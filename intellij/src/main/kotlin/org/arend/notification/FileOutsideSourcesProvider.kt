@@ -16,6 +16,7 @@ import com.jetbrains.edu.learning.getTaskFile
 import org.arend.psi.ArendFile
 import org.arend.server.ArendServerService
 import org.arend.util.ArendBundle
+import org.arend.util.FileUtils.SERIALIZED_EXTENSION
 import java.util.function.Function
 import javax.swing.JComponent
 
@@ -25,7 +26,8 @@ class FileOutsideSourcesProvider : EditorNotificationProvider {
         if (file !is ArendFile || ProjectFileIndex.getInstance(project).isInSource(virtualFile) ||
                 project.service<ArendServerService>().isPrelude(file) || virtualFile is LightVirtualFile ||
             ScratchFileService.getInstance().getRootType(virtualFile) != null ||
-            virtualFile.getTaskFile(project) != null) {
+            virtualFile.getTaskFile(project) != null || ) {
+            file.name.endsWith(SERIALIZED_EXTENSION)
             return null
         }
 
