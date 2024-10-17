@@ -14,6 +14,7 @@ import com.intellij.ui.EditorNotificationProvider
 import org.arend.psi.ArendFile
 import org.arend.server.ArendServerService
 import org.arend.util.ArendBundle
+import org.arend.util.FileUtils.SERIALIZED_EXTENSION
 import java.util.function.Function
 import javax.swing.JComponent
 
@@ -23,6 +24,8 @@ class FileOutsideSourcesProvider : EditorNotificationProvider {
         if (file !is ArendFile || ProjectFileIndex.getInstance(project).isInSource(virtualFile) ||
                 project.service<ArendServerService>().prelude == file || virtualFile is LightVirtualFile ||
             ScratchFileService.getInstance().getRootType(virtualFile) != null) {
+                project.service<TypeCheckingService>().prelude == file || virtualFile is LightVirtualFile ||
+                file.name.endsWith(SERIALIZED_EXTENSION)) {
             return null
         }
 
