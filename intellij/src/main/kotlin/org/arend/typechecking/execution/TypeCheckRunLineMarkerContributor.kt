@@ -14,6 +14,7 @@ import org.arend.psi.ArendElementTypes
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.scratch.SCRATCH_SUFFIX
+import org.arend.util.FileUtils.SERIALIZED_EXTENSION
 
 class TypeCheckRunLineMarkerContributor : RunLineMarkerContributor() {
     // Store previous definition status to prevent flickering during resolving
