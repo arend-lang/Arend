@@ -93,7 +93,7 @@ class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, Aren
                 return@getCachedValue cachedValue(ArendModuleConfigService.getInstance(module))
             }
 
-            if (!fileIndex.isInLibrarySource(virtualFile)) {
+            if (!runReadAction{ fileIndex.isInLibrarySource(virtualFile)}) {
                 return@getCachedValue cachedValue(null)
             }
 
