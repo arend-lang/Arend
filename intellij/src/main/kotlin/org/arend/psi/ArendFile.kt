@@ -29,7 +29,7 @@ import org.arend.psi.stubs.ArendFileStub
 import org.arend.resolving.ArendReference
 import org.arend.util.*
 
-class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, ArendLanguage.INSTANCE), ArendGroup, IArendFile {
+open class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, ArendLanguage.INSTANCE), ArendGroup, IArendFile {
     var generatedModuleLocation: ModuleLocation? = null
 
     /**
