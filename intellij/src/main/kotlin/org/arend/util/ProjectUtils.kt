@@ -2,9 +2,12 @@ package org.arend.util
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
@@ -107,7 +110,10 @@ fun Module.register() {
 
     val server = project.service<ArendServerService>().server
     runReadAction {
-        server.updateLibrary(config, NotificationErrorReporter(project))
+      server.updateLibrary(config, NotificationErrorReporter(project))
+      invokeLater {
+        FileDocumentManager.getInstance().reloadBinaryFiles()
+      }
     }
 
     ApplicationManager.getApplication().getService(ArendExtensionChangeService::class.java).initializeModule(config)
