@@ -2,10 +2,13 @@ package org.arend.util
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
@@ -224,6 +227,9 @@ fun Module.register(modules: List<Module> = emptyList()) {
         loaded.addAll(project.arendModules.map { it.name })
         project.addDependencies(server, config, loaded)
         project.registerLibrary(server, config)
+        invokeLater {
+            FileDocumentManager.getInstance().reloadBinaryFiles()
+        }
     }
 
     project.service<ArendExtensionChangeService>().initializeModule(config)
