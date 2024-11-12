@@ -52,6 +52,8 @@ import org.arend.toolWindow.errors.tree.ArendErrorTreeAutoScrollToSource
 import org.arend.toolWindow.errors.tree.ArendErrorTreeCellRenderer
 import org.arend.toolWindow.errors.tree.ArendErrorTreeElement
 import org.arend.util.ArendBundle
+import org.arend.util.checkArcFile
+import java.util.*
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.event.TreeSelectionEvent

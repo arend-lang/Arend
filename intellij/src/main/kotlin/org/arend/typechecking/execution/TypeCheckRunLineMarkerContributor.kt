@@ -14,7 +14,7 @@ import org.arend.psi.ArendElementTypes
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.scratch.SCRATCH_SUFFIX
-import org.arend.util.FileUtils.SERIALIZED_EXTENSION
+import org.arend.util.checkArcFile
 
 class TypeCheckRunLineMarkerContributor : RunLineMarkerContributor() {
     // Store previous definition status to prevent flickering during resolving
@@ -23,7 +23,14 @@ class TypeCheckRunLineMarkerContributor : RunLineMarkerContributor() {
     override fun getInfo(element: PsiElement): Info? {
         if (!(element is LeafPsiElement && element.node.elementType == ArendElementTypes.ID) ||
                 element.containingFile.virtualFile.extension == SCRATCH_SUFFIX ||
-                (element.containingFile as? ArendFile?)?.isRepl == true) {
+            (element.containingFile as? ArendFile?)?.isRepl == true) {
+          return null
+        }
+        if (checkArcFile(element.containingFile.virtualFile)) {
+            return null
+        }
+
+        if (!(element is LeafPsiElement && element.node.elementType == ArendElementTypes.ID)) {
             return null
         }
 

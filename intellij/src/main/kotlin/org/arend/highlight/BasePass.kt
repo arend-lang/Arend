@@ -68,6 +68,7 @@ import org.arend.term.group.ConcreteNamespaceCommand
 import org.arend.typechecking.error.local.inference.FunctionArgInferenceError
 import org.arend.typechecking.error.local.inference.LambdaInferenceError
 import org.arend.typechecking.error.local.inference.RecursiveInstanceInferenceError
+import org.arend.util.checkArcFile
 import org.arend.util.ComputationInterruptedException
 import com.intellij.openapi.progress.ProcessCanceledException
 import java.util.*
@@ -163,6 +164,7 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
     }
 
     fun registerFix(builder: HighlightInfo.Builder, fix: IntentionAction) {
+        if (checkArcFile(file.virtualFile)) return
         builder.registerFix(fix, null, fix.text, null, null)
     }
 
