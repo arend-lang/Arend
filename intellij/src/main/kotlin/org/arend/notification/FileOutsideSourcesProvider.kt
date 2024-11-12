@@ -14,7 +14,7 @@ import com.intellij.ui.EditorNotificationProvider
 import org.arend.psi.ArendFile
 import org.arend.server.ArendServerService
 import org.arend.util.ArendBundle
-import org.arend.util.FileUtils.SERIALIZED_EXTENSION
+import org.arend.util.checkArcFile
 import java.util.function.Function
 import javax.swing.JComponent
 
@@ -25,10 +25,9 @@ class FileOutsideSourcesProvider : EditorNotificationProvider {
                 project.service<ArendServerService>().prelude == file || virtualFile is LightVirtualFile ||
             ScratchFileService.getInstance().getRootType(virtualFile) != null) {
                 project.service<TypeCheckingService>().prelude == file || virtualFile is LightVirtualFile ||
-                file.name.endsWith(SERIALIZED_EXTENSION)) {
+                checkArcFile(file.virtualFile)) {
             return null
         }
-
         return Function<FileEditor, EditorNotificationPanel?> { fileEditor: FileEditor? ->
             fileEditor?.let { createPanel(fileEditor) }
         }
