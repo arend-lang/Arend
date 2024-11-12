@@ -15,6 +15,7 @@ import com.intellij.openapi.roots.ui.configuration.ProjectStructureConfigurable
 import com.intellij.openapi.vfs.JarFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiManager
 import org.arend.ArendLanguage
@@ -41,7 +42,10 @@ import org.arend.settings.ArendProjectSettings
 import org.arend.term.group.ConcreteGroup
 import org.arend.term.prettyprint.PrettyPrintVisitor
 import org.arend.typechecking.ArendExtensionChangeService
+import org.arend.typechecking.ArendTypechecking
+import org.arend.typechecking.TypeCheckingService
 import org.arend.typechecking.error.NotificationErrorReporter
+import org.arend.util.FileUtils.SERIALIZED_EXTENSION
 import org.jetbrains.yaml.psi.YAMLFile
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -173,3 +177,7 @@ private class CollectingDocVisitor(private val references: MutableList<ArendRef>
 }
 
 fun Editor.isDetailedViewEditor() : Boolean = getUserData(InjectedArendEditor.AREND_GOAL_EDITOR) != null
+
+fun checkArcFile(file: VirtualFile): Boolean {
+    return file.name.endsWith(SERIALIZED_EXTENSION)
+}

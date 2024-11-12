@@ -37,6 +37,8 @@ import org.arend.settings.ArendProjectSettings
 import org.arend.settings.ArendSettings
 import org.arend.toolWindow.errors.tree.*
 import org.arend.util.ArendBundle
+import org.arend.util.checkArcFile
+import java.util.*
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.event.TreeSelectionEvent
