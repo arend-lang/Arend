@@ -35,11 +35,13 @@ import org.arend.ArendIcons
 import org.arend.ext.error.GeneralError
 import org.arend.ext.error.LocalError
 import org.arend.ext.error.MissingClausesError
+import org.arend.injection.InjectedArendEditor
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.reference.ArendRef
 import org.arend.ext.reference.DataContainer
 import org.arend.psi.ArendFile
 import org.arend.psi.ancestor
+import org.arend.psi.arc.ArcFile
 import org.arend.psi.doc.ArendDocComment
 import org.arend.psi.ext.ArendGoal
 import org.arend.psi.ext.PsiLocatedReferable
@@ -52,7 +54,6 @@ import org.arend.toolWindow.errors.tree.ArendErrorTreeAutoScrollToSource
 import org.arend.toolWindow.errors.tree.ArendErrorTreeCellRenderer
 import org.arend.toolWindow.errors.tree.ArendErrorTreeElement
 import org.arend.util.ArendBundle
-import org.arend.util.checkArcFile
 import java.util.*
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -446,10 +447,15 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
         val expandedPaths = TreeUtil.collectExpandedPaths(tree)
         val selectedPath = tree.selectionPath
 
+//        val arcFiles = arendFilesWithErrors.filterIsInstance<ArcFile>()
+//          .groupBy { it.fullName }.values.map { it.maxBy { file -> file.arcTimestamp } }
+
         val map = HashMap<ArendRef, HashMap<Any?, ArendErrorTreeElement>>()
         tree.update(root) { node ->
             if (node == root) {
                 errorMap.keys
+//              TODO()
+//              arendFilesWithErrors.filter { it !is ArcFile } + arcFiles
             }
             else when (val obj = node.userObject) {
                 is ModuleLocation -> {
