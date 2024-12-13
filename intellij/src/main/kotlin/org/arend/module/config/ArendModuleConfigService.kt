@@ -69,6 +69,10 @@ class ArendModuleConfigService(val module: Module) : LibraryConfig(module.projec
             root?.parent?.path?.let { FileUtil.toSystemDependentName(it) }
         }
 
+    init {
+        copyFromYAML(false)
+    }
+
     /* TODO[server2]
     private fun updateDependencies(newDependencies: List<LibraryDependency>, reload: Boolean, callback: () -> Unit) {
         val oldDependencies = dependencies

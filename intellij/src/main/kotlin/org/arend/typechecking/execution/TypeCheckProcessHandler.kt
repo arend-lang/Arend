@@ -119,7 +119,7 @@ class TypeCheckProcessHandler(
                                 resetGroup(module)
                             }
                             for (module in modules) {
-                                orderGroup(module, ordering)
+                                orderGroup(module, ordering, indicator)
                             }
                         } else {
                             val ref = modules.firstOrNull()?.findGroupByFullName(command.definitionFullName.split('.'))?.referable
@@ -219,6 +219,23 @@ class TypeCheckProcessHandler(
     override fun detachIsDefault(): Boolean = true
 
     override fun getProcessInput(): OutputStream? = null
+
+    companion object {
+        fun orderGroup(group: ArendGroup, ordering: Ordering, indicator: ProgressIndicator) {
+            if (indicator.isCanceled) {
+                return
+            }
+
+            (ordering.concreteProvider.getConcrete(group) as? Concrete.Definition)?.let { ordering.order(it) }
+
+            for (stat in group.statements) {
+                orderGroup(stat.group ?: continue, ordering, indicator)
+            }
+            for (subgroup in group.dynamicSubgroups) {
+                orderGroup(subgroup, ordering, indicator)
+            }
+        }
+    }
 }
 
 class DefinitionNotFoundError(definitionName: String, modulePath: ModulePath? = null) :
