@@ -25,7 +25,7 @@ class FileOutsideSourcesProvider : EditorNotificationProvider {
                 project.service<ArendServerService>().prelude == file || virtualFile is LightVirtualFile ||
             ScratchFileService.getInstance().getRootType(virtualFile) != null) {
                 project.service<TypeCheckingService>().prelude == file || virtualFile is LightVirtualFile ||
-                checkArcFile(file.virtualFile)) {
+                checkArcFile(file)) {
             return null
         }
         return Function<FileEditor, EditorNotificationPanel?> { fileEditor: FileEditor? ->

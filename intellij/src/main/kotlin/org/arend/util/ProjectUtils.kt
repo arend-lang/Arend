@@ -34,6 +34,7 @@ import org.arend.naming.reference.Referable
 import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.reference.UnresolvedReference
 import org.arend.psi.ArendFile
+import org.arend.psi.arc.ArcFile
 import org.arend.psi.ext.ArendGroup
 import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.ReferableBase
@@ -178,6 +179,6 @@ private class CollectingDocVisitor(private val references: MutableList<ArendRef>
 
 fun Editor.isDetailedViewEditor() : Boolean = getUserData(InjectedArendEditor.AREND_GOAL_EDITOR) != null
 
-fun checkArcFile(file: VirtualFile): Boolean {
-    return file.name.endsWith(SERIALIZED_EXTENSION)
+fun checkArcFile(file: PsiFile): Boolean {
+    return file is ArcFile
 }
