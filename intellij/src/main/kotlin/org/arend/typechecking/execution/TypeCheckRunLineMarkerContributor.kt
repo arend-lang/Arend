@@ -26,7 +26,7 @@ class TypeCheckRunLineMarkerContributor : RunLineMarkerContributor() {
             (element.containingFile as? ArendFile?)?.isRepl == true) {
             return null
         }
-        if (checkArcFile(element.containingFile.virtualFile)) {
+        if (checkArcFile(element.containingFile)) {
             return null
         }
 
