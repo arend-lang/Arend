@@ -24,7 +24,7 @@ class TypeCheckRunLineMarkerContributor : RunLineMarkerContributor() {
                 element.containingFile.virtualFile.extension == SCRATCH_SUFFIX) {
           return null
         }
-        if (checkArcFile(element.containingFile.virtualFile)) {
+        if (checkArcFile(element.containingFile)) {
             return null
         }
 
