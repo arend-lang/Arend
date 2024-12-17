@@ -55,7 +55,7 @@ class ArendBinaryCacheService(private val project: Project) {
                 }
                 val config = project.findLibrary(libraryName) ?: continue
                 val binariesDir = config.binariesDirPath
-                val modules = if (binariesDir == null) emptyList() else readAction { config.findModules(false) }
+                val modules = if (binariesDir == null) emptyList() else readAction { config.findModules(ModuleLocation.LocationKind.SOURCE) }
                 if (binariesDir == null || modules.none { Files.exists(FileUtils.binaryFile(binariesDir, it)) }) {
                     loadedLibraries[libraryName] = emptySet()
                     continue

@@ -335,9 +335,15 @@ public class BinaryCacheLoader {
   }
 
   /** True if any definition reachable from {@code group} already holds a typechecked core. */
-  private static boolean hasTypechecked(ConcreteGroup group) {
+  public static boolean hasTypechecked(ConcreteGroup group) {
     boolean[] found = { false };
     walkDefinitions(group, def -> { found[0] = true; return true; });
+    return found[0];
+  }
+
+  public static boolean hasIncompleteDefinition(ConcreteGroup group) {
+    boolean[] found = { false };
+    walkDefinitions(group, def -> { found[0] = def.status().needsTypeChecking(); return found[0]; });
     return found[0];
   }
 
@@ -367,7 +373,7 @@ public class BinaryCacheLoader {
    * an orphan shell left behind when its owning module's phase-2b failed partway
    * through fillInDefinition.
    */
-  private static boolean hasOrphanShellReference(ConcreteGroup group) {
+  public static boolean hasOrphanShellReference(ConcreteGroup group) {
     OrphanShellFinder finder = new OrphanShellFinder();
     walkDefinitions(group, def -> {
       finder.scan(def);
@@ -397,7 +403,7 @@ public class BinaryCacheLoader {
     }
   }
 
-  private static void clearTypechecked(ConcreteGroup group) {
+  public static void clearTypechecked(ConcreteGroup group) {
     LocatedReferable ref = group.referable();
     if (ref instanceof TCDefReferable tcRef) {
       tcRef.setTypechecked(null);

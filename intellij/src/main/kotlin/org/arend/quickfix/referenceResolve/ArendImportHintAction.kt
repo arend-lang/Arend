@@ -43,9 +43,9 @@ class ArendImportHintAction(private val referenceElement: ArendReferenceElement)
             val psiFile = referenceElement.containingFile
             val project = referenceElement.project
             availability = if (checkArcFile(psiFile)) {
-                doComputeAvailability(project, referenceElement)
-            } else {
                 ImportHintActionAvailability.UNAVAILABLE
+            } else {
+                doComputeAvailability(project, referenceElement)
             }
             itemsToImport = if (checkArcFile(psiFile)) {
                 emptySequence()

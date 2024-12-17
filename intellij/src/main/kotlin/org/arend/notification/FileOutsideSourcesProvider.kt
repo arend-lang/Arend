@@ -11,7 +11,6 @@ import com.intellij.psi.PsiManager
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.EditorNotificationProvider
-import com.jetbrains.edu.learning.courseFormat.tasks.Task
 import com.jetbrains.edu.learning.getTaskFile
 import org.arend.psi.ArendFile
 import org.arend.server.ArendServerService
@@ -24,8 +23,8 @@ class FileOutsideSourcesProvider : EditorNotificationProvider {
         val file = PsiManager.getInstance(project).findFile(virtualFile)
         if (file !is ArendFile || ProjectFileIndex.getInstance(project).isInSource(virtualFile) ||
                 project.service<ArendServerService>().isPrelude(file) || virtualFile is LightVirtualFile ||
-            ScratchFileService.getInstance().getRootType(virtualFile) != null ||
-            virtualFile.getTaskFile(project) != null) {
+                ScratchFileService.getInstance().getRootType(virtualFile) != null ||
+                virtualFile.getTaskFile(project) != null) {
             return null
         }
 

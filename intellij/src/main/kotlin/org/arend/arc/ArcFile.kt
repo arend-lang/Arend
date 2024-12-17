@@ -1,4 +1,4 @@
-package org.arend.psi.arc
+package org.arend.arc
 
 import com.intellij.openapi.vfs.findDocument
 import com.intellij.psi.FileViewProvider

@@ -220,7 +220,7 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
       }
       try {
         SingleDependentLink parameters = DependentLink.Helper.subst(expr.getParameters(), this);
-        PiExpression result = new PiExpression(expr.getResultSort().subst(myLevelSubstitution), parameters, expr.getCodomain().accept(this, null));
+        PiExpression result = new PiExpression(parameters, expr.getCodomain().accept(this, null));
         DependentLink.Helper.freeSubsts(expr.getParameters(), myExprSubstitution);
         return result;
       } finally {

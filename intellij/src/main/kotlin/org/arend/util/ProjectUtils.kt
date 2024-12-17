@@ -7,7 +7,6 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
@@ -43,7 +42,7 @@ import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.reference.UnresolvedReference
 import org.arend.prelude.Prelude
 import org.arend.psi.ArendFile
-import org.arend.psi.arc.ArcFile
+import org.arend.arc.ArcFile
 import org.arend.psi.ext.ArendGroup
 import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.ReferableBase
@@ -54,10 +53,7 @@ import org.arend.settings.ArendProjectSettings
 import org.arend.term.group.ConcreteGroup
 import org.arend.term.prettyprint.PrettyPrintVisitor
 import org.arend.typechecking.ArendExtensionChangeService
-import org.arend.typechecking.ArendTypechecking
-import org.arend.typechecking.TypeCheckingService
 import org.arend.typechecking.error.NotificationErrorReporter
-import org.arend.util.FileUtils.SERIALIZED_EXTENSION
 import org.arend.yaml.createFromText
 import org.arend.yaml.dependencies
 import org.jetbrains.yaml.psi.YAMLFile

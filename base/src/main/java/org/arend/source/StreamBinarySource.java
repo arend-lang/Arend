@@ -3,7 +3,9 @@ package org.arend.source;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.arend.ext.error.ErrorReporter;
+import org.arend.ext.module.ModulePath;
 import org.arend.ext.typechecking.DefinitionListener;
+import org.arend.ext.util.Pair;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.module.error.CorruptBinaryCacheError;
@@ -14,6 +16,7 @@ import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.module.serialization.ModuleProtos;
 import org.arend.module.serialization.ModuleSerialization;
 import org.arend.server.ArendServer;
+import org.arend.server.impl.ArendServerImpl;
 import org.arend.source.error.LocationError;
 import org.arend.source.error.PersistingError;
 import org.arend.term.group.ConcreteGroup;
@@ -25,6 +28,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.zip.ZipException;
 
 /**
@@ -80,6 +84,10 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
 
   @Override
   public @Nullable ConcreteGroup load(@NotNull ArendServer server, @NotNull ErrorReporter errorReporter) {
+    return loadWithImports(server, errorReporter).proj1;
+  }
+
+  public Pair<ConcreteGroup, List<ModulePath>> loadWithImports(@NotNull ArendServer server, @NotNull ErrorReporter errorReporter) {
     ModuleLocation module = getModule();
     try (InputStream inputStream = getInputStream()) {
       if (inputStream == null) return null;
@@ -96,7 +104,9 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
       ModuleScopeProvider scopeProvider =
           server.getModuleScopeProvider(module.getLibraryName(), false);
       moduleDeserialization.readModule(scopeProvider, new DependencyCollector(null));
-      return group;
+      return new Pair<>(group, moduleProto.getModuleCallTargetsList().stream()
+              .map(target -> new ModulePath(target.getNameList()))
+              .filter(modulePath -> !modulePath.equals(module.getModulePath())).toList());
     } catch (IOException | DeserializationException e) {
       reportUnreadableCache(errorReporter, e);
       return null;

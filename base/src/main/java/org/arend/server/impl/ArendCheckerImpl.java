@@ -382,13 +382,12 @@ public class ArendCheckerImpl implements ArendChecker {
 
   private void resolveMetaBody(Concrete.MetaDefinition freshMeta, Scope outerScope) {
     Scope scope = new PrivateFilteredScope(outerScope);
-    List<? extends Referable> pLevels = freshMeta.getPLevelParameters() == null ? Collections.emptyList() : freshMeta.getPLevelParameters().referables;
-    List<? extends Referable> hLevels = freshMeta.getHLevelParameters() == null ? Collections.emptyList() : freshMeta.getHLevelParameters().referables;
+    List<? extends Referable> levels = freshMeta.getLevelParameters() == null ? Collections.emptyList() : freshMeta.getLevelParameters().referables;
     List<org.arend.naming.resolving.typing.TypedReferable> context = new ArrayList<>();
     ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(
         scope, context, myServer.getTypingInfo(),
         DummyErrorReporter.INSTANCE, null, null,
-        pLevels, hLevels);
+        levels);
     exprVisitor.visitParameters(freshMeta.getParameters(), null);
     if (freshMeta.body != null) {
       freshMeta.body = freshMeta.body.accept(exprVisitor, null);

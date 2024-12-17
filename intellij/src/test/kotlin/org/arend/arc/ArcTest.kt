@@ -1,4 +1,4 @@
-package org.arend.psi.arc
+package org.arend.arc
 
 import com.intellij.openapi.vfs.LocalFileSystem
 import org.arend.ArendTestBase
@@ -10,6 +10,6 @@ class ArcTest : ArendTestBase() {
     fun `test decompile arc file`() {
         val file = File("$testDataPath/Test.arc")
         val result = LocalFileSystem.getInstance().findFileByIoFile(file)?.let { ArcFileDecompiler.decompile(it) }
-        assertEquals("\\func f \\plevels  \\hlevels  : {?} => {?}", result)
+        assertEquals("\\func f : Prelude.Nat => 0", result)
     }
 }
