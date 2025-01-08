@@ -20,14 +20,23 @@ public class FileUtils {
   public static final String EXTENSION = ".ard";
   public static final String SERIALIZED_EXTENSION = ".arc";
   public static final String LIBRARY_CONFIG_FILE = "arend.yaml";
+  public static final String LOG_FILE = "arend.log";
   public static final String USER_CONFIG_DIR = ".arend";
   public static final String ZIP_EXTENSION = ".zip";
   public static final String DEFAULT_SOURCES_DIR = "src";
   public static final String DEFAULT_BINARIES_DIR = "bin";
   public static final @NotNull Path USER_HOME = Paths.get(System.getProperty("user.home")).toAbsolutePath().normalize();
 
+  public static Path configDir() {
+    return USER_HOME.resolve(USER_CONFIG_DIR);
+  }
+
   public static Path defaultLibrariesRoot() {
-    return USER_HOME.resolve(USER_CONFIG_DIR).resolve("libs");
+    return configDir().resolve("libs");
+  }
+
+  public static Path defaultLogFile() {
+    return configDir().resolve(LOG_FILE);
   }
 
   private static Path baseFile(Path root, ModulePath modulePath) {

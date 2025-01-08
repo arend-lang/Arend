@@ -39,7 +39,7 @@ import org.arend.typechecking.doubleChecker.CoreModuleChecker;
 import org.arend.typechecking.error.local.GoalError;
 import org.arend.typechecking.instance.provider.InstanceProviderSet;
 import org.arend.typechecking.order.MapTarjanSCC;
-import org.arend.typechecking.order.dependency.DependencyListener;
+import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.order.dependency.MetaDependencyCollector;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.util.FileUtils;
@@ -65,7 +65,7 @@ public abstract class BaseCliFrontend {
   // Typechecking
   private final ListErrorReporter myErrorReporter = new ListErrorReporter();
   private final Map<ModulePath, GeneralError.Level> myModuleResults = new LinkedHashMap<>();
-  private final DependencyListener myDependencyCollector = new MetaDependencyCollector();
+  private final DependencyCollector myDependencyCollector = new MetaDependencyCollector(null);
   private Map<TCDefReferable, Pair<Long,Long>> myTimes = null;
   private Map<TCDefReferable, Integer> mySizes = null;
   private ModulePath myPrintModule;
@@ -119,11 +119,6 @@ public abstract class BaseCliFrontend {
       if (def instanceof FunctionDefinition || def instanceof DataDefinition || def instanceof ClassDefinition) myPrintDefinitions.add(def);
     }
   };
-
-  public LibraryManager getLibraryManager() {
-    return myLibraryManager;
-  }
-
 
   private class MyTypechecking extends TypecheckingOrderingListener {
     private int total;
@@ -209,6 +204,10 @@ public abstract class BaseCliFrontend {
       total = 0;
       failed = 0;
     }
+  }
+
+  public BaseCliFrontend() {
+    myDependencyCollector.setLibraryManager(myLibraryManager);
   }
 
   public boolean isExitWithError() {

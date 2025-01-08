@@ -2,6 +2,7 @@ package org.arend.term.abs;
 
 import org.arend.naming.reference.ClassReferable;
 import org.arend.naming.reference.LocatedReferable;
+import org.arend.naming.reference.ParameterReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.ext.concrete.definition.FunctionKind;
@@ -142,6 +143,23 @@ public final class Abstract {
     }
   }
 
+  // Group
+
+  public interface Statement {
+    @Nullable Group getGroup();
+    @Nullable NamespaceCommand getNamespaceCommand();
+    @Nullable LevelParameters getPLevelsDefinition();
+    @Nullable LevelParameters getHLevelsDefinition();
+  }
+
+  public interface Group {
+    @NotNull LocatedReferable getReferable();
+    @Nullable Definition getGroupDefinition();
+    @NotNull List<? extends Statement> getStatements();
+    @NotNull List<? extends Group> getDynamicSubgroups();
+    @NotNull List<? extends ParameterReferable> getExternalParameters(); // TODO[server2]: Remove this
+  }
+
   // Expression
 
   public enum EvalKind { EVAL, PEVAL, BOX }
@@ -156,6 +174,7 @@ public final class Abstract {
   public interface FieldAcc extends SourceNode {
     @Nullable Object getData();
     @Nullable Integer getNumber();
+    @Nullable AbstractReference getFieldReference();
     @Nullable String getFieldName();
   }
 
@@ -243,8 +262,6 @@ public final class Abstract {
   }
 
   public interface Definition extends ReferableDefinition {
-    @Nullable ClassReferable getEnclosingClass();
-    @Nullable LocatedReferable getUseParent();
     @Override @NotNull LocatedReferable getReferable();
     <R> R accept(AbstractDefinitionVisitor<? extends R> visitor);
     @Nullable LevelParameters getPLevelParameters();

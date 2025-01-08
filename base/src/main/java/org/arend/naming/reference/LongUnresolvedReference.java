@@ -5,29 +5,49 @@ import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.MergeScope;
 import org.arend.naming.scope.Scope;
 import org.arend.term.Fixity;
+import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class LongUnresolvedReference implements UnresolvedReference {
   private final Object myData;
+  private final List<AbstractReference> myReferences; // TODO[server2]: Remove this after parser redesign
   private final List<String> myPath;
   private Referable resolved;
 
-  public LongUnresolvedReference(Object data, @NotNull List<String> path) {
+  public LongUnresolvedReference(Object data, @NotNull List<AbstractReference> references, @NotNull List<String> path) {
     assert !path.isEmpty();
     myData = data;
+    myReferences = references;
     myPath = path;
   }
 
   public static UnresolvedReference make(Object data, @NotNull List<String> path) {
-    return path.isEmpty() ? null : path.size() == 1 ? new NamedUnresolvedReference(data, path.get(0)) : new LongUnresolvedReference(data, path);
+    if (path.isEmpty()) return null;
+    if (path.size() == 1) return new NamedUnresolvedReference(data, path.get(0));
+
+    List<AbstractReference> references = new ArrayList<>(path.size());
+    for (String ignored : path) {
+      references.add(null);
+    }
+    return new LongUnresolvedReference(data, references, path);
+  }
+
+  public static UnresolvedReference make(Object data, @NotNull List<AbstractReference> references, @NotNull List<String> path) {
+    return path.isEmpty() ? null : path.size() == 1 ? new NamedUnresolvedReference(data, path.get(0)) : new LongUnresolvedReference(data, references, path);
   }
 
   public @NotNull List<String> getPath() {
     return myPath;
+  }
+
+  @Override
+  public LongUnresolvedReference copy() {
+    return new LongUnresolvedReference(myData, myReferences, myPath);
   }
 
   @Nullable
@@ -169,6 +189,11 @@ public class LongUnresolvedReference implements UnresolvedReference {
   }
 
   @Override
+  public @NotNull List<AbstractReference> getReferenceList() {
+    return myReferences;
+  }
+
+  @Override
   public void reset() {
     resolved = null;
   }
@@ -216,7 +241,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
       if (newResolved == null) {
         if (classRef != null) {
           if (onlyTry) return null;
-          resolved = new ErrorReference(myData, classRef, i, myPath.get(i));
+          resolved = new ErrorReference(i < myReferences.size() ? myReferences.get(i) : myData, classRef, i, myPath.get(i));
           if (resolvedRefs != null) {
             resolvedRefs.add(resolved);
           }

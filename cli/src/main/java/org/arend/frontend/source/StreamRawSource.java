@@ -85,7 +85,7 @@ public abstract class StreamRawSource implements Source {
       return LoadResult.CONTINUE;
     }
 
-    new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, null, myPass == 2, sourceLoader.getTypecheckingErrorReporter(), null).resolveGroup(myGroup, myGroup.getGroupScope());
+    new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, myPass == 2, sourceLoader.getTypecheckingErrorReporter(), null).resolveGroup(myGroup, myGroup.getGroupScope());
     if (myPass == 2) {
       myPass = 3;
       return LoadResult.CONTINUE;

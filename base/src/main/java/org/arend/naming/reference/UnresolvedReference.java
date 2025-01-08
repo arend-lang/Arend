@@ -2,6 +2,7 @@ package org.arend.naming.reference;
 
 import org.arend.ext.reference.DataContainer;
 import org.arend.naming.scope.Scope;
+import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -13,7 +14,9 @@ public interface UnresolvedReference extends Referable, DataContainer {
   @Nullable Referable tryResolve(Scope scope, List<Referable> resolvedRefs);
   @Nullable Concrete.Expression resolveExpression(Scope scope, List<Referable> resolvedRefs);
   @Nullable Concrete.Expression tryResolveExpression(Scope scope, List<Referable> resolvedRefs);
+  @NotNull List<AbstractReference> getReferenceList();
   @NotNull List<String> getPath();
+  UnresolvedReference copy();
   void reset();
   boolean isResolved();
 

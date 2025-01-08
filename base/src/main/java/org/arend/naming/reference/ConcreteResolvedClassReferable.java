@@ -12,8 +12,8 @@ import java.util.Collections;
 import java.util.List;
 
 public class ConcreteResolvedClassReferable extends ConcreteLocatedReferable implements ClassReferable {
-  protected final List<ClassReferable> superClasses;
-  protected final List<ConcreteClassFieldReferable> fields;
+  protected List<ClassReferable> superClasses;
+  protected List<ConcreteClassFieldReferable> fields;
   protected List<GlobalReferable> dynamicReferables = Collections.emptyList();
 
   public ConcreteResolvedClassReferable(Object data, AccessModifier accessModifier, @NotNull String name, Precedence precedence, @Nullable String aliasName, Precedence aliasPrecedence, LocatedReferable parent, List<ConcreteClassFieldReferable> fields) {
@@ -27,42 +27,6 @@ public class ConcreteResolvedClassReferable extends ConcreteLocatedReferable imp
     return (Concrete.ClassDefinition) super.getDefinition();
   }
 
-  protected boolean setFromConcrete() {
-    return true;
-  }
-
-  @Override
-  public void setDefinition(Concrete.ReferableDefinition definition) {
-    super.setDefinition(definition);
-    if (!setFromConcrete()) {
-      return;
-    }
-    if (!(definition instanceof Concrete.ClassDefinition)) {
-      throw new IllegalArgumentException();
-    }
-
-    for (Concrete.ReferenceExpression superClass : ((Concrete.ClassDefinition) definition).getSuperClasses()) {
-      Referable ref = superClass.getReferent();
-      if (!(ref instanceof ClassReferable)) {
-        ref = ref.getUnderlyingReferable();
-      }
-      if (!(ref instanceof ClassReferable)) {
-        throw new IllegalArgumentException();
-      }
-      superClasses.add((ClassReferable) ref);
-    }
-
-    for (Concrete.ClassElement element : ((Concrete.ClassDefinition) definition).getElements()) {
-      if (element instanceof Concrete.ClassField) {
-        Referable ref = ((Concrete.ClassField) element).getData();
-        if (!(ref instanceof ConcreteClassFieldReferable)) {
-          throw new IllegalArgumentException();
-        }
-        fields.add((ConcreteClassFieldReferable) ref);
-      }
-    }
-  }
-
   @Override
   public boolean isRecord() {
     return getDefinition().isRecord();
@@ -73,9 +37,17 @@ public class ConcreteResolvedClassReferable extends ConcreteLocatedReferable imp
     return superClasses;
   }
 
+  public void setSuperClasses(List<ClassReferable> superClasses) {
+    this.superClasses = superClasses;
+  }
+
   @Override
   public @NotNull Collection<? extends FieldReferable> getFieldReferables() {
     return fields;
+  }
+
+  public void setFields(List<ConcreteClassFieldReferable> fields) {
+    this.fields = fields;
   }
 
   @NotNull

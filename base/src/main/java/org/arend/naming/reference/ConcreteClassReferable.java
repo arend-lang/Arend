@@ -43,11 +43,6 @@ public class ConcreteClassReferable extends ConcreteResolvedClassReferable imple
     }
   }
 
-  @Override
-  protected boolean setFromConcrete() {
-    return false;
-  }
-
   @NotNull
   @Override
   public List<? extends ClassReferable> getSuperClassReferences() {

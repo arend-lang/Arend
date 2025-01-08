@@ -2164,13 +2164,18 @@ public final class Concrete {
     private TCFieldReferable myClassifyingField;
     private boolean myForcedClassifyingField;
 
-    public ClassDefinition(TCDefReferable referable, LevelParameters pParams, LevelParameters hParams, boolean isRecord, boolean withoutClassifying, List<ReferenceExpression> superClasses, List<ClassElement> elements) {
+    public ClassDefinition(ConcreteResolvedClassReferable referable, LevelParameters pParams, LevelParameters hParams, boolean isRecord, boolean withoutClassifying, List<ReferenceExpression> superClasses, List<ClassElement> elements) {
       super(referable, pParams, hParams);
       myRecord = isRecord;
       myWithoutClassifying = withoutClassifying;
       stage = Stage.NOT_RESOLVED;
       mySuperClasses = superClasses;
       myElements = elements;
+    }
+
+    @Override
+    public @NotNull ConcreteResolvedClassReferable getData() {
+      return (ConcreteResolvedClassReferable) super.getData();
     }
 
     public boolean isRecord() {
@@ -2224,10 +2229,10 @@ public final class Concrete {
           throw new IllegalArgumentException();
         }
         for (Referable referable : parameter.getReferableList()) {
-          if (!(referable instanceof TCFieldReferable)) {
+          if (!(referable instanceof ConcreteClassFieldReferable)) {
             throw new IllegalArgumentException();
           }
-          elements.add(new ClassField((TCFieldReferable) referable, this, parameter.isExplicit(), ClassFieldKind.ANY, new ArrayList<>(), type, null, false));
+          elements.add(new ClassField((ConcreteClassFieldReferable) referable, this, parameter.isExplicit(), ClassFieldKind.ANY, new ArrayList<>(), type, null, false));
         }
       }
       myElements.addAll(0, elements);
@@ -2299,7 +2304,7 @@ public final class Concrete {
   }
 
   public static class ClassField extends ReferableDefinitionBase implements BaseClassField {
-    private final TCFieldReferable myReferable;
+    private final ConcreteClassFieldReferable myReferable;
     private ClassDefinition myParentClass;
     private final boolean myExplicit;
     private final ClassFieldKind myKind;
@@ -2308,7 +2313,7 @@ public final class Concrete {
     private Expression myResultTypeLevel;
     private final boolean myCoerce;
 
-    public ClassField(TCFieldReferable referable, ClassDefinition parentClass, boolean isExplicit, ClassFieldKind kind, List<TypeParameter> parameters, Expression resultType, Expression resultTypeLevel, boolean isCoerce) {
+    public ClassField(ConcreteClassFieldReferable referable, ClassDefinition parentClass, boolean isExplicit, ClassFieldKind kind, List<TypeParameter> parameters, Expression resultType, Expression resultTypeLevel, boolean isCoerce) {
       myReferable = referable;
       myParentClass = parentClass;
       myExplicit = isExplicit;
@@ -2321,7 +2326,7 @@ public final class Concrete {
 
     @NotNull
     @Override
-    public TCFieldReferable getData() {
+    public ConcreteClassFieldReferable getData() {
       return myReferable;
     }
 

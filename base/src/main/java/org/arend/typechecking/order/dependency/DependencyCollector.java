@@ -2,6 +2,8 @@ package org.arend.typechecking.order.dependency;
 
 import org.arend.core.definition.*;
 import org.arend.ext.typechecking.MetaDefinition;
+import org.arend.library.Library;
+import org.arend.library.LibraryManager;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.MetaReferable;
 import org.arend.naming.reference.TCDefReferable;
@@ -13,8 +15,17 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DependencyCollector implements DependencyListener {
+  private LibraryManager myLibraryManager;
   private final Map<TCReferable, Set<TCReferable>> myDependencies = new ConcurrentHashMap<>();
   private final Map<TCReferable, Set<TCReferable>> myReverseDependencies = new ConcurrentHashMap<>();
+
+  public DependencyCollector(LibraryManager libraryManager) {
+    myLibraryManager = libraryManager;
+  }
+
+  public void setLibraryManager(LibraryManager libraryManager) {
+    myLibraryManager = libraryManager;
+  }
 
   @Override
   public void dependsOn(TCReferable def1, TCReferable def2) {
@@ -22,7 +33,8 @@ public class DependencyCollector implements DependencyListener {
       return;
     }
     ModuleLocation location = def2.getLocation();
-    if (location != null && location.isExternalLibrary()) {
+    Library library = location == null ? null : myLibraryManager.getRegisteredLibrary(location.getLibraryName());
+    if (library != null && library.isExternal()) {
       return;
     }
 

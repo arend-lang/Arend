@@ -1,7 +1,9 @@
 package org.arend.naming.reference;
 
+import org.arend.term.abs.AbstractReferable;
 import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public interface RedirectingReferable extends GlobalReferable {
   @NotNull Referable getOriginalReferable();
@@ -30,5 +32,10 @@ public interface RedirectingReferable extends GlobalReferable {
   @NotNull
   default Referable.RefKind getRefKind() {
     return getOriginalReferable().getRefKind();
+  }
+
+  @Override
+  default @Nullable AbstractReferable getAbstractReferable() {
+    return getOriginalReferable().getAbstractReferable();
   }
 }

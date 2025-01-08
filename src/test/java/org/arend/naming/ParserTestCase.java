@@ -17,7 +17,7 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public abstract class ParserTestCase extends ArendTestCase {
-  protected static final ModuleLocation MODULE_PATH = new ModuleLocation(null, false, null, new ModulePath("$TestCase$"));
+  protected static final ModuleLocation MODULE_PATH = new ModuleLocation((String) null, null, new ModulePath("$TestCase$"));
   protected static final LocatedReferable MODULE_REF = new FullModuleReferable(MODULE_PATH);
 
   private ArendParser _parse(String text) {

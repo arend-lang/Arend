@@ -11,11 +11,13 @@ import org.arend.term.ChildNamespaceCommand;
 import org.arend.term.NameHiding;
 import org.arend.term.NameRenaming;
 import org.arend.term.NamespaceCommand;
+import org.arend.term.abs.AbstractReference;
 import org.arend.term.group.ChildGroup;
 import org.arend.term.group.Statement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -47,6 +49,15 @@ public class SimpleNamespaceCommand implements ChildNamespaceCommand, SourceInfo
   @Override
   public Kind getKind() {
     return myKind;
+  }
+
+  @Override
+  public @NotNull List<AbstractReference> getReferenceList() {
+    List<AbstractReference> result = new ArrayList<>(myPath.size());
+    for (String ignored : myPath) {
+      result.add(null);
+    }
+    return result;
   }
 
   @NotNull

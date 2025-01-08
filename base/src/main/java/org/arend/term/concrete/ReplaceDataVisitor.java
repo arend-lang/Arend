@@ -1,6 +1,8 @@
 package org.arend.term.concrete;
 
+import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
+import org.arend.naming.reference.UnresolvedReference;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,15 +10,22 @@ import java.util.List;
 public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concrete.Expression>, ConcreteLevelExpressionVisitor<Void,Concrete.LevelExpression>, ConcreteResolvableDefinitionVisitor<Void, Concrete.ResolvableDefinition> {
   private final Object myData;
   private final boolean myReplace;
+  private final boolean myCopyUnresolved;
 
   public ReplaceDataVisitor(Object data) {
     myData = data;
     myReplace = true;
+    myCopyUnresolved = false;
+  }
+
+  public ReplaceDataVisitor(boolean copyUnresolved) {
+    myData = null;
+    myReplace = false;
+    myCopyUnresolved = copyUnresolved;
   }
 
   public ReplaceDataVisitor() {
-    myData = null;
-    myReplace = false;
+    this(false);
   }
 
   private Object getData(Concrete.SourceNode sourceNode) {
@@ -34,7 +43,11 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
   @Override
   public Concrete.ReferenceExpression visitReference(Concrete.ReferenceExpression expr, Void params) {
-    return new Concrete.ReferenceExpression(getData(expr), expr.getReferent(), visitLevels(expr.getPLevels()), visitLevels(expr.getHLevels()));
+    Referable referable = expr.getReferent();
+    if (myCopyUnresolved && referable instanceof UnresolvedReference unresolved) {
+      referable = unresolved.copy();
+    }
+    return new Concrete.ReferenceExpression(getData(expr), referable, visitLevels(expr.getPLevels()), visitLevels(expr.getHLevels()));
   }
 
   @Override
@@ -154,7 +167,12 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
   @Override
   public Concrete.Expression visitBinOpSequence(Concrete.BinOpSequenceExpression expr, Void params) {
-    throw new IllegalStateException();
+    Concrete.FunctionClauses clauses = expr.getClauses();
+    List<Concrete.BinOpSequenceElem<Concrete.Expression>> sequence = new ArrayList<>(expr.getSequence().size());
+    for (Concrete.BinOpSequenceElem<Concrete.Expression> elem : expr.getSequence()) {
+      sequence.add(new Concrete.BinOpSequenceElem<>(elem.getComponent().accept(this, null), elem.fixity, elem.isExplicit));
+    }
+    return new Concrete.BinOpSequenceExpression(getData(expr), sequence, clauses == null ? null : new Concrete.FunctionClauses(getData(clauses), visitFunctionClauses(clauses.getClauseList())));
   }
 
   private List<Concrete.FunctionClause> visitFunctionClauses(List<Concrete.FunctionClause> clauses) {
@@ -288,12 +306,16 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   }
 
   private Concrete.CoClauseElement visitCoClauseElement(Concrete.CoClauseElement element) {
+    Referable referable = element.getImplementedField();
+    if (myCopyUnresolved && referable instanceof UnresolvedReference unresolved) {
+      referable = unresolved.copy();
+    }
     if (element instanceof Concrete.CoClauseFunctionReference oldElement) {
-      Concrete.CoClauseFunctionReference newElement = new Concrete.CoClauseFunctionReference(getData(oldElement), oldElement.getImplementedField(), (TCDefReferable) ((Concrete.ReferenceExpression) oldElement.implementation).getReferent(), oldElement.isDefault());
+      Concrete.CoClauseFunctionReference newElement = new Concrete.CoClauseFunctionReference(getData(oldElement), referable, (TCDefReferable) ((Concrete.ReferenceExpression) oldElement.implementation).getReferent(), oldElement.isDefault());
       newElement.classRef = oldElement.classRef;
       return newElement;
     } else if (element instanceof Concrete.ClassFieldImpl classFieldImpl) {
-      Concrete.ClassFieldImpl newElement = new Concrete.ClassFieldImpl(getData(classFieldImpl), classFieldImpl.getImplementedField(), classFieldImpl.implementation == null ? null : classFieldImpl.implementation.accept(this, null), visitCoclauses(classFieldImpl.getSubCoclauses()), classFieldImpl.isDefault());
+      Concrete.ClassFieldImpl newElement = new Concrete.ClassFieldImpl(getData(classFieldImpl), referable, classFieldImpl.implementation == null ? null : classFieldImpl.implementation.accept(this, null), visitCoclauses(classFieldImpl.getSubCoclauses()), classFieldImpl.isDefault());
       newElement.classRef = classFieldImpl.classRef;
       return newElement;
     } else {

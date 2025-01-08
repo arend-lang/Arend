@@ -40,7 +40,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public abstract class Repl {
-  public static final @NotNull ModuleLocation replModulePath = new ModuleLocation("Repl", true, ModuleLocation.LocationKind.SOURCE, ModulePath.fromString("Repl"));
+  public static final @NotNull ModuleLocation replModulePath = new ModuleLocation("Repl", ModuleLocation.LocationKind.SOURCE, ModulePath.fromString("Repl"));
 
   protected final List<Scope> myMergedScopes = new LinkedList<>();
   private final List<ReplHandler> myHandlers = new ArrayList<>();
@@ -158,8 +158,7 @@ public abstract class Repl {
     var scope = ScopeFactory.forGroup(group, moduleScopeProvider);
     myReplScope.addScope(scope);
     myReplScope.setCurrentLineScope(null);
-    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), null, myErrorReporter)
-        .resolveGroupWithTypes(group, myScope);
+    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), myErrorReporter).resolveGroupWithTypes(group, myScope);
     if (checkErrors()) {
       myMergedScopes.remove(scope);
     } else {
@@ -307,7 +306,7 @@ public abstract class Repl {
   public final @Nullable Concrete.Expression preprocessExpr(@NotNull String text) {
     var expr = parseExpr(text);
     if (expr == null || checkErrors()) return null;
-    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(typechecking.getReferableConverter(), myScope, new ArrayList<>(), myErrorReporter, null), null), myErrorReporter);
+    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(myScope, new ArrayList<>(), myErrorReporter, null), null), myErrorReporter);
     if (checkErrors()) return null;
     return expr;
   }

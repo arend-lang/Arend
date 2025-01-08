@@ -1160,7 +1160,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     }
 
     List<Concrete.ClassElement> elements = new ArrayList<>();
-    Concrete.ClassDefinition result = new Concrete.ClassDefinition(def.getRef(), pair.proj1, pair.proj2, def.isRecord(), false, superClasses, elements);
+    Concrete.ClassDefinition result = new Concrete.ClassDefinition((ConcreteResolvedClassReferable) def.getReferable(), pair.proj1, pair.proj2, def.isRecord(), false, superClasses, elements);
     for (ClassField field : def.getPersonalFields()) {
       elements.add(visitField(field, result));
     }

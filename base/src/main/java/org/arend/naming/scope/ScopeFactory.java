@@ -9,6 +9,8 @@ import org.arend.prelude.Prelude;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.Abstract;
 import org.arend.term.abs.AbstractParameterPattern;
+import org.arend.term.abs.AbstractReferable;
+import org.arend.term.abs.AbstractReference;
 import org.arend.term.group.ChildGroup;
 import org.arend.term.group.Group;
 import org.arend.term.group.Statement;
@@ -167,15 +169,20 @@ public class ScopeFactory {
         return parentScope;
       }
 
+      List<AbstractReference> references = new ArrayList<>();
       List<String> path = new ArrayList<>();
+      Object headData = headRef.getData();
+      references.add(headData instanceof AbstractReference ? (AbstractReference) headData : null);
       path.add(headRef.getReferent().textRepresentation());
       for (Abstract.Reference reference : ((Abstract.LongReference) parentSourceNode).getTailReferences()) {
         if (reference == null) {
           return EmptyScope.INSTANCE;
         }
         if (sourceNode.equals(reference)) {
-          return new LongUnresolvedReference(sourceNode, path).resolveNamespaceWithArgument(parentScope);
+          return new LongUnresolvedReference(sourceNode, references, path).resolveNamespaceWithArgument(parentScope);
         }
+        Object refData = reference.getData();
+        references.add(refData instanceof AbstractReferable ? (AbstractReference) refData : null);
         path.add(reference.getReferent().textRepresentation());
       }
 

@@ -152,12 +152,12 @@ public class ModuleDeserialization {
           if (fieldProto == null || absField == null) {
             throw new DeserializationException("Cannot locate '" + fieldRef + "'");
           }
-          if (!(absField instanceof TCFieldReferable)) {
+          if (!(absField instanceof ConcreteClassFieldReferable)) {
             throw new DeserializationException("Incorrect field '" + absField.textRepresentation() + "'");
           }
 
           assert def instanceof ClassDefinition;
-          ClassField res = new ClassField((TCFieldReferable) absField, (ClassDefinition) def);
+          ClassField res = new ClassField((ConcreteClassFieldReferable) absField, (ClassDefinition) def);
           ((ClassDefinition) def).addPersonalField(res);
           ((TCFieldReferable) absField).setTypechecked(res);
           myCallTargetProvider.putCallTarget(fieldProto.getReferable().getIndex(), res);
@@ -359,7 +359,7 @@ public class ModuleDeserialization {
         for (DefinitionProtos.Definition.ClassData.Field fieldProto : defProto.getClass_().getPersonalFieldList()) {
           DefinitionProtos.Referable fieldReferable = fieldProto.getReferable();
           if (fillInternalDefinitions || fieldProto.getIsRealParameter()) {
-            TCFieldReferable absField = new FieldReferableImpl(AccessModifier.PUBLIC, readPrecedence(fieldReferable.getPrecedence()), fieldReferable.getName(), fieldProto.getIsExplicit(), fieldProto.getIsParameter(), fieldProto.getIsRealParameter(), referable);
+            ConcreteClassFieldReferable absField = new FieldReferableImpl(AccessModifier.PUBLIC, readPrecedence(fieldReferable.getPrecedence()), fieldReferable.getName(), fieldProto.getIsExplicit(), fieldProto.getIsParameter(), fieldProto.getIsRealParameter(), referable);
             ClassField res = new ClassField(absField, classDef);
             classDef.addPersonalField(res);
             absField.setTypechecked(res);

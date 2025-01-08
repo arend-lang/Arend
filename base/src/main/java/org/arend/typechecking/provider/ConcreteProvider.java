@@ -6,8 +6,11 @@ import org.jetbrains.annotations.Nullable;
 
 public interface ConcreteProvider {
   @Nullable Concrete.GeneralDefinition getConcrete(GlobalReferable referable);
-  @Nullable Concrete.FunctionDefinition getConcreteFunction(GlobalReferable referable);
-  @Nullable Concrete.FunctionDefinition getConcreteInstance(GlobalReferable referable);
-  @Nullable Concrete.ClassDefinition getConcreteClass(GlobalReferable referable);
-  @Nullable Concrete.DataDefinition getConcreteData(GlobalReferable referable);
+
+  ConcreteProvider EMPTY = new ConcreteProvider() {
+    @Override
+    public @Nullable Concrete.GeneralDefinition getConcrete(GlobalReferable referable) {
+      return null;
+    }
+  };
 }

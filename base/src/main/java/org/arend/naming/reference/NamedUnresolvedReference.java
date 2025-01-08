@@ -1,6 +1,7 @@
 package org.arend.naming.reference;
 
 import org.arend.naming.scope.Scope;
+import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -90,8 +91,18 @@ public class NamedUnresolvedReference implements UnresolvedReference {
   }
 
   @Override
+  public @NotNull List<AbstractReference> getReferenceList() {
+    return Collections.singletonList(myData instanceof AbstractReference ? (AbstractReference) myData : null);
+  }
+
+  @Override
   public @NotNull List<String> getPath() {
     return Collections.singletonList(myName);
+  }
+
+  @Override
+  public NamedUnresolvedReference copy() {
+    return new NamedUnresolvedReference(myData, myName);
   }
 
   @Override

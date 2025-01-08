@@ -8,6 +8,7 @@ import org.arend.ext.prettyprinting.doc.LineDoc;
 import org.arend.ext.reference.Precedence;
 import org.arend.naming.reference.ModuleReferable;
 import org.arend.naming.scope.Scope;
+import org.arend.term.abs.AbstractReference;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 public interface NamespaceCommand extends PrettyPrintable {
   enum Kind { OPEN, IMPORT }
   @NotNull Kind getKind();
+  @NotNull List<AbstractReference> getReferenceList();
   @NotNull List<String> getPath();
   boolean isUsing();
   @NotNull Collection<? extends NameRenaming> getOpenedReferences();

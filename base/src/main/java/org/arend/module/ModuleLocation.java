@@ -9,30 +9,23 @@ public class ModuleLocation {
   public enum LocationKind { SOURCE, TEST, GENERATED }
 
   private final String myLibraryName;
-  private final boolean myExternalLibrary;
   private final LocationKind myLocationKind;
   private final ModulePath myModulePath;
 
-  public ModuleLocation(String libraryName, boolean isExternalLibrary, LocationKind locationKind, ModulePath modulePath) {
+  public ModuleLocation(String libraryName, LocationKind locationKind, ModulePath modulePath) {
     myLibraryName = libraryName;
-    myExternalLibrary = isExternalLibrary;
     myLocationKind = locationKind;
     myModulePath = modulePath;
   }
 
   public ModuleLocation(Library library, LocationKind locationKind, ModulePath modulePath) {
     myLibraryName = library.getName();
-    myExternalLibrary = library.isExternal();
     myLocationKind = locationKind;
     myModulePath = modulePath;
   }
 
   public String getLibraryName() {
     return myLibraryName;
-  }
-
-  public boolean isExternalLibrary() {
-    return myExternalLibrary;
   }
 
   public LocationKind getLocationKind() {

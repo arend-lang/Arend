@@ -3,6 +3,7 @@ package org.arend.term.group;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.ParameterReferable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
@@ -47,5 +48,21 @@ public interface Group {
     for (Group subgroup : getDynamicSubgroups()) {
       subgroup.traverseGroup(consumer);
     }
+  }
+
+  default @Nullable GroupPath.Element getGroupPathElement(Group parent) {
+    List<? extends Statement> statements = parent.getStatements();
+    for (int i = 0; i < statements.size(); i++) {
+      if (equals(statements.get(i).getGroup())) {
+        return new GroupPath.Element(false, i);
+      }
+    }
+    List<? extends Group> subgroups = parent.getDynamicSubgroups();
+    for (int i = 0; i < subgroups.size(); i++) {
+      if (equals(subgroups.get(i))) {
+        return new GroupPath.Element(true, i);
+      }
+    }
+    return null;
   }
 }

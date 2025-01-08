@@ -7,7 +7,7 @@ import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.core.subst.SubstVisitor;
 import org.arend.ext.core.definition.CoreClassField;
-import org.arend.naming.reference.TCFieldReferable;
+import org.arend.naming.reference.ConcreteClassFieldReferable;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -23,12 +23,12 @@ public class ClassField extends CallableDefinition implements CoreClassField {
   private boolean myHideable;
   private UniverseKind myUniverseKind = UniverseKind.NO_UNIVERSES;
 
-  public ClassField(TCFieldReferable referable, ClassDefinition parentClass) {
+  public ClassField(ConcreteClassFieldReferable referable, ClassDefinition parentClass) {
     super(referable, TypeCheckingStatus.NEEDS_TYPE_CHECKING);
     myParentClass = parentClass;
   }
 
-  public ClassField(TCFieldReferable referable, ClassDefinition parentClass, PiExpression type, Expression typeLevel) {
+  public ClassField(ConcreteClassFieldReferable referable, ClassDefinition parentClass, PiExpression type, Expression typeLevel) {
     super(referable, TypeCheckingStatus.NO_ERRORS);
     myParentClass = parentClass;
     myType = type;
@@ -36,8 +36,8 @@ public class ClassField extends CallableDefinition implements CoreClassField {
   }
 
   @Override
-  public TCFieldReferable getReferable() {
-    return (TCFieldReferable) super.getReferable();
+  public ConcreteClassFieldReferable getReferable() {
+    return (ConcreteClassFieldReferable) super.getReferable();
   }
 
   @Override
