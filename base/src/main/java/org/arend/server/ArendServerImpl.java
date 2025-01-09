@@ -36,7 +36,7 @@ public class ArendServerImpl implements ArendServer {
   private final SimpleModuleScopeProvider myPreludeModuleScopeProvider = new SimpleModuleScopeProvider();
   private final Map<String, Pair<Long, List<String>>> myLibraries = new ConcurrentHashMap<>();
   private final Map<ModuleLocation, Pair<Long, ConcreteGroup>> myGroups = new ConcurrentHashMap<>();
-  private final ResolverCache myResolverCache = new ResolverCache();
+  private final ResolverCache myResolverCache = new ResolverCache(this, myLogger);
 
   public ArendServerImpl(@NotNull ArendServerRequester requester, boolean withLogging, @Nullable String logFile) {
     myRequester = requester;

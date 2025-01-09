@@ -1,26 +1,42 @@
 package org.arend.server;
 
+import org.arend.error.DummyErrorReporter;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.TCDefReferable;
+import org.arend.naming.resolving.ResolverListener;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.LexicalScope;
 import org.arend.naming.scope.Scope;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.dfs.MapDFS;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Handler;
+import java.util.logging.Logger;
 
 public class ResolverCache {
+  private final ArendServer myServer;
+  private final Logger myLogger = Logger.getLogger(ResolverCache.class.getName());
   private final Map<ModuleLocation, Scope> myModuleScopes = new ConcurrentHashMap<>();
   private final Map<AbstractReference, AbstractReferable> myResolverCache = Collections.synchronizedMap(new WeakHashMap<>());
   private final Map<ModuleLocation, Set<AbstractReference>> myModuleReferences = new ConcurrentHashMap<>();
   private final Map<ModuleLocation, List<ModuleLocation>> myDirectDependencies = new ConcurrentHashMap<>();
   private final Map<ModuleLocation, Set<ModuleLocation>> myReverseDependencies = new ConcurrentHashMap<>();
+
+  public ResolverCache(ArendServer server, Logger originalLogger) {
+    myServer = server;
+    myLogger.setLevel(originalLogger.getLevel());
+    myLogger.setUseParentHandlers(originalLogger.getUseParentHandlers());
+    for (Handler handler : originalLogger.getHandlers()) {
+      myLogger.addHandler(handler);
+    }
+  }
 
   public void clearLibrary(String libraryName) {
     for (var it = myModuleReferences.entrySet().iterator(); it.hasNext(); ) {
@@ -100,8 +116,26 @@ public class ResolverCache {
   }
 
   public @Nullable AbstractReferable resolveReference(@NotNull AbstractReference reference) {
-    // TODO[server2]: Resolve modules if cache is null.
     AbstractReferable result = myResolverCache.get(reference);
+    if (result == TCDefReferable.NULL_REFERABLE) return null;
+    if (result != null) return result;
+
+    myLogger.info("Reference " + reference + " is not in cache");
+
+    ModuleLocation module = reference.getReferenceModule();
+    if (module == null) {
+      myLogger.warning("Cannot determine module of " + reference);
+      return null;
+    }
+
+    myServer.resolveModules(Collections.singletonList(module), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
+    result = myResolverCache.get(reference);
+    if (result == null) {
+      myLogger.warning("Cannot resolve reference " + reference);
+      return null;
+    }
+
+    myLogger.info("Reference " + reference + " is added to cache");
     return result == TCDefReferable.NULL_REFERABLE ? null : result;
   }
 }

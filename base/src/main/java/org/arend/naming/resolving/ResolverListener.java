@@ -23,4 +23,6 @@ public interface ResolverListener {
 
   default void beforeDefinitionResolved(Concrete.ResolvableDefinition definition) {}
   default void definitionResolved(Concrete.ResolvableDefinition definition) {}
+
+  ResolverListener EMPTY = new ResolverListener() {};
 }
