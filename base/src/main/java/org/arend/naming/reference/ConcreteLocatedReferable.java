@@ -8,6 +8,7 @@ import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+// TODO[server2]: Replace this class with TypedLocatedReferable
 public class ConcreteLocatedReferable extends LocatedReferableImpl implements DataContainer, TypedReferable {
   private final Object myData;
   private final String myAliasName;
@@ -57,7 +58,6 @@ public class ConcreteLocatedReferable extends LocatedReferableImpl implements Da
   }
 
   public void setDefinition(Concrete.ReferableDefinition definition) {
-    assert myDefinition == null;
     myDefinition = definition;
   }
 

@@ -96,8 +96,6 @@ public class ResolverCache {
 
   public void updateModule(ModuleLocation module, ConcreteGroup group) {
     clearModule(module);
-
-    // TODO[server2]: DefinitionResolveNameVisitor visitor = new DefinitionResolveNameVisitor(ConcreteProvider.EMPTY, true, DummyErrorReporter.INSTANCE, null);
     myModuleScopes.put(module, CachingScope.make(LexicalScope.opened(group)));
   }
 

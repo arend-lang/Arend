@@ -1,5 +1,6 @@
 package org.arend.server;
 
+import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
@@ -19,6 +20,7 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
+import org.arend.term.group.Group;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
 import org.arend.util.ComputationInterruptedException;
@@ -31,11 +33,13 @@ import java.util.function.Supplier;
 import java.util.logging.*;
 
 public class ArendServerImpl implements ArendServer {
+  private record GroupData(long timestamp, ConcreteGroup group) {}
+
   private final ArendServerRequester myRequester;
   private final Logger myLogger = Logger.getLogger(ArendServerImpl.class.getName());
   private final SimpleModuleScopeProvider myPreludeModuleScopeProvider = new SimpleModuleScopeProvider();
   private final Map<String, Pair<Long, List<String>>> myLibraries = new ConcurrentHashMap<>();
-  private final Map<ModuleLocation, Pair<Long, ConcreteGroup>> myGroups = new ConcurrentHashMap<>();
+  private final Map<ModuleLocation, GroupData> myGroups = new ConcurrentHashMap<>();
   private final ResolverCache myResolverCache = new ResolverCache(this, myLogger);
 
   public ArendServerImpl(@NotNull ArendServerRequester requester, boolean withLogging, @Nullable String logFile) {
@@ -97,35 +101,61 @@ public class ArendServerImpl implements ArendServer {
 
     myGroups.compute(module, (k,prevPair) -> {
       if (prevPair != null) {
-        myLogger.warning("Read-only module '" + module + "' is already added" + (prevPair.proj1 == null ? "" : " as a writable module"));
+        myLogger.warning("Read-only module '" + module + "' is already added" + (prevPair.timestamp < 0 ? "" : " as a writable module"));
         return prevPair;
       }
       myLogger.info(() -> "Added a read-only module '" + module + "'");
-      return new Pair<>(null, group);
+      return new GroupData(-1, group);
     });
   }
 
   @Override
   public void updateModule(long modificationStamp, @NotNull ModuleLocation module, @NotNull Supplier<ConcreteGroup> supplier) {
     synchronized (myGroups) {
-      myGroups.compute(module, (k, prevPair) -> {
-        if (prevPair != null && prevPair.proj1 >= modificationStamp) {
-          myLogger.fine(() -> "Module '" + module + "' is not updated; previous timestamp " + prevPair.proj1 + " >= new timestamp " + modificationStamp);
-          return prevPair;
+      boolean[] updated = new boolean[1];
+      GroupData newData = myGroups.compute(module, (k, prevData) -> {
+        if (prevData != null) {
+          if (prevData.timestamp < 0) {
+            myLogger.severe("Read-only module '" + module + "' cannot be updated");
+            return prevData;
+          } else if (prevData.timestamp >= modificationStamp) {
+            myLogger.fine(() -> "Module '" + module + "' is not updated; previous timestamp " + prevData.timestamp + " >= new timestamp " + modificationStamp);
+            return prevData;
+          }
         }
 
         ConcreteGroup group = supplier.get();
         if (group == null) {
           myLogger.info(() -> "Module '" + module + "' is not updated");
-          return prevPair;
+          return prevData;
         }
 
+        updated[0] = true;
         myResolverCache.updateModule(module, group);
 
-        myLogger.info(() -> prevPair == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
-        return new Pair<>(modificationStamp, group);
+        myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
+        return new GroupData(modificationStamp, group);
       });
+
+      if (updated[0]) {
+        new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(newData.group)), true, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY).resolveGroup(newData.group, getGroupScope(module, newData.group));
+      }
     }
+  }
+
+  private static @NotNull Map<GlobalReferable, Concrete.GeneralDefinition> updateDefinitions(Group group) {
+    Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
+    group.traverseGroup(subgroup -> {
+      if (subgroup instanceof ConcreteGroup cGroup) {
+        Concrete.ResolvableDefinition definition = cGroup.definition();
+        if (definition instanceof Concrete.ReferableDefinition && cGroup.referable() instanceof ConcreteLocatedReferable referable) {
+          definition = definition.accept(new ReplaceDataVisitor(true), null);
+          defMap.put(referable, definition);
+          referable.setDefinition((Concrete.ReferableDefinition) definition);
+        }
+      }
+    });
+    return defMap;
   }
 
   @Override
@@ -152,12 +182,24 @@ public class ArendServerImpl implements ArendServer {
         myRequester.requestModuleUpdate(this, location);
         var modulePair = myGroups.get(location);
         if (modulePair != null) {
-          return withReadOnly || modulePair.proj1 != null ? location : null;
+          return withReadOnly || modulePair.timestamp >= 0 ? location : null;
         }
       }
     }
 
     return null;
+  }
+
+  private Scope getGroupScope(ModuleLocation module, Group group) {
+    return CachingScope.make(ScopeFactory.forGroup(group, new ModuleScopeProvider() {
+      @Override
+      public @Nullable Scope forModule(@NotNull ModulePath modulePath) {
+        Scope result = myPreludeModuleScopeProvider.forModule(modulePath);
+        if (result != null) return result;
+        ModuleLocation found = findDependency(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+        return found == null ? null : myResolverCache.getModuleScope(found);
+      }
+    }));
   }
 
   @Override
@@ -176,9 +218,9 @@ public class ArendServerImpl implements ArendServer {
         indicator.checkCanceled();
         ModuleLocation module = toVisit.pop();
         if (!visited.add(module)) continue;
-        Pair<Long, ConcreteGroup> pair = myGroups.get(module);
-        if (pair != null) {
-          for (ConcreteStatement statement : pair.proj2.statements()) {
+        GroupData groupData = myGroups.get(module);
+        if (groupData != null) {
+          for (ConcreteStatement statement : groupData.group.statements()) {
             indicator.checkCanceled();
             if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
               ModuleLocation dependency = findDependency(new ModulePath(statement.command().getPath()), module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
@@ -191,10 +233,10 @@ public class ArendServerImpl implements ArendServer {
       Map<ModuleLocation, Long> moduleVersions = new HashMap<>();
       Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
       for (ModuleLocation module : modules) {
-        var pair = myGroups.get(module);
-        if (pair != null) {
-          moduleVersions.put(module, pair.proj1);
-          pair.proj2.traverseGroup(group -> {
+        GroupData groupData = myGroups.get(module);
+        if (groupData != null) {
+          moduleVersions.put(module, groupData.timestamp);
+          groupData.group.traverseGroup(group -> {
             if (group instanceof ConcreteGroup cGroup) {
               Concrete.ResolvableDefinition definition = cGroup.definition();
               if (definition != null) {
@@ -209,18 +251,10 @@ public class ArendServerImpl implements ArendServer {
       DefinitionResolveNameVisitor visitor = new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), false, errorReporter, resolverListener);
       for (ModuleLocation module : modules) {
         indicator.checkCanceled();
-        var pair = myGroups.get(module);
-        if (pair != null) {
+        GroupData groupData = myGroups.get(module);
+        if (groupData != null) {
           resolverListener.moduleLocation = module;
-          visitor.resolveGroupWithTypes(pair.proj2, CachingScope.make(ScopeFactory.forGroup(pair.proj2, new ModuleScopeProvider() {
-            @Override
-            public @Nullable Scope forModule(@NotNull ModulePath modulePath) {
-              Scope result = myPreludeModuleScopeProvider.forModule(modulePath);
-              if (result != null) return result;
-              ModuleLocation found = findDependency(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
-              return found == null ? null : myResolverCache.getModuleScope(found);
-            }
-          })));
+          visitor.resolveGroupWithTypes(groupData.group, getGroupScope(module, groupData.group));
         }
 
         myLogger.info(() -> "Module '" + module + "' is resolved");
@@ -229,8 +263,8 @@ public class ArendServerImpl implements ArendServer {
       synchronized (myGroups) {
         for (ModuleLocation module : modules) {
           indicator.checkCanceled();
-          var pair = myGroups.get(module);
-          if (pair != null && (pair.proj1 == null || pair.proj1.equals(moduleVersions.get(module)))) {
+          GroupData groupData = myGroups.get(module);
+          if (groupData != null && (groupData.timestamp < 0 || groupData.timestamp == moduleVersions.get(module))) {
             CollectingResolverListener.ModuleCacheStructure cache = resolverListener.getCacheStructure(module);
             if (cache != null) {
               for (CollectingResolverListener.ResolvedReference resolvedReference : cache.cache()) {
@@ -260,8 +294,8 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public @Nullable ConcreteGroup getGroup(@NotNull ModuleLocation module) {
-    var pair = myGroups.get(module);
-    return pair == null ? null : pair.proj2;
+    GroupData groupData = myGroups.get(module);
+    return groupData == null ? null : groupData.group;
   }
 
   @Override
