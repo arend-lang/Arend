@@ -1,6 +1,7 @@
 package org.arend.server;
 
 import org.arend.module.ModuleLocation;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.LexicalScope;
 import org.arend.naming.scope.Scope;
@@ -99,8 +100,8 @@ public class ResolverCache {
   }
 
   public @Nullable AbstractReferable resolveReference(@NotNull AbstractReference reference) {
-    // TODO[server2]: 1. Store unresolved references in myResolverCache as NULL_REFERABLE.
-    //                2. Resolve modules if cache is null.
-    return myResolverCache.get(reference);
+    // TODO[server2]: Resolve modules if cache is null.
+    AbstractReferable result = myResolverCache.get(reference);
+    return result == TCDefReferable.NULL_REFERABLE ? null : result;
   }
 }

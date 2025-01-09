@@ -44,17 +44,21 @@ public class CollectingResolverListener extends DelegateResolverListener {
           AbstractReferable abstractRef = resolvedRefs.get(i) == null ? null : resolvedRefs.get(i).getAbstractReferable();
           if (abstractRef != null) {
             myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
-              .addReference(referenceList.get(i), abstractRef);
+              .addReference(referenceList.get(i), abstractRef instanceof ErrorReference ? TCDefReferable.NULL_REFERABLE : abstractRef);
           }
         }
+      }
+      for (int i = resolvedRefs.size(); i < referenceList.size(); i++) {
+        myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
+          .addReference(referenceList.get(i), TCDefReferable.NULL_REFERABLE);
       }
     } else {
       Object data = reference.getData();
       if (data instanceof AbstractReference) {
         AbstractReferable abstractRef = referable.getAbstractReferable();
-        if (abstractRef != null && !(abstractRef instanceof ErrorReference)) {
+        if (abstractRef != null) {
           myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
-            .addReference((AbstractReference) data, abstractRef);
+            .addReference((AbstractReference) data, abstractRef instanceof ErrorReference ? TCDefReferable.NULL_REFERABLE : abstractRef);
         }
       }
     }
