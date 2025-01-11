@@ -2,6 +2,9 @@ package org.arend.server;
 
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
+import org.arend.ext.error.GeneralError;
+import org.arend.ext.error.ListErrorReporter;
+import org.arend.ext.error.MergingErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
 import org.arend.module.ModuleLocation;
@@ -41,6 +44,7 @@ public class ArendServerImpl implements ArendServer {
   private final Map<String, Pair<Long, List<String>>> myLibraries = new ConcurrentHashMap<>();
   private final Map<ModuleLocation, GroupData> myGroups = new ConcurrentHashMap<>();
   private final ResolverCache myResolverCache = new ResolverCache(this, myLogger);
+  private final ErrorService myErrorService = new ErrorService();
 
   public ArendServerImpl(@NotNull ArendServerRequester requester, boolean withLogging, @Nullable String logFile) {
     myRequester = requester;
@@ -74,7 +78,7 @@ public class ArendServerImpl implements ArendServer {
         }
       }
 
-      synchronized (myGroups) {
+      synchronized (this) {
         myResolverCache.clearLibrary(name);
       }
 
@@ -111,7 +115,7 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public void updateModule(long modificationStamp, @NotNull ModuleLocation module, @NotNull Supplier<ConcreteGroup> supplier) {
-    synchronized (myGroups) {
+    synchronized (this) {
       boolean[] updated = new boolean[1];
       GroupData newData = myGroups.compute(module, (k, prevData) -> {
         if (prevData != null) {
@@ -248,19 +252,21 @@ public class ArendServerImpl implements ArendServer {
       }
 
       CollectingResolverListener resolverListener = new CollectingResolverListener(listener);
-      DefinitionResolveNameVisitor visitor = new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), false, errorReporter, resolverListener);
+      Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
       for (ModuleLocation module : modules) {
         indicator.checkCanceled();
         GroupData groupData = myGroups.get(module);
         if (groupData != null) {
           resolverListener.moduleLocation = module;
-          visitor.resolveGroupWithTypes(groupData.group, getGroupScope(module, groupData.group));
+          ListErrorReporter listErrorReporter = new ListErrorReporter();
+          errorReporterMap.put(module, listErrorReporter);
+          new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), false, new MergingErrorReporter(errorReporter, listErrorReporter), resolverListener).resolveGroupWithTypes(groupData.group, getGroupScope(module, groupData.group));
         }
 
         myLogger.info(() -> "Module '" + module + "' is resolved");
       }
 
-      synchronized (myGroups) {
+      synchronized (this) {
         for (ModuleLocation module : modules) {
           indicator.checkCanceled();
           GroupData groupData = myGroups.get(module);
@@ -277,13 +283,17 @@ public class ArendServerImpl implements ArendServer {
                 }
               }
             }
+            ListErrorReporter reporter = errorReporterMap.get(module);
+            if (reporter != null) {
+              myErrorService.setErrors(module, reporter.getErrorList());
+            }
           }
         }
       }
 
       myLogger.info(() -> "End resolving modules " + modules);
     } catch (ComputationInterruptedException e) {
-      myLogger.info(() -> "Resolving of " + modules + " is interrupted");
+      myLogger.info(() -> "Resolving of modules " + modules + " is interrupted");
     }
   }
 
@@ -301,5 +311,15 @@ public class ArendServerImpl implements ArendServer {
   @Override
   public @Nullable AbstractReferable resolveReference(@NotNull AbstractReference reference) {
     return myResolverCache.resolveReference(reference);
+  }
+
+  @Override
+  public @NotNull List<GeneralError> getErrorList(@NotNull ModuleLocation module) {
+    return myErrorService.getErrorList(module);
+  }
+
+  @Override
+  public @NotNull Collection<ModuleLocation> getModulesWithErrors() {
+    return myErrorService.getModulesWithErrors();
   }
 }

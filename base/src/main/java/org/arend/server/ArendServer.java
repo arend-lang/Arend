@@ -1,6 +1,7 @@
 package org.arend.server;
 
 import org.arend.ext.error.ErrorReporter;
+import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.resolving.ResolverListener;
 import org.arend.term.abs.AbstractReferable;
@@ -10,6 +11,7 @@ import org.arend.typechecking.computation.CancellationIndicator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -57,9 +59,7 @@ public interface ArendServer {
   void removeModule(@NotNull ModuleLocation module);
 
   /**
-   * Resolves the content of {@param modules} and their dependencies.
-   *
-   * @param modules             the modules to be resolved.
+   * Resolves the content of {@param modules} and updates the state of the server.
    */
   void resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener);
 
@@ -77,4 +77,14 @@ public interface ArendServer {
    * @return either the data of some element, or {@link ModuleLocation}.
    */
   @Nullable AbstractReferable resolveReference(@NotNull AbstractReference reference);
+
+  /**
+   * @return the list of errors corresponding to the given module.
+   */
+  @NotNull List<GeneralError> getErrorList(@NotNull ModuleLocation module);
+
+  /**
+   * @return the collection of modules with errors.
+   */
+  @NotNull Collection<ModuleLocation> getModulesWithErrors();
 }
