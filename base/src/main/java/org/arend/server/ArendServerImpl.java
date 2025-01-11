@@ -98,6 +98,11 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
+  public boolean isLibraryLoaded(@NotNull String name) {
+    return myLibraries.containsKey(name);
+  }
+
+  @Override
   public void addReadOnlyModule(@NotNull ModuleLocation module, @NotNull ConcreteGroup group) {
     if (module.getLibraryName().equals(Prelude.LIBRARY_NAME)) {
       myPreludeModuleScopeProvider.addModule(module.getModulePath(), CachingScope.make(LexicalScope.opened(group)));
@@ -208,6 +213,7 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public void resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener) {
+    if (modules.isEmpty()) return;
     try {
       myLogger.info(() -> "Begin resolving modules " + modules);
 
@@ -262,7 +268,7 @@ public class ArendServerImpl implements ArendServer {
           errorReporterMap.put(module, listErrorReporter);
           new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), false, new MergingErrorReporter(errorReporter, listErrorReporter), resolverListener).resolveGroupWithTypes(groupData.group, getGroupScope(module, groupData.group));
         }
-
+        resolverListener.moduleResolved(module);
         myLogger.info(() -> "Module '" + module + "' is resolved");
       }
 
@@ -295,6 +301,11 @@ public class ArendServerImpl implements ArendServer {
     } catch (ComputationInterruptedException e) {
       myLogger.info(() -> "Resolving of modules " + modules + " is interrupted");
     }
+  }
+
+  @Override
+  public @NotNull Collection<? extends ModuleLocation> getModules() {
+    return myGroups.keySet();
   }
 
   @Override

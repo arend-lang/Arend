@@ -132,7 +132,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     var term = def.getTerm();
     var body = term != null ? term.accept(this, null) : null;
     LocatedReferable origRef = def.getReferable();
-    MetaReferable referable = new MetaReferable(origRef.getAccessModifier(), origRef.getPrecedence(), origRef.getRefName(), origRef.getAliasPrecedence(), origRef.getAliasName(), origRef.getDescription(), null, null, origRef.getLocatedReferableParent());
+    MetaReferable referable = new MetaReferable(origRef.getAccessModifier(), origRef.getPrecedence(), origRef.getRefName(), origRef.getAliasPrecedence(), origRef.getAliasName(), origRef.getDescription(), null, null, convertReferable(origRef.getLocatedReferableParent()));
     var definition = new DefinableMetaDefinition(referable, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), parameters, body);
     if (term != null) { // if term == null, it may be a generated meta, in which case we shouldn't replace its definition
       referable.setDefinition(definition);

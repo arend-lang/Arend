@@ -1,5 +1,6 @@
 package org.arend.naming.resolving;
 
+import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.scope.Scope;
 import org.arend.term.NameRenaming;
@@ -23,6 +24,7 @@ public interface ResolverListener {
 
   default void beforeDefinitionResolved(Concrete.ResolvableDefinition definition) {}
   default void definitionResolved(Concrete.ResolvableDefinition definition) {}
+  default void moduleResolved(ModuleLocation module) {}
 
   ResolverListener EMPTY = new ResolverListener() {};
 }

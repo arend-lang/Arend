@@ -18,7 +18,7 @@ import java.util.function.Supplier;
 
 public interface ArendServer {
   /**
-   * Adds or updates the library dependencies.
+   * Adds or updates a library.
    *
    * @param modificationStamp   tracks the version of the library. If the previous modification stamp is
    *                            greater than {@param modificationStamp}, the library will not be updated.
@@ -34,6 +34,11 @@ public interface ArendServer {
    * @param name    the name of the library.
    */
   void removeLibrary(@NotNull String name);
+
+  /**
+   * @return {@code true} if the library was loaded; {@code false} otherwise.
+   */
+  boolean isLibraryLoaded(@NotNull String name);
 
   /**
    * Adds a read-only module.
@@ -62,6 +67,11 @@ public interface ArendServer {
    * Resolves the content of {@param modules} and updates the state of the server.
    */
   void resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener);
+
+  /**
+   * Returns the set of registered modules.
+   */
+  @NotNull Collection<? extends ModuleLocation> getModules();
 
   /**
    * @return the set of registered libraries.

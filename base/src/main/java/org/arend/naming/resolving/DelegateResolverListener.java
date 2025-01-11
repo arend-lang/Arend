@@ -1,5 +1,6 @@
 package org.arend.naming.resolving;
 
+import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.scope.Scope;
 import org.arend.term.NameRenaming;
@@ -74,5 +75,10 @@ public class DelegateResolverListener implements ResolverListener {
   @Override
   public void definitionResolved(Concrete.ResolvableDefinition definition) {
     myResolverListener.definitionResolved(definition);
+  }
+
+  @Override
+  public void moduleResolved(ModuleLocation module) {
+    myResolverListener.moduleResolved(module);
   }
 }
