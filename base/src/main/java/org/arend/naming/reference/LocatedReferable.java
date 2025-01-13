@@ -42,6 +42,17 @@ public interface LocatedReferable extends GlobalReferable {
       return location;
     }
 
+    public static ModuleLocation getAncestors(LocatedReferable referable, List<LocatedReferable> ancestors) {
+      LocatedReferable parent = referable.getLocatedReferableParent();
+      if (parent == null) {
+        return referable.getLocation();
+      }
+
+      ModuleLocation location = getAncestors(parent, ancestors);
+      ancestors.add(referable);
+      return location;
+    }
+
     public static Scope resolveNamespace(LocatedReferable locatedReferable, ModuleScopeProvider moduleScopeProvider) {
       LocatedReferable parent = locatedReferable.getLocatedReferableParent();
       if (parent == null) {

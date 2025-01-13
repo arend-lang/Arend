@@ -6,7 +6,6 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.error.MergingErrorReporter;
 import org.arend.ext.module.ModulePath;
-import org.arend.ext.util.Pair;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.module.scopeprovider.SimpleModuleScopeProvider;
@@ -38,16 +37,18 @@ import java.util.logging.*;
 public class ArendServerImpl implements ArendServer {
   private record GroupData(long timestamp, ConcreteGroup group) {}
 
-  private final ArendServerRequester myRequester;
   private final Logger myLogger = Logger.getLogger(ArendServerImpl.class.getName());
+  private final ArendServerRequester myRequester;
   private final SimpleModuleScopeProvider myPreludeModuleScopeProvider = new SimpleModuleScopeProvider();
-  private final Map<String, Pair<Long, List<String>>> myLibraries = new ConcurrentHashMap<>();
   private final Map<ModuleLocation, GroupData> myGroups = new ConcurrentHashMap<>();
-  private final ResolverCache myResolverCache = new ResolverCache(this, myLogger);
+  private final LibraryService myLibraryService;
+  private final ResolverCache myResolverCache;
   private final ErrorService myErrorService = new ErrorService();
+  private final boolean myCacheReferences;
 
-  public ArendServerImpl(@NotNull ArendServerRequester requester, boolean withLogging, @Nullable String logFile) {
+  public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging, @Nullable String logFile) {
     myRequester = requester;
+    myCacheReferences = cacheReferences;
     myLogger.setLevel(withLogging ? Level.INFO : Level.OFF);
     myLogger.setUseParentHandlers(false);
     if (logFile != null) {
@@ -62,35 +63,31 @@ public class ArendServerImpl implements ArendServer {
     } else {
       myLogger.addHandler(new ConsoleHandler());
     }
+    myLibraryService = new LibraryService(this);
+    myResolverCache = new ResolverCache(this);
+  }
+
+  void copyLogger(Logger to) {
+    to.setLevel(myLogger.getLevel());
+    to.setUseParentHandlers(myLogger.getUseParentHandlers());
+    for (Handler handler : myLogger.getHandlers()) {
+      to.addHandler(handler);
+    }
+  }
+
+  ResolverCache getResolverCache() {
+    return myResolverCache;
   }
 
   @Override
-  public void updateLibrary(long modificationStamp, @NotNull String name, @NotNull List<String> dependencies) {
-    myLibraries.compute(name, (k,prevPair) -> {
-      if (prevPair != null) {
-        if (modificationStamp >= 0 && prevPair.proj1 >= modificationStamp) {
-          myLogger.info(() -> "Library '" + name + "' is not updated; previous timestamp " + prevPair.proj1 + " >= new timestamp " + modificationStamp);
-          return prevPair;
-        }
-        if (prevPair.proj2.equals(dependencies)) {
-          myLogger.info(() -> "Library '" + name + "' is not updated; dependencies are the same: " + dependencies);
-          return prevPair;
-        }
-      }
-
-      synchronized (this) {
-        myResolverCache.clearLibrary(name);
-      }
-
-      myLogger.info(() -> "Library '" + name + "' is updated; dependencies: " + dependencies);
-      return new Pair<>(modificationStamp, dependencies);
-    });
+  public void updateLibrary(@NotNull ArendLibrary library, @NotNull ErrorReporter errorReporter) {
+    myLibraryService.updateLibrary(library, errorReporter);
   }
 
   @Override
   public void removeLibrary(@NotNull String name) {
     synchronized (this) {
-      myLibraries.remove(name);
+      myLibraryService.removeLibrary(name);
       myResolverCache.clearLibrary(name);
       myGroups.keySet().removeIf(module -> module.getLibraryName().equals(name));
       myLogger.info(() -> "Library '" + name + "' is removed");
@@ -99,7 +96,7 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public boolean isLibraryLoaded(@NotNull String name) {
-    return myLibraries.containsKey(name);
+    return myLibraryService.isLibraryLoaded(name);
   }
 
   @Override
@@ -108,12 +105,13 @@ public class ArendServerImpl implements ArendServer {
       myPreludeModuleScopeProvider.addModule(module.getModulePath(), CachingScope.make(LexicalScope.opened(group)));
     }
 
-    myGroups.compute(module, (k,prevPair) -> {
+    myGroups.compute(module, (mod,prevPair) -> {
       if (prevPair != null) {
-        myLogger.warning("Read-only module '" + module + "' is already added" + (prevPair.timestamp < 0 ? "" : " as a writable module"));
+        myLogger.warning("Read-only module '" + mod + "' is already added" + (prevPair.timestamp < 0 ? "" : " as a writable module"));
         return prevPair;
       }
-      myLogger.info(() -> "Added a read-only module '" + module + "'");
+      myResolverCache.updateModule(mod, group);
+      myLogger.info(() -> "Added a read-only module '" + mod + "'");
       return new GroupData(-1, group);
     });
   }
@@ -178,8 +176,8 @@ public class ArendServerImpl implements ArendServer {
   private ModuleLocation findDependency(ModulePath modulePath, String fromLibrary, boolean fromTests, boolean withReadOnly) {
     List<String> libraries = new ArrayList<>(3);
     libraries.add(fromLibrary);
-    var pair = myLibraries.get(fromLibrary);
-    if (pair != null) libraries.addAll(pair.proj2);
+    ArendLibraryImpl arendLib = myLibraryService.getLibrary(fromLibrary);
+    if (arendLib != null) libraries.addAll(arendLib.getLibraryDependencies());
     List<ModuleLocation.LocationKind> kinds = new ArrayList<>(3);
     kinds.add(ModuleLocation.LocationKind.SOURCE);
     if (fromTests) kinds.add(ModuleLocation.LocationKind.TEST);
@@ -257,7 +255,7 @@ public class ArendServerImpl implements ArendServer {
         }
       }
 
-      CollectingResolverListener resolverListener = new CollectingResolverListener(listener);
+      CollectingResolverListener resolverListener = new CollectingResolverListener(listener, myCacheReferences);
       Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
       for (ModuleLocation module : modules) {
         indicator.checkCanceled();
@@ -268,7 +266,7 @@ public class ArendServerImpl implements ArendServer {
           errorReporterMap.put(module, listErrorReporter);
           new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), false, new MergingErrorReporter(errorReporter, listErrorReporter), resolverListener).resolveGroupWithTypes(groupData.group, getGroupScope(module, groupData.group));
         }
-        resolverListener.moduleResolved(module);
+        listener.moduleResolved(module);
         myLogger.info(() -> "Module '" + module + "' is resolved");
       }
 
@@ -310,7 +308,7 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public @NotNull Set<String> getLibraries() {
-    return myLibraries.keySet();
+    return myLibraryService.getLibraries();
   }
 
   @Override

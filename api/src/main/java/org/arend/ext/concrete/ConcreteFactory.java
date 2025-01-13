@@ -6,7 +6,9 @@ import org.arend.ext.concrete.pattern.ConcretePattern;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.error.GeneralError;
+import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.ArendRef;
+import org.arend.ext.reference.MetaRef;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.GoalSolver;
 import org.arend.ext.typechecking.TypedExpression;
@@ -78,12 +80,23 @@ public interface ConcreteFactory {
   @NotNull ConcreteClassElement override(@NotNull ArendRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, @NotNull ConcreteExpression resultType, @Nullable ConcreteExpression resultTypeLevel);
   @NotNull ConcreteLevelParameters levelParameters(boolean isPLevels, @NotNull List<String> names, boolean isIncreasing);
 
+  @NotNull ArendRef moduleRef(@NotNull ModulePath modulePath);
   @NotNull ArendRef local(@NotNull String name);
   @NotNull ArendRef localDeclaration(@NotNull ArendRef ref);
   @NotNull ArendRef global(@NotNull String name, @NotNull Precedence precedence);
   @NotNull ArendRef global(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec);
   @NotNull ArendRef classRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec);
   @NotNull ArendRef fieldRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec, boolean isExplicit, boolean isParameter);
+  @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec, @NotNull String description);
+
+  default @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @NotNull String description) {
+    return metaRef(parent, name, precedence, null, null, description);
+  }
+
+  default @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull String description) {
+    return metaRef(parent, name, Precedence.DEFAULT, null, null, description);
+  }
+
   @NotNull ConcreteParameter param(boolean explicit, @Nullable ArendRef ref);
   @NotNull ConcreteParameter param(boolean explicit, @NotNull Collection<? extends ArendRef> refs, @NotNull ConcreteExpression type);
   @NotNull ConcreteParameter param(boolean explicit, @NotNull ConcreteExpression type);

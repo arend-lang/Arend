@@ -2,108 +2,84 @@ package org.arend.extImpl;
 
 import org.arend.ext.DefinitionContributor;
 import org.arend.ext.concrete.definition.ConcreteDefinition;
-import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.LongName;
-import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.MetaRef;
-import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.MetaResolver;
-import org.arend.library.Library;
-import org.arend.library.error.LibraryError;
 import org.arend.module.ModuleLocation;
-import org.arend.module.scopeprovider.SimpleModuleScopeProvider;
-import org.arend.naming.reference.*;
-import org.arend.naming.scope.SimpleScope;
+import org.arend.naming.reference.FullModuleReferable;
+import org.arend.naming.reference.LocatedReferable;
+import org.arend.naming.reference.MetaReferable;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.group.AccessModifier;
+import org.arend.term.concrete.DefinableMetaDefinition;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class DefinitionContributorImpl extends Disableable implements DefinitionContributor {
-  private final Library myLibrary;
-  private final ErrorReporter myErrorReporter;
-  private final SimpleModuleScopeProvider myModuleScopeProvider;
+  private static class Tree {
+    final LocatedReferable referable;
+    Concrete.ResolvableDefinition definition;
+    final Map<String, Tree> children = new LinkedHashMap<>();
 
-  public DefinitionContributorImpl(Library library, ErrorReporter errorReporter, SimpleModuleScopeProvider moduleScopeProvider) {
-    myLibrary = library;
-    myErrorReporter = errorReporter;
-    myModuleScopeProvider = moduleScopeProvider;
-  }
-
-  private interface Cont<T> {
-    T apply(LocatedReferable locationRef, Referable prevRef, String name);
-  }
-
-  private <T extends GlobalReferable> T declare(ModulePath module, LongName longName, String alias, Cont<T> cont) {
-    checkEnabled();
-
-    if (!FileUtils.isCorrectModulePath(module)) {
-      myErrorReporter.report(FileUtils.illegalModuleName(module.toString()));
-      return null;
+    private Tree(LocatedReferable referable) {
+      this.referable = referable;
     }
 
-    if (!FileUtils.isCorrectDefinitionName(longName)) {
-      myErrorReporter.report(FileUtils.illegalDefinitionName(longName.toString()));
-      return null;
-    }
-
-    SimpleScope scope = (SimpleScope) myModuleScopeProvider.forModule(module);
-    if (scope == null) {
-      scope = new SimpleScope();
-      myModuleScopeProvider.addModule(module, scope);
-    }
-
-    LocatedReferable locationRef = new FullModuleReferable(new ModuleLocation(myLibrary, ModuleLocation.LocationKind.GENERATED, module));
-    Referable prevRef = null;
-    List<String> list = longName.toList();
-    for (int i = 0; i < list.size(); i++) {
-      String name = list.get(i);
-      if (i == list.size() - 1) {
-        Referable ref = scope.resolveName(name);
-        if (ref != null) {
-          myErrorReporter.report(LibraryError.duplicateExtensionDefinition(myLibrary.getName(), module, longName));
-          return null;
-        }
-        T curRef = cont.apply(locationRef, prevRef, name);
-        scope.names.put(name, curRef);
-        if (alias != null) {
-          scope.names.putIfAbsent(alias, new AliasReferable(curRef));
-          SimpleScope namespace = scope.namespaces.get(name);
-          if (namespace != null) {
-            scope.namespaces.putIfAbsent(alias, namespace);
-          }
-          namespace = scope.namespaces.get(alias);
-          if (namespace != null) {
-            scope.namespaces.putIfAbsent(name, namespace);
-          }
-        }
-        return curRef;
-      } else {
-        prevRef = scope.names.putIfAbsent(name, new EmptyLocatedReferable(name, prevRef instanceof LocatedReferable ? (LocatedReferable) prevRef : locationRef));
-        SimpleScope newScope = scope.namespaces.computeIfAbsent(name, k -> new SimpleScope());
-        if (prevRef instanceof AliasReferable) {
-          scope.namespaces.putIfAbsent(((AliasReferable) prevRef).getOriginalReferable().getRefName(), newScope);
-        } else if (prevRef instanceof GlobalReferable) {
-          String aliasName = ((GlobalReferable) prevRef).getAliasName();
-          if (aliasName != null) {
-            scope.namespaces.putIfAbsent(aliasName, newScope);
-          }
-        }
-        scope = newScope;
+    ConcreteGroup makeGroup() {
+      List<ConcreteStatement> statements = new ArrayList<>();
+      for (Tree tree : children.values()) {
+        statements.add(new ConcreteStatement(tree.makeGroup(), null, null, null));
       }
+      return new ConcreteGroup(referable, definition, statements, Collections.emptyList(), Collections.emptyList());
     }
-
-    return null;
   }
 
-  @Override
-  public MetaRef declare(@NotNull ModulePath module, @NotNull LongName longName, @NotNull String description, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec, @Nullable MetaDefinition meta, @Nullable MetaResolver resolver) {
-    return declare(module, longName, alias, ((locationRef, prevRef, name) -> new MetaReferable(AccessModifier.PUBLIC, precedence, name, aliasPrec, alias, description, meta, resolver, prevRef instanceof LocatedReferable ? (LocatedReferable) prevRef : locationRef)));
+  private final String myLibraryName;
+  private final Map<ModuleLocation, Tree> myModules = new LinkedHashMap<>();
+
+  public DefinitionContributorImpl(String libraryName) {
+    myLibraryName = libraryName;
+  }
+
+  public Map<ModuleLocation, ConcreteGroup> getModules() {
+    Map<ModuleLocation, ConcreteGroup> result = new LinkedHashMap<>();
+    for (Map.Entry<ModuleLocation, Tree> entry : myModules.entrySet()) {
+      result.put(entry.getKey(), entry.getValue().makeGroup());
+    }
+    return result;
+  }
+
+  private void declareDefinition(Concrete.ResolvableDefinition definition) {
+    List<LocatedReferable> ancestors = new ArrayList<>();
+    ModuleLocation module = LocatedReferable.Helper.getAncestors(definition.getData(), ancestors);
+
+    Tree tree = myModules.computeIfAbsent(module, k -> {
+      if (!(myLibraryName.equals(module.getLibraryName()) && module.getLocationKind() == ModuleLocation.LocationKind.GENERATED && FileUtils.isCorrectModulePath(module.getModulePath()) && FileUtils.isCorrectDefinitionName(new LongName(ancestors.stream().map(LocatedReferable::getRefName).toList())))) {
+        throw new IllegalArgumentException();
+      }
+      return new Tree(new FullModuleReferable(module));
+    });
+
+    for (LocatedReferable ref : ancestors) {
+      tree = tree.children.compute(ref.getRefName(), (refName, prevTree) -> {
+        if (prevTree == null) return new Tree(ref);
+        if (!prevTree.referable.equals(ref)) {
+          throw new IllegalArgumentException("Duplicate name: " + refName);
+        }
+        return prevTree;
+      });
+    }
+
+    if (tree.definition != null) {
+      throw new IllegalArgumentException("Duplicate definition: " + definition.getData());
+    }
+
+    tree.definition = definition;
   }
 
   @Override
@@ -111,10 +87,15 @@ public class DefinitionContributorImpl extends Disableable implements Definition
     if (!(definition instanceof Concrete.Definition def)) {
       throw new IllegalArgumentException();
     }
+    declareDefinition(def);
+  }
 
-    List<String> longName = new ArrayList<>();
-    ModulePath module = LocatedReferable.Helper.getLocation(def.getData(), longName).getModulePath();
-    longName.add(def.getData().getRefName());
-    declare(module, new LongName(longName), def.getData().getAliasName(), (locationRef, prevRef, name) -> def.getData());
+  @Override
+  public void declare(@NotNull MetaRef metaRef, @Nullable MetaDefinition meta, @Nullable MetaResolver resolver) {
+    if (!(metaRef instanceof MetaReferable ref)) {
+      throw new IllegalArgumentException();
+    }
+    ref.setDefinition(meta, resolver);
+    declareDefinition(new DefinableMetaDefinition(ref, null, null, Collections.emptyList(), null));
   }
 }

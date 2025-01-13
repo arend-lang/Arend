@@ -27,9 +27,11 @@ public class CollectingResolverListener extends DelegateResolverListener {
 
   public ModuleLocation moduleLocation;
   private final Map<ModuleLocation, ModuleCacheStructure> myModuleCache = new HashMap<>();
+  private final boolean myCacheReferences;
 
-  public CollectingResolverListener(ResolverListener resolverListener) {
+  public CollectingResolverListener(ResolverListener resolverListener, boolean cacheReferences) {
     super(resolverListener);
+    myCacheReferences = cacheReferences;
   }
 
   public ModuleCacheStructure getCacheStructure(ModuleLocation module) {
@@ -37,6 +39,7 @@ public class CollectingResolverListener extends DelegateResolverListener {
   }
 
   private void cacheReference(UnresolvedReference reference, Referable referable, List<Referable> resolvedRefs) {
+    if (!myCacheReferences) return;
     if (reference instanceof LongUnresolvedReference && resolvedRefs != null) {
       List<AbstractReference> referenceList = reference.getReferenceList();
       for (int i = 0; i < referenceList.size() && i < resolvedRefs.size(); i++) {

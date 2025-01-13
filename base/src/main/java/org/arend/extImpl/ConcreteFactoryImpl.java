@@ -10,11 +10,14 @@ import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.LocalError;
+import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.ArendRef;
+import org.arend.ext.reference.MetaRef;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.GoalSolver;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.typechecking.MetaDefinition;
+import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
@@ -28,9 +31,16 @@ import java.util.*;
 
 public class ConcreteFactoryImpl implements ConcreteFactory {
   private final Object myData;
+  private final String myLibraryName;
+
+  public ConcreteFactoryImpl(Object data, String libraryName) {
+    myData = data;
+    myLibraryName = libraryName;
+  }
 
   public ConcreteFactoryImpl(Object data) {
     myData = data;
+    myLibraryName = null;
   }
 
   @NotNull
@@ -637,6 +647,11 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     return new Concrete.LevelParameters(myData, refs, isIncreasing);
   }
 
+  @Override
+  public @NotNull ArendRef moduleRef(@NotNull ModulePath modulePath) {
+    return myLibraryName == null ? new ModuleReferable(modulePath) : new FullModuleReferable(new ModuleLocation(myLibraryName, ModuleLocation.LocationKind.GENERATED, modulePath));
+  }
+
   @NotNull
   @Override
   public ArendRef local(@NotNull String name) {
@@ -675,6 +690,14 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
       throw new IllegalArgumentException();
     }
     return new ConcreteClassFieldReferable(myData, AccessModifier.PUBLIC, name, precedence, alias, aliasPrec, !isParameter, isExplicit, isParameter, (TCDefReferable) parent);
+  }
+
+  @Override
+  public @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec, @NotNull String description) {
+    if (!(parent instanceof LocatedReferable)) {
+      throw new IllegalArgumentException();
+    }
+    return new MetaReferable(AccessModifier.PUBLIC, precedence, name, aliasPrec, alias, description, null, null, (LocatedReferable) parent);
   }
 
   private static Referable makeLocalRef(ArendRef ref) {
@@ -900,13 +923,13 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   @NotNull
   @Override
   public ConcreteFactory copy() {
-    return new ConcreteFactoryImpl(myData);
+    return new ConcreteFactoryImpl(myData, myLibraryName);
   }
 
   @NotNull
   @Override
   public ConcreteFactory withData(@Nullable Object data) {
     Object actualData = data instanceof ConcreteSourceNode ? ((ConcreteSourceNode) data).getData() : data;
-    return actualData == myData ? this : new ConcreteFactoryImpl(actualData);
+    return actualData == myData ? this : new ConcreteFactoryImpl(actualData, myLibraryName);
   }
 }

@@ -17,11 +17,12 @@ import org.jetbrains.annotations.Nullable;
 import java.util.function.Supplier;
 
 public class MetaReferable implements TCDefReferable, MetaRef {
+  private Object myData;
   private final AccessModifier myAccessModifier;
   private final Precedence myPrecedence;
   private final String myName;
   private MetaDefinition myDefinition;
-  private final MetaResolver myResolver;
+  private MetaResolver myResolver;
   private final String myDescription;
   private final String myAliasName;
   private final Precedence myAliasPrecedence;
@@ -70,6 +71,11 @@ public class MetaReferable implements TCDefReferable, MetaRef {
 
   public void setDefinition(@NotNull MetaDefinition definition) {
     myDefinition = definition;
+  }
+
+  public void setDefinition(@Nullable MetaDefinition definition, @Nullable MetaResolver resolver) {
+    myDefinition = definition;
+    myResolver = resolver;
   }
 
   @Override
@@ -123,7 +129,11 @@ public class MetaReferable implements TCDefReferable, MetaRef {
 
   @Override
   public @Nullable Object getData() {
-    return getUnderlyingReferable();
+    return myData;
+  }
+
+  public void setData(Object data) {
+    myData = data;
   }
 
   @Override

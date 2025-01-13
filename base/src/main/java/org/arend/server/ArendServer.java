@@ -19,14 +19,8 @@ import java.util.function.Supplier;
 public interface ArendServer {
   /**
    * Adds or updates a library.
-   *
-   * @param modificationStamp   tracks the version of the library. If the previous modification stamp is
-   *                            greater than {@param modificationStamp}, the library will not be updated.
-   *                            If {@param modificationStamp} equals -1, then the library is always updated.
-   * @param name                the name of the library.
-   * @param dependencies        names of library dependencies.
    */
-  void updateLibrary(long modificationStamp, @NotNull String name, @NotNull List<String> dependencies);
+  void updateLibrary(@NotNull ArendLibrary library, @NotNull ErrorReporter errorReporter);
 
   /**
    * Removes the library and all the modules from it.

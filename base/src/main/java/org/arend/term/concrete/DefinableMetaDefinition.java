@@ -43,16 +43,8 @@ public class DefinableMetaDefinition extends Concrete.ResolvableDefinition imple
     stage = Concrete.Stage.NOT_RESOLVED;
   }
 
-  public Concrete.LevelParameters getPLevelParameters() {
-    return pLevelParameters;
-  }
-
   public List<? extends LevelReferable> getPLevelParametersList() {
     return pLevelParameters == null ? null : pLevelParameters.getReferables();
-  }
-
-  public Concrete.LevelParameters getHLevelParameters() {
-    return hLevelParameters;
   }
 
   public List<? extends LevelReferable> getHLevelParametersList() {

@@ -17,7 +17,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Handler;
 import java.util.logging.Logger;
 
 public class ResolverCache {
@@ -29,13 +28,17 @@ public class ResolverCache {
   private final Map<ModuleLocation, List<ModuleLocation>> myDirectDependencies = new ConcurrentHashMap<>();
   private final Map<ModuleLocation, Set<ModuleLocation>> myReverseDependencies = new ConcurrentHashMap<>();
 
-  public ResolverCache(ArendServer server, Logger originalLogger) {
+  public ResolverCache(ArendServerImpl server) {
     myServer = server;
-    myLogger.setLevel(originalLogger.getLevel());
-    myLogger.setUseParentHandlers(originalLogger.getUseParentHandlers());
-    for (Handler handler : originalLogger.getHandlers()) {
-      myLogger.addHandler(handler);
-    }
+    server.copyLogger(myLogger);
+  }
+
+  public void clear() {
+    myModuleScopes.clear();
+    myResolverCache.clear();
+    myModuleReferences.clear();
+    myDirectDependencies.clear();
+    myReverseDependencies.clear();
   }
 
   public void clearLibrary(String libraryName) {
@@ -67,6 +70,7 @@ public class ResolverCache {
       }
     }
 
+    myModuleScopes.keySet().removeIf(module -> module.getLibraryName().equals(libraryName));
   }
 
   public void clearModule(ModuleLocation module) {
@@ -94,9 +98,11 @@ public class ResolverCache {
     }
   }
 
-  public void updateModule(ModuleLocation module, ConcreteGroup group) {
+  public Scope updateModule(ModuleLocation module, ConcreteGroup group) {
     clearModule(module);
-    myModuleScopes.put(module, CachingScope.make(LexicalScope.opened(group)));
+    Scope scope = CachingScope.make(LexicalScope.opened(group));
+    myModuleScopes.put(module, scope);
+    return scope;
   }
 
   public void addReference(ModuleLocation module, AbstractReference reference, AbstractReferable referable) {
@@ -110,7 +116,13 @@ public class ResolverCache {
   }
 
   public @Nullable Scope getModuleScope(@NotNull ModuleLocation module) {
-    return myModuleScopes.get(module);
+    Scope scope = myModuleScopes.get(module);
+    if (scope != null) return scope;
+    ConcreteGroup group = myServer.getGroup(module);
+    if (group == null) return null;
+    synchronized (myServer) {
+      return updateModule(module, group);
+    }
   }
 
   public @Nullable AbstractReferable resolveReference(@NotNull AbstractReference reference) {

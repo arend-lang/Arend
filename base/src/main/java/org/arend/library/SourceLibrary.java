@@ -261,14 +261,14 @@ public abstract class SourceLibrary extends BaseLibrary {
     myExtension.registerKeys(keyRegistry);
     myExtension.setDependencies(dependenciesExtensions);
     myExtension.setPrelude(new Prelude());
-    myExtension.setConcreteFactory(new ConcreteFactoryImpl(null));
+    myExtension.setConcreteFactory(new ConcreteFactoryImpl(null, getName()));
     myExtension.setVariableRenamerFactory(VariableRenamerFactoryImpl.INSTANCE);
     ArendUI ui = getUI();
     if (ui != null) {
       myExtension.setUI(ui);
     }
 
-    DefinitionContributorImpl contributor = new DefinitionContributorImpl(this, libraryManager.getLibraryErrorReporter(), myAdditionalModuleScopeProvider);
+    OldDefinitionContributorImpl contributor = new OldDefinitionContributorImpl(getName(), libraryManager.getLibraryErrorReporter(), myAdditionalModuleScopeProvider);
     try {
       myExtension.declareDefinitions(contributor);
     } finally {
