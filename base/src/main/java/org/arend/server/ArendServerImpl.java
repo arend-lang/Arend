@@ -35,7 +35,11 @@ import java.util.function.Supplier;
 import java.util.logging.*;
 
 public class ArendServerImpl implements ArendServer {
-  private record GroupData(long timestamp, ConcreteGroup group) {}
+  private record GroupData(long timestamp, ConcreteGroup group) {
+    boolean isReadOnly() {
+      return timestamp < 0;
+    }
+  }
 
   private final Logger myLogger = Logger.getLogger(ArendServerImpl.class.getName());
   private final ArendServerRequester myRequester;
@@ -107,7 +111,7 @@ public class ArendServerImpl implements ArendServer {
 
     myGroups.compute(module, (mod,prevPair) -> {
       if (prevPair != null) {
-        myLogger.warning("Read-only module '" + mod + "' is already added" + (prevPair.timestamp < 0 ? "" : " as a writable module"));
+        myLogger.warning("Read-only module '" + mod + "' is already added" + (prevPair.isReadOnly() ? "" : " as a writable module"));
         return prevPair;
       }
       myResolverCache.updateModule(mod, group);
@@ -122,7 +126,7 @@ public class ArendServerImpl implements ArendServer {
       boolean[] updated = new boolean[1];
       GroupData newData = myGroups.compute(module, (k, prevData) -> {
         if (prevData != null) {
-          if (prevData.timestamp < 0) {
+          if (prevData.isReadOnly()) {
             myLogger.severe("Read-only module '" + module + "' cannot be updated");
             return prevData;
           } else if (prevData.timestamp >= modificationStamp) {
@@ -189,7 +193,7 @@ public class ArendServerImpl implements ArendServer {
         myRequester.requestModuleUpdate(this, location);
         var modulePair = myGroups.get(location);
         if (modulePair != null) {
-          return withReadOnly || modulePair.timestamp >= 0 ? location : null;
+          return withReadOnly || !modulePair.isReadOnly() ? location : null;
         }
       }
     }
@@ -274,9 +278,15 @@ public class ArendServerImpl implements ArendServer {
         GroupData groupData = myGroups.get(module);
         if (groupData != null) {
           resolverListener.moduleLocation = module;
-          ListErrorReporter listErrorReporter = new ListErrorReporter();
-          errorReporterMap.put(module, listErrorReporter);
-          new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), false, new MergingErrorReporter(errorReporter, listErrorReporter), resolverListener).resolveGroupWithTypes(groupData.group, getGroupScope(module, groupData.group));
+          ErrorReporter currentErrorReporter;
+          if (groupData.isReadOnly()) {
+            currentErrorReporter = DummyErrorReporter.INSTANCE;
+          } else {
+            ListErrorReporter listErrorReporter = new ListErrorReporter();
+            errorReporterMap.put(module, listErrorReporter);
+            currentErrorReporter = new MergingErrorReporter(errorReporter, listErrorReporter);
+          }
+          new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), false, currentErrorReporter, resolverListener).resolveGroupWithTypes(groupData.group, getGroupScope(module, groupData.group));
         }
         listener.moduleResolved(module);
         myLogger.info(() -> "Module '" + module + "' is resolved");
@@ -286,7 +296,7 @@ public class ArendServerImpl implements ArendServer {
         for (ModuleLocation module : modules) {
           indicator.checkCanceled();
           GroupData groupData = myGroups.get(module);
-          if (groupData != null && (groupData.timestamp < 0 || groupData.timestamp == moduleVersions.get(module))) {
+          if (groupData != null && (groupData.isReadOnly() || groupData.timestamp == moduleVersions.get(module))) {
             CollectingResolverListener.ModuleCacheStructure cache = resolverListener.getCacheStructure(module);
             if (cache != null) {
               for (CollectingResolverListener.ResolvedReference resolvedReference : cache.cache()) {
