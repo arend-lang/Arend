@@ -1,6 +1,7 @@
 package org.arend.naming.reference;
 
 import org.arend.module.ModuleLocation;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -13,7 +14,7 @@ public class FullModuleReferable extends ModuleReferable implements LocatedRefer
     myLocation = location;
   }
 
-  @Nullable
+  @NotNull
   @Override
   public ModuleLocation getLocation() {
     return myLocation;

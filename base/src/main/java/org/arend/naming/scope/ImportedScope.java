@@ -3,7 +3,6 @@ package org.arend.naming.scope;
 import org.arend.ext.module.ModulePath;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
-import org.arend.naming.reference.ModuleReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.group.Group;
@@ -92,7 +91,7 @@ public class ImportedScope implements Scope {
     }
 
     Scope scope2 = new ImportedScope(triple.tree, myProvider, myElementsScope == null ? null : myElementsScope.resolveNamespace(name));
-    return triple.modulePath == null || triple.scope == null ? scope2 : new MergeScope(triple.scope, scope2);
+    return !triple.isFile || triple.scope == null ? scope2 : new MergeScope(triple.scope, scope2);
   }
 
   @Nullable
@@ -112,7 +111,7 @@ public class ImportedScope implements Scope {
     }
 
     Triple triple = scope.myExpectedNamesTree.map.get(path.get(path.size() - 1));
-    return triple != null && triple.modulePath != null ? triple.scope : null;
+    return triple != null && triple.isFile ? triple.scope : null;
   }
 
   @Nullable
@@ -122,14 +121,14 @@ public class ImportedScope implements Scope {
   }
 
   private static class Triple {
-    ModuleReferable referable;
-    ModulePath modulePath;
+    Referable referable;
+    boolean isFile;
     Tree tree;
     Scope scope;
 
-    Triple(ModuleReferable referable, ModulePath modulePath, Tree tree, Scope scope) {
+    Triple(Referable referable, boolean isFile, Tree tree, Scope scope) {
       this.referable = referable;
-      this.modulePath = modulePath;
+      this.isFile = isFile;
       this.tree = tree;
       this.scope = scope;
     }
@@ -149,15 +148,15 @@ public class ImportedScope implements Scope {
         Triple triple = tree.map.compute(path.get(i), (k,oldTriple) -> {
           ModulePath modulePath = new ModulePath(path.subList(0, finalI));
           if (oldTriple == null) {
-            return new Triple(new ModuleReferable(modulePath), finalI == path.size() ? modulePath : null, new Tree(), finalI == path.size() ? myProvider.forModule(modulePath) : EmptyScope.INSTANCE);
+            return new Triple(myProvider.findModule(modulePath), finalI == path.size(), new Tree(), finalI == path.size() ? myProvider.forModule(modulePath) : EmptyScope.INSTANCE);
           }
-          if (oldTriple.modulePath != null || finalI != path.size()) {
+          if (oldTriple.isFile || finalI != path.size()) {
             return oldTriple;
           }
-          return new Triple(oldTriple.referable, modulePath, oldTriple.tree, myProvider.forModule(modulePath));
+          return new Triple(oldTriple.referable, true, oldTriple.tree, myProvider.forModule(modulePath));
         });
-        if (triple.modulePath == null && finalI == path.size()) {
-          triple.modulePath = triple.referable.path;
+        if (finalI == path.size()) {
+          triple.isFile = true;
         }
         tree = triple.tree;
       }

@@ -206,6 +206,18 @@ public class ArendServerImpl implements ArendServer {
         ModuleLocation found = findDependency(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
         return found == null ? null : myResolverCache.getModuleScope(found);
       }
+
+      @Override
+      public @NotNull GlobalReferable findModule(@NotNull ModulePath modulePath) {
+        ModuleLocation location = modulePath.equals(Prelude.MODULE_PATH) ? Prelude.MODULE_LOCATION : findDependency(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+        if (location != null) {
+          GroupData groupData = myGroups.get(location);
+          if (groupData != null) {
+            return groupData.group().referable();
+          }
+        }
+        return new ModuleReferable(modulePath);
+      }
     }));
   }
 

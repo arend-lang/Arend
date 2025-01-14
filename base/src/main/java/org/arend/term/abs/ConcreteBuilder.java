@@ -7,6 +7,7 @@ import org.arend.error.ParsingError;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.reference.DataContainer;
+import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
@@ -42,25 +43,41 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     };
   }
 
-  private static ConcreteLocatedReferable convertReferable(LocatedReferable referable) {
+  private static ConcreteLocatedReferable convertReferable(LocatedReferable referable, LocatedReferable parent) {
     if (referable == null) return null;
     Object data = referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable;
-    return referable instanceof FieldReferable fieldRef ? new ConcreteClassFieldReferable(data, referable.getAccessModifier(), referable.getRefName(), referable.getPrecedence(), referable.getAliasName(), referable.getAliasPrecedence(), !fieldRef.isParameterField(), fieldRef.isExplicitField(), fieldRef.isParameterField(), convertReferable(referable.getLocatedReferableParent()))
-      : new ConcreteLocatedReferable(data, referable.getAccessModifier(), referable.getRefName(), referable.getPrecedence(), referable.getAliasName(), referable.getAliasPrecedence(), convertReferable(referable.getLocatedReferableParent()), referable.getKind());
+    return referable instanceof FieldReferable fieldRef && parent instanceof TCDefReferable ? new ConcreteClassFieldReferable(data, referable.getAccessModifier(), referable.getRefName(), referable.getPrecedence(), referable.getAliasName(), referable.getAliasPrecedence(), !fieldRef.isParameterField(), fieldRef.isExplicitField(), fieldRef.isParameterField(), (TCDefReferable) parent)
+      : new ConcreteLocatedReferable(data, referable.getAccessModifier(), referable.getRefName(), referable.getPrecedence(), referable.getAliasName(), referable.getAliasPrecedence(), parent, referable.getKind());
   }
 
-  private static ConcreteLocatedReferable convertClassReferable(LocatedReferable referable) {
+  private static LocatedReferable convertFileReferable(LocatedReferable referable, LocatedReferable parent) {
+    if (parent == null) {
+      ModuleLocation module = referable.getLocation();
+      if (module != null) {
+        return new DataModuleReferable(referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable, module);
+      }
+    }
+    return convertReferable(referable, parent);
+  }
+
+  private static ConcreteLocatedReferable convertClassReferable(LocatedReferable referable, LocatedReferable parent) {
     if (referable == null) return null;
     Object data = referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable;
-    return new ConcreteResolvedClassReferable(data, referable.getAccessModifier(), referable.getRefName(), referable.getPrecedence(), referable.getAliasName(), referable.getAliasPrecedence(), convertReferable(referable.getLocatedReferableParent()), Collections.emptyList());
+    return new ConcreteResolvedClassReferable(data, referable.getAccessModifier(), referable.getRefName(), referable.getPrecedence(), referable.getAliasName(), referable.getAliasPrecedence(), parent, Collections.emptyList());
   }
 
-  public static @NotNull Concrete.ResolvableDefinition convert(Abstract.Definition definition, ErrorReporter errorReporter) {
-    ConcreteLocatedReferable referable = definition instanceof Abstract.ClassDefinition ? convertClassReferable(definition.getReferable()) : convertReferable(definition.getReferable());
+  private static MetaReferable convertMetaReferable(LocatedReferable referable, LocatedReferable parent) {
+    return new MetaReferable(referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), referable.getDescription(), null, null, parent);
+  }
+
+  public static @NotNull Concrete.ResolvableDefinition convert(Abstract.Definition definition, LocatedReferable parent, ErrorReporter errorReporter) {
+    TCDefReferable referable = definition instanceof Abstract.ClassDefinition ? convertClassReferable(definition.getReferable(), parent)
+      : definition instanceof Abstract.MetaDefinition ? convertMetaReferable(definition.getReferable(), parent)
+        : convertReferable(definition.getReferable(), parent);
     ConcreteBuilder builder = new ConcreteBuilder(errorReporter, referable);
     Concrete.ResolvableDefinition result = definition.accept(builder);
-    if (result instanceof Concrete.ReferableDefinition) {
-      referable.setDefinition((Concrete.ReferableDefinition) result);
+    if (result instanceof Concrete.ReferableDefinition && referable instanceof ConcreteLocatedReferable) {
+      ((ConcreteLocatedReferable) referable).setDefinition((Concrete.ReferableDefinition) result);
     }
     if (builder.myErrorLevel != null) {
       result.setStatus(builder.myErrorLevel);
@@ -88,26 +105,27 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
   // TODO[server2]: Do not report actual errors in ConcreteBuilder
   public static @NotNull ConcreteGroup convertGroup(Abstract.Group group, ErrorReporter errorReporter) {
-    return buildGroup(group, errorReporter);
+    return buildGroup(group, null, errorReporter);
   }
 
   // Group
 
-  private static ConcreteGroup buildGroup(Abstract.Group group, ErrorReporter errorReporter) {
+  private static ConcreteGroup buildGroup(Abstract.Group group, LocatedReferable parent, ErrorReporter errorReporter) {
     Abstract.Definition definition = group.getGroupDefinition();
+    Concrete.ResolvableDefinition concrete = definition == null ? null : convert(definition, parent, errorReporter);
+    LocatedReferable referable = concrete == null ? convertFileReferable(group.getReferable(), parent) : concrete.getData();
     List<ConcreteStatement> statements = new ArrayList<>();
     for (Abstract.Statement statement : group.getStatements()) {
       Abstract.Group subgroup = statement.getGroup();
-      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, errorReporter), statement.getNamespaceCommand(), statement.getPLevelsDefinition(), statement.getHLevelsDefinition()));
+      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, referable, errorReporter), statement.getNamespaceCommand(), statement.getPLevelsDefinition(), statement.getHLevelsDefinition()));
     }
 
     List<ConcreteGroup> dynamicGroups = new ArrayList<>();
     for (Abstract.Group subgroup : group.getDynamicSubgroups()) {
-      dynamicGroups.add(buildGroup(subgroup, errorReporter));
+      dynamicGroups.add(buildGroup(subgroup, referable, errorReporter));
     }
 
-    Concrete.ResolvableDefinition concrete = definition == null ? null : convert(definition, errorReporter);
-    return new ConcreteGroup(concrete == null ? convertReferable(group.getReferable()) : concrete.getData(), concrete, statements, dynamicGroups, group.getExternalParameters());
+    return new ConcreteGroup(referable, concrete, statements, dynamicGroups, group.getExternalParameters());
   }
 
   // Definition
@@ -131,11 +149,10 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     var parameters = buildParameters(def.getParameters(), false);
     var term = def.getTerm();
     var body = term != null ? term.accept(this, null) : null;
-    LocatedReferable origRef = def.getReferable();
-    MetaReferable referable = new MetaReferable(origRef.getAccessModifier(), origRef.getPrecedence(), origRef.getRefName(), origRef.getAliasPrecedence(), origRef.getAliasName(), origRef.getDescription(), null, null, convertReferable(origRef.getLocatedReferableParent()));
-    var definition = new DefinableMetaDefinition(referable, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), parameters, body);
+    MetaReferable metaRef = (MetaReferable) myDefinition;
+    var definition = new DefinableMetaDefinition(metaRef, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), parameters, body);
     if (term != null) { // if term == null, it may be a generated meta, in which case we shouldn't replace its definition
-      referable.setDefinition(definition);
+      metaRef.setDefinition(definition);
     }
     return definition;
   }
@@ -198,7 +215,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
       List<Concrete.Constructor> constructors = new ArrayList<>(absConstructors.size());
       for (Abstract.Constructor constructor : absConstructors) {
-        Concrete.Constructor cons = new Concrete.Constructor(convertReferable(constructor.getReferable()), data, buildTypeParameters(constructor.getParameters(), true), buildReferences(constructor.getEliminatedExpressions()), buildClauses(constructor.getClauses()), constructor.isCoerce());
+        Concrete.Constructor cons = new Concrete.Constructor(convertReferable(constructor.getReferable(), myDefinition), data, buildTypeParameters(constructor.getParameters(), true), buildReferences(constructor.getEliminatedExpressions()), buildClauses(constructor.getClauses()), constructor.isCoerce());
         Abstract.Expression resultType = constructor.getResultType();
         if (resultType != null) {
           cons.setResultType(resultType.accept(this, null));
@@ -253,7 +270,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       if (element instanceof Abstract.ClassField field) {
         Abstract.Expression resultType = field.getResultType();
         LocatedReferable fieldRefOrig = field.getReferable();
-        TCReferable fieldRef = convertReferable(fieldRefOrig);
+        TCReferable fieldRef = convertReferable(fieldRefOrig, myDefinition);
         if (resultType == null || !(fieldRef instanceof ConcreteClassFieldReferable)) {
           myErrorLevel = GeneralError.Level.ERROR;
           if (fieldRef != null && !(fieldRef instanceof ConcreteClassFieldReferable)) {
@@ -313,7 +330,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       if (functionRef != null) {
         Abstract.Reference implementedField = implementation.getImplementedField();
         if (implementedField != null) {
-          implementations.add(new Concrete.CoClauseFunctionReference(implementedField.getReferent(), convertReferable(functionRef), implementation.isDefault()));
+          implementations.add(new Concrete.CoClauseFunctionReference(implementedField.getReferent(), convertReferable(functionRef, myDefinition), implementation.isDefault()));
         }
         return;
       }
@@ -386,7 +403,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     } else {
       List<Referable> dataReferableList = new ArrayList<>(referableList.size());
       for (Referable referable : referableList) {
-        dataReferableList.add(referable instanceof FieldReferable ? convertReferable((FieldReferable) referable) : DataLocalReferable.make(referable));
+        dataReferableList.add(referable instanceof FieldReferable ? convertReferable((FieldReferable) referable, myDefinition) : DataLocalReferable.make(referable));
       }
       if (isDefinition && isStrict) {
         return new Concrete.DefinitionTelescopeParameter(parameter.getData(), parameter.isExplicit(), true, dataReferableList, cType, isProperty);

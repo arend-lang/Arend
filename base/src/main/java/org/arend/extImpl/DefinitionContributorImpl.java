@@ -7,7 +7,7 @@ import org.arend.ext.reference.MetaRef;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.MetaResolver;
 import org.arend.module.ModuleLocation;
-import org.arend.naming.reference.FullModuleReferable;
+import org.arend.naming.reference.DataModuleReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.MetaReferable;
 import org.arend.term.concrete.Concrete;
@@ -62,7 +62,7 @@ public class DefinitionContributorImpl extends Disableable implements Definition
       if (!(myLibraryName.equals(module.getLibraryName()) && module.getLocationKind() == ModuleLocation.LocationKind.GENERATED && FileUtils.isCorrectModulePath(module.getModulePath()) && FileUtils.isCorrectDefinitionName(new LongName(ancestors.stream().map(LocatedReferable::getRefName).toList())))) {
         throw new IllegalArgumentException();
       }
-      return new Tree(new FullModuleReferable(module));
+      return new Tree(new DataModuleReferable(null, module));
     });
 
     for (LocatedReferable ref : ancestors) {

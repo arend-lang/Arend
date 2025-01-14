@@ -12,10 +12,13 @@ import org.arend.naming.reference.*;
 import org.arend.naming.renamer.MapReferableRenamer;
 import org.arend.term.Fixity;
 import org.arend.ext.concrete.definition.FunctionKind;
+import org.arend.term.abs.Abstract;
 import org.arend.term.concrete.*;
 import org.arend.term.concrete.Concrete.BinOpSequenceElem;
 import org.arend.term.concrete.Concrete.Expression;
 import org.arend.term.concrete.Concrete.ReferenceExpression;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.util.StringEscapeUtils;
 
 import java.util.*;
@@ -47,6 +50,66 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
   protected PrettyPrintVisitor copy(StringBuilder builder, int indent, boolean doIndent) {
     return new PrettyPrintVisitor(builder, indent, doIndent);
+  }
+
+  public void printGroup(ConcreteGroup group) {
+    if (group == null) return;
+    if (group.definition() != null) {
+      group.definition().accept(this, null);
+    } else {
+      printIndent();
+      myBuilder.append("\\module ").append(group.getReferable().getRefName());
+    }
+
+    if (group.statements().isEmpty()) return;
+
+    myBuilder.append("\n");
+    myIndent += INDENT;
+    printIndent();
+    myBuilder.append("\\where {\n");
+    myIndent += INDENT;
+
+    printStatements(group.statements());
+
+    myBuilder.append("\n");
+    myIndent -= INDENT;
+    printIndent();
+    myBuilder.append("}\n");
+    myIndent -= INDENT;
+  }
+
+  public void printStatements(List<? extends ConcreteStatement> statements) {
+    boolean first = true;
+    for (ConcreteStatement statement : statements) {
+      if (first) first = false;
+      else myBuilder.append("\n\n");
+
+      printGroup(statement.group());
+      if (statement.command() != null) {
+        printIndent();
+        statement.command().prettyPrint(myBuilder, PrettyPrinterConfig.DEFAULT);
+      }
+      if (statement.getPLevelsDefinition() != null) {
+        printIndent();
+        myBuilder.append("\\plevels ");
+        printLevelsDefinition(statement.getPLevelsDefinition());
+      }
+      if (statement.getHLevelsDefinition() != null) {
+        printIndent();
+        myBuilder.append("\\hlevels ");
+        printLevelsDefinition(statement.getHLevelsDefinition());
+      }
+    }
+  }
+
+  private void printLevelsDefinition(Abstract.LevelParameters defs) {
+    String op = defs.isIncreasing() ? " <= " : " >= ";
+    boolean first = true;
+    for (Referable referable : defs.getReferables()) {
+      if (first) first = false;
+      else myBuilder.append(op);
+      myBuilder.append(referable.getRefName());
+    }
   }
 
   @Override

@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 public interface Group {
@@ -64,5 +65,18 @@ public interface Group {
       }
     }
     return null;
+  }
+
+  default boolean match(Group other, BiFunction<Group, Group, Boolean> function) {
+    List<? extends Statement> stats1 = getStatements();
+    List<? extends Statement> stats2 = other.getStatements();
+    if (stats1.size() != stats2.size()) return false;
+    for (int i = 0; i < stats1.size(); i++) {
+      Group subgroup1 = stats1.get(i).getGroup();
+      Group subgroup2 = stats2.get(i).getGroup();
+      if (subgroup1 == null && subgroup2 == null) continue;
+      if (subgroup1 == null || subgroup2 == null || !function.apply(subgroup1, subgroup2)) return false;
+    }
+    return true;
   }
 }
