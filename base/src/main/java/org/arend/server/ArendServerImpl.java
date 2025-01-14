@@ -345,8 +345,8 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
-  public boolean isErrorReference(@NotNull AbstractReference reference) {
-    return myResolverCache.getCachedReferable(reference) == TCDefReferable.NULL_REFERABLE;
+  public @Nullable AbstractReferable getCachedReferable(@NotNull AbstractReference reference) {
+    return myResolverCache.getCachedReferable(reference);
   }
 
   @Override
