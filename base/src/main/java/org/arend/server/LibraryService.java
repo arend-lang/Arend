@@ -33,34 +33,28 @@ public class LibraryService {
   }
 
   void updateLibrary(@NotNull ArendLibrary library, @NotNull ErrorReporter errorReporter) {
-    String name = library.getLibraryName();
-    boolean[] updated = new boolean[1];
-    myLibraries.compute(name, (k, prevLibrary) -> {
-      long modificationStamp = library.getModificationStamp();
-      if (prevLibrary != null && modificationStamp >= 0 && prevLibrary.getModificationStamp() >= modificationStamp) {
-        myLogger.info(() -> "Library '" + name + "' is not updated; previous timestamp " + prevLibrary.getModificationStamp() + " >= new timestamp " + modificationStamp);
-        return prevLibrary;
-      }
+    synchronized (myServer) {
+      String name = library.getLibraryName();
+      myLibraries.compute(name, (k, prevLibrary) -> {
+        long modificationStamp = library.getModificationStamp();
+        if (prevLibrary != null && modificationStamp >= 0 && prevLibrary.getModificationStamp() >= modificationStamp) {
+          myLogger.info(() -> "Library '" + name + "' is not updated; previous timestamp " + prevLibrary.getModificationStamp() + " >= new timestamp " + modificationStamp);
+          return prevLibrary;
+        }
 
-      boolean isExternal = library.isExternalLibrary();
-      ClassLoaderDelegate delegate = library.getClassLoaderDelegate();
-      synchronized (myServer) {
+        myServer.clear();
+
+        boolean isExternal = library.isExternalLibrary();
+        ClassLoaderDelegate delegate = library.getClassLoaderDelegate();
         if (delegate != null) {
           (isExternal ? myExternalClassLoader : myInternalClassLoader).addDelegate(name, delegate);
         }
-      }
 
-      ArendLibraryImpl result = new ArendLibraryImpl(name, isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, errorReporter));
-      setupExtension(result, library);
-      updated[0] = true;
-      myLogger.info(() -> "Library '" + name + "' is updated");
-      return result;
-    });
-
-    if (updated[0]) {
-      synchronized (myServer) {
-        myServer.getResolverCache().clear();
-      }
+        ArendLibraryImpl result = new ArendLibraryImpl(name, isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, errorReporter));
+        setupExtension(result, library);
+        myLogger.info(() -> "Library '" + name + "' is updated");
+        return result;
+      });
     }
   }
 
@@ -69,10 +63,6 @@ public class LibraryService {
     if (library != null) {
       (library.isExternalLibrary() ? myExternalClassLoader : myInternalClassLoader).removeDelegate(name);
     }
-  }
-
-  boolean isLibraryLoaded(String name) {
-    return myLibraries.containsKey(name);
   }
 
   public Set<String> getLibraries() {

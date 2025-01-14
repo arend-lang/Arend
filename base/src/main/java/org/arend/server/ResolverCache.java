@@ -134,18 +134,18 @@ public class ResolverCache {
 
     ModuleLocation module = reference.getReferenceModule();
     if (module == null) {
-      myLogger.warning("Cannot determine module of " + reference);
+      myLogger.warning("Cannot determine module of " + reference.getReferenceText());
       return null;
     }
 
     myServer.resolveModules(Collections.singletonList(module), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
     result = myResolverCache.get(reference);
     if (result == null) {
-      myLogger.warning("Cannot resolve reference " + reference);
+      myLogger.warning("Cannot resolve reference " + reference.getReferenceText());
       return null;
     }
 
-    myLogger.info("Reference " + reference + " is added to cache");
+    myLogger.info(() -> "Reference " + reference.getReferenceText() + " is added to cache");
     return result == TCDefReferable.NULL_REFERABLE ? null : result;
   }
 

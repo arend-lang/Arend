@@ -30,9 +30,9 @@ public interface ArendServer {
   void removeLibrary(@NotNull String name);
 
   /**
-   * @return {@code true} if the library was loaded; {@code false} otherwise.
+   * @return a library with the given name.
    */
-  boolean isLibraryLoaded(@NotNull String name);
+  @Nullable ArendLibrary getLibrary(@NotNull String name);
 
   /**
    * Adds a read-only module.

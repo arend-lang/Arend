@@ -79,8 +79,10 @@ public class ArendServerImpl implements ArendServer {
     }
   }
 
-  ResolverCache getResolverCache() {
-    return myResolverCache;
+  void clear() {
+    myGroups.clear();
+    myResolverCache.clear();
+    myErrorService.clear();
   }
 
   @Override
@@ -99,8 +101,8 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
-  public boolean isLibraryLoaded(@NotNull String name) {
-    return myLibraryService.isLibraryLoaded(name);
+  public ArendLibrary getLibrary(@NotNull String name) {
+    return myLibraryService.getLibrary(name);
   }
 
   @Override

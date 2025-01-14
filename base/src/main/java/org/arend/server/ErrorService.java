@@ -28,4 +28,8 @@ public class ErrorService {
   public Collection<ModuleLocation> getModulesWithErrors() {
     return myErrorMap.keySet();
   }
+
+  public void clear() {
+    myErrorMap.clear();
+  }
 }
