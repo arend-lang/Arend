@@ -78,9 +78,17 @@ public interface ArendServer {
   @Nullable ConcreteGroup getGroup(@NotNull ModuleLocation module);
 
   /**
+   * Resolves given reference.
+   * This might be a slow operation if the reference was not resolved already.
+   *
    * @return either the data of some element, or {@link ModuleLocation}.
    */
   @Nullable AbstractReferable resolveReference(@NotNull AbstractReference reference);
+
+  /**
+   * @return {@code true} if reference was already resolved as an error reference.
+   */
+  boolean isErrorReference(@NotNull AbstractReference reference);
 
   /**
    * @return the list of errors corresponding to the given module.

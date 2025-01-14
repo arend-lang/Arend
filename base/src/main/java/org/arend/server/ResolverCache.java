@@ -130,7 +130,7 @@ public class ResolverCache {
     if (result == TCDefReferable.NULL_REFERABLE) return null;
     if (result != null) return result;
 
-    myLogger.info("Reference " + reference + " is not in cache");
+    myLogger.info("Reference " + reference.getReferenceText() + " is not in cache");
 
     ModuleLocation module = reference.getReferenceModule();
     if (module == null) {
@@ -147,5 +147,9 @@ public class ResolverCache {
 
     myLogger.info("Reference " + reference + " is added to cache");
     return result == TCDefReferable.NULL_REFERABLE ? null : result;
+  }
+
+  public @Nullable AbstractReferable getCachedReferable(@NotNull AbstractReference reference) {
+    return myResolverCache.get(reference);
   }
 }
