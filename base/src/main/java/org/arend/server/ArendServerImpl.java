@@ -35,7 +35,16 @@ import java.util.function.Supplier;
 import java.util.logging.*;
 
 public class ArendServerImpl implements ArendServer {
-  private record GroupData(long timestamp, ConcreteGroup group) {
+  private static class GroupData {
+    final long timestamp;
+    final ConcreteGroup group;
+    boolean headersResolved;
+
+    private GroupData(long timestamp, ConcreteGroup group) {
+      this.timestamp = timestamp;
+      this.group = group;
+    }
+
     boolean isReadOnly() {
       return timestamp < 0;
     }
@@ -124,36 +133,28 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public void updateModule(long modificationStamp, @NotNull ModuleLocation module, @NotNull Supplier<ConcreteGroup> supplier) {
-    synchronized (this) {
-      boolean[] updated = new boolean[1];
-      GroupData newData = myGroups.compute(module, (k, prevData) -> {
-        if (prevData != null) {
-          if (prevData.isReadOnly()) {
-            myLogger.severe("Read-only module '" + module + "' cannot be updated");
-            return prevData;
-          } else if (prevData.timestamp >= modificationStamp) {
-            myLogger.fine(() -> "Module '" + module + "' is not updated; previous timestamp " + prevData.timestamp + " >= new timestamp " + modificationStamp);
-            return prevData;
-          }
-        }
-
-        ConcreteGroup group = supplier.get();
-        if (group == null) {
-          myLogger.info(() -> "Module '" + module + "' is not updated");
+    myGroups.compute(module, (k, prevData) -> {
+      if (prevData != null) {
+        if (prevData.isReadOnly()) {
+          myLogger.severe("Read-only module '" + module + "' cannot be updated");
+          return prevData;
+        } else if (prevData.timestamp >= modificationStamp) {
+          myLogger.fine(() -> "Module '" + module + "' is not updated; previous timestamp " + prevData.timestamp + " >= new timestamp " + modificationStamp);
           return prevData;
         }
-
-        updated[0] = true;
-        myResolverCache.updateModule(module, group);
-
-        myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
-        return new GroupData(modificationStamp, group);
-      });
-
-      if (updated[0]) {
-        new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(newData.group)), true, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY).resolveGroup(newData.group, getGroupScope(module, newData.group));
       }
-    }
+
+      ConcreteGroup group = supplier.get();
+      if (group == null) {
+        myLogger.info(() -> "Module '" + module + "' is not updated");
+        return prevData;
+      }
+
+      myResolverCache.updateModule(module, group);
+
+      myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
+      return new GroupData(modificationStamp, group);
+    });
   }
 
   private static @NotNull Map<GlobalReferable, Concrete.GeneralDefinition> updateDefinitions(Group group) {
@@ -219,7 +220,7 @@ public class ArendServerImpl implements ArendServer {
         if (location != null) {
           GroupData groupData = myGroups.get(location);
           if (groupData != null) {
-            return groupData.group().referable();
+            return groupData.group.referable();
           }
         }
         return new ModuleReferable(modulePath);
@@ -252,6 +253,12 @@ public class ArendServerImpl implements ArendServer {
               ModuleLocation dependency = findDependency(new ModulePath(statement.command().getPath()), module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
               if (dependency != null) toVisit.add(dependency);
             }
+          }
+
+          if (!groupData.headersResolved) {
+            new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(groupData.group)), true, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY).resolveGroup(groupData.group, getGroupScope(module, groupData.group));
+            groupData.headersResolved = true;
+            myLogger.info(() -> "Header of module '" + module + "' is resolved");
           }
         }
       }
