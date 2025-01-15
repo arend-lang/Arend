@@ -2097,15 +2097,6 @@ public final class Concrete {
       return this;
     }
 
-    @Override
-    public void setDynamic() {
-      LocatedReferable parent = myReferable.getLocatedReferableParent();
-      if (!(parent instanceof ConcreteResolvedClassReferable)) {
-        throw new IllegalStateException();
-      }
-      ((ConcreteResolvedClassReferable) parent).addDynamicReferable(myReferable);
-    }
-
     public TCDefReferable getUseParent() {
       return myUseParent;
     }

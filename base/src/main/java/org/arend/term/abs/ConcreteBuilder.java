@@ -4,6 +4,7 @@ import org.arend.core.context.binding.LevelVariable;
 import org.arend.error.CountingErrorReporter;
 import org.arend.error.DummyErrorReporter;
 import org.arend.error.ParsingError;
+import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.reference.DataContainer;
@@ -27,11 +28,13 @@ import static org.arend.term.concrete.Concrete.LevelParameters.getLevelParameter
 @SuppressWarnings("WeakerAccess")
 public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.ResolvableDefinition>, AbstractExpressionVisitor<Void, Concrete.Expression>, AbstractLevelExpressionVisitor<LevelVariable, Concrete.LevelExpression> {
   private final LocalErrorReporter myErrorReporter;
+  private final LocatedReferable myParent;
   private final TCReferable myDefinition;
   private GeneralError.Level myErrorLevel;
 
-  protected ConcreteBuilder(ErrorReporter errorReporter, TCReferable definition) {
+  private ConcreteBuilder(ErrorReporter errorReporter, TCReferable definition, LocatedReferable parent) {
     myDefinition = definition;
+    myParent = parent;
     myErrorReporter = new LocalErrorReporter(myDefinition, errorReporter) {
       @Override
       public void report(GeneralError error) {
@@ -41,6 +44,10 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
         super.report(error);
       }
     };
+  }
+
+  protected ConcreteBuilder(ErrorReporter errorReporter, TCReferable definition) {
+    this(errorReporter, definition, null);
   }
 
   private static ConcreteLocatedReferable convertReferable(LocatedReferable referable, LocatedReferable parent) {
@@ -74,7 +81,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     TCDefReferable referable = definition instanceof Abstract.ClassDefinition ? convertClassReferable(definition.getReferable(), parent)
       : definition instanceof Abstract.MetaDefinition ? convertMetaReferable(definition.getReferable(), parent)
         : convertReferable(definition.getReferable(), parent);
-    ConcreteBuilder builder = new ConcreteBuilder(errorReporter, referable);
+    ConcreteBuilder builder = new ConcreteBuilder(errorReporter, referable, parent);
     Concrete.ResolvableDefinition result = definition.accept(builder);
     if (result instanceof Concrete.ReferableDefinition && referable instanceof ConcreteLocatedReferable) {
       ((ConcreteLocatedReferable) referable).setDefinition((Concrete.ReferableDefinition) result);
@@ -105,24 +112,39 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
   // TODO[server2]: Do not report actual errors in ConcreteBuilder
   public static @NotNull ConcreteGroup convertGroup(Abstract.Group group, ErrorReporter errorReporter) {
-    return buildGroup(group, null, errorReporter);
+    return buildGroup(group, null, null, errorReporter);
   }
 
   // Group
 
-  private static ConcreteGroup buildGroup(Abstract.Group group, LocatedReferable parent, ErrorReporter errorReporter) {
+  private static ConcreteGroup buildGroup(Abstract.Group group, LocatedReferable parent, Concrete.Definition parentDef, ErrorReporter errorReporter) {
     Abstract.Definition definition = group.getGroupDefinition();
     Concrete.ResolvableDefinition concrete = definition == null ? null : convert(definition, parent, errorReporter);
     LocatedReferable referable = concrete == null ? convertFileReferable(group.getReferable(), parent) : concrete.getData();
     List<ConcreteStatement> statements = new ArrayList<>();
     for (Abstract.Statement statement : group.getStatements()) {
       Abstract.Group subgroup = statement.getGroup();
-      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, referable, errorReporter), statement.getNamespaceCommand(), statement.getPLevelsDefinition(), statement.getHLevelsDefinition()));
+      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, referable, concrete instanceof Concrete.Definition def ? def : null, errorReporter), statement.getNamespaceCommand(), statement.getPLevelsDefinition(), statement.getHLevelsDefinition()));
     }
 
     List<ConcreteGroup> dynamicGroups = new ArrayList<>();
     for (Abstract.Group subgroup : group.getDynamicSubgroups()) {
-      dynamicGroups.add(buildGroup(subgroup, referable, errorReporter));
+      ConcreteGroup cSubgroup = buildGroup(subgroup, referable, null, errorReporter);
+      dynamicGroups.add(cSubgroup);
+      if (referable instanceof ConcreteResolvedClassReferable classRef && cSubgroup.definition() instanceof Concrete.Definition def) {
+        classRef.addDynamic(def);
+      }
+    }
+
+    if (definition != null && definition.withUse()) {
+      if (parentDef == null) {
+        errorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "\\use must belong to a \\where-block of a definition", definition));
+      } else {
+        parentDef.addUsedDefinition(concrete.getData());
+        if (concrete instanceof Concrete.Definition def) {
+          def.setUseParent(parentDef.getData());
+        }
+      }
     }
 
     return new ConcreteGroup(referable, concrete, statements, dynamicGroups, group.getExternalParameters());
@@ -189,7 +211,16 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     Concrete.Expression type = resultType == null ? null : resultType.accept(this, null);
     Concrete.Expression typeLevel = resultTypeLevel == null ? null : resultTypeLevel.accept(this, null);
 
-    return new Concrete.FunctionDefinition(def.getFunctionKind(), (TCDefReferable) myDefinition, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), parameters, type, typeLevel, body);
+    FunctionKind kind = def.getFunctionKind();
+
+    Concrete.FunctionDefinition result;
+    if (kind.isCoclause() && myParent instanceof TCDefReferable) {
+      Abstract.Reference implementedField = def.getImplementedField();
+      result = new Concrete.CoClauseFunctionDefinition(kind, (TCDefReferable) myDefinition, (TCDefReferable) myParent, implementedField == null ? null : implementedField.getReferent(), parameters, type, typeLevel, body);
+    } else {
+      result = new Concrete.FunctionDefinition(def.getFunctionKind(), (TCDefReferable) myDefinition, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), parameters, type, typeLevel, body);
+    }
+    return result;
   }
 
   @Override

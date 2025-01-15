@@ -8,5 +8,4 @@ public interface ConcreteDefinition extends ConcreteSourceNode {
   @Nullable ConcreteLevelParameters getHLevelParameters();
   void setPLevelParameters(@Nullable ConcreteLevelParameters parameters);
   void setHLevelParameters(@Nullable ConcreteLevelParameters parameters);
-  void setDynamic();
 }
