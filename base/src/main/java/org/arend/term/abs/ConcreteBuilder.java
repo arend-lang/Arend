@@ -738,7 +738,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     Concrete.Expression result = expression.accept(this, null);
 
     int i = 0;
-    if (result instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof UnresolvedReference unresolved) {
+    if (result instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof UnresolvedReference unresolved && (!fieldAccs.isEmpty() && fieldAccs.get(0).getFieldName() != null || infixName != null)) {
       List<AbstractReference> references = new ArrayList<>(unresolved.getReferenceList());
       List<String> names = new ArrayList<>(unresolved.getPath());
       for (; i < fieldAccs.size(); i++) {
