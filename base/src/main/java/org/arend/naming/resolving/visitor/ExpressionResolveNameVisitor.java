@@ -800,6 +800,9 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
           Object data = originalUnresolvedReferable instanceof UnresolvedReference ? ((UnresolvedReference) originalUnresolvedReferable).getData() : null;
           Referable local = new DataLocalReferable(data, name);
           corrected = new Concrete.BinOpSequenceElem<>(new Concrete.NamePattern(subPattern.getData(), subPattern.isExplicit(), local, namePattern.type));
+          if (myResolverListener != null && originalUnresolvedReferable != null) {
+            myResolverListener.patternResolved(originalUnresolvedReferable, local, pattern, Collections.singletonList(local));
+          }
         } else {
           if (resolved instanceof GlobalReferable) {
             Fixity fixity = first ? Fixity.NONFIX : ((GlobalReferable) resolved).getPrecedence().isInfix ? Fixity.INFIX : namePattern.fixity;
