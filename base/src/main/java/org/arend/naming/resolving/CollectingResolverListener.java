@@ -1,6 +1,7 @@
 package org.arend.naming.resolving;
 
 import org.arend.ext.module.ModulePath;
+import org.arend.ext.reference.DataContainer;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.naming.scope.Scope;
@@ -38,6 +39,16 @@ public class CollectingResolverListener extends DelegateResolverListener {
     return myModuleCache.get(module);
   }
 
+  private void cacheReference(Object data, Referable referable) {
+    if (data instanceof AbstractReference) {
+      AbstractReferable abstractRef = referable.getAbstractReferable();
+      if (abstractRef != null) {
+        myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
+          .addReference((AbstractReference) data, abstractRef instanceof ErrorReference ? TCDefReferable.NULL_REFERABLE : abstractRef);
+      }
+    }
+  }
+
   private void cacheReference(UnresolvedReference reference, Referable referable, List<Referable> resolvedRefs) {
     if (!myCacheReferences) return;
     if (reference instanceof LongUnresolvedReference && resolvedRefs != null) {
@@ -56,15 +67,16 @@ public class CollectingResolverListener extends DelegateResolverListener {
           .addReference(referenceList.get(i), TCDefReferable.NULL_REFERABLE);
       }
     } else {
-      Object data = reference.getData();
-      if (data instanceof AbstractReference) {
-        AbstractReferable abstractRef = referable.getAbstractReferable();
-        if (abstractRef != null) {
-          myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
-            .addReference((AbstractReference) data, abstractRef instanceof ErrorReference ? TCDefReferable.NULL_REFERABLE : abstractRef);
-        }
-      }
+      cacheReference(reference.getData(), referable);
     }
+  }
+
+  @Override
+  public void bindingResolved(Referable binding) {
+    if (binding instanceof DataContainer container) {
+      cacheReference(container.getData(), binding);
+    }
+    super.bindingResolved(binding);
   }
 
   @Override
