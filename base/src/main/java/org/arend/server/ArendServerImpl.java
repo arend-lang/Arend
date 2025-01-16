@@ -88,8 +88,8 @@ public class ArendServerImpl implements ArendServer {
     }
   }
 
-  void clear() {
-    myGroups.clear();
+  void clear(String libraryName) {
+    myGroups.keySet().removeIf(module -> module.getLibraryName().equals(libraryName));
     myResolverCache.clear();
     myErrorService.clear();
   }

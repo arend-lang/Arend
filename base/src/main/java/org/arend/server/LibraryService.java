@@ -35,24 +35,24 @@ public class LibraryService {
   void updateLibrary(@NotNull ArendLibrary library, @NotNull ErrorReporter errorReporter) {
     synchronized (myServer) {
       String name = library.getLibraryName();
-      myLibraries.compute(name, (k, prevLibrary) -> {
+      myLibraries.compute(name, (libName, prevLibrary) -> {
         long modificationStamp = library.getModificationStamp();
         if (prevLibrary != null && modificationStamp >= 0 && prevLibrary.getModificationStamp() >= modificationStamp) {
-          myLogger.info(() -> "Library '" + name + "' is not updated; previous timestamp " + prevLibrary.getModificationStamp() + " >= new timestamp " + modificationStamp);
+          myLogger.info(() -> "Library '" + libName + "' is not updated; previous timestamp " + prevLibrary.getModificationStamp() + " >= new timestamp " + modificationStamp);
           return prevLibrary;
         }
 
-        myServer.clear();
+        myServer.clear(libName);
 
         boolean isExternal = library.isExternalLibrary();
         ClassLoaderDelegate delegate = library.getClassLoaderDelegate();
         if (delegate != null) {
-          (isExternal ? myExternalClassLoader : myInternalClassLoader).addDelegate(name, delegate);
+          (isExternal ? myExternalClassLoader : myInternalClassLoader).addDelegate(libName, delegate);
         }
 
-        ArendLibraryImpl result = new ArendLibraryImpl(name, isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, errorReporter));
+        ArendLibraryImpl result = new ArendLibraryImpl(libName, isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, errorReporter));
         setupExtension(result, library);
-        myLogger.info(() -> "Library '" + name + "' is updated");
+        myLogger.info(() -> "Library '" + libName + "' is updated");
         return result;
       });
     }
