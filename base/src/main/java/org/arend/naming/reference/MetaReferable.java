@@ -30,7 +30,8 @@ public class MetaReferable implements TCDefReferable, MetaRef {
   private final LocatedReferable myParent;
   private MetaTopDefinition myTypechecked;
 
-  public MetaReferable(AccessModifier accessModifier, Precedence precedence, String name, Precedence aliasPrec, String aliasName, String description, MetaDefinition definition, MetaResolver resolver, LocatedReferable parent) {
+  public MetaReferable(Object data, AccessModifier accessModifier, Precedence precedence, String name, Precedence aliasPrec, String aliasName, String description, MetaDefinition definition, MetaResolver resolver, LocatedReferable parent) {
+    myData = data;
     myAccessModifier = accessModifier;
     myPrecedence = precedence;
     myName = name;
@@ -43,7 +44,7 @@ public class MetaReferable implements TCDefReferable, MetaRef {
   }
 
   public MetaReferable(AccessModifier accessModifier, Precedence precedence, String name, String description, MetaDefinition definition, MetaResolver resolver, LocatedReferable parent) {
-    this(accessModifier, precedence, name, null, null, description, definition, resolver, parent);
+    this(null, accessModifier, precedence, name, null, null, description, definition, resolver, parent);
   }
 
   @Override

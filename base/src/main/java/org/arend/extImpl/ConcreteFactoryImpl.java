@@ -697,7 +697,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     if (!(parent instanceof LocatedReferable)) {
       throw new IllegalArgumentException();
     }
-    return new MetaReferable(AccessModifier.PUBLIC, precedence, name, aliasPrec, alias, description, null, null, (LocatedReferable) parent);
+    return new MetaReferable(null, AccessModifier.PUBLIC, precedence, name, aliasPrec, alias, description, null, null, (LocatedReferable) parent);
   }
 
   private static Referable makeLocalRef(ArendRef ref) {

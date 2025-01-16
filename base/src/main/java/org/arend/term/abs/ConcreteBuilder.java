@@ -75,7 +75,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   private static MetaReferable convertMetaReferable(LocatedReferable referable, LocatedReferable parent) {
-    return new MetaReferable(referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), referable.getDescription(), null, null, parent);
+    return new MetaReferable(referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), referable.getDescription(), null, null, parent);
   }
 
   public static @NotNull Concrete.ResolvableDefinition convert(Abstract.Definition definition, LocatedReferable parent, ErrorReporter errorReporter) {
