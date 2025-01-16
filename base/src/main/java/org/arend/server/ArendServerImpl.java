@@ -19,6 +19,7 @@ import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
+import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
@@ -117,7 +118,18 @@ public class ArendServerImpl implements ArendServer {
   @Override
   public void addReadOnlyModule(@NotNull ModuleLocation module, @NotNull ConcreteGroup group) {
     if (module.getLibraryName().equals(Prelude.LIBRARY_NAME)) {
-      myPreludeModuleScopeProvider.addModule(module.getModulePath(), CachingScope.make(LexicalScope.opened(group)));
+      if (myPreludeModuleScopeProvider.isRegistered(module.getModulePath())) {
+        myLogger.warning("Read-only module '" + module + "' is already added");
+      } else {
+        Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
+        group.traverseGroup(subgroup -> {
+          if (subgroup instanceof ConcreteGroup cGroup && cGroup.definition() != null) {
+            defMap.put(cGroup.referable(), cGroup.definition());
+          }
+        });
+        new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), true, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY).resolveGroup(group, getGroupScope(module, group));
+        myPreludeModuleScopeProvider.addModule(module.getModulePath(), CachingScope.make(LexicalScope.opened(group)));
+      }
     }
 
     myGroups.compute(module, (mod,prevPair) -> {
@@ -166,6 +178,10 @@ public class ArendServerImpl implements ArendServer {
           definition = definition.accept(new ReplaceDataVisitor(true), null);
           defMap.put(referable, definition);
           referable.setDefinition((Concrete.ReferableDefinition) definition);
+        } else if (definition instanceof DefinableMetaDefinition metaDef) {
+          metaDef = new ReplaceDataVisitor(true).visitMeta(metaDef, null);
+          defMap.put(metaDef.getData(), metaDef);
+          metaDef.getData().setDefinition(metaDef);
         }
       }
     });
