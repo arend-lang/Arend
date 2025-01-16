@@ -132,8 +132,8 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     for (Abstract.Group subgroup : group.getDynamicSubgroups()) {
       ConcreteGroup cSubgroup = buildGroup(subgroup, referable, null, errorReporter);
       dynamicGroups.add(cSubgroup);
-      if (referable instanceof ConcreteResolvedClassReferable classRef && cSubgroup.definition() instanceof Concrete.Definition def) {
-        classRef.addDynamic(def);
+      if (referable instanceof ConcreteResolvedClassReferable classRef && cSubgroup.definition() != null) {
+        classRef.addDynamic(cSubgroup.definition());
       }
     }
 

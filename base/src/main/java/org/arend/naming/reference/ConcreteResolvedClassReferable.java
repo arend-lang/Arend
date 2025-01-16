@@ -67,14 +67,17 @@ public class ConcreteResolvedClassReferable extends ConcreteLocatedReferable imp
     return dynamicReferables;
   }
 
-  public void addDynamic(Concrete.Definition def) {
-    if (def.enclosingClass != null) {
-      throw new IllegalStateException();
+  public void addDynamic(Concrete.ResolvableDefinition def) {
+    if (def instanceof Concrete.Definition definition) {
+      if (definition.enclosingClass != null) {
+        throw new IllegalStateException();
+      }
+      definition.enclosingClass = this;
     }
+
     if (dynamicReferables.isEmpty()) {
       dynamicReferables = new ArrayList<>();
     }
     dynamicReferables.add(def.getData());
-    def.enclosingClass = this;
   }
 }
