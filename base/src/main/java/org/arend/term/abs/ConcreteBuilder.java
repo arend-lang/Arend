@@ -10,6 +10,7 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.reference.DataContainer;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
+import org.arend.naming.resolving.visitor.TypeClassReferenceExtractVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.Fixity;
@@ -110,12 +111,12 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     return (new ConcreteBuilder(errorReporter, definition)).buildPattern(clause);
   }
 
+  // Group
+
   // TODO[server2]: Do not report actual errors in ConcreteBuilder
   public static @NotNull ConcreteGroup convertGroup(Abstract.Group group, ErrorReporter errorReporter) {
     return buildGroup(group, null, null, errorReporter);
   }
-
-  // Group
 
   private static ConcreteGroup buildGroup(Abstract.Group group, LocatedReferable parent, Concrete.Definition parentDef, ErrorReporter errorReporter) {
     Abstract.Definition definition = group.getGroupDefinition();
@@ -147,7 +148,34 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       }
     }
 
-    return new ConcreteGroup(referable, concrete, statements, dynamicGroups, group.getExternalParameters());
+    return new ConcreteGroup(referable, concrete, statements, dynamicGroups, buildExternalParameters(parentDef));
+  }
+
+  private static List<ParameterReferable> buildExternalParameters(Concrete.Definition definition) {
+    if (definition == null) return Collections.emptyList();
+    List<? extends Concrete.Parameter> parameters = definition.getParameters();
+    if (parameters.isEmpty()) return Collections.emptyList();
+
+    Set<String> eliminated = new HashSet<>();
+    Concrete.FunctionBody body = definition instanceof Concrete.BaseFunctionDefinition ? ((Concrete.BaseFunctionDefinition) definition).getBody() : null;
+    if (body instanceof Concrete.ElimFunctionBody) {
+      if (body.getEliminatedReferences().isEmpty()) return Collections.emptyList();
+      for (Concrete.ReferenceExpression reference : body.getEliminatedReferences()) {
+        eliminated.add(reference.getReferent().getRefName());
+      }
+    }
+
+    List<ParameterReferable> result = new ArrayList<>();
+    int i = 0;
+    for (Concrete.Parameter parameter : parameters) {
+      for (Referable referable : parameter.getReferableList()) {
+        if (referable != null && !eliminated.contains(referable.getRefName())) {
+          result.add(new ParameterReferable(definition.getData(), i, referable, TypeClassReferenceExtractVisitor.getTypeReferenceExpression(parameter.getType(), true)));
+        }
+        i++;
+      }
+    }
+    return result;
   }
 
   // Definition

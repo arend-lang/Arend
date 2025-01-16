@@ -2,7 +2,6 @@ package org.arend.term.abs;
 
 import org.arend.naming.reference.ClassReferable;
 import org.arend.naming.reference.LocatedReferable;
-import org.arend.naming.reference.ParameterReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.ext.concrete.definition.FunctionKind;
@@ -157,7 +156,6 @@ public final class Abstract {
     @Nullable Definition getGroupDefinition();
     @NotNull List<? extends Statement> getStatements();
     @NotNull List<? extends Group> getDynamicSubgroups();
-    @NotNull List<? extends ParameterReferable> getExternalParameters(); // TODO[server2]: Remove this
   }
 
   // Expression

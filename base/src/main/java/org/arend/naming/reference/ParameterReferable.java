@@ -1,6 +1,7 @@
 package org.arend.naming.reference;
 
 import org.arend.naming.resolving.visitor.TypeClassReferenceExtractVisitor;
+import org.arend.term.abs.AbstractReferable;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -41,6 +42,11 @@ public class ParameterReferable implements TypedReferable {
   @Override
   public @Nullable ClassReferable getTypeClassReference() {
     return new TypeClassReferenceExtractVisitor().findClassReference(TypeClassReferenceExtractVisitor.getTypeReference(myClassRef, true));
+  }
+
+  @Override
+  public @Nullable AbstractReferable getAbstractReferable() {
+    return myReferable.getAbstractReferable();
   }
 
   @Override
