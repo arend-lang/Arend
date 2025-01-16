@@ -178,6 +178,21 @@ public class ArendServerImpl implements ArendServer {
           definition = definition.accept(new ReplaceDataVisitor(true), null);
           defMap.put(referable, definition);
           referable.setDefinition((Concrete.ReferableDefinition) definition);
+          if (definition instanceof Concrete.ClassDefinition classDef) {
+            for (Concrete.ClassElement element : classDef.getElements()) {
+              if (element instanceof Concrete.ClassField field) {
+                field.getData().setDefinition(field);
+              }
+            }
+          } else if (definition instanceof Concrete.DataDefinition dataDef) {
+            for (Concrete.ConstructorClause clause : dataDef.getConstructorClauses()) {
+              for (Concrete.Constructor constructor : clause.getConstructors()) {
+                if (constructor.getData() instanceof ConcreteLocatedReferable constructorRef) {
+                  constructorRef.setDefinition(constructor);
+                }
+              }
+            }
+          }
         } else if (definition instanceof DefinableMetaDefinition metaDef) {
           metaDef = new ReplaceDataVisitor(true).visitMeta(metaDef, null);
           defMap.put(metaDef.getData(), metaDef);
