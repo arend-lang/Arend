@@ -1117,8 +1117,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     myBuilder.append(" ".repeat(Math.max(0, myIndent)));
   }
 
-  private void prettyPrintNameWithPrecedence(GlobalReferable def) {
-    Precedence precedence = def.getPrecedence();
+  private void prettyPrintPrecedence(Precedence precedence) {
     if (!precedence.equals(Precedence.DEFAULT)) {
       myBuilder.append("\\infix");
       if (precedence.associativity == Precedence.Associativity.LEFT_ASSOC) myBuilder.append('l');
@@ -1127,8 +1126,18 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       myBuilder.append(precedence.priority);
       myBuilder.append(' ');
     }
+  }
 
+  private void prettyPrintNameWithPrecedence(GlobalReferable def) {
+    prettyPrintPrecedence(def.getPrecedence());
     myBuilder.append(def.textRepresentation());
+
+    String alias = def.getAliasName();
+    if (alias != null) {
+      myBuilder.append(" \\alias ");
+      prettyPrintPrecedence(def.getAliasPrecedence());
+      myBuilder.append(alias);
+    }
   }
 
   public void prettyPrintBody(Concrete.FunctionBody body, boolean isFunction) {
