@@ -36,7 +36,7 @@ public class NamespaceCommandNamespace implements Scope {
   }
 
   private Referable resolve(NamedUnresolvedReference ref, ScopeContext context) {
-    return ref.resolve(new PrivateFilteredScope(myModuleNamespace, true), null, context);
+    return ref.resolve(new PrivateFilteredScope(myModuleNamespace, true), null, context, null);
   }
 
   @NotNull

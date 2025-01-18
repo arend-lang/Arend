@@ -4,7 +4,6 @@ import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.DataContainer;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
-import org.arend.naming.scope.Scope;
 import org.arend.term.NameRenaming;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.AbstractReferable;
@@ -80,11 +79,11 @@ public class CollectingResolverListener extends DelegateResolverListener {
   }
 
   @Override
-  public void referenceResolved(Concrete.Expression expr, Referable originalRef, Concrete.ReferenceExpression refExpr, List<Referable> resolvedRefs, Scope scope) {
+  public void referenceResolved(Concrete.Expression expr, Referable originalRef, Concrete.ReferenceExpression refExpr, List<Referable> resolvedRefs) {
     if (originalRef instanceof UnresolvedReference) {
       cacheReference((UnresolvedReference) originalRef, refExpr.getReferent(), resolvedRefs);
     }
-    super.referenceResolved(expr, originalRef, refExpr, resolvedRefs, scope);
+    super.referenceResolved(expr, originalRef, refExpr, resolvedRefs);
   }
 
   @Override

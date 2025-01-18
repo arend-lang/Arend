@@ -168,9 +168,9 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     referable = RedirectingReferable.getOriginalReferable(referable);
     if (referable instanceof UnresolvedReference) {
       if (withArg) {
-        ((UnresolvedReference) referable).resolveExpression(scope, resolvedRefs);
+        ((UnresolvedReference) referable).resolveExpression(scope, resolvedRefs, null);
       }
-      referable = RedirectingReferable.getOriginalReferable(((UnresolvedReference) referable).resolve(scope, withArg ? null : resolvedRefs, context));
+      referable = RedirectingReferable.getOriginalReferable(((UnresolvedReference) referable).resolve(scope, withArg ? null : resolvedRefs, context, null));
     }
     return referable;
   }
@@ -186,7 +186,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
   public static Referable tryResolve(Referable referable, Scope scope, List<Referable> resolvedRefs) {
     referable = RedirectingReferable.getOriginalReferable(referable);
     if (referable instanceof UnresolvedReference) {
-      referable = RedirectingReferable.getOriginalReferable(((UnresolvedReference) referable).tryResolve(scope, resolvedRefs));
+      referable = RedirectingReferable.getOriginalReferable(((UnresolvedReference) referable).tryResolve(scope, resolvedRefs, null));
     }
     return referable;
   }
@@ -195,9 +195,9 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     Referable referable = RedirectingReferable.getOriginalReferable(refExpr.getReferent());
     refExpr.setReferent(referable);
     if (referable instanceof UnresolvedReference unresolved) {
-      Concrete.Expression resolved = unresolved.tryResolveExpression(scope, resolvedRefs);
+      Concrete.Expression resolved = unresolved.tryResolveExpression(scope, resolvedRefs, null);
       if (unresolved.isResolved()) {
-        refExpr.setReferent(unresolved.resolve(scope, null));
+        refExpr.setReferent(unresolved.resolve(scope, null, null));
       }
       return resolved == null ? refExpr : resolved;
     } else {
@@ -205,12 +205,12 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     }
   }
 
-  public static Concrete.Expression resolve(Concrete.ReferenceExpression refExpr, Scope scope, boolean removeRedirection, List<Referable> resolvedRefs) {
+  public static Concrete.Expression resolve(Concrete.ReferenceExpression refExpr, Scope scope, boolean removeRedirection, List<Referable> resolvedRefs, ResolverListener listener) {
     Referable referable = RedirectingReferable.getOriginalReferable(refExpr.getReferent());
     Concrete.Expression resolved;
     if (referable instanceof UnresolvedReference unresolved) {
-      resolved = unresolved.resolveExpression(scope, resolvedRefs);
-      referable = unresolved.resolve(scope, null);
+      resolved = unresolved.resolveExpression(scope, resolvedRefs, listener);
+      referable = unresolved.resolve(scope, null, listener);
       if (removeRedirection) {
         referable = RedirectingReferable.getOriginalReferable(referable);
       }
@@ -235,13 +235,13 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     if (origRef instanceof UnresolvedReference) {
       List<Referable> resolvedList = myResolverListener == null ? null : new ArrayList<>();
       Scope scope = myContext == null ? EmptyScope.INSTANCE : new ListScope(myContext);
-      resolve(expr, scope, true, resolvedList);
+      resolve(expr, scope, true, resolvedList, myResolverListener);
       convertExpr(expr);
       if (expr.getReferent() instanceof ErrorReference) {
         myErrorReporter.report(((ErrorReference) expr.getReferent()).getError());
       }
       if (myResolverListener != null) {
-        myResolverListener.referenceResolved(null, origRef, expr, resolvedList, scope);
+        myResolverListener.referenceResolved(null, origRef, expr, resolvedList);
       }
     }
   }
@@ -334,13 +334,13 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     if (origRef instanceof UnresolvedReference) {
       expr.setReferent(origRef);
       List<Referable> resolvedList = myResolverListener == null ? null : new ArrayList<>();
-      resolved = resolve(expr, myScope, false, resolvedList);
+      resolved = resolve(expr, myScope, false, resolvedList, myResolverListener);
       if (expr.getReferent() instanceof ErrorReference) {
         myErrorReporter.report(((ErrorReference) expr.getReferent()).getError());
       }
       convertArgument(resolved);
       if (myResolverListener != null) {
-        myResolverListener.referenceResolved(resolved, origRef, expr, resolvedList, myScope);
+        myResolverListener.referenceResolved(resolved, origRef, expr, resolvedList);
       }
     } else {
       resolved = null;
@@ -506,13 +506,13 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     }
 
     if (resolvedReference.refExpr.getReferent() instanceof UnresolvedReference) {
-      resolve(resolvedReference.refExpr, myScope, false, null);
+      resolve(resolvedReference.refExpr, myScope, false, null, myResolverListener);
       if (resolvedReference.refExpr.getReferent() instanceof ErrorReference) {
         myErrorReporter.report(((ErrorReference) resolvedReference.refExpr.getReferent()).getError());
       }
     }
     if (resolvedReference.resolvedList != null && myResolverListener != null) {
-      myResolverListener.referenceResolved(elem.getComponent(), resolvedReference.originalReference, resolvedReference.refExpr, resolvedReference.resolvedList, myScope);
+      myResolverListener.referenceResolved(elem.getComponent(), resolvedReference.originalReference, resolvedReference.refExpr, resolvedReference.resolvedList);
     }
   }
 
@@ -692,9 +692,9 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
 
         Referable resolved;
         if (referable instanceof LongUnresolvedReference) {
-          resolved = ((LongUnresolvedReference) referable).resolve(myParentScope, resolvedRefs);
+          resolved = ((LongUnresolvedReference) referable).resolve(myParentScope, resolvedRefs, myResolverListener);
         } else if (referable instanceof UnresolvedReference) {
-          resolved = ((UnresolvedReference) referable).tryResolve(myParentScope, resolvedRefs);
+          resolved = ((UnresolvedReference) referable).tryResolve(myParentScope, resolvedRefs, myResolverListener);
         } else {
           resolved = myParentScope.resolveName(referable.getRefName());
           resolvedRefs.add(resolved);

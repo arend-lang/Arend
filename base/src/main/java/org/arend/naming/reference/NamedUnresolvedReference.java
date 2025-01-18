@@ -1,5 +1,6 @@
 package org.arend.naming.reference;
 
+import org.arend.naming.resolving.ResolverListener;
 import org.arend.naming.scope.Scope;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
@@ -47,11 +48,14 @@ public class NamedUnresolvedReference implements UnresolvedReference {
 
   @NotNull
   @Override
-  public Referable resolve(Scope scope, @Nullable List<Referable> resolvedRefs, @Nullable Scope.ScopeContext context) {
+  public Referable resolve(Scope scope, @Nullable List<Referable> resolvedRefs, @Nullable Scope.ScopeContext context, @Nullable ResolverListener listener) {
     if (resolved != null) {
       return resolved;
     }
 
+    if (listener != null && myData instanceof AbstractReference reference) {
+      listener.resolving(reference, scope, context, true);
+    }
     resolved = scope.resolveName(myName, context);
     if (resolved == null) {
       resolved = new ErrorReference(myData, myName);
@@ -64,11 +68,14 @@ public class NamedUnresolvedReference implements UnresolvedReference {
 
   @Nullable
   @Override
-  public Referable tryResolve(Scope scope, List<Referable> resolvedRefs) {
+  public Referable tryResolve(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
     if (resolved != null) {
       return resolved;
     }
 
+    if (listener != null && myData instanceof AbstractReference reference) {
+      listener.resolving(reference, scope, Scope.ScopeContext.STATIC, true);
+    }
     resolved = scope.resolveName(myName);
     if (resolved != null && resolvedRefs != null) {
       resolvedRefs.add(resolved);
@@ -79,14 +86,14 @@ public class NamedUnresolvedReference implements UnresolvedReference {
 
   @Nullable
   @Override
-  public Concrete.Expression resolveExpression(Scope scope, List<Referable> resolvedRefs) {
-    resolve(scope, resolvedRefs);
+  public Concrete.Expression resolveExpression(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
+    resolve(scope, resolvedRefs, listener);
     return null;
   }
 
   @Override
-  public @Nullable Concrete.Expression tryResolveExpression(Scope scope, List<Referable> resolvedRefs) {
-    tryResolve(scope, resolvedRefs);
+  public @Nullable Concrete.Expression tryResolveExpression(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
+    tryResolve(scope, resolvedRefs, listener);
     return null;
   }
 

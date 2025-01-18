@@ -5,14 +5,16 @@ import org.arend.naming.reference.Referable;
 import org.arend.naming.scope.Scope;
 import org.arend.term.NameRenaming;
 import org.arend.term.NamespaceCommand;
+import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 
 import java.util.Collection;
 import java.util.List;
 
 public interface ResolverListener {
+  default void resolving(AbstractReference reference, Scope scope, Scope.ScopeContext context, boolean finished) {}
   default void bindingResolved(Referable binding) {}
-  default void referenceResolved(Concrete.Expression expr, Referable originalRef, Concrete.ReferenceExpression refExpr, List<Referable> resolvedRefs, Scope scope) {}
+  default void referenceResolved(Concrete.Expression expr, Referable originalRef, Concrete.ReferenceExpression refExpr, List<Referable> resolvedRefs) {}
   default void patternParsed(Concrete.ConstructorPattern pattern) {}
   default void patternResolved(Referable originalRef, Referable newRef, Concrete.Pattern pattern, List<Referable> resolvedRefs) {}
   default void coPatternResolved(Concrete.CoClauseElement classFieldImpl, Referable originalRef, Referable referable, List<Referable> resolvedRefs) {}

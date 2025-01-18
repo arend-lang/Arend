@@ -435,11 +435,13 @@ public class ArendServerImpl implements ArendServer {
     try {
       new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(group)), true, DummyErrorReporter.INSTANCE, new ResolverListener() {
         @Override
-        public void referenceResolved(Concrete.Expression expr, Referable originalRef, Concrete.ReferenceExpression refExpr, List<Referable> resolvedRefs, Scope scope) {
-          if (refExpr.getData() == reference) {
-            result.addAll(scope.getElements());
+        public void resolving(AbstractReference abstractReference, Scope scope, Scope.ScopeContext context, boolean finished) {
+          if (abstractReference == reference) {
+            result.addAll(scope.getElements(context));
             found[0] = true;
-            throw new CompletionException();
+            if (finished) {
+              throw new CompletionException();
+            }
           }
         }
       }).resolveGroupWithTypes(group, getGroupScope(module, group));

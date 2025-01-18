@@ -128,13 +128,13 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     if (ref instanceof UnresolvedReference) {
       List<Referable> resolvedRefs = new ArrayList<>();
-      Referable newRef = ((UnresolvedReference) ref).tryResolve(exprVisitor.getScope(), resolvedRefs);
+      Referable newRef = ((UnresolvedReference) ref).tryResolve(exprVisitor.getScope(), resolvedRefs, myResolverListener);
       if (newRef == null) {
         return false;
       }
       expr.setReferent(exprVisitor.convertReferable(newRef));
       if (myResolverListener != null) {
-        myResolverListener.referenceResolved(null, ref, expr, resolvedRefs, exprVisitor.getScope());
+        myResolverListener.referenceResolved(null, ref, expr, resolvedRefs);
       }
     }
 
@@ -893,7 +893,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         LongUnresolvedReference reference = new LongUnresolvedReference(namespaceCommand, namespaceCommand.getReferenceList(), path);
         Scope importedScope = kind == NamespaceCommand.Kind.IMPORT ? namespaceScope.getImportedSubscope() : namespaceScope;
         List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
-        reference.resolve(importedScope, resolvedRefs);
+        reference.resolve(importedScope, resolvedRefs, myResolverListener);
         if (myResolverListener != null) {
           myResolverListener.namespaceResolved(namespaceCommand, resolvedRefs);
         }

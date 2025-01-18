@@ -2,7 +2,6 @@ package org.arend.naming.resolving;
 
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
-import org.arend.naming.scope.Scope;
 import org.arend.term.NameRenaming;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.Concrete;
@@ -23,8 +22,8 @@ public class DelegateResolverListener implements ResolverListener {
   }
 
   @Override
-  public void referenceResolved(Concrete.Expression expr, Referable originalRef, Concrete.ReferenceExpression refExpr, List<Referable> resolvedRefs, Scope scope) {
-    myResolverListener.referenceResolved(expr, originalRef, refExpr, resolvedRefs, scope);
+  public void referenceResolved(Concrete.Expression expr, Referable originalRef, Concrete.ReferenceExpression refExpr, List<Referable> resolvedRefs) {
+    myResolverListener.referenceResolved(expr, originalRef, refExpr, resolvedRefs);
   }
 
   @Override
