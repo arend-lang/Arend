@@ -10,22 +10,22 @@ import org.arend.library.classLoader.MultiClassLoader;
 import org.arend.library.error.LibraryError;
 import org.arend.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
+import org.arend.prelude.ConcretePrelude;
 import org.arend.prelude.Prelude;
 import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 public class LibraryService {
   private final ArendServerImpl myServer;
   private final Logger myLogger = Logger.getLogger(LibraryService.class.getName());
   private final Map<String, ArendLibraryImpl> myLibraries = new ConcurrentHashMap<>();
-  private final MultiClassLoader<String> myExternalClassLoader = new MultiClassLoader<>(ArendExtension.class.getClassLoader());
-  private final MultiClassLoader<String> myInternalClassLoader = new MultiClassLoader<>(myExternalClassLoader);
+  private MultiClassLoader<String> myExternalClassLoader = new MultiClassLoader<>(ArendExtension.class.getClassLoader());
+  private MultiClassLoader<String> myInternalClassLoader = new MultiClassLoader<>(myExternalClassLoader);
 
   public LibraryService(ArendServerImpl server) {
     myServer = server;
@@ -51,7 +51,14 @@ public class LibraryService {
         }
 
         ArendLibraryImpl result = new ArendLibraryImpl(libName, isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, errorReporter));
-        setupExtension(result, library);
+        try {
+          setupExtension(result, library);
+        } catch (Exception e) {
+          String msg = "Library '" + libName + "' extension is not loaded. Reason: " + e.getMessage();
+          errorReporter.report(new LibraryError(msg, Stream.of(libName)));
+          myLogger.severe(msg);
+          return new ArendLibraryImpl(libName, isExternal, modificationStamp, result.getLibraryDependencies(), new DefaultArendExtension());
+        }
         myLogger.info(() -> "Library '" + libName + "' is updated");
         return result;
       });
@@ -63,6 +70,20 @@ public class LibraryService {
     if (library != null) {
       (library.isExternalLibrary() ? myExternalClassLoader : myInternalClassLoader).removeDelegate(name);
     }
+  }
+
+  Set<String> unloadLibraries(boolean onlyInternal) {
+    Set<String> removed = new HashSet<>();
+    for (Iterator<Map.Entry<String, ArendLibraryImpl>> iterator = myLibraries.entrySet().iterator(); iterator.hasNext(); ) {
+      Map.Entry<String, ArendLibraryImpl> entry = iterator.next();
+      if (!onlyInternal || !entry.getValue().isExternalLibrary()) {
+        iterator.remove();
+        removed.add(entry.getKey());
+      }
+    }
+    myExternalClassLoader = new MultiClassLoader<>(ArendExtension.class.getClassLoader());
+    myInternalClassLoader = new MultiClassLoader<>(myExternalClassLoader);
+    return removed;
   }
 
   public Set<String> getLibraries() {
@@ -110,7 +131,8 @@ public class LibraryService {
     SerializableKeyRegistryImpl keyRegistry = new SerializableKeyRegistryImpl();
     extension.registerKeys(keyRegistry);
     extension.setDependencies(dependencies);
-    extension.setPrelude(new Prelude());
+    ConcreteGroup preludeGroup = myServer.getGroup(Prelude.MODULE_LOCATION);
+    extension.setPrelude(preludeGroup == null ? new Prelude() : new ConcretePrelude(preludeGroup));
     extension.setConcreteFactory(new ConcreteFactoryImpl(null, library.getLibraryName()));
     extension.setVariableRenamerFactory(VariableRenamerFactoryImpl.INSTANCE);
 

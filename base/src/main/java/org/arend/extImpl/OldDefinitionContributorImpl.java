@@ -5,6 +5,7 @@ import org.arend.ext.concrete.definition.ConcreteDefinition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
+import org.arend.ext.prettyprinting.doc.Doc;
 import org.arend.ext.reference.MetaRef;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.MetaResolver;
@@ -97,7 +98,7 @@ public class OldDefinitionContributorImpl extends Disableable implements Definit
   }
 
   @Override
-  public void declare(@NotNull MetaRef metaRef, @Nullable MetaDefinition meta, @Nullable MetaResolver resolver) {
+  public void declare(@NotNull Doc description, @NotNull MetaRef metaRef, @Nullable MetaDefinition meta, @Nullable MetaResolver resolver) {
     if (!(metaRef instanceof MetaReferable ref)) {
       throw new IllegalArgumentException();
     }
@@ -106,7 +107,7 @@ public class OldDefinitionContributorImpl extends Disableable implements Definit
   }
 
   @Override
-  public void declare(@NotNull ConcreteDefinition definition) {
+  public void declare(@NotNull Doc description, @NotNull ConcreteDefinition definition) {
     if (!(definition instanceof Concrete.Definition def)) {
       throw new IllegalArgumentException();
     }

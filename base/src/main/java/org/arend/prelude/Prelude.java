@@ -417,8 +417,8 @@ public class Prelude implements ArendPrelude {
   }
 
   @Override
-  public ArendRef getPathConRef() {
-    return PATH_CON.getRef();
+  public Constructor getPathCon() {
+    return PATH_CON;
   }
 
   @Override
@@ -427,8 +427,8 @@ public class Prelude implements ArendPrelude {
   }
 
   @Override
-  public TCDefReferable getAtRef() {
-    return AT.getRef();
+  public FunctionDefinition getAt() {
+    return AT;
   }
 
   @Override
@@ -494,5 +494,190 @@ public class Prelude implements ArendPrelude {
   @Override
   public CoreFunctionDefinition getArrayIndex() {
     return ARRAY_INDEX;
+  }
+
+  @Override
+  public ArendRef getIntervalRef() {
+    return INTERVAL == null ? null : INTERVAL.getRef();
+  }
+
+  @Override
+  public ArendRef getLeftRef() {
+    return LEFT == null ? null : LEFT.getRef();
+  }
+
+  @Override
+  public ArendRef getRightRef() {
+    return RIGHT == null ? null : RIGHT.getRef();
+  }
+
+  @Override
+  public ArendRef getSqueezeRef() {
+    return SQUEEZE == null ? null : SQUEEZE.getRef();
+  }
+
+  @Override
+  public ArendRef getSqueezeRRef() {
+    return SQUEEZE_R == null ? null : SQUEEZE_R.getRef();
+  }
+
+  @Override
+  public ArendRef getNatRef() {
+    return NAT == null ? null : NAT.getRef();
+  }
+
+  @Override
+  public ArendRef getZeroRef() {
+    return ZERO == null ? null : ZERO.getRef();
+  }
+
+  @Override
+  public ArendRef getSucRef() {
+    return SUC == null ? null : SUC.getRef();
+  }
+
+  @Override
+  public ArendRef getPlusRef() {
+    return PLUS == null ? null : PLUS.getRef();
+  }
+
+  @Override
+  public ArendRef getMulRef() {
+    return MUL == null ? null : MUL.getRef();
+  }
+
+  @Override
+  public ArendRef getMinusRef() {
+    return MINUS == null ? null : MINUS.getRef();
+  }
+
+  @Override
+  public ArendRef getFinRef() {
+    return FIN == null ? null : FIN.getRef();
+  }
+
+  @Override
+  public ArendRef getFinFromNatRef() {
+    return FIN_FROM_NAT == null ? null : FIN_FROM_NAT.getRef();
+  }
+
+  @Override
+  public ArendRef getIntRef() {
+    return INT == null ? null : INT.getRef();
+  }
+
+  @Override
+  public ArendRef getPosRef() {
+    return POS == null ? null : POS.getRef();
+  }
+
+  @Override
+  public ArendRef getNegRef() {
+    return NEG == null ? null : NEG.getRef();
+  }
+
+  @Override
+  public ArendRef getStringRef() {
+    return STRING == null ? null : STRING.getRef();
+  }
+
+  @Override
+  public ArendRef getCoerceRef() {
+    return COERCE == null ? null : COERCE.getRef();
+  }
+
+  @Override
+  public ArendRef getCoerce2Ref() {
+    return COERCE2 == null ? null : COERCE2.getRef();
+  }
+
+  @Override
+  public ArendRef getPathRef() {
+    return PATH == null ? null : PATH.getRef();
+  }
+
+  @Override
+  public ArendRef getEqualityRef() {
+    return PATH_INFIX == null ? null : PATH_INFIX.getRef();
+  }
+
+  @Override
+  public ArendRef getPathConRef() {
+    return PATH_CON == null ? null : PATH_CON.getRef();
+  }
+
+  @Override
+  public ArendRef getIdpRef() {
+    return IDP == null ? null : IDP.getRef();
+  }
+
+  @Override
+  public ArendRef getAtRef() {
+    return AT == null ? null : AT.getRef();
+  }
+
+  @Override
+  public ArendRef getIsoRef() {
+    return ISO == null ? null : ISO.getRef();
+  }
+
+  @Override
+  public ArendRef getDivModRef() {
+    return DIV_MOD == null ? null : DIV_MOD.getRef();
+  }
+
+  @Override
+  public ArendRef getDivRef() {
+    return DIV == null ? null : DIV.getRef();
+  }
+
+  @Override
+  public ArendRef getModRef() {
+    return MOD == null ? null : MOD.getRef();
+  }
+
+  @Override
+  public ArendRef getDivModPropRef() {
+    return DIV_MOD_PROPERTY == null ? null : DIV_MOD_PROPERTY.getRef();
+  }
+
+  @Override
+  public ArendRef getDArrayRef() {
+    return DEP_ARRAY == null ? null : DEP_ARRAY.getRef();
+  }
+
+  @Override
+  public ArendRef getArrayRef() {
+    return ARRAY == null ? null : ARRAY.getRef();
+  }
+
+  @Override
+  public ArendRef getArrayElementsTypeRef() {
+    return ARRAY_ELEMENTS_TYPE == null ? null : ARRAY_ELEMENTS_TYPE.getRef();
+  }
+
+  @Override
+  public ArendRef getArrayLengthRef() {
+    return ARRAY_LENGTH == null ? null : ARRAY_LENGTH.getRef();
+  }
+
+  @Override
+  public ArendRef getArrayAtRef() {
+    return ARRAY_AT == null ? null : ARRAY_AT.getRef();
+  }
+
+  @Override
+  public ArendRef getEmptyArrayRef() {
+    return EMPTY_ARRAY == null ? null : EMPTY_ARRAY.getRef();
+  }
+
+  @Override
+  public ArendRef getArrayConsRef() {
+    return ARRAY_CONS == null ? null : ARRAY_CONS.getRef();
+  }
+
+  @Override
+  public ArendRef getArrayIndexRef() {
+    return ARRAY_INDEX == null ? null : ARRAY_INDEX.getRef();
   }
 }

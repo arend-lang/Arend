@@ -5,6 +5,8 @@ import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.Constructor;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
+import org.arend.ext.prettyprinting.doc.DocStringBuilder;
+import org.arend.ext.prettyprinting.doc.LineDoc;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.variable.Variable;
 import org.arend.extImpl.AbstractedExpressionImpl;
@@ -54,6 +56,27 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
   public void printGroup(ConcreteGroup group) {
     if (group == null) return;
+
+    List<LineDoc> lines = group.description().linearize(0, true);
+    if (!lines.isEmpty()) {
+      if (lines.size() == 1) {
+        printIndent();
+        myBuilder.append("-- | ");
+        DocStringBuilder.buildDocComment(myBuilder, lines.get(0), true);
+      } else {
+        printIndent();
+        myBuilder.append("{- |\n");
+        myIndent += INDENT;
+        for (LineDoc line : lines) {
+          printIndent();
+          DocStringBuilder.buildDocComment(myBuilder, line, true);
+        }
+        myIndent -= INDENT;
+        printIndent();
+        myBuilder.append("-}\n");
+      }
+    }
+
     if (group.definition() != null) {
       group.definition().accept(this, null);
     } else {
@@ -84,7 +107,10 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       if (first) first = false;
       else myBuilder.append("\n\n");
 
-      printGroup(statement.group());
+      ConcreteGroup group = statement.group();
+      if (group != null) {
+        printGroup(statement.group());
+      }
       if (statement.command() != null) {
         printIndent();
         statement.command().prettyPrint(myBuilder, PrettyPrinterConfig.DEFAULT);

@@ -7,6 +7,7 @@ import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.NameResolverError;
+import org.arend.ext.prettyprinting.doc.*;
 import org.arend.ext.reference.Precedence;
 import org.arend.naming.error.DuplicateNameError;
 import org.arend.naming.error.DuplicateOpenedNameError;
@@ -33,7 +34,7 @@ import org.arend.ext.util.Pair;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitionVisitor<Scope, Void> {
+public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitionVisitor<Scope, Void>, DocVisitor<Scope, Void> {
   private boolean myResolveTypeClassReferences;
   private boolean myReportDefinitionBeforeResolve;
   private final ConcreteProvider myConcreteProvider;
@@ -185,6 +186,57 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     return null;
   }
 
+  @Override
+  public Void visitVList(VListDoc doc, Scope scope) {
+    for (Doc line : doc.getDocs()) {
+      line.accept(this, scope);
+    }
+    return null;
+  }
+
+  @Override
+  public Void visitHList(HListDoc doc, Scope scope) {
+    for (Doc line : doc.getDocs()) {
+      line.accept(this, scope);
+    }
+    return null;
+  }
+
+  @Override
+  public Void visitText(TextDoc doc, Scope scope) {
+    return null;
+  }
+
+  @Override
+  public Void visitHang(HangDoc doc, Scope scope) {
+    doc.getTop().accept(this, scope);
+    doc.getBottom().accept(this, scope);
+    return null;
+  }
+
+  @Override
+  public Void visitReference(ReferenceDoc doc, Scope scope) {
+    if (doc.getReference() instanceof UnresolvedReference referable) {
+      new ExpressionResolveNameVisitor(scope, Collections.emptyList(), myErrorReporter, myResolverListener).visitReference(new Concrete.ReferenceExpression(referable.getData(), referable), null);
+    }
+    return null;
+  }
+
+  @Override
+  public Void visitCaching(CachingDoc doc, Scope params) {
+    return null;
+  }
+
+  @Override
+  public Void visitTermLine(TermLineDoc doc, Scope params) {
+    return null;
+  }
+
+  @Override
+  public Void visitPattern(PatternDoc doc, Scope params) {
+    return null;
+  }
+
   private class ConcreteProxyErrorReporter extends LocalErrorReporter {
     private final Concrete.ResolvableDefinition definition;
 
@@ -223,7 +275,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     Concrete.GeneralDefinition enclosingDef = myConcreteProvider.getConcrete(function.getUseParent());
-    Referable classRef = null;
+    ClassReferable classRef = null;
     List<? extends Concrete.ClassElement> elements = Collections.emptyList();
     if (enclosingDef instanceof Concrete.BaseFunctionDefinition enclosingFunction) {
       if (enclosingFunction.getResultType() != null) {
@@ -233,15 +285,12 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         classRef = new TypeClassReferenceExtractVisitor().getTypeClassReference(enclosingFunction.getResultType());
         elements = enclosingFunction.getBody().getCoClauseElements();
       }
-    } else if (enclosingDef instanceof Concrete.ClassDefinition) {
-      classRef = enclosingDef.getData();
-      elements = ((Concrete.ClassDefinition) enclosingDef).getElements();
+    } else if (enclosingDef instanceof Concrete.ClassDefinition classDef) {
+      classRef = classDef.getData();
+      elements = classDef.getElements();
     }
 
-    if (classRef != null && !(classRef instanceof ClassReferable)) {
-      classRef = classRef.getUnderlyingReferable();
-    }
-    if (classRef instanceof ClassReferable) {
+    if (classRef != null) {
       Concrete.CoClauseFunctionReference functionRef = null;
       for (Concrete.ClassElement element : elements) {
         if (element instanceof Concrete.CoClauseFunctionReference && ((Concrete.CoClauseFunctionReference) element).getFunctionReference().equals(function.getData())) {
@@ -250,7 +299,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         }
       }
       if (functionRef != null) {
-        function.setImplementedField(new ExpressionResolveNameVisitor(scope, null, myLocalErrorReporter, myResolverListener).visitClassFieldReference(functionRef, function.getImplementedField(), (ClassReferable) classRef));
+        function.setImplementedField(new ExpressionResolveNameVisitor(scope, null, myLocalErrorReporter, myResolverListener).visitClassFieldReference(functionRef, function.getImplementedField(), classRef));
       }
     }
     if (function.getData() instanceof LocatedReferableImpl && !((LocatedReferableImpl) function.getData()).isPrecedenceSet() && function.getImplementedField() instanceof GlobalReferable) {
@@ -811,6 +860,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     boolean isTopLevel = !(group instanceof ChildGroup) || ((ChildGroup) group).getParentGroup() == null;
     Scope namespaceScope = CachingScope.make(new LexicalScope(scope, group, null, true, false));
     if (!myResolveTypeClassReferences) {
+      if (myResolverListener != null && myResolverListener != ResolverListener.EMPTY) {
+        group.getDescription().accept(this, cachedScope);
+      }
+
       for (Statement statement : statements) {
         NamespaceCommand namespaceCommand = statement.getNamespaceCommand();
         if (namespaceCommand == null) {

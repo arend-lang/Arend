@@ -1,5 +1,7 @@
 package org.arend.term.group;
 
+import org.arend.ext.prettyprinting.doc.Doc;
+import org.arend.ext.prettyprinting.doc.DocFactory;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.ParameterReferable;
 import org.jetbrains.annotations.NotNull;
@@ -21,6 +23,11 @@ public class StaticGroup implements ChildGroup, Statement {
     myExternalParameters = externalParameters;
     myParent = parent;
     myDynamicContext = isDynamicContext;
+  }
+
+  @Override
+  public @NotNull Doc getDescription() {
+    return DocFactory.nullDoc();
   }
 
   @NotNull

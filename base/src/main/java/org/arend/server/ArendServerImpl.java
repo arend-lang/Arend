@@ -91,7 +91,7 @@ public class ArendServerImpl implements ArendServer {
 
   void clear(String libraryName) {
     myGroups.keySet().removeIf(module -> module.getLibraryName().equals(libraryName));
-    myResolverCache.clear();
+    myResolverCache.clearLibraries(Collections.singleton(libraryName));
     myErrorService.clear();
   }
 
@@ -104,9 +104,19 @@ public class ArendServerImpl implements ArendServer {
   public void removeLibrary(@NotNull String name) {
     synchronized (this) {
       myLibraryService.removeLibrary(name);
-      myResolverCache.clearLibrary(name);
+      myResolverCache.clearLibraries(Collections.singleton(name));
       myGroups.keySet().removeIf(module -> module.getLibraryName().equals(name));
       myLogger.info(() -> "Library '" + name + "' is removed");
+    }
+  }
+
+  @Override
+  public void unloadLibraries(boolean onlyInternal) {
+    synchronized (this) {
+      Set<String> libraries = myLibraryService.unloadLibraries(onlyInternal);
+      myResolverCache.clearLibraries(libraries);
+      myGroups.keySet().removeIf(module -> libraries.contains(module.getLibraryName()));
+      myLogger.info(onlyInternal ? "Internal libraries unloaded" : "Libraries unloaded");
     }
   }
 
@@ -387,6 +397,11 @@ public class ArendServerImpl implements ArendServer {
   @Override
   public @Nullable AbstractReferable getCachedReferable(@NotNull AbstractReference reference) {
     return myResolverCache.getCachedReferable(reference);
+  }
+
+  @Override
+  public void cacheReference(@NotNull UnresolvedReference reference, @NotNull Referable referable) {
+    myResolverCache.addReference(reference, referable);
   }
 
   @Override

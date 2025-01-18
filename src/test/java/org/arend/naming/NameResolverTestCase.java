@@ -65,14 +65,14 @@ public abstract class NameResolverTestCase extends ParserTestCase {
   }
 
   protected void addMeta(String name, Precedence prec, MetaDefinition meta) {
-    metaDefs.put(name, new MetaReferable(AccessModifier.PUBLIC, prec, name, "", meta, meta instanceof MetaResolver ? (MetaResolver) meta : null, new FullModuleReferable(MODULE_PATH)));
+    metaDefs.put(name, new MetaReferable(AccessModifier.PUBLIC, prec, name, meta, meta instanceof MetaResolver ? (MetaResolver) meta : null, new FullModuleReferable(MODULE_PATH)));
   }
 
   private Concrete.Expression resolveNamesExpr(Scope parentScope, List<Referable> context, String text, int errors) {
     Concrete.Expression expression = parseExpr(text);
     assertThat(expression, is(notNullValue()));
 
-    expression = SyntacticDesugarVisitor.desugar(expression.accept(new ExpressionResolveNameVisitor(IdReferableConverter.INSTANCE, parentScope, context, new TestLocalErrorReporter(errorReporter), null), null), errorReporter);
+    expression = SyntacticDesugarVisitor.desugar(expression.accept(new ExpressionResolveNameVisitor(parentScope, context, new TestLocalErrorReporter(errorReporter), null), null), errorReporter);
     assertThat(errorList, containsErrors(errors));
     return expression;
   }
@@ -102,7 +102,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
   ChildGroup resolveNamesDefGroup(String text, int errors) {
     ChildGroup group = parseDef(text);
     Scope parentScope = new MergeScope(new SingletonScope(group.getReferable()), metaScope, PreludeLibrary.getPreludeScope());
-    new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, null, errorReporter).resolveGroupWithTypes(group, CachingScope.make(LexicalScope.insideOf(group, parentScope, true)));
+    new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, errorReporter).resolveGroupWithTypes(group, CachingScope.make(LexicalScope.insideOf(group, parentScope, true)));
     assertThat(errorList, containsErrors(errors));
     return group;
   }
@@ -126,7 +126,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
 
   protected void resolveNamesModule(ChildGroup group, int errors) {
     Scope scope = CachingScope.make(new MergeScope(ScopeFactory.forGroup(group, moduleScopeProvider), metaScope));
-    new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, null, errorReporter).resolveGroupWithTypes(group, scope);
+    new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, errorReporter).resolveGroupWithTypes(group, scope);
     libraryManager.getInstanceProviderSet().collectInstances(group, CachingScope.make(ScopeFactory.parentScopeForGroup(group, moduleScopeProvider, true)), IdReferableConverter.INSTANCE);
     assertThat(errorList, containsErrors(errors));
   }

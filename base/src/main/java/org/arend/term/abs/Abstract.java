@@ -1,5 +1,6 @@
 package org.arend.term.abs;
 
+import org.arend.ext.prettyprinting.doc.Doc;
 import org.arend.naming.reference.ClassReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.Referable;
@@ -152,6 +153,7 @@ public final class Abstract {
   }
 
   public interface Group {
+    @NotNull Doc getDescription();
     @NotNull LocatedReferable getReferable();
     @Nullable Definition getGroupDefinition();
     @NotNull List<? extends Statement> getStatements();

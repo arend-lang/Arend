@@ -1,5 +1,6 @@
 package org.arend.term.group;
 
+import org.arend.ext.prettyprinting.doc.Doc;
 import org.arend.naming.reference.*;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
@@ -7,7 +8,12 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public record ConcreteGroup(@NotNull LocatedReferable referable, @Nullable Concrete.ResolvableDefinition definition, @NotNull List<? extends ConcreteStatement> statements, @NotNull List<? extends ConcreteGroup> dynamicGroups, @NotNull List<? extends ParameterReferable> externalParameters) implements Group {
+public record ConcreteGroup(@NotNull Doc description, @NotNull LocatedReferable referable, @Nullable Concrete.ResolvableDefinition definition, @NotNull List<? extends ConcreteStatement> statements, @NotNull List<? extends ConcreteGroup> dynamicGroups, @NotNull List<? extends ParameterReferable> externalParameters) implements Group {
+  @Override
+  public @NotNull Doc getDescription() {
+    return description;
+  }
+
   @Override
   public @NotNull LocatedReferable getReferable() {
     return referable;

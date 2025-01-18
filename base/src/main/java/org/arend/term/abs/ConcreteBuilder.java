@@ -75,7 +75,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   private static MetaReferable convertMetaReferable(LocatedReferable referable, LocatedReferable parent) {
-    return new MetaReferable(referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), referable.getDescription(), null, null, parent);
+    return new MetaReferable(referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), null, null, parent);
   }
 
   public static @NotNull Concrete.ResolvableDefinition convert(Abstract.Definition definition, LocatedReferable parent, ErrorReporter errorReporter) {
@@ -148,7 +148,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       }
     }
 
-    return new ConcreteGroup(referable, concrete, statements, dynamicGroups, buildExternalParameters(parentDef));
+    return new ConcreteGroup(group.getDescription(), referable, concrete, statements, dynamicGroups, buildExternalParameters(parentDef));
   }
 
   private static List<ParameterReferable> buildExternalParameters(Concrete.Definition definition) {

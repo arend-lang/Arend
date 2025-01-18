@@ -102,7 +102,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   @NotNull
   @Override
   public ConcreteExpression meta(@NotNull String name, @NotNull MetaDefinition meta) {
-    return new Concrete.ReferenceExpression(myData, new MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, name, "", meta, null, null));
+    return new Concrete.ReferenceExpression(myData, new MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, name, meta, null, null));
   }
 
   @NotNull
@@ -693,11 +693,11 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   }
 
   @Override
-  public @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec, @NotNull String description) {
+  public @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec) {
     if (!(parent instanceof LocatedReferable)) {
       throw new IllegalArgumentException();
     }
-    return new MetaReferable(null, AccessModifier.PUBLIC, precedence, name, aliasPrec, alias, description, null, null, (LocatedReferable) parent);
+    return new MetaReferable(null, AccessModifier.PUBLIC, precedence, name, aliasPrec, alias, null, null, (LocatedReferable) parent);
   }
 
   private static Referable makeLocalRef(ArendRef ref) {

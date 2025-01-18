@@ -4,9 +4,15 @@ import org.arend.ext.module.LongName;
 
 public class DocStringBuilder extends LineDocVisitor {
   private final StringBuilder builder;
+  private final boolean isDocComment;
 
-  public DocStringBuilder(StringBuilder builder) {
+  private DocStringBuilder(StringBuilder builder, boolean isDocComment) {
     this.builder = builder;
+    this.isDocComment = isDocComment;
+  }
+
+  protected DocStringBuilder(StringBuilder builder) {
+    this(builder, false);
   }
 
   public static String build(Doc doc) {
@@ -17,6 +23,10 @@ public class DocStringBuilder extends LineDocVisitor {
 
   public static void build(StringBuilder builder, Doc doc) {
     doc.accept(new DocStringBuilder(builder), false);
+  }
+
+  public static void buildDocComment(StringBuilder builder, Doc doc, boolean withNewLine) {
+    doc.accept(new DocStringBuilder(builder, true), withNewLine);
   }
 
   @Override
@@ -60,7 +70,13 @@ public class DocStringBuilder extends LineDocVisitor {
   @Override
   public Void visitReference(ReferenceDoc doc, Boolean newLine) {
     LongName longName = doc.getReference().isClassField() ? null : doc.getReference().getRefLongName();
+    if (isDocComment) {
+      builder.append("{");
+    }
     builder.append(longName == null || longName.toList().isEmpty() ? doc.getReference().getRefName() : longName.toString());
+    if (isDocComment) {
+      builder.append("}");
+    }
     if (newLine) {
       builder.append('\n');
     }

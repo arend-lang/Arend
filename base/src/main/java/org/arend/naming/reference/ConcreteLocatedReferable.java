@@ -14,7 +14,6 @@ public class ConcreteLocatedReferable extends LocatedReferableImpl implements Da
   private final String myAliasName;
   private final Precedence myAliasPrecedence;
   private Concrete.ReferableDefinition myDefinition;
-  private String myDescription = "";
 
   public ConcreteLocatedReferable(Object data, AccessModifier accessModifier, @NotNull String name, Precedence precedence, @Nullable String aliasName, Precedence aliasPrecedence, LocatedReferable parent, Kind kind) {
     super(accessModifier, precedence, name, parent, kind);
@@ -41,15 +40,6 @@ public class ConcreteLocatedReferable extends LocatedReferableImpl implements Da
 
   public Concrete.ReferableDefinition getDefinition() {
     return myDefinition;
-  }
-
-  @Override
-  public @NotNull String getDescription() {
-    return myDescription;
-  }
-
-  public void setDescription(String description) {
-    myDescription = description;
   }
 
   @Override

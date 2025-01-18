@@ -18,10 +18,6 @@ public interface LocatedReferable extends GlobalReferable {
     return this;
   }
 
-  default @NotNull String getDescription() {
-    return "";
-  }
-
   @NotNull
   @Override
   default LongName getRefLongName() {

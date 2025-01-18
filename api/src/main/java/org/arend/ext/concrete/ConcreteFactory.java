@@ -87,14 +87,14 @@ public interface ConcreteFactory {
   @NotNull ArendRef global(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec);
   @NotNull ArendRef classRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec);
   @NotNull ArendRef fieldRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec, boolean isExplicit, boolean isParameter);
-  @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec, @NotNull String description);
+  @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec);
 
-  default @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @NotNull String description) {
-    return metaRef(parent, name, precedence, null, null, description);
+  default @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence) {
+    return metaRef(parent, name, precedence, null, null);
   }
 
-  default @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull String description) {
-    return metaRef(parent, name, Precedence.DEFAULT, null, null, description);
+  default @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name) {
+    return metaRef(parent, name, Precedence.DEFAULT, null, null);
   }
 
   @NotNull ConcreteParameter param(boolean explicit, @Nullable ArendRef ref);

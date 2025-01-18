@@ -1,5 +1,7 @@
 package org.arend.term.group;
 
+import org.arend.ext.prettyprinting.doc.Doc;
+import org.arend.ext.prettyprinting.doc.DocFactory;
 import org.arend.naming.reference.LocatedReferable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -27,6 +29,11 @@ public class EmptyGroup implements ChildGroup, Statement {
   @Override
   public boolean isDynamicContext() {
     return myDynamicContext;
+  }
+
+  @Override
+  public @NotNull Doc getDescription() {
+    return DocFactory.nullDoc();
   }
 
   @NotNull

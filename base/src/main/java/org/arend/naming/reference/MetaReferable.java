@@ -23,28 +23,26 @@ public class MetaReferable implements TCDefReferable, MetaRef {
   private final String myName;
   private MetaDefinition myDefinition;
   private MetaResolver myResolver;
-  private final String myDescription;
   private final String myAliasName;
   private final Precedence myAliasPrecedence;
   public Supplier<GlobalReferable> underlyingReferable;
   private final LocatedReferable myParent;
   private MetaTopDefinition myTypechecked;
 
-  public MetaReferable(Object data, AccessModifier accessModifier, Precedence precedence, String name, Precedence aliasPrec, String aliasName, String description, MetaDefinition definition, MetaResolver resolver, LocatedReferable parent) {
+  public MetaReferable(Object data, AccessModifier accessModifier, Precedence precedence, String name, Precedence aliasPrec, String aliasName, MetaDefinition definition, MetaResolver resolver, LocatedReferable parent) {
     myData = data;
     myAccessModifier = accessModifier;
     myPrecedence = precedence;
     myName = name;
     myAliasName = aliasName;
     myAliasPrecedence = aliasPrec == null ? Precedence.DEFAULT : aliasPrec;
-    myDescription = description;
     myDefinition = definition;
     myResolver = resolver;
     myParent = parent;
   }
 
-  public MetaReferable(AccessModifier accessModifier, Precedence precedence, String name, String description, MetaDefinition definition, MetaResolver resolver, LocatedReferable parent) {
-    this(null, accessModifier, precedence, name, null, null, description, definition, resolver, parent);
+  public MetaReferable(AccessModifier accessModifier, Precedence precedence, String name, MetaDefinition definition, MetaResolver resolver, LocatedReferable parent) {
+    this(null, accessModifier, precedence, name, null, null, definition, resolver, parent);
   }
 
   @Override
@@ -77,11 +75,6 @@ public class MetaReferable implements TCDefReferable, MetaRef {
   public void setDefinition(@Nullable MetaDefinition definition, @Nullable MetaResolver resolver) {
     myDefinition = definition;
     myResolver = resolver;
-  }
-
-  @Override
-  public @NotNull String getDescription() {
-    return myDescription;
   }
 
   @Override

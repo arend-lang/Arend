@@ -3,6 +3,8 @@ package org.arend.server;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;
+import org.arend.naming.reference.Referable;
+import org.arend.naming.reference.UnresolvedReference;
 import org.arend.naming.resolving.ResolverListener;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
@@ -28,6 +30,14 @@ public interface ArendServer {
    * @param name    the name of the library.
    */
   void removeLibrary(@NotNull String name);
+
+  /**
+   * Unloads loaded libraries.
+   * It is necessary to invoke this method before updating libraries in order for library extensions to be updated.
+   *
+   * @param onlyInternal    if {@code true}, updates only internal libraries; otherwise, updates all libraries.
+   */
+  void unloadLibraries(boolean onlyInternal);
 
   /**
    * @return a library with the given name.
@@ -88,6 +98,11 @@ public interface ArendServer {
    * This method returns the same result as {@link #resolveReference} if the reference is already reserved, and {@code null} otherwise.
    */
   @Nullable AbstractReferable getCachedReferable(@NotNull AbstractReference reference);
+
+  /**
+   * Adds a reference to the cache.
+   */
+  void cacheReference(@NotNull UnresolvedReference reference, @NotNull Referable referable);
 
   /**
    * @return the list of errors corresponding to the given module.

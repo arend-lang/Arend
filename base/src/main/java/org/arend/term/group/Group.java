@@ -1,5 +1,6 @@
 package org.arend.term.group;
 
+import org.arend.ext.prettyprinting.doc.Doc;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.ParameterReferable;
 import org.jetbrains.annotations.NotNull;
@@ -11,6 +12,8 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 public interface Group {
+  @NotNull Doc getDescription();
+
   @NotNull LocatedReferable getReferable();
 
   @NotNull List<? extends Statement> getStatements();

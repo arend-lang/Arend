@@ -2,7 +2,7 @@ package org.arend.server;
 
 import org.arend.error.DummyErrorReporter;
 import org.arend.module.ModuleLocation;
-import org.arend.naming.reference.TCDefReferable;
+import org.arend.naming.reference.*;
 import org.arend.naming.resolving.ResolverListener;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.LexicalScope;
@@ -33,18 +33,10 @@ public class ResolverCache {
     server.copyLogger(myLogger);
   }
 
-  public void clear() {
-    myModuleScopes.clear();
-    myResolverCache.clear();
-    myModuleReferences.clear();
-    myDirectDependencies.clear();
-    myReverseDependencies.clear();
-  }
-
-  public void clearLibrary(String libraryName) {
+  public void clearLibraries(Set<String> libraries) {
     for (var it = myModuleReferences.entrySet().iterator(); it.hasNext(); ) {
       var entry = it.next();
-      if (entry.getKey().getLibraryName().equals(libraryName)) {
+      if (libraries.contains(entry.getKey().getLibraryName())) {
         it.remove();
         for (AbstractReference reference : entry.getValue()) {
           myResolverCache.remove(reference);
@@ -54,23 +46,23 @@ public class ResolverCache {
 
     for (var iterator = myDirectDependencies.entrySet().iterator(); iterator.hasNext(); ) {
       var entry = iterator.next();
-      if (entry.getKey().getLibraryName().equals(libraryName)) {
+      if (libraries.contains(entry.getKey().getLibraryName())) {
         iterator.remove();
       } else {
-        entry.getValue().removeIf(dependency -> dependency.getLibraryName().equals(libraryName));
+        entry.getValue().removeIf(dependency -> libraries.contains(dependency.getLibraryName()));
       }
     }
 
     for (var iterator = myReverseDependencies.entrySet().iterator(); iterator.hasNext(); ) {
       var entry = iterator.next();
-      if (entry.getKey().getLibraryName().equals(libraryName)) {
+      if (libraries.contains(entry.getKey().getLibraryName())) {
         iterator.remove();
       } else {
-        entry.getValue().removeIf(dependency -> dependency.getLibraryName().equals(libraryName));
+        entry.getValue().removeIf(dependency -> libraries.contains(dependency.getLibraryName()));
       }
     }
 
-    myModuleScopes.keySet().removeIf(module -> module.getLibraryName().equals(libraryName));
+    myModuleScopes.keySet().removeIf(module -> libraries.contains(module.getLibraryName()));
   }
 
   public void clearModule(ModuleLocation module) {
@@ -110,6 +102,29 @@ public class ResolverCache {
     myResolverCache.put(reference, referable);
   }
 
+  public void addReference(UnresolvedReference reference, Referable referable) {
+    if (reference instanceof LongUnresolvedReference unresolved) {
+      List<AbstractReference> references = unresolved.getReferenceList();
+      if (references.isEmpty()) return;
+      ModuleLocation module = references.get(0).getReferenceModule();
+      if (module == null) return;
+      for (int i = unresolved.getPath().size() - 1; i >= 0; i--) {
+        if (i < references.size() && references.get(i) != null) {
+          addReference(module, references.get(i), referable);
+        }
+        if (!(referable instanceof LocatedReferable)) return;
+        referable = ((LocatedReferable) referable).getLocatedReferableParent();
+        if (referable == null) return;
+      }
+    } else if (reference.getData() instanceof AbstractReference abstractReference) {
+      ModuleLocation module = abstractReference.getReferenceModule();
+      AbstractReferable abstractRef = referable.getAbstractReferable();
+      if (module != null && abstractRef != null) {
+        addReference(module, abstractReference, abstractRef);
+      }
+    }
+  }
+
   public void addModuleDependency(ModuleLocation module, ModuleLocation dependency) {
     myDirectDependencies.computeIfAbsent(module, k -> new ArrayList<>()).add(dependency);
     myReverseDependencies.computeIfAbsent(dependency, k -> new LinkedHashSet<>()).add(module);
@@ -134,6 +149,7 @@ public class ResolverCache {
 
     ModuleLocation module = reference.getReferenceModule();
     if (module == null) {
+      myResolverCache.putIfAbsent(reference, TCDefReferable.NULL_REFERABLE);
       myLogger.warning("Cannot determine module of " + reference.getReferenceText());
       return null;
     }
@@ -141,6 +157,7 @@ public class ResolverCache {
     myServer.resolveModules(Collections.singletonList(module), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
     result = myResolverCache.get(reference);
     if (result == null) {
+      myResolverCache.putIfAbsent(reference, TCDefReferable.NULL_REFERABLE);
       myLogger.warning("Cannot resolve reference " + reference.getReferenceText());
       return null;
     }

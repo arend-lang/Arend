@@ -11,16 +11,19 @@ import org.arend.ext.reference.ArendRef;
 import java.util.*;
 
 public class DocFactory {
+  private final static Doc NULL_DOC = new VListDoc(Collections.emptyList());
+  private final static LineDoc EMPTY_DOC = new TextDoc("");
+
   public static ReferenceDoc refDoc(ArendRef ref) {
     return new ReferenceDoc(ref);
   }
 
   public static LineDoc empty() {
-    return new TextDoc("");
+    return EMPTY_DOC;
   }
 
   public static Doc nullDoc() {
-    return new VListDoc(Collections.emptyList());
+    return NULL_DOC;
   }
 
   public static Doc hang(Doc top, Doc bottom) {

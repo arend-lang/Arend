@@ -20,7 +20,7 @@ import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 public class LibraryError extends GeneralError {
   public final Stream<String> libraryNames;
 
-  private LibraryError(String message, Stream<String> libraryNames) {
+  public LibraryError(String message, Stream<String> libraryNames) {
     super(Level.ERROR, message);
     this.libraryNames = libraryNames;
   }
@@ -63,7 +63,7 @@ public class LibraryError extends GeneralError {
   }
 
   public static LibraryError incorrectExtensionClass(String libraryName) {
-    return new LibraryError("Extension main class does not implement " + ArendExtension.class.toString(), Stream.of(libraryName));
+    return new LibraryError("Extension main class does not implement " + ArendExtension.class, Stream.of(libraryName));
   }
 
   public static LibraryError duplicateExtensionDefinition(String libraryName, ModulePath modulePath, LongName longName) {
