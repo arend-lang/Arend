@@ -113,4 +113,9 @@ public interface ArendServer {
    * @return the collection of modules with errors.
    */
   @NotNull Collection<ModuleLocation> getModulesWithErrors();
+
+  /**
+   * @return list of possible completion variants for the given reference.
+   */
+  @NotNull List<Referable> getCompletionVariants(@Nullable ConcreteGroup group, @NotNull AbstractReference reference);
 }

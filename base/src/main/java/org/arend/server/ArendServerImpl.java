@@ -413,4 +413,39 @@ public class ArendServerImpl implements ArendServer {
   public @NotNull Collection<ModuleLocation> getModulesWithErrors() {
     return myErrorService.getModulesWithErrors();
   }
+
+  private static class CompletionException extends RuntimeException {}
+
+  @Override
+  public @NotNull List<Referable> getCompletionVariants(@Nullable ConcreteGroup group, @NotNull AbstractReference reference) {
+    myLogger.fine(() -> "Begin completion for '" + reference.getReferenceText() + "'");
+
+    ModuleLocation module = reference.getReferenceModule();
+    if (group == null && module != null) {
+      GroupData groupData = myGroups.get(module);
+      if (groupData != null) group = groupData.group;
+    }
+    if (module == null || group == null) {
+      myLogger.fine(() -> "Completion for '" + reference.getReferenceText() + "' failed: cannot find module");
+      return Collections.emptyList();
+    }
+
+    List<Referable> result = new ArrayList<>();
+    boolean[] found = new boolean[1];
+    try {
+      new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(group)), true, DummyErrorReporter.INSTANCE, new ResolverListener() {
+        @Override
+        public void referenceResolved(Concrete.Expression expr, Referable originalRef, Concrete.ReferenceExpression refExpr, List<Referable> resolvedRefs, Scope scope) {
+          if (refExpr.getData() == reference) {
+            result.addAll(scope.getElements());
+            found[0] = true;
+            throw new CompletionException();
+          }
+        }
+      }).resolveGroupWithTypes(group, getGroupScope(module, group));
+    } catch (CompletionException ignored) {}
+
+    myLogger.fine(() -> found[0] ? "Finish completion for '" + reference.getReferenceText() + "' with " + result.size() + " results" : "Cannot find completion variants for '" + reference.getReferenceText() + "'");
+    return result;
+  }
 }
