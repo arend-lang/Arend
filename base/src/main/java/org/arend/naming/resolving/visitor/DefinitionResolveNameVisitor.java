@@ -17,6 +17,7 @@ import org.arend.naming.reference.*;
 import org.arend.naming.resolving.ResolverListener;
 import org.arend.naming.scope.*;
 import org.arend.naming.scope.local.ElimScope;
+import org.arend.naming.scope.local.LocalListScope;
 import org.arend.prelude.Prelude;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.term.NameHiding;
@@ -850,9 +851,23 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     if (def instanceof Concrete.ClassDefinition) {
       resolveSuperClasses((Concrete.ClassDefinition) def, new PrivateFilteredScope(cachedScope), false);
     }
+
+    Scope docScope;
     if (def instanceof Concrete.ResolvableDefinition) {
-      ((Concrete.ResolvableDefinition) def).accept(this, def.getData().getUnderlyingReferable() instanceof ClassReferable classRef ? new MergeScope(new ClassFieldImplScope(classRef, ClassFieldImplScope.Extent.WITH_SUPER_DYNAMIC), cachedScope) : cachedScope);
+      Scope classScope = def.getData().getUnderlyingReferable() instanceof ClassReferable classRef ? new MergeScope(new ClassFieldImplScope(classRef, ClassFieldImplScope.Extent.WITH_SUPER_DYNAMIC), cachedScope) : cachedScope;
+      ((Concrete.ResolvableDefinition) def).accept(this, classScope);
+
+      List<Referable> parameters = new ArrayList<>();
+      for (Concrete.Parameter parameter : def.getParameters()) {
+        for (Referable referable : parameter.getRefList()) {
+          if (referable != null) parameters.add(referable);
+        }
+      }
+      docScope = parameters.isEmpty() ? classScope : new LocalListScope(classScope, parameters);
+    } else {
+      docScope = cachedScope;
     }
+
     if (def instanceof Concrete.Definition && !myExternalParameters.isEmpty()) {
       ((Concrete.Definition) def).setExternalParameters(new HashMap<>(myExternalParameters));
     }
@@ -861,7 +876,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     Scope namespaceScope = CachingScope.make(new LexicalScope(scope, group, null, true, false));
     if (!myResolveTypeClassReferences) {
       if (myResolverListener != null && myResolverListener != ResolverListener.EMPTY) {
-        group.getDescription().accept(this, cachedScope);
+        group.getDescription().accept(this, docScope);
       }
 
       for (Statement statement : statements) {
