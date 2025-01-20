@@ -38,12 +38,16 @@ import java.util.logging.*;
 public class ArendServerImpl implements ArendServer {
   private static class GroupData {
     final long timestamp;
-    final ConcreteGroup group;
-    boolean headersResolved;
+    final LocatedReferable fileReferable;
+    final ConcreteGroup rawGroup;
+    final Scope fileScope;
+    boolean headersResolved; // TODO[server2]: Replace with TypeInfo
 
-    private GroupData(long timestamp, ConcreteGroup group) {
+    private GroupData(long timestamp, ConcreteGroup rawGroup, Scope fileScope) {
       this.timestamp = timestamp;
-      this.group = group;
+      this.fileReferable = rawGroup.referable();
+      this.rawGroup = rawGroup;
+      this.fileScope = fileScope;
     }
 
     boolean isReadOnly() {
@@ -147,9 +151,9 @@ public class ArendServerImpl implements ArendServer {
         myLogger.warning("Read-only module '" + mod + "' is already added" + (prevPair.isReadOnly() ? "" : " as a writable module"));
         return prevPair;
       }
-      myResolverCache.updateModule(mod, group);
+      myResolverCache.clearModule(mod);
       myLogger.info(() -> "Added a read-only module '" + mod + "'");
-      return new GroupData(-1, group);
+      return new GroupData(-1, group, CachingScope.make(LexicalScope.opened(group)));
     });
   }
 
@@ -172,10 +176,10 @@ public class ArendServerImpl implements ArendServer {
         return prevData;
       }
 
-      myResolverCache.updateModule(module, group);
+      myResolverCache.clearModule(module);
 
       myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
-      return new GroupData(modificationStamp, group);
+      return new GroupData(modificationStamp, group, CachingScope.make(LexicalScope.opened(group)));
     });
   }
 
@@ -252,7 +256,9 @@ public class ArendServerImpl implements ArendServer {
         Scope result = myPreludeModuleScopeProvider.forModule(modulePath);
         if (result != null) return result;
         ModuleLocation found = findDependency(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
-        return found == null ? null : myResolverCache.getModuleScope(found);
+        if (found == null) return null;
+        GroupData groupData = myGroups.get(found);
+        return groupData == null ? null : groupData.fileScope;
       }
 
       @Override
@@ -261,7 +267,7 @@ public class ArendServerImpl implements ArendServer {
         if (location != null) {
           GroupData groupData = myGroups.get(location);
           if (groupData != null) {
-            return groupData.group.referable();
+            return groupData.fileReferable;
           }
         }
         return new ModuleReferable(modulePath);
@@ -288,7 +294,7 @@ public class ArendServerImpl implements ArendServer {
         if (!visited.add(module)) continue;
         GroupData groupData = myGroups.get(module);
         if (groupData != null) {
-          for (ConcreteStatement statement : groupData.group.statements()) {
+          for (ConcreteStatement statement : groupData.rawGroup.statements()) {
             indicator.checkCanceled();
             if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
               ModuleLocation dependency = findDependency(new ModulePath(statement.command().getPath()), module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
@@ -297,7 +303,7 @@ public class ArendServerImpl implements ArendServer {
           }
 
           if (!groupData.headersResolved) {
-            new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(groupData.group)), true, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY).resolveGroup(groupData.group, getGroupScope(module, groupData.group));
+            new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(groupData.rawGroup)), true, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY).resolveGroup(groupData.rawGroup, getGroupScope(module, groupData.rawGroup));
             groupData.headersResolved = true;
             myLogger.info(() -> "Header of module '" + module + "' is resolved");
           }
@@ -310,7 +316,7 @@ public class ArendServerImpl implements ArendServer {
         GroupData groupData = myGroups.get(module);
         if (groupData != null) {
           moduleVersions.put(module, groupData.timestamp);
-          groupData.group.traverseGroup(group -> {
+          groupData.rawGroup.traverseGroup(group -> {
             if (group instanceof ConcreteGroup cGroup) {
               Concrete.ResolvableDefinition definition = cGroup.definition();
               if (definition != null) {
@@ -336,7 +342,7 @@ public class ArendServerImpl implements ArendServer {
             errorReporterMap.put(module, listErrorReporter);
             currentErrorReporter = new MergingErrorReporter(errorReporter, listErrorReporter);
           }
-          new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), false, currentErrorReporter, resolverListener).resolveGroupWithTypes(groupData.group, getGroupScope(module, groupData.group));
+          new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), false, currentErrorReporter, resolverListener).resolveGroupWithTypes(groupData.rawGroup, getGroupScope(module, groupData.rawGroup));
         }
         listener.moduleResolved(module);
         myLogger.info(() -> "Module '" + module + "' is resolved");
@@ -384,9 +390,14 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
-  public @Nullable ConcreteGroup getGroup(@NotNull ModuleLocation module) {
+  public @Nullable ConcreteGroup getRawGroup(@NotNull ModuleLocation module) {
     GroupData groupData = myGroups.get(module);
-    return groupData == null ? null : groupData.group;
+    return groupData == null ? null : groupData.rawGroup;
+  }
+
+  public Scope getGroupScope(@NotNull ModuleLocation module) {
+    GroupData groupData = myGroups.get(module);
+    return groupData == null ? null : groupData.fileScope;
   }
 
   @Override
@@ -423,7 +434,7 @@ public class ArendServerImpl implements ArendServer {
     ModuleLocation module = reference.getReferenceModule();
     if (group == null && module != null) {
       GroupData groupData = myGroups.get(module);
-      if (groupData != null) group = groupData.group;
+      if (groupData != null) group = groupData.rawGroup;
     }
     if (module == null || group == null) {
       myLogger.fine(() -> "Completion for '" + reference.getReferenceText() + "' failed: cannot find module");
@@ -449,5 +460,10 @@ public class ArendServerImpl implements ArendServer {
 
     myLogger.fine(() -> found[0] ? "Finish completion for '" + reference.getReferenceText() + "' with " + result.size() + " results" : "Cannot find completion variants for '" + reference.getReferenceText() + "'");
     return result;
+  }
+
+  @Override
+  public @Nullable TCDefReferable getTCReferable(@NotNull AbstractReferable referable) {
+    return myResolverCache.getTCReferable(referable);
   }
 }

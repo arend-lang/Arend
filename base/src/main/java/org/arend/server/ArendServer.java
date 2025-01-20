@@ -4,6 +4,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.reference.UnresolvedReference;
 import org.arend.naming.resolving.ResolverListener;
 import org.arend.term.abs.AbstractReferable;
@@ -85,7 +86,7 @@ public interface ArendServer {
   /**
    * Returns the content of the given module.
    */
-  @Nullable ConcreteGroup getGroup(@NotNull ModuleLocation module);
+  @Nullable ConcreteGroup getRawGroup(@NotNull ModuleLocation module);
 
   /**
    * Resolves given reference.
@@ -118,4 +119,9 @@ public interface ArendServer {
    * @return list of possible completion variants for the given reference.
    */
   @NotNull List<Referable> getCompletionVariants(@Nullable ConcreteGroup group, @NotNull AbstractReference reference);
+
+  /**
+   *
+   */
+  @Nullable TCDefReferable getTCReferable(@NotNull AbstractReferable referable);
 }

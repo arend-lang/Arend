@@ -3,18 +3,15 @@ package org.arend.prelude;
 import org.arend.ext.ArendPrelude;
 import org.arend.ext.core.definition.*;
 import org.arend.ext.reference.ArendRef;
-import org.arend.term.group.ConcreteGroup;
-import org.arend.term.group.Group;
+import org.arend.naming.scope.Scope;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Arrays;
 
 public class ConcretePrelude implements ArendPrelude {
-  private final ConcreteGroup myPreludeGroup;
-  private Map<String, ArendRef> myMap;
+  private final Scope myPreludeScope;
 
-  public ConcretePrelude(ConcreteGroup preludeGroup) {
-    myPreludeGroup = preludeGroup;
+  public ConcretePrelude(Scope preludeScope) {
+    myPreludeScope = preludeScope;
   }
 
   @Override
@@ -202,275 +199,225 @@ public class ConcretePrelude implements ArendPrelude {
     return Prelude.ARRAY_INDEX;
   }
 
-  private void init() {
-    if (myMap == null) {
-      myMap = new HashMap<>();
-      myPreludeGroup.traverseGroup(group -> {
-        myMap.put(group.getReferable().getRefName(), group.getReferable());
-        for (Group.InternalReferable internal : group.getInternalReferables()) {
-          ArendRef ref = internal.getReferable();
-          myMap.put(ref.getRefName(), ref);
-        }
-      });
-    }
-  }
-
   @Override
   public ArendRef getIntervalRef() {
     if (Prelude.INTERVAL != null) return Prelude.INTERVAL.getRef();
-    init();
-    return myMap.get("I");
+    return myPreludeScope.resolveName("I");
   }
 
   @Override
   public ArendRef getLeftRef() {
     if (Prelude.LEFT != null) return Prelude.LEFT.getRef();
-    init();
-    return myMap.get("left");
+    return myPreludeScope.resolveName("left");
   }
 
   @Override
   public ArendRef getRightRef() {
     if (Prelude.RIGHT != null) return Prelude.RIGHT.getRef();
-    init();
-    return myMap.get("right");
+    return myPreludeScope.resolveName("right");
   }
 
   @Override
   public ArendRef getSqueezeRef() {
     if (Prelude.SQUEEZE != null) return Prelude.SQUEEZE.getRef();
-    init();
-    return myMap.get("squeeze");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("I", "squeeze"));
   }
 
   @Override
   public ArendRef getSqueezeRRef() {
     if (Prelude.SQUEEZE_R != null) return Prelude.SQUEEZE_R.getRef();
-    init();
-    return myMap.get("squeezeR");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("I", "squeezeR"));
   }
 
   @Override
   public ArendRef getNatRef() {
     if (Prelude.NAT != null) return Prelude.NAT.getRef();
-    init();
-    return myMap.get("Nat");
+    return myPreludeScope.resolveName("Nat");
   }
 
   @Override
   public ArendRef getZeroRef() {
     if (Prelude.ZERO != null) return Prelude.ZERO.getRef();
-    init();
-    return myMap.get("zero");
+    return myPreludeScope.resolveName("zero");
   }
 
   @Override
   public ArendRef getSucRef() {
     if (Prelude.SUC != null) return Prelude.SUC.getRef();
-    init();
-    return myMap.get("suc");
+    return myPreludeScope.resolveName("suc");
   }
 
   @Override
   public ArendRef getPlusRef() {
     if (Prelude.PLUS != null) return Prelude.PLUS.getRef();
-    init();
-    return myMap.get("+");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("Nat", "+"));
   }
 
   @Override
   public ArendRef getMulRef() {
     if (Prelude.MUL != null) return Prelude.MUL.getRef();
-    init();
-    return myMap.get("*");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("Nat", "*"));
   }
 
   @Override
   public ArendRef getMinusRef() {
     if (Prelude.MINUS != null) return Prelude.MINUS.getRef();
-    init();
-    return myMap.get("-");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("Nat", "-"));
   }
 
   @Override
   public ArendRef getFinRef() {
     if (Prelude.FIN != null) return Prelude.FIN.getRef();
-    init();
-    return myMap.get("Fin");
+    return myPreludeScope.resolveName("Fin");
   }
 
   @Override
   public ArendRef getFinFromNatRef() {
     if (Prelude.FIN_FROM_NAT != null) return Prelude.FIN_FROM_NAT.getRef();
-    init();
-    return myMap.get("fromNat");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("Fin", "fromNat"));
   }
 
   @Override
   public ArendRef getIntRef() {
     if (Prelude.INT != null) return Prelude.INT.getRef();
-    init();
-    return myMap.get("Int");
+    return myPreludeScope.resolveName("Int");
   }
 
   @Override
   public ArendRef getPosRef() {
     if (Prelude.POS != null) return Prelude.POS.getRef();
-    init();
-    return myMap.get("pos");
+    return myPreludeScope.resolveName("pos");
   }
 
   @Override
   public ArendRef getNegRef() {
     if (Prelude.NEG != null) return Prelude.NEG.getRef();
-    init();
-    return myMap.get("neg");
+    return myPreludeScope.resolveName("neg");
   }
 
   @Override
   public ArendRef getStringRef() {
     if (Prelude.STRING != null) return Prelude.STRING.getRef();
-    init();
-    return myMap.get("String");
+    return myPreludeScope.resolveName("String");
   }
 
   @Override
   public ArendRef getCoerceRef() {
     if (Prelude.COERCE != null) return Prelude.COERCE.getRef();
-    init();
-    return myMap.get("coe");
+    return myPreludeScope.resolveName("coe");
   }
 
   @Override
   public ArendRef getCoerce2Ref() {
     if (Prelude.COERCE2 != null) return Prelude.COERCE2.getRef();
-    init();
-    return myMap.get("coe2");
+    return myPreludeScope.resolveName("coe2");
   }
 
   @Override
   public ArendRef getPathRef() {
     if (Prelude.PATH != null) return Prelude.PATH.getRef();
-    init();
-    return myMap.get("Path");
+    return myPreludeScope.resolveName("Path");
   }
 
   @Override
   public ArendRef getEqualityRef() {
     if (Prelude.PATH_INFIX != null) return Prelude.PATH_INFIX.getRef();
-    init();
-    return myMap.get("=");
+    return myPreludeScope.resolveName("=");
   }
 
   @Override
   public ArendRef getPathConRef() {
     if (Prelude.PATH_CON != null) return Prelude.PATH_CON.getRef();
-    init();
-    return myMap.get("path");
+    return myPreludeScope.resolveName("path");
   }
 
   @Override
   public ArendRef getIdpRef() {
     if (Prelude.IDP != null) return Prelude.IDP.getRef();
-    init();
-    return myMap.get("idp");
+    return myPreludeScope.resolveName("idp");
   }
 
   @Override
   public ArendRef getAtRef() {
     if (Prelude.AT != null) return Prelude.AT.getRef();
-    init();
-    return myMap.get("@");
+    return myPreludeScope.resolveName("@");
   }
 
   @Override
   public ArendRef getIsoRef() {
     if (Prelude.ISO != null) return Prelude.ISO.getRef();
-    init();
-    return myMap.get("iso");
+    return myPreludeScope.resolveName("iso");
   }
 
   @Override
   public ArendRef getDivModRef() {
     if (Prelude.DIV_MOD != null) return Prelude.DIV_MOD.getRef();
-    init();
-    return myMap.get("divMod");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("Nat", "divMod"));
   }
 
   @Override
   public ArendRef getDivRef() {
     if (Prelude.DIV != null) return Prelude.DIV.getRef();
-    init();
-    return myMap.get("div");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("Nat", "div"));
   }
 
   @Override
   public ArendRef getModRef() {
     if (Prelude.MOD != null) return Prelude.MOD.getRef();
-    init();
-    return myMap.get("mod");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("Nat", "mod"));
   }
 
   @Override
   public ArendRef getDivModPropRef() {
     if (Prelude.DIV_MOD_PROPERTY != null) return Prelude.DIV_MOD_PROPERTY.getRef();
-    init();
-    return myMap.get("divModProp");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("Nat", "divModProp"));
   }
 
   @Override
   public ArendRef getDArrayRef() {
     if (Prelude.DEP_ARRAY != null) return Prelude.DEP_ARRAY.getRef();
-    init();
-    return myMap.get("DArray");
+    return myPreludeScope.resolveName("DArray");
   }
 
   @Override
   public ArendRef getArrayRef() {
     if (Prelude.ARRAY != null) return Prelude.ARRAY.getRef();
-    init();
-    return myMap.get("Array");
+    return myPreludeScope.resolveName("Array");
   }
 
   @Override
   public ArendRef getArrayElementsTypeRef() {
     if (Prelude.ARRAY_ELEMENTS_TYPE != null) return Prelude.ARRAY_ELEMENTS_TYPE.getRef();
-    init();
-    return myMap.get("A");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("DArray", "A"));
   }
 
   @Override
   public ArendRef getArrayLengthRef() {
     if (Prelude.ARRAY_LENGTH != null) return Prelude.ARRAY_LENGTH.getRef();
-    init();
-    return myMap.get("len");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("DArray", "len"));
   }
 
   @Override
   public ArendRef getArrayAtRef() {
     if (Prelude.ARRAY_AT != null) return Prelude.ARRAY_AT.getRef();
-    init();
-    return myMap.get("at");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("DArray", "at"));
   }
 
   @Override
   public ArendRef getEmptyArrayRef() {
     if (Prelude.EMPTY_ARRAY != null) return Prelude.EMPTY_ARRAY.getRef();
-    init();
-    return myMap.get("nil");
+    return myPreludeScope.resolveName("nil");
   }
 
   @Override
   public ArendRef getArrayConsRef() {
     if (Prelude.ARRAY_CONS != null) return Prelude.ARRAY_CONS.getRef();
-    init();
-    return myMap.get("::");
+    return myPreludeScope.resolveName("::");
   }
 
   @Override
   public ArendRef getArrayIndexRef() {
     if (Prelude.ARRAY_INDEX != null) return Prelude.ARRAY_INDEX.getRef();
-    init();
-    return myMap.get("!!");
+    return Scope.resolveName(myPreludeScope, Arrays.asList("DArray", "!!"));
   }
 }

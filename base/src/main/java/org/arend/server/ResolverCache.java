@@ -4,12 +4,8 @@ import org.arend.error.DummyErrorReporter;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.ResolverListener;
-import org.arend.naming.scope.CachingScope;
-import org.arend.naming.scope.LexicalScope;
-import org.arend.naming.scope.Scope;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
-import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.dfs.MapDFS;
 import org.jetbrains.annotations.NotNull;
@@ -20,11 +16,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 public class ResolverCache {
+  private record ModuleCache(Set<AbstractReferable> referables, Set<AbstractReference> references) {
+    void addReferable(AbstractReferable referable) {
+      referables.add(referable);
+    }
+
+    void addReference(AbstractReference reference) {
+      references.add(reference);
+    }
+  }
+
   private final ArendServer myServer;
   private final Logger myLogger = Logger.getLogger(ResolverCache.class.getName());
-  private final Map<ModuleLocation, Scope> myModuleScopes = new ConcurrentHashMap<>();
   private final Map<AbstractReference, AbstractReferable> myResolverCache = Collections.synchronizedMap(new WeakHashMap<>());
-  private final Map<ModuleLocation, Set<AbstractReference>> myModuleReferences = new ConcurrentHashMap<>();
+  private final Map<AbstractReferable, TCDefReferable> myReferableCache = Collections.synchronizedMap(new WeakHashMap<>());
+  private final Map<ModuleLocation, ModuleCache> myModuleReferences = new ConcurrentHashMap<>();
   private final Map<ModuleLocation, List<ModuleLocation>> myDirectDependencies = new ConcurrentHashMap<>();
   private final Map<ModuleLocation, Set<ModuleLocation>> myReverseDependencies = new ConcurrentHashMap<>();
 
@@ -38,8 +44,11 @@ public class ResolverCache {
       var entry = it.next();
       if (libraries.contains(entry.getKey().getLibraryName())) {
         it.remove();
-        for (AbstractReference reference : entry.getValue()) {
+        for (AbstractReference reference : entry.getValue().references) {
           myResolverCache.remove(reference);
+        }
+        for (AbstractReferable referable : entry.getValue().referables) {
+          myReferableCache.remove(referable);
         }
       }
     }
@@ -61,8 +70,6 @@ public class ResolverCache {
         entry.getValue().removeIf(dependency -> libraries.contains(dependency.getLibraryName()));
       }
     }
-
-    myModuleScopes.keySet().removeIf(module -> libraries.contains(module.getLibraryName()));
   }
 
   public void clearModule(ModuleLocation module) {
@@ -70,15 +77,17 @@ public class ResolverCache {
     dfs.visit(module);
 
     for (ModuleLocation dependency : dfs.getVisited()) {
-      Set<AbstractReference> references = myModuleReferences.remove(dependency);
-      if (references != null) {
-        for (AbstractReference reference : references) {
+      ModuleCache cache = myModuleReferences.remove(dependency);
+      if (cache != null) {
+        for (AbstractReference reference : cache.references) {
           myResolverCache.remove(reference);
+        }
+        for (AbstractReferable referable : cache.referables) {
+          myReferableCache.remove(referable);
         }
       }
     }
 
-    myModuleScopes.remove(module);
     List<ModuleLocation> dependencies = myDirectDependencies.remove(module);
     if (dependencies != null) {
       for (ModuleLocation dependency : dependencies) {
@@ -90,16 +99,14 @@ public class ResolverCache {
     }
   }
 
-  public Scope updateModule(ModuleLocation module, ConcreteGroup group) {
-    clearModule(module);
-    Scope scope = CachingScope.make(LexicalScope.opened(group));
-    myModuleScopes.put(module, scope);
-    return scope;
+  public void addReference(ModuleLocation module, AbstractReference reference, AbstractReferable referable) {
+    myModuleReferences.computeIfAbsent(module, k -> new ModuleCache(Collections.newSetFromMap(new WeakHashMap<>()), Collections.newSetFromMap(new WeakHashMap<>()))).addReference(reference);
+    myResolverCache.put(reference, referable);
   }
 
-  public void addReference(ModuleLocation module, AbstractReference reference, AbstractReferable referable) {
-    myModuleReferences.computeIfAbsent(module, k -> Collections.newSetFromMap(new WeakHashMap<>())).add(reference);
-    myResolverCache.put(reference, referable);
+  public void addReferable(ModuleLocation module, AbstractReferable referable, TCDefReferable tcReferable) {
+    myModuleReferences.computeIfAbsent(module, k -> new ModuleCache(Collections.newSetFromMap(new WeakHashMap<>()), Collections.newSetFromMap(new WeakHashMap<>()))).addReferable(referable);
+    myReferableCache.put(referable, tcReferable);
   }
 
   public void addReference(UnresolvedReference reference, Referable referable) {
@@ -130,16 +137,6 @@ public class ResolverCache {
     myReverseDependencies.computeIfAbsent(dependency, k -> new LinkedHashSet<>()).add(module);
   }
 
-  public @Nullable Scope getModuleScope(@NotNull ModuleLocation module) {
-    Scope scope = myModuleScopes.get(module);
-    if (scope != null) return scope;
-    ConcreteGroup group = myServer.getGroup(module);
-    if (group == null) return null;
-    synchronized (myServer) {
-      return updateModule(module, group);
-    }
-  }
-
   public @Nullable AbstractReferable resolveReference(@NotNull AbstractReference reference) {
     AbstractReferable result = myResolverCache.get(reference);
     if (result == TCDefReferable.NULL_REFERABLE) return null;
@@ -168,5 +165,9 @@ public class ResolverCache {
 
   public @Nullable AbstractReferable getCachedReferable(@NotNull AbstractReference reference) {
     return myResolverCache.get(reference);
+  }
+
+  public TCDefReferable getTCReferable(@NotNull AbstractReferable referable) {
+    return myReferableCache.get(referable);
   }
 }
