@@ -22,6 +22,13 @@ public class VoidConcreteVisitor<P> implements ConcreteExpressionVisitor<P,Void>
     }
     visitElements(body.getCoClauseElements(), params);
     visitClauses(body.getClauses(), params);
+    visitEliminatedReferences(body.getEliminatedReferences(), params);
+  }
+
+  protected void visitEliminatedReferences(List<? extends Concrete.ReferenceExpression> eliminatedReferences, P params) {
+    for (Concrete.ReferenceExpression eliminatedReference : eliminatedReferences) {
+      visitReference(eliminatedReference, params);
+    }
   }
 
   @Override
@@ -57,6 +64,9 @@ public class VoidConcreteVisitor<P> implements ConcreteExpressionVisitor<P,Void>
   }
 
   protected void visitDataBody(Concrete.DataDefinition def, P params) {
+    if (def.getEliminatedReferences() != null) {
+      visitEliminatedReferences(def.getEliminatedReferences(), params);
+    }
     visitClauses(def.getConstructorClauses(), params);
     for (Concrete.ConstructorClause clause : def.getConstructorClauses()) {
       for (Concrete.Constructor constructor : clause.getConstructors()) {
@@ -78,6 +88,7 @@ public class VoidConcreteVisitor<P> implements ConcreteExpressionVisitor<P,Void>
       def.getResultType().accept(this, params);
     }
     if (!def.getEliminatedReferences().isEmpty()) {
+      visitEliminatedReferences(def.getEliminatedReferences(), params);
       visitClauses(def.getClauses(), params);
     }
   }

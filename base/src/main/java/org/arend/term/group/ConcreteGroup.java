@@ -20,7 +20,7 @@ public record ConcreteGroup(@NotNull Doc description, @NotNull LocatedReferable 
   }
 
   @Override
-  public @NotNull List<? extends Statement> getStatements() {
+  public @NotNull List<? extends ConcreteStatement> getStatements() {
     return statements;
   }
 

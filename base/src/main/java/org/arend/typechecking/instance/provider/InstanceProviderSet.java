@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+// TODO[server2]: Rework/delete this.
 public class InstanceProviderSet {
   private final Map<TCDefReferable, InstanceProvider> myProviders = new HashMap<>();
   private final Set<Group> myCollected = new HashSet<>();

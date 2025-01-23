@@ -15,9 +15,15 @@ import java.util.*;
 public class CollectingResolverListener extends DelegateResolverListener {
   public record ResolvedReference(AbstractReference reference, AbstractReferable referable) {}
 
-  public record ModuleCacheStructure(List<ResolvedReference> cache, List<ModulePath> importedModules) {
+  public record ReferablePair(AbstractReferable referable, TCDefReferable tcReferable) {}
+
+  public record ModuleCacheStructure(List<ResolvedReference> cache, List<ReferablePair> referables, List<ModulePath> importedModules) {
     void addReference(AbstractReference reference, AbstractReferable referable) {
       cache.add(new ResolvedReference(reference, referable));
+    }
+
+    void addReferable(AbstractReferable referable, TCDefReferable tcReferable) {
+      referables.add(new ReferablePair(referable, tcReferable));
     }
 
     void addImportedModule(ModulePath module) {
@@ -42,7 +48,7 @@ public class CollectingResolverListener extends DelegateResolverListener {
     if (data instanceof AbstractReference) {
       AbstractReferable abstractRef = referable.getAbstractReferable();
       if (abstractRef != null) {
-        myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
+        myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
           .addReference((AbstractReference) data, abstractRef instanceof ErrorReference ? TCDefReferable.NULL_REFERABLE : abstractRef);
       }
     }
@@ -56,13 +62,13 @@ public class CollectingResolverListener extends DelegateResolverListener {
         if (referenceList.get(i) != null) {
           AbstractReferable abstractRef = resolvedRefs.get(i) == null ? null : resolvedRefs.get(i).getAbstractReferable();
           if (abstractRef != null) {
-            myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
+            myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
               .addReference(referenceList.get(i), abstractRef instanceof ErrorReference ? TCDefReferable.NULL_REFERABLE : abstractRef);
           }
         }
       }
       for (int i = resolvedRefs.size(); i < referenceList.size(); i++) {
-        myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
+        myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
           .addReference(referenceList.get(i), TCDefReferable.NULL_REFERABLE);
       }
     } else {
@@ -120,7 +126,7 @@ public class CollectingResolverListener extends DelegateResolverListener {
   public void namespaceResolved(NamespaceCommand namespaceCommand, List<Referable> resolvedRefs) {
     cacheReference(new LongUnresolvedReference(namespaceCommand, namespaceCommand.getReferenceList(), namespaceCommand.getPath()), null, resolvedRefs);
     if (namespaceCommand.getKind() == NamespaceCommand.Kind.IMPORT && resolvedRefs != null && !resolvedRefs.isEmpty() && resolvedRefs.get(resolvedRefs.size() - 1) instanceof ModuleReferable moduleRef) {
-      myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
+      myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
         .addImportedModule(moduleRef.path);
     }
     super.namespaceResolved(namespaceCommand, resolvedRefs);
@@ -132,5 +138,14 @@ public class CollectingResolverListener extends DelegateResolverListener {
       cacheReference((UnresolvedReference) originalRef, resolvedRef, null);
     }
     super.renamingResolved(renaming, originalRef, resolvedRef);
+  }
+
+  @Override
+  public void definitionResolved(Concrete.ResolvableDefinition definition) {
+    if (definition.getData().getData() instanceof AbstractReferable referable) {
+      myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
+        .addReferable(referable, definition.getData());
+    }
+    super.definitionResolved(definition);
   }
 }

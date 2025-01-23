@@ -74,7 +74,7 @@ public interface ArendServer {
   void resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener);
 
   /**
-   * Returns the set of registered modules.
+   * @return the set of registered modules.
    */
   @NotNull Collection<? extends ModuleLocation> getModules();
 
@@ -84,7 +84,7 @@ public interface ArendServer {
   @NotNull Set<String> getLibraries();
 
   /**
-   * Returns the content of the given module.
+   * @return the content of the given module.
    */
   @Nullable ConcreteGroup getRawGroup(@NotNull ModuleLocation module);
 
@@ -121,7 +121,7 @@ public interface ArendServer {
   @NotNull List<Referable> getCompletionVariants(@Nullable ConcreteGroup group, @NotNull AbstractReference reference);
 
   /**
-   *
+   * @return A typecheckable referable corresponding to the given abstract one.
    */
   @Nullable TCDefReferable getTCReferable(@NotNull AbstractReferable referable);
 }

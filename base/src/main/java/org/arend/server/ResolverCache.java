@@ -151,8 +151,10 @@ public class ResolverCache {
       return null;
     }
 
+    // TODO[server2]: Do not resolve module if it is already resolved.
     myServer.resolveModules(Collections.singletonList(module), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
     result = myResolverCache.get(reference);
+
     if (result == null) {
       myResolverCache.putIfAbsent(reference, TCDefReferable.NULL_REFERABLE);
       myLogger.warning("Cannot resolve reference " + reference.getReferenceText());
