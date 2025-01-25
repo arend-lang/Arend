@@ -15,8 +15,10 @@ import org.arend.naming.error.ExistingOpenedNameError;
 import org.arend.naming.error.ReferenceError;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.ResolverListener;
+import org.arend.naming.resolving.typing.GlobalTypingInfo;
 import org.arend.naming.resolving.typing.TypedReferable;
 import org.arend.naming.resolving.typing.TypingInfo;
+import org.arend.naming.resolving.typing.TypingInfoVisitor;
 import org.arend.naming.scope.*;
 import org.arend.naming.scope.local.ElimScope;
 import org.arend.naming.scope.local.ListScope;
@@ -289,7 +291,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         if (enclosingFunction.getStage().ordinal() < Concrete.Stage.RESOLVED.ordinal()) {
           resolveTypeClassReference(enclosingFunction.getParameters(), enclosingFunction.getResultType(), scope, true);
         }
-        classRef = new TypeClassReferenceExtractVisitor().getTypeClassReference(enclosingFunction.getResultType());
+        classRef = myTypingInfo.getBodyClassReferable(TypingInfoVisitor.resolveTypeClassReference(enclosingFunction.getResultType()));
         elements = enclosingFunction.getBody().getCoClauseElements();
       }
     } else if (enclosingDef instanceof Concrete.ClassDefinition classDef) {
@@ -402,7 +404,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       ((Concrete.TermFunctionBody) body).setTerm(((Concrete.TermFunctionBody) body).getTerm().accept(exprVisitor, null));
     }
     if (body instanceof Concrete.CoelimFunctionBody) {
-      ClassReferable typeRef = def.getResultType() == null ? null : new TypeClassReferenceExtractVisitor().getTypeClassReference(def.getResultType());
+      ClassReferable typeRef = def.getResultType() == null ? null : myTypingInfo.getBodyClassReferable(TypingInfoVisitor.resolveTypeClassReference(def.getResultType()));
       if (typeRef != null) {
         if (def.getKind() == FunctionKind.INSTANCE && typeRef.isRecord()) {
           myLocalErrorReporter.report(new NameResolverError("Expected a class, got a record", def));
@@ -533,12 +535,11 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     Set<Referable> referables = eliminated.stream().map(Concrete.ReferenceExpression::getReferent).collect(Collectors.toSet());
-    TypeClassReferenceExtractVisitor typeClassReferenceExtractVisitor = new TypeClassReferenceExtractVisitor();
     for (Concrete.Parameter parameter : parameters) {
-      ClassReferable classRef = typeClassReferenceExtractVisitor.getTypeClassReference(parameter.getType());
+      GlobalTypingInfo.Builder.MyInfo info = TypingInfoVisitor.resolveTypeClassReference(parameter.getType());
       for (Referable referable : parameter.getReferableList()) {
         if (referable != null && !referable.textRepresentation().equals("_") && !referables.contains(referable)) {
-          context.add(new TypedReferable(referable, 0, classRef));
+          context.add(new TypedReferable(referable, GlobalTypingInfo.Builder.makeReferableInfo(myTypingInfo, info)));
         }
       }
     }

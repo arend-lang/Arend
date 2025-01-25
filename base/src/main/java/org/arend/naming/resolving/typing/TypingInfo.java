@@ -8,9 +8,10 @@ public interface TypingInfo {
   @Nullable ReferableInfo getBodyInfo(Referable referable);
   @Nullable ReferableInfo getTypeInfo(Referable referable);
 
-  default @Nullable ClassReferable getBodyClassReferable(Referable referable) {
-    ReferableInfo info = getBodyInfo(referable);
-    return info == null || info.getParameters() != 0 ? null : info.getClassReferable();
+  default @Nullable ClassReferable getBodyClassReferable(GlobalTypingInfo.Builder.MyInfo info) {
+    if (info == null || info.parameters() != 0) return null;
+    ReferableInfo refInfo = getBodyInfo(info.referable());
+    return refInfo == null || refInfo.getParameters() != info.arguments() ? null : refInfo.getClassReferable();
   }
 
   default @Nullable ClassReferable getTypeClassReferable(Referable referable) {

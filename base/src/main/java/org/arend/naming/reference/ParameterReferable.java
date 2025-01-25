@@ -1,5 +1,6 @@
 package org.arend.naming.reference;
 
+import org.arend.naming.resolving.typing.GlobalTypingInfo;
 import org.arend.naming.resolving.typing.ReferableInfo;
 import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.resolving.typing.TypingInfoVisitor;
@@ -14,29 +15,19 @@ public class ParameterReferable implements Referable {
   private final TCDefReferable myDefinition;
   private final int myIndex;
   private final Referable myReferable;
-  private final int myTypeParameters;
-  private final Referable myTypeReference;
+  private final GlobalTypingInfo.Builder.MyInfo myTypeInfo;
   private ReferableInfo myReferableInfo;
 
-  public ParameterReferable(TCDefReferable definition, int index, Referable referable, int typeParameters, Referable typeReference) {
+  public ParameterReferable(TCDefReferable definition, int index, Referable referable, GlobalTypingInfo.Builder.MyInfo typeInfo) {
     myDefinition = definition;
     myIndex = index;
     myReferable = referable;
-    myTypeParameters = typeParameters;
-    myTypeReference = typeReference;
+    myTypeInfo = typeInfo;
   }
 
   public void resolve(Scope scope, TypingInfo typingInfo) {
-    if (myReferableInfo != null) return;
-    Referable referable = TypingInfoVisitor.tryResolve(myTypeReference, scope);
-    if (referable instanceof ClassReferable classRef) {
-      myReferableInfo = new ReferableInfo(myTypeParameters, classRef);
-    } else {
-      ReferableInfo bodyInfo = typingInfo.getBodyInfo(referable);
-      if (bodyInfo != null) {
-        myReferableInfo = new ReferableInfo(myTypeParameters + bodyInfo.getParameters(), bodyInfo.getClassReferable());
-      }
-    }
+    if (myReferableInfo != null || myTypeInfo == null) return;
+    myReferableInfo = GlobalTypingInfo.Builder.makeReferableInfo(typingInfo, GlobalTypingInfo.Builder.makeMyInfo(myTypeInfo.parameters(), TypingInfoVisitor.tryResolve(myTypeInfo.referable(), scope), myTypeInfo.arguments()));
   }
 
   public ReferableInfo getReferableInfo() {

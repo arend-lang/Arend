@@ -13,7 +13,7 @@ import org.arend.frontend.reference.*;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.InternalConcreteLocatedReferable;
 import org.arend.naming.reference.*;
-import org.arend.naming.resolving.visitor.TypeClassReferenceExtractVisitor;
+import org.arend.naming.resolving.typing.TypingInfoVisitor;
 import org.arend.naming.scope.Scope;
 import org.arend.term.*;
 import org.arend.term.concrete.Concrete;
@@ -520,8 +520,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     for (Concrete.Parameter parameter : parameters) {
       for (Referable referable : parameter.getReferableList()) {
         if (referable != null && !eliminated.contains(referable.getRefName())) {
-          Concrete.ReferenceExpression refExpr = TypeClassReferenceExtractVisitor.getTypeReferenceExpression(parameter.getType(), true);
-          result.add(new ParameterReferable((ConcreteLocatedReferable) parent, i, referable, 0, refExpr == null ? null : refExpr.getReferent()));
+          result.add(new ParameterReferable((ConcreteLocatedReferable) parent, i, referable, TypingInfoVisitor.resolveTypeClassReference(parameter.getType())));
         }
         i++;
       }

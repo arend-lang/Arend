@@ -10,7 +10,7 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.reference.DataContainer;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
-import org.arend.naming.resolving.visitor.TypeClassReferenceExtractVisitor;
+import org.arend.naming.resolving.typing.TypingInfoVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.Fixity;
@@ -170,8 +170,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     for (Concrete.Parameter parameter : parameters) {
       for (Referable referable : parameter.getReferableList()) {
         if (referable != null && !eliminated.contains(referable.getRefName())) {
-          Concrete.ReferenceExpression refExpr = TypeClassReferenceExtractVisitor.getTypeReferenceExpression(parameter.getType(), true);
-          result.add(new ParameterReferable(definition.getData(), i, referable, 0, refExpr == null ? null : refExpr.getReferent()));
+          result.add(new ParameterReferable(definition.getData(), i, referable, TypingInfoVisitor.resolveTypeClassReference(parameter.getType())));
         }
         i++;
       }

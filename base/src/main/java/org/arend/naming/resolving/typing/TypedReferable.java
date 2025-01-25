@@ -11,6 +11,10 @@ public class TypedReferable extends ReferableInfo {
     myReferable = referable;
   }
 
+  public TypedReferable(Referable referable, ReferableInfo info) {
+    this(referable, info == null ? 0 : info.getParameters(), info == null ? null : info.getClassReferable());
+  }
+
   public Referable getReferable() {
     return myReferable;
   }

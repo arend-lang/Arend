@@ -14,6 +14,7 @@ import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Scope, GlobalTypingInfo> {
@@ -49,10 +50,14 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
     return ref instanceof UnresolvedReference unresolved ? unresolved.copy().tryResolve(scope, null, ResolverListener.EMPTY) : ref;
   }
 
-  private void resolveTypeClassReference(Referable referable, List<? extends Concrete.Parameter> parameters, Concrete.Expression expr, Scope scope, boolean isType) {
-    if (expr == null) return;
-    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY);
-    exprVisitor.updateScope(parameters);
+  public static GlobalTypingInfo.Builder.MyInfo resolveTypeClassReference(Concrete.Expression expr) {
+    return resolveTypeClassReference(Collections.emptyList(), expr, null, true);
+  }
+
+  private static GlobalTypingInfo.Builder.MyInfo resolveTypeClassReference(List<? extends Concrete.Parameter> parameters, Concrete.Expression expr, Scope scope, boolean isType) {
+    if (expr == null) return null;
+    ExpressionResolveNameVisitor exprVisitor = scope == null ? null : new ExpressionResolveNameVisitor(scope, new ArrayList<>(), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY);
+    if (exprVisitor != null) exprVisitor.updateScope(parameters);
 
     int paramsNumber = 0;
     for (Concrete.Parameter parameter : parameters) {
@@ -63,7 +68,7 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
 
     if (isType) {
       while (expr instanceof Concrete.PiExpression piExpr) {
-        exprVisitor.updateScope(piExpr.getParameters());
+        if (exprVisitor != null) exprVisitor.updateScope(piExpr.getParameters());
         for (Concrete.TypeParameter parameter : piExpr.getParameters()) {
           if (parameter.isExplicit()) {
             paramsNumber += parameter.getNumberOfParameters();
@@ -73,7 +78,7 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
       }
     } else {
       while (expr instanceof Concrete.LamExpression lamExpr) {
-        exprVisitor.updateScope(lamExpr.getParameters());
+        if (exprVisitor != null) exprVisitor.updateScope(lamExpr.getParameters());
         for (Concrete.Parameter parameter : lamExpr.getParameters()) {
           if (parameter.isExplicit()) {
             paramsNumber += parameter.getNumberOfParameters();
@@ -94,7 +99,7 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
         arguments = 0;
       } else if (expr instanceof Concrete.BinOpSequenceExpression binOpExpr) {
         var sequence = binOpExpr.getSequence();
-        if (sequence.isEmpty()) return;
+        if (sequence.isEmpty()) return null;
         if (sequence.size() == 1) {
           expr = sequence.get(0).getComponent();
           continue;
@@ -105,14 +110,14 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
         int bestIndex = 0;
         for (int i = 0; i < sequence.size(); i++) {
           var elem = sequence.get(i);
-          if (elem.fixity == Fixity.POSTFIX) return; // TODO: Just ignore postfix operators for now.
+          if (elem.fixity == Fixity.POSTFIX) return null; // TODO: Just ignore postfix operators for now.
           if (elem.isExplicit && elem.getComponent() instanceof Concrete.ReferenceExpression refExpr) {
-            Referable ref = tryResolve(refExpr.getReferent(), exprVisitor.getScope());
+            Referable ref = exprVisitor == null ? refExpr.getReferent() : tryResolve(refExpr.getReferent(), exprVisitor.getScope());
             if (ref != null && i == 0) first = ref;
             Precedence prec = ref instanceof GlobalReferable globalRef ? globalRef.getPrecedence() : Precedence.DEFAULT;
             if (prec.isInfix || elem.fixity == Fixity.INFIX) {
               Precedence.ComparisonResult cmp = best == null ? Precedence.ComparisonResult.LESS : prec.compare(bestPrec);
-              if (cmp == Precedence.ComparisonResult.UNCOMPARABLE) return;
+              if (cmp == Precedence.ComparisonResult.UNCOMPARABLE) return null;
               if (best == null || cmp == Precedence.ComparisonResult.LESS) {
                 best = ref;
                 bestIndex = i;
@@ -135,34 +140,28 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
         }
         break;
       } else if (expr instanceof Concrete.ReferenceExpression refExpr) {
-        found = tryResolve(refExpr.getReferent(), exprVisitor.getScope());
+        found = exprVisitor == null ? refExpr.getReferent() : tryResolve(refExpr.getReferent(), exprVisitor.getScope());
         break;
       } else {
         break;
       }
     }
 
-    if (found != null) {
-      if (isType) {
-        myBuilder.addReferableType(referable, paramsNumber, found, arguments);
-      } else {
-        myBuilder.addReferableBody(referable, paramsNumber, found, arguments);
-      }
-    }
+    return found == null ? null : GlobalTypingInfo.Builder.makeMyInfo(paramsNumber, found, arguments);
   }
 
   @Override
   public GlobalTypingInfo visitMeta(DefinableMetaDefinition def, Scope scope) {
-    resolveTypeClassReference(def.getData(), def.getParameters(), def.body, scope, false);
+    myBuilder.addReferableBody(def.getData(), resolveTypeClassReference(def.getParameters(), def.body, scope, false));
     return null;
   }
 
   @Override
   public GlobalTypingInfo visitFunction(Concrete.BaseFunctionDefinition def, Scope scope) {
     if (def.getBody() instanceof Concrete.TermFunctionBody body) {
-      resolveTypeClassReference(def.getData(), def.getParameters(), body.getTerm(), scope, false);
+      myBuilder.addReferableBody(def.getData(), resolveTypeClassReference(def.getParameters(), body.getTerm(), scope, false));
     }
-    resolveTypeClassReference(def.getData(), def.getParameters(), def.getResultType(), scope, true);
+    myBuilder.addReferableType(def.getData(), resolveTypeClassReference(def.getParameters(), def.getResultType(), scope, true));
     return null;
   }
 
@@ -175,7 +174,7 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
   public GlobalTypingInfo visitClass(Concrete.ClassDefinition def, Scope scope) {
     for (Concrete.ClassElement element : def.getElements()) {
       if (element instanceof Concrete.ClassField field) {
-        resolveTypeClassReference(field.getData(), field.getParameters(), field.getResultType(), scope, true);
+        myBuilder.addReferableType(field.getData(), resolveTypeClassReference(field.getParameters(), field.getResultType(), scope, true));
       }
     }
     return null;

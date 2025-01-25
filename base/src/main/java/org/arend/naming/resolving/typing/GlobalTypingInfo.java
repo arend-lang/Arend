@@ -7,6 +7,7 @@ import org.arend.typechecking.dfs.DFS;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,21 +36,38 @@ public class GlobalTypingInfo implements TypingInfo {
 
   public static class Builder {
     private record FinalInfo(Referable referable, int arguments) {}
-    private record MyInfo(int parameters, Referable referable, int arguments) {}
+    public record MyInfo(int parameters, Referable referable, int arguments) {}
 
     private final Map<Referable, MyInfo> myBodyMap = new HashMap<>();
     private final Map<Referable, MyInfo> myTypeMap = new HashMap<>();
 
-    private MyInfo makeInfo(int parameters, Referable referable, int arguments) {
+    public static MyInfo makeMyInfo(int parameters, Referable referable, int arguments) {
       return new MyInfo(parameters, referable, referable instanceof GlobalReferable global && global.getKind() == GlobalReferable.Kind.CLASS ? 0 : arguments);
     }
 
-    public void addReferableType(Referable referable, int parameters, Referable typeReferable, int arguments) {
-      myTypeMap.put(referable, makeInfo(parameters, typeReferable, arguments));
+    public static ReferableInfo makeReferableInfo(TypingInfo typingInfo, MyInfo info) {
+      if (info == null) return null;
+      if (info.referable instanceof ClassReferable classRef) {
+        return new ReferableInfo(info.parameters, classRef);
+      } else {
+        ReferableInfo bodyRefInfo = typingInfo.getBodyInfo(info.referable);
+        if (bodyRefInfo != null && info.arguments == bodyRefInfo.getParameters()) {
+          return new ReferableInfo(info.parameters, bodyRefInfo.getClassReferable());
+        }
+      }
+      return null;
     }
 
-    public void addReferableBody(Referable referable, int parameters, Referable bodyReferable, int arguments) {
-      myBodyMap.put(referable, makeInfo(parameters, bodyReferable, arguments));
+    public void addReferableType(Referable referable, MyInfo info) {
+      if (info != null) {
+        myTypeMap.put(referable, info);
+      }
+    }
+
+    public void addReferableBody(Referable referable, MyInfo info) {
+      if (info != null) {
+        myBodyMap.put(referable, info);
+      }
     }
 
     public @NotNull GlobalTypingInfo build(@Nullable TypingInfo parent) {
@@ -83,15 +101,12 @@ public class GlobalTypingInfo implements TypingInfo {
         }
       }
 
+      GlobalTypingInfo globalTypingInfo = new GlobalTypingInfo(null, bodyInfo, Collections.emptyMap());
       Map<Referable, ReferableInfo> typeInfo = new HashMap<>();
       for (Map.Entry<Referable, MyInfo> entry : myTypeMap.entrySet()) {
-        if (entry.getValue().referable instanceof ClassReferable classRef) {
-          typeInfo.put(entry.getKey(), new ReferableInfo(entry.getValue().parameters, classRef));
-        } else {
-          ReferableInfo bodyRefInfo = bodyInfo.get(entry.getValue().referable);
-          if (bodyRefInfo != null && entry.getValue().arguments == bodyRefInfo.getParameters()) {
-            typeInfo.put(entry.getKey(), new ReferableInfo(entry.getValue().parameters, bodyRefInfo.getClassReferable()));
-          }
+        ReferableInfo refInfo = makeReferableInfo(globalTypingInfo, entry.getValue());
+        if (refInfo != null) {
+          typeInfo.put(entry.getKey(), refInfo);
         }
       }
 
