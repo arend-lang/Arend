@@ -520,7 +520,8 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     for (Concrete.Parameter parameter : parameters) {
       for (Referable referable : parameter.getReferableList()) {
         if (referable != null && !eliminated.contains(referable.getRefName())) {
-          result.add(new ParameterReferable((ConcreteLocatedReferable) parent, i, referable, TypeClassReferenceExtractVisitor.getTypeReferenceExpression(parameter.getType(), true)));
+          Concrete.ReferenceExpression refExpr = TypeClassReferenceExtractVisitor.getTypeReferenceExpression(parameter.getType(), true);
+          result.add(new ParameterReferable((ConcreteLocatedReferable) parent, i, referable, 0, refExpr == null ? null : refExpr.getReferent()));
         }
         i++;
       }

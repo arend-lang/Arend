@@ -2,14 +2,13 @@ package org.arend.naming.reference;
 
 import org.arend.ext.reference.DataContainer;
 import org.arend.ext.reference.Precedence;
-import org.arend.naming.resolving.visitor.TypeClassReferenceExtractVisitor;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 // TODO[server2]: Replace this class with TypedLocatedReferable
-public class ConcreteLocatedReferable extends LocatedReferableImpl implements DataContainer, TypedReferable {
+public class ConcreteLocatedReferable extends LocatedReferableImpl implements DataContainer {
   private final Object myData;
   private final String myAliasName;
   private final Precedence myAliasPrecedence;
@@ -49,16 +48,5 @@ public class ConcreteLocatedReferable extends LocatedReferableImpl implements Da
 
   public void setDefinition(Concrete.ReferableDefinition definition) {
     myDefinition = definition;
-  }
-
-  @Nullable
-  @Override
-  public ClassReferable getTypeClassReference() {
-    return myDefinition == null ? null : myDefinition.accept(new TypeClassReferenceExtractVisitor(), null);
-  }
-
-  @Override
-  public @Nullable Referable getBodyReference(TypeClassReferenceExtractVisitor visitor) {
-    return myDefinition instanceof Concrete.FunctionDefinition function && function.getBody() instanceof Concrete.TermFunctionBody ? TypeClassReferenceExtractVisitor.getTypeReference(function.getBody().getTerm(), false) : null;
   }
 }

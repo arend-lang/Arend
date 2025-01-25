@@ -1,24 +1,46 @@
 package org.arend.naming.reference;
 
-import org.arend.naming.resolving.visitor.TypeClassReferenceExtractVisitor;
+import org.arend.naming.resolving.typing.ReferableInfo;
+import org.arend.naming.resolving.typing.TypingInfo;
+import org.arend.naming.resolving.typing.TypingInfoVisitor;
+import org.arend.naming.scope.Scope;
 import org.arend.term.abs.AbstractReferable;
-import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public class ParameterReferable implements TypedReferable {
+public class ParameterReferable implements Referable {
   private final TCDefReferable myDefinition;
   private final int myIndex;
   private final Referable myReferable;
-  private final Concrete.ReferenceExpression myClassRef;
+  private final int myTypeParameters;
+  private final Referable myTypeReference;
+  private ReferableInfo myReferableInfo;
 
-  public ParameterReferable(TCDefReferable definition, int index, Referable referable, Concrete.ReferenceExpression classRef) {
+  public ParameterReferable(TCDefReferable definition, int index, Referable referable, int typeParameters, Referable typeReference) {
     myDefinition = definition;
     myIndex = index;
     myReferable = referable;
-    myClassRef = classRef;
+    myTypeParameters = typeParameters;
+    myTypeReference = typeReference;
+  }
+
+  public void resolve(Scope scope, TypingInfo typingInfo) {
+    if (myReferableInfo != null) return;
+    Referable referable = TypingInfoVisitor.tryResolve(myTypeReference, scope);
+    if (referable instanceof ClassReferable classRef) {
+      myReferableInfo = new ReferableInfo(myTypeParameters, classRef);
+    } else {
+      ReferableInfo bodyInfo = typingInfo.getBodyInfo(referable);
+      if (bodyInfo != null) {
+        myReferableInfo = new ReferableInfo(myTypeParameters + bodyInfo.getParameters(), bodyInfo.getClassReferable());
+      }
+    }
+  }
+
+  public ReferableInfo getReferableInfo() {
+    return myReferableInfo;
   }
 
   @Override
@@ -37,11 +59,6 @@ public class ParameterReferable implements TypedReferable {
   @Override
   public @NotNull Referable getUnderlyingReferable() {
     return myReferable;
-  }
-
-  @Override
-  public @Nullable ClassReferable getTypeClassReference() {
-    return new TypeClassReferenceExtractVisitor().findClassReference(TypeClassReferenceExtractVisitor.getTypeReference(myClassRef, true));
   }
 
   @Override

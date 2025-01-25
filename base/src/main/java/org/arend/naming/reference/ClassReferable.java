@@ -68,13 +68,14 @@ public interface ClassReferable extends LocatedReferable {
       }
 
       // Remove tail implicit parameters (only classes)
+      /* TODO[server2]
       if (withTailImplicits) {
         while (it.hasNext()) {
           FieldReferable field = it.next();
           if (field.isExplicitField() || !field.isParameterField()) {
             break;
           }
-          ClassReferable typeClass = field instanceof TypedReferable ? ((TypedReferable) field).getTypeClassReference() : null;
+          ClassReferable typeClass = field instanceof OldTypedReferable ? ((OldTypedReferable) field).getTypeClassReference() : null;
           if (typeClass == null || typeClass.isRecord()) {
             break;
           }
@@ -85,6 +86,7 @@ public interface ClassReferable extends LocatedReferable {
           it.remove();
         }
       }
+      */
 
       return fieldSet;
     }

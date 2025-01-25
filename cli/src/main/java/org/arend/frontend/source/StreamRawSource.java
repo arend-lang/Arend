@@ -9,6 +9,7 @@ import org.arend.library.SourceLibrary;
 import org.arend.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
 import org.arend.naming.reference.converter.IdReferableConverter;
+import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.ScopeFactory;
@@ -85,7 +86,7 @@ public abstract class StreamRawSource implements Source {
       return LoadResult.CONTINUE;
     }
 
-    new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, myPass == 2, sourceLoader.getTypecheckingErrorReporter(), null).resolveGroup(myGroup, myGroup.getGroupScope());
+    new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, myPass == 2, TypingInfo.EMPTY, sourceLoader.getTypecheckingErrorReporter(), null).resolveGroup(myGroup, myGroup.getGroupScope());
     if (myPass == 2) {
       myPass = 3;
       return LoadResult.CONTINUE;

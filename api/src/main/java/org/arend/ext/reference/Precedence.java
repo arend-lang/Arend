@@ -27,6 +27,15 @@ public class Precedence {
     this.isInfix = false;
   }
 
+  public enum ComparisonResult { LESS, EQUALS, GREATER, UNCOMPARABLE }
+
+  public ComparisonResult compare(Precedence prec) {
+    if (priority < prec.priority) return ComparisonResult.LESS;
+    if (priority > prec.priority) return ComparisonResult.GREATER;
+    if (associativity != prec.associativity || associativity == Associativity.NON_ASSOC) return ComparisonResult.UNCOMPARABLE;
+    return associativity == Associativity.LEFT_ASSOC ? ComparisonResult.GREATER : ComparisonResult.LESS;
+  }
+
   @Override
   public String toString() {
     String result = isInfix ? "infix" : "fix";

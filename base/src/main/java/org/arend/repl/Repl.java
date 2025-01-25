@@ -16,6 +16,7 @@ import org.arend.library.LibraryManager;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.*;
+import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor;
 import org.arend.naming.scope.Scope;
@@ -158,7 +159,7 @@ public abstract class Repl {
     var scope = ScopeFactory.forGroup(group, moduleScopeProvider);
     myReplScope.addScope(scope);
     myReplScope.setCurrentLineScope(null);
-    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), myErrorReporter).resolveGroupWithTypes(group, myScope);
+    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, myErrorReporter).resolveGroupWithTypes(group, myScope);
     if (checkErrors()) {
       myMergedScopes.remove(scope);
     } else {
@@ -306,7 +307,7 @@ public abstract class Repl {
   public final @Nullable Concrete.Expression preprocessExpr(@NotNull String text) {
     var expr = parseExpr(text);
     if (expr == null || checkErrors()) return null;
-    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(myScope, new ArrayList<>(), myErrorReporter, null), null), myErrorReporter);
+    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(myScope, new ArrayList<>(), TypingInfo.EMPTY, myErrorReporter, null), null), myErrorReporter);
     if (checkErrors()) return null;
     return expr;
   }

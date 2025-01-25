@@ -29,14 +29,12 @@ public class ModuleDeserialization {
   private final List<Pair<DefinitionProtos.Definition, Definition>> myDefinitions = new ArrayList<>();
   private final SerializableKeyRegistryImpl myKeyRegistry;
   private final DefinitionListener myDefinitionListener;
-  private final boolean myPrelude;
 
-  public ModuleDeserialization(ModuleProtos.Module moduleProto, ReferableConverter referableConverter, SerializableKeyRegistryImpl keyRegistry, DefinitionListener definitionListener, boolean isPrelude) {
+  public ModuleDeserialization(ModuleProtos.Module moduleProto, ReferableConverter referableConverter, SerializableKeyRegistryImpl keyRegistry, DefinitionListener definitionListener) {
     myModuleProto = moduleProto;
     myReferableConverter = referableConverter;
     myKeyRegistry = keyRegistry;
     myDefinitionListener = definitionListener;
-    myPrelude = isPrelude;
   }
 
   public ModuleProtos.Module getModuleProto() {
@@ -265,16 +263,7 @@ public class ModuleDeserialization {
     } else {
       dynamicReferables = null;
       fieldReferables = new ArrayList<>(0);
-      if (parent == null) {
-        referable = new FullModuleReferable(modulePath);
-      } else {
-        String name = referableProto.getName();
-        if (myPrelude && kind == GlobalReferable.Kind.FUNCTION && Prelude.ARRAY_NAME.equals(name)) {
-          referable = new TypedLocatedReferable(AccessModifier.PUBLIC, readPrecedence(referableProto.getPrecedence()), name, parent.getReferable(), kind, null, null);
-        } else {
-          referable = new LocatedReferableImpl(AccessModifier.PUBLIC, readPrecedence(referableProto.getPrecedence()), name, parent.getReferable(), kind);
-        }
-      }
+      referable = parent == null ? new FullModuleReferable(modulePath) : new LocatedReferableImpl(AccessModifier.PUBLIC, readPrecedence(referableProto.getPrecedence()), referableProto.getName(), parent.getReferable(), kind);
     }
 
     Definition def;

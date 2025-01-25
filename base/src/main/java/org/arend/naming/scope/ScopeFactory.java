@@ -3,7 +3,7 @@ package org.arend.naming.scope;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor;
-import org.arend.naming.scope.local.LocalListScope;
+import org.arend.naming.scope.local.ListScope;
 import org.arend.naming.scope.local.*;
 import org.arend.prelude.Prelude;
 import org.arend.term.NamespaceCommand;
@@ -330,7 +330,7 @@ public class ScopeFactory {
         }
       }
 
-      return referables != null ? new LocalListScope(parentScope, referables) : eliminatedRefs != null ? new ElimScope(parentScope, eliminatedRefs) : parentScope;
+      return referables != null ? new ListScope(parentScope, referables) : eliminatedRefs != null ? new ElimScope(parentScope, eliminatedRefs) : parentScope;
     }
 
     // Extend the scope with let clauses

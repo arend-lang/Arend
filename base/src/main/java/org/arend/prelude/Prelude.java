@@ -81,7 +81,6 @@ public class Prelude implements ArendPrelude {
   public static FunctionDefinition DIV_MOD_PROPERTY;
   public static SigmaExpression DIV_MOD_TYPE;
 
-  public static final String ARRAY_NAME = "Array";
   public static FunctionDefinition ARRAY;
   public static ClassDefinition DEP_ARRAY;
   public static ClassField ARRAY_ELEMENTS_TYPE;
@@ -218,12 +217,7 @@ public class Prelude implements ArendPrelude {
         ARRAY_LENGTH = DEP_ARRAY.getPersonalFields().get(0);
         ARRAY_AT = DEP_ARRAY.getPersonalFields().get(2);
       }
-      case "Array" -> {
-        ARRAY = (FunctionDefinition) definition;
-        if (ARRAY.getRef() instanceof TypedLocatedReferable) {
-          ((TypedLocatedReferable) ARRAY.getRef()).setBodyReference(DEP_ARRAY.getRef());
-        }
-      }
+      case "Array" -> ARRAY = (FunctionDefinition) definition;
       case "nil" -> {
         EMPTY_ARRAY = (DConstructor) definition;
         EMPTY_ARRAY.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(EMPTY_ARRAY, LevelPair.STD, Collections.emptyList()), Collections.singletonList(new BindingPattern(EMPTY_ARRAY.getParameters()))));

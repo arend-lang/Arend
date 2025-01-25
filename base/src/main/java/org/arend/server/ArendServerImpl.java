@@ -12,7 +12,10 @@ import org.arend.module.scopeprovider.SimpleModuleScopeProvider;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.CollectingResolverListener;
 import org.arend.naming.resolving.ResolverListener;
+import org.arend.naming.resolving.typing.ReferableInfo;
+import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
+import org.arend.naming.resolving.typing.TypingInfoVisitor;
 import org.arend.naming.scope.*;
 import org.arend.prelude.Prelude;
 import org.arend.term.NamespaceCommand;
@@ -44,6 +47,20 @@ public class ArendServerImpl implements ArendServer {
   private final ResolverCache myResolverCache;
   private final ErrorService myErrorService = new ErrorService();
   private final boolean myCacheReferences;
+
+  private final TypingInfo myTypingInfo = new TypingInfo() {
+    @Override
+    public @Nullable ReferableInfo getBodyInfo(Referable referable) {
+      TypingInfo info = getTypingInfo(referable);
+      return info == null ? null : info.getBodyInfo(referable);
+    }
+
+    @Override
+    public @Nullable ReferableInfo getTypeInfo(Referable referable) {
+      TypingInfo info = getTypingInfo(referable);
+      return info == null ? null : info.getTypeInfo(referable);
+    }
+  };
 
   public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging, @Nullable String logFile) {
     myRequester = requester;
@@ -122,7 +139,7 @@ public class ArendServerImpl implements ArendServer {
             defMap.put(cGroup.referable(), cGroup.definition());
           }
         });
-        new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), true, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY).resolveGroup(group, getGroupScope(module, group));
+        new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), true, TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY).resolveGroup(group, getGroupScope(module, group));
         myPreludeModuleScopeProvider.addModule(module.getModulePath(), CachingScope.make(LexicalScope.opened(group)));
       }
     }
@@ -230,8 +247,8 @@ public class ArendServerImpl implements ArendServer {
     return null;
   }
 
-  private Scope getGroupScope(ModuleLocation module, Group group) {
-    return CachingScope.make(ScopeFactory.forGroup(group, new ModuleScopeProvider() {
+  private ModuleScopeProvider getModuleScopeProviderFor(ModuleLocation module) {
+    return new ModuleScopeProvider() {
       @Override
       public @Nullable Scope forModule(@NotNull ModulePath modulePath) {
         Scope result = myPreludeModuleScopeProvider.forModule(modulePath);
@@ -253,7 +270,23 @@ public class ArendServerImpl implements ArendServer {
         }
         return new ModuleReferable(modulePath);
       }
-    }));
+    };
+  }
+
+  private Scope getParentGroupScope(ModuleLocation module, Group group) {
+    return ScopeFactory.parentScopeForGroup(group, getModuleScopeProviderFor(module), true);
+  }
+
+  private Scope getGroupScope(ModuleLocation module, Group group) {
+    return CachingScope.make(ScopeFactory.forGroup(group, getModuleScopeProviderFor(module)));
+  }
+
+  private TypingInfo getTypingInfo(Referable referable) {
+    if (!(referable instanceof LocatedReferable located)) return null;
+    ModuleLocation module = located.getLocation();
+    if (module == null) return null;
+    GroupData groupData = myGroups.get(module);
+    return groupData == null ? null : groupData.getTypingInfo();
   }
 
   @Override
@@ -283,9 +316,8 @@ public class ArendServerImpl implements ArendServer {
             }
           }
 
-          if (!groupData.areHeadersResolved()) {
-            new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(groupData.getRawGroup())), true, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY).resolveGroup(groupData.getRawGroup(), getGroupScope(module, groupData.getRawGroup()));
-            groupData.setHeadersResolved();
+          if (groupData.getTypingInfo() == null) {
+            groupData.setTypingInfo(new TypingInfoVisitor().processGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()), null));
             myLogger.info(() -> "Header of module '" + module + "' is resolved");
           }
         }
@@ -323,7 +355,7 @@ public class ArendServerImpl implements ArendServer {
             errorReporterMap.put(module, listErrorReporter);
             currentErrorReporter = new MergingErrorReporter(errorReporter, listErrorReporter);
           }
-          new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), false, currentErrorReporter, resolverListener).resolveGroupWithTypes(groupData.getRawGroup(), getGroupScope(module, groupData.getRawGroup()));
+          new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), myTypingInfo, currentErrorReporter, resolverListener).resolveGroupWithTypes(groupData.getRawGroup(), getGroupScope(module, groupData.getRawGroup()));
         }
         listener.moduleResolved(module);
         myLogger.info(() -> "Module '" + module + "' is resolved");
@@ -428,7 +460,7 @@ public class ArendServerImpl implements ArendServer {
     List<Referable> result = new ArrayList<>();
     boolean[] found = new boolean[1];
     try {
-      new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(group)), true, DummyErrorReporter.INSTANCE, new ResolverListener() {
+      new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(group)), new TypingInfoVisitor().processGroup(group, getParentGroupScope(module, group), myTypingInfo), DummyErrorReporter.INSTANCE, new ResolverListener() {
         @Override
         public void resolving(AbstractReference abstractReference, Scope scope, Scope.ScopeContext context, boolean finished) {
           if (abstractReference == reference) {

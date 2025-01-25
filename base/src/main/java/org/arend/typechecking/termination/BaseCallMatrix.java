@@ -9,34 +9,25 @@ import java.util.HashMap;
 import java.util.Map;
 
 public abstract class BaseCallMatrix<T> {
-  public enum R {
+  enum R {
     Unknown(),
     Equal(),
     LessThan()
   }
 
   private static BaseCallMatrix.R rmul(BaseCallMatrix.R a, BaseCallMatrix.R b) {
-    switch (a) {
-      case Equal:
-        switch (b) {
-          case Equal:
-            return BaseCallMatrix.R.Equal;
-          case LessThan:
-            return BaseCallMatrix.R.LessThan;
-          default:
-            return BaseCallMatrix.R.Unknown;
-        }
-      case LessThan:
-        switch (b) {
-          case Equal:
-          case LessThan:
-            return BaseCallMatrix.R.LessThan;
-          default:
-            return BaseCallMatrix.R.Unknown;
-        }
-      default:
-        return BaseCallMatrix.R.Unknown;
-    }
+    return switch (a) {
+      case Equal -> switch (b) {
+        case Equal -> R.Equal;
+        case LessThan -> R.LessThan;
+        default -> R.Unknown;
+      };
+      case LessThan -> switch (b) {
+        case Equal, LessThan -> R.LessThan;
+        default -> R.Unknown;
+      };
+      default -> R.Unknown;
+    };
   }
 
   private static BaseCallMatrix.R radd(BaseCallMatrix.R a, BaseCallMatrix.R b) {
@@ -46,14 +37,11 @@ public abstract class BaseCallMatrix<T> {
   }
 
   static boolean rleq(BaseCallMatrix.R a, BaseCallMatrix.R b) {
-    switch (a) {
-      case LessThan:
-        return (b == BaseCallMatrix.R.LessThan);
-      case Equal:
-        return (b == BaseCallMatrix.R.LessThan || b == BaseCallMatrix.R.Equal);
-      default:
-        return true;
-    }
+    return switch (a) {
+      case LessThan -> b == R.LessThan;
+      case Equal -> b == R.LessThan || b == R.Equal;
+      default -> true;
+    };
   }
 
   private final HashMap<Integer, HashMap<Integer, BaseCallMatrix.R>> matrixMap = new HashMap<>();
@@ -105,7 +93,7 @@ public abstract class BaseCallMatrix<T> {
 
   public abstract int getCompositeLength();
 
-  public void set(int i, int j, BaseCallMatrix.R v) {
+  void set(int i, int j, BaseCallMatrix.R v) {
     if (v != R.Unknown) {
       HashMap<Integer, BaseCallMatrix.R> map = matrixMap.computeIfAbsent(i, k -> new HashMap<>());
       map.put(j, v);
@@ -117,7 +105,7 @@ public abstract class BaseCallMatrix<T> {
     }
   }
 
-  public BaseCallMatrix.R getValue(int i, int j) {
+  BaseCallMatrix.R getValue(int i, int j) {
     HashMap<Integer, BaseCallMatrix.R> result = matrixMap.get(i);
     if (result == null) return R.Unknown; else {
       BaseCallMatrix.R result2 = result.get(j);
@@ -127,17 +115,15 @@ public abstract class BaseCallMatrix<T> {
 
   @Override
   public final boolean equals(Object object) {
-    if (object instanceof BaseCallMatrix) {
-      BaseCallMatrix<?> cm = (BaseCallMatrix<?>) object;
+    if (object instanceof BaseCallMatrix<?> cm) {
       if (getCodomain() != cm.getCodomain() || getDomain() != cm.getDomain()) return false;
       return cm.matrixMap.equals(this.matrixMap);
     }
     return false;
   }
 
-  public BaseCallMatrix.R compare(Object object) {
-    if (object instanceof BaseCallMatrix) {
-      BaseCallMatrix<?> cm = (BaseCallMatrix<?>) object;
+  BaseCallMatrix.R compare(Object object) {
+    if (object instanceof BaseCallMatrix<?> cm) {
       if (this.equals(cm)) return R.Equal;
       if (this.getDomain() != cm.getDomain() || this.getCodomain() != cm.getCodomain()) throw new IllegalArgumentException();
       for (Integer i : matrixMap.keySet()) {
@@ -180,14 +166,11 @@ public abstract class BaseCallMatrix<T> {
   }
 
   static char rToChar(R r) {
-    switch (r) {
-      case Equal:
-        return '=';
-      case LessThan:
-        return '<';
-      default:
-        return '?';
-    }
+    return switch (r) {
+      case Equal -> '=';
+      case LessThan -> '<';
+      default -> '?';
+    };
   }
 
   @Override
@@ -232,7 +215,7 @@ public abstract class BaseCallMatrix<T> {
           if (!first) {
             result.append(", '-'");
           }
-          if (result.length() > 0) result.append(", ");
+          if (!result.isEmpty()) result.append(", ");
           if (value == R.Equal) result.append("'='"); else if (value == R.LessThan) result.append("'<'");
           result.append(", ").append(j);
           first = false;
@@ -241,7 +224,7 @@ public abstract class BaseCallMatrix<T> {
       }
 
       if (!found) {
-        if (result.length() > 0) result.append(", ");
+        if (!result.isEmpty()) result.append(", ");
         result.append("'?'");
       }
     }

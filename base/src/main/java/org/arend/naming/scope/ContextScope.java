@@ -1,47 +1,46 @@
 package org.arend.naming.scope;
 
 import org.arend.naming.reference.Referable;
+import org.arend.naming.resolving.typing.TypedReferable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
 
-public class ListScope extends DelegateScope {
-  private final List<? extends Referable> myContext;
+public class ContextScope extends DelegateScope {
+  private final List<? extends TypedReferable> myContext;
   private final List<? extends Referable> myPLevels;
   private final List<? extends Referable> myHLevels;
 
-  public ListScope(Scope parent, List<? extends Referable> context, List<? extends Referable> pLevels, List<? extends Referable> hLevels) {
+  public ContextScope(Scope parent, List<? extends TypedReferable> context, List<? extends Referable> pLevels, List<? extends Referable> hLevels) {
     super(parent);
     myContext = context;
     myPLevels = pLevels;
     myHLevels = hLevels;
   }
 
-  public ListScope(List<? extends Referable> context) {
+  public ContextScope(List<? extends TypedReferable> context) {
     super(EmptyScope.INSTANCE);
     myContext = context;
     myPLevels = Collections.emptyList();
     myHLevels = Collections.emptyList();
   }
 
-  public ListScope(Referable... context) {
-    this(Arrays.asList(context));
-  }
-
   @NotNull
   @Override
   public Collection<? extends Referable> getElements(@Nullable ScopeContext context) {
     if (parent == EmptyScope.INSTANCE && context != null) {
-      return context == ScopeContext.STATIC ? myContext : context == ScopeContext.PLEVEL ? myPLevels : myHLevels;
+      return context == ScopeContext.STATIC ? myContext.stream().map(TypedReferable::getReferable).toList() : context == ScopeContext.PLEVEL ? myPLevels : myHLevels;
     }
     List<Referable> result = new ArrayList<>();
     Set<String> names = new HashSet<>();
     if (context == null || context == ScopeContext.STATIC) {
-      result.addAll(myContext);
-      for (Referable referable : myContext) {
-        names.add(referable.getRefName());
+      for (TypedReferable referable : myContext) {
+        result.add(referable.getReferable());
+      }
+      for (TypedReferable referable : myContext) {
+        names.add(referable.getReferable().getRefName());
       }
     }
     if (context == null || context == ScopeContext.PLEVEL) {
@@ -68,8 +67,8 @@ public class ListScope extends DelegateScope {
   public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context) {
     if (context == null || context == ScopeContext.STATIC) {
       for (int i = myContext.size() - 1; i >= 0; i--) {
-        if (pred.test(myContext.get(i))) {
-          return myContext.get(i);
+        if (pred.test(myContext.get(i).getReferable())) {
+          return myContext.get(i).getReferable();
         }
       }
     }
@@ -96,8 +95,14 @@ public class ListScope extends DelegateScope {
         Referable ref = resolveName(name, ctx);
         if (ref != null) return ref;
       }
+    } else if (context == ScopeContext.STATIC) {
+      for (int i = myContext.size() - 1; i >= 0; i--) {
+        if (myContext.get(i).getReferable().getRefName().equals(name)) {
+          return myContext.get(i).getReferable();
+        }
+      }
     } else {
-      List<? extends Referable> list = context == ScopeContext.STATIC ? myContext : context == ScopeContext.PLEVEL ? myPLevels : myHLevels;
+      List<? extends Referable> list = context == ScopeContext.PLEVEL ? myPLevels : myHLevels;
       for (int i = list.size() - 1; i >= 0; i--) {
         if (list.get(i).getRefName().equals(name)) {
           return list.get(i);

@@ -3,18 +3,28 @@ package org.arend.naming.scope.local;
 import org.arend.ext.reference.ArendRef;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.scope.DelegateScope;
+import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 
-public class LocalListScope extends DelegateScope {
+public class ListScope extends DelegateScope {
   private final List<? extends ArendRef> myReferables;
 
-  public LocalListScope(Scope parent, List<? extends ArendRef> referables) {
+  public ListScope(Scope parent, List<? extends ArendRef> referables) {
     super(parent);
     myReferables = referables;
+  }
+
+  public ListScope(List<? extends ArendRef> referables) {
+    this(EmptyScope.INSTANCE, referables);
+  }
+
+  public ListScope(ArendRef... referables) {
+    this(Arrays.asList(referables));
   }
 
   private Referable findHere(Predicate<Referable> pred) {

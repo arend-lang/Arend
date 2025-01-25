@@ -2,6 +2,7 @@ package org.arend.naming.reference;
 
 import org.arend.ext.reference.Precedence;
 import org.arend.module.scopeprovider.EmptyModuleScopeProvider;
+import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.LexicalScope;
@@ -65,7 +66,7 @@ public class ConcreteClassReferable extends ConcreteResolvedClassReferable imple
   protected void resolve(Scope scope) {
     superClasses.clear();
     for (Reference superClass : myUnresolvedSuperClasses) {
-      Referable ref = ExpressionResolveNameVisitor.resolve(superClass.getReferent(), scope, true, null, Scope.ScopeContext.STATIC);
+      Referable ref = ExpressionResolveNameVisitor.resolve(superClass.getReferent(), scope, true, null, Scope.ScopeContext.STATIC, TypingInfo.EMPTY);
       if (ref instanceof ClassReferable) {
         superClasses.add((ClassReferable) ref);
       }

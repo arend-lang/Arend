@@ -1,6 +1,7 @@
 package org.arend.naming.reference;
 
 import org.arend.naming.resolving.ResolverListener;
+import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.scope.Scope;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
@@ -86,13 +87,13 @@ public class NamedUnresolvedReference implements UnresolvedReference {
 
   @Nullable
   @Override
-  public Concrete.Expression resolveExpression(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
+  public Concrete.Expression resolveExpression(Scope scope, @NotNull TypingInfo typingInfo, @Nullable List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
     resolve(scope, resolvedRefs, listener);
     return null;
   }
 
   @Override
-  public @Nullable Concrete.Expression tryResolveExpression(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
+  public @Nullable Concrete.Expression tryResolveExpression(Scope scope, @NotNull TypingInfo typingInfo, @Nullable List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
     tryResolve(scope, resolvedRefs, listener);
     return null;
   }

@@ -122,32 +122,11 @@ public class TypeClassReferenceExtractVisitor implements ConcreteReferableDefini
   }
 
   public ClassReferable findClassReference(Referable referent) {
-    Set<Referable> visited = null;
-    while (true) {
-      if (referent instanceof ClassReferable || referent == null) {
-        return (ClassReferable) referent;
-      }
-      Referable underlyingRef = referent.getUnderlyingReferable();
-      if (underlyingRef instanceof ClassReferable) {
-        return (ClassReferable) underlyingRef;
-      }
-      if (!(underlyingRef instanceof TypedReferable)) {
-        return null;
-      }
-      Referable ref = ((TypedReferable) underlyingRef).getBodyReference(this);
-      if (!(ref instanceof GlobalReferable)) {
-        return null;
-      }
-
-      if (visited == null) {
-        visited = new HashSet<>();
-      }
-      if (!visited.add(underlyingRef)) {
-        return null;
-      }
-
-      referent = ref;
+    if (referent instanceof ClassReferable || referent == null) {
+      return (ClassReferable) referent;
     }
+    Referable underlyingRef = referent.getUnderlyingReferable();
+    return underlyingRef instanceof ClassReferable ? (ClassReferable) underlyingRef : null;
   }
 
   public ClassReferable getTypeClassReference(Concrete.Expression type) {

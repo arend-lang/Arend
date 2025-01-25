@@ -1,6 +1,7 @@
 package org.arend.naming.reference;
 
 import org.arend.naming.resolving.ResolverListener;
+import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.scope.ClassFieldImplScope;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.MergeScope;
@@ -146,7 +147,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
     return resolve(scope, resolvedRefs, true, Scope.ScopeContext.STATIC, listener);
   }
 
-  private Concrete.Expression resolveArgument(Scope scope, boolean onlyTry, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
+  private Concrete.Expression resolveArgument(Scope scope, boolean onlyTry, TypingInfo typingInfo, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
     if (resolved != null) {
       return null;
     }
@@ -156,7 +157,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
     for (int i = 0; i < myPath.size() - 1; i++) {
       Scope nextScope = scope.resolveNamespace(myPath.get(i));
       if (nextScope == null) {
-        return resolveField(prevScope, initialScope, i - 1, onlyTry, resolvedRefs, listener);
+        return resolveField(prevScope, initialScope, i - 1, onlyTry, typingInfo, resolvedRefs, listener);
       }
       if (listener != null && i < myReferences.size() && myReferences.get(i) != null) {
         listener.resolving(myReferences.get(i), scope, Scope.ScopeContext.STATIC, !onlyTry);
@@ -177,7 +178,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
         if (onlyTry) return null;
         resolved = new ErrorReference(getData(), name);
       } else {
-        return resolveField(prevScope, initialScope, myPath.size() - 2, onlyTry, resolvedRefs, listener);
+        return resolveField(prevScope, initialScope, myPath.size() - 2, onlyTry, typingInfo, resolvedRefs, listener);
       }
     }
     if (listener != null && myPath.size() - 1 < myReferences.size() && myReferences.get(myPath.size() - 1) != null) {
@@ -192,13 +193,13 @@ public class LongUnresolvedReference implements UnresolvedReference {
 
   @Nullable
   @Override
-  public Concrete.Expression resolveExpression(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
-    return resolveArgument(scope, false, resolvedRefs, listener);
+  public Concrete.Expression resolveExpression(Scope scope, @NotNull TypingInfo typingInfo, @Nullable List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
+    return resolveArgument(scope, false, typingInfo, resolvedRefs, listener);
   }
 
   @Override
-  public @Nullable Concrete.Expression tryResolveExpression(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
-    return resolveArgument(scope, true, resolvedRefs, listener);
+  public @Nullable Concrete.Expression tryResolveExpression(Scope scope, @NotNull TypingInfo typingInfo, @Nullable List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
+    return resolveArgument(scope, true, typingInfo, resolvedRefs, listener);
   }
 
   @Override
@@ -216,7 +217,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
     return resolved != null;
   }
 
-  private Concrete.Expression resolveField(Scope scope, Scope initialScope, int i, boolean onlyTry, List<Referable> resolvedRefs, ResolverListener listener) {
+  private Concrete.Expression resolveField(Scope scope, Scope initialScope, int i, boolean onlyTry, TypingInfo typingInfo, List<Referable> resolvedRefs, ResolverListener listener) {
     if (i == -1) {
       resolved = scope.resolveName(myPath.get(0));
       if (listener != null && !myReferences.isEmpty() && myReferences.get(0) != null) {
@@ -240,7 +241,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
       return null;
     }
 
-    ClassReferable classRef = resolved instanceof TypedReferable ? ((TypedReferable) resolved).getTypeClassReference() : null;
+    ClassReferable classRef = typingInfo.getTypeClassReferable(resolved);
     boolean withArg = true;
     if (classRef == null && resolved.getUnderlyingReferable() instanceof ClassReferable classRef2) {
       classRef = classRef2;
@@ -287,7 +288,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
       }
       Concrete.Expression refExpr = new Concrete.ReferenceExpression(myData, resolved);
       result = result == null ? refExpr : Concrete.AppExpression.make(myData, refExpr, result, false);
-      classRef = resolved instanceof TypedReferable ? ((TypedReferable) resolved).getTypeClassReference() : null;
+      classRef = typingInfo.getTypeClassReferable(resolved);
     }
 
     return result;
