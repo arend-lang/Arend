@@ -16,21 +16,26 @@ public class LocalTypingInfo implements TypingInfo {
   }
 
   @Override
-  public @Nullable ReferableInfo getBodyInfo(Referable referable) {
-    return myParent.getBodyInfo(referable);
+  public @Nullable DynamicScopeProvider getDynamicScopeProvider(Referable referable) {
+    return myParent.getDynamicScopeProvider(referable);
   }
 
   @Override
-  public @Nullable ReferableInfo getTypeInfo(Referable referable) {
+  public @Nullable AbstractBody getRefBody(Referable referable) {
+    return myParent.getRefBody(referable);
+  }
+
+  @Override
+  public @Nullable AbstractBody getRefType(Referable referable) {
     if (referable instanceof ParameterReferable paramRef) {
-      return paramRef.getReferableInfo();
+      return paramRef.getAbstractBody();
     }
 
-    ReferableInfo info = myParent.getTypeInfo(referable);
+    AbstractBody info = myParent.getRefType(referable);
     if (info != null) return info;
     for (int i = myContext.size() - 1; i >= 0; i--) {
       if (myContext.get(i).getReferable().equals(referable)) {
-        return myContext.get(i);
+        return myContext.get(i).getAbstractBody();
       }
     }
     return null;

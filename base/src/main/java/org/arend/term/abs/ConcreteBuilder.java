@@ -170,7 +170,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     for (Concrete.Parameter parameter : parameters) {
       for (Referable referable : parameter.getReferableList()) {
         if (referable != null && !eliminated.contains(referable.getRefName())) {
-          result.add(new ParameterReferable(definition.getData(), i, referable, TypingInfoVisitor.resolveTypeClassReference(parameter.getType())));
+          result.add(new ParameterReferable(definition.getData(), i, referable, TypingInfoVisitor.resolveAbstractBody(parameter.getType())));
         }
         i++;
       }

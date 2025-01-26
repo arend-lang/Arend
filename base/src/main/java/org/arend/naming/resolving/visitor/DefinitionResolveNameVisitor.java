@@ -15,10 +15,7 @@ import org.arend.naming.error.ExistingOpenedNameError;
 import org.arend.naming.error.ReferenceError;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.ResolverListener;
-import org.arend.naming.resolving.typing.GlobalTypingInfo;
-import org.arend.naming.resolving.typing.TypedReferable;
-import org.arend.naming.resolving.typing.TypingInfo;
-import org.arend.naming.resolving.typing.TypingInfoVisitor;
+import org.arend.naming.resolving.typing.*;
 import org.arend.naming.scope.*;
 import org.arend.naming.scope.local.ElimScope;
 import org.arend.naming.scope.local.ListScope;
@@ -284,22 +281,22 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     Concrete.GeneralDefinition enclosingDef = myConcreteProvider.getConcrete(function.getUseParent());
-    ClassReferable classRef = null;
+    DynamicScopeProvider dynamicScopeProvider = null;
     List<? extends Concrete.ClassElement> elements = Collections.emptyList();
     if (enclosingDef instanceof Concrete.BaseFunctionDefinition enclosingFunction) {
       if (enclosingFunction.getResultType() != null) {
         if (enclosingFunction.getStage().ordinal() < Concrete.Stage.RESOLVED.ordinal()) {
           resolveTypeClassReference(enclosingFunction.getParameters(), enclosingFunction.getResultType(), scope, true);
         }
-        classRef = myTypingInfo.getBodyClassReferable(TypingInfoVisitor.resolveTypeClassReference(enclosingFunction.getResultType()));
+        dynamicScopeProvider = myTypingInfo.getBodyDynamicScopeProvider(enclosingFunction.getResultType());
         elements = enclosingFunction.getBody().getCoClauseElements();
       }
     } else if (enclosingDef instanceof Concrete.ClassDefinition classDef) {
-      classRef = classDef.getData();
+      dynamicScopeProvider = myTypingInfo.getDynamicScopeProvider(classDef.getData());
       elements = classDef.getElements();
     }
 
-    if (classRef != null) {
+    if (dynamicScopeProvider != null) {
       Concrete.CoClauseFunctionReference functionRef = null;
       for (Concrete.ClassElement element : elements) {
         if (element instanceof Concrete.CoClauseFunctionReference && ((Concrete.CoClauseFunctionReference) element).getFunctionReference().equals(function.getData())) {
@@ -308,7 +305,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         }
       }
       if (functionRef != null) {
-        function.setImplementedField(new ExpressionResolveNameVisitor(scope, null, myTypingInfo, myLocalErrorReporter, myResolverListener).visitClassFieldReference(functionRef, function.getImplementedField(), classRef));
+        function.setImplementedField(new ExpressionResolveNameVisitor(scope, null, myTypingInfo, myLocalErrorReporter, myResolverListener).visitClassFieldReference(functionRef, function.getImplementedField(), dynamicScopeProvider));
       }
     }
     if (function.getData() instanceof LocatedReferableImpl && !((LocatedReferableImpl) function.getData()).isPrecedenceSet() && function.getImplementedField() instanceof GlobalReferable) {
@@ -404,16 +401,11 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       ((Concrete.TermFunctionBody) body).setTerm(((Concrete.TermFunctionBody) body).getTerm().accept(exprVisitor, null));
     }
     if (body instanceof Concrete.CoelimFunctionBody) {
-      ClassReferable typeRef = def.getResultType() == null ? null : myTypingInfo.getBodyClassReferable(TypingInfoVisitor.resolveTypeClassReference(def.getResultType()));
-      if (typeRef != null) {
-        if (def.getKind() == FunctionKind.INSTANCE && typeRef.isRecord()) {
-          myLocalErrorReporter.report(new NameResolverError("Expected a class, got a record", def));
-          body.getCoClauseElements().clear();
-        } else {
-          for (Concrete.CoClauseElement element : body.getCoClauseElements()) {
-            if (element instanceof Concrete.ClassFieldImpl) {
-              exprVisitor.visitClassFieldImpl((Concrete.ClassFieldImpl) element, typeRef);
-            }
+      DynamicScopeProvider provider = def.getResultType() == null ? null : myTypingInfo.getBodyDynamicScopeProvider(def.getResultType());
+      if (provider != null) {
+        for (Concrete.CoClauseElement element : body.getCoClauseElements()) {
+          if (element instanceof Concrete.ClassFieldImpl) {
+            exprVisitor.visitClassFieldImpl((Concrete.ClassFieldImpl) element, provider);
           }
         }
       } else {
@@ -536,10 +528,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     Set<Referable> referables = eliminated.stream().map(Concrete.ReferenceExpression::getReferent).collect(Collectors.toSet());
     for (Concrete.Parameter parameter : parameters) {
-      GlobalTypingInfo.Builder.MyInfo info = TypingInfoVisitor.resolveTypeClassReference(parameter.getType());
+      AbstractBody abstractBody = TypingInfoVisitor.resolveAbstractBody(parameter.getType());
       for (Referable referable : parameter.getReferableList()) {
         if (referable != null && !referable.textRepresentation().equals("_") && !referables.contains(referable)) {
-          context.add(new TypedReferable(referable, GlobalTypingInfo.Builder.makeReferableInfo(myTypingInfo, info)));
+          context.add(new TypedReferable(referable, abstractBody));
         }
       }
     }
@@ -747,11 +739,13 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
     }
 
+    DynamicScopeProvider dynamicScopeProvider = myTypingInfo.getDynamicScopeProvider(def.getData());
+    if (dynamicScopeProvider == null) dynamicScopeProvider = new EmptyDynamicScopeProvider(def.getData());
     for (Concrete.ClassElement element : def.getElements()) {
       if (element instanceof Concrete.ClassFieldImpl) {
-        exprVisitor.visitClassFieldImpl((Concrete.ClassFieldImpl) element, def.getData());
+        exprVisitor.visitClassFieldImpl((Concrete.ClassFieldImpl) element, dynamicScopeProvider);
       } else if (element instanceof Concrete.OverriddenField field) {
-        exprVisitor.visitClassFieldReference(field, field.getOverriddenField(), def.getData());
+        exprVisitor.visitClassFieldReference(field, field.getOverriddenField(), dynamicScopeProvider);
         try (Utils.ContextSaver ignore = new Utils.ContextSaver(context)) {
           exprVisitor.visitParameters(field.getParameters(), null);
           field.setResultType(field.getResultType().accept(exprVisitor, null));
@@ -861,7 +855,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     for (ParameterReferable parameter : group.getExternalParameters()) {
-      parameter.resolve(cachedScope, myTypingInfo);
+      parameter.resolve(cachedScope);
     }
 
     Scope docScope;

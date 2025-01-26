@@ -1,21 +1,21 @@
 package org.arend.naming.resolving.typing;
 
-import org.arend.naming.reference.ClassReferable;
 import org.arend.naming.reference.Referable;
 
-public class TypedReferable extends ReferableInfo {
+public class TypedReferable {
   private final Referable myReferable;
+  private final AbstractBody myAbstractBody;
 
-  public TypedReferable(Referable referable, int parameters, ClassReferable classRef) {
-    super(parameters, classRef);
+  public TypedReferable(Referable referable, AbstractBody abstractBody) {
     myReferable = referable;
-  }
-
-  public TypedReferable(Referable referable, ReferableInfo info) {
-    this(referable, info == null ? 0 : info.getParameters(), info == null ? null : info.getClassReferable());
+    myAbstractBody = abstractBody;
   }
 
   public Referable getReferable() {
     return myReferable;
+  }
+
+  public AbstractBody getAbstractBody() {
+    return myAbstractBody;
   }
 }

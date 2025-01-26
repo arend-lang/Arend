@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+// TODO[server2]: Delete this.
 public interface ClassReferable extends LocatedReferable {
   boolean isRecord();
   @NotNull List<? extends ClassReferable> getSuperClassReferences();

@@ -1,11 +1,9 @@
 package org.arend.naming.reference;
 
 import org.arend.naming.resolving.ResolverListener;
+import org.arend.naming.resolving.typing.DynamicScopeProvider;
 import org.arend.naming.resolving.typing.TypingInfo;
-import org.arend.naming.scope.ClassFieldImplScope;
-import org.arend.naming.scope.EmptyScope;
-import org.arend.naming.scope.MergeScope;
-import org.arend.naming.scope.Scope;
+import org.arend.naming.scope.*;
 import org.arend.term.Fixity;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
@@ -241,13 +239,13 @@ public class LongUnresolvedReference implements UnresolvedReference {
       return null;
     }
 
-    ClassReferable classRef = typingInfo.getTypeClassReferable(resolved);
+    DynamicScopeProvider provider = typingInfo.getTypeDynamicScopeProvider(resolved);
     boolean withArg = true;
-    if (classRef == null && resolved.getUnderlyingReferable() instanceof ClassReferable classRef2) {
-      classRef = classRef2;
-      withArg = false;
+    if (provider == null) {
+      provider = typingInfo.getBodyDynamicScopeProvider(resolved);
+      if (provider != null) withArg = false;
     }
-    if (classRef == null && i + 1 < myPath.size() && RedirectingReferable.getOriginalReferable(resolved) instanceof GlobalReferable globalRef && globalRef.getKind() == GlobalReferable.Kind.OTHER) {
+    if (provider == null && i + 1 < myPath.size() && RedirectingReferable.getOriginalReferable(resolved) instanceof GlobalReferable globalRef && globalRef.getKind() == GlobalReferable.Kind.OTHER) {
       resolved = new ErrorReference(myData, resolved, i + 1, myPath.get(i + 1));
       return null;
     }
@@ -255,22 +253,22 @@ public class LongUnresolvedReference implements UnresolvedReference {
     Concrete.Expression result = withArg ? new Concrete.ReferenceExpression(myData, resolved) : null;
     for (i++; i < myPath.size(); i++) {
       Referable newResolved;
-      if (classRef == null) {
+      if (provider == null) {
         newResolved = initialScope.resolveName(myPath.get(i), Scope.ScopeContext.DYNAMIC);
         if (listener != null && i < myReferences.size() && myReferences.get(i) != null) {
           listener.resolving(myReferences.get(i), initialScope, Scope.ScopeContext.DYNAMIC, !onlyTry);
         }
       } else {
-        Scope classScope = new ClassFieldImplScope(classRef, ClassFieldImplScope.Extent.WITH_DYNAMIC);
-        newResolved = classScope.resolveName(myPath.get(i));
+        Scope dynamicScope = new DynamicScope(provider, typingInfo, false);
+        newResolved = dynamicScope.resolveName(myPath.get(i));
         if (listener != null && i < myReferences.size() && myReferences.get(i) != null) {
-          listener.resolving(myReferences.get(i), classScope, Scope.ScopeContext.STATIC, !onlyTry);
+          listener.resolving(myReferences.get(i), dynamicScope, Scope.ScopeContext.STATIC, !onlyTry);
         }
       }
       if (newResolved == null) {
-        if (classRef != null) {
+        if (provider != null) {
           if (onlyTry) return null;
-          resolved = new ErrorReference(i < myReferences.size() ? myReferences.get(i) : myData, classRef, i, myPath.get(i));
+          resolved = new ErrorReference(i < myReferences.size() ? myReferences.get(i) : myData, resolved, i, myPath.get(i));
           if (resolvedRefs != null) {
             resolvedRefs.add(resolved);
           }
@@ -288,7 +286,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
       }
       Concrete.Expression refExpr = new Concrete.ReferenceExpression(myData, resolved);
       result = result == null ? refExpr : Concrete.AppExpression.make(myData, refExpr, result, false);
-      classRef = typingInfo.getTypeClassReferable(resolved);
+      provider = typingInfo.getTypeDynamicScopeProvider(resolved);
     }
 
     return result;

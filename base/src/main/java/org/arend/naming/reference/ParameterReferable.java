@@ -1,8 +1,6 @@
 package org.arend.naming.reference;
 
-import org.arend.naming.resolving.typing.GlobalTypingInfo;
-import org.arend.naming.resolving.typing.ReferableInfo;
-import org.arend.naming.resolving.typing.TypingInfo;
+import org.arend.naming.resolving.typing.AbstractBody;
 import org.arend.naming.resolving.typing.TypingInfoVisitor;
 import org.arend.naming.scope.Scope;
 import org.arend.term.abs.AbstractReferable;
@@ -15,23 +13,23 @@ public class ParameterReferable implements Referable {
   private final TCDefReferable myDefinition;
   private final int myIndex;
   private final Referable myReferable;
-  private final GlobalTypingInfo.Builder.MyInfo myTypeInfo;
-  private ReferableInfo myReferableInfo;
+  private final AbstractBody myBody;
+  private AbstractBody myAbstractBody;
 
-  public ParameterReferable(TCDefReferable definition, int index, Referable referable, GlobalTypingInfo.Builder.MyInfo typeInfo) {
+  public ParameterReferable(TCDefReferable definition, int index, Referable referable, AbstractBody body) {
     myDefinition = definition;
     myIndex = index;
     myReferable = referable;
-    myTypeInfo = typeInfo;
+    myBody = body;
   }
 
-  public void resolve(Scope scope, TypingInfo typingInfo) {
-    if (myReferableInfo != null || myTypeInfo == null) return;
-    myReferableInfo = GlobalTypingInfo.Builder.makeReferableInfo(typingInfo, GlobalTypingInfo.Builder.makeMyInfo(myTypeInfo.parameters(), TypingInfoVisitor.tryResolve(myTypeInfo.referable(), scope), myTypeInfo.arguments()));
+  public void resolve(Scope scope) {
+    if (myAbstractBody != null || myBody == null) return;
+    myAbstractBody = new AbstractBody(myBody.getParameters(), TypingInfoVisitor.tryResolve(myBody.getReferable(), scope), myBody.getArguments());
   }
 
-  public ReferableInfo getReferableInfo() {
-    return myReferableInfo;
+  public AbstractBody getAbstractBody() {
+    return myAbstractBody;
   }
 
   @Override

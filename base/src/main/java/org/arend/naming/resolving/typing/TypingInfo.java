@@ -1,42 +1,71 @@
 package org.arend.naming.resolving.typing;
 
-import org.arend.naming.reference.ClassReferable;
 import org.arend.naming.reference.Referable;
+import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public interface TypingInfo {
-  @Nullable ReferableInfo getBodyInfo(Referable referable);
-  @Nullable ReferableInfo getTypeInfo(Referable referable);
+  @Nullable DynamicScopeProvider getDynamicScopeProvider(Referable referable);
+  @Nullable AbstractBody getRefBody(Referable referable);
+  @Nullable AbstractBody getRefType(Referable referable);
 
-  default @Nullable ClassReferable getBodyClassReferable(GlobalTypingInfo.Builder.MyInfo info) {
-    if (info == null || info.parameters() != 0) return null;
-    ReferableInfo refInfo = getBodyInfo(info.referable());
-    return refInfo == null || refInfo.getParameters() != info.arguments() ? null : refInfo.getClassReferable();
+  private @Nullable DynamicScopeProvider getNormDynamicScopeProvider(Referable referable, int arguments) {
+    Set<Referable> visited = new HashSet<>();
+    while (true) {
+      if (!visited.add(referable)) return null;
+      AbstractBody body = getRefBody(referable);
+      if (body == null) {
+        return arguments == 0 ? getDynamicScopeProvider(referable) : null;
+      }
+      if (body.getParameters() > arguments) return null;
+      referable = body.getReferable();
+      arguments = arguments - body.getParameters() + body.getArguments();
+    }
   }
 
-  default @Nullable ClassReferable getTypeClassReferable(Referable referable, int arguments) {
-    ReferableInfo info = getTypeInfo(referable);
-    return info == null || info.getParameters() != arguments ? null : info.getClassReferable();
+  private @Nullable DynamicScopeProvider getBodyDynamicScopeProvider(AbstractBody body) {
+    return body == null ? null : getNormDynamicScopeProvider(body.getReferable(), body.getArguments());
   }
 
-  default @Nullable ClassReferable getTypeClassReferable(Referable referable) {
-    return getTypeClassReferable(referable, 0);
+  default @Nullable DynamicScopeProvider getBodyDynamicScopeProvider(Referable referable) {
+    return getBodyDynamicScopeProvider(new AbstractBody(0, referable, 0));
   }
 
-  default @Nullable ClassReferable getTypeClassReferable(GlobalTypingInfo.Builder.MyInfo info) {
-    if (info == null || info.parameters() != 0) return null;
-    ReferableInfo refInfo = getTypeInfo(info.referable());
-    return refInfo == null || refInfo.getParameters() != info.arguments() ? null : refInfo.getClassReferable();
+  default @Nullable DynamicScopeProvider getBodyDynamicScopeProvider(Concrete.Expression expr) {
+    return getBodyDynamicScopeProvider(TypingInfoVisitor.resolveAbstractBodyWithoutParameters(expr));
+  }
+
+  private @Nullable DynamicScopeProvider getTypeDynamicScopeProvider(AbstractBody body) {
+    if (body == null) return null;
+    AbstractBody typeBody = getRefType(body.getReferable());
+    if (typeBody == null || typeBody.getParameters() != body.getArguments()) return null;
+    return getNormDynamicScopeProvider(typeBody.getReferable(), typeBody.getArguments());
+  }
+
+  default @Nullable DynamicScopeProvider getTypeDynamicScopeProvider(Referable referable) {
+    return getTypeDynamicScopeProvider(new AbstractBody(0, referable, 0));
+  }
+
+  default @Nullable DynamicScopeProvider getTypeDynamicScopeProvider(Concrete.Expression expr) {
+    return getTypeDynamicScopeProvider(TypingInfoVisitor.resolveAbstractBodyWithoutParameters(expr));
   }
 
   TypingInfo EMPTY = new TypingInfo() {
     @Override
-    public @Nullable ReferableInfo getBodyInfo(Referable referable) {
+    public @Nullable DynamicScopeProvider getDynamicScopeProvider(Referable referable) {
       return null;
     }
 
     @Override
-    public @Nullable ReferableInfo getTypeInfo(Referable referable) {
+    public @Nullable AbstractBody getRefBody(Referable referable) {
+      return null;
+    }
+
+    @Override
+    public @Nullable AbstractBody getRefType(Referable referable) {
       return null;
     }
   };

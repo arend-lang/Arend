@@ -128,7 +128,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       List<TypedReferable> newRefs = new ArrayList<>(refs.size());
       for (ArendRef ref : refs) {
         if (ref instanceof Referable) {
-          newRefs.add(new TypedReferable((Referable) ref, 0, null));
+          newRefs.add(new TypedReferable((Referable) ref, null));
         }
       }
       scope = new ContextScope(newRefs);
@@ -330,12 +330,12 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     Concrete.Expression argument = expr.getArgument().accept(this, null);
     Referable ref = expr.getField();
     if (ref instanceof UnresolvedReference unresolved) {
-      ClassReferable classRef = argument instanceof Concrete.TypedExpression typedExpr
-        ? myTypingInfo.getBodyClassReferable(TypingInfoVisitor.resolveTypeClassReference(typedExpr.getType()))
-        : myTypingInfo.getTypeClassReferable(TypingInfoVisitor.resolveTypeClassReference(argument));
+      DynamicScopeProvider provider = argument instanceof Concrete.TypedExpression typedExpr
+        ? myTypingInfo.getBodyDynamicScopeProvider(typedExpr.getType())
+        : myTypingInfo.getTypeDynamicScopeProvider(argument);
 
-      if (classRef != null) {
-        ref = unresolved.resolve(new ClassFieldImplScope(classRef, ClassFieldImplScope.Extent.WITH_DYNAMIC), null, myResolverListener);
+      if (provider != null) {
+        ref = unresolved.resolve(new DynamicScope(provider, myTypingInfo, false), null, myResolverListener);
         if (ref instanceof ErrorReference errorRef) {
           myErrorReporter.report(errorRef.getError());
         }
@@ -502,9 +502,9 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     return true;
   }
 
-  private void addLocalRef(Referable ref, GlobalTypingInfo.Builder.MyInfo info) {
+  private void addLocalRef(Referable ref, AbstractBody body) {
     if (checkName(ref, myErrorReporter)) {
-      myContext.add(new TypedReferable(ref, GlobalTypingInfo.Builder.makeReferableInfo(myTypingInfo, info)));
+      myContext.add(new TypedReferable(ref, body));
       if (myResolverListener != null) {
         myResolverListener.bindingResolved(ref);
       }
@@ -517,7 +517,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       ((Concrete.TypeParameter) parameter).type = ((Concrete.TypeParameter) parameter).type.accept(this, null);
     }
 
-    GlobalTypingInfo.Builder.MyInfo info = TypingInfoVisitor.resolveTypeClassReference(parameter.getType());
+    AbstractBody abstractBody = TypingInfoVisitor.resolveAbstractBody(parameter.getType());
     List<? extends Referable> referableList = parameter.getReferableList();
     for (int i = 0; i < referableList.size(); i++) {
       Referable referable = referableList.get(i);
@@ -528,7 +528,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
             myErrorReporter.report(new DuplicateNameError(GeneralError.Level.WARNING, referable, referable1));
           }
         }
-        addLocalRef(referable, info);
+        addLocalRef(referable, abstractBody);
       }
     }
   }
@@ -631,7 +631,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       myErrorReporter.report(new DuplicateNameError(GeneralError.Level.WARNING, referable, prev));
     }
 
-    addLocalRef(referable, type == null ? null : TypingInfoVisitor.resolveTypeClassReference(type));
+    addLocalRef(referable, type == null ? null : TypingInfoVisitor.resolveAbstractBody(type));
   }
 
   private Concrete.Pattern visitPattern(Concrete.Pattern pattern, Map<String, Referable> usedNames) {
@@ -846,9 +846,9 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       return Concrete.ClassExtExpression.make(data, baseExpr, coclauses);
     }
 
-    ClassReferable classRef = myTypingInfo.getBodyClassReferable(TypingInfoVisitor.resolveTypeClassReference(baseExpr));
-    if (classRef != null) {
-      visitClassFieldImpls(coclauses.getCoclauseList(), classRef);
+    DynamicScopeProvider provider = myTypingInfo.getBodyDynamicScopeProvider(baseExpr);
+    if (provider != null) {
+      visitClassFieldImpls(coclauses.getCoclauseList(), provider);
     } else {
       LocalError error = new NameResolverError("Expected a class or a class instance", baseExpr);
       myErrorReporter.report(error);
@@ -884,10 +884,10 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     return visitClassExt(expr.getData(), baseExpr, expr.getCoclauses());
   }
 
-  Referable visitClassFieldReference(Concrete.ClassElement element, Referable oldField, ClassReferable classDef) {
+  Referable visitClassFieldReference(Concrete.ClassElement element, Referable oldField, DynamicScopeProvider provider) {
     if (oldField instanceof UnresolvedReference) {
       List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
-      Referable field = resolve(oldField, new MergeScope(true, new ClassFieldImplScope(classDef, true), myScope), false, resolvedRefs, Scope.ScopeContext.STATIC, myTypingInfo);
+      Referable field = resolve(oldField, new MergeScope(true, new DynamicScope(provider, myTypingInfo, true), myScope), false, resolvedRefs, Scope.ScopeContext.STATIC, myTypingInfo);
       if (myResolverListener != null) {
         if (element instanceof Concrete.CoClauseElement) {
           myResolverListener.coPatternResolved((Concrete.CoClauseElement) element, oldField, field, resolvedRefs);
@@ -908,31 +908,29 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     return oldField;
   }
 
-  void visitClassFieldImpl(Concrete.ClassFieldImpl impl, ClassReferable classDef) {
-    visitClassFieldReference(impl, impl.getImplementedField(), classDef);
+  void visitClassFieldImpl(Concrete.ClassFieldImpl impl, DynamicScopeProvider provider) {
+    visitClassFieldReference(impl, impl.getImplementedField(), provider);
 
     if (impl.implementation == null) {
       Referable ref = impl.getImplementedField();
-      if (!(ref instanceof ClassReferable)) {
-        ClassReferable classRef = myTypingInfo.getTypeClassReferable(ref);
-        if (classRef != null) {
-          ref = classRef;
-        }
+      if (ref instanceof TCDefReferable) {
+        impl.classRef = (TCDefReferable) ref;
       }
-      if (ref instanceof ClassReferable) {
-        if (ref instanceof TCDefReferable) {
-          impl.classRef = (TCDefReferable) ref;
-        }
-        visitClassFieldImpls(impl.getSubCoclauseList(), (ClassReferable) ref);
+      DynamicScopeProvider subProvider = myTypingInfo.getBodyDynamicScopeProvider(ref);
+      if (subProvider == null) {
+        subProvider = myTypingInfo.getTypeDynamicScopeProvider(ref);
+      }
+      if (subProvider != null) {
+        visitClassFieldImpls(impl.getSubCoclauseList(), subProvider);
       }
     } else {
       impl.implementation = impl.implementation.accept(this, null);
     }
   }
 
-  void visitClassFieldImpls(List<Concrete.ClassFieldImpl> classFieldImpls, ClassReferable classDef) {
+  private void visitClassFieldImpls(List<Concrete.ClassFieldImpl> classFieldImpls, DynamicScopeProvider provider) {
     for (Concrete.ClassFieldImpl impl : classFieldImpls) {
-      visitClassFieldImpl(impl, classDef);
+      visitClassFieldImpl(impl, provider);
     }
   }
 
@@ -953,7 +951,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
 
         Concrete.Pattern pattern = clause.getPattern();
         if (pattern instanceof Concrete.NamePattern && ((Concrete.NamePattern) pattern).getRef() != null) {
-          addLocalRef(((Concrete.NamePattern) pattern).getRef(), TypingInfoVisitor.resolveTypeClassReference(clause.resultType != null ? clause.resultType : clause.term instanceof Concrete.NewExpression newExpr ? newExpr.expression : null));
+          addLocalRef(((Concrete.NamePattern) pattern).getRef(), TypingInfoVisitor.resolveAbstractBody(clause.resultType != null ? clause.resultType : clause.term instanceof Concrete.NewExpression newExpr ? newExpr.expression : null));
         } else {
           ArrayList<Concrete.Pattern> newPattern = new ArrayList<>(List.of(pattern));
           visitPatterns(newPattern, null, new HashMap<>(), true);

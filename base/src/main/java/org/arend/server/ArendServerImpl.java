@@ -12,10 +12,8 @@ import org.arend.module.scopeprovider.SimpleModuleScopeProvider;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.CollectingResolverListener;
 import org.arend.naming.resolving.ResolverListener;
-import org.arend.naming.resolving.typing.ReferableInfo;
-import org.arend.naming.resolving.typing.TypingInfo;
+import org.arend.naming.resolving.typing.*;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
-import org.arend.naming.resolving.typing.TypingInfoVisitor;
 import org.arend.naming.scope.*;
 import org.arend.prelude.Prelude;
 import org.arend.term.NamespaceCommand;
@@ -50,15 +48,21 @@ public class ArendServerImpl implements ArendServer {
 
   private final TypingInfo myTypingInfo = new TypingInfo() {
     @Override
-    public @Nullable ReferableInfo getBodyInfo(Referable referable) {
+    public @Nullable DynamicScopeProvider getDynamicScopeProvider(Referable referable) {
       TypingInfo info = getTypingInfo(referable);
-      return info == null ? null : info.getBodyInfo(referable);
+      return info == null ? null : info.getDynamicScopeProvider(referable);
     }
 
     @Override
-    public @Nullable ReferableInfo getTypeInfo(Referable referable) {
+    public @Nullable AbstractBody getRefBody(Referable referable) {
       TypingInfo info = getTypingInfo(referable);
-      return info == null ? null : info.getTypeInfo(referable);
+      return info == null ? null : info.getRefBody(referable);
+    }
+
+    @Override
+    public @Nullable AbstractBody getRefType(Referable referable) {
+      TypingInfo info = getTypingInfo(referable);
+      return info == null ? null : info.getRefType(referable);
     }
   };
 
@@ -317,7 +321,9 @@ public class ArendServerImpl implements ArendServer {
           }
 
           if (groupData.getTypingInfo() == null) {
-            groupData.setTypingInfo(new TypingInfoVisitor().processGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()), null));
+            GlobalTypingInfo typingInfo = new GlobalTypingInfo(null);
+            new TypingInfoVisitor(typingInfo).processGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()));
+            groupData.setTypingInfo(typingInfo);
             myLogger.info(() -> "Header of module '" + module + "' is resolved");
           }
         }
@@ -460,7 +466,9 @@ public class ArendServerImpl implements ArendServer {
     List<Referable> result = new ArrayList<>();
     boolean[] found = new boolean[1];
     try {
-      new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(group)), new TypingInfoVisitor().processGroup(group, getParentGroupScope(module, group), myTypingInfo), DummyErrorReporter.INSTANCE, new ResolverListener() {
+      GlobalTypingInfo typingInfo = new GlobalTypingInfo(myTypingInfo);
+      new TypingInfoVisitor(typingInfo).processGroup(group, getParentGroupScope(module, group));
+      new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(group)), typingInfo, DummyErrorReporter.INSTANCE, new ResolverListener() {
         @Override
         public void resolving(AbstractReference abstractReference, Scope scope, Scope.ScopeContext context, boolean finished) {
           if (abstractReference == reference) {
