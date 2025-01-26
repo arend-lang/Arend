@@ -69,15 +69,15 @@ public class NamedUnresolvedReference implements UnresolvedReference {
 
   @Nullable
   @Override
-  public Referable tryResolve(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
+  public Referable tryResolve(Scope scope, List<Referable> resolvedRefs, @Nullable Scope.ScopeContext context, @Nullable ResolverListener listener) {
     if (resolved != null) {
       return resolved;
     }
 
     if (listener != null && myData instanceof AbstractReference reference) {
-      listener.resolving(reference, scope, Scope.ScopeContext.STATIC, true);
+      listener.resolving(reference, scope, context, true);
     }
-    resolved = scope.resolveName(myName);
+    resolved = scope.resolveName(myName, context);
     if (resolved != null && resolvedRefs != null) {
       resolvedRefs.add(resolved);
     }

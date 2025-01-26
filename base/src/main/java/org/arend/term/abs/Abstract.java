@@ -174,8 +174,7 @@ public final class Abstract {
   public interface FieldAcc extends SourceNode {
     @Nullable Object getData();
     @Nullable Integer getNumber();
-    @Nullable AbstractReference getFieldReference();
-    @Nullable String getFieldName();
+    @Nullable Referable getFieldRef();
   }
 
   public interface ReferenceExpression extends SourceNode {

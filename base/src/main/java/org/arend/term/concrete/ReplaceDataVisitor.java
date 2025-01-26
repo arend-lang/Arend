@@ -41,18 +41,18 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
     return Concrete.AppExpression.make(getData(expr), expr.getFunction().accept(this, null), args);
   }
 
+  private Referable copyRef(Referable referable) {
+    return myCopyUnresolved && referable instanceof UnresolvedReference unresolved ? unresolved.copy() : referable;
+  }
+
   @Override
   public Concrete.ReferenceExpression visitReference(Concrete.ReferenceExpression expr, Void params) {
-    Referable referable = expr.getReferent();
-    if (myCopyUnresolved && referable instanceof UnresolvedReference unresolved) {
-      referable = unresolved.copy();
-    }
-    return new Concrete.ReferenceExpression(getData(expr), referable, visitLevels(expr.getPLevels()), visitLevels(expr.getHLevels()));
+    return new Concrete.ReferenceExpression(getData(expr), copyRef(expr.getReferent()), visitLevels(expr.getPLevels()), visitLevels(expr.getHLevels()));
   }
 
   @Override
   public Concrete.Expression visitFieldCall(Concrete.FieldCallExpression expr, Void params) {
-    return new Concrete.FieldCallExpression(getData(expr), expr.getFieldName(), expr.fixity, expr.getArgument().accept(this, null));
+    return new Concrete.FieldCallExpression(getData(expr), copyRef(expr.getField()), expr.fixity, expr.getArgument().accept(this, null));
   }
 
   @Override
@@ -306,10 +306,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   }
 
   private Concrete.CoClauseElement visitCoClauseElement(Concrete.CoClauseElement element) {
-    Referable referable = element.getImplementedField();
-    if (myCopyUnresolved && referable instanceof UnresolvedReference unresolved) {
-      referable = unresolved.copy();
-    }
+    Referable referable = copyRef(element.getImplementedField());
     if (element instanceof Concrete.CoClauseFunctionReference oldElement) {
       Concrete.CoClauseFunctionReference newElement = new Concrete.CoClauseFunctionReference(getData(oldElement), referable, (TCDefReferable) ((Concrete.ReferenceExpression) oldElement.implementation).getReferent(), oldElement.isDefault());
       newElement.classRef = oldElement.classRef;

@@ -766,14 +766,14 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     Concrete.Expression result = expression.accept(this, null);
 
     int i = 0;
-    if (result instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof UnresolvedReference unresolved && (!fieldAccs.isEmpty() && fieldAccs.get(0).getFieldName() != null || infixName != null)) {
+    if (result instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof UnresolvedReference unresolved && (!fieldAccs.isEmpty() && fieldAccs.get(0).getFieldRef() != null || infixName != null)) {
       List<AbstractReference> references = new ArrayList<>(unresolved.getReferenceList());
       List<String> names = new ArrayList<>(unresolved.getPath());
       for (; i < fieldAccs.size(); i++) {
-        String fieldName = fieldAccs.get(i).getFieldName();
-        if (fieldName != null) {
-          references.add(fieldAccs.get(i).getFieldReference());
-          names.add(fieldName);
+        Referable fieldRef = fieldAccs.get(i).getFieldRef();
+        if (fieldRef != null) {
+          references.add(fieldRef instanceof DataContainer dataContainer && dataContainer.getData() instanceof AbstractReference abstractRef ? abstractRef : null);
+          names.add(fieldRef.getRefName());
         } else {
           break;
         }
@@ -791,9 +791,9 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       if (number != null) {
         result = new Concrete.ProjExpression(data, result, number - 1);
       } else {
-        String fieldName = fieldAccs.get(i).getFieldName();
-        if (fieldName != null) {
-          result = new Concrete.FieldCallExpression(data, fieldName, Fixity.UNKNOWN, result);
+        Referable fieldRef = fieldAccs.get(i).getFieldRef();
+        if (fieldRef != null) {
+          result = new Concrete.FieldCallExpression(data, fieldRef, Fixity.UNKNOWN, result);
         }
       }
     }

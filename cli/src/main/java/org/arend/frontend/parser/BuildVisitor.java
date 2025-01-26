@@ -1855,9 +1855,16 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     for (; i < fieldAccs.size(); i++) {
       FieldAccContext fieldAcc = fieldAccs.get(i);
       TerminalNode node = fieldAcc instanceof FieldAccNumberContext ? ((FieldAccNumberContext) fieldAcc).NUMBER() : ((FieldAccIdContext) fieldAcc).ID();
-      expression = fieldAcc instanceof FieldAccNumberContext ? new Concrete.ProjExpression(tokenPosition(node.getSymbol()), expression, Integer.parseInt(node.getText()) - 1) : new Concrete.FieldCallExpression(tokenPosition(node.getSymbol()), node.getText(), Fixity.UNKNOWN, expression);
+      Position position = tokenPosition(node.getSymbol());
+      expression = fieldAcc instanceof FieldAccNumberContext ? new Concrete.ProjExpression(position, expression, Integer.parseInt(node.getText()) - 1) : new Concrete.FieldCallExpression(position, new NamedUnresolvedReference(position, node.getText()), Fixity.UNKNOWN, expression);
     }
-    return infixCtx != null || postfixCtx != null ? new Concrete.FieldCallExpression(tokenPosition((infixCtx != null ? infixCtx : postfixCtx).getSymbol()), infixCtx != null ? getInfixText(infixCtx) : getPostfixText(postfixCtx), infixCtx != null ? Fixity.INFIX : Fixity.POSTFIX, expression) : expression;
+
+    if (infixCtx == null && postfixCtx == null) {
+      return expression;
+    }
+
+    Position position = tokenPosition((infixCtx != null ? infixCtx : postfixCtx).getSymbol());
+    return new Concrete.FieldCallExpression(position, new NamedUnresolvedReference(position, infixCtx != null ? getInfixText(infixCtx) : getPostfixText(postfixCtx)), infixCtx != null ? Fixity.INFIX : Fixity.POSTFIX, expression);
   }
 
   private List<Concrete.FunctionClause> visitClauses(ClausesContext ctx) {

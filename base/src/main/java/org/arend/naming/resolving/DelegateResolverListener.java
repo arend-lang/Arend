@@ -27,6 +27,11 @@ public class DelegateResolverListener implements ResolverListener {
   }
 
   @Override
+  public void fieldCallResolved(Concrete.FieldCallExpression expr, Referable originalRef, Referable resolvedRef) {
+    myResolverListener.fieldCallResolved(expr, originalRef, resolvedRef);
+  }
+
+  @Override
   public void patternParsed(Concrete.ConstructorPattern pattern) {
     myResolverListener.patternParsed(pattern);
   }

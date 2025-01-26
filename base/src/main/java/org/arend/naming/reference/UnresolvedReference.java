@@ -13,7 +13,7 @@ import java.util.List;
 
 public interface UnresolvedReference extends Referable, DataContainer {
   @NotNull Referable resolve(Scope scope, @Nullable List<Referable> resolvedRefs, @Nullable Scope.ScopeContext context, @Nullable ResolverListener listener);
-  @Nullable Referable tryResolve(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener);
+  @Nullable Referable tryResolve(Scope scope, List<Referable> resolvedRefs, @Nullable Scope.ScopeContext context, @Nullable ResolverListener listener);
   @Nullable Concrete.Expression resolveExpression(Scope scope, @NotNull TypingInfo typingInfo, @Nullable List<Referable> resolvedRefs, @Nullable ResolverListener listener);
   @Nullable Concrete.Expression tryResolveExpression(Scope scope, @NotNull TypingInfo typingInfo, @Nullable List<Referable> resolvedRefs, @Nullable ResolverListener listener);
   @NotNull List<AbstractReference> getReferenceList();
@@ -25,6 +25,11 @@ public interface UnresolvedReference extends Referable, DataContainer {
   @NotNull
   default Referable resolve(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
     return resolve(scope, resolvedRefs, Scope.ScopeContext.STATIC, listener);
+  }
+
+  @Nullable
+  default Referable tryResolve(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
+    return tryResolve(scope, resolvedRefs, Scope.ScopeContext.STATIC, listener);
   }
 
   @Override

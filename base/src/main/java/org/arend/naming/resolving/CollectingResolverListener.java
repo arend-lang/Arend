@@ -93,6 +93,14 @@ public class CollectingResolverListener extends DelegateResolverListener {
   }
 
   @Override
+  public void fieldCallResolved(Concrete.FieldCallExpression expr, Referable originalRef, Referable resolvedRef) {
+    if (originalRef instanceof UnresolvedReference) {
+      cacheReference((UnresolvedReference) originalRef, resolvedRef, Collections.singletonList(resolvedRef));
+    }
+    super.fieldCallResolved(expr, originalRef, resolvedRef);
+  }
+
+  @Override
   public void patternResolved(Referable originalRef, Referable newRef, Concrete.Pattern pattern, List<Referable> resolvedRefs) {
     cacheReference(originalRef instanceof UnresolvedReference ? (UnresolvedReference) originalRef : new NamedUnresolvedReference(originalRef, originalRef.getRefName()), newRef, resolvedRefs);
     super.patternResolved(originalRef, newRef, pattern, resolvedRefs);

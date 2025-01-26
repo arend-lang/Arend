@@ -143,8 +143,8 @@ public class LongUnresolvedReference implements UnresolvedReference {
 
   @Nullable
   @Override
-  public Referable tryResolve(Scope scope, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
-    return resolve(scope, resolvedRefs, true, Scope.ScopeContext.STATIC, listener);
+  public Referable tryResolve(Scope scope, List<Referable> resolvedRefs, @Nullable Scope.ScopeContext context, @Nullable ResolverListener listener) {
+    return resolve(scope, resolvedRefs, true, context, listener);
   }
 
   private Concrete.Expression resolveArgument(Scope scope, boolean onlyTry, TypingInfo typingInfo, List<Referable> resolvedRefs, @Nullable ResolverListener listener) {
@@ -277,7 +277,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
           return null;
         } else {
           for (; i < myPath.size(); i++) {
-            result = new Concrete.FieldCallExpression(myData, myPath.get(i), i == myPath.size() - 1 ? Fixity.UNKNOWN : Fixity.NONFIX, result);
+            result = new Concrete.FieldCallExpression(myData, new NamedUnresolvedReference(i < myReferences.size() ? myReferences.get(i) : myData, myPath.get(i)), i == myPath.size() - 1 ? Fixity.UNKNOWN : Fixity.NONFIX, result);
           }
           return result;
         }

@@ -676,19 +676,23 @@ public final class Concrete {
 
   public static class FieldCallExpression extends Expression {
     public static final byte PREC = 12;
-    private final String myFieldName;
+    private final Referable myFieldRef;
     public Fixity fixity;
     public Expression argument;
 
-    public FieldCallExpression(Object data, @NotNull String fieldName, @NotNull Fixity fixity, Expression argument) {
+    public FieldCallExpression(Object data, @NotNull Referable fieldRef, @NotNull Fixity fixity, Expression argument) {
       super(data);
-      myFieldName = fieldName;
+      myFieldRef = fieldRef;
       this.fixity = fixity;
       this.argument = argument;
     }
 
+    public @NotNull Referable getField() {
+      return myFieldRef;
+    }
+
     public @NotNull String getFieldName() {
-      return myFieldName;
+      return myFieldRef.getRefName();
     }
 
     public @NotNull Expression getArgument() {

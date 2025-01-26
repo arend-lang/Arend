@@ -57,7 +57,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
   @Override
   public Boolean visitFieldCall(Concrete.FieldCallExpression expr, Concrete.Expression expr2) {
-    return expr2 instanceof Concrete.FieldCallExpression fieldCall2 && expr.getFieldName().equals(fieldCall2.getFieldName()) && expr.argument.accept(this, fieldCall2.argument);
+    return expr2 instanceof Concrete.FieldCallExpression fieldCall2 && expr.getField().equals(fieldCall2.getField()) && expr.argument.accept(this, fieldCall2.argument);
   }
 
   private boolean compareLevels(List<Concrete.LevelExpression> levels1, List<Concrete.LevelExpression> levels2) {

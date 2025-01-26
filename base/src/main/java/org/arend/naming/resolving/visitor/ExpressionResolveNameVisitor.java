@@ -328,22 +328,26 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     }
 
     Concrete.Expression argument = expr.getArgument().accept(this, null);
-    Referable ref = null;
-    if (argument instanceof Concrete.TypedExpression typedExpr) {
-      ClassReferable classRef = myTypingInfo.getBodyClassReferable(TypingInfoVisitor.resolveTypeClassReference(typedExpr.getType()));
+    Referable ref = expr.getField();
+    if (ref instanceof UnresolvedReference unresolved) {
+      ClassReferable classRef = argument instanceof Concrete.TypedExpression typedExpr
+        ? myTypingInfo.getBodyClassReferable(TypingInfoVisitor.resolveTypeClassReference(typedExpr.getType()))
+        : myTypingInfo.getTypeClassReferable(TypingInfoVisitor.resolveTypeClassReference(argument));
+
       if (classRef != null) {
-        ref = new ClassFieldImplScope(classRef, ClassFieldImplScope.Extent.WITH_DYNAMIC).resolveName(expr.getFieldName());
-        if (ref == null) {
-          ErrorReference errorRef = new ErrorReference(expr.getData(), classRef, 0, expr.getFieldName());
+        ref = unresolved.resolve(new ClassFieldImplScope(classRef, ClassFieldImplScope.Extent.WITH_DYNAMIC), null, myResolverListener);
+        if (ref instanceof ErrorReference errorRef) {
           myErrorReporter.report(errorRef.getError());
-          ref = errorRef;
         }
+      } else {
+        ref = unresolved.tryResolve(myScope, null, Scope.ScopeContext.DYNAMIC, myResolverListener);
+      }
+
+      if (ref != null && myResolverListener != null) {
+        myResolverListener.fieldCallResolved(expr, unresolved, ref);
       }
     }
 
-    if (ref == null) {
-      ref = myScope.resolveName(expr.getFieldName(), Scope.ScopeContext.DYNAMIC);
-    }
     return ref != null ? Concrete.AppExpression.make(expr.getData(), new Concrete.ReferenceExpression(expr.getData(), ref), argument, false) : super.visitFieldCall(expr, params);
   }
 
