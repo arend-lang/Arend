@@ -309,25 +309,6 @@ public class LongUnresolvedReference implements UnresolvedReference {
     return scope;
   }
 
-  public Scope resolveNamespaceWithArgument(Scope scope) {
-    Scope prevScope = scope;
-    for (String name : myPath) {
-      Scope nextScope = scope.resolveNamespace(name);
-      if (nextScope == null) {
-        return EmptyScope.INSTANCE;
-      }
-      prevScope = scope;
-      scope = nextScope;
-    }
-
-    Referable ref = prevScope.resolveName(myPath.get(myPath.size() - 1));
-    if (ref instanceof ClassReferable classRef) {
-      scope = new MergeScope(scope, new ClassFieldImplScope(classRef, ClassFieldImplScope.Extent.WITH_DYNAMIC));
-    }
-
-    return scope;
-  }
-
   public ErrorReference getErrorReference() {
     return resolved instanceof ErrorReference ? (ErrorReference) resolved : null;
   }

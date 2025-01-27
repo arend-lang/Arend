@@ -770,38 +770,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     return null;
   }
 
-  public void resolveDefinition(Concrete.ResolvableDefinition definition, Scope defScope, ChildGroup group) {
-    List<Pair<ChildGroup,Boolean>> groups = new ArrayList<>();
-    while (true) {
-      ChildGroup parentGroup = group.getParentGroup();
-      if (parentGroup == null) break;
-      groups.add(new Pair<>(parentGroup, group.isDynamicContext()));
-      group = parentGroup;
-    }
-
-    if (groups.size() > 1) {
-      Scope scope = CachingScope.make(groups.get(groups.size() - 1).proj1.getGroupScope());
-      for (int i = groups.size() - 2; i >= 0; i--) {
-        LocatedReferable groupRef = groups.get(i).proj1.getReferable();
-        var def = myConcreteProvider.getConcrete(groupRef);
-        scope = CachingScope.make(makeScope(groups.get(i).proj1, scope, groups.get(i).proj2));
-        if (def instanceof Concrete.FunctionDefinition) {
-          resolveFunctionHeader((Concrete.BaseFunctionDefinition) def, new PrivateFilteredScope(scope));
-        } else if (def instanceof Concrete.DataDefinition) {
-          resolveDataHeader((Concrete.DataDefinition) def, new PrivateFilteredScope(scope));
-        }
-        if (def instanceof Concrete.Definition && !myExternalParameters.isEmpty()) {
-          ((Concrete.Definition) def).setExternalParameters(new HashMap<>(myExternalParameters));
-        }
-        addExternalParameters(def);
-      }
-    }
-    definition.accept(this, new PrivateFilteredScope(defScope));
-    if (definition instanceof Concrete.Definition && !myExternalParameters.isEmpty()) {
-      ((Concrete.Definition) definition).setExternalParameters(new HashMap<>(myExternalParameters));
-    }
-  }
-
   // TODO[server2]: Delete this
   public void resolveGroupWithTypes(Group group, Scope scope) {
     myResolveTypeClassReferences = true;
