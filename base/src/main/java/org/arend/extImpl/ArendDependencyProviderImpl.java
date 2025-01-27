@@ -34,7 +34,7 @@ public class ArendDependencyProviderImpl extends Disableable implements ArendDep
   private @NotNull Referable getReference(@NotNull ModulePath module, @NotNull LongName name) {
     checkEnabled();
     Scope scope = myModuleScopeProvider.forModule(module);
-    Referable ref = scope == null ? null : Scope.resolveName(scope, name.toList(), true);
+    Referable ref = scope == null ? null : Scope.resolveName(scope, name.toList());
     if (ref == null) {
       throw new IllegalArgumentException("Cannot find definition '" + name + "'");
     }

@@ -130,7 +130,6 @@ public final class Abstract {
   }
 
   public interface ClassReferenceHolder extends SourceNode {
-    @Nullable ClassReferable getClassReference();
     @NotNull Collection<? extends CoClauseElement> getCoClauseElements();
   }
 

@@ -1,6 +1,5 @@
 package org.arend.naming.scope;
 
-import org.arend.naming.reference.ClassReferable;
 import org.arend.naming.reference.Referable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -90,27 +89,9 @@ public interface Scope {
   }
 
   static Referable resolveName(Scope scope, List<? extends String> path) {
-    return resolveName(scope, path, false);
-  }
-
-  static Referable resolveName(Scope scope, List<? extends String> path, boolean withFields) {
     for (int i = 0; i < path.size(); i++) {
       if (scope == null) {
         return null;
-      }
-      if (withFields && i == path.size() - 2) {
-        Scope scope1 = scope.resolveNamespace(path.get(i));
-        if (scope1 != null) {
-          Referable ref = scope1.resolveName(path.get(i + 1));
-          if (ref != null) return ref;
-        }
-        Referable parentRef = scope.resolveName(path.get(i));
-        if (parentRef instanceof ClassReferable) {
-          Referable result = new ClassFieldImplScope((ClassReferable) parentRef, false).resolveName(path.get(i + 1));
-          if (result != null) {
-            return result;
-          }
-        }
       }
       if (i == path.size() - 1) {
         return scope.resolveName(path.get(i));
