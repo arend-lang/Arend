@@ -259,7 +259,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
           listener.resolving(myReferences.get(i), initialScope, Scope.ScopeContext.DYNAMIC, !onlyTry);
         }
       } else {
-        Scope dynamicScope = new DynamicScope(provider, typingInfo, false);
+        Scope dynamicScope = new DynamicScope(provider, typingInfo, DynamicScope.Extent.WITH_DYNAMIC);
         newResolved = dynamicScope.resolveName(myPath.get(i));
         if (listener != null && i < myReferences.size() && myReferences.get(i) != null) {
           listener.resolving(myReferences.get(i), dynamicScope, Scope.ScopeContext.STATIC, !onlyTry);

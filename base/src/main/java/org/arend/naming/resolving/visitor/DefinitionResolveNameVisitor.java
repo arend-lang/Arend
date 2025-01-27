@@ -827,8 +827,9 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     Scope docScope;
+    DynamicScopeProvider dynamicScopeProvider = def == null ? null : myTypingInfo.getTypeDynamicScopeProvider(def.getData());
     if (def instanceof Concrete.ResolvableDefinition) {
-      Scope classScope = def.getData().getUnderlyingReferable() instanceof ClassReferable classRef ? new MergeScope(new ClassFieldImplScope(classRef, ClassFieldImplScope.Extent.WITH_SUPER_DYNAMIC), cachedScope) : cachedScope;
+      Scope classScope = dynamicScopeProvider == null ? cachedScope : new MergeScope(new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC), cachedScope);
       ((Concrete.ResolvableDefinition) def).accept(this, classScope);
 
       List<Referable> parameters = new ArrayList<>();
@@ -907,8 +908,8 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
     if (!dynamicSubgroups.isEmpty()) {
       Scope dynamicScope = CachingScope.make(makeScope(group, scope, true));
-      if (def != null && def.getData().getUnderlyingReferable() instanceof ClassReferable classRef) {
-        dynamicScope = new MergeScope(dynamicScope, new ClassFieldImplScope(classRef, ClassFieldImplScope.Extent.WITH_SUPER_DYNAMIC));
+      if (dynamicScopeProvider != null) {
+        dynamicScope = new MergeScope(dynamicScope, new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC));
       }
       for (Group subgroup : dynamicSubgroups) {
         resolveGroup(subgroup, dynamicScope, false);

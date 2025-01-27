@@ -13,18 +13,14 @@ import java.util.function.Predicate;
 public class DynamicScope implements Scope {
   private final DynamicScopeProvider myProvider;
   private final TypingInfo myTypingInfo;
-  private final boolean myWithSuper;
-  private final boolean myOnlyFields;
+  private final Extent myExtent;
 
-  public DynamicScope(DynamicScopeProvider provider, TypingInfo typingInfo, boolean withSuper, boolean onlyFields) {
+  public enum Extent { WITH_SUPER, WITH_DYNAMIC, WITH_SUPER_DYNAMIC, ONLY_FIELDS }
+
+  public DynamicScope(DynamicScopeProvider provider, TypingInfo typingInfo, Extent extent) {
     myProvider = provider;
     myTypingInfo = typingInfo;
-    myWithSuper = withSuper;
-    myOnlyFields = onlyFields;
-  }
-
-  public DynamicScope(DynamicScopeProvider provider, TypingInfo typingInfo, boolean withSuper) {
-    this(provider, typingInfo, withSuper, withSuper);
+    myExtent = extent;
   }
 
   @Nullable
@@ -37,6 +33,7 @@ public class DynamicScope implements Scope {
     Set<GlobalReferable> visited = new HashSet<>();
     Deque<DynamicScopeProvider> toVisit = new ArrayDeque<>();
     toVisit.add(myProvider);
+    Extent extent = myExtent;
 
     while (!toVisit.isEmpty()) {
       DynamicScopeProvider provider = toVisit.removeLast();
@@ -45,22 +42,27 @@ public class DynamicScope implements Scope {
       }
 
       for (GlobalReferable referable : provider.getDynamicContent()) {
-        if (referable.getAccessModifier() == AccessModifier.PRIVATE || myOnlyFields && referable.getKind() != GlobalReferable.Kind.FIELD) {
-          continue;
-        }
-        if (pred.test(referable)) {
-          return referable;
-        }
-        if (referable.hasAlias()) {
-          AliasReferable aliasRef = new AliasReferable(referable);
-          if (pred.test(aliasRef)) {
-            return aliasRef;
+        boolean isField = referable.getKind() == GlobalReferable.Kind.FIELD;
+        boolean notPrivate = referable.getAccessModifier() != AccessModifier.PRIVATE;
+        if (isField && (extent == Extent.WITH_SUPER || notPrivate) || !isField && extent == Extent.WITH_DYNAMIC && notPrivate) {
+          if (pred.test(referable)) {
+            return referable;
+          }
+          if (referable.hasAlias()) {
+            AliasReferable aliasRef = new AliasReferable(referable);
+            if (pred.test(aliasRef)) {
+              return aliasRef;
+            }
           }
         }
       }
 
+      if (extent == Extent.WITH_SUPER_DYNAMIC) {
+        extent = Extent.WITH_DYNAMIC;
+      }
+
       List<? extends GlobalReferable> superRefs = provider.getSuperReferables();
-      if (myWithSuper) {
+      if (myExtent == Extent.WITH_SUPER) {
         for (GlobalReferable superRef : superRefs) {
           DynamicScopeProvider superProvider = myTypingInfo.getDynamicScopeProvider(superRef);
           if (superProvider == null) continue;

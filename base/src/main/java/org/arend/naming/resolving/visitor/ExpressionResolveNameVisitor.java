@@ -335,7 +335,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
         : myTypingInfo.getTypeDynamicScopeProvider(argument);
 
       if (provider != null) {
-        ref = unresolved.resolve(new DynamicScope(provider, myTypingInfo, false), null, myResolverListener);
+        ref = unresolved.resolve(new DynamicScope(provider, myTypingInfo, DynamicScope.Extent.WITH_DYNAMIC), null, myResolverListener);
         if (ref instanceof ErrorReference errorRef) {
           myErrorReporter.report(errorRef.getError());
         }
@@ -887,7 +887,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
   Referable visitClassFieldReference(Concrete.ClassElement element, Referable oldField, DynamicScopeProvider provider) {
     if (oldField instanceof UnresolvedReference) {
       List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
-      Referable field = resolve(oldField, new MergeScope(true, new DynamicScope(provider, myTypingInfo, true), myScope), false, resolvedRefs, Scope.ScopeContext.STATIC, myTypingInfo);
+      Referable field = resolve(oldField, new MergeScope(true, new DynamicScope(provider, myTypingInfo, DynamicScope.Extent.WITH_SUPER), myScope), false, resolvedRefs, Scope.ScopeContext.STATIC, myTypingInfo);
       if (myResolverListener != null) {
         if (element instanceof Concrete.CoClauseElement) {
           myResolverListener.coPatternResolved((Concrete.CoClauseElement) element, oldField, field, resolvedRefs);
