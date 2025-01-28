@@ -2,6 +2,8 @@ package org.arend.server;
 
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.resolving.typing.GlobalTypingInfo;
+import org.arend.naming.scope.CachingScope;
+import org.arend.naming.scope.LexicalScope;
 import org.arend.naming.scope.Scope;
 import org.arend.term.group.ConcreteGroup;
 
@@ -11,10 +13,19 @@ class GroupData {
   private final Scope myFileScope;
   private GlobalTypingInfo myTypingInfo;
 
-  public GroupData(long timestamp, ConcreteGroup rawGroup, Scope fileScope) {
+  private GroupData(long timestamp, ConcreteGroup rawGroup, GlobalTypingInfo typingInfo) {
     myTimestamp = timestamp;
     myRawGroup = rawGroup;
-    myFileScope = fileScope;
+    myFileScope = CachingScope.make(LexicalScope.opened(rawGroup));
+    myTypingInfo = typingInfo;
+  }
+
+  public GroupData(ConcreteGroup rawGroup, GlobalTypingInfo typingInfo) {
+    this(-1, rawGroup, typingInfo);
+  }
+
+  public GroupData(long timestamp, ConcreteGroup rawGroup) {
+    this(timestamp, rawGroup, null);
   }
 
   public long getTimestamp() {

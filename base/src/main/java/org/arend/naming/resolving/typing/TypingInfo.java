@@ -53,6 +53,12 @@ public interface TypingInfo {
     return getTypeDynamicScopeProvider(TypingInfoVisitor.resolveAbstractBodyWithoutParameters(expr));
   }
 
+  default @Nullable DynamicScopeProvider getBodyOrTypeDynamicScopeProvider(Concrete.Expression expr) {
+    AbstractBody body = TypingInfoVisitor.resolveAbstractBodyWithoutParameters(expr);
+    DynamicScopeProvider provider = getBodyDynamicScopeProvider(body);
+    return provider != null ? provider : getTypeDynamicScopeProvider(body);
+  }
+
   TypingInfo EMPTY = new TypingInfo() {
     @Override
     public @Nullable DynamicScopeProvider getDynamicScopeProvider(Referable referable) {

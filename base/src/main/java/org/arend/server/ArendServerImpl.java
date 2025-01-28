@@ -133,7 +133,8 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public void addReadOnlyModule(@NotNull ModuleLocation module, @NotNull ConcreteGroup group) {
-    if (module.getLibraryName().equals(Prelude.LIBRARY_NAME)) {
+    boolean isPrelude = module.getLibraryName().equals(Prelude.LIBRARY_NAME);
+    if (isPrelude) {
       if (myPreludeModuleScopeProvider.isRegistered(module.getModulePath())) {
         myLogger.warning("Read-only module '" + module + "' is already added");
       } else {
@@ -154,8 +155,17 @@ public class ArendServerImpl implements ArendServer {
         return prevPair;
       }
       myResolverCache.clearModule(mod);
+
+      GlobalTypingInfo typingInfo;
+      if (isPrelude) {
+        typingInfo = new GlobalTypingInfo(null);
+        new TypingInfoVisitor(typingInfo).processGroup(group, getParentGroupScope(module, group));
+      } else {
+        typingInfo = null;
+      }
+
       myLogger.info(() -> "Added a read-only module '" + mod + "'");
-      return new GroupData(-1, group, CachingScope.make(LexicalScope.opened(group)));
+      return new GroupData(group, typingInfo);
     });
   }
 
@@ -181,7 +191,7 @@ public class ArendServerImpl implements ArendServer {
       myResolverCache.clearModule(module);
 
       myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
-      return new GroupData(modificationStamp, group, CachingScope.make(LexicalScope.opened(group)));
+      return new GroupData(modificationStamp, group);
     });
   }
 

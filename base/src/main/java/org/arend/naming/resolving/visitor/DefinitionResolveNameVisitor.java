@@ -827,7 +827,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     Scope docScope;
-    DynamicScopeProvider dynamicScopeProvider = def == null ? null : myTypingInfo.getTypeDynamicScopeProvider(def.getData());
+    DynamicScopeProvider dynamicScopeProvider = def == null ? null : myTypingInfo.getDynamicScopeProvider(def.getData());
     if (def instanceof Concrete.ResolvableDefinition) {
       Scope classScope = dynamicScopeProvider == null ? cachedScope : new MergeScope(new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC), cachedScope);
       ((Concrete.ResolvableDefinition) def).accept(this, classScope);

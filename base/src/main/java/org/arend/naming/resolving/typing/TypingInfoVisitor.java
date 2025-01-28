@@ -144,7 +144,7 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
             Referable ref = exprVisitor == null ? refExpr.getReferent() : tryResolve(refExpr.getReferent(), exprVisitor.getScope());
             if (ref != null && i == 0) first = ref;
             Precedence prec = ref instanceof GlobalReferable globalRef ? globalRef.getPrecedence() : Precedence.DEFAULT;
-            if (prec.isInfix || elem.fixity == Fixity.INFIX) {
+            if (prec.isInfix && elem.fixity != Fixity.NONFIX || elem.fixity == Fixity.INFIX) {
               Precedence.ComparisonResult cmp = best == null ? Precedence.ComparisonResult.LESS : prec.compare(bestPrec);
               if (cmp == Precedence.ComparisonResult.UNCOMPARABLE) return null;
               if (best == null || cmp == Precedence.ComparisonResult.LESS) {
@@ -176,7 +176,7 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
       }
     }
 
-    return found == null ? null : new AbstractBody(paramsNumber, found, arguments);
+    return found == null ? null : new AbstractBody(paramsNumber, RedirectingReferable.getOriginalReferable(found), arguments);
   }
 
   @Override

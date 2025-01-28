@@ -846,7 +846,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       return Concrete.ClassExtExpression.make(data, baseExpr, coclauses);
     }
 
-    DynamicScopeProvider provider = myTypingInfo.getBodyDynamicScopeProvider(baseExpr);
+    DynamicScopeProvider provider = myTypingInfo.getBodyOrTypeDynamicScopeProvider(baseExpr);
     if (provider != null) {
       visitClassFieldImpls(coclauses.getCoclauseList(), provider);
     } else {
