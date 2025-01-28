@@ -6,6 +6,7 @@ import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.ElimClause;
 import org.arend.core.expr.*;
+import org.arend.naming.reference.LocatedReferableImpl;
 import org.arend.term.group.AccessModifier;
 import org.arend.term.prettyprint.ToAbstractVisitor;
 import org.arend.core.pattern.BindingPattern;
@@ -16,7 +17,6 @@ import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.ext.reference.Precedence;
-import org.arend.naming.reference.ConcreteLocatedReferable;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.prelude.Prelude;
@@ -35,8 +35,7 @@ import java.util.List;
 import static org.arend.ExpressionFactory.*;
 import static org.arend.core.expr.ExpressionFactory.*;
 import static org.arend.term.concrete.ConcreteExpressionFactory.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class PrettyPrintingParserTest extends TypeCheckingTestCase {
   private void testExpr(String expected, Expression expr, EnumSet<PrettyPrinterFlag> flags) {
@@ -86,7 +85,8 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
     StringBuilder builder = new StringBuilder();
     def.accept(new PrettyPrintVisitor(builder, 0), null);
 
-    Concrete.FunctionDefinition result = (Concrete.FunctionDefinition) getDefinition(resolveNamesDef(builder.toString()));
+    Concrete.FunctionDefinition result = (Concrete.FunctionDefinition) resolveNamesDef(builder.toString()).definition();
+    assertNotNull(result);
     List<Concrete.TypeParameter> expectedParams = new ArrayList<>();
     for (Concrete.Parameter parameter : expected.getParameters()) {
       expectedParams.add((Concrete.TypeParameter) parameter);
@@ -157,9 +157,8 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
     LocalReferable t = ref("t");
     LocalReferable y = ref("y");
     LocalReferable z = ref("z");
-    ConcreteLocatedReferable reference = new ConcreteLocatedReferable(null, AccessModifier.PUBLIC, "f", Precedence.DEFAULT, null, Precedence.DEFAULT, MODULE_REF, GlobalReferable.Kind.FUNCTION);
+    LocatedReferableImpl reference = new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, "f", Precedence.DEFAULT, null, MODULE_REF, GlobalReferable.Kind.FUNCTION);
     Concrete.FunctionDefinition def = new Concrete.FunctionDefinition(FunctionKind.FUNC, reference, cargs(cTele(false, cvars(x), cUniverseStd(1)), cTele(cvars(A), cPi(cUniverseStd(1), cUniverseStd(0)))), cPi(cApps(cVar(A), cVar(x)), cPi(cPi(cUniverseStd(1), cUniverseStd(1)), cPi(cUniverseStd(1), cUniverseStd(1)))), null, body(cLam(cargs(cName(t), cName(y), cName(z)), cApps(cVar(y), cVar(z)))));
-    reference.setDefinition(def);
     testDef(def, def);
   }
 

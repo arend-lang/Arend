@@ -207,7 +207,7 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
             List<Referable> newRefs = new ArrayList<>(param.getRefList().size());
             pair.proj1.set(i, new Concrete.TelescopeParameter(param.getData(), param.isExplicit(), newRefs, param.getType() == null ? null : param.getType().accept(visitor, null), param.isProperty()));
             for (Referable referable : param.getRefList()) {
-              FieldReferableImpl newRef = new FieldReferableImpl(AccessModifier.PUBLIC, Precedence.DEFAULT, referable.getRefName(), param.isExplicit(), true, true, definition.getData());
+              FieldReferableImpl newRef = new FieldReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, referable.getRefName(), Precedence.DEFAULT, null, param.isExplicit(), true, true, definition.getData());
               newRefs.add(newRef);
               visitor.bind(referable, newRef);
             }

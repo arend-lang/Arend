@@ -7,11 +7,10 @@ import org.arend.core.definition.*;
 import org.arend.core.expr.ClassCallExpression;
 import org.arend.core.expr.Expression;
 import org.arend.core.subst.Levels;
-import org.arend.naming.reference.ConcreteLocatedReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.group.ChildGroup;
-import org.arend.term.group.Statement;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.util.SingletonList;
@@ -803,15 +802,15 @@ public class DefCallTest extends TypeCheckingTestCase {
 
   @Test
   public void resolvedConstructorTest() {
-    ChildGroup cd = resolveNamesModule("""
+    ConcreteGroup cd = resolveNamesModule("""
       \\data TrP (A : \\Type) | inP A
       \\func isequiv {A B : \\Type0} (f : A -> B) => 0
       \\func inP-isequiv (P : \\Prop) => isequiv (inP {P})
       """);
-    Iterator<? extends Statement> it = cd.getStatements().iterator();
-    LocatedReferable inP = it.next().getGroup().getInternalReferables().iterator().next().getReferable();
-    it.next();
-    Concrete.FunctionDefinition lastDef = (Concrete.FunctionDefinition) ((ConcreteLocatedReferable) it.next().getGroup().getReferable()).getDefinition();
+    List<? extends ConcreteStatement> statements = cd.statements();
+    LocatedReferable inP = statements.get(0).getGroup().getInternalReferables().iterator().next().getReferable();
+    Concrete.FunctionDefinition lastDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
+    assertNotNull(lastDef);
     ((Concrete.ReferenceExpression) ((Concrete.AppExpression) ((Concrete.AppExpression) ((Concrete.TermFunctionBody) lastDef.getBody()).getTerm()).getArguments().get(0).getExpression()).getFunction()).setReferent(inP);
     typeCheckModule(cd);
   }

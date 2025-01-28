@@ -19,8 +19,8 @@ public class ImpossibleEliminationError extends TypecheckingError {
   public final ExprSubstitution substitution;
   public final DependentLink clauseParameters;
   public final DependentLink myParameters;
-  public final List<DependentLink> myElimParams;
-  public final List<Expression> myCaseExpressions;
+  public final List<DependentLink> elimParams;
+  public final List<Expression> caseExpressions;
 
   public ImpossibleEliminationError(LeveledDefCallExpression defCall, @NotNull Concrete.SourceNode cause, @Nullable ExprSubstitution substitution,
                                     @Nullable DependentLink clauseParameters, @Nullable DependentLink parameters, @Nullable List<DependentLink> elimParams, @Nullable List<Expression> caseExpressions) {
@@ -29,8 +29,8 @@ public class ImpossibleEliminationError extends TypecheckingError {
     this.substitution = substitution;
     this.clauseParameters = clauseParameters;
     this.myParameters = parameters;
-    this.myElimParams = elimParams;
-    this.myCaseExpressions = caseExpressions;
+    this.elimParams = elimParams;
+    this.caseExpressions = caseExpressions;
   }
 
   public ImpossibleEliminationError(LeveledDefCallExpression defCall, @NotNull Concrete.SourceNode cause) {

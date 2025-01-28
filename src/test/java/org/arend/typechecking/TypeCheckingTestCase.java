@@ -4,7 +4,6 @@ import org.arend.core.context.binding.Binding;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.type.Type;
-import org.arend.frontend.ConcreteReferableProvider;
 import org.arend.frontend.PositionComparator;
 import org.arend.naming.reference.*;
 import org.arend.naming.NameResolverTestCase;
@@ -12,6 +11,7 @@ import org.arend.naming.reference.converter.IdReferableConverter;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteExpressionFactory;
 import org.arend.term.group.ChildGroup;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.Group;
 import org.arend.typechecking.doubleChecker.CoreDefinitionChecker;
 import org.arend.typechecking.doubleChecker.CoreException;
@@ -20,6 +20,7 @@ import org.arend.typechecking.doubleChecker.CoreModuleChecker;
 import org.arend.typechecking.error.local.LocalErrorReporter;
 import org.arend.typechecking.implicitargs.equations.DummyEquations;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
+import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.typechecking.visitor.DesugarVisitor;
@@ -98,7 +99,7 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
   }
 
   protected Definition typeCheckDef(TCDefReferable reference, int errors) {
-    new TypecheckingOrderingListener(libraryManager.getInstanceProviderSet(), ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, ref -> null).typecheckDefinitions(Collections.singletonList((Concrete.ResolvableDefinition) getDefinition(reference)), null);
+    new TypecheckingOrderingListener(libraryManager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, ref -> null).typecheckDefinitions(Collections.singletonList((Concrete.ResolvableDefinition) getDefinition(reference)), null);
     Definition definition = reference.getTypechecked();
     boolean ok = errors != 0 || new CoreDefinitionChecker(errorReporter).check(definition);
     assertThat(errorList, containsErrors(errors));
@@ -116,7 +117,7 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
 
 
   private void typeCheckModule(Group group, int errors) {
-    assertTrue(new TypecheckingOrderingListener(libraryManager.getInstanceProviderSet(), ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, localErrorReporter, PositionComparator.INSTANCE, ref -> null).typecheckModules(Collections.singletonList(group), null));
+    assertTrue(new TypecheckingOrderingListener(libraryManager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, localErrorReporter, PositionComparator.INSTANCE, ref -> null).typecheckModules(Collections.singletonList(group), null));
     boolean ok = errors != 0 || !errorList.isEmpty() || new CoreModuleChecker(errorReporter).checkGroup(group);
     assertThat(errorList, containsErrors(errors));
     assertTrue(ok);
@@ -133,8 +134,8 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
     return ref instanceof TCDefReferable ? ((TCDefReferable) ref).getTypechecked() : null;
   }
 
-  protected void typeCheckModule(ChildGroup group) {
-    lastGroup = group;
+  protected void typeCheckModule(Group group) {
+    if (group instanceof ConcreteGroup) lastGroup = (ConcreteGroup) group;
     typeCheckModule(group, 0);
   }
 

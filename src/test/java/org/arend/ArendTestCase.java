@@ -4,7 +4,6 @@ import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.prettyprinting.doc.Doc;
 import org.arend.extImpl.DefinitionRequester;
-import org.arend.frontend.ConcreteReferableProvider;
 import org.arend.frontend.PositionComparator;
 import org.arend.frontend.library.PreludeFileLibrary;
 import org.arend.library.Library;
@@ -21,6 +20,7 @@ import org.arend.prelude.PreludeLibrary;
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
 import org.arend.typechecking.instance.provider.InstanceProviderSet;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
+import org.arend.typechecking.provider.ConcreteProvider;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -40,7 +40,7 @@ public abstract class ArendTestCase {
 
   protected final List<GeneralError> errorList = new ArrayList<>();
   protected final ListErrorReporter errorReporter = new ListErrorReporter(errorList);
-  protected final TypecheckingOrderingListener typechecking = new TypecheckingOrderingListener(new InstanceProviderSet(), ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, ref -> null);
+  protected final TypecheckingOrderingListener typechecking = new TypecheckingOrderingListener(new InstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, ref -> null);
   protected int loadedBinaryModules;
 
   @Before
@@ -54,7 +54,7 @@ public abstract class ArendTestCase {
     preludeLibrary = new PreludeFileLibrary(null);
     moduleScopeProvider = preludeLibrary.getModuleScopeProvider();
     libraryManager.loadLibrary(preludeLibrary, null);
-    new Prelude.PreludeTypechecking(new InstanceProviderSet(), ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, PositionComparator.INSTANCE).typecheckLibrary(preludeLibrary);
+    new Prelude.PreludeTypechecking(new InstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, PositionComparator.INSTANCE).typecheckLibrary(preludeLibrary);
     errorList.clear();
   }
 

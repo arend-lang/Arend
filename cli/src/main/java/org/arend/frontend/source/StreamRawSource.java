@@ -3,7 +3,6 @@ package org.arend.frontend.source;
 import org.antlr.v4.runtime.*;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
-import org.arend.frontend.ConcreteReferableProvider;
 import org.arend.frontend.parser.*;
 import org.arend.library.SourceLibrary;
 import org.arend.module.ModuleLocation;
@@ -15,6 +14,7 @@ import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.ScopeFactory;
 import org.arend.source.Source;
 import org.arend.source.SourceLoader;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.FileGroup;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,7 +27,7 @@ import java.io.InputStream;
 public abstract class StreamRawSource implements Source {
   private final ModulePath myModulePath;
   private final boolean myInTests;
-  private FileGroup myGroup;
+  private ConcreteGroup myGroup;
   private byte myPass = 0;
 
   protected StreamRawSource(ModulePath modulePath, boolean inTests) {
@@ -69,7 +69,7 @@ public abstract class StreamRawSource implements Source {
 
         ArendParser.StatementsContext tree = parser.statements();
         myGroup = new BuildVisitor(new ModuleLocation(library, myInTests ? ModuleLocation.LocationKind.TEST : ModuleLocation.LocationKind.SOURCE, modulePath), errorReporter).visitStatements(tree);
-        library.groupLoaded(modulePath, myGroup, true, myInTests);
+        // TODO[server2]: library.groupLoaded(modulePath, myGroup, true, myInTests);
 
         myPass = 1;
         return LoadResult.CONTINUE;
@@ -81,12 +81,12 @@ public abstract class StreamRawSource implements Source {
     }
 
     if (myPass == 1) {
-      myGroup.setModuleScopeProvider(sourceLoader.getModuleScopeProvider(myInTests));
+      // TODO[server2]: myGroup.setModuleScopeProvider(sourceLoader.getModuleScopeProvider(myInTests));
       myPass = 2;
       return LoadResult.CONTINUE;
     }
 
-    new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, myPass == 2, TypingInfo.EMPTY, sourceLoader.getTypecheckingErrorReporter(), null).resolveGroup(myGroup, myGroup.getGroupScope());
+    // TODO[server2]: new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, myPass == 2, TypingInfo.EMPTY, sourceLoader.getTypecheckingErrorReporter(), null).resolveGroup(myGroup, myGroup.getGroupScope());
     if (myPass == 2) {
       myPass = 3;
       return LoadResult.CONTINUE;

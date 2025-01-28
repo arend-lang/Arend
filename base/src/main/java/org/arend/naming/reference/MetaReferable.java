@@ -7,7 +7,6 @@ import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.MetaResolver;
 import org.arend.module.ModuleLocation;
-import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.Contract;
@@ -54,11 +53,6 @@ public class MetaReferable implements TCDefReferable, MetaRef {
   @Contract(pure = true)
   public @Nullable LocatedReferable getLocatedReferableParent() {
     return myParent;
-  }
-
-  @Override
-  public Concrete.ResolvableDefinition getDefaultConcrete() {
-    return myDefinition instanceof DefinableMetaDefinition ? (DefinableMetaDefinition) myDefinition : null;
   }
 
   @Nullable

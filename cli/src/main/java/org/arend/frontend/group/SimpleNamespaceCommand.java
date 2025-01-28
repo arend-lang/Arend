@@ -7,12 +7,10 @@ import org.arend.frontend.parser.Position;
 import org.arend.naming.reference.NamedUnresolvedReference;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.scope.Scope;
-import org.arend.term.ChildNamespaceCommand;
 import org.arend.term.NameHiding;
 import org.arend.term.NameRenaming;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.AbstractReference;
-import org.arend.term.group.ChildGroup;
 import org.arend.term.group.Statement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,23 +19,21 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class SimpleNamespaceCommand implements ChildNamespaceCommand, SourceInfo, DataContainer, Statement {
+public class SimpleNamespaceCommand implements NamespaceCommand, SourceInfo, DataContainer, Statement {
   private final Position myPosition;
   private final Kind myKind;
   private final List<String> myPath;
   private final boolean myUsing;
   private final List<SimpleNameRenaming> myOpenedReferences;
   private final List<SimpleNameHiding> myHiddenReferences;
-  private final ChildGroup myParent;
 
-  public SimpleNamespaceCommand(Position position, Kind kind, List<String> path, boolean isUsing, List<SimpleNameRenaming> openedReferences, List<SimpleNameHiding> hiddenReferences, ChildGroup parent) {
+  public SimpleNamespaceCommand(Position position, Kind kind, List<String> path, boolean isUsing, List<SimpleNameRenaming> openedReferences, List<SimpleNameHiding> hiddenReferences) {
     myPosition = position;
     myKind = kind;
     myPath = path;
     myUsing = isUsing;
     myOpenedReferences = openedReferences;
     myHiddenReferences = hiddenReferences;
-    myParent = parent;
   }
 
   @Override
@@ -91,12 +87,6 @@ public class SimpleNamespaceCommand implements ChildNamespaceCommand, SourceInfo
   @Override
   public String positionTextRepresentation() {
     return myPosition.positionTextRepresentation();
-  }
-
-  @Nullable
-  @Override
-  public ChildGroup getParentGroup() {
-    return myParent;
   }
 
   @Override

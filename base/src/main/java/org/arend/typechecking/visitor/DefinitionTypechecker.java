@@ -3502,7 +3502,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     }
   }
 
-  private ClassField addField(ConcreteClassFieldReferable fieldRef, ClassDefinition parentClass, PiExpression piType, Expression typeLevel) {
+  private ClassField addField(FieldReferableImpl fieldRef, ClassDefinition parentClass, PiExpression piType, Expression typeLevel) {
     ClassField typedDef = new ClassField(fieldRef, parentClass, piType, typeLevel);
     fieldRef.setTypechecked(typedDef);
     parentClass.addField(typedDef);

@@ -85,7 +85,6 @@ public interface ConcreteFactory {
   @NotNull ArendRef localDeclaration(@NotNull ArendRef ref);
   @NotNull ArendRef global(@NotNull String name, @NotNull Precedence precedence);
   @NotNull ArendRef global(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec);
-  @NotNull ArendRef classRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec);
   @NotNull ArendRef fieldRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec, boolean isExplicit, boolean isParameter);
   @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec);
 

@@ -643,25 +643,19 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       return;
     }
 
-    List<ClassReferable> superClasses = new ArrayList<>(def.getSuperClasses().size());
     ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(Prelude.DEP_ARRAY == null ? scope : new ElimScope(scope, Collections.singleton(Prelude.DEP_ARRAY.getRef())), null, myTypingInfo, myErrorReporter, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
     for (int i = 0; i < def.getSuperClasses().size(); i++) {
       Concrete.ReferenceExpression superClass = def.getSuperClasses().get(i);
       Concrete.Expression resolved = exprVisitor.visitReference(superClass, true, resolveLevels);
       Referable ref = RedirectingReferable.getOriginalReferable(superClass.getReferent());
-      if (resolved == superClass && ref instanceof ClassReferable) {
+      if (resolved == superClass && myTypingInfo.getBodyDynamicScopeProvider(ref) != null) {
         superClass.setReferent(ref);
-        superClasses.add((ClassReferable) ref);
       } else {
         if (!(ref instanceof ErrorReference)) {
           myLocalErrorReporter.report(new NameResolverError("Expected a class", superClass));
         }
         def.getSuperClasses().remove(i--);
       }
-    }
-
-    if (!resolveLevels) {
-      def.getData().setSuperClasses(superClasses);
     }
   }
 
@@ -679,14 +673,11 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
     if (myResolveTypeClassReferences) {
       if (def.getStage() == Concrete.Stage.NOT_RESOLVED) {
-        List<ConcreteClassFieldReferable> fields = new ArrayList<>();
         for (Concrete.ClassElement element : def.getElements()) {
           if (element instanceof Concrete.ClassField field) {
             resolveTypeClassReference(field.getParameters(), field.getResultType(), scope, true);
-            fields.add(field.getData());
           }
         }
-        def.getData().setFields(fields);
       }
       def.setTypeClassReferencesResolved();
       return null;

@@ -13,12 +13,10 @@ import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.LevelPair;
 import org.arend.ext.error.RedundantClauseError;
-import org.arend.naming.reference.ConcreteLocatedReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.error.local.LocalErrorReporter;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
@@ -111,9 +109,10 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void threeVars() {
-    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) getDefinition(resolveNamesDef(
+    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n m k : Nat) : Nat\n" +
-      "  | suc n, zero, suc k => k"));
+      "  | suc n, zero, suc k => k").definition();
+    assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Nat()), param(null, Nat())), fun.getBody(), false);
     assertNotNull(res);
@@ -123,9 +122,10 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void nestedPatterns() {
-    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) getDefinition(resolveNamesDef(
+    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n m k : Nat) : Nat\n" +
-      "  | suc (suc (suc n)), zero, suc (suc (suc (suc zero))) => n"));
+      "  | suc (suc (suc n)), zero, suc (suc (suc (suc zero))) => n").definition();
+    assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Nat()), param(null, Nat())), fun.getBody(), false);
     assertNotNull(res);
@@ -135,9 +135,10 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void incorrectType() {
-    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) getDefinition(resolveNamesDef(
+    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n : Nat) (m : Nat -> Nat) (k : Nat) : Nat\n" +
-      "  | suc n, zero, suc k => k"));
+      "  | suc n, zero, suc k => k").definition();
+    assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Pi(Nat(), Nat())), param(null, Nat())), fun.getBody(), false);
     assertNull(res);
@@ -146,15 +147,15 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void incorrectDataType() {
-    Group module = resolveNamesModule(
+    List<? extends ConcreteStatement> statements =resolveNamesModule(
       """
         \\data D | con
         \\func f (n : Nat) (d : D) (k : Nat) : Nat
           | suc n, zero, suc k => k
-        """);
-    Iterator<? extends Statement> it = module.getStatements().iterator();
-    TCDefReferable dataDef = (TCDefReferable) it.next().getGroup().getReferable();
-    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) ((ConcreteLocatedReferable) it.next().getGroup().getReferable()).getDefinition();
+        """).statements();
+    TCDefReferable dataDef = (TCDefReferable) statements.get(0).getGroup().getReferable();
+    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(1).group()).definition();
+    assertNotNull(funDef);
     DataDefinition data = new DataDefinition(dataDef);
     data.setParameters(EmptyDependentLink.getInstance());
     data.setSort(Sort.STD);
@@ -169,9 +170,10 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void tooManyPatterns() {
-    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) getDefinition(resolveNamesDef(
+    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n m k : Nat) : Nat\n" +
-      "  | suc n m, zero, suc k => k"));
+      "  | suc n m, zero, suc k => k").definition();
+    assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Nat()), param(null, Nat())), fun.getBody(), false);
     assertNull(res);
@@ -180,9 +182,10 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void interval() {
-    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) getDefinition(resolveNamesDef(
+    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n : Nat) (i : I) : Nat\n" +
-      "  | zero, i => zero"));
+      "  | zero, i => zero").definition();
+    assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Interval())), fun.getBody(), false);
     assertNotNull(res);
@@ -192,9 +195,10 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void intervalFail() {
-    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) getDefinition(resolveNamesDef(
+    Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n : Nat) (i : I) : Nat\n" +
-      "  | zero, left => zero"));
+      "  | zero, left => zero").definition();
+    assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Interval())), fun.getBody(), false);
     assertNull(res);
@@ -203,15 +207,15 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void emptyDataType() {
-    Group module = resolveNamesModule(
+    List<? extends ConcreteStatement> statements = resolveNamesModule(
       """
         \\data D
         \\func f (n : Nat) (d : D) (k : Nat) : Nat
           | suc n, (), k => k
-        """);
-    Iterator<? extends Statement> it = module.getStatements().iterator();
-    TCDefReferable dataDef = (TCDefReferable) it.next().getGroup().getReferable();
-    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) ((ConcreteLocatedReferable) it.next().getGroup().getReferable()).getDefinition();
+        """).statements();
+    TCDefReferable dataDef = (TCDefReferable) statements.get(0).getGroup().getReferable();
+    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(1).group()).definition();
+    assertNotNull(funDef);
     DataDefinition data = new DataDefinition(dataDef);
     data.setParameters(EmptyDependentLink.getInstance());
     data.setSort(Sort.STD);
@@ -226,15 +230,15 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void emptyDataTypeWarning() {
-    Group module = resolveNamesModule(
+    List<? extends ConcreteStatement> statements = resolveNamesModule(
       """
         \\data D
         \\func f (n : Nat) (d : D) (k : Nat) : Nat
           | suc n, (), suc k => k
-        """);
-    Iterator<? extends Statement> it = module.getStatements().iterator();
-    TCDefReferable dataDef = (TCDefReferable) it.next().getGroup().getReferable();
-    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) ((ConcreteLocatedReferable) it.next().getGroup().getReferable()).getDefinition();
+        """).statements();
+    TCDefReferable dataDef = (TCDefReferable) statements.get(0).getGroup().getReferable();
+    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(1).group()).definition();
+    assertNotNull(funDef);
     DataDefinition data = new DataDefinition(dataDef);
     data.setParameters(EmptyDependentLink.getInstance());
     data.setSort(Sort.STD);

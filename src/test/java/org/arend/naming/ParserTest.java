@@ -1,18 +1,15 @@
 package org.arend.naming;
 
-import org.arend.naming.reference.ConcreteLocatedReferable;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.group.ChildGroup;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.*;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 import static org.arend.term.concrete.ConcreteExpressionFactory.*;
 import static org.junit.Assert.*;
@@ -115,7 +112,7 @@ public class ParserTest extends NameResolverTestCase {
 
   @Test
   public void parserImplicit() {
-    Concrete.ClassField def = (Concrete.ClassField) ((Concrete.ClassDefinition) getDefinition(resolveNamesDef("\\class X { | f : \\Pi (x y : \\Type1) {z w : \\Type1} (t : \\Type1) {r : \\Type1} (A : \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type0) -> A x y z w t r }"))).getElements().get(0);
+    Concrete.ClassField def = (Concrete.ClassField) ((Concrete.ClassDefinition) Objects.requireNonNull(resolveNamesDef("\\class X { | f : \\Pi (x y : \\Type1) {z w : \\Type1} (t : \\Type1) {r : \\Type1} (A : \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type0) -> A x y z w t r }").definition())).getElements().get(0);
     Concrete.PiExpression pi = (Concrete.PiExpression) def.getResultType();
     assertEquals(5, pi.getParameters().size());
     assertTrue(pi.getParameters().get(0).isExplicit());
@@ -141,7 +138,7 @@ public class ParserTest extends NameResolverTestCase {
 
   @Test
   public void parserImplicit2() {
-    Concrete.ClassField def = (Concrete.ClassField) ((Concrete.ClassDefinition) getDefinition(resolveNamesDef("\\class X { | f : \\Pi {x : \\Type1} (_ : \\Type1) {y z : \\Type1} (A : \\Type1 -> \\Type1 -> \\Type1 -> \\Type0) (_ : A x y z) -> \\Type1 }"))).getElements().get(0);
+    Concrete.ClassField def = (Concrete.ClassField) ((Concrete.ClassDefinition) Objects.requireNonNull(resolveNamesDef("\\class X { | f : \\Pi {x : \\Type1} (_ : \\Type1) {y z : \\Type1} (A : \\Type1 -> \\Type1 -> \\Type1 -> \\Type0) (_ : A x y z) -> \\Type1 }").definition())).getElements().get(0);
     Concrete.PiExpression pi = (Concrete.PiExpression) def.getResultType();
     assertEquals(5, pi.getParameters().size());
     assertFalse(pi.getParameters().get(0).isExplicit());
@@ -231,14 +228,14 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   private void postfixTest(String name) {
-    Group module = resolveNamesModule(
+    List<? extends ConcreteStatement> statements = resolveNamesModule(
       "\\func \\fix 5 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infixl 5 $ (A B : \\Prop) => A\n" +
-      "\\func f (A B C : \\Prop) => A $ B `" + name + " $ C");
-    Iterator<? extends Statement> it = module.getStatements().iterator();
-    GlobalReferable named = it.next().getGroup().getReferable();
-    GlobalReferable d = it.next().getGroup().getReferable();
-    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) ((ConcreteLocatedReferable) it.next().getGroup().getReferable()).getDefinition();
+      "\\func f (A B C : \\Prop) => A $ B `" + name + " $ C").statements();
+    GlobalReferable named = statements.get(0).getGroup().getReferable();
+    GlobalReferable d = statements.get(1).getGroup().getReferable();
+    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
+    assertNotNull(function);
     List<? extends Referable> refs = function.getParameters().get(0).getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
     Concrete.Expression expectedTerm = cApps(cVar(d), cApps(cVar(named), cApps(cVar(d), cVar(refs.get(0)), cVar(refs.get(1)))), cVar(refs.get(2)));
@@ -255,7 +252,7 @@ public class ParserTest extends NameResolverTestCase {
     resolveNamesModule(
       "\\func \\fix 5 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infix 5 $ (A B : \\Prop) => A\n" +
-      "\\func f (A B : \\Prop) => A $ B `" + name + "", 1);
+      "\\func f (A B : \\Prop) => A $ B `" + name, 1);
   }
 
   @Test
@@ -266,14 +263,14 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   private void postfixTest2(String name) {
-    Group module = resolveNamesModule(
+    List<? extends ConcreteStatement> statements = resolveNamesModule(
       "\\func \\fix 5 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infixr 5 $ (A B : \\Prop) => A\n" +
-      "\\func f (A B C : \\Prop) => A $ B `" + name + " $ C");
-    Iterator<? extends Statement> it = module.getStatements().iterator();
-    GlobalReferable named = it.next().getGroup().getReferable();
-    GlobalReferable d = it.next().getGroup().getReferable();
-    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) ((ConcreteLocatedReferable) it.next().getGroup().getReferable()).getDefinition();
+      "\\func f (A B C : \\Prop) => A $ B `" + name + " $ C").statements();
+    GlobalReferable named = statements.get(0).getGroup().getReferable();
+    GlobalReferable d = statements.get(1).getGroup().getReferable();
+    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
+    assertNotNull(function);
     List<? extends Referable> refs = function.getParameters().get(0).getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
     Concrete.Expression expectedTerm = cApps(cVar(d), cVar(refs.get(0)), cApps(cVar(d), cApps(cVar(named), cVar(refs.get(1))), cVar(refs.get(2))));
@@ -287,14 +284,14 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   private void postfixTest3(String name) {
-    Group module = resolveNamesModule(
+    List<? extends ConcreteStatement> statements = resolveNamesModule(
       "\\func \\fix 6 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infix 5 $ (A B : \\Prop) => A\n" +
-      "\\func f (A B : \\Prop) => A $ B `" + name);
-    Iterator<? extends Statement> it = module.getStatements().iterator();
-    GlobalReferable named = it.next().getGroup().getReferable();
-    GlobalReferable d = it.next().getGroup().getReferable();
-    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) ((ConcreteLocatedReferable) it.next().getGroup().getReferable()).getDefinition();
+      "\\func f (A B : \\Prop) => A $ B `" + name).statements();
+    GlobalReferable named = statements.get(0).getGroup().getReferable();
+    GlobalReferable d = statements.get(1).getGroup().getReferable();
+    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
+    assertNotNull(function);
     List<? extends Referable> refs = function.getParameters().get(0).getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
     Concrete.Expression expectedTerm = cApps(cVar(d), cVar(refs.get(0)), cApps(cVar(named), cVar(refs.get(1))));
@@ -308,14 +305,14 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   private void postfixTest4(String name) {
-    Group module = resolveNamesModule(
+    List<? extends ConcreteStatement> statements = resolveNamesModule(
       "\\func \\fix 4 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infix 5 $ (A B : \\Prop) => A\n" +
-      "\\func f (A B : \\Prop) => A $ B `" + name);
-    Iterator<? extends Statement> it = module.getStatements().iterator();
-    GlobalReferable named = it.next().getGroup().getReferable();
-    GlobalReferable d = it.next().getGroup().getReferable();
-    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) ((ConcreteLocatedReferable) it.next().getGroup().getReferable()).getDefinition();
+      "\\func f (A B : \\Prop) => A $ B `" + name).statements();
+    GlobalReferable named = statements.get(0).getGroup().getReferable();
+    GlobalReferable d = statements.get(1).getGroup().getReferable();
+    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
+    assertNotNull(function);
     List<? extends Referable> refs = function.getParameters().get(0).getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
     Concrete.Expression expectedTerm = cApps(cVar(named), cApps(cVar(d), cVar(refs.get(0)), cVar(refs.get(1))));
@@ -329,14 +326,14 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   private void postfixTest5(String name1, String name2, String pr1, String pr2) {
-    Group module = resolveNamesModule(
+    List<? extends ConcreteStatement> statements = resolveNamesModule(
       "\\func " + pr1 + " " + name1 + " (A : \\Prop) => A\n" +
       "\\func " + pr2 + " " + name2 + " (A : \\Prop) => A\n" +
-      "\\func f (A : \\Prop) => A `" + name1 + " `" + name2);
-    Iterator<? extends Statement> it = module.getStatements().iterator();
-    GlobalReferable named1 = it.next().getGroup().getReferable();
-    GlobalReferable named2 = it.next().getGroup().getReferable();
-    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) ((ConcreteLocatedReferable) it.next().getGroup().getReferable()).getDefinition();
+      "\\func f (A : \\Prop) => A `" + name1 + " `" + name2).statements();
+    GlobalReferable named1 = statements.get(0).getGroup().getReferable();
+    GlobalReferable named2 = statements.get(1).getGroup().getReferable();
+    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
+    assertNotNull(function);
     Referable refA = function.getParameters().get(0).getReferableList().get(0);
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
     Concrete.Expression expectedTerm = cApps(cVar(named2), cApps(cVar(named1), cVar(refA)));
@@ -362,20 +359,20 @@ public class ParserTest extends NameResolverTestCase {
 
   @Test
   public void postfixTest6() {
-    Group module = resolveNamesModule(
+    List<? extends ConcreteStatement> statements = resolveNamesModule(
       """
         \\func \\infixr 1 >== (A B : \\Prop) => A
         \\func \\infix 2 ==< (A B : \\Prop) => A
         \\func \\fix 2 qed (A : \\Prop) => A
         \\func g (A : \\Prop) => A
         \\func f (A B C : \\Prop) => g A ==< g B >== g C `qed
-        """);
-    Iterator<? extends Statement> it = module.getStatements().iterator();
-    GlobalReferable rightP = it.next().getGroup().getReferable();
-    GlobalReferable leftP = it.next().getGroup().getReferable();
-    GlobalReferable qed = it.next().getGroup().getReferable();
-    GlobalReferable g = it.next().getGroup().getReferable();
-    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) ((ConcreteLocatedReferable) it.next().getGroup().getReferable()).getDefinition();
+        """).statements();
+    GlobalReferable rightP = statements.get(0).getGroup().getReferable();
+    GlobalReferable leftP = statements.get(1).getGroup().getReferable();
+    GlobalReferable qed = statements.get(2).getGroup().getReferable();
+    GlobalReferable g = statements.get(3).getGroup().getReferable();
+    Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(4).group()).definition();
+    assertNotNull(function);
     List<? extends Referable> refs = function.getParameters().get(0).getReferableList();
 
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
@@ -397,7 +394,7 @@ public class ParserTest extends NameResolverTestCase {
 
   @Test
   public void commentTest() {
-    ChildGroup group = resolveNamesModule(
+    resolveNamesModule(
       """
         \\func f => 0
         ------------
@@ -421,7 +418,7 @@ public class ParserTest extends NameResolverTestCase {
         \\func h => f g g1 g2 g3 g4 g5 g6
         --
         """);
-    assertNotNull(get(group.getGroupScope(), "h"));
+    assertNotNull(get("h"));
   }
 
   @Test

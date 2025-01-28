@@ -11,7 +11,6 @@ import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.extImpl.DefinitionRequester;
-import org.arend.frontend.ConcreteReferableProvider;
 import org.arend.frontend.FileLibraryResolver;
 import org.arend.frontend.PositionComparator;
 import org.arend.frontend.library.FileSourceLibrary;
@@ -35,12 +34,13 @@ import org.arend.repl.Repl;
 import org.arend.repl.action.ReplCommand;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.group.FileGroup;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.Statement;
 import org.arend.typechecking.LibraryArendExtensionProvider;
 import org.arend.typechecking.instance.provider.InstanceProviderSet;
 import org.arend.typechecking.order.dependency.DummyDependencyListener;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
+import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.util.FileUtils;
 import org.arend.util.Range;
 import org.intellij.lang.annotations.Language;
@@ -117,7 +117,7 @@ public abstract class CommonCliRepl extends Repl {
     super(
       errorReporter,
       libraryManager,
-      new TypecheckingOrderingListener(instanceProviders, ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(libraryManager))
+      new TypecheckingOrderingListener(instanceProviders, ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(libraryManager))
     );
     myLibraryResolver = libraryResolver;
     myReplLibrary = Files.exists(pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE))
@@ -252,10 +252,8 @@ public abstract class CommonCliRepl extends Repl {
   }
 
   @Override
-  protected final @Nullable FileGroup parseStatements(@NotNull String line) {
-    var fileGroup = buildVisitor().visitStatements(parse(line).statements());
-    if (fileGroup != null)
-      fileGroup.setModuleScopeProvider(getAvailableModuleScopeProvider());
+  protected final @Nullable ConcreteGroup parseStatements(@NotNull String line) {
+    ConcreteGroup fileGroup = buildVisitor().visitStatements(parse(line).statements());
     if (checkErrors()) return null;
     return fileGroup;
   }

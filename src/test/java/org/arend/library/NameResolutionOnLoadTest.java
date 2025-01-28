@@ -1,7 +1,6 @@
 package org.arend.library;
 
 import org.arend.ext.module.ModulePath;
-import org.arend.naming.reference.ConcreteLocatedReferable;
 import org.arend.naming.scope.Scope;
 import org.arend.term.concrete.Concrete;
 import org.junit.Test;
@@ -29,7 +28,7 @@ public class NameResolutionOnLoadTest extends LibraryTestCase {
     assertTrue(errorList.isEmpty());
     Scope moduleB = library.getModuleScopeProvider().forModule(new ModulePath("B"));
 
-    Concrete.ReferenceExpression defCall = (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleB, "b")).getDefinition()).getBody()).getTerm();
+    Concrete.ReferenceExpression defCall = null; // TODO[server2]: (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleB, "b")).getDefinition()).getBody()).getTerm();
 
     assertThat(defCall.getReferent(), is(notNullValue()));
     assertThat(defCall.getReferent(), is(get(moduleB, "x")));
@@ -45,7 +44,7 @@ public class NameResolutionOnLoadTest extends LibraryTestCase {
     Scope moduleB = library.getModuleScopeProvider().forModule(new ModulePath("B"));
     assertThat(moduleB, is(notNullValue()));
 
-    Concrete.ReferenceExpression defCall = (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleA, "a")).getDefinition()).getBody()).getTerm();
+    Concrete.ReferenceExpression defCall = null; // TODO[server2]: (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleA, "a")).getDefinition()).getBody()).getTerm();
 
     assertThat(defCall.getReferent(), is(notNullValue()));
     assertThat(defCall.getReferent(), is(get(moduleB, "b")));
@@ -60,11 +59,11 @@ public class NameResolutionOnLoadTest extends LibraryTestCase {
     Scope moduleBCE = library.getModuleScopeProvider().forModule(new ModulePath("B", "C", "E"));
     Scope moduleBCF = library.getModuleScopeProvider().forModule(new ModulePath("B", "C", "F"));
 
-    Concrete.ReferenceExpression defCall1 = (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleBC, "c")).getDefinition()).getBody()).getTerm();
+    Concrete.ReferenceExpression defCall1 = null; // TODO[server2]: (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleBC, "c")).getDefinition()).getBody()).getTerm();
     assertThat(defCall1.getReferent(), is(notNullValue()));
     assertThat(defCall1.getReferent(), is(get(moduleBCE, "e")));
 
-    Concrete.ReferenceExpression defCall2 = (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleBCE, "e")).getDefinition()).getBody()).getTerm();
+    Concrete.ReferenceExpression defCall2 = null; // TODO[server2]: (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleBCE, "e")).getDefinition()).getBody()).getTerm();
     assertThat(defCall2.getReferent(), is(notNullValue()));
     assertThat(defCall2.getReferent(), is(get(moduleBCF, "f")));
   }
@@ -77,11 +76,11 @@ public class NameResolutionOnLoadTest extends LibraryTestCase {
     Scope moduleX = library.getModuleScopeProvider().forModule(new ModulePath("X"));
     Scope moduleY = library.getModuleScopeProvider().forModule(new ModulePath("Y"));
 
-    Concrete.ReferenceExpression defCall1 = (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleX, "f")).getDefinition()).getBody()).getTerm();
+    Concrete.ReferenceExpression defCall1 = null; // TODO[server2]: (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleX, "f")).getDefinition()).getBody()).getTerm();
     assertThat(defCall1.getReferent(), is(notNullValue()));
     assertThat(defCall1.getReferent(), is(get(moduleY, "f")));
 
-    Concrete.ReferenceExpression defCall2 = (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleY, "f")).getDefinition()).getBody()).getTerm();
+    Concrete.ReferenceExpression defCall2 = null; // TODO[server2]: (Concrete.ReferenceExpression) ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) ((ConcreteLocatedReferable) get(moduleY, "f")).getDefinition()).getBody()).getTerm();
     assertThat(defCall2.getReferent(), is(notNullValue()));
     assertThat(defCall2.getReferent(), is(get(moduleX, "f")));
   }

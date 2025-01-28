@@ -76,7 +76,7 @@ public abstract class Repl {
     myErrorReporter = listErrorReporter;
     myLibraryManager = libraryManager;
     typechecking = typecheckingOrderingListener;
-    myModuleReferable = new LocatedReferableImpl(AccessModifier.PUBLIC, Precedence.DEFAULT, replModulePath.getLibraryName(), new FullModuleReferable(replModulePath), GlobalReferable.Kind.OTHER);
+    myModuleReferable = new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, replModulePath.getLibraryName(), Precedence.DEFAULT, null, new FullModuleReferable(replModulePath), GlobalReferable.Kind.OTHER);
   }
 
   protected abstract void loadLibraries();

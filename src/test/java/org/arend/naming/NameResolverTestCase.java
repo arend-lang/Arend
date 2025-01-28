@@ -5,7 +5,6 @@ import org.arend.error.DummyErrorReporter;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.MetaResolver;
-import org.arend.frontend.ConcreteReferableProvider;
 import org.arend.naming.reference.*;
 import org.arend.naming.reference.converter.IdReferableConverter;
 import org.arend.naming.resolving.typing.TypedReferable;
@@ -18,7 +17,10 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.AccessModifier;
 import org.arend.term.group.ChildGroup;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.Group;
 import org.arend.typechecking.TestLocalErrorReporter;
+import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.DesugarVisitor;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
 import org.jetbrains.annotations.NotNull;
@@ -31,7 +33,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 public abstract class NameResolverTestCase extends ParserTestCase {
-  protected ChildGroup lastGroup;
+  protected ConcreteGroup lastGroup;
   private final Map<String, MetaReferable> metaDefs = new HashMap<>();
   private final Scope metaScope = new Scope() {
     @Override
@@ -53,7 +55,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
 
   public Concrete.ReferableDefinition getConcrete(String path) {
     TCReferable ref = get(path);
-    return ref instanceof ConcreteLocatedReferable ? ((ConcreteLocatedReferable) ref).getDefinition() : null;
+    return null; // TODO[server2]: ref instanceof ConcreteLocatedReferable ? ((ConcreteLocatedReferable) ref).getDefinition() : null;
   }
 
   public Concrete.ResolvableDefinition getConcreteDesugarized(String path) {
@@ -101,24 +103,20 @@ public abstract class NameResolverTestCase extends ParserTestCase {
   }
 
 
-  ChildGroup resolveNamesDefGroup(String text, int errors) {
-    ChildGroup group = parseDef(text);
+  protected ConcreteGroup resolveNamesDef(String text, int errors) {
+    ConcreteGroup group = parseDef(text);
     Scope parentScope = new MergeScope(new SingletonScope(group.getReferable()), metaScope, PreludeLibrary.getPreludeScope());
-    new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, TypingInfo.EMPTY, errorReporter).resolveGroupWithTypes(group, CachingScope.make(LexicalScope.insideOf(group, parentScope, true)));
+    new DefinitionResolveNameVisitor(ConcreteProvider.EMPTY /* TODO[server2] */, TypingInfo.EMPTY, errorReporter).resolveGroupWithTypes(group, CachingScope.make(LexicalScope.insideOf(group, parentScope, true)));
     assertThat(errorList, containsErrors(errors));
     return group;
   }
 
-  protected ChildGroup resolveNamesDefGroup(String text) {
-    lastGroup = resolveNamesDefGroup(text, 0);
+  protected ConcreteGroup resolveNamesDefGroup(String text) {
+    lastGroup = resolveNamesDef(text, 0);
     return lastGroup;
   }
 
-  protected TCDefReferable resolveNamesDef(String text, int errors) {
-    return (TCDefReferable) resolveNamesDefGroup(text, errors).getReferable();
-  }
-
-  protected TCDefReferable resolveNamesDef(String text) {
+  protected ConcreteGroup resolveNamesDef(String text) {
     return resolveNamesDef(text, 0);
   }
 
@@ -126,20 +124,20 @@ public abstract class NameResolverTestCase extends ParserTestCase {
     return typechecking.getConcreteProvider().getConcrete(ref);
   }
 
-  protected void resolveNamesModule(ChildGroup group, int errors) {
+  protected void resolveNamesModule(Group group, int errors) {
     Scope scope = CachingScope.make(new MergeScope(ScopeFactory.forGroup(group, moduleScopeProvider), metaScope));
-    new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, TypingInfo.EMPTY, errorReporter).resolveGroupWithTypes(group, scope);
+    new DefinitionResolveNameVisitor(ConcreteProvider.EMPTY /* TODO[server2] */, TypingInfo.EMPTY, errorReporter).resolveGroupWithTypes(group, scope);
     libraryManager.getInstanceProviderSet().collectInstances(group, CachingScope.make(ScopeFactory.parentScopeForGroup(group, moduleScopeProvider, true)), IdReferableConverter.INSTANCE);
     assertThat(errorList, containsErrors(errors));
   }
 
-  protected ChildGroup resolveNamesModule(String text, int errors) {
-    ChildGroup group = parseModule(text);
+  protected ConcreteGroup resolveNamesModule(String text, int errors) {
+    ConcreteGroup group = parseModule(text);
     resolveNamesModule(group, errors);
     return group;
   }
 
-  protected ChildGroup resolveNamesModule(String text) {
+  protected ConcreteGroup resolveNamesModule(String text) {
     lastGroup = resolveNamesModule(text, 0);
     return lastGroup;
   }

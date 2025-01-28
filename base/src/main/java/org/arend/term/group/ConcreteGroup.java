@@ -50,7 +50,7 @@ public record ConcreteGroup(@NotNull Doc description, @NotNull LocatedReferable 
       List<InternalReferable> result = new ArrayList<>();
       for (Concrete.ClassElement element : classDef.getElements()) {
         if (element instanceof Concrete.ClassField field) {
-          result.add(new SimpleInternalReferable(field.getData(), !field.getData().isParameterField()));
+          result.add(field.getData());
         }
       }
       return result;

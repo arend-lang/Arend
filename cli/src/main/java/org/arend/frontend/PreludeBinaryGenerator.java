@@ -9,6 +9,7 @@ import org.arend.prelude.Prelude;
 import org.arend.source.BinarySource;
 import org.arend.source.Source;
 import org.arend.typechecking.instance.provider.InstanceProviderSet;
+import org.arend.typechecking.provider.ConcreteProvider;
 
 import java.nio.file.Paths;
 
@@ -31,7 +32,7 @@ public class PreludeBinaryGenerator {
 
     LibraryManager manager = new LibraryManager((lib,name) -> { throw new IllegalStateException(); }, new InstanceProviderSet(), System.err::println, System.err::println, DefinitionRequester.INSTANCE, null);
     if (manager.loadLibrary(library, null)) {
-      if (new Prelude.PreludeTypechecking(manager.getInstanceProviderSet(), ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, PositionComparator.INSTANCE).typecheckLibrary(library)) {
+      if (new Prelude.PreludeTypechecking(manager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2]: Maybe we do not need PreludeBinaryGenerator at all? */, IdReferableConverter.INSTANCE, PositionComparator.INSTANCE).typecheckLibrary(library)) {
         library.persistModule(Prelude.MODULE_PATH, IdReferableConverter.INSTANCE, System.err::println);
       }
     }

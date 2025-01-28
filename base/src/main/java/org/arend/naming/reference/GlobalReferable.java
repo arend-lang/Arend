@@ -2,7 +2,6 @@ package org.arend.naming.reference;
 
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.ext.reference.Precedence;
-import org.arend.term.concrete.Concrete;
 import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -56,10 +55,6 @@ public interface GlobalReferable extends Referable {
   }
 
   @NotNull Kind getKind();
-
-  default Concrete.ResolvableDefinition getDefaultConcrete() {
-    return null;
-  }
 
   @Override
   default boolean isLocalRef() {

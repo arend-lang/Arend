@@ -495,7 +495,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @Override
   public @NotNull Concrete.FunctionDefinition function(@NotNull ArendRef ref, @NotNull FunctionKind kind, @NotNull Collection<? extends ConcreteParameter> parameters, @Nullable ConcreteExpression resultType, @Nullable ConcreteExpression resultTypeLevel, @NotNull ConcreteFunctionBody body) {
-    if (!(ref instanceof ConcreteLocatedReferable cRef)) {
+    if (!(ref instanceof LocatedReferableImpl cRef)) {
       throw new IllegalArgumentException("The reference must be a global reference with a parent");
     }
     if (kind.isUse() || kind.isCoclause()) {
@@ -506,9 +506,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     }
 
     cRef.setKind(GlobalReferable.kindFromFunction(kind));
-    Concrete.FunctionDefinition result = new Concrete.FunctionDefinition(kind, cRef, parameters(parameters), (Concrete.Expression) resultType, (Concrete.Expression) resultTypeLevel, (Concrete.FunctionBody) body);
-    cRef.setDefinition(result);
-    return result;
+    return new Concrete.FunctionDefinition(kind, cRef, parameters(parameters), (Concrete.Expression) resultType, (Concrete.Expression) resultTypeLevel, (Concrete.FunctionBody) body);
   }
 
   @Override
@@ -549,7 +547,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @Override
   public @NotNull Concrete.DataDefinition data(@NotNull ArendRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, boolean isTruncated, @Nullable ConcreteLevel pLevel, @Nullable ConcreteLevel hLevel, @NotNull Collection<? extends ConcreteConstructorClause> clauses) {
-    if (!(ref instanceof ConcreteLocatedReferable cRef)) {
+    if (!(ref instanceof LocatedReferableImpl cRef)) {
       throw new IllegalArgumentException("The reference must be a global reference with a parent");
     }
 
@@ -563,7 +561,6 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
     cRef.setKind(GlobalReferable.Kind.DATA);
     Concrete.DataDefinition result = new Concrete.DataDefinition(cRef, null, null, typeParameters(parameters), null, isTruncated, pLevel == null && hLevel == null ? null : universe(pLevel, hLevel), constructorClauses);
-    cRef.setDefinition(result);
     for (Concrete.ConstructorClause clause : constructorClauses) {
       for (Concrete.Constructor constructor : clause.getConstructors()) {
         constructor.setDataType(result);
@@ -586,19 +583,17 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @Override
   public @NotNull ConcreteConstructor constructor(@NotNull ArendRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, @NotNull Collection<? extends ConcreteReferenceExpression> elimRefs, @NotNull Collection<? extends ConcreteClause> clauses, boolean isCoerce) {
-    if (!(ref instanceof ConcreteLocatedReferable cRef)) {
+    if (!(ref instanceof LocatedReferableImpl cRef)) {
       throw new IllegalArgumentException("The reference must be a global reference with a parent");
     }
 
     cRef.setKind(GlobalReferable.Kind.CONSTRUCTOR);
-    Concrete.Constructor result = new Concrete.Constructor(cRef, null, typeParameters(parameters), refExprs(elimRefs), functionClauses(clauses), isCoerce);
-    cRef.setDefinition(result);
-    return result;
+    return new Concrete.Constructor(cRef, null, typeParameters(parameters), refExprs(elimRefs), functionClauses(clauses), isCoerce);
   }
 
   @Override
   public @NotNull ConcreteDefinition classDef(@NotNull ArendRef ref, boolean isRecord, boolean withoutClassifying, @NotNull Collection<? extends ConcreteReferenceExpression> superClasses, @NotNull Collection<? extends ConcreteClassElement> elements) {
-    if (!(ref instanceof ConcreteResolvedClassReferable cRef)) {
+    if (!(ref instanceof TCDefReferable cRef)) {
       throw new IllegalArgumentException("The reference must be a class reference");
     }
 
@@ -615,19 +610,16 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
       cElements.add((Concrete.ClassElement) element);
     }
 
-    cRef.setDefinition(result);
     return result;
   }
 
   @Override
   public @NotNull ConcreteClassElement field(@NotNull ArendRef ref, @NotNull ClassFieldKind kind, @NotNull Collection<? extends ConcreteParameter> parameters, @NotNull ConcreteExpression resultType, @Nullable ConcreteExpression resultTypeLevel, boolean isCoerce) {
-    if (!(ref instanceof ConcreteClassFieldReferable cRef && resultType instanceof Concrete.Expression && (resultTypeLevel == null || resultTypeLevel instanceof Concrete.Expression))) {
+    if (!(ref instanceof FieldReferableImpl cRef && resultType instanceof Concrete.Expression && (resultTypeLevel == null || resultTypeLevel instanceof Concrete.Expression))) {
       throw new IllegalArgumentException("The reference must be a global reference with a parent");
     }
 
-    Concrete.ClassField result = new Concrete.ClassField(cRef, null, cRef.isExplicitField(), kind, typeParameters(parameters), (Concrete.Expression) resultType, (Concrete.Expression) resultTypeLevel, isCoerce);
-    cRef.setDefinition(result);
-    return result;
+    return new Concrete.ClassField(cRef, null, cRef.isExplicitField(), kind, typeParameters(parameters), (Concrete.Expression) resultType, (Concrete.Expression) resultTypeLevel, isCoerce);
   }
 
   @Override
@@ -673,15 +665,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     if (!(parent instanceof LocatedReferable)) {
       throw new IllegalArgumentException();
     }
-    return new ConcreteLocatedReferable(myData, AccessModifier.PUBLIC, name, precedence, alias, aliasPrec, (LocatedReferable) parent, GlobalReferable.Kind.OTHER);
-  }
-
-  @Override
-  public @NotNull ArendRef classRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec) {
-    if (!(parent instanceof LocatedReferable)) {
-      throw new IllegalArgumentException();
-    }
-    return new ConcreteResolvedClassReferable(myData, AccessModifier.PUBLIC, name, precedence, alias, aliasPrec, (LocatedReferable) parent, new ArrayList<>());
+    return new LocatedReferableImpl(myData, AccessModifier.PUBLIC, precedence, name, aliasPrec == null ? Precedence.DEFAULT : aliasPrec, alias, (LocatedReferable) parent, GlobalReferable.Kind.OTHER);
   }
 
   @Override
@@ -689,7 +673,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     if (!(parent instanceof TCDefReferable)) {
       throw new IllegalArgumentException();
     }
-    return new ConcreteClassFieldReferable(myData, AccessModifier.PUBLIC, name, precedence, alias, aliasPrec, !isParameter, isExplicit, isParameter, (TCDefReferable) parent);
+    return new FieldReferableImpl(myData, AccessModifier.PUBLIC, precedence, name, aliasPrec, alias, isExplicit, isParameter, false, (TCDefReferable) parent);
   }
 
   @Override

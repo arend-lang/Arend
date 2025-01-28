@@ -42,6 +42,7 @@ import org.arend.typechecking.order.MapTarjanSCC;
 import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.order.dependency.MetaDependencyCollector;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
+import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.util.FileUtils;
 import org.arend.ext.util.Pair;
 import org.arend.util.Range;
@@ -125,7 +126,7 @@ public abstract class BaseCliFrontend {
     private int failed;
 
     MyTypechecking() {
-      super(myLibraryManager.getInstanceProviderSet(), ConcreteReferableProvider.INSTANCE, IdReferableConverter.INSTANCE, myErrorReporter, myDependencyCollector, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(myLibraryManager));
+      super(myLibraryManager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, myErrorReporter, myDependencyCollector, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(myLibraryManager));
     }
 
     private void startTimer(TCDefReferable ref) {

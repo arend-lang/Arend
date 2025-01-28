@@ -10,7 +10,7 @@ import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.naming.scope.local.ListScope;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.AccessModifier;
-import org.arend.term.group.ChildGroup;
+import org.arend.term.group.ConcreteGroup;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -76,12 +76,8 @@ public class NameResolverTest extends NameResolverTestCase {
 
   @Test
   public void parserInfix() {
-    ConcreteLocatedReferable plusRef = new ConcreteLocatedReferable(null, AccessModifier.PUBLIC, "+", new Precedence(Precedence.Associativity.LEFT_ASSOC, (byte) 6, true), null, Precedence.DEFAULT, MODULE_REF, GlobalReferable.Kind.FUNCTION);
-    Concrete.Definition plus = new Concrete.FunctionDefinition(FunctionKind.FUNC, plusRef, Collections.emptyList(), null, null, null);
-    plusRef.setDefinition(plus);
-    ConcreteLocatedReferable mulRef = new ConcreteLocatedReferable(null, AccessModifier.PUBLIC, "*", new Precedence(Precedence.Associativity.LEFT_ASSOC, (byte) 7, true), null, Precedence.DEFAULT, MODULE_REF, GlobalReferable.Kind.FUNCTION);
-    Concrete.Definition mul = new Concrete.FunctionDefinition(FunctionKind.FUNC, mulRef, Collections.emptyList(), null, null, null);
-    mulRef.setDefinition(mul);
+    LocatedReferableImpl plusRef = new LocatedReferableImpl(null, AccessModifier.PUBLIC, new Precedence(Precedence.Associativity.LEFT_ASSOC, (byte) 6, true), "+", Precedence.DEFAULT, null, MODULE_REF, GlobalReferable.Kind.FUNCTION);
+    LocatedReferableImpl mulRef = new LocatedReferableImpl(null, AccessModifier.PUBLIC, new Precedence(Precedence.Associativity.LEFT_ASSOC, (byte) 7, true), "*", Precedence.DEFAULT, null, MODULE_REF, GlobalReferable.Kind.FUNCTION);
 
     Concrete.Expression result = resolveNamesExpr(new ListScope(plusRef, mulRef), "0 + 1 * 2 + 3 * (4 * 5) * (6 + 7)");
     assertNotNull(result);
@@ -90,12 +86,8 @@ public class NameResolverTest extends NameResolverTestCase {
 
   @Test
   public void parserInfixError() {
-    ConcreteLocatedReferable plusRef = new ConcreteLocatedReferable(null, AccessModifier.PUBLIC, "+", new Precedence(Precedence.Associativity.LEFT_ASSOC, (byte) 6, true), null, Precedence.DEFAULT, MODULE_REF, GlobalReferable.Kind.FUNCTION);
-    Concrete.Definition plus = new Concrete.FunctionDefinition(FunctionKind.FUNC, plusRef, Collections.emptyList(), null, null, null);
-    plusRef.setDefinition(plus);
-    ConcreteLocatedReferable mulRef = new ConcreteLocatedReferable(null, AccessModifier.PUBLIC, "*", new Precedence(Precedence.Associativity.RIGHT_ASSOC, (byte) 6, true), null, Precedence.DEFAULT, MODULE_REF, GlobalReferable.Kind.FUNCTION);
-    Concrete.Definition mul = new Concrete.FunctionDefinition(FunctionKind.FUNC, mulRef, Collections.emptyList(), null, null, null);
-    mulRef.setDefinition(mul);
+    LocatedReferableImpl plusRef = new LocatedReferableImpl(null, AccessModifier.PUBLIC, new Precedence(Precedence.Associativity.LEFT_ASSOC, (byte) 6, true), "+", Precedence.DEFAULT, null, MODULE_REF, GlobalReferable.Kind.FUNCTION);
+    LocatedReferableImpl mulRef = new LocatedReferableImpl(null, AccessModifier.PUBLIC, new Precedence(Precedence.Associativity.RIGHT_ASSOC, (byte) 6, true), "*", Precedence.DEFAULT, null, MODULE_REF, GlobalReferable.Kind.FUNCTION);
     resolveNamesExpr(new ListScope(plusRef, mulRef), "11 + 2 * 3", 1);
   }
 
@@ -668,7 +660,7 @@ public class NameResolverTest extends NameResolverTestCase {
 
   @Test
   public void openElementsTest() {
-    ChildGroup group = resolveNamesModule(
+    ConcreteGroup group = resolveNamesModule(
       """
         \\import Prelude()
         \\module X \\where { \\func f => 0 }
@@ -727,7 +719,7 @@ public class NameResolverTest extends NameResolverTestCase {
   public void importOrder() {
     setModuleScopeProvider(module ->
       module.equals(new ModulePath("Mod"))
-        ? new SingletonScope(new LocatedReferableImpl(AccessModifier.PUBLIC, Precedence.DEFAULT, "foo", new FullModuleReferable(new ModuleLocation((String) null, null, module)), GlobalReferable.Kind.FUNCTION))
+        ? new SingletonScope(new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, "foo", Precedence.DEFAULT, null, new FullModuleReferable(new ModuleLocation((String) null, null, module)), GlobalReferable.Kind.FUNCTION))
         : EmptyScope.INSTANCE);
     /*
     resolveNamesModule(

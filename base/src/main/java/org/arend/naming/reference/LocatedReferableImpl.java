@@ -8,17 +8,23 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class LocatedReferableImpl implements TCDefReferable {
+  private final Object myData;
   private final AccessModifier myAccessModifier;
   private Precedence myPrecedence;
   private final String myName;
+  private final Precedence myAliasPrecedence;
+  private final String myAliasName;
   private final LocatedReferable myParent;
   private Kind myKind;
   private Definition myTypechecked;
 
-  public LocatedReferableImpl(AccessModifier accessModifier, Precedence precedence, String name, @Nullable LocatedReferable parent, Kind kind) {
+  public LocatedReferableImpl(@Nullable Object data, @NotNull AccessModifier accessModifier, @NotNull Precedence precedence, @NotNull String name, @NotNull Precedence aliasPrecedence, @Nullable String aliasName, @Nullable LocatedReferable parent, @NotNull Kind kind) {
+    myData = data;
     myAccessModifier = accessModifier;
     myPrecedence = precedence;
     myName = name;
+    myAliasPrecedence = aliasPrecedence;
+    myAliasName = aliasName;
     myParent = parent;
     myKind = kind;
   }
@@ -41,6 +47,16 @@ public class LocatedReferableImpl implements TCDefReferable {
   @Override
   public String textRepresentation() {
     return myName;
+  }
+
+  @Override
+  public @Nullable String getAliasName() {
+    return myAliasName;
+  }
+
+  @Override
+  public @NotNull Precedence getAliasPrecedence() {
+    return myAliasPrecedence;
   }
 
   @Override
@@ -93,6 +109,6 @@ public class LocatedReferableImpl implements TCDefReferable {
   @Nullable
   @Override
   public Object getData() {
-    return null;
+    return myData;
   }
 }

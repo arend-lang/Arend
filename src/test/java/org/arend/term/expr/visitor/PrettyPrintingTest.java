@@ -14,10 +14,10 @@ import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.PrettyPrinterConfigImpl;
 import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.ext.reference.Precedence;
-import org.arend.naming.reference.ConcreteLocatedReferable;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
+import org.arend.naming.reference.LocatedReferableImpl;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteCompareVisitor;
 import org.arend.term.group.AccessModifier;
@@ -96,9 +96,8 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
     LocalReferable x = ref("X");
     arguments.add(cTele(cvars(X), cUniverseStd(0)));
     arguments.add(cTele(cvars(x), cVar(X)));
-    ConcreteLocatedReferable reference = new ConcreteLocatedReferable(null, AccessModifier.PUBLIC, "f", Precedence.DEFAULT, null, Precedence.DEFAULT, MODULE_REF, GlobalReferable.Kind.FUNCTION);
+    LocatedReferableImpl reference = new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, "f", Precedence.DEFAULT, null, MODULE_REF, GlobalReferable.Kind.FUNCTION);
     Concrete.FunctionDefinition def = new Concrete.FunctionDefinition(FunctionKind.FUNC, reference, arguments, cVar(X), null, body(cVar(x)));
-    reference.setDefinition(def);
     def.accept(new PrettyPrintVisitor(new StringBuilder(), 0), null);
   }
 
@@ -114,26 +113,27 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
 
   @Test
   public void prettyPrintingPatternDataDef() {
-    Concrete.Definition def = (Concrete.Definition) ((ConcreteLocatedReferable) parseDef("\\data LE Nat Nat \\with | zero, m => LE-zero | suc n, suc m => LE-suc (LE n m)").getReferable()).getDefinition();
+    Concrete.Definition def = (Concrete.Definition) parseDef("\\data LE Nat Nat \\with | zero, m => LE-zero | suc n, suc m => LE-suc (LE n m)").definition();
     assertNotNull(def);
     def.accept(new PrettyPrintVisitor(new StringBuilder(), Concrete.Expression.PREC), null);
   }
 
   @Test
   public void prettyPrintingDataWithConditions() {
-    Concrete.Definition def = (Concrete.Definition) ((ConcreteLocatedReferable) parseDef("\\data Z | neg Nat | pos Nat { zero => neg zero }").getReferable()).getDefinition();
+    Concrete.Definition def = (Concrete.Definition) parseDef("\\data Z | neg Nat | pos Nat { zero => neg zero }").definition();
     assertNotNull(def);
     def.accept(new PrettyPrintVisitor(new StringBuilder(), Concrete.Expression.PREC), null);
   }
 
   private void testDefinition(String s) {
-    ConcreteLocatedReferable def = (ConcreteLocatedReferable) resolveNamesDef(s);
+    Concrete.Definition def = (Concrete.Definition) resolveNamesDef(s).definition();
+    assertNotNull(def);
     StringBuilder sb = new StringBuilder();
     PrettyPrintVisitor visitor = new PrettyPrintVisitor(sb, 0);
-    ((Concrete.Definition) def.getDefinition()).accept(visitor, null);
+    def.accept(visitor, null);
     String s2 = sb.toString();
-    ConcreteLocatedReferable def2 = (ConcreteLocatedReferable) resolveNamesDef(s2);
-    assertTrue(ConcreteCompareVisitor.compare(def.getDefinition(), def2.getDefinition()));
+    Concrete.Definition def2 = (Concrete.Definition) resolveNamesDef(s2).definition();
+    assertTrue(ConcreteCompareVisitor.compare(def, def2));
   }
 
   @Test
@@ -345,7 +345,8 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
   }
 
   private void testLamPatterns(String body) {
-    Concrete.FunctionDefinition def = (Concrete.FunctionDefinition) getDefinition(resolveNamesDef("\\func foo => " + body));
+    Concrete.FunctionDefinition def = (Concrete.FunctionDefinition) resolveNamesDef("\\func foo => " + body).definition();
+    assertNotNull(def);
     assertEquals(body, Objects.requireNonNull(def.getBody().getTerm()).toString());
   }
 

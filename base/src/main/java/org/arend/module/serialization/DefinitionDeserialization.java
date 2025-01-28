@@ -179,18 +179,6 @@ public class DefinitionDeserialization implements ArendDeserializer {
       }
     }
 
-    if (classDef.getReferable() instanceof ClassReferableImpl classRef) {
-      for (ClassDefinition superClass : classDef.getSuperClasses()) {
-        Referable superRef = superClass.getReferable().getUnderlyingReferable();
-        if (superRef instanceof ClassReferable) {
-          classRef.getSuperClassReferences().add((ClassReferable) superRef);
-        }
-        if (!classDef.getSuperLevels().isEmpty()) {
-          classRef.addSuperLevels(classDef.getSuperLevels().get(superClass) != null);
-        }
-      }
-    }
-
     if (classProto.getCoercingFieldRef() != -1) {
       classDef.setClassifyingField(myCallTargetProvider.getCallTarget(classProto.getCoercingFieldRef(), ClassField.class));
     }
