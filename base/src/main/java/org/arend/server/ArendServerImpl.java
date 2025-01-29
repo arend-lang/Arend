@@ -191,18 +191,20 @@ public class ArendServerImpl implements ArendServer {
     }
   }
 
-  private void resetReverseDependencies(ModulePath module, Set<ModulePath> visited) {
-    if (!visited.add(module)) return;
+  private boolean resetReverseDependencies(ModulePath module, Set<ModulePath> visited) {
+    if (!visited.add(module)) return false;
     Set<ModuleLocation> reverseDependencies = myReverseDependencies.get(module);
     if (reverseDependencies != null) {
       for (ModuleLocation dependency : reverseDependencies) {
-        GroupData groupData = myGroups.get(dependency);
-        if (groupData != null) {
-          groupData.clearResolved();
+        if (resetReverseDependencies(dependency.getModulePath(), visited)) {
+          GroupData groupData = myGroups.get(dependency);
+          if (groupData != null) {
+            groupData.clearResolved();
+          }
         }
-        resetReverseDependencies(dependency.getModulePath(), visited);
       }
     }
+    return true;
   }
 
   @Override
@@ -227,34 +229,9 @@ public class ArendServerImpl implements ArendServer {
 
         myResolverCache.clearModule(module);
 
-        Set<ModulePath> toRemove;
         if (prevData != null) {
-          toRemove = new HashSet<>();
-          for (ConcreteStatement statement : prevData.getRawGroup().statements()) {
-            if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
-              toRemove.add(new ModulePath(statement.command().getPath()));
-            }
-          }
-        } else {
-          toRemove = Collections.emptySet();
+          clearReverseDependencies(module, prevData.getRawGroup());
         }
-
-        for (ConcreteStatement statement : group.statements()) {
-          if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
-            ModulePath modulePath = new ModulePath(statement.command().getPath());
-            if ((toRemove.isEmpty() || !toRemove.remove(modulePath)) && !modulePath.equals(module.getModulePath())) {
-              myReverseDependencies.computeIfAbsent(modulePath, k -> new HashSet<>()).add(module);
-            }
-          }
-        }
-
-        for (ModulePath modulePath : toRemove) {
-          Set<ModuleLocation> modules = myReverseDependencies.get(modulePath);
-          if (modules != null) {
-            modules.remove(module);
-          }
-        }
-
         resetReverseDependencies(module.getModulePath(), new HashSet<>());
 
         myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
@@ -390,7 +367,27 @@ public class ArendServerImpl implements ArendServer {
               if (dependency != null) toVisit.add(dependency);
             }
           }
+        }
+      }
 
+      synchronized (this) {
+        for (ModuleLocation module : visited) {
+          GroupData groupData = myGroups.get(module);
+          if (groupData != null) {
+            for (ConcreteStatement statement : groupData.getRawGroup().statements()) {
+              if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
+                myReverseDependencies.computeIfAbsent(new ModulePath(statement.command().getPath()), k -> new HashSet<>()).add(module);
+              }
+            }
+          }
+        }
+      }
+
+      Map<ModuleLocation, Long> moduleVersions = new HashMap<>();
+      for (ModuleLocation module : visited) {
+        GroupData groupData = myGroups.get(module);
+        if (groupData != null) {
+          moduleVersions.put(module, groupData.getTimestamp());
           if (groupData.getTypingInfo() == null) {
             GlobalTypingInfo typingInfo = new GlobalTypingInfo(null);
             new TypingInfoVisitor(typingInfo).processGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()));
@@ -400,12 +397,10 @@ public class ArendServerImpl implements ArendServer {
         }
       }
 
-      Map<ModuleLocation, Long> moduleVersions = new HashMap<>();
       Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
       for (ModuleLocation module : modules) {
         GroupData groupData = myGroups.get(module);
         if (groupData != null) {
-          moduleVersions.put(module, groupData.getTimestamp());
           groupData.getRawGroup().traverseGroup(group -> {
             if (group instanceof ConcreteGroup cGroup) {
               Concrete.ResolvableDefinition definition = cGroup.definition();
@@ -439,10 +434,18 @@ public class ArendServerImpl implements ArendServer {
       }
 
       synchronized (this) {
+        for (ModuleLocation module : visited) {
+          GroupData groupData = myGroups.get(module);
+          if (groupData == null || !groupData.isReadOnly() && groupData.getTimestamp() != moduleVersions.get(module)) {
+            myLogger.info(() -> "Version of " + module + " changed; didn't resolve modules " + modules);
+            return;
+          }
+        }
+
         for (ModuleLocation module : modules) {
           indicator.checkCanceled();
           GroupData groupData = myGroups.get(module);
-          if (groupData != null && (groupData.isReadOnly() || groupData.getTimestamp() == moduleVersions.get(module))) {
+          if (groupData != null) {
             CollectingResolverListener.ModuleCacheStructure cache = resolverListener.getCacheStructure(module);
             if (cache != null) {
               for (CollectingResolverListener.ResolvedReference resolvedReference : cache.cache()) {
