@@ -55,4 +55,8 @@ class GroupData {
   public void setTypingInfo(GlobalTypingInfo typingInfo) {
     myTypingInfo = typingInfo;
   }
+
+  public void clearResolved() {
+    myTypingInfo = null;
+  }
 }

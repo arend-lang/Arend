@@ -41,6 +41,7 @@ public class ArendServerImpl implements ArendServer {
   private final ArendServerRequester myRequester;
   private final SimpleModuleScopeProvider myPreludeModuleScopeProvider = new SimpleModuleScopeProvider();
   private final Map<ModuleLocation, GroupData> myGroups = new ConcurrentHashMap<>();
+  private final Map<ModulePath, Set<ModuleLocation>> myReverseDependencies = new ConcurrentHashMap<>();
   private final LibraryService myLibraryService;
   private final ResolverCache myResolverCache;
   private final ErrorService myErrorService = new ErrorService();
@@ -99,10 +100,22 @@ public class ArendServerImpl implements ArendServer {
     return myRequester;
   }
 
+  void clearReverseDependencies(String libraryName) {
+    for (Iterator<Map.Entry<ModuleLocation, GroupData>> iterator = myGroups.entrySet().iterator(); iterator.hasNext(); ) {
+      Map.Entry<ModuleLocation, GroupData> entry = iterator.next();
+      if (entry.getKey().getLibraryName().equals(libraryName)) {
+        clearReverseDependencies(entry.getKey(), entry.getValue().getRawGroup());
+        iterator.remove();
+      }
+    }
+  }
+
   void clear(String libraryName) {
-    myGroups.keySet().removeIf(module -> module.getLibraryName().equals(libraryName));
-    myResolverCache.clearLibraries(Collections.singleton(libraryName));
-    myErrorService.clear();
+    synchronized (this) {
+      clearReverseDependencies(libraryName);
+      myResolverCache.clearLibraries(Collections.singleton(libraryName));
+      myErrorService.clear();
+    }
   }
 
   @Override
@@ -115,7 +128,7 @@ public class ArendServerImpl implements ArendServer {
     synchronized (this) {
       myLibraryService.removeLibrary(name);
       myResolverCache.clearLibraries(Collections.singleton(name));
-      myGroups.keySet().removeIf(module -> module.getLibraryName().equals(name));
+      clearReverseDependencies(name);
       myLogger.info(() -> "Library '" + name + "' is removed");
     }
   }
@@ -126,6 +139,7 @@ public class ArendServerImpl implements ArendServer {
       Set<String> libraries = myLibraryService.unloadLibraries(onlyInternal);
       myResolverCache.clearLibraries(libraries);
       myGroups.keySet().removeIf(module -> libraries.contains(module.getLibraryName()));
+      myReverseDependencies.clear();
       myLogger.info(onlyInternal ? "Internal libraries unloaded" : "Libraries unloaded");
     }
   }
@@ -166,30 +180,87 @@ public class ArendServerImpl implements ArendServer {
     });
   }
 
-  @Override
-  public void updateModule(long modificationStamp, @NotNull ModuleLocation module, @NotNull Supplier<ConcreteGroup> supplier) {
-    myGroups.compute(module, (k, prevData) -> {
-      if (prevData != null) {
-        if (prevData.isReadOnly()) {
-          myLogger.severe("Read-only module '" + module + "' cannot be updated");
-          return prevData;
-        } else if (prevData.getTimestamp() >= modificationStamp) {
-          myLogger.fine(() -> "Module '" + module + "' is not updated; previous timestamp " + prevData.getTimestamp() + " >= new timestamp " + modificationStamp);
-          return prevData;
+  private void clearReverseDependencies(ModuleLocation module, ConcreteGroup group) {
+    for (ConcreteStatement statement : group.statements()) {
+      if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
+        Set<ModuleLocation> modules = myReverseDependencies.get(new ModulePath(statement.command().getPath()));
+        if (modules != null) {
+          modules.remove(module);
         }
       }
+    }
+  }
 
-      ConcreteGroup group = supplier.get();
-      if (group == null) {
-        myLogger.info(() -> "Module '" + module + "' is not updated");
-        return prevData;
+  private void resetReverseDependencies(ModulePath module, Set<ModulePath> visited) {
+    if (!visited.add(module)) return;
+    Set<ModuleLocation> reverseDependencies = myReverseDependencies.get(module);
+    if (reverseDependencies != null) {
+      for (ModuleLocation dependency : reverseDependencies) {
+        GroupData groupData = myGroups.get(dependency);
+        if (groupData != null) {
+          groupData.clearResolved();
+        }
+        resetReverseDependencies(dependency.getModulePath(), visited);
       }
+    }
+  }
 
-      myResolverCache.clearModule(module);
+  @Override
+  public void updateModule(long modificationStamp, @NotNull ModuleLocation moduleLocation, @NotNull Supplier<ConcreteGroup> supplier) {
+    synchronized (this) {
+      myGroups.compute(moduleLocation, (module, prevData) -> {
+        if (prevData != null) {
+          if (prevData.isReadOnly()) {
+            myLogger.severe("Read-only module '" + module + "' cannot be updated");
+            return prevData;
+          } else if (prevData.getTimestamp() >= modificationStamp) {
+            myLogger.fine(() -> "Module '" + module + "' is not updated; previous timestamp " + prevData.getTimestamp() + " >= new timestamp " + modificationStamp);
+            return prevData;
+          }
+        }
 
-      myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
-      return new GroupData(modificationStamp, group);
-    });
+        ConcreteGroup group = supplier.get();
+        if (group == null) {
+          myLogger.info(() -> "Module '" + module + "' is not updated");
+          return prevData;
+        }
+
+        myResolverCache.clearModule(module);
+
+        Set<ModulePath> toRemove;
+        if (prevData != null) {
+          toRemove = new HashSet<>();
+          for (ConcreteStatement statement : prevData.getRawGroup().statements()) {
+            if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
+              toRemove.add(new ModulePath(statement.command().getPath()));
+            }
+          }
+        } else {
+          toRemove = Collections.emptySet();
+        }
+
+        for (ConcreteStatement statement : group.statements()) {
+          if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
+            ModulePath modulePath = new ModulePath(statement.command().getPath());
+            if ((toRemove.isEmpty() || !toRemove.remove(modulePath)) && !modulePath.equals(module.getModulePath())) {
+              myReverseDependencies.computeIfAbsent(modulePath, k -> new HashSet<>()).add(module);
+            }
+          }
+        }
+
+        for (ModulePath modulePath : toRemove) {
+          Set<ModuleLocation> modules = myReverseDependencies.get(modulePath);
+          if (modules != null) {
+            modules.remove(module);
+          }
+        }
+
+        resetReverseDependencies(module.getModulePath(), new HashSet<>());
+
+        myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
+        return new GroupData(modificationStamp, group);
+      });
+    }
   }
 
   private static @NotNull Map<GlobalReferable, Concrete.GeneralDefinition> updateDefinitions(Group group) {
@@ -212,9 +283,13 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public void removeModule(@NotNull ModuleLocation module) {
-    myResolverCache.clearModule(module);
-    if (myGroups.remove(module) != null) {
-      myLogger.info(() -> "Module '" + module + "' is deleted");
+    synchronized (this) {
+      myResolverCache.clearModule(module);
+      GroupData groupData = myGroups.remove(module);
+      if (groupData != null) {
+        clearReverseDependencies(module, groupData.getRawGroup());
+        myLogger.info(() -> "Module '" + module + "' is deleted");
+      }
     }
   }
 
