@@ -14,4 +14,8 @@ public interface ModuleScopeProvider {
   default @NotNull GlobalReferable findModule(@NotNull ModulePath module) {
     return new ModuleReferable(module);
   }
+
+  default @Nullable Scope getModuleScope() {
+    return null;
+  }
 }

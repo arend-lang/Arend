@@ -21,7 +21,7 @@ public class ImportedScope implements Scope {
   public ImportedScope(@NotNull Group group, ModuleScopeProvider provider) {
     myExpectedNamesTree = new Tree();
     myProvider = provider;
-    myElementsScope = null;
+    myElementsScope = provider.getModuleScope();
 
     ModuleLocation location = group.getReferable().getLocation();
     if (location != null) {
@@ -34,12 +34,6 @@ public class ImportedScope implements Scope {
         myExpectedNamesTree.addPath(cmd.getPath());
       }
     }
-  }
-
-  public ImportedScope(ImportedScope importedScope, @NotNull Scope elementsScope) {
-    myExpectedNamesTree = importedScope.myExpectedNamesTree;
-    myProvider = importedScope.myProvider;
-    myElementsScope = elementsScope;
   }
 
   private ImportedScope(Tree tree, ModuleScopeProvider provider, Scope elementsScope) {

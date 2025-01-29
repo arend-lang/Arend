@@ -95,6 +95,10 @@ public class ArendServerImpl implements ArendServer {
     }
   }
 
+  public ArendServerRequester getRequester() {
+    return myRequester;
+  }
+
   void clear(String libraryName) {
     myGroups.keySet().removeIf(module -> module.getLibraryName().equals(libraryName));
     myResolverCache.clearLibraries(Collections.singleton(libraryName));
@@ -267,6 +271,11 @@ public class ArendServerImpl implements ArendServer {
           }
         }
         return new ModuleReferable(modulePath);
+      }
+
+      @Override
+      public @NotNull Scope getModuleScope() {
+        return new LazyScope(() -> new ModuleScope(ArendServerImpl.this, module.getLibraryName(), module.getLocationKind()));
       }
     };
   }
