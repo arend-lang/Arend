@@ -1,7 +1,6 @@
 package org.arend.naming.resolving.visitor;
 
 import org.arend.core.context.Utils;
-import org.arend.error.DummyErrorReporter;
 import org.arend.error.ParsingError;
 import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.error.ErrorReporter;
@@ -37,8 +36,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitionVisitor<Scope, Void>, DocVisitor<Scope, Void> {
-  private boolean myResolveTypeClassReferences; // TODO[server2]: Delete these flags
-  private boolean myReportDefinitionBeforeResolve;
   private final TypingInfo myTypingInfo;
   private final ConcreteProvider myConcreteProvider; // TODO[server2]: Do we really need this here?
   private final ErrorReporter myErrorReporter;
@@ -47,8 +44,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   private final Map<TCDefReferable, Concrete.ExternalParameters> myExternalParameters = new HashMap<>();
 
   public DefinitionResolveNameVisitor(ConcreteProvider concreteProvider, TypingInfo typingInfo, ErrorReporter errorReporter) {
-    myResolveTypeClassReferences = false;
-    myReportDefinitionBeforeResolve = true;
     myConcreteProvider = concreteProvider;
     myTypingInfo = typingInfo;
     myErrorReporter = errorReporter;
@@ -56,94 +51,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   }
 
   public DefinitionResolveNameVisitor(ConcreteProvider concreteProvider, TypingInfo typingInfo, ErrorReporter errorReporter, ResolverListener resolverListener) {
-    myResolveTypeClassReferences = false;
-    myReportDefinitionBeforeResolve = true;
     myConcreteProvider = concreteProvider;
     myTypingInfo = typingInfo;
     myErrorReporter = errorReporter;
     myResolverListener = resolverListener;
-  }
-
-  public DefinitionResolveNameVisitor(ConcreteProvider concreteProvider, boolean resolveTypeClassReferences, TypingInfo typingInfo, ErrorReporter errorReporter, ResolverListener resolverListener) {
-    myResolveTypeClassReferences = resolveTypeClassReferences;
-    myReportDefinitionBeforeResolve = resolveTypeClassReferences;
-    myConcreteProvider = concreteProvider;
-    myTypingInfo = typingInfo;
-    myErrorReporter = errorReporter;
-    myResolverListener = resolverListener;
-  }
-
-  private void resolveTypeClassReference(List<? extends Concrete.Parameter> parameters, Concrete.Expression expr, Scope scope, boolean isType) {
-    if (isType) {
-      Concrete.Expression expr1 = expr;
-      while (expr1 instanceof Concrete.PiExpression) {
-        for (Concrete.TypeParameter parameter : ((Concrete.PiExpression) expr1).getParameters()) {
-          if (parameter.isExplicit()) {
-            return;
-          }
-        }
-        expr1 = ((Concrete.PiExpression) expr1).getCodomain();
-      }
-    }
-
-    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, DummyErrorReporter.INSTANCE, myResolverListener);
-    exprVisitor.updateScope(parameters);
-    if (isType) {
-      while (expr instanceof Concrete.PiExpression) {
-        exprVisitor.updateScope(((Concrete.PiExpression) expr).getParameters());
-        expr = ((Concrete.PiExpression) expr).getCodomain();
-      }
-    } else {
-      while (expr instanceof Concrete.LamExpression) {
-        exprVisitor.updateScope(((Concrete.LamExpression) expr).getParameters());
-        expr = ((Concrete.LamExpression) expr).getBody();
-      }
-    }
-
-    while (true) {
-      if (expr instanceof Concrete.AppExpression) {
-        expr = ((Concrete.AppExpression) expr).getFunction();
-      } else if (expr instanceof Concrete.ClassExtExpression) {
-        expr = ((Concrete.ClassExtExpression) expr).getBaseClassExpression();
-      } else {
-        break;
-      }
-    }
-
-    if (expr instanceof Concrete.BinOpSequenceExpression binOpExpr) {
-      for (Concrete.BinOpSequenceElem<Concrete.Expression> elem : binOpExpr.getSequence()) {
-        if (elem.getComponent() instanceof Concrete.ReferenceExpression) {
-          if (!tryResolve((Concrete.ReferenceExpression) elem.getComponent(), exprVisitor)) {
-            return;
-          }
-        }
-      }
-    }
-
-    if (expr instanceof Concrete.ReferenceExpression) {
-      tryResolve((Concrete.ReferenceExpression) expr, exprVisitor);
-    }
-  }
-
-  private boolean tryResolve(Concrete.ReferenceExpression expr, ExpressionResolveNameVisitor exprVisitor) {
-    Referable ref = expr.getReferent();
-    while (ref instanceof RedirectingReferable) {
-      ref = ((RedirectingReferable) ref).getOriginalReferable();
-    }
-
-    if (ref instanceof UnresolvedReference) {
-      List<Referable> resolvedRefs = new ArrayList<>();
-      Referable newRef = ((UnresolvedReference) ref).tryResolve(exprVisitor.getScope(), resolvedRefs, myResolverListener);
-      if (newRef == null) {
-        return false;
-      }
-      expr.setReferent(newRef);
-      if (myResolverListener != null) {
-        myResolverListener.referenceResolved(null, ref, expr, resolvedRefs);
-      }
-    }
-
-    return true;
   }
 
   @Override
@@ -152,19 +63,8 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       return null;
     }
 
-    if (myResolverListener != null && myReportDefinitionBeforeResolve) {
-      myResolverListener.beforeDefinitionResolved(def);
-    }
-
     scope = new PrivateFilteredScope(scope);
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
-    if (myResolveTypeClassReferences) {
-      if (def.getStage() == Concrete.Stage.NOT_RESOLVED && def.body != null) {
-        resolveTypeClassReference(def.getParameters(), def.body, scope, false);
-      }
-      def.setTypeClassReferencesResolved();
-      return null;
-    }
 
     checkNameAndPrecedence(def, def.getData());
 
@@ -285,9 +185,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     List<? extends Concrete.ClassElement> elements = Collections.emptyList();
     if (enclosingDef instanceof Concrete.BaseFunctionDefinition enclosingFunction) {
       if (enclosingFunction.getResultType() != null) {
-        if (enclosingFunction.getStage().ordinal() < Concrete.Stage.RESOLVED.ordinal()) {
-          resolveTypeClassReference(enclosingFunction.getParameters(), enclosingFunction.getResultType(), scope, true);
-        }
         dynamicScopeProvider = myTypingInfo.getBodyDynamicScopeProvider(enclosingFunction.getResultType());
         elements = enclosingFunction.getBody().getCoClauseElements();
       }
@@ -314,32 +211,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   }
 
   private ExpressionResolveNameVisitor resolveFunctionHeader(Concrete.BaseFunctionDefinition def, Scope scope) {
-    if (def.getStage().ordinal() >= Concrete.Stage.HEADER_RESOLVED.ordinal()) {
-      return null;
-    }
-
-    if (myResolverListener != null && myReportDefinitionBeforeResolve) {
-      myResolverListener.beforeDefinitionResolved(def);
-    }
-
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
-    if (myResolveTypeClassReferences) {
-      if (def.getStage() == Concrete.Stage.NOT_RESOLVED) {
-        if (def.getBody() instanceof Concrete.TermFunctionBody) {
-          resolveTypeClassReference(def.getParameters(), ((Concrete.TermFunctionBody) def.getBody()).getTerm(), scope, false);
-        }
-        if (def.getResultType() != null && !(def instanceof Concrete.CoClauseFunctionDefinition)) {
-          resolveTypeClassReference(def.getParameters(), def.getResultType(), scope, true);
-        }
-      }
-
-      if (def instanceof Concrete.CoClauseFunctionDefinition function) {
-        resolveCoclauseImplementedField(function, scope);
-      }
-
-      def.setTypeClassReferencesResolved();
-      return null;
-    }
 
     if (def instanceof Concrete.FunctionDefinition funDef && (funDef.getKind().isUse() || funDef.getKind().isCoclause())) {
       if (def.getUseParent() == null) {
@@ -384,8 +256,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     scope = new PrivateFilteredScope(scope);
     ExpressionResolveNameVisitor exprVisitor = resolveFunctionHeader(def, scope);
-    if (myResolveTypeClassReferences) return null;
-    if (exprVisitor == null) exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myLocalErrorReporter, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
     List<TypedReferable> context = exprVisitor.getContext();
     checkNameAndPrecedence(def);
 
@@ -538,12 +408,8 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   }
 
   private ExpressionResolveNameVisitor resolveDataHeader(Concrete.DataDefinition def, Scope scope) {
-     if (myResolveTypeClassReferences || def.getStage().ordinal() >= Concrete.Stage.HEADER_RESOLVED.ordinal()) {
+     if (def.getStage().ordinal() >= Concrete.Stage.HEADER_RESOLVED.ordinal()) {
       return null;
-    }
-
-    if (myResolverListener != null && myReportDefinitionBeforeResolve) {
-      myResolverListener.beforeDefinitionResolved(def);
     }
 
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
@@ -555,7 +421,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
   @Override
   public Void visitData(Concrete.DataDefinition def, Scope scope) {
-    if (myResolveTypeClassReferences || def.getStage().ordinal() >= Concrete.Stage.RESOLVED.ordinal()) {
+    if (def.getStage().ordinal() >= Concrete.Stage.RESOLVED.ordinal()) {
       return null;
     }
 
@@ -665,23 +531,8 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       return null;
     }
 
-    if (myResolverListener != null && myReportDefinitionBeforeResolve) {
-      myResolverListener.beforeDefinitionResolved(def);
-    }
-
     scope = new PrivateFilteredScope(scope);
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
-    if (myResolveTypeClassReferences) {
-      if (def.getStage() == Concrete.Stage.NOT_RESOLVED) {
-        for (Concrete.ClassElement element : def.getElements()) {
-          if (element instanceof Concrete.ClassField field) {
-            resolveTypeClassReference(field.getParameters(), field.getResultType(), scope, true);
-          }
-        }
-      }
-      def.setTypeClassReferencesResolved();
-      return null;
-    }
 
     checkNameAndPrecedence(def);
 
@@ -761,23 +612,13 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     return null;
   }
 
-  // TODO[server2]: Delete this
-  public void resolveGroupWithTypes(Group group, Scope scope) {
-    myResolveTypeClassReferences = true;
-    myReportDefinitionBeforeResolve = true;
-    resolveGroup(group, scope);
-    myReportDefinitionBeforeResolve = false;
-    myResolveTypeClassReferences = false;
-    resolveGroup(group, scope);
-  }
-
   private static Scope makeScope(Group group, Scope parentScope, boolean isDynamicScope) {
     return parentScope == null ? null : LexicalScope.insideOf(group, parentScope, isDynamicScope);
   }
 
   private boolean addExternalParameters(Concrete.GeneralDefinition def) {
     List<? extends Concrete.Parameter> defParams = def == null || !(def.getData() instanceof TCDefReferable) ? Collections.emptyList() : def.getParameters();
-    if (myResolveTypeClassReferences || defParams.isEmpty()) {
+    if (defParams.isEmpty()) {
       return false;
     }
 
@@ -840,51 +681,49 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     boolean isTopLevel = !(group instanceof ChildGroup) || ((ChildGroup) group).getParentGroup() == null;
     Scope namespaceScope = CachingScope.make(new LexicalScope(scope, group, null, true, false));
-    if (!myResolveTypeClassReferences) {
-      if (myResolverListener != null && myResolverListener != ResolverListener.EMPTY) {
-        group.getDescription().accept(this, docScope);
+    if (myResolverListener != null && myResolverListener != ResolverListener.EMPTY) {
+      group.getDescription().accept(this, docScope);
+    }
+
+    for (Statement statement : statements) {
+      NamespaceCommand namespaceCommand = statement.getNamespaceCommand();
+      if (namespaceCommand == null) {
+        continue;
+      }
+      List<String> path = namespaceCommand.getPath();
+      NamespaceCommand.Kind kind = namespaceCommand.getKind();
+      if (path.isEmpty() || kind == NamespaceCommand.Kind.IMPORT && !isTopLevel) {
+        continue;
       }
 
-      for (Statement statement : statements) {
-        NamespaceCommand namespaceCommand = statement.getNamespaceCommand();
-        if (namespaceCommand == null) {
-          continue;
-        }
-        List<String> path = namespaceCommand.getPath();
-        NamespaceCommand.Kind kind = namespaceCommand.getKind();
-        if (path.isEmpty() || kind == NamespaceCommand.Kind.IMPORT && !isTopLevel) {
-          continue;
-        }
+      LongUnresolvedReference reference = new LongUnresolvedReference(namespaceCommand, namespaceCommand.getReferenceList(), path);
+      Scope importedScope = kind == NamespaceCommand.Kind.IMPORT ? namespaceScope.getImportedSubscope() : namespaceScope;
+      List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
+      reference.resolve(importedScope, resolvedRefs, myResolverListener);
+      if (myResolverListener != null) {
+        myResolverListener.namespaceResolved(namespaceCommand, resolvedRefs);
+      }
+      Scope curScope = reference.resolveNamespace(importedScope);
+      if (curScope == null) {
+        myErrorReporter.report(reference.getErrorReference().getError());
+      }
 
-        LongUnresolvedReference reference = new LongUnresolvedReference(namespaceCommand, namespaceCommand.getReferenceList(), path);
-        Scope importedScope = kind == NamespaceCommand.Kind.IMPORT ? namespaceScope.getImportedSubscope() : namespaceScope;
-        List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
-        reference.resolve(importedScope, resolvedRefs, myResolverListener);
-        if (myResolverListener != null) {
-          myResolverListener.namespaceResolved(namespaceCommand, resolvedRefs);
-        }
-        Scope curScope = reference.resolveNamespace(importedScope);
-        if (curScope == null) {
-          myErrorReporter.report(reference.getErrorReference().getError());
-        }
-
-        if (curScope != null) {
-          for (NameRenaming renaming : namespaceCommand.getOpenedReferences()) {
-            Referable oldRef = renaming.getOldReference();
-            Referable ref = ExpressionResolveNameVisitor.resolve(oldRef, new PrivateFilteredScope(curScope, true), null);
-            if (myResolverListener != null) {
-              myResolverListener.renamingResolved(renaming, oldRef, ref);
-            }
-            if (ref instanceof ErrorReference) {
-              myErrorReporter.report(((ErrorReference) ref).getError());
-            }
+      if (curScope != null) {
+        for (NameRenaming renaming : namespaceCommand.getOpenedReferences()) {
+          Referable oldRef = renaming.getOldReference();
+          Referable ref = ExpressionResolveNameVisitor.resolve(oldRef, new PrivateFilteredScope(curScope, true), null);
+          if (myResolverListener != null) {
+            myResolverListener.renamingResolved(renaming, oldRef, ref);
           }
+          if (ref instanceof ErrorReference) {
+            myErrorReporter.report(((ErrorReference) ref).getError());
+          }
+        }
 
-          for (NameHiding nameHiding : namespaceCommand.getHiddenReferences()) {
-            Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.getHiddenReference(), new PrivateFilteredScope(curScope, true), nameHiding.getScopeContext());
-            if (ref instanceof ErrorReference) {
-              myErrorReporter.report(((ErrorReference) ref).getError());
-            }
+        for (NameHiding nameHiding : namespaceCommand.getHiddenReferences()) {
+          Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.getHiddenReference(), new PrivateFilteredScope(curScope, true), nameHiding.getScopeContext());
+          if (ref instanceof ErrorReference) {
+            myErrorReporter.report(((ErrorReference) ref).getError());
           }
         }
       }
@@ -909,10 +748,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     if (added) {
       assert def != null;
       myExternalParameters.remove((TCDefReferable) def.getData());
-    }
-
-    if (myResolveTypeClassReferences) {
-      return;
     }
 
     myLocalErrorReporter = myErrorReporter;

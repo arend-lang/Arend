@@ -1783,6 +1783,7 @@ public final class Concrete {
     }
   }
 
+  // TODO[server2]: Do we still need Stage and Status?
   public enum Stage { NOT_RESOLVED, TYPE_CLASS_REFERENCES_RESOLVED, HEADER_RESOLVED, RESOLVED, DESUGARIZED, TYPECHECKED }
 
   public enum Status {
@@ -1811,7 +1812,7 @@ public final class Concrete {
   }
 
   public static abstract class ResolvableDefinition implements GeneralDefinition {
-    Stage stage = Stage.TYPE_CLASS_REFERENCES_RESOLVED;
+    Stage stage = Stage.NOT_RESOLVED;
     private Status myStatus = Status.NO_ERRORS;
     protected LevelParameters pLevelParameters;
     protected LevelParameters hLevelParameters;
@@ -1884,12 +1885,6 @@ public final class Concrete {
 
     public void setTypechecked() {
       stage = Stage.TYPECHECKED;
-    }
-
-    public void setTypeClassReferencesResolved() {
-      if (stage == Stage.NOT_RESOLVED) {
-        stage = Stage.TYPE_CLASS_REFERENCES_RESOLVED;
-      }
     }
 
     public abstract <P, R> R accept(ConcreteResolvableDefinitionVisitor<? super P, ? extends R> visitor, P params);

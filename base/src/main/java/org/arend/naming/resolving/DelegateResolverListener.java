@@ -72,11 +72,6 @@ public class DelegateResolverListener implements ResolverListener {
   }
 
   @Override
-  public void beforeDefinitionResolved(Concrete.ResolvableDefinition definition) {
-    myResolverListener.beforeDefinitionResolved(definition);
-  }
-
-  @Override
   public void definitionResolved(Concrete.ResolvableDefinition definition) {
     myResolverListener.definitionResolved(definition);
   }

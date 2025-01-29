@@ -159,7 +159,7 @@ public abstract class Repl {
     var scope = ScopeFactory.forGroup(group, moduleScopeProvider);
     myReplScope.addScope(scope);
     myReplScope.setCurrentLineScope(null);
-    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, myErrorReporter).resolveGroupWithTypes(group, myScope);
+    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, myErrorReporter).resolveGroup(group, myScope);
     if (checkErrors()) {
       myMergedScopes.remove(scope);
     } else {

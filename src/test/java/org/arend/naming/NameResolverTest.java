@@ -4,9 +4,10 @@ import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.Precedence;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
+import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.EmptyScope;
+import org.arend.naming.scope.ScopeFactory;
 import org.arend.naming.scope.SingletonScope;
-import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.naming.scope.local.ListScope;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.AccessModifier;
@@ -16,7 +17,6 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import static org.arend.Matchers.*;
@@ -668,7 +668,7 @@ public class NameResolverTest extends NameResolverTestCase {
         \\func g => f
         """);
     List<String> names = new ArrayList<>();
-    for (Referable element : group.getGroupScope().getElements()) {
+    for (Referable element : CachingScope.make(ScopeFactory.forGroup(group, moduleScopeProvider)).getElements()) {
       names.add(element.textRepresentation());
     }
     assertEquals(Arrays.asList("X", "g", "f", "Prelude"), names);

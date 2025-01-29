@@ -15,7 +15,6 @@ import org.arend.naming.scope.ScopeFactory;
 import org.arend.source.Source;
 import org.arend.source.SourceLoader;
 import org.arend.term.group.ConcreteGroup;
-import org.arend.term.group.FileGroup;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;

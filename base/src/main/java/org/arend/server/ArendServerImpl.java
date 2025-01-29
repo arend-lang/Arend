@@ -142,13 +142,6 @@ public class ArendServerImpl implements ArendServer {
       if (myPreludeModuleScopeProvider.isRegistered(module.getModulePath())) {
         myLogger.warning("Read-only module '" + module + "' is already added");
       } else {
-        Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
-        group.traverseGroup(subgroup -> {
-          if (subgroup instanceof ConcreteGroup cGroup && cGroup.definition() != null) {
-            defMap.put(cGroup.referable(), cGroup.definition());
-          }
-        });
-        new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), true, TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY).resolveGroup(group, getGroupScope(module, group));
         myPreludeModuleScopeProvider.addModule(module.getModulePath(), CachingScope.make(LexicalScope.opened(group)));
       }
     }
@@ -364,7 +357,7 @@ public class ArendServerImpl implements ArendServer {
             errorReporterMap.put(module, listErrorReporter);
             currentErrorReporter = new MergingErrorReporter(errorReporter, listErrorReporter);
           }
-          new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), myTypingInfo, currentErrorReporter, resolverListener).resolveGroupWithTypes(groupData.getRawGroup(), getGroupScope(module, groupData.getRawGroup()));
+          new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getGroupScope(module, groupData.getRawGroup()));
         }
         listener.moduleResolved(module);
         myLogger.info(() -> "Module '" + module + "' is resolved");
@@ -482,7 +475,7 @@ public class ArendServerImpl implements ArendServer {
             }
           }
         }
-      }).resolveGroupWithTypes(group, getGroupScope(module, group));
+      }).resolveGroup(group, getGroupScope(module, group));
     } catch (CompletionException ignored) {}
 
     myLogger.fine(() -> found[0] ? "Finish completion for '" + reference.getReferenceText() + "' with " + result.size() + " results" : "Cannot find completion variants for '" + reference.getReferenceText() + "'");
