@@ -1,4 +1,4 @@
-package org.arend.server;
+package org.arend.server.impl;
 
 import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;

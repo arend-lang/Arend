@@ -1,8 +1,9 @@
-package org.arend.server;
+package org.arend.server.impl;
 
 import org.arend.ext.ArendExtension;
 import org.arend.ext.ui.ArendUI;
 import org.arend.library.classLoader.ClassLoaderDelegate;
+import org.arend.server.ArendLibrary;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

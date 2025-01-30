@@ -1,4 +1,4 @@
-package org.arend.server;
+package org.arend.server.impl;
 
 import org.arend.ext.ArendExtension;
 import org.arend.ext.DefaultArendExtension;
@@ -12,6 +12,7 @@ import org.arend.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
 import org.arend.prelude.ConcretePrelude;
 import org.arend.prelude.Prelude;
+import org.arend.server.ArendLibrary;
 import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
 

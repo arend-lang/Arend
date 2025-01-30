@@ -6,11 +6,9 @@ import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.reference.UnresolvedReference;
-import org.arend.naming.resolving.ResolverListener;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.group.ConcreteGroup;
-import org.arend.typechecking.computation.CancellationIndicator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -69,9 +67,9 @@ public interface ArendServer {
   void removeModule(@NotNull ModuleLocation module);
 
   /**
-   * Resolves the content of {@param modules} and updates the state of the server.
+   * @return a checker that can be used to resolve and typecheck specified modules.
    */
-  void resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener);
+  @NotNull ArendChecker getCheckerFor(@NotNull List<? extends @NotNull ModuleLocation> modules);
 
   /**
    * @return the set of registered modules.

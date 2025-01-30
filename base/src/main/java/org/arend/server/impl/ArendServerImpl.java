@@ -1,4 +1,4 @@
-package org.arend.server;
+package org.arend.server.impl;
 
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
@@ -16,6 +16,7 @@ import org.arend.naming.resolving.typing.*;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.scope.*;
 import org.arend.prelude.Prelude;
+import org.arend.server.*;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
@@ -65,17 +66,6 @@ public class ArendServerImpl implements ArendServer {
     public @Nullable AbstractBody getRefType(Referable referable) {
       TypingInfo info = getTypingInfo(referable);
       return info == null ? null : info.getRefType(referable);
-    }
-  };
-
-  private final ConcreteProvider myConcreteProvider = new ConcreteProvider() {
-    @Override
-    public @Nullable Concrete.GeneralDefinition getConcrete(GlobalReferable referable) {
-      if (!(referable instanceof LocatedReferable located)) return null;
-      ModuleLocation module = located.getLocation();
-      if (module == null) return null;
-      GroupData groupData = myGroups.get(module);
-      return groupData == null ? null : groupData.getConcreteDefinition(referable);
     }
   };
 
@@ -346,67 +336,73 @@ public class ArendServerImpl implements ArendServer {
     return groupData == null ? null : groupData.getTypingInfo();
   }
 
-  @Override
-  public void resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener) {
-    if (modules.isEmpty()) return;
-    try {
-      myLogger.info(() -> "Begin resolving modules " + modules);
+  Map<ModuleLocation, GroupData> getDependencies(List<? extends ModuleLocation> modules, CancellationIndicator indicator) {
+    myLogger.info(() -> "Begin calculating dependencies for " + modules);
 
-      Set<ModuleLocation> visited = new HashSet<>();
+    try {
+      Map<ModuleLocation, GroupData> groups = new HashMap<>();
       Deque<ModuleLocation> toVisit = new ArrayDeque<>();
       for (ModuleLocation module : modules) {
         indicator.checkCanceled();
         myRequester.requestModuleUpdate(this, module);
         toVisit.add(module);
       }
-      while (!toVisit.isEmpty()) {
-        indicator.checkCanceled();
-        ModuleLocation module = toVisit.pop();
-        if (!visited.add(module)) continue;
-        GroupData groupData = myGroups.get(module);
-        if (groupData != null) {
-          for (ConcreteStatement statement : groupData.getRawGroup().statements()) {
-            indicator.checkCanceled();
-            if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
-              ModuleLocation dependency = findDependency(new ModulePath(statement.command().getPath()), module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
-              if (dependency != null) toVisit.add(dependency);
-            }
-          }
-        }
-      }
 
       synchronized (this) {
-        for (ModuleLocation module : visited) {
+        while (!toVisit.isEmpty()) {
+          indicator.checkCanceled();
+          ModuleLocation module = toVisit.pop();
           GroupData groupData = myGroups.get(module);
           if (groupData != null) {
+            if (groups.putIfAbsent(module, groupData) != null) continue;
             for (ConcreteStatement statement : groupData.getRawGroup().statements()) {
+              indicator.checkCanceled();
               if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
-                myReverseDependencies.computeIfAbsent(new ModulePath(statement.command().getPath()), k -> new HashSet<>()).add(module);
+                ModuleLocation dependency = findDependency(new ModulePath(statement.command().getPath()), module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+                if (dependency != null) toVisit.add(dependency);
               }
             }
           }
         }
-      }
 
-      Map<ModuleLocation, Long> moduleVersions = new HashMap<>();
-      for (ModuleLocation module : visited) {
-        GroupData groupData = myGroups.get(module);
-        if (groupData != null) {
-          moduleVersions.put(module, groupData.getTimestamp());
-          if (groupData.getTypingInfo() == null) {
+        for (Map.Entry<ModuleLocation, GroupData> entry : groups.entrySet()) {
+          for (ConcreteStatement statement : entry.getValue().getRawGroup().statements()) {
+            if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
+              myReverseDependencies.computeIfAbsent(new ModulePath(statement.command().getPath()), k -> new HashSet<>()).add(entry.getKey());
+            }
+          }
+        }
+
+        for (Map.Entry<ModuleLocation, GroupData> entry : groups.entrySet()) {
+          if (entry.getValue().getTypingInfo() == null) {
             GlobalTypingInfo typingInfo = new GlobalTypingInfo(null);
-            new TypingInfoVisitor(typingInfo).processGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()));
-            groupData.setTypingInfo(typingInfo);
-            myLogger.info(() -> "Header of module '" + module + "' is resolved");
+            new TypingInfoVisitor(typingInfo).processGroup(entry.getValue().getRawGroup(), getParentGroupScope(entry.getKey(), entry.getValue().getRawGroup()));
+            entry.getValue().setTypingInfo(typingInfo);
+            myLogger.info(() -> "Header of module '" + entry.getKey() + "' is resolved");
           }
         }
       }
 
-      Map<ModuleLocation, ConcreteProvider> concreteProviders = new HashMap<>();
-      for (ModuleLocation module : modules) {
-        GroupData groupData = myGroups.get(module);
+      myLogger.info(() -> "End calculating dependencies for " + modules);
+      return groups;
+    } catch (ComputationInterruptedException e) {
+      myLogger.info(() -> "Calculating dependencies of " + modules + " is interrupted");
+      return null;
+    }
+  }
+
+  ConcreteProvider resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener, @Nullable Map<ModuleLocation, GroupData> dependencies, boolean resolveDependencies, boolean resolveResolved) {
+    if (modules.isEmpty()) return ConcreteProvider.EMPTY;
+    if (dependencies == null || dependencies.isEmpty()) return null;
+    try {
+      myLogger.info(() -> "Begin resolving modules " + modules);
+
+      Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
+      ConcreteProvider concreteProvider = new SimpleConcreteProvider(defMap);
+      Collection<? extends ModuleLocation> currentModules = resolveDependencies ? dependencies.keySet() : modules;
+      for (ModuleLocation module : currentModules) {
+        GroupData groupData = dependencies.get(module);
         if (groupData != null) {
-          Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
           groupData.getRawGroup().traverseGroup(group -> {
             if (group instanceof ConcreteGroup cGroup) {
               Concrete.ResolvableDefinition definition = cGroup.definition();
@@ -415,17 +411,16 @@ public class ArendServerImpl implements ArendServer {
               }
             }
           });
-          concreteProviders.put(module, new SimpleConcreteProvider(defMap));
         }
       }
 
       CollectingResolverListener resolverListener = new CollectingResolverListener(listener, myCacheReferences);
       Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
       Map<ModuleLocation, List<GroupData.DefinitionData>> resolverResult = new HashMap<>();
-      for (ModuleLocation module : modules) {
+      for (ModuleLocation module : currentModules) {
         indicator.checkCanceled();
-        GroupData groupData = myGroups.get(module);
-        if (groupData != null) {
+        GroupData groupData = dependencies.get(module);
+        if (groupData != null && (resolveResolved || !groupData.isResolved())) {
           resolverListener.moduleLocation = module;
           ErrorReporter currentErrorReporter;
           if (groupData.isReadOnly()) {
@@ -435,11 +430,11 @@ public class ArendServerImpl implements ArendServer {
             errorReporterMap.put(module, listErrorReporter);
             currentErrorReporter = new MergingErrorReporter(errorReporter, listErrorReporter);
           }
-          new DefinitionResolveNameVisitor(concreteProviders.get(module), myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()));
+          new DefinitionResolveNameVisitor(concreteProvider, myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()));
 
           List<GroupData.DefinitionData> definitionData = new ArrayList<>();
           groupData.getRawGroup().traverseGroup(group -> {
-            Concrete.GeneralDefinition def = concreteProviders.get(module).getConcrete(group.getReferable());
+            Concrete.GeneralDefinition def = concreteProvider.getConcrete(group.getReferable());
             if (def instanceof Concrete.Definition definition) {
               definitionData.add(new GroupData.DefinitionData(definition, null));
             }
@@ -451,17 +446,17 @@ public class ArendServerImpl implements ArendServer {
       }
 
       synchronized (this) {
-        for (ModuleLocation module : visited) {
-          GroupData groupData = myGroups.get(module);
-          if (groupData == null || !groupData.isReadOnly() && groupData.getTimestamp() != moduleVersions.get(module)) {
-            myLogger.info(() -> "Version of " + module + " changed; didn't resolve modules " + modules);
-            return;
+        for (Map.Entry<ModuleLocation, GroupData> entry : dependencies.entrySet()) {
+          GroupData groupData = myGroups.get(entry.getKey());
+          if (groupData == null || !groupData.isReadOnly() && groupData.getTimestamp() != entry.getValue().getTimestamp()) {
+            myLogger.info(() -> "Version of " + entry.getKey() + " changed; didn't resolve modules " + modules);
+            return null;
           }
         }
 
-        for (ModuleLocation module : modules) {
+        for (ModuleLocation module : currentModules) {
           indicator.checkCanceled();
-          GroupData groupData = myGroups.get(module);
+          GroupData groupData = dependencies.get(module);
           if (groupData != null) {
             CollectingResolverListener.ModuleCacheStructure cache = resolverListener.getCacheStructure(module);
             if (cache != null) {
@@ -483,15 +478,25 @@ public class ArendServerImpl implements ArendServer {
               myErrorService.setErrors(module, reporter.getErrorList());
             }
 
-            groupData.setResolvedDefinitions(concreteProviders.get(module), resolverResult.get(module));
+            List<GroupData.DefinitionData> definitionData = resolverResult.get(module);
+            if (definitionData != null) {
+              groupData.setResolvedDefinitions(definitionData);
+            }
           }
         }
       }
 
       myLogger.info(() -> "End resolving modules " + modules);
+      return concreteProvider;
     } catch (ComputationInterruptedException e) {
       myLogger.info(() -> "Resolving of modules " + modules + " is interrupted");
+      return null;
     }
+  }
+
+  @Override
+  public @NotNull ArendChecker getCheckerFor(@NotNull List<? extends @NotNull ModuleLocation> modules) {
+    return new ArendCheckerImpl(this, modules);
   }
 
   @Override

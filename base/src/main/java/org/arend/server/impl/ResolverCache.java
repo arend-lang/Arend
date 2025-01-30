@@ -1,4 +1,4 @@
-package org.arend.server;
+package org.arend.server.impl;
 
 import org.arend.error.DummyErrorReporter;
 import org.arend.module.ModuleLocation;
@@ -158,7 +158,7 @@ public class ResolverCache {
       return null;
     }
 
-    myServer.resolveModules(Collections.singletonList(module), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
+    myServer.resolveModules(Collections.singletonList(module), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY, myServer.getDependencies(Collections.singletonList(module), UnstoppableCancellationIndicator.INSTANCE), false, false);
     result = myResolverCache.get(reference);
 
     if (result == null) {

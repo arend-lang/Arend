@@ -5,7 +5,7 @@ import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.FullModuleReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.server.ArendLibrary;
-import org.arend.server.ArendServerImpl;
+import org.arend.server.impl.ArendServerImpl;
 import org.arend.server.ArendServerRequester;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
