@@ -26,7 +26,7 @@ public class ResolverCache {
     }
   }
 
-  private final ArendServer myServer;
+  private final ArendServerImpl myServer;
   private final Logger myLogger = Logger.getLogger(ResolverCache.class.getName());
   private final Map<AbstractReference, AbstractReferable> myResolverCache = Collections.synchronizedMap(new WeakHashMap<>());
   private final Map<AbstractReferable, TCDefReferable> myReferableCache = Collections.synchronizedMap(new WeakHashMap<>());
@@ -151,7 +151,13 @@ public class ResolverCache {
       return null;
     }
 
-    // TODO[server2]: Do not resolve module if it is already resolved.
+    GroupData groupData = myServer.getGroupData(module);
+    if (groupData != null && groupData.isResolved()) {
+      myResolverCache.putIfAbsent(reference, TCDefReferable.NULL_REFERABLE);
+      myLogger.warning("Reference " + reference.getReferenceText() + " was not resolved");
+      return null;
+    }
+
     myServer.resolveModules(Collections.singletonList(module), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
     result = myResolverCache.get(reference);
 

@@ -26,6 +26,7 @@ import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.group.Group;
 import org.arend.typechecking.computation.CancellationIndicator;
+import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
 import org.arend.util.ComputationInterruptedException;
 import org.jetbrains.annotations.NotNull;
@@ -64,6 +65,17 @@ public class ArendServerImpl implements ArendServer {
     public @Nullable AbstractBody getRefType(Referable referable) {
       TypingInfo info = getTypingInfo(referable);
       return info == null ? null : info.getRefType(referable);
+    }
+  };
+
+  private final ConcreteProvider myConcreteProvider = new ConcreteProvider() {
+    @Override
+    public @Nullable Concrete.GeneralDefinition getConcrete(GlobalReferable referable) {
+      if (!(referable instanceof LocatedReferable located)) return null;
+      ModuleLocation module = located.getLocation();
+      if (module == null) return null;
+      GroupData groupData = myGroups.get(module);
+      return groupData == null ? null : groupData.getConcreteDefinition(referable);
     }
   };
 
@@ -246,11 +258,8 @@ public class ArendServerImpl implements ArendServer {
       if (subgroup instanceof ConcreteGroup cGroup) {
         Concrete.ResolvableDefinition definition = cGroup.definition();
         if (definition instanceof DefinableMetaDefinition metaDef) {
-          metaDef = new ReplaceDataVisitor(true).visitMeta(metaDef, null);
           defMap.put(metaDef.getData(), metaDef);
-          metaDef.getData().setDefinition(metaDef);
         } else if (definition != null) {
-          definition = definition.accept(new ReplaceDataVisitor(true), null);
           defMap.put(cGroup.referable(), definition);
         }
       }
@@ -329,10 +338,6 @@ public class ArendServerImpl implements ArendServer {
     return ScopeFactory.parentScopeForGroup(group, getModuleScopeProviderFor(module), true);
   }
 
-  private Scope getGroupScope(ModuleLocation module, Group group) {
-    return CachingScope.make(ScopeFactory.forGroup(group, getModuleScopeProviderFor(module)));
-  }
-
   private TypingInfo getTypingInfo(Referable referable) {
     if (!(referable instanceof LocatedReferable located)) return null;
     ModuleLocation module = located.getLocation();
@@ -397,10 +402,11 @@ public class ArendServerImpl implements ArendServer {
         }
       }
 
-      Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
+      Map<ModuleLocation, ConcreteProvider> concreteProviders = new HashMap<>();
       for (ModuleLocation module : modules) {
         GroupData groupData = myGroups.get(module);
         if (groupData != null) {
+          Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
           groupData.getRawGroup().traverseGroup(group -> {
             if (group instanceof ConcreteGroup cGroup) {
               Concrete.ResolvableDefinition definition = cGroup.definition();
@@ -409,11 +415,13 @@ public class ArendServerImpl implements ArendServer {
               }
             }
           });
+          concreteProviders.put(module, new SimpleConcreteProvider(defMap));
         }
       }
 
       CollectingResolverListener resolverListener = new CollectingResolverListener(listener, myCacheReferences);
       Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
+      Map<ModuleLocation, List<GroupData.DefinitionData>> resolverResult = new HashMap<>();
       for (ModuleLocation module : modules) {
         indicator.checkCanceled();
         GroupData groupData = myGroups.get(module);
@@ -427,7 +435,16 @@ public class ArendServerImpl implements ArendServer {
             errorReporterMap.put(module, listErrorReporter);
             currentErrorReporter = new MergingErrorReporter(errorReporter, listErrorReporter);
           }
-          new DefinitionResolveNameVisitor(new SimpleConcreteProvider(defMap), myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getGroupScope(module, groupData.getRawGroup()));
+          new DefinitionResolveNameVisitor(concreteProviders.get(module), myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()));
+
+          List<GroupData.DefinitionData> definitionData = new ArrayList<>();
+          groupData.getRawGroup().traverseGroup(group -> {
+            Concrete.GeneralDefinition def = concreteProviders.get(module).getConcrete(group.getReferable());
+            if (def instanceof Concrete.Definition definition) {
+              definitionData.add(new GroupData.DefinitionData(definition, null));
+            }
+          });
+          resolverResult.put(module, definitionData);
         }
         listener.moduleResolved(module);
         myLogger.info(() -> "Module '" + module + "' is resolved");
@@ -465,6 +482,8 @@ public class ArendServerImpl implements ArendServer {
             if (reporter != null) {
               myErrorService.setErrors(module, reporter.getErrorList());
             }
+
+            groupData.setResolvedDefinitions(concreteProviders.get(module), resolverResult.get(module));
           }
         }
       }
@@ -491,9 +510,8 @@ public class ArendServerImpl implements ArendServer {
     return groupData == null ? null : groupData.getRawGroup();
   }
 
-  public Scope getGroupScope(@NotNull ModuleLocation module) {
-    GroupData groupData = myGroups.get(module);
-    return groupData == null ? null : groupData.getFileScope();
+  GroupData getGroupData(@NotNull ModuleLocation module) {
+    return myGroups.get(module);
   }
 
   @Override
@@ -553,7 +571,7 @@ public class ArendServerImpl implements ArendServer {
             }
           }
         }
-      }).resolveGroup(group, getGroupScope(module, group));
+      }).resolveGroup(group, getParentGroupScope(module, group));
     } catch (CompletionException ignored) {}
 
     myLogger.fine(() -> found[0] ? "Finish completion for '" + reference.getReferenceText() + "' with " + result.size() + " results" : "Cannot find completion variants for '" + reference.getReferenceText() + "'");

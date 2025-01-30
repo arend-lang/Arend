@@ -24,9 +24,7 @@ import org.arend.term.NameHiding;
 import org.arend.term.NameRenaming;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.*;
-import org.arend.term.group.ChildGroup;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.*;
 import org.arend.typechecking.error.local.LocalErrorReporter;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
@@ -37,7 +35,7 @@ import java.util.stream.Collectors;
 
 public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitionVisitor<Scope, Void>, DocVisitor<Scope, Void> {
   private final TypingInfo myTypingInfo;
-  private final ConcreteProvider myConcreteProvider; // TODO[server2]: Do we really need this here?
+  private final ConcreteProvider myConcreteProvider;
   private final ErrorReporter myErrorReporter;
   private ErrorReporter myLocalErrorReporter;
   private final ResolverListener myResolverListener;
@@ -639,16 +637,12 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   }
 
   public void resolveGroup(Group group, Scope scope) {
-    resolveGroup(group, scope, true);
-  }
-
-  private void resolveGroup(Group group, Scope scope, boolean topLevel) {
     LocatedReferable groupRef = group.getReferable();
     Collection<? extends Statement> statements = group.getStatements();
     Collection<? extends Group> dynamicSubgroups = group.getDynamicSubgroups();
 
     var def = myConcreteProvider.getConcrete(groupRef);
-    Scope cachedScope = CachingScope.make(topLevel ? scope : makeScope(group, scope, false));
+    Scope cachedScope = CachingScope.make(makeScope(group, scope, false));
     myLocalErrorReporter = new LocalErrorReporter(groupRef, myErrorReporter);
     if (def instanceof Concrete.ClassDefinition) {
       resolveSuperClasses((Concrete.ClassDefinition) def, new PrivateFilteredScope(cachedScope), false);
@@ -679,7 +673,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       ((Concrete.Definition) def).setExternalParameters(new HashMap<>(myExternalParameters));
     }
 
-    boolean isTopLevel = !(group instanceof ChildGroup) || ((ChildGroup) group).getParentGroup() == null;
+    boolean isTopLevel = group.isTopLevel();
     Scope namespaceScope = CachingScope.make(new LexicalScope(scope, group, null, true, false));
     if (myResolverListener != null && myResolverListener != ResolverListener.EMPTY) {
       group.getDescription().accept(this, docScope);
@@ -733,7 +727,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     for (Statement statement : statements) {
       Group subgroup = statement.getGroup();
       if (subgroup != null) {
-        resolveGroup(subgroup, cachedScope, false);
+        resolveGroup(subgroup, cachedScope);
       }
     }
     if (!dynamicSubgroups.isEmpty()) {
@@ -742,7 +736,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         dynamicScope = new MergeScope(dynamicScope, new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC));
       }
       for (Group subgroup : dynamicSubgroups) {
-        resolveGroup(subgroup, dynamicScope, false);
+        resolveGroup(subgroup, dynamicScope);
       }
     }
     if (added) {

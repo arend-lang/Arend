@@ -24,6 +24,7 @@ import org.arend.naming.scope.ScopeFactory;
 import org.arend.repl.action.*;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.AccessModifier;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.Group;
 import org.arend.term.group.Statement;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
@@ -144,7 +145,7 @@ public abstract class Repl {
     return ">";
   }
 
-  protected abstract @Nullable Group parseStatements(@NotNull String line);
+  protected abstract @Nullable ConcreteGroup parseStatements(@NotNull String line);
 
   protected abstract @Nullable Concrete.Expression parseExpr(@NotNull String text);
 

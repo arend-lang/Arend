@@ -10,7 +10,6 @@ import org.arend.library.classLoader.MultiClassLoader;
 import org.arend.library.error.LibraryError;
 import org.arend.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
-import org.arend.naming.scope.Scope;
 import org.arend.prelude.ConcretePrelude;
 import org.arend.prelude.Prelude;
 import org.arend.term.group.ConcreteGroup;
@@ -132,8 +131,8 @@ public class LibraryService {
     SerializableKeyRegistryImpl keyRegistry = new SerializableKeyRegistryImpl();
     extension.registerKeys(keyRegistry);
     extension.setDependencies(dependencies);
-    Scope preludeScope = myServer.getGroupScope(Prelude.MODULE_LOCATION);
-    extension.setPrelude(preludeScope == null ? new Prelude() : new ConcretePrelude(preludeScope));
+    GroupData preludeData = myServer.getGroupData(Prelude.MODULE_LOCATION);
+    extension.setPrelude(preludeData == null ? new Prelude() : new ConcretePrelude(preludeData.getFileScope()));
     extension.setConcreteFactory(new ConcreteFactoryImpl(null, library.getLibraryName()));
     extension.setVariableRenamerFactory(VariableRenamerFactoryImpl.INSTANCE);
 
