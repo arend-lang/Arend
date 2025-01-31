@@ -20,7 +20,6 @@ import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.library.Library;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.reference.TCReferable;
-import org.arend.naming.reference.converter.ReferableConverter;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
@@ -56,27 +55,25 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   private final ErrorReporter myErrorReporter;
   private final InstanceProviderSet myInstanceProviderSet;
   private final ConcreteProvider myConcreteProvider;
-  private final ReferableConverter myReferableConverter;
   private final PartialComparator<TCDefReferable> myComparator;
   private final ArendExtensionProvider myExtensionProvider;
   private final Map<TCDefReferable, Concrete.ResolvableDefinition> myDesugaredDefinitions = new HashMap<>();
-  private List<TCDefReferable> myCurrentDefinitions = Collections.emptyList();
+  private List<TCDefReferable> myCurrentDefinitions = new ArrayList<>();
   private boolean myHeadersAreOK = true;
 
   private record Suspension(CheckTypeVisitor typechecker, boolean isNew, UniverseKind universeKind) {}
 
-  public TypecheckingOrderingListener(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, ReferableConverter referableConverter, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
+  public TypecheckingOrderingListener(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
     myErrorReporter = errorReporter;
     myDependencyListener = dependencyListener;
     myInstanceProviderSet = instanceProviderSet;
     myConcreteProvider = concreteProvider;
-    myReferableConverter = referableConverter;
     myComparator = comparator;
     myExtensionProvider = extensionProvider;
   }
 
-  public TypecheckingOrderingListener(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, ReferableConverter referableConverter, ErrorReporter errorReporter, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
-    this(instanceProviderSet, concreteProvider, referableConverter, errorReporter, DummyDependencyListener.INSTANCE, comparator, extensionProvider);
+  public TypecheckingOrderingListener(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, ErrorReporter errorReporter, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
+    this(instanceProviderSet, concreteProvider, errorReporter, DummyDependencyListener.INSTANCE, comparator, extensionProvider);
   }
 
   public ConcreteProvider getConcreteProvider() {
@@ -87,24 +84,20 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     return myInstanceProviderSet;
   }
 
-  public ReferableConverter getReferableConverter() {
-    return myReferableConverter;
-  }
-
   @Override
-  protected Boolean computationInterrupted() {
+  public Boolean computationInterrupted() {
     for (TCDefReferable currentDefinition : myCurrentDefinitions) {
       Definition typechecked = currentDefinition.getTypechecked();
       currentDefinition.setTypechecked(null);
       typecheckingInterrupted(currentDefinition, typechecked);
     }
-    myCurrentDefinitions = Collections.emptyList();
+    myCurrentDefinitions = new ArrayList<>();
     return false;
   }
 
   public boolean typecheckDefinitions(final Collection<? extends Concrete.ResolvableDefinition> definitions, CancellationIndicator cancellationIndicator, boolean withInstances) {
     return run(cancellationIndicator, () -> {
-      Ordering ordering = new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myReferableConverter, myComparator, withInstances);
+      Ordering ordering = new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myComparator, withInstances);
       for (Concrete.ResolvableDefinition definition : definitions) {
         ordering.order(definition);
       }
@@ -118,13 +111,13 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   public boolean typecheckModules(final Collection<? extends Group> modules, CancellationIndicator cancellationIndicator) {
     return run(cancellationIndicator, () -> {
-      new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myReferableConverter, myComparator).orderModules(modules);
+      new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myComparator).orderModules(modules);
       return true;
     });
   }
 
   public boolean typecheckLibrary(Library library, CancellationIndicator cancellationIndicator) {
-    return run(cancellationIndicator, () -> library.orderModules(new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myReferableConverter, myComparator)));
+    return run(cancellationIndicator, () -> library.orderModules(new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myComparator)));
   }
 
   public boolean typecheckLibrary(Library library) {
@@ -132,7 +125,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   }
 
   public boolean typecheckTests(Library library, CancellationIndicator cancellationIndicator) {
-    return run(cancellationIndicator, () -> library.orderTestModules(new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myReferableConverter, myComparator)));
+    return run(cancellationIndicator, () -> library.orderTestModules(new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myComparator)));
   }
 
   public boolean typecheckCollected(CollectingOrderingListener collector, CancellationIndicator cancellationIndicator) {
@@ -314,9 +307,8 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       }
     }
 
-    myCurrentDefinitions = usedDefinitions == null ? Collections.singletonList(definition.getData()) : new ArrayList<>();
+    myCurrentDefinitions.add(definition.getData());
     if (usedDefinitions != null) {
-      myCurrentDefinitions.add(definition.getData());
       myCurrentDefinitions.addAll(usedDefinitions);
     }
     List<Definition> typechecked = new ArrayList<>();
@@ -332,7 +324,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
         }
       }
     }
-    myCurrentDefinitions = Collections.emptyList();
   }
 
   private void setParametersOriginalDefinitionsDependency(Definition definition) {
@@ -388,7 +379,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   public void headerFound(Concrete.ResolvableDefinition definition) {
     Concrete.ResolvableDefinition newDef = myDesugaredDefinitions.get(definition.getData());
     if (newDef != null) definition = newDef;
-    myCurrentDefinitions = Collections.singletonList(definition.getData());
+    myCurrentDefinitions.add(definition.getData());
     typecheckingHeaderStarted(definition.getData());
 
     CountingErrorReporter countingErrorReporter = new CountingErrorReporter(myErrorReporter);
@@ -407,7 +398,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
 
     typecheckingHeaderFinished(definition.getData(), typechecked);
-    myCurrentDefinitions = Collections.emptyList();
     if (!typechecked.status().headerIsOK()) {
       myHeadersAreOK = false;
     }
@@ -436,7 +426,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     orderedDefinitions.addAll(otherDefs);
 
     DefinitionTypechecker typechecking = new DefinitionTypechecker(null, refs);
-    myCurrentDefinitions = new ArrayList<>();
     for (Concrete.ResolvableDefinition definition : orderedDefinitions) {
       myCurrentDefinitions.add(definition.getData());
     }
@@ -481,8 +470,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
         }
       }
     }
-    myCurrentDefinitions = Collections.emptyList();
-
     myHeadersAreOK = true;
 
     boolean fixLevels = true;

@@ -160,7 +160,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
   }
 
   @Override
-  public boolean persist(SourceLibrary library, ReferableConverter referableConverter, ErrorReporter errorReporter) {
+  public boolean persist(SourceLibrary library, ErrorReporter errorReporter) {
     ModulePath currentModulePath = getModulePath();
     Group group = library.getModuleGroup(currentModulePath, false);
     if (group == null) {
@@ -174,7 +174,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
         return false;
       }
 
-      ModuleProtos.Module module = new ModuleSerialization(errorReporter, library.getDependencyListener()).writeModule(group, currentModulePath, referableConverter);
+      ModuleProtos.Module module = new ModuleSerialization(errorReporter, library.getDependencyListener()).writeModule(group, currentModulePath);
       if (module == null) {
         return false;
       }

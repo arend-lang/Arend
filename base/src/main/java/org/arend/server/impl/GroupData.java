@@ -18,7 +18,7 @@ class GroupData {
   private GlobalTypingInfo myTypingInfo;
   private List<DefinitionData> myResolvedDefinitions;
 
-  public record DefinitionData(Concrete.Definition definition, InstanceProvider instanceProvider) {}
+  public record DefinitionData(Concrete.ResolvableDefinition definition, InstanceProvider instanceProvider) {}
 
   private GroupData(long timestamp, ConcreteGroup rawGroup, GlobalTypingInfo typingInfo) {
     myTimestamp = timestamp;

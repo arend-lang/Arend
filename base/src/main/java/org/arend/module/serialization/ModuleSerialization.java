@@ -7,7 +7,6 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
-import org.arend.naming.reference.converter.ReferableConverter;
 import org.arend.source.error.LocationError;
 import org.arend.term.group.Group;
 import org.arend.term.group.Statement;
@@ -29,13 +28,13 @@ public class ModuleSerialization {
     myDefinitionSerialization = new DefinitionSerialization(myCallTargetIndexProvider, dependencyListener);
   }
 
-  public ModuleProtos.Module writeModule(Group group, ModulePath modulePath, ReferableConverter referableConverter) {
+  public ModuleProtos.Module writeModule(Group group, ModulePath modulePath) {
     ModuleProtos.Module.Builder out = ModuleProtos.Module.newBuilder();
 
     // Serialize the group structure first in order to populate the call target tree
     myComplete = true;
     out.setVersion(VERSION);
-    out.setGroup(writeGroup(group, referableConverter));
+    out.setGroup(writeGroup(group));
     out.setComplete(myComplete);
 
     // Now write the call target tree
@@ -75,7 +74,7 @@ public class ModuleSerialization {
     return out.build();
   }
 
-  private ModuleProtos.Group writeGroup(Group group, ReferableConverter referableConverter) {
+  private ModuleProtos.Group writeGroup(Group group) {
     ModuleProtos.Group.Builder builder = ModuleProtos.Group.newBuilder();
 
     // Write referable
@@ -84,15 +83,14 @@ public class ModuleSerialization {
     refBuilder.setName(referable instanceof ModuleReferable ? ((ModuleReferable) referable).path.getLastName() : referable.textRepresentation());
     refBuilder.setPrecedence(DefinitionSerialization.writePrecedence(referable.getPrecedence()));
 
-    TCReferable tcReferable = referableConverter.toDataLocatedReferable(referable);
-    Definition typechecked = tcReferable instanceof TCDefReferable ? ((TCDefReferable) tcReferable).getTypechecked() : null;
+    Definition typechecked = referable instanceof TCDefReferable ? ((TCDefReferable) referable).getTypechecked() : null;
     if (typechecked != null && !(typechecked instanceof Constructor || typechecked instanceof ClassField)) {
       builder.setDefinition(myDefinitionSerialization.writeDefinition(typechecked));
       int index = myCallTargetIndexProvider.getDefIndex(typechecked);
       refBuilder.setIndex(index);
       myCurrentDefinitions.add(index);
     }
-    if (tcReferable != null && (typechecked == null || !typechecked.status().noErrors()) && tcReferable.getKind() != GlobalReferable.Kind.OTHER) {
+    if ((typechecked == null || !typechecked.status().noErrors()) && referable.getKind() != GlobalReferable.Kind.OTHER) {
       myComplete = false;
     }
     builder.setReferable(refBuilder.build());
@@ -101,15 +99,15 @@ public class ModuleSerialization {
     for (Statement statement : group.getStatements()) {
       Group subgroup = statement.getGroup();
       if (subgroup != null) {
-        builder.addSubgroup(writeGroup(subgroup, referableConverter));
+        builder.addSubgroup(writeGroup(subgroup));
       }
     }
     for (Group subgroup : group.getDynamicSubgroups()) {
-      builder.addDynamicSubgroup(writeGroup(subgroup, referableConverter));
+      builder.addDynamicSubgroup(writeGroup(subgroup));
     }
     for (Group.InternalReferable internalReferable : group.getInternalReferables()) {
       if (!internalReferable.isVisible()) {
-        TCReferable ref = referableConverter.toDataLocatedReferable(internalReferable.getReferable());
+        LocatedReferable ref = internalReferable.getReferable();
         Definition def = ref instanceof TCDefReferable ? ((TCDefReferable) ref).getTypechecked() : null;
         if (def != null) {
           builder.addInvisibleInternalReferable(myCallTargetIndexProvider.getDefIndex(def));

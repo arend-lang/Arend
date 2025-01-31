@@ -15,13 +15,7 @@ public class CollectingOrderingListener implements OrderingListener {
     List<? extends Concrete.ResolvableDefinition> getAllDefinitions();
   }
 
-  private static class MyHeader implements Element {
-    final Concrete.ResolvableDefinition definition;
-
-    private MyHeader(Concrete.ResolvableDefinition definition) {
-      this.definition = definition;
-    }
-
+  private record MyHeader(Concrete.ResolvableDefinition definition) implements Element {
     @Override
     public void feedTo(OrderingListener listener) {
       listener.headerFound(definition);
@@ -38,15 +32,7 @@ public class CollectingOrderingListener implements OrderingListener {
     }
   }
 
-  private static class MyUnit implements Element {
-    final Concrete.ResolvableDefinition definition;
-    final boolean withLoops;
-
-    MyUnit(Concrete.ResolvableDefinition definition, boolean withLoops) {
-      this.definition = definition;
-      this.withLoops = withLoops;
-    }
-
+  private record MyUnit(Concrete.ResolvableDefinition definition, boolean withLoops) implements Element {
     @Override
     public void feedTo(OrderingListener listener) {
       listener.unitFound(definition, withLoops);
@@ -63,30 +49,17 @@ public class CollectingOrderingListener implements OrderingListener {
     }
   }
 
-  private static class MyDefinitions implements Element {
+  private record MyDefinitions(List<? extends Concrete.ResolvableDefinition> definitions, CollectingOrderingListener.MyDefinitions.Kind kind) implements Element {
     enum Kind { CYCLE, INSTANCE_CYCLE, PRE_BODIES, BODIES }
-
-    final List<? extends Concrete.ResolvableDefinition> definitions;
-    final Kind kind;
-
-    MyDefinitions(List<? extends Concrete.ResolvableDefinition> definitions, Kind kind) {
-      this.definitions = definitions;
-      this.kind = kind;
-    }
 
     @SuppressWarnings("unchecked")
     @Override
     public void feedTo(OrderingListener listener) {
-      if (kind == Kind.PRE_BODIES) {
-        listener.preBodiesFound((List<Concrete.ResolvableDefinition>) definitions);
-      } else if (kind == Kind.BODIES) {
-        listener.bodiesFound((List<Concrete.ResolvableDefinition>) definitions);
-      } else if (kind == Kind.CYCLE) {
-        listener.cycleFound((List<Concrete.ResolvableDefinition>) definitions, false);
-      } else if (kind == Kind.INSTANCE_CYCLE) {
-        listener.cycleFound((List<Concrete.ResolvableDefinition>) definitions, true);
-      } else {
-        throw new IllegalStateException();
+      switch (kind) {
+        case CYCLE -> listener.cycleFound((List<Concrete.ResolvableDefinition>) definitions, false);
+        case INSTANCE_CYCLE -> listener.cycleFound((List<Concrete.ResolvableDefinition>) definitions, true);
+        case PRE_BODIES -> listener.preBodiesFound((List<Concrete.ResolvableDefinition>) definitions);
+        case BODIES -> listener.bodiesFound((List<Concrete.ResolvableDefinition>) definitions);
       }
     }
 
@@ -102,16 +75,12 @@ public class CollectingOrderingListener implements OrderingListener {
     return myElements.isEmpty();
   }
 
-  public List<Element> getElements() {
-    return myElements;
+  public void clear() {
+    myElements.clear();
   }
 
-  public List<Concrete.ResolvableDefinition> getAllDefinitions() {
-    List<Concrete.ResolvableDefinition> result = new ArrayList<>();
-    for (Element element : myElements) {
-      result.addAll(element.getAllDefinitions());
-    }
-    return result;
+  public List<Element> getElements() {
+    return myElements;
   }
 
   @Override

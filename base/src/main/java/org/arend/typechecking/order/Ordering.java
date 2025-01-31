@@ -1,11 +1,9 @@
 package org.arend.typechecking.order;
 
 import org.arend.core.definition.Definition;
-import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.reference.TCReferable;
-import org.arend.naming.reference.converter.ReferableConverter;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.Group;
@@ -26,42 +24,36 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   private final ConcreteProvider myConcreteProvider;
   private OrderingListener myOrderingListener;
   private final DependencyListener myDependencyListener;
-  private final ReferableConverter myReferableConverter;
   private final PartialComparator<TCDefReferable> myComparator;
   private final Set<TCReferable> myAllowedDependencies;
   private final Stage myStage;
 
   private enum Stage { EVERYTHING, WITHOUT_INSTANCES, WITHOUT_BODIES }
 
-  private Ordering(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, ReferableConverter referableConverter, PartialComparator<TCDefReferable> comparator, Set<TCReferable> allowedDependencies, Stage stage) {
+  private Ordering(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, Set<TCReferable> allowedDependencies, Stage stage) {
     myInstanceProviderSet = instanceProviderSet;
     myConcreteProvider = concreteProvider;
     myOrderingListener = orderingListener;
     myDependencyListener = dependencyListener;
-    myReferableConverter = referableConverter;
     myComparator = comparator;
     myAllowedDependencies = allowedDependencies;
     myStage = stage;
   }
 
   private Ordering(Ordering ordering, Set<TCReferable> allowedDependencies, Stage stage) {
-    this(ordering.myInstanceProviderSet, ordering.myConcreteProvider, ordering.myOrderingListener, ordering.myDependencyListener, ordering.myReferableConverter, ordering.myComparator, allowedDependencies, stage);
+    this(ordering.myInstanceProviderSet, ordering.myConcreteProvider, ordering.myOrderingListener, ordering.myDependencyListener, ordering.myComparator, allowedDependencies, stage);
   }
 
-  public Ordering(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, ReferableConverter referableConverter, PartialComparator<TCDefReferable> comparator, boolean withInstances) {
-    this(instanceProviderSet, concreteProvider, orderingListener, dependencyListener, referableConverter, comparator, null, withInstances ? Stage.EVERYTHING : Stage.WITHOUT_INSTANCES);
+  public Ordering(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, boolean withInstances) {
+    this(instanceProviderSet, concreteProvider, orderingListener, dependencyListener, comparator, null, withInstances ? Stage.EVERYTHING : Stage.WITHOUT_INSTANCES);
   }
 
-  public Ordering(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, ReferableConverter referableConverter, PartialComparator<TCDefReferable> comparator) {
-    this(instanceProviderSet, concreteProvider, orderingListener, dependencyListener, referableConverter, comparator, true);
+  public Ordering(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator) {
+    this(instanceProviderSet, concreteProvider, orderingListener, dependencyListener, comparator, true);
   }
 
   public ConcreteProvider getConcreteProvider() {
     return myConcreteProvider;
-  }
-
-  public ReferableConverter getReferableConverter() {
-    return myReferableConverter;
   }
 
   public OrderingListener getListener() {
@@ -79,10 +71,8 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   }
 
   public void orderModule(Group group) {
-    LocatedReferable referable = group.getReferable();
-    TCReferable tcReferable = myReferableConverter.toDataLocatedReferable(referable);
-    if (tcReferable instanceof TCDefReferable && getTypechecked(tcReferable) == null) {
-      var def = myConcreteProvider.getConcrete(referable);
+    if (group.getReferable() instanceof TCDefReferable tcReferable && getTypechecked(tcReferable) == null) {
+      var def = myConcreteProvider.getConcrete(tcReferable);
       if (def instanceof Concrete.Definition) {
         order((Concrete.Definition) def);
       }
@@ -331,7 +321,10 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
       ordering.order(definition);
     }
 
-    new DefinitionComparator(myComparator).sort(defs);
+    if (!new DefinitionComparator(myComparator).sort(defs)) {
+      // TODO[server2]: Report an error
+    }
+
     myOrderingListener.bodiesFound(defs);
   }
 }

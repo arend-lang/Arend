@@ -9,17 +9,17 @@ import java.util.List;
 import java.util.Objects;
 
 public class FullName {
-  public ModuleLocation modulePath;
+  public ModuleLocation module;
   public LongName longName;
 
   public FullName(ModuleLocation modulePath, LongName longName) {
-    this.modulePath = modulePath;
+    this.module = modulePath;
     this.longName = longName;
   }
 
   public FullName(LocatedReferable referable) {
     List<String> name = new ArrayList<>();
-    modulePath = LocatedReferable.Helper.getLocation(referable, name);
+    module = LocatedReferable.Helper.getLocation(referable, name);
     longName = new LongName(name);
   }
 
@@ -28,17 +28,17 @@ public class FullName {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     FullName fullName = (FullName) o;
-    return Objects.equals(modulePath, fullName.modulePath) &&
+    return Objects.equals(module, fullName.module) &&
       Objects.equals(longName, fullName.longName);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(modulePath, longName);
+    return Objects.hash(module, longName);
   }
 
   @Override
   public String toString() {
-    return modulePath + "::" + longName;
+    return module + "::" + longName;
   }
 }

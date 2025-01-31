@@ -4,7 +4,6 @@ import org.arend.extImpl.DefinitionRequester;
 import org.arend.frontend.library.PreludeFileLibrary;
 import org.arend.library.LibraryManager;
 import org.arend.library.SourceLibrary;
-import org.arend.naming.reference.converter.IdReferableConverter;
 import org.arend.prelude.Prelude;
 import org.arend.source.BinarySource;
 import org.arend.source.Source;
@@ -32,8 +31,8 @@ public class PreludeBinaryGenerator {
 
     LibraryManager manager = new LibraryManager((lib,name) -> { throw new IllegalStateException(); }, new InstanceProviderSet(), System.err::println, System.err::println, DefinitionRequester.INSTANCE, null);
     if (manager.loadLibrary(library, null)) {
-      if (new Prelude.PreludeTypechecking(manager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2]: Maybe we do not need PreludeBinaryGenerator at all? */, IdReferableConverter.INSTANCE, PositionComparator.INSTANCE).typecheckLibrary(library)) {
-        library.persistModule(Prelude.MODULE_PATH, IdReferableConverter.INSTANCE, System.err::println);
+      if (new Prelude.PreludeTypechecking(ConcreteProvider.EMPTY /* TODO[server2]: Maybe we do not need PreludeBinaryGenerator at all? */).typecheckLibrary(library)) {
+        library.persistModule(Prelude.MODULE_PATH, System.err::println);
       }
     }
   }

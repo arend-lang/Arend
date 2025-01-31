@@ -1,6 +1,7 @@
 package org.arend.server.impl;
 
 import org.arend.error.DummyErrorReporter;
+import org.arend.ext.ArendExtension;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
@@ -26,6 +27,7 @@ import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.group.Group;
+import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
@@ -69,6 +71,16 @@ public class ArendServerImpl implements ArendServer {
     }
   };
 
+  private final ArendExtensionProvider myExtensionProvider = new ArendExtensionProvider() {
+    @Override
+    public @Nullable ArendExtension getArendExtension(TCDefReferable ref) {
+      ModuleLocation module = ref.getLocation();
+      if (module == null) return null;
+      ArendLibraryImpl library = myLibraryService.getLibrary(module.getLibraryName());
+      return library == null ? null : library.getExtension();
+    }
+  };
+
   public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging, @Nullable String logFile) {
     myRequester = requester;
     myCacheReferences = cacheReferences;
@@ -100,6 +112,10 @@ public class ArendServerImpl implements ArendServer {
 
   public ArendServerRequester getRequester() {
     return myRequester;
+  }
+
+  public ArendExtensionProvider getExtensionProvider() {
+    return myExtensionProvider;
   }
 
   void clearReverseDependencies(String libraryName) {
@@ -383,6 +399,8 @@ public class ArendServerImpl implements ArendServer {
         }
       }
 
+      groups.computeIfAbsent(Prelude.MODULE_LOCATION, k -> myGroups.get(Prelude.MODULE_LOCATION));
+
       myLogger.info(() -> "End calculating dependencies for " + modules);
       return groups;
     } catch (ComputationInterruptedException e) {
@@ -392,8 +410,8 @@ public class ArendServerImpl implements ArendServer {
   }
 
   ConcreteProvider resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener, @Nullable Map<ModuleLocation, GroupData> dependencies, boolean resolveDependencies, boolean resolveResolved) {
+    if (dependencies == null) return null;
     if (modules.isEmpty()) return ConcreteProvider.EMPTY;
-    if (dependencies == null || dependencies.isEmpty()) return null;
     try {
       myLogger.info(() -> "Begin resolving modules " + modules);
 
@@ -403,14 +421,21 @@ public class ArendServerImpl implements ArendServer {
       for (ModuleLocation module : currentModules) {
         GroupData groupData = dependencies.get(module);
         if (groupData != null) {
-          groupData.getRawGroup().traverseGroup(group -> {
-            if (group instanceof ConcreteGroup cGroup) {
-              Concrete.ResolvableDefinition definition = cGroup.definition();
-              if (definition != null) {
-                defMap.put(cGroup.referable(), definition.accept(new ReplaceDataVisitor(true), null));
+          List<GroupData.DefinitionData> definitionData = groupData.getResolvedDefinitions();
+          if (resolveResolved || !groupData.isResolved() || definitionData == null) {
+            groupData.getRawGroup().traverseGroup(group -> {
+              if (group instanceof ConcreteGroup cGroup) {
+                Concrete.ResolvableDefinition definition = cGroup.definition();
+                if (definition != null) {
+                  defMap.put(cGroup.referable(), definition.accept(new ReplaceDataVisitor(true), null));
+                }
               }
+            });
+          } else {
+            for (GroupData.DefinitionData data : definitionData) {
+              defMap.put(data.definition().getData(), data.definition());
             }
-          });
+          }
         }
       }
 
@@ -434,8 +459,7 @@ public class ArendServerImpl implements ArendServer {
 
           List<GroupData.DefinitionData> definitionData = new ArrayList<>();
           groupData.getRawGroup().traverseGroup(group -> {
-            Concrete.GeneralDefinition def = concreteProvider.getConcrete(group.getReferable());
-            if (def instanceof Concrete.Definition definition) {
+            if (concreteProvider.getConcrete(group.getReferable()) instanceof Concrete.ResolvableDefinition definition) {
               definitionData.add(new GroupData.DefinitionData(definition, null));
             }
           });
@@ -446,12 +470,10 @@ public class ArendServerImpl implements ArendServer {
       }
 
       synchronized (this) {
-        for (Map.Entry<ModuleLocation, GroupData> entry : dependencies.entrySet()) {
-          GroupData groupData = myGroups.get(entry.getKey());
-          if (groupData == null || !groupData.isReadOnly() && groupData.getTimestamp() != entry.getValue().getTimestamp()) {
-            myLogger.info(() -> "Version of " + entry.getKey() + " changed; didn't resolve modules " + modules);
-            return null;
-          }
+        ModuleLocation changedModule = findChanged(dependencies);
+        if (changedModule != null) {
+          myLogger.info(() -> "Version of " + changedModule + " changed; didn't resolve modules " + modules);
+          return null;
         }
 
         for (ModuleLocation module : currentModules) {
@@ -494,9 +516,19 @@ public class ArendServerImpl implements ArendServer {
     }
   }
 
+  ModuleLocation findChanged(Map<ModuleLocation, GroupData> modules) {
+    for (Map.Entry<ModuleLocation, GroupData> entry : modules.entrySet()) {
+      GroupData groupData = myGroups.get(entry.getKey());
+      if (groupData == null || !groupData.isReadOnly() && groupData.getTimestamp() != entry.getValue().getTimestamp()) {
+        return entry.getKey();
+      }
+    }
+    return null;
+  }
+
   @Override
   public @NotNull ArendChecker getCheckerFor(@NotNull List<? extends @NotNull ModuleLocation> modules) {
-    return new ArendCheckerImpl(this, modules);
+    return modules.isEmpty() ? ArendChecker.EMPTY : new ArendCheckerImpl(this, modules);
   }
 
   @Override

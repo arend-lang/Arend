@@ -2,7 +2,6 @@ package org.arend.library;
 
 import org.arend.core.definition.Definition;
 import org.arend.ext.module.ModulePath;
-import org.arend.naming.reference.converter.IdReferableConverter;
 import org.arend.source.Source;
 import org.arend.term.group.ChildGroup;
 import org.arend.term.group.Group;
@@ -267,7 +266,7 @@ public class CachingTest extends LibraryTestCase {
     assertTrue(typechecking.typecheckModules(groups, null));
     assertThat(errorList, hasSize(1));
     errorList.clear();
-    library.persistModule(new ModulePath("B"), IdReferableConverter.INSTANCE, errorReporter);
+    library.persistModule(new ModulePath("B"), errorReporter);
     assertThat(errorList, is(empty()));
 
     Source sourceA = library.getBinarySource(new ModulePath("A"));

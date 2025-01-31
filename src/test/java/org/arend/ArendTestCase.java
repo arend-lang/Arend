@@ -12,7 +12,6 @@ import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.reference.TCReferable;
-import org.arend.naming.reference.converter.IdReferableConverter;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
@@ -40,7 +39,7 @@ public abstract class ArendTestCase {
 
   protected final List<GeneralError> errorList = new ArrayList<>();
   protected final ListErrorReporter errorReporter = new ListErrorReporter(errorList);
-  protected final TypecheckingOrderingListener typechecking = new TypecheckingOrderingListener(new InstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, ref -> null);
+  protected final TypecheckingOrderingListener typechecking = new TypecheckingOrderingListener(new InstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, ref -> null);
   protected int loadedBinaryModules;
 
   @Before
@@ -54,7 +53,7 @@ public abstract class ArendTestCase {
     preludeLibrary = new PreludeFileLibrary(null);
     moduleScopeProvider = preludeLibrary.getModuleScopeProvider();
     libraryManager.loadLibrary(preludeLibrary, null);
-    new Prelude.PreludeTypechecking(new InstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, PositionComparator.INSTANCE).typecheckLibrary(preludeLibrary);
+    new Prelude.PreludeTypechecking(ConcreteProvider.EMPTY /* TODO[server2] */).typecheckLibrary(preludeLibrary);
     errorList.clear();
   }
 

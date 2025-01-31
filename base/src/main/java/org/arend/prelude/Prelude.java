@@ -25,7 +25,6 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.Precedence;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
-import org.arend.naming.reference.converter.ReferableConverter;
 import org.arend.naming.scope.Scope;
 import org.arend.term.group.AccessModifier;
 import org.arend.typechecking.instance.provider.InstanceProviderSet;
@@ -91,7 +90,7 @@ public class Prelude implements ArendPrelude {
   public static FunctionDefinition ARRAY_INDEX;
 
   public static boolean isInitialized() {
-    return INTERVAL != null;
+    return ARRAY_CONS != null;
   }
 
   public static void update(Definition definition) {
@@ -295,8 +294,8 @@ public class Prelude implements ArendPrelude {
   }
 
   public static class PreludeTypechecking extends TypecheckingOrderingListener {
-    public PreludeTypechecking(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, ReferableConverter referableConverter, PartialComparator<TCDefReferable> comparator) {
-      super(instanceProviderSet, concreteProvider, referableConverter, DummyErrorReporter.INSTANCE, comparator, ref -> null);
+    public PreludeTypechecking(ConcreteProvider concreteProvider) {
+      super(new InstanceProviderSet(), concreteProvider, DummyErrorReporter.INSTANCE, PartialComparator.getTrivial(), ref -> null);
     }
 
     @Override

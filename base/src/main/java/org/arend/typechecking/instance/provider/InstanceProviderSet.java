@@ -1,7 +1,6 @@
 package org.arend.typechecking.instance.provider;
 
 import org.arend.naming.reference.*;
-import org.arend.naming.reference.converter.ReferableConverter;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.LexicalScope;
 import org.arend.naming.scope.NamespaceCommandNamespace;
@@ -32,39 +31,33 @@ public class InstanceProviderSet {
   }
 
   private class MyPredicate implements Predicate<Referable> {
-    private final ReferableConverter referableConverter;
     private SimpleInstanceProvider instanceProvider;
     private boolean used = false;
 
-    private MyPredicate(ReferableConverter referableConverter) {
-      this.referableConverter = referableConverter;
+    private MyPredicate() {
       this.instanceProvider = new SimpleInstanceProvider();
     }
 
     public LocatedReferable recordInstances(LocatedReferable ref) {
       if (instanceProvider.isEmpty()) return ref;
-      TCReferable tcRef = referableConverter.toDataLocatedReferable(ref);
-      if (tcRef instanceof TCDefReferable) {
+      if (ref instanceof TCDefReferable tcRef) {
         SimpleInstanceProvider instanceProvider = this.instanceProvider;
         if (tcRef.getKind() == GlobalReferable.Kind.INSTANCE) {
           instanceProvider = new SimpleInstanceProvider(instanceProvider);
-          instanceProvider.remove((TCDefReferable) tcRef);
+          instanceProvider.remove(tcRef);
         }
-        myProviders.put((TCDefReferable) tcRef, instanceProvider);
+        myProviders.put(tcRef, instanceProvider);
       }
-      return tcRef;
+      return ref;
     }
 
     void test(int index, Referable ref) {
-      if (ref instanceof LocatedReferable) {
-        TCReferable instance = referableConverter.toDataLocatedReferable((LocatedReferable) ref);
-        if (instance instanceof TCDefReferable && instance.getKind() == GlobalReferable.Kind.INSTANCE) {
-          if (used) {
-            instanceProvider = new SimpleInstanceProvider(instanceProvider);
-            used = false;
-          }
-          instanceProvider.add(index, (TCDefReferable) instance);
+      if (ref instanceof TCDefReferable instance && instance.getKind() == GlobalReferable.Kind.INSTANCE) {
+        if (used) {
+          instanceProvider = new SimpleInstanceProvider(instanceProvider);
+          used = false;
         }
+        instanceProvider.add(index, instance);
       }
     }
 
@@ -75,12 +68,12 @@ public class InstanceProviderSet {
     }
   }
 
-  public boolean collectInstances(Group group, Scope parentScope, LocatedReferable referable, ReferableConverter referableConverter) {
+  public boolean collectInstances(Group group, Scope parentScope, LocatedReferable referable) {
     if (!myCollected.add(group)) {
       return false;
     }
 
-    var predicate = new MyPredicate(referableConverter);
+    var predicate = new MyPredicate();
     parentScope.find(predicate);
     predicate.instanceProvider.reverseFrom(0);
     processGroup(group, parentScope, predicate);
@@ -88,8 +81,8 @@ public class InstanceProviderSet {
     return true;
   }
 
-  public boolean collectInstances(Group group, Scope parentScope, ReferableConverter referableConverter) {
-    return collectInstances(group, parentScope, group.getReferable(), referableConverter);
+  public boolean collectInstances(Group group, Scope parentScope) {
+    return collectInstances(group, parentScope, group.getReferable());
   }
 
   private void processGroup(Group group, Scope parentScope, MyPredicate predicate) {
@@ -146,11 +139,8 @@ public class InstanceProviderSet {
 
   private void processCoclauseFunction(Group subgroup, MyPredicate predicate) {
     LocatedReferable subRef = subgroup.getReferable();
-    if (subRef.getKind() == GlobalReferable.Kind.COCLAUSE_FUNCTION) {
-      subRef = predicate.referableConverter.toDataLocatedReferable(subRef);
-      if (subRef instanceof TCDefReferable) {
-        myProviders.put((TCDefReferable) subRef, predicate.instanceProvider);
-      }
+    if (subRef instanceof TCDefReferable && subRef.getKind() == GlobalReferable.Kind.COCLAUSE_FUNCTION) {
+      myProviders.put((TCDefReferable) subRef, predicate.instanceProvider);
     }
   }
 }

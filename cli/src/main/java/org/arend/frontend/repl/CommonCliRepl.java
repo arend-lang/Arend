@@ -25,7 +25,6 @@ import org.arend.library.LibraryHeader;
 import org.arend.library.LibraryManager;
 import org.arend.library.SourceLibrary;
 import org.arend.module.ModuleLocation;
-import org.arend.naming.reference.converter.IdReferableConverter;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.GeneratedVersion;
 import org.arend.prelude.PreludeLibrary;
@@ -117,7 +116,7 @@ public abstract class CommonCliRepl extends Repl {
     super(
       errorReporter,
       libraryManager,
-      new TypecheckingOrderingListener(instanceProviders, ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(libraryManager))
+      new TypecheckingOrderingListener(instanceProviders, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(libraryManager))
     );
     myLibraryResolver = libraryResolver;
     myReplLibrary = Files.exists(pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE))

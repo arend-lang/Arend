@@ -99,7 +99,7 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
   }
 
   protected Definition typeCheckDef(TCDefReferable reference, int errors) {
-    new TypecheckingOrderingListener(libraryManager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, errorReporter, PositionComparator.INSTANCE, ref -> null).typecheckDefinitions(Collections.singletonList((Concrete.ResolvableDefinition) getDefinition(reference)), null);
+    new TypecheckingOrderingListener(libraryManager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, ref -> null).typecheckDefinitions(Collections.singletonList((Concrete.ResolvableDefinition) getDefinition(reference)), null);
     Definition definition = reference.getTypechecked();
     boolean ok = errors != 0 || new CoreDefinitionChecker(errorReporter).check(definition);
     assertThat(errorList, containsErrors(errors));
@@ -117,7 +117,7 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
 
 
   private void typeCheckModule(Group group, int errors) {
-    assertTrue(new TypecheckingOrderingListener(libraryManager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, localErrorReporter, PositionComparator.INSTANCE, ref -> null).typecheckModules(Collections.singletonList(group), null));
+    assertTrue(new TypecheckingOrderingListener(libraryManager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, localErrorReporter, PositionComparator.INSTANCE, ref -> null).typecheckModules(Collections.singletonList(group), null));
     boolean ok = errors != 0 || !errorList.isEmpty() || new CoreModuleChecker(errorReporter).checkGroup(group);
     assertThat(errorList, containsErrors(errors));
     assertTrue(ok);

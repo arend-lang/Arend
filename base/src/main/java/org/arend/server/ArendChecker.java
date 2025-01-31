@@ -1,12 +1,17 @@
 package org.arend.server;
 
 import org.arend.ext.error.ErrorReporter;
+import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.resolving.ResolverListener;
+import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.util.FullName;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -14,9 +19,9 @@ import java.util.Set;
  */
 public interface ArendChecker {
   /**
-   * @return the set of dependencies of stored modules.
+   * @return the set of dependencies of stored modules or {@code null} if the computation was interrupted.
    */
-  @NotNull Set<ModuleLocation> getDependencies(@NotNull CancellationIndicator indicator);
+  @Nullable Set<ModuleLocation> getDependencies(@NotNull CancellationIndicator indicator);
 
   /**
    * Resolves stored modules.
@@ -29,14 +34,75 @@ public interface ArendChecker {
   void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener);
 
   /**
-   * Typechecks stored modules.
-   * This method also invokes {@link #resolveAll}
+   * Sorts definitions in stored modules before typechecking.
+   *
+   * @return the number of definitions that will be typechecked.
    */
-  void typecheckModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator);
+  int prepareTypechecking();
 
   /**
-   * Typechecks the specified definition.
-   * This method also invokes {@link #resolveAll}
+   * Sorts given definitions before typechecking.
+   *
+   * @param definitions     definitions to be typechecked
+   * @param errorReporter   reports {@link DefinitionNotFoundError} and, possibly, resolver errors.
+   * @return the number of definitions that will be typechecked.
    */
-  void typecheckDefinition(@NotNull FullName definition, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator);
+  int prepareTypechecking(@NotNull List<FullName> definitions, @NotNull ErrorReporter errorReporter);
+
+  /**
+   * Typechecks prepared definitions.
+   */
+  void typecheckPrepared(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener);
+
+  class DefinitionNotFoundError extends GeneralError {
+    public final FullName definition;
+
+    public DefinitionNotFoundError(@NotNull FullName definition) {
+      super(Level.ERROR, "Definition " + definition.longName + " is not found in " + definition.module);
+      this.definition = definition;
+    }
+  }
+
+  interface TypecheckingListener {
+    void definitionsTypechecked(@NotNull List<? extends Concrete.ResolvableDefinition> definitions);
+    TypecheckingListener EMPTY = definitions -> {};
+  }
+
+  default void typecheck(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator) {
+    resolveAll(errorReporter, indicator, ResolverListener.EMPTY);
+    prepareTypechecking();
+    typecheckPrepared(errorReporter, indicator, TypecheckingListener.EMPTY);
+  }
+
+  default void typecheck(@NotNull List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator) {
+    resolveAll(errorReporter, indicator, ResolverListener.EMPTY);
+    prepareTypechecking(definitions, errorReporter);
+    typecheckPrepared(errorReporter, indicator, TypecheckingListener.EMPTY);
+  }
+
+  ArendChecker EMPTY = new ArendChecker() {
+    @Override
+    public @NotNull Set<ModuleLocation> getDependencies(@NotNull CancellationIndicator indicator) {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener) {}
+
+    @Override
+    public void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener) {}
+
+    @Override
+    public int prepareTypechecking() {
+      return 0;
+    }
+
+    @Override
+    public int prepareTypechecking(@NotNull List<FullName> definitions, @NotNull ErrorReporter errorReporter) {
+      return 0;
+    }
+
+    @Override
+    public void typecheckPrepared(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener) {}
+  };
 }

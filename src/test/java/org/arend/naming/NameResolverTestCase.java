@@ -6,7 +6,6 @@ import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.MetaResolver;
 import org.arend.naming.reference.*;
-import org.arend.naming.reference.converter.IdReferableConverter;
 import org.arend.naming.resolving.typing.TypedReferable;
 import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
@@ -127,7 +126,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
   protected void resolveNamesModule(ConcreteGroup group, int errors) {
     Scope scope = CachingScope.make(new MergeScope(ScopeFactory.parentScopeForGroup(group, moduleScopeProvider, true), metaScope));
     new DefinitionResolveNameVisitor(ConcreteProvider.EMPTY /* TODO[server2] */, TypingInfo.EMPTY, errorReporter).resolveGroup(group, scope);
-    libraryManager.getInstanceProviderSet().collectInstances(group, CachingScope.make(ScopeFactory.parentScopeForGroup(group, moduleScopeProvider, true)), IdReferableConverter.INSTANCE);
+    libraryManager.getInstanceProviderSet().collectInstances(group, CachingScope.make(ScopeFactory.parentScopeForGroup(group, moduleScopeProvider, true)));
     assertThat(errorList, containsErrors(errors));
   }
 

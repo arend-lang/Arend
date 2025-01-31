@@ -179,12 +179,7 @@ public abstract class Repl {
   }
 
   protected void onScopeAdded(Group group) {
-    typechecking.getInstanceProviderSet().collectInstances(
-      group,
-      myScope,
-      myModuleReferable,
-      typechecking.getReferableConverter()
-    );
+    typechecking.getInstanceProviderSet().collectInstances(group, myScope, myModuleReferable);
   }
 
   @MustBeInvokedByOverriders

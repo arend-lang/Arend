@@ -345,20 +345,20 @@ public abstract class SourceLibrary extends BaseLibrary {
     return !isExternal();
   }
 
-  public boolean persistModule(ModulePath modulePath, ReferableConverter referableConverter, ErrorReporter errorReporter) {
+  public boolean persistModule(ModulePath modulePath, ErrorReporter errorReporter) {
     PersistableBinarySource source = getPersistableBinarySource(modulePath);
     if (source == null) {
       errorReporter.report(new PersistingError(modulePath));
       return false;
     } else {
-      return source.persist(this, referableConverter, errorReporter);
+      return source.persist(this, errorReporter);
     }
   }
 
   public boolean persistUpdatedModules(ErrorReporter errorReporter) {
     boolean ok = true;
     for (ModulePath module : getUpdatedModules()) {
-      if (getModuleGroup(module, false) != null && !persistModule(module, IdReferableConverter.INSTANCE, errorReporter)) {
+      if (getModuleGroup(module, false) != null && !persistModule(module, errorReporter)) {
         ok = false;
       }
     }
