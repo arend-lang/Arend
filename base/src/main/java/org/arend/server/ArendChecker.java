@@ -52,7 +52,7 @@ public interface ArendChecker {
   /**
    * Typechecks prepared definitions.
    */
-  void typecheckPrepared(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener);
+  void typecheckPrepared(@NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener);
 
   class DefinitionNotFoundError extends GeneralError {
     public final FullName definition;
@@ -71,13 +71,13 @@ public interface ArendChecker {
   default void typecheck(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator) {
     resolveAll(errorReporter, indicator, ResolverListener.EMPTY);
     prepareTypechecking();
-    typecheckPrepared(errorReporter, indicator, TypecheckingListener.EMPTY);
+    typecheckPrepared(indicator, TypecheckingListener.EMPTY);
   }
 
   default void typecheck(@NotNull List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator) {
     resolveAll(errorReporter, indicator, ResolverListener.EMPTY);
     prepareTypechecking(definitions, errorReporter);
-    typecheckPrepared(errorReporter, indicator, TypecheckingListener.EMPTY);
+    typecheckPrepared(indicator, TypecheckingListener.EMPTY);
   }
 
   ArendChecker EMPTY = new ArendChecker() {
@@ -103,6 +103,6 @@ public interface ArendChecker {
     }
 
     @Override
-    public void typecheckPrepared(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener) {}
+    public void typecheckPrepared(@NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener) {}
   };
 }

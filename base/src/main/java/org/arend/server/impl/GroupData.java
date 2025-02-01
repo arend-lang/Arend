@@ -71,7 +71,7 @@ class GroupData {
     return myResolvedDefinitions;
   }
 
-  public void setResolvedDefinitions(List<DefinitionData> definitions) {
+  public void updateResolvedDefinitions(List<DefinitionData> definitions) {
     myResolvedDefinitions = definitions;
   }
 

@@ -2,6 +2,7 @@ package org.arend.server.impl;
 
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
+import org.arend.ext.error.ListErrorReporter;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
@@ -119,22 +120,28 @@ public class ArendCheckerImpl implements ArendChecker {
   }
 
   @Override
-  public void typecheckPrepared(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener) {
+  public void typecheckPrepared(@NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener) {
     if (myCollector.isEmpty()) return;
-    ConcreteProvider concreteProvider = getConcreteProvider(errorReporter, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
+    ConcreteProvider concreteProvider = getConcreteProvider(DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
     if (concreteProvider == null) return;
 
-    TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(new InstanceProviderSet(), concreteProvider, errorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
+    ListErrorReporter listErrorReporter = new ListErrorReporter();
+    TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(new InstanceProviderSet(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
     typechecker.run(indicator, () -> {
       for (CollectingOrderingListener.Element element : myCollector.getElements()) {
         indicator.checkCanceled();
         element.feedTo(typechecker);
         listener.definitionsTypechecked(element.getAllDefinitions());
       }
-      if (myServer.findChanged(myDependencies) != null) {
-        return typechecker.computationInterrupted();
+
+      synchronized (myServer) {
+        if (myServer.findChanged(myDependencies) == null) {
+          listErrorReporter.reportTo(myServer.getErrorService());
+          return true;
+        } else {
+          return typechecker.computationInterrupted();
+        }
       }
-      return true;
     });
   }
 }

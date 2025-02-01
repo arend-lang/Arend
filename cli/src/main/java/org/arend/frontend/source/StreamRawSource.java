@@ -55,7 +55,8 @@ public abstract class StreamRawSource implements Source {
       ErrorReporter errorReporter = sourceLoader.getTypecheckingErrorReporter();
 
       try {
-        var errorListener = new ReporterErrorListener(errorReporter, modulePath);
+        ModuleLocation module = new ModuleLocation(library, myInTests ? ModuleLocation.LocationKind.TEST : ModuleLocation.LocationKind.SOURCE, modulePath);
+        var errorListener = new ReporterErrorListener(errorReporter, module);
 
         ArendLexer lexer = new ArendLexer(CharStreams.fromStream(getInputStream()));
         lexer.removeErrorListeners();
@@ -66,7 +67,7 @@ public abstract class StreamRawSource implements Source {
         parser.addErrorListener(errorListener);
 
         ArendParser.StatementsContext tree = parser.statements();
-        myGroup = new BuildVisitor(new ModuleLocation(library, myInTests ? ModuleLocation.LocationKind.TEST : ModuleLocation.LocationKind.SOURCE, modulePath), errorReporter).visitStatements(tree);
+        myGroup = new BuildVisitor(module, errorReporter).visitStatements(tree);
         // TODO[server2]: library.groupLoaded(modulePath, myGroup, true, myInTests);
 
         myPass = 1;

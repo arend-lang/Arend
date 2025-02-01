@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -104,14 +105,18 @@ public interface ArendServer {
   void cacheReference(@NotNull UnresolvedReference reference, @NotNull Referable referable);
 
   /**
-   * @return the list of errors corresponding to the given module.
+   * @return errors grouped by modules.
    */
-  @NotNull List<GeneralError> getErrorList(@NotNull ModuleLocation module);
+  @NotNull Map<ModuleLocation, List<GeneralError>> getErrorMap();
 
   /**
-   * @return the collection of modules with errors.
+   * @return typechecking errors in the specified module.
    */
-  @NotNull Collection<ModuleLocation> getModulesWithErrors();
+  @NotNull List<GeneralError> getTypecheckingErrors(@NotNull ModuleLocation module);
+
+  default boolean hasErrors() {
+    return !getErrorMap().isEmpty();
+  }
 
   /**
    * @return list of possible completion variants for the given reference.

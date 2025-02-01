@@ -183,7 +183,7 @@ public abstract class CommonCliRepl extends Repl {
   }
 
   public static @NotNull ArendParser createParser(@NotNull String text, @NotNull ModuleLocation moduleLocation, @NotNull ErrorReporter reporter) {
-    var errorListener = new ReporterErrorListener(reporter, moduleLocation.getModulePath());
+    var errorListener = new ReporterErrorListener(reporter, moduleLocation);
     var parser = new ArendParser(
         new CommonTokenStream(createLexer(text, errorListener)));
     parser.removeErrorListeners();

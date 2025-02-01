@@ -497,12 +497,12 @@ public class ArendServerImpl implements ArendServer {
             }
             ListErrorReporter reporter = errorReporterMap.get(module);
             if (reporter != null) {
-              myErrorService.setErrors(module, reporter.getErrorList());
+              myErrorService.setResolverErrors(module, reporter.getErrorList());
             }
 
             List<GroupData.DefinitionData> definitionData = resolverResult.get(module);
             if (definitionData != null) {
-              groupData.setResolvedDefinitions(definitionData);
+              groupData.updateResolvedDefinitions(definitionData);
             }
           }
         }
@@ -567,13 +567,22 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
-  public @NotNull List<GeneralError> getErrorList(@NotNull ModuleLocation module) {
-    return myErrorService.getErrorList(module);
+  public @NotNull Map<ModuleLocation, List<GeneralError>> getErrorMap() {
+    return myErrorService.getAllErrors();
   }
 
   @Override
-  public @NotNull Collection<ModuleLocation> getModulesWithErrors() {
-    return myErrorService.getModulesWithErrors();
+  public @NotNull List<GeneralError> getTypecheckingErrors(@NotNull ModuleLocation module) {
+    return myErrorService.getTypecheckingErrors(module);
+  }
+
+  @Override
+  public boolean hasErrors() {
+    return myErrorService.hasErrors();
+  }
+
+  ErrorService getErrorService() {
+    return myErrorService;
   }
 
   private static class CompletionException extends RuntimeException {}

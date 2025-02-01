@@ -1,12 +1,12 @@
 package org.arend.frontend.parser;
 
 import org.arend.error.SourcePosition;
-import org.arend.ext.module.ModulePath;
+import org.arend.module.ModuleLocation;
 
 public class Position extends SourcePosition {
-  public final ModulePath module;
+  public final ModuleLocation module;
 
-  public Position(ModulePath module, int line, int column) {
+  public Position(ModuleLocation module, int line, int column) {
     super(module == null ? null : module.toString(), line, column + 1);
     this.module = module;
   }

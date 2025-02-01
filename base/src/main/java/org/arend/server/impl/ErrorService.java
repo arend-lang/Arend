@@ -1,35 +1,62 @@
 package org.arend.server.impl;
 
+import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;
+import org.arend.naming.reference.LocatedReferable;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ErrorService {
-  private final Map<ModuleLocation, List<GeneralError>> myErrorMap = new ConcurrentHashMap<>();
+public class ErrorService implements ErrorReporter {
+  private final Map<ModuleLocation, List<GeneralError>> myResolverErrors = new ConcurrentHashMap<>();
+  private final Map<LocatedReferable, List<GeneralError>> myTypecheckingErrors = new ConcurrentHashMap<>();
 
-  public void setErrors(ModuleLocation module, List<GeneralError> errors) {
+  public void setResolverErrors(ModuleLocation module, List<GeneralError> errors) {
     if (errors.isEmpty()) {
-      myErrorMap.remove(module);
+      myResolverErrors.remove(module);
     } else {
-      myErrorMap.put(module, errors);
+      myResolverErrors.put(module, errors);
     }
   }
 
-  public List<GeneralError> getErrorList(ModuleLocation module) {
-    List<GeneralError> errors = myErrorMap.get(module);
-    return errors == null ? Collections.emptyList() : errors;
-  }
-
-  public Collection<ModuleLocation> getModulesWithErrors() {
-    return myErrorMap.keySet();
-  }
-
   public void clear() {
-    myErrorMap.clear();
+    myResolverErrors.clear();
+    myTypecheckingErrors.clear();
+  }
+
+  public boolean hasErrors() {
+    return !(myResolverErrors.isEmpty() && myTypecheckingErrors.isEmpty());
+  }
+
+  public Map<ModuleLocation, List<GeneralError>> getAllErrors() {
+    Map<ModuleLocation, List<GeneralError>> result = new HashMap<>(myResolverErrors);
+    for (Map.Entry<LocatedReferable, List<GeneralError>> entry : myTypecheckingErrors.entrySet()) {
+      ModuleLocation module = entry.getKey().getLocation();
+      if (module != null) {
+        result.computeIfAbsent(module, k -> new ArrayList<>()).addAll(entry.getValue());
+      }
+    }
+    return result;
+  }
+
+  public List<GeneralError> getTypecheckingErrors(ModuleLocation module) {
+    List<GeneralError> result = new ArrayList<>();
+    for (Map.Entry<LocatedReferable, List<GeneralError>> entry : myTypecheckingErrors.entrySet()) {
+      ModuleLocation errorModule = entry.getKey().getLocation();
+      if (module.equals(errorModule)) {
+        result.addAll(entry.getValue());
+      }
+    }
+    return result;
+  }
+
+  @Override
+  public void report(GeneralError error) {
+    error.forAffectedDefinitions((ref, newError) -> {
+      if (ref instanceof LocatedReferable located) {
+        myTypecheckingErrors.computeIfAbsent(located, k -> new ArrayList<>()).add(newError);
+      }
+    });
   }
 }
