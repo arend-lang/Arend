@@ -6,6 +6,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.error.MergingErrorReporter;
+import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
@@ -253,7 +254,7 @@ public class ArendServerImpl implements ArendServer {
         resetReverseDependencies(module.getModulePath(), new HashSet<>());
 
         myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
-        return new GroupData(modificationStamp, group);
+        return new GroupData(modificationStamp, group, prevData);
       });
     }
   }
@@ -421,8 +422,8 @@ public class ArendServerImpl implements ArendServer {
       for (ModuleLocation module : currentModules) {
         GroupData groupData = dependencies.get(module);
         if (groupData != null) {
-          List<GroupData.DefinitionData> definitionData = groupData.getResolvedDefinitions();
-          if (resolveResolved || !groupData.isResolved() || definitionData == null) {
+          Collection<GroupData.DefinitionData> definitionData = groupData.getResolvedDefinitions();
+          if (resolveResolved || definitionData == null) {
             groupData.getRawGroup().traverseGroup(group -> {
               if (group instanceof ConcreteGroup cGroup) {
                 Concrete.ResolvableDefinition definition = cGroup.definition();
@@ -441,7 +442,7 @@ public class ArendServerImpl implements ArendServer {
 
       CollectingResolverListener resolverListener = new CollectingResolverListener(listener, myCacheReferences);
       Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
-      Map<ModuleLocation, List<GroupData.DefinitionData>> resolverResult = new HashMap<>();
+      Map<ModuleLocation, Map<LongName, GroupData.DefinitionData>> resolverResult = new HashMap<>();
       for (ModuleLocation module : currentModules) {
         indicator.checkCanceled();
         GroupData groupData = dependencies.get(module);
@@ -457,10 +458,10 @@ public class ArendServerImpl implements ArendServer {
           }
           new DefinitionResolveNameVisitor(concreteProvider, myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()));
 
-          List<GroupData.DefinitionData> definitionData = new ArrayList<>();
+          Map<LongName, GroupData.DefinitionData> definitionData = new LinkedHashMap<>();
           groupData.getRawGroup().traverseGroup(group -> {
             if (concreteProvider.getConcrete(group.getReferable()) instanceof Concrete.ResolvableDefinition definition) {
-              definitionData.add(new GroupData.DefinitionData(definition, null));
+              definitionData.putIfAbsent(definition.getData().getRefLongName(), new GroupData.DefinitionData(definition, null));
             }
           });
           resolverResult.put(module, definitionData);
@@ -500,7 +501,7 @@ public class ArendServerImpl implements ArendServer {
               myErrorService.setResolverErrors(module, reporter.getErrorList());
             }
 
-            List<GroupData.DefinitionData> definitionData = resolverResult.get(module);
+            Map<LongName, GroupData.DefinitionData> definitionData = resolverResult.get(module);
             if (definitionData != null) {
               groupData.updateResolvedDefinitions(definitionData);
             }

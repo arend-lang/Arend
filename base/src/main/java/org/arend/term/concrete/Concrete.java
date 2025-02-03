@@ -1887,6 +1887,8 @@ public final class Concrete {
       stage = Stage.TYPECHECKED;
     }
 
+    public abstract ResolvableDefinition copy(TCDefReferable referable);
+
     public abstract <P, R> R accept(ConcreteResolvableDefinitionVisitor<? super P, ? extends R> visitor, P params);
 
     @Override
@@ -2223,6 +2225,15 @@ public final class Concrete {
       myElements.addAll(0, elements);
       setParametersOriginalDefinitions(parametersOriginalDefinitions);
     }
+
+    @Override
+    public ClassDefinition copy(TCDefReferable referable) {
+      ClassDefinition result = new ClassDefinition(referable, pLevelParameters, hLevelParameters, myRecord, myWithoutClassifying, mySuperClasses, myElements);
+      result.myClassifyingField = myClassifyingField;
+      result.myForcedClassifyingField = myForcedClassifyingField;
+      copyData(result);
+      return result;
+    }
   }
 
   public static class CoClauseFunctionDefinition extends FunctionDefinition {
@@ -2252,8 +2263,8 @@ public final class Concrete {
     }
 
     @Override
-    public CoClauseFunctionDefinition copy(List<Parameter> parameters, FunctionBody body) {
-      Concrete.CoClauseFunctionDefinition result = new CoClauseFunctionDefinition(getKind(), getData(), getUseParent(), getImplementedField(), parameters, getResultType(), getResultTypeLevel(), body);
+    public CoClauseFunctionDefinition copy(TCDefReferable referable, List<Parameter> parameters, FunctionBody body) {
+      Concrete.CoClauseFunctionDefinition result = new CoClauseFunctionDefinition(getKind(), referable, getUseParent(), getImplementedField(), parameters, getResultType(), getResultTypeLevel(), body);
       result.enclosingClass = enclosingClass;
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
@@ -2591,7 +2602,7 @@ public final class Concrete {
       return visitor.visitFunction(this, params);
     }
 
-    public abstract Concrete.BaseFunctionDefinition copy(List<Parameter> parameters, FunctionBody body);
+    public abstract Concrete.BaseFunctionDefinition copy(TCDefReferable referable, List<Parameter> parameters, FunctionBody body);
   }
 
   public static class FunctionDefinition extends BaseFunctionDefinition {
@@ -2620,11 +2631,18 @@ public final class Concrete {
     }
 
     @Override
-    public FunctionDefinition copy(List<Parameter> parameters, FunctionBody body) {
-      FunctionDefinition result = new FunctionDefinition(myKind, getData(), getPLevelParameters(), getHLevelParameters(), parameters, getResultType(), getResultTypeLevel(), body);
+    public FunctionDefinition copy(TCDefReferable referable, List<Parameter> parameters, FunctionBody body) {
+      FunctionDefinition result = new FunctionDefinition(myKind, referable, getPLevelParameters(), getHLevelParameters(), parameters, getResultType(), getResultTypeLevel(), body);
       result.enclosingClass = enclosingClass;
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
+      return result;
+    }
+
+    @Override
+    public FunctionDefinition copy(TCDefReferable referable) {
+      FunctionDefinition result = copy(referable, getParameters(), getBody());
+      copyData(result);
       return result;
     }
   }
@@ -2680,6 +2698,13 @@ public final class Concrete {
     @Override
     public <P, R> R accept(ConcreteDefinitionVisitor<? super P, ? extends R> visitor, P params) {
       return visitor.visitData(this, params);
+    }
+
+    @Override
+    public DataDefinition copy(TCDefReferable referable) {
+      DataDefinition result = new DataDefinition(referable, pLevelParameters, hLevelParameters, myParameters, myEliminatedReferences, myIsTruncated, myUniverse, myConstructorClauses);
+      copyData(result);
+      return result;
     }
   }
 

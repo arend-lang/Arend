@@ -7,9 +7,21 @@ import org.arend.typechecking.computation.ComputationRunner;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 public interface TCDefReferable extends TCReferable {
   void setTypechecked(@Nullable Definition definition);
   Definition getTypechecked();
+
+  default boolean isSimilar(@NotNull TCDefReferable referable) {
+    return referable.getClass().equals(getClass()) &&
+      getAccessModifier() == referable.getAccessModifier() &&
+      getPrecedence().equals(referable.getPrecedence()) &&
+      getAliasPrecedence().equals(referable.getAliasPrecedence()) &&
+      Objects.equals(getAliasName(), referable.getAliasName()) &&
+      getKind() == referable.getKind() &&
+      isVisible() == referable.isVisible();
+  }
 
   default void setTypecheckedIfAbsent(@NotNull Definition definition) {
     if (getTypechecked() == null) {
@@ -93,6 +105,11 @@ public interface TCDefReferable extends TCReferable {
     @Override
     public Definition getTypechecked() {
       return null;
+    }
+
+    @Override
+    public boolean isSimilar(@NotNull TCDefReferable referable) {
+      return referable == NULL_REFERABLE;
     }
   };
 }

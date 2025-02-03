@@ -338,7 +338,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
       throw new IllegalStateException();
     }
 
-    Concrete.BaseFunctionDefinition newDef = def.copy(visitParameters(def.getParameters()), newBody);
+    Concrete.BaseFunctionDefinition newDef = def.copy(def.getData(), visitParameters(def.getParameters()), newBody);
     if (def.getResultType() != null) {
       newDef.setResultType(def.getResultType().accept(this, null));
     }

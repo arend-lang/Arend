@@ -157,6 +157,11 @@ public class DefinableMetaDefinition extends Concrete.ResolvableDefinition imple
   }
 
   @Override
+  public DefinableMetaDefinition copy(TCDefReferable referable) {
+    return new DefinableMetaDefinition((MetaReferable) referable, getPLevelParameters(), getHLevelParameters(), myParameters, body);
+  }
+
+  @Override
   public @NotNull Concrete.ResolvableDefinition getRelatedDefinition() {
     return this;
   }

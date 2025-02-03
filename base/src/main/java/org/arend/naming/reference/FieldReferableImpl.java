@@ -2,6 +2,7 @@ package org.arend.naming.reference;
 
 import org.arend.ext.reference.Precedence;
 import org.arend.term.group.AccessModifier;
+import org.jetbrains.annotations.NotNull;
 
 public class FieldReferableImpl extends InternalLocatedReferable implements TCFieldReferable {
   private final boolean myExplicit;
@@ -26,5 +27,10 @@ public class FieldReferableImpl extends InternalLocatedReferable implements TCFi
   @Override
   public boolean isRealParameterField() {
     return myRealParameterField;
+  }
+
+  @Override
+  public boolean isSimilar(@NotNull TCDefReferable referable) {
+    return super.isSimilar(referable) && referable instanceof FieldReferableImpl fieldRef && myExplicit == fieldRef.myExplicit && myRealParameterField == fieldRef.myRealParameterField;
   }
 }
