@@ -1842,6 +1842,8 @@ public final class Concrete {
     @Override
     public abstract @NotNull TCDefReferable getData();
 
+    public abstract void setReferable(@NotNull TCDefReferable referable);
+
     public Status getStatus() {
       return myStatus;
     }
@@ -1886,8 +1888,6 @@ public final class Concrete {
     public void setTypechecked() {
       stage = Stage.TYPECHECKED;
     }
-
-    public abstract ResolvableDefinition copy(TCDefReferable referable);
 
     public abstract <P, R> R accept(ConcreteResolvableDefinitionVisitor<? super P, ? extends R> visitor, P params);
 
@@ -2014,7 +2014,7 @@ public final class Concrete {
   }
 
   public static abstract class Definition extends ResolvableDefinition implements ReferableDefinition, ConcreteDefinition {
-    private final TCDefReferable myReferable;
+    private TCDefReferable myReferable;
     private TCDefReferable myUseParent;
     public TCDefReferable enclosingClass;
     private Set<TCDefReferable> myRecursiveDefinitions = Collections.emptySet();
@@ -2050,6 +2050,11 @@ public final class Concrete {
     @Override
     public @NotNull TCDefReferable getData() {
       return myReferable;
+    }
+
+    @Override
+    public void setReferable(@NotNull TCDefReferable referable) {
+      myReferable = referable;
     }
 
     public TCDefReferable getEnclosingClass() {
@@ -2225,15 +2230,6 @@ public final class Concrete {
       myElements.addAll(0, elements);
       setParametersOriginalDefinitions(parametersOriginalDefinitions);
     }
-
-    @Override
-    public ClassDefinition copy(TCDefReferable referable) {
-      ClassDefinition result = new ClassDefinition(referable, pLevelParameters, hLevelParameters, myRecord, myWithoutClassifying, mySuperClasses, myElements);
-      result.myClassifyingField = myClassifyingField;
-      result.myForcedClassifyingField = myForcedClassifyingField;
-      copyData(result);
-      return result;
-    }
   }
 
   public static class CoClauseFunctionDefinition extends FunctionDefinition {
@@ -2263,8 +2259,8 @@ public final class Concrete {
     }
 
     @Override
-    public CoClauseFunctionDefinition copy(TCDefReferable referable, List<Parameter> parameters, FunctionBody body) {
-      Concrete.CoClauseFunctionDefinition result = new CoClauseFunctionDefinition(getKind(), referable, getUseParent(), getImplementedField(), parameters, getResultType(), getResultTypeLevel(), body);
+    public CoClauseFunctionDefinition copy(List<Parameter> parameters, FunctionBody body) {
+      Concrete.CoClauseFunctionDefinition result = new CoClauseFunctionDefinition(getKind(), getData(), getUseParent(), getImplementedField(), parameters, getResultType(), getResultTypeLevel(), body);
       result.enclosingClass = enclosingClass;
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
@@ -2300,7 +2296,7 @@ public final class Concrete {
   }
 
   public static class ClassField extends ReferableDefinitionBase implements BaseClassField {
-    private final FieldReferableImpl myReferable;
+    private FieldReferableImpl myReferable;
     private ClassDefinition myParentClass;
     private final boolean myExplicit;
     private final ClassFieldKind myKind;
@@ -2324,6 +2320,10 @@ public final class Concrete {
     @Override
     public FieldReferableImpl getData() {
       return myReferable;
+    }
+
+    public void setReferable(FieldReferableImpl referable) {
+      myReferable = referable;
     }
 
     public boolean isExplicit() {
@@ -2602,7 +2602,7 @@ public final class Concrete {
       return visitor.visitFunction(this, params);
     }
 
-    public abstract Concrete.BaseFunctionDefinition copy(TCDefReferable referable, List<Parameter> parameters, FunctionBody body);
+    public abstract Concrete.BaseFunctionDefinition copy(List<Parameter> parameters, FunctionBody body);
   }
 
   public static class FunctionDefinition extends BaseFunctionDefinition {
@@ -2631,18 +2631,11 @@ public final class Concrete {
     }
 
     @Override
-    public FunctionDefinition copy(TCDefReferable referable, List<Parameter> parameters, FunctionBody body) {
-      FunctionDefinition result = new FunctionDefinition(myKind, referable, getPLevelParameters(), getHLevelParameters(), parameters, getResultType(), getResultTypeLevel(), body);
+    public FunctionDefinition copy(List<Parameter> parameters, FunctionBody body) {
+      FunctionDefinition result = new FunctionDefinition(myKind, getData(), getPLevelParameters(), getHLevelParameters(), parameters, getResultType(), getResultTypeLevel(), body);
       result.enclosingClass = enclosingClass;
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());
-      return result;
-    }
-
-    @Override
-    public FunctionDefinition copy(TCDefReferable referable) {
-      FunctionDefinition result = copy(referable, getParameters(), getBody());
-      copyData(result);
       return result;
     }
   }
@@ -2699,13 +2692,6 @@ public final class Concrete {
     public <P, R> R accept(ConcreteDefinitionVisitor<? super P, ? extends R> visitor, P params) {
       return visitor.visitData(this, params);
     }
-
-    @Override
-    public DataDefinition copy(TCDefReferable referable) {
-      DataDefinition result = new DataDefinition(referable, pLevelParameters, hLevelParameters, myParameters, myEliminatedReferences, myIsTruncated, myUniverse, myConstructorClauses);
-      copyData(result);
-      return result;
-    }
   }
 
   public static abstract class Clause extends SourceNodeImpl implements PatternHolder {
@@ -2757,7 +2743,7 @@ public final class Concrete {
   }
 
   public static class Constructor extends ReferableDefinitionBase implements ConcreteConstructor {
-    private final TCDefReferable myReferable;
+    private TCDefReferable myReferable;
     private DataDefinition myDataType;
     private final List<TypeParameter> myParameters;
     private final List<ReferenceExpression> myEliminatedReferences;
@@ -2777,6 +2763,10 @@ public final class Concrete {
     @Override
     public @NotNull TCDefReferable getData() {
       return myReferable;
+    }
+
+    public void setReferable(TCDefReferable referable) {
+      myReferable = referable;
     }
 
     @NotNull

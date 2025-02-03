@@ -38,6 +38,7 @@ public class SimpleInstanceProvider implements InstanceProvider {
     return myInstances.remove(instance);
   }
 
+  @Override
   public List<TCDefReferable> getInstances() {
     return myInstances;
   }

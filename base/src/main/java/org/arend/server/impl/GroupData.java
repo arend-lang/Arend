@@ -1,6 +1,7 @@
 package org.arend.server.impl;
 
 import org.arend.ext.module.LongName;
+import org.arend.naming.reference.FieldReferableImpl;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.ParameterReferable;
 import org.arend.naming.reference.TCDefReferable;
@@ -24,6 +25,7 @@ class GroupData {
   private final Scope myFileScope;
   private GlobalTypingInfo myTypingInfo;
   private Map<LongName, DefinitionData> myResolvedDefinitions;
+  private boolean myResolved;
 
   public record DefinitionData(Concrete.ResolvableDefinition definition, InstanceProvider instanceProvider) {}
 
@@ -49,10 +51,66 @@ class GroupData {
     Concrete.ResolvableDefinition newDef = group.definition();
     if (newDef != null) {
       DefinitionData definitionData = myResolvedDefinitions.get(newDef.getData().getRefLongName());
-      if (definitionData != null && newDef.getData().isSimilar(definitionData.definition.getData())) {
+      boolean ok = definitionData != null && newDef.getData().isSimilar(definitionData.definition.getData());
+      if (ok) {
+        if (newDef instanceof Concrete.DataDefinition dataDef) {
+          if (definitionData.definition instanceof Concrete.DataDefinition oldData && dataDef.getConstructorClauses().size() == oldData.getConstructorClauses().size()) {
+            List<Concrete.ConstructorClause> clauses = dataDef.getConstructorClauses();
+            List<Concrete.ConstructorClause> oldClauses = oldData.getConstructorClauses();
+            for (int i = 0; i < clauses.size(); i++) {
+              List<Concrete.Constructor> constructors = clauses.get(i).getConstructors();
+              List<Concrete.Constructor> oldConstructors = oldClauses.get(i).getConstructors();
+              if (constructors.size() != oldConstructors.size()) {
+                ok = false;
+                break;
+              }
+              for (int j = 0; j < constructors.size(); j++) {
+                Concrete.Constructor constructor = constructors.get(j);
+                Concrete.Constructor oldConstructor = oldConstructors.get(j);
+                if (constructor.getData().getRefName().equals(oldConstructor.getData().getRefName()) && constructor.getData().isSimilar(oldConstructor.getData())) {
+                  TCDefReferable conRef = oldConstructor.getData();
+                  conRef.setData(constructor.getData().getData());
+                  constructor.setReferable(conRef);
+                } else {
+                  ok = false;
+                }
+              }
+            }
+          } else {
+            ok = false;
+          }
+        } else if (newDef instanceof Concrete.ClassDefinition classDef) {
+          if (definitionData.definition instanceof Concrete.ClassDefinition oldClass && classDef.getElements().size() == oldClass.getElements().size()) {
+            List<Concrete.ClassElement> elements = classDef.getElements();
+            List<Concrete.ClassElement> oldElements = oldClass.getElements();
+            for (int i = 0; i < elements.size(); i++) {
+              Concrete.ClassElement element = elements.get(i);
+              Concrete.ClassElement oldElement = oldElements.get(i);
+              if (element.getClass().equals(oldElement.getClass())) {
+                if (element instanceof Concrete.ClassField field) {
+                  Concrete.ClassField oldField = (Concrete.ClassField) oldElement;
+                  if (field.getData().getRefName().equals(oldField.getData().getRefName()) && field.getData().isSimilar(oldField.getData())) {
+                    FieldReferableImpl fieldRef = oldField.getData();
+                    fieldRef.setData(field.getData().getData());
+                    field.setReferable(fieldRef);
+                  } else {
+                    ok = false;
+                  }
+                }
+              } else {
+                ok = false;
+              }
+            }
+          } else {
+            ok = false;
+          }
+        }
+      }
+
+      if (ok) {
         TCDefReferable ref = definitionData.definition.getData();
         ref.setData(newDef.getData().getData());
-        newDef = newDef.copy(ref);
+        newDef.setReferable(ref);
       }
     }
 
@@ -103,18 +161,24 @@ class GroupData {
   }
 
   public boolean isResolved() {
-    return myTypingInfo != null && myResolvedDefinitions != null;
+    return myResolved;
   }
 
   public Collection<DefinitionData> getResolvedDefinitions() {
-    return myResolvedDefinitions == null ? null : myResolvedDefinitions.values();
+    return myResolved ? myResolvedDefinitions.values() : null;
+  }
+
+  public Map<LongName, DefinitionData> getPreviousDefinitions() {
+    return myResolved ? null : myResolvedDefinitions;
   }
 
   public void updateResolvedDefinitions(Map<LongName, DefinitionData> definitions) {
     myResolvedDefinitions = definitions;
+    myResolved = true;
   }
 
   public void clearResolved() {
+    myResolved = false;
     myTypingInfo = null;
   }
 }

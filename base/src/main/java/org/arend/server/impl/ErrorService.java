@@ -51,6 +51,10 @@ public class ErrorService implements ErrorReporter {
     return result;
   }
 
+  public void resetDefinition(LocatedReferable referable) {
+    myTypecheckingErrors.remove(referable);
+  }
+
   @Override
   public void report(GeneralError error) {
     error.forAffectedDefinitions((ref, newError) -> {

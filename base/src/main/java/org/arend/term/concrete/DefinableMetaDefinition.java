@@ -31,7 +31,7 @@ import java.util.List;
  */
 public class DefinableMetaDefinition extends Concrete.ResolvableDefinition implements MetaDefinition {
   private final List<Concrete.Parameter> myParameters;
-  private final MetaReferable myReferable;
+  private MetaReferable myReferable;
   public Concrete.@Nullable Expression body;
 
   public DefinableMetaDefinition(MetaReferable referable, Concrete.LevelParameters pLevelParameters, Concrete.LevelParameters hLevelParameters, List<Concrete.Parameter> parameters, Concrete.@Nullable Expression body) {
@@ -157,8 +157,9 @@ public class DefinableMetaDefinition extends Concrete.ResolvableDefinition imple
   }
 
   @Override
-  public DefinableMetaDefinition copy(TCDefReferable referable) {
-    return new DefinableMetaDefinition((MetaReferable) referable, getPLevelParameters(), getHLevelParameters(), myParameters, body);
+  public void setReferable(@NotNull TCDefReferable referable) {
+    if (!(referable instanceof MetaReferable)) throw new IllegalArgumentException();
+    myReferable = (MetaReferable) referable;
   }
 
   @Override

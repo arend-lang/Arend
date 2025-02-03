@@ -23,6 +23,7 @@ import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
+import org.arend.term.concrete.ConcreteCompareVisitor;
 import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
@@ -30,6 +31,7 @@ import org.arend.term.group.ConcreteStatement;
 import org.arend.term.group.Group;
 import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.computation.CancellationIndicator;
+import org.arend.typechecking.instance.provider.EmptyInstanceProvider;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
 import org.arend.util.ComputationInterruptedException;
@@ -461,7 +463,7 @@ public class ArendServerImpl implements ArendServer {
           Map<LongName, GroupData.DefinitionData> definitionData = new LinkedHashMap<>();
           groupData.getRawGroup().traverseGroup(group -> {
             if (concreteProvider.getConcrete(group.getReferable()) instanceof Concrete.ResolvableDefinition definition) {
-              definitionData.putIfAbsent(definition.getData().getRefLongName(), new GroupData.DefinitionData(definition, null));
+              definitionData.putIfAbsent(definition.getData().getRefLongName(), new GroupData.DefinitionData(definition, EmptyInstanceProvider.getInstance()));
             }
           });
           resolverResult.put(module, definitionData);
@@ -503,6 +505,17 @@ public class ArendServerImpl implements ArendServer {
 
             Map<LongName, GroupData.DefinitionData> definitionData = resolverResult.get(module);
             if (definitionData != null) {
+              Map<LongName, GroupData.DefinitionData> prevData = groupData.getPreviousDefinitions();
+              if (prevData != null) {
+                for (Map.Entry<LongName, GroupData.DefinitionData> entry : prevData.entrySet()) {
+                  GroupData.DefinitionData newData = definitionData.get(entry.getKey());
+                  if (newData == null || !(newData.definition().accept(new ConcreteCompareVisitor(), entry.getValue().definition()) && newData.instanceProvider().getInstances().equals(entry.getValue().instanceProvider().getInstances()))) {
+                    // TODO[server2]: Use DependencyCollector
+                    entry.getValue().definition().getData().setTypechecked(null);
+                    myErrorService.resetDefinition(entry.getValue().definition().getData());
+                  }
+                }
+              }
               groupData.updateResolvedDefinitions(definitionData);
             }
           }

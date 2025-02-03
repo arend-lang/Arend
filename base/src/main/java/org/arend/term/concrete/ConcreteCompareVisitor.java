@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concrete.Expression, Boolean>, ConcreteDefinitionVisitor<Concrete.Definition, Boolean> {
+public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concrete.Expression, Boolean>, ConcreteResolvableDefinitionVisitor<Concrete.ResolvableDefinition, Boolean> {
   private final Map<Referable, Referable> mySubstitution = new HashMap<>();
 
   public boolean compare(Concrete.Expression expr1, Concrete.Expression expr2) {
@@ -552,16 +552,13 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   }
 
   @Override
-  public Boolean visitFunction(Concrete.BaseFunctionDefinition def, Concrete.Definition def2) {
+  public Boolean visitFunction(Concrete.BaseFunctionDefinition def, Concrete.ResolvableDefinition def2) {
     if (!(def2 instanceof Concrete.BaseFunctionDefinition fun2)) {
       return false;
     }
 
     if ((def instanceof Concrete.CoClauseFunctionDefinition) != (fun2 instanceof Concrete.CoClauseFunctionDefinition)) return false;
     if (!compareTCReferable(def.getData(), fun2.getData())) return false;
-
-    // TODO[server2]: Add all definitions from the file to mySubstitution
-    mySubstitution.put(def.getData(), fun2.getData());
 
     if (def instanceof Concrete.CoClauseFunctionDefinition coClauseDef1) {
       Concrete.CoClauseFunctionDefinition coClauseDef2 = (Concrete.CoClauseFunctionDefinition) fun2;
@@ -598,20 +595,16 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
       return false;
     }
     freeParameters(def.getParameters());
-    mySubstitution.remove(def.getData());
     return result;
   }
 
   @Override
-  public Boolean visitData(Concrete.DataDefinition def, Concrete.Definition def2) {
+  public Boolean visitData(Concrete.DataDefinition def, Concrete.ResolvableDefinition def2) {
     if (!(def2 instanceof Concrete.DataDefinition data2)) {
       return false;
     }
 
     if (!compareTCReferable(def.getData(), data2.getData())) return false;
-
-    mySubstitution.put(def.getData(), data2.getData());
-
     if (!(compareLevelParameters(def, def2) && compareParameters(def.getParameters(), data2.getParameters()) && ((def.getUniverse() == null) == (data2.getUniverse() == null)) && (def.getUniverse() == null || visitUniverse(def.getUniverse(), data2.getUniverse())))) {
       return false;
     }
@@ -654,18 +647,11 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
       }
     }
     freeParameters(def.getParameters());
-    for (Concrete.ConstructorClause constructorClause : def.getConstructorClauses()) {
-      for (Concrete.Constructor constructor : constructorClause.getConstructors()) {
-        mySubstitution.remove(constructor.getData());
-      }
-    }
-    mySubstitution.remove(def.getData());
     return true;
   }
 
   private boolean compareConstructor(Concrete.Constructor con1, Concrete.Constructor con2) {
     if (!compareTCReferable(con1.getData(), con2.getData())) return false;
-    mySubstitution.put(con1.getData(), con2.getData());
     if (con1.isCoerce() != con2.isCoerce()) return false;
     boolean result = compareParameters(con1.getParameters(), con2.getParameters()) && compare(con1.getResultType(), con2.getResultType()) && compareExpressionList(con1.getEliminatedReferences(), con2.getEliminatedReferences()) && compareClauses(con1.getClauses(), con2.getClauses());
     freeParameters(con1.getParameters());
@@ -673,16 +659,13 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   }
 
   @Override
-  public Boolean visitClass(Concrete.ClassDefinition def, Concrete.Definition def2) {
+  public Boolean visitClass(Concrete.ClassDefinition def, Concrete.ResolvableDefinition def2) {
     if (!(def2 instanceof Concrete.ClassDefinition class2)) {
       return false;
     }
 
     if (!compareTCReferable(def.getData(), class2.getData())) return false;
     if (def.isRecord() != class2.isRecord() || def.withoutClassifying() != class2.withoutClassifying() || def.isForcedClassifyingField() != class2.isForcedClassifyingField()) return false;
-
-    mySubstitution.put(def.getData(), class2.getData());
-
     if (!compareLevelParameters(def, def2) || !compareExpressionList(def.getSuperClasses(), class2.getSuperClasses())) {
       return false;
     }
@@ -708,12 +691,6 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
         return false;
       }
     }
-    for (Concrete.ClassElement element : def.getElements()) {
-      if (element instanceof Concrete.ClassField) {
-        mySubstitution.remove(element.getData());
-      }
-    }
-    mySubstitution.remove(def.getData());
     return Objects.equals(def.getClassifyingField(), class2.getClassifyingField());
   }
 
@@ -725,10 +702,17 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
   private boolean compareField(Concrete.ClassField field1, Concrete.ClassField field2) {
     if (!compareFieldReferable(field1.getData(), field2.getData())) return false;
-    mySubstitution.put(field1.getData(), field2.getData());
     if (field1.getKind() != field2.getKind() || field1.isCoerce() != field2.isCoerce()) return false;
     boolean result = field1.isExplicit() == field2.isExplicit() && compareParameters(field1.getParameters(), field2.getParameters()) && compare(field1.getResultType(), field2.getResultType()) && compare(field1.getResultTypeLevel(), field2.getResultTypeLevel());
     freeParameters(field1.getParameters());
     return result;
+  }
+
+  @Override
+  public Boolean visitMeta(DefinableMetaDefinition def, Concrete.ResolvableDefinition def2) {
+    if (!(def2 instanceof DefinableMetaDefinition meta2)) return false;
+    if (!compareTCReferable(def.getData(), meta2.getData())) return false;
+    if (!(compareLevelParameters(def, def2) && compareParameters(def.getParameters(), meta2.getParameters()))) return false;
+    return compareParameters(def.getParameters(), meta2.getParameters()) && compare(def.body, meta2.body);
   }
 }
