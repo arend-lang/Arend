@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class LocatedReferableImpl implements TCDefReferable {
-  private final Object myData;
+  private Object myData;
   private final AccessModifier myAccessModifier;
   private Precedence myPrecedence;
   private final String myName;
@@ -72,6 +72,11 @@ public class LocatedReferableImpl implements TCDefReferable {
   @Override
   public Definition getTypechecked() {
     return myTypechecked;
+  }
+
+  @Override
+  public void setData(Object data) {
+    myData = data;
   }
 
   @NotNull

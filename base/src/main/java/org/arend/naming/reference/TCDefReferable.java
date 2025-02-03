@@ -12,6 +12,7 @@ import java.util.Objects;
 public interface TCDefReferable extends TCReferable {
   void setTypechecked(@Nullable Definition definition);
   Definition getTypechecked();
+  void setData(Object data);
 
   default boolean isSimilar(@NotNull TCDefReferable referable) {
     return referable.getClass().equals(getClass()) &&
@@ -106,6 +107,9 @@ public interface TCDefReferable extends TCReferable {
     public Definition getTypechecked() {
       return null;
     }
+
+    @Override
+    public void setData(Object data) {}
 
     @Override
     public boolean isSimilar(@NotNull TCDefReferable referable) {

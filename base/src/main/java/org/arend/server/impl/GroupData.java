@@ -50,7 +50,9 @@ class GroupData {
     if (newDef != null) {
       DefinitionData definitionData = myResolvedDefinitions.get(newDef.getData().getRefLongName());
       if (definitionData != null && newDef.getData().isSimilar(definitionData.definition.getData())) {
-        newDef = newDef.copy(definitionData.definition.getData());
+        TCDefReferable ref = definitionData.definition.getData();
+        ref.setData(newDef.getData().getData());
+        newDef = newDef.copy(ref);
       }
     }
 

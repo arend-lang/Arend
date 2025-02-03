@@ -120,6 +120,7 @@ public class MetaReferable implements TCDefReferable, MetaRef {
     return myData;
   }
 
+  @Override
   public void setData(Object data) {
     myData = data;
   }
