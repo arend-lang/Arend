@@ -32,6 +32,7 @@ import org.arend.term.group.Group;
 import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.instance.provider.EmptyInstanceProvider;
+import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
 import org.arend.util.ComputationInterruptedException;
@@ -52,6 +53,7 @@ public class ArendServerImpl implements ArendServer {
   private final LibraryService myLibraryService;
   private final ResolverCache myResolverCache;
   private final ErrorService myErrorService = new ErrorService();
+  private final DependencyCollector myDependencyCollector = new DependencyCollector(null);
   private final boolean myCacheReferences;
 
   private final TypingInfo myTypingInfo = new TypingInfo() {
@@ -119,6 +121,10 @@ public class ArendServerImpl implements ArendServer {
 
   public ArendExtensionProvider getExtensionProvider() {
     return myExtensionProvider;
+  }
+
+  public DependencyCollector getDependencyCollector() {
+    return myDependencyCollector;
   }
 
   void clearReverseDependencies(String libraryName) {
@@ -510,9 +516,9 @@ public class ArendServerImpl implements ArendServer {
                 for (Map.Entry<LongName, GroupData.DefinitionData> entry : prevData.entrySet()) {
                   GroupData.DefinitionData newData = definitionData.get(entry.getKey());
                   if (newData == null || !(newData.definition().accept(new ConcreteCompareVisitor(), entry.getValue().definition()) && newData.instanceProvider().getInstances().equals(entry.getValue().instanceProvider().getInstances()))) {
-                    // TODO[server2]: Use DependencyCollector
-                    entry.getValue().definition().getData().setTypechecked(null);
-                    myErrorService.resetDefinition(entry.getValue().definition().getData());
+                    for (TCReferable updated : myDependencyCollector.update(entry.getValue().definition().getData())) {
+                      myErrorService.resetDefinition(updated);
+                    }
                   }
                 }
               }

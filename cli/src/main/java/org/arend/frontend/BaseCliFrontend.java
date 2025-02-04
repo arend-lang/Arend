@@ -23,7 +23,6 @@ import org.arend.library.classLoader.FileClassLoaderDelegate;
 import org.arend.library.error.LibraryError;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
-import org.arend.naming.reference.converter.IdReferableConverter;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
@@ -40,7 +39,6 @@ import org.arend.typechecking.error.local.GoalError;
 import org.arend.typechecking.instance.provider.InstanceProviderSet;
 import org.arend.typechecking.order.MapTarjanSCC;
 import org.arend.typechecking.order.dependency.DependencyCollector;
-import org.arend.typechecking.order.dependency.MetaDependencyCollector;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.util.FileUtils;
@@ -66,7 +64,7 @@ public abstract class BaseCliFrontend {
   // Typechecking
   private final ListErrorReporter myErrorReporter = new ListErrorReporter();
   private final Map<ModulePath, GeneralError.Level> myModuleResults = new LinkedHashMap<>();
-  private final DependencyCollector myDependencyCollector = new MetaDependencyCollector(null);
+  private final DependencyCollector myDependencyCollector = new DependencyCollector(null);
   private Map<TCDefReferable, Pair<Long,Long>> myTimes = null;
   private Map<TCDefReferable, Integer> mySizes = null;
   private ModulePath myPrintModule;
@@ -126,7 +124,7 @@ public abstract class BaseCliFrontend {
     private int failed;
 
     MyTypechecking() {
-      super(myLibraryManager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, IdReferableConverter.INSTANCE, myErrorReporter, myDependencyCollector, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(myLibraryManager));
+      super(myLibraryManager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, myErrorReporter, myDependencyCollector, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(myLibraryManager));
     }
 
     private void startTimer(TCDefReferable ref) {
@@ -205,10 +203,6 @@ public abstract class BaseCliFrontend {
       total = 0;
       failed = 0;
     }
-  }
-
-  public BaseCliFrontend() {
-    myDependencyCollector.setLibraryManager(myLibraryManager);
   }
 
   public boolean isExitWithError() {

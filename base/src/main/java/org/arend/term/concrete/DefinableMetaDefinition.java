@@ -26,9 +26,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * User-defined meta in Arend, not Java extension meta.
- */
+// TODO[server2]: Move this to concrete.
 public class DefinableMetaDefinition extends Concrete.ResolvableDefinition implements MetaDefinition {
   private final List<Concrete.Parameter> myParameters;
   private MetaReferable myReferable;

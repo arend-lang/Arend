@@ -1755,6 +1755,7 @@ public final class Concrete {
     return null;
   }
 
+  // TODO[server2]: Do we still need this?
   public interface ReferableDefinition extends GeneralDefinition {
     @NotNull
     @Override

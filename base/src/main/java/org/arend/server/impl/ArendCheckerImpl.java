@@ -16,7 +16,7 @@ import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.instance.provider.InstanceProviderSet;
 import org.arend.typechecking.order.Ordering;
-import org.arend.typechecking.order.dependency.DummyDependencyListener;
+import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.order.listener.CollectingOrderingListener;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.provider.ConcreteProvider;
@@ -32,11 +32,13 @@ public class ArendCheckerImpl implements ArendChecker {
   private boolean myInterrupted;
   private Map<ModuleLocation, GroupData> myDependencies;
   private ConcreteProvider myConcreteProvider;
+  private final DependencyCollector myDependencyCollector;
   private final CollectingOrderingListener myCollector = new CollectingOrderingListener();
 
   public ArendCheckerImpl(ArendServerImpl server, List<? extends ModuleLocation> modules) {
     myServer = server;
     myModules = modules;
+    myDependencyCollector = new DependencyCollector(myServer);
   }
 
   private Map<ModuleLocation, GroupData> getDependenciesInternal(@NotNull CancellationIndicator indicator) {
@@ -116,7 +118,8 @@ public class ArendCheckerImpl implements ArendChecker {
     }
 
     myCollector.clear();
-    return new Ordering(new InstanceProviderSet(), concreteProvider, myCollector, DummyDependencyListener.INSTANCE, new GroupComparator(myDependencies));
+    myDependencyCollector.clear();
+    return new Ordering(new InstanceProviderSet(), concreteProvider, myCollector, myDependencyCollector, new GroupComparator(myDependencies));
   }
 
   @Override
@@ -137,6 +140,7 @@ public class ArendCheckerImpl implements ArendChecker {
       synchronized (myServer) {
         if (myServer.findChanged(myDependencies) == null) {
           listErrorReporter.reportTo(myServer.getErrorService());
+          myDependencyCollector.copyTo(myServer.getDependencyCollector());
           return true;
         } else {
           return typechecker.computationInterrupted();

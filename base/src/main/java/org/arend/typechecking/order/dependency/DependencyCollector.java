@@ -1,30 +1,22 @@
 package org.arend.typechecking.order.dependency;
 
 import org.arend.core.definition.*;
-import org.arend.ext.typechecking.MetaDefinition;
-import org.arend.library.Library;
-import org.arend.library.LibraryManager;
 import org.arend.module.ModuleLocation;
-import org.arend.naming.reference.MetaReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.reference.TCReferable;
-import org.arend.term.concrete.DefinableMetaDefinition;
-import org.arend.typechecking.visitor.CollectDefCallsVisitor;
+import org.arend.server.ArendLibrary;
+import org.arend.server.ArendServer;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DependencyCollector implements DependencyListener {
-  private LibraryManager myLibraryManager;
+  private final ArendServer myServer;
   private final Map<TCReferable, Set<TCReferable>> myDependencies = new ConcurrentHashMap<>();
   private final Map<TCReferable, Set<TCReferable>> myReverseDependencies = new ConcurrentHashMap<>();
 
-  public DependencyCollector(LibraryManager libraryManager) {
-    myLibraryManager = libraryManager;
-  }
-
-  public void setLibraryManager(LibraryManager libraryManager) {
-    myLibraryManager = libraryManager;
+  public DependencyCollector(ArendServer server) {
+    myServer = server;
   }
 
   @Override
@@ -33,23 +25,14 @@ public class DependencyCollector implements DependencyListener {
       return;
     }
     ModuleLocation location = def2.getLocation();
-    Library library = location == null ? null : myLibraryManager.getRegisteredLibrary(location.getLibraryName());
-    if (library != null && library.isExternal()) {
-      return;
+    ArendLibrary library = location == null || myServer == null ? null : myServer.getLibrary(location.getLibraryName());
+    if (library == null || !library.isExternalLibrary()) {
+      myReverseDependencies.computeIfAbsent(def2, k -> ConcurrentHashMap.newKeySet()).add(def1);
     }
-
-    if (!(def1 instanceof MetaDefinition)) {
-      myDependencies.computeIfAbsent(def1, k -> ConcurrentHashMap.newKeySet()).add(def2);
-    }
-    myReverseDependencies.computeIfAbsent(def2, k -> ConcurrentHashMap.newKeySet()).add(def1);
   }
 
   @Override
   public Set<? extends TCReferable> update(TCReferable definition) {
-    if (definition instanceof TCDefReferable && ((TCDefReferable) definition).getTypechecked() == null) {
-      return Collections.emptySet();
-    }
-
     Set<TCReferable> updated = new HashSet<>();
     Stack<TCReferable> stack = new Stack<>();
     stack.push(definition);
@@ -60,19 +43,7 @@ public class DependencyCollector implements DependencyListener {
         continue;
       }
 
-      Set<TCReferable> dependencies;
-      if (toUpdate instanceof MetaReferable) {
-        MetaDefinition metaDef = ((MetaReferable) toUpdate).getDefinition();
-        if (metaDef instanceof DefinableMetaDefinition) {
-          dependencies = new HashSet<>();
-          ((DefinableMetaDefinition) metaDef).accept(new CollectDefCallsVisitor(dependencies, true), null);
-        } else {
-          dependencies = null;
-        }
-      } else {
-        dependencies = myDependencies.remove(toUpdate);
-      }
-
+      Set<TCReferable> dependencies = myDependencies.remove(toUpdate);
       if (dependencies != null) {
         for (TCReferable dependency : dependencies) {
           Set<TCReferable> definitions = myReverseDependencies.get(dependency);
@@ -88,7 +59,6 @@ public class DependencyCollector implements DependencyListener {
       }
     }
 
-    Set<TCReferable> additional = new HashSet<>();
     for (TCReferable updatedDef : updated) {
       if (!(updatedDef instanceof TCDefReferable)) {
         continue;
@@ -98,17 +68,14 @@ public class DependencyCollector implements DependencyListener {
       if (def instanceof ClassDefinition) {
         for (ClassField field : ((ClassDefinition) def).getPersonalFields()) {
           field.getReferable().dropAndCancelTypechecking();
-          additional.add(field.getReferable());
         }
       } else if (def instanceof DataDefinition) {
         for (Constructor constructor : ((DataDefinition) def).getConstructors()) {
           constructor.getReferable().dropAndCancelTypechecking();
-          additional.add(constructor.getReferable());
         }
       }
     }
 
-    updated.addAll(additional);
     return updated;
   }
 
@@ -116,5 +83,19 @@ public class DependencyCollector implements DependencyListener {
   public Set<? extends TCReferable> getDependencies(TCReferable definition) {
     Set<TCReferable> dependencies = myDependencies.get(definition);
     return dependencies == null ? Collections.emptySet() : dependencies;
+  }
+
+  public void clear() {
+    myDependencies.clear();
+    myReverseDependencies.clear();
+  }
+
+  public void copyTo(DependencyCollector collector) {
+    for (Map.Entry<TCReferable, Set<TCReferable>> entry : myDependencies.entrySet()) {
+      collector.myDependencies.computeIfAbsent(entry.getKey(), k -> ConcurrentHashMap.newKeySet()).addAll(entry.getValue());
+    }
+    for (Map.Entry<TCReferable, Set<TCReferable>> entry : myReverseDependencies.entrySet()) {
+      collector.myReverseDependencies.computeIfAbsent(entry.getKey(), k -> ConcurrentHashMap.newKeySet()).addAll(entry.getValue());
+    }
   }
 }
