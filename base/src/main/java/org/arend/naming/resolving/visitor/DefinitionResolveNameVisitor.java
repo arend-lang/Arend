@@ -81,6 +81,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       def.body = def.body.accept(exprVisitor, null);
     }
 
+    def.getData().setDefinition(def);
     def.setResolved();
     SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter);
     if (myResolverListener != null) {
