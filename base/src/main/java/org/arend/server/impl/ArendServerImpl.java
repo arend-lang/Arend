@@ -23,7 +23,6 @@ import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.concrete.ConcreteCompareVisitor;
 import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
@@ -534,7 +533,7 @@ public class ArendServerImpl implements ArendServer {
               if (prevData != null) {
                 for (Map.Entry<LongName, GroupData.DefinitionData> entry : prevData.entrySet()) {
                   GroupData.DefinitionData newData = definitionData.get(entry.getKey());
-                  if (newData == null || !(newData.definition().accept(new ConcreteCompareVisitor(), entry.getValue().definition()) && newData.instanceScope().getElements().equals(entry.getValue().instanceScope().getElements()))) {
+                  if (newData == null || !newData.compare(entry.getValue())) {
                     for (TCReferable updated : myDependencyCollector.update(entry.getValue().definition().getData())) {
                       myErrorService.resetDefinition(updated);
                     }

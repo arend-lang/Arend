@@ -2188,6 +2188,10 @@ public final class Concrete {
       return myForcedClassifyingField;
     }
 
+    public void setClassifyingField(TCFieldReferable classifyingField) {
+      myClassifyingField = classifyingField;
+    }
+
     public void setClassifyingField(TCFieldReferable classifyingField, boolean isForced) {
       myClassifyingField = classifyingField;
       myForcedClassifyingField = isForced;

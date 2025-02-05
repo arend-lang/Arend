@@ -410,7 +410,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   }
 
   private boolean compareImplementStatement(Concrete.ClassFieldImpl implStat1, Concrete.ClassFieldImpl implStat2) {
-    if (!(implStat1.isDefault() != implStat2.isDefault() && compareImplementStatements(implStat1.getSubCoclauseList(), implStat2.getSubCoclauseList()) && (implStat1.implementation == implStat2.implementation || implStat1.implementation != null && implStat2.implementation != null && compare(implStat1.implementation, implStat2.implementation)) && Objects.equals(implStat1.getImplementedField(), implStat2.getImplementedField()))) return false;
+    if (!(implStat1.isDefault() == implStat2.isDefault() && compareImplementStatements(implStat1.getSubCoclauseList(), implStat2.getSubCoclauseList()) && compare(implStat1.implementation, implStat2.implementation) && Objects.equals(implStat1.getImplementedField(), implStat2.getImplementedField()))) return false;
     if ((implStat1.classRef == null) != (implStat2.classRef == null)) return false;
     if (implStat1.classRef != null && !implStat1.classRef.equals(implStat2.classRef)) return false;
     if ((implStat1 instanceof Concrete.CoClauseFunctionReference) != (implStat2 instanceof Concrete.CoClauseFunctionReference)) return false;

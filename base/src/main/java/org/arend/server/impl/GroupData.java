@@ -1,22 +1,17 @@
 package org.arend.server.impl;
 
 import org.arend.ext.module.LongName;
-import org.arend.naming.reference.FieldReferableImpl;
-import org.arend.naming.reference.LocatedReferable;
-import org.arend.naming.reference.ParameterReferable;
-import org.arend.naming.reference.TCDefReferable;
+import org.arend.naming.reference.*;
 import org.arend.naming.resolving.typing.GlobalTypingInfo;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.LexicalScope;
 import org.arend.naming.scope.Scope;
 import org.arend.term.concrete.Concrete;
+import org.arend.term.concrete.ConcreteCompareVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class GroupData {
   private final long myTimestamp;
@@ -26,7 +21,26 @@ public class GroupData {
   private Map<LongName, DefinitionData> myResolvedDefinitions;
   private boolean myResolved;
 
-  public record DefinitionData(Concrete.ResolvableDefinition definition, Scope instanceScope) {}
+  public record DefinitionData(Concrete.ResolvableDefinition definition, Scope instanceScope) {
+    public boolean compare(DefinitionData other) {
+      if (!definition.accept(new ConcreteCompareVisitor(), other.definition)) {
+        return false;
+      }
+
+      Collection<? extends Referable> instances1 = instanceScope.getElements();
+      Collection<? extends Referable> instances2 = other.instanceScope.getElements();
+      if (instances1.size() != instances2.size()) {
+        return false;
+      }
+      Iterator<? extends Referable> it = instances2.iterator();
+      for (Referable instance : instances1) {
+        if (!instance.equals(it.next())) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
 
   private GroupData(long timestamp, ConcreteGroup rawGroup, GlobalTypingInfo typingInfo) {
     myTimestamp = timestamp;
@@ -90,6 +104,9 @@ public class GroupData {
                   Concrete.ClassField oldField = (Concrete.ClassField) oldElement;
                   if (field.getData().getRefName().equals(oldField.getData().getRefName()) && field.getData().isSimilar(oldField.getData())) {
                     FieldReferableImpl fieldRef = oldField.getData();
+                    if (field.getData().equals(classDef.getClassifyingField())) {
+                      classDef.setClassifyingField(fieldRef);
+                    }
                     fieldRef.setData(field.getData().getData());
                     field.setReferable(fieldRef);
                   } else {
