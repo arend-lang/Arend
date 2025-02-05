@@ -12,7 +12,6 @@ import org.arend.naming.scope.Scope;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
-import org.arend.typechecking.instance.provider.InstanceProvider;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,7 +26,7 @@ public class GroupData {
   private Map<LongName, DefinitionData> myResolvedDefinitions;
   private boolean myResolved;
 
-  public record DefinitionData(Concrete.ResolvableDefinition definition, InstanceProvider instanceProvider) {}
+  public record DefinitionData(Concrete.ResolvableDefinition definition, Scope instanceScope) {}
 
   private GroupData(long timestamp, ConcreteGroup rawGroup, GlobalTypingInfo typingInfo) {
     myTimestamp = timestamp;
@@ -170,6 +169,10 @@ public class GroupData {
 
   public Map<LongName, DefinitionData> getPreviousDefinitions() {
     return myResolved ? null : myResolvedDefinitions;
+  }
+
+  public DefinitionData getDefinitionData(LongName name) {
+    return myResolvedDefinitions.get(name);
   }
 
   public void updateResolvedDefinitions(Map<LongName, DefinitionData> definitions) {

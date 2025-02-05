@@ -14,7 +14,6 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.group.Group;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
-import org.arend.typechecking.instance.provider.InstanceProviderSet;
 import org.arend.typechecking.order.Ordering;
 import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.order.listener.CollectingOrderingListener;
@@ -123,7 +122,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
     myCollector.clear();
     myDependencyCollector.clear();
-    return new Ordering(new InstanceProviderSet(), concreteProvider, myCollector, myDependencyCollector, new GroupComparator(myDependencies), withInstances);
+    return new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, myCollector, myDependencyCollector, new GroupComparator(myDependencies), withInstances);
   }
 
   @Override
@@ -133,7 +132,7 @@ public class ArendCheckerImpl implements ArendChecker {
     if (concreteProvider == null) return;
 
     ListErrorReporter listErrorReporter = new ListErrorReporter();
-    TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(new InstanceProviderSet(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
+    TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
     typechecker.run(indicator, () -> {
       for (CollectingOrderingListener.Element element : myCollector.getElements()) {
         indicator.checkCanceled();

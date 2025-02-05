@@ -34,7 +34,7 @@ import org.arend.typechecking.error.TerminationCheckError;
 import org.arend.typechecking.error.local.LocalErrorReporter;
 import org.arend.typechecking.implicitargs.equations.DummyEquations;
 import org.arend.typechecking.instance.pool.GlobalInstancePool;
-import org.arend.typechecking.instance.provider.InstanceProviderSet;
+import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.Ordering;
 import org.arend.typechecking.order.PartialComparator;
 import org.arend.typechecking.order.dependency.DependencyListener;
@@ -53,7 +53,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   private final DependencyListener myDependencyListener;
   private final Map<TCDefReferable, Suspension> mySuspensions = new HashMap<>();
   private final ErrorReporter myErrorReporter;
-  private final InstanceProviderSet myInstanceProviderSet;
+  private final InstanceScopeProvider myInstanceScopeProvider;
   private final ConcreteProvider myConcreteProvider;
   private final PartialComparator<TCDefReferable> myComparator;
   private final ArendExtensionProvider myExtensionProvider;
@@ -63,25 +63,25 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   private record Suspension(CheckTypeVisitor typechecker, boolean isNew, UniverseKind universeKind) {}
 
-  public TypecheckingOrderingListener(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
+  public TypecheckingOrderingListener(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
     myErrorReporter = errorReporter;
     myDependencyListener = dependencyListener;
-    myInstanceProviderSet = instanceProviderSet;
+    myInstanceScopeProvider = instanceScopeProvider;
     myConcreteProvider = concreteProvider;
     myComparator = comparator;
     myExtensionProvider = extensionProvider;
   }
 
-  public TypecheckingOrderingListener(InstanceProviderSet instanceProviderSet, ConcreteProvider concreteProvider, ErrorReporter errorReporter, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
-    this(instanceProviderSet, concreteProvider, errorReporter, DummyDependencyListener.INSTANCE, comparator, extensionProvider);
+  public TypecheckingOrderingListener(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, ErrorReporter errorReporter, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
+    this(instanceScopeProvider, concreteProvider, errorReporter, DummyDependencyListener.INSTANCE, comparator, extensionProvider);
   }
 
   public ConcreteProvider getConcreteProvider() {
     return myConcreteProvider;
   }
 
-  public InstanceProviderSet getInstanceProviderSet() {
-    return myInstanceProviderSet;
+  public InstanceScopeProvider getInstanceScopeProvider() {
+    return myInstanceScopeProvider;
   }
 
   @Override
@@ -97,7 +97,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   public boolean typecheckDefinitions(final Collection<? extends Concrete.ResolvableDefinition> definitions, CancellationIndicator cancellationIndicator, boolean withInstances) {
     return run(cancellationIndicator, () -> {
-      Ordering ordering = new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myComparator, withInstances);
+      Ordering ordering = new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, withInstances);
       for (Concrete.ResolvableDefinition definition : definitions) {
         ordering.order(definition);
       }
@@ -111,13 +111,13 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   public boolean typecheckModules(final Collection<? extends Group> modules, CancellationIndicator cancellationIndicator) {
     return run(cancellationIndicator, () -> {
-      new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myComparator).orderModules(modules);
+      new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator).orderModules(modules);
       return true;
     });
   }
 
   public boolean typecheckLibrary(Library library, CancellationIndicator cancellationIndicator) {
-    return run(cancellationIndicator, () -> library.orderModules(new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myComparator)));
+    return run(cancellationIndicator, () -> library.orderModules(new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator)));
   }
 
   public boolean typecheckLibrary(Library library) {
@@ -125,7 +125,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   }
 
   public boolean typecheckTests(Library library, CancellationIndicator cancellationIndicator) {
-    return run(cancellationIndicator, () -> library.orderTestModules(new Ordering(myInstanceProviderSet, myConcreteProvider, this, myDependencyListener, myComparator)));
+    return run(cancellationIndicator, () -> library.orderTestModules(new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator)));
   }
 
   public boolean typecheckCollected(CollectingOrderingListener collector, CancellationIndicator cancellationIndicator) {
@@ -235,7 +235,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
     if (ok) {
       CheckTypeVisitor checkTypeVisitor = new CheckTypeVisitor(new LocalErrorReporter(definition.getData(), myErrorReporter), null, extension);
-      checkTypeVisitor.setInstancePool(new GlobalInstancePool(myInstanceProviderSet.get(definition.getData()), checkTypeVisitor));
+      checkTypeVisitor.setInstancePool(new GlobalInstancePool(myInstanceScopeProvider.getInstanceScopeFor(definition.getData()), checkTypeVisitor));
       definition = definition.accept(new ReplaceDataVisitor(), null);
       if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind().isUse()) {
         myDesugaredDefinitions.put(funDef.getData(), funDef);
@@ -390,7 +390,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     DesugarVisitor.desugar(definition, visitor.getErrorReporter());
     Definition oldTypechecked = definition.getData().getTypechecked();
     DefinitionTypechecker typechecker = new DefinitionTypechecker(visitor, definition instanceof Concrete.Definition ? ((Concrete.Definition) definition).getRecursiveDefinitions() : Collections.emptySet());
-    Definition typechecked = typechecker.typecheckHeader(oldTypechecked, new GlobalInstancePool(myInstanceProviderSet.get(definition.getData()), visitor), definition);
+    Definition typechecked = typechecker.typecheckHeader(oldTypechecked, new GlobalInstancePool(myInstanceScopeProvider.getInstanceScopeFor(definition.getData()), visitor), definition);
     UniverseKind universeKind = typechecked.getUniverseKind();
     if (typechecked instanceof TopLevelDefinition) {
       ((TopLevelDefinition) typechecked).setUniverseKind(UniverseKind.WITH_UNIVERSES);

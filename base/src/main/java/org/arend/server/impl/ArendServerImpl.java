@@ -31,7 +31,7 @@ import org.arend.term.group.ConcreteStatement;
 import org.arend.term.group.Group;
 import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.computation.CancellationIndicator;
-import org.arend.typechecking.instance.provider.EmptyInstanceProvider;
+import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
@@ -86,6 +86,18 @@ public class ArendServerImpl implements ArendServer {
     }
   };
 
+  private final InstanceScopeProvider myInstanceScopeProvider = new InstanceScopeProvider() {
+    @Override
+    public @NotNull Scope getInstanceScopeFor(@NotNull TCDefReferable referable) {
+      ModuleLocation module = referable.getLocation();
+      if (module == null) return EmptyScope.INSTANCE;
+      GroupData groupData = myGroups.get(module);
+      if (groupData == null) return EmptyScope.INSTANCE;
+      GroupData.DefinitionData defData = groupData.getDefinitionData(referable.getRefLongName());
+      return defData == null ? EmptyScope.INSTANCE : defData.instanceScope();
+    }
+  };
+
   public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging, @Nullable String logFile) {
     myRequester = requester;
     myCacheReferences = cacheReferences;
@@ -121,6 +133,10 @@ public class ArendServerImpl implements ArendServer {
 
   public ArendExtensionProvider getExtensionProvider() {
     return myExtensionProvider;
+  }
+
+  public InstanceScopeProvider getInstanceScopeProvider() {
+    return myInstanceScopeProvider;
   }
 
   public DependencyCollector getDependencyCollector() {
@@ -467,12 +483,12 @@ public class ArendServerImpl implements ArendServer {
             errorReporterMap.put(module, listErrorReporter);
             currentErrorReporter = new MergingErrorReporter(errorReporter, listErrorReporter);
           }
-          new DefinitionResolveNameVisitor(concreteProvider, myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()));
-
           Map<LongName, GroupData.DefinitionData> definitionData = new LinkedHashMap<>();
+          new DefinitionResolveNameVisitor(concreteProvider, myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()), definitionData);
+
           groupData.getRawGroup().traverseGroup(group -> {
             if (concreteProvider.getConcrete(group.getReferable()) instanceof Concrete.ResolvableDefinition definition) {
-              definitionData.putIfAbsent(definition.getData().getRefLongName(), new GroupData.DefinitionData(definition, EmptyInstanceProvider.getInstance()));
+              definitionData.putIfAbsent(definition.getData().getRefLongName(), new GroupData.DefinitionData(definition, EmptyScope.INSTANCE));
             }
           });
           resolverResult.put(module, definitionData);
@@ -518,7 +534,7 @@ public class ArendServerImpl implements ArendServer {
               if (prevData != null) {
                 for (Map.Entry<LongName, GroupData.DefinitionData> entry : prevData.entrySet()) {
                   GroupData.DefinitionData newData = definitionData.get(entry.getKey());
-                  if (newData == null || !(newData.definition().accept(new ConcreteCompareVisitor(), entry.getValue().definition()) && newData.instanceProvider().getInstances().equals(entry.getValue().instanceProvider().getInstances()))) {
+                  if (newData == null || !(newData.definition().accept(new ConcreteCompareVisitor(), entry.getValue().definition()) && newData.instanceScope().getElements().equals(entry.getValue().instanceScope().getElements()))) {
                     for (TCReferable updated : myDependencyCollector.update(entry.getValue().definition().getData())) {
                       myErrorService.resetDefinition(updated);
                     }
@@ -640,7 +656,7 @@ public class ArendServerImpl implements ArendServer {
             }
           }
         }
-      }).resolveGroup(group, getParentGroupScope(module, group));
+      }).resolveGroup(group, getParentGroupScope(module, group), null);
     } catch (CompletionException ignored) {}
 
     myLogger.fine(() -> found[0] ? "Finish completion for '" + reference.getReferenceText() + "' with " + result.size() + " results" : "Cannot find completion variants for '" + reference.getReferenceText() + "'");
