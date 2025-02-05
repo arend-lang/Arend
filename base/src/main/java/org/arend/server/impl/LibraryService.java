@@ -153,13 +153,11 @@ public class LibraryService {
     }
 
     extension.setDefinitionProvider(DefinitionProviderImpl.INSTANCE);
-    /* TODO[server2]
-    ArendDependencyProviderImpl provider = new ArendDependencyProviderImpl(typechecking, libraryManager.getAvailableModuleScopeProvider(this), libraryManager.getDefinitionRequester(), this);
+    ArendDependencyProviderImpl provider = new ArendDependencyProviderImpl(myServer, library.getLibraryName());
     try {
       extension.load(provider);
     } finally {
       provider.disable();
     }
-    */
   }
 }

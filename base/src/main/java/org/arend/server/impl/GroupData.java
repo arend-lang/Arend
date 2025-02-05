@@ -19,7 +19,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-class GroupData {
+public class GroupData {
   private final long myTimestamp;
   private final ConcreteGroup myRawGroup;
   private final Scope myFileScope;

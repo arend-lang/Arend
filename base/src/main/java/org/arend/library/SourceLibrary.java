@@ -304,7 +304,7 @@ public abstract class SourceLibrary extends BaseLibrary {
     }
 
     myExtension.setDefinitionProvider(DefinitionProviderImpl.INSTANCE);
-    ArendDependencyProviderImpl provider = new ArendDependencyProviderImpl(typechecking, libraryManager.getAvailableModuleScopeProvider(this), libraryManager.getDefinitionRequester(), this);
+    OldArendDependencyProviderImpl provider = new OldArendDependencyProviderImpl(typechecking, libraryManager.getAvailableModuleScopeProvider(this), libraryManager.getDefinitionRequester(), this);
     try {
       myExtension.load(provider);
     } finally {

@@ -1,11 +1,13 @@
 package org.arend.server;
 
+import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.resolving.ResolverListener;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.computation.CancellationIndicator;
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.util.FullName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -53,6 +55,11 @@ public interface ArendChecker {
    * Typechecks prepared definitions.
    */
   void typecheckPrepared(@NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener);
+
+  // TODO[server2]: Delete this. Instead, typecheck extension definitions as needed.
+  default void typecheckExtensionDefinition(@NotNull FullName definition) {
+    typecheck(Collections.singletonList(definition), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE);
+  }
 
   class DefinitionNotFoundError extends GeneralError {
     public final FullName definition;

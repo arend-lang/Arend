@@ -24,4 +24,6 @@ public interface ArendServerRequester {
    * @return the list of file names or {@code null} if cannot determine the list of files.
    */
   @Nullable List<String> getFiles(@NotNull String libraryName, boolean inTests, @NotNull List<String> prefix);
+
+  void runUnderReadLock(@NotNull Runnable runnable);
 }

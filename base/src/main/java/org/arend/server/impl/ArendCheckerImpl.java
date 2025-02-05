@@ -77,7 +77,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
   @Override
   public int prepareTypechecking() {
-    Ordering ordering = prepareOrdering(DummyErrorReporter.INSTANCE);
+    Ordering ordering = prepareOrdering(DummyErrorReporter.INSTANCE, true);
     if (ordering == null) return 0;
 
     List<Group> groups = new ArrayList<>(myModules.size());
@@ -90,9 +90,8 @@ public class ArendCheckerImpl implements ArendChecker {
     return myCollector.getElements().size();
   }
 
-  @Override
-  public int prepareTypechecking(@NotNull List<FullName> definitions, @NotNull ErrorReporter errorReporter) {
-    Ordering ordering = prepareOrdering(errorReporter);
+  private int prepareTypechecking(@NotNull List<FullName> definitions, @NotNull ErrorReporter errorReporter, boolean withInstances) {
+    Ordering ordering = prepareOrdering(errorReporter, withInstances);
     if (ordering == null) return 0;
 
     for (FullName definition : definitions) {
@@ -109,7 +108,12 @@ public class ArendCheckerImpl implements ArendChecker {
     return myCollector.getElements().size();
   }
 
-  private Ordering prepareOrdering(ErrorReporter errorReporter) {
+  @Override
+  public int prepareTypechecking(@NotNull List<FullName> definitions, @NotNull ErrorReporter errorReporter) {
+    return prepareTypechecking(definitions, errorReporter, true);
+  }
+
+  private Ordering prepareOrdering(ErrorReporter errorReporter, boolean withInstances) {
     ConcreteProvider concreteProvider = getConcreteProvider(errorReporter, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
     if (concreteProvider == null) return null;
 
@@ -119,7 +123,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
     myCollector.clear();
     myDependencyCollector.clear();
-    return new Ordering(new InstanceProviderSet(), concreteProvider, myCollector, myDependencyCollector, new GroupComparator(myDependencies));
+    return new Ordering(new InstanceProviderSet(), concreteProvider, myCollector, myDependencyCollector, new GroupComparator(myDependencies), withInstances);
   }
 
   @Override
@@ -147,5 +151,12 @@ public class ArendCheckerImpl implements ArendChecker {
         }
       }
     });
+  }
+
+  @Override
+  public void typecheckExtensionDefinition(@NotNull FullName definition) {
+    resolveAll(DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
+    prepareTypechecking(Collections.singletonList(definition), DummyErrorReporter.INSTANCE, false);
+    typecheckPrepared(UnstoppableCancellationIndicator.INSTANCE, TypecheckingListener.EMPTY);
   }
 }
