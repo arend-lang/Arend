@@ -6,6 +6,7 @@ import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.reference.UnresolvedReference;
+import org.arend.server.impl.GroupData;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.group.ConcreteGroup;
@@ -103,6 +104,11 @@ public interface ArendServer {
    * Adds a reference to the cache.
    */
   void cacheReference(@NotNull UnresolvedReference reference, @NotNull Referable referable);
+
+  /**
+   * @return the group data of the specified module.
+   */
+  @Nullable GroupData getGroupData(@NotNull ModuleLocation module);
 
   /**
    * @return errors grouped by modules.

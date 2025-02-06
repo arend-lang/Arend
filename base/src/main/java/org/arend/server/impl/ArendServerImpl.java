@@ -585,7 +585,8 @@ public class ArendServerImpl implements ArendServer {
     return groupData == null ? null : groupData.getRawGroup();
   }
 
-  public GroupData getGroupData(@NotNull ModuleLocation module) {
+  @Override
+  public @Nullable GroupData getGroupData(@NotNull ModuleLocation module) {
     return myGroups.get(module);
   }
 
