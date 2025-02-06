@@ -17,7 +17,6 @@ import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.module.serialization.ModuleProtos;
 import org.arend.module.serialization.ModuleSerialization;
-import org.arend.naming.reference.converter.ReferableConverter;
 import org.arend.source.error.LocationError;
 import org.arend.source.error.PersistingError;
 import org.arend.term.group.ChildGroup;
@@ -81,7 +80,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
     codedInputStream.setRecursionLimit(Integer.MAX_VALUE);
     ModuleProtos.Module moduleProto = ModuleProtos.Module.parseFrom(codedInputStream);
 
-    ModuleDeserialization moduleDeserialization = new ModuleDeserialization(moduleProto, library.getReferableConverter(), null, libraryManager.getDefinitionListener());
+    ModuleDeserialization moduleDeserialization = new ModuleDeserialization(moduleProto, null, libraryManager.getDefinitionListener());
 
     ChildGroup group = moduleDeserialization.readGroup(new ModuleLocation(library, ModuleLocation.LocationKind.GENERATED, new ModulePath()));
 
@@ -117,21 +116,15 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
           return LoadResult.FAIL;
         }
 
-        ReferableConverter referableConverter = sourceLoader.getReferableConverter();
-        myModuleDeserialization = new ModuleDeserialization(moduleProto, referableConverter, myKeyRegistry, myDefinitionListener);
+        myModuleDeserialization = new ModuleDeserialization(moduleProto, myKeyRegistry, myDefinitionListener);
 
-        if (referableConverter == null) {
-          ChildGroup group = myModuleDeserialization.readGroup(new ModuleLocation(library, ModuleLocation.LocationKind.SOURCE, modulePath));
-          library.groupLoaded(modulePath, group, false, false);
-        } else {
-          ChildGroup group = library.getModuleGroup(modulePath, false);
-          if (group == null) {
-            sourceLoader.getLibraryErrorReporter().report(LibraryError.moduleNotFound(modulePath, library.getName()));
-            library.groupLoaded(modulePath, null, false, false);
-            return LoadResult.FAIL;
-          }
-          myModuleDeserialization.readDefinitions(group);
+        ChildGroup group = library.getModuleGroup(modulePath, false);
+        if (group == null) {
+          sourceLoader.getLibraryErrorReporter().report(LibraryError.moduleNotFound(modulePath, library.getName()));
+          library.groupLoaded(modulePath, null, false, false);
+          return LoadResult.FAIL;
         }
+        myModuleDeserialization.readDefinitions(group);
 
         myPass = 1;
         return LoadResult.CONTINUE;

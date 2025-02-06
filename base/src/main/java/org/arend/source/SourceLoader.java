@@ -8,7 +8,6 @@ import org.arend.library.LibraryManager;
 import org.arend.library.SourceLibrary;
 import org.arend.module.scopeprovider.CachingModuleScopeProvider;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
-import org.arend.naming.reference.converter.ReferableConverter;
 import org.arend.naming.scope.Scope;
 import org.arend.term.group.Group;
 import org.arend.typechecking.instance.provider.InstanceProviderSet;
@@ -22,7 +21,6 @@ import java.util.function.Function;
  */
 public final class SourceLoader {
   private final SourceLibrary myLibrary;
-  private final ReferableConverter myReferableConverter;
   private final LibraryManager myLibraryManager;
   private ModuleScopeProvider myModuleScopeProvider;
   private ModuleScopeProvider myTestsModuleScopeProvider;
@@ -30,15 +28,10 @@ public final class SourceLoader {
   public SourceLoader(SourceLibrary library, LibraryManager libraryManager) {
     myLibrary = library;
     myLibraryManager = libraryManager;
-    myReferableConverter = myLibrary.getReferableConverter();
   }
 
   public SourceLibrary getLibrary() {
     return myLibrary;
-  }
-
-  public ReferableConverter getReferableConverter() {
-    return myReferableConverter;
   }
 
   public ModuleScopeProvider getModuleScopeProvider(boolean withTests) {

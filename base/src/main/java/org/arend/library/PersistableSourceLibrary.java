@@ -2,7 +2,6 @@ package org.arend.library;
 
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
-import org.arend.naming.reference.converter.IdReferableConverter;
 import org.arend.term.group.ChildGroup;
 import org.jetbrains.annotations.Nullable;
 

@@ -14,8 +14,6 @@ import org.arend.module.error.ExceptionError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.module.scopeprovider.SimpleModuleScopeProvider;
-import org.arend.naming.reference.converter.IdReferableConverter;
-import org.arend.naming.reference.converter.ReferableConverter;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
 import org.arend.source.BinarySource;
@@ -164,16 +162,6 @@ public abstract class SourceLibrary extends BaseLibrary {
    */
   public boolean hasRawSources() {
     return true;
-  }
-
-  /**
-   * Gets a referable converter which is used during loading of binary sources without raw counterparts.
-   *
-   * @return a referable converter or null if the library does not have raw sources.
-   */
-  @Nullable
-  public ReferableConverter getReferableConverter() {
-    return IdReferableConverter.INSTANCE;
   }
 
   /**

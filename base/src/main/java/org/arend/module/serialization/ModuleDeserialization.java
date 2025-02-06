@@ -11,7 +11,6 @@ import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.*;
-import org.arend.naming.reference.converter.ReferableConverter;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
@@ -25,14 +24,12 @@ import java.util.*;
 public class ModuleDeserialization {
   private final ModuleProtos.Module myModuleProto;
   private final SimpleCallTargetProvider myCallTargetProvider = new SimpleCallTargetProvider();
-  private final ReferableConverter myReferableConverter;
   private final List<Pair<DefinitionProtos.Definition, Definition>> myDefinitions = new ArrayList<>();
   private final SerializableKeyRegistryImpl myKeyRegistry;
   private final DefinitionListener myDefinitionListener;
 
-  public ModuleDeserialization(ModuleProtos.Module moduleProto, ReferableConverter referableConverter, SerializableKeyRegistryImpl keyRegistry, DefinitionListener definitionListener) {
+  public ModuleDeserialization(ModuleProtos.Module moduleProto, SerializableKeyRegistryImpl keyRegistry, DefinitionListener definitionListener) {
     myModuleProto = moduleProto;
-    myReferableConverter = referableConverter;
     myKeyRegistry = keyRegistry;
     myDefinitionListener = definitionListener;
   }
@@ -65,18 +62,15 @@ public class ModuleDeserialization {
     myDefinitions.clear();
   }
 
-  private TCReferable convertReferable(Referable ref) {
-    return myReferableConverter == null
-      ? (ref instanceof TCReferable ? (TCReferable) ref : null)
-      : (ref instanceof LocatedReferable ? myReferableConverter.toDataLocatedReferable((LocatedReferable) ref) : null);
-  }
-
   private void fillInCallTargetTree(String parentName, ModuleProtos.CallTargetTree callTargetTree, Scope scope, ModulePath module, Scope parentScope, TCReferable parent) throws DeserializationException {
     TCReferable referable = null;
     if (callTargetTree.getIndex() > 0) {
       Referable referable1 = scope.resolveName(callTargetTree.getName(), null);
       if (referable1 == null) {
-        if (parent == null) parent = convertReferable(parentScope.resolveName(parentName));
+        if (parent == null) {
+          Referable parentRef = parentScope.resolveName(parentName);
+          if (parentRef instanceof TCDefReferable) parent = (TCDefReferable) parentRef;
+        }
         if (parent instanceof TCDefReferable) {
           Definition parentDef = ((TCDefReferable) parent).getTypechecked();
           if (parentDef instanceof ClassDefinition) {
@@ -89,7 +83,7 @@ public class ModuleDeserialization {
           }
         }
       }
-      referable = convertReferable(referable1);
+      referable = referable1 instanceof TCDefReferable ? (TCDefReferable) referable1 : null;
       if (referable == null && module.equals(Prelude.MODULE_PATH) && "Fin".equals(parentName)) {
         if (callTargetTree.getName().equals("zero")) {
           referable = Prelude.FIN_ZERO.getReferable();
@@ -123,16 +117,12 @@ public class ModuleDeserialization {
   public void readDefinitions(ModuleProtos.Group groupProto, Group group) throws DeserializationException {
     if (groupProto.hasDefinition()) {
       LocatedReferable referable = group.getReferable();
-      TCReferable tcReferable = myReferableConverter.toDataLocatedReferable(referable);
-      if (tcReferable == null) {
-        throw new DeserializationException("Cannot locate '" + referable + "'");
-      }
-      if (!(tcReferable instanceof TCDefReferable tcDefReferable)) {
+      if (!(referable instanceof TCDefReferable tcReferable)) {
         throw new DeserializationException("'" + referable + "' is not a definition");
       }
 
-      Definition def = readDefinition(groupProto.getDefinition(), tcDefReferable, false);
-      tcDefReferable.setTypechecked(def);
+      Definition def = readDefinition(groupProto.getDefinition(), tcReferable, false);
+      tcReferable.setTypechecked(def);
       myCallTargetProvider.putCallTarget(groupProto.getReferable().getIndex(), def);
       myDefinitions.add(new Pair<>(groupProto.getDefinition(), def));
 
@@ -145,19 +135,18 @@ public class ModuleDeserialization {
 
         for (Group.InternalReferable field : fields) {
           LocatedReferable fieldRef = field.getReferable();
-          TCReferable absField = myReferableConverter.toDataLocatedReferable(fieldRef);
           DefinitionProtos.Definition.ClassData.Field fieldProto = fieldMap.get(fieldRef.textRepresentation());
-          if (fieldProto == null || absField == null) {
+          if (fieldProto == null) {
             throw new DeserializationException("Cannot locate '" + fieldRef + "'");
           }
-          if (!(absField instanceof FieldReferableImpl)) {
-            throw new DeserializationException("Incorrect field '" + absField.textRepresentation() + "'");
+          if (!(fieldRef instanceof FieldReferableImpl absField)) {
+            throw new DeserializationException("Incorrect field '" + fieldRef.textRepresentation() + "'");
           }
 
           assert def instanceof ClassDefinition;
-          ClassField res = new ClassField((FieldReferableImpl) absField, (ClassDefinition) def);
+          ClassField res = new ClassField(absField, (ClassDefinition) def);
           ((ClassDefinition) def).addPersonalField(res);
-          ((TCFieldReferable) absField).setTypechecked(res);
+          absField.setTypechecked(res);
           myCallTargetProvider.putCallTarget(fieldProto.getReferable().getIndex(), res);
         }
       }
@@ -171,19 +160,18 @@ public class ModuleDeserialization {
 
         for (Group.InternalReferable constructor : constructors) {
           LocatedReferable constructorRef = constructor.getReferable();
-          TCReferable absConstructor = myReferableConverter.toDataLocatedReferable(constructorRef);
           DefinitionProtos.Definition.DataData.Constructor constructorProto = constructorMap.get(constructorRef.textRepresentation());
-          if (constructorProto == null || absConstructor == null) {
+          if (constructorProto == null) {
             throw new DeserializationException("Cannot locate '" + constructorRef + "'");
           }
-          if (!(absConstructor instanceof TCDefReferable)) {
+          if (!(constructorRef instanceof TCDefReferable absConstructor)) {
             throw new DeserializationException("'" + constructorRef + "' is not a definition");
           }
 
           assert def instanceof DataDefinition;
-          Constructor res = new Constructor((TCDefReferable) absConstructor, (DataDefinition) def);
+          Constructor res = new Constructor(absConstructor, (DataDefinition) def);
           ((DataDefinition) def).addConstructor(res);
-          ((TCDefReferable) absConstructor).setTypechecked(res);
+          absConstructor.setTypechecked(res);
           myCallTargetProvider.putCallTarget(constructorProto.getReferable().getIndex(), res);
         }
       }

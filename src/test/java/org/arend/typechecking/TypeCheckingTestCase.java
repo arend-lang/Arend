@@ -7,7 +7,6 @@ import org.arend.core.expr.type.Type;
 import org.arend.frontend.PositionComparator;
 import org.arend.naming.reference.*;
 import org.arend.naming.NameResolverTestCase;
-import org.arend.naming.reference.converter.IdReferableConverter;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteExpressionFactory;
 import org.arend.term.group.ChildGroup;

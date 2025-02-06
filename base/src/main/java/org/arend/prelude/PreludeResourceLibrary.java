@@ -2,7 +2,6 @@ package org.arend.prelude;
 
 import org.arend.ext.module.ModulePath;
 import org.arend.library.LibraryManager;
-import org.arend.naming.reference.converter.ReferableConverter;
 import org.arend.source.GZIPStreamBinarySource;
 import org.arend.source.PersistableBinarySource;
 import org.arend.source.Source;
@@ -52,11 +51,5 @@ public class PreludeResourceLibrary extends PreludeLibrary {
   @Override
   public boolean hasRawSources() {
     return false;
-  }
-
-  @Nullable
-  @Override
-  public ReferableConverter getReferableConverter() {
-    return null;
   }
 }
