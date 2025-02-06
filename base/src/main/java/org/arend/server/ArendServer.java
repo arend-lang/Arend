@@ -91,13 +91,13 @@ public interface ArendServer {
    * Resolves given reference.
    * This might be a slow operation if the reference was not resolved already.
    */
-  @Nullable AbstractReferable resolveReference(@NotNull AbstractReference reference);
+  @Nullable Referable resolveReference(@NotNull AbstractReference reference);
 
   /**
    * Returns a cached referable.
    * This method returns the same result as {@link #resolveReference} if the reference is already reserved, and {@code null} otherwise.
    */
-  @Nullable AbstractReferable getCachedReferable(@NotNull AbstractReference reference);
+  @Nullable Referable getCachedReferable(@NotNull AbstractReference reference);
 
   /**
    * Adds a reference to the cache.

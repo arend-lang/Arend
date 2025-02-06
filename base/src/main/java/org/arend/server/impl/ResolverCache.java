@@ -28,7 +28,7 @@ public class ResolverCache {
 
   private final ArendServerImpl myServer;
   private final Logger myLogger = Logger.getLogger(ResolverCache.class.getName());
-  private final Map<AbstractReference, AbstractReferable> myResolverCache = Collections.synchronizedMap(new WeakHashMap<>());
+  private final Map<AbstractReference, Referable> myResolverCache = Collections.synchronizedMap(new WeakHashMap<>());
   private final Map<AbstractReferable, TCDefReferable> myReferableCache = Collections.synchronizedMap(new WeakHashMap<>());
   private final Map<ModuleLocation, ModuleCache> myModuleReferences = new ConcurrentHashMap<>();
   private final Map<ModuleLocation, List<ModuleLocation>> myDirectDependencies = new ConcurrentHashMap<>();
@@ -99,7 +99,7 @@ public class ResolverCache {
     }
   }
 
-  public void addReference(ModuleLocation module, AbstractReference reference, AbstractReferable referable) {
+  public void addReference(ModuleLocation module, AbstractReference reference, Referable referable) {
     myModuleReferences.computeIfAbsent(module, k -> new ModuleCache(Collections.newSetFromMap(new WeakHashMap<>()), Collections.newSetFromMap(new WeakHashMap<>()))).addReference(reference);
     myResolverCache.put(reference, referable);
   }
@@ -125,9 +125,8 @@ public class ResolverCache {
       }
     } else if (reference.getData() instanceof AbstractReference abstractReference) {
       ModuleLocation module = abstractReference.getReferenceModule();
-      AbstractReferable abstractRef = referable.getAbstractReferable();
-      if (module != null && abstractRef != null) {
-        addReference(module, abstractReference, abstractRef);
+      if (module != null) {
+        addReference(module, abstractReference, referable);
       }
     }
   }
@@ -137,8 +136,8 @@ public class ResolverCache {
     myReverseDependencies.computeIfAbsent(dependency, k -> new LinkedHashSet<>()).add(module);
   }
 
-  public @Nullable AbstractReferable resolveReference(@NotNull AbstractReference reference) {
-    AbstractReferable result = myResolverCache.get(reference);
+  public @Nullable Referable resolveReference(@NotNull AbstractReference reference) {
+    Referable result = myResolverCache.get(reference);
     if (result == TCDefReferable.NULL_REFERABLE) return null;
     if (result != null) return result;
 
@@ -171,7 +170,7 @@ public class ResolverCache {
     return result == TCDefReferable.NULL_REFERABLE ? null : result;
   }
 
-  public @Nullable AbstractReferable getCachedReferable(@NotNull AbstractReference reference) {
+  public @Nullable Referable getCachedReferable(@NotNull AbstractReference reference) {
     return myResolverCache.get(reference);
   }
 

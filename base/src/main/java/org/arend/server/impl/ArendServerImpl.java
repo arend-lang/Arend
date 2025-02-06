@@ -590,12 +590,12 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
-  public @Nullable AbstractReferable resolveReference(@NotNull AbstractReference reference) {
+  public @Nullable Referable resolveReference(@NotNull AbstractReference reference) {
     return myResolverCache.resolveReference(reference);
   }
 
   @Override
-  public @Nullable AbstractReferable getCachedReferable(@NotNull AbstractReference reference) {
+  public @Nullable Referable getCachedReferable(@NotNull AbstractReference reference) {
     return myResolverCache.getCachedReferable(reference);
   }
 

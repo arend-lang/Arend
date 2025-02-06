@@ -13,12 +13,12 @@ import org.arend.term.concrete.Concrete;
 import java.util.*;
 
 public class CollectingResolverListener extends DelegateResolverListener {
-  public record ResolvedReference(AbstractReference reference, AbstractReferable referable) {}
+  public record ResolvedReference(AbstractReference reference, Referable referable) {}
 
   public record ReferablePair(AbstractReferable referable, TCDefReferable tcReferable) {}
 
   public record ModuleCacheStructure(List<ResolvedReference> cache, List<ReferablePair> referables, List<ModulePath> importedModules) {
-    void addReference(AbstractReference reference, AbstractReferable referable) {
+    void addReference(AbstractReference reference, Referable referable) {
       cache.add(new ResolvedReference(reference, referable));
     }
 
@@ -46,11 +46,8 @@ public class CollectingResolverListener extends DelegateResolverListener {
 
   private void cacheReference(Object data, Referable referable) {
     if (data instanceof AbstractReference) {
-      AbstractReferable abstractRef = referable.getAbstractReferable();
-      if (abstractRef != null) {
-        myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
-          .addReference((AbstractReference) data, abstractRef instanceof ErrorReference ? TCDefReferable.NULL_REFERABLE : abstractRef);
-      }
+      myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
+        .addReference((AbstractReference) data, referable instanceof ErrorReference ? TCDefReferable.NULL_REFERABLE : referable);
     }
   }
 
@@ -60,7 +57,7 @@ public class CollectingResolverListener extends DelegateResolverListener {
       List<AbstractReference> referenceList = reference.getReferenceList();
       for (int i = 0; i < referenceList.size() && i < resolvedRefs.size(); i++) {
         if (referenceList.get(i) != null) {
-          AbstractReferable abstractRef = resolvedRefs.get(i) == null ? null : resolvedRefs.get(i).getAbstractReferable();
+          Referable abstractRef = resolvedRefs.get(i);
           if (abstractRef != null) {
             myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
               .addReference(referenceList.get(i), abstractRef instanceof ErrorReference ? TCDefReferable.NULL_REFERABLE : abstractRef);
