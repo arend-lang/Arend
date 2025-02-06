@@ -114,7 +114,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     List<ConcreteStatement> statements = new ArrayList<>();
     for (Abstract.Statement statement : group.getStatements()) {
       Abstract.Group subgroup = statement.getGroup();
-      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, referable, concrete instanceof Concrete.Definition def ? def : null, errorReporter), statement.getNamespaceCommand(), statement.getPLevelsDefinition(), statement.getHLevelsDefinition()));
+      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, referable, concrete instanceof Concrete.Definition def ? def : null, errorReporter), statement.getNamespaceCommand(), buildLevelsDefinition(statement.getPLevelsDefinition(), true, referable), buildLevelsDefinition(statement.getHLevelsDefinition(), false, referable)));
     }
 
     List<ConcreteGroup> dynamicGroups = new ArrayList<>();
@@ -134,6 +134,17 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     }
 
     return new ConcreteGroup(group.getDescription(), referable, concrete, statements, dynamicGroups, buildExternalParameters(parentDef));
+  }
+
+  private static Concrete.LevelsDefinition buildLevelsDefinition(Abstract.LevelParameters parameters, boolean isPLevels, LocatedReferable parent) {
+    if (parameters == null) return null;
+    boolean isIncreasing = parameters.isIncreasing();
+    List<TCLevelReferable> referables = new ArrayList<>();
+    LevelDefinition levelDefinition = new LevelDefinition(isPLevels, isIncreasing, referables, parent);
+    for (Referable referable : parameters.getReferables()) {
+      referables.add(new TCLevelReferable(referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable, referable.getRefName(), levelDefinition));
+    }
+    return new Concrete.LevelsDefinition(parameters.getData(), referables, isIncreasing, isPLevels);
   }
 
   private static List<ParameterReferable> buildExternalParameters(Concrete.Definition definition) {

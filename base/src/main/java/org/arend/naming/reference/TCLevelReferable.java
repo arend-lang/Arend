@@ -26,11 +26,6 @@ public class TCLevelReferable implements TCReferable, LevelReferable {
     return myParent.isPLevels() ? RefKind.PLEVEL : RefKind.HLEVEL;
   }
 
-  @Override
-  public @NotNull TCReferable getTypecheckable() {
-    return this;
-  }
-
   public LevelDefinition getDefParent() {
     return myParent;
   }

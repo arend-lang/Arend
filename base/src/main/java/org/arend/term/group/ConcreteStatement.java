@@ -2,11 +2,10 @@ package org.arend.term.group;
 
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.NamespaceCommand;
-import org.arend.term.abs.Abstract;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.Nullable;
 
-public record ConcreteStatement(@Nullable ConcreteGroup group, @Nullable NamespaceCommand command, @Nullable Abstract.LevelParameters pLevelsDefinition, @Nullable Abstract.LevelParameters hLevelsDefinition) implements Statement {
+public record ConcreteStatement(@Nullable ConcreteGroup group, @Nullable NamespaceCommand command, @Nullable Concrete.LevelsDefinition pLevelsDefinition, @Nullable Concrete.LevelsDefinition hLevelsDefinition) implements Statement {
   public @Nullable TCDefReferable getReferable() {
     if (group == null) return null;
     Concrete.ResolvableDefinition definition = group.definition();
@@ -24,12 +23,12 @@ public record ConcreteStatement(@Nullable ConcreteGroup group, @Nullable Namespa
   }
 
   @Override
-  public Abstract.LevelParameters getPLevelsDefinition() {
+  public Concrete.LevelsDefinition getPLevelsDefinition() {
     return pLevelsDefinition;
   }
 
   @Override
-  public Abstract.LevelParameters getHLevelsDefinition() {
+  public Concrete.LevelsDefinition getHLevelsDefinition() {
     return hLevelsDefinition;
   }
 }
