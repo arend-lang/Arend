@@ -1,7 +1,6 @@
 package org.arend.term.concrete;
 
 import org.arend.naming.reference.Referable;
-import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.reference.UnresolvedReference;
 
 import java.util.ArrayList;
@@ -308,7 +307,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   private Concrete.CoClauseElement visitCoClauseElement(Concrete.CoClauseElement element) {
     Referable referable = copyRef(element.getImplementedField());
     if (element instanceof Concrete.CoClauseFunctionReference oldElement) {
-      Concrete.CoClauseFunctionReference newElement = new Concrete.CoClauseFunctionReference(getData(oldElement), referable, (TCDefReferable) ((Concrete.ReferenceExpression) oldElement.implementation).getReferent(), oldElement.isDefault());
+      Concrete.CoClauseFunctionReference newElement = new Concrete.CoClauseFunctionReference(getData(oldElement), referable, oldElement.getFunctionReference(), oldElement.isDefault());
       newElement.classRef = oldElement.classRef;
       return newElement;
     } else if (element instanceof Concrete.ClassFieldImpl classFieldImpl) {

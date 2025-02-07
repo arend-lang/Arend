@@ -36,6 +36,7 @@ public class LibraryService {
   void updateLibrary(@NotNull ArendLibrary library, @NotNull ErrorReporter errorReporter) {
     synchronized (myServer) {
       String name = library.getLibraryName();
+      ArendLibraryImpl[] newLibrary = new ArendLibraryImpl[1];
       myLibraries.compute(name, (libName, prevLibrary) -> {
         long modificationStamp = library.getModificationStamp();
         if (prevLibrary != null && modificationStamp >= 0 && prevLibrary.getModificationStamp() >= modificationStamp) {
@@ -52,17 +53,21 @@ public class LibraryService {
         }
 
         ArendLibraryImpl result = new ArendLibraryImpl(libName, isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, errorReporter));
-        try {
-          setupExtension(result, library);
-        } catch (Exception e) {
-          String msg = "Library '" + libName + "' extension is not loaded. Reason: " + e.getMessage();
-          errorReporter.report(new LibraryError(msg, Stream.of(libName)));
-          myLogger.severe(msg);
-          return new ArendLibraryImpl(libName, isExternal, modificationStamp, result.getLibraryDependencies(), new DefaultArendExtension());
-        }
+        newLibrary[0] = result;
+
         myLogger.info(() -> "Library '" + libName + "' is updated");
         return result;
       });
+
+      if (newLibrary[0] != null) {
+        try {
+          setupExtension(newLibrary[0], library);
+        } catch (Exception e) {
+          String msg = "Library '" + newLibrary[0].getLibraryName() + "' extension is not loaded. Reason: " + e.getMessage();
+          errorReporter.report(new LibraryError(msg, Stream.of(newLibrary[0].getLibraryName())));
+          myLogger.severe(msg);
+        }
+      }
     }
   }
 
