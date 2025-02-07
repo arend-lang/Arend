@@ -4,6 +4,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.util.Pair;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
+import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.term.Fixity;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
@@ -80,6 +81,6 @@ public class PatternBinOpEngine implements BinOpEngine<Concrete.Pattern> {
   }
 
   public static @NotNull Concrete.Pattern parse(@NotNull Concrete.UnparsedConstructorPattern pattern, @NotNull ErrorReporter reporter) {
-    return new BinOpParser<>(reporter, engine).parse(pattern.getUnparsedPatterns());
+    return new BinOpParser<>(TypingInfo.EMPTY, reporter, engine).parse(pattern.getUnparsedPatterns());
   }
 }

@@ -191,6 +191,12 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
     if (def.getBody() instanceof Concrete.TermFunctionBody body) {
       AbstractBody abstractBody = resolveAbstractBody(def.getParameters(), body.getTerm(), scope, false);
       if (abstractBody != null) myTypingInfo.addReferableBody(def.getData(), abstractBody);
+    } else if (def.getBody() instanceof Concrete.CoelimFunctionBody body) {
+      for (Concrete.CoClauseElement element : body.getCoClauseElements()) {
+        if (element instanceof Concrete.CoClauseFunctionReference reference) {
+          myTypingInfo.addReferablePrecedence(reference.functionReference, def.getData(), false, reference.getImplementedField());
+        }
+      }
     }
     AbstractBody abstractBody = resolveAbstractBody(def.getParameters(), def.getResultType(), scope, true);
     if (abstractBody != null) myTypingInfo.addReferableType(def.getData(), abstractBody);
@@ -208,6 +214,8 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
       if (element instanceof Concrete.ClassField field) {
         AbstractBody abstractBody = resolveAbstractBody(field.getParameters(), field.getResultType(), scope, true);
         if (abstractBody != null) myTypingInfo.addReferableType(field.getData(), abstractBody);
+      } else if (element instanceof Concrete.CoClauseFunctionReference reference) {
+        myTypingInfo.addReferablePrecedence(reference.functionReference, def.getData(), true, reference.getImplementedField());
       }
     }
     return null;

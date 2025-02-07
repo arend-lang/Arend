@@ -307,7 +307,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   private Concrete.CoClauseElement visitCoClauseElement(Concrete.CoClauseElement element) {
     Referable referable = copyRef(element.getImplementedField());
     if (element instanceof Concrete.CoClauseFunctionReference oldElement) {
-      Concrete.CoClauseFunctionReference newElement = new Concrete.CoClauseFunctionReference(getData(oldElement), referable, oldElement.getFunctionReference(), oldElement.isDefault());
+      Concrete.CoClauseFunctionReference newElement = new Concrete.CoClauseFunctionReference(getData(oldElement), referable, oldElement.functionReference, oldElement.isDefault());
       newElement.classRef = oldElement.classRef;
       return newElement;
     } else if (element instanceof Concrete.ClassFieldImpl classFieldImpl) {

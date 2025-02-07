@@ -1,7 +1,10 @@
 package org.arend.naming.resolving.typing;
 
+import org.arend.ext.reference.Precedence;
+import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.term.concrete.Concrete;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
@@ -11,6 +14,11 @@ public interface TypingInfo {
   @Nullable DynamicScopeProvider getDynamicScopeProvider(Referable referable);
   @Nullable AbstractBody getRefBody(Referable referable);
   @Nullable AbstractBody getRefType(Referable referable);
+  @NotNull Precedence getRefPrecedence(GlobalReferable referable, TypingInfo typingInfo);
+
+  default @NotNull Precedence getRefPrecedence(GlobalReferable referable) {
+    return getRefPrecedence(referable, this);
+  }
 
   private @Nullable DynamicScopeProvider getNormDynamicScopeProvider(Referable referable, int arguments) {
     Set<Referable> visited = new HashSet<>();
@@ -73,6 +81,11 @@ public interface TypingInfo {
     @Override
     public @Nullable AbstractBody getRefType(Referable referable) {
       return null;
+    }
+
+    @Override
+    public @NotNull Precedence getRefPrecedence(GlobalReferable referable, TypingInfo typingInfo) {
+      return referable.getPrecedence();
     }
   };
 }

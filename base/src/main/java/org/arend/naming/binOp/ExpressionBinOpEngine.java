@@ -5,6 +5,7 @@ import org.arend.ext.util.Pair;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.renamer.Renamer;
+import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.term.Fixity;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
@@ -45,17 +46,17 @@ public class ExpressionBinOpEngine implements BinOpEngine<Concrete.Expression> {
     return "expression";
   }
 
-  public static @NotNull Concrete.Expression parse(@NotNull Concrete.BinOpSequenceExpression expression, @NotNull ErrorReporter reporter) {
+  public static @NotNull Concrete.Expression parse(@NotNull Concrete.BinOpSequenceExpression expression, @NotNull ErrorReporter reporter, @NotNull TypingInfo typingInfo) {
     Concrete.BinOpSequenceElem<Concrete.Expression> first = expression.getSequence().get(0);
     if (first.fixity == Fixity.INFIX || first.fixity == Fixity.POSTFIX) {
       LocalReferable firstArg = new LocalReferable(Renamer.UNNAMED);
       List<Concrete.BinOpSequenceElem<Concrete.Expression>> newSequence = new ArrayList<>(expression.getSequence().size() + 1);
       newSequence.add(new Concrete.BinOpSequenceElem<>(new Concrete.ReferenceExpression(expression.getData(), firstArg)));
       newSequence.addAll(expression.getSequence());
-      return new Concrete.LamExpression(expression.getData(), Collections.singletonList(new Concrete.NameParameter(expression.getData(), true, firstArg)), parse(new Concrete.BinOpSequenceExpression(expression.getData(), newSequence, expression.getClauses()), reporter));
+      return new Concrete.LamExpression(expression.getData(), Collections.singletonList(new Concrete.NameParameter(expression.getData(), true, firstArg)), parse(new Concrete.BinOpSequenceExpression(expression.getData(), newSequence, expression.getClauses()), reporter, typingInfo));
     }
 
-    Concrete.Expression parsed = new BinOpParser<>(reporter, engine).parse(expression.getSequence());
+    Concrete.Expression parsed = new BinOpParser<>(typingInfo, reporter, engine).parse(expression.getSequence());
     return parsed instanceof Concrete.AppExpression && parsed.getData() != expression.getData()
         ? Concrete.AppExpression.make(expression.getData(), ((Concrete.AppExpression) parsed).getFunction(), ((Concrete.AppExpression) parsed).getArguments())
         : parsed;

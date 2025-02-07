@@ -71,6 +71,10 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     return myContext;
   }
 
+  public TypingInfo getTypingInfo() {
+    return myTypingInfo;
+  }
+
   @Override
   public @Nullable ArendRef resolveName(@NotNull String name) {
     Referable result = tryResolve(new NamedUnresolvedReference(null, name), myScope, null);

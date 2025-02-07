@@ -8,6 +8,7 @@ import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.error.MergingErrorReporter;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
+import org.arend.ext.reference.Precedence;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.module.scopeprovider.SimpleModuleScopeProvider;
@@ -72,6 +73,13 @@ public class ArendServerImpl implements ArendServer {
     public @Nullable AbstractBody getRefType(Referable referable) {
       TypingInfo info = getTypingInfo(referable);
       return info == null ? null : info.getRefType(referable);
+    }
+
+    @Override
+    public @NotNull Precedence getRefPrecedence(GlobalReferable referable, TypingInfo typingInfo) {
+      if (referable.getKind() != GlobalReferable.Kind.COCLAUSE_FUNCTION) return referable.getPrecedence();
+      TypingInfo info = getTypingInfo(referable);
+      return info == null ? referable.getPrecedence() : info.getRefPrecedence(referable, this);
     }
   };
 

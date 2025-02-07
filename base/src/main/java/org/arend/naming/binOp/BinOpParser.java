@@ -10,6 +10,7 @@ import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.renamer.Renamer;
+import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.term.Fixity;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
@@ -20,11 +21,13 @@ import java.util.List;
 
 // package-local on purpose, this class should be accessed via its users like ExpressionBinOpEngine
 class BinOpParser<T extends Concrete.SourceNode> {
+  private final TypingInfo myTypingInfo;
   private final ErrorReporter myErrorReporter;
   private final List<StackElem<T>> myStack;
   private final BinOpEngine<T> myEngine;
 
-  BinOpParser(ErrorReporter errorReporter, BinOpEngine<T> engine) {
+  BinOpParser(TypingInfo typingInfo, ErrorReporter errorReporter, BinOpEngine<T> engine) {
+    myTypingInfo = typingInfo;
     myErrorReporter = errorReporter;
     myEngine = engine;
     myStack = new ArrayList<>();
@@ -43,7 +46,7 @@ class BinOpParser<T extends Concrete.SourceNode> {
   @NotNull T parse(@NotNull List<Concrete.BinOpSequenceElem<T>> sequence) {
     for (Concrete.BinOpSequenceElem<T> elem : sequence) {
       Referable referable = myEngine.getReferable(elem.getComponent());
-      Precedence precedence = referable instanceof GlobalReferable ? ((GlobalReferable) referable).getPrecedence() : null;
+      Precedence precedence = referable instanceof GlobalReferable ? myTypingInfo.getRefPrecedence((GlobalReferable) referable) : null;
 
       if (referable != null && (elem.fixity == Fixity.INFIX || elem.fixity == Fixity.POSTFIX || elem.fixity == Fixity.UNKNOWN && precedence != null && precedence.isInfix)) {
         if (precedence == null) {

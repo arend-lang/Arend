@@ -87,7 +87,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       def.getData().setDefinition(def);
     }
     def.setResolved();
-    SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter);
+    SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter, myTypingInfo);
     if (myResolverListener != null) {
       myResolverListener.definitionResolved(def);
     }
@@ -207,9 +207,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       if (functionRef != null) {
         function.setImplementedField(new ExpressionResolveNameVisitor(scope, null, myTypingInfo, myLocalErrorReporter, myResolverListener).visitClassFieldReference(functionRef, function.getImplementedField(), dynamicScopeProvider));
       }
-    }
-    if (function.getData() instanceof LocatedReferableImpl && !((LocatedReferableImpl) function.getData()).isPrecedenceSet() && function.getImplementedField() instanceof GlobalReferable) {
-      ((LocatedReferableImpl) function.getData()).setPrecedence(((GlobalReferable) function.getImplementedField()).getPrecedence());
     }
   }
 
@@ -340,7 +337,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
     }
 
-    SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter);
+    SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter, myTypingInfo);
 
     if (def instanceof Concrete.CoClauseFunctionDefinition function && def.getKind() == FunctionKind.FUNC_COCLAUSE && function.getNumberOfExternalParameters() > 0) {
       BaseConcreteExpressionVisitor<Void> visitor = new BaseConcreteExpressionVisitor<>() {
@@ -474,7 +471,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     def.setResolved();
-    SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter);
+    SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter, myTypingInfo);
     if (myResolverListener != null) {
       myResolverListener.definitionResolved(def);
     }
@@ -607,7 +604,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     def.setResolved();
-    SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter);
+    SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter, myTypingInfo);
     if (myResolverListener != null) {
       myResolverListener.definitionResolved(def);
     }

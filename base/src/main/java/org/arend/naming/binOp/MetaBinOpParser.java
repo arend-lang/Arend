@@ -87,7 +87,7 @@ public class MetaBinOpParser {
       }
 
       Concrete.BinOpSequenceElem<Concrete.Expression> elem = sequence.get(i);
-      Precedence precedence = resolvedRef.refExpr.getReferent() instanceof GlobalReferable ? ((GlobalReferable) resolvedRef.refExpr.getReferent()).getPrecedence() : null;
+      Precedence precedence = resolvedRef.refExpr.getReferent() instanceof GlobalReferable ? myVisitor.getTypingInfo().getRefPrecedence((GlobalReferable) resolvedRef.refExpr.getReferent()) : null;
       if (elem.fixity == Fixity.INFIX || elem.fixity == Fixity.POSTFIX || elem.fixity == Fixity.UNKNOWN && precedence != null && precedence.isInfix) {
         if (precedence == null) {
           precedence = Precedence.DEFAULT;

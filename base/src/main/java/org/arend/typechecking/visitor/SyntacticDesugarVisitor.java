@@ -4,6 +4,8 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.naming.binOp.ExpressionBinOpEngine;
 import org.arend.naming.reference.*;
+import org.arend.naming.resolving.typing.TypingInfo;
+import org.arend.term.Fixity;
 import org.arend.term.concrete.BaseConcreteExpressionVisitor;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
@@ -12,20 +14,22 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class SyntacticDesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
+  private final TypingInfo myTypingInfo;
   private final ErrorReporter myErrorReporter;
   private final boolean myParametersRefsSupported;
 
-  private SyntacticDesugarVisitor(ErrorReporter errorReporter, boolean parametersRefsSupported) {
+  private SyntacticDesugarVisitor(TypingInfo typingInfo, ErrorReporter errorReporter, boolean parametersRefsSupported) {
+    myTypingInfo = typingInfo;
     myErrorReporter = errorReporter;
     myParametersRefsSupported = parametersRefsSupported;
   }
 
-  public static void desugar(Concrete.ResolvableDefinition definition, ErrorReporter errorReporter) {
-    definition.accept(new SyntacticDesugarVisitor(errorReporter, !(definition instanceof DefinableMetaDefinition)), null);
+  public static void desugar(Concrete.ResolvableDefinition definition, ErrorReporter errorReporter, TypingInfo typingInfo) {
+    definition.accept(new SyntacticDesugarVisitor(typingInfo, errorReporter, !(definition instanceof DefinableMetaDefinition)), null);
   }
 
   public static Concrete.Expression desugar(Concrete.Expression expression, ErrorReporter errorReporter) {
-    return expression.accept(new SyntacticDesugarVisitor(errorReporter, false), null);
+    return expression.accept(new SyntacticDesugarVisitor(TypingInfo.EMPTY, errorReporter, false), null);
   }
 
   @Override
@@ -47,7 +51,7 @@ public class SyntacticDesugarVisitor extends BaseConcreteExpressionVisitor<Void>
     convertBinOpAppHoles(expr, parameters);
     return !parameters.isEmpty()
             ? new Concrete.LamExpression(expr.getData(), parameters, expr).accept(this, null)
-            : ExpressionBinOpEngine.parse(expr, myErrorReporter).accept(this, null);
+            : ExpressionBinOpEngine.parse(expr, myErrorReporter, myTypingInfo).accept(this, null);
   }
 
   @Override
@@ -164,8 +168,19 @@ public class SyntacticDesugarVisitor extends BaseConcreteExpressionVisitor<Void>
           || elem.getComponent() instanceof Concrete.PiExpression
           || elem.getComponent() instanceof Concrete.CaseExpression
       ) convertRecursively(elem.getComponent(), parameters);
-      isLastElemInfix = elem.isInfixReference();
+      isLastElemInfix = isInfixElem(elem);
     }
+  }
+
+  private boolean isInfixExpr(Concrete.Expression expr) {
+    if (expr instanceof Concrete.AppExpression) {
+      expr = ((Concrete.AppExpression) expr).getFunction();
+    }
+    return expr instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof GlobalReferable global && myTypingInfo.getRefPrecedence(global).isInfix;
+  }
+
+  private boolean isInfixElem(Concrete.BinOpSequenceElem<Concrete.Expression> elem) {
+    return elem.isExplicit && (elem.fixity == Fixity.INFIX || elem.fixity == Fixity.UNKNOWN && isInfixExpr(elem.getComponent()));
   }
 
   private void convertRecursively(Concrete.Expression expression, List<Concrete.Parameter> parameters) {

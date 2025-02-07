@@ -1,7 +1,10 @@
 package org.arend.naming.resolving.typing;
 
+import org.arend.ext.reference.Precedence;
+import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.ParameterReferable;
 import org.arend.naming.reference.Referable;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -39,5 +42,10 @@ public class LocalTypingInfo implements TypingInfo {
       }
     }
     return null;
+  }
+
+  @Override
+  public @NotNull Precedence getRefPrecedence(GlobalReferable referable, TypingInfo typingInfo) {
+    return myParent.getRefPrecedence(referable);
   }
 }
