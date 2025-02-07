@@ -129,11 +129,15 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
     List<ConcreteGroup> dynamicGroups = new ArrayList<>();
     for (Abstract.Group subgroup : group.getDynamicSubgroups()) {
-      dynamicGroups.add(buildGroup(subgroup, referable, null, true, errorReporter, resolved));
+      dynamicGroups.add(buildGroup(subgroup, referable, concrete instanceof Concrete.Definition def ? def : null, true, errorReporter, resolved));
+    }
+
+    if (concrete instanceof Concrete.Definition cDef && parentDef != null && cDef.getUseParent() == parentDef.getData()) {
+      parentDef.addUsedDefinition(concrete.getData());
     }
 
     if (definition != null && definition.withUse()) {
-      if (parentDef == null) {
+      if (parentDef == null || isDynamic) {
         errorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "\\use must belong to a \\where-block of a definition", definition));
       } else {
         parentDef.addUsedDefinition(concrete.getData());
