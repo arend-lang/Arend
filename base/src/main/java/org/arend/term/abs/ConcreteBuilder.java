@@ -113,10 +113,10 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
   // TODO[server2]: Do not report actual errors in ConcreteBuilder
   public static @NotNull ConcreteGroup convertGroup(Abstract.Group group, ErrorReporter errorReporter) {
-    return buildGroup(group, null, null, false, errorReporter, null);
+    return buildGroup(group, null, null, null, errorReporter, null);
   }
 
-  private static ConcreteGroup buildGroup(Abstract.Group group, LocatedReferable parent, Concrete.Definition parentDef, boolean isDynamic, ErrorReporter errorReporter, Map<LocatedReferable, LocatedReferableImpl> parentResolved) {
+  private static ConcreteGroup buildGroup(Abstract.Group group, LocatedReferable parent, Concrete.Definition parentDef, TCDefReferable enclosingClass, ErrorReporter errorReporter, Map<LocatedReferable, LocatedReferableImpl> parentResolved) {
     Abstract.Definition definition = group.getGroupDefinition();
     Map<LocatedReferable, LocatedReferableImpl> resolved = new HashMap<>();
     Concrete.ResolvableDefinition concrete = definition == null ? null : convert(definition, parent, errorReporter, resolved, parentResolved);
@@ -124,13 +124,13 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
     List<ConcreteGroup> dynamicGroups = new ArrayList<>();
     for (Abstract.Group subgroup : group.getDynamicSubgroups()) {
-      dynamicGroups.add(buildGroup(subgroup, referable, concrete instanceof Concrete.Definition def ? def : null, true, errorReporter, resolved));
+      dynamicGroups.add(buildGroup(subgroup, referable, concrete instanceof Concrete.Definition def ? def : null, referable instanceof TCDefReferable ? (TCDefReferable) referable : null, errorReporter, resolved));
     }
 
     List<ConcreteStatement> statements = new ArrayList<>();
     for (Abstract.Statement statement : group.getStatements()) {
       Abstract.Group subgroup = statement.getGroup();
-      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, referable, concrete instanceof Concrete.Definition def ? def : null, false, errorReporter, resolved), statement.getNamespaceCommand(), buildLevelsDefinition(statement.getPLevelsDefinition(), true, referable), buildLevelsDefinition(statement.getHLevelsDefinition(), false, referable)));
+      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, referable, concrete instanceof Concrete.Definition def ? def : null, enclosingClass, errorReporter, resolved), statement.getNamespaceCommand(), buildLevelsDefinition(statement.getPLevelsDefinition(), true, referable), buildLevelsDefinition(statement.getHLevelsDefinition(), false, referable)));
     }
 
     if (concrete instanceof Concrete.Definition cDef && parentDef instanceof Concrete.ClassDefinition && cDef.getUseParent() == parentDef.getData()) {
@@ -148,8 +148,8 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       }
     }
 
-    if (isDynamic && concrete instanceof Concrete.Definition def && parent instanceof TCDefReferable) {
-      def.enclosingClass = (TCDefReferable) parent;
+    if (concrete instanceof Concrete.Definition def && enclosingClass != null) {
+      def.enclosingClass = enclosingClass;
     }
 
     return new ConcreteGroup(group.getDescription(), referable, concrete, statements, dynamicGroups, buildExternalParameters(parentDef));
