@@ -492,12 +492,6 @@ public class ArendServerImpl implements ArendServer {
           }
           Map<LongName, GroupData.DefinitionData> definitionData = new LinkedHashMap<>();
           new DefinitionResolveNameVisitor(concreteProvider, myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()), definitionData);
-
-          groupData.getRawGroup().traverseGroup(group -> {
-            if (concreteProvider.getConcrete(group.getReferable()) instanceof Concrete.ResolvableDefinition definition) {
-              definitionData.putIfAbsent(definition.getData().getRefLongName(), new GroupData.DefinitionData(definition, EmptyScope.INSTANCE));
-            }
-          });
           resolverResult.put(module, definitionData);
         }
         listener.moduleResolved(module);
