@@ -121,23 +121,24 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     Map<LocatedReferable, LocatedReferableImpl> resolved = new HashMap<>();
     Concrete.ResolvableDefinition concrete = definition == null ? null : convert(definition, parent, errorReporter, resolved, parentResolved);
     LocatedReferable referable = concrete == null ? convertFileReferable(group.getReferable(), parent) : concrete.getData();
-    List<ConcreteStatement> statements = new ArrayList<>();
-    for (Abstract.Statement statement : group.getStatements()) {
-      Abstract.Group subgroup = statement.getGroup();
-      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, referable, concrete instanceof Concrete.Definition def ? def : null, false, errorReporter, resolved), statement.getNamespaceCommand(), buildLevelsDefinition(statement.getPLevelsDefinition(), true, referable), buildLevelsDefinition(statement.getHLevelsDefinition(), false, referable)));
-    }
 
     List<ConcreteGroup> dynamicGroups = new ArrayList<>();
     for (Abstract.Group subgroup : group.getDynamicSubgroups()) {
       dynamicGroups.add(buildGroup(subgroup, referable, concrete instanceof Concrete.Definition def ? def : null, true, errorReporter, resolved));
     }
 
-    if (concrete instanceof Concrete.Definition cDef && parentDef != null && cDef.getUseParent() == parentDef.getData()) {
+    List<ConcreteStatement> statements = new ArrayList<>();
+    for (Abstract.Statement statement : group.getStatements()) {
+      Abstract.Group subgroup = statement.getGroup();
+      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, referable, concrete instanceof Concrete.Definition def ? def : null, false, errorReporter, resolved), statement.getNamespaceCommand(), buildLevelsDefinition(statement.getPLevelsDefinition(), true, referable), buildLevelsDefinition(statement.getHLevelsDefinition(), false, referable)));
+    }
+
+    if (concrete instanceof Concrete.Definition cDef && parentDef instanceof Concrete.ClassDefinition && cDef.getUseParent() == parentDef.getData()) {
       parentDef.addUsedDefinition(concrete.getData());
     }
 
     if (definition != null && definition.withUse()) {
-      if (parentDef == null || isDynamic) {
+      if (parentDef == null) {
         errorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "\\use must belong to a \\where-block of a definition", definition));
       } else {
         parentDef.addUsedDefinition(concrete.getData());

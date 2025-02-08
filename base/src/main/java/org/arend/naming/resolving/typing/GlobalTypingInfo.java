@@ -61,7 +61,7 @@ public class GlobalTypingInfo implements TypingInfo {
         if (!unresolved.isResolved()) {
           DynamicScopeProvider provider = fieldRef.isBodyRef ? typingInfo.getBodyDynamicScopeProvider(fieldRef.referable) : typingInfo.getTypeDynamicScopeProvider(fieldRef.referable);
           if (provider != null) {
-            unresolved.resolveExpression(new DynamicScope(provider, this, DynamicScope.Extent.ONLY_FIELDS), this, null, null);
+            unresolved.resolveExpression(new DynamicScope(provider, typingInfo, DynamicScope.Extent.ONLY_FIELDS), this, null, null);
           }
         }
         if (unresolved.isResolved()) {

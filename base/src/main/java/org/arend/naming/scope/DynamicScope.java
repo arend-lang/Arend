@@ -44,7 +44,7 @@ public class DynamicScope implements Scope {
       for (GlobalReferable referable : provider.getDynamicContent()) {
         boolean isField = referable.getKind() == GlobalReferable.Kind.FIELD;
         boolean notPrivate = referable.getAccessModifier() != AccessModifier.PRIVATE;
-        if (isField && (extent == Extent.WITH_SUPER || notPrivate) || !isField && extent == Extent.WITH_DYNAMIC && notPrivate) {
+        if (isField && (extent == Extent.WITH_SUPER || notPrivate) || !isField && extent == Extent.WITH_DYNAMIC && notPrivate && !isCoclause(referable)) {
           if (pred.test(referable)) {
             return referable;
           }
@@ -85,6 +85,10 @@ public class DynamicScope implements Scope {
     }
 
     return null;
+  }
+
+  private static boolean isCoclause(GlobalReferable referable) {
+    return referable instanceof LocatedReferable located && located.getKind() == GlobalReferable.Kind.COCLAUSE_FUNCTION;
   }
 
   @NotNull
