@@ -722,9 +722,24 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       if (curScope == null) {
         myErrorReporter.report(reference.getErrorReference().getError());
       } else {
+        loop:
         for (Referable element : curScope.getElements()) {
           if (element instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
-            newInstances.add(defRef);
+            for (NameHiding hiding : namespaceCommand.getHiddenReferences()) {
+              if (hiding.getScopeContext() == Scope.ScopeContext.STATIC && hiding.getHiddenReference().getRefName().equals(defRef.getRefName())) continue loop;
+            }
+            boolean ok = namespaceCommand.isUsing();
+            if (!ok) {
+              for (NameRenaming renaming : namespaceCommand.getOpenedReferences()) {
+                if (renaming.getScopeContext() == Scope.ScopeContext.STATIC && renaming.getOldReference().getRefName().equals(defRef.getRefName())) {
+                  ok = true;
+                  break;
+                }
+              }
+            }
+            if (ok) {
+              newInstances.add(defRef);
+            }
           }
         }
 
