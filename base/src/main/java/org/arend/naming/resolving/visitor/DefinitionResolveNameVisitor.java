@@ -6,6 +6,7 @@ import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.NameResolverError;
+import org.arend.ext.module.LongName;
 import org.arend.ext.prettyprinting.doc.*;
 import org.arend.ext.reference.Precedence;
 import org.arend.naming.error.DuplicateNameError;
@@ -20,6 +21,7 @@ import org.arend.naming.scope.local.ElimScope;
 import org.arend.naming.scope.local.ListScope;
 import org.arend.prelude.Prelude;
 import org.arend.ext.concrete.definition.FunctionKind;
+import org.arend.server.impl.GroupData;
 import org.arend.term.NameHiding;
 import org.arend.term.NameRenaming;
 import org.arend.term.NamespaceCommand;
@@ -29,6 +31,8 @@ import org.arend.typechecking.error.local.LocalErrorReporter;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
 import org.arend.ext.util.Pair;
+import org.arend.util.list.ConsList;
+import org.arend.util.list.PersistentList;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -636,7 +640,14 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     return true;
   }
 
-  public void resolveGroup(Group group, Scope scope) {
+  private PersistentList<TCDefReferable> addInstances(PersistentList<TCDefReferable> instances, List<TCDefReferable> list) {
+    for (int i = list.size() - 1; i >= 0; i--) {
+      instances = new ConsList<>(list.get(i), instances);
+    }
+    return instances;
+  }
+
+  public void resolveGroup(Group group, Scope scope, PersistentList<TCDefReferable> instances, Map<LongName, GroupData.DefinitionData> definitionData) {
     LocatedReferable groupRef = group.getReferable();
     Collection<? extends Statement> statements = group.getStatements();
     Collection<? extends Group> dynamicSubgroups = group.getDynamicSubgroups();
@@ -679,7 +690,17 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       group.getDescription().accept(this, docScope);
     }
 
+    boolean added = addExternalParameters(def);
+    List<TCDefReferable> newInstances = new ArrayList<>();
     for (Statement statement : statements) {
+      Group subgroup = statement.getGroup();
+      if (subgroup != null) {
+        resolveGroup(subgroup, cachedScope, addInstances(instances, newInstances), definitionData);
+        if (subgroup.getReferable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
+          newInstances.add(defReferable);
+        }
+      }
+
       NamespaceCommand namespaceCommand = statement.getNamespaceCommand();
       if (namespaceCommand == null) {
         continue;
@@ -700,9 +721,13 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       Scope curScope = reference.resolveNamespace(importedScope);
       if (curScope == null) {
         myErrorReporter.report(reference.getErrorReference().getError());
-      }
+      } else {
+        for (Referable element : curScope.getElements()) {
+          if (element instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
+            newInstances.add(defRef);
+          }
+        }
 
-      if (curScope != null) {
         for (NameRenaming renaming : namespaceCommand.getOpenedReferences()) {
           Referable oldRef = renaming.getOldReference();
           Referable ref = ExpressionResolveNameVisitor.resolve(oldRef, new PrivateFilteredScope(curScope, true), null);
@@ -723,20 +748,20 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
     }
 
-    boolean added = addExternalParameters(def);
-    for (Statement statement : statements) {
-      Group subgroup = statement.getGroup();
-      if (subgroup != null) {
-        resolveGroup(subgroup, cachedScope);
-      }
+    if (definitionData != null && def instanceof Concrete.ResolvableDefinition definition) {
+      definitionData.putIfAbsent(definition.getData().getRefLongName(), new GroupData.DefinitionData(definition, addInstances(instances, newInstances)));
     }
+
     if (!dynamicSubgroups.isEmpty()) {
       Scope dynamicScope = CachingScope.make(makeScope(group, scope, true));
       if (dynamicScopeProvider != null) {
         dynamicScope = new MergeScope(dynamicScope, new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC));
       }
       for (Group subgroup : dynamicSubgroups) {
-        resolveGroup(subgroup, dynamicScope);
+        resolveGroup(subgroup, dynamicScope, addInstances(instances, newInstances), definitionData);
+        if (subgroup.getReferable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
+          newInstances.add(defReferable);
+        }
       }
     }
     if (added) {

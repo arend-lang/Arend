@@ -24,4 +24,9 @@ public final class NilList<T> implements PersistentList<T> {
   public @Nullable T find(@NotNull Predicate<T> predicate) {
     return null;
   }
+
+  @Override
+  public String toString() {
+    return "[]";
+  }
 }

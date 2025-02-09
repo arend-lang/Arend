@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.function.Predicate;
 
-@SuppressWarnings("Duplicates")
+// TODO[server2]: This class shouldn't resolve namespace commands. It should take as an input already resolved data.
 public class LexicalScope implements Scope {
   private final Scope myParent;
   private final Group myGroup;

@@ -30,7 +30,7 @@ public final class ConsList<T> implements PersistentList<T> {
   @Override
   public @Nullable T find(@NotNull Predicate<T> predicate) {
     for (PersistentList<T> list = this; list instanceof ConsList<T> cons; list = cons.myTail) {
-      if (predicate.test(cons.myValue)) return myValue;
+      if (predicate.test(cons.myValue)) return cons.myValue;
     }
     return null;
   }
@@ -63,5 +63,17 @@ public final class ConsList<T> implements PersistentList<T> {
   @Override
   public int hashCode() {
     return Objects.hash(myValue, myTail);
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    builder.append("[");
+    builder.append(myValue);
+    for (PersistentList<T> list = myTail; list instanceof ConsList<T> cons; list = cons.myTail) {
+      builder.append(", ").append(cons.myValue);
+    }
+    builder.append("]");
+    return builder.toString();
   }
 }
