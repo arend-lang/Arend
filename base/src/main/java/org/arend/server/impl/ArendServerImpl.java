@@ -584,6 +584,11 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
+  public @NotNull TypingInfo getTypingInfo() {
+    return myTypingInfo;
+  }
+
+  @Override
   public @Nullable ConcreteGroup getRawGroup(@NotNull ModuleLocation module) {
     GroupData groupData = myGroups.get(module);
     return groupData == null ? null : groupData.getRawGroup();

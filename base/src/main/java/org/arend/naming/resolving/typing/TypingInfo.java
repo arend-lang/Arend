@@ -57,6 +57,12 @@ public interface TypingInfo {
     return getTypeDynamicScopeProvider(new AbstractBody(0, referable, 0));
   }
 
+  default @Nullable DynamicScopeProvider getAnyTypeDynamicScopeProvider(Referable referable) {
+    AbstractBody typeBody = getRefType(referable);
+    if (typeBody == null) return null;
+    return getNormDynamicScopeProvider(typeBody.getReferable(), typeBody.getArguments());
+  }
+
   default @Nullable DynamicScopeProvider getTypeDynamicScopeProvider(Concrete.Expression expr) {
     return getTypeDynamicScopeProvider(TypingInfoVisitor.resolveAbstractBodyWithoutParameters(expr));
   }

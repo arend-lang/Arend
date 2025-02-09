@@ -6,6 +6,7 @@ import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.reference.UnresolvedReference;
+import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.server.impl.GroupData;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
@@ -82,6 +83,8 @@ public interface ArendServer {
    * @return the set of registered libraries.
    */
   @NotNull Set<String> getLibraries();
+
+  @NotNull TypingInfo getTypingInfo();
 
   /**
    * @return the content of the given module.
