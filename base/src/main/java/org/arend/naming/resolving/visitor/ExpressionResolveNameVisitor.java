@@ -917,14 +917,14 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
 
     if (impl.implementation == null) {
       Referable ref = impl.getImplementedField();
-      if (ref instanceof TCDefReferable) {
-        impl.classRef = (TCDefReferable) ref;
-      }
       DynamicScopeProvider subProvider = myTypingInfo.getBodyDynamicScopeProvider(ref);
       if (subProvider == null) {
         subProvider = myTypingInfo.getTypeDynamicScopeProvider(ref);
       }
       if (subProvider != null) {
+        if (subProvider.getReferable() instanceof TCDefReferable defRef) {
+          impl.classRef = defRef;
+        }
         visitClassFieldImpls(impl.getSubCoclauseList(), subProvider);
       }
     } else {
