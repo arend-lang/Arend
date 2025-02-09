@@ -160,7 +160,7 @@ public abstract class Repl {
     var scope = ScopeFactory.forGroup(group, moduleScopeProvider);
     myReplScope.addScope(scope);
     myReplScope.setCurrentLineScope(null);
-    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, myErrorReporter).resolveGroup(group, myScope, null);
+    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, myErrorReporter).resolveGroup(group, myScope);
     if (checkErrors()) {
       myMergedScopes.remove(scope);
     } else {
@@ -283,7 +283,7 @@ public abstract class Repl {
     expr = DesugarVisitor.desugar(expr, myErrorReporter);
     if (checkErrors()) return;
     var typechecker = new CheckTypeVisitor(myErrorReporter, null, null);
-    var instancePool = new GlobalInstancePool(typechecking.getInstanceScopeProvider().getInstanceScopeFor(myModuleReferable), typechecker);
+    var instancePool = new GlobalInstancePool(typechecking.getInstanceScopeProvider().getInstancesFor(myModuleReferable), typechecker);
     typechecker.setInstancePool(instancePool);
     var result = typechecker.finalCheckExpr(expr, expectedType);
     if (!checkErrors()) {

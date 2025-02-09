@@ -19,7 +19,6 @@ import org.arend.naming.reference.DataLocalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.renamer.ReferableRenamer;
-import org.arend.naming.scope.EmptyScope;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.SubstConcreteVisitor;
 import org.arend.typechecking.error.local.GoalError;
@@ -31,6 +30,7 @@ import org.arend.typechecking.instance.pool.GlobalInstancePool;
 import org.arend.typechecking.instance.pool.LocalInstancePool;
 import org.arend.typechecking.instance.provider.InstanceProvider;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
+import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -245,7 +245,7 @@ final public class MinimizedRepresentation {
                 errorsCollector.add(error);
             }
         }, null, null);
-        checkTypeVisitor.setInstancePool(new GlobalInstancePool(EmptyScope.INSTANCE /* TODO[server2]: instanceProvider */, checkTypeVisitor, new LocalInstancePool(checkTypeVisitor)));
+        checkTypeVisitor.setInstancePool(new GlobalInstancePool(PersistentList.empty() /* TODO[server2]: instanceProvider */, checkTypeVisitor, new LocalInstancePool(checkTypeVisitor)));
         return checkTypeVisitor;
     }
 

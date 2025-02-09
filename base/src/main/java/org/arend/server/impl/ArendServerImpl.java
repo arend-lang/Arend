@@ -29,6 +29,7 @@ import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.group.Group;
+import org.arend.term.group.Statement;
 import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
@@ -36,6 +37,8 @@ import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
 import org.arend.util.ComputationInterruptedException;
+import org.arend.util.list.ConsList;
+import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -95,13 +98,13 @@ public class ArendServerImpl implements ArendServer {
 
   private final InstanceScopeProvider myInstanceScopeProvider = new InstanceScopeProvider() {
     @Override
-    public @NotNull Scope getInstanceScopeFor(@NotNull TCDefReferable referable) {
+    public @NotNull PersistentList<TCDefReferable> getInstancesFor(@NotNull TCDefReferable referable) {
       ModuleLocation module = referable.getLocation();
-      if (module == null) return EmptyScope.INSTANCE;
+      if (module == null) return PersistentList.empty();
       GroupData groupData = myGroups.get(module);
-      if (groupData == null) return EmptyScope.INSTANCE;
+      if (groupData == null) return PersistentList.empty();
       GroupData.DefinitionData defData = groupData.getDefinitionData(referable.getRefLongName());
-      return defData == null ? EmptyScope.INSTANCE : defData.instanceScope();
+      return defData == null ? PersistentList.empty() : defData.instances();
     }
   };
 
@@ -490,8 +493,10 @@ public class ArendServerImpl implements ArendServer {
             errorReporterMap.put(module, listErrorReporter);
             currentErrorReporter = new MergingErrorReporter(errorReporter, listErrorReporter);
           }
+
+          new DefinitionResolveNameVisitor(concreteProvider, myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()));
           Map<LongName, GroupData.DefinitionData> definitionData = new LinkedHashMap<>();
-          new DefinitionResolveNameVisitor(concreteProvider, myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()), definitionData);
+          calculateDefinitionData(groupData.getRawGroup(), concreteProvider, PersistentList.empty(), definitionData);
           resolverResult.put(module, definitionData);
         }
         listener.moduleResolved(module);
@@ -553,6 +558,29 @@ public class ArendServerImpl implements ArendServer {
     } catch (ComputationInterruptedException e) {
       myLogger.info(() -> "Resolving of modules " + modules + " is interrupted");
       return null;
+    }
+  }
+
+  private void calculateDefinitionData(Group group, ConcreteProvider concreteProvider, PersistentList<TCDefReferable> instances, Map<LongName, GroupData.DefinitionData> definitionData) {
+    for (Statement statement : group.getStatements()) {
+      Group subgroup = statement.getGroup();
+      if (subgroup != null) {
+        calculateDefinitionData(subgroup, concreteProvider, instances, definitionData);
+        if (subgroup.getReferable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
+          instances = new ConsList<>(defReferable, instances);
+        }
+      }
+    }
+
+    if (concreteProvider.getConcrete(group.getReferable()) instanceof Concrete.ResolvableDefinition definition) {
+      definitionData.putIfAbsent(definition.getData().getRefLongName(), new GroupData.DefinitionData(definition, instances));
+    }
+
+    for (Group subgroup : group.getDynamicSubgroups()) {
+      calculateDefinitionData(subgroup, concreteProvider, instances, definitionData);
+      if (subgroup.getReferable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
+        instances = new ConsList<>(defReferable, instances);
+      }
     }
   }
 
@@ -658,7 +686,7 @@ public class ArendServerImpl implements ArendServer {
             }
           }
         }
-      }).resolveGroup(group, getParentGroupScope(module, group), null);
+      }).resolveGroup(group, getParentGroupScope(module, group));
     } catch (CompletionException ignored) {}
 
     myLogger.fine(() -> found[0] ? "Finish completion for '" + reference.getReferenceText() + "' with " + result.size() + " results" : "Cannot find completion variants for '" + reference.getReferenceText() + "'");

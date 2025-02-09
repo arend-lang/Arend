@@ -235,7 +235,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
     if (ok) {
       CheckTypeVisitor checkTypeVisitor = new CheckTypeVisitor(new LocalErrorReporter(definition.getData(), myErrorReporter), null, extension);
-      checkTypeVisitor.setInstancePool(new GlobalInstancePool(myInstanceScopeProvider.getInstanceScopeFor(definition.getData()), checkTypeVisitor));
+      checkTypeVisitor.setInstancePool(new GlobalInstancePool(myInstanceScopeProvider.getInstancesFor(definition.getData()), checkTypeVisitor));
       definition = definition.accept(new ReplaceDataVisitor(), null);
       if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind().isUse()) {
         myDesugaredDefinitions.put(funDef.getData(), funDef);
@@ -390,7 +390,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     DesugarVisitor.desugar(definition, visitor.getErrorReporter());
     Definition oldTypechecked = definition.getData().getTypechecked();
     DefinitionTypechecker typechecker = new DefinitionTypechecker(visitor, definition instanceof Concrete.Definition ? ((Concrete.Definition) definition).getRecursiveDefinitions() : Collections.emptySet());
-    Definition typechecked = typechecker.typecheckHeader(oldTypechecked, new GlobalInstancePool(myInstanceScopeProvider.getInstanceScopeFor(definition.getData()), visitor), definition);
+    Definition typechecked = typechecker.typecheckHeader(oldTypechecked, new GlobalInstancePool(myInstanceScopeProvider.getInstancesFor(definition.getData()), visitor), definition);
     UniverseKind universeKind = typechecked.getUniverseKind();
     if (typechecked instanceof TopLevelDefinition) {
       ((TopLevelDefinition) typechecked).setUniverseKind(UniverseKind.WITH_UNIVERSES);

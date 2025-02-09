@@ -17,7 +17,6 @@ import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.AccessModifier;
 import org.arend.term.group.ChildGroup;
 import org.arend.term.group.ConcreteGroup;
-import org.arend.term.group.Group;
 import org.arend.typechecking.TestLocalErrorReporter;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.DesugarVisitor;
@@ -105,7 +104,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
   protected ConcreteGroup resolveNamesDef(String text, int errors) {
     ConcreteGroup group = parseDef(text);
     Scope parentScope = new MergeScope(new SingletonScope(group.getReferable()), metaScope, PreludeLibrary.getPreludeScope());
-    new DefinitionResolveNameVisitor(ConcreteProvider.EMPTY /* TODO[server2] */, TypingInfo.EMPTY, errorReporter).resolveGroup(group, parentScope, null);
+    new DefinitionResolveNameVisitor(ConcreteProvider.EMPTY /* TODO[server2] */, TypingInfo.EMPTY, errorReporter).resolveGroup(group, parentScope);
     assertThat(errorList, containsErrors(errors));
     return group;
   }
@@ -125,7 +124,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
 
   protected void resolveNamesModule(ConcreteGroup group, int errors) {
     Scope scope = CachingScope.make(new MergeScope(ScopeFactory.parentScopeForGroup(group, moduleScopeProvider, true), metaScope));
-    new DefinitionResolveNameVisitor(ConcreteProvider.EMPTY /* TODO[server2] */, TypingInfo.EMPTY, errorReporter).resolveGroup(group, scope, null);
+    new DefinitionResolveNameVisitor(ConcreteProvider.EMPTY /* TODO[server2] */, TypingInfo.EMPTY, errorReporter).resolveGroup(group, scope);
     libraryManager.getInstanceProviderSet().collectInstances(group, CachingScope.make(ScopeFactory.parentScopeForGroup(group, moduleScopeProvider, true)));
     assertThat(errorList, containsErrors(errors));
   }

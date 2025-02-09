@@ -10,6 +10,7 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteCompareVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
+import org.arend.util.list.PersistentList;
 
 import java.util.*;
 
@@ -21,24 +22,9 @@ public class GroupData {
   private Map<LongName, DefinitionData> myResolvedDefinitions;
   private boolean myResolved;
 
-  public record DefinitionData(Concrete.ResolvableDefinition definition, Scope instanceScope) {
+  public record DefinitionData(Concrete.ResolvableDefinition definition, PersistentList<TCDefReferable> instances) {
     public boolean compare(DefinitionData other) {
-      if (!definition.accept(new ConcreteCompareVisitor(), other.definition)) {
-        return false;
-      }
-
-      Collection<? extends Referable> instances1 = instanceScope.getElements();
-      Collection<? extends Referable> instances2 = other.instanceScope.getElements();
-      if (instances1.size() != instances2.size()) {
-        return false;
-      }
-      Iterator<? extends Referable> it = instances2.iterator();
-      for (Referable instance : instances1) {
-        if (!instance.equals(it.next())) {
-          return false;
-        }
-      }
-      return true;
+      return definition.accept(new ConcreteCompareVisitor(), other.definition) && instances.equals(other.instances);
     }
   }
 

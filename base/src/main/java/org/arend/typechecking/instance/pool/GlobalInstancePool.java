@@ -13,29 +13,28 @@ import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.instance.InstanceSearchParameters;
 import org.arend.naming.reference.CoreReferable;
-import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.naming.scope.Scope;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.ext.util.Pair;
+import org.arend.util.list.PersistentList;
 
 import java.util.*;
 import java.util.function.Predicate;
 
 public class GlobalInstancePool implements InstancePool {
-  private final Scope myInstanceScope;
+  private final PersistentList<TCDefReferable> myInstances;
   private final CheckTypeVisitor myCheckTypeVisitor;
   private LocalInstancePool myInstancePool;
 
-  public GlobalInstancePool(Scope instanceScope, CheckTypeVisitor checkTypeVisitor) {
-    myInstanceScope = instanceScope;
+  public GlobalInstancePool(PersistentList<TCDefReferable> instances, CheckTypeVisitor checkTypeVisitor) {
+    myInstances = instances;
     myCheckTypeVisitor = checkTypeVisitor;
   }
 
-  public GlobalInstancePool(Scope instanceScope, CheckTypeVisitor checkTypeVisitor, LocalInstancePool instancePool) {
-    myInstanceScope = instanceScope;
+  public GlobalInstancePool(PersistentList<TCDefReferable> instances, CheckTypeVisitor checkTypeVisitor, LocalInstancePool instancePool) {
+    myInstances = instances;
     myCheckTypeVisitor = checkTypeVisitor;
     myInstancePool = instancePool;
   }
@@ -44,8 +43,8 @@ public class GlobalInstancePool implements InstancePool {
     myInstancePool = instancePool;
   }
 
-  public Scope getInstanceScope() {
-    return myInstanceScope;
+  public PersistentList<TCDefReferable> getInstances() {
+    return myInstances;
   }
 
   @Override
@@ -65,7 +64,7 @@ public class GlobalInstancePool implements InstancePool {
 
   @Override
   public GlobalInstancePool copy(CheckTypeVisitor typechecker) {
-    return new GlobalInstancePool(myInstanceScope, typechecker, myInstancePool == null ? null : myInstancePool.copy(typechecker));
+    return new GlobalInstancePool(myInstances, typechecker, myInstancePool == null ? null : myInstancePool.copy(typechecker));
   }
 
   @Override
@@ -77,7 +76,7 @@ public class GlobalInstancePool implements InstancePool {
       }
     }
 
-    if (myInstanceScope != null) {
+    if (myInstances != null) {
       Pair<Concrete.Expression, ClassDefinition> pair = getInstancePair(classifyingExpression, parameters, sourceNode, recursiveHoleExpression, currentDef);
       if (pair != null) {
         if (expectedType == null) {
@@ -108,7 +107,7 @@ public class GlobalInstancePool implements InstancePool {
       }
     }
 
-    Pair<Concrete.Expression, ClassDefinition> pair = myInstanceScope == null ? null : getInstancePair(classifyingExpression, parameters, sourceNode, recursiveHoleExpression, currentDef);
+    Pair<Concrete.Expression, ClassDefinition> pair = myInstances == null ? null : getInstancePair(classifyingExpression, parameters, sourceNode, recursiveHoleExpression, currentDef);
     return pair != null ? pair.proj1 : myInstancePool != null && !(currentDef instanceof ClassDefinition) ? myInstancePool.findInstance(classifyingExpression, parameters, sourceNode, currentDef, LocalInstancePool.FieldSearchParameters.FIELDS_ONLY) : null;
   }
 
@@ -179,13 +178,13 @@ public class GlobalInstancePool implements InstancePool {
     }
 
     Expression finalClassifyingExpression = normClassifyingExpression;
-    class MyPredicate implements Predicate<Referable> {
+    class MyPredicate implements Predicate<TCDefReferable> {
       private FunctionDefinition instanceDef = null;
 
       @Override
-      public boolean test(Referable instance) {
-        instanceDef = instance instanceof TCDefReferable tcRef ? (FunctionDefinition) tcRef.getTypechecked() : null;
-        if (!(instanceDef != null && instanceDef.status().headerIsOK() && instanceDef.getResultType() instanceof ClassCallExpression classCall && parameters.testClass(((ClassCallExpression) instanceDef.getResultType()).getDefinition()) && parameters.testGlobalInstance(instanceDef))) {
+      public boolean test(TCDefReferable instance) {
+        instanceDef = (FunctionDefinition) instance.getTypechecked();
+        if (!(instanceDef != null && instanceDef.status().headerIsOK() && instanceDef.getResultType() instanceof ClassCallExpression classCall && parameters.testClass(classCall.getDefinition()) && parameters.testGlobalInstance(instanceDef))) {
           return false;
         }
 
@@ -205,8 +204,8 @@ public class GlobalInstancePool implements InstancePool {
     }
 
     MyPredicate predicate = new MyPredicate();
-    Referable instance = myInstanceScope.find(predicate);
-    if (!(instance instanceof TCDefReferable) || predicate.instanceDef == null) {
+    TCDefReferable instance = myInstances.find(predicate);
+    if (instance == null || predicate.instanceDef == null) {
       return null;
     }
 
@@ -224,7 +223,7 @@ public class GlobalInstancePool implements InstancePool {
       if (recursiveHoleExpression != null) {
         newRecursiveData.addAll(recursiveHoleExpression.recursiveData);
       }
-      newRecursiveData.add(new RecursiveInstanceData((TCDefReferable) instance, actualClass.getReferable(), classifyingExpression));
+      newRecursiveData.add(new RecursiveInstanceData(instance, actualClass.getReferable(), classifyingExpression));
       instanceExpr = Concrete.AppExpression.make(data, instanceExpr, new RecursiveInstanceHoleExpression(recursiveHoleExpression == null ? data : recursiveHoleExpression.getData(), newRecursiveData), link.isExplicit());
     }
 
@@ -233,6 +232,6 @@ public class GlobalInstancePool implements InstancePool {
 
   @Override
   public GlobalInstancePool subst(ExprSubstitution substitution) {
-    return myInstancePool != null ? new GlobalInstancePool(myInstanceScope, myCheckTypeVisitor, myInstancePool.subst(substitution)) : this;
+    return myInstancePool != null ? new GlobalInstancePool(myInstances, myCheckTypeVisitor, myInstancePool.subst(substitution)) : this;
   }
 }

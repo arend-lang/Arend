@@ -143,10 +143,9 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     Set<TCReferable> dependencies = new LinkedHashSet<>();
     CollectDefCallsVisitor visitor = new CollectDefCallsVisitor(dependencies, myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal());
     if (myStage.ordinal() < Stage.WITHOUT_INSTANCES.ordinal()) {
-      myInstanceScopeProvider.getInstanceScopeFor(definition.getData()).find(instance -> {
-        if (instance instanceof TCReferable) visitor.addDependency((TCReferable) instance);
-        return false;
-      });
+      for (TCDefReferable instance : myInstanceScopeProvider.getInstancesFor(definition.getData())) {
+        visitor.addDependency(instance);
+      }
     }
 
     if (definition.getEnclosingClass() != null) {
@@ -254,15 +253,14 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
         @Override
         protected boolean forDependencies(TCDefReferable unit, Consumer<TCDefReferable> consumer) {
           boolean[] withLoops = new boolean[] { false };
-          myInstanceScopeProvider.getInstanceScopeFor(unit).find(instance -> {
-            if (instance instanceof TCDefReferable && instanceMap.containsKey(instance)) {
-              consumer.accept((TCDefReferable) instance);
+          for (TCDefReferable instance : myInstanceScopeProvider.getInstancesFor(unit)) {
+            if (instanceMap.containsKey(instance)) {
+              consumer.accept(instance);
               if (unit.equals(instance)) {
                 withLoops[0] = true;
               }
             }
-            return false;
-          });
+          }
           return withLoops[0];
         }
 

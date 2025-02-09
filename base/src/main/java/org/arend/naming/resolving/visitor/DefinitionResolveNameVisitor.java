@@ -6,7 +6,6 @@ import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.NameResolverError;
-import org.arend.ext.module.LongName;
 import org.arend.ext.prettyprinting.doc.*;
 import org.arend.ext.reference.Precedence;
 import org.arend.naming.error.DuplicateNameError;
@@ -21,7 +20,6 @@ import org.arend.naming.scope.local.ElimScope;
 import org.arend.naming.scope.local.ListScope;
 import org.arend.prelude.Prelude;
 import org.arend.ext.concrete.definition.FunctionKind;
-import org.arend.server.impl.GroupData;
 import org.arend.term.NameHiding;
 import org.arend.term.NameRenaming;
 import org.arend.term.NamespaceCommand;
@@ -638,7 +636,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     return true;
   }
 
-  public void resolveGroup(Group group, Scope scope, Map<LongName, GroupData.DefinitionData> definitionData) {
+  public void resolveGroup(Group group, Scope scope) {
     LocatedReferable groupRef = group.getReferable();
     Collection<? extends Statement> statements = group.getStatements();
     Collection<? extends Group> dynamicSubgroups = group.getDynamicSubgroups();
@@ -667,8 +665,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         }
       }
       docScope = parameters.isEmpty() ? classScope : new ListScope(classScope, parameters);
-
-      if (definitionData != null) definitionData.putIfAbsent(def.getData().getRefLongName(), new GroupData.DefinitionData((Concrete.ResolvableDefinition) def, CachingScope.make(new InstanceScope(cachedScope))));
     } else {
       docScope = cachedScope;
     }
@@ -731,7 +727,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     for (Statement statement : statements) {
       Group subgroup = statement.getGroup();
       if (subgroup != null) {
-        resolveGroup(subgroup, cachedScope, definitionData);
+        resolveGroup(subgroup, cachedScope);
       }
     }
     if (!dynamicSubgroups.isEmpty()) {
@@ -740,7 +736,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         dynamicScope = new MergeScope(dynamicScope, new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC));
       }
       for (Group subgroup : dynamicSubgroups) {
-        resolveGroup(subgroup, dynamicScope, definitionData);
+        resolveGroup(subgroup, dynamicScope);
       }
     }
     if (added) {

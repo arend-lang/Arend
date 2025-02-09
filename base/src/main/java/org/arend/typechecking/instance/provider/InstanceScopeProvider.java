@@ -1,17 +1,16 @@
 package org.arend.typechecking.instance.provider;
 
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.naming.scope.EmptyScope;
-import org.arend.naming.scope.Scope;
+import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.NotNull;
 
 public interface InstanceScopeProvider {
-  @NotNull Scope getInstanceScopeFor(@NotNull TCDefReferable referable);
+  @NotNull PersistentList<TCDefReferable> getInstancesFor(@NotNull TCDefReferable referable);
 
   InstanceScopeProvider EMPTY = new InstanceScopeProvider() {
     @Override
-    public @NotNull Scope getInstanceScopeFor(@NotNull TCDefReferable referable) {
-      return EmptyScope.INSTANCE;
+    public @NotNull PersistentList<TCDefReferable> getInstancesFor(@NotNull TCDefReferable referable) {
+      return PersistentList.empty();
     }
   };
 }
