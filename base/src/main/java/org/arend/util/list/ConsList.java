@@ -7,11 +7,11 @@ import java.util.Objects;
 import java.util.function.Predicate;
 
 public final class ConsList<T> implements PersistentList<T> {
-  private final T myValue;
+  private final @Nullable T myValue;
   private final PersistentList<T> myTail;
   private final int mySize;
 
-  public ConsList(T value, PersistentList<T> tail) {
+  public ConsList(@Nullable T value, PersistentList<T> tail) {
     myValue = value;
     myTail = tail;
     mySize = tail.size() + 1;
@@ -33,6 +33,11 @@ public final class ConsList<T> implements PersistentList<T> {
       if (predicate.test(cons.myValue)) return cons.myValue;
     }
     return null;
+  }
+
+  @Override
+  public @NotNull PersistentList<T> remove(@Nullable T value) {
+    return Objects.equals(myValue, value) ? myTail : new ConsList<>(myValue, myTail.remove(value));
   }
 
   public T getValue() {

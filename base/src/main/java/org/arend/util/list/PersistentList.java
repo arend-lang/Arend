@@ -12,7 +12,7 @@ public sealed interface PersistentList<T> extends Iterable<T> permits NilList, C
     return (NilList<T>) NilList.INSTANCE;
   }
 
-  default ConsList<T> cons(T value) {
+  default ConsList<T> cons(@Nullable T value) {
     return new ConsList<>(value, this);
   }
 
@@ -26,4 +26,6 @@ public sealed interface PersistentList<T> extends Iterable<T> permits NilList, C
   default @NotNull Iterator<T> iterator() {
     return new PersistentListIterator<>(this);
   }
+
+  @NotNull PersistentList<T> remove(@Nullable T value);
 }

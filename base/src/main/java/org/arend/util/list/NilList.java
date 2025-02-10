@@ -26,6 +26,11 @@ public final class NilList<T> implements PersistentList<T> {
   }
 
   @Override
+  public @NotNull PersistentList<T> remove(@Nullable T value) {
+    return this;
+  }
+
+  @Override
   public String toString() {
     return "[]";
   }

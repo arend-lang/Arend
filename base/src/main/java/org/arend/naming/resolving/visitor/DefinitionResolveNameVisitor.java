@@ -690,6 +690,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       group.getDescription().accept(this, docScope);
     }
 
+    boolean hasSelf = false;
     for (Statement statement : statements) {
       NamespaceCommand namespaceCommand = statement.getNamespaceCommand();
       if (namespaceCommand == null) {
@@ -729,7 +730,12 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
               }
             }
             if (ok) {
-              scopeInstances.add(defRef);
+              boolean add = true;
+              if (defRef.equals(groupRef)) {
+                if (hasSelf) add = false;
+                else hasSelf = true;
+              }
+              if (add) scopeInstances.add(defRef);
             }
           }
         }
@@ -767,6 +773,9 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
     }
 
+    if (hasSelf && groupRef instanceof TCDefReferable defRef) {
+      instances = instances.remove(defRef);
+    }
     if (definitionData != null && def instanceof Concrete.ResolvableDefinition definition) {
       definitionData.putIfAbsent(definition.getData().getRefLongName(), new GroupData.DefinitionData(definition, addInstances(instances, newInstances)));
     }
