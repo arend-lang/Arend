@@ -690,17 +690,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       group.getDescription().accept(this, docScope);
     }
 
-    boolean added = addExternalParameters(def);
-    List<TCDefReferable> newInstances = new ArrayList<>();
     for (Statement statement : statements) {
-      Group subgroup = statement.getGroup();
-      if (subgroup != null) {
-        resolveGroup(subgroup, cachedScope, addInstances(instances, newInstances), definitionData);
-        if (subgroup.getReferable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
-          newInstances.add(defReferable);
-        }
-      }
-
       NamespaceCommand namespaceCommand = statement.getNamespaceCommand();
       if (namespaceCommand == null) {
         continue;
@@ -722,6 +712,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       if (curScope == null) {
         myErrorReporter.report(reference.getErrorReference().getError());
       } else {
+        List<TCDefReferable> scopeInstances = new ArrayList<>();
         loop:
         for (Referable element : curScope.getElements()) {
           if (element instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
@@ -738,10 +729,11 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
               }
             }
             if (ok) {
-              newInstances.add(defRef);
+              scopeInstances.add(defRef);
             }
           }
         }
+        instances = addInstances(instances, scopeInstances);
 
         for (NameRenaming renaming : namespaceCommand.getOpenedReferences()) {
           Referable oldRef = renaming.getOldReference();
@@ -763,6 +755,18 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
     }
 
+    List<TCDefReferable> newInstances = new ArrayList<>();
+    boolean added = addExternalParameters(def);
+    for (Statement statement : statements) {
+      Group subgroup = statement.getGroup();
+      if (subgroup != null) {
+        resolveGroup(subgroup, cachedScope, addInstances(instances, newInstances), definitionData);
+        if (subgroup.getReferable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
+          newInstances.add(defReferable);
+        }
+      }
+    }
+
     if (definitionData != null && def instanceof Concrete.ResolvableDefinition definition) {
       definitionData.putIfAbsent(definition.getData().getRefLongName(), new GroupData.DefinitionData(definition, addInstances(instances, newInstances)));
     }
@@ -779,6 +783,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         }
       }
     }
+
     if (added) {
       assert def != null;
       myExternalParameters.remove((TCDefReferable) def.getData());
