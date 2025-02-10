@@ -40,11 +40,52 @@ public class GroupData {
   }
 
   public GroupData(long timestamp, ConcreteGroup rawGroup, GroupData prevData) {
-    this(timestamp, prevData == null || prevData.myResolvedDefinitions == null ? rawGroup : prevData.updateGroup(rawGroup, null), (GlobalTypingInfo) null);
+    this(timestamp, prevData == null || prevData.myResolvedDefinitions == null ? rawGroup : prevData.updateGroup(rawGroup), (GlobalTypingInfo) null);
     myResolvedDefinitions = prevData == null ? null : prevData.myResolvedDefinitions;
   }
 
-  private ConcreteGroup updateGroup(ConcreteGroup group, TCDefReferable parent) {
+  private ConcreteGroup updateGroup(ConcreteGroup group) {
+    Map<TCDefReferable, TCDefReferable> replaced = new HashMap<>();
+    ConcreteGroup result = updateGroup(group, null, replaced);
+
+    if (!replaced.isEmpty()) result.traverseGroup(subgroup -> {
+      if (subgroup instanceof ConcreteGroup && ((ConcreteGroup) subgroup).definition() instanceof Concrete.Definition def) {
+        if (def.getUseParent() != null) {
+          TCDefReferable useParent = replaced.get(def.getUseParent());
+          if (useParent != null) def.setUseParent(useParent);
+        }
+
+        if (def.enclosingClass != null) {
+          TCDefReferable enclosingClass = replaced.get(def.enclosingClass);
+          if (enclosingClass != null) def.enclosingClass = enclosingClass;
+        }
+
+        List<TCDefReferable> usedDefinitions = def.getUsedDefinitions();
+        for (int i = 0; i < usedDefinitions.size(); i++) {
+          TCDefReferable usedDef = replaced.get(usedDefinitions.get(i));
+          if (usedDef != null) usedDefinitions.set(i, usedDef);
+        }
+
+        if (def instanceof Concrete.ClassDefinition classDef) {
+          for (Concrete.ClassElement element : classDef.getElements()) {
+            if (element instanceof Concrete.CoClauseFunctionReference coclauseRef) {
+              replaceCoClauseFunctionReference(coclauseRef, replaced);
+            }
+          }
+        } else if (def instanceof Concrete.FunctionDefinition function && function.getBody() instanceof Concrete.CoelimFunctionBody body) {
+          for (Concrete.CoClauseElement element : body.getCoClauseElements()) {
+            if (element instanceof Concrete.CoClauseFunctionReference coclauseRef) {
+              replaceCoClauseFunctionReference(coclauseRef, replaced);
+            }
+          }
+        }
+      }
+    });
+
+    return result;
+  }
+
+  private ConcreteGroup updateGroup(ConcreteGroup group, TCDefReferable parent, Map<TCDefReferable, TCDefReferable> replaced) {
     if (group == null) return null;
 
     Concrete.ResolvableDefinition newDef = group.definition();
@@ -111,6 +152,7 @@ public class GroupData {
 
       if (ok) {
         TCDefReferable ref = definitionData.definition.getData();
+        replaced.put(newDef.getData(), ref);
         ref.setData(newDef.getData().getData());
         newDef.setReferable(ref);
       }
@@ -118,12 +160,12 @@ public class GroupData {
 
     List<ConcreteStatement> statements = new ArrayList<>(group.getStatements().size());
     for (ConcreteStatement statement : group.statements()) {
-      statements.add(new ConcreteStatement(updateGroup(statement.group(), newDef instanceof Concrete.Definition ? newDef.getData() : null), statement.command(), statement.pLevelsDefinition(), statement.hLevelsDefinition()));
+      statements.add(new ConcreteStatement(updateGroup(statement.group(), newDef instanceof Concrete.Definition ? newDef.getData() : null, replaced), statement.command(), statement.pLevelsDefinition(), statement.hLevelsDefinition()));
     }
 
     List<ConcreteGroup> dynamicGroups = new ArrayList<>(group.getDynamicSubgroups().size());
     for (ConcreteGroup dynamicGroup : group.dynamicGroups()) {
-      dynamicGroups.add(updateGroup(dynamicGroup, null));
+      dynamicGroups.add(updateGroup(dynamicGroup, null, replaced));
     }
 
     List<ParameterReferable> externalParameters = new ArrayList<>(group.getExternalParameters().size());
@@ -132,6 +174,15 @@ public class GroupData {
     }
 
     return new ConcreteGroup(group.description(), newDef == null ? group.referable() : newDef.getData(), newDef, statements, dynamicGroups, externalParameters);
+  }
+
+  private static void replaceCoClauseFunctionReference(Concrete.CoClauseFunctionReference coclauseRef, Map<TCDefReferable, TCDefReferable> coclauseMap) {
+    TCDefReferable newRef = coclauseMap.get(coclauseRef.functionReference);
+    if (newRef != null) coclauseRef.functionReference = newRef;
+    if (coclauseRef.implementation instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof TCDefReferable defRef) {
+      TCDefReferable newDefRef = coclauseMap.get(defRef);
+      if (newRef != null) coclauseRef.implementation = new Concrete.ReferenceExpression(refExpr.getData(), newDefRef, refExpr.getPLevels(), refExpr.getHLevels());
+    }
   }
 
   public long getTimestamp() {

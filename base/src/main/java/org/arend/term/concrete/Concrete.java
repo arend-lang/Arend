@@ -864,7 +864,7 @@ public final class Concrete {
   }
 
   public static class CoClauseFunctionReference extends ClassFieldImpl {
-    public final TCDefReferable functionReference;
+    public TCDefReferable functionReference;
 
     public CoClauseFunctionReference(Object data, Referable implementedField, TCDefReferable functionReference, boolean isDefault) {
       super(data, implementedField, new ReferenceExpression(data, functionReference), null, isDefault);
