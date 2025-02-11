@@ -2,6 +2,7 @@ package org.arend.typechecking.error.local;
 
 import org.arend.core.context.binding.Binding;
 import org.arend.core.expr.Expression;
+import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.prettifier.ExpressionPrettifier;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
@@ -24,6 +25,7 @@ public class GoalError extends GoalDataHolder {
   public final List<GeneralError> errors;
   public final GoalSolver goalSolver;
   public final String goalName;
+  public final Concrete.GoalExpression goalExpression;
 
   private List<Condition> myConditions = Collections.emptyList();
 
@@ -40,12 +42,14 @@ public class GoalError extends GoalDataHolder {
     this.result = result;
     this.errors = errors;
     this.goalSolver = goalSolver;
+    this.goalExpression = expression;
     goalName = expression.getName() == null ? "" : expression.getName();
   }
 
   @Override
-  public Concrete.GoalExpression getCauseSourceNode() {
-    return (Concrete.GoalExpression) super.getCauseSourceNode();
+  public void setCauseSourceNode(ConcreteSourceNode sourceNode) {
+    super.setCauseSourceNode(sourceNode);
+    goalExpression.setData(sourceNode.getData());
   }
 
   @Override

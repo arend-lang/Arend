@@ -1,5 +1,6 @@
 package org.arend.typechecking.error.local;
 
+import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.reference.ArendRef;
@@ -11,7 +12,7 @@ import java.util.function.BiConsumer;
 
 public class CoerceCycleError extends TypecheckingError {
   public final List<? extends Concrete.FunctionDefinition> cycle;
-  private final GlobalReferable myCauseReferable;
+  private GlobalReferable myCauseReferable;
 
   private CoerceCycleError(List<? extends Concrete.FunctionDefinition> cycle, GlobalReferable causeReferable) {
     super("Dependency cycle between \\coerce definitions", cycle.get(0));
@@ -26,6 +27,13 @@ public class CoerceCycleError extends TypecheckingError {
   @Override
   public Object getCause() {
     return myCauseReferable != null ? myCauseReferable : cycle;
+  }
+
+  @Override
+  public void setCauseSourceNode(ConcreteSourceNode sourceNode) {
+    if (sourceNode.getData() instanceof GlobalReferable referable) {
+      myCauseReferable = referable;
+    }
   }
 
   @Override

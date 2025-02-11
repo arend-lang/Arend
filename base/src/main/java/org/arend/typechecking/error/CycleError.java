@@ -1,5 +1,6 @@
 package org.arend.typechecking.error;
 
+import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
@@ -19,7 +20,7 @@ import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class CycleError extends GeneralError {
   public final List<? extends GlobalReferable> cycle;
-  public final Concrete.SourceNode cause;
+  public Concrete.SourceNode cause;
   private final GlobalReferable myCauseReferable;
   private final boolean myDoCycle;
 
@@ -42,6 +43,12 @@ public class CycleError extends GeneralError {
   @Override
   public Concrete.SourceNode getCauseSourceNode() {
     return cause;
+  }
+
+  @Override
+  public void setCauseSourceNode(ConcreteSourceNode sourceNode) {
+    if (!(sourceNode instanceof Concrete.SourceNode)) throw new IllegalArgumentException();
+    cause = (Concrete.SourceNode) sourceNode;
   }
 
   @Override

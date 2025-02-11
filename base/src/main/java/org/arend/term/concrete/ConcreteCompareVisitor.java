@@ -1,15 +1,33 @@
 package org.arend.term.concrete;
 
+import org.arend.ext.reference.DataContainer;
 import org.arend.naming.reference.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concrete.Expression, Boolean>, ConcreteResolvableDefinitionVisitor<Concrete.ResolvableDefinition, Boolean> {
   private final Map<Referable, Referable> mySubstitution = new HashMap<>();
+  private final Map<Object, Consumer<Concrete.SourceNode>> myDataUpdater;
+
+  public ConcreteCompareVisitor() {
+    myDataUpdater = new HashMap<>();
+  }
+
+  public ConcreteCompareVisitor(Map<Object, Consumer<Concrete.SourceNode>> dataUpdater) {
+    myDataUpdater = dataUpdater;
+  }
+
+  private void updateData(DataContainer dataContainer, Concrete.SourceNode sourceNode) {
+    Consumer<Concrete.SourceNode> consumer = myDataUpdater.remove(dataContainer.getData());
+    if (consumer != null) {
+      consumer.accept(sourceNode);
+    }
+  }
 
   public boolean compare(Concrete.Expression expr1, Concrete.Expression expr2) {
     if (expr1 == expr2) {
@@ -18,12 +36,14 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     if (expr1 == null || expr2 == null) {
       return false;
     }
-    if (expr1 instanceof Concrete.BinOpSequenceExpression && ((Concrete.BinOpSequenceExpression) expr1).getSequence().size() == 1) {
-      expr1 = ((Concrete.BinOpSequenceExpression) expr1).getSequence().get(0).getComponent();
-    }
     if (expr2 instanceof Concrete.BinOpSequenceExpression && ((Concrete.BinOpSequenceExpression) expr2).getSequence().size() == 1) {
       expr2 = ((Concrete.BinOpSequenceExpression) expr2).getSequence().get(0).getComponent();
     }
+    if (expr1 instanceof Concrete.BinOpSequenceExpression binOpSeq && binOpSeq.getSequence().size() == 1) {
+      updateData(binOpSeq, expr2);
+      expr1 = binOpSeq.getSequence().get(0).getComponent();
+    }
+    updateData(expr1, expr2);
     return expr1.accept(this, expr2);
   }
 
@@ -58,7 +78,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
   @Override
   public Boolean visitFieldCall(Concrete.FieldCallExpression expr, Concrete.Expression expr2) {
-    return expr2 instanceof Concrete.FieldCallExpression fieldCall2 && expr.fixity == fieldCall2.fixity && expr.getField().equals(fieldCall2.getField()) && expr.argument.accept(this, fieldCall2.argument);
+    return expr2 instanceof Concrete.FieldCallExpression fieldCall2 && expr.fixity == fieldCall2.fixity && expr.getField().equals(fieldCall2.getField()) && compare(expr.argument, fieldCall2.argument);
   }
 
   private boolean compareLevels(List<Concrete.LevelExpression> levels1, List<Concrete.LevelExpression> levels2) {
@@ -97,6 +117,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
         mySubstitution.put(list1.get(i), list2.get(i));
       }
     }
+    updateData(arg1, arg2);
     return compare(arg1.getType(), arg2.getType());
   }
 
@@ -167,9 +188,9 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   }
 
   private boolean compareLevel(Concrete.LevelExpression level1, Concrete.LevelExpression level2) {
-    if (level1 == null) {
-      return level2 == null;
-    }
+    if (level1 == level2) return true;
+    if (level1 == null || level2 == null) return false;
+    updateData(level1, level2);
     if (level1 instanceof Concrete.PLevelExpression) {
       return level2 instanceof Concrete.PLevelExpression;
     }
@@ -204,10 +225,10 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   @Override
   public Boolean visitGoal(Concrete.GoalExpression expr1, Concrete.Expression expr2) {
     if (!(expr2 instanceof Concrete.GoalExpression goalExpr2) || (expr1 instanceof Concrete.IncompleteExpression) != (expr2 instanceof Concrete.IncompleteExpression)) return false;
-    if ((expr1.getName() == null) != (goalExpr2.getName() == null) || expr1.useGoalSolver != goalExpr2.useGoalSolver || (expr1.originalExpression == null) != (goalExpr2.originalExpression == null) || (expr1.expression == null) != (goalExpr2.expression == null)) return false;
+    if ((expr1.getName() == null) != (goalExpr2.getName() == null) || expr1.useGoalSolver != goalExpr2.useGoalSolver) return false;
     if (expr1.getName() != null && !expr1.getName().equals(goalExpr2.getName())) return false;
-    if (expr1.expression != null && !expr1.expression.accept(this, goalExpr2.expression)) return false;
-    return expr1.originalExpression == null || expr1.originalExpression.accept(this, goalExpr2.originalExpression);
+    if (!compare(expr1.expression, goalExpr2.expression)) return false;
+    return expr1.originalExpression == null || compare(expr1.originalExpression, goalExpr2.originalExpression);
   }
 
   @Override
@@ -242,6 +263,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
       }
     }
     if ((expr1.getClauses() == null) != (binOpExpr2.getClauses() == null)) return false;
+    if (expr1.getClauses() != null) updateData(expr1.getClauses(), binOpExpr2.getClauses());
     return expr1.getClauses() == null || compareClauses(expr1.getClauses().getClauseList(), binOpExpr2.getClauses().getClauseList());
   }
 
@@ -268,6 +290,8 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
         mySubstitution.put(pattern1.getAsReferable().referable, pattern2.getAsReferable().referable);
       }
     }
+
+    updateData(pattern1, pattern2);
 
     if (pattern1 instanceof Concrete.NamePattern namePattern1) {
       if (!(pattern2 instanceof Concrete.NamePattern namePattern2 && namePattern1.fixity == namePattern2.fixity && compare(namePattern1.type, namePattern2.type) && (namePattern1.getReferable() == null) == (namePattern2.getReferable() == null))) {
@@ -336,6 +360,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   }
 
   private boolean compareClause(Concrete.Clause clause1, Concrete.Clause clause2, Supplier<Boolean> bodyHandler) {
+    updateData(clause1, clause2);
     if (clause1.getPatterns() == clause2.getPatterns()) {
       return bodyHandler == null || bodyHandler.get();
     }
@@ -410,6 +435,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   }
 
   private boolean compareImplementStatement(Concrete.ClassFieldImpl implStat1, Concrete.ClassFieldImpl implStat2) {
+    updateData(implStat1, implStat2);
     if (!(implStat1.isDefault() == implStat2.isDefault() && compareImplementStatements(implStat1.getSubCoclauseList(), implStat2.getSubCoclauseList()) && compare(implStat1.implementation, implStat2.implementation) && Objects.equals(implStat1.getImplementedField(), implStat2.getImplementedField()))) return false;
     if ((implStat1.classRef == null) != (implStat2.classRef == null)) return false;
     if (implStat1.classRef != null && !implStat1.classRef.equals(implStat2.classRef)) return false;
@@ -430,10 +456,8 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   }
 
   private boolean compareCoClauseElement(Concrete.CoClauseElement element1, Concrete.CoClauseElement element2) {
-    if (element1 instanceof Concrete.ClassFieldImpl && element2 instanceof Concrete.ClassFieldImpl) {
-      return compareImplementStatement((Concrete.ClassFieldImpl) element1, (Concrete.ClassFieldImpl) element2);
-    }
-    return false;
+    updateData(element1, element2);
+    return element1 instanceof Concrete.ClassFieldImpl && element2 instanceof Concrete.ClassFieldImpl && compareImplementStatement((Concrete.ClassFieldImpl) element1, (Concrete.ClassFieldImpl) element2);
   }
 
   private boolean compareCoClauseElements(List<Concrete.CoClauseElement> elements1, List<Concrete.CoClauseElement> elements2) {
@@ -459,6 +483,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   }
 
   private boolean compareLetClause(Concrete.LetClause clause1, Concrete.LetClause clause2) {
+    updateData(clause1, clause2);
     boolean result = compareParameters(clause1.getParameters(), clause2.getParameters()) && compare(clause1.getTerm(), clause2.getTerm()) && (clause1.getResultType() == null && clause2.getResultType() == null || clause1.getResultType() != null && clause2.getResultType() != null && compare(clause1.getResultType(), clause2.getResultType()));
     freeParameters(clause1.getParameters());
     return result;
@@ -529,8 +554,9 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   }
 
   private boolean compareLevelParameters(Concrete.LevelParameters params1, Concrete.LevelParameters params2) {
-    if ((params1 == null) != (params2 == null)) return false;
-    if (params1 == null) return true;
+    if (params1 == params2) return true;
+    if (params1 == null || params2 == null) return false;
+    updateData(params1, params2);
     if (params1.isIncreasing != params2.isIncreasing || params1.referables.size() != params2.referables.size()) return false;
     for (int i = 0; i < params1.referables.size(); i++) {
       if (!params1.referables.get(i).getRefName().equals(params2.referables.get(i).getRefName())) return false;
@@ -595,6 +621,10 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
       return false;
     }
     freeParameters(def.getParameters());
+    if (result) {
+      updateData(def, fun2);
+      updateData(def.getData(), fun2);
+    }
     return result;
   }
 
@@ -629,6 +659,10 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     if (def.getConstructorClauses().size() != data2.getConstructorClauses().size()) {
       return false;
     }
+
+    updateData(def, data2);
+    updateData(def.getData(), data2);
+
     for (int i = 0; i < def.getConstructorClauses().size(); i++) {
       Concrete.ConstructorClause clause1 = def.getConstructorClauses().get(i);
       Concrete.ConstructorClause clause2 = data2.getConstructorClauses().get(i);
@@ -655,6 +689,10 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     if (con1.isCoerce() != con2.isCoerce()) return false;
     boolean result = compareParameters(con1.getParameters(), con2.getParameters()) && compare(con1.getResultType(), con2.getResultType()) && compareExpressionList(con1.getEliminatedReferences(), con2.getEliminatedReferences()) && compareClauses(con1.getClauses(), con2.getClauses());
     freeParameters(con1.getParameters());
+    if (result) {
+      updateData(con1, con2);
+      updateData(con1.getData(), con2);
+    }
     return result;
   }
 
@@ -691,12 +729,16 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
         return false;
       }
     }
+
+    updateData(def, class2);
+    updateData(def.getData(), class2);
     return Objects.equals(def.getClassifyingField(), class2.getClassifyingField());
   }
 
   private boolean compareOverriddenField(Concrete.OverriddenField field1, Concrete.OverriddenField field2) {
     boolean result = Objects.equals(field1.getOverriddenField(), field2.getOverriddenField()) && compareParameters(field1.getParameters(), field2.getParameters()) && compare(field1.getResultType(), field2.getResultType()) && compare(field1.getResultTypeLevel(), field2.getResultTypeLevel());
     freeParameters(field1.getParameters());
+    if (result) updateData(field1, field2);
     return result;
   }
 
@@ -705,6 +747,10 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     if (field1.getKind() != field2.getKind() || field1.isCoerce() != field2.isCoerce()) return false;
     boolean result = field1.isExplicit() == field2.isExplicit() && compareParameters(field1.getParameters(), field2.getParameters()) && compare(field1.getResultType(), field2.getResultType()) && compare(field1.getResultTypeLevel(), field2.getResultTypeLevel());
     freeParameters(field1.getParameters());
+    if (result) {
+      updateData(field1, field2);
+      updateData(field1.getData(), field2);
+    }
     return result;
   }
 
@@ -713,6 +759,9 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     if (!(def2 instanceof DefinableMetaDefinition meta2)) return false;
     if (!compareTCReferable(def.getData(), meta2.getData())) return false;
     if (!(compareLevelParameters(def, def2) && compareParameters(def.getParameters(), meta2.getParameters()))) return false;
+
+    updateData(def, def2);
+    updateData(def.getData(), def2);
     return compareParameters(def.getParameters(), meta2.getParameters()) && compare(def.body, meta2.body);
   }
 }

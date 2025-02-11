@@ -944,7 +944,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     if (!name.isEmpty() && !"_".equals(name)) {
       Pair<LocatedReferable, ClassReferable> oldField = fields.get(name);
       if (oldField != null) {
-        myLocalErrorReporter.report(new ReferenceError(GeneralError.Level.WARNING, GeneralError.Stage.RESOLVER, "Field '" + field.textRepresentation() + ("' is already defined in super class " + oldField.proj2.textRepresentation()), field));
+        myLocalErrorReporter.report(new ReferenceError(GeneralError.Level.WARNING, "Field '" + field.textRepresentation() + ("' is already defined in super class " + oldField.proj2.textRepresentation()), field));
       }
     }
   }

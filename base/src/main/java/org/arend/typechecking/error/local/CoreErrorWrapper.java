@@ -30,6 +30,11 @@ public class CoreErrorWrapper extends LocalError {
   }
 
   @Override
+  public void setCauseSourceNode(ConcreteSourceNode sourceNode) {
+    error.setCauseSourceNode(sourceNode);
+  }
+
+  @Override
   public Object getCause() {
     Object cause = error.getCause();
     return cause != null ? cause : definition;

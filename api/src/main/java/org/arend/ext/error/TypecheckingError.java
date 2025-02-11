@@ -32,6 +32,11 @@ public class TypecheckingError extends LocalError {
     return cause;
   }
 
+  @Override
+  public void setCauseSourceNode(ConcreteSourceNode sourceNode) {
+    cause = sourceNode;
+  }
+
   @NotNull
   @Override
   public Stage getStage() {

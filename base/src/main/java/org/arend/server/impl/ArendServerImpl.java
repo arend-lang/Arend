@@ -42,6 +42,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.*;
 
@@ -537,7 +538,18 @@ public class ArendServerImpl implements ArendServer {
               if (prevData != null) {
                 for (Map.Entry<LongName, GroupData.DefinitionData> entry : prevData.entrySet()) {
                   GroupData.DefinitionData newData = definitionData.get(entry.getKey());
-                  if (newData == null || !newData.compare(entry.getValue())) {
+                  boolean update;
+                  if (newData != null) {
+                    Map<Object, Consumer<Concrete.SourceNode>> updater = new HashMap<>();
+                    for (GeneralError error : myErrorService.getTypecheckingErrors(entry.getValue().definition().getData())) {
+                      Object cause = error.getCause();
+                      if (cause != null) updater.put(cause, error::setCauseSourceNode);
+                    }
+                    update = !entry.getValue().compare(newData, updater);
+                  } else {
+                    update = true;
+                  }
+                  if (update) {
                     for (TCReferable updated : myDependencyCollector.update(entry.getValue().definition().getData())) {
                       myErrorService.resetDefinition(updated);
                     }

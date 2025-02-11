@@ -10,17 +10,15 @@ import org.jetbrains.annotations.NotNull;
 
 public class ReferenceError extends LocalError {
   public final Referable referable;
-  private final Stage myStage;
 
-  public ReferenceError(Stage stage, String message, Referable referable) {
-    this(Level.ERROR, stage, message, referable);
+  public ReferenceError(String message, Referable referable) {
+    this(Level.ERROR, message, referable);
   }
 
-  public ReferenceError(Level level, Stage stage, String message, Referable referable) {
+  public ReferenceError(Level level, String message, Referable referable) {
     super(level, message);
     this.referable = referable;
     definition = referable;
-    myStage = stage;
   }
 
   @Override
@@ -42,6 +40,6 @@ public class ReferenceError extends LocalError {
   @NotNull
   @Override
   public Stage getStage() {
-    return myStage;
+    return Stage.RESOLVER;
   }
 }

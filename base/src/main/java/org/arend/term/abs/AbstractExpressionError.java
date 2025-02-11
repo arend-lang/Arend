@@ -1,10 +1,11 @@
 package org.arend.term.abs;
 
+import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.error.LocalError;
 import org.jetbrains.annotations.NotNull;
 
 public class AbstractExpressionError extends LocalError {
-  private final Object myCause;
+  private Object myCause;
 
   public AbstractExpressionError(@NotNull Level level, String message, Object cause) {
     super(level, message);
@@ -14,6 +15,11 @@ public class AbstractExpressionError extends LocalError {
   @Override
   public Object getCause() {
     return myCause;
+  }
+
+  @Override
+  public void setCauseSourceNode(ConcreteSourceNode sourceNode) {
+    myCause = sourceNode.getData();
   }
 
   @NotNull

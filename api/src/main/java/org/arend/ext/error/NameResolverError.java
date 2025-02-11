@@ -4,7 +4,7 @@ import org.arend.ext.concrete.ConcreteSourceNode;
 import org.jetbrains.annotations.NotNull;
 
 public class NameResolverError extends LocalError {
-  public final Object cause;
+  public Object cause;
 
   public NameResolverError(String message, Object cause) {
     super(Level.ERROR, message);
@@ -19,6 +19,11 @@ public class NameResolverError extends LocalError {
   @Override
   public ConcreteSourceNode getCauseSourceNode() {
     return cause instanceof ConcreteSourceNode ? (ConcreteSourceNode) cause : null;
+  }
+
+  @Override
+  public void setCauseSourceNode(ConcreteSourceNode sourceNode) {
+    cause = sourceNode;
   }
 
   @Override

@@ -1,5 +1,6 @@
 package org.arend.ext.error;
 
+import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.reference.ArendRef;
 import org.jetbrains.annotations.NotNull;
 
@@ -16,6 +17,13 @@ public class LocalError extends GeneralError {
   public Object getCause() {
     Object cause = super.getCause();
     return cause != null ? cause : definition;
+  }
+
+  @Override
+  public void setCauseSourceNode(ConcreteSourceNode sourceNode) {
+    if (sourceNode.getData() instanceof ArendRef ref) {
+      definition = ref;
+    }
   }
 
   @Override

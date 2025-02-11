@@ -1994,7 +1994,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
     Expression type = def.getTypeExpr();
     if (type == null) {
-      errorReporter.report(new ReferenceTypeError(ref));
+      errorReporter.report(new ReferenceTypeError(ref, sourceNode));
       return null;
     } else {
       return new TypecheckingResult(def instanceof TypedEvaluatingBinding ? ((TypedEvaluatingBinding) def).getExpression() : new ReferenceExpression(def), type);

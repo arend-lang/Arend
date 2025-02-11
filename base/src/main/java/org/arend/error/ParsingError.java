@@ -1,7 +1,7 @@
 package org.arend.error;
 
+import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.error.GeneralError;
-import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 
 public class ParsingError extends GeneralError {
@@ -29,7 +29,7 @@ public class ParsingError extends GeneralError {
     }
   }
 
-  public final Object cause;
+  public Object cause;
   public final Kind kind;
 
   public ParsingError(Kind kind, Object cause) {
@@ -45,13 +45,18 @@ public class ParsingError extends GeneralError {
   }
 
   @Override
-  public Concrete.SourceNode getCauseSourceNode() {
-    return cause instanceof Concrete.SourceNode ? (Concrete.SourceNode) cause : null;
+  public ConcreteSourceNode getCauseSourceNode() {
+    return cause instanceof ConcreteSourceNode ? (ConcreteSourceNode) cause : null;
+  }
+
+  @Override
+  public void setCauseSourceNode(ConcreteSourceNode sourceNode) {
+    cause = sourceNode;
   }
 
   @Override
   public Object getCause() {
-    return cause instanceof Concrete.SourceNode ? ((Concrete.SourceNode) cause).getData() : cause;
+    return cause instanceof ConcreteSourceNode ? ((ConcreteSourceNode) cause).getData() : cause;
   }
 
   @NotNull

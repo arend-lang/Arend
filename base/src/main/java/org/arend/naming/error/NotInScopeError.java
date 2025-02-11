@@ -1,5 +1,6 @@
 package org.arend.naming.error;
 
+import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.error.LocalError;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.LineDoc;
@@ -9,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class NotInScopeError extends LocalError {
-  private final Object myCause;
+  private Object myCause;
   public final String name;
   public final Referable referable;
   public final int index;
@@ -25,6 +26,11 @@ public class NotInScopeError extends LocalError {
   @Override
   public Object getCause() {
     return myCause;
+  }
+
+  @Override
+  public void setCauseSourceNode(ConcreteSourceNode sourceNode) {
+    myCause = sourceNode.getData();
   }
 
   @Override

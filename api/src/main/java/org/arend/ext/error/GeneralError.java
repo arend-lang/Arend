@@ -10,7 +10,6 @@ import org.arend.ext.reference.DataContainer;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.function.BiConsumer;
 
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
@@ -36,6 +35,8 @@ public class GeneralError {
   public ConcreteSourceNode getCauseSourceNode() {
     return null;
   }
+
+  public void setCauseSourceNode(ConcreteSourceNode sourceNode) {}
 
   public Object getCause() {
     ConcreteSourceNode sourceNode = getCauseSourceNode();

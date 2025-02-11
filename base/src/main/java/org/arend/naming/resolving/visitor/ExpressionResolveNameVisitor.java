@@ -499,7 +499,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     String name = ref.getRefName();
     for (int i = 0; i < name.length(); i++) {
       if (!Character.UnicodeBlock.BASIC_LATIN.equals(Character.UnicodeBlock.of(name.codePointAt(i)))) {
-        errorReporter.report(new ReferenceError(GeneralError.Stage.RESOLVER, "Invalid name", ref));
+        errorReporter.report(new ReferenceError("Invalid name", ref));
         return false;
       }
     }

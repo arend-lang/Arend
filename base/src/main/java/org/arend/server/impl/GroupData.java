@@ -13,6 +13,7 @@ import org.arend.term.group.ConcreteStatement;
 import org.arend.util.list.PersistentList;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public class GroupData {
   private final long myTimestamp;
@@ -23,8 +24,8 @@ public class GroupData {
   private boolean myResolved;
 
   public record DefinitionData(Concrete.ResolvableDefinition definition, PersistentList<TCDefReferable> instances) {
-    public boolean compare(DefinitionData other) {
-      return definition.accept(new ConcreteCompareVisitor(), other.definition) && instances.equals(other.instances);
+    public boolean compare(DefinitionData other, Map<Object, Consumer<Concrete.SourceNode>> dataUpdater) {
+      return definition.accept(new ConcreteCompareVisitor(dataUpdater), other.definition) && instances.equals(other.instances) && dataUpdater.isEmpty();
     }
   }
 
