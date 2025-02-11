@@ -8,15 +8,13 @@ import org.arend.ext.prettifier.ExpressionPrettifier;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.Doc;
 import org.arend.ext.typechecking.GoalSolver;
+import org.arend.ext.typechecking.InteractiveGoalSolver;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.TypecheckingContext;
 import org.arend.typechecking.patternmatching.Condition;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
@@ -24,6 +22,7 @@ public class GoalError extends GoalDataHolder {
   public final Concrete.Expression result;
   public final List<GeneralError> errors;
   public final GoalSolver goalSolver;
+  public final Collection<? extends InteractiveGoalSolver> additionalSolvers;
   public final String goalName;
   public final Concrete.GoalExpression goalExpression;
 
@@ -42,6 +41,7 @@ public class GoalError extends GoalDataHolder {
     this.result = result;
     this.errors = errors;
     this.goalSolver = goalSolver;
+    this.additionalSolvers = goalSolver.getAdditionalSolvers();
     this.goalExpression = expression;
     goalName = expression.getName() == null ? "" : expression.getName();
   }
