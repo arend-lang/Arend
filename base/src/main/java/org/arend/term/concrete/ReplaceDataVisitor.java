@@ -99,7 +99,11 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
     } else if (pattern instanceof Concrete.NumberPattern) {
       result = new Concrete.NumberPattern(getData(pattern), ((Concrete.NumberPattern) pattern).getNumber(), null);
     } else if (pattern instanceof Concrete.UnparsedConstructorPattern) {
-      result = new Concrete.UnparsedConstructorPattern(getData(pattern), pattern.isExplicit(), ((Concrete.UnparsedConstructorPattern) pattern).getUnparsedPatterns(), null);
+      List<Concrete.BinOpSequenceElem<Concrete.Pattern>> patterns = new ArrayList<>();
+      for (Concrete.BinOpSequenceElem<Concrete.Pattern> elem : ((Concrete.UnparsedConstructorPattern) pattern).getUnparsedPatterns()) {
+        patterns.add(new Concrete.BinOpSequenceElem<>(visitPattern(elem.getComponent()), elem.fixity, elem.isExplicit));
+      }
+      result = new Concrete.UnparsedConstructorPattern(getData(pattern), pattern.isExplicit(), patterns, null);
     } else {
       throw new IllegalStateException();
     }
