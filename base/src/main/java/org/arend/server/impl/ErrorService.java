@@ -30,7 +30,10 @@ public class ErrorService implements ErrorReporter {
   }
 
   public Map<ModuleLocation, List<GeneralError>> getAllErrors() {
-    Map<ModuleLocation, List<GeneralError>> result = new HashMap<>(myResolverErrors);
+    Map<ModuleLocation, List<GeneralError>> result = new HashMap<>();
+    for (Map.Entry<ModuleLocation, List<GeneralError>> entry : myResolverErrors.entrySet()) {
+      result.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+    }
     for (Map.Entry<LocatedReferable, List<GeneralError>> entry : myTypecheckingErrors.entrySet()) {
       ModuleLocation module = entry.getKey().getLocation();
       if (module != null) {
