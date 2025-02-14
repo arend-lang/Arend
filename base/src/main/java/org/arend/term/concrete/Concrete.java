@@ -856,6 +856,7 @@ public final class Concrete {
   }
 
   public interface ClassElement extends SourceNode, ConcreteClassElement {
+    @Nullable Referable getField();
   }
 
   public interface CoClauseElement extends ClassElement {
@@ -941,6 +942,11 @@ public final class Concrete {
     @Override
     public void prettyPrint(PrettyPrintVisitor visitor, Precedence prec) {
       visitor.prettyPrintClassFieldImpl(this);
+    }
+
+    @Override
+    public @NotNull Referable getField() {
+      return myImplementedField;
     }
   }
 
@@ -2400,6 +2406,11 @@ public final class Concrete {
     public void prettyPrint(StringBuilder builder, PrettyPrinterConfig ppConfig) {
       new PrettyPrintVisitor(builder, 0).prettyPrintClassField(this);
     }
+
+    @Override
+    public @Nullable Referable getField() {
+      return null;
+    }
   }
 
   public static class OverriddenField extends SourceNodeImpl implements BaseClassField {
@@ -2461,6 +2472,11 @@ public final class Concrete {
     @Override
     public void prettyPrint(PrettyPrintVisitor visitor, Precedence prec) {
       visitor.prettyPrintOverridden(this);
+    }
+
+    @Override
+    public @NotNull Referable getField() {
+      return myOverriddenField;
     }
   }
 

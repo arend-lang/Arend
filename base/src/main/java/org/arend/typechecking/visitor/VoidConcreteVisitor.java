@@ -294,21 +294,25 @@ public class VoidConcreteVisitor<P> implements ConcreteExpressionVisitor<P,Void>
     visitElements(classFieldImpl.getSubCoclauseList(), params);
   }
 
+  protected void visitClassElement(Concrete.ClassElement element, P params) {
+    if (element instanceof Concrete.ClassField) {
+      visitClassField((Concrete.ClassField) element, params);
+    } else if (element instanceof Concrete.ClassFieldImpl) {
+      visitClassFieldImpl((Concrete.ClassFieldImpl) element, params);
+    } else if (element instanceof Concrete.OverriddenField field) {
+      visitParameters(field.getParameters(), params);
+      field.getResultType().accept(this, params);
+      if (field.getResultTypeLevel() != null) {
+        field.getResultTypeLevel().accept(this, params);
+      }
+    } else {
+      throw new IllegalStateException();
+    }
+  }
+
   protected void visitElements(List<? extends Concrete.ClassElement> elements, P params) {
     for (Concrete.ClassElement element : elements) {
-      if (element instanceof Concrete.ClassField) {
-        visitClassField((Concrete.ClassField) element, params);
-      } else if (element instanceof Concrete.ClassFieldImpl) {
-        visitClassFieldImpl((Concrete.ClassFieldImpl) element, params);
-      } else if (element instanceof Concrete.OverriddenField field) {
-        visitParameters(field.getParameters(), params);
-        field.getResultType().accept(this, params);
-        if (field.getResultTypeLevel() != null) {
-          field.getResultTypeLevel().accept(this, params);
-        }
-      } else {
-        throw new IllegalStateException();
-      }
+      visitClassElement(element, params);
     }
   }
 

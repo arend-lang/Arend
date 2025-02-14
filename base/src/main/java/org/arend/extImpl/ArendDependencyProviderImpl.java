@@ -11,10 +11,10 @@ import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.naming.resolving.ResolverListener;
 import org.arend.naming.scope.Scope;
 import org.arend.server.ArendChecker;
 import org.arend.server.impl.ArendServerImpl;
+import org.arend.server.impl.GroupData;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.util.FullName;
 import org.jetbrains.annotations.NotNull;
@@ -36,8 +36,9 @@ public class ArendDependencyProviderImpl extends Disableable implements ArendDep
     checkEnabled();
     ModuleLocation location = new ModuleLocation(myLibrary, ModuleLocation.LocationKind.SOURCE, module);
     ArendChecker checker = myServer.getCheckerFor(Collections.singletonList(location));
-    checker.resolveAll(DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
-    Referable resolved = Scope.resolveName(myServer.getGroupData(location).getFileScope(), name.toList());
+    checker.resolveAll(DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ArendChecker.ProgressReporter.empty());
+    GroupData groupData = myServer.getGroupData(location);
+    Referable resolved = groupData == null ? null : Scope.resolveName(groupData.getFileScope(), name.toList());
     TCDefReferable referable = resolved instanceof TCDefReferable ? (TCDefReferable) resolved : null;
     if (referable != null) {
       checker.typecheckExtensionDefinition(new FullName(location, referable.getKind() == GlobalReferable.Kind.CONSTRUCTOR || referable.getKind() == GlobalReferable.Kind.FIELD ? new LongName(name.toList().subList(0, name.size() - 1)) : name));

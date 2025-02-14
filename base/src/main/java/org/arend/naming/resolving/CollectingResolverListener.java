@@ -12,7 +12,7 @@ import org.arend.term.concrete.Concrete;
 
 import java.util.*;
 
-public class CollectingResolverListener extends DelegateResolverListener {
+public class CollectingResolverListener implements ResolverListener {
   public record ResolvedReference(AbstractReference reference, Referable referable) {}
 
   public record ReferablePair(AbstractReferable referable, TCDefReferable tcReferable) {}
@@ -35,8 +35,7 @@ public class CollectingResolverListener extends DelegateResolverListener {
   private final Map<ModuleLocation, ModuleCacheStructure> myModuleCache = new HashMap<>();
   private final boolean myCacheReferences;
 
-  public CollectingResolverListener(ResolverListener resolverListener, boolean cacheReferences) {
-    super(resolverListener);
+  public CollectingResolverListener(boolean cacheReferences) {
     myCacheReferences = cacheReferences;
   }
 
@@ -78,7 +77,6 @@ public class CollectingResolverListener extends DelegateResolverListener {
     if (binding instanceof DataContainer container) {
       cacheReference(container.getData(), binding);
     }
-    super.bindingResolved(binding);
   }
 
   @Override
@@ -86,7 +84,6 @@ public class CollectingResolverListener extends DelegateResolverListener {
     if (originalRef instanceof UnresolvedReference) {
       cacheReference((UnresolvedReference) originalRef, refExpr.getReferent(), resolvedRefs);
     }
-    super.referenceResolved(expr, originalRef, refExpr, resolvedRefs);
   }
 
   @Override
@@ -94,13 +91,11 @@ public class CollectingResolverListener extends DelegateResolverListener {
     if (originalRef instanceof UnresolvedReference) {
       cacheReference((UnresolvedReference) originalRef, resolvedRef, Collections.singletonList(resolvedRef));
     }
-    super.fieldCallResolved(expr, originalRef, resolvedRef);
   }
 
   @Override
   public void patternResolved(Referable originalRef, Referable newRef, Concrete.Pattern pattern, List<Referable> resolvedRefs) {
     cacheReference(originalRef instanceof UnresolvedReference ? (UnresolvedReference) originalRef : new NamedUnresolvedReference(originalRef, originalRef.getRefName()), newRef, resolvedRefs);
-    super.patternResolved(originalRef, newRef, pattern, resolvedRefs);
   }
 
   @Override
@@ -108,7 +103,6 @@ public class CollectingResolverListener extends DelegateResolverListener {
     if (originalRef instanceof UnresolvedReference) {
       cacheReference((UnresolvedReference) originalRef, referable, resolvedRefs);
     }
-    super.coPatternResolved(element, originalRef, referable, resolvedRefs);
   }
 
   @Override
@@ -116,7 +110,6 @@ public class CollectingResolverListener extends DelegateResolverListener {
     if (originalRef instanceof UnresolvedReference) {
       cacheReference((UnresolvedReference) originalRef, referable, resolvedRefs);
     }
-    super.overriddenFieldResolved(overriddenField, originalRef, referable, resolvedRefs);
   }
 
   @Override
@@ -124,7 +117,6 @@ public class CollectingResolverListener extends DelegateResolverListener {
     if (originalRef instanceof UnresolvedReference) {
       cacheReference((UnresolvedReference) originalRef, refExpr.getReferent(), null);
     }
-    super.levelResolved(originalRef, refExpr, resolvedRef, availableRefs);
   }
 
   @Override
@@ -134,7 +126,6 @@ public class CollectingResolverListener extends DelegateResolverListener {
       myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
         .addImportedModule(moduleRef.path);
     }
-    super.namespaceResolved(namespaceCommand, resolvedRefs);
   }
 
   @Override
@@ -142,7 +133,6 @@ public class CollectingResolverListener extends DelegateResolverListener {
     if (originalRef instanceof UnresolvedReference) {
       cacheReference((UnresolvedReference) originalRef, resolvedRef, null);
     }
-    super.renamingResolved(renaming, originalRef, resolvedRef);
   }
 
   @Override
@@ -151,6 +141,5 @@ public class CollectingResolverListener extends DelegateResolverListener {
       myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
         .addReferable(referable, definition.getData());
     }
-    super.definitionResolved(definition);
   }
 }

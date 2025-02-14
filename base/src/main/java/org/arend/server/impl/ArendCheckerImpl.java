@@ -6,7 +6,6 @@ import org.arend.ext.error.ListErrorReporter;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
-import org.arend.naming.resolving.ResolverListener;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
 import org.arend.server.ArendChecker;
@@ -58,20 +57,20 @@ public class ArendCheckerImpl implements ArendChecker {
   }
 
   @Override
-  public void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener, boolean resolveResolved) {
-    myServer.resolveModules(myModules, errorReporter, indicator, listener, getDependenciesInternal(indicator), false, resolveResolved);
+  public void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
+    myServer.resolveModules(myModules, errorReporter, indicator, progressReporter, getDependenciesInternal(indicator), false);
   }
 
-  private ConcreteProvider getConcreteProvider(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener) {
+  private ConcreteProvider getConcreteProvider(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
     if (myConcreteProvider == null) {
-      myConcreteProvider = myServer.resolveModules(myModules, errorReporter, indicator, listener, getDependenciesInternal(indicator), true, false);
+      myConcreteProvider = myServer.resolveModules(myModules, errorReporter, indicator, progressReporter, getDependenciesInternal(indicator), true);
     }
     return myConcreteProvider;
   }
 
   @Override
-  public void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener) {
-    getConcreteProvider(errorReporter, indicator, listener);
+  public void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
+    getConcreteProvider(errorReporter, indicator, progressReporter);
   }
 
   @Override
@@ -113,7 +112,7 @@ public class ArendCheckerImpl implements ArendChecker {
   }
 
   private Ordering prepareOrdering(ErrorReporter errorReporter, boolean withInstances) {
-    ConcreteProvider concreteProvider = getConcreteProvider(errorReporter, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
+    ConcreteProvider concreteProvider = getConcreteProvider(errorReporter, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     if (concreteProvider == null) return null;
 
     if (!Prelude.isInitialized()) {
@@ -126,9 +125,9 @@ public class ArendCheckerImpl implements ArendChecker {
   }
 
   @Override
-  public void typecheckPrepared(@NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener) {
+  public void typecheckPrepared(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
     if (myCollector.isEmpty()) return;
-    ConcreteProvider concreteProvider = getConcreteProvider(DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
+    ConcreteProvider concreteProvider = getConcreteProvider(DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     if (concreteProvider == null) return;
 
     ListErrorReporter listErrorReporter = new ListErrorReporter();
@@ -137,7 +136,7 @@ public class ArendCheckerImpl implements ArendChecker {
       for (CollectingOrderingListener.Element element : myCollector.getElements()) {
         indicator.checkCanceled();
         element.feedTo(typechecker);
-        listener.definitionsTypechecked(element.getAllDefinitions());
+        progressReporter.itemProcessed(element.getAllDefinitions());
       }
 
       synchronized (myServer) {
@@ -154,8 +153,8 @@ public class ArendCheckerImpl implements ArendChecker {
 
   @Override
   public void typecheckExtensionDefinition(@NotNull FullName definition) {
-    resolveAll(DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ResolverListener.EMPTY);
+    resolveAll(DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     prepareTypechecking(Collections.singletonList(definition), DummyErrorReporter.INSTANCE, false);
-    typecheckPrepared(UnstoppableCancellationIndicator.INSTANCE, TypecheckingListener.EMPTY);
+    typecheckPrepared(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
   }
 }

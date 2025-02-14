@@ -436,7 +436,7 @@ public class ArendServerImpl implements ArendServer {
     }
   }
 
-  ConcreteProvider resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener, @Nullable Map<ModuleLocation, GroupData> dependencies, boolean resolveDependencies, boolean resolveResolved) {
+  ConcreteProvider resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ArendChecker.ProgressReporter<ModuleLocation> progressReporter, @Nullable Map<ModuleLocation, GroupData> dependencies, boolean resolveDependencies) {
     if (dependencies == null) return null;
     if (modules.isEmpty()) return ConcreteProvider.EMPTY;
     try {
@@ -449,7 +449,7 @@ public class ArendServerImpl implements ArendServer {
         GroupData groupData = dependencies.get(module);
         if (groupData != null) {
           Collection<GroupData.DefinitionData> definitionData = groupData.getResolvedDefinitions();
-          if (resolveResolved || definitionData == null) {
+          if (definitionData == null) {
             groupData.getRawGroup().traverseGroup(group -> {
               if (group instanceof ConcreteGroup cGroup) {
                 Concrete.ResolvableDefinition definition = cGroup.definition();
@@ -466,13 +466,13 @@ public class ArendServerImpl implements ArendServer {
         }
       }
 
-      CollectingResolverListener resolverListener = new CollectingResolverListener(listener, myCacheReferences);
+      CollectingResolverListener resolverListener = new CollectingResolverListener(myCacheReferences);
       Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
       Map<ModuleLocation, Map<LongName, GroupData.DefinitionData>> resolverResult = new HashMap<>();
       for (ModuleLocation module : currentModules) {
         indicator.checkCanceled();
         GroupData groupData = dependencies.get(module);
-        if (groupData != null && (resolveResolved || !groupData.isResolved())) {
+        if (groupData != null && !groupData.isResolved()) {
           resolverListener.moduleLocation = module;
           ErrorReporter currentErrorReporter;
           if (groupData.isReadOnly()) {
@@ -486,9 +486,10 @@ public class ArendServerImpl implements ArendServer {
           Map<LongName, GroupData.DefinitionData> definitionData = new LinkedHashMap<>();
           new DefinitionResolveNameVisitor(concreteProvider, myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()), PersistentList.empty(), definitionData);
           resolverResult.put(module, definitionData);
+
+          myLogger.info(() -> "Module '" + module + "' is resolved");
         }
-        listener.moduleResolved(module);
-        myLogger.info(() -> "Module '" + module + "' is resolved");
+        progressReporter.itemProcessed(module);
       }
 
       synchronized (this) {

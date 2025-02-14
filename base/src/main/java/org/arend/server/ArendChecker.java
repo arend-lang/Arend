@@ -4,7 +4,6 @@ import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;
-import org.arend.naming.resolving.ResolverListener;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
@@ -28,12 +27,12 @@ public interface ArendChecker {
   /**
    * Resolves stored modules.
    */
-  void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener, boolean resolveResolved);
+  void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter);
 
   /**
    * Resolves stored modules together with their dependencies if they are not already resolved.
    */
-  void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener);
+  void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter);
 
   /**
    * Sorts definitions in stored modules before typechecking.
@@ -54,7 +53,7 @@ public interface ArendChecker {
   /**
    * Typechecks prepared definitions.
    */
-  void typecheckPrepared(@NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener);
+  void typecheckPrepared(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter);
 
   // TODO[server2]: Delete this. Instead, typecheck extension definitions as needed.
   default void typecheckExtensionDefinition(@NotNull FullName definition) {
@@ -70,21 +69,26 @@ public interface ArendChecker {
     }
   }
 
-  interface TypecheckingListener {
-    void definitionsTypechecked(@NotNull List<? extends Concrete.ResolvableDefinition> definitions);
-    TypecheckingListener EMPTY = definitions -> {};
+  interface ProgressReporter<T> {
+    void itemProcessed(@NotNull T item);
+
+    ProgressReporter<?> EMPTY = definitions -> {};
+    static <T> ProgressReporter<T> empty() {
+      //noinspection unchecked
+      return (ProgressReporter<T>) EMPTY;
+    }
   }
 
   default void typecheck(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator) {
-    resolveAll(errorReporter, indicator, ResolverListener.EMPTY);
+    resolveAll(errorReporter, indicator, ProgressReporter.empty());
     prepareTypechecking();
-    typecheckPrepared(indicator, TypecheckingListener.EMPTY);
+    typecheckPrepared(indicator, ProgressReporter.empty());
   }
 
   default void typecheck(@NotNull List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator) {
-    resolveAll(errorReporter, indicator, ResolverListener.EMPTY);
+    resolveAll(errorReporter, indicator, ProgressReporter.empty());
     prepareTypechecking(definitions, errorReporter);
-    typecheckPrepared(indicator, TypecheckingListener.EMPTY);
+    typecheckPrepared(indicator, ProgressReporter.empty());
   }
 
   ArendChecker EMPTY = new ArendChecker() {
@@ -94,10 +98,10 @@ public interface ArendChecker {
     }
 
     @Override
-    public void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener, boolean resolveResolved) {}
+    public void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {}
 
     @Override
-    public void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener) {}
+    public void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {}
 
     @Override
     public int prepareTypechecking() {
@@ -110,6 +114,6 @@ public interface ArendChecker {
     }
 
     @Override
-    public void typecheckPrepared(@NotNull CancellationIndicator indicator, @NotNull TypecheckingListener listener) {}
+    public void typecheckPrepared(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {}
   };
 }
