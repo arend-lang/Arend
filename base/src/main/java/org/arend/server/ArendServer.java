@@ -4,11 +4,8 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
-import org.arend.naming.reference.TCDefReferable;
-import org.arend.naming.reference.UnresolvedReference;
 import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.server.impl.GroupData;
-import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
@@ -84,29 +81,15 @@ public interface ArendServer {
    */
   @NotNull Set<String> getLibraries();
 
+  /**
+   * @return The typing info for the whole project.
+   */
   @NotNull TypingInfo getTypingInfo();
 
   /**
    * @return the content of the given module.
    */
   @Nullable ConcreteGroup getRawGroup(@NotNull ModuleLocation module);
-
-  /**
-   * Resolves given reference.
-   * This might be a slow operation if the reference was not resolved already.
-   */
-  @Nullable Referable resolveReference(@NotNull AbstractReference reference);
-
-  /**
-   * Returns a cached referable.
-   * This method returns the same result as {@link #resolveReference} if the reference is already reserved, and {@code null} otherwise.
-   */
-  @Nullable Referable getCachedReferable(@NotNull AbstractReference reference);
-
-  /**
-   * Adds a reference to the cache.
-   */
-  void cacheReference(@NotNull UnresolvedReference reference, @NotNull Referable referable);
 
   /**
    * @return the group data of the specified module.
@@ -131,9 +114,4 @@ public interface ArendServer {
    * @return list of possible completion variants for the given reference.
    */
   @NotNull List<Referable> getCompletionVariants(@Nullable ConcreteGroup group, @NotNull AbstractReference reference);
-
-  /**
-   * @return A typecheckable referable corresponding to the given abstract one.
-   */
-  @Nullable TCDefReferable getTCReferable(@NotNull AbstractReferable referable);
 }

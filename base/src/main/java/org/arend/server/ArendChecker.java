@@ -28,7 +28,7 @@ public interface ArendChecker {
   /**
    * Resolves stored modules.
    */
-  void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener);
+  void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener, boolean resolveResolved);
 
   /**
    * Resolves stored modules together with their dependencies if they are not already resolved.
@@ -94,7 +94,7 @@ public interface ArendChecker {
     }
 
     @Override
-    public void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener) {}
+    public void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener, boolean resolveResolved) {}
 
     @Override
     public void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener) {}

@@ -6,9 +6,8 @@ import org.arend.term.abs.AbstractReferable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-// TODO[server2]: Make only IDE stuff and ModuleReferable extend AbstractReferable.
-//                Also simplify the whole Referable hierarchy; PSI elements shouldn't implement this interface.
-public interface Referable extends ArendRef, AbstractReferable {
+// TODO[server2]: Simplify the whole Referable hierarchy; PSI elements shouldn't implement this interface.
+public interface Referable extends ArendRef {
   enum RefKind { EXPR, PLEVEL, HLEVEL }
 
   @NotNull String textRepresentation();
@@ -41,7 +40,7 @@ public interface Referable extends ArendRef, AbstractReferable {
         return (AbstractReferable) data;
       }
     }
-    return getUnderlyingReferable();
+    return getUnderlyingReferable() instanceof AbstractReferable result ? result : null;
   }
 
   @Override

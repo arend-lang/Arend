@@ -2,11 +2,12 @@ package org.arend.naming.reference;
 
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.Precedence;
+import org.arend.term.abs.AbstractReferable;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-public class ModuleReferable implements GlobalReferable {
+public class ModuleReferable implements GlobalReferable, AbstractReferable {
   public final ModulePath path;
 
   public ModuleReferable(ModulePath path) {

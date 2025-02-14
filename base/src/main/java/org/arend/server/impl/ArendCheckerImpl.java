@@ -58,8 +58,8 @@ public class ArendCheckerImpl implements ArendChecker {
   }
 
   @Override
-  public void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener) {
-    myServer.resolveModules(myModules, errorReporter, indicator, listener, getDependenciesInternal(indicator), false, true);
+  public void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener, boolean resolveResolved) {
+    myServer.resolveModules(myModules, errorReporter, indicator, listener, getDependenciesInternal(indicator), false, resolveResolved);
   }
 
   private ConcreteProvider getConcreteProvider(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ResolverListener listener) {

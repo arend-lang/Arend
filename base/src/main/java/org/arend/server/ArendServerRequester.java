@@ -1,6 +1,10 @@
 package org.arend.server;
 
 import org.arend.module.ModuleLocation;
+import org.arend.naming.reference.Referable;
+import org.arend.naming.reference.TCDefReferable;
+import org.arend.term.abs.AbstractReferable;
+import org.arend.term.abs.AbstractReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,4 +30,10 @@ public interface ArendServerRequester {
   @Nullable List<String> getFiles(@NotNull String libraryName, boolean inTests, @NotNull List<String> prefix);
 
   void runUnderReadLock(@NotNull Runnable runnable);
+
+  void addReference(@NotNull ModuleLocation module, @NotNull AbstractReference reference, @NotNull Referable referable);
+
+  void addReference(@NotNull ModuleLocation module, @NotNull AbstractReferable referable, @NotNull TCDefReferable tcReferable);
+
+  void addModuleDependency(@NotNull ModuleLocation module, @NotNull ModuleLocation dependency);
 }

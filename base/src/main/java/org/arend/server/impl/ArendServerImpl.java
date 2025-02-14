@@ -21,7 +21,6 @@ import org.arend.naming.scope.*;
 import org.arend.prelude.Prelude;
 import org.arend.server.*;
 import org.arend.term.NamespaceCommand;
-import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
@@ -53,7 +52,6 @@ public class ArendServerImpl implements ArendServer {
   private final Map<ModuleLocation, GroupData> myGroups = new ConcurrentHashMap<>();
   private final Map<ModulePath, Set<ModuleLocation>> myReverseDependencies = new ConcurrentHashMap<>();
   private final LibraryService myLibraryService;
-  private final ResolverCache myResolverCache;
   private final ErrorService myErrorService = new ErrorService();
   private final DependencyCollector myDependencyCollector = new DependencyCollector(null);
   private final boolean myCacheReferences;
@@ -125,7 +123,6 @@ public class ArendServerImpl implements ArendServer {
       myLogger.addHandler(new ConsoleHandler());
     }
     myLibraryService = new LibraryService(this);
-    myResolverCache = new ResolverCache(this);
   }
 
   void copyLogger(Logger to) {
@@ -164,7 +161,6 @@ public class ArendServerImpl implements ArendServer {
 
   void clear(String libraryName) {
     clearReverseDependencies(libraryName);
-    myResolverCache.clearLibraries(Collections.singleton(libraryName));
     myErrorService.clear();
   }
 
@@ -177,7 +173,6 @@ public class ArendServerImpl implements ArendServer {
   public void removeLibrary(@NotNull String name) {
     synchronized (this) {
       myLibraryService.removeLibrary(name);
-      myResolverCache.clearLibraries(Collections.singleton(name));
       clearReverseDependencies(name);
       myLogger.info(() -> "Library '" + name + "' is removed");
     }
@@ -187,7 +182,6 @@ public class ArendServerImpl implements ArendServer {
   public void unloadLibraries(boolean onlyInternal) {
     synchronized (this) {
       Set<String> libraries = myLibraryService.unloadLibraries(onlyInternal);
-      myResolverCache.clearLibraries(libraries);
       myGroups.keySet().removeIf(module -> libraries.contains(module.getLibraryName()));
       myReverseDependencies.clear();
       myLogger.info(onlyInternal ? "Internal libraries unloaded" : "Libraries unloaded");
@@ -215,7 +209,6 @@ public class ArendServerImpl implements ArendServer {
         myLogger.warning("Read-only module '" + mod + "' is already added" + (prevPair.isReadOnly() ? "" : " as a writable module"));
         return prevPair;
       }
-      myResolverCache.clearModule(mod);
 
       GlobalTypingInfo typingInfo;
       if (isPrelude) {
@@ -278,8 +271,6 @@ public class ArendServerImpl implements ArendServer {
             return prevData;
           }
 
-          myResolverCache.clearModule(module);
-
           if (prevData != null) {
             clearReverseDependencies(module, prevData.getRawGroup());
           }
@@ -310,7 +301,6 @@ public class ArendServerImpl implements ArendServer {
   @Override
   public void removeModule(@NotNull ModuleLocation module) {
     synchronized (this) {
-      myResolverCache.clearModule(module);
       GroupData groupData = myGroups.remove(module);
       if (groupData != null) {
         clearReverseDependencies(module, groupData.getRawGroup());
@@ -515,15 +505,15 @@ public class ArendServerImpl implements ArendServer {
             CollectingResolverListener.ModuleCacheStructure cache = resolverListener.getCacheStructure(module);
             if (cache != null) {
               for (CollectingResolverListener.ResolvedReference resolvedReference : cache.cache()) {
-                myResolverCache.addReference(module, resolvedReference.reference(), resolvedReference.referable());
+                myRequester.addReference(module, resolvedReference.reference(), resolvedReference.referable());
               }
               for (CollectingResolverListener.ReferablePair pair : cache.referables()) {
-                myResolverCache.addReferable(module, pair.referable(), pair.tcReferable());
+                myRequester.addReference(module, pair.referable(), pair.tcReferable());
               }
               for (ModulePath modulePath : cache.importedModules()) {
                 ModuleLocation dependency = findDependency(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, false);
                 if (dependency != null) {
-                  myResolverCache.addModuleDependency(module, dependency);
+                  myRequester.addModuleDependency(module, dependency);
                 }
               }
             }
@@ -612,21 +602,6 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
-  public @Nullable Referable resolveReference(@NotNull AbstractReference reference) {
-    return myResolverCache.resolveReference(reference);
-  }
-
-  @Override
-  public @Nullable Referable getCachedReferable(@NotNull AbstractReference reference) {
-    return myResolverCache.getCachedReferable(reference);
-  }
-
-  @Override
-  public void cacheReference(@NotNull UnresolvedReference reference, @NotNull Referable referable) {
-    myResolverCache.addReference(reference, referable);
-  }
-
-  @Override
   public @NotNull Map<ModuleLocation, List<GeneralError>> getErrorMap() {
     return myErrorService.getAllErrors();
   }
@@ -682,10 +657,5 @@ public class ArendServerImpl implements ArendServer {
 
     myLogger.fine(() -> found[0] ? "Finish completion for '" + reference.getReferenceText() + "' with " + result.size() + " results" : "Cannot find completion variants for '" + reference.getReferenceText() + "'");
     return result;
-  }
-
-  @Override
-  public @Nullable TCDefReferable getTCReferable(@NotNull AbstractReferable referable) {
-    return myResolverCache.getTCReferable(referable);
   }
 }

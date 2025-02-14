@@ -60,11 +60,6 @@ public interface TCDefReferable extends TCReferable {
   }
 
   TCDefReferable NULL_REFERABLE = new TCDefReferable() {
-    @Override
-    public boolean isErrorReferable() {
-      return true;
-    }
-
     @Nullable
     @Override
     public Object getData() {
