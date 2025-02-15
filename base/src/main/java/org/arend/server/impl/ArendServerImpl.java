@@ -659,4 +659,34 @@ public class ArendServerImpl implements ArendServer {
     myLogger.fine(() -> found[0] ? "Finish completion for '" + reference.getReferenceText() + "' with " + result.size() + " results" : "Cannot find completion variants for '" + reference.getReferenceText() + "'");
     return result;
   }
+
+  @Override
+  public @Nullable Scope getReferableScope(@NotNull LocatedReferable referable) {
+    List<LocatedReferable> ancestors = new ArrayList<>();
+    ModuleLocation module = LocatedReferable.Helper.getAncestors(referable, ancestors);
+    GroupData groupData = module == null ? null : myGroups.get(module);
+    if (groupData == null) return null;
+
+    ConcreteGroup group = groupData.getRawGroup();
+    Scope scope = LexicalScope.insideOf(group, getParentGroupScope(module, groupData.getRawGroup()), false);
+    loop:
+    for (LocatedReferable ancestor : ancestors) {
+      for (ConcreteStatement statement : group.statements()) {
+        ConcreteGroup subgroup = statement.group();
+        if (subgroup != null && subgroup.referable().equals(ancestor)) {
+          scope = LexicalScope.insideOf(subgroup, scope, false);
+          continue loop;
+        }
+      }
+      for (ConcreteGroup subgroup : group.dynamicGroups()) {
+        if (subgroup.referable().equals(ancestor)) {
+          scope = LexicalScope.insideOf(subgroup, scope, false);
+          continue loop;
+        }
+      }
+      return null;
+    }
+
+    return scope;
+  }
 }

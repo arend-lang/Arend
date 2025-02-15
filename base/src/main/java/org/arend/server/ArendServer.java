@@ -3,8 +3,10 @@ package org.arend.server;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;
+import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.resolving.typing.TypingInfo;
+import org.arend.naming.scope.Scope;
 import org.arend.server.impl.GroupData;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.group.ConcreteGroup;
@@ -114,4 +116,9 @@ public interface ArendServer {
    * @return list of possible completion variants for the given reference.
    */
   @NotNull List<Referable> getCompletionVariants(@Nullable ConcreteGroup group, @NotNull AbstractReference reference);
+
+  /**
+   * @return the scope corresponding to the given referable.
+   */
+  @Nullable Scope getReferableScope(@NotNull LocatedReferable referable);
 }
