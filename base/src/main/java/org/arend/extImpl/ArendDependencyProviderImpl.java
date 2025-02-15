@@ -1,7 +1,6 @@
 package org.arend.extImpl;
 
 import org.arend.core.definition.Definition;
-import org.arend.error.DummyErrorReporter;
 import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.dependency.ArendDependencyProvider;
 import org.arend.ext.dependency.Dependency;
@@ -36,7 +35,7 @@ public class ArendDependencyProviderImpl extends Disableable implements ArendDep
     checkEnabled();
     ModuleLocation location = new ModuleLocation(myLibrary, ModuleLocation.LocationKind.SOURCE, module);
     ArendChecker checker = myServer.getCheckerFor(Collections.singletonList(location));
-    checker.resolveAll(DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ArendChecker.ProgressReporter.empty());
+    checker.resolveAll(UnstoppableCancellationIndicator.INSTANCE, ArendChecker.ProgressReporter.empty());
     GroupData groupData = myServer.getGroupData(location);
     Referable resolved = groupData == null ? null : Scope.resolveName(groupData.getFileScope(), name.toList());
     TCDefReferable referable = resolved instanceof TCDefReferable ? (TCDefReferable) resolved : null;

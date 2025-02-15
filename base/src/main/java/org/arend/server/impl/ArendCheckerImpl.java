@@ -57,8 +57,8 @@ public class ArendCheckerImpl implements ArendChecker {
   }
 
   @Override
-  public void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
-    myServer.resolveModules(myModules, errorReporter, indicator, progressReporter, getDependenciesInternal(indicator), false);
+  public void resolveModules(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
+    myServer.resolveModules(myModules, DummyErrorReporter.INSTANCE, indicator, progressReporter, getDependenciesInternal(indicator), false);
   }
 
   private ConcreteProvider getConcreteProvider(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
@@ -69,8 +69,8 @@ public class ArendCheckerImpl implements ArendChecker {
   }
 
   @Override
-  public void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
-    getConcreteProvider(errorReporter, indicator, progressReporter);
+  public void resolveAll(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
+    getConcreteProvider(DummyErrorReporter.INSTANCE, indicator, progressReporter);
   }
 
   @Override
@@ -153,7 +153,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
   @Override
   public void typecheckExtensionDefinition(@NotNull FullName definition) {
-    resolveAll(DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     prepareTypechecking(Collections.singletonList(definition), DummyErrorReporter.INSTANCE, false);
     typecheckPrepared(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
   }

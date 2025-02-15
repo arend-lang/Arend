@@ -27,12 +27,12 @@ public interface ArendChecker {
   /**
    * Resolves stored modules.
    */
-  void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter);
+  void resolveModules(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter);
 
   /**
    * Resolves stored modules together with their dependencies if they are not already resolved.
    */
-  void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter);
+  void resolveAll(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter);
 
   /**
    * Sorts definitions in stored modules before typechecking.
@@ -57,7 +57,7 @@ public interface ArendChecker {
 
   // TODO[server2]: Delete this. Instead, typecheck extension definitions as needed.
   default void typecheckExtensionDefinition(@NotNull FullName definition) {
-    typecheck(Collections.singletonList(definition), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE);
+    typecheck(Collections.singletonList(definition), UnstoppableCancellationIndicator.INSTANCE);
   }
 
   class DefinitionNotFoundError extends GeneralError {
@@ -79,15 +79,15 @@ public interface ArendChecker {
     }
   }
 
-  default void typecheck(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator) {
-    resolveAll(errorReporter, indicator, ProgressReporter.empty());
+  default void typecheck(@NotNull CancellationIndicator indicator) {
+    resolveAll(indicator, ProgressReporter.empty());
     prepareTypechecking();
     typecheckPrepared(indicator, ProgressReporter.empty());
   }
 
-  default void typecheck(@NotNull List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator) {
-    resolveAll(errorReporter, indicator, ProgressReporter.empty());
-    prepareTypechecking(definitions, errorReporter);
+  default void typecheck(@NotNull List<FullName> definitions, @NotNull CancellationIndicator indicator) {
+    resolveAll(indicator, ProgressReporter.empty());
+    prepareTypechecking(definitions, DummyErrorReporter.INSTANCE);
     typecheckPrepared(indicator, ProgressReporter.empty());
   }
 
@@ -98,10 +98,10 @@ public interface ArendChecker {
     }
 
     @Override
-    public void resolveModules(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {}
+    public void resolveModules(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {}
 
     @Override
-    public void resolveAll(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {}
+    public void resolveAll(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {}
 
     @Override
     public int prepareTypechecking() {
