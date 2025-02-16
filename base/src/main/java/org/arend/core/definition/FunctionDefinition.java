@@ -9,6 +9,7 @@ import org.arend.core.subst.Levels;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.naming.reference.TCDefReferable;
+import org.arend.naming.reference.TCReferable;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -31,6 +32,7 @@ public class FunctionDefinition extends TopLevelDefinition implements Function, 
   private boolean myHasEnclosingClass;
   private List<Boolean> myStrictParameters = Collections.emptyList();
   private List<Boolean> myOmegaParameters = Collections.emptyList();
+  private TCReferable myImplementedField; // for coclause functions
 
   public enum HiddenStatus { NOT_HIDDEN, HIDDEN, REALLY_HIDDEN }
 
@@ -218,6 +220,14 @@ public class FunctionDefinition extends TopLevelDefinition implements Function, 
 
   public void addParametersLevel(ParametersLevel parametersLevel) {
     myParametersLevels.add(parametersLevel);
+  }
+
+  public TCReferable getImplementedField() {
+    return myImplementedField;
+  }
+
+  public void setImplementedField(TCReferable field) {
+    myImplementedField = field;
   }
 
   @Override

@@ -1078,6 +1078,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       typedDef.setHasEnclosingClass(true);
     }
     ClassField implementedField = def instanceof Concrete.CoClauseFunctionDefinition ? typechecker.referableToClassField(((Concrete.CoClauseFunctionDefinition) def).getImplementedField(), def) : null;
+    if (implementedField != null) typedDef.setImplementedField(implementedField.getReferable());
     FunctionKind kind = implementedField == null ? def.getKind() : implementedField.isProperty() && implementedField.getTypeLevel() == null ? FunctionKind.LEMMA : FunctionKind.FUNC;
     checkFunctionLevel(def, kind);
 

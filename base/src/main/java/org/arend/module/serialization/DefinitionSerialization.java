@@ -408,6 +408,7 @@ public class DefinitionSerialization implements ArendSerializer {
     };
     builder.setKind(kind);
     builder.setVisibleParameter(definition.getVisibleParameter());
+    builder.setImplementedField(definition.getImplementedField() == null ? -1 : myCallTargetIndexProvider.getDefIndex(definition.getImplementedField()));
     if (definition.getReallyActualBody() != null) {
       builder.setBody(writeBody(defSerializer, definition.getReallyActualBody()));
     }

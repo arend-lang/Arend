@@ -1,6 +1,7 @@
 package org.arend.naming.reference;
 
 import org.arend.core.definition.Definition;
+import org.arend.core.definition.FunctionDefinition;
 import org.arend.ext.reference.Precedence;
 import org.arend.module.ModuleLocation;
 import org.arend.typechecking.computation.ComputationRunner;
@@ -13,6 +14,12 @@ public interface TCDefReferable extends TCReferable {
   void setTypechecked(@Nullable Definition definition);
   Definition getTypechecked();
   void setData(Object data);
+
+  @Override
+  @NotNull
+  default Precedence getRepresentablePrecedence() {
+    return hasAlias() ? getAliasPrecedence() : getTypechecked() instanceof FunctionDefinition function && function.getImplementedField() != null ? function.getImplementedField().getPrecedence() : getPrecedence();
+  }
 
   default boolean isSimilar(@NotNull TCDefReferable referable) {
     return referable.getClass().equals(getClass()) &&

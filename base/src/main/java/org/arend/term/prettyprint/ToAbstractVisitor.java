@@ -218,7 +218,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     Concrete.Expression fun = ((Concrete.AppExpression) expression).getFunction();
     List<Concrete.Argument> args = ((Concrete.AppExpression) expression).getArguments();
     boolean infix = false;
-    if (fun instanceof Concrete.ReferenceExpression && ((Concrete.ReferenceExpression) fun).getReferent() instanceof GlobalReferable && ((GlobalReferable) ((Concrete.ReferenceExpression) fun).getReferent()).getPrecedence().isInfix) {
+    if (fun instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof GlobalReferable global && global.getRepresentablePrecedence().isInfix) {
       if (args.size() >= 2 && args.get(args.size() - 1).isExplicit() && args.get(args.size() - 2).isExplicit()) {
         infix = true;
         for (int i = 0; i < args.size() - 2; i++) {
@@ -422,7 +422,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     boolean concreteExplicit = true;
     do {
       expr = (ConCallExpression) it;
-      boolean showImplicitArgs = hasFlag(PrettyPrinterFlag.SHOW_BIN_OP_IMPLICIT_ARGS) || !expr.getDefinition().getReferable().getPrecedence().isInfix;
+      boolean showImplicitArgs = hasFlag(PrettyPrinterFlag.SHOW_BIN_OP_IMPLICIT_ARGS) || !expr.getDefinition().getReferable().getRepresentablePrecedence().isInfix;
 
       Concrete.Expression cExpr = makeReference(expr);
       if (showImplicitArgs && expr.getDefinition().status().headerIsOK() && hasFlag(PrettyPrinterFlag.SHOW_CON_PARAMS) || convertSubexprs(expr.getDataTypeArguments())) {

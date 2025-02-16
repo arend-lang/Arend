@@ -149,6 +149,7 @@ message Definition {
         bool has_enclosing_class = 13;
         repeated bool strict_parameters = 15;
         repeated bool omega_parameter = 19;
+        int32 implemented_field = 20;
 
         enum HiddenStatus {
             NOT_HIDDEN = 0;

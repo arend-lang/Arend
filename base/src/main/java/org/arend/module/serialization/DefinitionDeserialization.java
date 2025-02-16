@@ -454,6 +454,10 @@ public class DefinitionDeserialization implements ArendDeserializer {
     };
     functionDef.setKind(kind);
     functionDef.setVisibleParameter(functionProto.getVisibleParameter());
+    int implementedField = functionProto.getImplementedField();
+    if (implementedField != -1) {
+      functionDef.setImplementedField(myCallTargetProvider.getRef(implementedField));
+    }
     if (functionProto.hasBody()) {
       functionDef.setBody(readBody(defDeserializer, functionProto.getBody(), DependentLink.Helper.size(functionDef.getParameters())));
     }
