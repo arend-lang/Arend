@@ -4,16 +4,12 @@ import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendExtension;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
-import org.arend.ext.error.ListErrorReporter;
-import org.arend.ext.error.MergingErrorReporter;
-import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.Precedence;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.module.scopeprovider.SimpleModuleScopeProvider;
 import org.arend.naming.reference.*;
-import org.arend.naming.resolving.CollectingResolverListener;
 import org.arend.naming.resolving.ResolverListener;
 import org.arend.naming.resolving.typing.*;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
@@ -24,24 +20,19 @@ import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
-import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.group.Group;
 import org.arend.typechecking.ArendExtensionProvider;
-import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DependencyCollector;
-import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
-import org.arend.util.ComputationInterruptedException;
 import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.*;
 
@@ -131,6 +122,10 @@ public class ArendServerImpl implements ArendServer {
     for (Handler handler : myLogger.getHandlers()) {
       to.addHandler(handler);
     }
+  }
+
+  boolean doCacheReferences() {
+    return myCacheReferences;
   }
 
   public ArendServerRequester getRequester() {
@@ -223,6 +218,10 @@ public class ArendServerImpl implements ArendServer {
     });
   }
 
+  void addReverseDependencies(ModulePath module, ModuleLocation dependency) {
+    myReverseDependencies.computeIfAbsent(module, k -> new HashSet<>()).add(dependency);
+  }
+
   private void clearReverseDependencies(ModuleLocation module, ConcreteGroup group) {
     for (ConcreteStatement statement : group.statements()) {
       if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
@@ -309,7 +308,7 @@ public class ArendServerImpl implements ArendServer {
     }
   }
 
-  private ModuleLocation findDependency(ModulePath modulePath, String fromLibrary, boolean fromTests, boolean withReadOnly) {
+  ModuleLocation findDependency(ModulePath modulePath, String fromLibrary, boolean fromTests, boolean withReadOnly) {
     List<String> libraries = new ArrayList<>(3);
     libraries.add(fromLibrary);
     ArendLibraryImpl arendLib = myLibraryService.getLibrary(fromLibrary);
@@ -364,7 +363,7 @@ public class ArendServerImpl implements ArendServer {
     };
   }
 
-  private Scope getParentGroupScope(ModuleLocation module, Group group) {
+  Scope getParentGroupScope(ModuleLocation module, Group group) {
     return ScopeFactory.parentScopeForGroup(group, getModuleScopeProviderFor(module), true);
   }
 
@@ -374,201 +373,6 @@ public class ArendServerImpl implements ArendServer {
     if (module == null) return null;
     GroupData groupData = myGroups.get(module);
     return groupData == null ? null : groupData.getTypingInfo();
-  }
-
-  Map<ModuleLocation, GroupData> getDependencies(List<? extends ModuleLocation> modules, CancellationIndicator indicator) {
-    myLogger.info(() -> "Begin calculating dependencies for " + modules);
-
-    try {
-      Map<ModuleLocation, GroupData> groups = new HashMap<>();
-      Deque<ModuleLocation> toVisit = new ArrayDeque<>();
-
-      myRequester.runUnderReadLock(() -> {
-        for (ModuleLocation module : modules) {
-          indicator.checkCanceled();
-          myRequester.requestModuleUpdate(this, module);
-          toVisit.add(module);
-        }
-
-        synchronized (this) {
-          while (!toVisit.isEmpty()) {
-            indicator.checkCanceled();
-            ModuleLocation module = toVisit.pop();
-            GroupData groupData = myGroups.get(module);
-            if (groupData != null) {
-              if (groups.putIfAbsent(module, groupData) != null) continue;
-              for (ConcreteStatement statement : groupData.getRawGroup().statements()) {
-                indicator.checkCanceled();
-                if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
-                  ModuleLocation dependency = findDependency(new ModulePath(statement.command().getPath()), module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
-                  if (dependency != null) toVisit.add(dependency);
-                }
-              }
-            }
-          }
-
-          for (Map.Entry<ModuleLocation, GroupData> entry : groups.entrySet()) {
-            for (ConcreteStatement statement : entry.getValue().getRawGroup().statements()) {
-              if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
-                myReverseDependencies.computeIfAbsent(new ModulePath(statement.command().getPath()), k -> new HashSet<>()).add(entry.getKey());
-              }
-            }
-          }
-
-          for (Map.Entry<ModuleLocation, GroupData> entry : groups.entrySet()) {
-            if (entry.getValue().getTypingInfo() == null) {
-              GlobalTypingInfo typingInfo = new GlobalTypingInfo(null);
-              new TypingInfoVisitor(typingInfo).processGroup(entry.getValue().getRawGroup(), getParentGroupScope(entry.getKey(), entry.getValue().getRawGroup()));
-              entry.getValue().setTypingInfo(typingInfo);
-              myLogger.info(() -> "Header of module '" + entry.getKey() + "' is resolved");
-            }
-          }
-        }
-      });
-
-      groups.computeIfAbsent(Prelude.MODULE_LOCATION, k -> myGroups.get(Prelude.MODULE_LOCATION));
-
-      myLogger.info(() -> "End calculating dependencies for " + modules);
-      return groups;
-    } catch (ComputationInterruptedException e) {
-      myLogger.info(() -> "Calculating dependencies of " + modules + " is interrupted");
-      return null;
-    }
-  }
-
-  ConcreteProvider resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ArendChecker.ProgressReporter<ModuleLocation> progressReporter, @Nullable Map<ModuleLocation, GroupData> dependencies, boolean resolveDependencies) {
-    if (dependencies == null) return null;
-    if (modules.isEmpty()) return ConcreteProvider.EMPTY;
-    try {
-      myLogger.info(() -> "Begin resolving modules " + modules);
-
-      Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
-      ConcreteProvider concreteProvider = new SimpleConcreteProvider(defMap);
-      Collection<? extends ModuleLocation> currentModules = resolveDependencies ? dependencies.keySet() : modules;
-      for (ModuleLocation module : currentModules) {
-        GroupData groupData = dependencies.get(module);
-        if (groupData != null) {
-          Collection<GroupData.DefinitionData> definitionData = groupData.getResolvedDefinitions();
-          if (definitionData == null) {
-            groupData.getRawGroup().traverseGroup(group -> {
-              if (group instanceof ConcreteGroup cGroup) {
-                Concrete.ResolvableDefinition definition = cGroup.definition();
-                if (definition != null) {
-                  defMap.put(cGroup.referable(), definition.accept(new ReplaceDataVisitor(true), null));
-                }
-              }
-            });
-          } else {
-            for (GroupData.DefinitionData data : definitionData) {
-              defMap.put(data.definition().getData(), data.definition());
-            }
-          }
-        }
-      }
-
-      CollectingResolverListener resolverListener = new CollectingResolverListener(myCacheReferences);
-      Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
-      Map<ModuleLocation, Map<LongName, GroupData.DefinitionData>> resolverResult = new HashMap<>();
-      for (ModuleLocation module : currentModules) {
-        indicator.checkCanceled();
-        GroupData groupData = dependencies.get(module);
-        if (groupData != null && !groupData.isResolved()) {
-          resolverListener.moduleLocation = module;
-          ErrorReporter currentErrorReporter;
-          if (groupData.isReadOnly()) {
-            currentErrorReporter = DummyErrorReporter.INSTANCE;
-          } else {
-            ListErrorReporter listErrorReporter = new ListErrorReporter();
-            errorReporterMap.put(module, listErrorReporter);
-            currentErrorReporter = new MergingErrorReporter(errorReporter, listErrorReporter);
-          }
-
-          Map<LongName, GroupData.DefinitionData> definitionData = new LinkedHashMap<>();
-          new DefinitionResolveNameVisitor(concreteProvider, myTypingInfo, currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), getParentGroupScope(module, groupData.getRawGroup()), PersistentList.empty(), definitionData);
-          resolverResult.put(module, definitionData);
-
-          myLogger.info(() -> "Module '" + module + "' is resolved");
-        }
-        progressReporter.itemProcessed(module);
-      }
-
-      synchronized (this) {
-        ModuleLocation changedModule = findChanged(dependencies);
-        if (changedModule != null) {
-          myLogger.info(() -> "Version of " + changedModule + " changed; didn't resolve modules " + modules);
-          return null;
-        }
-
-        for (ModuleLocation module : currentModules) {
-          indicator.checkCanceled();
-          GroupData groupData = dependencies.get(module);
-          if (groupData != null) {
-            CollectingResolverListener.ModuleCacheStructure cache = resolverListener.getCacheStructure(module);
-            if (cache != null) {
-              for (CollectingResolverListener.ResolvedReference resolvedReference : cache.cache()) {
-                myRequester.addReference(module, resolvedReference.reference(), resolvedReference.referable());
-              }
-              for (CollectingResolverListener.ReferablePair pair : cache.referables()) {
-                myRequester.addReference(module, pair.referable(), pair.tcReferable());
-              }
-              for (ModulePath modulePath : cache.importedModules()) {
-                ModuleLocation dependency = findDependency(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, false);
-                if (dependency != null) {
-                  myRequester.addModuleDependency(module, dependency);
-                }
-              }
-            }
-            ListErrorReporter reporter = errorReporterMap.get(module);
-            if (reporter != null) {
-              myErrorService.setResolverErrors(module, reporter.getErrorList());
-            }
-
-            Map<LongName, GroupData.DefinitionData> definitionData = resolverResult.get(module);
-            if (definitionData != null) {
-              Map<LongName, GroupData.DefinitionData> prevData = groupData.getPreviousDefinitions();
-              if (prevData != null) {
-                for (Map.Entry<LongName, GroupData.DefinitionData> entry : prevData.entrySet()) {
-                  GroupData.DefinitionData newData = definitionData.get(entry.getKey());
-                  boolean update;
-                  if (newData != null) {
-                    Map<Object, Consumer<Concrete.SourceNode>> updater = new HashMap<>();
-                    for (GeneralError error : myErrorService.getTypecheckingErrors(entry.getValue().definition().getData())) {
-                      Object cause = error.getCause();
-                      if (cause != null) updater.put(cause, error::setCauseSourceNode);
-                    }
-                    update = !entry.getValue().compare(newData, updater);
-                  } else {
-                    update = true;
-                  }
-                  if (update) {
-                    for (TCReferable updated : myDependencyCollector.update(entry.getValue().definition().getData())) {
-                      myErrorService.resetDefinition(updated);
-                    }
-                  }
-                }
-              }
-              groupData.updateResolvedDefinitions(definitionData);
-            }
-          }
-        }
-      }
-
-      myLogger.info(() -> "End resolving modules " + modules);
-      return concreteProvider;
-    } catch (ComputationInterruptedException e) {
-      myLogger.info(() -> "Resolving of modules " + modules + " is interrupted");
-      return null;
-    }
-  }
-
-  ModuleLocation findChanged(Map<ModuleLocation, GroupData> modules) {
-    for (Map.Entry<ModuleLocation, GroupData> entry : modules.entrySet()) {
-      GroupData groupData = myGroups.get(entry.getKey());
-      if (groupData == null || !groupData.isReadOnly() && groupData.getTimestamp() != entry.getValue().getTimestamp()) {
-        return entry.getKey();
-      }
-    }
-    return null;
   }
 
   @Override
