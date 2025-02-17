@@ -114,6 +114,7 @@ public class ArendServerImpl implements ArendServer {
       myLogger.addHandler(new ConsoleHandler());
     }
     myLibraryService = new LibraryService(this);
+    copyLogger(ArendCheckerImpl.getLogger());
 
     myLogger.info(() -> "Server started");
   }

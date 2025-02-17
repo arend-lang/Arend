@@ -44,7 +44,7 @@ import java.util.logging.Logger;
 
 public class ArendCheckerImpl implements ArendChecker {
   private final ArendServerImpl myServer;
-  private final Logger myLogger = Logger.getLogger(ArendCheckerImpl.class.getName());
+  private static final Logger myLogger = Logger.getLogger(ArendCheckerImpl.class.getName());
   private final List<? extends ModuleLocation> myModules;
   private boolean myInterrupted;
   private Map<ModuleLocation, GroupData> myDependencies;
@@ -54,9 +54,12 @@ public class ArendCheckerImpl implements ArendChecker {
 
   public ArendCheckerImpl(ArendServerImpl server, List<? extends ModuleLocation> modules) {
     myServer = server;
-    server.copyLogger(myLogger);
     myModules = modules;
     myDependencyCollector = new DependencyCollector(myServer);
+  }
+
+  static Logger getLogger() {
+    return myLogger;
   }
 
   private Map<ModuleLocation, GroupData> getDependenciesInternal(@NotNull CancellationIndicator indicator) {
