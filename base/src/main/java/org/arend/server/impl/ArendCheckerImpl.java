@@ -4,10 +4,11 @@ import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
-import org.arend.ext.error.MergingErrorReporter;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.module.ModuleLocation;
+import org.arend.module.error.DefinitionNotFoundError;
+import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCReferable;
@@ -18,6 +19,7 @@ import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
 import org.arend.server.ArendChecker;
+import org.arend.server.ProgressReporter;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ReplaceDataVisitor;
@@ -49,20 +51,17 @@ public class ArendCheckerImpl implements ArendChecker {
   private boolean myInterrupted;
   private Map<ModuleLocation, GroupData> myDependencies;
   private ConcreteProvider myConcreteProvider;
-  private final DependencyCollector myDependencyCollector;
-  private final CollectingOrderingListener myCollector = new CollectingOrderingListener();
 
   public ArendCheckerImpl(ArendServerImpl server, List<? extends ModuleLocation> modules) {
     myServer = server;
     myModules = modules;
-    myDependencyCollector = new DependencyCollector(myServer);
   }
 
   static Logger getLogger() {
     return myLogger;
   }
 
-  private Map<ModuleLocation, GroupData> getDependenciesInternal(@NotNull CancellationIndicator indicator) {
+  private Map<ModuleLocation, GroupData> getDependencies(@NotNull CancellationIndicator indicator) {
     if (myDependencies == null) {
       if (myInterrupted) return null;
       myDependencies = getDependencies(myModules, indicator);
@@ -71,12 +70,6 @@ public class ArendCheckerImpl implements ArendChecker {
       }
     }
     return myDependencies;
-  }
-
-  @Override
-  public @Nullable Set<ModuleLocation> getDependencies(@NotNull CancellationIndicator indicator) {
-    var dependencies = getDependenciesInternal(indicator);
-    return dependencies == null ? null : Collections.unmodifiableSet(dependencies.keySet());
   }
 
   private Map<ModuleLocation, GroupData> getDependencies(List<? extends ModuleLocation> modules, CancellationIndicator indicator) {
@@ -139,7 +132,7 @@ public class ArendCheckerImpl implements ArendChecker {
     }
   }
 
-  private ConcreteProvider resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ArendChecker.ProgressReporter<ModuleLocation> progressReporter, @Nullable Map<ModuleLocation, GroupData> dependencies, boolean resolveDependencies) {
+  private ConcreteProvider resolveModules(@NotNull List<? extends @NotNull ModuleLocation> modules, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter, @Nullable Map<ModuleLocation, GroupData> dependencies, boolean resolveDependencies) {
     if (dependencies == null) return null;
     if (modules.isEmpty()) return ConcreteProvider.EMPTY;
     try {
@@ -172,8 +165,10 @@ public class ArendCheckerImpl implements ArendChecker {
       CollectingResolverListener resolverListener = new CollectingResolverListener(myServer.doCacheReferences());
       Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
       Map<ModuleLocation, Map<LongName, GroupData.DefinitionData>> resolverResult = new HashMap<>();
+      progressReporter.beginProcessing(currentModules.size());
       for (ModuleLocation module : currentModules) {
         indicator.checkCanceled();
+        progressReporter.beginItem(module);
         GroupData groupData = dependencies.get(module);
         if (groupData != null && !groupData.isResolved()) {
           resolverListener.moduleLocation = module;
@@ -183,7 +178,7 @@ public class ArendCheckerImpl implements ArendChecker {
           } else {
             ListErrorReporter listErrorReporter = new ListErrorReporter();
             errorReporterMap.put(module, listErrorReporter);
-            currentErrorReporter = new MergingErrorReporter(errorReporter, listErrorReporter);
+            currentErrorReporter = listErrorReporter;
           }
 
           Map<LongName, GroupData.DefinitionData> definitionData = new LinkedHashMap<>();
@@ -192,7 +187,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
           myLogger.info(() -> "Module '" + module + "' is resolved");
         }
-        progressReporter.itemProcessed(module);
+        progressReporter.endItem(module);
       }
 
       synchronized (myServer) {
@@ -244,7 +239,7 @@ public class ArendCheckerImpl implements ArendChecker {
                     update = true;
                   }
                   if (update) {
-                    Set<? extends TCReferable> updatedSet = myDependencyCollector.update(entry.getValue().definition().getData());
+                    Set<? extends TCReferable> updatedSet = myServer.getDependencyCollector().update(entry.getValue().definition().getData());
                     myLogger.info(() -> "Updated definitions " + updatedSet);
                     for (TCReferable updated : updatedSet) {
                       myServer.getErrorService().resetDefinition(updated);
@@ -268,76 +263,90 @@ public class ArendCheckerImpl implements ArendChecker {
 
   @Override
   public void resolveModules(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
-    resolveModules(myModules, DummyErrorReporter.INSTANCE, indicator, progressReporter, getDependenciesInternal(indicator), false);
+    resolveModules(myModules, indicator, progressReporter, getDependencies(indicator), false);
   }
 
-  private ConcreteProvider getConcreteProvider(@NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
+  private ConcreteProvider getConcreteProvider(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
     if (myConcreteProvider == null) {
-      myConcreteProvider = resolveModules(myModules, errorReporter, indicator, progressReporter, getDependenciesInternal(indicator), true);
+      myConcreteProvider = resolveModules(myModules, indicator, progressReporter, getDependencies(indicator), true);
     }
     return myConcreteProvider;
   }
 
   @Override
   public void resolveAll(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<ModuleLocation> progressReporter) {
-    getConcreteProvider(DummyErrorReporter.INSTANCE, indicator, progressReporter);
+    getConcreteProvider(indicator, progressReporter);
   }
 
   @Override
-  public int prepareTypechecking() {
-    myLogger.info(() -> "Begin ordering definitions in " + myModules);
-
-    Ordering ordering = prepareOrdering(DummyErrorReporter.INSTANCE, true);
-    if (ordering == null) return 0;
-
-    List<Group> groups = new ArrayList<>(myModules.size());
-    for (ModuleLocation module : myModules) {
-      GroupData groupData = myDependencies.get(module);
-      if (groupData != null) groups.add(groupData.getRawGroup());
-    }
-    ordering.orderModules(groups);
-
-    myLogger.info(() -> "End ordering definitions in " + myModules);
-    return myCollector.getElements().size();
+  public int typecheck(@Nullable List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
+    return typecheck(definitions, errorReporter, indicator, progressReporter, true);
   }
 
-  private int prepareTypechecking(@NotNull List<FullName> definitions, @NotNull ErrorReporter errorReporter, boolean withInstances) {
-    myLogger.info(() -> "Begin ordering definitions " + definitions);
+  private int typecheck(@Nullable List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter, boolean withInstances) {
+    myLogger.info(() -> definitions == null ? "Begin typechecking definitions in " + myModules : "Begin typechecking definitions " + definitions);
 
-    Ordering ordering = prepareOrdering(errorReporter, withInstances);
-    if (ordering == null) return 0;
-
-    for (FullName definition : definitions) {
-      GroupData groupData = myServer.getGroupData(definition.module);
-      Referable ref = groupData == null ? null : Scope.resolveName(groupData.getFileScope(), definition.longName.toList());
-      Concrete.GeneralDefinition def = ref instanceof GlobalReferable ? myConcreteProvider.getConcrete((GlobalReferable) ref) : null;
-      if (def instanceof Concrete.ResolvableDefinition) {
-        ordering.order((Concrete.ResolvableDefinition) def);
-      } else {
-        errorReporter.report(new DefinitionNotFoundError(definition));
-      }
-    }
-
-    myLogger.info(() -> "End ordering definitions " + definitions);
-    return myCollector.getElements().size();
-  }
-
-  @Override
-  public int prepareTypechecking(@NotNull List<FullName> definitions, @NotNull ErrorReporter errorReporter) {
-    return prepareTypechecking(definitions, errorReporter, true);
-  }
-
-  private Ordering prepareOrdering(ErrorReporter errorReporter, boolean withInstances) {
-    ConcreteProvider concreteProvider = getConcreteProvider(errorReporter, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-    if (concreteProvider == null) return null;
+    ConcreteProvider concreteProvider = getConcreteProvider(indicator, ProgressReporter.empty());
+    if (concreteProvider == null) return 0;
 
     if (!Prelude.isInitialized()) {
       new Prelude.PreludeTypechecking(concreteProvider).typecheckDefinitions(myDependencies.get(Prelude.MODULE_LOCATION).getResolvedDefinitions().stream().map(GroupData.DefinitionData::definition).toList(), UnstoppableCancellationIndicator.INSTANCE);
     }
 
-    myCollector.clear();
-    myDependencyCollector.clear();
-    return new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, myCollector, myDependencyCollector, new GroupComparator(myDependencies), withInstances);
+    DependencyCollector dependencyCollector = new DependencyCollector(myServer);
+    CollectingOrderingListener collector = new CollectingOrderingListener();
+    Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies), withInstances);
+
+    if (definitions == null) {
+      List<Group> groups = new ArrayList<>(myModules.size());
+      for (ModuleLocation module : myModules) {
+        GroupData groupData = myDependencies.get(module);
+        if (groupData != null) groups.add(groupData.getRawGroup());
+      }
+      ordering.orderModules(groups);
+    } else {
+      for (FullName definition : definitions) {
+        GroupData groupData = myDependencies.get(definition.module);
+        if (groupData != null) {
+          Referable ref = Scope.resolveName(groupData.getFileScope(), definition.longName.toList());
+          Concrete.GeneralDefinition def = ref instanceof GlobalReferable ? myConcreteProvider.getConcrete((GlobalReferable) ref) : null;
+          if (def instanceof Concrete.ResolvableDefinition) {
+            ordering.order((Concrete.ResolvableDefinition) def);
+          } else {
+            errorReporter.report(new DefinitionNotFoundError(definition));
+          }
+        } else {
+          errorReporter.report(new ModuleNotFoundError(definition.module.getModulePath()));
+        }
+      }
+    }
+
+    if (!collector.isEmpty()) {
+      ListErrorReporter listErrorReporter = new ListErrorReporter();
+      TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
+      typechecker.run(indicator, () -> {
+        progressReporter.beginProcessing(collector.getElements().size());
+        for (CollectingOrderingListener.Element element : collector.getElements()) {
+          indicator.checkCanceled();
+          progressReporter.beginItem(element.getAllDefinitions());
+          element.feedTo(typechecker);
+          progressReporter.endItem(element.getAllDefinitions());
+        }
+
+        synchronized (myServer) {
+          if (findChanged(myDependencies) == null) {
+            listErrorReporter.reportTo(myServer.getErrorService());
+            dependencyCollector.copyTo(myServer.getDependencyCollector());
+            return true;
+          } else {
+            return typechecker.computationInterrupted();
+          }
+        }
+      });
+    }
+
+    myLogger.info(() -> definitions == null ? "End typechecking definitions in " + myModules : "End typechecking definitions " + definitions);
+    return collector.getElements().size();
   }
 
   private ModuleLocation findChanged(Map<ModuleLocation, GroupData> modules) {
@@ -351,40 +360,7 @@ public class ArendCheckerImpl implements ArendChecker {
   }
 
   @Override
-  public void typecheckPrepared(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
-    if (myCollector.isEmpty()) return;
-    ConcreteProvider concreteProvider = getConcreteProvider(DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-    if (concreteProvider == null) return;
-
-    myLogger.info(() -> "Begin typechecking definitions (" + myCollector.getElements().size() + ") in " + myModules);
-
-    ListErrorReporter listErrorReporter = new ListErrorReporter();
-    TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
-    typechecker.run(indicator, () -> {
-      for (CollectingOrderingListener.Element element : myCollector.getElements()) {
-        indicator.checkCanceled();
-        element.feedTo(typechecker);
-        progressReporter.itemProcessed(element.getAllDefinitions());
-      }
-
-      synchronized (myServer) {
-        if (findChanged(myDependencies) == null) {
-          listErrorReporter.reportTo(myServer.getErrorService());
-          myDependencyCollector.copyTo(myServer.getDependencyCollector());
-          return true;
-        } else {
-          return typechecker.computationInterrupted();
-        }
-      }
-    });
-
-    myLogger.info(() -> "End typechecking definitions (" + myCollector.getElements().size() + ") in " + myModules);
-  }
-
-  @Override
   public void typecheckExtensionDefinition(@NotNull FullName definition) {
-    resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-    prepareTypechecking(Collections.singletonList(definition), DummyErrorReporter.INSTANCE, false);
-    typecheckPrepared(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    typecheck(Collections.singletonList(definition), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty(), false);
   }
 }
