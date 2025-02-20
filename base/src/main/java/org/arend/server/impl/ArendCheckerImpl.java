@@ -26,9 +26,7 @@ import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.group.Group;
-import org.arend.typechecking.computation.BooleanComputationRunner;
-import org.arend.typechecking.computation.CancellationIndicator;
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
+import org.arend.typechecking.computation.*;
 import org.arend.typechecking.order.Ordering;
 import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.order.listener.CollectingOrderingListener;
@@ -42,6 +40,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
@@ -52,6 +51,7 @@ public class ArendCheckerImpl implements ArendChecker {
   private boolean myInterrupted;
   private Map<ModuleLocation, GroupData> myDependencies;
   private ConcreteProvider myConcreteProvider;
+  private final ReentrantLock myTCDefLock = new ReentrantLock();
 
   public ArendCheckerImpl(ArendServerImpl server, List<? extends ModuleLocation> modules) {
     myServer = server;
@@ -60,6 +60,15 @@ public class ArendCheckerImpl implements ArendChecker {
 
   static Logger getLogger() {
     return myLogger;
+  }
+
+  private void withTCDefLock(Runnable runnable) {
+    myTCDefLock.lock();
+    try {
+      runnable.run();
+    } finally {
+      myTCDefLock.unlock();
+    }
   }
 
   private Map<ModuleLocation, GroupData> getDependencies(@NotNull CancellationIndicator indicator) {
@@ -242,9 +251,12 @@ public class ArendCheckerImpl implements ArendChecker {
                   if (update) {
                     Set<? extends TCReferable> updatedSet = myServer.getDependencyCollector().update(entry.getValue().definition().getData());
                     myLogger.info(() -> "Updated definitions " + updatedSet);
-                    for (TCReferable updated : updatedSet) {
-                      myServer.getErrorService().resetDefinition(updated);
-                    }
+                    withTCDefLock(() -> {
+                      ComputationRunner.getCancellationIndicator().cancel(updatedSet);
+                      for (TCReferable updated : updatedSet) {
+                        myServer.getErrorService().resetDefinition(updated);
+                      }
+                    });
                   }
                 }
               }
@@ -316,20 +328,25 @@ public class ArendCheckerImpl implements ArendChecker {
     CollectingOrderingListener collector = new CollectingOrderingListener();
     Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies), withInstances);
 
-    new BooleanComputationRunner().run(indicator, () -> {
+    TypecheckingCancellationIndicator typecheckingIndicator = new TypecheckingCancellationIndicator(indicator);
+    new BooleanComputationRunner().run(typecheckingIndicator, () -> {
       myLogger.info(() -> "<Lock> Typechecking of definitions " + (definitions == null ? "in " + myModules : definitions));
-      if (concreteDefinitions == null) {
-        List<Group> groups = new ArrayList<>(myModules.size());
-        for (ModuleLocation module : myModules) {
-          GroupData groupData = myDependencies.get(module);
-          if (groupData != null) groups.add(groupData.getRawGroup());
+
+      withTCDefLock(() -> {
+        if (concreteDefinitions == null) {
+          List<Group> groups = new ArrayList<>(myModules.size());
+          for (ModuleLocation module : myModules) {
+            GroupData groupData = myDependencies.get(module);
+            if (groupData != null) groups.add(groupData.getRawGroup());
+          }
+          ordering.orderModules(groups);
+        } else {
+          for (Concrete.ResolvableDefinition definition : concreteDefinitions) {
+            ordering.order(definition);
+          }
         }
-        ordering.orderModules(groups);
-      } else {
-        for (Concrete.ResolvableDefinition definition : concreteDefinitions) {
-          ordering.order(definition);
-        }
-      }
+        typecheckingIndicator.setElements(collector.getElements());
+      });
 
       if (!collector.isEmpty()) {
         myLogger.info(() -> "Collected definitions (" + collector.getElements().size() + ") for " + (definitions == null ? myModules : definitions));
@@ -337,24 +354,26 @@ public class ArendCheckerImpl implements ArendChecker {
         ListErrorReporter listErrorReporter = new ListErrorReporter();
         TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
 
-        progressReporter.beginProcessing(collector.getElements().size());
-        for (CollectingOrderingListener.Element element : collector.getElements()) {
-          indicator.checkCanceled();
-          progressReporter.beginItem(element.getAllDefinitions());
-          element.feedTo(typechecker);
-          progressReporter.endItem(element.getAllDefinitions());
-        }
+        try {
+          progressReporter.beginProcessing(collector.getElements().size());
+          for (CollectingOrderingListener.Element element : collector.getElements()) {
+            typecheckingIndicator.checkCanceled();
+            progressReporter.beginItem(element.getAllDefinitions());
+            element.feedTo(typechecker);
+            progressReporter.endItem(element.getAllDefinitions());
+          }
 
-        synchronized (myServer) {
-          if (findChanged(myDependencies) == null) {
+          withTCDefLock(() -> {
+            typecheckingIndicator.checkCanceled();
             listErrorReporter.reportTo(myServer.getErrorService());
             dependencyCollector.copyTo(myServer.getDependencyCollector());
-            myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is commited");
-            return true;
-          } else {
-            myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is not commited");
-            return typechecker.computationInterrupted();
-          }
+          });
+
+          myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is commited");
+        } catch (Exception e) {
+          typechecker.computationInterrupted();
+          myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is interrupted");
+          throw e;
         }
       }
 
