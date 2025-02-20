@@ -48,22 +48,9 @@ public interface TCDefReferable extends TCReferable {
     return this;
   }
 
-  default @NotNull Object getUpdateLock() {
-    return this;
-  }
-
-  default void dropAndCancelTypechecking() {
-    synchronized (getUpdateLock()) {
-      ComputationRunner.getCancellationIndicator().cancel();
-      setTypechecked(null);
-    }
-  }
-
   default void setTypecheckedIfNotCancelled(@NotNull Definition definition) {
-    synchronized (getUpdateLock()) {
-      ComputationRunner.getCancellationIndicator().checkCanceled();
-      setTypecheckedIfAbsent(definition);
-    }
+    ComputationRunner.getCancellationIndicator().checkCanceled();
+    setTypecheckedIfAbsent(definition);
   }
 
   TCDefReferable NULL_REFERABLE = new TCDefReferable() {

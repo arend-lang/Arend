@@ -64,14 +64,14 @@ public class DependencyCollector implements DependencyListener {
         continue;
       }
       Definition def = ((TCDefReferable) updatedDef).getTypechecked();
-      ((TCDefReferable) updatedDef).dropAndCancelTypechecking();
+      ((TCDefReferable) updatedDef).setTypechecked(null);
       if (def instanceof ClassDefinition) {
         for (ClassField field : ((ClassDefinition) def).getPersonalFields()) {
-          field.getReferable().dropAndCancelTypechecking();
+          field.getReferable().setTypechecked(null);
         }
       } else if (def instanceof DataDefinition) {
         for (Constructor constructor : ((DataDefinition) def).getConstructors()) {
-          constructor.getReferable().dropAndCancelTypechecking();
+          constructor.getReferable().setTypechecked(null);
         }
       }
     }

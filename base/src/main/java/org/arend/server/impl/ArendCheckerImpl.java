@@ -249,9 +249,9 @@ public class ArendCheckerImpl implements ArendChecker {
                     update = true;
                   }
                   if (update) {
-                    Set<? extends TCReferable> updatedSet = myServer.getDependencyCollector().update(entry.getValue().definition().getData());
-                    myLogger.info(() -> "Updated definitions " + updatedSet);
                     withTCDefLock(() -> {
+                      Set<? extends TCReferable> updatedSet = myServer.getDependencyCollector().update(entry.getValue().definition().getData());
+                      myLogger.info(() -> "Updated definitions " + updatedSet);
                       ComputationRunner.getCancellationIndicator().cancel(updatedSet);
                       for (TCReferable updated : updatedSet) {
                         myServer.getErrorService().resetDefinition(updated);
