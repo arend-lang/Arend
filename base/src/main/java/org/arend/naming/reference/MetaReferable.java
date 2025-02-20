@@ -127,7 +127,7 @@ public class MetaReferable implements TCDefReferable, MetaRef {
 
   @Override
   public void setTypechecked(@Nullable Definition definition) {
-    if (definition instanceof MetaTopDefinition) {
+    if (definition instanceof MetaTopDefinition || definition == null) {
       myTypechecked = (MetaTopDefinition) definition;
     }
   }

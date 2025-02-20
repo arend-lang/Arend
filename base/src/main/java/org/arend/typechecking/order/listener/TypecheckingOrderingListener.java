@@ -89,6 +89,20 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     for (TCDefReferable currentDefinition : myCurrentDefinitions) {
       Definition typechecked = currentDefinition.getTypechecked();
       currentDefinition.setTypechecked(null);
+      Concrete.GeneralDefinition def = myConcreteProvider.getConcrete(currentDefinition);
+      if (def instanceof Concrete.DataDefinition dataDef) {
+        for (Concrete.ConstructorClause clause : dataDef.getConstructorClauses()) {
+          for (Concrete.Constructor constructor : clause.getConstructors()) {
+            constructor.getData().setTypechecked(null);
+          }
+        }
+      } else if (def instanceof Concrete.ClassDefinition classDef) {
+        for (Concrete.ClassElement element : classDef.getElements()) {
+          if (element instanceof Concrete.ClassField classField) {
+            classField.getData().setTypechecked(null);
+          }
+        }
+      }
       typecheckingInterrupted(currentDefinition, typechecked);
     }
     myCurrentDefinitions = new ArrayList<>();

@@ -41,7 +41,7 @@ public class GoalError extends GoalDataHolder {
     this.result = result;
     this.errors = errors;
     this.goalSolver = goalSolver;
-    this.additionalSolvers = goalSolver.getAdditionalSolvers();
+    this.additionalSolvers = goalSolver == null ? Collections.emptyList() : goalSolver.getAdditionalSolvers();
     this.goalExpression = expression;
     goalName = expression.getName() == null ? "" : expression.getName();
   }

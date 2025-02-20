@@ -26,6 +26,7 @@ import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.group.Group;
+import org.arend.typechecking.computation.BooleanComputationRunner;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.order.Ordering;
@@ -289,29 +290,15 @@ public class ArendCheckerImpl implements ArendChecker {
     ConcreteProvider concreteProvider = getConcreteProvider(indicator, ProgressReporter.empty());
     if (concreteProvider == null) return 0;
 
-    if (!Prelude.isInitialized()) {
-      new Prelude.PreludeTypechecking(concreteProvider).typecheckDefinitions(myDependencies.get(Prelude.MODULE_LOCATION).getResolvedDefinitions().stream().map(GroupData.DefinitionData::definition).toList(), UnstoppableCancellationIndicator.INSTANCE);
-    }
-
-    DependencyCollector dependencyCollector = new DependencyCollector(myServer);
-    CollectingOrderingListener collector = new CollectingOrderingListener();
-    Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies), withInstances);
-
-    if (definitions == null) {
-      List<Group> groups = new ArrayList<>(myModules.size());
-      for (ModuleLocation module : myModules) {
-        GroupData groupData = myDependencies.get(module);
-        if (groupData != null) groups.add(groupData.getRawGroup());
-      }
-      ordering.orderModules(groups);
-    } else {
+    List<Concrete.ResolvableDefinition> concreteDefinitions = definitions == null ? null : new ArrayList<>();
+    if (definitions != null) {
       for (FullName definition : definitions) {
         GroupData groupData = myDependencies.get(definition.module);
         if (groupData != null) {
           Referable ref = Scope.resolveName(groupData.getFileScope(), definition.longName.toList());
           Concrete.GeneralDefinition def = ref instanceof GlobalReferable ? myConcreteProvider.getConcrete((GlobalReferable) ref) : null;
           if (def instanceof Concrete.ResolvableDefinition) {
-            ordering.order((Concrete.ResolvableDefinition) def);
+            concreteDefinitions.add((Concrete.ResolvableDefinition) def);
           } else {
             errorReporter.report(new DefinitionNotFoundError(definition));
           }
@@ -321,10 +308,35 @@ public class ArendCheckerImpl implements ArendChecker {
       }
     }
 
-    if (!collector.isEmpty()) {
-      ListErrorReporter listErrorReporter = new ListErrorReporter();
-      TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
-      typechecker.run(indicator, () -> {
+    if (!Prelude.isInitialized()) {
+      new Prelude.PreludeTypechecking(concreteProvider).typecheckDefinitions(myDependencies.get(Prelude.MODULE_LOCATION).getResolvedDefinitions().stream().map(GroupData.DefinitionData::definition).toList(), UnstoppableCancellationIndicator.INSTANCE);
+    }
+
+    DependencyCollector dependencyCollector = new DependencyCollector(myServer);
+    CollectingOrderingListener collector = new CollectingOrderingListener();
+    Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies), withInstances);
+
+    new BooleanComputationRunner().run(indicator, () -> {
+      myLogger.info(() -> "<Lock> Typechecking of definitions " + (definitions == null ? "in " + myModules : definitions));
+      if (concreteDefinitions == null) {
+        List<Group> groups = new ArrayList<>(myModules.size());
+        for (ModuleLocation module : myModules) {
+          GroupData groupData = myDependencies.get(module);
+          if (groupData != null) groups.add(groupData.getRawGroup());
+        }
+        ordering.orderModules(groups);
+      } else {
+        for (Concrete.ResolvableDefinition definition : concreteDefinitions) {
+          ordering.order(definition);
+        }
+      }
+
+      if (!collector.isEmpty()) {
+        myLogger.info(() -> "Collected definitions (" + collector.getElements().size() + ") for " + (definitions == null ? myModules : definitions));
+
+        ListErrorReporter listErrorReporter = new ListErrorReporter();
+        TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
+
         progressReporter.beginProcessing(collector.getElements().size());
         for (CollectingOrderingListener.Element element : collector.getElements()) {
           indicator.checkCanceled();
@@ -337,15 +349,19 @@ public class ArendCheckerImpl implements ArendChecker {
           if (findChanged(myDependencies) == null) {
             listErrorReporter.reportTo(myServer.getErrorService());
             dependencyCollector.copyTo(myServer.getDependencyCollector());
+            myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is commited");
             return true;
           } else {
+            myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is not commited");
             return typechecker.computationInterrupted();
           }
         }
-      });
-    }
+      }
 
-    myLogger.info(() -> definitions == null ? "End typechecking definitions in " + myModules : "End typechecking definitions " + definitions);
+      return true;
+    });
+
+    myLogger.info(() -> "End typechecking definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions));
     return collector.getElements().size();
   }
 
