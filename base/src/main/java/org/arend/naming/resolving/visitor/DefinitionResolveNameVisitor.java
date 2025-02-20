@@ -30,7 +30,6 @@ import org.arend.term.group.*;
 import org.arend.typechecking.error.local.LocalErrorReporter;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
-import org.arend.ext.util.Pair;
 import org.arend.util.list.ConsList;
 import org.arend.util.list.PersistentList;
 
@@ -803,10 +802,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     // Some checks
 
     Collection<? extends Group.InternalReferable> fields = group.getFields();
-    if (!fields.isEmpty()) {
-      Map<String, Pair<LocatedReferable, ClassReferable>> superFields = collectClassFields(groupRef);
+    if (!fields.isEmpty() && dynamicScopeProvider != null) {
+      Scope dynamicScope = CachingScope.make(new DynamicScope(new DynamicScopeProviderImpl(dynamicScopeProvider.getReferable(), dynamicScopeProvider.getSuperReferables(), Collections.emptyList()), myTypingInfo, DynamicScope.Extent.ONLY_FIELDS));
       for (Group.InternalReferable internalRef : fields) {
-        checkField(internalRef.getReferable(), superFields);
+        checkField(internalRef.getReferable(), dynamicScope);
       }
     }
 
@@ -906,46 +905,14 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
   }
 
-  private static Map<String, Pair<LocatedReferable, ClassReferable>> collectClassFields(LocatedReferable referable) {
-    Collection<? extends ClassReferable> superClasses = referable instanceof ClassReferable ? ((ClassReferable) referable).getSuperClassReferences() : Collections.emptyList();
-    if (superClasses.isEmpty()) {
-      return Collections.emptyMap();
-    }
-
-    Map<String, Pair<LocatedReferable, ClassReferable>> fields = new HashMap<>();
-    Set<ClassReferable> visited = new HashSet<>();
-    visited.add((ClassReferable) referable);
-    Deque<ClassReferable> toVisit = new ArrayDeque<>(superClasses);
-    while (!toVisit.isEmpty()) {
-      ClassReferable superClass = toVisit.pop();
-      if (!visited.add(superClass)) {
-        continue;
-      }
-
-      for (LocatedReferable fieldRef : superClass.getFieldReferables()) {
-        String name = fieldRef.textRepresentation();
-        if (!name.isEmpty() && !"_".equals(name)) {
-          fields.putIfAbsent(name, new Pair<>(fieldRef, superClass));
-        }
-      }
-
-      toVisit.addAll(superClass.getSuperClassReferences());
-    }
-
-    return fields;
-  }
-
-  private void checkField(LocatedReferable field, Map<String, Pair<LocatedReferable, ClassReferable>> fields) {
-    if (field == null || fields.isEmpty()) {
+  private void checkField(LocatedReferable field, Scope scope) {
+    if (field == null) {
       return;
     }
 
-    String name = field.textRepresentation();
-    if (!name.isEmpty() && !"_".equals(name)) {
-      Pair<LocatedReferable, ClassReferable> oldField = fields.get(name);
-      if (oldField != null) {
-        myLocalErrorReporter.report(new ReferenceError(GeneralError.Level.WARNING, "Field '" + field.textRepresentation() + ("' is already defined in super class " + oldField.proj2.textRepresentation()), field));
-      }
+    Referable prevField = scope.resolveName(field.getRefName());
+    if (prevField != null) {
+      myLocalErrorReporter.report(new ReferenceError(GeneralError.Level.WARNING, "Field '" + field.textRepresentation() + ("' is already defined in super class" + (prevField instanceof LocatedReferable located ? " at " + located.getRefLongName() : "")), field));
     }
   }
 

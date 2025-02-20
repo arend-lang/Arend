@@ -1,7 +1,6 @@
 package org.arend.term.abs;
 
 import org.arend.ext.prettyprinting.doc.Doc;
-import org.arend.naming.reference.ClassReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.ext.concrete.definition.ClassFieldKind;
@@ -292,7 +291,6 @@ public final class Abstract {
   }
 
   public interface ClassDefinition extends Definition, ParametersHolder, ClassReferenceHolder  {
-    @Override @NotNull ClassReferable getReferable();
     @Override @NotNull List<? extends FieldParameter> getParameters();
     @Override @NotNull Collection<? extends ClassFieldImpl> getCoClauseElements();
     boolean isRecord();

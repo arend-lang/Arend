@@ -270,7 +270,7 @@ public class ModuleDeserialization {
       }
 
       group = new DataGroup(referable, internalReferables, statements, Collections.emptyList(), parent, isDynamicContext);
-    } else if (referable instanceof ClassReferable && def instanceof ClassDefinition) {
+    } else if (def instanceof ClassDefinition) {
       Set<Definition> invisibleRefs = new HashSet<>();
       for (Integer index : groupProto.getInvisibleInternalReferableList()) {
         invisibleRefs.add(myCallTargetProvider.getCallTarget(index));
@@ -283,7 +283,7 @@ public class ModuleDeserialization {
       }
 
       List<Group> dynamicGroups = new ArrayList<>(groupProto.getDynamicSubgroupCount());
-      group = new ClassGroup((ClassReferable) referable, internalReferables, dynamicGroups, statements, Collections.emptyList(), parent, isDynamicContext);
+      group = new ClassGroup(referable, internalReferables, dynamicGroups, statements, Collections.emptyList(), parent, isDynamicContext);
       for (ModuleProtos.Group subgroupProto : groupProto.getDynamicSubgroupList()) {
         Group subgroup = readGroup(subgroupProto, group, true, modulePath);
         dynamicGroups.add(subgroup);

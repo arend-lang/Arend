@@ -30,10 +30,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-/**
- * Represents a library which can load modules in the binary format (see {@link #getBinarySource})
- * as well as ordinary modules (see {@link #getRawSource}).
- */
+// TODO[server2]: Delete this and the whole Library hierarchy together with LibraryManager
 public abstract class SourceLibrary extends BaseLibrary {
   public enum Flag { RECOMPILE }
   private final EnumSet<Flag> myFlags = EnumSet.noneOf(Flag.class);
@@ -256,12 +253,14 @@ public abstract class SourceLibrary extends BaseLibrary {
       myExtension.setUI(ui);
     }
 
+    /*
     OldDefinitionContributorImpl contributor = new OldDefinitionContributorImpl(getName(), libraryManager.getLibraryErrorReporter(), myAdditionalModuleScopeProvider);
     try {
       myExtension.declareDefinitions(contributor);
     } finally {
       contributor.disable();
     }
+    */
     loadGeneratedModules();
 
     Set<ModulePath> loaded = Collections.emptySet();
@@ -292,12 +291,14 @@ public abstract class SourceLibrary extends BaseLibrary {
     }
 
     myExtension.setDefinitionProvider(DefinitionProviderImpl.INSTANCE);
+    /*
     OldArendDependencyProviderImpl provider = new OldArendDependencyProviderImpl(typechecking, libraryManager.getAvailableModuleScopeProvider(this), libraryManager.getDefinitionRequester(), this);
     try {
       myExtension.load(provider);
     } finally {
       provider.disable();
     }
+    */
 
     libraryManager.afterLibraryLoading(this, loaded.size(), header.modules.size());
 

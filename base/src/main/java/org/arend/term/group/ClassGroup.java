@@ -1,6 +1,6 @@
 package org.arend.term.group;
 
-import org.arend.naming.reference.ClassReferable;
+import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.ParameterReferable;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,16 +10,10 @@ public class ClassGroup extends StaticGroup {
   private final List<Group> myDynamicGroups;
   private final List<? extends InternalReferable> myInternalGlobalReferables;
 
-  public ClassGroup(ClassReferable reference, List<? extends InternalReferable> internalGlobalReferables, List<Group> dynamicGroups, List<Statement> statements, List<ParameterReferable> externalParameters, ChildGroup parent, boolean isDynamicContext) {
+  public ClassGroup(LocatedReferable reference, List<? extends InternalReferable> internalGlobalReferables, List<Group> dynamicGroups, List<Statement> statements, List<ParameterReferable> externalParameters, ChildGroup parent, boolean isDynamicContext) {
     super(reference, statements, externalParameters, parent, isDynamicContext);
     myInternalGlobalReferables = internalGlobalReferables;
     myDynamicGroups = dynamicGroups;
-  }
-
-  @NotNull
-  @Override
-  public ClassReferable getReferable() {
-    return (ClassReferable) super.getReferable();
   }
 
   @NotNull
