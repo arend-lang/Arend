@@ -2,7 +2,7 @@ package org.arend.library;
 
 import org.arend.ext.module.ModulePath;
 import org.arend.source.Source;
-import org.arend.term.group.Group;
+import org.arend.term.group.ConcreteGroup;
 import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,13 +26,13 @@ public class LibraryLoadingTest extends LibraryTestCase {
     library.addModule(modulePath, "\\func f => 0");
     assertTrue(library.load(libraryManager, typechecking));
     assertTrue(errorList.isEmpty());
-    Group result1 = library.getModuleGroup(modulePath);
+    ConcreteGroup result1 = library.getModuleGroup(modulePath);
     assertThat(result1, is(notNullValue()));
 
     library.addModule(modulePath, "\\func g => 0");
     assertTrue(library.load(libraryManager, typechecking));
     assertTrue(errorList.isEmpty());
-    Group result2 = library.getModuleGroup(modulePath);
+    ConcreteGroup result2 = library.getModuleGroup(modulePath);
     assertThat(result2, is(notNullValue()));
 
     // We neither guarantee that result2 == result1 nor the opposite,

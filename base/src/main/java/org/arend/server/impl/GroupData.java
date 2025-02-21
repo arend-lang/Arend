@@ -50,7 +50,7 @@ public class GroupData {
     ConcreteGroup result = updateGroup(group, null, replaced);
 
     if (!replaced.isEmpty()) result.traverseGroup(subgroup -> {
-      if (subgroup instanceof ConcreteGroup && ((ConcreteGroup) subgroup).definition() instanceof Concrete.Definition def) {
+      if (subgroup.definition() instanceof Concrete.Definition def) {
         if (def.getUseParent() != null) {
           TCDefReferable useParent = replaced.get(def.getUseParent());
           if (useParent != null) def.setUseParent(useParent);
@@ -109,7 +109,7 @@ public class GroupData {
                 Concrete.Constructor constructor = constructors.get(j);
                 Concrete.Constructor oldConstructor = oldConstructors.get(j);
                 if (constructor.getData().getRefName().equals(oldConstructor.getData().getRefName()) && constructor.getData().isSimilar(oldConstructor.getData())) {
-                  TCDefReferable conRef = oldConstructor.getData();
+                  InternalReferable conRef = oldConstructor.getData();
                   conRef.setData(constructor.getData().getData());
                   constructor.setReferable(conRef);
                 } else {
@@ -159,17 +159,17 @@ public class GroupData {
       }
     }
 
-    List<ConcreteStatement> statements = new ArrayList<>(group.getStatements().size());
+    List<ConcreteStatement> statements = new ArrayList<>(group.statements().size());
     for (ConcreteStatement statement : group.statements()) {
       statements.add(new ConcreteStatement(updateGroup(statement.group(), newDef instanceof Concrete.Definition ? newDef.getData() : null, replaced), statement.command(), statement.pLevelsDefinition(), statement.hLevelsDefinition()));
     }
 
-    List<ConcreteGroup> dynamicGroups = new ArrayList<>(group.getDynamicSubgroups().size());
+    List<ConcreteGroup> dynamicGroups = new ArrayList<>(group.dynamicGroups().size());
     for (ConcreteGroup dynamicGroup : group.dynamicGroups()) {
       dynamicGroups.add(updateGroup(dynamicGroup, null, replaced));
     }
 
-    List<ParameterReferable> externalParameters = new ArrayList<>(group.getExternalParameters().size());
+    List<ParameterReferable> externalParameters = new ArrayList<>(group.externalParameters().size());
     for (ParameterReferable parameter : group.externalParameters()) {
       externalParameters.add(new ParameterReferable(parent, parameter.getIndex(), parameter.getOriginalReferable(), parameter.getAbstractBody()));
     }

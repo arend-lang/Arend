@@ -65,6 +65,10 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     return new LocatedReferableImpl(referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), parent, referable.getKind());
   }
 
+  private static InternalReferableImpl convertInternalReferable(LocatedReferable referable, LocatedReferable parent, boolean isVisible) {
+    return new InternalReferableImpl(referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), isVisible, parent, referable.getKind());
+  }
+
   private static LocatedReferableImpl convertField(Abstract.ClassField classField, LocatedReferable parent) {
     LocatedReferable referable = classField.getReferable();
     return referable == null ? null : new FieldReferableImpl(referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), classField.isExplicitField(), classField.isParameterField(), false, (TCDefReferable) parent);
@@ -292,7 +296,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
       List<Concrete.Constructor> constructors = new ArrayList<>(absConstructors.size());
       for (Abstract.Constructor constructor : absConstructors) {
-        Concrete.Constructor cons = new Concrete.Constructor(convertReferable(constructor.getReferable(), myDefinition, null), data, buildTypeParameters(constructor.getParameters(), true), buildReferences(constructor.getEliminatedExpressions()), buildClauses(constructor.getClauses()), constructor.isCoerce());
+        Concrete.Constructor cons = new Concrete.Constructor(convertInternalReferable(constructor.getReferable(), myDefinition, true), data, buildTypeParameters(constructor.getParameters(), true), buildReferences(constructor.getEliminatedExpressions()), buildClauses(constructor.getClauses()), constructor.isCoerce());
         Abstract.Expression resultType = constructor.getResultType();
         if (resultType != null) {
           cons.setResultType(resultType.accept(this, null));

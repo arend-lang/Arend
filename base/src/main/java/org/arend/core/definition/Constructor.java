@@ -16,7 +16,7 @@ import org.arend.core.subst.SubstVisitor;
 import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.core.elimtree.BranchKey;
 import org.arend.ext.core.level.LevelSubstitution;
-import org.arend.naming.reference.TCDefReferable;
+import org.arend.naming.reference.InternalReferable;
 import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
@@ -36,10 +36,15 @@ public class Constructor extends CallableDefinition implements Function, BranchK
   private int mySingleRecursiveParameter = -1;
   private List<Boolean> myStrictParameters = Collections.emptyList();
 
-  public Constructor(TCDefReferable referable, DataDefinition dataType) {
+  public Constructor(InternalReferable referable, DataDefinition dataType) {
     super(referable, TypeCheckingStatus.NEEDS_TYPE_CHECKING);
     myDataType = dataType;
     myParameters = EmptyDependentLink.getInstance();
+  }
+
+  @Override
+  public InternalReferable getReferable() {
+    return (InternalReferable) super.getReferable();
   }
 
   public void setBody(Body conditions) {

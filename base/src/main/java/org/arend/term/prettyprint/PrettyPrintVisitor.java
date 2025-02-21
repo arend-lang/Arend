@@ -81,7 +81,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       group.definition().accept(this, null);
     } else {
       printIndent();
-      myBuilder.append("\\module ").append(group.getReferable().getRefName());
+      myBuilder.append("\\module ").append(group.referable().getRefName());
     }
 
     if (group.statements().isEmpty()) return;
@@ -115,15 +115,15 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         printIndent();
         statement.command().prettyPrint(myBuilder, PrettyPrinterConfig.DEFAULT);
       }
-      if (statement.getPLevelsDefinition() != null) {
+      if (statement.pLevelsDefinition() != null) {
         printIndent();
         myBuilder.append("\\plevels ");
-        printLevelsDefinition(statement.getPLevelsDefinition());
+        printLevelsDefinition(statement.pLevelsDefinition());
       }
-      if (statement.getHLevelsDefinition() != null) {
+      if (statement.hLevelsDefinition() != null) {
         printIndent();
         myBuilder.append("\\hlevels ");
-        printLevelsDefinition(statement.getHLevelsDefinition());
+        printLevelsDefinition(statement.hLevelsDefinition());
       }
     }
   }

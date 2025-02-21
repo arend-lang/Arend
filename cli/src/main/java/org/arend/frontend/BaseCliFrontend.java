@@ -29,8 +29,8 @@ import org.arend.prelude.Prelude;
 import org.arend.prelude.PreludeResourceLibrary;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
 import org.arend.term.prettyprint.ToAbstractVisitor;
 import org.arend.typechecking.LibraryArendExtensionProvider;
@@ -275,18 +275,18 @@ public abstract class BaseCliFrontend {
   private void showModules(Library library, boolean allModules) {
     Map<ModulePath, List<ModulePath>> map = new HashMap<>();
     for (ModulePath module : library.getLoadedModules()) {
-      Group group = library.getModuleGroup(module, false);
+      ConcreteGroup group = library.getModuleGroup(module, false);
       if (group != null) {
         boolean withInstances = allModules;
         List<ModulePath> dependencies = new ArrayList<>();
-        for (Statement statement : group.getStatements()) {
-          NamespaceCommand cmd = statement.getNamespaceCommand();
+        for (ConcreteStatement statement : group.statements()) {
+          NamespaceCommand cmd = statement.command();
           if (cmd != null && cmd.getKind() == NamespaceCommand.Kind.IMPORT) {
             dependencies.add(new ModulePath(cmd.getPath()));
           }
           if (!withInstances && !dependencies.isEmpty()) {
-            Group subgroup = statement.getGroup();
-            if (subgroup != null && subgroup.getReferable().getKind() == GlobalReferable.Kind.INSTANCE) {
+            ConcreteGroup subgroup = statement.group();
+            if (subgroup != null && subgroup.referable().getKind() == GlobalReferable.Kind.INSTANCE) {
               withInstances = true;
             }
           }
@@ -501,7 +501,7 @@ public abstract class BaseCliFrontend {
             }
           }
         } else {
-          Group group = library.getModuleGroup(recompileModule, false);
+          ConcreteGroup group = library.getModuleGroup(recompileModule, false);
           if (group == null && library.loadTests(myLibraryManager, Collections.singletonList(recompileModule))) {
             group = library.getModuleGroup(recompileModule, true);
           }
@@ -509,9 +509,8 @@ public abstract class BaseCliFrontend {
             System.err.println("[ERROR] Cannot find module '" + recompileModule + "' in library '" + library.getName() + "'");
           } else {
             group.traverseGroup(g -> {
-              LocatedReferable ref = g.getReferable();
-              if (ref instanceof TCDefReferable) {
-                forcedRefs.add((TCDefReferable) ref);
+              if (g.referable() instanceof TCDefReferable ref) {
+                forcedRefs.add(ref);
               }
             });
           }
@@ -630,7 +629,7 @@ public abstract class BaseCliFrontend {
         try {
           CoreModuleChecker checker = new CoreModuleChecker(myErrorReporter);
           for (ModulePath module : library.getLoadedModules()) {
-            Group group = library.getModuleGroup(module, false);
+            ConcreteGroup group = library.getModuleGroup(module, false);
             if (group != null) {
               checker.checkGroup(group);
             }
@@ -679,7 +678,7 @@ public abstract class BaseCliFrontend {
             if (doCheck) {
               CoreModuleChecker checker = new CoreModuleChecker(myErrorReporter);
               for (ModulePath module : modules) {
-                Group group = library.getModuleGroup(module, true);
+                ConcreteGroup group = library.getModuleGroup(module, true);
                 if (group != null) {
                   checker.checkGroup(group);
                 }

@@ -25,7 +25,6 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
-import org.arend.term.group.Group;
 import org.arend.typechecking.computation.*;
 import org.arend.typechecking.order.Ordering;
 import org.arend.typechecking.order.dependency.DependencyCollector;
@@ -157,11 +156,9 @@ public class ArendCheckerImpl implements ArendChecker {
           Collection<GroupData.DefinitionData> definitionData = groupData.getResolvedDefinitions();
           if (definitionData == null) {
             groupData.getRawGroup().traverseGroup(group -> {
-              if (group instanceof ConcreteGroup cGroup) {
-                Concrete.ResolvableDefinition definition = cGroup.definition();
-                if (definition != null) {
-                  defMap.put(cGroup.referable(), definition.accept(new ReplaceDataVisitor(true), null));
-                }
+              Concrete.ResolvableDefinition definition = group.definition();
+              if (definition != null) {
+                defMap.put(group.referable(), definition.accept(new ReplaceDataVisitor(true), null));
               }
             });
           } else {
@@ -334,7 +331,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
       withTCDefLock(() -> {
         if (concreteDefinitions == null) {
-          List<Group> groups = new ArrayList<>(myModules.size());
+          List<ConcreteGroup> groups = new ArrayList<>(myModules.size());
           for (ModuleLocation module : myModules) {
             GroupData groupData = myDependencies.get(module);
             if (groupData != null) groups.add(groupData.getRawGroup());

@@ -3,8 +3,7 @@ package org.arend.library;
 import org.arend.core.definition.Definition;
 import org.arend.ext.module.ModulePath;
 import org.arend.source.Source;
-import org.arend.term.group.ChildGroup;
-import org.arend.term.group.Group;
+import org.arend.term.group.ConcreteGroup;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -25,7 +24,7 @@ public class CachingTest extends LibraryTestCase {
       \\func b1 : \\Set0 => \\Set0
       \\func b2 : \\Set0 => b1""");
     assertTrue(libraryManager.loadLibrary(library, null));
-    ChildGroup aClass = library.getModuleGroup(new ModulePath("A"));
+    ConcreteGroup aClass = library.getModuleGroup(new ModulePath("A"));
     assertThat(aClass, is(notNullValue()));
 
     typechecking.typecheckLibrary(library);
@@ -33,9 +32,9 @@ public class CachingTest extends LibraryTestCase {
     assertThat(errorList, hasSize(1));
     errorList.clear();
 
-    assertThat(getDef(aClass.getGroupScope(), "a").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
-    assertThat(getDef(aClass.getGroupScope(), "b1").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.HAS_ERRORS)));
-    assertThat(getDef(aClass.getGroupScope(), "b2").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
+    assertThat(getDef(aClass, "a").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
+    assertThat(getDef(aClass, "b1").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.HAS_ERRORS)));
+    assertThat(getDef(aClass, "b2").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
 
     libraryManager.unloadLibrary(library);
 
@@ -43,9 +42,9 @@ public class CachingTest extends LibraryTestCase {
     aClass = library.getModuleGroup(new ModulePath("A"));
     assertThat(aClass, is(notNullValue()));
 
-    assertThat(getDef(aClass.getGroupScope(), "a").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
-    assertThat(getDef(aClass.getGroupScope(), "b1").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NEEDS_TYPE_CHECKING)));
-    assertThat(getDef(aClass.getGroupScope(), "b2").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
+    assertThat(getDef(aClass, "a").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
+    assertThat(getDef(aClass, "b1").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NEEDS_TYPE_CHECKING)));
+    assertThat(getDef(aClass, "b2").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
   }
 
   @Test
@@ -66,7 +65,7 @@ public class CachingTest extends LibraryTestCase {
         "\\func a : \\Set0 => b\n" +
         "\\func b : \\Set0 => {?}");
     libraryManager.loadLibrary(library, null);
-    ChildGroup aGroup = library.getModuleGroup(new ModulePath("A"));
+    ConcreteGroup aGroup = library.getModuleGroup(new ModulePath("A"));
     assertThat(aGroup, is(notNullValue()));
     typechecking.typecheckLibrary(library);
     library.persistUpdatedModules(errorReporter);
@@ -74,16 +73,16 @@ public class CachingTest extends LibraryTestCase {
     errorList.clear();
 
     libraryManager.unloadLibrary(library);
-    assertThat(getDef(aGroup.getGroupScope(), "a").getTypechecked(), is(nullValue()));
-    assertThat(getDef(aGroup.getGroupScope(), "b").getTypechecked(), is(nullValue()));
+    assertThat(getDef(aGroup, "a").getTypechecked(), is(nullValue()));
+    assertThat(getDef(aGroup, "b").getTypechecked(), is(nullValue()));
 
     libraryManager.loadLibrary(library, null);
     typechecking.typecheckLibrary(library);
     library.persistUpdatedModules(errorReporter);
-    ChildGroup aGroup2 = library.getModuleGroup(new ModulePath("A"));
+    ConcreteGroup aGroup2 = library.getModuleGroup(new ModulePath("A"));
     assertThat(aGroup2, is(notNullValue()));
-    assertThat(getDef(aGroup2.getGroupScope(), "a").getTypechecked(), is(notNullValue()));
-    assertThat(getDef(aGroup2.getGroupScope(), "b").getTypechecked(), is(notNullValue()));
+    assertThat(getDef(aGroup2, "a").getTypechecked(), is(notNullValue()));
+    assertThat(getDef(aGroup2, "b").getTypechecked(), is(notNullValue()));
   }
 
   @Test
@@ -93,7 +92,7 @@ public class CachingTest extends LibraryTestCase {
       \\func a (d : D) \\with
       \\func b : \\Set0 => (\\lam x y => x) \\Prop a""");
     libraryManager.loadLibrary(library, null);
-    ChildGroup aGroup = library.getModuleGroup(new ModulePath("A"));
+    ConcreteGroup aGroup = library.getModuleGroup(new ModulePath("A"));
     assertThat(aGroup, is(notNullValue()));
 
     typechecking.typecheckLibrary(library);
@@ -102,17 +101,17 @@ public class CachingTest extends LibraryTestCase {
     errorList.clear();
 
     libraryManager.unloadLibrary(library);
-    assertThat(getDef(aGroup.getGroupScope(), "D").getTypechecked(), is(nullValue()));
-    assertThat(getDef(aGroup.getGroupScope(), "a").getTypechecked(), is(nullValue()));
-    assertThat(getDef(aGroup.getGroupScope(), "b").getTypechecked(), is(nullValue()));
+    assertThat(getDef(aGroup, "D").getTypechecked(), is(nullValue()));
+    assertThat(getDef(aGroup, "a").getTypechecked(), is(nullValue()));
+    assertThat(getDef(aGroup, "b").getTypechecked(), is(nullValue()));
 
     libraryManager.loadLibrary(library, null);
     aGroup = library.getModuleGroup(new ModulePath("A"));
     assertThat(aGroup, is(notNullValue()));
 
-    assertThat(getDef(aGroup.getGroupScope(), "D").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
-    assertThat(getDef(aGroup.getGroupScope(), "a").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NEEDS_TYPE_CHECKING)));
-    assertThat(getDef(aGroup.getGroupScope(), "b").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
+    assertThat(getDef(aGroup, "D").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
+    assertThat(getDef(aGroup, "a").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NEEDS_TYPE_CHECKING)));
+    assertThat(getDef(aGroup, "b").getTypechecked().status(), is(equalTo(Definition.TypeCheckingStatus.NO_ERRORS)));
   }
 
   @Test
@@ -260,7 +259,7 @@ public class CachingTest extends LibraryTestCase {
       "\\import A\n" +
       "\\func b : \\Set0 => A.a"); // There is an error here
     libraryManager.loadLibrary(library, null);
-    List<Group> groups = new ArrayList<>(2);
+    List<ConcreteGroup> groups = new ArrayList<>(2);
     groups.add(library.getModuleGroup(new ModulePath("A")));
     groups.add(library.getModuleGroup(new ModulePath("B")));
     assertTrue(typechecking.typecheckModules(groups, null));

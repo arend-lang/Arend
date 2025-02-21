@@ -2,7 +2,7 @@ package org.arend.library;
 
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
-import org.arend.term.group.ChildGroup;
+import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -24,7 +24,7 @@ public abstract class PersistableSourceLibrary extends UnmodifiableSourceLibrary
   }
 
   @Override
-  public void groupLoaded(ModulePath modulePath, @Nullable ChildGroup group, boolean isRaw, boolean inTests) {
+  public void groupLoaded(ModulePath modulePath, @Nullable ConcreteGroup group, boolean isRaw, boolean inTests) {
     super.groupLoaded(modulePath, group, isRaw, inTests);
     if (isRaw) {
       if (group == null) {

@@ -25,7 +25,6 @@ import org.arend.naming.reference.*;
 import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.term.Fixity;
 import org.arend.term.abs.Abstract;
-import org.arend.term.group.Statement;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -1961,7 +1960,7 @@ public final class Concrete {
     }
   }
 
-  public static class LevelsDefinition extends SourceNodeImpl implements Statement, Abstract.LevelParameters {
+  public static class LevelsDefinition extends SourceNodeImpl implements Abstract.LevelParameters {
     private final List<TCLevelReferable> myReferables;
     private final boolean myIncreasing;
     private final boolean myPLevels;
@@ -1990,16 +1989,6 @@ public final class Concrete {
 
     public boolean isPLevels() {
       return myPLevels;
-    }
-
-    @Override
-    public Abstract.LevelParameters getPLevelsDefinition() {
-      return myPLevels ? this : null;
-    }
-
-    @Override
-    public Abstract.LevelParameters getHLevelsDefinition() {
-      return myPLevels ? null : this;
     }
 
     @Override
@@ -2764,7 +2753,7 @@ public final class Concrete {
   }
 
   public static class Constructor extends ReferableDefinitionBase implements ConcreteConstructor {
-    private TCDefReferable myReferable;
+    private InternalReferable myReferable;
     private DataDefinition myDataType;
     private final List<TypeParameter> myParameters;
     private final List<ReferenceExpression> myEliminatedReferences;
@@ -2772,7 +2761,7 @@ public final class Concrete {
     private final boolean myCoerce;
     private Expression myResultType;
 
-    public Constructor(TCDefReferable referable, DataDefinition dataType, List<TypeParameter> parameters, List<ReferenceExpression> eliminatedReferences, List<FunctionClause> clauses, boolean isCoerce) {
+    public Constructor(InternalReferable referable, DataDefinition dataType, List<TypeParameter> parameters, List<ReferenceExpression> eliminatedReferences, List<FunctionClause> clauses, boolean isCoerce) {
       myReferable = referable;
       myDataType = dataType;
       myParameters = parameters;
@@ -2782,11 +2771,11 @@ public final class Concrete {
     }
 
     @Override
-    public @NotNull TCDefReferable getData() {
+    public @NotNull InternalReferable getData() {
       return myReferable;
     }
 
-    public void setReferable(TCDefReferable referable) {
+    public void setReferable(InternalReferable referable) {
       myReferable = referable;
     }
 

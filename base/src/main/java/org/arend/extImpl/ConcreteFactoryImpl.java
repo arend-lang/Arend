@@ -583,7 +583,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @Override
   public @NotNull ConcreteConstructor constructor(@NotNull ArendRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, @NotNull Collection<? extends ConcreteReferenceExpression> elimRefs, @NotNull Collection<? extends ConcreteClause> clauses, boolean isCoerce) {
-    if (!(ref instanceof LocatedReferableImpl cRef)) {
+    if (!(ref instanceof InternalReferableImpl cRef)) {
       throw new IllegalArgumentException("The reference must be a global reference with a parent");
     }
 

@@ -105,7 +105,7 @@ public class Prelude implements ArendPrelude {
         FIN = (DataDefinition) definition;
         FIN.setSort(Sort.SET0);
         if (FIN.getConstructors().isEmpty()) {
-          FIN_ZERO = new Constructor(new LocatedReferableImpl(ZERO == null ? null : ZERO.getReferable().getData(), AccessModifier.PUBLIC, Precedence.DEFAULT, "zero", Precedence.DEFAULT, null, FIN.getRef(), GlobalReferable.Kind.CONSTRUCTOR), FIN);
+          FIN_ZERO = new Constructor(new InternalReferableImpl(ZERO == null ? null : ZERO.getReferable().getData(), AccessModifier.PUBLIC, Precedence.DEFAULT, "zero", Precedence.DEFAULT, null, true, FIN.getRef(), GlobalReferable.Kind.CONSTRUCTOR), FIN);
           DependentLink binding = new TypedDependentLink(true, "n", ExpressionFactory.Nat(), EmptyDependentLink.getInstance());
           List<ExpressionPattern> patterns = Collections.singletonList(new ConstructorExpressionPattern(new ConCallExpression(SUC, Levels.EMPTY, Collections.emptyList(), Collections.emptyList()), Collections.singletonList(new BindingPattern(binding))));
           FIN_ZERO.setPatterns(patterns);
@@ -113,7 +113,7 @@ public class Prelude implements ArendPrelude {
           FIN_ZERO.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
           FIN_ZERO.getReferable().setTypechecked(FIN_ZERO);
           FIN.addConstructor(FIN_ZERO);
-          FIN_SUC = new Constructor(new LocatedReferableImpl(SUC == null ? null : SUC.getReferable().getData(), AccessModifier.PUBLIC, Precedence.DEFAULT, "suc", Precedence.DEFAULT, null, FIN.getRef(), GlobalReferable.Kind.CONSTRUCTOR), FIN);
+          FIN_SUC = new Constructor(new InternalReferableImpl(SUC == null ? null : SUC.getReferable().getData(), AccessModifier.PUBLIC, Precedence.DEFAULT, "suc", Precedence.DEFAULT, null, true, FIN.getRef(), GlobalReferable.Kind.CONSTRUCTOR), FIN);
           FIN_SUC.setPatterns(patterns);
           FIN_SUC.setParameters(new TypedDependentLink(true, null, DataCallExpression.make(FIN, Levels.EMPTY, new SingletonList<>(new ReferenceExpression(binding))), EmptyDependentLink.getInstance()));
           FIN_SUC.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);

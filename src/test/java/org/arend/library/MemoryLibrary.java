@@ -3,7 +3,7 @@ package org.arend.library;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.source.Source;
-import org.arend.term.group.ChildGroup;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.util.Range;
 import org.arend.util.Version;
 import org.jetbrains.annotations.NotNull;
@@ -19,7 +19,7 @@ public class MemoryLibrary extends PersistableSourceLibrary {
     super("test_library");
   }
 
-  public ChildGroup getModuleGroup(ModulePath modulePath) {
+  public ConcreteGroup getModuleGroup(ModulePath modulePath) {
     return getModuleGroup(modulePath, false);
   }
 

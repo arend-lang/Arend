@@ -12,7 +12,6 @@ import org.arend.term.concrete.ConcreteResolvableDefinitionVisitor;
 import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
-import org.arend.term.group.Group;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,8 +45,8 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
           dynamicRefs.add(field.getData());
         }
       }
-      for (Group subgroup : group.getDynamicSubgroups()) {
-        dynamicRefs.add(subgroup.getReferable());
+      for (ConcreteGroup subgroup : group.dynamicGroups()) {
+        dynamicRefs.add(subgroup.referable());
       }
 
       myTypingInfo.addDynamicScopeProvider(classDef.getData(), new DynamicScopeProviderImpl(classDef.getData(), superRefs, dynamicRefs));

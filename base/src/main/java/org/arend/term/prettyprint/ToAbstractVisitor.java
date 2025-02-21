@@ -1143,7 +1143,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     List<Concrete.TypeParameter> parameters = new ArrayList<>();
     visitDependentLink(constructor.getParameters(), parameters, false);
     List<Concrete.FunctionClause> clauses = visitIntervalElim(constructor.getParameters(), constructor.getBody());
-    return new Concrete.Constructor(constructor.getRef(), dataDef, parameters, Collections.emptyList(), clauses == null ? Collections.emptyList() : clauses, false);
+    return new Concrete.Constructor(constructor.getReferable(), dataDef, parameters, Collections.emptyList(), clauses == null ? Collections.emptyList() : clauses, false);
   }
 
   @Override

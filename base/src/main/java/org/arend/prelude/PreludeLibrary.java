@@ -10,8 +10,7 @@ import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.LexicalScope;
 import org.arend.naming.scope.Scope;
-import org.arend.term.group.ChildGroup;
-import org.arend.term.group.Group;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.util.Range;
 import org.arend.util.Version;
 import org.jetbrains.annotations.NotNull;
@@ -26,12 +25,8 @@ import java.util.Collections;
  * so all instances of this class use the same definitions, which are stored in {@link Prelude}.
  */
 public abstract class PreludeLibrary extends SourceLibrary {
-  private static ChildGroup myGroup;
+  private static ConcreteGroup myGroup;
   private static Scope myScope;
-
-  public static ChildGroup getPreludeGroup() {
-    return myGroup;
-  }
 
   public static Scope getPreludeScope() {
     return myScope;
@@ -43,7 +38,7 @@ public abstract class PreludeLibrary extends SourceLibrary {
   }
 
   @Override
-  public void groupLoaded(ModulePath modulePath, @Nullable ChildGroup group, boolean isRaw, boolean inTests) {
+  public void groupLoaded(ModulePath modulePath, @Nullable ConcreteGroup group, boolean isRaw, boolean inTests) {
     if (!modulePath.equals(Prelude.MODULE_PATH)) {
       throw new IllegalStateException();
     }
@@ -66,7 +61,7 @@ public abstract class PreludeLibrary extends SourceLibrary {
   public void reset() {}
 
   @Override
-  public void resetGroup(Group group) {}
+  public void resetGroup(ConcreteGroup group) {}
 
   @Override
   public void resetDefinition(LocatedReferable referable) {}
@@ -97,7 +92,7 @@ public abstract class PreludeLibrary extends SourceLibrary {
 
   @Nullable
   @Override
-  public ChildGroup getModuleGroup(ModulePath modulePath, boolean inTests) {
+  public ConcreteGroup getModuleGroup(ModulePath modulePath, boolean inTests) {
     return !inTests && modulePath.equals(Prelude.MODULE_PATH) ? myGroup : null;
   }
 

@@ -68,7 +68,7 @@ public abstract class StreamRawSource implements Source {
 
         ArendParser.StatementsContext tree = parser.statements();
         myGroup = new BuildVisitor(module, errorReporter).visitStatements(tree);
-        // TODO[server2]: library.groupLoaded(modulePath, myGroup, true, myInTests);
+        library.groupLoaded(modulePath, myGroup, true, myInTests);
 
         myPass = 1;
         return LoadResult.CONTINUE;

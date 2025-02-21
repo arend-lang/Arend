@@ -5,8 +5,8 @@ import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.computation.ComputationRunner;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DependencyListener;
@@ -58,27 +58,27 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     myOrderingListener = listener;
   }
 
-  public void orderModules(Collection<? extends Group> modules) {
-    for (Group group : modules) {
+  public void orderModules(Collection<? extends ConcreteGroup> modules) {
+    for (ConcreteGroup group : modules) {
       orderModule(group);
     }
   }
 
-  public void orderModule(Group group) {
-    if (group.getReferable() instanceof TCDefReferable tcReferable && getTypechecked(tcReferable) == null) {
+  public void orderModule(ConcreteGroup group) {
+    if (group.referable() instanceof TCDefReferable tcReferable && getTypechecked(tcReferable) == null) {
       var def = myConcreteProvider.getConcrete(tcReferable);
       if (def instanceof Concrete.Definition) {
         order((Concrete.Definition) def);
       }
     }
 
-    for (Statement statement : group.getStatements()) {
-      Group subgroup = statement.getGroup();
+    for (ConcreteStatement statement : group.statements()) {
+      ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
         orderModule(subgroup);
       }
     }
-    for (Group subgroup : group.getDynamicSubgroups()) {
+    for (ConcreteGroup subgroup : group.dynamicGroups()) {
       orderModule(subgroup);
     }
   }

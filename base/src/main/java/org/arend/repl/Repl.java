@@ -23,10 +23,7 @@ import org.arend.naming.scope.Scope;
 import org.arend.naming.scope.ScopeFactory;
 import org.arend.repl.action.*;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.group.AccessModifier;
-import org.arend.term.group.ConcreteGroup;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.*;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.arend.term.prettyprint.ToAbstractVisitor;
 import org.arend.typechecking.instance.pool.GlobalInstancePool;
@@ -70,7 +67,7 @@ public abstract class Repl {
   };
   protected final @NotNull ListErrorReporter myErrorReporter;
   protected final @NotNull LibraryManager myLibraryManager;
-  public final List<Statement> statements = new ArrayList<>();
+  public final List<ConcreteStatement> statements = new ArrayList<>();
 
   public Repl(@NotNull ListErrorReporter listErrorReporter,
               @NotNull LibraryManager libraryManager,
@@ -150,14 +147,14 @@ public abstract class Repl {
 
   protected abstract @Nullable Concrete.Expression parseExpr(@NotNull String text);
 
-  protected void loadPotentialUnloadedModules(Collection<? extends Statement> statements) {
+  protected void loadPotentialUnloadedModules(Collection<? extends ConcreteStatement> statements) {
   }
 
   public final void checkStatements(@NotNull String line) {
     var group = parseStatements(line);
     if (group == null) return;
     var moduleScopeProvider = getAvailableModuleScopeProvider();
-    loadPotentialUnloadedModules(group.getStatements());
+    loadPotentialUnloadedModules(group.statements());
     var scope = ScopeFactory.forGroup(group, moduleScopeProvider);
     myReplScope.addScope(scope);
     myReplScope.setCurrentLineScope(null);
@@ -165,12 +162,12 @@ public abstract class Repl {
     if (checkErrors()) {
       myMergedScopes.remove(scope);
     } else {
-      statements.addAll(group.getStatements());
+      statements.addAll(group.statements());
       typecheckStatements(group, scope);
     }
   }
 
-  protected void typecheckStatements(@NotNull Group group, @NotNull Scope scope) {
+  protected void typecheckStatements(@NotNull ConcreteGroup group, @NotNull Scope scope) {
     if (!typechecking.typecheckModules(Collections.singletonList(group), null)) {
       checkErrors();
       var isRemoved = removeScope(scope);

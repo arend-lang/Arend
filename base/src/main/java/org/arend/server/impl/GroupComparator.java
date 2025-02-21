@@ -22,7 +22,7 @@ class GroupComparator implements PartialComparator<TCDefReferable> {
 
     Set<TCDefReferable> result = new LinkedHashSet<>();
     groupData.getRawGroup().traverseGroup(group -> {
-      if (group.getReferable() instanceof TCDefReferable tcRef && list.contains(tcRef)) {
+      if (group.referable() instanceof TCDefReferable tcRef && list.contains(tcRef)) {
         result.add(tcRef);
       }
     });

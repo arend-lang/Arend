@@ -107,7 +107,6 @@ public final class Abstract {
 
   public interface LongReference extends Reference {
     @Nullable Reference getHeadReference();
-    @NotNull Collection<? extends Reference> getTailReferences();
   }
 
   // Holder

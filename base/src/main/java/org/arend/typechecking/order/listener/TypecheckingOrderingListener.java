@@ -24,7 +24,7 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.concrete.ReplaceDefCallsVisitor;
 import org.arend.term.concrete.ReplaceDataVisitor;
-import org.arend.term.group.Group;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.*;
 import org.arend.typechecking.computation.BooleanComputationRunner;
 import org.arend.typechecking.computation.CancellationIndicator;
@@ -122,7 +122,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     return typecheckDefinitions(definitions, cancellationIndicator, true);
   }
 
-  public boolean typecheckModules(final Collection<? extends Group> modules, CancellationIndicator cancellationIndicator) {
+  public boolean typecheckModules(final Collection<? extends ConcreteGroup> modules, CancellationIndicator cancellationIndicator) {
     return run(cancellationIndicator, () -> {
       new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator).orderModules(modules);
       return true;

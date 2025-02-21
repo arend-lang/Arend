@@ -15,6 +15,8 @@ import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
 import org.arend.prelude.PreludeLibrary;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
 import org.arend.typechecking.instance.provider.InstanceProviderSet;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
@@ -68,6 +70,20 @@ public abstract class ArendTestCase {
   public TCDefReferable getDef(Scope scope, String path) {
     Referable referable = Scope.resolveName(scope, Arrays.asList(path.split("\\.")));
     return referable instanceof TCDefReferable ? (TCDefReferable) referable : null;
+  }
+
+  public TCDefReferable getDef(ConcreteGroup group, String path) {
+    loop:
+    for (String name : path.split("\\.")) {
+      for (ConcreteStatement statement : group.statements()) {
+        if (statement.group() != null && statement.group().referable().getRefName().equals(name)) {
+          group = statement.group();
+          continue loop;
+        }
+      }
+      return null;
+    }
+    return group.referable() instanceof TCDefReferable ref ? ref : null;
   }
 
   @SafeVarargs

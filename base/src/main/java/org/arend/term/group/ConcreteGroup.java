@@ -7,35 +7,23 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
 
-public record ConcreteGroup(@NotNull Doc description, @NotNull LocatedReferable referable, @Nullable Concrete.ResolvableDefinition definition, @NotNull List<? extends ConcreteStatement> statements, @NotNull List<? extends ConcreteGroup> dynamicGroups, @NotNull List<? extends ParameterReferable> externalParameters) implements Group {
-  @Override
-  public @NotNull Doc getDescription() {
-    return description;
+public record ConcreteGroup(@NotNull Doc description, @NotNull LocatedReferable referable, @Nullable Concrete.ResolvableDefinition definition, @NotNull List<? extends ConcreteStatement> statements, @NotNull List<? extends ConcreteGroup> dynamicGroups, @NotNull List<? extends ParameterReferable> externalParameters) {
+  public boolean isTopLevel() {
+    return referable.getLocatedReferableParent() == null;
   }
 
-  @Override
-  public @NotNull LocatedReferable getReferable() {
-    return referable;
-  }
-
-  @Override
-  public @NotNull List<? extends ConcreteStatement> getStatements() {
-    return statements;
-  }
-
-  @Override
   public @NotNull List<? extends InternalReferable> getInternalReferables() {
     return definition instanceof Concrete.DataDefinition ? getConstructors() : getFields();
   }
 
-  @Override
   public @NotNull List<? extends InternalReferable> getConstructors() {
     if (definition instanceof Concrete.DataDefinition dataDef) {
       List<InternalReferable> result = new ArrayList<>();
       for (Concrete.ConstructorClause clause : dataDef.getConstructorClauses()) {
         for (Concrete.Constructor constructor : clause.getConstructors()) {
-          result.add(new SimpleInternalReferable(constructor.getData(), true));
+          result.add(constructor.getData());
         }
       }
       return result;
@@ -44,7 +32,6 @@ public record ConcreteGroup(@NotNull Doc description, @NotNull LocatedReferable 
     }
   }
 
-  @Override
   public @NotNull List<? extends InternalReferable> getFields() {
     if (definition instanceof Concrete.ClassDefinition classDef) {
       List<InternalReferable> result = new ArrayList<>();
@@ -59,14 +46,17 @@ public record ConcreteGroup(@NotNull Doc description, @NotNull LocatedReferable 
     }
   }
 
-  @Override
-  public @NotNull List<? extends Group> getDynamicSubgroups() {
-    return dynamicGroups;
-  }
-
-  @Override
-  public @NotNull List<? extends ParameterReferable> getExternalParameters() {
-    return externalParameters;
+  public void traverseGroup(Consumer<ConcreteGroup> consumer) {
+    consumer.accept(this);
+    for (ConcreteStatement statement : statements) {
+      ConcreteGroup subgroup = statement.group();
+      if (subgroup != null) {
+        subgroup.traverseGroup(consumer);
+      }
+    }
+    for (ConcreteGroup subgroup : dynamicGroups) {
+      subgroup.traverseGroup(consumer);
+    }
   }
 
   public @Nullable ConcreteGroup getSubgroup(@NotNull GroupPath.Element element) {

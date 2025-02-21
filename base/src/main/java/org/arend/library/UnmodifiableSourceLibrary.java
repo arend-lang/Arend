@@ -3,7 +3,7 @@ package org.arend.library;
 import org.arend.ext.module.ModulePath;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.module.scopeprovider.SimpleModuleScopeProvider;
-import org.arend.term.group.ChildGroup;
+import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,8 +12,8 @@ import java.util.*;
 public abstract class UnmodifiableSourceLibrary extends SourceLibrary {
   private final String myName;
   private final SimpleModuleScopeProvider myModuleScopeProvider = new SimpleModuleScopeProvider();
-  private final Map<ModulePath, ChildGroup> myGroups = new HashMap<>();
-  private final Map<ModulePath, ChildGroup> myTestGroups = new HashMap<>();
+  private final Map<ModulePath, ConcreteGroup> myGroups = new HashMap<>();
+  private final Map<ModulePath, ConcreteGroup> myTestGroups = new HashMap<>();
 
   protected UnmodifiableSourceLibrary(String name) {
     myName = name;
@@ -35,9 +35,9 @@ public abstract class UnmodifiableSourceLibrary extends SourceLibrary {
   }
 
   @Override
-  public void groupLoaded(ModulePath modulePath, @Nullable ChildGroup group, boolean isRaw, boolean inTests) {
+  public void groupLoaded(ModulePath modulePath, @Nullable ConcreteGroup group, boolean isRaw, boolean inTests) {
     if (isRaw) {
-      Map<ModulePath, ChildGroup> groups = inTests ? myTestGroups : myGroups;
+      Map<ModulePath, ConcreteGroup> groups = inTests ? myTestGroups : myGroups;
       if (group == null) {
         groups.remove(modulePath);
         myModuleScopeProvider.unregisterModule(modulePath);
@@ -62,7 +62,7 @@ public abstract class UnmodifiableSourceLibrary extends SourceLibrary {
   }
 
   @Override
-  public @Nullable ChildGroup getModuleGroup(ModulePath modulePath, boolean inTests) {
+  public @Nullable ConcreteGroup getModuleGroup(ModulePath modulePath, boolean inTests) {
     return (inTests ? myTestGroups : myGroups).get(modulePath);
   }
 }

@@ -3,7 +3,7 @@ package org.arend.library;
 import org.arend.ext.ArendExtension;
 import org.arend.ext.module.ModulePath;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
-import org.arend.term.group.ChildGroup;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.order.Ordering;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.util.Version;
@@ -96,7 +96,7 @@ public interface Library {
    * @return the group of a module or null if the module is not found.
    */
   @Nullable
-  ChildGroup getModuleGroup(ModulePath modulePath, boolean inTests);
+  ConcreteGroup getModuleGroup(ModulePath modulePath, boolean inTests);
 
   /**
    * Checks if this library contains a specified module.

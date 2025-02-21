@@ -613,7 +613,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     return null;
   }
 
-  private static Scope makeScope(Group group, Scope parentScope, boolean isDynamicScope) {
+  private static Scope makeScope(ConcreteGroup group, Scope parentScope, boolean isDynamicScope) {
     return parentScope == null ? null : LexicalScope.insideOf(group, parentScope, isDynamicScope);
   }
 
@@ -646,10 +646,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     return instances;
   }
 
-  public void resolveGroup(Group group, Scope scope, PersistentList<TCDefReferable> instances, Map<LongName, GroupData.DefinitionData> definitionData) {
-    LocatedReferable groupRef = group.getReferable();
-    Collection<? extends Statement> statements = group.getStatements();
-    Collection<? extends Group> dynamicSubgroups = group.getDynamicSubgroups();
+  public void resolveGroup(ConcreteGroup group, Scope scope, PersistentList<TCDefReferable> instances, Map<LongName, GroupData.DefinitionData> definitionData) {
+    LocatedReferable groupRef = group.referable();
+    Collection<? extends ConcreteStatement> statements = group.statements();
+    Collection<? extends ConcreteGroup> dynamicSubgroups = group.dynamicGroups();
 
     Concrete.GeneralDefinition def = myConcreteProvider.getConcrete(groupRef);
     Scope cachedScope = CachingScope.make(makeScope(group, scope, false));
@@ -658,7 +658,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       resolveSuperClasses((Concrete.ClassDefinition) def, new PrivateFilteredScope(cachedScope), false);
     }
 
-    for (ParameterReferable parameter : group.getExternalParameters()) {
+    for (ParameterReferable parameter : group.externalParameters()) {
       parameter.resolve(cachedScope);
     }
 
@@ -686,12 +686,12 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     boolean isTopLevel = group.isTopLevel();
     Scope namespaceScope = CachingScope.make(new LexicalScope(scope, group, null, true, false));
     if (myResolverListener != null && myResolverListener != ResolverListener.EMPTY) {
-      group.getDescription().accept(this, docScope);
+      group.description().accept(this, docScope);
     }
 
     boolean hasSelf = false;
-    for (Statement statement : statements) {
-      NamespaceCommand namespaceCommand = statement.getNamespaceCommand();
+    for (ConcreteStatement statement : statements) {
+      NamespaceCommand namespaceCommand = statement.command();
       if (namespaceCommand == null) {
         continue;
       }
@@ -762,11 +762,11 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     List<TCDefReferable> newInstances = new ArrayList<>();
     boolean added = addExternalParameters(def);
-    for (Statement statement : statements) {
-      Group subgroup = statement.getGroup();
+    for (ConcreteStatement statement : statements) {
+      ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
         resolveGroup(subgroup, cachedScope, addInstances(instances, newInstances), definitionData);
-        if (subgroup.getReferable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
+        if (subgroup.referable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
           newInstances.add(defReferable);
         }
       }
@@ -784,9 +784,9 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       if (dynamicScopeProvider != null) {
         dynamicScope = new MergeScope(dynamicScope, new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC));
       }
-      for (Group subgroup : dynamicSubgroups) {
+      for (ConcreteGroup subgroup : dynamicSubgroups) {
         resolveGroup(subgroup, dynamicScope, addInstances(instances, newInstances), definitionData);
-        if (subgroup.getReferable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
+        if (subgroup.referable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
           newInstances.add(defReferable);
         }
       }
@@ -801,40 +801,40 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     // Some checks
 
-    Collection<? extends Group.InternalReferable> fields = group.getFields();
+    Collection<? extends InternalReferable> fields = group.getFields();
     if (!fields.isEmpty() && dynamicScopeProvider != null) {
       Scope dynamicScope = CachingScope.make(new DynamicScope(new DynamicScopeProviderImpl(dynamicScopeProvider.getReferable(), dynamicScopeProvider.getSuperReferables(), Collections.emptyList()), myTypingInfo, DynamicScope.Extent.ONLY_FIELDS));
-      for (Group.InternalReferable internalRef : fields) {
-        checkField(internalRef.getReferable(), dynamicScope);
+      for (InternalReferable internalRef : fields) {
+        checkField(internalRef, dynamicScope);
       }
     }
 
     Map<String, LocatedReferable> referables = new HashMap<>();
-    for (Group.InternalReferable internalRef : group.getInternalReferables()) {
-      LocatedReferable ref = internalRef.getReferable();
+    for (InternalReferable internalRef : group.getInternalReferables()) {
+      LocatedReferable ref = internalRef.getLocatedReferableParent();
       String name = ref.textRepresentation();
       if (!name.isEmpty() && !"_".equals(name)) {
         referables.putIfAbsent(name, ref);
       }
     }
 
-    for (Statement statement : statements) {
-      Group subgroup = statement.getGroup();
+    for (ConcreteStatement statement : statements) {
+      ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
-        checkReference(subgroup.getReferable(), referables, false);
+        checkReference(subgroup.referable(), referables, false);
       }
     }
 
-    for (Group subgroup : dynamicSubgroups) {
-      checkReference(subgroup.getReferable(), referables, false);
+    for (ConcreteGroup subgroup : dynamicSubgroups) {
+      checkReference(subgroup.referable(), referables, false);
     }
 
-    for (Group subgroup : dynamicSubgroups) {
+    for (ConcreteGroup subgroup : dynamicSubgroups) {
       checkSubgroup(subgroup, referables);
     }
 
-    for (Statement statement : statements) {
-      Group subgroup = statement.getGroup();
+    for (ConcreteStatement statement : statements) {
+      ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
         checkSubgroup(subgroup, referables);
       }
@@ -853,8 +853,8 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     List<NamespaceStruct> namespaces = new ArrayList<>();
-    for (Statement statement : statements) {
-      NamespaceCommand cmd = statement.getNamespaceCommand();
+    for (ConcreteStatement statement : statements) {
+      NamespaceCommand cmd = statement.command();
       if (cmd == null) {
         continue;
       }
@@ -932,18 +932,17 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
   }
 
-  private void checkSubgroup(Group subgroup, Map<String, LocatedReferable> referables) {
-    for (Group.InternalReferable internalReferable : subgroup.getInternalReferables()) {
+  private void checkSubgroup(ConcreteGroup subgroup, Map<String, LocatedReferable> referables) {
+    for (InternalReferable internalReferable : subgroup.getInternalReferables()) {
       if (internalReferable.isVisible()) {
-        checkReference(internalReferable.getReferable(), referables, true);
+        checkReference(internalReferable, referables, true);
       }
     }
-    for (Group.InternalReferable internalReferable : subgroup.getInternalReferables()) {
+    for (InternalReferable internalReferable : subgroup.getInternalReferables()) {
       if (internalReferable.isVisible()) {
-        LocatedReferable newRef = internalReferable.getReferable();
-        String name = newRef.textRepresentation();
+        String name = internalReferable.textRepresentation();
         if (!name.isEmpty() && !"_".equals(name)) {
-          referables.putIfAbsent(name, newRef);
+          referables.putIfAbsent(name, internalReferable);
         }
       }
     }

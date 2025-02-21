@@ -4,8 +4,8 @@ import org.arend.core.definition.Definition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.error.local.LocalErrorReporter;
 
 public class CoreModuleChecker {
@@ -17,8 +17,8 @@ public class CoreModuleChecker {
     myChecker = new CoreDefinitionChecker(errorReporter);
   }
 
-  public boolean checkGroup(Group group) {
-    LocatedReferable ref = group.getReferable();
+  public boolean checkGroup(ConcreteGroup group) {
+    LocatedReferable ref = group.referable();
     Definition def = ref instanceof TCDefReferable ? ((TCDefReferable) ref).getTypechecked() : null;
     boolean ok = true;
     if (def != null) {
@@ -28,13 +28,13 @@ public class CoreModuleChecker {
       }
     }
 
-    for (Statement statement : group.getStatements()) {
-      Group subgroup = statement.getGroup();
+    for (ConcreteStatement statement : group.statements()) {
+      ConcreteGroup subgroup = statement.group();
       if (subgroup != null && !checkGroup(subgroup)) {
         ok = false;
       }
     }
-    for (Group subgroup : group.getDynamicSubgroups()) {
+    for (ConcreteGroup subgroup : group.dynamicGroups()) {
       if (!checkGroup(subgroup)) {
         ok = false;
       }

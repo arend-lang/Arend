@@ -21,7 +21,7 @@ import org.arend.naming.reference.LocatedReferableImpl;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteCompareVisitor;
 import org.arend.term.group.AccessModifier;
-import org.arend.term.group.ChildGroup;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.arend.term.prettyprint.ToAbstractVisitor;
 import org.arend.typechecking.TypeCheckingTestCase;
@@ -305,8 +305,8 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
     assertEquals(expr, printTestExpr());
   }
 
-  private void testRevealing(String module, Function<ChildGroup, Expression> moduleSelector, String expected, Function<Expression, Expression> selector) {
-    ChildGroup result = typeCheckModule(module);
+  private void testRevealing(String module, Function<ConcreteGroup, Expression> moduleSelector, String expected, Function<Expression, Expression> selector) {
+    ConcreteGroup result = typeCheckModule(module);
     Expression baseExpr = moduleSelector.apply(result);
     Expression incremented = selector.apply(baseExpr);
     PrettyPrinterConfig config = new PrettyPrinterConfigImpl(EMPTY) {

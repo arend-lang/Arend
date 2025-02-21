@@ -5,9 +5,7 @@ import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.Abstract;
-import org.arend.term.group.AccessModifier;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,12 +15,12 @@ import java.util.function.Predicate;
 // TODO[server2]: This class shouldn't resolve namespace commands. It should take as an input already resolved data.
 public class LexicalScope implements Scope {
   private final Scope myParent;
-  private final Group myGroup;
+  private final ConcreteGroup myGroup;
   private final ModulePath myModule;
   private final boolean myDynamicContext;
   private final boolean myWithAdditionalContent; // with external parameters and content of \open
 
-  public LexicalScope(Scope parent, Group group, ModulePath module, boolean isDynamicContext, boolean withAdditionalContent) {
+  public LexicalScope(Scope parent, ConcreteGroup group, ModulePath module, boolean isDynamicContext, boolean withAdditionalContent) {
     myParent = parent;
     myGroup = group;
     myModule = module;
@@ -30,12 +28,12 @@ public class LexicalScope implements Scope {
     myWithAdditionalContent = withAdditionalContent;
   }
 
-  public static LexicalScope insideOf(Group group, Scope parent, boolean isDynamicContext) {
-    ModuleLocation moduleLocation = group.getReferable().getLocation();
+  public static LexicalScope insideOf(ConcreteGroup group, Scope parent, boolean isDynamicContext) {
+    ModuleLocation moduleLocation = group.referable().getLocation();
     return new LexicalScope(parent, group, moduleLocation == null ? null : moduleLocation.getModulePath(), isDynamicContext, true);
   }
 
-  public static LexicalScope opened(Group group) {
+  public static LexicalScope opened(ConcreteGroup group) {
     return new LexicalScope(EmptyScope.INSTANCE, group, null, true, false);
   }
 
@@ -54,12 +52,12 @@ public class LexicalScope implements Scope {
     return null;
   }
 
-  private Referable checkSubgroup(Group subgroup, Predicate<Referable> pred) {
-    Referable ref = checkReferable(subgroup.getReferable(), pred);
+  private Referable checkSubgroup(ConcreteGroup subgroup, Predicate<Referable> pred) {
+    Referable ref = checkReferable(subgroup.referable(), pred);
     if (ref != null) return ref;
-    for (Group.InternalReferable internalRef : subgroup.getInternalReferables()) {
+    for (InternalReferable internalRef : subgroup.getInternalReferables()) {
       if (internalRef.isVisible()) {
-        ref = checkReferable(internalRef.getReferable(), pred);
+        ref = checkReferable(internalRef, pred);
         if (ref != null) return ref;
       }
     }
@@ -69,34 +67,34 @@ public class LexicalScope implements Scope {
   @Nullable
   @Override
   public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context) {
-    for (Statement statement : myGroup.getStatements()) {
-      Group subgroup = statement.getGroup();
+    for (ConcreteStatement statement : myGroup.statements()) {
+      ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
         if (context == null || context == ScopeContext.STATIC) {
           Referable ref = checkSubgroup(subgroup, pred);
           if (ref != null) return ref;
         }
         if (context == null || context == ScopeContext.DYNAMIC) {
-          for (Group dynamicGroup : subgroup.getDynamicSubgroups()) {
-            if (dynamicGroup.getReferable().getAccessModifier() == AccessModifier.PUBLIC) {
+          for (ConcreteGroup dynamicGroup : subgroup.dynamicGroups()) {
+            if (dynamicGroup.referable().getAccessModifier() == AccessModifier.PUBLIC) {
               Referable ref = checkSubgroup(dynamicGroup, pred);
               if (ref != null) return ref;
             }
           }
-          for (Group.InternalReferable field : subgroup.getFields()) {
-            if (field.isVisible() && field.getReferable().getAccessModifier() == AccessModifier.PUBLIC) {
-              checkReferable(field.getReferable(), pred);
+          for (InternalReferable field : subgroup.getFields()) {
+            if (field.isVisible() && field.getAccessModifier() == AccessModifier.PUBLIC) {
+              checkReferable(field, pred);
             }
           }
         }
       }
-      Abstract.LevelParameters pDef = statement.getPLevelsDefinition();
+      Abstract.LevelParameters pDef = statement.pLevelsDefinition();
       if (pDef != null && (context == null || context == ScopeContext.PLEVEL)) {
         for (Referable referable : pDef.getReferables()) {
           if (pred.test(referable)) return referable;
         }
       }
-      Abstract.LevelParameters hDef = statement.getHLevelsDefinition();
+      Abstract.LevelParameters hDef = statement.hLevelsDefinition();
       if (hDef != null && (context == null || context == ScopeContext.HLEVEL)) {
         for (Referable referable : hDef.getReferables()) {
           if (pred.test(referable)) return referable;
@@ -105,24 +103,24 @@ public class LexicalScope implements Scope {
     }
 
     if (context == ScopeContext.DYNAMIC || myDynamicContext && (context == null || context == ScopeContext.STATIC)) {
-      for (Group subgroup : myGroup.getDynamicSubgroups()) {
+      for (ConcreteGroup subgroup : myGroup.dynamicGroups()) {
         Referable ref = checkSubgroup(subgroup, pred);
         if (ref != null) return ref;
       }
     }
 
     if (context == null || context == ScopeContext.STATIC) {
-      for (Group.InternalReferable constructor : myGroup.getConstructors()) {
-        checkReferable(constructor.getReferable(), pred);
+      for (InternalReferable constructor : myGroup.getConstructors()) {
+        checkReferable(constructor, pred);
       }
-      for (Group.InternalReferable field : myGroup.getFields()) {
-        checkReferable(field.getReferable(), pred);
+      for (InternalReferable field : myGroup.getFields()) {
+        checkReferable(field, pred);
       }
     }
 
     Scope cachingScope = null;
-    for (Statement statement : myGroup.getStatements()) {
-      NamespaceCommand cmd = statement.getNamespaceCommand();
+    for (ConcreteStatement statement : myGroup.statements()) {
+      NamespaceCommand cmd = statement.command();
       if (cmd == null || !(myWithAdditionalContent || cmd.getKind() == NamespaceCommand.Kind.IMPORT)) {
         continue;
       }
@@ -145,7 +143,7 @@ public class LexicalScope implements Scope {
     }
 
     if (myWithAdditionalContent && (context == null || context == ScopeContext.STATIC)) {
-      for (ParameterReferable ref : myGroup.getExternalParameters()) {
+      for (ParameterReferable ref : myGroup.externalParameters()) {
         if (pred.test(ref)) return ref;
       }
     }
@@ -153,29 +151,15 @@ public class LexicalScope implements Scope {
     return myParent.find(pred, context);
   }
 
-  private static GlobalReferable resolveInternal(Group group, String name, boolean onlyInternal) {
-    for (Group.InternalReferable internalReferable : group.getConstructors()) {
+  private static GlobalReferable resolveInternal(ConcreteGroup group, String name, boolean onlyInternal) {
+    for (InternalReferable internalReferable : group.getInternalReferables()) {
       if (!onlyInternal || internalReferable.isVisible()) {
-        GlobalReferable constructor = internalReferable.getReferable();
-        if (constructor.textRepresentation().equals(name)) {
-          return constructor;
+        if (internalReferable.getRefName().equals(name)) {
+          return internalReferable;
         }
-        String alias = constructor.getAliasName();
+        String alias = internalReferable.getAliasName();
         if (alias != null && alias.equals(name)) {
-          return new AliasReferable(constructor);
-        }
-      }
-    }
-
-    for (Group.InternalReferable internalReferable : group.getFields()) {
-      if (!onlyInternal || internalReferable.isVisible()) {
-        GlobalReferable field = internalReferable.getReferable();
-        if (field.textRepresentation().equals(name)) {
-          return field;
-        }
-        String alias = field.getAliasName();
-        if (alias != null && alias.equals(name)) {
-          return new AliasReferable(field);
+          return new AliasReferable(internalReferable);
         }
       }
     }
@@ -183,8 +167,8 @@ public class LexicalScope implements Scope {
     return null;
   }
 
-  private static Object resolveSubgroup(Group group, String name, ResolveType resolveType) {
-    GlobalReferable ref = group.getReferable();
+  private static Object resolveSubgroup(ConcreteGroup group, String name, ResolveType resolveType) {
+    GlobalReferable ref = group.referable();
     boolean match = ref.textRepresentation().equals(name);
     if (!match) {
       String alias = ref.getAliasName();
@@ -213,8 +197,8 @@ public class LexicalScope implements Scope {
       return null;
     }
 
-    for (Statement statement : myGroup.getStatements()) {
-      Group subgroup = statement.getGroup();
+    for (ConcreteStatement statement : myGroup.statements()) {
+      ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
         if (resolveType != ResolveType.REF || context == null || context == ScopeContext.STATIC) {
           Object result = resolveSubgroup(subgroup, name, resolveType);
@@ -223,9 +207,9 @@ public class LexicalScope implements Scope {
           }
         }
         if (resolveType == ResolveType.REF && (context == null || context == ScopeContext.DYNAMIC)) {
-          for (Group dynamicGgroup : subgroup.getDynamicSubgroups()) {
-            if (dynamicGgroup.getReferable().getAccessModifier() == AccessModifier.PUBLIC) {
-              Object result = resolveSubgroup(dynamicGgroup, name, resolveType);
+          for (ConcreteGroup dynamicGroup : subgroup.dynamicGroups()) {
+            if (dynamicGroup.referable().getAccessModifier() == AccessModifier.PUBLIC) {
+              Object result = resolveSubgroup(dynamicGroup, name, resolveType);
               if (result != null) {
                 return result;
               }
@@ -238,7 +222,7 @@ public class LexicalScope implements Scope {
         }
       }
       if (context == null || context == ScopeContext.PLEVEL) {
-        Abstract.LevelParameters levelParams = statement.getPLevelsDefinition();
+        Abstract.LevelParameters levelParams = statement.pLevelsDefinition();
         if (levelParams != null) {
           for (Referable ref : levelParams.getReferables()) {
             if (name.equals(ref.getRefName())) {
@@ -248,7 +232,7 @@ public class LexicalScope implements Scope {
         }
       }
       if (context == null || context == ScopeContext.HLEVEL) {
-        Abstract.LevelParameters levelParams = statement.getHLevelsDefinition();
+        Abstract.LevelParameters levelParams = statement.hLevelsDefinition();
         if (levelParams != null) {
           for (Referable ref : levelParams.getReferables()) {
             if (name.equals(ref.getRefName())) {
@@ -260,7 +244,7 @@ public class LexicalScope implements Scope {
     }
 
     if (context == ScopeContext.DYNAMIC || myDynamicContext && (context == null || context == ScopeContext.STATIC)) {
-      for (Group subgroup : myGroup.getDynamicSubgroups()) {
+      for (ConcreteGroup subgroup : myGroup.dynamicGroups()) {
         Object result = resolveSubgroup(subgroup, name, resolveType);
         if (result != null) {
           return result;
@@ -276,8 +260,8 @@ public class LexicalScope implements Scope {
     }
 
     Scope cachingScope = null;
-    for (Statement statement : myGroup.getStatements()) {
-      NamespaceCommand cmd = statement.getNamespaceCommand();
+    for (ConcreteStatement statement : myGroup.statements()) {
+      NamespaceCommand cmd = statement.command();
       if (cmd == null || !(myWithAdditionalContent || cmd.getKind() == NamespaceCommand.Kind.IMPORT)) {
         continue;
       }
@@ -303,7 +287,7 @@ public class LexicalScope implements Scope {
     }
 
     if (myWithAdditionalContent && resolveType == ResolveType.REF) {
-      List<? extends Referable> refs = myGroup.getExternalParameters();
+      List<? extends Referable> refs = myGroup.externalParameters();
       for (int i = refs.size() - 1; i >= 0; i--) {
         Referable ref = refs.get(i);
         if (ref != null && ref.getRefName().equals(name)) {

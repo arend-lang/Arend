@@ -22,7 +22,6 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
-import org.arend.term.group.Group;
 import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DependencyCollector;
@@ -285,16 +284,14 @@ public class ArendServerImpl implements ArendServer {
     });
   }
 
-  private static @NotNull Map<GlobalReferable, Concrete.GeneralDefinition> updateDefinitions(Group group) {
+  private static @NotNull Map<GlobalReferable, Concrete.GeneralDefinition> updateDefinitions(ConcreteGroup group) {
     Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
     group.traverseGroup(subgroup -> {
-      if (subgroup instanceof ConcreteGroup cGroup) {
-        Concrete.ResolvableDefinition definition = cGroup.definition();
-        if (definition instanceof DefinableMetaDefinition metaDef) {
-          defMap.put(metaDef.getData(), metaDef);
-        } else if (definition != null) {
-          defMap.put(cGroup.referable(), definition);
-        }
+      Concrete.ResolvableDefinition definition = subgroup.definition();
+      if (definition instanceof DefinableMetaDefinition metaDef) {
+        defMap.put(metaDef.getData(), metaDef);
+      } else if (definition != null) {
+        defMap.put(subgroup.referable(), definition);
       }
     });
     return defMap;
@@ -366,7 +363,7 @@ public class ArendServerImpl implements ArendServer {
     };
   }
 
-  Scope getParentGroupScope(ModuleLocation module, Group group) {
+  Scope getParentGroupScope(ModuleLocation module, ConcreteGroup group) {
     return ScopeFactory.parentScopeForGroup(group, getModuleScopeProviderFor(module), true);
   }
 

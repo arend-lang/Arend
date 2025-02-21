@@ -5,8 +5,8 @@ import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.Referable;
 import org.arend.term.NamespaceCommand;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,18 +18,18 @@ public class ImportedScope implements Scope {
   private final ModuleScopeProvider myProvider;
   private final Scope myElementsScope;
 
-  public ImportedScope(@NotNull Group group, ModuleScopeProvider provider) {
+  public ImportedScope(@NotNull ConcreteGroup group, ModuleScopeProvider provider) {
     myExpectedNamesTree = new Tree();
     myProvider = provider;
     myElementsScope = provider.getModuleScope();
 
-    ModuleLocation location = group.getReferable().getLocation();
+    ModuleLocation location = group.referable().getLocation();
     if (location != null) {
       myExpectedNamesTree.addPath(location.getModulePath().toList());
     }
 
-    for (Statement statement : group.getStatements()) {
-      NamespaceCommand cmd = statement.getNamespaceCommand();
+    for (ConcreteStatement statement : group.statements()) {
+      NamespaceCommand cmd = statement.command();
       if (cmd != null && cmd.getKind() == NamespaceCommand.Kind.IMPORT) {
         myExpectedNamesTree.addPath(cmd.getPath());
       }

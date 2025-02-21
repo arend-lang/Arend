@@ -19,8 +19,7 @@ import org.arend.module.serialization.ModuleProtos;
 import org.arend.module.serialization.ModuleSerialization;
 import org.arend.source.error.LocationError;
 import org.arend.source.error.PersistingError;
-import org.arend.term.group.ChildGroup;
-import org.arend.term.group.Group;
+import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -75,14 +74,14 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
     return myDependencies;
   }
 
-  public static Group getGroup(InputStream inputStream, LibraryManager libraryManager, SourceLibrary library) throws IOException, DeserializationException {
+  public static ConcreteGroup getGroup(InputStream inputStream, LibraryManager libraryManager, SourceLibrary library) throws IOException, DeserializationException {
     CodedInputStream codedInputStream = CodedInputStream.newInstance(inputStream);
     codedInputStream.setRecursionLimit(Integer.MAX_VALUE);
     ModuleProtos.Module moduleProto = ModuleProtos.Module.parseFrom(codedInputStream);
 
     ModuleDeserialization moduleDeserialization = new ModuleDeserialization(moduleProto, null, libraryManager.getDefinitionListener());
 
-    ChildGroup group = moduleDeserialization.readGroup(new ModuleLocation(library, ModuleLocation.LocationKind.GENERATED, new ModulePath()));
+    ConcreteGroup group = moduleDeserialization.readGroup(new ModuleLocation(library, ModuleLocation.LocationKind.GENERATED, new ModulePath()));
 
     ModuleScopeProvider moduleScopeProvider = libraryManager.getAvailableModuleScopeProvider(library);
     moduleDeserialization.readModule(moduleScopeProvider, library.getDependencyListener());
@@ -118,7 +117,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
 
         myModuleDeserialization = new ModuleDeserialization(moduleProto, myKeyRegistry, myDefinitionListener);
 
-        ChildGroup group = library.getModuleGroup(modulePath, false);
+        ConcreteGroup group = library.getModuleGroup(modulePath, false);
         if (group == null) {
           sourceLoader.getLibraryErrorReporter().report(LibraryError.moduleNotFound(modulePath, library.getName()));
           library.groupLoaded(modulePath, null, false, false);
@@ -155,7 +154,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
   @Override
   public boolean persist(SourceLibrary library, ErrorReporter errorReporter) {
     ModulePath currentModulePath = getModulePath();
-    Group group = library.getModuleGroup(currentModulePath, false);
+    ConcreteGroup group = library.getModuleGroup(currentModulePath, false);
     if (group == null) {
       errorReporter.report(LocationError.module(currentModulePath));
       return false;

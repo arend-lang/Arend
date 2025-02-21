@@ -11,7 +11,7 @@ import org.arend.ext.reference.Precedence;
 import org.arend.frontend.group.SimpleNamespaceCommand;
 import org.arend.frontend.reference.*;
 import org.arend.module.ModuleLocation;
-import org.arend.naming.reference.InternalLocatedReferable;
+import org.arend.naming.reference.InternalReferableImpl;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.typing.TypingInfoVisitor;
 import org.arend.naming.scope.Scope;
@@ -163,9 +163,9 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       visitStatementList(visitAccessModifier(stat.accessMod(), accessModifier), stat.statement(), statements, parent, enclosingClass);
       return statements;
     } else if (ctx instanceof StatPLevelsContext) {
-      return Collections.singletonList(new ConcreteStatement(null, null, visitStatPLevels((StatPLevelsContext) ctx, parent.getReferable()), null));
+      return Collections.singletonList(new ConcreteStatement(null, null, visitStatPLevels((StatPLevelsContext) ctx, parent.referable()), null));
     } else if (ctx instanceof StatHLevelsContext) {
-      return Collections.singletonList(new ConcreteStatement(null, null, null, visitStatHLevels((StatHLevelsContext) ctx, parent.getReferable())));
+      return Collections.singletonList(new ConcreteStatement(null, null, null, visitStatHLevels((StatHLevelsContext) ctx, parent.referable())));
     } else {
       if (ctx != null) {
         myErrorReporter.report(new ParserError(tokenPosition(ctx.start), "Unknown statement"));
@@ -529,7 +529,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     TopDefIdContext topDefId = ctx.topDefId();
     DefIdContext defId = topDefId.defId();
     Pair<String, Precedence> alias = visitAlias(defId.alias());
-    LocatedReferableImpl reference = makeReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, defId.ID().getText(), visitPrecedence(defId.precedence()), alias.proj1, alias.proj2, parent.getReferable(), isInstance ? LocatedReferableImpl.Kind.INSTANCE : GlobalReferable.Kind.DEFINED_CONSTRUCTOR);
+    LocatedReferableImpl reference = makeReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, defId.ID().getText(), visitPrecedence(defId.precedence()), alias.proj1, alias.proj2, parent.referable(), isInstance ? LocatedReferableImpl.Kind.INSTANCE : GlobalReferable.Kind.DEFINED_CONSTRUCTOR);
     Pair<Concrete.Expression,Concrete.Expression> returnPair = visitReturnExpr(ctx.returnExpr2());
 
     Concrete.FunctionBody body;
@@ -575,7 +575,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     throw new IllegalStateException();
   }
 
-  private void visitCoClauses(List<CoClauseContext> coClausesCtx, List<? super ConcreteGroup> dynamicGroups, Group parentGroup, TCDefReferable enclosingDefinition, TCDefReferable enclosingClass, List<Concrete.CoClauseElement> result) {
+  private void visitCoClauses(List<CoClauseContext> coClausesCtx, List<? super ConcreteGroup> dynamicGroups, ConcreteGroup parentGroup, TCDefReferable enclosingDefinition, TCDefReferable enclosingClass, List<Concrete.CoClauseElement> result) {
     for (CoClauseContext coClause : coClausesCtx) {
       result.add(visitCoClause(coClause, dynamicGroups, parentGroup, enclosingClass, enclosingDefinition, false));
     }
@@ -647,7 +647,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     String name = defId.ID().getText();
     var precedence = visitPrecedence(defId.precedence());
     var alias = visitAlias(defId.alias());
-    var reference = new MetaReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, precedence, name, alias.proj2, alias.proj1, null, null, parent.getReferable());
+    var reference = new MetaReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, precedence, name, alias.proj2, alias.proj1, null, null, parent.referable());
     var body = ctx.expr();
     DefinableMetaDefinition definition;
     if (body != null) {
@@ -677,7 +677,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     TopDefIdContext topDefId = ctx.topDefId();
     DefIdContext defId = topDefId.defId();
     Pair<String, Precedence> alias = visitAlias(defId.alias());
-    LocatedReferableImpl referable = makeReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, defId.ID().getText(), visitPrecedence(defId.precedence()), alias.proj1, alias.proj2, parent.getReferable(), GlobalReferable.Kind.FUNCTION);
+    LocatedReferableImpl referable = makeReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, defId.ID().getText(), visitPrecedence(defId.precedence()), alias.proj1, alias.proj2, parent.referable(), GlobalReferable.Kind.FUNCTION);
     List<ConcreteStatement> statements = new ArrayList<>();
     Pair<Concrete.Expression,Concrete.Expression> returnPair = visitReturnExpr(ctx.returnExpr2());
 
@@ -738,13 +738,13 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       universe = null;
     }
 
-    List<InternalLocatedReferable> constructors = new ArrayList<>();
+    List<InternalReferableImpl> constructors = new ArrayList<>();
     DataBodyContext dataBodyCtx = ctx.dataBody();
     List<Concrete.ReferenceExpression> eliminatedReferences = dataBodyCtx instanceof DataClausesContext ? visitElim(((DataClausesContext) dataBodyCtx).elim()) : null;
     TopDefIdContext topDefId = ctx.topDefId();
     DefIdContext defId = topDefId.defId();
     Pair<String, Precedence> alias = visitAlias(defId.alias());
-    LocatedReferableImpl referable = makeReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, defId.ID().getText(), visitPrecedence(defId.precedence()), alias.proj1, alias.proj2, parent.getReferable(), LocatedReferableImpl.Kind.DATA);
+    LocatedReferableImpl referable = makeReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, defId.ID().getText(), visitPrecedence(defId.precedence()), alias.proj1, alias.proj2, parent.referable(), LocatedReferableImpl.Kind.DATA);
     Concrete.DataDefinition dataDefinition = new Concrete.DataDefinition(referable, visitPlevelParams(topDefId.plevelParams()), visitHlevelParams(topDefId.hlevelParams()), visitTeles(ctx.tele(), true), eliminatedReferences, ctx.TRUNCATED() != null, universe, new ArrayList<>());
     dataDefinition.enclosingClass = enclosingClass;
     visitDataBody(dataBodyCtx, dataDefinition, constructors, accessModifier);
@@ -755,7 +755,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     return resultGroup;
   }
 
-  private void visitDataBody(DataBodyContext ctx, Concrete.DataDefinition def, List<InternalLocatedReferable> constructors, AccessModifier dataAccessModifier) {
+  private void visitDataBody(DataBodyContext ctx, Concrete.DataDefinition def, List<InternalReferableImpl> constructors, AccessModifier dataAccessModifier) {
     if (ctx instanceof DataClausesContext) {
       ConstructorClausesContext conClauses = ((DataClausesContext) ctx).constructorClauses();
       List<ConstructorClauseContext> clauseCtxList;
@@ -783,7 +783,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     }
   }
 
-  private List<Concrete.Constructor> visitConstructors(List<ConstructorContext> conContexts, Concrete.DataDefinition def, List<InternalLocatedReferable> constructors, AccessModifier dataAccessModifier) {
+  private List<Concrete.Constructor> visitConstructors(List<ConstructorContext> conContexts, Concrete.DataDefinition def, List<InternalReferableImpl> constructors, AccessModifier dataAccessModifier) {
     List<Concrete.Constructor> result = new ArrayList<>(conContexts.size());
     for (ConstructorContext conCtx : conContexts) {
       try {
@@ -802,7 +802,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         if (accessModifier != AccessModifier.PUBLIC && accessModifier.compareTo(dataAccessModifier) <= 0) {
           myErrorReporter.report(new ParserError(GeneralError.Level.WARNING_UNUSED, tokenPosition(conCtx.accessMod().start), "Access modifier is redundant"));
         }
-        InternalLocatedReferable reference = new InternalLocatedReferable(tokenPosition(defId.ID().getSymbol()), accessModifier.max(dataAccessModifier), visitPrecedence(defId.precedence()), defId.ID().getText(), alias.proj2, alias.proj1, true, def.getData(), LocatedReferableImpl.Kind.CONSTRUCTOR);
+        InternalReferableImpl reference = new InternalReferableImpl(tokenPosition(defId.ID().getSymbol()), accessModifier.max(dataAccessModifier), visitPrecedence(defId.precedence()), defId.ID().getText(), alias.proj2, alias.proj1, true, def.getData(), LocatedReferableImpl.Kind.CONSTRUCTOR);
         Concrete.Constructor constructor = new Concrete.Constructor(reference, def, visitTeles(conCtx.tele(), true), visitElim(elimCtx), clauses, conCtx.COERCE() != null);
         Expr2Context type = conCtx.expr2();
         if (type != null) {
@@ -903,7 +903,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
 
   private ConcreteGroup visitDefModule(AccessModifier accessModifier, TerminalNode id, WhereContext where, ConcreteGroup parent, TCDefReferable enclosingClass) {
     List<ConcreteStatement> statements = where == null ? Collections.emptyList() : new ArrayList<>();
-    var reference = makeReferable(tokenPosition(id.getSymbol()), accessModifier, id.getText(), Precedence.DEFAULT, null, null, parent.getReferable(), GlobalReferable.Kind.OTHER);
+    var reference = makeReferable(tokenPosition(id.getSymbol()), accessModifier, id.getText(), Precedence.DEFAULT, null, null, parent.referable(), GlobalReferable.Kind.OTHER);
     ConcreteGroup resultGroup = new ConcreteGroup(nullDoc(), reference, null, statements, Collections.emptyList(), Collections.emptyList());
     visitWhere(where, statements, resultGroup, enclosingClass);
     return resultGroup;
@@ -939,7 +939,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     String name = defId.ID().getText();
     Precedence prec = visitPrecedence(defId.precedence());
     Pair<String, Precedence> alias = visitAlias(defId.alias());
-    LocatedReferableImpl reference = new LocatedReferableImpl(pos, accessModifier, prec, name, alias.proj2, alias.proj1, parent.getReferable(), GlobalReferable.Kind.CLASS);
+    LocatedReferableImpl reference = new LocatedReferableImpl(pos, accessModifier, prec, name, alias.proj2, alias.proj1, parent.referable(), GlobalReferable.Kind.CLASS);
     boolean isRecord = ctx.classKw() instanceof ClassKwRecordContext;
     ClassBodyContext classBodyCtx = ctx.classBody();
     List<ClassStatContext> classStatCtxs = classBodyCtx instanceof ClassBodyStatsContext ? ((ClassBodyStatsContext) classBodyCtx).classStat() : Collections.emptyList();
@@ -1261,7 +1261,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     return new Concrete.BinOpSequenceElem<>(visitLetExpr(ctx.letExpr()), Fixity.NONFIX, true);
   }
 
-  private Concrete.CoClauseElement visitCoClause(CoClauseContext ctx, List<? super ConcreteGroup> dynamicGroups, Group parentGroup, TCDefReferable enclosingClass, TCDefReferable enclosingDefinition, boolean isDefault) {
+  private Concrete.CoClauseElement visitCoClause(CoClauseContext ctx, List<? super ConcreteGroup> dynamicGroups, ConcreteGroup parentGroup, TCDefReferable enclosingClass, TCDefReferable enclosingDefinition, boolean isDefault) {
     List<String> path = visitLongNamePath(ctx.longName());
     Position position = tokenPosition(ctx.start);
     Concrete.Expression term = null;
@@ -1283,7 +1283,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
           term = Concrete.PatternLamExpression.make(pos, parameters, patterns, term);
         }
       } else {
-        LocatedReferableImpl reference = makeReferable(position, isDefault ? AccessModifier.PROTECTED : AccessModifier.PUBLIC, id != null ? id.getText() : path.get(path.size() - 1), precCtx == null || precCtx instanceof NoPrecedenceContext ? null : visitPrecedence(precCtx), null, Precedence.DEFAULT, parentGroup.getReferable(), LocatedReferableImpl.Kind.COCLAUSE_FUNCTION);
+        LocatedReferableImpl reference = makeReferable(position, isDefault ? AccessModifier.PROTECTED : AccessModifier.PUBLIC, id != null ? id.getText() : path.get(path.size() - 1), precCtx == null || precCtx instanceof NoPrecedenceContext ? null : visitPrecedence(precCtx), null, Precedence.DEFAULT, parentGroup.referable(), LocatedReferableImpl.Kind.COCLAUSE_FUNCTION);
         Pair<Concrete.Expression, Concrete.Expression> pair = visitReturnExpr(returnCtx);
         Referable fieldRef = LongUnresolvedReference.make(position, path);
         Concrete.FunctionBody fBody;

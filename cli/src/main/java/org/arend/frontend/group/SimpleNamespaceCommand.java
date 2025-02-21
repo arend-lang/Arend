@@ -11,7 +11,6 @@ import org.arend.term.NameHiding;
 import org.arend.term.NameRenaming;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.AbstractReference;
-import org.arend.term.group.Statement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,7 +18,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class SimpleNamespaceCommand implements NamespaceCommand, SourceInfo, DataContainer, Statement {
+public class SimpleNamespaceCommand implements NamespaceCommand, SourceInfo, DataContainer {
   private final Position myPosition;
   private final Kind myKind;
   private final List<String> myPath;
@@ -87,11 +86,6 @@ public class SimpleNamespaceCommand implements NamespaceCommand, SourceInfo, Dat
   @Override
   public String positionTextRepresentation() {
     return myPosition.positionTextRepresentation();
-  }
-
-  @Override
-  public NamespaceCommand getNamespaceCommand() {
-    return this;
   }
 
   public static class SimpleNameRenaming implements NameRenaming, SourceInfo {

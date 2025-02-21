@@ -21,7 +21,7 @@ import org.arend.source.PersistableBinarySource;
 import org.arend.source.Source;
 import org.arend.source.SourceLoader;
 import org.arend.source.error.PersistingError;
-import org.arend.term.group.ChildGroup;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.order.dependency.DependencyListener;
 import org.arend.typechecking.order.dependency.DummyDependencyListener;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
@@ -137,7 +137,7 @@ public abstract class SourceLibrary extends BaseLibrary {
    * @param group       the group of the loaded module or null if the group was not loaded.
    * @param isRaw       true if the module was loaded from a raw source, false otherwise.
    */
-  public void groupLoaded(ModulePath modulePath, @Nullable ChildGroup group, boolean isRaw, boolean inTests) {
+  public void groupLoaded(ModulePath modulePath, @Nullable ConcreteGroup group, boolean isRaw, boolean inTests) {
 
   }
 

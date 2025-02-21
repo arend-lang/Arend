@@ -808,7 +808,7 @@ public class DefCallTest extends TypeCheckingTestCase {
       \\func inP-isequiv (P : \\Prop) => isequiv (inP {P})
       """);
     List<? extends ConcreteStatement> statements = cd.statements();
-    LocatedReferable inP = statements.get(0).getGroup().getInternalReferables().iterator().next().getReferable();
+    LocatedReferable inP = Objects.requireNonNull(statements.get(0).group()).getInternalReferables().get(0);
     Concrete.FunctionDefinition lastDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
     assertNotNull(lastDef);
     ((Concrete.ReferenceExpression) ((Concrete.AppExpression) ((Concrete.AppExpression) ((Concrete.TermFunctionBody) lastDef.getBody()).getTerm()).getArguments().get(0).getExpression()).getFunction()).setReferent(inP);

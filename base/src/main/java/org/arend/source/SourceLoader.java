@@ -9,7 +9,7 @@ import org.arend.library.SourceLibrary;
 import org.arend.module.scopeprovider.CachingModuleScopeProvider;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.scope.Scope;
-import org.arend.term.group.Group;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.instance.provider.InstanceProviderSet;
 import org.arend.typechecking.dfs.MapDFS;
 
@@ -105,7 +105,7 @@ public final class SourceLoader {
         for (ModulePath module : dfs.getVisited()) {
           loaded.remove(module);
           sources.remove(module);
-          Group group = myLibrary.getModuleGroup(module, false);
+          ConcreteGroup group = myLibrary.getModuleGroup(module, false);
           if (group != null) {
             myLibrary.resetGroup(group);
           }

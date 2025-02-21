@@ -28,8 +28,7 @@ public interface TCDefReferable extends LocatedReferable, DataContainer {
       getPrecedence().equals(referable.getPrecedence()) &&
       getAliasPrecedence().equals(referable.getAliasPrecedence()) &&
       Objects.equals(getAliasName(), referable.getAliasName()) &&
-      getKind() == referable.getKind() &&
-      isVisible() == referable.isVisible();
+      getKind() == referable.getKind();
   }
 
   default void setTypecheckedIfAbsent(@NotNull Definition definition) {

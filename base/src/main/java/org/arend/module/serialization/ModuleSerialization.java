@@ -8,8 +8,8 @@ import org.arend.ext.module.ModulePath;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.source.error.LocationError;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.order.dependency.DependencyListener;
 
 import java.util.*;
@@ -28,7 +28,7 @@ public class ModuleSerialization {
     myDefinitionSerialization = new DefinitionSerialization(myCallTargetIndexProvider, dependencyListener);
   }
 
-  public ModuleProtos.Module writeModule(Group group, ModulePath modulePath) {
+  public ModuleProtos.Module writeModule(ConcreteGroup group, ModulePath modulePath) {
     ModuleProtos.Module.Builder out = ModuleProtos.Module.newBuilder();
 
     // Serialize the group structure first in order to populate the call target tree
@@ -74,11 +74,11 @@ public class ModuleSerialization {
     return out.build();
   }
 
-  private ModuleProtos.Group writeGroup(Group group) {
+  private ModuleProtos.Group writeGroup(ConcreteGroup group) {
     ModuleProtos.Group.Builder builder = ModuleProtos.Group.newBuilder();
 
     // Write referable
-    LocatedReferable referable = group.getReferable();
+    LocatedReferable referable = group.referable();
     DefinitionProtos.Referable.Builder refBuilder = DefinitionProtos.Referable.newBuilder();
     refBuilder.setName(referable instanceof ModuleReferable ? ((ModuleReferable) referable).path.getLastName() : referable.textRepresentation());
     refBuilder.setPrecedence(DefinitionSerialization.writePrecedence(referable.getPrecedence()));
@@ -96,19 +96,18 @@ public class ModuleSerialization {
     builder.setReferable(refBuilder.build());
 
     // Write subgroups
-    for (Statement statement : group.getStatements()) {
-      Group subgroup = statement.getGroup();
+    for (ConcreteStatement statement : group.statements()) {
+      ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
         builder.addSubgroup(writeGroup(subgroup));
       }
     }
-    for (Group subgroup : group.getDynamicSubgroups()) {
+    for (ConcreteGroup subgroup : group.dynamicGroups()) {
       builder.addDynamicSubgroup(writeGroup(subgroup));
     }
-    for (Group.InternalReferable internalReferable : group.getInternalReferables()) {
+    for (InternalReferable internalReferable : group.getInternalReferables()) {
       if (!internalReferable.isVisible()) {
-        LocatedReferable ref = internalReferable.getReferable();
-        Definition def = ref instanceof TCDefReferable ? ((TCDefReferable) ref).getTypechecked() : null;
+        Definition def = internalReferable.getTypechecked();
         if (def != null) {
           builder.addInvisibleInternalReferable(myCallTargetIndexProvider.getDefIndex(def));
         }

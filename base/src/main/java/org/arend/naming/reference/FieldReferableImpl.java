@@ -4,7 +4,7 @@ import org.arend.ext.reference.Precedence;
 import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.NotNull;
 
-public class FieldReferableImpl extends InternalLocatedReferable implements FieldReferable {
+public class FieldReferableImpl extends InternalReferableImpl implements FieldReferable {
   private final boolean myExplicit;
   private final boolean myRealParameterField;
 
@@ -31,6 +31,6 @@ public class FieldReferableImpl extends InternalLocatedReferable implements Fiel
 
   @Override
   public boolean isSimilar(@NotNull TCDefReferable referable) {
-    return super.isSimilar(referable) && referable instanceof FieldReferableImpl fieldRef && myExplicit == fieldRef.myExplicit && myRealParameterField == fieldRef.myRealParameterField;
+    return super.isSimilar(referable) && myExplicit == ((FieldReferableImpl) referable).myExplicit && myRealParameterField == ((FieldReferableImpl) referable).myRealParameterField;
   }
 }

@@ -4,49 +4,39 @@ import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.prelude.Prelude;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.Abstract;
-import org.arend.term.group.ChildGroup;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
+// TODO[server2]: Delete obsolete functions and move others somewhere else
 public class ScopeFactory {
-  public static @NotNull Scope forGroup(@Nullable Group group, @NotNull ModuleScopeProvider moduleScopeProvider) {
+  public static @NotNull Scope forGroup(@Nullable ConcreteGroup group, @NotNull ModuleScopeProvider moduleScopeProvider) {
     return forGroup(group, moduleScopeProvider, true, false);
   }
 
-  public static @NotNull Scope forGroup(@Nullable Group group, @NotNull ModuleScopeProvider moduleScopeProvider, boolean prelude) {
-    return forGroup(group, moduleScopeProvider, prelude, false);
-  }
-
-  public static @NotNull Scope parentScopeForGroup(@Nullable Group group, @NotNull ModuleScopeProvider moduleScopeProvider, boolean prelude) {
-    ChildGroup parentGroup = group instanceof ChildGroup ? ((ChildGroup) group).getParentGroup() : null;
-    Scope parentScope;
-    if (parentGroup == null) {
-      if (prelude && group != null) {
-        for (Statement statement : group.getStatements()) {
-          NamespaceCommand cmd = statement.getNamespaceCommand();
-          if (cmd != null && cmd.getKind() == NamespaceCommand.Kind.IMPORT && cmd.getPath().equals(Prelude.MODULE_PATH.toList())) {
-            prelude = false;
-          }
+  public static @NotNull Scope parentScopeForGroup(@Nullable ConcreteGroup group, @NotNull ModuleScopeProvider moduleScopeProvider, boolean prelude) {
+    if (prelude && group != null) {
+      for (ConcreteStatement statement : group.statements()) {
+        NamespaceCommand cmd = statement.command();
+        if (cmd != null && cmd.getKind() == NamespaceCommand.Kind.IMPORT && cmd.getPath().equals(Prelude.MODULE_PATH.toList())) {
+          prelude = false;
         }
       }
-      Scope preludeScope = prelude ? moduleScopeProvider.forModule(Prelude.MODULE_PATH) : null;
-      if (group == null) {
-        return preludeScope == null ? EmptyScope.INSTANCE : preludeScope;
-      }
-
-      ImportedScope importedScope = new ImportedScope(group, moduleScopeProvider);
-      parentScope = preludeScope == null ? importedScope : new MergeScope(preludeScope, importedScope);
-    } else {
-      parentScope = forGroup(parentGroup, moduleScopeProvider, prelude, ((ChildGroup) group).isDynamicContext());
     }
-    return parentScope;
+
+    Scope preludeScope = prelude ? moduleScopeProvider.forModule(Prelude.MODULE_PATH) : null;
+    if (group == null) {
+      return preludeScope == null ? EmptyScope.INSTANCE : preludeScope;
+    }
+
+    ImportedScope importedScope = new ImportedScope(group, moduleScopeProvider);
+    return preludeScope == null ? importedScope : new MergeScope(preludeScope, importedScope);
   }
 
-  public static @NotNull Scope forGroup(@Nullable Group group, @NotNull ModuleScopeProvider moduleScopeProvider, boolean prelude, boolean isDynamicContext) {
+  public static @NotNull Scope forGroup(@Nullable ConcreteGroup group, @NotNull ModuleScopeProvider moduleScopeProvider, boolean prelude, boolean isDynamicContext) {
     Scope parent = parentScopeForGroup(group, moduleScopeProvider, prelude);
     return group == null ? parent : LexicalScope.insideOf(group, parent, isDynamicContext);
   }

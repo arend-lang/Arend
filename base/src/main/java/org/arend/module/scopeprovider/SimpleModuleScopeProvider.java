@@ -5,7 +5,7 @@ import org.arend.module.ModuleRegistry;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.LexicalScope;
 import org.arend.naming.scope.Scope;
-import org.arend.term.group.Group;
+import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,7 +17,7 @@ public class SimpleModuleScopeProvider implements ModuleScopeProvider, ModuleReg
   private final Map<ModulePath, Scope> myMap = new LinkedHashMap<>();
 
   @Override
-  public void registerModule(ModulePath module, Group group) {
+  public void registerModule(ModulePath module, ConcreteGroup group) {
     myMap.put(module, CachingScope.make(LexicalScope.opened(group)));
   }
 

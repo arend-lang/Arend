@@ -9,9 +9,7 @@ import org.arend.naming.reference.*;
 import org.arend.naming.NameResolverTestCase;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteExpressionFactory;
-import org.arend.term.group.ChildGroup;
 import org.arend.term.group.ConcreteGroup;
-import org.arend.term.group.Group;
 import org.arend.typechecking.doubleChecker.CoreDefinitionChecker;
 import org.arend.typechecking.doubleChecker.CoreException;
 import org.arend.typechecking.doubleChecker.CoreExpressionChecker;
@@ -115,7 +113,7 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
   }
 
 
-  private void typeCheckModule(Group group, int errors) {
+  private void typeCheckModule(ConcreteGroup group, int errors) {
     assertTrue(new TypecheckingOrderingListener(libraryManager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, localErrorReporter, PositionComparator.INSTANCE, ref -> null).typecheckModules(Collections.singletonList(group), null));
     boolean ok = errors != 0 || !errorList.isEmpty() || new CoreModuleChecker(errorReporter).checkGroup(group);
     assertThat(errorList, containsErrors(errors));
@@ -123,8 +121,8 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
   }
 
 
-  public Definition getDefinition(ChildGroup group, String path) {
-    TCDefReferable ref = get(group.getGroupScope(), path);
+  public Definition getDefinition(ConcreteGroup group, String path) {
+    TCDefReferable ref = getDef(group, path);
     return ref.getTypechecked();
   }
 
@@ -133,28 +131,28 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
     return ref.getTypechecked();
   }
 
-  protected void typeCheckModule(Group group) {
-    if (group instanceof ConcreteGroup) lastGroup = (ConcreteGroup) group;
+  protected void typeCheckModule(ConcreteGroup group) {
+    lastGroup = group;
     typeCheckModule(group, 0);
   }
 
-  protected ChildGroup typeCheckModule(String text, int errors) {
+  protected ConcreteGroup typeCheckModule(String text, int errors) {
     resolveNamesModule(text);
     typeCheckModule(lastGroup, errors);
     return lastGroup;
   }
 
-  protected ChildGroup typeCheckModule(String text) {
+  protected ConcreteGroup typeCheckModule(String text) {
     return typeCheckModule(text, 0);
   }
 
-  protected ChildGroup typeCheckClass(String instance, String global, int errors) {
+  protected ConcreteGroup typeCheckClass(String instance, String global, int errors) {
     resolveNamesDefGroup("\\class Test {\n" + instance + (global.isEmpty() ? "" : "\n} \\where {\n" + global) + "\n}");
     typeCheckModule(lastGroup, errors);
     return lastGroup;
   }
 
-  protected ChildGroup typeCheckClass(String instance, String global) {
+  protected ConcreteGroup typeCheckClass(String instance, String global) {
     return typeCheckClass(instance, global, 0);
   }
 }

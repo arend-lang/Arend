@@ -4,11 +4,12 @@ import org.arend.ext.ArendExtension;
 import org.arend.ext.DefaultArendExtension;
 import org.arend.ext.module.ModulePath;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
+import org.arend.naming.reference.InternalReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.scope.LexicalScope;
-import org.arend.term.group.Group;
-import org.arend.term.group.Statement;
+import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.order.Ordering;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.jetbrains.annotations.NotNull;
@@ -44,32 +45,32 @@ public abstract class BaseLibrary implements Library {
   @Override
   public void reset() {
     for (ModulePath modulePath : getLoadedModules()) {
-      Group group = getModuleGroup(modulePath, false);
+      ConcreteGroup group = getModuleGroup(modulePath, false);
       if (group != null) {
         resetGroup(group);
       }
     }
     for (ModulePath modulePath : getTestModules()) {
-      Group group = getModuleGroup(modulePath, true);
+      ConcreteGroup group = getModuleGroup(modulePath, true);
       if (group != null) {
         resetGroup(group);
       }
     }
   }
 
-  public void resetGroup(Group group) {
-    resetDefinition(group.getReferable());
-    for (Statement statement : group.getStatements()) {
-      Group subgroup = statement.getGroup();
+  public void resetGroup(ConcreteGroup group) {
+    resetDefinition(group.referable());
+    for (ConcreteStatement statement : group.statements()) {
+      ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
         resetGroup(subgroup);
       }
     }
-    for (Group subgroup : group.getDynamicSubgroups()) {
+    for (ConcreteGroup subgroup : group.dynamicGroups()) {
       resetGroup(subgroup);
     }
-    for (Group.InternalReferable referable : group.getInternalReferables()) {
-      resetDefinition(referable.getReferable());
+    for (InternalReferable referable : group.getInternalReferables()) {
+      resetDefinition(referable);
     }
   }
 
@@ -94,7 +95,7 @@ public abstract class BaseLibrary implements Library {
   @Override
   public ModuleScopeProvider getDeclaredModuleScopeProvider() {
     return module -> {
-      Group group = getModuleGroup(module, false);
+      ConcreteGroup group = getModuleGroup(module, false);
       return group == null ? null : LexicalScope.opened(group);
     };
   }
@@ -108,7 +109,7 @@ public abstract class BaseLibrary implements Library {
   @Override
   public @NotNull ModuleScopeProvider getTestsModuleScopeProvider() {
     return module -> {
-      Group group = getModuleGroup(module, true);
+      ConcreteGroup group = getModuleGroup(module, true);
       return group == null ? null : LexicalScope.opened(group);
     };
   }
@@ -127,9 +128,9 @@ public abstract class BaseLibrary implements Library {
       return;
     }
 
-    List<Group> groups = new ArrayList<>(modules.size());
+    List<ConcreteGroup> groups = new ArrayList<>(modules.size());
     for (ModulePath module : modules) {
-      Group group = getModuleGroup(module, inTests);
+      ConcreteGroup group = getModuleGroup(module, inTests);
       if (group != null) {
         groups.add(group);
       }

@@ -15,7 +15,6 @@ import org.arend.prelude.PreludeLibrary;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.AccessModifier;
-import org.arend.term.group.ChildGroup;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.TestLocalErrorReporter;
 import org.arend.typechecking.provider.ConcreteProvider;
@@ -47,7 +46,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
   };
 
   public TCDefReferable get(String path) {
-    ChildGroup parent = lastGroup.getParentGroup();
+    ConcreteGroup parent = lastGroup.getParentGroup();
     Scope scope = LexicalScope.insideOf(lastGroup, parent == null ? EmptyScope.INSTANCE : LexicalScope.insideOf(lastGroup, parent.getGroupScope(), true), true);
     return get(scope, path);
   }
@@ -104,7 +103,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
 
   protected ConcreteGroup resolveNamesDef(String text, int errors) {
     ConcreteGroup group = parseDef(text);
-    Scope parentScope = new MergeScope(new SingletonScope(group.getReferable()), metaScope, PreludeLibrary.getPreludeScope());
+    Scope parentScope = new MergeScope(new SingletonScope(group.referable()), metaScope, PreludeLibrary.getPreludeScope());
     new DefinitionResolveNameVisitor(ConcreteProvider.EMPTY /* TODO[server2] */, TypingInfo.EMPTY, errorReporter).resolveGroup(group, parentScope, PersistentList.empty(), null);
     assertThat(errorList, containsErrors(errors));
     return group;
