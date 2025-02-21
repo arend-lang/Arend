@@ -21,7 +21,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
     Concrete.LamExpression xyx = (Concrete.LamExpression) resolveNamesExpr("\\lam x y => x");
     Expression pi = typeCheckExpr(resolveNamesExpr("\\Pi (x y : \\Type) -> \\Type"), null).expression;
     DependentLink link = FindBinding.visitLam(
-        xyx.getParameters().get(1).getReferableList().get(0),
+        xyx.getParameters().get(1).getReferableList().get(0).getAbstractReferable(),
         c(xyx), c(typeCheckExpr(xyx, pi).expression)
     );
     assertNotNull(link);
@@ -33,7 +33,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
     Concrete.LamExpression xx = (Concrete.LamExpression) resolveNamesExpr("\\lam x => x");
     Expression pi = typeCheckExpr(resolveNamesExpr("\\Pi (x : \\Type) -> \\Type"), null).expression;
     DependentLink link = FindBinding.visitLam(
-        xx.getParameters().get(0).getReferableList().get(0),
+        xx.getParameters().get(0).getReferableList().get(0).getAbstractReferable(),
         c(xx), c(typeCheckExpr(xx, pi).expression)
     );
     assertNotNull(link);
@@ -44,7 +44,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
   public void pi() {
     Concrete.PiExpression xyx = (Concrete.PiExpression) resolveNamesExpr("\\Pi (A B : \\Type) (x y : A) -> B");
     DependentLink link = FindBinding.visitPi(
-        xyx.getParameters().get(1).getReferableList().get(1),
+        xyx.getParameters().get(1).getReferableList().get(1).getAbstractReferable(),
         xyx, c(typeCheckExpr(xyx, null).expression)
     );
     assertNotNull(link);
@@ -65,7 +65,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
   public void letParam() {
     Concrete.LetExpression xyx = (Concrete.LetExpression) resolveNamesExpr("\\let | f a => Nat.suc a \\in f 114514");
      DependentLink let = FindBinding.visitLetParam(
-        xyx.getClauses().get(0).getParameters().get(0).getReferableList().get(0),
+        xyx.getClauses().get(0).getParameters().get(0).getReferableList().get(0).getAbstractReferable(),
         xyx, c(typeCheckExpr(xyx, null).expression));
     assertNotNull(let);
     assertEquals("Nat", let.getTypeExpr().toString());
@@ -77,7 +77,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
     Expression sig = typeCheckExpr(xyx, null).expression;
     {
       DependentLink link = FindBinding.visitSigma(
-          xyx.getParameters().get(0).getReferableList().get(0),
+          xyx.getParameters().get(0).getReferableList().get(0).getAbstractReferable(),
           xyx, c(sig)
       );
       assertNotNull(link);
@@ -85,7 +85,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
     }
     {
       DependentLink link = FindBinding.visitSigma(
-          xyx.getParameters().get(1).getReferableList().get(0),
+          xyx.getParameters().get(1).getReferableList().get(0).getAbstractReferable(),
           xyx, c(sig)
       );
       assertNotNull(link);
@@ -95,11 +95,12 @@ public class FindBindingTest extends TypeCheckingTestCase {
 
   @Test
   public void caseExpr() {
-    Concrete.CaseExpression case_ = (Concrete.CaseExpression) resolveNamesExpr(
-        "\\case 114514 \\return Nat \\with {\n" +
-            "  | suc x => 19260817\n" +
-            "  | a => a\n" +
-            "}");
+    Concrete.CaseExpression case_ = (Concrete.CaseExpression) resolveNamesExpr("""
+      \\case 114514 \\return Nat \\with {
+        | suc x => 19260817
+        | a => a
+      }
+      """);
     Expression core = typeCheckExpr(case_, null).expression;
     {
       Concrete.ConstructorPattern sucX = (Concrete.ConstructorPattern) case_.getClauses().get(0).getPatterns().get(0);

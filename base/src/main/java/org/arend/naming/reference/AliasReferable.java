@@ -1,7 +1,10 @@
 package org.arend.naming.reference;
 
+import org.arend.ext.reference.DataContainer;
 import org.arend.ext.reference.Precedence;
+import org.arend.term.abs.AbstractReferable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class AliasReferable implements RedirectingReferable {
   private final GlobalReferable myReferable;
@@ -10,10 +13,15 @@ public class AliasReferable implements RedirectingReferable {
     myReferable = referable;
   }
 
-  @NotNull
   @Override
-  public Referable getUnderlyingReferable() {
-    return myReferable.getUnderlyingReferable();
+  public @Nullable AbstractReferable getAbstractReferable() {
+    if (this instanceof DataContainer) {
+      Object data = ((DataContainer) this).getData();
+      if (data instanceof AbstractReferable) {
+        return (AbstractReferable) data;
+      }
+    }
+    return myReferable.getAbstractReferable();
   }
 
   @Override

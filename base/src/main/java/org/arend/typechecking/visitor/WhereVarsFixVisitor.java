@@ -74,7 +74,9 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
                 if (referable != null) {
                   ParamData data = new ParamData(entry1.getKey(), parameter, index);
                   parameterMap.put(referable, data);
-                  parameterMap.put(referable.getUnderlyingReferable(), data);
+                  if (referable instanceof ParameterReferable paramRef) {
+                    parameterMap.put(paramRef.getOriginalReferable(), data);
+                  }
                 }
                 index++;
               }
@@ -99,7 +101,7 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
             found.clear();
             for (Referable foundRef : foundRefs) {
               while (foundRef instanceof ParameterReferable paramRef) {
-                foundRef = paramRef.getUnderlyingReferable();
+                foundRef = paramRef.getOriginalReferable();
               }
               ParamData paramData = parameterMap.get(foundRef);
               if (paramData != null && wherePairs.add(new Pair<>(paramData.definition, paramData.index))) {

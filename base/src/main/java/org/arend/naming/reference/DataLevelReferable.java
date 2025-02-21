@@ -28,9 +28,4 @@ public class DataLevelReferable implements LevelReferable {
   public @NotNull String textRepresentation() {
     return myName;
   }
-
-  @Override
-  public @NotNull Referable getUnderlyingReferable() {
-    return myData instanceof Referable ? (Referable) myData : this;
-  }
 }

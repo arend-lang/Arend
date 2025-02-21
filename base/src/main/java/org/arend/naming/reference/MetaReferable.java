@@ -13,8 +13,6 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Supplier;
-
 public class MetaReferable implements TCDefReferable, MetaRef {
   private Object myData;
   private final AccessModifier myAccessModifier;
@@ -24,7 +22,6 @@ public class MetaReferable implements TCDefReferable, MetaRef {
   private MetaResolver myResolver;
   private final String myAliasName;
   private final Precedence myAliasPrecedence;
-  public Supplier<GlobalReferable> underlyingReferable;
   private final LocatedReferable myParent;
   private MetaTopDefinition myTypechecked;
 
@@ -107,12 +104,6 @@ public class MetaReferable implements TCDefReferable, MetaRef {
   @Override
   public @NotNull AccessModifier getAccessModifier() {
     return myAccessModifier;
-  }
-
-  @Override
-  public @NotNull GlobalReferable getUnderlyingReferable() {
-    GlobalReferable result = underlyingReferable == null ? null : underlyingReferable.get();
-    return result == null ? this : result;
   }
 
   @Override

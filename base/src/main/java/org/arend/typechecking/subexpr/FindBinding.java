@@ -8,6 +8,7 @@ import org.arend.core.expr.let.HaveClause;
 import org.arend.core.pattern.BindingPattern;
 import org.arend.core.pattern.Pattern;
 import org.arend.naming.reference.Referable;
+import org.arend.term.abs.AbstractReferable;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,7 +21,7 @@ import java.util.function.Function;
 
 public class FindBinding {
   public static @Nullable DependentLink visitLam(
-      Referable referable, Concrete.LamExpression expr, LamExpression lam) {
+    AbstractReferable referable, Concrete.LamExpression expr, LamExpression lam) {
     return parameters(lam.getParameters(), referable, new LambdaParam(lam), expr.getParameters());
   }
 
@@ -43,7 +44,7 @@ public class FindBinding {
   }
 
   public static @Nullable DependentLink visitPi(
-      Referable referable, Concrete.PiExpression expr, PiExpression pi) {
+      AbstractReferable referable, Concrete.PiExpression expr, PiExpression pi) {
     return parameters(pi.getBinding(), referable, new Function<>() {
       private PiExpression piExpr = pi;
 
@@ -60,7 +61,7 @@ public class FindBinding {
   }
 
   public static @Nullable DependentLink visitSigma(
-      Referable referable,
+      AbstractReferable referable,
       Concrete.SigmaExpression expr,
       SigmaExpression sigma
   ) {
@@ -97,8 +98,8 @@ public class FindBinding {
           corePattern = corePatterns.next();
           continue;
         }
-        if (Objects.equals(Referable.getUnderlyingReferable(((Concrete.NamePattern) pattern).getReferable()), data)
-            || Objects.equals(pattern.getData(), data)) return binding;
+        Referable patternRef = ((Concrete.NamePattern) pattern).getReferable();
+        if (patternRef != null && Objects.equals(patternRef.getAbstractReferable(), data) || Objects.equals(pattern.getData(), data)) return binding;
           // Go to next binding
         else continue findBinding;
       }
@@ -123,7 +124,7 @@ public class FindBinding {
       Object patternData, Concrete.LetExpression expr, LetExpression let) {
     return visitLet(expr, let, (coreLetClause, exprLetClause) ->
         Objects.equals(exprLetClause.getPattern().getData(), patternData)
-            || exprLetClause.getPattern() instanceof Concrete.NamePattern && Objects.equals(Referable.getUnderlyingReferable(((Concrete.NamePattern) exprLetClause.getPattern()).getRef()), patternData)
+            || exprLetClause.getPattern() instanceof Concrete.NamePattern namePattern && namePattern.getReferable() != null && Objects.equals(namePattern.getReferable().getAbstractReferable(), patternData)
             ? coreLetClause.getTypeExpr() : null);
   }
 
@@ -134,15 +135,15 @@ public class FindBinding {
       Object patternData, Concrete.LetExpression expr, LetExpression let) {
     Expression expression = visitLetBind(patternData, expr, let);
     if (expression != null) return expression;
-    if (patternData instanceof Referable) {
-      DependentLink link = visitLetParam((Referable) patternData, expr, let);
+    if (patternData instanceof AbstractReferable) {
+      DependentLink link = visitLetParam((AbstractReferable) patternData, expr, let);
       if (link != null) return link.getTypeExpr();
     }
     return null;
   }
 
   public static @Nullable DependentLink visitLetParam(
-      Referable patternParam, Concrete.LetExpression expr, LetExpression let) {
+      AbstractReferable patternParam, Concrete.LetExpression expr, LetExpression let) {
     return visitLet(expr, let, (coreLetClause, exprLetClause) -> {
       LamExpression coreLamExpr = coreLetClause.getExpression().cast(LamExpression.class);
       List<Concrete.Parameter> parameters = exprLetClause.getParameters();
@@ -167,13 +168,13 @@ public class FindBinding {
 
   private static @Nullable DependentLink parameters(
       DependentLink core,
-      Referable referable,
+      AbstractReferable referable,
       Function<DependentLink, DependentLink> next,
       List<? extends Concrete.Parameter> parameters
   ) {
     for (Concrete.Parameter concrete : parameters)
       for (Referable ref : concrete.getReferableList()) {
-        if (Referable.getUnderlyingReferable(ref) == referable) return core;
+        if (ref != null && Objects.equals(ref.getAbstractReferable(), referable)) return core;
         if (concrete.isExplicit() != core.isExplicit()) continue;
         core = next.apply(core);
         if (core == null) return null;

@@ -23,16 +23,6 @@ public interface Referable extends ArendRef {
     return RefKind.EXPR;
   }
 
-  // TODO[server2]: Remove this
-  @NotNull
-  default Referable getUnderlyingReferable() {
-    return this;
-  }
-
-  static Referable getUnderlyingReferable(Referable ref) {
-    return ref == null ? null : ref.getUnderlyingReferable();
-  }
-
   default @Nullable AbstractReferable getAbstractReferable() {
     if (this instanceof DataContainer) {
       Object data = ((DataContainer) this).getData();
@@ -40,7 +30,7 @@ public interface Referable extends ArendRef {
         return (AbstractReferable) data;
       }
     }
-    return getUnderlyingReferable() instanceof AbstractReferable result ? result : null;
+    return null;
   }
 
   @Override

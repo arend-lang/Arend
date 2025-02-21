@@ -28,7 +28,6 @@ import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.error.local.*;
 import org.arend.typechecking.implicitargs.equations.Equations;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
-import org.arend.typechecking.visitor.DumbTypechecker;
 import org.arend.ext.util.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -119,11 +118,24 @@ public class ElimTypechecking {
     return getEliminatedParameters(expressions, clauses, parameters, visitor.getErrorReporter(), visitor.getContext());
   }
 
+  private static void findImplicitPatterns(List<? extends Concrete.PatternHolder> clauses, ErrorReporter errorReporter) {
+    for (Concrete.PatternHolder clause : clauses) {
+      if (clause.getPatterns() == null) {
+        continue;
+      }
+      for (Concrete.Pattern pattern : clause.getPatterns()) {
+        if (!pattern.isExplicit()) {
+          errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.IMPLICIT_PATTERN, pattern));
+        }
+      }
+    }
+  }
+
   public static List<DependentLink> getEliminatedParameters(List<? extends Concrete.ReferenceExpression> expressions, List<? extends Concrete.Clause> clauses, DependentLink parameters, ErrorReporter errorReporter, Map<Referable, Binding> context) {
     List<DependentLink> elimParams = Collections.emptyList();
     if (!expressions.isEmpty()) {
       int expectedNumberOfPatterns = expressions.size();
-      DumbTypechecker.findImplicitPatterns(clauses, errorReporter);
+      findImplicitPatterns(clauses, errorReporter);
       for (Concrete.Clause clause : clauses) {
         if (clause.getPatterns() != null && clause.getPatterns().size() != expectedNumberOfPatterns) {
           if (clause.getPatterns().size() > expectedNumberOfPatterns) {

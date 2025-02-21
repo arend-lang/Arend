@@ -45,8 +45,7 @@ public class ParameterReferable implements Referable {
     return myIndex;
   }
 
-  @Override
-  public @NotNull Referable getUnderlyingReferable() {
+  public @NotNull Referable getOriginalReferable() {
     return myReferable;
   }
 
