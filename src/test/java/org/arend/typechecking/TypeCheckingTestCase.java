@@ -124,13 +124,13 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
 
 
   public Definition getDefinition(ChildGroup group, String path) {
-    TCReferable ref = get(group.getGroupScope(), path);
-    return ref instanceof TCDefReferable ? ((TCDefReferable) ref).getTypechecked() : null;
+    TCDefReferable ref = get(group.getGroupScope(), path);
+    return ref.getTypechecked();
   }
 
   public Definition getDefinition(String path) {
-    TCReferable ref = get(path);
-    return ref instanceof TCDefReferable ? ((TCDefReferable) ref).getTypechecked() : null;
+    TCDefReferable ref = get(path);
+    return ref.getTypechecked();
   }
 
   protected void typeCheckModule(Group group) {

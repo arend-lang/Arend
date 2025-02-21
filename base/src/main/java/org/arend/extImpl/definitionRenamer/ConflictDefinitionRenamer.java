@@ -13,7 +13,7 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.ModuleReferable;
-import org.arend.naming.reference.TCReferable;
+import org.arend.naming.reference.TCDefReferable;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -27,11 +27,11 @@ public class ConflictDefinitionRenamer extends VoidExpressionVisitor<Void> imple
   private final Map<String, CoreDefinition> myNotRenamedDefs = new HashMap<>();
 
   // The result map
-  private final Map<TCReferable, LongName> myDefLongNames = new HashMap<>();
+  private final Map<TCDefReferable, LongName> myDefLongNames = new HashMap<>();
 
   @Override
   public @Nullable LongName renameDefinition(ArendRef ref) {
-    return ref instanceof TCReferable ? myDefLongNames.get(ref) : null;
+    return ref instanceof TCDefReferable ? myDefLongNames.get(ref) : null;
   }
 
   private void rename(Definition definition) {

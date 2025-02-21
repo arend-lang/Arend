@@ -46,14 +46,14 @@ public abstract class NameResolverTestCase extends ParserTestCase {
     }
   };
 
-  public TCReferable get(String path) {
+  public TCDefReferable get(String path) {
     ChildGroup parent = lastGroup.getParentGroup();
     Scope scope = LexicalScope.insideOf(lastGroup, parent == null ? EmptyScope.INSTANCE : LexicalScope.insideOf(lastGroup, parent.getGroupScope(), true), true);
     return get(scope, path);
   }
 
   public Concrete.ReferableDefinition getConcrete(String path) {
-    TCReferable ref = get(path);
+    TCDefReferable ref = get(path);
     return null; // TODO[server2]: ref instanceof ConcreteLocatedReferable ? ((ConcreteLocatedReferable) ref).getDefinition() : null;
   }
 

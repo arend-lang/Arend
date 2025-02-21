@@ -963,8 +963,8 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     boolean hadHLevels = cdef.getHLevelParameters() != null;
     boolean searchPLevels = !hadPLevels;
     boolean searchHLevels = !hadHLevels;
-    TCReferable pLevelsParent = getFirstLevelParameter(cdef.getPLevelParameters());
-    TCReferable hLevelsParent = getFirstLevelParameter(cdef.getHLevelParameters());
+    LocatedReferable pLevelsParent = getFirstLevelParameter(cdef.getPLevelParameters());
+    LocatedReferable hLevelsParent = getFirstLevelParameter(cdef.getHLevelParameters());
     boolean pLevelsNotDerived = false;
     boolean hLevelsNotDerived = false;
     boolean allPLevelsDerived = true;
@@ -1048,7 +1048,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     return ref instanceof TCLevelReferable ? (TCLevelReferable) ref : null;
   }
 
-  private Concrete.LevelParameters referableToLevelParameters(TCReferable referable, Object data, boolean isPLevels) {
+  private Concrete.LevelParameters referableToLevelParameters(LocatedReferable referable, Object data, boolean isPLevels) {
     if (referable instanceof TCDefReferable) {
       Definition def = ((TCDefReferable) referable).getTypechecked();
       return levelVariablesToParameters(data, isPLevels ? def.getLevelParameters().subList(0, def.getNumberOfPLevelParameters()) : def.getLevelParameters().subList(def.getNumberOfPLevelParameters(), def.getLevelParameters().size()), isPLevels);
@@ -2104,7 +2104,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       Map<Referable, Binding> context = typechecker.getContext();
       PatternTypechecking dataPatternTypechecking = elimParams == null ? null : new PatternTypechecking(PatternTypechecking.Mode.DATA, typechecker, true, null, elimParams);
 
-      Set<TCReferable> notAllowedConstructors = new HashSet<>();
+      Set<TCDefReferable> notAllowedConstructors = new HashSet<>();
       for (Concrete.ConstructorClause clause : def.getConstructorClauses()) {
         for (Concrete.Constructor constructor : clause.getConstructors()) {
           notAllowedConstructors.add(constructor.getData());

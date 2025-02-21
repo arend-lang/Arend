@@ -322,7 +322,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     if (def.getKind().isUse()) {
-      TCReferable useParent = def.getUseParent();
+      TCDefReferable useParent = def.getUseParent();
       boolean isFunc = useParent.getKind() == GlobalReferable.Kind.FUNCTION || useParent.getKind() == GlobalReferable.Kind.INSTANCE;
       if (isFunc || useParent.getKind() == GlobalReferable.Kind.CLASS || useParent.getKind() == GlobalReferable.Kind.DATA) {
         if (def.getKind() == FunctionKind.COERCE) {
@@ -344,7 +344,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       BaseConcreteExpressionVisitor<Void> visitor = new BaseConcreteExpressionVisitor<>() {
         @Override
         public Concrete.Expression visitReference(Concrete.ReferenceExpression expr, Void params) {
-          if (expr.getReferent() instanceof TCReferable tcRef && tcRef.getKind() == GlobalReferable.Kind.COCLAUSE_FUNCTION) {
+          if (expr.getReferent() instanceof TCDefReferable tcRef && tcRef.getKind() == GlobalReferable.Kind.COCLAUSE_FUNCTION) {
             Concrete.GeneralDefinition definition = myConcreteProvider.getConcrete(tcRef);
             if (definition instanceof Concrete.CoClauseFunctionDefinition coClause && coClause.getUseParent() == function.getUseParent()) {
               List<Concrete.Argument> args = new ArrayList<>();
@@ -434,11 +434,11 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     List<TypedReferable> context = exprVisitor.getContext();
     checkNameAndPrecedence(def);
 
-    Map<String, TCReferable> constructorNames = new HashMap<>();
+    Map<String, TCDefReferable> constructorNames = new HashMap<>();
     for (Concrete.ConstructorClause clause : def.getConstructorClauses()) {
       for (Concrete.Constructor constructor : clause.getConstructors()) {
-        TCReferable ref = constructor.getData();
-        TCReferable oldRef = constructorNames.putIfAbsent(ref.textRepresentation(), ref);
+        TCDefReferable ref = constructor.getData();
+        TCDefReferable oldRef = constructorNames.putIfAbsent(ref.textRepresentation(), ref);
         if (oldRef != null) {
           myLocalErrorReporter.report(new DuplicateNameError(GeneralError.Level.ERROR, ref, oldRef));
         }
@@ -548,10 +548,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
     }
 
-    Map<String, TCReferable> fieldNames = new HashMap<>();
+    Map<String, TCDefReferable> fieldNames = new HashMap<>();
     for (Concrete.ClassField field : classFields) {
-      TCReferable ref = field.getData();
-      TCReferable oldRef = fieldNames.putIfAbsent(ref.textRepresentation(), ref);
+      TCDefReferable ref = field.getData();
+      TCDefReferable oldRef = fieldNames.putIfAbsent(ref.textRepresentation(), ref);
       if (oldRef != null) {
         myLocalErrorReporter.report(new DuplicateNameError(GeneralError.Level.ERROR, ref, oldRef));
       }
@@ -618,7 +618,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   }
 
   private boolean addExternalParameters(Concrete.GeneralDefinition def) {
-    List<? extends Concrete.Parameter> defParams = def == null || !(def.getData() instanceof TCDefReferable) ? Collections.emptyList() : def.getParameters();
+    List<? extends Concrete.Parameter> defParams = def == null ? Collections.emptyList() : def.getParameters();
     if (defParams.isEmpty()) {
       return false;
     }
@@ -635,7 +635,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         newParams.add(defParam);
       }
     }
-    myExternalParameters.put((TCDefReferable) def.getData(), new Concrete.ExternalParameters(newParams, def instanceof Concrete.Definition ? ((Concrete.Definition) def).getPLevelParameters() : null, def instanceof Concrete.Definition ? ((Concrete.Definition) def).getHLevelParameters() : null));
+    myExternalParameters.put(def.getData(), new Concrete.ExternalParameters(newParams, def instanceof Concrete.Definition ? ((Concrete.Definition) def).getPLevelParameters() : null, def instanceof Concrete.Definition ? ((Concrete.Definition) def).getHLevelParameters() : null));
     return true;
   }
 
@@ -794,7 +794,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     if (added) {
       assert def != null;
-      myExternalParameters.remove((TCDefReferable) def.getData());
+      myExternalParameters.remove(def.getData());
     }
 
     myLocalErrorReporter = myErrorReporter;

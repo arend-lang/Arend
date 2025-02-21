@@ -39,12 +39,12 @@ public class ModuleSerialization {
 
     // Now write the call target tree
     Map<ModulePath, Map<String, CallTargetTree>> moduleCallTargets = new HashMap<>();
-    for (Map.Entry<TCReferable, Integer> entry : myCallTargetIndexProvider.getCallTargets()) {
+    for (Map.Entry<LocatedReferable, Integer> entry : myCallTargetIndexProvider.getCallTargets()) {
       if (myCurrentDefinitions.contains(entry.getValue())) {
         continue;
       }
 
-      TCReferable targetReferable = entry.getKey();
+      LocatedReferable targetReferable = entry.getKey();
       List<String> longName = new ArrayList<>();
       ModuleLocation targetModuleLocation = LocatedReferable.Helper.getLocation(targetReferable, longName);
       if (targetModuleLocation == null || longName.isEmpty()) {

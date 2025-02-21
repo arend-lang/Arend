@@ -4,7 +4,7 @@ import org.arend.ext.reference.Precedence;
 import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.NotNull;
 
-public class FieldReferableImpl extends InternalLocatedReferable implements TCFieldReferable {
+public class FieldReferableImpl extends InternalLocatedReferable implements FieldReferable {
   private final boolean myExplicit;
   private final boolean myRealParameterField;
 

@@ -313,6 +313,8 @@ public final class Abstract {
     @Nullable Expression getResultTypeLevel();
     boolean isClassifying();
     boolean isCoerce();
+    boolean isParameterField();
+    boolean isExplicitField();
   }
 
   public interface OverriddenField extends ClassElement, ParametersHolder {

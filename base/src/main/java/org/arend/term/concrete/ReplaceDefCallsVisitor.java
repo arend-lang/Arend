@@ -4,18 +4,18 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.naming.reference.ErrorReference;
 import org.arend.naming.reference.Referable;
-import org.arend.naming.reference.TCReferable;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.typechecking.visitor.VoidConcreteVisitor;
 
 import java.util.Set;
 
 public class ReplaceDefCallsVisitor extends VoidConcreteVisitor<Void> {
-  private final Set<? extends TCReferable> myReferables;
-  private final TCReferable mySelfReferable;
+  private final Set<? extends TCDefReferable> myReferables;
+  private final TCDefReferable mySelfReferable;
   private final ErrorReporter myErrorReporter;
   private boolean myRecursive;
 
-  public ReplaceDefCallsVisitor(Set<? extends TCReferable> referables, TCReferable selfReferable, ErrorReporter errorReporter) {
+  public ReplaceDefCallsVisitor(Set<? extends TCDefReferable> referables, TCDefReferable selfReferable, ErrorReporter errorReporter) {
     myReferables = referables;
     mySelfReferable = selfReferable;
     myErrorReporter = errorReporter;
@@ -34,10 +34,10 @@ public class ReplaceDefCallsVisitor extends VoidConcreteVisitor<Void> {
   }
 
   private ErrorReference checkReferable(Referable referable, Concrete.SourceNode sourceNode) {
-    if (!(referable instanceof TCReferable)) {
+    if (!(referable instanceof TCDefReferable)) {
       return null;
     }
-    if (mySelfReferable == referable) {
+    if (mySelfReferable.equals(referable)) {
       myRecursive = true;
     }
     if (myReferables.contains(referable)) {

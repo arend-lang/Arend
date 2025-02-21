@@ -6,10 +6,7 @@ import org.arend.core.expr.Expression;
 import org.arend.ext.error.*;
 import org.arend.naming.error.DuplicateNameError;
 import org.arend.naming.error.NotInScopeError;
-import org.arend.naming.reference.GlobalReferable;
-import org.arend.naming.reference.LocalReferable;
-import org.arend.naming.reference.Referable;
-import org.arend.naming.reference.TCReferable;
+import org.arend.naming.reference.*;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.error.CycleError;
 import org.arend.typechecking.error.local.*;
@@ -168,7 +165,7 @@ public class Matchers {
     };
   }
 
-  public static Matcher<? super GeneralError> notInClass(String name, TCReferable classRef) {
+  public static Matcher<? super GeneralError> notInClass(String name, TCDefReferable classRef) {
     return new TypeSafeDiagnosingMatcher<>() {
       @Override
       protected boolean matchesSafely(GeneralError error, Description description) {
@@ -248,7 +245,7 @@ public class Matchers {
     };
   }
 
-  public static Matcher<? super GeneralError> instanceInference(TCReferable classRef, Expression classifyingExpression) {
+  public static Matcher<? super GeneralError> instanceInference(TCDefReferable classRef, Expression classifyingExpression) {
     return new TypeSafeDiagnosingMatcher<>() {
       @Override
       protected boolean matchesSafely(GeneralError error, Description description) {
@@ -278,7 +275,7 @@ public class Matchers {
     };
   }
 
-  public static Matcher<? super GeneralError> instanceInference(TCReferable definition) {
+  public static Matcher<? super GeneralError> instanceInference(TCDefReferable definition) {
     return instanceInference(definition, null);
   }
 

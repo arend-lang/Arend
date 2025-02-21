@@ -1154,7 +1154,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         myBuilder.append("\n");
         printIndent();
         if (element instanceof Concrete.CoClauseFunctionReference) {
-          TCReferable ref = ((Concrete.CoClauseFunctionReference) element).getFunctionReference();
+          TCDefReferable ref = ((Concrete.CoClauseFunctionReference) element).getFunctionReference();
           prettyPrintNameWithPrecedence(ref);
           myBuilder.append(" => ").append(ref.textRepresentation());
         } else if (element instanceof Concrete.ClassFieldImpl) {

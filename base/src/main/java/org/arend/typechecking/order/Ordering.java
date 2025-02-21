@@ -3,7 +3,6 @@ package org.arend.typechecking.order;
 import org.arend.core.definition.Definition;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.naming.reference.TCReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.Group;
@@ -24,12 +23,12 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   private OrderingListener myOrderingListener;
   private final DependencyListener myDependencyListener;
   private final PartialComparator<TCDefReferable> myComparator;
-  private final Set<TCReferable> myAllowedDependencies;
+  private final Set<TCDefReferable> myAllowedDependencies;
   private final Stage myStage;
 
   private enum Stage { EVERYTHING, WITHOUT_INSTANCES, WITHOUT_BODIES }
 
-  private Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, Set<TCReferable> allowedDependencies, Stage stage) {
+  private Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, Set<TCDefReferable> allowedDependencies, Stage stage) {
     myInstanceScopeProvider = instanceScopeProvider;
     myConcreteProvider = concreteProvider;
     myOrderingListener = orderingListener;
@@ -39,7 +38,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     myStage = stage;
   }
 
-  private Ordering(Ordering ordering, Set<TCReferable> allowedDependencies, Stage stage) {
+  private Ordering(Ordering ordering, Set<TCDefReferable> allowedDependencies, Stage stage) {
     this(ordering.myInstanceScopeProvider, ordering.myConcreteProvider, ordering.myOrderingListener, ordering.myDependencyListener, ordering.myComparator, allowedDependencies, stage);
   }
 
@@ -49,10 +48,6 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
 
   public Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator) {
     this(instanceScopeProvider, concreteProvider, orderingListener, dependencyListener, comparator, true);
-  }
-
-  public ConcreteProvider getConcreteProvider() {
-    return myConcreteProvider;
   }
 
   public OrderingListener getListener() {
@@ -89,10 +84,10 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   }
 
   public void orderExpression(Concrete.Expression expr) {
-    Set<TCReferable> dependencies = new LinkedHashSet<>();
+    Set<TCDefReferable> dependencies = new LinkedHashSet<>();
     expr.accept(new CollectDefCallsVisitor(dependencies, true), null);
-    for (TCReferable dependency : dependencies) {
-      TCReferable typecheckable = dependency.getTypecheckable();
+    for (TCDefReferable dependency : dependencies) {
+      TCDefReferable typecheckable = dependency.getTypecheckable();
       if (!typecheckable.isTypechecked()) {
         var def = myConcreteProvider.getConcrete(typecheckable);
         if (def instanceof Concrete.ResolvableDefinition && def.getStage() != Concrete.Stage.TYPECHECKED) {
@@ -123,8 +118,8 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     }
   }
 
-  public Definition getTypechecked(TCReferable definition) {
-    Definition typechecked = definition instanceof TCDefReferable ? ((TCDefReferable) definition).getTypechecked() : null;
+  public Definition getTypechecked(TCDefReferable definition) {
+    Definition typechecked = definition.getTypechecked();
     return typechecked == null || typechecked.status().needsTypeChecking() ? null : typechecked;
   }
 
@@ -140,7 +135,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
 
   @Override
   protected boolean forDependencies(Concrete.ResolvableDefinition definition, Consumer<Concrete.ResolvableDefinition> consumer) {
-    Set<TCReferable> dependencies = new LinkedHashSet<>();
+    Set<TCDefReferable> dependencies = new LinkedHashSet<>();
     CollectDefCallsVisitor visitor = new CollectDefCallsVisitor(dependencies, myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal());
     if (myStage.ordinal() < Stage.WITHOUT_INSTANCES.ordinal()) {
       for (TCDefReferable instance : myInstanceScopeProvider.getInstancesFor(definition.getData())) {
@@ -153,8 +148,8 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     }
     if (definition instanceof Concrete.CoClauseFunctionDefinition) {
       Referable ref = ((Concrete.CoClauseFunctionDefinition) definition).getImplementedField();
-      if (ref instanceof TCReferable) {
-        visitor.addDependency((TCReferable) ref);
+      if (ref instanceof TCDefReferable) {
+        visitor.addDependency((TCDefReferable) ref);
       }
     }
     if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind().isUse() && (!(definition instanceof Concrete.CoClauseFunctionDefinition) || ((Concrete.CoClauseFunctionDefinition) definition).getKind() == FunctionKind.CLASS_COCLAUSE)) {
@@ -168,8 +163,8 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     }
 
     boolean withLoops = false;
-    for (TCReferable referable : dependencies) {
-      TCReferable tcReferable = referable.getTypecheckable();
+    for (TCDefReferable referable : dependencies) {
+      TCDefReferable tcReferable = referable.getTypecheckable();
       var dependency = myConcreteProvider.getConcrete(tcReferable);
       if (dependency instanceof Concrete.ResolvableDefinition) {
         dependency = getCanonicalRepresentative((Concrete.ResolvableDefinition) dependency);
@@ -236,7 +231,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
       }
     }
 
-    Set<TCReferable> dependencies = new HashSet<>();
+    Set<TCDefReferable> dependencies = new HashSet<>();
     for (Concrete.ResolvableDefinition definition : scc) {
       dependencies.add(definition.getData());
     }

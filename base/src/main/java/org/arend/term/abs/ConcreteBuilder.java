@@ -62,9 +62,12 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       }
     }
 
-    Object data = referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable;
-    return referable instanceof FieldReferable fieldRef && parent instanceof TCDefReferable ? new FieldReferableImpl(data, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), fieldRef.isExplicitField(), fieldRef.isParameterField(), false, (TCDefReferable) parent)
-      : new LocatedReferableImpl(data, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), parent, referable.getKind());
+    return new LocatedReferableImpl(referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), parent, referable.getKind());
+  }
+
+  private static LocatedReferableImpl convertField(Abstract.ClassField classField, LocatedReferable parent) {
+    LocatedReferable referable = classField.getReferable();
+    return referable == null ? null : new FieldReferableImpl(referable instanceof DataContainer ? ((DataContainer) referable).getData() : referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), classField.isExplicitField(), classField.isParameterField(), false, (TCDefReferable) parent);
   }
 
   private static LocatedReferable convertFileReferable(LocatedReferable referable, LocatedReferable parent) {
@@ -326,7 +329,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     }
   }
 
-  private void setClassifyingField(Concrete.ClassDefinition classDef, TCFieldReferable field, Object cause, boolean isForced) {
+  private void setClassifyingField(Concrete.ClassDefinition classDef, FieldReferable field, Object cause, boolean isForced) {
     if (isForced && classDef.isForcedClassifyingField()) {
       myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Class can have at most one classifying field", cause));
     } else if (isForced && !classDef.isForcedClassifyingField() || classDef.getClassifyingField() == null) {
@@ -343,8 +346,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     for (Abstract.ClassElement element : def.getClassElements()) {
       if (element instanceof Abstract.ClassField field) {
         Abstract.Expression resultType = field.getResultType();
-        LocatedReferable fieldRefOrig = field.getReferable();
-        TCReferable fieldRef = convertReferable(fieldRefOrig, myDefinition, null);
+        TCDefReferable fieldRef = convertField(field, myDefinition);
         if (resultType == null || !(fieldRef instanceof FieldReferableImpl)) {
           myErrorLevel = GeneralError.Level.ERROR;
           if (fieldRef != null && !(fieldRef instanceof FieldReferableImpl)) {
@@ -357,7 +359,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
           Concrete.Expression typeLevel = resultTypeLevel == null ? null : resultTypeLevel.accept(this, null);
           elements.add(new Concrete.ClassField((FieldReferableImpl) fieldRef, classDef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false), type, typeLevel, field.isCoerce()));
           if (field.isClassifying()) {
-            setClassifyingField(classDef, (TCFieldReferable) fieldRef, field, true);
+            setClassifyingField(classDef, (FieldReferable) fieldRef, field, true);
           }
         }
       } else if (element instanceof Abstract.ClassFieldImpl) {
@@ -479,7 +481,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     } else {
       List<Referable> dataReferableList = new ArrayList<>(referableList.size());
       for (Referable referable : referableList) {
-        dataReferableList.add(referable instanceof FieldReferable ? convertReferable((FieldReferable) referable, myDefinition, null) : DataLocalReferable.make(referable));
+        dataReferableList.add(referable instanceof Abstract.ClassField ? convertField((Abstract.ClassField) referable, myDefinition) : DataLocalReferable.make(referable));
       }
       if (isDefinition && isStrict) {
         return new Concrete.DefinitionTelescopeParameter(parameter.getData(), parameter.isExplicit(), true, dataReferableList, cType, isProperty);

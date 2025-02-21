@@ -14,10 +14,6 @@ public interface LocatedReferable extends GlobalReferable {
   @Nullable ModuleLocation getLocation();
   @Nullable LocatedReferable getLocatedReferableParent();
 
-  default @NotNull LocatedReferable getTypecheckable() {
-    return this;
-  }
-
   default boolean isVisible() {
     return true;
   }
@@ -64,16 +60,6 @@ public interface LocatedReferable extends GlobalReferable {
       } else {
         Scope scope = resolveNamespace(parent, moduleScopeProvider);
         return scope == null ? null : scope.resolveNamespace(locatedReferable.textRepresentation());
-      }
-    }
-
-    public static Referable resolveReferable(LocatedReferable locatedReferable, ModuleScopeProvider moduleScopeProvider) {
-      LocatedReferable parent = locatedReferable.getLocatedReferableParent();
-      if (parent == null) {
-        return locatedReferable;
-      } else {
-        Scope scope = resolveNamespace(parent, moduleScopeProvider);
-        return scope == null ? null : scope.resolveName(locatedReferable.textRepresentation());
       }
     }
   }

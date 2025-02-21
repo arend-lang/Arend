@@ -4,8 +4,8 @@ import org.arend.core.definition.*;
 import org.arend.core.elimtree.Body;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.expr.*;
+import org.arend.naming.reference.FieldReferable;
 import org.arend.naming.reference.Referable;
-import org.arend.naming.reference.TCFieldReferable;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteDefinitionVisitor;
 import org.arend.ext.util.Pair;
@@ -120,7 +120,7 @@ public class CorrespondedSubDefVisitor implements
     var desugared = def.getStage().ordinal() >= Concrete.Stage.DESUGARIZED.ordinal();
     for (Concrete.ClassElement concreteRaw : def.getElements())
       if (concreteRaw instanceof Concrete.ClassField concrete) {
-        TCFieldReferable referable = concrete.getData();
+        FieldReferable referable = concrete.getData();
         Optional<Expression> field = coreDef.getAllFields()
           .stream()
           .filter(classField -> classField.getReferable() == referable)

@@ -1,6 +1,6 @@
 package org.arend.typechecking.order.dependency;
 
-import org.arend.naming.reference.TCReferable;
+import org.arend.naming.reference.TCDefReferable;
 
 import java.util.Collections;
 import java.util.Set;
@@ -11,17 +11,17 @@ public class DummyDependencyListener implements DependencyListener {
   private DummyDependencyListener() { }
 
   @Override
-  public void dependsOn(TCReferable def1, TCReferable def2) {
+  public void dependsOn(TCDefReferable def1, TCDefReferable def2) {
 
   }
 
   @Override
-  public Set<? extends TCReferable> update(TCReferable definition) {
+  public Set<? extends TCDefReferable> update(TCDefReferable definition) {
     return Collections.emptySet();
   }
 
   @Override
-  public Set<? extends TCReferable> getDependencies(TCReferable definition) {
+  public Set<? extends TCDefReferable> getDependencies(TCDefReferable definition) {
     return Collections.emptySet();
   }
 }

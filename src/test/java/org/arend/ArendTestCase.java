@@ -11,7 +11,6 @@ import org.arend.library.LibraryManager;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.naming.reference.TCReferable;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
@@ -61,9 +60,9 @@ public abstract class ArendTestCase {
     this.moduleScopeProvider = module -> module.equals(Prelude.MODULE_PATH) ? PreludeLibrary.getPreludeScope() : moduleScopeProvider.forModule(module);
   }
 
-  public TCReferable get(Scope scope, String path) {
+  public TCDefReferable get(Scope scope, String path) {
     Referable referable = Scope.resolveName(scope, Arrays.asList(path.split("\\.")));
-    return referable instanceof TCReferable ? (TCReferable) referable : null;
+    return referable instanceof TCDefReferable ? (TCDefReferable) referable : null;
   }
 
   public TCDefReferable getDef(Scope scope, String path) {

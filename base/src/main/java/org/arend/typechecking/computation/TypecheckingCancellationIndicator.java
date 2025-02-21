@@ -1,6 +1,6 @@
 package org.arend.typechecking.computation;
 
-import org.arend.naming.reference.TCReferable;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.order.listener.CollectingOrderingListener;
 
@@ -31,7 +31,7 @@ public class TypecheckingCancellationIndicator extends BooleanCancellationIndica
   }
 
   @Override
-  public void cancel(Set<? extends TCReferable> definitions) {
+  public void cancel(Set<? extends TCDefReferable> definitions) {
     if (myElements == null) return;
     for (CollectingOrderingListener.Element element : myElements) {
       for (Concrete.ResolvableDefinition definition : element.getAllDefinitions()) {

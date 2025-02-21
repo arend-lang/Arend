@@ -11,7 +11,7 @@ import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
-import org.arend.naming.reference.TCReferable;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.resolving.CollectingResolverListener;
 import org.arend.naming.resolving.typing.GlobalTypingInfo;
 import org.arend.naming.resolving.typing.TypingInfoVisitor;
@@ -250,10 +250,10 @@ public class ArendCheckerImpl implements ArendChecker {
                   }
                   if (update) {
                     withTCDefLock(() -> {
-                      Set<? extends TCReferable> updatedSet = myServer.getDependencyCollector().update(entry.getValue().definition().getData());
+                      Set<? extends TCDefReferable> updatedSet = myServer.getDependencyCollector().update(entry.getValue().definition().getData());
                       myLogger.info(() -> "Updated definitions " + updatedSet);
                       ComputationRunner.getCancellationIndicator().cancel(updatedSet);
-                      for (TCReferable updated : updatedSet) {
+                      for (TCDefReferable updated : updatedSet) {
                         myServer.getErrorService().resetDefinition(updated);
                       }
                     });

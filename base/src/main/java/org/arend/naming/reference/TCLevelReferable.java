@@ -5,7 +5,7 @@ import org.arend.module.ModuleLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TCLevelReferable implements TCReferable, LevelReferable {
+public class TCLevelReferable implements LocatedReferable, LevelReferable {
   private final Object myData;
   private final String myName;
   private final LevelDefinition myParent;
@@ -54,10 +54,5 @@ public class TCLevelReferable implements TCReferable, LevelReferable {
   @Override
   public @NotNull String textRepresentation() {
     return myName;
-  }
-
-  @Override
-  public boolean isTypechecked() {
-    return true;
   }
 }

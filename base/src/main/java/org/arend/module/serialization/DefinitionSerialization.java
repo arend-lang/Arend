@@ -23,7 +23,6 @@ import org.arend.ext.serialization.SerializableKey;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.MetaReferable;
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.naming.reference.TCReferable;
 import org.arend.typechecking.order.dependency.DependencyListener;
 import org.arend.ext.util.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -65,7 +64,7 @@ public class DefinitionSerialization implements ArendSerializer {
       out.addAxiom(myCallTargetIndexProvider.getDefIndex(axiom));
     }
 
-    for (TCReferable dependency : myDependencyListener.getDependencies(definition.getRef())) {
+    for (TCDefReferable dependency : myDependencyListener.getDependencies(definition.getRef())) {
       if (dependency instanceof MetaReferable) {
         out.addMetaRef(myCallTargetIndexProvider.getDefIndex(dependency));
       }

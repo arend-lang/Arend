@@ -13,8 +13,8 @@ import org.arend.core.subst.ListLevels;
 import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.util.Pair;
 import org.arend.extImpl.userData.UserDataHolderImpl;
+import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.naming.reference.TCReferable;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.implicitargs.equations.Equations;
 import org.jetbrains.annotations.NotNull;
@@ -51,11 +51,11 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
     return Collections.emptySet();
   }
 
-  public TCReferable getPLevelsParent() {
+  public LocatedReferable getPLevelsParent() {
     return null;
   }
 
-  public TCReferable getHLevelsParent() {
+  public LocatedReferable getHLevelsParent() {
     return null;
   }
 

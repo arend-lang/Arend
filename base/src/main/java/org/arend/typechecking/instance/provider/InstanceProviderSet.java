@@ -22,8 +22,8 @@ public class InstanceProviderSet {
     myProviders.put(referable, provider);
   }
 
-  public InstanceProvider get(TCReferable referable) {
-    return referable instanceof TCDefReferable ? myProviders.get(referable) : null;
+  public InstanceProvider get(TCDefReferable referable) {
+    return myProviders.get(referable);
   }
 
   public InstanceProvider computeIfAbsent(TCDefReferable referable, Function<? super TCDefReferable, ? extends InstanceProvider> fun) {

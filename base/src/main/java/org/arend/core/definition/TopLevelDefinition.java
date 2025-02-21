@@ -2,8 +2,8 @@ package org.arend.core.definition;
 
 import org.arend.core.context.binding.LevelVariable;
 import org.arend.ext.util.Pair;
+import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.naming.reference.TCReferable;
 
 import java.util.Collections;
 import java.util.List;
@@ -12,8 +12,8 @@ import java.util.Set;
 public abstract class TopLevelDefinition extends CallableDefinition {
   private UniverseKind myUniverseKind = UniverseKind.NO_UNIVERSES;
   private List<? extends LevelVariable> myLevelParameters;
-  private TCReferable myPLevelsParent;
-  private TCReferable myHLevelsParent;
+  private LocatedReferable myPLevelsParent;
+  private LocatedReferable myHLevelsParent;
   private boolean myPLevelsDerived;
   private boolean myHLevelsDerived;
   private List<Pair<TCDefReferable,Integer>> myParametersOriginalDefinitions = Collections.emptyList();
@@ -48,20 +48,20 @@ public abstract class TopLevelDefinition extends CallableDefinition {
   }
 
   @Override
-  public TCReferable getPLevelsParent() {
+  public LocatedReferable getPLevelsParent() {
     return myPLevelsParent;
   }
 
   @Override
-  public TCReferable getHLevelsParent() {
+  public LocatedReferable getHLevelsParent() {
     return myHLevelsParent;
   }
 
-  public void setPLevelsParent(TCReferable parent) {
+  public void setPLevelsParent(LocatedReferable parent) {
     myPLevelsParent = parent;
   }
 
-  public void setHLevelsParent(TCReferable parent) {
+  public void setHLevelsParent(LocatedReferable parent) {
     myHLevelsParent = parent;
   }
 

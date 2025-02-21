@@ -12,15 +12,15 @@ import java.util.List;
 import java.util.Map;
 
 public class SimpleCallTargetProvider implements CallTargetProvider {
-  private final Map<Integer, TCReferable> myMap = new HashMap<>();
+  private final Map<Integer, LocatedReferable> myMap = new HashMap<>();
 
   public boolean contains(int index) {
     return myMap.containsKey(index);
   }
 
   @Override
-  public TCReferable getRef(int index) throws DeserializationException {
-    TCReferable ref = myMap.get(index);
+  public LocatedReferable getRef(int index) throws DeserializationException {
+    LocatedReferable ref = myMap.get(index);
     if (ref == null) {
       throw new DeserializationException("Wrong index");
     }
@@ -28,12 +28,18 @@ public class SimpleCallTargetProvider implements CallTargetProvider {
   }
 
   @Override
-  public Definition getCallTarget(int index) throws DeserializationException {
-    TCReferable ref = getRef(index);
+  public TCDefReferable getTCRef(int index) throws DeserializationException {
+    LocatedReferable ref = getRef(index);
     if (!(ref instanceof TCDefReferable)) {
-      throw new DeserializationException("Not a definition");
+      throw new DeserializationException("Wrong index");
     }
-    Definition def = ((TCDefReferable) ref).getTypechecked();
+    return (TCDefReferable) ref;
+  }
+
+  @Override
+  public Definition getCallTarget(int index) throws DeserializationException {
+    TCDefReferable ref = getTCRef(index);
+    Definition def = ref.getTypechecked();
     if (def == null) {
       List<String> longName = new ArrayList<>();
       ModuleLocation location = LocatedReferable.Helper.getLocation(ref, longName);
@@ -51,10 +57,7 @@ public class SimpleCallTargetProvider implements CallTargetProvider {
     return (MetaReferable) ref;
   }
 
-  public void putCallTarget(int index, TCReferable callTarget) throws DeserializationException {
-    if (!(callTarget instanceof LevelReferable || callTarget instanceof TCDefReferable)) {
-      throw new DeserializationException("Unknown definition type");
-    }
+  public void putCallTarget(int index, TCDefReferable callTarget) {
     myMap.putIfAbsent(index, callTarget);
   }
 

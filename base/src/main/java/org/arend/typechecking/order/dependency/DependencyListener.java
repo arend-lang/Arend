@@ -1,11 +1,11 @@
 package org.arend.typechecking.order.dependency;
 
-import org.arend.naming.reference.TCReferable;
+import org.arend.naming.reference.TCDefReferable;
 
 import java.util.Set;
 
 public interface DependencyListener {
-  void dependsOn(TCReferable def1, TCReferable def2);
-  Set<? extends TCReferable> update(TCReferable definition);
-  Set<? extends TCReferable> getDependencies(TCReferable definition);
+  void dependsOn(TCDefReferable def1, TCDefReferable def2);
+  Set<? extends TCDefReferable> update(TCDefReferable definition);
+  Set<? extends TCDefReferable> getDependencies(TCDefReferable definition);
 }

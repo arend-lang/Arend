@@ -1807,7 +1807,7 @@ public final class Concrete {
 
   public interface GeneralDefinition extends SourceNode {
     @Override
-    @NotNull TCReferable getData();
+    @NotNull TCDefReferable getData();
 
     @NotNull Stage getStage();
 
@@ -2165,7 +2165,7 @@ public final class Concrete {
     private final boolean myWithoutClassifying;
     private final List<ReferenceExpression> mySuperClasses;
     private final List<ClassElement> myElements;
-    private TCFieldReferable myClassifyingField;
+    private FieldReferable myClassifyingField;
     private boolean myForcedClassifyingField;
 
     public ClassDefinition(TCDefReferable referable, LevelParameters pParams, LevelParameters hParams, boolean isRecord, boolean withoutClassifying, List<ReferenceExpression> superClasses, List<ClassElement> elements) {
@@ -2186,7 +2186,7 @@ public final class Concrete {
     }
 
     @Nullable
-    public TCFieldReferable getClassifyingField() {
+    public FieldReferable getClassifyingField() {
       return myClassifyingField;
     }
 
@@ -2194,11 +2194,11 @@ public final class Concrete {
       return myForcedClassifyingField;
     }
 
-    public void setClassifyingField(TCFieldReferable classifyingField) {
+    public void setClassifyingField(FieldReferable classifyingField) {
       myClassifyingField = classifyingField;
     }
 
-    public void setClassifyingField(TCFieldReferable classifyingField, boolean isForced) {
+    public void setClassifyingField(FieldReferable classifyingField, boolean isForced) {
       myClassifyingField = classifyingField;
       myForcedClassifyingField = isForced;
     }

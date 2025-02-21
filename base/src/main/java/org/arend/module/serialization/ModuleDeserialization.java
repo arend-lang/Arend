@@ -62,8 +62,8 @@ public class ModuleDeserialization {
     myDefinitions.clear();
   }
 
-  private void fillInCallTargetTree(String parentName, ModuleProtos.CallTargetTree callTargetTree, Scope scope, ModulePath module, Scope parentScope, TCReferable parent) throws DeserializationException {
-    TCReferable referable = null;
+  private void fillInCallTargetTree(String parentName, ModuleProtos.CallTargetTree callTargetTree, Scope scope, ModulePath module, Scope parentScope, TCDefReferable parent) throws DeserializationException {
+    TCDefReferable referable = null;
     if (callTargetTree.getIndex() > 0) {
       Referable referable1 = scope.resolveName(callTargetTree.getName(), null);
       if (referable1 == null) {
@@ -71,14 +71,11 @@ public class ModuleDeserialization {
           Referable parentRef = parentScope.resolveName(parentName);
           if (parentRef instanceof TCDefReferable) parent = (TCDefReferable) parentRef;
         }
-        if (parent instanceof TCDefReferable) {
-          Definition parentDef = ((TCDefReferable) parent).getTypechecked();
-          if (parentDef instanceof ClassDefinition) {
-            for (ClassField field : ((ClassDefinition) parentDef).getPersonalFields()) {
-              if (field.getName().equals(callTargetTree.getName())) {
-                referable1 = field.getReferable();
-                break;
-              }
+        if (parent != null && parent.getTypechecked() instanceof ClassDefinition parentDef) {
+          for (ClassField field : parentDef.getPersonalFields()) {
+            if (field.getName().equals(callTargetTree.getName())) {
+              referable1 = field.getReferable();
+              break;
             }
           }
         }

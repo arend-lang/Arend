@@ -6,7 +6,6 @@ import org.arend.term.abs.AbstractReferable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-// TODO[server2]: Simplify the whole Referable hierarchy; PSI elements shouldn't implement this interface.
 public interface Referable extends ArendRef {
   enum RefKind { EXPR, PLEVEL, HLEVEL }
 

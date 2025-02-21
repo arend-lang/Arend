@@ -19,7 +19,6 @@ import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.library.Library;
 import org.arend.naming.reference.TCDefReferable;
-import org.arend.naming.reference.TCReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
@@ -234,7 +233,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
     boolean ok = true;
     if (recursive) {
-      Set<TCReferable> dependencies = new HashSet<>();
+      Set<TCDefReferable> dependencies = new HashSet<>();
       definition.accept(new CollectDefCallsVisitor(dependencies, false), null);
       if (dependencies.contains(definition.getData())) {
         typecheckingUnitStarted(definition.getData());
@@ -350,7 +349,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   @Override
   public void cycleFound(List<Concrete.ResolvableDefinition> definitions, boolean isInstance) {
-    List<TCReferable> cycle = new ArrayList<>();
+    List<TCDefReferable> cycle = new ArrayList<>();
     if (isInstance) {
       for (Concrete.ResolvableDefinition definition : definitions) {
         cycle.add(definition.getData());

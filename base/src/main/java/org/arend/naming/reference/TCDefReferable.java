@@ -2,6 +2,7 @@ package org.arend.naming.reference;
 
 import org.arend.core.definition.Definition;
 import org.arend.core.definition.FunctionDefinition;
+import org.arend.ext.reference.DataContainer;
 import org.arend.ext.reference.Precedence;
 import org.arend.module.ModuleLocation;
 import org.arend.typechecking.computation.ComputationRunner;
@@ -10,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-public interface TCDefReferable extends TCReferable {
+public interface TCDefReferable extends LocatedReferable, DataContainer {
   void setTypechecked(@Nullable Definition definition);
   Definition getTypechecked();
   void setData(Object data);
@@ -37,13 +38,11 @@ public interface TCDefReferable extends TCReferable {
     }
   }
 
-  @Override
   default boolean isTypechecked() {
     Definition def = getTypechecked();
     return def != null && !def.status().needsTypeChecking();
   }
 
-  @Override
   default @NotNull TCDefReferable getTypecheckable() {
     return this;
   }

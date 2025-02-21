@@ -231,7 +231,7 @@ class ExpressionDeserialization {
           if (expression instanceof SigmaExpression) {
             return new ConstructorExpressionPattern((SigmaExpression) expression, patterns);
           }
-          if (expression instanceof FunCallExpression funCall && ((FunCallExpression) expression).getDefinition() instanceof DConstructor) {
+          if (expression instanceof FunCallExpression funCall && funCall.getDefinition() instanceof DConstructor) {
             return new ConstructorExpressionPattern(funCall, patterns);
           }
           throw new DeserializationException("Wrong pattern expression");

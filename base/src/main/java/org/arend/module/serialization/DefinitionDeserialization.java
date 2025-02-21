@@ -262,7 +262,7 @@ public class DefinitionDeserialization implements ArendDeserializer {
     if (protos.isEmpty()) return Collections.emptyList();
     List<Pair<TCDefReferable,Integer>> result = new ArrayList<>();
     for (DefinitionProtos.Definition.ParameterOriginalDef proto : protos) {
-      result.add(new Pair<>((TCDefReferable) myCallTargetProvider.getRef(proto.getDefinition()), proto.getIndex()));
+      result.add(new Pair<>(myCallTargetProvider.getTCRef(proto.getDefinition()), proto.getIndex()));
     }
     return result;
   }
@@ -456,7 +456,7 @@ public class DefinitionDeserialization implements ArendDeserializer {
     functionDef.setVisibleParameter(functionProto.getVisibleParameter());
     int implementedField = functionProto.getImplementedField();
     if (implementedField != -1) {
-      functionDef.setImplementedField(myCallTargetProvider.getRef(implementedField));
+      functionDef.setImplementedField(myCallTargetProvider.getTCRef(implementedField));
     }
     if (functionProto.hasBody()) {
       functionDef.setBody(readBody(defDeserializer, functionProto.getBody(), DependentLink.Helper.size(functionDef.getParameters())));

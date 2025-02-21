@@ -1,6 +1,6 @@
 package org.arend.naming.reference;
 
-public interface FieldReferable extends LocatedReferable {
+public interface FieldReferable extends TCDefReferable {
   boolean isExplicitField();
 
   boolean isParameterField();

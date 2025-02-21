@@ -7,16 +7,16 @@ import org.arend.term.concrete.DefinableMetaDefinition;
 import java.util.*;
 
 public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
-  private final Collection<TCReferable> myDependencies;
+  private final Collection<TCDefReferable> myDependencies;
   private final boolean myWithBodies;
-  private Set<TCReferable> myExcluded;
+  private Set<TCDefReferable> myExcluded;
 
-  public CollectDefCallsVisitor(Collection<TCReferable> dependencies, boolean withBodies) {
+  public CollectDefCallsVisitor(Collection<TCDefReferable> dependencies, boolean withBodies) {
     myDependencies = dependencies;
     myWithBodies = withBodies;
   }
 
-  public void addDependency(TCReferable dependency) {
+  public void addDependency(TCDefReferable dependency) {
     myDependencies.add(dependency);
   }
 
@@ -77,8 +77,8 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   protected void visitPattern(Concrete.Pattern pattern, Void params) {
     if (pattern instanceof Concrete.ConstructorPattern) {
       Referable constructor = ((Concrete.ConstructorPattern) pattern).getConstructor();
-      if (constructor instanceof TCReferable) {
-        myDependencies.add((TCReferable) constructor);
+      if (constructor instanceof TCDefReferable) {
+        myDependencies.add((TCDefReferable) constructor);
       }
     }
     super.visitPattern(pattern, null);
@@ -86,7 +86,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
 
   @Override
   public Void visitReference(Concrete.ReferenceExpression expr, Void params) {
-    if (expr.getReferent() instanceof TCReferable ref && (myExcluded == null || !myExcluded.contains(ref))) {
+    if (expr.getReferent() instanceof TCDefReferable ref && (myExcluded == null || !myExcluded.contains(ref))) {
       myDependencies.add(ref);
     }
     return null;
