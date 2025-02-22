@@ -60,10 +60,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
   @Override
   public Void visitMeta(DefinableMetaDefinition def, Scope scope) {
-    if (def.getStage().ordinal() >= Concrete.Stage.RESOLVED.ordinal()) {
-      return null;
-    }
-
     scope = new PrivateFilteredScope(scope);
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
 
@@ -87,7 +83,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     if (def.getData().getDefinition() instanceof DefinableMetaDefinition) {
       def.getData().setDefinition(def);
     }
-    def.setResolved();
     SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter, myTypingInfo);
     if (myResolverListener != null) {
       myResolverListener.definitionResolved(def);
@@ -160,10 +155,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       definition.setStatus(error.level);
       super.report(error);
     }
-  }
-
-  private void checkNameAndPrecedence(Concrete.ReferableDefinition definition) {
-    checkNameAndPrecedence(definition, definition.getData());
   }
 
   private void checkNameAndPrecedence(ConcreteSourceNode definition, LocatedReferable referable) {
@@ -245,20 +236,15 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myLocalErrorReporter, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
     exprVisitor.visitParameters(def.getParameters(), null);
-    def.setHeaderResolved();
     return exprVisitor;
   }
 
   @Override
   public Void visitFunction(Concrete.BaseFunctionDefinition def, Scope scope) {
-    if (def.getStage().ordinal() >= Concrete.Stage.RESOLVED.ordinal()) {
-      return null;
-    }
-
     scope = new PrivateFilteredScope(scope);
     ExpressionResolveNameVisitor exprVisitor = resolveFunctionHeader(def, scope);
     List<TypedReferable> context = exprVisitor.getContext();
-    checkNameAndPrecedence(def);
+    checkNameAndPrecedence(def, def.getData());
 
     Concrete.FunctionBody body = def.getBody();
     if (def.getResultType() != null) {
@@ -378,7 +364,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       visitor.visitFunctionHeader(function, null);
     }
 
-    def.setResolved();
     if (myResolverListener != null) {
       myResolverListener.definitionResolved(def);
     }
@@ -409,10 +394,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   }
 
   private ExpressionResolveNameVisitor resolveDataHeader(Concrete.DataDefinition def, Scope scope) {
-     if (def.getStage().ordinal() >= Concrete.Stage.HEADER_RESOLVED.ordinal()) {
-      return null;
-    }
-
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
 
     ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myLocalErrorReporter, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
@@ -422,17 +403,12 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
   @Override
   public Void visitData(Concrete.DataDefinition def, Scope scope) {
-    if (def.getStage().ordinal() >= Concrete.Stage.RESOLVED.ordinal()) {
-      return null;
-    }
-
     scope = new PrivateFilteredScope(scope);
     ExpressionResolveNameVisitor exprVisitor = resolveDataHeader(def, scope);
     List<? extends Referable> pLevels = visitLevelParameters(def.getPLevelParameters());
     List<? extends Referable> hLevels = visitLevelParameters(def.getHLevelParameters());
-    if (exprVisitor == null) exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myLocalErrorReporter, myResolverListener, pLevels, hLevels);
     List<TypedReferable> context = exprVisitor.getContext();
-    checkNameAndPrecedence(def);
+    checkNameAndPrecedence(def, def.getData());
 
     Map<String, TCDefReferable> constructorNames = new HashMap<>();
     for (Concrete.ConstructorClause clause : def.getConstructorClauses()) {
@@ -471,7 +447,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
     }
 
-    def.setResolved();
     SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter, myTypingInfo);
     if (myResolverListener != null) {
       myResolverListener.definitionResolved(def);
@@ -481,7 +456,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   }
 
   private void visitConstructor(Concrete.Constructor def, Scope parentScope, List<TypedReferable> context, List<? extends Referable> pLevels, List<? extends Referable> hLevels) {
-    checkNameAndPrecedence(def);
+    checkNameAndPrecedence(def, def.getData());
 
     ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(parentScope, context, myTypingInfo, myLocalErrorReporter, myResolverListener, pLevels, hLevels);
     try (Utils.ContextSaver ignored = new Utils.ContextSaver(context)) {
@@ -528,14 +503,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
   @Override
   public Void visitClass(Concrete.ClassDefinition def, Scope scope) {
-    if (def.getStage().ordinal() >= Concrete.Stage.RESOLVED.ordinal()) {
-      return null;
-    }
-
     scope = new PrivateFilteredScope(scope);
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
 
-    checkNameAndPrecedence(def);
+    checkNameAndPrecedence(def, def.getData());
 
     if (def.isRecord() && def.withoutClassifying()) {
       myErrorReporter.report(new ParsingError(ParsingError.Kind.CLASSIFYING_FIELD_IN_RECORD, def));
@@ -564,7 +535,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     Concrete.Expression previousType = null;
     for (int i = 0; i < classFields.size(); i++) {
       Concrete.ClassField field = classFields.get(i);
-      checkNameAndPrecedence(field);
+      checkNameAndPrecedence(field, field.getData());
 
       Concrete.Expression fieldType = field.getResultType();
       if (fieldType == previousType && field.getParameters().isEmpty()) {
@@ -604,7 +575,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       def.setClassifyingField(def.getClassifyingField(), false);
     }
 
-    def.setResolved();
     SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter, myTypingInfo);
     if (myResolverListener != null) {
       myResolverListener.definitionResolved(def);

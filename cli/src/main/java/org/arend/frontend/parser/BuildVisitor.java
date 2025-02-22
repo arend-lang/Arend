@@ -803,7 +803,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
           myErrorReporter.report(new ParserError(GeneralError.Level.WARNING_UNUSED, tokenPosition(conCtx.accessMod().start), "Access modifier is redundant"));
         }
         InternalReferableImpl reference = new InternalReferableImpl(tokenPosition(defId.ID().getSymbol()), accessModifier.max(dataAccessModifier), visitPrecedence(defId.precedence()), defId.ID().getText(), alias.proj2, alias.proj1, true, def.getData(), LocatedReferableImpl.Kind.CONSTRUCTOR);
-        Concrete.Constructor constructor = new Concrete.Constructor(reference, def, visitTeles(conCtx.tele(), true), visitElim(elimCtx), clauses, conCtx.COERCE() != null);
+        Concrete.Constructor constructor = new Concrete.Constructor(reference, visitTeles(conCtx.tele(), true), visitElim(elimCtx), clauses, conCtx.COERCE() != null);
         Expr2Context type = conCtx.expr2();
         if (type != null) {
           constructor.setResultType(visitExpr(type));
@@ -843,7 +843,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       myErrorReporter.report(new ParserError(GeneralError.Level.WARNING_UNUSED, tokenPosition(ctx.accessMod().start), "Access modifier is redundant"));
     }
     FieldReferableImpl reference = new FieldReferableImpl(tokenPosition(defId.ID().getSymbol()), accessModifier.max(classAccessModifier), visitPrecedence(defId.precedence()), defId.ID().getText(), alias.proj2, alias.proj1, true, false, false, parentClass.getData());
-    Concrete.ClassField field = new Concrete.ClassField(reference, parentClass, true, kind, parameters, returnPair.proj1, returnPair.proj2, ctx.COERCE() != null);
+    Concrete.ClassField field = new Concrete.ClassField(reference, true, kind, parameters, returnPair.proj1, returnPair.proj2, ctx.COERCE() != null);
     if (ctx.CLASSIFYING() != null) {
       setClassifyingField(parentClass, reference, true);
     }
@@ -1664,7 +1664,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       Concrete.Expression type = visitExpr(exprCtx);
       for (TerminalNode var : vars) {
         FieldReferableImpl fieldRef = new FieldReferableImpl(tokenPosition(var.getSymbol()), visitAccessModifier(accessMod), Precedence.DEFAULT, var.getText(), Precedence.DEFAULT, null, explicit, true, false, classDef.getData());
-        Concrete.ClassField field = new Concrete.ClassField(fieldRef, classDef, explicit, ClassFieldKind.ANY, new ArrayList<>(), type, null, coerced);
+        Concrete.ClassField field = new Concrete.ClassField(fieldRef, explicit, ClassFieldKind.ANY, new ArrayList<>(), type, null, coerced);
         fields.add(field);
         if (forced || explicit) {
           setClassifyingField(classDef, fieldRef, forced);

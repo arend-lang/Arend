@@ -41,8 +41,6 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
       processLevelDefinitions((Concrete.Definition) definition, pDefs, errorReporter, "p");
       processLevelDefinitions((Concrete.Definition) definition, hDefs, errorReporter, "h");
     }
-
-    definition.setDesugarized();
   }
 
   private static void processLevelDefinitions(Concrete.Definition def, Set<LevelDefinition> defs, ErrorReporter errorReporter, String kind) {

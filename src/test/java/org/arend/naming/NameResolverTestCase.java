@@ -51,17 +51,14 @@ public abstract class NameResolverTestCase extends ParserTestCase {
     return get(scope, path);
   }
 
-  public Concrete.ReferableDefinition getConcrete(String path) {
+  public Concrete.ResolvableDefinition getConcrete(String path) {
     TCDefReferable ref = get(path);
     return null; // TODO[server2]: ref instanceof ConcreteLocatedReferable ? ((ConcreteLocatedReferable) ref).getDefinition() : null;
   }
 
   public Concrete.ResolvableDefinition getConcreteDesugarized(String path) {
-    Concrete.ReferableDefinition def = getConcrete(path);
-    if (!(def instanceof Concrete.ResolvableDefinition)) {
-      throw new IllegalArgumentException();
-    }
-    Concrete.ResolvableDefinition result = ((Concrete.ResolvableDefinition) def).accept(new ReplaceDataVisitor(), null);
+    Concrete.ResolvableDefinition def = getConcrete(path);
+    Concrete.ResolvableDefinition result = def.accept(new ReplaceDataVisitor(), null);
     DesugarVisitor.desugar(result, DummyErrorReporter.INSTANCE);
     return result;
   }

@@ -356,16 +356,17 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   @Override
   public Concrete.DataDefinition visitData(Concrete.DataDefinition def, Void params) {
     List<Concrete.ConstructorClause> clauses = new ArrayList<>(def.getConstructorClauses().size());
-    Concrete.DataDefinition result = new Concrete.DataDefinition(def.getData(), def.getPLevelParameters(), def.getHLevelParameters(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(def.getParameters()), visitReferenceExpressions(def.getEliminatedReferences()), def.isTruncated(), def.getUniverse() == null ? null : visitUniverse(def.getUniverse(), null), clauses);
     for (Concrete.ConstructorClause clause : def.getConstructorClauses()) {
       List<Concrete.Constructor> constructors = new ArrayList<>(clause.getConstructors().size());
       for (Concrete.Constructor constructor : clause.getConstructors()) {
-        Concrete.Constructor newConstructor = new Concrete.Constructor(constructor.getData(), result, (List<Concrete.TypeParameter>) (List<?>) visitParameters(constructor.getParameters()), visitReferenceExpressions(constructor.getEliminatedReferences()), visitFunctionClauses(constructor.getClauses()), constructor.isCoerce());
+        Concrete.Constructor newConstructor = new Concrete.Constructor(constructor.getData(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(constructor.getParameters()), visitReferenceExpressions(constructor.getEliminatedReferences()), visitFunctionClauses(constructor.getClauses()), constructor.isCoerce());
         newConstructor.setResultType(constructor.getResultType() == null ? null : constructor.getResultType().accept(this, null));
         constructors.add(newConstructor);
       }
       clauses.add(new Concrete.ConstructorClause(getData(clause), visitPatterns(clause.getPatterns()), constructors));
     }
+
+    Concrete.DataDefinition result = new Concrete.DataDefinition(def.getData(), def.getPLevelParameters(), def.getHLevelParameters(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(def.getParameters()), visitReferenceExpressions(def.getEliminatedReferences()), def.isTruncated(), def.getUniverse() == null ? null : visitUniverse(def.getUniverse(), null), clauses);
     def.copyData(result);
     return result;
   }
@@ -385,7 +386,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
           previousType = field.getResultType();
           previousTypeCopied = previousType.accept(this, null);
         }
-        elements.add(new Concrete.ClassField(field.getData(), result, field.isExplicit(), field.getKind(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), previousTypeCopied, field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null), field.isCoerce()));
+        elements.add(new Concrete.ClassField(field.getData(), field.isExplicit(), field.getKind(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), previousTypeCopied, field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null), field.isCoerce()));
       } else if (element instanceof Concrete.OverriddenField field) {
         elements.add(new Concrete.OverriddenField(getData(field), field.getOverriddenField(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), field.getResultType().accept(this, null), field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null)));
       } else {
@@ -400,7 +401,6 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   @Override
   public DefinableMetaDefinition visitMeta(DefinableMetaDefinition def, Void params) {
     DefinableMetaDefinition result = new DefinableMetaDefinition(def.getData(), def.getPLevelParameters(), def.getHLevelParameters(), visitParameters(def.getParameters()), def.body == null ? null : def.body.accept(this, null));
-    result.stage = def.stage;
     result.setStatus(def.getStatus());
     return result;
   }

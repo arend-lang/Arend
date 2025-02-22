@@ -560,13 +560,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     }
 
     cRef.setKind(GlobalReferable.Kind.DATA);
-    Concrete.DataDefinition result = new Concrete.DataDefinition(cRef, null, null, typeParameters(parameters), null, isTruncated, pLevel == null && hLevel == null ? null : universe(pLevel, hLevel), constructorClauses);
-    for (Concrete.ConstructorClause clause : constructorClauses) {
-      for (Concrete.Constructor constructor : clause.getConstructors()) {
-        constructor.setDataType(result);
-      }
-    }
-    return result;
+    return new Concrete.DataDefinition(cRef, null, null, typeParameters(parameters), null, isTruncated, pLevel == null && hLevel == null ? null : universe(pLevel, hLevel), constructorClauses);
   }
 
   @Override
@@ -588,7 +582,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     }
 
     cRef.setKind(GlobalReferable.Kind.CONSTRUCTOR);
-    return new Concrete.Constructor(cRef, null, typeParameters(parameters), refExprs(elimRefs), functionClauses(clauses), isCoerce);
+    return new Concrete.Constructor(cRef, typeParameters(parameters), refExprs(elimRefs), functionClauses(clauses), isCoerce);
   }
 
   @Override
@@ -604,9 +598,6 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
       if (!(element instanceof Concrete.ClassElement)) {
         throw new IllegalArgumentException();
       }
-      if (element instanceof Concrete.ClassField) {
-        ((Concrete.ClassField) element).setParentClass(result);
-      }
       cElements.add((Concrete.ClassElement) element);
     }
 
@@ -619,7 +610,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
       throw new IllegalArgumentException("The reference must be a global reference with a parent");
     }
 
-    return new Concrete.ClassField(cRef, null, cRef.isExplicitField(), kind, typeParameters(parameters), (Concrete.Expression) resultType, (Concrete.Expression) resultTypeLevel, isCoerce);
+    return new Concrete.ClassField(cRef, cRef.isExplicitField(), kind, typeParameters(parameters), (Concrete.Expression) resultType, (Concrete.Expression) resultTypeLevel, isCoerce);
   }
 
   @Override

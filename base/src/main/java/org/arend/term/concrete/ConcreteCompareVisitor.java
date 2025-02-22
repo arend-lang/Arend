@@ -535,22 +535,9 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
     return true;
   }
 
-  public static boolean compare(Concrete.ReferableDefinition def1, Concrete.ReferableDefinition def2) {
+  public static boolean compare(Concrete.Definition def1, Concrete.Definition def2) {
     ConcreteCompareVisitor visitor = new ConcreteCompareVisitor();
-    if (def1 instanceof Concrete.Definition) {
-      return def2 instanceof Concrete.Definition && Objects.equals(((Concrete.Definition) def1).enclosingClass, ((Concrete.Definition) def2).enclosingClass) && ((Concrete.Definition) def1).accept(visitor, (Concrete.Definition) def2);
-    }
-    if (def1 instanceof Concrete.Constructor) {
-      boolean result = def2 instanceof Concrete.Constructor && visitor.compareConstructor((Concrete.Constructor) def1, (Concrete.Constructor) def2);
-      visitor.mySubstitution.remove(def1.getData());
-      return result;
-    }
-    if (def1 instanceof Concrete.ClassField) {
-      boolean result = def2 instanceof Concrete.ClassField && visitor.compareField((Concrete.ClassField) def1, (Concrete.ClassField) def2);
-      visitor.mySubstitution.remove(def1.getData());
-      return result;
-    }
-    return false;
+    return Objects.equals(def1.enclosingClass, def2.enclosingClass) && def1.accept(visitor, def2);
   }
 
   private boolean compareLevelParameters(Concrete.LevelParameters params1, Concrete.LevelParameters params2) {

@@ -1134,21 +1134,17 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     List<Concrete.ConstructorClause> constructors = new ArrayList<>();
     Concrete.DataDefinition result = new Concrete.DataDefinition(def.getRef(), pair.proj1, pair.proj2, parameters, hasPatterns ? Collections.emptyList() : null, def.isTruncated(), def.isTruncated() ? visitSort(def.getSort()) : null, constructors);
     for (Constructor constructor : def.getConstructors()) {
-      constructors.add(new Concrete.ConstructorClause(null, visitPatterns(def.getParameters(), constructor.getPatterns()), Collections.singletonList(visitConstructor(constructor, result))));
+      constructors.add(new Concrete.ConstructorClause(null, visitPatterns(def.getParameters(), constructor.getPatterns()), Collections.singletonList(visitConstructor(constructor, null))));
     }
     return result;
   }
 
-  private Concrete.Constructor visitConstructor(Constructor constructor, Concrete.DataDefinition dataDef) {
+  @Override
+  public Concrete.Constructor visitConstructor(Constructor constructor, Void params) {
     List<Concrete.TypeParameter> parameters = new ArrayList<>();
     visitDependentLink(constructor.getParameters(), parameters, false);
     List<Concrete.FunctionClause> clauses = visitIntervalElim(constructor.getParameters(), constructor.getBody());
-    return new Concrete.Constructor(constructor.getReferable(), dataDef, parameters, Collections.emptyList(), clauses == null ? Collections.emptyList() : clauses, false);
-  }
-
-  @Override
-  public Concrete.Constructor visitConstructor(Constructor constructor, Void params) {
-    return visitConstructor(constructor, (Concrete.DataDefinition) null);
+    return new Concrete.Constructor(constructor.getReferable(), parameters, Collections.emptyList(), clauses == null ? Collections.emptyList() : clauses, false);
   }
 
   @Override
@@ -1160,9 +1156,8 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     }
 
     List<Concrete.ClassElement> elements = new ArrayList<>();
-    Concrete.ClassDefinition result = new Concrete.ClassDefinition(def.getReferable(), pair.proj1, pair.proj2, def.isRecord(), false, superClasses, elements);
     for (ClassField field : def.getPersonalFields()) {
-      elements.add(visitField(field, result));
+      elements.add(visitField(field, null));
     }
     for (Map.Entry<ClassField, AbsExpression> entry : def.getImplemented()) {
       boolean implementedHere = true;
@@ -1176,10 +1171,11 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       elements.add(new Concrete.ClassFieldImpl(null, entry.getKey().getRef(), convertExpr(entry.getValue().getExpression()), null));
     }
     // TODO: Add other elements of the class
-    return result;
+    return new Concrete.ClassDefinition(def.getReferable(), pair.proj1, pair.proj2, def.isRecord(), false, superClasses, elements);
   }
 
-  private Concrete.ClassField visitField(ClassField field, Concrete.ClassDefinition classDef) {
+  @Override
+  public Concrete.ClassField visitField(ClassField field, Void params) {
     ClassFieldKind kind;
     if (field.isProperty()) {
       kind = ClassFieldKind.ANY;
@@ -1195,12 +1191,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       type = ((Concrete.PiExpression) type).getCodomain();
     }
 
-    return new Concrete.ClassField(field.getReferable(), classDef, field.getReferable().isExplicitField(), kind, parameters, type, field.getTypeLevel() == null ? null : convertExpr(field.getTypeLevel()), false);
-  }
-
-  @Override
-  public Concrete.ClassField visitField(ClassField field, Void params) {
-    return visitField(field, (Concrete.ClassDefinition) null);
+    return new Concrete.ClassField(field.getReferable(), field.getReferable().isExplicitField(), kind, parameters, type, field.getTypeLevel() == null ? null : convertExpr(field.getTypeLevel()), false);
   }
 
   @Override

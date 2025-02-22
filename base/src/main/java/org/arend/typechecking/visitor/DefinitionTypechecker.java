@@ -464,7 +464,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     definition.setGoodThisParameters(visitor.getGoodParameters());
   }
 
-  private void calculateTypeClassParameters(Concrete.ReferableDefinition refDef, Definition def) {
+  private void calculateTypeClassParameters(Concrete.GeneralDefinition refDef, Definition def) {
     List<Definition.TypeClassParameterKind> typeClassParameters = new ArrayList<>();
 
     if (def instanceof Constructor constructor) {
@@ -1510,7 +1510,6 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           if (myNewDef) {
             typechecker.setStatus(def.getStatus().getTypecheckingStatus());
             typedDef.addStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
-            def.setTypechecked();
           }
           return null;
         }
@@ -2000,7 +1999,6 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     if (myNewDef) {
       typechecker.setStatus(def.getStatus().getTypecheckingStatus());
       typedDef.addStatus(typechecker.getStatus().max(!bodyIsOK && typedDef.getActualBody() == null && def.getKind() != FunctionKind.AXIOM ? Definition.TypeCheckingStatus.HAS_ERRORS : Definition.TypeCheckingStatus.NO_ERRORS));
-      def.setTypechecked();
     }
 
     return clauses;
@@ -2323,7 +2321,6 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         goodThisParametersVisitor.visitBody(constructor.getBody(), null);
       }
       dataDefinition.setGoodThisParameters(goodThisParametersVisitor.getGoodParameters());
-      def.setTypechecked();
     }
 
     return countingErrorReporter.getErrorsNumber() == 0;
@@ -2634,7 +2631,6 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       typedDef.addStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       typechecker.setStatus(def.getStatus().getTypecheckingStatus());
       typedDef.addStatus(typechecker.getStatus());
-      def.setTypechecked();
     }
   }
 
@@ -3271,8 +3267,6 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       if (!typeClassFields.isEmpty()) {
         typedDef.setTypeClassFields(typeClassFields);
       }
-
-      def.setTypechecked();
     }
   }
 

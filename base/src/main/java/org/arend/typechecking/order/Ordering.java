@@ -90,7 +90,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
       TCDefReferable typecheckable = dependency.getTypecheckable();
       if (!typecheckable.isTypechecked()) {
         var def = myConcreteProvider.getConcrete(typecheckable);
-        if (def instanceof Concrete.ResolvableDefinition && def.getStage() != Concrete.Stage.TYPECHECKED) {
+        if (def instanceof Concrete.ResolvableDefinition) {
           order((Concrete.ResolvableDefinition) def);
         }
       }
@@ -112,7 +112,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   @Override
   public void order(Concrete.ResolvableDefinition definition) {
     definition = getCanonicalRepresentative(definition);
-    if (definition.getStage() != Concrete.Stage.TYPECHECKED && getTypechecked(definition.getData()) == null) {
+    if (getTypechecked(definition.getData()) == null) {
       ComputationRunner.checkCanceled();
       super.order(definition);
     }
@@ -183,7 +183,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
       } else {
         myDependencyListener.dependsOn(definition.getData(), tcReferable);
         if (!tcReferable.isTypechecked()) {
-          if (dependency instanceof Concrete.ResolvableDefinition && dependency.getStage() != Concrete.Stage.TYPECHECKED && !dependency.getData().isTypechecked()) {
+          if (dependency instanceof Concrete.ResolvableDefinition && !dependency.getData().isTypechecked()) {
             consumer.accept((Concrete.ResolvableDefinition) dependency);
           }
         }

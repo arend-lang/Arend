@@ -117,7 +117,6 @@ public class CorrespondedSubDefVisitor implements
     ClassDefinition coreDef;
     if (params instanceof ClassDefinition) coreDef = (ClassDefinition) params;
     else return null;
-    var desugared = def.getStage().ordinal() >= Concrete.Stage.DESUGARIZED.ordinal();
     for (Concrete.ClassElement concreteRaw : def.getElements())
       if (concreteRaw instanceof Concrete.ClassField concrete) {
         FieldReferable referable = concrete.getData();
@@ -129,10 +128,6 @@ public class CorrespondedSubDefVisitor implements
         if (field.isEmpty()) continue;
         Expression fieldExpr = field.get();
         var parameters = concrete.getParameters();
-        if (desugared && !parameters.isEmpty()) {
-          // Clone the list and remove the first "this" parameter if already desugared
-          parameters = parameters.subList(1, parameters.size());
-        }
         var accept = !parameters.isEmpty() && fieldExpr instanceof PiExpression
           ? visitor.visitPiImpl(parameters, concrete.getResultType(), (PiExpression) fieldExpr)
           : concrete.getResultType().accept(visitor, fieldExpr);

@@ -285,7 +285,6 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     Collection<? extends Abstract.ConstructorClause> absClauses = def.getClauses();
     List<Concrete.ConstructorClause> clauses = new ArrayList<>(absClauses.size());
     Collection<? extends Abstract.Reference> elimExpressions = def.getEliminatedExpressions();
-    Concrete.DataDefinition data = new Concrete.DataDefinition(myDefinition, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), typeParameters, elimExpressions == null ? null : buildReferences(elimExpressions), def.isTruncated(), universe instanceof Concrete.UniverseExpression ? (Concrete.UniverseExpression) universe : null, clauses);
 
     for (Abstract.ConstructorClause clause : absClauses) {
       Collection<? extends Abstract.Constructor> absConstructors = clause.getConstructors();
@@ -296,7 +295,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
       List<Concrete.Constructor> constructors = new ArrayList<>(absConstructors.size());
       for (Abstract.Constructor constructor : absConstructors) {
-        Concrete.Constructor cons = new Concrete.Constructor(convertInternalReferable(constructor.getReferable(), myDefinition, true), data, buildTypeParameters(constructor.getParameters(), true), buildReferences(constructor.getEliminatedExpressions()), buildClauses(constructor.getClauses()), constructor.isCoerce());
+        Concrete.Constructor cons = new Concrete.Constructor(convertInternalReferable(constructor.getReferable(), myDefinition, true), buildTypeParameters(constructor.getParameters(), true), buildReferences(constructor.getEliminatedExpressions()), buildClauses(constructor.getClauses()), constructor.isCoerce());
         Abstract.Expression resultType = constructor.getResultType();
         if (resultType != null) {
           cons.setResultType(resultType.accept(this, null));
@@ -308,7 +307,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       clauses.add(new Concrete.ConstructorClause(clause.getData(), patterns.isEmpty() ? null : buildPatterns(patterns), constructors));
     }
 
-    return data;
+    return new Concrete.DataDefinition(myDefinition, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), typeParameters, elimExpressions == null ? null : buildReferences(elimExpressions), def.isTruncated(), universe instanceof Concrete.UniverseExpression ? (Concrete.UniverseExpression) universe : null, clauses);
   }
 
   public void buildClassParameters(Collection<? extends Abstract.FieldParameter> absParameters, Concrete.ClassDefinition classDef, List<Concrete.ClassElement> elements) {
@@ -322,7 +321,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
             if (forced || explicit) {
               setClassifyingField(classDef, (FieldReferableImpl) referable, parameter, forced);
             }
-            elements.add(new Concrete.ClassField((FieldReferableImpl) referable, classDef, explicit, absParameter.getClassFieldKind(), new ArrayList<>(), parameter.getType(), null, absParameter.isCoerce()));
+            elements.add(new Concrete.ClassField((FieldReferableImpl) referable, explicit, absParameter.getClassFieldKind(), new ArrayList<>(), parameter.getType(), null, absParameter.isCoerce()));
           } else {
             myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Incorrect field parameter", referable));
           }
@@ -361,7 +360,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
           Concrete.Expression type = resultType.accept(this, null);
           Abstract.Expression resultTypeLevel = field.getResultTypeLevel();
           Concrete.Expression typeLevel = resultTypeLevel == null ? null : resultTypeLevel.accept(this, null);
-          elements.add(new Concrete.ClassField((FieldReferableImpl) fieldRef, classDef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false), type, typeLevel, field.isCoerce()));
+          elements.add(new Concrete.ClassField((FieldReferableImpl) fieldRef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false), type, typeLevel, field.isCoerce()));
           if (field.isClassifying()) {
             setClassifyingField(classDef, (FieldReferable) fieldRef, field, true);
           }

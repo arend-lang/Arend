@@ -1730,7 +1730,7 @@ public final class Concrete {
 
   // Definitions
 
-  public static Collection<? extends Parameter> getParameters(GeneralDefinition definition, boolean onlyThisDef) {
+  public static Collection<? extends Parameter> getParameters(GeneralDefinition definition, boolean isDesugarized) {
     if (definition instanceof BaseFunctionDefinition) {
       return ((BaseFunctionDefinition) definition).getParameters();
     }
@@ -1749,7 +1749,6 @@ public final class Concrete {
         if (element instanceof ClassField field && field.getData().isParameterField()) {
           Expression type = field.getResultType();
           List<TypeParameter> fieldParams = field.getParameters();
-          boolean isDesugarized = definition.getStage().ordinal() >= Stage.DESUGARIZED.ordinal();
           if (fieldParams.size() > 1 || !fieldParams.isEmpty() && !isDesugarized) {
             type = new PiExpression(field.getParameters().get(0).getData(), isDesugarized ? fieldParams.subList(1, fieldParams.size()) : fieldParams, type);
           }
@@ -1760,38 +1759,6 @@ public final class Concrete {
     }
     return null;
   }
-
-  // TODO[server2]: Do we still need this?
-  public interface ReferableDefinition extends GeneralDefinition {
-    @NotNull
-    @Override
-    TCDefReferable getData();
-
-    @NotNull
-    @Override
-    Definition getRelatedDefinition();
-
-    @Override
-    default @NotNull Stage getStage() {
-      return getRelatedDefinition().getStage();
-    }
-
-    <P, R> R accept(ConcreteReferableDefinitionVisitor<? super P, ? extends R> visitor, P params);
-
-    default boolean equalsImpl(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-      var that = (ReferableDefinition) o;
-      return getData().equals(that.getData());
-    }
-
-    default int hashCodeImpl() {
-      return getData().hashCode();
-    }
-  }
-
-  // TODO[server2]: Do we still need Stage and Status?
-  public enum Stage { NOT_RESOLVED, TYPE_CLASS_REFERENCES_RESOLVED, HEADER_RESOLVED, RESOLVED, DESUGARIZED, TYPECHECKED }
 
   public enum Status {
     NO_ERRORS { @Override public org.arend.core.definition.Definition.TypeCheckingStatus getTypecheckingStatus() { return org.arend.core.definition.Definition.TypeCheckingStatus.NO_ERRORS; } },
@@ -1809,17 +1776,12 @@ public final class Concrete {
     @Override
     @NotNull TCDefReferable getData();
 
-    @NotNull Stage getStage();
-
-    @NotNull ResolvableDefinition getRelatedDefinition();
-
     List<? extends Parameter> getParameters();
 
     void addParameters(List<? extends Parameter> parameters, List<Pair<TCDefReferable,Integer>> parametersOriginalDefinitions);
   }
 
   public static abstract class ResolvableDefinition implements GeneralDefinition {
-    Stage stage = Stage.NOT_RESOLVED;
     private Status myStatus = Status.NO_ERRORS;
     protected LevelParameters pLevelParameters;
     protected LevelParameters hLevelParameters;
@@ -1873,27 +1835,6 @@ public final class Concrete {
 
     public TCDefReferable getEnclosingClass() {
       return null;
-    }
-
-    @Override
-    public @NotNull Stage getStage() {
-      return stage;
-    }
-
-    public void setHeaderResolved() {
-      stage = Stage.HEADER_RESOLVED;
-    }
-
-    public void setResolved() {
-      stage = Stage.RESOLVED;
-    }
-
-    public void setDesugarized() {
-      stage = Stage.DESUGARIZED;
-    }
-
-    public void setTypechecked() {
-      stage = Stage.TYPECHECKED;
     }
 
     public abstract <P, R> R accept(ConcreteResolvableDefinitionVisitor<? super P, ? extends R> visitor, P params);
@@ -1980,7 +1921,7 @@ public final class Concrete {
     }
   }
 
-  public static abstract class Definition extends ResolvableDefinition implements ReferableDefinition, ConcreteDefinition {
+  public static abstract class Definition extends ResolvableDefinition implements ConcreteDefinition {
     private TCDefReferable myReferable;
     private TCDefReferable myUseParent;
     public TCDefReferable enclosingClass;
@@ -2002,7 +1943,6 @@ public final class Concrete {
     }
 
     public void copyData(Concrete.Definition newDef) {
-      newDef.stage = stage;
       newDef.setStatus(getStatus());
       newDef.pLevelParameters = pLevelParameters;
       newDef.hLevelParameters = hLevelParameters;
@@ -2054,20 +1994,15 @@ public final class Concrete {
     }
 
     @Override
-    @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     public boolean equals(Object o) {
-      return equalsImpl(o);
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      return getData().equals(((Definition) o).getData());
     }
 
     @Override
     public int hashCode() {
-      return hashCodeImpl();
-    }
-
-    @NotNull
-    @Override
-    public Definition getRelatedDefinition() {
-      return this;
+      return getData().hashCode();
     }
 
     public TCDefReferable getUseParent() {
@@ -2105,11 +2040,6 @@ public final class Concrete {
     public abstract <P, R> R accept(ConcreteDefinitionVisitor<? super P, ? extends R> visitor, P params);
 
     @Override
-    public <P, R> R accept(ConcreteReferableDefinitionVisitor<? super P, ? extends R> visitor, P params) {
-      return accept((ConcreteDefinitionVisitor<? super P, ? extends R>) visitor, params);
-    }
-
-    @Override
     public <P, R> R accept(ConcreteResolvableDefinitionVisitor<? super P, ? extends R> visitor, P params) {
       return accept((ConcreteDefinitionVisitor<? super P, ? extends R>) visitor, params);
     }
@@ -2132,7 +2062,6 @@ public final class Concrete {
       super(referable, pParams, hParams);
       myRecord = isRecord;
       myWithoutClassifying = withoutClassifying;
-      stage = Stage.NOT_RESOLVED;
       mySuperClasses = superClasses;
       myElements = elements;
     }
@@ -2195,7 +2124,7 @@ public final class Concrete {
           if (!(referable instanceof FieldReferableImpl)) {
             throw new IllegalArgumentException();
           }
-          elements.add(new ClassField((FieldReferableImpl) referable, this, parameter.isExplicit(), ClassFieldKind.ANY, new ArrayList<>(), type, null, false));
+          elements.add(new ClassField((FieldReferableImpl) referable, parameter.isExplicit(), ClassFieldKind.ANY, new ArrayList<>(), type, null, false));
         }
       }
       myElements.addAll(0, elements);
@@ -2248,27 +2177,27 @@ public final class Concrete {
     void setResultTypeLevel(Expression resultTypeLevel);
   }
 
-  public static abstract class ReferableDefinitionBase implements ReferableDefinition {
+  public static abstract class ReferableDefinitionBase implements GeneralDefinition {
     @Override
     public String toString() {
       return getData().textRepresentation();
     }
 
     @Override
-    @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     public boolean equals(Object o) {
-      return equalsImpl(o);
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      return getData().equals(((ReferableDefinitionBase) o).getData());
     }
 
     @Override
     public int hashCode() {
-      return hashCodeImpl();
+      return getData().hashCode();
     }
   }
 
   public static class ClassField extends ReferableDefinitionBase implements BaseClassField {
     private FieldReferableImpl myReferable;
-    private ClassDefinition myParentClass;
     private final boolean myExplicit;
     private final ClassFieldKind myKind;
     private final List<TypeParameter> myParameters;
@@ -2276,9 +2205,8 @@ public final class Concrete {
     private Expression myResultTypeLevel;
     private final boolean myCoerce;
 
-    public ClassField(FieldReferableImpl referable, ClassDefinition parentClass, boolean isExplicit, ClassFieldKind kind, List<TypeParameter> parameters, Expression resultType, Expression resultTypeLevel, boolean isCoerce) {
+    public ClassField(FieldReferableImpl referable, boolean isExplicit, ClassFieldKind kind, List<TypeParameter> parameters, Expression resultType, Expression resultTypeLevel, boolean isCoerce) {
       myReferable = referable;
-      myParentClass = parentClass;
       myExplicit = isExplicit;
       myKind = kind;
       myParameters = parameters;
@@ -2338,23 +2266,8 @@ public final class Concrete {
       myResultTypeLevel = resultTypeLevel;
     }
 
-    @NotNull
-    @Override
-    public ClassDefinition getRelatedDefinition() {
-      return myParentClass;
-    }
-
-    public void setParentClass(Concrete.ClassDefinition parentClass) {
-      myParentClass = parentClass;
-    }
-
     public boolean isCoerce() {
       return myCoerce;
-    }
-
-    @Override
-    public <P, R> R accept(ConcreteReferableDefinitionVisitor<? super P, ? extends R> visitor, P params) {
-      return visitor.visitClassField(this, params);
     }
 
     @Override
@@ -2533,7 +2446,6 @@ public final class Concrete {
 
     public BaseFunctionDefinition(TCDefReferable referable, LevelParameters pParams, LevelParameters hParams, List<Parameter> parameters, Expression resultType, Expression resultTypeLevel, FunctionBody body) {
       super(referable, pParams, hParams);
-      stage = Stage.NOT_RESOLVED;
       myParameters = parameters;
       myResultType = resultType;
       myResultTypeLevel = resultTypeLevel;
@@ -2592,13 +2504,11 @@ public final class Concrete {
     public FunctionDefinition(FunctionKind kind, TCDefReferable referable, List<Parameter> parameters, Expression resultType, Expression resultTypeLevel, FunctionBody body) {
       super(referable, null, null, parameters, resultType, resultTypeLevel, body);
       myKind = kind;
-      stage = Stage.NOT_RESOLVED;
     }
 
     public FunctionDefinition(FunctionKind kind, TCDefReferable referable, LevelParameters pParams, LevelParameters hParams, List<Parameter> parameters, Expression resultType, Expression resultTypeLevel, FunctionBody body) {
       super(referable, pParams, hParams, parameters, resultType, resultTypeLevel, body);
       myKind = kind;
-      stage = Stage.NOT_RESOLVED;
     }
 
     @Override
@@ -2725,16 +2635,14 @@ public final class Concrete {
 
   public static class Constructor extends ReferableDefinitionBase implements ConcreteConstructor {
     private InternalReferable myReferable;
-    private DataDefinition myDataType;
     private final List<TypeParameter> myParameters;
     private final List<ReferenceExpression> myEliminatedReferences;
     private final List<FunctionClause> myClauses;
     private final boolean myCoerce;
     private Expression myResultType;
 
-    public Constructor(InternalReferable referable, DataDefinition dataType, List<TypeParameter> parameters, List<ReferenceExpression> eliminatedReferences, List<FunctionClause> clauses, boolean isCoerce) {
+    public Constructor(InternalReferable referable, List<TypeParameter> parameters, List<ReferenceExpression> eliminatedReferences, List<FunctionClause> clauses, boolean isCoerce) {
       myReferable = referable;
-      myDataType = dataType;
       myParameters = parameters;
       myEliminatedReferences = eliminatedReferences;
       myClauses = clauses;
@@ -2771,16 +2679,6 @@ public final class Concrete {
       return myClauses;
     }
 
-    @NotNull
-    @Override
-    public DataDefinition getRelatedDefinition() {
-      return myDataType;
-    }
-
-    public void setDataType(DataDefinition dataType) {
-      myDataType = dataType;
-    }
-
     public Expression getResultType() {
       return myResultType;
     }
@@ -2791,11 +2689,6 @@ public final class Concrete {
 
     public boolean isCoerce() {
       return myCoerce;
-    }
-
-    @Override
-    public <P, R> R accept(ConcreteReferableDefinitionVisitor<? super P, ? extends R> visitor, P params) {
-      return visitor.visitConstructor(this, params);
     }
 
     @Override

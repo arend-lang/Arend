@@ -38,7 +38,6 @@ public class DefinableMetaDefinition extends Concrete.ResolvableDefinition imple
     this.hLevelParameters = hLevelParameters;
     myParameters = parameters;
     this.body = body;
-    stage = Concrete.Stage.NOT_RESOLVED;
   }
 
   public List<? extends LevelReferable> getPLevelParametersList() {
@@ -158,11 +157,6 @@ public class DefinableMetaDefinition extends Concrete.ResolvableDefinition imple
   public void setReferable(@NotNull TCDefReferable referable) {
     if (!(referable instanceof MetaReferable)) throw new IllegalArgumentException();
     myReferable = (MetaReferable) referable;
-  }
-
-  @Override
-  public @NotNull Concrete.ResolvableDefinition getRelatedDefinition() {
-    return this;
   }
 
   @Override
