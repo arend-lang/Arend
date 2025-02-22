@@ -11,12 +11,10 @@ import org.arend.module.scopeprovider.CachingModuleScopeProvider;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
-import org.arend.typechecking.instance.provider.InstanceProviderSet;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.util.Range;
 import org.arend.util.Version;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -27,7 +25,6 @@ import java.util.function.Supplier;
  */
 public class LibraryManager {
   private final LibraryResolver myLibraryResolver;
-  private final InstanceProviderSet myInstanceProviderSet;
   private final ErrorReporter myTypecheckingErrorReporter;
   private final ErrorReporter myLibraryErrorReporter;
   private final Map<Library, Set<Library>> myReverseDependencies = new LinkedHashMap<>();
@@ -42,14 +39,12 @@ public class LibraryManager {
    * Constructs new {@code LibraryManager}.
    *
    * @param libraryResolver           a library resolver.
-   * @param instanceProviderSet       an instance provider set.
    * @param typecheckingErrorReporter an error reporter for errors related to typechecking and name resolving.
    * @param libraryErrorReporter      an error reporter for errors related to loading and unloading of libraries.
    * @param definitionRequester       a listener for definitions requested in extensions.
    */
-  public LibraryManager(LibraryResolver libraryResolver, @Nullable InstanceProviderSet instanceProviderSet, ErrorReporter typecheckingErrorReporter, ErrorReporter libraryErrorReporter, DefinitionRequester definitionRequester, DefinitionListener listener) {
+  public LibraryManager(LibraryResolver libraryResolver, ErrorReporter typecheckingErrorReporter, ErrorReporter libraryErrorReporter, DefinitionRequester definitionRequester, DefinitionListener listener) {
     myLibraryResolver = libraryResolver;
-    myInstanceProviderSet = instanceProviderSet;
     myTypecheckingErrorReporter = typecheckingErrorReporter;
     myLibraryErrorReporter = libraryErrorReporter;
     myDefinitionRequester = definitionRequester;
@@ -87,10 +82,6 @@ public class LibraryManager {
       }
       return null;
     });
-  }
-
-  public InstanceProviderSet getInstanceProviderSet() {
-    return myInstanceProviderSet;
   }
 
   public ErrorReporter getTypecheckingErrorReporter() {

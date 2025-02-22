@@ -18,7 +18,7 @@ import org.arend.prelude.PreludeLibrary;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
-import org.arend.typechecking.instance.provider.InstanceProviderSet;
+import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.hamcrest.Description;
@@ -40,12 +40,12 @@ public abstract class ArendTestCase {
 
   protected final List<GeneralError> errorList = new ArrayList<>();
   protected final ListErrorReporter errorReporter = new ListErrorReporter(errorList);
-  protected final TypecheckingOrderingListener typechecking = new TypecheckingOrderingListener(new InstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, ref -> null);
+  protected final TypecheckingOrderingListener typechecking = new TypecheckingOrderingListener(InstanceScopeProvider.EMPTY, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, ref -> null);
   protected int loadedBinaryModules;
 
   @Before
   public void loadPrelude() {
-    libraryManager = new LibraryManager((lib,name) -> { throw new IllegalStateException(); }, new InstanceProviderSet(), errorReporter, errorReporter, DefinitionRequester.INSTANCE, null) {
+    libraryManager = new LibraryManager((lib,name) -> { throw new IllegalStateException(); }, errorReporter, errorReporter, DefinitionRequester.INSTANCE, null) {
       @Override
       protected void afterLibraryLoading(Library library, int loadedModules, int total) {
         loadedBinaryModules = loadedModules;

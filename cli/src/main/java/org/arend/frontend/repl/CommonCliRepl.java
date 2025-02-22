@@ -36,7 +36,7 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.LibraryArendExtensionProvider;
-import org.arend.typechecking.instance.provider.InstanceProviderSet;
+import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DummyDependencyListener;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.provider.ConcreteProvider;
@@ -89,7 +89,6 @@ public abstract class CommonCliRepl extends Repl {
     this(
         modules,
         new FileLibraryResolver(new ArrayList<>(), errorReporter, DummyDependencyListener.INSTANCE),
-        new InstanceProviderSet(),
         errorReporter
     );
   }
@@ -97,13 +96,11 @@ public abstract class CommonCliRepl extends Repl {
   private CommonCliRepl(
       @NotNull Set<ModulePath> modules,
       @NotNull FileLibraryResolver libraryResolver,
-      @NotNull InstanceProviderSet instanceProviders,
       @NotNull ListErrorReporter errorReporter) {
     this(
-      libraryManager(libraryResolver, instanceProviders, errorReporter),
+      libraryManager(libraryResolver, errorReporter),
       modules,
       libraryResolver,
-      instanceProviders,
       errorReporter);
   }
 
@@ -111,12 +108,11 @@ public abstract class CommonCliRepl extends Repl {
       @NotNull LibraryManager libraryManager,
       @NotNull Set<ModulePath> modules,
       @NotNull FileLibraryResolver libraryResolver,
-      @NotNull InstanceProviderSet instanceProviders,
       @NotNull ListErrorReporter errorReporter) {
     super(
       errorReporter,
       libraryManager,
-      new TypecheckingOrderingListener(instanceProviders, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(libraryManager))
+      new TypecheckingOrderingListener(InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(libraryManager))
     );
     myLibraryResolver = libraryResolver;
     myReplLibrary = Files.exists(pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE))
@@ -174,8 +170,8 @@ public abstract class CommonCliRepl extends Repl {
   }
 
   @NotNull
-  private static TimedLibraryManager libraryManager(@NotNull FileLibraryResolver libraryResolver, @NotNull InstanceProviderSet instanceProviders, @NotNull ListErrorReporter errorReporter) {
-    return new TimedLibraryManager(libraryResolver, instanceProviders, errorReporter, errorReporter, DefinitionRequester.INSTANCE);
+  private static TimedLibraryManager libraryManager(@NotNull FileLibraryResolver libraryResolver, @NotNull ListErrorReporter errorReporter) {
+    return new TimedLibraryManager(libraryResolver, errorReporter, errorReporter, DefinitionRequester.INSTANCE);
   }
 
   private @NotNull BuildVisitor buildVisitor() {

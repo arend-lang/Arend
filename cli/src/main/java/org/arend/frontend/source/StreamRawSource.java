@@ -90,7 +90,7 @@ public abstract class StreamRawSource implements Source {
       myPass = 3;
       return LoadResult.CONTINUE;
     }
-    sourceLoader.getInstanceProviderSet().collectInstances(myGroup, CachingScope.make(ScopeFactory.parentScopeForGroup(myGroup, sourceLoader.getModuleScopeProvider(myInTests), true)));
+    // TODO[server2]: sourceLoader.getInstanceProviderSet().collectInstances(myGroup, CachingScope.make(ScopeFactory.parentScopeForGroup(myGroup, sourceLoader.getModuleScopeProvider(myInTests), true)));
     return LoadResult.SUCCESS;
   }
 }

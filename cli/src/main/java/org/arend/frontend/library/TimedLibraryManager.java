@@ -6,17 +6,15 @@ import org.arend.extImpl.DefinitionRequester;
 import org.arend.library.Library;
 import org.arend.library.LibraryManager;
 import org.arend.library.resolver.LibraryResolver;
-import org.arend.typechecking.instance.provider.InstanceProviderSet;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Stack;
 
 public class TimedLibraryManager extends LibraryManager {
   private final Stack<Long> times = new Stack<>();
 
-  public TimedLibraryManager(LibraryResolver libraryResolver, @Nullable InstanceProviderSet instanceProviderSet, ErrorReporter typecheckingErrorReporter, ErrorReporter libraryErrorReporter, DefinitionRequester definitionRequester) {
-    super(libraryResolver, instanceProviderSet, typecheckingErrorReporter, libraryErrorReporter, definitionRequester, null);
+  public TimedLibraryManager(LibraryResolver libraryResolver, ErrorReporter typecheckingErrorReporter, ErrorReporter libraryErrorReporter, DefinitionRequester definitionRequester) {
+    super(libraryResolver, typecheckingErrorReporter, libraryErrorReporter, definitionRequester, null);
   }
 
   public static @NotNull String timeToString(long time) {

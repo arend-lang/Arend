@@ -36,7 +36,7 @@ import org.arend.term.prettyprint.ToAbstractVisitor;
 import org.arend.typechecking.LibraryArendExtensionProvider;
 import org.arend.typechecking.doubleChecker.CoreModuleChecker;
 import org.arend.typechecking.error.local.GoalError;
-import org.arend.typechecking.instance.provider.InstanceProviderSet;
+import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.MapTarjanSCC;
 import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
@@ -81,7 +81,7 @@ public abstract class BaseCliFrontend {
 
   // Libraries
   private final FileLibraryResolver myLibraryResolver = new FileLibraryResolver(new ArrayList<>(), mySystemErrErrorReporter, myDependencyCollector);
-  private final LibraryManager myLibraryManager = new TimedLibraryManager(myLibraryResolver, new InstanceProviderSet(), myErrorReporter, mySystemErrErrorReporter, DefinitionRequester.INSTANCE) {
+  private final LibraryManager myLibraryManager = new TimedLibraryManager(myLibraryResolver, myErrorReporter, mySystemErrErrorReporter, DefinitionRequester.INSTANCE) {
     @Override
     protected void afterLibraryLoading(@NotNull Library library, int loaded, int total) {
       super.afterLibraryLoading(library, loaded, total);
@@ -124,7 +124,7 @@ public abstract class BaseCliFrontend {
     private int failed;
 
     MyTypechecking() {
-      super(myLibraryManager.getInstanceProviderSet(), ConcreteProvider.EMPTY /* TODO[server2] */, myErrorReporter, myDependencyCollector, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(myLibraryManager));
+      super(InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, myErrorReporter, myDependencyCollector, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(myLibraryManager));
     }
 
     private void startTimer(TCDefReferable ref) {

@@ -10,7 +10,6 @@ import org.arend.module.scopeprovider.CachingModuleScopeProvider;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.scope.Scope;
 import org.arend.term.group.ConcreteGroup;
-import org.arend.typechecking.instance.provider.InstanceProviderSet;
 import org.arend.typechecking.dfs.MapDFS;
 
 import java.util.*;
@@ -50,10 +49,6 @@ public final class SourceLoader {
     } else {
       return myModuleScopeProvider;
     }
-  }
-
-  public InstanceProviderSet getInstanceProviderSet() {
-    return myLibraryManager.getInstanceProviderSet();
   }
 
   public ErrorReporter getTypecheckingErrorReporter() {

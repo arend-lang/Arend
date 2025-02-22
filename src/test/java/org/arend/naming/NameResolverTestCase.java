@@ -122,7 +122,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
   protected void resolveNamesModule(ConcreteGroup group, int errors) {
     Scope scope = CachingScope.make(new MergeScope(ScopeFactory.parentScopeForGroup(group, moduleScopeProvider, true), metaScope));
     new DefinitionResolveNameVisitor(ConcreteProvider.EMPTY /* TODO[server2] */, TypingInfo.EMPTY, errorReporter).resolveGroup(group, scope, PersistentList.empty(), null);
-    libraryManager.getInstanceProviderSet().collectInstances(group, CachingScope.make(ScopeFactory.parentScopeForGroup(group, moduleScopeProvider, true)));
+    // TODO[server2]: libraryManager.getInstanceProviderSet().collectInstances(group, CachingScope.make(ScopeFactory.parentScopeForGroup(group, moduleScopeProvider, true)));
     assertThat(errorList, containsErrors(errors));
   }
 

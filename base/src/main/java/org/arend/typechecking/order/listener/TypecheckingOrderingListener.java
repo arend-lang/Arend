@@ -340,11 +340,9 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   }
 
   private void setParametersOriginalDefinitionsDependency(Definition definition) {
-    /* TODO[server2]
     for (Pair<TCDefReferable, Integer> pair : definition.getParametersOriginalDefinitions()) {
       myDependencyListener.dependsOn(definition.getRef(), pair.proj1);
     }
-    */
   }
 
   @Override
