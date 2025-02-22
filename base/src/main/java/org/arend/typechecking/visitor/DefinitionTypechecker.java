@@ -2596,11 +2596,11 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
   @Override
   public List<ExtElimClause> visitMeta(DefinableMetaDefinition def, Void params) {
-    MetaTopDefinition typechecked = def.getData().getTypechecked();
+    Definition typechecked = def.getData().getTypechecked();
     LocalInstancePool localInstancePool = new LocalInstancePool(typechecker);
     typechecker.getInstancePool().setInstancePool(localInstancePool);
 
-    MetaTopDefinition definition = typechecked != null ? typechecked : new MetaTopDefinition(def.getData());
+    MetaTopDefinition definition = typechecked != null ? (MetaTopDefinition) typechecked : new MetaTopDefinition(def.getData());
     if (myNewDef) {
       myNewDef = typechecked == null || !typechecked.status().headerIsOK();
     }

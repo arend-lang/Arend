@@ -3230,7 +3230,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       errorReporter.report(new TypecheckingError("Meta '" + refExpr.getReferent().getRefName() + "' is empty", refExpr));
       return null;
     }
-    MetaTopDefinition def = metaRef.getTypechecked();
+    Definition definition = metaRef.getTypechecked();
+    MetaTopDefinition def = definition instanceof MetaTopDefinition ? (MetaTopDefinition) definition : null;
     LevelSubstitution levelSubst = def == null ? null : typecheckLevels(def, refExpr, null, false).makeSubstitution(def);
     if (def != null && def.getParameters().hasNext()) {
       ExprSubstitution substitution = new ExprSubstitution();

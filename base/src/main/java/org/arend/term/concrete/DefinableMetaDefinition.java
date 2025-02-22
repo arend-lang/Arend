@@ -26,7 +26,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-// TODO[server2]: Move this to concrete.
 public class DefinableMetaDefinition extends Concrete.ResolvableDefinition implements MetaDefinition {
   private final List<Concrete.Parameter> myParameters;
   private MetaReferable myReferable;
