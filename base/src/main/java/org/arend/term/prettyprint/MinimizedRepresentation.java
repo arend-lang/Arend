@@ -28,7 +28,6 @@ import org.arend.ext.error.InstanceInferenceError;
 import org.arend.typechecking.error.local.inference.LambdaInferenceError;
 import org.arend.typechecking.instance.pool.GlobalInstancePool;
 import org.arend.typechecking.instance.pool.LocalInstancePool;
-import org.arend.typechecking.instance.provider.InstanceProvider;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.NotNull;
@@ -48,7 +47,7 @@ final public class MinimizedRepresentation {
      */
     public static @NotNull Concrete.Expression generateMinimizedRepresentation(
             @NotNull Expression expressionToPrint,
-            @Nullable InstanceProvider instanceProvider,
+            @Nullable PersistentList<TCDefReferable> instances,
             @Nullable DefinitionRenamer definitionRenamer,
             @Nullable Supplier<@NotNull ReferableRenamer> referableRenamer) {
         Expression actualExpression = expressionToPrint.normalize(NormalizationMode.RNF);
@@ -56,7 +55,7 @@ final public class MinimizedRepresentation {
         Concrete.Expression verboseRepresentation = pair.proj1;
         Concrete.Expression incompleteRepresentation = pair.proj2;
         List<GeneralError> errorsCollector = new ArrayList<>();
-        var typechecker = generateTypechecker(instanceProvider, errorsCollector);
+        var typechecker = generateTypechecker(instances, errorsCollector);
         induceContext(typechecker, verboseRepresentation, incompleteRepresentation, actualExpression);
 
         int limit = 50;
@@ -239,13 +238,13 @@ final public class MinimizedRepresentation {
         return bindings;
     }
 
-    private static CheckTypeVisitor generateTypechecker(InstanceProvider instanceProvider, List<GeneralError> errorsCollector) {
+    private static CheckTypeVisitor generateTypechecker(PersistentList<TCDefReferable> instances, List<GeneralError> errorsCollector) {
         var checkTypeVisitor = new CheckTypeVisitor(error -> {
             if (!(error instanceof GoalError)) {
                 errorsCollector.add(error);
             }
         }, null, null);
-        checkTypeVisitor.setInstancePool(new GlobalInstancePool(PersistentList.empty() /* TODO[server2]: instanceProvider */, checkTypeVisitor, new LocalInstancePool(checkTypeVisitor)));
+        checkTypeVisitor.setInstancePool(new GlobalInstancePool(instances, checkTypeVisitor, new LocalInstancePool(checkTypeVisitor)));
         return checkTypeVisitor;
     }
 
@@ -307,7 +306,7 @@ class ErrorFixingConcreteExpressionVisitor extends BiConcreteVisitor {
 
     @Override
     public Concrete.Expression visitReference(Concrete.ReferenceExpression expr, Concrete.SourceNode params) {
-        var errorList = myErrors.stream().filter(err -> err.getCauseSourceNode() == expr).collect(Collectors.toList());
+        var errorList = myErrors.stream().filter(err -> err.getCauseSourceNode() == expr).toList();
         if (!errorList.isEmpty()) {
             var verboseExpr = (Concrete.Expression) params;
             myErrors.clear();
