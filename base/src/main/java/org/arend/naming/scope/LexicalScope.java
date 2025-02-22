@@ -4,7 +4,7 @@ import org.arend.ext.module.ModulePath;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.term.NamespaceCommand;
-import org.arend.term.abs.Abstract;
+import org.arend.term.concrete.Concrete;
 import org.arend.term.group.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -88,13 +88,13 @@ public class LexicalScope implements Scope {
           }
         }
       }
-      Abstract.LevelParameters pDef = statement.pLevelsDefinition();
+      Concrete.LevelsDefinition pDef = statement.pLevelsDefinition();
       if (pDef != null && (context == null || context == ScopeContext.PLEVEL)) {
         for (Referable referable : pDef.getReferables()) {
           if (pred.test(referable)) return referable;
         }
       }
-      Abstract.LevelParameters hDef = statement.hLevelsDefinition();
+      Concrete.LevelsDefinition hDef = statement.hLevelsDefinition();
       if (hDef != null && (context == null || context == ScopeContext.HLEVEL)) {
         for (Referable referable : hDef.getReferables()) {
           if (pred.test(referable)) return referable;
@@ -222,7 +222,7 @@ public class LexicalScope implements Scope {
         }
       }
       if (context == null || context == ScopeContext.PLEVEL) {
-        Abstract.LevelParameters levelParams = statement.pLevelsDefinition();
+        Concrete.LevelsDefinition levelParams = statement.pLevelsDefinition();
         if (levelParams != null) {
           for (Referable ref : levelParams.getReferables()) {
             if (name.equals(ref.getRefName())) {
@@ -232,7 +232,7 @@ public class LexicalScope implements Scope {
         }
       }
       if (context == null || context == ScopeContext.HLEVEL) {
-        Abstract.LevelParameters levelParams = statement.hLevelsDefinition();
+        Concrete.LevelsDefinition levelParams = statement.hLevelsDefinition();
         if (levelParams != null) {
           for (Referable ref : levelParams.getReferables()) {
             if (name.equals(ref.getRefName())) {

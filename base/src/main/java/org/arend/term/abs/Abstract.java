@@ -1,12 +1,14 @@
 package org.arend.term.abs;
 
 import org.arend.ext.prettyprinting.doc.Doc;
-import org.arend.naming.reference.LocatedReferable;
-import org.arend.naming.reference.Referable;
+import org.arend.ext.reference.Precedence;
+import org.arend.naming.reference.GlobalReferable;
 import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.ext.concrete.definition.FunctionKind;
+import org.arend.naming.reference.UnresolvedReference;
 import org.arend.term.Fixity;
 import org.arend.term.NamespaceCommand;
+import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,10 +45,12 @@ public final class Abstract {
     @Nullable Object getData();
   }
 
-  public interface Parameter extends LamParameter, org.arend.naming.reference.Parameter {
-    @Nullable Expression getType();
+  public interface Parameter extends LamParameter {
+    boolean isExplicit();
     boolean isStrict();
     boolean isProperty();
+    @NotNull List<? extends AbstractReferable> getReferableList();
+    @Nullable Expression getType();
   }
 
   public interface FieldParameter extends Parameter {
@@ -85,7 +89,7 @@ public final class Abstract {
 
   public interface TypedReferable extends SourceNode {
     @Nullable Object getData();
-    @Nullable Referable getReferable();
+    @Nullable AbstractReferable getReferable();
     @Nullable Expression getType();
   }
 
@@ -94,8 +98,8 @@ public final class Abstract {
     boolean isExplicit();
     boolean isTuplePattern();
     @Nullable Integer getInteger();
-    @Nullable Referable getSingleReferable();
-    @Nullable Referable getConstructorReference();
+    @Nullable AbstractReferable getSingleReferable();
+    @Nullable UnresolvedReference getConstructorReference();
     @Nullable Fixity getFixity();
     @NotNull List<? extends Pattern> getSequence();
     @Nullable Expression getType();
@@ -149,9 +153,24 @@ public final class Abstract {
     @Nullable LevelParameters getHLevelsDefinition();
   }
 
+  public interface AbstractReferable {
+    @NotNull String getRefName();
+  }
+
+  public interface AbstractLocatedReferable extends AbstractReferable {
+    default @NotNull AccessModifier getAccessModifier() {
+      return AccessModifier.PUBLIC;
+    }
+
+    @NotNull GlobalReferable.Kind getKind();
+    @NotNull Precedence getPrecedence();
+    @NotNull Precedence getAliasPrecedence();
+    @Nullable String getAliasName();
+  }
+
   public interface Group {
     @NotNull Doc getDescription();
-    @NotNull LocatedReferable getReferable();
+    @NotNull Abstract.AbstractLocatedReferable getReferable();
     @Nullable Definition getGroupDefinition();
     @NotNull List<? extends Statement> getStatements();
     @NotNull List<? extends Group> getDynamicSubgroups();
@@ -171,12 +190,12 @@ public final class Abstract {
   public interface FieldAcc extends SourceNode {
     @Nullable Object getData();
     @Nullable Integer getNumber();
-    @Nullable Referable getFieldRef();
+    @Nullable UnresolvedReference getFieldRef();
   }
 
   public interface ReferenceExpression extends SourceNode {
     @Nullable Object getData();
-    @NotNull Referable getReferent();
+    @NotNull UnresolvedReference getReferent();
     @Nullable Collection<? extends LevelExpression> getPLevels();
     @Nullable Collection<? extends LevelExpression> getHLevels();
   }
@@ -184,7 +203,7 @@ public final class Abstract {
   public interface CaseArgument extends SourceNode {
     @Nullable Object getApplyHoleData();
     @Nullable Expression getExpression();
-    @Nullable Referable getReferable();
+    @Nullable AbstractReferable getReferable();
     @Nullable Expression getType();
     @Nullable Reference getEliminatedReference();
   }
@@ -222,12 +241,12 @@ public final class Abstract {
   }
 
   public interface CoClauseFunctionReference extends ClassFieldImpl {
-    @Nullable LocatedReferable getFunctionReference();
+    @Nullable Abstract.AbstractLocatedReferable getFunctionReference();
   }
 
   public interface LetClause extends ParametersHolder {
     @Nullable Pattern getPattern();
-    @Nullable Referable getReferable();
+    @Nullable AbstractReferable getReferable();
     @Nullable Expression getResultType();
     /* @NotNull */ @Nullable Expression getTerm();
   }
@@ -240,7 +259,7 @@ public final class Abstract {
   // Definition
 
   public interface ReferableDefinition extends SourceNode {
-    /* @NotNull */ @Nullable LocatedReferable getReferable();
+    /* @NotNull */ @Nullable Abstract.AbstractLocatedReferable getReferable();
 
     @Override
     default boolean isLocal() {
@@ -252,18 +271,17 @@ public final class Abstract {
 
   public interface LevelParameters {
     @Nullable Object getData();
-    @NotNull Collection<? extends Referable> getReferables();
+    @NotNull Collection<? extends AbstractReferable> getReferables();
     @NotNull Collection<Comparison> getComparisonList();
     boolean isIncreasing();
   }
 
   public interface Definition extends ReferableDefinition {
-    @Override @NotNull LocatedReferable getReferable();
+    @Override @NotNull Abstract.AbstractLocatedReferable getReferable();
     <R> R accept(AbstractDefinitionVisitor<? extends R> visitor);
     @Nullable LevelParameters getPLevelParameters();
     @Nullable LevelParameters getHLevelParameters();
     boolean withUse();
-    @NotNull Collection<? extends LocatedReferable> getUsedDefinitions();
   }
 
   public interface MetaDefinition extends Definition, ParametersHolder {
@@ -299,7 +317,7 @@ public final class Abstract {
   }
 
   public interface Constructor extends ReferableDefinition, EliminatedExpressionsHolder {
-    @Override @NotNull LocatedReferable getReferable();
+    @Override @NotNull Abstract.AbstractLocatedReferable getReferable();
     @Override @NotNull Collection<? extends Reference> getEliminatedExpressions();
     @NotNull Collection<? extends FunctionClause> getClauses();
     @Nullable Expression getResultType();

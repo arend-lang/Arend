@@ -14,7 +14,6 @@ import org.arend.naming.reference.*;
 import org.arend.naming.renamer.MapReferableRenamer;
 import org.arend.term.Fixity;
 import org.arend.ext.concrete.definition.FunctionKind;
-import org.arend.term.abs.Abstract;
 import org.arend.term.concrete.*;
 import org.arend.term.concrete.Concrete.BinOpSequenceElem;
 import org.arend.term.concrete.Concrete.Expression;
@@ -128,10 +127,10 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     }
   }
 
-  private void printLevelsDefinition(Abstract.LevelParameters defs) {
-    String op = defs.isIncreasing() ? " <= " : " >= ";
+  private void printLevelsDefinition(Concrete.LevelsDefinition levelsDef) {
+    String op = levelsDef.isIncreasing() ? " <= " : " >= ";
     boolean first = true;
-    for (Referable referable : defs.getReferables()) {
+    for (Referable referable : levelsDef.getReferables()) {
       if (first) first = false;
       else myBuilder.append(op);
       myBuilder.append(referable.getRefName());

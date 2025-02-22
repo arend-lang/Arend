@@ -12,10 +12,6 @@ public class DataLocalReferable extends LocalReferable implements DataContainer,
     myData = data;
   }
 
-  public static DataLocalReferable make(Referable referable) {
-    return referable == null ? null : new DataLocalReferable(referable, referable.getRefName());
-  }
-
   @Override
   public @Nullable Object getData() {
     return myData;

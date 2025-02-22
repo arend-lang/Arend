@@ -24,7 +24,6 @@ import org.arend.ext.util.Pair;
 import org.arend.naming.reference.*;
 import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.term.Fixity;
-import org.arend.term.abs.Abstract;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -64,7 +63,7 @@ public final class Concrete {
 
   // Parameters
 
-  public static abstract class Parameter extends SourceNodeImpl implements org.arend.naming.reference.Parameter, ConcreteParameter {
+  public static abstract class Parameter extends SourceNodeImpl implements ConcreteParameter {
     private boolean myExplicit;
 
     public Parameter(Object data, boolean explicit) {
@@ -95,6 +94,8 @@ public final class Concrete {
     public boolean isProperty() {
       return false;
     }
+
+    public abstract @NotNull List<? extends Referable> getReferableList();
 
     @Override
     public @NotNull List<? extends Referable> getRefList() {
@@ -1903,16 +1904,7 @@ public final class Concrete {
     }
   }
 
-  private static List<Abstract.Comparison> makeComparisonList(List<? extends LevelReferable> referables, boolean isIncreasing) {
-    if (referables.isEmpty()) return Collections.emptyList();
-    List<Abstract.Comparison> result = new ArrayList<>(referables.size() - 1);
-    for (int i = 0; i < referables.size() - 1; i++) {
-      result.add(isIncreasing ? Abstract.Comparison.LESS_OR_EQUALS : Abstract.Comparison.GREATER_OR_EQUALS);
-    }
-    return result;
-  }
-
-  public static class LevelParameters extends SourceNodeImpl implements Abstract.LevelParameters, ConcreteLevelParameters {
+  public static class LevelParameters extends SourceNodeImpl implements ConcreteLevelParameters {
     public final List<? extends LevelReferable> referables;
     public final boolean isIncreasing;
 
@@ -1928,22 +1920,8 @@ public final class Concrete {
     }
 
     @Override
-    public @NotNull Collection<Abstract.Comparison> getComparisonList() {
-      return makeComparisonList(referables, isIncreasing);
-    }
-
-    @Override
     public boolean isIncreasing() {
       return isIncreasing;
-    }
-
-    public static List<LevelReferable> getLevelParametersRefs(Abstract.LevelParameters params, boolean isPLevels) {
-      if (params == null) return null;
-      List<LevelReferable> result = new ArrayList<>();
-      for (Referable ref : params.getReferables()) {
-        result.add(new DataLevelReferable(ref, ref.getRefName(), isPLevels));
-      }
-      return result;
     }
 
     public static Concrete.LevelParameters makeLevelParameters(List<? extends LevelVariable> variables, boolean isPLevels) {
@@ -1960,7 +1938,7 @@ public final class Concrete {
     }
   }
 
-  public static class LevelsDefinition extends SourceNodeImpl implements Abstract.LevelParameters {
+  public static class LevelsDefinition extends SourceNodeImpl {
     private final List<TCLevelReferable> myReferables;
     private final boolean myIncreasing;
     private final boolean myPLevels;
@@ -1972,17 +1950,10 @@ public final class Concrete {
       myPLevels = isPLevels;
     }
 
-    @Override
     public @NotNull List<? extends TCLevelReferable> getReferables() {
       return myReferables;
     }
 
-    @Override
-    public @NotNull Collection<Abstract.Comparison> getComparisonList() {
-      return makeComparisonList(myReferables, myIncreasing);
-    }
-
-    @Override
     public boolean isIncreasing() {
       return myIncreasing;
     }
