@@ -1,6 +1,7 @@
 package org.arend.typechecking.order;
 
 import org.arend.core.definition.Definition;
+import org.arend.ext.error.ErrorReporter;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
@@ -8,6 +9,7 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.computation.ComputationRunner;
+import org.arend.typechecking.error.DefinitionOrderingError;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DependencyListener;
 import org.arend.typechecking.order.listener.OrderingListener;
@@ -24,11 +26,12 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   private final DependencyListener myDependencyListener;
   private final PartialComparator<TCDefReferable> myComparator;
   private final Set<TCDefReferable> myAllowedDependencies;
+  private final ErrorReporter myErrorReporter;
   private final Stage myStage;
 
   private enum Stage { EVERYTHING, WITHOUT_INSTANCES, WITHOUT_BODIES }
 
-  private Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, Set<TCDefReferable> allowedDependencies, Stage stage) {
+  private Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, Set<TCDefReferable> allowedDependencies, Stage stage, ErrorReporter errorReporter) {
     myInstanceScopeProvider = instanceScopeProvider;
     myConcreteProvider = concreteProvider;
     myOrderingListener = orderingListener;
@@ -36,18 +39,19 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     myComparator = comparator;
     myAllowedDependencies = allowedDependencies;
     myStage = stage;
+    myErrorReporter = errorReporter;
   }
 
   private Ordering(Ordering ordering, Set<TCDefReferable> allowedDependencies, Stage stage) {
-    this(ordering.myInstanceScopeProvider, ordering.myConcreteProvider, ordering.myOrderingListener, ordering.myDependencyListener, ordering.myComparator, allowedDependencies, stage);
+    this(ordering.myInstanceScopeProvider, ordering.myConcreteProvider, ordering.myOrderingListener, ordering.myDependencyListener, ordering.myComparator, allowedDependencies, stage, ordering.myErrorReporter);
   }
 
-  public Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, boolean withInstances) {
-    this(instanceScopeProvider, concreteProvider, orderingListener, dependencyListener, comparator, null, withInstances ? Stage.EVERYTHING : Stage.WITHOUT_INSTANCES);
+  public Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, boolean withInstances, ErrorReporter errorReporter) {
+    this(instanceScopeProvider, concreteProvider, orderingListener, dependencyListener, comparator, null, withInstances ? Stage.EVERYTHING : Stage.WITHOUT_INSTANCES, errorReporter);
   }
 
-  public Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator) {
-    this(instanceScopeProvider, concreteProvider, orderingListener, dependencyListener, comparator, true);
+  public Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ErrorReporter errorReporter) {
+    this(instanceScopeProvider, concreteProvider, orderingListener, dependencyListener, comparator, true, errorReporter);
   }
 
   public OrderingListener getListener() {
@@ -308,7 +312,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     }
 
     if (!new DefinitionComparator(myComparator).sort(defs)) {
-      // TODO[server2]: Report an error
+      myErrorReporter.report(new DefinitionOrderingError(defs));
     }
 
     myOrderingListener.bodiesFound(defs);

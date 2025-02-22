@@ -5,23 +5,27 @@ import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.Doc;
+import org.arend.ext.reference.ArendRef;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.typechecking.termination.CompositeCallMatrix;
 import org.arend.typechecking.termination.RecursiveBehavior;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class TerminationCheckError extends GeneralError {
   public GlobalReferable definition;
+  public final Set<Definition> definitions;
   public final Set<RecursiveBehavior<Definition>> behaviors;
 
-  public TerminationCheckError(Definition def, Set<RecursiveBehavior<Definition>> behaviors) {
+  public TerminationCheckError(Definition def, Set<Definition> definitions, Set<RecursiveBehavior<Definition>> behaviors) {
     super(Level.ERROR, "Termination check failed");
     definition = def.getReferable();
+    this.definitions = definitions;
     this.behaviors = behaviors;
   }
 
@@ -55,5 +59,12 @@ public class TerminationCheckError extends GeneralError {
   @Override
   public boolean hasExpressions() {
     return true;
+  }
+
+  @Override
+  public void forAffectedDefinitions(BiConsumer<ArendRef, GeneralError> consumer) {
+    for (Definition def : definitions) {
+      consumer.accept(def.getReferable(), new TerminationCheckError(def, definitions, behaviors));
+    }
   }
 }

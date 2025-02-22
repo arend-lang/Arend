@@ -175,7 +175,7 @@ public abstract class CommonCliRepl extends Repl {
   }
 
   private @NotNull BuildVisitor buildVisitor() {
-    return new BuildVisitor(Repl.replModulePath, myErrorReporter);
+    return new BuildVisitor(Repl.replModulePath, errorReporter);
   }
 
   public static @NotNull ArendParser createParser(@NotNull String text, @NotNull ModuleLocation moduleLocation, @NotNull ErrorReporter reporter) {
@@ -198,7 +198,7 @@ public abstract class CommonCliRepl extends Repl {
   }
 
   private @NotNull ArendParser parse(String line) {
-    return createParser(line, Repl.replModulePath, myErrorReporter);
+    return createParser(line, Repl.replModulePath, errorReporter);
   }
 
   @Override

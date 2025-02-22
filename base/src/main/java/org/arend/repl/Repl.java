@@ -65,14 +65,14 @@ public abstract class Repl {
       return Repl.this.getNormalizationMode();
     }
   };
-  protected final @NotNull ListErrorReporter myErrorReporter;
+  protected final @NotNull ListErrorReporter errorReporter;
   protected final @NotNull LibraryManager myLibraryManager;
   public final List<ConcreteStatement> statements = new ArrayList<>();
 
   public Repl(@NotNull ListErrorReporter listErrorReporter,
               @NotNull LibraryManager libraryManager,
               @NotNull TypecheckingOrderingListener typecheckingOrderingListener) {
-    myErrorReporter = listErrorReporter;
+    errorReporter = listErrorReporter;
     myLibraryManager = libraryManager;
     typechecking = typecheckingOrderingListener;
     myModuleReferable = new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, replModulePath.getLibraryName(), Precedence.DEFAULT, null, new FullModuleReferable(replModulePath), GlobalReferable.Kind.OTHER);
@@ -158,7 +158,7 @@ public abstract class Repl {
     var scope = ScopeFactory.forGroup(group, moduleScopeProvider);
     myReplScope.addScope(scope);
     myReplScope.setCurrentLineScope(null);
-    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, myErrorReporter).resolveGroup(group, myScope, PersistentList.empty(), null);
+    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, errorReporter).resolveGroup(group, myScope, PersistentList.empty(), null);
     if (checkErrors()) {
       myMergedScopes.remove(scope);
     } else {
@@ -278,9 +278,9 @@ public abstract class Repl {
    * @see Repl#preprocessExpr(String)
    */
   public void checkExpr(@NotNull Concrete.Expression expr, @Nullable Expression expectedType, @NotNull Consumer<TypecheckingResult> continuation) {
-    expr = DesugarVisitor.desugar(expr, myErrorReporter);
+    expr = DesugarVisitor.desugar(expr, errorReporter);
     if (checkErrors()) return;
-    var typechecker = new CheckTypeVisitor(myErrorReporter, null, null);
+    var typechecker = new CheckTypeVisitor(errorReporter, null, null);
     var instancePool = new GlobalInstancePool(typechecking.getInstanceScopeProvider().getInstancesFor(myModuleReferable), typechecker);
     typechecker.setInstancePool(instancePool);
     var result = typechecker.finalCheckExpr(expr, expectedType);
@@ -295,7 +295,7 @@ public abstract class Repl {
   public final @Nullable Concrete.Expression preprocessExpr(@NotNull String text) {
     var expr = parseExpr(text);
     if (expr == null || checkErrors()) return null;
-    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(myScope, new ArrayList<>(), TypingInfo.EMPTY, myErrorReporter, null), null), myErrorReporter);
+    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(myScope, new ArrayList<>(), TypingInfo.EMPTY, errorReporter, null), null), errorReporter);
     if (checkErrors()) return null;
     return expr;
   }
@@ -312,7 +312,7 @@ public abstract class Repl {
    * @return true if there is error(s).
    */
   public boolean checkErrors() {
-    var errorList = myErrorReporter.getErrorList();
+    var errorList = errorReporter.getErrorList();
     boolean hasErrors = false;
     for (GeneralError error : errorList) {
       printlnOpt(error.getDoc(myPpConfig), ERROR_LEVELS.contains(error.level));

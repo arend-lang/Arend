@@ -110,7 +110,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   public boolean typecheckDefinitions(final Collection<? extends Concrete.ResolvableDefinition> definitions, CancellationIndicator cancellationIndicator, boolean withInstances) {
     return run(cancellationIndicator, () -> {
-      Ordering ordering = new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, withInstances);
+      Ordering ordering = new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, withInstances, myErrorReporter);
       for (Concrete.ResolvableDefinition definition : definitions) {
         ordering.order(definition);
       }
@@ -124,13 +124,13 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   public boolean typecheckModules(final Collection<? extends ConcreteGroup> modules, CancellationIndicator cancellationIndicator) {
     return run(cancellationIndicator, () -> {
-      new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator).orderModules(modules);
+      new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, myErrorReporter).orderModules(modules);
       return true;
     });
   }
 
   public boolean typecheckLibrary(Library library, CancellationIndicator cancellationIndicator) {
-    return run(cancellationIndicator, () -> library.orderModules(new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator)));
+    return run(cancellationIndicator, () -> library.orderModules(new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, myErrorReporter)));
   }
 
   public boolean typecheckLibrary(Library library) {
@@ -138,7 +138,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   }
 
   public boolean typecheckTests(Library library, CancellationIndicator cancellationIndicator) {
-    return run(cancellationIndicator, () -> library.orderTestModules(new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator)));
+    return run(cancellationIndicator, () -> library.orderTestModules(new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, myErrorReporter)));
   }
 
   public boolean typecheckCollected(CollectingOrderingListener collector, CancellationIndicator cancellationIndicator) {
@@ -616,7 +616,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
     if (!definitionCallGraph.checkTermination()) {
       for (Map.Entry<Definition, Set<RecursiveBehavior<Definition>>> entry : definitionCallGraph.myErrorInfo.entrySet()) {
-        myErrorReporter.report(new TerminationCheckError(entry.getKey(), entry.getValue()));
+        myErrorReporter.report(new TerminationCheckError(entry.getKey(), definitionCallGraph.myErrorInfo.keySet(), entry.getValue()));
       }
       ok = false;
     }
