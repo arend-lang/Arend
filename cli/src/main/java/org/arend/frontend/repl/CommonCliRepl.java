@@ -40,6 +40,7 @@ import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DummyDependencyListener;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.provider.ConcreteProvider;
+import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.util.FileUtils;
 import org.arend.util.Range;
 import org.intellij.lang.annotations.Language;
@@ -112,7 +113,7 @@ public abstract class CommonCliRepl extends Repl {
     super(
       errorReporter,
       libraryManager,
-      new TypecheckingOrderingListener(InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(libraryManager))
+      new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(libraryManager))
     );
     myLibraryResolver = libraryResolver;
     myReplLibrary = Files.exists(pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE))

@@ -7,13 +7,10 @@ import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.LexicalScope;
 import org.arend.naming.scope.Scope;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.concrete.ConcreteCompareVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
-import org.arend.util.list.PersistentList;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 public class GroupData {
   private final long myTimestamp;
@@ -22,12 +19,6 @@ public class GroupData {
   private GlobalTypingInfo myTypingInfo;
   private Map<LongName, DefinitionData> myResolvedDefinitions;
   private boolean myResolved;
-
-  public record DefinitionData(Concrete.ResolvableDefinition definition, PersistentList<TCDefReferable> instances) {
-    public boolean compare(DefinitionData other, Map<Object, Consumer<Concrete.SourceNode>> dataUpdater) {
-      return definition.accept(new ConcreteCompareVisitor(dataUpdater), other.definition) && instances.equals(other.instances) && dataUpdater.isEmpty();
-    }
-  }
 
   private GroupData(long timestamp, ConcreteGroup rawGroup, GlobalTypingInfo typingInfo) {
     myTimestamp = timestamp;
@@ -92,10 +83,10 @@ public class GroupData {
     Concrete.ResolvableDefinition newDef = group.definition();
     if (newDef != null) {
       DefinitionData definitionData = myResolvedDefinitions.get(newDef.getData().getRefLongName());
-      boolean ok = definitionData != null && newDef.getData().isSimilar(definitionData.definition.getData());
+      boolean ok = definitionData != null && newDef.getData().isSimilar(definitionData.definition().getData());
       if (ok) {
         if (newDef instanceof Concrete.DataDefinition dataDef) {
-          if (definitionData.definition instanceof Concrete.DataDefinition oldData && dataDef.getConstructorClauses().size() == oldData.getConstructorClauses().size()) {
+          if (definitionData.definition() instanceof Concrete.DataDefinition oldData && dataDef.getConstructorClauses().size() == oldData.getConstructorClauses().size()) {
             List<Concrete.ConstructorClause> clauses = dataDef.getConstructorClauses();
             List<Concrete.ConstructorClause> oldClauses = oldData.getConstructorClauses();
             for (int i = 0; i < clauses.size(); i++) {
@@ -121,7 +112,7 @@ public class GroupData {
             ok = false;
           }
         } else if (newDef instanceof Concrete.ClassDefinition classDef) {
-          if (definitionData.definition instanceof Concrete.ClassDefinition oldClass && classDef.getElements().size() == oldClass.getElements().size()) {
+          if (definitionData.definition() instanceof Concrete.ClassDefinition oldClass && classDef.getElements().size() == oldClass.getElements().size()) {
             List<Concrete.ClassElement> elements = classDef.getElements();
             List<Concrete.ClassElement> oldElements = oldClass.getElements();
             for (int i = 0; i < elements.size(); i++) {
@@ -152,7 +143,7 @@ public class GroupData {
       }
 
       if (ok) {
-        TCDefReferable ref = definitionData.definition.getData();
+        TCDefReferable ref = definitionData.definition().getData();
         replaced.put(newDef.getData(), ref);
         ref.setData(newDef.getData().getData());
         newDef.setReferable(ref);

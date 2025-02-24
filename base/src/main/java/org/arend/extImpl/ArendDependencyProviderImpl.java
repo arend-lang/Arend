@@ -16,7 +16,7 @@ import org.arend.server.ProgressReporter;
 import org.arend.server.impl.ArendServerImpl;
 import org.arend.server.impl.GroupData;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
-import org.arend.util.FullName;
+import org.arend.module.FullName;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;

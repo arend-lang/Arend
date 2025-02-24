@@ -6,6 +6,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.Precedence;
+import org.arend.module.FullName;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.module.scopeprovider.SimpleModuleScopeProvider;
@@ -86,11 +87,11 @@ public class ArendServerImpl implements ArendServer {
   private final InstanceScopeProvider myInstanceScopeProvider = new InstanceScopeProvider() {
     @Override
     public @NotNull PersistentList<TCDefReferable> getInstancesFor(@NotNull TCDefReferable referable) {
-      ModuleLocation module = referable.getLocation();
-      if (module == null) return PersistentList.empty();
-      GroupData groupData = myGroups.get(module);
+      FullName fullName = referable.getRefFullName();
+      if (fullName.module == null) return PersistentList.empty();
+      GroupData groupData = myGroups.get(fullName.module);
       if (groupData == null) return PersistentList.empty();
-      GroupData.DefinitionData defData = groupData.getDefinitionData(referable.getRefLongName());
+      DefinitionData defData = groupData.getDefinitionData(fullName.longName);
       return defData == null ? PersistentList.empty() : defData.instances();
     }
   };
@@ -401,9 +402,23 @@ public class ArendServerImpl implements ArendServer {
     return groupData == null ? null : groupData.getRawGroup();
   }
 
-  @Override
   public @Nullable GroupData getGroupData(@NotNull ModuleLocation module) {
     return myGroups.get(module);
+  }
+
+  @Override
+  public @NotNull Collection<? extends DefinitionData> getResolvedDefinitions(@NotNull ModuleLocation module) {
+    GroupData groupData = myGroups.get(module);
+    Collection<? extends DefinitionData> result = groupData == null ? null : groupData.getResolvedDefinitions();
+    return result == null ? Collections.emptyList() : result;
+  }
+
+  @Override
+  public @Nullable DefinitionData getResolvedDefinition(@NotNull TCDefReferable referable) {
+    FullName fullName = referable.getRefFullName();
+    if (fullName.module == null) return null;
+    GroupData groupData = myGroups.get(fullName.module);
+    return groupData == null ? null : groupData.getDefinitionData(fullName.longName);
   }
 
   @Override

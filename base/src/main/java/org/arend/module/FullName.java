@@ -1,26 +1,18 @@
-package org.arend.util;
+package org.arend.module;
 
 import org.arend.ext.module.LongName;
-import org.arend.module.ModuleLocation;
-import org.arend.naming.reference.LocatedReferable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 public class FullName {
-  public ModuleLocation module;
-  public LongName longName;
+  public final @Nullable ModuleLocation module;
+  public final @NotNull LongName longName;
 
-  public FullName(ModuleLocation modulePath, LongName longName) {
+  public FullName(@Nullable ModuleLocation modulePath, @NotNull LongName longName) {
     this.module = modulePath;
     this.longName = longName;
-  }
-
-  public FullName(LocatedReferable referable) {
-    List<String> name = new ArrayList<>();
-    module = LocatedReferable.Helper.getLocation(referable, name);
-    longName = new LongName(name);
   }
 
   @Override
@@ -39,6 +31,6 @@ public class FullName {
 
   @Override
   public String toString() {
-    return module + "::" + longName;
+    return module == null ? longName.toString() : module + ":" + longName;
   }
 }

@@ -21,7 +21,7 @@ import org.arend.naming.scope.local.ElimScope;
 import org.arend.naming.scope.local.ListScope;
 import org.arend.prelude.Prelude;
 import org.arend.ext.concrete.definition.FunctionKind;
-import org.arend.server.impl.GroupData;
+import org.arend.server.impl.DefinitionData;
 import org.arend.term.NameHiding;
 import org.arend.term.NameRenaming;
 import org.arend.term.NamespaceCommand;
@@ -616,7 +616,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     return instances;
   }
 
-  public void resolveGroup(ConcreteGroup group, Scope scope, PersistentList<TCDefReferable> instances, Map<LongName, GroupData.DefinitionData> definitionData) {
+  public void resolveGroup(ConcreteGroup group, Scope scope, PersistentList<TCDefReferable> instances, Map<LongName, DefinitionData> definitionData) {
     LocatedReferable groupRef = group.referable();
     Collection<? extends ConcreteStatement> statements = group.statements();
     Collection<? extends ConcreteGroup> dynamicSubgroups = group.dynamicGroups();
@@ -746,7 +746,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       instances = instances.remove(defRef);
     }
     if (definitionData != null && def instanceof Concrete.ResolvableDefinition definition) {
-      definitionData.putIfAbsent(definition.getData().getRefLongName(), new GroupData.DefinitionData(definition, addInstances(instances, newInstances)));
+      definitionData.putIfAbsent(definition.getData().getRefLongName(), new DefinitionData(definition, addInstances(instances, newInstances)));
     }
 
     if (!dynamicSubgroups.isEmpty()) {
@@ -781,10 +781,9 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     Map<String, LocatedReferable> referables = new HashMap<>();
     for (InternalReferable internalRef : group.getInternalReferables()) {
-      LocatedReferable ref = internalRef.getLocatedReferableParent();
-      String name = ref.textRepresentation();
+      String name = internalRef.getRefName();
       if (!name.isEmpty() && !"_".equals(name)) {
-        referables.putIfAbsent(name, ref);
+        referables.putIfAbsent(name, internalRef);
       }
     }
 

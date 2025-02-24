@@ -49,6 +49,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class TypecheckingOrderingListener extends BooleanComputationRunner implements OrderingListener {
+  private final ArendCheckerFactory myCheckerFactory;
   private final DependencyListener myDependencyListener;
   private final Map<TCDefReferable, Suspension> mySuspensions = new HashMap<>();
   private final ErrorReporter myErrorReporter;
@@ -62,7 +63,8 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   private record Suspension(CheckTypeVisitor typechecker, boolean isNew, UniverseKind universeKind) {}
 
-  public TypecheckingOrderingListener(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
+  public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
+    myCheckerFactory = factory;
     myErrorReporter = errorReporter;
     myDependencyListener = dependencyListener;
     myInstanceScopeProvider = instanceScopeProvider;
@@ -71,8 +73,8 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     myExtensionProvider = extensionProvider;
   }
 
-  public TypecheckingOrderingListener(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, ErrorReporter errorReporter, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
-    this(instanceScopeProvider, concreteProvider, errorReporter, DummyDependencyListener.INSTANCE, comparator, extensionProvider);
+  public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, ErrorReporter errorReporter, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
+    this(factory, instanceScopeProvider, concreteProvider, errorReporter, DummyDependencyListener.INSTANCE, comparator, extensionProvider);
   }
 
   public ConcreteProvider getConcreteProvider() {
@@ -247,7 +249,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
 
     if (ok) {
-      CheckTypeVisitor checkTypeVisitor = new CheckTypeVisitor(new LocalErrorReporter(definition.getData(), myErrorReporter), null, extension);
+      CheckTypeVisitor checkTypeVisitor = myCheckerFactory.create(new LocalErrorReporter(definition.getData(), myErrorReporter), null, extension);
       checkTypeVisitor.setInstancePool(new GlobalInstancePool(myInstanceScopeProvider.getInstancesFor(definition.getData()), checkTypeVisitor));
       definition = definition.accept(new ReplaceDataVisitor(), null);
       if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind().isUse()) {
@@ -396,7 +398,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     typecheckingHeaderStarted(definition.getData());
 
     CountingErrorReporter countingErrorReporter = new CountingErrorReporter(myErrorReporter);
-    CheckTypeVisitor visitor = new CheckTypeVisitor(new LocalErrorReporter(definition.getData(), countingErrorReporter), null, myExtensionProvider.getArendExtension(definition.getData()));
+    CheckTypeVisitor visitor = myCheckerFactory.create(new LocalErrorReporter(definition.getData(), countingErrorReporter), null, myExtensionProvider.getArendExtension(definition.getData()));
     visitor.setStatus(definition.getStatus().getTypecheckingStatus());
     DesugarVisitor.desugar(definition, visitor.getErrorReporter());
     Definition oldTypechecked = definition.getData().getTypechecked();

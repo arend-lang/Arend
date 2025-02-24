@@ -6,7 +6,7 @@ import org.arend.module.ModuleLocation;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
-import org.arend.util.FullName;
+import org.arend.module.FullName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

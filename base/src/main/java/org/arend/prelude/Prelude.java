@@ -31,6 +31,7 @@ import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.PartialComparator;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.provider.ConcreteProvider;
+import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.util.SingletonList;
 import org.arend.util.Version;
 
@@ -295,7 +296,7 @@ public class Prelude implements ArendPrelude {
 
   public static class PreludeTypechecking extends TypecheckingOrderingListener {
     public PreludeTypechecking(ConcreteProvider concreteProvider) {
-      super(InstanceScopeProvider.EMPTY, concreteProvider, DummyErrorReporter.INSTANCE, PartialComparator.getTrivial(), ref -> null);
+      super(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY, concreteProvider, DummyErrorReporter.INSTANCE, PartialComparator.getTrivial(), ref -> null);
     }
 
     @Override

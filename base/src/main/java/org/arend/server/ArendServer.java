@@ -5,9 +5,10 @@ import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.Referable;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.scope.Scope;
-import org.arend.server.impl.GroupData;
+import org.arend.server.impl.DefinitionData;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
@@ -96,7 +97,12 @@ public interface ArendServer {
   /**
    * @return the group data of the specified module.
    */
-  @Nullable GroupData getGroupData(@NotNull ModuleLocation module);
+  @NotNull Collection<? extends DefinitionData> getResolvedDefinitions(@NotNull ModuleLocation module);
+
+  /**
+   * @return the definition corresponding to the given referable if it was already resolved.
+   */
+  @Nullable DefinitionData getResolvedDefinition(@NotNull TCDefReferable referable);
 
   /**
    * @return errors grouped by modules.

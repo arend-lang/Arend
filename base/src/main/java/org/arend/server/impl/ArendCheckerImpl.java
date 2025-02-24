@@ -32,8 +32,9 @@ import org.arend.typechecking.order.listener.CollectingOrderingListener;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
+import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.util.ComputationInterruptedException;
-import org.arend.util.FullName;
+import org.arend.module.FullName;
 import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -153,7 +154,7 @@ public class ArendCheckerImpl implements ArendChecker {
       for (ModuleLocation module : currentModules) {
         GroupData groupData = dependencies.get(module);
         if (groupData != null) {
-          Collection<GroupData.DefinitionData> definitionData = groupData.getResolvedDefinitions();
+          Collection<DefinitionData> definitionData = groupData.getResolvedDefinitions();
           if (definitionData == null) {
             groupData.getRawGroup().traverseGroup(group -> {
               Concrete.ResolvableDefinition definition = group.definition();
@@ -162,7 +163,7 @@ public class ArendCheckerImpl implements ArendChecker {
               }
             });
           } else {
-            for (GroupData.DefinitionData data : definitionData) {
+            for (DefinitionData data : definitionData) {
               defMap.put(data.definition().getData(), data.definition());
             }
           }
@@ -171,7 +172,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
       CollectingResolverListener resolverListener = new CollectingResolverListener(myServer.doCacheReferences());
       Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
-      Map<ModuleLocation, Map<LongName, GroupData.DefinitionData>> resolverResult = new HashMap<>();
+      Map<ModuleLocation, Map<LongName, DefinitionData>> resolverResult = new HashMap<>();
       progressReporter.beginProcessing(currentModules.size());
       for (ModuleLocation module : currentModules) {
         indicator.checkCanceled();
@@ -188,7 +189,7 @@ public class ArendCheckerImpl implements ArendChecker {
             currentErrorReporter = listErrorReporter;
           }
 
-          Map<LongName, GroupData.DefinitionData> definitionData = new LinkedHashMap<>();
+          Map<LongName, DefinitionData> definitionData = new LinkedHashMap<>();
           new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), myServer.getParentGroupScope(module, groupData.getRawGroup()), PersistentList.empty(), definitionData);
           resolverResult.put(module, definitionData);
 
@@ -228,12 +229,12 @@ public class ArendCheckerImpl implements ArendChecker {
               myServer.getErrorService().setResolverErrors(module, reporter.getErrorList());
             }
 
-            Map<LongName, GroupData.DefinitionData> definitionData = resolverResult.get(module);
+            Map<LongName, DefinitionData> definitionData = resolverResult.get(module);
             if (definitionData != null) {
-              Map<LongName, GroupData.DefinitionData> prevData = groupData.getPreviousDefinitions();
+              Map<LongName, DefinitionData> prevData = groupData.getPreviousDefinitions();
               if (prevData != null) {
-                for (Map.Entry<LongName, GroupData.DefinitionData> entry : prevData.entrySet()) {
-                  GroupData.DefinitionData newData = definitionData.get(entry.getKey());
+                for (Map.Entry<LongName, DefinitionData> entry : prevData.entrySet()) {
+                  DefinitionData newData = definitionData.get(entry.getKey());
                   boolean update;
                   if (newData != null) {
                     Map<Object, Consumer<Concrete.SourceNode>> updater = new HashMap<>();
@@ -302,6 +303,11 @@ public class ArendCheckerImpl implements ArendChecker {
     List<Concrete.ResolvableDefinition> concreteDefinitions = definitions == null ? null : new ArrayList<>();
     if (definitions != null) {
       for (FullName definition : definitions) {
+        if (definition.module == null) {
+          errorReporter.report(new DefinitionNotFoundError(definition));
+          continue;
+        }
+
         GroupData groupData = myDependencies.get(definition.module);
         if (groupData != null) {
           Referable ref = Scope.resolveName(groupData.getFileScope(), definition.longName.toList());
@@ -318,7 +324,7 @@ public class ArendCheckerImpl implements ArendChecker {
     }
 
     if (!Prelude.isInitialized()) {
-      new Prelude.PreludeTypechecking(concreteProvider).typecheckDefinitions(myDependencies.get(Prelude.MODULE_LOCATION).getResolvedDefinitions().stream().map(GroupData.DefinitionData::definition).toList(), UnstoppableCancellationIndicator.INSTANCE);
+      new Prelude.PreludeTypechecking(concreteProvider).typecheckDefinitions(myDependencies.get(Prelude.MODULE_LOCATION).getResolvedDefinitions().stream().map(DefinitionData::definition).toList(), UnstoppableCancellationIndicator.INSTANCE);
     }
 
     DependencyCollector dependencyCollector = new DependencyCollector(myServer);
@@ -349,7 +355,7 @@ public class ArendCheckerImpl implements ArendChecker {
         myLogger.info(() -> "Collected definitions (" + collector.getElements().size() + ") for " + (definitions == null ? myModules : definitions));
 
         ListErrorReporter listErrorReporter = new ListErrorReporter();
-        TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
+        TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
 
         try {
           progressReporter.beginProcessing(collector.getElements().size());
