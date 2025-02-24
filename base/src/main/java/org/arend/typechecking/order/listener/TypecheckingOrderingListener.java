@@ -61,7 +61,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   private List<TCDefReferable> myCurrentDefinitions = new ArrayList<>();
   private boolean myHeadersAreOK = true;
 
-  private record Suspension(CheckTypeVisitor typechecker, boolean isNew, UniverseKind universeKind) {}
+  private record Suspension(CheckTypeVisitor typechecker, UniverseKind universeKind) {}
 
   public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
     myCheckerFactory = factory;
@@ -271,18 +271,16 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       }
 
       setParametersOriginalDefinitionsDependency(typechecked);
-      if (typechecker.isNew()) {
-        if (!(definition instanceof Concrete.FunctionDefinition && ((Concrete.FunctionDefinition) definition).getKind().isCoclause()) && typechecked instanceof TopLevelDefinition) {
-          FixLevelParameters.fix(Collections.singleton((TopLevelDefinition) typechecked), Collections.singleton(typechecked));
-        }
-        if (recursive && typechecked instanceof FunctionDefinition) {
-          ((FunctionDefinition) typechecked).setRecursiveDefinitions(Collections.singleton((FunctionDefinition) typechecked));
-        }
-        if (recursive && typechecked instanceof DataDefinition) {
-          ((DataDefinition) typechecked).setRecursiveDefinitions(Collections.singleton((DataDefinition) typechecked));
-        }
-        findAxiomsAndGoals(Collections.singletonList(definition), Collections.singleton(typechecked));
+      if (!(definition instanceof Concrete.FunctionDefinition && ((Concrete.FunctionDefinition) definition).getKind().isCoclause()) && typechecked instanceof TopLevelDefinition) {
+        FixLevelParameters.fix(Collections.singleton((TopLevelDefinition) typechecked), Collections.singleton(typechecked));
       }
+      if (recursive && typechecked instanceof FunctionDefinition) {
+        ((FunctionDefinition) typechecked).setRecursiveDefinitions(Collections.singleton((FunctionDefinition) typechecked));
+      }
+      if (recursive && typechecked instanceof DataDefinition) {
+        ((DataDefinition) typechecked).setRecursiveDefinitions(Collections.singleton((DataDefinition) typechecked));
+      }
+      findAxiomsAndGoals(Collections.singletonList(definition), Collections.singleton(typechecked));
       if (definition instanceof Concrete.Definition def && def.isRecursive() && typechecked instanceof FunctionDefinition) {
         checkRecursiveFunctions(Collections.singletonMap((FunctionDefinition) typechecked, def), clauses == null ? Collections.emptyMap() : Collections.singletonMap((FunctionDefinition) typechecked, clauses));
       }
@@ -401,15 +399,14 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     CheckTypeVisitor visitor = myCheckerFactory.create(new LocalErrorReporter(definition.getData(), countingErrorReporter), null, myExtensionProvider.getArendExtension(definition.getData()));
     visitor.setStatus(definition.getStatus().getTypecheckingStatus());
     DesugarVisitor.desugar(definition, visitor.getErrorReporter());
-    Definition oldTypechecked = definition.getData().getTypechecked();
     DefinitionTypechecker typechecker = new DefinitionTypechecker(visitor, definition instanceof Concrete.Definition ? ((Concrete.Definition) definition).getRecursiveDefinitions() : Collections.emptySet());
-    Definition typechecked = typechecker.typecheckHeader(oldTypechecked, new GlobalInstancePool(myInstanceScopeProvider.getInstancesFor(definition.getData()), visitor), definition);
+    Definition typechecked = typechecker.typecheckHeader(new GlobalInstancePool(myInstanceScopeProvider.getInstancesFor(definition.getData()), visitor), definition);
     UniverseKind universeKind = typechecked.getUniverseKind();
     if (typechecked instanceof TopLevelDefinition) {
       ((TopLevelDefinition) typechecked).setUniverseKind(UniverseKind.WITH_UNIVERSES);
     }
     if (typechecked.status() == Definition.TypeCheckingStatus.TYPE_CHECKING) {
-      mySuspensions.put(definition.getData(), new Suspension(visitor, typechecker.isNew(), universeKind));
+      mySuspensions.put(definition.getData(), new Suspension(visitor, universeKind));
     }
 
     typecheckingHeaderFinished(definition.getData(), typechecked);
@@ -462,12 +459,11 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
       Definition def = definition.getData().getTypechecked();
       Suspension suspension = mySuspensions.remove(definition.getData());
-      if (suspension != null && suspension.isNew) {
+      if (suspension != null) {
         newDefs.add(def);
       }
       if (myHeadersAreOK && suspension != null) {
         typechecking.setTypechecker(suspension.typechecker);
-        typechecking.updateState(suspension.isNew);
         List<? extends ElimClause<ExpressionPattern>> clauses = typechecking.typecheckBody(def, definition, dataDefinitions);
         if (def instanceof FunctionDefinition && definition instanceof Concrete.Definition) {
           functionDefinitions.put((FunctionDefinition) def, (Concrete.Definition) definition);
