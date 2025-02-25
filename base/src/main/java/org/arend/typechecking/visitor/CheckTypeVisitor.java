@@ -3171,6 +3171,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   @Override
   public TypecheckingResult defer(@NotNull MetaDefinition meta, @NotNull ContextData contextData, @NotNull CoreExpression type, boolean afterLevels) {
     if (!myAllowDeferredMetas) {
+      checkCancelled();
       return TypecheckingResult.fromChecked(meta.invokeMeta(this, contextData));
     }
     if (!meta.checkContextData(contextData, errorReporter)) {
@@ -3212,6 +3213,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   private TypecheckingResult invokeMeta(MetaDefinition meta, ContextData contextData) {
     try {
+      checkCancelled();
       return TypecheckingResult.fromChecked(meta.invokeMeta(this, contextData));
     } catch (MetaException e) {
       if (e.error.cause == null) {

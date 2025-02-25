@@ -23,6 +23,7 @@ import org.arend.server.ProgressReporter;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ReplaceDataVisitor;
+import org.arend.term.concrete.ReplaceTCRefVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.computation.*;
@@ -291,16 +292,30 @@ public class ArendCheckerImpl implements ArendChecker {
 
   @Override
   public int typecheck(@Nullable List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
-    return typecheck(definitions, errorReporter, indicator, progressReporter, true);
+    return typecheck(definitions, null, errorReporter, indicator, progressReporter, true);
   }
 
-  private int typecheck(@Nullable List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter, boolean withInstances) {
+  @Override
+  public int typecheck(@Nullable FullName definition, @NotNull ArendCheckerFactory checkerFactory, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
+    return typecheck(Collections.singletonList(definition), checkerFactory, errorReporter, indicator, progressReporter, true);
+  }
+
+  private static Concrete.ResolvableDefinition copyDefinition(Concrete.ResolvableDefinition definition) {
+    return definition.accept(new ReplaceTCRefVisitor(), null);
+  }
+
+  private int typecheck(@Nullable List<FullName> definitions, @Nullable ArendCheckerFactory checkerFactory, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter, boolean withInstances) {
     myLogger.info(() -> definitions == null ? "Begin typechecking definitions in " + myModules : "Begin typechecking definitions " + definitions);
+
+    if (checkerFactory != null && definitions == null) {
+      throw new IllegalArgumentException();
+    }
 
     ConcreteProvider concreteProvider = getConcreteProvider(indicator, ProgressReporter.empty());
     if (concreteProvider == null) return 0;
 
     List<Concrete.ResolvableDefinition> concreteDefinitions = definitions == null ? null : new ArrayList<>();
+    Set<TCDefReferable> concreteReferences = definitions == null || checkerFactory == null ? null : new HashSet<>();
     if (definitions != null) {
       for (FullName definition : definitions) {
         if (definition.module == null) {
@@ -312,8 +327,12 @@ public class ArendCheckerImpl implements ArendChecker {
         if (groupData != null) {
           Referable ref = Scope.resolveName(groupData.getFileScope(), definition.longName.toList());
           Concrete.GeneralDefinition def = ref instanceof GlobalReferable ? myConcreteProvider.getConcrete((GlobalReferable) ref) : null;
-          if (def instanceof Concrete.ResolvableDefinition) {
-            concreteDefinitions.add((Concrete.ResolvableDefinition) def);
+          if (def instanceof Concrete.ResolvableDefinition cDef) {
+            if (checkerFactory != null) {
+              cDef = copyDefinition(cDef);
+              concreteReferences.add(cDef.getData());
+            }
+            concreteDefinitions.add(cDef);
           } else {
             errorReporter.report(new DefinitionNotFoundError(definition));
           }
@@ -355,14 +374,39 @@ public class ArendCheckerImpl implements ArendChecker {
         myLogger.info(() -> "Collected definitions (" + collector.getElements().size() + ") for " + (definitions == null ? myModules : definitions));
 
         ListErrorReporter listErrorReporter = new ListErrorReporter();
-        TypecheckingOrderingListener typechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
+        TypecheckingOrderingListener dependencyTypechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
+        TypecheckingOrderingListener typechecker = checkerFactory == null ? dependencyTypechecker : new TypecheckingOrderingListener(checkerFactory, myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, new GroupComparator(myDependencies), myServer.getExtensionProvider());
 
         try {
           progressReporter.beginProcessing(collector.getElements().size());
           for (CollectingOrderingListener.Element element : collector.getElements()) {
             typecheckingIndicator.checkCanceled();
             progressReporter.beginItem(element.getAllDefinitions());
-            element.feedTo(typechecker);
+
+            if (checkerFactory == null) {
+              element.feedTo(typechecker);
+            } else {
+              boolean found = false;
+              List<? extends Concrete.ResolvableDefinition> allDefinitions = element.getAllDefinitions();
+              for (Concrete.ResolvableDefinition definition : allDefinitions) {
+                if (concreteReferences.contains(definition.getData())) {
+                  found = true;
+                  break;
+                }
+              }
+
+              if (found) {
+                List<Concrete.ResolvableDefinition> newDefinitions = new ArrayList<>(allDefinitions.size());
+                for (Concrete.ResolvableDefinition definition : allDefinitions) {
+                  newDefinitions.add(concreteReferences.contains(definition.getData()) ? definition : copyDefinition(definition));
+                }
+                element.replace(newDefinitions).feedTo(typechecker);
+                break;
+              } else {
+                element.feedTo(dependencyTypechecker);
+              }
+            }
+
             progressReporter.endItem(element.getAllDefinitions());
           }
 
@@ -374,6 +418,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
           myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is commited");
         } catch (Exception e) {
+          dependencyTypechecker.computationInterrupted();
           typechecker.computationInterrupted();
           myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is interrupted");
           throw e;
@@ -399,6 +444,6 @@ public class ArendCheckerImpl implements ArendChecker {
 
   @Override
   public void typecheckExtensionDefinition(@NotNull FullName definition) {
-    typecheck(Collections.singletonList(definition), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty(), false);
+    typecheck(Collections.singletonList(definition), null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty(), false);
   }
 }

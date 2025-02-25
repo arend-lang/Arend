@@ -2523,7 +2523,7 @@ public final class Concrete {
 
     @Override
     public FunctionDefinition copy(List<Parameter> parameters, FunctionBody body) {
-      FunctionDefinition result = new FunctionDefinition(myKind, getData(), getPLevelParameters(), getHLevelParameters(), parameters, getResultType(), getResultTypeLevel(), body);
+      FunctionDefinition result = new FunctionDefinition(myKind, getData(), pLevelParameters, hLevelParameters, parameters, getResultType(), getResultTypeLevel(), body);
       result.enclosingClass = enclosingClass;
       result.setUseParent(getUseParent());
       result.setUsedDefinitions(getUsedDefinitions());

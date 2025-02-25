@@ -8,7 +8,7 @@ public class FieldReferableImpl extends InternalReferableImpl implements FieldRe
   private final boolean myExplicit;
   private final boolean myRealParameterField;
 
-  public FieldReferableImpl(Object data, AccessModifier accessModifier, Precedence precedence, String name, Precedence aliasPrecedence, String aliasName, boolean isExplicit, boolean isParameter, boolean isRealParameterField, TCDefReferable parent) {
+  public FieldReferableImpl(Object data, AccessModifier accessModifier, Precedence precedence, String name, Precedence aliasPrecedence, String aliasName, boolean isExplicit, boolean isParameter, boolean isRealParameterField, LocatedReferable parent) {
     super(data, accessModifier, precedence, name, aliasPrecedence, aliasName, !isParameter, parent, Kind.FIELD);
     myRealParameterField = isRealParameterField;
     myExplicit = isExplicit;

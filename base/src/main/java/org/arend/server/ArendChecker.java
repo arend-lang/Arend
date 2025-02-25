@@ -7,6 +7,7 @@ import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.module.FullName;
+import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,6 +37,20 @@ public interface ArendChecker {
    */
   int typecheck(@Nullable List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter);
 
+  /**
+   * Typechecks the given definition with a custom checker.
+   *
+   * @param definition      the definition to be typechecked.
+   * @param checkerFactory  a factory for creating Arend checkers.
+   *                        If it is {@code null}, the default factory will be used.
+   *                        If it is not {@code null}, then the definitions will be re-checked even if they were already checked.
+   *                        Additionally, in this case, the state of the server won't be changed.
+   *                        Note that dependencies of the definitions are always checked with the default factory.
+   * @param errorReporter   reports not found definitions.
+   * @return the number of definitions that were typechecked.
+   */
+  int typecheck(@NotNull FullName definition, @NotNull ArendCheckerFactory checkerFactory, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter);
+
   // TODO[server2]: Delete this. Instead, typecheck extension definitions as needed.
   default void typecheckExtensionDefinition(@NotNull FullName definition) {
     typecheck(Collections.singletonList(definition), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
@@ -50,6 +65,11 @@ public interface ArendChecker {
 
     @Override
     public int typecheck(@Nullable List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
+      return 0;
+    }
+
+    @Override
+    public int typecheck(@NotNull FullName definition, @NotNull ArendCheckerFactory checkerFactory, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
       return 0;
     }
   };

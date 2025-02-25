@@ -1,10 +1,8 @@
 package org.arend.term.concrete;
 
-import org.arend.naming.reference.Referable;
-import org.arend.naming.reference.UnresolvedReference;
+import org.arend.naming.reference.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concrete.Expression>, ConcreteLevelExpressionVisitor<Void,Concrete.LevelExpression>, ConcreteResolvableDefinitionVisitor<Void, Concrete.ResolvableDefinition> {
   private final Object myData;
@@ -40,7 +38,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
     return Concrete.AppExpression.make(getData(expr), expr.getFunction().accept(this, null), args);
   }
 
-  private Referable copyRef(Referable referable) {
+  protected Referable copyRef(Referable referable) {
     return myCopyUnresolved && referable instanceof UnresolvedReference unresolved ? unresolved.copy() : referable;
   }
 
@@ -324,7 +322,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   }
 
   @Override
-  public Concrete.ResolvableDefinition visitFunction(Concrete.BaseFunctionDefinition def, Void params) {
+  public Concrete.BaseFunctionDefinition visitFunction(Concrete.BaseFunctionDefinition def, Void params) {
     Concrete.FunctionBody body = def.getBody();
     Concrete.FunctionBody newBody;
     if (body instanceof Concrete.CoelimFunctionBody) {
@@ -400,7 +398,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
   @Override
   public DefinableMetaDefinition visitMeta(DefinableMetaDefinition def, Void params) {
-    DefinableMetaDefinition result = new DefinableMetaDefinition(def.getData(), def.getPLevelParameters(), def.getHLevelParameters(), visitParameters(def.getParameters()), def.body == null ? null : def.body.accept(this, null));
+    DefinableMetaDefinition result = new DefinableMetaDefinition(def.getData(), def.pLevelParameters, def.hLevelParameters, visitParameters(def.getParameters()), def.body == null ? null : def.body.accept(this, null));
     result.setStatus(def.getStatus());
     return result;
   }
