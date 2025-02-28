@@ -28,7 +28,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
 
   public static UnresolvedReference make(Object data, @NotNull List<String> path) {
     if (path.isEmpty()) return null;
-    if (path.size() == 1) return new NamedUnresolvedReference(data, path.get(0));
+    if (path.size() == 1) return new NamedUnresolvedReference(data, path.getFirst());
 
     List<AbstractReference> references = new ArrayList<>(path.size());
     for (String ignored : path) {
@@ -38,7 +38,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
   }
 
   public static UnresolvedReference make(Object data, @NotNull List<AbstractReference> references, @NotNull List<String> path) {
-    return path.isEmpty() ? null : path.size() == 1 ? new NamedUnresolvedReference(data, path.get(0)) : new LongUnresolvedReference(data, references, path);
+    return path.isEmpty() ? null : path.size() == 1 ? new NamedUnresolvedReference(data, path.getFirst()) : new LongUnresolvedReference(data, references, path);
   }
 
   public @NotNull List<String> getPath() {
@@ -117,7 +117,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
       }
     }
 
-    String name = myPath.get(myPath.size() - 1);
+    String name = myPath.getLast();
     if (listener != null && myPath.size() - 1 < myReferences.size() && myReferences.get(myPath.size() - 1) != null) {
       listener.resolving(myReferences.get(myPath.size() - 1), scope, context, !onlyTry);
     }
@@ -154,11 +154,11 @@ public class LongUnresolvedReference implements UnresolvedReference {
     Scope prevScope = scope;
     for (int i = 0; i < myPath.size() - 1; i++) {
       Scope nextScope = scope.resolveNamespace(myPath.get(i));
+      if (listener != null && i < myReferences.size() && myReferences.get(i) != null) {
+        listener.resolving(myReferences.get(i), scope, Scope.ScopeContext.STATIC, !onlyTry && nextScope != null);
+      }
       if (nextScope == null) {
         return resolveField(prevScope, initialScope, i - 1, onlyTry, typingInfo, resolvedRefs, listener);
-      }
-      if (listener != null && i < myReferences.size() && myReferences.get(i) != null) {
-        listener.resolving(myReferences.get(i), scope, Scope.ScopeContext.STATIC, !onlyTry);
       }
 
       if (resolvedRefs != null) {
@@ -169,8 +169,11 @@ public class LongUnresolvedReference implements UnresolvedReference {
       scope = nextScope;
     }
 
-    String name = myPath.get(myPath.size() - 1);
+    String name = myPath.getLast();
     resolved = scope.resolveName(name);
+    if (listener != null && myPath.size() - 1 < myReferences.size() && myReferences.get(myPath.size() - 1) != null) {
+      listener.resolving(myReferences.get(myPath.size() - 1), scope, Scope.ScopeContext.STATIC, !onlyTry && resolved != null);
+    }
     if (resolved == null) {
       if (myPath.size() == 1) {
         if (onlyTry) return null;
@@ -178,9 +181,6 @@ public class LongUnresolvedReference implements UnresolvedReference {
       } else {
         return resolveField(prevScope, initialScope, myPath.size() - 2, onlyTry, typingInfo, resolvedRefs, listener);
       }
-    }
-    if (listener != null && myPath.size() - 1 < myReferences.size() && myReferences.get(myPath.size() - 1) != null) {
-      listener.resolving(myReferences.get(myPath.size() - 1), scope, Scope.ScopeContext.STATIC, !onlyTry);
     }
     if (resolvedRefs != null) {
       resolvedRefs.add(resolved);
@@ -217,9 +217,9 @@ public class LongUnresolvedReference implements UnresolvedReference {
 
   private Concrete.Expression resolveField(Scope scope, Scope initialScope, int i, boolean onlyTry, TypingInfo typingInfo, List<Referable> resolvedRefs, ResolverListener listener) {
     if (i == -1) {
-      resolved = scope.resolveName(myPath.get(0));
-      if (listener != null && !myReferences.isEmpty() && myReferences.get(0) != null) {
-        listener.resolving(myReferences.get(0), scope, Scope.ScopeContext.STATIC, !onlyTry);
+      resolved = scope.resolveName(myPath.getFirst());
+      if (listener != null && !myReferences.isEmpty() && myReferences.getFirst() != null) {
+        listener.resolving(myReferences.getFirst(), scope, Scope.ScopeContext.STATIC, !onlyTry);
       }
       if (resolvedRefs != null) {
         resolvedRefs.add(resolved);

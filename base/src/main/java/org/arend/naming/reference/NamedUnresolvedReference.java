@@ -75,7 +75,7 @@ public class NamedUnresolvedReference implements UnresolvedReference {
     }
 
     if (listener != null && myData instanceof AbstractReference reference) {
-      listener.resolving(reference, scope, context, true);
+      listener.resolving(reference, scope, context, false);
     }
     resolved = scope.resolveName(myName, context);
     if (resolved != null && resolvedRefs != null) {
