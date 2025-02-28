@@ -1,5 +1,6 @@
 package org.arend.actions
 
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -8,7 +9,13 @@ import org.arend.codeInsight.ArendPopupHandler
 import org.arend.core.expr.Expression
 import org.arend.ext.core.ops.NormalizationMode
 import org.arend.extImpl.definitionRenamer.ConflictDefinitionRenamer
+import org.arend.extImpl.definitionRenamer.ScopeDefinitionRenamer
+import org.arend.naming.reference.TCDefReferable
+import org.arend.naming.scope.RenamedScope
+import org.arend.psi.ancestor
+import org.arend.psi.ext.ReferableBase
 import org.arend.refactoring.exprToConcrete
+import org.arend.server.ArendServerService
 import org.arend.settings.ArendProjectSettings
 import org.arend.tracer.ArendTraceAction
 import org.arend.typechecking.SearchingArendCheckerFactory
@@ -24,12 +31,17 @@ abstract class ArendExpressionAction(private val message: String, private val ge
             val module = defName.module ?: return displayErrorHint(editor, "Failed to obtain type: cannot locate file")
             val factory = SearchingArendCheckerFactory(expr)
             var text = ""
-            project.service<RunnerService>().runChecker(module, defName.longName, factory, {
+            val renamed = HashMap<TCDefReferable, TCDefReferable>()
+            project.service<RunnerService>().runChecker(module, defName.longName, factory, renamed, {
                 val type = factory.checkedExprResult?.let { getter(it) }
                 val resultRange = factory.checkedExprRange
                 if (type != null && resultRange != null) {
                     val normalizePopup = project.service<ArendProjectSettings>().data.popupNormalize
-                    val definitionRenamer = ConflictDefinitionRenamer() // TODO[server2]: PsiLocatedRenamer(expr)
+                    val psiRef = runReadAction { expr.ancestor<ReferableBase<*>>() }
+                    val scope = psiRef?.tcReferable?.let {
+                        project.service<ArendServerService>().server.getReferableScope(it)
+                    }
+                    val definitionRenamer = if (scope != null) ScopeDefinitionRenamer(RenamedScope(scope, renamed)) else ConflictDefinitionRenamer()
                     text = exprToConcrete(project, type, if (normalizePopup) NormalizationMode.RNF else null, definitionRenamer).toString()
                 }
             }) {

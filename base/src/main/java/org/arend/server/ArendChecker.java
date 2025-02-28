@@ -3,6 +3,7 @@ package org.arend.server;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.module.ModuleLocation;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
@@ -13,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Stores a set of modules that can be resolved and typechecked.
@@ -46,10 +48,11 @@ public interface ArendChecker {
    *                        If it is not {@code null}, then the definitions will be re-checked even if they were already checked.
    *                        Additionally, in this case, the state of the server won't be changed.
    *                        Note that dependencies of the definitions are always checked with the default factory.
+   * @param renamed         If not {@code null}, will be populated with renamed referables.
    * @param errorReporter   reports not found definitions.
    * @return the number of definitions that were typechecked.
    */
-  int typecheck(@NotNull FullName definition, @NotNull ArendCheckerFactory checkerFactory, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter);
+  int typecheck(@NotNull FullName definition, @NotNull ArendCheckerFactory checkerFactory, @Nullable Map<TCDefReferable, TCDefReferable> renamed, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter);
 
   // TODO[server2]: Delete this. Instead, typecheck extension definitions as needed.
   default void typecheckExtensionDefinition(@NotNull FullName definition) {
@@ -69,7 +72,7 @@ public interface ArendChecker {
     }
 
     @Override
-    public int typecheck(@NotNull FullName definition, @NotNull ArendCheckerFactory checkerFactory, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
+    public int typecheck(@NotNull FullName definition, @NotNull ArendCheckerFactory checkerFactory, @Nullable Map<TCDefReferable, TCDefReferable> renamed, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
       return 0;
     }
   };

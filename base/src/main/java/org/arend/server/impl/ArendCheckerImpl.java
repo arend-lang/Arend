@@ -292,19 +292,19 @@ public class ArendCheckerImpl implements ArendChecker {
 
   @Override
   public int typecheck(@Nullable List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
-    return typecheck(definitions, null, errorReporter, indicator, progressReporter, true);
+    return typecheck(definitions, null, null, errorReporter, indicator, progressReporter, true);
   }
 
   @Override
-  public int typecheck(@Nullable FullName definition, @NotNull ArendCheckerFactory checkerFactory, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
-    return typecheck(Collections.singletonList(definition), checkerFactory, errorReporter, indicator, progressReporter, true);
+  public int typecheck(@Nullable FullName definition, @NotNull ArendCheckerFactory checkerFactory, @Nullable Map<TCDefReferable, TCDefReferable> renamed, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
+    return typecheck(Collections.singletonList(definition), checkerFactory, renamed, errorReporter, indicator, progressReporter, true);
   }
 
-  private static Concrete.ResolvableDefinition copyDefinition(Concrete.ResolvableDefinition definition) {
-    return definition.accept(new ReplaceTCRefVisitor(), null);
+  private static Concrete.ResolvableDefinition copyDefinition(Concrete.ResolvableDefinition definition, Map<TCDefReferable, TCDefReferable> renamed) {
+    return definition.accept(new ReplaceTCRefVisitor(renamed), null);
   }
 
-  private int typecheck(@Nullable List<FullName> definitions, @Nullable ArendCheckerFactory checkerFactory, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter, boolean withInstances) {
+  private int typecheck(@Nullable List<FullName> definitions, @Nullable ArendCheckerFactory checkerFactory, @Nullable Map<TCDefReferable, TCDefReferable> renamed, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter, boolean withInstances) {
     myLogger.info(() -> definitions == null ? "Begin typechecking definitions in " + myModules : "Begin typechecking definitions " + definitions);
 
     if (checkerFactory != null && definitions == null) {
@@ -329,7 +329,7 @@ public class ArendCheckerImpl implements ArendChecker {
           Concrete.GeneralDefinition def = ref instanceof GlobalReferable ? myConcreteProvider.getConcrete((GlobalReferable) ref) : null;
           if (def instanceof Concrete.ResolvableDefinition cDef) {
             if (checkerFactory != null) {
-              cDef = copyDefinition(cDef);
+              cDef = copyDefinition(cDef, renamed);
               concreteReferences.add(cDef.getData());
             }
             concreteDefinitions.add(cDef);
@@ -398,7 +398,7 @@ public class ArendCheckerImpl implements ArendChecker {
               if (found) {
                 List<Concrete.ResolvableDefinition> newDefinitions = new ArrayList<>(allDefinitions.size());
                 for (Concrete.ResolvableDefinition definition : allDefinitions) {
-                  newDefinitions.add(concreteReferences.contains(definition.getData()) ? definition : copyDefinition(definition));
+                  newDefinitions.add(concreteReferences.contains(definition.getData()) ? definition : copyDefinition(definition, renamed));
                 }
                 element.replace(newDefinitions).feedTo(typechecker);
                 break;
@@ -444,6 +444,6 @@ public class ArendCheckerImpl implements ArendChecker {
 
   @Override
   public void typecheckExtensionDefinition(@NotNull FullName definition) {
-    typecheck(Collections.singletonList(definition), null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty(), false);
+    typecheck(Collections.singletonList(definition), null, null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty(), false);
   }
 }

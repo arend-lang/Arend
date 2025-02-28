@@ -6,7 +6,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ReplaceTCRefVisitor extends ReplaceDataVisitor {
-  private final Map<TCDefReferable, TCDefReferable> myTCMap = new HashMap<>();
+  private final Map<TCDefReferable, TCDefReferable> myTCMap;
+
+  public ReplaceTCRefVisitor(Map<TCDefReferable, TCDefReferable> map) {
+    myTCMap = map == null ? new HashMap<>() : map;
+  }
 
   protected Referable copyRef(Referable referable) {
     if (referable instanceof TCDefReferable) {

@@ -33,6 +33,7 @@ import org.arend.injection.actions.RevealingInformationCaretListener
 import org.arend.injection.actions.UnblockingDocumentAction
 import org.arend.injection.actions.withNormalizedTerms
 import org.arend.naming.reference.LocatedReferable
+import org.arend.naming.reference.MetaReferable
 import org.arend.naming.reference.Referable
 import org.arend.naming.reference.Reference
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
@@ -42,8 +43,8 @@ import org.arend.naming.scope.Scope
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ancestor
 import org.arend.psi.ext.ArendCompositeElement
-import org.arend.psi.ext.ArendDefMeta
 import org.arend.server.ArendServerService
+import org.arend.term.concrete.Concrete
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer
 import org.arend.term.prettyprint.TermWithSubtermDoc
 import org.arend.toolWindow.errors.ArendPrintOptionsFilterAction
@@ -395,10 +396,7 @@ abstract class InjectedArendEditor(
         }
 
         fun causeIsMetaExpression(cause: ConcreteSourceNode?, resolve: Referable?) =
-            resolve is ArendDefMeta
-            /* TODO[server2]
-            (resolve as? ArendDefMeta)?.metaRef?.definition != null &&
+            (resolve as? MetaReferable)?.definition != null &&
                     (cause as? Concrete.ReferenceExpression)?.referent != resolve
-            */
     }
 }

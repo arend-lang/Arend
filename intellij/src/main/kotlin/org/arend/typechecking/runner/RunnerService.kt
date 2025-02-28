@@ -18,12 +18,13 @@ import org.arend.toolWindow.errors.ArendMessagesService
 import org.arend.typechecking.CoroutineCancellationIndicator
 import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.module.FullName
+import org.arend.naming.reference.TCDefReferable
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.visitor.ArendCheckerFactory
 
 @Service(Service.Level.PROJECT)
 class RunnerService(private val project: Project, private val coroutineScope: CoroutineScope) {
-    private fun runChecker(library: String?, isTest: Boolean, module: ModuleLocation?, definition: LongName?, checkerFactory: ArendCheckerFactory?, bgAction: (() -> Unit)?, edtAction: (() -> Unit)?) =
+    private fun runChecker(library: String?, isTest: Boolean, module: ModuleLocation?, definition: LongName?, checkerFactory: ArendCheckerFactory?, renamed: Map<TCDefReferable, TCDefReferable>?, bgAction: (() -> Unit)?, edtAction: (() -> Unit)?) =
         coroutineScope.launch {
             val message = module?.toString() ?: (library ?: "project")
             val server = project.service<ArendServerService>().server
@@ -51,7 +52,7 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
                         val result = if (checkerFactory == null) {
                             checker.typecheck(if (definition == null || module == null) null else listOf(FullName(module, definition)), NotificationErrorReporter(project), CoroutineCancellationIndicator(this), indicator)
                         } else {
-                            checker.typecheck(FullName(module, definition!!), checkerFactory, DummyErrorReporter.INSTANCE, CoroutineCancellationIndicator(this), indicator)
+                            checker.typecheck(FullName(module, definition!!), checkerFactory, renamed, DummyErrorReporter.INSTANCE, CoroutineCancellationIndicator(this), indicator)
                         }
                         if (bgAction != null) bgAction()
                         result
@@ -73,10 +74,10 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
         }
 
     fun runChecker(library: String?, isTest: Boolean, module: ModuleLocation?, definition: LongName?) =
-        runChecker(library, isTest, module, definition, null, null, null)
+        runChecker(library, isTest, module, definition, null, null, null, null)
 
-    fun runChecker(module: ModuleLocation, definition: LongName, checkerFactory: ArendCheckerFactory, bgAction: (() -> Unit)?, edtAction: (() -> Unit)?) =
-        runChecker(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, definition, checkerFactory, bgAction, edtAction)
+    fun runChecker(module: ModuleLocation, definition: LongName, checkerFactory: ArendCheckerFactory, renamed: Map<TCDefReferable, TCDefReferable>?, bgAction: (() -> Unit)?, edtAction: (() -> Unit)?) =
+        runChecker(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, definition, checkerFactory, renamed, bgAction, edtAction)
 
     fun runChecker(module: ModuleLocation) =
         runChecker(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, null)
