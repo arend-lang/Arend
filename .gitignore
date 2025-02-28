@@ -4,3 +4,4 @@ build/
 *.iml
 cli-*-full.jar
 lib/Prelude.arc
+.intellijPlatform/

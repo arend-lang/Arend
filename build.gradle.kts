@@ -26,9 +26,8 @@ allprojects {
     }
 
     java {
-        // toolchain.languageVersion.set(JavaLanguageVersion.of(17))
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     idea {
@@ -41,7 +40,7 @@ allprojects {
     tasks.withType<JavaCompile>().configureEach {
         options.encoding = "UTF-8"
         options.isDeprecation = true
-        options.release.set(17)
+        options.release.set(21)
         // options.compilerArgs.add("-Xlint:unchecked")
     }
 }
