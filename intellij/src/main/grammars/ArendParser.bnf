@@ -1,0 +1,876 @@
+{
+    generate = [
+        psi = 'no'
+    ]
+
+    parserClass = "org.arend.parser.ArendParser"
+    parserUtilClass = "org.arend.parser.ParserUtil"
+    parserImports = ["static org.arend.parser.ParserMixin.recursion_guard_"]
+
+    elementTypeHolderClass = "org.arend.psi.ArendElementTypes"
+    elementTypeClass = "org.arend.psi.ArendCompositeElementType"
+    tokenTypeClass = "org.arend.psi.ArendTokenType"
+
+    tokens = [
+        LBRACE              = '{'
+        RBRACE              = '}'
+        TGOAL               = '{?}'
+        LGOAL               = '{?'
+        LPAREN              = '('
+        RPAREN              = ')'
+        COLON               = ':'
+        ARROW               = '->'
+        FAT_ARROW           = '=>'
+        DOT                 = '.'
+        COMMA               = ','
+        APPLY_HOLE          = '__'
+        UNDERSCORE          = '_'
+        PIPE                = '|'
+
+        OPEN_KW             = '\open'
+        IMPORT_KW           = '\import'
+        HIDING_KW           = '\hiding'
+        USING_KW            = '\using'
+        AS_KW               = '\as'
+        MODULE_KW           = '\module'
+        FUNC_KW             = '\func'
+        META_KW             = '\meta'
+        SFUNC_KW            = '\sfunc'
+        LEMMA_KW            = '\lemma'
+        TYPE_KW             = '\type'
+        AXIOM_KW            = '\axiom'
+        FIELD_KW            = '\field'
+        OVERRIDE_KW         = '\override'
+        DEFAULT_KW          = '\default'
+        PROPERTY_KW         = '\property'
+        CLASSIFYING_KW      = '\classifying'
+        NO_CLASSIFYING_KW   = '\noclassifying'
+        STRICT_KW           = '\strict'
+        COERCE_KW           = '\coerce'
+        USE_KW              = '\use'
+        ALIAS_KW            = '\alias'
+        NON_ASSOC_KW        = '\fix'
+        LEFT_ASSOC_KW       = '\fixl'
+        RIGHT_ASSOC_KW      = '\fixr'
+        INFIX_NON_KW        = '\infix'
+        INFIX_LEFT_KW       = '\infixl'
+        INFIX_RIGHT_KW      = '\infixr'
+        PROP_KW             = '\Prop'
+        THIS_KW             = '\this'
+        WHERE_KW            = '\where'
+        WITH_KW             = '\with'
+        COWITH_KW           = '\cowith'
+        ELIM_KW             = '\elim'
+        NEW_KW              = '\new'
+        PI_KW               = '\Pi'
+        SIGMA_KW            = '\Sigma'
+        LAM_KW              = '\lam'
+        HAVE_KW             = '\have'
+        HAVES_KW            = '\have!'
+        LET_KW              = '\let'
+        LETS_KW             = '\let!'
+        IN_KW               = '\in'
+        CASE_KW             = '\case'
+        SCASE_KW            = '\scase'
+        EVAL_KW             = '\eval'
+        PEVAL_KW            = '\peval'
+        BOX_KW              = '\box'
+        RETURN_KW           = '\return'
+        DATA_KW             = '\data'
+        CONS_KW             = '\cons'
+        CLASS_KW            = '\class'
+        RECORD_KW           = '\record'
+        EXTENDS_KW          = '\extends'
+        INSTANCE_KW         = '\instance'
+        TRUNCATED_KW        = '\truncated'
+        PRIVATE_KW          = '\private'
+        PROTECTED_KW        = '\protected'
+        LP_KW               = '\lp'
+        LH_KW               = '\lh'
+        OO_KW               = '\oo'
+        SUC_KW              = '\suc'
+        LEVEL_KW            = '\level'
+        LEVELS_KW           = '\levels'
+        PLEVELS_KW          = '\plevels'
+        HLEVELS_KW          = '\hlevels'
+        LESS_OR_EQUALS      = '<='
+        GREATER_OR_EQUALS   = '>='
+        MAX_KW              = '\max'
+        INVALID_KW          = '\invalid'
+
+        LINE_COMMENT        = "LINE_COMMENT"
+        BLOCK_COMMENT       = 'BLOCK_COMMENT'
+    ]
+
+    extends("def(Function|Data|Class|Instance|Meta)") = definition
+    extends("(arr|new|pi|sigma|lam|let|case)Expr") = expr
+    extends("(universe|setUniverse|truncatedUniverse|argument)AppExpr") = appExpr
+    extends("atomArgument|newArg|universeAtom|implicitArgument|lamArgument|caseArgument|letArgument") = argument
+    extends("lamTele|atomPattern") = lamParam
+}
+
+statements ::= repl_line | (topStatement | topStatement_recovery)*
+
+repl_line ::= REPL_COMMAND? expr | REPL_COMMAND
+
+private topStatement ::= !<<eof>> stat
+
+private topStatement_recovery ::= topStatement_recover {
+    recoverWhile = topStatement_recover
+}
+
+private topStatement_recover ::= !(OPEN_KW | IMPORT_KW | MODULE_KW | FUNC_KW | SFUNC_KW | LEMMA_KW | TYPE_KW | AXIOM_KW | META_KW | USE_KW | FIELD_KW | OVERRIDE_KW | DEFAULT_KW | PROPERTY_KW | TRUNCATED_KW | DATA_KW | CONS_KW | RECORD_KW | CLASS_KW | INSTANCE_KW | PLEVELS_KW | HLEVELS_KW | PRIVATE_KW | PROTECTED_KW | <<eof>>)
+
+private statement_recover ::= !(WHERE_KW | RBRACE) & topStatement_recover
+
+accessMod ::= PRIVATE_KW | PROTECTED_KW
+
+stat ::= statCmd | accessMod? definition | defModule | statAccessMod | pLevelParams | hLevelParams | stat_recovery
+
+statAccessMod ::= accessMod statAccessModInternal { pin = 1 }
+
+private statAccessModInternal ::= LBRACE stat* RBRACE {
+    recoverWhile = statement_recover
+}
+
+private stat_recovery ::= statement_recover {
+    recoverWhile = statement_recover
+}
+
+statCmd ::= (OPEN_KW | IMPORT_KW) ns_longName nsUsing? [HIDING_KW LPAREN <<comma_separated_sequence refIdentifier>> RPAREN] {
+    pin = 1
+}
+
+private ns_longName ::= longName {
+    recoverWhile = ns_longName_recover
+}
+
+private ns_longName_recover ::= !(USING_KW | LPAREN | HIDING_KW) & statement_recover
+
+nsUsing ::= nsUsingUsing | nsUsingParams {
+  recoverWhile = nsUsing_recover
+}
+
+private nsUsingUsing ::= USING_KW nsUsingParams {
+    pin = 1
+}
+
+private nsUsingParams ::= LPAREN <<comma_separated_sequence nsId>>? RPAREN {
+    pin = 1
+}
+
+private nsUsing_recover ::= !(LPAREN | HIDING_KW) & statement_recover
+
+nsId ::= ns_refIdentifier [AS_KW prec? defIdentifier] {
+    recoverWhile = nsId_recover
+}
+
+private nsId_recover ::= !(COMMA | RPAREN) & nsUsing_recover
+
+private ns_refIdentifier ::= refIdentifier {
+    recoverWhile = ns_refIdentifier_recover
+}
+
+private ns_refIdentifier_recover ::= !(AS_KW | COMMA | RPAREN) & nsUsing_recover
+
+private classStats ::= LBRACE classStatRecovery classStat* RBRACE | classFieldOrImplement* {
+    pin(".*") = 1
+    recoverWhile = statement_recover
+}
+
+classStat ::= classFieldOrImplement | accessMod? definition | classFieldStat | overriddenField | defaultField | defModule { recoverWhile = classStat_recover }
+
+private classStatRecovery ::= {
+  recoverWhile = classStat_recover
+}
+
+private defaultField ::= DEFAULT_KW coClause { pin = 1 }
+
+private classStat_recover ::= !(PIPE | RBRACE) & statement_recover
+
+private classFieldOrImplement ::= pipe_def (classField | classImplement) { pin = 1 }
+
+private classFieldStat ::= (FIELD_KW | PROPERTY_KW) classField { pin = 1 }
+
+overriddenField ::= OVERRIDE_KW longName typeTele* COLON returnExpr {
+    pin = 1
+}
+
+classField ::= accessMod classFieldPrivate | classFieldPrivate {
+    pin(".*") = 1
+    elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
+}
+
+private classFieldPrivate ::= [CLASSIFYING_KW | COERCE_KW] prec? defIdentifier_typeTele alias? typeTele* COLON returnExpr {
+    pin = 6
+}
+
+classImplement ::= localCoClausePrivate {
+    elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
+}
+
+coClauseDef ::= nameTele* functionType? coClauseBody? {
+    pin = 1
+    elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
+}
+
+coClauseBody ::= functionTermBody
+    | COWITH_KW coClauses?
+    | elim clausesWithBraces? {
+    pin(".*") = 1
+    recoverWhile = coClauseBody_recover
+}
+
+private coClauseBody_recover ::= !PIPE & statement_recover
+
+definition ::= defFunction
+    | defData
+    | defClass
+    | defMeta
+    | defInstance
+
+defModule ::= MODULE_KW defIdentifier_module where? {
+    pin = 1
+    elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
+}
+
+defMeta ::= META_KW prec? defIdentifier_func pLevelParams? hLevelParams? alias? [nameTeleUntyped* functionTermBody] where? {
+    pin = 1
+    elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
+}
+
+pLevelIdentifier ::= ID
+
+hLevelIdentifier ::= ID
+
+private defIdentifier_module ::= defIdentifier {
+    recoverWhile = defIdentifier_module_recover
+}
+
+private defIdentifier_module_recover ::= !ALIAS_KW & statement_recover
+
+defFunction ::= functionKw prec? defIdentifier_func pLevelParams? hLevelParams? alias? nameTele* functionType? functionBody? where? {
+    pin = 1
+    elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
+}
+
+private pLevelParams ::= PLEVELS_KW pLevelParamsSeq { pin = 1 }
+
+private hLevelParams ::= HLEVELS_KW hLevelParamsSeq { pin = 1 }
+
+pLevelParamsSeq ::= [pLevelIdentifier (levelCmp pLevelIdentifier)*]
+
+hLevelParamsSeq ::= [hLevelIdentifier (levelCmp hLevelIdentifier)*]
+
+functionKw ::= FUNC_KW | SFUNC_KW | LEMMA_KW | TYPE_KW | AXIOM_KW | useMod
+
+levelCmp ::= LESS_OR_EQUALS | GREATER_OR_EQUALS
+
+private functionType ::= COLON returnExprWOB { pin = 1 }
+
+returnExprWOB ::= exprWOB [LEVEL_KW exprWOB] | LEVEL_KW atomFieldsAcc atomFieldsAcc {
+    pin(".*") = 1
+    elementType = returnExpr
+}
+
+returnExpr ::= expr [LEVEL_KW expr] | LEVEL_KW atomFieldsAcc atomFieldsAcc { pin(".*") = 1 }
+
+private useMod ::= USE_KW (COERCE_KW | LEVEL_KW) { pin = 1 }
+
+private defIdentifier_func ::= defIdentifier {
+    recoverWhile = defIdentifier_func_recover
+}
+
+private defIdentifier_func_recover ::= !(COLON | FAT_ARROW | COWITH_KW | WITH_KW | ELIM_KW | PIPE | ALIAS_KW | PLEVELS_KW | HLEVELS_KW) & nameTele_first & statement_recover
+
+defInstance ::= instanceOrCons prec? defIdentifier_func pLevelParams? hLevelParams? alias? nameTele* functionType? instanceBody? where? {
+    pin = 1
+    elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
+}
+
+private instanceOrCons ::= INSTANCE_KW | CONS_KW
+
+defData ::= dataKw prec? defIdentifier_top pLevelParams? hLevelParams? alias? typeTele* dataUniverse? dataBody? where? {
+    pin = 1
+    elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
+}
+
+private defIdentifier_top ::= defIdentifier {
+    recoverWhile = defIdentifier_top_recover
+}
+
+private defIdentifier_top_recover ::= !(PLEVELS_KW | HLEVELS_KW) & typeTele_recover
+
+private dataUniverse ::= COLON universeExpr {
+    pin = 1
+    recoverWhile = dataUniverse_recover
+}
+
+private dataUniverse_recover ::= !(PIPE | WITH_KW | ELIM_KW | FAT_ARROW) & statement_recover
+
+private dataKw ::= truncatedKW DATA_KW | DATA_KW {
+    pin(".*") = 1
+}
+
+private truncatedKW ::= TRUNCATED_KW {
+  recoverWhile = statement_recover
+}
+
+defClass ::= (defClassClass | defClassRecord) where? {
+    elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
+}
+
+private defClassClass ::= CLASS_KW defClassHeader classStats { pin = 1 }
+
+private defClassRecord ::= RECORD_KW defClassHeader classStats { pin = 1 }
+
+private defClassHeader ::= prec? defIdentifier pLevelParams? hLevelParams? alias? NO_CLASSIFYING_KW? fieldTele* [EXTENDS_KW <<comma_separated_sequence superClass>>]
+
+superClass ::= longName [maybeAtomLevelExprs maybeAtomLevelExprs?] {
+    pin = 1
+}
+
+functionBody ::= functionTermBody
+    | COWITH_KW coClauses?
+    | elim functionClauses?
+    | functionClauses {
+    pin(".*") = 1
+    recoverWhile = statement_recover
+}
+
+instanceBody ::= functionTermBody
+    | elim functionClauses?
+    | COWITH_KW coClauses?
+    | coClauseReg+ {
+    pin(".*") = 1
+    recoverWhile = statement_recover
+}
+
+private functionTermBody ::= FAT_ARROW expr { pin = 1 }
+
+dataBody ::= elim constructorClauses | fat_arrow_constructor? <<piped constructor>>+ {
+    recoverWhile = statement_recover
+}
+
+private fat_arrow_constructor ::= fat_arrow_def_pipe pipe_def? constructor { pin = 1 }
+
+private constructorClauses ::= LBRACE constructorClause* RBRACE | constructorClause* { pin(".*") = 1 }
+
+private fat_arrow_def_pipe ::= FAT_ARROW {
+    recoverWhile = def_pipe_recover
+}
+
+private def_pipe_recover ::= !(ID | PIPE | assoc) & statement_recover
+
+private pipe_def ::= PIPE {
+    recoverWhile = def_recover
+}
+
+private def_recover ::= !(ID | LPAREN | assoc | CLASSIFYING_KW | COERCE_KW) & statement_recover
+
+constructorClause ::= PIPE <<comma_separated_sequence pattern>> fat_arrow_def_pipe_lbrace (constructor | constructors) {
+    pin = 1
+}
+
+private constructors ::= LBRACE pipe_def? constructor (<<piped constructor>>)* RBRACE { pin = 1 }
+
+private fat_arrow_def_pipe_lbrace ::= FAT_ARROW {
+    recoverWhile = def_pipe_lbrace_recover
+}
+
+private def_pipe_lbrace_recover ::= !(ID | PIPE | LBRACE | assoc) & statement_recover
+
+elim ::= WITH_KW | ELIM_KW <<comma_separated_sequence refIdentifier>> { pin(".*") = 1 }
+
+where ::= WHERE_KW (statementList | stat) { pin = 1 }
+
+private statementList ::= LBRACE stat* RBRACE {
+    pin = 1
+}
+
+pattern ::= pattern_sequence
+
+private pattern_sequence ::= atomPattern+ (typeAnnotation | asPattern?) {
+    pin = 1
+    recoverWhile=pattern_recover
+}
+
+private pattern_recover ::= !(RPAREN | RBRACE | FAT_ARROW | PIPE | COMMA) & statement_recover
+
+asPattern ::= AS_KW defIdentifier typeAnnotation? {
+    pin = 1
+}
+
+atomPattern ::= atomic_pattern
+    | tuple_pattern
+    | implicit_pattern {
+    elementType=pattern
+}
+
+private atomic_pattern ::= defIdentifier_pattern | NUMBER | NEGATIVE_NUMBER | UNDERSCORE
+
+private defIdentifier_pattern ::= defIdentifier !DOT | IPName | longNameIP {
+    recoverWhile = defIdentifier_pattern_recover
+}
+
+private defIdentifier_pattern_recover ::= !(ID | LPAREN | LBRACE | NUMBER | NEGATIVE_NUMBER | STRING | UNDERSCORE | COLON | AS_KW) & pattern_recover
+
+tuple_pattern ::= LPAREN <<comma_separated_sequence pattern>>? RPAREN {
+    pin=1
+    elementType=pattern
+}
+
+implicit_pattern ::= LBRACE (atomic_pattern &RBRACE | pattern_sequence?) RBRACE {
+    pin=1
+    elementType=pattern
+}
+
+constructor ::= constructorHeaderAccessMod alias? typeTele* [COLON exprWOB] [elim? clausesWithBraces] {
+    pin = 1
+    elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
+}
+
+private constructorHeaderAccessMod ::= accessMod constructorHeaderCoerce | constructorHeaderCoerce {
+    pin(".*") = 1
+}
+
+private constructorHeaderCoerce ::= COERCE_KW constructorHeader | constructorHeader {
+    pin(".*") = 1
+}
+
+private constructorHeader ::= prec? defIdentifier_constructor
+
+private defIdentifier_constructor ::= defIdentifier {
+    recoverWhile = defIdentifier_constructor_recover
+}
+
+private defIdentifier_constructor_recover ::= !(LPAREN | LBRACE | ID | ALIAS_KW | PROP_KW | UNDERSCORE | APPLY_HOLE | TGOAL | LGOAL | SET | UNIVERSE | TRUNCATED_UNIVERSE | COLON | WITH_KW | ELIM_KW | PIPE | RBRACE) & statement_recover
+
+private assoc ::= NON_ASSOC_KW | LEFT_ASSOC_KW | RIGHT_ASSOC_KW | INFIX_NON_KW | INFIX_LEFT_KW | INFIX_RIGHT_KW
+
+alias ::= ALIAS_KW prec? aliasIdentifier { pin = 1 }
+
+aliasIdentifier ::= ID
+
+prec ::= assoc NUMBER { pin = 1 }
+
+expr ::= arrExpr
+    | sigmaExpr
+    | piExpr
+    | lamExpr
+    | letExpr
+    | caseExpr
+    | newExpr
+
+exprWOB ::= <<exprWOBImpl>> {
+    elementType = expr
+    name = expr
+}
+
+private expr_recover ::= !(LBRACE | RBRACE | RPAREN | IN_KW | ARROW | COMMA | PIPE | COWITH_KW | WITH_KW | ELIM_KW | FAT_ARROW | AS_KW | RETURN_KW | COLON | LEVEL_KW) & statement_recover
+
+arrExpr ::= expr ARROW expr {
+    pin = 2
+    rightAssociative = true
+}
+
+newExpr ::= appPrefix argumentAppExpr newExprTail withBody?
+    | appExpr newExprTail withBody? {
+    pin(".*") = 1
+    recoverWhile = expr_recover
+}
+
+//noinspection BnfUnusedRule
+newExprWOB ::= appPrefix argumentAppExpr newExprTail
+    | appExpr newExprTail {
+    pin(".*") = 1
+    recoverWhile = expr_recover
+    elementType = newExpr
+}
+
+withBody ::= WITH_KW clausesWithBraces {
+    pin = 1
+}
+
+appPrefix ::= NEW_KW EVAL_KW? | EVAL_KW | PEVAL_KW | BOX_KW {
+    pin(".*") = 1
+}
+
+private coClauseSequence ::= coClauseReg* {
+    recoverWhile = statement_recover
+}
+
+private localCoClauseSequence ::= localCoClause* {
+    recoverWhile = statement_recover
+}
+
+private newExprTail ::= [LBRACE localCoClauseSequence RBRACE (argument | argumentRecovery)*]
+
+universeExpr ::= universeAppExpr
+    | setUniverseAppExpr
+    | truncatedUniverseAppExpr
+    | PROP_KW
+
+appExpr ::= universeAppExpr
+    | setUniverseAppExpr
+    | truncatedUniverseAppExpr
+    | argumentAppExpr {
+    recoverWhile = expr_recover
+}
+
+caseExpr ::= [EVAL_KW | PEVAL_KW] (CASE_KW | SCASE_KW) <<comma_separated_sequence caseArg>> returnCaseExpr? withBody? {
+    pin = 2
+}
+
+private returnCaseExpr ::= RETURN_KW returnExprWOB {
+    pin = 1
+    recoverWhile = returnCaseExpr_recover
+}
+
+private returnCaseExpr_recover ::= !WITH_KW & expr_recover
+
+caseArg ::= caseArgExprAs [COLON exprWOB] {
+    pin = 1
+    recoverWhile = caseArg_recover
+}
+
+private caseArg_recover ::= !(COMMA | RETURN_KW | WITH_KW) & expr_recover
+
+private caseArgExprAs ::= caseArgExpr [AS_KW defIdentifier]
+    | ELIM_KW (refIdentifier | APPLY_HOLE) {
+    pin(".*") = 1
+    recoverWhile = caseArgExprAs_recover
+}
+
+private caseArgExprAs_recover ::= !COLON & expr_recover
+
+private caseArgExpr ::= exprWOB {
+    recoverWhile = caseArgExpr_recover
+}
+
+private caseArgExpr_recover ::= !(AS_KW | COLON) & expr_recover
+
+piExpr ::= PI_KW typeTele+ ARROW expr {
+    pin = 1
+}
+
+//noinspection BnfUnusedRule
+piExprWOB ::= PI_KW typeTele+ ARROW exprWOB {
+    pin = 1
+    elementType = piExpr
+}
+
+sigmaExpr ::= SIGMA_KW typeTele* {
+    pin = 1
+}
+
+lamExpr ::= LAM_KW lamParam+ [FAT_ARROW expr?] {
+    pin = 1
+}
+
+//noinspection BnfUnusedRule
+lamExprWOB ::= LAM_KW lamParam+ [FAT_ARROW exprWOB?] {
+    pin = 1
+    elementType = lamExpr
+}
+
+lamParam ::= lamTele | atomPattern
+
+private pipe_def_un ::= PIPE {
+    recoverWhile = def_un_recover
+}
+
+private def_un_recover ::= !(ID | UNDERSCORE | LPAREN | assoc) & statement_recover
+
+letExpr ::= (HAVE_KW | LET_KW | HAVES_KW | LETS_KW) pipe_def_un? letClause (pipe_def_un letClause)* [IN_KW expr?] {
+    pin = 1
+}
+
+//noinspection BnfUnusedRule
+letExprWOB ::= (HAVE_KW | LET_KW | HAVES_KW | LETS_KW) pipe_def_un? letClause (pipe_def_un letClause)* [IN_KW exprWOB?] {
+    pin = 1
+    elementType = letExpr
+}
+
+functionClauses ::= clausesWithBraces | (pipe_pattern clause)+
+private clausesWithBraces ::= LBRACE [pipe_pattern? clause] pipeClause* RBRACE { pin = 1 }
+
+private pipeClause ::= pipe_pattern clause { pin = 1 }
+
+private pipe_pattern ::= PIPE {
+    recoverWhile = pipe_pattern_recover
+}
+
+private pipe_pattern_recover ::= !(ID | LPAREN | LBRACE | NUMBER | NEGATIVE_NUMBER | STRING | UNDERSCORE) & statement_recover
+
+private coClauses ::= LBRACE coClauseSequence RBRACE | coClauseReg+ {
+    pin(".*") = 1
+    recoverWhile = pipe_seq_recover
+}
+
+private pipe_seq_recover ::= !(PIPE | RBRACE) & statement_recover
+
+clause ::= <<comma_separated_sequence pattern>> [FAT_ARROW expr] {
+    pin = 1
+    methods = [ pattern="" ]
+    recoverWhile = pipe_seq_recover
+}
+
+coClause ::= longName (coClauseRec | coClauseImpl | [AS_KW prec? defIdentifier] coClauseDef?)
+
+private coClauseReg ::= PIPE coClause {
+    pin = 1
+    recoverWhile = pipe_seq_recover
+}
+
+localCoClause ::= PIPE localCoClausePrivate {
+    pin = 1
+    recoverWhile = pipe_seq_recover
+}
+
+private coClauseImp ::= localCoClause {
+    recoverWhile = co_clause_imp_recover
+}
+
+private co_clause_imp_recover ::= !(PIPE | RBRACE | ID | UNDERSCORE) & statement_recover
+
+private localCoClausePrivate ::= longName (coClauseRec | coClauseImpl) { pin = 1 }
+
+private coClauseImpl ::= lamParam* FAT_ARROW expr { pin = 2 }
+
+private coClauseRec ::= LBRACE coClauseImp* RBRACE
+
+letClause ::= letClauseName typeAnnotation? FAT_ARROW expr {
+    pin = 1
+    methods = [ pattern = "" ]
+}
+
+private letClauseName ::= defIdentifier_letClause nameTele* | atomPattern { pin(".*") = 1 }
+
+private defIdentifier_letClause ::= defIdentifier {
+    recoverWhile = defIdentifier_letClause_recover
+}
+
+private defIdentifier_letClause_recover ::= !(COLON | FAT_ARROW | IN_KW) & nameTele_first & statement_recover
+
+private typeAnnotation ::= COLON expr { pin = 1 }
+
+levelExpr ::= atomLevelExpr
+    | SUC_KW atomLevelExpr
+    | MAX_KW atomLevelExpr atomLevelExpr {
+    pin(".*") = 1
+    recoverWhile = levelExpr_recover
+}
+
+private levelExpr_recover ::= !(RPAREN | COMMA) & statement_recover
+
+atomLevelExpr ::= LP_KW
+    | LH_KW
+    | OO_KW
+    | NUMBER
+    | NEGATIVE_NUMBER
+    | refIdentifier
+    | LPAREN levelExpr RPAREN {
+    pin(".*") = 1
+    extends = levelExpr
+}
+
+universeAppExpr ::= UNIVERSE [maybeAtomLevelExpr maybeAtomLevelExpr?] {
+    pin = 1
+}
+
+setUniverseAppExpr ::= SET maybeAtomLevelExpr? {
+    pin = 1
+}
+
+truncatedUniverseAppExpr ::= TRUNCATED_UNIVERSE maybeAtomLevelExpr? {
+    pin = 1
+}
+
+onlyLevelExpr ::= atomOnlyLevelExpr
+    | MAX_KW atomLevelExpr atomLevelExpr
+    | SUC_KW atomLevelExpr {
+    pin(".*") = 1
+    implements = [ "org.arend.psi.ext.ArendSourceNode"
+                   "org.arend.term.abs.Abstract.LevelExpression" ]
+}
+
+levelsExpr ::= levelsLevels | LPAREN levelsExpr RPAREN
+
+maybeAtomLevelExpr ::= atomLevelExpr | UNDERSCORE
+
+maybeAtomLevelExprs ::= LPAREN <<comma_separated_sequence levelExpr>>? RPAREN | maybeAtomLevelExpr
+
+private levelsLevels ::= LEVELS_KW maybeAtomLevelExprs maybeAtomLevelExprs { pin = 1 }
+
+atomOnlyLevelExpr ::= LP_KW
+    | LH_KW
+    | OO_KW
+    | LPAREN onlyLevelExpr RPAREN
+
+argumentAppExpr ::= (longNameExpr | atomFieldsAcc) (argument | argumentRecovery)* {
+    name = "defCall"
+}
+
+longNameExpr ::= longName (levelsExpr | atomOnlyLevelExpr atomOnlyLevelExpr?) {
+    pin = 2
+}
+
+private fieldAcc ::= DOT NUMBER { pin = 1 }
+
+atom ::= literal
+    | tuple
+    | NEGATIVE_NUMBER
+    | NUMBER
+    | THIS_KW
+
+tuple ::= LPAREN <<comma_separated_sequence_trail tupleExpr>>? RPAREN
+
+tupleExpr ::= expr [COLON expr] {
+    pin = 1
+    recoverWhile = tupleExpr_recover
+}
+
+private tupleExpr_recover ::= !(RPAREN | RBRACE | COMMA) & statement_recover
+
+atomFieldsAcc ::= atom fieldAcc* {
+    pin = 1
+    recoverWhile = argument_recover
+}
+
+argument ::= atomArgument
+    | newArg
+    | universeAtom
+    | implicitArgument
+    | lamArgument
+    | letArgument
+    | caseArgument
+
+lamArgument ::= lamExpr
+
+caseArgument ::= caseExpr
+
+letArgument ::= letExpr
+
+private argumentRecovery ::= argument_recover {
+    recoverWhile = argument_recover
+}
+
+private argument_recover ::= !(NEW_KW | EVAL_KW | PEVAL_KW | BOX_KW | NUMBER | LAM_KW | CASE_KW | SCASE_KW | LET_KW | LETS_KW | HAVE_KW | HAVES_KW | STRING | NEGATIVE_NUMBER | INFIX | POSTFIX | AS_KW | RETURN_KW | COWITH_KW | THIS_KW) & typeTele_recover
+
+atomArgument ::= atomFieldsAcc
+
+implicitArgument ::= LBRACE <<comma_separated_sequence_trail tupleExpr>> RBRACE
+
+newArg ::= appPrefix argumentAppExpr [LBRACE localCoClauseSequence RBRACE] {
+    pin = 1
+}
+
+longName ::= refIdentifier (DOT refIdentifier)* {
+    pin = 1
+}
+
+IPName ::= INFIX | POSTFIX
+
+private longNameIP ::= longName [DOT IPName] { pin = 1 }
+
+literal ::= longNameIP
+    | PROP_KW
+    | APPLY_HOLE
+    | UNDERSCORE
+    | STRING
+    | IPName
+    | goal
+
+goal ::= TGOAL | lGoal
+
+private lGoal ::= LGOAL defIdentifier_goal? [LPAREN expr? RPAREN] RBRACE { pin = 1 }
+
+private defIdentifier_goal ::= defIdentifier {
+    recoverWhile = defIdentifier_goal_recover
+}
+
+private defIdentifier_goal_recover ::= !(LPAREN | RBRACE) & statement_recover
+
+universeAtom ::= SET
+    | UNIVERSE
+    | TRUNCATED_UNIVERSE
+
+nameTele ::= identifierOrUnknown
+    | nameTeleExplicit
+    | nameTeleImplicit {
+    recoverWhile = nameTele_recover
+}
+
+lamTele ::= identifierOrUnknown
+    | LPAREN identifierOrUnknown+ COLON expr RPAREN
+    | LBRACE (identifierOrUnknown [identifierOrUnknown* COLON expr]) RBRACE
+
+nameTeleUntyped ::= defIdentifier {
+    recoverWhile = nameTeleUntyped_recover
+}
+
+private paramAttr ::= STRICT_KW | PROPERTY_KW
+
+private nameTeleUntyped_recover ::= !(ID | FAT_ARROW) & statement_recover
+
+private nameTeleExplicit ::= LPAREN paramAttr? identifierOrUnknown+ COLON expr RPAREN { pin = 1 }
+
+private nameTeleImplicit ::= LBRACE (paramAttr identifierOrUnknown+ COLON expr | identifierOrUnknown [identifierOrUnknown* COLON expr]) RBRACE { pin = 1 }
+
+private nameTele_first ::= !(ID | UNDERSCORE | LPAREN | LBRACE)
+
+private nameTele_recover ::= !(ID | UNDERSCORE | LPAREN) & expr_recover
+
+fieldTele ::= fieldTeleExplicit | fieldTeleImplicit | fieldTeleRecovery
+
+private fieldTeleExplicit ::= LPAREN accessMod? [CLASSIFYING_KW | COERCE_KW] fieldDefIdentifier+ COLON expr RPAREN { pin = 1 }
+
+private fieldTeleImplicit ::= LBRACE accessMod? [CLASSIFYING_KW | COERCE_KW] fieldDefIdentifier+ COLON expr RBRACE { pin = 5 }
+
+private fieldTeleRecovery ::= fieldTele_recover {
+    recoverWhile = fieldTele_recover
+}
+
+private fieldTele_recover ::= !(EXTENDS_KW | FAT_ARROW | LBRACE | LPAREN | PIPE) & statement_recover
+
+typeTele ::= literal
+    | universeAtom
+    | typedTeleExplicit
+    | typedTeleImplicit {
+        name = "parameters"
+        recoverWhile = typeTele_recover
+    }
+
+private typedTeleExplicit ::= LPAREN paramAttr? typedExpr RPAREN { pin = 1 }
+
+private typedTeleImplicit ::= LBRACE paramAttr? typedExpr RBRACE { pin = 1 }
+
+private typeTele_recover ::= !(LPAREN | LBRACE | ID | ALIAS_KW | COLON | WITH_KW | ELIM_KW | FAT_ARROW | RPAREN | RBRACE | PIPE | ARROW | COMMA | IN_KW | SET | UNIVERSE | TRUNCATED_UNIVERSE | PROP_KW | UNDERSCORE | APPLY_HOLE | TGOAL | LGOAL | LEVEL_KW | RETURN_KW) & statement_recover
+
+typedExpr ::= typedExprNamed | expr
+
+private typedExprNamed ::= identifierOrUnknown+ COLON expr { pin = 2 }
+
+identifierOrUnknown ::= defIdentifier | UNDERSCORE
+
+fieldDefIdentifier ::= defIdentifier {
+    elementTypeFactory = "org.arend.psi.stubs.StubImplementationsKt.factory"
+    recoverWhile = fieldDefIdentifier_recover
+}
+
+private fieldDefIdentifier_recover ::= !(COLON | ID | EXTENDS_KW | FAT_ARROW | LBRACE | LPAREN) & topStatement_recover
+
+defIdentifier ::= ID
+
+private defIdentifier_typeTele ::= defIdentifier {
+    recoverWhile = typeTele_recover
+}
+
+refIdentifier ::= ID
+
+private meta comma_separated_sequence ::= <<p>> (COMMA <<p>>)* { pin(".*") = 1 }
+
+private meta comma_separated_sequence_trail ::= <<p>> (COMMA <<p>>)* COMMA? { pin = 1 }
+
+private meta piped ::= pipe_def <<p>> { pin = 1 }

@@ -1,0 +1,3 @@
+\data Nat
+--     | zero
+    | su<caret>c Nat

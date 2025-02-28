@@ -1,0 +1,598 @@
+<idea-plugin>
+    <name>Arend</name>
+    <vendor>JetBrains</vendor>
+
+    <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
+    <idea-version since-build="242.21829"/>
+
+    <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <depends>org.jetbrains.plugins.yaml</depends>
+    <depends>com.intellij.java</depends>
+    <depends>org.jetbrains.kotlin</depends>
+    <depends optional="true" config-file="plugin-json.xml">com.intellij.modules.json</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+
+        <!-- Project -->
+
+        <projectStructureDetector implementation="org.arend.project.ArendProjectStructureDetector"/>
+        <projectImportProvider implementation="org.arend.project.ArendProjectImportProvider"/>
+        <projectOpenProcessor implementation="org.arend.project.ArendProjectOpenProcessor"/>
+        <projectImportBuilder implementation="org.arend.project.ArendProjectImportBuilder"/>
+        <additionalLibraryRootsProvider implementation="org.arend.project.ArendPreludeLibraryRootProvider"/>
+        <treeStructureProvider implementation="org.arend.projectView.ArendProjectViewStructureProvider"/>
+
+        <!-- Module -->
+
+        <moduleType id="AREND_MODULE" implementationClass="org.arend.module.ArendModuleType"/>
+        <moduleBuilder builderClass="org.arend.module.ArendModuleBuilder"/>
+        <library.type implementation="org.arend.module.ArendLibraryType"/>
+        <moduleConfigurationEditorProvider implementation="org.arend.module.editor.ArendModuleConfigEditorProvider"/>
+
+        <!-- debugger.positionManagerFactory implementation="org.arend.debug.ArendPositionManagerFactory" -->
+
+        <programRunner implementation="org.arend.debug.ArendDebuggerRunner"/>
+
+        <!-- Startup -->
+
+        <postStartupActivity implementation="org.arend.ArendStartupActivity"/>
+
+        <!-- Typed/Quote Handler -->
+
+        <typedHandler implementation="org.arend.codeInsight.ArendTypedHandler"/>
+        <lang.quoteHandler language="Arend" implementationClass="org.arend.codeInsight.ArendStringQuoteHandler"/>
+        <lang.quoteHandler language="INJECTION_TEXT" implementationClass="org.arend.codeInsight.ArendStringQuoteHandler"/>
+        <quoteHandler className="org.arend.codeInsight.ArendStringQuoteHandler" fileType="Arend"/>
+
+        <!-- File Type -->
+
+        <fileType language="Arend" implementationClass="org.arend.ArendFileType" name="Arend" extensions="ard;ars" />
+
+        <!-- Parser -->
+
+        <lang.parserDefinition language="Arend" implementationClass="org.arend.parser.ArendParserDefinition"/>
+
+        <!-- Injection -->
+
+        <fileType language="INJECTION_TEXT" implementationClass="org.arend.injection.InjectionTextFileType" name="INJECTION_TEXT" extensions="itxt" />
+        <lang.parserDefinition language="INJECTION_TEXT" implementationClass="org.arend.injection.InjectionTextParserDefinition"/>
+        <lang.ast.factory language="INJECTION_TEXT" implementationClass="org.arend.injection.InjectionTextASTFactory"/>
+        <multiHostInjector implementation="org.arend.injection.ArendLanguageInjector"/>
+
+        <!-- Name Validator -->
+
+        <lang.namesValidator language="Arend" implementationClass="org.arend.refactoring.ArendNamesValidator"/>
+
+        <!-- Syntax Highlighter -->
+
+        <lang.syntaxHighlighterFactory language="Arend"
+                                       implementationClass="org.arend.highlight.ArendSyntaxHighlighterFactory"/>
+
+        <highlightVisitor implementation="org.arend.highlight.ArendRainbowVisitor"/>
+
+        <!-- Commenter -->
+
+        <lang.commenter language="Arend" implementationClass="org.arend.commenter.ArendCommenter"/>
+
+        <!-- Matchers -->
+
+        <lang.braceMatcher language="Arend" implementationClass="org.arend.ArendBraceMatcher"/>
+
+        <!-- Documentation -->
+
+        <lang.documentationProvider language="Arend"
+                                    implementationClass="org.arend.documentation.ArendDocumentationProvider"/>
+
+        <lang.documentationProvider language="INJECTION_TEXT"
+                                    implementationClass="org.arend.injection.PsiInjectionTextDocumentationProvider"/>
+
+        <lang.implementationTextSelectioner language="Arend"
+                                            implementationClass="org.arend.ArendImplementationTextSelectioner"/>
+
+        <!-- Structure View -->
+
+        <lang.psiStructureViewFactory language="Arend"
+                                      implementationClass="org.arend.structure.ArendPsiStructureViewFactory"/>
+
+        <structureViewBuilder factoryClass="org.arend.structure.ArendStructureViewBuilderProvider"/>
+
+        <!-- Hierarchy -->
+
+        <callHierarchyProvider language="Arend" implementationClass="org.arend.hierarchy.call.ArendCallHierarchyProvider"/>
+        <typeHierarchyProvider language="Arend" implementationClass="org.arend.hierarchy.clazz.ArendClassHierarchyProvider"/>
+
+        <!-- Usages Provider -->
+
+        <referencesSearch implementation="org.arend.search.ArendCustomSearcher"/>
+
+        <lang.findUsagesProvider language="Arend"
+                                 implementationClass="org.arend.search.ArendFindUsagesProvider"/>
+
+        <fileStructureGroupRuleProvider
+                implementation="org.arend.search.ArendDefGroupingRuleProvider" />
+
+        <usageTypeProvider implementation="org.arend.search.ArendUsageTypeProvider"/>
+
+        <!--fileStructureGroupRuleProvider
+                implementation="org.arend.search.ArendDefClassGroupingRuleProvider" />
+        <fileStructureGroupRuleProvider
+                implementation="org.arend.search.ArendDefDataGroupingRuleProvider"/>
+        <fileStructureGroupRuleProvider
+                implementation="org.arend.search.ArendDefFunctionGroupingRuleProvider">
+        <fileStructureGroupRuleProvider
+                implementation="org.arend.search.ArendClassFieldGroupingRuleProvider"/>
+        <fileStructureGroupRuleProvider
+                implementation="org.arend.search.ArendDefInstanceGroupingRuleProvider"/>
+        <fileStructureGroupRuleProvider
+                implementation="org.arend.search.ArendConstructorGroupingRuleProvider"-->
+
+        <targetElementEvaluator language="Arend" implementationClass="org.arend.highlight.ArendTargetElementEvaluator"/>
+
+        <!-- Navigation -->
+
+        <gotoClassContributor implementation="org.arend.navigation.ArendClassNavigationContributor"/>
+        <gotoSymbolContributor implementation="org.arend.navigation.ArendSymbolNavigationContributor"/>
+        <gotoFileContributor implementation="org.arend.navigation.ArendFileNavigationContributor"/>
+        <navbar id="arendNavbar" implementation="org.arend.navigation.ArendNavBarExtension" order="first"/>
+
+        <!-- Hints -->
+
+        <declarationRangeHandler key="org.arend.lang.core.psi.ArendDefClass"
+                                 implementationClass="org.arend.codeInsight.ArendDeclarationRangeHandler"/>
+        <declarationRangeHandler key="org.arend.lang.core.psi.ArendDefData"
+                                 implementationClass="org.arend.codeInsight.ArendDeclarationRangeHandler"/>
+        <declarationRangeHandler key="org.arend.lang.core.psi.ArendDefInstance"
+                                 implementationClass="org.arend.codeInsight.ArendDeclarationRangeHandler"/>
+        <declarationRangeHandler key="org.arend.lang.core.psi.ArendDefFunction"
+                                 implementationClass="org.arend.codeInsight.ArendDeclarationRangeHandler"/>
+
+        <!-- Formatter -->
+
+        <lang.formatter language="Arend" implementationClass="org.arend.formatting.ArendFormattingModelBuilder"/>
+        <langCodeStyleSettingsProvider implementation="org.arend.formatting.ArendCodeStyleSettingsProvider"/>
+        <editor.backspaceModeOverride language="Arend" implementationClass="org.arend.formatting.ArendBackspaceDisabler"/>
+        <enterHandlerDelegate implementation="org.arend.formatting.ArendEnterAtIndentHandler" order="first"/>
+        <lang.importOptimizer language="Arend" implementationClass="org.arend.codeInsight.ArendImportOptimizer"/>
+
+        <!-- Code Insight -->
+
+        <codeInsight.parameterInfo language="Arend" implementationClass="org.arend.codeInsight.ArendParameterInfoHandler"/>
+
+        <codeInsight.inlayProvider language="Arend" implementationClass="org.arend.codeInsight.hints.ArendParametersInlayProvider"/>
+        <codeInsight.inlayProvider language="Arend" implementationClass="org.arend.codeInsight.hints.ArendAxiomsInlayProvider"/>
+        <codeInsight.inlayProvider language="Arend" implementationClass="org.arend.codeInsight.hints.ArendGoalsInlayProvider"/>
+
+        <completion.contributor language="Arend" implementationClass="org.arend.codeInsight.completion.ArendCompletionContributor"/>
+        <completion.contributor language="Arend" implementationClass="org.arend.codeInsight.completion.ArendNoVariantsDelegator"/>
+
+        <completion.confidence language="Arend" implementationClass="org.arend.codeInsight.completion.ArendCompletionConfidence" id="arendCompletion" />
+
+        <!-- Selection -->
+
+        <extendWordSelectionHandler implementation="org.arend.actions.ArendExtendWordSelectionHandler"/>
+
+        <!-- Support arend.yaml -->
+
+        <completion.contributor language="yaml" implementationClass="org.arend.yaml.codeInsight.YAMLCompletionContributor"/>
+
+        <annotator language="yaml" implementationClass="org.arend.yaml.codeInsight.YAMLHighlightingAnnotator"/>
+
+        <psi.referenceContributor language="yaml" implementation="org.arend.yaml.codeInsight.YAMLReferenceContributor"/>
+
+        <!-- Inspections -->
+        <lang.inspectionSuppressor language="Arend" implementationClass="org.arend.inspection.ArendInspectionSuppressor"/>
+        <localInspection language="Arend" groupPath="Arend"
+                         bundle="messages.ArendBundle" key="arend.inspection.redundant.parentheses.name"
+                         groupBundle="messages.InspectionsBundle" groupKey="group.names.declaration.redundancy"
+                         enabledByDefault="true" level="WEAK WARNING"
+                         implementationClass="org.arend.inspection.RedundantParensInspection"/>
+
+        <localInspection language="Arend" groupPath="Arend" key="arend.inspection.unused.import"
+                         groupBundle="messages.InspectionsBundle"
+                         groupKey="group.names.declaration.redundancy"
+                         enabledByDefault="true"
+                         unfair="true"
+                         implementationClass="org.arend.inspection.ArendUnusedImportInspection"/>
+
+        <localInspection language="Arend" groupPath="Arend"
+                         bundle="messages.ArendBundle" key="arend.inspection.redundant.parameter.name"
+                         groupBundle="messages.InspectionsBundle" groupKey="group.names.declaration.redundancy"
+                         enabledByDefault="true" level="WARNING"
+                         implementationClass="org.arend.inspection.RedundantParameterInspection"/>
+
+        <localInspection language="Arend" groupPath="Arend"
+                         bundle="messages.ArendBundle" key="arend.inspection.unresolved.pattern.name"
+                         groupBundle="messages.InspectionsBundle" groupKey="group.names.probable.bugs"
+                         enabledByDefault="true" level="WARNING"
+                         implementationClass="org.arend.inspection.UnresolvedArendPatternInspection"/>
+
+        <!-- Intention Actions -->
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.ImplementFieldsInCoClauseIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.GenerateFunctionFromGoalIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.ExtractExpressionToFunctionIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.generating.CreateLetBindingIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.SplitAtomPatternIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.ReplaceWithNormalFormIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.WrapInGoalIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.ReplaceMetaWithResultIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.ReplaceWithShortNameIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.SwapInfixOperatorArgumentsIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.ChangeArgumentExplicitnessIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.AddClarifyingParensIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.RemoveClarifyingParensIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.ReplaceBracketsIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.generating.GenerateMissingClausesIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+            <language>Arend</language>
+            <className>org.arend.intention.generating.GenerateElimMissingClausesIntention</className>
+            <category>Arend</category>
+        </intentionAction>
+
+        <!-- <highlightRangeExtension implementation="org.arend.annotation.ArendHighlightRangeExtension"/> -->
+
+        <daemon.changeLocalityDetector implementation="org.arend.highlight.ArendChangeLocalityDetector"/>
+
+        <!-- Line Marker Providers -->
+
+        <runLineMarkerContributor language="Arend"
+                                  implementationClass="org.arend.typechecking.execution.TypeCheckRunLineMarkerContributor"/>
+
+        <codeInsight.lineMarkerProvider language="Arend" implementationClass="org.arend.codeInsight.ArendLineMarkerProvider"/>
+
+        <!-- Color Settings -->
+
+        <colorSettingsPage implementation="org.arend.editor.ArendColorSettingsPage"/>
+
+        <!-- Folding -->
+
+        <lang.foldingBuilder language="Arend" implementationClass="org.arend.folding.ArendFoldingBuilder"/>
+        <lang.foldingBuilder language="Arend" implementationClass="org.arend.folding.ImportFoldingBuilder"/>
+
+        <!-- Refactoring -->
+
+        <renameInputValidator implementation="org.arend.refactoring.ArendRenameInputValidator"/>
+        <lang.refactoringSupport language="Arend" implementationClass="org.arend.refactoring.ArendRefactoringSupportProvider"/>
+        <!-- Renaming of files -->
+        <renamePsiElementProcessor implementation="org.arend.refactoring.ArendRenamePsiElementProcessor" />
+        <moveFileHandler implementation="org.arend.refactoring.ArendMoveFileHandler"/>
+        <refactoring.moveHandler order="first" implementation="org.arend.refactoring.move.ArendMoveHandlerDelegate"/>
+        <renameHandler implementation="org.arend.refactoring.ArendRenameModuleHandler"/>
+        <!-- Renaming of referables with aliases -->
+        <renameHandler implementation="org.arend.refactoring.rename.ArendGlobalReferableRenameHandler"/>
+        <nameSuggestionProvider implementation="org.arend.refactoring.rename.ArendAliasNameSuggestionProvider"/>
+        <!-- Change Signature -->
+        <refactoring.changeSignatureUsageProcessor implementation="org.arend.refactoring.changeSignature.ArendChangeSignatureUsageProcessor"
+                                                   id="Arend"/>
+
+        <!-- Notification groups -->
+
+        <notificationGroup id="Arend Error Messages" displayType="STICKY_BALLOON" />
+        <notificationGroup id="Arend Warning Messages" displayType="BALLOON" />
+        <notificationGroup id="Arend Info Messages" displayType="NONE" />
+        <notificationGroup id="Arend Reload" displayType="STICKY_BALLOON" />
+        <notificationGroup id="Arend Library Update" displayType="STICKY_BALLOON" />
+
+        <!-- Run Configurations -->
+
+        <programRunner implementation="org.arend.typechecking.execution.TypeCheckRunner"/>
+        <configurationType
+                implementation="org.arend.typechecking.execution.configurations.TypecheckRunConfigurationType"/>
+        <runConfigurationProducer
+                implementation="org.arend.typechecking.execution.TypecheckRunConfigurationProducer"/>
+
+        <!-- Indices -->
+
+        <stubIndex implementation="org.arend.psi.stubs.index.ArendNamedElementIndex"/>
+        <stubIndex implementation="org.arend.psi.stubs.index.ArendDefinitionIndex"/>
+        <stubIndex implementation="org.arend.psi.stubs.index.ArendGotoClassIndex"/>
+        <stubIndex implementation="org.arend.psi.stubs.index.ArendFileIndex"/>
+
+        <stubElementTypeHolder class="org.arend.psi.ArendElementTypes" externalIdPrefix="arend."/>
+
+        <!-- Lookup Filters -->
+
+        <lookup.charFilter implementation="org.arend.codeInsight.ArendCharFilter"/>
+
+        <!-- Highlight Filter -->
+
+        <problemFileHighlightFilter implementation="org.arend.highlight.ArendProblemHighlightFilter"/>
+
+        <!-- Order Root types -->
+
+        <orderRootType implementation="org.arend.module.orderRoot.ArendConfigOrderRootType"/>
+        <OrderRootTypeUI key="AREND_CONFIG" implementationClass="org.arend.module.orderRoot.ArendConfigOrderRootTypeUIFactory"/>
+
+        <!-- Services -->
+
+        <projectService serviceImplementation="org.arend.typechecking.TypeCheckingService"/>
+
+        <moduleService serviceImplementation="org.arend.module.config.ArendModuleConfigService"/>
+
+        <moduleService serviceImplementation="org.arend.module.editor.ArendModuleConfigurationView"/>
+
+        <applicationService serviceImplementation="org.arend.settings.ArendSettings"/>
+
+        <!-- Task Execution Listener -->
+
+        <externalSystemTaskNotificationListener implementation="org.arend.typechecking.ArendExtensionChangeListener"/>
+
+        <!-- Editor Notification -->
+
+        <editorNotificationProvider implementation="org.arend.yaml.YamlNotificationProvider"/>
+
+        <editorNotificationProvider implementation="org.arend.notification.FileOutsideSourcesProvider"/>
+
+        <!-- Scratches -->
+
+        <fileEditorProvider id="ArendScratchFileEditorProvider" implementation="org.arend.scratch.ArendScratchFileEditorProvider"/>
+
+        <scratch.creationHelper language="Arend"
+                                implementationClass="org.arend.scratch.ArendScratchFileCreationHelper"/>
+
+        <!-- Configuration Options -->
+
+        <editorSmartKeysConfigurable instance="org.arend.editor.ArendSmartKeysConfigurable"/>
+        <autoImportOptionsProvider instance="org.arend.editor.ArendAutoImportConfigurable"/>
+        <applicationConfigurable groupId="language" displayName="Arend" id="preferences.language.Arend" instance="org.arend.editor.ArendConfigurable"/>
+        <configuration.ModuleStructureExtension
+                implementation="org.arend.module.config.ArendModuleStructureExtension"/>
+
+        <!-- Highlighting Pass Factories -->
+
+        <highlightingPassFactory implementation="org.arend.highlight.ArendHighlightingPassFactory"/>
+        <highlightingPassFactory implementation="org.arend.highlight.TypecheckerPassFactory"/>
+        <highlightingPassFactory implementation="org.arend.injection.InjectionHighlightingPassFactory"/>
+        <highlightingPassFactory implementation="org.arend.highlight.ArendUnusedImportHighlightingPassFactory"/>
+        <highlightingPassFactory implementation="org.arend.highlight.RedundantParensPassFactory"/>
+        <highlightingPassFactory implementation="org.arend.highlight.NameShadowingHighlighterPassFactory"/>
+        <highlightingPassFactory implementation="org.arend.highlight.PartiallyInfixOperatorPrefixFormPassFactory"/>
+
+        <!-- Tool Windows -->
+
+        <toolWindow id="Arend Messages" anchor="bottom" factoryClass="org.arend.toolWindow.errors.ArendMessagesFactory"/>
+
+        <!-- Search everywhere contributor-->
+        <searchEverywhereContributor implementation="org.arend.actions.ArendSECFactory" />
+
+        <editorTabColorProvider implementation="org.arend.editor.ArendEditorTabColorProvider"/>
+
+        <!-- Live Templates -->
+
+        <defaultLiveTemplates file="/liveTemplates/Arend.xml"/>
+        <liveTemplateContext contextId="AREND" implementation="org.arend.liveTemplates.ArendTemplateContextType$Everywhere"/>
+        <liveTemplateContext contextId="AREND_STATEMENT" baseContextId="AREND" implementation="org.arend.liveTemplates.ArendTemplateContextType$Statement"/>
+        <liveTemplateContext contextId="AREND_EXPRESSION" baseContextId="AREND" implementation="org.arend.liveTemplates.ArendTemplateContextType$Expression"/>
+
+        <!-- Starters -->
+        <appStarter id="generateArendLibHtml" implementation="org.arend.documentation.GenerateArendLibHtmlStarter"/>
+
+    </extensions>
+
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <scratchFileLanguageProvider language="Arend" implementationClass="org.arend.scratch.ArendScratchFileLanguageProvider"/>
+    </extensions>
+
+    <projectListeners>
+        <listener class="org.arend.scratch.ArendScratchFileModuleInfoProvider"
+                  topic="org.jetbrains.kotlin.idea.scratch.ScratchFileListener"/>
+    </projectListeners>
+
+    <actions>
+        <action id="Arend.NewArendFile"
+                class="org.arend.actions.ArendCreateFileAction"
+                text="Arend File"
+                description="Create new Arend file">
+            <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFile"/>
+        </action>
+
+        <action id="Arend.PinGoal"
+                class="org.arend.toolWindow.errors.ArendPinGoalAction"
+                text="Pin Goal"
+                description="Pin goal">
+            <keyboard-shortcut keymap="$default" first-keystroke="control shift Y"/>
+        </action>
+
+        <action id="Arend.PinError"
+                class="org.arend.toolWindow.errors.ArendPinErrorAction"
+                text="Pin Error"
+                description="Pin error">
+        </action>
+
+        <action id="Arend.ClearGoal"
+                class="org.arend.toolWindow.errors.ArendClearGoalAction"
+                text="Clear Goal"
+                description="Clear goal">
+            <keyboard-shortcut keymap="$default" first-keystroke="control alt G"/>
+        </action>
+
+        <action id="Arend.GotoNextError"
+                class="org.arend.actions.ArendGotoNextErrorAction"
+                text="Goto Next Error"
+                description="Moves the cursor to the next error">
+            <keyboard-shortcut keymap="$default" first-keystroke="alt F2"/>
+        </action>
+
+        <action id="Arend.GotoPreviousError"
+                class="org.arend.actions.ArendGotoPreviousErrorAction"
+                text="Goto Previous Error"
+                description="Moves the cursor to the previous error">
+            <keyboard-shortcut keymap="$default" first-keystroke="alt shift F2"/>
+        </action>
+
+        <action id="Arend.PrettyPrint.RevealImplicitInformation"
+                class="org.arend.injection.actions.RevealImplicitInformationAction"
+                text="Reveal Implicit Information"
+                description="When invoked in Goal editor, reveals additional information under caret">
+            <keyboard-shortcut keymap="$default" first-keystroke="shift EQUALS"/>
+        </action>
+
+        <action id="Arend.PrettyPrint.HideImplicitInformation"
+                class="org.arend.injection.actions.HideImplicitInformationAction"
+                text="Hide Implicit Information"
+                description="When invoked in Goal editor, hides additional information under caret">
+            <keyboard-shortcut keymap="$default" first-keystroke="MINUS"/>
+        </action>
+
+        <action id="Arend.ShowExpr.Type"
+                class="org.arend.actions.ArendShowTypeAction"
+                text="Show Expression Type"
+                description="Show type of the selected expression">
+            <keyboard-shortcut keymap="$default" first-keystroke="control shift P"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="before" relative-to-action="EditorPopupMenu1"/>
+        </action>
+
+        <action id="Arend.ShowExpr.NormalForm"
+                class="org.arend.actions.ArendShowNormalFormAction"
+                text="Show Elaborated Expression"
+                description="Show the elaborated form of the selected expression">
+            <keyboard-shortcut keymap="$default" first-keystroke="control shift O"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="before" relative-to-action="EditorPopupMenu1"/>
+        </action>
+
+        <action id="Arend.Trace"
+                class="org.arend.tracer.ArendTraceAction"
+                text="Trace Code At Cursor"
+                description="Run the tracing typechecker for a declaration or expression at cursor">
+            <add-to-group group-id="EditorPopupMenu" anchor="before" relative-to-action="EditorPopupMenu1"/>
+        </action>
+
+        <action id="Arend.Repl.OpenFile"
+                class="org.arend.actions.ArendOpenInReplAction"
+                text="REPL"
+                description="Open the Arend REPL and \import the current file if not loaded">
+            <add-to-group group-id="RevealGroup" anchor="last"/>
+            <add-to-group group-id="TouchBarDefault_alt" anchor="last"/>
+        </action>
+
+        <action id="Arend.Config.ToggleNormalize"
+                text="Toggle Normalization"
+                description="Toggle normalization in popup actions"
+                class="org.arend.actions.ArendNormalizeToggleAction"/>
+
+        <action class="org.arend.actions.GotoArendFileAction"
+                text="Goto Arend File"
+                description="Go to Arend file">
+            <add-to-group group-id="GoToTargetEx" anchor="last" />
+        </action>
+
+        <group id="ToolbarArendGroup"
+               class="org.arend.actions.ArendToolbarGroup"
+               text="Arend Editor Toolbar"
+               description="Arend editor toolbar">
+            <add-to-group group-id="NavBarToolBar"
+                          relative-to-action="ToolbarRunGroup" anchor="after"/>
+        </group>
+        <group id="Arend.MarkRootGroup" searchable="false">
+            <action id="ArendMarkSourceRootAction" class="org.arend.actions.mark.ArendMarkSourceRootAction"/>
+            <action id="ArendMarkTestSourceRootAction" class="org.arend.actions.mark.ArendMarkTestSourceRootAction"/>
+            <action id="ArendMarkBinSourceRootAction" class="org.arend.actions.mark.ArendMarkBinRootAction"/>
+            <action id="ArendUnmarkRootAction" class="org.arend.actions.mark.ArendUnmarkRootAction"/>
+            <action id="ArendMarkResourceRootAction" class="org.arend.actions.mark.ArendMarkResourceRootAction"/>
+            <action id="ArendMarkResourceTestRootAction" class="org.arend.actions.mark.ArendMarkResourceTestRootAction"/>
+            <action id="ArendMarkExcludeRootAction" class="org.arend.actions.mark.ArendMarkExcludeRootAction"/>
+            <add-to-group group-id="MarkRootGroup"/>
+        </group>
+
+        <group id="ArendActions" class="org.arend.actions.ArendActions">
+            <action id="Arend.ReloadLibrary"
+                    class="org.arend.module.ReloadLibrariesAction"
+                    text="Reload Arend Libraries"/>
+            <action id="Arend.Repl.Show"
+                    class="org.arend.toolWindow.repl.ArendShowReplAction"
+                    text="Show Arend REPL"
+                    description="Display the Arend REPL as a tool window"/>
+            <action class="org.arend.search.proof.ArendProofSearchAction"
+                    text="Proof Search"
+                    description="Run search for pattern expression in functions' signature">
+                <keyboard-shortcut keymap="$default" first-keystroke="control alt P" />
+            </action>
+            <add-to-group group-id="ToolsMenu" anchor="last" />
+        </group>
+
+        <action id="org.arend.scratch.actions.ArendRunScratchAction" class="org.arend.scratch.actions.ArendRunScratchAction"
+                text="ArendRunScratchAction"/>
+        <action id="org.arend.scratch.actions.ArendClearScratchAction" class="org.arend.scratch.actions.ArendClearScratchAction"
+                text="ArendClearScratchAction"/>
+        <action id="org.arend.scratch.actions.ArendStopScratchAction" class="org.arend.scratch.actions.ArendStopScratchAction"
+                text="ArendStopScratchAction"/>
+    </actions>
+
+    <resource-bundle>messages.ArendBundle</resource-bundle>
+
+</idea-plugin>
