@@ -14,6 +14,7 @@ import com.intellij.ui.EditorNotificationProvider
 import org.arend.psi.ArendFile
 import org.arend.typechecking.TypeCheckingService
 import org.arend.util.ArendBundle
+import org.arend.util.checkArcFile
 import java.util.function.Function
 import javax.swing.JComponent
 
@@ -22,10 +23,9 @@ class FileOutsideSourcesProvider : EditorNotificationProvider {
         val file = PsiManager.getInstance(project).findFile(virtualFile)
         if (file !is ArendFile || ProjectFileIndex.getInstance(project).isInSource(virtualFile) ||
                 project.service<TypeCheckingService>().prelude == file || virtualFile is LightVirtualFile ||
-            ScratchFileService.getInstance().getRootType(virtualFile) != null) {
+                checkArcFile(file) || ScratchFileService.getInstance().getRootType(virtualFile) != null) {
             return null
         }
-
         return Function<FileEditor, EditorNotificationPanel?> { fileEditor: FileEditor? ->
             fileEditor?.let { createPanel(fileEditor) }
         }

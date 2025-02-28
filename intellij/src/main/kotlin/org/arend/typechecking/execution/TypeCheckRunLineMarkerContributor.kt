@@ -10,9 +10,14 @@ import org.arend.core.definition.Definition.TypeCheckingStatus.*
 import org.arend.psi.ArendElementTypes
 import org.arend.psi.ext.*
 import org.arend.scratch.SCRATCH_SUFFIX
+import org.arend.util.checkArcFile
 
 class TypeCheckRunLineMarkerContributor : RunLineMarkerContributor() {
     override fun getInfo(element: PsiElement): Info? {
+        if (checkArcFile(element.containingFile)) {
+            return null
+        }
+
         if (!(element is LeafPsiElement && element.node.elementType == ArendElementTypes.ID) ||
                 element.containingFile.virtualFile.extension == SCRATCH_SUFFIX) {
             return null

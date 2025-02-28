@@ -3,10 +3,12 @@ package org.arend.util
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.codeInsight.hints.InlayHintsFactory
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
@@ -14,12 +16,14 @@ import com.intellij.openapi.roots.ui.configuration.ProjectStructureConfigurable
 import com.intellij.openapi.vfs.JarFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import org.arend.injection.InjectedArendEditor
 import org.arend.module.ArendModuleType
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.ExternalLibraryConfig
 import org.arend.psi.ArendFile
+import org.arend.psi.arc.ArcFile
 import org.arend.settings.ArendProjectSettings
 import org.arend.typechecking.ArendExtensionChangeService
 import org.arend.typechecking.ArendTypechecking
@@ -69,6 +73,9 @@ fun Module.register() {
     refreshLibrariesDirectory(project.service<ArendProjectSettings>().librariesRoot)
     runReadAction {
         service.libraryManager.loadLibrary(config.library, ArendTypechecking.create(project))
+        invokeLater {
+            FileDocumentManager.getInstance().reloadBinaryFiles()
+        }
     }
     ApplicationManager.getApplication().getService(ArendExtensionChangeService::class.java).initializeModule(config)
     config.isInitialized = true
@@ -86,4 +93,8 @@ fun Project.afterTypechecking(files: Collection<ArendFile>) {
             DaemonCodeAnalyzer.getInstance(this).restart(file)
         }
     }
+}
+
+fun checkArcFile(file: PsiFile): Boolean {
+    return file is ArcFile
 }
