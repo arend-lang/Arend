@@ -33,6 +33,11 @@ public class ModuleReferable implements GlobalReferable, AbstractReferable {
   }
 
   @Override
+  public @NotNull ModuleReferable getAbstractReferable() {
+    return this;
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
