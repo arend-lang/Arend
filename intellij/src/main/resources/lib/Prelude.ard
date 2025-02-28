@@ -1,0 +1,94 @@
+\data I
+  | left
+  | right
+  \where {
+    \func squeeze (i j : I) : I
+      | left, j => left
+      | right, j => j
+      | i, left => left
+      | i, right => i
+
+    \func squeezeR (i j : I) : I
+      | left, j => j
+      | right, j => right
+      | i, left => i
+      | i, right => right
+  }
+
+\data Path (A : I -> \Type) (a : A left) (a' : A right)
+  | path (\Pi (i : I) -> A i)
+
+\func \infix 1 = {A : \Type} (a a' : A) => Path (\lam _ => A) a a'
+
+\cons idp {A : \Type} {a : A} => path (\lam _ => a)
+
+\func \infixl 9 @ {A : I -> \Type} {a : A left} {a' : A right} (p : Path A a a') (i : I) : A i \elim p, i
+  | path f, i => f i
+  | _, left => a
+  | _, right => a'
+
+\func coe (A : I -> \Type) (a : A left) (i : I) : A i \elim i
+  | left => a
+
+\func coe2 (A : I -> \Type) (i : I) (a : A i) (j : I) : A j \elim i, j
+  | left, j => coe A a j
+  | i, right => coe (\lam k => A (I.squeezeR i k)) a right
+
+\func iso {A B : \Type} (f : A -> B) (g : B -> A) (p : \Pi (x : A) -> g (f x) = x) (q : \Pi (y : B) -> f (g y) = y) (i : I) : \Type \elim i
+  | left => A
+  | right => B
+
+\data Nat
+  | zero
+  | suc Nat
+  \where {
+    \func \infixl 6 + (x y : Nat) : Nat \elim y
+      | 0 => x
+      | suc y => suc (x + y)
+
+    \func \infixl 7 * (x y : Nat) : Nat \elim y
+      | 0 => 0
+      | suc y => x * y + x
+
+    \func \infixl 6 - (n m : Nat) : Int
+      | 0, m => neg m
+      | n, 0 => pos n
+      | suc n, suc m => n - m
+
+    {- | divMod n m returns the pair (q,r) such that n = m * q + r and r < m if 0 < m.
+     -   If m == 0, then divMod n m returns (n,n).
+     -}
+    \func divMod (n m : Nat) : \Sigma Nat Nat
+
+    \func \infixl 8 div (n m : Nat) => (divMod n m).1
+
+    \func \infixl 8 mod (n m : Nat) => (divMod n m).2
+
+    \lemma divModProp (n m : Nat) : m * n div m + n mod m = n
+  }
+
+\data Fin (n : Nat)
+  \where {
+    \use \coerce fromNat {m : Nat} (n : Nat) : Fin (suc m)
+      => n Nat.mod suc m
+  }
+
+\data Int
+  | \coerce pos Nat
+  | neg Nat \with { zero => pos zero }
+
+\data String
+
+\record DArray {len : Nat} (A : Fin len -> \Type) (\coerce at : \Pi (j : Fin len) -> A j)
+  \where \func \infixl 9 !! (a : DArray) (i : Fin a.len) => a.at i
+
+\func Array (A : \Type) => DArray { | A _ => A }
+
+\cons nil {A : Fin 0 -> \Type} : DArray A \cowith
+  | at => \case __
+
+\cons \infixr 5 :: {n : Nat} {A : Fin (suc n) -> \Type} (a : A 0) (l : DArray (\lam j => A (suc j))) : DArray A \cowith
+  | at => \case \elim __ \with {
+    | 0 => a
+    | suc j => l j
+  }

@@ -1,0 +1,225 @@
+package org.arend.typechecking.execution
+
+import com.intellij.execution.process.ProcessHandler
+import com.intellij.ide.SaveAndSyncHandler
+import com.intellij.openapi.components.service
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.util.ProgressIndicatorBase
+import com.intellij.openapi.project.Project
+import org.arend.ext.error.ErrorReporter
+import org.arend.ext.error.GeneralError
+import org.arend.ext.module.ModulePath
+import org.arend.library.Library
+import org.arend.library.SourceLibrary
+import org.arend.library.error.LibraryError
+import org.arend.library.error.ModuleInSeveralLibrariesError
+import org.arend.module.error.ModuleNotFoundError
+import org.arend.typechecking.*
+import org.arend.typechecking.error.ErrorService
+import java.io.OutputStream
+
+
+// TODO[server2]: Do we still need this?
+class TypeCheckProcessHandler(
+    private val project: Project,
+    private val command: TypeCheckCommand
+) : ProcessHandler() {
+        //OSProcessHandler(GeneralCommandLine()) {
+    var eventsProcessor: TypecheckingEventsProcessor? = null
+    private val indicator: ProgressIndicator = ProgressIndicatorBase()
+
+    override fun startNotify() {
+        super.startNotify()
+
+        val eventsProcessor = eventsProcessor ?: return
+        SaveAndSyncHandler.getInstance().scheduleSave(SaveAndSyncHandler.SaveTask(project))
+
+        val typecheckingErrorReporter = project.service<ErrorService>()
+        val modulePath = if (command.modulePath == "") null else ModulePath(command.modulePath.split('.'))
+        if (modulePath != null) {
+            eventsProcessor.onSuiteStarted(modulePath)
+        }
+
+        if (command.definitionFullName != "" && modulePath == null) {
+            typecheckingErrorReporter.report(DefinitionNotFoundError(command.definitionFullName))
+            eventsProcessor.onSuitesFinished()
+            destroyProcessImpl()
+            return
+        }
+
+        /* TODO[server2]
+        val registeredLibraries = typeCheckerService.libraryManager.registeredLibraries
+        val libraries = if (command.library == "" && modulePath == null) registeredLibraries.filterIsInstance<ArendRawLibrary>() else {
+            val library = if (command.library != "") typeCheckerService.libraryManager.getRegisteredLibrary(command.library) else findLibrary(modulePath!!, registeredLibraries, typecheckingErrorReporter)
+            if (library == null) {
+                if (command.library != "") {
+                    typecheckingErrorReporter.report(LibraryError.notFound(command.library))
+                }
+                eventsProcessor.onSuitesFinished()
+                destroyProcessImpl()
+                return
+            }
+            if (library !is ArendRawLibrary) {
+                typecheckingErrorReporter.report(LibraryError.incorrectLibrary(library.name))
+                eventsProcessor.onSuitesFinished()
+                destroyProcessImpl()
+                return
+            }
+            listOf(library)
+        }
+
+        if (libraries.isEmpty()) {
+            destroyProcessImpl()
+            return
+        }
+
+        for (module in typeCheckerService.updatedModules) {
+            val library = typeCheckerService.libraryManager.getRegisteredLibrary(module.libraryName) as? SourceLibrary
+            if (library?.supportsPersisting() == true) {
+                library.deleteModule(module.modulePath)
+            }
+        }
+        typeCheckerService.updatedModules.clear()
+
+        PooledThreadExecutor.INSTANCE.execute {
+            val concreteProvider = PsiConcreteProvider(typeCheckerService.project, typecheckingErrorReporter, typecheckingErrorReporter.eventsProcessor)
+            val collector = CollectingOrderingListener()
+            val instanceProviderSet = PsiInstanceProviderSet()
+            val ordering = Ordering(instanceProviderSet, concreteProvider, collector, typeCheckerService.dependencyListener, ArendReferableConverter, PsiElementComparator)
+
+            try {
+                runReadAction {
+                    for (library in libraries) {
+                        if (indicator.isCanceled) {
+                            break
+                        }
+
+                        val modulePaths = if (modulePath == null) library.loadedModules else listOf(modulePath)
+                        val modules = modulePaths.mapNotNull {
+                            val module = library.config.findArendFile(it, command.isTest)
+                            if (module == null) {
+                                typecheckingErrorReporter.report(LibraryError.moduleNotFound(it, library.name))
+                            } else if (command.definitionFullName == "") {
+                                val sourcesModuleScopeProvider = typeCheckerService.libraryManager.getAvailableModuleScopeProvider(library)
+                                val moduleScopeProvider = if (module.moduleLocation?.locationKind == ModuleLocation.LocationKind.TEST) {
+                                    val testsModuleScopeProvider = library.testsModuleScopeProvider
+                                    ModuleScopeProvider { modulePath ->
+                                        sourcesModuleScopeProvider.forModule(modulePath)
+                                            ?: testsModuleScopeProvider.forModule(modulePath)
+                                    }
+                                } else sourcesModuleScopeProvider
+                                DefinitionResolveNameVisitor(concreteProvider, TypingInfo.EMPTY, typecheckingErrorReporter).resolveGroup(module, ScopeFactory.forGroup(module, moduleScopeProvider))
+                            }
+                            module
+                        }
+
+                        if (command.definitionFullName == "") {
+                            for (module in modules) {
+                                reportParserErrors(module, module, typecheckingErrorReporter)
+                                resetGroup(module)
+                            }
+                            for (module in modules) {
+                                orderGroup(module, ordering)
+                            }
+                        } else {
+                            val ref = modules.firstOrNull()?.findGroupByFullName(command.definitionFullName.split('.'))?.referable
+                            if (ref == null) {
+                                if (modules.isNotEmpty()) {
+                                    typecheckingErrorReporter.report(DefinitionNotFoundError(command.definitionFullName, modulePath))
+                                }
+                            } else {
+                                val tcReferable = ArendReferableConverter.toDataLocatedReferable(ref)
+                                val typechecked =
+                                    if (tcReferable is TCDefReferable) {
+                                        if (PsiLocatedReferable.isValid(tcReferable)) {
+                                            tcReferable.typechecked
+                                        } else {
+                                            typeCheckerService.dependencyListener.update(tcReferable)
+                                            null
+                                        }
+                                    } else null
+                                if (typechecked == null || !typechecked.status().isOK) {
+                                    val definition = concreteProvider.getConcrete(ref)
+                                    if (definition is Concrete.Definition) {
+                                        typeCheckerService.dependencyListener.update(definition.data)
+                                        ordering.order(definition)
+                                    } else if (definition != null) error(command.definitionFullName + " is not a definition")
+                                } else {
+                                    if (ref is PsiLocatedReferable) {
+                                        typecheckingErrorReporter.eventsProcessor.onTestStarted(ref)
+                                        typecheckingErrorReporter.eventsProcessor.onTestFinished(ref)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!indicator.isCanceled) {
+                    val typechecking = TestBasedTypechecking(typecheckingErrorReporter.eventsProcessor, instanceProviderSet, typeCheckerService, concreteProvider, typecheckingErrorReporter, typeCheckerService.dependencyListener)
+                    try {
+                        typechecking.typecheckCollected(collector, ProgressCancellationIndicator(indicator))
+                        typeCheckerService.project.service<BinaryFileSaver>().saveAll()
+                    } finally {
+                        typecheckingErrorReporter.flush()
+                        typeCheckerService.project.afterTypechecking(typechecking.filesToRestart)
+                    }
+                }
+            }
+            catch (_: ProcessCanceledException) {}
+            catch (e: Exception) {
+                Logger.getInstance(TypeCheckingService::class.java).error(e)
+            }
+            finally {
+                typecheckingErrorReporter.eventsProcessor.onSuitesFinished()
+                ApplicationManager.getApplication().executeOnPooledThread {
+                    destroyProcessImpl() //we prefer to call this method rather than "this@TypeCheckProcessHandler.destroyProcess()" for if processHandler state is not equal to PROCESS_RUNNING then destroyProcessImpl will not be invoked (this is true e.g. in the case when the user stops computation using Detach Process button)
+                }
+            }
+        }
+        */
+    }
+
+    private fun findLibrary(modulePath: ModulePath, registeredLibraries: Collection<Library>, typecheckingErrorReporter: ErrorReporter): Library? {
+        var library: Library? = null
+        var libraries: MutableList<Library>? = null
+        for (lib in registeredLibraries) {
+            if (lib.containsModule(modulePath)) {
+                if (library == null) {
+                    library = lib
+                } else {
+                    if (libraries == null) {
+                        libraries = ArrayList()
+                        libraries.add(library)
+                    }
+                    libraries.add(lib)
+                }
+            }
+        }
+
+        if (libraries != null) {
+            typecheckingErrorReporter.report(ModuleInSeveralLibrariesError(modulePath, libraries))
+        }
+
+        if (library == null) {
+            typecheckingErrorReporter.report(ModuleNotFoundError(modulePath))
+        }
+
+        return library
+    }
+
+    override fun detachProcessImpl() {
+        //Since we have no separate process to detach from, we simply interrupt current typechecking computation
+        indicator.cancel()
+    }
+
+    override fun destroyProcessImpl() =
+            notifyProcessTerminated(0)
+
+    override fun detachIsDefault(): Boolean = true
+
+    override fun getProcessInput(): OutputStream? = null
+}
+
+class DefinitionNotFoundError(definitionName: String, modulePath: ModulePath? = null) :
+    GeneralError(Level.ERROR, if (modulePath == null) "Definition '$definitionName' cannot be located without a module name" else "Definition $definitionName not found in module $modulePath")
