@@ -1,0 +1,91 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Meta
+\import Paths
+
+\lemma basicTest (f g : Nat -> Nat) (a b : Nat) (p : a = b) (q : f = g) : f a = g b
+  => cong
+
+\lemma funcComp (f : Nat -> Nat) (p : f (f (f 0)) = 0) (q : f (f (f (f (f 0)))) = 0) : f 0 = 0
+  => cong
+
+\lemma funcCompArgRev (f : Nat -> Nat) (p : f (f (f 0)) = 0) (q : f (f (f (f (f 0)))) = 0) : f 0 = 0
+  => cong
+
+\lemma binaryFunc (a b c : Nat) (+ : Nat -> Nat -> Nat) (p : b = c) : a `+` b = a `+` c
+  => cong
+
+\lemma binop (a b c : Nat) (p : b = c) : a Nat.+ b Nat.+ c = a Nat.+ c Nat.+ b
+  => cong
+
+\func defcall (a b c d : Nat) (p : b = d) (q : Foo a b c = Nat) : Foo a d c = Nat
+  => cong
+  \where {
+    \data Foo (a b c : Nat)
+  }
+
+\lemma monoid {M : Monoid} (a b c d : M) (p : b * c = d) (q : a * b = a * c) (r : c * c = b) : a * b = a * d
+  => cong {using (M.*-assoc {a} {b} {c}, M.*-assoc {a} {c} {c})}
+
+\lemma dependentFail (f : \Pi (n : Nat) -> depFunc n) {x : Nat} (p : 0 = suc x)
+  => fails {f 0 = f (suc x)} cong
+  \where {
+    \func depFunc (n : Nat) : \Set
+      | 0 => Nat
+      | suc _ => Nat
+  }
+
+\lemma congTrivial (x : Nat) (p : x = 0) : x = 0
+  => cong p
+
+\lemma congCon (x y : Nat) (p : x = y) : suc x = suc y
+  => cong p
+
+\lemma congCon1 (x : Nat) (p : x = 1) : suc (suc (suc x)) = 4
+  => cong p
+
+\lemma congCon2 (x : Nat) (p : 1 = x) : 4 = suc (suc (suc x))
+  => cong p
+
+\lemma funCall (x y : Nat) (p : x = y) : f x = f y
+  => cong p
+  \where
+    \func f (x : Nat) => x Nat.+ 2
+
+\lemma depFunCall (B : Nat -> \Set) (x : Nat) (b b' : B x) (p : b = b') : f B x b x = f B x b' x
+  => cong p
+  \where
+    \func f (B : Nat -> \Set) (x : Nat) (b : B x) (y : Nat) => 0
+
+\func dataCall (x y : Nat) (p : x = y) : D x = D y
+  => cong p
+  \where
+    \data D (n : Nat) | con1 | con2
+
+\lemma appTest {A B : \Set} (x y : A) (f : A -> B) (p : x = y) : f x = f y
+  => cong p
+
+\lemma appTest2 {A B : \Set} (x y : A) (f : A -> A -> B) (p : x = y) : f x y = f y x
+  => cong p (inv p)
+
+\lemma appTest3 {A B : \Set} (x y : A) (f g : A -> B) (p : f = g) (q : x = y) : f x = g y
+  => cong (path (\lam i => (p @ i) (q @ i)))
+
+\lemma arrayTest1 {A : \Set} (x y : A) (l : Array A) (p : x = y) : x :: l = y :: l
+  => cong p
+
+\lemma arrayTest2 {A : \Set} (x y : A) (l : Array A) (p : x = y) : x :: nil = y :: nil
+  => cong p
+
+\lemma arrayTest3 {A : \Set} (x y : A) (l1 l2 : Array A) (p : x = y) (q : l1 = l2) : x :: l1 = y :: l2
+  => cong p q
+
+-- not implemented
+-- \lemma appTest4 {A C : \Set} {B : A -> \Set} (x y : A) (b : B x) (b' : B y) (f : \Pi (a : A) -> B a -> C) (p : x = y) (q : Path (\lam i => B (p @ i)) b b') : f x b = f y b'
+--   => cong p q
+
+\lemma congWarn1 (f : Nat -> Nat) (q : 0 = 1)
+  => fails {f 0 = f 1} (cong q 1)
+
+\lemma congWarn2 (f : Nat -> Nat) (q : 0 = 1)
+  => fails {f 0 = f 0} (cong q)

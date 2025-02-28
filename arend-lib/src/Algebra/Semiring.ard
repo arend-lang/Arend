@@ -1,0 +1,122 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set.Fin
+
+\class PseudoSemiring \extends AbMonoid, Semigroup
+  | ldistr {x y z : E} : x * (y + z) = x * y + x * z
+  | rdistr {x y z : E} : (x + y) * z = x * z + y * z
+  | zro_*-left {x : E} : zro * x = zro
+  | zro_*-right {x : E} : x * zro = zro
+
+\class Semiring \extends PseudoSemiring, Monoid {
+  | natCoef : Nat -> E
+  \default natCoef \as natCoefImpl n \with {
+    | 0 => zro
+    | suc n => natCoefImpl n + ide
+  }
+  | natCoefZero : natCoef 0 = zro
+  \default natCoefZero \as natCoefZeroImpl : natCoefImpl 0 = zro => idp
+  | natCoefSuc (n : Nat) : natCoef (suc n) = natCoef n + ide
+  \default natCoefSuc \as natCoefSucImpl n : natCoefImpl (suc n) = natCoefImpl n + ide => idp
+
+  \lemma zero-div {x : E} : LDiv x 0 0 \cowith
+    | inv-right => zro_*-right
+
+  \lemma ldiv=0 {x y : E} (l : LDiv x y) (p : x = 0) : y = 0
+    => Paths.inv l.inv-right *> pmap (`* _) p *> zro_*-left
+
+  \lemma ldiv/=0 {x y : E} (y/=0 : y /= 0) (x|y : LDiv x y) : x /= 0
+    => \lam x=0 => y/=0 (ldiv=0 x|y x=0)
+
+  \func LDiv_+ {a b c : E} (a|b : LDiv a b) (a|c : LDiv a c) : LDiv a (b + c) \cowith
+    | inv => a|b.inv + a|c.inv
+    | inv-right => ldistr *> pmap2 (+) a|b.inv-right a|c.inv-right
+
+  \func LDiv_BigSum {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> LDiv a (l j)) : LDiv a (BigSum l) \cowith
+    | inv => BigSum (\lam j => LDiv.inv {p j})
+    | inv-right => BigSum-ldistr *> pmap BigSum (later $ exts \lam j => LDiv.inv-right {p j})
+
+  \lemma natCoef_+ (n m : Nat) : natCoef (n Nat.+ m) = natCoef n + natCoef m \elim m
+    | 0 => inv (pmap (_ +) natCoefZero *> zro-right)
+    | suc m => natCoefSuc _ *> pmap (`+ 1) (natCoef_+ n m) *> +-assoc *> inv (pmap (_ +) (natCoefSuc m))
+
+  \lemma BigSum-ldistr {x : E} {l : Array E} : x * BigSum l = BigSum (map (x *) l) \elim l
+    | nil => zro_*-right
+    | :: a l => ldistr *> pmap (x * a +) BigSum-ldistr
+
+  \lemma FinSum-ldistr {A : FinSet} {x : E} {y : A -> E} : x * FinSum y = FinSum (x * y __)
+    => \case FinSum_char y \with {
+      | inP p => pmap (x *) p.2 *> BigSum-ldistr *> inv (FinSum_char2 _ p.1)
+    }
+
+  \lemma BigSum-rdistr {l : Array E} {z : E} : BigSum l * z = BigSum (\lam i => l i * z) \elim l
+    | nil => zro_*-left
+    | :: a arr => rdistr *> pmap (_ +) BigSum-rdistr
+
+  \lemma FinSum-rdistr {A : FinSet} {x : E} {y : A -> E} : FinSum y * x = FinSum (y __ * x)
+    => \case FinSum_char y \with {
+      | inP p => pmap (`* x) p.2 *> BigSum-rdistr *> inv (FinSum_char2 _ p.1)
+    }
+
+  \lemma FinSum-distr {A B : FinSet} {x : A -> E} {y : B -> E} : FinSum x * FinSum y = FinSum (\lam (s : \Sigma A B) => x s.1 * y s.2)
+    => FinSum-rdistr *> path (\lam i => FinSum (\lam a => FinSum-ldistr {_} {_} {x a} i)) *> FinSum-double
+
+  \lemma BigSum_replicate {x : E} {n : Nat} : BigSum (replicate n x) = natCoef n * x \elim n
+    | 0 => rewrite natCoefZero (inv zro_*-left)
+    | suc n => rewrite natCoefSuc $ pmap (x +) BigSum_replicate *> equation
+
+  \lemma BigSum_replicate1 {n : Nat} : BigSum (replicate n ide) = natCoef n
+    => BigSum_replicate *> ide-right
+
+  \lemma FinSum_replicate {A : FinSet} {x : E} : FinSum {_} {A} (\lam _ => x) = natCoef A.finCard * x
+    => FinSum-const *> BigSum_replicate
+
+  \lemma BigProd_zro {l : Array E} (j : Fin l.len) (p : l j = 0) : BigProd l = 0 \elim l, j
+    | a :: l, 0 => pmap (`* _) p *> zro_*-left
+    | a :: l, suc j => pmap (_ *) (BigProd_zro j p) *> zro_*-right
+
+  \lemma trivial (p : 0 = {E} 1) {x y : E} : x = y
+    => inv ide-right *> inv (pmap (x *) p) *> zro_*-right *> inv zro_*-right *> pmap (y *) p *> ide-right
+
+  \lemma associates0 {a b : E} (c : associates a b) (p : a = 0) : b = 0
+    => (associates-sym c).2 *> pmap (_ *) p *> zro_*-right
+
+  \func op : Semiring \cowith
+    | AbMonoid => \this
+    | Monoid => Monoid.op
+    | ldistr => rdistr
+    | rdistr => ldistr
+    | zro_*-left => zro_*-right
+    | zro_*-right => zro_*-left
+} \where {
+    \open Monoid(LDiv)
+  }
+
+\class NonZeroSemiring \extends Semiring {
+  | zro/=ide : zro /= ide
+
+  \lemma inv-nonZero {a : E} (i : Monoid.Inv a) : a /= zro
+    => \lam a=0 => zro/=ide (inv zro_*-right *> pmap (_ *) (inv a=0) *> i.inv-left)
+}
+
+\class PseudoCSemiring \extends PseudoSemiring, CSemigroup {
+  \default ldistr => *-comm *> rdistr *> pmap2 (+) *-comm *-comm
+  \default rdistr => *-comm *> ldistr *> pmap2 (+) *-comm *-comm
+  \default zro_*-left => *-comm *> zro_*-right
+  \default zro_*-right => *-comm *> zro_*-left
+}
+
+\class CSemiring \extends Semiring, PseudoCSemiring, CMonoid {
+  \lemma divQuotient_un0 {a : E} (p : in~ a = {DivQuotient \this} in~ 0) : a = 0
+    => \case (DivQuotient.make~ p).1 \with {
+         | inP d => inv (Monoid.LDiv.inv-right {d}) *> zro_*-left
+       }
+}

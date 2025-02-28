@@ -1,0 +1,354 @@
+\import Data.Array
+\import Data.Or
+\import Function.Meta ($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open JoinSemilattice
+\open MeetSemilattice
+
+\class TotalOrder \extends DistributiveLattice {
+  | totality (x y : E) : x <= y || y <= x
+
+  \default meet (x y : E) : E => (tmeet (totality x y)).1
+  \default meet-left {x y : E} : meet x y <= x => (tmeet (totality x y)).2
+  \default meet-right {x y : E} : meet x y <= y => (tmeet (totality x y)).3
+  \default meet-univ {x y z : E} : z <= x -> z <= y -> z <= meet x y => (tmeet (totality x y)).4 z
+
+  \default join (x y : E) : E => (tjoin (totality x y)).1
+  \default join-left {x y : E} : x <= join x y => (tjoin (totality x y)).2
+  \default join-right {x y : E} : y <= join x y => (tjoin (totality x y)).3
+  \default join-univ {x y z : E} : x <= z -> y <= z -> join x y <= z => (tjoin (totality x y)).4 z
+
+  | ldistr>= {x} {y} {z} =>
+    \case totality y z \with {
+      | byLeft y<=z => meet-monotone <=-refl (join-univ y<=z <=-refl) <=∘ join-right
+      | byRight z<=y => meet-monotone <=-refl (join-univ <=-refl z<=y) <=∘ join-left
+    }
+
+  \lemma meet-isMin (x y : E) : (x ∧ y = x) || (x ∧ y = y)
+    => \case totality x y \with {
+      | byLeft x<=y => byLeft (<=-antisymmetric Lattice.meet-left (Lattice.meet-univ <=-refl x<=y))
+      | byRight y<=x => byRight (<=-antisymmetric Lattice.meet-right (Lattice.meet-univ y<=x <=-refl))
+    }
+
+  \lemma meet-prop (P : E -> \Prop) {x y : E} (Px : P x) (Py : P y) : P (x ∧ y)
+    => \case meet-isMin x y \with {
+      | byLeft p => transportInv P p Px
+      | byRight p => transportInv P p Py
+    }
+
+  \lemma Big01_meet-isMin (l : Array E) (x : E) : (\Sigma (j : Fin l.len) (Big (∧) x l = l j)) || (Big (∧) x l = x) \elim l
+    | nil => byRight idp
+    | a :: l => \case meet-isMin a (Big (∧) x l), Big01_meet-isMin l x \with {
+      | byLeft r, _ => byLeft (0, r)
+      | byRight r, byLeft q => byLeft (suc q.1, r *> q.2)
+      | byRight r, byRight q => byRight (r *> q)
+    }
+
+  \lemma Big_meet-isMin {n : Nat} (l : Array E (suc n)) : ∃ (j : Fin (suc n)) (Big_∧ l = l j) \elim l
+    | a :: l => \case Big01_meet-isMin l a \with {
+      | byLeft r => inP (suc r.1, r.2)
+      | byRight r => inP (0, r)
+    }
+
+  \lemma join-isMax (x y : E) : (x ∨ y = x) || (x ∨ y = y)
+    => \case totality x y \with {
+      | byLeft x<=y => byRight (<=-antisymmetric (Lattice.join-univ x<=y <=-refl) Lattice.join-right)
+      | byRight y<=x => byLeft (<=-antisymmetric (Lattice.join-univ <=-refl y<=x) Lattice.join-left)
+    }
+
+  \lemma join-prop (P : E -> \Prop) {x y : E} (Px : P x) (Py : P y) : P (x ∨ y)
+    => \case join-isMax x y \with {
+      | byLeft p => transportInv P p Px
+      | byRight p => transportInv P p Py
+    }
+
+  \lemma Big01_join-isMax (l : Array E) (x : E) : (\Sigma (j : Fin l.len) (Big (∨) x l = l j)) || (Big (∨) x l = x) \elim l
+    | nil => byRight idp
+    | a :: l => \case join-isMax a (Big (∨) x l), Big01_join-isMax l x \with {
+      | byLeft r, _ => byLeft (0, r)
+      | byRight r, byLeft q => byLeft (suc q.1, r *> q.2)
+      | byRight r, byRight q => byRight (r *> q)
+    }
+
+  \lemma Big_join-isMax {n : Nat} (l : Array E (suc n)) : ∃ (j : Fin (suc n)) (Big_∨ l = l j) \elim l
+    | a :: l => \case Big01_join-isMax l a \with {
+      | byLeft r => inP (suc r.1, r.2)
+      | byRight r => inP (0, r)
+    }
+} \where {
+  \func tmeet {E : Poset} {x y : E} => ||.rec MeetSemilattice.Meets-isProp
+                                              (\lam x<=y => (x, E.<=-refl, x<=y, \lam z z<=x _ => z<=x))
+                                              (\lam y<=x => (y, y<=x, E.<=-refl, \lam z _ z<=y => z<=y))
+
+  \func tjoin {E : Poset} {x y : E} => ||.rec JoinSemilattice.Joins-isProp
+                                              (\lam x<=y => (y, x<=y, E.<=-refl, \lam z _ y<=z => y<=z))
+                                              (\lam y<=x => (x, E.<=-refl, y<=x, \lam z z<=x _ => z<=x))
+}
+
+-- | A linearly ordered set.
+\class LinearOrder \extends BiorderedSet {
+  | <-comparison (y : E) {x z : E} : x < z -> x < y || y < z
+  | <-connectedness {x y : E} : Not (x < y) -> Not (y < x) -> x = y
+
+  | <= => <=
+  | <=-refl => <-irreflexive
+  | <=-transitive {x} {y} {z} x<=y y<=z => \case <-comparison y __ \with {
+    | byLeft z<y => y<=z z<y
+    | byRight y<x => x<=y y<x
+  }
+  | <=-antisymmetric x<=y y<=x => <-connectedness y<=x x<=y
+
+  | <-transitive-right {a1} {a2} {a3} a2/<a1 a2<a3 => \case <-comparison a1 a2<a3 \with {
+    | byLeft a2<a1 => absurd (a2/<a1 a2<a1)
+    | byRight a1<a3 => a1<a3
+  }
+  | <-transitive-left {a1} {a2} {a3} a1<a2 a3/<a2 => \case <-comparison a3 a1<a2 \with {
+    | byLeft a1<a3 => a1<a3
+    | byRight a3<a2 => absurd (a3/<a2 a3<a2)
+  }
+  | <=-less p => \lam q => <-irreflexive (p <∘ q)
+
+  \func op : LinearOrder \cowith
+    | StrictPoset => StrictPoset.op
+    | <-comparison y x<z => \case <-comparison y x<z \with {
+      | byLeft z<y => byRight z<y
+      | byRight y<x => byLeft y<x
+    }
+    | <-connectedness p q => <-connectedness q p
+} \where {
+  \class With# \extends LinearOrder, Set#
+    | # x y => x < y || y < x
+    | #-irreflexive x#x => \case x#x \with {
+      | byLeft x<x => <-irreflexive x<x
+      | byRight x<x => <-irreflexive x<x
+    }
+    | #-symmetric x#y => \case x#y \with {
+      | byLeft x<y => byRight x<y
+      | byRight y<x => byLeft y<x
+    }
+    | #-comparison x y z x#z => \case x#z \with {
+      | byLeft x<z => \case <-comparison y x<z \with {
+        | byLeft x<y => byLeft (byLeft x<y)
+        | byRight y<z => byRight (byLeft y<z)
+      }
+      | byRight z<x => \case <-comparison y z<x \with {
+        | byLeft z<y => byRight (byRight z<y)
+        | byRight y<x => byLeft (byRight y<x)
+      }
+    }
+    | tightness x/#y => <-connectedness (\lam x<y => x/#y (byLeft x<y)) (\lam y<x => x/#y (byRight y<x))
+
+  \type \infix 4 <= {A : StrictPoset} (a a' : A) => Not (a' < a)
+
+  \lemma <_<= {A : StrictPoset} {a a' : A} (p : a < a') : a <= a'
+    => \lam q => <-irreflexive (p <∘ q)
+
+  \lemma notLess {A : StrictPoset} {a a' : A} (p : a <= a') (q : a' < a) : Empty
+    => p q
+
+  -- | A linearly ordered set with decidable inequality.
+  \class Dec \extends LinearLattice, DecSet, TotalOrder {
+    \field trichotomy (x y : E) : Tri x y
+
+    | <-comparison y {x} {z} x<z => \case trichotomy x y \with {
+      | less x<y => byLeft x<y
+      | equals x=y => byRight (transport (`< z) x=y x<z)
+      | greater y<x => byRight (y<x <∘ x<z)
+    }
+    | <-connectedness {x} {y} x/<y y/<x => \case trichotomy x y \with {
+      | less x<y => absurd (x/<y x<y)
+      | equals x=y => x=y
+      | greater y<x => absurd (y/<x y<x)
+    }
+    | totality x y => \case trichotomy x y \with {
+      | less x<y => byLeft (<=-less x<y)
+      | equals x=y => byLeft (rewrite x=y <-irreflexive)
+      | greater y<x => byRight (<=-less y<x)
+    }
+
+    \default meet (x y : E) : E
+      => \case trichotomy x y \with {
+        | less _ => x
+        | equals _ => x
+        | greater _ => y
+      }
+    \default meet-left {x y : E} : meet x y <= x
+      => unfold meet (mcases <=-refl \with {
+        | greater y<x => <=-less y<x
+      })
+    \default meet-right {x y : E} : meet x y <= y
+      => unfold meet (mcases \with {
+        | less x<y => <=-less x<y
+        | equals x=y => rewrite x=y <=-refl
+        | greater _ => <=-refl
+      })
+    \default meet-univ {x y z : E} : z <= x -> z <= y -> z <= meet x y
+      => \lam z<=x z<=y => unfold meet (mcases z<=x \with {
+        | greater _ => z<=y
+      })
+
+    \default join (x y : E) : E
+      => \case trichotomy x y \with {
+        | less _ => y
+        | equals _ => x
+        | greater _ => x
+      }
+    \default join-left {x y : E} : x <= join x y
+      => unfold join (mcases <=-refl \with {
+        | less x<y => <=-less x<y
+      })
+    \default join-right {x y : E} : y <= join x y
+      => unfold join (mcases \with {
+        | less _x => <=-refl
+        | equals x=y => rewrite x=y <=-refl
+        | greater y<x => <=-less y<x
+      })
+    \default join-univ {x y z : E} : x <= z -> y <= z -> join x y <= z
+      => \lam x<=z y<=z => unfold join (mcases x<=z \with {
+        | less _ => y<=z
+      })
+
+    \default decideEq x y => \case trichotomy x y \with {
+      | less x<y => no (\lam x=y => <-irreflexive (transport (`< y) x=y x<y))
+      | equals x=y => yes x=y
+      | greater y<x => no (\lam x=y => <-irreflexive (transport (y <) x=y y<x))
+    }
+
+    \func op : Dec \cowith
+      | LinearOrder => LinearOrder.op
+      | decideEq => decideEq
+      | trichotomy x y => \case trichotomy x y \with {
+        | less y<x => greater y<x
+        | equals x=y => equals x=y
+        | greater x<y => less x<y
+      }
+  }
+
+  \func <-dec {A : Dec} (a a' : A) : Decide (a < a') \cowith
+    | decide => \case dec<_<= a a' \with {
+      | inl a<a' => yes a<a'
+      | inr a'<=a => no a'<=a
+    }
+
+  \lemma <=_/= {A : Dec} {a a' : A} (p : a <= a') (q : a /= a') : a < a'
+    => \case trichotomy a a' \with {
+         | less r => r
+         | equals r => absurd (q r)
+         | greater r => absurd (p r)
+       }
+
+  \func <=-dec {A : Dec} {a a' : A} (p : a <= a') : (a < a') `Or` (a = a') => \case trichotomy a a' \with {
+    | less a<a' => inl a<a'
+    | equals a=a' => inr a=a'
+    | greater a'<a => absurd (p a'<a)
+  }
+
+  \func dec<_<= {A : Dec} (a a' : A) : (a < a') `Or` (a' <= a) => \case trichotomy a a' \with {
+    | less a<a' => inl a<a'
+    | equals a=a' => inr (rewrite a=a' <-irreflexive)
+    | greater a'<a => inr (<=-less a'<a)
+  }
+
+  \lemma dec<_reduce {A : Dec} {a a' : A} (p : a < a') : dec<_<= a a' = inl p
+    => unfold dec<_<= (mcases contradiction \with {
+      | less a<a' => pmap inl prop-pi
+    })
+
+  \lemma dec<=_reduce {A : Dec} {a a' : A} (p : a' <= a) : dec<_<= a a' = inr p
+    => unfold dec<_<= (mcases (pmap inr prop-pi) \with {
+      | less a<a' => contradiction
+    })
+
+  \lemma dec<= {A : Dec} (a a' : A) : Set.Dec (a <= a')
+    => \case dec<_<= a' a \with {
+         | inl q => no \lam p => <-irreflexive (q <∘l p)
+         | inr q => yes q
+       }
+
+  \lemma trichotomy<_reduce {A : Dec} {a a' : A} (p : a < a') : trichotomy a a' = less p
+    => cases (trichotomy a a') contradiction \with {
+      | less q => pmap less prop-pi
+    }
+
+  \lemma trichotomy=_reduce {A : Dec} {a a' : A} (p : a = a') : trichotomy a a' = equals p
+    => cases (trichotomy a a') contradiction \with {
+      | equals q => pmap equals prop-pi
+    }
+
+  \lemma trichotomy>_reduce {A : Dec} {a a' : A} (p : a' < a) : trichotomy a a' = greater p
+    => cases (trichotomy a a') contradiction \with {
+      | greater q => pmap greater prop-pi
+    }
+
+  \lemma meet/=left {A : LinearOrder} {_ : MeetSemilattice A (<=)} {a b : A} (p : a ∧ b /= a) : a ∧ b = b
+    => <=-antisymmetric meet-right $ meet-univ (\lam a<b => p $ <=-antisymmetric meet-left $ meet-univ <=-refl $ <_<= a<b) <=-refl
+
+  \lemma meet/=right {A : LinearOrder} {_ : MeetSemilattice A (<=)} {a b : A} (p : a ∧ b /= b) : a ∧ b = a
+    => rewrite meet-comm $ meet/=left $ later $ rewrite meet-comm p
+
+  \lemma join/=left {A : LinearOrder} {_ : JoinSemilattice A (<=)} {a b : A} (p : a /= a ∨ b) : a ∨ b = b
+    => <=-antisymmetric (join-univ (\lam b<a => p $ <=-antisymmetric join-left (join-univ <=-refl $ <_<= b<a)) <=-refl) join-right
+
+  \lemma join/=right {A : LinearOrder} {_ : JoinSemilattice A (<=)} {a b : A} (p : b /= a ∨ b) : a ∨ b = a
+    => rewrite join-comm $ join/=left $ later $ rewrite join-comm p
+
+  \func findMin {A : Dec} {n : Nat} (l : Array A (suc n)) : \Sigma (j : Fin (suc n)) (Big_∧ l = l j) \elim n, l
+    | 0, a :: l => (0, idp)
+    | suc n, a :: a' :: l => \case dec<_<= a' (Big (∧) a l) \with {
+      | inl r => (1, <=-antisymmetric meet-left $ meet-univ <=-refl $ <_<= r)
+      | inr r => \case findMin (a :: l) \with {
+        | (0, p) => (0, rewrite p $ <=-antisymmetric meet-right $ meet-univ (rewrite p in r) <=-refl)
+        | (suc j, p) => (suc (suc j), rewrite p $ <=-antisymmetric meet-right $ meet-univ (rewrite p in r) <=-refl)
+      }
+    }
+
+  \func findMax {A : Dec} {n : Nat} (l : Array A (suc n)) : \Sigma (j : Fin (suc n)) (Big_∨ l = l j) \elim n, l
+    | 0, a :: l => (0, idp)
+    | suc n, a :: a' :: l => \case dec<_<= a' (Big (∨) a l) \with {
+      | inl r => \case findMax (a :: l) \with {
+        | (0, p) => (0, rewrite p $ <=-antisymmetric (join-univ (<_<= $ rewrite p in r) <=-refl) join-right)
+        | (suc j, p) => (suc (suc j), rewrite p $ <=-antisymmetric (join-univ (<_<= $ rewrite p in r) <=-refl) join-right)
+      }
+      | inr r => (1, <=-antisymmetric (join-univ <=-refl r) join-left)
+    }
+}
+
+\class LinearLattice \extends LinearOrder, BiorderedLattice {
+  | <_meet-univ {x} {y} {z} x<y x<z => \case <-comparison (y ∧ z) x<y \with {
+    | byLeft q => q
+    | byRight q => rewrite (LinearOrder.meet/=left $ <_/= q) x<z
+  }
+  | <_join-univ {x} {y} {z} x<z y<z => \case <-comparison (x ∨ y) x<z \with {
+      | byLeft q => rewrite (LinearOrder.join/=left $ <_/= q) y<z
+      | byRight q => q
+    }
+}
+
+\class DenseLinearOrder \extends LinearOrder
+  | isDense {x z : E} : x < z -> ∃ (y : E) (x < y) (y < z)
+  \where {
+    \class Dec \extends DenseLinearOrder, LinearOrder.Dec
+  }
+
+\class UnboundedDenseLinearOrder \extends DenseLinearOrder
+  | withoutUpperBound (x : E) : ∃ (y : E) (x < y)
+  | withoutLowerBound (x : E) : ∃ (y : E) (y < x)
+  \where {
+    \class Dec \extends UnboundedDenseLinearOrder, DenseLinearOrder.Dec
+  }
+
+\data Tri {A : StrictPoset} (a a' : A)
+  | less (a < a')
+  | equals (a = a')
+  | greater (a > a')
+  \where
+    \use \level levelProp : \Prop

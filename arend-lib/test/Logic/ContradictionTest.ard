@@ -1,0 +1,117 @@
+\import Data.Or
+\import Logic.Meta
+\import Logic
+\import Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Set
+
+\module Common \where {
+  \data Empty'
+}
+
+\open Common
+
+\lemma coerce (e : Empty) : Empty'
+  => contradiction
+
+\lemma identity (e : Empty') : Empty'
+  => contradiction
+
+\lemma withoutExpectedType (e : Empty')
+  => contradiction
+
+\lemma combineArgs (P Q : \Prop) (e : Not P) (p : P) : Q
+  => contradiction
+
+\lemma explicitProof (P : \Prop) (e : Empty) : P
+  => contradiction {e}
+
+\lemma explicitProof2 (P : \Prop) (e : Nat -> P -> Not P) (p : P) : Empty
+  => contradiction {e 0}
+
+\lemma severalArgs (P Q : \Prop) (q : Q) (e : P -> Q -> Empty') (p : P) : \Pi (Z : \Prop) -> Z
+  => contradiction
+
+\lemma dependentArgs (P : Nat -> \Prop) (z : Nat) (e : \Pi (x : Nat) -> P x -> Empty) (p : P z) : Empty
+  => contradiction
+
+\lemma dependentArgs2 (P : Nat -> \Prop) (e : \Pi {x : Nat} -> P x -> Empty) (p : P 3) : Empty
+  => contradiction
+
+\lemma dependentArgs3 (P : Nat -> \Prop) (Q : \Pi {x : Nat} -> P x -> \Prop) (e : \Pi (x : Nat) (p : P x) -> Q p -> Empty) (p : Nat -> P 3) (q : Q (p 0)) : Empty
+  => contradiction
+
+\lemma usingTest (P Q : \Prop) (q : Q) (e : P -> Empty) (p : P) : Empty
+  => contradiction {usingOnly (e,p)}
+
+\lemma usingFail (P Q : \Prop) (q : Q) (e : P -> Empty) (p : P)
+  => fails {Empty} contradiction {usingOnly (e,q)}
+
+\lemma equality {x y : Nat} (p : x = y) (q : x /= y) : Empty
+  => contradiction
+
+\lemma irreflexivity {A : Set#} {x y : A} (p : x # x) : Empty
+  => contradiction
+
+\lemma irreflexivity2 {A : Set#} {x y : A} (p : x # y) (q : x = y) : Empty
+  => contradiction
+
+\lemma irreflexivity3 {A : StrictPoset} {x y z : A} (p : x < y) (q : x = z) (s : y = z) : Empty
+  => contradiction
+
+\lemma cases {A : \Type} (d : D (Not A)) (a : A) : Empty
+  => contradiction
+  \where
+    \data D (A : \Type) | con1 Empty | con2 A
+
+\lemma cases2 {A B : \Type} (d : Not (Or A B)) (p : Or B A) : Empty
+  => contradiction
+
+\lemma cases3 {A : StrictPoset} {x y : A} (d : Not (Or (Or (x < y) (x = y)) (x > y))) (p : Or (x = y) (Or (y < x) (y > x))) : Empty
+  => contradiction
+
+\lemma transitivity {A : StrictPoset} {x y z : A} (p : y < z) (q : x < y) (s : z < x) : Empty
+  => contradiction
+
+\lemma transitivity2 {A : StrictPoset} {x y z w : A} (p : x < y) (q : y < z) (s : x = w) (t : z < w) : Empty
+  => contradiction
+
+\lemma transitivityConstructors {x : Nat} (p : x = 0) (q : x = 1) : Empty
+  => contradiction
+
+\lemma lambdaTest : 0 = 1 -> Empty => contradiction
+
+\lemma transTest {A : LinearOrder} {x y z : A} (s : x <= y) (p : y < z) (q : z < x) : Empty
+  => contradiction
+
+\lemma transTest2 {A : LinearOrder} {x y z : A} (p : x <= y) (q : y <= z) (s : z < x) : Empty
+  => contradiction
+
+\lemma transTest3 {A : LinearOrder} {x y z w : A} (p : x <= y) (q : y < z) (s : z <= w) (t : w < x) : Empty
+  => contradiction
+
+\lemma transTest4 {A : LinearOrder} {x y z w : A} (p : x = y) (q : y < z) (s : z = w) (t : w < x) : Empty
+  => contradiction
+
+\lemma transTest5 {A : LinearOrder} {x y z u v w : A} (p : x <= y) (q : y <= z) (a : z < u) (b : u = v) (c : v = w) (d : w < x) : Empty
+  => contradiction
+
+\lemma transTest6 {A : LinearOrder} {x y z u v w : A} (p : x < y) (q : y < z) (a : z <= u) (b : u = v) (c : v = w) (d : w <= x) : Empty
+  => contradiction
+
+\lemma transTest7 {A : LinearOrder} {x y z u v w : A} (p : x < y) (q : y = z) (a : z <= u) (b : u = v) (c : v < w) (d : w <= x) : Empty
+  => contradiction
+
+\lemma notTest {A : StrictPoset} {x y z w : A} (p : x < y) (q : y = z) (r : z < w) (s : Not (x < w)) : Empty
+  => contradiction
+
+\lemma notTest2 {A : Poset} {x y z w : A} (p : x <= y) (q : y = z) (r : z <= w) (s : Not (x <= w)) : Empty
+  => contradiction
+
+\lemma notTest3 {A : \Type} {x y z w : A} (p : x = y) (q : y = z) (r : z = w) (s : Not (x = w)) : Empty
+  => contradiction
+
+\lemma failTest {A : StrictPoset} {x y z : A} (p : Not (y < x)) (q : Not (z < y)) (s : z < x)
+  => fails {Empty} contradiction

@@ -1,0 +1,38 @@
+\import Logic
+\import Paths
+\import Set
+\import Set.Subset
+
+-- | Strict partial orders are also known as quasiorders
+\class StrictPoset \extends BaseSet {
+  | \infix 4 < : E -> E -> \Prop
+  | <-irreflexive {x : E} : Not (x < x)
+  | <-transitive \alias \infixr 9 <∘ {x y z : E} : x < y -> y < z -> x < z
+
+  | \infix 4 > : E -> E -> \Prop
+  | > x y => y < x
+
+  \func op : StrictPoset E \cowith
+    | < x y => y < x
+    | <-irreflexive => <-irreflexive
+    | <-transitive p q => q <∘ p
+
+  \lemma <_/= {x y : E} (x<y : x < y) : x /= y
+    => \lam x=y => <-irreflexive (transport (`< y) x=y x<y)
+
+  \lemma >_/= {x y : E} (y<x : x > y) : x /= y
+    => \lam x=y => <-irreflexive (transport (y <) x=y y<x)
+} \where {
+  \module Reasoning \where {
+    \lemma \infixr 1 >>> {P : StrictPoset} {x y z : P} => P.<∘
+
+    \lemma \infixr 1 >>= {P : StrictPoset} {x y z : P} (x<y : x < y) (y=z : y = z) => transport (x <) y=z x<y
+
+    \lemma \infixr 1 >=> {P : StrictPoset} {x y z : P} (x=y : x = y) (y<z : y < z) => transport (`< z) (inv x=y) y<z
+
+    \func \infix 2 <<< {P : StrictPoset} (x : P) {y : P} (p : x < y) => p
+  }
+}
+
+\func open-int {A : StrictPoset} (a b : A) : Set A
+  => \lam c => \Sigma (a < c) (c < b)

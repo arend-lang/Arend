@@ -1,0 +1,106 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.RingHom
+\import Arith.Nat
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.LinearOrder
+\import Paths
+\import Paths.Meta
+\open Monoid(LDiv,Inv)
+
+\class ReducedRing \extends Ring {
+  | isReduced {a : E} : a * a = 0 -> a = 0
+
+  \lemma noNilpotent {a : E} {n : Nat} (p : pow a n = 0) : a = 0
+    => aux $ pmap (pow a) (inv $ <=_exists $ LinearOrder.<_<= id<pow2) *> pow_+  *> pmap (`* pow a (NatSemiring.pow 2 n -' n)) p *> zro_*-left
+    \where
+      \lemma aux {a : E} {n : Nat} (p : pow a (NatSemiring.pow 2 n) = 0) : a = 0 \elim n
+        | 0 => inv ide-left *> p
+        | suc n => aux $ isReduced (inv pow_+ *> p)
+}
+
+\class ReducedCRing \extends ReducedRing, CRing {
+  \lemma div_zero {a b : E} (d : LDiv a b) (p : a * b = 0) : b = 0
+    => isReduced $ pmap (`* b) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> zro_*-right
+
+  \lemma div_pow_zero {a b : E} {n : Nat} (d : LDiv a (pow b n)) (p : a * b = 0) : b = 0 \elim n
+    | 0 => inv ide-left *> pmap (`* b) (inv d.inv-right *> *-comm) *> *-assoc *> pmap (d.inv *) p *> zro_*-right
+    | suc n => noNilpotent {_} {_} {suc n} $ div_zero d $ pmap (a *) *-comm *> inv *-assoc *> pmap (`* _) p *> zro_*-left
+
+  \lemma div-cancel {a b b' : E} (d : LDiv a b) (d' : LDiv a b') (p : a * b = a * b') : b = b'
+    => div_pow-cancel {_} {a} {b} {b'} {1} {1} (rewrite ide-left d) (rewrite ide-left d') p
+
+  \lemma div_pow-cancel {a b b' : E} {n n' : Nat} (d : LDiv a (pow b n)) (d' : LDiv a (pow b' n')) (p : a * b = a * b') : b = b'
+    => \let | I : Ideal => Ideal.radical {Ideal.closure1 a}
+            | (inP (k,c)) => I.contains_- (inP (n, Ideal.closure1_LDiv.2 $ inP d)) (inP (n', Ideal.closure1_LDiv.2 $ inP d'))
+            | (inP dd) => Ideal.closure1_LDiv.1 c
+       \in fromZero $ div_pow_zero dd $ ldistr_- *> toZero p
+
+  \lemma div_div-cancel {a b b' : E} (d : LDiv a b) (d' : LDiv a b') (p : LDiv (a * b) (a * b')) : LDiv b b' p.inv
+    => div_pow_div-cancel {_} {a} {b} {b'} {1} {1} (rewrite ide-left d) (rewrite ide-left d') p
+
+  \lemma div_pow_div-cancel {a b b' : E} {n n' : Nat} (d : LDiv a (pow b n)) (d' : LDiv a (pow b' n')) (p : LDiv (a * b) (a * b')) : LDiv b b' p.inv \cowith
+    | inv-right => div_pow-cancel {_} {a} (rewrite pow_*-comm $ LDiv.factor-left d) d' $ inv *-assoc *> p.inv-right
+}
+
+\class PPRing \extends ReducedCRing {
+  | isPPRing (a : E) : ∃ (u : E) (a = u * a) ∀ {x} (a * x = 0 -> u * x = 0)
+
+  | isReduced {a} aa=0 => \case isPPRing a \with {
+    | inP s => s.2 *> s.3 aa=0
+  }
+
+  \lemma bezout->strictBezout (bez : IsBezout) : IsStrictBezout
+    => \lam a b =>
+        \have | (inP (s,t,(a',p),(b',q))) => bez a b
+              | (inP (w,b=wb,f)) => isPPRing (s * a + t * b)
+        \in inP (w * t, w * s + (1 - w), w * b', w * a' + (1 - w),
+                 equation {usingOnly (f {b' * a - a' * b} equation)} *> inv zro-right *> pmap (_ +) equation *> inv rdistr *> *-comm,
+                 equation {usingOnly (f {t * b' + s * a' - 1} equation, f {1 - w} equation)})
+}
+
+\class ImpotentRing \extends ReducedRing, NonZeroRing {
+  | isImpotent {a : E} : a * a = a -> (a = 0) || (a = 1)
+
+  \lemma decomp {a b : E} (a+b=1 : a + b = 1) (ab=0 : a * b = 0) : (\Sigma (a = 1) (b = 0)) || (\Sigma (a = 0) (b = 1))
+    => \case isImpotent $ inv zro-left *> pmap (`+ _) (inv ab=0) *> inv rdistr *> pmap (`* b) a+b=1 *> ide-left \with {
+      | byLeft b=0 => byLeft (inv zro-right *> pmap (a +) (inv b=0) *> a+b=1, b=0)
+      | byRight b=1 => byRight (inv ide-right *> pmap (a *) (inv b=1) *> ab=0, b=1)
+    }
+} \where {
+  \func subring {R : Ring} {E : ImpotentRing} (f : RingHom R E) (inj : isInj f) : ImpotentRing { | Ring => R } \cowith
+    | zro/=ide p => E.zro/=ide $ inv f.func-zro *> pmap f p *> f.func-ide
+    | isReduced aa=0 => inj $ isReduced (inv f.func-* *> pmap f aa=0 *> f.func-zro) *> inv f.func-zro
+    | isImpotent aa=a => \case isImpotent (inv f.func-* *> pmap f aa=a) \with {
+      | byLeft fa=0 => byLeft $ inj (fa=0 *> inv f.func-zro)
+      | byRight fa=1 => byRight $ inj (fa=1 *> inv f.func-ide)
+    }
+}
+
+\class ImpotentCRing \extends ImpotentRing, ReducedCRing, NonZeroCRing {
+  \lemma zeroDim->inv (zd : IsZeroDimensional) (x : E) : (x = 0) || Inv x
+    => \case zeroDimensional-char 0 2 zd x \with {
+         | inP (u,k,k/=0,uu=u,x^k|u,u|x^k) => \case isImpotent uu=u \with {
+           | byLeft u=0 => byLeft $ noNilpotent $ ldiv=0 u|x^k u=0
+           | byRight u=1 => byRight \case \elim k, \elim x^k|u, \elim k/=0 \with {
+             | 0, d, p => absurd (p idp)
+             | suc k, d, _ => Inv.cfactor-right $ Inv.ldiv (rewrite u=1 in d)
+           }
+         }
+    }
+
+  \func zeroDim->field (zd : IsZeroDimensional) : DiscreteField { | CRing => \this } \cowith
+    | zro/=ide => zro/=ide
+    | eitherZeroOrInv => zeroDim->inv zd
+} \where {
+  \func subring {R : CRing} {E : ImpotentRing} (f : RingHom R E) (inj : isInj f) : ImpotentCRing { | CRing => R } \cowith
+    | ImpotentRing => ImpotentRing.subring f inj
+}

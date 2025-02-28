@@ -1,0 +1,34 @@
+\import Homotopy.Fibration
+\import Paths
+\import HLevel
+\import Equiv
+\import Equiv.HalfAdjoint
+
+\func hasContrFibers {A B : \Type} (f : A -> B) => \Pi (b : B) -> Contr (\Sigma (a : A) (f a = b))
+  \where
+    \lemma levelProp : isProp (hasContrFibers f)
+      => HLevels-pi {B} (\lam b0 => Contr (Fib f b0)) {0} (\lam b0 => Contr.levelProp (Fib f b0))
+
+\func contrFibers=>Equiv {A B : \Type} {f : A -> B} (p : hasContrFibers f) : QEquiv f =>
+  \let sec y => Contr.center {p y}
+  \in \new QEquiv {
+    | ret y => (sec y).1
+    | ret_f x => pmap (\lam (r : Fib f (f x)) => r.1) (Contr.contraction {p (f x)} (x,idp))
+    | f_sec y => (sec y).2
+  }
+
+\lemma Equiv=>contrFibers (e : Equiv) : hasContrFibers e => \lam b0 =>
+  \let | p : HAEquiv e => HAEquiv.fromQEquiv (QEquiv.fromEquiv e)
+       | x0 => Fib.make (p.ret b0) (p.f_sec b0)
+  \in Contr.make x0 (\lam x =>
+    \let -- p0 proves that the first components are equal: x0.over = x.over.
+         | p0 => pmap p.ret (inv x.2) *> p.ret_f x.1
+         -- q0 proves that the second compontents are equal: pmap f p0 *> x.basePath = x0.basePath.
+         | q0 =>
+            pmap e p0 *> x.2                                               ==< pmap (`*> x.2) (pmap_*>-comm e _ _) >==
+            (pmap e (pmap p.ret (inv x.2)) *> pmap e (p.ret_f x.1)) *> x.2 ==< pmap ((pmap e (pmap p.ret (inv x.2)) *> __) *> x.2) (p.f_ret_f=f_sec_f x.1) >==
+            (pmap e (pmap p.ret (inv x.2)) *> p.f_sec (e x.1)) *> x.2      ==< pmap (`*> x.2) (homotopy-isNatural (\lam x => e (p.ret x)) (\lam x => x) p.f_sec (inv x.2)) >==
+            (p.f_sec b0 *> inv x.2) *> x.2                                 ==< *>-assoc _ _ _ >==
+            p.f_sec b0 *> (inv x.2 *> x.2)                                 ==< pmap (p.f_sec b0 *>) (inv_*> x.2) >==
+            p.f_sec b0                                                     `qed
+    \in Fib.ext b0 x0 x p0 q0)

@@ -1,0 +1,362 @@
+\import Data.Bool
+\import Meta
+
+\lemma test1 (n : Nat) : (\case n \with { | 0 => 1 | suc _ => 1 }) = 1
+  => mcases \with {
+    | 0 => idp
+    | suc _ => idp
+  }
+
+\lemma test2 (n m : Nat) : (\case n \with { | 0 => 2 | suc _ => 2 }) = (\case m \with { | 0 => 2 | suc _ => 2 })
+  => mcases \with {
+    | 0, 0 => idp
+    | 0, suc n1 => idp
+    | suc n1, 0 => idp
+    | suc n1, suc n2 => idp
+  }
+
+\lemma test2_mixed (n m : Nat) : (\case n \with { | 0 => 2 | suc _ => 2 }) = (\case m \with { | 0 => 2 | suc _ => 2 })
+  => mcases idp \with {
+    | 0, 0 => idp
+    | suc n1, suc n2 => idp
+  }
+
+\lemma testOccurrences (n m : Nat) : \let x : Nat => \case m \with { | 0 => 0 | suc _ => 0 } \in (\case n \with { | 0 => 1 | suc _ => 1 }) = 1
+  => mcases {2} \with {
+    | 0 => idp
+    | suc _ => idp
+  }
+
+\module Common \where {
+  \func foo (n : Nat) : Nat
+    | 0 => 2
+    | suc _ => 2
+
+  \func bar (k n m : Nat) : Nat \elim n, m
+    | 0, m => 3
+    | n, 0 => 3
+    | suc n, suc m => 3
+
+  \func baz (n m : Nat) (p : n = m) : Nat \elim p
+    | idp => 4
+
+  \func bak (n : Nat) : n = n \elim n
+    | 0 => idp
+    | suc _ => idp
+}
+
+\open Common
+
+\lemma testDef (n : Nat) : foo n = 2
+  => mcases {foo} \with {
+    | 0 => idp
+    | suc _ => idp
+  }
+
+\lemma testDefOccurrences (n m : Nat) : \let x => foo m \in foo n = 2
+  => mcases {foo,2} \with {
+    | 0 => idp
+    | suc _ => idp
+  }
+
+\lemma testCaseDefOccurrences (n m k : Nat) : \let x => foo m \in foo n = (\case k \with { | 0 => 2 | suc _ => 2 })
+  => mcases {1,(foo,2)} \with {
+    | 0, 0 => idp
+    | 0, suc _ => idp
+    | suc _, 0 => idp
+    | suc _, suc _ => idp
+  }
+
+\lemma testCaseDefOccurrences2 (n m k : Nat) : \let x => foo m \in foo n = (\case k \with { | 0 => 2 | suc _ => 2 })
+  => mcases {(),(foo,2)} \with {
+    | 0, 0 => idp
+    | 0, suc _ => idp
+    | suc _, 0 => idp
+    | suc _, suc _ => idp
+  }
+
+\lemma testCaseDefOccurrencesFail (n m k : Nat)
+  => fails {\let x => foo m \in foo n = (\case k \with { | 0 => 2 | suc _ => 2 })}
+           (mcases {foo,2} \with {
+             | 0, 0 => idp
+             | 0, suc _ => idp
+             | suc _, 0 => idp
+             | suc _, suc _ => idp
+           })
+
+\lemma testRefinedPatterns (n : Nat) : (\case n \with { | 0 => 2 | 1 => 2 | _ => 2 }) = 2
+  => mcases \with {
+    | 0 => idp
+    | 1 => idp
+    | suc (suc _) => idp
+  }
+
+\lemma testRefinedPatterns2 (k n m : Nat) : bar k n m = 3
+  => mcases {bar} \with {
+    | 0, 0 => idp
+    | 0, suc n1 => idp
+    | suc n1, 0 => idp
+    | suc n1, suc n2 => idp
+  }
+
+\lemma testRefinedPatterns3 (n : Nat) : (\case n \with { | 0 => 2 | 1 => 2 | _ => 2 }) = 2
+  => mcases idp
+
+\lemma testRefinedPatterns4 (k n m : Nat) : bar k n m = 3
+  => mcases {bar} idp
+
+\lemma letTest (k n m : Nat) : bar k n m = 3
+  => mcases {bar} \with {
+    | 0, m1 => idp
+    | n1, 0 => idp
+    | suc n1, suc m1 => idp
+  }
+
+\lemma letTest2 (n : Nat) : (\case n \with { | 0 => 3 | _ => 3 }) = 3
+  => mcases \with {
+    | 0 => idp
+    | n1 => idp
+  }
+
+\lemma letTestRefined (n : Nat) : (\case n \with { | 0 => 3 | _ => 3 }) = 3
+  => mcases \with {
+    | 0 => idp
+    | suc n1 => idp
+  }
+
+\lemma letTestRefined2 (n : Nat) : (\case n \with { | 0 => 3 | _ => 3 }) = 3
+  => mcases \with {
+    | 0 => idp
+    | 1 => idp
+    | suc (suc _) => idp
+  }
+
+\lemma letTest3 (n : Nat) : (\case n \with { | 0 => 3 | _ => 3 }) = 3
+  => mcases idp
+
+\lemma letTest4 (n : Nat) : (\case n \with { | 0 => 3 | _ => 3 }) = 3
+  => mcases \with {
+    | _ => idp
+  }
+
+\lemma dependentTest (n : Nat) (p : n = 0) : qux n p = 4
+  => mcases {qux} \with {
+    | 0, p1 => idp
+  }
+  \where {
+    \func qux (n : Nat) (p : n = 0) : Nat \elim n
+      | 0 => 4
+  }
+
+\lemma dependentCaseTest (n : Nat) (p : n = 0) : (\case \elim n, p \with { | 0, _ => 4 }) = 4
+  => mcases \with {
+    | 0, p1 => idp
+  }
+
+\lemma idpTest (m : Nat) (p : 2 = m) : baz 2 m p = 4
+  => mcases {baz} \with {
+    | n1, m1, idp => idp
+  }
+
+\lemma idpTest2 (n : Nat) (p : n = 2) : baz n 2 p = 4
+  => mcases {baz} \with {
+    | n1, m1, idp => idp
+  }
+
+\lemma idpCaseTest (n m : Nat) (p : n = m) : (\case \elim n, p \with { | _, idp => 4 }) = 4
+  => mcases \with {
+    | n1, idp => idp
+  }
+
+\lemma idpCaseTest2 (n m : Nat) (p : n = m) : (\case \elim n, \elim m, p \with { | _, _, idp => 4 }) = 4
+  => mcases \with {
+    | n1, m1, idp => idp
+  }
+
+\lemma idpCaseTest3 (n m : Nat) (p : n = m) : (\case \elim n, \elim m, p \with { | 0, _, idp => 4 | suc _, _, idp => 4 }) = 4
+  => mcases \with {
+    | 0, m1, idp => idp
+    | suc n1, m1, idp => idp
+  }
+
+\lemma idpCaseTest4 (n m : Nat) (p : n = m) : (\case \elim n, \elim m, p \with { | _, 0, idp => 4 | _, suc _, idp => 4 }) = 4
+  => mcases \with {
+    | n1, 0, idp => idp
+    | n1, suc m1, idp => idp
+  }
+
+\lemma idpCaseTest5 (n : Nat) (p : n = 3) : (\case \elim n, p \with { | _, idp => 4 }) = 4
+  => mcases \with {
+    | n1, idp => idp
+  }
+
+\lemma idpCaseTest6 (m : Nat) (p : 3 = m) : (\case \elim m, p \with { | _, idp => 4 }) = 4
+  => mcases \with {
+    | m1, idp => idp
+  }
+
+\lemma argumentTest (x : Bool) : not (not x) = x
+  => mcases {not,2} idp
+
+\lemma testSameExpr (n : Nat) : (\case n \with { | 0 => 5 | suc _ => 7 }) = (\case n \with { | 0 => 5 | suc _ => 7 })
+  => mcases \with {
+    | 0 => idp
+    | suc _ => idp
+  }
+
+\lemma testSameExpr2 (n : Nat) : (\case n \with { | 0 => 5 | _ => 7 }) = (\case n \with { | 0 => 5 | _ => 7 })
+  => mcases \with {
+    | 0 => idp
+    | _ => idp
+  }
+
+\lemma testSameExprDef (n : Nat) : (\case n \with { | 0 => 5 | _ => 7 }) = (\case n \with { | 0 => 5 | _ => 7 })
+  => mcases idp
+
+\lemma testSameExpr3 (n : Nat) : (\case n \with { | 0 => 2 | suc n => n Nat.+ 3 }) = (\case n \with { | 1 => 3 | s => s Nat.+ 2 })
+  => mcases \with {
+    | 0 => idp
+    | 1 => idp
+    | suc _ => idp
+  }
+
+\lemma testSameExpr4 (n : Nat) : (\case n \with { | 0 => 2 | suc n => n Nat.+ 3 }) = (\case n \with { | 1 => 3 | s => s Nat.+ 2 })
+  => mcases \with {
+    | 0 => idp
+    | suc _ => idp
+  }
+
+\lemma andAssoc (x y z : Bool) : (x and y) and z = x and (y and z) => mcases {and,2,3} \with {
+  | true => idp
+  | false => idp
+}
+
+\lemma andIdempotent (x : Bool) : and x x = x => mcases {and} \with {
+  | true => idp
+  | false => idp
+}
+
+\lemma additionalArg (x y : Bool) (p : y = x and false) : y = x and false => mcases {and} p _ \with {
+  | true, p' => p'
+  | false, p' => p'
+}
+
+\lemma additionalArg2 (x y : Bool) (p : y = x and false) : x and false = false => mcases {and} p idp
+
+{-
+\lemma typedArg (x y : Bool) (p : y = and x false) : and x false = y => mcases {and} {arg (name = z)} (p : y = and z false) idp
+
+\lemma namedArg (x y z : Bool) (p : y = and x false) (q : y = z) : and x false = z => mcases {and} {arg (name = t)} (y arg (name = y'), p : y' = and t false, q : y' = z) _ \with {
+  | true, _, idp, q' => q'
+  | false, _, idp, q' => q'
+}
+-}
+
+\lemma addPathTest (x : Bool) (f : x = false -> false = false) : x = x and x => mcases {and} {arg addPath} \with {
+  | true, _ => idp
+  | false, p => f p
+}
+
+\lemma addPathTest2 (x y : Bool) (f : x = false -> false = false) : (x and x) and false = (y and y) and false => mcases {and,2,4} {arg addPath} \with {
+  | true, p, true => idp
+  | true, p, false => idp
+  | false, p, true => f p
+  | false, p, false => f p
+}
+
+\lemma addPathTest3 (x y : Bool) (f : y = false -> false = false) : (x and x) and false = (y and y) and false => mcases {and,2,4} {arg (), arg addPath} \with {
+  | true, true, q => idp
+  | true, false, q => f q
+  | false, true, q => idp
+  | false, false, q => f q
+}
+
+\lemma addPathTest4 (x y : Bool) (f : x = false -> false = false) (g : y = false -> false = false) : (x and x) and false = (y and y) and false => mcases {and,2,4} {arg addPath, arg addPath} \with {
+  | true, p, true, q => idp
+  | true, p, false, q => g q
+  | false, p, true, q => f p
+  | false, p, false, q => g q
+}
+
+\lemma addPathLetTest (x : Data) (f : \Pi (y : Data) -> x = y -> 0 = 0) : foo x = 0 => mcases {foo} {arg addPath} \with {
+  | con1, p => f con1 p
+  | c, p => f c p
+} \where {
+  \data Data | con1 | con2 | con3
+
+  \func foo (d : Data) : Nat
+    | con1 => 0
+    | _ => 0
+}
+
+\func addPathArg (x : Bool) (n : Nat) (f : n = 0 -> false = false) : x and false = false => mcases {and} (n arg addPath) _ \with {
+  | true, 0, p => f p
+  | true, suc _, p => idp
+  | false, 0, p => f p
+  | false, suc n1, _ => idp
+}
+
+\func addPathArg2 (x : Bool) (n : Nat) (f : x = false -> false = false) (g : n = 0 -> false = false) : x and false = false => mcases {and} {arg addPath} (n arg addPath) _ \with {
+  | true, p, 0, q => g q
+  | true, p, suc _, q => idp
+  | false, p, 0, q => g q
+  | false, p, suc n1, _ => f p
+}
+
+\func repeatedArg3 (x : Bool) : (x and false, x and false, x and false) = (false, false, false)
+  => mcases {and} idp
+
+\lemma onlyArg (x y : Bool) (p : y = x and false) : y = false => mcases {and} p _ \with {
+  | true, p' => p'
+  | false, p' => p'
+}
+
+\lemma onlyArg2 (x : Bool) (p : true = x and false) : x = false => mcases {and} p _ \with {
+  | true, p' => \case p' \with {}
+  | false, _ => idp
+}
+
+\func finTest1 (n : Nat) (x : Fin (suc n)) : 0 = (\case x \with { | 0 => 0 | suc _ => 0 }) => mcases \with {
+  | 0 => idp
+  | suc f => idp
+}
+
+\func finTest2 (n : Nat) (x : Fin (suc n)) : foo x = 2 => mcases {foo} {arg addPath} \with {
+  | 0, _ => idp
+  | suc f, _ => idp
+}
+
+\func typeTest (n : Nat) : bak n = idp => mcases {bak} idp
+
+\func typeTest2 (n : Nat) : (\case \elim n \return n = n \with { | 0 => idp | suc _ => idp }) = idp => mcases idp
+
+\func arrayTest (a : Array Nat) : 0 = (\case a \with { | nil => 0 | :: _ _ => 0 })
+  => mcases idp
+
+\lemma addPathDefault (n : Nat) : (\case n \with { | 0 => 1 | suc _ => 1 }) = 1
+  => mcases {_} {arg addPath} idp
+
+\func depTest (g : Nat -> Nat) (f : \Pi (n : Nat) -> D n) : foo (g 0) (f (g 0)) = idp
+  => mcases {foo} idp
+  \where {
+    \data D (n : Nat) | con1 | con2
+
+    \func foo (n : Nat) (d : D n) : n = n \elim d
+      | con1 => idp
+      | con2 => idp
+  }
+
+\lemma asTest (n : Nat) (p : (\case n \with { | 0 => 1 | suc _ => 1 }) = 2) : 1 = 2
+  => mcases (p arg (as = x)) x
+
+{- not supported yet
+\func depTest2 (g : Nat -> Nat) (f : \Pi (n : Nat) -> D n) : foo (g 0) (f (g 0)) = idp
+  => mcases {foo} idp
+  \where {
+    \data D (n : Nat) | con1 | con2
+
+    \func foo (n : Nat) (d : D n) : n = n \elim n
+      | 0 => idp
+      | suc n => idp
+  }
+-}

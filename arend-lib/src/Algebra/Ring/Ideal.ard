@@ -1,0 +1,496 @@
+\import Algebra.Domain.Bezout
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Group.Sub
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Monoid.Category
+\import Algebra.Monoid.GCD
+\import Algebra.Monoid.Prime
+\import Algebra.Monoid.Sub
+\import Algebra.Pointed.Sub
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Int
+\import Arith.Nat
+\import Combinatorics.Binom
+\import Data.Array
+\import Data.Bool
+\import Data.Or
+\import Equiv
+\import Function.Meta ($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Countable
+\import Set.Fin
+\open AddMonoid
+\open AbMonoid
+\open Monoid \hiding (op)
+
+-- | Left ideal
+\record LIdeal \extends SubAddGroup {
+  \override S : Ring
+  | ideal-left {r a : S} : contains a -> contains (r * a)
+  | contains_negative c => transport contains (Ring.negative_*-left *> pmap negative ide-left) (ideal-left c)
+}
+
+-- | Right ideal
+\record RIdeal \extends SubAddGroup {
+  \override S : Ring
+  | ideal-right {r a : S} : contains a -> contains (a * r)
+  | contains_negative c => transport contains (Ring.negative_*-right *> pmap negative ide-right) (ideal-right c)
+
+  \lemma ldiv {a b : S} (a|b : Monoid.LDiv a b) (Ia : contains a) : contains b
+    => transport contains a|b.inv-right (ideal-right Ia)
+}
+
+-- | Two-sided ideal
+\record TIdeal \extends LIdeal, RIdeal
+
+-- | Ideal of a commutative ring
+\record Ideal \extends TIdeal {
+  \override S : CRing
+  | ideal-right s => transport contains *-comm (ideal-left s)
+
+  \func radical : Ideal S \cowith
+    | contains a => ∃ (n : Nat) (contains (Monoid.pow a n))
+    | contains_zro => inP (1, transportInv contains ide-left contains_zro)
+    | contains_+ {x} {y} (inP (n,xS)) (inP (m,yS)) => inP (n + m, transportInv contains (binom.expansion x y (n + m)) (bigSum
+        (\new Array S (suc (n + m)) (\lam i => natCoef (binom (n + m) i) * (Monoid.pow x i * Monoid.pow y (iabs (n + m Nat.- i)))))
+        (\lam i => ideal-left (\let j => iabs (n + m Nat.- i) \in \case NatSemiring.splitSum (Poset.<=_= (pmap iabs (inv (pmap (`+ (n + m)) IntRing.minus__) *> IntRing.minus+pos i i (n + m) *> pmap (pos i +) (inv (pos_iabs (<_suc_<= (fin_< i))))))) \with {
+          | byLeft n<=i => ideal-right (rewriteI (<=_exists n<=i) (rewrite Monoid.pow_+ (ideal-right xS)))
+          | byRight m<=j => ideal-left (rewriteI (<=_exists m<=j) (rewrite Monoid.pow_+ (ideal-right yS)))
+        }))))
+    | ideal-left (inP (n,s)) => inP (n, transportInv contains CMonoid.pow_*-comm (ideal-left s))
+
+  \func module : LModule S \cowith
+    | AbGroup => SubAddGroup.abStruct \this
+    | *c a s => (a * s.1, ideal-left s.2)
+    | *c-assoc => ext *-assoc
+    | *c-ldistr => ext ldistr
+    | *c-rdistr => ext rdistr
+    | ide_*c => ext ide-left
+    \where {
+      \lemma finitelyGenerated (p : IsFinitelyGenerated) : module.IsFinitelyGenerated \elim p
+        | inP (l,lg) => inP (mkArray \lam j => later (l j, lg.1 j), \lam s => TruncP.map (lg.2 s.2) \lam t => (t.1, ext $ t.2 *> inv struct_BigSum))
+    }
+
+  \lemma radical-superset {x : S} (s : contains x) : radical x
+    => inP (1, transportInv contains ide-left s)
+
+  \lemma radical_pow {x : S} {n : Nat} (s : radical (Monoid.pow x n)) : radical x \elim s
+    | inP (m,p) => inP (n * m, transportInv contains Monoid.pow_* p)
+
+  \lemma radical-univ {I : Ideal S} (p : \Pi {x : S} -> I x -> radical x) {x : S} (s : I.radical x) : radical x \elim s
+    | inP (n,Ix^n) => radical_pow (p Ix^n)
+
+  \lemma bigSum (l : Array S) (p : \Pi (i : Fin l.len) -> contains (l i)) : contains (BigSum l) \elim l
+    | nil => contains_zro
+    | :: a l => contains_+ (p 0) (bigSum l (\lam i => p (suc i)))
+
+  \lemma finSum {J : FinSet} {a : J -> S} (p : \Pi (j : J) -> contains (a j)) : contains (FinSum a)
+    => \case FinSum_char a \with {
+         | inP (e,q) => transportInv contains q $ bigSum _ \lam i => p (e i)
+       }
+
+  \func IsGeneratedBy (l : Array S)
+    => \Sigma (∀ (a : l) (contains a)) (\Pi {a : S} -> contains a -> ∃ (l' : Array S l.len) (a = BigSum (\lam j => l' j * l j)))
+
+  \func IsFinitelyGenerated => ∃ (l : Array S) (IsGeneratedBy l)
+
+  \func IsGeneratedBy1 (a : S) => \Sigma (contains a) (\Pi {b : S} -> contains b -> TruncP (Monoid.LDiv a b))
+
+  \func IsPrincipal => ∃ (a : S) (IsGeneratedBy1 a)
+
+  \lemma principal->finitelyGenerated (p : IsPrincipal) : IsFinitelyGenerated
+    | inP s => inP (s.1 :: nil, (\lam _ => s.2.1, \lam {a} c => TruncP.map (s.2.2 c) \lam (d : Monoid.LDiv s.1 a) => (d.inv :: nil, simplify $ inv d.inv-right *> *-comm)))
+
+  \func IsMaximal => \Sigma (Not (contains 1)) (\Pi (x : S) -> contains x || (\Sigma (y : S) (contains (1 - y * x))))
+} \where {
+  \func closure {R : CRing} {J : \Set} (g : J -> R) : Ideal R \cowith
+    | contains e => ∃ (l : Array (\Sigma R J)) (e = BigSum (map (\lam p => p.1 * g p.2) l))
+    | contains_zro => inP (nil,idp)
+    | contains_+ (inP (l,p)) (inP (l',p')) => inP (l ++ l', pmap2 (+) p p' *> inv (pmap BigSum (map_++ (later (\lam (c,j) => c * g j))) *> BigSum_++))
+    | ideal-left {r} (inP (l,p)) => inP (map (\lam (c,j) => (r * c, j)) l, pmap (r *) p *> R.BigSum-ldistr *> path (\lam i => BigSum (map (\lam (c,j) => inv (R.*-assoc {r} {c} {g j}) @ i) l)))
+
+  \func sclosure {R : CRing} (U : R -> \Prop) => closure (\lam (p : \Sigma (x : R) (U x)) => p.1)
+
+  \lemma closure-superset {R : CRing} {J : \Set} {g : J -> R} (j : J) : closure g (g j)
+    => inP ((1,j) :: nil, equation)
+
+  \lemma sclosure-superset {R : CRing} {U : R -> \Prop} {x : R} (Ux : U x) : sclosure U x
+    => inP ((1,(x,Ux)) :: nil, equation)
+
+  \lemma closure-univ {R : CRing} {J : \Set} {g : J -> R} {I : Ideal R} (c : \Pi (j : J) -> I (g j)) {x : R} (d : closure g x) : I x \elim d
+    | inP (l,p) => transportInv I p $ bigSum _ \lam i => later $ ideal-left (c (l i).2)
+
+  \lemma sclosure-univ {R : CRing} {U : R -> \Prop} {I : Ideal R} (c : \Pi (x : R) -> U x -> I x) {x : R} (d : sclosure U x) : I x
+    => closure-univ {R} {\Sigma (x : R) (U x)} {__.1} (\lam j => c j.1 j.2) d
+
+  \func closure1 {R : CRing} (a : R) : Ideal R
+    => closure (\lam (_ : \Sigma) => a)
+
+  \lemma closure1-lem {R : CRing} {a b : R} : closure1 a b <-> ∃ (c : R) (b = a * c)
+    => (\lam (inP (l,b=sl)) => inP (BigSum (map __.1 l), b=sl *> inv (R.BigSum-rdistr {map __.1 l})  *> *-comm), \lam (inP (c,b=ac)) => inP ((c,()) :: nil, b=ac *> *-comm *> inv zro-right))
+
+  \lemma closure1_LDiv {R : CRing} {a b : R} : closure1 a b <-> TruncP (Monoid.LDiv a b)
+    => (\lam c => TruncP.map (closure1-lem.1 c) \lam s => \new Monoid.LDiv a b s.1 (inv s.2), \lam c => closure1-lem.2 $ TruncP.map c \lam (d : Monoid.LDiv a b) => (d.inv, inv d.inv-right))
+
+  \lemma closure1-principal {R : CRing} {a : R} : IsPrincipal {closure1 a}
+    => inP (a, generated)
+    \where
+      \lemma generated {R : CRing} {a : R} : IsGeneratedBy1 {closure1 a} a
+        => (closure-superset {R} {_} {\lam _ => a} (), \lam {a} => closure1_LDiv.1)
+
+  \lemma closure2-lem {R : CRing} {a : R} (f : Bool -> R)
+    : closure f a <-> ∃ (c d : R) (a = f true * c + f false * d)
+    => \have (g,h) => fin-closure-lem f
+       \in (\lam s => TruncP.map (g s) (\lam (c, a=fc) => (c true, c false, a=fc *> FinSum_char2 _ BoolFin.equiv *> equation)),
+            \lam (inP (c, d, a=fc)) => h (inP (if __ c d, a=fc *> inv (FinSum_char2 _ BoolFin.equiv *> equation))))
+
+  \lemma fin-closure-lem {D : FinSet} {R : CRing} {a : R} (f : D -> R)
+    : closure f a <-> ∃ (c : D -> R) (a = FinSum (\lam i => c i * f i))
+    => \case D.finEq \with {
+         | inP (eq : Equiv) =>
+           \have (g,h) => closureN-lem {_} {_} {\lam i => f (eq i)}
+           \in (
+             \lam (inP (l, a=fl)) =>
+                 TruncP.map (g (inP (map (\lam (r, d) => (r, eq.ret d)) l,
+                                     a=fl *> pmap BigSum (exts (\lam j => pmap (_ * f __) (inv (eq.f_ret _)))))))
+                     (\lam (c, a=fc) => (\lam d => c (eq.ret d),
+                                         a=fc *> pmap BigSum (exts (\lam j => pmap (c __ * _) (inv (eq.ret_f _)))) *> inv (FinSum_char2 _ eq)
+                                        )),
+             \lam (inP (c, a=fc)) =>
+                 TruncP.map (h (inP (\lam i => c (eq i), a=fc *> FinSum_char2 _ eq))) (\lam (l, a=fl) => (map (\lam (r, i) => (r, eq i)) l, a=fl)))
+       }
+
+  \lemma closureN-lem {R : CRing} {a : R} {B : Array R}
+    : closure B a <-> ∃ (c : Array R B.len) (a = BigSum (\lam i => c i * B i)) =>
+    (TruncP.map __ (\lam q =>
+        (\lam i => BigSum (map (\lam p => if (p.2 NatSemiring.== i) p.1 0) q.1),
+         q.2 *> pmap BigSum (exts (\lam k => inv (singleton-lem _ _ (q.1 k).2)
+                                     *> pmap BigSum (exts (\lam h => unfold (==) (cases (NatSemiring.decideEq (q.1 k).2 h) \with {
+                                     | yes e => pmap (_ * B __) (fin_nat-inj e)
+                                     | no _ => inv zro_*-left
+                                   })))))
+                  *> R.BigSum-transpose (\lam i j => if ((q.1 i).2 NatSemiring.== j) (q.1 i).1 0 * B j)
+                       *> pmap BigSum (exts (\lam j => inv R.BigSum-rdistr)))),
+     TruncP.map __ (\lam (c, a=Bc) => (\lam i => (c i, i), a=Bc)))
+    \where {
+      \lemma singleton-lem {R : Semiring} (a : R) (n : Nat) (i : Fin n)
+        : BigSum (\lam (j : Fin n) => if (i NatSemiring.== j) a 0) = a \elim n, i
+        | suc _, 0 => pmap (_ +) (R.BigSum_zro (\lam _ => idp)) *> zro-right
+        | suc n, suc i => zro-left *> pmap BigSum (exts (\lam j => pmap (if __ _ _) suc-eq)) *> singleton-lem a n i
+
+      \lemma suc-eq {a b : Nat} : suc a == suc b = a == b =>
+        unfold (==) (cases (decideEq a b, decideEq (suc a) (suc b)) idp \with {
+          | yes e, no n => absurd (n (pmap suc e))
+          | no n, yes e => absurd (n (pmap pred e))
+        })
+    }
+
+  \lemma closure-generated {R : CRing} {l : Array R} : IsGeneratedBy {closure l} l
+    => (closure-superset, \lam c => closureN-lem.1 c)
+
+  \lemma closure-finGenerated {R : CRing} {l : Array R} : IsFinitelyGenerated {closure l}
+    => inP (l, closure-generated)
+
+  \func ChainCondition {R : CRing} (I : Nat -> Ideal R) =>
+    (\Pi (n : Nat) {a : R} -> I n a -> I (suc n) a) -> ∃ (n : Nat) ∀ {a} (I (suc n) a -> I n a)
+
+  \lemma fromMonoidChainCondition {R : CRing} (cc : CMonoid.DivChain {DivQuotient.DivQuotientMonoid R})
+    (I : Nat -> Ideal R) (p : \Pi (n : Nat) -> Ideal.IsPrincipal {I n}) : ChainCondition I
+    => \lam f =>
+        \let | r n => TruncP.rec-set (p n) (\lam s => in~ s.1) \lam s s' => ~-pequiv $ later (s'.2.2 s.2.1, s.2.2 s'.2.1)
+             | t => cc (\lam n => (r n).1) \lam n => \case (r n).2, (r (suc n)).2 \with {
+               | inP sn, inP sn+1 => transport2 (\lam x y => TruncP (Monoid.LDiv x y)) sn+1.2 sn.2 $ TruncP.map (sn+1.1.2.2 $ f n sn.1.2.1) DivQuotient.div-to~
+             }
+        \in TruncP.map t \lam s => (s.1, \case (r s.1).2, (r (suc s.1)).2 \with {
+          | inP d, inP d' => \lam c => \case DivQuotient.div-from~' $ transport2 Monoid.LDiv (inv d.2) (inv d'.2) s.2, d'.1.2.2 c \with {
+            | inP d|d', inP d'|a => ldiv d'|a (ldiv d|d' d.1.2.1)
+          }
+        })
+
+  \func union {R : CRing} (I : Nat -> Ideal R) (\property inc : \Pi {n : Nat} {a : R} -> I n a -> I (suc n) a) : Ideal R \cowith
+    | contains a => ∃ (n : Nat) (I n a)
+    | contains_zro => inP (0, contains_zro)
+    | contains_+ (inP (n,c)) (inP (m,d)) => inP (n + m, contains_+ (include c) $ rewrite +-comm (include d))
+    | ideal-left (inP (n,c)) => inP (n, ideal-left c)
+    \where {
+      \lemma include {n m : Nat} {a : R} (Ia : I n a) : I (n + m) a \elim m
+        | 0 => Ia
+        | suc m => inc (include Ia)
+    }
+
+  \func countable-maximal {R : CRing} (c : Countable R)
+                          (Id : \Pi (I : Ideal R) -> I.IsFinitelyGenerated -> \Pi (x : R) -> Dec (I x))
+                          {I : Ideal R} (Ig : I.IsFinitelyGenerated) (Ip : Not (I 1))
+    : \Sigma (M : Ideal R) M.IsMaximal (\Pi {a : R} -> I a -> M a)
+    => (union (\lam n => (ideal n).1) \lam {_} {a} c => mcases \with {
+      | yes _ => c
+      | no _ => inP (a, 0, c, simplify)
+    }, (\lam (inP c) => ideal-proper c.1 c.2, \lam a => \case pointed-countable-surj R.zro c a \with {
+      | inP (n,fn=a) => \case Id (next n (ideal n)) (next-fg n (ideal n)) 1 \with {
+        | yes (inP (x,y,Ix,p)) => byRight (y, inP (n, transport (ideal n).1 equation Ix))
+        | no r => byLeft $ inP (suc n, rewrite (dec_no_reduce r) $ inP (0, 1, contains_zro, equation))
+      }
+    }), \lam c => inP (0,c))
+    \where {
+      \func next (n : Nat) (I : \Sigma (I : Ideal R) I.IsFinitelyGenerated) : Ideal R \cowith
+        | contains z => ∃ (x y : R) (I.1 x) (z = x + y * pointed-countable R.zro c n)
+        | contains_zro => inP (0, 0, contains_zro, simplify)
+        | contains_+ (inP (x1,y1,Ix1,p1)) (inP (x2,y2,Ix2,p2)) => inP (x1 + x2, y1 + y2, contains_+ Ix1 Ix2, equation)
+        | ideal-left {r} (inP (x,y,Ix,p)) => inP (r * x, r * y, ideal-left Ix, equation)
+
+      \lemma next-fg (n : Nat) (I : \Sigma (I : Ideal R) I.IsFinitelyGenerated) : Ideal.IsFinitelyGenerated {next n I}
+        => TruncP.map I.2 \lam (l,lg) => (pointed-countable R.zro c n :: l, (\case \elim __ \with {
+             | 0 => inP (0, 1, contains_zro, equation)
+             | suc j => inP (l j, 0, lg.1 j, equation)
+           }, \lam (inP (x,y,I1x,p)) => TruncP.map (lg.2 I1x) \lam (l',q) => (y :: l', equation)))
+
+      \func ideal (n : Nat) : \Sigma (I : Ideal R) I.IsFinitelyGenerated \elim n
+        | 0 => (I,Ig)
+        | suc n => \case Id (next n (ideal n)) (next-fg n (ideal n)) 1 \with {
+                     | yes r => ideal n
+                     | no r => (next n (ideal n), next-fg n (ideal n))
+                   }
+
+      \lemma ideal-proper (n : Nat) (c : (ideal n).1 1) : Empty \elim n
+        | 0 => Ip c
+        | suc n => mcases c _ \with {
+          | yes _, c => ideal-proper n c
+          | no r, c => r c
+        }
+    }
+}
+
+\instance IdealLattice {R : CRing} : Bounded.Lattice (Ideal R)
+  | <= I J => \Pi {a : R} -> I a -> J a
+  | <=-refl c => c
+  | <=-transitive p q c => q (p c)
+  | <=-antisymmetric p q => exts \lam a => ext (p,q)
+  | meet (I J : Ideal R) : Ideal R \cowith {
+    | contains x => \Sigma (I x) (J x)
+    | contains_zro => (contains_zro, contains_zro)
+    | contains_+ s t => (contains_+ s.1 t.1, contains_+ s.2 t.2)
+    | ideal-left s => (ideal-left s.1, ideal-left s.2)
+  }
+  | meet-left => __.1
+  | meet-right => __.2
+  | meet-univ f g c => (f c, g c)
+  | top : Ideal R \cowith {
+    | contains _ => \Sigma
+    | contains_zro => ()
+    | contains_+ _ _ => ()
+    | ideal-left _ => ()
+  }
+  | top-univ _ => ()
+  | join I J => Ideal.closure {R} {Or (\Sigma (a : R) (I a)) (\Sigma (a : R) (J a))} (Or.rec __.1 __.1)
+  | join-left {I} {J} {a} c => Ideal.closure-superset {R} {Or (\Sigma (a : R) (I a)) (\Sigma (a : R) (J a))} {Or.rec __.1 __.1} $ inl (a,c)
+  | join-right {I} {J} {a} c => Ideal.closure-superset {R} {Or (\Sigma (a : R) (I a)) (\Sigma (a : R) (J a))} {Or.rec __.1 __.1} $ inr (a,c)
+  | join-univ {I} {J} f g => Ideal.closure-univ {R} {Or (\Sigma (a : R) (I a)) (\Sigma (a : R) (J a))} {Or.rec __.1 __.1} \lam e => cases e \with {
+    | inl c => f c.2
+    | inr c => g c.2
+  }
+  | bottom : Ideal R \cowith {
+    | contains a => a = 0
+    | contains_zro => idp
+    | contains_+ p q => rewrite (p,q) zro-left
+    | ideal-left p => rewrite p zro_*-right
+  }
+  | bottom-univ p => rewrite p contains_zro
+
+\instance IdealMonoid {R : CRing} : CMonoid (Ideal R)
+  | ide => IdealLattice.top
+  | * => product
+  | ide-left => <=-antisymmetric (product-right {R} {IdealLattice.top}) \lam {a} c => inP ((1, (1, a, (), c)) :: nil, simplify)
+  | *-assoc {I} {J} {K} => <=-antisymmetric
+      (Ideal.closure-univ {R} {_} {func (product I J) K} {product I (product J K)} \lam (a, b, inP (l,p), Kb) =>
+          unfold func $ rewrite (p,R.BigSum-rdistr) $ Ideal.bigSum {product I (product J K)} _ \lam j => unfold func $
+          rewrite *-assoc $ ideal-left {product I (product J K)} $ rewrite *-assoc $ Ideal.closure-superset {R} {_} {func I (product J K)} $
+          later ((l j).2.1, (l j).2.2 * b, (l j).2.3, inP ((1, ((l j).2.2, b, (l j).2.4, Kb)) :: nil, simplify)))
+      (Ideal.closure-univ {R} {_} {func I (product J K)} {product (product I J) K} \lam (a, b, Ia, inP (l,p)) =>
+          unfold func $ rewrite (p,R.BigSum-ldistr) $ Ideal.bigSum {product (product I J) K} _ \lam j => unfold func $
+          rewrite (*-comm,*-assoc) $ ideal-left {product (product I J) K} $ rewrite (*-comm, inv *-assoc) $ Ideal.closure-superset {R} {_} {func (product I J) K} $
+          later (a * (l j).2.1, (l j).2.2, inP ((1, (a, (l j).2.1, Ia, (l j).2.3)) :: nil, simplify), (l j).2.4))
+  | *-comm =>
+    \have lem {I J : Ideal R} : product I J <= product J I => Ideal.closure-univ {R} {_} {func I J}
+        \lam s => transport (product J I) *-comm $ Ideal.closure-superset {R} {\Sigma (a b : R) (J a) (I b)} {func J I} (s.2,s.1,s.4,s.3)
+    \in <=-antisymmetric lem lem
+  \where {
+    \func func {R : CRing} (I J : Ideal R) => \lam (s : \Sigma (a b : R) (I a) (J b)) => s.1 * s.2
+
+    \func product {R : CRing} (I J : Ideal R) => Ideal.closure (func I J)
+
+    \lemma product-left {R : CRing} {I J : Ideal R} : product I J <= I
+      => Ideal.closure-univ {R} {_} {func I J} (\lam s => ideal-right s.3)
+
+    \lemma product-right {R : CRing} {I J : Ideal R} : product I J <= J
+      => Ideal.closure-univ {R} {_} {func I J} (\lam s => ideal-left s.4)
+
+    \lemma product_meet {R : CRing} {I J : Ideal R} : product I J <= I ∧ J
+      => meet-univ product-left product-right
+  }
+
+\instance FactorRing (I : Ideal) : CRing
+  | E => Type I
+  | zro => inF 0
+  | + (x y : Type I) : Type I \with {
+    | in~ a, in~ b => in~ (a Ring.+ b)
+    | in~ a, ~-equiv b c r => fequiv (simplify r)
+    | ~-equiv b c r, in~ a => fequiv (simplify r)
+  }
+  | zro-left {x} => \case \elim x \with {
+    | in~ a => fequiv (simplify contains_zro)
+  }
+  | +-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
+    | in~ a, in~ b, in~ c => fequiv (simplify contains_zro)
+  }
+  | +-comm {x} {y} => \case \elim x, \elim y \with {
+    | in~ a, in~ b => fequiv (simplify contains_zro)
+  }
+  | ide => inF 1
+  | * (x y : Type I) : Type I \with {
+    | in~ a, in~ b => inF (a Ring.* b)
+    | in~ a, ~-equiv b c r => fequiv $ transport I equation (I.ideal-left {a} r)
+    | ~-equiv b c r, in~ a => fequiv $ transport I equation (I.ideal-right {a} r)
+  }
+  | ide-left {x} => \case \elim x \with {
+    | in~ a => fequiv (simplify contains_zro)
+  }
+  | *-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
+    | in~ a, in~ b, in~ c => fequiv (transport I equation contains_zro)
+  }
+  | ldistr {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
+    | in~ a, in~ b, in~ c => fequiv (transport I equation contains_zro)
+  }
+  | natCoef n => inF (natCoef n)
+  | natCoefZero => fequiv $ simplify (transportInv I natCoefZero contains_zro)
+  | natCoefSuc n => fequiv $ later $ rewrite natCoefSuc (simplify contains_zro)
+  | negative (x : Type I) : Type I \with {
+    | in~ a => inF (Ring.negative a)
+    | ~-equiv a b r => fequiv $ transport I equation (I.ideal-left { -1} r)
+  }
+  | negative-left {x} => \case \elim x \with {
+    | in~ a => fequiv (simplify contains_zro)
+  }
+  | *-comm {x} {y} => \case \elim x, \elim y \with {
+    | in~ a, in~ b => fequiv (transport I equation contains_zro)
+  }
+  \where {
+    \type Type (I : Ideal) => Quotient {I.S} (\lam a b => I (a - b))
+
+    \func inF {I : Ideal} (a : I.S) : Type I => in~ a
+
+    \lemma fequiv {I : Ideal} {a b : I.S} (p : I (a - b)) : inF a = inF b
+      => path (\lam i => ~-equiv a b p i)
+
+    \lemma fequiv0 {I : Ideal} {a : I.S} (p : I a) : inF a = inF 0
+      => fequiv $ transportInv I (pmap (a Ring.+) AddGroup.negative_zro *> zro-right) p
+
+    \lemma unfequiv {I : Ideal} {a b : I.S} (p : inF a = inF b) : I (a - b)
+      => Quotient.equalityEquiv (\new Equivalence I.S (\lam a b => I (a - b)) {
+        | ~-transitive c d => transport I equation (contains_+ c d)
+        | ~-reflexive => simplify contains_zro
+        | ~-symmetric c => transport I equation (I.ideal-left { -1} c)
+      }) $ path (\lam i => p i)
+
+    \lemma unfequiv0 {I : Ideal} {a : I.S} (p : inF a = inF 0) : I a
+      => transport I (pmap (a Ring.+) AddGroup.negative_zro *> zro-right) (unfequiv p)
+  }
+
+\func factorHom {I : Ideal} : RingHom I.S (FactorRing I) \cowith
+  | func => FactorRing.inF
+  | func-+ => idp
+  | func-ide => idp
+  | func-* => idp
+
+\func factor-lift {I : Ideal} {R : Ring} (f : RingHom I.S R) (p : \Pi {a : I.S} -> I a -> f a = 0) : RingHom (FactorRing I) R \cowith
+  | func (x : FactorRing I) : R \with {
+    | in~ a => f a
+    | ~-equiv a b r => R.fromZero $ inv (f.func-+ *> pmap (_ +) f.func-negative) *> p r
+  }
+  | func-+ {x} {y} => \case \elim x, \elim y \with {
+    | in~ a, in~ b => f.func-+
+  }
+  | func-ide => f.func-ide
+  | func-* {x} {y} => \case \elim x, \elim y \with {
+    | in~ a, in~ b => f.func-*
+  }
+
+\instance FactorField {I : Ideal} (Im : I.IsMaximal) : DiscreteField
+  | CRing => FactorRing I
+  | zro/=ide p => Im.1 $ unfequiv0 (inv p)
+  | eitherZeroOrInv => \case \elim __ \with {
+    | in~ a => \case Im.2 a \with {
+      | byLeft r => byLeft $ fequiv0 r
+      | byRight s => byRight $ Monoid.Inv.lmake (inF s.1) $ inv $ later $ fequiv s.2
+    }
+  }
+  \where {
+    \open FactorRing
+
+    \lemma conv {I : Ideal} (p : 0 /= {FactorRing I} 1) (q : \Pi (x : FactorRing I) -> (x = 0) || Monoid.Inv x) : I.IsMaximal
+      => (\lam c => p $ inv $ fequiv0 c, \lam x => \case q (inF x) \with {
+            | byLeft r => byLeft $ unfequiv0 r
+            | byRight (in~ y, s, _) => byRight $ (y, unfequiv $ inv s)
+          })
+  }
+
+\instance FactorIrrField (R : BezoutRing) (p : Irr {R}) : DiscreteField
+  | CRing => FactorRing (Ideal.closure1 p)
+  | zro/=ide q => p.notInv (trivial_Inv.1 q)
+  | eitherZeroOrInv => zeroOrInv-char.2 \lam a => \case isBezout p a \with {
+    | inP (s, t, d|p : Monoid.LDiv, d|a : Monoid.LDiv) => \case p.isIrr (inv d|p.inv-right) \with {
+      | byLeft (c : Inv) => byRight (t * c.inv, s * c.inv, equation {usingOnly c.inv-right})
+      | byRight (c : Inv) => byLeft \new Monoid.LDiv {
+        | inv => c.inv * d|a.inv
+        | inv-right => equation {usingOnly (d|a.inv-right, c.inv-right, d|p.inv-right)}
+      }
+    }
+  }
+  \where {
+    \open FactorRing \hiding (+,*,negative)
+
+    \lemma trivial_Inv {R : CRing} {p : R} : (0 = {FactorRing (Ideal.closure1 p)} 1) <-> Inv p
+      => (\lam q => \case Ideal.closure1-lem.1 $ unfequiv (inv q) \with {
+        | inP t => Inv.lmake t.1 (*-comm *> inv t.2 *> simplify)
+      }, \lam (e : Inv p) => inv $ fequiv $ Ideal.closure1-lem.2 $ simplify $ inP (e.inv, inv e.inv-right))
+
+    \lemma zeroOrInv-char {R : CRing} {p : R} : (\Pi (a : FactorRing (Ideal.closure1 p)) -> (a = 0) || Inv a) <-> (\Pi (a : R) -> Monoid.LDiv p a || (\Sigma (s t : R) (s * a + t * p = 1)))
+      => (\lam f a => \case f (in~ a) \with {
+        | byLeft a~0 => \case Ideal.closure1-lem.1 (unfequiv a~0) \with {
+          | inP s => byLeft (\new Monoid.LDiv {
+            | inv => s.1
+            | inv-right => inv s.2 *> simplify
+          })
+        }
+        | byRight (in~ b, q, _) => \case Ideal.closure1-lem.1 (unfequiv q) \with {
+          | inP (c,u) => byRight (b, negative c, equation)
+        }
+      }, \lam f => \case \elim __ \with {
+        | in~ a => ||.map (\lam (p|a : Monoid.LDiv p a) => fequiv $ Ideal.closure1-lem.2 $ inP (p|a.inv, simplify $ inv p|a.inv-right))
+            (\lam (s,t,q) => Inv.lmake {_} {inF a} (inF s) $ fequiv $ (Ideal.closure1-lem {R} {p} {s * a - 1}).2 $ inP (negative t, equation)) (f a)
+      })
+
+    \lemma conv {R : CRing} {p : R} (c : \Pi {x y : R} -> p * x = p * y -> x = y) (d : DiscreteField { | CRing => FactorRing (Ideal.closure1 p) }) : Prime p \cowith
+      | notInv pi => zro/=ide (trivial_Inv.2 pi)
+      | isCancelable-left => c
+      | isPrime {x} {y} (z,pz=xy) => \case zeroOrInv-char.1 d.eitherZeroOrInv x, zeroOrInv-char.1 d.eitherZeroOrInv y \with {
+        | byLeft p|x, _ => byLeft p|x
+        | _, byLeft p|y => byRight p|y
+        | byRight (s,t,sx+tp=1), byRight (u,v,uy+vp=1) => byLeft \new Monoid.LDiv {
+          | inv => x * (s * u * z + v + t - v * t * p)
+          | inv-right => equation
+        }
+      }
+  }

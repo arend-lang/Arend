@@ -1,0 +1,220 @@
+\import Function.Meta ($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Directed
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Category
+\import Set.Filter
+\import Set.Subset
+\open Bounded(top)
+
+\class TopSpace \extends BaseSet {
+  | isOpen : Set E -> \Prop
+  | open-top : isOpen Bounded.top
+  | open-inter {U V : Set E} : isOpen U -> isOpen V -> isOpen (U ∧ V)
+  | open-Union {S : Set (Set E)} : ∀ {U : S} (isOpen U) -> isOpen (Set.Union S)
+
+  \lemma cover-open {U : Set E} (c : ∀ {x : U} ∃ (V : isOpen) (V x) (V ⊆ U)) : isOpen U
+    => \have uo => open-Union {_} {\lam V => \Sigma (isOpen V) (V ⊆ U)} __.1
+       \in transport isOpen (ext \lam x => ext (\lam (inP (V,(_,V<=U),Vx)) => V<=U Vx, \lam Ux => TruncP.map (c Ux) \lam (V,Vo,Vx,V<=U) => (V, (Vo, V<=U), Vx))) uo
+
+  \lemma open-IUnion {J : \hType} (g : J -> Given isOpen) : isOpen \lam x => ∃ (j : J) ((g j).1 x)
+    => \have uo => open-Union {_} {\lam U => ∃ (j : J) ((g j).1 = U)} \lam (inP (j,p)) => transport isOpen p (g j).2
+       \in transport isOpen (ext \lam x => ext (\lam (inP (U, inP (j,p), Ux)) => inP (j, rewrite p Ux), \lam (inP (j,c)) => inP ((g j).1, inP (j, idp), c))) uo
+
+  \type \infix 4 <=<T (V U : Set E) : \Prop
+    => \Pi (y : E) -> ∃ (W : isOpen) (W y) (Given (V ∧ W) -> W ⊆ U)
+
+  \func IsRegular => ∀ {U : isOpen} {x : U} ∃ (V : isOpen) (V x) (V <=<T U)
+
+  \func IsLimit {I : DirectedSet} (f : I -> E) (l : E) : \Prop
+    => ∀ {U : isOpen} (U l) ∃ (N : I) ∀ {n} (N <= n -> U (f n))
+
+  \func IsFilterLimit (F : SetFilter E) (l : E) : \Prop
+    => ∀ {U : isOpen} (U l) (F U)
+
+  \func IsLimitPoint (x : E) (U : Set E) : \Prop
+    => \Pi {V : Set E} -> isOpen V -> V x -> ∃ (y : U) (V y)
+
+  \func IsClosed (U : Set E) : \Prop
+    => \Pi {x : E} -> IsLimitPoint x U -> U x
+}
+
+\func DiscreteTopSpace (X : \Set) : TopSpace X \cowith
+  | isOpen _ => \Sigma
+  | open-top => ()
+  | open-inter _ _ => ()
+  | open-Union _ => ()
+
+\func NFilter {X : TopSpace} (x : X) : ProperFilter X \cowith
+  | F U => ∃ (V : isOpen) (V x) (V ⊆ U)
+  | filter-mono (inP (W,Wo,Wx,q)) p => inP (W, Wo, Wx, q <=∘ p)
+  | filter-top => inP (top, open-top, (), <=-refl)
+  | filter-meet (inP (U,Uo,Ux,p)) (inP (V,Vo,Vx,q)) => inP (U ∧ V, open-inter Uo Vo, (Ux,Vx), MeetSemilattice.meet-monotone p q)
+  | isProper (inP (V,Vo,Vx,p)) => inP (x, p Vx)
+
+\func IsWeaklyDenseSet {X : TopSpace} (S : Set X) : \Prop
+  => \Pi {U : Set X} -> isOpen U -> Not (Given (y : S) (U y)) -> Not (Given U)
+
+\func IsDenseSet {X : TopSpace} (S : Set X) : \Prop
+  => \Pi {x : X} {U : Set X} -> isOpen U -> U x -> ∃ (y : S) (U y)
+
+\lemma denseSet->weaklyDense {X : TopSpace} {S : Set X} (d : IsDenseSet S) : IsWeaklyDenseSet S
+  => \lam Uo c (x,Ux) => \case d Uo Ux \with {
+    | inP s => c s
+  }
+
+\record ContMap \extends SetHom {
+  \override Dom : TopSpace
+  \override Cod : TopSpace
+
+  | func-cont {U : Cod -> \Prop} : isOpen U -> isOpen \lam x => U (func x)
+
+  \func IsWeaklyDense : \Prop
+    => IsWeaklyDenseSet (\lam y => ∃ (x : Dom) (func x = y))
+
+  \func IsDense : \Prop
+    => IsDenseSet (\lam y => ∃ (x : Dom) (func x = y))
+
+  \lemma dense->weaklyDense (d : IsDense) : IsWeaklyDense
+    => denseSet->weaklyDense d
+
+  \func IsEmbedding : \Prop
+    => ∀ {U : isOpen} ∃ (V : isOpen) (U = func ^-1 V)
+
+  \lemma embedding-char : IsEmbedding <-> ∀ {U : isOpen} {x : U} ∃ (V : isOpen) (V (func x)) (func ^-1 V ⊆ U)
+    => (\lam e Uo Ux => \case e Uo \with {
+      | inP (V,Vo,p) => inP (V, Vo, rewrite p in Ux, rewrite p <=-refl)
+    }, \lam e {U} Uo => inP (_, open-Union {_} {\lam V => \Sigma (isOpen V) (func ^-1 V ⊆ U)} __.1, ext \lam x => ext (\lam Ux => \case e Uo Ux \with {
+      | inP (V,Vo,Vfx,p) => inP (V, (Vo, p), Vfx)
+    }, \lam (inP (V,(Vo,p),Vfx)) => p Vfx)))
+
+  \func IsDenseEmbedding : \Prop
+    => \Sigma IsDense IsEmbedding
+} \where {
+  \func id {X : TopSpace} : ContMap X X \cowith
+    | func x => x
+    | func-cont Uo => Uo
+
+  \func compose \alias \infixl 8 ∘ {X Y Z : TopSpace} (g : ContMap Y Z) (f : ContMap X Y) : ContMap X Z \cowith
+    | func x => g (f x)
+    | func-cont Uo => f.func-cont (g.func-cont Uo)
+
+  \func const {Y X : TopSpace} (x : X) : ContMap Y X \cowith
+    | func _ => x
+    | func-cont _ => Y.cover-open \lam Ux => inP (top, open-top, (), \lam _ => Ux)
+}
+
+\lemma limit-transport {X : TopSpace} {I : DirectedSet} {f g : I -> X} {l : X} (fl : X.IsLimit f l) (p : \Pi (n : I) -> g n = f n) : X.IsLimit g l
+  => transportInv (X.IsLimit __ _) (ext p) fl
+
+\lemma const-limit {I : DirectedSet} {X : TopSpace} {x : X} : X.IsLimit (\lam (_ : I) => x) x
+  => \lam _ Ux => \case I.isInhabitted \with {
+    | inP N => inP (N, \lam _ => Ux)
+  }
+
+\lemma cont-limit {I : DirectedSet} {X Y : TopSpace} {f : I -> X} {l : X} (p : X.IsLimit f l) (g : ContMap X Y) : Y.IsLimit (\lam n => g (f n)) (g l)
+  => \lam Uo Ugl => p (g.func-cont Uo) Ugl
+
+\func IsContAt {X Y : TopSpace} (f : X -> Y) (x : X) : \Prop
+  => ∀ {V : Y.isOpen} (V (f x)) ∃ (U : X.isOpen) (U x) (U ⊆ f ^-1 V)
+
+\lemma cont-char {X Y : TopSpace} {f : X -> Y} : ContMap X Y f <-> (\Pi (x : X) -> IsContAt f x)
+  => (\lam fc x Vo Vfx => inP (_, func-cont {fc} Vo, Vfx, <=-refl), \lam fc => \new ContMap {
+    | func-cont {V} Vo => X.cover-open \lam Vfx => fc _ Vo Vfx
+  })
+
+\lemma contAt-comp {X Y Z : TopSpace} (f : X -> Y) (g : Y -> Z) {x : X} (fc : IsContAt f x) (gc : IsContAt g (f x)) : IsContAt (\lam x => g (f x)) x
+  => \lam {W} Wo Wgfx => \case gc Wo Wgfx \with {
+    | inP (V,Vo,Vfx,q) => \case fc Vo Vfx \with {
+      | inP (U,Uo,Ux,p) => inP (U, Uo, Ux, p <=∘ \lam Vfx => q Vfx)
+    }
+  }
+
+\lemma contAt-left {X Y Z : TopSpace} {f : X -> Y} (g : ContMap Y Z) {x : X} (fc : IsContAt f x) : IsContAt (\lam x => g (f x)) x
+  => contAt-comp f g fc (cont-char.1 g (f x))
+
+\lemma contAt-right {X Y Z : TopSpace} (f : ContMap X Y) (g : Y -> Z) {x : X} (gc : IsContAt g (f x)) : IsContAt (\lam x => g (f x)) x
+  => contAt-comp f g (cont-char.1 f x) gc
+
+\lemma contAt-limit {I : DirectedSet} {X Y : TopSpace} {f : I -> X} {l : X} (p : X.IsLimit f l) {g : X -> Y} (gc : IsContAt g l) : Y.IsLimit (\lam n => g (f n)) (g l)
+  => \lam {V} Vo Vgl => \case gc Vo Vgl \with {
+    | inP (U,Uo,Ul,q) => \case p Uo Ul \with {
+      | inP (N,g) => inP (N, \lam N<=n => q $ g N<=n)
+    }
+  }
+
+\class HausdorffTopSpace \extends TopSpace {
+  | isHausdorff {x y : E} : ∀ {U V : isOpen} (U x) (V y) ∃ (U ∧ V) -> x = y
+
+  \lemma limit-unique {I : DirectedSet} {f : I -> E} {x y : E} (lx : IsLimit f x) (ly : IsLimit f y) : x = y
+    => isHausdorff \lam Uo Vo Ux Vy => \case lx Uo Ux, ly Vo Vy \with {
+      | inP (N,g), inP (M,h) => \case isDirected N M \with {
+        | inP (K,N<=K,M<=K) => inP (f K, (g N<=K, h M<=K))
+      }
+    }
+}
+
+\class StronglyHausdorffTopSpace \extends HausdorffTopSpace, SeparatedSet {
+  | isStronglyHausdorff {x y : E} : ∀ {U V : isOpen} (U x) (V y) (Not (Not (Given (U ∧ V)))) -> x = y
+  | isHausdorff p => isStronglyHausdorff \lam Uo Vo Ux Vy q => \case p Uo Vo Ux Vy \with {
+    | inP r => q r
+  }
+  | separatedEq {x} p => isStronglyHausdorff \lam Uo Vo Ux Vy q => p \lam x=y => q (x, (Ux, rewrite x=y Vy))
+}
+
+\lemma denseSet-lift-unique {X : TopSpace} {Y : HausdorffTopSpace} {S : Set X} (Sd : IsDenseSet S) (f g : ContMap X Y) (p : \Pi {x : X} -> S x -> f x = g x) {x : X} : f x = g x
+  => isHausdorff \lam {U} Uo Vo Ufx Vgx => \case Sd {x} (open-inter (f.func-cont Uo) (g.func-cont Vo)) (Ufx,Vgx) \with {
+    | inP (y,Sy,(Ufy,Vgy)) => inP (g y, (transport U (p Sy) Ufy, Vgy))
+  }
+
+\lemma dense-lift-unique {X Y : TopSpace} {Z : HausdorffTopSpace} (f : ContMap X Y) (fd : f.IsDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) = h (f x)) (y : Y) : g y = h y
+  => denseSet-lift-unique fd g h (\lam (inP (x,q)) => rewriteI q (p x))
+
+\lemma weaklyDenseSet-lift-unique {X : TopSpace} {Y : StronglyHausdorffTopSpace} {S : Set X} (Sd : IsWeaklyDenseSet S) (f g : ContMap X Y) (f=g : \Pi {x : X} -> S x -> f x = g x) {x : X} : f x = g x
+  => isStronglyHausdorff \lam {U} Uo Vo Ufx Vgx p => Sd (open-inter (f.func-cont Uo) (g.func-cont Vo)) (\lam s => p (g s.1, (transport U (f=g s.2) s.3.1, s.3.2))) (x,(Ufx,Vgx))
+
+\lemma weaklyDense-lift-unique {X Y : TopSpace} {Z : StronglyHausdorffTopSpace} (f : ContMap X Y) (fd : f.IsWeaklyDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) = h (f x)) (y : Y) : g y = h y
+  => weaklyDenseSet-lift-unique fd g h (\lam (inP (x,q)) => rewriteI q (p x))
+
+\func TopTransfer {X : \Set} {Y : TopSpace} (f : X -> Y) : TopSpace X \cowith
+  | isOpen U => ∃ (V : isOpen) (U = f ^-1 V)
+  | open-top => inP (top, open-top, idp)
+  | open-inter (inP (V,Vo,p)) (inP (V',V'o,p')) => inP (V ∧ V', open-inter Vo V'o, pmap2 (∧) p p')
+  | open-Union {S} h => inP (Set.Union \lam V => \Sigma (isOpen V) (f ^-1 V ⊆ Set.Union S), open-Union __.1, <=-antisymmetric (\lam (inP (U,SU,Ux)) => \case h SU \with {
+    | inP (V,Vo,p) => inP (V, (Vo, rewriteI p $ Set.Union-cond SU), rewrite p in Ux)
+  }) (\lam (inP (V,(Vo,p),Vfx)) => p Vfx))
+
+\lemma TopTransfer-map {X : \Set} {Y : TopSpace} (f : X -> Y) : ContMap (TopTransfer f) Y f \cowith
+  | func-cont {U} Uo => inP (U, Uo, idp)
+
+\lemma TopTransfer-lift {X Y : TopSpace} {U : Set Y} (f : ContMap X Y) (p : \Pi (x : X) -> U (f x)) : ContMap X (TopTransfer {Set.Total U} __.1) (\lam x => (f x, p x)) \cowith
+  | func-cont (inP (V,Vo,q)) => transport isOpen (ext \lam x => rewrite q idp) (f.func-cont Vo)
+
+\func TopSub {X : TopSpace} (S : Set X) : TopSpace (Set.Total S)
+  => TopTransfer __.1
+
+\lemma TopSub-func {X Y : TopSpace} (f : ContMap X Y) {U : Set X} {V : Set Y} (p : ∀ {x : U} (V (f x))) : ContMap (TopSub U) (TopSub V) \lam s => (f s.1, p s.2) \cowith
+  | func-cont {_} (inP (V,Vo,idp)) => inP (f ^-1 V, func-cont Vo, idp)
+
+\lemma TopSub-inc {X : TopSpace} {U V : Set X} (p : U ⊆ V) : ContMap (TopSub U) (TopSub V) \lam s => (s.1, p s.2)
+  => TopSub-func ContMap.id $ later (p __)
+
+\lemma TopSub-limit {X : TopSpace} {S : Set X} {I : DirectedSet} {f : I -> Set.Total S} {x : Set.Total S} (l : X.IsLimit (\lam n => (f n).1) x.1) : TopSpace.IsLimit {TopSub S} f x
+  => \lam {_} (inP (V,Vo,idp)) => l Vo
+
+\func IsRelativelyHausdorff {X Y : TopSpace} (f : X -> Y) : \Prop
+  => \Pi {x x' : X} -> ∀ {U V : X.isOpen} (U x) (V x') ∃ (U ∧ V) -> f x = f x' -> x = x'
+
+\lemma denseSet-relative-lift-unique {X Y Z : TopSpace} (p : Y -> Z) (ph : IsRelativelyHausdorff p) {S : Set X} (Sd : IsDenseSet S) (f g : ContMap X Y) (dp : \Pi {x : X} -> S x -> f x = g x) (dq : \Pi {x : X} -> p (f x) = p (g x)) {x : X} : f x = g x
+  => ph (\lam {U} Uo Vo Ufx Vgx => \case Sd {x} (open-inter (f.func-cont Uo) (g.func-cont Vo)) (Ufx,Vgx) \with {
+    | inP (y,Sy,(Ufy,Vgy)) => inP (g y, (transport U (dp Sy) Ufy, Vgy))
+  }) dq
+
+\lemma dense-relative-lift-unique {X Y Z W : TopSpace} (p : Z -> W) (ph : IsRelativelyHausdorff p) (f : ContMap X Y) (fd : f.IsDense) (g h : ContMap Y Z) (dp : \Pi (x : X) -> g (f x) = h (f x)) (dq : \Pi {y : Y} -> p (g y) = p (h y)) (y : Y) : g y = h y
+  => denseSet-relative-lift-unique p ph fd g h (\lam (inP (y,q)) => rewriteI q (dp y)) dq

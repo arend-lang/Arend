@@ -1,0 +1,281 @@
+\import Algebra.Domain.Bezout
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Category
+\import Algebra.Monoid.GCD
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Local
+\import Algebra.Ring.Nakayama
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Reduced
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function.Meta ($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+
+{- | Associative ring -}
+\class PseudoRing \extends PseudoSemiring, AbGroup
+  | zro_*-left {x} => AddGroup.cancel-left (zro * x) (
+    zro * x + zro * x ==< inv rdistr >==
+    (zro + zro) * x   ==< pmap (`* x) zro-left >==
+    zro * x           ==< inv zro-right >==
+    zro * x + zro     `qed
+  )
+  | zro_*-right {x} => AddGroup.cancel-left (x * zro) (
+    x * zro + x * zro ==< inv ldistr >==
+    x * (zro + zro)   ==< pmap (x *) zro-left >==
+    x * zro           ==< inv zro-right >==
+    x * zro + zro     `qed
+  )
+
+\class Ring \extends PseudoRing, Semiring {
+  \func intCoef (x : Int) : E
+    | pos n => natCoef n
+    | neg (suc _ \as n) => negative (natCoef n)
+
+  \lemma intCoef_neg (n : Nat) : intCoef (neg n) = negative (natCoef n)
+    | 0 => natCoefZero *> inv (pmap negative natCoefZero *> AddGroup.negative_zro)
+    | suc n => idp
+
+  \lemma negative_*-left {x y : E} : negative x * y = negative (x * y)
+    => negative-unique (x * y) (inv rdistr *> pmap (`* y) negative-left *> zro_*-left) negative-right
+
+  \lemma negative_*-right {x y : E} : x * negative y = negative (x * y)
+    => op.negative_*-left
+
+  \lemma negative_ide-left {x : E} : negative ide * x = negative x
+    => negative_*-left *> pmap negative ide-left
+
+  \lemma negative_ide-right {x : E} : x * negative ide = negative x
+    => negative_*-right *> pmap negative ide-right
+
+  \lemma negative_* {x y : E}  : negative x * negative y = x * y =>
+    negative x * negative y     ==< negative_*-left >==
+    negative (x * negative y)   ==< pmap negative negative_*-right >==
+    negative (negative (x * y)) ==< negative-isInv >==
+    x * y                       `qed
+
+  \lemma ldistr_- {x y z : E} : x * (y - z) = x * y - x * z
+    => ldistr *> pmap (_ +) negative_*-right
+
+  \lemma rdistr_- {x y z : E} : (x - y) * z = x * z - y * z
+    => rdistr *> pmap (_ +) negative_*-left
+
+  \lemma negative_inv (j : Monoid.Inv {\this}) : Monoid.Inv (negative j) (negative j.inv)
+    => \new Monoid.Inv {
+      | inv-left => negative_* *> j.inv-left
+      | inv-right => negative_* *> j.inv-right
+    }
+
+  \lemma geometric-partial-sum {n : Nat} {x : E} (xi : Monoid.Inv (1 - x)) : xi.inv - BigSum (\new Array E n (\lam j => Monoid.pow x j)) = Monoid.pow x n * xi.inv
+    => inv (rdistr_- *> pmap2 (-) ide-left (*-assoc *> pmap (_ *) xi.inv-right *> ide-right)) *> pmap (`* _) (pmap (1 -) ldistr_- *> simplify \case \elim n \with {
+      | 0 => simplify
+      | suc n => rewrite {1} (BigSum_suc,rdistr) $ simplify $ pmap (`+ _) +-comm *> +-assoc *>
+          pmap2 (+) (later rewrite (toFin'=id id<suc) idp) (pmap (`+ _) BigSum-rdistr *> negative-right) *> zro-right
+    })
+
+  \func IsNilpotent (x : E) => ∃ (n : Nat) (pow x n = 0)
+
+  \lemma pow_-1_+2 {n : Nat} : pow -1 (n Nat.+ 2) = pow -1 n
+    => pow_+ {_} { -1} {n} {2} *> pmap (_ *) (*-assoc *> ide-left *> negative_* *> ide-left) *> ide-right
+
+  \lemma pow_-1_even {n : Nat} : pow -1 (n Nat.* 2) = 1 \elim n
+    | 0 => idp
+    | suc n => negative_ide-right *> pmap negative negative_ide-right *> negative-isInv *> pow_-1_even
+
+  \lemma pow_-1_mod2 {n : Nat} : pow -1 n = pow -1 (n Nat.mod 2)
+    => pmap (pow -1) (inv (Nat.divModProp n 2)) *> pow_+ *> pmap (`* _) (pow_* *> pmap (pow __ _) (*-assoc *> ide-left *> negative_* *> ide-left) *> pow_ide) *> ide-left
+
+  \lemma idempotent_LDiv {a b : E} (q : b * b = b) (d : Monoid.LDiv b a) : a = b * a
+    => inv d.inv-right *> pmap (`* _) (inv q) *> *-assoc *> pmap (b *) d.inv-right
+
+  \type IsConnected => \Pi (a : E) -> a * a = a -> (a = 0) || (a = 1)
+
+  \func IsVonNeumannRegular => \Pi (a : E) -> ∃ (b : E) (a = a * b * a)
+
+  \func op : Ring \cowith
+    | AbGroup => \this
+    | Semiring => Semiring.op
+} \where {
+  -- | A ring with a tight apartness relation.
+  \class With# \extends Ring, AddGroup.With#
+    | #0-*-left {x y : E} : (x * y) `#0 -> x `#0
+    | #0-*-right {x y : E} : (x * y) `#0 -> y `#0
+    | #0-negative {x} x#0 => #0-*-left (transport #0 (inv (negative_* *> ide-right)) x#0)
+
+  -- | A ring with decidable equality.
+  \class Dec \extends AddGroup.Dec, With#
+    | #0-*-left {x} {y} x*y#0 => \case decideEq x zro \with {
+      | yes x=0 => absurd (#0-zro (transport #0 (pmap (`* y) x=0 *> zro_*-left) x*y#0))
+      | no x/=0 => nonZeroApart x/=0
+    }
+    | #0-*-right {x} {y} x*y#0 => \case decideEq y zro \with {
+      | yes y=0 => absurd (#0-zro (transport #0 (pmap (x *) y=0 *> zro_*-right) x*y#0))
+      | no y/=0 => nonZeroApart y/=0
+    }
+}
+
+\class NonZeroRing \extends Ring, NonZeroSemiring
+
+\class PseudoCRing \extends PseudoRing, PseudoCSemiring
+
+\class CRing \extends Ring, PseudoCRing, CSemiring {
+  \func IsBezout => \Pi (a b : E) -> ∃ (s t : E) (LDiv (s * a + t * b) a) (LDiv (s * a + t * b) b)
+
+  \func IsStrictBezout => \Pi (a b : E) -> ∃ (s t u v : E) (a * u = b * v) (s * u + t * v = 1)
+
+  \lemma bezout_finitelyGenerated_principal : IsBezout <-> (\Pi {I : Ideal \this} -> I.IsFinitelyGenerated -> I.IsPrincipal)
+    => (\lam bez {I : Ideal} Ifg =>
+          \have | (inP s) => Ifg
+                | (inP t) => BezoutRing.bezoutArray_LDiv {\new BezoutRing { | CRing => \this | isBezout => bez }} s.1
+          \in inP (BigSum (\lam j => t.1 j * s.1 j), (I.bigSum _ \lam j => ideal-left $ later (s.2.1 j), \lam {b} Ib =>
+               TruncP.map (s.2.2 Ib) \lam u => transportInv (LDiv _ __) u.2 (LDiv_BigSum \lam j => later $ LDiv.factor-right $ t.2 j))),
+        \lam p a b =>
+          \have | (inP (d,s)) => p {Ideal.closure (a :: b :: nil)} Ideal.closure-finGenerated
+                | (inP t) => Ideal.closureN-lem.1 s.1
+                | (inP d|a) => s.2 (Ideal.closure-superset {_} {_} {a :: b :: nil} (later 0))
+                | (inP d|b) => s.2 (Ideal.closure-superset {_} {_} {a :: b :: nil} (later 1))
+                | p => unfold BigSum at t $ rewrite zro-right in t.2
+          \in inP (t.1 0, t.1 1, rewriteI p d|a, rewriteI p d|b)
+    )
+
+  \func bezoutGCD {a b s t : E} (p : LDiv (s * a + t * b) a) (q : LDiv (s * a + t * b) b) : GCD a b (s * a + t * b) \cowith
+    | gcd|val1 => p
+    | gcd|val2 => q
+    | gcd-univ g (g|x : LDiv g a) (g|y : LDiv g b) => \new LDiv {
+      | inv => s * g|x.inv + t * g|y.inv
+      | inv-right =>
+        g * (s * g|x.inv + t * g|y.inv)       ==< ldistr >==
+        g * (s * g|x.inv) + g * (t * g|y.inv) ==< inv (pmap2 (+) *-assoc *-assoc) >==
+        (g * s) * g|x.inv + (g * t) * g|y.inv ==< pmap2 (__ * g|x.inv + __ * g|y.inv) *-comm *-comm >==
+        (s * g) * g|x.inv + (t * g) * g|y.inv ==< pmap2 (+) *-assoc *-assoc >==
+        s * (g * g|x.inv) + t * (g * g|y.inv) ==< pmap2 (s * __ + t * __) g|x.inv-right g|y.inv-right >==
+        s * a + t * b                         `qed
+    }
+
+  \type Dim<= (k : Nat) => \Pi (x : Array E (suc k)) -> ∃ (a : Array E (suc k)) (m : Array Nat (suc k)) (fold x a m = 0)
+    \where
+      \func fold {k : Nat} (xs as : Array E k) (ms : Array Nat k) : E \elim k, xs, as, ms
+        | 0, nil, nil, nil => 1
+        | suc k, x :: xs, a :: as, m :: ms => pow x m * (fold xs as ms - x * a)
+
+  \type IsZeroDimensional => \Pi (a : E) -> ∃ (b : E) (n : Nat) (pow a n = pow a (suc n) * b)
+
+  \lemma finite-zeroDimensional (c : FinSet E) : IsZeroDimensional
+    => \lam a => TruncP.map (c.pigeonhole< (pow a)) \lam s => (pow a (s.2 -' suc s.1), s.1, s.4 *> pmap (pow a) (inv $ <=_exists $ suc_<_<= s.3) *> pow_+ {_} {_} {suc s.1})
+
+  \lemma zeroDimensional-char : TFAE (
+    IsZeroDimensional,
+    Dim<= 0,
+    \Pi (a : E) -> ∃ (b : E) (k : Nat) (k /= 0) (b * b = b) (LDiv (pow a k) b) (LDiv b (pow a k))
+  ) => TFAE.cycle (
+        \lam zd x => \case zd (x 0) \with {
+          | inP (b,n,p) => inP (b :: nil, n :: nil, equation)
+        },
+        \lam zd x => \case zd (x :: nil) \with {
+          | inP (a,m,p) => cases (m 0 arg addPath) \with {
+            | 0, q => inP (1, 1, (\case __), ide-left, LDiv.make (a 0) (equation {usingOnly (rewrite q in p)}), LDiv.ide-div)
+            | suc n, q => \have t => rewrite pow_*-comm in aux {_} {pow x (m 0)} {x * a 0} (m 0) equation
+                          \in inP (pow x (m 0) * pow (a 0) (m 0), m 0, rewrite q (\case __), equation, LDiv.factor-left LDiv.id-div, LDiv.make (pow x (m 0)) equation)
+          }
+        }, \lam c a => TruncP.map (c a) \lam s =>
+            (LDiv.inv {s.5} * pow a (pred s.2), s.2, inv (LDiv.idempt s.6 s.4) *> *-comm *>
+             pmap (_ *) (inv (LDiv.inv-right {s.5}) *> *-comm *> pmap (_ * pow a __) (inv $ suc_pred s.3) *> inv *-assoc *> *-comm) *> inv *-assoc))
+    \where
+      \lemma aux {x c : E} (n : Nat) (p : x = x * c) : x = x * pow c n \elim n
+        | 0 => inv ide-right
+        | suc n => aux n p *> pmap (`* _) p *> *-assoc *> pmap (x *) *-comm
+
+  \lemma zeroDimensional_local-char : TFAE (
+    \Sigma IsZeroDimensional (\Pi (a : E) -> Inv a || Inv (a + 1)),
+    \Sigma IsZeroDimensional IsConnected,
+    \Pi (a : E) -> Inv a || (\Sigma (n : Nat) (pow a n = 0))
+  ) => TFAE.cycle (
+        \lam s => (s.1, LocalRing.local=>connected s.2),
+        \lam s a => \case zeroDimensional-char 0 2 s.1 a \with {
+          | inP r => \case s.2 r.1 r.4 \with {
+            | byLeft r1=0 => byRight (r.2, inv (LDiv.inv-right {r.6}) *> pmap (`* _) r1=0 *> zro_*-left)
+            | byRight r1=1 => byLeft $ Inv.cfactor-right $ rewrite (inv $ suc_pred r.3) in Inv.lmake (LDiv.inv {r.5}) (*-comm *> LDiv.inv-right {r.5} *> r1=1)
+          }
+        }, \lam s => (\lam a => \case s a \with {
+              | byLeft (r : Inv) => inP (r.inv, 0, inv $ simplify r.inv-right)
+              | byRight r => inP (1, r.1, rewrite r.2 simplify)
+            }, \lam a => \case s (a + 1) \with {
+              | byLeft r => byRight r
+              | byRight r => byLeft
+                \let | p => pow {PolyRing \this} (padd 1 1) r.1
+                     | t : polyEval p a = 0 => MonoidHom.func-pow {polyEvalRingHom a} *> pmap (pow __ r.1) equation *> r.2
+                \in Inv.ldiv $ transport (LDiv a) (lastCoef_pow *> pow_ide) (poly-root-div t)
+        }))
+
+  \lemma vonNeumann_idempotent (vn : IsVonNeumannRegular) (a : E) : ∃ (u : E) (u * u = u) (LDiv a u) (a = u * a)
+    => TruncP.map (vn a) \lam (b,p) => (a * b, equation, LDiv.factor-left LDiv.id-div, p)
+
+  \lemma vonNeumann-char : TFAE (
+    {- 0 -} IsVonNeumannRegular,
+    {- 1 -} \Sigma IsZeroDimensional (ReducedRing { | Ring => \this }),
+    {- 2 -} \Pi (I : Ideal \this) -> I.IsFinitelyGenerated -> ∃ (u : E) (u * u = u) (I.IsGeneratedBy1 u),
+    {- 3 -} \Pi (I : Ideal \this) -> I IdealMonoid.* I = I,
+    {- 4 -} \Pi (I J : Ideal \this) -> I ∧ J = I IdealMonoid.* J
+  ) => TFAE.proof (
+    ((0,1), \lam c => (\lam a => TruncP.map (c a) \lam s => (s.1, 1, equation {usingOnly s.2}),
+                       \new ReducedRing { | isReduced {a} p => \case c a \with {
+                         | inP (b,q) => equation
+                       } })),
+    ((1,0), \lam (zd, red : ReducedRing) => \lam a => \case zd a \with {
+        | inP (b, 0, p) => inP (b, equation)
+        | inP (b, suc n, p) => inP (b, inv ide-right *> fromZero (inv ldistr_- *>
+            red.noNilpotent {_} {suc n} (pow_*-comm {_} {_} {_} {suc n} *> equation)) *> inv *-assoc)
+      }
+    ),
+    ((2,0), \lam c a => \case c (closure1 a) (principal->finitelyGenerated closure1-principal) \with {
+                          | inP (u,uu=u,(a|u',f)) =>
+                            \have | (inP (a|u : LDiv a u)) => closure1_LDiv.1 a|u'
+                                  | (inP u|a) => f {a} (closure-superset {_} {_} {\lam _ => a} ())
+                            \in inP (a|u.inv, equation {using (a|u.inv-right, idempotent_LDiv uu=u u|a)})
+                        }),
+    ((0,4), \lam v I J => <=-antisymmetric (\lam {a} c =>
+      \case v a \with {
+        | inP (b,p) => rewrite p $ closure-superset {_} {_} {IdealMonoid.func I J} $ later (a * b, a, ideal-right (IdealLattice.meet-left c), IdealLattice.meet-right c)
+      }) IdealMonoid.product_meet),
+    ((4,3), \lam f I => inv (f I I) *> IdealLattice.meet-idemp),
+    ((3,2), \lam f I Ifg => nakayama-ideal Ifg (Preorder.=_<= (inv (f I))))
+  )
+  \where \open Ideal
+
+  \lemma vonNeumann_Bezout (vn : IsVonNeumannRegular) : IsBezout
+    => bezout_finitelyGenerated_principal.2 \lam {I} Ifg => TruncP.map (vonNeumann-char 0 2 vn I Ifg) \lam s => (s.1,s.3)
+
+  \func op : CRing \cowith
+    | Ring => Ring.op
+    | *-comm => *-comm
+} \where {
+    \open Monoid(LDiv,Inv)
+
+    -- | A commutative ring with a tight apartness relation.
+    \class With# \extends CRing, Ring.With#
+      | #0-*-right x*y#0 => #0-*-left (transport #0 *-comm x*y#0)
+
+    -- | A commutative ring with decidable equality.
+    \class Dec \extends Ring.Dec, With# {
+      \lemma divQuotient_dec0 (a : DivQuotient \this) : Set.Dec (a = in~ 0)
+        | in~ a => \case decideEq a 0 \with {
+          | yes e => yes $ ~-pequiv $ rewrite e (inP LDiv.id-div, inP LDiv.id-div)
+          | no q => no \lam p => q \case (DivQuotient.make~ p).1 \with {
+            | inP d => inv (LDiv.inv-right {d}) *> zro_*-left
+          }
+        }
+    }
+}
+
+\class NonZeroCRing \extends CRing, NonZeroRing

@@ -1,0 +1,152 @@
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Fin
+\import Data.List
+\import Function.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set \hiding (#)
+\open FinLinearOrder
+
+\data MonoidTerm (V : \Type)
+  | var V
+  | :ide
+  | \infixl 7 :* (t s : MonoidTerm V)
+
+\func normalize {V : \Type} (t : MonoidTerm V) => aux t nil
+  \where
+    \func aux {V : \Type} (t : MonoidTerm V) (acc : List V) : List V \elim t
+      | var v => v :: acc
+      | :ide => acc
+      | :* t s => aux t (aux s acc)
+
+\class Data \noclassifying {M : Monoid} (vars : Array M) {
+  \meta V => Fin vars.len
+
+  \func interpret (t : MonoidTerm V) : M \elim t
+    | var x => vars x
+    | :ide => ide
+    | :* t s => interpret t * interpret s
+
+  \func interpretNF (l : List V) : M \elim l
+    | nil => ide
+    | :: x nil => vars x
+    | :: x l => vars x * interpretNF l
+    \where
+      \lemma cons (x : V) (l : List V) : interpretNF (x :: l) = vars x * interpretNF l \elim l
+        | nil => inv ide-right
+        | :: a l => idp
+
+  \lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (normalize t)
+    => inv ide-right *> aux t nil
+    \where
+      \lemma aux (t : MonoidTerm V) (acc : List V) : interpret t * interpretNF acc = interpretNF (normalize.aux t acc) \elim t
+        | var x => inv (interpretNF.cons x acc)
+        | :ide => ide-left
+        | :* t s => *-assoc *> pmap (interpret t *) (aux s acc) *> aux t (normalize.aux s acc)
+
+  \lemma terms-equality (t s : MonoidTerm V) (p : interpretNF (normalize t) = interpretNF (normalize s)) : interpret t = interpret s
+    => normalize-consistent t *> p *> inv (normalize-consistent s)
+
+  \lemma terms-equality-conv (t s : MonoidTerm V) (p : interpret t = interpret s) : interpretNF (normalize t) = interpretNF (normalize s)
+    => inv (normalize-consistent t) *> p *> normalize-consistent s
+
+  \lemma interpretNF_++ (l1 l2 : List V) : interpretNF (l1 ++ l2) = interpretNF l1 * interpretNF l2 \elim l1
+    | nil => inv ide-left
+    | :: a l1 => repeat {2} (rewrite interpretNF.cons) $ rewrite interpretNF_++ (inv *-assoc)
+
+  \lemma replace-consistent (l : List V) (i s : Nat) (r : List V) (p : interpretNF (slice l i s) = interpretNF r)
+    : interpretNF l = interpretNF (replace l i s r)
+    => run {
+      rewriteI {1} (slice.appendLem l i s),
+      repeat {4} (rewrite interpretNF_++),
+      rewriteI p,
+      idp
+    }
+}
+
+\class CData \extends Data {
+  \override M : CMonoid
+
+  \lemma sort-consistent (l : List V) : interpretNF l = interpretNF (sort {FinLinearOrderInst} l)
+    => rewrite sort=insert (perm-consistent (Insertion.sort-perm l))
+
+  \lemma perm-consistent {l l' : List V} (p : Perm l l') : interpretNF l = interpretNF l' \elim l, l', p
+    | nil, nil, perm-nil => idp
+    | :: a1 l1, :: a2 l2, perm-:: idp p => repeat {2} (rewrite interpretNF.cons) (pmap (vars a1 *) (perm-consistent p))
+    | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite interpretNF.cons) (inv *-assoc *> pmap (`* interpretNF l1) *-comm *> *-assoc)
+    | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
+
+  \lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (sort (normalize t))
+    => Data.normalize-consistent t *> sort-consistent (normalize t)
+
+  \lemma terms-equality (t s : MonoidTerm V) (p : interpretNF (sort (normalize t)) = interpretNF (sort (normalize s))) : interpret t = interpret s
+    => normalize-consistent t *> p *> inv (normalize-consistent s)
+
+  \lemma terms-equality-conv (t s : MonoidTerm V) (p : interpret t = interpret s) : interpretNF (sort (normalize t)) = interpretNF (sort (normalize s))
+    => inv (normalize-consistent t) *> p *> normalize-consistent s
+
+  \lemma replace-consistent (l : List V) (is : List Nat) (r : List V) (p : interpretNF (indices is l) = interpretNF r)
+    : interpretNF l = interpretNF (r ++ removeIndices is l)
+    => replace-consistent-lem is l *> interpretNF_++ _ _ *> pmap (`* interpretNF (removeIndices is l)) p *> inv (interpretNF_++ _ _)
+
+  \lemma replace-consistent-lem (is : List Nat) (l : List V) : interpretNF l = interpretNF (indices is l ++ removeIndices is l)
+    | nil, l => idp
+    | :: 0 is, nil => idp
+    | :: (suc _) is, nil => idp
+    | :: 0 is, :: a l => repeat {2} (rewrite interpretNF.cons) (pmap (vars a *) (replace-consistent-lem is l))
+    | :: (suc n) is, :: a l => interpretNF.cons a l *> pmap (vars a *) (replace-consistent-lem (n :: is) l) *> inv (interpretNF.cons a _) *> perm-consistent Perm.perm-head
+} \where {
+  \open Data
+  \open Sort
+  \open Sort.RedBlack
+
+  \func indices {A : \Type} (is : List Nat) (l : List A) : List A \elim is, l
+    | nil, _ => nil
+    | :: _ _, nil => nil
+    | :: 0 is, :: a l => a :: indices is l
+    | :: (suc n) is, :: _ l => indices (n :: is) l
+
+  \func removeIndices {A : \Type} (is : List Nat) (l : List A) : List A \elim is, l
+    | nil, l => l
+    | :: _ _, nil => nil
+    | :: 0 is, :: a l => removeIndices is l
+    | :: (suc n) is, :: a l => a :: removeIndices (n :: is) l
+}
+
+\class LData {L : Bounded.MeetSemilattice} \extends CData {
+  | M => L
+
+  \func removeDuplicates (l : List V) : List V \elim l
+    | nil => nil
+    | :: a nil => a :: nil
+    | :: a (:: a' _ \as l) => \case decideEq a a' \with {
+      | yes _ => removeDuplicates l
+      | no _ =>  a :: removeDuplicates l
+    }
+
+  \lemma removeDuplicates-consistent (l : List V) : interpretNF l = interpretNF (removeDuplicates l)
+    | nil => idp
+    | :: a nil => idp
+    | :: a (:: a1 l) => mcases \with {
+      | yes p => rewrite (p, inv (removeDuplicates-consistent (a1 :: l)), interpretNF.cons) $
+                  inv M.*-assoc *> pmap (`∧ interpretNF l) (<=-antisymmetric meet-left (meet-univ <=-refl <=-refl))
+      | no _ => rewrite {2} interpretNF.cons $ pmap (vars a ∧) (removeDuplicates-consistent (a1 :: l))
+    }
+
+  \lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (removeDuplicates (RedBlack.sort (normalize t)))
+    => CData.normalize-consistent t *> removeDuplicates-consistent _
+
+  \lemma terms-equality (t s : MonoidTerm V) (p : interpretNF (removeDuplicates (RedBlack.sort (normalize t))) = interpretNF (removeDuplicates (RedBlack.sort (normalize s)))) : interpret t = interpret s
+    => normalize-consistent t *> p *> inv (normalize-consistent s)
+
+  \lemma terms-equality-conv (t s : MonoidTerm V) (p : interpret t = interpret s) : interpretNF (removeDuplicates (RedBlack.sort (normalize t))) = interpretNF (removeDuplicates (RedBlack.sort (normalize s)))
+    => inv (normalize-consistent t) *> p *> normalize-consistent s
+
+} \where {
+  \open Data
+  \open Sort
+}

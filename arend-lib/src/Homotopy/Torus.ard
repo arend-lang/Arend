@@ -1,0 +1,51 @@
+\import Equiv
+\import Equiv.Univalence
+\import Homotopy.Sphere.Circle
+\import Meta
+\import Paths
+
+\data Torus
+  | point
+  | line1  I \with { left => point | right => point }
+  | line2  I \with { left => point | right => point }
+  | face I I \with {
+    | left, i => line2 i
+    | right, i => line2 i
+    | i, left => line1 i
+    | i, right => line1 i
+  }
+
+\func TorusSphere-equiv : QEquiv {Torus} {\Sigma Sphere1 Sphere1} \cowith
+  | f => TorusSphere
+  | ret => SphereTorus
+  | ret_f _ => mcases {TorusSphere} idp
+  | f_sec _ => mcases {SphereTorus} idp
+  \where {
+    \func SphereTorus (_ : \Sigma Sphere1 Sphere1) : Torus
+      | (base1, base1) => point
+      | (base1, loop j) => line2 j
+      | (loop i, base1) => line1 i
+      | (loop i, loop j) => face i j
+
+    \func TorusSphere (_ : Torus) : \Sigma Sphere1 Sphere1
+      | point => (base1, base1)
+      | line1 i => (loop i, base1)
+      | line2 j => (base1, loop j)
+      | face i j => (loop i, loop j)
+  }
+
+\func coordinate : Path (Torus=Sphere @) point (base1, base1) =>
+  path (coe (Torus=Sphere @) point)
+  \where {
+    \func Torus=Sphere => QEquiv-to-= TorusSphere-equiv
+  }
+
+\func OmegaTorus => point = point
+
+\func Loop_S1^2 : OmegaTorus = (\Sigma Int Int) =>
+  \let | sigmaEta => sigmaEquiv (\lam _ => Sphere1) (base1, base1) (base1, base1)
+       | loopBase => (base1, base1) = (base1, base1)
+  \in OmegaTorus           ==< path (\lam i => coordinate @ i = coordinate @ i) >==
+  loopBase                 ==< QEquiv-to-= sigmaEta >==
+  (\Sigma OmegaS1 OmegaS1) ==< path (\lam i => \Sigma (Loop_S1 @ i) (Loop_S1 @ i)) >==
+  (\Sigma Int Int)         `qed

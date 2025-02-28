@@ -1,0 +1,179 @@
+\import Algebra.Algebra
+\import Algebra.Domain
+\import Algebra.Domain.Euclidean
+\import Algebra.Field
+\import Algebra.Field.Algebraic
+\import Algebra.Group.Category
+\import Algebra.Linear.Matrix.Smith
+\import Algebra.Linear.VectorSpace
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Monoid
+\import Algebra.Monoid.Category
+\import Algebra.Monoid.Prime
+\import Algebra.Ordered
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Integral
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Reduced
+\import Algebra.Ring.Sub
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Array
+\import Data.Or
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+
+\func isMinPoly (f : RingHom) (a : f.Cod) (p : Poly f.Dom) : \Prop
+  => \Sigma (polyMapEval f p a = 0) (\Pi {q : Poly f.Dom} -> polyEval (polyMap f q) a = 0 -> TruncP (Monoid.LDiv p q))
+
+\lemma integral_factor-equiv {R E : CRing} (f : RingHom R E) (a : E) (p : Poly R) (pm : isMinPoly f a p) : Equiv (integral_factor f a p pm.1)
+  => Equiv.fromInjSurj _ (AddGroupHom.injective $ unfold \lam {q} => \case \elim q \with {
+    | in~ q => \lam u => FactorRing.fequiv $ Ideal.closure1_LDiv.2 $ simplify $ pm.2 (pmap __.1 u)
+  }) \lam s => TruncP.map s.2 \lam t => (in~ t.1, ext t.2)
+
+\func isMonicMinPoly (f : RingHom) (a : f.Cod) (p : Poly f.Dom) : \Prop
+  => \Sigma (isMonic p) (isMinPoly f a p)
+  \where {
+    \lemma unique {R : StrictDomain} {f : RingHom R} {a : f.Cod} {p q : Poly R} (pm : isMonicMinPoly f a p) (qm : isMonicMinPoly f a q) : p = q
+      => \case pm.2.2 qm.2.1, qm.2.2 pm.2.1 \with {
+        | inP (p|q : Monoid.LDiv), inP (q|p : Monoid.LDiv) => \case polyDiv p|q q|p \with {
+          | byLeft (p=0,q=0) => p=0 *> inv q=0
+          | byRight (a,b,u,v,ab=1,ba=1) => \case pm.1, qm.1 \with {
+            | inP (n,dp,cp), inP (m,dq,cq) => \case LinearOrder.trichotomy n m \with {
+              | less n<m => absurd $ NonZeroSemiring.inv-nonZero (\new Monoid.Inv b a ab=1 ba=1) $ inv ide-left *> pmap (`* _) (inv cq) *> inv polyCoef_*-right *> (rewrite (inv q|p.inv-right, v) in degree<=.toCoefs p n dp n<m)
+              | equals n=m => inv ide-right *> pmap (p *) (inv $ u *> pmap (padd pzero) (inv ide-left *> pmap (`* a) (inv cp *> pmap (polyCoef p) n=m) *> inv polyCoef_*-right *> (rewrite (inv p|q.inv-right, u) in cq))) *> p|q.inv-right
+              | greater m<n => absurd $ NonZeroSemiring.inv-nonZero (\new Monoid.Inv a b ba=1 ab=1) $ inv ide-left *> pmap (`* _) (inv cp) *> inv polyCoef_*-right *> (rewrite (inv p|q.inv-right, u) in degree<=.toCoefs q m dq m<n)
+            }
+          }
+        }
+      }
+
+    \lemma fromMinPoly {K : DiscreteField} {R : CRing} {f : RingHom K R} {a : R} {p : Poly K} (p/=0 : p /= 0) (pm : isMinPoly f a p) : isMonicMinPoly f a (finv (leadCoef p) *c p)
+      => (field-toMonic p/=0, (polyMapEvalRingHom.polyMapEval_*c *> pmap (_ *) pm.1 *> zro_*-right, \lam {q} qe => \case pm.2 qe \with {
+            | inP (x,s) => inP $ Monoid.LDiv.make (leadCoef p *c x) $ inv *c-comm-left *> pmap (_ *c) (inv *c-comm-right) *> inv *c-assoc *> pmap (`*c _) (K.finv-left \lam q => p/=0 $ leadCoef=0-lem q) *> ide_*c *> s
+          }))
+  }
+
+\lemma minPoly_degree-char {K : DiscreteField} {E : CRing} (f : RingHom K E) (a : E) (p : Poly K) (pe : polyMapEval f p a = 0) (p/=0 : p /= 0)
+  : (\Pi {q : Poly K} -> q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q) <-> (\Pi {q : Poly K} (qe : polyEval (polyMap f q) a = 0) -> TruncP (Monoid.LDiv p q))
+  => (\lam c {q} qe =>
+        \let d : EuclideanRingData (Poly K) => PolyEuclideanRingData K
+        \in \case decideEq (d.divMod q p).2 0 \with {
+          | yes r=0 => inP \new Monoid.LDiv {
+            | inv => (d.divMod q p).1
+            | inv-right => inv zro-right *> pmap (_ +) (inv r=0) *> d.isDivMod q p
+          }
+          | no r/=0 => absurd $ <-irreflexive $ d.isEuclideanMap q p p/=0 r/=0 <∘l c r/=0
+                        (inv (func-+ {polyMapEvalRingHom f a} *> pmap (`+ _) (func-* {polyMapEvalRingHom f a} *> equation) *> zro-left) *>
+                         pmap (\lam u => polyEval (polyMap f u) a) (d.isDivMod q p) *> qe)
+      }, minPoly_degree f a p pe p/=0)
+  \where {
+    \lemma minPoly_degree {K : Domain.Dec} (f : RingHom K) (a : f.Cod) (p : Poly K) (pe : polyMapEval f p a = 0) (p/=0 : p /= 0)
+                          (c : \Pi {q : Poly K} (qe : polyEval (polyMap f q) a = 0) -> TruncP (Monoid.LDiv p q))
+                          {q : Poly K} (q/=0 : q /= 0) (qe : polyEval (polyMap f q) a = 0) : degree p <= degree q
+      => \case c qe \with {
+           | inP (x,s) => rewrite (inv s, degree_* p/=0 \lam x=0 => q/=0 $ inv s *> pmap (p *) x=0 *> zro_*-right) (<=_+ <=-refl zero<=_)
+         }
+  }
+
+\lemma irr_minPoly {K : DiscreteField} {E : NonZeroCRing} (f : RingHom K E) (a : E) (p : Irr {PolyAlgebra K}) (pe : polyMapEval f p a = 0) : isMinPoly f a p
+  => \have p/=0 (p=0 : p.e = 0) => K.zro/=ide $ pmap lastCoef $ p.isCancelable-left {0} {1} $ rewrite p=0 idp
+     \in (pe, (minPoly_degree-char f a p pe p/=0).1 \lam q/=0 qe => aux f a p pe id<suc q/=0 qe)
+  \where {
+    \lemma aux {K : DiscreteField} {E : NonZeroCRing} (f : RingHom K E) (a : E) (p : Irr {PolyAlgebra K}) (pe : polyMapEval f p a = 0) {n : Nat}
+               {q : Poly K} (qd : degree q < n) (q/=0 : q /= 0) (qe : polyEval (polyMap f q) a = 0) : degree p <= degree q \elim n
+      | suc n =>
+        \have d : EuclideanRingData (Poly K) => PolyEuclideanRingData K
+        \in \case decideEq p 0, decideEq (d.divMod p q).2 0 \with {
+          | yes p=0, _ => rewrite p=0 zero<=_
+          | no p/=0, yes r=0 =>
+            \have p=qd => (rewrite r=0 in inv (d.isDivMod p q)) *> zro-right
+            \in \case p.isIrr p=qd \with {
+              | byLeft (e : Monoid.Inv) => \case polyInv e \with {
+                | inP s => absurd $ NonZeroSemiring.inv-nonZero (f.func-Inv s.3) $ inv zro-left *> (rewrite (s.2,zro_*-left) in qe)
+              }
+              | byRight (e : Monoid.Inv) => rewrite (inv $ pmap (`* e.inv) p=qd *> *-assoc *> pmap (q *) e.inv-right *> ide-right, degree_* p/=0 \lam e1=0 => zro/=ide {PolyDomain K} $ inv zro_*-right *> pmap (e *) (inv e1=0) *> e.inv-right) (<=_+ <=-refl zero<=_)
+            }
+          | no _, no r/=0 => \have | dr<dq => d.isEuclideanMap p q q/=0 r/=0
+                                   | dp<=dr => aux f a p pe (dr<dq <∘l suc<=suc.conv (suc_<_<= qd)) r/=0 $
+                                       inv (func-+ {polyMapEvalRingHom f a} *> pmap (`+ _) (func-* {polyMapEvalRingHom f a} *> pmap (`* _) qe *> zro_*-left) *> zro-left) *>
+                                       pmap (\lam x => polyEval (polyMap f x) a) (d.isDivMod p q) *> pe
+                             \in LinearOrder.<_<= (dp<=dr <∘r dr<dq)
+        }
+  }
+
+\lemma minPoly_prime {K : DiscreteField} {E : ImpotentCRing} (f : RingHom K E) (a : E) (p : Poly K) (p/=0 : p /= 0) (pm : isMinPoly f a p) : Prime p
+  => FactorIrrField.conv (\lam q => Domain.nonZero-cancel-left p/=0 q) $ DiscreteField.backwards (integral_factor f a p pm.1) (integral_factor-equiv f a p pm) $ polyImage_field f a (isIntegral.fromPoly p/=0 pm.1)
+
+\lemma minPoly-char {K : DiscreteField} {E : ImpotentCRing} (f : RingHom K E) (a : E) (p : Poly K) (pe : polyMapEval f p a = 0) (p/=0 : p /= 0)
+  : TFAE (\Pi {q : Poly f.Dom} -> polyEval (polyMap f q) a = 0 -> TruncP (Monoid.LDiv p q),
+          Prime p,
+          Irr p,
+          \Pi {q : Poly K} -> q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q)
+  => TFAE.cycle
+      (\lam c => minPoly_prime f a p p/=0 (pe,c),
+       \lam p => p,
+       \lam ip q/=0 => irr_minPoly.aux f a ip pe id<suc q/=0,
+       (minPoly_degree-char f a p pe p/=0).1)
+
+\lemma finDim_minPoly {K : DiscreteField} {E : CRing} (f : RingHom K E) (S : SubRing E) (SR : \Pi (x : K) -> S (f x)) {l : Array S.struct} (lb : LModule.IsBasis {homLModule (S.corestrict f SR)} l) {a : E} (Sa : S a)
+  : \Sigma (p : Poly K) (isMonicMinPoly f a p) \level \lam s t => ext (isMonicMinPoly.unique s.2 t.2)
+  => \case finDim_minDegree f S SR lb Sa \with {
+       | inP (p,p/=0,pe,d) => (_, isMonicMinPoly.fromMinPoly p/=0 (pe, (minPoly_degree-char f a p pe p/=0).1 d))
+     }
+  \where
+    \lemma finDim_minDegree {R : SmithDomain} {E : CRing} (f : RingHom R E) (S : SubRing E) (SR : \Pi (x : R) -> S (f x)) {l : Array S.struct} (lb : LModule.IsBasis {homLModule (S.corestrict f SR)} l) {a : E} (Sa : S a)
+      : ∃ (p : Poly R) (p /= 0) (polyMapEval f p a = 0) ∀ {q : Poly R} (q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q)
+      => \case module-integral f a S SR (inP (l,lb.2)) Sa \with {
+           | inP (p,pm,pe) => minimize p (\lam p=0 => zro/=ide $ monic/=0 pm p=0) pe (suc (degree p)) $ degree<=_degree< (degree<=.fromDegree <=-refl)
+         }
+      \where {
+        \lemma poly-dec (n : Nat) : Dec (∃ (p : Poly R) (p /= 0) (degree< p n) (polyMapEval f p a = 0))
+          => \case dependency-dec {R} {\new FinModule { | LModule => homLModule (S.corestrict f SR) | isFinModule => inP (l,lb) }} (mkArray \lam (i : Fin n) => later (E.pow a i, S.contains_pow Sa)) \with {
+               | inl (inP (c,p,j,q)) => yes $ inP (Poly.fromArray c, \lam c=0 => q $ inv polyCoef_fromArray *> pmap (polyCoef __ j) c=0, fromArray_degree<, polyMapEval_fromArray *> inv S.embed.func-BigSum *> pmap __.1 p)
+               | inr g => no \lam (inP (p,p/=0,p<n,pe)) => p/=0 $ fromArray_polyCoef p<n *> pmap Poly.fromArray (exts $ g (\lam j => polyCoef p j) $ ext $ S.embed.func-BigSum *> inv polyMapEval_fromArray *> pmap (polyMapEval f __ a) (inv (fromArray_polyCoef p<n)) *> pe) *> fromArray_polyCoef.fromArray0 {_} {n}
+             }
+
+        \lemma minimize (p : Poly R) (p/=0 : p /= 0) (pe : polyMapEval f p a = 0) (n : Nat) (d : degree< p n)
+          : ∃ (p : Poly R) (p /= 0) (polyMapEval f p a = 0) ∀ {q : Poly R} (q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q) \elim n
+          | 0 => absurd $ p/=0 (degree<0 d)
+          | suc n => \case poly-dec n \with {
+            | yes (inP (q,q/=0,q<n,qe)) => minimize q q/=0 qe n q<n
+            | no r => inP (p, p/=0, pe, \lam {q} q/=0 qe => \case LinearOrder.dec<_<= (degree q) n \with {
+              | inl q<n => absurd $ r $ inP (q, q/=0, degree_degree< q<n, qe)
+              | inr n<=q => degree<=.toDegree (degree<_degree<= d) <=∘ n<=q
+            })
+          }
+      }
+
+\lemma finExt_minPoly {K : DiscreteField} {E : CRing} (f : RingHom K E) {l : Array E} (lb : LModule.IsBasis {homLModule f} l) {a : E}
+  : \Sigma (p : Poly K) (isMonicMinPoly f a p)
+  => finDim_minPoly f SubRing.max (\lam _ => ()) {map (__,()) l} (\lam c p j => lb.1 c (inv (AddMonoidHom.func-BigSum {SubRing.embed} {\lam j => (f (c j) * l j, ())}) *> pmap __.1 p) j, \lam x => TruncP.map (lb.2 x.1) \lam s => (s.1, ext $ s.2 *> inv (AddMonoidHom.func-BigSum {SubRing.embed}))) ()
+
+\lemma minPoly-exists {K : DiscreteField} {E : CRing} (f : RingHom K E) {a : E}
+  : ∃ (p : Poly K) (isMonicMinPoly f a p) <-> ∃ (l : Array (SubRing.struct {polyImage f a})) (LModule.IsBasis {homLModule (polyImageHom f a)} l)
+  => (\lam (inP (p,pm)) => inP (mkArray \lam (j : Fin (degree p)) => later (E.pow a j, polyImage-pow f a), (\lam c s j =>
+        \let q => Poly.fromArray c
+        \in \case decideEq q 0 \with {
+          | yes q=0 => inv polyCoef_fromArray *> pmap (polyCoef __ j) q=0
+          | no q/=0 => absurd \have | p<=q => minPoly_degree-char.minPoly_degree f a p pm.2.1 (\lam p=0 => zro/=ide $ monic/=0 pm.1 p=0) pm.2.2 q/=0 $ polyMapEval_fromArray *> inv (AddMonoidHom.func-BigSum {SubRing.embed}) *> pmap __.1 s
+                                    | q<p => degree<_degree q/=0 fromArray_degree<
+                              \in linarith
+        }, \lam (x, inP (q,s)) => \let (d,r,q=dp+r,r<p) => monicPolyDivision q p (degree p) (degree<=.fromDegree <=-refl) (monic-coef pm.1)
+                                  \in inP (\lam j => polyCoef r j, ext $ inv s *> pmap (polyMapEval f __ a) q=dp+r *> func-+ {polyMapEvalRingHom f a} *> pmap (`+ _) (func-* {polyMapEvalRingHom f a} *> pmap (_ *) pm.2.1 *> zro_*-right) *> zro-left *> polyMapEval_polyCoef r<p *> inv (AddMonoidHom.func-BigSum {SubRing.embed})))),
+      \lam (inP (l,lb)) => inP $ finDim_minPoly f (polyImage f a) (polyImage-ext f a) lb polyImage-element)

@@ -1,0 +1,58 @@
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Category
+\import Data.Bool
+\import Data.List
+\import Meta
+\import Paths.Meta
+\import Algebra.Monoid
+
+\lemma test1 (x y : Nat) (p : x = 0) (q : 0 = y) : x = y => rewrite p q
+
+\lemma test1a (x y : Nat) (p : x = 0) (q : 0 = y) => fails {x = y} rewriteI p q
+
+\lemma test2 (x y : Nat) (p : 0 = x) (q : 0 = y) : x = y => rewriteI p q
+
+\lemma test2a (x y : Nat) (p : 0 = x) (q : 0 = y) => fails {0 = y} rewriteI p q
+
+\lemma test3 (x y : Nat) (p : 0 = x) (q : 0 = y) : x = y => rewrite p in q
+
+\lemma test3a (x y : Nat) (p : x = 0) (q : 0 = y) => fails {x = y} (rewrite p in q)
+
+\lemma test4 (x y : Nat) (p : 0 = x) (q : 0 = y) => rewrite p in q
+
+\lemma test5 (x y : Nat) (p : 0 = x) (q : 0 = y) => rewrite p q
+
+\lemma test6 {A : \Set} (x : A) (f : A -> A) (h : \Pi (z : A) -> f z = z) : f (f x) = x
+  => rewrite h (rewrite h idp)
+
+\lemma test7 {A : AbMonoid} (x y : A) (f : A -> A) : f (x + y) = f (y + x)
+  => rewrite +-comm idp
+
+\lemma testNorm {A : \Type} (a : A) (l : List A) (P : List A -> \Prop) (p : P (a :: l)) : P ((a :: l) ++ nil)
+  => rewrite ++_nil p
+
+\lemma testRestore {A : \Type} (xs ys zs : List A) (P : List A -> List A -> \Prop) (p : P (xs ++ ys) zs) : P (xs ++ ys) (zs ++ nil)
+  => rewrite ++_nil p
+
+\lemma conTest {x : Bool} (p : true = x) : x = true => rewrite p idp
+
+\lemma conTest2 {x : Nat} (p : suc x = suc (suc x)) : suc (suc x) = x Nat.+ 3 => rewrite {1} p idp
+
+\lemma conTest3 {x : Nat} (p : suc (suc x) = suc x) : suc (suc x) = x Nat.+ 3 => rewrite {2} p idp
+
+\lemma smartRWtest1 {A : CMonoid} (x y : A) (f : A -> A) : f (x * y) = f (y * x)
+   => rewriteEq (idp {A} {x * y}) (idp {A})
+
+\lemma smartRWtest2 {A : CMonoid} (x y : A) (f : A -> A) (p : f (x * y) = x * y) : f (y * x * ide) = x * ide * y
+  => rewriteEq (idp {A} {x * y}) p
+
+\lemma smartRWtest3 {A : CRing} (x y : A) (B : A -> \Prop) (p : x * x + (Ring.intCoef 2) * x * y + y * y = x)
+ (t : B (x + x)) : B ((x + y) * (x + y) + (x * (x + (Ring.intCoef 2) * y) + y * y))
+  => rewriteEq p t
+
+\lemma smartRWtest4 {A : Monoid} (a b c d x : A) (B : A -> \Prop) (p : b * c = x) (t : B (a * x * d)) : B (((a * b) * (ide * c)) * (d * ide))
+  => rewriteEq p t
+
+\lemma rewriteCatTest {C : Precat} {a b c d : C} (P : Hom a d -> \Prop) (f : Hom a b) (g : Hom b c) (g' : Hom c b) (h : Hom c d) (p : g ∘ g' = id c) (t : P ((h ∘ g) ∘ (id b ∘ f))) : P ((h ∘ id c ∘ g) ∘ (g' ∘ g ∘ f))
+  => rewriteEq p (rewriteEq (idp {_} {(h ∘ g) ∘ (id b ∘ f)}) t)

@@ -1,0 +1,57 @@
+\import Equiv
+\import Equiv.Sigma
+\import Equiv.Univalence
+\import HLevel
+\import Homotopy.Image
+\import Homotopy.Localization.Equiv
+\import Homotopy.Localization.Universe
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\func Separated (U : Universe) : Universe \cowith
+  | isLocal Z => \Pi (z z' : Z) -> isLocal (z = z')
+
+\func ReflSeparated (U : ReflUniverse \lp) : ReflUniverse \cowith
+  | Universe => Separated U
+  | localization A =>
+    \have | p (a a' : A) : Local (F a = F a') => transport (Local __) (inv (pathEquiv a a')) (LType (a = a'))
+          | q (a a' : A) : LType (a = a') = {\hType \lp} (F a = F a') => inv (pathEquiv a a')
+          | r (a a' : A) : Localization (a = a') (p a a') =>
+             coe (\lam i => Localization (a = a') (\new Local (q a a' @ i) (prop-dpi (\lam j => isLocal (q a a' @ j)) (local {LType (a = a')}) (local {p a a'}) @ i)))
+                 (localization (a = a')) right
+    \in (separatedLocalization YImage.dom-map-surj (\lam a a' => (p a a', r a a'))).2
+  \where {
+    \func S {U : ReflUniverse} {A : \hType} (a a' : A) : \hType => LType (a = a')
+
+    \func F {U : ReflUniverse} {A : \hType} (a : A) => YImage.dom-map {_} {_} {S} a
+
+    \func pathEquiv {U : ReflUniverse} {A : \hType} (a a' : A) : (F a = F a') = LType (a = a') => Equiv-to-= (=-to-Equiv (
+      \let | E => \Pi (x : A) -> Equiv {S a' x} {S a x}
+           | emb => transEmbedding (\new Embedding {E} (\lam h x => Equiv.f {h x}) (\lam e e' =>
+                                          \new Retraction { | sec p => path (\lam i x => Equiv.equals (path ((p @ __) x)) @ i) | f_sec => idpe }))
+                                   (ESEquiv.fromEquiv (localYoneda a' (\lam y => LType (a = y))))
+      \in (F a = F a')                    ==< QEquiv-to-= YImage.cod-map-emb.pmap-isEquiv >==
+          (S a = S a')                    ==< path-sym (S a) (S a') >==
+          (S a' = S a)                    ==< path (iso {S a' = S a} (\lam p x => path ((p @ __) x)) (\lam h => path (\lam i x => h x @ i)) idpe idpe) >==
+          (\Pi (x : A) -> S a' x = S a x) ==< path (\lam i => \Pi (x : A) -> QEquiv-to-= univalence @ {_} {_} {Equiv {S a' x} {S a x}} i) >==
+          E                               ==< Equiv-to-= (localizationFactorEmbedding
+                                                              (piLocal (\lam x => equivLocal (LType (a' = x)) (LType (a = x))))
+                                                              (\lam p x => transport (\lam y => Equiv {S y x} {S a x}) p idEquiv)
+                                                              emb
+                                                              (\lam p => Jl (\lam x p' => transport (\lam y => Equiv {S y x} {S a x}) p' idEquiv (lEta idp) = inL p') idp p)) >==
+          (LType (a = a') : \hType)       `qed))
+
+    \lemma separatedLocalization {U : Universe} (f : Surjection) (p : \Pi (a a' : f.A) -> \Sigma (P : Local (f a = f a')) (Localization (a = a') P))
+      : \Sigma (L : Local {Separated U} f.B) (Localization {Separated U} f.A L f)
+      => \have B-local (b b' : f.B) : isLocal (b = b') =>
+                \case f.isSurjMap b, f.isSurjMap b' \with {
+                  | inP (a,q), inP (a',q') => transport2 _ q q' (local {(p a a').1})
+                }
+         \in (\new Local { | local => B-local }, \new Localization { | local-univ C => Extension.contr-equiv f (\lam g b =>
+            \case f.isSurjMap b \with {
+              | inP (a',q) => later rewriteI q (coe (\lam i => Contr (\Sigma (c : C) (\Pi (a : f.A) -> inv (Equiv-to-= (local-univ {(p a a').2} (\new Local (g a = c) (local {C} (g a) c)))) @ i)))
+                                                    (coe (\lam i => Contr (\Sigma (c : C) (inv (QEquiv-to-= (pi-contr-right a' (\lam x _ => g x = c))) @ i))) (lsigma (g a')) right) right)
+            }) })
+  }

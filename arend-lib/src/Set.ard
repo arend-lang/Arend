@@ -1,0 +1,166 @@
+\import Data.Array
+\import Data.Bool(Bool, true, false, So)
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set.Fin(FinSet,DecFin,SigmaFin)
+
+\data Dec (E : \Prop)
+  | yes E
+  | no (Not E)
+  \where {
+    \use \level levelProp : \Prop
+
+    \func rec {R : \Type} {E : \Prop} (y : E -> R) (n : Not E -> R) (d : Dec E) : R \elim d
+      | yes e => y e
+      | no q => n q
+  }
+
+\func decToBool {E : \Prop} (d : Dec E) : Bool
+  | yes _ => true
+  | no _ => false
+
+\class Decide (E : \Prop)
+  | decide : Dec E
+
+\lemma dec_decide {E : \Prop} (d : Dec E) : Decide E \cowith
+  | decide => d
+
+\lemma dec_yes_reduce {E : \Prop} {d : Dec E} (e : E) : d = yes e
+  => prop-pi
+
+\lemma dec_no_reduce {E : \Prop} {d : Dec E} (q : Not E) : d = no q
+  => prop-pi
+
+\lemma Dec_|| {A B : \Prop} (d : Dec A) (e : Dec B) : Dec (A || B) \elim d, e
+  | yes e, _ => yes (byLeft e)
+  | _, yes e => yes (byRight e)
+  | no q, no q' => no \case __ \with {
+    | byLeft a => q a
+    | byRight b => q' b
+  }
+
+\func SigmaDecide {A : Decide} (B : A -> Decide) : Decide (\Sigma (a : A) (B a)) \cowith
+  | decide => \case A.decide \with {
+    | yes a => \case decide {B a} \with {
+      | yes b => yes (a,b)
+      | no q => no \lam p => q $ transport (B __) prop-pi p.2
+    }
+    | no q => no \lam p => q p.1
+  }
+
+\instance ProductDecide (A B : Decide) => SigmaDecide {A} (\lam _ => B)
+
+\lemma NotDec {P : \Prop} (d : Dec P) : Dec (Not P) \elim d
+  | yes a => no \lam f => f a
+  | no q => yes q
+
+\instance NotDecide (A : Decide) : Decide (Not A)
+  | decide => NotDec A.decide
+
+\class BaseSet (E : \Set)
+
+\class SubSet (S : BaseSet) (\classifying contains : S -> \Prop) {
+  \func struct : BaseSet \cowith
+    | E => \Sigma (x : S) (contains x)
+}
+
+\class DecSubSet \extends SubSet
+  | isDec (x : S) : Dec (contains x)
+  \where {
+    \func max {S : BaseSet} : DecSubSet S \cowith
+      | contains _ => \Sigma
+      | isDec _ => yes ()
+
+    \lemma isFin (S : FinSet) (D : DecSubSet S) : FinSet D.struct
+      => SigmaFin S (\lam x => DecFin (D.isDec x))
+  }
+
+\class SeparatedSet \extends BaseSet
+  | separatedEq {x y : E} : Not (Not (x = y)) -> x = y
+
+-- | A set with a tight apartness relation.
+\class Set# \extends SeparatedSet {
+  | \infix 4 # : E -> E -> \Prop
+  | #-irreflexive {x : E} : Not (x # x)
+  | #-symmetric {x y : E} : x # y -> y # x
+  | #-comparison (x y z : E) : x # z -> x # y || y # z
+  | tightness {x y : E} : Not (x # y) -> x = y
+  | separatedEq {x} ~~x=y => tightness (\lam x#y => ~~x=y (\lam x=y => #-irreflexive (transport (x #) (inv x=y) x#y)))
+
+  \lemma apartNotEqual {x y : E} (x#y : x # y) : x /= y =>
+    \lam x=y => #-irreflexive (transport (x #) (inv x=y) x#y)
+}
+
+\class DecSet \extends BaseSet, Set# {
+  \field decideEq (x y : E) : Dec (x = y)
+  | nonEqualApart {x y : E} : x /= y -> x # y
+  | \infix 4 == : E -> E -> Bool
+  | == x y => decToBool (decideEq x y)
+
+  \default # x y : \Prop => x /= y
+  \default nonEqualApart \as nonEqualApartImpl {x} {y} (p : x /= y) : x # y => p
+  \default #-irreflexive {x} (x/=x : x # x) : Empty => x/=x idp
+  \default #-symmetric {x} {y} (x/=y : x # y) : y # x => /=-sym x/=y
+  \default #-comparison x y z (x/=z : x # z) : x # y || y # z => \case decideEq x y \with {
+    | yes x=y => byRight (\lam y=z => x/=z (x=y *> y=z))
+    | no x/=y => byLeft x/=y
+  }
+  \default tightness {x} {y} (x//=y : Not (x # y)) : x = y => \case decideEq x y \with {
+    | yes x=y => x=y
+    | no x/=y => absurd (x//=y x/=y)
+  }
+}
+
+\func SigmaDecSet {A : DecSet} (B : A -> DecSet) : DecSet (\Sigma (a : A) (B a)) \cowith
+  | decideEq p q => \case decideEq p.1 q.1 \with {
+    | yes e => \case decideEq (transport (\lam a => B a) e p.2) q.2 \with {
+      | yes e' => yes (ext (e,e'))
+      | no n => no (\lam e' => n (rewrite (prop-isProp e (pmap __.1 e')) (pmapd __.2 e')))
+    }
+    | no n => no (\lam e => n (pmap __.1 e))
+  }
+
+\func SubDecSet {A : DecSet} {B : A -> \Prop} : DecSet (\Sigma (a : A) (B a))
+  => SigmaDecSet \lam a => \new DecSet (B a) {
+    | decideEq b b' => yes prop-pi
+  }
+
+\instance ProductDecSet (A B : DecSet) : DecSet (\Sigma A B)
+  => SigmaDecSet (\lam _ => B)
+
+\instance EqualityDecide (A : DecSet) (a a' : A) : Decide (a = a')
+  | decide => decideEq a a'
+
+\instance ArrayDec (A : DecSet) (n : Nat) : DecSet (Array A n)
+  | decideEq => aux
+  \where {
+    \private \lemma aux {n : Nat} (l l' : Array A n) : Dec (l = l') \elim n, l, l'
+      | 0, nil, nil => yes idp
+      | suc n, a :: l, a' :: l' => \case decideEq a a', aux l l' \with {
+        | yes e, yes e' => yes $ pmap2 (::) e e'
+        | _, no q => no \lam p => q (pmap taild p)
+        | no q, _ => no \lam p => q (unhead p)
+      }
+  }
+
+\lemma decideEq=_reduce {A : DecSet} {x y : A} (p : x = y) : decideEq x y = yes p
+  => prop-pi
+
+\lemma decideEq/=_reduce {A : DecSet} {x y : A} (p : x /= y) : decideEq x y = no p
+  => prop-pi
+
+\lemma ==_= {A : DecSet} {a a' : A} (so : So (a == a')) : a = a'
+  => unfold (==) at so $ mcases {decToBool} so _ \with {
+    | yes p, _ => p
+    | no n, ()
+  }
+
+\truncated \data Trunc0 (A : \Type) : \Set
+  | in0 A
+  \where {
+    \func map {A B : \Type} (t : Trunc0 A) (f : A -> B) : Trunc0 B \elim t
+      | in0 a => in0 (f a)
+  }
