@@ -6,5 +6,6 @@ include(
     "cli",
     "proto",
     "parser",
-    "intellij"
+    "intellij",
+    "arend-lib:meta"
 )

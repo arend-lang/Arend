@@ -1,0 +1,35 @@
+\import Algebra.Pointed.Category
+\import Homotopy.Space
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Algebra.Pointed \using (Pointed \as AlgPointed)
+\import Set
+
+\class Pointed \extends InhSpace
+  | base : E
+  | isInh => inP base
+  \where
+    \func make {E : \Type} (e : E) => \new Pointed E e
+
+\instance UnitPointed : Pointed (\Sigma)
+  | base => ()
+
+\func \infixr 1 ->* (A B : Pointed) => \Sigma (f : A -> B) (f base = base)
+  \where {
+    \func ext {A B : Pointed} {f g : A ->* B} (p : \Pi (x : A) -> f.1 x = g.1 x) (q : p base *> g.2 = f.2) : f = g =>
+      \let | p' => path (\lam i x => p x @ i)
+           | q' => Jl (\lam _ p'' => (rewrite p'' in f.2) = inv (pmap (\lam (h : A -> B) => h base) p'') *> f.2)
+                      (inv (idp_*> _)) p' *> rotatePathLeft (inv q)
+      \in path (\lam i => (p' @ i, pathOver q' @ i))
+  }
+
+{- | Mapping from Pointed Types to Pointed Sets -}
+\func PointedTrunc0 (X :  Pointed) : AlgPointed \cowith
+  | E => Trunc0 X
+  | ide => in0 X.base
+
+\func PointedTrunc0-Func {X Y : Pointed}(f : X ->* Y) : PointedHom (PointedTrunc0 X) (PointedTrunc0 Y) \cowith
+  | func x => Trunc0.map x f.1
+  | func-ide => rewrite f.2 idp

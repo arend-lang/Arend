@@ -1,0 +1,121 @@
+\import Algebra.Domain.GCD(GCDDomain)
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Ring
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Reduced
+\import Data.Array
+\import Data.Fin (fsuc/=)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Countable
+\open Monoid(LDiv)
+
+\class BezoutRing \extends CRing, GCDMonoid {
+  | isBezout : IsBezout
+  | isGCD a b => TruncP.map (isBezout a b) \lam (s,t,d1,d2) => \new GCD a b (s * a + t * b) {
+    | gcd|val1 => d1
+    | gcd|val2 => d2
+    | gcd-univ g (x,p) (y,q) => LDiv.make (s * x + t * y) equation
+  }
+  | gcd-ldistr c {a} {b} {z} (g : GCD a b z) => TruncP.map (isBezout a b) \lam (s,t,d1,d2) => \new GCD (c * a) (c * b) (c * z) {
+    | gcd|val1 => LDiv.product-left c g.gcd|val1
+    | gcd|val2 => LDiv.product-left c g.gcd|val2
+    | gcd-univ d (x,p) (y,q) => LDiv.trans (later $ rewrite ldistr $ LDiv_+ (LDiv.make (s * x) equation) (LDiv.make (t * y) equation)) $ LDiv.product-left c (g.gcd-univ _ d1 d2)
+  }
+
+  \lemma gcd_bezout {a b c : E} (gcd : GCD a b c) : ∃ (s t : E) (s * a + t * b = c)
+    => TruncP.map (isBezout a b) \lam (s,t,d1,d2) =>
+        \let (w,q) => gcd.gcd-univ (s * a + t * b) d1 d2
+        \in (w * s, w * t, equation)
+
+  \lemma bezoutArray_LDiv (l : Array E) : ∃ (c : Array E l.len) ∀ j (LDiv (BigSum (\lam i => c i * l i)) (l j)) \elim l
+    | nil => inP (nil, \case __)
+    | a :: l =>
+      \have | (inP s) => bezoutArray_LDiv l
+            | (inP t) => isBezout a (BigSum (\lam j => s.1 j * l j))
+      \in inP (t.1 :: map (t.2 *) s.1, \case \elim __ \with {
+        | 0 => transport (\lam x => LDiv (t.1 * a + x) a) (BigSum-ldistr *> pmap BigSum (exts \lam j => inv *-assoc)) t.3
+        | suc j => LDiv.trans (transport (\lam x => LDiv (t.1 * a + x) _) (BigSum-ldistr *> pmap BigSum (exts \lam j => inv *-assoc)) t.4) (s.2 j)
+      })
+
+  \lemma coprime_bezoutArray {a : Array E} (ac : IsCoprimeArray a) : ∃ (s : Array E a.len) (BigSum (\lam j => s j * a j) = 1)
+    => TruncP.map (bezoutArray_LDiv a) \lam (c,f) =>
+        \have lci : Monoid.Inv => ac (BigSum (\lam j => c j * a j)) f
+        \in (\lam j => lci.inv * c j, pmap BigSum (exts \lam j => *-assoc) *> inv BigSum-ldistr *> lci.inv-left)
+
+  \lemma chinese2 (a1 a2 d1 d2 : E) (p : IsCoprime d1 d2) : ∃ (r : E) (LDiv d1 (r - a1)) (LDiv d2 (r - a2))
+    => TruncP.map (gcd_bezout (IsCoprime.=>gcd p))
+        \lam (s1,s2,s1d1+s2d2=1) => (a1 * s2 * d2 + a2 * s1 * d1, LDiv.make ((a2 - a1) * s1) equation, LDiv.make ((a1 - a2) * s2) equation)
+
+  \lemma chinese {n : Nat} (a d : Array E n) (p : \Pi (i j : Fin n) -> i /= j -> IsCoprime (d i) (d j))
+    : ∃ (r : E) (\Pi (j : Fin n) -> LDiv (d j) (r - a j)) \elim n
+    | 0 => inP (0, \case __)
+    | suc n =>
+      \have | (inP (q,f)) => chinese (taild a) (taild d) \lam i j i/=j => p (suc i) (suc j) (fsuc/= i/=j)
+            | (inP (r,p1,p2)) => chinese2 (a 0) q (d 0) (BigProd (taild d)) $ IsCoprime_BigProd-right $ later \lam j => p 0 (suc j) (\case __)
+      \in inP (r, \case \elim __ \with {
+        | 0 => p1
+        | suc j => transport (LDiv _) equation (LDiv_+ (LDiv.trans (LDiv_BigProd j) p2) (f j))
+      })
+
+  \lemma chinese-unique {n : Nat} (r r' : E) (d : Array E n) (p : \Pi (i j : Fin n) -> i /= j -> IsCoprime (d i) (d j)) (q : \Pi (j : Fin n) -> LDiv (d j) (r - r')) : TruncP (LDiv (BigProd d) (r - r'))
+    => coprime_BigProd_div-left p q
+
+  \func maximal-ideal (c : Countable E) (p : \Pi (a b : E) -> Dec (TruncP (LDiv a b))) (l : Array E) (lc : Not (IsCoprimeArray l))
+    : \Sigma (M : Ideal \this) M.IsMaximal (\Pi (j : Fin l.len) -> M (l j))
+    => \let (M,Mm,Mc) => Ideal.countable-maximal c (\lam I Ig x => \case bezout_finitelyGenerated_principal.1 isBezout Ig \with {
+                           | inP (y,yg) => transport Dec (ext (\lam (inP y|x) => Ideal.ldiv y|x yg.1, \lam Ix => yg.2 Ix)) (p y x)
+                         }) {Ideal.closure l} Ideal.closure-finGenerated (\lam (inP c) => lc \lam z d => Monoid.Inv.ldiv $ later $ rewrite c.2 $ LDiv_BigSum \lam j => later $ LDiv.factor-right $ d (c.1 j).2)
+       \in (M, Mm, \lam j => Mc $ Ideal.closure-superset j)
+} \where {
+  \lemma bezoutArray_coprime {R : CRing} {n : Nat} (s : Array R n) {u : Array R n} (p : R.BigSum (\lam j => s j * u j) = 1) : IsCoprimeArray u
+    => \lam z f => Monoid.Inv.lmake (R.BigSum \lam j => s j * LDiv.inv {f j}) $ BigSum-rdistr *>
+          pmap BigSum (exts \lam j => *-assoc *> pmap (_ *) (*-comm *> LDiv.inv-right {f j})) *> p
+
+  \lemma bezoutArrayInv_coprime {R : CRing} {n : Nat} (s : Array R n) {u : Array R n} (p : Monoid.Inv (R.BigSum (\lam j => s j * u j))) : IsCoprimeArray u
+    => bezoutArray_coprime (\lam j => p.inv * s j) $ pmap BigSum (exts \lam j => *-assoc) *> inv BigSum-ldistr *> p.inv-left
+
+  \lemma bezout_coprime {R : CRing} {s t a b : R} (p : s * a + t * b = 1) : IsCoprime a b
+    => bezoutInv_coprime (transportInv Monoid.Inv p Monoid.Inv.ide-isInv)
+
+  \lemma bezoutInv_coprime {R : CRing} {s t a b : R} (p : Monoid.Inv (s * a + t * b)) : IsCoprime a b
+    => \lam z z|a z|b => bezoutArrayInv_coprime (s,t) {a,b} (transport Monoid.Inv simplify p) z (z|a,z|b)
+}
+
+\class StrictBezoutRing \extends BezoutRing {
+  | isStrictBezout : IsStrictBezout
+  \default isBezout a b => TruncP.map (isStrictBezout a b) \lam (s,t,u,v,p,q) => (t, s, \new LDiv {
+    | inv => v
+    | inv-right => equation
+  }, \new LDiv {
+    | inv => u
+    | inv-right => equation
+  })
+
+  \lemma bezoutArray {n : Nat} (a : Array E (suc n)) : ∃ (s u : Array E (suc n)) (BigSum (\lam j => s j * u j) = 1) (d : E) (\Pi (j : Fin (suc n)) -> a j = u j * d) \elim n, a
+    | 0, a :: nil => inP (1 :: nil, 1 :: nil, simplify, a, \lam (0) => inv ide-left)
+    | suc n, a1 :: a =>
+      \have | (inP (s,u,p,d,f)) => bezoutArray a
+            | (inP (s1,t1,u1,v1,p1,q1)) => isStrictBezout d a1
+      \in inP (s1 :: map (t1 *) s, u1 :: map (v1 *) u, pmap (_ +) (pmap2 (+) equation (cong $ ext \lam j => equation) *> inv (BigSum-ldistr {_} {_} {\lam j => s j * u j}) *> pmap (_ *) p *> ide-right) *> q1, s1 * a1 + t1 * d, \case \elim __ \with {
+        | 0 => equation
+        | suc j => f j *> equation
+      })
+}
+
+\class BezoutDomain \extends GCDDomain, BezoutRing {
+  | isGCDDomain x y _ _ => TruncP.map (isBezout x y) (\lam p => bezoutGCD p.3 p.4)
+} \where {
+  \class Dec \extends StrictBezoutDomain, GCDDomain.Dec
+    | isStrictBezout => PPRing.bezout->strictBezout isBezout
+}
+
+\class StrictBezoutDomain \extends BezoutDomain, StrictBezoutRing

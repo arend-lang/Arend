@@ -1,0 +1,299 @@
+\import Arith.Nat
+\import Data.Array \hiding (++,++_nil)
+\import Data.Bool
+\import Data.Fin (nat_fin_=)
+\import Data.List (++, ++_nil, InList, InList_++, InList_++-left, InList_++-right, List, contains, contains_InList, here, there, union, union~++)
+\import Data.Or
+\import Function.Meta
+\import HLevel
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+
+\data Empty
+
+\func absurd {A : \Type} (x : Empty) : A
+
+\func Not (A : \Type) => A -> Empty
+
+\func \infix 1 /= {A : \Type} (a a' : A) => Not (a = a')
+
+\lemma /=-sym {A : \Type} {a a' : A} (p : a /= a') : a' /= a
+  => \lam r => p (inv r)
+
+\data TruncP (A : \Type)
+  | inP A
+  | truncP (a a' : TruncP A) : a = a'
+  \where {
+    \use \level levelProp {A : \Type} (a a' : TruncP A) : a = a' => path (truncP a a')
+
+    \lemma remove {A : \Type} (p : isProp A) (t : TruncP A) : A \elim t
+      | inP a => a
+
+    \lemma remove' {A : \Prop} (t : TruncP A) : A \elim t
+      | inP a => a
+
+    \lemma rec {A B : \Type} (p : isProp B) (t : TruncP A) (f : A -> B) : B \elim t
+      | inP a => f a
+
+    \lemma rec-eval {A B : \Type} {p : isProp B} {a : A} {f : A -> B} : rec p (inP a) f = f a \level isProp=>isSet B p _ _
+      => p _ _
+
+    \lemma rec-set {A : \Type} {B : \Set} (t : TruncP A) (f : A -> B) (p : \Pi (a a' : A) -> f a = f a')
+      : \Sigma (b : B) (∃ (a : A) (f a = b)) \level level p \elim t
+      | inP a => (f a, inP (a, idp))
+      \where {
+        \lemma level (p : \Pi (a a' : A) -> f a = f a') : isProp (\Sigma (b : B) (∃ (a : A) (f a = b)))
+          => \lam (b, inP (a,fa=b)) (b', inP (a',fa'=b')) => ext $ inv fa=b *> p a a' *> fa'=b'
+      }
+
+    \func map {A B : \Type} (t : TruncP A) (f : A -> B) : TruncP B \elim t
+      | inP a => inP (f a)
+  }
+
+\lemma prop-pi {A : \Prop} {a a' : A} : a = a'
+  => \case truncP (inP a) (inP a') __ \with {
+    | inP x => x
+  }
+
+\lemma prop-isProp {A : \Prop} : isProp A
+  => \lam _ _ => prop-pi
+
+\lemma set-pi {A : \Set} {a b : A} {p q : a = b} : p = q
+  => prop-pi
+
+\lemma prop-dpi (A : I -> \Prop) (a : A left) (a' : A right) : Path A a a'
+  => pathOver (prop-isProp (coe A a right) a')
+
+\data ToProp (A : \Type) (p : isProp A)
+  | toProp A
+  \where {
+    \lemma fromProp {A : \Type} {p : isProp A} (t : ToProp A p) : A \elim t
+      | toProp a => a
+
+    \use \level levelProp : \Prop
+  }
+
+\truncated \data \infixr 2 || (A B : \Type) : \Prop
+  | byLeft A
+  | byRight B
+  \where {
+    \lemma rec {A B C : \Type} (p : isProp C) (f : A -> C) (g : B -> C) (t : A || B) : C \elim t
+      | byLeft a => f a
+      | byRight b => g b
+
+    \lemma rec' {A B : \Type} {C : \Prop} (f : A -> C) (g : B -> C) (t : A || B) : C \elim t
+      | byLeft a => f a
+      | byRight b => g b
+
+    \func map {A B C D : \Type} (f : A -> C) (g : B -> D) (t : A || B) : C || D \elim t
+      | byLeft a => byLeft (f a)
+      | byRight b => byRight (g b)
+
+    \lemma fromOr {A B : \Type} (p : Or A B) : A || B \elim p
+      | inl a => byLeft a
+      | inr b => byRight b
+
+    \lemma toOr {A B : \Type} (p : A || B) : TruncP (Or A B) \elim p
+      | byLeft a => inP (inl a)
+      | byRight b => inP (inr b)
+  }
+
+\func \infix 0 <-> (P Q : \Prop) => \Sigma (P -> Q) (Q -> P)
+
+\lemma <->_= {P Q : \Prop} : (P <-> Q) <-> (P = Q)
+  => (\lam p => ext p, \lam p => rewrite p (\lam x => x, \lam x => x))
+
+\lemma <->refl {P : \Prop} : P <-> P
+  => (\lam p => p, \lam p => p)
+
+\lemma <->trans {P Q S : \Prop} (f : P <-> Q) (g : Q <-> S) : P <-> S
+  => (\lam p => g.1 (f.1 p), \lam s => f.2 (g.2 s))
+
+\lemma <->sym {P Q : \Prop} (f : P <-> Q) : Q <-> P
+  => (f.2,f.1)
+
+\func OneOf (l : Array \Type) => ∃ (P : l) P
+
+\func ElemOf (l : Array \Type) => Given (P : l) P
+
+\type arraySubset {X : \Type} (l : Array X) (x : X) => ∃ (y : l) (y = x)
+
+\lemma propExt {A B : \Prop} (f : A -> B) (g : B -> A) : A = B =>
+  path (iso f g (\lam _ => prop-pi) (\lam _ => prop-pi))
+  \where {
+    \lemma dir {A B : \Prop} (p : A = B) (a : A) : B => transport (\lam X => X) p a
+
+    \lemma conv {A B : \Prop} (p : A = B) (b : B) : A => dir (inv p) b
+  }
+
+\type TFAE (l : Array \Prop) : \Prop
+  => \Pi (i j : Fin l.len) -> l i -> l j
+  \where {
+    \lemma proof' {l : Array \Prop} (p : Array (\Sigma (s : \Sigma (Fin l.len) (Fin l.len)) (l s.1 -> l s.2))) {s : So (checkConnected (map __.1 p) l.len)} : TFAE l
+      => \lam i j => path-proof p (checkConnected-correct (So.fromSo s) i j)
+      \where {
+        \func Graph (A : \Set) => Array (\Sigma A A)
+
+        \truncated \data Path {A : \Set} (G : Graph A) (a a' : A) : \Prop
+          | trivial (a = a')
+          | step (i : Fin G.len) (a = (G i).1) (Path G (G i).2 a')
+
+        \lemma path-proof {l : Array \Prop} (p : Array (\Sigma (s : \Sigma (Fin l.len) (Fin l.len)) (l s.1 -> l s.2))) {i j : Fin l.len} (c : Path (map __.1 p) i j) (a : l i) : l j \elim c
+          | trivial q => rewriteI q a
+          | step k q c => path-proof p c $ (p k).2 $ rewriteI q a
+
+        \func checkConnected (\strict G : Graph Nat) (t : Nat) : Bool
+          => forall (\lam i => checkConnected1 G i t) \new Array Nat t \lam i => i
+
+        \func checkConnected1 (G : Graph Nat) (i t : Nat) : Bool
+          => \let! r => collect G (i List.:: List.nil) (i List.:: List.nil) t
+             \in forall (contains r) \new Array Nat t \lam j => j
+
+        \func step1 (G : Graph Nat) (ex : List Nat) (i : Nat) : List Nat \elim G
+          | nil => List.nil
+          | e :: G => \case decideEq i e.1 \with {
+            | yes q => if (contains ex e.2) (step1 G ex i) (e.2 List.:: step1 G ex i)
+            | no q => step1 G ex i
+          }
+
+        \func makeStep (G : Graph Nat) (\strict ex : List Nat) (l : List Nat) : List Nat \elim l
+          | List.nil => List.nil
+          | i List.:: l => \let! s => step1 G ex i \in s ++ makeStep G (union s ex) l
+
+        \func collect (G : Graph Nat) (\strict acc : List Nat) (l : List Nat) (n : Nat) : List Nat \elim n
+          | 0 => acc
+          | suc n => \let! l' => makeStep G acc l \in collect G (union l' acc) l' n
+
+        -- correctnes
+
+        \lemma checkConnected-correct {n : Nat} {G : Graph (Fin n)} (s : checkConnected G n = true) (i j : Fin n) : Path G i j
+          => checkConnected1-correct i j (forall-char s i)
+
+        \lemma Path-Nat_Fin {n : Nat} {G : Graph (Fin n)} {i j : Fin n} (p : Path {Nat} G i j) : Path G i j \elim p
+          | trivial q => trivial (nat_fin_= q)
+          | step k p q => step k (nat_fin_= p) (Path-Nat_Fin q)
+
+        \lemma checkConnected1-correct {n : Nat} {G : Graph (Fin n)} (i j : Fin n) (s : checkConnected1 G i n = true) : Path G i j
+          => \case collect->collect' {G} (contains_InList.1 (forall-char s j)) \with {
+            | here p => trivial $ inv (nat_fin_= p)
+            | there c => \case collect'-correct {G} c \with {
+              | inP (i', here q, p) => Path-Nat_Fin (rewrite q in p)
+              | inP (_, there (), _)
+            }
+          }
+
+        \func step1' (G : Graph Nat) (i : Nat) : List Nat \elim G
+          | nil => List.nil
+          | e :: G => \case decideEq i e.1 \with {
+            | yes q => e.2 List.:: step1' G i
+            | no q => step1' G i
+          }
+
+        \func makeStep' (G : Graph Nat) (l : List Nat) : List Nat \elim l
+          | List.nil => List.nil
+          | i List.:: l => step1' G i ++ makeStep' G l
+
+        \func collect' (G : Graph Nat) (l : List Nat) (n : Nat) : List Nat \elim n
+          | 0 => List.nil
+          | suc n => makeStep' G l ++ collect' G (makeStep' G l) n
+
+        \lemma step1'-correct {G : Graph Nat} {i j : Nat} (c : InList j (step1' G i)) : TruncP (Index (i,j) G) \elim G
+          | nil => \case c
+          | e :: G => cases (decideEq i e.1, c) \with {
+            | yes q, here c => inP (0, rewrite (q,c) idp)
+            | yes q, there c => TruncP.map (step1'-correct c) \lam s => (suc s.1, s.2)
+            | no _, c => TruncP.map (step1'-correct c) \lam s => (suc s.1, s.2)
+          }
+
+        \lemma makeStep'-correct {G : Graph Nat} {l : List Nat} {j : Nat} (c : InList j (makeStep' G l)) : ∃ (i : Nat) (InList i l) (Index (i,j) G) \elim l
+          | List.nil => \case c
+          | a List.:: l => \case InList_++ c \with {
+            | byLeft r => TruncP.map (step1'-correct r) \lam s => (a, here idp, s)
+            | byRight r => TruncP.map (makeStep'-correct r) \lam s => (s.1, there s.2, s.3)
+          }
+
+        \lemma collect'-correct {G : Graph Nat} {l : List Nat} {n j : Nat} (c : InList j (collect' G l n)) : ∃ (i : Nat) (InList i l) (Path G i j) \elim n
+          | 0 => \case c
+          | suc n => \case InList_++ c \with {
+            | byLeft r => TruncP.map (makeStep'-correct r) \lam s => (s.1, s.2, step s.3.1 (inv $ pmap __.1 s.3.2) $ trivial $ pmap __.2 s.3.2)
+            | byRight r => \case collect'-correct r \with {
+              | inP u => TruncP.map (makeStep'-correct u.2) \lam s => (s.1, s.2, step s.3.1 (inv $ pmap __.1 s.3.2) $ rewrite (pmap __.2 s.3.2) u.3)
+            }
+          }
+
+        \lemma step1->step1' {G : Graph Nat} {ex : List Nat} {i a : Nat} (c : InList a (step1 G ex i)) : InList a (step1' G i) \elim G
+          | nil => c
+          | e :: G => cases (decideEq i e.1, c) \with {
+            | yes q, c => cases (contains ex e.2, c) \with {
+              | false, here c => here c
+              | false, there c => there (step1->step1' c)
+              | true, c => there (step1->step1' c)
+            }
+            | no q, c => step1->step1' c
+          }
+
+        \lemma makeStep->makeStep' {G : Graph Nat} {ex l : List Nat} {a : Nat} (c : InList a (makeStep G ex l)) : InList a (makeStep' G l) \elim l
+          | List.nil => c
+          | a' List.:: l => \case InList_++ c \with {
+            | byLeft d => InList_++-left (step1->step1' d)
+            | byRight d => InList_++-right (makeStep->makeStep' d)
+          }
+
+        \lemma step1'_makeStep' {G : Graph Nat} {l : List Nat} {a b : Nat} (p : InList b l) (c : InList a (step1' G b)) : InList a (makeStep' G l) \elim l
+          | List.nil => \case p
+          | a' List.:: l => \case \elim p \with {
+            | here p => InList_++-left (rewrite p in c)
+            | there p => InList_++-right (step1'_makeStep' p c)
+          }
+
+        \lemma makeStep'-monotone {G : Graph Nat} {l l' : List Nat} {a : Nat} (p : \Pi (a : Nat) -> InList a l -> InList a l') (c : InList a (makeStep' G l)) : InList a (makeStep' G l') \elim l
+          | List.nil => \case c
+          | b List.:: l => \case InList_++ c \with {
+            | byLeft d => step1'_makeStep' (p b (here idp)) d
+            | byRight d => makeStep'-monotone (\lam a al => p a (there al)) d
+          }
+
+        \lemma collect'-monotone {G : Graph Nat} {l l' : List Nat} {n : Nat} (p : \Pi (a : Nat) -> InList a l -> InList a l') {i : Nat} (c : InList i (collect' G l n)) : InList i (collect' G l' n) \elim n
+          | 0 => c
+          | suc n => \case InList_++ c \with {
+            | byLeft d => InList_++-left (makeStep'-monotone p d)
+            | byRight d => InList_++-right (collect'-monotone (\lam a => makeStep'-monotone p) d)
+          }
+
+        \lemma collect->collect' {G : Graph Nat} {acc l : List Nat} {n a : Nat} (c : InList a (collect G acc l n)) : InList a (acc ++ collect' G l n) \elim n
+          | 0 => rewrite ++_nil c
+          | suc n => \case InList_++ (collect->collect' c) \with {
+            | byLeft c => \case InList_++ ((union~++ a).1 c) \with {
+              | byLeft d => InList_++-right $ InList_++-left (makeStep->makeStep' d)
+              | byRight d => InList_++-left d
+            }
+            | byRight c => InList_++-right $ InList_++-right (collect'-monotone (\lam a => makeStep->makeStep') c)
+          }
+      }
+
+    \meta proof P => proof' (later P)
+
+    \lemma cycle' {n : Nat} {l : Array \Prop (suc n)} (p : DArray {suc n} (\lam i => l i -> l (suc i Nat.mod suc n))) : TFAE l
+      => aux2 (\lam i a => later $ transport l (nat_fin_= $ mod_< $ fin_< (suc i)) (p i a))
+          \lam a => transport l (later $ nat_fin_= $ rewrite (mod_< id<suc) id_mod) (p n a)
+      \where \private {
+        \lemma aux2 {n : Nat} {l : Array \Prop (suc n)} (p : DArray {n} (\lam i => l i -> l (suc i))) (q : l n -> l 0) : TFAE l \elim n
+          | 0 => \lam (0) (0) a => a
+          | suc n =>
+            \have t => aux2 {n} {taild l} (\lam i => p (suc i)) \lam a => p 0 $ q $ transport l (nat_fin_= $ pmap suc (mod_< id<suc) *> inv (mod_< id<suc)) a
+            \in \case \elim __, \elim __ \with {
+              | 0, j => aux p (later idp)
+              | suc i, 0 => \lam a => q $ aux p (later $ pmap suc (<=_exists $ <_suc_<= $ fin_< i) *> inv (mod_< id<suc)) a
+              | suc i, suc j => t i j
+            }
+
+        \lemma aux {n : Nat} {l : Array \Prop (suc n)} (p : DArray {n} (\lam i => l i -> l (suc i))) {i j : Fin (suc n)} {k : Nat} (q : i Nat.+ k = j) (a : l i) : l j \elim j, k, q
+          | _, 0, idp => a
+          | suc j, suc k, q => p j $ aux p (pmap pred q) a
+      }
+
+    \meta cycle P => cycle' (later P)
+  }

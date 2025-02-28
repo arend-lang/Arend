@@ -1,0 +1,41 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Order.Lattice \hiding (MeetSemilattice)
+
+\lemma test1 {M : CMonoid} (x y z w : M)
+  : (x * (1 * y)) * ((1 * z) * w) = x * ((y * (z * 1)) * w)
+  => equation
+
+\lemma test2 {M : CMonoid} (x y z w : M)
+  : (y * (1 * z)) * ((1 * x) * w) = x * ((y * (z * 1)) * w)
+  => equation
+
+\lemma testOneAx {M : CMonoid} (x y z : M) (p : x = y)
+  : y * z = z * x
+  => equation
+
+\lemma testTwoAx {M : CMonoid} (x y : M) (p : x * y = ide) (q : y * y = x)
+  : x * x = y
+  => equation
+
+\lemma testTwoAxRev {M : CMonoid} (x y : M) (p : y * x = 1) (q : x = y * y)
+  : x * x = y
+  => equation
+
+\lemma testThreeAx {M : CMonoid} (x y z : M) (r : x * y = z) (p : x * z * x * x * z = y * z * y * y)
+                   (q : x * z * x = y)
+  : z * z = y * y * y * z
+  => equation
+
+\lemma idempTrivialTest {M : CMonoid} {a b : M} (a-idempotent : a * a = a) (a-inv : a * b = 1) : a = 1
+  => equation
+
+\open Bounded(MeetSemilattice,top)
+
+\lemma test3 {L : MeetSemilattice} (x y z : L) : (x ∧ y) ∧ ((top ∧ x) ∧ z) = z ∧ ((y ∧ x) ∧ (z ∧ y))
+  => equation
+
+\lemma addTest {M : AbMonoid} (x y z w : M)
+  : (y + (0 + z)) + ((0 + x) + w) = x + ((y + (z + 0)) + w)
+  => equation

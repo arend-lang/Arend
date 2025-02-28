@@ -1,0 +1,36 @@
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Paths
+
+\class AAlgebra \extends LModule, Ring {
+  \override R : CRing
+  | *c-comm-left  {r : R} {a b : E} : r *c (a * b) = (r *c a) * b
+  | *c-comm-right {r : R} {a b : E} : r *c (a * b) = a * (r *c b)
+
+  | coefMap : R -> E
+  | coefMap_*c {x : R} : coefMap x = x *c 1
+  \default coefMap \as coefMap-impl x => x *c 1
+  \default coefMap_*c \as coefMap_*c-impl {x} : coefMap-impl x = x *c 1 => idp
+
+  \func coefHom : RingHom R \this \cowith
+    | func => coefMap
+    | func-+ => coefMap_*c *> *c-rdistr *> inv (pmap2 (+) coefMap_*c coefMap_*c)
+    | func-ide => coefMap_*c *> ide_*c
+    | func-* => coefMap_*c *> *c-assoc *> pmap (_ *c) (inv ide-left) *> *c-comm-left *> inv (pmap2 (*) coefMap_*c coefMap_*c)
+}
+
+\class CAlgebra \extends AAlgebra, CRing
+  | *c-comm-right => pmap (_ *c) *-comm *> *c-comm-left *> *-comm
+
+\func homAlgebra {R E : CRing} (f : RingHom R E) : CAlgebra \cowith
+  | CRing => E
+  | LModule => homLModule f
+  | *c-comm-left => inv *-assoc
+
+\func \infixl 7 *r {R : CRing} {A : AAlgebra R} {X : LModule A} (a : R) (x : X) : X
+  => coefMap a *c x
+
+\lemma *r-assoc {R : CRing} {A : AAlgebra R} {X : LModule A} {a b : R} {x : X} : a * b *r x = a *r (b *r x)
+  => pmap (`*c x) A.coefHom.func-* *> *c-assoc

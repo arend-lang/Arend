@@ -1,0 +1,556 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Arith.Nat
+\import Data.Bool
+\import Data.Or
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+
+\data List (A : \Type)
+  | nil
+  | \infixr 5 :: A (List A)
+
+\func length {A : \Type} (l : List A) : Nat \elim l
+  | nil => 0
+  | :: a l => suc (length l)
+
+\func \infixl 9 !! {A : \Type} (l : List A) (i : Fin (length l)) : A \elim l, i
+  | :: a l, 0 => a
+  | :: a l, suc i => l !! i
+
+\func \infixr 5 ++ {A : \Type} (xs ys : List A) : List A \elim xs
+  | nil => ys
+  | :: a xs => a :: xs ++ ys
+
+\func ++-assoc {A : \Type} {xs ys zs : List A} : (xs ++ ys) ++ zs = xs ++ (ys ++ zs) \elim xs
+  | nil => idp
+  | :: x xs => pmap (x ::) ++-assoc
+
+\func ++_nil {A : \Type} {l : List A} : l ++ nil = l \elim l
+  | nil => idp
+  | :: a l => pmap (a ::) ++_nil
+
+\lemma length_++ {A : \Type} {l l' : List A} : length (l ++ l') = length l + length l' \elim l
+  | nil => idp
+  | :: a l => pmap suc length_++
+
+\func replicate {A : \Type} (n : Nat) (a : A) : List A \elim n
+  | 0 => nil
+  | suc n => a :: replicate n a
+
+\lemma length_replicate {A : \Type} {n : Nat} {a : A} : length (replicate n a) = n \elim n
+  | 0 => idp
+  | suc n => pmap suc length_replicate
+
+\func map {A B : \Type} (f : A -> B) (l : List A) : List B \elim l
+  | nil => nil
+  | :: a l => f a :: map f l
+
+\func length_map {A B : \Type} (f : A -> B) (l : List A) : length (map f l) = length l \elim l
+  | nil => idp
+  | :: a l => pmap suc (length_map f l)
+
+\func map_comp {A B C : \Type} (g : B -> C) (f : A -> B) (l : List A) : map (\lam x => g (f x)) l = map g (map f l) \elim l
+  | nil => idp
+  | :: a l => pmap (_ ::) (map_comp g f l)
+
+\func headDef {A : \Type} (x : A) (xs : List A) : A \elim xs
+  | nil => x
+  | :: a _ => a
+
+\func tail {A : \Type} (l : List A) : List A \elim l
+  | nil => nil
+  | :: a l => l
+
+\instance ListMonoid {A : \Set} : Monoid (List A)
+  | ide => nil
+  | * => ++
+  | ide-left => idp
+  | ide-right => ++_nil
+  | *-assoc => ++-assoc
+
+\func splitAt {A : \Type} (n : Nat) (l : List A) : \Sigma (List A) (List A) \elim n, l
+  | 0, l => (nil, l)
+  | suc _, nil => (nil, nil)
+  | suc n, :: a l =>
+      \let! (l1, l2) => splitAt n l
+      \in (a :: l1, l2)
+  \where
+    \func appendLem {A : \Type} (n : Nat) (l : List A) : take n l ++ drop n l = l \elim n, l
+      | 0, l => idp
+      | suc n, nil => idp
+      | suc n, :: a l => pmap (a ::) (appendLem n l)
+
+\func take {A : \Type} (n : Nat) (l : List A) => (splitAt n l).1
+
+\func drop {A : \Type} (n : Nat) (l : List A) => (splitAt n l).2
+
+\func replace {A : \Type} (l : List A) (i s : Nat) (r : List A) =>
+  \let! (l1, l2) => splitAt i l
+  \in l1 ++ r ++ drop s l2
+
+\func slice {A : \Type} (l : List A) (i s : Nat) => take s (drop i l)
+  \where
+    \func appendLem {A : \Type} (l : List A) (i s : Nat) : take i l ++ slice l i s ++ drop s (drop i l) = l \elim l, i, s
+      | l, 0, s => splitAt.appendLem s l
+      | nil, suc i, 0 => idp
+      | nil, suc i, suc s => idp
+      | :: a l, suc i, s => pmap (a ::) (appendLem l i s)
+
+\data All {A : \Type} (P : A -> \Prop) (l : List A) \elim l
+  | nil => all-nil
+  | :: x l => all-cons (P x) (All P l)
+
+\lemma all-map {A B : \Type} (f : A -> B) {P : B -> \Prop} {l : List A} (a : All P (map f l)) : All (\lam a => P (f a)) l \elim l, a
+  | nil, all-nil => all-nil
+  | :: x l, all-cons p a => all-cons p (all-map f a)
+
+\lemma all-implies {A : \Type} {P Q : A -> \Prop} {l : List A} (a : All P l) (p : All (\lam a => P a -> Q a) l) : All Q l \elim l, a, p
+  | nil, all-nil, all-nil => all-nil
+  | :: x l, all-cons c a, all-cons f p => all-cons (f c) (all-implies a p)
+
+\lemma all-forall {A : \Type} {P : A -> \Prop} {l : List A} (p : \Pi (a : A) -> P a) : All P l \elim l
+  | nil => all-nil
+  | :: a l => all-cons (p a) (all-forall p)
+
+\data All2 {A : \Type} (P : A -> A -> \Prop) (l : List A) \elim l
+  | nil => all2-nil
+  | :: x l => all2-cons (All (P x) l) (All2 P l)
+
+\data AllC {A : \Type} (P : A -> A -> \Prop) (l : List A) \elim l
+  | nil => allC-nil
+  | :: x nil => allC-single
+  | :: x (:: y l) => allC-cons (P x y) (AllC P (y :: l))
+
+\lemma allC-tail {A : \Type} {a : A} {l : List A} {P : A -> A -> \Prop} (a : AllC P (a :: l)) : AllC P l \elim l, a
+  | nil, allC-single => allC-nil
+  | :: y l, allC-cons p a => a
+
+\func count {A : DecSet} (l : List A) (a : A) : Nat \elim l
+  | nil => 0
+  | :: x l => \case decideEq x a \with {
+    | yes _ => suc (count l a)
+    | no _ => count l a
+  }
+  \where {
+    \lemma all-diff {A : DecSet} {l : List A} {a : A} (d : All (a /=) l) : count l a = 0 \elim l, d
+      | nil, all-nil => idp
+      | :: x l, all-cons p d => mcases \with {
+        | yes e => \case p (inv e)
+        | no _ => all-diff d
+      }
+  }
+
+\lemma count_perm {A : DecSet} {l l' : List A} (p : Perm l l') (a : A) : count l a = count l' a \elim l, l', p
+  | nil, nil, perm-nil => idp
+  | :: x l, :: _ l', perm-:: idp p => rewrite (count_perm p) idp
+  | :: x (:: x' l), :: _ (:: _ _), perm-swap idp idp idp => mcases \with {
+    | yes e, yes e' => rewrite (decideEq=_reduce e, decideEq=_reduce e') idp
+    | yes e, no q => rewrite (decideEq=_reduce e, decideEq/=_reduce q) idp
+    | no q, yes e => rewrite (decideEq/=_reduce q, decideEq=_reduce e) idp
+    | no q, no q' => rewrite (decideEq/=_reduce q, decideEq/=_reduce q') idp
+  }
+  | l, l', perm-trans p1 p2 => count_perm p1 a *> count_perm p2 a
+
+\lemma count_++ {A : DecSet} {l l' : List A} {a : A} : count (l ++ l') a = count l a Nat.+ count l' a \elim l
+  | nil => idp
+  | :: x l => mcases \with {
+    | yes e => pmap suc count_++
+    | no q => count_++
+  }
+
+\func group {A : DecSet} (l : List A) : List (\Sigma A Nat) \elim l
+  | nil => nil
+  | :: a l => \case group l \with {
+    | nil => (a,1) :: nil
+    | :: (a',n) l' => \case decideEq a a' \with {
+      | yes _ => (a', suc n) :: l'
+      | no _ => (a,1) :: (a',n) :: l'
+    }
+  }
+
+\open Sort
+
+\lemma group-sorted {A : DecSet} {P : Preorder A} {l : List A} (s : Sorted l) : Sorted (map __.1 (group l)) \elim l, s
+  | nil, sorted-nil => sorted-nil
+  | :: x l, sorted-cons x<=l s => mcases {1} {arg addPath} \with {
+    | nil, _ => sorted-cons <=-refl sorted-nil
+    | :: (a',n) l', p =>
+      \have s' => rewrite p in group-sorted s
+      \in mcases \with {
+        | yes _ => s'
+        | no _ => sorted-cons (transport (x <=) (head-lem p) x<=l) s'
+      }
+  }
+  \where {
+    \lemma head-lem {A : DecSet} {l : List A} {a x : A} {n : Nat} {l' : List (\Sigma A Nat)} (p : group l = (a,n) :: l') : headDef x l = a \elim l
+      | nil => \case p
+      | :: y l => mcases {1} p _ \with {
+        | nil, p' => pmap (\lam s => (headDef (a,n) s).1) p'
+        | :: z l'', p' => mcases p' _ \with {
+          | yes e, p'' => e *> pmap (\lam s => (headDef (a,n) s).1) p''
+          | no q, p'' => pmap (\lam s => (headDef (a,n) s).1) p''
+        }
+      }
+  }
+
+\lemma group-diff {A : DecSet} {P : Poset A} {l : List A} (s : Sorted l) : All2 (__.1 /= __.1) (group l) \elim l, s
+  | nil, sorted-nil => all2-nil
+  | :: x l, sorted-cons x<=l s => mcases {1} {arg addPath} \with {
+    | nil, _ => all2-cons all-nil all2-nil
+    | :: ((a',n)) l', p =>
+      \have (all2-cons t t') => rewrite p in group-diff s
+      \in mcases \with {
+        | yes _ => all2-cons t t'
+        | no q =>
+          \have | s' => rewrite p in group-sorted s
+                | (all-cons _ r) => diff-lem s' a' a' (transport (x <=) (group-sorted.head-lem p) x<=l) q
+          \in all2-cons (all-cons q (all-map __.1 r)) (all2-cons t t')
+      }
+  }
+  \where {
+    \lemma diff-lem {A : DecSet} {P : Poset A} {l : List A} (s : Sorted l) {x : A} (y z : A) (p : x <= headDef y l) (q : x /= headDef z l) : All (x /=) l \elim l, s
+      | nil, sorted-nil => all-nil
+      | :: a l, sorted-cons a<=l s => all-cons q (diff-lem s _ _ (p <=∘ a<=l) (\lam t => q (<=-antisymmetric p (transportInv (a <=) t a<=l))))
+  }
+
+\lemma group_count-lem {A : DecSet} {P : Poset A} {l : List A} (s : Sorted l) : All (\lam p => p.2 = count l p.1) (group l) \elim l, s
+  | nil, sorted-nil => all-nil
+  | :: a l, sorted-cons a<=l s => mcases {2} {arg addPath} \with {
+    | nil, p => all-cons (rewrite (decideEq=_reduce idp, group_nil-lem p) idp) all-nil
+    | :: (a',n) l', p =>
+      \have (all-cons t t') => rewrite p in group_count-lem s
+      \in mcases {2} \with {
+        | yes e =>
+          \have (all2-cons t'' _) => rewrite p in group-diff s
+          \in all-cons (rewrite (decideEq=_reduce e) $ pmap suc t) $ all-implies t' $ all-implies t'' $ all-forall \lam q c d => rewrite (decideEq/=_reduce (\lam e' => c (inv e *> e'))) d
+        | no q =>
+          \have (all-cons _ t'') : All (\lam x => a /= x.1) ((a',n) :: l') => all-map __.1 (group-diff.diff-lem (rewrite p in group-sorted s) a a (transport (a <=) (group-sorted.head-lem p) a<=l) q)
+          \in all-cons (rewrite (decideEq=_reduce idp) $ pmap suc $ inv $ count.all-diff $ group-diff.diff-lem s a a a<=l $ rewrite (group-sorted.head-lem p) q) $
+                all-cons (rewrite (decideEq/=_reduce q) t) $ all-implies t' $ all-implies t'' $ all-forall \lam y c d => rewrite (decideEq/=_reduce c) d
+      }
+  }
+  \where {
+    \lemma group_nil-lem {A : DecSet} {l : List A} (p : group l = nil) : l = nil \elim l
+      | nil => idp
+      | :: a l => mcases {1} p _ \with {
+        | nil, ()
+        | :: ((a',n)) l', p' => mcases p' _ \with {
+          | yes p1, ()
+          | no n1, ()
+        }
+      }
+  }
+
+\module Sort \where {
+  \data Perm {A : \Type} (xs ys : List A) \elim xs, ys
+    | nil, nil => perm-nil
+    | :: x xs, :: y ys => perm-:: (x = y) (Perm xs ys)
+    | :: x (:: x' xs), :: y (:: y' ys) => perm-swap (x = y') (x' = y) (xs = ys)
+    | xs, ys => perm-trans {zs : List A} (Perm xs zs) (Perm zs ys)
+    \where {
+      \func perm-refl {A : \Type} {xs : List A} : Perm xs xs \elim xs
+        | nil => perm-nil
+        | :: a l => perm-:: idp perm-refl
+
+      \func perm-sym {A : \Type} {xs ys : List A} (p : Perm xs ys) : Perm ys xs \elim xs, ys, p
+        | nil, nil, perm-nil => perm-nil
+        | :: x xs, :: y ys, perm-:: p p1 => perm-:: (inv p) (perm-sym p1)
+        | :: x (:: x' xs), :: y (:: y' ys), perm-swap p p1 p2 => perm-swap (inv p1) (inv p) (inv p2)
+        | xs, ys, perm-trans p1 p2 => perm-trans (perm-sym p2) (perm-sym p1)
+
+      \func perm-head {A : \Type} {a : A} {xs ys : List A} : Perm (a :: xs ++ ys) (xs ++ a :: ys) \elim xs
+        | nil => perm-refl
+        | :: a1 xs => perm-trans (perm-swap idp idp idp) (perm-:: idp perm-head)
+
+      \lemma perm_length {A : \Type} {xs ys : List A} (p : Perm xs ys) : length xs = length ys \elim xs, ys, p
+        | nil, nil, perm-nil => idp
+        | x :: xs, y :: ys, perm-:: _ q => pmap suc (perm_length q)
+        | x :: (x' :: xs), y :: (y' :: _), perm-swap _ _ idp => idp
+        | xs, ys, perm-trans p1 p2 => perm_length p1 *> perm_length p2
+    }
+
+  \data Sorted {A : Preorder} (xs : List A) \elim xs
+    | nil => sorted-nil
+    | :: x xs => sorted-cons (x A.<= headDef x xs) (Sorted xs)
+    \where {
+      \lemma allSorted {A : Preorder} {a1 a2 : A} (l1 l2 : List A) (s : Sorted (a1 :: l1 ++ a2 :: l2)) : a1 A.<= a2
+        => aux a1 (a1 :: l1) l2 s
+        \where
+          \lemma aux {A : Preorder} (a' : A) {a : A} (l1 l2 : List A) (s : Sorted (l1 ++ a :: l2)) : headDef a' (l1 ++ a :: l2) A.<= a \elim l1, s
+            | nil, sorted-cons _ s => <=-refl
+            | :: a1 l1, sorted-cons a1<=h s => <=-transitive a1<=h (aux a1 l1 l2 s)
+
+      \lemma headSorted {A : Preorder} {l1 l2 : List A} (s : Sorted (l1 ++ l2)) : Sorted l1 \elim l1, s
+        | nil, _ => sorted-nil
+        | :: a l1, sorted-cons e s => sorted-cons (\case \elim l1, \elim e \with {
+          | nil, _ => <=-refl
+          | :: a1 l1, e => e
+        }) (headSorted s)
+
+      \lemma tailSorted {A : Preorder} (l1 l2 : List A) (s : Sorted (l1 ++ l2)) : Sorted l2 \elim l1, s
+        | nil, s => s
+        | :: a l1, sorted-cons _ s => tailSorted l1 l2 s
+    }
+
+  \open LinearOrder
+
+  \module Insertion \where {
+    \func sort {A : Dec} (xs : List A) : List A
+      | nil => nil
+      | :: a xs => insert a (sort xs)
+      \where {
+        \func insert {A : Dec} (a : A) (xs : List A) : List A \elim xs
+          | nil => a :: nil
+          | :: x xs => \case dec<_<= x a \with {
+            | inl x<a => x :: insert a xs
+            | inr a<=x => a :: x :: xs
+          }
+      }
+
+    \open sort
+
+    \lemma sort-sorted {A : Dec} (xs : List A) : Sorted (sort xs) \elim xs
+      | nil => sorted-nil
+      | :: a xs => insert-sorted a (sort-sorted xs)
+      \where {
+        \lemma insert-sorted {A : Dec} (a : A) {xs : List A} (s : Sorted xs) : Sorted (sort.insert a xs) \elim xs, s
+          | nil, _ => sorted-cons <=-refl sorted-nil
+          | :: a1 xs, sorted-cons p s1 \as s2 => mcases \with {
+            | inl a1<a => sorted-cons (\case \elim xs, \elim p \with {
+              | nil, _ => <=-less a1<a
+              | :: a2 xs, a1<=a2 => mcases \with {
+                | inl _ => a1<=a2
+                | inr _ => <=-less a1<a
+              }
+            }) (insert-sorted a s1)
+            | inr a<=a1 => sorted-cons a<=a1 s2
+          }
+      }
+
+    \func sort-perm {A : Dec} (xs : List A) : Perm xs (sort xs) \elim xs
+      | nil => perm-nil
+      | :: a l => perm-trans (perm-:: idp (sort-perm l)) (insert-perm a (sort l))
+      \where {
+        \func insert-perm {A : Dec} (a : A) (xs : List A) : Perm (a :: xs) (insert a xs) \elim xs
+          | nil => perm-:: idp perm-nil
+          | :: b xs => mcases \with {
+            | inl b<=a => perm-trans (perm-swap idp idp idp) (perm-:: idp (insert-perm a xs))
+            | inr a<=b => Perm.perm-refl
+          }
+
+        \lemma insert-comm {A : Dec} (a a' : A) (l : List A) : insert a (insert a' l) = insert a' (insert a l)
+          => \case trichotomy a a' \with {
+            | less a<a' => aux a<a' l
+            | equals a=a' => rewrite a=a' idp
+            | greater a>a' => inv (aux a>a' l)
+          } \where {
+            \lemma aux {A : Dec} {a a' : A} (a<a' : a < a') (l : List A) : insert a (insert a' l) = insert a' (insert a l) \elim l
+              | nil => mcases (idp <|> contradiction)
+              | :: a1 l => repeat {3} mcases (idp <|> contradiction <|> pmap (a1 ::) (aux a<a' l))
+          }
+      }
+
+    \lemma perm_sort {A : Dec} {xs ys : List A} (p : Perm xs ys) : sort xs = sort ys \elim xs, ys, p
+      | nil, nil, perm-nil => idp
+      | x :: xs, y :: ys, perm-:: p q => pmap2 insert p (perm_sort q)
+      | x :: (x' :: xs), _ :: (_ :: _), perm-swap idp idp idp => sort-perm.insert-comm x x' (sort xs)
+      | xs, ys, perm-trans p1 p2 => perm_sort p1 *> perm_sort p2
+
+    \lemma sorted_sort {A : Dec} {xs : List A} (s : Sorted xs) : sort xs = xs \elim xs, s
+      | nil, sorted-nil => idp
+      | x :: xs, sorted-cons p s => pmap (insert x) (sorted_sort s) *> \case \elim xs, \elim p \with {
+        | nil, p => idp
+        | a :: xs, x<=a => mcases \with {
+          | inl a<x => absurd $ <-irreflexive (a<x <∘l x<=a)
+          | inr x<=a => idp
+        }
+      }
+  }
+
+  \module RedBlack \where {
+    \func sort {A : Dec} (l : List A) => rbTreeToList (aux l rbLeaf) nil
+      \where {
+        \data Color | red | black
+
+        \data RBTree (A : \Type) | rbLeaf | rbBranch Color (RBTree A) A (RBTree A)
+
+        \func rbTreeToList {A : \Type} (t : RBTree A) (r : List A) : List A \elim t
+          | rbLeaf => r
+          | rbBranch _ t1 a t2 => rbTreeToList t1 (a :: rbTreeToList t2 r)
+
+        \func aux {A : Dec} (l : List A) (\strict r : RBTree A) : RBTree A \elim l
+          | nil => r
+          | :: a l => aux l (repaint (insert a r))
+
+        \func repaint {A : \Type} (t : RBTree A) : RBTree A
+          | rbBranch red l a r => rbBranch black l a r
+          | t => t
+
+        \func insert {A : Dec} (a : A) (t : RBTree A) : RBTree A \elim t
+          | rbLeaf => rbBranch red rbLeaf a rbLeaf
+          | rbBranch c l1 a1 l2 => \case dec<_<= a1 a \with {
+            | inl a1<a => balanceRight c l1 a1 (insert a l2)
+            | inr a<=a1 => balanceLeft c (insert a l1) a1 l2
+          }
+
+        \func balanceLeft {A : \Type} (c : Color) (\strict l : RBTree A) (v : A) (r : RBTree A) : RBTree A \elim c, l
+          | black, rbBranch red (rbBranch red a x b) y c => rbBranch red (rbBranch black a x b) y (rbBranch black c v r)
+          | black, rbBranch red a x (rbBranch red b y c) => rbBranch red (rbBranch black a x b) y (rbBranch black c v r)
+          | c, a => rbBranch c a v r
+
+        \func balanceRight {A : \Type} (c : Color) (l : RBTree A) (v : A) (\strict r : RBTree A) : RBTree A \elim c, r
+          | black, rbBranch red (rbBranch red b y c) z d => rbBranch red (rbBranch black l v b) y (rbBranch black c z d)
+          | black, rbBranch red b y (rbBranch red c z d) => rbBranch red (rbBranch black l v b) y (rbBranch black c z d)
+          | c, b => rbBranch c l v b
+      }
+
+    \open sort
+
+    \func toList {A : \Type} (t : RBTree A) : List A \elim t
+      | rbLeaf => nil
+      | rbBranch _ t1 a t2 => toList t1 ++ a :: toList t2
+      \where {
+        \lemma =rbTreeToList {A : \Set} (t : RBTree A) : rbTreeToList t nil = toList t
+          => aux t nil *> ++_nil
+          \where
+            \lemma aux {A : \Set} (t : RBTree A) (l : List A) : rbTreeToList t l = toList t ++ l \elim t
+              | rbLeaf => idp
+              | rbBranch c t1 a t2 => aux t1 (a :: rbTreeToList t2 l) *> pmap (toList t1 ++ a :: __) (aux t2 l) *> inv ++-assoc
+      }
+
+      \lemma sort=insert {A : Dec} (l : List A) : sort l = Insertion.sort l
+        => toList.=rbTreeToList _ *> aux=makeTree l nil *> pmap (\lam s => toList (makeTree s)) ++_nil *> toList_mkTree l
+        \where {
+          \func makeTree {A : Dec} (l : List A) : RBTree A \elim l
+            | nil => rbLeaf
+            | :: a l => repaint (insert a (makeTree l))
+
+          \lemma toList_repaint {A : \Set} (t : RBTree A) : toList (repaint t) = toList t \elim t
+            | rbLeaf => idp
+            | rbBranch red t1 a t2 => idp
+            | rbBranch black t1 a t2 => idp
+
+          \lemma toList_balanceLeft {A : \Set} (c : Color) (l : RBTree A) (v : A) (r : RBTree A)
+            : toList (balanceLeft c l v r) = toList (rbBranch c l v r)
+            => mcases {balanceLeft} equation
+
+          \lemma toList_balanceRight {A : \Set} (c : Color) (l : RBTree A) (v : A) (r : RBTree A)
+            : toList (balanceRight c l v r) = toList (rbBranch c l v r)
+            => mcases {balanceRight} equation
+
+          \lemma insert_++-left {A : Dec} {a a1 : A} (a<=a1 : a <= a1) {l1 l2 : List A} (s : Sorted (l1 ++ a1 :: l2))
+            : Insertion.sort.insert a (l1 ++ a1 :: l2) = Insertion.sort.insert a l1 ++ a1 :: l2 \elim l1, s
+            | nil, _ => rewrite (dec<=_reduce a<=a1) idp
+            | :: a2 l1, sorted-cons _ s => mcases \with {
+              | inl a2<a => pmap (a2 ::) (insert_++-left a<=a1 s)
+              | inr a<=a2 => idp
+            }
+
+          \lemma insert_++-right {A : Dec} {a a1 : A} (a1<a : a1 < a) {l1 l2 : List A} (s : Sorted (l1 ++ a1 :: l2))
+            : Insertion.sort.insert a (l1 ++ a1 :: l2) = l1 ++ a1 :: Insertion.sort.insert a l2 \elim l1, s
+            | nil, _ => rewrite (dec<_reduce a1<a) idp
+            | :: a' l1, sorted-cons _ s1 \as s2 => rewrite (dec<_reduce (Sorted.allSorted l1 l2 s2 <∘r a1<a)) (pmap (a' ::) (insert_++-right a1<a s1))
+
+          \lemma toList_insert' {A : Dec} (a : A) (t : RBTree A) (s : Sorted (toList t)) : toList (insert a t) = Insertion.sort.insert a (toList t) \elim t
+            | rbLeaf => idp
+            | rbBranch c t1 a1 t2 => mcases \with {
+              | inl a1<a => toList_balanceRight _ _ _ _ *> pmap (toList t1 ++ a1 :: __) (toList_insert' a t2 (Sorted.tailSorted (a1 :: nil) _ (Sorted.tailSorted _ _ s))) *> inv (insert_++-right a1<a s)
+              | inr a<=a1 => toList_balanceLeft _ _ _ _ *> pmap (__ ++ a1 :: toList t2) (toList_insert' a t1 (Sorted.headSorted s)) *> inv (insert_++-left a<=a1 s)
+            }
+
+          \lemma toList_mkTree {A : Dec} (l : List A) : toList (makeTree l) = Insertion.sort l \elim l
+            | nil => idp
+            | :: a l => toList_repaint (insert a (makeTree l)) *> toList_insert' a (makeTree l) (rewrite toList_mkTree (Insertion.sort-sorted l)) *> pmap (Insertion.sort.insert a) (toList_mkTree l)
+
+          \lemma makeTree-sorted {A : Dec} (l : List A) : Sorted (toList (makeTree l))
+            => rewrite toList_mkTree (Insertion.sort-sorted l)
+
+          \lemma toList_insert {A : Dec} (a : A) (l : List A) : toList (insert a (makeTree l)) = Insertion.sort.insert a (toList (makeTree l))
+            => toList_insert' a (makeTree l) (makeTree-sorted l)
+
+          \lemma makeTree_insert {A : Dec} (a : A) (l l' : List A) : toList (makeTree (l ++ a :: l')) = toList (repaint (insert a (makeTree (l ++ l')))) \elim l
+            | nil => idp
+            | :: a' l => toList_repaint _ *> toList_insert a' _ *> pmap (Insertion.sort.insert a') (makeTree_insert a l l' *> toList_repaint _ *> toList_insert a _) *> Insertion.sort-perm.insert-comm a' a _ *> inv (
+                           toList_repaint _ *>
+                           toList_insert' a _ (transportInv Sorted (toList_repaint _ *> toList_insert a' _) (Insertion.sort-sorted.insert-sorted a' (makeTree-sorted _))) *>
+                           pmap (Insertion.sort.insert a) (toList_repaint _ *> toList_insert a' _))
+
+          \lemma aux=makeTree {A : Dec} (l l' : List A) : toList (aux l (makeTree l')) = toList (makeTree (l ++ l')) \elim l
+            | nil => idp
+            | :: a l => aux=makeTree l (a :: l') *> makeTree_insert a l l'
+        }
+  }
+}
+
+\func contains {A : DecSet} (l : List A) (a : A) : Bool \elim l
+  | nil => false
+  | b :: l => \case decideEq b a \with {
+    | yes _ => true
+    | no _ => contains l a
+  }
+
+\func union {A : DecSet} (l l' : List A) : List A \elim l
+  | nil => l'
+  | a :: l => if (contains l' a) (union l l') (a :: union l l')
+
+\truncated \data InList {A : \Type} (a : A) (l : List A) : \Prop \elim l
+  | a' :: l => { here (a = a') | there (InList a l) }
+  \where {
+    \func \infix 4 ~ {A : \Type} (l l' : List A) => \Pi (a : A) -> InList a l <-> InList a l'
+
+    \lemma ~_:: {A : \Type} {a : A} {l l' : List A} (p : l ~ l') : a :: l ~ a :: l'
+      => \lam b => (InList_:: (p b).1, InList_:: (p b).2)
+      \where
+        \lemma InList_:: {A : \Type} {a b : A} {l l' : List A} (p : InList b l -> InList b l') (c : InList b (a :: l)) : InList b (a :: l') \elim c
+          | here q => here q
+          | there c => there (p c)
+  }
+
+\lemma InList_++ {A : \Type} {a : A} {l l' : List A} (p : InList a (l ++ l')) : InList a l || InList a l' \elim l, p
+  | nil, p => byRight p
+  | a' :: l, here p => byLeft (here p)
+  | a' :: l, there p => ||.map there id (InList_++ p)
+
+\lemma InList_++-left {A : \Type} {a : A} {l l' : List A} (p : InList a l) : InList a (l ++ l') \elim l, p
+  | a' :: l, here p => here p
+  | a' :: l, there p => there (InList_++-left p)
+
+\lemma InList_++-right {A : \Type} {a : A} {l l' : List A} (p : InList a l') : InList a (l ++ l') \elim l
+  | nil => p
+  | a' :: l => there (InList_++-right p)
+
+\open InList
+
+\lemma contains_InList {A : DecSet} {a : A} {l : List A} : (contains l a = true) <-> InList a l \elim l
+  | nil => ((\case __), \case __)
+  | a' :: l => (\lam p => cases (decideEq a' a, p) \with {
+    | yes e, _ => here (inv e)
+    | no _, p => there (contains_InList.1 p)
+  }, \lam p => mcases \with {
+    | yes _ => idp
+    | no q => \case \elim p \with {
+      | here p => absurd $ q (inv p)
+      | there p => contains_InList.2 p
+    }
+  })
+
+\lemma union~++ {A : DecSet} {l l' : List A} : union l l' ~ l ++ l' \elim l
+  | nil => \lam a => (id,id)
+  | a :: l => cases (contains l' a arg addPath) \with {
+    | false, _ => ~_:: union~++
+    | true, q => \lam b => (\lam c => there ((union~++ b).1 c), \case __ \with {
+      | here p => (union~++ b).2 $ InList_++-right $ rewrite p (contains_InList.1 q)
+      | there p => (union~++ b).2 p
+    })
+  }

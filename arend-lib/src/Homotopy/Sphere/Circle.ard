@@ -1,0 +1,96 @@
+\import Arith.Int
+\import Equiv
+\import Homotopy.Cube
+\import Homotopy.Pushout
+\import Homotopy.Sphere
+\import Homotopy.Suspension
+\import Paths
+\import Paths.Meta
+
+\data Sphere1
+  | base1
+  | loop : base1 = base1
+  \where
+    \func ploop => path loop
+
+\func OmegaS1 => base1 = base1
+
+\func Sphere1-equiv : QEquiv {Sphere1} {Sphere 1} \cowith
+  | f => CircleSusp
+  | ret => SuspCircle
+  | ret_f => CircleSuspCircle
+  | f_sec => SuspCircleSusp
+  \where {
+    \open Sphere1 (ploop)
+
+    \func CircleSusp (x : Sphere1) : Sphere 1
+      | base1 => north
+      | loop => pmerid north *> inv (pmerid south)
+
+    \func SuspCircle (x : Sphere 1) : Sphere1
+      | north => base1
+      | south => base1
+      | pglue north i => loop i
+      | pglue south i => base1
+      | pglue (pglue () _) _
+
+    \func CircleSuspCircle (x : Sphere1) : SuspCircle (CircleSusp x) = x
+      | base1 => idp
+      | loop i =>
+        \have p =>
+            pmap SuspCircle (pmerid north *> inv (pmerid south)) ==< pmap_*>-comm SuspCircle (pmerid north) (inv (pmerid south)) >==
+            ploop *> pmap SuspCircle (inv (pmerid south))        ==< pmap (ploop *>) (pmap_inv-comm SuspCircle (pmerid south)) >==
+            ploop                                                `qed
+        \in path (p @ __ @ i)
+
+    \func SuspCircleSusp (x : Sphere 1) : CircleSusp (SuspCircle x) = x
+      | north => idp
+      | south => pmerid south
+      | pglue north i => path (Cube2.map (pmerid north *> inv (pmerid south)) (pmerid north) idp (pmerid south) idp @ __ @ i)
+      | pglue south i => path (\lam j => pglue south (I.squeeze i j))
+      | pglue (pglue () _) _
+  }
+
+\func code (x : Sphere1) : \Set0
+  | base1 => Int
+  | loop i => iso isuc ipred ipred_isuc isuc_ipred i
+
+\func encode (x : Sphere1) (p : base1 = x) => transport code p 0
+
+\func wind (x : Int) : OmegaS1
+  | pos 0 => idp
+  | pos (suc n) => wind (pos n) *> path loop
+  | neg (suc n) => wind (neg n) *> inv (path loop)
+
+\func decode (x : Sphere1) : code x -> base1 = x \elim x
+  | base1 => wind
+  | loop => pathOver decode_loop
+  \where {
+    \func wind_loop (n : Int) : wind n *> path loop = wind (isuc n)
+      | pos _ => idp
+      | neg (suc n) => *>-assoc (wind (neg n)) (inv (path loop)) (path loop) *> pmap (wind (neg n) *>) (inv_*> (path loop))
+
+    \func decode_loop : transport (\lam x => code x -> base1 = x) (path loop) wind = wind
+      => simp_coe (\lam c => simp_coe (wind_loop c))
+  }
+
+\func encode_decode {x : Sphere1} (p : base1 = x) : decode x (encode x p) = p
+  | idp => idp
+
+\func encode_wind (x : Int) : encode base1 (wind x) = x
+  | pos (suc m) =>
+      encode base1 (wind (pos m) *> path loop)                 ==< transport_*> code (wind (pos m)) (path loop) 0 >==
+      transport code (path loop) (encode base1 (wind (pos m))) ==< pmap (transport code (path loop)) (encode_wind (pos m)) >==
+      pos (suc m)                                             `qed
+  | pos zero => idp
+  | neg (suc m) =>
+      encode base1 (wind (neg m) *> inv (path loop))                 ==< transport_*> code (wind (neg m)) (inv (path loop)) 0 >==
+      transport code (inv (path loop)) (encode base1 (wind (neg m))) ==< pmap (transport code (inv (path loop))) (encode_wind (neg m)) >==
+      transport code (inv (path loop)) (neg m)                       ==< transport_inv_func code (path loop) ipred ipred_isuc (neg m) >==
+      neg (suc m)                                                    `qed
+
+\func decode_encode (x : Sphere1) (c : code x) : encode x (decode x c) = c \elim x
+  | base1 => encode_wind c
+
+\func Loop_S1 : OmegaS1 = Int =>
+  path (iso (encode base1) wind encode_decode encode_wind)

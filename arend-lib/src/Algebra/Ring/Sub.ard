@@ -1,0 +1,68 @@
+\import Algebra.Group
+\import Algebra.Group.Sub
+\import Algebra.Monoid
+\import Algebra.Monoid.Category
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring.Sub
+\import HLevel
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+
+\class SubPseudoRing \extends SubPseudoSemiring, SubAddGroup {
+  \override S : PseudoRing
+
+  \func struct : PseudoRing \cowith
+    | PseudoSemiring => SubPseudoSemiring.struct
+    | AbGroup => SubAddGroup.abStruct \this
+} \where {
+  \func cStruct {R : PseudoCRing} (S : SubPseudoRing R) : PseudoCRing \cowith
+    | PseudoRing => S.struct
+    | *-comm => ext *-comm
+}
+
+\class SubRing \extends SubPseudoRing, SubSemiring {
+  \override S : Ring
+
+  \func struct : Ring \cowith
+    | Semiring => SubSemiring.struct
+    | AbGroup => SubAddGroup.abStruct \this
+
+  \func corestrict {R : Ring} (f : RingHom R S) (p : \Pi (x : R) -> contains (f x)) : RingHom R struct \cowith
+    | func x => (f x, p x)
+    | func-+ => ext f.func-+
+    | func-ide => ext f.func-ide
+    | func-* => ext f.func-*
+
+  \func embed : RingHom struct S \cowith
+    | func => __.1
+    | func-+ => idp
+    | func-ide => idp
+    | func-* => idp
+} \where {
+  \func cStruct {R : CRing} (S : SubRing R) : CRing \cowith
+    | Ring => S.struct
+    | PseudoCRing => SubPseudoRing.cStruct S
+
+  \func max {R : Ring} : SubRing \cowith
+    | SubSemiring => SubSemiring.max {R}
+    | SubAddGroup => SubAddGroup.max
+
+  \lemma isContr {R : Ring} {S : SubRing R} (c : Contr R) : Contr S.struct \cowith
+    | center => (c.center, rewrite (c.contraction 1) contains_ide)
+    | contraction x => ext (c.contraction _)
+
+  \lemma comm-isContr {R : CRing} {S : SubRing R} (c : Contr R) : Contr (cStruct S) \cowith
+    | center => (c.center, rewrite (c.contraction 1) contains_ide)
+    | contraction x => ext (c.contraction _)
+}
+
+\func ringHomImage (f : RingHom) : SubRing f.Cod \cowith
+  | contains y => ∃ (x : f.Dom) (f x = y)
+  | contains_zro => inP (0, f.func-zro)
+  | contains_+ (inP (x1,p1)) (inP (x2,p2)) => inP (x1 + x2, f.func-+ *> pmap2 (+) p1 p2)
+  | contains_ide => inP (1, f.func-ide)
+  | contains_* (inP (x1,p1)) (inP (x2,p2)) => inP (x1 * x2, f.func-* *> pmap2 (*) p1 p2)
+  | contains_negative (inP (x,p)) => inP (negative x, f.func-negative *> pmap negative p)

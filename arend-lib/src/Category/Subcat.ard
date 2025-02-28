@@ -1,0 +1,83 @@
+\import Category
+\import Category.Adjoint
+\import Category.Functor
+\import Category.Limit
+\import Equiv
+\import Function.Meta
+\import Homotopy.Fibration
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\func subPrecat {C : Precat} {X : \hType obj} (f : X -> C) : Precat X \cowith
+  | Hom x y => Hom (f x) (f y)
+  | id x => id (f x)
+  | o h g => o h g
+  | id-left => id-left
+  | id-right => id-right
+  | o-assoc => o-assoc
+  \where {
+    \func embedding {C : Precat} {X : \hType obj} (f : X -> C) : FullyFaithfulFunctor (subPrecat f) C f \cowith
+      | Func h => h
+      | Func-id => idp
+      | Func-o => idp
+      | isFullyFaithful => idEquiv
+
+    \func pred {C : Precat} (P : C -> \Prop) => subPrecat (Total.proj P)
+      \where
+        \func embedding {C : Precat} (P : C -> \Prop) => subPrecat.embedding (Total.proj P)
+
+    \func funcLift {C D : Precat} {X : \hType} (f : X -> D) (g : C -> X) (G : Functor C D) (p : \Pi {a : C} -> Iso {D} {f (g a)} {G a}) : Functor C (subPrecat f) g \cowith
+      | Func h => p.hinv ∘ G.Func h ∘ p.f
+      | Func-id => rewrite (G.Func-id, id-right) p.hinv_f
+      | Func-o => rewrite G.Func-o $ later (rewrite (p.f_hinv, id-left) $ pmap (`∘ _) (inv o-assoc) *> o-assoc) *> pmap (_ ∘) (pmap (`∘ _) o-assoc *> o-assoc) *> inv o-assoc
+  }
+
+\func subCat {C : Cat} {X : \hType obj} (e : Embedding {X} {C}) : Cat \cowith
+  | Precat => subPrecat e
+  | univalence => Cat.makeUnivalence $ later \lam (j : Iso) =>
+    \have (t,r) => Cat.univalenceToTransport (\new Iso j.f j.hinv j.hinv_f j.f_hinv)
+    \in (sec {e.isEmb j.dom j.cod} t, pmap (transport (Hom (e j.dom)) __ (id (e j.dom))) (f_sec {e.isEmb j.dom j.cod} t) *> r)
+
+\class ReflectiveSubPrecat \extends FullyFaithfulFunctor, RightAdjoint {
+  | reflector : D -> C
+  | reflectorMap (X : D) : Hom X (F (reflector X))
+  \field isReflective {X : D} {Y : C} : Equiv {Hom (reflector X) Y} {Hom X (F Y)} (Func __ ∘ reflectorMap X)
+  | LAdj {
+      | F => reflector
+      | Func {X} {Y} h => isReflective.ret (reflectorMap Y ∘ h)
+      | Func-id => rewrite id-right (unfold (rewrite (Func-id, id-left) idp) *> isReflective.ret_f (id _))
+      | Func-o => run {
+          isReflective.isInj,
+          unfold,
+          rewrite (isReflective.f_ret, Func-o, o-assoc, isReflective.f_ret),
+          rewriteI {2} o-assoc,
+          rewrite isReflective.f_ret,
+          inv o-assoc
+        }
+    }
+  | eta {
+    | trans => reflectorMap
+    | natural h => inv (isReflective.f_ret _)
+  }
+  | isAdjoint => isReflective
+} \where {
+    \func fromRightAdjoint (F : RightAdjoint) {ff : FullyFaithfulFunctor { | Functor => F }} : ReflectiveSubPrecat \cowith
+      | FullyFaithfulFunctor => ff
+      | reflector => F.LAdj
+      | reflectorMap => F.eta
+      | isReflective => isAdjoint
+  }
+
+\func reflectiveSubPrecatColimit {J : Precat} (I : ReflectiveSubPrecat) (F : Functor J I.C) (c : Colimit (Comp I F)) : Limit F.op \cowith
+  | apex => I.reflector c.apex
+  | coneMap j => I.inverse (reflectorMap _ ∘ c.coneMap j)
+  | coneCoh h => I.isFaithful $ run {
+    rewrite I.Func-o,
+    repeat {2} (rewrite I.inverse-right),
+    rewrite o-assoc,
+    pmap (_ ∘) (c.coneCoh h)
+  }
+  | limMap {z} c' => I.isReflective.ret (c.limMap (Cone.map I.op {J.op} c'))
+  | limBeta c' j => I.isFullyFaithful.isInj $ Func-o *> pmap (_ ∘) I.inverse-right *> inv o-assoc *> pmap (`∘ _) (I.isReflective.f_ret _) *> c.limBeta (Cone.map I.op {J.op} c') j
+  | limUnique {z} {f} {g} p => inv (I.isReflective.ret_f f) *> pmap I.isReflective.ret (c.limUnique \lam j => o-assoc *> (rewrite I.inverse-right in inv I.Func-o *> pmap I.Func (p j) *> I.Func-o) *> inv o-assoc) *> I.isReflective.ret_f g

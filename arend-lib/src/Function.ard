@@ -1,0 +1,49 @@
+\import Arith.Nat
+\import Logic
+\import Logic.Meta
+\import Order.StrictOrder
+\import Paths
+
+\func id {A : \Type} => \lam (x : A) => x
+
+\func -o {A B C : \Type} (f : A -> B) => \lam (g : B -> C) x => g (f x)
+
+\func o- {A B C : \Type} (g : B -> C) => \lam (f : A -> B) x => g (f x)
+
+\func \infixr 8 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam x => g (f x)
+
+\func iterl {A : \Type} (f : A -> A) (n : Nat) (a : A) : A \elim n
+  | 0 => a
+  | suc n => iterl f n (f a)
+
+\func iterr {A : \Type} (f : A -> A) (n : Nat) (a : A) : A \elim n
+  | 0 => a
+  | suc n => f (iterr f n a)
+
+\func iterr-ind {A : \Type} {P : A -> \Type} {f : A -> A} {a0 : A} (p0 : P a0) (s : \Pi {a : A} -> P a -> P (f a)) (n : Nat) : P (iterr f n a0) \elim n
+  | 0 => p0
+  | suc n => s (iterr-ind p0 s n)
+
+\func iterr-index-ind {A : \Type} {P : Nat -> A -> \Type} {f : A -> A} {a0 : A} (p0 : P 0 a0) (s : \Pi {n : Nat} {a : A} -> P n a -> P (suc n) (f a)) (n : Nat) : P n (iterr f n a0) \elim n
+  | 0 => p0
+  | suc n => s (iterr-index-ind p0 s n)
+
+\func isInj {A B : \Set} (f : A -> B) => \Pi {a a' : A} -> f a = f a' -> a = a'
+
+\lemma iterr_inj {A : \Set} (f : A -> A) (inj : isInj f) (a : A) (n m : Nat) (p : n < m) (q : iterr f n a = iterr f m a) : a = iterr f (suc (pred (m -' n))) a \elim n, m, p
+  | 0, suc m, NatSemiring.zero<suc => q
+  | suc n, suc m, NatSemiring.suc<suc p => iterr_inj f inj a n m p (inj q)
+
+\func isSurj {A B : \Type} (f : A -> B) => \Pi (y : B) -> ∃ (x : A) (f x = y)
+  \where {
+    \lemma comp {A B C : \Type} {f : A -> B} (fs : isSurj f) {g : B -> C} (gs : isSurj g) : isSurj (g o f)
+      => \lam z => \have | (inP (y,gy=z)) => gs z
+                         | (inP (x,fx=y)) => fs y
+                   \in inP (x, pmap g fx=y *> gy=z)
+  }
+
+\func assuming {A B : \Type} (f : (A -> B) -> B) (g : A -> B) => f g
+
+\type Image {A B : \Type} (f : A -> B) => \Sigma (b : B) (∃ (a : A) (f a = b))
+
+\meta flip f a b => f b a

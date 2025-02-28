@@ -1,0 +1,79 @@
+\import Category
+\import Category.Meta
+\import Function ()
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths.Meta
+\import Set
+\import Set.Category
+
+\record PosetHom \extends SetHom {
+  \override Dom : Poset
+  \override Cod : Poset
+  | func-<= {x y : Dom} : x <= y -> func x <= func y
+}
+
+\instance PosetCat : Cat
+  | Ob => Poset
+  | Hom P1 P2 => PosetHom P1 P2
+  | id (P : Poset) : PosetHom P P \cowith {
+    | func x => x
+    | func-<= leq => leq
+  }
+  | o f g => \new PosetHom {
+    | func => f Function.o g
+    | func-<= leq => func-<= (func-<= leq)
+  }
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip (\lam {_} {_} {_} p p1 => ext (ext (\lam _ _ => ext (\lam _x => func-<= {p} _x, \lam _x => func-<= {p1} _x)))) \where {
+}
+
+\record StrictPosetHom \extends SetHom {
+  \override Dom : StrictPoset
+  \override Cod : StrictPoset
+  | func-< {x y : Dom} : x < y -> func x < func y
+}
+
+\instance StrictPosetCat : Cat
+  | Ob => StrictPoset
+  | Hom P1 P2 => StrictPosetHom P1 P2
+  | id (P : StrictPoset) : StrictPosetHom P P \cowith {
+    | func x => x
+    | func-< leq => leq
+  }
+  | o f g => \new StrictPosetHom {
+    | func => f Function.o g
+    | func-< leq => func-< (func-< leq)
+  }
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip (\lam {_} {_} {_} p p1 => ext (ext (\lam _ _ => ext (\lam _x => func-< {p} _x, \lam _x => func-< {p1} _x)))) \where {
+}
+
+\instance DecLinearOrderCat : Cat
+  | Ob => LinearOrder.Dec
+  | Hom E1 E2 => PosetHom E1 E2
+  | id X => \new PosetHom X X {
+    | func x => x
+    | func-<= x => x
+  }
+  | o f g => \new PosetHom {
+    | func x => f (g x)
+    | func-<= p1 => func-<= {f} (func-<= {g} p1)
+  }
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam {A} {S1 S2 : LinearOrder.Dec} (f : PosetHom) (g : PosetHom) => ext LinearOrder.Dec {
+    | < => ext \lam _ _ => ext (\lam l => LinearOrder.<=_/= (f.func-<= (LinearOrder.<_<= l)) (StrictPoset.<_/= l),
+                                \lam l => LinearOrder.<=_/= (g.func-<= (LinearOrder.<_<= l)) (StrictPoset.<_/= l))
+    | meet => ext \lam _ _ => S1.<=-antisymmetric (g.func-<= (meet-univ (f.func-<= meet-left) (f.func-<= meet-right))) (meet-univ (g.func-<= meet-left) (g.func-<= meet-right))
+    | join => ext \lam _ _ => S2.<=-antisymmetric (f.func-<= (join-univ (g.func-<= join-left) (g.func-<= join-right))) (join-univ (f.func-<= join-left) (f.func-<= join-right))
+    | # => ext \lam _ _ => ext (\lam a => nonEqualApart (Set#.apartNotEqual a),
+                                \lam a => nonEqualApart (Set#.apartNotEqual a))
+  }

@@ -1,0 +1,265 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Category
+\import Algebra.Monoid.GCD
+\import Algebra.Monoid.Sub
+\import Algebra.Ring
+\import Algebra.Ring.Localization
+\import Algebra.Ring.Reduced
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function
+\import Function.Meta ($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\open Monoid
+
+{- | Domain is a ring with a tight apartness relation such that elements apart from {zro} are closed under finite products.
+ -   Classically, this is equivalent to the usual definition since there is a unique apartness relation on a set assuming LEM.
+ -}
+\class Domain \extends Ring.With#, ImpotentRing, NonZeroRing {
+  | zro#ide : ide `#0
+  | #0-* {x y : E} : x `#0 -> y `#0 -> (x * y) `#0
+
+  | isReduced p => #0-tight \lam a#0 => #0-zro $ transport #0 p (#0-* a#0 a#0)
+  | isImpotent {a} p => \have q : a * (1 - a) = 0 => ldistr_- *> toZero (ide-right *> inv p)
+                        \in \case #0-+ (transportInv #0 (+-comm *> +-assoc *> pmap (1 +) negative-left *> zro-right) zro#ide) \with {
+                          | byLeft a#0 => byRight $ inv $ fromZero $ #0-tight \lam zro-a#0 => apartNonZero (#0-* a#0 zro-a#0) q
+                          | byRight zro-a#0 => byLeft $ #0-tight \lam a#0 => apartNonZero (#0-* a#0 zro-a#0) q
+                        }
+
+  \default zro/=ide zro=ide => #0-zro (transportInv #0 zro=ide zro#ide)
+
+  \lemma nonZero_* {x y : E} (x/=0 : x /= zro) (y/=0 : y /= zro) : x * y /= zro => \lam x*y=0 =>
+    x/=0 (#0-tight (\lam x#0 =>
+    y/=0 (#0-tight (\lam y#0 =>
+        #0-zro (transport #0 x*y=0 (#0-* x#0 y#0))))))
+
+  \lemma nonZero-left {x y : E} (x/=0 : x /= zro) (x*y=0 : x * y = zro) : y = zro
+    => separatedEq (nonZero_* x/=0 __ x*y=0)
+
+  \lemma nonZero-right {x y : E} (y/=0 : y /= zro) (x*y=0 : x * y = zro) : x = zro
+    => separatedEq (nonZero_* __ y/=0 x*y=0)
+
+  \lemma nonZero-cancel-left {x y z : E} (x/=0 : x /= zro) (x*y=x*z : x * y = x * z) : y = z
+    => fromZero (nonZero-left x/=0 (ldistr_- *> toZero x*y=x*z))
+
+  \lemma nonZero-cancel-right {x y z : E} (z/=0 : z /= zro) (x*z=y*z : x * z = y * z) : x = y
+    => fromZero (nonZero-right z/=0 (rdistr_- *> toZero x*z=y*z))
+
+  \func nonZeroMonoid : CancelMonoid \cowith
+    | E => \Sigma (x : E) (x `#0)
+    | ide => (ide, zro#ide)
+    | * x y => (x.1 * y.1, #0-* x.2 y.2)
+    | ide-left => ext ide-left
+    | ide-right => ext ide-right
+    | *-assoc => ext *-assoc
+    | cancel_*-left x {y} {z} x*y=x*z => ext (nonZero-cancel-left (apartNonZero x.2) (pmap __.1 x*y=x*z))
+    | cancel_*-right z {x} {y} x*z=y*z => ext (nonZero-cancel-right (apartNonZero z.2) (pmap __.1 x*z=y*z))
+
+  \func subMonoid : SubMonoid \this \cowith
+    | contains => #0
+    | contains_ide => zro#ide
+    | contains_* => #0-*
+
+  \lemma ldiv_nonZero {a b : nonZeroMonoid} (a|b : Monoid.LDiv a.1 b.1) : Monoid.LDiv {nonZeroMonoid} a b \cowith
+    | inv => (a|b.inv, #0-*-right (transportInv #0 a|b.inv-right b.2))
+    | inv-right => ext a|b.inv-right
+
+  \func nonZero_ldiv {a b : nonZeroMonoid} (a|b : Monoid.LDiv {nonZeroMonoid} a b) : Monoid.LDiv a.1 b.1 \cowith
+    | inv => a|b.inv.1
+    | inv-right => pmap __.1 a|b.inv-right
+
+  \lemma inv_nonZero {a : nonZeroMonoid} (i : Monoid.Inv a.1) : Monoid.Inv {nonZeroMonoid} a \cowith
+    | inv => (i.inv, #0-*-right (transportInv #0 i.inv-right zro#ide))
+    | inv-left => ext i.inv-left
+    | inv-right => ext i.inv-right
+
+  \lemma nonZero_inv {a : nonZeroMonoid} (i : Monoid.Inv {nonZeroMonoid} a) : Monoid.Inv a.1 \cowith
+    | inv => i.inv.1
+    | inv-left => pmap __.1 i.inv-left
+    | inv-right => pmap __.1 i.inv-right
+
+  \lemma pow_#0 {a : E} {n : Nat} (a#0 : a `#0) : pow a n `#0 \elim n
+    | 0 => zro#ide
+    | suc n => #0-* (pow_#0 a#0) a#0
+} \where {
+  \class Dec \extends Domain, Ring.Dec, StrictDomain {
+    \default zeroProduct {x} {y} xy=0 => \case decideEq x zro, decideEq y zro \with {
+      | yes x=0, _ => byLeft x=0
+      | _, yes y=0 => byRight y=0
+      | no x/=0, no y/=0 => absurd $ #0-zro $ transport #0 xy=0 $ #0-* (nonZeroApart x/=0) (nonZeroApart y/=0)
+    }
+    \default zro#ide => nonZeroApart (\lam x => zro/=ide (inv x))
+    \default #0-* x#0 y#0 => nonZeroApart (\lam xy=0 => ||.rec' (apartNonZero x#0) (apartNonZero y#0) (zeroProduct xy=0))
+
+    \func LDiv_TruncP {a b : E} (p : TruncP (LDiv a b)) : LDiv a b
+      => \case decideEq a 0 \with {
+        | yes a=0 => LDiv.make 1 \case p \with {
+          | inP (_,q) => later (rewrite a=0 simplify) *> q
+        }
+        | no a/=0 => TruncP.remove (\lam d d' => ext $ nonZero-cancel-left a/=0 $ LDiv.inv-right {d} *> inv (LDiv.inv-right {d'})) p
+      }
+  }
+}
+
+-- | An integral domain is a commutative domain.
+\class IntegralDomain \extends Domain, CRing.With#, ImpotentCRing, NonZeroCRing {
+  \func nonZeroMonoid : CancelCMonoid \cowith
+    | CancelMonoid => Domain.nonZeroMonoid
+    | *-comm => ext *-comm
+
+  \lemma div-inv (x y : E) (x/=0 : x /= zro) (x|y : LDiv x y) (y|x : LDiv y x) : Inv x|y.inv
+    => Inv.rmake y|x.inv (Domain.nonZero-cancel-left x/=0 (equation {Monoid}))
+
+  \func gcd_nonZero {a b : nonZeroMonoid} (gcd : GCD a.1 b.1) : GCD {nonZeroMonoid} a b \cowith
+    | gcd => (gcd.gcd, #0-*-left (transportInv #0 gcd.gcd|val1.inv-right a.2))
+    | gcd|val1 => ldiv_nonZero gcd.gcd|val1
+    | gcd|val2 => ldiv_nonZero gcd.gcd|val2
+    | gcd-univ g g|a g|b => ldiv_nonZero $ gcd.gcd-univ g.1 (nonZero_ldiv g|a) (nonZero_ldiv g|b)
+
+  \func nonZero_gcd {a b : nonZeroMonoid} (gcd : GCD {nonZeroMonoid} a b) : GCD a.1 b.1 \cowith
+    | gcd => gcd.gcd.1
+    | gcd|val1 => nonZero_ldiv gcd.gcd|val1
+    | gcd|val2 => nonZero_ldiv gcd.gcd|val2
+    | gcd-univ g (g|a : LDiv g a.1) g|b => nonZero_ldiv {_} {g, #0-*-left $ transportInv #0 g|a.inv-right a.2} $ gcd.gcd-univ _ (ldiv_nonZero g|a) (ldiv_nonZero g|b)
+
+  \lemma divQuotient_LDiv {x y : DivQuotient nonZeroMonoid} : TruncP (LDiv {DivQuotientMonoid \this} (map subMonoid.embed x) (map subMonoid.embed y)) <-> TruncP (LDiv {DivQuotientMonoid nonZeroMonoid} x y) \elim x, y
+    | in~ x, in~ y => (\case __ \with {
+      | inP (in~ z, p) => TruncP.map (make~ p).2 \lam s => div-to~ $ ldiv_nonZero $ LDiv.trans (LDiv.factor-left LDiv.id-div) s
+    }, \case __ \with {
+      | inP (in~ z, p) => TruncP.map (make~ p).2 \lam (xz|y : LDiv (x nonZeroMonoid.* z) y) =>
+          \new LDiv (map subMonoid.embed (inD {nonZeroMonoid} x)) (map subMonoid.embed (inD {nonZeroMonoid} y)) (inD (z.1 * xz|y.inv.1)) $ pmap inD $ inv *-assoc *> pmap __.1 xz|y.inv-right
+    })
+
+  \lemma toNonZeroDivChain (cc : CMonoid.DivChain {DivQuotientMonoid \this}) : CMonoid.DivChain {DivQuotientMonoid nonZeroMonoid}
+    => \lam a d => \have | (inP s) => cc (\lam i => map subMonoid.embed (a i)) \lam i => divQuotient_LDiv.2 (d i)
+                         | (inP d) => divQuotient_LDiv.1 (inP s.2)
+                   \in inP (s.1, d)
+
+  \lemma IsRegular_/=0 {a : E} : IsRegular a <-> a /= 0
+    => (\lam ar a=0 => zro/=ide $ ar (rewrite a=0 simplify), \lam a/=0 p => nonZero-cancel-left a/=0 p)
+} \where {
+  \open DivQuotient
+
+  \class Dec \extends IntegralDomain, Domain.Dec, CRing.Dec, StrictIntegralDomain, PPRing {
+    | isPPRing a => inP \case decideEq a 0 \with {
+      | yes a=0 => (0, rewrite a=0 (inv zro_*-left), \lam _ => zro_*-left)
+      | no a/=0 => (1, inv ide-left, \lam p => ide-left *> nonZero-left a/=0 p)
+    }
+
+    \lemma fromNonZeroDivChain (cc : CMonoid.DivChain {DivQuotientMonoid nonZeroMonoid}) : CMonoid.DivChain {DivQuotientMonoid \this}
+      => \lam a ac =>
+          \have | f => map {SubMonoid.cStruct subMonoid} subMonoid.embed
+                | f-inj : isInj f => \lam {x} {y} => \case \elim x, \elim y \with {
+                  | in~ x, in~ y => \lam p => \have t => make~ p \in ~-pequiv (TruncP.map t.1 ldiv_nonZero, TruncP.map t.2 ldiv_nonZero)
+                }
+                | r n (q : Not (∃ (j : Fin (suc (suc n))) (a (suc j) = in~ 0))) => TruncP.rec {_} {\Sigma (x : DivQuotient nonZeroMonoid) (f x = a (suc n))} (\lam s s' => ext $ f-inj $ s.2 *> inv s'.2) (Quotient.in-surj (a (suc n)))
+                   \lam s => (in~ (s.1, nonZeroApart \lam s=0 => q $ inP (n, pmap (\lam x => a (suc x)) (toFin'=id $ id<suc <∘ id<suc) *> inv s.2 *> pmap in~ s=0)), s.2)
+                | t => cc (\lam n => \case FinSet.search {FinFin (suc (suc n))} _ (\lam j => divQuotient_dec0 (a (suc j))) \with {
+                         | yes e => in~ (1,zro#ide)
+                         | no q => (r n q).1
+                       }) (\lam n => mcases {1} \with {
+                         | yes e => inP LDiv.ide-div
+                         | no q => rewrite (FinSet.search_no_reduce (\lam (j : Fin (suc (suc n))) => divQuotient_dec0 (a (suc j))) (\lam p => q p)) \case ac (suc n) \with {
+                           | inP d => divQuotient_LDiv.1 $ inP $ transport2 LDiv (inv (r (suc n) q).2) (inv (r n (\lam p => q p)).2) d
+                         }
+                       })
+          \in \case t \with {
+            | inP s => mcases {2} s.2 _ \with {
+                | yes e', s2 => TruncP.map e' \lam e => (e.1, \new LDiv {
+                  | inv => in~ 0
+                  | inv-right => cases (a e.1) \with {
+                    | in~ b => pmap in~ zro_*-right *> inv e.2
+                  }
+                })
+                | no q, s2 => rewrite (FinSet.search_no_reduce (\lam (j : Fin (suc (suc s.1))) => divQuotient_dec0 (a (suc j))) (\lam p => q p)) at s2 $
+                                inP (suc s.1, transport2 LDiv (r s.1 (\lam p => q p)).2 (r (suc s.1) q).2 $ MonoidHom.func-LDiv {f} s2)
+              }
+          }
+
+    \lemma oneDimensional-char : Dim<= 1 <-> (\Pi (a u : E) -> a /= 0 -> ∃ (v : E) (n : Nat) (LDiv a (pow u n * (1 - u * v))))
+      => (\lam d a u a/=0 => \case d (a,u) \with {
+        | inP (b,m,p) => \have q => nonZero-cancel-left (apartNonZero $ pow_#0 $ nonZeroApart a/=0) (p *> inv zro_*-right)
+                         \in inP (b 1, m 1, LDiv.make (b 0) equation)
+      }, \lam f x => \case decideEq (x 0) 0 \with {
+        | yes x0=0 => inP ((1,1), (1,1), rewrite x0=0 simplify)
+        | no x0/=0 => \case f (x 0) (x 1) x0/=0 \with {
+          | inP (v,n,(y,p)) => inP ((y, v), (1, n), equation)
+        }
+      })
+  }
+}
+
+\instance FieldOfQuotients (D : IntegralDomain.Dec) : DiscreteField \cowith
+  | CRing => LocRing D.subMonoid
+  | zro/=ide p => \case LocRing.unequals p \with {
+    | inP (c,c#0,q) => D.#0-zro (transport D.#0 equation c#0)
+  }
+  | eitherZeroOrInv => \case \elim __ \with {
+    | in~ x => \case decideEq x.1 0 \with {
+      | yes e => byLeft $ LocRing.equals1 $ ide-right *> e *> inv zro_*-left
+      | no q => byRight $ Monoid.Inv.lmake (inl~ (x.2, x.1, AddGroup.nonZeroApart q)) $ LocRing.equals1 (simplify *-comm)
+    }
+  }
+
+\class StrictDomain \extends Ring, NonZeroSemiring, ImpotentRing {
+  | zeroProduct {x y : E} : x * y = zro -> (x = zro) || (y = zro)
+  | isReduced => \case zeroProduct __ \with {
+    | byLeft r => r
+    | byRight r => r
+  }
+  | isImpotent {a} p => \have q : a * (a - 1) = 0 => ldistr_- *> toZero (p *> inv ide-right)
+                        \in \case zeroProduct q \with {
+                          | byLeft r => byLeft r
+                          | byRight r => byRight (fromZero r)
+                        }
+
+  \lemma zeroBigProd {l : Array E} (p : BigProd l = zro) : ∃ (j : Fin l.len) (l j = 0) \elim l
+    | nil => absurd $ zro/=ide (inv p)
+    | a :: l => \case zeroProduct p \with {
+      | byLeft r => inP (0,r)
+      | byRight r => TruncP.map (zeroBigProd r) \lam s => (suc s.1, s.2)
+    }
+
+  \lemma zeroOrCancel-left {x y z : E} (p : x * y = x * z) : (x = 0) || (y = z)
+    => \case zeroProduct $ ldistr_- *> toZero p \with {
+      | byLeft x=0 => byLeft x=0
+      | byRight y-z=0 => byRight (fromZero y-z=0)
+    }
+
+  \lemma zeroOrCancel-right {x y z : E} (p : x * z = y * z) : (x = y) || (z = 0)
+    => \case zeroProduct $ rdistr_- *> toZero p \with {
+      | byLeft x-y=0 => byLeft (fromZero x-y=0)
+      | byRight z=0 => byRight z=0
+    }
+
+  \lemma nonZero-cancel-left {x y z : E} (x/=0 : x /= 0) (p : x * y = x * z) : y = z
+    => \case zeroOrCancel-left p \with {
+      | byLeft x=0 => absurd (x/=0 x=0)
+      | byRight r => r
+    }
+
+  \lemma nonZero-cancel-right {x y z : E} (z/=0 : z /= 0) (p : x * z = y * z) : x = y
+    => \case zeroOrCancel-right p \with {
+      | byLeft r => r
+      | byRight z=0 => absurd (z/=0 z=0)
+    }
+}
+
+\class StrictIntegralDomain \extends StrictDomain, ImpotentCRing {
+  \lemma div-associates {a b : E} (a|b : LDiv a b) (b|a : LDiv b a) : TruncP (associates a b)
+    => \case zeroOrCancel-left $ inv *-assoc *> pmap (`* _) a|b.inv-right *> b|a.inv-right *> inv ide-right \with {
+      | byLeft a=0 => inP (Inv.ide-isInv, a=0 *> inv (ldiv=0 a|b a=0) *> inv ide-left)
+      | byRight r => inP (Inv.lmake _ r, inv b|a.inv-right *> *-comm)
+    }
+}

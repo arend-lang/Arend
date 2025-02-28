@@ -1,0 +1,356 @@
+\import Algebra.Group
+\import Algebra.Group.Category
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Data.Bool
+\import Data.List
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\open Equivalence \hiding (map)
+
+\instance FreeGroup (S : \Set) : Group
+  | E => Quotient (~)
+  | ide => in~ nil
+  | * a b => \case a, b \with {
+    | in~ a, in~ b => in~ (a * b)
+    | in~ a, ~-equiv x y r => ~-equiv {_} {~} (a * x) (a * y) (equivMulLeft r)
+    | ~-equiv x y r, in~ a => ~-equiv {_} {~} (x * a) (y * a) (equivMulRight r)
+  }
+  | ide-left {x} => \case \elim x \with {
+    | in~ a => idp
+  }
+
+  | inverse x => \case \elim x \with {
+    | in~ a => in~ (inv a)
+    | ~-equiv x y r => ~-equiv {_} (inv x) (inv y) (equiv_inv r)
+  }
+
+  | inverse-left {x} => \case \elim x \with {
+    | in~ a => ~-equiv {_} _ _ (inv_mul {_} {a})
+  }
+
+  | *-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
+    | in~ a, in~ a1, in~ a2 => ~-equiv {_} _ _ (crefl (unfold (*) (rewrite ++-assoc idp)))
+  }
+
+  \where {
+    \func can {S : \Set} (s : S) : FreeGroup S => in~ ((s, true) :: nil)
+
+    \func W : Monoid => ListMonoid {\Sigma S Bool}
+
+    \func inv (w : W) : W \elim w
+      | nil => nil
+      | (x, deg) :: l => inv l ++ ((x, not deg) :: nil)
+
+    \lemma inv_* (x y : W) : inv (x * y) = inv y * inv x
+      | nil, y => rewrite ++_nil idp
+      | (x, p) :: xs, y => rewriteI (++-assoc, inv_*) idp
+
+    \func AreAdjacent (w_1 w_2 : W) =>
+      ∃ (u_1 u_2 : W) (x : S) (p : Bool)
+          (\Sigma
+            (w_1 = u_1 * u_2)
+            (w_2 = u_1 * ((x, p) :: nil) * ((x, not p) :: nil) * u_2))
+
+    \instance equivWords : Equivalence W => Closure.isEquivalence AreAdjacent
+
+    \lemma adjacent_cons {w1 w2 : W} (gen : \Sigma S Bool) (w1~w2 : w1 ~ w2) : gen :: w1 ~ gen :: w2 \elim w1~w2
+      | cin (inP (u1, u2, y, q, (A0, A1))) => cin (inP ((gen :: nil) * u1, u2, y, q, (rewrite A0 idp, rewrite A1 idp)))
+      | crefl p1 => crefl (rewrite p1 idp)
+      | csym c => csym (adjacent_cons _ c)
+      | ctrans {z} c c1 => ctrans (adjacent_cons _ c) (adjacent_cons _ c1)
+
+    \lemma adjacent_snoc {w1 w2 : W} {gen : \Sigma S Bool} (w1~w2 : w1 ~ w2) : w1 ++ (gen :: nil) ~ w2 ++ (gen :: nil) \elim w1~w2
+      | cin (inP (u1, u2, y, q, (A0, A1))) => cin (inP (u1, u2 ++ (gen :: nil), y, q, (rewrite (A0, ++-assoc) idp, rewrite (A1, ++-assoc) idp)))
+      | crefl p1 => crefl (rewrite p1 idp)
+      | csym c => csym (adjacent_snoc c)
+      | ctrans {z} c c1 => ctrans (adjacent_snoc c) (adjacent_snoc c1)
+
+    \lemma equivMulRight {a b c : W} (equiv : a ~ b) : a * c ~ b * c \elim c
+      | nil => repeat {2} (rewrite ide-right) equiv
+      | gen :: cs => repeat {2} (rewrite ++-assoc) in (equivMulRight {S} {a ++ (gen :: nil)} {b ++ (gen :: nil)} {cs}) (adjacent_snoc equiv)
+
+    \lemma equivMulLeft {a b c : W} (equiv : a ~ b) : c * a ~ c * b \elim c
+      | nil => repeat {2} (rewrite ide-left) equiv
+      | gen :: cs => adjacent_cons _ (equivMulLeft equiv)
+
+    \lemma equiv_inv {a b : W} (equiv : a ~ b) : inv a ~ inv b \elim equiv
+      | cin (inP (u1, u2, y, q, (A0, A1))) => rewrite (A0, A1) ((repeat {4} (rewrite inv_*)) (rewrite not-isInv (cin (inP (inv u2, inv u1, y, q, (idp, repeat {2} (rewrite *-assoc) idp))))))
+      | crefl p => crefl (rewrite p idp)
+      | csym c => csym (equiv_inv c)
+      | ctrans c c1 => ctrans (equiv_inv c) (equiv_inv c1)
+
+    \lemma inv_mul {a : W} : inv a * a ~ nil \elim a
+      | nil => crefl idp
+      | a :: l => ~-transitive {_} {_} {inv l * l} (csym (cin (inP (inv l, l, a.1, not a.2, (idp, rewrite not-isInv (repeat {3} (rewrite ++-assoc) idp)))))) (inv_mul {_} {l})
+
+    \func univ_map {G : Group} (i : S -> G) (l : List (\Sigma S Bool)) : G \elim l
+      | nil => ide
+      | (s, b) :: l => (\case b \with {
+        | true => i s
+        | false => inverse (i s) } ) G.* univ_map i l
+
+    \lemma univ_map_++ {G : Group} (i : S -> G) (l1 l2 : List (\Sigma S Bool)) : univ_map i (l1 ++ l2) = univ_map i l1 G.* univ_map i l2 \elim l1
+      | nil => rewrite ide-left idp
+      | (s, p) :: l1 => rewrite (univ_map_++ i l1 l2, *-assoc) idp
+
+    \lemma univ_equiv {G : Group} (i : S -> G) (w1 w2 : W) (equiv : w1 ~ w2)
+      : univ_map i w1 = univ_map i w2 \elim equiv
+      | cin (inP (u1, u2, y, q, (A0, A1))) => run {
+        rewrite (A0, A1),
+        repeat {4} (rewrite univ_map_++),
+        repeat {2} (rewrite ide-right),
+        cases q,
+        repeat {2} (rewrite *-assoc),
+        rewriteI {2} *-assoc,
+        rewrite (inverse-left, ide-left {G}) idp <|> rewrite (inverse-right, ide-left {G}) idp
+      }
+      | crefl p => pmap (univ_map i) p
+      | csym c => Paths.inv (univ_equiv i w2 w1 c)
+      | ctrans {z} c c1 => univ_equiv i w1 z c *> univ_equiv i z w2 c1
+
+    \func univ_map' {G : Group} (i : S -> G) (w : FreeGroup S) : G \elim w
+      | in~ a => univ_map i a
+      | ~-equiv x y p => univ_equiv {S} {G} i x y p
+  }
+
+\func FreeGroupUniversalProperty (S : \Set) (G : Group) (i : S -> G) : \Sigma (f : GroupHom (FreeGroup S) G) (f o FreeGroup.can = i) =>
+  (\new GroupHom {
+     | func => FreeGroup.univ_map' i
+     | func-ide => idp
+     | func-* {x} {y} => \case \elim x, \elim y \with {
+       | in~ x, in~ y => FreeGroup.univ_map_++ i x y
+     }
+   }, ext (\lam _ => unfold (o) (rewrite ide-right idp)))
+
+\func reduce {S : DecSet} (x : List (\Sigma S Bool)) : List (\Sigma S Bool) \elim x
+  | nil =>  nil
+  | (xa, xb) :: xs => \case reduce xs \with {
+    | nil => (xa, xb) :: nil
+    | (ya, yb) :: ys => \case decideEq xa ya, xor xb yb \with {
+      | yes e, true => ys
+      | _, _ => (xa, xb) :: (ya, yb) :: ys
+    }
+  }
+
+\func reduce_equiv {S : DecSet} (x : List (\Sigma S Bool)) : x ~ reduce x \elim x
+  | nil => crefl idp
+  | a :: nil => crefl idp
+  | a :: a1 :: x => cases ((reduce x) arg addPath) \with {
+    | nil, p => cases ((decideEq a.1 a1.1) arg addPath) \with {
+      | yes e, p1 => cases ((xor a.2 a1.2) arg addPath) \with {
+        | false, p2 => rewrite p in FreeGroup.adjacent_cons a (FreeGroup.adjacent_cons a1 (reduce_equiv x))
+        | true, p2 => csym (ctrans (csym (rewrite p in reduce_equiv x)) (cin (inP (nil, x, a.1, a.2, (idp, rewrite {2} e (rewrite (helper1 p2) idp))))))
+      }
+      | no n, p1 => rewrite p in FreeGroup.adjacent_cons a (FreeGroup.adjacent_cons a1 (reduce_equiv x))
+    }
+    | a2 :: x1, p => \have A0 => rewrite p in FreeGroup.adjacent_cons a (FreeGroup.adjacent_cons a1 (reduce_equiv x)) \in cases ((decideEq a.1 a1.1) arg addPath) \with {
+      | yes e, p1 => cases ((decideEq a1.1 a2.1) arg addPath) \with {
+        | yes e1, p2 => cases ((xor a1.2 a2.2) arg addPath) \with {
+          | false, p3 => rewrite p1 (cases ((xor a.2 a1.2) arg addPath) \with {
+            | false, p4 => A0
+            | true, p4 => csym (ctrans (csym (rewrite p in reduce_equiv x)) (cin (inP (nil, x, a.1, a.2, (idp, rewrite {2} e (rewrite (helper1 p4) idp))))))
+          })
+          | true, p3 => ctrans A0 (cases (x1 arg addPath) \with {
+            | nil, p4 => csym (cin (inP (a :: nil, nil, a1.1, a1.2, (idp, rewrite {2} e1 (rewrite (helper1 p3) idp)))))
+            | a3 :: x2, p4 => cases ((S.decideEq a.1 a3.1) arg addPath) \with {
+              | yes e2, p5 => cases ((xor a.2 a3.2) arg addPath) \with {
+                | false, p6 => csym (cin (inP (a :: nil, a3 :: x2, a1.1, a1.2, (idp, rewrite {2} e1 (rewrite (helper1 p3) idp)))))
+                | true, p6 => csym (ctrans {_} {AreAdjacent} {_} {_} {a :: a3 :: x2}
+                    (cin (inP (nil, x2, a.1, a.2, (idp, rewrite {2} e2 (rewrite (helper1 p6) idp)))))
+                    (cin (inP (a :: nil, a3 :: x2, a1.1, a1.2, (unfold (*) idp, rewrite {2} e1 (rewrite (helper1 p3) idp ))))) )
+              }
+              | no n, p5 => csym (cin (inP (a :: nil, a3 :: x2, a1.1, a1.2, (idp, rewrite {2} e1 (rewrite (helper1 p3) idp)))))
+            }
+          })
+        }
+        | no n, p2 => rewrite p1 (ctrans A0 (cases ((xor a.2 a1.2) arg addPath) \with {
+          | false, p3 => crefl idp
+          | true, p3 => csym (cin (inP (nil, a2 :: x1, a.1, a.2, (idp, rewrite {2} e (rewrite (helper1 p3) idp)))))
+        }))
+      }
+      | no n, p1 => ctrans A0 (cases ((decideEq a1.1 a2.1) arg addPath) \with {
+        | yes e, p2 => cases ((xor a1.2 a2.2) arg addPath) \with {
+          | false, p3 => rewrite p1 (crefl idp)
+          | true, p3 => cases (x1 arg addPath) \with {
+            | nil, p4 => csym (cin (inP (a :: nil, nil, a1.1, a1.2, (idp, rewrite {2} e (rewrite (helper1 p3) idp)))))
+            | a3 :: x2, p4 => cases ((S.decideEq a.1 a3.1) arg addPath) \with {
+              | yes e1, p5 => cases ((xor a.2 a3.2) arg addPath) \with {
+                | false, p6 => csym (cin (inP (a :: nil, a3 :: x2, a1.1, a1.2, (idp, rewrite {2} e (rewrite (helper1 p3) idp)))))
+                | true, p6 => csym (ctrans {_} {AreAdjacent} {_} {_} {a :: a3 :: x2}
+                    (cin (inP (nil, x2, a.1, a.2, (idp, rewrite {2} e1 (rewrite (helper1 p6) idp)))))
+                    (cin (inP (a :: nil, a3 :: x2, a1.1, a1.2, (idp, rewrite {2} e (rewrite (helper1 p3) idp))))) )
+              }
+              | no n1, p5 => csym (cin (inP (a :: nil, a3 :: x2, a1.1, a1.2, (idp, rewrite {2} e (rewrite (helper1 p3) idp)))))
+            }
+          }
+        }
+        | no n1, p2 => rewrite p1 (crefl idp)
+      })
+    }
+  } \where {
+  \open FreeGroup
+
+  \func helper1 {a2 b2 : Bool} (_ : xor a2 b2 = true) : not a2 = b2 \with
+    | {false}, {true}, p => idp
+    | {true}, {false}, p => idp
+}
+
+\func isIrreducible {S : DecSet} (x : List (\Sigma S Bool)) : Bool \elim x
+  | nil => true
+  | a :: nil => true
+  | (xa, xb) :: (ya, yb) :: xs => \case decideEq xa ya, xor xb yb \with {
+    | yes e, true => false
+    | _, _ => isIrreducible ((ya, yb) :: xs)
+  }
+
+\func isIrreducibleCons {S : DecSet} {a : \Sigma S Bool} {x : List (\Sigma S Bool)} :
+  isIrreducible (a :: x) = true -> isIrreducible x = true \elim x
+  | nil => \lam _ => idp
+  | a1 :: x => cases ((S.decideEq a.1 a1.1) arg addPath) \with {
+    | yes e, p => cases ((xor a.2 a1.2) arg addPath) \with {
+      | false, p1 => id
+      | true, p1 => \lam Q => \case Q
+    }
+    | no n, p => id
+  }
+
+\func reduceIsIrreducible {S : DecSet} (x : List (\Sigma S Bool)) : isIrreducible (reduce x) = true \elim x
+  | nil => idp
+  | a :: nil => idp
+  | a :: a1 :: x => \have IH => reduceIsIrreducible (a1 :: x) \in cases ((reduce x) arg addPath) \with {
+    | nil, p => cases ((decideEq a.1 a1.1) arg addPath) \with {
+      | yes e, p1 => cases ((xor a.2 a1.2) arg addPath) \with {
+        | false, p2 => rewrite (p1, p2) idp
+        | true, p2 => idp
+      }
+      | no n, p1 => cases ((decideEq a.1 a1.1) arg addPath) \with {
+        | yes e, p2 => cases ((xor a.2 a1.2) arg addPath) \with {
+          | false, p3 => idp
+          | true, p3 => \case inv p1 *> p2
+        }
+        | no n1, p2 => idp
+      }
+    }
+    | a2 :: x1, p => (rewrite p at IH) (cases ((decideEq a1.1 a2.1) arg addPath) \with {
+      | yes e, p1 => cases ((xor a1.2 a2.2) arg addPath) \with {
+        | false, p2 => (rewrite (p1, p2, p1, p2) at IH) (cases ((decideEq a.1 a1.1) arg addPath) \with {
+          | yes e1, p3 => cases ((xor a.2 a1.2) arg addPath) \with {
+            | false, p4 => rewrite (p3, p4, p1, p2) IH
+            | true, p4 => IH
+          }
+          | no n, p3 => rewrite (p3, p1, p2) IH
+        })
+        | true, p2 => cases (x1 arg addPath) \with {
+          | nil, p3 => idp
+          | a3 :: x2, p3 => (rewrite (p1, p2, p3) at IH) (cases ((decideEq a.1 a3.1) arg addPath) \with {
+            | yes e1, p4 => cases ((xor a.2 a3.2) arg addPath) \with {
+              | false, p5 => rewrite (p4, p5) IH
+              | true, p5 => isIrreducibleCons IH
+            }
+            | no n, p4 => rewrite p4 IH
+          })
+        }
+      }
+      | no n, p1 => (rewrite (p1, p1) at IH) (cases ((decideEq a.1 a1.1) arg addPath) \with {
+        | yes e, p2 => cases ((xor a.2 a1.2) arg addPath) \with {
+          | false, p3 => rewrite (p2, p3, p1) IH
+          | true, p3 => IH
+        }
+        | no n1, p2 => rewrite (p2, p1) IH
+      })
+    })
+  }
+
+\func reduce_inP {S : DecSet} (x y : List (\Sigma S Bool)) (s : S) (b : Bool) :
+ reduce (x ++ ((s, b) :: (s, not b) :: y)) = reduce (x ++ y) \elim x
+  | nil => cases ((reduce y) arg addPath) \with {
+    | nil, p => rewrite (helper1, helper2) idp
+    | a :: x, p => cases ((decideEq s a.1) arg addPath) \with {
+      | yes e, p1 => cases ((xor (not b) a.2) arg addPath) \with {
+        | false, p2 => rewrite (helper1, helper2) idp
+        | true, p2 => rewrite (e, helper3 p2) (cases (x arg addPath) \with {
+          | nil, p3 => idp
+          | a1 :: x1, p3 => cases ((decideEq a.1 a1.1) arg addPath) \with {
+            | yes e1, p4 => cases ((xor a.2 a1.2) arg addPath) \with {
+              | false, p5 => idp
+              | true, p5 => (rewrite p3 at p)
+                  \have | A0 : isIrreducible (a :: a1 :: x1) = false => rewrite (p4, p5) idp
+                  \in \case (rewrite p in inv (reduceIsIrreducible y)) *> A0
+            }
+            | no n, p4 => idp
+          }
+        })
+      }
+      | no n, p1 => rewrite (helper1, helper2) idp
+    }
+  }
+  | a :: x => rewrite (reduce_inP x y s b) idp
+  \where {
+    \func helper1 {x : S} : decideEq x x = yes idp => cases (decideEq x x arg addPath) \with {
+      | yes e, p => pmap yes set-pi
+      | no n, _ => absurd (n idp)
+    }
+
+    \func helper2 (p : Bool) : xor p (not p) = true => cases p \with {
+      | false => idp
+      | true => idp
+    }
+
+    \func helper3 {a b : Bool} (_ : xor (not a) b = true) : a = b \elim a, b
+      | false, false => idp
+      | false, true => contradiction
+      | true, false => contradiction
+      | true, true => idp
+}
+
+\func reduce_equivWords {S : DecSet} {l1 l2 : List (\Sigma S Bool)} (eq : l1 FreeGroup.equivWords.~ l2) : reduce l1 = reduce l2 \elim eq
+  | cin r => \case r \with {
+    | inP (u_1, u_2, x, p, (p1, p2)) =>
+      rewrite (p1, p2) (inv (unfold (*) (repeat {2} (rewrite ++-assoc) (reduce_inP u_1 u_2 x p))))
+  }
+  | crefl p => rewrite p idp
+  | csym c => inv (reduce_equivWords c)
+  | ctrans c c1 => reduce_equivWords c *> reduce_equivWords c1
+
+ \func reduceHom {S : DecSet} (x : FreeGroup S) : List (\Sigma S Bool) \elim x
+   | in~ a => reduce a
+   | ~-equiv x y r => reduce_equivWords r
+
+\instance DecWordMonoid (S : DecSet) : DecSet
+  | E => List (\Sigma S Bool)
+  | decideEq x y => word-dec x y
+\where {
+  \func first {X : \Type} (x : List X) (x0 : X) : X \elim x
+    | nil => x0
+    | a :: x => a
+
+  \func word-dec (x y : List (\Sigma S Bool)) : Dec (x = y)
+    | nil, nil => yes idp
+    | nil, a :: y => no contradiction
+    | a :: x, nil => no contradiction
+    | (x, xb) :: xs, (y, yb) :: ys => cases ((decideEq x y) arg addPath) \with {
+      | no n, p => no (\lam Q => n (pmap {_} {S} (\lam l => (first l (x, xb)).1) Q))
+      | yes e, p => cases ((decideEq xb yb) arg addPath) \with {
+        | yes e1, p1 => cases ((word-dec xs ys) arg addPath) \with {
+          | yes e2, p2 => yes (rewrite (e, e1, e2) idp)
+          | no n, p2 => no (\lam Q => n (pmap (\lam l => tail l) Q))
+        }
+        | no n, p1 => no (\lam Q => n (pmap {_} {Bool} (\lam l => (first l (x, xb)).2) Q))
+      }
+    }
+}
+
+\instance FreeDecGroup (S : DecSet) : Group.Dec
+  | Group => FreeGroup S
+  | decideEq (in~ x) (in~ y) => \have A0 => decideEq (reduceHom (in~ x)) (reduceHom (in~ y)) \in \case A0 \with {
+    | yes e => yes (~-equiv {_} {_} x y (ctrans (reduce_equiv x) (ctrans (crefl e) (csym (reduce_equiv y)))))
+    | no n => no (\lam Q => n (pmap reduceHom Q))
+  }

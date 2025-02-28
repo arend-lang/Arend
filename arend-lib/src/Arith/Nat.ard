@@ -1,0 +1,423 @@
+\import Algebra.Monoid(Monoid)
+\import Algebra.Ordered
+\import Data.Bool
+\import Data.Or
+\import Equiv (QEquiv)
+\import Equiv.Univalence
+\import Function.Meta
+\import HLevel
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder \hiding (<=)
+\import Paths
+\import Paths.Meta
+\import Set (==, ==_=, Dec)
+\import Set.Fin
+\open Nat
+\open LinearlyOrderedAbMonoid
+
+-- # Various operations
+
+\func pred (x : Nat) : Nat
+  | zero => 0
+  | suc x' => x'
+
+\lemma suc_pred {n : Nat} (n/=0 : n /= 0) : suc (pred n) = n \elim n
+  | 0 => absurd (n/=0 idp)
+  | suc n => idp
+
+\func \infixl 6 -' (n m : Nat) : Nat
+  | 0, _ => 0
+  | suc n, 0 => suc n
+  | suc n, suc m => n -' m
+
+\lemma -'0 {n : Nat} : n -' 0 = n \elim n
+  | 0 => idp
+  | suc n => idp
+
+\lemma -'+ {n m : Nat} : n + m -' m = n \elim m
+  | 0 => -'0
+  | suc n => -'+
+
+\lemma -'id {n : Nat} : n -' n = 0 => -'+ {0}
+
+\lemma -'-' {a b c : Nat} : a -' b -' c = a -' (b + c) \elim a, b
+  | 0, b => idp
+  | suc a, 0 => idp
+  | suc a, suc b => -'-'
+
+\func suc/=0 {n : Nat} (p : suc n = 0) : Empty
+
+-- # Properties of +, *, and <
+
+\instance NatSemiring : LinearlyOrderedCSemiring.Dec Nat
+  | zro => 0
+  | + => +
+  | zro-left => idp
+  | +-assoc {n m k : Nat} : (n + m) + k = n + (m + k) \elim k {
+    | 0 => idp
+    | suc k => pmap suc +-assoc
+  }
+  | +-comm {n m : Nat} : n + m = m + n \elim n, m {
+    | 0, m => idp
+    | n, 0 => idp
+    | suc n, suc m => pmap (\lam x => suc (suc x)) +-comm
+  }
+  | ide => 1
+  | * => *
+  | ide-left {n : Nat} : 1 * n = n \elim n {
+    | 0 => idp
+    | suc n => pmap suc ide-left
+  }
+  | *-assoc {n m k : Nat} : (n * m) * k = n * (m * k) \elim k {
+    | 0 => idp
+    | suc k => pmap (`+ n * m) *-assoc *> inv ldistr
+  }
+  | ldistr {n m k : Nat} : n * (m + k) = n * m + n * k \elim k {
+    | 0 => idp
+    | suc k =>
+        n * (m + k) + n     ==< pmap (`+ n) ldistr >==
+        n * m + n * k + n   ==< +-assoc >==
+        n * m + (n * k + n) `qed
+  }
+  | *-comm {n m : Nat} : n * m = m * n \elim n, m {
+    | 0, 0 => idp
+    | suc n, 0 => *-comm
+    | 0, suc m => *-comm
+    | suc n, suc m => pmap suc (
+        suc n * m + n   ==< pmap (`+ n) *-comm >==
+        m * n + m + n   ==< +-assoc >==
+        m * n + (m + n) ==< pmap2 (+) (inv *-comm) +-comm >==
+        n * m + (n + m) ==< inv +-assoc >==
+        n * m + n + m   ==< pmap (`+ m) *-comm >==
+        suc m * n + m   `qed)
+  }
+  | zro_*-left => *-comm
+  | < => <
+  | <-irreflexive {n : Nat} (p : n < n) : Empty \elim n, p {
+    | suc n, suc<suc p => <-irreflexive p
+  }
+  | <-transitive {n m k : Nat} (p : n < m) (q : m < k) : n < k \elim n, m, k, p, q {
+    | 0, suc n, suc m, zero<suc, suc<suc q => zero<suc
+    | suc n, suc m, suc k, suc<suc p, suc<suc q => suc<suc (<-transitive p q)
+  }
+  | trichotomy n m => \case n - m \as d, idp : n - m = d \with {
+    | pos 0, p => equals (triEquals p)
+    | pos (suc d), p => greater (triGreater p)
+    | neg (suc d), p => less (triLess p)
+  }
+  | <_+-left (k : Nat) {n m : Nat} (p : n < m) : n + k < m + k \elim k {
+    | 0 => p
+    | suc k => suc<suc (<_+-left k p)
+  }
+  | zro<ide => zero<suc
+  | <_*_positive-left {n m k : Nat} (p : n < m) (q : 0 < k) : n * k < m * k \elim k, q {
+    | 1, _ => p
+    | suc (suc k), q => <-transitive (<_+-left n (<_*_positive-left p zero<suc)) (transport2 (<) +-comm +-comm (<_+-left _ p))
+  }
+  | <_*_negative-left x<y z<0 => \case z<0
+  | natCoef n => n
+  | natCoefZero => idp
+  | natCoefSuc n => idp
+  \where {
+    \open LinearOrder
+
+    \data \infix 4 < (n m : Nat) \with
+      | 0, suc _ => zero<suc
+      | suc n, suc m => suc<suc (n < m)
+
+    \lemma unsuc< {n m : Nat} (p : suc n < suc m) : n < m \elim p
+      | suc<suc p => p
+
+    \lemma triEquals {n m : Nat} (p : n - m = 0) : n = m \elim n, m
+      | 0, 0 => idp
+      | suc n, suc m => pmap suc (triEquals p)
+
+    \lemma triGreater {n m d : Nat} (p : n - m = suc d) : m < n \elim n, m, p
+      | suc n, 0, p => zero<suc
+      | suc n, suc m, p => suc<suc (triGreater p)
+
+    \lemma triLess {n m d : Nat} (p : n - m = neg (suc d)) : n < m \elim n, m, p
+      | 0, suc m, p => zero<suc
+      | suc n, suc m, p => suc<suc (triLess p)
+
+    \lemma cancel-right {n m : Nat} (k : Nat) (p : n + k = m + k) : n = m \elim k
+      | 0 => p
+      | suc k => cancel-right k (pmap pred p)
+
+    \lemma cancel-left (n : Nat) {m k : Nat} (p : n + m = n + k) : m = k
+      => cancel-right n (+-comm *> p *> +-comm)
+
+    \lemma cancel_*-left {k : Nat} (k/=0 : k /= 0) {n m : Nat} (p : k * n = k * m) : n = m \elim k, n, m
+      | 0, _, _ => absurd (k/=0 idp)
+      | _, 0, 0 => idp
+      | k, suc n, suc m => pmap suc (cancel_*-left k/=0 (cancel-right k p))
+
+    \lemma cancel_*-right {n m k : Nat} (k/=0 : k /= 0) (p : n * k = m * k) : n = m
+      => cancel_*-left k/=0 (*-comm *> p *> *-comm)
+  }
+
+-- # Properties of <= and <
+
+\open LinearOrder \hiding (Dec)
+
+\instance NatBSemilattice : Bounded.JoinSemilattice
+  | JoinSemilattice => NatSemiring
+  | bottom => 0
+  | bottom-univ {_} => \case __
+  \where {
+    \lemma <=_cancel-left (n : Nat) {m k : Nat} (p : n + m <= n + k) : m <= k \elim n
+      | 0 => p
+      | suc n => <=_cancel-left n (suc<=suc.conv p)
+
+    \lemma <=_cancel-right (n : Nat) {m k : Nat} (p : m + n <= k + n) : m <= k \elim n
+      | 0 => p
+      | suc n => <=_cancel-right n (suc<=suc.conv p)
+
+    \lemma ldistr0 {x : Nat} : x ∧ 0 = 0
+      => cases x idp
+
+    \lemma rdistr0 {x : Nat} : 0 ∧ x = 0
+      => cases x idp
+  }
+
+\lemma zero<=_ {x : Nat} : 0 <= x
+  => NatBSemilattice.bottom-univ
+
+\lemma suc<=suc {x y : Nat} (p : x <= y) : suc x <= suc y
+  => \case <=-dec p \with {
+       | inl x<y => <=-less (suc<suc x<y)
+       | inr p => rewrite p <=-refl
+     }
+  \where
+    \lemma conv {x y : Nat} (p : suc x <= suc y) : x <= y
+      => \lam y<x => p (suc<suc y<x)
+
+\lemma <=_exists {n m : Nat} (p : n <= m) : n + (m -' n) = m \elim n, m
+  | 0, 0 => idp
+  | 0, suc m => idp
+  | suc n, suc m => \case <=-dec p \with {
+    | inl (suc<suc q) => pmap suc (<=_exists (<=-less q))
+    | inr q => rewrite (pmap pred q, -'id) idp
+  }
+  | suc n, 0 => absurd (p zero<suc)
+
+\lemma -'<=id {n m : Nat} : n -' m <= n \elim n, m
+  | 0, _ => zero<=_
+  | suc n, 0 => <=-refl
+  | suc n, suc m => -'<=id <=∘ <=_+ <=-refl (zero<=_ {1})
+
+\lemma -'+-comm {n m k : Nat} (p : m <= n) : n + k -' m = n -' m + k \elim n, m, k
+  | _, _, 0 => idp
+  | _, 0, _ => rewrite (-'0, -'0) idp
+  | 0, _, _ => rewrite (<=-antisymmetric p zero<=_, -'0) idp
+  | suc n, suc m, k => -'+-comm (\lam q => p (suc<suc q))
+
+\lemma -'-monotone-left {n m k : Nat} (p : n <= m) : n -' k <= m -' k \elim n, m, k
+  | 0, _, _ => zero<=_
+  | suc n, 0, 0 => p
+  | suc n, 0, suc k => absurd $ suc/=0 (<=_exists p)
+  | suc n, suc m, 0 => p
+  | suc n, suc m, suc k => -'-monotone-left (suc<=suc.conv p)
+
+\lemma -'-monotone-right {n m k : Nat} (p : m <= n) : k -' n <= k -' m \elim n, m, k
+  | 0, _, _ => rewrite (<=_exists p) <=-refl
+  | suc n, m, 0 => zero<=_
+  | suc n, 0, suc k => -'<=id <=∘ <=_+ <=-refl (zero<=_ {1})
+  | suc n, suc m, suc k => -'-monotone-right (suc<=suc.conv p)
+
+\lemma -'_<= {n m : Nat} (p : n -' m = 0) : n <= m \elim n, m
+  | 0, m => zero<=_
+  | suc n, 0 => \case p
+  | suc n, suc m => suc<=suc (-'_<= p)
+
+\lemma -'_< {n m : Nat} (p : 0 < n -' m) : m < n \elim n, m, p
+  | suc n, 0, _ => zero<suc
+  | suc n, suc m, p => suc<suc (-'_< p)
+
+\lemma <_-' {n m : Nat} (p : m < n) : 0 < n -' m \elim n, m, p
+  | suc n, 0, _ => zero<suc
+  | suc n, suc m, suc<suc p => <_-' p
+
+\open LinearlyOrderedSemiring \hiding (Dec)
+
+\lemma <=_* {n m k l : Nat} (n<=m : n <= m) (k<=l : k <= l) : n * k <= m * l
+  => <=-transitive (<=_*_positive-right zero<=_ k<=l) (<=_*_positive-left n<=m zero<=_)
+
+\lemma monotone-diagonal (f : Nat -> Nat) (mon : \Pi (n : Nat) -> suc (f n) <= f (suc n)) {n : Nat} : n <= f n \elim n
+  | 0 => zero<=_
+  | suc n => <=-transitive (suc<=suc (monotone-diagonal f mon)) (mon n)
+
+\lemma suc_<_<= {n m : Nat} (p : n < m) : suc n <= m \elim n, m, p
+  | 0, suc m, p => suc<=suc zero<=_
+  | suc n, suc m, p => suc<=suc $ suc_<_<= {n} {m} (\case p \with { | suc<suc x => x })
+
+\lemma <_suc_<= {n m : Nat} (p : n < suc m) : n <= m
+  => \lam q => suc_<_<= p (suc<suc q)
+
+\lemma suc_<=_< {n m : Nat} (p : suc n <= m) : n < m
+  => id<suc <∘l p
+
+\lemma id<suc {n : Nat} : n < suc n \elim n
+  | 0 => zero<suc
+  | suc n => suc<suc id<suc
+
+\lemma id<=suc {n : Nat} : n <= suc n => <=_+ <=-refl (zero<=_ {1})
+
+\lemma id/=suc {n : Nat} : n /= suc n \elim n
+  | 0 => \case __
+  | suc n => \lam p => id/=suc {n} (pmap pred p)
+
+\lemma n*_+_<n {n q r : Nat} (p : n * q + r < n) : q = 0 \elim q
+  | 0 => idp
+  | suc q => absurd (notLess (<=-transitive (<=_+ zero<=_ <=-refl) (<=_+ <=-refl zero<=_)) p)
+
+\lemma fin_< {n : Nat} (x : Fin n) : x < n \elim n, x
+  | suc n, zero => zero<suc
+  | suc n, suc x => suc<suc (fin_< x)
+
+\func toFin (k : Nat) {n : Nat} (\property p : k < n) : Fin n \elim k, n
+  | 0, suc n => 0
+  | suc k, suc n => suc (toFin _ (NatSemiring.unsuc< p))
+
+\lemma toFin=id {k n : Nat} {p : k < n} : toFin k p = {Nat} k \elim k, n, p
+  | 0, suc n, zero<suc => idp
+  | suc k, suc n, suc<suc p => pmap suc toFin=id
+
+\lemma toFin=fin {n : Nat} {k : Fin n} : toFin k (fin_< k) = k
+  => fin_nat-inj toFin=id
+
+\func toFin' {k n : Nat} (p : k < n) : Fin n \elim n
+  | suc n => k mod suc n
+
+\lemma toFin'=id {k n : Nat} (p : k < n) : toFin' p = {Nat} k \elim n
+  | suc n => mod_< p
+
+\func mod_Fin (k : Nat) {n : Nat} (p : 0 < n) : Fin n \elim n
+  | suc n => k mod suc n
+
+\lemma mod_Fin=mod {k n : Nat} {p : 0 < n} : mod_Fin k p = {Nat} k mod n \elim n
+  | suc n => idp
+
+\lemma mod_Fin_< {n k : Nat} {p : 0 < n} (q : k < n) : mod_Fin k p = {Nat} k \elim n
+  | suc n => mod_< q
+
+\lemma mod_Fin=id {n : Nat} {k : Fin n} {p : 0 < n} : mod_Fin k p = k
+  => fin_nat-inj $ mod_Fin_< (fin_< k)
+
+\open NatSemiring \hiding (<_*_positive-left, <_+-left)
+
+\lemma mod-unique {n q r q' r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : n * q + r = n * q' + r') : r = r' \elim q, q'
+  | 0, 0 => p
+  | 0, suc q' => \case n*_+_<n {n} {suc q'} (transport (`< n) p r<n)
+  | suc q, 0 => \case n*_+_<n {n} {suc q} (transport (`< n) (inv p) r'<n)
+  | suc q, suc q' =>
+    \have t => +-assoc *> pmap (_ +) +-comm *> inv +-assoc *> p *> +-assoc *> pmap (_ +) +-comm *> inv +-assoc
+    \in mod-unique r<n r'<n (cancel-right n t)
+
+\lemma div-unique {n q r q' r' : Nat} (r<n : r < n) (r'<n : r' < n) (n/=0 : n /= 0) (p : n * q + r = n * q' + r') : q = q'
+  => cancel_*-left n/=0 $ cancel-right r' $ rewrite (mod-unique r<n r'<n p) in p
+
+\lemma mod<=left {n m : Nat} : n mod m <= n
+  => transport (_ <=) (divModProp n m) (<=_+ zero<=_ <=-refl)
+
+\lemma mod<right {n m : Nat} (m/=0 : m /= 0) : n mod m < m \elim m
+  | 0 => absurd (m/=0 idp)
+  | suc m => fin_< (n mod suc m)
+
+\lemma div_< {n m : Nat} (n<m : n < m) : n div m = 0
+  => n*_+_<n (transportInv (`< m) (divModProp n m) n<m)
+
+\lemma mod_< {n m : Nat} (n<m : n < m) : n mod m = n
+  => inv (pmap (m * __ + _) (div_< n<m)) *> divModProp n m
+
+\lemma fin_nat-inj {n : Nat} {x y : Fin n} (p : x = {Nat} y) : x = y \elim n, x, y, p
+  | suc n, zero, zero, _ => idp
+  | suc n, suc x, suc y, p => pmap (\lam z => suc z) (fin_nat-inj (pmap pred p))
+
+\lemma fin_nat-ineq {n : Nat} {x y : Fin n} (p : Not (x = y)) : Not (x = {Nat} y)
+  => \lam q => p (fin_nat-inj q)
+
+\lemma fin_mod_id {n : Nat} (x : Fin (suc n)) : x mod suc n = x
+  => fin_nat-inj (mod_< (fin_< x))
+
+\lemma nonZero>0 {n : Nat} (n/=0 : n /= 0) : 0 < n \elim n
+  | 0 => absurd (n/=0 idp)
+  | suc n => zero<suc
+
+\lemma natUnit {n m : Nat} (p : n * m = 1) : m = 1 \elim n, m, p
+  | _, 1, _ => idp
+  | 0, suc (suc n), p => \case inv NatSemiring.zro_*-left *> p
+
+\open Monoid(LDiv)
+
+\lemma natAssociates-areEqual {n m : Nat} (n|m : LDiv n m) (m|n : LDiv m n) : n = m \elim n
+  | 0 => inv NatSemiring.zro_*-left *> n|m.inv-right
+  | suc _ \as n =>
+    \have t : m|n.inv = 1 => natUnit (cancel_*-left {n} (\case __) (inv *-assoc *> pmap (`* _) n|m.inv-right *> m|n.inv-right))
+    \in inv m|n.inv-right *> pmap (m *) t
+
+\lemma ldiv_<= {n m : Nat} (m/=0 : m /= 0) (n|m : LDiv n m) : n <= m
+  => \case n|m.inv \as k, n|m.inv-right : n * k = m \with {
+    | 0, p => absurd (m/=0 (inv p))
+    | suc k, p => transport (n <=) p (<=_+ zero<=_ <=-refl)
+  }
+
+\func mod_div {n m : Nat} (p : n mod m = 0) : LDiv m n
+  => rewriteI (divModProp n m) (rewrite p (\new LDiv {
+    | inv => n div m
+    | inv-right => idp
+  }))
+
+\lemma div_mod {n m : Nat} (m|n : LDiv m n) : n mod m = 0 \elim n, m
+  | 0, _ => idp
+  | n, 0 => inv m|n.inv-right *> *-comm
+  | suc x \as n, suc y \as m => mod-unique {m} {n div m} {_} {m|n.inv} (fin_< (n mod m)) zero<suc (divModProp n m *> inv m|n.inv-right)
+
+\lemma id_mod {n : Nat} : n mod n = 0
+  => div_mod \new LDiv {
+    | inv => 1
+    | inv-right => NatSemiring.ide-right
+  }
+
+\lemma div_*<=id {n m : Nat} : n div m * m <= n
+  => transport2 (<=) *-comm (Nat.divModProp n m) (<=_+ <=-refl zero<=_)
+
+\lemma nat_<=-dec {n m : Nat} {so : So (nat_<=_Bool n m)} : n <= m
+  => -'_<= (==_= so)
+  \where
+    \func nat_<=_Bool (n m : Nat) : Bool
+      => n -' m == 0
+
+\lemma nat_<-dec {n m : Nat} {so : So (nat_<=-dec.nat_<=_Bool (suc n) m)} : n < m
+  => id<suc <∘l nat_<=-dec {suc n} {m} {so}
+
+\lemma search (A : Nat -> \Prop) (d : \Pi (n : Nat) -> Dec (A n)) (c : ∃ (n : Nat) (A n))
+  : Contr (\Sigma (n0 : Nat) (A n0) (\Pi (n : Nat) -> A n -> n0 <= n))
+  => \case \elim c \with {
+    | inP (n,An) => isProp=>isContr (\lam t s => ext $ <=-antisymmetric (t.3 s.1 s.2) (s.3 t.1 t.2))
+      \have t => Contr.center {FinSet.searchFin-unique (\lam j => A j) (\lam j => d j) (inP (n, transportInv A (mod_< id<suc) An))}
+      \in (t.1, t.2, \lam k Ak => \case dec<_<= k t.1 \with {
+        | inl k<t1 =>
+          \have s => mod_< $ <-transitive k<t1 (fin_< t.1)
+          \in absurd $ <-irreflexive $ k<t1 <∘l transport (t.1 <=) s (t.3 (k mod suc n) (transportInv A s Ak))
+        | inr t1<=k => t1<=k
+      })
+  }
+
+\lemma NatFinSubset (A : Nat -> \Prop) (d : \Pi (n : Nat) -> Dec (A n)) (M : Nat) (c : \Pi (n : Nat) -> A n -> n < M)
+  : FinSet (\Sigma (n : Nat) (A n))
+  => transport FinSet (QEquiv-to-= $ later \new QEquiv {
+    | f s => s
+    | ret s => (toFin s.1 (c s.1 s.2), transportInv A toFin=id s.2)
+    | ret_f s => ext (fin_nat-inj toFin=id)
+    | f_sec s => ext toFin=id
+  }) (SigmaFin (FinFin M) \lam j => DecFin (d j))
+
+\lemma id<pow2 {n : Nat} : n < Monoid.pow 2 n \elim n
+  | 0 => zero<suc
+  | suc n => <=_+-left (suc_<_<= $ zero<=_ <∘r id<pow2) id<pow2

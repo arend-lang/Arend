@@ -1,0 +1,35 @@
+\import Equiv
+\import Paths
+\import Logic
+
+\data \fixr 2 Or (A B : \Type)
+  | inl A
+  | inr B
+  \where {
+    \func levelProp {A B : \Prop} (e : A -> B -> Empty) (x y : Or A B) : x = y \elim x, y
+      | inl a, inl a' => pmap inl prop-pi
+      | inl a, inr b => absurd (e a b)
+      | inr b, inl a => absurd (e a b)
+      | inr b, inr b' => pmap inr prop-pi
+
+    \func map {A B C D : \Type} (e : Or A B) (f : A -> C) (g : B -> D) : Or C D \elim e
+      | inl a => inl (f a)
+      | inr b => inr (g b)
+
+    \func rec {A B C : \Type} (f : A -> C) (g : B -> C) (e : Or A B) : C \elim e
+      | inl a => f a
+      | inr b => g b
+
+    \func Or_Equiv (e1 e2 : Equiv) : Equiv {Or e1.A e2.A} {Or e1.B e2.B} \cowith
+      | f => map __ e1 e2
+      | ret => map __ e1.ret e2.ret
+      | ret_f => \case \elim __ \with {
+        | inl a => pmap inl (e1.ret_f a)
+        | inr b => pmap inr (e2.ret_f b)
+      }
+      | sec => map __ e1.sec e2.sec
+      | f_sec => \case \elim __ \with {
+        | inl a => pmap inl (e1.f_sec a)
+        | inr b => pmap inr (e2.f_sec b)
+      }
+  }

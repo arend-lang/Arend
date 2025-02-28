@@ -1,0 +1,208 @@
+\import Algebra.Meta
+\import Equiv
+\import Equiv.Sigma
+\import Equiv.Univalence
+\import Function
+\import Homotopy.Pointed
+\import Homotopy.Square
+\import Paths
+
+\class Pushout (square : Square)
+  | pushout-univ {Z : \Type} : Equiv {square.Y -> Z} {Square { | Y => Z | U => square.U | V => square.V | X => square.X | uv => square.uv | ux => square.ux }} (Square.push square)
+  \where {
+    -- | Pushouts are functorial
+    \func map (p : Pushout) (s : Square)
+              (f : p.square.U -> s.U)
+              (g : p.square.V -> s.V)
+              (h : p.square.X -> s.X)
+              (e1 : \Pi (u : p.square.U) -> s.uv (f u) = g (p.square.uv u))
+              (e2 : \Pi (u : p.square.U) -> s.ux (f u) = h (p.square.ux u))
+              : p.square.Y -> s.Y
+      => p.pushout-univ.ret (\new Square {
+        | vy v => s.vy (g v)
+        | xy x => s.xy (h x)
+        | sqcomm u => pmap s.vy (inv (e1 u)) <* s.sqcomm (f u) *> pmap s.xy (e2 u)
+      })
+
+    -- | {map} preserves identity maps
+    \func map_id (p : Pushout) (y : p.square.Y) : map p p.square id id id (\lam _ => idp) (\lam _ => idp) = id
+      => p.pushout-univ.ret_f (\lam x => x)
+  }
+
+\data PushoutData {A B C : \Type} (f : A -> B) (g : A -> C)
+  | pinl B
+  | pinr C
+  | pglue (a : A) : pinl (f a) = pinr (g a)
+  \where {
+    \func ppglue {A B C : \Type} {f : A -> B} {g : A -> C} (a : A) : pinl (f a) = {PushoutData f g} pinr (g a) => path (pglue a)
+
+    \func rec {A B C : \Type} {f : A -> B} {g : A -> C} {Z : \Type} (lm : B -> Z) (rm : C -> Z) (gm : \Pi (a : A) -> lm (f a) = rm (g a)) (x : PushoutData f g) : Z \elim x
+      | pinl b => lm b
+      | pinr c => rm c
+      | pglue a => gm a
+      \where {
+        \func map {A B C : \Type} {f : A -> B} {g : A -> C} {Y Z : \Type} (h : Y -> Z) (lm : B -> Y) (rm : C -> Y) (gm : \Pi (a : A) -> lm (f a) = rm (g a)) (x : PushoutData f g)
+          : h (rec lm rm gm x) = rec (h `o` lm) (h `o` rm) (\lam a => pmap h (gm a)) x \elim x
+          | pinl b => idp
+          | pinr c => idp
+          | pglue a i => idp
+
+        \func equiv {A B C : \Type} {f : A -> B} {g : A -> C} (Z : \Type)
+          : Equiv {PushoutData f g -> Z} {\Sigma (lm : B -> Z) (rm : C -> Z) (gm : \Pi (a : A) -> lm (f a) = rm (g a))}
+          => \new QEquiv {
+            | f h => (\lam b => h (pinl b), \lam c => h (pinr c), \lam a => path (\lam i => h (pglue a i)))
+            | ret p => rec p.1 p.2 p.3
+            | ret_f h => path (\lam i x => (\case \elim x \return rec (\lam b => h (pinl b)) (\lam c => h (pinr c)) (\lam a => path (\lam i => h (pglue a i))) x = h x \with {
+              | pinl b => idp
+              | pinr c => idp
+              | pglue a i => idp
+            }) @ i)
+            | f_sec => idpe
+          }
+      }
+
+    -- | The total space of a fibration over a pushout is equivalent to a pushout of fibers of this fibration.
+    \func flattening {A B C : \Type} {f : A -> B} {g : A -> C} (F : PushoutData f g -> \Type)
+      : total = (\Sigma (w : PushoutData f g) (F w))
+      => QEquiv-to-= totalPushoutLeft *> path TotalPushout *> QEquiv-to-= totalPushoutRight
+      \where {
+        \func total
+          => PushoutData {\Sigma (x : A) (F (pinl (f x)))}
+                         {\Sigma (y : B) (F (pinl y))}
+                         {\Sigma (z : C) (F (pinr z))}
+                         (\lam p => (f p.1, p.2))
+                         (\lam p => (g p.1, transport F (ppglue p.1) p.2))
+
+        \data TotalPushout (j : I)
+          | tinl (y : B) (F (pinl y))
+          | tinr (z : C) (F (pinr z))
+          | tglue (x : A) (i : I) (w : F (pglue x (I.squeeze i j))) \elim i {
+            | left => tinl (f x) w
+            | right => tinr (g x) (coe2 (\lam i => F (pglue x i)) j w right)
+          }
+
+        \func totalPushoutLeft : QEquiv {total} {TotalPushout left} \cowith
+          | f => LR
+          | ret => RL
+          | ret_f t => \case \elim t \with {
+            | pinl (y,t) => idp
+            | pinr (z,t) => idp
+            | pglue (x,t) i => idp
+          }
+          | f_sec t => \case \elim t \with {
+            | tinl y t => idp
+            | tinr y t => idp
+            | tglue x i t => idp
+          }
+          \where {
+            \func LR (t : total) : TotalPushout left \elim t
+              | pinl (y,t) => tinl y t
+              | pinr (z,t) => tinr z t
+              | pglue (x,t) i => tglue x i t
+
+            \func RL (t : TotalPushout left) : total \elim t
+              | tinl y t => pinl (y,t)
+              | tinr z t => pinr (z,t)
+              | tglue x i t => pglue (x,t) i
+          }
+
+        \func totalPushoutRight : QEquiv {TotalPushout right} {\Sigma (w : PushoutData f g) (F w)} \cowith
+          | f => LR
+          | ret => RL
+          | ret_f t => \case \elim t \with {
+            | tinl y t => idp
+            | tinr z t => idp
+            | tglue x i t => idp
+          }
+          | f_sec t => \case \elim t \with {
+            | (pinl y, t) => idp
+            | (pinr z, t) => idp
+            | (pglue x i, t) => idp
+          }
+          \where {
+            \func LR (t : TotalPushout right) : \Sigma (w : PushoutData f g) (F w) \elim t
+              | tinl y t => (pinl y, t)
+              | tinr z t => (pinr z, t)
+              | tglue x i t => (pglue x i, t)
+
+            \func RL (t : \Sigma (w : PushoutData f g) (F w)) : TotalPushout right \elim t
+              | (pinl y, t) => tinl y t
+              | (pinr z, t) => tinr z t
+              | (pglue x i, t) => tglue x i t
+          }
+      }
+  }
+
+\open PushoutData
+
+\instance PushoutPointed {A B C : \Type} {P : Pointed B} {f : A -> B} {g : A -> C} : Pointed (PushoutData f g)
+  | base => pinl base
+
+\func pushoutData {A B C : \Type} (f : A -> B) (g : A -> C) : Pushout \cowith
+  | square {
+    | U => A
+    | V => B
+    | X => C
+    | Y => PushoutData f g
+    | ux => g
+    | vy => pinl
+    | uv => f
+    | xy => pinr
+    | sqcomm a => path (pglue a)
+  }
+  | pushout-univ {Z} => \new QEquiv {
+    | ret (s : Square) => rec s.vy s.xy s.sqcomm
+    | ret_f h => path (\lam i p => (\case \elim p \return rec (h `o` pinl) (h `o` pinr) (\lam a => path (\lam j => h (pglue a j))) p = h p \with {
+      | pinl _ => idp
+      | pinr _ => idp
+      | pglue _ _ => idp
+    }) @ i)
+    | f_sec _ => idp
+  }
+
+-- | A pushout of an embedding is an embedding and such a pushout square is also a pullback square
+\class EmbeddingPushout \noclassifying (A B C : \Type) (f : A -> B) (g : Embedding {A} {C}) {
+  \func PO => PushoutData f g
+
+  \func code (b0 : B) (w : PO) : \hType \elim w
+    | pinl b => b0 = b
+    | pinr c => \Sigma (a : A) (b0 = f a) (c = g a)
+    | pglue a => QEquiv-to-= (equiv b0 a)
+
+  \lemma equiv (b0 : B) (a : A) : Equiv {b0 = f a} {\Sigma (a' : A) (b0 = f a') (g a = g a')} (a, __, idp) => equation
+                                                                  {symQEquiv (contr-left (lsigma a))}
+    (\Sigma (p : \Sigma (a' : A) (a = a')) (b0 = f p.1))          {sigma-left (sigma-right (g.pmap-isEquiv {a} {__}))}
+    (\Sigma (p : \Sigma (a' : A) (g a = g a')) (b0 = f p.1))  {\new QEquiv { | B => \Sigma (a' : A) (b0 = f a') (g a = g a') | f p => (p.1.1, p.2, p.1.2) | ret q => ((q.1,q.3),q.2) | ret_f => idpe | f_sec => idpe }}
+
+  \func encode (b0 : B) {w : PO} (p : pinl b0 = w) : code b0 w => transport (code b0) p idp
+
+  \func decode (b0 : B) {w : PO} (d : code b0 w) : pinl b0 = w \elim w
+    | pinl b => pmap pinl d
+    | pinr c => pmap pinl d.2 *> ppglue d.1 *> inv (pmap pinr d.3)
+    | pglue a i =>
+        \let t => transport_pi2 (code b0) (pinl b0 =) (ppglue a) (pmap pinl) (\lam x => pmap pinl x.2 *> ppglue x.1 *> inv (pmap pinr x.3))
+                                (\lam p => Jl (\lam _ q => transport (pinl b0 =) q (pmap pinl p) = pmap pinl p *> q) idp (ppglue a))
+        \in (pathOver t @ i) d
+
+  \func encode_decode-left (b0 b : B) (d : code b0 (pinl b)) : encode b0 {pinl b} (decode b0 d) = d \elim d
+    | idp => idp
+
+  \func encode_decode-right (b0 : B) (c : C) (d : code b0 (pinr c)) : encode b0 {pinr c} (decode b0 d) = d \elim d
+   | (a,idp,idp) => pmap (encode (f a)) (idp_*> (ppglue a))
+
+  \func decode_enode (b0 : B) {w : PO} (p : pinl b0 = w) : decode b0 (encode b0 p) = p \elim p
+    | idp => idp
+
+  \lemma pushout-embedding : Embedding {B} {PO} pinl \cowith
+    | isEmb b b' => \new Retraction {
+      | sec => encode b
+      | f_sec => decode_enode b
+    }
+
+  \lemma pullback-path-equiv (b : B) (c : C) : Equiv {\Sigma (a : A) (b = f a) (c = g a)} {pinl b = {PO} pinr c} (decode b)
+    => \new QEquiv {
+      | ret => encode b
+      | ret_f => encode_decode-right b c
+      | f_sec => decode_enode b
+    }
+}

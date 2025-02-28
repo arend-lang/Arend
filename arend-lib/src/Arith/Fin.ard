@@ -1,0 +1,205 @@
+\import Algebra.Domain.Euclidean
+\import Algebra.Field
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Monoid.Prime
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Int
+\import Arith.Nat
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set \hiding (#)
+\open Nat(div,mod,divModProp)
+\open AddMonoid
+
+\lemma n*_+_mod_n {n q r : Nat} (r<n : r < n) : (n * q + r) mod n = {Nat} r \elim n
+  | 0 => pmap (`+ r) zro_*-left
+  | suc n => mod-unique (fin_< _) r<n (divModProp (suc n * q + r) (suc n))
+
+\lemma n*_+_mod_n=mod {n q r : Nat} : (suc n * q + r) mod suc n = r mod suc n
+  => run {
+    rewriteI {1} (divModProp r (suc n)),
+    rewriteI (NatSemiring.+-assoc, NatSemiring.ldistr),
+    fin_nat-inj (n*_+_mod_n (fin_< (r mod suc n)))
+  }
+  \where
+    \lemma nat {n q r : Nat} : (n * q + r) mod n = r mod n \elim n
+      | 0 => pmap (`+ r) zro_*-left
+      | suc n => n*_+_mod_n=mod
+
+\lemma int_n*_+_mod_n {n r : Nat} {q : Int} (r<=n : r < suc n) : (pos (suc n) * q + r) mod suc n = r
+  => mod-unique {(pos (suc n) * q + r) div suc n} {q} (natMod<right _ _) r<=n (natDivModProp (pos (suc n) * q + r) n)
+  \where \open IntEuclidean
+
+\lemma int_n*_+_mod_n=mod {n : Nat} {q r : Int} : (pos (suc n) * q + r) mod suc n = r mod suc n
+  => run {
+    rewriteI {1} (natDivModProp r n),
+    rewriteI (IntRing.+-assoc {pos (suc n) * q} {pos (suc n) * r div suc n} {pos (r mod suc n)}, IntRing.ldistr {suc n} {q} {r div suc n}),
+    int_n*_+_mod_n (natMod<right r n)
+  }
+  \where \open IntEuclidean
+
+\lemma mod_+-left {n a b : Nat} : (a mod suc n + b) mod suc n = (a + b) mod suc n
+  => run {
+    rewriteI {2} (divModProp a (suc n)),
+    rewrite NatSemiring.+-assoc,
+    inv n*_+_mod_n=mod
+  }
+
+\lemma mod_+-right {n a b : Nat} : (a + b mod suc n) mod suc n = (a + b) mod suc n
+  => fin_nat-inj (pmap (`mod _) +-comm *> mod_+-left *> pmap (`mod _) +-comm)
+
+\lemma mod_*-left {n a b : Nat} : (a mod suc n * b) mod suc n = (a * b) mod suc n
+  => run {
+    rewriteI {2} (divModProp a (suc n)),
+    rewrite (NatSemiring.rdistr, NatSemiring.*-assoc),
+    inv n*_+_mod_n=mod
+  }
+
+\lemma mod_*-right {n a b : Nat} : (a * b mod suc n) mod suc n = (a * b) mod suc n
+  => fin_nat-inj (pmap (`mod _) *-comm *> mod_*-left *> pmap (`mod _) *-comm)
+
+\lemma mod_+-cong-left {n c a b : Nat} (p : a mod suc n = b mod suc n) : (c + a) mod suc n = (c + b) mod suc n
+ => inv mod_+-right *> pmap ((c + __) mod suc n) p *> mod_+-right
+
+\lemma mod_+-cong-right {n c a b : Nat} (p : a mod suc n = b mod suc n) : (a + c) mod suc n = (b + c) mod suc n
+  => inv mod_+-left *> pmap ((__ + c) mod suc n) p *> mod_+-left
+
+\lemma int_mod_*-left {n : Nat} {a b : Int} : (pos (a mod suc n) * b) mod suc n = (a * b) mod suc n
+  => run {
+    rewriteI {2} (natDivModProp a n),
+    rewrite (IntRing.rdistr, IntRing.*-assoc),
+    inv int_n*_+_mod_n=mod
+  } \where \open IntEuclidean
+
+\lemma int_mod_*-right {n : Nat} {a b : Int} : (a * b mod suc n) mod suc n = (a * b) mod suc n
+  => pmap (`mod _) *-comm *> int_mod_*-left *> pmap (`mod _) *-comm
+  \where \open IntEuclidean
+
+\lemma div_suc-lem {n m : Nat} (m/=0 : m /= 0) : (n + m) div m = suc (n div m)
+  => div-unique (mod<right m/=0) (mod<right m/=0) m/=0 $ divModProp (n + m) m *> pmap (`+ m) (inv (divModProp n m) *> pmap (_ +) (inv (pmap (`mod m) +-comm *> n*_+_mod_n=mod.nat {m} {1})) *> +-comm) *> +-assoc *> +-comm
+
+\lemma n*_+_div_n=div {m q r : Nat} (m/=0 : m /= 0) : (m * q + r) div m = q + r div m \elim q
+  | 0 => idp
+  | suc q => pmap (`div m) (+-assoc *> pmap (_ +) +-comm *> inv +-assoc) *> div_suc-lem m/=0 *> pmap suc (n*_+_div_n=div m/=0)
+
+\lemma *_div=id {m q : Nat} (m/=0 : m /= 0) : (q * m) div m = q
+  => pmap (`div m) *-comm *> n*_+_div_n=div {m} {q} {0} m/=0
+
+\lemma div-monotone {n k m : Nat} (p : n <= k) : n div m <= k div m
+  => aux n <=-refl p
+  \where
+    \lemma aux (c : Nat) {n k m : Nat} (q : n <= c) (p : n <= k) : n div m <= k div m \elim c, m
+      | _, 0 => p
+      | 0, _ => rewrite (<=_exists q) zero<=_
+      | suc c, suc _ \as m => \case LinearOrder.dec<_<= n m, LinearOrder.dec<_<= k m \with {
+        | inl n<m, _ => transportInv (`<= _) (div_< n<m) zero<=_
+        | inr m<=n, inl k<m => absurd $ <-irreflexive $ k<m <∘l m<=n <∘l p
+        | inr m<=n, inr m<=k => \case m \as m', idp : m' = m \with {
+          | 0, s => rewriteI s p
+          | suc xxx, s =>
+            \have m/=0 m=0 => suc/=0 (s *> m=0)
+            \in rewriteI (<=_exists m<=n, <=_exists m<=k, NatSemiring.+-comm) $ rewrite {2} NatSemiring.+-comm $
+                  transport2 (<=) (inv $ div_suc-lem m/=0) (inv $ div_suc-lem m/=0) $ suc<=suc $ aux c (cases (n,q) \with {
+                    | 0, _ => zero<=_
+                    | suc n, q => -'<=id <=∘ suc<=suc.conv q
+                  }) (-'-monotone-left p)
+        }
+      }
+
+\func base-digit (n b j : Nat) : Nat \elim j
+  | 0 => n mod b
+  | suc j => base-digit (n div b) b j
+
+\lemma base-digit-sum {l : Array Nat} {b : Nat} (p : \Pi (j : Fin l.len) -> l j < b) {j : Fin l.len}
+  : l j = base-digit (BigSum (\lam j => l j * Monoid.pow b j)) b j \elim l, j
+  | a :: l, 0 => inv $ pmap (`mod b) +-comm *> pmap (\lam x => (x + a) mod b) (inv $ *-comm *> Semiring.BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_mod_n {b} {BigSum (\lam j => l j * Monoid.pow b j)} (p 0)
+  | a :: l, suc j => base-digit-sum (\lam j => p (suc j)) *> pmap (base-digit __ b j) (unfold BigSum $ inv $ pmap (`div b) +-comm *> pmap (\lam x => (x + a) div b) (inv $ *-comm *> Semiring.BigSum-rdistr *> pmap BigSum (exts \lam j => *-assoc)) *> n*_+_div_n=div (later \lam b=0 => \case rewrite b=0 in p 0) *> pmap (_ +) (div_< (p 0)) *> zro-right)
+
+\instance FinRing {n : Nat} : CRing.Dec (Fin (suc n))
+  | zro => 0
+  | + x y => (x + y : Nat)
+  | zro-left {x} => pmap Fin.fromNat zro-left *> fin_mod_id x
+  | +-assoc => mod_+-left *> pmap Fin.fromNat +-assoc *> inv mod_+-right
+  | +-comm => pmap Fin.fromNat +-comm
+  | ide => Fin.fromNat 1
+  | * x y => (x * y : Nat)
+  | ide-left {x} => mod_*-left *> pmap Fin.fromNat ide-left *> fin_mod_id x
+  | *-assoc => mod_*-left *> pmap Fin.fromNat *-assoc *> inv mod_*-right
+  | ldistr {x} {y} {z} => mod_*-right *> pmap Fin.fromNat ldistr *> inv (mod_+-left *> mod_+-right)
+  | negative x => iabs (suc n Nat.- x)
+  | negative-left {x} =>
+    \let t => pmap (`+ pos x) (pos_iabs (<=-less (fin_< x))) *> IntRing.+-assoc {pos (suc n)} {neg x} *> pmap (_ +) (IntRing.negative-left {pos x})
+    \in mod_+-left *> transport (__ mod suc n = 0) (inv (pmap iabs t)) (fin_nat-inj (n*_+_mod_n {_} {1} NatSemiring.zero<suc))
+  | decideEq x y => \case NatSemiring.decideEq x y \with {
+    | yes x=y => yes (fin_nat-inj x=y)
+    | no x/=y => no (\lam p => x/=y p)
+  }
+  | *-comm => pmap Fin.fromNat *-comm
+  | natCoef => Fin.fromNat
+  | natCoefZero => idp
+  | natCoefSuc m => inv (mod_+-left *> mod_+-right)
+
+\instance FinEuclidean {n : Nat} : EuclideanRingData (Fin (suc n))
+  | CRing => FinRing {n}
+  | decideEq => decideEq
+  | euclideanMap x => x
+  | divMod x y =>
+    \let! (d,m) => Nat.divMod x y
+    \in (d `mod` suc n, m `mod` suc n)
+  | isDivMod x y => run {
+    unfold_let,
+    rewrite mod_*-right,
+    mod_+-left *> mod_+-right *> pmap Fin.fromNat (Nat.divModProp x y) *> fin_mod_id x
+  }
+  | isEuclideanMap x y y/=0 _ => mod<=left <∘r mod<right (fin_nat-ineq y/=0)
+
+\instance FinField {n : Nat} {p : Prime (suc n)} : DiscreteField (Fin (suc n))
+  | CRing => FinRing {n}
+  | zro/=ide => \case __ *> {Nat} mod_< (NatSemiring.suc<suc (nonZero>0 (\lam n=0 => p.notInv (transportInv (\lam x => Inv (suc x)) n=0 Inv.ide-isInv))))
+  | finv x => (IntEuclidean.natDivMod (bezout (pos (suc n)) (pos x)).2 (suc n)).2 mod suc n
+  | finv_zro => idp
+  | finv-right {x} x/=0 =>
+    \let | (u,v) => bezout (pos (suc n)) (pos x)
+         | (q,r) => IntEuclidean.natDivMod v (suc n)
+         | int_gcd=1 : gcd (pos (suc n)) (pos x) = 1 => int_gcd_pos *> pmap pos (gcd=1 p (fin_nat-ineq x/=0) (fin_< x))
+    \in *-comm *> pmap ((__ * x) mod suc n) (inv (int_n*_+_mod_n=mod *> IntEuclidean.natMod=mod r (suc n)) *> pmap (__ IntEuclidean.mod suc n) (IntEuclidean.natDivModProp v n)) *>
+                  fin_nat-inj (inv (IntEuclidean.natMod=mod _ _) *> int_mod_*-left *> inv int_n*_+_mod_n=mod *> pmap (__ IntEuclidean.mod suc n) (pmap (__ + v * pos x) *-comm *> bezoutIdentity (pos (suc n)) (pos x) *> int_gcd=1) *> IntEuclidean.natMod=mod 1 (suc n))
+  | decideEq x y => \case NatSemiring.decideEq x y \with {
+    | yes x=y => yes (fin_nat-inj x=y)
+    | no x/=y => no (\lam x=y => x/=y x=y)
+  }
+  \where {
+    \open EuclideanSemiringData
+    \open EuclideanRingData
+    \open Monoid(Inv)
+
+    \lemma gcd=1 (p : Prime {NatSemiring}) {x : Nat} (x/=0 : Not (x = 0)) (x<p : x < p) : gcd p x = 1
+      => \case nat_irr p (GCD.gcd|val1 {gcd-isGCD p x}) \with {
+           | byLeft gcd=1 => gcd=1
+           | byRight gcd=p =>
+             \have p<=x => transport (`<= x) gcd=p (ldiv_<= x/=0 (GCD.gcd|val2 {gcd-isGCD p x}))
+             \in absurd (p<=x x<p)
+         }
+  }
+
+\module FinLinearOrder \where {
+  \instance FinLinearOrderInst {n : Nat} : LinearOrder.Dec (Fin n)
+    | < i j => i NatSemiring.< j
+    | <-irreflexive => NatSemiring.<-irreflexive
+    | <-transitive => NatSemiring.<-transitive
+    | trichotomy i j => \case NatSemiring.trichotomy i j \with {
+      | less r => less r
+      | equals r => equals (fin_nat-inj r)
+      | greater r => greater r
+    }
+}
