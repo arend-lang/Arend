@@ -1,7 +1,11 @@
 package org.arend.resolving
 
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.module.Module
+import com.intellij.openapi.progress.util.ProgressIndicatorBase
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import org.arend.ArendIcons

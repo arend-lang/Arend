@@ -53,6 +53,7 @@ public class ElimTypechecking {
   private final Concrete.SourceNode mySourceNode;
   private boolean myAllowInterval = true;
   private List<ExtElimClause> myCoreClauses;
+  private final int myNumberOfExternalParameters;
 
   private static Integer getMinPlus1(Integer level1, Level l2, int sub) {
     Integer level2 = !l2.isInfinity() && l2.isClosed() ? l2.getConstant() : null;
@@ -60,12 +61,13 @@ public class ElimTypechecking {
     return result == null ? null : result + 1;
   }
 
-  public ElimTypechecking(@Nullable ErrorReporter errorReporter, Equations equations, Expression expectedType, PatternTypechecking.Mode mode, @Nullable Integer level, @NotNull Level actualLevel, boolean isSFunc, List<? extends Concrete.FunctionClause> clauses, Concrete.SourceNode sourceNode) {
+  public ElimTypechecking(@Nullable ErrorReporter errorReporter, Equations equations, Expression expectedType, PatternTypechecking.Mode mode, @Nullable Integer level, @NotNull Level actualLevel, boolean isSFunc, List<? extends Concrete.FunctionClause> clauses, int numberOfExternalParameters, Concrete.SourceNode sourceNode) {
     myErrorReporter = errorReporter;
     myEquations = equations;
     myExpectedType = expectedType;
     myMode = mode;
     myClauses = clauses;
+    myNumberOfExternalParameters = numberOfExternalParameters;
     mySourceNode = sourceNode;
 
     int actualLevelSub = 0;
@@ -111,6 +113,7 @@ public class ElimTypechecking {
     myActualLevel = Level.INFINITY;
     myActualLevelSub = 0;
     myClauses = clauses;
+    myNumberOfExternalParameters = 0;
     mySourceNode = sourceNode;
   }
 
@@ -539,6 +542,12 @@ public class ElimTypechecking {
 
   private DependentLink reportNoClauses(DependentLink parameters, List<DependentLink> elimParams) {
     if (myErrorReporter == null) return null;
+    if (elimParams.isEmpty()) {
+      for (int i = 0; i < myNumberOfExternalParameters && parameters.hasNext(); i++) {
+        parameters = parameters.getNext();
+      }
+    }
+
     if (parameters.hasNext() && !parameters.getNext().hasNext()) {
       DataCallExpression dataCall = parameters.getTypeExpr().cast(DataCallExpression.class);
       if (dataCall != null && dataCall.getDefinition() == Prelude.INTERVAL) {

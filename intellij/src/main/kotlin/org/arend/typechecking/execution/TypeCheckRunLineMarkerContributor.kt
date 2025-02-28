@@ -12,13 +12,15 @@ import org.arend.core.definition.Definition.TypeCheckingStatus.*
 import org.arend.naming.reference.MetaReferable
 import org.arend.psi.ArendElementTypes
 import org.arend.psi.ext.*
+import org.arend.scratch.SCRATCH_SUFFIX
 
 class TypeCheckRunLineMarkerContributor : RunLineMarkerContributor() {
     // Store previous definition status to prevent flickering during resolving
     private val statusKey: Key<TypeCheckingStatus> = Key.create("AREND_DEFINITION_STATUS")
 
     override fun getInfo(element: PsiElement): Info? {
-        if (!(element is LeafPsiElement && element.node.elementType == ArendElementTypes.ID)) {
+        if (!(element is LeafPsiElement && element.node.elementType == ArendElementTypes.ID) ||
+                element.containingFile.virtualFile.extension == SCRATCH_SUFFIX) {
             return null
         }
 

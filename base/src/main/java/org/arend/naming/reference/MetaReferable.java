@@ -17,7 +17,7 @@ public class MetaReferable extends LocatedReferableImpl implements MetaRef {
   private MetaResolver myResolver;
 
   public MetaReferable(Object data, AccessModifier accessModifier, Precedence precedence, String name, Precedence aliasPrec, String aliasName, MetaDefinition definition, MetaResolver resolver, LocatedReferable parent) {
-    super(data, accessModifier, precedence, name, aliasPrec == null ? Precedence.DEFAULT : aliasPrec, aliasName, parent, Kind.OTHER);
+    super(data, accessModifier, precedence, name, aliasPrec == null ? Precedence.DEFAULT : aliasPrec, aliasName, parent, Kind.META);
     myDefinition = definition;
     myResolver = resolver;
   }

@@ -13,6 +13,7 @@ import org.arend.prelude.Prelude
 import org.arend.psi.ArendFile
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ext.*
+import org.arend.scratch.isArendScratch
 import org.arend.term.NamespaceCommand
 import org.arend.term.group.AccessModifier
 import org.arend.toolWindow.repl.ArendReplService
@@ -190,7 +191,7 @@ fun isVisible(importFile: ArendFile, currentFile: ArendFile): Boolean {
     val modulePath = importFile.moduleLocation?.modulePath ?: return false
     val locationsOk = importFile.moduleLocation != null && importFile.moduleLocation?.modulePath != null
 
-    if (currentFile.isRepl) return locationsOk
+    if (currentFile.isRepl || currentFile.isArendScratch) return locationsOk
 
     val conf = currentFile.arendLibrary ?: return false
     val inTests = conf.getFileLocationKind(currentFile) == ModuleLocation.LocationKind.TEST

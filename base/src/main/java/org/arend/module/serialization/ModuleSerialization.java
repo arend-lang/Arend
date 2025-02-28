@@ -90,7 +90,7 @@ public class ModuleSerialization {
       refBuilder.setIndex(index);
       myCurrentDefinitions.add(index);
     }
-    if ((typechecked == null || !typechecked.status().noErrors()) && referable.getKind() != GlobalReferable.Kind.OTHER) {
+    if ((typechecked == null || !typechecked.status().noErrors()) && referable.getKind().isTypecheckable()) {
       myComplete = false;
     }
     builder.setReferable(refBuilder.build());

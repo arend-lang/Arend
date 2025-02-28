@@ -223,6 +223,9 @@ public class ModuleDeserialization {
       case CONSTRUCTOR -> {
         return GlobalReferable.Kind.DEFINED_CONSTRUCTOR;
       }
+      case META -> {
+        return GlobalReferable.Kind.META;
+      }
       default -> {
         return GlobalReferable.Kind.OTHER;
       }

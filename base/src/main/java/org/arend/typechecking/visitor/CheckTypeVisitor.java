@@ -4050,11 +4050,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         list.append(link);
         if (caseArg.isElim) {
           if (argTypeExpr != null) {
-            Expression actualArgType = exprResult.type.subst(substitution);
-            if (!CompareVisitor.compare(myEquations, CMP.EQ, actualArgType, argTypeExpr, Type.OMEGA, caseArg.type)) {
-              errorReporter.report(new TypeMismatchError(actualArgType, argTypeExpr, caseArg.expression));
-              return null;
-            }
+            errorReporter.report(new TypecheckingError("Explicit type annotation is not allowed with \\elim", caseArg.expression));
+            return null;
           }
           Binding origBinding = ((ReferenceExpression) exprResult.expression).getBinding();
           origElimBindings.put(asRef, origBinding);
@@ -4145,7 +4142,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (clauses == null) {
       return null;
     }
-    ElimBody elimBody = new ElimTypechecking(errorReporter, myEquations, resultExpr, PatternTypechecking.Mode.CASE, level, actualLevel, expr.isSCase(), expr.getClauses(), expr).typecheckElim(clauses, list.getFirst());
+    ElimBody elimBody = new ElimTypechecking(errorReporter, myEquations, resultExpr, PatternTypechecking.Mode.CASE, level, actualLevel, expr.isSCase(), expr.getClauses(), 0, expr).typecheckElim(clauses, list.getFirst());
     if (elimBody == null) {
       return null;
     }

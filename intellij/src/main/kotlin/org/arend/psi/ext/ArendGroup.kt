@@ -20,3 +20,13 @@ interface ArendGroup: PsiLocatedReferable, ArendSourceNode, Abstract.Group {
 
     override fun getDynamicSubgroups(): List<ArendGroup>
 }
+
+fun ArendGroup.traverse(function: (ArendGroup) -> Unit): Unit {
+    function(this)
+    for (statement in statements) {
+        statement.group?.traverse(function)
+    }
+    for (group in dynamicSubgroups) {
+        group.traverse(function)
+    }
+}

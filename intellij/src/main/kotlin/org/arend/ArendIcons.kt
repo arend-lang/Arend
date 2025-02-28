@@ -87,7 +87,7 @@ object ArendIcons {
         GlobalReferable.Kind.INSTANCE -> CLASS_INSTANCE
         GlobalReferable.Kind.CONSTRUCTOR -> CONSTRUCTOR
         GlobalReferable.Kind.FIELD -> CLASS_FIELD
-        GlobalReferable.Kind.LEVEL, GlobalReferable.Kind.OTHER -> null
+        GlobalReferable.Kind.LEVEL, GlobalReferable.Kind.OTHER, GlobalReferable.Kind.META -> null
     }
 
     fun definitionToIcon(definition: Definition): Icon? = when (definition) {

@@ -4,15 +4,17 @@ import org.jetbrains.grammarkit.tasks.GenerateLexerTask
 import org.jetbrains.grammarkit.tasks.GenerateParserTask
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.BuildPluginTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.intellij.platform.gradle.tasks.PatchPluginXmlTask
 import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
-val projectArend = gradle.includedBuild("Arend")
 group = "org.arend.lang"
 version = "1.10.0.3"
+
+val baseName = "intellij-arend"
 
 plugins {
     idea
@@ -29,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.arend:base")
+    implementation(project(":base"))
     implementation(kotlin("reflect"))
     implementation(kotlin("stdlib-jdk8"))
     implementation("org.scilab.forge:jlatexmath:1.0.7")
@@ -40,7 +42,7 @@ dependencies {
     intellijPlatform {
         create(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3")
         instrumentationTools()
-        bundledPlugins("org.jetbrains.plugins.yaml", "com.intellij.java")
+        bundledPlugins("org.jetbrains.plugins.yaml", "com.intellij.java", "org.jetbrains.kotlin")
         plugins("IdeaVIM:2.16.0")
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
@@ -53,11 +55,13 @@ java {
     targetCompatibility = JavaVersion.VERSION_21
 }
 
+/*
 tasks["jar"].dependsOn(
-        projectArend.task(":api:jar"),
-        projectArend.task(":proto:jar"),
-        projectArend.task(":base:jar")
+        task(":api:jar"),
+        task(":proto:jar"),
+        task(":base:jar")
 )
+*/
 
 val generated = arrayOf("src/main/doc-lexer", "src/main/lexer", "src/main/parser")
 
@@ -99,6 +103,10 @@ tasks.withType<PatchPluginXmlTask>().configureEach {
     pluginId.set(project.group.toString())
     changeNotes.set(file("src/main/html/change-notes.html").readText())
     pluginDescription.set(file("src/main/html/description.html").readText())
+}
+
+tasks.withType<BuildPluginTask>().configureEach {
+  archiveBaseName = baseName
 }
 
 val generateArendLexer = tasks.register<GenerateLexerTask>("genArendLexer") {
@@ -148,10 +156,9 @@ tasks.withType<Test>().configureEach {
 }
 
 tasks.register<Copy>("prelude") {
-    val dir = projectArend.projectDir
-    from(dir.resolve("lib/Prelude.ard"))
+    from(projectDir.resolve("lib/Prelude.ard"))
     into("src/main/resources/lib")
-    dependsOn(projectArend.task(":cli:buildPrelude"))
+    dependsOn(task(":cli:buildPrelude"))
 }
 
 tasks.withType<Wrapper> {
