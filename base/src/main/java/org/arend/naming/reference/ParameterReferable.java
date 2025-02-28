@@ -32,6 +32,10 @@ public class ParameterReferable implements Referable {
     return myAbstractBody;
   }
 
+  public AbstractBody getAnyBody() {
+    return myAbstractBody != null ? myAbstractBody : myBody;
+  }
+
   @Override
   public @NotNull String textRepresentation() {
     return myReferable.textRepresentation();

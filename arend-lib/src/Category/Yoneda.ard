@@ -144,7 +144,7 @@
           \new NatTrans {
             | trans x => image-of-rep-iso x
             | natural {X} {Y} f =>
-              unfold $ Iso.adjoint' $ rewrite o-assoc $ inv $ Iso.adjoint $
+              unfold $ Iso.adjointMap' $ rewrite o-assoc $ inv $ Iso.adjointMap $
                                                               limUnique {L-limit (hom-presheaf X)}
                                                                   (\lam p0 => \case\elim p0 \with {
                                                                     | (Z, p) =>

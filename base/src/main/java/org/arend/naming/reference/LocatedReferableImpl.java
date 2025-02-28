@@ -52,11 +52,6 @@ public class LocatedReferableImpl implements TCDefReferable {
   }
 
   @Override
-  public @NotNull TCDefReferable getTypecheckable() {
-    return myKind.isTypecheckable() || myKind == Kind.OTHER || !(myParent instanceof TCDefReferable) ? this : (TCDefReferable) myParent;
-  }
-
-  @Override
   public void setTypechecked(Definition definition) {
     myTypechecked = definition;
   }

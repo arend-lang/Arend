@@ -62,13 +62,13 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     return new LocatedReferableImpl(referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), parent, referable.getKind());
   }
 
-  private static InternalReferableImpl convertInternalReferable(Abstract.AbstractLocatedReferable referable, LocatedReferable parent, boolean isVisible) {
+  private static InternalReferableImpl convertInternalReferable(Abstract.AbstractLocatedReferable referable, TCDefReferable parent, boolean isVisible) {
     return new InternalReferableImpl(referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), isVisible, parent, referable.getKind());
   }
 
-  private static LocatedReferableImpl convertField(Abstract.ClassField classField, LocatedReferable parent) {
+  private static LocatedReferableImpl convertField(Abstract.ClassField classField, TCDefReferable parent) {
     Abstract.AbstractLocatedReferable referable = classField.getReferable();
-    return referable == null ? null : new FieldReferableImpl(referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), classField.isExplicitField(), classField.isParameterField(), false, (TCDefReferable) parent);
+    return referable == null ? null : new FieldReferableImpl(referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), classField.isExplicitField(), classField.isParameterField(), false, parent);
   }
 
   private static LocatedReferable convertFileReferable(Abstract.AbstractLocatedReferable referable, ModuleLocation module, LocatedReferable parent) {
@@ -347,36 +347,38 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     buildClassParameters(def.getParameters(), classDef, elements);
 
     for (Abstract.ClassElement element : def.getClassElements()) {
-      if (element instanceof Abstract.ClassField field) {
-        Abstract.Expression resultType = field.getResultType();
-        TCDefReferable fieldRef = convertField(field, myDefinition);
-        if (resultType == null || !(fieldRef instanceof FieldReferableImpl)) {
-          myErrorLevel = GeneralError.Level.ERROR;
-          if (fieldRef != null && !(fieldRef instanceof FieldReferableImpl)) {
-            myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Incorrect field", fieldRef));
-          }
-        } else {
-          List<? extends Abstract.Parameter> parameters = field.getParameters();
-          Concrete.Expression type = resultType.accept(this, null);
-          Abstract.Expression resultTypeLevel = field.getResultTypeLevel();
-          Concrete.Expression typeLevel = resultTypeLevel == null ? null : resultTypeLevel.accept(this, null);
-          elements.add(new Concrete.ClassField((FieldReferableImpl) fieldRef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false), type, typeLevel, field.isCoerce()));
-          if (field.isClassifying()) {
-            setClassifyingField(classDef, (FieldReferable) fieldRef, field, true);
+      switch (element) {
+        case Abstract.ClassField field -> {
+          Abstract.Expression resultType = field.getResultType();
+          TCDefReferable fieldRef = convertField(field, myDefinition);
+          if (resultType == null || !(fieldRef instanceof FieldReferableImpl)) {
+            myErrorLevel = GeneralError.Level.ERROR;
+            if (fieldRef != null && !(fieldRef instanceof FieldReferableImpl)) {
+              myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Incorrect field", fieldRef));
+            }
+          } else {
+            List<? extends Abstract.Parameter> parameters = field.getParameters();
+            Concrete.Expression type = resultType.accept(this, null);
+            Abstract.Expression resultTypeLevel = field.getResultTypeLevel();
+            Concrete.Expression typeLevel = resultTypeLevel == null ? null : resultTypeLevel.accept(this, null);
+            elements.add(new Concrete.ClassField((FieldReferableImpl) fieldRef, true, field.getClassFieldKind(), buildTypeParameters(parameters, false), type, typeLevel, field.isCoerce()));
+            if (field.isClassifying()) {
+              setClassifyingField(classDef, (FieldReferable) fieldRef, field, true);
+            }
           }
         }
-      } else if (element instanceof Abstract.ClassFieldImpl) {
-        buildImplementation(def, (Abstract.ClassFieldImpl) element, elements);
-      } else if (element instanceof Abstract.OverriddenField field) {
-        Abstract.Reference ref = field.getOverriddenField();
-        Abstract.Expression type = field.getResultType();
-        if (ref == null || type == null) {
-          continue;
+        case Abstract.ClassFieldImpl classField -> buildImplementation(def, classField, elements);
+        case Abstract.OverriddenField field -> {
+          Abstract.Reference ref = field.getOverriddenField();
+          Abstract.Expression type = field.getResultType();
+          if (ref == null || type == null) {
+            continue;
+          }
+          Abstract.Expression typeLevel = field.getResultTypeLevel();
+          elements.add(new Concrete.OverriddenField(field.getData(), ref.getReferent(), buildTypeParameters(field.getParameters(), false), type.accept(this, null), typeLevel == null ? null : typeLevel.accept(this, null)));
         }
-        Abstract.Expression typeLevel = field.getResultTypeLevel();
-        elements.add(new Concrete.OverriddenField(field.getData(), ref.getReferent(), buildTypeParameters(field.getParameters(), false), type.accept(this, null), typeLevel == null ? null : typeLevel.accept(this, null)));
-      } else {
-        myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Unknown class element", element));
+        case null, default ->
+            myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "Unknown class element", element));
       }
     }
 
@@ -434,7 +436,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       List<Concrete.Parameter> cParams = new ArrayList<>();
       List<Concrete.Pattern> patterns = buildLamParameters(parameters, cParams);
       if (!parameters.isEmpty() || !patterns.isEmpty()) {
-        term = Concrete.PatternLamExpression.make(parameters.get(0).getData(), cParams, patterns, term);
+        term = Concrete.PatternLamExpression.make(parameters.getFirst().getData(), cParams, patterns, term);
       }
 
       implementations.add(new Concrete.ClassFieldImpl(implementation.getData(), implementedField.getReferent(), term, null, implementation.isDefault()));
@@ -465,7 +467,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     Concrete.Expression cType;
     if (type == null) {
       if (referableList.size() == 1) {
-        return new Concrete.NameParameter(parameter.getData(), parameter.isExplicit(), makeLocalRef(referableList.get(0)));
+        return new Concrete.NameParameter(parameter.getData(), parameter.isExplicit(), makeLocalRef(referableList.getFirst()));
       } else {
         myErrorLevel = GeneralError.Level.ERROR;
         cType = new Concrete.ErrorHoleExpression(parameter.getData(), null);
@@ -476,7 +478,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
     boolean isStrict = parameter.isStrict();
     boolean isProperty = parameter.isProperty();
-    if (!isNamed && (referableList.isEmpty() || referableList.size() == 1 && referableList.get(0) == null)) {
+    if (!isNamed && (referableList.isEmpty() || referableList.size() == 1 && referableList.getFirst() == null)) {
       if (isDefinition && isStrict) {
         return new Concrete.DefinitionTypeParameter(parameter.getData(), parameter.isExplicit(), true, cType, isProperty);
       } else {
@@ -532,8 +534,8 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   public Concrete.Pattern buildPattern(Abstract.Pattern pattern) {
     List<? extends Abstract.Pattern> subPatterns = pattern.getSequence();
     if (subPatterns.size() == 1) {
-      Concrete.Pattern innerPattern = buildPattern(subPatterns.get(0));
-      if (!subPatterns.get(0).isExplicit() || !pattern.isExplicit()) {
+      Concrete.Pattern innerPattern = buildPattern(subPatterns.getFirst());
+      if (!subPatterns.getFirst().isExplicit() || !pattern.isExplicit()) {
         innerPattern.setExplicit(false);
       }
       Concrete.TypedReferable typedReferables = buildTypedReferable(pattern.getAsPattern());
@@ -793,7 +795,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     Concrete.Expression result = expression.accept(this, null);
 
     int i = 0;
-    if (result instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof UnresolvedReference unresolved && (!fieldAccs.isEmpty() && fieldAccs.get(0).getFieldRef() != null || infixName != null)) {
+    if (result instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof UnresolvedReference unresolved && (!fieldAccs.isEmpty() && fieldAccs.getFirst().getFieldRef() != null || infixName != null)) {
       List<AbstractReference> references = new ArrayList<>(unresolved.getReferenceList());
       List<String> names = new ArrayList<>(unresolved.getPath());
       for (; i < fieldAccs.size(); i++) {
