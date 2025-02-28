@@ -85,7 +85,7 @@
   \func transFuncMap {D : Precat} (L L' : Limit { | D => D }) (H : Functor L.J L'.J) (a : NatTrans (Comp L'.G H) L.G) : Hom L' L =>
     limMap cone
   \where {
-    \func cone : Cone G L' => \new Cone {
+    \func cone : Cone L.G L' => \new Cone {
       | coneMap j => a j ∘ L'.coneMap (H j)
       | coneCoh f => inv o-assoc *> pmap (`∘ _) (inv (a.natural f)) *> o-assoc *> pmap (_ ∘) (L'.coneCoh (H.Func f))
     }
@@ -156,7 +156,7 @@
   \lemma tupleEta {Z : D} {f : Hom Z apex} : tupleMap (\lam j => proj j ∘ f) = f
     => tupleEq \lam j => tupleBeta
 
-  \func toLimit : Limit {DiscretePrecat J} {D} \cowith
+  \protected \func toLimit : Limit {DiscretePrecat J} {D} \cowith
     | G => functor G
     | apex => apex
     | coneMap => proj
@@ -201,7 +201,7 @@
   \lemma eqMono {Z : D} {h1 h2 : Hom Z apex} (p : eql ∘ h1 = eql ∘ h2) : h1 = h2 =>
     inv (ret_f {isEqualizer Z} h1) *> pmap ret (ext p) *> ret_f {isEqualizer Z} h2
 
-  \func toLimit : Limit {Shape} {D} \cowith
+  \protected \func toLimit : Limit {Shape} {D} \cowith
     | G => functor f g
     | apex => apex
     | coneMap x => \case \elim x \with {
@@ -353,7 +353,7 @@
     | pbBeta2 => pbBeta1
     | pbEta q1 q2 => pbEta q2 q1
 
-  \func toLimit : LimitDiagram \cowith
+  \protected \func toLimit : LimitDiagram \cowith
     | Diagram => diagram f g
     | apex => apex
     | coneMap => \case \elim __ \with {
@@ -519,8 +519,7 @@
 
 \func terminalMap' {C : Precat} {t : terminal-obj C} {x : C} : Hom x t => tupleMap (\case __)
 
-\func isTerminal {C : Precat} (a : C) (e : \Pi (b : C) -> Contr (Hom b a))
-  : terminal-obj C a
+\func isTerminal {C : Precat} (a : C) (e : \Pi (b : C) -> Contr (Hom b a)) : terminal-obj C a
   \cowith
     | proj j => absurd j
     | tupleMap {Z} _ => Contr.center {e Z}

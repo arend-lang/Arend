@@ -19,7 +19,7 @@ class ArendDefMeta : ArendDefinition<ArendDefMetaStub>, Abstract.MetaDefinition,
     val expr: ArendExpr?
         get() = childOfType()
 
-    override fun getKind() = GlobalReferable.Kind.OTHER
+    override fun getKind() = GlobalReferable.Kind.META
 
     override fun getIcon(flags: Int) = ArendIcons.META_DEFINITION
 

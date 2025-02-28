@@ -216,7 +216,7 @@
 
   \use \func global (X : Ob) => Hom terminal X
 
-  \use \func name {A : Ob} (phi : Hom A omega) : global (Power A) => p-transpose (phi ∘ terminal-prod-left.hinv)
+  \use \func namePower {A : Ob} (phi : Hom A omega) : global (Power A) => p-transpose (phi ∘ terminal-prod-left.hinv)
 
   -- Topos is cartesian closed
 
@@ -241,8 +241,8 @@
 
   -- Finally, the apex of the pullback gives the type of functional relations between B and C.
 
-  \use \func graphs {B C : Ob} : Pullback (name (true-over-obj {\this} {B})) (all-with-single-img {\this} {B} {C})
-    => pullback (name (true-over-obj {\this} {B})) (all-with-single-img {\this} {B} {C})
+  \use \func graphs {B C : Ob} : Pullback (namePower (true-over-obj {\this} {B})) (all-with-single-img {\this} {B} {C})
+    => pullback (namePower (true-over-obj {\this} {B})) (all-with-single-img {\this} {B} {C})
     \where {
       \use \func apex (B C : Ob) : Ob => Pullback.apex {graphs {_} {B} {C} }
 
@@ -290,7 +290,7 @@
              | step4 : true-over-obj {_} {B} ∘ proj2 {_} {A} {B} = true-over-obj ∘ f
                      => unfold true-over-obj $ rewrite (o-assoc, terminate, o-assoc, terminate) idp
              | step5 => run {
-                          p-transpose-unique {\this} {_} {_} {true-over-obj {_} {B} ∘ proj2 {_} {A} {B}} {name (true-over-obj {_} {B}) ∘ terminalMap},
+                          p-transpose-unique {\this} {_} {_} {true-over-obj {_} {B} ∘ proj2 {_} {A} {B}} {namePower (true-over-obj {_} {B}) ∘ terminalMap},
                           rewrite (prod-id-right, inv o-assoc, inv $ antitranspose-eq _),
                           rewrite (o-assoc, terminate, o-assoc, o-assoc, terminate),
                           idp

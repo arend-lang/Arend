@@ -26,7 +26,7 @@ public interface TypingInfo {
       if (!visited.add(referable)) return null;
       AbstractBody body = getRefBody(referable);
       if (body == null) {
-        return arguments == 0 ? getDynamicScopeProvider(referable) : null;
+        return getDynamicScopeProvider(referable);
       }
       if (body.getParameters() > arguments) return null;
       referable = body.getReferable();
