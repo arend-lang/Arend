@@ -1,4 +1,4 @@
-val projectArend = gradle.includedBuild("Arend")
+val baseName = "arend-lib"
 
 plugins {
     java
@@ -6,15 +6,15 @@ plugins {
 
 tasks.register<JavaExec>("cliCheck") {
     group = "verification"
-    dependsOn(projectArend.task(":cli:jarDep"), tasks.named("classes"))
+    dependsOn(task(":cli:jarDep"), tasks.named("classes"))
     mainClass.set("-jar")
-    val jarDepPath = projectArend.projectDir.resolve("cli/build/libs/cli-1.10.0-full.jar").absolutePath
+    val jarDepPath = projectDir.resolve("cli/build/libs/cli-1.10.0-full.jar").absolutePath
     args(jarDepPath, "-tcr")
-    workingDir(projectDir.parent)
+    workingDir(baseName)
 }
 
 tasks.register("copyJarDep") {
-    dependsOn(projectArend.task(":cli:copyJarDep"))
+    dependsOn(task(":cli:copyJarDep"))
 }
 
 repositories {
@@ -22,14 +22,14 @@ repositories {
 }
 
 dependencies {
-    implementation("org.arend:api")
+    implementation(project(":api"))
 }
 
 
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 tasks.withType<Wrapper>().configureEach {

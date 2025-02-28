@@ -1,7 +1,4 @@
 /meta/build/
-/.idea/
-/meta/.gradle/
-/meta/.idea/
 bin
 *.iml
 *DS_Store*
