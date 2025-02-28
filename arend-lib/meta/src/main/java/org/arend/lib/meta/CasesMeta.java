@@ -295,8 +295,8 @@ public class CasesMeta extends BaseMetaDefinition implements MetaResolver {
         concreteParameters.add(factory.param(Collections.singletonList(caseArgRef), argType != null ? argType : factory.core(typedArgs.get(i).getType().computeTyped())));
       }
       if (argParams.addPath) {
-        ConcreteExpression type = factory.app(factory.ref(ext.prelude.getEquality().getRef()), true, Arrays.asList(factory.hole(), factory.ref(caseArgRef)));
-        caseArgs.add(factory.caseArg(factory.ref(ext.prelude.getIdp().getRef()), null, type));
+        ConcreteExpression type = factory.app(factory.ref(ext.prelude.getEqualityRef()), true, Arrays.asList(factory.hole(), factory.ref(caseArgRef)));
+        caseArgs.add(factory.caseArg(factory.ref(ext.prelude.getIdpRef()), null, type));
         if (concreteParameters != null) {
           concreteParameters.add(factory.param(Collections.singletonList(caseArgRef), type));
         }

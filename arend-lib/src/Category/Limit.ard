@@ -95,7 +95,7 @@
 \meta Colimit G => Limit (Functor.op {G})
 
 \class Diagram (G : Graph) (D : Precat) (F : G -> D) (Func : \Pi {x y : G} -> G.E x y -> Hom (F x) (F y)) {
-  \func functor : Functor G.FreeCat D \cowith
+  \protected \func functor : Functor G.FreeCat D \cowith
     | F => F
     | Func {x y : G} (h : G.Paths x y) : Hom (F x) (F y) \elim h {
       | Graph.empty idp => id (F x)
@@ -115,7 +115,7 @@
   | diagramCoh {g g' : G} (e : G.E g g') : Func e ∘ coneMap g = coneMap g'
   | coneCoh => coneCoh-lem apex coneMap diagramCoh
   \where {
-    \lemma coneCoh-lem {D : Diagram} (apex : D.D) (coneMap : \Pi (j : G.FreeCat) -> Hom apex (D.functor j)) (p : \Pi {g g' : G} (e : G.E g g') -> Func e ∘ coneMap g = coneMap g') {j j' : D.G.FreeCat} (h : G.FreeCat.Hom j j') : D.functor.Func h ∘ coneMap j = coneMap j' \elim h
+    \lemma coneCoh-lem {D : Diagram} (apex : D.D) (coneMap : \Pi (j : D.G.FreeCat) -> Hom apex (D.functor j)) (p : \Pi {g g' : D.G} (e : D.G.E g g') -> D.Func e ∘ coneMap g = coneMap g') {j j' : D.G.FreeCat} (h : D.G.FreeCat.Hom j j') : D.functor.Func h ∘ coneMap j = coneMap j' \elim h
       | Graph.empty idp => id-left
       | Graph.cons e h => o-assoc *> pmap (_ ∘) (p e) *> coneCoh-lem apex coneMap p h
 
@@ -304,13 +304,13 @@
     }
 
   \func unique {D : Precat} {x y : D} {f g : Hom x y} (E E' : Equalizer f g) : Iso {D} {E} {E'} \cowith
-    | f => eqMap eql equal
-    | hinv => eqMap eql equal
-    | hinv_f => eqMono $ rewriteEq (E.eqBeta E'.eql equal) (eqBeta _ _ *> inv id-right)
-    | f_hinv => eqMono $ rewriteEq (E'.eqBeta E.eql equal) (eqBeta _ _ *> inv id-right)
+    | f => E'.eqMap eql equal
+    | hinv => E.eqMap eql equal
+    | hinv_f => E.eqMono $ rewriteEq (E.eqBeta E'.eql equal) (E'.eqBeta _ _ *> inv id-right)
+    | f_hinv => E'.eqMono $ rewriteEq (E'.eqBeta E.eql equal) (E.eqBeta _ _ *> inv id-right)
 
-  \lemma unique-map {D : Precat} {x y : D} {f g : Hom x y} (E E' : Equalizer f g) : E'.eql ∘ Iso.f {unique E E'} = E.eql =>
-    eqBeta eql equal
+  \lemma unique-map {D : Precat} {x y : D} {f g : Hom x y} (E E' : Equalizer f g) : E'.eql ∘ Iso.f {unique E E'} = E.eql
+    => E'.eqBeta eql equal
 
   \lemma mono=>equalizer {D : Precat} {x y e : D} {f g : Hom x y} {eql : Hom e x} (equal : f ∘ eql = g ∘ eql)
                          (m : Mono eql) (p : \Pi {z : D} (h : Hom z x) -> f ∘ h = g ∘ h -> ∃ (k : Hom z e) (eql ∘ k = h))
@@ -331,7 +331,7 @@
   \func equalizer-iso {D : Precat} {X Y : D} {f : Hom X Y} (eq : Equalizer f f) : Iso {D} {eq} {X} eq.eql
   \cowith
     | hinv => unique id-equalizer eq
-    | hinv_f => unfold $ eqMono $ rewriteI o-assoc $ rewrite (eqBeta {eq} _ _, id-left, id-right) idp
+    | hinv_f => unfold $ eq.eqMono $ rewriteI o-assoc $ rewrite (eq.eqBeta _ _, id-left, id-right) idp
     | f_hinv => unique-map id-equalizer eq
 }
 
@@ -576,8 +576,8 @@
   \func prod-id-right {x y z w : Ob} (g : Hom y z) (f : Hom x y)
     : prodMap (g ∘ f) (id w) = prodMap g (id w) ∘ prodMap f (id w) => rewriteI {5} id-right $ prodMap-comp _ _ _ _
 
-  \func prod-id {x y : Ob} : prodMap (id x) (id y) = id (Bprod x y) =>
-    unfold prodMap $ rewrite (id-left, id-left) pair-proj
+  \lemma prod-id {x y : Ob} : prodMap (id x) (id y) = id (Bprod x y)
+    => unfold prodMap $ rewrite (id-left, id-left) pair-proj
 
   \lemma beta1 {x y z : Ob} (f : Hom z x) (g : Hom z y) : proj1 ∘ pair f g = f => tupleBeta {Bprod x y}
 
@@ -699,7 +699,7 @@
 
   \func equalizer {x y : Ob} (f g : Hom x y) : Equalizer f g => Equalizer.fromLimit (limit (Equalizer.functor f g))
 
-  \func op : CocompletePrecat \cowith
+  \protected \func op : CocompletePrecat \cowith
     | Precat => Precat.op
     | colimit (G : Functor) => limit G.op
 } \where {
@@ -710,14 +710,14 @@
         | coneMap j => E.eta-iso.hinv ∘ E.Func (lim.coneMap j)
         | coneCoh h => rewrite (inv (pmap E.Func (lim.coneCoh h)), Func-o, inv o-assoc, inv o-assoc)
                                (pmap (`∘ _) (inv (NatTrans.natural {E.eta.iso E.eta-iso} (G.Func h))))
-        | limMap c => E.isAdjoint $ lim.limMap (Cone.map E.LAdj c)
+        | limMap c => E.eta_epsilon-equiv $ lim.limMap (Cone.map E.LAdj c)
         | limBeta c j => o-assoc *> pmap (_ ∘) (inv o-assoc *> pmap (`∘ _) (inv E.Func-o *> pmap E.Func (lim.limBeta (Cone.map E.LAdj c) j)) *> inv (E.eta.natural (coneMap j))) *> inv o-assoc *> pmap (`∘ _) E.eta-iso.hinv_f *> id-left
-        | limUnique p => Equiv.isInj {symQEquiv E.eta_eps_equiv} $ lim.limUnique \lam j => inv o-assoc *> pmap (`∘ _) (inv (E.epsilon.natural _)) *> o-assoc *> pmap (_ ∘) (inv Func-o *> pmap E.LAdj.Func (E.eta-iso.reverse.isMono (inv o-assoc *> p j *> o-assoc)) *> Func-o) *> inv o-assoc *> pmap (`∘ _) (E.epsilon.natural _) *> o-assoc
+        | limUnique p => Equiv.isInj {symQEquiv E.eta_epsilon-equiv} $ lim.limUnique \lam j => inv o-assoc *> pmap (`∘ _) (inv (E.epsilon.natural _)) *> o-assoc *> pmap (_ ∘) (inv Func-o *> pmap E.LAdj.Func (E.eta-iso.reverse.isMono (inv o-assoc *> p j *> o-assoc)) *> Func-o) *> inv o-assoc *> pmap (`∘ _) (E.epsilon.natural _) *> o-assoc
       }
 }
 
 \class CompleteCat \extends CompletePrecat, Cat {
-  \func op : CocompleteCat \cowith
+  \protected \func op : CocompleteCat \cowith
     | Cat => Cat.op
     | colimit (G : Functor) => limit G.op
 }
@@ -725,7 +725,7 @@
 \class CocompletePrecat \extends Precat {
   | colimit {J : Precat} (G : Functor J \this) : Colimit G
 
-  \func op : CompletePrecat \cowith
+  \protected \func op : CompletePrecat \cowith
     | Precat => Precat.op
     | limit (G : Functor) => colimit G.op
 } \where {
@@ -734,13 +734,13 @@
 }
 
 \class CocompleteCat \extends CocompletePrecat, Cat {
-  \func op : CompleteCat \cowith
+  \protected \func op : CompleteCat \cowith
     | Cat => Cat.op
     | limit (G : Functor) => colimit G.op
 }
 
 \class BicompleteCat \extends CompleteCat, CocompleteCat {
-  \func op : BicompleteCat \cowith
+  \protected \func op : BicompleteCat \cowith
     | Cat => Cat.op
     | limit (G : Functor) => colimit G.op
     | colimit (G : Functor) => limit G.op

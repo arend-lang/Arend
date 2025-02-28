@@ -164,18 +164,18 @@
 \class DistributiveLattice \extends Lattice {
   | ldistr>= {x y z : E} : x ∧ (y ∨ z) <= (x ∧ y) ∨ (x ∧ z)
 
-  \lemma ldistr {x y z : E} : x ∧ (y ∨ z) = (x ∧ y) ∨ (x ∧ z)
+  \lemma meet-ldistr {x y z : E} : x ∧ (y ∨ z) = (x ∧ y) ∨ (x ∧ z)
     => <=-antisymmetric ldistr>= ldistr<=
 
-  \lemma rdistr {x y z : E} : (y ∨ z) ∧ x = (y ∧ x) ∨ (z ∧ x)
-    => meet-comm *> ldistr *> pmap2 (∨) meet-comm meet-comm
+  \lemma meet-rdistr {x y z : E} : (y ∨ z) ∧ x = (y ∧ x) ∨ (z ∧ x)
+    => meet-comm *> meet-ldistr *> pmap2 (∨) meet-comm meet-comm
 
   \lemma rdistr>= {x y z : E} : (y ∨ z) ∧ x <= (y ∧ x) ∨ (z ∧ x)
-    => =_<= rdistr
+    => =_<= meet-rdistr
 
   \lemma lcodistr {x y z : E} : x ∨ (y ∧ z) = (x ∨ y) ∧ (x ∨ z) => inv $
-    ldistr *>
-    pmap2 (∨) (meet-comm *> meet_<= join-left) (meet-comm *> ldistr)  *>
+    meet-ldistr *>
+    pmap2 (∨) (meet-comm *> meet_<= join-left) (meet-comm *> meet-ldistr)  *>
     inv join-assoc *> pmap2 (∨) (join-comm *> join_<= meet-right) meet-comm
 }
 
@@ -191,7 +191,7 @@
       | tupleEq _ => prop-pi
     }
 
-    \lemma top-left {x : E} : top ∧ x = x
+    \use \lemma top-left {x : E} : top ∧ x = x
       => <=-antisymmetric meet-right (meet-univ top-univ <=-refl)
 
     \lemma top-right {x : E} : x ∧ top = x
@@ -213,13 +213,13 @@
       | bottom => top
       | bottom-univ => top-univ
   } \where {
-      \use \coerce toMonoid (L : MeetSemilattice) : CMonoid L \cowith
-        | ide => top
-        | * => meet
-        | ide-left => top-left
-        | *-assoc => meet-assoc
-        | *-comm => meet-comm
-    }
+    \use \coerce toMonoid (L : MeetSemilattice) : CMonoid L \cowith
+      | ide => top
+      | * => meet
+      | ide-left => L.top-left
+      | *-assoc => L.meet-assoc
+      | *-comm => L.meet-comm
+  }
 
   \class JoinSemilattice \extends Order.Lattice.JoinSemilattice, DirectedSet {
     | bottom : E
@@ -228,7 +228,7 @@
     | isInhabitted => inP bottom
     | isDirected x y => inP (x ∨ y, join-left, join-right)
 
-    \lemma bottom-left {x : E} : bottom ∨ x = x
+    \use \lemma bottom-left {x : E} : bottom ∨ x = x
       => <=-antisymmetric (join-univ bottom-univ <=-refl) join-right
 
     \lemma bottom-right {x : E} : x ∨ bottom = x
@@ -268,9 +268,9 @@
       \use \coerce toMonoid (L : JoinSemilattice) : AbMonoid L \cowith
         | zro => bottom
         | + => join
-        | zro-left {x} => <=-antisymmetric (join-univ bottom-univ <=-refl) join-right
-        | +-assoc => join-assoc
-        | +-comm => join-comm
+        | zro-left => L.bottom-left
+        | +-assoc => L.join-assoc
+        | +-comm => L.join-comm
     }
 
   \class Lattice \extends Order.Lattice.Lattice, MeetSemilattice, JoinSemilattice {
@@ -285,16 +285,16 @@
       \use \coerce toSemiring (L : DistributiveLattice) : CSemiring L \cowith
         | zro => bottom
         | + => join
-        | zro-left {x} => <=-antisymmetric (join-univ bottom-univ <=-refl) join-right
-        | +-assoc => join-assoc
-        | +-comm => join-comm
+        | zro-left => L.bottom-left
+        | +-assoc => L.join-assoc
+        | +-comm => L.join-comm
         | ide => top
         | * => meet
-        | ide-left {x} => <=-antisymmetric meet-right (meet-univ top-univ <=-refl)
-        | *-assoc => meet-assoc
-        | ldistr => Order.Lattice.DistributiveLattice.ldistr
+        | ide-left => L.top-left
+        | *-assoc => L.meet-assoc
+        | ldistr => L.meet-ldistr
         | zro_*-left {x} => <=-antisymmetric meet-left bottom-univ
-        | *-comm => meet-comm
+        | *-comm => L.meet-comm
     }
 }
 
