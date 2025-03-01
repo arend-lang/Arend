@@ -5,7 +5,7 @@ import com.intellij.openapi.project.Project
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.psi.ext.fullNameText
-import org.arend.typechecking.TypeCheckingService
+import org.arend.server.ArendServerService
 import java.lang.StringBuilder
 
 fun StringBuilder.addImports(project: Project, referables: Set<PsiLocatedReferable>): StringBuilder {
@@ -13,7 +13,7 @@ fun StringBuilder.addImports(project: Project, referables: Set<PsiLocatedReferab
     val definitionsToFiles = mutableSetOf<String>()
     for (referable in referables) {
         val file = referable.containingFile as ArendFile
-        if (file == project.service<TypeCheckingService>().prelude) {
+        if (file == project.service<ArendServerService>().prelude) {
             continue
         }
         filesToDefinitions.getOrPut(file) { mutableListOf() }.add(referable.fullNameText)

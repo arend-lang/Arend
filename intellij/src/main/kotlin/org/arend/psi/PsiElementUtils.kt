@@ -18,7 +18,6 @@ import com.intellij.psi.util.startOffset
 import com.intellij.util.SmartList
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.LibraryConfig
-import org.arend.naming.reference.Referable
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
 import org.arend.typechecking.error.ErrorService
@@ -354,12 +353,6 @@ fun getTeleType(tele: PsiElement?): ArendExpr? = when (tele) {
     is ArendTypedExpr -> tele.type
     is ArendTypeTele -> tele.typedExpr?.type
     is ArendFieldTele -> tele.type
-    else -> null
-}
-
-fun getIdName(id: Referable): String? = when (id) {
-    is ArendDefIdentifier -> id.name
-    is ArendFieldDefIdentifier -> id.name
     else -> null
 }
 

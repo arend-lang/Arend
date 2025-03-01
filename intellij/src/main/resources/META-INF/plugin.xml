@@ -166,9 +166,7 @@
         -->
 
         <completion.contributor language="Arend" implementationClass="org.arend.codeInsight.completion.ArendCompletionContributor"/>
-        <!-- TODO[server2]
         <completion.contributor language="Arend" implementationClass="org.arend.codeInsight.completion.ArendNoVariantsDelegator"/>
-        -->
 
         <completion.confidence language="Arend" implementationClass="org.arend.codeInsight.completion.ArendCompletionConfidence" id="arendCompletion" />
 

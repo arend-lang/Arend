@@ -2,7 +2,6 @@ package org.arend.psi
 
 import com.intellij.extapi.psi.PsiFileBase
 import com.intellij.openapi.application.runReadAction
-import com.intellij.openapi.components.service
 import com.intellij.openapi.roots.LibraryOrderEntry
 import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.psi.FileViewProvider
@@ -26,7 +25,6 @@ import org.arend.module.orderRoot.ArendConfigOrderRootType
 import org.arend.naming.reference.GlobalReferable
 import org.arend.naming.scope.*
 import org.arend.psi.ext.*
-import org.arend.psi.listener.ArendPsiChangeService
 import org.arend.psi.stubs.ArendFileStub
 import org.arend.resolving.ArendReference
 import org.arend.util.*
@@ -69,7 +67,7 @@ class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, Aren
         get() = injectionContext != null
 
     private fun <T> cachedValue(value: T) =
-        CachedValueProvider.Result(value, PsiModificationTracker.MODIFICATION_COUNT, service<ArendPsiChangeService>().definitionModificationTracker)
+        CachedValueProvider.Result(value, PsiModificationTracker.MODIFICATION_COUNT)
 
     val arendLibrary: LibraryConfig?
         get() = CachedValuesManager.getCachedValue(this) {

@@ -1,19 +1,12 @@
 package org.arend.refactoring
 
-import com.intellij.openapi.components.service
 import com.intellij.openapi.util.TextRange
 import org.arend.ArendTestBase
 import org.arend.core.expr.LetExpression
 import org.arend.term.concrete.Concrete
-import org.arend.typechecking.TypeCheckingService
 import org.intellij.lang.annotations.Language
 
 class SubExprTest : ArendTestBase() {
-    override fun setUp() {
-        super.setUp()
-        project.service<TypeCheckingService>().initialize()
-    }
-
     fun subexpr(@Language("Arend") code: String, selection: TextRange): SubExprResult {
         InlineFile(code)
         typecheck()

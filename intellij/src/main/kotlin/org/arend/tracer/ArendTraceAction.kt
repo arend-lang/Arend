@@ -3,7 +3,6 @@ package org.arend.tracer
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.ActionUtil
-import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ex.util.EditorUtil
 import com.intellij.openapi.project.Project
@@ -26,7 +25,6 @@ import org.arend.refactoring.collectArendExprs
 import org.arend.refactoring.selectedExpr
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.LibraryArendExtensionProvider
-import org.arend.typechecking.TypeCheckingService
 import org.arend.typechecking.error.local.GoalDataHolder
 import org.arend.typechecking.instance.pool.GlobalInstancePool
 import org.arend.typechecking.visitor.DefinitionTypechecker
@@ -166,10 +164,8 @@ class ArendTraceAction : ArendPopupAction() {
             definition: Concrete.Definition,
             expression: ArendExpr
         ): ArendTracingData {
-            val extension = LibraryArendExtensionProvider(project.service<TypeCheckingService>().libraryManager)
-                .getArendExtension(definition.data)
             val errorsConsumer = ErrorsConsumer()
-            val tracer = ArendTracingTypechecker(errorsConsumer, extension).apply {
+            val tracer = ArendTracingTypechecker(errorsConsumer, null /* TODO[server2] */).apply {
                 instancePool = GlobalInstancePool(PersistentList.empty() /* TODO[server2]: PsiInstanceProviderSet()[definition.data] */, this)
             }
             var firstTraceEntryIndex = -1

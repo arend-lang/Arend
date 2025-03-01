@@ -50,7 +50,7 @@ class ArendEditorSession(private val project: Project, private val editor: Edito
 
         val lookupList = request.list.map { elem ->
             val ref = (elem as? Definition)?.referable ?: elem as? Referable
-            val element = (if (ref != null) ArendReferenceBase.createArendLookUpElement(ref, null, false, null, false, "")?.withInsertHandler { _, _ -> } else null)
+            val element = (if (ref != null) ArendReferenceBase.createArendLookUpElement(ref, ref.abstractReferable, null, false, null, false, "")?.withInsertHandler { _, _ -> } else null)
                 ?: LookupElementBuilder.create(elem, "")
             element.withPresentableText(ref?.refName ?: elem.toString())
         }

@@ -18,13 +18,13 @@ import org.arend.ext.error.ErrorReporter
 import org.arend.library.SourceLibrary
 import org.arend.module.ModuleLocation
 import org.arend.psi.ArendFile
+import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.util.FileUtils
 import org.arend.util.getRelativeFile
 
 
 @Service(Service.Level.PROJECT)
 class BinaryFileSaver(private val project: Project) {
-    private val typeCheckingService = project.service<TypeCheckingService>()
     private val typecheckedModules = LinkedHashSet<ArendFile>()
 
     init {
@@ -40,7 +40,7 @@ class BinaryFileSaver(private val project: Project) {
                     val file = (if (event is VFileContentChangeEvent && event.isFromSave) PsiManager.getInstance(project).findFile(event.file) as? ArendFile else null) ?: continue
                     synchronized(project) {
                         if (typecheckedModules.remove(file)) {
-                            saveFile(file, typeCheckingService.libraryManager.libraryErrorReporter, savedFiles)
+                            saveFile(file, NotificationErrorReporter(project), savedFiles)
                         }
                     }
                 }
@@ -97,7 +97,7 @@ class BinaryFileSaver(private val project: Project) {
             val savedFiles = HashSet<VirtualFile>()
             for (file in typecheckedModules) {
                 ApplicationManager.getApplication().executeOnPooledThread {
-                    saveFile(file, typeCheckingService.libraryManager.libraryErrorReporter, savedFiles)
+                    saveFile(file, NotificationErrorReporter(project), savedFiles)
                 }
             }
             typecheckedModules.clear()

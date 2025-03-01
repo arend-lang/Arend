@@ -310,10 +310,15 @@ public class ArendServerImpl implements ArendServer {
   }
 
   ModuleLocation findDependency(ModulePath modulePath, String fromLibrary, boolean fromTests, boolean withReadOnly) {
-    List<String> libraries = new ArrayList<>(3);
-    libraries.add(fromLibrary);
-    ArendLibraryImpl arendLib = myLibraryService.getLibrary(fromLibrary);
-    if (arendLib != null) libraries.addAll(arendLib.getLibraryDependencies());
+    List<String> libraries = new ArrayList<>();
+    if (fromLibrary == null) {
+      libraries.addAll(getLibraries());
+    } else {
+      libraries.add(fromLibrary);
+      ArendLibraryImpl arendLib = myLibraryService.getLibrary(fromLibrary);
+      if (arendLib != null) libraries.addAll(arendLib.getLibraryDependencies());
+    }
+
     List<ModuleLocation.LocationKind> kinds = new ArrayList<>(3);
     kinds.add(ModuleLocation.LocationKind.SOURCE);
     if (fromTests) kinds.add(ModuleLocation.LocationKind.TEST);
@@ -333,13 +338,14 @@ public class ArendServerImpl implements ArendServer {
     return null;
   }
 
-  private ModuleScopeProvider getModuleScopeProviderFor(ModuleLocation module) {
+  @Override
+  public @NotNull ModuleScopeProvider getModuleScopeProvider(@Nullable String libraryName, boolean withTests) {
     return new ModuleScopeProvider() {
       @Override
       public @Nullable Scope forModule(@NotNull ModulePath modulePath) {
         Scope result = myPreludeModuleScopeProvider.forModule(modulePath);
         if (result != null) return result;
-        ModuleLocation found = findDependency(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+        ModuleLocation found = findDependency(modulePath, libraryName, withTests, true);
         if (found == null) return null;
         GroupData groupData = myGroups.get(found);
         return groupData == null ? null : groupData.getFileScope();
@@ -347,7 +353,7 @@ public class ArendServerImpl implements ArendServer {
 
       @Override
       public @NotNull GlobalReferable findModule(@NotNull ModulePath modulePath) {
-        ModuleLocation location = modulePath.equals(Prelude.MODULE_PATH) ? Prelude.MODULE_LOCATION : findDependency(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+        ModuleLocation location = modulePath.equals(Prelude.MODULE_PATH) ? Prelude.MODULE_LOCATION : findDependency(modulePath, libraryName, withTests, true);
         if (location != null) {
           GroupData groupData = myGroups.get(location);
           if (groupData != null) {
@@ -359,13 +365,13 @@ public class ArendServerImpl implements ArendServer {
 
       @Override
       public @NotNull Scope getModuleScope() {
-        return new LazyScope(() -> new ModuleScope(ArendServerImpl.this, module.getLibraryName(), module.getLocationKind()));
+        return new LazyScope(() -> new ModuleScope(ArendServerImpl.this, libraryName, withTests));
       }
     };
   }
 
   Scope getParentGroupScope(ModuleLocation module, ConcreteGroup group) {
-    return ScopeFactory.parentScopeForGroup(group, getModuleScopeProviderFor(module), true);
+    return ScopeFactory.parentScopeForGroup(group, getModuleScopeProvider(module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST), true);
   }
 
   private TypingInfo getTypingInfo(Referable referable) {

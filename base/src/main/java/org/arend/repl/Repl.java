@@ -12,7 +12,6 @@ import org.arend.ext.reference.Precedence;
 import org.arend.extImpl.definitionRenamer.CachingDefinitionRenamer;
 import org.arend.extImpl.definitionRenamer.ScopeDefinitionRenamer;
 import org.arend.library.Library;
-import org.arend.library.LibraryManager;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.*;
@@ -22,6 +21,8 @@ import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor;
 import org.arend.naming.scope.Scope;
 import org.arend.naming.scope.ScopeFactory;
 import org.arend.repl.action.*;
+import org.arend.server.ArendLibrary;
+import org.arend.server.ArendServer;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.*;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
@@ -66,14 +67,14 @@ public abstract class Repl {
     }
   };
   protected final @NotNull ListErrorReporter errorReporter;
-  protected final @NotNull LibraryManager myLibraryManager;
+  protected final @NotNull ArendServer myServer;
   public final List<ConcreteStatement> statements = new ArrayList<>();
 
   public Repl(@NotNull ListErrorReporter listErrorReporter,
-              @NotNull LibraryManager libraryManager,
+              @NotNull ArendServer server,
               @NotNull TypecheckingOrderingListener typecheckingOrderingListener) {
     errorReporter = listErrorReporter;
-    myLibraryManager = libraryManager;
+    myServer = server;
     typechecking = typecheckingOrderingListener;
     myModuleReferable = new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, replModulePath.getLibraryName(), Precedence.DEFAULT, null, new FullModuleReferable(replModulePath), GlobalReferable.Kind.OTHER);
   }
@@ -128,15 +129,7 @@ public abstract class Repl {
 
   @Contract(pure = true)
   public final @NotNull ModuleScopeProvider getAvailableModuleScopeProvider() {
-    return module -> {
-      for (Library registeredLibrary : myLibraryManager.getRegisteredLibraries()) {
-        Scope scope = registeredLibrary.getModuleScopeProvider().forModule(module);
-        if (scope != null) return scope;
-        scope = registeredLibrary.getTestsModuleScopeProvider().forModule(module);
-        if (scope != null) return scope;
-      }
-      return null;
-    };
+    return myServer.getModuleScopeProvider(null, true);
   }
 
   public @NotNull String prompt() {
@@ -323,7 +316,7 @@ public abstract class Repl {
   }
 
   public void resetReplContext() {
-    Scope prelude = myMergedScopes.get(myMergedScopes.size() - 1);
+    Scope prelude = myMergedScopes.getLast();
     myMergedScopes.clear();
     myMergedScopes.add(prelude);
     myReplScope = new ReplScope(myReplScope.myCurrentLineScope, myMergedScopes);
@@ -343,15 +336,9 @@ public abstract class Repl {
 
     @Override
     public void invoke(@NotNull String line, @NotNull Repl api, @NotNull Supplier<@NotNull String> scanner) {
-      for (var registeredLibrary : api.myLibraryManager.getRegisteredLibraries()) {
-        boolean external = registeredLibrary.isExternal();
-        boolean notLoaded = !registeredLibrary.isLoaded();
-        var info = external && notLoaded
-          ? " (external, not loaded)"
-          : external ? " (external)"
-          : notLoaded ? " (not loaded)"
-          : "";
-        api.println(registeredLibrary.getName() + info);
+      for (String libraryName : api.myServer.getLibraries()) {
+        ArendLibrary library = api.myServer.getLibrary(libraryName);
+        api.println(libraryName + (library != null && library.isExternalLibrary() ? " (external)" : ""));
       }
     }
   }

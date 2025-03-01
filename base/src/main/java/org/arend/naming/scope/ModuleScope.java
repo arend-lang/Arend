@@ -27,16 +27,20 @@ public class ModuleScope implements Scope {
     myPrefix = prefix;
   }
 
-  public ModuleScope(ArendServerImpl server, String libraryName, ModuleLocation.LocationKind kind) {
-    myRequester = kind == ModuleLocation.LocationKind.GENERATED ? null : server.getRequester();
-    myWithTests = kind == ModuleLocation.LocationKind.TEST;
+  public ModuleScope(ArendServerImpl server, String libraryName, boolean withTests) {
+    myRequester = server.getRequester();
+    myWithTests = withTests;
     myPrefix = Collections.emptyList();
 
-    ArendLibrary library = server.getLibrary(libraryName);
     myLibraries = new ArrayList<>();
-    myLibraries.add(libraryName);
-    if (library != null) {
-      myLibraries.addAll(library.getLibraryDependencies());
+    if (libraryName == null) {
+      myLibraries.addAll(server.getLibraries());
+    } else {
+      ArendLibrary library = server.getLibrary(libraryName);
+      myLibraries.add(libraryName);
+      if (library != null) {
+        myLibraries.addAll(library.getLibraryDependencies());
+      }
     }
 
     List<ModuleLocation> modules = new ArrayList<>();

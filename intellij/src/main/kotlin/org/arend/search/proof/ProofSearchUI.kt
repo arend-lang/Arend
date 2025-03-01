@@ -19,7 +19,6 @@ import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.application.runInEdt
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.actions.IncrementalFindAction
@@ -63,7 +62,6 @@ import org.arend.psi.ext.ArendCompositeElement
 import org.arend.psi.ext.PsiReferable
 import org.arend.psi.ext.ArendGroup
 import org.arend.psi.ext.ReferableBase
-import org.arend.psi.listener.ArendPsiChangeService
 import org.arend.psi.navigate
 import org.arend.psi.stubs.index.ArendDefinitionIndex
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
@@ -630,7 +628,6 @@ class ProofSearchUI(private val project: Project, private val caret: Caret?) : B
                 mainDocument.insertString(offset, representation.text)
                 PsiDocumentManager.getInstance(definition.project).commitDocument(mainDocument)
                 action.execute(mainEditor)
-                service<ArendPsiChangeService>().incModificationCount()
             })
         }
 

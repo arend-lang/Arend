@@ -25,10 +25,10 @@ import org.arend.prelude.Prelude
 import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.refactoring.getCompleteWhere
+import org.arend.server.ArendServerService
 import org.arend.settings.ArendCustomCodeStyleSettings
 import org.arend.settings.ArendCustomCodeStyleSettings.OptimizeImportsPolicy
 import org.arend.term.NamespaceCommand
-import org.arend.typechecking.TypeCheckingService
 import org.arend.typechecking.visitor.SearchVisitor
 import org.arend.util.ArendBundle
 import org.arend.util.mapToSet
@@ -277,12 +277,8 @@ fun getScopeProvider(isForModule: Boolean, group: ArendGroup): ScopeProvider {
             group.scope.resolveNamespace(it.toList())
         }
     } else {
-        val libraryManager = group.project.service<TypeCheckingService>().libraryManager
-        { path ->
-            val result = libraryManager.registeredLibraries.firstNotNullOfOrNull { libraryManager.getAvailableModuleScopeProvider(it).forModule(path) }
-            if (result == null) println("FOO")
-            result
-        }
+        val server = group.project.service<ArendServerService>().server
+        { path -> server.getModuleScopeProvider(null, true).forModule(path) }
     }
 }
 
@@ -435,6 +431,7 @@ private class ImportStructureCollector(
 
     private fun addSyntacticGlobalInstances(element: ArendGroup) {
         // only \open-ed instances can participate in instance candidate resolution
+        /* TODO[server2]
         val scope = element.scope
         val referables =
             element.statements.flatMap { stat -> stat.namespaceCommand?.let { NamespaceCommandNamespace.makeNamespace(scope, it).elements } ?: emptyList() }
@@ -443,6 +440,7 @@ private class ImportStructureCollector(
                 currentFrame.instancesFromScope.add(instanceCandidate)
             }
         }
+        */
     }
 
     private fun ArendDefInstance.isDefinitelyInstance(): Boolean = functionKind == FunctionKind.INSTANCE

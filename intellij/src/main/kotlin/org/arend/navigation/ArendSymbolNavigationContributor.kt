@@ -6,7 +6,6 @@ import org.arend.prelude.Prelude
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.psi.ext.PsiReferable
 import org.arend.psi.stubs.index.ArendNamedElementIndex
-import org.arend.typechecking.TypeCheckingService
 
 class ArendSymbolNavigationContributor : ArendNavigationContributorBase<PsiReferable>(
     ArendNamedElementIndex.KEY,

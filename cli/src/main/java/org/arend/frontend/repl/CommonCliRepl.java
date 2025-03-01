@@ -31,10 +31,13 @@ import org.arend.prelude.PreludeLibrary;
 import org.arend.prelude.PreludeResourceLibrary;
 import org.arend.repl.Repl;
 import org.arend.repl.action.ReplCommand;
+import org.arend.server.ArendServer;
+import org.arend.server.impl.ArendServerImpl;
 import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
+import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.LibraryArendExtensionProvider;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DummyDependencyListener;
@@ -99,21 +102,21 @@ public abstract class CommonCliRepl extends Repl {
       @NotNull FileLibraryResolver libraryResolver,
       @NotNull ListErrorReporter errorReporter) {
     this(
-      libraryManager(libraryResolver, errorReporter),
+      new ArendServerImpl(null /* TODO[server2] */, false, false, null),
       modules,
       libraryResolver,
       errorReporter);
   }
 
   private CommonCliRepl(
-      @NotNull LibraryManager libraryManager,
+      @NotNull ArendServer server,
       @NotNull Set<ModulePath> modules,
       @NotNull FileLibraryResolver libraryResolver,
       @NotNull ListErrorReporter errorReporter) {
     super(
       errorReporter,
-      libraryManager,
-      new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(libraryManager))
+      server,
+      new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, ref -> null /* TODO[server2] */)
     );
     myLibraryResolver = libraryResolver;
     myReplLibrary = Files.exists(pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE))
@@ -130,7 +133,7 @@ public abstract class CommonCliRepl extends Repl {
         myPrettyPrinterFlags.addAll(properties.prettyPrinterFlags);
       }
     } catch (IOException e) {
-      libraryManager.getLibraryErrorReporter().report(new GeneralError(GeneralError.Level.ERROR, "Failed to load repl config: " + e.getLocalizedMessage()));
+      errorReporter.report(new GeneralError(GeneralError.Level.ERROR, "Failed to load repl config: " + e.getLocalizedMessage()));
     }
   }
   //endregion
@@ -168,11 +171,6 @@ public abstract class CommonCliRepl extends Repl {
     } catch (IOException e) {
       eprintln("[ERROR] Failed to save repl config: " + e.getLocalizedMessage());
     }
-  }
-
-  @NotNull
-  private static TimedLibraryManager libraryManager(@NotNull FileLibraryResolver libraryResolver, @NotNull ListErrorReporter errorReporter) {
-    return new TimedLibraryManager(libraryResolver, errorReporter, errorReporter, DefinitionRequester.INSTANCE);
   }
 
   private @NotNull BuildVisitor buildVisitor() {
@@ -267,20 +265,25 @@ public abstract class CommonCliRepl extends Repl {
    * @return false means type checking failed.
    */
   public final boolean loadLibrary(@NotNull Library library) {
+    return false;
+    /* TODO[server2]
     if (!myLibraryManager.loadLibrary(library, typechecking)) return false;
     myLibraryManager.registerDependency(myReplLibrary, library);
     typecheckLibrary(library);
     return true;
+    */
   }
 
   @Override
   protected final void loadLibraries() {
+    /* TODO[server2]
     if (!loadLibrary(new PreludeResourceLibrary()))
       eprintln("[FATAL] Failed to load Prelude");
     else myReplScope.addPreludeScope(PreludeLibrary.getPreludeScope());
     if (!myLibraryManager.loadLibrary(myReplLibrary, typechecking))
       eprintln("[FATAL] Failed to load the REPL virtual library");
     typecheckLibrary(myReplLibrary);
+    */
   }
 
   /**
@@ -288,18 +291,23 @@ public abstract class CommonCliRepl extends Repl {
    * This will <strong>not</strong> modify the REPL scope.
    */
   public final @Nullable Scope loadModule(@NotNull ModulePath modulePath) {
+    return null;
+    /* TODO[server2]
     if (myModules.add(modulePath))
       myLibraryManager.unloadLibrary(myReplLibrary);
     myLibraryManager.loadLibrary(myReplLibrary, typechecking);
     typecheckLibrary(myReplLibrary);
     return getAvailableModuleScopeProvider().forModule(modulePath);
+    */
   }
 
   public final void loadModules(Collection<@NotNull ModulePath> modulePaths) {
+    /* TODO[server2]
     if (myModules.addAll(modulePaths))
       myLibraryManager.unloadLibrary(myReplLibrary);
     myLibraryManager.loadLibrary(myReplLibrary, typechecking);
     typecheckLibrary(myReplLibrary);
+    */
   }
 
   /**
@@ -311,7 +319,7 @@ public abstract class CommonCliRepl extends Repl {
   public final boolean unloadModule(@NotNull ModulePath modulePath) {
     boolean isLoadedBefore = myModules.remove(modulePath);
     if (isLoadedBefore) {
-      myLibraryManager.unloadLibrary(myReplLibrary);
+      // TODO[server2]: myLibraryManager.unloadLibrary(myReplLibrary);
       myReplLibrary.groupLoaded(modulePath, null, true, false);
       typecheckLibrary(myReplLibrary);
     }

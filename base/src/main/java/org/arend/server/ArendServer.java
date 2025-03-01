@@ -3,6 +3,7 @@ package org.arend.server;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.module.ModuleLocation;
+import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
@@ -83,6 +84,11 @@ public interface ArendServer {
    * @return the set of registered libraries.
    */
   @NotNull Set<String> getLibraries();
+
+  /**
+   * @return the set of registered libraries.
+   */
+  @NotNull ModuleScopeProvider getModuleScopeProvider(@Nullable String libraryName, boolean withTests);
 
   /**
    * @return The typing info for the whole project.

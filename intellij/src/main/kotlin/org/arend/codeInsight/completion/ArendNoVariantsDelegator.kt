@@ -21,7 +21,6 @@ import org.arend.refactoring.isVisible
 import org.arend.resolving.ArendReferenceBase
 import org.arend.term.abs.Abstract
 import org.arend.term.group.AccessModifier
-import org.arend.typechecking.TypeCheckingService
 
 class ArendNoVariantsDelegator : CompletionContributor() {
     override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
@@ -80,9 +79,8 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                     locatedReferables.forEach {
                         val isInsideTest = (it.containingFile as? ArendFile)?.moduleLocation?.locationKind == ModuleLocation.LocationKind.TEST
                         val isImportAllowed = it.accessModifier != AccessModifier.PRIVATE && isVisible(it.containingFile as ArendFile, file)
-                        /* TODO[server2]
                         if (!tracker.variants.contains(it) && (isTestFile || !isInsideTest) && isImportAllowed)
-                            ArendReferenceBase.createArendLookUpElement(it, parameters.originalFile, true, null, it !is ArendDefClass || !it.isRecord)?.let {
+                            ArendReferenceBase.createArendLookUpElement(null, it, parameters.originalFile, true, null, it !is ArendDefClass || !it.isRecord)?.let {
                                 result.addElement(
                                     run { val oldHandler = it.insertHandler
                                         it.withInsertHandler { context, item ->
@@ -106,7 +104,6 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                                     }
                                 )
                         }
-                        */
                     }
                 }
             }
@@ -118,11 +115,11 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                 }
                 null
             }
-            */
 
             if (isInsideValidExpr) for (entry in project.service<TypeCheckingService>().additionalReferables.entries) {
                 consumer.invoke(entry.key, entry.value)
             }
+            */
 
             StubIndex.getInstance().processAllKeys(if (isInsideValidNsCmd) ArendFileIndex.KEY else ArendDefinitionIndex.KEY, project) { name ->
                 consumer.invoke(name, null)

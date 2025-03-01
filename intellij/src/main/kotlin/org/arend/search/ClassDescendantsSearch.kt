@@ -3,14 +3,12 @@ package org.arend.search
 import com.intellij.find.findUsages.DefaultFindUsagesHandlerFactory
 import com.intellij.find.findUsages.FindUsagesOptions
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.usageView.UsageInfo
 import com.intellij.util.CommonProcessors
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.psi.listener.ArendDefinitionChangeListener
-import org.arend.psi.listener.ArendPsiChangeService
 import java.util.concurrent.ConcurrentHashMap
 
 @Service(Service.Level.PROJECT)
@@ -32,10 +30,6 @@ class ClassDescendantsSearch(val project: Project) : ArendDefinitionChangeListen
                 cache.clear()
             }
         }
-
-    init {
-        service<ArendPsiChangeService>().addListener(this)
-    }
 
     fun search(clazz: ArendDefClass): List<ArendDefinition<*>> {
         if (!FIND_INSTANCES && !FIND_SUBCLASSES) {

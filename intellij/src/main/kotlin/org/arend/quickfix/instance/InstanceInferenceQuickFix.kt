@@ -27,7 +27,6 @@ import org.arend.psi.ext.ArendDefinition
 import org.arend.psi.ext.ArendGroup
 import org.arend.psi.ext.ArendLongName
 import org.arend.refactoring.*
-import org.arend.typechecking.TypeCheckingService
 import org.arend.typechecking.error.ErrorService
 import org.arend.ext.error.InstanceInferenceError
 import org.arend.naming.reference.TCDefReferable
@@ -46,7 +45,7 @@ class InstanceInferenceQuickFix(val error: InstanceInferenceError, val cause: Sm
     override fun getFamilyName(): String = text
 
     override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean =
-        error.classifyingExpression != null || project.service<TypeCheckingService>().isInstanceAvailable(classRef)
+        error.classifyingExpression != null // TODO[server2]: || project.service<TypeCheckingService>().isInstanceAvailable(classRef)
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
         if (editor == null) return
@@ -54,7 +53,7 @@ class InstanceInferenceQuickFix(val error: InstanceInferenceError, val cause: Sm
 
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Searching for instances", true) {
             override fun run(indicator: ProgressIndicator) {
-                instances = project.service<TypeCheckingService>().findInstances(classRef, error.classifyingExpression as? Expression)
+                // TODO[server2]: instances = project.service<TypeCheckingService>().findInstances(classRef, error.classifyingExpression as? Expression)
             }
 
             override fun onFinished() {
@@ -64,7 +63,7 @@ class InstanceInferenceQuickFix(val error: InstanceInferenceError, val cause: Sm
                 if (instancesVal != null && instancesVal.size > 1 && longName != null) {
                     val lookupList = instancesVal.map {
                         val ref = it.first().ref
-                        (ArendReferenceBase.createArendLookUpElement(ref, null, false, null, false, "") ?: LookupElementBuilder.create(ref, "")).withPresentableText(ref.refName)
+                        (ArendReferenceBase.createArendLookUpElement(ref, ref.abstractReferable, null, false, null, false, "") ?: LookupElementBuilder.create(ref, "")).withPresentableText(ref.refName)
                     }
                     val lookup = LookupManager.getInstance(project).showLookup(editor, *lookupList.toTypedArray())
                     lookup?.addLookupListener(object : LookupListener {
@@ -105,17 +104,6 @@ class InstanceInferenceQuickFix(val error: InstanceInferenceError, val cause: Sm
                             importData.first?.execute()
                             if (openedName.size > 1 && elementReferable is ArendGroup)
                                 doAddIdToOpen(psiFactory, openedName, longName, elementReferable, instanceMode = true)
-                        }
-                    }
-
-                    val tcService = project.service<TypeCheckingService>()
-                    val file = mySourceContainer.containingFile as? ArendFile ?: return@runWriteCommandAction
-                    tcService.updateDefinition(enclosingDefinition, file, true)
-                    for ((error,element) in project.service<ErrorService>().getTypecheckingErrors(file)) {
-                        if (error is InstanceInferenceError) {
-                            element.ancestor<ArendDefinition<*>>()?.let {
-                                tcService.updateDefinition(it, file, true)
-                            }
                         }
                     }
                 }

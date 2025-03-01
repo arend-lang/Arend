@@ -44,7 +44,6 @@ import org.arend.psi.ArendElementTypes
 import org.arend.psi.ArendExpressionCodeFragment
 import org.arend.psi.ext.ArendFunctionDefinition
 import org.arend.psi.ext.ArendReferenceElement
-import org.arend.psi.listener.ArendPsiChangeService
 import org.arend.psi.oneLineText
 import org.arend.refactoring.NsCmdRefactoringAction
 import org.arend.util.FileUtils.isCorrectDefinitionName
@@ -344,7 +343,6 @@ class ArendChangeSignatureDialog(project: Project,
     }
     fun invalidateIndices(depIndices: Set<Int>) {
         for (i in depIndices.toSortedSet().reversed()) {
-            service<ArendPsiChangeService>().definitionModificationTracker.incModificationCount()
             invokeNameResolverHighlighting(i)
         }
     }

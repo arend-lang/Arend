@@ -31,6 +31,7 @@ import org.arend.psi.ext.*
 import org.arend.psi.ext.ArendGroup
 import org.arend.psi.ext.ArendDefFunction
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
+import org.arend.server.ArendServerService
 import org.arend.settings.ArendSettings
 import org.arend.term.Fixity
 import org.arend.term.NamespaceCommand
@@ -39,7 +40,6 @@ import org.arend.term.abs.AbstractExpressionVisitor
 import org.arend.term.abs.AbstractReference
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.ConcreteExpressionVisitor
-import org.arend.typechecking.TypeCheckingService
 import org.arend.util.getBounds
 import java.lang.IllegalArgumentException
 import java.math.BigInteger
@@ -232,7 +232,7 @@ fun isPrelude(file: ArendFile) = file.generatedModuleLocation == Prelude.MODULE_
 fun getCorrectPreludeItemStringReference(project: Project, location: ArendCompositeElement, preludeItem: Definition): String {
     //Notice that this method may modify PSI (by writing "import Prelude" in the file header)
     val itemName = preludeItem.name
-    val itemReferable = project.service<TypeCheckingService>().preludeScope.resolveName(itemName)
+    val itemReferable = project.service<ArendServerService>().server.getModuleScopeProvider(Prelude.LIBRARY_NAME, false).forModule(Prelude.MODULE_PATH)?.resolveName(itemName)
     val data = ResolveReferenceAction.getTargetName(itemReferable as PsiLocatedReferable, location)
     data.second?.execute()
     return data.first
