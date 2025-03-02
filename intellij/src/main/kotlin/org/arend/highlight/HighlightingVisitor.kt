@@ -151,7 +151,7 @@ class HighlightingVisitor(private val collector: HighlightingCollector, private 
     override fun visitPattern(pattern: Concrete.Pattern, params: Void?) {
         if (pattern is Concrete.ConstructorPattern) {
             val referent = pattern.constructor
-            if (referent != null) resolveReference(pattern.data, referent)
+            if (referent != null) resolveReference(pattern.constructorData, referent)
         }
         super.visitPattern(pattern, params)
     }
