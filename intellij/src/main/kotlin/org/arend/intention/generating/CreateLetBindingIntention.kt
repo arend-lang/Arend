@@ -196,7 +196,7 @@ class CreateLetBindingIntention : AbstractGenerateFunctionIntention() {
     }
 
     private fun collectInterestingSubranges(rootPsi: ArendCompositeElement, binop: ArendExpr, rootSelection: TextRange): List<TextRange> {
-        val parsed = appExprToConcrete(binop, true) ?: return listOf(rootPsi.textRange)
+        val parsed = appExprToConcrete(binop) ?: return listOf(rootPsi.textRange)
         val ranges = mutableListOf<TextRange>()
         forEachRange(parsed) { range, concrete ->
             if (concrete is Concrete.AppExpression && range.contains(rootSelection) && range != rootSelection) ranges.add(range)

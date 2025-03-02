@@ -1,6 +1,5 @@
 package org.arend.intention
 
-import com.intellij.codeInsight.intention.preview.IntentionPreviewInfo
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -113,7 +112,7 @@ class GenerateFunctionFromGoalIntention : AbstractGenerateFunctionIntention() {
     }
 
     private fun computeGoalArguments(goal: ArendGoal, psiAppExpr: ArendArgumentAppExpr): List<Pair<PsiElement, Boolean>> {
-        val parsedAppExpr = appExprToConcrete(psiAppExpr, true)
+        val parsedAppExpr = appExprToConcrete(psiAppExpr)
                 ?: return psiAppExpr.argumentList.map { it to it.isExplicit }
         var result = emptyList<Pair<PsiElement, Boolean>>()
         parsedAppExpr.accept(object : BaseConcreteExpressionVisitor<Unit>() {

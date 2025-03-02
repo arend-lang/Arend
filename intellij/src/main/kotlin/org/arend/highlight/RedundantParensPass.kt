@@ -45,7 +45,7 @@ class RedundantParensPass(file: ArendFile, editor: Editor):
     fun isApplicationUsedAsBinOpArgument(tuple: ArendTuple, tupleExpression: ArendExpr): Boolean {
         val parentAtomFieldsAcc = getParentAtomFieldsAcc(tuple) ?: return false
         val parentAppExprPsi = parentArgumentAppExpr(parentAtomFieldsAcc) ?: return false
-        val parentAppExpr = appExprToConcrete(parentAppExprPsi, true) ?: return false
+        val parentAppExpr = appExprToConcrete(parentAppExprPsi) ?: return false
         var result = false
         parentAppExpr.accept(object : ArendInspectionConcreteVisitor() {
             override fun visitHole(expr: Concrete.HoleExpression?, params: Void?): Void? {

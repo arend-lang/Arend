@@ -133,11 +133,11 @@ class ArendChangeSignatureProcessor(project: Project,
                         val errorReporter = CountingErrorReporter(GeneralError.Level.ERROR, DummyErrorReporter.INSTANCE)
                         when (rootPsi) {
                             is ArendArgumentAppExpr ->
-                                appExprToConcrete(rootPsi, false, errorReporter)?.let {
+                                appExprToConcrete(rootPsi)?.let {
                                 if (errorReporter.errorsNumber == 0) concreteSet.add(ConcreteDataItem(rootPsi, it))
                             }
 
-                            is ArendAtomFieldsAcc -> appExprToConcrete(rootPsi, false, errorReporter)?.let {
+                            is ArendAtomFieldsAcc -> appExprToConcrete(rootPsi)?.let {
                                 if (errorReporter.errorsNumber == 0) concreteSet.add(ConcreteDataItem(rootPsi, it))
                             }
 

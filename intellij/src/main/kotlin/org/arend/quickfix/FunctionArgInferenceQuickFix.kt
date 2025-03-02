@@ -9,10 +9,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
 import org.arend.codeInsight.ArendCodeInsightUtils.Companion.getAllParametersForReferable
 import org.arend.codeInsight.ParameterDescriptor
-import org.arend.error.CountingErrorReporter
-import org.arend.error.DummyErrorReporter
 import org.arend.ext.concrete.expr.ConcreteExpression
-import org.arend.ext.error.GeneralError
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.TGOAL
 import org.arend.psi.ext.*
@@ -43,8 +40,7 @@ class FunctionArgInferenceQuickFix(
         if (element !is ArendAtomArgument && element !is ArendAtomFieldsAcc) return
 
         val rootPsi = cause.element?.ancestor<ArendArgumentAppExpr>() ?: return
-        val errorReporter = CountingErrorReporter(GeneralError.Level.ERROR, DummyErrorReporter.INSTANCE)
-        val concreteExpr = appExprToConcrete(rootPsi, false, errorReporter) ?: return
+        val concreteExpr = appExprToConcrete(rootPsi) ?: return
         val rangeData = HashMap<Concrete.SourceNode, TextRange>(); getBounds(concreteExpr, rootPsi.node.getChildren(null).toList(), rangeData)
 
         fun findSubExpr(expr: Concrete.Expression): Concrete.Expression? {

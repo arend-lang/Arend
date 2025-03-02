@@ -328,7 +328,7 @@ class ArendCodeInsightUtils {
                     return computeCoClauseParameterInfo(currentNode, offset)
 
                 val rootConcrete = when (currentNode) {
-                    is ArendArgumentAppExpr -> appExprToConcrete(currentNode, false, errorReporter)?.let {
+                    is ArendArgumentAppExpr -> appExprToConcrete(currentNode)?.let {
                         if (errorReporter.errorsNumber == 0) it else null
                     }
 

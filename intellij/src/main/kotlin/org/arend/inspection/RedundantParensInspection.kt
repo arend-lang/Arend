@@ -164,7 +164,7 @@ private fun isRedundantParensInTupleParent(parent: ArendTupleExpr, expression: A
 }
 
 internal fun isBinOpApp(app: ArendArgumentAppExpr): Boolean {
-    val binOpSeq = appExprToConcrete(app, true)
+    val binOpSeq = appExprToConcrete(app)
     return binOpSeq is Concrete.AppExpression && isBinOp(binOpSeq.function.data as? ArendReferenceContainer)
 }
 

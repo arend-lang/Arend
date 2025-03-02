@@ -1,6 +1,7 @@
 package org.arend.util
 
 import com.intellij.lang.ASTNode
+import com.intellij.openapi.components.service
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.parentOfType
@@ -8,53 +9,27 @@ import org.arend.error.DummyErrorReporter
 import org.arend.ext.error.ErrorReporter
 import org.arend.naming.reference.AliasReferable
 import org.arend.naming.reference.GlobalReferable
-import org.arend.naming.reference.Referable
 import org.arend.naming.resolving.typing.TypedReferable
 import org.arend.naming.resolving.typing.TypingInfo
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
 import org.arend.naming.scope.CachingScope
+import org.arend.psi.ancestor
 import org.arend.psi.ext.*
 import org.arend.psi.ext.ArendExpr
-import org.arend.resolving.util.parseBinOp
-import org.arend.resolving.util.resolveReference
-import org.arend.term.Fixity
+import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
-import org.arend.term.abs.AbstractReference
-import org.arend.term.abs.BaseAbstractExpressionVisitor
 import org.arend.term.abs.ConcreteBuilder
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.Concrete.NumberPattern
+import org.arend.term.concrete.SearchConcreteVisitor
 
-fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? = appExprToConcrete(appExpr, false)
-
-fun appExprToConcrete(appExpr: ArendExpr, setData: Boolean, errorReporter: ErrorReporter = DummyErrorReporter.INSTANCE): Concrete.Expression? {
-    return appExpr.accept(object : BaseAbstractExpressionVisitor<Void, Concrete.Expression>(null) {
-        override fun visitBinOpSequence(data: Any?, left: Abstract.Expression, sequence: Collection<Abstract.BinOpSequenceElem>, params: Void?): Concrete.Expression =
-                parseBinOp(if (setData) data else null, left, sequence, errorReporter)
-
-        override fun visitReference(data: Any?, referent: Referable, lp: Int, lh: Int, params: Void?) =
-                resolveReference(data, referent, null)
-
-        override fun visitReference(data: Any?, referent: Referable, fixity: Fixity?, pLevels: Collection<Abstract.LevelExpression>?, hLevels: Collection<Abstract.LevelExpression>?, params: Void?) =
-                resolveReference(data, referent, fixity)
-
-        override fun visitFieldAccs(data: Any?, expression: Abstract.Expression, fieldAccs: MutableList<Abstract.FieldAcc>, infixReference: AbstractReference?, infixName: String?, isInfix: Boolean, params: Void?): Concrete.Expression {
-            var result = expression.accept<Void, Concrete.Expression>(this, null)
-            for (fieldAcc in fieldAccs) {
-                val number = fieldAcc.number
-                if (number != null) {
-                    result = Concrete.ProjExpression(data, result, number - 1)
-                } else {
-                    val fieldRef = fieldAcc.fieldRef
-                    if (fieldRef != null) {
-                        result = Concrete.FieldCallExpression(data, fieldRef, Fixity.UNKNOWN, result)
-                    }
-                }
-            }
-            return result!!
-        }
-
-    }, null)
+fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
+    val definition = appExpr.ancestor<ArendDefinition<*>>()?.tcReferable ?: return null
+    val concrete = appExpr.project.service<ArendServerService>().server.getResolvedDefinition(definition)?.definition ?: return null
+    return concrete.accept(object : SearchConcreteVisitor<Any?, Concrete.SourceNode?>() {
+        override fun checkSourceNode(sourceNode: Concrete.SourceNode, params: Any?): Concrete.SourceNode? =
+            if (sourceNode.data == appExpr) sourceNode else null
+    }, null) as? Concrete.Expression
 }
 
 fun patternToConcrete(unparsedPattern: ArendPattern, errorReporter: ErrorReporter = DummyErrorReporter.INSTANCE): Concrete.Pattern? {
