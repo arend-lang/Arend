@@ -6,16 +6,9 @@ import com.intellij.psi.util.elementType
 import org.arend.naming.scope.Scope
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
-import org.arend.term.NamespaceCommand
 import org.arend.term.abs.Abstract
 
-class ArendStatCmd(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.NamespaceCommandHolder, NamespaceCommand {
-    override fun getKind(): NamespaceCommand.Kind = when (firstRelevantChild.elementType) {
-        IMPORT_KW -> NamespaceCommand.Kind.IMPORT
-        OPEN_KW -> NamespaceCommand.Kind.OPEN
-        else -> error("Incorrect expression: namespace command")
-    }
-
+class ArendStatCmd(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.NamespaceCommand {
     val longName: ArendLongName?
         get() = childOfType()
 
@@ -37,18 +30,18 @@ class ArendStatCmd(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.Namespac
     val openKw: PsiElement?
         get() = findChildByType(OPEN_KW)
 
-    override fun getReferenceList() = longName?.refIdentifierList ?: emptyList()
+    override fun isImport() = importKw != null
 
-    override fun getPath() = longName?.refIdentifierList?.map { it.referenceName } ?: emptyList()
+    override fun getModuleReference() = longName?.referent
 
     override fun isUsing(): Boolean {
         val using = nsUsing
         return using == null || using.usingKw != null
     }
 
-    override fun getOpenedReferences(): List<ArendNsId> = nsUsing?.nsIdList ?: emptyList()
+    override fun getRenamings(): List<ArendNsId> = nsUsing?.nsIdList ?: emptyList()
 
-    override fun getHiddenReferences(): List<ArendScId> = getChildrenOfType()
+    override fun getHidings(): List<ArendScId> = getChildrenOfType()
 
     override fun getOpenedReference() = longName
 
@@ -59,6 +52,5 @@ class ArendStatCmd(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.Namespac
             HLEVEL_KW -> Scope.ScopeContext.HLEVEL
             else -> Scope.ScopeContext.STATIC
         }
-
     }
 }

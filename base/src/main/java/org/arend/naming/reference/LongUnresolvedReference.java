@@ -19,11 +19,18 @@ public class LongUnresolvedReference implements UnresolvedReference {
   private final List<String> myPath;
   private Referable resolved;
 
-  public LongUnresolvedReference(Object data, @NotNull List<AbstractReference> references, @NotNull List<String> path) {
+  public LongUnresolvedReference(Object data, @Nullable List<AbstractReference> references, @NotNull List<String> path) {
     assert !path.isEmpty();
     myData = data;
-    myReferences = references;
     myPath = path;
+
+    if (references == null) {
+      references = new ArrayList<>(path.size());
+      for (String ignored : path) {
+        references.add(null);
+      }
+    }
+    myReferences = references;
   }
 
   public static UnresolvedReference make(Object data, @NotNull List<String> path) {

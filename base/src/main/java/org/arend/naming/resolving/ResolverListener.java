@@ -3,10 +3,9 @@ package org.arend.naming.resolving;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.scope.Scope;
-import org.arend.term.NameRenaming;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
+import org.arend.term.group.ConcreteNamespaceCommand;
 
 import java.util.Collection;
 import java.util.List;
@@ -20,8 +19,8 @@ public interface ResolverListener {
   default void patternResolved(Referable originalRef, Referable newRef, Concrete.Pattern pattern, List<Referable> resolvedRefs) {}
   default void coPatternResolved(Concrete.CoClauseElement classFieldImpl, Referable originalRef, Referable referable, List<Referable> resolvedRefs) {}
   default void overriddenFieldResolved(Concrete.OverriddenField overriddenField, Referable originalRef, Referable referable, List<Referable> resolvedRefs) {}
-  default void namespaceResolved(NamespaceCommand namespaceCommand, List<Referable> resolvedRefs) {}
-  default void renamingResolved(NameRenaming renaming, Referable originalRef, Referable resolvedRef) {}
+  default void namespaceResolved(ConcreteNamespaceCommand namespaceCommand, List<Referable> resolvedRefs) {}
+  default void renamingResolved(ConcreteNamespaceCommand.NameRenaming renaming, Referable originalRef, Referable resolvedRef) {}
   default void metaResolved(Concrete.ReferenceExpression expression, List<Concrete.Argument> arguments, Concrete.Expression result, Concrete.Coclauses coclauses, Concrete.FunctionClauses clauses) {}
   default void levelResolved(Referable originalRef, Concrete.VarLevelExpression refExpr, Referable resolvedRef, Collection<Referable> availableRefs) {}
 

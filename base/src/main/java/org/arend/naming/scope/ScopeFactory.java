@@ -2,9 +2,9 @@ package org.arend.naming.scope;
 
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.prelude.Prelude;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.Abstract;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,8 +20,8 @@ public class ScopeFactory {
   public static @NotNull Scope parentScopeForGroup(@Nullable ConcreteGroup group, @NotNull ModuleScopeProvider moduleScopeProvider, boolean prelude) {
     if (prelude && group != null) {
       for (ConcreteStatement statement : group.statements()) {
-        NamespaceCommand cmd = statement.command();
-        if (cmd != null && cmd.getKind() == NamespaceCommand.Kind.IMPORT && cmd.getPath().equals(Prelude.MODULE_PATH.toList())) {
+        ConcreteNamespaceCommand cmd = statement.command();
+        if (cmd != null && cmd.isImport() && cmd.module().getPath().equals(Prelude.MODULE_PATH.toList())) {
           prelude = false;
         }
       }
@@ -42,7 +42,7 @@ public class ScopeFactory {
   }
 
   public static boolean isGlobalScopeVisible(Abstract.SourceNode sourceNode) {
-    while (sourceNode != null && !(sourceNode instanceof Abstract.Definition || sourceNode instanceof Abstract.NamespaceCommandHolder)) {
+    while (sourceNode != null && !(sourceNode instanceof Abstract.Definition || sourceNode instanceof Abstract.NamespaceCommand)) {
       // We cannot use any references in level expressions
       if (sourceNode instanceof Abstract.LevelExpression) {
         return false;
@@ -59,11 +59,11 @@ public class ScopeFactory {
       }
 
       // After namespace command
-      if (parentSourceNode instanceof Abstract.NamespaceCommandHolder && sourceNode instanceof Abstract.Reference) {
-        if (((Abstract.NamespaceCommandHolder) parentSourceNode).getKind() == NamespaceCommand.Kind.IMPORT) {
+      if (parentSourceNode instanceof Abstract.NamespaceCommand && sourceNode instanceof Abstract.Reference) {
+        if (((Abstract.NamespaceCommand) parentSourceNode).isImport()) {
           return false;
         }
-        return sourceNode.equals(((Abstract.NamespaceCommandHolder) parentSourceNode).getOpenedReference());
+        return sourceNode.equals(((Abstract.NamespaceCommand) parentSourceNode).getOpenedReference());
       }
 
       // After a dot

@@ -8,7 +8,6 @@ import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.reference.Precedence;
-import org.arend.frontend.group.SimpleNamespaceCommand;
 import org.arend.frontend.reference.*;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.InternalReferableImpl;
@@ -145,32 +144,39 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   }
 
   private List<ConcreteStatement> visitStatement(AccessModifier accessModifier, StatementContext ctx, ConcreteGroup parent, TCDefReferable enclosingClass) {
-    if (ctx instanceof StatCmdContext) {
-      return Collections.singletonList(new ConcreteStatement(null, visitStatCmd((StatCmdContext) ctx), null, null));
-    } else if (ctx instanceof StatDefContext statDef) {
-      ConcreteGroup group = visitDefinition(visitAccessModifier(statDef.accessMod(), accessModifier), statDef.definition(), parent, enclosingClass);
-      if (statDef.USE() != null && group.definition() instanceof Concrete.Definition def) {
-        if (parent.definition() instanceof Concrete.Definition parentDef) {
-          def.setUseParent(parentDef.getData());
-          parentDef.addUsedDefinition(def.getData());
-        } else {
-          myErrorReporter.report(new ParserError(tokenPosition(statDef.USE().getSymbol()), "\\use must belong to a \\where-block of a definition"));
+    switch (ctx) {
+      case StatCmdContext statCmdContext -> {
+        return Collections.singletonList(new ConcreteStatement(null, visitStatCmd(statCmdContext), null, null));
+      }
+      case StatDefContext statDef -> {
+        ConcreteGroup group = visitDefinition(visitAccessModifier(statDef.accessMod(), accessModifier), statDef.definition(), parent, enclosingClass);
+        if (statDef.USE() != null && group.definition() instanceof Concrete.Definition def) {
+          if (parent.definition() instanceof Concrete.Definition parentDef) {
+            def.setUseParent(parentDef.getData());
+            parentDef.addUsedDefinition(def.getData());
+          } else {
+            myErrorReporter.report(new ParserError(tokenPosition(statDef.USE().getSymbol()), "\\use must belong to a \\where-block of a definition"));
+          }
         }
+        return Collections.singletonList(new ConcreteStatement(group, null, null, null));
       }
-      return Collections.singletonList(new ConcreteStatement(group, null, null, null));
-    } else if (ctx instanceof StatAccessModContext stat) {
-      List<ConcreteStatement> statements = new ArrayList<>();
-      visitStatementList(visitAccessModifier(stat.accessMod(), accessModifier), stat.statement(), statements, parent, enclosingClass);
-      return statements;
-    } else if (ctx instanceof StatPLevelsContext) {
-      return Collections.singletonList(new ConcreteStatement(null, null, visitStatPLevels((StatPLevelsContext) ctx, parent.referable()), null));
-    } else if (ctx instanceof StatHLevelsContext) {
-      return Collections.singletonList(new ConcreteStatement(null, null, null, visitStatHLevels((StatHLevelsContext) ctx, parent.referable())));
-    } else {
-      if (ctx != null) {
-        myErrorReporter.report(new ParserError(tokenPosition(ctx.start), "Unknown statement"));
+      case StatAccessModContext stat -> {
+        List<ConcreteStatement> statements = new ArrayList<>();
+        visitStatementList(visitAccessModifier(stat.accessMod(), accessModifier), stat.statement(), statements, parent, enclosingClass);
+        return statements;
       }
-      throw new ParseException();
+      case StatPLevelsContext statPLevelsContext -> {
+        return Collections.singletonList(new ConcreteStatement(null, null, visitStatPLevels(statPLevelsContext, parent.referable()), null));
+      }
+      case StatHLevelsContext statHLevelsContext -> {
+        return Collections.singletonList(new ConcreteStatement(null, null, null, visitStatHLevels(statHLevelsContext, parent.referable())));
+      }
+      case null, default -> {
+        if (ctx != null) {
+          myErrorReporter.report(new ParserError(tokenPosition(ctx.start), "Unknown statement"));
+        }
+        throw new ParseException();
+      }
     }
   }
 
@@ -183,23 +189,31 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   }
 
   public ConcreteGroup visitDefinition(AccessModifier accessModifier, DefinitionContext ctx, ConcreteGroup parent, TCDefReferable enclosingClass) {
-    if (ctx instanceof DefFunctionContext) {
-      return visitDefFunction(accessModifier, (DefFunctionContext) ctx, parent, enclosingClass);
-    } else if (ctx instanceof DefDataContext) {
-      return visitDefData(accessModifier, (DefDataContext) ctx, parent, enclosingClass);
-    } else if (ctx instanceof DefClassContext) {
-      return visitDefClass(accessModifier, (DefClassContext) ctx, parent, enclosingClass);
-    } else if (ctx instanceof DefInstanceContext) {
-      return visitDefInstance(accessModifier, (DefInstanceContext) ctx, parent, enclosingClass);
-    } else if (ctx instanceof DefModuleContext moduleCtx) {
-      return visitDefModule(accessModifier, moduleCtx.ID(), moduleCtx.where(), parent, enclosingClass);
-    } else if (ctx instanceof DefMetaContext) {
-      return visitDefMeta(accessModifier, (DefMetaContext) ctx, parent, enclosingClass);
-    } else {
-      if (ctx != null) {
-        myErrorReporter.report(new ParserError(tokenPosition(ctx.start), "Unknown definition"));
+    switch (ctx) {
+      case DefFunctionContext defFunctionContext -> {
+        return visitDefFunction(accessModifier, defFunctionContext, parent, enclosingClass);
       }
-      throw new ParseException();
+      case DefDataContext defDataContext -> {
+        return visitDefData(accessModifier, defDataContext, parent, enclosingClass);
+      }
+      case DefClassContext defClassContext -> {
+        return visitDefClass(accessModifier, defClassContext, parent, enclosingClass);
+      }
+      case DefInstanceContext defInstanceContext -> {
+        return visitDefInstance(accessModifier, defInstanceContext, parent, enclosingClass);
+      }
+      case DefModuleContext moduleCtx -> {
+        return visitDefModule(accessModifier, moduleCtx.ID(), moduleCtx.where(), parent, enclosingClass);
+      }
+      case DefMetaContext defMetaContext -> {
+        return visitDefMeta(accessModifier, defMetaContext, parent, enclosingClass);
+      }
+      case null, default -> {
+        if (ctx != null) {
+          myErrorReporter.report(new ParserError(tokenPosition(ctx.start), "Unknown definition"));
+        }
+        throw new ParseException();
+      }
     }
   }
 
@@ -223,12 +237,11 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   }
 
   @Override
-  public SimpleNamespaceCommand visitStatCmd(StatCmdContext ctx) {
-    NamespaceCommand.Kind kind = (NamespaceCommand.Kind) visit(ctx.nsCmd());
+  public ConcreteNamespaceCommand visitStatCmd(StatCmdContext ctx) {
     var longName = ctx.longName();
     List<String> path = visitLongNamePath(longName);
 
-    List<SimpleNamespaceCommand.SimpleNameRenaming> openedReferences;
+    List<ConcreteNamespaceCommand.NameRenaming> openedReferences;
     NsUsingContext nsUsing = ctx.nsUsing();
     if (nsUsing == null) {
       openedReferences = Collections.emptyList();
@@ -237,7 +250,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       for (NsIdContext nsIdCtx : nsUsing.nsId()) {
         Position position = tokenPosition(nsIdCtx.scId().ID().getSymbol());
         TerminalNode id = nsIdCtx.ID();
-        openedReferences.add(new SimpleNamespaceCommand.SimpleNameRenaming(position,
+        openedReferences.add(new ConcreteNamespaceCommand.NameRenaming(position,
           visitScopeContext(nsIdCtx.scId().scopeContext()),
           new NamedUnresolvedReference(position, nsIdCtx.scId().ID().getText()),
           nsIdCtx.precedence() == null ? null : visitPrecedence(nsIdCtx.precedence()),
@@ -245,24 +258,15 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       }
     }
 
-    List<SimpleNamespaceCommand.SimpleNameHiding> hiddenReferences = new ArrayList<>();
+    List<ConcreteNamespaceCommand.NameHiding> hiddenReferences = new ArrayList<>();
     for (ScIdContext scIdCtx : ctx.scId()) {
       TerminalNode id = scIdCtx.ID();
       Position position = tokenPosition(id.getSymbol());
-      hiddenReferences.add(new SimpleNamespaceCommand.SimpleNameHiding(position, visitScopeContext(scIdCtx.scopeContext()), new NamedUnresolvedReference(position, id.getText())));
+      hiddenReferences.add(new ConcreteNamespaceCommand.NameHiding(position, visitScopeContext(scIdCtx.scopeContext()), new NamedUnresolvedReference(position, id.getText())));
     }
 
-    return new SimpleNamespaceCommand(tokenPosition(longName.start), kind, path, nsUsing == null || nsUsing.USING() != null, openedReferences, hiddenReferences);
-  }
-
-  @Override
-  public NamespaceCommand.Kind visitOpenCmd(OpenCmdContext ctx) {
-    return NamespaceCommand.Kind.OPEN;
-  }
-
-  @Override
-  public NamespaceCommand.Kind visitImportCmd(ImportCmdContext ctx) {
-    return NamespaceCommand.Kind.IMPORT;
+    Position position = tokenPosition(longName.start);
+    return new ConcreteNamespaceCommand(position, ctx.nsCmd() instanceof ImportCmdContext, new LongUnresolvedReference(position, null, path), nsUsing == null || nsUsing.USING() != null, openedReferences, hiddenReferences);
   }
 
   private Precedence visitPrecedence(PrecedenceContext ctx) {
@@ -324,7 +328,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   public Concrete.Pattern visitPatternConstructor(PatternConstructorContext ctx) {
     List<AtomPatternContext> atomPatterns = ctx.atomPattern();
     Position position = tokenPosition(ctx.start);
-    Concrete.Pattern basePattern = visitAtomPattern(atomPatterns.get(0));
+    Concrete.Pattern basePattern = visitAtomPattern(atomPatterns.getFirst());
     ExprContext typeCtx = ctx.expr();
     TerminalNode id = ctx.ID();
 
@@ -372,7 +376,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       return new Concrete.TuplePattern(tokenPosition(ctx.start), Collections.emptyList(), null);
     }
     if (patternCtxs.size() == 1) {
-      return visitPattern(patternCtxs.get(0));
+      return visitPattern(patternCtxs.getFirst());
     }
 
     List<Concrete.Pattern> patterns = new ArrayList<>(patternCtxs.size());
@@ -451,7 +455,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   private Object parseLevelParameters(Token token, List<TerminalNode> ids, LocatedReferable parent, boolean isPLevels) {
     if (ids.isEmpty()) return parent == null ? new Concrete.LevelParameters(tokenPosition(token), Collections.emptyList(), true) : new Concrete.LevelsDefinition(tokenPosition(token), Collections.emptyList(), true, isPLevels);
     if (ids.size() % 2 == 0) {
-      myErrorReporter.report(new ParserError(tokenPosition(ids.get(0).getSymbol()), "Cannot parse level parameters"));
+      myErrorReporter.report(new ParserError(tokenPosition(ids.getFirst().getSymbol()), "Cannot parse level parameters"));
       return null;
     }
     boolean linear = true;
@@ -535,18 +539,20 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     Concrete.FunctionBody body;
     InstanceBodyContext bodyCtx = ctx.instanceBody();
     List<CoClauseContext> coClauses = null;
-    if (bodyCtx instanceof InstanceWithElimContext elimCtx) {
-      body = new Concrete.ElimFunctionBody(tokenPosition(elimCtx.start), visitElim(elimCtx.elim()), visitClauses(elimCtx.clauses()));
-    } else if (bodyCtx instanceof InstanceWithoutElimContext) {
-      body = new Concrete.TermFunctionBody(tokenPosition(ctx.start), visitExpr(((InstanceWithoutElimContext) bodyCtx).expr()));
-    } else if (bodyCtx instanceof InstanceCowithElimContext) {
-      body = new Concrete.CoelimFunctionBody(tokenPosition(bodyCtx.start), new ArrayList<>());
-      coClauses = getCoClauses(((InstanceCowithElimContext) bodyCtx).coClauses());
-    } else if (bodyCtx instanceof InstanceCoclausesContext) {
-      body = new Concrete.CoelimFunctionBody(tokenPosition(bodyCtx.start), new ArrayList<>());
-      coClauses = ((InstanceCoclausesContext) bodyCtx).coClause();
-    } else {
-      throw new IllegalStateException();
+    switch (bodyCtx) {
+      case InstanceWithElimContext elimCtx ->
+          body = new Concrete.ElimFunctionBody(tokenPosition(elimCtx.start), visitElim(elimCtx.elim()), visitClauses(elimCtx.clauses()));
+      case InstanceWithoutElimContext instanceWithoutElimContext ->
+          body = new Concrete.TermFunctionBody(tokenPosition(ctx.start), visitExpr(instanceWithoutElimContext.expr()));
+      case InstanceCowithElimContext instanceCowithElimContext -> {
+        body = new Concrete.CoelimFunctionBody(tokenPosition(bodyCtx.start), new ArrayList<>());
+        coClauses = getCoClauses(instanceCowithElimContext.coClauses());
+      }
+      case InstanceCoclausesContext instanceCoclausesContext -> {
+        body = new Concrete.CoelimFunctionBody(tokenPosition(bodyCtx.start), new ArrayList<>());
+        coClauses = instanceCoclausesContext.coClause();
+      }
+      case null, default -> throw new IllegalStateException();
     }
 
     Concrete.FunctionDefinition funcDef = new Concrete.FunctionDefinition(isInstance ? FunctionKind.INSTANCE : FunctionKind.CONS, reference, visitPlevelParams(topDefId.plevelParams()), visitHlevelParams(topDefId.hlevelParams()), parameters, returnPair.proj1, returnPair.proj2, body);
@@ -682,15 +688,16 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     Pair<Concrete.Expression,Concrete.Expression> returnPair = visitReturnExpr(ctx.returnExpr2());
 
     List<CoClauseContext> coClauses = null;
-    if (functionBodyCtx instanceof WithElimContext elimCtx) {
-      body = new Concrete.ElimFunctionBody(tokenPosition(elimCtx.start), visitElim(elimCtx.elim()), visitClauses(elimCtx.clauses()));
-    } else if (functionBodyCtx instanceof CowithElimContext) {
-      coClauses = getCoClauses(((CowithElimContext) functionBodyCtx).coClauses());
-      body = new Concrete.CoelimFunctionBody(tokenPosition(functionBodyCtx.start), new ArrayList<>());
-    } else if (functionBodyCtx instanceof WithoutElimContext) {
-      body = new Concrete.TermFunctionBody(tokenPosition(ctx.start), visitExpr(((WithoutElimContext) functionBodyCtx).expr()));
-    } else {
-      body = null;
+    switch (functionBodyCtx) {
+      case WithElimContext elimCtx ->
+          body = new Concrete.ElimFunctionBody(tokenPosition(elimCtx.start), visitElim(elimCtx.elim()), visitClauses(elimCtx.clauses()));
+      case CowithElimContext cowithElimContext -> {
+        coClauses = getCoClauses(cowithElimContext.coClauses());
+        body = new Concrete.CoelimFunctionBody(tokenPosition(functionBodyCtx.start), new ArrayList<>());
+      }
+      case WithoutElimContext withoutElimContext ->
+          body = new Concrete.TermFunctionBody(tokenPosition(ctx.start), visitExpr(withoutElimContext.expr()));
+      case null, default -> body = null;
     }
 
     ConcreteGroup resultGroup;
@@ -875,25 +882,27 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       }
 
       try {
-        if (statementCtx instanceof ClassFieldOrImplStatContext) {
-          visitInstanceStatement(((ClassFieldOrImplStatContext) statementCtx).classFieldOrImpl(), elements, parentClass);
-        } else if (statementCtx instanceof ClassDefinitionStatContext defStat) {
-          ConcreteGroup subgroup = visitDefinition(visitAccessModifier(defStat.accessMod()), defStat.definition(), parent, parentClass.getData());
-          if (defStat.USE() != null && subgroup.definition() instanceof Concrete.Definition def) {
-            def.setUseParent(parentClass.getData());
-            parentClass.addUsedDefinition(def.getData());
+        switch (statementCtx) {
+          case ClassFieldOrImplStatContext classFieldOrImplStatContext ->
+              visitInstanceStatement(classFieldOrImplStatContext.classFieldOrImpl(), elements, parentClass);
+          case ClassDefinitionStatContext defStat -> {
+            ConcreteGroup subgroup = visitDefinition(visitAccessModifier(defStat.accessMod()), defStat.definition(), parent, parentClass.getData());
+            if (defStat.USE() != null && subgroup.definition() instanceof Concrete.Definition def) {
+              def.setUseParent(parentClass.getData());
+              parentClass.addUsedDefinition(def.getData());
+            }
+            statements.add(subgroup);
           }
-          statements.add(subgroup);
-        } else if (statementCtx instanceof ClassFieldStatContext fieldStatCtx) {
-          elements.add(visitClassFieldDef(fieldStatCtx.classFieldDef(), (ClassFieldKind) visit(fieldStatCtx.fieldMod()), parentClass));
-        } else if (statementCtx instanceof ClassOverrideStatContext overrideCtx) {
-          LongNameContext longName = overrideCtx.longName();
-          Pair<Concrete.Expression, Concrete.Expression> pair = visitReturnExpr(overrideCtx.returnExpr());
-          elements.add(new Concrete.OverriddenField(tokenPosition(overrideCtx.start), LongUnresolvedReference.make(tokenPosition(longName.start), visitLongNamePath(longName)), visitTeles(overrideCtx.tele(), false), pair.proj1, pair.proj2));
-        } else if (statementCtx instanceof ClassDefaultStatContext) {
-          elements.add(visitCoClause(((ClassDefaultStatContext) statementCtx).coClause(), statements, parent, parentClass.getData(), parentClass.getData(), true));
-        } else {
-          throw new IllegalStateException();
+          case ClassFieldStatContext fieldStatCtx ->
+              elements.add(visitClassFieldDef(fieldStatCtx.classFieldDef(), (ClassFieldKind) visit(fieldStatCtx.fieldMod()), parentClass));
+          case ClassOverrideStatContext overrideCtx -> {
+            LongNameContext longName = overrideCtx.longName();
+            Pair<Concrete.Expression, Concrete.Expression> pair = visitReturnExpr(overrideCtx.returnExpr());
+            elements.add(new Concrete.OverriddenField(tokenPosition(overrideCtx.start), LongUnresolvedReference.make(tokenPosition(longName.start), visitLongNamePath(longName)), visitTeles(overrideCtx.tele(), false), pair.proj1, pair.proj2));
+          }
+          case ClassDefaultStatContext classDefaultStatContext ->
+              elements.add(visitCoClause(classDefaultStatContext.coClause(), statements, parent, parentClass.getData(), parentClass.getData(), true));
+          default -> throw new IllegalStateException();
         }
       } catch (ParseException ignored) {
 
@@ -914,7 +923,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     Concrete.ReferenceExpression result = visitLongNameRef(ctx.longName(), null, null);
     List<MaybeLevelAtomsContext> levelCtxs = ctx.maybeLevelAtoms();
     if (!levelCtxs.isEmpty()) {
-      result.setPLevels(visitLevels(levelCtxs.get(0)));
+      result.setPLevels(visitLevels(levelCtxs.getFirst()));
     }
     if (levelCtxs.size() >= 2) {
       result.setHLevels(visitLevels(levelCtxs.get(1)));
@@ -1022,14 +1031,14 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
 
   private Concrete.Expression visitTupleExprs(List<TupleExprContext> exprs, List<TerminalNode> commas, ParserRuleContext parentCtx) {
     if (exprs.size() == 1 && commas.isEmpty()) {
-      return visitTupleExpr(exprs.get(0));
+      return visitTupleExpr(exprs.getFirst());
     } else {
       List<Concrete.Expression> fields = new ArrayList<>();
       for (TupleExprContext exprCtx : exprs) {
         fields.add(visitTupleExpr(exprCtx));
       }
       if (commas.size() == exprs.size() && !commas.isEmpty()) {
-        fields.add(new Concrete.IncompleteExpression(tokenPosition(commas.get(commas.size() - 1).getSymbol())));
+        fields.add(new Concrete.IncompleteExpression(tokenPosition(commas.getLast().getSymbol())));
       }
       return new Concrete.TupleExpression(tokenPosition(parentCtx.start), fields);
     }
@@ -1063,7 +1072,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
           parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.start), explicit, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null));
         }
       } else {
-        getVarList(exprs.get(0), vars);
+        getVarList(exprs.getFirst(), vars);
         if (!isDefinition) {
           checkStrict(typedExpr);
         }
@@ -1182,7 +1191,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         Object obj1 = visit(onlyLevelAtoms.get(0));
         Object obj2 = onlyLevelAtoms.size() < 2 ? null : visit(onlyLevelAtoms.get(1));
         if (onlyLevelAtoms.size() > 2 || obj1 instanceof Pair && obj2 != null || obj2 instanceof Pair) {
-          myErrorReporter.report(new ParserError(tokenPosition(onlyLevelAtoms.get(0).start), "too many level specifications"));
+          myErrorReporter.report(new ParserError(tokenPosition(onlyLevelAtoms.getFirst().start), "too many level specifications"));
         }
 
         List<Concrete.LevelExpression> levels1;
@@ -1197,7 +1206,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
 
         expr = new Concrete.ReferenceExpression(expr.getData(), ((Concrete.ReferenceExpression) expr).getReferent(), levels1, levels2);
       } else {
-        myErrorReporter.report(new ParserError(tokenPosition(onlyLevelAtoms.get(0).start), "Level annotations are allowed only after a reference"));
+        myErrorReporter.report(new ParserError(tokenPosition(onlyLevelAtoms.getFirst().start), "Level annotations are allowed only after a reference"));
       }
     }
 
@@ -1279,32 +1288,33 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         List<Concrete.Pattern> patterns = visitLamParams(lamParamCtxs, parameters);
         term = visitExpr(((CoClauseExprContext) defBody).expr());
         if (!parameters.isEmpty() || !patterns.isEmpty()) {
-          Position pos = tokenPosition(lamParamCtxs.get(0).start);
+          Position pos = tokenPosition(lamParamCtxs.getFirst().start);
           term = Concrete.PatternLamExpression.make(pos, parameters, patterns, term);
         }
       } else {
-        LocatedReferableImpl reference = makeReferable(position, isDefault ? AccessModifier.PROTECTED : AccessModifier.PUBLIC, id != null ? id.getText() : path.get(path.size() - 1), precCtx == null || precCtx instanceof NoPrecedenceContext ? null : visitPrecedence(precCtx), null, Precedence.DEFAULT, parentGroup.referable(), LocatedReferableImpl.Kind.COCLAUSE_FUNCTION);
+        LocatedReferableImpl reference = makeReferable(position, isDefault ? AccessModifier.PROTECTED : AccessModifier.PUBLIC, id != null ? id.getText() : path.getLast(), precCtx == null || precCtx instanceof NoPrecedenceContext ? null : visitPrecedence(precCtx), null, Precedence.DEFAULT, parentGroup.referable(), LocatedReferableImpl.Kind.COCLAUSE_FUNCTION);
         Pair<Concrete.Expression, Concrete.Expression> pair = visitReturnExpr(returnCtx);
         Referable fieldRef = LongUnresolvedReference.make(position, path);
         Concrete.FunctionBody fBody;
-        if (defBody instanceof CoClauseExprContext) {
-          fBody = new Concrete.TermFunctionBody(tokenPosition(defBody.start), visitExpr(((CoClauseExprContext) defBody).expr()));
-        } else if (defBody instanceof CoClauseWithContext withBody) {
-          List<Concrete.FunctionClause> clauses = new ArrayList<>();
-          for (ClauseContext clauseCtx : withBody.clause()) {
-            clauses.add(visitClause(clauseCtx));
+        switch (defBody) {
+          case CoClauseExprContext coClauseExprContext ->
+              fBody = new Concrete.TermFunctionBody(tokenPosition(defBody.start), visitExpr(coClauseExprContext.expr()));
+          case CoClauseWithContext withBody -> {
+            List<Concrete.FunctionClause> clauses = new ArrayList<>();
+            for (ClauseContext clauseCtx : withBody.clause()) {
+              clauses.add(visitClause(clauseCtx));
+            }
+            fBody = new Concrete.ElimFunctionBody(tokenPosition(defBody.start), visitElim(withBody.elim()), clauses);
           }
-          fBody = new Concrete.ElimFunctionBody(tokenPosition(defBody.start), visitElim(withBody.elim()), clauses);
-        } else if (defBody instanceof CoClauseCowithContext) {
-          fBody = new Concrete.CoelimFunctionBody(tokenPosition(defBody.start), new ArrayList<>());
-        } else {
-          throw new IllegalStateException();
+          case CoClauseCowithContext ignored ->
+              fBody = new Concrete.CoelimFunctionBody(tokenPosition(defBody.start), new ArrayList<>());
+          case null, default -> throw new IllegalStateException();
         }
         List<LamParamContext> lamParamCtxs = ((CoClauseDefContext) body).lamParam();
         List<Concrete.Parameter> parameters = new ArrayList<>();
         List<Concrete.Pattern> patterns = visitLamParams(lamParamCtxs, parameters);
         if (!patterns.isEmpty()) {
-          myErrorReporter.report(new ParserError((Position) patterns.get(0).getData(), "Patterns are not allowed in coclause functions"));
+          myErrorReporter.report(new ParserError((Position) patterns.getFirst().getData(), "Patterns are not allowed in coclause functions"));
         }
         Concrete.CoClauseFunctionDefinition def = new Concrete.CoClauseFunctionDefinition(isDefault ? FunctionKind.CLASS_COCLAUSE : FunctionKind.FUNC_COCLAUSE, reference, enclosingDefinition, fieldRef, parameters, pair.proj1, pair.proj2, fBody);
         ConcreteGroup myGroup = new ConcreteGroup(nullDoc(), reference, def, Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
@@ -1349,12 +1359,12 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     if (exprCtx != null) {
       term = visitExpr(exprCtx);
       if (!parameters.isEmpty() || !patterns.isEmpty()) {
-        Position pos = tokenPosition(lamParamCtxs.get(0).start);
+        Position pos = tokenPosition(lamParamCtxs.getFirst().start);
         term = Concrete.PatternLamExpression.make(pos, parameters, patterns, term);
       }
     } else {
       if (!parameters.isEmpty() || !patterns.isEmpty()) {
-        myErrorReporter.report(new ParserError(tokenPosition(lamParamCtxs.get(0).start), "Parameters are allowed only before '=> <expression>'"));
+        myErrorReporter.report(new ParserError(tokenPosition(lamParamCtxs.getFirst().start), "Parameters are allowed only before '=> <expression>'"));
       }
       subClassFieldImpls = visitLocalCoClauses(ctx.localCoClause());
     }
@@ -1383,10 +1393,10 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     List<MaybeLevelAtomContext> maybeLevelAtomCtxs = ctx.maybeLevelAtom();
     if (!maybeLevelAtomCtxs.isEmpty()) {
       if (lp == null) {
-        lp = visitLevel(maybeLevelAtomCtxs.get(0));
+        lp = visitLevel(maybeLevelAtomCtxs.getFirst());
         lh = null;
       } else {
-        lh = visitLevel(maybeLevelAtomCtxs.get(0));
+        lh = visitLevel(maybeLevelAtomCtxs.getFirst());
       }
 
       if (maybeLevelAtomCtxs.size() >= 2) {
@@ -1595,18 +1605,17 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       boolean explicit = !(tele instanceof ImplicitContext);
       TypedExprContext typedExpr;
       if (explicit) {
-        if (tele instanceof ExplicitContext) {
-          typedExpr = ((ExplicitContext) tele).typedExpr();
-        } else
-        if (tele instanceof TeleLiteralContext) {
-          parameters.add(new Concrete.TypeParameter(true, visitAtomFieldsAcc(((TeleLiteralContext) tele).atomFieldsAcc()), false));
-          continue;
-        } else
-        if (tele instanceof TeleUniverseContext) {
-          parameters.add(new Concrete.TypeParameter(true, visitExpr(((TeleUniverseContext) tele).universeAtom()), false));
-          continue;
-        } else {
-          throw new IllegalStateException();
+        switch (tele) {
+          case ExplicitContext explicitContext -> typedExpr = explicitContext.typedExpr();
+          case TeleLiteralContext teleLiteralContext -> {
+            parameters.add(new Concrete.TypeParameter(true, visitAtomFieldsAcc(teleLiteralContext.atomFieldsAcc()), false));
+            continue;
+          }
+          case TeleUniverseContext teleUniverseContext -> {
+            parameters.add(new Concrete.TypeParameter(true, visitExpr(teleUniverseContext.universeAtom()), false));
+            continue;
+          }
+          case null, default -> throw new IllegalStateException();
         }
       } else {
         typedExpr = ((ImplicitContext) tele).typedExpr();
@@ -1625,10 +1634,10 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         }
       } else {
         if (isDefinition && paramAttr.STRICT() != null) {
-          parameters.add(new Concrete.DefinitionTypeParameter(explicit, true, visitExpr(exprs.get(0)), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.DefinitionTypeParameter(explicit, true, visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null));
         } else {
           checkStrict(typedExpr);
-          parameters.add(new Concrete.TypeParameter(explicit, visitExpr(exprs.get(0)), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.TypeParameter(explicit, visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null));
         }
       }
     }

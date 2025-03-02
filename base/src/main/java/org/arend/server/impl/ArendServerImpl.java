@@ -17,7 +17,6 @@ import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.scope.*;
 import org.arend.prelude.Prelude;
 import org.arend.server.*;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
@@ -227,8 +226,8 @@ public class ArendServerImpl implements ArendServer {
 
   private void clearReverseDependencies(ModuleLocation module, ConcreteGroup group) {
     for (ConcreteStatement statement : group.statements()) {
-      if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
-        Set<ModuleLocation> modules = myReverseDependencies.get(new ModulePath(statement.command().getPath()));
+      if (statement.command() != null && statement.command().isImport()) {
+        Set<ModuleLocation> modules = myReverseDependencies.get(new ModulePath(statement.command().module().getPath()));
         if (modules != null) {
           modules.remove(module);
         }

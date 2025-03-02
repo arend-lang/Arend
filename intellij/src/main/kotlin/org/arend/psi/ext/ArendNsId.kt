@@ -6,10 +6,10 @@ import org.arend.psi.ArendElementTypes
 import org.arend.psi.childOfType
 import org.arend.psi.childOfTypeStrict
 import org.arend.psi.firstRelevantChild
-import org.arend.term.NameRenaming
+import org.arend.term.abs.Abstract
 
 
-class ArendNsId(node: ASTNode) : ArendCompositeElementImpl(node), NameRenaming {
+class ArendNsId(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.NameRenaming {
     val refIdentifier: ArendRefIdentifier
         get() = childOfTypeStrict()
 
@@ -26,7 +26,7 @@ class ArendNsId(node: ASTNode) : ArendCompositeElementImpl(node), NameRenaming {
 
     override fun getOldReference() = refIdentifier.referent
 
-    override fun getName() = defIdentifier?.referenceName
+    override fun getNewName() = defIdentifier?.referenceName
 
     override fun getPrecedence() = ReferableBase.calcPrecedence(prec)
 }

@@ -19,7 +19,6 @@ import org.arend.core.expr.FunCallExpression
 import org.arend.ext.concrete.definition.FunctionKind
 import org.arend.ext.module.ModulePath
 import org.arend.naming.reference.Referable
-import org.arend.naming.scope.NamespaceCommandNamespace
 import org.arend.naming.scope.Scope
 import org.arend.prelude.Prelude
 import org.arend.psi.*
@@ -28,7 +27,6 @@ import org.arend.refactoring.getCompleteWhere
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendCustomCodeStyleSettings
 import org.arend.settings.ArendCustomCodeStyleSettings.OptimizeImportsPolicy
-import org.arend.term.NamespaceCommand
 import org.arend.typechecking.visitor.SearchVisitor
 import org.arend.util.ArendBundle
 import org.arend.util.mapToSet
@@ -102,7 +100,7 @@ class ArendImportOptimizer : ImportOptimizer {
         ) {
             processRedundantImportedDefinitions(file, fileImports, optimalTree, importRemover)
             val factory = ArendPsiFactory(file.project)
-            val allImports = file.statements.filter { it.statCmd?.kind == NamespaceCommand.Kind.IMPORT }.map {
+            val allImports = file.statements.filter { it.statCmd?.isImport == true }.map {
                 val text = it.text
                 it.delete()
                 factory.createFromText(text)!!.statements[0]
@@ -134,7 +132,7 @@ val importRemover : (ArendCompositeElement) -> Unit = { element ->
 }
 
 fun processRedundantImportedDefinitions(group : ArendGroup, fileImports: Map<FilePath, Set<ImportedName>>, moduleStructure: OptimalModuleStructure, action: (ArendCompositeElement) -> Unit) {
-    checkStatements(action, group.statements.filter { it is ArendStat && it.statCmd?.kind == NamespaceCommand.Kind.IMPORT }, fileImports, EMPTY_STRUCTURE, moduleStructure)
+    checkStatements(action, group.statements.filter { it is ArendStat && it.statCmd?.isImport == true }, fileImports, EMPTY_STRUCTURE, moduleStructure)
     visitModuleInconsistencies(action, group, moduleStructure, moduleStructure.usages, emptyMap())
 }
 
@@ -196,7 +194,7 @@ private fun visitModuleInconsistencies(action : (ArendCompositeElement) -> Unit,
     for ((modulePath, set) in importedOnTopLevel) {
         filteredPattern[modulePath] = filteredPattern[modulePath]?.let { it - set }
     }
-    val deepStatements = checkStatements(action, group.statements.filter { it.namespaceCommand?.kind == NamespaceCommand.Kind.OPEN }, filteredPattern, moduleStructure ?: EMPTY_STRUCTURE)
+    val deepStatements = checkStatements(action, group.statements.filter { it.namespaceCommand?.isImport == false }, filteredPattern, moduleStructure ?: EMPTY_STRUCTURE)
     for (subgroup in group.statements.mapNotNull { it.group } + group.dynamicSubgroups) {
         val substructure = moduleStructure?.subgroups?.find { it.name == subgroup.name }
         visitModuleInconsistencies(action, subgroup, substructure, treeUsages + (substructure?.usages ?: emptyMap()), importedOnTopLevel + deepStatements)

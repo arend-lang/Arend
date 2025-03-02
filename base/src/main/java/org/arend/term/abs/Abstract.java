@@ -5,9 +5,10 @@ import org.arend.ext.reference.Precedence;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.ext.concrete.definition.FunctionKind;
+import org.arend.naming.reference.NamedUnresolvedReference;
 import org.arend.naming.reference.UnresolvedReference;
+import org.arend.naming.scope.Scope;
 import org.arend.term.Fixity;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,24 +22,6 @@ public final class Abstract {
   public interface SourceNode {
     @NotNull SourceNode getTopmostEquivalentSourceNode();
     @Nullable SourceNode getParentSourceNode();
-
-    default boolean isLocal() {
-      return true;
-    }
-  }
-
-  public static abstract class SourceNodeImpl implements SourceNode {
-    @NotNull
-    @Override
-    public SourceNode getTopmostEquivalentSourceNode() {
-      return this;
-    }
-
-    @Nullable
-    @Override
-    public SourceNode getParentSourceNode() {
-      return null;
-    }
   }
 
   public interface LamParameter extends SourceNode {
@@ -57,11 +40,6 @@ public final class Abstract {
     boolean isClassifying();
     boolean isCoerce();
     ClassFieldKind getClassFieldKind();
-
-    @Override
-    default boolean isLocal() {
-      return false;
-    }
 
     @Override
     default boolean isProperty() {
@@ -135,13 +113,25 @@ public final class Abstract {
     @NotNull Collection<? extends CoClauseElement> getCoClauseElements();
   }
 
-  public interface NamespaceCommandHolder extends SourceNode, NamespaceCommand {
-    @Nullable LongReference getOpenedReference();
+  public interface NameRenaming extends SourceNode {
+    @NotNull Scope.ScopeContext getScopeContext();
+    @NotNull NamedUnresolvedReference getOldReference();
+    @Nullable Precedence getPrecedence();
+    @Nullable String getNewName();
+  }
 
-    @Override
-    default boolean isLocal() {
-      return false;
-    }
+  public interface NameHiding extends SourceNode {
+    @NotNull Scope.ScopeContext getScopeContext();
+    @NotNull NamedUnresolvedReference getHiddenReference();
+  }
+
+  public interface NamespaceCommand extends SourceNode {
+    boolean isImport();
+    /* @NotNull */ @Nullable UnresolvedReference getModuleReference();
+    boolean isUsing();
+    @Nullable LongReference getOpenedReference();
+    @NotNull Collection<? extends NameRenaming> getRenamings();
+    @NotNull Collection<? extends NameHiding> getHidings();
   }
 
   // Group
@@ -260,11 +250,6 @@ public final class Abstract {
 
   public interface ReferableDefinition extends SourceNode {
     /* @NotNull */ @Nullable Abstract.AbstractLocatedReferable getReferable();
-
-    @Override
-    default boolean isLocal() {
-      return false;
-    }
   }
 
   public enum Comparison { LESS_OR_EQUALS, GREATER_OR_EQUALS }

@@ -20,7 +20,6 @@ import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
 import org.arend.server.ArendChecker;
 import org.arend.server.ProgressReporter;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.concrete.ReplaceTCRefVisitor;
@@ -106,8 +105,8 @@ public class ArendCheckerImpl implements ArendChecker {
               if (groups.putIfAbsent(module, groupData) != null) continue;
               for (ConcreteStatement statement : groupData.getRawGroup().statements()) {
                 indicator.checkCanceled();
-                if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
-                  ModuleLocation dependency = myServer.findDependency(new ModulePath(statement.command().getPath()), module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+                if (statement.command() != null && statement.command().isImport()) {
+                  ModuleLocation dependency = myServer.findDependency(new ModulePath(statement.command().module().getPath()), module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
                   if (dependency != null) toVisit.add(dependency);
                 }
               }
@@ -116,8 +115,8 @@ public class ArendCheckerImpl implements ArendChecker {
 
           for (Map.Entry<ModuleLocation, GroupData> entry : groups.entrySet()) {
             for (ConcreteStatement statement : entry.getValue().getRawGroup().statements()) {
-              if (statement.command() != null && statement.command().getKind() == NamespaceCommand.Kind.IMPORT) {
-                myServer.addReverseDependencies(new ModulePath(statement.command().getPath()), entry.getKey());
+              if (statement.command() != null && statement.command().isImport()) {
+                myServer.addReverseDependencies(new ModulePath(statement.command().module().getPath()), entry.getKey());
               }
             }
           }

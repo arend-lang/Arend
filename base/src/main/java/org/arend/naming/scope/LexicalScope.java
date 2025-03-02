@@ -3,7 +3,6 @@ package org.arend.naming.scope;
 import org.arend.ext.module.ModulePath;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.*;
 import org.jetbrains.annotations.NotNull;
@@ -120,14 +119,14 @@ public class LexicalScope implements Scope {
 
     Scope cachingScope = null;
     for (ConcreteStatement statement : myGroup.statements()) {
-      NamespaceCommand cmd = statement.command();
-      if (cmd == null || !(myWithAdditionalContent || cmd.getKind() == NamespaceCommand.Kind.IMPORT)) {
+      ConcreteNamespaceCommand cmd = statement.command();
+      if (cmd == null || !(myWithAdditionalContent || cmd.isImport())) {
         continue;
       }
 
       Scope scope;
-      if (cmd.getKind() == NamespaceCommand.Kind.IMPORT) {
-        if (myModule != null && cmd.getPath().equals(myModule.toList())) {
+      if (cmd.isImport()) {
+        if (myModule != null && cmd.module().getPath().equals(myModule.toList())) {
           continue;
         }
         scope = getImportedSubscope();
@@ -261,14 +260,14 @@ public class LexicalScope implements Scope {
 
     Scope cachingScope = null;
     for (ConcreteStatement statement : myGroup.statements()) {
-      NamespaceCommand cmd = statement.command();
-      if (cmd == null || !(myWithAdditionalContent || cmd.getKind() == NamespaceCommand.Kind.IMPORT)) {
+      ConcreteNamespaceCommand cmd = statement.command();
+      if (cmd == null || !(myWithAdditionalContent || cmd.isImport())) {
         continue;
       }
 
       Scope scope;
-      if (cmd.getKind() == NamespaceCommand.Kind.IMPORT) {
-        if (myModule != null && cmd.getPath().equals(myModule.toList())) {
+      if (cmd.isImport()) {
+        if (myModule != null && cmd.module().getPath().equals(myModule.toList())) {
           continue;
         }
         scope = getImportedSubscope();

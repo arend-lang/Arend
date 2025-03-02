@@ -4,11 +4,10 @@ import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.DataContainer;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
-import org.arend.term.NameRenaming;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
+import org.arend.term.group.ConcreteNamespaceCommand;
 
 import java.util.*;
 
@@ -120,16 +119,16 @@ public class CollectingResolverListener implements ResolverListener {
   }
 
   @Override
-  public void namespaceResolved(NamespaceCommand namespaceCommand, List<Referable> resolvedRefs) {
-    cacheReference(new LongUnresolvedReference(namespaceCommand, namespaceCommand.getReferenceList(), namespaceCommand.getPath()), null, resolvedRefs);
-    if (namespaceCommand.getKind() == NamespaceCommand.Kind.IMPORT && resolvedRefs != null && !resolvedRefs.isEmpty() && resolvedRefs.get(resolvedRefs.size() - 1) instanceof ModuleReferable moduleRef) {
+  public void namespaceResolved(ConcreteNamespaceCommand namespaceCommand, List<Referable> resolvedRefs) {
+    cacheReference(namespaceCommand.module(), null, resolvedRefs);
+    if (namespaceCommand.isImport() && resolvedRefs != null && !resolvedRefs.isEmpty() && resolvedRefs.getLast() instanceof ModuleReferable moduleRef) {
       myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
         .addImportedModule(moduleRef.path);
     }
   }
 
   @Override
-  public void renamingResolved(NameRenaming renaming, Referable originalRef, Referable resolvedRef) {
+  public void renamingResolved(ConcreteNamespaceCommand.NameRenaming renaming, Referable originalRef, Referable resolvedRef) {
     if (originalRef instanceof UnresolvedReference) {
       cacheReference((UnresolvedReference) originalRef, resolvedRef, null);
     }

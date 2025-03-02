@@ -14,7 +14,6 @@ import org.arend.psi.ArendFile
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ext.*
 import org.arend.scratch.isArendScratch
-import org.arend.term.NamespaceCommand
 import org.arend.term.group.AccessModifier
 import org.arend.toolWindow.repl.ArendReplService
 import org.arend.util.mapFirstNotNull
@@ -117,7 +116,7 @@ fun doCalculateReferenceName(
             defaultLocation.processParentGroup(psi)
 
         if (statements != null)
-            ancestorGroups.add(0, Pair(containingGroup, statements.filter { it.kind == NamespaceCommand.Kind.OPEN }))
+            ancestorGroups.add(0, Pair(containingGroup, statements.filter { !it.isImport }))
 
         /* TODO[server2]
         if (psi is ArendDefClass) {
@@ -375,7 +374,7 @@ class AddIdToUsingAction(currentFile: ArendFile,
 
         if (statCmd == null) return
         /* if statCmd was found -- execute refactoring action */
-        val hiddenRef: ArendRefIdentifier? = statCmd.hiddenReferences.lastOrNull { it.refIdentifier.referenceName == myId }?.refIdentifier
+        val hiddenRef: ArendRefIdentifier? = statCmd.hidings.lastOrNull { it.refIdentifier.referenceName == myId }?.refIdentifier
         if (hiddenRef == null) doAddIdToUsing(statCmd, singletonList(Pair(myId, null)), locationData.target.accessModifier == AccessModifier.PROTECTED) else doRemoveRefFromStatCmd(hiddenRef)
     }
 

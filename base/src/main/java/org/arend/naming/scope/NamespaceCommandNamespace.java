@@ -1,10 +1,8 @@
 package org.arend.naming.scope;
 
 import org.arend.naming.reference.*;
-import org.arend.term.NameHiding;
-import org.arend.term.NameRenaming;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.group.AccessModifier;
+import org.arend.term.group.ConcreteNamespaceCommand;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,22 +10,18 @@ import java.util.*;
 
 public class NamespaceCommandNamespace implements Scope {
   private final Scope myModuleNamespace;
-  private final NamespaceCommand myNamespaceCommand;
+  private final ConcreteNamespaceCommand myNamespaceCommand;
 
-  private NamespaceCommandNamespace(Scope moduleNamespace, NamespaceCommand namespaceCommand) {
+  private NamespaceCommandNamespace(Scope moduleNamespace, ConcreteNamespaceCommand namespaceCommand) {
     myNamespaceCommand = namespaceCommand;
     myModuleNamespace = moduleNamespace;
   }
 
-  public static @NotNull Scope makeNamespace(Scope moduleNamespace, NamespaceCommand namespaceCommand) {
-    return moduleNamespace == null || namespaceCommand.getOpenedReferences().isEmpty() && !namespaceCommand.isUsing() ? EmptyScope.INSTANCE : new NamespaceCommandNamespace(moduleNamespace, namespaceCommand);
-  }
-
-  public static @NotNull Scope resolveNamespace(Scope parentScope, NamespaceCommand cmd) {
-    if (cmd.getOpenedReferences().isEmpty() && !cmd.isUsing()) {
+  public static @NotNull Scope resolveNamespace(Scope parentScope, ConcreteNamespaceCommand cmd) {
+    if (cmd.renamings().isEmpty() && !cmd.isUsing()) {
       return EmptyScope.INSTANCE;
     }
-    List<String> path = cmd.getPath();
+    List<String> path = cmd.module().getPath();
     if (path.isEmpty()) {
       return EmptyScope.INSTANCE;
     }
@@ -43,25 +37,24 @@ public class NamespaceCommandNamespace implements Scope {
   @Override
   public Collection<? extends Referable> getElements(@Nullable ScopeContext context) {
     Set<String> hidden = new HashSet<>();
-    for (NameHiding hiddenElement : myNamespaceCommand.getHiddenReferences()) {
-      if (context == null || hiddenElement.getScopeContext() == context) {
-        hidden.add(hiddenElement.getHiddenReference().getRefName());
+    for (ConcreteNamespaceCommand.NameHiding hiddenElement : myNamespaceCommand.hidings()) {
+      if (context == null || hiddenElement.scopeContext() == context) {
+        hidden.add(hiddenElement.reference().getRefName());
       }
     }
 
     List<Referable> elements = new ArrayList<>();
-    Collection<? extends NameRenaming> opened = myNamespaceCommand.getOpenedReferences();
-    for (NameRenaming renaming : opened) {
-      ScopeContext renamingContext = renaming.getScopeContext();
+    for (ConcreteNamespaceCommand.NameRenaming renaming : myNamespaceCommand.renamings()) {
+      ScopeContext renamingContext = renaming.scopeContext();
       if (!(context == null || context == renamingContext)) {
         continue;
       }
-      Referable oldRef = resolve(renaming.getOldReference(), renamingContext);
+      Referable oldRef = resolve(renaming.reference(), renamingContext);
       if (!(oldRef instanceof ErrorReference || oldRef instanceof GlobalReferable && ((GlobalReferable) oldRef).getAccessModifier() == AccessModifier.PRIVATE)) {
-        String newName = renaming.getName();
+        String newName = renaming.newName();
         String name = newName != null ? newName : oldRef.textRepresentation();
         if (!hidden.contains(name)) {
-          elements.add(newName != null ? new RedirectingReferableImpl(oldRef, renaming.getPrecedence(), newName) : oldRef);
+          elements.add(newName != null ? new RedirectingReferableImpl(oldRef, renaming.newPrecedence(), newName) : oldRef);
         }
         hidden.add(oldRef.textRepresentation());
       }
@@ -74,8 +67,8 @@ public class NamespaceCommandNamespace implements Scope {
           continue;
         }
 
-        for (NameRenaming renaming : opened) {
-          if (renaming.getOldReference().textRepresentation().equals(ref.textRepresentation())) {
+        for (ConcreteNamespaceCommand.NameRenaming renaming : myNamespaceCommand.renamings()) {
+          if (renaming.reference().getRefName().equals(ref.getRefName())) {
             continue elemLoop;
           }
         }
@@ -88,8 +81,8 @@ public class NamespaceCommandNamespace implements Scope {
   }
 
   private boolean isHidden(String name, ScopeContext context) {
-    for (NameHiding hiddenRef : myNamespaceCommand.getHiddenReferences()) {
-      if ((context == null || context == hiddenRef.getScopeContext()) && hiddenRef.getHiddenReference().getRefName().equals(name)) {
+    for (ConcreteNamespaceCommand.NameHiding hiddenRef : myNamespaceCommand.hidings()) {
+      if ((context == null || context == hiddenRef.scopeContext()) && hiddenRef.reference().getRefName().equals(name)) {
         return true;
       }
     }
@@ -101,8 +94,8 @@ public class NamespaceCommandNamespace implements Scope {
       return true;
     }
 
-    for (NameRenaming renaming : myNamespaceCommand.getOpenedReferences()) {
-      if (renaming.getOldReference().textRepresentation().equals(name)) {
+    for (ConcreteNamespaceCommand.NameRenaming renaming : myNamespaceCommand.renamings()) {
+      if (renaming.reference().getRefName().equals(name)) {
         return true;
       }
     }
@@ -117,18 +110,17 @@ public class NamespaceCommandNamespace implements Scope {
       return null;
     }
 
-    Collection<? extends NameRenaming> opened = myNamespaceCommand.getOpenedReferences();
-    for (NameRenaming renaming : opened) {
-      ScopeContext renamingContext = renaming.getScopeContext();
+    for (ConcreteNamespaceCommand.NameRenaming renaming : myNamespaceCommand.renamings()) {
+      ScopeContext renamingContext = renaming.scopeContext();
       if (!(context == null || context == renamingContext)) {
         continue;
       }
 
-      String newName = renaming.getName();
-      NamedUnresolvedReference oldRef = renaming.getOldReference();
+      String newName = renaming.newName();
+      NamedUnresolvedReference oldRef = renaming.reference();
       if (name.equals(newName) || newName == null && oldRef.getRefName().equals(name)) {
         Referable ref = resolve(oldRef, renamingContext);
-        return ref instanceof ErrorReference ? null : newName != null ? new RedirectingReferableImpl(ref, renaming.getPrecedence(), newName) : ref;
+        return ref instanceof ErrorReference ? null : newName != null ? new RedirectingReferableImpl(ref, renaming.newPrecedence(), newName) : ref;
       }
     }
 
@@ -144,14 +136,13 @@ public class NamespaceCommandNamespace implements Scope {
       return null;
     }
 
-    Collection<? extends NameRenaming> opened = myNamespaceCommand.getOpenedReferences();
-    for (NameRenaming renaming : opened) {
-      if (renaming.getScopeContext() != ScopeContext.STATIC) {
+    for (ConcreteNamespaceCommand.NameRenaming renaming : myNamespaceCommand.renamings()) {
+      if (renaming.scopeContext() != ScopeContext.STATIC) {
         continue;
       }
 
-      String newName = renaming.getName();
-      NamedUnresolvedReference oldRef = renaming.getOldReference();
+      String newName = renaming.newName();
+      NamedUnresolvedReference oldRef = renaming.reference();
       if (newName == null) {
         newName = resolve(oldRef, ScopeContext.STATIC).getRefName();
       }

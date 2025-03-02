@@ -27,9 +27,9 @@ import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
 import org.arend.prelude.PreludeResourceLibrary;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
 import org.arend.term.prettyprint.ToAbstractVisitor;
@@ -41,6 +41,7 @@ import org.arend.typechecking.order.MapTarjanSCC;
 import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.provider.ConcreteProvider;
+import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.util.FileUtils;
 import org.arend.ext.util.Pair;
 import org.arend.util.Range;
@@ -124,7 +125,7 @@ public abstract class BaseCliFrontend {
     private int failed;
 
     MyTypechecking() {
-      super(InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, myErrorReporter, myDependencyCollector, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(myLibraryManager));
+      super(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, myErrorReporter, myDependencyCollector, PositionComparator.INSTANCE, new LibraryArendExtensionProvider(myLibraryManager));
     }
 
     private void startTimer(TCDefReferable ref) {
@@ -280,9 +281,9 @@ public abstract class BaseCliFrontend {
         boolean withInstances = allModules;
         List<ModulePath> dependencies = new ArrayList<>();
         for (ConcreteStatement statement : group.statements()) {
-          NamespaceCommand cmd = statement.command();
-          if (cmd != null && cmd.getKind() == NamespaceCommand.Kind.IMPORT) {
-            dependencies.add(new ModulePath(cmd.getPath()));
+          ConcreteNamespaceCommand cmd = statement.command();
+          if (cmd != null && cmd.isImport()) {
+            dependencies.add(new ModulePath(cmd.module().getPath()));
           }
           if (!withInstances && !dependencies.isEmpty()) {
             ConcreteGroup subgroup = statement.group();
@@ -361,14 +362,14 @@ public abstract class BaseCliFrontend {
     boolean recompile = recompileString == null && cmdLine.hasOption("r");
     if (cmdLine.hasOption("i")) {
       switch (replKind.toLowerCase()) {
-        default:
-          System.err.println("[ERROR] Unrecognized repl type: " + replKind);
-          break;
         case "plain":
           PlainCliRepl.launch(recompile, libDirs);
           break;
         case "jline":
           JLineCliRepl.launch(recompile, libDirs);
+          break;
+        default:
+          System.err.println("[ERROR] Unrecognized repl type: " + replKind);
           break;
       }
       return null;

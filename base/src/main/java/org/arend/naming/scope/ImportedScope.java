@@ -4,8 +4,8 @@ import org.arend.ext.module.ModulePath;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.Referable;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,9 +29,9 @@ public class ImportedScope implements Scope {
     }
 
     for (ConcreteStatement statement : group.statements()) {
-      NamespaceCommand cmd = statement.command();
-      if (cmd != null && cmd.getKind() == NamespaceCommand.Kind.IMPORT) {
-        myExpectedNamesTree.addPath(cmd.getPath());
+      ConcreteNamespaceCommand cmd = statement.command();
+      if (cmd != null && cmd.isImport()) {
+        myExpectedNamesTree.addPath(cmd.module().getPath());
       }
     }
   }
@@ -104,7 +104,7 @@ public class ImportedScope implements Scope {
       scope = new ImportedScope(triple.tree, myProvider, null);
     }
 
-    Triple triple = scope.myExpectedNamesTree.map.get(path.get(path.size() - 1));
+    Triple triple = scope.myExpectedNamesTree.map.get(path.getLast());
     return triple != null && triple.isFile ? triple.scope : null;
   }
 

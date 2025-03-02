@@ -33,9 +33,9 @@ import org.arend.repl.Repl;
 import org.arend.repl.action.ReplCommand;
 import org.arend.server.ArendServer;
 import org.arend.server.impl.ArendServerImpl;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.LibraryArendExtensionProvider;
@@ -233,9 +233,9 @@ public abstract class CommonCliRepl extends Repl {
     var moduleScopeProvider = getAvailableModuleScopeProvider();
     List<ModulePath> modules = new ArrayList<>();
     for (ConcreteStatement statement : statements) {
-      NamespaceCommand command = statement.command();
-      if (command != null && command.getKind() == NamespaceCommand.Kind.IMPORT) {
-        var module = new ModulePath(command.getPath());
+      ConcreteNamespaceCommand command = statement.command();
+      if (command != null && command.isImport()) {
+        var module = new ModulePath(command.module().getPath());
         var scope = moduleScopeProvider.forModule(module);
         if (scope == null) {
           modules.add(module);

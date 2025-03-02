@@ -11,6 +11,7 @@ import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.typing.TypingInfoVisitor;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.Fixity;
 import org.arend.term.concrete.Concrete;
@@ -128,7 +129,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     List<ConcreteStatement> statements = new ArrayList<>();
     for (Abstract.Statement statement : group.getStatements()) {
       Abstract.Group subgroup = statement.getGroup();
-      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, module, referable, concrete instanceof Concrete.Definition def ? def : null, enclosingClass, errorReporter, resolved), statement.getNamespaceCommand(), buildLevelsDefinition(statement.getPLevelsDefinition(), true, referable), buildLevelsDefinition(statement.getHLevelsDefinition(), false, referable)));
+      statements.add(new ConcreteStatement(subgroup == null ? null : buildGroup(subgroup, module, referable, concrete instanceof Concrete.Definition def ? def : null, enclosingClass, errorReporter, resolved), buildNamespaceCommand(statement.getNamespaceCommand()), buildLevelsDefinition(statement.getPLevelsDefinition(), true, referable), buildLevelsDefinition(statement.getHLevelsDefinition(), false, referable)));
     }
 
     if (concrete instanceof Concrete.Definition cDef && parentDef instanceof Concrete.ClassDefinition && cDef.getUseParent() == parentDef.getData()) {
@@ -151,6 +152,24 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     }
 
     return new ConcreteGroup(group.getDescription(), referable, concrete, statements, dynamicGroups, buildExternalParameters(parentDef));
+  }
+
+  private static ConcreteNamespaceCommand buildNamespaceCommand(Abstract.NamespaceCommand command) {
+    if (command == null) return null;
+    UnresolvedReference reference = command.getModuleReference();
+    if (reference == null) return null;
+
+    List<ConcreteNamespaceCommand.NameRenaming> renamings = new ArrayList<>();
+    for (Abstract.NameRenaming renaming : command.getRenamings()) {
+      renamings.add(new ConcreteNamespaceCommand.NameRenaming(renaming, renaming.getScopeContext(), renaming.getOldReference(), renaming.getPrecedence(), renaming.getNewName()));
+    }
+
+    List<ConcreteNamespaceCommand.NameHiding> hidings = new ArrayList<>();
+    for (Abstract.NameHiding hiding : command.getHidings()) {
+      hidings.add(new ConcreteNamespaceCommand.NameHiding(hiding, hiding.getScopeContext(), hiding.getHiddenReference()));
+    }
+
+    return new ConcreteNamespaceCommand(command, command.isImport(), reference instanceof LongUnresolvedReference ? (LongUnresolvedReference) reference : new LongUnresolvedReference(reference.getData(), Collections.singletonList(reference.getData() instanceof AbstractReference ref ? ref : null), Collections.singletonList(reference.getRefName())), command.isUsing(), renamings, hidings);
   }
 
   private static Concrete.LevelsDefinition buildLevelsDefinition(Abstract.LevelParameters parameters, boolean isPLevels, LocatedReferable parent) {

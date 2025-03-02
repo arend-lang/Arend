@@ -12,6 +12,4 @@ class ArendConstructorClause(node: ASTNode) : ArendSourceNodeImpl(node), Abstrac
     override fun getPatterns(): List<ArendPattern> = PsiTreeUtil.getChildrenOfTypeAsList(this, ArendPattern::class.java)
 
     override fun getConstructors(): List<ArendConstructor> = getChildrenOfType()
-
-    override fun isLocal() = false
 }

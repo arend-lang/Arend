@@ -22,9 +22,6 @@ import org.arend.naming.scope.local.ListScope;
 import org.arend.prelude.Prelude;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.server.impl.DefinitionData;
-import org.arend.term.NameHiding;
-import org.arend.term.NameRenaming;
-import org.arend.term.NamespaceCommand;
 import org.arend.term.concrete.*;
 import org.arend.term.group.*;
 import org.arend.typechecking.error.local.LocalErrorReporter;
@@ -352,7 +349,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
         @Override
         public Concrete.Expression visitApp(Concrete.AppExpression expr, Void params) {
-          if (expr.getArguments().get(0).isExplicit() || !(expr.getFunction() instanceof Concrete.ReferenceExpression)) {
+          if (expr.getArguments().getFirst().isExplicit() || !(expr.getFunction() instanceof Concrete.ReferenceExpression)) {
             return super.visitApp(expr, params);
           }
           for (Concrete.Argument argument : expr.getArguments()) {
@@ -661,18 +658,16 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     boolean hasSelf = false;
     for (ConcreteStatement statement : statements) {
-      NamespaceCommand namespaceCommand = statement.command();
+      ConcreteNamespaceCommand namespaceCommand = statement.command();
       if (namespaceCommand == null) {
         continue;
       }
-      List<String> path = namespaceCommand.getPath();
-      NamespaceCommand.Kind kind = namespaceCommand.getKind();
-      if (path.isEmpty() || kind == NamespaceCommand.Kind.IMPORT && !isTopLevel) {
+      if (namespaceCommand.isImport() && !isTopLevel) {
         continue;
       }
 
-      LongUnresolvedReference reference = new LongUnresolvedReference(namespaceCommand, namespaceCommand.getReferenceList(), path);
-      Scope importedScope = kind == NamespaceCommand.Kind.IMPORT ? namespaceScope.getImportedSubscope() : namespaceScope;
+      LongUnresolvedReference reference = namespaceCommand.module();
+      Scope importedScope = namespaceCommand.isImport() ? namespaceScope.getImportedSubscope() : namespaceScope;
       List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
       reference.resolve(importedScope, resolvedRefs, myResolverListener);
       if (myResolverListener != null) {
@@ -686,13 +681,13 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         loop:
         for (Referable element : curScope.getElements()) {
           if (element instanceof TCDefReferable defRef && defRef.getKind() == GlobalReferable.Kind.INSTANCE) {
-            for (NameHiding hiding : namespaceCommand.getHiddenReferences()) {
-              if (hiding.getScopeContext() == Scope.ScopeContext.STATIC && hiding.getHiddenReference().getRefName().equals(defRef.getRefName())) continue loop;
+            for (ConcreteNamespaceCommand.NameHiding hiding : namespaceCommand.hidings()) {
+              if (hiding.scopeContext() == Scope.ScopeContext.STATIC && hiding.reference().getRefName().equals(defRef.getRefName())) continue loop;
             }
             boolean ok = namespaceCommand.isUsing();
             if (!ok) {
-              for (NameRenaming renaming : namespaceCommand.getOpenedReferences()) {
-                if (renaming.getScopeContext() == Scope.ScopeContext.STATIC && renaming.getOldReference().getRefName().equals(defRef.getRefName())) {
+              for (ConcreteNamespaceCommand.NameRenaming renaming : namespaceCommand.renamings()) {
+                if (renaming.scopeContext() == Scope.ScopeContext.STATIC && renaming.reference().getRefName().equals(defRef.getRefName())) {
                   ok = true;
                   break;
                 }
@@ -710,8 +705,8 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         }
         instances = addInstances(instances, scopeInstances);
 
-        for (NameRenaming renaming : namespaceCommand.getOpenedReferences()) {
-          Referable oldRef = renaming.getOldReference();
+        for (ConcreteNamespaceCommand.NameRenaming renaming : namespaceCommand.renamings()) {
+          Referable oldRef = renaming.reference();
           Referable ref = ExpressionResolveNameVisitor.resolve(oldRef, new PrivateFilteredScope(curScope, true), null);
           if (myResolverListener != null) {
             myResolverListener.renamingResolved(renaming, oldRef, ref);
@@ -721,8 +716,8 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
           }
         }
 
-        for (NameHiding nameHiding : namespaceCommand.getHiddenReferences()) {
-          Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.getHiddenReference(), new PrivateFilteredScope(curScope, true), nameHiding.getScopeContext());
+        for (ConcreteNamespaceCommand.NameHiding nameHiding : namespaceCommand.hidings()) {
+          Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.reference(), new PrivateFilteredScope(curScope, true), nameHiding.scopeContext());
           if (ref instanceof ErrorReference) {
             myErrorReporter.report(((ErrorReference) ref).getError());
           }
@@ -811,10 +806,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     class NamespaceStruct {
       final Scope.ScopeContext context;
-      final NamespaceCommand command;
+      final ConcreteNamespaceCommand command;
       final Map<String, Referable> refMap;
 
-      NamespaceStruct(Scope.ScopeContext context, NamespaceCommand command, Map<String, Referable> refMap) {
+      NamespaceStruct(Scope.ScopeContext context, ConcreteNamespaceCommand command, Map<String, Referable> refMap) {
         this.context = context;
         this.command = command;
         this.refMap = refMap;
@@ -823,17 +818,17 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     List<NamespaceStruct> namespaces = new ArrayList<>();
     for (ConcreteStatement statement : statements) {
-      NamespaceCommand cmd = statement.command();
+      ConcreteNamespaceCommand cmd = statement.command();
       if (cmd == null) {
         continue;
       }
-      if (!isTopLevel && cmd.getKind() == NamespaceCommand.Kind.IMPORT) {
+      if (!isTopLevel && cmd.isImport()) {
         myLocalErrorReporter.report(new ParsingError(ParsingError.Kind.MISPLACED_IMPORT, cmd));
       } else {
         checkNamespaceCommand(cmd, referables.keySet());
       }
       for (Scope.ScopeContext context : Scope.ScopeContext.values()) {
-        Collection<? extends Referable> elements = NamespaceCommandNamespace.resolveNamespace(cmd.getKind() == NamespaceCommand.Kind.IMPORT ? namespaceScope.getImportedSubscope() : namespaceScope, cmd).getElements(context);
+        Collection<? extends Referable> elements = NamespaceCommandNamespace.resolveNamespace(cmd.isImport() ? namespaceScope.getImportedSubscope() : namespaceScope, cmd).getElements(context);
         if (!elements.isEmpty()) {
           Map<String, Referable> map = new LinkedHashMap<>();
           for (Referable element : elements) {
@@ -855,11 +850,11 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
           if (!struct.context.equals(namespaces.get(j).context)) continue;
           Referable ref = namespaces.get(j).refMap.get(entry.getKey());
           if (ref != null && !ref.equals(entry.getValue())) {
-            NamespaceCommand nsCmd = namespaces.get(j).command;
+            ConcreteNamespaceCommand nsCmd = namespaces.get(j).command;
             Object cause = nsCmd;
-            for (NameRenaming renaming : nsCmd.getOpenedReferences()) {
-              String name = renaming.getName();
-              if (entry.getKey().equals(name != null ? name : renaming.getOldReference().textRepresentation())) {
+            for (ConcreteNamespaceCommand.NameRenaming renaming : nsCmd.renamings()) {
+              String name = renaming.newName();
+              if (entry.getKey().equals(name != null ? name : renaming.reference().getRefName())) {
                 cause = renaming;
                 break;
               }
@@ -885,15 +880,15 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
   }
 
-  private void checkNamespaceCommand(NamespaceCommand cmd, Set<String> defined) {
+  private void checkNamespaceCommand(ConcreteNamespaceCommand cmd, Set<String> defined) {
     if (defined == null) {
       return;
     }
 
-    for (NameRenaming renaming : cmd.getOpenedReferences()) {
-      String name = renaming.getName();
+    for (ConcreteNamespaceCommand.NameRenaming renaming : cmd.renamings()) {
+      String name = renaming.newName();
       if (name == null) {
-        name = renaming.getOldReference().textRepresentation();
+        name = renaming.reference().getRefName();
       }
       if (defined.contains(name)) {
         myLocalErrorReporter.report(new ExistingOpenedNameError(renaming));

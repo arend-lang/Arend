@@ -34,7 +34,6 @@ import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendSettings
 import org.arend.term.Fixity
-import org.arend.term.NamespaceCommand
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractExpressionVisitor
 import org.arend.term.abs.AbstractReference
@@ -116,7 +115,7 @@ private fun addIdToHiding(refs: List<ArendRefIdentifier>, startAnchor: PsiElemen
         if (ref.referenceName == name) return ref
     }
     val statCmd = factory.createFromText("\\import Foo \\hiding (bar, $name)")?.descendantOfType<ArendStatCmd>()
-    val ref = statCmd!!.hiddenReferences[1].refIdentifier
+    val ref = statCmd!!.hidings[1].refIdentifier
     val comma = ref.findPrevSibling()!!
     if (needsComma) anchor = anchor.parent.addAfter(comma, anchor)
     val insertedRef = anchor.parent.addAfter(ref, anchor) as ArendRefIdentifier
@@ -135,7 +134,7 @@ fun doAddIdToHiding(statCmd: ArendStatCmd, idList: List<String>) : List<ArendRef
     }
     val lparen = statCmd.lparen
     val result = ArrayList<ArendRefIdentifier>()
-    if (lparen != null) for (id in idList) result.add(addIdToHiding(statCmd.hiddenReferences.map { it.refIdentifier }, lparen, id, factory))
+    if (lparen != null) for (id in idList) result.add(addIdToHiding(statCmd.hidings.map { it.refIdentifier }, lparen, id, factory))
     return result
 }
 
@@ -156,7 +155,7 @@ fun doRemoveRefFromStatCmd(id: ArendRefIdentifier, deleteEmptyCommands: Boolean 
         }
     }
 
-    if (parent is ArendStatCmd && parent.hiddenReferences.isEmpty()) { // This means that we are removing something from "hiding" list
+    if (parent is ArendStatCmd && parent.hidings.isEmpty()) { // This means that we are removing something from "hiding" list
         parent.lparen?.delete()
         parent.rparen?.delete()
         parent.hidingKw?.delete()
@@ -258,14 +257,14 @@ fun findPlaceForNsCmd(currentFile: ArendFile, fileToImport: LongName): RelativeP
 
             val currFileCommands = currentFile.statements.mapNotNull { it.namespaceCommand }.filter { it.importKw != null }
             if (currFileCommands.isNotEmpty()) {
-                val name = LongName(currFileCommands[0].path).toString()
+                val name = LongName(currFileCommands[0].longName?.longName.let { it ?: emptyList() }).toString()
                 anchor = currFileCommands[0].parent
                 if (fullName >= name)
                     after = true
             }
 
             if (after) for (nC in currFileCommands.drop(1)) {
-                val name = LongName(nC.path).toString()
+                val name = LongName(nC.longName?.longName.let { it ?: emptyList() }).toString()
                 if (fullName >= name)
                     anchor = nC.parent else break
             }
@@ -308,7 +307,7 @@ fun doAddIdToOpen(psiFactory: ArendPsiFactory, openedName: List<String>, positio
     val mySourceContainer =  if (!instanceMode) enclosingDefinition?.containingFile as? ArendGroup else enclosingDefinition?.parentGroup
 
     if ((scope != null && scope.resolveName(shortName) == null || instanceMode) && mySourceContainer != null) {
-        val anchor = mySourceContainer.statements.lastOrNull { it.namespaceCommand?.kind == NamespaceCommand.Kind.OPEN }?.let {RelativePosition(PositionKind.AFTER_ANCHOR, it)}
+        val anchor = mySourceContainer.statements.lastOrNull { it.namespaceCommand?.isImport == false }?.let {RelativePosition(PositionKind.AFTER_ANCHOR, it)}
             ?: mySourceContainer.statements.lastOrNull {it.namespaceCommand != null}?.let{ RelativePosition(PositionKind.AFTER_ANCHOR, it) }
             ?: if (mySourceContainer is ArendFile || mySourceContainer.statements.size > 1) RelativePosition(PositionKind.BEFORE_ANCHOR, mySourceContainer.statements.first()) else
                 getAnchorInAssociatedModule(psiFactory, mySourceContainer, headPosition = true)?.let{ RelativePosition(PositionKind.AFTER_ANCHOR, it) }
@@ -366,7 +365,7 @@ fun getImportedNames(namespaceCommand: ArendStatCmd, shortName: String?): List<P
     if (shortName == null) return emptyList()
 
     val nsUsing = namespaceCommand.nsUsing
-    val isHidden = namespaceCommand.hiddenReferences.any { it.refIdentifier.referenceName == shortName }
+    val isHidden = namespaceCommand.hidings.any { it.refIdentifier.referenceName == shortName }
 
     if (nsUsing != null) {
         val resultList = ArrayList<Pair<String, ArendNsId?>>()
