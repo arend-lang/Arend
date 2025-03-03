@@ -1,5 +1,7 @@
 package org.arend.term.concrete;
 
+import org.arend.naming.reference.Referable;
+
 import java.util.List;
 
 public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R>, ConcreteResolvableDefinitionVisitor<P,R> {
@@ -35,10 +37,17 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
     return checkSourceNode(expr, params);
   }
 
+  public void visitReferable(Referable referable, P params) {}
+
   public R visitParameter(Concrete.Parameter parameter, P params) {
     R result = checkSourceNode(parameter, params);
     if (result != null) return result;
-    return parameter.getType() == null ? null : parameter.getType().accept(this, params);
+    result = parameter.getType() == null ? null : parameter.getType().accept(this, params);
+    if (result != null) return result;
+    for (Referable referable : parameter.getReferableList()) {
+      if (referable != null) visitReferable(referable, params);
+    }
+    return null;
   }
 
   public R visitParameters(List<? extends Concrete.Parameter> parameters, P params) {
@@ -49,12 +58,40 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
     return null;
   }
 
+  public void freeReferable(Referable referable, P params) {}
+
+  public void freeParameter(Concrete.Parameter parameter, P params) {
+    for (Referable referable : parameter.getReferableList()) {
+      if (referable != null) freeReferable(referable, params);
+    }
+  }
+
+  public void freeParameters(List<? extends Concrete.Parameter> parameters, P params) {
+    for (Concrete.Parameter parameter : parameters) {
+      freeParameter(parameter, params);
+    }
+  }
+
+  public void freeEliminatedParameters(List<? extends Concrete.Parameter> parameters, List<? extends Concrete.ReferenceExpression> eliminated, P params) {
+    for (Concrete.ReferenceExpression reference : eliminated) {
+      freeReferable(reference.getReferent(), params);
+    }
+  }
+
+  public void freeNotEliminatedParameters(List<? extends Concrete.Parameter> parameters, List<? extends Concrete.ReferenceExpression> eliminated, P params) {
+    if (eliminated.isEmpty()) freeParameters(parameters, params);
+  }
+
   @Override
   public R visitLam(Concrete.LamExpression expr, P params) {
     R result = checkSourceNode(expr, params);
     if (result != null) return result;
     result = visitParameters(expr.getParameters(), params);
-    return result != null ? result : expr.getBody().accept(this, params);
+    if (result != null) return result;
+    result = expr.getBody().accept(this, params);
+    if (result != null) return result;
+    freeParameters(expr.getParameters(), params);
+    return null;
   }
 
   @Override
@@ -62,7 +99,11 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
     R result = checkSourceNode(expr, params);
     if (result != null) return result;
     result = visitParameters(expr.getParameters(), params);
-    return result != null ? result : expr.codomain.accept(this, params);
+    if (result != null) return result;
+    result = expr.codomain.accept(this, params);
+    if (result != null) return result;
+    freeParameters(expr.getParameters(), params);
+    return null;
   }
 
   @Override
@@ -102,7 +143,10 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
   public R visitSigma(Concrete.SigmaExpression expr, P params) {
     R result = checkSourceNode(expr, params);
     if (result != null) return result;
-    return visitParameters(expr.getParameters(), params);
+    result = visitParameters(expr.getParameters(), params);
+    if (result != null) return result;
+    freeParameters(expr.getParameters(), params);
+    return null;
   }
 
   @Override
@@ -133,19 +177,56 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
       if (result != null) return result;
     }
 
-    return switch (pattern) {
+    result = switch (pattern) {
       case Concrete.NamePattern namePattern -> namePattern.type != null ? namePattern.type.accept(this, params) : null;
       case Concrete.ConstructorPattern constructorPattern -> visitPatterns(constructorPattern.getPatterns(), params);
       case Concrete.TuplePattern tuplePattern -> visitPatterns(tuplePattern.getPatterns(), params);
       default -> null;
     };
+    if (result != null) return result;
+
+    if (pattern instanceof Concrete.NamePattern namePattern && namePattern.getReferable() != null) {
+      visitReferable(namePattern.getReferable(), params);
+    }
+    if (pattern.getAsReferable() != null) {
+      Referable ref = pattern.getAsReferable().referable;
+      if (ref != null) visitReferable(ref, params);
+    }
+
+    return null;
+  }
+
+  public void freePattern(Concrete.Pattern pattern, P params) {
+    if (pattern.getAsReferable() != null && pattern.getAsReferable().referable != null) {
+      freeReferable(pattern.getAsReferable().referable, params);
+    }
+    if (pattern instanceof Concrete.NamePattern namePattern && namePattern.getReferable() != null) {
+      freeReferable(namePattern.getReferable(), params);
+    }
+    freePatterns(pattern.getPatterns(), params);
+  }
+
+  public void freePatterns(List<? extends Concrete.Pattern> patterns, P params) {
+    for (Concrete.Pattern pattern : patterns) {
+      freePattern(pattern, params);
+    }
   }
 
   public R visitClause(Concrete.Clause clause, P params) {
     R result = checkSourceNode(clause, params);
     if (result != null) return result;
     result = clause.getPatterns() == null ? null : visitPatterns(clause.getPatterns(), params);
-    return result != null ? result : clause.getExpression() != null ? clause.getExpression().accept(this, params) : null;
+    if (result != null) return result;
+    result = clause.getExpression() != null ? clause.getExpression().accept(this, params) : null;
+    if (result != null) return result;
+    if (clause instanceof Concrete.ConstructorClause conClause) {
+      for (Concrete.Constructor constructor : conClause.getConstructors()) {
+        result = visitConstructor(constructor, params);
+        if (result != null) return result;
+      }
+    }
+    freePatterns(clause.getPatterns(), params);
+    return null;
   }
 
   public R visitClauses(List<? extends Concrete.Clause> clauses, P params) {
@@ -166,6 +247,7 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
       if (result != null) return result;
       result = arg.type != null ? arg.type.accept(this, params) : null;
       if (result != null) return result;
+      if (arg.referable != null) visitReferable(arg.referable, params);
     }
     if (expr.getResultType() != null) {
       result = expr.getResultType().accept(this, params);
@@ -174,6 +256,9 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
     if (expr.getResultTypeLevel() != null) {
       result = expr.getResultTypeLevel().accept(this, params);
       if (result != null) return result;
+    }
+    for (Concrete.CaseArgument arg : expr.getArguments()) {
+      if (arg.referable != null) freeReferable(arg.referable, params);
     }
     return visitClauses(expr.getClauses(), params);
   }
@@ -247,6 +332,8 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
       }
       result = clause.term.accept(this, params);
       if (result != null) return result;
+      freeParameters(clause.getParameters(), params);
+      freePattern(clause.getPattern(), params);
     }
     return expr.expression.accept(this, params);
   }
@@ -285,7 +372,9 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
       result = def.getResultTypeLevel().accept(this, params);
       if (result != null) return result;
     }
+
     Concrete.FunctionBody body = def.getBody();
+    freeEliminatedParameters(def.getParameters(), body.getEliminatedReferences(), params);
     if (body instanceof Concrete.TermFunctionBody) {
       result = checkSourceNode(body, params);
       if (result != null) return result;
@@ -294,7 +383,10 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
     }
     result = visitClauses(body.getClauses(), params);
     if (result != null) return result;
-    return visitClassElements(body.getCoClauseElements(), params);
+    result = visitClassElements(body.getCoClauseElements(), params);
+    if (result != null) return result;
+    freeNotEliminatedParameters(def.getParameters(), body.getEliminatedReferences(), params);
+    return null;
   }
 
   protected R visitClassElements(List<? extends Concrete.ClassElement> elements, P params) {
@@ -312,6 +404,7 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
             result = field.getResultTypeLevel().accept(this, params);
             if (result != null) return null;
           }
+          freeParameters(field.getParameters(), params);
         }
         case Concrete.ClassFieldImpl classField -> {
           return visitClassFieldImpl(classField, params);
@@ -325,10 +418,31 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
             result = field.getResultTypeLevel().accept(this, params);
             if (result != null) return null;
           }
+          freeParameters(field.getParameters(), params);
         }
         case null, default -> throw new IllegalStateException();
       }
     }
+    return null;
+  }
+
+  public R visitConstructor(Concrete.Constructor constructor, P params) {
+    R result = checkSourceNode(constructor, params);
+    if (result != null) return result;
+
+    result = visitParameters(constructor.getParameters(), params);
+    if (result != null) return result;
+    if (constructor.getResultType() != null) {
+      result = constructor.getResultType().accept(this, params);
+      if (result != null) return result;
+    }
+    if (!constructor.getEliminatedReferences().isEmpty()) {
+      freeEliminatedParameters(constructor.getParameters(), constructor.getEliminatedReferences(), params);
+      result = visitClauses(constructor.getClauses(), params);
+      if (result != null) return result;
+    }
+
+    freeNotEliminatedParameters(constructor.getParameters(), constructor.getEliminatedReferences(), params);
     return null;
   }
 
@@ -343,25 +457,14 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
       result = def.getUniverse().accept(this, params);
       if (result != null) return result;
     }
+    if (def.getEliminatedReferences() != null) {
+      freeEliminatedParameters(def.getParameters(), def.getEliminatedReferences(), params);
+    }
     visitClauses(def.getConstructorClauses(), params);
-    for (Concrete.ConstructorClause clause : def.getConstructorClauses()) {
-      result = checkSourceNode(clause, params);
-      if (result != null) return result;
-      for (Concrete.Constructor constructor : clause.getConstructors()) {
-        result = checkSourceNode(constructor, params);
-        if (result != null) return result;
-
-        result = visitParameters(constructor.getParameters(), params);
-        if (result != null) return result;
-        if (constructor.getResultType() != null) {
-          result = constructor.getResultType().accept(this, params);
-          if (result != null) return result;
-        }
-        if (!constructor.getEliminatedReferences().isEmpty()) {
-          result = visitClauses(constructor.getClauses(), params);
-          if (result != null) return result;
-        }
-      }
+    if (def.getEliminatedReferences() == null) {
+      freeParameters(def.getParameters(), params);
+    } else {
+      freeNotEliminatedParameters(def.getParameters(), def.getEliminatedReferences(), params);
     }
     return null;
   }
@@ -384,6 +487,9 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
     if (result != null) return result;
     result = visitParameters(def.getParameters(), params);
     if (result != null) return result;
-    return def.body != null ? def.body.accept(this, params) : null;
+    result = def.body != null ? def.body.accept(this, params) : null;
+    if (result != null) return result;
+    freeParameters(def.getParameters(), params);
+    return null;
   }
 }

@@ -4,8 +4,10 @@ import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendExtension;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
+import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.Precedence;
+import org.arend.ext.util.Pair;
 import org.arend.module.FullName;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
@@ -17,9 +19,12 @@ import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.scope.*;
 import org.arend.prelude.Prelude;
 import org.arend.server.*;
+import org.arend.server.modifier.RawModifier;
+import org.arend.source.error.LocationError;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
+import org.arend.term.concrete.LocalVariablesCollector;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.ArendExtensionProvider;
@@ -512,5 +517,39 @@ public class ArendServerImpl implements ArendServer {
     }
 
     return scope;
+  }
+
+  @Override
+  public @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @NotNull ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter) {
+    // Check that referables are located in available modules and collect them in refMap
+    ModuleLocation anchorModule = anchor.parent().getLocation();
+    Map<ModulePath, List<LocatedReferable>> refMap = new HashMap<>();
+    for (LocatedReferable referable : referables) {
+      ModuleLocation module = referable.getLocation();
+      if (module == null) {
+        errorReporter.report(LocationError.definition(referable, null));
+        continue;
+      }
+      if (anchorModule != null) {
+        ModuleLocation found = findDependency(module.getModulePath(), anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+        if (!module.equals(found)) {
+          errorReporter.report(LocationError.definition(null, module.getModulePath()));
+        }
+      }
+      refMap.computeIfAbsent(module.getModulePath(), m -> new ArrayList<>()).add(referable);
+    }
+
+    // Calculate the set of locally bounded names
+    Set<String> localNames = Collections.emptySet();
+    if (anchor.data() != null && anchor.parent() instanceof TCDefReferable tcRef) {
+      DefinitionData definitionData = getResolvedDefinition(tcRef);
+      if (definitionData != null) {
+        LocalVariablesCollector collector = new LocalVariablesCollector(anchor.data());
+        definitionData.definition().accept(collector, null);
+        localNames = collector.getNames();
+      }
+    }
+
+    return null;
   }
 }

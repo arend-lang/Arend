@@ -4,7 +4,6 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.Doc;
-import org.arend.ext.prettyprinting.doc.DocFactory;
 import org.arend.ext.prettyprinting.doc.LineDoc;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.ModuleReferable;
@@ -31,11 +30,11 @@ public class LocationError extends GeneralError {
 
   @Override
   public LineDoc getShortHeaderDoc(PrettyPrinterConfig src) {
-    return referable == null ? text(message) : DocFactory.hList(text(message), DocFactory.refDoc(referable));
+    return referable == null ? text(message) : hList(text(message), refDoc(referable));
   }
 
   @Override
   public Doc getBodyDoc(PrettyPrinterConfig src) {
-    return hList(text("While persisting: "), refDoc(new ModuleReferable(modulePath)));
+    return modulePath == null ? nullDoc() : hList(text("While persisting: "), refDoc(new ModuleReferable(modulePath)));
   }
 }

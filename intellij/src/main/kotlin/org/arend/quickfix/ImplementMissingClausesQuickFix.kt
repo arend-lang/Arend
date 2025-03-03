@@ -25,7 +25,6 @@ import org.arend.refactoring.*
 import org.arend.settings.ArendSettings
 import org.arend.term.concrete.Concrete
 import org.arend.ext.error.MissingClausesError
-import org.arend.naming.reference.GlobalReferable
 import org.arend.psi.ext.*
 import org.arend.util.ArendBundle
 import java.lang.IllegalStateException
@@ -300,7 +299,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                     eliminatedBindings.add(sampleParameter)
                     val definition = pattern.constructor as? Definition
                     val referable = if (definition != null) PsiLocatedReferable.fromReferable(definition.referable) else null
-                    val infixMode = (referable as? GlobalReferable)?.precedence?.isInfix ?: false
+                    val infixMode = definition?.referable?.precedence?.isInfix ?: false
                     val integralNumber = getIntegralNumber(pattern)
                     val patternMatchingOnIdp = if (missingClausesError.generateIdpPatterns) {
                         admitsPatternMatchingOnIdp(sampleParameter.typeExpr, if (cause is ArendCaseExpr) missingClausesError.parameters else null, eliminatedBindings)

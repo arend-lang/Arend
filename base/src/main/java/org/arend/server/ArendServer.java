@@ -2,6 +2,8 @@ package org.arend.server;
 
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
+import org.arend.ext.module.LongName;
+import org.arend.ext.util.Pair;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.LocatedReferable;
@@ -10,6 +12,7 @@ import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.scope.Scope;
 import org.arend.server.impl.DefinitionData;
+import org.arend.server.modifier.RawModifier;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
@@ -133,4 +136,11 @@ public interface ArendServer {
    * @return the scope corresponding to the given referable.
    */
   @Nullable Scope getReferableScope(@NotNull LocatedReferable referable);
+
+  /**
+   * Creates a modifier that alters import commands of {@param group} to make {@param referables} available in the context given by {@param anchor}.
+   *
+   * @return the modifier and the list of long names that should be used to refer to the given referables.
+   */
+  @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @NotNull ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter);
 }
