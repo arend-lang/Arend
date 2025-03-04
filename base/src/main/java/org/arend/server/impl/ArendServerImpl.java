@@ -17,15 +17,19 @@ import org.arend.naming.resolving.ResolverListener;
 import org.arend.naming.resolving.typing.*;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.scope.*;
+import org.arend.naming.scope.local.ListScope;
 import org.arend.prelude.Prelude;
 import org.arend.server.*;
 import org.arend.server.modifier.RawModifier;
+import org.arend.server.modifier.RawSequenceModifier;
 import org.arend.source.error.LocationError;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.concrete.LocalVariablesCollector;
+import org.arend.term.group.AccessModifier;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
@@ -37,6 +41,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.logging.*;
 
@@ -206,7 +211,7 @@ public class ArendServerImpl implements ArendServer {
       }
     }
 
-    myGroups.compute(module, (mod,prevPair) -> {
+    myGroups.compute(module, (mod, prevPair) -> {
       if (prevPair != null) {
         myLogger.warning("Read-only module '" + mod + "' is already added" + (prevPair.isReadOnly() ? "" : " as a writable module"));
         return prevPair;
@@ -450,7 +455,8 @@ public class ArendServerImpl implements ArendServer {
     return myErrorService;
   }
 
-  private static class CompletionException extends RuntimeException {}
+  private static class CompletionException extends RuntimeException {
+  }
 
   @Override
   public @NotNull List<Referable> getCompletionVariants(@Nullable ConcreteGroup group, @NotNull AbstractReference reference) {
@@ -483,7 +489,8 @@ public class ArendServerImpl implements ArendServer {
           }
         }
       }).resolveGroup(group, getParentGroupScope(module, group), PersistentList.empty(), null);
-    } catch (CompletionException ignored) {}
+    } catch (CompletionException ignored) {
+    }
 
     myLogger.fine(() -> found[0] ? "Finish completion for '" + reference.getReferenceText() + "' with " + result.size() + " results" : "Cannot find completion variants for '" + reference.getReferenceText() + "'");
     return result;
@@ -523,6 +530,14 @@ public class ArendServerImpl implements ArendServer {
   public @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @NotNull ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter) {
     // Check that referables are located in available modules and collect them in refMap
     ModuleLocation anchorModule = anchor.parent().getLocation();
+    List<RawModifier> nsCmdActions = new ArrayList<>();
+    List<LongName> result = new ArrayList<>();
+
+    if (anchorModule == null) {
+      errorReporter.report(LocationError.definition(anchor.parent(), null));
+      return new Pair<>(new RawSequenceModifier(nsCmdActions), result);
+    }
+
     Map<ModulePath, List<LocatedReferable>> refMap = new HashMap<>();
     for (LocatedReferable referable : referables) {
       ModuleLocation module = referable.getLocation();
@@ -530,26 +545,60 @@ public class ArendServerImpl implements ArendServer {
         errorReporter.report(LocationError.definition(referable, null));
         continue;
       }
-      if (anchorModule != null) {
-        ModuleLocation found = findDependency(module.getModulePath(), anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
-        if (!module.equals(found)) {
-          errorReporter.report(LocationError.definition(null, module.getModulePath()));
-        }
+
+      ModuleLocation found = findDependency(module.getModulePath(), anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+      if (!module.equals(found)) {
+        errorReporter.report(LocationError.definition(null, module.getModulePath()));
       }
+
       refMap.computeIfAbsent(module.getModulePath(), m -> new ArrayList<>()).add(referable);
     }
 
-    // Calculate the set of locally bounded names
-    Set<String> localNames = Collections.emptySet();
+    // Calculate the set of local referables
+    List<Referable> localReferables = new ArrayList<>();
     if (anchor.data() != null && anchor.parent() instanceof TCDefReferable tcRef) {
       DefinitionData definitionData = getResolvedDefinition(tcRef);
       if (definitionData != null) {
         LocalVariablesCollector collector = new LocalVariablesCollector(anchor.data());
         definitionData.definition().accept(collector, null);
-        localNames = collector.getNames();
+        localReferables = collector.getResult();
       }
     }
 
-    return null;
+
+    ModuleScopeProvider moduleScopeProvider = getModuleScopeProvider(anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST);
+    Scope currentScope = new MergeScope(new ListScope(localReferables), LocatedReferable.Helper.resolveNamespace(anchor.parent(), moduleScopeProvider));
+    Collection<? extends Referable> currentScopeElements = currentScope.getElements();
+    Scope importedScope = CachingScope.make(ScopeFactory.forGroup(group, moduleScopeProvider)); //Probably instead of `group` we should use some intermediate class that filters out statements of `group` for which ``statement.group == null`
+
+    for (LocatedReferable referable : referables) {
+      final Boolean hasProtectedAccessModifier = referable.getAccessModifier() == AccessModifier.PROTECTED;
+      final ModuleLocation targetFileLocation = referable.getLocation();
+
+      List<LocatedReferable> ancestors = new LinkedList<>();
+      LocatedReferable currAncestor = referable;
+      do {
+        ancestors.add(currAncestor);
+        Boolean ancestorInScope = currentScopeElements.contains(currAncestor);
+
+        currAncestor = currAncestor.getLocatedReferableParent();
+      }
+      while (currAncestor != null);
+
+
+      HashSet<ConcreteNamespaceCommand> nsCmds = new HashSet<>();
+      group.traverseGroup(subgroup -> subgroup.statements().forEach(statement -> {
+        ConcreteNamespaceCommand command = statement.command();
+        if (command != null && command.isImport()) {
+          ModuleLocation commandTarget = findDependency(new ModulePath(command.module().getPath()),
+            anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+          if (commandTarget.equals(targetFileLocation)) nsCmds.add(command);
+        }
+      }));
+
+
+    }
+
+    return new Pair<>(new RawSequenceModifier(nsCmdActions), result);
   }
 }

@@ -19,6 +19,7 @@ import org.arend.toolWindow.repl.ArendReplService
 import org.arend.util.mapFirstNotNull
 import java.util.Collections.singletonList
 
+@Deprecated("Use makeReferenceAvailable from arendServer")
 fun doCalculateReferenceName(
     defaultLocation: LocationData,
     currentFile: ArendFile,
