@@ -17,7 +17,7 @@ public interface ArendServerRequester {
    * @param server    server to be updated.
    * @param module    module to be updated.
    */
-  void requestModuleUpdate(@NotNull ArendServer server, @NotNull ModuleLocation module);
+  default void requestModuleUpdate(@NotNull ArendServer server, @NotNull ModuleLocation module) {}
 
   /**
    * Returns the list of files and directories in the given library and directory.
@@ -27,13 +27,17 @@ public interface ArendServerRequester {
    * @param prefix        a path to the directory to search.
    * @return the list of file names or {@code null} if cannot determine the list of files.
    */
-  @Nullable List<String> getFiles(@NotNull String libraryName, boolean inTests, @NotNull List<String> prefix);
+  default @Nullable List<String> getFiles(@NotNull String libraryName, boolean inTests, @NotNull List<String> prefix) {
+    return null;
+  }
 
-  void runUnderReadLock(@NotNull Runnable runnable);
+  default void runUnderReadLock(@NotNull Runnable runnable) {}
 
-  void addReference(@NotNull ModuleLocation module, @NotNull AbstractReference reference, @NotNull Referable referable);
+  default void addReference(@NotNull ModuleLocation module, @NotNull AbstractReference reference, @NotNull Referable referable) {}
 
-  void addReference(@NotNull ModuleLocation module, @NotNull AbstractReferable referable, @NotNull TCDefReferable tcReferable);
+  default void addReference(@NotNull ModuleLocation module, @NotNull AbstractReferable referable, @NotNull TCDefReferable tcReferable) {}
 
-  void addModuleDependency(@NotNull ModuleLocation module, @NotNull ModuleLocation dependency);
+  default void addModuleDependency(@NotNull ModuleLocation module, @NotNull ModuleLocation dependency) {}
+
+  ArendServerRequester TRIVIAL = new ArendServerRequester() {};
 }

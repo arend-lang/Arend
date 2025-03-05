@@ -147,7 +147,7 @@ public final class Abstract {
     @NotNull String getRefName();
   }
 
-  public interface AbstractLocatedReferable extends AbstractReferable {
+  public interface AbstractLocatedReferable extends AbstractReferable, org.arend.term.abs.AbstractReferable {
     default @NotNull AccessModifier getAccessModifier() {
       return AccessModifier.PUBLIC;
     }

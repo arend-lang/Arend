@@ -214,9 +214,6 @@ public class ArendCheckerImpl implements ArendChecker {
               for (CollectingResolverListener.ResolvedReference resolvedReference : cache.cache()) {
                 myServer.getRequester().addReference(module, resolvedReference.reference(), resolvedReference.referable());
               }
-              for (CollectingResolverListener.ReferablePair pair : cache.referables()) {
-                myServer.getRequester().addReference(module, pair.referable(), pair.tcReferable());
-              }
               for (ModulePath modulePath : cache.importedModules()) {
                 ModuleLocation dependency = myServer.findDependency(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, false);
                 if (dependency != null) {

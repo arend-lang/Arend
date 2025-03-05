@@ -1,11 +1,7 @@
 package org.arend.resolving
 
 import com.intellij.codeInsight.lookup.LookupElementBuilder
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.service
-import com.intellij.openapi.module.Module
-import com.intellij.openapi.progress.util.ProgressIndicatorBase
-import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import org.arend.ArendIcons
@@ -19,6 +15,7 @@ import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.psi.ext.ReferableBase
 import org.arend.refactoring.ArendNamesValidator
+import org.arend.server.ArendServerRequester
 import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractReferable
@@ -112,7 +109,7 @@ open class ArendReferenceImpl<T : ArendReferenceElement>(element: T, scopeContex
 
     override fun getVariants(): Array<Any> {
         val file = element.containingFile as? ArendFile ?: return emptyArray()
-        return file.project.service<ArendServerService>().server.getCompletionVariants(ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE), element).mapNotNull {
+        return file.project.service<ArendServerService>().server.getCompletionVariants(ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE, ArendServerRequester.TRIVIAL), element).mapNotNull {
             origElement -> createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false)
         }.toTypedArray()
     }

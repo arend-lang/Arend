@@ -16,13 +16,9 @@ public class CollectingResolverListener implements ResolverListener {
 
   public record ReferablePair(AbstractReferable referable, TCDefReferable tcReferable) {}
 
-  public record ModuleCacheStructure(List<ResolvedReference> cache, List<ReferablePair> referables, List<ModulePath> importedModules) {
+  public record ModuleCacheStructure(List<ResolvedReference> cache, List<ModulePath> importedModules) {
     void addReference(AbstractReference reference, Referable referable) {
       cache.add(new ResolvedReference(reference, referable));
-    }
-
-    void addReferable(AbstractReferable referable, TCDefReferable tcReferable) {
-      referables.add(new ReferablePair(referable, tcReferable));
     }
 
     void addImportedModule(ModulePath module) {
@@ -44,7 +40,7 @@ public class CollectingResolverListener implements ResolverListener {
 
   private void cacheReference(Object data, Referable referable) {
     if (data instanceof AbstractReference) {
-      myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
+      myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
         .addReference((AbstractReference) data, referable instanceof ErrorReference ? TCDefReferable.NULL_REFERABLE : referable);
     }
   }
@@ -57,13 +53,13 @@ public class CollectingResolverListener implements ResolverListener {
         if (referenceList.get(i) != null) {
           Referable abstractRef = resolvedRefs.get(i);
           if (abstractRef != null) {
-            myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
+            myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
               .addReference(referenceList.get(i), abstractRef instanceof ErrorReference ? TCDefReferable.NULL_REFERABLE : abstractRef);
           }
         }
       }
       for (int i = resolvedRefs.size(); i < referenceList.size(); i++) {
-        myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
+        myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
           .addReference(referenceList.get(i), TCDefReferable.NULL_REFERABLE);
       }
     } else {
@@ -122,7 +118,7 @@ public class CollectingResolverListener implements ResolverListener {
   public void namespaceResolved(ConcreteNamespaceCommand namespaceCommand, List<Referable> resolvedRefs) {
     cacheReference(namespaceCommand.module(), null, resolvedRefs);
     if (namespaceCommand.isImport() && resolvedRefs != null && !resolvedRefs.isEmpty() && resolvedRefs.getLast() instanceof ModuleReferable moduleRef) {
-      myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
+      myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))
         .addImportedModule(moduleRef.path);
     }
   }
@@ -131,14 +127,6 @@ public class CollectingResolverListener implements ResolverListener {
   public void renamingResolved(ConcreteNamespaceCommand.NameRenaming renaming, Referable originalRef, Referable resolvedRef) {
     if (originalRef instanceof UnresolvedReference) {
       cacheReference((UnresolvedReference) originalRef, resolvedRef, null);
-    }
-  }
-
-  @Override
-  public void definitionResolved(Concrete.ResolvableDefinition definition) {
-    if (definition.getData().getData() instanceof AbstractReferable referable) {
-      myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>(), new ArrayList<>()))
-        .addReferable(referable, definition.getData());
     }
   }
 }
