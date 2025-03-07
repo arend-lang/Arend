@@ -4,11 +4,8 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.util.isAncestor
 import org.arend.ext.module.ModulePath
 import org.arend.module.ModuleLocation
-import org.arend.naming.reference.AliasReferable
 import org.arend.naming.reference.GlobalReferable
-import org.arend.naming.reference.Referable
 import org.arend.naming.scope.*
-import org.arend.naming.scope.local.ListScope
 import org.arend.prelude.Prelude
 import org.arend.psi.ArendFile
 import org.arend.psi.ArendPsiFactory
@@ -19,6 +16,7 @@ import org.arend.toolWindow.repl.ArendReplService
 import org.arend.util.mapFirstNotNull
 import java.util.Collections.singletonList
 
+@Deprecated("Use makeReferenceAvailable from arendServer")
 fun doCalculateReferenceName(
     defaultLocation: LocationData,
     currentFile: ArendFile,
@@ -69,7 +67,9 @@ fun doCalculateReferenceName(
         }
     }
 
-    val minimalImportMode = protectedAccessModifier || targetFile.fullName != Prelude.MODULE_PATH.toString() && targetFile.statements.any { stat -> stat.group?.let { importedScope.resolveName(it.referable.refName) } != null } // True if imported scope of the current file has nonempty intersection with the scope of the target file
+    val minimalImportMode = protectedAccessModifier ||
+      targetFile.fullName != Prelude.MODULE_PATH.toString() && targetFile.statements.any { stat -> stat.group?.let { importedScope.resolveName(it.referable.refName) } != null }
+    // True if imported scope of the current file has nonempty intersection with the scope of the target file
 
     if (deferredImports != null) for (deferredImport in deferredImports) if (deferredImport.currentFile == currentFile) {
         if (deferredImport is ImportFileAction) preludeImportedManually = preludeImportedManually || deferredImport.getLongName().toString() == Prelude.MODULE_PATH.toString()

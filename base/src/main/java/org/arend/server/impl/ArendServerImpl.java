@@ -17,15 +17,19 @@ import org.arend.naming.resolving.ResolverListener;
 import org.arend.naming.resolving.typing.*;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.scope.*;
+import org.arend.naming.scope.local.ListScope;
 import org.arend.prelude.Prelude;
 import org.arend.server.*;
 import org.arend.server.modifier.RawModifier;
+import org.arend.server.modifier.RawSequenceModifier;
 import org.arend.source.error.LocationError;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.concrete.LocalVariablesCollector;
+import org.arend.term.group.AccessModifier;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
@@ -37,6 +41,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.logging.*;
 
@@ -206,7 +211,7 @@ public class ArendServerImpl implements ArendServer {
       }
     }
 
-    myGroups.compute(module, (mod,prevPair) -> {
+    myGroups.compute(module, (mod, prevPair) -> {
       if (prevPair != null) {
         myLogger.warning("Read-only module '" + mod + "' is already added" + (prevPair.isReadOnly() ? "" : " as a writable module"));
         return prevPair;
@@ -450,7 +455,8 @@ public class ArendServerImpl implements ArendServer {
     return myErrorService;
   }
 
-  private static class CompletionException extends RuntimeException {}
+  private static class CompletionException extends RuntimeException {
+  }
 
   @Override
   public @NotNull List<Referable> getCompletionVariants(@Nullable ConcreteGroup group, @NotNull AbstractReference reference) {
@@ -483,7 +489,8 @@ public class ArendServerImpl implements ArendServer {
           }
         }
       }).resolveGroup(group, getParentGroupScope(module, group), PersistentList.empty(), null);
-    } catch (CompletionException ignored) {}
+    } catch (CompletionException ignored) {
+    }
 
     myLogger.fine(() -> found[0] ? "Finish completion for '" + reference.getReferenceText() + "' with " + result.size() + " results" : "Cannot find completion variants for '" + reference.getReferenceText() + "'");
     return result;
@@ -520,9 +527,21 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
-  public @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @NotNull ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter) {
+  public @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(
+    @NotNull List<LocatedReferable> referables,
+    @NotNull ConcreteGroup currentFile,
+    @NotNull RawAnchor anchor,
+    @NotNull ErrorReporter errorReporter) {
     // Check that referables are located in available modules and collect them in refMap
     ModuleLocation anchorModule = anchor.parent().getLocation();
+    List<RawModifier> nsCmdActions = new ArrayList<>();
+    List<LongName> result = new ArrayList<>();
+
+    if (anchorModule == null) {
+      errorReporter.report(LocationError.definition(anchor.parent(), null));
+      return new Pair<>(new RawSequenceModifier(nsCmdActions), result);
+    }
+
     Map<ModulePath, List<LocatedReferable>> refMap = new HashMap<>();
     for (LocatedReferable referable : referables) {
       ModuleLocation module = referable.getLocation();
@@ -530,26 +549,262 @@ public class ArendServerImpl implements ArendServer {
         errorReporter.report(LocationError.definition(referable, null));
         continue;
       }
-      if (anchorModule != null) {
-        ModuleLocation found = findDependency(module.getModulePath(), anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
-        if (!module.equals(found)) {
-          errorReporter.report(LocationError.definition(null, module.getModulePath()));
-        }
+
+      ModuleLocation found = findDependency(module.getModulePath(), anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+      if (!module.equals(found)) {
+        errorReporter.report(LocationError.definition(null, module.getModulePath()));
       }
+
       refMap.computeIfAbsent(module.getModulePath(), m -> new ArrayList<>()).add(referable);
     }
 
-    // Calculate the set of locally bounded names
-    Set<String> localNames = Collections.emptySet();
+    // Calculate the set of local referables
+    List<Referable> localReferables = new ArrayList<>();
     if (anchor.data() != null && anchor.parent() instanceof TCDefReferable tcRef) {
       DefinitionData definitionData = getResolvedDefinition(tcRef);
       if (definitionData != null) {
         LocalVariablesCollector collector = new LocalVariablesCollector(anchor.data());
         definitionData.definition().accept(collector, null);
-        localNames = collector.getNames();
+        localReferables = collector.getResult();
       }
     }
 
-    return null;
+    ModuleScopeProvider moduleScopeProvider = getModuleScopeProvider(anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST);
+    Scope currentScope = new MergeScope(new ListScope(localReferables), LocatedReferable.Helper.resolveNamespace(anchor.parent(), moduleScopeProvider));
+    Collection<? extends Referable> currentScopeElements = currentScope.getElements();
+    Set<String> currentScopeElementNames = new HashSet<>();
+    for (Referable referable : currentScopeElements) {currentScopeElementNames.add(referable.textRepresentation());}
+
+    HashMap<ModuleLocation, ConcreteNamespaceCommand> commandsToAdd = new HashMap<>();
+    HashSet<ConcreteNamespaceCommand> commandsToRemove = new HashSet<>();
+
+    for (LocatedReferable referable : referables) {
+      ModuleLocation targetModuleLocation = referable.getLocation();
+      ConcreteGroup targetModuleFile = targetModuleLocation != null ? this.getRawGroup(targetModuleLocation) : null;
+      List<Referable> targetModuleDefinitions = new LinkedList<>();
+      if (targetModuleFile != null) for (ConcreteStatement statement : targetModuleFile.statements()) {
+        ConcreteGroup group = statement.group();
+        if (group != null) targetModuleDefinitions.add(group.referable());
+      }
+
+      List<CalculatedName> names = new ArrayList<>();
+      CalculatedName referableName = new CalculatedName(this, referable, false, false);
+      names.add(referableName);
+
+      if (referable.hasAlias())
+        names.add(new CalculatedName(this, referable, false, true));
+
+      if (referable instanceof InternalReferable) {
+        names.add(new CalculatedName(this, referable, true, false));
+        if (referable.hasAlias()) names.add(new CalculatedName(this, referable, true, true));
+      }
+
+      AtomicReference<ConcreteNamespaceCommand> existingImportCommand = new AtomicReference<>(null);
+      AtomicReference<Boolean> preludeImportedManually = new AtomicReference<>(false);
+
+      currentFile.traverseGroup(subgroup -> subgroup.statements().forEach(statement -> {
+        ConcreteNamespaceCommand command = statement.command();
+        if (command != null && command.isImport()) {
+          ModuleLocation commandTarget = findDependency(new ModulePath(command.module().getPath()),
+            anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+
+          if (commandTarget.equals(referable.getLocation())) {
+            existingImportCommand.set(command);
+            for (CalculatedName location : names)
+              location.processStatCmd(command, moduleScopeProvider);
+          }
+
+          if (Prelude.MODULE_PATH.equals(commandTarget.getModulePath())) {
+            preludeImportedManually.set(true);
+          }
+        }
+      }));
+
+      boolean referableIsProtected = referable.getAccessModifier() == AccessModifier.PROTECTED;
+      boolean nonEmptyScopeIntersection = (!Prelude.MODULE_LOCATION.equals(referable.getLocation()) &&
+        targetModuleDefinitions.stream().anyMatch(stat -> currentScope.resolveName(stat.getRefName()) != null));
+
+      if (existingImportCommand.get() != null) {
+        for (CalculatedName name : names) {
+          if (name.getReferenceNames().isEmpty() || referableIsProtected) {
+            name.addLongNameAsReferenceName();
+
+            fileResolveActions.put(name, new AddIdToUsingAction(currentFile, targetFile, name));
+          }
+        }
+        fallbackImportAction = null;
+      } else {
+        fallbackImportAction = new ImportFileAction(currentFile, targetFile, minimalImportMode ? Collections.emptyList() : null);
+        if (isPrelude(targetFile) && !preludeImportedManually.get()) fallbackImportAction = null;
+
+        for (CalculatedName name : names) {
+          List<String> fName = name.getLongName();
+          List<String> importList = fName.isEmpty() ? Collections.emptyList() : Collections.singletonList(fName.get(0));
+          name.addLongNameAsReferenceName();
+          fileResolveActions.put(name, (referableIsProtected || nonEmptyScopeIntersection) ?
+            new ImportFileAction(currentFile, targetFile, importList) : fallbackImportAction);
+        }
+      }
+
+      /*
+      final Boolean hasProtectedAccessModifier = referable.getAccessModifier() == AccessModifier.PROTECTED;
+      final ModuleLocation targetFileLocation = referable.getLocation();
+
+      List<LocatedReferable> ancestors = new LinkedList<>();
+      LocatedReferable currAncestor = referable;
+      do {
+        ancestors.add(currAncestor);
+        Boolean ancestorInScope = currentScopeElements.contains(currAncestor);
+
+        currAncestor = currAncestor.getLocatedReferableParent();
+      }
+      while (currAncestor != null);
+
+      HashSet<ConcreteNamespaceCommand> nsCmds = new HashSet<>();
+      group.traverseGroup(subgroup -> subgroup.statements().forEach(statement -> {
+        ConcreteNamespaceCommand command = statement.command();
+        if (command != null && command.isImport()) {
+          ModuleLocation commandTarget = findDependency(new ModulePath(command.module().getPath()),
+            anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+          if (commandTarget.equals(targetFileLocation)) nsCmds.add(command);
+        }
+      }));
+
+
+    */}
+
+    return new Pair<>(new RawSequenceModifier(nsCmdActions), result);
+  }
+
+
+  public record ImportDecision(List<String> refName, Boolean alias) implements Comparable<ImportDecision> {
+    @Override
+    public int compareTo(@NotNull ArendServerImpl.ImportDecision other) {
+      int lD = this.refName.size() - other.refName.size();
+
+      if (lD != 0) return lD; // if this is more optimal => result < 0 => this < other
+      if (this.alias && !other.alias) return -1;
+      if (!this.alias && other.alias) return 1; // other is more optimal
+
+      return this.refName.getFirst().compareTo(this.refName.getLast());
+    }
+  }
+
+  public class ReferenceNameCalculator {
+    public static Pair<RawModifier, List<String>> doCalculateReferenceName(
+      CalculatedName referableLocation,
+      ConcreteGroup currentFile,
+      RawAnchor anchor) {
+
+      ModuleReferable targetFile = referableLocation.getContainingFile();
+      ModuleLocation targetModulePath = Objects.requireNonNull(targetFile.getModuleLocation());
+
+      List<LocationData> locations = new ArrayList<>();
+      locations.add(referableLocation);
+
+      if (referableLocation.getTarget() instanceof ArendClassField ||
+        referableLocation.getTarget() instanceof ArendConstructor) {
+        LocationData newLocation = LocationData.createLocationData(referableLocation.getTarget(), true);
+        if (newLocation != null) locations.add(newLocation);
+      }
+
+      if (referableLocation.getTarget() instanceof ReferableBase && ((ReferableBase<?>) referableLocation.getTarget()).getAlias() != null) {
+        LocationData newLocation = LocationData.createLocationData(referableLocation.getTarget(), true);
+        if (newLocation != null) locations.add(newLocation);
+        if (referableLocation.getTarget() instanceof ArendClassField ||
+          referableLocation.getTarget() instanceof ArendConstructor) {
+          LocationData aliasLocation = LocationData.createLocationData(referableLocation.getTarget(), true, true);
+          if (aliasLocation != null) locations.add(aliasLocation);
+        }
+      }
+
+      NsCmdRefactoringAction fallbackImportAction;
+      boolean targetFileAlreadyImported = false;
+      boolean preludeImportedManually = false;
+      Map<CalculatedName, NsCmdRefactoringAction> fileResolveActions = new HashMap<>();
+
+      for (ArendStatCmd statement : currentFile.getStatements()) {
+        NamespaceCommand command = statement.getNamespaceCommand();
+        if (command == null) continue;
+
+        String nsCmdLongName = command.getLongName() != null ? command.getLongName().getReferent().textRepresentation() : null;
+        if (Prelude.MODULE_PATH.toString().equals(nsCmdLongName)) {
+          preludeImportedManually = true;
+        }
+
+        if (targetFile.getFullName().equals(nsCmdLongName)) {
+          targetFileAlreadyImported = true;
+          for (CalculatedName location : locations) {
+            location.processStatCmd(command);
+          }
+        }
+      }
+
+      boolean minimalImportMode = referableLocation.getTarget().getAccessModifier() == AccessModifier.PROTECTED ||
+        (!targetFile.getFullName().equals(Prelude.MODULE_PATH.toString()) &&
+          targetFile.getStatements().stream().anyMatch(stat -> stat.getGroup() != null));
+
+      if (deferredImports != null) {
+        for (NsCmdRefactoringAction deferredImport : deferredImports) {
+          if (deferredImport.getCurrentFile() == currentFile) {
+            if (deferredImport instanceof ImportFileAction) {
+              preludeImportedManually |= Prelude.MODULE_PATH.toString().equals(((ImportFileAction) deferredImport).getLongName().toString());
+            }
+            if (deferredImport.getLongName().toString().equals(targetFile.getFullName())) {
+              targetFileAlreadyImported = true;
+              for (CalculatedName location : locations) {
+                location.processDeferredImport(deferredImport);
+              }
+            }
+          }
+        }
+      }
+
+      if (targetFileAlreadyImported) {
+        for (CalculatedName location : locations) {
+          if (location.getReferenceNames().isEmpty() || referableLocation.getTarget().getAccessModifier() == AccessModifier.PROTECTED) {
+            location.addLongNameAsReferenceName();
+            fileResolveActions.put(location, new AddIdToUsingAction(currentFile, targetFile, location));
+          }
+        }
+        fallbackImportAction = null;
+      } else {
+        fallbackImportAction = new ImportFileAction(currentFile, targetFile, minimalImportMode ? Collections.emptyList() : null);
+        if (isPrelude(targetFile) && !preludeImportedManually) fallbackImportAction = null;
+
+        for (CalculatedName location : locations) {
+          List<String> fName = location.getLongName();
+          List<String> importList = fName.isEmpty() ? Collections.emptyList() : Collections.singletonList(fName.get(0));
+          location.addLongNameAsReferenceName();
+          fileResolveActions.put(location, minimalImportMode ? new ImportFileAction(currentFile, targetFile, importList) : fallbackImportAction);
+        }
+      }
+
+      List<String> veryLongName = new ArrayList<>();
+      List<ImportDecision> resultingDecisions = new ArrayList<>();
+
+      for (CalculatedName location : locations) {
+        for (List<String> referenceName : location.getReferenceNames()) {
+          if (referenceName.isEmpty() || Scope.resolveName(null, referenceName).getAbstractReferable() == referableLocation.getTarget()) {
+            resultingDecisions.add(new ImportDecision(referenceName, fileResolveActions.get(location), location.isAlias()));
+          }
+        }
+      }
+
+      if (resultingDecisions.isEmpty()) {
+        if (isPrelude(targetFile) && !preludeImportedManually && fallbackImportAction == null) {
+          fallbackImportAction = new ImportFileAction(currentFile, targetFile, null);
+        }
+        veryLongName.addAll(targetModulePath.getModulePath());
+        veryLongName.addAll(referableLocation.getLongName());
+        resultingDecisions.add(new ImportDecision(veryLongName, fallbackImportAction, false));
+      }
+      Collections.sort(resultingDecisions);
+
+      List<String> resultingName = resultingDecisions.get(0).getRefName();
+      NsCmdRefactoringAction importAction = (targetFile != currentFile || (resultingName.isEmpty() && resultingName.equals(veryLongName))) ? resultingDecisions.get(0).getNsAction() : null;
+
+      return new Pair<>(importAction, resultingName);
+    }
   }
 }
