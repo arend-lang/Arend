@@ -36,11 +36,10 @@ class HighlightingVisitor(private val collector: HighlightingCollector, private 
         val lastReference = list.lastOrNull() ?: return
         if (data !is ArendPattern && (lastReference is ArendRefIdentifier || lastReference is ArendDefIdentifier)) {
             when {
-                referent is GlobalReferable && typingInfo.getRefPrecedence(referent).isInfix ->
+                referent is GlobalReferable && (typingInfo.getRefPrecedence(referent).isInfix && (!referent.hasAlias() || referent.refName == lastReference.referenceName) || referent.aliasPrecedence.isInfix && referent.aliasName == lastReference.referenceName) ->
                     collector.addHighlightInfo(lastReference.textRange, ArendHighlightingColors.OPERATORS)
 
-                (((referent as? RedirectingReferable)?.originalReferable
-                    ?: referent) as? MetaReferable)?.resolver != null ->
+                (referent as? MetaReferable)?.resolver != null ->
                     collector.addHighlightInfo(lastReference.textRange, ArendHighlightingColors.META_RESOLVER)
             }
         }
