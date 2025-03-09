@@ -101,7 +101,11 @@ public class CalculatedName {
   }
 
   private List<List<String>> calculateShorterNames(ConcreteNamespaceCommand statCmd, ModuleScopeProvider moduleScopeProvider) {
-    GlobalReferable openedGroup = moduleScopeProvider.findModule(new ModulePath(statCmd.module().getPath()));
+    GlobalReferable openedGroup;
+    if (statCmd.isImport())
+    openedGroup = moduleScopeProvider.findModule(new ModulePath(statCmd.module().getPath())); else {
+      // TODO: No idea how to implement this at the moment
+    }
 
     List<String> remainder = calculateRemainder(openedGroup);
     if (remainder != null && !remainder.isEmpty()) {

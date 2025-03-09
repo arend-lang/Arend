@@ -572,11 +572,32 @@ public class ArendServerImpl implements ArendServer {
     ModuleScopeProvider moduleScopeProvider = getModuleScopeProvider(anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST);
     Scope currentScope = new MergeScope(new ListScope(localReferables), LocatedReferable.Helper.resolveNamespace(anchor.parent(), moduleScopeProvider));
     Collection<? extends Referable> currentScopeElements = currentScope.getElements();
-    Set<String> currentScopeElementNames = new HashSet<>();
-    for (Referable referable : currentScopeElements) {currentScopeElementNames.add(referable.textRepresentation());}
 
-    HashMap<ModuleLocation, ConcreteNamespaceCommand> commandsToAdd = new HashMap<>();
-    HashSet<ConcreteNamespaceCommand> commandsToRemove = new HashSet<>();
+    /*Set<String> currentScopeElementNames = new HashSet<>();
+    for (Referable referable : currentScopeElements) { currentScopeElementNames.add(referable.textRepresentation()); } */
+
+    Set<LocatedReferable> anchorAncestors = new HashSet<>();
+    LocatedReferable locatedReferable = anchor.parent();
+    do {
+      anchorAncestors.add(locatedReferable);
+      locatedReferable = locatedReferable.getLocatedReferableParent();
+    } while (locatedReferable != null);
+
+    HashMap<LocatedReferable, List<ConcreteNamespaceCommand>> existingNamespaceCommands =
+      getExistingNamespaceCommands(currentFile, anchorAncestors);
+
+            /* TODO[server2]
+            if (psi instanceof ArendDefClass) {
+                ClassFieldImplScope scope = new ClassFieldImplScope((ArendDefClass) psi, true);
+                for (Location location : locations) {
+                    location.checkShortNameInScope(scope);
+                }
+            }
+            */
+
+
+    HashMap<ConcreteNamespaceCommand, List<String>> itemsToAdd = new HashMap<>();
+    HashMap<ModuleLocation, List<String>> importsToAdd = new HashMap<>();
 
     for (LocatedReferable referable : referables) {
       ModuleLocation targetModuleLocation = referable.getLocation();
@@ -588,8 +609,8 @@ public class ArendServerImpl implements ArendServer {
       }
 
       List<CalculatedName> names = new ArrayList<>();
-      CalculatedName referableName = new CalculatedName(this, referable, false, false);
-      names.add(referableName);
+      CalculatedName defaultName = new CalculatedName(this, referable, false, false);
+      names.add(defaultName);
 
       if (referable.hasAlias())
         names.add(new CalculatedName(this, referable, false, true));
@@ -624,7 +645,19 @@ public class ArendServerImpl implements ArendServer {
       boolean nonEmptyScopeIntersection = (!Prelude.MODULE_LOCATION.equals(referable.getLocation()) &&
         targetModuleDefinitions.stream().anyMatch(stat -> currentScope.resolveName(stat.getRefName()) != null));
 
-      if (existingImportCommand.get() != null) {
+      for (Map.Entry<LocatedReferable, List<ConcreteNamespaceCommand>> entry : existingNamespaceCommands.entrySet()) {
+        for (CalculatedName name : names) {
+          name.processParentGroup(entry.getKey());
+          if (entry.getValue() != null) for (ConcreteNamespaceCommand nsCmd : entry.getValue())
+            name.processStatCmd(nsCmd, moduleScopeProvider);
+        }
+      }
+
+      for (CalculatedName name : names) {
+        System.out.println("Name: " + name.getLongName());
+      }
+
+      /* if (existingImportCommand.get() != null) {
         for (CalculatedName name : names) {
           if (name.getReferenceNames().isEmpty() || referableIsProtected) {
             name.addLongNameAsReferenceName();
@@ -644,7 +677,21 @@ public class ArendServerImpl implements ArendServer {
           fileResolveActions.put(name, (referableIsProtected || nonEmptyScopeIntersection) ?
             new ImportFileAction(currentFile, targetFile, importList) : fallbackImportAction);
         }
+      } */
+
+      /* Scope correctedScope = currentScope;
+
+      if (deferredImports != null && !deferredImports.isEmpty()) {
+        List<Scope> scopes = Collections.singletonList(correctedScope);
+        for (DeferredImport deferredImport : deferredImports) {
+          scopes.add(deferredImport.getAmendedScope());
+        }
+        correctedScope = new MergeScope(scopes);
       }
+
+      if (!defaultLocation.getLongName().isEmpty()) {
+        correctedScope = new MergeScope(correctedScope, defaultLocation.getComplementScope());
+      } */
 
       /*
       final Boolean hasProtectedAccessModifier = referable.getAccessModifier() == AccessModifier.PROTECTED;
@@ -676,6 +723,20 @@ public class ArendServerImpl implements ArendServer {
     return new Pair<>(new RawSequenceModifier(nsCmdActions), result);
   }
 
+  private static @NotNull HashMap<LocatedReferable, List<ConcreteNamespaceCommand>> getExistingNamespaceCommands(@NotNull ConcreteGroup currentFile, Set<LocatedReferable> anchorAncestors) {
+    HashMap<LocatedReferable, List<ConcreteNamespaceCommand>> existingNamespaceCommands = new LinkedHashMap<>();
+    currentFile.traverseGroup(subgroup -> {
+      if (anchorAncestors.contains(subgroup.referable())) {
+        subgroup.statements().forEach(statement -> {
+          ConcreteNamespaceCommand command = statement.command();
+          if (command != null && !command.isImport())
+            existingNamespaceCommands.computeIfAbsent(subgroup.referable(), k -> new ArrayList<>()).add(command);
+        });
+      }
+    });
+    return existingNamespaceCommands;
+  }
+
 
   public record ImportDecision(List<String> refName, Boolean alias) implements Comparable<ImportDecision> {
     @Override
@@ -690,7 +751,7 @@ public class ArendServerImpl implements ArendServer {
     }
   }
 
-  public class ReferenceNameCalculator {
+  /* public class ReferenceNameCalculator {
     public static Pair<RawModifier, List<String>> doCalculateReferenceName(
       CalculatedName referableLocation,
       ConcreteGroup currentFile,
@@ -806,5 +867,5 @@ public class ArendServerImpl implements ArendServer {
 
       return new Pair<>(importAction, resultingName);
     }
-  }
+  } */
 }
