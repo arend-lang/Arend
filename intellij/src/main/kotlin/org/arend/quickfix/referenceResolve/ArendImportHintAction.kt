@@ -19,20 +19,31 @@ import com.intellij.psi.stubs.StubIndex
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
+import com.intellij.psi.util.descendantsOfType
 import com.intellij.util.ThreeState
 import org.arend.module.config.ArendModuleConfigService
+import org.arend.naming.reference.FieldReferableImpl
+import org.arend.naming.reference.FullModuleReferable
+import org.arend.naming.reference.InternalReferable
+import org.arend.naming.reference.LocatedReferable
+import org.arend.naming.reference.Referable
 import org.arend.naming.scope.ScopeFactory
+import org.arend.prelude.Prelude
 import org.arend.psi.ArendFile
 import org.arend.psi.ArendFileScope
+import org.arend.psi.descendantOfType
 import org.arend.psi.ext.*
 import org.arend.psi.libraryConfig
 import org.arend.psi.stubs.index.ArendDefinitionIndex
 import org.arend.psi.stubs.index.ArendFileIndex
 import org.arend.scratch.ArendScratchModuleService
 import org.arend.scratch.isArendScratch
+import org.arend.server.ArendServerService
 import org.arend.settings.ArendSettings
+import org.arend.term.abs.Abstract
 import org.arend.util.ArendBundle
 import org.arend.util.FileUtils
+import java.util.Collections.singletonList
 
 enum class Result { POPUP_SHOWN, CLASS_AUTO_IMPORTED, POPUP_NOT_SHOWN }
 
@@ -160,12 +171,13 @@ class ArendImportHintAction(private val referenceElement: ArendReferenceElement)
 
         private fun getStubElementSet(project: Project, refElement: ArendReferenceElement, file: PsiFile?): List<PsiLocatedReferable> {
             val name = refElement.referenceName
+
             val config = (file as? ArendFile)?.libraryConfig ?: if (file?.virtualFile.isArendScratch) {
                 ArendModuleConfigService.getInstance(project.service<ArendScratchModuleService>().getModule(file as ArendFile))
             } else {
                 null
             }
-            val libRefs = emptyList<PsiLocatedReferable>() /* TODO[server2]: if (config == null) emptyList() else {
+            val libRefs: MutableList<LocatedReferable> = ArrayList() /* TODO[server2]: if (config == null) emptyList() else {
                 val result = ArrayList<PsiLocatedReferable>()
                 config.forAvailableConfigs { conf ->
                     conf.additionalNames[name]?.let { result.addAll(it) }
@@ -173,9 +185,16 @@ class ArendImportHintAction(private val referenceElement: ArendReferenceElement)
                 }
                 result
             } */
-            return StubIndex.getElements(ArendDefinitionIndex.KEY, name, project, ArendFileScope(project), PsiReferable::class.java).filterIsInstance<PsiLocatedReferable>() +
-                    StubIndex.getElements(ArendFileIndex.KEY, name + FileUtils.EXTENSION, project, ArendFileScope(project), ArendFile::class.java) +
-                    libRefs // TODO[server2]: + project.service<TypeCheckingService>().getAdditionalReferables(name)
+            val preludeFile = project.service<ArendServerService>().server.getRawGroup(Prelude.MODULE_LOCATION)?.referable
+
+            val preludeElements = if (preludeFile != null) {
+               project.service<ArendServerService>().prelude?.descendantsOfType<PsiLocatedReferable>()?.filter { it.name == name }?.firstOrNull()?.let{ singletonList(it) } ?: emptyList<PsiLocatedReferable>()
+            } else emptyList<PsiLocatedReferable>()
+
+            val definitions = StubIndex.getElements(ArendDefinitionIndex.KEY, name, project, ArendFileScope(project), PsiReferable::class.java).filterIsInstance<ReferableBase<*>>().toList()
+            val files = StubIndex.getElements(ArendFileIndex.KEY, name + FileUtils.EXTENSION, project, ArendFileScope(project), ArendFile::class.java).toList()
+
+            return definitions + files + preludeElements // TODO[server2]: + project.service<TypeCheckingService>().getAdditionalReferables(name)
         }
 
         fun importQuickFixAllowed(referenceElement: ArendReferenceElement) = when (referenceElement) {

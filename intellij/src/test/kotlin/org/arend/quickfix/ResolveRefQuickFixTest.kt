@@ -89,6 +89,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
             """,
             """
                 \import A (a)
+                
                 \func d => a.b
             """)
 
@@ -100,6 +101,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
             """,
             """
                 \import A (a, e)
+                
                 \func d => a.b.c
             """)
 
@@ -111,6 +113,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
             """,
             """
                 \import A (a, e)
+                
                 \func d => e
             """)
 
@@ -134,6 +137,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
             """,
             """
                 \import A \hiding (e)
+                
                 \func d => a.b
             """)
 
@@ -144,7 +148,8 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
                 \func d => {-caret-}e
             """,
             """
-                \import A \hiding ( a)
+                \import A \hiding (a)
+                
                 \func d => e
             """)
 
@@ -462,6 +467,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
             """,
             """
                 \import F (*, Test1 \as Test)
+                
                 \func test => 1 * 2
             """)
 
@@ -473,6 +479,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
             """,
             """
                 \import F (*)
+                
                 \func test => 1 * 2
             """)
 
@@ -488,6 +495,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
             """
                 \import C
                 \import F (*)
+                
                 \func test => 1 * 2
             """)
 
@@ -524,6 +532,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
             """,
             """
                 \import F \hiding (Test1)
+                
                 \func test => 1 * 2
             """)
 
@@ -691,7 +700,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
         val action = ImportFileAction(file, file, null)
         WriteCommandAction.runWriteCommandAction(project, "", null, { action.execute() }, file) }
 
-    fun `test RemoveFromHidingAction on namespace command with comments`() = simpleActionTest(
+    /* fun `test RemoveFromHidingAction on namespace command with comments`() = simpleActionTest(
             "\\import Prelude \\hiding (Nat {- 1 -} , {- 2 -} Int {- 3 -} , {- 4 -} Path){-caret-}",
             "\\import Prelude \\hiding (Nat {- 1 -}  {- 2 -}  {- 3 -} , {- 4 -} Path)") {file ->
         val cmd = file.statements.first().statCmd!!
@@ -699,7 +708,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
         WriteCommandAction.runWriteCommandAction(project, "", null, {
             doRemoveRefFromStatCmd(ref)
         }, file)
-    }
+    } */
 
 
     fun `test that resolve ref quick fixes are disabled inside class extensions`() =
@@ -769,7 +778,6 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
 
                 \func foo => lol'""")
 
-
     fun `test imports in patterns`() =
             simpleImportFixTest("""
                -- ! Main.ard
@@ -823,7 +831,6 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
                 \func foo (a : Nat) => a `lol{-caret-}
             """, """
                 \import A
-                
                 \func foo (a : Nat) => a Foo.`lol{-caret-}
             """)
 

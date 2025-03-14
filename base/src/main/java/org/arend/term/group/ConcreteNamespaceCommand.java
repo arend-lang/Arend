@@ -70,7 +70,7 @@ public record ConcreteNamespaceCommand(@Nullable Object data, boolean isImport, 
         String newName = renaming.newName();
         if (newName != null) {
           Precedence precedence = renaming.newPrecedence();
-          renamingDoc = hList(renamingDoc, text(" \\as " + (precedence == null ? "" : precedence)), text(newName));
+          renamingDoc = hList(renamingDoc, text(" \\as " + (precedence == null || precedence.equals(Precedence.DEFAULT) ? "" : "\\" + precedence + " ")), text(newName));
         }
         renamingDocs.add(renamingDoc);
       }
@@ -81,8 +81,9 @@ public record ConcreteNamespaceCommand(@Nullable Object data, boolean isImport, 
       }
       docs.add(referenceDoc);
       if (using) {
-        docs.add(text("\\using"));
+        docs.add(text("\\using ("));
         docs.add(openedReferencesDoc);
+        docs.add(text(")"));
       }
     } else {
       docs.add(referenceDoc);
@@ -96,4 +97,10 @@ public record ConcreteNamespaceCommand(@Nullable Object data, boolean isImport, 
     DocStringBuilder.build(builder, hSep(text(" "), docs));
   }
 
+  @Override
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    prettyPrint(builder, PrettyPrinterConfig.DEFAULT);
+    return builder.toString();
+  }
 }
