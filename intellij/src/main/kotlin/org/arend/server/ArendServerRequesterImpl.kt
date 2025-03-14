@@ -9,6 +9,7 @@ import org.arend.module.ModuleLocation
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.naming.reference.Referable
 import org.arend.naming.reference.TCDefReferable
+import org.arend.psi.ArendFile
 import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.ReferableBase
 import org.arend.term.abs.AbstractReferable
@@ -24,9 +25,7 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
         if (module.locationKind == ModuleLocation.LocationKind.GENERATED) return
         runReadAction {
             val file = project.findInternalLibrary(module.libraryName)?.findArendFile(module.modulePath, module.locationKind == ModuleLocation.LocationKind.TEST)
-            if (file != null) server.updateModule(file.modificationStamp, module) {
-                ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE, this)
-            }
+            doUpdateModule(server, module, file ?: return@runReadAction)
         }
     }
 
@@ -73,6 +72,10 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
         if (withTests) {
             requestUpdate(server, config.findModules(true), config.name, true)
         }
+    }
+
+    fun doUpdateModule(server: ArendServer, module: ModuleLocation, file: ArendFile) = server.updateModule(file.modificationStamp, module) {
+      ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE, this)
     }
 
     fun requestUpdate(server: ArendServer, library: String?, withTests: Boolean) {

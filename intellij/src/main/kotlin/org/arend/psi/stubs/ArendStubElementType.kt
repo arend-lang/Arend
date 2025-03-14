@@ -9,8 +9,8 @@ import com.intellij.psi.tree.IStubFileElementType
 import org.arend.ArendLanguage
 import org.arend.ext.reference.Precedence
 import org.arend.ext.reference.Precedence.Associativity.*
-import org.arend.naming.reference.GlobalReferable
 import org.arend.psi.ext.PsiLocatedReferable
+import org.arend.psi.ext.ReferableBase
 
 abstract class ArendStubElementType<StubT : ArendStub<*>, PsiT : PsiLocatedReferable>(debugName: String)
     : IStubElementType<StubT, PsiT>(debugName, ArendLanguage.INSTANCE) {
@@ -19,7 +19,7 @@ abstract class ArendStubElementType<StubT : ArendStub<*>, PsiT : PsiLocatedRefer
 
     abstract fun createStub(parentStub: StubElement<*>?, name: String?, prec: Precedence?, aliasName: String?): StubT
 
-    override fun createStub(psi: PsiT, parentStub: StubElement<*>?) = createStub(parentStub, psi.name, psi.precedence, (psi as? GlobalReferable)?.aliasName)
+    override fun createStub(psi: PsiT, parentStub: StubElement<*>?) = createStub(parentStub, psi.name, psi.precedence, (psi as? ReferableBase<*>)?.aliasName)
 
     override fun serialize(stub: StubT, dataStream: StubOutputStream) {
         dataStream.writeName(stub.name)

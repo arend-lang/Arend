@@ -28,6 +28,7 @@ import org.arend.module.AREND_LIB
 import org.arend.module.ArendModuleType
 import org.arend.module.ModuleLocation
 import org.arend.module.ModuleSynchronizer
+import org.arend.module.ReloadLibrariesService
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.ExternalLibraryConfig
 import org.arend.module.scopeprovider.SimpleModuleScopeProvider
@@ -58,6 +59,7 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
 
         service<ArendSettings>().isBackgroundTypechecking = true
 
+        project?.service<ReloadLibrariesService>()?.reload(true)
         // TODO[server2]: library.setArendExtension(null)
 
         VimPlugin.setEnabled(false)

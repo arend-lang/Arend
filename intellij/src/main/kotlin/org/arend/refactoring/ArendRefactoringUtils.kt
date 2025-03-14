@@ -189,7 +189,7 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
         val needsModification = element.longName != id
 
         when (element) {
-            is ArendIPName -> if (parent is ArendLiteral) {
+            is ArendIPName -> {
                 if (!needsModification) return
                 val argumentStr = buildString {
                     if (id.size > 1) {
@@ -201,8 +201,10 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
                     if (element.fixity == Fixity.INFIX) append("`")
 
                 }
-                val replacementLiteral = factory.createExpression(argumentStr).descendantOfType<ArendLiteral>()
-                if (replacementLiteral != null) parent.replace(replacementLiteral)
+                val parentAtomFieldsAcc = element.ancestor<ArendAtomFieldsAcc>()
+                val replacementLiteral = factory.createExpression(argumentStr).descendantOfType<ArendAtomFieldsAcc>()
+                if (replacementLiteral != null && parentAtomFieldsAcc != null)
+                  parentAtomFieldsAcc.replace(replacementLiteral)
             }
             else -> {
                 val longNameStr = LongName(id).toString()
@@ -218,6 +220,11 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
                             parent.deleteChildRange(parent.firstChild, element)
                         }
                         is ArendPattern -> element.replace(longName)
+                        else -> {
+                          val newAtomFieldAcc: PsiElement? = factory.createExpression(longNameStr).descendantOfType<ArendAtomFieldsAcc>()
+                          val atomFieldAcc = element.ancestor<ArendAtomFieldsAcc>();
+                          if (newAtomFieldAcc != null) atomFieldAcc?.replace(newAtomFieldAcc)
+                        }
                     }
                     editor?.caretModel?.moveToOffset(longNameStartOffset + offset)
                 }

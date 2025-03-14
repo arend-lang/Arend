@@ -112,7 +112,7 @@ class ArendChangeSignatureDialog(project: Project,
         val limit = items.indexOfFirst { it.typeCodeFragment == codeFragment }.let { if (it == -1) items.size else it }
         val params = items.take(limit).map { it.associatedReferable }
         val localScope = ListScope(params)
-        return if (deferredNsCmds.isEmpty()) localScope else MergeScope(singletonList(localScope) + deferredNsCmds.map { it.getAmendedScope() })
+        return localScope //TODO: if (deferredNsCmds.isEmpty()) localScope else MergeScope(singletonList(localScope) + deferredNsCmds.map { it.getAmendedScope() })
     }
 
     override fun updatePropagateButtons() {
@@ -168,9 +168,9 @@ class ArendChangeSignatureDialog(project: Project,
         for (item in myParametersTable.items) (item.typeCodeFragment as? ArendExpressionCodeFragment)?.let{processFragment(it)}
 
         /* Validate namespace commands to be invoked upon refactoring start; purge unused namespace commands */
-        val unusedNsCmds = HashSet<NsCmdRefactoringAction>()
-        for (nsCmd in this.deferredNsCmds) if (nsCmd.getAmendedScope().elements.intersect(allPsiTargets).isEmpty()) unusedNsCmds.add(nsCmd)
-        this.deferredNsCmds.removeAll(unusedNsCmds)
+        /* val unusedNsCmds = HashSet<NsCmdRefactoringAction>()
+         for (nsCmd in this.deferredNsCmds) if (nsCmd.getAmendedScope().elements.intersect(allPsiTargets).isEmpty()) unusedNsCmds.add(nsCmd)
+         this.deferredNsCmds.removeAll(unusedNsCmds) */ //TODO:
 
         /* Validate that code fragments for parameter types do not contain resolving errors */
         var hasErrors = false
