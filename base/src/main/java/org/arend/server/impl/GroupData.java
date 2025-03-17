@@ -218,7 +218,7 @@ public class GroupData {
   }
 
   public DefinitionData getDefinitionData(LongName name) {
-    return myResolvedDefinitions.get(name);
+    return myResolved ? myResolvedDefinitions.get(name) : null;
   }
 
   public void updateResolvedDefinitions(Map<LongName, DefinitionData> definitions) {
