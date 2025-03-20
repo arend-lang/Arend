@@ -8,29 +8,25 @@ import com.intellij.codeInsight.lookup.LookupListener
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.codeInsight.lookup.impl.LookupImpl
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
 import org.arend.core.definition.FunctionDefinition
-import org.arend.core.expr.Expression
-import org.arend.psi.ArendFile
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ancestor
 import org.arend.psi.ext.ArendDefinition
 import org.arend.psi.ext.ArendGroup
 import org.arend.psi.ext.ArendLongName
 import org.arend.refactoring.*
-import org.arend.typechecking.error.ErrorService
 import org.arend.ext.error.InstanceInferenceError
 import org.arend.naming.reference.TCDefReferable
 import org.arend.psi.ext.PsiLocatedReferable
+import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
 import org.arend.resolving.ArendReferenceBase
 import org.arend.util.ArendBundle
 
@@ -94,14 +90,12 @@ class InstanceInferenceQuickFix(val error: InstanceInferenceError, val cause: Sm
                     val psiFactory = ArendPsiFactory(project)
 
                     for (element in chosenElement) {
-                        val sourceContainerFile = (mySourceContainer as PsiElement).containingFile as ArendFile
                         val elementReferable = element.referable?.data as? PsiLocatedReferable ?: continue
-                        val targetLocation = LocationData.createLocationData(elementReferable)
-                        val importData = targetLocation?.let { calculateReferenceName(it, sourceContainerFile, longName) }
+                        val importData = getTargetName(elementReferable, longName)
 
                         if (importData != null) {
-                            val openedName: List<String> = importData.second
-                            importData.first?.execute()
+                            val openedName: List<String> = importData.first.split(".")
+                            importData.second?.execute()
                             if (openedName.size > 1 && elementReferable is ArendGroup)
                                 doAddIdToOpen(psiFactory, openedName, longName, elementReferable, instanceMode = true)
                         }

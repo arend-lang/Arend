@@ -26,8 +26,6 @@ import org.arend.core.subst.SubstVisitor
 import org.arend.error.CountingErrorReporter
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.core.level.LevelSubstitution
-import org.arend.ext.error.GeneralError
-import org.arend.ext.error.ListErrorReporter
 import org.arend.ext.prettyprinting.DefinitionRenamer
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
 import org.arend.ext.variable.Variable
@@ -35,12 +33,10 @@ import org.arend.ext.variable.VariableImpl
 import org.arend.intention.SplitAtomPatternIntention
 import org.arend.intention.SplitAtomPatternIntention.Companion.doReplacePattern
 import org.arend.naming.reference.NamedUnresolvedReference
-import org.arend.naming.reference.Referable
 import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.Renamer
 import org.arend.naming.renamer.StringRenamer
 import org.arend.naming.resolving.typing.TypingInfo
-import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
 import org.arend.prelude.Prelude
 import org.arend.psi.*
@@ -48,15 +44,12 @@ import org.arend.psi.ext.*
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.refactoring.PsiLocatedRenamer
 import org.arend.term.abs.Abstract
-import org.arend.term.abs.ConcreteBuilder.convert
 import org.arend.term.abs.ConcreteBuilder.convertPattern
 import org.arend.term.concrete.Concrete
 import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.typechecking.error.local.ExpectedConstructorError
-import org.arend.typechecking.patternmatching.ElimTypechecking
 import org.arend.typechecking.patternmatching.ExpressionMatcher
 import org.arend.typechecking.patternmatching.PatternTypechecking
-import org.arend.typechecking.visitor.CheckTypeVisitor
 import org.arend.typechecking.visitor.VoidConcreteVisitor
 import org.arend.util.ArendBundle
 import org.arend.util.Decision
@@ -385,9 +378,10 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                                     }
                                 }
                                 (((((substEntry.value as? ConstructorExpressionPattern)?.dataExpression as? ClassCallExpression)?.definition?.referable?.data) as? SmartPsiElementPointer<*>)?.element as? PsiLocatedReferable)?.let {
-                                    val (name, namespaceCommand) = ResolveReferenceAction.getTargetName(it, currentClause as ArendCompositeElement)
-                                    namespaceCommand?.execute()
-                                    if (asName.isNotEmpty()) asName += " : $name"
+                                    ResolveReferenceAction.getTargetName(it, currentClause as ArendCompositeElement)?.let{ (name, namespaceCommand) ->
+                                        namespaceCommand?.execute()
+                                        if (asName.isNotEmpty()) asName += " : $name"
+                                    }
                                 }
 
                                 val actualPatternToReplace = if ((namePatternToReplace.parent as? ArendPattern)?.asPattern != null) namePatternToReplace.parent as ArendPattern else namePatternToReplace
@@ -786,11 +780,10 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                         val tupleMode = constructor == null
                         var constructorArgument: DependentLink = pattern.parameters
                         val locatedReferable = if (constructor != null) PsiLocatedReferable.fromReferable(constructor.referable) else null
-                        var result = if (locatedReferable != null) {
-                            val (name, namespaceCommand) = ResolveReferenceAction.getTargetName(locatedReferable, location)
+                        var result = if (locatedReferable != null) ResolveReferenceAction.getTargetName(locatedReferable, location)?.let { (name, namespaceCommand) ->
                             namespaceCommand?.execute()
                             "$name "
-                        } else "("
+                        } ?: "" else "("
                         val patternIterator = pattern.subPatterns.iterator()
                         var complexity = 1
                         var containsClassConstructor = tupleMode && pattern.definition is ClassDefinition
@@ -812,6 +805,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                         }
 
                         if (tupleMode) result += ")"
+
                         return PatternPrintResult(result, pattern.subPatterns.isNotEmpty() && !tupleMode, complexity, containsClassConstructor)
                     }
                 }

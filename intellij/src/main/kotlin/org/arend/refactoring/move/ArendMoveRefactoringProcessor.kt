@@ -28,7 +28,6 @@ import org.arend.psi.ext.*
 import org.arend.psi.ext.ArendGroup
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
-import org.arend.refactoring.LocationData
 import org.arend.refactoring.*
 import org.arend.refactoring.changeSignature.*
 import org.arend.refactoring.changeSignature.ArendChangeSignatureProcessor.Companion.getUsagesPreprocessor
@@ -38,7 +37,6 @@ import org.arend.term.concrete.Concrete
 import java.util.Collections.singletonList
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 import kotlin.collections.List
 import kotlin.collections.MutableMap
 import kotlin.collections.MutableSet
@@ -328,13 +326,11 @@ class ArendMoveRefactoringProcessor(project: Project,
                 while (remainderAnchor !is ArendCompositeElement && remainderAnchor != null) remainderAnchor = remainderAnchor.parent
 
                 if (remainderAnchor is ArendCompositeElement) {
-                    val sourceContainerFile = (mySourceContainer as PsiElement).containingFile as ArendFile
-                    val targetLocation = LocationData.createLocationData(myTargetContainer)
-                    val importData = targetLocation?.let{ calculateReferenceName(it, sourceContainerFile, remainderAnchor) }
+                    val importData = getTargetName(myTargetContainer, remainderAnchor)
 
                     if (importData != null && movedReferablesUniqueNames.isNotEmpty()) {
-                        val importAction: NsCmdRefactoringAction? = importData.first
-                        val openedName: List<String> = importData.second
+                        val importAction: NsCmdRefactoringAction? = importData.second
+                        val openedName: List<String> = importData.first.split(".")
 
                         importAction?.execute()
                         val renamings = movedReferablesUniqueNames.map { Pair(it, null as String?) }.sortedBy { it.second ?: it.first } // filter this list
@@ -376,12 +372,11 @@ class ArendMoveRefactoringProcessor(project: Project,
                 }
             }
 
-            val locationData = LocationData.createLocationData(myTargetContainer as PsiLocatedReferable)
-            val importData = locationData?.let{ calculateReferenceName(it, usageFile, statCmd) }
-            val currentName: List<String>? = importData?.second
+            val importData = getTargetName(myTargetContainer, statCmd)
+            val currentName: List<String>? = importData?.first?.split(".")
 
             if (renamings.isNotEmpty() && currentName != null) {
-                importData.first?.execute()
+                importData.second?.execute()
                 val name = when {
                     currentName.isNotEmpty() -> LongName(currentName).toString()
                     myTargetContainer is ArendFile -> myTargetContainer.moduleLocation?.modulePath?.lastName ?: ""
@@ -633,9 +628,10 @@ class ArendMoveRefactoringProcessor(project: Project,
                                     val freshName = StringRenamer().generateFreshName(VariableImpl("this"), getAllBindings(referable).map { VariableImpl(it) }.toList())
                                     thisVarNameMap[referable] = freshName
                                     val classNameGetter: () -> String = {
-                                        val (targetName, namespaceCommand) = getTargetName(oldThisParameterClass, referable)
-                                        namespaceCommand?.execute()
-                                        targetName
+                                        getTargetName(oldThisParameterClass, referable)?.let { (targetName, namespaceCommand) ->
+                                            namespaceCommand?.execute()
+                                            targetName
+                                        } ?: ""
                                     }
 
                                     val internalizedThisDescriptor = if (referable is ArendConstructor) {

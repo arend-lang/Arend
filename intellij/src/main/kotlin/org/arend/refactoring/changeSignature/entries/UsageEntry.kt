@@ -20,7 +20,6 @@ import org.arend.resolving.ArendReference
 import org.arend.term.concrete.Concrete
 import java.util.*
 import java.util.Collections.singletonList
-import kotlin.collections.ArrayList
 
 abstract class UsageEntry(val refactoringContext: ChangeSignatureRefactoringContext,
                           val contextPsi: ArendCompositeElement,
@@ -259,13 +258,13 @@ abstract class UsageEntry(val refactoringContext: ChangeSignatureRefactoringCont
         data class PrintedParameter(val text: String, val spacing: String)
 
         fun getContextName(affectedDefinition: PsiLocatedReferable, contextPsi: ArendCompositeElement, refactoringContext: ChangeSignatureRefactoringContext): String {
-            val data = ResolveReferenceAction.getTargetName(affectedDefinition, contextPsi, refactoringContext.deferredNsCmds)
-            val longNameString = data.first
-            val namespaceCommand = data.second
+            val data = ResolveReferenceAction.getTargetName(affectedDefinition, contextPsi) //TODO: Should take refactoringContext.deferredNsCmds into account
+            val longNameString = data?.first
+            val namespaceCommand = data?.second
             if (namespaceCommand != null) {
                 refactoringContext.deferredNsCmds.add(namespaceCommand)
             }
-            return longNameString
+            return longNameString ?: ""
         }
 
         fun getContextName(context: ChangeSignatureRefactoringContext, concreteExpr: Concrete.SourceNode): String {

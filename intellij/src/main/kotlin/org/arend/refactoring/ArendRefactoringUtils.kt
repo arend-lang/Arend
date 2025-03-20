@@ -29,8 +29,8 @@ import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
 import org.arend.psi.ext.ArendGroup
-import org.arend.psi.ext.ArendDefFunction
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
+import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendSettings
 import org.arend.term.Fixity
@@ -45,7 +45,6 @@ import java.math.BigInteger
 import java.util.Collections.singletonList
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 import kotlin.math.max
 
 private fun addId(id: String, newName: String?, factory: ArendPsiFactory, using: ArendNsUsing): ArendNsId? {
@@ -240,8 +239,8 @@ fun getCorrectPreludeItemStringReference(project: Project, location: ArendCompos
     val itemName = preludeItem.name
     val itemReferable = project.service<ArendServerService>().server.getModuleScopeProvider(Prelude.LIBRARY_NAME, false).forModule(Prelude.MODULE_PATH)?.resolveName(itemName)
     val data = ResolveReferenceAction.getTargetName(itemReferable as PsiLocatedReferable, location)
-    data.second?.execute()
-    return data.first
+    data?.second?.execute()
+    return data?.first ?: ""
 }
 
 fun usingListToString(usingList: List<Pair<String, String?>>?): String {
@@ -322,15 +321,14 @@ fun doAddIdToOpen(psiFactory: ArendPsiFactory, openedName: List<String>, positio
         if (anchor != null) {
             val targetContainer = when (elementReferable) {
                 is ArendGroup -> elementReferable.parentGroup
-                else -> if (elementReferable is ArendGroup) elementReferable.parentGroup else elementReferable
+                else -> elementReferable
             }
             if (openedName.size > 1 && targetContainer != null) {
                 val containingFile = positionInFile.containingFile as? ArendFile
                 val openPrefix = (if (containingFile != null) {
-                    val locationData = LocationData.createLocationData(targetContainer)
-                    val data = locationData?.let{ calculateReferenceName(it, containingFile, mySourceContainer) }
-                    data?.first?.execute()
-                    if (data != null) LongName(data.second).toString() else null
+                    val data = getTargetName(targetContainer, mySourceContainer)
+                    data?.second?.execute()
+                    data?.first
                 } else null) ?: LongName(openedName.subList(0, openedName.size - 1)).toString()
                 return addIdToUsing(mySourceContainer, targetContainer, openPrefix, singletonList(Pair(openedName.last(), null)), psiFactory, anchor).second
             }
