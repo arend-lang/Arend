@@ -8,17 +8,17 @@ import org.arend.ext.reference.DataContainer
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.ArendCompositeElement
 import org.arend.psi.ext.PsiLocatedReferable
+import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
 
 class PsiLocatedRenamer(private val element: ArendCompositeElement, private val file: ArendFile = element.containingFile as ArendFile) : DefinitionRenamer {
     private val deferredNsCmdActions = ArrayList<NsCmdRefactoringAction>()
 
     override fun renameDefinition(arendRef: ArendRef): LongName? = runReadAction {
         val ref = (arendRef as? DataContainer)?.data as? PsiLocatedReferable ?: return@runReadAction null
-        val locationData = LocationData.createLocationData(ref) ?: return@runReadAction null
-        val pair = calculateReferenceName(locationData, file, element, deferredNsCmdActions) ?: return@runReadAction null
-        val action = pair.first
+        val pair = getTargetName(ref, element) ?: return@runReadAction null // TODO: Should take into account deferredNsCmd's
+        val action = pair.second
         if (action != null) deferredNsCmdActions.add(action)
-        LongName(pair.second)
+        LongName(pair.first.split("."))
     }
 
     fun writeAllImportCommands() {

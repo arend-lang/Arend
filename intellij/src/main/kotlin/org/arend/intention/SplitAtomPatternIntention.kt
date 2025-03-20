@@ -1,6 +1,5 @@
 package org.arend.intention
 
-import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -9,22 +8,16 @@ import com.intellij.util.containers.tail
 import org.arend.ext.variable.Variable
 import org.arend.core.context.param.DependentLink
 import org.arend.core.definition.Definition
-import org.arend.core.definition.FunctionDefinition
-import org.arend.core.elimtree.ElimBody
-import org.arend.core.elimtree.IntervalElim
 import org.arend.core.expr.*
 import org.arend.term.prettyprint.ToAbstractVisitor
-import org.arend.core.pattern.BindingPattern
 import org.arend.core.pattern.ConstructorExpressionPattern
 import org.arend.core.pattern.ExpressionPattern
-import org.arend.core.pattern.Pattern
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.core.ops.NormalizationMode
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
 import org.arend.ext.reference.Precedence
 import org.arend.ext.variable.VariableImpl
 import org.arend.naming.reference.GlobalReferable
-import org.arend.naming.reference.Referable
 import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.StringRenamer
 import org.arend.naming.resolving.typing.TypingInfo
@@ -34,7 +27,6 @@ import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
 import org.arend.refactoring.*
-import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.ConcreteBuilder
 import org.arend.term.concrete.Concrete
@@ -236,7 +228,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
 
             override fun patternString(location: ArendCompositeElement): String {
                 val locatedReferable = PsiLocatedReferable.fromReferable(constructor.referable)
-                val (constructorName, namespaceCommand) = if (locatedReferable != null) getTargetName(locatedReferable, location) else Pair(constructor.name, null)
+                val (constructorName, namespaceCommand) = locatedReferable?.let{ getTargetName(locatedReferable, location) } ?: Pair(constructor.name, null)
                 namespaceCommand?.execute()
 
                 val isInfix = constructor.referable.precedence.isInfix
@@ -255,7 +247,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
 
             override fun expressionString(location: ArendCompositeElement): String {
                 val locatedReferable = PsiLocatedReferable.fromReferable(constructor.referable)
-                val (constructorName, namespaceCommand) = if (locatedReferable != null) getTargetName(locatedReferable, location) else Pair(constructor.name, null)
+                val (constructorName, namespaceCommand) = locatedReferable?.let{ getTargetName(locatedReferable, location) } ?: Pair(constructor.name, null)
                 namespaceCommand?.execute()
 
                 return if (constructor.referable.precedence.isInfix && params.size == 2)
@@ -309,7 +301,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
             override fun expressionString(location: ArendCompositeElement): String = buildString {
                 append("\\new ")
                 val locatedReferable = PsiLocatedReferable.fromReferable(classCall.definition.referable)
-                val (recordName, namespaceCommand) = if (locatedReferable != null) getTargetName(locatedReferable, location) else Pair(classCall.definition.name, null)
+                val (recordName, namespaceCommand) = locatedReferable?.let { getTargetName(locatedReferable, location) } ?: Pair(classCall.definition.name, null)
                 namespaceCommand?.execute()
 
                 append("$recordName ")
@@ -619,16 +611,16 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
                                                      substitutedExpression: String): String {
             val field = if (longNameTail.isNotEmpty()) longNameTail[0] else null
             val fieldTarget = field?.reference?.resolve()
-            return if (fieldTarget is ArendClassField) {
-                val (fieldName, namespaceCommand) = getTargetName(fieldTarget, element)
+            if (fieldTarget is ArendClassField) getTargetName(fieldTarget, element)?.let {
+                val (fieldName, namespaceCommand) = it
                 namespaceCommand?.execute()
-                createFieldConstructorInvocation(element, longNameTail.drop(1), "$fieldName {${substitutedExpression}}")
+                return createFieldConstructorInvocation(element, longNameTail.drop(1), "$fieldName {${substitutedExpression}}")
+            }
+
+            return if (longNameTail.isEmpty()) {
+                substitutedExpression
             } else {
-                if (longNameTail.isEmpty()) {
-                    substitutedExpression
-                } else {
-                    "($substitutedExpression)${longNameTail.foldRight("") { ref, acc -> "$acc.${ref.referenceName}" }}"
-                }
+                "($substitutedExpression)${longNameTail.foldRight("") { ref, acc -> "$acc.${ref.referenceName}" }}"
             }
         }
     }

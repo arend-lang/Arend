@@ -45,10 +45,10 @@ class AddInstanceArgumentQuickFix(val error: InstanceInferenceError, val cause: 
         val implementedClass = classRef?.typechecked
         if (ambientDefinition is PsiLocatedReferable && missingClassInstance is ArendDefClass && implementedClass is ClassDefinition) {
             val psiFactory = ArendPsiFactory(project)
-            val className = ResolveReferenceAction.getTargetName(missingClassInstance, ambientDefinition).let {
+            val className = ResolveReferenceAction.getTargetName(missingClassInstance, ambientDefinition)?.let {
                 it.second?.execute()
                 it.first.ifEmpty { missingClassInstance.defIdentifier?.refName }
-            }
+            } ?: ""
             val ppConfig = object : PrettyPrinterConfig { override fun getDefinitionRenamer(): DefinitionRenamer = PsiLocatedRenamer(ambientDefinition) }
             val classifyingTypeExpr = (error.classifyingExpression as? Expression)?.let{ ToAbstractVisitor.convert(it, ppConfig) }
             val classifyingField = implementedClass.classifyingField

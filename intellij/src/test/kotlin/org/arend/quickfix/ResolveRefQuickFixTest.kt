@@ -2,7 +2,6 @@ package org.arend.quickfix
 
 import com.intellij.openapi.command.WriteCommandAction
 import org.arend.ext.prettyprinting.doc.DocFactory.nullDoc
-import org.arend.refactoring.ImportFileAction
 import org.arend.refactoring.doAddIdToUsing
 import org.arend.util.ArendBundle
 import org.intellij.lang.annotations.Language
@@ -693,11 +692,6 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
         WriteCommandAction.runWriteCommandAction(project, "", null, {
             doAddIdToUsing(cmd, listOf(Pair("b", "b'")))
         }, file) }
-
-    fun `test ImportFileAction on empty file`() = simpleActionTest(
-            "{-caret-}", "\\import Main") { file ->
-        val action = ImportFileAction(file, file, null)
-        WriteCommandAction.runWriteCommandAction(project, "", null, { action.execute() }, file) }
 
     /* fun `test RemoveFromHidingAction on namespace command with comments`() = simpleActionTest(
             "\\import Prelude \\hiding (Nat {- 1 -} , {- 2 -} Int {- 3 -} , {- 4 -} Path){-caret-}",

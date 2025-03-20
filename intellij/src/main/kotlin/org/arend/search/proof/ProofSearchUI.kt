@@ -38,7 +38,6 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.stubs.StubIndex
 import com.intellij.psi.util.parentOfType
@@ -51,13 +50,11 @@ import com.intellij.ui.components.fields.ExtendableTextField
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.Alarm
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.concurrency.annotations.RequiresReadLock
 import com.intellij.util.ui.*
 import net.miginfocom.swing.MigLayout
 import org.arend.ArendIcons
 import org.arend.psi.ext.ArendDefinition
 import org.arend.psi.ArendFile
-import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ext.ArendCompositeElement
 import org.arend.psi.ext.PsiReferable
 import org.arend.psi.ext.ArendGroup
@@ -65,9 +62,6 @@ import org.arend.psi.ext.ReferableBase
 import org.arend.psi.navigate
 import org.arend.psi.stubs.index.ArendDefinitionIndex
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
-import org.arend.refactoring.LocationData
-import org.arend.refactoring.calculateReferenceName
-import org.arend.term.abs.Abstract
 import org.arend.util.ArendBundle
 import org.arend.util.isDetailedViewEditor
 import java.awt.BorderLayout
@@ -617,28 +611,14 @@ class ProofSearchUI(private val project: Project, private val caret: Caret?) : B
             val elementUnderCaret = file.findElementAt(offset)?.parentOfType<ArendCompositeElement>()
                 ?: file.findElementAt(offset - 1)?.parentOfType<ArendCompositeElement>()
                 ?: return
-            val (action, representation) = runReadAction {
-                val locationData = LocationData.createLocationData(definition)
-                val (importAction, resultName) = locationData?.let{ calculateReferenceName(it, file, elementUnderCaret) } ?: return@runReadAction null
-                val representation = getInsertableRepresentation(definition, resultName)
-                val resolveReferenceAction = ResolveReferenceAction(definition, locationData.getLongName(), importAction, null)
-                representation?.run(resolveReferenceAction::to)
+            val (representation, action) = runReadAction {
+                ResolveReferenceAction.getTargetName(definition, elementUnderCaret)
             } ?: return
             WriteCommandAction.runWriteCommandAction(project, "Inserting Selected Definition...", "__Arend__Proof_search_insert_selected_definition", {
-                mainDocument.insertString(offset, representation.text)
+                mainDocument.insertString(offset, representation)
                 PsiDocumentManager.getInstance(definition.project).commitDocument(mainDocument)
-                action.execute(mainEditor)
+                action?.execute()
             })
-        }
-
-        @RequiresReadLock
-        private fun getInsertableRepresentation(definition: ReferableBase<*>, resultName: List<String>) : PsiElement? {
-            val factory = ArendPsiFactory(definition.project)
-            val explicitArguments = when(definition) {
-                is Abstract.ParametersHolder -> definition.parameters.count { it.isExplicit }
-                else -> return null
-            }
-            return factory.createExpression("(${resultName.joinToString(".")}${" {?}".repeat(explicitArguments)})")
         }
     }
 }
