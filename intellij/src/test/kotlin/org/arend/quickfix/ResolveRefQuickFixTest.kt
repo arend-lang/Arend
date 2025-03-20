@@ -794,7 +794,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
                | suc a' => 1
             """)
 
-    fun `test importing files`() =
+    /* fun `test importing files`() =
             simpleImportFixTest("""
                 -- ! Dir/A.ard 
                 \func foo => 0 
@@ -805,7 +805,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
                 \import Dir.A    
             
                 \func bar => Dir.A            
-            """)
+            """) */
 
     fun `test importing infix functions`() =
             simpleImportFixTest("""

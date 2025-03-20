@@ -397,26 +397,27 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
       switch (element) {
         case Concrete.ClassField field -> {
           result = visitParameters(field.getParameters(), params);
-          if (result != null) return null;
+          if (result != null) return result;
           result = field.getResultType().accept(this, params);
-          if (result != null) return null;
+          if (result != null) return result;
           if (field.getResultTypeLevel() != null) {
             result = field.getResultTypeLevel().accept(this, params);
-            if (result != null) return null;
+            if (result != null) return result;
           }
           freeParameters(field.getParameters(), params);
         }
         case Concrete.ClassFieldImpl classField -> {
-          return visitClassFieldImpl(classField, params);
+          result = visitClassFieldImpl(classField, params);
+          if (result != null) return result;
         }
         case Concrete.OverriddenField field -> {
           result = visitParameters(field.getParameters(), params);
-          if (result != null) return null;
+          if (result != null) return result;
           result = field.getResultType().accept(this, params);
-          if (result != null) return null;
+          if (result != null) return result;
           if (field.getResultTypeLevel() != null) {
             result = field.getResultTypeLevel().accept(this, params);
-            if (result != null) return null;
+            if (result != null) return result;
           }
           freeParameters(field.getParameters(), params);
         }

@@ -3,6 +3,7 @@ package org.arend.formatting.block
 import com.intellij.formatting.*
 import com.intellij.lang.ASTNode
 import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbService
 import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
@@ -10,8 +11,15 @@ import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.TokenType
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings
 import org.arend.formatting.block.SimpleArendBlock.Companion.oneSpaceWrap
+import org.arend.psi.ArendFile
+import org.arend.psi.ancestor
+import org.arend.psi.ext.ArendDefinition
 import org.arend.psi.ext.ArendExpr
+import org.arend.server.ArendServerRequesterImpl
+import org.arend.server.ArendServerService
+import org.arend.server.ProgressReporter
 import org.arend.term.concrete.Concrete
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.util.appExprToConcrete
 import org.arend.util.getBounds
 
@@ -20,7 +28,25 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
     override fun buildChildren(): MutableList<Block> {
         val cExpr = runReadAction {
             val psi = node.psi
-            if (psi is ArendExpr && !DumbService.isDumb(psi.project)) appExprToConcrete(psi) else null
+            val project = psi.project
+            if (psi is ArendExpr && !DumbService.isDumb(project)) {
+                var definition = psi.ancestor<ArendDefinition<*>>()?.tcReferable
+                if (definition == null) {
+                    val arendServer = project.service<ArendServerService>().server
+                    val targetFile = psi.containingFile as? ArendFile
+                    val targetFileLocation = targetFile?.moduleLocation
+                    if (targetFileLocation != null) {
+                        val requester = ArendServerRequesterImpl(project)
+                        requester.doUpdateModule(arendServer, targetFileLocation, targetFile)
+                        //TODO: This operation may be slow
+                        arendServer.getCheckerFor(listOf(targetFileLocation)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+
+                        definition = psi.ancestor<ArendDefinition<*>>()?.tcReferable
+                    }
+                }
+
+                if (definition != null) appExprToConcrete(psi) else null
+            } else null
         }
         val children = myNode.getChildren(null).filter { it.elementType != TokenType.WHITE_SPACE }.toList()
 
@@ -84,7 +110,8 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
 
             if (fData is PsiElement) {
                 val f = aaeBlocks.filter{ it.textRange.contains(fData.node.textRange) }
-                if (f.size != 1) throw java.lang.IllegalStateException()
+                if (f.size != 1)
+                  throw java.lang.IllegalStateException()
                 val fBlock = createArendBlock(f.first(), null, null, if (isPrefix) Indent.getNoneIndent() else Indent.getNormalIndent())
                 if (!blocks.any { it.textRange.contains(fBlock.textRange) }) blocks.add(fBlock)
             }
@@ -117,6 +144,8 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
             blocks.sortBy { it.textRange.startOffset }
 
             return GroupBlock(settings, blocks, null, align, indent, this)
+        } else if (cExpr is Concrete.LamExpression) { // we are dealing with right sections
+            return GroupBlock(settings, aaeBlocks.map { createArendBlock(it, null, null, Indent.getNoneIndent()) }.toMutableList(), null, align, indent, this)
         } else if (cExprData is PsiElement) {
             var psi: PsiElement? = null
             for (aaeBlock in aaeBlocks) if (aaeBlock.textRange.contains(cExprData.node.textRange)) {
@@ -130,8 +159,7 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
             singletonSet.add(psi)
 
             return createArendBlock(psi.node, null, align, indent)
-        } else if (cExpr is Concrete.LamExpression) { // we are dealing with right sections
-            return GroupBlock(settings, aaeBlocks.map { createArendBlock(it, null, null, Indent.getNoneIndent()) }.toMutableList(), null, align, indent, this)
-        } else throw IllegalStateException()
+        }
+        else throw IllegalStateException()
     }
 }

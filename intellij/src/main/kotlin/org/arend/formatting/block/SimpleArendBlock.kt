@@ -144,8 +144,8 @@ class SimpleArendBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: 
                     c1et == LBRACE && (psi2 is ArendStat || child2 is DocCommentBlock || c2et == DOC_COMMENT)) oneCrlf
             else if ((nodePsi is ArendNsUsing || nodePsi is ArendStatCmd)) { /* Spacing rules for hiding/using refs in namespace commands */
                 when {
-                    (c1et == LPAREN && (c2et == REF_IDENTIFIER || c2et == NS_ID || c2et == RPAREN)) ||
-                            ((c1et == REF_IDENTIFIER || c1et == NS_ID) && (c2et == COMMA || c2et == RPAREN)) -> noWhitespace
+                    (c1et == LPAREN && (c2et == REF_IDENTIFIER || c2et == NS_ID || c2et == RPAREN || c2et == SC_ID)) ||
+                            ((c1et == REF_IDENTIFIER || c1et == NS_ID || c1et == SC_ID) && (c2et == COMMA || c2et == RPAREN)) -> noWhitespace
                     c1et == COMMA ||
                             (c1et == LONG_NAME && c2et == NS_USING) ||
                             ((c1et == LONG_NAME || c1et == NS_USING) && c2et == HIDING_KW) ||
