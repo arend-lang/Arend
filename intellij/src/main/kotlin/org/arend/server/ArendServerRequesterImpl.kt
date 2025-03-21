@@ -61,8 +61,8 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
     private fun requestUpdate(server: ArendServer, modules: List<ModulePath>, library: String, inTests: Boolean) {
         for (module in modules) {
             val file = project.findInternalLibrary(library)?.findArendFile(module, inTests)
-            if (file != null) server.updateModule(file.modificationStamp, ModuleLocation(library, if (inTests) ModuleLocation.LocationKind.TEST else ModuleLocation.LocationKind.SOURCE, module)) {
-                ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE, this)
+            if (file != null) {
+                doUpdateModule(server, ModuleLocation(library, if (inTests) ModuleLocation.LocationKind.TEST else ModuleLocation.LocationKind.SOURCE, module), file)
             }
         }
     }
@@ -75,7 +75,7 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
     }
 
     fun doUpdateModule(server: ArendServer, module: ModuleLocation, file: ArendFile) = server.updateModule(file.modificationStamp, module) {
-      ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE, this)
+      ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE)
     }
 
     fun requestUpdate(server: ArendServer, library: String?, withTests: Boolean) {

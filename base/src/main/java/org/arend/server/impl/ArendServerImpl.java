@@ -25,6 +25,7 @@ import org.arend.server.modifier.RawImportRemover;
 import org.arend.server.modifier.RawModifier;
 import org.arend.server.modifier.RawSequenceModifier;
 import org.arend.source.error.LocationError;
+import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.DefinableMetaDefinition;
@@ -289,9 +290,35 @@ public class ArendServerImpl implements ArendServer {
           }
           resetReverseDependencies(module.getModulePath(), new HashSet<>());
 
+          GroupData newData = new GroupData(modificationStamp, group, prevData);
+          updateReferables(newData.getRawGroup(), module);
+
           myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
-          return new GroupData(modificationStamp, group, prevData);
+          return newData;
         });
+      }
+    });
+  }
+
+  private void updateReferables(ConcreteGroup group, ModuleLocation module) {
+    group.traverseGroup(subgroup -> {
+      if (subgroup.referable() instanceof TCDefReferable tcRef && tcRef.getData() instanceof AbstractReferable referable) {
+        myRequester.addReference(module, referable, tcRef);
+      }
+      if (subgroup.definition() instanceof Concrete.DataDefinition dataDef) {
+        for (Concrete.ConstructorClause clause : dataDef.getConstructorClauses()) {
+          for (Concrete.Constructor constructor : clause.getConstructors()) {
+            if (constructor.getData().getData() instanceof AbstractReferable referable) {
+              myRequester.addReference(module, referable, constructor.getData());
+            }
+          }
+        }
+      } else if (subgroup.definition() instanceof Concrete.ClassDefinition classDef) {
+        for (Concrete.ClassElement element : classDef.getElements()) {
+          if (element instanceof Concrete.ClassField field && field.getData().getData() instanceof AbstractReferable referable) {
+            myRequester.addReference(module, referable, field.getData());
+          }
+        }
       }
     });
   }

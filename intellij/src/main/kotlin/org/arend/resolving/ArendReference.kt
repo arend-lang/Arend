@@ -15,7 +15,6 @@ import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.psi.ext.ReferableBase
 import org.arend.refactoring.ArendNamesValidator
-import org.arend.server.ArendServerRequester
 import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractReferable
@@ -109,7 +108,7 @@ open class ArendReferenceImpl<T : ArendReferenceElement>(element: T, scopeContex
 
     override fun getVariants(): Array<Any> {
         val file = element.containingFile as? ArendFile ?: return emptyArray()
-        return file.project.service<ArendServerService>().server.getCompletionVariants(ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE, ArendServerRequester.TRIVIAL), element).mapNotNull {
+        return file.project.service<ArendServerService>().server.getCompletionVariants(ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE), element).mapNotNull {
             origElement -> createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false)
         }.toTypedArray()
     }
