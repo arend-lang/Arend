@@ -27,10 +27,12 @@ import org.arend.module.config.LibraryConfig
 import org.arend.naming.reference.DataModuleReferable
 import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.Referable
+import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.reference.UnresolvedReference
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.ArendGroup
 import org.arend.psi.ext.ArendReferenceElement
+import org.arend.psi.ext.ReferableBase
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendProjectSettings
 import org.arend.term.group.ConcreteGroup
@@ -133,7 +135,10 @@ fun Project.addGeneratedModule(module: ModuleLocation, group: ConcreteGroup) {
         file.generatedModuleLocation = module
         (group.referable as? DataModuleReferable)?.data = file
         groupMatch(group, file) { subgroup1, subgroup2 ->
-            (subgroup1.referable as? LocatedReferableImpl)?.data = subgroup2.referable
+            val ref2 = subgroup2.referable
+            (subgroup1.referable as? LocatedReferableImpl)?.data = ref2
+            val ref1 = subgroup1.referable
+            if (ref1 is TCDefReferable) (ref2 as? ReferableBase<*>)?.tcReferable = ref1
             val doc1 = (subgroup1 as? ConcreteGroup)?.description()
             val doc2 = (subgroup2 as? ArendGroup)?.description
             if (doc1?.isNull == false && doc2?.isNull == false) {

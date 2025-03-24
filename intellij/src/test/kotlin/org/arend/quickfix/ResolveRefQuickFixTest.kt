@@ -4,7 +4,6 @@ import com.intellij.openapi.command.WriteCommandAction
 import org.arend.ext.prettyprinting.doc.DocFactory.nullDoc
 import org.arend.refactoring.ImportFileAction
 import org.arend.refactoring.doAddIdToUsing
-import org.arend.refactoring.doRemoveRefFromStatCmd
 import org.arend.util.ArendBundle
 import org.intellij.lang.annotations.Language
 
@@ -850,7 +849,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
             \func d => {-caret-}foo
         """,
         """
-            \import Foo
+            \import Meta
 
             \func d => foo
         """)
