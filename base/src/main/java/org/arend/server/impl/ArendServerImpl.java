@@ -228,6 +228,8 @@ public class ArendServerImpl implements ArendServer {
         typingInfo = null;
       }
 
+      updateReferables(group, module);
+
       myLogger.info(() -> "Added a read-only module '" + mod + "'");
       return new GroupData(group, typingInfo);
     });
