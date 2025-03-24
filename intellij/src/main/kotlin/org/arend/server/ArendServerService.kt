@@ -35,4 +35,11 @@ class ArendServerService(val project: Project) : Disposable {
     }
 
     override fun dispose() {}
+
+    fun getLibraries(libraryName: String?, withSelf: Boolean, withPrelude: Boolean): List<ArendLibrary> {
+        val library = (if (libraryName != null) server.getLibrary(libraryName) else null) ?: return emptyList()
+        val dependencies = library.libraryDependencies.mapNotNull { server.getLibrary(it) }
+        val prelude = if (withPrelude) listOfNotNull(server.getLibrary(Prelude.LIBRARY_NAME)) else emptyList()
+        return (if (withSelf) listOf(library) else emptyList()) + dependencies + prelude
+    }
 }

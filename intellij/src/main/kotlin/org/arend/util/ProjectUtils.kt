@@ -25,7 +25,7 @@ import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.ExternalLibraryConfig
 import org.arend.module.config.LibraryConfig
 import org.arend.naming.reference.DataModuleReferable
-import org.arend.naming.reference.MetaReferable
+import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.Referable
 import org.arend.naming.reference.UnresolvedReference
 import org.arend.psi.ArendFile
@@ -124,7 +124,7 @@ private fun groupMatch(group1: ConcreteGroup, group2: ArendGroup, function: (Con
     return true
 }
 
-private fun Project.addGeneratedModule(module: ModuleLocation, group: ConcreteGroup) {
+fun Project.addGeneratedModule(module: ModuleLocation, group: ConcreteGroup) {
     val builder = StringBuilder()
     PrettyPrintVisitor(builder, 0).printStatements(group.statements())
     runReadAction {
@@ -133,7 +133,7 @@ private fun Project.addGeneratedModule(module: ModuleLocation, group: ConcreteGr
         file.generatedModuleLocation = module
         (group.referable as? DataModuleReferable)?.data = file
         groupMatch(group, file) { subgroup1, subgroup2 ->
-            (subgroup1.referable as? MetaReferable)?.data = subgroup2.referable
+            (subgroup1.referable as? LocatedReferableImpl)?.data = subgroup2.referable
             val doc1 = (subgroup1 as? ConcreteGroup)?.description()
             val doc2 = (subgroup2 as? ArendGroup)?.description
             if (doc1?.isNull == false && doc2?.isNull == false) {

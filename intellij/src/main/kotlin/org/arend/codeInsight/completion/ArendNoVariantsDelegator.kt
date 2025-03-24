@@ -5,9 +5,11 @@ import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionResult
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.impl.BetterPrefixMatcher
+import com.intellij.openapi.components.service
 import com.intellij.psi.PsiElement
 import com.intellij.psi.stubs.StubIndex
 import com.intellij.util.Consumer
+import org.arend.ext.reference.DataContainer
 import org.arend.module.ModuleLocation
 import org.arend.naming.scope.ScopeFactory.isGlobalScopeVisible
 import org.arend.psi.*
@@ -18,6 +20,7 @@ import org.arend.psi.stubs.index.ArendGotoClassIndex
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.refactoring.isVisible
 import org.arend.resolving.ArendReferenceBase
+import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
 import org.arend.term.group.AccessModifier
 
@@ -107,18 +110,18 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                 }
             }
 
-            /* TODO[server2]
-            (file as? ArendFile)?.libraryConfig?.forAvailableConfigs {
-                for (entry in it.additionalNames.entries) {
-                    consumer.invoke(entry.key, entry.value)
+            val generatedMap = HashMap<String, ArrayList<PsiLocatedReferable>>()
+            for (library in project.service<ArendServerService>().getLibraries(file.libraryName, withSelf = true, withPrelude = true)) {
+                for (entry in library.generatedNames.entries) {
+                    val psiRef = (entry.value as? DataContainer)?.data
+                    if (psiRef is PsiLocatedReferable) {
+                        generatedMap.computeIfAbsent(entry.key) { ArrayList() }.add(psiRef)
+                    }
                 }
-                null
             }
-
-            if (isInsideValidExpr) for (entry in project.service<TypeCheckingService>().additionalReferables.entries) {
+            for (entry in generatedMap.entries) {
                 consumer.invoke(entry.key, entry.value)
             }
-            */
 
             StubIndex.getInstance().processAllKeys(if (isInsideValidNsCmd) ArendFileIndex.KEY else ArendDefinitionIndex.KEY, project) { name ->
                 consumer.invoke(name, null)

@@ -14,7 +14,7 @@ import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.stubs.ArendNamedStub
 import org.arend.term.group.AccessModifier
 
-abstract class ReferableBase<StubT> : PsiStubbedReferableImpl<StubT>, PsiLocatedReferable
+abstract class ReferableBase<StubT> : PsiStubbedReferableImpl<StubT>
 where StubT : ArendNamedStub, StubT : StubElement<*> {
     constructor(node: ASTNode) : super(node)
 

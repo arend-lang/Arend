@@ -1,6 +1,7 @@
 package org.arend.typechecking.runner
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -60,7 +61,9 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
                 }
 
                 if (updated && checkerFactory == null) {
-                    DaemonCodeAnalyzer.getInstance(project).restart()
+                    if (!ApplicationManager.getApplication().isUnitTestMode) {
+                        DaemonCodeAnalyzer.getInstance(project).restart()
+                    }
                     withContext(Dispatchers.EDT) {
                         project.service<ArendMessagesService>().update()
                         if (edtAction != null) edtAction()

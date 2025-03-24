@@ -49,7 +49,7 @@ class ArendStartupActivity : ProjectActivity {
         })
         */
 
-        DumbService.getInstance(project).queueTask(object : DumbModeTask() {
+        if (!ApplicationManager.getApplication().isUnitTestMode) DumbService.getInstance(project).queueTask(object : DumbModeTask() {
             override fun performInDumbMode(indicator: ProgressIndicator) {
                 ApplicationManager.getApplication().executeOnPooledThread {
                     val modules = project.arendModules

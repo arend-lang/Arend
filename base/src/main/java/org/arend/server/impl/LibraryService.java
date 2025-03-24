@@ -30,6 +30,7 @@ public class LibraryService {
 
   public LibraryService(ArendServerImpl server) {
     myServer = server;
+    myLibraries.put(Prelude.LIBRARY_NAME, new ArendLibraryImpl(Prelude.LIBRARY_NAME, true, 0, Collections.emptyList(), null, null));
     server.copyLogger(myLogger);
   }
 
@@ -52,7 +53,7 @@ public class LibraryService {
           (isExternal ? myExternalClassLoader : myInternalClassLoader).addDelegate(libName, delegate);
         }
 
-        ArendLibraryImpl result = new ArendLibraryImpl(libName, isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, errorReporter));
+        ArendLibraryImpl result = new ArendLibraryImpl(libName, isExternal, modificationStamp, library.getLibraryDependencies(), loadArendExtension(delegate, name, isExternal, library, errorReporter), library.getGeneratedNames());
         newLibrary[0] = result;
 
         myLogger.info(() -> "Library '" + libName + "' is updated");

@@ -2,10 +2,13 @@ package org.arend.server;
 
 import org.arend.ext.ui.ArendUI;
 import org.arend.library.classLoader.ClassLoaderDelegate;
+import org.arend.naming.reference.LocatedReferable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public interface ArendLibrary {
   /**
@@ -42,4 +45,8 @@ public interface ArendLibrary {
   @Nullable String getExtensionMainClass();
 
   @Nullable ArendUI getArendUI();
+
+  default @NotNull Map<String, LocatedReferable> getGeneratedNames() {
+    return Collections.emptyMap();
+  }
 }

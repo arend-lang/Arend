@@ -24,11 +24,7 @@ import org.arend.ext.module.ModulePath
 import org.arend.ext.prettyprinting.doc.DocFactory
 import org.arend.ext.reference.Precedence
 import org.arend.extImpl.DefinitionContributorImpl
-import org.arend.module.AREND_LIB
-import org.arend.module.ArendModuleType
-import org.arend.module.ModuleLocation
-import org.arend.module.ModuleSynchronizer
-import org.arend.module.ReloadLibrariesService
+import org.arend.module.*
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.ExternalLibraryConfig
 import org.arend.naming.reference.FullModuleReferable
@@ -40,7 +36,9 @@ import org.arend.settings.ArendSettings
 import org.arend.term.group.AccessModifier
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.util.FileUtils
+import org.arend.util.addGeneratedModule
 import org.arend.util.findExternalLibrary
+import org.arend.util.register
 import org.intellij.lang.annotations.Language
 
 abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
@@ -58,7 +56,8 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
 
         service<ArendSettings>().isBackgroundTypechecking = true
 
-        project?.service<ReloadLibrariesService>()?.doReload(true)
+        project.service<ReloadLibrariesService>().doReload(true)
+        module.register()
 
         VimPlugin.setEnabled(false)
     }
@@ -197,14 +196,15 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
                     .split("(?=[A-Z])".toRegex())
                     .joinToString("_", transform = String::lowercase)
         }
+    }
 
-        fun addGeneratedModules(library: String, filler: DefinitionContributor.() -> Unit) {
-            filler(DefinitionContributorImpl(library))
-            /* TODO[server2]
-            for (entry in moduleScopeProvider.registeredEntries) {
-                library.addGeneratedModule(entry.key, entry.value)
-            }
-            */
+    protected fun addGeneratedModules(library: String, filler: DefinitionContributor.() -> Unit) {
+        val contributor = DefinitionContributorImpl(library)
+        filler(contributor)
+        val server = project.service<ArendServerService>().server
+        for ((key, value) in contributor.modules.entries) {
+            server.addReadOnlyModule(key, value)
+            project.addGeneratedModule(key, value)
         }
     }
 

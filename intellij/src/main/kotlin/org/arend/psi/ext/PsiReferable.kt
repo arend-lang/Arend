@@ -70,7 +70,7 @@ abstract class PsiReferableImpl(node: ASTNode) : ArendCompositeElementImpl(node)
     override fun getPresentation(): ItemPresentation = getPresentation(this)
 }
 
-abstract class PsiStubbedReferableImpl<StubT> : ArendStubbedElementImpl<StubT>, PsiReferable, Abstract.AbstractLocatedReferable
+abstract class PsiStubbedReferableImpl<StubT> : ArendStubbedElementImpl<StubT>, PsiLocatedReferable
 where StubT : ArendNamedStub, StubT : StubElement<*> {
 
     constructor(node: ASTNode) : super(node)

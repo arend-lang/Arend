@@ -302,8 +302,18 @@ public class ArendServerImpl implements ArendServer {
     });
   }
 
+  private void addGeneratedName(ArendLibraryImpl library, LocatedReferable referable) {
+    if (library == null) return;
+    library.putGeneratedName(referable.getRefName(), referable);
+    if (referable.getAliasName() != null) {
+      library.putGeneratedName(referable.getAliasName(), referable);
+    }
+  }
+
   private void updateReferables(ConcreteGroup group, ModuleLocation module) {
+    ArendLibraryImpl library = myLibraryService.getLibrary(module.getLibraryName());
     group.traverseGroup(subgroup -> {
+      addGeneratedName(library, subgroup.referable());
       if (subgroup.referable() instanceof TCDefReferable tcRef && tcRef.getData() instanceof AbstractReferable referable) {
         myRequester.addReference(module, referable, tcRef);
       }
@@ -311,6 +321,7 @@ public class ArendServerImpl implements ArendServer {
         for (Concrete.ConstructorClause clause : dataDef.getConstructorClauses()) {
           for (Concrete.Constructor constructor : clause.getConstructors()) {
             if (constructor.getData().getData() instanceof AbstractReferable referable) {
+              addGeneratedName(library, constructor.getData());
               myRequester.addReference(module, referable, constructor.getData());
             }
           }
@@ -318,6 +329,7 @@ public class ArendServerImpl implements ArendServer {
       } else if (subgroup.definition() instanceof Concrete.ClassDefinition classDef) {
         for (Concrete.ClassElement element : classDef.getElements()) {
           if (element instanceof Concrete.ClassField field && field.getData().getData() instanceof AbstractReferable referable) {
+            addGeneratedName(library, field.getData());
             myRequester.addReference(module, referable, field.getData());
           }
         }
