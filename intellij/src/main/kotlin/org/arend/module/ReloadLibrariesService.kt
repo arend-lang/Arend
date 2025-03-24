@@ -28,17 +28,7 @@ class ReloadLibrariesService(private val project: Project, private val coroutine
                 if (refresh) {
                     refreshLibrariesDirectory(project.service<ArendProjectSettings>().librariesRoot)
                 }
-
-                val server = project.service<ArendServerService>().server
-                val libraries = server.libraries.filter { !onlyInternal || server.getLibrary(it)?.isExternalLibrary == false }
-                runReadAction {
-                    server.unloadLibraries(onlyInternal)
-                    for (libraryName in libraries) {
-                        val library = project.findLibrary(libraryName) ?: continue
-                        server.updateLibrary(library, NotificationErrorReporter(project))
-                    }
-                }
-
+                doReload(onlyInternal)
                 DaemonCodeAnalyzer.getInstance(project).restart()
                 withContext(Dispatchers.EDT) {
                     project.service<ArendMessagesService>().update()
@@ -46,4 +36,16 @@ class ReloadLibrariesService(private val project: Project, private val coroutine
             }
         }
     }
+
+  fun doReload(onlyInternal: Boolean) {
+    val server = project.service<ArendServerService>().server
+    val libraries = server.libraries.filter { !onlyInternal || server.getLibrary(it)?.isExternalLibrary == false }
+    runReadAction {
+      server.unloadLibraries(onlyInternal)
+      for (libraryName in libraries) {
+        val library = project.findLibrary(libraryName) ?: continue
+        server.updateLibrary(library, NotificationErrorReporter(project))
+      }
+    }
+  }
 }

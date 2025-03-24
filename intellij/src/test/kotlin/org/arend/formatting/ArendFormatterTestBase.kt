@@ -11,7 +11,7 @@ abstract class ArendFormatterTestBase : ArendTestBase() {
         InlineFile(c).withCaret()
         for (i in 1..count) myFixture.type('\n')
 
-        testCaret(resultingContent)
+        doTestCaret(resultingContent)
     }
 
     protected fun checkReformat(@Language("Arend") code: String, @Language("Arend") resultingContent: String = code) {

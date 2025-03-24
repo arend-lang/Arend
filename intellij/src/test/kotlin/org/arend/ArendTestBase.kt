@@ -31,7 +31,6 @@ import org.arend.module.ModuleSynchronizer
 import org.arend.module.ReloadLibrariesService
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.ExternalLibraryConfig
-import org.arend.module.scopeprovider.SimpleModuleScopeProvider
 import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.MetaReferable
 import org.arend.psi.parentOfType
@@ -59,8 +58,7 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
 
         service<ArendSettings>().isBackgroundTypechecking = true
 
-        project?.service<ReloadLibrariesService>()?.reload(true)
-        // TODO[server2]: library.setArendExtension(null)
+        project?.service<ReloadLibrariesService>()?.doReload(true)
 
         VimPlugin.setEnabled(false)
     }
@@ -219,7 +217,7 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
         return testProject
     }
 
-    fun testCaret(resultingContent: String) {
+    fun doTestCaret(resultingContent: String) {
         val rC = resultingContent.trimIndent()
         val index = rC.indexOf(CARET_MARKER)
         if (index != -1) {

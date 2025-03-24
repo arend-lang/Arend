@@ -106,7 +106,9 @@ fun Module.register() {
 
     ApplicationManager.getApplication().getService(ArendExtensionChangeService::class.java).initializeModule(config)
     config.isInitialized = true
-    DaemonCodeAnalyzer.getInstance(project).restart()
+    if (!ApplicationManager.getApplication().isUnitTestMode) {
+        DaemonCodeAnalyzer.getInstance(project).restart()
+    }
 }
 
 private fun groupMatch(group1: ConcreteGroup, group2: ArendGroup, function: (ConcreteGroup, ArendGroup) -> Boolean): Boolean {

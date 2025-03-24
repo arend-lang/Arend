@@ -42,7 +42,7 @@ abstract class QuickFixTestBase : ArendTestBase() {
 
     protected fun checkQuickFix(fixName: String, resultingContent: String) {
         myFixture.launchAction(myFixture.findSingleIntention(fixName))
-        testCaret(resultingContent)
+        doTestCaret(resultingContent)
     }
 
     protected fun simpleQuickFixTest(fixName: String, contents: String, resultingContent: String) {
