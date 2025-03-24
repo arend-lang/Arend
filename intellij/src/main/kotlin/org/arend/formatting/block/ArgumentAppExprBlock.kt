@@ -2,6 +2,7 @@ package org.arend.formatting.block
 
 import com.intellij.formatting.*
 import com.intellij.lang.ASTNode
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbService
@@ -113,7 +114,8 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
                 if (f.size != 1)
                   throw java.lang.IllegalStateException()
                 val fBlock = createArendBlock(f.first(), null, null, if (isPrefix) Indent.getNoneIndent() else Indent.getNormalIndent())
-                if (!blocks.any { it.textRange.contains(fBlock.textRange) }) blocks.add(fBlock)
+                if (!blocks.any { it.textRange.contains(fBlock.textRange) })
+                    blocks.add(fBlock)
             }
 
             blocks.sortBy { it.textRange.startOffset }
@@ -142,6 +144,14 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
             }
 
             blocks.sortBy { it.textRange.startOffset }
+
+            // Verify that blocks do not intersect
+            var segmentEnd = -1
+            for (block in blocks) {
+                if (block.textRange.endOffset <= segmentEnd)
+                    throw AssertionError("Blocks intersect")
+                segmentEnd = block.textRange.endOffset
+            }
 
             return GroupBlock(settings, blocks, null, align, indent, this)
         } else if (cExpr is Concrete.LamExpression) { // we are dealing with right sections

@@ -915,4 +915,18 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
                
                \func fubar => foo
         """)
+
+    fun testFormatter() = simpleImportFixTest("""
+               -- ! Bar.ard
+               \func \infixr 9 *> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a'' \elim q | idp => p
+
+               \func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' => path (\lam i => f (p @ i))
+       
+               -- ! Main.ard
+               \func foo {A : \Type} (f : A -> A) (h : \Pi (a : A) -> f a = a) (a : A) => pmap{-caret-} (h (f a) *>)
+         """, """
+               \import Bar
+
+               \func foo {A : \Type} (f : A -> A) (h : \Pi (a : A) -> f a = a) (a : A) => pmap{-caret-} (h (f a) *>)
+         """)
 }
