@@ -624,13 +624,6 @@ public class ArendServerImpl implements ArendServer {
       currentScopeMap.put(referable, referable.getRefName());
     }
 
-    Set<LocatedReferable> anchorAncestors = new HashSet<>();
-    LocatedReferable locatedReferable = anchor.parent();
-    do {
-      anchorAncestors.add(locatedReferable);
-      locatedReferable = locatedReferable.getLocatedReferableParent();
-    } while (locatedReferable != null);
-
     HashMap<ConcreteNamespaceCommand, @Nullable HashSet<String>> itemsToAdd = new HashMap<>();
     HashMap<ModuleLocation, @Nullable HashSet<String>> importsToAdd = new HashMap<>();
 
@@ -644,22 +637,17 @@ public class ArendServerImpl implements ArendServer {
       }
 
       AtomicReference<ConcreteNamespaceCommand> namespaceCommand = new AtomicReference<>();
-      AtomicReference<Boolean> preludeImportedManually = new AtomicReference<>(false); //TODO:
 
       currentFile.traverseGroup(subgroup -> subgroup.statements().forEach(statement -> {
         ConcreteNamespaceCommand command = statement.command();
         if (command != null && command.isImport()) {
-          Boolean isPrelude = Prelude.MODULE_PATH.toList().equals(command.module().getPath());
+          boolean isPrelude = Prelude.MODULE_PATH.toList().equals(command.module().getPath());
 
           ModuleLocation commandTarget = isPrelude? Prelude.MODULE_LOCATION : findDependency(new ModulePath(command.module().getPath()),
             anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
 
           if (commandTarget.equals(referable.getLocation())) {
             namespaceCommand.set(command);
-          }
-
-          if (isPrelude) {
-            preludeImportedManually.set(true);
           }
         }
       }));
@@ -671,7 +659,7 @@ public class ArendServerImpl implements ArendServer {
       if (namespaceCommand.get() != null || anchorModule.equals(targetModuleLocation)) {
         LocatedReferable currReferable;
         LocatedReferable parent = referable;
-        Boolean foundNameInScope = false;
+        boolean foundNameInScope = false;
         String contextName;
 
         do {
@@ -684,11 +672,11 @@ public class ArendServerImpl implements ArendServer {
             if (resolveResult instanceof RedirectingReferable redirecting) resolveResult = redirecting.getOriginalReferable();
 
             if (resolveResult == currReferable) {
-              calculatedName.add(0, contextName);
+              calculatedName.addFirst(contextName);
               foundNameInScope = true;
               break;
             } else if (currReferable.getAliasName() != null && currentScope.resolveName(currReferable.getAliasName()) == currReferable) {
-              calculatedName.add(0, currReferable.getAliasName());
+              calculatedName.addFirst(currReferable.getAliasName());
               foundNameInScope = true;
               break;
             }
@@ -700,8 +688,8 @@ public class ArendServerImpl implements ArendServer {
             parent = parent.getLocatedReferableParent();
           }
 
-          calculatedName.add(0, currReferable.getRefName());
-        } while (!(parent instanceof ModuleReferable));
+          calculatedName.addFirst(currReferable.getRefName());
+        } while (parent != null && !(parent instanceof ModuleReferable));
 
         final LocatedReferable topLevelReferable = currReferable;
         boolean topLevelReferableIsProtected = topLevelReferable.getAccessModifier() == AccessModifier.PROTECTED;
@@ -710,7 +698,7 @@ public class ArendServerImpl implements ArendServer {
 
         boolean scopeObstructed = !foundNameInScope && currentScope.resolveName(contextName) != null;
 
-        if (scopeObstructed) {
+        if (scopeObstructed && targetModuleLocation != null) {
           calculatedName.addAll(0, targetModuleLocation.getModulePath().toList());
         }
 
@@ -733,8 +721,8 @@ public class ArendServerImpl implements ArendServer {
           currReferable = parent;
 
           if (currReferable.getAliasName() != null)
-            calculatedName.add(0, currReferable.getAliasName()); else
-              calculatedName.add(0, currReferable.getRefName());
+            calculatedName.addFirst(currReferable.getAliasName()); else
+              calculatedName.addFirst(currReferable.getRefName());
 
           parent = currReferable.getLocatedReferableParent();
 
@@ -750,11 +738,11 @@ public class ArendServerImpl implements ArendServer {
         boolean topLevelReferableIsProtected = currReferable.getAccessModifier() == AccessModifier.PROTECTED;
         boolean scopeObstructed = referableInScope != null && referableInScope != currReferable;
 
-        if (scopeObstructed) {
+        if (scopeObstructed && targetModuleLocation != null) {
           calculatedName.addAll(0, targetModuleLocation.getModulePath().toList());
         }
         if (itemsToAdd.containsKey(namespaceCommand.get())) {
-          HashSet<String> individualImports = itemsToAdd.get(targetModuleLocation);
+          HashSet<String> individualImports = itemsToAdd.get(namespaceCommand.get());
           if (individualImports != null) individualImports.add(topLevelName);
         } else if (importsToAdd.containsKey(targetModuleLocation)) {
           HashSet<String> individualImports = importsToAdd.get(targetModuleLocation);
@@ -794,10 +782,10 @@ public class ArendServerImpl implements ArendServer {
     }
 
     for (Map.Entry<ModuleLocation, HashSet<String>> entry : importsToAdd.entrySet()) if (!entry.getKey().equals(anchorModule)) {
-      ArrayList<ConcreteNamespaceCommand.NameRenaming> renamings = new ArrayList<>();
+      ArrayList<ConcreteNamespaceCommand.NameRenaming> renamings;
       HashSet<String> individualImports = entry.getValue();
-      if (individualImports != null) renamings.addAll(individualImports.stream().map(name ->
-        new ConcreteNamespaceCommand.NameRenaming(null, Scope.ScopeContext.STATIC, new NamedUnresolvedReference(null, name), null, null)).toList());
+      if (individualImports != null) renamings = new ArrayList<>(individualImports.stream().map(name ->
+              new ConcreteNamespaceCommand.NameRenaming(null, Scope.ScopeContext.STATIC, new NamedUnresolvedReference(null, name), null, null)).toList());
       else renamings = null;
 
       if (renamings != null) renamings.sort(Comparator.comparing(nameRenaming -> nameRenaming.reference().getRefName()));
