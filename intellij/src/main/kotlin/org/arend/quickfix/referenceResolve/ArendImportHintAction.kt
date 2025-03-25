@@ -20,18 +20,16 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.util.ThreeState
-import com.intellij.util.containers.addIfNotNull
 import org.arend.ext.reference.DataContainer
 import org.arend.naming.scope.ScopeFactory
 import org.arend.psi.ArendFile
 import org.arend.psi.ArendFileScope
 import org.arend.psi.ext.*
 import org.arend.psi.stubs.index.ArendDefinitionIndex
-import org.arend.psi.stubs.index.ArendFileIndex
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendSettings
 import org.arend.util.ArendBundle
-import org.arend.util.FileUtils
+import org.jetbrains.kotlin.utils.addIfNotNull
 
 enum class Result { POPUP_SHOWN, CLASS_AUTO_IMPORTED, POPUP_NOT_SHOWN }
 
@@ -157,16 +155,16 @@ class ArendImportHintAction(private val referenceElement: ArendReferenceElement)
         private fun kindMatches(target: PsiLocatedReferable, element: ArendReferenceElement) : Boolean =
             element.parent !is ArendPattern || (target as? ReferableBase<*>)?.tcReferable?.kind?.isConstructor == true
 
-        private fun getStubElementSet(project: Project, refElement: ArendReferenceElement, file: PsiFile?): List<PsiLocatedReferable> {
+        private fun getStubElementSet(project: Project, refElement: ArendReferenceElement, file: PsiFile?): Set<PsiLocatedReferable> {
             val name = refElement.referenceName
 
-            val libRefs = ArrayList<PsiLocatedReferable>()
+            val result = HashSet<PsiLocatedReferable>()
             for (library in project.service<ArendServerService>().getLibraries((file as? ArendFile)?.libraryName, withSelf = true, withPrelude = true)) {
-                libRefs.addIfNotNull((library.generatedNames[name] as? DataContainer)?.data as? PsiLocatedReferable)
+                result.addIfNotNull((library.generatedNames[name] as? DataContainer)?.data as? PsiLocatedReferable)
             }
-            val definitions = StubIndex.getElements(ArendDefinitionIndex.KEY, name, project, ArendFileScope(project), PsiReferable::class.java).filterIsInstance<ReferableBase<*>>().toList()
-            val files = StubIndex.getElements(ArendFileIndex.KEY, name + FileUtils.EXTENSION, project, ArendFileScope(project), ArendFile::class.java).toList()
-            return definitions + files + libRefs
+
+            result.addAll(StubIndex.getElements(ArendDefinitionIndex.KEY, name, project, ArendFileScope(project), PsiReferable::class.java).filterIsInstance<ReferableBase<*>>())
+            return result
         }
 
         fun importQuickFixAllowed(referenceElement: ArendReferenceElement) = when (referenceElement) {

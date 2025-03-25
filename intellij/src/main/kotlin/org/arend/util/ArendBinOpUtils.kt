@@ -19,9 +19,11 @@ import org.arend.psi.ext.ArendExpr
 import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.ConcreteBuilder
+import org.arend.term.concrete.BaseConcreteExpressionVisitor
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.Concrete.NumberPattern
 import org.arend.term.concrete.SearchConcreteVisitor
+import org.arend.term.concrete.SubstConcreteVisitor
 
 fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
     val definition = appExpr.ancestor<ArendDefinition<*>>()?.tcReferable ?: return null
@@ -30,6 +32,31 @@ fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
         override fun checkSourceNode(sourceNode: Concrete.SourceNode, params: Any?): Concrete.SourceNode? =
             if (sourceNode.data == appExpr) sourceNode else null
     }, null) as? Concrete.Expression
+}
+
+/**
+ * Converts an `ArendExpr` expression into a `Concrete.Expression` representation.
+ * The conversion replaces every non-top-level ArendArgumentAppExpr with HoleExpression.
+ *
+ * @param appExpr The `ArendExpr` instance to be converted.
+ * @return A `Concrete.Expression` instance representing the converted expression,
+ *         or `null` if the conversion fails.
+ */
+fun appExprToConcreteOnlyTopLevel(appExpr: ArendExpr): Concrete.Expression? {
+    val concrete = appExprToConcrete(appExpr)
+    val concreteCopy = concrete?.accept(SubstConcreteVisitor(HashMap(), null), null)
+    concreteCopy?.accept(object : BaseConcreteExpressionVisitor<Void>() {
+        override fun visitApp(
+            expr: Concrete.AppExpression?,
+            params: Void?
+        ): Concrete.Expression? {
+            return if (expr?.data is ArendArgumentAppExpr && expr.data != concreteCopy.data)
+                Concrete.HoleExpression(expr.data) else
+                super.visitApp(expr, params)
+        }
+    }, null)
+
+    return concreteCopy
 }
 
 fun patternToConcrete(unparsedPattern: ArendPattern, errorReporter: ErrorReporter = DummyErrorReporter.INSTANCE): Concrete.Pattern? {

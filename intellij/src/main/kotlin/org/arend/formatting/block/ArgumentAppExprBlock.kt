@@ -2,7 +2,6 @@ package org.arend.formatting.block
 
 import com.intellij.formatting.*
 import com.intellij.lang.ASTNode
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbService
@@ -21,7 +20,7 @@ import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
-import org.arend.util.appExprToConcrete
+import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getBounds
 
 class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: Wrap?, alignment: Alignment?, myIndent: Indent?, parentBlock: AbstractArendBlock?) :
@@ -46,7 +45,7 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
                     }
                 }
 
-                if (definition != null) appExprToConcrete(psi) else null
+                if (definition != null) appExprToConcreteOnlyTopLevel(psi) else null
             } else null
         }
         val children = myNode.getChildren(null).filter { it.elementType != TokenType.WHITE_SPACE }.toList()
