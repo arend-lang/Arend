@@ -14,49 +14,57 @@
 \class SubPseudoRing \extends SubPseudoSemiring, SubAddGroup {
   \override S : PseudoRing
 
-  \func IPseudoRing : PseudoRing \cowith
-    | PseudoSemiring => IPseudoSemiring
+  \func struct : PseudoRing \cowith
+    | PseudoSemiring => SubPseudoSemiring.struct
     | AbGroup => SubAddGroup.abStruct \this
 } \where {
   \func cStruct {R : PseudoCRing} (S : SubPseudoRing R) : PseudoCRing \cowith
-    | PseudoRing => S.IPseudoRing
+    | PseudoRing => S.struct
     | *-comm => ext *-comm
 }
 
 \class SubRing \extends SubPseudoRing, SubSemiring {
   \override S : Ring
 
-  \func IRing : Ring \cowith
-    | Semiring => ISemiring
+  \func struct : Ring \cowith
+    | Semiring => SubSemiring.struct
     | AbGroup => SubAddGroup.abStruct \this
 
-  \func corestrict {R : Ring} (f : RingHom R S) (p : \Pi (x : R) -> contains (f x)) : RingHom R IRing \cowith
+  \func corestrict {R : Ring} (f : RingHom R S) (p : \Pi (x : R) -> contains (f x)) : RingHom R struct \cowith
     | func x => (f x, p x)
     | func-+ => ext f.func-+
     | func-ide => ext f.func-ide
     | func-* => ext f.func-*
 
-  \func embed : RingHom IRing S \cowith
+  \func embed : RingHom struct S \cowith
     | func => __.1
     | func-+ => idp
     | func-ide => idp
     | func-* => idp
 } \where {
   \func cStruct {R : CRing} (S : SubRing R) : CRing \cowith
-    | Ring => S.IRing
+    | Ring => S.struct
     | PseudoCRing => SubPseudoRing.cStruct S
 
   \func max {R : Ring} : SubRing \cowith
     | SubSemiring => SubSemiring.max {R}
     | SubAddGroup => SubAddGroup.max
 
-  \lemma isContr {R : Ring} {S : SubRing R} (c : Contr R) : Contr S.IRing \cowith
-    | center => (c.center, rewrite (c.contraction 1) S.contains_ide)
+  \lemma isContr {R : Ring} {S : SubRing R} (c : Contr R) : Contr S.struct \cowith
+    | center => (c.center, rewrite (c.contraction 1) contains_ide)
     | contraction x => ext (c.contraction _)
 
   \lemma comm-isContr {R : CRing} {S : SubRing R} (c : Contr R) : Contr (cStruct S) \cowith
-    | center => (c.center, rewrite (c.contraction 1) S.contains_ide)
+    | center => (c.center, rewrite (c.contraction 1) contains_ide)
     | contraction x => ext (c.contraction _)
+}
+
+\class CSubRing \extends SubRing {
+  \override S : CRing
+
+  \func struct : CRing \cowith
+    | Ring => SubRing.struct
+    | *-comm => ext *-comm
 }
 
 \func ringHomImage (f : RingHom) : SubRing f.Cod \cowith

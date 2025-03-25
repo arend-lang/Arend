@@ -97,7 +97,7 @@
   => \lam (b, inP (g,ga)) =>
       \have (q,r,g=q*p+r,dr<n) => monicPolyDivision g p n dp dm
       \in inP (mkArray \lam j => polyCoef r j, (unfold,unfold) at ga $ ext $ inv ga *> rewrite (g=q*p+r,polyMapRingHom.func-+,polyEvalRingHom.func-+,polyMapRingHom.func-*,polyEvalRingHom.func-*,e,E.zro_*-right)
-            (zro-left *> polyEval_polyCoef (degree<_polyMap dr<n) *> pmap AddMonoid.BigSum (arrayExt \lam j => pmap2 (*) polyCoef_polyMap (inv SubMonoid.sub-pow)) *> inv SubAddMonoid.sub-BigSum))
+            (zro-left *> polyEval_polyCoef (degree<_polyMap dr<n) *> pmap AddMonoid.BigSum (arrayExt \lam j => pmap2 (*) polyCoef_polyMap (inv SubMonoid.struct_pow)) *> inv SubAddMonoid.struct_BigSum))
 
 \func isIntegral (f : RingHom) (x : f.Cod) : \Prop
   => ∃ (p : Poly f.Dom) (isMonic p) (polyEval (polyMap f p) x = 0)
@@ -113,21 +113,21 @@
                        (Sg : LModule.IsFinitelyGenerated {homLModule (S.corestrict f SR)}) (Sa : S a) : isIntegral f a \elim Sg
   | inP (l,Sg) => TruncP.map (module-monic l Sg) \lam d => (d.1, inP (_, d.2, d.3), d.4)
   \where
-    \lemma module-monic (l : Array S.IRing) (Sg : LModule.IsGenerated {homLModule (S.corestrict f SR)} l)
+    \lemma module-monic (l : Array S.struct) (Sg : LModule.IsGenerated {homLModule (S.corestrict f SR)} l)
       : ∃ (p : Poly R) (degree<= p l.len) (polyCoef p l.len = 1) (polyEval (polyMap f p) a = 0)
       => \let | (inP Sg') => FinSet.finiteAC \lam j => Sg (a * (l j).1, contains_* Sa (l j).2)
               | (inP d) => Sg (1,contains_ide)
               | A => mkMatrix (\lam i => (Sg' i).1)
          \in inP (charPoly A, charPoly-degree A, charPoly-monic A, pmap (polyEval __ a) (charPoly_map f A) *> eigen-root (matrix-map f A) (
               inP (mkMatrix \lam i _ => (l i).1,
-                   \lam x p => inv ide-right *> pmap (x *) (pmap __.1 d.2 *> S.sub-BigSum) *> E.BigSum-ldistr *> E.BigSum_zro (\lam i => equation {usingOnly (pmap (__ i 0) p)}),
-                   matrixExt \lam i _ => pmap __.1 (Sg' i).2 *> S.sub-BigSum)))
+                   \lam x p => inv ide-right *> pmap (x *) (pmap __.1 d.2 *> S.struct_BigSum) *> E.BigSum-ldistr *> E.BigSum_zro (\lam i => equation {usingOnly (pmap (__ i 0) p)}),
+                   matrixExt \lam i _ => pmap __.1 (Sg' i).2 *> S.struct_BigSum)))
 
 \func isIntegralExt (f : RingHom) : \Prop
   => \Pi (a : f.Cod) -> isIntegral f a
 
 \lemma finite-integralExt {R E : CRing} {f : RingHom R E} (gen : LModule.IsFinitelyGenerated {homLModule f}) : isIntegralExt f \elim gen
-  | inP gen => \lam a => module-integral f a SubRing.max (\lam _ => ()) (inP (map (__,()) gen.1, \lam x => TruncP.map (gen.2 x.1) \lam s => (s.1, ext (s.2 *> inv SubRing.max.sub-BigSum)))) ()
+  | inP gen => \lam a => module-integral f a SubRing.max (\lam _ => ()) (inP (map (__,()) gen.1, \lam x => TruncP.map (gen.2 x.1) \lam s => (s.1, ext (s.2 *> inv SubRing.max.struct_BigSum)))) ()
 
 \lemma integral-generated {R E : CRing} (f : RingHom R E) (a : E) (ai : isIntegral f a) : LModule.IsFinitelyGenerated {homLModule (polyImageHom f a)} \elim ai
   | inP (p, inP t, pc) => inP (_, monic-generated f a p t.1 t.2 t.3 pc)
@@ -161,7 +161,7 @@
   => integral_image-comp {_} {_} {_} {id f.Dom} f {a} $ integralExt-surj (id f.Dom) (\lam y => inP (y, idp)) a
 
 \lemma poly-integralExt {R : CRing} {I : Ideal (PolyAlgebra R)} {p : Poly R} (pm : isMonic p) (Ip : I p) : isIntegralExt (factorHom {I} ∘ polyHom)
-  => integralExt-finite-char {R} {FactorRing I} (in~ (padd 1 0) :: nil) (RingHom.isAlgebraGenerated-poly $ later \lam (in~ q) => inP (q, factorHom_polyMapEval)) 1 0
+  => integralExt-finite-char {R} {CFactorRing I} (in~ (padd 1 0) :: nil) (RingHom.isAlgebraGenerated-poly $ later \lam (in~ q) => inP (q, factorHom_polyMapEval)) 1 0
       \lam (0) => inP (p, pm, later $ factorHom_polyMapEval *> FactorRing.fequiv0 Ip)
 
 \lemma integralExt_polyDiv {R E : CRing} {f : RingHom R E} (fi : isIntegralExt f) {p : Poly E} (pm : isMonic p) : ∃ (q : Poly R) (isMonic q) (LDiv p (polyMap f q))
@@ -259,7 +259,7 @@
 
 -- | A map `R[x]/p -> R[a]` given by `[q]_~ |-> q(a)`.
 \func integral_factor {R E : CRing} (f : RingHom R E) (a : E) (p : Poly R) (e : polyEval (polyMap f p) a = 0)
-  : RingHom (FactorRing (Ideal.closure1 p)) (SubRing.cStruct (polyImage f a))
+  : RingHom (CFactorRing (Ideal.closure1 p)) (SubRing.cStruct (polyImage f a))
   => factor-lift (polyImageHomPoly f a) \lam {q} c => ext $ unfold \case Ideal.closure1-lem.1 c \with {
     | inP (d,q=pd) => rewrite (q=pd, func-* {polyMapEvalRingHom f a}) equation
   }

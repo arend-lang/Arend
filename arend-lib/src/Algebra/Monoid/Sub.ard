@@ -17,22 +17,22 @@
   \override S : Semigroup
   | contains_* {x y : S} : contains x -> contains y -> contains (x * y)
 
-  \func ISemigroup : Semigroup \cowith
-    | BaseSet => ISet
+  \func struct : Semigroup \cowith
+    | BaseSet => SubSet.struct
     | * x y => (x.1 * y.1, contains_* x.2 y.2)
     | *-assoc => ext *-assoc
 } \where {
   \func cStruct {A : CSemigroup} (S : SubSemigroup A) : CSemigroup \cowith
-    | Semigroup => S.ISemigroup
+    | Semigroup => S.struct
     | *-comm => ext *-comm
 }
 
 \class SubMonoid \extends SubPointed, SubSemigroup {
   \override S : Monoid
 
-  \func IMonoid : Monoid \cowith
-    | Pointed => IPointed
-    | Semigroup => ISemigroup
+  \func struct : Monoid \cowith
+    | Pointed => SubPointed.struct
+    | Semigroup => SubSemigroup.struct
     | ide-left => ext ide-left
     | ide-right => ext ide-right
 
@@ -40,17 +40,17 @@
     | 0 => contains_ide
     | suc n => contains_* (contains_pow s) s
 
-  \lemma sub-pow {x : IMonoid} {n : Nat} : (IMonoid.pow x n).1 = Monoid.pow x.1 n \elim n
+  \lemma struct_pow {x : struct} {n : Nat} : (struct.pow x n).1 = Monoid.pow x.1 n \elim n
     | 0 => idp
-    | suc n => pmap (`* x.1) sub-pow
+    | suc n => pmap (`* x.1) struct_pow
 
-  \func embedMonoid : MonoidHom IMonoid S \cowith
+  \func embed : MonoidHom struct S \cowith
     | func => __.1
     | func-ide => idp
     | func-* => idp
 } \where {
   \func cStruct {A : CMonoid} (S : SubMonoid A) : CMonoid \cowith
-    | Monoid => S.IMonoid
+    | Monoid => S.struct
     | CSemigroup => SubSemigroup.cStruct S
 
   \func max {A : Monoid} : SubMonoid \cowith
@@ -58,14 +58,14 @@
     | contains_* _ _ => ()
 
   \func closure {M : Monoid} (S : SubSet M) : SubMonoid M \cowith
-    | contains x => ∃ (n : Nat) (iterr apl n S x)
+    | contains x => ∃ (n : Nat) (contains {iterr apl n S} x)
     | contains_ide => inP (1, byRight (byLeft idp))
     | contains_* {x} {y} (inP (n,xr)) (inP (m,yr)) => inP (suc (n ∨ m), byRight (byRight (x, y, apl-inc join-left x xr, apl-inc join-right y yr, idp)))
     \where {
       \lemma ext {M : Monoid} (S : SubSet M) : S <= closure S
         => \lam x x<-S => inP (0, x<-S)
 
-      \lemma univ (S' : SubMonoid M) (p : S <= S') (x : M) (q : closure S x) : S' x \elim q
+      \lemma univ (S' : SubMonoid M) (p : S <= S') (x : M) (q : contains {closure S} x) : S' x \elim q
         | inP (0, x<-S) => p x x<-S
         | inP (suc n, byLeft x<-C) => univ S' p x (inP (n, x<-C))
         | inP (suc n, byRight (byLeft x=1)) => transport S' (inv x=1) S'.contains_ide
@@ -74,10 +74,10 @@
       \func apl {M : Monoid} (S : SubSet M) : SubSet M \cowith
         | contains x => S x || (x = 1) || (\Sigma (y z : M) (S y) (S z) (x = y * z))
 
-      \lemma apl-inc {n m : Nat} (q : n <= m) (x : M) (p : iterr apl n S x) : iterr apl m S x
+      \lemma apl-inc {n m : Nat} (q : n <= m) (x : M) (p : contains {iterr apl n S} x) : contains {iterr apl m S} x
         => rewriteI (<=_exists q) (alt n (m -' n) x p)
         \where
-          \lemma alt (n m : Nat) (x : M) (p : iterr apl n S x) : iterr apl (n + m) S x \elim m
+          \lemma alt (n m : Nat) (x : M) (p : contains {iterr apl n S} x) : contains {iterr apl (n + m) S} x \elim m
             | 0 => p
             | suc m => byLeft (alt n m x p)
     }
@@ -96,22 +96,25 @@
   \override S : AddMonoid
   | contains_+ {x y : S} : contains x -> contains y -> contains (x + y)
 
-  \func IAddMonoid : AddMonoid \cowith
-    | AddPointed => IAddPointed
+  \func struct : AddMonoid \cowith
+    | AddPointed => SubAddPointed.struct
     | + x y => (x.1 + y.1, contains_+ x.2 y.2)
     | zro-left => ext zro-left
     | zro-right => ext zro-right
     | +-assoc => ext +-assoc
 
-  \lemma sub-BigSum {l : Array IAddMonoid} : (IAddMonoid.BigSum l).1 = AddMonoid.BigSum (map __.1 l) \elim l
+  \lemma struct_BigSum {l : Array struct} : (struct.BigSum l).1 = AddMonoid.BigSum (map __.1 l) \elim l
     | nil => idp
-    | a :: l => pmap (a.1 +) sub-BigSum
+    | a :: l => pmap (a.1 +) struct_BigSum
 } \where {
   \func abStruct {A : AbMonoid} (S : SubAddMonoid A) : AbMonoid \cowith
-    | AddMonoid => S.IAddMonoid
+    | AddMonoid => S.struct
     | +-comm => ext +-comm
 
   \func max {A : AddMonoid} : SubAddMonoid \cowith
     | SubAddPointed => SubAddPointed.max {A}
     | contains_+ _ _ => ()
 }
+
+\func prod-Minkowski {S : Semigroup} (H1 H2 : SubSemigroup S) : SubSet S \cowith
+  | contains g => ∃ (h1 : H1.struct) (h2 : H2.struct) (g = h1.1 * h2.1)
