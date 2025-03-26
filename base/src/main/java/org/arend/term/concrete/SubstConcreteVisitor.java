@@ -228,7 +228,8 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   }
 
   private Concrete.TypedReferable visitTypedReferable(Concrete.TypedReferable asReferable) {
-    return asReferable == null ? null : new Concrete.TypedReferable(myData != null ? myData : asReferable.getData(), asReferable.referable, asReferable.type.accept(this, null));
+    var asReferableType = (asReferable != null && asReferable.type != null) ? asReferable.type.accept(this, null) : null;
+    return asReferable == null ? null : new Concrete.TypedReferable(myData != null ? myData : asReferable.getData(), asReferable.referable, asReferableType);
   }
 
   private @NotNull List<Concrete.Pattern> visitPatterns(List<Concrete.Pattern> patterns) {
@@ -242,7 +243,8 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
       return (T) new Concrete.ConstructorClause(myData != null ? myData : clause.getData(), visitPatterns(clause.getPatterns()), new ArrayList<>(conClause.getConstructors()));
     } else if (Concrete.FunctionClause.class.equals(clause.getClass())) {
       var funcClause = (Concrete.FunctionClause) clause;
-      return (T) new Concrete.FunctionClause(myData != null ? myData : funcClause.getData(), visitPatterns(funcClause.getPatterns()), funcClause.expression.accept(this, null));
+      var expression = (funcClause.expression != null) ? funcClause.expression.accept(this, null) : null;
+      return (T) new Concrete.FunctionClause(myData != null ? myData : funcClause.getData(), visitPatterns(funcClause.getPatterns()), expression);
     } else {
       throw new IllegalArgumentException("Unhandled clause: " + clause.getClass());
     }

@@ -1,5 +1,6 @@
 package org.arend.formatting.block
 
+import androidx.collection.emptyScatterSet
 import com.intellij.formatting.*
 import com.intellij.lang.ASTNode
 import com.intellij.openapi.application.runReadAction
@@ -95,17 +96,19 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
             var newAlign =  if (cExpr.arguments.size > 1) Alignment.createAlignment() else null
             val newIndent = if (isPrefix) Indent.getContinuationIndent() else Indent.getNoneIndent()
 
-            blocks.addAll(cExpr.arguments.asSequence().map {
-                val myBounds = getBounds(it.expression, aaeBlocks)!!
-                val aaeBlocksFiltered = aaeBlocks.filter { aaeBlock -> myBounds.contains(aaeBlock.textRange)  }.asSequence().sortedBy{ aaeBlock -> aaeBlock.startOffset }.toList()
+            blocks.addAll(cExpr.arguments.asSequence().mapNotNull {
+                val myBounds = getBounds(it.expression, aaeBlocks)
+                val aaeBlocksFiltered = aaeBlocks.filter { aaeBlock -> myBounds?.contains(aaeBlock.textRange) == true  }.asSequence().sortedBy{ aaeBlock -> aaeBlock.startOffset }.toList()
                 val first = isFirst(it)
-                var leadingWhitespace = aaeBlocksFiltered.first().psi.prevSibling
-                if (leadingWhitespace is PsiComment) leadingWhitespace = leadingWhitespace.prevSibling
-                val hasLf = leadingWhitespace is PsiWhiteSpace && leadingWhitespace.textContains('\n')
-                if (hasLf) newAlign = Alignment.createAlignment()
-                transform(it.expression, aaeBlocksFiltered,
+                if (aaeBlocksFiltered.isNotEmpty()) {
+                    var leadingWhitespace = aaeBlocksFiltered.first().psi.prevSibling
+                    if (leadingWhitespace is PsiComment) leadingWhitespace = leadingWhitespace.prevSibling
+                    val hasLf = leadingWhitespace is PsiWhiteSpace && leadingWhitespace.textContains('\n')
+                    if (hasLf) newAlign = Alignment.createAlignment()
+                    transform(it.expression, aaeBlocksFiltered,
                         if (!first) newAlign else null,
-                        if (!first) newIndent else Indent.getNoneIndent()) })
+                        if (!first) newIndent else Indent.getNoneIndent())
+                } else null })
 
 
             if (fData is PsiElement) {
@@ -144,13 +147,13 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
 
             blocks.sortBy { it.textRange.startOffset }
 
-            // Verify that blocks do not intersect
+            /*
             var segmentEnd = -1
             for (block in blocks) {
                 if (block.textRange.endOffset <= segmentEnd)
                     throw AssertionError("Blocks intersect")
                 segmentEnd = block.textRange.endOffset
-            }
+            }*/
 
             return GroupBlock(settings, blocks, null, align, indent, this)
         } else if (cExpr is Concrete.LamExpression) { // we are dealing with right sections

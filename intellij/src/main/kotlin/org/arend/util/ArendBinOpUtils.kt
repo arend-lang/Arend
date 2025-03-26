@@ -107,10 +107,11 @@ fun getBounds(cExpr: Concrete.SourceNode, aaeBlocks: List<ASTNode>, rangesMap: H
 
         if (fData is PsiElement) {
             val f = aaeBlocks.filter { it.textRange.contains(fData.textRange) }
-            if (f.size != 1) throw IllegalStateException()
-            val functionRange = f.first().textRange
-            elements.add(functionRange)
-            if (cExpr is Concrete.AppExpression) rangesMap?.put(cExpr.function, functionRange)
+            if (f.size == 1) { // f may be empty if neither of aaeBlocks corresponds
+                val functionRange = f.first().textRange
+                elements.add(functionRange)
+                if (cExpr is Concrete.AppExpression) rangesMap?.put(cExpr.function, functionRange)
+            }
         }
 
         val startOffset = elements.asSequence().map { it.startOffset }.minOrNull()
@@ -119,7 +120,8 @@ fun getBounds(cExpr: Concrete.SourceNode, aaeBlocks: List<ASTNode>, rangesMap: H
             result = TextRange.create(startOffset, endOffset)
         }
     } else if (cExprData is PsiElement) {
-        for (psi in aaeBlocks) if (psi.textRange.contains(cExprData.node.textRange)) {
+        for (psi in aaeBlocks)
+            if (psi.textRange.contains(cExprData.node.textRange)) {
             result = psi.textRange
             break
         }
