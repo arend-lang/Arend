@@ -11,6 +11,8 @@ import org.arend.term.concrete.Concrete
 class ArendBinOpUtilsTest : ArendTestBase() {
     private fun testParseBinOp(file: String, result: String) {
         InlineFile(file)
+        myFixture.checkHighlighting()
+
         val element = myFixture.findElementByText("test", PsiElement::class.java)
         val appExprPsi = element.parentOfType<ArendFunctionDefinition<*>>()?.body?.expr?.descendantOfType<ArendArgumentAppExpr>()!!
         val appExpr = appExprToConcrete(appExprPsi) as Concrete.AppExpression

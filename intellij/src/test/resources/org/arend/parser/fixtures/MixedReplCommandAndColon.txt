@@ -7,6 +7,5 @@ FILE
         ArendAtomFieldsAcc(ATOM_FIELDS_ACC)
           ArendAtom(ATOM)
             ArendLiteral(LITERAL)
-              ArendLongName(LONG_NAME)
-                ArendRefIdentifier(REF_IDENTIFIER)
-                  PsiElement(ID)('::')
+              ArendRefIdentifier(REF_IDENTIFIER)
+                PsiElement(ID)('::')

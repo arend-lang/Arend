@@ -11,8 +11,7 @@ import org.arend.IArendFile
 class ArendHighlightingPassFactory : BasePassFactory<IArendFile>(IArendFile::class.java), TextEditorHighlightingPassFactoryRegistrar {
     private var myPassId = -1
 
-    override fun registerHighlightingPassFactory(registrar: TextEditorHighlightingPassRegistrar, project: Project) {
-        myPassId = registrar.registerTextEditorHighlightingPass(this, null, null, false, -1)
+    override fun registerHighlightingPassFactory(registrar: TextEditorHighlightingPassRegistrar, project: Project) { myPassId = registrar.registerTextEditorHighlightingPass(this, null, null, false, -1)
         project.service<ArendPassFactoryService>().highlightingPassId = myPassId
     }
 
