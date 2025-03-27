@@ -114,12 +114,12 @@ private fun addIdToHiding(refs: List<ArendRefIdentifier>, startAnchor: PsiElemen
         if (ref.referenceName == name) return ref
     }
     val statCmd = factory.createFromText("\\import Foo \\hiding (bar, $name)")?.descendantOfType<ArendStatCmd>()
-    val ref = statCmd!!.hidings[1].refIdentifier
-    val comma = ref.findPrevSibling()!!
+    val scId = statCmd!!.hidings[1]
+    val comma = scId.findPrevSibling()!!
     if (needsComma) anchor = anchor.parent.addAfter(comma, anchor)
-    val insertedRef = anchor.parent.addAfter(ref, anchor) as ArendRefIdentifier
-    if (!needsComma && insertedRef.findNextSibling() is ArendRefIdentifier) anchor.parent.addAfter(comma, insertedRef)
-    return insertedRef
+    val insertedRef = anchor.parent.addAfter(scId, anchor) as ArendScId
+    if (!needsComma && insertedRef.findNextSibling() is ArendScId) anchor.parent.addAfter(comma, insertedRef)
+    return insertedRef.refIdentifier
 }
 
 fun doAddIdToHiding(statCmd: ArendStatCmd, idList: List<String>) : List<ArendRefIdentifier> {

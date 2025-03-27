@@ -18,7 +18,8 @@ class MisplacedImportQuickFix(private val misplacedStatCmdRef: SmartPsiElementPo
 
     override fun getFamilyName(): String = text
 
-    override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean = misplacedStatCmdRef.element != null
+    override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean =
+        misplacedStatCmdRef.element != null
 
     override fun getText(): String = ArendBundle.message("arend.import.fixMisplaced")
 

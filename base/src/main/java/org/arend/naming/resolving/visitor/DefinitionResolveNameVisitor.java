@@ -851,7 +851,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
           Referable ref = namespaces.get(j).refMap.get(entry.getKey());
           if (ref != null && !ref.equals(entry.getValue())) {
             ConcreteNamespaceCommand nsCmd = namespaces.get(j).command;
-            Object cause = nsCmd;
+            ConcreteNamespaceCommand.NameRenaming cause = null;
             for (ConcreteNamespaceCommand.NameRenaming renaming : nsCmd.renamings()) {
               String name = renaming.newName();
               if (entry.getKey().equals(name != null ? name : renaming.reference().getRefName())) {
@@ -859,7 +859,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
                 break;
               }
             }
-            myLocalErrorReporter.report(new DuplicateOpenedNameError(struct.context, ref, struct.command, cause));
+            myLocalErrorReporter.report(new DuplicateOpenedNameError(struct.context, ref, nsCmd, struct.command, cause));
             if (ref instanceof LocatedReferable) {
               referables.putIfAbsent(ref.getRefName(), (LocatedReferable) ref);
             }
@@ -891,7 +891,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         name = renaming.reference().getRefName();
       }
       if (defined.contains(name)) {
-        myLocalErrorReporter.report(new ExistingOpenedNameError(renaming));
+        myLocalErrorReporter.report(new ExistingOpenedNameError(cmd, renaming));
       }
     }
   }

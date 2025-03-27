@@ -8,8 +8,11 @@ import org.arend.term.group.ConcreteNamespaceCommand;
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class ExistingOpenedNameError extends NameResolverError {
-  public ExistingOpenedNameError(ConcreteNamespaceCommand.NameRenaming cause) {
+  public final ConcreteNamespaceCommand currentNamespaceCommand;
+
+  public ExistingOpenedNameError(ConcreteNamespaceCommand cmd, ConcreteNamespaceCommand.NameRenaming cause) {
     super(Level.WARNING, "", cause);
+    currentNamespaceCommand = cmd;
   }
 
   @Override

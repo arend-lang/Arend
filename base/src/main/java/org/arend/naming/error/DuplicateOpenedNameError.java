@@ -6,6 +6,7 @@ import org.arend.ext.prettyprinting.doc.LineDoc;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.scope.Scope;
 import org.arend.term.group.ConcreteNamespaceCommand;
+import org.jetbrains.annotations.Nullable;
 
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
@@ -13,12 +14,14 @@ public class DuplicateOpenedNameError extends NameResolverError {
   public final Scope.ScopeContext context;
   public final Referable referable;
   public final ConcreteNamespaceCommand previousNamespaceCommand;
+  public final ConcreteNamespaceCommand currentNamespaceCommand;
 
-  public DuplicateOpenedNameError(Scope.ScopeContext context, Referable referable, ConcreteNamespaceCommand previous, Object cause) {
-    super(Level.WARNING, "", cause);
+  public DuplicateOpenedNameError(Scope.ScopeContext context, Referable referable, ConcreteNamespaceCommand current, ConcreteNamespaceCommand previous, @Nullable ConcreteNamespaceCommand.NameRenaming renaming) {
+    super(Level.WARNING, "", renaming != null ? renaming : current);
     this.context = context;
     this.referable = referable;
     previousNamespaceCommand = previous;
+    currentNamespaceCommand = current;
   }
 
   @Override

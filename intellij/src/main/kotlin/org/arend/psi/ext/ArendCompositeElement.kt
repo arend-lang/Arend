@@ -17,6 +17,7 @@ import org.arend.resolving.ArendReference
 import org.arend.term.abs.Abstract
 
 interface ArendCompositeElement : PsiElement, SourceInfo {
+    @Deprecated("Removed without replacement")
     val scope: Scope // TODO[server2]: Remove this
         get() = EmptyScope.INSTANCE
     override fun getReference(): ArendReference?

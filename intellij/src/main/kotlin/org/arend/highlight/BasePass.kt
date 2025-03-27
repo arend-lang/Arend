@@ -37,7 +37,6 @@ import org.arend.ext.reference.DataContainer
 import org.arend.naming.error.DuplicateOpenedNameError
 import org.arend.naming.error.ExistingOpenedNameError
 import org.arend.naming.error.NotInScopeError
-import org.arend.naming.reference.Referable
 import org.arend.naming.scope.EmptyScope
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
@@ -63,6 +62,7 @@ import org.arend.ext.error.InstanceInferenceError
 import org.arend.naming.reference.TCDefReferable
 import org.arend.psi.ArendExpressionCodeFragment
 import org.arend.quickfix.instance.AddRecursiveInstanceArgumentQuickFix
+import org.arend.term.group.ConcreteNamespaceCommand
 import org.arend.typechecking.error.local.inference.FunctionArgInferenceError
 import org.arend.typechecking.error.local.inference.LambdaInferenceError
 import org.arend.typechecking.error.local.inference.RecursiveInstanceInferenceError
@@ -261,8 +261,9 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
             is ParsingError -> when (error.kind) {
                 MISPLACED_IMPORT -> {
                     val errorCause = error.cause
-                    if (errorCause is ArendStatCmd && errorCause.isValid) {
-                        registerFix(builder, MisplacedImportQuickFix(SmartPointerManager.createPointer(errorCause)))
+                    val statCmd = (errorCause as? ConcreteNamespaceCommand)?.data()
+                    if (statCmd is ArendStatCmd) {
+                        registerFix(builder, MisplacedImportQuickFix(SmartPointerManager.createPointer(statCmd)))
                     }
                 }
                 CLASSIFYING_FIELD_IN_RECORD -> {
@@ -273,19 +274,13 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
             }
 
             is DuplicateOpenedNameError -> {
-                val errorCause = error.cause
-                if (errorCause is PsiElement && errorCause.isValid) {
-                    registerFix(builder, RenameDuplicateNameQuickFix(SmartPointerManager.createPointer(errorCause), error.referable))
-                    registerFix(builder, HideImportQuickFix(SmartPointerManager.createPointer(errorCause), error.referable))
-                }
+                registerFix(builder, RenameDuplicateNameQuickFix(error.cause, error.currentNamespaceCommand, error.referable))
+                registerFix(builder, HideImportQuickFix(error.cause, error.referable))
             }
 
             is ExistingOpenedNameError -> {
-                val errorCause = error.cause
-                if (errorCause is PsiElement && errorCause.isValid) {
-                    registerFix(builder, RenameDuplicateNameQuickFix(SmartPointerManager.createPointer(errorCause), null))
-                    registerFix(builder, HideImportQuickFix(SmartPointerManager.createPointer(errorCause), null))
-                }
+                registerFix(builder, RenameDuplicateNameQuickFix(error.cause, error.currentNamespaceCommand, null))
+                registerFix(builder, HideImportQuickFix(error.cause, null))
             }
 
             is FieldsImplementationError ->
