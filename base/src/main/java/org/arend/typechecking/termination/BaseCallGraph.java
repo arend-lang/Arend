@@ -1,6 +1,7 @@
 package org.arend.typechecking.termination;
 
 import org.arend.typechecking.computation.ComputationRunner;
+import org.arend.ext.util.Pair;
 import java.util.*;
 
 public abstract class BaseCallGraph<T> {
@@ -13,6 +14,10 @@ public abstract class BaseCallGraph<T> {
     for (BaseCallMatrix<T> cm : set) {
       append(cm, myGraph);
     }
+  }
+
+  public HashMap<T, HashMap<T, HashSet<BaseCallMatrix<T>>>> getGraph() {
+    return myGraph;
   }
 
   protected abstract String getLabel(T vertex);
@@ -107,7 +112,7 @@ public abstract class BaseCallGraph<T> {
     }
   }
 
-  public boolean checkTermination() {
+  public Pair<Boolean, Map<T, HashMap<T, HashSet<BaseCallMatrix<T>>>>> checkTermination() {
     HashMap<T, HashMap<T, HashSet<BaseCallMatrix<T>>>> newGraph;
     HashMap<T, HashMap<T, HashSet<BaseCallMatrix<T>>>> oldGraph = myGraph;
     int myNewEdges;
@@ -160,7 +165,7 @@ public abstract class BaseCallGraph<T> {
       }
     } while (myNewEdges > 0 && result);
 
-    return result;
+    return new Pair<>(result, newGraph);
   }
 
   private static class RecursiveBehaviors<T> {

@@ -17,7 +17,7 @@ import java.util.List;
 
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
-class CallMatrix extends BaseCallMatrix<Definition> {
+public class CallMatrix extends BaseCallMatrix<Definition> {
   private final DefCallExpression myCallExpression;
   private final Definition myEnclosingDefinition;
   private final IndexData myCodomainIndexData;
@@ -33,6 +33,10 @@ class CallMatrix extends BaseCallMatrix<Definition> {
 
   CallMatrix(Definition myEnclosingDefinition, DefCallExpression call) {
     this(myEnclosingDefinition, call, new IndexData(call.getDefinition().getParameters()), new IndexData(myEnclosingDefinition.getParameters()));
+  }
+
+  public DefCallExpression getCallExpression() {
+    return myCallExpression;
   }
 
   @Override

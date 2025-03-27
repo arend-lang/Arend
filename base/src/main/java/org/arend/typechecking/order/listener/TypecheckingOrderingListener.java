@@ -575,9 +575,9 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       }
     }
 
-    if (!definitionCallGraph.checkTermination()) {
+    if (!((Boolean) definitionCallGraph.checkTermination().proj1)) {
       for (Map.Entry<Definition, Set<RecursiveBehavior<Definition>>> entry : definitionCallGraph.myErrorInfo.entrySet()) {
-        myErrorReporter.report(new TerminationCheckError(entry.getKey(), definitionCallGraph.myErrorInfo.keySet(), entry.getValue()));
+        myErrorReporter.report(new TerminationCheckError(entry.getKey(), definitionCallGraph.myErrorInfo.keySet(), entry.getValue(), null));
       }
       ok = false;
     }

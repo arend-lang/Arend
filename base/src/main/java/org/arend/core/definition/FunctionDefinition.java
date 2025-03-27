@@ -40,6 +40,25 @@ public class FunctionDefinition extends TopLevelDefinition implements Function, 
     myParameters = EmptyDependentLink.getInstance();
   }
 
+  public FunctionDefinition(FunctionDefinition other) {
+    super(other.getReferable(), TypeCheckingStatus.NEEDS_TYPE_CHECKING);
+    this.myParameters = other.myParameters;
+    this.myResultType = other.myResultType;
+    this.myResultTypeLevel = other.myResultTypeLevel;
+    this.myBody = other.myBody;
+    this.myParametersTypecheckingOrder = other.myParametersTypecheckingOrder;
+    this.myKind = other.myKind;
+    this.myBodyIsHidden = other.myBodyIsHidden;
+    this.myGoodThisParameters = other.myGoodThisParameters;
+    this.myTypeClassParameters = other.myTypeClassParameters;
+    this.myVisibleParameter = other.myVisibleParameter;
+    this.myRecursiveDefinitions = other.myRecursiveDefinitions;
+    this.myHasEnclosingClass = other.myHasEnclosingClass;
+    this.myStrictParameters = other.myStrictParameters;
+    this.myOmegaParameters = other.myOmegaParameters;
+    this.myImplementedField = other.myImplementedField;
+  }
+
   @Override
   public Body getBody() {
     return isSFunc() || myBodyIsHidden != HiddenStatus.NOT_HIDDEN ? null : myBody;
