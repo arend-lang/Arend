@@ -15,6 +15,8 @@ class ArendParameterInfoTest : ArendTestBase() {
 
         if (typecheck) {
             typecheck()
+        } else {
+            myFixture.doHighlighting()
         }
 
         val handler = ShowParameterInfoHandler.getHandlers(project, ArendLanguage.INSTANCE).firstOrNull() ?:
@@ -275,27 +277,27 @@ class ArendParameterInfoTest : ArendTestBase() {
     """, "{X : \\Type}, {n}, <highlight>{_ : X}</highlight>, _ : Vec {X} n")
 
     fun `test local coclause`() = checkParameterInfo("""
-       \\class C (carrier : \Set) {
+       \class C (carrier : \Set) {
          | magma (x y : carrier) : carrier
        }
         
-       \\func instance => \new C {
+       \func instance => \new C {
          | magma x y{-caret-} => Nat
        } 
     """, "x : carrier, <highlight>y : carrier</highlight>")
 
     fun `test patterns`() = checkParameterInfo("""
-        \\data List (X : \Type)
+        \data List (X : \Type)
           | nil
           | \infixr 1 :: X (List X)
           
-        \\func foo {X : \Type} (l : List X) \with
+        \func foo {X : \Type} (l : List X) \with
           | l0 :: l{-caret-}s => {?} 
-    """, "_ : X, <highlight>_ : List X</highlight>")
+    """, "_ : X, <highlight>_ : List X</highlight>", true)
 
 
     fun `test this 2`() = checkParameterInfo("""
-        \\class Pair
+        \class Pair
           | sum (a b : Nat) : Nat
           
         \func lol (p : Pair) => p{-caret-}.sum 1 2

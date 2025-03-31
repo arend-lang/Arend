@@ -143,7 +143,7 @@ class ArendChangeSignatureProcessor(project: Project,
 
                             is ArendTypeTele -> rootPsi.type?.let { appExprToConcrete(it) }?.let { concreteSet.add(ConcreteDataItem(rootPsi, it)) }
 
-                            is ArendPattern -> patternToConcrete(rootPsi, errorReporter)?.let {
+                            is ArendPattern -> patternToConcrete(rootPsi)?.let {
                                 if (errorReporter.errorsNumber == 0) concreteSet.add(ConcreteDataItem(rootPsi, it))
                             }
 

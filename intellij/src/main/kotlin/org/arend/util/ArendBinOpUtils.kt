@@ -5,23 +5,15 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.parentOfType
-import org.arend.error.DummyErrorReporter
-import org.arend.ext.error.ErrorReporter
 import org.arend.naming.reference.AliasReferable
 import org.arend.naming.reference.GlobalReferable
-import org.arend.naming.resolving.typing.TypedReferable
-import org.arend.naming.resolving.typing.TypingInfo
-import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
-import org.arend.naming.scope.CachingScope
 import org.arend.psi.ancestor
 import org.arend.psi.ext.*
 import org.arend.psi.ext.ArendExpr
 import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
-import org.arend.term.abs.ConcreteBuilder
 import org.arend.term.concrete.BaseConcreteExpressionVisitor
 import org.arend.term.concrete.Concrete
-import org.arend.term.concrete.Concrete.NumberPattern
 import org.arend.term.concrete.SearchConcreteVisitor
 import org.arend.term.concrete.SubstConcreteVisitor
 
@@ -29,8 +21,16 @@ fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
     val definition = appExpr.ancestor<ArendDefinition<*>>()?.tcReferable ?: return null
     val concrete = appExpr.project.service<ArendServerService>().server.getResolvedDefinition(definition)?.definition ?: return null
     return concrete.accept(object : SearchConcreteVisitor<Any?, Concrete.SourceNode?>() {
-        override fun checkSourceNode(sourceNode: Concrete.SourceNode, params: Any?): Concrete.SourceNode? =
-            if (sourceNode.data == appExpr) sourceNode else null
+        override fun checkSourceNode(sourceNode: Concrete.SourceNode, params: Any?): Concrete.SourceNode? {
+            var data: PsiElement? = sourceNode.data as? PsiElement
+            val textRange = data?.textRange ?: return null
+            while (data != null && data.textRange == textRange) {
+                if (data == appExpr) return sourceNode
+                data = data.parent
+            }
+            return null
+        }
+
     }, null) as? Concrete.Expression
 }
 
@@ -59,21 +59,16 @@ fun appExprToConcreteOnlyTopLevel(appExpr: ArendExpr): Concrete.Expression? {
     return concreteCopy
 }
 
-fun patternToConcrete(unparsedPattern: ArendPattern, errorReporter: ErrorReporter = DummyErrorReporter.INSTANCE): Concrete.Pattern? {
-    val scope = CachingScope.make(unparsedPattern.scope)
-    val builder = object: ConcreteBuilder(errorReporter, null) {
-        override fun buildPattern(pattern: Abstract.Pattern?): Concrete.Pattern {
-            if (pattern is ArendPattern && pattern.getSequence().size == 1 && pattern.isTuplePattern) {
-                return NumberPattern(pattern.data, -1, buildTypedReferable(pattern.asPattern)) // substitute every parenthesized pattern with dummy
-            }
-            return super.buildPattern(pattern)
-        }
-    }
-    val unparsed = builder.buildPattern(unparsedPattern)
-    val referables = ArrayList<TypedReferable>()
-    val patterns = ArrayList<Concrete.Pattern>(); patterns.add(unparsed)
-    ExpressionResolveNameVisitor(scope, referables, TypingInfo.EMPTY, errorReporter, null).visitPatterns(patterns, HashMap())
-    return patterns.firstOrNull()
+fun patternToConcrete(unparsedPattern: ArendPattern): Concrete.Pattern? {
+    val definition = unparsedPattern.ancestor<ArendDefinition<*>>()?.tcReferable ?: return null
+    val concrete = unparsedPattern.project.service<ArendServerService>().server.getResolvedDefinition(definition)?.definition ?: return null
+    return concrete.accept(object : SearchConcreteVisitor<Any?, Concrete.SourceNode?>() {
+        override fun checkSourceNode(sourceNode: Concrete.SourceNode, params: Any?): Concrete.SourceNode? =
+            if (sourceNode.data == unparsedPattern)
+                sourceNode
+            else
+                null
+    }, null) as? Concrete.Pattern
 }
 
 fun getBounds(cExpr: Concrete.SourceNode, aaeBlocks: List<ASTNode>, rangesMap: HashMap<Concrete.SourceNode, TextRange>? = null): TextRange? {
@@ -102,7 +97,7 @@ fun getBounds(cExpr: Concrete.SourceNode, aaeBlocks: List<ASTNode>, rangesMap: H
                 is Concrete.Pattern -> it
                 else -> throw IllegalStateException()
             }
-            getBounds(key, aaeBlocks, rangesMap) }
+            getBounds(key, aaeBlocks, rangesMap)}
         )
 
         if (fData is PsiElement) {
@@ -110,7 +105,8 @@ fun getBounds(cExpr: Concrete.SourceNode, aaeBlocks: List<ASTNode>, rangesMap: H
             if (f.size == 1) { // f may be empty if neither of aaeBlocks corresponds
                 val functionRange = f.first().textRange
                 elements.add(functionRange)
-                if (cExpr is Concrete.AppExpression) rangesMap?.put(cExpr.function, functionRange)
+                if (cExpr is Concrete.AppExpression)
+                    rangesMap?.put(cExpr, functionRange)
             }
         }
 
@@ -119,17 +115,18 @@ fun getBounds(cExpr: Concrete.SourceNode, aaeBlocks: List<ASTNode>, rangesMap: H
         if (startOffset != null && endOffset != null) {
             result = TextRange.create(startOffset, endOffset)
         }
+    } else if (cExpr is Concrete.LamExpression) { //cExpr.data == null, so this is most likely a postfix or apply hole expression
+        result = getBounds(cExpr.body, aaeBlocks, rangesMap)
     } else if (cExprData is PsiElement) {
         for (psi in aaeBlocks)
             if (psi.textRange.contains(cExprData.node.textRange)) {
             result = psi.textRange
             break
         }
-    } else if (cExpr is Concrete.LamExpression) { //cExpr.data == null, so this is most likely a postfix or apply hole expression
-        result = getBounds(cExpr.body, aaeBlocks, rangesMap)
     }
 
-    if (result != null) rangesMap?.put(cExpr, result)
+    if (result != null)
+        rangesMap?.put(cExpr, result)
     return result
 }
 

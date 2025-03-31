@@ -4,7 +4,6 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiWhiteSpace
-import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.startOffset
 import org.arend.core.definition.ClassDefinition
@@ -20,12 +19,10 @@ import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractReferable
 import org.arend.term.abs.ConcreteBuilder
 import org.arend.term.concrete.Concrete
-import org.arend.util.appExprToConcrete
+import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getBounds
 import org.arend.util.patternToConcrete
 import java.util.Collections.singletonList
-import kotlin.IllegalStateException
-import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 class ArendCodeInsightUtils {
@@ -273,38 +270,36 @@ class ArendCodeInsightUtils {
         }
 
         fun getExternalParameters(def: PsiLocatedReferable): List<ParameterDescriptor>? {
-            val tcDef = (def as? ReferableBase<*>)?.tcReferable?.typechecked
-            if (tcDef == null)
-                for (p in def.ancestors)
-                    if (p is ArendDefinition<*> /* TODO[server2]: && p.externalParameters.isNotEmpty() */)
-                        return null
-
-            if (tcDef != null) {
-                return tcDef.parametersOriginalDefinitions.map {
-                    val definitionContainingExternalParameter = ((it.proj1?.data as? SmartPsiElementPointer<*>)?.element as? Abstract.ParametersHolder)
-                    val externalParameters = definitionContainingExternalParameter?.parameters?.map { tele ->
-                        when (tele) {
-                            is ArendTypeTele ->
-                                if (tele.typedExpr?.identifierOrUnknownList.isNullOrEmpty()) singletonList(null) else
-                                    tele.typedExpr?.identifierOrUnknownList!!.map { iou -> iou.defIdentifier?.let { defIdentifier ->
-                                        DefaultParameterDescriptorFactory.createExternalParameter(defIdentifier) }
-                                    }
-
-                            is ArendNameTele ->
-                                if (tele.identifierOrUnknownList.isEmpty()) singletonList(null) else
-                                    tele.identifierOrUnknownList.map { iou -> iou.defIdentifier?.let { defIdentifier ->
+            val tcDef = (def as? ReferableBase<*>)?.tcReferable?.typechecked ?: return null
+            return tcDef.parametersOriginalDefinitions.map {
+                val definitionContainingExternalParameter = (it.proj1?.data as? Abstract.ParametersHolder)
+                val externalParameters = definitionContainingExternalParameter?.parameters?.map { tele ->
+                    when (tele) {
+                        is ArendTypeTele ->
+                            if (tele.typedExpr?.identifierOrUnknownList.isNullOrEmpty()) singletonList(null) else
+                                tele.typedExpr?.identifierOrUnknownList!!.map { iou ->
+                                    iou.defIdentifier?.let { defIdentifier ->
                                         DefaultParameterDescriptorFactory.createExternalParameter(defIdentifier)
-                                    } }
+                                    }
+                                }
 
-                            else ->
-                                throw java.lang.IllegalArgumentException()
-                        }
-                    }?.flatten()
-                    val externalParameter = externalParameters?.getOrNull(it.proj2) ?: return null
+                        is ArendNameTele ->
+                            if (tele.identifierOrUnknownList.isEmpty()) singletonList(null) else
+                                tele.identifierOrUnknownList.map { iou ->
+                                    iou.defIdentifier?.let { defIdentifier ->
+                                        DefaultParameterDescriptorFactory.createExternalParameter(defIdentifier)
+                                    }
+                                }
 
-                    externalParameter
-                }
+                        else ->
+                            throw java.lang.IllegalArgumentException()
+                    }
+                }?.flatten()
+                val externalParameter = externalParameters?.getOrNull(it.proj2) ?: return null
+
+                externalParameter
             }
+
 
             return emptyList()
         }
@@ -321,20 +316,17 @@ class ArendCodeInsightUtils {
 
             //Stage 1: Determine appropriate expression roots for the selected concrete
             do {
-                val errorReporter = CountingErrorReporter(GeneralError.Level.ERROR, DummyErrorReporter.INSTANCE)
                 val curNodeParent = currentNode?.parent
 
                 if (currentNode != null && curNodeParent is CoClauseBase && curNodeParent.implementation != currentNode && (parameterOwner == null || parameterOwner == curNodeParent.longName))
                     return computeCoClauseParameterInfo(currentNode, offset)
 
                 val rootConcrete = when (currentNode) {
-                    is ArendArgumentAppExpr -> appExprToConcrete(currentNode)?.let {
-                        if (errorReporter.errorsNumber == 0) it else null
-                    }
+                    is ArendArgumentAppExpr ->
+                        appExprToConcreteOnlyTopLevel(currentNode)
 
-                    is ArendPattern -> patternToConcrete(currentNode, errorReporter)?.let {
-                        if (errorReporter.errorsNumber == 0) it else null
-                    }
+                    is ArendPattern ->
+                        patternToConcrete(currentNode)
 
                     else -> null
                 }
@@ -377,7 +369,8 @@ class ArendCodeInsightUtils {
                             data = getParameters(applicationConcrete)
                             val isProperOverlap = rangeData[entry.first]?.let { it.startOffset <= caretOffset && caretOffset <= it.endOffset } ?: false
                             if ((data?.first?.isNotEmpty() == true && isProperOverlap || data?.second == false) &&
-                                (!parameterOwnerIsValid || getData(applicationConcrete) == parameterOwner)) break
+                                (!parameterOwnerIsValid || getData(applicationConcrete) == parameterOwner))
+                                break
                             argumentTextRange = rangeData[applicationConcrete]
                         }
                     }
@@ -404,11 +397,23 @@ class ArendCodeInsightUtils {
                 null
         }
 
-        fun getData(concrete: Concrete.SourceNode?): ArendReferenceContainer? = when (concrete) {
-            is Concrete.AppExpression -> (concrete.function as? Concrete.ReferenceExpression)?.data as? ArendReferenceContainer
-            is Concrete.ConstructorPattern -> (concrete.constructorData as ArendPattern).childOfType<ArendReferenceContainer>()
-            is Concrete.ReferenceExpression -> concrete.data as? ArendReferenceContainer
-            else -> null
+        fun getData(concrete: Concrete.SourceNode?): ArendReferenceContainer? {
+            val data = when (concrete) {
+                is Concrete.AppExpression ->
+                    concrete.function.data
+                is Concrete.ConstructorPattern ->
+                    concrete.constructorData
+                is Concrete.ReferenceExpression -> {
+                    concrete.data
+                }
+                else -> null
+            }
+            val refContainer = when (data) {
+                is ArendReferenceContainer -> data
+                is PsiElement -> data.descendantOfType<ArendReferenceContainer>()
+                else -> null
+            }
+            return refContainer
         }
 
         fun getAllParametersForReferable(def: AbstractReferable?, anchor: ArendCompositeElement?, addTailParameters: Boolean = false): Pair<List<ParameterDescriptor>, Boolean>? {
@@ -482,8 +487,8 @@ class ArendCodeInsightUtils {
         private fun computeCoClauseParameterInfo(node: PsiElement, offset: Int): ParameterInfo? {
             val localCoClause = node.parent as CoClauseBase
             val arguments = localCoClause.lamParameters
-            val referable = localCoClause.longName?.resolve as? Referable ?: return null
-            val data = getAllParametersForReferable(referable.abstractReferable, localCoClause.longName, addTailParameters = true)
+            val referable = localCoClause.longName?.resolve as? ReferableBase<*> ?: return null
+            val data = getAllParametersForReferable(referable, localCoClause.longName, addTailParameters = true)
             val parameters = data?.first
 
             var paramIndex = 0
