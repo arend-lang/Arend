@@ -8,6 +8,7 @@ import com.intellij.psi.PsiFileSystemItem
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.ModulePath
 import org.arend.ext.module.ModuleLocation
+import org.arend.module.ModuleLocation.LocationKind
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.naming.reference.DataModuleReferable
 import org.arend.naming.reference.FullModuleReferable
@@ -92,19 +93,19 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
 
     override fun addModuleDependency(module: ModuleLocation, dependency: ModuleLocation) {}
 
-    private fun requestUpdate(server: ArendServer, modules: List<ModulePath>, library: String, inTests: Boolean) {
+    private fun requestUpdate(server: ArendServer, modules: List<ModulePath>, library: String, locationKind: LocationKind) {
         for (module in modules) {
-            val file = project.findInternalLibrary(library)?.findArendFile(module, inTests)
+            val file = project.findInternalLibrary(library)?.findArendFile(module, locationKind)
             if (file != null) {
-                doUpdateModule(server, ModuleLocation(library, if (inTests) ModuleLocation.LocationKind.TEST else ModuleLocation.LocationKind.SOURCE, module), file)
+                doUpdateModule(server, ModuleLocation(library, locationKind, module), file)
             }
         }
     }
 
-    private fun requestUpdate(server: ArendServer, config: ArendModuleConfigService, withTests: Boolean) {
-        requestUpdate(server, config.findModules(false), config.name, false)
-        if (withTests) {
-            requestUpdate(server, config.findModules(true), config.name, true)
+    private fun requestUpdate(server: ArendServer, config: ArendModuleConfigService, locationKind: LocationKind) {
+        requestUpdate(server, config.findModules(LocationKind.SOURCE), config.name, LocationKind.SOURCE)
+        if (locationKind == LocationKind.TEST) {
+            requestUpdate(server, config.findModules(LocationKind.TEST), config.name, LocationKind.TEST)
         }
     }
 
@@ -112,14 +113,14 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
       ConcreteBuilder.convertGroup(file, module, DummyErrorReporter.INSTANCE)
     }
 
-    fun requestUpdate(server: ArendServer, library: String?, withTests: Boolean) {
+    fun requestUpdate(server: ArendServer, library: String?, locationKind: LocationKind) {
         runReadAction {
             if (library == null) {
                 for (config in project.moduleConfigs) {
-                    requestUpdate(server, config, withTests)
+                    requestUpdate(server, config, locationKind)
                 }
             } else {
-                requestUpdate(server, project.findInternalLibrary(library) as? ArendModuleConfigService ?: return@runReadAction, withTests)
+                requestUpdate(server, project.findInternalLibrary(library) as? ArendModuleConfigService ?: return@runReadAction, locationKind)
             }
         }
     }

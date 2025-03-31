@@ -1,7 +1,5 @@
 package org.arend.psi.arc
 
-import com.intellij.execution.testframework.sm.runner.SMTestProxy
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
@@ -16,20 +14,13 @@ import com.intellij.psi.PsiManager
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.EditorNotificationProvider
 import com.intellij.ui.EditorNotifications
+import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.ModulePath
-import org.arend.ext.prettyprinting.PrettyPrinterConfig
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.psi.ArendFile
-import org.arend.resolving.ArendReferableConverter
-import org.arend.resolving.PsiConcreteProvider
-import org.arend.typechecking.*
-import org.arend.typechecking.error.ErrorService
-import org.arend.typechecking.error.TypecheckingErrorReporter
-import org.arend.typechecking.execution.PsiElementComparator
-import org.arend.typechecking.execution.TypeCheckProcessHandler
-import org.arend.typechecking.execution.TypecheckingEventsProcessor
-import org.arend.typechecking.order.Ordering
-import org.arend.typechecking.order.listener.CollectingOrderingListener
+import org.arend.server.ArendServerService
+import org.arend.server.ProgressReporter
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.util.*
 import org.arend.util.FileUtils.EXTENSION
 import org.arend.util.FileUtils.SERIALIZED_EXTENSION
@@ -63,37 +54,14 @@ class ArcFileNotificationProvider : EditorNotificationProvider {
             object : Task.Backgroundable(project, "Typechecking", false) {
                 override fun run(indicator: ProgressIndicator) {
                     project.service<ArcUnloadedModuleService>().removeLoadedModule(virtualFile)
-                    val library = arendFile.arendLibrary
                     runReadAction {
-                        library?.resetGroup(arendFile)
+                        val server = project.service<ArendServerService>().server
+                        arendFile.moduleLocation?.let { server.getCheckerFor(listOf(it)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty()) }
                     }
 
-                    val typeCheckerService = project.service<TypeCheckingService>()
-                    val eventsProcessor = TypecheckingEventsProcessor(
-                        project,
-                        SMTestProxy.SMRootTestProxy(),
-                        "ArcCheckRunner"
-                    )
-                    val typecheckingErrorReporter = TypecheckingErrorReporter(typeCheckerService.project.service(), PrettyPrinterConfig.DEFAULT, eventsProcessor)
-                    val concreteProvider = PsiConcreteProvider(typeCheckerService.project, project.service<ErrorService>(), typecheckingErrorReporter.eventsProcessor)
-                    val instanceProviderSet = PsiInstanceProviderSet()
-                    val collector = CollectingOrderingListener()
-                    val ordering = Ordering(instanceProviderSet, concreteProvider, collector, typeCheckerService.dependencyListener, ArendReferableConverter, PsiElementComparator)
-                    runReadAction {
-                        TypeCheckProcessHandler.orderGroup(arendFile, ordering, indicator)
-                    }
-
-                    val typechecking = TestBasedTypechecking(typecheckingErrorReporter.eventsProcessor, instanceProviderSet, typeCheckerService, concreteProvider, typecheckingErrorReporter, typeCheckerService.dependencyListener)
-                    try {
-                        typechecking.typecheckCollected(collector, ProgressCancellationIndicator(indicator))
-                    } finally {
-                        typecheckingErrorReporter.flush()
-                        project.afterTypechecking(listOf(arendFile))
-
-                        EditorNotifications.getInstance(project).updateNotifications(virtualFile)
-                        invokeLater {
-                            FileDocumentManager.getInstance().reloadBinaryFiles()
-                        }
+                    EditorNotifications.getInstance(project).updateNotifications(virtualFile)
+                    invokeLater {
+                      FileDocumentManager.getInstance().reloadBinaryFiles()
                     }
                 }
             }.queue()
