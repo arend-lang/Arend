@@ -32,7 +32,7 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
             withBackgroundProgress(project, "Checking $message") { reportSequentialProgress { reporter ->
                 val checker = reporter.nextStep(5, "Resolving $message") { reportRawProgress { reporter ->
                     if (module == null) {
-                        ArendServerRequesterImpl(project).requestUpdate(server, library, isTest)
+                        ArendServerRequesterImpl(project).requestUpdate(server, library, if (isTest) ModuleLocation.LocationKind.TEST else ModuleLocation.LocationKind.SOURCE)
                     }
                     val checker = server.getCheckerFor(if (module == null) server.modules.filter { (library == null || it.libraryName == library) && (it.locationKind == ModuleLocation.LocationKind.SOURCE || isTest && it.locationKind == ModuleLocation.LocationKind.TEST) } else listOf(module))
                     checker.resolveAll(CoroutineCancellationIndicator(this), IntellijProgressReporter(reporter) { it.toString() })
@@ -62,7 +62,9 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
 
                 if (updated && checkerFactory == null) {
                     if (!ApplicationManager.getApplication().isUnitTestMode) {
-                        DaemonCodeAnalyzer.getInstance(project).restart()
+                        if (module?.locationKind != ModuleLocation.LocationKind.GENERATED) {
+                          DaemonCodeAnalyzer.getInstance(project).restart()
+                        }
                     }
                     withContext(Dispatchers.EDT) {
                         project.service<ArendMessagesService>().update()

@@ -29,15 +29,9 @@ import org.arend.psi.ext.*
 import org.arend.psi.stubs.ArendFileStub
 import org.arend.resolving.ArendReference
 import org.arend.util.*
-import org.arend.resolving.IntellijTCReferable
-import org.arend.term.concrete.Concrete
-import org.arend.typechecking.TypeCheckingService
 import org.arend.util.FileUtils
 import org.arend.util.arendModules
 import org.arend.util.libraryName
-import org.arend.util.mapFirstNotNull
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
 
 open class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, ArendLanguage.INSTANCE), ArendGroup, IArendFile {
     var generatedModuleLocation: ModuleLocation? = null
@@ -98,7 +92,7 @@ open class ArendFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider,
                     it?.binariesDirFile?.let { binFile -> VfsUtilCore.isAncestor(binFile, virtualFile, true) } ?: false
                 }
                 if (config != null) {
-                    return@getCachedValue cachedValue(config.library)
+                    return@getCachedValue cachedValue(config)
                 } else {
                     return@getCachedValue cachedValue(null)
                 }

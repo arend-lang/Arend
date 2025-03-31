@@ -45,10 +45,7 @@ import org.arend.settings.ArendProjectSettings
 import org.arend.term.group.ConcreteGroup
 import org.arend.term.prettyprint.PrettyPrintVisitor
 import org.arend.typechecking.ArendExtensionChangeService
-import org.arend.typechecking.ArendTypechecking
-import org.arend.typechecking.TypeCheckingService
 import org.arend.typechecking.error.NotificationErrorReporter
-import org.arend.util.FileUtils.SERIALIZED_EXTENSION
 import org.jetbrains.yaml.psi.YAMLFile
 import java.nio.file.Path
 import java.nio.file.Paths

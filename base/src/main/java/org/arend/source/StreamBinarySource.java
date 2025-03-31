@@ -3,6 +3,7 @@ package org.arend.source;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.typechecking.DefinitionListener;
+import org.arend.ext.util.Pair;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
@@ -64,7 +65,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
   }
 
   /* TODO[server2]:
-  public static ConcreteGroup getGroup(InputStream inputStream, OldLibraryManager libraryManager, SourceLibrary library) throws IOException, DeserializationException {
+  public static Pair<ConcreteGroup, List<ModulePath>> getGroup(InputStream inputStream, LibraryManager libraryManager, SourceLibrary library) throws IOException, DeserializationException {
     CodedInputStream codedInputStream = CodedInputStream.newInstance(inputStream);
     codedInputStream.setRecursionLimit(Integer.MAX_VALUE);
     ModuleProtos.Module moduleProto = ModuleProtos.Module.parseFrom(codedInputStream);
@@ -76,7 +77,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
     ModuleScopeProvider moduleScopeProvider = libraryManager.getAvailableModuleScopeProvider(library);
     moduleDeserialization.readModule(moduleScopeProvider, library.getDependencyListener());
 
-    return group;
+    return new Pair<>(group, moduleProto.getModuleCallTargetsList().stream().map(target -> new ModulePath(target.getNameList())).toList());
   }
 
   public @NotNull LoadResult load(SourceLoader sourceLoader) {

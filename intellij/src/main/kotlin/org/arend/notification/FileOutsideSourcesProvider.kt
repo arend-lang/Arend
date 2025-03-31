@@ -1,7 +1,6 @@
 package org.arend.notification
 
 import com.intellij.ide.BrowserUtil
-import com.intellij.ide.scratch.ScratchFileService
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.project.Project
@@ -12,6 +11,7 @@ import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.EditorNotificationProvider
 import org.arend.psi.ArendFile
+import org.arend.scratch.isArendScratch
 import org.arend.server.ArendServerService
 import org.arend.util.ArendBundle
 import org.arend.util.checkArcFile
@@ -23,9 +23,7 @@ class FileOutsideSourcesProvider : EditorNotificationProvider {
         val file = PsiManager.getInstance(project).findFile(virtualFile)
         if (file !is ArendFile || ProjectFileIndex.getInstance(project).isInSource(virtualFile) ||
                 project.service<ArendServerService>().prelude == file || virtualFile is LightVirtualFile ||
-            ScratchFileService.getInstance().getRootType(virtualFile) != null) {
-                project.service<TypeCheckingService>().prelude == file || virtualFile is LightVirtualFile ||
-                checkArcFile(file)) {
+          virtualFile.isArendScratch || checkArcFile(file)) {
             return null
         }
         return Function<FileEditor, EditorNotificationPanel?> { fileEditor: FileEditor? ->
