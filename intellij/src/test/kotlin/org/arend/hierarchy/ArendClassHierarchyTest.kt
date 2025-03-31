@@ -10,7 +10,7 @@ class ArendClassHierarchyTest : ArendTestBase() {
     private fun codeSample() : String = "\\class {-caret-}A {X : \\Set} {\n" +
             "  | field : Nat }\n" +
             "\\class B \\extends A\n" +
-            "\\class C (foo : \\Set -> \\Set) (X : \\Set) \\extends A {foo X}\n" +
+            "\\class C (foo : \\Set -> \\Set) (X : \\Set) \\extends A\n" +
             "\\instance I (foo : \\Set -> \\Set) (X : \\Set) : A {foo X} {\n" +
             "  | field => 0}"
 
@@ -21,7 +21,7 @@ class ArendClassHierarchyTest : ArendTestBase() {
         val descendantsSearch = project.service<ClassDescendantsSearch>()
         descendantsSearch.FIND_SUBCLASSES = true
         descendantsSearch.FIND_INSTANCES = false
-        Assert.assertEquals(descendantsSearch.search(classElement).map { it.name }.toSet(), setOf("B", "C"))
+        Assert.assertEquals(setOf("B", "C"), descendantsSearch.search(classElement).map { it.name }.toSet())
     }
 
     fun `test instances`() {
@@ -31,6 +31,6 @@ class ArendClassHierarchyTest : ArendTestBase() {
         val descendantsSearch = project.service<ClassDescendantsSearch>()
         descendantsSearch.FIND_SUBCLASSES = false
         descendantsSearch.FIND_INSTANCES = true
-        Assert.assertEquals(descendantsSearch.search(classElement).map { it.name }.toSet(), setOf("I"))
+        Assert.assertEquals(setOf("I"), descendantsSearch.search(classElement).map { it.name }.toSet())
     }
 }

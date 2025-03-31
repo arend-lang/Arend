@@ -6,9 +6,11 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.usageView.UsageInfo
 import com.intellij.util.CommonProcessors
+import org.arend.codeInsight.completion.withAncestors
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.psi.listener.ArendDefinitionChangeListener
+import org.arend.psi.parentOfType
 import java.util.concurrent.ConcurrentHashMap
 
 @Service(Service.Level.PROJECT)
@@ -64,14 +66,13 @@ class ClassDescendantsSearch(val project: Project) : ArendDefinitionChangeListen
                 }
             }
 
-            /* TODO[server2]
             if (FIND_INSTANCES) {
-                val defInst = usage.element?.parentOfType<ArendDefInstance>() //ArendReturnExpr>()?.parent as? InstanceAdapter
-                if (defInst?.classReference == clazz) {
+                val defInst = usage.element?.parentOfType<ArendDefInstance>()
+                if (defInst != null && withAncestors(ArendLiteral::class.java, ArendAtom::class.java, ArendAtomFieldsAcc::class.java,
+                            ArendArgumentAppExpr::class.java, ArendNewExpr::class.java, ArendReturnExpr::class.java, ArendDefInstance::class.java).accepts(usage.element)) {
                     descendants.add(defInst)
                 }
             }
-            */
         }
 
         res = descendants.toList()
