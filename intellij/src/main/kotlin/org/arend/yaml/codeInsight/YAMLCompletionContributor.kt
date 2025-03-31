@@ -9,6 +9,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.ClassInheritorsSearch
 import org.arend.ArendIcons
+import org.arend.module.ModuleLocation
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.prelude.Prelude
 import org.arend.psi.module
@@ -53,7 +54,7 @@ class YAMLCompletionContributor : CompletionContributor() {
                 synchronized(service) {
                     val cachedModules = service.modules
                     service.modules = null
-                    service.findModules(false).forEach {
+                    service.findModules(ModuleLocation.LocationKind.SOURCE).forEach {
                         result.addElement(LookupElementBuilder
                                 .create(it)
                                 .withIcon(ArendIcons.AREND_MODULE))

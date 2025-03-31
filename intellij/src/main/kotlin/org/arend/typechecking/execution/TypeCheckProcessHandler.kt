@@ -14,8 +14,11 @@ import org.arend.library.SourceLibrary
 import org.arend.library.error.LibraryError
 import org.arend.library.error.ModuleInSeveralLibrariesError
 import org.arend.module.error.ModuleNotFoundError
+import org.arend.psi.ext.ArendGroup
+import org.arend.term.concrete.Concrete
 import org.arend.typechecking.*
 import org.arend.typechecking.error.ErrorService
+import org.arend.typechecking.order.Ordering
 import java.io.OutputStream
 
 
@@ -219,23 +222,6 @@ class TypeCheckProcessHandler(
     override fun detachIsDefault(): Boolean = true
 
     override fun getProcessInput(): OutputStream? = null
-
-    companion object {
-        fun orderGroup(group: ArendGroup, ordering: Ordering, indicator: ProgressIndicator) {
-            if (indicator.isCanceled) {
-                return
-            }
-
-            (ordering.concreteProvider.getConcrete(group) as? Concrete.Definition)?.let { ordering.order(it) }
-
-            for (stat in group.statements) {
-                orderGroup(stat.group ?: continue, ordering, indicator)
-            }
-            for (subgroup in group.dynamicSubgroups) {
-                orderGroup(subgroup, ordering, indicator)
-            }
-        }
-    }
 }
 
 class DefinitionNotFoundError(definitionName: String, modulePath: ModulePath? = null) :
