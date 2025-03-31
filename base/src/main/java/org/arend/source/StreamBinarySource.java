@@ -3,6 +3,7 @@ package org.arend.source;
 import com.google.protobuf.CodedInputStream;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.typechecking.DefinitionListener;
+import org.arend.ext.util.Pair;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
