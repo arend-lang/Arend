@@ -27,9 +27,9 @@ class ArendCustomSearcher : QueryExecutorBase<PsiReference, ReferencesSearch.Sea
         var elementToSearch_var : PsiLocatedReferable? = null
         runReadAction {
             elementToSearch_var = when (val e = parameters.elementToSearch) {
-                is PsiLocatedReferable -> e
-                is ArendAliasIdentifier -> e.parent?.parent as? PsiLocatedReferable
-                is ArendDefIdentifier -> if (isDefIdentifierFromNsId(e)) ((e.parent as ArendNsId).refIdentifier.resolve as? PsiLocatedReferable) else null
+                is ArendGroup -> e
+                is ArendAliasIdentifier -> e.parent?.parent as? ArendGroup
+                is ArendDefIdentifier -> if (isDefIdentifierFromNsId(e)) ((e.parent as ArendNsId).refIdentifier.resolve as? ArendGroup) else null
                 else -> null
             }
         }

@@ -13,6 +13,7 @@ import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.SearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
+import com.intellij.psi.util.parentOfType
 import com.intellij.psi.util.startOffset
 import com.intellij.refactoring.RefactoringActionHandler
 import com.intellij.refactoring.rename.*
@@ -23,8 +24,6 @@ import com.intellij.refactoring.rename.inplace.VariableInplaceRenamer
 import com.intellij.refactoring.util.TextOccurrencesUtil
 import com.intellij.usageView.UsageInfo
 import org.arend.intention.checkNotGeneratePreview
-import org.arend.naming.reference.GlobalReferable
-import org.arend.naming.reference.RedirectingReferable
 import org.arend.naming.reference.RedirectingReferableImpl
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
@@ -36,7 +35,7 @@ class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
     override fun createMemberRenamer(element: PsiElement, elementToRename: PsiNameIdentifierOwner, editor: Editor): MemberInplaceRenamer {
         //Notice that element == elementToRename since currently there are no such things as inherited methods in Arend
         val project = editor.project
-        if (project != null && (elementToRename is GlobalReferable || Util.isDefIdentifierFromNsId(elementToRename))) {
+        if (project != null && (elementToRename is ReferableBase<*> || Util.isDefIdentifierFromNsId(elementToRename))) {
             val context = Util.getContext(project, elementToRename, editor)
             if (context != null) return ArendInplaceRenamer(elementToRename, editor, context)
         }
@@ -50,7 +49,7 @@ class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
         if (e == null && LookupManager.getActiveLookup(editor) != null) {
             e = PsiTreeUtil.getParentOfType(nameSuggestionContext, PsiNamedElement::class.java)
         }
-        return e is GlobalReferable || e is ArendAliasIdentifier || (e != null && Util.isDefIdentifierFromNsId(e))
+        return e is ReferableBase<*> || e is ArendAliasIdentifier || (e != null && Util.isDefIdentifierFromNsId(e))
     }
 
     override fun doRename(elementToRename: PsiElement, editor: Editor, dataContext: DataContext?): InplaceRefactoring? {
@@ -65,7 +64,7 @@ class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
                 return null
             }
         }
-        if (elementToRename is PsiNameIdentifierOwner && (elementToRename is GlobalReferable || Util.isDefIdentifierFromNsId(
+        if (elementToRename is PsiNameIdentifierOwner && (elementToRename is ReferableBase<*> || Util.isDefIdentifierFromNsId(
                 elementToRename
             ))) {
             val renamer = createMemberRenamer(elementToRename, elementToRename, editor)
@@ -86,8 +85,9 @@ class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
         val elementAtCaret = Util.findElementAtCaret(file, editor)
         val isIDinAlias = elementAtCaret is LeafPsiElement && elementAtCaret.elementType == ID && elementAtCaret.psi.parent is ArendAliasIdentifier
         if (isIDinAlias) {
-            val globalReferable = (elementAtCaret as? LeafPsiElement)?.psi?.parent?.parent?.parent as? GlobalReferable
-            if (globalReferable is PsiElement) doRename(globalReferable, editor, dataContext)
+            val globalReferable = elementAtCaret.parentOfType<ArendDefinition<*>>()
+            if (globalReferable is PsiElement)
+                doRename(globalReferable, editor, dataContext)
         } else
             super.invoke(project, editor, file, dataContext)
     }
@@ -145,18 +145,15 @@ class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
             val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
             val caretElement = if (psiFile != null) findElementAtCaret(psiFile, editor) else null
             val caretElementText = getArendNameText(caretElement)
-            val redirectingReferable = (caretElement?.parent as? ArendCompositeElement)?.scope?.elements?.filterIsInstance<RedirectingReferable>()
-                ?.firstOrNull { it.refName == caretElementText }
+            val redirectingReferable = (caretElement?.parent as? ArendReferenceElement)?.resolve()
 
-            if (elementToRename is GlobalReferable) {
-                if (caretElement != null) {
-                    val nameUnderCaret = when {
-                        redirectingReferable is RedirectingReferableImpl -> ArendNameKind.NSID_NAME // e.g. name coming from a NsId operator in a namespace command
-                        caretElementText == elementToRename.aliasName -> ArendNameKind.ALIAS_NAME
-                        else /* caretElementText == elementToRename.refName */ -> ArendNameKind.NORMAL_NAME
-                    }
-                    return ArendRenameRefactoringContext(caretElementText ?: return null, nameUnderCaret, editor.caretModel.offset, psiFile)
+            if (elementToRename is ReferableBase<*>) {
+                val nameUnderCaret = when {
+                    redirectingReferable is RedirectingReferableImpl -> ArendNameKind.NSID_NAME // e.g. name coming from a NsId operator in a namespace command
+                    caretElementText == elementToRename.aliasName -> ArendNameKind.ALIAS_NAME
+                    else /* caretElementText == elementToRename.refName */ -> ArendNameKind.NORMAL_NAME
                 }
+                return ArendRenameRefactoringContext(caretElementText ?: return null, nameUnderCaret, editor.caretModel.offset, psiFile)
             } else if (isDefIdentifierFromNsId(elementToRename) && psiFile != null) {
                 return ArendRenameRefactoringContext(caretElementText ?: return null, ArendNameKind.NSID_NAME, editor.caretModel.offset, psiFile)
             }
@@ -248,7 +245,7 @@ class ArendRenameProcessor(project: Project,
     }
 
     override fun performRefactoring(usages: Array<out UsageInfo>) {
-        val oldRefName = (element as? GlobalReferable)?.refName
+        val oldRefName = (element as? ReferableBase<*>)?.refName
         val newName = getNewName(element)
         super.performRefactoring(usages)
         if (context.nameKind == ArendNameKind.ALIAS_NAME) {

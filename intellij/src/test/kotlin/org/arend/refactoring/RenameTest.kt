@@ -24,11 +24,11 @@ class RenameTest : ArendTestBase() {
             "bar",
             """
                 \func foo
-                \func _ : {-caret-}foo
+                \func fubar : {-caret-}foo
             """,
             """
                 \func bar
-                \func _ : bar
+                \func fubar : bar
             """
     )
 
@@ -36,11 +36,11 @@ class RenameTest : ArendTestBase() {
             "**",
             """
                 \func foo
-                \func _ : {-caret-}foo
+                \func fubar : {-caret-}foo
             """,
             """
                 \func **
-                \func _ : **
+                \func fubar : **
             """
     )
 
@@ -48,11 +48,11 @@ class RenameTest : ArendTestBase() {
             "bar",
             """
                 \func ++
-                \func _ : {-caret-}++
+                \func fubar : {-caret-}++
             """,
             """
                 \func bar
-                \func _ : bar
+                \func fubar : bar
             """
     )
 
@@ -60,11 +60,11 @@ class RenameTest : ArendTestBase() {
             "**",
             """
                 \func ++
-                \func _ : {-caret-}++
+                \func fubar : {-caret-}++
             """,
             """
                 \func **
-                \func _ : **
+                \func fubar : **
             """
     )
 
@@ -72,11 +72,11 @@ class RenameTest : ArendTestBase() {
             "**",
             """
                 \func \infixl 6 ++
-                \func _ : _ {-caret-}++ _
+                \func fubar : _ {-caret-}++ _
             """,
             """
                 \func \infixl 6 **
-                \func _ : _ ** _
+                \func fubar : _ ** _
             """
     )
 
@@ -84,11 +84,11 @@ class RenameTest : ArendTestBase() {
             "bar",
             """
                 \func \infixl 6 ++
-                \func _ : _ {-caret-}++ _
+                \func fubar : _ {-caret-}++ _
             """,
             """
                 \func \infixl 6 bar
-                \func _ : _ bar _
+                \func fubar : _ bar _
             """
     )
 
@@ -96,11 +96,11 @@ class RenameTest : ArendTestBase() {
             "**",
             """
                 \func foo
-                \func _ : _ `{-caret-}foo` _
+                \func fubar : _ `{-caret-}foo` _
             """,
             """
                 \func **
-                \func _ : _ `**` _
+                \func fubar : _ `**` _
             """
     )
 
@@ -108,11 +108,11 @@ class RenameTest : ArendTestBase() {
             "bar",
             """
                 \func foo
-                \func _ : _ `{-caret-}foo` _
+                \func fubar : _ `{-caret-}foo` _
             """,
             """
                 \func bar
-                \func _ : _ `bar` _
+                \func fubar : _ `bar` _
             """
     )
 
@@ -120,11 +120,11 @@ class RenameTest : ArendTestBase() {
             "bar",
             """
                 \func foo
-                \func _ : _ `{-caret-}foo
+                \func fubar : _ `{-caret-}foo
             """,
             """
                 \func bar
-                \func _ : _ `bar
+                \func fubar : _ `bar
             """
     )
 
@@ -132,11 +132,11 @@ class RenameTest : ArendTestBase() {
             "**",
             """
                 \func foo
-                \func _ : _ `{-caret-}foo
+                \func fubar : _ `{-caret-}foo
             """,
             """
                 \func **
-                \func _ : _ `**
+                \func fubar : _ `**
             """
     )
 
@@ -144,11 +144,11 @@ class RenameTest : ArendTestBase() {
             "bar",
             """
                 \func ++
-                \func _ : _ `{-caret-}++
+                \func fubar : _ `{-caret-}++
             """,
             """
                 \func bar
-                \func _ : _ `bar
+                \func fubar : _ `bar
             """
     )
 
@@ -156,11 +156,11 @@ class RenameTest : ArendTestBase() {
             "**",
             """
                 \func ++
-                \func _ : _ `{-caret-}++
+                \func fubar : _ `{-caret-}++
             """,
             """
                 \func **
-                \func _ : _ `**
+                \func fubar : _ `**
             """
     )
 
@@ -253,6 +253,42 @@ class RenameTest : ArendTestBase() {
             """
     ) {
         val file = myFixture.configureFromTempProjectFile("DirA/Foo.ard")
+        myFixture.renameElement(file.containingDirectory, "DirB")
+    }
+
+    fun `test rename directory 2`() = checkByDirectory(
+        """
+                -- ! Main.ard
+                \import Foo.DirA.Foo
+                \import Foo.DirA
+                \import Bar.DirA.Fubar
+
+                -- ! Bar/DirA/Fubar.ard                
+                -- empty
+                
+                -- ! Foo/DirA.ard
+                -- empty
+
+                -- ! Foo/DirA/Foo.ard                
+                -- empty
+            """,
+        """
+                -- ! Main.ard
+                \import Foo.DirB.Foo
+                \import Foo.DirA
+                \import Bar.DirA.Fubar
+                
+                -- ! Bar/DirA/Fubar.ard
+                -- empty
+                
+                -- ! Foo/DirA.ard
+                -- empty
+
+                -- ! Foo/DirB/Foo.ard
+                -- empty
+            """
+    ) {
+        val file = myFixture.configureFromTempProjectFile("Foo/DirA/Foo.ard")
         myFixture.renameElement(file.containingDirectory, "DirB")
     }
 
