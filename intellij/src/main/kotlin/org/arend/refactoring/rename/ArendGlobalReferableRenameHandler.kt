@@ -13,7 +13,6 @@ import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.SearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
-import com.intellij.psi.util.parentOfType
 import com.intellij.psi.util.startOffset
 import com.intellij.refactoring.RefactoringActionHandler
 import com.intellij.refactoring.rename.*
