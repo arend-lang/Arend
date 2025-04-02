@@ -39,6 +39,7 @@ class ResolveReferenceAction(val target: PsiLocatedReferable,
 
     companion object {
         fun checkIfAvailable(target: PsiLocatedReferable, element: ArendReferenceElement): Boolean { // should return true iff getProposedFix with the same arguments returns a nonnull value
+            if (!target.isValid) return false
             val containingFile = element.containingFile as? ArendFile ?: return false
             if (target.accessModifier == AccessModifier.PRIVATE) return false
             return isVisible(target.containingFile as ArendFile, containingFile)
@@ -67,6 +68,7 @@ class ResolveReferenceAction(val target: PsiLocatedReferable,
         }
 
         fun getProposedFix(target: PsiLocatedReferable, anchor: ArendReferenceElement): ResolveReferenceAction? {
+            if (!target.isValid) return null
             val anchorFile = anchor.containingFile as? ArendFile ?: return null
             val fix: org.arend.ext.util.Pair<RawModifier, List<LongName>>? = doGetProposedFix(target, anchor) ?: return null
             val name = fix?.proj2?.firstOrNull() ?: return null
@@ -74,6 +76,7 @@ class ResolveReferenceAction(val target: PsiLocatedReferable,
         }
 
         fun getTargetName(target: PsiLocatedReferable, element: ArendCompositeElement): Pair<String, NsCmdRefactoringAction?>? {
+            if (!target.isValid) return null
             val anchorFile = element.containingFile as? ArendFile ?: return null
             val fix: org.arend.ext.util.Pair<RawModifier, List<LongName>>? = doGetProposedFix(target, element) ?: return null
             val name = fix?.proj2?.firstOrNull()?.toString() ?: return null

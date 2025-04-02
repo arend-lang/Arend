@@ -207,7 +207,7 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
   }
 
   public void freePatterns(List<? extends Concrete.Pattern> patterns, P params) {
-    for (Concrete.Pattern pattern : patterns) {
+    if (patterns != null) for (Concrete.Pattern pattern : patterns) {
       freePattern(pattern, params);
     }
   }
@@ -462,6 +462,7 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
       freeEliminatedParameters(def.getParameters(), def.getEliminatedReferences(), params);
     }
     visitClauses(def.getConstructorClauses(), params);
+
     if (def.getEliminatedReferences() == null) {
       freeParameters(def.getParameters(), params);
     } else {

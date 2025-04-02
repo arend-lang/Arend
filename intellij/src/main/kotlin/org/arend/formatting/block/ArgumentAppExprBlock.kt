@@ -147,13 +147,17 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
 
             blocks.sortBy { it.textRange.startOffset }
 
-            /*
+
             var segmentEnd = -1
+            val oddBlocks = ArrayList<Block>()
             for (block in blocks) {
-                if (block.textRange.endOffset <= segmentEnd)
+                if (block.textRange.endOffset == segmentEnd)
+                    oddBlocks.add(block)
+                if (block.textRange.endOffset < segmentEnd)
                     throw AssertionError("Blocks intersect")
                 segmentEnd = block.textRange.endOffset
-            }*/
+            }
+            blocks.removeAll(oddBlocks)
 
             return GroupBlock(settings, blocks, null, align, indent, this)
         } else if (cExpr is Concrete.LamExpression) { // we are dealing with right sections
