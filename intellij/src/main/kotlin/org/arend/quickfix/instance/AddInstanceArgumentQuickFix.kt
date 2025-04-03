@@ -25,7 +25,7 @@ import org.arend.naming.reference.TCDefReferable
 import org.arend.util.ArendBundle
 import java.lang.Integer.max
 
-class AddInstanceArgumentQuickFix(val error: InstanceInferenceError, val cause: SmartPsiElementPointer<ArendLongName>) : IntentionAction {
+class AddInstanceArgumentQuickFix(val error: InstanceInferenceError, val cause: SmartPsiElementPointer<ArendCompositeElement>) : IntentionAction {
     private val classRef: TCDefReferable?
         get() = error.classRef as? TCDefReferable
 

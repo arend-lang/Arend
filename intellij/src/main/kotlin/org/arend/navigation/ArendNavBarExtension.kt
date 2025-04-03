@@ -52,13 +52,13 @@ class ArendNavBarExtension : StructureAwareNavBarModelExtension() {
     }
 
     override fun getParent(psiElement: PsiElement?): PsiElement? {
-        val ancestor = psiElement?.ancestor<ArendDefinition<*>>()
-        if (ancestor != null) {
-            return ancestor.ancestor<ArendDefinition<*>>()
+        val coClauseResult = checkCoClause(psiElement?.parentOfType<ArendLocalCoClause>())
+        if (coClauseResult.first) {
+          return coClauseResult.second
         }
         val overrideField = psiElement?.parentOfType<ArendOverriddenField>()
         if (overrideField != null) {
-            return overrideField
+          return overrideField
         }
         return psiElement?.parentOfType<PsiLocatedReferable>() ?: DefaultNavBarExtension().getParent(psiElement)
     }

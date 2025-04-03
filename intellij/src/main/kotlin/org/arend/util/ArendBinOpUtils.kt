@@ -31,7 +31,6 @@ fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
             }
             return null
         }
-
     }, null) as? Concrete.Expression
 }
 

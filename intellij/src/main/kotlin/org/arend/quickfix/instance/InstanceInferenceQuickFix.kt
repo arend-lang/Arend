@@ -19,18 +19,15 @@ import com.intellij.psi.SmartPsiElementPointer
 import org.arend.core.definition.FunctionDefinition
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ancestor
-import org.arend.psi.ext.ArendDefinition
-import org.arend.psi.ext.ArendGroup
-import org.arend.psi.ext.ArendLongName
 import org.arend.refactoring.*
 import org.arend.ext.error.InstanceInferenceError
 import org.arend.naming.reference.TCDefReferable
-import org.arend.psi.ext.PsiLocatedReferable
+import org.arend.psi.ext.*
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
 import org.arend.resolving.ArendReferenceBase
 import org.arend.util.ArendBundle
 
-class InstanceInferenceQuickFix(val error: InstanceInferenceError, val cause: SmartPsiElementPointer<ArendLongName>) : IntentionAction {
+class InstanceInferenceQuickFix(val error: InstanceInferenceError, val cause: SmartPsiElementPointer<ArendCompositeElement>) : IntentionAction {
     private val classRef: TCDefReferable?
         get() = error.classRef as? TCDefReferable
 
@@ -82,26 +79,26 @@ class InstanceInferenceQuickFix(val error: InstanceInferenceError, val cause: Sm
     }
 
     companion object {
-        fun doAddImplicitArg(project: Project, longName: ArendLongName, chosenElement: List<FunctionDefinition>) {
+        fun doAddImplicitArg(project: Project, compositeElement: ArendCompositeElement, chosenElement: List<FunctionDefinition>) {
             WriteCommandAction.runWriteCommandAction(project, "Import Instance", null, {
-                val enclosingDefinition = longName.ancestor<ArendDefinition<*>>()
+                val enclosingDefinition = compositeElement.ancestor<ArendDefinition<*>>()
                 val mySourceContainer = enclosingDefinition?.parentGroup
                 if (mySourceContainer != null) {
                     val psiFactory = ArendPsiFactory(project)
 
                     for (element in chosenElement) {
                         val elementReferable = element.referable?.data as? PsiLocatedReferable ?: continue
-                        val importData = getTargetName(elementReferable, longName)
+                        val importData = getTargetName(elementReferable, compositeElement)
 
                         if (importData != null) {
                             val openedName: List<String> = importData.first.split(".")
                             importData.second?.execute()
                             if (openedName.size > 1 && elementReferable is ArendGroup)
-                                doAddIdToOpen(psiFactory, openedName, longName, elementReferable, instanceMode = true)
+                                doAddIdToOpen(psiFactory, openedName, compositeElement, elementReferable, instanceMode = true)
                         }
                     }
                 }
-            }, longName.containingFile)
+            }, compositeElement.containingFile)
         }
     }
 

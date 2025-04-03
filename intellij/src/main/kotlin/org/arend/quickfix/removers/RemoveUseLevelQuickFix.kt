@@ -33,7 +33,7 @@ class RemoveUseLevelQuickFix(private val cause: SmartPsiElementPointer<ArendDefF
         if (element.childOfType(LBRACE) == null) {
             element.delete()
         } else {
-            cause.element?.delete()
+            cause.element?.parent?.delete()
         }
     }
 }

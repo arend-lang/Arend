@@ -13,7 +13,7 @@ class RemoveUseLevelQuickFixTest: QuickFixTestBase() {
     """, """
         \data D
           \where {
-            }
+          }
     """
     )
 

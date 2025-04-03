@@ -391,7 +391,7 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
 
             is RedundantCoclauseError -> if (cause is ArendLocalCoClause) registerFix(builder, RemoveCoClauseQuickFix(SmartPointerManager.createPointer(cause)))
 
-            is InstanceInferenceError -> if (cause is ArendLongName) {
+            is InstanceInferenceError -> if (cause is ArendCompositeElement) {
                 val classifyingExpression = error.classifyingExpression
                 val isLocal = (classifyingExpression is ReferenceExpression) && DependentLink.Helper.toList((error.definition as? TCDefReferable)?.typechecked?.parameters ?: EmptyDependentLink.getInstance()).contains(classifyingExpression.binding)
                 if (isLocal) registerFix(builder, ReplaceWithLocalInstanceQuickFix(error, SmartPointerManager.createPointer(cause))) else registerFix(builder, InstanceInferenceQuickFix(error, SmartPointerManager.createPointer(cause)))

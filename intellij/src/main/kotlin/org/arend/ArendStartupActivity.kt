@@ -6,6 +6,7 @@ import com.intellij.ide.AppLifecycleListener
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.*
@@ -16,6 +17,7 @@ import org.arend.server.ArendServerService
 import org.arend.util.ArendBundle
 import org.arend.util.arendModules
 import org.arend.util.register
+import org.arend.yaml.YAMLFileListener
 
 
 class ArendStartupActivity : ProjectActivity {
@@ -73,6 +75,10 @@ class ArendStartupActivity : ProjectActivity {
                     }
                 }
             })
+
+        val yamlFileListener = YAMLFileListener(project)
+        yamlFileListener.register()
+        EditorFactory.getInstance().eventMulticaster.addDocumentListener(yamlFileListener, project)
 
         disableActions()
     }

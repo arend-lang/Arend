@@ -30,7 +30,7 @@ class AddRecursiveInstanceArgumentQuickFixTest : QuickFixTestBase() {
         \class b
         \class C
         \func f {b : b} {c : C} => 0
-        \class D {b0 : b} {c : C} (X : \Type) \extends b, C
+        \class D {b1 : b} {c : C} (X : \Type) \extends b, C
           | g : f = f
     """)
 }

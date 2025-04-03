@@ -17,7 +17,7 @@ import org.arend.naming.reference.TCDefReferable
 import org.arend.psi.ext.*
 import org.arend.util.ArendBundle
 
-class ReplaceWithLocalInstanceQuickFix(val error: InstanceInferenceError, val cause: SmartPsiElementPointer<ArendLongName>): IntentionAction {
+class ReplaceWithLocalInstanceQuickFix(val error: InstanceInferenceError, val cause: SmartPsiElementPointer<ArendCompositeElement>): IntentionAction {
     override fun startInWriteAction(): Boolean = true
 
     override fun getText(): String = ArendBundle.message("arend.instance.replaceWithLocalInstance")
