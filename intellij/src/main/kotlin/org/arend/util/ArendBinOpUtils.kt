@@ -106,7 +106,7 @@ fun getBounds(cExpr: Concrete.SourceNode, aaeBlocks: List<ASTNode>, rangesMap: H
                 val functionRange = f.first().textRange
                 elements.add(functionRange)
                 if (cExpr is Concrete.AppExpression)
-                    rangesMap?.put(cExpr, functionRange)
+                    rangesMap?.put(cExpr.function, functionRange)
             }
         }
 
