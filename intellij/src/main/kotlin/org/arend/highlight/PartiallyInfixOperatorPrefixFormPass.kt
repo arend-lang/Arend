@@ -8,7 +8,6 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.descendantsOfType
-import org.arend.naming.reference.GlobalReferable
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.util.ArendBundle
@@ -19,37 +18,34 @@ class PartiallyInfixOperatorPrefixFormPass(file: ArendFile, editor: Editor):
 
     override fun collectInformationWithProgress(progress: ProgressIndicator) {
         val infixArendRefIdentifiers = file.descendantsOfType<ArendRefIdentifier>().filter {
-            (it.resolve as? GlobalReferable?)?.precedence?.isInfix == true
+            (it.resolve as? ReferableBase<*>?)?.precedence?.isInfix == true
         }.toList()
 
         loop@ for (arendRefIdentifier in infixArendRefIdentifiers) {
             var element = arendRefIdentifier as PsiElement?
             while (element !is ArendNewExpr) {
                 element = element?.parent
-                if (element == null) {
+                if (element == null)
                     continue@loop
-                }
             }
-            element = element as ArendNewExpr
+            val concrete = appExprToConcrete(element)
+            val arguments = concrete?.argumentsSequence ?: emptyList()
+            if (arguments.size != 2)
+                continue
 
-            val arguments = appExprToConcrete(element)?.argumentsSequence ?: emptyList()
-            if (arguments.size != 2) {
-                continue
+            val (first, second) = arguments
+            val operationReference = when (val firstData = first.expression.data) {
+                is ArendRefIdentifier -> firstData
+                is ArendAtomFieldsAcc -> firstData.fieldAccList.last().refIdentifier ?: continue
+                else -> continue
             }
+            val argument = second.expression.data as? PsiElement? ?: continue
 
-            val (arendReferenceContainer, arendAtomFieldsAcc) = arguments
-            val arendReferenceContainerData = arendReferenceContainer.expression.data as PsiElement? ?: continue
-            val arendAtomFieldsAccData = arendAtomFieldsAcc.expression.data as PsiElement? ?: continue
-            if (arendReferenceContainerData.textRange.endOffset >= arendAtomFieldsAccData.textRange.startOffset) {
+            if (operationReference.textRange.endOffset >= argument.textRange.startOffset ||
+                operationReference.resolve != arendRefIdentifier.resolve ||
+                argument !is ArendAtom || !second.isExplicit)
                 continue
-            }
 
-            if ((arendReferenceContainerData as ArendReferenceContainer).resolve != arendRefIdentifier.resolve) {
-                continue
-            }
-            if (arendAtomFieldsAcc.expression.data !is ArendAtomFieldsAcc || !arendAtomFieldsAcc.isExplicit) {
-                continue
-            }
             val builder = HighlightInfo
                 .newHighlightInfo(HighlightInfoType.WARNING)
                 .range(element.textRange)

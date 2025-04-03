@@ -1,6 +1,5 @@
 package org.arend.formatting.block
 
-import androidx.collection.emptyScatterSet
 import com.intellij.formatting.*
 import com.intellij.lang.ASTNode
 import com.intellij.openapi.application.runReadAction

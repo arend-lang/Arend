@@ -25,7 +25,8 @@ fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
             var data: PsiElement? = sourceNode.data as? PsiElement
             val textRange = data?.textRange ?: return null
             while (data != null && data.textRange == textRange) {
-                if (data == appExpr) return sourceNode
+                if (data == appExpr && sourceNode is Concrete.Expression)
+                    return sourceNode
                 data = data.parent
             }
             return null
