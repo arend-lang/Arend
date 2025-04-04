@@ -565,7 +565,7 @@ public class ArendServerImpl implements ArendServer {
           continue loop;
         }
       }
-      return null;
+      return scope;
     }
 
     return scope;
