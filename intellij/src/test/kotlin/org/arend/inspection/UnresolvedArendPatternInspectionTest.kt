@@ -11,8 +11,6 @@ class UnresolvedArendPatternInspectionTest : QuickFixTestBase() {
 
     fun testBool() = doWarningsCheck(myFixture, """
         -- ! Bool.ard
-        \import Data.Bool(Bool, if)
-
         \data Bool | false | true 
         
         -- ! Main.ard
@@ -26,8 +24,6 @@ class UnresolvedArendPatternInspectionTest : QuickFixTestBase() {
 
     fun testBoolBar() = doWarningsCheck(myFixture, """
         -- ! Bool.ard
-        \import Data.Bool(Bool, if)
-
         \data Bool | false | true 
         
         -- ! Main.ard
@@ -44,8 +40,6 @@ class UnresolvedArendPatternInspectionTest : QuickFixTestBase() {
 
     fun testBoolSigma() = doWarningsCheck(myFixture, """
         -- ! Bool.ard
-        \import Data.Bool(Bool, if)
-
         \data Bool | false | true 
         
         -- ! Main.ard

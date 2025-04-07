@@ -205,13 +205,11 @@
                          enabledByDefault="true" level="WARNING"
                          implementationClass="org.arend.inspection.RedundantParameterInspection"/>
 
-        <!-- TODO[server2]
         <localInspection language="Arend" groupPath="Arend"
                          bundle="messages.ArendBundle" key="arend.inspection.unresolved.pattern.name"
                          groupBundle="messages.InspectionsBundle" groupKey="group.names.probable.bugs"
                          enabledByDefault="true" level="WARNING"
                          implementationClass="org.arend.inspection.UnresolvedArendPatternInspection"/>
-        -->
 
         <!-- Intention Actions -->
         <intentionAction>
@@ -429,10 +427,10 @@
         <highlightingPassFactory implementation="org.arend.highlight.ErrorHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.injection.InjectionHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.PartiallyInfixOperatorPrefixFormPassFactory"/>
+        <highlightingPassFactory implementation="org.arend.highlight.NameShadowingHighlighterPassFactory"/>
         <!-- TODO[server2]
         <highlightingPassFactory implementation="org.arend.highlight.ArendUnusedImportHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.RedundantParensPassFactory"/>
-        <highlightingPassFactory implementation="org.arend.highlight.NameShadowingHighlighterPassFactory"/>
         -->
 
         <!-- Tool Windows -->

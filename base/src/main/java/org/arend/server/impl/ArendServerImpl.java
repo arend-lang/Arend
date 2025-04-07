@@ -571,6 +571,17 @@ public class ArendServerImpl implements ArendServer {
     return scope;
   }
 
+  public static List<Referable> getLocalReferables(DefinitionData definitionData, Object anchor) {
+    List<Referable> localReferables = new ArrayList<>();
+    if (definitionData != null) {
+      LocalVariablesCollector collector = new LocalVariablesCollector(anchor);
+      definitionData.definition().accept(collector, null);
+      @Nullable List<Referable> collectedResult = collector.getResult();
+      if (collectedResult != null) localReferables.addAll(collectedResult);
+    }
+    return localReferables;
+  }
+
   @Override
   public @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(
     @NotNull List<LocatedReferable> referables,
@@ -607,12 +618,7 @@ public class ArendServerImpl implements ArendServer {
     List<Referable> localReferables = new ArrayList<>();
     if (anchor.data() != null && anchor.parent() instanceof TCDefReferable tcRef) {
       DefinitionData definitionData = getResolvedDefinition(tcRef);
-      if (definitionData != null) {
-        LocalVariablesCollector collector = new LocalVariablesCollector(anchor.data());
-        definitionData.definition().accept(collector, null);
-        @Nullable List<Referable> collectedResult = collector.getResult();
-        if (collectedResult != null) localReferables.addAll(collectedResult);
-      }
+      localReferables = getLocalReferables(definitionData, anchor.data());
     }
 
     Scope currentScope = new MergeScope(new ListScope(localReferables), getReferableScope(anchor.parent()));
