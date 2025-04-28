@@ -10,11 +10,11 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiNamedElement
 import com.intellij.psi.util.descendantsOfType
 import org.arend.naming.reference.DataLocalReferable
+import org.arend.naming.reference.LocalReferable.getLocalReferables
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.psi.parentOfType
 import org.arend.server.ArendServerService
-import org.arend.server.impl.ArendServerImpl
 import org.arend.util.ArendBundle
 
 class NameShadowingHighlighterPass(file: ArendFile, editor: Editor) :
@@ -43,7 +43,7 @@ class NameShadowingHighlighterPass(file: ArendFile, editor: Editor) :
         }
         val server = definition?.project?.service<ArendServerService>()?.server
         val definitionData = definition?.tcReferable?.let { server?.getResolvedDefinition(it) }
-        val elements = ArendServerImpl.getLocalReferables(definitionData, tele).mapNotNull { ((it as? DataLocalReferable)?.data as? PsiNamedElement?)?.name }
+        val elements = getLocalReferables(definitionData, tele).mapNotNull { ((it as? DataLocalReferable)?.data as? PsiNamedElement?)?.name }
 
         for (identifier in identifiers) {
             val name = identifier.name

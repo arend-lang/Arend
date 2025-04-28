@@ -262,8 +262,14 @@
 
         <intentionAction>
             <language>Arend</language>
-            <className>org.arend.intention.ReplaceWithShortNameIntention</className>
+            <className>org.arend.intention.ReplaceLongNameWithShortNameIntention</className>
             <category>Arend</category>
+        </intentionAction>
+
+        <intentionAction>
+          <language>Arend</language>
+          <className>org.arend.intention.ReplaceAtomFieldAccWithShortNameIntention</className>
+          <category>Arend</category>
         </intentionAction>
 
         <!-- TODO[server2]

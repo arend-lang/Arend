@@ -3,7 +3,5 @@
 }
 
 \module M2 \where {
-  <spot>\open M (f)</spot>
-
-  \func f2 => <spot>f</spot>
+  \func f2 => <spot>M.f</spot> \levels _ _
 }

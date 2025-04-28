@@ -140,7 +140,8 @@ class ArendRefIdentifier(node: ASTNode) : ArendIdentifierBase(node), ArendSource
 
     override val longName: List<String>
         get() = (parent as? ArendLongName)?.refIdentifierList?.mapUntilNotNull { if (it == this) null else it.referenceName }?.apply { add(referenceName) }
-            ?: listOf(referenceName)
+          ?: ((parent.parent as? ArendAtomFieldsAcc)?.let { atomFieldsAcc -> ((atomFieldsAcc.atom.text?.let { text -> listOf(text) } ?: emptyList()) + atomFieldsAcc.fieldAccList.mapUntilNotNull { it.refIdentifier?.referenceName }) })
+          ?: listOf(referenceName)
 
     override val resolve: PsiElement?
         get() = reference?.resolve()
