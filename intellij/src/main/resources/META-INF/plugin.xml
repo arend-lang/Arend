@@ -272,13 +272,11 @@
           <category>Arend</category>
         </intentionAction>
 
-        <!-- TODO[server2]
         <intentionAction>
             <language>Arend</language>
             <className>org.arend.intention.SwapInfixOperatorArgumentsIntention</className>
             <category>Arend</category>
         </intentionAction>
-        -->
 
         <intentionAction>
             <language>Arend</language>
