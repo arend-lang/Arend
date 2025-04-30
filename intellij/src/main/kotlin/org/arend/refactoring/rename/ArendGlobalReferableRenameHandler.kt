@@ -3,6 +3,7 @@ package org.arend.refactoring.rename
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Comparing
@@ -26,9 +27,13 @@ import com.intellij.usageView.UsageInfo
 import org.arend.intention.checkNotGeneratePreview
 import org.arend.naming.reference.RedirectingReferableImpl
 import org.arend.psi.ArendElementTypes.*
+import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.psi.getArendNameText
 import org.arend.refactoring.rename.ArendGlobalReferableRenameHandler.Util.isMoreSpecific
+import org.arend.server.ArendServerService
+import org.arend.server.ProgressReporter
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import java.awt.EventQueue.invokeLater
 
 class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
@@ -233,6 +238,11 @@ class ArendRenameProcessor(project: Project,
     var relevantNsId: ArendNsId? = null
 
     override fun findUsages(): Array<UsageInfo> {
+        val module = (element.containingFile as? ArendFile)?.moduleLocation
+        if (module != null) {
+            myProject.service<ArendServerService>().server.getCheckerFor(listOf(module)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+        }
+
         var collection: List<UsageInfo> = super.findUsages().toMutableList()
 
         val nsId = calculateRelevantNsId(context.offset, context.caretElementText, context.file, collection.map { it.reference })
