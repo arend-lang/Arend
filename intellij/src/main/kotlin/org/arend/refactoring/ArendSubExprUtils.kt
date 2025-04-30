@@ -1,7 +1,6 @@
 package org.arend.refactoring
 
 import com.intellij.codeInsight.hint.HintManager
-import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
@@ -25,12 +24,9 @@ import org.arend.ext.core.ops.NormalizationMode
 import org.arend.ext.prettyprinting.DefinitionRenamer
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
 import org.arend.intention.checkNotGeneratePreview
-import org.arend.injection.PsiInjectionTextFile
 import org.arend.naming.resolving.ResolverListener
-import org.arend.naming.resolving.typing.TypingInfo
-import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
-import org.arend.naming.scope.CachingScope
 import org.arend.psi.*
+import org.arend.psi.ancestor
 import org.arend.psi.ext.*
 import org.arend.settings.ArendProjectSettings
 import org.arend.term.Fixity
@@ -41,11 +37,12 @@ import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.typechecking.ProgressCancellationIndicator
 import org.arend.typechecking.computation.ComputationRunner
 import org.arend.typechecking.subexpr.CorrespondedSubDefVisitor
-import org.arend.typechecking.subexpr.CorrespondedSubExprVisitor
 import org.arend.typechecking.subexpr.FindBinding
 import org.arend.typechecking.subexpr.SubExprError
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor
 import org.arend.resolving.util.parseBinOp
+import org.arend.search.proof.getTcDefReferable
+import org.arend.server.ArendServerService
 
 /**
  * @param def for storing function-level elim/clauses bodies
@@ -124,15 +121,16 @@ fun correspondedSubExpr(range: TextRange, file: PsiFile, project: Project): SubE
     val resolver = subExpr.underlyingReferenceExpression?.let { refExpr -> refExpr.data?.let { MyResolverListener(it) } }
 
     // if (possibleParent is PsiWhiteSpace) return "selected text are whitespaces"
-    val psiDef = exprAncestor.ancestor<PsiLocatedReferable>()
+    val psiDef = exprAncestor.topmostAncestor<ReferableBase<*>>()
         ?: throw SubExprException("selected text is not in a definition")
-    val concreteDef: Concrete.Definition? = null // TODO[server2]: PsiConcreteProvider(project, DummyErrorReporter.INSTANCE, null, true, resolver).getConcrete(psiDef) as? Concrete.Definition
+    val arendServer = project.service<ArendServerService>().server
+    val concreteDef = getTcDefReferable(psiDef)?.let { arendServer.getResolvedDefinition(it) }?.definition as? Concrete.Definition
     val body = concreteDef?.let { it to psiDef }
 
     val errors: List<SubExprError>
     val result = run {
         concreteDef ?: throw SubExprException("selected text is not in a definition")
-        val def = (psiDef as? ReferableBase<*>)?.tcReferable?.typechecked
+        val def = psiDef.tcReferable?.typechecked
             ?: throw SubExprException("underlying definition is not type checked")
         val subDefVisitor = CorrespondedSubDefVisitor(resolver?.result ?: subExpr)
         errors = subDefVisitor.exprError
@@ -154,7 +152,8 @@ inline fun selectedExpr(file: PsiFile, range: TextRange, errorHandling: (String)
     else file.findElementAt(range.endOffset - 1)?.let {
         PsiTreeUtil.findCommonParent(startElement, it)
     } ?: errorHandling("selected expr in bad position")
-    return element.ancestor() ?: errorHandling("selected text is not an arend expression")
+    return element.ancestor<ArendAtomFieldsAcc>() ?:
+      element.ancestor() ?: errorHandling("selected text is not an arend expression")
 }
 
 fun selectedExpr(file: PsiFile, range: TextRange): ArendExpr? = selectedExpr(file, range) { return null }

@@ -42,6 +42,18 @@ inline fun <reified T : PsiElement> PsiElement.ancestor(): T? {
     return element as? T
 }
 
+inline fun <reified T : PsiElement> PsiElement.topmostAncestor(): T? {
+  var element: PsiElement? = this
+  var result: T? = null
+  while (element != null && element !is PsiFile) {
+    if (element is T) {
+      result = element
+    }
+    element = element.parent
+  }
+  return result
+}
+
 inline fun <reified T : PsiElement> PsiElement.rightSibling(): T? {
     var element: PsiElement? = nextSibling
     while (element != null && element !is T) {
