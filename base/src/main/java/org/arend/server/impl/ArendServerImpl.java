@@ -96,16 +96,13 @@ public class ArendServerImpl implements ArendServer {
     }
   };
 
-  private final InstanceScopeProvider myInstanceScopeProvider = new InstanceScopeProvider() {
-    @Override
-    public @NotNull PersistentList<TCDefReferable> getInstancesFor(@NotNull TCDefReferable referable) {
-      FullName fullName = referable.getRefFullName();
-      if (fullName.module == null) return PersistentList.empty();
-      GroupData groupData = myGroups.get(fullName.module);
-      if (groupData == null) return PersistentList.empty();
-      DefinitionData defData = groupData.getDefinitionData(fullName.longName);
-      return defData == null ? PersistentList.empty() : defData.instances();
-    }
+  private final InstanceScopeProvider myInstanceScopeProvider = referable -> {
+    FullName fullName = referable.getRefFullName();
+    if (fullName.module == null) return PersistentList.empty();
+    GroupData groupData = myGroups.get(fullName.module);
+    if (groupData == null) return PersistentList.empty();
+    DefinitionData defData = groupData.getDefinitionData(fullName.longName);
+    return defData == null ? PersistentList.empty() : defData.instances();
   };
 
   public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging, @Nullable String logFile) {
@@ -541,6 +538,11 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public @Nullable Scope getReferableScope(@NotNull LocatedReferable referable) {
+    if (referable.getKind() == GlobalReferable.Kind.CONSTRUCTOR || referable.getKind() == GlobalReferable.Kind.FIELD) {
+      LocatedReferable parent = referable.getLocatedReferableParent();
+      if (parent != null) referable = parent;
+    }
+
     List<LocatedReferable> ancestors = new ArrayList<>();
     ModuleLocation module = LocatedReferable.Helper.getAncestors(referable, ancestors);
     GroupData groupData = module == null ? null : myGroups.get(module);
@@ -565,7 +567,7 @@ public class ArendServerImpl implements ArendServer {
           continue loop;
         }
       }
-      return scope;
+      return null;
     }
 
     return scope;
