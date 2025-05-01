@@ -29,7 +29,7 @@ public class ScopeDefinitionRenamer implements DefinitionRenamer {
     }
 
     if (myScope.resolveName(arendRef.getRefName()) == arendRef) {
-      return new LongName(Collections.singletonList(arendRef.getRefName()));
+      return new LongName(Collections.singletonList(ref.getRepresentableName()));
     }
 
     List<String> list = new ArrayList<>();
@@ -54,10 +54,12 @@ public class ScopeDefinitionRenamer implements DefinitionRenamer {
         break;
       } else {
         ref = parent;
-        list.add(ref.getRefName());
         if (myScope.resolveName(ref.getRefName()) == ref) {
+          list.add(ref.getRepresentableName());
           Collections.reverse(list);
           break;
+        } else {
+          list.add(ref.getRefName());
         }
       }
     }
