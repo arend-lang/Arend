@@ -570,6 +570,11 @@ public class ArendServerImpl implements ArendServer {
       return null;
     }
 
+    if (referable.getKind() == GlobalReferable.Kind.CLASS) {
+      DynamicScopeProvider dynamicScopeProvider = myTypingInfo.getDynamicScopeProvider(referable);
+      return dynamicScopeProvider == null ? scope : new MergeScope(new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC), scope);
+    }
+
     return scope;
   }
 
