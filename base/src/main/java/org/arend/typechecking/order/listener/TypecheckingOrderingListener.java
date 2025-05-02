@@ -181,35 +181,37 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   private Definition newDefinition(Concrete.ResolvableDefinition definition) {
     Definition typechecked;
-    if (definition instanceof Concrete.DataDefinition def) {
-      typechecked = new DataDefinition(def.getData());
-      for (Concrete.ConstructorClause constructorClause : def.getConstructorClauses()) {
-        for (Concrete.Constructor constructor : constructorClause.getConstructors()) {
-          Constructor tcConstructor = new Constructor(constructor.getData(), (DataDefinition) typechecked);
-          tcConstructor.setParameters(EmptyDependentLink.getInstance());
-          tcConstructor.setStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
-          ((DataDefinition) typechecked).addConstructor(tcConstructor);
-          constructor.getData().setTypecheckedIfAbsent(tcConstructor);
+    switch (definition) {
+      case Concrete.DataDefinition def -> {
+        typechecked = new DataDefinition(def.getData());
+        for (Concrete.ConstructorClause constructorClause : def.getConstructorClauses()) {
+          for (Concrete.Constructor constructor : constructorClause.getConstructors()) {
+            Constructor tcConstructor = new Constructor(constructor.getData(), (DataDefinition) typechecked);
+            tcConstructor.setParameters(EmptyDependentLink.getInstance());
+            tcConstructor.setStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
+            ((DataDefinition) typechecked).addConstructor(tcConstructor);
+            constructor.getData().setTypecheckedIfAbsent(tcConstructor);
+          }
         }
       }
-    } else if (definition instanceof Concrete.BaseFunctionDefinition def) {
-      typechecked = def.getKind() == FunctionKind.CONS ? new DConstructor(def.getData()) : new FunctionDefinition(def.getData());
-      ((FunctionDefinition) typechecked).setResultType(new ErrorExpression());
-    } else if (definition instanceof Concrete.ClassDefinition def) {
-      typechecked = new ClassDefinition(def.getData());
-      for (Concrete.ClassElement element : def.getElements()) {
-        if (element instanceof Concrete.ClassField) {
-          ClassField classField = new ClassField(((Concrete.ClassField) element).getData(), (ClassDefinition) typechecked, new PiExpression(Sort.PROP, new TypedSingleDependentLink(false, "this", new ClassCallExpression((ClassDefinition) typechecked, typechecked.makeIdLevels()), true), new ErrorExpression()), null);
-          classField.setStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
-          ((ClassDefinition) typechecked).addPersonalField(classField);
-          ((ClassDefinition) typechecked).addField(classField);
-          classField.getReferable().setTypecheckedIfAbsent(classField);
+      case Concrete.BaseFunctionDefinition def -> {
+        typechecked = def.getKind() == FunctionKind.CONS ? new DConstructor(def.getData()) : new FunctionDefinition(def.getData());
+        ((FunctionDefinition) typechecked).setResultType(new ErrorExpression());
+      }
+      case Concrete.ClassDefinition def -> {
+        typechecked = new ClassDefinition(def.getData());
+        for (Concrete.ClassElement element : def.getElements()) {
+          if (element instanceof Concrete.ClassField) {
+            ClassField classField = new ClassField(((Concrete.ClassField) element).getData(), (ClassDefinition) typechecked, new PiExpression(Sort.PROP, new TypedSingleDependentLink(false, "this", new ClassCallExpression((ClassDefinition) typechecked, typechecked.makeIdLevels()), true), new ErrorExpression()), null);
+            classField.setStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
+            ((ClassDefinition) typechecked).addPersonalField(classField);
+            ((ClassDefinition) typechecked).addField(classField);
+            classField.getReferable().setTypecheckedIfAbsent(classField);
+          }
         }
       }
-    } else if (definition instanceof DefinableMetaDefinition) {
-      typechecked = new MetaTopDefinition(((DefinableMetaDefinition) definition).getData());
-    } else {
-      throw new IllegalStateException();
+      case DefinableMetaDefinition definableMetaDefinition -> typechecked = new MetaTopDefinition(definableMetaDefinition.getData());
+      case null, default -> throw new IllegalStateException();
     }
     typechecked.setStatus(Definition.TypeCheckingStatus.NEEDS_TYPE_CHECKING);
     definition.getData().setTypecheckedIfAbsent(typechecked);
@@ -305,6 +307,13 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
   }
 
+  private void addUseDependencies(Concrete.ResolvableDefinition definition) {
+    for (TCDefReferable usedDefinition : definition.getUsedDefinitions()) {
+      myDependencyListener.dependsOn(definition.getData(), usedDefinition);
+      myDependencyListener.dependsOn(usedDefinition, definition.getData());
+    }
+  }
+
   @Override
   public void unitFound(Concrete.ResolvableDefinition definition, boolean recursive) {
     myHeadersAreOK = true;
@@ -326,6 +335,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
     List<Definition> typechecked = new ArrayList<>();
     typecheckWithUse(definition, usedDefinitions, recursive, extension, typechecked);
+    addUseDependencies(definition);
     if (definition instanceof Concrete.ClassDefinition classDef) {
       DefinitionTypechecker.setDefaultDependencies(classDef);
     }
@@ -357,7 +367,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
 
     for (Concrete.ResolvableDefinition definition : definitions) {
-      if (cycle.isEmpty() || cycle.get(cycle.size() - 1) != definition.getData()) {
+      if (cycle.isEmpty() || cycle.getLast() != definition.getData()) {
         cycle.add(definition.getData());
       }
 
@@ -434,6 +444,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
         otherDefs.add(newDef);
       }
       refs.add(definition.getData());
+      addUseDependencies(definition);
     }
     orderedDefinitions.addAll(otherDefs);
 
