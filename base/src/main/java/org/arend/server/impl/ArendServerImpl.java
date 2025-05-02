@@ -516,11 +516,12 @@ public class ArendServerImpl implements ArendServer {
     boolean[] found = new boolean[1];
     try {
       GlobalTypingInfo typingInfo = new GlobalTypingInfo(myTypingInfo);
-      new TypingInfoVisitor(typingInfo).processGroup(group, getParentGroupScope(module, group));
+      Scope scope = getParentGroupScope(module, group);
+      new TypingInfoVisitor(typingInfo).processGroup(group, scope);
       new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(group)), typingInfo, DummyErrorReporter.INSTANCE, new ResolverListener() {
         @Override
         public void resolving(AbstractReference abstractReference, Scope scope, Scope.ScopeContext context, boolean finished) {
-          if (abstractReference == reference) {
+          if (reference.equals(abstractReference)) {
             result.addAll(scope.getElements(context));
             found[0] = true;
             if (finished) {
@@ -528,7 +529,7 @@ public class ArendServerImpl implements ArendServer {
             }
           }
         }
-      }).resolveGroup(group, getParentGroupScope(module, group), PersistentList.empty(), null);
+      }).resolveGroup(group, scope, PersistentList.empty(), null);
     } catch (CompletionException ignored) {
     }
 
