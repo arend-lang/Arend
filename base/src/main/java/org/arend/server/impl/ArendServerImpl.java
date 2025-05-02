@@ -629,7 +629,8 @@ public class ArendServerImpl implements ArendServer {
       localReferables = getLocalReferables(definitionData, anchor.data());
     }
 
-    Scope currentScope = new MergeScope(new ListScope(localReferables), getReferableScope(anchor.parent()));
+    Scope referableScope = getReferableScope(anchor.parent());
+    Scope currentScope = referableScope == null ? new ListScope(localReferables) : new MergeScope(new ListScope(localReferables), referableScope);
     Collection<? extends Referable> currentScopeElements = currentScope.getElements();
     HashMap<Referable, String> currentScopeMap = new HashMap<>();
     for (Referable referable : currentScopeElements) {

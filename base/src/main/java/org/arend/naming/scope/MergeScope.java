@@ -19,7 +19,7 @@ public class MergeScope implements Scope {
     myMergeNamespaces = false;
   }
 
-  public MergeScope(Scope... scopes) {
+  public MergeScope(@NotNull Scope... scopes) {
     myScopes = Arrays.asList(scopes);
     myMergeNamespaces = false;
   }
