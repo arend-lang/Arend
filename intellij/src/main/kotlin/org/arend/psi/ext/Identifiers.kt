@@ -8,7 +8,6 @@ import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.SearchScope
 import org.arend.ext.reference.Precedence
 import org.arend.naming.reference.*
-import org.arend.naming.scope.Scope.ScopeContext
 import org.arend.psi.*
 import org.arend.psi.doc.ArendDocComment
 import org.arend.psi.doc.ArendDocReference
@@ -166,7 +165,7 @@ class ArendRefIdentifier(node: ASTNode) : ArendIdentifierBase(node), ArendSource
                 }
             }
         }
-        return ArendReferenceImpl(this, if (parent is ArendAtomLevelExpr) (if (ancestors.filterIsInstance<ArendTopLevelLevelExpr>().firstOrNull()?.isPLevels() != false) ScopeContext.PLEVEL else ScopeContext.HLEVEL) else ScopeContext.STATIC)
+        return ArendReferenceImpl(this)
     }
 
     override fun getTopmostEquivalentSourceNode() = getTopmostEquivalentSourceNode(this)

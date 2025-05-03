@@ -7,10 +7,8 @@ import com.intellij.psi.*
 import org.arend.ArendIcons
 import org.arend.codeInsight.completion.ReplaceInsertHandler
 import org.arend.error.DummyErrorReporter
-import org.arend.ext.reference.DataContainer
 import org.arend.module.ModuleLocation
 import org.arend.naming.reference.*
-import org.arend.naming.scope.Scope
 import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.psi.ext.ReferableBase
@@ -28,25 +26,19 @@ interface ArendReference : PsiReference {
     override fun resolve(): PsiElement?
 }
 
-abstract class ArendReferenceBase<T : ArendReferenceElement>(element: T, range: TextRange, protected val scopeContext: Scope.ScopeContext = Scope.ScopeContext.STATIC) : PsiReferenceBase<T>(element, range), ArendReference {
+abstract class ArendReferenceBase<T : ArendReferenceElement>(element: T, range: TextRange)
+    : PsiReferenceBase<T>(element, range), ArendReference {
+
     override fun handleElementRename(newName: String): PsiElement {
         element.referenceNameElement?.let { doRename(it, newName) }
         return element
-    }
-
-    private fun getPsi(referable: Referable?): Any? {
-        if (referable is DataContainer) {
-            val data = referable.data
-            if (data is PsiReferable) return data
-        }
-        return referable
     }
 
     override fun resolve() = element.resolvePsi()
 
     companion object {
         fun createArendLookUpElement(origElement: Referable?, ref: AbstractReferable?, containingFile: PsiFile?, fullName: Boolean, clazz: Class<*>?, notARecord: Boolean, lookup: String? = null): LookupElementBuilder? =
-            if (origElement is AliasReferable || ref !is ModuleReferable && (clazz != null && !clazz.isInstance(ref) || notARecord && (ref as? ArendDefClass)?.isRecord == true)) {
+            if (ref !is ModuleReferable && (clazz != null && !clazz.isInstance(ref) || notARecord && (ref as? ArendDefClass)?.isRecord == true)) {
                 null
             } else when (ref) {
                 is ArendFile -> LookupElementBuilder.create(ref, (origElement as? ModuleReferable)?.path?.lastName ?: ref.name.removeSuffix(FileUtils.EXTENSION)).withIcon(ArendIcons.AREND_FILE)
@@ -103,7 +95,7 @@ open class ArendDefReferenceImpl<T : ArendReferenceElement>(element: T) : ArendR
     }
 }
 
-open class ArendReferenceImpl<T : ArendReferenceElement>(element: T, scopeContext: Scope.ScopeContext = Scope.ScopeContext.STATIC) : ArendReferenceBase<T>(element, element.rangeInElement, scopeContext) {
+open class ArendReferenceImpl<T : ArendReferenceElement>(element: T) : ArendReferenceBase<T>(element, element.rangeInElement) {
     override fun bindToElement(element: PsiElement) = element
 
     override fun getVariants(): Array<Any> {

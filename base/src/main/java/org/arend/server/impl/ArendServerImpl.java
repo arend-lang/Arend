@@ -522,7 +522,27 @@ public class ArendServerImpl implements ArendServer {
         @Override
         public void resolving(AbstractReference abstractReference, Scope scope, Scope.ScopeContext context, boolean finished) {
           if (reference.equals(abstractReference)) {
-            result.addAll(scope.getElements(context));
+            Collection<? extends Referable> elements = scope.getElements(context);
+            int i = result.size();
+            List<Integer> aliases = new ArrayList<>();
+            for (Referable element : elements) {
+              result.add(element);
+              if (element instanceof AliasReferable) {
+                aliases.add(i);
+              }
+              i++;
+            }
+
+            for (int j = aliases.size() - 1; j >= 0; j--) {
+              int aliasIndex = aliases.get(j);
+              GlobalReferable original = (((AliasReferable) result.get(aliasIndex)).getOriginalReferable());
+              if (elements.contains(original)) {
+                result.remove(aliasIndex);
+              } else {
+                result.set(aliasIndex, original);
+              }
+            }
+
             found[0] = true;
             if (finished) {
               throw new CompletionException();
