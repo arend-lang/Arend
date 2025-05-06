@@ -2,6 +2,7 @@ package org.arend.naming;
 
 import org.arend.Matchers;
 import org.arend.term.group.AccessModifier;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.junit.Test;
 
@@ -419,11 +420,11 @@ public class AccessModifiersTest extends TypeCheckingTestCase {
 
   @Test
   public void testConstructor2() {
-    lastGroup = parseModule("""
+    ConcreteGroup group = parseModule("""
       \\private \\data D
         | \\private cons
       """, 1);
-    resolveNamesModule(lastGroup, 1);
+    resolveNamesModule(group, 1);
     assertEquals(AccessModifier.PRIVATE, get("D.cons").getAccessModifier());
     assertThatErrorsAre(Matchers.warning());
   }
@@ -455,11 +456,11 @@ public class AccessModifiersTest extends TypeCheckingTestCase {
 
   @Test
   public void testField3() {
-    lastGroup = parseModule("""
+    ConcreteGroup group = parseModule("""
       \\private \\data R
         | \\private field : Nat
       """, 1);
-    resolveNamesModule(lastGroup, 1);
+    resolveNamesModule(group, 1);
     assertEquals(AccessModifier.PRIVATE, get("R.field").getAccessModifier());
     assertThatErrorsAre(Matchers.warning());
   }

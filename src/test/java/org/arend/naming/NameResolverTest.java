@@ -7,7 +7,6 @@ import org.arend.naming.scope.ScopeFactory;
 import org.arend.naming.scope.local.ListScope;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.AccessModifier;
-import org.arend.term.group.ConcreteGroup;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -656,7 +655,7 @@ public class NameResolverTest extends NameResolverTestCase {
 
   @Test
   public void openElementsTest() {
-    ConcreteGroup group = resolveNamesModule(
+    resolveNamesModule(
       """
         \\import Prelude()
         \\module X \\where { \\func f => 0 }
@@ -664,7 +663,7 @@ public class NameResolverTest extends NameResolverTestCase {
         \\func g => f
         """);
     List<String> names = new ArrayList<>();
-    for (Referable element : CachingScope.make(ScopeFactory.forGroup(group, server.getModuleScopeProvider(null, false))).getElements()) {
+    for (Referable element : CachingScope.make(ScopeFactory.forGroup(getGroup(), server.getModuleScopeProvider(null, false))).getElements()) {
       names.add(element.textRepresentation());
     }
     assertEquals(Arrays.asList("X", "g", "f", "Prelude"), names);

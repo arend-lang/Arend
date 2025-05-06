@@ -228,10 +228,11 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   private void postfixTest(String name) {
-    List<? extends ConcreteStatement> statements = resolveNamesModule(
+    resolveNamesModule(
       "\\func \\fix 5 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infixl 5 $ (A B : \\Prop) => A\n" +
-      "\\func f (A B C : \\Prop) => A $ B `" + name + " $ C").statements();
+      "\\func f (A B C : \\Prop) => A $ B `" + name + " $ C");
+    List<? extends ConcreteStatement> statements = getGroup().statements();
     GlobalReferable named = Objects.requireNonNull(statements.get(0).group()).referable();
     GlobalReferable d = Objects.requireNonNull(statements.get(1).group()).referable();
     Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
@@ -256,17 +257,21 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   @Test
-  public void postfixError() {
+  public void postfixError1() {
     postfixError("#");
-    errorList.clear();
+  }
+
+  @Test
+  public void postfixError2() {
     postfixError("foo");
   }
 
   private void postfixTest2(String name) {
-    List<? extends ConcreteStatement> statements = resolveNamesModule(
+    resolveNamesModule(
       "\\func \\fix 5 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infixr 5 $ (A B : \\Prop) => A\n" +
-      "\\func f (A B C : \\Prop) => A $ B `" + name + " $ C").statements();
+      "\\func f (A B C : \\Prop) => A $ B `" + name + " $ C");
+    List<? extends ConcreteStatement> statements = getGroup().statements();
     GlobalReferable named = Objects.requireNonNull(statements.get(0).group()).referable();
     GlobalReferable d = Objects.requireNonNull(statements.get(1).group()).referable();
     Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
@@ -284,10 +289,11 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   private void postfixTest3(String name) {
-    List<? extends ConcreteStatement> statements = resolveNamesModule(
+    resolveNamesModule(
       "\\func \\fix 6 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infix 5 $ (A B : \\Prop) => A\n" +
-      "\\func f (A B : \\Prop) => A $ B `" + name).statements();
+      "\\func f (A B : \\Prop) => A $ B `" + name);
+    List<? extends ConcreteStatement> statements = getGroup().statements();
     GlobalReferable named = Objects.requireNonNull(statements.get(0).group()).referable();
     GlobalReferable d = Objects.requireNonNull(statements.get(1).group()).referable();
     Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
@@ -305,10 +311,11 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   private void postfixTest4(String name) {
-    List<? extends ConcreteStatement> statements = resolveNamesModule(
+    resolveNamesModule(
       "\\func \\fix 4 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infix 5 $ (A B : \\Prop) => A\n" +
-      "\\func f (A B : \\Prop) => A $ B `" + name).statements();
+      "\\func f (A B : \\Prop) => A $ B `" + name);
+    List<? extends ConcreteStatement> statements = getGroup().statements();
     GlobalReferable named = Objects.requireNonNull(statements.get(0).group()).referable();
     GlobalReferable d = Objects.requireNonNull(statements.get(1).group()).referable();
     Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
@@ -326,10 +333,11 @@ public class ParserTest extends NameResolverTestCase {
   }
 
   private void postfixTest5(String name1, String name2, String pr1, String pr2) {
-    List<? extends ConcreteStatement> statements = resolveNamesModule(
+    resolveNamesModule(
       "\\func " + pr1 + " " + name1 + " (A : \\Prop) => A\n" +
       "\\func " + pr2 + " " + name2 + " (A : \\Prop) => A\n" +
-      "\\func f (A : \\Prop) => A `" + name1 + " `" + name2).statements();
+      "\\func f (A : \\Prop) => A `" + name1 + " `" + name2);
+    List<? extends ConcreteStatement> statements = getGroup().statements();
     GlobalReferable named1 = Objects.requireNonNull(statements.get(0).group()).referable();
     GlobalReferable named2 = Objects.requireNonNull(statements.get(1).group()).referable();
     Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
@@ -359,14 +367,15 @@ public class ParserTest extends NameResolverTestCase {
 
   @Test
   public void postfixTest6() {
-    List<? extends ConcreteStatement> statements = resolveNamesModule(
+    resolveNamesModule(
       """
         \\func \\infixr 1 >== (A B : \\Prop) => A
         \\func \\infix 2 ==< (A B : \\Prop) => A
         \\func \\fix 2 qed (A : \\Prop) => A
         \\func g (A : \\Prop) => A
         \\func f (A B C : \\Prop) => g A ==< g B >== g C `qed
-        """).statements();
+        """);
+    List<? extends ConcreteStatement> statements = getGroup().statements();
     GlobalReferable rightP = Objects.requireNonNull(statements.get(0).group()).referable();
     GlobalReferable leftP = Objects.requireNonNull(statements.get(1).group()).referable();
     GlobalReferable qed = Objects.requireNonNull(statements.get(2).group()).referable();

@@ -1,10 +1,12 @@
 package org.arend.naming;
 
 import org.arend.ArendTestCase;
+import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.doc.DocFactory;
 import org.arend.frontend.parser.*;
 import org.arend.frontend.repl.CommonCliRepl;
+import org.arend.library.MemoryLibrary;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.FullModuleReferable;
 import org.arend.naming.reference.LocatedReferable;
@@ -19,18 +21,19 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public abstract class ParserTestCase extends ArendTestCase {
-  protected static final ModuleLocation MODULE_PATH = new ModuleLocation((String) null, null, new ModulePath("$TestCase$"));
-  protected static final LocatedReferable MODULE_REF = new FullModuleReferable(MODULE_PATH);
+  protected final static ModuleLocation MODULE = new ModuleLocation(MemoryLibrary.INSTANCE.getLibraryName(), ModuleLocation.LocationKind.SOURCE, new ModulePath("$TestCase$"));
+  protected static final LocatedReferable MODULE_REF = new FullModuleReferable(MODULE);
 
-  private ArendParser _parse(String text) {
-    return CommonCliRepl.createParser(text, MODULE_PATH, errorReporter);
+  private ArendParser _parse(String text, ListErrorReporter errorReporter) {
+    return CommonCliRepl.createParser(text, MODULE, errorReporter);
   }
 
 
   Concrete.Expression parseExpr(String text, int errors) {
-    ArendParser.ExprContext ctx = _parse(text).expr();
-    Concrete.Expression expr = errorList.isEmpty() ? new BuildVisitor(MODULE_PATH, errorReporter).visitExpr(ctx) : null;
-    assertThat(errorList, containsErrors(errors));
+    ListErrorReporter errorReporter = new ListErrorReporter();
+    ArendParser.ExprContext ctx = _parse(text, errorReporter).expr();
+    Concrete.Expression expr = errorReporter.getErrorList().isEmpty() ? new BuildVisitor(MODULE, errorReporter).visitExpr(ctx) : null;
+    assertThat(errorReporter.getErrorList(), containsErrors(errors));
     return expr;
   }
 
@@ -39,14 +42,15 @@ public abstract class ParserTestCase extends ArendTestCase {
   }
 
   ConcreteGroup parseDef(String text, int errors) {
-    ArendParser.DefinitionContext ctx = _parse(text).definition();
+    ListErrorReporter errorReporter = new ListErrorReporter();
+    ArendParser.DefinitionContext ctx = _parse(text, errorReporter).definition();
     List<ConcreteStatement> statements = new ArrayList<>(1);
-    ConcreteGroup fileGroup = new ConcreteGroup(DocFactory.nullDoc(), new FullModuleReferable(MODULE_PATH), null, statements, Collections.emptyList(), Collections.emptyList());
-    ConcreteGroup definition = errorList.isEmpty() ? new BuildVisitor(MODULE_PATH, errorReporter).visitDefinition(AccessModifier.PUBLIC, ctx, fileGroup, null) : null;
+    ConcreteGroup fileGroup = new ConcreteGroup(DocFactory.nullDoc(), new FullModuleReferable(MODULE), null, statements, Collections.emptyList(), Collections.emptyList());
+    ConcreteGroup definition = errorReporter.getErrorList().isEmpty() ? new BuildVisitor(MODULE, errorReporter).visitDefinition(AccessModifier.PUBLIC, ctx, fileGroup, null) : null;
     if (definition != null) {
       statements.add(new ConcreteStatement(definition, null, null, null));
     }
-    assertThat(errorList, containsErrors(errors));
+    assertThat(errorReporter.getErrorList(), containsErrors(errors));
     return definition;
   }
 
@@ -55,9 +59,10 @@ public abstract class ParserTestCase extends ArendTestCase {
   }
 
   protected ConcreteGroup parseModule(String text, int errors) {
-    ArendParser.StatementsContext tree = _parse(text).statements();
-    ConcreteGroup group = errorList.isEmpty() ? new BuildVisitor(MODULE_PATH, errorReporter).visitStatements(tree) : null;
-    assertThat(errorList, containsErrors(errors));
+    ListErrorReporter errorReporter = new ListErrorReporter();
+    ArendParser.StatementsContext tree = _parse(text, errorReporter).statements();
+    ConcreteGroup group = errorReporter.getErrorList().isEmpty() ? new BuildVisitor(MODULE, errorReporter).visitStatements(tree) : null;
+    assertThat(errorReporter.getErrorList(), containsErrors(errors));
     return group;
   }
 

@@ -7,6 +7,7 @@ import org.arend.core.definition.Definition;
 import org.arend.core.expr.UniverseExpression;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.error.DummyErrorReporter;
 import org.arend.ext.util.Pair;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
@@ -22,7 +23,7 @@ import static org.junit.Assert.assertNotNull;
 public class VarsTest extends TypeCheckingTestCase {
   private Concrete.Definition getConcreteFixed(String path) {
     Concrete.Definition def = (Concrete.Definition) getConcrete(path);
-    WhereVarsFixVisitor.fixDefinition(Collections.singletonList(def), errorReporter);
+    WhereVarsFixVisitor.fixDefinition(Collections.singletonList(def), DummyErrorReporter.INSTANCE);
     return def;
   }
 
@@ -334,7 +335,7 @@ public class VarsTest extends TypeCheckingTestCase {
     Definition bar = getDefinition("foo.bar");
     assertNotNull(bar.getLevelParameters());
     assertEquals(3, bar.getLevelParameters().size());
-    assertEquals(new UniverseExpression(new Sort(new Level(bar.getLevelParameters().get(0)), new Level(LevelVariable.HVAR))), bar.getParameters().getTypeExpr());
+    assertEquals(new UniverseExpression(new Sort(new Level(bar.getLevelParameters().getFirst()), new Level(LevelVariable.HVAR))), bar.getParameters().getTypeExpr());
   }
 
   @Test
@@ -357,7 +358,7 @@ public class VarsTest extends TypeCheckingTestCase {
     Definition bar = getDefinition("foo.bar");
     assertNotNull(bar.getLevelParameters());
     assertEquals(3, bar.getLevelParameters().size());
-    assertEquals(new UniverseExpression(new Sort(new Level(bar.getLevelParameters().get(0)), new Level(LevelVariable.HVAR))), bar.getParameters().getTypeExpr());
+    assertEquals(new UniverseExpression(new Sort(new Level(bar.getLevelParameters().getFirst()), new Level(LevelVariable.HVAR))), bar.getParameters().getTypeExpr());
   }
 
   @Test

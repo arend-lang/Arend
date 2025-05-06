@@ -198,13 +198,13 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
   @Test
   public void isoSet() {
     typeCheckModule("\\func setExt (A B : \\Set) (f : A -> B) (g : B -> A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y : B) -> f (g y) = y) => path {\\lam _ => \\Set} (iso f g p q)");
-    assertEquals(new UniverseExpression(Sort.SetOfLevel(new Level(LevelVariable.PVAR))), ((FunctionDefinition) getDefinition("setExt")).getResultType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class).getDefCallArguments().get(0).cast(LamExpression.class).getBody());
+    assertEquals(new UniverseExpression(Sort.SetOfLevel(new Level(LevelVariable.PVAR))), ((FunctionDefinition) getDefinition("setExt")).getResultType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class).getDefCallArguments().getFirst().cast(LamExpression.class).getBody());
   }
 
   @Test
   public void isoSet2() {
     typeCheckModule("\\func setExt (A B : \\Set) (f : A -> B) (g : B -> A) (p : \\Pi (x : A) -> g (f x) = x) (q : \\Pi (y : B) -> f (g y) = y) : A = {\\Set} B => path (iso f g p q)");
-    assertEquals(new UniverseExpression(Sort.SetOfLevel(new Level(LevelVariable.PVAR))), ((FunctionDefinition) getDefinition("setExt")).getResultType().cast(FunCallExpression.class).getDefCallArguments().get(0));
+    assertEquals(new UniverseExpression(Sort.SetOfLevel(new Level(LevelVariable.PVAR))), ((FunctionDefinition) getDefinition("setExt")).getResultType().cast(FunCallExpression.class).getDefCallArguments().getFirst());
   }
 
   @Test
@@ -234,7 +234,7 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
     LetExpression body = (LetExpression) Objects.requireNonNull(((FunctionDefinition) getDefinition("test")).getBody());
     var let = body.getExpression();
     var concrete = ToAbstractVisitor.convert(let, PrettyPrinterConfig.DEFAULT);
-    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().get(0).getTypeExpr())), concrete, let.getType(), 0);
+    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().getFirst().getTypeExpr())), concrete, let.getType(), 0);
   }
 
   @Test
@@ -244,7 +244,7 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
     LetExpression body = (LetExpression) Objects.requireNonNull(((FunctionDefinition) getDefinition("test")).getBody());
     var let = body.getExpression();
     var concrete = ToAbstractVisitor.convert(let, PrettyPrinterConfig.DEFAULT);
-    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().get(0).getTypeExpr())), concrete, let.getType(), 0);
+    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().getFirst().getTypeExpr())), concrete, let.getType(), 0);
   }
 
   @Test
@@ -260,7 +260,7 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
                     Objects.requireNonNull((
                                     (FunctionDefinition) getDefinition("insert-comm")))
                             .getBody()))
-            .getClauses().get(0).getExpression()).cast(AppExpression.class).getFunction().cast(GoalErrorExpression.class);
+            .getClauses().getFirst().getExpression()).cast(AppExpression.class).getFunction().cast(GoalErrorExpression.class);
     Assert.assertNotNull(goal.getType());
   }
 
@@ -280,7 +280,7 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
                     Objects.requireNonNull((
                                     (FunctionDefinition) getDefinition("insert-comm")))
                             .getBody()))
-            .getClauses().get(0).getExpression()).cast(AppExpression.class).getFunction().cast(GoalErrorExpression.class);
+            .getClauses().getFirst().getExpression()).cast(AppExpression.class).getFunction().cast(GoalErrorExpression.class);
     Assert.assertNotNull(goal.getType());
   }
 
@@ -289,7 +289,7 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
     typeCheckModule(
       "\\func foo {A B : \\Type} (f : A -> B) => f\n" +
       "\\func test : Nat -> \\Pi (n : Nat) -> n = n => foo (\\lam x y => {?})", 1);
-    GeneralError error = errorList.get(0);
+    GeneralError error = getAllErrors().getFirst();
     assertTrue(error instanceof GoalError);
     assertNotNull(((GoalError) error).expectedType);
     assertFalse(((GoalError) error).expectedType.getUnderlyingExpression() instanceof InferenceReferenceExpression);

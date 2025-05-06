@@ -9,7 +9,6 @@ import org.arend.core.expr.Expression;
 import org.arend.core.subst.Levels;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.result.TypecheckingResult;
@@ -45,7 +44,7 @@ public class DefCallTest extends TypeCheckingTestCase {
 
   private Expression getThisFI() {
     FunctionDefinition function = (FunctionDefinition) getDefinition("Test.test");
-    return FieldCall(((ClassDefinition) getDefinition("Test")).getPersonalFields().get(0), Ref(function.getParameters()));
+    return FieldCall(((ClassDefinition) getDefinition("Test")).getPersonalFields().getFirst(), Ref(function.getParameters()));
   }
 
   private ClassCallExpression makeClassCall(Definition definition, Expression impl) {
@@ -771,7 +770,7 @@ public class DefCallTest extends TypeCheckingTestCase {
     context.add(new TypedBinding("x", Nat()));
     TypecheckingResult result = typeCheckExpr(context, "x", null);
     assertNotNull(result);
-    assertEquals(Ref(context.get(0)), result.expression);
+    assertEquals(Ref(context.getFirst()), result.expression);
   }
 
   @Test
@@ -802,16 +801,16 @@ public class DefCallTest extends TypeCheckingTestCase {
 
   @Test
   public void resolvedConstructorTest() {
-    ConcreteGroup cd = resolveNamesModule("""
+    resolveNamesModule("""
       \\data TrP (A : \\Type) | inP A
       \\func isequiv {A B : \\Type0} (f : A -> B) => 0
       \\func inP-isequiv (P : \\Prop) => isequiv (inP {P})
       """);
-    List<? extends ConcreteStatement> statements = cd.statements();
-    LocatedReferable inP = Objects.requireNonNull(statements.get(0).group()).getInternalReferables().get(0);
+    List<? extends ConcreteStatement> statements = getGroup().statements();
+    LocatedReferable inP = Objects.requireNonNull(statements.get(0).group()).getInternalReferables().getFirst();
     Concrete.FunctionDefinition lastDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
     assertNotNull(lastDef);
-    ((Concrete.ReferenceExpression) ((Concrete.AppExpression) ((Concrete.AppExpression) ((Concrete.TermFunctionBody) lastDef.getBody()).getTerm()).getArguments().get(0).getExpression()).getFunction()).setReferent(inP);
-    typeCheckModule(cd);
+    ((Concrete.ReferenceExpression) ((Concrete.AppExpression) ((Concrete.AppExpression) ((Concrete.TermFunctionBody) lastDef.getBody()).getTerm()).getArguments().getFirst().getExpression()).getFunction()).setReferent(inP);
+    typeCheckModule();
   }
 }

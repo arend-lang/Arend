@@ -4,23 +4,21 @@ import org.arend.core.context.binding.Binding;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.type.Type;
-import org.arend.frontend.PositionComparator;
+import org.arend.error.DummyErrorReporter;
+import org.arend.ext.error.GeneralError;
+import org.arend.ext.error.ListErrorReporter;
 import org.arend.naming.reference.*;
 import org.arend.naming.NameResolverTestCase;
+import org.arend.server.ProgressReporter;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteExpressionFactory;
 import org.arend.term.group.ConcreteGroup;
-import org.arend.typechecking.doubleChecker.CoreDefinitionChecker;
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.doubleChecker.CoreException;
 import org.arend.typechecking.doubleChecker.CoreExpressionChecker;
 import org.arend.typechecking.doubleChecker.CoreModuleChecker;
-import org.arend.typechecking.error.local.LocalErrorReporter;
 import org.arend.typechecking.implicitargs.equations.DummyEquations;
-import org.arend.typechecking.instance.provider.InstanceScopeProvider;
-import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
-import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.result.TypecheckingResult;
-import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.typechecking.visitor.DesugarVisitor;
 
@@ -32,12 +30,11 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertTrue;
 
 public class TypeCheckingTestCase extends NameResolverTestCase {
-  protected final LocalErrorReporter localErrorReporter = new TestLocalErrorReporter(errorReporter);
-
   TypecheckingResult typeCheckExpr(Map<Referable, Binding> context, Concrete.Expression expression, Expression expectedType, int errors) {
-    CheckTypeVisitor visitor = new CheckTypeVisitor(localErrorReporter, null, null);
+    ListErrorReporter errorReporter = new ListErrorReporter();
+    CheckTypeVisitor visitor = new CheckTypeVisitor(errorReporter, null, null);
     visitor.addBindings(context);
-    Concrete.Expression desugar = DesugarVisitor.desugar(expression, localErrorReporter);
+    Concrete.Expression desugar = DesugarVisitor.desugar(expression, errorReporter);
     TypecheckingResult result = visitor.finalCheckExpr(desugar, expectedType);
     if (errors == 0) {
       assertThat(result, is(notNullValue()));
@@ -50,12 +47,12 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
         result.type.accept(checker, Type.OMEGA);
         checker.check(expectedType, result.expression.accept(checker, result.type), result.expression);
       } catch (CoreException e) {
-        localErrorReporter.report(e.error);
+        errorReporter.report(e.error);
         ok = false;
       }
     }
 
-    assertThat(errorList, containsErrors(errors));
+    assertThat(errorReporter.getErrorList(), containsErrors(errors));
     assertTrue(ok);
     return result;
   }
@@ -98,12 +95,8 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
   }
 
   protected Definition typeCheckDef(TCDefReferable reference, int errors) {
-    new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, ref -> null).typecheckDefinitions(Collections.singletonList((Concrete.ResolvableDefinition) getDefinition(reference)), null);
-    Definition definition = reference.getTypechecked();
-    boolean ok = errors != 0 || new CoreDefinitionChecker(errorReporter).check(definition);
-    assertThat(errorList, containsErrors(errors));
-    assertTrue(ok);
-    return definition;
+    typeCheckModule(errors);
+    return reference.getTypechecked();
   }
 
   protected Definition typeCheckDef(String text, int errors) {
@@ -115,9 +108,10 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
   }
 
 
-  private void typeCheckModule(ConcreteGroup group, int errors) {
-    assertTrue(new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, localErrorReporter, PositionComparator.INSTANCE, ref -> null).typecheckModules(Collections.singletonList(group), null));
-    boolean ok = errors != 0 || !errorList.isEmpty() || new CoreModuleChecker(errorReporter).checkGroup(group);
+  private void typeCheckModule(int errors) {
+    server.getCheckerFor(Collections.singletonList(MODULE)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    List<GeneralError> errorList = getAllErrors();
+    boolean ok = errors != 0 || !errorList.isEmpty() || new CoreModuleChecker(new ListErrorReporter(errorList)).checkGroup(getGroup());
     assertThat(errorList, containsErrors(errors));
     assertTrue(ok);
   }
@@ -133,28 +127,25 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
     return ref.getTypechecked();
   }
 
-  protected void typeCheckModule(ConcreteGroup group) {
-    lastGroup = group;
-    typeCheckModule(group, 0);
+  protected void typeCheckModule() {
+    typeCheckModule(0);
   }
 
-  protected ConcreteGroup typeCheckModule(String text, int errors) {
+  protected void typeCheckModule(String text, int errors) {
     resolveNamesModule(text);
-    typeCheckModule(lastGroup, errors);
-    return lastGroup;
+    typeCheckModule(errors);
   }
 
-  protected ConcreteGroup typeCheckModule(String text) {
-    return typeCheckModule(text, 0);
+  protected void typeCheckModule(String text) {
+    typeCheckModule(text, 0);
   }
 
-  protected ConcreteGroup typeCheckClass(String instance, String global, int errors) {
+  protected void typeCheckClass(String instance, String global, int errors) {
     resolveNamesDefGroup("\\class Test {\n" + instance + (global.isEmpty() ? "" : "\n} \\where {\n" + global) + "\n}");
-    typeCheckModule(lastGroup, errors);
-    return lastGroup;
+    typeCheckModule(errors);
   }
 
-  protected ConcreteGroup typeCheckClass(String instance, String global) {
-    return typeCheckClass(instance, global, 0);
+  protected void typeCheckClass(String instance, String global) {
+    typeCheckClass(instance, global, 0);
   }
 }

@@ -31,7 +31,9 @@ public interface ArendServerRequester {
     return null;
   }
 
-  default void runUnderReadLock(@NotNull Runnable runnable) {}
+  default void runUnderReadLock(@NotNull Runnable runnable) {
+    runnable.run();
+  }
 
   default void addReference(@NotNull ModuleLocation module, @NotNull AbstractReference reference, @NotNull Referable referable) {}
 

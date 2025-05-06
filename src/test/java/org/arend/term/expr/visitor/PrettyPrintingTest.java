@@ -133,6 +133,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
     def.accept(visitor, null);
     String s2 = sb.toString();
     Concrete.Definition def2 = (Concrete.Definition) resolveNamesDef(s2).definition();
+    assertNotNull(def2);
     assertTrue(ConcreteCompareVisitor.compare(def, def2));
   }
 
@@ -193,7 +194,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
   @Test
   public void fieldCallTest() {
     ClassDefinition def = (ClassDefinition) typeCheckDef("\\record R (f : Nat)");
-    Expression expr = FieldCallExpression.make(def.getPersonalFields().get(0), new ReferenceExpression(new TypedBinding("r", new ClassCallExpression(def, Levels.EMPTY))));
+    Expression expr = FieldCallExpression.make(def.getPersonalFields().getFirst(), new ReferenceExpression(new TypedBinding("r", new ClassCallExpression(def, Levels.EMPTY))));
     assertEquals("r.f", expr.toString());
   }
 
@@ -211,7 +212,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
       "\\func foo (x : Nat) => x\n" +
       "\\module M \\where { \\func foo => 1 }");
     Expression expr = FunCallExpression.make((FunctionDefinition) getDefinition("foo"), Levels.EMPTY, Collections.singletonList(FunCallExpression.make((FunctionDefinition) getDefinition("M.foo"), Levels.EMPTY, Collections.emptyList())));
-    assertEquals(MODULE_PATH + ".foo M.foo", expr.toString());
+    assertEquals(MODULE + ".foo M.foo", expr.toString());
   }
 
   @Test
@@ -220,7 +221,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
       "\\module M \\where { \\func foo (x : Nat) => x }\n" +
       "\\func foo => 1");
     Expression expr = FunCallExpression.make((FunctionDefinition) getDefinition("M.foo"), Levels.EMPTY, Collections.singletonList(FunCallExpression.make((FunctionDefinition) getDefinition("foo"), Levels.EMPTY, Collections.emptyList())));
-    assertEquals("M.foo " + MODULE_PATH + ".foo", expr.toString());
+    assertEquals("M.foo " + MODULE + ".foo", expr.toString());
   }
 
   @Test
@@ -306,8 +307,8 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
   }
 
   private void testRevealing(String module, Function<ConcreteGroup, Expression> moduleSelector, String expected, Function<Expression, Expression> selector) {
-    ConcreteGroup result = typeCheckModule(module);
-    Expression baseExpr = moduleSelector.apply(result);
+    typeCheckModule(module);
+    Expression baseExpr = moduleSelector.apply(getGroup());
     Expression incremented = selector.apply(baseExpr);
     PrettyPrinterConfig config = new PrettyPrinterConfigImpl(EMPTY) {
       @Override

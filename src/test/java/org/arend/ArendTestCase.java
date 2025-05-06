@@ -1,10 +1,8 @@
 package org.arend;
 
 import org.arend.error.DummyErrorReporter;
-import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.prettyprinting.doc.Doc;
-import org.arend.frontend.PositionComparator;
 import org.arend.frontend.library.PreludeFileLibrary;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
@@ -17,10 +15,6 @@ import org.arend.server.impl.ArendServerImpl;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
-import org.arend.typechecking.instance.provider.InstanceScopeProvider;
-import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
-import org.arend.typechecking.provider.ConcreteProvider;
-import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -35,13 +29,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public abstract class ArendTestCase {
   protected ArendServer server;
-  protected final List<GeneralError> errorList = new ArrayList<>();
-  protected final ListErrorReporter errorReporter = new ListErrorReporter(errorList);
-  protected final TypecheckingOrderingListener typechecking = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, ref -> null);
 
   @Before
   public void initializeServer() {
-    errorList.clear();
     server = new ArendServerImpl(ArendServerRequester.TRIVIAL, false, false, null);
     server.addReadOnlyModule(Prelude.MODULE_LOCATION, Objects.requireNonNull(PreludeFileLibrary.getSource().loadGroup(DummyErrorReporter.INSTANCE)));
   }
@@ -65,9 +55,17 @@ public abstract class ArendTestCase {
     return group.referable() instanceof TCDefReferable ref ? ref : null;
   }
 
+  protected List<GeneralError> getAllErrors() {
+    List<GeneralError> errors = new ArrayList<>();
+    for (List<GeneralError> errorList : server.getErrorMap().values()) {
+      errors.addAll(errorList);
+    }
+    return errors;
+  }
+
   @SafeVarargs
   protected final void assertThatErrorsAre(Matcher<? super GeneralError>... matchers) {
-    assertThat(errorList, Matchers.contains(matchers));
+    assertThat(getAllErrors(), Matchers.contains(matchers));
   }
 
 
