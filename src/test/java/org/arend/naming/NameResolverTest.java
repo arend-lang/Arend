@@ -1,13 +1,9 @@
 package org.arend.naming;
 
-import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.Precedence;
-import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.naming.scope.CachingScope;
-import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.ScopeFactory;
-import org.arend.naming.scope.SingletonScope;
 import org.arend.naming.scope.local.ListScope;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.AccessModifier;
@@ -668,7 +664,7 @@ public class NameResolverTest extends NameResolverTestCase {
         \\func g => f
         """);
     List<String> names = new ArrayList<>();
-    for (Referable element : CachingScope.make(ScopeFactory.forGroup(group, moduleScopeProvider)).getElements()) {
+    for (Referable element : CachingScope.make(ScopeFactory.forGroup(group, server.getModuleScopeProvider(null, false))).getElements()) {
       names.add(element.textRepresentation());
     }
     assertEquals(Arrays.asList("X", "g", "f", "Prelude"), names);
@@ -693,6 +689,7 @@ public class NameResolverTest extends NameResolverTestCase {
       "\\func f : Nat => 0", 1);
   }
 
+  /* TODO[server2]
   @Test
   public void importHidingName() {
     setModuleScopeProvider(module -> EmptyScope.INSTANCE);
@@ -721,12 +718,6 @@ public class NameResolverTest extends NameResolverTestCase {
       module.equals(new ModulePath("Mod"))
         ? new SingletonScope(new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, "foo", Precedence.DEFAULT, null, new FullModuleReferable(new ModuleLocation((String) null, null, module)), GlobalReferable.Kind.FUNCTION))
         : EmptyScope.INSTANCE);
-    /*
-    resolveNamesModule(
-      "\\import Mod\n" +
-      "\\import Mod.Path\n" +
-      "\\func bar => foo");
-    */
     resolveNamesModule(
       """
         \\import Mod.Path
@@ -734,6 +725,7 @@ public class NameResolverTest extends NameResolverTestCase {
         \\func bar => foo
         """);
   }
+  */
 
   @Test
   public void unicodeError() {

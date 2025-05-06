@@ -41,6 +41,7 @@ import java.util.function.Consumer;
 import static org.arend.core.expr.ExpressionFactory.*;
 
 public class Prelude implements ArendPrelude {
+  private static boolean IS_INITIALIZED = false;
   public static final Version VERSION = GeneratedVersion.VERSION;
 
   public static final String LIBRARY_NAME = "prelude";
@@ -91,7 +92,7 @@ public class Prelude implements ArendPrelude {
   public static FunctionDefinition ARRAY_INDEX;
 
   public static boolean isInitialized() {
-    return ARRAY_CONS != null;
+    return IS_INITIALIZED;
   }
 
   public static void update(Definition definition) {
@@ -173,7 +174,7 @@ public class Prelude implements ArendPrelude {
         PathExpression pathExpr = (PathExpression) IDP.getBody();
         assert pathExpr != null;
         Sort sort = new Sort(new Level(LevelVariable.PVAR), Level.INFINITY);
-        IDP.setBody(new PathExpression(pathExpr.getLevels(), new LamExpression(sort, UnusedIntervalDependentLink.INSTANCE, args.get(0)), new LamExpression(sort, UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody())));
+        IDP.setBody(new PathExpression(pathExpr.getLevels(), new LamExpression(sort, UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(sort, UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody())));
       }
       case "@" -> {
         AT = (FunctionDefinition) definition;
@@ -292,6 +293,12 @@ public class Prelude implements ArendPrelude {
         }
       }
     }
+
+    initialize();
+  }
+
+  public static void initialize() {
+    IS_INITIALIZED = true;
   }
 
   public static class PreludeTypechecking extends TypecheckingOrderingListener {

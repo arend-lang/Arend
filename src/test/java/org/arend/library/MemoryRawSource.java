@@ -2,6 +2,7 @@ package org.arend.library;
 
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.source.StreamRawSource;
+import org.arend.module.ModuleLocation;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.ByteArrayInputStream;
@@ -13,7 +14,7 @@ public class MemoryRawSource extends StreamRawSource {
   private final long myTimeStamp;
 
   public MemoryRawSource(ModulePath modulePath, String text, long timeStamp) {
-    super(modulePath, false);
+    super(new ModuleLocation(MemoryLibrary.INSTANCE.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath));
     myText = text;
     myTimeStamp = timeStamp;
   }
@@ -23,7 +24,7 @@ public class MemoryRawSource extends StreamRawSource {
   }
 
   public MemoryRawSource(MemoryRawSource source) {
-    this(source.getModulePath(), source.myText, source.myTimeStamp);
+    this(source.getModule().getModulePath(), source.myText, source.myTimeStamp);
   }
 
   @NotNull
@@ -35,10 +36,5 @@ public class MemoryRawSource extends StreamRawSource {
   @Override
   public long getTimeStamp() {
     return myTimeStamp;
-  }
-
-  @Override
-  public boolean isAvailable() {
-    return true;
   }
 }

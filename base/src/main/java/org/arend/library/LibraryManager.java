@@ -20,9 +20,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/**
- * Contains all necessary information for the library loading.
- */
+// TODO[server2]: Delete this
 public class LibraryManager {
   private final LibraryResolver myLibraryResolver;
   private final ErrorReporter myTypecheckingErrorReporter;

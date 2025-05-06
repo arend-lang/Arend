@@ -1,79 +1,50 @@
 package org.arend.library;
 
-import org.arend.ext.error.ErrorReporter;
-import org.arend.ext.module.ModulePath;
-import org.arend.source.Source;
-import org.arend.term.group.ConcreteGroup;
-import org.arend.util.Range;
-import org.arend.util.Version;
+import org.arend.ext.ui.ArendUI;
+import org.arend.library.classLoader.ClassLoaderDelegate;
+import org.arend.server.ArendLibrary;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class MemoryLibrary extends PersistableSourceLibrary {
-  private final Map<ModulePath, MemoryRawSource> myRawSources = new LinkedHashMap<>();
-  private final Map<ModulePath, MemoryBinarySource> myBinarySources = new LinkedHashMap<>();
+public class MemoryLibrary implements ArendLibrary {
+  public final static ArendLibrary INSTANCE = new MemoryLibrary();
 
-  protected MemoryLibrary() {
-    super("test_library");
-  }
+  private MemoryLibrary() {}
 
-  public ConcreteGroup getModuleGroup(ModulePath modulePath) {
-    return getModuleGroup(modulePath, false);
-  }
-
-  @Nullable
   @Override
-  public Source getRawSource(ModulePath modulePath) {
-    return myRawSources.get(modulePath);
+  public @NotNull String getLibraryName() {
+    return "test_library";
   }
 
-  @Nullable
   @Override
-  public MemoryBinarySource getPersistableBinarySource(ModulePath modulePath) {
-    return myBinarySources.get(modulePath);
+  public boolean isExternalLibrary() {
+    return false;
   }
 
-  @Nullable
   @Override
-  protected LibraryHeader loadHeader(ErrorReporter errorReporter) {
-    return new LibraryHeader(myRawSources.keySet(), Collections.emptyList(), null, Range.unbound(), null, null);
+  public long getModificationStamp() {
+    return -1;
   }
 
-  public void addModule(ModulePath module, String text) {
-    myRawSources.put(module, new MemoryRawSource(module, text));
-    myBinarySources.put(module, new MemoryBinarySource(module));
-  }
-
-  public void updateModule(ModulePath module, String text, boolean updateVersion) {
-    myRawSources.put(module, new MemoryRawSource(module, text, updateVersion ? 1 : 0));
-  }
-
-  public void removeRawSource(ModulePath module) {
-    myRawSources.remove(module);
-  }
-
-  public void removeBinarySource(ModulePath module) {
-    myBinarySources.put(module, new MemoryBinarySource(module));
-  }
-
-  @NotNull
   @Override
-  public List<? extends LibraryDependency> getDependencies() {
+  public @NotNull List<String> getLibraryDependencies() {
     return Collections.emptyList();
   }
 
   @Override
-  public @Nullable Version getVersion() {
+  public @Nullable ClassLoaderDelegate getClassLoaderDelegate() {
     return null;
   }
 
   @Override
-  public void reset() {
-    super.reset();
-    for (Map.Entry<ModulePath, MemoryRawSource> entry : myRawSources.entrySet()) {
-      entry.setValue(new MemoryRawSource(entry.getValue()));
-    }
+  public @Nullable String getExtensionMainClass() {
+    return null;
+  }
+
+  @Override
+  public @Nullable ArendUI getArendUI() {
+    return null;
   }
 }

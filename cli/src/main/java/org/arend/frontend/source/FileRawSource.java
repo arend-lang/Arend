@@ -1,6 +1,6 @@
 package org.arend.frontend.source;
 
-import org.arend.ext.module.ModulePath;
+import org.arend.module.ModuleLocation;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -16,12 +16,11 @@ public class FileRawSource extends StreamRawSource {
    * Creates a new {@code FileRawSource} from a path to the base directory and a path to the source.
    *
    * @param basePath    a path to the base directory.
-   * @param modulePath  a path to the source.
-   * @param inTests     true if the source is located in the test directory.
+   * @param module      a path to the source.
    */
-  public FileRawSource(Path basePath, ModulePath modulePath, boolean inTests) {
-    super(modulePath, inTests);
-    myFile = FileUtils.sourceFile(basePath, modulePath);
+  public FileRawSource(@NotNull Path basePath, @NotNull ModuleLocation module) {
+    super(module);
+    myFile = FileUtils.sourceFile(basePath, module.getModulePath());
   }
 
   @NotNull
@@ -37,10 +36,5 @@ public class FileRawSource extends StreamRawSource {
     } catch (IOException e) {
       return 0;
     }
-  }
-
-  @Override
-  public boolean isAvailable() {
-    return Files.exists(myFile);
   }
 }

@@ -112,7 +112,7 @@ public class ParserTest extends NameResolverTestCase {
 
   @Test
   public void parserImplicit() {
-    Concrete.ClassField def = (Concrete.ClassField) ((Concrete.ClassDefinition) Objects.requireNonNull(resolveNamesDef("\\class X { | f : \\Pi (x y : \\Type1) {z w : \\Type1} (t : \\Type1) {r : \\Type1} (A : \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type0) -> A x y z w t r }").definition())).getElements().get(0);
+    Concrete.ClassField def = (Concrete.ClassField) ((Concrete.ClassDefinition) Objects.requireNonNull(resolveNamesDef("\\class X { | f : \\Pi (x y : \\Type1) {z w : \\Type1} (t : \\Type1) {r : \\Type1} (A : \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type1 -> \\Type0) -> A x y z w t r }").definition())).getElements().getFirst();
     Concrete.PiExpression pi = (Concrete.PiExpression) def.getResultType();
     assertEquals(5, pi.getParameters().size());
     assertTrue(pi.getParameters().get(0).isExplicit());
@@ -138,7 +138,7 @@ public class ParserTest extends NameResolverTestCase {
 
   @Test
   public void parserImplicit2() {
-    Concrete.ClassField def = (Concrete.ClassField) ((Concrete.ClassDefinition) Objects.requireNonNull(resolveNamesDef("\\class X { | f : \\Pi {x : \\Type1} (_ : \\Type1) {y z : \\Type1} (A : \\Type1 -> \\Type1 -> \\Type1 -> \\Type0) (_ : A x y z) -> \\Type1 }").definition())).getElements().get(0);
+    Concrete.ClassField def = (Concrete.ClassField) ((Concrete.ClassDefinition) Objects.requireNonNull(resolveNamesDef("\\class X { | f : \\Pi {x : \\Type1} (_ : \\Type1) {y z : \\Type1} (A : \\Type1 -> \\Type1 -> \\Type1 -> \\Type0) (_ : A x y z) -> \\Type1 }").definition())).getElements().getFirst();
     Concrete.PiExpression pi = (Concrete.PiExpression) def.getResultType();
     assertEquals(5, pi.getParameters().size());
     assertFalse(pi.getParameters().get(0).isExplicit());
@@ -232,11 +232,11 @@ public class ParserTest extends NameResolverTestCase {
       "\\func \\fix 5 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infixl 5 $ (A B : \\Prop) => A\n" +
       "\\func f (A B C : \\Prop) => A $ B `" + name + " $ C").statements();
-    GlobalReferable named = statements.get(0).getGroup().getReferable();
-    GlobalReferable d = statements.get(1).getGroup().getReferable();
+    GlobalReferable named = Objects.requireNonNull(statements.get(0).group()).referable();
+    GlobalReferable d = Objects.requireNonNull(statements.get(1).group()).referable();
     Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
     assertNotNull(function);
-    List<? extends Referable> refs = function.getParameters().get(0).getReferableList();
+    List<? extends Referable> refs = function.getParameters().getFirst().getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
     Concrete.Expression expectedTerm = cApps(cVar(d), cApps(cVar(named), cApps(cVar(d), cVar(refs.get(0)), cVar(refs.get(1)))), cVar(refs.get(2)));
     assertTrue(compareAbstract(actualTerm, expectedTerm));
@@ -267,11 +267,11 @@ public class ParserTest extends NameResolverTestCase {
       "\\func \\fix 5 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infixr 5 $ (A B : \\Prop) => A\n" +
       "\\func f (A B C : \\Prop) => A $ B `" + name + " $ C").statements();
-    GlobalReferable named = statements.get(0).getGroup().getReferable();
-    GlobalReferable d = statements.get(1).getGroup().getReferable();
+    GlobalReferable named = Objects.requireNonNull(statements.get(0).group()).referable();
+    GlobalReferable d = Objects.requireNonNull(statements.get(1).group()).referable();
     Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
     assertNotNull(function);
-    List<? extends Referable> refs = function.getParameters().get(0).getReferableList();
+    List<? extends Referable> refs = function.getParameters().getFirst().getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
     Concrete.Expression expectedTerm = cApps(cVar(d), cVar(refs.get(0)), cApps(cVar(d), cApps(cVar(named), cVar(refs.get(1))), cVar(refs.get(2))));
     assertTrue(compareAbstract(actualTerm, expectedTerm));
@@ -288,11 +288,11 @@ public class ParserTest extends NameResolverTestCase {
       "\\func \\fix 6 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infix 5 $ (A B : \\Prop) => A\n" +
       "\\func f (A B : \\Prop) => A $ B `" + name).statements();
-    GlobalReferable named = statements.get(0).getGroup().getReferable();
-    GlobalReferable d = statements.get(1).getGroup().getReferable();
+    GlobalReferable named = Objects.requireNonNull(statements.get(0).group()).referable();
+    GlobalReferable d = Objects.requireNonNull(statements.get(1).group()).referable();
     Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
     assertNotNull(function);
-    List<? extends Referable> refs = function.getParameters().get(0).getReferableList();
+    List<? extends Referable> refs = function.getParameters().getFirst().getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
     Concrete.Expression expectedTerm = cApps(cVar(d), cVar(refs.get(0)), cApps(cVar(named), cVar(refs.get(1))));
     assertTrue(compareAbstract(actualTerm, expectedTerm));
@@ -309,11 +309,11 @@ public class ParserTest extends NameResolverTestCase {
       "\\func \\fix 4 " + name + " (A : \\Prop) => A\n" +
       "\\func \\infix 5 $ (A B : \\Prop) => A\n" +
       "\\func f (A B : \\Prop) => A $ B `" + name).statements();
-    GlobalReferable named = statements.get(0).getGroup().getReferable();
-    GlobalReferable d = statements.get(1).getGroup().getReferable();
+    GlobalReferable named = Objects.requireNonNull(statements.get(0).group()).referable();
+    GlobalReferable d = Objects.requireNonNull(statements.get(1).group()).referable();
     Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
     assertNotNull(function);
-    List<? extends Referable> refs = function.getParameters().get(0).getReferableList();
+    List<? extends Referable> refs = function.getParameters().getFirst().getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
     Concrete.Expression expectedTerm = cApps(cVar(named), cApps(cVar(d), cVar(refs.get(0)), cVar(refs.get(1))));
     assertTrue(compareAbstract(actualTerm, expectedTerm));
@@ -330,11 +330,11 @@ public class ParserTest extends NameResolverTestCase {
       "\\func " + pr1 + " " + name1 + " (A : \\Prop) => A\n" +
       "\\func " + pr2 + " " + name2 + " (A : \\Prop) => A\n" +
       "\\func f (A : \\Prop) => A `" + name1 + " `" + name2).statements();
-    GlobalReferable named1 = statements.get(0).getGroup().getReferable();
-    GlobalReferable named2 = statements.get(1).getGroup().getReferable();
+    GlobalReferable named1 = Objects.requireNonNull(statements.get(0).group()).referable();
+    GlobalReferable named2 = Objects.requireNonNull(statements.get(1).group()).referable();
     Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(2).group()).definition();
     assertNotNull(function);
-    Referable refA = function.getParameters().get(0).getReferableList().get(0);
+    Referable refA = function.getParameters().getFirst().getReferableList().getFirst();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
     Concrete.Expression expectedTerm = cApps(cVar(named2), cApps(cVar(named1), cVar(refA)));
     assertTrue(compareAbstract(actualTerm, expectedTerm));
@@ -367,13 +367,13 @@ public class ParserTest extends NameResolverTestCase {
         \\func g (A : \\Prop) => A
         \\func f (A B C : \\Prop) => g A ==< g B >== g C `qed
         """).statements();
-    GlobalReferable rightP = statements.get(0).getGroup().getReferable();
-    GlobalReferable leftP = statements.get(1).getGroup().getReferable();
-    GlobalReferable qed = statements.get(2).getGroup().getReferable();
-    GlobalReferable g = statements.get(3).getGroup().getReferable();
+    GlobalReferable rightP = Objects.requireNonNull(statements.get(0).group()).referable();
+    GlobalReferable leftP = Objects.requireNonNull(statements.get(1).group()).referable();
+    GlobalReferable qed = Objects.requireNonNull(statements.get(2).group()).referable();
+    GlobalReferable g = Objects.requireNonNull(statements.get(3).group()).referable();
     Concrete.FunctionDefinition function = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(4).group()).definition();
     assertNotNull(function);
-    List<? extends Referable> refs = function.getParameters().get(0).getReferableList();
+    List<? extends Referable> refs = function.getParameters().getFirst().getReferableList();
 
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
     Concrete.Expression expectedTerm = cApps(cVar(rightP), cApps(cVar(leftP), cApps(cVar(g), cVar(refs.get(0))), cApps(cVar(g), cVar(refs.get(1)))), cApps(cVar(qed), cApps(cVar(g), cVar(refs.get(2)))));

@@ -1,7 +1,7 @@
 package org.arend.source;
 
-import org.arend.ext.module.ModulePath;
 import org.arend.library.SourceLibrary;
+import org.arend.module.ModuleLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,18 +38,13 @@ public class GZIPStreamBinarySource extends StreamBinarySource {
 
   @NotNull
   @Override
-  public ModulePath getModulePath() {
-    return mySource.getModulePath();
+  public ModuleLocation getModule() {
+    return mySource.getModule();
   }
 
   @Override
   public long getTimeStamp() {
     return mySource.getTimeStamp();
-  }
-
-  @Override
-  public boolean isAvailable() {
-    return mySource.isAvailable();
   }
 
   @Override

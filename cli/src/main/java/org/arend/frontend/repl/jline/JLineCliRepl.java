@@ -111,6 +111,8 @@ public class JLineCliRepl extends CommonCliRepl {
 
   @NotNull
   private Stream<String> modulePaths() {
+    return Stream.empty();
+    /* TODO[server2]
     return myLibraryManager.getRegisteredLibraries()
       .stream()
       .flatMap(library -> Stream.concat(
@@ -124,6 +126,8 @@ public class JLineCliRepl extends CommonCliRepl {
           .map(Objects::toString)
           : Stream.empty()
       ));
+
+    */
   }
 
   public static void main(String... args) {

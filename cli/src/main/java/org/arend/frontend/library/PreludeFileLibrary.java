@@ -24,28 +24,29 @@ public class PreludeFileLibrary extends PreludeTypecheckingLibrary {
     myBinaryPath = binaryPath;
   }
 
-  @Nullable
-  @Override
-  public Source getRawSource(ModulePath modulePath) {
-    if (!modulePath.equals(Prelude.MODULE_PATH)) {
-      return null;
-    }
-
+  public static Source getSource() {
     Path preludePath = PreludeResourceSource.BASE_PATH;
     String arendPath = System.getenv("AREND_PATH");
     if (arendPath != null) {
       preludePath = Paths.get(arendPath).resolve(preludePath);
     }
-    return new FileRawSource(preludePath, Prelude.MODULE_PATH, false);
+    return new FileRawSource(preludePath, Prelude.MODULE_LOCATION);
+  }
+
+  public static PersistableBinarySource getBinarySource(Path binaryPath) {
+    return new GZIPStreamBinarySource(new FileBinarySource(binaryPath.resolve(PreludeResourceSource.BASE_PATH), Prelude.MODULE_LOCATION));
+  }
+
+  @Nullable
+  @Override
+  public Source getRawSource(ModulePath modulePath) {
+    return modulePath.equals(Prelude.MODULE_PATH) ? getSource() : null;
   }
 
   @Nullable
   @Override
   public PersistableBinarySource getPersistableBinarySource(ModulePath modulePath) {
-    if (myBinaryPath == null || !modulePath.equals(Prelude.MODULE_PATH)) {
-      return null;
-    }
-    return new GZIPStreamBinarySource(new FileBinarySource(myBinaryPath.resolve(PreludeResourceSource.BASE_PATH), Prelude.MODULE_PATH));
+    return myBinaryPath != null && modulePath.equals(Prelude.MODULE_PATH) ? getBinarySource(myBinaryPath) : null;
   }
 
   @Override

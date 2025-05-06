@@ -37,37 +37,38 @@ public class PatternTest extends TypeCheckingTestCase {
     int i = 0, j = 0;
     for (; i < patternArgs.size() && j < patterns.size(); i++, j++) {
       Concrete.Pattern pattern1 = patternArgs.get(i);
-      if (pattern1 instanceof Concrete.TuplePattern) {
-        assertTrue(((Concrete.TuplePattern) pattern1).getPatterns().isEmpty());
-        while (hasImplicit && patterns.get(j) instanceof BindingPattern) {
-          j++;
+      switch (pattern1) {
+        case Concrete.TuplePattern tuplePattern -> {
+          assertTrue(tuplePattern.getPatterns().isEmpty());
+          while (hasImplicit && patterns.get(j) instanceof BindingPattern) {
+            j++;
+          }
+          assertTrue(patterns.get(j) instanceof EmptyPattern);
+          for (j++; j < patterns.size(); j++) {
+            assertTrue(patterns.get(j) instanceof BindingPattern);
+          }
+          return false;
         }
-        assertTrue(patterns.get(j) instanceof EmptyPattern);
-        for (j++; j < patterns.size(); j++) {
+        case Concrete.NamePattern namePattern -> {
+          Referable referable = namePattern.getReferable();
+          while (hasImplicit && patterns.get(j) instanceof BindingPattern && expected.get(referable) != ((BindingPattern) patterns.get(j)).getBinding()) {
+            j++;
+          }
           assertTrue(patterns.get(j) instanceof BindingPattern);
+          actual.put(referable, ((BindingPattern) patterns.get(j)).getBinding());
         }
-        return false;
-      } else
-      if (pattern1 instanceof Concrete.NamePattern) {
-        Referable referable = ((Concrete.NamePattern) pattern1).getReferable();
-        while (hasImplicit && patterns.get(j) instanceof BindingPattern && expected.get(referable) != ((BindingPattern) patterns.get(j)).getBinding()) {
-          j++;
-        }
-        assertTrue(patterns.get(j) instanceof BindingPattern);
-        actual.put(referable, ((BindingPattern) patterns.get(j)).getBinding());
-      } else
-      if (pattern1 instanceof Concrete.ConstructorPattern conPattern1) {
-        while (hasImplicit && patterns.get(j) instanceof BindingPattern) {
-          j++;
-        }
-        assertTrue(patterns.get(j) instanceof ConstructorExpressionPattern);
+        case Concrete.ConstructorPattern conPattern1 -> {
+          while (hasImplicit && patterns.get(j) instanceof BindingPattern) {
+            j++;
+          }
+          assertTrue(patterns.get(j) instanceof ConstructorExpressionPattern);
 
-        ConstructorExpressionPattern conPattern2 = (ConstructorExpressionPattern) patterns.get(j);
-        assertNotNull(conPattern2.getDefinition());
-        assertEquals(conPattern1.getConstructor(), conPattern2.getDefinition().getReferable());
-        checkPatterns(conPattern1.getPatterns(), conPattern2.getSubPatterns(), expected, actual, hasImplicit);
-      } else {
-        throw new IllegalStateException();
+          ConstructorExpressionPattern conPattern2 = (ConstructorExpressionPattern) patterns.get(j);
+          assertNotNull(conPattern2.getDefinition());
+          assertEquals(conPattern1.getConstructor(), conPattern2.getDefinition().getReferable());
+          checkPatterns(conPattern1.getPatterns(), conPattern2.getSubPatterns(), expected, actual, hasImplicit);
+        }
+        case null, default -> throw new IllegalStateException();
       }
     }
 
@@ -113,7 +114,7 @@ public class PatternTest extends TypeCheckingTestCase {
       "\\func f (n m k : Nat) : Nat\n" +
       "  | suc n, zero, suc k => k").definition();
     assertNotNull(fun);
-    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
+    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Nat()), param(null, Nat())), fun.getBody(), false);
     assertNotNull(res);
     assertEquals(0, errorReporter.getErrorList().size());
@@ -126,7 +127,7 @@ public class PatternTest extends TypeCheckingTestCase {
       "\\func f (n m k : Nat) : Nat\n" +
       "  | suc (suc (suc n)), zero, suc (suc (suc (suc zero))) => n").definition();
     assertNotNull(fun);
-    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
+    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Nat()), param(null, Nat())), fun.getBody(), false);
     assertNotNull(res);
     assertEquals(0, errorReporter.getErrorList().size());
@@ -139,7 +140,7 @@ public class PatternTest extends TypeCheckingTestCase {
       "\\func f (n : Nat) (m : Nat -> Nat) (k : Nat) : Nat\n" +
       "  | suc n, zero, suc k => k").definition();
     assertNotNull(fun);
-    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
+    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Pi(Nat(), Nat())), param(null, Nat())), fun.getBody(), false);
     assertNull(res);
     assertEquals(1, errorReporter.getErrorList().size());
@@ -153,7 +154,7 @@ public class PatternTest extends TypeCheckingTestCase {
         \\func f (n : Nat) (d : D) (k : Nat) : Nat
           | suc n, zero, suc k => k
         """).statements();
-    TCDefReferable dataDef = (TCDefReferable) statements.get(0).getGroup().getReferable();
+    TCDefReferable dataDef = (TCDefReferable) Objects.requireNonNull(statements.get(0).group()).referable();
     Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(1).group()).definition();
     assertNotNull(funDef);
     DataDefinition data = new DataDefinition(dataDef);
@@ -161,7 +162,7 @@ public class PatternTest extends TypeCheckingTestCase {
     data.setSort(Sort.STD);
     data.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
 
-    List<Concrete.Pattern> patternsArgs = funDef.getBody().getClauses().get(0).getPatterns();
+    List<Concrete.Pattern> patternsArgs = funDef.getBody().getClauses().getFirst().getPatterns();
     LocalErrorReporter localErrorReporter = new LocalErrorReporter(funDef.getData(), errorReporter);
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(PatternTypechecking.Mode.DATA, new CheckTypeVisitor(localErrorReporter, null, null), true, null, Collections.emptyList()).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, DataCallExpression.make(data, LevelPair.STD, Collections.emptyList())), param(null, Nat())), funDef.getBody(), false);
     assertNull(res);
@@ -174,7 +175,7 @@ public class PatternTest extends TypeCheckingTestCase {
       "\\func f (n m k : Nat) : Nat\n" +
       "  | suc n m, zero, suc k => k").definition();
     assertNotNull(fun);
-    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
+    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Nat()), param(null, Nat())), fun.getBody(), false);
     assertNull(res);
     assertEquals(1, errorReporter.getErrorList().size());
@@ -186,7 +187,7 @@ public class PatternTest extends TypeCheckingTestCase {
       "\\func f (n : Nat) (i : I) : Nat\n" +
       "  | zero, i => zero").definition();
     assertNotNull(fun);
-    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
+    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Interval())), fun.getBody(), false);
     assertNotNull(res);
     assertEquals(0, errorReporter.getErrorList().size());
@@ -199,7 +200,7 @@ public class PatternTest extends TypeCheckingTestCase {
       "\\func f (n : Nat) (i : I) : Nat\n" +
       "  | zero, left => zero").definition();
     assertNotNull(fun);
-    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().get(0).getPatterns();
+    List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(fun.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, Interval())), fun.getBody(), false);
     assertNull(res);
     assertEquals(1, errorReporter.getErrorList().size());
@@ -213,7 +214,7 @@ public class PatternTest extends TypeCheckingTestCase {
         \\func f (n : Nat) (d : D) (k : Nat) : Nat
           | suc n, (), k => k
         """).statements();
-    TCDefReferable dataDef = (TCDefReferable) statements.get(0).getGroup().getReferable();
+    TCDefReferable dataDef = (TCDefReferable) Objects.requireNonNull(statements.get(0).group()).referable();
     Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(1).group()).definition();
     assertNotNull(funDef);
     DataDefinition data = new DataDefinition(dataDef);
@@ -221,7 +222,7 @@ public class PatternTest extends TypeCheckingTestCase {
     data.setSort(Sort.STD);
     data.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
 
-    List<Concrete.Pattern> patternsArgs = funDef.getBody().getClauses().get(0).getPatterns();
+    List<Concrete.Pattern> patternsArgs = funDef.getBody().getClauses().getFirst().getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(funDef.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, DataCallExpression.make(data, LevelPair.STD, Collections.emptyList())), param(null, Nat())), funDef.getBody(), false);
     assertNotNull(res);
     assertEquals(0, errorReporter.getErrorList().size());
@@ -236,7 +237,7 @@ public class PatternTest extends TypeCheckingTestCase {
         \\func f (n : Nat) (d : D) (k : Nat) : Nat
           | suc n, (), suc k => k
         """).statements();
-    TCDefReferable dataDef = (TCDefReferable) statements.get(0).getGroup().getReferable();
+    TCDefReferable dataDef = (TCDefReferable) Objects.requireNonNull(statements.get(0).group()).referable();
     Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(1).group()).definition();
     assertNotNull(funDef);
     DataDefinition data = new DataDefinition(dataDef);
@@ -244,7 +245,7 @@ public class PatternTest extends TypeCheckingTestCase {
     data.setSort(Sort.STD);
     data.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
 
-    List<Concrete.Pattern> patternsArgs = funDef.getBody().getClauses().get(0).getPatterns();
+    List<Concrete.Pattern> patternsArgs = funDef.getBody().getClauses().getFirst().getPatterns();
     Pair<List<ExpressionPattern>, Map<Referable, Binding>> res = new PatternTypechecking(new LocalErrorReporter(funDef.getData(), errorReporter), PatternTypechecking.Mode.DATA).typecheckPatterns(patternsArgs, params(param(null, Nat()), param(null, DataCallExpression.make(data, LevelPair.STD, Collections.emptyList())), param(null, Nat())), funDef.getBody(), false);
     assertNotNull(res);
     assertEquals(1, errorReporter.getErrorList().size());

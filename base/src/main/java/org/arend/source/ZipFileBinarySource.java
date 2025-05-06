@@ -1,7 +1,7 @@
 package org.arend.source;
 
-import org.arend.ext.module.ModulePath;
 import org.arend.library.SourceLibrary;
+import org.arend.module.ModuleLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,29 +12,24 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class ZipFileBinarySource extends StreamBinarySource {
-  private final ModulePath myModulePath;
+  private final ModuleLocation myModule;
   private final ZipFile myFile;
   private final ZipEntry myEntry;
 
-  public ZipFileBinarySource(ModulePath modulePath, ZipFile file, ZipEntry entry) {
-    myModulePath = modulePath;
+  public ZipFileBinarySource(ModuleLocation module, ZipFile file, ZipEntry entry) {
+    myModule = module;
     myFile = file;
     myEntry = entry;
   }
 
   @Override
-  public @NotNull ModulePath getModulePath() {
-    return myModulePath;
+  public @NotNull ModuleLocation getModule() {
+    return myModule;
   }
 
   @Override
   public long getTimeStamp() {
     return 0;
-  }
-
-  @Override
-  public boolean isAvailable() {
-    return true;
   }
 
   @Override

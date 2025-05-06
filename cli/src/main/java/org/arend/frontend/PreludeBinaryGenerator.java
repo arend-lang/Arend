@@ -1,38 +1,32 @@
 package org.arend.frontend;
 
-import org.arend.extImpl.DefinitionRequester;
+import org.arend.error.DummyErrorReporter;
 import org.arend.frontend.library.PreludeFileLibrary;
-import org.arend.library.LibraryManager;
-import org.arend.library.SourceLibrary;
 import org.arend.prelude.Prelude;
-import org.arend.source.BinarySource;
+import org.arend.server.ArendServer;
+import org.arend.server.ArendServerRequester;
+import org.arend.server.ProgressReporter;
+import org.arend.server.impl.ArendServerImpl;
+import org.arend.source.PersistableBinarySource;
 import org.arend.source.Source;
-import org.arend.typechecking.provider.ConcreteProvider;
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 
 import java.nio.file.Paths;
+import java.util.Collections;
 
 public class PreludeBinaryGenerator {
   public static void main(String[] args) {
-    PreludeFileLibrary library = new PreludeFileLibrary(Paths.get(args[0]));
-    BinarySource binarySource = library.getBinarySource(Prelude.MODULE_PATH);
-    assert binarySource != null;
+    Source rawSource = PreludeFileLibrary.getSource();
+    PersistableBinarySource binarySource = PreludeFileLibrary.getBinarySource(Paths.get(args[0]));
 
-    if (args.length >= 2 && args[1].equals("--recompile")) {
-      library.addFlag(SourceLibrary.Flag.RECOMPILE);
-    } else {
-      Source rawSource = library.getRawSource(Prelude.MODULE_PATH);
-      assert rawSource != null;
-      if (rawSource.getTimeStamp() < binarySource.getTimeStamp()) {
-        System.out.println("Prelude is up to date");
-        return;
-      }
+    if (!(args.length >= 2 && args[1].equals("--recompile")) && rawSource.getTimeStamp() < binarySource.getTimeStamp()) {
+      System.out.println("Prelude is up to date");
+      return;
     }
 
-    LibraryManager manager = new LibraryManager((lib,name) -> { throw new IllegalStateException(); }, System.err::println, System.err::println, DefinitionRequester.INSTANCE, null);
-    if (manager.loadLibrary(library, null)) {
-      if (new Prelude.PreludeTypechecking(ConcreteProvider.EMPTY /* TODO[server2]: Maybe we do not need PreludeBinaryGenerator at all? */).typecheckLibrary(library)) {
-        library.persistModule(Prelude.MODULE_PATH, System.err::println);
-      }
-    }
+    Prelude.initialize();
+    ArendServer server = new ArendServerImpl(ArendServerRequester.TRIVIAL, false, false, null);
+    server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    binarySource.persist(server, System.err::println);
   }
 }

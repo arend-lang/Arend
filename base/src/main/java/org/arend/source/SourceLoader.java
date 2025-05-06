@@ -9,15 +9,11 @@ import org.arend.library.SourceLibrary;
 import org.arend.module.scopeprovider.CachingModuleScopeProvider;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.scope.Scope;
-import org.arend.term.group.ConcreteGroup;
-import org.arend.typechecking.dfs.MapDFS;
 
 import java.util.*;
 import java.util.function.Function;
 
-/**
- * Contains all necessary information for source loading.
- */
+// TODO[server2]: Delete this
 public final class SourceLoader {
   private final SourceLibrary myLibrary;
   private final LibraryManager myLibraryManager;
@@ -60,6 +56,8 @@ public final class SourceLoader {
   }
 
   private Set<ModulePath> loadSources(Collection<? extends ModulePath> modules, Function<ModulePath, Source> sourceMap) {
+    return Collections.emptySet();
+    /* TODO[server2]
     Set<ModulePath> failed = new HashSet<>();
     Map<ModulePath, Source> sources = new LinkedHashMap<>();
     for (ModulePath module : modules) {
@@ -110,6 +108,7 @@ public final class SourceLoader {
     }
 
     return loaded;
+    */
   }
 
   /**
@@ -138,12 +137,13 @@ public final class SourceLoader {
 
         if (!myLibrary.isExternal() && myLibrary.hasRawSources()) {
           Source rawSource = myLibrary.getRawSource(module);
+          /* TODO[server2]
           if (rawSource != null && rawSource.isAvailable() && binarySource.getTimeStamp() < rawSource.getTimeStamp()) {
             return null;
-          }
+          } */
         }
       }
-      return binarySource;
+      return null; // TODO[server2]: binarySource;
     });
   }
 }

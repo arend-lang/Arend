@@ -1,7 +1,7 @@
 package org.arend.prelude;
 
-import org.arend.ext.module.ModulePath;
 import org.arend.library.SourceLibrary;
+import org.arend.module.ModuleLocation;
 import org.arend.source.StreamBinarySource;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
@@ -31,18 +31,13 @@ public class PreludeResourceSource extends StreamBinarySource {
 
   @NotNull
   @Override
-  public ModulePath getModulePath() {
-    return Prelude.MODULE_PATH;
+  public ModuleLocation getModule() {
+    return Prelude.MODULE_LOCATION;
   }
 
   @Override
   public long getTimeStamp() {
     return 0;
-  }
-
-  @Override
-  public boolean isAvailable() {
-    return true;
   }
 
   @Override

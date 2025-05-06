@@ -10,6 +10,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertTrue;
 
 public class LibraryLoadingTest extends LibraryTestCase {
+  /* TODO[server2]
   @Test
   public void loadSimpleModule() {
     ModulePath module = new ModulePath("A");
@@ -66,4 +67,5 @@ public class LibraryLoadingTest extends LibraryTestCase {
     assertThat(library.getModuleGroup(modulePath), is(notNullValue()));
     assertThat(errorList, is(not(empty())));
   }
+  */
 }

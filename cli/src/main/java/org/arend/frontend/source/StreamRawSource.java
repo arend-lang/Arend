@@ -2,19 +2,13 @@ package org.arend.frontend.source;
 
 import org.antlr.v4.runtime.*;
 import org.arend.ext.error.ErrorReporter;
-import org.arend.ext.module.ModulePath;
 import org.arend.frontend.parser.*;
-import org.arend.library.SourceLibrary;
 import org.arend.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
-import org.arend.naming.resolving.typing.TypingInfo;
-import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
-import org.arend.naming.scope.CachingScope;
-import org.arend.naming.scope.ScopeFactory;
 import org.arend.source.Source;
-import org.arend.source.SourceLoader;
 import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,20 +17,10 @@ import java.io.InputStream;
  * Represents a source that loads a raw module from an {@link InputStream}.
  */
 public abstract class StreamRawSource implements Source {
-  private final ModulePath myModulePath;
-  private final boolean myInTests;
-  private ConcreteGroup myGroup;
-  private byte myPass = 0;
+  private final ModuleLocation myModule;
 
-  protected StreamRawSource(ModulePath modulePath, boolean inTests) {
-    myModulePath = modulePath;
-    myInTests = inTests;
-  }
-
-  @NotNull
-  @Override
-  public ModulePath getModulePath() {
-    return myModulePath;
+  protected StreamRawSource(@NotNull ModuleLocation module) {
+    myModule = module;
   }
 
   /**
@@ -48,49 +32,28 @@ public abstract class StreamRawSource implements Source {
   protected abstract InputStream getInputStream() throws IOException;
 
   @Override
-  public @NotNull LoadResult load(SourceLoader sourceLoader) {
-    if (myPass == 0) {
-      SourceLibrary library = sourceLoader.getLibrary();
-      ModulePath modulePath = getModulePath();
-      ErrorReporter errorReporter = sourceLoader.getTypecheckingErrorReporter();
+  public @NotNull ModuleLocation getModule() {
+    return myModule;
+  }
 
-      try {
-        ModuleLocation module = new ModuleLocation(library, myInTests ? ModuleLocation.LocationKind.TEST : ModuleLocation.LocationKind.SOURCE, modulePath);
-        var errorListener = new ReporterErrorListener(errorReporter, module);
+  @Override
+  public @Nullable ConcreteGroup loadGroup(@NotNull ErrorReporter errorReporter) {
+    try {
+      CharStream stream = CharStreams.fromStream(getInputStream());
+      ReporterErrorListener errorListener = new ReporterErrorListener(errorReporter, myModule);
 
-        ArendLexer lexer = new ArendLexer(CharStreams.fromStream(getInputStream()));
-        lexer.removeErrorListeners();
-        lexer.addErrorListener(errorListener);
+      ArendLexer lexer = new ArendLexer(stream);
+      lexer.removeErrorListeners();
+      lexer.addErrorListener(errorListener);
 
-        ArendParser parser = new ArendParser(new CommonTokenStream(lexer));
-        parser.removeErrorListeners();
-        parser.addErrorListener(errorListener);
+      ArendParser parser = new ArendParser(new CommonTokenStream(lexer));
+      parser.removeErrorListeners();
+      parser.addErrorListener(errorListener);
 
-        ArendParser.StatementsContext tree = parser.statements();
-        myGroup = new BuildVisitor(module, errorReporter).visitStatements(tree);
-        library.groupLoaded(modulePath, myGroup, true, myInTests);
-
-        myPass = 1;
-        return LoadResult.CONTINUE;
-      } catch (IOException e) {
-        errorReporter.report(new ExceptionError(e, "loading", modulePath));
-        library.groupLoaded(modulePath, null, true, myInTests);
-        return LoadResult.FAIL;
-      }
+      return new BuildVisitor(myModule, errorReporter).visitStatements(parser.statements());
+    } catch (IOException e) {
+      errorReporter.report(new ExceptionError(e, "loading", myModule.getModulePath()));
+      return null;
     }
-
-    if (myPass == 1) {
-      // TODO[server2]: myGroup.setModuleScopeProvider(sourceLoader.getModuleScopeProvider(myInTests));
-      myPass = 2;
-      return LoadResult.CONTINUE;
-    }
-
-    // TODO[server2]: new DefinitionResolveNameVisitor(ConcreteReferableProvider.INSTANCE, myPass == 2, TypingInfo.EMPTY, sourceLoader.getTypecheckingErrorReporter(), null).resolveGroup(myGroup, myGroup.getGroupScope());
-    if (myPass == 2) {
-      myPass = 3;
-      return LoadResult.CONTINUE;
-    }
-    // TODO[server2]: sourceLoader.getInstanceProviderSet().collectInstances(myGroup, CachingScope.make(ScopeFactory.parentScopeForGroup(myGroup, sourceLoader.getModuleScopeProvider(myInTests), true)));
-    return LoadResult.SUCCESS;
   }
 }

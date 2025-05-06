@@ -340,6 +340,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
     if (!Prelude.isInitialized()) {
       new Prelude.PreludeTypechecking(concreteProvider).typecheckDefinitions(myDependencies.get(Prelude.MODULE_LOCATION).getResolvedDefinitions().stream().map(DefinitionData::definition).toList(), UnstoppableCancellationIndicator.INSTANCE);
+      Prelude.initialize();
     }
 
     DependencyCollector dependencyCollector = new DependencyCollector(myServer);

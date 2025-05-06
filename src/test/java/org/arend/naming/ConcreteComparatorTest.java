@@ -3,6 +3,7 @@ package org.arend.naming;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteCompareVisitor;
 import org.arend.term.concrete.ReplaceDataVisitor;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
@@ -18,23 +19,26 @@ public class ConcreteComparatorTest extends NameResolverTestCase {
 
   @Test
   public void testLamPatternsCopy() {
-    Concrete.Definition def = (Concrete.Definition) getDefinition(resolveNamesDef("\\func foo => \\lam (path f) n (path g) => f"));
-    assertTrue(def.accept(new ConcreteCompareVisitor(), (Concrete.Definition) def.accept(new ReplaceDataVisitor(), null)));
+    Concrete.ResolvableDefinition def = resolveNamesDef("\\func foo => \\lam (path f) n (path g) => f").definition();
+    Assert.assertNotNull(def);
+    assertTrue(def.accept(new ConcreteCompareVisitor(), def.accept(new ReplaceDataVisitor(), null)));
   }
 
   @Test
   public void testSubstitution() {
-    Concrete.Definition def = (Concrete.Definition) getDefinition(resolveNamesDef("\\func foo => \\lam n (path f) m (path g) => f"));
+    Concrete.ResolvableDefinition def = resolveNamesDef("\\func foo => \\lam n (path f) m (path g) => f").definition();
     ConcreteCompareVisitor visitor = new ConcreteCompareVisitor();
+    Assert.assertNotNull(def);
     def.accept(visitor, (Concrete.Definition) def.accept(new ReplaceDataVisitor(), null));
     assertTrue(visitor.getSubstitution().isEmpty());
   }
 
   @Test
   public void testLetPatterns() {
-    Concrete.Definition def = (Concrete.Definition) getDefinition(resolveNamesDef("\\func foo => \\let (x,y) => (0,1) \\in x"));
+    Concrete.ResolvableDefinition def = resolveNamesDef("\\func foo => \\let (x,y) => (0,1) \\in x").definition();
     ConcreteCompareVisitor visitor = new ConcreteCompareVisitor();
-    def.accept(visitor, (Concrete.Definition) def.accept(new ReplaceDataVisitor(), null));
+    Assert.assertNotNull(def);
+    def.accept(visitor, def.accept(new ReplaceDataVisitor(), null));
     assertTrue(visitor.getSubstitution().isEmpty());
   }
 }

@@ -59,6 +59,15 @@ public record ConcreteGroup(@NotNull Doc description, @NotNull LocatedReferable 
     }
   }
 
+  public @Nullable ConcreteGroup findSubgroup(@NotNull String name) {
+    for (ConcreteStatement statement : statements) {
+      if (statement.group() != null && statement.group().referable.getRefName().equals(name)) {
+        return statement.group();
+      }
+    }
+    return null;
+  }
+
   public @Nullable ConcreteGroup getSubgroup(@NotNull GroupPath.Element element) {
     if (element.isDynamic()) {
       return element.index() < dynamicGroups.size() ? dynamicGroups.get(element.index()) : null;
@@ -78,14 +87,14 @@ public record ConcreteGroup(@NotNull Doc description, @NotNull LocatedReferable 
 
   public @Nullable ConcreteStatement getSubStatement(@NotNull GroupPath path) {
     List<GroupPath.Element> list = path.getList();
-    if (list.isEmpty() || list.get(list.size() - 1).isDynamic()) return null;
+    if (list.isEmpty() || list.getLast().isDynamic()) return null;
 
     ConcreteGroup subgroup = this;
     for (int i = 0; i < list.size() - 1; i++) {
       subgroup = subgroup.getSubgroup(list.get(i));
       if (subgroup == null) return null;
     }
-    GroupPath.Element element = list.get(list.size() - 1);
+    GroupPath.Element element = list.getLast();
     return element.index() < subgroup.statements.size() ? subgroup.statements.get(element.index()) : null;
   }
 

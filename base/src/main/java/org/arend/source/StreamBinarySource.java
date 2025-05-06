@@ -7,19 +7,18 @@ import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.library.LibraryManager;
 import org.arend.library.SourceLibrary;
-import org.arend.library.error.LibraryError;
-import org.arend.library.error.PartialModuleError;
 import org.arend.module.ModuleLocation;
-import org.arend.module.error.DeserializationError;
 import org.arend.module.error.ExceptionError;
 import org.arend.ext.serialization.DeserializationException;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.module.serialization.ModuleProtos;
 import org.arend.module.serialization.ModuleSerialization;
+import org.arend.server.ArendServer;
 import org.arend.source.error.LocationError;
 import org.arend.source.error.PersistingError;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,10 +48,6 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
     myDefinitionListener = definitionListener;
   }
 
-  @NotNull
-  @Override
-  public abstract ModulePath getModulePath();
-
   /**
    * Gets an input stream from which the source will be loaded.
    *
@@ -69,7 +64,6 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
   @Nullable
   protected abstract OutputStream getOutputStream() throws IOException;
 
-  @Override
   public @NotNull List<? extends ModulePath> getDependencies() {
     return myDependencies;
   }
@@ -89,7 +83,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
     return group;
   }
 
-  @Override
+  /* TODO[server2]
   public @NotNull LoadResult load(SourceLoader sourceLoader) {
     SourceLibrary library = sourceLoader.getLibrary();
     ModulePath modulePath = getModulePath();
@@ -143,30 +137,24 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
       return LoadResult.FAIL;
     }
   }
-
-  private void loadingFailed(SourceLoader sourceLoader, ModulePath modulePath, Exception e) {
-    sourceLoader.getLibraryErrorReporter().report(new DeserializationError(modulePath, e));
-    if (!sourceLoader.getLibrary().hasRawSources()) {
-      sourceLoader.getLibrary().groupLoaded(modulePath, null, false, false);
-    }
-  }
+  */
 
   @Override
-  public boolean persist(SourceLibrary library, ErrorReporter errorReporter) {
-    ModulePath currentModulePath = getModulePath();
-    ConcreteGroup group = library.getModuleGroup(currentModulePath, false);
+  public boolean persist(ArendServer server, ErrorReporter errorReporter) {
+    ModuleLocation currentModule = getModule();
+    ConcreteGroup group = server.getRawGroup(currentModule);
     if (group == null) {
-      errorReporter.report(LocationError.module(currentModulePath));
+      errorReporter.report(LocationError.module(currentModule.getModulePath()));
       return false;
     }
 
     try (OutputStream outputStream = getOutputStream()) {
       if (outputStream == null) {
-        errorReporter.report(new PersistingError(currentModulePath));
+        errorReporter.report(new PersistingError(currentModule.getModulePath()));
         return false;
       }
 
-      ModuleProtos.Module module = new ModuleSerialization(errorReporter, library.getDependencyListener()).writeModule(group, currentModulePath);
+      ModuleProtos.Module module = new ModuleSerialization(errorReporter, new DependencyCollector(null)).writeModule(group, currentModule.getModulePath());
       if (module == null) {
         return false;
       }
@@ -174,7 +162,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
       module.writeTo(outputStream);
       return true;
     } catch (Exception e) {
-      errorReporter.report(new ExceptionError(e, "persisting", currentModulePath));
+      errorReporter.report(new ExceptionError(e, "persisting", currentModule.getModulePath()));
       return false;
     }
   }

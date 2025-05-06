@@ -4,10 +4,8 @@ import org.arend.ArendTestCase;
 import org.junit.Before;
 
 public class LibraryTestCase extends ArendTestCase {
-  protected final MemoryLibrary library = new MemoryLibrary();
-
   @Before
   public void initialize() {
-    setModuleScopeProvider(library.getModuleScopeProvider());
+    server.updateLibrary(MemoryLibrary.INSTANCE, errorReporter);
   }
 }

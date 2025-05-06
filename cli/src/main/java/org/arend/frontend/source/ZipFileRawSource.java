@@ -1,6 +1,6 @@
 package org.arend.frontend.source;
 
-import org.arend.ext.module.ModulePath;
+import org.arend.module.ModuleLocation;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -12,8 +12,8 @@ public class ZipFileRawSource extends StreamRawSource {
   private final ZipFile myFile;
   private final ZipEntry myEntry;
 
-  public ZipFileRawSource(ModulePath modulePath, ZipFile file, ZipEntry entry) {
-    super(modulePath, false);
+  public ZipFileRawSource(ModuleLocation module, ZipFile file, ZipEntry entry) {
+    super(module);
     myFile = file;
     myEntry = entry;
   }
@@ -21,11 +21,6 @@ public class ZipFileRawSource extends StreamRawSource {
   @Override
   public long getTimeStamp() {
     return 0;
-  }
-
-  @Override
-  public boolean isAvailable() {
-    return true;
   }
 
   @Override

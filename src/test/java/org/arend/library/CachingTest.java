@@ -17,6 +17,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 public class CachingTest extends LibraryTestCase {
+  /* TODO[server2]
   @Test
   public void statusSerialization() {
     library.addModule(new ModulePath("A"), """
@@ -252,6 +253,7 @@ public class CachingTest extends LibraryTestCase {
   }
   */
 
+  /* TODO[server2]
   @Test
   public void persistDependencyWhenReferrerHasErrorInHeader() {
     library.addModule(new ModulePath("A"), "\\func a : \\1-Type1 => \\Set0");
@@ -275,4 +277,5 @@ public class CachingTest extends LibraryTestCase {
     assertThat(sourceB, is(notNullValue()));
     assertTrue(sourceB.isAvailable());
   }
+  */
 }

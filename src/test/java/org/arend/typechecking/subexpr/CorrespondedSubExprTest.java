@@ -7,6 +7,7 @@ import org.arend.core.expr.Expression;
 import org.arend.core.expr.ReferenceExpression;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.util.Arend;
@@ -78,7 +79,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
     Expression core = typeCheckExpr(expr, null).expression;
     var body = (Concrete.AppExpression) expr.getBody();
     {
-      var accept = expr.accept(new CorrespondedSubExprVisitor(body.getArguments().get(0).getExpression()), core);
+      var accept = expr.accept(new CorrespondedSubExprVisitor(body.getArguments().getFirst().getExpression()), core);
       assertNotNull(accept);
       assertEquals("b", accept.proj1.cast(ReferenceExpression.class).getBinding().getName());
       assertEquals("b", accept.proj2.toString());
@@ -90,7 +91,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
       assertEquals("a", accept.proj2.toString());
     }
     {
-      var make = Concrete.AppExpression.make(body.getData(), body.getFunction(), body.getArguments().get(0).getExpression(), true);
+      var make = Concrete.AppExpression.make(body.getData(), body.getFunction(), body.getArguments().getFirst().getExpression(), true);
       var accept = expr.accept(new CorrespondedSubExprVisitor(make), core);
       assertNotNull(accept);
       // Selects the whole expression
@@ -108,7 +109,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
     // Concrete.Expression sub = expr.getFunction();
     // Concrete.Argument four = expr.getArguments().get(1);
     // 1+x*2
-    var arg1 = expr.getArguments().get(0);
+    var arg1 = expr.getArguments().getFirst();
     // 1+x*2
     var expr2 = (Concrete.AppExpression) arg1.getExpression();
     var add = expr2.getFunction();
@@ -169,13 +170,14 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
           \\func f (a b : Nat) => \\lam c => a + b + c
         }
         """);
-    var concreteDef = (Concrete.FunctionDefinition) getDefinition(resolved);
+    var concreteDef = (Concrete.FunctionDefinition) resolved.definition();
+    assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
     {
       var accept = concreteDef.accept(new CorrespondedSubDefVisitor(
         concrete.getArguments().get(2).getExpression()
-      ), typeCheckDef(resolved));
+      ), typeCheckDef((TCDefReferable) resolved.referable()));
       assertNotNull(accept);
       assertEquals("14", accept.proj1.toString());
       assertEquals("14", accept.proj2.toString());
@@ -183,7 +185,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
     {
       var accept = concreteDef.accept(new CorrespondedSubDefVisitor(
         concrete.getArguments().get(1).getExpression()
-      ), typeCheckDef(resolved));
+      ), typeCheckDef((TCDefReferable) resolved.referable()));
       assertNotNull(accept);
       assertEquals("45", accept.proj1.toString());
       assertEquals("45", accept.proj2.toString());
@@ -200,12 +202,13 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
           \\func f (a b : Nat) => a + b
         }
         """);
-    var concreteDef = (Concrete.FunctionDefinition) getDefinition(resolved);
+    var concreteDef = (Concrete.FunctionDefinition) resolved.definition();
+    assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
     var accept = concreteDef.accept(new CorrespondedSubDefVisitor(
-      concrete.getArguments().get(0).getExpression()
-    ), typeCheckDef(resolved));
+      concrete.getArguments().getFirst().getExpression()
+    ), typeCheckDef((TCDefReferable) resolved.referable()));
     assertNotNull(accept);
     assertEquals("114514", accept.proj1.toString());
     assertEquals("114514", accept.proj2.toString());
@@ -220,19 +223,20 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
           \\func const {A : \\Type} (a b : A) => a
         }
         """);
-    var concreteDef = (Concrete.FunctionDefinition) getDefinition(resolved);
+    var concreteDef = (Concrete.FunctionDefinition) resolved.definition();
+    assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
     {
       var accept = concreteDef.accept(new CorrespondedSubDefVisitor(
-        concrete.getArguments().get(0).getExpression()), typeCheckDef(resolved));
+        concrete.getArguments().getFirst().getExpression()), typeCheckDef((TCDefReferable) resolved.referable()));
       assertNotNull(accept);
       assertEquals("114", accept.proj1.toString());
       assertEquals("114", accept.proj2.toString());
     }
     {
       var accept = concreteDef.accept(new CorrespondedSubDefVisitor(
-        concrete.getArguments().get(1).getExpression()), typeCheckDef(resolved));
+        concrete.getArguments().get(1).getExpression()), typeCheckDef((TCDefReferable) resolved.referable()));
       assertNotNull(accept);
       assertEquals("514", accept.proj1.toString());
       assertEquals("514", accept.proj2.toString());
@@ -248,13 +252,14 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
           \\func const => \\lam {A : \\Type} (a b : A) => a
         }
         """);
-    var concreteDef = (Concrete.FunctionDefinition) getDefinition(resolved);
+    var concreteDef = (Concrete.FunctionDefinition) resolved.definition();
+    assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
     {
       var accept = concreteDef.accept(new CorrespondedSubDefVisitor(
-        concrete.getArguments().get(0).getExpression()
-      ), typeCheckDef(resolved));
+        concrete.getArguments().getFirst().getExpression()
+      ), typeCheckDef((TCDefReferable) resolved.referable()));
       assertNotNull(accept);
       assertEquals("114", accept.proj1.toString());
       assertEquals("114", accept.proj2.toString());
@@ -262,7 +267,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
     {
       var accept = concreteDef.accept(new CorrespondedSubDefVisitor(
         concrete.getArguments().get(1).getExpression()
-      ), typeCheckDef(resolved));
+      ), typeCheckDef((TCDefReferable) resolved.referable()));
       assertNotNull(accept);
       assertEquals("514", accept.proj1.toString());
       assertEquals("514", accept.proj2.toString());
@@ -274,7 +279,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
   public void letExpr() {
     var concrete = (Concrete.LetExpression) resolveNamesExpr("\\let | x => 1 \\in x");
     var accept = concrete.accept(new CorrespondedSubExprVisitor(
-      concrete.getClauses().get(0).getTerm()), typeCheckExpr(concrete, null).expression);
+      concrete.getClauses().getFirst().getTerm()), typeCheckExpr(concrete, null).expression);
     assertNotNull(accept);
     assertEquals("1", accept.proj1.toString());
     assertEquals("1", accept.proj2.toString());
@@ -290,12 +295,13 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
             | con Nat
         }
         """);
-    var concreteDef = (Concrete.FunctionDefinition) getDefinition(resolved);
+    var concreteDef = (Concrete.FunctionDefinition) resolved.definition();
+    assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
     {
       var accept = concreteDef.accept(new CorrespondedSubDefVisitor(
-        concrete.getArguments().get(0).getExpression()), typeCheckDef(resolved));
+        concrete.getArguments().getFirst().getExpression()), typeCheckDef((TCDefReferable) resolved.referable()));
       assertNotNull(accept);
       assertEquals("514", accept.proj1.toString());
       assertEquals("514", accept.proj2.toString());
@@ -310,12 +316,13 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
           \\class X (A : \\Type0) { }
         }
         """);
-    var concreteDef = (Concrete.FunctionDefinition) getDefinition(resolved);
+    var concreteDef = (Concrete.FunctionDefinition) resolved.definition();
+    assertNotNull(concreteDef);
     var concrete = (Concrete.ClassExtExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
     var accept = concreteDef.accept(new CorrespondedSubDefVisitor(
-      concrete.getStatements().get(0).implementation
-    ), typeCheckDef(resolved));
+      concrete.getStatements().getFirst().implementation
+    ), typeCheckDef((TCDefReferable) resolved.referable()));
     assertNotNull(accept);
     assertEquals("Nat", accept.proj1.toString());
     assertEquals("Nat", accept.proj2.toString());
@@ -340,7 +347,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
     assertNotNull(concrete);
     var c = (Concrete.NewExpression) concrete.getStatements().get(1).implementation;
     var classExt = (Concrete.ClassExtExpression) c.getExpression();
-    Concrete.Expression subExpr = classExt.getStatements().get(0).implementation;
+    Concrete.Expression subExpr = classExt.getStatements().getFirst().implementation;
     var accept = concreteDef.accept(
       new CorrespondedSubDefVisitor(subExpr), coreDef);
     assertNotNull(accept);
@@ -381,14 +388,14 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
     Definition coreDef = getDefinition("test");
     assertNotNull(concrete);
     {
-      Concrete.Expression c = concrete.getStatements().get(0).implementation;
+      Concrete.Expression c = concrete.getStatements().getFirst().implementation;
       var accept = concreteDef.accept(new CorrespondedSubDefVisitor(c), coreDef);
       assertNotNull(accept);
       assertEquals("114514", accept.proj1.toString());
       assertEquals("114514", accept.proj2.toString());
     }
     {
-      Concrete.Expression c = ((Concrete.AppExpression) concrete.getBaseClassExpression()).getArguments().get(0).expression;
+      Concrete.Expression c = ((Concrete.AppExpression) concrete.getBaseClassExpression()).getArguments().getFirst().expression;
       var accept = concreteDef.accept(new CorrespondedSubDefVisitor(c), coreDef);
       assertNotNull(accept);
       assertEquals("Nat", accept.proj1.toString());
@@ -408,12 +415,13 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
         \\instance x : X Nat | B => 114514
       }
       """);
-    var concreteDef = (Concrete.FunctionDefinition) getDefinition(resolved);
+    var concreteDef = (Concrete.FunctionDefinition) resolved.definition();
+    assertNotNull(concreteDef);
     var concrete = (Concrete.ClassExtExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
     Concrete.Expression c = concrete.getStatements().get(1).implementation;
     var accept = concreteDef.accept(
-      new CorrespondedSubDefVisitor(c), typeCheckDef(resolved));
+      new CorrespondedSubDefVisitor(c), typeCheckDef((TCDefReferable) resolved.referable()));
     assertNotNull(accept);
     assertEquals(c.toString(), accept.proj1.toString());
     assertEquals(c.toString(), accept.proj2.toString());
@@ -423,13 +431,14 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
   public void exprInGoal() {
     var resolved = resolveNamesDef(
             "\\func test : Nat => {?(10)}");
-    var concreteDef = (Concrete.FunctionDefinition) getDefinition(resolved);
+    var concreteDef = (Concrete.FunctionDefinition) resolved.definition();
+    assertNotNull(concreteDef);
     var concrete = (Concrete.GoalExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
     assertNotNull(concrete.getExpression());
     var accept = concreteDef.accept(new CorrespondedSubDefVisitor(
             concrete.getExpression()
-    ), typeCheckDef(resolved, 1));
+    ), typeCheckDef((TCDefReferable) resolved.referable(), 1));
     assertNotNull(accept);
     assertEquals("10", accept.proj1.toString());
     assertEquals("10", accept.proj2.toString());

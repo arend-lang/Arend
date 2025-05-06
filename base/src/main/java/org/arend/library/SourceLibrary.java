@@ -20,7 +20,6 @@ import org.arend.source.BinarySource;
 import org.arend.source.PersistableBinarySource;
 import org.arend.source.Source;
 import org.arend.source.SourceLoader;
-import org.arend.source.error.PersistingError;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.order.dependency.DependencyListener;
 import org.arend.typechecking.order.dependency.DummyDependencyListener;
@@ -322,12 +321,7 @@ public abstract class SourceLibrary extends BaseLibrary {
 
   @Override
   public boolean containsModule(ModulePath modulePath) {
-    Source source = getRawSource(modulePath);
-    if (source != null && source.isAvailable()) {
-      return true;
-    }
-    source = getBinarySource(modulePath);
-    return source != null && source.isAvailable();
+    return false;
   }
 
   public boolean supportsPersisting() {
@@ -335,6 +329,7 @@ public abstract class SourceLibrary extends BaseLibrary {
   }
 
   public boolean persistModule(ModulePath modulePath, ErrorReporter errorReporter) {
+    /* TODO[server2]
     PersistableBinarySource source = getPersistableBinarySource(modulePath);
     if (source == null) {
       errorReporter.report(new PersistingError(modulePath));
@@ -342,6 +337,8 @@ public abstract class SourceLibrary extends BaseLibrary {
     } else {
       return source.persist(this, errorReporter);
     }
+    */
+    return true;
   }
 
   public boolean persistUpdatedModules(ErrorReporter errorReporter) {

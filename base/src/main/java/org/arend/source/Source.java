@@ -1,56 +1,28 @@
 package org.arend.source;
 
-import org.arend.ext.module.ModulePath;
+import org.arend.ext.error.ErrorReporter;
+import org.arend.module.ModuleLocation;
+import org.arend.server.ArendServer;
+import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.File;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Represents a persisted module.
  */
 public interface Source {
-  enum LoadResult { SUCCESS, FAIL, CONTINUE }
-
-  /**
-   * Gets the path to this source.
-   *
-   * @return path to the source.
-   */
-  @Nullable
-  ModulePath getModulePath();
-
-  /**
-   * Runs one pass of the loading process.
-   *
-   * @param sourceLoader    the state of the loading process.
-   *
-   * @return {@link LoadResult#CONTINUE} if this method must be called again,
-   *         otherwise returns either {@link LoadResult#SUCCESS} or {@link LoadResult#FAIL} depending on the result.
-   */
-  @NotNull LoadResult load(SourceLoader sourceLoader);
+  @NotNull ModuleLocation getModule();
 
   /**
    * Gets the timestamp for this source.
    *
    * @return timestamp
-   * @see File#lastModified
    */
   long getTimeStamp();
 
-  /**
-   * Checks if the source is available for loading.
-   *
-   * @return true if the source can be loaded and/or persisted, false otherwise.
-   */
-  boolean isAvailable();
+  @Nullable ConcreteGroup loadGroup(@NotNull ErrorReporter errorReporter);
 
-  /**
-   * Returns the list of modules on which this source depends.
-   */
-  default @NotNull List<? extends ModulePath> getDependencies() {
-    return Collections.emptyList();
+  default void load(@NotNull ArendServer server, @NotNull ErrorReporter errorReporter) {
+    server.updateModule(getTimeStamp(), getModule(), () -> loadGroup(errorReporter));
   }
 }

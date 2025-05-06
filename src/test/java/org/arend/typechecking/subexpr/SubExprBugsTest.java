@@ -1,6 +1,8 @@
 package org.arend.typechecking.subexpr;
 
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -13,18 +15,19 @@ import static org.junit.Assert.*;
 public class SubExprBugsTest extends TypeCheckingTestCase {
   @Test
   public void issue168() {
-    var resolved = resolveNamesDef(
+    ConcreteGroup resolved = resolveNamesDef(
       """
         \\func test => f 114 \\where {
           \\func F => \\Pi Nat -> Nat
           \\func f : F => \\lam i => i Nat.+ 514
         }
         """);
-    var concreteDef = (Concrete.FunctionDefinition) getDefinition(resolved);
+    var concreteDef = (Concrete.FunctionDefinition) resolved.definition();
+    assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
-    Concrete.Expression subExpr = concrete.getArguments().get(0).getExpression();
-    var accept = concreteDef.accept(new CorrespondedSubDefVisitor(subExpr), typeCheckDef(resolved));
+    Concrete.Expression subExpr = concrete.getArguments().getFirst().getExpression();
+    var accept = concreteDef.accept(new CorrespondedSubDefVisitor(subExpr), typeCheckDef((TCDefReferable) resolved.referable()));
     assertNotNull(accept);
     assertEquals("114", accept.proj1.toString());
     assertEquals("114", accept.proj2.toString());
@@ -33,11 +36,12 @@ public class SubExprBugsTest extends TypeCheckingTestCase {
   @Test
   public void issue180() {
     var resolved = resolveNamesDef("\\func test => \\Pi (A : \\Set) -> A -> A");
-    var concreteDef = (Concrete.FunctionDefinition) getDefinition(resolved);
+    var concreteDef = (Concrete.FunctionDefinition) resolved.definition();
+    assertNotNull(concreteDef);
     var concrete = (Concrete.PiExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
-    Concrete.@NotNull Expression subExpr = ((Concrete.PiExpression) concrete.getCodomain()).getParameters().get(0).getType();
-    var accept = concreteDef.accept(new CorrespondedSubDefVisitor(subExpr), typeCheckDef(resolved));
+    Concrete.@NotNull Expression subExpr = ((Concrete.PiExpression) concrete.getCodomain()).getParameters().getFirst().getType();
+    var accept = concreteDef.accept(new CorrespondedSubDefVisitor(subExpr), typeCheckDef((TCDefReferable) resolved.referable()));
     assertNotNull(accept);
     assertEquals("A", accept.proj1.toString());
     assertEquals("A", accept.proj2.toString());
@@ -52,11 +56,12 @@ public class SubExprBugsTest extends TypeCheckingTestCase {
             \\record No | hana : Nat
           }
         """);
-    var concreteDef = (Concrete.ClassDefinition) getDefinition(resolved);
-    var classField = (Concrete.ClassFieldImpl) concreteDef.getElements().get(0);
+    var concreteDef = (Concrete.ClassDefinition) resolved.definition();
+    assertNotNull(concreteDef);
+    var classField = (Concrete.ClassFieldImpl) concreteDef.getElements().getFirst();
     assertNotNull(classField);
     Concrete.Expression implementation = classField.implementation;
-    var accept = concreteDef.accept(new CorrespondedSubDefVisitor(implementation), typeCheckDef(resolved));
+    var accept = concreteDef.accept(new CorrespondedSubDefVisitor(implementation), typeCheckDef((TCDefReferable) resolved.referable()));
     assertNotNull(accept);
     assertEquals("114514", accept.proj1.toString());
     // It's actually \lam {this : Kibou} => 114514
@@ -75,11 +80,12 @@ public class SubExprBugsTest extends TypeCheckingTestCase {
             \\record Alice (rbq : Rbq)
           }
         """);
-    var concreteDef = (Concrete.FunctionDefinition) getDefinition(resolved);
-    var classField = (Concrete.ClassFieldImpl) concreteDef.getBody().getCoClauseElements().get(0);
+    var concreteDef = (Concrete.FunctionDefinition) resolved.definition();
+    assertNotNull(concreteDef);
+    var classField = (Concrete.ClassFieldImpl) concreteDef.getBody().getCoClauseElements().getFirst();
     assertNotNull(classField);
-    Concrete.ClassFieldImpl implementation = classField.getSubCoclauseList().get(0);
-    var accept = concreteDef.accept(new CorrespondedSubDefVisitor(implementation.implementation), typeCheckDef(resolved));
+    Concrete.ClassFieldImpl implementation = classField.getSubCoclauseList().getFirst();
+    var accept = concreteDef.accept(new CorrespondedSubDefVisitor(implementation.implementation), typeCheckDef((TCDefReferable) resolved.referable()));
     assertNotNull(accept);
     assertEquals("114514", accept.proj1.toString());
     assertEquals("114514", accept.proj2.toString());
@@ -93,7 +99,7 @@ public class SubExprBugsTest extends TypeCheckingTestCase {
     var concreteDef = (Concrete.ClassDefinition) getConcreteDesugarized("Tony");
     var def = getDefinition("Tony");
     assertTrue(concreteDef.isRecord());
-    var field = (Concrete.ClassField) concreteDef.getElements().get(0);
+    var field = (Concrete.ClassField) concreteDef.getElements().getFirst();
     var parameters = field.getParameters();
     {
       var parameter = parameters.get(1);

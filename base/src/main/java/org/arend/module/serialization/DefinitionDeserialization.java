@@ -26,7 +26,7 @@ import java.util.*;
 
 public class DefinitionDeserialization implements ArendDeserializer {
   private final CallTargetProvider myCallTargetProvider;
-  private final DependencyListener myDependencyListener;
+  private final DependencyListener myDependencyListener; // TODO[server2]: Delete this; set dependencies from concrete instead.
   private final SerializableKeyRegistryImpl myKeyRegistry;
   private final DefinitionListener myDefinitionListener;
 

@@ -1,7 +1,7 @@
 package org.arend.source;
 
-import org.arend.ext.module.ModulePath;
 import org.arend.library.SourceLibrary;
+import org.arend.module.ModuleLocation;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,23 +15,23 @@ import java.nio.file.StandardOpenOption;
 
 public class FileBinarySource extends StreamBinarySource {
   private final Path myFile;
-  private final ModulePath myModulePath;
+  private final ModuleLocation myModule;
 
   /**
    * Creates a new {@code FileBinarySource} from a path to the base directory and a path to the source.
    *
    * @param basePath    a path to the base directory.
-   * @param modulePath  a path to the source.
+   * @param module      a path to the source.
    */
-  public FileBinarySource(Path basePath, ModulePath modulePath) {
-    myFile = FileUtils.binaryFile(basePath, modulePath);
-    myModulePath = modulePath;
+  public FileBinarySource(Path basePath, ModuleLocation module) {
+    myFile = FileUtils.binaryFile(basePath, module.getModulePath());
+    myModule = module;
   }
 
   @NotNull
   @Override
-  public ModulePath getModulePath() {
-    return myModulePath;
+  public ModuleLocation getModule() {
+    return myModule;
   }
 
   @Nullable
@@ -54,11 +54,6 @@ public class FileBinarySource extends StreamBinarySource {
     } catch (IOException e) {
       return 0;
     }
-  }
-
-  @Override
-  public boolean isAvailable() {
-    return Files.exists(myFile);
   }
 
   @Override

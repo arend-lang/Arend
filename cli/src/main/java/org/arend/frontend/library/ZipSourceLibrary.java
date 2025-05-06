@@ -7,6 +7,7 @@ import org.arend.frontend.source.ZipFileRawSource;
 import org.arend.library.*;
 import org.arend.library.classLoader.ZipClassLoaderDelegate;
 import org.arend.library.error.LibraryIOError;
+import org.arend.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
 import org.arend.source.*;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
@@ -50,7 +51,7 @@ public class ZipSourceLibrary extends UnmodifiableSourceLibrary {
   @Override
   public @Nullable Source getRawSource(ModulePath modulePath) {
     ZipEntry entry = myZipFile.getEntry(mySourcesDir + String.join("/", modulePath.toList()) + FileUtils.EXTENSION);
-    return entry == null ? null : new ZipFileRawSource(modulePath, myZipFile, entry);
+    return entry == null ? null : new ZipFileRawSource(new ModuleLocation(getName(), ModuleLocation.LocationKind.SOURCE, modulePath), myZipFile, entry);
   }
 
   @Override
@@ -59,7 +60,7 @@ public class ZipSourceLibrary extends UnmodifiableSourceLibrary {
       return null;
     }
     ZipEntry entry = myZipFile.getEntry(myBinariesDir + String.join("/", modulePath.toList()) + FileUtils.SERIALIZED_EXTENSION);
-    return entry == null ? null : new GZIPStreamBinarySource(new ZipFileBinarySource(modulePath, myZipFile, entry));
+    return entry == null ? null : new GZIPStreamBinarySource(new ZipFileBinarySource(new ModuleLocation(getName(), ModuleLocation.LocationKind.SOURCE, modulePath), myZipFile, entry));
   }
 
   @Override

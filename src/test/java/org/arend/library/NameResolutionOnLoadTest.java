@@ -11,6 +11,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertTrue;
 
 public class NameResolutionOnLoadTest extends LibraryTestCase {
+  /* TODO[server2]
   private void setupSources() {
     library.addModule(new ModulePath("A"), "\\import B() \\func a => B.b");
     library.addModule(new ModulePath("B"), "\\func b => x\n \\func x => 0");
@@ -90,4 +91,5 @@ public class NameResolutionOnLoadTest extends LibraryTestCase {
     library.addModule(new ModulePath("Test"), "\\func a => 0 \n \\func a => 0");
     libraryManager.loadLibrary(library, null);
   }
+  */
 }

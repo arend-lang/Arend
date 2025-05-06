@@ -8,6 +8,7 @@ import org.arend.frontend.ui.ArendCliUI;
 import org.arend.library.LibraryDependency;
 import org.arend.library.LibraryHeader;
 import org.arend.library.PersistableSourceLibrary;
+import org.arend.module.ModuleLocation;
 import org.arend.source.*;
 import org.arend.typechecking.order.dependency.DependencyListener;
 import org.arend.util.Version;
@@ -57,18 +58,18 @@ public class FileSourceLibrary extends PersistableSourceLibrary {
   @Nullable
   @Override
   public final Source getRawSource(ModulePath modulePath) {
-    return mySourceBasePath == null ? null : new FileRawSource(mySourceBasePath, modulePath, false);
+    return mySourceBasePath == null ? null : new FileRawSource(mySourceBasePath, new ModuleLocation(getName(), ModuleLocation.LocationKind.SOURCE, modulePath));
   }
 
   @Override
   public @Nullable Source getTestSource(ModulePath modulePath) {
-    return myTestBasePath == null ? null : new FileRawSource(myTestBasePath, modulePath, true);
+    return myTestBasePath == null ? null : new FileRawSource(myTestBasePath, new ModuleLocation(getName(), ModuleLocation.LocationKind.TEST, modulePath));
   }
 
   @Nullable
   @Override
   public PersistableBinarySource getPersistableBinarySource(ModulePath modulePath) {
-    return myBinaryBasePath == null ? null : new GZIPStreamBinarySource(new FileBinarySource(myBinaryBasePath, modulePath));
+    return myBinaryBasePath == null ? null : new GZIPStreamBinarySource(new FileBinarySource(myBinaryBasePath, new ModuleLocation(getName(), ModuleLocation.LocationKind.SOURCE, modulePath)));
   }
 
   @Override
