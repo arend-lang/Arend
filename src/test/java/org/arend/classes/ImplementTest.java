@@ -348,7 +348,7 @@ public class ImplementTest extends TypeCheckingTestCase {
         | y => y
       }
       """, 1);
-    assertThatErrorsAre(cycle(get("y")));
+    assertThatErrorsAre(cycle(get("A.y")));
   }
 
   @Test
@@ -380,7 +380,7 @@ public class ImplementTest extends TypeCheckingTestCase {
         | z => y
       }
       """, 1);
-    assertThatErrorsAre(cycle(get("z"), get("y")));
+    assertThatErrorsAre(cycle(get("A.z"), get("A.y")));
   }
 
   @Test
@@ -399,7 +399,7 @@ public class ImplementTest extends TypeCheckingTestCase {
       }
       \\class D \\extends B, C
       """, 1);
-    assertThatErrorsAre(cycle(get("y"), get("z")));
+    assertThatErrorsAre(cycle(get("A.y"), get("A.z")));
   }
 
   @Test
@@ -422,7 +422,7 @@ public class ImplementTest extends TypeCheckingTestCase {
         | x5 => 0
       }
       """, 1);
-    assertThatErrorsAre(cycle(get("x4"), get("x1"), get("x2"), get("x3")));
+    assertThatErrorsAre(cycle(get("A.x4"), get("A.x1"), get("A.x2"), get("A.x3")));
   }
 
   @Test
@@ -441,7 +441,7 @@ public class ImplementTest extends TypeCheckingTestCase {
       }
       \\class D \\extends B, C
       """, 1);
-    assertThatErrorsAre(cycle(get("y"), get("x")));
+    assertThatErrorsAre(cycle(get("A.y"), get("A.x")));
   }
 
   @Test
@@ -472,7 +472,7 @@ public class ImplementTest extends TypeCheckingTestCase {
         | y => 0
       }
       """, 1);
-    assertThatErrorsAre(cycle(get("x"), get("p")));
+    assertThatErrorsAre(cycle(get("A.x"), get("B.p")));
   }
 
   @Test
@@ -487,7 +487,7 @@ public class ImplementTest extends TypeCheckingTestCase {
         | x => f \\this
       }
       """, 1);
-    assertThatErrorsAre(cycle(get("x")));
+    assertThatErrorsAre(cycle(get("A.x")));
   }
 
   @Test

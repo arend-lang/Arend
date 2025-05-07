@@ -65,6 +65,11 @@ public record ConcreteGroup(@NotNull Doc description, @NotNull LocatedReferable 
         return statement.group();
       }
     }
+    for (ConcreteGroup group : dynamicGroups) {
+      if (group.referable.getRefName().equals(name)) {
+        return group;
+      }
+    }
     return null;
   }
 

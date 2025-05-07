@@ -160,10 +160,23 @@ public class DynamicTest extends TypeCheckingTestCase {
 
   @Test
   public void dynamicFromAbstractCall() {
-    typeCheckClass("""
-      \\func f => 0
+    resolveNamesDef("""
+      \\class Test {
+        \\func f => 0
         | h : f = 0
-      """, "", 1);
+      }
+      """, 1);
+    assertThatErrorsAre(notInScope("f"));
+  }
+
+  @Test
+  public void dynamicFromAbstractCall2() {
+    typeCheckDef("""
+      \\class Test {
+        \\func f => 0
+        | h : Test.f = 0
+      }
+      """, 2);
   }
 
   @Test
@@ -545,7 +558,7 @@ public class DynamicTest extends TypeCheckingTestCase {
 
     ClassDefinition cClass = (ClassDefinition) getDefinition("A.C");
     assertEquals(1, cClass.getNotImplementedFields().size());
-    ClassField cParent = ((ClassDefinition) getDefinition("A.C")).getPersonalFields().get(0);
+    ClassField cParent = ((ClassDefinition) getDefinition("A.C")).getPersonalFields().getFirst();
     assertNotNull(cParent);
     FunctionDefinition hFun = (FunctionDefinition) getDefinition("A.C.h");
     List<DependentLink> hParams = new ArrayList<>();
@@ -723,15 +736,15 @@ public class DynamicTest extends TypeCheckingTestCase {
 
     ConCallExpression arg2 = arguments.get(2).cast(LamExpression.class).getBody().cast(ConCallExpression.class);
     assertEquals(1, arg2.getDataTypeArguments().size());
-    assertEquals(Ref(testFun.getParameters()), arg2.getDataTypeArguments().get(0));
+    assertEquals(Ref(testFun.getParameters()), arg2.getDataTypeArguments().getFirst());
     assertEquals(foo, arg2.getDefinition());
 
     ConCallExpression arg1 = arguments.get(1).cast(LamExpression.class).getBody().cast(ConCallExpression.class);
     assertEquals(1, arg1.getDataTypeArguments().size());
-    assertEquals(Ref(testFun.getParameters()), arg1.getDataTypeArguments().get(0));
+    assertEquals(Ref(testFun.getParameters()), arg1.getDataTypeArguments().getFirst());
     assertEquals(foo, arg1.getDefinition());
 
-    Expression domFunction = arguments.get(0).cast(LamExpression.class).getBody().cast(PiExpression.class).getParameters().getTypeExpr().normalize(NormalizationMode.WHNF);
+    Expression domFunction = arguments.getFirst().cast(LamExpression.class).getBody().cast(PiExpression.class).getParameters().getTypeExpr().normalize(NormalizationMode.WHNF);
     assertEquals(Prelude.PATH, domFunction.cast(DataCallExpression.class).getDefinition());
     List<? extends Expression> domArguments = domFunction.cast(DataCallExpression.class).getDefCallArguments();
     assertEquals(3, domArguments.size());
@@ -767,7 +780,7 @@ public class DynamicTest extends TypeCheckingTestCase {
     assertEquals(xCall, expr1.getArgument().cast(LamExpression.class).getBody());
 
     assertEquals(foo, arg2Fun.getDefinition());
-    PathExpression expr2 = arg2Fun.getDefCallArguments().get(0).cast(PathExpression.class);
+    PathExpression expr2 = arg2Fun.getDefCallArguments().getFirst().cast(PathExpression.class);
     PathExpression expr3 = expr2.getArgument().cast(LamExpression.class).getBody().cast(PathExpression.class);
     assertEquals(xCall, expr3.getArgument().cast(LamExpression.class).getBody());
 
@@ -776,11 +789,11 @@ public class DynamicTest extends TypeCheckingTestCase {
     assertEquals(Ref(testFun.getParameters()), arg1Fun.getDataTypeArguments().get(0));
     assertEquals(expr1, arg1Fun.getDataTypeArguments().get(1));
     assertEquals(foo, arg1Fun.getDefinition());
-    PathExpression expr4 = arg1Fun.getDefCallArguments().get(0).cast(PathExpression.class);
+    PathExpression expr4 = arg1Fun.getDefCallArguments().getFirst().cast(PathExpression.class);
     PathExpression expr5 = expr4.getArgument().cast(LamExpression.class).getBody().cast(PathExpression.class);
     assertEquals(xCall, expr5.getArgument().cast(LamExpression.class).getBody());
 
-    LamExpression arg0 = arguments.get(0).cast(LamExpression.class);
+    LamExpression arg0 = arguments.getFirst().cast(LamExpression.class);
     assertEquals(Foo, arg0.getBody().cast(DataCallExpression.class).getDefinition());
     assertEquals(Ref(testFun.getParameters()), arg0.getBody().cast(DataCallExpression.class).getDefCallArguments().get(0));
     PathExpression paramConCall = arg0.getBody().cast(DataCallExpression.class).getDefCallArguments().get(1).cast(PathExpression.class);

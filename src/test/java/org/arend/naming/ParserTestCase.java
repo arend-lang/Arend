@@ -1,6 +1,7 @@
 package org.arend.naming;
 
 import org.arend.ArendTestCase;
+import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.doc.DocFactory;
@@ -13,6 +14,8 @@ import org.arend.naming.reference.LocatedReferable;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteCompareVisitor;
 import org.arend.term.group.*;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,11 +61,15 @@ public abstract class ParserTestCase extends ArendTestCase {
     return parseDef(text, 0);
   }
 
-  protected ConcreteGroup parseModule(String text, int errors) {
+  @SafeVarargs
+  protected final ConcreteGroup parseModule(String text, int errors, Matcher<? super GeneralError>... matchers) {
     ListErrorReporter errorReporter = new ListErrorReporter();
     ArendParser.StatementsContext tree = _parse(text, errorReporter).statements();
     ConcreteGroup group = errorReporter.getErrorList().isEmpty() ? new BuildVisitor(MODULE, errorReporter).visitStatements(tree) : null;
     assertThat(errorReporter.getErrorList(), containsErrors(errors));
+    if (matchers.length > 0) {
+      assertThat(errorReporter.getErrorList(), Matchers.contains(matchers));
+    }
     return group;
   }
 

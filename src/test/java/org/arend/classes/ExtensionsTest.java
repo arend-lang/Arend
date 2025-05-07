@@ -168,8 +168,8 @@ public class ExtensionsTest extends TypeCheckingTestCase {
   public void mutualRecursiveExtendsError() {
     typeCheckModule(
       "\\class A \\extends B\n" +
-      "\\class B \\extends A", 1);
-    assertThatErrorsAre(error());
+      "\\class B \\extends A", 2);
+    assertThatErrorsAre(error(), error());
   }
 
   @Test

@@ -72,7 +72,7 @@ public class RecordsTest extends TypeCheckingTestCase {
         | f => 1
       }
       """, 1);
-    assertThatErrorsAre(Matchers.fieldsImplementation(true, Collections.singletonList(get("f"))));
+    assertThatErrorsAre(Matchers.fieldsImplementation(true, Collections.singletonList(get("A.f"))));
   }
 
   @Test
@@ -311,8 +311,8 @@ public class RecordsTest extends TypeCheckingTestCase {
   public void mutuallyRecursiveClassError() {
     typeCheckModule(
       "\\class A { | a : B }\n" +
-      "\\class B { | b : A }", 1);
-    assertThatErrorsAre(Matchers.error());
+      "\\class B { | b : A }", 2);
+    assertThatErrorsAre(Matchers.error(), Matchers.error());
   }
 
   @Test
@@ -386,7 +386,7 @@ public class RecordsTest extends TypeCheckingTestCase {
       \\data D (a : A) | ddd
       \\func b : D (\\new B) => ddd
       """);
-    assertEquals(getDefinition("B"), ((NewExpression) ((DataCallExpression) ((FunctionDefinition) getDefinition("b")).getResultType()).getDefCallArguments().get(0)).getClassCall().getDefinition());
+    assertEquals(getDefinition("B"), ((NewExpression) ((DataCallExpression) ((FunctionDefinition) getDefinition("b")).getResultType()).getDefCallArguments().getFirst()).getClassCall().getDefinition());
   }
 
   @Test

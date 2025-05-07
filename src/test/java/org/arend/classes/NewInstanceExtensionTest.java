@@ -23,8 +23,7 @@ public class NewInstanceExtensionTest extends TypeCheckingTestCase {
 
   @Test
   public void withoutNew() {
-    // This test produces an error on resolving since the resolver preprocess bodies and types of functions and R is not resolved at this stage.
-    resolveNamesModule(
+    typeCheckModule(
       "\\record R (x y : Nat)\n" +
       "\\func f (r : R) => r { | x => 2 }", 1);
   }
@@ -79,7 +78,7 @@ public class NewInstanceExtensionTest extends TypeCheckingTestCase {
     typeCheckModule(
       "\\record C (A : \\Type) (a : A)\n" +
       "\\func f : \\Sigma C Nat => (\\new C \\levels 1 1 Nat 0, 0)");
-    assertEquals(new LevelPair(new Level(1), new Level(1)), ((Expression) Objects.requireNonNull(((FunctionDefinition) getDefinition("f")).getBody())).cast(TupleExpression.class).getFields().get(0).cast(NewExpression.class).getClassCall().getLevels());
+    assertEquals(new LevelPair(new Level(1), new Level(1)), ((Expression) Objects.requireNonNull(((FunctionDefinition) getDefinition("f")).getBody())).cast(TupleExpression.class).getFields().getFirst().cast(NewExpression.class).getClassCall().getLevels());
   }
 
   @Test

@@ -141,7 +141,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
 
   protected ConcreteGroup resolveNamesDef(String text, int errors) {
     ConcreteGroup group = parseDef(text);
-    server.updateModule(-1, MODULE, () -> group);
+    server.updateModule(0, MODULE, () -> group);
     server.getCheckerFor(Collections.singletonList(MODULE)).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     assertThat(getAllErrors(), containsErrors(errors));
     return group;

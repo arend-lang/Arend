@@ -423,10 +423,9 @@ public class AccessModifiersTest extends TypeCheckingTestCase {
     ConcreteGroup group = parseModule("""
       \\private \\data D
         | \\private cons
-      """, 1);
-    resolveNamesModule(group, 1);
+      """, 1, Matchers.warning());
+    resolveNamesModule(group, 0);
     assertEquals(AccessModifier.PRIVATE, get("D.cons").getAccessModifier());
-    assertThatErrorsAre(Matchers.warning());
   }
 
   @Test
@@ -459,10 +458,9 @@ public class AccessModifiersTest extends TypeCheckingTestCase {
     ConcreteGroup group = parseModule("""
       \\private \\data R
         | \\private field : Nat
-      """, 1);
-    resolveNamesModule(group, 1);
+      """, 1, Matchers.warning());
+    resolveNamesModule(group, 0);
     assertEquals(AccessModifier.PRIVATE, get("R.field").getAccessModifier());
-    assertThatErrorsAre(Matchers.warning());
   }
 
   @Test
