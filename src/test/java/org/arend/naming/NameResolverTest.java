@@ -21,20 +21,17 @@ import static org.junit.Assert.*;
 public class NameResolverTest extends NameResolverTestCase {
   @Test
   public void notInScopeError() {
-    resolveNamesExpr("x", 1);
-    assertThatErrorsAre(notInScope("x"));
+    resolveNamesExpr("x", 1, notInScope("x"));
   }
 
   @Test
   public void notInScopeLongNameError() {
-    resolveNamesExpr("x.y", 1);
-    assertThatErrorsAre(notInScope("x"));
+    resolveNamesExpr("x.y", 1, notInScope("x"));
   }
 
   @Test
   public void notInScopeLongNameError2() {
-    resolveNamesExpr("x.y.z", 1);
-    assertThatErrorsAre(notInScope("x"));
+    resolveNamesExpr("x.y.z", 1, notInScope("x"));
   }
 
   @Test
@@ -480,8 +477,7 @@ public class NameResolverTest extends NameResolverTestCase {
 
   @Test
   public void nameResolverLamOpenError() {
-    resolveNamesExpr("\\lam (x : Nat) => (\\lam (y : Nat) => \\Pi (z : Nat -> \\Type0) (y : Nat) -> z ((\\lam (y : Nat) => y) y)) y", 1);
-    assertThatErrorsAre(error());
+    resolveNamesExpr("\\lam (x : Nat) => (\\lam (y : Nat) => \\Pi (z : Nat -> \\Type0) (y : Nat) -> z ((\\lam (y : Nat) => y) y)) y", 1, error());
   }
 
   @Test
@@ -505,8 +501,7 @@ public class NameResolverTest extends NameResolverTestCase {
 
   @Test
   public void nameResolverPiOpenError() {
-    resolveNamesExpr("\\Pi (A : Nat -> \\Type0) (a b : A a) -> A 0", 1);
-    assertThatErrorsAre(error());
+    resolveNamesExpr("\\Pi (A : Nat -> \\Type0) (a b : A a) -> A 0", 1, error());
   }
 
   @Test

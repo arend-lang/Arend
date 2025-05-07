@@ -121,7 +121,7 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
         | zero, _ => zero
         | suc x', zero => zero
         | suc x', suc y' => h (f (suc x') (suc y')) (g x' (suc (suc y')))
-      """, 2);
+      """, 8);
   }
 
   @Test
@@ -135,7 +135,7 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
   public void headerCycle() {
     typeCheckModule(
       "\\func he1 : he2 = he2 => path (\\lam _ => he2)\n" +
-      "\\func he2 : he1 = he1 => path (\\lam _ => he1)", 1);
+      "\\func he2 : he1 = he1 => path (\\lam _ => he1)", 2);
   }
 
   @Test
@@ -215,7 +215,7 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
         \\func fooA (p : \\Sigma Nat (\\Sigma Nat Nat)) : Nat \\elim p
           | (a, (b, c)) => fooB a b c
         \\func fooB (a b c : Nat) : Nat \\with | a, b, c => fooA (a, (b, c))
-        """, 2);
+        """, 4);
   }
 
   @Test

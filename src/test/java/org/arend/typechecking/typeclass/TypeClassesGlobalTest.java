@@ -430,7 +430,7 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
         | f (n : Nat) : Nat \\with {
           | 0 => x
           | suc n => n
-      }
+        }
         \\where \\instance inst => \\new C Nat 0""");
   }
 
@@ -470,7 +470,7 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
         \\instance inst2 : C Nat
           | f x => x
       }
-      """, 1);
+      """, 2);
   }
 
   @Test

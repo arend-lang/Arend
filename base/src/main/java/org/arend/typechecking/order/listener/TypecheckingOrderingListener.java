@@ -543,7 +543,9 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
           return expr instanceof LeveledDefCallExpression && expr.getDefinition() instanceof TopLevelDefinition && allDefinitions.contains((TopLevelDefinition) expr.getDefinition()) && !((LeveledDefCallExpression) expr).getLevels().compare(expr.getDefinition().makeIdLevels(), CMP.EQ, DummyEquations.getInstance(), null) ? CoreExpression.FindAction.STOP : CoreExpression.FindAction.CONTINUE;
         }
       }, null)) {
-        myErrorReporter.report(new TypecheckingError("Recursive call must have the same levels as the definition", definition));
+        TypecheckingError error = new TypecheckingError("Recursive call must have the same levels as the definition", definition);
+        error.definition = definition.getData();
+        myErrorReporter.report(error);
       }
     }
 

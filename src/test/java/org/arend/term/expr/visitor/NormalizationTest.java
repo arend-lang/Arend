@@ -182,6 +182,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
     LocalReferable y = ref("y");
     Concrete.LetClause xClause = clet(x, cZero());
     Concrete.LetClause yClause = clet(y, cSuc());
+    incModification();
     TypecheckingResult result = typeCheckExpr(cLet(clets(xClause), cLet(clets(yClause), cApps(cVar(y), cVar(x)))), null);
     assertEquals(Suc(Zero()), result.expression.normalize(NormalizationMode.NF));
   }
@@ -193,6 +194,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
     LocalReferable y = ref("y");
     Concrete.LetClause xClause = clet(x, cSuc());
     Concrete.LetClause yClause = clet(y, cZero());
+    incModification();
     TypecheckingResult result = typeCheckExpr(cLet(clets(xClause), cLet(clets(yClause), cApps(cVar(x), cVar(y)))), null);
     assertEquals(Suc(Zero()), result.expression.normalize(NormalizationMode.NF));
   }
@@ -200,6 +202,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
   @Test
   public void normalizeLetNo() {
     // normalize (\let | x (y z : N) => zero \in x zero) = \lam (z : N) => zero
+    incModification();
     TypecheckingResult result = typeCheckExpr("\\let x (y z : Nat) => 0 \\in x 0", null);
     SingleDependentLink x = singleParam("x", Nat());
     assertEquals(Lam(x, Zero()), result.expression.normalize(NormalizationMode.NF));
@@ -209,6 +212,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
   public void normalizeCaseStuck() {
     List<Binding> context = new ArrayList<>();
     context.add(new TypedBinding("n", Nat()));
+    incModification();
     TypecheckingResult result = typeCheckExpr(context, "\\case n \\with { zero => zero | suc _ => zero }", Nat());
     assertEquals(result.expression, result.expression.normalize(NormalizationMode.NF));
   }
@@ -219,6 +223,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
     LocalReferable y = ref("y");
     LocalReferable x = ref("x");
     Concrete.LetClause xClause = clet(x, cargs(cTele(cvars(y), cNat())), cUniverseInf(2), cUniverseStd(0));
+    incModification();
     TypecheckingResult result = typeCheckExpr(cLet(clets(xClause), cApps(cVar(x), cZero())), null);
     assertEquals(Universe(new Level(0), new Level(LevelVariable.HVAR)), result.expression.normalize(NormalizationMode.NF));
   }
@@ -226,6 +231,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
   @Test
   public void normalizeElimAnyConstructor() {
     DependentLink var0 = param("var0", Universe(0));
+    incModification();
     typeCheckModule(
         "\\data D | d Nat\n" +
         "\\func test (x : D) : Nat | _ => 0");
@@ -241,6 +247,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
 
   @Test
   public void testConditionNormalization() {
+    incModification();
     typeCheckModule(
         "\\data Z | neg Nat | pos Nat { zero => neg 0 }\n" +
         "\\func only-one-zero : pos 0 = neg 0 => idp"
@@ -379,6 +386,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
 
   @Test
   public void testConCallEta() {
+    incModification();
     typeCheckModule(
       """
       \\func \\infixl 1 $ {X Y : \\Type0} (f : X -> Y) (x : X) => f x
@@ -390,8 +398,8 @@ public class NormalizationTest extends TypeCheckingTestCase {
     FunctionDefinition f = (FunctionDefinition) getDefinition("f");
     Expression term = ((Expression) Objects.requireNonNull(f.getBody())).normalize(NormalizationMode.NF);
     ConCallExpression conCall = term.cast(ConCallExpression.class);
-    assertEquals(getDefinition("fsuc"), conCall.getDefinition());
+    assertEquals(getDefinition("Fin.fsuc"), conCall.getDefinition());
     assertEquals(1, conCall.getDefCallArguments().size());
-    assertEquals(f.getParameters().getNext(), conCall.getDefCallArguments().get(0).cast(ReferenceExpression.class).getBinding());
+    assertEquals(f.getParameters().getNext(), conCall.getDefCallArguments().getFirst().cast(ReferenceExpression.class).getBinding());
   }
 }

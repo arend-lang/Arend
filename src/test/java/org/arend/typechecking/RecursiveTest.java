@@ -11,7 +11,7 @@ import static org.junit.Assert.assertSame;
 public class RecursiveTest extends TypeCheckingTestCase {
   @Test
   public void list() {
-    assertSame(typeCheckDef("\\data List (A : \\Type0) | nil | cons A (List A)").status(), Definition.TypeCheckingStatus.NO_ERRORS);
+    assertSame(Definition.TypeCheckingStatus.NO_ERRORS, typeCheckDef("\\data List (A : \\Type0) | nil | cons A (List A)").status());
   }
 
   @Test
@@ -28,27 +28,27 @@ public class RecursiveTest extends TypeCheckingTestCase {
 
   @Test
   public void plus() {
-    assertSame(typeCheckDef("\\func \\infixr 9 + (x y : Nat) : Nat \\elim x | zero => y | suc x' => suc (x' + y)").status(), Definition.TypeCheckingStatus.NO_ERRORS);
+    assertSame(Definition.TypeCheckingStatus.NO_ERRORS, typeCheckDef("\\func \\infixr 9 + (x y : Nat) : Nat \\elim x | zero => y | suc x' => suc (x' + y)").status());
   }
 
   @Test
   public void doubleRec() {
-    assertSame(typeCheckDef("\\func \\infixr 9 + (x y : Nat) : Nat \\elim x | zero => y | suc zero => y | suc (suc x'') => x'' + (x'' + y)").status(), Definition.TypeCheckingStatus.NO_ERRORS);
+    assertSame(Definition.TypeCheckingStatus.NO_ERRORS, typeCheckDef("\\func \\infixr 9 + (x y : Nat) : Nat \\elim x | zero => y | suc zero => y | suc (suc x'') => x'' + (x'' + y)").status());
   }
 
   @Test
   public void functionError() {
-    assertSame(typeCheckDef("\\func \\infixr 9 + (x y : Nat) : Nat => x + y", 1).status(), Definition.TypeCheckingStatus.HAS_ERRORS);
+    assertSame(Definition.TypeCheckingStatus.HAS_ERRORS, typeCheckDef("\\func \\infixr 9 + (x y : Nat) : Nat => x + y", 1).status());
   }
 
   @Test
   public void functionError2() {
-    assertSame(typeCheckDef("\\func \\infixr 9 + (x y : Nat) : Nat \\elim x | zero => y | suc zero => y | suc (suc x'') => y + y", 1).status(), Definition.TypeCheckingStatus.HAS_ERRORS);
+    assertSame(Definition.TypeCheckingStatus.HAS_ERRORS, typeCheckDef("\\func \\infixr 9 + (x y : Nat) : Nat \\elim x | zero => y | suc zero => y | suc (suc x'') => y + y", 1).status());
   }
 
   @Test
   public void functionPartiallyApplied() {
-    assertSame(typeCheckDef("\\func foo (z : (Nat -> Nat) -> Nat) (x y : Nat) : Nat \\elim x | zero => y | suc x' => z (foo z x')").status(), Definition.TypeCheckingStatus.NO_ERRORS);
+    assertSame(Definition.TypeCheckingStatus.NO_ERRORS, typeCheckDef("\\func foo (z : (Nat -> Nat) -> Nat) (x y : Nat) : Nat \\elim x | zero => y | suc x' => z (foo z x')").status());
   }
 
   @Test
@@ -60,47 +60,50 @@ public class RecursiveTest extends TypeCheckingTestCase {
 
   @Test
   public void mutualCowithError() {
-    typeCheckModule(
-      "\\class C (x y : Nat)\n" +
-      "\\func f (x : Nat) : C \\cowith | x => x | y => C.y {g x}\n" +
-      "\\func g (x : Nat) : C \\cowith | x => x | y => C.y {f x}", 2);
+    typeCheckModule("""
+      \\class C (x y : Nat)
+      \\func f (x : Nat) : C \\cowith | x => x | y => C.y {g x}
+      \\func g (x : Nat) : C \\cowith | x => x | y => C.y {f x}
+      """, 2);
   }
 
   @Test
   public void bodyBodyTest() {
     typeCheckModule(
       "\\func f (x : Nat) : \\Type => g 0\n" +
-      "\\func g (x : Nat) : \\Type => f 0", 2);
+      "\\func g (x : Nat) : \\Type => f 0", 4);
   }
 
   @Test
   public void bodyBodyTest2() {
     typeCheckModule(
       "\\func f (x : Nat) : Nat => g 0\n" +
-      "\\func g (x : Nat) : Nat => f 0", 2);
+      "\\func g (x : Nat) : Nat => f 0", 4);
   }
 
   @Test
   public void bodyBodyLemmaTest() {
     typeCheckModule(
       "\\lemma f (x : Nat) : x = x => g x\n" +
-      "\\lemma g (x : Nat) : x = x => f x", 2);
+      "\\lemma g (x : Nat) : x = x => f x", 4);
   }
 
   @Test
   public void bodyBodyCowithTest() {
-    typeCheckModule(
-      "\\class C (n : Nat)\n" +
-      "\\func f (x : Nat) : C \\cowith | n => C.n {g x}\n" +
-      "\\func g (x : Nat) : C \\cowith | n => C.n {f x}", 2);
+    typeCheckModule("""
+      \\class C (n : Nat)
+      \\func f (x : Nat) : C \\cowith | n => C.n {g x}
+      \\func g (x : Nat) : C \\cowith | n => C.n {f x}
+      """, 2);
   }
 
   @Test
   public void bodyBodyNewTest() {
-    typeCheckModule(
-      "\\class C (n : Nat)\n" +
-      "\\func f (x : Nat) : C => \\new C (C.n {g x})\n" +
-      "\\func g (x : Nat) : C => \\new C (C.n {f x})", 2);
+    typeCheckModule("""
+      \\class C (n : Nat)
+      \\func f (x : Nat) : C => \\new C (C.n {g x})
+      \\func g (x : Nat) : C => \\new C (C.n {f x})
+      """, 4);
   }
 
   @Test
@@ -121,8 +124,8 @@ public class RecursiveTest extends TypeCheckingTestCase {
   public void resultTypeTestError() {
     typeCheckModule(
       "\\func f (n : Nat) : \\let t => g 0 \\in Nat | 0 => 0 | suc n => g n\n" +
-      "\\func g (n : Nat) : Nat | 0 => 0 | suc n => f n", 2);
-    assertThatErrorsAre(instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class));
+      "\\func g (n : Nat) : Nat | 0 => 0 | suc n => f n", 4);
+    assertThatErrorsAre(instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class));
   }
 
   @Test
@@ -136,16 +139,16 @@ public class RecursiveTest extends TypeCheckingTestCase {
   public void bodyBodyElimTest() {
     typeCheckModule(
       "\\func f (x : Nat) : \\hType | 0 => g 0 | suc _ => Nat\n" +
-      "\\func g (x : Nat) : \\hType | 0 => f 0 | suc _ => Nat", 2);
-    assertThatErrorsAre(instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class));
+      "\\func g (x : Nat) : \\hType | 0 => f 0 | suc _ => Nat", 4);
+    assertThatErrorsAre(instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class));
   }
 
   @Test
   public void bodyBodyElimTest2() {
     typeCheckModule(
       "\\func f (x : Nat) : Nat | 0 => g 0 | suc n => n \n" +
-      "\\func g (x : Nat) : Nat | 0 => f 0 | suc n => n", 2);
-    assertThatErrorsAre(instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class));
+      "\\func g (x : Nat) : Nat | 0 => f 0 | suc n => n", 4);
+    assertThatErrorsAre(instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class), instanceOf(TerminationCheckError.class));
   }
 
   @Test
@@ -181,12 +184,13 @@ public class RecursiveTest extends TypeCheckingTestCase {
 
   @Test
   public void mutualRecursionOrder() {
-    typeCheckModule(
-      "\\func g => D'\n" +
-      "\\data D : \\Set | con1 | con2 (d : D) (D' d)\n" +
-      "\\data D' (d : D) : \\Set \\with\n" +
-      "  | con1 => con1'\n" +
-      "  | con2 _ _ => con2'");
+    typeCheckModule("""
+      \\func g => D'
+      \\data D : \\Set | con1 | con2 (d : D) (D' d)
+      \\data D' (d : D) : \\Set \\with
+        | con1 => con1'
+        | con2 _ _ => con2'
+      """);
   }
 
   @Test
@@ -200,23 +204,25 @@ public class RecursiveTest extends TypeCheckingTestCase {
   public void withoutPatternMatchingError() {
     typeCheckModule(
       "\\func f (n : Nat) : Nat | 0 => 0 | suc n => g n\n" +
-      "\\func g (n : Nat) : Nat => f (suc n)", 2);
+      "\\func g (n : Nat) : Nat => f (suc n)", 4);
   }
 
   @Test
   public void levelsTest() {
-    typeCheckModule(
-      "\\func test (n : Nat) : Nat\n" +
-      "  | 0 => 0\n" +
-      "  | suc n => test \\lp n");
+    typeCheckModule("""
+      \\func test (n : Nat) : Nat
+        | 0 => 0
+        | suc n => test \\lp n
+      """);
   }
 
   @Test
   public void levelsError() {
-    typeCheckModule(
-      "\\func test (n : Nat) : Nat\n" +
-      "  | 0 => 0\n" +
-      "  | suc n => test (\\suc \\lp) n", 1);
+    typeCheckModule("""
+      \\func test (n : Nat) : Nat
+        | 0 => 0
+        | suc n => test (\\suc \\lp) n
+      """, 1);
   }
 
   @Test
@@ -240,10 +246,11 @@ public class RecursiveTest extends TypeCheckingTestCase {
 
   @Test
   public void expectedTypeTest() {
-    typeCheckModule(
-      "\\func foo (n : Nat) : Nat\n" +
-      "  | 0 => 0\n" +
-      "  | suc n => bar n\n" +
-      "\\func bar (n : Nat) => foo n", 1);
+    typeCheckModule("""
+      \\func foo (n : Nat) : Nat
+        | 0 => 0
+        | suc n => bar n
+      \\func bar (n : Nat) => foo n
+      """, 1);
   }
 }

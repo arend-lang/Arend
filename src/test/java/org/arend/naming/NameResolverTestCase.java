@@ -14,6 +14,7 @@ import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor;
 import org.arend.naming.scope.*;
 import org.arend.prelude.Prelude;
 import org.arend.server.ProgressReporter;
+import org.arend.server.impl.DefinitionData;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.AccessModifier;
@@ -22,6 +23,8 @@ import org.arend.typechecking.TestLocalErrorReporter;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.visitor.DesugarVisitor;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,6 +35,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 public abstract class NameResolverTestCase extends ParserTestCase {
+  private long myModificationStamp = 0;
   private final Map<String, MetaReferable> metaDefs = new HashMap<>();
   private final Scope metaScope = new Scope() {
     @Override
@@ -44,6 +48,10 @@ public abstract class NameResolverTestCase extends ParserTestCase {
       return context == null || context == ScopeContext.STATIC ? metaDefs.values() : Collections.emptyList();
     }
   };
+
+  protected void incModification() {
+    myModificationStamp++;
+  }
 
   @Override
   protected List<GeneralError> getAllErrors() {
@@ -60,29 +68,26 @@ public abstract class NameResolverTestCase extends ParserTestCase {
   }
 
   public Concrete.GeneralDefinition getConcrete(String path) {
-    ConcreteGroup group = getGroup();
-    String[] names = path.split("\\.");
-    for (int i = 0; i < names.length - 1; i++) {
-      group = Objects.requireNonNull(group.findSubgroup(names[i]));
-    }
+    for (DefinitionData defData : server.getResolvedDefinitions(MODULE)) {
+      Concrete.ResolvableDefinition definition = defData.definition();
+      if (definition.getData().getRefLongName().toString().equals(path)) {
+        return definition;
+      }
 
-    String lastName = names[names.length - 1];
-    ConcreteGroup subgroup = group.findSubgroup(lastName);
-    if (subgroup != null) return subgroup.definition();
-
-    if (group.definition() instanceof Concrete.ClassDefinition classDef) {
-      for (Concrete.ClassElement element : classDef.getElements()) {
-        if (element instanceof Concrete.ClassField field) {
-          if (field.getData().getRefName().equals(lastName)) {
-            return field;
+      if (definition instanceof Concrete.ClassDefinition classDef) {
+        for (Concrete.ClassElement element : classDef.getElements()) {
+          if (element instanceof Concrete.ClassField field) {
+            if (field.getData().getRefLongName().toString().equals(path)) {
+              return field;
+            }
           }
         }
-      }
-    } else if (group.definition() instanceof Concrete.DataDefinition dataDef) {
-      for (Concrete.ConstructorClause clause : dataDef.getConstructorClauses()) {
-        for (Concrete.Constructor constructor : clause.getConstructors()) {
-          if (constructor.getData().getRefName().equals(lastName)) {
-            return constructor;
+      } else if (definition instanceof Concrete.DataDefinition dataDef) {
+        for (Concrete.ConstructorClause clause : dataDef.getConstructorClauses()) {
+          for (Concrete.Constructor constructor : clause.getConstructors()) {
+            if (constructor.getData().getRefLongName().toString().equals(path)) {
+              return constructor;
+            }
           }
         }
       }
@@ -102,7 +107,8 @@ public abstract class NameResolverTestCase extends ParserTestCase {
     metaDefs.put(name, new MetaReferable(AccessModifier.PUBLIC, prec, name, meta, meta instanceof MetaResolver ? (MetaResolver) meta : null, MODULE_REF));
   }
 
-  private Concrete.Expression resolveNamesExpr(Scope parentScope, List<Referable> context, String text, int errors) {
+  @SafeVarargs
+  private Concrete.Expression resolveNamesExpr(Scope parentScope, List<Referable> context, String text, int errors, Matcher<? super GeneralError>... matchers) {
     Concrete.Expression expression = parseExpr(text);
     assertThat(expression, is(notNullValue()));
 
@@ -114,6 +120,9 @@ public abstract class NameResolverTestCase extends ParserTestCase {
     ListErrorReporter errorReporter = new ListErrorReporter();
     expression = SyntacticDesugarVisitor.desugar(expression.accept(new ExpressionResolveNameVisitor(parentScope, typedContext, TypingInfo.EMPTY, new TestLocalErrorReporter(errorReporter), null), null), errorReporter);
     assertThat(errorReporter.getErrorList(), containsErrors(errors));
+    if (matchers.length > 0) {
+      assertThat(errorReporter.getErrorList(), Matchers.contains(matchers));
+    }
     return expression;
   }
 
@@ -121,8 +130,9 @@ public abstract class NameResolverTestCase extends ParserTestCase {
     return resolveNamesExpr(parentScope, new ArrayList<>(), text, errors);
   }
 
-  protected Concrete.Expression resolveNamesExpr(String text, @SuppressWarnings("SameParameterValue") int errors) {
-    return resolveNamesExpr(server.getModuleScopeProvider(null, false).forModule(Prelude.MODULE_PATH), new ArrayList<>(), text, errors);
+  @SafeVarargs
+  protected final Concrete.Expression resolveNamesExpr(String text, @SuppressWarnings("SameParameterValue") int errors, Matcher<? super GeneralError>... matchers) {
+    return resolveNamesExpr(server.getModuleScopeProvider(null, false).forModule(Prelude.MODULE_PATH), new ArrayList<>(), text, errors, matchers);
   }
 
   protected Concrete.Expression resolveNamesExpr(Scope parentScope, @SuppressWarnings("SameParameterValue") String text) {
@@ -141,7 +151,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
 
   protected ConcreteGroup resolveNamesDef(String text, int errors) {
     ConcreteGroup group = parseDef(text);
-    server.updateModule(0, MODULE, () -> group);
+    server.updateModule(myModificationStamp, MODULE, () -> group);
     server.getCheckerFor(Collections.singletonList(MODULE)).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     assertThat(getAllErrors(), containsErrors(errors));
     return group;
@@ -160,7 +170,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
   }
 
   protected void resolveNamesModule(ConcreteGroup group, int errors) {
-    server.updateModule(0, MODULE, () -> group);
+    server.updateModule(myModificationStamp, MODULE, () -> group);
     server.getCheckerFor(Collections.singletonList(MODULE)).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     assertThat(getAllErrors(), containsErrors(errors));
   }
