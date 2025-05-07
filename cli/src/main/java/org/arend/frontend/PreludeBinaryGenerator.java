@@ -25,7 +25,7 @@ public class PreludeBinaryGenerator {
     }
 
     Prelude.initialize();
-    ArendServer server = new ArendServerImpl(ArendServerRequester.TRIVIAL, false, false, null);
+    ArendServer server = new ArendServerImpl(ArendServerRequester.TRIVIAL, false, false);
     server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     binarySource.persist(server, System.err::println);
   }

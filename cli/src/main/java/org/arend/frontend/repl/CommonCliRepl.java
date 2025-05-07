@@ -102,7 +102,7 @@ public abstract class CommonCliRepl extends Repl {
       @NotNull FileLibraryResolver libraryResolver,
       @NotNull ListErrorReporter errorReporter) {
     this(
-      new ArendServerImpl(null /* TODO[server2] */, false, false, null),
+      new ArendServerImpl(null /* TODO[server2] */, false, false),
       modules,
       libraryResolver,
       errorReporter);

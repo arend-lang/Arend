@@ -34,7 +34,7 @@ public abstract class ArendTestCase {
 
   @Before
   public void initializeServer() {
-    server = new ArendServerImpl(ArendServerRequester.TRIVIAL, false, false, null);
+    server = new ArendServerImpl(ArendServerRequester.TRIVIAL, false, false);
     if (myPrelude == null) {
       myPrelude = PreludeFileLibrary.getSource().loadGroup(DummyErrorReporter.INSTANCE);
       Assert.assertNotNull(myPrelude);

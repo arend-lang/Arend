@@ -49,7 +49,7 @@ import java.util.function.Supplier;
 import java.util.logging.*;
 
 public class ArendServerImpl implements ArendServer {
-  private final Logger myLogger = Logger.getLogger(ArendServerImpl.class.getName());
+  private final static Logger myLogger = Logger.getLogger(ArendServerImpl.class.getName());
   private final ArendServerRequester myRequester;
   private final SimpleModuleScopeProvider myPreludeModuleScopeProvider = new SimpleModuleScopeProvider();
   private final Map<ModuleLocation, GroupData> myGroups = new ConcurrentHashMap<>();
@@ -105,23 +105,11 @@ public class ArendServerImpl implements ArendServer {
     return defData == null ? PersistentList.empty() : defData.instances();
   };
 
-  public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging, @Nullable String logFile) {
+  public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging) {
     myRequester = requester;
     myCacheReferences = cacheReferences;
     myLogger.setLevel(withLogging ? Level.INFO : Level.OFF);
     myLogger.setUseParentHandlers(false);
-    if (logFile != null) {
-      try {
-        FileHandler handler = new FileHandler(logFile, true);
-        handler.setFormatter(new SimpleFormatter());
-        myLogger.addHandler(handler);
-      } catch (Exception e) {
-        myLogger.addHandler(new ConsoleHandler());
-        myLogger.severe(e.getMessage());
-      }
-    } else {
-      myLogger.addHandler(new ConsoleHandler());
-    }
     myLibraryService = new LibraryService(this);
     copyLogger(ArendCheckerImpl.getLogger());
 
