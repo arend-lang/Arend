@@ -17,9 +17,7 @@ import org.arend.naming.reference.*;
 import org.arend.naming.resolving.ResolverListener;
 import org.arend.naming.resolving.typing.*;
 import org.arend.naming.scope.*;
-import org.arend.naming.scope.local.ElimScope;
 import org.arend.naming.scope.local.ListScope;
-import org.arend.prelude.Prelude;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.server.impl.DefinitionData;
 import org.arend.term.concrete.*;
@@ -482,7 +480,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       return;
     }
 
-    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(Prelude.DEP_ARRAY == null ? scope : new ElimScope(scope, Collections.singleton(Prelude.DEP_ARRAY.getRef())), new ArrayList<>(), myTypingInfo, myErrorReporter, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
+    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(scope, new ArrayList<>(), myTypingInfo, myErrorReporter, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
     for (int i = 0; i < def.getSuperClasses().size(); i++) {
       Concrete.ReferenceExpression superClass = def.getSuperClasses().get(i);
       Concrete.Expression resolved = exprVisitor.visitReference(superClass, true, resolveLevels);

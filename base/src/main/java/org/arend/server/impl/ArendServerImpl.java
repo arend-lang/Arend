@@ -209,6 +209,15 @@ public class ArendServerImpl implements ArendServer {
       if (isPrelude) {
         typingInfo = new GlobalTypingInfo(null);
         new TypingInfoVisitor(typingInfo).processGroup(group, getParentGroupScope(module, group));
+
+        for (ConcreteStatement statement : group.statements()) {
+          if (statement.group() != null && statement.group().referable().getRefName().equals("Array")) {
+            AbstractBody body = typingInfo.getRefBody(statement.group().referable());
+            if (body != null) {
+              typingInfo.addReferableBody(statement.group().referable(), new AbstractBody(0, body.getReferable(), 0));
+            }
+          }
+        }
       } else {
         typingInfo = null;
       }
