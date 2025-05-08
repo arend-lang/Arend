@@ -21,6 +21,8 @@ import org.arend.typechecking.implicitargs.equations.DummyEquations;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.typechecking.visitor.DesugarVisitor;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 
 import java.util.*;
 
@@ -30,7 +32,8 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertTrue;
 
 public class TypeCheckingTestCase extends NameResolverTestCase {
-  TypecheckingResult typeCheckExpr(Map<Referable, Binding> context, Concrete.Expression expression, Expression expectedType, int errors) {
+  @SafeVarargs
+  final TypecheckingResult typeCheckExpr(Map<Referable, Binding> context, Concrete.Expression expression, Expression expectedType, int errors, Matcher<? super GeneralError>... matchers) {
     ListErrorReporter errorReporter = new ListErrorReporter();
     CheckTypeVisitor visitor = new CheckTypeVisitor(errorReporter, null, null);
     visitor.addBindings(context);
@@ -53,12 +56,16 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
     }
 
     assertThat(errorReporter.getErrorList(), containsErrors(errors));
+    if (matchers.length > 0) {
+      assertThat(errorReporter.getErrorList(), Matchers.contains(matchers));
+    }
     assertTrue(ok);
     return result;
   }
 
-  TypecheckingResult typeCheckExpr(Concrete.Expression expression, Expression expectedType, int errors) {
-    return typeCheckExpr(Collections.emptyMap(), expression, expectedType, errors);
+  @SafeVarargs
+  final TypecheckingResult typeCheckExpr(Concrete.Expression expression, Expression expectedType, int errors, Matcher<? super GeneralError>... matchers) {
+    return typeCheckExpr(Collections.emptyMap(), expression, expectedType, errors, matchers);
   }
 
   protected TypecheckingResult typeCheckExpr(Map<Referable, Binding> context, Concrete.Expression expression, Expression expectedType) {
@@ -78,8 +85,9 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
     return typeCheckExpr(mapContext, resolveNamesExpr(mapContext, text), expectedType, errors);
   }
 
-  protected TypecheckingResult typeCheckExpr(String text, Expression expectedType, int errors) {
-    return typeCheckExpr(resolveNamesExpr(text), expectedType, errors);
+  @SafeVarargs
+  protected final TypecheckingResult typeCheckExpr(String text, Expression expectedType, int errors, Matcher<? super GeneralError>... matchers) {
+    return typeCheckExpr(resolveNamesExpr(text), expectedType, errors, matchers);
   }
 
   protected TypecheckingResult typeCheckExpr(List<Binding> context, String text, Expression expectedType) {

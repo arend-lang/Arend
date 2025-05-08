@@ -485,7 +485,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       Concrete.ReferenceExpression superClass = def.getSuperClasses().get(i);
       Concrete.Expression resolved = exprVisitor.visitReference(superClass, true, resolveLevels);
       Referable ref = RedirectingReferable.getOriginalReferable(superClass.getReferent());
-      if (resolved == superClass && myTypingInfo.getBodyDynamicScopeProvider(ref) != null) {
+      if (resolved == superClass && myTypingInfo.getBodyDynamicScopeProvider(ref) != null && ref instanceof GlobalReferable globalRef && globalRef.getKind().equals(GlobalReferable.Kind.CLASS)) {
         superClass.setReferent(ref);
       } else {
         if (!(ref instanceof ErrorReference)) {

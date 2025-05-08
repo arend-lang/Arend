@@ -92,7 +92,7 @@ public class ArrayTest extends TypeCheckingTestCase {
 
   @Test
   public void extendsTest2() {
-    typeCheckModule("\\record R \\extends Array", 1);
+    resolveNamesModule("\\record R \\extends Array", 1);
   }
 
   @Test

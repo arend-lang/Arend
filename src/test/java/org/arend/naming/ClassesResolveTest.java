@@ -1,11 +1,12 @@
 package org.arend.naming;
 
+import org.arend.typechecking.TypeCheckingTestCase;
 import org.junit.Test;
 
 import static org.arend.Matchers.notInScope;
 import static org.arend.Matchers.warning;
 
-public class ClassesResolveTest extends NameResolverTestCase {
+public class ClassesResolveTest extends TypeCheckingTestCase {
   @Test
   public void unknownExtTestError() {
     resolveNamesModule(
@@ -215,7 +216,7 @@ public class ClassesResolveTest extends NameResolverTestCase {
 
   @Test
   public void instanceRecord() {
-    resolveNamesModule("""
+    typeCheckModule("""
       \\record X (A : \\Type0) {
         | B : A -> \\Type0
       }

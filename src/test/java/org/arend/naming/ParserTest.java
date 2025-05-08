@@ -3,6 +3,7 @@ package org.arend.naming;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
+import org.arend.term.Fixity;
 import org.arend.term.concrete.Concrete;
 import org.junit.Test;
 
@@ -239,7 +240,7 @@ public class ParserTest extends NameResolverTestCase {
     assertNotNull(function);
     List<? extends Referable> refs = function.getParameters().getFirst().getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
-    Concrete.Expression expectedTerm = cApps(cVar(d), cApps(cVar(named), cApps(cVar(d), cVar(refs.get(0)), cVar(refs.get(1)))), cVar(refs.get(2)));
+    Concrete.Expression expectedTerm = cApps(cVar(d), cApps(new Concrete.FixityReferenceExpression(null, named, Fixity.NONFIX), cApps(cVar(d), cVar(refs.get(0)), cVar(refs.get(1)))), cVar(refs.get(2)));
     assertTrue(compareAbstract(actualTerm, expectedTerm));
   }
 
@@ -278,7 +279,7 @@ public class ParserTest extends NameResolverTestCase {
     assertNotNull(function);
     List<? extends Referable> refs = function.getParameters().getFirst().getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
-    Concrete.Expression expectedTerm = cApps(cVar(d), cVar(refs.get(0)), cApps(cVar(d), cApps(cVar(named), cVar(refs.get(1))), cVar(refs.get(2))));
+    Concrete.Expression expectedTerm = cApps(cVar(d), cVar(refs.get(0)), cApps(cVar(d), cApps(new Concrete.FixityReferenceExpression(null, named, Fixity.NONFIX), cVar(refs.get(1))), cVar(refs.get(2))));
     assertTrue(compareAbstract(actualTerm, expectedTerm));
   }
 
@@ -300,7 +301,7 @@ public class ParserTest extends NameResolverTestCase {
     assertNotNull(function);
     List<? extends Referable> refs = function.getParameters().getFirst().getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
-    Concrete.Expression expectedTerm = cApps(cVar(d), cVar(refs.get(0)), cApps(cVar(named), cVar(refs.get(1))));
+    Concrete.Expression expectedTerm = cApps(cVar(d), cVar(refs.get(0)), cApps(new Concrete.FixityReferenceExpression(null, named, Fixity.NONFIX), cVar(refs.get(1))));
     assertTrue(compareAbstract(actualTerm, expectedTerm));
   }
 
@@ -322,7 +323,7 @@ public class ParserTest extends NameResolverTestCase {
     assertNotNull(function);
     List<? extends Referable> refs = function.getParameters().getFirst().getReferableList();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
-    Concrete.Expression expectedTerm = cApps(cVar(named), cApps(cVar(d), cVar(refs.get(0)), cVar(refs.get(1))));
+    Concrete.Expression expectedTerm = cApps(new Concrete.FixityReferenceExpression(null, named, Fixity.NONFIX), cApps(cVar(d), cVar(refs.get(0)), cVar(refs.get(1))));
     assertTrue(compareAbstract(actualTerm, expectedTerm));
   }
 
@@ -345,7 +346,7 @@ public class ParserTest extends NameResolverTestCase {
     assertNotNull(function);
     Referable refA = function.getParameters().getFirst().getReferableList().getFirst();
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
-    Concrete.Expression expectedTerm = cApps(cVar(named2), cApps(cVar(named1), cVar(refA)));
+    Concrete.Expression expectedTerm = cApps(new Concrete.FixityReferenceExpression(null, named2, Fixity.NONFIX), cApps(new Concrete.FixityReferenceExpression(null, named1, Fixity.NONFIX), cVar(refA)));
     assertTrue(compareAbstract(actualTerm, expectedTerm));
   }
 
@@ -385,7 +386,7 @@ public class ParserTest extends NameResolverTestCase {
     List<? extends Referable> refs = function.getParameters().getFirst().getReferableList();
 
     Concrete.Expression actualTerm = ((Concrete.TermFunctionBody) function.getBody()).getTerm();
-    Concrete.Expression expectedTerm = cApps(cVar(rightP), cApps(cVar(leftP), cApps(cVar(g), cVar(refs.get(0))), cApps(cVar(g), cVar(refs.get(1)))), cApps(cVar(qed), cApps(cVar(g), cVar(refs.get(2)))));
+    Concrete.Expression expectedTerm = cApps(cVar(rightP), cApps(cVar(leftP), cApps(cVar(g), cVar(refs.get(0))), cApps(cVar(g), cVar(refs.get(1)))), cApps(new Concrete.FixityReferenceExpression(null, qed, Fixity.NONFIX), cApps(cVar(g), cVar(refs.get(2)))));
     assertTrue(compareAbstract(actualTerm, expectedTerm));
   }
 

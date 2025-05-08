@@ -121,7 +121,7 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
         | zero, _ => zero
         | suc x', zero => zero
         | suc x', suc y' => h (f (suc x') (suc y')) (g x' (suc (suc y')))
-      """, 8);
+      """, 4);
   }
 
   @Test

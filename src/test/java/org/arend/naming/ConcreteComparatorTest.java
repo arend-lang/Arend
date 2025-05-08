@@ -14,7 +14,7 @@ public class ConcreteComparatorTest extends NameResolverTestCase {
     resolveNamesModule(
       "\\func foo => \\lam n (path f) m => f\n" +
       "\\func bar => \\lam n (path f) m => f");
-    assertTrue(((Concrete.Definition) getConcrete("foo")).accept(new ConcreteCompareVisitor(), (Concrete.Definition) getConcrete("bar")));
+    assertTrue(((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) getConcrete("foo")).getBody()).getTerm().accept(new ConcreteCompareVisitor(), ((Concrete.TermFunctionBody) ((Concrete.FunctionDefinition) getConcrete("bar")).getBody()).getTerm()));
   }
 
   @Test

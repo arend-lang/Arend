@@ -9,6 +9,7 @@ import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.result.TypecheckingResult;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.*;
@@ -23,6 +24,12 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.*;
 
 public class ExpressionTest extends TypeCheckingTestCase {
+  @Before
+  public void initializePrelude() {
+    typeCheckModule("");
+    incModification();
+  }
+
   @Test
   public void typeCheckingLam() {
     // \x. x : Nat -> Nat
@@ -53,8 +60,7 @@ public class ExpressionTest extends TypeCheckingTestCase {
   public void typeCheckingIdError() {
     // \X x. X : (X : Type0) -> X -> X
     SingleDependentLink param = singleParam("X", Universe(0));
-    typeCheckExpr("\\lam X x => X", Pi(param, Pi(Ref(param), Ref(param))), 1);
-    assertThatErrorsAre(typeMismatchError());
+    typeCheckExpr("\\lam X x => X", Pi(param, Pi(Ref(param), Ref(param))), 1, typeMismatchError());
   }
 
   @Test
@@ -98,7 +104,7 @@ public class ExpressionTest extends TypeCheckingTestCase {
     List<Binding> context = new ArrayList<>();
     context.add(new TypedBinding("X", Pi(Nat(), Universe(0))));
     SingleDependentLink link = singleParam("t", Nat());
-    context.add(new TypedBinding("Y", Pi(link, Pi(singleParam("x", Apps(Ref(context.get(0)), Ref(link))), Universe(0)))));
+    context.add(new TypedBinding("Y", Pi(link, Pi(singleParam("x", Apps(Ref(context.getFirst()), Ref(link))), Universe(0)))));
     TypecheckingResult typeResult = typeCheckExpr(context,
           "\\Pi (f : \\Pi (g : Nat -> Nat) -> X (g zero)) " +
           "-> (\\Pi (z : (Nat -> Nat) -> Nat) -> Y (z (\\lam _ => 0)) (f (\\lam x => z (\\lam _ => x)))) " +
@@ -121,8 +127,7 @@ public class ExpressionTest extends TypeCheckingTestCase {
     // (f : Type1 -> Type1) -> f Type1
     LocalReferable f = ref("f");
     Concrete.Expression expr = cPi(f, cPi(cUniverseStd(1), cUniverseStd(1)), cApps(cVar(f), cUniverseStd(1)));
-    typeCheckExpr(expr, null, 1);
-    assertThatErrorsAre(typeMismatchError());
+    typeCheckExpr(expr, null, 1, typeMismatchError());
   }
 
   @Test
@@ -162,8 +167,7 @@ public class ExpressionTest extends TypeCheckingTestCase {
     // \x. x : (Nat -> Nat) -> Nat
     LocalReferable x = ref("x");
     Concrete.Expression expr = cLam(cName(x), cVar(x));
-    typeCheckExpr(expr, Pi(Pi(Nat(), Nat()), Nat()), 1);
-    assertThatErrorsAre(typeMismatchError());
+    typeCheckExpr(expr, Pi(Pi(Nat(), Nat()), Nat()), 1, typeMismatchError());
   }
 
   @Test
@@ -171,8 +175,7 @@ public class ExpressionTest extends TypeCheckingTestCase {
     // \x. x x : (Nat -> Nat) -> Nat
     LocalReferable x = ref("x");
     Concrete.Expression expr = cLam(cName(x), cApps(cVar(x), cVar(x)));
-    typeCheckExpr(expr, Pi(Pi(Nat(), Nat()), Nat()), 1);
-    assertThatErrorsAre(typeMismatchError());
+    typeCheckExpr(expr, Pi(Pi(Nat(), Nat()), Nat()), 1, typeMismatchError());
   }
 
   @Test
@@ -180,8 +183,7 @@ public class ExpressionTest extends TypeCheckingTestCase {
     // \x. x 0 : (Nat -> Nat) -> Nat -> Nat
     LocalReferable x = ref("x");
     Concrete.Expression expr = cLam(cName(x), cApps(cVar(x), cZero()));
-    typeCheckExpr(expr, Pi(Pi(Nat(), Nat()), Pi(Nat(), Nat())), 1);
-    assertThatErrorsAre(typeMismatchError());
+    typeCheckExpr(expr, Pi(Pi(Nat(), Nat()), Pi(Nat(), Nat())), 1, typeMismatchError());
   }
 
   @Test

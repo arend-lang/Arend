@@ -44,7 +44,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
   @Override
   public Concrete.ReferenceExpression visitReference(Concrete.ReferenceExpression expr, Void params) {
-    return new Concrete.ReferenceExpression(getData(expr), copyRef(expr.getReferent()), visitLevels(expr.getPLevels()), visitLevels(expr.getHLevels()));
+    return expr instanceof Concrete.FixityReferenceExpression fixRef ? new Concrete.FixityReferenceExpression(getData(expr), copyRef(expr.getReferent()), fixRef.fixity) : new Concrete.ReferenceExpression(getData(expr), copyRef(expr.getReferent()), visitLevels(expr.getPLevels()), visitLevels(expr.getHLevels()));
   }
 
   @Override
@@ -80,30 +80,31 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
   private Concrete.Pattern visitPattern(Concrete.Pattern pattern) {
     Concrete.Pattern result;
-    if (pattern instanceof Concrete.NamePattern namePattern) {
-      result = new Concrete.NamePattern(getData(pattern), pattern.isExplicit(), namePattern.getReferable(), namePattern.type == null ? null : namePattern.type.accept(this, null), namePattern.fixity);
-    } else if (pattern instanceof Concrete.ConstructorPattern conPattern) {
-      List<Concrete.Pattern> args = new ArrayList<>(pattern.getPatterns().size());
-      for (Concrete.Pattern subPattern : pattern.getPatterns()) {
-        args.add(visitPattern(subPattern));
+    switch (pattern) {
+      case Concrete.NamePattern namePattern -> result = new Concrete.NamePattern(getData(pattern), pattern.isExplicit(), namePattern.getReferable(), namePattern.type == null ? null : namePattern.type.accept(this, null), namePattern.fixity);
+      case Concrete.ConstructorPattern conPattern -> {
+        List<Concrete.Pattern> args = new ArrayList<>(pattern.getPatterns().size());
+        for (Concrete.Pattern subPattern : pattern.getPatterns()) {
+          args.add(visitPattern(subPattern));
+        }
+        result = new Concrete.ConstructorPattern(getData(pattern), pattern.isExplicit(), myReplace ? myData : conPattern.getConstructorData(), conPattern.getConstructor(), args, null);
       }
-      result = new Concrete.ConstructorPattern(getData(pattern), pattern.isExplicit(), myReplace ? myData : conPattern.getConstructorData(), conPattern.getConstructor(), args, null);
-    } else if (pattern instanceof Concrete.TuplePattern) {
-      List<Concrete.Pattern> args = new ArrayList<>(pattern.getPatterns().size());
-      for (Concrete.Pattern subPattern : pattern.getPatterns()) {
-        args.add(visitPattern(subPattern));
+      case Concrete.TuplePattern ignored -> {
+        List<Concrete.Pattern> args = new ArrayList<>(pattern.getPatterns().size());
+        for (Concrete.Pattern subPattern : pattern.getPatterns()) {
+          args.add(visitPattern(subPattern));
+        }
+        result = new Concrete.TuplePattern(getData(pattern), pattern.isExplicit(), args, null);
       }
-      result = new Concrete.TuplePattern(getData(pattern), pattern.isExplicit(), args, null);
-    } else if (pattern instanceof Concrete.NumberPattern) {
-      result = new Concrete.NumberPattern(getData(pattern), ((Concrete.NumberPattern) pattern).getNumber(), null);
-    } else if (pattern instanceof Concrete.UnparsedConstructorPattern) {
-      List<Concrete.BinOpSequenceElem<Concrete.Pattern>> patterns = new ArrayList<>();
-      for (Concrete.BinOpSequenceElem<Concrete.Pattern> elem : ((Concrete.UnparsedConstructorPattern) pattern).getUnparsedPatterns()) {
-        patterns.add(new Concrete.BinOpSequenceElem<>(visitPattern(elem.getComponent()), elem.fixity, elem.isExplicit));
+      case Concrete.NumberPattern numberPattern -> result = new Concrete.NumberPattern(getData(pattern), numberPattern.getNumber(), null);
+      case Concrete.UnparsedConstructorPattern unparsedConstructorPattern -> {
+        List<Concrete.BinOpSequenceElem<Concrete.Pattern>> patterns = new ArrayList<>();
+        for (Concrete.BinOpSequenceElem<Concrete.Pattern> elem : unparsedConstructorPattern.getUnparsedPatterns()) {
+          patterns.add(new Concrete.BinOpSequenceElem<>(visitPattern(elem.getComponent()), elem.fixity, elem.isExplicit));
+        }
+        result = new Concrete.UnparsedConstructorPattern(getData(pattern), pattern.isExplicit(), patterns, null);
       }
-      result = new Concrete.UnparsedConstructorPattern(getData(pattern), pattern.isExplicit(), patterns, null);
-    } else {
-      throw new IllegalStateException();
+      case null, default -> throw new IllegalStateException();
     }
 
     if (!pattern.isExplicit()) {
@@ -325,18 +326,17 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   public Concrete.BaseFunctionDefinition visitFunction(Concrete.BaseFunctionDefinition def, Void params) {
     Concrete.FunctionBody body = def.getBody();
     Concrete.FunctionBody newBody;
-    if (body instanceof Concrete.CoelimFunctionBody) {
-      List<Concrete.CoClauseElement> elements = body.getCoClauseElements(), newElements = new ArrayList<>(elements.size());
-      for (Concrete.CoClauseElement element : elements) {
-        newElements.add(visitCoClauseElement(element));
+    switch (body) {
+      case Concrete.CoelimFunctionBody ignored -> {
+        List<Concrete.CoClauseElement> elements = body.getCoClauseElements(), newElements = new ArrayList<>(elements.size());
+        for (Concrete.CoClauseElement element : elements) {
+          newElements.add(visitCoClauseElement(element));
+        }
+        newBody = new Concrete.CoelimFunctionBody(getData(body), newElements);
       }
-      newBody = new Concrete.CoelimFunctionBody(getData(body), newElements);
-    } else if (body instanceof Concrete.ElimFunctionBody) {
-      newBody = new Concrete.ElimFunctionBody(getData(body), visitReferenceExpressions(body.getEliminatedReferences()), visitFunctionClauses(body.getClauses()));
-    } else if (body instanceof Concrete.TermFunctionBody) {
-      newBody = new Concrete.TermFunctionBody(getData(body), body.getTerm().accept(this, null));
-    } else {
-      throw new IllegalStateException();
+      case Concrete.ElimFunctionBody ignored -> newBody = new Concrete.ElimFunctionBody(getData(body), visitReferenceExpressions(body.getEliminatedReferences()), visitFunctionClauses(body.getClauses()));
+      case Concrete.TermFunctionBody ignored -> newBody = new Concrete.TermFunctionBody(getData(body), body.getTerm().accept(this, null));
+      default -> throw new IllegalStateException();
     }
 
     Concrete.BaseFunctionDefinition newDef = def.copy(visitParameters(def.getParameters()), newBody);
@@ -377,18 +377,17 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
     Concrete.Expression previousType = null;
     Concrete.Expression previousTypeCopied = null;
     for (Concrete.ClassElement element : def.getElements()) {
-      if (element instanceof Concrete.CoClauseElement coClauseElem) {
-        elements.add(visitCoClauseElement(coClauseElem));
-      } else if (element instanceof Concrete.ClassField field) {
-        if (field.getResultType() != previousType) {
-          previousType = field.getResultType();
-          previousTypeCopied = previousType.accept(this, null);
+      switch (element) {
+        case Concrete.CoClauseElement coClauseElem -> elements.add(visitCoClauseElement(coClauseElem));
+        case Concrete.ClassField field -> {
+          if (field.getResultType() != previousType) {
+            previousType = field.getResultType();
+            previousTypeCopied = previousType.accept(this, null);
+          }
+          elements.add(new Concrete.ClassField(field.getData(), field.isExplicit(), field.getKind(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), previousTypeCopied, field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null), field.isCoerce()));
         }
-        elements.add(new Concrete.ClassField(field.getData(), field.isExplicit(), field.getKind(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), previousTypeCopied, field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null), field.isCoerce()));
-      } else if (element instanceof Concrete.OverriddenField field) {
-        elements.add(new Concrete.OverriddenField(getData(field), field.getOverriddenField(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), field.getResultType().accept(this, null), field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null)));
-      } else {
-        throw new IllegalStateException();
+        case Concrete.OverriddenField field -> elements.add(new Concrete.OverriddenField(getData(field), field.getOverriddenField(), (List<Concrete.TypeParameter>) (List<?>) visitParameters(field.getParameters()), field.getResultType().accept(this, null), field.getResultTypeLevel() == null ? null : field.getResultTypeLevel().accept(this, null)));
+        case null, default -> throw new IllegalStateException();
       }
     }
     result.setClassifyingField(def.getClassifyingField(), def.isForcedClassifyingField());
