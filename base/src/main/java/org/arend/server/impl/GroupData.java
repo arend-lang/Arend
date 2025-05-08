@@ -162,7 +162,7 @@ public class GroupData {
 
     List<ParameterReferable> externalParameters = new ArrayList<>(group.externalParameters().size());
     for (ParameterReferable parameter : group.externalParameters()) {
-      externalParameters.add(new ParameterReferable(parent, parameter.getIndex(), parameter.getOriginalReferable(), parameter.getAnyBody()));
+      externalParameters.add(new ParameterReferable(parent, parameter.getIndex(), parameter.getOriginalReferable(), parameter.getAbstractBody()));
     }
 
     return new ConcreteGroup(group.description(), newDef == null ? group.referable() : newDef.getData(), newDef, statements, dynamicGroups, externalParameters);

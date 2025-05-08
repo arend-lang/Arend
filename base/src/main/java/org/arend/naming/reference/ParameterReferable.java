@@ -1,8 +1,6 @@
 package org.arend.naming.reference;
 
 import org.arend.naming.resolving.typing.AbstractBody;
-import org.arend.naming.resolving.typing.TypingInfoVisitor;
-import org.arend.naming.scope.Scope;
 import org.arend.term.abs.AbstractReferable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -13,27 +11,21 @@ public class ParameterReferable implements Referable {
   private final TCDefReferable myDefinition;
   private final int myIndex;
   private final Referable myReferable;
-  private final AbstractBody myBody;
   private AbstractBody myAbstractBody;
 
   public ParameterReferable(TCDefReferable definition, int index, Referable referable, AbstractBody body) {
     myDefinition = definition;
     myIndex = index;
     myReferable = referable;
-    myBody = body;
-  }
-
-  public void resolve(Scope scope) {
-    if (myAbstractBody != null || myBody == null) return;
-    myAbstractBody = new AbstractBody(myBody.getParameters(), TypingInfoVisitor.tryResolve(myBody.getReferable(), scope), myBody.getArguments());
+    myAbstractBody = body;
   }
 
   public AbstractBody getAbstractBody() {
     return myAbstractBody;
   }
 
-  public AbstractBody getAnyBody() {
-    return myAbstractBody != null ? myAbstractBody : myBody;
+  public void setAbstractBody(AbstractBody body) {
+    myAbstractBody = body;
   }
 
   @Override

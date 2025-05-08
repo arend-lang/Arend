@@ -624,7 +624,20 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     for (ParameterReferable parameter : group.externalParameters()) {
-      parameter.resolve(cachedScope);
+      if (parameter.getAbstractBody() == null) {
+        Concrete.GeneralDefinition paramDef = myConcreteProvider.getConcrete(parameter.getDefinition());
+        if (paramDef != null) {
+          loop:
+          for (Concrete.Parameter param : paramDef.getParameters()) {
+            for (Referable referable : param.getReferableList()) {
+              if (parameter.getOriginalReferable().equals(referable)) {
+                parameter.setAbstractBody(TypingInfoVisitor.resolveAbstractBody(param.getType()));
+                break loop;
+              }
+            }
+          }
+        }
+      }
     }
 
     Scope docScope;
