@@ -62,11 +62,9 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     List<TypedReferable> context = new ArrayList<>();
     var exprVisitor = new ExpressionResolveNameVisitor(scope, context, myTypingInfo, myLocalErrorReporter, myResolverListener, visitLevelParameters(def.getPLevelParameters()), visitLevelParameters(def.getHLevelParameters()));
-    for (Iterator<? extends Concrete.Parameter> iterator = def.getParameters().iterator(); iterator.hasNext(); ) {
-      Concrete.Parameter parameter = iterator.next();
+    for (Concrete.Parameter parameter : def.getParameters()) {
       if (parameter.getType() == null && !parameter.isExplicit()) {
         myErrorReporter.report(new NameResolverError("Untyped parameters must be explicit", parameter));
-        iterator.remove();
       }
     }
     exprVisitor.visitParameters(def.getParameters(), null);

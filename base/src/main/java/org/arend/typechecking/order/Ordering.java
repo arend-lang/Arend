@@ -71,8 +71,8 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   public void orderModule(ConcreteGroup group) {
     if (group.referable() instanceof TCDefReferable tcReferable && getTypechecked(tcReferable) == null) {
       var def = myConcreteProvider.getConcrete(tcReferable);
-      if (def instanceof Concrete.Definition) {
-        order((Concrete.Definition) def);
+      if (def instanceof Concrete.ResolvableDefinition) {
+        order((Concrete.ResolvableDefinition) def);
       }
     }
 
@@ -219,7 +219,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
       return;
     }
     if (scc.size() == 1) {
-      myOrderingListener.unitFound(scc.get(0), true);
+      myOrderingListener.unitFound(scc.getFirst(), true);
       return;
     }
 

@@ -135,7 +135,7 @@ public class CorrespondedSubDefTest extends TypeCheckingTestCase {
     }
     {
       Concrete.TypeParameter typeParam = ((Concrete.ClassField) def.getElements().get(1)).getParameters().getFirst();
-      var accept = def.accept(new CorrespondedSubDefVisitor(typeParam.getType()), typeCheckDef(def.getData()));
+      var accept = def.accept(new CorrespondedSubDefVisitor(typeParam.getType(), false), typeCheckDef(def.getData()));
       assertNotNull(accept);
       assertEquals("\\Sigma", accept.proj1.toString());
       assertEquals("\\Sigma", accept.proj2.toString());

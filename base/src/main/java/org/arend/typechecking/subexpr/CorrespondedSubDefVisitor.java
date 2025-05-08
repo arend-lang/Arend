@@ -19,18 +19,20 @@ public class CorrespondedSubDefVisitor implements
     ConcreteDefinitionVisitor<@NotNull Definition,
         @Nullable Pair<@NotNull Expression, Concrete.@NotNull Expression>> {
   private final @NotNull CorrespondedSubExprVisitor visitor;
+  private final boolean myDesugarized;
 
   @Contract(pure = true)
   public @NotNull List<@NotNull SubExprError> getExprError() {
     return visitor.getErrors();
   }
 
-  public CorrespondedSubDefVisitor(@NotNull CorrespondedSubExprVisitor visitor) {
-    this.visitor = visitor;
+  public CorrespondedSubDefVisitor(@NotNull Concrete.Expression subExpr, boolean isDesugarized) {
+    visitor = new CorrespondedSubExprVisitor(subExpr);
+    myDesugarized = isDesugarized;
   }
 
   public CorrespondedSubDefVisitor(@NotNull Concrete.Expression subExpr) {
-    this(new CorrespondedSubExprVisitor(subExpr));
+    this(subExpr, true);
   }
 
   private @Nullable Pair<@NotNull Expression, Concrete.@NotNull Expression> visitBody(
@@ -38,22 +40,28 @@ public class CorrespondedSubDefVisitor implements
       @Nullable Body coreBody,
       @Nullable Expression coreResultType
   ) {
-    if (body instanceof Concrete.TermFunctionBody) {
-      Concrete.Expression term = body.getTerm();
-      if (term instanceof Concrete.NewExpression) {
-        Concrete.Expression classExpr = ((Concrete.NewExpression) term).getExpression();
-        if (classExpr instanceof Concrete.ClassExtExpression) {
-          return visitCoclauses(((Concrete.ClassExtExpression) classExpr).getCoclauses().getCoclauseList(), coreBody, coreResultType);
+    switch (body) {
+      case Concrete.TermFunctionBody ignored -> {
+        Concrete.Expression term = body.getTerm();
+        if (term instanceof Concrete.NewExpression) {
+          Concrete.Expression classExpr = ((Concrete.NewExpression) term).getExpression();
+          if (classExpr instanceof Concrete.ClassExtExpression) {
+            return visitCoclauses(((Concrete.ClassExtExpression) classExpr).getCoclauses().getCoclauseList(), coreBody, coreResultType);
+          }
         }
+        return coreBody instanceof Expression ? term.accept(visitor, (Expression) coreBody) : null;
       }
-      return coreBody instanceof Expression ? term.accept(visitor, (Expression) coreBody) : null;
-    } else if (body instanceof Concrete.ElimFunctionBody && coreBody instanceof ElimBody) {
-      // Assume they have the same order.
-      return visitor.visitElimTree(body.getClauses(), ((ElimBody) coreBody).getClauses());
-    } else if (body instanceof Concrete.CoelimFunctionBody) {
-      return visitCoclauses(body.getCoClauseElements(), coreBody, coreResultType);
-    } else {
-      return null;
+      case Concrete.ElimFunctionBody ignored when coreBody instanceof ElimBody -> {
+        // Assume they have the same order.
+        return visitor.visitElimTree(body.getClauses(), ((ElimBody) coreBody).getClauses());
+        // Assume they have the same order.
+      }
+      case Concrete.CoelimFunctionBody ignored -> {
+        return visitCoclauses(body.getCoClauseElements(), coreBody, coreResultType);
+      }
+      default -> {
+        return null;
+      }
     }
   }
 
@@ -128,6 +136,10 @@ public class CorrespondedSubDefVisitor implements
         if (field.isEmpty()) continue;
         Expression fieldExpr = field.get();
         var parameters = concrete.getParameters();
+        if (myDesugarized && !parameters.isEmpty()) {
+          // Clone the list and remove the first "this" parameter if already desugared
+          parameters = parameters.subList(1, parameters.size());
+        }
         var accept = !parameters.isEmpty() && fieldExpr instanceof PiExpression
           ? visitor.visitPiImpl(parameters, concrete.getResultType(), (PiExpression) fieldExpr)
           : concrete.getResultType().accept(visitor, fieldExpr);

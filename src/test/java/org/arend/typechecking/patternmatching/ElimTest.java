@@ -34,39 +34,42 @@ import static org.junit.Assert.assertEquals;
 public class ElimTest extends TypeCheckingTestCase {
   @Test
   public void elim2() {
-    typeCheckModule(
-        "\\data D Nat (x y : Nat) | con1 Nat | con2 (Nat -> Nat) (a b c : Nat)\n" +
-        "\\func P (a1 b1 c1 : Nat) (d1 : D a1 b1 c1) (a2 b2 c2 : Nat) (d2 : D a2 b2 c2) : \\oo-Type0 \\elim d1\n" +
-        "  | con2 _ _ _ _ => Nat -> Nat\n" +
-        "  | con1 _ => Nat\n" +
-        "\\func test (q w : Nat) (e : D w 0 q) (r : D q w 1) : P w 0 q e q w 1 r \\elim e, r\n" +
-        "  | con2 x y z t, con1 s => x\n" +
-        "  | con1 _, con1 s => s\n" +
-        "  | con1 s, con2 x y z t => x q\n" +
-        "  | con2 _ y z t, con2 x y' z' t' => x");
+    typeCheckModule("""
+      \\data D Nat (x y : Nat) | con1 Nat | con2 (Nat -> Nat) (a b c : Nat)
+      \\func P (a1 b1 c1 : Nat) (d1 : D a1 b1 c1) (a2 b2 c2 : Nat) (d2 : D a2 b2 c2) : \\oo-Type0 \\elim d1
+        | con2 _ _ _ _ => Nat -> Nat
+        | con1 _ => Nat
+      \\func test (q w : Nat) (e : D w 0 q) (r : D q w 1) : P w 0 q e q w 1 r \\elim e, r
+        | con2 x y z t, con1 s => x
+        | con1 _, con1 s => s
+        | con1 s, con2 x y z t => x q
+        | con2 _ y z t, con2 x y' z' t' => x
+      """);
   }
 
   @Test
   public void elim3() {
-    typeCheckModule(
-        "\\data D (x : Nat -> Nat) (y : Nat) | con1 {Nat} Nat | con2 (Nat -> Nat) {a b c : Nat}\n" +
-        "\\func test (q : Nat -> Nat) (e : D q 0) (r : D (\\lam x => x) (q 1)) : Nat \\elim e, r\n" +
-        "  | con2 _ {y} {z} {t}, con1 s => q t\n" +
-        "  | con1 {z} _, con1 s => z\n" +
-        "  | con1 s, con2 y => y s\n" +
-        "  | con2 _ {a} {b}, con2 y => y (q b)");
+    typeCheckModule("""
+      \\data D (x : Nat -> Nat) (y : Nat) | con1 {Nat} Nat | con2 (Nat -> Nat) {a b c : Nat}
+      \\func test (q : Nat -> Nat) (e : D q 0) (r : D (\\lam x => x) (q 1)) : Nat \\elim e, r
+        | con2 _ {y} {z} {t}, con1 s => q t
+        | con1 {z} _, con1 s => z
+        | con1 s, con2 y => y s
+        | con2 _ {a} {b}, con2 y => y (q b)
+      """);
   }
 
   @Test
   public void elim3_() {
-    typeCheckModule(
-      "\\data D (x : Nat -> Nat) (y : Nat) | con1 {Nat} Nat | con2 (Nat -> Nat) {a b c : Nat}\n" +
-      "\\func test (q : Nat -> Nat) (e : D q 0) (r : D (\\lam x => x) (q 1)) : Nat \\elim e, r\n" +
-      "  | con2 _ {y} {z} {t}, con1 s => q t\n" +
-      "  | con1 {z} _, con1 s => z\n" +
-      "  | con1 s, con2 y => y s\n" +
-      "  | con2 _ {a} {zero} {c}, con2 y => y (q a)\n" +
-      "  | con2 _ {a} {suc b} {c}, con2 y => y (q b)");
+    typeCheckModule("""
+      \\data D (x : Nat -> Nat) (y : Nat) | con1 {Nat} Nat | con2 (Nat -> Nat) {a b c : Nat}
+      \\func test (q : Nat -> Nat) (e : D q 0) (r : D (\\lam x => x) (q 1)) : Nat \\elim e, r
+        | con2 _ {y} {z} {t}, con1 s => q t
+        | con1 {z} _, con1 s => z
+        | con1 s, con2 y => y s
+        | con2 _ {a} {zero} {c}, con2 y => y (q a)
+        | con2 _ {a} {suc b} {c}, con2 y => y (q b)
+      """);
   }
 
   @Test
@@ -107,34 +110,38 @@ public class ElimTest extends TypeCheckingTestCase {
 
   @Test
   public void elimUnknownIndex4() {
-    typeCheckModule(
-        "\\data E | A | B | C\n" +
-        "\\data D E \\with | A => d0 | B => d1 | _ => d2\n" +
-        "\\func test (x : E) (y : D x) : Nat \\elim y | d0 => 0 | d1 => 1", 2);
+    typeCheckModule("""
+      \\data E | A | B | C
+      \\data D E \\with | A => d0 | B => d1 | _ => d2
+      \\func test (x : E) (y : D x) : Nat \\elim y | d0 => 0 | d1 => 1
+      """, 2);
   }
 
   @Test
   public void elimUnknownIndex5() {
-    typeCheckModule(
-        "\\data E | A | B | C\n" +
-        "\\data D E \\with | A => d0 | B => d1 | _ => d2\n" +
-        "\\func test (x : E) (y : D x) : Nat \\elim y | d0 => 0 | d1 => 1 | d2 => 2", 2);
+    typeCheckModule("""
+      \\data E | A | B | C
+      \\data D E \\with | A => d0 | B => d1 | _ => d2
+      \\func test (x : E) (y : D x) : Nat \\elim y | d0 => 0 | d1 => 1 | d2 => 2
+      """, 2);
   }
 
   @Test
   public void elimUnknownIndex6() {
-    typeCheckModule(
-        "\\data E | A | B | C\n" +
-        "\\data D E \\with | A => d0 | B => d1 | _ => d2\n" +
-        "\\func test (x : E) (y : D x) : Nat \\elim y | d0 => 0 | d1 => 1 | _ => 2", 2);
+    typeCheckModule("""
+      \\data E | A | B | C
+      \\data D E \\with | A => d0 | B => d1 | _ => d2
+      \\func test (x : E) (y : D x) : Nat \\elim y | d0 => 0 | d1 => 1 | _ => 2
+      """, 2);
   }
 
   @Test
   public void elimUnknownIndex7() {
-    typeCheckModule(
-        "\\data E | A | B | C\n" +
-        "\\data D E \\with | A => d0 | B => d1 | _ => d2\n" +
-        "\\func test (x : E) (y : D x) : Nat \\elim y | _ => 0");
+    typeCheckModule("""
+      \\data E | A | B | C
+      \\data D E \\with | A => d0 | B => d1 | _ => d2
+      \\func test (x : E) (y : D x) : Nat \\elim y | _ => 0
+      """);
   }
 
   @Test
@@ -162,7 +169,7 @@ public class ElimTest extends TypeCheckingTestCase {
         "\\data D | d Nat Nat\n" +
         "\\func test (x : D) : Nat | d zero zero => 0 | d _ _ => 1");
     FunctionDefinition test = (FunctionDefinition) getDefinition("test");
-    Constructor d = (Constructor) getDefinition("d");
+    Constructor d = (Constructor) getDefinition("D.d");
     Binding binding = new TypedBinding("y", Nat());
     Expression call1 = ConCall(d, Levels.EMPTY, Collections.emptyList(), Zero(), Ref(binding));
     Expression call2 = ConCall(d, Levels.EMPTY, Collections.emptyList(), Suc(Zero()), Ref(binding));
@@ -179,14 +186,16 @@ public class ElimTest extends TypeCheckingTestCase {
 
   @Test
   public void elim10() {
-    typeCheckModule("\\data Bool | true | false\n" +
-                   "\\func tp : \\Pi (x : Bool) -> \\oo-Type0 => \\lam x => \\case x \\with {\n" +
-                   "  | true => Bool\n" +
-                   "  | false => Nat\n" +
-                   "}\n" +
-                   "\\func f (x : Bool) : tp x\n" +
-                   "  | true => true\n" +
-                   "  | false => zero\n");
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\func tp : \\Pi (x : Bool) -> \\oo-Type0 => \\lam x => \\case x \\with {
+        | true => Bool
+        | false => Nat
+      }
+      \\func f (x : Bool) : tp x
+        | true => true
+        | false => zero
+      """);
   }
 
   @Test
@@ -222,75 +231,82 @@ public class ElimTest extends TypeCheckingTestCase {
 
   @Test
   public void testAuto1() {
-    typeCheckModule(
-        "\\data Geq Nat Nat \\with | _, zero => Geq-zero | suc n, suc m => Geq-suc (Geq n m)\n" +
-        "\\func test (n m : Nat) (p : Geq n m) : Nat\n" +
-        "  | _, zero, Geq-zero => 0\n" +
-        "  | suc n, suc m, Geq-suc p => 1");
+    typeCheckModule("""
+      \\data Geq Nat Nat \\with | _, zero => Geq-zero | suc n, suc m => Geq-suc (Geq n m)
+      \\func test (n m : Nat) (p : Geq n m) : Nat
+        | _, zero, Geq-zero => 0
+        | suc n, suc m, Geq-suc p => 1
+      """);
   }
 
   @Test
   public void testAutoNonData() {
-    typeCheckModule(
-        "\\data D Nat \\with | zero => dcons\n" +
-        "\\data E (n : Nat) (Nat -> Nat) (D n) | econs\n" +
-        "\\func test (n : Nat) (d : D n) (e : E n (\\lam x => x) d) : Nat\n" +
-        "  | zero, dcons, econs => 1");
+    typeCheckModule("""
+      \\data D Nat \\with | zero => dcons
+      \\data E (n : Nat) (Nat -> Nat) (D n) | econs
+      \\func test (n : Nat) (d : D n) (e : E n (\\lam x => x) d) : Nat
+        | zero, dcons, econs => 1
+      """);
   }
 
   @Test
   public void testElimNeedNormalize() {
-    typeCheckModule(
-      "\\data D Nat \\with | suc n => c\n" +
-      "\\func f => D (suc zero)\n" +
-      "\\func test (x : f) : Nat\n" +
-      "  | c => 0"
-    );
+    typeCheckModule("""
+      \\data D Nat \\with | suc n => c
+      \\func f => D (suc zero)
+      \\func test (x : f) : Nat
+        | c => 0
+      """);
   }
 
   @Test
   public void elimFail() {
-      typeCheckModule("\\func test (x y : Nat) : y = 0\n" +
-                     "  | _, zero => idp\n" +
-                     "  | zero, suc y' => test zero y'\n" +
-                     "  | suc x', suc y' => test (suc x') y'\n" +
-                     "\n" +
-                     "\\func zero-is-one : 1 = 0 => test 0 1", 2);
+      typeCheckModule("""
+        \\func test (x y : Nat) : y = 0
+          | _, zero => idp
+          | zero, suc y' => test zero y'
+          | suc x', suc y' => test (suc x') y'
+        \\func zero-is-one : 1 = 0 => test 0 1
+        """, 2);
   }
 
   @Test
   public void testSmthing() {
-    typeCheckModule(
-        "\\data Geq Nat Nat \\with\n" +
-        "  | m, zero => EqBase \n" +
-        "  | suc n, suc m => EqSuc (p : Geq n m)\n" +
-        "\n" +
-        "\\func f (x y : Nat) (p : Geq x y) : Nat =>\n" +
-        "  \\case x, y, p \\with {\n" +
-        "    | m, zero, EqBase => zero \n" +
-        "    | zero, suc _, ()\n" +
-        "    | suc _, suc _, EqSuc q => suc zero\n" +
-        "  }", 3);
+    typeCheckModule("""
+      \\data Geq Nat Nat \\with
+        | m, zero => EqBase\s
+        | suc n, suc m => EqSuc (p : Geq n m)
+      
+      \\func f (x y : Nat) (p : Geq x y) : Nat =>
+        \\case x, y, p \\with {
+          | m, zero, EqBase => zero\s
+          | zero, suc _, ()
+          | suc _, suc _, EqSuc q => suc zero
+        }
+      """, 3);
   }
 
   @Test
   public void testElimOrderError() {
-    typeCheckModule("\\data \\infix 4\n" +
-                   "=< Nat Nat \\with\n" +
-                   "  | zero, m => le_z\n" +
-                   "  | suc n, suc m => le_ss (n =< m)\n" +
-                   "\n" +
-                   "\\func leq-trans {n m k : Nat} (nm : n =< m) (mk : m =< k) : n =< k \\elim n, nm, m\n" +
-                   "  | zero, le_z, _ => {?}\n" +
-                   "  | suc n', le_ss nm', suc m' => {?}", 1);
+    typeCheckModule("""
+      \\data \\infix 4
+      =< Nat Nat \\with
+        | zero, m => le_z
+        | suc n, suc m => le_ss (n =< m)
+      
+      \\func leq-trans {n m k : Nat} (nm : n =< m) (mk : m =< k) : n =< k \\elim n, nm, m
+        | zero, le_z, _ => {?}
+        | suc n', le_ss nm', suc m' => {?}
+      """, 1);
   }
 
   @Test
   public void testEmptyNoElimError() {
-    typeCheckModule(
-        "\\data D Nat \\with | zero => d0\n" +
-        "\\func test (x : Nat) (d : D x) : Nat \\elim d\n" +
-        "  | () => 0", 1);
+    typeCheckModule("""
+      \\data D Nat \\with | zero => d0
+      \\func test (x : Nat) (d : D x) : Nat \\elim d
+        | () => 0
+      """, 1);
   }
 
   @Test
@@ -304,11 +320,11 @@ public class ElimTest extends TypeCheckingTestCase {
 
   @Test
   public void testElimTranslationSubst2() {
-    FunctionDefinition def = (FunctionDefinition) typeCheckDef(
-      "\\func test (n m : Nat) : Nat \\elim m\n" +
-      " | zero => n\n" +
-      " | _ => n"
-    );
+    FunctionDefinition def = (FunctionDefinition) typeCheckDef("""
+      \\func test (n m : Nat) : Nat \\elim m
+       | zero => n
+       | _ => n
+     """);
     DependentLink nParam = DependentLink.Helper.take(def.getParameters(), 1);
     List<ElimClause<Pattern>> clauses = new ArrayList<>(2);
     clauses.add(new ElimClause<>(Arrays.asList(new BindingPattern(nParam), ConstructorPattern.make(Prelude.ZERO, Collections.emptyList())), new ReferenceExpression(nParam)));
@@ -318,12 +334,12 @@ public class ElimTest extends TypeCheckingTestCase {
 
   @Test
   public void testElimTranslationSubst3() {
-    typeCheckModule(
-      "\\data D | A | B | C\n" +
-      "\\func f (n m : D) : D \\elim m\n" +
-      " | A => n\n" +
-      " | _ => n"
-    );
+    typeCheckModule("""
+      \\data D | A | B | C
+      \\func f (n m : D) : D \\elim m
+       | A => n
+       | _ => n
+     """);
     FunctionDefinition def = (FunctionDefinition) getDefinition("f");
     DependentLink nParam = DependentLink.Helper.take(def.getParameters(), 1);
     List<ElimClause<Pattern>> clauses = new ArrayList<>(3);
@@ -334,37 +350,39 @@ public class ElimTest extends TypeCheckingTestCase {
 
   @Test
   public void emptyAfterAFewError() {
-    typeCheckModule(
-        "\\data D Nat \\with | zero => d\n" +
-        "\\func test (x : Nat) (y : \\Pi(z : Nat) -> x = z) (a : D (suc x)) : Nat \\elim x\n", 1);
+    typeCheckModule("""
+      \\data D Nat \\with | zero => d
+      \\func test (x : Nat) (y : \\Pi(z : Nat) -> x = z) (a : D (suc x)) : Nat \\elim x
+      """, 1);
   }
 
   @Test
   public void emptyAfterAFew() {
-    typeCheckModule(
-        "\\data D Nat \\with | zero => d\n" +
-        "\\func test (x : Nat) (y : \\Pi(z : Nat) -> x = z) (a : D (suc x)) : Nat \\elim a\n");
+    typeCheckModule("""
+      \\data D Nat \\with | zero => d
+      \\func test (x : Nat) (y : \\Pi(z : Nat) -> x = z) (a : D (suc x)) : Nat \\elim a
+      """);
   }
 
   @Test
   public void testElimEmpty1() {
-    typeCheckModule(
-        "\\data D Nat \\with | zero => d1 | suc zero => d2 \n" +
-        "\\data E (n : Nat) | e (D n)\n" +
-        "\\func test (n : Nat) (e : E n) : Nat\n" +
-        "  | zero, _ => 0\n" +
-        "  | suc zero, _ => 1\n" +
-        "  | suc (suc _), e ()"
-    );
+    typeCheckModule("""
+      \\data D Nat \\with | zero => d1 | suc zero => d2\s
+      \\data E (n : Nat) | e (D n)
+      \\func test (n : Nat) (e : E n) : Nat
+        | zero, _ => 0
+        | suc zero, _ => 1
+        | suc (suc _), e ()
+      """);
   }
 
   @Test
   public void testMultiArg() {
-    typeCheckModule(
-      "\\data D (A B : \\Type0) | c A B\n" +
-      "\\func test (f : Nat -> Nat) (d : D Nat (Nat -> Nat)) : Nat \\elim d\n" +
-      "  | c x y => f x"
-    );
+    typeCheckModule("""
+      \\data D (A B : \\Type0) | c A B
+      \\func test (f : Nat -> Nat) (d : D Nat (Nat -> Nat)) : Nat \\elim d
+        | c x y => f x
+      """);
   }
 
   @Test
@@ -377,25 +395,26 @@ public class ElimTest extends TypeCheckingTestCase {
 
   @Test
   public void threeVars() {
-    typeCheckModule(
-      "\\func f (x y z : Nat) : Nat\n" +
-      "  | zero, zero, zero => zero\n" +
-      "  | zero, zero, suc k => k\n" +
-      "  | zero, suc m, zero => m\n" +
-      "  | zero, suc m, suc k => k\n" +
-      "  | suc n, zero, zero => n\n" +
-      "  | suc n, zero, suc k => k\n" +
-      "  | suc n, suc m, zero => m\n" +
-      "  | suc n, suc m, suc k => n");
+    typeCheckModule("""
+      \\func f (x y z : Nat) : Nat
+        | zero, zero, zero => zero
+        | zero, zero, suc k => k
+        | zero, suc m, zero => m
+        | zero, suc m, suc k => k
+        | suc n, zero, zero => n
+        | suc n, zero, suc k => k
+        | suc n, suc m, zero => m
+        | suc n, suc m, suc k => n
+      """);
   }
 
   @Test
   public void dependentElim() {
-    typeCheckModule(
-      "\\data Bool | true | false\n" +
-      "\\func if (b : Bool) : \\Set | true => Nat | false => Nat -> Nat\n" +
-      "\\func test (b : Bool) (x : if b) : Nat | true, zero => 0 | true, suc n => n | false, _ => 0"
-    );
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\func if (b : Bool) : \\Set | true => Nat | false => Nat -> Nat
+      \\func test (b : Bool) (x : if b) : Nat | true, zero => 0 | true, suc n => n | false, _ => 0
+      """);
   }
 
   @Test
@@ -410,64 +429,70 @@ public class ElimTest extends TypeCheckingTestCase {
 
   @Test
   public void threePatternsEval() {
-    typeCheckModule(
-      "\\open Nat(+,*)\n" +
-      "\\func f (n m k : Nat) : Nat\n" +
-      "  | zero, m, zero => m\n" +
-      "  | n, zero, suc k => 10 * n + k\n" +
-      "  | n, m, k => 100 * n + 10 * m + k\n" +
-      "\\func test1 : f 0 2 0 = 2 => idp\n" +
-      "\\func test2 : f 1 0 3 = 12 => idp\n" +
-      "\\func test3 : f 1 2 3 = 123 => idp");
+    typeCheckModule("""
+      \\open Nat(+,*)
+      \\func f (n m k : Nat) : Nat
+        | zero, m, zero => m
+        | n, zero, suc k => 10 * n + k
+        | n, m, k => 100 * n + 10 * m + k
+      \\func test1 : f 0 2 0 = 2 => idp
+      \\func test2 : f 1 0 3 = 12 => idp
+      \\func test3 : f 1 2 3 = 123 => idp
+      """);
   }
 
   @Test
   public void threePatterns() {
-    typeCheckModule(
-      "\\func f (n m k : Nat) : Nat\n" +
-      "  | zero, _, zero => 1\n" +
-      "  | _, zero, suc _ => 2\n" +
-      "  | _, _, _ => 0\n" +
-      "\\func g (n : Nat) : f 0 n 0 = 1 => idp", 1);
+    typeCheckModule("""
+      \\func f (n m k : Nat) : Nat
+        | zero, _, zero => 1
+        | _, zero, suc _ => 2
+        | _, _, _ => 0
+      \\func g (n : Nat) : f 0 n 0 = 1 => idp
+      """, 1);
   }
 
   @Test
   public void threePatterns2() {
-    typeCheckModule(
-      "\\func f (n m k : Nat) : Nat\n" +
-      "  | zero, zero, _ => 1\n" +
-      "  | _, zero, zero => 2\n" +
-      "  | _, _, _ => 0\n" +
-      "\\func g (n : Nat) : f 0 0 n = 1 => idp", 1);
+    typeCheckModule("""
+      \\func f (n m k : Nat) : Nat
+        | zero, zero, _ => 1
+        | _, zero, zero => 2
+        | _, _, _ => 0
+      \\func g (n : Nat) : f 0 0 n = 1 => idp
+      """, 1);
   }
 
   @Test
   public void threePatternsError() {
-    typeCheckModule(
-      "\\func f (n m k : Nat) : Nat\n" +
-      "  | _, zero, zero => 1\n" +
-      "  | zero, zero, _ => 2\n" +
-      "  | _, _, _ => 0\n" +
-      "\\func g (n : Nat) : f 0 0 n = 2 => idp", 1);
+    typeCheckModule("""
+      \\func f (n m k : Nat) : Nat
+        | _, zero, zero => 1
+        | zero, zero, _ => 2
+        | _, _, _ => 0
+      \\func g (n : Nat) : f 0 0 n = 2 => idp
+      """, 1);
   }
 
   @Test
   public void elimExpression() {
-    parseModule(
-      "\\func + (a b : Nat) => a\n" +
-      "\\func f (a b : Nat) : Nat \\elim (a + b)\n" +
-      "  | zero => zero\n" +
-      "  | suc n' => zero", -1);
+    parseModule("""
+      \\func + (a b : Nat) => a
+      \\func f (a b : Nat) : Nat \\elim (a + b)
+        | zero => zero
+        | suc n' => zero
+      """, -1);
   }
 
   @Test
   public void testAbsurd() {
-    typeCheckModule(
-      "\\data Bool | true | false\n" +
-      "\\func not (b : Bool) : Bool | true => false | false => true\n" +
-      "\\data T (b : Bool) \\with | true => tt\n" +
-      "\\func f (b : Bool) (p : T (not b)) : Nat\n" +
-      "  | false, tt => 0");
+    typeCheckModule("""
+      \\data Bool | true | false
+      \\func not (b : Bool) : Bool | true => false | false => true
+      \\data T (b : Bool) \\with | true => tt
+      \\func f (b : Bool) (p : T (not b)) : Nat
+        | false, tt => 0
+      """);
   }
 
   @Test
@@ -479,37 +504,41 @@ public class ElimTest extends TypeCheckingTestCase {
 
   @Test
   public void elimNoClauses() {
-    typeCheckModule(
-      "\\data D (n : Nat) \\with\n" +
-      "  | 0 => con\n" +
-      "\\func f (n : Nat) (d : D n) : Nat \\elim d", 1);
+    typeCheckModule("""
+      \\data D (n : Nat) \\with
+        | 0 => con
+      \\func f (n : Nat) (d : D n) : Nat \\elim d
+      """, 1);
     assertThatErrorsAre(Matchers.typecheckingError(ImpossibleEliminationError.class));
   }
 
   @Test
   public void contextTest() {
-    typeCheckModule(
-      "\\func f (n : Nat) : Nat \\elim n\n" +
-        "  | 0 => 0\n" +
-        "  | suc n => {?}", 1);
+    typeCheckModule("""
+      \\func f (n : Nat) : Nat \\elim n
+        | 0 => 0
+        | suc n => {?}
+      """, 1);
     assertThatErrorsAre(goal(1));
   }
 
   @Test
   public void contextTest2() {
-    typeCheckModule(
-      "\\func f (n m : Nat) : Nat\n" +
-        "  | _, 0 => 0\n" +
-        "  | _, suc m => {?}", 1);
+    typeCheckModule("""
+      \\func f (n m : Nat) : Nat
+        | _, 0 => 0
+        | _, suc m => {?}
+      """, 1);
     assertThatErrorsAre(goal(1));
   }
 
   @Test
   public void contextTest3() {
-    typeCheckModule(
-      "\\func f (n m k l : Nat) : Nat \\elim n, m, l\n" +
-        "  | _, suc m, suc _ => {?}\n" +
-        "  | _, _, _ => 0", 1);
+    typeCheckModule("""
+      \\func f (n m k l : Nat) : Nat \\elim n, m, l
+        | _, suc m, suc _ => {?}
+        | _, _, _ => 0
+      """, 1);
     assertThatErrorsAre(goal(2));
   }
 }

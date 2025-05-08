@@ -15,13 +15,15 @@ import static org.junit.Assert.assertEquals;
 public class DefinableMetaTest extends TypeCheckingTestCase {
   @Test
   public void noArgSubst() {
-    var def = (FunctionDefinition) typeCheckDef("\\func redy => red \\where \\meta red => 114514");
+    typeCheckModule("\\func redy => red \\where \\meta red => 114514");
+    FunctionDefinition def = (FunctionDefinition) getDefinition("redy");
     assertEquals("114514", ((Expression) Objects.requireNonNull(def.getBody())).normalize(NormalizationMode.WHNF).toString());
   }
 
   @Test
   public void uniArgSubst() {
-    var def = (FunctionDefinition) typeCheckDef("\\func redy => red 114 \\where \\meta red x => x Nat.+ 514");
+    typeCheckModule("\\func redy => red 114 \\where \\meta red x => x Nat.+ 514");
+    FunctionDefinition def = (FunctionDefinition) getDefinition("redy");
     assertEquals(String.valueOf(114 + 514), ((Expression) Objects.requireNonNull(def.getBody())).normalize(NormalizationMode.WHNF).toString());
   }
 
@@ -37,36 +39,41 @@ public class DefinableMetaTest extends TypeCheckingTestCase {
 
   @Test
   public void appBody() {
-    var def = (FunctionDefinition) typeCheckDef("\\func alendia => matchy suc zero \\where \\meta matchy f x => f x");
+    typeCheckModule("\\func alendia => matchy suc zero \\where \\meta matchy f x => f x");
+    FunctionDefinition def = (FunctionDefinition) getDefinition("alendia");
     assertEquals("1", ((Expression) Objects.requireNonNull(def.getBody())).normalize(NormalizationMode.WHNF).toString());
   }
 
   @Test
   public void invokeTwice() {
-    var def = (FunctionDefinition) typeCheckDef("\\func him => self 65 Nat.+ self 65 \\where \\meta self x => x");
+    typeCheckModule("\\func him => self 65 Nat.+ self 65 \\where \\meta self x => x");
+    FunctionDefinition def = (FunctionDefinition) getDefinition("him");
     assertEquals(String.valueOf(65 + 65), ((Expression) Objects.requireNonNull(def.getBody())).normalize(NormalizationMode.WHNF).toString());
   }
 
   @Test
   public void invokeManyTimes() {
-    var def = (FunctionDefinition) typeCheckDef("\\func him => self 65 Nat.+ self 65 Nat.+ self 65 Nat.+ self 65 \\where \\meta self x => x");
+    typeCheckModule("\\func him => self 65 Nat.+ self 65 Nat.+ self 65 Nat.+ self 65 \\where \\meta self x => x");
+    FunctionDefinition def = (FunctionDefinition) getDefinition("him");
     assertEquals(String.valueOf(65 + 65 + 65 + 65), ((Expression) Objects.requireNonNull(def.getBody())).normalize(NormalizationMode.WHNF).toString());
   }
 
   @Test
   public void hierarchy() {
-    var def = (FunctionDefinition) typeCheckDef("""
+    typeCheckModule("""
       \\func zhang => ice \\where {
         \\meta ice => alendia.tesla
         \\func alendia => 1 \\where \\meta tesla => 1
       }
       """);
+    FunctionDefinition def = (FunctionDefinition) getDefinition("zhang");
     assertEquals(String.valueOf(1), ((Expression) Objects.requireNonNull(def.getBody())).normalize(NormalizationMode.WHNF).toString());
   }
 
   @Test
   public void biArgSubst() {
-    var def = (FunctionDefinition) typeCheckDef("\\func redy => red 114 514 \\where \\meta red x y => x Nat.+ y");
+    typeCheckModule("\\func redy => red 114 514 \\where \\meta red x y => x Nat.+ y");
+    FunctionDefinition def = (FunctionDefinition) getDefinition("redy");
     assertEquals(String.valueOf(114 + 514), ((Expression) Objects.requireNonNull(def.getBody())).normalize(NormalizationMode.WHNF).toString());
   }
 

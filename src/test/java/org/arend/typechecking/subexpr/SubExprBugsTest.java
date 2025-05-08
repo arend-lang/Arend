@@ -13,12 +13,13 @@ import static org.junit.Assert.*;
 public class SubExprBugsTest extends TypeCheckingTestCase {
   @Test
   public void issue168() {
-    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\func test => f 114 \\where {
         \\func F => \\Pi Nat -> Nat
         \\func f : F => \\lam i => i Nat.+ 514
       }
       """);
+    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) getConcrete("test");
     assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
@@ -44,12 +45,13 @@ public class SubExprBugsTest extends TypeCheckingTestCase {
 
   @Test
   public void issue195() {
-    Concrete.ClassDefinition concreteDef = (Concrete.ClassDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\record Kibou \\extends No
         | hana => 114514 \\where {
           \\record No | hana : Nat
         }
       """);
+    Concrete.ClassDefinition concreteDef = (Concrete.ClassDefinition) getConcrete("Kibou");
     assertNotNull(concreteDef);
     var classField = (Concrete.ClassFieldImpl) concreteDef.getElements().getFirst();
     assertNotNull(classField);
@@ -63,7 +65,7 @@ public class SubExprBugsTest extends TypeCheckingTestCase {
 
   @Test
   public void issue196() {
-    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\func Dorothy : Alice \\cowith
        | rbq {
          | level => 114514
@@ -72,6 +74,7 @@ public class SubExprBugsTest extends TypeCheckingTestCase {
           \\record Alice (rbq : Rbq)
         }
       """);
+    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) getConcrete("Dorothy");
     assertNotNull(concreteDef);
     var classField = (Concrete.ClassFieldImpl) concreteDef.getBody().getCoClauseElements().getFirst();
     assertNotNull(classField);

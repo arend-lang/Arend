@@ -18,7 +18,6 @@ import org.arend.ext.error.RedundantClauseError;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.error.local.LocalErrorReporter;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
@@ -153,14 +152,16 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void incorrectDataType() {
+    typeCheckModule("");
+    incModification();
+
     resolveNamesModule("""
       \\data D | con
       \\func f (n : Nat) (d : D) (k : Nat) : Nat
         | suc n, zero, suc k => k
       """);
-    List<? extends ConcreteStatement> statements = getGroup().statements();
-    TCDefReferable dataDef = (TCDefReferable) Objects.requireNonNull(statements.get(0).group()).referable();
-    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(1).group()).definition();
+    TCDefReferable dataDef = get("D");
+    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) getConcrete("f");
     assertNotNull(funDef);
     DataDefinition data = new DataDefinition(dataDef);
     data.setParameters(EmptyDependentLink.getInstance());
@@ -217,14 +218,16 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void emptyDataType() {
+    typeCheckModule("");
+    incModification();
+
     resolveNamesModule("""
       \\data D
       \\func f (n : Nat) (d : D) (k : Nat) : Nat
         | suc n, (), k => k
       """);
-    List<? extends ConcreteStatement> statements = getGroup().statements();
-    TCDefReferable dataDef = (TCDefReferable) Objects.requireNonNull(statements.get(0).group()).referable();
-    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(1).group()).definition();
+    TCDefReferable dataDef = get("D");
+    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) getConcrete("f");
     assertNotNull(funDef);
     DataDefinition data = new DataDefinition(dataDef);
     data.setParameters(EmptyDependentLink.getInstance());
@@ -241,14 +244,16 @@ public class PatternTest extends TypeCheckingTestCase {
 
   @Test
   public void emptyDataTypeWarning() {
+    typeCheckModule("");
+    incModification();
+
     resolveNamesModule("""
       \\data D
       \\func f (n : Nat) (d : D) (k : Nat) : Nat
         | suc n, (), suc k => k
       """);
-    List<? extends ConcreteStatement> statements = getGroup().statements();
-    TCDefReferable dataDef = (TCDefReferable) Objects.requireNonNull(statements.get(0).group()).referable();
-    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) Objects.requireNonNull(statements.get(1).group()).definition();
+    TCDefReferable dataDef = get("D");
+    Concrete.FunctionDefinition funDef = (Concrete.FunctionDefinition) getConcrete("f");
     assertNotNull(funDef);
     DataDefinition data = new DataDefinition(dataDef);
     data.setParameters(EmptyDependentLink.getInstance());
