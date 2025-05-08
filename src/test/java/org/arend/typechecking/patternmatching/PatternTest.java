@@ -114,7 +114,7 @@ public class PatternTest extends TypeCheckingTestCase {
   public void threeVars() {
     Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n m k : Nat) : Nat\n" +
-      "  | suc n, zero, suc k => k").definition();
+      "  | suc n, zero, suc k => k");
     assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     List<GeneralError> errors = new ArrayList<>();
@@ -128,7 +128,7 @@ public class PatternTest extends TypeCheckingTestCase {
   public void nestedPatterns() {
     Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n m k : Nat) : Nat\n" +
-      "  | suc (suc (suc n)), zero, suc (suc (suc (suc zero))) => n").definition();
+      "  | suc (suc (suc n)), zero, suc (suc (suc (suc zero))) => n");
     assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     List<GeneralError> errors = new ArrayList<>();
@@ -142,7 +142,7 @@ public class PatternTest extends TypeCheckingTestCase {
   public void incorrectType() {
     Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n : Nat) (m : Nat -> Nat) (k : Nat) : Nat\n" +
-      "  | suc n, zero, suc k => k").definition();
+      "  | suc n, zero, suc k => k");
     assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     List<GeneralError> errors = new ArrayList<>();
@@ -179,7 +179,7 @@ public class PatternTest extends TypeCheckingTestCase {
   public void tooManyPatterns() {
     Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n m k : Nat) : Nat\n" +
-      "  | suc n m, zero, suc k => k").definition();
+      "  | suc n m, zero, suc k => k");
     assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     List<GeneralError> errors = new ArrayList<>();
@@ -192,7 +192,7 @@ public class PatternTest extends TypeCheckingTestCase {
   public void interval() {
     Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n : Nat) (i : I) : Nat\n" +
-      "  | zero, i => zero").definition();
+      "  | zero, i => zero");
     assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     List<GeneralError> errors = new ArrayList<>();
@@ -206,7 +206,7 @@ public class PatternTest extends TypeCheckingTestCase {
   public void intervalFail() {
     Concrete.FunctionDefinition fun = (Concrete.FunctionDefinition) resolveNamesDef(
       "\\func f (n : Nat) (i : I) : Nat\n" +
-      "  | zero, left => zero").definition();
+      "  | zero, left => zero");
     assertNotNull(fun);
     List<Concrete.Pattern> patternsArgs = fun.getBody().getClauses().getFirst().getPatterns();
     List<GeneralError> errors = new ArrayList<>();

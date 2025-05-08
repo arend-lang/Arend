@@ -85,7 +85,7 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
     StringBuilder builder = new StringBuilder();
     def.accept(new PrettyPrintVisitor(builder, 0), null);
 
-    Concrete.FunctionDefinition result = (Concrete.FunctionDefinition) resolveNamesDef(builder.toString()).definition();
+    Concrete.FunctionDefinition result = (Concrete.FunctionDefinition) resolveNamesDef(builder.toString());
     assertNotNull(result);
     List<Concrete.TypeParameter> expectedParams = new ArrayList<>();
     for (Concrete.Parameter parameter : expected.getParameters()) {

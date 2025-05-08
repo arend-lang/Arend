@@ -149,19 +149,19 @@ public abstract class NameResolverTestCase extends ParserTestCase {
   }
 
 
-  protected ConcreteGroup resolveNamesDef(String text, int errors) {
+  protected Concrete.ResolvableDefinition resolveNamesDef(String text, int errors) {
     ConcreteGroup group = parseDef(text);
     server.updateModule(myModificationStamp, MODULE, () -> group);
     server.getCheckerFor(Collections.singletonList(MODULE)).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     assertThat(getAllErrors(), containsErrors(errors));
-    return group;
+    return server.getResolvedDefinitions(MODULE).iterator().next().definition();
   }
 
   protected void resolveNamesDefGroup(String text) {
     resolveNamesDef(text, 0);
   }
 
-  protected ConcreteGroup resolveNamesDef(String text) {
+  protected Concrete.ResolvableDefinition resolveNamesDef(String text) {
     return resolveNamesDef(text, 0);
   }
 

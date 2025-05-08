@@ -100,7 +100,7 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
   }
 
   protected Definition typeCheckDef(String text, int errors) {
-    return typeCheckDef((TCDefReferable) resolveNamesDef(text).referable(), errors);
+    return typeCheckDef(resolveNamesDef(text).getData(), errors);
   }
 
   protected Definition typeCheckDef(String text) {

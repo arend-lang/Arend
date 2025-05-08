@@ -126,13 +126,13 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
   }
 
   private void testDefinition(String s) {
-    Concrete.Definition def = (Concrete.Definition) resolveNamesDef(s).definition();
+    Concrete.Definition def = (Concrete.Definition) resolveNamesDef(s);
     assertNotNull(def);
     StringBuilder sb = new StringBuilder();
     PrettyPrintVisitor visitor = new PrettyPrintVisitor(sb, 0);
     def.accept(visitor, null);
     String s2 = sb.toString();
-    Concrete.Definition def2 = (Concrete.Definition) resolveNamesDef(s2).definition();
+    Concrete.Definition def2 = (Concrete.Definition) resolveNamesDef(s2);
     assertNotNull(def2);
     assertTrue(ConcreteCompareVisitor.compare(def, def2));
   }
@@ -346,7 +346,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
   }
 
   private void testLamPatterns(String body) {
-    Concrete.FunctionDefinition def = (Concrete.FunctionDefinition) resolveNamesDef("\\func foo => " + body).definition();
+    Concrete.FunctionDefinition def = (Concrete.FunctionDefinition) resolveNamesDef("\\func foo => " + body);
     assertNotNull(def);
     assertEquals(body, Objects.requireNonNull(def.getBody().getTerm()).toString());
   }

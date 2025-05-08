@@ -826,7 +826,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
 
   @Override
   public Pair<String, Precedence> visitAlias(AliasContext ctx) {
-    return new Pair<>(ctx == null ? null : ctx.ID().getText(), ctx == null ? null : visitPrecedence(ctx.precedence()));
+    return new Pair<>(ctx == null ? null : ctx.ID().getText(), visitPrecedence(ctx == null ? null : ctx.precedence()));
   }
 
   @Override
