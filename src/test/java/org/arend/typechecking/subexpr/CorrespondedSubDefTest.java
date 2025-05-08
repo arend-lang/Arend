@@ -58,7 +58,7 @@ public class CorrespondedSubDefTest extends TypeCheckingTestCase {
 
   @Test
   public void coelimFun() {
-    Concrete.FunctionDefinition def = (Concrete.FunctionDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\instance t : T
         | A => 114
         | B => 514
@@ -71,6 +71,7 @@ public class CorrespondedSubDefTest extends TypeCheckingTestCase {
           }
         }
       """);
+    Concrete.FunctionDefinition def = (Concrete.FunctionDefinition) getConcrete("t");
     Definition coreDef = typeCheckDef(def.getData());
     assertNotNull(def);
     Concrete.ClassFieldImpl clause = (Concrete.ClassFieldImpl) def.getBody().getCoClauseElements().get(1);
@@ -143,7 +144,7 @@ public class CorrespondedSubDefTest extends TypeCheckingTestCase {
 
   @Test
   public void cowithFun() {
-    Concrete.FunctionDefinition def = (Concrete.FunctionDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\func t : R \\cowith
         | pre  => 114
         | post => 514
@@ -154,6 +155,7 @@ public class CorrespondedSubDefTest extends TypeCheckingTestCase {
           }
         }
       """);
+    Concrete.FunctionDefinition def = (Concrete.FunctionDefinition) getConcrete("t");
     Definition coreDef = typeCheckDef(def.getData());
     assertNotNull(def);
     var clause = (Concrete.ClassFieldImpl) def.getBody().getCoClauseElements().get(1);

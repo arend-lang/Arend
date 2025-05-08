@@ -10,6 +10,7 @@ import org.arend.naming.reference.Referable;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.util.Arend;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -20,6 +21,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 public class CorrespondedSubExprTest extends TypeCheckingTestCase {
+  @Before
+  public void initializePrelude() {
+    typeCheckModule("");
+    incModification();
+  }
+
   @Test
   public void multiParamLam() {
     var xyx = (Concrete.LamExpression) resolveNamesExpr("\\lam x y => x");
@@ -162,12 +169,13 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
   // When an AppExpr applied to more arguments, then corresponding DefCall has.
   @Test
   public void defCallExtraArgs() {
-    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\func test => f 11 45 14 \\where {
         \\open Nat
         \\func f (a b : Nat) => \\lam c => a + b + c
       }
       """);
+    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) getConcrete("test");
     assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
@@ -189,15 +197,16 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
     }
   }
 
-  // When it is applied to less arguments.
+  // When it is applied to fewer arguments.
   @Test
   public void defCallLessArgs() {
-    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\func test => f 114514 \\where {
         \\open Nat
         \\func f (a b : Nat) => a + b
       }
       """);
+    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) getConcrete("test");
     assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
@@ -212,11 +221,12 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
   // Implicit arguments in core DefCall
   @Test
   public void defCallImplicitArgs() {
-    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\func test => const 114 514 \\where {
         \\func const {A : \\Type} (a b : A) => a
       }
       """);
+    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) getConcrete("test");
     assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
@@ -239,11 +249,12 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
   // Implicit arguments in core AppExpr
   @Test
   public void appExprImplicitArgs() {
-    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\func test => const 114 514 \\where {
         \\func const => \\lam {A : \\Type} (a b : A) => a
       }
       """);
+    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) getConcrete("test");
     assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
@@ -279,12 +290,13 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
   // (Data type) implicit arguments in core ConCall
   @Test
   public void conCallImplicits() {
-    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\func test : Fin 114 => con 514 \\where {
         \\data Fin (limit : Nat)
           | con Nat
       }
       """);
+    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) getConcrete("test");
     assertNotNull(concreteDef);
     var concrete = (Concrete.AppExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
@@ -299,11 +311,12 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
 
   @Test
   public void simpleClassCall() {
-    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\func test => X { | A => Nat } \\where {
         \\class X (A : \\Type0) { }
       }
       """);
+    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) getConcrete("test");
     assertNotNull(concreteDef);
     var concrete = (Concrete.ClassExtExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
@@ -392,7 +405,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
 
   @Test
   public void baseClassCall() {
-    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) resolveNamesDef("""
+    resolveNamesModule("""
       \\func test => Y Nat {
         | X => x
         | C => 1919810
@@ -402,6 +415,7 @@ public class CorrespondedSubExprTest extends TypeCheckingTestCase {
         \\instance x : X Nat | B => 114514
       }
       """);
+    Concrete.FunctionDefinition concreteDef = (Concrete.FunctionDefinition) getConcrete("test");
     assertNotNull(concreteDef);
     var concrete = (Concrete.ClassExtExpression) concreteDef.getBody().getTerm();
     assertNotNull(concrete);
