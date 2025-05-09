@@ -19,7 +19,7 @@ import static org.arend.core.expr.ExpressionFactory.singleParams;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class Lambda extends TypeCheckingTestCase {
+public class LambdaTest extends TypeCheckingTestCase {
   @Test
   public void id() {
     TypecheckingResult result = typeCheckExpr("\\lam x => x", Pi(Nat(), Nat()));
@@ -135,7 +135,6 @@ public class Lambda extends TypeCheckingTestCase {
 
   @Test
   public void typedLambdaError() {
-    typeCheckExpr("\\lam (X : \\Type0) => X", Pi(singleParams(true, vars("x"), Universe(1)), Universe(1)), 1);
-    assertThatErrorsAre(typeMismatchError());
+    typeCheckExpr("\\lam (X : \\Type0) => X", Pi(singleParams(true, vars("x"), Universe(1)), Universe(1)), 1, typeMismatchError());
   }
 }

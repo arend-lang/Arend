@@ -64,8 +64,7 @@ public class ImplicitArgumentsTest extends TypeCheckingTestCase {
     SingleDependentLink params = singleParams(false, vars("A", "B"), Universe(0));
     context.add(new TypedBinding("f", Pi(params, Pi(Ref(params), Ref(params)))));
 
-    typeCheckExpr(context, "f 0", null, 1);
-    assertThatErrorsAre(Matchers.typecheckingError(ArgInferenceError.class));
+    typeCheckExpr(context, "f 0", null, 1, Matchers.typecheckingError(ArgInferenceError.class));
   }
 
   @Test

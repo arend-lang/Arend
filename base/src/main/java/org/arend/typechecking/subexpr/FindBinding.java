@@ -8,7 +8,6 @@ import org.arend.core.expr.let.HaveClause;
 import org.arend.core.pattern.BindingPattern;
 import org.arend.core.pattern.Pattern;
 import org.arend.naming.reference.Referable;
-import org.arend.term.abs.AbstractReferable;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,7 +20,7 @@ import java.util.function.Function;
 
 public class FindBinding {
   public static @Nullable DependentLink visitLam(
-    AbstractReferable referable, Concrete.LamExpression expr, LamExpression lam) {
+    Object referable, Concrete.LamExpression expr, LamExpression lam) {
     return parameters(lam.getParameters(), referable, new LambdaParam(lam), expr.getParameters());
   }
 
@@ -44,7 +43,7 @@ public class FindBinding {
   }
 
   public static @Nullable DependentLink visitPi(
-      AbstractReferable referable, Concrete.PiExpression expr, PiExpression pi) {
+      Object referable, Concrete.PiExpression expr, PiExpression pi) {
     return parameters(pi.getBinding(), referable, new Function<>() {
       private PiExpression piExpr = pi;
 
@@ -61,7 +60,7 @@ public class FindBinding {
   }
 
   public static @Nullable DependentLink visitSigma(
-      AbstractReferable referable,
+      Object referable,
       Concrete.SigmaExpression expr,
       SigmaExpression sigma
   ) {
@@ -135,15 +134,13 @@ public class FindBinding {
       Object patternData, Concrete.LetExpression expr, LetExpression let) {
     Expression expression = visitLetBind(patternData, expr, let);
     if (expression != null) return expression;
-    if (patternData instanceof AbstractReferable) {
-      DependentLink link = visitLetParam((AbstractReferable) patternData, expr, let);
-      if (link != null) return link.getTypeExpr();
-    }
+    DependentLink link = visitLetParam(patternData, expr, let);
+    if (link != null) return link.getTypeExpr();
     return null;
   }
 
   public static @Nullable DependentLink visitLetParam(
-      AbstractReferable patternParam, Concrete.LetExpression expr, LetExpression let) {
+      Object patternParam, Concrete.LetExpression expr, LetExpression let) {
     return visitLet(expr, let, (coreLetClause, exprLetClause) -> {
       LamExpression coreLamExpr = coreLetClause.getExpression().cast(LamExpression.class);
       List<Concrete.Parameter> parameters = exprLetClause.getParameters();
@@ -168,13 +165,13 @@ public class FindBinding {
 
   private static @Nullable DependentLink parameters(
       DependentLink core,
-      AbstractReferable referable,
+      Object referable,
       Function<DependentLink, DependentLink> next,
       List<? extends Concrete.Parameter> parameters
   ) {
     for (Concrete.Parameter concrete : parameters)
       for (Referable ref : concrete.getReferableList()) {
-        if (ref != null && Objects.equals(ref.getAbstractReferable(), referable)) return core;
+        if (ref != null && Objects.equals(ref.getAbstractReferable() == null ? ref : ref.getAbstractReferable(), referable)) return core;
         if (concrete.isExplicit() != core.isExplicit()) continue;
         core = next.apply(core);
         if (core == null) return null;

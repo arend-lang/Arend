@@ -4,9 +4,6 @@ import org.arend.core.context.binding.Binding;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
-import org.arend.ext.reference.Precedence;
-import org.arend.ext.typechecking.MetaDefinition;
-import org.arend.ext.typechecking.MetaResolver;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.typing.TypedReferable;
 import org.arend.naming.resolving.typing.TypingInfo;
@@ -17,7 +14,6 @@ import org.arend.server.ProgressReporter;
 import org.arend.server.impl.DefinitionData;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ReplaceDataVisitor;
-import org.arend.term.group.AccessModifier;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.TestLocalErrorReporter;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
@@ -25,8 +21,6 @@ import org.arend.typechecking.visitor.DesugarVisitor;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -36,18 +30,6 @@ import static org.hamcrest.Matchers.notNullValue;
 
 public abstract class NameResolverTestCase extends ParserTestCase {
   private long myModificationStamp = 0;
-  private final Map<String, MetaReferable> metaDefs = new HashMap<>();
-  private final Scope metaScope = new Scope() {
-    @Override
-    public @Nullable Referable resolveName(@NotNull String name, @Nullable ScopeContext context) {
-      return context == null || context == ScopeContext.STATIC ? metaDefs.get(name) : null;
-    }
-
-    @Override
-    public @NotNull Collection<? extends Referable> getElements(@Nullable ScopeContext context) {
-      return context == null || context == ScopeContext.STATIC ? metaDefs.values() : Collections.emptyList();
-    }
-  };
 
   protected void incModification() {
     myModificationStamp++;
@@ -101,10 +83,6 @@ public abstract class NameResolverTestCase extends ParserTestCase {
     Concrete.ResolvableDefinition result = def.accept(new ReplaceDataVisitor(), null);
     DesugarVisitor.desugar(result, DummyErrorReporter.INSTANCE);
     return result;
-  }
-
-  protected void addMeta(String name, Precedence prec, MetaDefinition meta) {
-    metaDefs.put(name, new MetaReferable(AccessModifier.PUBLIC, prec, name, meta, meta instanceof MetaResolver ? (MetaResolver) meta : null, MODULE_REF));
   }
 
   @SafeVarargs

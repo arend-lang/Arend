@@ -739,10 +739,18 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     for (ConcreteStatement statement : statements) {
       ConcreteGroup subgroup = statement.group();
       if (subgroup != null) {
-        resolveGroup(subgroup, cachedScope, addInstances(instances, newInstances), definitionData);
+        if (!(subgroup.definition() instanceof Concrete.CoClauseFunctionDefinition)) {
+          resolveGroup(subgroup, cachedScope, addInstances(instances, newInstances), definitionData);
+        }
         if (subgroup.referable() instanceof TCDefReferable defReferable && defReferable.getKind() == GlobalReferable.Kind.INSTANCE) {
           newInstances.add(defReferable);
         }
+      }
+    }
+    for (ConcreteStatement statement : statements) {
+      ConcreteGroup subgroup = statement.group();
+      if (subgroup != null && subgroup.definition() instanceof Concrete.CoClauseFunctionDefinition) {
+        resolveGroup(subgroup, cachedScope, addInstances(instances, newInstances), definitionData);
       }
     }
 

@@ -77,12 +77,13 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
   }
 
 
-  protected TypecheckingResult typeCheckExpr(List<Binding> context, String text, Expression expectedType, int errors) {
+  @SafeVarargs
+  protected final TypecheckingResult typeCheckExpr(List<Binding> context, String text, Expression expectedType, int errors, Matcher<? super GeneralError>... matchers) {
     Map<Referable, Binding> mapContext = new LinkedHashMap<>();
     for (Binding binding : context) {
       mapContext.put(ConcreteExpressionFactory.ref(binding.getName()), binding);
     }
-    return typeCheckExpr(mapContext, resolveNamesExpr(mapContext, text), expectedType, errors);
+    return typeCheckExpr(mapContext, resolveNamesExpr(mapContext, text), expectedType, errors, matchers);
   }
 
   @SafeVarargs

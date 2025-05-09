@@ -10,7 +10,7 @@ import static org.arend.core.expr.ExpressionFactory.Zero;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class Typed extends TypeCheckingTestCase {
+public class TypedTest extends TypeCheckingTestCase {
   @Test
   public void typedExpr() {
     TypecheckingResult result = typeCheckExpr("(0 : Nat)", null);
@@ -21,8 +21,7 @@ public class Typed extends TypeCheckingTestCase {
 
   @Test
   public void typedError() {
-    typeCheckExpr("(0 : Nat -> Nat)", null, 1);
-    assertThatErrorsAre(Matchers.typeMismatchError());
+    typeCheckExpr("(0 : Nat -> Nat)", null, 1, Matchers.typeMismatchError());
   }
 
   @Test
@@ -32,18 +31,20 @@ public class Typed extends TypeCheckingTestCase {
 
   @Test
   public void typedTupleField() {
-    typeCheckModule(
-      "\\func f => ((0, idp : 0 = 0) : \\Sigma (x : Nat) (x = 0))\n" +
-      "\\func g (p : \\Sigma (x : Nat) (x = 0)) => p.1\n" +
-      "\\func h => g f");
+    typeCheckModule("""
+      \\func f => ((0, idp : 0 = 0) : \\Sigma (x : Nat) (x = 0))
+      \\func g (p : \\Sigma (x : Nat) (x = 0)) => p.1
+      \\func h => g f
+      """);
   }
 
   @Test
   public void typedTupleFieldError() {
-    typeCheckModule(
-      "\\func f => (0, idp : 0 = 0)\n" +
-      "\\func g (p : \\Sigma (x : Nat) (x = 0)) => p.1\n" +
-      "\\func h => g f", 1);
+    typeCheckModule("""
+      \\func f => (0, idp : 0 = 0)
+      \\func g (p : \\Sigma (x : Nat) (x = 0)) => p.1
+      \\func h => g f
+      """, 1);
     assertThatErrorsAre(Matchers.typeMismatchError());
   }
 }
