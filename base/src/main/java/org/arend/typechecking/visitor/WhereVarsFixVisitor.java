@@ -10,6 +10,7 @@ import org.arend.naming.reference.*;
 import org.arend.term.concrete.*;
 import org.arend.term.group.AccessModifier;
 import org.arend.term.prettyprint.FreeVariableCollectorConcrete;
+import org.arend.typechecking.error.local.LocalErrorReporter;
 
 import java.util.*;
 
@@ -182,8 +183,9 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
               }
             }
           }
-          checkLevels(pLevelsDefs, definition.getPLevelParameters(), errorReporter, "p", definition);
-          checkLevels(hLevelsDefs, definition.getHLevelParameters(), errorReporter, "h", definition);
+          ErrorReporter localErrorReporter = new LocalErrorReporter(definition.getData(), errorReporter);
+          checkLevels(pLevelsDefs, definition.getPLevelParameters(), localErrorReporter, "p", definition);
+          checkLevels(hLevelsDefs, definition.getHLevelParameters(), localErrorReporter, "h", definition);
           if (pLevels != null && definition.getPLevelParameters() == null) {
             definition.setPLevelParameters(pLevels);
           }
@@ -291,7 +293,7 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
           return expr;
         }
       }
-    } else if (expr.getFunction() instanceof Concrete.ReferenceExpression refExpr && !expr.getArguments().get(0).isExplicit()) {
+    } else if (expr.getFunction() instanceof Concrete.ReferenceExpression refExpr && !expr.getArguments().getFirst().isExplicit()) {
       if (refExpr.getReferent() instanceof ParameterReferable) {
         visitReference(refExpr, null);
       }

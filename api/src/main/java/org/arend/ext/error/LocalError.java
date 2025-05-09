@@ -30,6 +30,8 @@ public class LocalError extends GeneralError {
   public void forAffectedDefinitions(BiConsumer<ArendRef, GeneralError> consumer) {
     if (definition != null) {
       consumer.accept(definition, this);
+    } else {
+      assert false;
     }
   }
 

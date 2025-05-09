@@ -142,16 +142,16 @@ public class UseTest extends TypeCheckingTestCase {
   public void mutualRecursionError() {
     typeCheckModule(
       "\\func f (c : C) : c = c => idp\n" +
-      "\\class C \\where \\use \\level isProp (c1 c2 : C) : c1 = c2 => f c1", 1);
-    assertThatErrorsAre(Matchers.cycle(get("f"), get("C")));
+      "\\class C \\where \\use \\level isProp (c1 c2 : C) : c1 = c2 => f c1", 2);
+    assertThatErrorsAre(Matchers.cycle(get("f"), get("C")), Matchers.cycle(get("f"), get("C")));
   }
 
   @Test
   public void mutualRecursionError2() {
     typeCheckModule(
       "\\class C \\where \\use \\level isProp (c1 c2 : C) : c1 = c2 => f c1\n" +
-      "\\func f (c : C) : c = c => idp", 1);
-    assertThatErrorsAre(Matchers.cycle(get("f"), get("C")));
+      "\\func f (c : C) : c = c => idp", 2);
+    assertThatErrorsAre(Matchers.cycle(get("f"), get("C")), Matchers.cycle(get("f"), get("C")));
   }
 
   @Test
@@ -161,8 +161,8 @@ public class UseTest extends TypeCheckingTestCase {
         \\func f (c : C) : c = c => idp
         \\use \\level isProp (c1 c2 : C) : c1 = c2 => f c1
       }
-      """, 1);
-    assertThatErrorsAre(Matchers.cycle(get("C.f"), get("C")));
+      """, 2);
+    assertThatErrorsAre(Matchers.cycle(get("C.f"), get("C")), Matchers.cycle(get("C.f"), get("C")));
   }
 
   @Test
@@ -345,7 +345,7 @@ public class UseTest extends TypeCheckingTestCase {
     typeCheckModule(
       "\\func test (A : \\Type) (p : \\Pi (x y : A) -> x = y) => A\n" +
       "  \\where \\use \\level levelProp (A : \\Type) (p : \\Pi (x y : A) -> x = y) : \\Pi (x y : A) -> x = y => p");
-    assertEquals(-1, getDefinition("test").getParametersLevels().get(0).level);
+    assertEquals(-1, getDefinition("test").getParametersLevels().getFirst().level);
   }
 
   @Test
@@ -366,7 +366,7 @@ public class UseTest extends TypeCheckingTestCase {
         }
       """);
     assertEquals(1, getDefinition("f").getParametersLevels().size());
-    assertEquals(-1, getDefinition("f").getParametersLevels().get(0).level);
+    assertEquals(-1, getDefinition("f").getParametersLevels().getFirst().level);
   }
 
   @Test
@@ -380,7 +380,7 @@ public class UseTest extends TypeCheckingTestCase {
         }
       """);
     assertEquals(1, getDefinition("f").getParametersLevels().size());
-    assertEquals(-1, getDefinition("f").getParametersLevels().get(0).level);
+    assertEquals(-1, getDefinition("f").getParametersLevels().getFirst().level);
   }
 
   @Test
@@ -534,7 +534,7 @@ public class UseTest extends TypeCheckingTestCase {
       \\data D2 : \\Set | con2 D1
         \\where
           \\use \\coerce toNat (d : D2) : Nat => 0
-      """, 1);
-    assertThatErrorsAre(Matchers.cycle(get("D1"), get("D2")));
+      """, 2);
+    assertThatErrorsAre(Matchers.cycle(get("D1"), get("D2")), Matchers.cycle(get("D1"), get("D2")));
   }
 }

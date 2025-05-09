@@ -229,8 +229,9 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   }
 
   private void typecheckWithUse(Concrete.ResolvableDefinition definition, Set<TCDefReferable> usedDefinitions, boolean recursive, ArendExtension extension, List<Definition> typecheckedList) {
+    ErrorReporter errorReporter = new LocalErrorReporter(definition.getData(), myErrorReporter);
     if (usedDefinitions != null && definition instanceof Concrete.Definition def) {
-      ReplaceDefCallsVisitor visitor = new ReplaceDefCallsVisitor(usedDefinitions, definition.getData(), myErrorReporter);
+      ReplaceDefCallsVisitor visitor = new ReplaceDefCallsVisitor(usedDefinitions, definition.getData(), errorReporter);
       def.accept(visitor, null);
       recursive = visitor.isRecursive();
     }
@@ -241,7 +242,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       definition.accept(new CollectDefCallsVisitor(dependencies, false), null);
       if (dependencies.contains(definition.getData())) {
         typecheckingUnitStarted(definition.getData());
-        myErrorReporter.report(new CycleError(Collections.singletonList(definition.getData())));
+        errorReporter.report(new CycleError(Collections.singletonList(definition.getData())));
         typecheckingUnitFinished(definition.getData(), newDefinition(definition));
         ok = false;
       }
@@ -251,14 +252,14 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
 
     if (ok) {
-      CheckTypeVisitor checkTypeVisitor = myCheckerFactory.create(new LocalErrorReporter(definition.getData(), myErrorReporter), null, extension);
+      CheckTypeVisitor checkTypeVisitor = myCheckerFactory.create(errorReporter, null, extension);
       checkTypeVisitor.setInstancePool(new GlobalInstancePool(myInstanceScopeProvider.getInstancesFor(definition.getData()), checkTypeVisitor));
       definition = definition.accept(new ReplaceDataVisitor(), null);
       if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind().isUse()) {
         myDesugaredDefinitions.put(funDef.getData(), funDef);
       }
       if (definition instanceof Concrete.Definition) {
-        WhereVarsFixVisitor.fixDefinition(Collections.singletonList((Concrete.Definition) definition), myErrorReporter);
+        WhereVarsFixVisitor.fixDefinition(Collections.singletonList((Concrete.Definition) definition), errorReporter);
       }
       DesugarVisitor.desugar(definition, checkTypeVisitor.getErrorReporter());
       typecheckingUnitStarted(definition.getData());
@@ -303,7 +304,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
           funcDefinitions.add(funcDef);
         }
       }
-      UseTypechecking.typecheck(funcDefinitions, myErrorReporter);
+      UseTypechecking.typecheck(funcDefinitions, errorReporter);
     }
   }
 
@@ -543,9 +544,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
           return expr instanceof LeveledDefCallExpression && expr.getDefinition() instanceof TopLevelDefinition && allDefinitions.contains((TopLevelDefinition) expr.getDefinition()) && !((LeveledDefCallExpression) expr).getLevels().compare(expr.getDefinition().makeIdLevels(), CMP.EQ, DummyEquations.getInstance(), null) ? CoreExpression.FindAction.STOP : CoreExpression.FindAction.CONTINUE;
         }
       }, null)) {
-        TypecheckingError error = new TypecheckingError("Recursive call must have the same levels as the definition", definition);
-        error.definition = definition.getData();
-        myErrorReporter.report(error);
+        myErrorReporter.report(new TypecheckingError("Recursive call must have the same levels as the definition", definition).withDefinition(definition.getData()));
       }
     }
 
