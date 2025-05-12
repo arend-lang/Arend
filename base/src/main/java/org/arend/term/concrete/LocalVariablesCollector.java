@@ -15,6 +15,17 @@ public class LocalVariablesCollector extends SearchConcreteVisitor<Void, Boolean
     myAnchor = anchor;
   }
 
+  public static List<Referable> getLocalReferables(@Nullable Concrete.ResolvableDefinition definition, Object anchor) {
+    List<Referable> localReferables = new ArrayList<>();
+    if (definition != null) {
+      LocalVariablesCollector collector = new LocalVariablesCollector(anchor);
+      definition.accept(collector, null);
+      List<Referable> collectedResult = collector.getResult();
+      if (collectedResult != null) localReferables.addAll(collectedResult);
+    }
+    return localReferables;
+  }
+
   public @Nullable List<Referable> getResult() {
     return myResult;
   }

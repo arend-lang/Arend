@@ -48,8 +48,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.logging.*;
 
-import static org.arend.naming.reference.LocalReferable.getLocalReferables;
-
 public class ArendServerImpl implements ArendServer {
   private final static Logger myLogger = Logger.getLogger(ArendServerImpl.class.getName());
   private final ArendServerRequester myRequester;
@@ -634,7 +632,9 @@ public class ArendServerImpl implements ArendServer {
     List<Referable> localReferables = new ArrayList<>();
     if (anchor.data() != null && anchor.parent() instanceof TCDefReferable tcRef) {
       DefinitionData definitionData = getResolvedDefinition(tcRef);
-      localReferables = getLocalReferables(definitionData, anchor.data());
+      if (definitionData != null) {
+        localReferables = LocalVariablesCollector.getLocalReferables(definitionData.definition(), anchor.data());
+      }
     }
 
     Scope referableScope = getReferableScope(anchor.parent());
