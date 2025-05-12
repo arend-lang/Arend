@@ -49,11 +49,11 @@ class ArendNoVariantsDelegator : CompletionContributor() {
         }
         result.runRemainingContributors(parameters, tracker)
         val file = parameters.originalFile as? ArendFile ?: return
-        val isTestFile = (file as? ArendFile)?.moduleLocation?.locationKind == ModuleLocation.LocationKind.TEST
+        val isTestFile = file.moduleLocation?.locationKind == ModuleLocation.LocationKind.TEST
         val refElementAtCaret = file.findElementAt(parameters.offset - 1)?.parent
         val parent = refElementAtCaret?.parent
 
-        val isInsideValidExpr = refElementAtCaret is ArendRefIdentifier && parent is ArendLongName &&
+        val isInsideValidExpr = refElementAtCaret is ArendRefIdentifier && parent is ArendLiteral &&
                 refElementAtCaret.prevSibling == null && isGlobalScopeVisible(refElementAtCaret.topmostEquivalentSourceNode)
         val isInsideValidNsCmd = refElementAtCaret is ArendRefIdentifier && parent is ArendLongName &&
                 refElementAtCaret.prevSibling == null && refElementAtCaret.topmostEquivalentSourceNode.parent is Abstract.NamespaceCommand
@@ -65,18 +65,18 @@ class ArendNoVariantsDelegator : CompletionContributor() {
         val bpm = object: BetterPrefixMatcher(result.prefixMatcher, Int.MIN_VALUE) {
             override fun prefixMatchesEx(name: String?): MatchingOutcome {
                 if (name?.startsWith(myPrefix) == true) return MatchingOutcome.BETTER_MATCH
-                return if (super.prefixMatchesEx(name) == MatchingOutcome.BETTER_MATCH) MatchingOutcome.WORSE_MATCH else MatchingOutcome.NON_MATCH
+                return super.prefixMatchesEx(name)
             }
         }
 
         if (project != null && (isInsideValidExpr || isInsideValidNsCmd) && (tracker.variants.isEmpty() && tracker.nullPsiVariants.isEmpty() || !parameters.isAutoPopup)) {
             val consumer = { name: String, refs: List<PsiLocatedReferable>? ->
                 if (bpm.prefixMatches(name)) {
-                    val locatedReferables = refs ?: when {
+                    val locatedReferables = refs?.filter { it is ArendFile || !isInsideValidNsCmd } ?: when {
                         isInsideValidExpr ->
                             StubIndex.getElements(if (isClassExtension) ArendGotoClassIndex.KEY else ArendDefinitionIndex.KEY, name, project, ArendFileScope(project), PsiReferable::class.java).filterIsInstance<PsiLocatedReferable>()
                         else ->
-                            StubIndex.getElements(ArendFileIndex.KEY, name, project, ArendFileScope(project), ArendFile::class.java)
+                            StubIndex.getElements(ArendFileIndex.KEY, "$name.ard", project, ArendFileScope(project), ArendFile::class.java)
                     }
                     locatedReferables.forEach {
                         val isInsideTest = (it.containingFile as? ArendFile)?.moduleLocation?.locationKind == ModuleLocation.LocationKind.TEST
@@ -124,8 +124,9 @@ class ArendNoVariantsDelegator : CompletionContributor() {
             }
 
             StubIndex.getInstance().processAllKeys(if (isInsideValidNsCmd) ArendFileIndex.KEY else ArendDefinitionIndex.KEY, project) { name ->
-                consumer.invoke(name, null)
-                true // If only a limited number (say N) of variants is needed, return false after N added lookUpElements
+              val withoutSuffix = name.removeSuffix(".ard")
+              consumer.invoke(withoutSuffix, null)
+              true // If only a limited number (say N) of variants is needed, return false after N added lookUpElements
             }
         } else {
             result.restartCompletionOnAnyPrefixChange()
