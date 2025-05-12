@@ -19,6 +19,7 @@ import org.arend.ext.module.LongName
 import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
 import org.arend.naming.reference.GlobalReferable
+import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.Referable
 import org.arend.naming.renamer.StringRenamer
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
@@ -207,7 +208,11 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
             }
             else -> {
                 val longNameStr = LongName(id).toString()
-                val longNameStartOffset = element.parent.textOffset
+                val longNameStartOffset = if (parent is ArendFieldAcc) {
+                  parent.parent.textOffset
+                } else {
+                  parent.textOffset
+                }
                 val relativePosition = max(0, (editor?.caretModel?.offset ?: 0) - longNameStartOffset)
                 val offset = max(0, relativePosition + LongName(id).toString().length - LongName(element.longName).toString().length)
 
@@ -305,9 +310,10 @@ fun addStatCmd(factory: ArendPsiFactory,
 
 fun doAddIdToOpen(psiFactory: ArendPsiFactory, openedName: List<String>, positionInFile: ArendCompositeElement, elementReferable: PsiLocatedReferable, instanceMode: Boolean = false): Boolean {
     val enclosingDefinition = positionInFile.ancestor<ArendDefinition<*>>()
-    val scope = enclosingDefinition?.scope
+    val server = enclosingDefinition?.project?.service<ArendServerService>()?.server
+    val scope = enclosingDefinition?.tcReferable?.let { server?.getReferableScope(it) }
     val shortName = openedName.last()
-    if (scope != null && scope.resolveName(shortName) == elementReferable) return true
+    if (scope != null && (scope.resolveName(shortName) as? LocatedReferableImpl)?.data == elementReferable) return true
 
     // Find uppermost level container
     val mySourceContainer =  if (!instanceMode) enclosingDefinition?.containingFile as? ArendGroup else enclosingDefinition?.parentGroup

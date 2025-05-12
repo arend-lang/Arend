@@ -125,7 +125,7 @@ private data class SignatureWithHighlighting(
 data class RenderingInfo(val parameters: List<ProofSearchHighlightingData>, val codomain: ProofSearchHighlightingData)
 data class ProofSearchHighlightingData(val typeRep: String, val keywords: List<TextRange>, val match: List<TextRange>)
 
-private fun getTcDefReferable(globalReferable: ReferableBase<*>): TCDefReferable? {
+fun getTcDefReferable(globalReferable: ReferableBase<*>): TCDefReferable? {
     globalReferable.tcReferable?.let { return it }
 
     val project = globalReferable.project

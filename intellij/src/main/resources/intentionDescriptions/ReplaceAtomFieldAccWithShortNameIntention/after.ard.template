@@ -1,0 +1,9 @@
+<spot>\open M (f)</spot>
+
+\module M \where {
+  \func f => 1
+}
+
+\module M2 \where {
+  \func f2 => <spot>f</spot>
+}

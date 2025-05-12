@@ -60,8 +60,7 @@ class ResolveReferenceAction(val target: PsiLocatedReferable,
             ArendServerRequesterImpl(project).doUpdateModule(arendServer, targetFileLocation, targetFile)
 
             val rawAnchor = RawAnchor(anchorReferable, anchor)
-            val targetReferable : LocatedReferable? = (target as? ReferableBase<*>)?.tcReferable ?:
-            return null
+            val targetReferable : LocatedReferable? = (target as? ReferableBase<*>)?.tcReferable ?: return null
             val concreteGroup = arendServer.getRawGroup(anchorFile.moduleLocation ?: return null) ?: return null
 
             return arendServer.makeReferencesAvailable(singletonList(targetReferable), concreteGroup, rawAnchor, errorReporter)
@@ -80,7 +79,7 @@ class ResolveReferenceAction(val target: PsiLocatedReferable,
             val anchorFile = element.containingFile as? ArendFile ?: return null
             val fix: org.arend.ext.util.Pair<RawModifier, List<LongName>>? = doGetProposedFix(target, element) ?: return null
             val name = fix?.proj2?.firstOrNull()?.toString() ?: return null
-            val action = fix.proj1.let{ nsFix -> if (nsFix is RawSequenceModifier && nsFix.sequence.isEmpty()) null else
+            val action = fix.proj1.let { nsFix -> if (nsFix is RawSequenceModifier && nsFix.sequence.isEmpty()) null else
                 if (nsFix is RawSequenceModifier && nsFix.sequence.size == 1) NsCmdRawModifierAction(nsFix.sequence.first(), anchorFile) else
                     NsCmdRawModifierAction(nsFix, anchorFile) }
 

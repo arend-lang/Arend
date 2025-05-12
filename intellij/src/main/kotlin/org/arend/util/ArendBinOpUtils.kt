@@ -197,7 +197,8 @@ fun findDefAndArgsInParsedBinop(arg: ArendExpr, parsedExpr: Concrete.Expression)
 
 fun isBinOp(binOpReference: ArendReferenceContainer?) =
         if (binOpReference is ArendIPName) binOpReference.infix != null
-        else (resolve(binOpReference))?.precedence?.isInfix == true
+        else resolve(binOpReference)?.precedence?.isInfix
+          ?: ((binOpReference?.resolve as? Abstract.AbstractLocatedReferable)?.precedence?.isInfix == true)
 
 private fun resolve(reference: ArendReferenceContainer?): GlobalReferable? =
         (reference?.resolve as? GlobalReferable)

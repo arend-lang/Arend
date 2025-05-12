@@ -20,6 +20,7 @@ import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
+import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getBounds
 
@@ -30,11 +31,13 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
             val psi = node.psi
             val project = psi.project
             if (psi is ArendExpr && !DumbService.isDumb(project)) {
+                val arendServer = project.service<ArendServerService>().server
+                val targetFile = psi.containingFile as? ArendFile
+                val targetFileLocation = targetFile?.moduleLocation
+
                 var definition = psi.ancestor<ArendDefinition<*>>()?.tcReferable
+                targetFileLocation?.let { arendServer.getCheckerFor(listOf(it)).typecheck(listOf(definition?.refFullName), NotificationErrorReporter(project), UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty()) }
                 if (definition == null) {
-                    val arendServer = project.service<ArendServerService>().server
-                    val targetFile = psi.containingFile as? ArendFile
-                    val targetFileLocation = targetFile?.moduleLocation
                     if (targetFileLocation != null) {
                         val requester = ArendServerRequesterImpl(project)
                         requester.doUpdateModule(arendServer, targetFileLocation, targetFile)
@@ -111,7 +114,7 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
 
 
             if (fData is PsiElement) {
-                val f = aaeBlocks.filter{ it.textRange.contains(fData.node.textRange) }
+                val f = aaeBlocks.filter { it.textRange.contains(fData.node.textRange) }
                 if (f.size != 1)
                   throw java.lang.IllegalStateException()
                 val fBlock = createArendBlock(f.first(), null, null, if (isPrefix) Indent.getNoneIndent() else Indent.getNormalIndent())

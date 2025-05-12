@@ -6,22 +6,23 @@ import com.intellij.psi.util.PsiTreeUtil
 import org.arend.psi.ext.ArendArgumentAppExpr
 import org.arend.psi.ext.ArendIPName
 import org.arend.psi.ext.ArendLongName
+import org.arend.psi.ext.ArendRefIdentifier
 import org.arend.psi.ext.ArendReferenceContainer
 import org.arend.refactoring.rangeOfConcrete
+import org.arend.resolving.util.parseBinOp
 import org.arend.term.concrete.Concrete
-import org.arend.util.appExprToConcrete
 import org.arend.util.isBinOp
 
 object BinOpIntentionUtil {
     internal fun findBinOp(element: PsiElement): ArendReferenceContainer? {
         val binOpReference = PsiTreeUtil.findFirstParent(skipWhiteSpacesBackwards(element)) {
-            it is ArendLongName || it is ArendIPName
+            it is ArendLongName || it is ArendIPName || it is ArendRefIdentifier
         } as? ArendReferenceContainer ?: return null
         return if (isBinOp(binOpReference)) binOpReference else null
     }
 
     internal fun toConcreteBinOpInfixApp(app: ArendArgumentAppExpr): Concrete.AppExpression? {
-        val binOpSeq = appExprToConcrete(app)
+        val binOpSeq = parseBinOp(app)
         return if (binOpSeq is Concrete.AppExpression && isBinOpInfixApp(binOpSeq)) binOpSeq else null
     }
 
