@@ -1,116 +1,79 @@
 package org.arend.frontend.library;
 
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
-import org.arend.ext.ui.ArendUI;
 import org.arend.frontend.source.FileRawSource;
-import org.arend.frontend.ui.ArendCliUI;
-import org.arend.library.LibraryDependency;
-import org.arend.library.LibraryHeader;
-import org.arend.library.PersistableSourceLibrary;
+import org.arend.library.LibraryConfig;
+import org.arend.library.classLoader.ClassLoaderDelegate;
+import org.arend.library.classLoader.FileClassLoaderDelegate;
+import org.arend.library.error.LibraryIOError;
 import org.arend.module.ModuleLocation;
-import org.arend.source.*;
-import org.arend.typechecking.order.dependency.DependencyListener;
+import org.arend.source.Source;
+import org.arend.util.FileUtils;
 import org.arend.util.Version;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
-public class FileSourceLibrary extends PersistableSourceLibrary {
-  protected Path mySourceBasePath;
-  protected Path myBinaryBasePath;
-  protected Path myTestBasePath;
-  protected LibraryHeader myLibraryHeader;
-  protected List<ModulePath> myTestModules = Collections.emptyList();
-  private final DependencyListener myDependencyListener;
+public class FileSourceLibrary extends SourceLibrary {
+  protected final Path sourceBasePath;
+  protected final Path binaryBasePath;
+  protected final Path testBasePath;
+  private final Set<ModulePath> myModules;
+  private final ClassLoaderDelegate myClassLoaderDelegate;
 
-  /**
-   * Creates a new {@code UnmodifiableFileSourceLibrary}
-   * @param name                the name of this library.
-   * @param sourceBasePath      a path to the directory with raw source files.
-   * @param binaryBasePath      a path to the directory with binary source files.
-   * @param libraryHeader       specifies parameters of the library.
-   */
-  public FileSourceLibrary(String name, Path sourceBasePath, Path binaryBasePath, LibraryHeader libraryHeader, DependencyListener dependencyListener) {
-    super(name);
-    mySourceBasePath = sourceBasePath;
-    myBinaryBasePath = binaryBasePath;
-    myLibraryHeader = libraryHeader;
-    myDependencyListener = dependencyListener;
+  public FileSourceLibrary(String name, boolean isExternalLibrary, long modificationStamp, List<String> dependencies, Version version, String extensionMainClass, @Nullable Set<ModulePath> modules, Path sourceBasePath, Path binaryBasePath, Path testBasePath, ClassLoaderDelegate classLoaderDelegate) {
+    super(name, isExternalLibrary, modificationStamp, dependencies, version, extensionMainClass);
+    this.sourceBasePath = sourceBasePath;
+    this.binaryBasePath = binaryBasePath;
+    this.testBasePath = testBasePath;
+    myModules = modules;
+    myClassLoaderDelegate = classLoaderDelegate;
   }
 
-  public Path getSourceBasePath() {
-    return mySourceBasePath;
-  }
+  public static FileSourceLibrary fromConfigFile(Path configFile, boolean isExternalLibrary, ErrorReporter errorReporter) {
+    try {
+      Path basePath = configFile.getParent();
+      Path dirName = basePath == null ? null : basePath.getFileName();
+      if (dirName == null) {
+        errorReporter.report(new LibraryIOError(configFile.toString(), "Configuration file does not have a parent"));
+        return null;
+      }
 
-  public Path getBinaryBasePath() {
-    return myBinaryBasePath;
-  }
+      String libName = dirName.toString();
+      if (!FileUtils.isLibraryName(libName)) {
+        errorReporter.report(new LibraryIOError(configFile.toString(), "Incorrect library name: " + libName));
+        return null;
+      }
 
-  public Path getTestBasePath() {
-    return myTestBasePath;
-  }
+      LibraryHeader header = LibraryHeader.fromConfig(new YAMLMapper().readValue(configFile.toFile(), LibraryConfig.class), configFile.toString(), errorReporter);
 
-  @Nullable
-  @Override
-  public final Source getRawSource(ModulePath modulePath) {
-    return mySourceBasePath == null ? null : new FileRawSource(mySourceBasePath, new ModuleLocation(getName(), ModuleLocation.LocationKind.SOURCE, modulePath));
-  }
-
-  @Override
-  public @Nullable Source getTestSource(ModulePath modulePath) {
-    return myTestBasePath == null ? null : new FileRawSource(myTestBasePath, new ModuleLocation(getName(), ModuleLocation.LocationKind.TEST, modulePath));
-  }
-
-  @Nullable
-  @Override
-  public PersistableBinarySource getPersistableBinarySource(ModulePath modulePath) {
-    return myBinaryBasePath == null ? null : new GZIPStreamBinarySource(new FileBinarySource(myBinaryBasePath, new ModuleLocation(getName(), ModuleLocation.LocationKind.SOURCE, modulePath)));
+      return header == null ? null : new FileSourceLibrary(libName, isExternalLibrary, Files.getLastModifiedTime(configFile).toMillis(),
+          header.dependencies(), header.version(), header.extMainClass(), header.modules(),
+          header.sourcesDir() == null ? basePath : basePath.resolve(header.sourcesDir()),
+          header.binariesDir() == null ? null : basePath.resolve(header.binariesDir()),
+          header.testDir() == null ? null : basePath.resolve(header.testDir()),
+          header.extDir() == null ? null : new FileClassLoaderDelegate(basePath.resolve(header.extDir())));
+    } catch (IOException e) {
+      errorReporter.report(new LibraryIOError(configFile.toString(), "Failed to read configuration file", e.getLocalizedMessage()));
+      return null;
+    }
   }
 
   @Override
-  public @NotNull Collection<? extends ModulePath> getTestModules() {
-    return myTestModules;
+  public @Nullable Source getSource(@NotNull ModulePath modulePath, boolean inTests) {
+    if (myModules != null && !myModules.contains(modulePath) || inTests && testBasePath == null) return null;
+    FileRawSource source = new FileRawSource(inTests ? testBasePath : sourceBasePath, new ModuleLocation(getLibraryName(), inTests ? ModuleLocation.LocationKind.TEST : ModuleLocation.LocationKind.SOURCE, modulePath));
+    return source.isAvailable() ? source : null;
   }
 
   @Override
-  public @Nullable ArendUI getUI() {
-    return new ArendCliUI();
-  }
-
-  @Nullable
-  @Override
-  protected LibraryHeader loadHeader(ErrorReporter errorReporter) {
-    return myLibraryHeader;
-  }
-
-  @Override
-  public boolean supportsPersisting() {
-    return myBinaryBasePath != null && !isExternal();
-  }
-
-  @Override
-  public @NotNull DependencyListener getDependencyListener() {
-    return myDependencyListener;
-  }
-
-  @Override
-  public @Nullable Version getVersion() {
-    return myLibraryHeader == null ? null : myLibraryHeader.version;
-  }
-
-  @NotNull
-  @Override
-  public List<? extends LibraryDependency> getDependencies() {
-    return myLibraryHeader == null ? Collections.emptyList() : myLibraryHeader.dependencies;
-  }
-
-  @Override
-  public boolean containsModule(ModulePath modulePath) {
-    return myLibraryHeader != null && myLibraryHeader.modules.contains(modulePath);
+  public @Nullable ClassLoaderDelegate getClassLoaderDelegate() {
+    return myClassLoaderDelegate;
   }
 }

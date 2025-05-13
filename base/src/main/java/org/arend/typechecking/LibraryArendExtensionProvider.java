@@ -2,16 +2,16 @@ package org.arend.typechecking;
 
 import org.arend.ext.ArendExtension;
 import org.arend.library.Library;
-import org.arend.library.LibraryManager;
+import org.arend.library.OldLibraryManager;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.TCDefReferable;
 import org.jetbrains.annotations.Nullable;
 
 public class LibraryArendExtensionProvider implements ArendExtensionProvider {
-  private final LibraryManager myLibraryManager;
+  private final OldLibraryManager myLibraryManager;
   private final ArendExtension myUniqueArendExtension;
 
-  public LibraryArendExtensionProvider(LibraryManager libraryManager) {
+  public LibraryArendExtensionProvider(OldLibraryManager libraryManager) {
     myLibraryManager = libraryManager;
 
     Library internalLibrary = null;

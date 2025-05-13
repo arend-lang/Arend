@@ -21,7 +21,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 // TODO[server2]: Delete this
-public class LibraryManager {
+public class OldLibraryManager {
   private final LibraryResolver myLibraryResolver;
   private final ErrorReporter myTypecheckingErrorReporter;
   private final ErrorReporter myLibraryErrorReporter;
@@ -41,7 +41,7 @@ public class LibraryManager {
    * @param libraryErrorReporter      an error reporter for errors related to loading and unloading of libraries.
    * @param definitionRequester       a listener for definitions requested in extensions.
    */
-  public LibraryManager(LibraryResolver libraryResolver, ErrorReporter typecheckingErrorReporter, ErrorReporter libraryErrorReporter, DefinitionRequester definitionRequester, DefinitionListener listener) {
+  public OldLibraryManager(LibraryResolver libraryResolver, ErrorReporter typecheckingErrorReporter, ErrorReporter libraryErrorReporter, DefinitionRequester definitionRequester, DefinitionListener listener) {
     myLibraryResolver = libraryResolver;
     myTypecheckingErrorReporter = typecheckingErrorReporter;
     myLibraryErrorReporter = libraryErrorReporter;

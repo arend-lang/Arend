@@ -1,8 +1,8 @@
 package org.arend.frontend;
 
 import org.arend.error.DummyErrorReporter;
-import org.arend.frontend.library.PreludeFileLibrary;
 import org.arend.prelude.Prelude;
+import org.arend.frontend.source.PreludeSources;
 import org.arend.server.ArendServer;
 import org.arend.server.ArendServerRequester;
 import org.arend.server.ProgressReporter;
@@ -16,8 +16,8 @@ import java.util.Collections;
 
 public class PreludeBinaryGenerator {
   public static void main(String[] args) {
-    Source rawSource = PreludeFileLibrary.getSource();
-    PersistableBinarySource binarySource = PreludeFileLibrary.getBinarySource(Paths.get(args[0]));
+    Source rawSource = PreludeSources.getFileSource();
+    PersistableBinarySource binarySource = PreludeSources.getBinarySource(Paths.get(args[0]));
 
     if (!(args.length >= 2 && args[1].equals("--recompile")) && rawSource.getTimeStamp() < binarySource.getTimeStamp()) {
       System.out.println("Prelude is up to date");

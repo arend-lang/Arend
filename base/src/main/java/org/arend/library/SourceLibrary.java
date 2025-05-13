@@ -120,16 +120,6 @@ public abstract class SourceLibrary extends BaseLibrary {
   }
 
   /**
-   * Loads the header of this library.
-   *
-   * @param errorReporter a reporter for all errors that occur during the loading process.
-   *
-   * @return loaded library header, or null if some error occurred.
-   */
-  @Nullable
-  protected abstract LibraryHeader loadHeader(ErrorReporter errorReporter);
-
-  /**
    * Invoked by a source after it loads the group of a module.
    *
    * @param modulePath  the path to the loaded module.
@@ -182,134 +172,16 @@ public abstract class SourceLibrary extends BaseLibrary {
   protected void loadGeneratedModules() {}
 
   @Override
-  public boolean load(LibraryManager libraryManager, TypecheckingOrderingListener typechecking) {
-    if (isLoaded()) {
-      return true;
-    }
-
-    LibraryHeader header = loadHeader(libraryManager.getLibraryErrorReporter());
-    if (header == null) {
-      return false;
-    }
-    if (!header.languageVersionRange.inRange(Prelude.VERSION)) {
-      libraryManager.showIncorrectLanguageVersionError(getName(), header.languageVersionRange);
-      if (!mustBeLoaded()) {
-        return false;
-      }
-    }
-
-    MultiClassLoader<Library> classLoader = libraryManager.getClassLoader(isExternal());
-    if (header.classLoaderDelegate != null && header.extMainClass != null) {
-      classLoader.addDelegate(this, header.classLoaderDelegate);
-    }
-
-    Map<String, ArendExtension> dependenciesExtensions = new LinkedHashMap<>();
-    for (LibraryDependency dependency : header.dependencies) {
-      Library loadedDependency = libraryManager.loadDependency(this, dependency.name, typechecking);
-      if (loadedDependency == null && !mustBeLoaded()) {
-        classLoader.removeDelegate(this);
-        return false;
-      }
-
-      if (loadedDependency != null) {
-        libraryManager.registerDependency(this, loadedDependency);
-        dependenciesExtensions.put(dependency.name, loadedDependency.getArendExtension());
-      }
-    }
-
-    libraryManager.beforeLibraryLoading(this);
-
-    try {
-      Class<?> extMainClass = null;
-      if (header.classLoaderDelegate != null && header.extMainClass != null) {
-        extMainClass = classLoader.loadClass(header.extMainClass);
-        if (!ArendExtension.class.isAssignableFrom(extMainClass)) {
-          libraryManager.getLibraryErrorReporter().report(LibraryError.incorrectExtensionClass(getName()));
-          extMainClass = null;
-        }
-      }
-
-      if (extMainClass != null) {
-        myExtension = (ArendExtension) extMainClass.getDeclaredConstructor().newInstance();
-      }
-    } catch (Exception e) {
-      classLoader.removeDelegate(this);
-      libraryManager.getLibraryErrorReporter().report(new ExceptionError(e, "loading of library " + getName()));
-    }
-
-    SerializableKeyRegistryImpl keyRegistry = new SerializableKeyRegistryImpl();
-    if (myExtension == null) {
-      myExtension = new DefaultArendExtension();
-    }
-
-    myExtension.registerKeys(keyRegistry);
-    myExtension.setDependencies(dependenciesExtensions);
-    myExtension.setPrelude(new Prelude());
-    myExtension.setConcreteFactory(new ConcreteFactoryImpl(null, getName()));
-    myExtension.setVariableRenamerFactory(VariableRenamerFactoryImpl.INSTANCE);
-    ArendUI ui = getUI();
-    if (ui != null) {
-      myExtension.setUI(ui);
-    }
-
-    /*
-    OldDefinitionContributorImpl contributor = new OldDefinitionContributorImpl(getName(), libraryManager.getLibraryErrorReporter(), myAdditionalModuleScopeProvider);
-    try {
-      myExtension.declareDefinitions(contributor);
-    } finally {
-      contributor.disable();
-    }
-    */
-    loadGeneratedModules();
-
-    Set<ModulePath> loaded = Collections.emptySet();
-    try {
-      SourceLoader sourceLoader = new SourceLoader(this, libraryManager);
-      if (hasRawSources()) {
-        Set<ModulePath> loadedRaw = sourceLoader.loadRawSources(header.modules, false);
-        if (loadedRaw.size() < header.modules.size()) {
-          for (ModulePath module : header.modules) {
-            if (!loadedRaw.contains(module)) {
-              libraryManager.getLibraryErrorReporter().report(new ModuleNotFoundError(module));
-            }
-          }
-        }
-      }
-
-      if (!myFlags.contains(Flag.RECOMPILE) || isExternal()) {
-        DefinitionListener definitionListener = ListDefinitionListener.join(libraryManager.getDefinitionListener(), myExtension.getDefinitionListener());
-        loaded = sourceLoader.loadBinarySources(header.modules, keyRegistry, definitionListener);
-        if (loaded.size() < header.modules.size() && !mustBeLoaded()) {
-          libraryManager.afterLibraryLoading(this, -1, header.modules.size());
-          return false;
-        }
-      }
-    } catch (Throwable e) {
-      libraryManager.afterLibraryLoading(this, -1, header.modules.size());
-      throw e;
-    }
-
-    myExtension.setDefinitionProvider(DefinitionProviderImpl.INSTANCE);
-    /*
-    OldArendDependencyProviderImpl provider = new OldArendDependencyProviderImpl(typechecking, libraryManager.getAvailableModuleScopeProvider(this), libraryManager.getDefinitionRequester(), this);
-    try {
-      myExtension.load(provider);
-    } finally {
-      provider.disable();
-    }
-    */
-
-    libraryManager.afterLibraryLoading(this, loaded.size(), header.modules.size());
-
-    return super.load(libraryManager, typechecking);
+  public boolean load(OldLibraryManager libraryManager, TypecheckingOrderingListener typechecking) {
+    return false;
   }
 
-  public boolean loadTests(LibraryManager libraryManager, Collection<? extends ModulePath> modules) {
+  public boolean loadTests(OldLibraryManager libraryManager, Collection<? extends ModulePath> modules) {
     return new SourceLoader(this, libraryManager).loadRawSources(modules, true).size() == modules.size();
   }
 
   @Override
-  public boolean loadTests(LibraryManager libraryManager) {
+  public boolean loadTests(OldLibraryManager libraryManager) {
     return loadTests(libraryManager, getTestModules());
   }
 

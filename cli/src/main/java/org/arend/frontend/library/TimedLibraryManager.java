@@ -4,13 +4,13 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.util.StringUtils;
 import org.arend.extImpl.DefinitionRequester;
 import org.arend.library.Library;
-import org.arend.library.LibraryManager;
+import org.arend.library.OldLibraryManager;
 import org.arend.library.resolver.LibraryResolver;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Stack;
 
-public class TimedLibraryManager extends LibraryManager {
+public class TimedLibraryManager extends OldLibraryManager {
   private final Stack<Long> times = new Stack<>();
 
   public TimedLibraryManager(LibraryResolver libraryResolver, ErrorReporter typecheckingErrorReporter, ErrorReporter libraryErrorReporter, DefinitionRequester definitionRequester) {

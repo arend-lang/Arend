@@ -4,7 +4,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
-import org.arend.library.LibraryManager;
+import org.arend.library.OldLibraryManager;
 import org.arend.library.SourceLibrary;
 import org.arend.module.scopeprovider.CachingModuleScopeProvider;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
@@ -16,11 +16,11 @@ import java.util.function.Function;
 // TODO[server2]: Delete this
 public final class SourceLoader {
   private final SourceLibrary myLibrary;
-  private final LibraryManager myLibraryManager;
+  private final OldLibraryManager myLibraryManager;
   private ModuleScopeProvider myModuleScopeProvider;
   private ModuleScopeProvider myTestsModuleScopeProvider;
 
-  public SourceLoader(SourceLibrary library, LibraryManager libraryManager) {
+  public SourceLoader(SourceLibrary library, OldLibraryManager libraryManager) {
     myLibrary = library;
     myLibraryManager = libraryManager;
   }

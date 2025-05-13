@@ -6,7 +6,7 @@ import org.arend.ArendLanguage
 import org.arend.ext.module.ModulePath
 import org.arend.library.BaseLibrary
 import org.arend.library.LibraryDependency
-import org.arend.library.LibraryManager
+import org.arend.library.OldLibraryManager
 import org.arend.module.scopeprovider.ModuleScopeProvider
 import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.scope.Scope
@@ -50,7 +50,7 @@ class ArendPreludeLibrary(private val project: Project) : BaseLibrary() {
         return isTypechecked
     }
 
-    override fun load(libraryManager: LibraryManager, typechecking: TypecheckingOrderingListener?): Boolean {
+    override fun load(libraryManager: OldLibraryManager, typechecking: TypecheckingOrderingListener?): Boolean {
         if (prelude == null) {
             val text = String(ArendPreludeLibrary::class.java.getResourceAsStream("/lib/Prelude" + FileUtils.EXTENSION)!!.readBytes(), StandardCharsets.UTF_8)
             prelude = PsiFileFactory.getInstance(project).createFileFromText(PRELUDE_FILE_NAME, ArendLanguage.INSTANCE, text) as? ArendFile

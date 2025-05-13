@@ -23,6 +23,10 @@ public class FileRawSource extends StreamRawSource {
     myFile = FileUtils.sourceFile(basePath, module.getModulePath());
   }
 
+  public boolean isAvailable() {
+    return Files.isRegularFile(myFile);
+  }
+
   @NotNull
   @Override
   protected InputStream getInputStream() throws IOException {

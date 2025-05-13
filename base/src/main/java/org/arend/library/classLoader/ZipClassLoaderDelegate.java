@@ -7,13 +7,11 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class ZipClassLoaderDelegate implements ClassLoaderDelegate {
-  public ZipFile zipFile;
   private final File myFile;
   private final String myPrefix;
 
-  public ZipClassLoaderDelegate(File file, ZipFile zipFile, String prefix) {
+  public ZipClassLoaderDelegate(File file, String prefix) {
     myFile = file;
-    this.zipFile = zipFile;
     myPrefix = prefix.isEmpty() || prefix.endsWith("/") ? prefix : prefix + "/";
   }
 
@@ -32,10 +30,6 @@ public class ZipClassLoaderDelegate implements ClassLoaderDelegate {
 
   @Override
   public byte[] findClass(String name) throws ClassNotFoundException {
-    if (zipFile != null) {
-      return readClass(zipFile, name);
-    }
-
     try (ZipFile zipFile = new ZipFile(myFile)) {
       return readClass(zipFile, name);
     } catch (IOException e) {

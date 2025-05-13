@@ -3,16 +3,18 @@ package org.arend.frontend.source;
 import org.arend.module.ModuleLocation;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 public class ZipFileRawSource extends StreamRawSource {
-  private final ZipFile myFile;
-  private final ZipEntry myEntry;
+  private final File myFile;
+  private final String myEntry;
 
-  public ZipFileRawSource(ModuleLocation module, ZipFile file, ZipEntry entry) {
+  public ZipFileRawSource(ModuleLocation module, File file, String entry) {
     super(module);
     myFile = file;
     myEntry = entry;
@@ -20,11 +22,17 @@ public class ZipFileRawSource extends StreamRawSource {
 
   @Override
   public long getTimeStamp() {
-    return 0;
+    return myFile.lastModified();
   }
 
   @Override
   protected @NotNull InputStream getInputStream() throws IOException {
-    return myFile.getInputStream(myEntry);
+    try (ZipFile zipFile = new ZipFile(myFile)) {
+      ZipEntry entry = zipFile.getEntry(myEntry);
+      if (entry == null) {
+        throw new ZipException("Cannot find " + myEntry + " in " + myFile);
+      }
+      return zipFile.getInputStream(entry);
+    }
   }
 }

@@ -3,7 +3,7 @@ package org.arend;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.prettyprinting.doc.Doc;
-import org.arend.frontend.library.PreludeFileLibrary;
+import org.arend.frontend.source.PreludeResourceSource;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.scope.EmptyScope;
@@ -36,7 +36,7 @@ public abstract class ArendTestCase {
   public void initializeServer() {
     server = new ArendServerImpl(ArendServerRequester.TRIVIAL, false, false);
     if (myPrelude == null) {
-      myPrelude = PreludeFileLibrary.getSource().loadGroup(DummyErrorReporter.INSTANCE);
+      myPrelude = new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE);
       Assert.assertNotNull(myPrelude);
     }
     server.addReadOnlyModule(Prelude.MODULE_LOCATION, myPrelude);

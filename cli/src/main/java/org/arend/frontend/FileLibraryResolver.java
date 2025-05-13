@@ -1,18 +1,13 @@
 package org.arend.frontend;
 
-import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.arend.ext.error.ErrorReporter;
-import org.arend.frontend.library.FileLoadableHeaderLibrary;
-import org.arend.frontend.library.ZipSourceLibrary;
 import org.arend.library.*;
 import org.arend.library.error.LibraryIOError;
-import org.arend.library.error.MultipleLibraries;
 import org.arend.library.resolver.LibraryResolver;
 import org.arend.typechecking.order.dependency.DependencyListener;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -20,44 +15,23 @@ import java.util.*;
 public class FileLibraryResolver implements LibraryResolver {
   private final List<Path> myLibDirs;
   private final ErrorReporter myErrorReporter;
-  private final Map<String, UnmodifiableSourceLibrary> myLibraries = new HashMap<>();
-  private final DependencyListener myDependencyListener;
+  private final Map<String, SourceLibrary> myLibraries = new HashMap<>();
 
   public FileLibraryResolver(List<Path> libDirs, ErrorReporter errorReporter, DependencyListener dependencyListener) {
     myLibDirs = libDirs;
     myErrorReporter = errorReporter;
-    myDependencyListener = dependencyListener;
   }
 
-  private FileLoadableHeaderLibrary getLibrary(Path headerFile) {
-    try {
-      LibraryConfig config = new YAMLMapper().readValue(headerFile.toFile(), LibraryConfig.class);
-      if (config.getName() == null) {
-        Path parent = headerFile.getParent();
-        Path fileName = parent == null ? null : parent.getFileName();
-        if (fileName != null) {
-          config.setName(fileName.toString());
-        } else {
-          return null;
-        }
-      }
-      if (config.getSourcesDir() == null) {
-        config.setSourcesDir(headerFile.getParent().toString());
-      }
-      return new FileLoadableHeaderLibrary(config, headerFile, myDependencyListener);
-    } catch (IOException e) {
-      myErrorReporter.report(new LibraryIOError(headerFile.toString(), "Failed to read header file", e.getLocalizedMessage()));
-      return null;
-    }
+  private SourceLibrary getLibrary(Path headerFile) {
+    return null;
   }
 
-  private ZipSourceLibrary getLibraryFromZip(Path zipFile) {
-    String fileName = zipFile.getFileName().toString();
-    return new ZipSourceLibrary(fileName.substring(0, fileName.length() - FileUtils.ZIP_EXTENSION.length()), zipFile.toFile());
+  private SourceLibrary getLibraryFromZip(Path zipFile) {
+    return null;
   }
 
-  private UnmodifiableSourceLibrary findLibrary(Path libDir, String libName) {
-    UnmodifiableSourceLibrary library;
+  private SourceLibrary findLibrary(Path libDir, String libName) {
+    SourceLibrary library;
     Path zipFile = libDir.resolve(libName + FileUtils.ZIP_EXTENSION);
     if (Files.exists(zipFile)) {
       library = getLibraryFromZip(zipFile);
@@ -80,8 +54,8 @@ public class FileLibraryResolver implements LibraryResolver {
    * @param libPath Recommended to use a
    *                <code>.toAbsolutePath().normalize()</code> path.
    */
-  public UnmodifiableSourceLibrary registerLibrary(Path libPath) {
-    UnmodifiableSourceLibrary library;
+  public SourceLibrary registerLibrary(Path libPath) {
+    SourceLibrary library;
     if (Files.isDirectory(libPath)) {
       library = getLibrary(libPath.resolve(FileUtils.LIBRARY_CONFIG_FILE));
     } else if (libPath.endsWith(FileUtils.LIBRARY_CONFIG_FILE)) {
@@ -97,20 +71,7 @@ public class FileLibraryResolver implements LibraryResolver {
       return null;
     }
 
-    UnmodifiableSourceLibrary prevLibrary = myLibraries.putIfAbsent(library.getName(), library);
-    if (prevLibrary != null) {
-      if (!prevLibrary.equals(library)) {
-        List<String> libraries = new ArrayList<>(2);
-        libraries.add(prevLibrary.getName() + " (" + prevLibrary.getFullName() + ")");
-        libraries.add(library.getName() + " (" + library.getFullName() + ")");
-        myErrorReporter.report(new MultipleLibraries(library.getName(), libraries));
-        return null;
-      } else {
-        return prevLibrary;
-      }
-    } else {
-      return library;
-    }
+    return myLibraries.putIfAbsent(library.getName(), library);
   }
 
   @Nullable
@@ -120,7 +81,7 @@ public class FileLibraryResolver implements LibraryResolver {
       return null;
     }
 
-    UnmodifiableSourceLibrary library = myLibraries.get(dependencyName);
+    SourceLibrary library = myLibraries.get(dependencyName);
     if (library != null) {
       return library;
     }
@@ -129,10 +90,6 @@ public class FileLibraryResolver implements LibraryResolver {
     if (library == null) {
       for (Path libDir : myLibDirs) {
         library = findLibrary(libDir, dependencyName);
-        if (library instanceof FileLoadableHeaderLibrary) {
-          ((FileLoadableHeaderLibrary) library).setExternal(true);
-          break;
-        }
       }
     }
 

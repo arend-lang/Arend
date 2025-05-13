@@ -5,7 +5,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
-import org.arend.library.LibraryManager;
+import org.arend.library.OldLibraryManager;
 import org.arend.library.SourceLibrary;
 import org.arend.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
@@ -68,7 +68,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
     return myDependencies;
   }
 
-  public static ConcreteGroup getGroup(InputStream inputStream, LibraryManager libraryManager, SourceLibrary library) throws IOException, DeserializationException {
+  public static ConcreteGroup getGroup(InputStream inputStream, OldLibraryManager libraryManager, SourceLibrary library) throws IOException, DeserializationException {
     CodedInputStream codedInputStream = CodedInputStream.newInstance(inputStream);
     codedInputStream.setRecursionLimit(Integer.MAX_VALUE);
     ModuleProtos.Module moduleProto = ModuleProtos.Module.parseFrom(codedInputStream);

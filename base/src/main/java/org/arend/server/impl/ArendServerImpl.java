@@ -109,7 +109,6 @@ public class ArendServerImpl implements ArendServer {
     myRequester = requester;
     myCacheReferences = cacheReferences;
     myLogger.setLevel(withLogging ? Level.INFO : Level.OFF);
-    myLogger.setUseParentHandlers(false);
     myLibraryService = new LibraryService(this);
     copyLogger(ArendCheckerImpl.getLogger());
 

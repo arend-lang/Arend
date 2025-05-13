@@ -14,19 +14,16 @@ import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.extImpl.DefinitionRequester;
-import org.arend.frontend.library.FileSourceLibrary;
 import org.arend.frontend.library.TimedLibraryManager;
 import org.arend.frontend.repl.PlainCliRepl;
 import org.arend.frontend.repl.jline.JLineCliRepl;
 import org.arend.library.*;
-import org.arend.library.classLoader.FileClassLoaderDelegate;
 import org.arend.library.error.LibraryError;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
-import org.arend.prelude.PreludeResourceLibrary;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
@@ -44,11 +41,9 @@ import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.util.FileUtils;
 import org.arend.ext.util.Pair;
-import org.arend.util.Range;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -82,7 +77,7 @@ public abstract class BaseCliFrontend {
 
   // Libraries
   private final FileLibraryResolver myLibraryResolver = new FileLibraryResolver(new ArrayList<>(), mySystemErrErrorReporter, myDependencyCollector);
-  private final LibraryManager myLibraryManager = new TimedLibraryManager(myLibraryResolver, myErrorReporter, mySystemErrErrorReporter, DefinitionRequester.INSTANCE) {
+  private final OldLibraryManager myLibraryManager = new TimedLibraryManager(myLibraryResolver, myErrorReporter, mySystemErrErrorReporter, DefinitionRequester.INSTANCE) {
     @Override
     protected void afterLibraryLoading(@NotNull Library library, int loaded, int total) {
       super.afterLibraryLoading(library, loaded, total);
@@ -375,10 +370,6 @@ public abstract class BaseCliFrontend {
       return null;
     }
 
-    if (!myLibraryManager.loadLibrary(new PreludeResourceLibrary(), null)) {
-      return null;
-    }
-
     myLibraryResolver.addLibraryDirectories(libDirs);
 
     // Get library dependencies
@@ -443,15 +434,6 @@ public abstract class BaseCliFrontend {
           }
         }
       }
-    }
-    if (!requestedModules.isEmpty()) {
-      try {
-        Files.createDirectories(outDir);
-      } catch (IOException e) {
-        e.printStackTrace();
-        outDir = null;
-      }
-      requestedLibraries.add(new FileSourceLibrary("\\default", sourceDir, outDir, new LibraryHeader(requestedModules, libraryDependencies, null, Range.unbound(), new FileClassLoaderDelegate(extDir), extMainClass), myDependencyCollector));
     }
 
     if (requestedLibraries.isEmpty()) {

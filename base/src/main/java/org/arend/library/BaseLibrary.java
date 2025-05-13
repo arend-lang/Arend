@@ -26,7 +26,7 @@ public abstract class BaseLibrary implements Library {
   private boolean myLoaded = false;
 
   @Override
-  public boolean load(LibraryManager libraryManager, TypecheckingOrderingListener typechecking) {
+  public boolean load(OldLibraryManager libraryManager, TypecheckingOrderingListener typechecking) {
     myLoaded = true;
     return true;
   }
@@ -157,7 +157,7 @@ public abstract class BaseLibrary implements Library {
   }
 
   @Override
-  public boolean loadTests(LibraryManager libraryManager) {
+  public boolean loadTests(OldLibraryManager libraryManager) {
     return false;
   }
 

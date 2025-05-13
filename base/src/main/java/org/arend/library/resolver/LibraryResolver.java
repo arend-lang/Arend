@@ -3,9 +3,7 @@ package org.arend.library.resolver;
 import org.arend.library.Library;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Resolves dependencies names of a library.
- */
+// TODO[server2]: Delete this
 public interface LibraryResolver {
   /**
    * Resolves dependencies names of a library.

@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class LibraryConfig {
-  private String myName;
   private String mySourcesDirectory;
   private String myTestsDirectory;
   private String myBinariesDirectory;
@@ -20,14 +19,6 @@ public class LibraryConfig {
   private List<String> myDependencies;
   private String myVersion;
   private String myLangVersion;
-
-  public String getName() {
-    return myName;
-  }
-
-  public void setName(String name) {
-    myName = name;
-  }
 
   public String getSourcesDir() {
     return mySourcesDirectory;
@@ -104,9 +95,6 @@ public class LibraryConfig {
   @Override
   public String toString() {
     List<Doc> docs = new ArrayList<>();
-    if (myName != null) {
-      docs.add(text("name: " + myName));
-    }
     if (mySourcesDirectory != null) {
       docs.add(text("sourcesDir: " + mySourcesDirectory));
     }

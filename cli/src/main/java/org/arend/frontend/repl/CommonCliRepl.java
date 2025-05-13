@@ -10,25 +10,18 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.PrettyPrinterFlag;
-import org.arend.extImpl.DefinitionRequester;
 import org.arend.frontend.FileLibraryResolver;
 import org.arend.frontend.PositionComparator;
-import org.arend.frontend.library.FileSourceLibrary;
-import org.arend.frontend.library.TimedLibraryManager;
 import org.arend.frontend.parser.ArendLexer;
 import org.arend.frontend.parser.ArendParser;
 import org.arend.frontend.parser.BuildVisitor;
 import org.arend.frontend.parser.ReporterErrorListener;
 import org.arend.frontend.repl.action.*;
 import org.arend.library.Library;
-import org.arend.library.LibraryHeader;
-import org.arend.library.LibraryManager;
 import org.arend.library.SourceLibrary;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.GeneratedVersion;
-import org.arend.prelude.PreludeLibrary;
-import org.arend.prelude.PreludeResourceLibrary;
 import org.arend.repl.Repl;
 import org.arend.repl.action.ReplCommand;
 import org.arend.server.ArendServer;
@@ -37,8 +30,6 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
-import org.arend.typechecking.ArendExtensionProvider;
-import org.arend.typechecking.LibraryArendExtensionProvider;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DummyDependencyListener;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
@@ -121,7 +112,7 @@ public abstract class CommonCliRepl extends Repl {
     myLibraryResolver = libraryResolver;
     myReplLibrary = Files.exists(pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE))
         ? libraryResolver.registerLibrary(pwd)
-        : new FileSourceLibrary("Repl", pwd, null, new LibraryHeader(modules, new ArrayList<>(), null, Range.unbound(), null, null), DummyDependencyListener.INSTANCE);
+        : null; // TODO[server2]: new FileSourceLibrary("Repl", pwd, null, new LibraryHeader(modules, new ArrayList<>(), null, Range.unbound(), null, null), DummyDependencyListener.INSTANCE);
     myModules = modules;
 
     try {

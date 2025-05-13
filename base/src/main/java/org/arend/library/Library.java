@@ -33,19 +33,19 @@ public interface Library {
 
   /**
    * Loads the library and its dependencies.
-   * This method must register all of the library's dependencies using {@link LibraryManager#registerDependency}
-   * Do not invoke this method directly; use {@link LibraryManager#loadLibrary(Library,TypecheckingOrderingListener)} instead.
+   * This method must register all of the library's dependencies using {@link OldLibraryManager#registerDependency}
+   * Do not invoke this method directly; use {@link OldLibraryManager#loadLibrary(Library,TypecheckingOrderingListener)} instead.
    *
    * @param libraryManager  a library manager containing the information necessary for the loading.
    * @param typechecking    a typechecker that will be used for loading extensions.
    *
    * @return true if loading succeeded, false otherwise.
    */
-  boolean load(LibraryManager libraryManager, TypecheckingOrderingListener typechecking);
+  boolean load(OldLibraryManager libraryManager, TypecheckingOrderingListener typechecking);
 
   /**
    * Unloads the library.
-   * Do not invoke this method directly; use {@link LibraryManager#unloadLibrary(Library)} instead.
+   * Do not invoke this method directly; use {@link OldLibraryManager#unloadLibrary(Library)} instead.
    * A library can fail to unload; for example, prelude can never be unloaded.
    *
    * @return true if the library was successfully unloaded, false otherwise.
@@ -174,5 +174,5 @@ public interface Library {
    *
    * @return true if tests were successfully loaded.
    */
-  boolean loadTests(LibraryManager libraryManager);
+  boolean loadTests(OldLibraryManager libraryManager);
 }
