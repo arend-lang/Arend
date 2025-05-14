@@ -12,15 +12,11 @@ import com.intellij.psi.TokenType
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings
 import org.arend.formatting.block.SimpleArendBlock.Companion.oneSpaceWrap
 import org.arend.psi.ArendFile
-import org.arend.psi.ancestor
-import org.arend.psi.ext.ArendDefinition
 import org.arend.psi.ext.ArendExpr
-import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
-import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getBounds
 
@@ -35,20 +31,12 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
                 val targetFile = psi.containingFile as? ArendFile
                 val targetFileLocation = targetFile?.moduleLocation
 
-                var definition = psi.ancestor<ArendDefinition<*>>()?.tcReferable
-                targetFileLocation?.let { arendServer.getCheckerFor(listOf(it)).typecheck(listOf(definition?.refFullName), NotificationErrorReporter(project), UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty()) }
-                if (definition == null) {
-                    if (targetFileLocation != null) {
-                        val requester = ArendServerRequesterImpl(project)
-                        requester.doUpdateModule(arendServer, targetFileLocation, targetFile)
-                        //TODO: This operation may be slow
-                        arendServer.getCheckerFor(listOf(targetFileLocation)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-
-                        definition = psi.ancestor<ArendDefinition<*>>()?.tcReferable
-                    }
+                if (targetFileLocation != null) {
+                    //TODO: This operation may be slow
+                    arendServer.getCheckerFor(listOf(targetFileLocation)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
                 }
 
-                if (definition != null) appExprToConcreteOnlyTopLevel(psi) else null
+                appExprToConcreteOnlyTopLevel(psi)
             } else null
         }
         val children = myNode.getChildren(null).filter { it.elementType != TokenType.WHITE_SPACE }.toList()
