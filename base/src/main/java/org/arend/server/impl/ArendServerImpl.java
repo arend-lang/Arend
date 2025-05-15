@@ -354,7 +354,8 @@ public class ArendServerImpl implements ArendServer {
     }
   }
 
-  ModuleLocation findDependency(ModulePath modulePath, String fromLibrary, boolean fromTests, boolean withReadOnly) {
+  @Override
+  public @Nullable ModuleLocation findModule(@NotNull ModulePath modulePath, @Nullable String fromLibrary, boolean withTests, boolean withReadOnly) {
     List<String> libraries = new ArrayList<>();
     if (fromLibrary == null) {
       libraries.addAll(getLibraries());
@@ -366,7 +367,7 @@ public class ArendServerImpl implements ArendServer {
 
     List<ModuleLocation.LocationKind> kinds = new ArrayList<>(3);
     kinds.add(ModuleLocation.LocationKind.SOURCE);
-    if (fromTests) kinds.add(ModuleLocation.LocationKind.TEST);
+    if (withTests) kinds.add(ModuleLocation.LocationKind.TEST);
     kinds.add(ModuleLocation.LocationKind.GENERATED);
 
     for (String library : libraries) {
@@ -390,7 +391,7 @@ public class ArendServerImpl implements ArendServer {
       public @Nullable Scope forModule(@NotNull ModulePath modulePath) {
         Scope result = myPreludeModuleScopeProvider.forModule(modulePath);
         if (result != null) return result;
-        ModuleLocation found = findDependency(modulePath, libraryName, withTests, true);
+        ModuleLocation found = ArendServerImpl.this.findModule(modulePath, libraryName, withTests, true);
         if (found == null) return null;
         GroupData groupData = myGroups.get(found);
         return groupData == null ? null : groupData.getFileScope();
@@ -398,7 +399,7 @@ public class ArendServerImpl implements ArendServer {
 
       @Override
       public @NotNull GlobalReferable findModule(@NotNull ModulePath modulePath) {
-        ModuleLocation location = modulePath.equals(Prelude.MODULE_PATH) ? Prelude.MODULE_LOCATION : findDependency(modulePath, libraryName, withTests, true);
+        ModuleLocation location = modulePath.equals(Prelude.MODULE_PATH) ? Prelude.MODULE_LOCATION : ArendServerImpl.this.findModule(modulePath, libraryName, withTests, true);
         if (location != null) {
           GroupData groupData = myGroups.get(location);
           if (groupData != null) {
@@ -470,6 +471,11 @@ public class ArendServerImpl implements ArendServer {
     if (fullName.module == null) return null;
     GroupData groupData = myGroups.get(fullName.module);
     return groupData == null ? null : groupData.getDefinitionData(fullName.longName);
+  }
+
+  @Override
+  public void addErrorReporter(@NotNull ErrorReporter errorReporter) {
+    myErrorService.addErrorReporter(errorReporter);
   }
 
   @Override
@@ -619,7 +625,7 @@ public class ArendServerImpl implements ArendServer {
         continue;
       }
 
-      ModuleLocation found = findDependency(module.getModulePath(), anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+      ModuleLocation found = findModule(module.getModulePath(), anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
       if (!module.equals(found)) {
         errorReporter.report(LocationError.definition(null, module.getModulePath()));
       }
@@ -665,10 +671,10 @@ public class ArendServerImpl implements ArendServer {
         if (command != null && command.isImport()) {
           boolean isPrelude = Prelude.MODULE_PATH.toList().equals(command.module().getPath());
 
-          ModuleLocation commandTarget = isPrelude? Prelude.MODULE_LOCATION : findDependency(new ModulePath(command.module().getPath()),
+          ModuleLocation commandTarget = isPrelude ? Prelude.MODULE_LOCATION : findModule(new ModulePath(command.module().getPath()),
             anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
 
-          if (commandTarget.equals(referable.getLocation())) {
+          if (commandTarget != null && commandTarget.equals(referable.getLocation())) {
             namespaceCommand.set(command);
           }
         }

@@ -39,6 +39,10 @@ public interface ArendChecker {
    */
   int typecheck(@Nullable List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter);
 
+  default int typecheck(@NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
+    return typecheck(null, DummyErrorReporter.INSTANCE, indicator, progressReporter);
+  }
+
   /**
    * Typechecks the given definition with a custom checker.
    *

@@ -106,7 +106,7 @@ public class ArendCheckerImpl implements ArendChecker {
               for (ConcreteStatement statement : groupData.getRawGroup().statements()) {
                 indicator.checkCanceled();
                 if (statement.command() != null && statement.command().isImport()) {
-                  ModuleLocation dependency = myServer.findDependency(new ModulePath(statement.command().module().getPath()), module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+                  ModuleLocation dependency = myServer.findModule(new ModulePath(statement.command().module().getPath()), module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
                   if (dependency != null) toVisit.add(dependency);
                 }
               }
@@ -215,7 +215,7 @@ public class ArendCheckerImpl implements ArendChecker {
                 myServer.getRequester().addReference(module, resolvedReference.reference(), resolvedReference.referable());
               }
               for (ModulePath modulePath : cache.importedModules()) {
-                ModuleLocation dependency = myServer.findDependency(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, false);
+                ModuleLocation dependency = myServer.findModule(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, false);
                 if (dependency != null) {
                   myServer.getRequester().addModuleDependency(module, dependency);
                 }

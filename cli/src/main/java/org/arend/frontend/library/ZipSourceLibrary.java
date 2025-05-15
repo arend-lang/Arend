@@ -17,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -85,6 +86,11 @@ public class ZipSourceLibrary extends SourceLibrary {
     }
     builder.append(FileUtils.EXTENSION);
     return new ZipFileRawSource(new ModuleLocation(getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath), myFile, builder.toString());
+  }
+
+  @Override
+  public @NotNull List<ModulePath> findModules(boolean inTests) {
+    return new ArrayList<>(myModules);
   }
 
   @Override

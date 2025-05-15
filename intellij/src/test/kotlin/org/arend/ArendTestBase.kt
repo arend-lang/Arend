@@ -18,7 +18,6 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ThrowableRunnable
 import com.maddyhome.idea.vim.VimPlugin
-import org.arend.error.DummyErrorReporter
 import org.arend.ext.DefinitionContributor
 import org.arend.ext.module.ModulePath
 import org.arend.ext.prettyprinting.doc.DocFactory
@@ -239,7 +238,7 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
     }
 
     fun typecheck(fileNames: List<ModulePath> = listOf(ModulePath("Main"))) {
-        project.service<ArendServerService>().server.getCheckerFor(fileNames.map { ModuleLocation(module.name, ModuleLocation.LocationKind.SOURCE, it) }).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+        project.service<ArendServerService>().server.getCheckerFor(fileNames.map { ModuleLocation(module.name, ModuleLocation.LocationKind.SOURCE, it) }).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
     }
 
     protected fun withStdLib(name: String = AREND_LIB, test: () -> Unit) {

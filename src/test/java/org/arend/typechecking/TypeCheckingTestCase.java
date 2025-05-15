@@ -4,7 +4,6 @@ import org.arend.core.context.binding.Binding;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.type.Type;
-import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.naming.reference.*;
@@ -118,7 +117,7 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
 
 
   private void typeCheckModule(int errors) {
-    server.getCheckerFor(Collections.singletonList(MODULE)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    server.getCheckerFor(Collections.singletonList(MODULE)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     List<GeneralError> errorList = getAllErrors();
     boolean ok = errors != 0 || !errorList.isEmpty() || new CoreModuleChecker(new ListErrorReporter(errorList)).checkGroup(getGroup());
     assertThat(errorList, containsErrors(errors));

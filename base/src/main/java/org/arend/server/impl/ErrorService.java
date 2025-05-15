@@ -11,12 +11,22 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ErrorService implements ErrorReporter {
   private final Map<ModuleLocation, List<GeneralError>> myResolverErrors = new ConcurrentHashMap<>();
   private final Map<LocatedReferable, List<GeneralError>> myTypecheckingErrors = new ConcurrentHashMap<>();
+  private final List<ErrorReporter> myErrorReporters = new ArrayList<>();
+
+  public void addErrorReporter(ErrorReporter errorReporter) {
+    myErrorReporters.add(errorReporter);
+  }
 
   public void setResolverErrors(ModuleLocation module, List<GeneralError> errors) {
     if (errors.isEmpty()) {
       myResolverErrors.remove(module);
     } else {
       myResolverErrors.put(module, errors);
+      for (ErrorReporter errorReporter : myErrorReporters) {
+        for (GeneralError error : errors) {
+          errorReporter.report(error);
+        }
+      }
     }
   }
 
@@ -70,5 +80,8 @@ public class ErrorService implements ErrorReporter {
         myTypecheckingErrors.computeIfAbsent(located, k -> new ArrayList<>()).add(newError);
       }
     });
+    for (ErrorReporter errorReporter : myErrorReporters) {
+      errorReporter.report(error);
+    }
   }
 }

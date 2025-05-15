@@ -1,6 +1,5 @@
 package org.arend.frontend;
 
-import org.arend.error.DummyErrorReporter;
 import org.arend.prelude.Prelude;
 import org.arend.frontend.source.PreludeSources;
 import org.arend.server.ArendServer;
@@ -26,7 +25,7 @@ public class PreludeBinaryGenerator {
 
     Prelude.initialize();
     ArendServer server = new ArendServerImpl(ArendServerRequester.TRIVIAL, false, false);
-    server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+    server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     binarySource.persist(server, System.err::println);
   }
 }

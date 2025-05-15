@@ -3,6 +3,7 @@ package org.arend.server;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.LongName;
+import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
@@ -74,6 +75,19 @@ public interface ArendServer {
   void removeModule(@NotNull ModuleLocation module);
 
   /**
+   * Searches for a module with the specified module path.
+   *
+   * @param modulePath      the module path
+   * @param fromLibrary     the library from which the module is invoked.
+   *                        The method searches in dependencies of this library.
+   *                        If {@code null}, it searches in all registered libraries.
+   * @param withTests       if {@code true}, searches in tests as well as sources.
+   * @param withReadOnly    if {@code true}, searches in generated files as well as sources.
+   * @return the module location, or {@code null} if not found.
+   */
+  @Nullable ModuleLocation findModule(@NotNull ModulePath modulePath, @Nullable String fromLibrary, boolean withTests, boolean withReadOnly);
+
+  /**
    * @return a checker that can be used to resolve and typecheck specified modules.
    */
   @NotNull ArendChecker getCheckerFor(@NotNull List<? extends @NotNull ModuleLocation> modules);
@@ -112,6 +126,11 @@ public interface ArendServer {
    * @return the definition corresponding to the given referable if it was already resolved.
    */
   @Nullable DefinitionData getResolvedDefinition(@NotNull TCDefReferable referable);
+
+  /**
+   * Adds an error listener.
+   */
+  void addErrorReporter(@NotNull ErrorReporter errorReporter);
 
   /**
    * @return errors grouped by modules.

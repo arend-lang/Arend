@@ -1,6 +1,7 @@
 package org.arend.frontend.library;
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.source.FileRawSource;
@@ -70,6 +71,14 @@ public class FileSourceLibrary extends SourceLibrary {
     if (myModules != null && !myModules.contains(modulePath) || inTests && testBasePath == null) return null;
     FileRawSource source = new FileRawSource(inTests ? testBasePath : sourceBasePath, new ModuleLocation(getLibraryName(), inTests ? ModuleLocation.LocationKind.TEST : ModuleLocation.LocationKind.SOURCE, modulePath));
     return source.isAvailable() ? source : null;
+  }
+
+  @Override
+  public @NotNull List<ModulePath> findModules(boolean inTests) {
+    if (inTests && testBasePath == null) return Collections.emptyList();
+    List<ModulePath> result = new ArrayList<>();
+    FileUtils.getModules(inTests ? testBasePath : sourceBasePath, FileUtils.EXTENSION, result, DummyErrorReporter.INSTANCE);
+    return result;
   }
 
   @Override

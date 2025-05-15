@@ -5,14 +5,24 @@ import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.ModulePath;
+import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.frontend.library.*;
 import org.arend.frontend.source.PreludeResourceSource;
 import org.arend.library.classLoader.FileClassLoaderDelegate;
 import org.arend.library.error.LibraryIOError;
+import org.arend.module.ModuleLocation;
+import org.arend.module.error.ModuleNotFoundError;
+import org.arend.naming.reference.LocatedReferable;
+import org.arend.naming.scope.EmptyScope;
 import org.arend.prelude.Prelude;
 import org.arend.server.ArendServer;
+import org.arend.server.ProgressReporter;
 import org.arend.server.impl.ArendServerImpl;
+import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
+import org.arend.typechecking.error.local.GoalError;
 import org.arend.util.FileUtils;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,6 +32,7 @@ import java.util.*;
 
 public class ConsoleMain {
   private boolean myExitWithError;
+  private final Map<ModuleLocation, GeneralError.Level> myModuleResults = new LinkedHashMap<>();
 
   private final ErrorReporter mySystemErrErrorReporter = error -> {
     System.err.println(error);
@@ -37,6 +48,7 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("s").longOpt("sources").hasArg().argName("dir").desc("project source directory").build());
       cmdOptions.addOption(Option.builder("e").longOpt("extensions").hasArg().argName("dir").desc("language extensions directory").build());
       cmdOptions.addOption(Option.builder("m").longOpt("extension-main").hasArg().argName("class").desc("main extension class").build());
+      cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
       CommandLine cmdLine = new DefaultParser().parse(cmdOptions, args);
 
@@ -57,6 +69,14 @@ public class ConsoleMain {
     }
   }
 
+  private void updateSourceResult(ModuleLocation module, GeneralError.Level result) {
+    if (module == null) return;
+    GeneralError.Level prevResult = myModuleResults.get(module);
+    if (prevResult == null || result.ordinal() > prevResult.ordinal()) {
+      myModuleResults.put(module, result);
+    }
+  }
+
   private boolean run(String[] args) {
     CommandLine cmdLine = parseArgs(args);
     if (cmdLine == null) return false;
@@ -64,6 +84,31 @@ public class ConsoleMain {
     LibraryManager libraryManager = new LibraryManager(mySystemErrErrorReporter);
     ArendServer server = new ArendServerImpl(new CliServerRequester(libraryManager), false, false);
     server.addReadOnlyModule(Prelude.MODULE_LOCATION, Objects.requireNonNull(new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE)));
+    server.addErrorReporter(error -> {
+      error.forAffectedDefinitions((referable, err) -> {
+        if (referable instanceof LocatedReferable) {
+          updateSourceResult(((LocatedReferable) referable).getLocation(), err.level);
+        }
+      });
+
+      //Print error
+      PrettyPrinterConfigWithRenamer ppConfig = new PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE);
+      if (error instanceof GoalError) {
+        ppConfig.expressionFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE);
+      }
+      if (error.level == GeneralError.Level.ERROR) {
+        myExitWithError = true;
+      }
+      String errorText = error.getDoc(ppConfig).toString();
+
+      if (error.isSevere()) {
+        System.err.println(errorText);
+        System.err.flush();
+      } else {
+        System.out.println(errorText);
+        System.out.flush();
+      }
+    });
 
     // Get library directories
     List<Path> libDirs = new ArrayList<>();
@@ -109,17 +154,7 @@ public class ConsoleMain {
         } else if (fileName.endsWith(FileUtils.ZIP_EXTENSION)) {
           loadZipLibrary(path, requestedLibraries);
         } else {
-          ModulePath modulePath;
-          if (path.isAbsolute() || path.getNameCount() > 1 || fileName.endsWith(FileUtils.EXTENSION)) {
-            modulePath = path.isAbsolute() ? null : FileUtils.modulePath(path, FileUtils.EXTENSION);
-          } else {
-            modulePath = FileUtils.modulePath(fileName);
-          }
-          if (modulePath == null) {
-            mySystemErrErrorReporter.report(FileUtils.illegalModuleName(fileName));
-          } else {
-            requestedModules.add(modulePath);
-          }
+          mySystemErrErrorReporter.report(new LibraryIOError(fileName, "not a library"));
         }
       } else if (!findLibrary(fileName, libDirs, requestedLibraries)) {
         ModulePath modulePath = ModulePath.fromString(fileName);
@@ -161,20 +196,84 @@ public class ConsoleMain {
     }
 
     for (SourceLibrary library : requestedLibraries) {
-      libraryManager.updateLibrary(library, server);
+      loadLibrary(libraryManager, library, server);
     }
 
     for (SourceLibrary library : requestedLibraries) {
-      loadDependencies(library, libraryManager, libDirs, server);
+      if (!loadDependencies(library, libraryManager, libDirs, server)) {
+        return false;
+      }
     }
 
     if (myExitWithError) {
       return false;
     }
 
-    // TODO[server2]: Do typechecking
+    if (requestedModules.isEmpty()) {
+      for (SourceLibrary library : requestedLibraries) {
+        System.out.println();
+        System.out.println("--- Typechecking " + library.getLibraryName() + " ---");
+        long time = System.currentTimeMillis();
+
+        for (ModulePath modulePath : library.findModules(false)) {
+          server.getCheckerFor(Collections.singletonList(new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath))).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+        }
+
+        time = System.currentTimeMillis() - time;
+        System.out.println("--- Done (" + timeToString(time) + ") ---");
+      }
+    } else {
+      for (ModulePath modulePath : requestedModules) {
+        ModuleLocation module = server.findModule(modulePath, null, true, false);
+        if (module == null) {
+          mySystemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
+        } else {
+          System.out.println();
+          System.out.println("--- Typechecking " + module + " ---");
+          long time = System.currentTimeMillis();
+
+          server.getCheckerFor(Collections.singletonList(module)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+
+          System.out.println("--- Done (" + timeToString(System.currentTimeMillis() - time) + ") ---");
+        }
+      }
+    }
+
+    if (cmdLine.hasOption("t")) {
+      for (SourceLibrary library : requestedLibraries) {
+        System.out.println();
+        System.out.println("--- Running tests in " + library.getLibraryName() + " ---");
+        long time = System.currentTimeMillis();
+
+        for (ModulePath modulePath : library.findModules(true)) {
+          server.getCheckerFor(Collections.singletonList(new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.TEST, modulePath))).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+        }
+
+        time = System.currentTimeMillis() - time;
+        System.out.println("--- Done (" + timeToString(time) + ") ---");
+      }
+    }
 
     return true;
+  }
+
+  private static @NotNull String timeToString(long time) {
+    if (time < 10000) {
+      return time + "ms";
+    }
+    if (time < 60000) {
+      return time / 1000 + ("." + (time / 100 % 10)) + "s";
+    }
+
+    long seconds = time / 1000;
+    return (seconds / 60) + "m" + (seconds % 60) + "s";
+  }
+
+  private void loadLibrary(LibraryManager libraryManager, SourceLibrary library, ArendServer server) {
+    System.out.println("[INFO] Loading " + library.getLibraryName());
+    long time = System.currentTimeMillis();
+    libraryManager.updateLibrary(library, server);
+    System.out.println("[INFO] " + "Loaded " + library.getLibraryName() + " (" + timeToString(System.currentTimeMillis() - time) + ")");
   }
 
   private boolean loadDependencies(SourceLibrary library, LibraryManager libraryManager, List<Path> libDirs, ArendServer server) {
@@ -183,7 +282,7 @@ public class ConsoleMain {
         List<SourceLibrary> libDependency = new ArrayList<>(1);
         findLibrary(dependency, libDirs, libDependency);
         if (libDependency.isEmpty()) return false;
-        libraryManager.updateLibrary(libDependency.getFirst(), server);
+        loadLibrary(libraryManager, libDependency.getFirst(), server);
         if (!loadDependencies(libDependency.getFirst(), libraryManager, libDirs, server)) return false;
       }
     }

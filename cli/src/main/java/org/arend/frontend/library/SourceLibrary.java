@@ -63,4 +63,6 @@ public abstract class SourceLibrary implements ArendLibrary {
   }
 
   public abstract @Nullable Source getSource(@NotNull ModulePath modulePath, boolean inTests);
+
+  public abstract @NotNull List<ModulePath> findModules(boolean inTests);
 }
