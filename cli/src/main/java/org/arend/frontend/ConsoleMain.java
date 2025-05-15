@@ -1,6 +1,7 @@
 package org.arend.frontend;
 
 import org.apache.commons.cli.*;
+import org.arend.core.definition.Definition;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
@@ -13,11 +14,13 @@ import org.arend.library.error.LibraryIOError;
 import org.arend.module.ModuleLocation;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.LocatedReferable;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.scope.EmptyScope;
 import org.arend.prelude.Prelude;
 import org.arend.server.ArendServer;
 import org.arend.server.ProgressReporter;
 import org.arend.server.impl.ArendServerImpl;
+import org.arend.term.group.ConcreteStatement;
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.error.local.GoalError;
@@ -75,6 +78,21 @@ public class ConsoleMain {
     if (prevResult == null || result.ordinal() > prevResult.ordinal()) {
       myModuleResults.put(module, result);
     }
+  }
+
+  private void reportTypeCheckResult(ModulePath modulePath, GeneralError.Level result) {
+    System.out.println("[" + resultChar(result) + "]" + " " + modulePath);
+  }
+
+  private static char resultChar(GeneralError.Level result) {
+    if (result == null) {
+      return ' ';
+    }
+    return switch (result) {
+      case GOAL -> '◯';
+      case ERROR -> '✗';
+      default -> '·';
+    };
   }
 
   private boolean run(String[] args) {
@@ -220,6 +238,26 @@ public class ConsoleMain {
         }
 
         time = System.currentTimeMillis() - time;
+
+        // Output nice per-module typechecking results
+        int numWithErrors = 0;
+        int numWithGoals = 0;
+        for (ModuleLocation module : server.getModules()) {
+          if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
+            GeneralError.Level result = myModuleResults.get(module);
+            reportTypeCheckResult(module.getModulePath(), result);
+            if (result == GeneralError.Level.ERROR) numWithErrors++;
+            if (result == GeneralError.Level.GOAL) numWithGoals++;
+          }
+        }
+
+        if (numWithErrors > 0) {
+          myExitWithError = true;
+          System.out.println("Number of modules with errors: " + numWithErrors);
+        }
+        if (numWithGoals > 0) {
+          System.out.println("Number of modules with goals: " + numWithGoals);
+        }
         System.out.println("--- Done (" + timeToString(time) + ") ---");
       }
     } else {
@@ -250,6 +288,26 @@ public class ConsoleMain {
         }
 
         time = System.currentTimeMillis() - time;
+
+        int[] total = new int[1];
+        int[] failed = new int[1];
+        for (ModuleLocation module : server.getModules()) {
+          if (module.getLocationKind() == ModuleLocation.LocationKind.TEST && module.getLibraryName().equals(library.getLibraryName())) {
+            for (ConcreteStatement statement : Objects.requireNonNull(server.getRawGroup(module)).statements()) {
+              if (statement.group() != null && statement.group().referable() instanceof TCDefReferable referable) {
+                Definition definition = referable.getTypechecked();
+                if (definition != null || referable.getKind().isTypecheckable()) {
+                  total[0]++;
+                  if (definition == null || definition.status() != Definition.TypeCheckingStatus.NO_ERRORS) {
+                    failed[0]++;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        System.out.println("Tests completed: " + total[0] + ", Failed: " + failed[0]);
         System.out.println("--- Done (" + timeToString(time) + ") ---");
       }
     }

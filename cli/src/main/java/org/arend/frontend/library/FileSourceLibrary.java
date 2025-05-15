@@ -39,16 +39,17 @@ public class FileSourceLibrary extends SourceLibrary {
 
   public static FileSourceLibrary fromConfigFile(Path configFile, boolean isExternalLibrary, ErrorReporter errorReporter) {
     try {
-      Path basePath = configFile.getParent();
+      Path configAbsolutePath = configFile.toAbsolutePath();
+      Path basePath = configAbsolutePath.getParent();
       Path dirName = basePath == null ? null : basePath.getFileName();
       if (dirName == null) {
-        errorReporter.report(new LibraryIOError(configFile.toString(), "Configuration file does not have a parent"));
+        errorReporter.report(new LibraryIOError(configAbsolutePath.toString(), "Configuration file does not have a parent"));
         return null;
       }
 
       String libName = dirName.toString();
       if (!FileUtils.isLibraryName(libName)) {
-        errorReporter.report(new LibraryIOError(configFile.toString(), "Incorrect library name: " + libName));
+        errorReporter.report(new LibraryIOError(configAbsolutePath.toString(), "Incorrect library name: " + libName));
         return null;
       }
 
