@@ -17,6 +17,7 @@ import org.junit.Test;
 import java.util.Collections;
 
 import static org.arend.Matchers.argInferenceError;
+import static org.arend.Matchers.notInScope;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -673,7 +674,7 @@ public class VarsTest extends TypeCheckingTestCase {
 
   @Test
   public void fieldResolveTest3() {
-    typeCheckModule("""
+    resolveNamesModule("""
       \\record R (f : Nat)
       \\func foo (r : R) => 0
         \\where {
@@ -681,6 +682,7 @@ public class VarsTest extends TypeCheckingTestCase {
           \\func test => r.f
         }
       """, 1);
+    assertThatErrorsAre(notInScope("f"));
   }
 
   @Test
@@ -692,6 +694,20 @@ public class VarsTest extends TypeCheckingTestCase {
           \\func test => r.f
             \\where
               \\record R (g : Nat)
+      """);
+  }
+
+  @Test
+  public void dynamicResolveTest() {
+    typeCheckModule("""
+      \\module M \\where {
+        \\record R {
+          \\func f => 0
+        }
+      }
+      \\func foo (r : M.R) => r.f
+        \\where
+          \\func test => r.f
       """);
   }
 
