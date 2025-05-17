@@ -43,10 +43,4 @@ public class MemoryBinarySource extends StreamBinarySource {
   public long getTimeStamp() {
     return 0;
   }
-
-  @Override
-  public boolean delete(SourceLibrary library) {
-    myOutputStream = null;
-    return true;
-  }
 }

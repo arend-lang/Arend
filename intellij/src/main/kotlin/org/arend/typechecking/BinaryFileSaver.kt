@@ -15,7 +15,6 @@ import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.psi.PsiManager
 import org.arend.ext.error.ErrorReporter
-import org.arend.library.SourceLibrary
 import org.arend.module.ModuleLocation
 import org.arend.psi.ArendFile
 import org.arend.typechecking.error.NotificationErrorReporter

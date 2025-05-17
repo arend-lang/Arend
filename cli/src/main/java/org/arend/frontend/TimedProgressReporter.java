@@ -11,10 +11,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.arend.frontend.library.TimedLibraryManager.timeToString;
-
 public class TimedProgressReporter implements ProgressReporter<List<? extends Concrete.ResolvableDefinition>> {
   private final Map<TCDefReferable, Pair<Long,Long>> myTimes = new HashMap<>();
+
+  public static @NotNull String timeToString(long time) {
+    if (time < 10000) {
+      return time + "ms";
+    }
+    if (time < 60000) {
+      return time / 1000 + ("." + (time / 100 % 10)) + "s";
+    }
+
+    long seconds = time / 1000;
+    return (seconds / 60) + "m" + (seconds % 60) + "s";
+  }
 
   @Override
   public void beginProcessing(int numberOfItems) {}

@@ -7,8 +7,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFileFactory
 import org.arend.ArendLanguage
 import org.arend.error.DummyErrorReporter
-import org.arend.module.ArendPreludeLibrary
-import org.arend.module.ArendPreludeLibrary.Companion.PRELUDE_FILE_NAME
 import org.arend.prelude.Prelude
 import org.arend.psi.ArendFile
 import org.arend.server.impl.ArendServerImpl
@@ -22,9 +20,10 @@ class ArendServerService(val project: Project) : Disposable {
     val prelude: ArendFile?
 
     init {
-        val preludeText = String(ArendPreludeLibrary::class.java.getResourceAsStream("/lib/Prelude" + FileUtils.EXTENSION)!!.readBytes(), StandardCharsets.UTF_8)
+        val preludeFileName = Prelude.MODULE_PATH.toString() + FileUtils.EXTENSION
+        val preludeText = String(ArendServerService::class.java.getResourceAsStream("/lib/$preludeFileName")!!.readBytes(), StandardCharsets.UTF_8)
         prelude = runReadAction {
-            val prelude = PsiFileFactory.getInstance(project).createFileFromText(PRELUDE_FILE_NAME, ArendLanguage.INSTANCE, preludeText) as? ArendFile
+            val prelude = PsiFileFactory.getInstance(project).createFileFromText(preludeFileName, ArendLanguage.INSTANCE, preludeText) as? ArendFile
             if (prelude != null) {
                 prelude.virtualFile?.isWritable = false
                 prelude.generatedModuleLocation = Prelude.MODULE_LOCATION

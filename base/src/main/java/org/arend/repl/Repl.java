@@ -11,7 +11,6 @@ import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.ext.reference.Precedence;
 import org.arend.extImpl.definitionRenamer.CachingDefinitionRenamer;
 import org.arend.extImpl.definitionRenamer.ScopeDefinitionRenamer;
-import org.arend.library.Library;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.*;
@@ -123,9 +122,11 @@ public abstract class Repl {
     return quit;
   }
 
+  /* TODO[server2]
   protected final boolean typecheckLibrary(@NotNull Library library) {
     return typechecking.typecheckLibrary(library);
   }
+  */
 
   @Contract(pure = true)
   public final @NotNull ModuleScopeProvider getAvailableModuleScopeProvider() {

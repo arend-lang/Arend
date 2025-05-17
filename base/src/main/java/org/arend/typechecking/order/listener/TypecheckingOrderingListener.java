@@ -17,7 +17,6 @@ import org.arend.ext.core.ops.CMP;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.typechecking.DefinitionListener;
-import org.arend.library.Library;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.term.concrete.Concrete;
@@ -129,18 +128,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, myErrorReporter).orderModules(modules);
       return true;
     });
-  }
-
-  public boolean typecheckLibrary(Library library, CancellationIndicator cancellationIndicator) {
-    return run(cancellationIndicator, () -> library.orderModules(new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, myErrorReporter)));
-  }
-
-  public boolean typecheckLibrary(Library library) {
-    return typecheckLibrary(library, null);
-  }
-
-  public boolean typecheckTests(Library library, CancellationIndicator cancellationIndicator) {
-    return run(cancellationIndicator, () -> library.orderTestModules(new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, myErrorReporter)));
   }
 
   public boolean typecheckCollected(CollectingOrderingListener collector, CancellationIndicator cancellationIndicator) {

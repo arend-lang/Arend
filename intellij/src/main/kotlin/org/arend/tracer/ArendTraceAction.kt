@@ -24,7 +24,6 @@ import org.arend.psi.ext.*
 import org.arend.refactoring.collectArendExprs
 import org.arend.refactoring.selectedExpr
 import org.arend.term.concrete.Concrete
-import org.arend.typechecking.LibraryArendExtensionProvider
 import org.arend.typechecking.error.local.GoalDataHolder
 import org.arend.typechecking.instance.pool.GlobalInstancePool
 import org.arend.typechecking.visitor.DefinitionTypechecker

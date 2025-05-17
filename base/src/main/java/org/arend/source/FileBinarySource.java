@@ -1,6 +1,5 @@
 package org.arend.source;
 
-import org.arend.library.SourceLibrary;
 import org.arend.module.ModuleLocation;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
@@ -53,16 +52,6 @@ public class FileBinarySource extends StreamBinarySource {
       return Files.getLastModifiedTime(myFile).toMillis();
     } catch (IOException e) {
       return 0;
-    }
-  }
-
-  @Override
-  public boolean delete(SourceLibrary library) {
-    try {
-      Files.deleteIfExists(myFile);
-      return true;
-    } catch (IOException e) {
-      return false;
     }
   }
 }

@@ -5,8 +5,6 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
-import org.arend.library.OldLibraryManager;
-import org.arend.library.SourceLibrary;
 import org.arend.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
 import org.arend.ext.serialization.DeserializationException;
@@ -68,6 +66,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
     return myDependencies;
   }
 
+  /* TODO[server2]:
   public static ConcreteGroup getGroup(InputStream inputStream, OldLibraryManager libraryManager, SourceLibrary library) throws IOException, DeserializationException {
     CodedInputStream codedInputStream = CodedInputStream.newInstance(inputStream);
     codedInputStream.setRecursionLimit(Integer.MAX_VALUE);
@@ -75,7 +74,7 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
 
     ModuleDeserialization moduleDeserialization = new ModuleDeserialization(moduleProto, null, libraryManager.getDefinitionListener());
 
-    ConcreteGroup group = moduleDeserialization.readGroup(new ModuleLocation(library, ModuleLocation.LocationKind.GENERATED, new ModulePath()));
+    ConcreteGroup group = moduleDeserialization.readGroup(new ModuleLocation(library.getName(), ModuleLocation.LocationKind.GENERATED, new ModulePath()));
 
     ModuleScopeProvider moduleScopeProvider = libraryManager.getAvailableModuleScopeProvider(library);
     moduleDeserialization.readModule(moduleScopeProvider, library.getDependencyListener());
@@ -83,7 +82,6 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
     return group;
   }
 
-  /* TODO[server2]
   public @NotNull LoadResult load(SourceLoader sourceLoader) {
     SourceLibrary library = sourceLoader.getLibrary();
     ModulePath modulePath = getModulePath();

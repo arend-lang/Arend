@@ -2,7 +2,6 @@ package org.arend.module
 
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.vfs.VirtualFile
-import org.arend.library.SourceLibrary
 import org.arend.util.getRelativeFile
 import org.arend.source.StreamBinarySource
 import org.arend.util.FileUtils
@@ -25,15 +24,6 @@ class IntellijBinarySource(private val root: VirtualFile, private val binDirList
     override fun getModule() = module
 
     override fun getTimeStamp() = file?.timeStamp ?: 0
-
-    override fun delete(library: SourceLibrary?) = if (file != null) runWriteAction {
-        try {
-            file!!.delete(library)
-        } catch (e: IOException) {
-            return@runWriteAction false
-        }
-        true
-    } else false
 
     override fun getInputStream(): InputStream? = file?.inputStream
 

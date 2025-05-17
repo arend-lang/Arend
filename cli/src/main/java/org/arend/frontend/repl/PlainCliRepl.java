@@ -1,6 +1,5 @@
 package org.arend.frontend.repl;
 
-import org.arend.library.SourceLibrary;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
@@ -12,7 +11,7 @@ import java.util.Scanner;
 public class PlainCliRepl extends CommonCliRepl {
   public PlainCliRepl() {
     super();
-    prompt = "\u03bb ";
+    prompt = "λ ";
   }
 
   @Override
@@ -65,7 +64,7 @@ public class PlainCliRepl extends CommonCliRepl {
     repl.println();
     repl.println("Note: you're using the plain REPL.");
     repl.addLibraryDirectories(libDirs);
-    if (recompile) repl.getReplLibrary().addFlag(SourceLibrary.Flag.RECOMPILE);
+    // TODO[server2]: if (recompile) repl.getReplLibrary().addFlag(SourceLibrary.Flag.RECOMPILE);
     repl.initialize();
     repl.runRepl(System.in);
   }

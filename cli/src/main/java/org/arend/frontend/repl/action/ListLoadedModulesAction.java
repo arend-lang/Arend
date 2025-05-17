@@ -2,7 +2,6 @@ package org.arend.frontend.repl.action;
 
 import org.arend.ext.module.ModulePath;
 import org.arend.frontend.repl.CommonCliRepl;
-import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.scope.Scope;
@@ -21,7 +20,7 @@ public final class ListLoadedModulesAction implements CliReplCommand {
   @Override
   public void invoke(@NotNull String line, @NotNull CommonCliRepl api, @NotNull Supplier<@NotNull String> scanner) {
     Node root = new Node("", null);
-    api.getReplLibrary().getLoadedModules().forEach(mP -> insert(mP.toArray(), root));
+    // TODO[server2]: api.getReplLibrary().getLoadedModules().forEach(mP -> insert(mP.toArray(), root));
 
     if (root.children.isEmpty()) api.println("[INFO] No modules loaded."); else print(api, root, "", true, root);
   }
@@ -77,7 +76,7 @@ public final class ListLoadedModulesAction implements CliReplCommand {
     }
 
     if (!children.isEmpty()) {
-      print(api, children.get(children.size() - 1), prefix + (isTail ? "    " : "│   "), true, root);
+      print(api, children.getLast(), prefix + (isTail ? "    " : "│   "), true, root);
     }
   }
 

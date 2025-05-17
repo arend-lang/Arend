@@ -4,7 +4,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-// TODO[server2]: Delete this
 public class LibraryDependency implements Comparable<LibraryDependency> {
   public final @NotNull String name;
 

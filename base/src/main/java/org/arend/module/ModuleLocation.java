@@ -1,7 +1,6 @@
 package org.arend.module;
 
 import org.arend.ext.module.ModulePath;
-import org.arend.library.Library;
 
 import java.util.Objects;
 
@@ -14,12 +13,6 @@ public class ModuleLocation {
 
   public ModuleLocation(String libraryName, LocationKind locationKind, ModulePath modulePath) {
     myLibraryName = libraryName;
-    myLocationKind = locationKind;
-    myModulePath = modulePath;
-  }
-
-  public ModuleLocation(Library library, LocationKind locationKind, ModulePath modulePath) {
-    myLibraryName = library.getName();
     myLocationKind = locationKind;
     myModulePath = modulePath;
   }

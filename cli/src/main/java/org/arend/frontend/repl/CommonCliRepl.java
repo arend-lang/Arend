@@ -10,15 +10,12 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.PrettyPrinterFlag;
-import org.arend.frontend.FileLibraryResolver;
 import org.arend.frontend.PositionComparator;
 import org.arend.frontend.parser.ArendLexer;
 import org.arend.frontend.parser.ArendParser;
 import org.arend.frontend.parser.BuildVisitor;
 import org.arend.frontend.parser.ReporterErrorListener;
 import org.arend.frontend.repl.action.*;
-import org.arend.library.Library;
-import org.arend.library.SourceLibrary;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.GeneratedVersion;
@@ -68,8 +65,7 @@ public abstract class CommonCliRepl extends Repl {
 
   @NotNull
   protected String prompt = ">";
-  private final FileLibraryResolver myLibraryResolver;
-  private final SourceLibrary myReplLibrary;
+  // TODO[server2]: private final SourceLibrary myReplLibrary;
   private final Set<ModulePath> myModules;
 
   //region Tricky constructors (expand to read more...)
@@ -82,37 +78,25 @@ public abstract class CommonCliRepl extends Repl {
       @NotNull Set<ModulePath> modules,
       @NotNull ListErrorReporter errorReporter) {
     this(
+        new ArendServerImpl(null /* TODO[server2] */, false, false),
         modules,
-        new FileLibraryResolver(new ArrayList<>(), errorReporter, DummyDependencyListener.INSTANCE),
         errorReporter
     );
   }
 
   private CommonCliRepl(
-      @NotNull Set<ModulePath> modules,
-      @NotNull FileLibraryResolver libraryResolver,
-      @NotNull ListErrorReporter errorReporter) {
-    this(
-      new ArendServerImpl(null /* TODO[server2] */, false, false),
-      modules,
-      libraryResolver,
-      errorReporter);
-  }
-
-  private CommonCliRepl(
       @NotNull ArendServer server,
       @NotNull Set<ModulePath> modules,
-      @NotNull FileLibraryResolver libraryResolver,
       @NotNull ListErrorReporter errorReporter) {
     super(
       errorReporter,
       server,
       new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, ref -> null /* TODO[server2] */)
     );
-    myLibraryResolver = libraryResolver;
-    myReplLibrary = Files.exists(pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE))
-        ? libraryResolver.registerLibrary(pwd)
-        : null; // TODO[server2]: new FileSourceLibrary("Repl", pwd, null, new LibraryHeader(modules, new ArrayList<>(), null, Range.unbound(), null, null), DummyDependencyListener.INSTANCE);
+    /* TODO[server2]
+      myReplLibrary = Files.exists(pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE)) ? libraryResolver.registerLibrary(pwd)
+        : new FileSourceLibrary("Repl", pwd, null, new LibraryHeader(modules, new ArrayList<>(), null, Range.unbound(), null, null), DummyDependencyListener.INSTANCE);
+    */
     myModules = modules;
 
     try {
@@ -209,14 +193,17 @@ public abstract class CommonCliRepl extends Repl {
     registerAction("cd", new CdCommand());
   }
 
+  /* TODO[server2]
   public @Nullable Library createLibrary(@NotNull String path) {
     var library = myLibraryResolver.resolve(myReplLibrary, path);
     if (library != null) return library;
     return myLibraryResolver.registerLibrary(pwd.resolve(path).toAbsolutePath().normalize());
+    return null;
   }
+  */
 
   public final void addLibraryDirectories(@NotNull Collection<? extends Path> libDirs) {
-    myLibraryResolver.addLibraryDirectories(libDirs);
+    // TODO[server2]: myLibraryResolver.addLibraryDirectories(libDirs);
   }
 
   @Override
@@ -252,18 +239,14 @@ public abstract class CommonCliRepl extends Repl {
     this(new TreeSet<>(), new ListErrorReporter(new ArrayList<>()));
   }
 
-  /**
-   * @return false means type checking failed.
-   */
+  /* TODO[server2]
   public final boolean loadLibrary(@NotNull Library library) {
-    return false;
-    /* TODO[server2]
     if (!myLibraryManager.loadLibrary(library, typechecking)) return false;
     myLibraryManager.registerDependency(myReplLibrary, library);
     typecheckLibrary(library);
     return true;
-    */
   }
+  */
 
   @Override
   protected final void loadLibraries() {
@@ -309,16 +292,14 @@ public abstract class CommonCliRepl extends Repl {
    */
   public final boolean unloadModule(@NotNull ModulePath modulePath) {
     boolean isLoadedBefore = myModules.remove(modulePath);
+    /* TODO[server2]:
     if (isLoadedBefore) {
-      // TODO[server2]: myLibraryManager.unloadLibrary(myReplLibrary);
+      myLibraryManager.unloadLibrary(myReplLibrary);
       myReplLibrary.groupLoaded(modulePath, null, true, false);
       typecheckLibrary(myReplLibrary);
     }
+    */
     return isLoadedBefore;
-  }
-
-  public @NotNull SourceLibrary getReplLibrary() {
-    return myReplLibrary;
   }
 
   private final class ChangePromptCommand implements ReplCommand {

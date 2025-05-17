@@ -3,7 +3,6 @@ package org.arend.frontend.repl.jline;
 import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.repl.CommandHandler;
 import org.arend.repl.action.PrettyPrintFlagCommand;
-import org.arend.library.SourceLibrary;
 import org.arend.repl.action.DirectoryArgumentCommand;
 import org.arend.repl.action.FileArgumentCommand;
 import org.arend.repl.action.NormalizeCommand;
@@ -153,7 +152,7 @@ public class JLineCliRepl extends CommonCliRepl {
     }
     var repl = new JLineCliRepl(terminal);
     repl.addLibraryDirectories(libDirs);
-    if (recompile) repl.getReplLibrary().addFlag(SourceLibrary.Flag.RECOMPILE);
+    // TODO[server2]: if (recompile) repl.getReplLibrary().addFlag(SourceLibrary.Flag.RECOMPILE);
     repl.initialize();
     repl.println(ASCII_BANNER);
     repl.println();

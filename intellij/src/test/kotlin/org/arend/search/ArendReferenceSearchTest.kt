@@ -4,7 +4,8 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
 import kotlinx.collections.immutable.toImmutableList
 import org.arend.ArendTestBase
-import org.arend.module.ArendPreludeLibrary
+import org.arend.prelude.Prelude
+import org.arend.util.FileUtils
 
 class ArendReferenceSearchTest : ArendTestBase() {
     fun `test Nat is used in Prelude`() {
@@ -26,14 +27,14 @@ class ArendReferenceSearchTest : ArendTestBase() {
     private fun isUsedInPrelude(scope: GlobalSearchScope): Boolean {
         val element = myFixture.elementAtCaret
         val search = ReferencesSearch.search(element, scope)
-        return search.anyMatch { it.element.containingFile.name == ArendPreludeLibrary.PRELUDE_FILE_NAME }
+        return search.anyMatch { it.element.containingFile.name == Prelude.MODULE_PATH.toString() + FileUtils.EXTENSION }
     }
 
     fun `test findUsages upon alias`() {
         InlineFile("""\func foobar \alias f{-caret-}ubar => {?}""").withCaret()
         val element = myFixture.elementAtCaret
         val search = ReferencesSearch.search(element, GlobalSearchScope.allScope(project))
-        assertTrue(search.toImmutableList().size == 0)
+        assertTrue(search.toImmutableList().isEmpty())
     }
 
     fun `test findUsages upon alias 2`() {

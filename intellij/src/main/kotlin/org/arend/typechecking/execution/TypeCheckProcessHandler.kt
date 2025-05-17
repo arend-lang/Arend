@@ -9,8 +9,6 @@ import com.intellij.openapi.project.Project
 import org.arend.ext.error.ErrorReporter
 import org.arend.ext.error.GeneralError
 import org.arend.ext.module.ModulePath
-import org.arend.library.Library
-import org.arend.library.SourceLibrary
 import org.arend.library.error.LibraryError
 import org.arend.library.error.ModuleInSeveralLibrariesError
 import org.arend.module.error.ModuleNotFoundError
@@ -180,6 +178,7 @@ class TypeCheckProcessHandler(
         */
     }
 
+    /* TODO[server2]
     private fun findLibrary(modulePath: ModulePath, registeredLibraries: Collection<Library>, typecheckingErrorReporter: ErrorReporter): Library? {
         var library: Library? = null
         var libraries: MutableList<Library>? = null
@@ -207,6 +206,7 @@ class TypeCheckProcessHandler(
 
         return library
     }
+    */
 
     override fun detachProcessImpl() {
         //Since we have no separate process to detach from, we simply interrupt current typechecking computation

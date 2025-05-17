@@ -1,6 +1,5 @@
 package org.arend.source;
 
-import org.arend.library.SourceLibrary;
 import org.arend.module.ModuleLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,10 +39,5 @@ public class ZipFileBinarySource extends StreamBinarySource {
   @Override
   protected @Nullable OutputStream getOutputStream() {
     return null;
-  }
-
-  @Override
-  public boolean delete(SourceLibrary library) {
-    return false;
   }
 }

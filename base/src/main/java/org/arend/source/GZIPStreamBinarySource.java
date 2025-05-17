@@ -1,6 +1,5 @@
 package org.arend.source;
 
-import org.arend.library.SourceLibrary;
 import org.arend.module.ModuleLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -45,10 +44,5 @@ public class GZIPStreamBinarySource extends StreamBinarySource {
   @Override
   public long getTimeStamp() {
     return mySource.getTimeStamp();
-  }
-
-  @Override
-  public boolean delete(SourceLibrary library) {
-    return mySource.delete(library);
   }
 }

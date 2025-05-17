@@ -6,8 +6,8 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.io.FileUtil
 import org.arend.ext.module.ModulePath
-import org.arend.module.ArendPreludeLibrary
 import org.arend.module.config.LibraryConfig
+import org.arend.prelude.Prelude
 import org.arend.server.ArendServerService
 import org.arend.util.FileUtils
 import org.arend.util.findLibrary
@@ -15,7 +15,7 @@ import org.arend.util.findLibrary
 class ArendFileNavigationContributor : ChooseByNameContributor {
     override fun getNames(project: Project?, includeNonProjectItems: Boolean): Array<String> {
         project ?: return emptyArray()
-        val result = mutableListOf(ArendPreludeLibrary.PRELUDE_FILE_NAME)
+        val result = mutableListOf(Prelude.MODULE_PATH.toString() + FileUtils.EXTENSION)
         val service = project.service<ArendServerService>()
         forEachArendRawLib(service) { lib ->
             lib.additionalModulesSet.forEach { modulePath ->
@@ -34,7 +34,7 @@ class ArendFileNavigationContributor : ChooseByNameContributor {
         project ?: return emptyArray()
         name ?: return emptyArray()
         val result = mutableListOf<NavigationItem>()
-        if (name == ArendPreludeLibrary.PRELUDE_FILE_NAME) {
+        if (name == Prelude.MODULE_PATH.toString() + FileUtils.EXTENSION) {
             project.service<ArendServerService>().prelude?.let { result.add(it) }
         }
         val modulePath = ModulePath.fromString(FileUtil.getNameWithoutExtension(name))

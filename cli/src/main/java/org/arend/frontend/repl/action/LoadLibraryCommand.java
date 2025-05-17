@@ -1,7 +1,6 @@
 package org.arend.frontend.repl.action;
 
 import org.arend.frontend.repl.CommonCliRepl;
-import org.arend.library.Library;
 import org.arend.repl.action.DirectoryArgumentCommand;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.Nls;
@@ -16,13 +15,14 @@ public final class LoadLibraryCommand implements CliReplCommand, DirectoryArgume
   }
 
   @Override
-  public final void invoke(@NotNull String line, @NotNull CommonCliRepl api, @NotNull Supplier<@NotNull String> scanner) {
+  public void invoke(@NotNull String line, @NotNull CommonCliRepl api, @NotNull Supplier<@NotNull String> scanner) {
 /*
     if (!FileUtils.isLibraryName(line)) {
       api.eprintln("[ERROR] `" + line + "` is not a valid library name.");
       return;
     }
 */
+    /* TODO[server2]
     Library library = api.createLibrary(line);
     if (library == null || api.checkErrors()) {
       api.eprintln("[ERROR] Cannot find a library at '" + line + "'.");
@@ -34,6 +34,7 @@ public final class LoadLibraryCommand implements CliReplCommand, DirectoryArgume
       api.checkErrors();
       api.eprintln("[ERROR] No library loaded.");
     }
+    */
   }
 
   @Override

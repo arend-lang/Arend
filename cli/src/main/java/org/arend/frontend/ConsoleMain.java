@@ -41,7 +41,6 @@ import org.arend.typechecking.doubleChecker.CoreModuleChecker;
 import org.arend.typechecking.error.local.GoalError;
 import org.arend.typechecking.order.MapTarjanSCC;
 import org.arend.util.FileUtils;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -427,7 +426,7 @@ public class ConsoleMain {
         if (numWithGoals > 0) {
           System.out.println("Number of modules with goals: " + numWithGoals);
         }
-        System.out.println("--- Done (" + timeToString(time) + ") ---");
+        System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
 
         if (cmdLine.hasOption(SHOW_SIZES)) {
           showSizes(server, library);
@@ -462,7 +461,7 @@ public class ConsoleMain {
             }
           } finally {
             time = System.currentTimeMillis() - time;
-            System.out.println("--- Done (" + timeToString(time) + ") ---");
+            System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
           }
         }
       }
@@ -478,7 +477,7 @@ public class ConsoleMain {
 
           server.getCheckerFor(Collections.singletonList(module)).typecheck(UnstoppableCancellationIndicator.INSTANCE, progressReporter);
 
-          System.out.println("--- Done (" + timeToString(System.currentTimeMillis() - time) + ") ---");
+          System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
 
           if (doubleCheck) {
             System.out.println();
@@ -493,7 +492,7 @@ public class ConsoleMain {
               }
             } finally {
               time = System.currentTimeMillis() - time;
-              System.out.println("--- Done (" + timeToString(time) + ") ---");
+              System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
             }
           }
         }
@@ -533,7 +532,7 @@ public class ConsoleMain {
         }
 
         System.out.println("Tests completed: " + total[0] + ", Failed: " + failed[0]);
-        System.out.println("--- Done (" + timeToString(time) + ") ---");
+        System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
 
         if (doubleCheck) {
           System.out.println();
@@ -552,7 +551,7 @@ public class ConsoleMain {
             }
           } finally {
             time = System.currentTimeMillis() - time;
-            System.out.println("--- Done (" + timeToString(time) + ") ---");
+            System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
           }
         }
       }
@@ -565,23 +564,11 @@ public class ConsoleMain {
     return true;
   }
 
-  private static @NotNull String timeToString(long time) {
-    if (time < 10000) {
-      return time + "ms";
-    }
-    if (time < 60000) {
-      return time / 1000 + ("." + (time / 100 % 10)) + "s";
-    }
-
-    long seconds = time / 1000;
-    return (seconds / 60) + "m" + (seconds % 60) + "s";
-  }
-
   private void loadLibrary(LibraryManager libraryManager, SourceLibrary library, ArendServer server) {
     System.out.println("[INFO] Loading " + library.getLibraryName());
     long time = System.currentTimeMillis();
     libraryManager.updateLibrary(library, server);
-    System.out.println("[INFO] " + "Loaded " + library.getLibraryName() + " (" + timeToString(System.currentTimeMillis() - time) + ")");
+    System.out.println("[INFO] " + "Loaded " + library.getLibraryName() + " (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ")");
   }
 
   private boolean loadDependencies(SourceLibrary library, LibraryManager libraryManager, List<Path> libDirs, ArendServer server) {

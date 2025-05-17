@@ -22,10 +22,12 @@ public final class UnloadModuleCommand implements CliReplCommand {
   @Override
   public void invoke(@NotNull String line, @NotNull CommonCliRepl api, @NotNull Supplier<@NotNull String> scanner) {
     var modulePath = ModulePath.fromString(line);
+    /* TODO[server2]:
     if (!api.getReplLibrary().containsModule(modulePath)) {
       api.eprintln("[ERROR] Module " + modulePath + " is not loaded.");
       return;
     }
+    */
     Scope scope = api.getAvailableModuleScopeProvider().forModule(modulePath);
     if (scope != null) api.removeScope(scope);
     boolean isUnloaded = api.unloadModule(modulePath);
