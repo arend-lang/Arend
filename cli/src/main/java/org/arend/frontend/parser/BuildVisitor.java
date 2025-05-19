@@ -1622,21 +1622,22 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
 
       List<ExprContext> exprs = typedExpr.expr();
       ParamAttrContext paramAttr = typedExpr.paramAttr();
+      Position position = tokenPosition(tele.start);
       if (exprs.size() == 2) {
         List<ParsedLocalReferable> vars = new ArrayList<>();
         getVarList(exprs.get(0), vars);
         if (isDefinition && paramAttr.STRICT() != null) {
-          parameters.add(new Concrete.DefinitionTelescopeParameter(tokenPosition(tele.getStart()), explicit, true, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.DefinitionTelescopeParameter(position, explicit, true, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null));
         } else {
           checkStrict(typedExpr);
-          parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.getStart()), explicit, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.TelescopeParameter(position, explicit, vars, visitExpr(exprs.get(1)), paramAttr.PROPERTY() != null));
         }
       } else {
         if (isDefinition && paramAttr.STRICT() != null) {
-          parameters.add(new Concrete.DefinitionTypeParameter(explicit, true, visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.DefinitionTelescopeParameter(position, explicit, true, Collections.singletonList(null), visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null));
         } else {
           checkStrict(typedExpr);
-          parameters.add(new Concrete.TypeParameter(explicit, visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null));
+          parameters.add(new Concrete.TypeParameter(position, explicit, visitExpr(exprs.getFirst()), paramAttr.PROPERTY() != null));
         }
       }
     }

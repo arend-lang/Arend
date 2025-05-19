@@ -115,8 +115,6 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
       return (T) new Concrete.NameParameter(data, parameter.isExplicit(), ((Concrete.NameParameter) parameter).getReferable());
     } else if (Concrete.TypeParameter.class.equals(parameter.getClass())) {
       return (T) new Concrete.TypeParameter(data, parameter.isExplicit(), nullableMap(parameter.getType()), parameter.isProperty());
-    } else if (Concrete.DefinitionTypeParameter.class.equals(parameter.getClass())) {
-      return (T) new Concrete.DefinitionTypeParameter(data, parameter.isExplicit(), parameter.isStrict(), nullableMap(parameter.getType()), parameter.isProperty());
     } else if (Concrete.TelescopeParameter.class.equals(parameter.getClass())) {
       return (T) new Concrete.TelescopeParameter(data, parameter.isExplicit(), new ArrayList<>(parameter.getReferableList()), nullableMap(parameter.getType()), parameter.isProperty());
     } else if (Concrete.DefinitionTelescopeParameter.class.equals(parameter.getClass())) {
@@ -195,7 +193,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   @Override
   public Concrete.Expression visitBinOpSequence(Concrete.BinOpSequenceExpression expr, Void ignored) {
     if (expr.getSequence().size() == 1) {
-      return expr.getSequence().get(0).getComponent().accept(this, null);
+      return expr.getSequence().getFirst().getComponent().accept(this, null);
     }
     var clauses = expr.getClauses();
 
@@ -214,17 +212,13 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   protected Concrete.Pattern visitPattern(Concrete.Pattern pattern) {
     if (pattern == null) return null;
     var data = myData != null ? myData : pattern.getData();
-    if (pattern instanceof Concrete.NamePattern namePattern) {
-      return new Concrete.NamePattern(data, namePattern.isExplicit(), namePattern.getReferable(), namePattern.type);
-    } else if (pattern instanceof Concrete.ConstructorPattern conPattern) {
-      return new Concrete.ConstructorPattern(data, conPattern.isExplicit(), conPattern.getConstructorData(), conPattern.getConstructor(), visitPatterns(conPattern.getPatterns()), visitTypedReferable(conPattern.getAsReferable()));
-    } else if (pattern instanceof Concrete.TuplePattern tuplePattern) {
-      return new Concrete.TuplePattern(data, tuplePattern.isExplicit(), visitPatterns(tuplePattern.getPatterns()), visitTypedReferable(tuplePattern.getAsReferable()));
-    } else if (pattern instanceof Concrete.NumberPattern numberPattern) {
-      return new Concrete.NumberPattern(data, numberPattern.getNumber(), visitTypedReferable(numberPattern.getAsReferable()));
-    } else {
-      throw new IllegalArgumentException("Unhandled pattern: " + pattern.getClass());
-    }
+    return switch (pattern) {
+      case Concrete.NamePattern namePattern -> new Concrete.NamePattern(data, namePattern.isExplicit(), namePattern.getReferable(), namePattern.type);
+      case Concrete.ConstructorPattern conPattern -> new Concrete.ConstructorPattern(data, conPattern.isExplicit(), conPattern.getConstructorData(), conPattern.getConstructor(), visitPatterns(conPattern.getPatterns()), visitTypedReferable(conPattern.getAsReferable()));
+      case Concrete.TuplePattern tuplePattern -> new Concrete.TuplePattern(data, tuplePattern.isExplicit(), visitPatterns(tuplePattern.getPatterns()), visitTypedReferable(tuplePattern.getAsReferable()));
+      case Concrete.NumberPattern numberPattern -> new Concrete.NumberPattern(data, numberPattern.getNumber(), visitTypedReferable(numberPattern.getAsReferable()));
+      default -> throw new IllegalArgumentException("Unhandled pattern: " + pattern.getClass());
+    };
   }
 
   private Concrete.TypedReferable visitTypedReferable(Concrete.TypedReferable asReferable) {

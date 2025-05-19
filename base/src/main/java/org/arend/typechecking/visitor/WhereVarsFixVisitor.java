@@ -70,7 +70,7 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
           Map<Referable, ParamData> parameterMap = new HashMap<>();
           for (Map.Entry<TCDefReferable, Concrete.ExternalParameters> entry1 : definition.getExternalParameters().entrySet()) {
             int index = 0;
-            for (Concrete.Parameter parameter : entry1.getValue().parameters) {
+            for (Concrete.Parameter parameter : entry1.getValue().parameters()) {
               for (Referable referable : parameter.getReferableList()) {
                 if (referable != null) {
                   ParamData data = new ParamData(entry1.getKey(), parameter, index);
@@ -127,7 +127,7 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
         for (var data : parametersOriginalDefinitions) {
           Concrete.ExternalParameters params = definition.getExternalParameters().get(data.proj1);
           if (params != null) {
-            Pair<Concrete.Parameter, Referable> param = Concrete.getParameter(params.parameters, data.proj2);
+            Pair<Concrete.Parameter, Referable> param = Concrete.getParameter(params.parameters(), data.proj2);
             if (param != null) {
               newParams.add(new Concrete.TelescopeParameter(definition.getData(), false, Collections.singletonList(param.proj2), param.proj1.getType() == null ? null : param.proj1.getType(), param.proj1.isProperty()));
             }
@@ -173,13 +173,13 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
           for (var varData : parametersOriginalDefinitions) {
             Concrete.ExternalParameters params = definition.getExternalParameters().get(varData.proj1);
             if (params != null) {
-              if (params.pLevelParameters != null) {
+              if (params.pLevelParameters() != null) {
                 pLevelsDefs.add(varData.proj1);
-                if (pLevels == null) pLevels = params.pLevelParameters;
+                if (pLevels == null) pLevels = params.pLevelParameters();
               }
-              if (params.hLevelParameters != null) {
+              if (params.hLevelParameters() != null) {
                 hLevelsDefs.add(varData.proj1);
-                if (hLevels == null) hLevels = params.hLevelParameters;
+                if (hLevels == null) hLevels = params.hLevelParameters();
               }
             }
           }
@@ -267,7 +267,7 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
   private static Referable getReferable(Concrete.Definition definition, ParameterReferable parameterRef) {
     Concrete.ExternalParameters extParams = definition.getExternalParameters().get(parameterRef.getDefinition());
     if (extParams != null) {
-      var pair = Concrete.getParameter(extParams.parameters, parameterRef.getIndex());
+      var pair = Concrete.getParameter(extParams.parameters(), parameterRef.getIndex());
       if (pair != null) {
         return pair.proj2;
       }
@@ -328,7 +328,7 @@ public class WhereVarsFixVisitor extends BaseConcreteExpressionVisitor<Void> {
             parameters = myDefinition.getParameters();
           } else {
             Concrete.ExternalParameters externalParameters = myDefinition.getExternalParameters().get(pair.proj1);
-            parameters = externalParameters == null ? null : externalParameters.parameters;
+            parameters = externalParameters == null ? null : externalParameters.parameters();
           }
           if (parameters != null) {
             Pair<Concrete.Parameter, Referable> paramRef = Concrete.getParameter(parameters, pair.proj2);

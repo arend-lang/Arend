@@ -242,30 +242,6 @@ public final class Concrete {
     return null;
   }
 
-  public static class DefinitionTypeParameter extends TelescopeParameter {
-    private final boolean myStrict;
-
-    public DefinitionTypeParameter(Object data, boolean explicit, boolean isStrict, Expression type, boolean isProperty) {
-      super(data, explicit, Collections.singletonList(null), type, isProperty);
-      myStrict = isStrict;
-    }
-
-    public DefinitionTypeParameter(boolean explicit, boolean isStrict, Expression type, boolean isProperty) {
-      super(type.getData(), explicit, Collections.singletonList(null), type, isProperty);
-      myStrict = isStrict;
-    }
-
-    @Override
-    public boolean isStrict() {
-      return myStrict;
-    }
-
-    @Override
-    public DefinitionTypeParameter copy(Object data) {
-      return new DefinitionTypeParameter(data, isExplicit(), isStrict(), type, isProperty());
-    }
-  }
-
   public static class DefinitionTelescopeParameter extends TelescopeParameter {
     private final boolean myStrict;
 
@@ -521,12 +497,11 @@ public final class Concrete {
       this.fixity = binOpComponent instanceof FixityReferenceExpression refExpr ? refExpr.fixity :
         binOpComponent instanceof FieldCallExpression fieldCall ? fieldCall.fixity : Fixity.NONFIX;
       boolean explicit = true;
-      if (binOpComponent instanceof FixityReferenceExpression refExpr) {
-        refExpr.fixity = Fixity.NONFIX;
-      } else if (binOpComponent instanceof FieldCallExpression fieldCall) {
-        fieldCall.fixity = Fixity.NONFIX;
-      } else if (binOpComponent instanceof Pattern) {
-        explicit = ((Pattern) binOpComponent).isExplicit();
+      switch (binOpComponent) {
+        case FixityReferenceExpression refExpr -> refExpr.fixity = Fixity.NONFIX;
+        case FieldCallExpression fieldCall -> fieldCall.fixity = Fixity.NONFIX;
+        case Pattern pattern -> explicit = pattern.isExplicit();
+        default -> {}
       }
       this.isExplicit = explicit;
     }
@@ -1750,7 +1725,7 @@ public final class Concrete {
           Expression type = field.getResultType();
           List<TypeParameter> fieldParams = field.getParameters();
           if (fieldParams.size() > 1 || !fieldParams.isEmpty() && !isDesugarized) {
-            type = new PiExpression(field.getParameters().get(0).getData(), isDesugarized ? fieldParams.subList(1, fieldParams.size()) : fieldParams, type);
+            type = new PiExpression(field.getParameters().getFirst().getData(), isDesugarized ? fieldParams.subList(1, fieldParams.size()) : fieldParams, type);
           }
           parameters.add(new TypeParameter(field.getData(), field.getData().isExplicitField(), type, field.getKind() == ClassFieldKind.PROPERTY));
         }
@@ -1909,17 +1884,7 @@ public final class Concrete {
     }
   }
 
-  public static class ExternalParameters {
-    public final List<? extends Concrete.Parameter> parameters;
-    public final LevelParameters pLevelParameters;
-    public final LevelParameters hLevelParameters;
-
-    public ExternalParameters(List<? extends Parameter> parameters, LevelParameters pLevelParameters, LevelParameters hLevelParameters) {
-      this.parameters = parameters;
-      this.pLevelParameters = pLevelParameters;
-      this.hLevelParameters = hLevelParameters;
-    }
-  }
+  public record ExternalParameters(List<? extends Parameter> parameters, LevelParameters pLevelParameters, LevelParameters hLevelParameters) {}
 
   public static abstract class Definition extends ResolvableDefinition implements ConcreteDefinition {
     private TCDefReferable myReferable;

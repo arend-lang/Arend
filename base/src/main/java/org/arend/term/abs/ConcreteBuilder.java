@@ -498,7 +498,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     boolean isProperty = parameter.isProperty();
     if (!isNamed && (referableList.isEmpty() || referableList.size() == 1 && referableList.getFirst() == null)) {
       if (isDefinition && isStrict) {
-        return new Concrete.DefinitionTypeParameter(parameter.getData(), parameter.isExplicit(), true, cType, isProperty);
+        return new Concrete.DefinitionTelescopeParameter(parameter.getData(), parameter.isExplicit(), true, Collections.singletonList(null), cType, isProperty);
       } else {
         if (isStrict) {
           myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "\\strict is not allowed here", parameter.getData()));
