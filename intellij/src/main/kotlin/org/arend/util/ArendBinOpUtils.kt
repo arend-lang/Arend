@@ -223,6 +223,10 @@ fun forEachRange(concrete: Concrete.Expression, action: (TextRange, Concrete.Exp
                     childRanges.add(argRange)
                 }
                 childRanges.add((concrete.function.data as PsiElement).textRange)
+                val data = concrete.data as? PsiElement
+                if (data != null && data is ArendArgumentAppExpr) {
+                    data.ancestor<ArendAtomFieldsAcc>()?.let { childRanges.add(it.textRange) }
+                }
                 return TextRange(childRanges.minOf { it.startOffset }, childRanges.maxOf { it.endOffset })
             }
             else -> return (concrete.data as PsiElement).textRange

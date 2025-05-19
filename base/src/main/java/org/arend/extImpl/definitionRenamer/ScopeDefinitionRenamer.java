@@ -15,6 +15,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
+import static org.arend.prelude.Prelude.MODULE_PATH;
+
 public class ScopeDefinitionRenamer implements DefinitionRenamer {
   private final Scope myScope;
 
@@ -40,6 +42,9 @@ public class ScopeDefinitionRenamer implements DefinitionRenamer {
         parent = parent.getLocatedReferableParent();
       }
       if (parent == null || parent instanceof ModuleReferable) {
+        if (parent != null && ((ModuleReferable) parent).path == MODULE_PATH) {
+          break;
+        }
         Collections.reverse(list);
         ModulePath modulePath;
         if (parent != null) {
