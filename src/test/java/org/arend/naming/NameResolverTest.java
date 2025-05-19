@@ -683,44 +683,6 @@ public class NameResolverTest extends NameResolverTestCase {
       "\\func f : Nat => 0", 1);
   }
 
-  /* TODO[server2]
-  @Test
-  public void importHidingName() {
-    setModuleScopeProvider(module -> EmptyScope.INSTANCE);
-    resolveNamesModule(
-      """
-        \\import Mod
-        \\import Mod.Path
-        \\func foo => Path
-        """);
-  }
-
-  @Test
-  public void importHidingNamespace() {
-    setModuleScopeProvider(module -> EmptyScope.INSTANCE);
-    resolveNamesModule(
-      """
-        \\import Mod
-        \\import Mod.Path
-        \\func foo => Path.path
-        """);
-  }
-
-  @Test
-  public void importOrder() {
-    setModuleScopeProvider(module ->
-      module.equals(new ModulePath("Mod"))
-        ? new SingletonScope(new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, "foo", Precedence.DEFAULT, null, new FullModuleReferable(new ModuleLocation((String) null, null, module)), GlobalReferable.Kind.FUNCTION))
-        : EmptyScope.INSTANCE);
-    resolveNamesModule(
-      """
-        \\import Mod.Path
-        \\import Mod
-        \\func bar => foo
-        """);
-  }
-  */
-
   @Test
   public void unicodeError() {
     resolveNamesModule("\\func ∀ => 0", 1);

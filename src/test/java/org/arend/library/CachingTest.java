@@ -251,9 +251,7 @@ public class CachingTest extends LibraryTestCase {
     assertThat(errorList, hasSize(1));
     assertThatErrorsAre(typeMismatchError());
   }
-  */
 
-  /* TODO[server2]
   @Test
   public void persistDependencyWhenReferrerHasErrorInHeader() {
     library.addModule(new ModulePath("A"), "\\func a : \\1-Type1 => \\Set0");
