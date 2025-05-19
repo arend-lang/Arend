@@ -9,8 +9,6 @@ import org.junit.Test;
 
 import static org.arend.ExpressionFactory.DataCall;
 import static org.arend.Matchers.*;
-import static org.arend.core.expr.ExpressionFactory.Nat;
-import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 
 public class TypeClassesGlobalTest extends TypeCheckingTestCase {
@@ -359,9 +357,7 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class C | x : Nat
       \\func f {c : (C,C).1} => x {c}
       \\func g : Nat => f
-        \\where \\instance ccc : C | x => 1""", 1);
-    assertThatErrorsAre(argInferenceError());
-    assertThatErrorsAre(not(instanceInference(get("C"))));
+        \\where \\instance ccc : C | x => 1""");
   }
 
   @Test
@@ -370,10 +366,7 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class C (X : \\Type) | x : X
       \\func f {c : (C Nat, C Nat).1} => x {c}
       \\func g : Nat => f
-        \\where \\instance ccc : C Nat | x => 1""", 1);
-    assertThatErrorsAre(argInferenceError());
-    assertThatErrorsAre(not(instanceInference(get("C"))));
-    assertThatErrorsAre(not(instanceInference(get("C"), Nat())));
+        \\where \\instance ccc : C Nat | x => 1""");
   }
 
   @Test

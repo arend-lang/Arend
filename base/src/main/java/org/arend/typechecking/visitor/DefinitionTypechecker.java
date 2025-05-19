@@ -411,7 +411,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     definition.setGoodThisParameters(visitor.getGoodParameters());
   }
 
-  private void calculateTypeClassParameters(Concrete.GeneralDefinition refDef, Definition def) {
+  private void calculateTypeClassParameters(Definition def) {
     List<Definition.TypeClassParameterKind> typeClassParameters = new ArrayList<>();
 
     if (def instanceof Constructor constructor) {
@@ -442,11 +442,8 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       }
     }
 
-    for (Concrete.Parameter parameter : Objects.requireNonNull(Concrete.getParameters(refDef, true))) {
-      boolean isTypeClass = isTypeClassRef(parameter.getType());
-      for (int i = 0; i < parameter.getNumberOfParameters(); i++) {
-        typeClassParameters.add(isTypeClass ? Definition.TypeClassParameterKind.YES : Definition.TypeClassParameterKind.NO);
-      }
+    for (DependentLink param = def.getParameters(); param.hasNext(); param = param.getNext()) {
+      typeClassParameters.add(isTypeClassRef(param.getTypeExpr()) ? Definition.TypeClassParameterKind.YES : Definition.TypeClassParameterKind.NO);
     }
 
     for (Definition.TypeClassParameterKind kind : typeClassParameters) {
@@ -457,13 +454,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     }
   }
 
-  private boolean isTypeClassRef(Concrete.Expression expr) {
-    if (expr == null) {
-      return false;
-    }
-    Referable typeRef = expr.getUnderlyingReferable();
-    Definition typeDef = typeRef instanceof TCDefReferable ? ((TCDefReferable) typeRef).getTypechecked() : null;
-    return typeDef instanceof ClassDefinition && !((ClassDefinition) typeDef).isRecord();
+  private boolean isTypeClassRef(Expression expr) {
+    expr = expr.getUnderlyingExpression();
+    return expr instanceof ClassCallExpression classCall && !classCall.getDefinition().isRecord();
   }
 
   private Pair<Sort,Expression> typecheckParameters(Concrete.GeneralDefinition def, Definition typedDef, LinkList list, LocalInstancePool localInstancePool, Sort expectedSort, ClassField implementedField, List<Boolean> typedParameters) {
@@ -1106,7 +1099,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     typedDef.setResultType(expectedType);
     typedDef.setKind(kind.isSFunc() ? (kind == FunctionKind.LEMMA || kind == FunctionKind.AXIOM ? CoreFunctionDefinition.Kind.LEMMA : kind == FunctionKind.TYPE ? CoreFunctionDefinition.Kind.TYPE : CoreFunctionDefinition.Kind.SFUNC) : kind == FunctionKind.INSTANCE ? CoreFunctionDefinition.Kind.INSTANCE : CoreFunctionDefinition.Kind.FUNC);
 
-    calculateTypeClassParameters(def, typedDef);
+    calculateTypeClassParameters(typedDef);
     calculateParametersTypecheckingOrder(typedDef);
 
     GoodThisParametersVisitor goodThisParametersVisitor;
@@ -1922,7 +1915,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     }
 
     dataDefinition.setSort(userSort);
-    calculateTypeClassParameters(def, dataDefinition);
+    calculateTypeClassParameters(dataDefinition);
     calculateParametersTypecheckingOrder(dataDefinition);
 
     if (!paramsOk) {
@@ -2424,7 +2417,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     }
 
     constructor.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
-    calculateTypeClassParameters(def, constructor);
+    calculateTypeClassParameters(constructor);
     calculateGoodThisParameters(constructor);
     calculateParametersTypecheckingOrder(constructor);
 
@@ -3070,17 +3063,10 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     typedDef.setGoodThisFields(visitor.getGoodFields());
 
     Set<ClassField> typeClassFields = new HashSet<>();
-    for (Concrete.ClassElement element : def.getElements()) {
-      if (element instanceof Concrete.ClassField && ((Concrete.ClassField) element).getData().isParameterField()) {
-        Concrete.Expression resultType = ((Concrete.ClassField) element).getResultType();
-        if (resultType instanceof Concrete.PiExpression) {
-          resultType = ((Concrete.PiExpression) resultType).getCodomain();
-        }
-        if (isTypeClassRef(resultType)) {
-          ClassField field = typechecker.referableToClassField(((Concrete.ClassField) element).getData(), null);
-          if (field != null) {
-            typeClassFields.add(field);
-          }
+    for (ClassField field : typedDef.getPersonalFields()) {
+      if (field.getReferable().isParameterField()) {
+        if (isTypeClassRef(field.getResultType())) {
+          typeClassFields.add(field);
         }
       }
     }

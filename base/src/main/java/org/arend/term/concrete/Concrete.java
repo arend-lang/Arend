@@ -19,7 +19,6 @@ import org.arend.ext.prettyprinting.doc.DocFactory;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.GoalSolver;
-import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.util.Pair;
 import org.arend.naming.reference.*;
 import org.arend.ext.concrete.definition.ClassFieldKind;
@@ -292,16 +291,6 @@ public final class Concrete {
           expr = ((ClassExtExpression) expr).getBaseClassExpression();
         } else if (expr instanceof AppExpression) {
           expr = ((AppExpression) expr).getFunction();
-        } else if (expr instanceof ReferenceExpression) {
-          Referable ref = ((ReferenceExpression) expr).getReferent();
-          if (ref instanceof MetaReferable) {
-            MetaDefinition metaDef = ((MetaReferable) ref).getDefinition();
-            if (metaDef instanceof DefinableMetaDefinition) {
-              expr = ((DefinableMetaDefinition) metaDef).body;
-              continue;
-            }
-          }
-          break;
         } else {
           break;
         }
