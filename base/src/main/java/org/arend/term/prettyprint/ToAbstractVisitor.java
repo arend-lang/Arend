@@ -27,7 +27,6 @@ import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
-import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.module.LongName;
@@ -43,11 +42,9 @@ import org.arend.naming.renamer.ReferableRenamer;
 import org.arend.naming.renamer.Renamer;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.typechecking.visitor.VoidConcreteVisitor;
 import org.arend.util.SingletonList;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -59,15 +56,8 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   private final CollectFreeVariablesVisitor myFreeVariablesCollector;
   private final ReferableRenamer myRenamer;
   private final ExpressionPrettifier myPrettifier;
-  private final ExpressionPrettifier myDefaultPrettifier = new ExpressionPrettifier() {
-    @Override
-    public @Nullable ConcreteExpression prettify(@NotNull CoreExpression expression, @NotNull ExpressionPrettifier defaultPrettifier) {
-      if (!(expression instanceof Expression)) {
-        return null;
-      }
-      return ((Expression) expression).accept(ToAbstractVisitor.this, null);
-    }
-  };
+  private final ExpressionPrettifier myDefaultPrettifier = (expression, defaultPrettifier) ->
+      expression instanceof Expression ? ((Expression) expression).accept(ToAbstractVisitor.this, null) : null;
 
   ToAbstractVisitor(ExpressionPrettifier prettifier, PrettyPrinterConfig config, DefinitionRenamer definitionRenamer, CollectFreeVariablesVisitor collector, ReferableRenamer renamer) {
     myPrettifier = prettifier;
@@ -219,7 +209,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     List<Concrete.Argument> args = ((Concrete.AppExpression) expression).getArguments();
     boolean infix = false;
     if (fun instanceof Concrete.ReferenceExpression refExpr && refExpr.getReferent() instanceof GlobalReferable global && global.getRepresentablePrecedence().isInfix) {
-      if (args.size() >= 2 && args.get(args.size() - 1).isExplicit() && args.get(args.size() - 2).isExplicit()) {
+      if (args.size() >= 2 && args.getLast().isExplicit() && args.get(args.size() - 2).isExplicit()) {
         infix = true;
         for (int i = 0; i < args.size() - 2; i++) {
           if (args.get(i).isExplicit()) {
@@ -607,8 +597,8 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
       return lamExpr;
     }
 
-    List<? extends Referable> lastRefs = parameters.get(parameters.size() - 1).getReferableList();
-    Referable lastRef = lastRefs.get(lastRefs.size() - 1);
+    List<? extends Referable> lastRefs = parameters.getLast().getReferableList();
+    Referable lastRef = lastRefs.getLast();
     VoidConcreteVisitor<Void> visitor = new VoidConcreteVisitor<>() {
       @Override
       public Void visitReference(Concrete.ReferenceExpression expr, Void params) {
@@ -713,8 +703,8 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     for (; piExpr != null; piExpr = expr.cast(PiExpression.class)) {
       List<Concrete.TypeParameter> params = new ArrayList<>();
       visitDependentLink(piExpr.getParameters(), params, false);
-      if (!parameters.isEmpty() && parameters.get(parameters.size() - 1) instanceof Concrete.TelescopeParameter && !params.isEmpty() && params.get(0) instanceof Concrete.TelescopeParameter) {
-        parameters.get(parameters.size() - 1).addAll(params);
+      if (!parameters.isEmpty() && parameters.getLast() instanceof Concrete.TelescopeParameter && !params.isEmpty() && params.getFirst() instanceof Concrete.TelescopeParameter) {
+        parameters.getLast().addAll(params);
       } else {
         parameters.add(params);
       }
@@ -740,7 +730,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
 
   private List<Concrete.LevelExpression> visitLevelsNull(List<Level> levels, boolean showStdVar) {
     if (levels.size() == 1) {
-      Concrete.LevelExpression result = visitLevelNull(levels.get(0), showStdVar);
+      Concrete.LevelExpression result = visitLevelNull(levels.getFirst(), showStdVar);
       return result == null ? null : new SingletonList<>(result);
     }
 
@@ -1076,7 +1066,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   }
 
   public static Concrete.LevelParameters visitLevelParameters(List<? extends LevelVariable> parameters, boolean isPLevels) {
-    if (parameters.size() == 1 && parameters.get(0).equals(parameters.get(0).getStd())) {
+    if (parameters.size() == 1 && parameters.getFirst().equals(parameters.getFirst().getStd())) {
       return null;
     }
     List<LevelReferable> refs = new ArrayList<>(parameters.size());
@@ -1091,16 +1081,14 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   }
 
   private List<Concrete.FunctionClause> visitIntervalElim(DependentLink parameters, Body body) {
-    if (body instanceof ElimBody) {
-      return visitElimBody(parameters, (ElimBody) body);
-    } else if (body instanceof IntervalElim elim) {
-      // TODO: Add interval clauses
-      return elim.getOtherwise() == null ? new ArrayList<>() : visitElimBody(parameters, elim.getOtherwise());
-    } else if (body == null) {
-      return null;
-    } else {
-      throw new IllegalStateException();
-    }
+    return switch (body) {
+      case ElimBody elimBody -> visitElimBody(parameters, elimBody);
+      case IntervalElim elim ->
+        // TODO: Add interval clauses
+          elim.getOtherwise() == null ? new ArrayList<>() : visitElimBody(parameters, elim.getOtherwise());
+      case null -> null;
+      default -> throw new IllegalStateException();
+    };
   }
 
   @Override
@@ -1130,7 +1118,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     Pair<Concrete.LevelParameters, Concrete.LevelParameters> pair = visitLevelParameters(def.getLevelParameters(), def.getNumberOfPLevelParameters());
     List<Concrete.TypeParameter> parameters = new ArrayList<>();
     visitDependentLink(def.getParameters(), parameters, false);
-    boolean hasPatterns = !def.getConstructors().isEmpty() && def.getConstructors().get(0).getPatterns() != null;
+    boolean hasPatterns = !def.getConstructors().isEmpty() && def.getConstructors().getFirst().getPatterns() != null;
     List<Concrete.ConstructorClause> constructors = new ArrayList<>();
     Concrete.DataDefinition result = new Concrete.DataDefinition(def.getRef(), pair.proj1, pair.proj2, parameters, hasPatterns ? Collections.emptyList() : null, def.isTruncated(), def.isTruncated() ? visitSort(def.getSort()) : null, constructors);
     for (Constructor constructor : def.getConstructors()) {
@@ -1195,10 +1183,10 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   }
 
   @Override
-  public Concrete.GeneralDefinition visitMeta(MetaTopDefinition def, Void params) {
+  public Concrete.MetaDefinition visitMeta(MetaTopDefinition def, Void params) {
     Pair<Concrete.LevelParameters, Concrete.LevelParameters> pair = visitLevelParameters(def.getLevelParameters(), def.getNumberOfPLevelParameters());
     List<Concrete.Parameter> parameters = new ArrayList<>();
     visitDependentLink(def.getParameters(), parameters, true);
-    return new DefinableMetaDefinition(def.getReferable(), pair.proj1, pair.proj2, parameters, null);
+    return new Concrete.MetaDefinition(def.getReferable(), pair.proj1, pair.proj2, parameters, null);
   }
 }

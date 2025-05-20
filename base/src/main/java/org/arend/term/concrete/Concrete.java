@@ -1701,7 +1701,7 @@ public final class Concrete {
     if (definition instanceof DataDefinition) {
       return ((DataDefinition) definition).getParameters();
     }
-    if (definition instanceof DefinableMetaDefinition) {
+    if (definition instanceof MetaDefinition) {
       return definition.getParameters();
     }
     if (definition instanceof Constructor) {
@@ -1806,6 +1806,56 @@ public final class Concrete {
     @Override
     public void prettyPrint(StringBuilder builder, PrettyPrinterConfig ppConfig) {
       accept(new PrettyPrintVisitor(builder, 0, !ppConfig.isSingleLine()), null);
+    }
+  }
+
+  public static class MetaDefinition extends ResolvableDefinition implements ConcreteMetaDefinition {
+    private final List<Concrete.Parameter> myParameters;
+    private MetaReferable myReferable;
+    public Concrete.Expression body;
+
+    public MetaDefinition(MetaReferable referable, Concrete.LevelParameters pLevelParameters, Concrete.LevelParameters hLevelParameters, List<Concrete.Parameter> parameters, Concrete.@Nullable Expression body) {
+      myReferable = referable;
+      this.pLevelParameters = pLevelParameters;
+      this.hLevelParameters = hLevelParameters;
+      myParameters = parameters;
+      this.body = body;
+    }
+
+    @Override
+    public @NotNull MetaReferable getData() {
+      return myReferable;
+    }
+
+    @Override
+    public void setReferable(@NotNull TCDefReferable referable) {
+      if (!(referable instanceof MetaReferable)) throw new IllegalArgumentException();
+      myReferable = (MetaReferable) referable;
+    }
+
+    @Override
+    public @NotNull List<? extends Concrete.Parameter> getParameters() {
+      return myParameters;
+    }
+
+    @Override
+    public @Nullable ConcreteExpression getBody() {
+      return body;
+    }
+
+    @Override
+    public void addParameters(List<? extends Concrete.Parameter> parameters, List<Pair<TCDefReferable,Integer>> parametersOriginalDefinitions) {
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public <P, R> R accept(ConcreteResolvableDefinitionVisitor<? super P, ? extends R> visitor, P params) {
+      return visitor.visitMeta(this, params);
+    }
+
+    @Override
+    public void prettyPrint(PrettyPrintVisitor visitor, Precedence prec) {
+      visitor.visitMeta(this, null);
     }
   }
 

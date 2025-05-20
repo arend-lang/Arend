@@ -1,4 +1,4 @@
-package org.arend.term.concrete;
+package org.arend.extImpl;
 
 import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.concrete.expr.ConcreteArgument;
@@ -8,53 +8,24 @@ import org.arend.ext.concrete.expr.ConcreteReferenceExpression;
 import org.arend.ext.error.ArgumentExplicitnessError;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
-import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.TypedExpression;
-import org.arend.ext.util.Pair;
-import org.arend.extImpl.ConcreteFactoryImpl;
-import org.arend.naming.reference.LevelReferable;
-import org.arend.naming.reference.MetaReferable;
 import org.arend.naming.reference.Referable;
-import org.arend.naming.reference.TCDefReferable;
-import org.arend.term.prettyprint.PrettyPrintVisitor;
+import org.arend.term.concrete.Concrete;
+import org.arend.term.concrete.SubstConcreteVisitor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class DefinableMetaDefinition extends Concrete.ResolvableDefinition implements MetaDefinition {
-  private final List<Concrete.Parameter> myParameters;
-  private MetaReferable myReferable;
-  public Concrete.@Nullable Expression body;
+public class DefaultMetaDefinition implements MetaDefinition {
+  private final Concrete.MetaDefinition myDefinition;
 
-  public DefinableMetaDefinition(MetaReferable referable, Concrete.LevelParameters pLevelParameters, Concrete.LevelParameters hLevelParameters, List<Concrete.Parameter> parameters, Concrete.@Nullable Expression body) {
-    myReferable = referable;
-    this.pLevelParameters = pLevelParameters;
-    this.hLevelParameters = hLevelParameters;
-    myParameters = parameters;
-    this.body = body;
-  }
-
-  public List<? extends LevelReferable> getPLevelParametersList() {
-    return pLevelParameters == null ? null : pLevelParameters.getReferables();
-  }
-
-  public List<? extends LevelReferable> getHLevelParametersList() {
-    return hLevelParameters == null ? null : hLevelParameters.getReferables();
-  }
-
-  @Override
-  public List<? extends Concrete.Parameter> getParameters() {
-    return myParameters;
-  }
-
-  @Override
-  public void addParameters(List<? extends Concrete.Parameter> parameters, List<Pair<TCDefReferable,Integer>> parametersOriginalDefinitions) {
-    throw new IllegalStateException();
+  public DefaultMetaDefinition(Concrete.MetaDefinition definition) {
+    myDefinition = definition;
   }
 
   @Override
@@ -73,7 +44,7 @@ public class DefinableMetaDefinition extends Concrete.ResolvableDefinition imple
     }
 
     int params = 0;
-    for (Concrete.Parameter parameter : myParameters) {
+    for (Concrete.Parameter parameter : myDefinition.getParameters()) {
       params += parameter.getRefList().size();
     }
     boolean ok = arguments.size() >= params;
@@ -94,9 +65,9 @@ public class DefinableMetaDefinition extends Concrete.ResolvableDefinition imple
   }
 
   protected @Nullable ConcreteExpression getConcreteRepresentation(@Nullable Object data, @Nullable List<Concrete.LevelExpression> pLevels, @Nullable List<Concrete.LevelExpression> hLevels, @NotNull List<? extends ConcreteArgument> arguments, @Nullable ConcreteCoclauses coclauses) {
-    if (body == null) return null;
+    if (myDefinition.body == null) return null;
     List<Referable> refs = new ArrayList<>();
-    for (Concrete.Parameter parameter : myParameters) {
+    for (Concrete.Parameter parameter : myDefinition.getParameters()) {
       refs.addAll(parameter.getRefList());
     }
     assert refs.size() <= arguments.size();
@@ -109,9 +80,9 @@ public class DefinableMetaDefinition extends Concrete.ResolvableDefinition imple
       }
     }
 
-    binLevelParameters(subst, pLevels, getPLevelParametersList());
-    binLevelParameters(subst, hLevels, getHLevelParametersList());
-    Concrete.Expression result = body.accept(subst, null);
+    binLevelParameters(subst, pLevels, myDefinition.getPLevelParameters());
+    binLevelParameters(subst, hLevels, myDefinition.getHLevelParameters());
+    Concrete.Expression result = myDefinition.body.accept(subst, null);
     if (result == null) return null;
     if (arguments.size() > refs.size()) {
       result = new ConcreteFactoryImpl(result.getData()).app(result, arguments.subList(refs.size(), arguments.size()));
@@ -125,10 +96,10 @@ public class DefinableMetaDefinition extends Concrete.ResolvableDefinition imple
     return result;
   }
 
-  private void binLevelParameters(SubstConcreteVisitor subst, @Nullable List<Concrete.LevelExpression> levels, List<? extends LevelReferable> levelParameters) {
+  private void binLevelParameters(SubstConcreteVisitor subst, @Nullable List<Concrete.LevelExpression> levels, Concrete.LevelParameters levelParameters) {
     if (levelParameters != null && levels != null) {
-      for (int i = 0; i < levelParameters.size() && i < levels.size(); i++) {
-        subst.bind(levelParameters.get(i), levels.get(i));
+      for (int i = 0; i < levelParameters.referables.size() && i < levels.size(); i++) {
+        subst.bind(levelParameters.referables.get(i), levels.get(i));
       }
     }
   }
@@ -141,30 +112,9 @@ public class DefinableMetaDefinition extends Concrete.ResolvableDefinition imple
     }
     ConcreteExpression result = getConcreteRepresentation(refExpr.getData(), ((Concrete.ReferenceExpression) refExpr).getPLevels(), ((Concrete.ReferenceExpression) refExpr).getHLevels(), contextData.getArguments(), contextData.getCoclauses());
     if (result == null) {
-      typechecker.getErrorReporter().report(new TypecheckingError("Meta '" + myReferable.getRefName() + "' is not defined", contextData.getMarker()));
+      typechecker.getErrorReporter().report(new TypecheckingError("Meta '" + myDefinition.getData().getRefName() + "' is not defined", contextData.getMarker()));
       return null;
     }
     return typechecker.typecheck(result, contextData.getExpectedType());
-  }
-
-  @Override
-  public @NotNull MetaReferable getData() {
-    return myReferable;
-  }
-
-  @Override
-  public void setReferable(@NotNull TCDefReferable referable) {
-    if (!(referable instanceof MetaReferable)) throw new IllegalArgumentException();
-    myReferable = (MetaReferable) referable;
-  }
-
-  @Override
-  public <P, R> R accept(ConcreteResolvableDefinitionVisitor<? super P, ? extends R> visitor, P params) {
-    return visitor.visitMeta(this, params);
-  }
-
-  @Override
-  public void prettyPrint(PrettyPrintVisitor visitor, Precedence prec) {
-    visitor.visitMeta(this, null);
   }
 }

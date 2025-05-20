@@ -8,7 +8,6 @@ import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.term.Fixity;
 import org.arend.term.concrete.BaseConcreteExpressionVisitor;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.concrete.DefinableMetaDefinition;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,7 +24,7 @@ public class SyntacticDesugarVisitor extends BaseConcreteExpressionVisitor<Void>
   }
 
   public static void desugar(Concrete.ResolvableDefinition definition, ErrorReporter errorReporter, TypingInfo typingInfo) {
-    definition.accept(new SyntacticDesugarVisitor(typingInfo, errorReporter, !(definition instanceof DefinableMetaDefinition)), null);
+    definition.accept(new SyntacticDesugarVisitor(typingInfo, errorReporter, !(definition instanceof Concrete.MetaDefinition)), null);
   }
 
   public static Concrete.Expression desugar(Concrete.Expression expression, ErrorReporter errorReporter) {

@@ -101,7 +101,7 @@ public class BaseConcreteExpressionVisitor<P> implements ConcreteExpressionVisit
   @Override
   public Concrete.Expression visitBinOpSequence(Concrete.BinOpSequenceExpression expr, P params) {
     if (expr.getSequence().size() == 1 && expr.getClauses() == null) {
-      return expr.getSequence().get(0).getComponent().accept(this, params);
+      return expr.getSequence().getFirst().getComponent().accept(this, params);
     }
 
     for (Concrete.BinOpSequenceElem<Concrete.Expression> elem : expr.getSequence()) {
@@ -287,7 +287,7 @@ public class BaseConcreteExpressionVisitor<P> implements ConcreteExpressionVisit
   }
 
   @Override
-  public Void visitMeta(DefinableMetaDefinition def, P params) {
+  public Void visitMeta(Concrete.MetaDefinition def, P params) {
     visitParameters(def.getParameters(), params);
     if (def.body != null) {
       def.body = def.body.accept(this, params);

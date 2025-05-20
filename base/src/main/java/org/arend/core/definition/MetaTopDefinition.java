@@ -2,6 +2,7 @@ package org.arend.core.definition;
 
 import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.param.DependentLink;
+import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.expr.Expression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
@@ -15,8 +16,8 @@ import java.util.Set;
 
 public class MetaTopDefinition extends Definition {
   private List<? extends LevelVariable> myLevelParameters;
-  private DependentLink myParameters;
-  private List<? extends Boolean> myTypedParameters;
+  private DependentLink myParameters = EmptyDependentLink.getInstance();
+  private List<? extends Boolean> myTypedParameters = Collections.emptyList();
 
   public MetaTopDefinition(MetaReferable referable) {
     super(referable, TypeCheckingStatus.NEEDS_TYPE_CHECKING);

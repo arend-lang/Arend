@@ -737,12 +737,12 @@ class MissingClausesQuickFixTest: QuickFixTestBase() {
 
     private fun addMeta(useClauses: Boolean) {
         addGeneratedModules {
-            declare(nullDoc(), makeMetaRef("myMeta"), null, object : MetaResolver {
+            declare(nullDoc(), makeMeta("myMeta", object : MetaResolver {
                 override fun resolvePrefix(resolver: ExpressionResolver, contextData: ContextData): ConcreteExpression {
                     val factory = ConcreteFactoryImpl(if (useClauses) contextData.clauses?.data else contextData.marker.data)
                     return resolver.resolve(factory.caseExpr(false, listOf(factory.caseArg(contextData.arguments[0].expression, null, null)), null, null, contextData.clauses?.clauseList ?: emptyList()))
                 }
-            })
+            }, null))
         }
     }
 

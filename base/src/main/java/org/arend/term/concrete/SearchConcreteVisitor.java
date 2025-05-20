@@ -484,7 +484,7 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
   }
 
   @Override
-  public R visitMeta(DefinableMetaDefinition def, P params) {
+  public R visitMeta(Concrete.MetaDefinition def, P params) {
     R result = checkSourceNode(def, params);
     if (result != null) return result;
     result = visitParameters(def.getParameters(), params);

@@ -20,7 +20,6 @@ import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.concrete.ReplaceDefCallsVisitor;
 import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
@@ -43,7 +42,6 @@ import org.arend.typechecking.termination.DefinitionCallGraph;
 import org.arend.typechecking.termination.RecursiveBehavior;
 import org.arend.typechecking.visitor.*;
 import org.arend.ext.util.Pair;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -87,7 +85,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   @Override
   public Boolean computationInterrupted() {
     for (TCDefReferable currentDefinition : myCurrentDefinitions) {
-      Definition typechecked = currentDefinition.getTypechecked();
       currentDefinition.setTypechecked(null);
       Concrete.GeneralDefinition def = myConcreteProvider.getConcrete(currentDefinition);
       if (def instanceof Concrete.DataDefinition dataDef) {
@@ -103,7 +100,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
           }
         }
       }
-      typecheckingInterrupted(currentDefinition, typechecked);
     }
     myCurrentDefinitions = new ArrayList<>();
     return false;
@@ -138,31 +134,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     });
   }
 
-  public void typecheckingHeaderStarted(TCDefReferable definition) {
-
-  }
-
-  public void typecheckingBodyStarted(TCDefReferable definition) {
-
-  }
-
-  public void typecheckingUnitStarted(TCDefReferable definition) {
-
-  }
-
-  public void typecheckingHeaderFinished(TCDefReferable referable, Definition definition) {
-
-  }
-
-  public void typecheckingBodyFinished(TCDefReferable referable, Definition definition) {
-
-  }
-
   public void typecheckingUnitFinished(TCDefReferable referable, Definition definition) {
-
-  }
-
-  public void typecheckingInterrupted(TCDefReferable definition, @Nullable Definition typechecked) {
 
   }
 
@@ -197,7 +169,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
           }
         }
       }
-      case DefinableMetaDefinition definableMetaDefinition -> typechecked = new MetaTopDefinition(definableMetaDefinition.getData());
+      case Concrete.MetaDefinition metaDefinition -> typechecked = new MetaTopDefinition(metaDefinition.getData());
       case null, default -> throw new IllegalStateException();
     }
     typechecked.setStatus(Definition.TypeCheckingStatus.NEEDS_TYPE_CHECKING);
@@ -228,7 +200,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       Set<TCDefReferable> dependencies = new HashSet<>();
       definition.accept(new CollectDefCallsVisitor(dependencies, false), null);
       if (dependencies.contains(definition.getData())) {
-        typecheckingUnitStarted(definition.getData());
         errorReporter.report(new CycleError(Collections.singletonList(definition.getData())));
         typecheckingUnitFinished(definition.getData(), newDefinition(definition));
         ok = false;
@@ -249,7 +220,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
         WhereVarsFixVisitor.fixDefinition(Collections.singletonList((Concrete.Definition) definition), errorReporter);
       }
       DesugarVisitor.desugar(definition, checkTypeVisitor.getErrorReporter());
-      typecheckingUnitStarted(definition.getData());
       DefinitionTypechecker typechecker = new DefinitionTypechecker(checkTypeVisitor, recursive ? Collections.singleton(definition.getData()) : Collections.emptySet());
       List<ExtElimClause> clauses = definition.accept(typechecker, null);
       Definition typechecked = definition.getData().getTypechecked();
@@ -365,7 +335,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
           typechecked = newDefinition(def);
         }
         typechecked.addStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
-        typecheckingUnitStarted(def.getData());
         mySuspensions.remove(def.getData());
         typecheckingUnitFinished(def.getData(), typechecked);
       }
@@ -391,7 +360,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     Concrete.ResolvableDefinition newDef = myDesugaredDefinitions.get(definition.getData());
     if (newDef != null) definition = newDef;
     myCurrentDefinitions.add(definition.getData());
-    typecheckingHeaderStarted(definition.getData());
 
     CountingErrorReporter countingErrorReporter = new CountingErrorReporter(myErrorReporter);
     CheckTypeVisitor visitor = myCheckerFactory.create(new LocalErrorReporter(definition.getData(), countingErrorReporter), null, myExtensionProvider.getArendExtension(definition.getData()));
@@ -407,7 +375,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       mySuspensions.put(definition.getData(), new Suspension(visitor, universeKind));
     }
 
-    typecheckingHeaderFinished(definition.getData(), typechecked);
     if (!typechecked.status().headerIsOK()) {
       myHeadersAreOK = false;
     }
@@ -454,8 +421,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
 
     for (Concrete.ResolvableDefinition definition : orderedDefinitions) {
-      typecheckingBodyStarted(definition.getData());
-
       Definition def = definition.getData().getTypechecked();
       Suspension suspension = mySuspensions.remove(definition.getData());
       if (suspension != null) {
@@ -540,10 +505,6 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
 
     findAxiomsAndGoals(orderedDefinitions, newDefs);
-
-    for (Definition definition : allDefinitions) {
-      typecheckingBodyFinished(definition.getReferable(), definition);
-    }
 
     for (Pair<Definition, DefinitionListener> pair : listeners) {
       pair.proj2.typechecked(pair.proj1);

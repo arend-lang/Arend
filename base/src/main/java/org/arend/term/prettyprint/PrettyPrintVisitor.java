@@ -21,6 +21,7 @@ import org.arend.term.concrete.Concrete.ReferenceExpression;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.util.StringEscapeUtils;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -61,7 +62,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       if (lines.size() == 1) {
         printIndent();
         myBuilder.append("-- | ");
-        DocStringBuilder.buildDocComment(myBuilder, lines.get(0), true);
+        DocStringBuilder.buildDocComment(myBuilder, lines.getFirst(), true);
       } else {
         printIndent();
         myBuilder.append("{- |\n");
@@ -168,7 +169,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
         StringBuilder tailBuilder = new StringBuilder();
         boolean leftParamIsRecursive = explicitIndex == constructor.getRecursiveParameter();
-        prec = visitBinOp(leftParamIsRecursive ? null : args.get(args.size() - 2).getExpression(), (Concrete.ReferenceExpression) expr.getFunction(), args.subList(0, args.size() - 2), leftParamIsRecursive ? args.get(args.size() - 1).getExpression() : null, prec, tailBuilder);
+        prec = visitBinOp(leftParamIsRecursive ? null : args.get(args.size() - 2).getExpression(), (Concrete.ReferenceExpression) expr.getFunction(), args.subList(0, args.size() - 2), leftParamIsRecursive ? args.getLast().getExpression() : null, prec, tailBuilder);
         if (!tailBuilder.isEmpty()) {
           if (tail == null) {
             tail = new ArrayList<>();
@@ -265,7 +266,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     List<Concrete.Argument> args = expr.getArguments();
 
     if (fun instanceof Concrete.ReferenceExpression && ((ReferenceExpression) fun).getReferent() instanceof GlobalReferable && ((GlobalReferable) ((ReferenceExpression) fun).getReferent()).getRepresentablePrecedence().isInfix && isInfix(args)) {
-      visitBinOp(args.get(args.size() - 2).getExpression(), (ReferenceExpression) fun, args.subList(0, args.size() - 2), args.get(args.size() - 1).getExpression(), prec, null);
+      visitBinOp(args.get(args.size() - 2).getExpression(), (ReferenceExpression) fun, args.subList(0, args.size() - 2), args.getLast().getExpression(), prec, null);
     } else {
       if (prec.priority > Concrete.AppExpression.PREC) myBuilder.append('(');
       new BinOpLayout() {
@@ -332,7 +333,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   private void printLevels(List<Concrete.LevelExpression> levels) {
     if (levels != null) {
       if (levels.size() == 1) {
-        levels.get(0).accept(this, new Precedence((byte) (Concrete.AppExpression.PREC + 1)));
+        levels.getFirst().accept(this, new Precedence((byte) (Concrete.AppExpression.PREC + 1)));
       } else {
         myBuilder.append('(');
         boolean first = true;
@@ -528,8 +529,8 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     new BinOpLayout(){
       @Override
       void printLeft(PrettyPrintVisitor pp) {
-        if (expr.getParameters().size() == 1 && !(expr.getParameters().get(0) instanceof Concrete.TelescopeParameter)) {
-          pp.printExpr(expr.getParameters().get(0).getType(), new Precedence((byte) (Concrete.PiExpression.PREC + 1)));
+        if (expr.getParameters().size() == 1 && !(expr.getParameters().getFirst() instanceof Concrete.TelescopeParameter)) {
+          pp.printExpr(expr.getParameters().getFirst().getType(), new Precedence((byte) (Concrete.PiExpression.PREC + 1)));
           pp.myBuilder.append(' ');
         } else {
           pp.myBuilder.append("\\Pi ");
@@ -717,7 +718,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   }
 
   private AbstractLayout createBinOpLayout(List<BinOpSequenceElem<Expression>> elems) {
-    Concrete.Expression lhs = elems.get(0).getComponent();
+    Concrete.Expression lhs = elems.getFirst().getComponent();
     if (lhs instanceof Concrete.AppExpression && elems.size() > 1) {
       lhs = Concrete.AppExpression.make(lhs.getData(), ((Concrete.AppExpression) lhs).getFunction(), new ArrayList<>(((Concrete.AppExpression) lhs).getArguments()));
     }
@@ -798,7 +799,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   @Override
   public Void visitBinOpSequence(Concrete.BinOpSequenceExpression expr, Precedence prec) {
     if (expr.getSequence().size() == 1) {
-      printExpr(expr.getSequence().get(0).getComponent(), prec);
+      printExpr(expr.getSequence().getFirst().getComponent(), prec);
       return null;
     }
     if (prec.priority > Concrete.BinOpSequenceExpression.PREC) myBuilder.append('(');
@@ -1206,7 +1207,12 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     }
 
     myBuilder.append(" ");
-    final BinOpLayout l = new BinOpLayout(){
+    getBinOpLayout(def).doPrettyPrint(this, noIndent);
+    return null;
+  }
+
+  private @NotNull BinOpLayout getBinOpLayout(Concrete.BaseFunctionDefinition def) {
+    final BinOpLayout l = new BinOpLayout() {
       @Override
       void printLeft(PrettyPrintVisitor pp) {
         pp.prettyPrintParameters(def.getParameters());
@@ -1228,7 +1234,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       }
     };
 
-    final BinOpLayout r = new BinOpLayout(){
+    return new BinOpLayout() {
       @Override
       String getOpText() {
         return "";
@@ -1251,10 +1257,6 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       @Override
       boolean printSpaceAfter() { return false;}
     };
-
-    r.doPrettyPrint(this, noIndent);
-
-    return null;
   }
 
   @Override
@@ -1402,33 +1404,39 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       myBuilder.append("{");
     }
 
-    if (pattern instanceof Concrete.NamePattern namePattern) {
-      Referable referable = namePattern.getReferable();
-      String name = referable == null ? null : referable.textRepresentation();
-      if (name == null) {
-        name = "_";
+    switch (pattern) {
+      case Concrete.NamePattern namePattern -> {
+        Referable referable = namePattern.getReferable();
+        String name = referable == null ? null : referable.textRepresentation();
+        if (name == null) {
+          name = "_";
+        }
+        myBuilder.append(name);
+        if (namePattern.type != null && !name.equals("_")) {
+          myBuilder.append(" : ");
+          printExpr(namePattern.type, new Precedence(Expression.PREC));
+        }
       }
-      myBuilder.append(name);
-      if (namePattern.type != null && !name.equals("_")) {
-        myBuilder.append(" : ");
-        printExpr(namePattern.type, new Precedence(Expression.PREC));
+      case Concrete.NumberPattern numberPattern -> myBuilder.append(numberPattern.getNumber());
+      case Concrete.TuplePattern ignored -> {
+        myBuilder.append('(');
+        prettyPrintPatterns(pattern.getPatterns(), true);
+        myBuilder.append(')');
       }
-    } else if (pattern instanceof Concrete.NumberPattern) {
-      myBuilder.append(((Concrete.NumberPattern) pattern).getNumber());
-    } else if (pattern instanceof Concrete.TuplePattern) {
-      myBuilder.append('(');
-      prettyPrintPatterns(pattern.getPatterns(), true);
-      myBuilder.append(')');
-    } else if (pattern instanceof Concrete.ConstructorPattern conPattern) {
-      if ((withParens || !conPattern.getPatterns().isEmpty() && prec > Concrete.Pattern.PREC) && pattern.isExplicit()) myBuilder.append('(');
+      case Concrete.ConstructorPattern conPattern -> {
+        if ((withParens || !conPattern.getPatterns().isEmpty() && prec > Concrete.Pattern.PREC) && pattern.isExplicit())
+          myBuilder.append('(');
 
-      myBuilder.append(conPattern.getConstructor() == null ? "_" : conPattern.getConstructor().textRepresentation());
-      if (!conPattern.getPatterns().isEmpty()) {
-        myBuilder.append(' ');
-        prettyPrintPatterns(conPattern.getPatterns(), false);
-      }
+        myBuilder.append(conPattern.getConstructor() == null ? "_" : conPattern.getConstructor().textRepresentation());
+        if (!conPattern.getPatterns().isEmpty()) {
+          myBuilder.append(' ');
+          prettyPrintPatterns(conPattern.getPatterns(), false);
+        }
 
-      if ((withParens || !conPattern.getPatterns().isEmpty() && prec > Concrete.Pattern.PREC) && pattern.isExplicit()) myBuilder.append(')');
+        if ((withParens || !conPattern.getPatterns().isEmpty() && prec > Concrete.Pattern.PREC) && pattern.isExplicit())
+          myBuilder.append(')');
+      }
+      default -> {}
     }
 
     if (pattern.getAsReferable() != null) {
@@ -1536,15 +1544,14 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       for (Concrete.ClassElement element : def.getElements()) {
         myBuilder.append('\n');
         printIndent();
-        if (element instanceof Concrete.ClassField) {
-          prettyPrintClassField((Concrete.ClassField) element);
-        } else if (element instanceof Concrete.ClassFieldImpl) {
-          myBuilder.append("| ");
-          prettyPrintClassFieldImpl((Concrete.ClassFieldImpl) element);
-        } else if (element instanceof Concrete.OverriddenField) {
-          prettyPrintOverridden((Concrete.OverriddenField) element);
-        } else {
-          throw new IllegalStateException();
+        switch (element) {
+          case Concrete.ClassField classField -> prettyPrintClassField(classField);
+          case Concrete.ClassFieldImpl classField -> {
+            myBuilder.append("| ");
+            prettyPrintClassFieldImpl(classField);
+          }
+          case Concrete.OverriddenField overriddenField -> prettyPrintOverridden(overriddenField);
+          case null, default -> throw new IllegalStateException();
         }
       }
 
@@ -1558,7 +1565,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   }
 
   @Override
-  public Void visitMeta(DefinableMetaDefinition def, Void params) {
+  public Void visitMeta(Concrete.MetaDefinition def, Void params) {
     myBuilder.append("\\meta ");
     prettyPrintNameWithPrecedence(def.getData());
     myBuilder.append(" ");
@@ -1663,7 +1670,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     public void doPrettyPrint(PrettyPrintVisitor pp, List<? extends E> l, boolean disabled){
       if (disabled) {
         if (!l.isEmpty()) {
-          printListElement(pp, l.get(0));
+          printListElement(pp, l.getFirst());
         }
         if (l.size() > 1) {
           for (E e : l.subList(1, l.size())) {
@@ -1781,9 +1788,9 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       int rhs_sz = rhs_strings.size();
 
       int leftLen = lhs_sz == 0 ? 0 : lhs_strings.get(lhs_sz-1).trim().length();
-      int rightLen = rhs_sz == 0 ? 0 : rhs_strings.get(0).trim().length();
+      int rightLen = rhs_sz == 0 ? 0 : rhs_strings.getFirst().trim().length();
 
-      boolean hyph = doHyphenation(leftLen, rightLen) && !(rhs_sz > 0 && rhs_strings.get(0).isEmpty());
+      boolean hyph = doHyphenation(leftLen, rightLen) && !(rhs_sz > 0 && rhs_strings.getFirst().isEmpty());
 
       for (int i=0; i<lhs_sz; i++) {
         String s = lhs_strings.get(i);

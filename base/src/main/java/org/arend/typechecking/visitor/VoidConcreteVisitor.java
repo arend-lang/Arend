@@ -38,18 +38,18 @@ public class VoidConcreteVisitor<P> implements ConcreteExpressionVisitor<P,Void>
     return null;
   }
 
-  protected void visitMetaHeader(DefinableMetaDefinition def, P params) {
+  protected void visitMetaHeader(Concrete.MetaDefinition def, P params) {
     visitParameters(def.getParameters(), params);
   }
 
-  protected void visitMetaBody(DefinableMetaDefinition def, P params) {
+  protected void visitMetaBody(Concrete.MetaDefinition def, P params) {
     if (def.body != null) {
       def.body.accept(this, params);
     }
   }
 
   @Override
-  public Void visitMeta(DefinableMetaDefinition def, P params) {
+  public Void visitMeta(Concrete.MetaDefinition def, P params) {
     visitMetaHeader(def, params);
     visitMetaBody(def, params);
     return null;
@@ -222,19 +222,24 @@ public class VoidConcreteVisitor<P> implements ConcreteExpressionVisitor<P,Void>
       }
     }
 
-    if (pattern instanceof Concrete.NamePattern) {
-      Concrete.Expression type = ((Concrete.NamePattern) pattern).type;
-      if (type != null) {
-        type.accept(this, params);
+    switch (pattern) {
+      case Concrete.NamePattern namePattern -> {
+        Concrete.Expression type = namePattern.type;
+        if (type != null) {
+          type.accept(this, params);
+        }
       }
-    } else if (pattern instanceof Concrete.ConstructorPattern) {
-      for (Concrete.Pattern patternArg : ((Concrete.ConstructorPattern) pattern).getPatterns()) {
-        visitPattern(patternArg, params);
+      case Concrete.ConstructorPattern constructorPattern -> {
+        for (Concrete.Pattern patternArg : constructorPattern.getPatterns()) {
+          visitPattern(patternArg, params);
+        }
       }
-    } else if (pattern instanceof Concrete.TuplePattern) {
-      for (Concrete.Pattern patternArg : ((Concrete.TuplePattern) pattern).getPatterns()) {
-        visitPattern(patternArg, params);
+      case Concrete.TuplePattern tuplePattern -> {
+        for (Concrete.Pattern patternArg : tuplePattern.getPatterns()) {
+          visitPattern(patternArg, params);
+        }
       }
+      default -> {}
     }
   }
 
@@ -295,18 +300,17 @@ public class VoidConcreteVisitor<P> implements ConcreteExpressionVisitor<P,Void>
   }
 
   protected void visitClassElement(Concrete.ClassElement element, P params) {
-    if (element instanceof Concrete.ClassField) {
-      visitClassField((Concrete.ClassField) element, params);
-    } else if (element instanceof Concrete.ClassFieldImpl) {
-      visitClassFieldImpl((Concrete.ClassFieldImpl) element, params);
-    } else if (element instanceof Concrete.OverriddenField field) {
-      visitParameters(field.getParameters(), params);
-      field.getResultType().accept(this, params);
-      if (field.getResultTypeLevel() != null) {
-        field.getResultTypeLevel().accept(this, params);
+    switch (element) {
+      case Concrete.ClassField classField -> visitClassField(classField, params);
+      case Concrete.ClassFieldImpl classField -> visitClassFieldImpl(classField, params);
+      case Concrete.OverriddenField field -> {
+        visitParameters(field.getParameters(), params);
+        field.getResultType().accept(this, params);
+        if (field.getResultTypeLevel() != null) {
+          field.getResultTypeLevel().accept(this, params);
+        }
       }
-    } else {
-      throw new IllegalStateException();
+      case null, default -> throw new IllegalStateException();
     }
   }
 

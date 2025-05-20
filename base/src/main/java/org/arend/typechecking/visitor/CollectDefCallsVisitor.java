@@ -2,7 +2,6 @@ package org.arend.typechecking.visitor;
 
 import org.arend.naming.reference.*;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.concrete.DefinableMetaDefinition;
 
 import java.util.*;
 
@@ -42,7 +41,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   }
 
   @Override
-  protected void visitMetaBody(DefinableMetaDefinition def, Void params) {
+  protected void visitMetaBody(Concrete.MetaDefinition def, Void params) {
     if (myWithBodies) {
       super.visitMetaBody(def, params);
     }

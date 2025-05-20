@@ -836,7 +836,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
 
     fun `test importing of meta`() {
         addGeneratedModules {
-            declare(nullDoc(), makeMetaRef("foo"), null)
+            declare(nullDoc(), makeMeta("foo", null, null))
         }
 
         simpleImportFixTest("""

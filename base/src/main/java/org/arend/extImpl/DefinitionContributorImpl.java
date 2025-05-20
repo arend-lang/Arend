@@ -4,20 +4,14 @@ import org.arend.ext.DefinitionContributor;
 import org.arend.ext.concrete.definition.ConcreteDefinition;
 import org.arend.ext.module.LongName;
 import org.arend.ext.prettyprinting.doc.*;
-import org.arend.ext.reference.MetaRef;
-import org.arend.ext.typechecking.MetaDefinition;
-import org.arend.ext.typechecking.MetaResolver;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.DataModuleReferable;
 import org.arend.naming.reference.LocatedReferable;
-import org.arend.naming.reference.MetaReferable;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -114,18 +108,9 @@ public class DefinitionContributorImpl extends Disableable implements Definition
 
   @Override
   public void declare(@NotNull Doc description, @NotNull ConcreteDefinition definition) {
-    if (!(definition instanceof Concrete.Definition def)) {
+    if (!(definition instanceof Concrete.ResolvableDefinition def)) {
       throw new IllegalArgumentException();
     }
     declareDefinition(description, def);
-  }
-
-  @Override
-  public void declare(@NotNull Doc description, @NotNull MetaRef metaRef, @Nullable MetaDefinition meta, @Nullable MetaResolver resolver) {
-    if (!(metaRef instanceof MetaReferable ref)) {
-      throw new IllegalArgumentException();
-    }
-    ref.setDefinition(meta, resolver);
-    declareDefinition(description, new DefinableMetaDefinition(ref, null, null, Collections.emptyList(), null));
   }
 }

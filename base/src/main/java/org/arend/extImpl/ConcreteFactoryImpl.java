@@ -14,9 +14,7 @@ import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.MetaRef;
 import org.arend.ext.reference.Precedence;
-import org.arend.ext.typechecking.GoalSolver;
-import org.arend.ext.typechecking.TypedExpression;
-import org.arend.ext.typechecking.MetaDefinition;
+import org.arend.ext.typechecking.*;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.prelude.Prelude;
@@ -102,7 +100,9 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   @NotNull
   @Override
   public ConcreteExpression meta(@NotNull String name, @NotNull MetaDefinition meta) {
-    return new Concrete.ReferenceExpression(myData, new MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, name, meta, null, null));
+    MetaReferable referable = new MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, name, new TrivialMetaTypechecker(meta), null, null);
+    referable.setDefinition(meta);
+    return new Concrete.ReferenceExpression(myData, referable);
   }
 
   @NotNull
@@ -246,7 +246,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   @Override
   public @NotNull ConcreteExpression sigma(@NotNull List<? extends ConcreteParameter> parameters) {
     if (parameters.size() == 1) {
-      ConcreteExpression type = parameters.get(0).getType();
+      ConcreteExpression type = parameters.getFirst().getType();
       if (type == null) throw new IllegalArgumentException();
       return type;
     }
@@ -631,6 +631,14 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   }
 
   @Override
+  public @NotNull Concrete.MetaDefinition metaDef(@NotNull MetaRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, @Nullable ConcreteExpression body) {
+    if (!(ref instanceof MetaReferable && (body == null || body instanceof Concrete.Expression))) {
+      throw new IllegalArgumentException();
+    }
+    return new Concrete.MetaDefinition((MetaReferable) ref, null, null, parameters(parameters), (Concrete.Expression) body);
+  }
+
+  @Override
   public @NotNull ArendRef moduleRef(@NotNull ModulePath modulePath) {
     return myLibraryName == null ? new ModuleReferable(modulePath) : new FullModuleReferable(new ModuleLocation(myLibraryName, ModuleLocation.LocationKind.GENERATED, modulePath));
   }
@@ -668,11 +676,11 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   }
 
   @Override
-  public @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec) {
+  public @NotNull MetaRef metaRef(@NotNull ArendRef parent, @NotNull String name, @NotNull Precedence precedence, @Nullable String alias, @Nullable Precedence aliasPrec, @Nullable MetaResolver resolver, @NotNull MetaTypechecker typechecker) {
     if (!(parent instanceof LocatedReferable)) {
       throw new IllegalArgumentException();
     }
-    return new MetaReferable(null, AccessModifier.PUBLIC, precedence, name, aliasPrec, alias, null, null, (LocatedReferable) parent);
+    return new MetaReferable(null, AccessModifier.PUBLIC, precedence, name, aliasPrec, alias, typechecker, resolver, (LocatedReferable) parent);
   }
 
   private static Referable makeLocalRef(ArendRef ref) {

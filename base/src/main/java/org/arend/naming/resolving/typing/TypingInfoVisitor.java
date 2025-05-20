@@ -9,7 +9,6 @@ import org.arend.naming.scope.*;
 import org.arend.term.Fixity;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteResolvableDefinitionVisitor;
-import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 
@@ -118,60 +117,64 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
 
     int arguments = 0;
     Referable found = null;
+    label:
     while (true) {
-      if (expr instanceof Concrete.AppExpression appExpr) {
-        expr = appExpr.getFunction();
-        arguments += appExpr.getNumberOfExplicitArguments();
-      } else if (expr instanceof Concrete.ClassExtExpression) {
-        expr = ((Concrete.ClassExtExpression) expr).getBaseClassExpression();
-        arguments = 0;
-      } else if (expr instanceof Concrete.BinOpSequenceExpression binOpExpr) {
-        var sequence = binOpExpr.getSequence();
-        if (sequence.isEmpty()) return null;
-        if (sequence.size() == 1) {
-          expr = sequence.get(0).getComponent();
-          continue;
-        }
-        Referable first = null;
-        Referable best = null;
-        Precedence bestPrec = Precedence.DEFAULT;
-        int bestIndex = 0;
-        for (int i = 0; i < sequence.size(); i++) {
-          var elem = sequence.get(i);
-          if (elem.fixity == Fixity.POSTFIX) return null; // TODO: Just ignore postfix operators for now.
-          if (elem.isExplicit && elem.getComponent() instanceof Concrete.ReferenceExpression refExpr) {
-            Referable ref = exprVisitor == null ? refExpr.getReferent() : tryResolve(refExpr.getReferent(), exprVisitor.getScope());
-            if (ref != null && i == 0) first = ref;
-            Precedence prec = ref instanceof GlobalReferable globalRef ? globalRef.getPrecedence() : Precedence.DEFAULT;
-            if (prec.isInfix && elem.fixity != Fixity.NONFIX || elem.fixity == Fixity.INFIX) {
-              Precedence.ComparisonResult cmp = best == null ? Precedence.ComparisonResult.LESS : prec.compare(bestPrec);
-              if (cmp == Precedence.ComparisonResult.UNCOMPARABLE) return null;
-              if (best == null || cmp == Precedence.ComparisonResult.LESS) {
-                best = ref;
-                bestIndex = i;
-                bestPrec = prec;
+      switch (expr) {
+        case Concrete.AppExpression appExpr:
+          expr = appExpr.getFunction();
+          arguments += appExpr.getNumberOfExplicitArguments();
+          break;
+        case Concrete.ClassExtExpression classExtExpression:
+          expr = classExtExpression.getBaseClassExpression();
+          arguments = 0;
+          break;
+        case Concrete.BinOpSequenceExpression binOpExpr:
+          var sequence = binOpExpr.getSequence();
+          if (sequence.isEmpty()) return null;
+          if (sequence.size() == 1) {
+            expr = sequence.getFirst().getComponent();
+            continue;
+          }
+          Referable first = null;
+          Referable best = null;
+          Precedence bestPrec = Precedence.DEFAULT;
+          int bestIndex = 0;
+          for (int i = 0; i < sequence.size(); i++) {
+            var elem = sequence.get(i);
+            if (elem.fixity == Fixity.POSTFIX) return null; // TODO: Just ignore postfix operators for now.
+            if (elem.isExplicit && elem.getComponent() instanceof Concrete.ReferenceExpression refExpr) {
+              Referable ref = exprVisitor == null ? refExpr.getReferent() : tryResolve(refExpr.getReferent(), exprVisitor.getScope());
+              if (ref != null && i == 0) first = ref;
+              Precedence prec = ref instanceof GlobalReferable globalRef ? globalRef.getPrecedence() : Precedence.DEFAULT;
+              if (prec.isInfix && elem.fixity != Fixity.NONFIX || elem.fixity == Fixity.INFIX) {
+                Precedence.ComparisonResult cmp = best == null ? Precedence.ComparisonResult.LESS : prec.compare(bestPrec);
+                if (cmp == Precedence.ComparisonResult.UNCOMPARABLE) return null;
+                if (best == null || cmp == Precedence.ComparisonResult.LESS) {
+                  best = ref;
+                  bestIndex = i;
+                  bestPrec = prec;
+                }
               }
             }
           }
-        }
 
-        if (best == null) {
-          arguments += sequence.size() - 1;
-          if (!(sequence.get(0).getComponent() instanceof Concrete.ReferenceExpression)) {
-            expr = sequence.get(0).getComponent();
-            continue;
+          if (best == null) {
+            arguments += sequence.size() - 1;
+            if (!(sequence.getFirst().getComponent() instanceof Concrete.ReferenceExpression)) {
+              expr = sequence.getFirst().getComponent();
+              continue;
+            }
+            found = first;
+          } else {
+            found = best;
+            arguments += bestIndex == 0 || bestIndex == sequence.size() - 1 ? 1 : 2;
           }
-          found = first;
-        } else {
-          found = best;
-          arguments += bestIndex == 0 || bestIndex == sequence.size() - 1 ? 1 : 2;
-        }
-        break;
-      } else if (expr instanceof Concrete.ReferenceExpression refExpr) {
-        found = exprVisitor == null ? refExpr.getReferent() : tryResolve(refExpr.getReferent(), exprVisitor.getScope());
-        break;
-      } else {
-        break;
+          break label;
+        case Concrete.ReferenceExpression refExpr:
+          found = exprVisitor == null ? refExpr.getReferent() : tryResolve(refExpr.getReferent(), exprVisitor.getScope());
+          break label;
+        default:
+          break label;
       }
     }
 
@@ -179,7 +182,7 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
   }
 
   @Override
-  public GlobalTypingInfo visitMeta(DefinableMetaDefinition def, Scope scope) {
+  public GlobalTypingInfo visitMeta(Concrete.MetaDefinition def, Scope scope) {
     AbstractBody body = resolveAbstractBody(def.getParameters(), def.body, scope, false);
     if (body != null) myTypingInfo.addReferableBody(def.getData(), body);
     return null;

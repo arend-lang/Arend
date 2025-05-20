@@ -6,7 +6,6 @@ import org.arend.naming.resolving.typing.TypingInfo
 import org.arend.psi.ext.*
 import org.arend.psi.extendLeft
 import org.arend.term.concrete.Concrete
-import org.arend.term.concrete.DefinableMetaDefinition
 import org.arend.typechecking.visitor.VoidConcreteVisitor
 
 class HighlightingVisitor(private val collector: HighlightingCollector, private val typingInfo: TypingInfo) : VoidConcreteVisitor<Void>() {
@@ -112,7 +111,7 @@ class HighlightingVisitor(private val collector: HighlightingCollector, private 
         return super.visitFunction(def, params)
     }
 
-    override fun visitMeta(def: DefinableMetaDefinition, params: Void?): Void? {
+    override fun visitMeta(def: Concrete.MetaDefinition, params: Void?): Void? {
         processDefinition(def)
         return super.visitMeta(def, params)
     }

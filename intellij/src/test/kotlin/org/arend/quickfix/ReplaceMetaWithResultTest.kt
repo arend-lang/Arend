@@ -13,10 +13,10 @@ class ReplaceMetaWithResultTest : QuickFixTestBase() {
 
     private fun addMeta() {
         addGeneratedModules {
-            declare(nullDoc(), makeMetaRef("myMeta"), object : MetaDefinition {
+            declare(nullDoc(), makeMeta("myMeta", null, object : MetaDefinition {
                 override fun invokeMeta(typechecker: ExpressionTypechecker, contextData: ContextData) =
                     typechecker.typecheck(contextData.arguments[1].expression, null)
-            })
+            }))
         }
     }
 
@@ -44,10 +44,10 @@ class ReplaceMetaWithResultTest : QuickFixTestBase() {
 
     fun `test meta resolver`() {
         addGeneratedModules {
-            declare(nullDoc(), makeMetaRef("myMeta"), null, object : MetaResolver {
+            declare(nullDoc(), makeMeta("myMeta", object : MetaResolver {
                 override fun resolvePrefix(resolver: ExpressionResolver, contextData: ContextData) =
                     Concrete.TupleExpression(contextData.marker.data, contextData.arguments.map { it.expression as Concrete.Expression })
-            })
+            }, null))
         }
 
         simpleQuickFixTest(fixName, """
@@ -61,10 +61,10 @@ class ReplaceMetaWithResultTest : QuickFixTestBase() {
 
     fun addResolver() {
         addGeneratedModules {
-            declare(nullDoc(),  makeMetaRef("myMeta"), null, object : MetaResolver {
+            declare(nullDoc(),  makeMeta("myMeta", object : MetaResolver {
                 override fun resolvePrefix(resolver: ExpressionResolver, contextData: ContextData) =
                     resolver.resolve(contextData.arguments[1].expression)
-            })
+            }, null))
         }
     }
 
@@ -103,12 +103,12 @@ class ReplaceMetaWithResultTest : QuickFixTestBase() {
 
     fun `test meta resolver with case`() {
         addGeneratedModules {
-            declare(nullDoc(), makeMetaRef("myMeta"), null, object : MetaResolver {
+            declare(nullDoc(), makeMeta("myMeta", object : MetaResolver {
                 override fun resolvePrefix(resolver: ExpressionResolver, contextData: ContextData): ConcreteExpression {
                     val factory = ConcreteFactoryImpl(contextData.marker.data)
                     return resolver.resolve(factory.caseExpr(false, listOf(factory.caseArg(contextData.arguments[0].expression, null, null)), null, null, contextData.clauses?.clauseList ?: emptyList()))
                 }
-            })
+            }, null))
         }
 
         simpleQuickFixTest(fixName, """

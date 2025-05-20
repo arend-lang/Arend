@@ -78,12 +78,12 @@ public class ReplaceTCRefVisitor extends ReplaceDataVisitor {
   }
 
   @Override
-  public DefinableMetaDefinition visitMeta(DefinableMetaDefinition def, Void params) {
+  public Concrete.MetaDefinition visitMeta(Concrete.MetaDefinition def, Void params) {
     MetaReferable metaRef = def.getData();
-    MetaReferable newRef = new MetaReferable(metaRef.getData(), metaRef.getAccessModifier(), metaRef.getPrecedence(), metaRef.getRefName(), metaRef.getAliasPrecedence(), metaRef.getAliasName(), metaRef.getDefinition(), metaRef.getResolver(), metaRef.getLocatedReferableParent());
+    MetaReferable newRef = new MetaReferable(metaRef.getData(), metaRef.getAccessModifier(), metaRef.getPrecedence(), metaRef.getRefName(), metaRef.getAliasPrecedence(), metaRef.getAliasName(), metaRef.getTypechecker(), metaRef.getResolver(), metaRef.getLocatedReferableParent());
     myTCMap.put(metaRef, newRef);
 
-    DefinableMetaDefinition result = super.visitMeta(def, params);
+    Concrete.MetaDefinition result = super.visitMeta(def, params);
     result.setReferable(newRef);
     return result;
   }

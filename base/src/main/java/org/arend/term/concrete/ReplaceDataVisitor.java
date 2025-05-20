@@ -396,8 +396,8 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
   }
 
   @Override
-  public DefinableMetaDefinition visitMeta(DefinableMetaDefinition def, Void params) {
-    DefinableMetaDefinition result = new DefinableMetaDefinition(def.getData(), def.pLevelParameters, def.hLevelParameters, visitParameters(def.getParameters()), def.body == null ? null : def.body.accept(this, null));
+  public Concrete.MetaDefinition visitMeta(Concrete.MetaDefinition def, Void params) {
+    Concrete.MetaDefinition result = new Concrete.MetaDefinition(def.getData(), def.pLevelParameters, def.hLevelParameters, visitParameters(def.getParameters()), def.body == null ? null : def.body.accept(this, null));
     result.setStatus(def.getStatus());
     return result;
   }

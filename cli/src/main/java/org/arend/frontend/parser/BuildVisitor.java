@@ -8,6 +8,7 @@ import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.reference.Precedence;
+import org.arend.extImpl.DefaultMetaTypechecker;
 import org.arend.frontend.reference.*;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.InternalReferableImpl;
@@ -15,7 +16,6 @@ import org.arend.naming.reference.*;
 import org.arend.naming.scope.Scope;
 import org.arend.term.*;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.group.*;
 import org.arend.ext.util.Pair;
 import org.arend.util.SingletonList;
@@ -652,13 +652,12 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     String name = defId.ID().getText();
     var precedence = visitPrecedence(defId.precedence());
     var alias = visitAlias(defId.alias());
-    var reference = new MetaReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, precedence, name, alias.proj2, alias.proj1, null, null, parent.referable());
+    var reference = new MetaReferable(tokenPosition(defId.ID().getSymbol()), accessModifier, precedence, name, alias.proj2, alias.proj1, new DefaultMetaTypechecker(), null, parent.referable());
     var body = ctx.expr();
-    DefinableMetaDefinition definition;
+    Concrete.MetaDefinition definition;
     if (body != null) {
       var params = visitLamTeles(ctx.tele(), false);
-      definition = new DefinableMetaDefinition(reference, visitPlevelParams(ctx.plevelParams()), visitHlevelParams(ctx.hlevelParams()), params, visitExpr(body));
-      reference.setDefinition(definition);
+      definition = new Concrete.MetaDefinition(reference, visitPlevelParams(ctx.plevelParams()), visitHlevelParams(ctx.hlevelParams()), params, visitExpr(body));
     } else {
       definition = null;
     }

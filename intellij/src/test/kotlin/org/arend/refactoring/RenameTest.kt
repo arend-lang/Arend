@@ -294,13 +294,13 @@ class RenameTest : ArendTestBase() {
 
     fun `test rename refIdentifier`() {
         addGeneratedModules {
-            declare(nullDoc(), makeMetaRef("myMeta"), null, object : MetaResolver {
+            declare(nullDoc(), makeMeta("myMeta", object : MetaResolver {
                 override fun resolvePrefix(resolver: ExpressionResolver, contextData: ContextData): ConcreteExpression {
                     val factory = ConcreteFactoryImpl(contextData.marker.data)
                     val ref = (contextData.arguments[0].expression as Concrete.ReferenceExpression).referent
                     return resolver.resolve(factory.lam(listOf(factory.param(true, ref)), contextData.arguments[1].expression))
                 }
-            })
+            }, null))
         }
 
         doTest("xoox", """

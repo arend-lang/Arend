@@ -19,9 +19,12 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ThrowableRunnable
 import com.maddyhome.idea.vim.VimPlugin
 import org.arend.ext.DefinitionContributor
+import org.arend.ext.concrete.definition.TrivialMetaTypechecker
 import org.arend.ext.module.ModulePath
 import org.arend.ext.prettyprinting.doc.DocFactory
 import org.arend.ext.reference.Precedence
+import org.arend.ext.typechecking.MetaDefinition
+import org.arend.ext.typechecking.MetaResolver
 import org.arend.extImpl.DefinitionContributorImpl
 import org.arend.module.*
 import org.arend.module.config.ArendModuleConfigService
@@ -32,6 +35,7 @@ import org.arend.psi.parentOfType
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
 import org.arend.settings.ArendSettings
+import org.arend.term.concrete.Concrete
 import org.arend.term.group.AccessModifier
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.util.FileUtils
@@ -72,8 +76,8 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
         super.runTestRunnable(testRunnable)
     }
 
-    protected fun makeMetaRef(name: String): MetaReferable =
-        MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, name, null, null, FullModuleReferable(ModuleLocation(module.name, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta"))))
+    protected fun makeMeta(name: String, resolver: MetaResolver?, definition: MetaDefinition?): Concrete.MetaDefinition =
+        Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, name, TrivialMetaTypechecker(definition), resolver, FullModuleReferable(ModuleLocation(module.name, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta")))), null, null, emptyList(), null)
 
     protected fun addGeneratedModules(filler: DefinitionContributor.() -> Unit) {
         addGeneratedModules(this.library.name, filler)
@@ -260,9 +264,9 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
 
     private fun setupLibraryManager(config: ExternalLibraryConfig) {
         addGeneratedModules(config.name) {
-            declare(DocFactory.nullDoc(), MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "using", null, null, FullModuleReferable(ModuleLocation(config.libraryName, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta")))), null)
-            declare(DocFactory.nullDoc(), MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "$", null, null, FullModuleReferable(ModuleLocation(config.libraryName, ModuleLocation.LocationKind.GENERATED, ModulePath("Function", "Meta")))), null)
-            declare(DocFactory.nullDoc(), MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "rewrite", null, null, FullModuleReferable(ModuleLocation(config.libraryName, ModuleLocation.LocationKind.GENERATED, ModulePath("Paths", "Meta")))), null)
+            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "using", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(config.libraryName, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta")))), null, null, emptyList(), null))
+            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "$", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(config.libraryName, ModuleLocation.LocationKind.GENERATED, ModulePath("Function", "Meta")))), null, null, emptyList(), null))
+            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "rewrite", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(config.libraryName, ModuleLocation.LocationKind.GENERATED, ModulePath("Paths", "Meta")))), null, null, emptyList(), null))
         }
         // TODO[server2]: TypeCheckingService.LibraryManagerTestingOptions.setStdLibrary(arendLib, testRootDisposable)
     }

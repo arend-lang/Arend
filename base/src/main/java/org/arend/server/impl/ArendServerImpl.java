@@ -28,7 +28,6 @@ import org.arend.source.error.LocationError;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.term.concrete.LocalVariablesCollector;
 import org.arend.term.group.AccessModifier;
 import org.arend.term.group.ConcreteGroup;
@@ -334,10 +333,8 @@ public class ArendServerImpl implements ArendServer {
     Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
     group.traverseGroup(subgroup -> {
       Concrete.ResolvableDefinition definition = subgroup.definition();
-      if (definition instanceof DefinableMetaDefinition metaDef) {
-        defMap.put(metaDef.getData(), metaDef);
-      } else if (definition != null) {
-        defMap.put(subgroup.referable(), definition);
+      if (definition != null) {
+        defMap.put(definition.getData(), definition);
       }
     });
     return defMap;

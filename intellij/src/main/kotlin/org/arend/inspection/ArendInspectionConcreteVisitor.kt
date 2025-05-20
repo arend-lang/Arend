@@ -2,7 +2,6 @@ package org.arend.inspection
 
 import org.arend.ext.concrete.ConcreteSourceNode
 import org.arend.term.concrete.Concrete
-import org.arend.term.concrete.DefinableMetaDefinition
 import org.arend.typechecking.visitor.VoidConcreteVisitor
 import java.util.LinkedList
 
@@ -21,7 +20,7 @@ open class ArendInspectionConcreteVisitor : VoidConcreteVisitor<Void>() {
         return null
     }
 
-    override fun visitMeta(def: DefinableMetaDefinition?, params: Void?): Void? {
+    override fun visitMeta(def: Concrete.MetaDefinition?, params: Void?): Void? {
         parents.push(def)
         super.visitMeta(def, params)
         parents.pop()

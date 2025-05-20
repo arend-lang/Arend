@@ -54,7 +54,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
   }
 
   @Override
-  public Void visitMeta(DefinableMetaDefinition def, Scope scope) {
+  public Void visitMeta(Concrete.MetaDefinition def, Scope scope) {
     scope = new PrivateFilteredScope(scope);
     myLocalErrorReporter = new ConcreteProxyErrorReporter(def);
 
@@ -73,9 +73,6 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       def.body = def.body.accept(exprVisitor, null);
     }
 
-    if (def.getData().getDefinition() instanceof DefinableMetaDefinition) {
-      def.getData().setDefinition(def);
-    }
     SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter, myTypingInfo);
     if (myResolverListener != null) {
       myResolverListener.definitionResolved(def);

@@ -7,6 +7,7 @@ import org.arend.error.ParsingError;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
+import org.arend.extImpl.DefaultMetaTypechecker;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.term.group.ConcreteGroup;
@@ -14,7 +15,6 @@ import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.term.Fixity;
 import org.arend.term.concrete.Concrete;
-import org.arend.term.concrete.DefinableMetaDefinition;
 import org.arend.typechecking.error.local.LocalErrorReporter;
 import org.arend.util.SingletonList;
 import org.jetbrains.annotations.NotNull;
@@ -76,7 +76,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   private static MetaReferable convertMetaReferable(Abstract.AbstractLocatedReferable referable, LocatedReferable parent) {
-    return new MetaReferable(referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), null, null, parent);
+    return new MetaReferable(referable, referable.getAccessModifier(), referable.getPrecedence(), referable.getRefName(), referable.getAliasPrecedence(), referable.getAliasName(), new DefaultMetaTypechecker(), null, parent);
   }
 
   public static @NotNull Concrete.ResolvableDefinition convert(Abstract.Definition definition, LocatedReferable parent, ErrorReporter errorReporter, Map<Abstract.AbstractLocatedReferable, LocatedReferableImpl> resolved, Map<Abstract.AbstractLocatedReferable, LocatedReferableImpl> parentResolved) {
@@ -235,16 +235,9 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   @Override
-  public DefinableMetaDefinition visitMeta(Abstract.MetaDefinition def) {
-    var parameters = buildParameters(def.getParameters(), false);
-    var term = def.getTerm();
-    var body = term != null ? term.accept(this, null) : null;
-    MetaReferable metaRef = (MetaReferable) myDefinition;
-    var definition = new DefinableMetaDefinition(metaRef, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), parameters, body);
-    if (term != null) { // if term == null, it may be a generated meta, in which case we shouldn't replace its definition
-      metaRef.setDefinition(definition);
-    }
-    return definition;
+  public Concrete.MetaDefinition visitMeta(Abstract.MetaDefinition def) {
+    Abstract.Expression term = def.getTerm();
+    return new Concrete.MetaDefinition((MetaReferable) myDefinition, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), buildParameters(def.getParameters(), false), term != null ? term.accept(this, null) : null);
   }
 
   @Override

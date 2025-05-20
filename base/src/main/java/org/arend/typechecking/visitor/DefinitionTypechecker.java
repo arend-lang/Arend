@@ -30,6 +30,7 @@ import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.*;
 import org.arend.ext.prettyprinting.doc.DocFactory;
 import org.arend.ext.typechecking.LevelProver;
+import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.naming.reference.*;
 import org.arend.prelude.Prelude;
 import org.arend.ext.concrete.definition.ClassFieldKind;
@@ -106,11 +107,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         }
         return dataDef;
       }
-      case DefinableMetaDefinition def -> {
-        MetaTopDefinition metaDef = new MetaTopDefinition(def.getData());
-        metaDef.setStatus(Definition.TypeCheckingStatus.TYPE_CHECKING);
-        typecheckMetaHeader(metaDef, def, localInstancePool);
-        return metaDef;
+      case Concrete.MetaDefinition def -> {
+        typecheckMeta(def, localInstancePool);
+        return def.getData().getTypechecked();
       }
       case null, default -> throw new IllegalStateException();
     }
@@ -123,7 +122,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       if (!typecheckDataBody((DataDefinition) definition, (Concrete.DataDefinition) def, dataDefinitions)) {
         definition.addStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
       }
-    } else if (!(def instanceof DefinableMetaDefinition)) {
+    } else if (!(def instanceof Concrete.MetaDefinition)) {
       throw new IllegalStateException();
     }
     return null;
@@ -2450,41 +2449,29 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   }
 
   @Override
-  public List<ExtElimClause> visitMeta(DefinableMetaDefinition def, Void params) {
-    Definition typechecked = def.getData().getTypechecked();
+  public List<ExtElimClause> visitMeta(Concrete.MetaDefinition def, Void params) {
     LocalInstancePool localInstancePool = new LocalInstancePool(typechecker);
     typechecker.getInstancePool().setInstancePool(localInstancePool);
-
-    MetaTopDefinition definition = typechecked != null ? (MetaTopDefinition) typechecked : new MetaTopDefinition(def.getData());
-    typechecker.setDefinition(definition);
-    definition.setStatus(Definition.TypeCheckingStatus.TYPE_CHECKING);
-    typecheckMetaHeader(definition, def, localInstancePool);
+    typecheckMeta(def, localInstancePool);
     return null;
   }
 
-  private void typecheckMetaHeader(MetaTopDefinition typedDef, DefinableMetaDefinition def, LocalInstancePool instancePool) {
-    def.getData().setTypecheckedIfNotCancelled(typedDef);
-    typedDef.setLevelParameters(typecheckLevelParameters(def));
+  private void typecheckMeta(Concrete.MetaDefinition def, LocalInstancePool instancePool) {
+    int errors = typechecker.getNumberOfErrors();
+    MetaDefinition definition = def.getData().getTypechecker().typecheck(typechecker, def, () -> typecheckLevelParameters(def), () -> {
+      List<Boolean> typedParameters = new ArrayList<>();
+      LinkList list = new LinkList();
+      typecheckParameters(def, null, list, instancePool, null, null, typedParameters);
+      return new Pair<>(list.getFirst(), typedParameters);
+    });
 
-    List<Boolean> typedParameters = new ArrayList<>();
-    LinkList list = new LinkList();
-    typecheckParameters(def, typedDef, list, instancePool, null, null, typedParameters);
-
-    typedDef.setParameters(list.getFirst(), typedParameters);
-    typedDef.addStatus(Definition.TypeCheckingStatus.NO_ERRORS);
-    typechecker.setStatus(def.getStatus().getTypecheckingStatus());
-    typedDef.addStatus(typechecker.getStatus());
-  }
-
-  private static class LocalInstance {
-    final ClassCallExpression classCall;
-    final ClassField instanceField;
-
-    LocalInstance(ClassCallExpression classCall, ClassField instanceField) {
-      this.classCall = classCall;
-      this.instanceField = instanceField;
+    def.getData().setDefinition(definition);
+    if (definition == null && typechecker.getNumberOfErrors() <= errors) {
+      errorReporter.report(new TypecheckingError("Typechecking failed", def));
     }
   }
+
+  private record LocalInstance(ClassCallExpression classCall, ClassField instanceField) {}
 
   private ClassField findClassifyingField(ClassDefinition superClass, ClassDefinition classDef, Set<ClassDefinition> visited) {
     if (!visited.add(superClass)) {
