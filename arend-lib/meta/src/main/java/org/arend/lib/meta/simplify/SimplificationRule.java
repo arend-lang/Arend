@@ -2,13 +2,13 @@ package org.arend.lib.meta.simplify;
 
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.typechecking.TypedExpression;
-import org.arend.lib.meta.RewriteMeta;
+import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 
 public interface SimplificationRule {
   /**
    * @return Pair (simplifiedExpr, p : simplifiedExpr = expression). Null if expression cannot be simplified.
    */
-  RewriteMeta.EqProofConcrete apply(TypedExpression expression);
+  RewriteEquationMeta.EqProofConcrete apply(TypedExpression expression);
 
   ConcreteExpression finalizeEqProof(ConcreteExpression proof);
 }

@@ -30,6 +30,8 @@ import org.arend.lib.meta.debug.SleepMeta;
 import org.arend.lib.meta.debug.TimeMeta;
 import org.arend.lib.meta.equation.EquationMeta;
 import org.arend.lib.meta.linear.LinearSolverMeta;
+import org.arend.lib.meta.rewrite.RewriteEquationMeta;
+import org.arend.lib.meta.rewrite.RewriteMeta;
 import org.arend.lib.meta.simplify.SimplifyMeta;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
@@ -253,7 +255,7 @@ public class StdExtension implements ArendExtension {
         makeDef(meta, "defaultImpl", new DefaultImplMeta(this)));
 
     ModulePath paths = ModulePath.fromString("Paths.Meta");
-    MetaRef rewrite = makeRef(paths, "rewrite", new RewriteMeta(this, false, true, false));
+    MetaRef rewrite = makeRef(paths, "rewrite", new RewriteMeta(this, true));
     contributor.declare(multiline("""
         `rewrite (p : a = b) t : T` replaces occurrences of `a` in `T` with a variable `x` obtaining a type `T[x/a]` and returns `transportInv (\\lam x => T[x/a]) p t`
 
@@ -263,13 +265,13 @@ public class StdExtension implements ArendExtension {
         `rewrite (p_1, ... p_n) t` is equivalent to `rewrite p_1 (... rewrite p_n t ...)`
         """), factory.metaDef(rewrite, Collections.emptyList(), null));
     contributor.declare(text("`rewriteI p` is equivalent to `rewrite (inv p)`"),
-        makeDef(paths, "rewriteI", new RewriteMeta(this, false, false, false)));
+        makeDef(paths, "rewriteI", new RewriteMeta(this, false)));
     contributor.declare(vList(
         hList(text("`rewriteEq (p : a = b) t : T` is similar to "), refDoc(rewrite), text(", but it finds and replaces occurrences of `a` up to algebraic equivalences.")),
         text("For example, `rewriteEq (p : b * (c * id) = x) t : T` rewrites `(a * b) * (id * c)` as `a * x` in `T`."),
         text("Similarly to `rewrite` this meta allows specification of occurrence numbers."),
         text("Currently this meta supports noncommutative monoids and categories.")),
-        makeDef(paths, "rewriteEq", new RewriteMeta(this, false, true, true)));
+        makeDef(paths, "rewriteEq", new RewriteEquationMeta(this)));
     contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
         makeDef(paths, "simplify", new DeferredMetaDefinition(new SimplifyMeta(this), true)));
     MetaRef simp_coe = makeRef(paths, "simp_coe", new ClassExtResolver(this), simpCoeMeta);

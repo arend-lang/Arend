@@ -20,7 +20,7 @@ import org.arend.ext.util.Wrapper;
 import org.arend.lib.StdExtension;
 import org.arend.lib.error.SimplifyError;
 import org.arend.lib.error.TypeError;
-import org.arend.lib.meta.RewriteMeta;
+import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,10 +30,10 @@ import java.util.stream.Collectors;
 
 public class Simplifier {
     private final StdExtension ext;
-    private ExpressionTypechecker typechecker;
-    private ConcreteReferenceExpression refExpr;
-    private ConcreteFactory factory;
-    private ErrorReporter errorReporter;
+    private final ExpressionTypechecker typechecker;
+    private final ConcreteReferenceExpression refExpr;
+    private final ConcreteFactory factory;
+    private final ErrorReporter errorReporter;
 
     public Simplifier(StdExtension ext, ExpressionTypechecker typechecker, ConcreteReferenceExpression refExpr, ConcreteFactory factory, ErrorReporter errorReporter) {
         this.ext = ext; this.typechecker = typechecker; this.refExpr = refExpr; this.factory = factory; this.errorReporter = errorReporter;
@@ -41,12 +41,12 @@ public class Simplifier {
 
     private class SimplifyExpressionProcessor implements Function<CoreExpression, CoreExpression.FindAction> {
 
-        private final List<Pair<CoreExpression, RewriteMeta.EqProofConcrete>> simplificationOccurrences = new ArrayList<>();
+        private final List<Pair<CoreExpression, RewriteEquationMeta.EqProofConcrete>> simplificationOccurrences = new ArrayList<>();
         private final Map<Wrapper<CoreExpression>, CoreExpression> exprsToNormalize = new HashMap<>();
         private boolean isFirstLaunch = true;
         private boolean skipRoot = false;
 
-        public List<Pair<CoreExpression, RewriteMeta.EqProofConcrete>> getSimplificationOccurrences() {
+        public List<Pair<CoreExpression, RewriteEquationMeta.EqProofConcrete>> getSimplificationOccurrences() {
             return simplificationOccurrences;
         }
 
@@ -142,7 +142,7 @@ public class Simplifier {
                 exprsToNormalize.put(new Wrapper<>(expression), normExpr);
             }
             isFirstLaunch = false;
-            simplificationOccurrences.add(new Pair<>(normExpr, new RewriteMeta.EqProofConcrete(path, factory.core(expression.computeTyped()), right)));
+            simplificationOccurrences.add(new Pair<>(normExpr, new RewriteEquationMeta.EqProofConcrete(path, factory.core(expression.computeTyped()), right)));
             return CoreExpression.FindAction.SKIP;
         }
     }
@@ -249,7 +249,7 @@ public class Simplifier {
                 List<TypedExpression> checkedVars = new ArrayList<>();
 
                 for (var param : lamParams) {
-                    var checkedVar =  typechecker.typecheck(factory.ref(param.getRefList().get(0)), null);
+                    var checkedVar =  typechecker.typecheck(factory.ref(param.getRefList().getFirst()), null);
                     assert checkedVar != null;
                     checkedVars.add(checkedVar);
                 }
@@ -302,7 +302,7 @@ public class Simplifier {
             return null;
         }
         var proofs = processor.simplificationOccurrences.stream().map(x -> isForward ? x.proj2 : x.proj2.inverse(factory, ext)).collect(Collectors.toList());
-        return RewriteMeta.chainOfTransports(factory.ref(ext.transport.getRef(), refExpr.getPLevels(), refExpr.getHLevels()),
+        return RewriteEquationMeta.chainOfTransports(factory.ref(ext.transport.getRef(), refExpr.getPLevels(), refExpr.getHLevels()),
                 checkedLam.getExpression(), proofs, expression, factory, ext);
     }
 }

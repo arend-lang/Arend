@@ -504,7 +504,7 @@
 
     \lemma prod-div {R : CRing} {n m k : Nat} {A B : Matrix R n m} (As : IsSmith A) (Bs : IsSmith B) (A~B : A M~ B) (p : k <= n) (q : k <= m)
                     : TruncP (LDiv (diagProd A p q) (diagProd B p q)) \elim A~B
-      | inP (C,D,B=CAD) => rewrite {2} (diag-sub Bs.1 p q) $ rewrite B=CAD $ subMatrix-div (diag-div As p q) (index p) (index q)
+      | inP (C,D,B=CAD) => rewrite (diag-sub Bs.1 p q, B=CAD) $ subMatrix-div (diag-div As p q) (index p) (index q)
 
     \lemma smith-div {R : ReducedCRing} {n m : Nat} {A B : Matrix R n m} (As : IsSmith A) (Bs : IsSmith B) (A~B : A M~ B)
                      (i : Fin n) (j : Fin m) : TruncP (LDiv (A i j) (B i j))

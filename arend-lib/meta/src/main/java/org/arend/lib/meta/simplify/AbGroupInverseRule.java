@@ -1,27 +1,17 @@
 package org.arend.lib.meta.simplify;
 
-import org.arend.ext.concrete.ConcreteFactory;
-import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.concrete.expr.ConcreteReferenceExpression;
 import org.arend.ext.core.expr.CoreClassCallExpression;
-import org.arend.ext.core.expr.CoreExpression;
-import org.arend.ext.core.ops.NormalizationMode;
-import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
 import org.arend.lib.StdExtension;
-import org.arend.lib.meta.RewriteMeta;
-import org.arend.lib.meta.equation.EquationMeta;
-import org.arend.lib.meta.equation.binop_matcher.FunctionMatcher;
-import org.arend.lib.meta.equation.datafactory.GroupDataFactory;
+import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.meta.equation.term.CompiledTerm;
 import org.arend.lib.meta.equation.term.CompositeTerm;
 import org.arend.lib.meta.equation.term.VarTerm;
-import org.arend.lib.util.Values;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -42,7 +32,7 @@ public class AbGroupInverseRule extends GroupRuleBase {
       indToVarOccurNums.put(varTerm.index, curSign ? new Pair<>(occurNums.proj1, occurNums.proj2 + 1) : new Pair<>(occurNums.proj1 + 1, occurNums.proj2));
     } else if (term instanceof CompositeTerm compTerm) {
       if (compTerm.matcher == invMatcher) {
-        countVarOccurNums(compTerm.subterms.get(0), indToVarOccurNums, !curSign);
+        countVarOccurNums(compTerm.subterms.getFirst(), indToVarOccurNums, !curSign);
       } else if (compTerm.matcher == mulMatcher) {
         countVarOccurNums(compTerm.subterms.get(0), indToVarOccurNums, curSign);
         countVarOccurNums(compTerm.subterms.get(1), indToVarOccurNums, curSign);
@@ -79,7 +69,7 @@ public class AbGroupInverseRule extends GroupRuleBase {
     } else if (term instanceof CompositeTerm compositeTerm) {
       if (compositeTerm.matcher == invMatcher) {
         var invTerm = new CompositeTerm(invMatcher);
-        invTerm.subterms.add(removeVars(compositeTerm.subterms.get(0), numVarsToRemove, !curSign));
+        invTerm.subterms.add(removeVars(compositeTerm.subterms.getFirst(), numVarsToRemove, !curSign));
         return invTerm;
       } else if (compositeTerm.matcher == mulMatcher) {
         var mulTerm = new CompositeTerm(mulMatcher);
@@ -94,7 +84,7 @@ public class AbGroupInverseRule extends GroupRuleBase {
   }
 
   @Override
-  public RewriteMeta.EqProofConcrete apply(TypedExpression expression) {
+  public RewriteEquationMeta.EqProofConcrete apply(TypedExpression expression) {
     var term = CompiledTerm.compile(expression.getExpression(), Arrays.asList(ideMatcher, mulMatcher, invMatcher), values);
     var concreteTerm = CompiledTerm.termToConcrete(term, x -> {
       if (x == mulMatcher) {
@@ -124,6 +114,6 @@ public class AbGroupInverseRule extends GroupRuleBase {
       return factory.ref(isAdditive ? ext.equationMeta.zro.getRef() : ext.equationMeta.ide.getRef());
     }, ind -> factory.core(values.getValue(ind).computeTyped()), factory);
     if (right == null) return null;
-    return new RewriteMeta.EqProofConcrete(simplifyProof, left, right);/**/
+    return new RewriteEquationMeta.EqProofConcrete(simplifyProof, left, right);/**/
   }
 }

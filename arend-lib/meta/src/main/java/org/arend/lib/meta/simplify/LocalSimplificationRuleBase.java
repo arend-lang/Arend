@@ -13,7 +13,7 @@ import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
 import org.arend.lib.StdExtension;
-import org.arend.lib.meta.RewriteMeta;
+import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 
@@ -40,12 +40,12 @@ public abstract class LocalSimplificationRuleBase implements SimplificationRule 
   public ConcreteExpression finalizeEqProof(ConcreteExpression proof) { return proof; }
 
   @Override
-  public RewriteMeta.EqProofConcrete apply(TypedExpression expression) {
+  public RewriteEquationMeta.EqProofConcrete apply(TypedExpression expression) {
     var simplifiedExpression = expression;
-    RewriteMeta.EqProofConcrete simplificationProof = null;
+    RewriteEquationMeta.EqProofConcrete simplificationProof = null;
     while (true) {
       typechecker.checkCancelled();
-      final RewriteMeta.EqProofConcrete[] simplificationRes = {null};
+      final RewriteEquationMeta.EqProofConcrete[] simplificationRes = {null};
       TypedExpression finalSimplifiedExpression = simplifiedExpression;
       simplifiedExpression.getExpression().processSubexpression(subexpr -> {
         if (!subexpr.computeType().compare(expression.getType(), CMP.EQ)) {
@@ -91,7 +91,7 @@ public abstract class LocalSimplificationRuleBase implements SimplificationRule 
 
   protected abstract Pair<CoreExpression, ConcreteExpression> simplifySubexpression(CoreExpression subexpr);
 
-  private RewriteMeta.EqProofConcrete applySimplificationToSubexpr(TypedExpression expr, CoreExpression subexpr) {
+  private RewriteEquationMeta.EqProofConcrete applySimplificationToSubexpr(TypedExpression expr, CoreExpression subexpr) {
     var simplifyRes = simplifySubexpression(subexpr);
     if (simplifyRes != null) {
       var var = factory.local("i");
@@ -125,7 +125,7 @@ public abstract class LocalSimplificationRuleBase implements SimplificationRule 
       var exprPath = factory.path(factory.core(checkedLam));
       var checkedSimplifiedExpr = typechecker.check(simplifiedExpr, refExpr);
       if (checkedSimplifiedExpr == null) return null;
-      return new RewriteMeta.EqProofConcrete(exprPath, factory.core(expr), factory.core(checkedSimplifiedExpr));
+      return new RewriteEquationMeta.EqProofConcrete(exprPath, factory.core(expr), factory.core(checkedSimplifiedExpr));
     }
     return null;
   }

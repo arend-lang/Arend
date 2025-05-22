@@ -1,4 +1,4 @@
-package org.arend.lib.meta;
+package org.arend.lib.meta.rewrite;
 
 import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
@@ -26,19 +26,13 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Function;
 
-public class RewriteMeta extends BaseMetaDefinition {
+public class RewriteEquationMeta extends BaseMetaDefinition {
   private final StdExtension ext;
-  private final boolean isForward;
-  private final boolean isInverse;
-  private final boolean useEqSolver;
 
   private EqualitySolver solver;
 
-  public RewriteMeta(StdExtension ext, boolean isForward, boolean isInverse, boolean useEqSolver) {
+  public RewriteEquationMeta(StdExtension ext) {
     this.ext = ext;
-    this.isForward = isForward;
-    this.isInverse = isInverse;
-    this.useEqSolver = useEqSolver;
   }
 
   @Override
@@ -60,10 +54,10 @@ public class RewriteMeta extends BaseMetaDefinition {
 
   @Override
   public @Nullable ConcreteExpression getConcreteRepresentation(@NotNull List<? extends ConcreteArgument> arguments) {
-    return ext.factory.appBuilder(ext.factory.ref(ext.transportInv.getRef())).app(ext.factory.hole()).app(arguments.subList(arguments.get(0).isExplicit() ? 0 : 1, arguments.size())).build();
+    return ext.factory.appBuilder(ext.factory.ref(ext.transportInv.getRef())).app(ext.factory.hole()).app(arguments.subList(arguments.getFirst().isExplicit() ? 0 : 1, arguments.size())).build();
   }
 
-  private EquationSolver.SubexprOccurrences matchSubexpr(CoreExpression subExpr, CoreExpression expr, ExpressionTypechecker tc, ConcreteReferenceExpression refExpr, List<Integer> occurrences, ConcreteFactory factory) {
+  private EquationSolver.SubexprOccurrences matchSubexpr(CoreExpression subExpr, CoreExpression expr, ExpressionTypechecker tc, List<Integer> occurrences) {
     return solver.matchSubexpr(subExpr.computeTyped(), expr.computeTyped(), tc.getErrorReporter(), occurrences);
   }
 
@@ -88,7 +82,7 @@ public class RewriteMeta extends BaseMetaDefinition {
 
     public boolean allOccurrencesFound() { return occurrences == null || occurrences.isEmpty(); }
 
-    public RewriteExpressionProcessor(CoreExpression subExpr, CoreExpression subExprType, List<Integer> occurrences, ExpressionTypechecker typechecker, ConcreteReferenceExpression refExpr) {
+    public RewriteExpressionProcessor(CoreExpression subExpr, List<Integer> occurrences, ExpressionTypechecker typechecker, ConcreteReferenceExpression refExpr) {
       this.subExpr = subExpr;
       this.occurrences = occurrences != null ? new ArrayList<>(occurrences) : null;
       this.typechecker = typechecker;
@@ -119,57 +113,51 @@ public class RewriteMeta extends BaseMetaDefinition {
         }
         exactMatch = true;
       } else {
-        if (useEqSolver) {
-          var subExprTypeFixed = subExprType;
-          var expressionTypeFixed = expression.computeType();
-          while (subExprTypeFixed instanceof CoreAppExpression) {
-            subExprTypeFixed = ((CoreAppExpression) subExprTypeFixed).getFunction();
-          }
-          while (expressionTypeFixed instanceof CoreAppExpression) {
-            expressionTypeFixed = ((CoreAppExpression) expressionTypeFixed).getFunction();
-          }
-          if (subExprTypeFixed instanceof CoreDefCallExpression && ((CoreDefCallExpression) subExprTypeFixed).getDefinition() == ext.equationMeta.catHom) {
-            if (!(expressionTypeFixed instanceof CoreDefCallExpression)) {
-              ok = false;
-            } else {
-              ok = ((CoreDefCallExpression) subExprTypeFixed).getDefinition() == ((CoreDefCallExpression) expressionTypeFixed).getDefinition();
-            }
+        var subExprTypeFixed = subExprType;
+        var expressionTypeFixed = expression.computeType();
+        while (subExprTypeFixed instanceof CoreAppExpression) {
+          subExprTypeFixed = ((CoreAppExpression) subExprTypeFixed).getFunction();
+        }
+        while (expressionTypeFixed instanceof CoreAppExpression) {
+          expressionTypeFixed = ((CoreAppExpression) expressionTypeFixed).getFunction();
+        }
+        if (subExprTypeFixed instanceof CoreDefCallExpression && ((CoreDefCallExpression) subExprTypeFixed).getDefinition() == ext.equationMeta.catHom) {
+          if (!(expressionTypeFixed instanceof CoreDefCallExpression)) {
+            ok = false;
           } else {
-            ok = typechecker.compare(subExprType, expression.computeType(), CMP.LE, refExpr, false, true, false);
-          } /**/
+            ok = ((CoreDefCallExpression) subExprTypeFixed).getDefinition() == ((CoreDefCallExpression) expressionTypeFixed).getDefinition();
+          }
         } else {
           ok = typechecker.compare(subExprType, expression.computeType(), CMP.LE, refExpr, false, true, false);
-        }
+        } /**/
         if (ok) {
           ok = typechecker.compare(subExpr, expression, CMP.EQ, refExpr, false, true, true);
           if (!ok) {
-            if (useEqSolver) {
-              subExprOccur = matchSubexpr(subExpr, expression, typechecker, refExpr, occurrences, factory);
-              ok = subExprOccur.doesExist();
-              //if (!ok) {
-              if (occurrences != null) {
-                if (ok) {
-                  occurrences = new ArrayList<>(occurrences.subList(0, subExprOccur.numOccurrences));
-                }
-                if (!occurrences.isEmpty()) {
-                  occurrences.set(0, occurrences.get(0) - subExprOccur.numOccurrencesSkipped);
-                }
+            subExprOccur = matchSubexpr(subExpr, expression, typechecker, occurrences);
+            ok = subExprOccur.doesExist();
+            //if (!ok) {
+            if (occurrences != null) {
+              if (ok) {
+                occurrences = new ArrayList<>(occurrences.subList(0, subExprOccur.numOccurrences));
               }
-              //}
-
-              skip = !subExprOccur.subExprMissed;
+              if (!occurrences.isEmpty()) {
+                occurrences.set(0, occurrences.getFirst() - subExprOccur.numOccurrencesSkipped);
+              }
             }
+            //}
+
+            skip = !subExprOccur.subExprMissed;
           } else {
             exactMatch = true;
           }
         }
       }
       if (exactMatch && occurrences != null) {
-        if (occurrences.get(0) == 0) {
-          occurrences.remove(0);
+        if (occurrences.getFirst() == 0) {
+          occurrences.removeFirst();
         } else {
           ok = false;
-          occurrences.set(0, occurrences.get(0) - 1);
+          occurrences.set(0, occurrences.getFirst() - 1);
         }
       }
       if (ok) {
@@ -226,8 +214,8 @@ public class RewriteMeta extends BaseMetaDefinition {
         var right = !isInverse ? eqProofs.get(j).right : eqProofs.get(j).left;
         absNewBody = factory.appBuilder(absNewBody).app(right).build();
       }
-      var left = eqProofs.get(i).left; //isInverse ? eqProofs.get(i).left : eqProofs.get(i).right;//eqProofs.get(i).left; //
-      var right = eqProofs.get(i).right; //isInverse ? eqProofs.get(i).right : eqProofs.get(i).left;//eqProofs.get(i).right; //
+      // var left = eqProofs.get(i).left; //isInverse ? eqProofs.get(i).left : eqProofs.get(i).right;//eqProofs.get(i).left; //
+      // var right = eqProofs.get(i).right; //isInverse ? eqProofs.get(i).right : eqProofs.get(i).left;//eqProofs.get(i).right; //
       result = factory.appBuilder(transport)//.app(factory.hole(), false)
               //.app(factory.core(transportType))
               .app(absNewBody) //.app(left, false).app(right, false)
@@ -244,7 +232,7 @@ public class RewriteMeta extends BaseMetaDefinition {
   public TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     List<? extends ConcreteArgument> args = contextData.getArguments();
     int currentArg = 0;
-    ConcreteExpression occurrencesArg = args.get(0).isExplicit() ? null : args.get(currentArg++).getExpression();
+    ConcreteExpression occurrencesArg = args.getFirst().isExplicit() ? null : args.get(currentArg++).getExpression();
     List<? extends ConcreteExpression> args0 = new ArrayList<>(Utils.getArgumentList(args.get(currentArg++).getExpression()));
     if (args0.isEmpty()) {
       return typechecker.typecheck(args.get(currentArg).getExpression(), contextData.getExpectedType());
@@ -252,7 +240,7 @@ public class RewriteMeta extends BaseMetaDefinition {
 
     CoreExpression expectedType = contextData.getExpectedType() == null ? null : contextData.getExpectedType().getUnderlyingExpression();
     boolean reverse = expectedType == null || args.size() > currentArg + 2;
-    boolean isForward = reverse || this.isForward;
+    boolean isForward = reverse;
 
     ErrorReporter errorReporter = typechecker.getErrorReporter();
     ConcreteReferenceExpression refExpr = contextData.getReferenceExpression();
@@ -269,7 +257,7 @@ public class RewriteMeta extends BaseMetaDefinition {
       }
       return typechecker.typecheck(factory.app(result, args.subList(currentArg, args.size())), contextData.getExpectedType());
     }
-    ConcreteExpression arg0 = args0.get(0);
+    ConcreteExpression arg0 = args0.getFirst();
 
     // Collect occurrences
     List<Integer> occurrences;
@@ -282,8 +270,7 @@ public class RewriteMeta extends BaseMetaDefinition {
       occurrences = null;
     }
 
-    //noinspection SimplifiableConditionalExpression
-    boolean isInverse = reverse && !this.isForward ? !this.isInverse : this.isInverse;
+    boolean isInverse = !reverse;
 
     // Add inference holes to functions and type-check the path argument
     TypedExpression path = Utils.typecheckWithAdditionalArguments(arg0, typechecker, ext, 0, false);
@@ -298,7 +285,7 @@ public class RewriteMeta extends BaseMetaDefinition {
     }
 
     ConcreteExpression transport = factory.ref((isInverse ? ext.transportInv : ext.transport).getRef(), refExpr.getPLevels(), refExpr.getHLevels());
-    CoreExpression value = eq.getDefCallArguments().get(isInverse == isForward ? 2 : 1);
+    CoreExpression value = eq.getDefCallArguments().get(1);
 
     // This case won't happen often, but sill possible
     if (!isForward && expectedType instanceof CoreInferenceReferenceExpression) {
@@ -306,7 +293,7 @@ public class RewriteMeta extends BaseMetaDefinition {
       if (var instanceof CoreInferenceReferenceExpression && ((CoreInferenceReferenceExpression) var).getVariable() == ((CoreInferenceReferenceExpression) expectedType).getVariable()) {
         if (!(occurrences == null || occurrences.isEmpty() || occurrences.size() == 1 && occurrences.contains(1))) {
           occurrences.remove(1);
-          errorReporter.report(new SubexprError(typechecker.getExpressionPrettifier(), occurrences, var, null, expectedType, refExpr));
+          errorReporter.report(new SubexprError(typechecker.getExpressionPrettifier(), occurrences.stream().map(x -> x + 1).toList(), var, null, expectedType, refExpr));
           return null;
         }
         ArendRef ref = factory.local("T");
@@ -331,12 +318,10 @@ public class RewriteMeta extends BaseMetaDefinition {
       type = expectedType;
     }
 
-    if (useEqSolver) {
-      solver = new EqualitySolver(ext.equationMeta, typechecker, factory, refExpr);
-      solver.setValuesType(value.computeType());
-      solver.setUseHypotheses(false);
-      solver.initializeSolver();
-    }
+    solver = new EqualitySolver(ext.equationMeta, typechecker, factory, refExpr);
+    solver.setValuesType(value.computeType());
+    solver.setUseHypotheses(false);
+    solver.initializeSolver();
 
     ConcreteExpression concretePath = factory.core(path);
     CoreExpression normType = type.normalize(NormalizationMode.RNF);
@@ -344,14 +329,14 @@ public class RewriteMeta extends BaseMetaDefinition {
     var occurVars = new ArrayList<ArendRef>();
     var eqProofs = new ArrayList<EqProofConcrete>();
 
-    var processor = new RewriteExpressionProcessor(value, eq.getDefCallArguments().get(0), occurrences, typechecker, refExpr);
+    var processor = new RewriteExpressionProcessor(value, occurrences, typechecker, refExpr);
     typechecker.withCurrentState(tc -> normType.processSubexpression(processor));
 
     var foundOccurs = processor.getFoundOccurrences();
-    int firstExactMatch = processor.getExactMatches().isEmpty() ? -1 : processor.getExactMatches().get(0);
+    int firstExactMatch = processor.getExactMatches().isEmpty() ? -1 : processor.getExactMatches().getFirst();
 
     if (foundOccurs.isEmpty() || !processor.allOccurrencesFound()) {
-      errorReporter.report(new SubexprError(typechecker.getExpressionPrettifier(), occurrences, value, null, normType, refExpr));
+      errorReporter.report(new SubexprError(typechecker.getExpressionPrettifier(), occurrences == null ? null : occurrences.stream().map(x -> x + 1).toList(), value, null, normType, refExpr));
       return null;
     }
 
@@ -384,7 +369,7 @@ public class RewriteMeta extends BaseMetaDefinition {
 
     for (int i = 0; i < occurVars.size(); ++i) {
       var var = occurVars.get(i);
-      var typeParam = useEqSolver ? factory.core(foundOccurs.get(i).proj2.computeType().computeTyped()) : factory.core(eq.getDefCallArguments().get(0).computeTyped());
+      var typeParam = factory.core(foundOccurs.get(i).proj2.computeType().computeTyped());
       lamParams.add(factory.param(true, Collections.singletonList(var), typeParam));
     }
 
@@ -416,7 +401,7 @@ public class RewriteMeta extends BaseMetaDefinition {
 
         TypedExpression result = typeWithOccur != null ? Utils.tryTypecheck(typechecker, tc -> tc.check(typeWithOccur, refExpr)) : null;
         if (result == null) {
-          errorReporter.report(typeWithOccur == null ? new SubexprError(typechecker.getExpressionPrettifier(), occurrences, value, null, normType, refExpr) : new TypeError(typechecker.getExpressionPrettifier(), "Cannot substitute a variable. The resulting type is invalid", typeWithOccur, refExpr));
+          errorReporter.report(typeWithOccur == null ? new SubexprError(typechecker.getExpressionPrettifier(), occurrences == null ? null : occurrences.stream().map(x -> x + 1).toList(), value, null, normType, refExpr) : new TypeError(typechecker.getExpressionPrettifier(), "Cannot substitute a variable. The resulting type is invalid", typeWithOccur, refExpr));
         }
         return result;
       }
@@ -436,7 +421,6 @@ public class RewriteMeta extends BaseMetaDefinition {
             .app(args.subList(currentArg, args.size()))
             .build();
 
-    if (useEqSolver) return solver.finalize(term);
-    return typechecker.typecheck(term, expectedType);
+    return solver.finalize(term);
   }
 }

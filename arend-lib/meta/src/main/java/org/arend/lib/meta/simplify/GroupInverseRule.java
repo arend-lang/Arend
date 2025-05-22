@@ -1,14 +1,12 @@
 package org.arend.lib.meta.simplify;
 
-import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.concrete.expr.ConcreteReferenceExpression;
 import org.arend.ext.core.expr.CoreClassCallExpression;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
 import org.arend.lib.StdExtension;
-import org.arend.lib.meta.RewriteMeta;
-import org.arend.lib.meta.equation.datafactory.GroupDataFactory;
+import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.meta.equation.term.CompiledTerm;
 import org.arend.lib.meta.equation.term.CompositeTerm;
 import org.arend.lib.meta.equation.term.VarTerm;
@@ -28,7 +26,7 @@ public class GroupInverseRule extends GroupRuleBase {
         return isInNF(compositeTerm.subterms.get(0)) && isInNF(compositeTerm.subterms.get(1));
       }
       if (compositeTerm.matcher == invMatcher) {
-        return !(compositeTerm.subterms.get(0) instanceof CompositeTerm);
+        return !(compositeTerm.subterms.getFirst() instanceof CompositeTerm);
       }
       return true;
     }
@@ -42,7 +40,7 @@ public class GroupInverseRule extends GroupRuleBase {
         return countLeaves(compositeTerm.subterms.get(0)) + countLeaves(compositeTerm.subterms.get(1));
       }
       if (compositeTerm.matcher == invMatcher) {
-        return (compositeTerm.subterms.get(0) instanceof CompositeTerm) ? 0 : 1;
+        return (compositeTerm.subterms.getFirst() instanceof CompositeTerm) ? 0 : 1;
       }
     }
     return 0;
@@ -70,7 +68,7 @@ public class GroupInverseRule extends GroupRuleBase {
         return new Pair<>(null, leftRes.proj2);
       }
       if (compositeTerm.matcher == invMatcher) {
-        if (compositeTerm.subterms.get(0) instanceof VarTerm varTerm) {
+        if (compositeTerm.subterms.getFirst() instanceof VarTerm varTerm) {
           if (lastLeaf != null && !lastLeaf.isInv && varTerm.index == lastLeaf.var.index) {
             return new Pair<>(lastLeafInd - 1, null);
           }
@@ -95,7 +93,7 @@ public class GroupInverseRule extends GroupRuleBase {
         var result = new CompositeTerm();
         result.matcher = mulMatcher;
         if (fstIndToRemove < numLeavesLeft) {
-          var leftRes = removePair(compositeTerm.subterms.get(0), fstIndToRemove);
+          var leftRes = removePair(compositeTerm.subterms.getFirst(), fstIndToRemove);
           if (leftRes == null) {
             return right;
           }
@@ -137,7 +135,7 @@ public class GroupInverseRule extends GroupRuleBase {
   }
 
   @Override
-  public RewriteMeta.EqProofConcrete apply(TypedExpression expression) {
+  public RewriteEquationMeta.EqProofConcrete apply(TypedExpression expression) {
     var term = CompiledTerm.compile(expression.getExpression(), Arrays.asList(mulMatcher, invMatcher, ideMatcher), values);
     var newTerm = simplify(term);
     if (newTerm == null) return null;
@@ -164,6 +162,6 @@ public class GroupInverseRule extends GroupRuleBase {
       }
       return factory.ref(isAdditive ? ext.equationMeta.zro.getRef() : ext.equationMeta.ide.getRef());
     }, ind -> factory.core(values.getValue(ind).computeTyped()), factory);
-    return new RewriteMeta.EqProofConcrete(simplifyProof, left, right);
+    return new RewriteEquationMeta.EqProofConcrete(simplifyProof, left, right);
   }
 }

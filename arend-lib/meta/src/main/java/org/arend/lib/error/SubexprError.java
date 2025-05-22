@@ -19,7 +19,7 @@ public class SubexprError extends TypecheckingError {
   private final CoreExpression expr;
 
   public SubexprError(ExpressionPrettifier prettifier, List<Integer> occurrences, CoreExpression subexpr, CoreExpression subexprType, CoreExpression expr, @Nullable ConcreteSourceNode cause) {
-    super("Cannot find subexpression" + (occurrences == null ? "" : " at " + occurrences.stream().map(x -> x + 1).toList()), cause);
+    super("Cannot find subexpression" + (occurrences == null ? "" : " at " + occurrences), cause);
     this.prettifier = prettifier;
     this.expr = expr;
     this.subexpr = subexpr;
