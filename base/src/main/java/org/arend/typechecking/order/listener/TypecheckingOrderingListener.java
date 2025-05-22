@@ -367,6 +367,8 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     DesugarVisitor.desugar(definition, visitor.getErrorReporter());
     DefinitionTypechecker typechecker = new DefinitionTypechecker(visitor, definition instanceof Concrete.Definition ? ((Concrete.Definition) definition).getRecursiveDefinitions() : Collections.emptySet());
     Definition typechecked = typechecker.typecheckHeader(new GlobalInstancePool(myInstanceScopeProvider.getInstancesFor(definition.getData()), visitor), definition);
+    if (typechecked == null) return;
+
     UniverseKind universeKind = typechecked.getUniverseKind();
     if (typechecked instanceof TopLevelDefinition) {
       ((TopLevelDefinition) typechecked).setUniverseKind(UniverseKind.WITH_UNIVERSES);
@@ -490,7 +492,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
 
     for (Concrete.ResolvableDefinition definition : orderedDefinitions) {
-      if (definition.getData().getTypechecked().accept(new SearchVisitor<Void>() {
+      if (definition.getData().getTypechecked() != null && definition.getData().getTypechecked().accept(new SearchVisitor<Void>() {
         @Override
         protected CoreExpression.FindAction processDefCall(DefCallExpression expr, Void param) {
           return expr instanceof LeveledDefCallExpression && expr.getDefinition() instanceof TopLevelDefinition && allDefinitions.contains((TopLevelDefinition) expr.getDefinition()) && !((LeveledDefCallExpression) expr).getLevels().compare(expr.getDefinition().makeIdLevels(), CMP.EQ, DummyEquations.getInstance(), null) ? CoreExpression.FindAction.STOP : CoreExpression.FindAction.CONTINUE;
@@ -541,6 +543,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
     for (Concrete.ResolvableDefinition definition : definitions) {
       Definition def = definition.getData().getTypechecked();
+      if (def == null) continue;
       def.accept(visitor, null);
       if (def instanceof TopLevelDefinition topDef && newDefs.contains(def)) {
         if (definition instanceof Concrete.BaseFunctionDefinition && ((Concrete.BaseFunctionDefinition) definition).getKind() == FunctionKind.AXIOM) {

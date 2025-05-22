@@ -7,6 +7,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.module.LongName;
 import org.arend.ext.reference.ArendRef;
+import org.arend.ext.typechecking.DeferredMetaDefinition;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.jetbrains.annotations.NotNull;
@@ -18,12 +19,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
-public class DependencyMetaTypechecker<T extends MetaDefinition> implements MetaTypechecker {
+public class DependencyMetaTypechecker implements MetaTypechecker {
   private final List<LongName> names;
   private final List<Field> fields;
-  private final Supplier<T> metaSupplier;
+  private final Supplier<MetaDefinition> metaSupplier;
 
-  public DependencyMetaTypechecker(@NotNull Class<T> container, @NotNull Supplier<T> metaSupplier) {
+  public DependencyMetaTypechecker(@NotNull Class<? extends MetaDefinition> container, @NotNull Supplier<MetaDefinition> metaSupplier) {
     names = new ArrayList<>();
     fields = new ArrayList<>();
     this.metaSupplier = metaSupplier;
@@ -95,10 +96,11 @@ public class DependencyMetaTypechecker<T extends MetaDefinition> implements Meta
   public @Nullable MetaDefinition typecheck(@NotNull ExpressionTypechecker typechecker, @NotNull ConcreteMetaDefinition definition) {
     List<ArendRef> refs = extractReferences(definition, fields.size(), typechecker.getErrorReporter());
     if (refs == null) return null;
-    T meta = metaSupplier.get();
+    MetaDefinition meta = metaSupplier.get();
     try {
+      MetaDefinition actual = meta instanceof DeferredMetaDefinition deferred ? deferred.deferredMeta : meta;
       for (int i = 0; i < fields.size(); i++) {
-        fields.get(i).set(meta, refs.get(i));
+        fields.get(i).set(actual, refs.get(i));
       }
     } catch (IllegalAccessException e) {
       throw new IllegalStateException(e);

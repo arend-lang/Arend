@@ -11,6 +11,7 @@ import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
+import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
 import org.arend.lib.StdExtension;
 
@@ -28,8 +29,11 @@ import java.util.function.Function;
 
 public class RewriteEquationMeta extends BaseMetaDefinition {
   private final StdExtension ext;
-
-  private EqualitySolver solver;
+  @Dependency(name = "Precat.Hom") private ArendRef catHom;
+  @Dependency private ArendRef transport;
+  @Dependency private ArendRef transportInv;
+  @Dependency(name = "*>") private ArendRef concat;
+  @Dependency private ArendRef pmap;
 
   public RewriteEquationMeta(StdExtension ext) {
     this.ext = ext;
@@ -45,19 +49,14 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
     return new boolean[] { false, true, true };
   }
 
-  private void getNumber(ConcreteExpression expression, List<Integer> result, ErrorReporter errorReporter) {
+  private static void getNumber(ConcreteExpression expression, List<Integer> result, ErrorReporter errorReporter) {
     int n = Utils.getNumber(expression, errorReporter);
     if (n >= 1) {
       result.add(n - 1);
     }
   }
 
-  @Override
-  public @Nullable ConcreteExpression getConcreteRepresentation(@NotNull List<? extends ConcreteArgument> arguments) {
-    return ext.factory.appBuilder(ext.factory.ref(ext.transportInv.getRef())).app(ext.factory.hole()).app(arguments.subList(arguments.getFirst().isExplicit() ? 0 : 1, arguments.size())).build();
-  }
-
-  private EquationSolver.SubexprOccurrences matchSubexpr(CoreExpression subExpr, CoreExpression expr, ExpressionTypechecker tc, List<Integer> occurrences) {
+  private EquationSolver.SubexprOccurrences matchSubexpr(CoreExpression subExpr, CoreExpression expr, ExpressionTypechecker tc, List<Integer> occurrences, EqualitySolver solver) {
     return solver.matchSubexpr(subExpr.computeTyped(), expr.computeTyped(), tc.getErrorReporter(), occurrences);
   }
 
@@ -67,6 +66,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
     private final ConcreteReferenceExpression refExpr;
     private final CoreExpression subExprType;
     private final ConcreteFactory factory;
+    private final EqualitySolver solver;
 
     private List<Integer> occurrences;
     private final List<Pair<EquationSolver.SubexprOccurrences, CoreExpression>> foundOccurrences = new ArrayList<>();
@@ -82,13 +82,14 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
 
     public boolean allOccurrencesFound() { return occurrences == null || occurrences.isEmpty(); }
 
-    public RewriteExpressionProcessor(CoreExpression subExpr, List<Integer> occurrences, ExpressionTypechecker typechecker, ConcreteReferenceExpression refExpr) {
+    public RewriteExpressionProcessor(CoreExpression subExpr, List<Integer> occurrences, ExpressionTypechecker typechecker, ConcreteReferenceExpression refExpr, EqualitySolver solver) {
       this.subExpr = subExpr;
       this.occurrences = occurrences != null ? new ArrayList<>(occurrences) : null;
       this.typechecker = typechecker;
       this.refExpr = refExpr;
       this.subExprType = subExpr.computeType();
       this.factory = ext.factory.withData(refExpr.getData());
+      this.solver = solver;
     }
 
     @Override
@@ -121,7 +122,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
         while (expressionTypeFixed instanceof CoreAppExpression) {
           expressionTypeFixed = ((CoreAppExpression) expressionTypeFixed).getFunction();
         }
-        if (subExprTypeFixed instanceof CoreDefCallExpression && ((CoreDefCallExpression) subExprTypeFixed).getDefinition() == ext.equationMeta.catHom) {
+        if (subExprTypeFixed instanceof CoreDefCallExpression && ((CoreDefCallExpression) subExprTypeFixed).getDefinition().getRef().equals(catHom)) {
           if (!(expressionTypeFixed instanceof CoreDefCallExpression)) {
             ok = false;
           } else {
@@ -133,7 +134,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
         if (ok) {
           ok = typechecker.compare(subExpr, expression, CMP.EQ, refExpr, false, true, true);
           if (!ok) {
-            subExprOccur = matchSubexpr(subExpr, expression, typechecker, occurrences);
+            subExprOccur = matchSubexpr(subExpr, expression, typechecker, occurrences, solver);
             ok = subExprOccur.doesExist();
             //if (!ok) {
             if (occurrences != null) {
@@ -190,11 +191,10 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
     }
   }
 
-  public static ConcreteExpression chainOfTransports(ConcreteExpression transport, CoreExpression type, List<EqProofConcrete> eqProofs, ConcreteExpression term, ConcreteFactory factory, StdExtension ext) {
+  public static ConcreteExpression chainOfTransports(ConcreteExpression transport, CoreExpression type, List<EqProofConcrete> eqProofs, ConcreteExpression term, ConcreteFactory factory, boolean isInverse) {
     var result = term;
     var curType = type; //typechecker.typecheck(type, null);
     List<CoreBinding> paramList = new ArrayList<>();
-    boolean isInverse = ((ConcreteReferenceExpression)transport).getReferent() == ext.transportInv.getRef();
 
     for (int i = 0; i < eqProofs.size(); ++i) {
       if (!(curType instanceof CoreLamExpression)) return null;
@@ -284,7 +284,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
       return null;
     }
 
-    ConcreteExpression transport = factory.ref((isInverse ? ext.transportInv : ext.transport).getRef(), refExpr.getPLevels(), refExpr.getHLevels());
+    ConcreteExpression transportExpr = factory.ref(isInverse ? transportInv : transport, refExpr.getPLevels(), refExpr.getHLevels());
     CoreExpression value = eq.getDefCallArguments().get(1);
 
     // This case won't happen often, but sill possible
@@ -297,7 +297,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
           return null;
         }
         ArendRef ref = factory.local("T");
-        return typechecker.typecheck(factory.app(transport, true, Arrays.asList(
+        return typechecker.typecheck(factory.app(transportExpr, true, Arrays.asList(
           factory.lam(Collections.singletonList(factory.param(ref)), factory.ref(ref)),
           factory.core("transport (\\lam T => T) {!} _", path),
           args.get(currentArg).getExpression())), null);
@@ -318,7 +318,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
       type = expectedType;
     }
 
-    solver = new EqualitySolver(ext.equationMeta, typechecker, factory, refExpr);
+    EqualitySolver solver = new EqualitySolver(ext.equationMeta, typechecker, factory, refExpr);
     solver.setValuesType(value.computeType());
     solver.setUseHypotheses(false);
     solver.initializeSolver();
@@ -329,7 +329,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
     var occurVars = new ArrayList<ArendRef>();
     var eqProofs = new ArrayList<EqProofConcrete>();
 
-    var processor = new RewriteExpressionProcessor(value, occurrences, typechecker, refExpr);
+    var processor = new RewriteExpressionProcessor(value, occurrences, typechecker, refExpr, solver);
     typechecker.withCurrentState(tc -> normType.processSubexpression(processor));
 
     var foundOccurs = processor.getFoundOccurrences();
@@ -356,8 +356,8 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
           var subExprOccur = foundOccurs.get(i).proj1;
           var fixedLeft = factory.appBuilder(subExprOccur.exprWithOccurrences).app(left).build();
           var fixedRight = factory.appBuilder(subExprOccur.exprWithOccurrences).app(right).build();
-          var occurPathTransport = factory.appBuilder(factory.ref(ext.pmap.getRef())).app(subExprOccur.exprWithOccurrences).app(concretePath).build();
-          var eqProof = factory.appBuilder(factory.ref(ext.concat.getRef())).app(subExprOccur.equalityProof).app(occurPathTransport).build();
+          var occurPathTransport = factory.appBuilder(factory.ref(pmap)).app(subExprOccur.exprWithOccurrences).app(concretePath).build();
+          var eqProof = factory.appBuilder(factory.ref(concat)).app(subExprOccur.equalityProof).app(occurPathTransport).build();
           eqProofs.add(new EqProofConcrete(eqProof, fixedLeft, fixedRight)); // (factory.core(solver.finalize(eqProof)));
         }
       } else {
@@ -413,7 +413,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
       return null;
     }
 
-    term = chainOfTransports(transport, checkedLam.getExpression(), eqProofs, term, factory, ext);
+    term = chainOfTransports(transportExpr, checkedLam.getExpression(), eqProofs, term, factory, isInverse);
 
     if (term == null) return null;
 

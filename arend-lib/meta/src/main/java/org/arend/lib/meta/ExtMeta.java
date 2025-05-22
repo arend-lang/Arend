@@ -18,6 +18,7 @@ import org.arend.ext.core.ops.SubstitutionPair;
 import org.arend.ext.error.*;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
+import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.ui.ArendUI;
 import org.arend.lib.StdExtension;
 import org.arend.lib.error.IgnoredArgumentError;
@@ -35,6 +36,9 @@ import java.util.function.Consumer;
 public class ExtMeta extends BaseMetaDefinition {
   private final StdExtension ext;
   private final boolean withSimpCoe;
+  @Dependency private ArendRef transport;
+  @Dependency private ArendRef simp_coe;
+  @Dependency private ArendRef later;
 
   public ExtMeta(StdExtension ext, boolean withSimpCoe) {
     this.ext = ext;
@@ -61,17 +65,7 @@ public class ExtMeta extends BaseMetaDefinition {
     return true;
   }
 
-  private static class PiTreeData {
-    private final PiTreeMaker maker;
-    private final PiTreeRoot tree;
-    private final List<ConcreteExpression> leftProjs;
-
-    private PiTreeData(PiTreeMaker maker, PiTreeRoot tree, List<ConcreteExpression> leftProjs) {
-      this.maker = maker;
-      this.tree = tree;
-      this.leftProjs = leftProjs;
-    }
-  }
+  private record PiTreeData(PiTreeMaker maker, PiTreeRoot tree, List<ConcreteExpression> leftProjs) {}
 
   private static boolean useLet(CoreExpression expr, int index) {
     return !(expr instanceof CoreReferenceExpression) && (!(expr instanceof CoreTupleExpression tuple) || !(index < tuple.getFields().size() && tuple.getFields().get(index) instanceof CoreReferenceExpression));
@@ -81,15 +75,7 @@ public class ExtMeta extends BaseMetaDefinition {
     return fields == null ? factory.proj(expr, index) : factory.app(factory.ref(fields.get(index).getRef()), false, Collections.singletonList(expr));
   }
 
-  private static class CoclauseData {
-    final ConcreteCoclause coclause;
-    final boolean fromField;
-
-    private CoclauseData(ConcreteCoclause coclause, boolean fromField) {
-      this.coclause = coclause;
-      this.fromField = fromField;
-    }
-  }
+  private record CoclauseData(ConcreteCoclause coclause, boolean fromField) {}
 
   private static class FieldPathExpression extends PathExpression {
     final CoreClassField classField;
@@ -119,14 +105,14 @@ public class ExtMeta extends BaseMetaDefinition {
   public class ExtGenerator {
     private final ExpressionTypechecker typechecker;
     private final ConcreteFactory factory;
-    private final ConcreteSourceNode marker;
+    private final ConcreteReferenceExpression selfReference;
     private final ArendRef iRef;
     private CoreErrorExpression goalExpr;
 
-    private ExtGenerator(ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteSourceNode marker, ArendRef iRef) {
+    private ExtGenerator(ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression selfReference, ArendRef iRef) {
       this.typechecker = typechecker;
       this.factory = factory;
-      this.marker = marker;
+      this.selfReference = selfReference;
       this.iRef = iRef;
     }
 
@@ -233,7 +219,7 @@ public class ExtMeta extends BaseMetaDefinition {
             if (ok) {
               arrayLength = factory.core((leftLength != null ? leftLength : rightLength).computeTyped());
               typeParams = typechecker.substituteParameters(typeParams, LevelSubstitution.EMPTY, Collections.singletonList(arrayLength));
-              classFields.remove(0);
+              classFields.removeFirst();
             }
           }
         }
@@ -333,11 +319,11 @@ public class ExtMeta extends BaseMetaDefinition {
             }
 
             if (!notImplemented.isEmpty()) {
-              typechecker.getErrorReporter().report(new FieldsImplementationError(false, classCall.getDefinition().getRef(), notImplemented, arg instanceof ConcreteClassExtExpression ? ((ConcreteClassExtExpression) arg).getCoclauses() : marker));
+              typechecker.getErrorReporter().report(new FieldsImplementationError(false, classCall.getDefinition().getRef(), notImplemented, arg instanceof ConcreteClassExtExpression ? ((ConcreteClassExtExpression) arg).getCoclauses() : selfReference));
               return null;
             }
 
-            newArg = tupleFields.isEmpty() ? null : tupleFields.size() == 1 ? tupleFields.get(0) : factory.withData(arg.getData()).tuple(tupleFields);
+            newArg = tupleFields.isEmpty() ? null : tupleFields.size() == 1 ? tupleFields.getFirst() : factory.withData(arg.getData()).tuple(tupleFields);
           }
         }
 
@@ -366,11 +352,11 @@ public class ExtMeta extends BaseMetaDefinition {
               if (bindings.contains(binding)) {
                 if (!isProp) {
                   if (propBindings.containsKey(binding)) {
-                    typechecker.getErrorReporter().report(new TypecheckingError("Non-propositional fields cannot depend on propositional ones", marker));
+                    typechecker.getErrorReporter().report(new TypecheckingError("Non-propositional fields cannot depend on propositional ones", selfReference));
                     return CoreExpression.FindAction.STOP;
                   }
                   if (dependentBindings.contains(binding)) {
-                    typechecker.getErrorReporter().report(new TypecheckingError((type instanceof CoreSigmaExpression ? "\\Sigma types" : "Classes") + " with more than two levels of dependencies are not supported", marker));
+                    typechecker.getErrorReporter().report(new TypecheckingError((type instanceof CoreSigmaExpression ? "\\Sigma types" : "Classes") + " with more than two levels of dependencies are not supported", selfReference));
                     return CoreExpression.FindAction.STOP;
                   }
                   dependentBindings.add(paramBinding);
@@ -414,7 +400,7 @@ public class ExtMeta extends BaseMetaDefinition {
                 }
               }
 
-              PiTreeMaker piTreeMaker = new PiTreeMaker(ext, typechecker, factory, letClauses);
+              PiTreeMaker piTreeMaker = new PiTreeMaker(ext, transport, typechecker, factory, letClauses);
               PiTreeRoot piTree = piTreeMaker.make(paramType, sigmaParameters);
               if (piTree == null) return null;
               if (!piTree.subtrees.isEmpty()) {
@@ -540,7 +526,7 @@ public class ExtMeta extends BaseMetaDefinition {
               boolean hasDeferred = false;
               for (int j = 0; j < oldFields.size(); j++) {
                 Boolean simpCoe = simpCoeIndices.get(j);
-                newFields.add(simpCoe == null && !hasDeferred ? oldFields.get(j) : argFactory.app(hasDeferred ? argFactory.meta("later", ext.laterMeta) : simpCoe ? argFactory.meta("simp_coe", ext.simpCoeMeta) : argFactory.meta("ext", new DeferredMetaDefinition(ext.extMeta, false)), true, Collections.singletonList(oldFields.get(j))));
+                newFields.add(simpCoe == null && !hasDeferred ? oldFields.get(j) : argFactory.app(argFactory.ref(hasDeferred ? later : simpCoe ? simp_coe : selfReference.getReferent()), true, Collections.singletonList(oldFields.get(j))));
                 if (simpCoe != null) hasDeferred = true;
               }
               newArg = argFactory.tuple(newFields);
@@ -703,7 +689,7 @@ public class ExtMeta extends BaseMetaDefinition {
         return haveClauses.isEmpty() ? let : factory.letExpr(true, false, haveClauses, let);
       }
 
-      typechecker.getErrorReporter().report(new TypeError(typechecker.getExpressionPrettifier(), "Cannot apply extensionality", type, marker));
+      typechecker.getErrorReporter().report(new TypeError(typechecker.getExpressionPrettifier(), "Cannot apply extensionality", type, selfReference));
       return null;
     }
   }
@@ -734,7 +720,7 @@ public class ExtMeta extends BaseMetaDefinition {
     CoreFunCallExpression equality = Utils.toEquality(expectedType, typechecker.getErrorReporter(), data.getMarker());
     if (equality == null) return null;
     data.setExpectedType(equality);
-    CoreExpression type = equality.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF);
+    CoreExpression type = equality.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
     result = checkStuckExpression(type);
     if (result != null) return result;
 
@@ -752,17 +738,17 @@ public class ExtMeta extends BaseMetaDefinition {
 
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-    ConcreteSourceNode marker = contextData.getMarker();
+    ConcreteReferenceExpression marker = contextData.getReferenceExpression();
     ErrorReporter errorReporter = typechecker.getErrorReporter();
     CoreFunCallExpression equality = Utils.toEquality(contextData.getExpectedType(), errorReporter, marker);
     if (equality == null) return null;
 
     List<? extends ConcreteArgument> args = contextData.getArguments();
     ConcreteFactory factory = ext.factory.withData(marker);
-    CoreExpression type = equality.getDefCallArguments().get(0);
+    CoreExpression type = equality.getDefCallArguments().getFirst();
     if (contextData.getUserData() != Kind.NOT_PROP && Utils.isProp(type)) {
       if (!args.isEmpty()) {
-        errorReporter.report(new IgnoredArgumentError(args.get(0).getExpression()));
+        errorReporter.report(new IgnoredArgumentError(args.getFirst().getExpression()));
       }
       return typechecker.typecheck(factory.app(factory.ref(ext.propIsProp.getRef()), true, Arrays.asList(factory.hole(), factory.hole())), contextData.getExpectedType());
     }
@@ -774,7 +760,7 @@ public class ExtMeta extends BaseMetaDefinition {
 
     CoreExpression origNormType = type.normalize(NormalizationMode.WHNF);
     CoreExpression normType = Utils.unfoldType(origNormType);
-    ConcreteExpression arg = args.get(0).getExpression();
+    ConcreteExpression arg = args.getFirst().getExpression();
     if (normType instanceof CoreUniverseExpression) {
       ConcreteExpression left = factory.core(equality.getDefCallArguments().get(1).computeTyped());
       ConcreteExpression right = factory.core(equality.getDefCallArguments().get(2).computeTyped());

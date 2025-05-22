@@ -19,7 +19,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 
 public class LibraryService {
   private final ArendServerImpl myServer;
@@ -64,8 +63,8 @@ public class LibraryService {
         try {
           setupExtension(newLibrary[0], library);
         } catch (Exception e) {
-          String msg = "Library '" + newLibrary[0].getLibraryName() + "' extension is not loaded. Reason: " + e.getMessage();
-          errorReporter.report(new LibraryError(msg, Stream.of(newLibrary[0].getLibraryName())));
+          String msg = "Library '" + newLibrary[0].getLibraryName() + "' extension is not loaded. Reason: " + e.getLocalizedMessage();
+          errorReporter.report(new ExceptionError(e, "Loading extension of " + newLibrary[0].getLibraryName()));
           myLogger.severe(msg);
         }
       }

@@ -27,6 +27,7 @@ import java.util.*;
 
 public class PiTreeMaker {
   private final StdExtension ext;
+  private final ArendRef transportRef;
   private final ExpressionTypechecker typechecker;
   private final ConcreteFactory factory;
   private final List<ConcreteLetClause> clauses;
@@ -36,8 +37,9 @@ public class PiTreeMaker {
   private Set<CoreBinding> substBindings;
   private int index = 1;
 
-  public PiTreeMaker(StdExtension ext, ExpressionTypechecker typechecker, ConcreteFactory factory, List<ConcreteLetClause> clauses) {
+  public PiTreeMaker(StdExtension ext, ArendRef transportRef, ExpressionTypechecker typechecker, ConcreteFactory factory, List<ConcreteLetClause> clauses) {
     this.ext = ext;
+    this.transportRef = transportRef;
     this.typechecker = typechecker;
     this.factory = factory;
     this.clauses = clauses;
@@ -276,10 +278,10 @@ public class PiTreeMaker {
       return result;
     }
 
-    if (tree.indices.size() == 1 && tree.indices.get(0) < pathRefs.size()) {
-      PathExpression pathExpr = pathRefs.get(tree.indices.get(0));
+    if (tree.indices.size() == 1 && tree.indices.getFirst() < pathRefs.size()) {
+      PathExpression pathExpr = pathRefs.get(tree.indices.getFirst());
       if (pathExpr.getClass().equals(PathExpression.class)) {
-        return factory.app(factory.ref(ext.transport.getRef()), true, Arrays.asList(useLet ? tree.getAltHead() : tree.head, pathExpr.pathExpression, result));
+        return factory.app(factory.ref(transportRef), true, Arrays.asList(useLet ? tree.getAltHead() : tree.head, pathExpr.pathExpression, result));
       }
     }
 

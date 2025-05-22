@@ -303,6 +303,6 @@ public class Simplifier {
         }
         var proofs = processor.simplificationOccurrences.stream().map(x -> isForward ? x.proj2 : x.proj2.inverse(factory, ext)).collect(Collectors.toList());
         return RewriteEquationMeta.chainOfTransports(factory.ref(ext.transport.getRef(), refExpr.getPLevels(), refExpr.getHLevels()),
-                checkedLam.getExpression(), proofs, expression, factory, ext);
+                checkedLam.getExpression(), proofs, expression, factory, false);
     }
 }
