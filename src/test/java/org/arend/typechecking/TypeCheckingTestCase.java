@@ -116,9 +116,10 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
   }
 
 
-  private void typeCheckModule(int errors) {
+  protected void typeCheckModule(int errors) {
     server.getCheckerFor(Collections.singletonList(MODULE)).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     List<GeneralError> errorList = getAllErrors();
+    if (errorList.isEmpty()) errorList = new ArrayList<>();
     boolean ok = errors != 0 || !errorList.isEmpty() || new CoreModuleChecker(new ListErrorReporter(errorList)).checkGroup(getGroup());
     assertThat(errorList, containsErrors(errors));
     assertTrue(ok);

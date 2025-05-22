@@ -1,4 +1,4 @@
-package org.arend.lib.meta;
+package org.arend.lib.meta.cases;
 
 import org.arend.ext.concrete.*;
 import org.arend.ext.concrete.expr.*;
@@ -17,7 +17,6 @@ import org.arend.ext.core.ops.SubstitutionPair;
 import org.arend.ext.error.*;
 import org.arend.ext.error.quickFix.RemoveErrorQuickFix;
 import org.arend.ext.reference.ArendRef;
-import org.arend.ext.reference.ExpressionResolver;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.util.Pair;
 import org.arend.lib.StdExtension;
@@ -34,94 +33,15 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolver {
+public class MatchingCasesMeta extends BaseMetaDefinition {
   private final StdExtension ext;
+  private final CasesMetaTypechecker casesResolver;
+  private final ArendRef constructorMetaRef;
 
-  public MatchingCasesMeta(StdExtension ext) {
+  public MatchingCasesMeta(StdExtension ext, CasesMetaTypechecker casesResolver, ArendRef constructorMetaRef) {
     this.ext = ext;
-  }
-
-  @Override
-  public @Nullable ConcreteExpression resolvePrefix(@NotNull ExpressionResolver resolver, @NotNull ContextData contextData) {
-    if (!new ContextDataChecker() {
-      @Override
-      public boolean @Nullable [] argumentExplicitness() {
-        return new boolean[] { false, false, true, true };
-      }
-
-      @Override
-      public int numberOfOptionalExplicitArguments() {
-        return 2;
-      }
-
-      @Override
-      public boolean allowClauses() {
-        return true;
-      }
-    }.checkContextData(contextData, resolver.getErrorReporter())) {
-      return null;
-    }
-
-    ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
-    List<? extends ConcreteArgument> args = contextData.getArguments();
-
-    int paramsIndex = -1;
-    if (!args.isEmpty() && !args.get(0).isExplicit()) {
-      if (args.size() >= 2 && !args.get(1).isExplicit()) {
-        paramsIndex = 1;
-      } else {
-        if (args.get(0).getExpression() instanceof ConcreteAppExpression) {
-          paramsIndex = 0;
-        } else if (args.get(0).getExpression() instanceof ConcreteTupleExpression tupleExpr) {
-          if (!tupleExpr.getFields().isEmpty() && tupleExpr.getFields().get(0) instanceof ConcreteAppExpression) {
-            paramsIndex = 0;
-          }
-        }
-      }
-    }
-    boolean hasDefinitionArg = !args.isEmpty() && !args.get(0).isExplicit() && paramsIndex != 0;
-    int caseArgsIndex = -1;
-    int defaultIndex = -1;
-    int firstExplicitIndex = paramsIndex >= 0 ? paramsIndex + 1 : hasDefinitionArg ? 1 : 0;
-    if (firstExplicitIndex + 1 < args.size()) {
-      caseArgsIndex = firstExplicitIndex;
-      if (!(args.get(firstExplicitIndex + 1).getExpression() instanceof ConcreteHoleExpression)) {
-        defaultIndex = firstExplicitIndex + 1;
-      }
-    } else if (firstExplicitIndex < args.size()) {
-      defaultIndex = firstExplicitIndex;
-    }
-
-    ConcreteAppBuilder builder = factory.appBuilder(contextData.getReferenceExpression());
-    if (hasDefinitionArg) {
-      builder.app(resolver.resolve(args.get(0).getExpression()), false);
-    } else if (paramsIndex != -1) {
-      builder.app(factory.hole(), false);
-    }
-    if (paramsIndex != -1) {
-      List<ConcreteExpression> fields = new ArrayList<>();
-      List<? extends ConcreteExpression> params = Utils.getArgumentList(args.get(paramsIndex).getExpression());
-      for (ConcreteExpression param : params) {
-        List<ConcreteArgument> seq = param.getArgumentsSequence();
-        if (seq.size() == 2 && seq.get(0).getExpression() instanceof ConcreteReferenceExpression && seq.get(1).isExplicit() && ((ConcreteReferenceExpression) seq.get(0).getExpression()).getReferent().getRefName().equals(ext.casesMeta.argRef.getRefName())) {
-          ConcreteExpression field = ext.casesMeta.parameter.resolve(resolver, seq.get(1).getExpression(), false, true);
-          if (field != null) fields.add(field);
-        } else {
-          resolver.getErrorReporter().report(new NameResolverError("Expected 'arg' with one explicit argument", param));
-        }
-      }
-      builder.app(factory.tuple(fields), false);
-    }
-
-    ConcreteExpression caseArgs = caseArgsIndex == -1 ? factory.tuple() : ext.casesMeta.resolveArgument(resolver, args.get(caseArgsIndex).getExpression());
-    builder.app(caseArgs);
-    builder.app(resolver.resolve(factory.caseExpr(false, Collections.emptyList(), null, null, contextData.getClauses() == null ? Collections.emptyList() : contextData.getClauses().getClauseList())));
-    if (defaultIndex != -1) {
-      builder.app(ext.casesMeta.resolveDefaultClause(resolver, args.get(defaultIndex).getExpression(), caseArgs));
-    } else {
-      ext.casesMeta.resolveDefaultClause(resolver, null, caseArgs);
-    }
-    return builder.build();
+    this.casesResolver = casesResolver;
+    this.constructorMetaRef = constructorMetaRef;
   }
 
   @Override
@@ -184,9 +104,9 @@ public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolve
     Map<CoreFunctionDefinition, Integer> defCount = new HashMap<>(); // if defCount.get(def) != null, then we are looking for def
     Map<CoreFunctionDefinition, Set<Integer>> defOccurrences = new HashMap<>(); // if we are looking for def and defOccurrences.get(def) == null, then we are looking for all occurrences; otherwise only for the specified ones; defOccurrences.get(def) is never empty
     if (!args.get(0).isExplicit() && !(args.get(0).getExpression() instanceof ConcreteHoleExpression)) {
-      List<? extends ConcreteExpression> params = Utils.getArgumentList(args.get(0).getExpression());
+      List<? extends ConcreteExpression> params = Utils.getArgumentList(args.getFirst().getExpression());
       if (params.isEmpty()) {
-        errorReporter.report(new IgnoredArgumentError(args.get(0).getExpression()));
+        errorReporter.report(new IgnoredArgumentError(args.getFirst().getExpression()));
         caseOccurrences = null;
       } else {
         List<Pair<ConcreteExpression, List<? extends ConcreteExpression>>> lists = new ArrayList<>();
@@ -235,7 +155,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolve
             if (myCaseOccurrences != null && myCaseOccurrences.isEmpty()) {
               myCaseOccurrences = occurrences.isEmpty() ? null : occurrences;
             } else {
-              errorReporter.report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Parameters for \\case expressions are already specified", pair.proj2.isEmpty() ? args.get(0).getExpression() : pair.proj2.get(0)));
+              errorReporter.report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Parameters for \\case expressions are already specified", pair.proj2.isEmpty() ? args.getFirst().getExpression() : pair.proj2.getFirst()));
             }
           }
         }
@@ -248,15 +168,15 @@ public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolve
     List<Boolean> addPathList = new ArrayList<>();
     if (!args.get(1).isExplicit()) {
       for (ConcreteExpression arg : Utils.getArgumentList(args.get(1).getExpression())) {
-        addPathList.add(ext.casesMeta.parameter.containsKey(arg, ext.casesMeta.addPathRef));
+        addPathList.add(casesResolver.parameter.containsKey(arg, casesResolver.addPathRef));
       }
     }
 
     int additionalArgsIndex = args.get(0).isExplicit() ? 0 : args.get(1).isExplicit() ? 1 : 2;
-    List<CasesMeta.ArgParameters> argParamsList = new ArrayList<>();
+    List<CasesMetaTypechecker.ArgParameters> argParamsList = new ArrayList<>();
     List<Pair<TypedExpression,CoreExpression>> additionalArgs = new ArrayList<>();
     for (ConcreteExpression additionalArg : Utils.getArgumentList(args.get(additionalArgsIndex).getExpression())) {
-      CasesMeta.ArgParameters argParams = ext.casesMeta.new ArgParameters(additionalArg, errorReporter, false);
+      CasesMetaTypechecker.ArgParameters argParams = casesResolver.new ArgParameters(additionalArg, errorReporter, false);
       TypedExpression typed = typechecker.typecheck(argParams.expression, null);
       if (typed == null) return null;
       additionalArgs.add(new Pair<>(typed, typed.getType().normalize(NormalizationMode.RNF)));
@@ -319,7 +239,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolve
                   matched.add(param.getBinding());
                   CoreFunCallExpression funCall = param.getTypeExpr().toEquality(); // try to take the type immediately
                   if (funCall == null) { // if it's not an equality, then this may be because we need to substitute patterns
-                    CoreExpression type = (CoreExpression) typechecker.substituteAbstractedExpression(parameters.abstractType(i), levelSubst, PatternUtils.toExpression(clause.getPatterns().subList(0, i), ext, factory, null), null);
+                    CoreExpression type = (CoreExpression) typechecker.substituteAbstractedExpression(parameters.abstractType(i), levelSubst, PatternUtils.toExpression(clause.getPatterns().subList(0, i), constructorMetaRef, factory, null), null);
                     funCall = type == null ? null : type.toEquality();
                     if (funCall != null) {
                       List<CoreBinding> patternBindings = new ArrayList<>(2);
@@ -424,7 +344,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolve
       });
       argsDataLists.add(dataList.subList(start, dataList.size()));
     }
-    List<SubexpressionData> resultDataList = argsDataLists.remove(argsDataLists.size() - 1);
+    List<SubexpressionData> resultDataList = argsDataLists.removeLast();
 
     int caseParam = additionalArgsIndex + 1;
     List<? extends ConcreteClause> actualClauses = ((ConcreteCaseExpression) args.get(caseParam).getExpression()).getClauses();
@@ -452,7 +372,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolve
       for (int i = addPathList.size(); i < numberOfParameters; i++) {
         addPathList.add(false);
       }
-      for (CasesMeta.ArgParameters parameters : argParamsList) {
+      for (CasesMetaTypechecker.ArgParameters parameters : argParamsList) {
         addPathList.add(parameters.addPath);
       }
     }
@@ -865,7 +785,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolve
             Map<CoreBinding, ArendRef> bindings = new HashMap<>();
             int k = 0;
             for (CoreParameter param = lamParams; param.hasNext() && k < cParams.size(); param = param.getNext()) {
-              bindings.put(param.getBinding(), cParams.get(k++).getRefList().get(0));
+              bindings.put(param.getBinding(), cParams.get(k++).getRefList().getFirst());
             }
 
             List<CorePattern> actualRowWithoutAddPath = actualRowsWithoutAddPath.get(pair.proj1);
@@ -878,7 +798,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolve
                   SubexpressionData data = dataList.get(j);
                   for (int k = 0; k < data.matchedArgs.size(); k++) {
                     if (abstractedArgs.contains(new Pair<>(j, k))) {
-                      args.add(PatternUtils.toExpression(actualRowWithoutAddPath.get(l + k), ext, factory, bindings));
+                      args.add(PatternUtils.toExpression(actualRowWithoutAddPath.get(l + k), constructorMetaRef, factory, bindings));
                     }
                   }
                 }
@@ -893,7 +813,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolve
                       patternArgs.add(null);
                     }
                   }
-                  CoreExpression arg = PatternUtils.eval(data.body, data.levelSubst, patternArgs, data.removedArgs, typechecker, ext, factory, bindings);
+                  CoreExpression arg = PatternUtils.eval(data.body, data.levelSubst, patternArgs, data.removedArgs, typechecker, constructorMetaRef, factory, bindings);
                   if (arg == null) {
                     return null;
                   }
@@ -924,7 +844,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolve
           List<ConcreteExpression> rhsArgs = new ArrayList<>();
           for (; param.hasNext(); param = param.getNext()) {
             CorePattern pattern = pair.proj2.get(param.getBinding());
-            rhsArgs.add(pattern == null ? factory.ref(param.getBinding()) : PatternUtils.toExpression(pattern, ext, factory, bindings));
+            rhsArgs.add(pattern == null ? factory.ref(param.getBinding()) : PatternUtils.toExpression(pattern, constructorMetaRef, factory, bindings));
           }
           rhs = factory.app(rhs, true, rhsArgs);
         }
@@ -935,7 +855,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition implements MetaResolve
         for (int j = argParamsList.size(); j < actualRow.size(); j++) {
           asRefs.add(null);
         }
-        for (CasesMeta.ArgParameters argParameters : argParamsList) {
+        for (CasesMetaTypechecker.ArgParameters argParameters : argParamsList) {
           argParameters.addAsRef(asRefs);
         }
         resultClauses.add(pair.proj1 < actualClauses.size() ? actualClauses.get(pair.proj1) : factory.clause(PatternUtils.toConcrete(actualRow, asRefs, ext.renamerFactory, factory, null, null), isAbsurd ? null : defaultExpr));

@@ -6,6 +6,7 @@ import org.arend.ext.concrete.pattern.ConcretePattern;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.error.GeneralError;
+import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.MetaRef;
@@ -80,6 +81,7 @@ public interface ConcreteFactory {
   @NotNull ConcreteMetaDefinition metaDef(@NotNull MetaRef ref, @NotNull Collection<? extends ConcreteParameter> parameters, @Nullable ConcreteExpression body);
 
   @NotNull ArendRef moduleRef(@NotNull ModulePath modulePath);
+  @NotNull ArendRef unresolved(@NotNull LongName longName);
   @NotNull ArendRef local(@NotNull String name);
   @NotNull ArendRef localDeclaration(@NotNull ArendRef ref);
   @NotNull ArendRef global(@NotNull String name, @NotNull Precedence precedence);

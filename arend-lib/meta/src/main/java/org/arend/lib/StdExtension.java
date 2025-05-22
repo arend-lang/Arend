@@ -21,6 +21,8 @@ import org.arend.lib.key.ReflexivityKey;
 import org.arend.lib.key.TransitivityKey;
 import org.arend.lib.level.StdLevelProver;
 import org.arend.lib.meta.*;
+import org.arend.lib.meta.cases.CasesMetaTypechecker;
+import org.arend.lib.meta.cases.MatchingCasesMetaTypechecker;
 import org.arend.lib.meta.cong.CongruenceMeta;
 import org.arend.lib.meta.debug.PrintMeta;
 import org.arend.lib.meta.debug.RandomMeta;
@@ -29,10 +31,12 @@ import org.arend.lib.meta.debug.TimeMeta;
 import org.arend.lib.meta.equation.EquationMeta;
 import org.arend.lib.meta.linear.LinearSolverMeta;
 import org.arend.lib.meta.simplify.SimplifyMeta;
+import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
+import java.util.List;
 
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
@@ -86,8 +90,6 @@ public class StdExtension implements ArendExtension {
   public final SimpCoeMeta simpCoeMeta = new SimpCoeMeta(this, false);
   public final SimpCoeMeta simpCoeFMeta = new SimpCoeMeta(this, true);
   public final SIPMeta sipMeta = new SIPMeta(this);
-  public CasesMeta casesMeta;
-  public MetaRef constructorMetaRef;
 
   public MetaRef givenMetaRef;
   public MetaRef forallMetaRef;
@@ -161,9 +163,17 @@ public class StdExtension implements ArendExtension {
     return factory.metaDef(makeRef(modulePath, name, definition), Collections.emptyList(), null);
   }
 
+  private ConcreteMetaDefinition makeDef(ModulePath modulePath, String name, MetaTypechecker typechecker, List<LongName> references) {
+    return factory.metaDef(factory.metaRef(factory.moduleRef(modulePath), name, Precedence.DEFAULT, null, null, typechecker instanceof MetaResolver ? (MetaResolver) typechecker : null, typechecker), Collections.emptyList(), Utils.makeReferences(factory, references));
+  }
+
   @Override
   public void declareDefinitions(@NotNull DefinitionContributor contributor) {
     ModulePath meta = new ModulePath("Meta");
+    ModulePath logic = ModulePath.fromString("Logic.Meta");
+    String constructorName = "constructor";
+
+    contributor.declare(meta, logic);
     contributor.declare(text("`later meta args` defers the invocation of `meta args`"), makeDef(meta, "later", laterMeta));
     contributor.declare(multiline("""
         `fails meta args` succeeds if and only if `meta args` fails
@@ -182,7 +192,7 @@ public class StdExtension implements ArendExtension {
         factory.metaDef(makeRef(meta, "at", new Precedence(Precedence.Associativity.NON_ASSOC, (byte) 1, true), new AtMeta(this)), Collections.emptyList(), null));
     contributor.declare(text("`f in x` is equivalent to `\\let r => f x \\in r`. Also, `(f_1, ... f_n) in x` is equivalent to `f_1 in ... f_n in x`. This meta is usually used with `f` being a meta such as `rewrite`, `simplify`, `simp_coe`, or `unfold`."),
         factory.metaDef(makeRef(meta, "in", new Precedence(Precedence.Associativity.RIGHT_ASSOC, (byte) 1, true), new InMeta(this)), Collections.emptyList(), null));
-    casesMeta = new CasesMeta(this);
+    CasesMetaTypechecker casesMetaTypechecker = new CasesMetaTypechecker(this);
     contributor.declare(multiline("""
         `cases args default` works just like `mcases args default`, but does not search for \\case expressions or definition invocations.
         Each argument has a set of parameters that can be configured.
@@ -193,7 +203,7 @@ public class StdExtension implements ArendExtension {
         The type of an argument is specified as either `e : E` or `e arg parameters : E`.
         The flag 'addPath' indicates that argument `idp` with type `e = x` should be added after the current one, where `e` is the current argument and `x` is its name.
         That is, `cases (e arg addPath)` is equivalent to `cases (e arg (name = x), idp : e = x)`.
-        """), makeDef(meta, "cases", casesMeta));
+        """), makeDef(meta, "cases", casesMetaTypechecker, Collections.singletonList(new LongName(constructorName))));
     contributor.declare(multiline("""
         `mcases {def} args default \\with { ... }` finds all invocations of definition `def` in the expected type and generate a \\case expression that matches arguments of those invocations.
 
@@ -214,7 +224,7 @@ public class StdExtension implements ArendExtension {
         * `mcases {(1,2),(def,1)}` looks for the first and the second occurrence of a \\case expression and the first occurrence of `def`.
         * `mcases {(def1,2),(),def2}` looks for the second occurrence of `def1`, all occurrences of \\case expressions, and all occurrences of `def2`.
         * `mcases {_} {arg addPath, arg (), arg addPath}` looks for case expressions and adds a path argument after the first and the third matched expression.
-        """), makeDef(meta, "mcases", new MatchingCasesMeta(this)));
+        """), makeDef(meta, "mcases", new MatchingCasesMetaTypechecker(this, casesMetaTypechecker), Collections.singletonList(new LongName(constructorName))));
     contributor.declare(multiline("""
         `unfold (f_1, ... f_n) e` unfolds functions/fields/variables `f_1`, ... `f_n` in the expected type before type-checking of `e` and returns `e` itself.
         If the first argument is omitted, it unfold all fields.
@@ -315,7 +325,6 @@ public class StdExtension implements ArendExtension {
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DeferredMetaDefinition(new CongruenceMeta(this))));
 
-    ModulePath logic = ModulePath.fromString("Logic.Meta");
     contributor.declare(multiline("""
         Derives a contradiction from assumptions in the context
 
@@ -348,9 +357,8 @@ public class StdExtension implements ArendExtension {
           * `Forall {x y} {z} B` is equivalent to `\\Pi {x y : _} {z : _} -> B`
           * If `P : A -> \\Type`, then `Forall {x y : P} (Q x) (Q y)` is equivalent to `\\Pi {x y : A} -> P x -> P y -> Q x -> Q y`
           """)), factory.metaDef(forallMetaRef, Collections.emptyList(), null));
-    constructorMetaRef = makeRef(logic, "constructor", new ConstructorMeta(this, false));
     contributor.declare(text("Returns either a tuple, a \\new expression, or a single constructor of a data type depending on the expected type"),
-        factory.metaDef(constructorMetaRef, Collections.emptyList(), null));
+        makeDef(logic, constructorName, new ConstructorMeta(this, false)));
 
     ModulePath debug = ModulePath.fromString("Debug.Meta");
     contributor.declare(text("Returns current time in milliseconds"), makeDef(debug, "time", new TimeMeta(this)));

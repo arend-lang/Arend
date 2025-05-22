@@ -3,12 +3,15 @@ package org.arend.extImpl;
 import org.arend.ext.DefinitionContributor;
 import org.arend.ext.concrete.definition.ConcreteDefinition;
 import org.arend.ext.module.LongName;
+import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.doc.*;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.DataModuleReferable;
 import org.arend.naming.reference.LocatedReferable;
+import org.arend.naming.reference.LongUnresolvedReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
+import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
@@ -27,10 +30,9 @@ public class DefinitionContributorImpl extends Disableable implements Definition
       this.referable = referable;
     }
 
-    ConcreteGroup makeGroup() {
-      List<ConcreteStatement> statements = new ArrayList<>();
+    ConcreteGroup makeGroup(List<ConcreteStatement> statements) {
       for (Tree tree : children.values()) {
-        statements.add(new ConcreteStatement(tree.makeGroup(), null, null, null));
+        statements.add(new ConcreteStatement(tree.makeGroup(new ArrayList<>()), null, null, null));
       }
       return new ConcreteGroup(description, referable, definition, statements, Collections.emptyList(), Collections.emptyList());
     }
@@ -38,6 +40,7 @@ public class DefinitionContributorImpl extends Disableable implements Definition
 
   private final String myLibraryName;
   private final Map<ModuleLocation, Tree> myModules = new LinkedHashMap<>();
+  private final Map<ModuleLocation, List<ConcreteStatement>> myImports = new HashMap<>();
 
   public DefinitionContributorImpl(String libraryName) {
     myLibraryName = libraryName;
@@ -46,7 +49,8 @@ public class DefinitionContributorImpl extends Disableable implements Definition
   public Map<ModuleLocation, ConcreteGroup> getModules() {
     Map<ModuleLocation, ConcreteGroup> result = new LinkedHashMap<>();
     for (Map.Entry<ModuleLocation, Tree> entry : myModules.entrySet()) {
-      result.put(entry.getKey(), entry.getValue().makeGroup());
+      List<ConcreteStatement> imports = myImports.get(entry.getKey());
+      result.put(entry.getKey(), entry.getValue().makeGroup(imports == null ? new ArrayList<>() : imports));
     }
     return result;
   }
@@ -112,5 +116,11 @@ public class DefinitionContributorImpl extends Disableable implements Definition
       throw new IllegalArgumentException();
     }
     declareDefinition(description, def);
+  }
+
+  @Override
+  public void declare(@NotNull ModulePath module, @NotNull ModulePath importedModule) {
+    myImports.computeIfAbsent(new ModuleLocation(myLibraryName, ModuleLocation.LocationKind.GENERATED, module), k -> new ArrayList<>())
+        .add(new ConcreteStatement(null, new ConcreteNamespaceCommand(null, true, new LongUnresolvedReference(null, null, importedModule.toList()), true, Collections.emptyList(), Collections.emptyList()), null, null));
   }
 }

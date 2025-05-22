@@ -10,6 +10,7 @@ import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.LocalError;
+import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.MetaRef;
@@ -641,6 +642,15 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   @Override
   public @NotNull ArendRef moduleRef(@NotNull ModulePath modulePath) {
     return myLibraryName == null ? new ModuleReferable(modulePath) : new FullModuleReferable(new ModuleLocation(myLibraryName, ModuleLocation.LocationKind.GENERATED, modulePath));
+  }
+
+  @Override
+  public @NotNull ArendRef unresolved(@NotNull LongName longName) {
+    ArendRef result = LongUnresolvedReference.make(myData, longName.toList());
+    if (result == null) {
+      throw new IllegalArgumentException();
+    }
+    return result;
   }
 
   @NotNull

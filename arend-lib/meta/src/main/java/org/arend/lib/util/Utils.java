@@ -3,6 +3,7 @@ package org.arend.lib.util;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteParameter;
 import org.arend.ext.concrete.ConcreteSourceNode;
+import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.definition.CoreClassDefinition;
@@ -14,6 +15,7 @@ import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.*;
 import org.arend.ext.instance.InstanceSearchParameters;
+import org.arend.ext.module.LongName;
 import org.arend.ext.prettyprinting.doc.DocFactory;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.ExpressionResolver;
@@ -27,6 +29,44 @@ import java.util.*;
 import java.util.function.Function;
 
 public class Utils {
+  public static ConcreteExpression makeReferences(ConcreteFactory factory, List<LongName> references) {
+    ConcreteExpression body;
+    if (references.size() == 1) {
+      body = factory.ref(factory.unresolved(references.getFirst()));
+    } else {
+      List<ConcreteExpression> fields = new ArrayList<>(references.size());
+      for (LongName reference : references) {
+        fields.add(factory.ref(factory.unresolved(reference)));
+      }
+      body = factory.tuple(fields);
+    }
+    return factory.app(factory.hole(), true, body);
+  }
+
+  public static List<ArendRef> extractReferences(ConcreteMetaDefinition definition, int numberOfReferences, ErrorReporter errorReporter) {
+    if (definition.getBody() instanceof ConcreteAppExpression appExpr && appExpr.getFunction() instanceof ConcreteHoleExpression && appExpr.getArguments().size() == 1 && appExpr.getArguments().getFirst().isExplicit()) {
+      ConcreteExpression argument = appExpr.getArguments().getFirst().getExpression();
+      if (argument instanceof ConcreteReferenceExpression refExpr && numberOfReferences == 1) {
+        return Collections.singletonList(refExpr.getReferent());
+      } else if (argument instanceof ConcreteTupleExpression tuple && tuple.getFields().size() == numberOfReferences) {
+        List<ArendRef> result = new ArrayList<>(numberOfReferences);
+        for (ConcreteExpression field : tuple.getFields()) {
+          if (field instanceof ConcreteReferenceExpression refExpr) {
+            result.add(refExpr.getReferent());
+          } else {
+            break;
+          }
+        }
+        if (result.size() == numberOfReferences) {
+          return result;
+        }
+      }
+    }
+
+    errorReporter.report(new TypecheckingError("Cannot extract " + numberOfReferences + " references", definition));
+    return null;
+  }
+
   public static int getNumber(ConcreteExpression expression, ErrorReporter errorReporter) {
     if (expression instanceof ConcreteNumberExpression) {
       return ((ConcreteNumberExpression) expression).getNumber().intValue();

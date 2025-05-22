@@ -70,7 +70,7 @@ fun Project.findExternalLibrary(name: String): LibraryConfig? {
 private fun Project.findConfigInZip(zipFile: VirtualFile): YAMLFile? {
     val zipRoot = JarFileSystem.getInstance().getJarRootForLocalFile(zipFile) ?: return null
     val configFile = zipRoot.findChild(FileUtils.LIBRARY_CONFIG_FILE) ?: return null
-    return PsiManager.getInstance(this).findFile(configFile) as? YAMLFile ?: return null
+    return PsiManager.getInstance(this).findFile(configFile) as? YAMLFile
 }
 
 fun Project.findExternalLibrary(root: VirtualFile, libName: String): ExternalLibraryConfig? {
@@ -139,9 +139,9 @@ fun Project.addGeneratedModule(module: ModuleLocation, group: ConcreteGroup) {
             (subgroup1.referable as? LocatedReferableImpl)?.data = ref2
             val ref1 = subgroup1.referable
             if (ref1 is TCDefReferable) (ref2 as? ReferableBase<*>)?.tcReferable = ref1
-            val doc1 = (subgroup1 as? ConcreteGroup)?.description()
-            val doc2 = (subgroup2 as? ArendGroup)?.description
-            if (doc1?.isNull == false && doc2?.isNull == false) {
+            val doc1 = subgroup1.description()
+            val doc2 = subgroup2.description
+            if (!doc1.isNull && !doc2.isNull) {
                 val refs1 = ArrayList<ArendRef>()
                 val refs2 = ArrayList<ArendRef>()
                 doc1.accept(CollectingDocVisitor(refs1), null)
@@ -154,6 +154,7 @@ fun Project.addGeneratedModule(module: ModuleLocation, group: ConcreteGroup) {
                     }
                 }
             }
+            // TODO: Set data in definitions and namespace commands
             true
         }
     }

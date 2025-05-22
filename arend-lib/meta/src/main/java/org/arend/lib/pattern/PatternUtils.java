@@ -17,7 +17,6 @@ import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
 import org.arend.ext.variable.VariableRenamerFactory;
-import org.arend.lib.StdExtension;
 
 import java.util.*;
 
@@ -69,7 +68,7 @@ public class PatternUtils {
     return result;
   }
 
-  public static ConcreteExpression toExpression(CorePattern pattern, StdExtension ext, ConcreteFactory factory, Map<CoreBinding, ArendRef> bindings) {
+  public static ConcreteExpression toExpression(CorePattern pattern, ArendRef constructorMetaRef, ConcreteFactory factory, Map<CoreBinding, ArendRef> bindings) {
     CoreBinding binding = pattern.getBinding();
     if (binding != null) {
       ArendRef ref = bindings == null ? null : bindings.get(binding);
@@ -77,16 +76,16 @@ public class PatternUtils {
     }
 
     if (pattern.getConstructor() == null) {
-      return factory.app(factory.ref(ext.constructorMetaRef), true, toExpression(pattern.getSubPatterns(), ext, factory, bindings));
+      return factory.app(factory.ref(constructorMetaRef), true, toExpression(pattern.getSubPatterns(), constructorMetaRef, factory, bindings));
     } else {
-      return factory.app(factory.ref(pattern.getConstructor().getRef()), true, toExpression(pattern.getSubPatterns(), ext, factory, bindings));
+      return factory.app(factory.ref(pattern.getConstructor().getRef()), true, toExpression(pattern.getSubPatterns(), constructorMetaRef, factory, bindings));
     }
   }
 
-  public static List<ConcreteExpression> toExpression(Collection<? extends CorePattern> patterns, StdExtension ext, ConcreteFactory factory, Map<CoreBinding, ArendRef> bindings) {
+  public static List<ConcreteExpression> toExpression(Collection<? extends CorePattern> patterns, ArendRef constructorMetaRef, ConcreteFactory factory, Map<CoreBinding, ArendRef> bindings) {
     List<ConcreteExpression> result = new ArrayList<>(patterns.size());
     for (CorePattern pattern : patterns) {
-      result.add(toExpression(pattern, ext, factory, bindings));
+      result.add(toExpression(pattern, constructorMetaRef, factory, bindings));
     }
     return result;
   }
@@ -226,7 +225,7 @@ public class PatternUtils {
 
   // patterns[i] == null iff removedArgs[i] != null.
   // Moreover, if these equivalent conditions hold, then body.getClauses().get(j)[i].getBinding() != null for every j.
-  public static CoreExpression eval(CoreElimBody body, LevelSubstitution levelSubst, List<? extends CorePattern> patterns, List<? extends TypedExpression> removedArgs, ExpressionTypechecker typechecker, StdExtension ext, ConcreteFactory factory, Map<CoreBinding, ArendRef> bindings) {
+  public static CoreExpression eval(CoreElimBody body, LevelSubstitution levelSubst, List<? extends CorePattern> patterns, List<? extends TypedExpression> removedArgs, ExpressionTypechecker typechecker, ArendRef constructorMetaRef, ConcreteFactory factory, Map<CoreBinding, ArendRef> bindings) {
     loop:
     for (CoreElimClause clause : body.getClauses()) {
       Map<CoreBinding, CorePattern> subst1 = new HashMap<>();
@@ -255,7 +254,7 @@ public class PatternUtils {
         List<ConcreteExpression> args = new ArrayList<>();
         for (; param.hasNext(); param = param.getNext()) {
           TypedExpression removed = removedMap.get(param.getBinding());
-          args.add(removed != null ? factory.core(removed) : toExpression(subst1.get(param.getBinding()), ext, factory, bindings));
+          args.add(removed != null ? factory.core(removed) : toExpression(subst1.get(param.getBinding()), constructorMetaRef, factory, bindings));
         }
         return (CoreExpression) typechecker.substituteAbstractedExpression(expr, levelSubst, args, null);
       }
@@ -298,7 +297,7 @@ public class PatternUtils {
       return false;
     }
     if (row.isEmpty()) {
-      indices.add(actualRows.get(0).proj2);
+      indices.add(actualRows.getFirst().proj2);
       return true;
     }
 
@@ -325,7 +324,7 @@ public class PatternUtils {
       }
     }
 
-    CorePattern pattern = row.get(0);
+    CorePattern pattern = row.getFirst();
     List<Pair<? extends List<? extends CorePattern>, Integer>> newRows = new ArrayList<>(actualRows.size());
     List<? extends CorePattern> rowTail = row.subList(1, row.size());
     if (pattern.getBinding() != null) {
@@ -333,7 +332,7 @@ public class PatternUtils {
       boolean hasVars = false;
       Set<CoreDefinition> constructors = new LinkedHashSet<>();
       for (Pair<? extends List<? extends CorePattern>, Integer> actualRow : actualRows) {
-        CorePattern actualPattern = actualRow.proj1.get(0);
+        CorePattern actualPattern = actualRow.proj1.getFirst();
         if (actualPattern.isAbsurd()) { // TODO: This is not needed if implemented properly; see TODO below
           indices.add(actualRow.proj2);
           return true;
@@ -394,7 +393,7 @@ public class PatternUtils {
 
         newRows.clear();
         for (Pair<? extends List<? extends CorePattern>, Integer> actualRow : actualRows) {
-          CorePattern actualPattern = actualRow.proj1.get(0);
+          CorePattern actualPattern = actualRow.proj1.getFirst();
           if (actualPattern.getBinding() != null) {
             List<CorePattern> newActualRow = new ArrayList<>();
             for (CoreParameter param = pair.proj2; param.hasNext(); param = param.getNext()) {
@@ -422,7 +421,7 @@ public class PatternUtils {
       newRow.addAll(rowTail);
 
       for (Pair<? extends List<? extends CorePattern>, Integer> actualRow : actualRows) {
-        CorePattern actualPattern = actualRow.proj1.get(0);
+        CorePattern actualPattern = actualRow.proj1.getFirst();
         if (actualPattern.getBinding() != null) {
           List<CorePattern> newActualRow = new ArrayList<>();
           for (CorePattern ignored : pattern.getSubPatterns()) {
