@@ -18,6 +18,7 @@ import org.arend.ext.error.*;
 import org.arend.ext.error.quickFix.RemoveErrorQuickFix;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
+import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
 import org.arend.lib.StdExtension;
 import org.arend.lib.error.IgnoredArgumentError;
@@ -35,13 +36,12 @@ import java.util.*;
 
 public class MatchingCasesMeta extends BaseMetaDefinition {
   private final StdExtension ext;
-  private final CasesMetaTypechecker casesResolver;
-  private final ArendRef constructorMetaRef;
+  private final CasesMetaResolver casesResolver;
+  @Dependency private ArendRef constructor;
 
-  public MatchingCasesMeta(StdExtension ext, CasesMetaTypechecker casesResolver, ArendRef constructorMetaRef) {
+  public MatchingCasesMeta(StdExtension ext, CasesMetaResolver casesResolver) {
     this.ext = ext;
     this.casesResolver = casesResolver;
-    this.constructorMetaRef = constructorMetaRef;
   }
 
   @Override
@@ -173,10 +173,10 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
     }
 
     int additionalArgsIndex = args.get(0).isExplicit() ? 0 : args.get(1).isExplicit() ? 1 : 2;
-    List<CasesMetaTypechecker.ArgParameters> argParamsList = new ArrayList<>();
+    List<CasesMetaResolver.ArgParameters> argParamsList = new ArrayList<>();
     List<Pair<TypedExpression,CoreExpression>> additionalArgs = new ArrayList<>();
     for (ConcreteExpression additionalArg : Utils.getArgumentList(args.get(additionalArgsIndex).getExpression())) {
-      CasesMetaTypechecker.ArgParameters argParams = casesResolver.new ArgParameters(additionalArg, errorReporter, false);
+      CasesMetaResolver.ArgParameters argParams = casesResolver.new ArgParameters(additionalArg, errorReporter, false);
       TypedExpression typed = typechecker.typecheck(argParams.expression, null);
       if (typed == null) return null;
       additionalArgs.add(new Pair<>(typed, typed.getType().normalize(NormalizationMode.RNF)));
@@ -239,7 +239,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
                   matched.add(param.getBinding());
                   CoreFunCallExpression funCall = param.getTypeExpr().toEquality(); // try to take the type immediately
                   if (funCall == null) { // if it's not an equality, then this may be because we need to substitute patterns
-                    CoreExpression type = (CoreExpression) typechecker.substituteAbstractedExpression(parameters.abstractType(i), levelSubst, PatternUtils.toExpression(clause.getPatterns().subList(0, i), constructorMetaRef, factory, null), null);
+                    CoreExpression type = (CoreExpression) typechecker.substituteAbstractedExpression(parameters.abstractType(i), levelSubst, PatternUtils.toExpression(clause.getPatterns().subList(0, i), constructor, factory, null), null);
                     funCall = type == null ? null : type.toEquality();
                     if (funCall != null) {
                       List<CoreBinding> patternBindings = new ArrayList<>(2);
@@ -372,7 +372,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
       for (int i = addPathList.size(); i < numberOfParameters; i++) {
         addPathList.add(false);
       }
-      for (CasesMetaTypechecker.ArgParameters parameters : argParamsList) {
+      for (CasesMetaResolver.ArgParameters parameters : argParamsList) {
         addPathList.add(parameters.addPath);
       }
     }
@@ -798,7 +798,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
                   SubexpressionData data = dataList.get(j);
                   for (int k = 0; k < data.matchedArgs.size(); k++) {
                     if (abstractedArgs.contains(new Pair<>(j, k))) {
-                      args.add(PatternUtils.toExpression(actualRowWithoutAddPath.get(l + k), constructorMetaRef, factory, bindings));
+                      args.add(PatternUtils.toExpression(actualRowWithoutAddPath.get(l + k), constructor, factory, bindings));
                     }
                   }
                 }
@@ -813,7 +813,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
                       patternArgs.add(null);
                     }
                   }
-                  CoreExpression arg = PatternUtils.eval(data.body, data.levelSubst, patternArgs, data.removedArgs, typechecker, constructorMetaRef, factory, bindings);
+                  CoreExpression arg = PatternUtils.eval(data.body, data.levelSubst, patternArgs, data.removedArgs, typechecker, constructor, factory, bindings);
                   if (arg == null) {
                     return null;
                   }
@@ -844,7 +844,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
           List<ConcreteExpression> rhsArgs = new ArrayList<>();
           for (; param.hasNext(); param = param.getNext()) {
             CorePattern pattern = pair.proj2.get(param.getBinding());
-            rhsArgs.add(pattern == null ? factory.ref(param.getBinding()) : PatternUtils.toExpression(pattern, constructorMetaRef, factory, bindings));
+            rhsArgs.add(pattern == null ? factory.ref(param.getBinding()) : PatternUtils.toExpression(pattern, constructor, factory, bindings));
           }
           rhs = factory.app(rhs, true, rhsArgs);
         }
@@ -855,7 +855,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
         for (int j = argParamsList.size(); j < actualRow.size(); j++) {
           asRefs.add(null);
         }
-        for (CasesMetaTypechecker.ArgParameters argParameters : argParamsList) {
+        for (CasesMetaResolver.ArgParameters argParameters : argParamsList) {
           argParameters.addAsRef(asRefs);
         }
         resultClauses.add(pair.proj1 < actualClauses.size() ? actualClauses.get(pair.proj1) : factory.clause(PatternUtils.toConcrete(actualRow, asRefs, ext.renamerFactory, factory, null, null), isAbsurd ? null : defaultExpr));

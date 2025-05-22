@@ -15,6 +15,7 @@ import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.core.ops.SubstitutionPair;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
+import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
 import org.arend.lib.StdExtension;
 import org.arend.lib.error.IgnoredArgumentError;
@@ -29,13 +30,12 @@ import java.util.*;
 
 public class CasesMeta extends BaseMetaDefinition {
   private final StdExtension ext;
-  private final CasesMetaTypechecker resolver;
-  private final ArendRef constructorMetaRef;
+  private final CasesMetaResolver resolver;
+  @Dependency private ArendRef constructor;
 
-  public CasesMeta(StdExtension ext, CasesMetaTypechecker resolver, ArendRef constructorMetaRef) {
+  public CasesMeta(StdExtension ext, CasesMetaResolver resolver) {
     this.ext = ext;
     this.resolver = resolver;
-    this.constructorMetaRef = constructorMetaRef;
   }
 
   @Override
@@ -59,7 +59,7 @@ public class CasesMeta extends BaseMetaDefinition {
     List<? extends ConcreteExpression> caseArgExprs = Utils.getArgumentList(args.get(0).getExpression());
     ConcreteExpression defaultExpr = args.size() > 2 ? args.get(2).getExpression() : null;
 
-    List<CasesMetaTypechecker.ArgParameters> argParametersList = new ArrayList<>(args.size());
+    List<CasesMetaResolver.ArgParameters> argParametersList = new ArrayList<>(args.size());
     for (ConcreteExpression caseArgExpr : caseArgExprs) {
       argParametersList.add(resolver.new ArgParameters(caseArgExpr, typechecker.getErrorReporter(), true));
     }
@@ -67,7 +67,7 @@ public class CasesMeta extends BaseMetaDefinition {
     List<TypedExpression> typedArgs;
     if (defaultExpr != null) {
       typedArgs = new ArrayList<>();
-      for (CasesMetaTypechecker.ArgParameters argParameters : argParametersList) {
+      for (CasesMetaResolver.ArgParameters argParameters : argParametersList) {
         TypedExpression typed = typechecker.typecheck(argParameters.expression, null);
         if (typed == null) return null;
         typedArgs.add(typed);
@@ -81,7 +81,7 @@ public class CasesMeta extends BaseMetaDefinition {
     List<Pair<TypedExpression,Object>> searchPairs = new ArrayList<>();
     List<ConcreteParameter> concreteParameters = defaultExpr == null ? null : new ArrayList<>();
     for (int i = 0; i < argParametersList.size(); i++) {
-      CasesMetaTypechecker.ArgParameters argParams = argParametersList.get(i);
+      CasesMetaResolver.ArgParameters argParams = argParametersList.get(i);
       ConcreteExpression argExpr = argParams.expression;
       ConcreteExpression argType = argParams.type;
       boolean isLocalRef = argParams.expression instanceof ConcreteReferenceExpression && ((ConcreteReferenceExpression) argParams.expression).getReferent().isLocalRef();
@@ -140,7 +140,7 @@ public class CasesMeta extends BaseMetaDefinition {
             for (int i = 0; i < patternList.size(); i++) {
               CoreExpression expr = typedArgs.get(i).getExpression();
               if (expr instanceof CoreReferenceExpression) {
-                substitution.add(new SubstitutionPair(((CoreReferenceExpression) expr).getBinding(), PatternUtils.toExpression(patternList.get(i), constructorMetaRef, factory, null)));
+                substitution.add(new SubstitutionPair(((CoreReferenceExpression) expr).getBinding(), PatternUtils.toExpression(patternList.get(i), constructor, factory, null)));
               }
             }
             if (!substitution.isEmpty()) {
@@ -188,7 +188,7 @@ public class CasesMeta extends BaseMetaDefinition {
         for (List<ArendPattern> patternList : patternLists) {
           if (PatternUtils.computeCovering(actualRows, patternList) == null) {
             List<ArendRef> asRefs = new ArrayList<>();
-            for (CasesMetaTypechecker.ArgParameters argParameters : argParametersList) {
+            for (CasesMetaResolver.ArgParameters argParameters : argParametersList) {
               argParameters.addAsRef(asRefs);
             }
             newClauses.add(factory.clause(PatternUtils.toConcrete(patternList, asRefs, ext.renamerFactory, factory, null, null), defaultExpr));

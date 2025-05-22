@@ -1828,6 +1828,11 @@ public final class Concrete {
     }
 
     @Override
+    public @NotNull MetaReferable getRef() {
+      return myReferable;
+    }
+
+    @Override
     public void setReferable(@NotNull TCDefReferable referable) {
       if (!(referable instanceof MetaReferable)) throw new IllegalArgumentException();
       myReferable = (MetaReferable) referable;
@@ -1960,6 +1965,11 @@ public final class Concrete {
 
     @Override
     public @NotNull TCDefReferable getData() {
+      return myReferable;
+    }
+
+    @Override
+    public @NotNull TCDefReferable getRef() {
       return myReferable;
     }
 

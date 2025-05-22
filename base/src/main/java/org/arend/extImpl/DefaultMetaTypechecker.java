@@ -8,7 +8,7 @@ import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.MetaDefinition;
-import org.arend.ext.typechecking.MetaTypechecker;
+import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.ext.util.Pair;
 import org.arend.ext.variable.Variable;
 import org.arend.term.concrete.Concrete;

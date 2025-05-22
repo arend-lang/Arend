@@ -1,8 +1,8 @@
-package org.arend.ext.concrete.definition;
+package org.arend.ext.typechecking.meta;
 
+import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.MetaDefinition;
-import org.arend.ext.typechecking.MetaTypechecker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

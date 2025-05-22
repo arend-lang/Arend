@@ -3,7 +3,7 @@ package org.arend.lib;
 import org.arend.ext.*;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
-import org.arend.ext.concrete.definition.TrivialMetaTypechecker;
+import org.arend.ext.typechecking.meta.TrivialMetaTypechecker;
 import org.arend.ext.core.definition.*;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.dependency.Dependency;
@@ -13,6 +13,7 @@ import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.MetaRef;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.*;
+import org.arend.ext.typechecking.meta.DependencyMetaTypechecker;
 import org.arend.ext.ui.ArendUI;
 import org.arend.ext.variable.VariableRenamerFactory;
 import org.arend.lib.goal.StdGoalSolver;
@@ -21,8 +22,10 @@ import org.arend.lib.key.ReflexivityKey;
 import org.arend.lib.key.TransitivityKey;
 import org.arend.lib.level.StdLevelProver;
 import org.arend.lib.meta.*;
-import org.arend.lib.meta.cases.CasesMetaTypechecker;
-import org.arend.lib.meta.cases.MatchingCasesMetaTypechecker;
+import org.arend.lib.meta.cases.CasesMeta;
+import org.arend.lib.meta.cases.CasesMetaResolver;
+import org.arend.lib.meta.cases.MatchingCasesMeta;
+import org.arend.lib.meta.cases.MatchingCasesMetaResolver;
 import org.arend.lib.meta.cong.CongruenceMeta;
 import org.arend.lib.meta.debug.PrintMeta;
 import org.arend.lib.meta.debug.RandomMeta;
@@ -33,12 +36,10 @@ import org.arend.lib.meta.linear.LinearSolverMeta;
 import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.meta.rewrite.RewriteMeta;
 import org.arend.lib.meta.simplify.SimplifyMeta;
-import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
-import java.util.List;
 
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
@@ -165,8 +166,12 @@ public class StdExtension implements ArendExtension {
     return factory.metaDef(makeRef(modulePath, name, definition), Collections.emptyList(), null);
   }
 
-  private ConcreteMetaDefinition makeDef(ModulePath modulePath, String name, MetaTypechecker typechecker, List<LongName> references) {
-    return factory.metaDef(factory.metaRef(factory.moduleRef(modulePath), name, Precedence.DEFAULT, null, null, typechecker instanceof MetaResolver ? (MetaResolver) typechecker : null, typechecker), Collections.emptyList(), Utils.makeReferences(factory, references));
+  private ConcreteMetaDefinition makeDef(ModulePath modulePath, String name, MetaResolver resolver, DependencyMetaTypechecker<?> typechecker) {
+    return factory.metaDef(factory.metaRef(factory.moduleRef(modulePath), name, Precedence.DEFAULT, null, null, resolver, typechecker), Collections.emptyList(), typechecker.makeBody(factory));
+  }
+
+  private ConcreteMetaDefinition makeDef(ModulePath modulePath, String name, DependencyMetaTypechecker<?> typechecker) {
+    return makeDef(modulePath, name, null, typechecker);
   }
 
   @Override
@@ -194,7 +199,7 @@ public class StdExtension implements ArendExtension {
         factory.metaDef(makeRef(meta, "at", new Precedence(Precedence.Associativity.NON_ASSOC, (byte) 1, true), new AtMeta(this)), Collections.emptyList(), null));
     contributor.declare(text("`f in x` is equivalent to `\\let r => f x \\in r`. Also, `(f_1, ... f_n) in x` is equivalent to `f_1 in ... f_n in x`. This meta is usually used with `f` being a meta such as `rewrite`, `simplify`, `simp_coe`, or `unfold`."),
         factory.metaDef(makeRef(meta, "in", new Precedence(Precedence.Associativity.RIGHT_ASSOC, (byte) 1, true), new InMeta(this)), Collections.emptyList(), null));
-    CasesMetaTypechecker casesMetaTypechecker = new CasesMetaTypechecker(this);
+    CasesMetaResolver casesMetaResolver = new CasesMetaResolver(this);
     contributor.declare(multiline("""
         `cases args default` works just like `mcases args default`, but does not search for \\case expressions or definition invocations.
         Each argument has a set of parameters that can be configured.
@@ -205,7 +210,7 @@ public class StdExtension implements ArendExtension {
         The type of an argument is specified as either `e : E` or `e arg parameters : E`.
         The flag 'addPath' indicates that argument `idp` with type `e = x` should be added after the current one, where `e` is the current argument and `x` is its name.
         That is, `cases (e arg addPath)` is equivalent to `cases (e arg (name = x), idp : e = x)`.
-        """), makeDef(meta, "cases", casesMetaTypechecker, Collections.singletonList(new LongName(constructorName))));
+        """), makeDef(meta, "cases", casesMetaResolver, new DependencyMetaTypechecker<>(CasesMeta.class, () -> new CasesMeta(this, casesMetaResolver))));
     contributor.declare(multiline("""
         `mcases {def} args default \\with { ... }` finds all invocations of definition `def` in the expected type and generate a \\case expression that matches arguments of those invocations.
 
@@ -226,7 +231,7 @@ public class StdExtension implements ArendExtension {
         * `mcases {(1,2),(def,1)}` looks for the first and the second occurrence of a \\case expression and the first occurrence of `def`.
         * `mcases {(def1,2),(),def2}` looks for the second occurrence of `def1`, all occurrences of \\case expressions, and all occurrences of `def2`.
         * `mcases {_} {arg addPath, arg (), arg addPath}` looks for case expressions and adds a path argument after the first and the third matched expression.
-        """), makeDef(meta, "mcases", new MatchingCasesMetaTypechecker(this, casesMetaTypechecker), Collections.singletonList(new LongName(constructorName))));
+        """), makeDef(meta, "mcases", new MatchingCasesMetaResolver(this, casesMetaResolver), new DependencyMetaTypechecker<>(MatchingCasesMeta.class, () -> new MatchingCasesMeta(this, casesMetaResolver))));
     contributor.declare(multiline("""
         `unfold (f_1, ... f_n) e` unfolds functions/fields/variables `f_1`, ... `f_n` in the expected type before type-checking of `e` and returns `e` itself.
         If the first argument is omitted, it unfold all fields.
@@ -255,7 +260,8 @@ public class StdExtension implements ArendExtension {
         makeDef(meta, "defaultImpl", new DefaultImplMeta(this)));
 
     ModulePath paths = ModulePath.fromString("Paths.Meta");
-    MetaRef rewrite = makeRef(paths, "rewrite", new RewriteMeta(this, true));
+    contributor.declare(paths, new ModulePath("Paths"));
+    ConcreteMetaDefinition rewrite = makeDef(paths, "rewrite", new DependencyMetaTypechecker<>(RewriteMeta.class, () -> new RewriteMeta(this, true)));
     contributor.declare(multiline("""
         `rewrite (p : a = b) t : T` replaces occurrences of `a` in `T` with a variable `x` obtaining a type `T[x/a]` and returns `transportInv (\\lam x => T[x/a]) p t`
 
@@ -263,11 +269,11 @@ public class StdExtension implements ArendExtension {
         `rewrite {i_1, ... i_k} p t` replaces only occurrences with indices `i_1`, ... `i_k`. Here `i_j` is the number of occurrence after replacing all the previous occurrences.\s
         Also, `p` may be a function, in which case `rewrite p` is equivalent to `rewrite (p _ ... _)`.
         `rewrite (p_1, ... p_n) t` is equivalent to `rewrite p_1 (... rewrite p_n t ...)`
-        """), factory.metaDef(rewrite, Collections.emptyList(), null));
+        """), rewrite);
     contributor.declare(text("`rewriteI p` is equivalent to `rewrite (inv p)`"),
-        makeDef(paths, "rewriteI", new RewriteMeta(this, false)));
+        makeDef(paths, "rewriteI", new DependencyMetaTypechecker<>(RewriteMeta.class, () -> new RewriteMeta(this, false))));
     contributor.declare(vList(
-        hList(text("`rewriteEq (p : a = b) t : T` is similar to "), refDoc(rewrite), text(", but it finds and replaces occurrences of `a` up to algebraic equivalences.")),
+        hList(text("`rewriteEq (p : a = b) t : T` is similar to "), refDoc(rewrite.getRef()), text(", but it finds and replaces occurrences of `a` up to algebraic equivalences.")),
         text("For example, `rewriteEq (p : b * (c * id) = x) t : T` rewrites `(a * b) * (id * c)` as `a * x` in `T`."),
         text("Similarly to `rewrite` this meta allows specification of occurrence numbers."),
         text("Currently this meta supports noncommutative monoids and categories.")),

@@ -2,10 +2,8 @@ package org.arend.lib.meta.cases;
 
 import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
-import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.error.NameResolverError;
-import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.ExpressionResolver;
 import org.arend.ext.typechecking.*;
 import org.arend.lib.StdExtension;
@@ -17,11 +15,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class MatchingCasesMetaTypechecker implements MetaTypechecker, MetaResolver {
+public class MatchingCasesMetaResolver implements MetaResolver {
   private final StdExtension ext;
-  private final CasesMetaTypechecker casesResolver;
+  private final CasesMetaResolver casesResolver;
 
-  public MatchingCasesMetaTypechecker(StdExtension ext, CasesMetaTypechecker casesResolver) {
+  public MatchingCasesMetaResolver(StdExtension ext, CasesMetaResolver casesResolver) {
     this.ext = ext;
     this.casesResolver = casesResolver;
   }
@@ -107,11 +105,5 @@ public class MatchingCasesMetaTypechecker implements MetaTypechecker, MetaResolv
       casesResolver.resolveDefaultClause(resolver, null, caseArgs);
     }
     return builder.build();
-  }
-
-  @Override
-  public @Nullable MetaDefinition typecheck(@NotNull ExpressionTypechecker typechecker, @NotNull ConcreteMetaDefinition definition) {
-    List<ArendRef> refs = Utils.extractReferences(definition, 1, typechecker.getErrorReporter());
-    return refs == null ? null : new MatchingCasesMeta(ext, casesResolver, refs.getFirst());
   }
 }

@@ -12,6 +12,7 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.MetaRef;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.*;
+import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

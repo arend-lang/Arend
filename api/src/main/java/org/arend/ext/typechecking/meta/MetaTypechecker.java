@@ -1,7 +1,9 @@
-package org.arend.ext.typechecking;
+package org.arend.ext.typechecking.meta;
 
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
 import org.arend.ext.core.context.CoreParameter;
+import org.arend.ext.typechecking.ExpressionTypechecker;
+import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.util.Pair;
 import org.arend.ext.variable.Variable;
 import org.jetbrains.annotations.NotNull;

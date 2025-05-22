@@ -6,7 +6,7 @@ import org.arend.ext.reference.MetaRef;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.MetaResolver;
-import org.arend.ext.typechecking.MetaTypechecker;
+import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;

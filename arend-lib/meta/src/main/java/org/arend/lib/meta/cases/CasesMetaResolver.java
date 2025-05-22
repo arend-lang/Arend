@@ -2,7 +2,6 @@ package org.arend.lib.meta.cases;
 
 import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
-import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
@@ -14,14 +13,13 @@ import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.*;
 import org.arend.lib.StdExtension;
 import org.arend.lib.util.NamedParameter;
-import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiFunction;
 
-public class CasesMetaTypechecker implements MetaTypechecker, MetaResolver {
+public class CasesMetaResolver implements MetaResolver {
   private final StdExtension ext;
   final NamedParameter parameter;
   final ArendRef argRef;
@@ -29,7 +27,7 @@ public class CasesMetaTypechecker implements MetaTypechecker, MetaResolver {
   final ArendRef addPathRef;
   final ArendRef asRef;
 
-  public CasesMetaTypechecker(StdExtension ext) {
+  public CasesMetaResolver(StdExtension ext) {
     this.ext = ext;
     parameter = new NamedParameter(ext.factory);
     argRef = ext.factory.global("arg", new Precedence(Precedence.Associativity.NON_ASSOC, (byte) 0, true));
@@ -216,11 +214,5 @@ public class CasesMetaTypechecker implements MetaTypechecker, MetaResolver {
         refs.add(as);
       }
     }
-  }
-
-  @Override
-  public @Nullable MetaDefinition typecheck(@NotNull ExpressionTypechecker typechecker, @NotNull ConcreteMetaDefinition definition) {
-    List<ArendRef> refs = Utils.extractReferences(definition, 1, typechecker.getErrorReporter());
-    return refs == null ? null : new CasesMeta(ext, this, refs.getFirst());
   }
 }

@@ -12,6 +12,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
+import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.lib.StdExtension;
 import org.arend.lib.error.SubexprError;
 import org.arend.lib.util.Utils;
@@ -23,6 +24,8 @@ import java.util.*;
 public class RewriteMeta extends BaseMetaDefinition {
   private final StdExtension ext;
   private final boolean isInverse;
+  @Dependency private ArendRef transport;
+  @Dependency private ArendRef transportInv;
 
   public RewriteMeta(StdExtension ext, boolean isInverse) {
     this.ext = ext;
@@ -48,7 +51,7 @@ public class RewriteMeta extends BaseMetaDefinition {
 
   @Override
   public @Nullable ConcreteExpression getConcreteRepresentation(@NotNull List<? extends ConcreteArgument> arguments) {
-    return ext.factory.appBuilder(ext.factory.ref(ext.transportInv.getRef())).app(ext.factory.hole()).app(arguments.subList(arguments.getFirst().isExplicit() ? 0 : 1, arguments.size())).build();
+    return ext.factory.appBuilder(ext.factory.ref(transportInv)).app(ext.factory.hole()).app(arguments.subList(arguments.getFirst().isExplicit() ? 0 : 1, arguments.size())).build();
   }
 
   @Override
@@ -108,7 +111,7 @@ public class RewriteMeta extends BaseMetaDefinition {
       return null;
     }
 
-    ConcreteExpression transport = factory.ref((isInverse ? ext.transportInv : ext.transport).getRef(), refExpr.getPLevels(), refExpr.getHLevels());
+    ConcreteExpression transportExpr = factory.ref(isInverse ? transportInv : transport, refExpr.getPLevels(), refExpr.getHLevels());
     CoreExpression value = eq.getDefCallArguments().get(isInverse == isForward ? 2 : 1);
 
     // This case won't happen often, but sill possible
@@ -121,7 +124,7 @@ public class RewriteMeta extends BaseMetaDefinition {
           return null;
         }
         ArendRef ref = factory.local("T");
-        return typechecker.typecheck(factory.app(transport, true, Arrays.asList(
+        return typechecker.typecheck(factory.app(transportExpr, true, Arrays.asList(
             factory.lam(Collections.singletonList(factory.param(ref)), factory.ref(ref)),
             factory.core("transport (\\lam T => T) {!} _", path),
             args.get(currentArg).getExpression())), null);
@@ -144,7 +147,7 @@ public class RewriteMeta extends BaseMetaDefinition {
     CoreExpression normType = type.normalize(NormalizationMode.RNF);
 
     ArendRef ref = factory.local("x");
-    return typechecker.typecheck(factory.appBuilder(transport)
+    return typechecker.typecheck(factory.appBuilder(transportExpr)
       .app(factory.lam(Collections.singletonList(factory.param(Collections.singletonList(ref), factory.core(eq.getDefCallArguments().getFirst().computeTyped()))), factory.meta("transport (\\lam x => {!}) _ _", new MetaDefinition() {
         @Override
         public TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {

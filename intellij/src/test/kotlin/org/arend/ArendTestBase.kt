@@ -19,7 +19,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ThrowableRunnable
 import com.maddyhome.idea.vim.VimPlugin
 import org.arend.ext.DefinitionContributor
-import org.arend.ext.concrete.definition.TrivialMetaTypechecker
+import org.arend.ext.typechecking.meta.TrivialMetaTypechecker
 import org.arend.ext.module.ModulePath
 import org.arend.ext.prettyprinting.doc.DocFactory
 import org.arend.ext.reference.Precedence
