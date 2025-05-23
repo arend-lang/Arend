@@ -114,7 +114,9 @@ fun correspondedSubExpr(range: TextRange, file: PsiFile, project: Project): SubE
         ?: throw SubExprException("cannot find a suitable concrete expression")
     val subExpr =
         if (tail.isNotEmpty()) {
-            val data = if (exprAncestor.textRange == range) exprAncestor else null
+            val data = if (exprAncestor.textRange == range) {
+              exprAncestor.descendantOfType<ArendTuple>() ?: exprAncestor
+            } else null
             parseBinOp(data, head, tail)
         }
         else SyntacticDesugarVisitor.desugar(ConcreteBuilder.convertExpression(head), DummyErrorReporter.INSTANCE)

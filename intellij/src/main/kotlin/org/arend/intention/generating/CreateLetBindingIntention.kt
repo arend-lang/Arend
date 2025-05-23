@@ -8,7 +8,6 @@ import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.executeCommand
-import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -27,20 +26,15 @@ import org.arend.intention.AbstractGenerateFunctionIntention
 import org.arend.intention.BaseArendIntention
 import org.arend.intention.ExtractExpressionToFunctionIntention
 import org.arend.intention.checkNotGeneratePreview
-import org.arend.naming.scope.EmptyScope
-import org.arend.naming.scope.MergeScope
-import org.arend.naming.scope.local.ListScope
+import org.arend.intention.getElementScope
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ext.*
 import org.arend.psi.getSelectionWithoutErrors
-import org.arend.psi.topmostAncestor
 import org.arend.refactoring.addNewClause
 import org.arend.refactoring.rangeOfConcrete
 import org.arend.refactoring.replaceExprSmart
 import org.arend.refactoring.tryCorrespondedSubExpr
-import org.arend.server.ArendServerService
 import org.arend.term.concrete.Concrete
-import org.arend.term.concrete.LocalVariablesCollector.getLocalReferables
 import org.arend.util.ArendBundle
 import org.arend.util.ParameterExplicitnessState
 import org.arend.util.appExprToConcrete
@@ -216,14 +210,7 @@ class CreateLetBindingIntention : AbstractGenerateFunctionIntention() {
     private fun runDocumentChanges(wrappableOption: WrappableOption, editor: Editor, selection: SelectionResult, freeVariables: List<Pair<Binding, ParameterExplicitnessState>>) {
         val elementToWrap = wrappableOption.psi.element ?: return
         val project = elementToWrap.project
-
-        val server = project.service<ArendServerService>().server
-        val tcReferable =  selection.contextPsi.topmostAncestor<ArendDefinition<*>>()?.tcReferable
-        val definitionData = tcReferable?.let { server.getResolvedDefinition(it) }
-
-        val referableScope = tcReferable?.let { server.getReferableScope(it) } ?: EmptyScope.INSTANCE
-        val localReferables = getLocalReferables(definitionData?.definition, null)
-        val scope = MergeScope(ListScope(localReferables), referableScope)
+        val scope = getElementScope(selection.contextPsi)
 
         val actualFreeVariables = freeVariables.filter { scope.resolveName(it.first.name) == null }
         val freeName = generateFreeName("x", scope)

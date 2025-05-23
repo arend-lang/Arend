@@ -24,7 +24,7 @@ class ArendAtomFieldsAcc(node: ASTNode) : ArendExpr(node) {
         return if (fieldAccs.isEmpty() && ipName == null) {
             atom.accept(visitor, params)
         } else {
-            visitor.visitFieldAccs(this, atom, fieldAccs, ipName, ipName?.referenceName, ipName?.fixity == Fixity.INFIX, params)
+            visitor.visitFieldAccs(this, atom, fieldAccs, ipName, ipName?.referenceName, ipName?.fixity, params)
         }
     }
 }

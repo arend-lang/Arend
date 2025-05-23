@@ -74,7 +74,7 @@ class ShrinkAbstractVisitor(val textRange: TextRange) : AbstractExpressionVisito
         return """\case ${arguments.joinToString(", ") { DOTS }} \with { $DOTS }"""
     }
 
-    override fun visitFieldAccs(data: Any?, expression: Abstract.Expression, fieldAccs: MutableList<Abstract.FieldAcc>, infixReference: AbstractReference?, infixName: String?, isInfix: Boolean, params: Unit?): String {
+    override fun visitFieldAccs(data: Any?, expression: Abstract.Expression, fieldAccs: MutableList<Abstract.FieldAcc>, infixReference: AbstractReference?, infixName: String?, fixity: Fixity?, params: Unit?): String {
         return "${expression.accept(this, Unit)}.${fieldAccs.joinToString(".") { it.number?.toString() ?: it.fieldRef?.refName ?: "_" }}"
     }
 

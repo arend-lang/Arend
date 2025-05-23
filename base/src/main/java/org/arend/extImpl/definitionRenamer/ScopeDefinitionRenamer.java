@@ -5,10 +5,7 @@ import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.DefinitionRenamer;
 import org.arend.ext.reference.ArendRef;
 import org.arend.module.ModuleLocation;
-import org.arend.naming.reference.FieldReferable;
-import org.arend.naming.reference.GlobalReferable;
-import org.arend.naming.reference.LocatedReferable;
-import org.arend.naming.reference.ModuleReferable;
+import org.arend.naming.reference.*;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.Scope;
 import org.jetbrains.annotations.Nullable;
@@ -42,9 +39,6 @@ public class ScopeDefinitionRenamer implements DefinitionRenamer {
         parent = parent.getLocatedReferableParent();
       }
       if (parent == null || parent instanceof ModuleReferable) {
-        if (parent != null && ((ModuleReferable) parent).path == MODULE_PATH) {
-          break;
-        }
         Collections.reverse(list);
         ModulePath modulePath;
         if (parent != null) {
