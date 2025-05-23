@@ -7,8 +7,6 @@ import org.arend.core.elimtree.ElimClause;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
 import org.arend.core.pattern.Pattern;
-import org.arend.ext.concrete.expr.ConcreteExpression;
-import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.MetaReferable;
 import org.arend.naming.reference.Referable;
@@ -63,17 +61,7 @@ public class CorrespondedSubExprVisitor implements
   public Pair<Expression, Concrete.Expression> visitReference(Concrete.ReferenceExpression expr, Expression coreExpr) {
     if (matchesSubExpr(expr)) return new Pair<>(coreExpr, expr);
     Referable ref = expr.getReferent();
-    if (ref instanceof MetaReferable) {
-      MetaDefinition meta = ((MetaReferable) ref).getDefinition();
-      if (meta != null) {
-        ConcreteExpression concrete = meta.checkAndGetConcreteRepresentation(Collections.emptyList());
-        if (concrete instanceof Concrete.Expression) {
-          return ((Concrete.Expression) concrete).accept(this, coreExpr);
-        }
-      }
-      return nullWithError(new SubExprError(SubExprError.Kind.MetaRef, coreExpr));
-    }
-    return null;
+    return ref instanceof MetaReferable ? nullWithError(new SubExprError(SubExprError.Kind.MetaRef, coreExpr)) : null;
   }
 
   @Override
@@ -291,13 +279,6 @@ public class CorrespondedSubExprVisitor implements
     Concrete.Expression function = expr.getFunction();
     Referable ref = function.getUnderlyingReferable();
     if (ref instanceof MetaReferable) {
-      MetaDefinition meta = ((MetaReferable) ref).getDefinition();
-      if (meta != null) {
-        ConcreteExpression concrete = meta.checkAndGetConcreteRepresentation(expr.getArguments());
-        if (concrete instanceof Concrete.Expression) {
-          return ((Concrete.Expression) concrete).accept(this, coreExpr);
-        }
-      }
       return nullWithError(new SubExprError(SubExprError.Kind.MetaRef, coreExpr));
     }
     if (subExpr instanceof Concrete.AppExpression && Objects.equals(

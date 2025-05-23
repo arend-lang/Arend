@@ -6,7 +6,6 @@ import org.arend.ext.concrete.expr.*;
 import org.arend.ext.error.NameResolverError;
 import org.arend.ext.reference.ExpressionResolver;
 import org.arend.ext.typechecking.*;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,11 +15,9 @@ import java.util.Collections;
 import java.util.List;
 
 public class MatchingCasesMetaResolver implements MetaResolver {
-  private final StdExtension ext;
   private final CasesMetaResolver casesResolver;
 
-  public MatchingCasesMetaResolver(StdExtension ext, CasesMetaResolver casesResolver) {
-    this.ext = ext;
+  public MatchingCasesMetaResolver(CasesMetaResolver casesResolver) {
     this.casesResolver = casesResolver;
   }
 
@@ -45,7 +42,7 @@ public class MatchingCasesMetaResolver implements MetaResolver {
       return null;
     }
 
-    ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
+    ConcreteFactory factory = contextData.getFactory();
     List<? extends ConcreteArgument> args = contextData.getArguments();
 
     int paramsIndex = -1;

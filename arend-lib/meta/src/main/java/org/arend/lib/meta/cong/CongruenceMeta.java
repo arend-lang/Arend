@@ -46,7 +46,7 @@ public class CongruenceMeta extends BaseMetaDefinition {
     CoreDefCallExpression equality = pathChecked != null ? pathChecked.getType().toEquality() : null;
     if (equality != null) {
       ArendRef iParam = factory.local("i");
-      ConcreteExpression funcLam = factory.lam(Collections.singletonList(factory.param(iParam)), factory.core(equality.getDefCallArguments().get(0).computeTyped()));
+      ConcreteExpression funcLam = factory.lam(Collections.singletonList(factory.param(iParam)), factory.core(equality.getDefCallArguments().getFirst().computeTyped()));
       return factory.app(factory.ref(prelude.getAtRef()), Arrays.asList(factory.arg(funcLam, false), factory.arg(path.eqProofOrElement, true), factory.arg(factory.ref(param), true)));
     }
     return factory.app(factory.ref(prelude.getAtRef()), Arrays.asList(factory.arg(path.eqProofOrElement, true), factory.arg(factory.ref(param), true)));
@@ -62,7 +62,7 @@ public class CongruenceMeta extends BaseMetaDefinition {
       eqProofsAtJ.add(factory.arg(appAt(typechecker, eqProofs.get(i), jParam, factory, prelude), true));
     }
 
-    return factory.app(factory.ref(prelude.getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singleton(factory.param(jParam)), factory.app(appAt(typechecker, eqProofs.get(0), jParam, factory, prelude), eqProofsAtJ))));
+    return factory.app(factory.ref(prelude.getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singleton(factory.param(jParam)), factory.app(appAt(typechecker, eqProofs.getFirst(), jParam, factory, prelude), eqProofsAtJ))));
   }
 
   private TypedExpression mapMode(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
@@ -72,10 +72,10 @@ public class CongruenceMeta extends BaseMetaDefinition {
     }
 
     List<? extends CoreExpression> args = ((CoreDataCallExpression) equality).getDefCallArguments();
-    ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
+    ConcreteFactory factory = contextData.getFactory();
     ArendRef iRef = factory.local("i");
     CongVisitor visitor = new CongVisitor(ext.prelude, factory, typechecker, contextData.getMarker(), contextData.getArguments().stream().map(ConcreteArgument::getExpression).collect(Collectors.toList()), iRef);
-    CongVisitor.Result result = args.get(1).normalize(NormalizationMode.RNF).accept(visitor, new CongVisitor.ParamType(() -> new CongVisitor.Result(factory.core(args.get(0).normalize(NormalizationMode.RNF).computeTyped())), args.get(2).normalize(NormalizationMode.RNF)));
+    CongVisitor.Result result = args.get(1).normalize(NormalizationMode.RNF).accept(visitor, new CongVisitor.ParamType(() -> new CongVisitor.Result(factory.core(args.getFirst().normalize(NormalizationMode.RNF).computeTyped())), args.get(2).normalize(NormalizationMode.RNF)));
     if (result == null) {
       if (visitor.index > contextData.getArguments().size()) {
         typechecker.getErrorReporter().report(new MissingArgumentsError(visitor.index - contextData.getArguments().size(), contextData.getMarker()));
@@ -111,7 +111,7 @@ public class CongruenceMeta extends BaseMetaDefinition {
 
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-    if (!contextData.getArguments().isEmpty() && contextData.getArguments().get(0).isExplicit()) {
+    if (!contextData.getArguments().isEmpty() && contextData.getArguments().getFirst().isExplicit()) {
       return mapMode(typechecker, contextData);
     }
 
@@ -121,12 +121,12 @@ public class CongruenceMeta extends BaseMetaDefinition {
       return null;
     }
 
-    ContextHelper contextHelper = new ContextHelper(Context.TRIVIAL, contextData.getArguments().isEmpty() ? null : contextData.getArguments().get(0).getExpression());
+    ContextHelper contextHelper = new ContextHelper(Context.TRIVIAL, contextData.getArguments().isEmpty() ? null : contextData.getArguments().getFirst().getExpression());
     if (contextHelper.meta == null && !contextData.getArguments().isEmpty()) {
-      typechecker.getErrorReporter().report(new IgnoredArgumentError(contextData.getArguments().get(0).getExpression()));
+      typechecker.getErrorReporter().report(new IgnoredArgumentError(contextData.getArguments().getFirst().getExpression()));
     }
 
-    ConcreteFactory factory = ext.factory.withData(refExpr);
+    ConcreteFactory factory = contextData.getFactory();
     CongruenceClosure<CoreExpression> congruenceClosure = new CongruenceClosure<>(typechecker, refExpr, eqProofs -> applyCongruence(typechecker, eqProofs, factory, ext.prelude),
         new CongruenceClosure.EqualityIsEquivProof(factory.ref(ext.prelude.getIdpRef()), factory.ref(ext.inv.getRef()), factory.ref(ext.concat.getRef())), factory);
     for (CoreBinding binding : contextHelper.getAllBindings(typechecker)) {

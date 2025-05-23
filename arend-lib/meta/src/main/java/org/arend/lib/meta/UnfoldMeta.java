@@ -54,11 +54,6 @@ public class UnfoldMeta extends BaseMetaDefinition {
   }
 
   @Override
-  public @Nullable ConcreteExpression getConcreteRepresentation(@NotNull List<? extends ConcreteArgument> arguments) {
-    return arguments.size() > 1 ? arguments.get(1).getExpression() : arguments.get(0).getExpression();
-  }
-
-  @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     Set<Variable> functions = new HashSet<>();
     List<? extends ConcreteExpression> firstArgList;

@@ -29,7 +29,7 @@ public abstract class LocalSimplificationRuleBase implements SimplificationRule 
 
   public LocalSimplificationRuleBase(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker) {
     this.ext = ext;
-    this.factory = ext.factory;
+    this.factory = ext.factory.withData(refExpr);
     this.refExpr = refExpr;
     this.typechecker = typechecker;
     this.classCall = classCall;

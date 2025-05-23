@@ -177,7 +177,7 @@ public class EquationMeta extends BaseMetaDefinition {
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     ErrorReporter errorReporter = typechecker.getErrorReporter();
     ConcreteReferenceExpression refExpr = contextData.getReferenceExpression();
-    ConcreteFactory factory = ext.factory.withData(refExpr.getData());
+    ConcreteFactory factory = contextData.getFactory();
 
     // values will contain ConcreteExpression (which correspond to implicit arguments) and TypedExpression (which correspond to explicit arguments).
     List<Object> values = new ArrayList<>();

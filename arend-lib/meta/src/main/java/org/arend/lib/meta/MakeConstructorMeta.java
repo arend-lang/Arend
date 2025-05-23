@@ -11,18 +11,11 @@ import org.arend.ext.typechecking.BaseMetaDefinition;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class MakeConstructorMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
-
-  public MakeConstructorMeta(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean[] argumentExplicitness() {
     return new boolean[] { true };
@@ -42,7 +35,7 @@ public class MakeConstructorMeta extends BaseMetaDefinition {
     }
 
     int dataTypeParams = Utils.parametersSize(constructor.getDataTypeParameters());
-    ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
+    ConcreteFactory factory = contextData.getFactory();
     ConcreteAppBuilder builder = factory.appBuilder(arg);
     for (int i = 0; i < dataTypeParams; i++) {
       builder.app(factory.hole(), false);

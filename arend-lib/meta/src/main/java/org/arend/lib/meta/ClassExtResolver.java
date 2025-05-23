@@ -9,7 +9,6 @@ import org.arend.ext.reference.ExpressionResolver;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ContextDataChecker;
 import org.arend.ext.typechecking.MetaResolver;
-import org.arend.lib.StdExtension;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,12 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ClassExtResolver extends ContextDataChecker implements MetaResolver {
-  private final StdExtension ext;
-
-  public ClassExtResolver(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean @Nullable [] argumentExplicitness() {
     return new boolean[] { true };
@@ -50,13 +43,13 @@ public class ClassExtResolver extends ContextDataChecker implements MetaResolver
       return contextData.getReferenceExpression();
     }
 
-    ConcreteFactory factory = ext.factory.withData(contextData.getReferenceExpression().getData());
+    ConcreteFactory factory = contextData.getFactory();
     List<ConcreteArgument> args = new ArrayList<>();
     for (int i = 0; i < oldArgs.size() - 1; i++) {
       ConcreteArgument oldArg = oldArgs.get(i);
       args.add(factory.arg(resolver.resolve(oldArg.getExpression()), oldArg.isExplicit()));
     }
-    ConcreteArgument arg = oldArgs.get(oldArgs.size() - 1);
+    ConcreteArgument arg = oldArgs.getLast();
     args.add(factory.arg(resolver.resolve(coclauses == null ? arg.getExpression() : factory.classExt(arg.getExpression(), coclauses.getCoclauseList())), arg.isExplicit()));
     return factory.app(contextData.getReferenceExpression(), args);
   }

@@ -18,7 +18,6 @@ import org.arend.ext.typechecking.BaseMetaDefinition;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -27,12 +26,6 @@ import java.util.Collections;
 import java.util.List;
 
 public class DefaultImplMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
-
-  public DefaultImplMeta(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean @Nullable [] argumentExplicitness() {
     return new boolean[] { true, true };
@@ -77,7 +70,7 @@ public class DefaultImplMeta extends BaseMetaDefinition {
       return null;
     }
 
-    ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
+    ConcreteFactory factory = contextData.getFactory();
     if (arg == null) {
       CoreBinding binding = typechecker.getThisBinding();
       arg = binding != null && binding.getTypeExpr() instanceof CoreClassCallExpression classCall && classCall.getDefinition().isSubClassOf(classDef) ? factory.ref(binding) : factory.hole();

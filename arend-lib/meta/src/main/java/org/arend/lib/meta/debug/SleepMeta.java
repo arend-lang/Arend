@@ -5,7 +5,6 @@ import org.arend.ext.typechecking.BaseMetaDefinition;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -13,12 +12,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class SleepMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
-
-  public SleepMeta(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean[] argumentExplicitness() {
     return new boolean[] { true, true };
@@ -37,7 +30,7 @@ public class SleepMeta extends BaseMetaDefinition {
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     List<? extends ConcreteArgument> args = contextData.getArguments();
-    int millis = Utils.getNumber(args.get(0).getExpression(), typechecker.getErrorReporter());
+    int millis = Utils.getNumber(args.getFirst().getExpression(), typechecker.getErrorReporter());
     if (millis < 0) return null;
 
     try {
@@ -46,6 +39,6 @@ public class SleepMeta extends BaseMetaDefinition {
       return null;
     }
 
-    return typechecker.typecheck(args.size() > 1 ? args.get(1).getExpression() : ext.factory.withData(contextData.getMarker().getData()).tuple(), contextData.getExpectedType());
+    return typechecker.typecheck(args.size() > 1 ? args.get(1).getExpression() : contextData.getFactory().tuple(), contextData.getExpectedType());
   }
 }

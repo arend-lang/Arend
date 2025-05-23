@@ -9,7 +9,6 @@ import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.reference.ExpressionResolver;
 import org.arend.ext.typechecking.*;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,12 +16,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class AtMeta extends BaseMetaDefinition implements MetaResolver {
-  private final StdExtension ext;
-
-  public AtMeta(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean[] argumentExplicitness() {
     return new boolean[] { true, true, true };
@@ -35,14 +28,14 @@ public class AtMeta extends BaseMetaDefinition implements MetaResolver {
 
   @Override
   public @Nullable ConcreteExpression resolvePrefix(@NotNull ExpressionResolver resolver, @NotNull ContextData contextData) {
-    return Utils.resolvePrefixAsInfix(this, resolver, contextData, ext.factory);
+    return Utils.resolvePrefixAsInfix(this, resolver, contextData);
   }
 
   @Override
   public @Nullable ConcreteExpression resolveInfix(@NotNull ExpressionResolver resolver, @NotNull ContextData contextData, @Nullable ConcreteExpression leftArg, @Nullable ConcreteExpression rightArg) {
-    if (leftArg == null || rightArg == null || !contextData.getArguments().isEmpty()) return Utils.normalResolve(resolver, contextData, leftArg, rightArg, ext.factory);
+    if (leftArg == null || rightArg == null || !contextData.getArguments().isEmpty()) return Utils.normalResolve(resolver, contextData, leftArg, rightArg);
 
-    ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
+    ConcreteFactory factory = contextData.getFactory();
     ConcreteExpression cReplacement = resolver.resolve(rightArg);
     for (ConcreteExpression function : Utils.getArgumentList(resolver.resolve(leftArg))) {
       cReplacement = factory.app(function, true, cReplacement);

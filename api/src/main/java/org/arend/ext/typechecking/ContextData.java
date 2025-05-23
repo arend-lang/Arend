@@ -1,8 +1,7 @@
 package org.arend.ext.typechecking;
 
-import org.arend.ext.concrete.ConcreteClause;
+import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.*;
-import org.arend.ext.core.expr.CoreExpression;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,4 +48,6 @@ public interface ContextData extends BaseContextData {
   Object getUserData();
 
   void setUserData(Object userData);
+
+  @NotNull ConcreteFactory getFactory();
 }

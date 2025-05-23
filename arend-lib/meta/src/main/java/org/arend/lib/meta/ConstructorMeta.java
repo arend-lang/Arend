@@ -44,7 +44,7 @@ public class ConstructorMeta extends BaseMetaDefinition {
 
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-    ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
+    ConcreteFactory factory = contextData.getFactory();
     CoreExpression type = contextData.getExpectedType().normalize(NormalizationMode.WHNF);
 
     if (!withImplicit || type instanceof CoreSigmaExpression) {
@@ -83,7 +83,7 @@ public class ConstructorMeta extends BaseMetaDefinition {
 
         List<ConcreteArgument> newArgs = new ArrayList<>(expected);
         if (!hasElementsType) {
-          newArgs.add(factory.arg(args.get(0).getExpression(), false));
+          newArgs.add(factory.arg(args.getFirst().getExpression(), false));
         }
         for (int i = hasElementsType ? 0 : 1; i < args.size(); i++) {
           newArgs.add(factory.arg(args.get(i).getExpression(), true));
@@ -132,7 +132,7 @@ public class ConstructorMeta extends BaseMetaDefinition {
         List<? extends ConcreteArgument> args = contextData.getArguments();
         if (!withImplicit) {
           List<ConcreteArgument> newArgs = new ArrayList<>();
-          CoreParameter param = constructors.get(0).getParameters();
+          CoreParameter param = constructors.getFirst().getParameters();
           for (ConcreteArgument arg : args) {
             if (!param.hasNext()) {
               typechecker.getErrorReporter().report(new TypecheckingError("Too many arguments", arg.getExpression()));
@@ -144,7 +144,7 @@ public class ConstructorMeta extends BaseMetaDefinition {
           args = newArgs;
         }
 
-        if (!args.isEmpty() && !args.get(0).isExplicit()) {
+        if (!args.isEmpty() && !args.getFirst().isExplicit()) {
           CoreParameter dataParam = ((CoreDataCallExpression) type).getDefinition().getParameters();
           if (dataParam.hasNext()) {
             List<ConcreteArgument> newArgs = new ArrayList<>();
@@ -156,7 +156,7 @@ public class ConstructorMeta extends BaseMetaDefinition {
           }
         }
 
-        return typechecker.typecheck(factory.app(factory.ref(constructors.get(0).getRef()), args), type);
+        return typechecker.typecheck(factory.app(factory.ref(constructors.getFirst().getRef()), args), type);
       }
     }
 

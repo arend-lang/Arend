@@ -112,7 +112,7 @@ public class Utils {
     return factory.app(expr, true, args);
   }
 
-  public static List<ConcreteExpression> addArguments(ConcreteExpression expr, ExpressionTypechecker typechecker, StdExtension ext, int expectedParameters, boolean addGoals) {
+  public static List<ConcreteExpression> addArguments(ConcreteExpression expr, ExpressionTypechecker typechecker, ConcreteFactory factory, int expectedParameters, boolean addGoals) {
     ConcreteReferenceExpression refExpr = null;
     if (expr instanceof ConcreteReferenceExpression) {
       refExpr = (ConcreteReferenceExpression) expr;
@@ -161,7 +161,6 @@ public class Utils {
       return Collections.emptyList();
     }
 
-    ConcreteFactory factory = ext.factory.withData(expr.getData());
     List<ConcreteExpression> args = new ArrayList<>(numberOfArgs);
     for (int i = 0; i < numberOfArgs; i++) {
       args.add(addGoals ? factory.goal() : factory.hole());
@@ -169,9 +168,10 @@ public class Utils {
     return args;
   }
 
-  public static TypedExpression typecheckWithAdditionalArguments(ConcreteExpression expr, ExpressionTypechecker typechecker, StdExtension ext, int expectedParameters, boolean addGoals) {
-    List<ConcreteExpression> args = addArguments(expr, typechecker, ext, expectedParameters, addGoals);
-    TypedExpression result = typechecker.typecheck(args.isEmpty() ? expr : ext.factory.withData(expr.getData()).app(expr, true, args), null);
+  public static TypedExpression typecheckWithAdditionalArguments(ConcreteExpression expr, ExpressionTypechecker typechecker, ConcreteFactory factory, int expectedParameters, boolean addGoals) {
+    factory = factory.withData(expr);
+    List<ConcreteExpression> args = addArguments(expr, typechecker, factory.withData(expr), expectedParameters, addGoals);
+    TypedExpression result = typechecker.typecheck(args.isEmpty() ? expr : factory.app(expr, true, args), null);
     if (result == null) {
       return null;
     }
@@ -182,7 +182,6 @@ public class Utils {
       return result;
     }
 
-    ConcreteFactory factory = ext.factory.withData(expr.getData());
     List<ConcreteArgument> arguments = new ArrayList<>();
     for (CoreParameter parameter : parameters) {
       if (parameter.isExplicit()) {
@@ -435,8 +434,8 @@ public class Utils {
     }
   }
 
-  public static ConcreteExpression normalResolve(ExpressionResolver resolver, ContextData contextData, ConcreteExpression leftArg, ConcreteExpression rightArg, ConcreteFactory factory) {
-    factory = factory.withData(contextData.getMarker());
+  public static ConcreteExpression normalResolve(ExpressionResolver resolver, ContextData contextData, ConcreteExpression leftArg, ConcreteExpression rightArg) {
+    ConcreteFactory factory = contextData.getFactory();
     List<ConcreteArgument> args = new ArrayList<>(contextData.getArguments().size());
     for (ConcreteArgument argument : contextData.getArguments()) {
       args.add(factory.arg(resolver.resolve(argument.getExpression()), argument.isExplicit()));
@@ -457,7 +456,7 @@ public class Utils {
     return result;
   }
 
-  public static ConcreteExpression resolvePrefixAsInfix(MetaResolver metaResolver, ExpressionResolver resolver, ContextData contextData, ConcreteFactory factory) {
+  public static ConcreteExpression resolvePrefixAsInfix(MetaResolver metaResolver, ExpressionResolver resolver, ContextData contextData) {
     List<? extends ConcreteArgument> args = contextData.getArguments();
     int implicitArgs = 0;
     for (ConcreteArgument arg : args) {
@@ -469,7 +468,7 @@ public class Utils {
       contextData.setArguments(args.subList(0, implicitArgs));
       return metaResolver.resolveInfix(resolver, contextData, args.size() > implicitArgs ? args.get(implicitArgs).getExpression() : null, args.size() > implicitArgs + 1 ? args.get(implicitArgs + 1).getExpression() : null);
     } else {
-      return normalResolve(resolver, contextData, null, null, factory);
+      return normalResolve(resolver, contextData, null, null);
     }
   }
 

@@ -38,7 +38,7 @@ public class ExistsMeta implements MetaResolver, MetaDefinition {
     if (!new ContextDataChecker().checkContextData(contextData, resolver.getErrorReporter())) {
       return null;
     }
-    ConcreteFactory factory = ext.factory.withData(contextData.getReferenceExpression().getData());
+    ConcreteFactory factory = contextData.getFactory();
 
     List<? extends ConcreteArgument> arguments = contextData.getArguments();
     for (int i = 0; i < arguments.size(); i++) {
@@ -64,11 +64,11 @@ public class ExistsMeta implements MetaResolver, MetaDefinition {
     }
 
     if (arguments.size() == 1) {
-      if (!arguments.get(0).isExplicit()) {
-        resolver.getErrorReporter().report(new ArgumentExplicitnessError(true, arguments.get(0).getExpression()));
+      if (!arguments.getFirst().isExplicit()) {
+        resolver.getErrorReporter().report(new ArgumentExplicitnessError(true, arguments.getFirst().getExpression()));
         return null;
       }
-      return factory.app(contextData.getReferenceExpression(), true, Collections.singletonList(resolver.resolve(arguments.get(0).getExpression())));
+      return factory.app(contextData.getReferenceExpression(), true, Collections.singletonList(resolver.resolve(arguments.getFirst().getExpression())));
     }
 
     ConcreteExpression codomain = null;
@@ -143,7 +143,7 @@ public class ExistsMeta implements MetaResolver, MetaDefinition {
         return getResult();
       }
 
-      ConcreteParameter param = parameters.get(0);
+      ConcreteParameter param = parameters.getFirst();
       ConcreteExpression cType = Objects.requireNonNull(param.getType());
       ConcreteExpression aType;
       List<ConcreteParameter> varParams;
@@ -186,7 +186,7 @@ public class ExistsMeta implements MetaResolver, MetaDefinition {
         refs = null;
         List<ArendRef> sigmaRefs = new ArrayList<>(param.getRefList().size());
         List<? extends ArendRef> paramRefList = param.getRefList();
-        if (param.getRefList().isEmpty() || param.getRefList().size() == 1 && param.getRefList().get(0) == null) {
+        if (param.getRefList().isEmpty() || param.getRefList().size() == 1 && param.getRefList().getFirst() == null) {
           paramRefList = new ArrayList<>(piParams.size());
           for (CoreParameter ignored : piParams) {
             paramRefList.add(null);
@@ -279,7 +279,7 @@ public class ExistsMeta implements MetaResolver, MetaDefinition {
       if (kind != Kind.PI) {
         return kind == Kind.TRUNCATED ? factory.app(factory.ref(ext.TruncP.getRef()), true, factory.sigma(sigmaParams)) : factory.sigma(sigmaParams);
       }
-      ConcreteExpression codomain = sigmaParams.get(sigmaParams.size() - 1).getType();
+      ConcreteExpression codomain = sigmaParams.getLast().getType();
       assert codomain != null;
       return factory.pi(sigmaParams.subList(0, sigmaParams.size() - 1), codomain);
     }
@@ -292,8 +292,8 @@ public class ExistsMeta implements MetaResolver, MetaDefinition {
 
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-    ConcreteFactory factory = ext.factory.withData(contextData.getReferenceExpression().getData());
-    ConcreteExpression arg = contextData.getArguments().get(0).getExpression();
+    ConcreteFactory factory = contextData.getFactory();
+    ConcreteExpression arg = contextData.getArguments().getFirst().getExpression();
     List<? extends ConcreteParameter> params;
     if (arg instanceof ConcretePiExpression) {
       List<ConcreteParameter> params1 = new ArrayList<>(((ConcretePiExpression) arg).getParameters());

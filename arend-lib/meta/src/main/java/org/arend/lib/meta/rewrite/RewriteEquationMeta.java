@@ -82,13 +82,13 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
 
     public boolean allOccurrencesFound() { return occurrences == null || occurrences.isEmpty(); }
 
-    public RewriteExpressionProcessor(CoreExpression subExpr, List<Integer> occurrences, ExpressionTypechecker typechecker, ConcreteReferenceExpression refExpr, EqualitySolver solver) {
+    public RewriteExpressionProcessor(CoreExpression subExpr, List<Integer> occurrences, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, EqualitySolver solver) {
       this.subExpr = subExpr;
       this.occurrences = occurrences != null ? new ArrayList<>(occurrences) : null;
       this.typechecker = typechecker;
       this.refExpr = refExpr;
       this.subExprType = subExpr.computeType();
-      this.factory = ext.factory.withData(refExpr.getData());
+      this.factory = factory;
       this.solver = solver;
     }
 
@@ -244,7 +244,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
 
     ErrorReporter errorReporter = typechecker.getErrorReporter();
     ConcreteReferenceExpression refExpr = contextData.getReferenceExpression();
-    ConcreteFactory factory = ext.factory.withData(refExpr.getData());
+    ConcreteFactory factory = contextData.getFactory();
     if (args0.size() > 1) {
       if (isForward) {
         Collections.reverse(args0);
@@ -273,7 +273,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
     boolean isInverse = !reverse;
 
     // Add inference holes to functions and type-check the path argument
-    TypedExpression path = Utils.typecheckWithAdditionalArguments(arg0, typechecker, ext, 0, false);
+    TypedExpression path = Utils.typecheckWithAdditionalArguments(arg0, typechecker, factory, 0, false);
     if (path == null) {
       return null;
     }
@@ -329,7 +329,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
     var occurVars = new ArrayList<ArendRef>();
     var eqProofs = new ArrayList<EqProofConcrete>();
 
-    var processor = new RewriteExpressionProcessor(value, occurrences, typechecker, refExpr, solver);
+    var processor = new RewriteExpressionProcessor(value, occurrences, typechecker, factory, refExpr, solver);
     typechecker.withCurrentState(tc -> normType.processSubexpression(processor));
 
     var foundOccurs = processor.getFoundOccurrences();

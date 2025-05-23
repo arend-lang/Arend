@@ -27,7 +27,7 @@ public abstract class GroupRuleBase implements SimplificationRule {
 
   public GroupRuleBase(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive, boolean isCommutative) {
     this.values = new Values<>(typechecker, refExpr);
-    this.factory = ext.factory;
+    this.factory = ext.factory.withData(refExpr);
     this.ext = ext;
     if (isAdditive) {
       var convertedInst = typechecker.typecheck(factory.appBuilder(factory.ref(isCommutative ? ext.equationMeta.fromAbGroupToCGroup.getRef() : ext.equationMeta.fromAddGroupToGroup.getRef())).app(factory.core(instance)).build(), null);

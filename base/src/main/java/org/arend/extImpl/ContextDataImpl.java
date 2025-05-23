@@ -1,12 +1,11 @@
 package org.arend.extImpl;
 
 import org.arend.core.expr.Expression;
-import org.arend.ext.concrete.ConcreteClause;
+import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.ext.concrete.expr.ConcreteClauses;
 import org.arend.ext.concrete.expr.ConcreteCoclauses;
 import org.arend.ext.concrete.expr.ConcreteExpression;
-import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
@@ -86,5 +85,10 @@ public class ContextDataImpl extends BaseContextDataImpl implements ContextData 
   @Override
   public void setUserData(Object userData) {
     myUserData = userData;
+  }
+
+  @Override
+  public @NotNull ConcreteFactory getFactory() {
+    return new ConcreteFactoryImpl(myExpression.getData());
   }
 }

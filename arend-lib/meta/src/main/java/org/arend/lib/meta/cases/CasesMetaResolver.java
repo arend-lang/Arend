@@ -11,7 +11,6 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.ExpressionResolver;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.*;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.NamedParameter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,24 +19,24 @@ import java.util.*;
 import java.util.function.BiFunction;
 
 public class CasesMetaResolver implements MetaResolver {
-  private final StdExtension ext;
+  private final ConcreteFactory factory;
   final NamedParameter parameter;
   final ArendRef argRef;
   final ArendRef nameRef;
   final ArendRef addPathRef;
   final ArendRef asRef;
 
-  public CasesMetaResolver(StdExtension ext) {
-    this.ext = ext;
-    parameter = new NamedParameter(ext.factory);
-    argRef = ext.factory.global("arg", new Precedence(Precedence.Associativity.NON_ASSOC, (byte) 0, true));
+  public CasesMetaResolver(ConcreteFactory factory) {
+    this.factory = factory;
+    parameter = new NamedParameter(factory);
+    argRef = factory.global("arg", new Precedence(Precedence.Associativity.NON_ASSOC, (byte) 0, true));
 
     BiFunction<ExpressionResolver, List<ConcreteArgument>, ConcreteExpression> handler = (resolver, args) -> {
       if (args.size() == 1 && args.getFirst().isExplicit() && args.getFirst().getExpression() instanceof ConcreteReferenceExpression) {
-        ConcreteFactory factory = ext.factory.withData(args.getFirst().getExpression().getData());
-        ArendRef ref = factory.localDeclaration(((ConcreteReferenceExpression) args.getFirst().getExpression()).getReferent());
+        ConcreteFactory factory1 = factory.withData(args.getFirst().getExpression().getData());
+        ArendRef ref = factory1.localDeclaration(((ConcreteReferenceExpression) args.getFirst().getExpression()).getReferent());
         resolver.registerDeclaration(ref);
-        return factory.ref(ref);
+        return factory1.ref(ref);
       } else {
         resolver.getErrorReporter().report(new NameResolverError("Expected an identifier", args.getFirst().getExpression()));
         return null;
@@ -55,8 +54,8 @@ public class CasesMetaResolver implements MetaResolver {
 
   private ConcreteExpression addType(ConcreteExpression expr, ConcreteExpression type, ConcreteExpression opArg) {
     if (type == null) return expr;
-    ConcreteFactory factory = ext.factory.withData(expr.getData());
-    return factory.app(opArg != null ? opArg : factory.ref(argRef), true, Arrays.asList(expr, factory.tuple(), type));
+    ConcreteFactory factory1 = factory.withData(expr.getData());
+    return factory1.app(opArg != null ? opArg : factory1.ref(argRef), true, Arrays.asList(expr, factory1.tuple(), type));
   }
 
   private ConcreteExpression resolveArgument1(ExpressionResolver resolver, ConcreteExpression argument) {
@@ -70,14 +69,14 @@ public class CasesMetaResolver implements MetaResolver {
         ConcreteExpression result = resolver.resolve(argument.getData(), sequence.subList(0, sequence.size() - 2));
         ConcreteExpression params = parameter.resolve(resolver, sequence.getLast().getExpression(), false, true);
         if (params == null && type == null) return result;
-        ConcreteFactory factory = ext.factory.withData(argument.getData());
-        ConcreteAppBuilder builder = factory.appBuilder(opArg).app(result).app(params != null ? params : factory.tuple());
+        ConcreteFactory factory1 = factory.withData(argument.getData());
+        ConcreteAppBuilder builder = factory1.appBuilder(opArg).app(result).app(params != null ? params : factory1.tuple());
         if (type != null) builder.app(type);
         return builder.build();
       }
 
       if (opArg != null) {
-        sequence.set(sequence.size() - 2, ext.factory.arg(opArg, true));
+        sequence.set(sequence.size() - 2, factory.arg(opArg, true));
         return addType(resolver.resolve(argument.getData(), sequence), type, null);
       }
     }
@@ -89,7 +88,7 @@ public class CasesMetaResolver implements MetaResolver {
       }
 
       if (lastArg != null) {
-        sequence.set(sequence.size() - 1, ext.factory.arg(lastArg, true));
+        sequence.set(sequence.size() - 1, factory.arg(lastArg, true));
         return addType(resolver.resolve(argument.getData(), sequence), type, lastArg);
       }
     }
@@ -144,7 +143,7 @@ public class CasesMetaResolver implements MetaResolver {
           }
         }
       }
-      return ext.factory.withData(argument.getData()).tuple(newFields);
+      return factory.withData(argument.getData()).tuple(newFields);
     } else {
       return resolveArgument1(resolver, argument);
     }
@@ -159,7 +158,7 @@ public class CasesMetaResolver implements MetaResolver {
     }
 
     ConcreteExpression caseArgs = resolveArgument(resolver, args.get(0).getExpression());
-    ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
+    ConcreteFactory factory = contextData.getFactory();
     ConcreteAppBuilder builder = factory.appBuilder(contextData.getReferenceExpression())
         .app(caseArgs, args.get(0).isExplicit())
         .app(resolver.resolve(factory.caseExpr(false, Collections.emptyList(), null, null, contextData.getClauses() == null ? Collections.emptyList() : contextData.getClauses().getClauseList())));

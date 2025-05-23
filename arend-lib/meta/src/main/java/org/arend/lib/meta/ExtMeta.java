@@ -752,7 +752,7 @@ public class ExtMeta extends BaseMetaDefinition {
     if (equality == null) return null;
 
     List<? extends ConcreteArgument> args = contextData.getArguments();
-    ConcreteFactory factory = ext.factory.withData(marker);
+    ConcreteFactory factory = contextData.getFactory();
     CoreExpression type = equality.getDefCallArguments().getFirst();
     if (contextData.getUserData() != Kind.NOT_PROP && Utils.isProp(type)) {
       if (!args.isEmpty()) {

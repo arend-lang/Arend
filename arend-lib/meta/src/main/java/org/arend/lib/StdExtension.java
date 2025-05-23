@@ -172,7 +172,7 @@ public class StdExtension implements ArendExtension {
         `fails meta args` succeeds if and only if `meta args` fails
 
         `fails {T} meta args` succeeds if and only if `meta args : T` fails
-        """), makeDef(meta, "fails", new FailsMeta(this)));
+        """), makeDef(meta, "fails", new FailsMeta()));
     contributor.declare(text("`using (e_1, ... e_n) e` adds `e_1`, ... `e_n` to the context before checking `e`"),
         makeDef(meta, "using", new UsingMeta(true)));
     contributor.declare(text("`usingOnly (e_1, ... e_n) e` replaces the context with `e_1`, ... `e_n` before checking `e`"),
@@ -180,12 +180,12 @@ public class StdExtension implements ArendExtension {
     contributor.declare(text("`hiding (x_1, ... x_n) e` hides local variables `x_1`, ... `x_n` from the context before checking `e`"),
         makeDef(meta, "hiding", new HidingMeta()));
     contributor.declare(text("`run { e_1, ... e_n }` is equivalent to `e_1 $ e_2 $ ... $ e_n`"),
-        makeDef(meta, "run", new RunMeta(this)));
+        makeDef(meta, "run", new RunMeta()));
     contributor.declare(text("`((f_1, ... f_n) at x) r` replaces variable `x` with `f_1 (... (f_n x) ...)` and runs `r` in the modified context"),
-        factory.metaDef(makeRef(meta, "at", new Precedence(Precedence.Associativity.NON_ASSOC, (byte) 1, true), new AtMeta(this)), Collections.emptyList(), null));
+        factory.metaDef(makeRef(meta, "at", new Precedence(Precedence.Associativity.NON_ASSOC, (byte) 1, true), new AtMeta()), Collections.emptyList(), null));
     contributor.declare(text("`f in x` is equivalent to `\\let r => f x \\in r`. Also, `(f_1, ... f_n) in x` is equivalent to `f_1 in ... f_n in x`. This meta is usually used with `f` being a meta such as `rewrite`, `simplify`, `simp_coe`, or `unfold`."),
-        factory.metaDef(makeRef(meta, "in", new Precedence(Precedence.Associativity.RIGHT_ASSOC, (byte) 1, true), new InMeta(this)), Collections.emptyList(), null));
-    CasesMetaResolver casesMetaResolver = new CasesMetaResolver(this);
+        factory.metaDef(makeRef(meta, "in", new Precedence(Precedence.Associativity.RIGHT_ASSOC, (byte) 1, true), new InMeta()), Collections.emptyList(), null));
+    CasesMetaResolver casesMetaResolver = new CasesMetaResolver(factory);
     contributor.declare(multiline("""
         `cases args default` works just like `mcases args default`, but does not search for \\case expressions or definition invocations.
         Each argument has a set of parameters that can be configured.
@@ -217,7 +217,7 @@ public class StdExtension implements ArendExtension {
         * `mcases {(1,2),(def,1)}` looks for the first and the second occurrence of a \\case expression and the first occurrence of `def`.
         * `mcases {(def1,2),(),def2}` looks for the second occurrence of `def1`, all occurrences of \\case expressions, and all occurrences of `def2`.
         * `mcases {_} {arg addPath, arg (), arg addPath}` looks for case expressions and adds a path argument after the first and the third matched expression.
-        """), makeDef(meta, "mcases", new MatchingCasesMetaResolver(this, casesMetaResolver), new DependencyMetaTypechecker(MatchingCasesMeta.class, () -> new MatchingCasesMeta(this, casesMetaResolver))));
+        """), makeDef(meta, "mcases", new MatchingCasesMetaResolver(casesMetaResolver), new DependencyMetaTypechecker(MatchingCasesMeta.class, () -> new MatchingCasesMeta(this, casesMetaResolver))));
     contributor.declare(multiline("""
         `unfold (f_1, ... f_n) e` unfolds functions/fields/variables `f_1`, ... `f_n` in the expected type before type-checking of `e` and returns `e` itself.
         If the first argument is omitted, it unfold all fields.
@@ -227,23 +227,23 @@ public class StdExtension implements ArendExtension {
         makeDef(meta, "unfold_let", new DeferredMetaDefinition(new UnfoldLetMeta(), true, false)));
     contributor.declare(text("Unfolds recursively top-level functions and fields"),
         makeDef(meta, "unfolds", new DeferredMetaDefinition(new UnfoldsMeta(), true, false)));
-    MetaRef orMeta = makeRef(meta, "<|>", new Precedence(Precedence.Associativity.RIGHT_ASSOC, (byte) 3, true), new OrElseMeta(this));
+    MetaRef orMeta = makeRef(meta, "<|>", new Precedence(Precedence.Associativity.RIGHT_ASSOC, (byte) 3, true), new OrElseMeta());
     contributor.declare(multiline("""
         `x <|> y` invokes `x` and if it fails, invokes `y`
         Also, `(x <|> y) z_1 ... z_n` is equivalent to `x z_1 ... z_n <|> z_1 ... z_n`
         """), factory.metaDef(orMeta, Collections.emptyList(), null));
-    contributor.declare(hList(text("The same as "), refDoc(orMeta)), makeDef(meta, "try", new OrElseMeta(this)));
+    contributor.declare(hList(text("The same as "), refDoc(orMeta)), makeDef(meta, "try", new OrElseMeta()));
     contributor.declare(multiline("""
         Inserts data type arguments in constructor invocation.
         If constructor `con` has 3 data type arguments, then `mkcon con args` is equivalent to `con {_} {_} {_} args`
-        """), makeDef(meta, "mkcon", new MakeConstructorMeta(this)));
+        """), makeDef(meta, "mkcon", new MakeConstructorMeta()));
     contributor.declare(multiline("""
         * `assumption` searches for a proof in the context. It tries variables that are declared later first.
         * `assumption` {n} returns the n-th variables from the context counting from the end.
         * `assumption` {n} a1 ... ak applies n-th variable from the context to arguments a1, ... ak.
-        """), makeDef(meta, "assumption", new AssumptionMeta(this)));
+        """), makeDef(meta, "assumption", new AssumptionMeta()));
     contributor.declare(text("`defaultImpl C F E` returns the default implementation of field `F` in class `C` applied to expression `E`. The third argument can be omitted, in which case either `\\this` or `_` will be used instead,"),
-        makeDef(meta, "defaultImpl", new DefaultImplMeta(this)));
+        makeDef(meta, "defaultImpl", new DefaultImplMeta()));
 
     ModulePath paths = ModulePath.fromString("Paths.Meta");
     contributor.declare(paths, new ModulePath("Category"));
@@ -252,7 +252,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(paths, new ModulePath("Logic"));
     contributor.declare(paths, new ModulePath("Meta"));
     contributor.declare(paths, new ModulePath("Paths"));
-    ConcreteMetaDefinition rewrite = makeDef(paths, "rewrite", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(this, true)));
+    ConcreteMetaDefinition rewrite = makeDef(paths, "rewrite", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(true)));
     contributor.declare(multiline("""
         `rewrite (p : a = b) t : T` replaces occurrences of `a` in `T` with a variable `x` obtaining a type `T[x/a]` and returns `transportInv (\\lam x => T[x/a]) p t`
 
@@ -262,7 +262,7 @@ public class StdExtension implements ArendExtension {
         `rewrite (p_1, ... p_n) t` is equivalent to `rewrite p_1 (... rewrite p_n t ...)`
         """), rewrite);
     contributor.declare(text("`rewriteI p` is equivalent to `rewrite (inv p)`"),
-        makeDef(paths, "rewriteI", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(this, false))));
+        makeDef(paths, "rewriteI", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(false))));
     contributor.declare(vList(
         hList(text("`rewriteEq (p : a = b) t : T` is similar to "), refDoc(rewrite.getRef()), text(", but it finds and replaces occurrences of `a` up to algebraic equivalences.")),
         text("For example, `rewriteEq (p : b * (c * id) = x) t : T` rewrites `(a * b) * (id * c)` as `a * x` in `T`."),
@@ -271,8 +271,8 @@ public class StdExtension implements ArendExtension {
         makeDef(paths, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, () -> new RewriteEquationMeta(this))));
     contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
         makeDef(paths, "simplify", new DeferredMetaDefinition(new SimplifyMeta(this), true)));
-    ConcreteMetaDefinition simp_coe = makeDef(paths, "simp_coe", new ClassExtResolver(this), new DependencyMetaTypechecker(SimpCoeMeta.class, () -> new SimpCoeMeta(this)));
-    ConcreteMetaDefinition extMeta = makeDef(paths, "ext", new ClassExtResolver(this), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, false), false, ExtMeta.defermentChecker)));
+    ConcreteMetaDefinition simp_coe = makeDef(paths, "simp_coe", new ClassExtResolver(), new DependencyMetaTypechecker(SimpCoeMeta.class, () -> new SimpCoeMeta(this)));
+    ConcreteMetaDefinition extMeta = makeDef(paths, "ext", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, false), false, ExtMeta.defermentChecker)));
     contributor.declare(vList(
         text("Simplifies certain equalities. It expects one argument and the type of this argument is called 'subgoal'. The expected type is called 'goal'."),
         text("* If the goal is `coe (\\lam i => \\Pi (x : A) -> B x i) f right a = b'`, then the subgoal is `coe (B a) (f a) right = b`."),
@@ -296,9 +296,9 @@ public class StdExtension implements ArendExtension {
         * If the goal is `x = {P} y`, where `P : \\Prop`, then there is no subgoal
         """), extMeta);
     contributor.declare(hList(text("Similar to "), refDoc(extMeta.getRef()), text(", but also applies either "), refDoc(simp_coe.getRef()), text(" or "), refDoc(extMeta.getRef()), text(" when a field of a \\Sigma-type or a record has an appropriate type.")),
-        makeDef(paths, "exts", new ClassExtResolver(this), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, true), false, ExtMeta.defermentChecker))));
+        makeDef(paths, "exts", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, true), false, ExtMeta.defermentChecker))));
 
-    MetaDefinition apply = new ApplyMeta(this);
+    MetaDefinition apply = new ApplyMeta();
     ModulePath function = ModulePath.fromString("Function.Meta");
     contributor.declare(text("`f $ a` returns `f a`"),
         factory.metaDef(makeRef(function, "$", new Precedence(Precedence.Associativity.RIGHT_ASSOC, (byte) 0, true), apply), Collections.emptyList(), null));
@@ -308,7 +308,7 @@ public class StdExtension implements ArendExtension {
         `repeat {n} f x` returns `f^n(x)
 
         ``repeat f x` repeats `f` until it fails and returns `x` in this case
-        """), makeDef(function, "repeat", new RepeatMeta(this)));
+        """), makeDef(function, "repeat", new RepeatMeta()));
 
     ModulePath algebra = ModulePath.fromString("Algebra.Meta");
     contributor.declare(multiline("""
@@ -360,14 +360,14 @@ public class StdExtension implements ArendExtension {
         makeDef(logic, constructorName, new ConstructorMeta(this, false)));
 
     ModulePath debug = ModulePath.fromString("Debug.Meta");
-    contributor.declare(text("Returns current time in milliseconds"), makeDef(debug, "time", new TimeMeta(this)));
+    contributor.declare(text("Returns current time in milliseconds"), makeDef(debug, "time", new TimeMeta()));
     contributor.declare(text("Prints the argument to the console"), makeDef(debug, "println", new PrintMeta(this)));
-    contributor.declare(text("`sleep m` waits for `m` milliseconds"), makeDef(debug, "sleep", new SleepMeta(this)));
+    contributor.declare(text("`sleep m` waits for `m` milliseconds"), makeDef(debug, "sleep", new SleepMeta()));
     contributor.declare(multiline("""
         `random` returns a random number.
         `random n` returns a random number between 0 and `n`.
         `random (l,u)` returns a random number between `l` and `u`.
-        """), makeDef(debug, "random", new RandomMeta(this)));
+        """), makeDef(debug, "random", new RandomMeta()));
     MetaRef nfMeta = makeRef(debug, "nf", new NormalizationMeta(NormalizationMode.ENF));
     contributor.declare(text("Normalizes the argument"), factory.metaDef(nfMeta, Collections.emptyList(), null));
     contributor.declare(nullDoc(), factory.metaDef(factory.metaRef(nfMeta, "whnf", Precedence.DEFAULT, null, null, null, new TrivialMetaTypechecker(new NormalizationMeta(NormalizationMode.WHNF))), Collections.emptyList(), null));

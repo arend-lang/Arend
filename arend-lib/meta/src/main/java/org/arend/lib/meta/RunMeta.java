@@ -1,12 +1,10 @@
 package org.arend.lib.meta;
 
 import org.arend.ext.concrete.ConcreteFactory;
-import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.error.NameResolverError;
 import org.arend.ext.reference.ExpressionResolver;
 import org.arend.ext.typechecking.*;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,12 +13,6 @@ import java.util.Collections;
 import java.util.List;
 
 public class RunMeta extends BaseMetaDefinition implements MetaResolver {
-  private final StdExtension ext;
-
-  public RunMeta(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean @Nullable [] argumentExplicitness() {
     return new boolean[] { false };
@@ -31,14 +23,13 @@ public class RunMeta extends BaseMetaDefinition implements MetaResolver {
     return true;
   }
 
-  private ConcreteExpression getConcreteRepresentation(List<? extends ConcreteArgument> arguments, ConcreteSourceNode marker) {
-    List<? extends ConcreteExpression> args = Utils.getArgumentList(arguments.get(0).getExpression());
-    ConcreteFactory factory = ext.factory.withData(marker);
-    ConcreteExpression result = args.get(args.size() - 1);
+  private ConcreteExpression getConcreteRepresentation(ContextData contextData) {
+    List<? extends ConcreteExpression> args = Utils.getArgumentList(contextData.getArguments().getFirst().getExpression());
+    ConcreteFactory factory = contextData.getFactory();
+    ConcreteExpression result = args.getLast();
     for (int i = args.size() - 2; i >= 0; i--) {
       ConcreteExpression arg = args.get(i);
-      if (arg instanceof ConcreteLetExpression && ((ConcreteLetExpression) arg).getExpression() instanceof ConcreteIncompleteExpression) {
-        ConcreteLetExpression let = (ConcreteLetExpression) arg;
+      if (arg instanceof ConcreteLetExpression let && let.getExpression() instanceof ConcreteIncompleteExpression) {
         result = factory.letExpr(let.isHave(), let.isStrict(), let.getClauses(), result);
       } else if (arg instanceof ConcreteLamExpression && ((ConcreteLamExpression) arg).getBody() instanceof ConcreteIncompleteExpression) {
         result = factory.lam(((ConcreteLamExpression) arg).getParameters(), result);
@@ -50,21 +41,16 @@ public class RunMeta extends BaseMetaDefinition implements MetaResolver {
   }
 
   @Override
-  public @Nullable ConcreteExpression getConcreteRepresentation(@NotNull List<? extends ConcreteArgument> arguments) {
-    return getConcreteRepresentation(arguments, null);
-  }
-
-  @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     if (contextData.getExpectedType() != null) {
       return typechecker.defer(new MetaDefinition() {
         @Override
         public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-          return typechecker.typecheck(RunMeta.this.getConcreteRepresentation(contextData.getArguments(), contextData.getMarker()), contextData.getExpectedType());
+          return typechecker.typecheck(RunMeta.this.getConcreteRepresentation(contextData), contextData.getExpectedType());
         }
       }, contextData, contextData.getExpectedType(), false);
     } else {
-      return typechecker.typecheck(getConcreteRepresentation(contextData.getArguments(), contextData.getMarker()), contextData.getExpectedType());
+      return typechecker.typecheck(getConcreteRepresentation(contextData), contextData.getExpectedType());
     }
   }
 
@@ -78,9 +64,9 @@ public class RunMeta extends BaseMetaDefinition implements MetaResolver {
       return null;
     }
     if (contextData.getCoclauses() != null) {
-      return ext.factory.withData(contextData.getCoclauses().getData()).goal();
+      return contextData.getFactory().withData(contextData.getCoclauses().getData()).goal();
     }
 
-    return resolver.resolve(getConcreteRepresentation(contextData.getArguments(), contextData.getReferenceExpression()));
+    return resolver.resolve(getConcreteRepresentation(contextData));
   }
 }

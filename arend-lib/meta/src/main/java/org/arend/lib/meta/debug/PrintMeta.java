@@ -18,7 +18,7 @@ public class PrintMeta extends BaseMetaDefinition {
   }
 
   @Override
-  public @Nullable boolean[] argumentExplicitness() {
+  public boolean @Nullable [] argumentExplicitness() {
     return new boolean[] { true, true };
   }
 
@@ -36,14 +36,14 @@ public class PrintMeta extends BaseMetaDefinition {
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     ArendConsole console = ext.ui.getConsole(contextData.getMarker());
     if (contextData.getArguments().get(0).getExpression() instanceof ConcreteStringExpression) {
-      console.println(((ConcreteStringExpression) contextData.getArguments().get(0).getExpression()).getUnescapedString());
+      console.println(((ConcreteStringExpression) contextData.getArguments().getFirst().getExpression()).getUnescapedString());
     } else {
-      TypedExpression result = typechecker.typecheck(contextData.getArguments().get(0).getExpression(), null);
+      TypedExpression result = typechecker.typecheck(contextData.getArguments().getFirst().getExpression(), null);
       if (result == null) {
         return null;
       }
       console.println(result.getExpression());
     }
-    return typechecker.typecheck(contextData.getArguments().size() > 1 ? contextData.getArguments().get(1).getExpression() : ext.factory.withData(contextData.getMarker().getData()).tuple(), contextData.getExpectedType());
+    return typechecker.typecheck(contextData.getArguments().size() > 1 ? contextData.getArguments().get(1).getExpression() : contextData.getFactory().tuple(), contextData.getExpectedType());
   }
 }

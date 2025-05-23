@@ -1,5 +1,6 @@
 package org.arend.lib.meta.simplify;
 
+import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.ext.core.expr.*;
 import org.arend.ext.typechecking.*;
@@ -40,8 +41,8 @@ public class SimplifyMeta extends BaseMetaDefinition {
       return null;
     }
 
-    var factory = ext.factory.withData(refExpr.getData());
-    var expression = args.isEmpty() ? factory.ref(ext.prelude.getIdpRef()) : args.get(0).getExpression();
+    ConcreteFactory factory = contextData.getFactory();
+    var expression = args.isEmpty() ? factory.ref(ext.prelude.getIdpRef()) : args.getFirst().getExpression();
     CoreExpression type;
 
     if (isForward) {
@@ -52,7 +53,7 @@ public class SimplifyMeta extends BaseMetaDefinition {
     }
 
     if (type == null) {
-      return Utils.typecheckWithAdditionalArguments(expression, typechecker, ext, 0, false);
+      return Utils.typecheckWithAdditionalArguments(expression, typechecker, factory, 0, false);
     }
 
     var transportedExpr = new Simplifier(ext, typechecker, refExpr, factory, typechecker.getErrorReporter()).simplifyTypeOfExpression(expression, type, isForward);

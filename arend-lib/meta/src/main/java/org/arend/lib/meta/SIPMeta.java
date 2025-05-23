@@ -121,7 +121,7 @@ public class SIPMeta extends BaseMetaDefinition {
     TypedExpression homTyped = hom.computeTyped();
     TypedExpression idTyped = id.computeTyped();
 
-    ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
+    ConcreteFactory factory = contextData.getFactory();
     ArendRef isoRef = factory.local("e");
     ArendRef sipRef = factory.local("t");
     ArendRef sipRef1 = factory.local("X");

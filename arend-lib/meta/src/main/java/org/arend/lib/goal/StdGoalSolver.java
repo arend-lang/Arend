@@ -38,7 +38,7 @@ public class StdGoalSolver implements GoalSolver {
     Object exprData = expr.getData();
     ConcreteFactory factory = ext.factory.withData(exprData);
     ErrorReporter errorReporter = typechecker.getErrorReporter();
-    List<ConcreteExpression> args = Utils.addArguments(expr, typechecker, ext, expectedParams, true);
+    List<ConcreteExpression> args = Utils.addArguments(expr, typechecker, factory, expectedParams, true);
     ConcreteExpression extExpr = args.isEmpty() ? expr : factory.app(expr, true, args);
     TypedExpression result = typechecker.withErrorReporter(error -> {
       if (!(error.level == GeneralError.Level.GOAL && error.getCause() == exprData)) {

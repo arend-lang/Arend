@@ -89,7 +89,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
     List<? extends ConcreteArgument> args = contextData.getArguments();
     ErrorReporter errorReporter = typechecker.getErrorReporter();
     ConcreteExpression marker = contextData.getMarker();
-    ConcreteFactory factory = ext.factory.withData(marker);
+    ConcreteFactory factory = contextData.getFactory();
     CoreExpression expectedType = contextData.getExpectedType().normalize(NormalizationMode.RNF);
     boolean[] isSCase = new boolean[] { false };
 

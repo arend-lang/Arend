@@ -59,11 +59,6 @@ public class DefaultMetaDefinition implements MetaDefinition {
     return checkArguments(contextData.getArguments(), contextData.getCoclauses(), errorReporter, contextData.getMarker());
   }
 
-  @Override
-  public @Nullable ConcreteExpression getConcreteRepresentation(@NotNull List<? extends ConcreteArgument> arguments) {
-    return getConcreteRepresentation(null, null, null, arguments, null);
-  }
-
   protected @Nullable ConcreteExpression getConcreteRepresentation(@Nullable Object data, @Nullable List<Concrete.LevelExpression> pLevels, @Nullable List<Concrete.LevelExpression> hLevels, @NotNull List<? extends ConcreteArgument> arguments, @Nullable ConcreteCoclauses coclauses) {
     if (myDefinition.body == null) return null;
     List<Referable> refs = new ArrayList<>();

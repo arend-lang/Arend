@@ -61,33 +61,6 @@ public abstract class MetaInvocationMeta extends BaseMetaDefinition {
     return currentArg;
   }
 
-  public ConcreteExpression getConcreteRepresentation(MetaDefinition meta, List<ConcreteExpression> implicitArguments, @NotNull List<? extends ConcreteArgument> arguments) {
-    return meta.checkAndGetConcreteRepresentation(arguments);
-  }
-
-  @Override
-  public @Nullable ConcreteExpression getConcreteRepresentation(@NotNull List<? extends ConcreteArgument> arguments) {
-    List<ConcreteExpression> implicitArgs = new ArrayList<>();
-    int currentArg = getImplicitArguments(arguments, implicitArgs);
-
-    ConcreteExpression expr = arguments.get(currentArg).getExpression();
-    List<? extends ConcreteArgument> metaArgs = null;
-    if (expr instanceof ConcreteAppExpression) {
-      metaArgs = ((ConcreteAppExpression) expr).getArguments();
-      expr = ((ConcreteAppExpression) expr).getFunction();
-    }
-    if (expr instanceof ConcreteReferenceExpression) {
-      ArendRef ref = ((ConcreteReferenceExpression) expr).getReferent();
-      if (ref instanceof MetaRef) {
-        MetaDefinition def = ((MetaRef) ref).getDefinition();
-        if (def != null) {
-          return getConcreteRepresentation(def, implicitArgs, mergeArgs(metaArgs, arguments, currentArg));
-        }
-      }
-    }
-    return null;
-  }
-
   public abstract TypedExpression invokeMeta(MetaDefinition meta, List<ConcreteExpression> implicitArguments, ExpressionTypechecker typechecker, ContextData contextData);
 
   @Override

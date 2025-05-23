@@ -1,11 +1,9 @@
 package org.arend.lib.meta;
 
-import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.core.expr.CoreInferenceReferenceExpression;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.typechecking.*;
-import org.arend.lib.StdExtension;
 import org.arend.lib.error.MetaDidNotFailError;
 import org.arend.lib.meta.util.MetaInvocationMeta;
 import org.jetbrains.annotations.NotNull;
@@ -15,30 +13,19 @@ import java.util.List;
 import java.util.Objects;
 
 public class FailsMeta extends MetaInvocationMeta {
-  private final StdExtension ext;
-
-  public FailsMeta(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean @Nullable [] argumentExplicitness() {
     return new boolean[] { false, true };
   }
 
-  private ConcreteExpression makeResult(Object data) {
-    return ext.factory.withData(data).tuple();
-  }
-
-  @Override
-  public @Nullable ConcreteExpression getConcreteRepresentation(@NotNull List<? extends ConcreteArgument> arguments) {
-    return makeResult(null);
+  private ConcreteExpression makeResult(ContextData contextData) {
+    return contextData.getFactory().tuple();
   }
 
   @Override
   public TypedExpression invokeMeta(MetaDefinition meta, List<ConcreteExpression> implicitArgs, ExpressionTypechecker typechecker, ContextData contextData) {
     if (!implicitArgs.isEmpty()) {
-      TypedExpression type = typechecker.typecheck(implicitArgs.get(0), null);
+      TypedExpression type = typechecker.typecheck(implicitArgs.getFirst(), null);
       if (type == null) {
         return null;
       }
@@ -50,7 +37,7 @@ public class FailsMeta extends MetaInvocationMeta {
     TypedExpression result = typechecker.withErrorReporter(error -> hasErrors[0] = true, tc -> meta.checkAndInvokeMeta(tc, contextData));
 
     if (result == null || hasErrors[0]) {
-      return typechecker.typecheck(makeResult(contextData.getReferenceExpression().getData()), null);
+      return typechecker.typecheck(makeResult(contextData), null);
     }
 
     // If the meta is deferred, it won't fail immediately.
@@ -62,9 +49,9 @@ public class FailsMeta extends MetaInvocationMeta {
           if (!hasErrors[0]) {
             errorReporter.report(new MetaDidNotFailError(typechecker.getExpressionPrettifier(), result.getExpression(), contextData.getReferenceExpression()));
           }
-          return typechecker.typecheck(makeResult(contextData.getReferenceExpression().getData()), null);
+          return typechecker.typecheck(makeResult(contextData), null);
         }
-      }, contextData, Objects.requireNonNull(typechecker.typecheck(ext.factory.sigma(), null)).getExpression(), true);
+      }, contextData, Objects.requireNonNull(typechecker.typecheck(contextData.getFactory().sigma(), null)).getExpression(), true);
     }
 
     errorReporter.report(new MetaDidNotFailError(typechecker.getExpressionPrettifier(), result.getExpression(), contextData.getReferenceExpression()));

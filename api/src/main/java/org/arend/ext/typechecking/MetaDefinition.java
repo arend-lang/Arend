@@ -1,7 +1,6 @@
 package org.arend.ext.typechecking;
 
 import org.arend.ext.concrete.expr.ConcreteArgument;
-import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.error.ErrorReporter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,17 +19,6 @@ public interface MetaDefinition {
    * @return              the typed expression that will be used as the result of this meta definition
    */
   default @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-    return null;
-  }
-
-  /**
-   * Returns the concrete representation of the result of the meta definition.
-   * This method is optional and only used for various features in the IDE.
-   *
-   * @param arguments   the arguments passed to the meta definition
-   * @return            the concrete representation of the result
-   */
-  default @Nullable ConcreteExpression getConcreteRepresentation(@NotNull List<? extends ConcreteArgument> arguments) {
     return null;
   }
 
@@ -61,18 +49,7 @@ public interface MetaDefinition {
   }
 
   /**
-   * Runs additional checks before returning the concrete representation of the meta definition.
-   * This method can be implemented in a base class to simplify the definition of {@code getConcreteRepresentation} in subclasses.
-   *
-   * @param arguments   the arguments passed to the meta definition
-   * @return            the concrete representation of the result
-   */
-  default @Nullable ConcreteExpression checkAndGetConcreteRepresentation(@NotNull List<? extends ConcreteArgument> arguments) {
-    return checkArguments(arguments) ? getConcreteRepresentation(arguments) : null;
-  }
-
-  /**
-   * @return the list of indices of arguments that should be desugared, or {@code null} if all arguments should be desugared.
+   * @return the array of indices of arguments that should be desugared, or {@code null} if all arguments should be desugared.
    */
   default int @Nullable [] desugarArguments(@NotNull List<? extends ConcreteArgument> arguments) {
     return null;

@@ -7,7 +7,6 @@ import org.arend.ext.typechecking.BaseMetaDefinition;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,12 +14,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class OrElseMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
-
-  public OrElseMeta(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean[] argumentExplicitness() {
     return new boolean[] { true, true };
@@ -32,7 +25,7 @@ public class OrElseMeta extends BaseMetaDefinition {
     ConcreteExpression arg1 = args.get(0).getExpression();
     ConcreteExpression arg2 = args.get(1).getExpression();
     if (args.size() > 2) {
-      ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
+      ConcreteFactory factory = contextData.getFactory();
       arg1 = factory.app(arg1, args.subList(2, args.size()));
       arg2 = factory.app(arg2, args.subList(2, args.size()));
     }

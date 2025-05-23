@@ -13,22 +13,18 @@ import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.Dependency;
-import org.arend.lib.StdExtension;
 import org.arend.lib.error.SubexprError;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
 public class RewriteMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
   private final boolean isInverse;
   @Dependency private ArendRef transport;
   @Dependency private ArendRef transportInv;
 
-  public RewriteMeta(StdExtension ext, boolean isInverse) {
-    this.ext = ext;
+  public RewriteMeta(boolean isInverse) {
     this.isInverse = isInverse;
   }
 
@@ -50,11 +46,6 @@ public class RewriteMeta extends BaseMetaDefinition {
   }
 
   @Override
-  public @Nullable ConcreteExpression getConcreteRepresentation(@NotNull List<? extends ConcreteArgument> arguments) {
-    return ext.factory.appBuilder(ext.factory.ref(transportInv)).app(ext.factory.hole()).app(arguments.subList(arguments.getFirst().isExplicit() ? 0 : 1, arguments.size())).build();
-  }
-
-  @Override
   public TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     List<? extends ConcreteArgument> args = contextData.getArguments();
     int currentArg = 0;
@@ -70,7 +61,7 @@ public class RewriteMeta extends BaseMetaDefinition {
 
     ErrorReporter errorReporter = typechecker.getErrorReporter();
     ConcreteReferenceExpression refExpr = contextData.getReferenceExpression();
-    ConcreteFactory factory = ext.factory.withData(refExpr.getData());
+    ConcreteFactory factory = contextData.getFactory();
     if (args0.size() > 1) {
       if (isForward) {
         Collections.reverse(args0);
@@ -100,7 +91,7 @@ public class RewriteMeta extends BaseMetaDefinition {
     boolean isInverse = reverse ? !this.isInverse : this.isInverse;
 
     // Add inference holes to functions and type-check the path argument
-    TypedExpression path = Utils.typecheckWithAdditionalArguments(arg0, typechecker, ext, 0, false);
+    TypedExpression path = Utils.typecheckWithAdditionalArguments(arg0, typechecker, factory, 0, false);
     if (path == null) {
       return null;
     }

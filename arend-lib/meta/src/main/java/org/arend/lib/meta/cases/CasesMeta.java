@@ -76,7 +76,7 @@ public class CasesMeta extends BaseMetaDefinition {
       typedArgs = null;
     }
 
-    ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
+    ConcreteFactory factory = contextData.getFactory();
     List<ConcreteCaseArgument> caseArgs = new ArrayList<>();
     List<Pair<TypedExpression,Object>> searchPairs = new ArrayList<>();
     List<ConcreteParameter> concreteParameters = defaultExpr == null ? null : new ArrayList<>();

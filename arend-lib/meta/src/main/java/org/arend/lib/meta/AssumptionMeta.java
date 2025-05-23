@@ -13,7 +13,6 @@ import org.arend.ext.typechecking.BaseMetaDefinition;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
-import org.arend.lib.StdExtension;
 import org.arend.lib.error.IgnoredArgumentError;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
@@ -23,12 +22,6 @@ import java.math.BigInteger;
 import java.util.List;
 
 public class AssumptionMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
-
-  public AssumptionMeta(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean @Nullable [] argumentExplicitness() {
     return new boolean[] { false };
@@ -38,10 +31,10 @@ public class AssumptionMeta extends BaseMetaDefinition {
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     ConcreteSourceNode marker = contextData.getMarker();
     CoreExpression expectedType = contextData.getExpectedType();
-    ConcreteFactory factory = ext.factory.withData(marker);
+    ConcreteFactory factory = contextData.getFactory();
     List<CoreBinding> vars = typechecker.getFreeBindingsList();
-    if (!contextData.getArguments().isEmpty() && !contextData.getArguments().get(0).isExplicit()) {
-      ConcreteExpression arg = contextData.getArguments().get(0).getExpression();
+    if (!contextData.getArguments().isEmpty() && !contextData.getArguments().getFirst().isExplicit()) {
+      ConcreteExpression arg = contextData.getArguments().getFirst().getExpression();
       if (arg instanceof ConcreteNumberExpression) {
         BigInteger index = ((ConcreteNumberExpression) arg).getNumber();
         if (index.compareTo(BigInteger.ONE) < 0) {

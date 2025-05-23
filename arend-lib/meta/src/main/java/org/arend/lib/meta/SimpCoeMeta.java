@@ -484,7 +484,7 @@ public class SimpCoeMeta extends BaseMetaDefinition {
     }
     CoreFunCallExpression equality = Utils.toEquality(type, typechecker.getErrorReporter(), contextData.getMarker());
     if (equality == null) return null;
-    ConcreteFactory factory = ext.factory.withData(contextData.getMarker());
+    ConcreteFactory factory = contextData.getFactory();
 
     CoreExpression leftExpr = equality.getDefCallArguments().get(1).getUnderlyingExpression();
     List<CoreExpression> arguments = new ArrayList<>();
