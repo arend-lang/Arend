@@ -1,6 +1,5 @@
 package org.arend.ext.typechecking.meta;
 
-import org.arend.ext.DefinitionProvider;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
 import org.arend.ext.concrete.expr.*;
@@ -27,18 +26,16 @@ public class DependencyMetaTypechecker implements MetaTypechecker {
   private final List<LongName> names;
   private final List<Pair<Field,Class<?>>> fields;
   private final Supplier<MetaDefinition> metaSupplier;
-  private final DefinitionProvider definitionProvider; // TODO[server2]: Delete this. Maybe move to typecheck method, or even merge DefinitionProvider into ExpressionTypechecker.
 
-  public DependencyMetaTypechecker(@NotNull Class<? extends MetaDefinition> container, @NotNull Supplier<MetaDefinition> metaSupplier, @Nullable DefinitionProvider definitionProvider) {
+  public DependencyMetaTypechecker(@NotNull Class<? extends MetaDefinition> container, @NotNull Supplier<MetaDefinition> metaSupplier) {
     names = new ArrayList<>();
     fields = new ArrayList<>();
     this.metaSupplier = metaSupplier;
-    this.definitionProvider = definitionProvider;
 
     for (Field field : container.getDeclaredFields()) {
       Class<?> fieldType = field.getType();
       boolean isRef = ArendRef.class.equals(fieldType);
-      if (isRef || definitionProvider != null && CoreClassDefinition.class.isAssignableFrom(fieldType)) {
+      if (isRef || CoreClassDefinition.class.isAssignableFrom(fieldType)) {
         Dependency dependency = field.getAnnotation(Dependency.class);
         if (dependency != null) {
           field.setAccessible(true);
@@ -52,10 +49,6 @@ public class DependencyMetaTypechecker implements MetaTypechecker {
     if (names.isEmpty()) {
       throw new IllegalArgumentException();
     }
-  }
-
-  public DependencyMetaTypechecker(@NotNull Class<? extends MetaDefinition> container, @NotNull Supplier<MetaDefinition> metaSupplier) {
-    this(container, metaSupplier, null);
   }
 
   public static List<ArendRef> extractReferences(ConcreteMetaDefinition definition, int numberOfReferences, ErrorReporter errorReporter) {
@@ -116,7 +109,7 @@ public class DependencyMetaTypechecker implements MetaTypechecker {
         if (pair.proj2 == null) {
           pair.proj1.set(actual, refs.get(i));
         } else {
-          CoreDefinition def = definitionProvider.getCoreDefinition(refs.get(i));
+          CoreDefinition def = typechecker.getCoreDefinition(refs.get(i));
           if (def == null) {
             typechecker.getErrorReporter().report(new TypecheckingError("Definition '" + refs.get(i) + "' is not typechecked", definition));
             return null;

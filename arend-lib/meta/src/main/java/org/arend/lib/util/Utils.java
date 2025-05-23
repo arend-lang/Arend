@@ -112,7 +112,7 @@ public class Utils {
     return factory.app(expr, true, args);
   }
 
-  public static List<ConcreteExpression> addArguments(ConcreteExpression expr, StdExtension ext, int expectedParameters, boolean addGoals) {
+  public static List<ConcreteExpression> addArguments(ConcreteExpression expr, ExpressionTypechecker typechecker, StdExtension ext, int expectedParameters, boolean addGoals) {
     ConcreteReferenceExpression refExpr = null;
     if (expr instanceof ConcreteReferenceExpression) {
       refExpr = (ConcreteReferenceExpression) expr;
@@ -142,7 +142,7 @@ public class Utils {
         }
       }
     } else {
-      CoreDefinition argDef = ext.definitionProvider.getCoreDefinition(ref);
+      CoreDefinition argDef = typechecker.getCoreDefinition(ref);
       if (argDef == null) {
         return Collections.emptyList();
       }
@@ -170,7 +170,7 @@ public class Utils {
   }
 
   public static TypedExpression typecheckWithAdditionalArguments(ConcreteExpression expr, ExpressionTypechecker typechecker, StdExtension ext, int expectedParameters, boolean addGoals) {
-    List<ConcreteExpression> args = addArguments(expr, ext, expectedParameters, addGoals);
+    List<ConcreteExpression> args = addArguments(expr, typechecker, ext, expectedParameters, addGoals);
     TypedExpression result = typechecker.typecheck(args.isEmpty() ? expr : ext.factory.withData(expr.getData()).app(expr, true, args), null);
     if (result == null) {
       return null;

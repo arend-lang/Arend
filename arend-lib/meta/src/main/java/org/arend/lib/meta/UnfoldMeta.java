@@ -19,7 +19,6 @@ import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.variable.Variable;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,12 +28,6 @@ import java.util.List;
 import java.util.Set;
 
 public class UnfoldMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
-
-  public UnfoldMeta(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean[] argumentExplicitness() {
     return new boolean[] { true, true };
@@ -71,14 +64,14 @@ public class UnfoldMeta extends BaseMetaDefinition {
     List<? extends ConcreteExpression> firstArgList;
     boolean unfoldFields = contextData.getArguments().size() == 1;
     if (contextData.getArguments().size() == 2) {
-      firstArgList = Utils.getArgumentList(contextData.getArguments().get(0).getExpression());
+      firstArgList = Utils.getArgumentList(contextData.getArguments().getFirst().getExpression());
       for (ConcreteExpression expr : firstArgList) {
         Variable var = null;
         while (expr instanceof ConcreteAppExpression) {
           expr = ((ConcreteAppExpression) expr).getFunction();
         }
         if (expr instanceof ConcreteReferenceExpression) {
-          CoreDefinition def = ext.definitionProvider.getCoreDefinition(((ConcreteReferenceExpression) expr).getReferent());
+          CoreDefinition def = typechecker.getCoreDefinition(((ConcreteReferenceExpression) expr).getReferent());
           if (def instanceof CoreFunctionDefinition || def instanceof CoreClassField) {
             var = def;
           }
@@ -104,9 +97,9 @@ public class UnfoldMeta extends BaseMetaDefinition {
     Set<Variable> unfolded = new HashSet<>();
     TypedExpression result;
     if (contextData.getExpectedType() != null) {
-      result = typechecker.typecheck(contextData.getArguments().get(contextData.getArguments().size() - 1).getExpression(), contextData.getExpectedType().normalize(NormalizationMode.RNF).unfold(functions, unfolded, false, unfoldFields));
+      result = typechecker.typecheck(contextData.getArguments().getLast().getExpression(), contextData.getExpectedType().normalize(NormalizationMode.RNF).unfold(functions, unfolded, false, unfoldFields));
     } else {
-      TypedExpression arg = typechecker.typecheck(contextData.getArguments().get(contextData.getArguments().size() - 1).getExpression(), null);
+      TypedExpression arg = typechecker.typecheck(contextData.getArguments().getLast().getExpression(), null);
       if (arg == null) {
         return null;
       }
@@ -116,7 +109,7 @@ public class UnfoldMeta extends BaseMetaDefinition {
     if (firstArgList != null && unfolded.size() != functions.size()) {
       for (ConcreteExpression expr : firstArgList) {
         if (expr instanceof ConcreteReferenceExpression) {
-          CoreDefinition def = ext.definitionProvider.getCoreDefinition(((ConcreteReferenceExpression) expr).getReferent());
+          CoreDefinition def = typechecker.getCoreDefinition(((ConcreteReferenceExpression) expr).getReferent());
           if ((def instanceof CoreFunctionDefinition || def instanceof CoreClassField) && !unfolded.contains(def)) {
             typechecker.getErrorReporter().report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Function was not unfolded", expr).withQuickFix(new RemoveErrorQuickFix("Remove function")));
             unfolded.add(def);

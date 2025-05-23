@@ -252,7 +252,7 @@ public class ExtMeta extends BaseMetaDefinition {
         Map<CoreClassField, PathExpression> superFields = new HashMap<>();
         if (type instanceof CoreClassCallExpression classCall) {
           ConcreteExpression baseExpr = arg instanceof ConcreteClassExtExpression ? ((ConcreteClassExtExpression) arg).getBaseClassExpression() : arg;
-          CoreDefinition def = ext.definitionProvider.getCoreDefinition(baseExpr instanceof ConcreteReferenceExpression ? ((ConcreteReferenceExpression) baseExpr).getReferent() : null);
+          CoreDefinition def = typechecker.getCoreDefinition(baseExpr instanceof ConcreteReferenceExpression ? ((ConcreteReferenceExpression) baseExpr).getReferent() : null);
           boolean isSubclass = def instanceof CoreClassDefinition && ((CoreClassDefinition) def).isSubClassOf(classCall.getDefinition());
           if (arg instanceof ConcreteClassExtExpression && !isSubclass) {
             typechecker.getErrorReporter().report(new SubclassError(true, classCall.getDefinition().getRef(), baseExpr));
@@ -268,7 +268,7 @@ public class ExtMeta extends BaseMetaDefinition {
                   return null;
                 }
 
-                CoreDefinition implDef = ext.definitionProvider.getCoreDefinition(coclause.getImplementedRef());
+                CoreDefinition implDef = typechecker.getCoreDefinition(coclause.getImplementedRef());
                 if (implDef instanceof CoreClassDefinition implClass) {
                   if (!((CoreClassDefinition) def).isSubClassOf(implClass)) {
                     typechecker.getErrorReporter().report(new SubclassError(false, def.getRef(), coclause));

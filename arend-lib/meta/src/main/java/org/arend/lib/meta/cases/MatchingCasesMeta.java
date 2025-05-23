@@ -135,7 +135,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
           boolean isCase = true;
           for (ConcreteExpression param : pair.proj2) {
             if (param instanceof ConcreteReferenceExpression) {
-              CoreDefinition def = ext.definitionProvider.getCoreDefinition(((ConcreteReferenceExpression) param).getReferent());
+              CoreDefinition def = typechecker.getCoreDefinition(((ConcreteReferenceExpression) param).getReferent());
               if (def instanceof CoreFunctionDefinition && ((CoreFunctionDefinition) def).getBody() instanceof CoreElimBody) {
                 isCase = false;
                 if (defCount.putIfAbsent((CoreFunctionDefinition) def, 0) == null) {

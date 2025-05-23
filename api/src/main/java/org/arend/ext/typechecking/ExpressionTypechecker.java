@@ -13,6 +13,7 @@ import org.arend.ext.core.context.CoreInferenceVariable;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.context.CoreParameterBuilder;
 import org.arend.ext.core.definition.CoreClassDefinition;
+import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.expr.CoreInferenceReferenceExpression;
@@ -332,6 +333,11 @@ public interface ExpressionTypechecker extends UserDataHolder {
    *         The type depends on the sign of {@code number} and on {@code expectedType}.
    */
   @Nullable TypedExpression checkNumber(@NotNull BigInteger number, @Nullable CoreExpression expectedType, @NotNull ConcreteExpression marker);
+
+  /**
+   * Returns the definitions corresponding to the given reference.
+   */
+  @Nullable CoreDefinition getCoreDefinition(@Nullable ArendRef ref);
 
   /**
    * Checks if the type-checking was cancelled.

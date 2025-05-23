@@ -60,11 +60,6 @@ public interface ArendExtension {
   default void declareDefinitions(@NotNull DefinitionContributor contributor) {}
 
   /**
-   * Can be used to get access to definitions.
-   */
-  default void setDefinitionProvider(@NotNull DefinitionProvider definitionProvider) {}
-
-  /**
    * This method is invoked last and can be used to initialize the extension.
    * It should store all the definition that will be used in the extension.
    * This method can be invoked multiple times if one of the definitions is updated.

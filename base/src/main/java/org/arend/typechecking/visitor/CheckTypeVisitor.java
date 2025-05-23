@@ -350,7 +350,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         stack.get(i).setArgument(curExpr);
         curExpr = stack.get(i);
       }
-      return new Pair<>(new TypecheckingResult(stack.get(0), expectedType), pair.proj2);
+      return new Pair<>(new TypecheckingResult(stack.getFirst(), expectedType), pair.proj2);
     }
     return null;
   }
@@ -378,9 +378,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(resultType, equality, resultType, equality, idp.getLevels(), equality.getLevels()), expr));
           return null;
         }
-        if (!visitor.compare(idp.getDefCallArguments().get(0), equality.getDefCallArguments().get(0), Type.OMEGA, false)) {
+        if (!visitor.compare(idp.getDefCallArguments().get(0), equality.getDefCallArguments().getFirst(), Type.OMEGA, false)) {
           Expression resultType = FunCallExpression.make(Prelude.PATH_INFIX, idp.getLevels(), Arrays.asList(idp.getDefCallArguments().get(0), idp.getDefCallArguments().get(1), idp.getDefCallArguments().get(1)));
-          errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(resultType, equality, idp.getDefCallArguments().get(0), equality.getDefCallArguments().get(0), null, null), expr));
+          errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(resultType, equality, idp.getDefCallArguments().get(0), equality.getDefCallArguments().getFirst(), null, null), expr));
           return null;
         }
         visitor.setCMP(CMP.EQ);
@@ -914,7 +914,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     checkSubstExpr((Expression) body, (Collection<? extends CoreBinding>) parameters, true);
 
     Sort sort = getSortOfType(((Expression) body).computeType(), (Concrete.SourceNode) marker);
-    if (parameters.size() == 1 && parameters.get(0) instanceof SingleDependentLink param) {
+    if (parameters.size() == 1 && parameters.getFirst() instanceof SingleDependentLink param) {
       return new LamExpression(PiExpression.generateUpperBound(param.getType().getSortOfType(), sort, myEquations, (Concrete.SourceNode) marker), param, (Expression) body);
     }
 
@@ -1570,7 +1570,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           }
         }
       } finally {
-        myClassCallBindings.remove(myClassCallBindings.size() - 1);
+        myClassCallBindings.removeLast();
       }
       removeBinding(thisRef);
     }
@@ -2232,7 +2232,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (sorts.isEmpty()) {
       return Sort.PROP;
     } else {
-      Sort resultSort = sorts.get(0);
+      Sort resultSort = sorts.getFirst();
       for (int i = 1; i < sorts.size(); i++) {
         resultSort = resultSort.max(sorts.get(i));
       }
@@ -2452,7 +2452,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     Function<Pair<ParametersProvider,SingleDependentLink>, Pair<TypecheckingResult,Boolean>> checker = pair -> {
       ParametersProvider newProvider = pair.proj1;
       SingleDependentLink piParam = pair.proj2;
-      Concrete.Parameter param = parameters.get(0);
+      Concrete.Parameter param = parameters.getFirst();
       if (param.isProperty()) {
         errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.PROPERTY_IGNORED, param));
       }
@@ -2690,9 +2690,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (expr.getParameters().isEmpty()) {
       return checkResult(expectedType, new TypecheckingResult(new SigmaExpression(Sort.PROP, EmptyDependentLink.getInstance()), new UniverseExpression(Sort.PROP)), expr);
     }
-    if (expr.getParameters().size() == 1 && expr.getParameters().get(0).getReferableList().size() == 1) {
+    if (expr.getParameters().size() == 1 && expr.getParameters().getFirst().getReferableList().size() == 1) {
       errorReporter.report(new TypecheckingError("\\Sigma type cannot have exactly one parameter", expr));
-      return expr.getParameters().get(0).getType().accept(this, expectedType);
+      return expr.getParameters().getFirst().getType().accept(this, expectedType);
     }
 
     List<Sort> sorts = new ArrayList<>(expr.getParameters().size());
@@ -2939,7 +2939,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     }
 
-    Concrete.Parameter param = parameters.get(0);
+    Concrete.Parameter param = parameters.getFirst();
     if (param.isProperty()) {
       errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.PROPERTY_IGNORED, param));
     }
@@ -3342,7 +3342,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     }
 
-    Object data = arguments.isEmpty() ? fun.getData() : arguments.get(arguments.size() - 1).getExpression().getData();
+    Object data = arguments.isEmpty() ? fun.getData() : arguments.getLast().getExpression().getData();
     if (inferTailImplicits) {
       notImplementedFields.removeAll(implemented);
       int maxIndex;
@@ -3557,6 +3557,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       result = new TypecheckingResult(resultExpr, ty);
     }
     return checkResult((Expression) expectedType, result, (Concrete.Expression) marker);
+  }
+
+  @Override
+  public @Nullable Definition getCoreDefinition(@Nullable ArendRef ref) {
+    return ref instanceof TCDefReferable ? ((TCDefReferable) ref).getTypechecked() : null;
   }
 
   @Override

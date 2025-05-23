@@ -30,10 +30,10 @@ public class MakeConstructorMeta extends BaseMetaDefinition {
 
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-    ConcreteExpression arg = contextData.getArguments().get(0).getExpression();
+    ConcreteExpression arg = contextData.getArguments().getFirst().getExpression();
     CoreConstructor constructor = null;
     if (arg instanceof ConcreteReferenceExpression) {
-      CoreDefinition def = ext.definitionProvider.getCoreDefinition(((ConcreteReferenceExpression) arg).getReferent());
+      CoreDefinition def = typechecker.getCoreDefinition(((ConcreteReferenceExpression) arg).getReferent());
       if (def instanceof CoreConstructor) constructor = (CoreConstructor) def;
     }
     if (constructor == null) {

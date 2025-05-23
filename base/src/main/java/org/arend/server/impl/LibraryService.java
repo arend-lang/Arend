@@ -157,7 +157,6 @@ public class LibraryService {
       myServer.addReadOnlyModule(entry.getKey(), entry.getValue());
     }
 
-    extension.setDefinitionProvider(DefinitionProviderImpl.INSTANCE);
     ArendDependencyProviderImpl provider = new ArendDependencyProviderImpl(myServer, library.getLibraryName());
     try {
       extension.load(provider);

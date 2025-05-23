@@ -48,7 +48,6 @@ public class StdExtension implements ArendExtension {
   public ArendPrelude prelude;
 
   public ConcreteFactory factory;
-  public DefinitionProvider definitionProvider;
   public VariableRenamerFactory renamerFactory;
 
   public final IrreflexivityKey irreflexivityKey = new IrreflexivityKey("irreflexivity", this);
@@ -112,11 +111,6 @@ public class StdExtension implements ArendExtension {
   @Override
   public void setConcreteFactory(@NotNull ConcreteFactory factory) {
     this.factory = factory;
-  }
-
-  @Override
-  public void setDefinitionProvider(@NotNull DefinitionProvider definitionProvider) {
-    this.definitionProvider = definitionProvider;
   }
 
   @Override
@@ -228,7 +222,7 @@ public class StdExtension implements ArendExtension {
         `unfold (f_1, ... f_n) e` unfolds functions/fields/variables `f_1`, ... `f_n` in the expected type before type-checking of `e` and returns `e` itself.
         If the first argument is omitted, it unfold all fields.
         If the expected type is unknown, it unfolds these function in the result type of `e`.
-        """), makeDef(meta, "unfold", new DeferredMetaDefinition(new UnfoldMeta(this), true, false)));
+        """), makeDef(meta, "unfold", new DeferredMetaDefinition(new UnfoldMeta(), true, false)));
     contributor.declare(text("Unfolds \\let expressions"),
         makeDef(meta, "unfold_let", new DeferredMetaDefinition(new UnfoldLetMeta(), true, false)));
     contributor.declare(text("Unfolds recursively top-level functions and fields"),
@@ -278,7 +272,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
         makeDef(paths, "simplify", new DeferredMetaDefinition(new SimplifyMeta(this), true)));
     ConcreteMetaDefinition simp_coe = makeDef(paths, "simp_coe", new ClassExtResolver(this), new DependencyMetaTypechecker(SimpCoeMeta.class, () -> new SimpCoeMeta(this)));
-    ConcreteMetaDefinition extMeta = makeDef(paths, "ext", new ClassExtResolver(this), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, false), false, ExtMeta.defermentChecker), definitionProvider));
+    ConcreteMetaDefinition extMeta = makeDef(paths, "ext", new ClassExtResolver(this), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, false), false, ExtMeta.defermentChecker)));
     contributor.declare(vList(
         text("Simplifies certain equalities. It expects one argument and the type of this argument is called 'subgoal'. The expected type is called 'goal'."),
         text("* If the goal is `coe (\\lam i => \\Pi (x : A) -> B x i) f right a = b'`, then the subgoal is `coe (B a) (f a) right = b`."),
@@ -302,7 +296,7 @@ public class StdExtension implements ArendExtension {
         * If the goal is `x = {P} y`, where `P : \\Prop`, then there is no subgoal
         """), extMeta);
     contributor.declare(hList(text("Similar to "), refDoc(extMeta.getRef()), text(", but also applies either "), refDoc(simp_coe.getRef()), text(" or "), refDoc(extMeta.getRef()), text(" when a field of a \\Sigma-type or a record has an appropriate type.")),
-        makeDef(paths, "exts", new ClassExtResolver(this), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, true), false, ExtMeta.defermentChecker), definitionProvider)));
+        makeDef(paths, "exts", new ClassExtResolver(this), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, true), false, ExtMeta.defermentChecker))));
 
     MetaDefinition apply = new ApplyMeta(this);
     ModulePath function = ModulePath.fromString("Function.Meta");

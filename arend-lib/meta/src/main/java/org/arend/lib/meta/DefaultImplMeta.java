@@ -60,12 +60,12 @@ public class DefaultImplMeta extends BaseMetaDefinition {
     if (ref2 == null) return null;
     ConcreteExpression arg = args.size() >= 3 ? args.get(2).getExpression() : null;
 
-    CoreDefinition def1 = ext.definitionProvider.getCoreDefinition(ref1);
+    CoreDefinition def1 = typechecker.getCoreDefinition(ref1);
     if (!(def1 instanceof CoreClassDefinition classDef)) {
-      typechecker.getErrorReporter().report(new TypecheckingError("Expected a class", args.get(0).getExpression()));
+      typechecker.getErrorReporter().report(new TypecheckingError("Expected a class", args.getFirst().getExpression()));
       return null;
     }
-    CoreDefinition def2 = ext.definitionProvider.getCoreDefinition(ref2);
+    CoreDefinition def2 = typechecker.getCoreDefinition(ref2);
     if (!(def2 instanceof CoreClassField fieldDef)) {
       typechecker.getErrorReporter().report(new TypecheckingError("Expected a field", args.get(1).getExpression()));
       return null;

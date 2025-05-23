@@ -400,7 +400,7 @@ public class SimpCoeMeta extends BaseMetaDefinition {
 
         if (classFields != null && concreteArg instanceof ConcreteClassExtExpression classExt) {
           ConcreteExpression baseExpr = classExt.getBaseClassExpression();
-          CoreDefinition def = baseExpr instanceof ConcreteReferenceExpression ? ext.definitionProvider.getCoreDefinition(((ConcreteReferenceExpression) baseExpr).getReferent()) : null;
+          CoreDefinition def = baseExpr instanceof ConcreteReferenceExpression ? typechecker.getCoreDefinition(((ConcreteReferenceExpression) baseExpr).getReferent()) : null;
           CoreClassDefinition classDef = ((CoreClassCallExpression) body).getDefinition();
           if (!(def instanceof CoreClassDefinition && ((CoreClassDefinition) def).isSubClassOf(classDef))) {
             typechecker.getErrorReporter().report(new SubclassError(true, classDef.getRef(), baseExpr));
