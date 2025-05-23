@@ -252,9 +252,12 @@ public class StdExtension implements ArendExtension {
         makeDef(meta, "defaultImpl", new DefaultImplMeta(this)));
 
     ModulePath paths = ModulePath.fromString("Paths.Meta");
-    contributor.declare(paths, new ModulePath("Paths"));
     contributor.declare(paths, new ModulePath("Category"));
+    contributor.declare(paths, new ModulePath("Equiv"));
+    contributor.declare(paths, new ModulePath("Equiv.Univalence"));
+    contributor.declare(paths, new ModulePath("Logic"));
     contributor.declare(paths, new ModulePath("Meta"));
+    contributor.declare(paths, new ModulePath("Paths"));
     ConcreteMetaDefinition rewrite = makeDef(paths, "rewrite", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(this, true)));
     contributor.declare(multiline("""
         `rewrite (p : a = b) t : T` replaces occurrences of `a` in `T` with a variable `x` obtaining a type `T[x/a]` and returns `transportInv (\\lam x => T[x/a]) p t`
@@ -275,7 +278,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
         makeDef(paths, "simplify", new DeferredMetaDefinition(new SimplifyMeta(this), true)));
     ConcreteMetaDefinition simp_coe = makeDef(paths, "simp_coe", new ClassExtResolver(this), new DependencyMetaTypechecker(SimpCoeMeta.class, () -> new SimpCoeMeta(this)));
-    ConcreteMetaDefinition extMeta = makeDef(paths, "ext", new ClassExtResolver(this), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, false), false, ExtMeta.defermentChecker)));
+    ConcreteMetaDefinition extMeta = makeDef(paths, "ext", new ClassExtResolver(this), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, false), false, ExtMeta.defermentChecker), definitionProvider));
     contributor.declare(vList(
         text("Simplifies certain equalities. It expects one argument and the type of this argument is called 'subgoal'. The expected type is called 'goal'."),
         text("* If the goal is `coe (\\lam i => \\Pi (x : A) -> B x i) f right a = b'`, then the subgoal is `coe (B a) (f a) right = b`."),
@@ -299,7 +302,7 @@ public class StdExtension implements ArendExtension {
         * If the goal is `x = {P} y`, where `P : \\Prop`, then there is no subgoal
         """), extMeta);
     contributor.declare(hList(text("Similar to "), refDoc(extMeta.getRef()), text(", but also applies either "), refDoc(simp_coe.getRef()), text(" or "), refDoc(extMeta.getRef()), text(" when a field of a \\Sigma-type or a record has an appropriate type.")),
-        makeDef(paths, "exts", new ClassExtResolver(this), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, true), false, ExtMeta.defermentChecker))));
+        makeDef(paths, "exts", new ClassExtResolver(this), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, true), false, ExtMeta.defermentChecker), definitionProvider)));
 
     MetaDefinition apply = new ApplyMeta(this);
     ModulePath function = ModulePath.fromString("Function.Meta");

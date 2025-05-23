@@ -1,8 +1,11 @@
 package org.arend.ext.typechecking.meta;
 
+import org.arend.ext.DefinitionProvider;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
 import org.arend.ext.concrete.expr.*;
+import org.arend.ext.core.definition.CoreClassDefinition;
+import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.module.LongName;
@@ -10,6 +13,7 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.DeferredMetaDefinition;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.MetaDefinition;
+import org.arend.ext.util.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,22 +25,26 @@ import java.util.function.Supplier;
 
 public class DependencyMetaTypechecker implements MetaTypechecker {
   private final List<LongName> names;
-  private final List<Field> fields;
+  private final List<Pair<Field,Class<?>>> fields;
   private final Supplier<MetaDefinition> metaSupplier;
+  private final DefinitionProvider definitionProvider; // TODO[server2]: Delete this. Maybe move to typecheck method, or even merge DefinitionProvider into ExpressionTypechecker.
 
-  public DependencyMetaTypechecker(@NotNull Class<? extends MetaDefinition> container, @NotNull Supplier<MetaDefinition> metaSupplier) {
+  public DependencyMetaTypechecker(@NotNull Class<? extends MetaDefinition> container, @NotNull Supplier<MetaDefinition> metaSupplier, @Nullable DefinitionProvider definitionProvider) {
     names = new ArrayList<>();
     fields = new ArrayList<>();
     this.metaSupplier = metaSupplier;
+    this.definitionProvider = definitionProvider;
 
     for (Field field : container.getDeclaredFields()) {
-      if (ArendRef.class.equals(field.getType())) {
+      Class<?> fieldType = field.getType();
+      boolean isRef = ArendRef.class.equals(fieldType);
+      if (isRef || definitionProvider != null && CoreClassDefinition.class.isAssignableFrom(fieldType)) {
         Dependency dependency = field.getAnnotation(Dependency.class);
         if (dependency != null) {
           field.setAccessible(true);
           String name = dependency.name();
           names.add(name.isEmpty() ? new LongName(field.getName()) : LongName.fromString(name));
-          fields.add(field);
+          fields.add(new Pair<>(field, isRef ? null : fieldType));
         }
       }
     }
@@ -44,6 +52,10 @@ public class DependencyMetaTypechecker implements MetaTypechecker {
     if (names.isEmpty()) {
       throw new IllegalArgumentException();
     }
+  }
+
+  public DependencyMetaTypechecker(@NotNull Class<? extends MetaDefinition> container, @NotNull Supplier<MetaDefinition> metaSupplier) {
+    this(container, metaSupplier, null);
   }
 
   public static List<ArendRef> extractReferences(ConcreteMetaDefinition definition, int numberOfReferences, ErrorReporter errorReporter) {
@@ -100,7 +112,18 @@ public class DependencyMetaTypechecker implements MetaTypechecker {
     try {
       MetaDefinition actual = meta instanceof DeferredMetaDefinition deferred ? deferred.deferredMeta : meta;
       for (int i = 0; i < fields.size(); i++) {
-        fields.get(i).set(actual, refs.get(i));
+        var pair = fields.get(i);
+        if (pair.proj2 == null) {
+          pair.proj1.set(actual, refs.get(i));
+        } else {
+          CoreDefinition def = definitionProvider.getCoreDefinition(refs.get(i));
+          if (def == null) {
+            typechecker.getErrorReporter().report(new TypecheckingError("Definition '" + refs.get(i) + "' is not typechecked", definition));
+            return null;
+          } else {
+            pair.proj1.set(actual, def);
+          }
+        }
       }
     } catch (IllegalAccessException e) {
       throw new IllegalStateException(e);

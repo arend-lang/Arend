@@ -73,7 +73,6 @@ public class EquationMeta extends BaseMetaDefinition {
   @Dependency(module = "Algebra.Monoid.Solver", name = "MonoidTerm.:*")   CoreConstructor mulMTerm;
 
   @Dependency(module = "Category", name = "Precat.o")      CoreClassField catMul;
-  @Dependency(module = "Category", name = "Precat.Hom")      public CoreClassField catHom;
 
   @Dependency(module = "Category.Solver", name = "CatTerm.var")           CoreConstructor varCTerm;
   @Dependency(module = "Category.Solver", name = "CatTerm.:id")           CoreConstructor idCTerm;
@@ -158,9 +157,6 @@ public class EquationMeta extends BaseMetaDefinition {
 
 
   @Dependency(module = "Equiv")                                  public CoreClassDefinition Equiv;
-  @Dependency(module = "Equiv")                                  public CoreClassDefinition QEquiv;
-  @Dependency(module = "Equiv.Univalence", name = "Equiv-to-=")  public CoreFunctionDefinition equivToEq;
-  @Dependency(module = "Equiv.Univalence", name = "QEquiv-to-=") public CoreFunctionDefinition qEquivToEq;
   @Dependency(module = "Equiv", name = "Map.A")                  public CoreClassField equivLeft;
   @Dependency(module = "Equiv", name = "Map.B")                  public CoreClassField equivRight;
   @Dependency(module = "Equiv")                                  CoreFunctionDefinition idEquiv;
@@ -169,15 +165,7 @@ public class EquationMeta extends BaseMetaDefinition {
   @Dependency(module = "Arith.Rat", name = "Rat.fromInt") public CoreFunctionDefinition fromInt;
   @Dependency(module = "Arith.Rat")                       public CoreFunctionDefinition RatField;
 
-  public static class TransitivityInstanceCache {
-    public final CoreFunctionDefinition instance;
-    public final CoreClassField relationField;
-
-    public TransitivityInstanceCache(CoreFunctionDefinition instance, CoreClassField relationField) {
-      this.instance = instance;
-      this.relationField = relationField;
-    }
-  }
+  public record TransitivityInstanceCache(CoreFunctionDefinition instance, CoreClassField relationField) {}
 
   public final Map<CoreDefinition, TransitivityInstanceCache> transitivityInstanceCache = new HashMap<>();
 
@@ -197,8 +185,8 @@ public class EquationMeta extends BaseMetaDefinition {
     EquationSolver solver = null;
     int argIndex = 0;
     List<? extends ConcreteArgument> arguments = contextData.getArguments();
-    if (!arguments.isEmpty() && !arguments.get(0).isExplicit()) {
-      ConcreteExpression arg = arguments.get(0).getExpression();
+    if (!arguments.isEmpty() && !arguments.getFirst().isExplicit()) {
+      ConcreteExpression arg = arguments.getFirst().getExpression();
       if (arg instanceof ConcreteUniverseExpression) {
         argIndex = 1;
         solver = new EqualitySolver(this, typechecker, factory, refExpr, false);
@@ -245,11 +233,11 @@ public class EquationMeta extends BaseMetaDefinition {
     }
 
     CoreExpression leftExpr = solver.getLeftValue();
-    if (leftExpr != null && (values.isEmpty() || !(values.get(0) instanceof TypedExpression) || !Utils.safeCompare(typechecker, leftExpr, ((TypedExpression) values.get(0)).getExpression(), CMP.EQ, refExpr, false, true, true))) {
-      values.add(0, leftExpr.computeTyped());
+    if (leftExpr != null && (values.isEmpty() || !(values.getFirst() instanceof TypedExpression) || !Utils.safeCompare(typechecker, leftExpr, ((TypedExpression) values.getFirst()).getExpression(), CMP.EQ, refExpr, false, true, true))) {
+      values.addFirst(leftExpr.computeTyped());
     }
     CoreExpression rightExpr = solver.getRightValue();
-    if (rightExpr != null && (values.isEmpty() || !(values.get(values.size() - 1) instanceof TypedExpression) || !Utils.safeCompare(typechecker, rightExpr, ((TypedExpression) values.get(values.size() - 1)).getExpression(), CMP.EQ, refExpr, false, true, true))) {
+    if (rightExpr != null && (values.isEmpty() || !(values.getLast() instanceof TypedExpression) || !Utils.safeCompare(typechecker, rightExpr, ((TypedExpression) values.getLast()).getExpression(), CMP.EQ, refExpr, false, true, true))) {
       values.add(rightExpr.computeTyped());
     }
 
@@ -261,9 +249,9 @@ public class EquationMeta extends BaseMetaDefinition {
 
     // If values.size() == 1, we either return the implicit argument or the trivial answer on the explicit argument
     if (values.size() == 1) {
-      return values.get(0) instanceof ConcreteExpression
-        ? typechecker.typecheck((ConcreteExpression) values.get(0), null)
-        : solver.getTrivialResult((TypedExpression) values.get(0));
+      return values.getFirst() instanceof ConcreteExpression
+        ? typechecker.typecheck((ConcreteExpression) values.getFirst(), null)
+        : solver.getTrivialResult((TypedExpression) values.getFirst());
     }
 
     boolean hasMissingProofs = false;
@@ -330,7 +318,7 @@ public class EquationMeta extends BaseMetaDefinition {
       return null;
     }
 
-    ConcreteExpression result = equalities.get(equalities.size() - 1);
+    ConcreteExpression result = equalities.getLast();
     for (int i = equalities.size() - 2; i >= 0; i--) {
       result = solver.combineResults(equalities.get(i), result);
     }

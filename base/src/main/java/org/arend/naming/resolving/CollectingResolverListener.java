@@ -4,7 +4,6 @@ import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.DataContainer;
 import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.*;
-import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteNamespaceCommand;
@@ -14,11 +13,11 @@ import java.util.*;
 public class CollectingResolverListener implements ResolverListener {
   public record ResolvedReference(AbstractReference reference, Referable referable) {}
 
-  public record ReferablePair(AbstractReferable referable, TCDefReferable tcReferable) {}
-
   public record ModuleCacheStructure(List<ResolvedReference> cache, List<ModulePath> importedModules) {
     void addReference(AbstractReference reference, Referable referable) {
-      cache.add(new ResolvedReference(reference, referable));
+      if (reference != null) {
+        cache.add(new ResolvedReference(reference, referable));
+      }
     }
 
     void addImportedModule(ModulePath module) {

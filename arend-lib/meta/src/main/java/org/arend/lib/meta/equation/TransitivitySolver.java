@@ -108,13 +108,13 @@ public class TransitivitySolver implements EquationSolver {
       TypedExpression instance;
       if (cache != null) {
         List<ConcreteExpression> args = new ArrayList<>();
-        for (CoreParameter param = cache.instance.getParameters(); param.hasNext(); param = param.getNext()) {
+        for (CoreParameter param = cache.instance().getParameters(); param.hasNext(); param = param.getNext()) {
           if (param.isExplicit()) {
             args.add(factory.hole());
           }
         }
-        instance = typechecker.typecheck(factory.app(factory.ref(cache.instance.getRef()), true, args), null);
-        relationField = cache.relationField;
+        instance = typechecker.typecheck(factory.app(factory.ref(cache.instance().getRef()), true, args), null);
+        relationField = cache.relationField();
       } else {
         MyInstanceSearchParameters parameters = new MyInstanceSearchParameters(defCall.getDefinition());
         instance = typechecker.findInstance(parameters, null, null, refExpr);

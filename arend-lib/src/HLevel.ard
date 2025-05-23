@@ -43,10 +43,11 @@
   \where {
     \func make {A : \Type} (a : A) (p : \Pi (a' : A) -> a = a')  => \new Contr A a p
 
-    \use \level levelProp (A : \Type) (c1 c2 : Contr A) : c1 = c2 => exts Contr {
-      | center => c1.contraction c2.center
-      | contraction a' => isProp.=>isSet (\lam x y => inv (c1.contraction x) *> c1.contraction y) c2.center a' _ _
-    }
+    \use \level levelProp (A : \Type) (c1 c2 : Contr A) : c1 = c2 => path (\lam i => \new Contr A {
+      | center => c1.contraction c2.center i
+      | contraction a' => pathOver {\lam i => c1.contraction c2.center i = a'} {c1.contraction a'} {c2.contraction a'}
+          (isProp.=>isSet (\lam x y => inv (c1.contraction x) *> c1.contraction y) c2.center a' _ _) i
+    })
   }
 
 \lemma contr-equiv (A B : Contr) {f : A -> B} : Equiv f
