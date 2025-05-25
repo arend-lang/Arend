@@ -1,6 +1,7 @@
 package org.arend.naming.reference;
 
 import org.arend.ext.module.LongName;
+import org.arend.ext.module.ModulePath;
 import org.arend.module.FullName;
 import org.arend.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
@@ -26,6 +27,12 @@ public interface LocatedReferable extends GlobalReferable {
   default FullName getRefFullName() {
     List<String> name = new ArrayList<>();
     return new FullName(LocatedReferable.Helper.getLocation(this, name), new LongName(name));
+  }
+
+  @Override
+  default @Nullable ModulePath getModulePath() {
+    ModuleLocation module = getLocation();
+    return module == null ? null : module.getModulePath();
   }
 
   class Helper {

@@ -180,17 +180,10 @@ public class ArendCheckerImpl implements ArendChecker {
         GroupData groupData = dependencies.get(module);
         if (groupData != null && !groupData.isResolved()) {
           resolverListener.moduleLocation = module;
-          ErrorReporter currentErrorReporter;
-          if (groupData.isReadOnly()) {
-            currentErrorReporter = DummyErrorReporter.INSTANCE;
-          } else {
-            ListErrorReporter listErrorReporter = new ListErrorReporter();
-            errorReporterMap.put(module, listErrorReporter);
-            currentErrorReporter = listErrorReporter;
-          }
-
+          ListErrorReporter listErrorReporter = new ListErrorReporter();
+          errorReporterMap.put(module, listErrorReporter);
           Map<LongName, DefinitionData> definitionData = new LinkedHashMap<>();
-          new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), currentErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), myServer.getParentGroupScope(module, groupData.getRawGroup()), PersistentList.empty(), definitionData);
+          new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), listErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), myServer.getParentGroupScope(module, groupData.getRawGroup()), PersistentList.empty(), definitionData);
           resolverResult.put(module, definitionData);
 
           myLogger.info(() -> "Module '" + module + "' is resolved");

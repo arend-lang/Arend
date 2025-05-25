@@ -3,7 +3,6 @@ package org.arend.ext.typechecking.meta;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
 import org.arend.ext.concrete.expr.*;
-import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
@@ -34,14 +33,16 @@ public class DependencyMetaTypechecker implements MetaTypechecker {
 
     for (Field field : container.getDeclaredFields()) {
       Class<?> fieldType = field.getType();
-      boolean isRef = ArendRef.class.equals(fieldType);
-      if (isRef || CoreClassDefinition.class.isAssignableFrom(fieldType)) {
-        Dependency dependency = field.getAnnotation(Dependency.class);
-        if (dependency != null) {
+      Dependency dependency = field.getAnnotation(Dependency.class);
+      if (dependency != null) {
+        boolean isRef = ArendRef.class.equals(fieldType);
+        if (isRef || CoreDefinition.class.isAssignableFrom(fieldType)) {
           field.setAccessible(true);
           String name = dependency.name();
           names.add(name.isEmpty() ? new LongName(field.getName()) : LongName.fromString(name));
           fields.add(new Pair<>(field, isRef ? null : fieldType));
+        } else {
+          throw new IllegalArgumentException("Field '" + field.getName() + "' has incorrect type");
         }
       }
     }
@@ -110,8 +111,8 @@ public class DependencyMetaTypechecker implements MetaTypechecker {
           pair.proj1.set(actual, refs.get(i));
         } else {
           CoreDefinition def = typechecker.getCoreDefinition(refs.get(i));
-          if (def == null) {
-            typechecker.getErrorReporter().report(new TypecheckingError("Definition '" + refs.get(i) + "' is not typechecked", definition));
+          if (!pair.proj2.isInstance(def)) {
+            typechecker.getErrorReporter().report(new TypecheckingError("Definition '" + refs.get(i) + "' " + (def == null ? "is not typechecked" : "has incorrect type: " + def.getClass()), definition));
             return null;
           } else {
             pair.proj1.set(actual, def);

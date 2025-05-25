@@ -56,7 +56,7 @@ public class MonoidSolver extends BaseEqualitySolver {
   private final Map<Integer, Integer> domMap; // indices of morphisms in `values` to indices of domains.
   private final Map<Integer, Integer> codomMap; // indices of morphisms in `values` to indices of codomains.
 
-  public MonoidSolver(EquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreFunCallExpression equality, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses) {
+  public MonoidSolver(EquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreFunCallExpression equality, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses, CoreClassField catComp, CoreClassField catId) {
     super(meta, typechecker, factory, refExpr, instance, useHypotheses);
     this.equality = equality;
 
@@ -67,8 +67,8 @@ public class MonoidSolver extends BaseEqualitySolver {
     isCommutative = !isCat && (isSemilattice || isMultiplicative && classCall.getDefinition().isSubClassOf(meta.CMonoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.CMonoid)) || !isMultiplicative && classCall.getDefinition().isSubClassOf(meta.AbMonoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.AbMonoid)));
     CoreClassField ide = isSemilattice ? meta.top : isMultiplicative ? meta.ext.ide : meta.ext.zro;
     CoreClassField mul = isSemilattice ? meta.meet : isMultiplicative ? meta.mul : meta.plus;
-    mulMatcher = isCat ? new DefinitionFunctionMatcher(meta.ext.sipMeta.catComp, 5) : FunctionMatcher.makeFieldMatcher(classCall, instance, mul, typechecker, factory, refExpr, meta.ext, 2);
-    ideMatcher = isCat ? new DefinitionFunctionMatcher(meta.ext.sipMeta.catId, 1) : FunctionMatcher.makeFieldMatcher(classCall, instance, ide, typechecker, factory, refExpr, meta.ext, 0);
+    mulMatcher = isCat ? new DefinitionFunctionMatcher(catComp, 5) : FunctionMatcher.makeFieldMatcher(classCall, instance, mul, typechecker, factory, refExpr, meta.ext, 2);
+    ideMatcher = isCat ? new DefinitionFunctionMatcher(catId, 1) : FunctionMatcher.makeFieldMatcher(classCall, instance, ide, typechecker, factory, refExpr, meta.ext, 0);
     obValues = isCat ? new Values<>(typechecker, refExpr) : null;
     homMap = isCat ? new HashMap<>() : null;
     domMap = isCat ? new HashMap<>() : null;

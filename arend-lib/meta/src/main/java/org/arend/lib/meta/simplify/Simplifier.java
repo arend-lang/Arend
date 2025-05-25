@@ -301,7 +301,7 @@ public class Simplifier {
         if (checkedLam == null || checkedLam instanceof CoreErrorExpression) {
             return null;
         }
-        var proofs = processor.simplificationOccurrences.stream().map(x -> isForward ? x.proj2 : x.proj2.inverse(factory, ext)).collect(Collectors.toList());
+        var proofs = processor.simplificationOccurrences.stream().map(x -> isForward ? x.proj2 : x.proj2.inverse(factory, ext.inv.getRef())).collect(Collectors.toList());
         return RewriteEquationMeta.chainOfTransports(factory.ref(ext.transport.getRef(), refExpr.getPLevels(), refExpr.getHLevels()),
                 checkedLam.getExpression(), proofs, expression, factory, false);
     }

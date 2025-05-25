@@ -13,6 +13,12 @@ public class SourceInfoReference implements SourceInfo, ArendRef, DataContainer 
     this.sourceInfo = sourceInfo;
   }
 
+  public SourceInfoReference(String module, String position) {
+    this.sourceInfo = null;
+    this.module = module;
+    this.position = position;
+  }
+
   @Override
   public Object getData() {
     return sourceInfo instanceof DataContainer ? ((DataContainer) sourceInfo).getData() : sourceInfo;
@@ -23,7 +29,7 @@ public class SourceInfoReference implements SourceInfo, ArendRef, DataContainer 
     if (module != null) {
       return module;
     }
-    module = sourceInfo.moduleTextRepresentation();
+    module = sourceInfo == null ? null : sourceInfo.moduleTextRepresentation();
     if (module == null) {
       module = "";
     }
@@ -35,7 +41,7 @@ public class SourceInfoReference implements SourceInfo, ArendRef, DataContainer 
     if (position != null) {
       return position;
     }
-    position = sourceInfo.positionTextRepresentation();
+    position = sourceInfo == null ? null : sourceInfo.positionTextRepresentation();
     if (position == null) {
       position = "";
     }

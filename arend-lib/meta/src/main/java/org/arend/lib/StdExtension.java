@@ -87,7 +87,6 @@ public class StdExtension implements ArendExtension {
   public final EquationMeta equationMeta = new EquationMeta(this);
   public final LinearSolverMeta linearSolverMeta = new LinearSolverMeta(this);
   public final ContradictionMeta contradictionMeta = new ContradictionMeta(this);
-  public final SIPMeta sipMeta = new SIPMeta(this);
 
   private final StdGoalSolver goalSolver = new StdGoalSolver();
   private final StdLevelProver levelProver = new StdLevelProver(this);
@@ -113,7 +112,6 @@ public class StdExtension implements ArendExtension {
   @Override
   public void load(@NotNull ArendDependencyProvider provider) {
     provider.load(this);
-    provider.load(sipMeta);
     provider.getDefinition(new ModulePath("Set"), new LongName("ProductDecide"), CoreFunctionDefinition.class);
     provider.getDefinition(new ModulePath("Set"), new LongName("NotDecide"), CoreFunctionDefinition.class);
     provider.getDefinition(new ModulePath("Set"), new LongName("EqualityDecide"), CoreFunctionDefinition.class);
@@ -162,6 +160,8 @@ public class StdExtension implements ArendExtension {
     ModulePath logicMeta = ModulePath.fromString("Logic.Meta");
     ModulePath paths = new ModulePath("Paths");
     ModulePath logic = new ModulePath("Logic");
+    ModulePath category = new ModulePath("Category");
+    ModulePath equiv = new ModulePath("Equiv");
     String constructorName = "constructor";
 
     contributor.declare(meta, logicMeta);
@@ -244,11 +244,11 @@ public class StdExtension implements ArendExtension {
         makeDef(meta, "defaultImpl", new DefaultImplMeta()));
 
     ModulePath pathsMeta = ModulePath.fromString("Paths.Meta");
-    contributor.declare(pathsMeta, new ModulePath("Category"));
-    contributor.declare(pathsMeta, new ModulePath("Equiv"));
-    contributor.declare(pathsMeta, new ModulePath("Equiv.Univalence"));
-    contributor.declare(pathsMeta, new ModulePath("Logic"));
-    contributor.declare(pathsMeta, new ModulePath("Meta"));
+    contributor.declare(pathsMeta, category);
+    contributor.declare(pathsMeta, equiv);
+    contributor.declare(pathsMeta, ModulePath.fromString("Equiv.Univalence"), "Equiv-to-=", "QEquiv-to-=");
+    contributor.declare(pathsMeta, logic);
+    contributor.declare(pathsMeta, meta);
     contributor.declare(pathsMeta, paths);
     ConcreteMetaDefinition rewrite = makeDef(pathsMeta, "rewrite", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(true)));
     contributor.declare(multiline("""
@@ -310,6 +310,7 @@ public class StdExtension implements ArendExtension {
 
     ModulePath algebra = ModulePath.fromString("Algebra.Meta");
     contributor.declare(algebra, paths);
+    contributor.declare(algebra, category);
     contributor.declare(multiline("""
         `equation a_1 ... a_n` proves an equation a_0 = a_{n+1} using a_1, ... a_n as intermediate steps
 
@@ -318,7 +319,7 @@ public class StdExtension implements ArendExtension {
         The first implicit argument can be either a universe or a subclass of either `Algebra.Monoid.Monoid`, `Algebra.Monoid.AddMonoid`, or `Order.Lattice.Bounded.MeetSemilattice`.
         In the former case, the meta will prove an equality in a type without using any additional structure on it.
         In the latter case, the meta will prove an equality using only structure available in the specified class.
-        """), makeDef(algebra, "equation", new DeferredMetaDefinition(equationMeta, true)));
+        """), makeDef(algebra, "equation", new DependencyMetaTypechecker(EquationMeta.class, () -> new DeferredMetaDefinition(equationMeta, true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DeferredMetaDefinition(linearSolverMeta, true)));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
@@ -371,9 +372,14 @@ public class StdExtension implements ArendExtension {
     contributor.declare(nullDoc(), factory.metaDef(factory.metaRef(nfMeta, "whnf", Precedence.DEFAULT, null, null, null, new TrivialMetaTypechecker(new NormalizationMeta(NormalizationMode.WHNF))), Collections.emptyList(), null));
     contributor.declare(nullDoc(), factory.metaDef(factory.metaRef(nfMeta, "rnf", Precedence.DEFAULT, null, null, null, new TrivialMetaTypechecker(new NormalizationMeta(NormalizationMode.RNF))), Collections.emptyList(), null));
 
-    ModulePath category = ModulePath.fromString("Category.Meta");
-    contributor.declare(category, pathsMeta);
-    contributor.declare(text("Proves univalence for categories. The type of objects must extend `BaseSet` and the Hom-set must extend `SetHom` with properties only."), makeDef(category, "sip", new DependencyMetaTypechecker(SIPMeta.class, () -> new SIPMeta(this))));
+    ModulePath categoryMeta = ModulePath.fromString("Category.Meta");
+    contributor.declare(categoryMeta, category);
+    contributor.declare(categoryMeta, equiv);
+    contributor.declare(categoryMeta, paths);
+    contributor.declare(categoryMeta, pathsMeta);
+    contributor.declare(categoryMeta, new ModulePath("Set"));
+    contributor.declare(categoryMeta, ModulePath.fromString("Set.Category"));
+    contributor.declare(text("Proves univalence for categories. The type of objects must extend `BaseSet` and the Hom-set must extend `SetHom` with properties only."), makeDef(categoryMeta, "sip", new DependencyMetaTypechecker(SIPMeta.class, SIPMeta::new)));
   }
 
   @Override

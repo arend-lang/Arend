@@ -9,6 +9,8 @@ import org.arend.module.ModuleLocation;
 import org.arend.naming.reference.DataModuleReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.LongUnresolvedReference;
+import org.arend.naming.reference.NamedUnresolvedReference;
+import org.arend.naming.scope.Scope;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
@@ -119,8 +121,8 @@ public class DefinitionContributorImpl extends Disableable implements Definition
   }
 
   @Override
-  public void declare(@NotNull ModulePath module, @NotNull ModulePath importedModule) {
+  public void declare(@NotNull ModulePath module, @NotNull ModulePath importedModule, @NotNull String... names) {
     myImports.computeIfAbsent(new ModuleLocation(myLibraryName, ModuleLocation.LocationKind.GENERATED, module), k -> new ArrayList<>())
-        .add(new ConcreteStatement(null, new ConcreteNamespaceCommand(null, true, new LongUnresolvedReference(null, null, importedModule.toList()), true, Collections.emptyList(), Collections.emptyList()), null, null));
+        .add(new ConcreteStatement(null, new ConcreteNamespaceCommand(null, true, new LongUnresolvedReference(null, null, importedModule.toList()), names.length == 0, Arrays.stream(names).map(name -> new ConcreteNamespaceCommand.NameRenaming(null, Scope.ScopeContext.STATIC, new NamedUnresolvedReference(null, name), null, null)).toList(), Collections.emptyList()), null, null));
   }
 }

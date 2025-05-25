@@ -25,7 +25,7 @@ public class NotInScopeError extends LocalError {
 
   @Override
   public Object getCause() {
-    return myCause;
+    return myCause == null ? definition : myCause;
   }
 
   @Override

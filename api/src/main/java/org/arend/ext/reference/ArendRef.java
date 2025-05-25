@@ -1,6 +1,7 @@
 package org.arend.ext.reference;
 
 import org.arend.ext.module.LongName;
+import org.arend.ext.module.ModulePath;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -9,6 +10,10 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface ArendRef {
   @NotNull String getRefName();
+
+  default @Nullable ModulePath getModulePath() {
+    return null;
+  }
 
   /**
    * Returns the long name of a definition; returns null for local bindings.

@@ -17,5 +17,5 @@ public interface DefinitionContributor {
   /**
    * Declares a import command in a module.
    */
-  void declare(@NotNull ModulePath module, @NotNull ModulePath importedModule);
+  void declare(@NotNull ModulePath module, @NotNull ModulePath importedModule, @NotNull String... names);
 }

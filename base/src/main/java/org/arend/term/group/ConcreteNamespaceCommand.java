@@ -1,7 +1,7 @@
 package org.arend.term.group;
 
+import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.module.ModulePath;
-import org.arend.ext.prettyprinting.PrettyPrintable;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.DocStringBuilder;
 import org.arend.ext.prettyprinting.doc.LineDoc;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 import static org.arend.ext.prettyprinting.doc.DocFactory.text;
 
-public record ConcreteNamespaceCommand(@Nullable Object data, boolean isImport, @NotNull LongUnresolvedReference module, boolean isUsing, @NotNull List<NameRenaming> renamings, @NotNull List<NameHiding> hidings) implements DataContainer, PrettyPrintable {
+public record ConcreteNamespaceCommand(@Nullable Object data, boolean isImport, @NotNull LongUnresolvedReference module, boolean isUsing, @NotNull List<NameRenaming> renamings, @NotNull List<NameHiding> hidings) implements ConcreteSourceNode {
   public record NameRenaming(@Nullable Object data, @NotNull Scope.ScopeContext scopeContext, @NotNull NamedUnresolvedReference reference, @Nullable Precedence newPrecedence, @Nullable String newName) implements DataContainer {
     @Override
     public @Nullable Object getData() {
@@ -98,7 +98,7 @@ public record ConcreteNamespaceCommand(@Nullable Object data, boolean isImport, 
   }
 
   @Override
-  public String toString() {
+  public @NotNull String toString() {
     StringBuilder builder = new StringBuilder();
     prettyPrint(builder, PrettyPrinterConfig.DEFAULT);
     return builder.toString();

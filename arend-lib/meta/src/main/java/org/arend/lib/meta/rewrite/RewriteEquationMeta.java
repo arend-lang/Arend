@@ -5,6 +5,7 @@ import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteParameter;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.core.context.CoreBinding;
+import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.*;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -30,6 +31,8 @@ import java.util.function.Function;
 public class RewriteEquationMeta extends BaseMetaDefinition {
   private final StdExtension ext;
   @Dependency(name = "Precat.Hom") private ArendRef catHom;
+  @Dependency(name = "Precat.o")   private CoreClassField catComp;
+  @Dependency(name = "Precat.id")  private CoreClassField catId;
   @Dependency private ArendRef transport;
   @Dependency private ArendRef transportInv;
   @Dependency(name = "*>") private ArendRef concat;
@@ -186,8 +189,8 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
       this.right = right;
     }
 
-    public EqProofConcrete inverse(ConcreteFactory factory, StdExtension ext) {
-      return new EqProofConcrete(factory.appBuilder(factory.ref(ext.inv.getRef()))/*.app(factory.hole(), false).app(left, false).app(right, false)*/.app(proof).build(), right, left);
+    public EqProofConcrete inverse(ConcreteFactory factory, ArendRef inv) {
+      return new EqProofConcrete(factory.appBuilder(factory.ref(inv))/*.app(factory.hole(), false).app(left, false).app(right, false)*/.app(proof).build(), right, left);
     }
   }
 
@@ -318,7 +321,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
       type = expectedType;
     }
 
-    EqualitySolver solver = new EqualitySolver(ext.equationMeta, typechecker, factory, refExpr);
+    EqualitySolver solver = new EqualitySolver(ext.equationMeta, typechecker, factory, refExpr, catHom, catComp, catId);
     solver.setValuesType(value.computeType());
     solver.setUseHypotheses(false);
     solver.initializeSolver();

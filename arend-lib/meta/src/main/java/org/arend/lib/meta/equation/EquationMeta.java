@@ -11,6 +11,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.error.TypecheckingError;
+import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.lib.StdExtension;
 import org.arend.lib.util.Maybe;
@@ -23,6 +24,9 @@ import java.util.*;
 
 public class EquationMeta extends BaseMetaDefinition {
   public final StdExtension ext;
+  @org.arend.ext.typechecking.meta.Dependency(name = "Precat.Hom") private ArendRef catHom;
+  @org.arend.ext.typechecking.meta.Dependency(name = "Precat.o")   private CoreClassField catComp;
+  @org.arend.ext.typechecking.meta.Dependency(name = "Precat.id")  private CoreClassField catId;
 
   @Dependency(module = "Arith.Nat")                     public CoreFunctionDefinition NatSemiring;
   @Dependency(module = "Arith.Int")                     public CoreFunctionDefinition IntRing;
@@ -189,13 +193,13 @@ public class EquationMeta extends BaseMetaDefinition {
       ConcreteExpression arg = arguments.getFirst().getExpression();
       if (arg instanceof ConcreteUniverseExpression) {
         argIndex = 1;
-        solver = new EqualitySolver(this, typechecker, factory, refExpr, false);
+        solver = new EqualitySolver(this, typechecker, factory, refExpr, false, catHom, catComp, catId);
       } else if (arg instanceof ConcreteReferenceExpression) {
         CoreDefinition def = typechecker.getCoreDefinition(((ConcreteReferenceExpression) arg).getReferent());
         if (def instanceof CoreClassDefinition classDef) {
           if ((classDef.isSubClassOf(Monoid) || classDef.isSubClassOf(AddMonoid) || classDef.isSubClassOf(MSemilattice))) {
             argIndex = 1;
-            solver = new EqualitySolver(this, typechecker, factory, refExpr, classDef);
+            solver = new EqualitySolver(this, typechecker, factory, refExpr, classDef, catHom, catComp, catId);
           }
         }
       }
@@ -203,7 +207,7 @@ public class EquationMeta extends BaseMetaDefinition {
 
     if (contextData.getExpectedType() != null) {
       CoreExpression type = contextData.getExpectedType().normalize(NormalizationMode.WHNF);
-      final List<EquationSolver> solvers = solver != null ? Collections.singletonList(solver) : Arrays.asList(new EqualitySolver(this, typechecker, factory, refExpr), new EquivSolver(this, typechecker, factory), new TransitivitySolver(this, typechecker, factory, refExpr));
+      final List<EquationSolver> solvers = solver != null ? Collections.singletonList(solver) : Arrays.asList(new EqualitySolver(this, typechecker, factory, refExpr, catHom, catComp, catId), new EquivSolver(this, typechecker, factory), new TransitivitySolver(this, typechecker, factory, refExpr));
       solver = null;
       for (EquationSolver eqSolver : solvers) {
         if (eqSolver.isApplicable(type)) {
@@ -216,7 +220,7 @@ public class EquationMeta extends BaseMetaDefinition {
         return null;
       }
     } else if (solver == null) {
-      solver = new EqualitySolver(this, typechecker, factory, refExpr);
+      solver = new EqualitySolver(this, typechecker, factory, refExpr, catHom, catComp, catId);
     }
 
     for (; argIndex < arguments.size(); argIndex++) {

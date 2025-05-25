@@ -613,7 +613,8 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
     Concrete.GeneralDefinition def = myConcreteProvider.getConcrete(groupRef);
     Scope cachedScope = CachingScope.make(makeScope(group, scope, false));
-    myLocalErrorReporter = new LocalErrorReporter(groupRef, myErrorReporter);
+    LocalErrorReporter localErrorReporter = new LocalErrorReporter(groupRef, myErrorReporter);
+    myLocalErrorReporter = localErrorReporter;
     if (def instanceof Concrete.ClassDefinition) {
       resolveSuperClasses((Concrete.ClassDefinition) def, new PrivateFilteredScope(cachedScope), false);
     }
@@ -681,7 +682,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       }
       Scope curScope = reference.resolveNamespace(importedScope);
       if (curScope == null) {
-        myErrorReporter.report(reference.getErrorReference().getError());
+        localErrorReporter.report(reference.getErrorReference().getError());
       } else {
         List<TCDefReferable> scopeInstances = new ArrayList<>();
         loop:
@@ -718,14 +719,14 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
             myResolverListener.renamingResolved(renaming, oldRef, ref);
           }
           if (ref instanceof ErrorReference) {
-            myErrorReporter.report(((ErrorReference) ref).getError());
+            localErrorReporter.report(((ErrorReference) ref).getError());
           }
         }
 
         for (ConcreteNamespaceCommand.NameHiding nameHiding : namespaceCommand.hidings()) {
           Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.reference(), new PrivateFilteredScope(curScope, true), nameHiding.scopeContext());
           if (ref instanceof ErrorReference) {
-            myErrorReporter.report(((ErrorReference) ref).getError());
+            localErrorReporter.report(((ErrorReference) ref).getError());
           }
         }
       }
@@ -837,7 +838,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         continue;
       }
       if (!isTopLevel && cmd.isImport()) {
-        myLocalErrorReporter.report(new ParsingError(ParsingError.Kind.MISPLACED_IMPORT, cmd));
+        localErrorReporter.report(new ParsingError(ParsingError.Kind.MISPLACED_IMPORT, cmd));
       } else {
         checkNamespaceCommand(cmd, referables.keySet());
       }
@@ -873,7 +874,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
                 break;
               }
             }
-            myLocalErrorReporter.report(new DuplicateOpenedNameError(struct.context, ref, nsCmd, struct.command, cause));
+            localErrorReporter.report(new DuplicateOpenedNameError(struct.context, ref, nsCmd, struct.command, cause));
             if (ref instanceof LocatedReferable) {
               referables.putIfAbsent(ref.getRefName(), (LocatedReferable) ref);
             }
