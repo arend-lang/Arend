@@ -138,7 +138,7 @@ public class LibraryService {
     extension.registerKeys(keyRegistry);
     extension.setDependencies(dependencies);
     GroupData preludeData = myServer.getGroupData(Prelude.MODULE_LOCATION);
-    extension.setPrelude(preludeData == null ? new Prelude() : new ConcretePrelude(preludeData.getFileScope()));
+    extension.setPrelude(preludeData == null ? Prelude.INSTANCE : new ConcretePrelude(preludeData.getFileScope()));
     extension.setConcreteFactory(new ConcreteFactoryImpl(null, library.getLibraryName()));
     extension.setVariableRenamerFactory(VariableRenamerFactoryImpl.INSTANCE);
 

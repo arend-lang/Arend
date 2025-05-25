@@ -51,7 +51,7 @@ public abstract class BaseEqualitySolver implements EquationSolver {
 
   @Override
   public CoreExpression getValuesType() {
-    return equality.getDefCallArguments().get(0);
+    return equality.getDefCallArguments().getFirst();
   }
 
   @Override
@@ -67,7 +67,7 @@ public abstract class BaseEqualitySolver implements EquationSolver {
   @Override
   public @Nullable Maybe<CoreExpression> getEqType(@Nullable TypedExpression leftExpr, @Nullable TypedExpression rightExpr) {
     if (leftExpr != null && rightExpr != null) {
-      TypedExpression result = typechecker.typecheck(factory.app(factory.ref(meta.ext.prelude.getEqualityRef()), true, Arrays.asList(factory.core(leftExpr), factory.core(rightExpr))), null);
+      TypedExpression result = typechecker.typecheck(factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, Arrays.asList(factory.core(leftExpr), factory.core(rightExpr))), null);
       return result == null ? null : new Maybe<>(result.getExpression());
     } else {
       return new Maybe<>(null);
@@ -76,7 +76,7 @@ public abstract class BaseEqualitySolver implements EquationSolver {
 
   @Override
   public TypedExpression getTrivialResult(TypedExpression expression) {
-    return typechecker.typecheck(factory.app(factory.ref(meta.ext.prelude.getIdpRef()), false, Arrays.asList(factory.hole(), factory.core(expression))), null);
+    return typechecker.typecheck(factory.app(factory.ref(typechecker.getPrelude().getIdpRef()), false, Arrays.asList(factory.hole(), factory.core(expression))), null);
   }
 
   @Override
@@ -105,7 +105,7 @@ public abstract class BaseEqualitySolver implements EquationSolver {
   @Override
   public SubexprOccurrences matchSubexpr(@NotNull TypedExpression subExpr, @NotNull TypedExpression expr, @NotNull ErrorReporter errorReporter, List<Integer> occurrences) {
     var eqProof = solve(null, expr, subExpr, errorReporter);
-    var occurrence = occurrences == null ? 0 : occurrences.get(0);
+    var occurrence = occurrences == null ? 0 : occurrences.getFirst();
 
     if (occurrence != 0 || eqProof == null) {
       return new SubexprOccurrences(null, null, null, 0, eqProof == null ? 0 : 1);

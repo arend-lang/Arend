@@ -171,7 +171,7 @@ public class TermCompiler extends BaseTermCompiler {
 
   private ConcreteExpression computeVal(CoreExpression expr, Map<Integer, Ring> coefficients, Set<Integer> vars) {
     if (toInt) {
-      expr = toPos(expr, typechecker, factory, meta.ext);
+      expr = toPos(expr, typechecker, factory);
       if (expr == null) return null;
     } else if (toRat) {
       expr = toRat(expr, typechecker, factory, meta.ext);
@@ -234,7 +234,7 @@ public class TermCompiler extends BaseTermCompiler {
 
     List<CoreExpression> addArgs = addMatcher.match(expr);
     if (addArgs != null) {
-      return computePlus(addArgs.get(addArgs.size() - 2), addArgs.get(addArgs.size() - 1), coefficients, freeCoef, vars);
+      return computePlus(addArgs.get(addArgs.size() - 2), addArgs.getLast(), coefficients, freeCoef, vars);
     }
 
     if (ideMatcher.match(expr) != null) {
@@ -252,7 +252,7 @@ public class TermCompiler extends BaseTermCompiler {
     if (negativeMatcher != null) {
       List<CoreExpression> negativeArgs = negativeMatcher.match(expr);
       if (negativeArgs != null) {
-        return computeNegative(negativeArgs.get(0), coefficients, freeCoef, vars);
+        return computeNegative(negativeArgs.getFirst(), coefficients, freeCoef, vars);
       }
     }
 
@@ -260,7 +260,7 @@ public class TermCompiler extends BaseTermCompiler {
     if (ratAlgebraMatcher != null) {
       List<CoreExpression> ratAlgebraArgs = ratAlgebraMatcher.match(expr);
       if (ratAlgebraArgs != null) {
-        expr1 = ratAlgebraArgs.get(0).normalize(NormalizationMode.WHNF);
+        expr1 = ratAlgebraArgs.getFirst().normalize(NormalizationMode.WHNF);
       }
     }
     if (expr1 instanceof CoreConCallExpression conCall) {
@@ -296,7 +296,7 @@ public class TermCompiler extends BaseTermCompiler {
       coefArgs = natCoefMatcher.match(expr);
     }
     if (coefArgs != null) {
-      CoreExpression arg = coefArgs.get(0).normalize(NormalizationMode.WHNF);
+      CoreExpression arg = coefArgs.getFirst().normalize(NormalizationMode.WHNF);
       if (arg instanceof CoreIntegerExpression) {
         BigInteger coef = ((CoreIntegerExpression) arg).getBigInteger();
         if (isNeg) coef = coef.negate();
@@ -318,14 +318,14 @@ public class TermCompiler extends BaseTermCompiler {
 
     List<CoreExpression> mulArgs = mulMatcher.match(expr);
     if (mulArgs != null) {
-      return computeMul(mulArgs.get(mulArgs.size() - 2), mulArgs.get(mulArgs.size() - 1), expr, coefficients, freeCoef, vars);
+      return computeMul(mulArgs.get(mulArgs.size() - 2), mulArgs.getLast(), expr, coefficients, freeCoef, vars);
     }
 
     return computeVal(expr, coefficients, vars);
   }
 
-  public static CoreExpression toPos(CoreExpression expr, ExpressionTypechecker typechecker, ConcreteFactory factory, StdExtension ext) {
-    TypedExpression result = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(factory.app(factory.ref(ext.prelude.getPosRef()), true, factory.core(expr.computeTyped())), null));
+  public static CoreExpression toPos(CoreExpression expr, ExpressionTypechecker typechecker, ConcreteFactory factory) {
+    TypedExpression result = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(factory.app(factory.ref(typechecker.getPrelude().getPosRef()), true, factory.core(expr.computeTyped())), null));
     return result == null ? null : result.getExpression();
   }
 

@@ -39,7 +39,7 @@ public class StdNumberTypechecker implements LiteralTypechecker {
   @Override
   public @Nullable TypedExpression typecheckNumber(@NotNull BigInteger number, @NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     CoreExpression expectedType = contextData.getExpectedType() == null ? null : contextData.getExpectedType().normalize(NormalizationMode.WHNF);
-    if (expectedType != null && !(expectedType instanceof CoreDataCallExpression && (((CoreDataCallExpression) expectedType).getDefinition() == ext.prelude.getNat() || ((CoreDataCallExpression) expectedType).getDefinition() == ext.prelude.getInt()))) {
+    if (expectedType != null && !(expectedType instanceof CoreDataCallExpression && (((CoreDataCallExpression) expectedType).getDefinition() == typechecker.getPrelude().getNat() || ((CoreDataCallExpression) expectedType).getDefinition() == typechecker.getPrelude().getInt()))) {
       boolean generate;
       TypedExpression instance;
       if (expectedType instanceof CoreFieldCallExpression && ((CoreFieldCallExpression) expectedType).getDefinition() == ext.carrier) {

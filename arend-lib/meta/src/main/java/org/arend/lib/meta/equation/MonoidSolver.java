@@ -176,7 +176,7 @@ public class MonoidSolver extends BaseEqualitySolver {
 
       result.numOccurrencesSkipped = exprSplitting.proj2;
 
-      if (pieces.size() == 1 && pieces.get(0) != null) {
+      if (pieces.size() == 1 && pieces.getFirst() != null) {
         result.occurrenceVar = null;
         return result;
       }
@@ -190,10 +190,10 @@ public class MonoidSolver extends BaseEqualitySolver {
       var mul = isCat ? factory.ref(meta.catMul.getRef()) : factory.ref(meta.mul.getRef());
       var interpretNF = isCat ? factory.ref(meta.catInterpretNF.getRef()) : factory.ref(meta.monoidInterpretNF.getRef());
       var subExprNF = computeNFTerm(subExTerm.nf);
-      var constructedExprNF = pieces.get(0) == null ? new ArrayList<>(subExTerm.nf) : new ArrayList<>(pieces.get(0));
+      var constructedExprNF = pieces.getFirst() == null ? new ArrayList<>(subExTerm.nf) : new ArrayList<>(pieces.getFirst());
       ConcreteExpression concatNFsProof = null;
 
-      result.exprWithOccurrences = pieces.get(0) == null ? factory.ref(result.occurrenceVar) : factory.app(interpretNF, true, computeNFTerm(pieces.get(0)));
+      result.exprWithOccurrences = pieces.getFirst() == null ? factory.ref(result.occurrenceVar) : factory.app(interpretNF, true, computeNFTerm(pieces.getFirst()));
 
       for (int i = 1; i < pieces.size(); ++i) {
         var piece = pieces.get(i);
@@ -214,10 +214,10 @@ public class MonoidSolver extends BaseEqualitySolver {
         normConsistSubExpr = factory.appBuilder(factory.ref(normConsist)).app(subExTerm.concrete).build();
         normConsistExpr = factory.appBuilder(factory.ref(normConsist)).app(term.concrete).build();
       } else {
-        int subExprDom = domMap.get(subExTerm.nf.get(subExTerm.nf.size() - 1));
-        int subExprCod = codomMap.get(subExTerm.nf.get(0));
-        int exprDom = domMap.get(term.nf.get(term.nf.size() - 1));
-        int exprCod = codomMap.get(term.nf.get(0));
+        int subExprDom = domMap.get(subExTerm.nf.getLast());
+        int subExprCod = codomMap.get(subExTerm.nf.getFirst());
+        int exprDom = domMap.get(term.nf.getLast());
+        int exprCod = codomMap.get(term.nf.getFirst());
         normConsistSubExpr = factory.appBuilder(factory.ref(normConsist))
                 .app(factory.ref(dataRef), false)
                 .app(factory.number(subExprDom), false).app(factory.number(subExprCod), false)
@@ -327,9 +327,9 @@ public class MonoidSolver extends BaseEqualitySolver {
       }
 
       while (!trace1.isEmpty() && !trace2.isEmpty()) {
-        if (trace1.get(trace1.size() - 1).equals(trace2.get(trace2.size() - 1))) {
-          trace1.remove(trace1.size() - 1);
-          trace2.remove(trace2.size() - 1);
+        if (trace1.getLast().equals(trace2.getLast())) {
+          trace1.removeLast();
+          trace2.removeLast();
         } else {
           break;
         }
@@ -375,7 +375,7 @@ public class MonoidSolver extends BaseEqualitySolver {
       ConcreteExpression expr1 = trace1.isEmpty() ? null : traceToExpr(term1.nf, trace1, dataRef, factory);
       ConcreteExpression expr2 = trace2.isEmpty() ? null : factory.app(factory.ref(meta.ext.inv.getRef()), true, singletonList(traceToExpr(term2.nf, trace2, dataRef, factory)));
       if (expr1 == null && expr2 == null) {
-        lastArgument = factory.ref(meta.ext.prelude.getIdpRef());
+        lastArgument = factory.ref(typechecker.getPrelude().getIdpRef());
       } else if (expr2 == null) {
         lastArgument = expr1;
       } else if (expr1 == null) {
@@ -384,7 +384,7 @@ public class MonoidSolver extends BaseEqualitySolver {
         lastArgument = factory.appBuilder(factory.ref(meta.ext.concat.getRef())).app(expr1).app(expr2).build();
       }
     } else {
-      lastArgument = factory.ref(meta.ext.prelude.getIdpRef());
+      lastArgument = factory.ref(typechecker.getPrelude().getIdpRef());
     }
 
     ConcreteAppBuilder builder = factory.appBuilder(factory.ref((isCat ? meta.catTermsEq : semilattice ? meta.semilatticeTermsEq : commutative ? meta.commTermsEq : meta.termsEq).getRef()))
@@ -496,7 +496,7 @@ public class MonoidSolver extends BaseEqualitySolver {
         }
 
         for (int i = rhsNF.size() - 1; i >= 0; --i) {
-          newWord.add(0, rhsNF.get(i));
+          newWord.addFirst(rhsNF.get(i));
         }
 
         if (subwordToReplace.size() > 1) {
@@ -524,7 +524,7 @@ public class MonoidSolver extends BaseEqualitySolver {
       }
 
       if (proofTerm == null) {
-        proofTerm = factory.ref(meta.ext.prelude.getIdpRef());
+        proofTerm = factory.ref(typechecker.getPrelude().getIdpRef());
       } else {
         ConcreteExpression sortProof = factory.appBuilder(factory.ref(meta.sortDef.getRef())).app(computeNFTerm(curWord)).build();
         proofTerm = factory.app(factory.ref(meta.ext.concat.getRef()), true, Arrays.asList(proofTerm, sortProof));
@@ -557,11 +557,11 @@ public class MonoidSolver extends BaseEqualitySolver {
         return false;
       }
       List<ConcreteExpression> args = singletonList(binding != null ? factory.ref(binding) : factory.core(null, typed));
-      return (!isLDiv || typeToRule(typechecker.typecheck(factory.app(factory.ref(meta.ldiv.getPersonalFields().get(0).getRef()), false, args), null), null, true, rules)) &&
-        (!isRDiv || typeToRule(typechecker.typecheck(factory.app(factory.ref(meta.rdiv.getPersonalFields().get(0).getRef()), false, args), null), null, true, rules));
+      return (!isLDiv || typeToRule(typechecker.typecheck(factory.app(factory.ref(meta.ldiv.getPersonalFields().getFirst().getRef()), false, args), null), null, true, rules)) &&
+        (!isRDiv || typeToRule(typechecker.typecheck(factory.app(factory.ref(meta.rdiv.getPersonalFields().getFirst().getRef()), false, args), null), null, true, rules));
     }
 
-    if (!typechecker.compare(eq.getDefCallArguments().get(0), getValuesType(), CMP.EQ, refExpr, false, true, false)) {
+    if (!typechecker.compare(eq.getDefCallArguments().getFirst(), getValuesType(), CMP.EQ, refExpr, false, true, false)) {
       return false;
     }
 
@@ -661,7 +661,7 @@ public class MonoidSolver extends BaseEqualitySolver {
 
   private ConcreteExpression computeNFTerm(List<Integer> nf) {
     if (isCat) {
-      ConcreteExpression result = factory.appBuilder(factory.ref(meta.nilCatNF.getRef())).app(factory.ref(meta.ext.prelude.getIdpRef())).build();
+      ConcreteExpression result = factory.appBuilder(factory.ref(meta.nilCatNF.getRef())).app(factory.ref(typechecker.getPrelude().getIdpRef())).build();
       ConcreteExpression hdata = factory.appBuilder(factory.ref(meta.HDataFunc.getRef())).app(factory.ref(dataRef), false).build();
       ConcreteExpression vdata = factory.appBuilder(factory.ref(meta.VDataFunc.getRef())).app(factory.ref(dataRef), false).build();
       Integer domNF = null;
@@ -673,7 +673,7 @@ public class MonoidSolver extends BaseEqualitySolver {
           domNF = dom;
         }
         result = factory.appBuilder(factory.ref(meta.consCatNF.getRef()))
-                //.app(factory.ref(meta.ext.prelude.getNat().getRef()), false)
+                //.app(factory.ref(typechecker.getPrelude().getNat().getRef()), false)
                 .app(vdata, false)
                 .app(factory.number(domNF), false)
                 .app(factory.number(codom), false)
@@ -823,11 +823,11 @@ public class MonoidSolver extends BaseEqualitySolver {
                   .app(factory.number(dom), false)
                   .app(factory.number(cod), false)
                   .app(hdata, false)
-                  .app(factory.ref(meta.ext.prelude.getIdpRef()))
+                  .app(factory.ref(typechecker.getPrelude().getIdpRef()))
                   .build();
         }
       }
-      return isCat ? factory.app(factory.ref(meta.idCTerm.getRef()), true, singletonList(factory.ref(meta.ext.prelude.getIdpRef()))) : factory.ref(meta.ideMTerm.getRef());
+      return isCat ? factory.app(factory.ref(meta.idCTerm.getRef()), true, singletonList(factory.ref(typechecker.getPrelude().getIdpRef()))) : factory.ref(meta.ideMTerm.getRef());
     }
 
 
@@ -836,7 +836,7 @@ public class MonoidSolver extends BaseEqualitySolver {
       List<ConcreteExpression> cArgs = new ArrayList<>();
       List<ConcreteExpression> implArgs = new ArrayList<>();
       var left = computeTerm(args.get(args.size() - 2), nf);
-      var right = computeTerm(args.get(args.size() - 1), nf);
+      var right = computeTerm(args.getLast(), nf);
       if (isCat) {
         if (dom != -1 && cod != -1) {
           implArgs.add(vdata);

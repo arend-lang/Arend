@@ -18,7 +18,6 @@ import org.arend.ext.ui.ArendQuery;
 import org.arend.ext.ui.ArendSession;
 import org.arend.ext.ui.ArendUI;
 import org.arend.ext.variable.VariableRenamer;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,12 +28,6 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class ConstructorGoalSolver implements InteractiveGoalSolver {
-  private final StdExtension ext;
-
-  public ConstructorGoalSolver(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public @NotNull String getShortDescription() {
     return "Replace with constructor";
@@ -48,7 +41,7 @@ public class ConstructorGoalSolver implements InteractiveGoalSolver {
   @Override
   public void solve(@NotNull ExpressionTypechecker typechecker, @NotNull ConcreteGoalExpression goalExpression, @Nullable CoreExpression expectedType, @NotNull ArendUI ui, @NotNull Consumer<ConcreteExpression> callback) {
     CoreExpression type = expectedType == null ? null : Utils.unfoldType(expectedType.normalize(NormalizationMode.WHNF));
-    ConcreteFactory factory = ext.factory.withData(goalExpression.getData());
+    ConcreteFactory factory = typechecker.getFactory().withData(goalExpression.getData());
 
     ConcreteExpression result;
     if (type instanceof CoreSigmaExpression) {
@@ -61,17 +54,16 @@ public class ConstructorGoalSolver implements InteractiveGoalSolver {
       List<CoreParameter> params = new ArrayList<>();
       type.getPiParameters(params);
       List<ConcreteParameter> cParams = new ArrayList<>(params.size());
-      VariableRenamer renamer = ext.renamerFactory.variableRenamer();
+      VariableRenamer renamer = typechecker.getVariableRenameFactory().variableRenamer();
       List<CoreBinding> freeVars = typechecker.getFreeBindingsList();
       for (CoreParameter param : params) {
         cParams.add(factory.param(param.isExplicit(), factory.local(renamer.generateFreshName(param.getBinding(), freeVars))));
         freeVars.add(param.getBinding());
       }
       result = factory.lam(cParams, factory.goal());
-    } else if (type instanceof CoreClassCallExpression) {
-      Boolean isEmptyArray = Utils.isArrayEmpty(type, ext);
+    } else if (type instanceof CoreClassCallExpression classCall) {
+      Boolean isEmptyArray = Utils.isArrayEmpty(type, typechecker.getPrelude());
       if (isEmptyArray == null) {
-        CoreClassCallExpression classCall = (CoreClassCallExpression) type;
         List<ConcreteClassElement> classElements = new ArrayList<>();
         for (CoreClassField field : classCall.getDefinition().getNotImplementedFields()) {
           if (!classCall.isImplementedHere(field)) {
@@ -80,15 +72,15 @@ public class ConstructorGoalSolver implements InteractiveGoalSolver {
         }
         result = factory.newExpr(factory.classExt(factory.ref(classCall.getDefinition().getRef()), classElements));
       } else if (isEmptyArray) {
-        result = factory.ref(ext.prelude.getEmptyArrayRef());
+        result = factory.ref(typechecker.getPrelude().getEmptyArrayRef());
       } else {
-        result = factory.app(factory.ref(ext.prelude.getArrayConsRef()), true, Arrays.asList(factory.goal(), factory.goal()));
+        result = factory.app(factory.ref(typechecker.getPrelude().getArrayConsRef()), true, Arrays.asList(factory.goal(), factory.goal()));
       }
     } else if (type instanceof CoreDataCallExpression dataCall) {
-      if (dataCall.getDefinition() == ext.prelude.getPath()) {
+      if (dataCall.getDefinition() == typechecker.getPrelude().getPath()) {
         CoreFunCallExpression eq = dataCall.toEquality();
         if (eq != null && eq.getDefCallArguments().get(1).compare(eq.getDefCallArguments().get(2), CMP.EQ)) {
-          callback.accept(factory.ref(ext.prelude.getIdpRef()));
+          callback.accept(factory.ref(typechecker.getPrelude().getIdpRef()));
           return;
         }
       }
@@ -98,7 +90,7 @@ public class ConstructorGoalSolver implements InteractiveGoalSolver {
       if (constructors.isEmpty()) {
         result = null;
       } else if (constructors.size() == 1) {
-        result = Utils.addArguments(factory.ref(constructors.get(0).getRef()), factory, Utils.numberOfExplicitParameters(constructors.get(0)), true);
+        result = Utils.addArguments(factory.ref(constructors.getFirst().getRef()), factory, Utils.numberOfExplicitParameters(constructors.getFirst()), true);
       } else {
         ArendSession session = ui.newSession();
         session.setDescription("Goal");

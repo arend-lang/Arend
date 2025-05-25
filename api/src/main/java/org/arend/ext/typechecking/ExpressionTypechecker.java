@@ -1,6 +1,8 @@
 package org.arend.ext.typechecking;
 
+import org.arend.ext.ArendPrelude;
 import org.arend.ext.FreeBindingsModifier;
+import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.pattern.ConcreteNumberPattern;
 import org.arend.ext.concrete.ConcreteParameter;
 import org.arend.ext.concrete.pattern.ConcretePattern;
@@ -29,6 +31,7 @@ import org.arend.ext.prettifier.ExpressionPrettifier;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.userData.UserDataHolder;
 import org.arend.ext.util.Pair;
+import org.arend.ext.variable.VariableRenamerFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -338,6 +341,12 @@ public interface ExpressionTypechecker extends UserDataHolder {
    * Returns the definitions corresponding to the given reference.
    */
   @Nullable CoreDefinition getCoreDefinition(@Nullable ArendRef ref);
+
+  @NotNull ConcreteFactory getFactory();
+
+  @NotNull ArendPrelude getPrelude();
+
+  @NotNull VariableRenamerFactory getVariableRenameFactory();
 
   /**
    * Checks if the type-checking was cancelled.

@@ -53,7 +53,7 @@ public class EqualitySolver extends BaseEqualitySolver {
     if (equality == null) {
       return false;
     }
-    setValuesType(equality.getDefCallArguments().get(0));
+    setValuesType(equality.getDefCallArguments().getFirst());
     return true;
   }
 
@@ -96,7 +96,7 @@ public class EqualitySolver extends BaseEqualitySolver {
       return algebraSolver.solve(hint, leftExpr, rightExpr, errorReporter);
     }
 
-    ValuesRelationClosure closure = new ValuesRelationClosure(values, new EquivalenceClosure<>(factory.ref(meta.ext.prelude.getIdpRef()), factory.ref(meta.ext.inv.getRef()), factory.ref(meta.ext.concat.getRef()), factory));
+    ValuesRelationClosure closure = new ValuesRelationClosure(values, new EquivalenceClosure<>(factory.ref(typechecker.getPrelude().getIdpRef()), factory.ref(meta.ext.inv.getRef()), factory.ref(meta.ext.concat.getRef()), factory));
     if (useHypotheses) {
       ContextHelper helper = new ContextHelper(hint);
       for (CoreBinding binding : helper.getAllBindings(typechecker)) {

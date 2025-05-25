@@ -6,7 +6,6 @@ import org.arend.ext.core.expr.*;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.typechecking.*;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,12 +15,6 @@ import java.util.Collections;
 import java.util.List;
 
 public class StdGoalSolver implements GoalSolver {
-  private final StdExtension ext;
-
-  public StdGoalSolver(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public @NotNull CheckGoalResult checkGoal(@NotNull ExpressionTypechecker typechecker, @NotNull ConcreteGoalExpression goalExpression, @Nullable CoreExpression expectedType) {
     ConcreteExpression expr = goalExpression.getExpression();
@@ -36,7 +29,7 @@ public class StdGoalSolver implements GoalSolver {
     int expectedParams = Utils.numberOfExplicitPiParameters(expectedType);
 
     Object exprData = expr.getData();
-    ConcreteFactory factory = ext.factory.withData(exprData);
+    ConcreteFactory factory = typechecker.getFactory().withData(exprData);
     ErrorReporter errorReporter = typechecker.getErrorReporter();
     List<ConcreteExpression> args = Utils.addArguments(expr, typechecker, factory, expectedParams, true);
     ConcreteExpression extExpr = args.isEmpty() ? expr : factory.app(expr, true, args);
@@ -55,6 +48,6 @@ public class StdGoalSolver implements GoalSolver {
 
   @Override
   public @NotNull Collection<? extends InteractiveGoalSolver> getAdditionalSolvers() {
-    return Collections.singletonList(new ConstructorGoalSolver(ext));
+    return Collections.singletonList(new ConstructorGoalSolver());
   }
 }

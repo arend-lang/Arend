@@ -140,13 +140,13 @@ public class SIPMeta extends BaseMetaDefinition {
     ConcreteExpression eInv = factory.app(factory.ref(ext.sipMeta.isoInv.getRef()), false, Collections.singletonList(factory.ref(isoRef)));
     ConcreteExpression eFuncInv = factory.app(factory.ref(ext.sipMeta.isoFuncInv.getRef()), false, Collections.singletonList(factory.ref(isoRef)));
     ConcreteExpression eInvFunc = factory.app(factory.ref(ext.sipMeta.isoInvFunc.getRef()), false, Collections.singletonList(factory.ref(isoRef)));
-    ConcreteExpression eFuncInvPath = factory.app(factory.ref(ext.prelude.getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.app(factory.ref(ext.sipMeta.homFunc.getRef()), false, Collections.singletonList(factory.app(factory.ref(ext.prelude.getAtRef()), true, Arrays.asList(eFuncInv, factory.ref(iRef))))))));
-    ConcreteExpression eInvFuncPath = factory.app(factory.ref(ext.prelude.getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.app(factory.ref(ext.sipMeta.homFunc.getRef()), false, Collections.singletonList(factory.app(factory.ref(ext.prelude.getAtRef()), true, Arrays.asList(eInvFunc, factory.ref(iRef))))))));
+    ConcreteExpression eFuncInvPath = factory.app(factory.ref(typechecker.getPrelude().getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.app(factory.ref(ext.sipMeta.homFunc.getRef()), false, Collections.singletonList(factory.app(factory.ref(typechecker.getPrelude().getAtRef()), true, Arrays.asList(eFuncInv, factory.ref(iRef))))))));
+    ConcreteExpression eInvFuncPath = factory.app(factory.ref(typechecker.getPrelude().getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.app(factory.ref(ext.sipMeta.homFunc.getRef()), false, Collections.singletonList(factory.app(factory.ref(typechecker.getPrelude().getAtRef()), true, Arrays.asList(eInvFunc, factory.ref(iRef))))))));
 
     List<ConcreteClassElement> obFields = new ArrayList<>();
     for (CoreClassField field : ((CoreClassCallExpression) ob).getDefinition().getNotImplementedFields()) {
       if (!((CoreClassCallExpression) ob).isImplementedHere(field)) {
-        ConcreteExpression arg = factory.app(factory.ref(ext.prelude.getAtRef()), true, Arrays.asList(factory.proj(factory.ref(sipRef), field == ext.sipMeta.homFunc ? 0 : 1), factory.ref(iRef)));
+        ConcreteExpression arg = factory.app(factory.ref(typechecker.getPrelude().getAtRef()), true, Arrays.asList(factory.proj(factory.ref(sipRef), field == ext.sipMeta.homFunc ? 0 : 1), factory.ref(iRef)));
         obFields.add(factory.implementation(field.getRef(), field == ext.sipMeta.homFunc ? arg : factory.app(factory.ref(field.getRef()), false, Collections.singletonList(arg))));
       }
     }
@@ -165,19 +165,19 @@ public class SIPMeta extends BaseMetaDefinition {
       argument,
       factory.newExpr(factory.app(factory.ref(ext.sipMeta.Iso.getRef()), true, Arrays.asList(eFunc, eInv, eInvFuncPath, eFuncInvPath))),
       eDom, eCod, eFunc, eInv)));
-    ConcreteLetClause letClause = factory.letClause(pathRef, Collections.emptyList(), null, factory.app(factory.ref(ext.prelude.getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.newExpr(factory.classExt(factory.core(obTyped), obFields))))));
+    ConcreteLetClause letClause = factory.letClause(pathRef, Collections.emptyList(), null, factory.app(factory.ref(typechecker.getPrelude().getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.newExpr(factory.classExt(factory.core(obTyped), obFields))))));
 
     return typechecker.typecheck(factory.appBuilder(factory.ref(ext.sipMeta.makeUnivalence.getRef())).app(factory.thisExpr(), false).app(factory.lam(Collections.singletonList(factory.param(isoRef)), factory.letExpr(true, false, Collections.singletonList(haveClause), factory.letExpr(false, false, Collections.singletonList(letClause), factory.tuple(factory.ref(pathRef), factory.app(factory.ref(exts), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(extRef)),
       factory.app(factory.ref(ext.concat.getRef()), true, Arrays.asList(
         factory.appBuilder(factory.ref(ext.Jl.getRef()))
           .app(factory.core(obTyped), false)
-          .app(factory.lam(Arrays.asList(factory.param(jRef1), factory.param(jRef2)), factory.app(factory.ref(ext.prelude.getEqualityRef()), true, Arrays.asList(
+          .app(factory.lam(Arrays.asList(factory.param(jRef1), factory.param(jRef2)), factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, Arrays.asList(
             factory.appBuilder(factory.ref(ext.sipMeta.homFunc.getRef()))
               .app(factory.app(factory.ref(ext.transport.getRef()), true, Arrays.asList(factory.lam(Collections.singletonList(factory.param(transportRef)), factory.app(factory.core(homTyped), true, Arrays.asList(eDom, factory.ref(transportRef)))), factory.ref(jRef2), factory.app(factory.core(idTyped), true, Collections.singletonList(eDom)))), false)
               .app(factory.ref(extRef))
               .build(),
-            factory.app(factory.ref(ext.prelude.getCoerceRef()), true, Arrays.asList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.app(factory.ref(ext.prelude.getAtRef()), true, Arrays.asList(factory.ref(jRef2), factory.ref(iRef)))), factory.ref(extRef), factory.ref(ext.prelude.getRightRef())))))))
-          .app(factory.ref(ext.prelude.getIdpRef()))
+            factory.app(factory.ref(typechecker.getPrelude().getCoerceRef()), true, Arrays.asList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.app(factory.ref(typechecker.getPrelude().getAtRef()), true, Arrays.asList(factory.ref(jRef2), factory.ref(iRef)))), factory.ref(extRef), factory.ref(typechecker.getPrelude().getRightRef())))))))
+          .app(factory.ref(typechecker.getPrelude().getIdpRef()))
           .app(factory.ref(pathRef))
           .build(),
         factory.app(factory.proj(factory.ref(sipRef), 2), true, Collections.singletonList(factory.ref(extRef))))))))))))).build(), contextData.getExpectedType());

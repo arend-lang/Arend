@@ -29,7 +29,7 @@ public abstract class LocalSimplificationRuleBase implements SimplificationRule 
 
   public LocalSimplificationRuleBase(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker) {
     this.ext = ext;
-    this.factory = ext.factory.withData(refExpr);
+    this.factory = typechecker.getFactory().withData(refExpr);
     this.refExpr = refExpr;
     this.typechecker = typechecker;
     this.classCall = classCall;
@@ -95,7 +95,7 @@ public abstract class LocalSimplificationRuleBase implements SimplificationRule 
     var simplifyRes = simplifySubexpression(subexpr);
     if (simplifyRes != null) {
       var var = factory.local("i");
-      var typeParam = factory.ref(ext.prelude.getIntervalRef());
+      var typeParam = factory.ref(typechecker.getPrelude().getIntervalRef());
       ConcreteExpression lam = factory.lam(Collections.singletonList(factory.param(true, Collections.singletonList(var), typeParam)),
               factory.meta("\\lam i => {!}", new MetaDefinition() {
                 @Override

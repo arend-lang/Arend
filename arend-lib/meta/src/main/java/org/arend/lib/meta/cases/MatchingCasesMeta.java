@@ -20,7 +20,6 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.error.IgnoredArgumentError;
 import org.arend.lib.error.TypeError;
 import org.arend.lib.meta.util.ReplaceSubexpressionsMeta;
@@ -35,12 +34,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class MatchingCasesMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
   private final CasesMetaResolver casesResolver;
   @Dependency private ArendRef constructor;
 
-  public MatchingCasesMeta(StdExtension ext, CasesMetaResolver casesResolver) {
-    this.ext = ext;
+  public MatchingCasesMeta(CasesMetaResolver casesResolver) {
     this.casesResolver = casesResolver;
   }
 
@@ -330,7 +327,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
                   }
                 }
               }
-              row = PatternUtils.replaceParameters(row, typechecker.substituteParameters(patternsParams, levelSubst, substExprs), ext.renamerFactory);
+              row = PatternUtils.replaceParameters(row, typechecker.substituteParameters(patternsParams, levelSubst, substExprs), typechecker.getVariableRenameFactory());
             }
             block.add(row);
           }
@@ -423,7 +420,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
       for (Boolean addPath : addPathList) {
         if (!param.hasNext()) break;
         if (addPath) {
-          CoreParameter addPathParam = typechecker.typecheckParameters(Collections.singletonList(factory.param(true, factory.app(factory.ref(ext.prelude.getEqualityRef()), true, factory.core(allMatchedArgs.get(i)), factory.core(param.getBinding().makeReference().computeTyped())))));
+          CoreParameter addPathParam = typechecker.typecheckParameters(Collections.singletonList(factory.param(true, factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, factory.core(allMatchedArgs.get(i)), factory.core(param.getBinding().makeReference().computeTyped())))));
           if (addPathParam == null) return null;
           addPathMap.put(param, addPathParam);
         }
@@ -494,7 +491,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
                 var pair = new Pair<>(i, j);
                 indicesToAbstract.add(pair);
                 expressionsToAbstract.add(expr);
-                argRefs.computeIfAbsent(pair, k -> factory.local(ext.renamerFactory.getNameFromType(arg.getType(), null)));
+                argRefs.computeIfAbsent(pair, k -> factory.local(typechecker.getVariableRenameFactory().getNameFromType(arg.getType(), null)));
               } else {
                 tc.loadSavedState();
               }
@@ -574,7 +571,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
           return null;
         }
 
-        ArendRef ref = factory.local(ext.renamerFactory.getNameFromType(resultType, null));
+        ArendRef ref = factory.local(typechecker.getVariableRenameFactory().getNameFromType(resultType, null));
         lambdaParams.add(factory.param(ref));
         lambdaTypesParams.add(factory.param(Collections.singletonList(ref), needSubst ? factory.meta("subst_meta", new SubstitutionMeta(resultType, levelSubst, substitution)) : factory.core(data.expression.computeType().computeTyped())));
         argRefs.put(new Pair<>(i + dataList.size() - resultDataList.size(), -1), ref);
@@ -607,7 +604,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
     if (additionalParameters != null) {
       List<CorePattern> additionalPatterns = new ArrayList<>();
       for (CoreParameter param = additionalParameters; param.hasNext(); param = param.getNext()) {
-        additionalPatterns.add(new ArendPattern(param.getBinding(), null, Collections.emptyList(), null, ext.renamerFactory));
+        additionalPatterns.add(new ArendPattern(param.getBinding(), null, Collections.emptyList(), null, typechecker.getVariableRenameFactory()));
       }
       for (List<CorePattern> row : requiredBlock) {
         row.addAll(additionalPatterns);
@@ -623,7 +620,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
       for (Boolean addPath : addPathList) {
         if (addPath) {
           param = param.getNext();
-          addPathPatterns.add(new ArendPattern(param.getBinding(), null, Collections.emptyList(), null, ext.renamerFactory));
+          addPathPatterns.add(new ArendPattern(param.getBinding(), null, Collections.emptyList(), null, typechecker.getVariableRenameFactory()));
         } else {
           addPathPatterns.add(null);
         }
@@ -773,12 +770,12 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
               PatternUtils.getReferences(actualClauses.get(pair.proj1).getPatterns(), refs);
               CoreParameter param = lamParams;
               for (ArendRef ref : refs) {
-                cParams.add(factory.param(ref != null ? ref : factory.local(ext.renamerFactory.getNameFromBinding(param.getBinding(), null))));
+                cParams.add(factory.param(ref != null ? ref : factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(param.getBinding(), null))));
                 param = param.getNext();
               }
             } else {
               for (CoreParameter param = lamParams; param.hasNext(); param = param.getNext()) {
-                cParams.add(factory.param(factory.local(ext.renamerFactory.getNameFromBinding(param.getBinding(), null))));
+                cParams.add(factory.param(factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(param.getBinding(), null))));
               }
             }
 
@@ -837,7 +834,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
         }
 
         Map<CoreBinding, ArendRef> bindings = new HashMap<>();
-        List<ConcretePattern> cPatterns = PatternUtils.toConcrete(refinedRows.get(i), null, ext.renamerFactory, factory, bindings, null);
+        List<ConcretePattern> cPatterns = PatternUtils.toConcrete(refinedRows.get(i), null, typechecker.getVariableRenameFactory(), factory, bindings, null);
         CoreParameter param = lamParams;
         ConcreteExpression rhs = makeLet ? factory.ref(letRef) : cExpr;
         if (param != null) {
@@ -858,7 +855,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
         for (CasesMetaResolver.ArgParameters argParameters : argParamsList) {
           argParameters.addAsRef(asRefs);
         }
-        resultClauses.add(pair.proj1 < actualClauses.size() ? actualClauses.get(pair.proj1) : factory.clause(PatternUtils.toConcrete(actualRow, asRefs, ext.renamerFactory, factory, null, null), isAbsurd ? null : defaultExpr));
+        resultClauses.add(pair.proj1 < actualClauses.size() ? actualClauses.get(pair.proj1) : factory.clause(PatternUtils.toConcrete(actualRow, asRefs, typechecker.getVariableRenameFactory(), factory, null, null), isAbsurd ? null : defaultExpr));
       }
     }
 
@@ -887,7 +884,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
 
         if (index == null) {
           TypedExpression typed = dataList.get(pair.proj1).matchedArgs.get(pair.proj2);
-          ArendRef ref = factory.local(ext.renamerFactory.getNameFromType(typed.getType(), null));
+          ArendRef ref = factory.local(typechecker.getVariableRenameFactory().getNameFromType(typed.getType(), null));
           ConcreteExpression refExpr = factory.ref(ref);
           if (abstractedArgs.contains(pair)) {
             caseRefExprs.add(refExpr);
@@ -904,12 +901,12 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
             })
           ));
           if (totalArgs < addPathList.size() && addPathList.get(totalArgs)) {
-            ConcreteAppBuilder builder = factory.appBuilder(factory.ref(ext.prelude.getEqualityRef()));
+            ConcreteAppBuilder builder = factory.appBuilder(factory.ref(typechecker.getPrelude().getEqualityRef()));
             CoreExpression type = typed.getType().normalize(NormalizationMode.WHNF);
-            if (type instanceof CoreDataCallExpression && ((CoreDataCallExpression) type).getDefinition() == ext.prelude.getFin()) {
-              builder.app(factory.ref(ext.prelude.getNatRef()), false);
+            if (type instanceof CoreDataCallExpression && ((CoreDataCallExpression) type).getDefinition() == typechecker.getPrelude().getFin()) {
+              builder.app(factory.ref(typechecker.getPrelude().getNatRef()), false);
             }
-            caseArgs.add(factory.caseArg(factory.ref(ext.prelude.getIdpRef()), null, builder.app(factory.core(typed)).app(factory.ref(ref)).build()));
+            caseArgs.add(factory.caseArg(factory.ref(typechecker.getPrelude().getIdpRef()), null, builder.app(factory.core(typed)).app(factory.ref(ref)).build()));
           }
           totalArgs++;
           exprs.add(typed.getExpression());
@@ -934,7 +931,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
       ArendRef ref = argParamsList.get(i).name != null ? argParamsList.get(i).name : factory.local("arg" + (i + 1));
       caseArgs.add(factory.caseArg(factory.core(additionalArgs.get(i).proj1), ref, factory.meta("case_additional_arg_" + (i + 1), new ReplaceSubexpressionsMeta(additionalArgs.get(i).proj2, substPairs))));
       if (totalArgs < addPathList.size() && addPathList.get(totalArgs)) {
-        caseArgs.add(factory.caseArg(factory.ref(ext.prelude.getIdpRef()), null, factory.app(factory.ref(ext.prelude.getEqualityRef()), true, factory.core(additionalArgs.get(i).proj1), factory.ref(ref))));
+        caseArgs.add(factory.caseArg(factory.ref(typechecker.getPrelude().getIdpRef()), null, factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, factory.core(additionalArgs.get(i).proj1), factory.ref(ref))));
       }
       totalArgs++;
       substPairs.add(new Pair<>(additionalArgs.get(i).proj1, ref));

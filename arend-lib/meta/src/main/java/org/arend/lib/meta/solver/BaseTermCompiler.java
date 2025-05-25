@@ -43,7 +43,7 @@ public abstract class BaseTermCompiler {
 
   protected BaseTermCompiler(CoreClassCallExpression classCall, boolean isRing, boolean isLattice, TypedExpression instance, RingKind kind, StdExtension ext, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
     meta = ext.equationMeta;
-    factory = ext.factory.withData(marker);
+    factory = typechecker.getFactory().withData(marker);
     zroMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, isLattice ? meta.bottom : meta.ext.zro, typechecker, factory, marker, ext, 0);
     ideMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, isLattice ? meta.top : ext.ide, typechecker, factory, marker, ext, 0);
     addMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, isLattice ? meta.join : meta.plus, typechecker, factory, marker, ext, 2);
@@ -51,7 +51,7 @@ public abstract class BaseTermCompiler {
     natCoefMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.natCoef, typechecker, factory, marker, ext, 1);
     negativeMatcher = isRing ? FunctionMatcher.makeFieldMatcher(classCall, instance, meta.negative, typechecker, factory, marker, ext, 1) : null;
     ratAlgebraMatcher = kind == RingKind.RAT_ALG ? FunctionMatcher.makeFieldMatcher(classCall, instance, meta.ext.linearSolverMeta.coefMap, typechecker, factory, marker, ext, 1) : null;
-    minusMatcher = toInt ? new DefinitionFunctionMatcher(ext.prelude.getMinus(), 2) : null;
+    minusMatcher = toInt ? new DefinitionFunctionMatcher(typechecker.getPrelude().getMinus(), 2) : null;
     this.values = values;
     this.kind = kind;
     BaseTermCompiler subTermCompiler = null;
@@ -98,8 +98,8 @@ public abstract class BaseTermCompiler {
   protected Pair<Boolean, CoreExpression> checkInt(CoreExpression expr) {
     if (expr instanceof CoreConCallExpression) {
       CoreConstructor constructor = ((CoreConCallExpression) expr).getDefinition();
-      if (constructor == meta.ext.prelude.getPos() || constructor == meta.ext.prelude.getNeg()) {
-        return new Pair<>(constructor == meta.ext.prelude.getNeg(), ((CoreConCallExpression) expr).getDefCallArguments().get(0));
+      if (constructor == typechecker.getPrelude().getPos() || constructor == typechecker.getPrelude().getNeg()) {
+        return new Pair<>(constructor == typechecker.getPrelude().getNeg(), ((CoreConCallExpression) expr).getDefCallArguments().getFirst());
       }
     } else if (expr instanceof CoreIntegerExpression) {
       return new Pair<>(false, expr);

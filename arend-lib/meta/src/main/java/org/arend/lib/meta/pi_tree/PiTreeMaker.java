@@ -18,7 +18,6 @@ import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.TypedExpression;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.util.SubstitutionMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -26,7 +25,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class PiTreeMaker {
-  private final StdExtension ext;
   private final ArendRef transportRef;
   private final ExpressionTypechecker typechecker;
   private final ConcreteFactory factory;
@@ -37,8 +35,7 @@ public class PiTreeMaker {
   private Set<CoreBinding> substBindings;
   private int index = 1;
 
-  public PiTreeMaker(StdExtension ext, ArendRef transportRef, ExpressionTypechecker typechecker, ConcreteFactory factory, List<ConcreteLetClause> clauses) {
-    this.ext = ext;
+  public PiTreeMaker(ArendRef transportRef, ExpressionTypechecker typechecker, ConcreteFactory factory, List<ConcreteLetClause> clauses) {
     this.transportRef = transportRef;
     this.typechecker = typechecker;
     this.factory = factory;
@@ -218,7 +215,7 @@ public class PiTreeMaker {
     List<ConcreteParameter> params = new ArrayList<>(n);
     List<ConcreteExpression> args = new ArrayList<>(n);
     for (int i = 0; i < n; i++) {
-      ArendRef ref = factory.local(ext.renamerFactory.getNameFromBinding(tree.subtrees.get(i).parameter.getBinding(), "x"));
+      ArendRef ref = factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(tree.subtrees.get(i).parameter.getBinding(), "x"));
       params.add(factory.param(false, ref));
       args.add(factory.ref(ref));
     }
@@ -247,7 +244,7 @@ public class PiTreeMaker {
         List<ConcreteExpression> args = new ArrayList<>();
         for (Integer index : tree.indices) {
           if (index < pathRefs.size()) {
-            args.add(pathRefs.get(index).applyAt(coeRef, factory, ext));
+            args.add(pathRefs.get(index).applyAt(coeRef, factory, typechecker.getPrelude()));
           } else if (headArgs != null) {
             args.add(headArgs.get(index - pathRefs.size()).getExpression());
           }
@@ -255,7 +252,7 @@ public class PiTreeMaker {
         return typechecker.typecheck(headArgs != null ? factory.app(useLet ? tree.getAltHead() : tree.head, true, args) : makeConcrete((PiTreeRoot) tree, useLet, args), null);
       }
     }));
-    return factory.app(factory.ref(ext.prelude.getCoerceRef()), true, Arrays.asList(coeLam, arg, factory.ref(ext.prelude.getRightRef())));
+    return factory.app(factory.ref(typechecker.getPrelude().getCoerceRef()), true, Arrays.asList(coeLam, arg, factory.ref(typechecker.getPrelude().getRightRef())));
   }
 
   private ConcreteExpression etaExpand(BasePiTree tree, ConcreteExpression fun, List<ConcreteArgument> args, List<ConcreteArgument> topArgs, boolean insertCoe, boolean useLet, List<PathExpression> pathRefs) {
@@ -294,7 +291,7 @@ public class PiTreeMaker {
     List<ConcreteArgument> piRefs = new ArrayList<>(tree.subtrees.size());
     List<ConcreteParameter> piParams = new ArrayList<>(tree.subtrees.size());
     for (int i = 0; i < tree.subtrees.size(); i++) {
-      ArendRef piRef = factory.local(ext.renamerFactory.getNameFromBinding(tree.subtrees.get(i).parameter.getBinding(), "s"));
+      ArendRef piRef = factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(tree.subtrees.get(i).parameter.getBinding(), "s"));
       ConcreteExpression piRefExpr = factory.ref(piRef);
       leftRefs.add(piRefExpr);
       rightRefs.add(piRefExpr);
@@ -316,6 +313,6 @@ public class PiTreeMaker {
     }
     args.add(factory.arg(leftArg, true));
     args.add(factory.arg(rightArg, true));
-    return factory.pi(piParams, factory.app(factory.ref(ext.prelude.getEqualityRef()), args));
+    return factory.pi(piParams, factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), args));
   }
 }

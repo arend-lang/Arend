@@ -158,7 +158,7 @@ public class ExistsMeta implements MetaResolver, MetaDefinition {
         Pair<AbstractedExpression, TypedExpression> pair = typechecker.typecheckAbstracted(cType, null, abstracted, typed -> {
           typed = typed.normalizeType();
           types[0] = typed.getType();
-          if (!(types[0] instanceof CoreUniverseExpression || types[0] instanceof CorePiExpression || types[0] instanceof CoreClassCallExpression && ((CoreClassCallExpression) types[0]).getDefinition() == ext.prelude.getDArray())) {
+          if (!(types[0] instanceof CoreUniverseExpression || types[0] instanceof CorePiExpression || types[0] instanceof CoreClassCallExpression && ((CoreClassCallExpression) types[0]).getDefinition() == typechecker.getPrelude().getDArray())) {
             typed = typechecker.coerceToType(typed, cType);
             if (typed == null) {
               if (!types[0].reportIfError(typechecker.getErrorReporter(), cType)) {
@@ -194,7 +194,7 @@ public class ExistsMeta implements MetaResolver, MetaDefinition {
         }
         int i = 0;
         for (ArendRef ref : paramRefList) {
-          sigmaRefs.add(ref != null ? ref : factory.local(ext.renamerFactory.getNameFromType(piParams.get(i % piParams.size()).getTypeExpr(), null)));
+          sigmaRefs.add(ref != null ? ref : factory.local(typechecker.getVariableRenameFactory().getNameFromType(piParams.get(i % piParams.size()).getTypeExpr(), null)));
           i++;
         }
         if (sigmaRefs.size() % piParams.size() != 0) {
@@ -231,13 +231,13 @@ public class ExistsMeta implements MetaResolver, MetaDefinition {
           }
           j++;
         }
-      } else if (type instanceof CoreClassCallExpression && ((CoreClassCallExpression) type).getDefinition() == ext.prelude.getDArray()) {
+      } else if (type instanceof CoreClassCallExpression && ((CoreClassCallExpression) type).getDefinition() == typechecker.getPrelude().getDArray()) {
         refs = new ArrayList<>(param.getRefList().size());
         for (ArendRef ignored : param.getRefList()) {
           refs.add(factory.local("j" + (arrayIndex == 0 ? "" : arrayIndex)));
           arrayIndex++;
         }
-        ConcreteParameter varParam = produceParam(param.isExplicit(), refs, factory.app(factory.ref(ext.prelude.getFinRef()), true, Collections.singletonList(factory.app(factory.ref(ext.prelude.getArrayLengthRef()), false, Collections.singletonList(aType)))), param.getData());
+        ConcreteParameter varParam = produceParam(param.isExplicit(), refs, factory.app(factory.ref(typechecker.getPrelude().getFinRef()), true, Collections.singletonList(factory.app(factory.ref(typechecker.getPrelude().getArrayLengthRef()), false, Collections.singletonList(aType)))), param.getData());
         varParams = Collections.singletonList(varParam);
         sigmaParams.add(varParam);
 
@@ -266,10 +266,10 @@ public class ExistsMeta implements MetaResolver, MetaDefinition {
         }
         List<Pair<ArendRef, CoreBinding>> list = new ArrayList<>(refs.size());
         for (int i = 0; i < refs.size(); i++) {
-          TypedExpression result = tc.typecheck(factory.app(factory.ref(ext.prelude.getArrayIndexRef()), true, Arrays.asList(factory.withData(cType.getData()).core(typedType), factory.ref(refs.get(i)))), null);
+          TypedExpression result = tc.typecheck(factory.app(factory.ref(typechecker.getPrelude().getArrayIndexRef()), true, Arrays.asList(factory.withData(cType.getData()).core(typedType), factory.ref(refs.get(i)))), null);
           if (result == null) return null;
           ArendRef ref = param.getRefList().get(i);
-          list.add(new Pair<>(ref, result.makeEvaluatingBinding(ref != null ? ref.getRefName() : ext.renamerFactory.getNameFromType(result.getType(), null))));
+          list.add(new Pair<>(ref, result.makeEvaluatingBinding(ref != null ? ref.getRefName() : typechecker.getVariableRenameFactory().getNameFromType(result.getType(), null))));
         }
         return tc.withFreeBindings(new FreeBindingsModifier().addRef(list), tc2 -> processParameters(newParams, newAbstracted, tc2));
       });

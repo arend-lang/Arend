@@ -36,7 +36,7 @@ public class StdLevelProver implements LevelProver {
     }
 
     return Utils.tryTypecheck(typechecker, tc -> {
-      ConcreteFactory factory = ext.factory.withData(marker.getData());
+      ConcreteFactory factory = typechecker.getFactory().withData(marker);
       ArendRef x = factory.local("x");
       ArendRef y = factory.local("y");
       ConcreteExpression result = proveProp(type, factory.ref(x), factory.ref(y), marker, factory, typechecker);
@@ -52,7 +52,7 @@ public class StdLevelProver implements LevelProver {
     }
 
     if (type instanceof CoreDataCallExpression) {
-      ConcreteExpression result = provePropDataType((CoreDataCallExpression) type, leftExpr, rightExpr, marker, factory);
+      ConcreteExpression result = provePropDataType((CoreDataCallExpression) type, leftExpr, rightExpr, marker, factory, typechecker);
       if (result != null) {
         return result;
       }
@@ -79,7 +79,7 @@ public class StdLevelProver implements LevelProver {
     return ext.contradictionMeta.check(null, null, true, marker, typechecker);
   }
 
-  private ConcreteExpression provePropDataType(CoreDataCallExpression dataCall, ConcreteReferenceExpression leftExpr, ConcreteReferenceExpression rightExpr, ConcreteSourceNode marker, ConcreteFactory factory) {
+  private ConcreteExpression provePropDataType(CoreDataCallExpression dataCall, ConcreteReferenceExpression leftExpr, ConcreteReferenceExpression rightExpr, ConcreteSourceNode marker, ConcreteFactory factory, ExpressionTypechecker typechecker) {
     if (!dataCall.getDefinition().getRecursiveDefinitions().isEmpty()) {
       return null;
     }
@@ -111,14 +111,14 @@ public class StdLevelProver implements LevelProver {
         List<ArendRef> refs1 = def1 == def2 ? new ArrayList<>() : null;
         List<ArendRef> refs2 = def1 == def2 ? new ArrayList<>() : null;
         for (CoreParameter param = con1.getParameters(); param.hasNext(); param = param.getNext()) {
-          ArendRef ref = factory.local(ext.renamerFactory.getNameFromBinding(param.getBinding(), null) + "1");
+          ArendRef ref = factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(param.getBinding(), null) + "1");
           subPatterns1.add(factory.refPattern(ref, null));
           if (refs1 != null) {
             refs1.add(ref);
           }
         }
         for (CoreParameter param = con2.getParameters(); param.hasNext(); param = param.getNext()) {
-          ArendRef ref = factory.local(ext.renamerFactory.getNameFromBinding(param.getBinding(), null) + "2");
+          ArendRef ref = factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(param.getBinding(), null) + "2");
           subPatterns2.add(factory.refPattern(ref, null));
           if (refs2 != null) {
             refs2.add(ref);
@@ -141,11 +141,11 @@ public class StdLevelProver implements LevelProver {
                   if (expr == null) {
                     return null;
                   }
-                  args.add(factory.arg(factory.app(factory.ref(ext.prelude.getAtRef()), true, Arrays.asList(expr, iExpr)), conParam.isExplicit()));
+                  args.add(factory.arg(factory.app(factory.ref(typechecker.getPrelude().getAtRef()), true, Arrays.asList(expr, iExpr)), conParam.isExplicit()));
                 }
-                result = factory.app(factory.ref(ext.prelude.getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.app(factory.ref(def1.getRef()), args))));
+                result = factory.app(factory.ref(typechecker.getPrelude().getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), factory.app(factory.ref(def1.getRef()), args))));
               } else {
-                result = factory.ref(ext.prelude.getIdpRef());
+                result = factory.ref(typechecker.getPrelude().getIdpRef());
               }
             } else {
               result = ext.contradictionMeta.check(null, null, true, marker, typechecker);
@@ -155,6 +155,6 @@ public class StdLevelProver implements LevelProver {
         })));
       }
     }
-    return factory.caseExpr(false, Arrays.asList(factory.caseArg(leftExpr, null), factory.caseArg(rightExpr, null)), factory.app(factory.ref(ext.prelude.getEqualityRef()), true, Arrays.asList(leftExpr, rightExpr)), null, clauses);
+    return factory.caseExpr(false, Arrays.asList(factory.caseArg(leftExpr, null), factory.caseArg(rightExpr, null)), factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, Arrays.asList(leftExpr, rightExpr)), null, clauses);
   }
 }

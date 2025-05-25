@@ -46,7 +46,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
 
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-    return checkCore(contextData.getArguments().isEmpty() ? null : contextData.getArguments().get(0).getExpression(), contextData.getExpectedType(), contextData.getExpectedType() != null, contextData.getMarker(), typechecker);
+    return checkCore(contextData.getArguments().isEmpty() ? null : contextData.getArguments().getFirst().getExpression(), contextData.getExpectedType(), contextData.getExpectedType() != null, contextData.getMarker(), typechecker);
   }
 
   private static class RType {
@@ -189,7 +189,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
 
     if (isEmpty(type)) {
       if (parameters.size() == 1) {
-        Triple triple = Triple.make(Utils.unfoldType(parameters.get(0).getTypeExpr().normalize(NormalizationMode.WHNF)));
+        Triple triple = Triple.make(Utils.unfoldType(parameters.getFirst().getTypeExpr().normalize(NormalizationMode.WHNF)));
         if (triple != null) {
           if (triple.fun.getDefinition() == ext.equationMeta.less) {
             CoreExpression argType = triple.fun.getArgument().computeType().normalize(NormalizationMode.WHNF);
@@ -269,10 +269,10 @@ public class ContradictionMeta extends BaseMetaDefinition {
       return checkInternal(context, argument, type, withExpectedType, marker, typechecker);
     }
 
-    ConcreteFactory factory = ext.factory.withData(marker.getData());
+    ConcreteFactory factory = typechecker.getFactory().withData(marker.getData());
     List<ConcreteParameter> cParams = new ArrayList<>();
     for (CoreParameter parameter : parameters) {
-      cParams.add(factory.param(parameter.isExplicit(), factory.local(ext.renamerFactory.getNameFromBinding(parameter.getBinding(), null))));
+      cParams.add(factory.param(parameter.isExplicit(), factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(parameter.getBinding(), null))));
     }
 
     return factory.lam(cParams, factory.meta("contradiction_lambda", new MetaDefinition() {
@@ -355,7 +355,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
 
   private ConcreteExpression checkInternal(Context context, ConcreteExpression argument, CoreExpression expectedType, boolean withExpectedType, ConcreteSourceNode marker, ExpressionTypechecker typechecker) {
     ContextHelper contextHelper = new ContextHelper(context, argument);
-    ConcreteFactory factory = ext.factory.withData(marker.getData());
+    ConcreteFactory factory = typechecker.getFactory().withData(marker.getData());
 
     CoreExpression type = null;
     ConcreteExpression contr = null;
@@ -380,7 +380,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
     }
 
     if (contr == null) {
-      BunchedEquivalenceClosure<Integer> equivalenceClosure = new BunchedEquivalenceClosure<>(factory.ref(ext.prelude.getIdpRef()), factory.ref(ext.inv.getRef()), factory.ref(ext.concat.getRef()), factory);
+      BunchedEquivalenceClosure<Integer> equivalenceClosure = new BunchedEquivalenceClosure<>(factory.ref(typechecker.getPrelude().getIdpRef()), factory.ref(ext.inv.getRef()), factory.ref(ext.concat.getRef()), factory);
       ValuesRelationClosure closure = new ValuesRelationClosure(values, equivalenceClosure);
       List<Edge<Integer>> equalities = new ArrayList<>();
       Values<CoreExpression> typeValues = new Values<>(typechecker, marker);
@@ -400,7 +400,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
           for (CoreDataCallExpression.ConstructorWithDataArguments con : constructors) {
             List<ConcretePattern> subPatterns = new ArrayList<>();
             for (CoreParameter param = con.getParameters(); param.hasNext(); param = param.getNext()) {
-              subPatterns.add(factory.refPattern(factory.local(ext.renamerFactory.getNameFromBinding(param.getBinding(), null) + "1"), null));
+              subPatterns.add(factory.refPattern(factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(param.getBinding(), null) + "1"), null));
             }
             clauses.add(factory.clause(Collections.singletonList(factory.conPattern(con.getConstructor().getRef(), subPatterns)), factory.meta("case_" + con.getConstructor().getName(), new MetaDefinition() {
               @Override

@@ -42,6 +42,7 @@ import static org.arend.core.expr.ExpressionFactory.*;
 
 public class Prelude implements ArendPrelude {
   private static boolean IS_INITIALIZED = false;
+  public static final Prelude INSTANCE = new Prelude();
   public static final Version VERSION = GeneratedVersion.VERSION;
 
   public static final String LIBRARY_NAME = "prelude";
@@ -94,6 +95,8 @@ public class Prelude implements ArendPrelude {
   public static boolean isInitialized() {
     return IS_INITIALIZED;
   }
+
+  private Prelude() {}
 
   public static void update(Definition definition) {
     switch (definition.getReferable().textRepresentation()) {

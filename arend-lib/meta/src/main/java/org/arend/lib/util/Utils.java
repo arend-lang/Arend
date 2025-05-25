@@ -1,5 +1,6 @@
 package org.arend.lib.util;
 
+import org.arend.ext.ArendPrelude;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteParameter;
 import org.arend.ext.concrete.ConcreteSourceNode;
@@ -20,7 +21,6 @@ import org.arend.ext.reference.ExpressionResolver;
 import org.arend.ext.reference.MetaRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 
 import java.math.BigInteger;
 import java.util.*;
@@ -338,13 +338,13 @@ public class Utils {
     return type;
   }
 
-  public static Boolean isArrayEmpty(CoreExpression type, StdExtension ext) {
+  public static Boolean isArrayEmpty(CoreExpression type, ArendPrelude prelude) {
     type = type.normalize(NormalizationMode.WHNF);
-    if (!(type instanceof CoreClassCallExpression && ((CoreClassCallExpression) type).getDefinition() == ext.prelude.getDArray())) return null;
-    CoreExpression length = ((CoreClassCallExpression) type).getAbsImplementationHere(ext.prelude.getArrayLength());
+    if (!(type instanceof CoreClassCallExpression && ((CoreClassCallExpression) type).getDefinition() == prelude.getDArray())) return null;
+    CoreExpression length = ((CoreClassCallExpression) type).getAbsImplementationHere(prelude.getArrayLength());
     if (length == null) return null;
     length = length.normalize(NormalizationMode.WHNF);
-    return length instanceof CoreIntegerExpression ? (Boolean) ((CoreIntegerExpression) length).getBigInteger().equals(BigInteger.ZERO) : length instanceof CoreConCallExpression && ((CoreConCallExpression) length).getDefinition() == ext.prelude.getSuc() ? false : null;
+    return length instanceof CoreIntegerExpression ? (Boolean) ((CoreIntegerExpression) length).getBigInteger().equals(BigInteger.ZERO) : length instanceof CoreConCallExpression && ((CoreConCallExpression) length).getDefinition() == prelude.getSuc() ? false : null;
   }
 
   private static boolean getRef(ConcreteExpression expr, ExpressionResolver resolver, List<ArendRef> refs) {

@@ -72,6 +72,6 @@ public class CategoryDataFactory implements DataFactory {
             .app(makeLambda2())
             .app(makeLambda3())
             .build())));
-    return meta.ext.factory.letExpr(false, false, letClauses, expression);
+    return factory.letExpr(false, false, letClauses, expression);
   }
 }

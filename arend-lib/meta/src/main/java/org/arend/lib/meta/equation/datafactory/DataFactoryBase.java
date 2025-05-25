@@ -69,8 +69,8 @@ public abstract class DataFactoryBase implements DataFactory {
             factory.caseExpr(false, singletonList(factory.caseArg(factory.ref(lamParam), null, null)), null, null, caseClauses));
 
     letClauses.set(0, factory.letClause(dataRef, Collections.emptyList(), null, factory.newExpr(getDataClass(instanceArg, dataArg))));
-    //return typechecker.typecheck(meta.ext.factory.letExpr(false, false, letClauses, expression), null);
-    return meta.ext.factory.letExpr(false, false, letClauses, expression); */
+    //return typechecker.typecheck(factory.letExpr(false, false, letClauses, expression), null);
+    return factory.letExpr(false, false, letClauses, expression); */
     List<CoreExpression> valueList = values.getValues();
 
     ConcreteExpression instanceArg = factory.core(instance);
@@ -80,6 +80,6 @@ public abstract class DataFactoryBase implements DataFactory {
     }
 
     letClauses.set(0, factory.letClause(dataRef, Collections.emptyList(), null, factory.newExpr(getDataClass(instanceArg, dataArg))));
-    return meta.ext.factory.letExpr(false, false, letClauses, expression);
+    return factory.letExpr(false, false, letClauses, expression);
   }
 }

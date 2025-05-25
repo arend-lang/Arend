@@ -42,7 +42,7 @@ public class SimplifyMeta extends BaseMetaDefinition {
     }
 
     ConcreteFactory factory = contextData.getFactory();
-    var expression = args.isEmpty() ? factory.ref(ext.prelude.getIdpRef()) : args.getFirst().getExpression();
+    var expression = args.isEmpty() ? factory.ref(typechecker.getPrelude().getIdpRef()) : args.getFirst().getExpression();
     CoreExpression type;
 
     if (isForward) {

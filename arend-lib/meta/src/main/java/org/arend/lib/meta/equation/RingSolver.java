@@ -85,7 +85,7 @@ public class RingSolver extends BaseEqualitySolver {
       }
       monomialTerms.add(mTerm);
     }
-    var resTerm = monomialTerms.get(0);
+    var resTerm = monomialTerms.getFirst();
     for (int i = 1; i < nf.size(); ++i) {
       resTerm = factory.app(factory.ref(meta.addTerm.getRef()), true, Arrays.asList(resTerm, monomialTerms.get(i)));
     }
@@ -144,7 +144,7 @@ public class RingSolver extends BaseEqualitySolver {
       .app(factory.ref(dataRef), false)
       .app(term1.concrete)
       .app(term2.concrete)
-      .app(factory.ref(meta.ext.prelude.getIdpRef()))
+      .app(factory.ref(typechecker.getPrelude().getIdpRef()))
       .build();
   }
 
@@ -208,8 +208,8 @@ public class RingSolver extends BaseEqualitySolver {
 
     private List<Monomial> polyToNF(Poly<BigInteger> poly) {
       var nf =  poly.monomials.stream().map(m -> new Monomial(m.coefficient, ComMonoidWP.powersSeqToElemsSeq(m.degreeVector))).collect(Collectors.toList());
-      if (nf.size() > 1 && nf.get(0).elements.isEmpty() && nf.get(0).coefficient.equals(BigInteger.ZERO)) {
-        nf.remove(0);
+      if (nf.size() > 1 && nf.getFirst().elements.isEmpty() && nf.getFirst().coefficient.equals(BigInteger.ZERO)) {
+        nf.removeFirst();
       }
       return nf;
     }
@@ -233,7 +233,7 @@ public class RingSolver extends BaseEqualitySolver {
       var prodCongProof = CongruenceMeta.applyCongruence(typechecker,
         Arrays.asList(new CongruenceClosure.EqProofOrElement(factory.ref(meta.mul.getRef()), true),
           new CongruenceClosure.EqProofOrElement(a, true),
-          new CongruenceClosure.EqProofOrElement(bEqZeroPrf,  false)), factory, meta.ext.prelude);
+          new CongruenceClosure.EqProofOrElement(bEqZeroPrf,  false)), factory);
       var aMulZeroIsZeroProof = factory.appBuilder(factory.ref(meta.zeroMulRight.getRef()))
         .app(factory.core(instance), false)
         .app(a, false)
@@ -245,7 +245,7 @@ public class RingSolver extends BaseEqualitySolver {
       var sumCongProof = CongruenceMeta.applyCongruence(typechecker,
         Arrays.asList(new CongruenceClosure.EqProofOrElement(factory.ref(meta.plus.getRef()), true),
           new CongruenceClosure.EqProofOrElement(aEqZeroPrf, false),
-          new CongruenceClosure.EqProofOrElement(bEqZeroPrf,  false)), factory, meta.ext.prelude);
+          new CongruenceClosure.EqProofOrElement(bEqZeroPrf,  false)), factory);
 
       var zeroPlusZeroIsZeroProof = factory.appBuilder(factory.ref(meta.addMonZroRight.getRef()))
         .app(factory.core(instance), false)
@@ -265,7 +265,7 @@ public class RingSolver extends BaseEqualitySolver {
           .app(coeffTerm).build();
         summandProofs.add(argIsZeroToProdIsZero(coeffTerm, axEqZeroProofs.get(i)));
       }
-      var resProof = summandProofs.get(0);
+      var resProof = summandProofs.getFirst();
       for (int i = 1; i < summandProofs.size(); ++i) {
         resProof = argsAreZeroToSumIsZero(resProof, summandProofs.get(i));
       }
@@ -352,7 +352,7 @@ public class RingSolver extends BaseEqualitySolver {
         .app(factory.ref(dataRef), false)
         .app(minusRingTerm(term1.concrete, term2.concrete))
         .app(idealGenDecompRingTerm(idealCoeffs, axiomDiffs))
-        .app(factory.ref(meta.ext.prelude.getIdpRef()))
+        .app(factory.ref(typechecker.getPrelude().getIdpRef()))
         .build();
 
       /*

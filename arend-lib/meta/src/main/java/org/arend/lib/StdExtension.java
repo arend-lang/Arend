@@ -15,7 +15,6 @@ import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.DependencyMetaTypechecker;
 import org.arend.ext.ui.ArendUI;
-import org.arend.ext.variable.VariableRenamerFactory;
 import org.arend.lib.goal.StdGoalSolver;
 import org.arend.lib.key.IrreflexivityKey;
 import org.arend.lib.key.ReflexivityKey;
@@ -46,9 +45,7 @@ import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 @SuppressWarnings("unused")
 public class StdExtension implements ArendExtension {
   public ArendPrelude prelude;
-
-  public ConcreteFactory factory;
-  public VariableRenamerFactory renamerFactory;
+  private ConcreteFactory factory;
 
   public final IrreflexivityKey irreflexivityKey = new IrreflexivityKey("irreflexivity", this);
   public final TransitivityKey transitivityKey = new TransitivityKey("transitivity", this);
@@ -92,7 +89,7 @@ public class StdExtension implements ArendExtension {
   public MetaRef forallMetaRef;
   public MetaRef existsMetaRef;
 
-  private final StdGoalSolver goalSolver = new StdGoalSolver(this);
+  private final StdGoalSolver goalSolver = new StdGoalSolver();
   private final StdLevelProver levelProver = new StdLevelProver(this);
   private final StdNumberTypechecker numberTypechecker = new StdNumberTypechecker(this);
   private final ListDefinitionListener definitionListener = new ListDefinitionListener().addDeclaredListeners(this);
@@ -111,11 +108,6 @@ public class StdExtension implements ArendExtension {
   @Override
   public void setConcreteFactory(@NotNull ConcreteFactory factory) {
     this.factory = factory;
-  }
-
-  @Override
-  public void setVariableRenamerFactory(@NotNull VariableRenamerFactory factory) {
-    renamerFactory = factory;
   }
 
   @Override
@@ -196,7 +188,7 @@ public class StdExtension implements ArendExtension {
         The type of an argument is specified as either `e : E` or `e arg parameters : E`.
         The flag 'addPath' indicates that argument `idp` with type `e = x` should be added after the current one, where `e` is the current argument and `x` is its name.
         That is, `cases (e arg addPath)` is equivalent to `cases (e arg (name = x), idp : e = x)`.
-        """), makeDef(meta, "cases", casesMetaResolver, new DependencyMetaTypechecker(CasesMeta.class, () -> new CasesMeta(this, casesMetaResolver))));
+        """), makeDef(meta, "cases", casesMetaResolver, new DependencyMetaTypechecker(CasesMeta.class, () -> new CasesMeta(casesMetaResolver))));
     contributor.declare(multiline("""
         `mcases {def} args default \\with { ... }` finds all invocations of definition `def` in the expected type and generate a \\case expression that matches arguments of those invocations.
 
@@ -217,7 +209,7 @@ public class StdExtension implements ArendExtension {
         * `mcases {(1,2),(def,1)}` looks for the first and the second occurrence of a \\case expression and the first occurrence of `def`.
         * `mcases {(def1,2),(),def2}` looks for the second occurrence of `def1`, all occurrences of \\case expressions, and all occurrences of `def2`.
         * `mcases {_} {arg addPath, arg (), arg addPath}` looks for case expressions and adds a path argument after the first and the third matched expression.
-        """), makeDef(meta, "mcases", new MatchingCasesMetaResolver(casesMetaResolver), new DependencyMetaTypechecker(MatchingCasesMeta.class, () -> new MatchingCasesMeta(this, casesMetaResolver))));
+        """), makeDef(meta, "mcases", new MatchingCasesMetaResolver(casesMetaResolver), new DependencyMetaTypechecker(MatchingCasesMeta.class, () -> new MatchingCasesMeta(casesMetaResolver))));
     contributor.declare(multiline("""
         `unfold (f_1, ... f_n) e` unfolds functions/fields/variables `f_1`, ... `f_n` in the expected type before type-checking of `e` and returns `e` itself.
         If the first argument is omitted, it unfold all fields.
@@ -271,8 +263,8 @@ public class StdExtension implements ArendExtension {
         makeDef(paths, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, () -> new RewriteEquationMeta(this))));
     contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
         makeDef(paths, "simplify", new DeferredMetaDefinition(new SimplifyMeta(this), true)));
-    ConcreteMetaDefinition simp_coe = makeDef(paths, "simp_coe", new ClassExtResolver(), new DependencyMetaTypechecker(SimpCoeMeta.class, () -> new SimpCoeMeta(this)));
-    ConcreteMetaDefinition extMeta = makeDef(paths, "ext", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, false), false, ExtMeta.defermentChecker)));
+    ConcreteMetaDefinition simp_coe = makeDef(paths, "simp_coe", new ClassExtResolver(), new DependencyMetaTypechecker(SimpCoeMeta.class, SimpCoeMeta::new));
+    ConcreteMetaDefinition extMeta = makeDef(paths, "ext", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(false), false, ExtMeta.defermentChecker)));
     contributor.declare(vList(
         text("Simplifies certain equalities. It expects one argument and the type of this argument is called 'subgoal'. The expected type is called 'goal'."),
         text("* If the goal is `coe (\\lam i => \\Pi (x : A) -> B x i) f right a = b'`, then the subgoal is `coe (B a) (f a) right = b`."),
@@ -296,7 +288,7 @@ public class StdExtension implements ArendExtension {
         * If the goal is `x = {P} y`, where `P : \\Prop`, then there is no subgoal
         """), extMeta);
     contributor.declare(hList(text("Similar to "), refDoc(extMeta.getRef()), text(", but also applies either "), refDoc(simp_coe.getRef()), text(" or "), refDoc(extMeta.getRef()), text(" when a field of a \\Sigma-type or a record has an appropriate type.")),
-        makeDef(paths, "exts", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(this, true), false, ExtMeta.defermentChecker))));
+        makeDef(paths, "exts", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(true), false, ExtMeta.defermentChecker))));
 
     MetaDefinition apply = new ApplyMeta();
     ModulePath function = ModulePath.fromString("Function.Meta");
@@ -357,7 +349,7 @@ public class StdExtension implements ArendExtension {
           * If `P : A -> \\Type`, then `Forall {x y : P} (Q x) (Q y)` is equivalent to `\\Pi {x y : A} -> P x -> P y -> Q x -> Q y`
           """)), factory.metaDef(forallMetaRef, Collections.emptyList(), null));
     contributor.declare(text("Returns either a tuple, a \\new expression, or a single constructor of a data type depending on the expected type"),
-        makeDef(logic, constructorName, new ConstructorMeta(this, false)));
+        makeDef(logic, constructorName, new ConstructorMeta(false)));
 
     ModulePath debug = ModulePath.fromString("Debug.Meta");
     contributor.declare(text("Returns current time in milliseconds"), makeDef(debug, "time", new TimeMeta()));

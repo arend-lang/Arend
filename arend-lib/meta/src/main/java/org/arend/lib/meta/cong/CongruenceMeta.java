@@ -52,29 +52,29 @@ public class CongruenceMeta extends BaseMetaDefinition {
     return factory.app(factory.ref(prelude.getAtRef()), Arrays.asList(factory.arg(path.eqProofOrElement, true), factory.arg(factory.ref(param), true)));
   }
 
-  public static ConcreteExpression applyCongruence(ExpressionTypechecker typechecker, List<CongruenceClosure.EqProofOrElement> eqProofs, ConcreteFactory factory, ArendPrelude prelude) {
+  public static ConcreteExpression applyCongruence(ExpressionTypechecker typechecker, List<CongruenceClosure.EqProofOrElement> eqProofs, ConcreteFactory factory) {
     if (eqProofs.isEmpty()) return null;
 
     ArendRef jParam = factory.local("j");
     List<ConcreteArgument> eqProofsAtJ = new ArrayList<>();
 
     for (int i = 1; i < eqProofs.size(); ++i) {
-      eqProofsAtJ.add(factory.arg(appAt(typechecker, eqProofs.get(i), jParam, factory, prelude), true));
+      eqProofsAtJ.add(factory.arg(appAt(typechecker, eqProofs.get(i), jParam, factory, typechecker.getPrelude()), true));
     }
 
-    return factory.app(factory.ref(prelude.getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singleton(factory.param(jParam)), factory.app(appAt(typechecker, eqProofs.getFirst(), jParam, factory, prelude), eqProofsAtJ))));
+    return factory.app(factory.ref(typechecker.getPrelude().getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singleton(factory.param(jParam)), factory.app(appAt(typechecker, eqProofs.getFirst(), jParam, factory, typechecker.getPrelude()), eqProofsAtJ))));
   }
 
   private TypedExpression mapMode(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     CoreExpression equality = contextData.getExpectedType().normalize(NormalizationMode.WHNF);
-    if (!(equality instanceof CoreDataCallExpression && ((CoreDataCallExpression) equality).getDefinition() == ext.prelude.getPath())) {
+    if (!(equality instanceof CoreDataCallExpression && ((CoreDataCallExpression) equality).getDefinition() == typechecker.getPrelude().getPath())) {
       return null;
     }
 
     List<? extends CoreExpression> args = ((CoreDataCallExpression) equality).getDefCallArguments();
     ConcreteFactory factory = contextData.getFactory();
     ArendRef iRef = factory.local("i");
-    CongVisitor visitor = new CongVisitor(ext.prelude, factory, typechecker, contextData.getMarker(), contextData.getArguments().stream().map(ConcreteArgument::getExpression).collect(Collectors.toList()), iRef);
+    CongVisitor visitor = new CongVisitor(typechecker.getPrelude(), factory, typechecker, contextData.getMarker(), contextData.getArguments().stream().map(ConcreteArgument::getExpression).collect(Collectors.toList()), iRef);
     CongVisitor.Result result = args.get(1).normalize(NormalizationMode.RNF).accept(visitor, new CongVisitor.ParamType(() -> new CongVisitor.Result(factory.core(args.getFirst().normalize(NormalizationMode.RNF).computeTyped())), args.get(2).normalize(NormalizationMode.RNF)));
     if (result == null) {
       if (visitor.index > contextData.getArguments().size()) {
@@ -90,7 +90,7 @@ public class CongruenceMeta extends BaseMetaDefinition {
       }
     }
 
-    return typechecker.typecheck(factory.app(factory.ref(ext.prelude.getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), result.getExpression(args.get(1), factory)))), contextData.getExpectedType());
+    return typechecker.typecheck(factory.app(factory.ref(typechecker.getPrelude().getPathConRef()), true, Collections.singletonList(factory.lam(Collections.singletonList(factory.param(iRef)), result.getExpression(args.get(1), factory)))), contextData.getExpectedType());
   }
 
   @Override
@@ -127,8 +127,8 @@ public class CongruenceMeta extends BaseMetaDefinition {
     }
 
     ConcreteFactory factory = contextData.getFactory();
-    CongruenceClosure<CoreExpression> congruenceClosure = new CongruenceClosure<>(typechecker, refExpr, eqProofs -> applyCongruence(typechecker, eqProofs, factory, ext.prelude),
-        new CongruenceClosure.EqualityIsEquivProof(factory.ref(ext.prelude.getIdpRef()), factory.ref(ext.inv.getRef()), factory.ref(ext.concat.getRef())), factory);
+    CongruenceClosure<CoreExpression> congruenceClosure = new CongruenceClosure<>(typechecker, refExpr, eqProofs -> applyCongruence(typechecker, eqProofs, factory),
+        new CongruenceClosure.EqualityIsEquivProof(factory.ref(typechecker.getPrelude().getIdpRef()), factory.ref(ext.inv.getRef()), factory.ref(ext.concat.getRef())), factory);
     for (CoreBinding binding : contextHelper.getAllBindings(typechecker)) {
       CoreFunCallExpression equality = binding.getTypeExpr().toEquality();
       if (equality != null) {

@@ -18,11 +18,10 @@ public class PreludeTest extends TypeCheckingTestCase {
   @Test
   public void testForEach() {
     typeCheckModule("");
-    var obj = new Prelude();
     List<Definition> fields = new ArrayList<>();
     for (Method method : ArendPrelude.class.getDeclaredMethods()) {
       try {
-        Object result = method.invoke(obj);
+        Object result = method.invoke(Prelude.INSTANCE);
         Definition def = result instanceof Definition ? (Definition) result : null;
         if (def != null) fields.add(def);
       } catch (Exception e) {

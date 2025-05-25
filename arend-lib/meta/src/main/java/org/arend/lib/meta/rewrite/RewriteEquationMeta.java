@@ -164,7 +164,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
       if (ok) {
         typechecker.updateSavedState();
         if (exactMatch) {
-          subExprOccur = EquationSolver.SubexprOccurrences.simpleSingletonOccur(factory, subExprType,factory.ref(ext.prelude.getIdpRef()));
+          subExprOccur = EquationSolver.SubexprOccurrences.simpleSingletonOccur(factory, subExprType,factory.ref(typechecker.getPrelude().getIdpRef()));
           exactMatches.add(foundOccurrences.size());
         }
         foundOccurrences.add(new Pair<>(subExprOccur, expression));

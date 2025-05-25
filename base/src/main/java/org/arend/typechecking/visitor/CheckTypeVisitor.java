@@ -17,7 +17,9 @@ import org.arend.core.sort.Sort;
 import org.arend.core.subst.*;
 import org.arend.error.*;
 import org.arend.ext.ArendExtension;
+import org.arend.ext.ArendPrelude;
 import org.arend.ext.FreeBindingsModifier;
+import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.pattern.ConcreteNumberPattern;
 import org.arend.ext.concrete.ConcreteParameter;
 import org.arend.ext.concrete.pattern.ConcretePattern;
@@ -45,6 +47,7 @@ import org.arend.ext.prettyprinting.doc.DocFactory;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.util.StringUtils;
+import org.arend.ext.variable.VariableRenamerFactory;
 import org.arend.extImpl.*;
 import org.arend.extImpl.userData.UserDataHolderImpl;
 import org.arend.naming.reference.*;
@@ -463,13 +466,12 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     }
 
-    if (expectedType instanceof ClassCallExpression && ((ClassCallExpression) expectedType).getDefinition() == Prelude.DEP_ARRAY && result.type instanceof PiExpression piExpr) {
+    if (expectedType instanceof ClassCallExpression classCall && classCall.getDefinition() == Prelude.DEP_ARRAY && result.type instanceof PiExpression piExpr) {
       Expression dom = piExpr.getParameters().getTypeExpr().normalize(NormalizationMode.WHNF);
       if (dom instanceof DataCallExpression && ((DataCallExpression) dom).getDefinition() == Prelude.FIN || dom.getStuckInferenceVariable() != null) {
-        ClassCallExpression classCall = (ClassCallExpression) expectedType;
         Expression length = classCall.getClosedImplementation(Prelude.ARRAY_LENGTH);
         if (length == null && dom instanceof DataCallExpression) {
-          length = ((DataCallExpression) dom).getDefCallArguments().get(0);
+          length = ((DataCallExpression) dom).getDefCallArguments().getFirst();
         }
         if (length != null) {
           Map<ClassField, Expression> impls = new LinkedHashMap<>();
@@ -493,7 +495,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       Expression eType = expectedType;
       while (eType instanceof DataCallExpression && ((DataCallExpression) eType).getDefinition() == Prelude.PATH) {
         n2++;
-        eType = AppExpression.make(((DataCallExpression) eType).getDefCallArguments().get(0), new ReferenceExpression(new TypedBinding("i", ExpressionFactory.Interval())), true).normalize(NormalizationMode.WHNF);
+        eType = AppExpression.make(((DataCallExpression) eType).getDefCallArguments().getFirst(), new ReferenceExpression(new TypedBinding("i", ExpressionFactory.Interval())), true).normalize(NormalizationMode.WHNF);
       }
 
       int n = Math.min(n1, n2);
@@ -3562,6 +3564,21 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   @Override
   public @Nullable Definition getCoreDefinition(@Nullable ArendRef ref) {
     return ref instanceof TCDefReferable ? ((TCDefReferable) ref).getTypechecked() : null;
+  }
+
+  @Override
+  public @NotNull ConcreteFactory getFactory() {
+    return new ConcreteFactoryImpl(myDefinition == null ? null : myDefinition.getReferable().getData(), null);
+  }
+
+  @Override
+  public @NotNull ArendPrelude getPrelude() {
+    return Prelude.INSTANCE;
+  }
+
+  @Override
+  public @NotNull VariableRenamerFactory getVariableRenameFactory() {
+    return VariableRenamerFactoryImpl.INSTANCE;
   }
 
   @Override

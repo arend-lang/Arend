@@ -17,7 +17,6 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.error.IgnoredArgumentError;
 import org.arend.lib.meta.util.ReplaceSubexpressionsMeta;
 import org.arend.lib.pattern.ArendPattern;
@@ -29,12 +28,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class CasesMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
   private final CasesMetaResolver resolver;
   @Dependency private ArendRef constructor;
 
-  public CasesMeta(StdExtension ext, CasesMetaResolver resolver) {
-    this.ext = ext;
+  public CasesMeta(CasesMetaResolver resolver) {
     this.resolver = resolver;
   }
 
@@ -103,8 +100,8 @@ public class CasesMeta extends BaseMetaDefinition {
         concreteParameters.add(factory.param(Collections.singletonList(caseArgRef), argType != null ? argType : factory.core(typedArgs.get(i).getType().computeTyped())));
       }
       if (argParams.addPath) {
-        ConcreteExpression type = factory.app(factory.ref(ext.prelude.getEqualityRef()), true, Arrays.asList(factory.hole(), factory.ref(caseArgRef)));
-        caseArgs.add(factory.caseArg(factory.ref(ext.prelude.getIdpRef()), null, type));
+        ConcreteExpression type = factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, Arrays.asList(factory.hole(), factory.ref(caseArgRef)));
+        caseArgs.add(factory.caseArg(factory.ref(typechecker.getPrelude().getIdpRef()), null, type));
         if (concreteParameters != null) {
           concreteParameters.add(factory.param(Collections.singletonList(caseArgRef), type));
         }
@@ -125,7 +122,7 @@ public class CasesMeta extends BaseMetaDefinition {
       CoreParameter parameter = parameters;
       for (int j = 0; j < typedArgs.size(); j++) {
         CoreExpression type = typedArgs.get(j).getType().normalize(NormalizationMode.WHNF);
-        List<ArendPattern> patterns = getPatterns(type, parameter);
+        List<ArendPattern> patterns = getPatterns(type, parameter, typechecker);
         if (patterns != null && patterns.isEmpty()) {
           patternLists = Collections.emptyList();
           break;
@@ -146,11 +143,11 @@ public class CasesMeta extends BaseMetaDefinition {
             if (!substitution.isEmpty()) {
               type1 = typechecker.substitute(type1, LevelSubstitution.EMPTY, substitution);
               if (type1 != null) {
-                patterns1 = getPatterns(type1.normalize(NormalizationMode.WHNF), parameter);
+                patterns1 = getPatterns(type1.normalize(NormalizationMode.WHNF), parameter, typechecker);
               }
             }
             if (patterns1 == null) {
-              patterns1 = Collections.singletonList(new ArendPattern(parameter.getBinding(), null, Collections.emptyList(), parameter, ext.renamerFactory));
+              patterns1 = Collections.singletonList(new ArendPattern(parameter.getBinding(), null, Collections.emptyList(), parameter, typechecker.getVariableRenameFactory()));
             }
           }
           for (ArendPattern pattern : patterns1) {
@@ -166,7 +163,7 @@ public class CasesMeta extends BaseMetaDefinition {
 
         if (argParametersList.get(j).addPath) {
           for (List<ArendPattern> patternList : patternLists) {
-            patternList.add(new ArendPattern(parameter.getBinding(), null, Collections.emptyList(), parameter, ext.renamerFactory));
+            patternList.add(new ArendPattern(parameter.getBinding(), null, Collections.emptyList(), parameter, typechecker.getVariableRenameFactory()));
           }
           parameter = parameter.getNext();
         }
@@ -191,7 +188,7 @@ public class CasesMeta extends BaseMetaDefinition {
             for (CasesMetaResolver.ArgParameters argParameters : argParametersList) {
               argParameters.addAsRef(asRefs);
             }
-            newClauses.add(factory.clause(PatternUtils.toConcrete(patternList, asRefs, ext.renamerFactory, factory, null, null), defaultExpr));
+            newClauses.add(factory.clause(PatternUtils.toConcrete(patternList, asRefs, typechecker.getVariableRenameFactory(), factory, null, null), defaultExpr));
           }
         }
       }
@@ -202,9 +199,9 @@ public class CasesMeta extends BaseMetaDefinition {
     return typechecker.typecheck(factory.caseExpr(false, caseArgs, searchPairs.isEmpty() ? null : factory.meta("return_expr", new ReplaceSubexpressionsMeta(contextData.getExpectedType().normalize(NormalizationMode.RNF), searchPairs)), null, clauses), searchPairs.isEmpty() ? contextData.getExpectedType() : null);
   }
 
-  private List<ArendPattern> getPatterns(CoreExpression type, CoreParameter parameter) {
-    if (type instanceof CoreDataCallExpression && ((CoreDataCallExpression) type).getDefinition() == ext.prelude.getPath()) {
-      return Collections.singletonList(new ArendPattern(parameter.getBinding(), null, Collections.emptyList(), parameter, ext.renamerFactory));
+  private List<ArendPattern> getPatterns(CoreExpression type, CoreParameter parameter, ExpressionTypechecker typechecker) {
+    if (type instanceof CoreDataCallExpression && ((CoreDataCallExpression) type).getDefinition() == typechecker.getPrelude().getPath()) {
+      return Collections.singletonList(new ArendPattern(parameter.getBinding(), null, Collections.emptyList(), parameter, typechecker.getVariableRenameFactory()));
     }
     List<CoreExpression.ConstructorWithDataArguments> constructors = type instanceof CoreDataCallExpression ? type.computeMatchedConstructorsWithDataArguments() : null;
     if (constructors == null) return null;
@@ -213,9 +210,9 @@ public class CasesMeta extends BaseMetaDefinition {
     for (CoreExpression.ConstructorWithDataArguments constructor : constructors) {
       List<ArendPattern> subpatterns = new ArrayList<>();
       for (CoreParameter param = constructor.getParameters(); param.hasNext(); param = param.getNext()) {
-        subpatterns.add(new ArendPattern(param.getBinding(), null, Collections.emptyList(), param, ext.renamerFactory));
+        subpatterns.add(new ArendPattern(param.getBinding(), null, Collections.emptyList(), param, typechecker.getVariableRenameFactory()));
       }
-      patterns.add(new ArendPattern(null, constructor.getConstructor(), subpatterns, null, ext.renamerFactory));
+      patterns.add(new ArendPattern(null, constructor.getConstructor(), subpatterns, null, typechecker.getVariableRenameFactory()));
     }
     return patterns;
   }

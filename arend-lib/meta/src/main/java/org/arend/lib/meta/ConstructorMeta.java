@@ -18,7 +18,6 @@ import org.arend.ext.typechecking.BaseMetaDefinition;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
-import org.arend.lib.StdExtension;
 import org.arend.lib.error.TypeError;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
@@ -29,11 +28,9 @@ import java.util.Iterator;
 import java.util.List;
 
 public class ConstructorMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
   private final boolean withImplicit;
 
-  public ConstructorMeta(StdExtension ext, boolean withImplicit) {
-    this.ext = ext;
+  public ConstructorMeta(boolean withImplicit) {
     this.withImplicit = withImplicit;
   }
 
@@ -65,13 +62,13 @@ public class ConstructorMeta extends BaseMetaDefinition {
 
     if (type instanceof CoreClassCallExpression classCall) {
       List<? extends ConcreteArgument> args = contextData.getArguments();
-      Boolean isEmpty = Utils.isArrayEmpty(classCall, ext);
+      Boolean isEmpty = Utils.isArrayEmpty(classCall, typechecker.getPrelude());
       if (isEmpty != null) {
         if (withImplicit) {
-          return typechecker.typecheck(factory.app(factory.ref(isEmpty ? ext.prelude.getEmptyArrayRef() : ext.prelude.getArrayConsRef()), args), type);
+          return typechecker.typecheck(factory.app(factory.ref(isEmpty ? typechecker.getPrelude().getEmptyArrayRef() : typechecker.getPrelude().getArrayConsRef()), args), type);
         }
 
-        boolean hasElementsType = classCall.isImplemented(ext.prelude.getArrayElementsType());
+        boolean hasElementsType = classCall.isImplemented(typechecker.getPrelude().getArrayElementsType());
         int expected = (hasElementsType ? 0 : 1) + (isEmpty ? 0 : 2);
         if (args.size() < expected) {
           typechecker.getErrorReporter().report(new TypecheckingError("Not enough arguments. Expected " + (expected - args.size()) + " more.", contextData.getMarker()));
@@ -88,7 +85,7 @@ public class ConstructorMeta extends BaseMetaDefinition {
         for (int i = hasElementsType ? 0 : 1; i < args.size(); i++) {
           newArgs.add(factory.arg(args.get(i).getExpression(), true));
         }
-        return typechecker.typecheck(factory.app(factory.ref(isEmpty ? ext.prelude.getEmptyArrayRef() : ext.prelude.getArrayConsRef()), newArgs), type);
+        return typechecker.typecheck(factory.app(factory.ref(isEmpty ? typechecker.getPrelude().getEmptyArrayRef() : typechecker.getPrelude().getArrayConsRef()), newArgs), type);
       }
 
       if (withImplicit) {
