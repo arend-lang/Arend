@@ -27,6 +27,7 @@ public class MetaReferable extends LocatedReferableImpl implements MetaRef {
     this(null, accessModifier, precedence, name, null, null, typechecker, resolver, parent);
   }
 
+  @Override
   public @NotNull MetaTypechecker getTypechecker() {
     return myTypechecker;
   }

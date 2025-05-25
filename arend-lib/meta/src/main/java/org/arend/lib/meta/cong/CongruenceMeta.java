@@ -11,7 +11,7 @@ import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.*;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
-import org.arend.lib.StdExtension;
+import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.lib.context.Context;
 import org.arend.lib.context.ContextHelper;
 import org.arend.lib.error.IgnoredArgumentError;
@@ -27,11 +27,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class CongruenceMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
-
-  public CongruenceMeta(StdExtension ext) {
-    this.ext = ext;
-  }
+  @Dependency private ArendRef inv;
+  @Dependency(name = "*>") private ArendRef concat;
 
   @Override
   public boolean requireExpectedType() {
@@ -128,7 +125,7 @@ public class CongruenceMeta extends BaseMetaDefinition {
 
     ConcreteFactory factory = contextData.getFactory();
     CongruenceClosure<CoreExpression> congruenceClosure = new CongruenceClosure<>(typechecker, refExpr, eqProofs -> applyCongruence(typechecker, eqProofs, factory),
-        new CongruenceClosure.EqualityIsEquivProof(factory.ref(typechecker.getPrelude().getIdpRef()), factory.ref(ext.inv.getRef()), factory.ref(ext.concat.getRef())), factory);
+        new CongruenceClosure.EqualityIsEquivProof(factory.ref(typechecker.getPrelude().getIdpRef()), factory.ref(inv), factory.ref(concat)), factory);
     for (CoreBinding binding : contextHelper.getAllBindings(typechecker)) {
       CoreFunCallExpression equality = binding.getTypeExpr().toEquality();
       if (equality != null) {

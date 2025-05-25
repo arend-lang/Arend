@@ -3,6 +3,7 @@ package org.arend.lib;
 import org.arend.ext.*;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
+import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.ext.typechecking.meta.TrivialMetaTypechecker;
 import org.arend.ext.core.definition.*;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -31,6 +32,9 @@ import org.arend.lib.meta.debug.RandomMeta;
 import org.arend.lib.meta.debug.SleepMeta;
 import org.arend.lib.meta.debug.TimeMeta;
 import org.arend.lib.meta.equation.EquationMeta;
+import org.arend.lib.meta.exists.ExistsMeta;
+import org.arend.lib.meta.exists.GivenMeta;
+import org.arend.lib.meta.exists.ExistsResolver;
 import org.arend.lib.meta.linear.LinearSolverMeta;
 import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.meta.rewrite.RewriteMeta;
@@ -84,10 +88,6 @@ public class StdExtension implements ArendExtension {
   public final LinearSolverMeta linearSolverMeta = new LinearSolverMeta(this);
   public final ContradictionMeta contradictionMeta = new ContradictionMeta(this);
   public final SIPMeta sipMeta = new SIPMeta(this);
-
-  public MetaRef givenMetaRef;
-  public MetaRef forallMetaRef;
-  public MetaRef existsMetaRef;
 
   private final StdGoalSolver goalSolver = new StdGoalSolver();
   private final StdLevelProver levelProver = new StdLevelProver(this);
@@ -144,8 +144,12 @@ public class StdExtension implements ArendExtension {
     return factory.metaDef(makeRef(modulePath, name, definition), Collections.emptyList(), null);
   }
 
-  private ConcreteMetaDefinition makeDef(ModulePath modulePath, String name, MetaResolver resolver, DependencyMetaTypechecker typechecker) {
-    return factory.metaDef(factory.metaRef(factory.moduleRef(modulePath), name, Precedence.DEFAULT, null, null, resolver, typechecker), Collections.emptyList(), typechecker.makeBody(factory));
+  private ConcreteMetaDefinition makeDef(MetaRef ref) {
+    return factory.metaDef(ref, Collections.emptyList(), ref.getTypechecker() instanceof DependencyMetaTypechecker tc ? tc.makeBody(factory) : null);
+  }
+
+  private ConcreteMetaDefinition makeDef(ModulePath modulePath, String name, MetaResolver resolver, MetaTypechecker typechecker) {
+    return makeDef(factory.metaRef(factory.moduleRef(modulePath), name, Precedence.DEFAULT, null, null, resolver, typechecker));
   }
 
   private ConcreteMetaDefinition makeDef(ModulePath modulePath, String name, DependencyMetaTypechecker typechecker) {
@@ -155,10 +159,12 @@ public class StdExtension implements ArendExtension {
   @Override
   public void declareDefinitions(@NotNull DefinitionContributor contributor) {
     ModulePath meta = new ModulePath("Meta");
-    ModulePath logic = ModulePath.fromString("Logic.Meta");
+    ModulePath logicMeta = ModulePath.fromString("Logic.Meta");
+    ModulePath paths = new ModulePath("Paths");
+    ModulePath logic = new ModulePath("Logic");
     String constructorName = "constructor";
 
-    contributor.declare(meta, logic);
+    contributor.declare(meta, logicMeta);
     contributor.declare(text("`later meta args` defers the invocation of `meta args`"), makeDef(meta, "later", new LaterMeta()));
     contributor.declare(multiline("""
         `fails meta args` succeeds if and only if `meta args` fails
@@ -237,14 +243,14 @@ public class StdExtension implements ArendExtension {
     contributor.declare(text("`defaultImpl C F E` returns the default implementation of field `F` in class `C` applied to expression `E`. The third argument can be omitted, in which case either `\\this` or `_` will be used instead,"),
         makeDef(meta, "defaultImpl", new DefaultImplMeta()));
 
-    ModulePath paths = ModulePath.fromString("Paths.Meta");
-    contributor.declare(paths, new ModulePath("Category"));
-    contributor.declare(paths, new ModulePath("Equiv"));
-    contributor.declare(paths, new ModulePath("Equiv.Univalence"));
-    contributor.declare(paths, new ModulePath("Logic"));
-    contributor.declare(paths, new ModulePath("Meta"));
-    contributor.declare(paths, new ModulePath("Paths"));
-    ConcreteMetaDefinition rewrite = makeDef(paths, "rewrite", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(true)));
+    ModulePath pathsMeta = ModulePath.fromString("Paths.Meta");
+    contributor.declare(pathsMeta, new ModulePath("Category"));
+    contributor.declare(pathsMeta, new ModulePath("Equiv"));
+    contributor.declare(pathsMeta, new ModulePath("Equiv.Univalence"));
+    contributor.declare(pathsMeta, new ModulePath("Logic"));
+    contributor.declare(pathsMeta, new ModulePath("Meta"));
+    contributor.declare(pathsMeta, paths);
+    ConcreteMetaDefinition rewrite = makeDef(pathsMeta, "rewrite", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(true)));
     contributor.declare(multiline("""
         `rewrite (p : a = b) t : T` replaces occurrences of `a` in `T` with a variable `x` obtaining a type `T[x/a]` and returns `transportInv (\\lam x => T[x/a]) p t`
 
@@ -254,17 +260,17 @@ public class StdExtension implements ArendExtension {
         `rewrite (p_1, ... p_n) t` is equivalent to `rewrite p_1 (... rewrite p_n t ...)`
         """), rewrite);
     contributor.declare(text("`rewriteI p` is equivalent to `rewrite (inv p)`"),
-        makeDef(paths, "rewriteI", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(false))));
+        makeDef(pathsMeta, "rewriteI", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(false))));
     contributor.declare(vList(
         hList(text("`rewriteEq (p : a = b) t : T` is similar to "), refDoc(rewrite.getRef()), text(", but it finds and replaces occurrences of `a` up to algebraic equivalences.")),
         text("For example, `rewriteEq (p : b * (c * id) = x) t : T` rewrites `(a * b) * (id * c)` as `a * x` in `T`."),
         text("Similarly to `rewrite` this meta allows specification of occurrence numbers."),
         text("Currently this meta supports noncommutative monoids and categories.")),
-        makeDef(paths, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, () -> new RewriteEquationMeta(this))));
+        makeDef(pathsMeta, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, () -> new RewriteEquationMeta(this))));
     contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
-        makeDef(paths, "simplify", new DeferredMetaDefinition(new SimplifyMeta(this), true)));
-    ConcreteMetaDefinition simp_coe = makeDef(paths, "simp_coe", new ClassExtResolver(), new DependencyMetaTypechecker(SimpCoeMeta.class, SimpCoeMeta::new));
-    ConcreteMetaDefinition extMeta = makeDef(paths, "ext", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(false), false, ExtMeta.defermentChecker)));
+        makeDef(pathsMeta, "simplify", new DeferredMetaDefinition(new SimplifyMeta(this), true)));
+    ConcreteMetaDefinition simp_coe = makeDef(pathsMeta, "simp_coe", new ClassExtResolver(), new DependencyMetaTypechecker(SimpCoeMeta.class, SimpCoeMeta::new));
+    ConcreteMetaDefinition extMeta = makeDef(pathsMeta, "ext", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(false), false, ExtMeta.defermentChecker)));
     contributor.declare(vList(
         text("Simplifies certain equalities. It expects one argument and the type of this argument is called 'subgoal'. The expected type is called 'goal'."),
         text("* If the goal is `coe (\\lam i => \\Pi (x : A) -> B x i) f right a = b'`, then the subgoal is `coe (B a) (f a) right = b`."),
@@ -288,7 +294,7 @@ public class StdExtension implements ArendExtension {
         * If the goal is `x = {P} y`, where `P : \\Prop`, then there is no subgoal
         """), extMeta);
     contributor.declare(hList(text("Similar to "), refDoc(extMeta.getRef()), text(", but also applies either "), refDoc(simp_coe.getRef()), text(" or "), refDoc(extMeta.getRef()), text(" when a field of a \\Sigma-type or a record has an appropriate type.")),
-        makeDef(paths, "exts", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(true), false, ExtMeta.defermentChecker))));
+        makeDef(pathsMeta, "exts", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(true), false, ExtMeta.defermentChecker))));
 
     MetaDefinition apply = new ApplyMeta();
     ModulePath function = ModulePath.fromString("Function.Meta");
@@ -303,6 +309,7 @@ public class StdExtension implements ArendExtension {
         """), makeDef(function, "repeat", new RepeatMeta()));
 
     ModulePath algebra = ModulePath.fromString("Algebra.Meta");
+    contributor.declare(algebra, paths);
     contributor.declare(multiline("""
         `equation a_1 ... a_n` proves an equation a_0 = a_{n+1} using a_1, ... a_n as intermediate steps
 
@@ -314,32 +321,31 @@ public class StdExtension implements ArendExtension {
         """), makeDef(algebra, "equation", new DeferredMetaDefinition(equationMeta, true)));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DeferredMetaDefinition(linearSolverMeta, true)));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
-        makeDef(algebra, "cong", new DeferredMetaDefinition(new CongruenceMeta(this))));
+        makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
 
+    contributor.declare(logicMeta, logic);
     contributor.declare(multiline("""
         Derives a contradiction from assumptions in the context
 
         A proof of a contradiction can be explicitly specified as an implicit argument
         `using`, `usingOnly`, and `hiding` with a single argument can be used instead of a proof to control the context
-        """), makeDef(logic, "contradiction", contradictionMeta));
-    givenMetaRef = makeRef(logic, "Given", new ExistsMeta(this, ExistsMeta.Kind.SIGMA));
+        """), makeDef(logicMeta, "contradiction", contradictionMeta));
+    ConcreteMetaDefinition givenMetaRef = makeDef(logicMeta, "Given", new ExistsResolver(GivenMeta.Kind.SIGMA), new TrivialMetaTypechecker(new GivenMeta(GivenMeta.Kind.SIGMA)));
     contributor.declare(multiline("""
         Given constructs a \\Sigma-type:
         * `Given (x y z : A) B` is equivalent to `\\Sigma (x y z : A) B`.
         * `Given {x y z} B` is equivalent to `\\Sigma (x y z : _) B`
         * If `P : A -> B -> C -> \\Type`, then `Given ((x,y,z) (a,b,c) : P) (Q x y z a b c)` is equivalent to `\\Sigma (x a : A) (y b : B) (z c : C) (P x y z) (P a b c) (Q x y z a b c)`
         * If `l : Array A`, then `Given (x y : l) (P x y)` is equivalent to `\\Sigma (j j' : Fin l.len) (P (l j) (l j'))`
-        """), factory.metaDef(givenMetaRef, Collections.emptyList(), null));
-    ExistsMeta existsMeta = new ExistsMeta(this, ExistsMeta.Kind.TRUNCATED);
-    existsMetaRef = factory.metaRef(factory.moduleRef(logic), "Exists", Precedence.DEFAULT, "∃", Precedence.DEFAULT, existsMeta, new TrivialMetaTypechecker(existsMeta));
-    contributor.declare(hList(refDoc(existsMetaRef), text(" is a truncated version of "), refDoc(givenMetaRef), text(". That is, `Exists a b c` is equivalent to `TruncP (Given a b c)`")),
-        factory.metaDef(existsMetaRef, Collections.emptyList(), null));
-    ExistsMeta forallMeta = new ExistsMeta(this, ExistsMeta.Kind.PI);
-    forallMetaRef = factory.metaRef(factory.moduleRef(logic), "Forall", Precedence.DEFAULT, "∀", Precedence.DEFAULT, forallMeta, new TrivialMetaTypechecker(forallMeta));
+        """), givenMetaRef);
+    MetaRef existsMetaRef = factory.metaRef(factory.moduleRef(logicMeta), "Exists", Precedence.DEFAULT, "∃", Precedence.DEFAULT, new ExistsResolver(GivenMeta.Kind.TRUNCATED), new DependencyMetaTypechecker(ExistsMeta.class, ExistsMeta::new));
+    contributor.declare(hList(refDoc(existsMetaRef), text(" is a truncated version of "), refDoc(givenMetaRef.getRef()), text(". That is, `Exists a b c` is equivalent to `TruncP (Given a b c)`")),
+        makeDef(existsMetaRef));
+    MetaRef forallMetaRef = factory.metaRef(factory.moduleRef(logicMeta), "Forall", Precedence.DEFAULT, "∀", Precedence.DEFAULT, new ExistsResolver(GivenMeta.Kind.PI), new TrivialMetaTypechecker(new GivenMeta(GivenMeta.Kind.PI)));
     contributor.declare(vList(
-        hList(refDoc(forallMetaRef), text(" works like "), refDoc(givenMetaRef), text(", but returns a \\Pi-type instead of a \\Sigma-type.")),
+        hList(refDoc(forallMetaRef), text(" works like "), refDoc(givenMetaRef.getRef()), text(", but returns a \\Pi-type instead of a \\Sigma-type.")),
         text("The last argument should be a type and will be used as the codomain."),
-        hList(text("Other arguments work like arguments of "), refDoc(givenMetaRef), text(" with the exception that curly braces mean implicit arguments:")),
+        hList(text("Other arguments work like arguments of "), refDoc(givenMetaRef.getRef()), text(" with the exception that curly braces mean implicit arguments:")),
         multiline("""
           * `Forall (x y : A) B` is equivalent to `\\Pi (x y : A) -> B`
           * `Forall {x y : A} B` is equivalent to `\\Pi {x y : A} -> B`
@@ -347,9 +353,9 @@ public class StdExtension implements ArendExtension {
           * `Forall x (B 0) (B 1)` is equivalent to `\\Pi (x : _) -> B 0 -> B 1
           * `Forall {x y} {z} B` is equivalent to `\\Pi {x y : _} {z : _} -> B`
           * If `P : A -> \\Type`, then `Forall {x y : P} (Q x) (Q y)` is equivalent to `\\Pi {x y : A} -> P x -> P y -> Q x -> Q y`
-          """)), factory.metaDef(forallMetaRef, Collections.emptyList(), null));
+          """)), makeDef(forallMetaRef));
     contributor.declare(text("Returns either a tuple, a \\new expression, or a single constructor of a data type depending on the expected type"),
-        makeDef(logic, constructorName, new ConstructorMeta(false)));
+        makeDef(logicMeta, constructorName, new ConstructorMeta(false)));
 
     ModulePath debug = ModulePath.fromString("Debug.Meta");
     contributor.declare(text("Returns current time in milliseconds"), makeDef(debug, "time", new TimeMeta()));
@@ -366,7 +372,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(nullDoc(), factory.metaDef(factory.metaRef(nfMeta, "rnf", Precedence.DEFAULT, null, null, null, new TrivialMetaTypechecker(new NormalizationMeta(NormalizationMode.RNF))), Collections.emptyList(), null));
 
     ModulePath category = ModulePath.fromString("Category.Meta");
-    contributor.declare(category, paths);
+    contributor.declare(category, pathsMeta);
     contributor.declare(text("Proves univalence for categories. The type of objects must extend `BaseSet` and the Hom-set must extend `SetHom` with properties only."), makeDef(category, "sip", new DependencyMetaTypechecker(SIPMeta.class, () -> new SIPMeta(this))));
   }
 
