@@ -18,15 +18,17 @@ import org.arend.core.expr.ReferenceExpression
 import org.arend.core.expr.type.TypeExpression
 import org.arend.ext.core.ops.NormalizationMode
 import org.arend.extImpl.UncheckedExpressionImpl
+import org.arend.psi.ArendFile
+import org.arend.psi.ancestor
 import org.arend.psi.ext.ArendArgumentAppExpr
 import org.arend.psi.ext.ArendAtomFieldsAcc
 import org.arend.psi.ext.ArendGoal
 import org.arend.psi.ext.ArendCompositeElement
 import org.arend.psi.ext.ArendFunctionDefinition
 import org.arend.refactoring.tryCorrespondedSubExpr
+import org.arend.server.ArendServerService
 import org.arend.term.concrete.BaseConcreteExpressionVisitor
 import org.arend.term.concrete.Concrete
-import org.arend.typechecking.error.ErrorService
 import org.arend.typechecking.error.local.GoalError
 import org.arend.util.ArendBundle
 import org.arend.util.appExprToConcrete
@@ -46,8 +48,7 @@ class GenerateFunctionFromGoalIntention : AbstractGenerateFunctionIntention() {
 
     override fun extractSelectionData(file: PsiFile, editor: Editor, project: Project): SelectionResult? {
         val goal = file.findElementAt(editor.caretModel.offset)?.parentOfType<ArendGoal>(false) ?: return null
-        val errorService = project.service<ErrorService>()
-        val arendError = errorService.errors[goal.containingFile]?.firstOrNull { it.cause == goal }?.error as? GoalError
+        val arendError = project.service<ArendServerService>().server.errorMap[(goal.containingFile as? ArendFile)?.moduleLocation]?.firstOrNull { it.cause == goal } as? GoalError
                 ?: return null
         val goalType = arendError.expectedType
         val (modifiedType, customArguments) = getCustomArguments(goal, goalType) { tryCorrespondedSubExpr(it, file, project, editor)?.subCore }
@@ -117,7 +118,8 @@ class GenerateFunctionFromGoalIntention : AbstractGenerateFunctionIntention() {
         var result = emptyList<Pair<PsiElement, Boolean>>()
         parsedAppExpr.accept(object : BaseConcreteExpressionVisitor<Unit>() {
             override fun visitApp(expr: Concrete.AppExpression, params: Unit?): Concrete.Expression {
-                val functionPsi = expr.function.data as PsiElement
+                val funcData = expr.function.data as PsiElement
+                val functionPsi = funcData.ancestor<ArendAtomFieldsAcc>() ?: funcData
                 if (functionPsi.isEffectivelyGoal(goal)) {
                     result = expr.arguments.map { it.expression.data as PsiElement to it.isExplicit }
                     return expr
