@@ -1,8 +1,14 @@
 package org.arend.navigation
 
 import org.arend.ArendTestBase
+import org.arend.prelude.Prelude
 
 class ArendSymbolNavigationContributorTest : ArendTestBase() {
+    override fun setUp() {
+        super.setUp()
+        typecheck(listOf(Prelude.MODULE_PATH))
+    }
+
     fun `test contains Prelude definitions`() {
         val contributor = ArendSymbolNavigationContributor()
         val names = contributor.getNames(project, true)
