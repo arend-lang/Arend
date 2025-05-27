@@ -17,15 +17,15 @@ public class NegationPropagationRule extends LocalSimplificationRuleBase {
   private final FunctionMatcher invMatcher;
   private final boolean isAdditive;
 
-  public NegationPropagationRule(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
-    super(instance, classCall, ext, refExpr, typechecker);
+  public NegationPropagationRule(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
+    super(instance, classCall, meta, refExpr, typechecker);
     this.isAdditive = isAdditive;
     if (isAdditive) {
-      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, ext.equationMeta.plus, typechecker, factory, refExpr, ext, 2);
-      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, ext.equationMeta.negative, typechecker, factory, refExpr, ext, 1);
+      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.plus, typechecker, factory, refExpr, ext, 2);
+      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.negative, typechecker, factory, refExpr, ext, 1);
     } else {
-      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, ext.equationMeta.mul, typechecker, factory, refExpr, ext, 2);
-      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, ext.equationMeta.inverse, typechecker, factory, refExpr, ext, 1);
+      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.mul, typechecker, factory, refExpr, ext, 2);
+      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.inverse, typechecker, factory, refExpr, ext, 1);
     }
   }
 
@@ -33,19 +33,19 @@ public class NegationPropagationRule extends LocalSimplificationRuleBase {
   protected Pair<CoreExpression, ConcreteExpression> simplifySubexpression(CoreExpression subexpr) {
     List<CoreExpression> args = invMatcher.match(subexpr);
     if (args != null) {
-      args = mulMatcher.match(args.get(0));
+      args = mulMatcher.match(args.getFirst());
       if (args != null) {
         var left = args.get(args.size() - 2);
-        var right = args.get(args.size() - 1);
-        var newLeft = factory.appBuilder(factory.ref(isAdditive ? ext.equationMeta.negative.getRef() : ext.equationMeta.inverse.getRef()))
+        var right = args.getLast();
+        var newLeft = factory.appBuilder(factory.ref((isAdditive ? meta.negative : meta.inverse).getRef()))
           .app(factory.core(left.computeTyped())).build();
-        var newRight = factory.appBuilder(factory.ref(isAdditive ? ext.equationMeta.negative.getRef() : ext.equationMeta.inverse.getRef()))
+        var newRight = factory.appBuilder(factory.ref((isAdditive ? meta.negative : meta.inverse).getRef()))
           .app(factory.core(right.computeTyped())).build();
-        var newExpr = factory.appBuilder(factory.ref(isAdditive ? ext.equationMeta.plus.getRef() : ext.equationMeta.mul.getRef()))
+        var newExpr = factory.appBuilder(factory.ref((isAdditive ? meta.plus : meta.mul).getRef()))
           .app(newRight).app(newLeft).build();
         var checkedNewExpr = typechecker.typecheck(newExpr, subexpr.computeType());
         if (checkedNewExpr == null) return null;
-        var negPropagationLemma = factory.ref(isAdditive ? ext.equationMeta.negativePlus.getRef() : ext.equationMeta.inverseMul.getRef());
+        var negPropagationLemma = factory.ref(isAdditive ? meta.negativePlus : meta.inverseMul);
         return new Pair<>(checkedNewExpr.getExpression(), factory.appBuilder(negPropagationLemma).app(factory.hole(), false).app(factory.core(left.computeTyped()), false).app(factory.core(right.computeTyped()), false).build());
       }
     }

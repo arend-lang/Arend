@@ -39,10 +39,10 @@
   | \infixl 6 :+ (t s : RingTerm C V)
   | \infixl 7 :* (t s : RingTerm C V)
 
-\class BaseData {C : Semiring} {S : LinearOrder.Dec C} {R : Semiring} (alg : SemiringHom C R) \extends CData {
+\class BaseData {C : Semiring} {S : LinearOrder.Dec C} {R : Semiring} (alg : SemiringHom C R) \extends CMonoidData {
   | M => AbMonoid.toCMonoid R
   | alg-comm (x : C) (y : R) : alg x R.* y = y R.* alg x
-  \field mData : Data {R} vars
+  \field mData : MonoidData {R} vars
 
   \func interpretRingNF (l : List (\Sigma (List V) C)) : R \elim l
     | nil => 0
@@ -78,12 +78,12 @@
 
   \lemma interpretNF_map (a1 : C) (a2 a3 : List V) (l : List (\Sigma (List V) C)) : interpretRingNF (map (\lam b => (a2 ++ b.1 ++ a3, a1 * b.2)) l) = alg a1 * mData.interpretNF a2 * interpretRingNF l * mData.interpretNF a3 \elim l
     | nil => inv (pmap (`* _) zro_*-right *> zro_*-left)
-    | :: a l => run {
+    | :: a l => {?} {- TODO[server2]: run {
       repeat {2} (rewrite BaseData.cons),
       repeat {2} (rewrite mData.interpretNF_++),
       rewrite (alg.func-*, interpretNF_map, ldistr, rdistr),
       pmap (`+ _) (equation {Monoid} {usingOnly (alg-comm a.2 (mData.interpretNF a2))})
-    }
+    } -}
 
   \lemma interpretNF_map-left (a1 : C) (a2 : List V) (l : List (\Sigma (List V) C)) : interpretRingNF (map (\lam b => (a2 ++ b.1, a1 * b.2)) l) = alg a1 * mData.interpretNF a2 * interpretRingNF l
     => inv (path (\lam i => interpretRingNF (map (\lam b => (a2 ++ (++_nil {_} {b.1} @ i), a1 * b.2)) l))) *> interpretNF_map a1 a2 nil l *> ide-right
@@ -180,15 +180,15 @@
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 
   \lemma replace-consistent (list : List (\Sigma (List V) C)) (l r : RingTerm C V) (is : List Nat) (a b : List V) (c : C)
-                            (p : interpretRingNF (remove0 (collapse (sort (CData.indices is list)))) = interpretRingNF (remove0 (collapse (sort (map (\lam t => (a ++ t.1 ++ b, c * t.2)) (normalize' l))))))
+                            (p : interpretRingNF (remove0 (collapse (sort (CMonoidData.indices is list)))) = interpretRingNF (remove0 (collapse (sort (map (\lam t => (a ++ t.1 ++ b, c * t.2)) (normalize' l))))))
                             (rule : interpret l = interpret r)
-    : interpretRingNF list = interpretRingNF (map (\lam t => (a ++ t.1 ++ b, c * t.2)) (normalize' r) ++ CData.removeIndices is list)
+    : interpretRingNF list = interpretRingNF (map (\lam t => (a ++ t.1 ++ b, c * t.2)) (normalize' r) ++ CMonoidData.removeIndices is list)
     => replace-consistent-lem is list *>
        interpretRingNF_++ _ _ *>
        pmap (`+ _) (normalizeList-consistent _ *> p *> inv (normalizeList-consistent _) *> interpretNF_map c a b _ *> pmap (_ * __ * _) (inv (normalize-consistent' l) *> rule *> normalize-consistent' r) *> inv (interpretNF_map c a b _)) *>
        inv (interpretRingNF_++ _ _)
 
-  \lemma replace-consistent-lem (is : List Nat) (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (CData.indices is l ++ CData.removeIndices is l)
+  \lemma replace-consistent-lem (is : List Nat) (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (CMonoidData.indices is l ++ CMonoidData.removeIndices is l)
     | nil, l => idp
     | :: 0 is, nil => idp
     | :: (suc _) is, nil => idp
@@ -209,15 +209,15 @@
 
 \class CAlgData \extends AlgData {
   \override R : CSemiring
-  \override mData : CData vars
-  | mData => \new CData
+  \override mData : CMonoidData vars
+  | mData => \new CMonoidData
   | alg-comm x y => *-comm
 
   \func normalize (t : RingTerm C V) => remove0 (collapse (sort (map (\lam p => (sort p.1, p.2)) (normalize' t))))
 
   \lemma map_sort-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (map (\lam p => (sort p.1, p.2)) l)
     | nil => idp
-    | :: a l => repeat {2} (rewrite BaseData.cons) $ pmap2 (_ * __ + __) (CData.sort-consistent {mData} a.1) (map_sort-consistent l)
+    | :: a l => repeat {2} (rewrite BaseData.cons) $ pmap2 (_ * __ + __) (CMonoidData.sort-consistent {mData} a.1) (map_sort-consistent l)
 
   \lemma normalize-consistent (t : RingTerm C V) : interpret t = interpretRingNF (normalize t)
     => normalize-consistent' t *> map_sort-consistent _ *> normalizeList-consistent _
@@ -226,9 +226,9 @@
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 
   \lemma replace-consistent (list : List (\Sigma (List V) C)) (l r : RingTerm C V) (is : List Nat) (a : List V) (c : C)
-                            (p : interpretRingNF (remove0 (collapse (sort (map (\lam p => (sort p.1, p.2)) (CData.indices is list))))) = interpretRingNF (remove0 (collapse (sort (map (\lam t => (sort (a ++ t.1), c * t.2)) (normalize' l))))))
+                            (p : interpretRingNF (remove0 (collapse (sort (map (\lam p => (sort p.1, p.2)) (CMonoidData.indices is list))))) = interpretRingNF (remove0 (collapse (sort (map (\lam t => (sort (a ++ t.1), c * t.2)) (normalize' l))))))
                             (rule : interpret l = interpret r)
-    : interpretRingNF list = interpretRingNF (map (\lam t => (a ++ t.1, c * t.2)) (normalize' r) ++ CData.removeIndices is list)
+    : interpretRingNF list = interpretRingNF (map (\lam t => (a ++ t.1, c * t.2)) (normalize' r) ++ CMonoidData.removeIndices is list)
     => replace-consistent-lem is list *>
        interpretRingNF_++ _ _ *>
        pmap (`+ _) (map_sort-consistent _ *>
@@ -296,16 +296,16 @@
     | :: a l, nil => greater (<=-antisymmetric top-univ join-right)
     | :: a l, :: a' l' => \case trichotomy a a' \with {
       | less a<a' => \case compare l (a' :: l') \with {
-        | greater p => greater $ rewrite (Data.interpretNF.cons {mData}) (lattice-lem p)
+        | greater p => greater $ rewrite (MonoidData.interpretNF.cons {mData}) (lattice-lem p)
         | _ => uncomparable
       }
       | equals a=a' => \case compare l l' \with {
-        | lessOrEquals p => lessOrEquals $ rewriteI a=a' $ repeat {2} (rewrite (Data.interpretNF.cons {mData})) (inv ldistr *> pmap (vars a ∧) p)
-        | greater p => greater $ rewrite a=a' $ repeat {2} (rewrite (Data.interpretNF.cons {mData})) (inv ldistr *> pmap (vars a' ∧) p)
+        | lessOrEquals p => lessOrEquals $ rewriteI a=a' $ repeat {2} (rewrite (MonoidData.interpretNF.cons {mData})) (inv ldistr *> pmap (vars a ∧) p)
+        | greater p => greater $ rewrite a=a' $ repeat {2} (rewrite (MonoidData.interpretNF.cons {mData})) (inv ldistr *> pmap (vars a' ∧) p)
         | uncomparable => uncomparable
       }
       | Order.LinearOrder.greater a>a' => \case compare (a :: l) l' \with {
-        | lessOrEquals p => lessOrEquals $ rewrite {2} (Data.interpretNF.cons {mData}) (+-comm *> lattice-lem (+-comm *> p))
+        | lessOrEquals p => lessOrEquals $ rewrite {2} (MonoidData.interpretNF.cons {mData}) (+-comm *> lattice-lem (+-comm *> p))
         | _ => uncomparable
       }
     }
@@ -368,7 +368,7 @@
 
   \lemma map_sort-consistent (l : List (List V)) : interpretLatticeNF l = interpretLatticeNF (map sort l)
     | nil => idp
-    | :: a l => repeat {2} (rewrite interpretLatticeNF.cons) $ pmap2 (+) (CData.sort-consistent {mData} a) (map_sort-consistent l)
+    | :: a l => repeat {2} (rewrite interpretLatticeNF.cons) $ pmap2 (+) (CMonoidData.sort-consistent {mData} a) (map_sort-consistent l)
 
   \lemma map_removeDuplicates-consistent (l : List (List V)) : interpretLatticeNF l = interpretLatticeNF (map (LData.removeDuplicates {lData}) l)
     | nil => idp
@@ -394,7 +394,7 @@
   \override C : Ring
   \override R : Ring
   \override alg : RingHom C R
-  \default mData => \new Data
+  \default mData => \new MonoidData
   | pnegative => negative
   | negate => BaseRingData.negate
   \default interpretNF_negate (l : List (\Sigma (List V) C)) : negative (interpretRingNF l) = interpretRingNF (negate l) \elim l {
@@ -440,9 +440,9 @@
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 
   \lemma replace-consistent (list : List (\Sigma (List V) C)) (l r : RingTerm C V) (is : List Nat) (a : List V) (c : C)
-                            (p : interpretRingNF (remove0 (collapse (sort (map (\lam p => (sort p.1, p.2)) (CData.indices is list))))) = interpretRingNF (remove0 (collapse (sort (map (\lam t => (sort (a ++ t.1), c * t.2)) (normalize' l))))))
+                            (p : interpretRingNF (remove0 (collapse (sort (map (\lam p => (sort p.1, p.2)) (CMonoidData.indices is list))))) = interpretRingNF (remove0 (collapse (sort (map (\lam t => (sort (a ++ t.1), c * t.2)) (normalize' l))))))
                             (rule : interpret l = interpret r)
-    : interpretRingNF list = interpretRingNF (map (\lam t => (a ++ t.1, c * t.2)) (normalize' r) ++ CData.removeIndices is list)
+    : interpretRingNF list = interpretRingNF (map (\lam t => (a ++ t.1, c * t.2)) (normalize' r) ++ CMonoidData.removeIndices is list)
     => replace-consistent-lem is list *>
        interpretRingNF_++ _ _ *>
        pmap (`+ _) (CAlgData.map_sort-consistent _ *>

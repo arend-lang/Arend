@@ -67,20 +67,20 @@
   | E => Type
   | zro => in~ (zro, ide, contains_ide)
   | + => ++
-  | zro-left {in~ _} => path (~-equiv _ _ equation)
-  | +-assoc {in~ _} {in~ _} {in~ _} => path (~-equiv _ _ (pmap2 (*) equation (inv *-assoc)))
-  | +-comm {in~ _} {in~ _} => path (~-equiv _ _ equation)
+  | zro-left {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
+  | +-assoc {in~ _} {in~ _} {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ (pmap2 (*) equation (inv *-assoc)))
+  | +-comm {in~ _} {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
   | ide => in~ (ide, ide, contains_ide)
   | * => **
-  | ide-left {in~ _} => path (~-equiv _ _ equation)
-  | *-assoc {in~ _} {in~ _} {in~ _} => path (~-equiv _ _ equation)
-  | ldistr {in~ _} {in~ _} {in~ _} => path (~-equiv _ _ equation)
+  | ide-left {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
+  | *-assoc {in~ _} {in~ _} {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
+  | ldistr {in~ _} {in~ _} {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
   | negative => neg
-  | negative-left {in~ _} => path (~-equiv _ _ equation)
+  | negative-left {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
   | *-comm {in~ _} {in~ _} => path (~-equiv _ _ (pmap2 (*) *-comm *-comm))
   | natCoef n => in~ (natCoef n, 1, contains_ide)
   | natCoefZero => path (\lam i => in~ (natCoefZero i, 1, contains_ide))
-  | natCoefSuc n => pmap in~ $ ext (natCoefSuc n *> equation, inv ide-left)
+  | natCoefSuc n => {?} -- TODO[server2]: pmap in~ $ ext (natCoefSuc n *> equation, inv ide-left)
   \where {
     \func SType (S : SubMonoid R) => \Sigma (x y : R) (S y)
 
@@ -90,55 +90,55 @@
       => Quotient.in-surj
 
     \lemma equals-lem {a b : SType S} (c : R) (s : S c) (p : a.1 * b.2 * c = b.1 * a.2 * c) : inl~ a = inl~ b
-      => \let a' : SType S => (a.1 * c, a.2 * c, contains_* a.3 s)
+      => {?} {- TODO[server2]: \let a' : SType S => (a.1 * c, a.2 * c, contains_* a.3 s)
          \in path (~-equiv a a' equation) *>
-             path (~-equiv a' b equation)
+             path (~-equiv a' b equation) -}
 
     \lemma equals1 {a b : SType S} (p : a.1 * b.2 = b.1 * a.2) : inl~ a = inl~ b
-      => equals-lem 1 S.contains_ide (simplify p)
+      => {?} -- TODO[server2]: equals-lem 1 S.contains_ide (simplify p)
 
     \lemma unequals {a b : SType S} (p : inl~ a = inl~ b)
       : TruncP (\Sigma (c : R) (S c) (a.1 * b.2 * c = b.1 * a.2 * c))
-      => Equivalence.Closure.univ (\new Equivalence (SType S) {
+      => {?} {- TODO[server2]: Equivalence.Closure.univ (\new Equivalence (SType S) {
         | ~ x y => TruncP (\Sigma (z : R) (S z) (x.1 * y.2 * z = y.1 * x.2 * z))
         | ~-reflexive => inP (ide, contains_ide, idp)
         | ~-symmetric (inP (z,c,p)) => inP (z, c, inv p)
         | ~-transitive {x} {y} (inP (t,ct,pt)) (inP (s,cs,ps)) => inP (y.2 * (t * s), contains_* y.3 (contains_* ct cs), equation)
       }) (\lam x~y => inP (ide, contains_ide, simplify x~y))
-         (Quotient.equality p)
+         (Quotient.equality p) -}
 
     \lemma equality {a b : SType S} : (inl~ a = inl~ b) = TruncP (\Sigma (c : R) (S c) (a.1 * b.2 * c = b.1 * a.2 * c))
       => propExt unequals (\lam (inP (c,s,p)) => equals-lem c s p)
 
     \lemma swap {R : CMonoid} {r1 r2 s1 s2 : R} : (r1 * r2) * (s1 * s2) = (r1 * s1) * (r2 * s2)
-      => equation
+      => {?} -- TODO[server2]: equation
 
     \func neg (a : Type) : Type \elim a
       | in~ (r,s,p) => in~ (negative r, s, p)
       | ~-equiv (r,s,p) (r',s',p') rs~rs' i =>
-        ~-equiv (negative r, s, p) (negative r', s', p') equation i
+        {?} -- TODO[server2]: ~-equiv (negative r, s, p) (negative r', s', p') equation i
 
     \func ++ (a b : Type) : Type \elim a, b
       | in~ (r1,s1,p1), in~ (r2,s2,p2) => in~ (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2)
       | ~-equiv (r1,s1,p1) (r1',s1',p1') rs1~rs1' i, in~ (r2,s2,p2) =>
-        ~-equiv (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2) (r1' * s2 + r2 * s1', s1' * s2, contains_* p1' p2) equation i
+        {?} -- TODO[server2]: ~-equiv (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2) (r1' * s2 + r2 * s1', s1' * s2, contains_* p1' p2) equation i
       | in~ (r1,s1,p1), ~-equiv (r2,s2,p2) (r2',s2',p2') rs2~rs2' i =>
-        ~-equiv (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2) (r1 * s2' + r2' * s1, s1 * s2', contains_* p1 p2') equation i
+        {?} -- TODO[server2]: ~-equiv (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2) (r1 * s2' + r2' * s1, s1 * s2', contains_* p1 p2') equation i
 
     \func ** (a b : Type) : Type \elim a, b
       | in~ (r1,s1,p1), in~ (r2,s2,p2) => in~ (r1 * r2, s1 * s2, contains_* p1 p2)
       | ~-equiv (r1,s1,p1) (r1',s1',p1') rs1~rs1' i, in~ (r2,s2,p2) =>
-        ~-equiv (r1 * r2, s1 * s2, contains_* p1 p2) (r1' * r2, s1' * s2, contains_* p1' p2) equation i
+        {?} -- TODO[server2]: ~-equiv (r1 * r2, s1 * s2, contains_* p1 p2) (r1' * r2, s1' * s2, contains_* p1' p2) equation i
       | in~ (r1,s1,p1), ~-equiv (r2,s2,p2) (r2',s2',p2') rs2~rs2' i =>
-        ~-equiv (r1 * r2, s1 * s2, contains_* p1 p2) (r1 * r2', s1 * s2', contains_* p1 p2') equation i
+        {?} -- TODO[server2]: ~-equiv (r1 * r2, s1 * s2, contains_* p1 p2) (r1 * r2', s1 * s2', contains_* p1 p2') equation i
 
     \lemma trivial {x : R} (n : R.IsNilpotent x) (s : S x) : Contr (LocRing S) \elim n
-      | inP (n,p) => \new Contr {
+      | inP (n,p) => {?} {- TODO[server2]: \new Contr {
         | center => in~ (zro, ide, contains_ide)
         | contraction => \case \elim __ \with {
           | in~ a => equals-lem 0 (transport S p $ S.contains_pow s) simplify
         }
-      }
+      } -}
 
     \lemma closure-equiv {R : CRing} (S : SubSet R) (l1 : Localization R S) (l2 : Localization R (closure S))
       : Iso (l1.lift l2.inL (\lam x x<-S => l2.local x (closure.ext S x x<-S)))
@@ -154,7 +154,7 @@
 
     \lemma nilpotent-contr (b : R) (Sb : S b) (n : Nat) (p : R.pow b n = 0) : Contr (LocRing S)
       => isProp=>isContr (\case \elim __, \elim __ \with {
-        | in~ x, in~ y => equals-lem 0 (rewriteI p $ S.contains_pow Sb) simplify
+        | in~ x, in~ y => {?} -- TODO[server2]: equals-lem 0 (rewriteI p $ S.contains_pow Sb) simplify
       }) $ inl~ (0,b,Sb)
   }
 
@@ -169,7 +169,7 @@
   | func x => in~ (x, ide, contains_ide)
   | func-ide => idp
   | func-+ => path (~-equiv _ _ (path (\lam i => ((inv ide-right @ i) + (inv ide-right @ i)) * (ide-right @ i))))
-  | func-* => path (~-equiv _ _ simplify)
+  | func-* => {?} -- TODO[server2]: path (~-equiv _ _ simplify)
 
 \lemma locMap-inj {R : CRing} {S : SubMonoid R} (p : \Pi {a : R} -> S a -> \Pi {x y : R} -> x * a = y * a -> x = y) : isInj (locMap {R} {S})
   => \lam {a} {b} q => \case LocRing.unequals q \with {
@@ -273,20 +273,20 @@
 
     \lemma div-map_loc {a b : R} (a|b : LDiv a b) : div-map a|b ∘ locMap = locMap
       => exts \lam x => \case (div-map.aux a|b (x, ide, contains_ide {powers a})).2 \with {
-        | inP ((n,a^n=1),p) => inv p *> path (~-equiv _ _ equation)
+        | inP ((n,a^n=1),p) => {?} -- TODO[server2]: inv p *> path (~-equiv _ _ equation)
       }
 
     \func div-map {a b : R} (a|b : LDiv a b) : RingHom (LocRing (powers a)) (LocRing (powers b)) \cowith
       | func => aux-func a|b
-      | func-+ {in~ x} {in~ y} => \case (aux a|b x).2, (aux a|b y).2, (aux a|b _).2 \with {
+      | func-+ {in~ x} {in~ y} => {?} {- TODO[server2]: \case (aux a|b x).2, (aux a|b y).2, (aux a|b _).2 \with {
         | inP ((n,a^n=x2),p1), inP ((m,a^m=y2),p2), inP ((k,a^k=x2y2),p3) => inv p3 *> path (~-equiv _ _ equation) *> pmap2 (+) p1 p2
-      }
-      | func-ide => \case (aux a|b _).2 \with {
+      } -}
+      | func-ide => {?} {- TODO[server2]: \case (aux a|b _).2 \with {
         | inP ((n,a^n=1),p) => inv p *> path (~-equiv _ _ equation)
-      }
-      | func-* {in~ x} {in~ y} => \case (aux a|b x).2, (aux a|b y).2, (aux a|b _).2 \with {
+      } -}
+      | func-* {in~ x} {in~ y} => {?} {- TODO[server2]: \case (aux a|b x).2, (aux a|b y).2, (aux a|b _).2 \with {
         | inP ((n,a^n=x2),p1), inP ((m,a^m=y2),p2), inP ((k,a^k=x2y2),p3) => inv p3 *> path (~-equiv _ _ equation) *> pmap2 (*) p1 p2
-      }
+      } -}
       \where {
         \lemma aux {a b : R} (a|b : LDiv a b) (x : SType (powers a))
           => TruncP.rec-set {_} {LocRing (powers b)} x.3 (\lam (n,a^n=y) => in~ $ later (x.1 * pow a|b.inv n, pow a|b.inv n * pow a n, inP (n, rewriteI a|b.inv-right $ R.pow_*-comm *> *-comm))) (\lam (n,a^n=x2) (m,a^m=x2) => later $ path (~-equiv _ _ $ later $ rewrite (a^n=x2,a^m=x2) swap))
@@ -295,7 +295,7 @@
           => \case \elim x \with {
             | in~ x => (aux a|b x).1
             | ~-equiv x y r => \case (aux a|b x).2, (aux a|b y).2 \with {
-              | inP ((n,a^n=x2),p), inP ((m,a^m=y2),q) => inv p *> path (~-equiv _ _ equation) *> q
+              | inP ((n,a^n=x2),p), inP ((m,a^m=y2),q) => {?} -- TODO[server2]: inv p *> path (~-equiv _ _ equation) *> q
             }
           }
       }

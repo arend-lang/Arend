@@ -46,7 +46,7 @@ public class StdNumberTypechecker implements LiteralTypechecker {
         instance = null;
         generate = true;
       } else {
-        CoreClassDefinition classDef = number.equals(BigInteger.ZERO) ? ext.AddPointed : number.equals(BigInteger.ONE) ? ext.Pointed : number.signum() == -1 ? ext.equationMeta.Ring : ext.equationMeta.Semiring;
+        CoreClassDefinition classDef = number.equals(BigInteger.ZERO) ? ext.AddPointed : number.equals(BigInteger.ONE) ? ext.Pointed : number.signum() == -1 ? ext.Ring : ext.Semiring;
         instance = classDef == null ? null : Utils.findInstance(new SubclassSearchParameters(classDef), ext.carrier, expectedType, typechecker, contextData.getMarker());
         generate = instance != null;
       }
@@ -55,9 +55,9 @@ public class StdNumberTypechecker implements LiteralTypechecker {
         ConcreteExpression cExpr;
         ConcreteExpression cInstance = instance == null ? null : factory.core(null, instance);
         if (number.equals(BigInteger.ZERO) || number.equals(BigInteger.ONE) || number.equals(BigInteger.ONE.negate())) {
-          cExpr = number.equals(BigInteger.ZERO) ? applyInstance(cInstance, factory.ref(ext.zro.getRef()), factory) : number.equals(BigInteger.ONE) ? applyInstance(cInstance, factory.ref(ext.ide.getRef()), factory) : factory.app(applyInstance(cInstance, factory.ref(ext.equationMeta.negative.getRef()), factory), true, factory.ref(ext.ide.getRef()));
+          cExpr = number.equals(BigInteger.ZERO) ? applyInstance(cInstance, factory.ref(ext.zro.getRef()), factory) : number.equals(BigInteger.ONE) ? applyInstance(cInstance, factory.ref(ext.ide.getRef()), factory) : factory.app(applyInstance(cInstance, factory.ref(ext.negative.getRef()), factory), true, factory.ref(ext.ide.getRef()));
         } else {
-          ConcreteAppBuilder builder = factory.appBuilder(factory.ref((number.signum() == -1 ? ext.equationMeta.intCoef : ext.equationMeta.natCoef).getRef()));
+          ConcreteAppBuilder builder = factory.appBuilder(factory.ref((number.signum() == -1 ? ext.intCoef : ext.natCoef).getRef()));
           if (cInstance != null) {
             builder.app(cInstance, false);
           }

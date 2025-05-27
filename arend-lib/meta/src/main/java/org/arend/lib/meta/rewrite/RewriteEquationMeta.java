@@ -5,7 +5,6 @@ import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteParameter;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.core.context.CoreBinding;
-import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.*;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -17,6 +16,7 @@ import org.arend.ext.util.Pair;
 import org.arend.lib.StdExtension;
 
 import org.arend.lib.error.TypeError;
+import org.arend.lib.meta.equation.BaseEquationMeta;
 import org.arend.lib.meta.equation.EqualitySolver;
 import org.arend.lib.meta.equation.EquationSolver;
 import org.arend.lib.meta.util.SubstitutionMeta;
@@ -28,11 +28,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Function;
 
-public class RewriteEquationMeta extends BaseMetaDefinition {
+public class RewriteEquationMeta extends BaseEquationMeta {
   private final StdExtension ext;
-  @Dependency(name = "Precat.Hom") private ArendRef catHom;
-  @Dependency(name = "Precat.o")   private CoreClassField catComp;
-  @Dependency(name = "Precat.id")  private CoreClassField catId;
   @Dependency private ArendRef transport;
   @Dependency private ArendRef transportInv;
   @Dependency(name = "*>") private ArendRef concat;
@@ -321,7 +318,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
       type = expectedType;
     }
 
-    EqualitySolver solver = new EqualitySolver(ext.equationMeta, typechecker, factory, refExpr, catHom, catComp, catId);
+    EqualitySolver solver = new EqualitySolver(ext, this, typechecker, factory, refExpr);
     solver.setValuesType(value.computeType());
     solver.setUseHypotheses(false);
     solver.initializeSolver();

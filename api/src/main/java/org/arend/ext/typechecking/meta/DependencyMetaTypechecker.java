@@ -8,6 +8,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.module.LongName;
 import org.arend.ext.reference.ArendRef;
+import org.arend.ext.typechecking.BaseMetaDefinition;
 import org.arend.ext.typechecking.DeferredMetaDefinition;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.MetaDefinition;
@@ -19,6 +20,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 public class DependencyMetaTypechecker implements MetaTypechecker {
@@ -31,7 +33,7 @@ public class DependencyMetaTypechecker implements MetaTypechecker {
     fields = new ArrayList<>();
     this.metaSupplier = metaSupplier;
 
-    for (Field field : container.getDeclaredFields()) {
+    for (Field field : getAllFields(container)) {
       Class<?> fieldType = field.getType();
       Dependency dependency = field.getAnnotation(Dependency.class);
       if (dependency != null) {
@@ -50,6 +52,15 @@ public class DependencyMetaTypechecker implements MetaTypechecker {
     if (names.isEmpty()) {
       throw new IllegalArgumentException();
     }
+  }
+
+  private static List<Field> getAllFields(Class<?> clazz) {
+    List<Field> result = new ArrayList<>();
+    do {
+      Collections.addAll(result, clazz.getDeclaredFields());
+      clazz = clazz.getSuperclass();
+    } while (clazz != null && !clazz.equals(BaseMetaDefinition.class) && !clazz.equals(Objects.class));
+    return result;
   }
 
   public static List<ArendRef> extractReferences(ConcreteMetaDefinition definition, int numberOfReferences, ErrorReporter errorReporter) {

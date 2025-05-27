@@ -12,7 +12,6 @@ import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
@@ -20,15 +19,15 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collections;
 
 public abstract class LocalSimplificationRuleBase implements SimplificationRule {
+  protected final SimplifyMeta meta;
   protected final ConcreteFactory factory;
-  protected final StdExtension ext;
   protected final ConcreteReferenceExpression refExpr;
   protected final ExpressionTypechecker typechecker;
   protected final CoreClassCallExpression classCall;
   protected final TypedExpression instance;
 
-  public LocalSimplificationRuleBase(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker) {
-    this.ext = ext;
+  public LocalSimplificationRuleBase(TypedExpression instance, CoreClassCallExpression classCall, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker) {
+    this.meta = meta;
     this.factory = typechecker.getFactory().withData(refExpr);
     this.refExpr = refExpr;
     this.typechecker = typechecker;
@@ -81,7 +80,7 @@ public abstract class LocalSimplificationRuleBase implements SimplificationRule 
           continue;
         }
         simplificationProof.right = simplificationRes[0].right;
-        simplificationProof.proof = factory.appBuilder(factory.ref(ext.concat.getRef())).app(simplificationProof.proof).app(simplificationRes[0].proof).build();
+        simplificationProof.proof = factory.appBuilder(factory.ref(meta.concat)).app(simplificationProof.proof).app(simplificationRes[0].proof).build();
         continue;
       }
       break;

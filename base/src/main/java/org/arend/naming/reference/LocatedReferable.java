@@ -24,6 +24,13 @@ public interface LocatedReferable extends GlobalReferable {
     return new LongName(longName);
   }
 
+  @Override
+  default boolean checkName(@NotNull ModulePath modulePath, @NotNull LongName name) {
+    List<String> longName = new ArrayList<>();
+    ModuleLocation module = LocatedReferable.Helper.getLocation(this, longName);
+    return module != null && modulePath.equals(module.getModulePath()) && name.toList().equals(longName);
+  }
+
   default FullName getRefFullName() {
     List<String> name = new ArrayList<>();
     return new FullName(LocatedReferable.Helper.getLocation(this, name), new LongName(name));

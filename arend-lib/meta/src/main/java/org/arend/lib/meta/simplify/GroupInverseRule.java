@@ -14,9 +14,8 @@ import org.arend.lib.meta.equation.term.VarTerm;
 import java.util.Arrays;
 
 public class GroupInverseRule extends GroupRuleBase {
-
-  public GroupInverseRule(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
-    super(instance, classCall, ext, refExpr, typechecker, isAdditive, false);
+  public GroupInverseRule(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
+    super(instance, classCall, ext, meta, refExpr, typechecker, isAdditive, false);
   }
 
   private boolean isInNF(CompiledTerm term) {
@@ -141,26 +140,26 @@ public class GroupInverseRule extends GroupRuleBase {
     if (newTerm == null) return null;
     var concreteTerm = CompiledTerm.termToConcrete(term, x -> {
       if (x == mulMatcher) {
-        return factory.ref(ext.equationMeta.mulGTerm.getRef());
+        return factory.ref(meta.mulGTerm);
       }
       if (x == invMatcher) {
-        return factory.ref(ext.equationMeta.invGTerm.getRef());
+        return factory.ref(meta.invGTerm);
       }
-      return factory.ref(ext.equationMeta.ideGTerm.getRef());
-    }, ind -> factory.appBuilder(factory.ref(ext.equationMeta.varGTerm.getRef())).app(factory.number(ind)).build(), factory);
+      return factory.ref(meta.ideGTerm);
+    }, ind -> factory.appBuilder(factory.ref(meta.varGTerm)).app(factory.number(ind)).build(), factory);
     if (concreteTerm == null) return null;
-    var simplifyProof = factory.appBuilder(factory.ref(ext.equationMeta.simplifyCorrectInv.getRef()))
+    var simplifyProof = factory.appBuilder(factory.ref(meta.simplifyCorrectInv))
       .app(factory.ref(dataRef), false)
       .app(concreteTerm).build();
     var left = factory.core(expression);
     var right = CompiledTerm.termToConcrete(newTerm, x -> {
       if (x == mulMatcher) {
-        return isAdditive ? factory.ref(ext.equationMeta.plus.getRef()) : factory.ref(ext.equationMeta.mul.getRef());
+        return factory.ref((isAdditive ? meta.plus : meta.mul).getRef());
       }
       if (x == invMatcher) {
-        return isAdditive ? factory.ref(ext.equationMeta.negative.getRef()) : factory.ref(ext.equationMeta.inverse.getRef());
+        return factory.ref((isAdditive ? meta.negative : meta.inverse).getRef());
       }
-      return factory.ref(isAdditive ? ext.equationMeta.zro.getRef() : ext.equationMeta.ide.getRef());
+      return factory.ref((isAdditive ? meta.zro : meta.ide).getRef());
     }, ind -> factory.core(values.getValue(ind).computeTyped()), factory);
     return new RewriteEquationMeta.EqProofConcrete(simplifyProof, left, right);
   }

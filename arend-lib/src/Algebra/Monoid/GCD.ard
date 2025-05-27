@@ -163,9 +163,9 @@
 \class UnitlessMonoid \extends CancelCMonoid {
   | uniqueUnit (j : Inv) : j.val = ide
 
-  \lemma div-eq {x y : E} (d1 : LDiv x y) (d2 : LDiv y x) : x = y =>
-    \have d1=ide : d1.inv = ide => uniqueUnit (Inv.lmake d2.inv (cancel_*-left y equation))
-    \in equation {usingOnly d1=ide} (x * d1.inv)
+  \lemma div-eq {x y : E} (d1 : LDiv x y) (d2 : LDiv y x) : x = y
+    => {?} {- TODO[server2]: \have d1=ide : d1.inv = ide => uniqueUnit (Inv.lmake d2.inv (cancel_*-left y equation))
+       \in equation {usingOnly d1=ide} (x * d1.inv) -}
 
   \lemma GCD-isProp (x y : E) : isProp (GCD x y) =>
     \lam (g1 g2 : GCD x y) =>

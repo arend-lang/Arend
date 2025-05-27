@@ -23,7 +23,7 @@
       | :ide => acc
       | :* t s => aux t (aux s acc)
 
-\class Data \noclassifying {M : Monoid} (vars : Array M) {
+\class MonoidData \noclassifying {M : Monoid} (vars : Array M) {
   \meta V => Fin vars.len
 
   \func interpret (t : MonoidTerm V) : M \elim t
@@ -68,7 +68,7 @@
     }
 }
 
-\class CData \extends Data {
+\class CMonoidData \extends MonoidData {
   \override M : CMonoid
 
   \lemma sort-consistent (l : List V) : interpretNF l = interpretNF (sort {FinLinearOrderInst} l)
@@ -81,7 +81,7 @@
     | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
 
   \lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (sort (normalize t))
-    => Data.normalize-consistent t *> sort-consistent (normalize t)
+    => MonoidData.normalize-consistent t *> sort-consistent (normalize t)
 
   \lemma terms-equality (t s : MonoidTerm V) (p : interpretNF (sort (normalize t)) = interpretNF (sort (normalize s))) : interpret t = interpret s
     => normalize-consistent t *> p *> inv (normalize-consistent s)
@@ -100,7 +100,7 @@
     | :: 0 is, :: a l => repeat {2} (rewrite interpretNF.cons) (pmap (vars a *) (replace-consistent-lem is l))
     | :: (suc n) is, :: a l => interpretNF.cons a l *> pmap (vars a *) (replace-consistent-lem (n :: is) l) *> inv (interpretNF.cons a _) *> perm-consistent Perm.perm-head
 } \where {
-  \open Data
+  \open MonoidData
   \open Sort
   \open Sort.RedBlack
 
@@ -117,7 +117,7 @@
     | :: (suc n) is, :: a l => a :: removeIndices (n :: is) l
 }
 
-\class LData {L : Bounded.MeetSemilattice} \extends CData {
+\class LData {L : Bounded.MeetSemilattice} \extends CMonoidData {
   | M => L
 
   \func removeDuplicates (l : List V) : List V \elim l
@@ -138,7 +138,7 @@
     }
 
   \lemma normalize-consistent (t : MonoidTerm V) : interpret t = interpretNF (removeDuplicates (RedBlack.sort (normalize t)))
-    => CData.normalize-consistent t *> removeDuplicates-consistent _
+    => CMonoidData.normalize-consistent t *> removeDuplicates-consistent _
 
   \lemma terms-equality (t s : MonoidTerm V) (p : interpretNF (removeDuplicates (RedBlack.sort (normalize t))) = interpretNF (removeDuplicates (RedBlack.sort (normalize s)))) : interpret t = interpret s
     => normalize-consistent t *> p *> inv (normalize-consistent s)
@@ -147,6 +147,6 @@
     => inv (normalize-consistent t) *> p *> normalize-consistent s
 
 } \where {
-  \open Data
+  \open MonoidData
   \open Sort
 }

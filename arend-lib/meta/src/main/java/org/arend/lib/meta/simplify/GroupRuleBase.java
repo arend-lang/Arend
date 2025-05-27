@@ -1,5 +1,6 @@
 package org.arend.lib.meta.simplify;
 
+import org.arend.ext.ArendPrelude;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.concrete.expr.ConcreteReferenceExpression;
@@ -14,9 +15,10 @@ import org.arend.lib.meta.equation.datafactory.GroupDataFactory;
 import org.arend.lib.util.Values;
 
 public abstract class GroupRuleBase implements SimplificationRule {
+  private final ArendPrelude prelude;
   protected final Values<CoreExpression> values;
   protected final ConcreteFactory factory;
-  protected final StdExtension ext;
+  protected final SimplifyMeta meta;
   protected final FunctionMatcher mulMatcher;
   protected final FunctionMatcher ideMatcher;
   protected final FunctionMatcher invMatcher;
@@ -25,12 +27,13 @@ public abstract class GroupRuleBase implements SimplificationRule {
   protected final TypedExpression instance;
   protected final ArendRef dataRef;
 
-  public GroupRuleBase(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive, boolean isCommutative) {
+  public GroupRuleBase(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive, boolean isCommutative) {
     this.values = new Values<>(typechecker, refExpr);
     this.factory = typechecker.getFactory().withData(refExpr);
-    this.ext = ext;
+    this.prelude = ext.prelude;
+    this.meta = meta;
     if (isAdditive) {
-      var convertedInst = typechecker.typecheck(factory.appBuilder(factory.ref(isCommutative ? ext.equationMeta.fromAbGroupToCGroup.getRef() : ext.equationMeta.fromAddGroupToGroup.getRef())).app(factory.core(instance)).build(), null);
+      var convertedInst = typechecker.typecheck(factory.appBuilder(factory.ref(isCommutative ? meta.fromAbGroupToCGroup : meta.fromAddGroupToGroup)).app(factory.core(instance)).build(), null);
       this.instance = convertedInst != null ? convertedInst : instance;
     } else {
       this.instance = instance;
@@ -39,19 +42,18 @@ public abstract class GroupRuleBase implements SimplificationRule {
     this.isCommutative = isCommutative;
     this.dataRef = factory.local("d");
     if (isAdditive) {
-      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, ext.equationMeta.plus, typechecker, factory, refExpr, ext, 2);
-      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, ext.equationMeta.negative, typechecker, factory, refExpr, ext, 1);
-      this.ideMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, ext.equationMeta.zro, typechecker, factory, refExpr, ext, 0);
+      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.plus, typechecker, factory, refExpr, ext, 2);
+      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.negative, typechecker, factory, refExpr, ext, 1);
+      this.ideMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.zro, typechecker, factory, refExpr, ext, 0);
     } else {
-      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, ext.equationMeta.mul, typechecker, factory, refExpr, ext, 2);
-      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, ext.equationMeta.inverse, typechecker, factory, refExpr, ext, 1);
-      this.ideMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, ext.equationMeta.ide, typechecker, factory, refExpr, ext, 0);
+      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.mul, typechecker, factory, refExpr, ext, 2);
+      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.inverse, typechecker, factory, refExpr, ext, 1);
+      this.ideMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.ide, typechecker, factory, refExpr, ext, 0);
     }
   }
 
   @Override
   public ConcreteExpression finalizeEqProof(ConcreteExpression proof) {
-    var dataFactory = new GroupDataFactory(ext.equationMeta, dataRef, values, factory, instance, isCommutative, !isAdditive);
-    return dataFactory.wrapWithData(proof);
+    return new GroupDataFactory(meta, prelude, dataRef, values, factory, instance, isCommutative).wrapWithData(proof);
   }
 }

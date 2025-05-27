@@ -19,7 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public abstract class BaseEqualitySolver implements EquationSolver {
-  protected final EquationMeta meta;
+  protected final BaseEquationMeta meta;
   protected final ExpressionTypechecker typechecker;
   protected final ConcreteFactory factory;
   protected final ConcreteReferenceExpression refExpr;
@@ -29,7 +29,7 @@ public abstract class BaseEqualitySolver implements EquationSolver {
   protected final ArendRef dataRef;
   protected boolean useHypotheses;
 
-  protected BaseEqualitySolver(EquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, TypedExpression instance, boolean useHypotheses) {
+  protected BaseEqualitySolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, TypedExpression instance, boolean useHypotheses) {
     this.meta = meta;
     this.typechecker = typechecker;
     this.factory = factory;
@@ -40,7 +40,7 @@ public abstract class BaseEqualitySolver implements EquationSolver {
     this.useHypotheses = useHypotheses;
   }
 
-  protected BaseEqualitySolver(EquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, TypedExpression instance) {
+  protected BaseEqualitySolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, TypedExpression instance) {
     this(meta, typechecker, factory, refExpr, instance, true);
   }
 
@@ -81,7 +81,7 @@ public abstract class BaseEqualitySolver implements EquationSolver {
 
   @Override
   public ConcreteExpression combineResults(ConcreteExpression expr1, ConcreteExpression expr2) {
-    return factory.app(factory.ref(meta.ext.concat.getRef()), true, Arrays.asList(expr1, expr2));
+    return factory.app(factory.ref(meta.concat), true, Arrays.asList(expr1, expr2));
   }
 
   @Override

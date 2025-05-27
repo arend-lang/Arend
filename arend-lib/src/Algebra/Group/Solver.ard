@@ -18,7 +18,7 @@
 \import Order.Lattice
 \import Order.Lexicographical
 \import Order.LinearOrder
-\import Order.PartialOrder \hiding (ProductPoset)
+\import Order.PartialOrder \hiding (ProductPreorder, ProductPoset)
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
@@ -33,7 +33,7 @@
   | :inv (GroupTerm V)
   | \infixl 6 :* (t s : GroupTerm V)
 
-\class Data \noclassifying {G : Group} {V : \Set} (f : V -> G) {
+\class GroupData \noclassifying {G : Group} {V : \Set} (f : V -> G) {
   \func interpret (t : GroupTerm V) : G \elim t
     | var x => f x
     | :ide => ide
@@ -41,7 +41,7 @@
     | :* t s => interpret t * interpret s
 }
 
-\class NatData \extends Data {
+\class NatData \extends GroupData {
   | V => Nat
 
   \func rp-correctness-both-inside (t : GroupTerm V) (nf-pf : isInNF t) (fstLeafToRemoveInd : Nat) (p : interpret (get-leaf t fstLeafToRemoveInd) = inverse (interpret $ get-leaf t (suc fstLeafToRemoveInd)))
@@ -510,7 +510,7 @@
      })
 }
 
-\class CData \extends NatData {
+\class CGroupData \extends NatData {
   \override G : CGroup
 
   \lemma removeVar-lem (t : GroupTerm V) (v : V) (withInv : Bool) {n : Nat}
@@ -523,8 +523,8 @@
     }
     | :ide, suc n => (ide-left, idp)
     | :inv t, suc n => (pmap (_ *) pow-lem *> *-comm *> inv G.inverse_* *> pmap inverse (removeVar-lem t v (not withInv)).1, (removeVar-lem t v (not withInv)).2)
-    | :* t1 t2, suc n => (rewrite sum-lem $ pmap (_ *) G.pow_+ *> rewrite (removeVar-lem t1 v withInv).2 (equation *> pmap2 (*) (removeVar-lem t1 v withInv {suc n}).1 (removeVar-lem t2 v withInv {suc n -' countVar t1 v withInv}).1),
-                          (removeVar-lem _ v withInv).2 *> rewrite (removeVar-lem t1 v withInv).2 -'-')
+    | :* t1 t2, suc n => {?} {- TODO[server2]: (rewrite sum-lem $ pmap (_ *) G.pow_+ *> rewrite (removeVar-lem t1 v withInv).2 (equation *> pmap2 (*) (removeVar-lem t1 v withInv {suc n}).1 (removeVar-lem t2 v withInv {suc n -' countVar t1 v withInv}).1),
+                          (removeVar-lem _ v withInv).2 *> rewrite (removeVar-lem t1 v withInv).2 -'-') -}
     \where {
       \open NatBSemilattice
 

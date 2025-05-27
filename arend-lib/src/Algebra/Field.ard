@@ -57,7 +57,7 @@
       | no _ => (finv y * x, 0)
     }
     | isDivMod x y => mcases \with {
-      | yes _ => equation
+      | yes _ => {?} -- TODO[server2]: equation
       | no q => zro-right *> inv *-assoc *> rewrite (finv-right q) ide-left
     }
     | isEuclideanMap x y y/=0 => mcases {1} \with {
@@ -84,7 +84,7 @@
   }
 
   | locality x => \case eitherZeroOrInv x \with {
-    | byLeft x=0 => byRight (Inv.lmake ide equation)
+    | byLeft x=0 => {?} -- TODO[server2]: byRight (Inv.lmake ide equation)
     | byRight xInv => byLeft xInv
   }
   \default decideEq x y => \case eitherZeroOrInv (x - y) \with {
@@ -112,8 +112,8 @@
     => \case decideEq x 0, decideEq y 0 \with {
       | yes x=0, _ => rewrite (x=0,zro_*-left,finv_zro) (inv zro_*-right)
       | _, yes y=0 => rewrite (y=0,zro_*-right,finv_zro) (inv zro_*-left)
-      | no x/=0, no y/=0 => Inv.inv-isUnique (nonZero-Inv (nonZero_* x/=0 y/=0))
-          (Inv.lmake (finv y * finv x) (equation {usingOnly (finv-left x/=0, finv-left y/=0)})) idp
+      | no x/=0, no y/=0 => {?} {- TODO[server2]: Inv.inv-isUnique (nonZero-Inv (nonZero_* x/=0 y/=0))
+          (Inv.lmake (finv y * finv x) (equation {usingOnly (finv-left x/=0, finv-left y/=0)})) idp -}
     }
 
   \lemma finv_finv {x : E} : finv (finv x) = x
@@ -123,16 +123,16 @@
     }
 
   \lemma zeroDimensional : IsZeroDimensional
-    => \lam a => \case eitherZeroOrInv a \with {
+    => {?} {- TODO[server2]: \lam a => \case eitherZeroOrInv a \with {
       | byLeft a=0 => inP (0, 1, rewrite a=0 simplify)
       | byRight (r : Inv) => inP (r.inv, 0, simplify $ inv r.inv-right)
-    }
+    } -}
 
   \lemma decideZeroOrInv (x : E) : (x = 0) `Or` Inv x
     => aux zro/=ide x (eitherZeroOrInv x)
 
   \lemma finv-diff {x : E} (xi : x /= 0) (x+1i : x + 1 /= 0) : finv x - finv (x + 1) = finv (x * (x + 1))
-    => equation {usingOnly (finv-right xi, finv-right x+1i, finv-right $ nonZero_* xi x+1i)}
+    => {?} -- TODO[server2]: equation {usingOnly (finv-right xi, finv-right x+1i, finv-right $ nonZero_* xi x+1i)}
 } \where {
   \private \lemma aux {R : CRing} (p : R.zro /= R.ide) (x : R) (q : (x = 0) || Inv x) : (x = 0) `Or` Inv x
     \level Or.levelProp (\lam x=0 (j : Inv x) => p $ inv R.zro_*-left *> pmap (`* _) (inv x=0) *> j.inv-right)

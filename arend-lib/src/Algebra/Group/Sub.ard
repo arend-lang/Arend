@@ -110,8 +110,8 @@
     | ide => in~ 1
     | * (x y : Cosets) : Cosets \with {
       | in~ g, in~ g' => in~ (g Group.* g')
-      | in~ g, ~-equiv x y r =>  ~-pequiv $ rewriteEq (inverse_*, inverse-left {S} {g}, ide-left) r
-      | ~-equiv x y r, in~ g =>  ~-pequiv $ rewriteEq inverse_* $ transport contains equation (isNormal' g r)
+      | in~ g, ~-equiv x y r => ~-pequiv $ rewriteEq (inverse_*, inverse-left {S} {g}, ide-left) r
+      | ~-equiv x y r, in~ g => ~-pequiv $ rewriteEq inverse_* $ transport contains equation (isNormal' g r)
     }
     | ide-left {x} => cases x \with {
       | in~ a => pmap in~ ide-left

@@ -1,44 +1,51 @@
 package org.arend.lib.meta.linear;
 
-import org.arend.ext.core.definition.CoreClassDefinition;
-import org.arend.ext.core.definition.CoreClassField;
-import org.arend.ext.core.definition.CoreConstructor;
-import org.arend.ext.core.definition.CoreFunctionDefinition;
-import org.arend.ext.dependency.Dependency;
-import org.arend.ext.typechecking.BaseMetaDefinition;
+import org.arend.ext.core.definition.*;
+import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
+import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.lib.StdExtension;
+import org.arend.lib.meta.equation.BaseAlgebraicMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class LinearSolverMeta extends BaseMetaDefinition {
+public class LinearSolverMeta extends BaseAlgebraicMeta {
   private final StdExtension ext;
 
-  @Dependency(module = "Algebra.Linear.Solver", name = "LinearData.solveContrProblem")  CoreFunctionDefinition solveContrProblem;
-  @Dependency(module = "Algebra.Linear.Solver", name = "LinearData.solve<=Problem")     CoreFunctionDefinition solveLeqProblem;
-  @Dependency(module = "Algebra.Linear.Solver", name = "LinearData.solve<Problem")      CoreFunctionDefinition solveLessProblem;
-  @Dependency(module = "Algebra.Linear.Solver", name = "LinearData.solve=Problem")      CoreFunctionDefinition solveEqProblem;
-  @Dependency(module = "Algebra.Linear.Solver", name = "Operation.Less")                CoreConstructor less;
-  @Dependency(module = "Algebra.Linear.Solver", name = "Operation.LessOrEquals")        CoreConstructor lessOrEquals;
-  @Dependency(module = "Algebra.Linear.Solver", name = "Operation.Equals")              CoreConstructor equals;
-  @Dependency(module = "Algebra.Linear.Solver")                                         CoreClassDefinition LinearSemiringData;
-  @Dependency(module = "Algebra.Linear.Solver")                                         CoreClassDefinition LinearRingData;
-  @Dependency(module = "Algebra.Linear.Solver")                                         CoreClassDefinition LinearRatData;
-  @Dependency(module = "Arith.Int", name = "pos<=pos")                                  CoreFunctionDefinition posLEpos;
-  @Dependency(module = "Arith.Int", name = "pos<pos")                                   CoreFunctionDefinition posLpos;
-  @Dependency(module = "Arith.Rat", name = "fromInt_<=")                                CoreFunctionDefinition fromIntLE;
-  @Dependency(module = "Arith.Rat", name = "fromInt_<")                                 CoreFunctionDefinition fromIntL;
-  @Dependency(module = "Order.PartialOrder", name = "Preorder.=_<=")                    CoreFunctionDefinition eqToLeq;
+  @Dependency                                         ArendRef inv;
+  @Dependency                                         ArendRef pmap;
+  @Dependency                                         ArendRef Bool;
+  @Dependency(name = "Bool.true")                     ArendRef true_;
 
-  @Dependency(module = "Algebra.Ordered")                                               public CoreClassDefinition OrderedAAlgebra;
-  @Dependency(module = "Algebra.Module", name = "LModule.R")                            public CoreClassField moduleRing;
-  @Dependency(module = "Algebra.Linear.Solver")                                         CoreClassDefinition LinearRatAlgebraData;
+  @Dependency(name = "zero<=_")                       ArendRef zeroLE_;
+  @Dependency(name = "pos<=pos")                      ArendRef posLEpos;
+  @Dependency(name = "pos<pos")                       ArendRef posLpos;
+  @Dependency(name = "fromInt_<=")                    ArendRef fromIntLE;
+  @Dependency(name = "fromInt_<")                     ArendRef fromIntL;
+  @Dependency(name = "Rat.fromInt")                   ArendRef fromInt;
+  @Dependency(name = "Preorder.=_<=")                 ArendRef eqToLeq;
+  @Dependency(name = "OrderedAAlgebra.coef_<")        ArendRef coefMapL;
+  @Dependency(name = "OrderedAAlgebra.coef_<=")       ArendRef coefMapLE;
+  @Dependency                                         CoreClassDefinition LinearlyOrderedSemiring;
+  @Dependency                                         CoreClassDefinition OrderedRing;
+  @Dependency(name = "OrderedAddGroup.<")             ArendRef addGroupLess;
+  @Dependency(name = "LinearOrder.<=")                ArendRef linearOrederLeq;
+  @Dependency(name = "Preorder.<=")                   CoreClassField lessOrEquals;
+  @Dependency(name = "StrictPoset.<")                 CoreClassField less;
 
-  @Dependency(module = "Algebra.Algebra", name = "AAlgebra.coefMap")                    public CoreClassField coefMap;
-  @Dependency(module = "Algebra.Ordered", name = "OrderedAAlgebra.coef_<")              CoreClassField coefMapL;
-  @Dependency(module = "Algebra.Ordered", name = "OrderedAAlgebra.coef_<=")             CoreFunctionDefinition coefMapLE;
+  @Dependency                                         ArendRef LinearRatAlgebraData;
+  @Dependency                                         ArendRef LinearRatData;
+  @Dependency                                         ArendRef LinearSemiringData;
+  @Dependency                                         ArendRef LinearRingData;
+  @Dependency(name = "LinearData.solveContrProblem")  ArendRef solveContrProblem;
+  @Dependency(name = "LinearData.solve<=Problem")     ArendRef solveLeqProblem;
+  @Dependency(name = "LinearData.solve<Problem")      ArendRef solveLessProblem;
+  @Dependency(name = "LinearData.solve=Problem")      ArendRef solveEqProblem;
+  @Dependency(name = "Operation.Less")                ArendRef opLess;
+  @Dependency(name = "Operation.LessOrEquals")        ArendRef opLessOrEquals;
+  @Dependency(name = "Operation.Equals")              ArendRef opEquals;
 
   public LinearSolverMeta(StdExtension ext) {
     this.ext = ext;
@@ -61,6 +68,6 @@ public class LinearSolverMeta extends BaseMetaDefinition {
 
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-    return new LinearSolver(typechecker, contextData.getMarker(), ext).solve(contextData.getExpectedType(), contextData.getArguments().isEmpty() ? null : contextData.getArguments().get(0).getExpression());
+    return new LinearSolver(typechecker, contextData.getMarker(), ext, this).solve(contextData.getExpectedType(), contextData.getArguments().isEmpty() ? null : contextData.getArguments().getFirst().getExpression());
   }
 }
