@@ -71,7 +71,7 @@ public class ClassFieldChecker extends BaseConcreteExpressionVisitor<Void> {
           if (myFutureFields != null && myClassReferable.equals(enclosingClass.getReferable())) {
             return makeErrorExpression(expr);
           }
-          if (ClassDefinition.isSubClassOf(new ArrayDeque<>(mySuperClasses), enclosingClass)) {
+          if (ClassDefinition.findAncestor(new ArrayDeque<>(mySuperClasses), enclosingClass::equals) != null) {
             return Concrete.AppExpression.make(expr.getData(), expr, new Concrete.ThisExpression(expr.getData(), myThisParameter), false);
           }
         }
@@ -113,7 +113,7 @@ public class ClassFieldChecker extends BaseConcreteExpressionVisitor<Void> {
           return expr;
         }
       }
-    } else if (expr.getFunction() instanceof Concrete.ReferenceExpression && !expr.getArguments().get(0).isExplicit() && !(expr.getArguments().get(0) instanceof Concrete.GeneratedArgument)) {
+    } else if (expr.getFunction() instanceof Concrete.ReferenceExpression && !expr.getArguments().getFirst().isExplicit() && !(expr.getArguments().getFirst() instanceof Concrete.GeneratedArgument)) {
       for (Concrete.Argument argument : expr.getArguments()) {
         argument.expression = argument.expression.accept(this, params);
       }

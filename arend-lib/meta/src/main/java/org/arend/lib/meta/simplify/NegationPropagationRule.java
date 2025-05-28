@@ -7,7 +7,6 @@ import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.equation.binop_matcher.FunctionMatcher;
 
 import java.util.List;
@@ -17,15 +16,15 @@ public class NegationPropagationRule extends LocalSimplificationRuleBase {
   private final FunctionMatcher invMatcher;
   private final boolean isAdditive;
 
-  public NegationPropagationRule(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
+  public NegationPropagationRule(TypedExpression instance, CoreClassCallExpression classCall, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
     super(instance, classCall, meta, refExpr, typechecker);
     this.isAdditive = isAdditive;
     if (isAdditive) {
-      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.plus, typechecker, factory, refExpr, ext, 2);
-      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.negative, typechecker, factory, refExpr, ext, 1);
+      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.plus, typechecker, factory, refExpr, 2);
+      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.negative, typechecker, factory, refExpr, 1);
     } else {
-      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.mul, typechecker, factory, refExpr, ext, 2);
-      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.inverse, typechecker, factory, refExpr, ext, 1);
+      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.mul, typechecker, factory, refExpr, 2);
+      this.invMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.inverse, typechecker, factory, refExpr, 1);
     }
   }
 

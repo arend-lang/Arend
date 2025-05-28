@@ -223,26 +223,26 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
     return myCoerce;
   }
 
-  public static boolean isSubClassOf(ArrayDeque<CoreClassDefinition> classDefs, CoreClassDefinition classDef) {
+  public static @Nullable CoreClassDefinition findAncestor(ArrayDeque<CoreClassDefinition> classDefs, Predicate<CoreClassDefinition> predicate) {
     Set<CoreClassDefinition> visited = new HashSet<>();
     while (!classDefs.isEmpty()) {
       CoreClassDefinition subClass = classDefs.pop();
       if (!visited.add(subClass)) {
         continue;
       }
-      if (subClass == classDef) {
-        return true;
+      if (predicate.test(subClass)) {
+        return subClass;
       }
       classDefs.addAll(subClass.getSuperClasses());
     }
-    return false;
+    return null;
   }
 
   @Override
-  public boolean isSubClassOf(@NotNull CoreClassDefinition classDefinition) {
-    if (this.equals(classDefinition)) return true;
-    ArrayDeque<CoreClassDefinition> classDefs = new ArrayDeque<>(mySuperClasses);
-    return isSubClassOf(classDefs, classDefinition);
+  public @Nullable CoreClassDefinition findAncestor(@NotNull Predicate<CoreClassDefinition> predicate) {
+    ArrayDeque<CoreClassDefinition> classDefs = new ArrayDeque<>();
+    classDefs.add(this);
+    return findAncestor(classDefs, predicate);
   }
 
   @NotNull

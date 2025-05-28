@@ -5,7 +5,6 @@ import org.arend.ext.core.expr.CoreClassCallExpression;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.meta.equation.term.CompiledTerm;
 import org.arend.lib.meta.equation.term.CompositeTerm;
@@ -14,8 +13,8 @@ import org.arend.lib.meta.equation.term.VarTerm;
 import java.util.Arrays;
 
 public class GroupInverseRule extends GroupRuleBase {
-  public GroupInverseRule(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
-    super(instance, classCall, ext, meta, refExpr, typechecker, isAdditive, false);
+  public GroupInverseRule(TypedExpression instance, CoreClassCallExpression classCall, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
+    super(instance, classCall, meta, refExpr, typechecker, isAdditive, false);
   }
 
   private boolean isInNF(CompiledTerm term) {

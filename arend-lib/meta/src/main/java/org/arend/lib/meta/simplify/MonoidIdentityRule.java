@@ -8,7 +8,6 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.equation.binop_matcher.FunctionMatcher;
 
 import java.util.List;
@@ -21,17 +20,17 @@ public class MonoidIdentityRule extends LocalSimplificationRuleBase {
 
   private final boolean isAdditive;
 
-  public MonoidIdentityRule(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
+  public MonoidIdentityRule(TypedExpression instance, CoreClassCallExpression classCall, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
     super(instance, classCall, meta, refExpr, typechecker);
     this.isAdditive = isAdditive;
     if (isAdditive) {
-      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.plus, typechecker, factory, refExpr, ext, 2);
-      this.ideMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.zro, typechecker, factory, refExpr, ext, 0);
+      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.plus, typechecker, factory, refExpr, 2);
+      this.ideMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.zro, typechecker, factory, refExpr, 0);
       this.ideLeft = meta.addMonZroLeft;
       this.ideRight = meta.addMonZroRight;
     } else {
-      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.mul, typechecker, factory, refExpr, ext, 2);
-      this.ideMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.ide, typechecker, factory, refExpr, ext, 0);
+      this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.mul, typechecker, factory, refExpr, 2);
+      this.ideMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.ide, typechecker, factory, refExpr, 0);
       this.ideLeft = meta.ideLeft;
       this.ideRight = meta.ideRight;
     }

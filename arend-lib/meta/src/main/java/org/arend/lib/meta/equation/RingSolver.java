@@ -11,7 +11,6 @@ import org.arend.ext.core.ops.CMP;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
-import org.arend.lib.StdExtension;
 import org.arend.lib.context.ContextHelper;
 import org.arend.lib.error.EquationSolverError;
 import org.arend.lib.meta.closure.CongruenceClosure;
@@ -40,10 +39,10 @@ public class RingSolver extends BaseEqualitySolver {
   private TermCompiler.CompiledTerm lastCompiled;
   private TypedExpression lastTerm;
 
-  protected RingSolver(BaseEquationMeta meta, StdExtension ext, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreFunCallExpression equality, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses) {
+  protected RingSolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreFunCallExpression equality, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses) {
     super(meta, typechecker, factory, refExpr, instance, useHypotheses);
     this.equality = equality;
-    termCompiler = new TermCompiler(classCall, instance, ext, meta, typechecker, refExpr, values, forcedClass);
+    termCompiler = new TermCompiler(classCall, instance, meta, typechecker, refExpr, values, forcedClass);
     isCommutative = termCompiler.isLattice || classCall.getDefinition().isSubClassOf(meta.CMonoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.CMonoid));
   }
 

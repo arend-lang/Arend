@@ -38,15 +38,13 @@ public class LinearSolver {
   private final ExpressionTypechecker typechecker;
   private final ErrorReporter errorReporter;
   private final ConcreteSourceNode marker;
-  private final StdExtension ext;
   private final ConcreteFactory factory;
   private final LinearSolverMeta meta;
 
-  public LinearSolver(ExpressionTypechecker typechecker, ConcreteSourceNode marker, StdExtension ext, LinearSolverMeta meta) {
+  public LinearSolver(ExpressionTypechecker typechecker, ConcreteSourceNode marker, LinearSolverMeta meta) {
     this.typechecker = typechecker;
     errorReporter = typechecker.getErrorReporter();
     this.marker = marker;
-    this.ext = ext;
     factory = typechecker.getFactory().withData(marker);
     this.meta = meta;
   }
@@ -267,7 +265,7 @@ public class LinearSolver {
   }
 
   private TermCompiler makeTermCompiler(TypedExpression instance, CoreClassCallExpression classCall) {
-    return classCall == null ? null : new TermCompiler(classCall, instance, ext, meta, typechecker, marker);
+    return classCall == null ? null : new TermCompiler(classCall, instance, meta, typechecker, marker);
   }
 
   private void compileHypotheses(TermCompiler compiler, List<Hypothesis<CoreExpression>> equations, List<Hypothesis<CompiledTerm>> result) {

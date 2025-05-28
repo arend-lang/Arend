@@ -55,13 +55,13 @@ public class EquationMeta extends BaseEquationMeta {
       ConcreteExpression arg = arguments.getFirst().getExpression();
       if (arg instanceof ConcreteUniverseExpression) {
         argIndex = 1;
-        solver = new EqualitySolver(ext, this, typechecker, factory, refExpr, false);
+        solver = new EqualitySolver(this, typechecker, factory, refExpr, false);
       } else if (arg instanceof ConcreteReferenceExpression) {
         CoreDefinition def = typechecker.getCoreDefinition(((ConcreteReferenceExpression) arg).getReferent());
         if (def instanceof CoreClassDefinition classDef) {
           if ((classDef.isSubClassOf(Monoid) || classDef.isSubClassOf(AddMonoid) || classDef.isSubClassOf(MSemilattice))) {
             argIndex = 1;
-            solver = new EqualitySolver(ext, this, typechecker, factory, refExpr, classDef);
+            solver = new EqualitySolver(this, typechecker, factory, refExpr, classDef);
           }
         }
       }
@@ -69,7 +69,7 @@ public class EquationMeta extends BaseEquationMeta {
 
     if (contextData.getExpectedType() != null) {
       CoreExpression type = contextData.getExpectedType().normalize(NormalizationMode.WHNF);
-      final List<EquationSolver> solvers = solver != null ? Collections.singletonList(solver) : Arrays.asList(new EqualitySolver(ext, this, typechecker, factory, refExpr), new EquivSolver(this, typechecker, factory), new TransitivitySolver(this, typechecker, factory, refExpr));
+      final List<EquationSolver> solvers = solver != null ? Collections.singletonList(solver) : Arrays.asList(new EqualitySolver(this, typechecker, factory, refExpr), new EquivSolver(this, typechecker, factory), new TransitivitySolver(this, typechecker, factory, refExpr));
       solver = null;
       for (EquationSolver eqSolver : solvers) {
         if (eqSolver.isApplicable(type)) {
@@ -82,7 +82,7 @@ public class EquationMeta extends BaseEquationMeta {
         return null;
       }
     } else if (solver == null) {
-      solver = new EqualitySolver(ext, this, typechecker, factory, refExpr);
+      solver = new EqualitySolver(this, typechecker, factory, refExpr);
     }
 
     for (; argIndex < arguments.size(); argIndex++) {

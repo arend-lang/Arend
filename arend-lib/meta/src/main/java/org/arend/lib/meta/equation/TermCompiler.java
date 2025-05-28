@@ -10,7 +10,6 @@ import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.solver.BaseTermCompiler;
 import org.arend.lib.meta.solver.RingKind;
 import org.arend.lib.ring.Monomial;
@@ -26,22 +25,22 @@ public class TermCompiler extends BaseTermCompiler {
   public final boolean isLattice;
   public final boolean isRing;
 
-  private TermCompiler(CoreClassCallExpression classCall, boolean isRing, boolean isLattice, TypedExpression instance, RingKind kind, StdExtension ext, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat, CoreClassDefinition forcedClass) {
-    super(classCall, isRing, isLattice, instance, kind, ext, meta, typechecker, marker, values, positiveVars, toInt, toRat);
+  private TermCompiler(CoreClassCallExpression classCall, boolean isRing, boolean isLattice, TypedExpression instance, RingKind kind, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat, CoreClassDefinition forcedClass) {
+    super(classCall, isRing, isLattice, instance, kind, meta, typechecker, marker, values, positiveVars, toInt, toRat);
     this.forcedClass = forcedClass;
     this.isLattice = isLattice;
     this.isRing = isRing;
   }
 
-  private TermCompiler(CoreClassCallExpression classCall, boolean isRing, boolean isLattice, TypedExpression instance, StdExtension ext, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, CoreClassDefinition forcedClass) {
-    super(classCall, isRing, isLattice, instance, ext, meta, typechecker, marker, values);
+  private TermCompiler(CoreClassCallExpression classCall, boolean isRing, boolean isLattice, TypedExpression instance, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, CoreClassDefinition forcedClass) {
+    super(classCall, isRing, isLattice, instance, meta, typechecker, marker, values);
     this.forcedClass = forcedClass;
     this.isLattice = isLattice;
     this.isRing = isRing;
   }
 
-  public TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, StdExtension ext, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, CoreClassDefinition forcedClass) {
-    this(classCall, isRing(classCall, meta, forcedClass), isLattice(classCall, meta, forcedClass), instance, ext, meta, typechecker, marker, values, forcedClass);
+  public TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, CoreClassDefinition forcedClass) {
+    this(classCall, isRing(classCall, meta, forcedClass), isLattice(classCall, meta, forcedClass), instance, meta, typechecker, marker, values, forcedClass);
   }
 
   private static boolean isLattice(CoreClassCallExpression classCall, BaseEquationMeta meta, CoreClassDefinition forcedClass) {
@@ -57,8 +56,8 @@ public class TermCompiler extends BaseTermCompiler {
   }
 
   @Override
-  protected BaseTermCompiler newInstance(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, StdExtension ext, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
-    return new TermCompiler(classCall, isRing(classCall, getMeta(), forcedClass), isLattice(classCall, getMeta(), forcedClass), instance, kind, ext, getMeta(), typechecker, marker, values, positiveVars, toInt, toRat, forcedClass);
+  protected BaseTermCompiler newInstance(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
+    return new TermCompiler(classCall, isRing(classCall, getMeta(), forcedClass), isLattice(classCall, getMeta(), forcedClass), instance, kind, getMeta(), typechecker, marker, values, positiveVars, toInt, toRat, forcedClass);
   }
 
   private TermCompiler getSubTermCompiler() {

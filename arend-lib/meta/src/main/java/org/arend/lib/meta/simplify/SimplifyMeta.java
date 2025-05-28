@@ -8,7 +8,6 @@ import org.arend.ext.core.expr.*;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.Dependency;
-import org.arend.lib.StdExtension;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,8 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class SimplifyMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
-
+  @Dependency                                       ArendRef transport;
   @Dependency(name = "*>")                          ArendRef concat;
   @Dependency                                       ArendRef inv;
 
@@ -63,10 +61,6 @@ public class SimplifyMeta extends BaseMetaDefinition {
   @Dependency(name = "CGroupData.simplify-correct") ArendRef simplifyCorrectAbInv;
   @Dependency(name = "NatData.simplify-correct")    ArendRef simplifyCorrectInv;
 
-  public SimplifyMeta(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean @Nullable [] argumentExplicitness() {
     return new boolean[] { true };
@@ -105,7 +99,7 @@ public class SimplifyMeta extends BaseMetaDefinition {
       return Utils.typecheckWithAdditionalArguments(expression, typechecker, factory, 0, false);
     }
 
-    var transportedExpr = new Simplifier(ext, this, typechecker, refExpr, factory, typechecker.getErrorReporter()).simplifyTypeOfExpression(expression, type, isForward);
+    var transportedExpr = new Simplifier(this, typechecker, refExpr, factory, typechecker.getErrorReporter()).simplifyTypeOfExpression(expression, type, isForward);
     return transportedExpr == null ? null : typechecker.typecheck(transportedExpr, expectedType);
   }
 }

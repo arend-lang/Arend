@@ -6,14 +6,11 @@ import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.typechecking.meta.Dependency;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.equation.BaseAlgebraicMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class LinearSolverMeta extends BaseAlgebraicMeta {
-  private final StdExtension ext;
-
   @Dependency                                         ArendRef inv;
   @Dependency                                         ArendRef pmap;
   @Dependency                                         ArendRef Bool;
@@ -47,10 +44,6 @@ public class LinearSolverMeta extends BaseAlgebraicMeta {
   @Dependency(name = "Operation.LessOrEquals")        ArendRef opLessOrEquals;
   @Dependency(name = "Operation.Equals")              ArendRef opEquals;
 
-  public LinearSolverMeta(StdExtension ext) {
-    this.ext = ext;
-  }
-
   @Override
   public boolean @Nullable [] argumentExplicitness() {
     return new boolean[] { true };
@@ -68,6 +61,6 @@ public class LinearSolverMeta extends BaseAlgebraicMeta {
 
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-    return new LinearSolver(typechecker, contextData.getMarker(), ext, this).solve(contextData.getExpectedType(), contextData.getArguments().isEmpty() ? null : contextData.getArguments().getFirst().getExpression());
+    return new LinearSolver(typechecker, contextData.getMarker(), this).solve(contextData.getExpectedType(), contextData.getArguments().isEmpty() ? null : contextData.getArguments().getFirst().getExpression());
   }
 }

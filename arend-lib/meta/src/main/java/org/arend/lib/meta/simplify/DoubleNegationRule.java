@@ -8,7 +8,6 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.equation.binop_matcher.FunctionMatcher;
 
 import java.util.List;
@@ -17,13 +16,13 @@ public class DoubleNegationRule extends LocalSimplificationRuleBase {
   private final FunctionMatcher negativeMatcher;
   private final ArendRef negIsInv;
 
-  public DoubleNegationRule(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
+  public DoubleNegationRule(TypedExpression instance, CoreClassCallExpression classCall, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker, boolean isAdditive) {
     super(instance, classCall, meta, refExpr, typechecker);
     if (isAdditive) {
-      this.negativeMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.negative, typechecker, factory, refExpr, ext, 1);
+      this.negativeMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.negative, typechecker, factory, refExpr, 1);
       this.negIsInv = meta.negIsInv;
     } else {
-      this.negativeMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.inverse, typechecker, factory, refExpr, ext, 1);
+      this.negativeMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.inverse, typechecker, factory, refExpr, 1);
       this.negIsInv = meta.invIsInv;
     }
   }

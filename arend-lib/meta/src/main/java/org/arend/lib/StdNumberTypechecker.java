@@ -42,12 +42,12 @@ public class StdNumberTypechecker implements LiteralTypechecker {
     if (expectedType != null && !(expectedType instanceof CoreDataCallExpression && (((CoreDataCallExpression) expectedType).getDefinition() == typechecker.getPrelude().getNat() || ((CoreDataCallExpression) expectedType).getDefinition() == typechecker.getPrelude().getInt()))) {
       boolean generate;
       TypedExpression instance;
-      if (expectedType instanceof CoreFieldCallExpression && ((CoreFieldCallExpression) expectedType).getDefinition() == ext.carrier) {
+      if (expectedType instanceof CoreFieldCallExpression fieldCall && StdExtension.isCarrier(fieldCall.getDefinition().getRef())) {
         instance = null;
         generate = true;
       } else {
         CoreClassDefinition classDef = number.equals(BigInteger.ZERO) ? ext.AddPointed : number.equals(BigInteger.ONE) ? ext.Pointed : number.signum() == -1 ? ext.Ring : ext.Semiring;
-        instance = classDef == null ? null : Utils.findInstance(new SubclassSearchParameters(classDef), ext.carrier, expectedType, typechecker, contextData.getMarker());
+        instance = classDef == null ? null : Utils.findInstance(new SubclassSearchParameters(classDef), classDef.getClassifyingField(), expectedType, typechecker, contextData.getMarker());
         generate = instance != null;
       }
       if (generate) {

@@ -6,6 +6,7 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 
 public class BaseEquationMeta extends BaseAlgebraicMeta {
+  @Dependency(name = "BaseSet.E")                       CoreClassField carrier;
   @Dependency                                           ArendRef pmap;
   @Dependency                                           ArendRef inv;
   @Dependency(name = "*>")                              ArendRef concat;

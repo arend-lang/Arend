@@ -93,12 +93,12 @@ public class TransitivitySolver implements EquationSolver {
       valuesType = new Lazy<>(() -> {
         TypedExpression instance = fieldCall.getArgument().computeTyped();
         if (instance.getType() instanceof CoreClassCallExpression) {
-          CoreExpression result = ((CoreClassCallExpression) instance.getType()).getImplementation(meta.ext.carrier, instance);
+          CoreExpression result = ((CoreClassCallExpression) instance.getType()).getImplementation(meta.carrier, instance);
           if (result != null) {
             return result;
           }
         }
-        return Objects.requireNonNull(typechecker.typecheck(factory.app(factory.ref(meta.ext.carrier.getRef()), false, Collections.singletonList(factory.core(instance))), null)).getExpression();
+        return Objects.requireNonNull(typechecker.typecheck(factory.app(factory.ref(meta.carrier.getRef()), false, Collections.singletonList(factory.core(instance))), null)).getExpression();
       });
       instanceDefinition = fieldCall.getDefinition();
     } else {
@@ -131,7 +131,7 @@ public class TransitivitySolver implements EquationSolver {
       transFieldData = relationField.getUserData(meta.ext.transitivityKey);
       reflFieldData = relationField.getUserData(meta.ext.reflexivityKey);
       relation = new Lazy<>(() -> factory.core(Objects.requireNonNull(((CoreClassCallExpression) instance.getType()).getImplementation(relationField, instance)).computeTyped()));
-      valuesType = new Lazy<>(() -> ((CoreClassCallExpression) instance.getType()).getImplementation(meta.ext.carrier, instance));
+      valuesType = new Lazy<>(() -> ((CoreClassCallExpression) instance.getType()).getImplementation(meta.carrier, instance));
       instanceDefinition = defCall.getDefinition();
     }
 
@@ -178,10 +178,10 @@ public class TransitivitySolver implements EquationSolver {
     }
 
     List<ConcreteArgument> args = new ArrayList<>(2);
-    if (!reflFieldData.parametersExplicitness.get(0)) {
+    if (!reflFieldData.parametersExplicitness.getFirst()) {
       args.add(factory.arg(factory.hole(), false));
     }
-    args.add(factory.arg(factory.core(expression), reflFieldData.parametersExplicitness.get(0)));
+    args.add(factory.arg(factory.core(expression), reflFieldData.parametersExplicitness.getFirst()));
     return typechecker.typecheck(factory.app(factory.ref(reflFieldData.field.getRef()), args), null);
   }
 
@@ -209,7 +209,7 @@ public class TransitivitySolver implements EquationSolver {
     ConcreteExpression reflExpr = null;
     if (reflFieldData != null) {
       reflExpr = factory.ref(reflFieldData.field.getRef());
-      if (reflFieldData.parametersExplicitness.get(0)) {
+      if (reflFieldData.parametersExplicitness.getFirst()) {
         reflExpr = factory.app(reflExpr, true, Collections.singletonList(factory.hole()));
       }
     }

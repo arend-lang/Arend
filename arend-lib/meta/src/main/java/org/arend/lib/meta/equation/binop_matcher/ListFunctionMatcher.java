@@ -1,6 +1,7 @@
 package org.arend.lib.meta.equation.binop_matcher;
 
 import org.arend.ext.concrete.ConcreteFactory;
+import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.ext.core.expr.CoreConCallExpression;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.expr.CoreFunCallExpression;
@@ -16,32 +17,33 @@ import java.util.List;
 public class ListFunctionMatcher implements FunctionMatcher {
   private final ExpressionTypechecker typechecker;
   private final ConcreteFactory factory;
-  private final StdExtension ext;
 
-  public ListFunctionMatcher(ExpressionTypechecker typechecker, ConcreteFactory factory, StdExtension ext) {
+  public ListFunctionMatcher(ExpressionTypechecker typechecker, ConcreteFactory factory) {
     this.typechecker = typechecker;
     this.factory = factory;
-    this.ext = ext;
   }
 
   @Override
   public List<CoreExpression> match(CoreExpression expr) {
-    if (expr instanceof CoreFunCallExpression && ((CoreFunCallExpression) expr).getDefinition() == ext.append) {
+    if (expr instanceof CoreFunCallExpression && StdExtension.isAppend(((CoreFunCallExpression) expr).getDefinition().getRef())) {
       List<? extends CoreExpression> defCallArgs = ((CoreFunCallExpression) expr).getDefCallArguments();
       List<CoreExpression> args = new ArrayList<>(2);
       args.add(defCallArgs.get(1));
       args.add(defCallArgs.get(2));
       return args;
-    } else if (expr instanceof CoreConCallExpression && ((CoreConCallExpression) expr).getDefinition() == ext.cons) {
-      List<? extends CoreExpression> defCallArgs = ((CoreConCallExpression) expr).getDefCallArguments();
+    } else if (expr instanceof CoreConCallExpression cons && StdExtension.isCons(cons.getDefinition().getRef())) {
+      List<? extends CoreExpression> defCallArgs = cons.getDefCallArguments();
       CoreExpression tail = defCallArgs.get(1).normalize(NormalizationMode.WHNF);
-      if (!(tail instanceof CoreConCallExpression && ((CoreConCallExpression) tail).getDefinition() == ext.nil)) {
-        TypedExpression result = typechecker.typecheck(factory.app(factory.ref(ext.cons.getRef()), true, Arrays.asList(factory.core(defCallArgs.get(0).computeTyped()), factory.ref(ext.nil.getRef()))), null);
-        if (result != null) {
-          List<CoreExpression> args = new ArrayList<>(2);
-          args.add(result.getExpression());
-          args.add(tail);
-          return args;
+      if (!(tail instanceof CoreConCallExpression && StdExtension.isNil(((CoreConCallExpression) tail).getDefinition().getRef()))) {
+        CoreConstructor nil = cons.getDefinition().getDataType().findConstructor(StdExtension.getNil());
+        if (nil != null) {
+          TypedExpression result = typechecker.typecheck(factory.app(factory.ref(cons.getDefinition().getRef()), true, Arrays.asList(factory.core(defCallArgs.getFirst().computeTyped()), factory.ref(nil.getRef()))), null);
+          if (result != null) {
+            List<CoreExpression> args = new ArrayList<>(2);
+            args.add(result.getExpression());
+            args.add(tail);
+            return args;
+          }
         }
       }
     }

@@ -10,7 +10,6 @@ import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.solver.BaseTermCompiler;
 import org.arend.lib.meta.solver.RingKind;
 import org.arend.lib.ring.BigRational;
@@ -23,17 +22,17 @@ import java.math.BigInteger;
 import java.util.*;
 
 public class TermCompiler extends BaseTermCompiler {
-  private TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, StdExtension ext, LinearSolverMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
-    super(classCall, classCall.getDefinition().isSubClassOf(meta.OrderedRing), false, instance, kind, ext, meta, typechecker, marker, values, positiveVars, toInt, toRat);
+  private TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, LinearSolverMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
+    super(classCall, classCall.getDefinition().isSubClassOf(meta.OrderedRing), false, instance, kind, meta, typechecker, marker, values, positiveVars, toInt, toRat);
   }
 
-  public TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, StdExtension ext, LinearSolverMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker) {
-    super(classCall, classCall.getDefinition().isSubClassOf(meta.OrderedRing), false, instance, ext, meta, typechecker, marker, new Values<>(typechecker, marker));
+  public TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, LinearSolverMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker) {
+    super(classCall, classCall.getDefinition().isSubClassOf(meta.OrderedRing), false, instance, meta, typechecker, marker, new Values<>(typechecker, marker));
   }
 
   @Override
-  protected BaseTermCompiler newInstance(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, StdExtension ext, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
-    return new TermCompiler(classCall, instance, kind, ext, getMeta(), typechecker, marker, values, positiveVars, toInt, toRat);
+  protected BaseTermCompiler newInstance(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
+    return new TermCompiler(classCall, instance, kind, getMeta(), typechecker, marker, values, positiveVars, toInt, toRat);
   }
 
   private LinearSolverMeta getMeta() {

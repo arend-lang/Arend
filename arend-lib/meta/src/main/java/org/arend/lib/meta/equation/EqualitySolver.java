@@ -12,7 +12,6 @@ import org.arend.ext.instance.InstanceSearchParameters;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.context.ContextHelper;
 import org.arend.lib.meta.closure.EquivalenceClosure;
 import org.arend.lib.meta.closure.ValuesRelationClosure;
@@ -24,30 +23,28 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class EqualitySolver extends BaseEqualitySolver {
-  private final StdExtension ext;
   private CoreExpression valuesType;
   private EquationSolver algebraSolver;
   private Values<UncheckedExpression> values;
   private final CoreClassDefinition forcedClass;
   private final boolean useSolver;
 
-  private EqualitySolver(StdExtension ext, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreClassDefinition forcedClass, boolean useSolver) {
+  private EqualitySolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreClassDefinition forcedClass, boolean useSolver) {
     super(meta, typechecker, factory, refExpr, null);
-    this.ext = ext;
     this.forcedClass = forcedClass;
     this.useSolver = useSolver;
   }
 
-  public EqualitySolver(StdExtension ext, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreClassDefinition forcedClass) {
-    this(ext, meta, typechecker, factory, refExpr, forcedClass, true);
+  public EqualitySolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreClassDefinition forcedClass) {
+    this(meta, typechecker, factory, refExpr, forcedClass, true);
   }
 
-  public EqualitySolver(StdExtension ext, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, boolean useSolver) {
-    this(ext, meta, typechecker, factory, refExpr, null, useSolver);
+  public EqualitySolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, boolean useSolver) {
+    this(meta, typechecker, factory, refExpr, null, useSolver);
   }
 
-  public EqualitySolver(StdExtension ext, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr) {
-    this(ext, meta, typechecker, factory, refExpr, null, true);
+  public EqualitySolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr) {
+    this(meta, typechecker, factory, refExpr, null, true);
   }
 
   @Override
@@ -99,7 +96,7 @@ public class EqualitySolver extends BaseEqualitySolver {
       return algebraSolver.solve(hint, leftExpr, rightExpr, errorReporter);
     }
 
-    ValuesRelationClosure closure = new ValuesRelationClosure(values, new EquivalenceClosure<>(factory.ref(typechecker.getPrelude().getIdpRef()), factory.ref(ext.inv.getRef()), factory.ref(ext.concat.getRef()), factory));
+    ValuesRelationClosure closure = new ValuesRelationClosure(values, new EquivalenceClosure<>(factory.ref(typechecker.getPrelude().getIdpRef()), factory.ref(meta.inv), factory.ref(meta.concat), factory));
     if (useHypotheses) {
       ContextHelper helper = new ContextHelper(hint);
       for (CoreBinding binding : helper.getAllBindings(typechecker)) {
@@ -114,8 +111,8 @@ public class EqualitySolver extends BaseEqualitySolver {
 
   private void initializeAlgebraSolver(TypedExpression instance, CoreClassCallExpression classCall) {
     algebraSolver = meta.Semiring != null && classCall.getDefinition().isSubClassOf(meta.Semiring) && (forcedClass == null || forcedClass.isSubClassOf(meta.Semiring)) || meta.BoundedDistributiveLattice != null && classCall.getDefinition().isSubClassOf(meta.BoundedDistributiveLattice) && (forcedClass == null || forcedClass.isSubClassOf(meta.BoundedDistributiveLattice))
-      ? new RingSolver(meta, ext, typechecker, factory, refExpr, equality, instance, classCall, forcedClass, useHypotheses)
-      : new MonoidSolver(meta, ext, typechecker, factory, refExpr, equality, instance, classCall, forcedClass, useHypotheses, meta.catComp, meta.catId);
+      ? new RingSolver(meta, typechecker, factory, refExpr, equality, instance, classCall, forcedClass, useHypotheses)
+      : new MonoidSolver(meta, typechecker, factory, refExpr, equality, instance, classCall, forcedClass, useHypotheses, meta.catComp, meta.catId);
   }
 
   private boolean initializeAlgebraSolver(CoreExpression type) {
@@ -131,7 +128,7 @@ public class EqualitySolver extends BaseEqualitySolver {
         CoreExpression fun = ((CoreAppExpression) typeFun).getFunction().normalize(NormalizationMode.WHNF);
         if (fun instanceof CoreFieldCallExpression) {
           if (((CoreFieldCallExpression) fun).getDefinition().getRef() == meta.catHom) {
-            algebraSolver = new MonoidSolver(meta, ext, typechecker, factory, refExpr, equality, ((CoreFieldCallExpression) fun).getArgument().computeTyped(), null, null, false, meta.catComp, meta.catId);
+            algebraSolver = new MonoidSolver(meta, typechecker, factory, refExpr, equality, ((CoreFieldCallExpression) fun).getArgument().computeTyped(), null, null, false, meta.catComp, meta.catId);
             return true;
           }
           return false;
@@ -153,7 +150,7 @@ public class EqualitySolver extends BaseEqualitySolver {
           }
           return false;
         }
-      }, ext.carrier, type, typechecker, refExpr, forcedClass);
+      }, meta.carrier, type, typechecker, refExpr, forcedClass);
     if (pair != null) {
       initializeAlgebraSolver(pair.proj1, pair.proj2);
       return true;

@@ -7,7 +7,6 @@ import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.equation.binop_matcher.FunctionMatcher;
 
 import java.util.List;
@@ -16,10 +15,10 @@ public class MultiplicationByZeroRule extends LocalSimplificationRuleBase {
   private final FunctionMatcher mulMatcher;
   private final FunctionMatcher zroMatcher;
 
-  public MultiplicationByZeroRule(TypedExpression instance, CoreClassCallExpression classCall, StdExtension ext, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker) {
+  public MultiplicationByZeroRule(TypedExpression instance, CoreClassCallExpression classCall, SimplifyMeta meta, ConcreteReferenceExpression refExpr, ExpressionTypechecker typechecker) {
     super(instance, classCall, meta, refExpr, typechecker);
-    this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.mul, typechecker, factory, refExpr, ext, 2);
-    this.zroMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, ext.zro, typechecker, factory, refExpr, ext, 0);
+    this.mulMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.mul, typechecker, factory, refExpr, 2);
+    this.zroMatcher = FunctionMatcher.makeFieldMatcher(classCall, instance, meta.zro, typechecker, factory, refExpr, 0);
   }
 
   @Override

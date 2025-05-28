@@ -18,7 +18,6 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.context.ContextHelper;
 import org.arend.lib.error.MonoidSolverError;
 import org.arend.lib.meta.equation.binop_matcher.DefinitionFunctionMatcher;
@@ -56,7 +55,7 @@ public class MonoidSolver extends BaseEqualitySolver {
   private final Map<Integer, Integer> domMap; // indices of morphisms in `values` to indices of domains.
   private final Map<Integer, Integer> codomMap; // indices of morphisms in `values` to indices of codomains.
 
-  public MonoidSolver(BaseEquationMeta meta, StdExtension ext, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreFunCallExpression equality, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses, CoreClassField catComp, CoreClassField catId) {
+  public MonoidSolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreFunCallExpression equality, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses, CoreClassField catComp, CoreClassField catId) {
     super(meta, typechecker, factory, refExpr, instance, useHypotheses);
     this.equality = equality;
 
@@ -67,8 +66,8 @@ public class MonoidSolver extends BaseEqualitySolver {
     isCommutative = !isCat && (isSemilattice || isMultiplicative && classCall.getDefinition().isSubClassOf(meta.CMonoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.CMonoid)) || !isMultiplicative && classCall.getDefinition().isSubClassOf(meta.AbMonoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.AbMonoid)));
     CoreClassField ide = isSemilattice ? meta.top : isMultiplicative ? meta.ide : meta.zro;
     CoreClassField mul = isSemilattice ? meta.meet : isMultiplicative ? meta.mul : meta.plus;
-    mulMatcher = isCat ? new DefinitionFunctionMatcher(catComp, 5) : FunctionMatcher.makeFieldMatcher(classCall, instance, mul, typechecker, factory, refExpr, ext, 2);
-    ideMatcher = isCat ? new DefinitionFunctionMatcher(catId, 1) : FunctionMatcher.makeFieldMatcher(classCall, instance, ide, typechecker, factory, refExpr, ext, 0);
+    mulMatcher = isCat ? new DefinitionFunctionMatcher(catComp, 5) : FunctionMatcher.makeFieldMatcher(classCall, instance, mul, typechecker, factory, refExpr, 2);
+    ideMatcher = isCat ? new DefinitionFunctionMatcher(catId, 1) : FunctionMatcher.makeFieldMatcher(classCall, instance, ide, typechecker, factory, refExpr, 0);
     obValues = isCat ? new Values<>(typechecker, refExpr) : null;
     homMap = isCat ? new HashMap<>() : null;
     domMap = isCat ? new HashMap<>() : null;

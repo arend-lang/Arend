@@ -17,7 +17,6 @@ import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
 import org.arend.ext.util.Wrapper;
-import org.arend.lib.StdExtension;
 import org.arend.lib.error.SimplifyError;
 import org.arend.lib.error.TypeError;
 import org.arend.lib.meta.rewrite.RewriteEquationMeta;
@@ -29,15 +28,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Simplifier {
-  private final StdExtension ext;
   private final SimplifyMeta meta;
   private final ExpressionTypechecker typechecker;
   private final ConcreteReferenceExpression refExpr;
   private final ConcreteFactory factory;
   private final ErrorReporter errorReporter;
 
-  public Simplifier(StdExtension ext, SimplifyMeta meta, ExpressionTypechecker typechecker, ConcreteReferenceExpression refExpr, ConcreteFactory factory, ErrorReporter errorReporter) {
-    this.ext = ext;
+  public Simplifier(SimplifyMeta meta, ExpressionTypechecker typechecker, ConcreteReferenceExpression refExpr, ConcreteFactory factory, ErrorReporter errorReporter) {
     this.meta = meta;
     this.typechecker = typechecker;
     this.refExpr = refExpr;
@@ -170,36 +167,36 @@ public class Simplifier {
       CoreClassCallExpression classCall = instanceClassCallPair.proj2;
       if (classCall != null) {
         if (classCall.getDefinition().isSubClassOf(meta.Monoid)) {
-          rules.add(new MonoidIdentityRule(instance, classCall, ext, meta, refExpr, typechecker, false));
+          rules.add(new MonoidIdentityRule(instance, classCall, meta, refExpr, typechecker, false));
         }
         if (classCall.getDefinition().isSubClassOf(meta.AddMonoid)) {
-          rules.add(new MonoidIdentityRule(instance, classCall, ext, meta, refExpr, typechecker, true));
+          rules.add(new MonoidIdentityRule(instance, classCall, meta, refExpr, typechecker, true));
         }
         if (classCall.getDefinition().isSubClassOf(meta.Semiring)) {
-          rules.add(new MultiplicationByZeroRule(instance, classCall, ext, meta, refExpr, typechecker));
+          rules.add(new MultiplicationByZeroRule(instance, classCall, meta, refExpr, typechecker));
         }
         if (classCall.getDefinition().isSubClassOf(meta.Ring)) {
-          rules.add(new MulOfNegativesRule(instance, classCall, ext, meta, refExpr, typechecker));
+          rules.add(new MulOfNegativesRule(instance, classCall, meta, refExpr, typechecker));
         }
 
         if (classCall.getDefinition().isSubClassOf(meta.AddGroup)) {
-          rules.add(new DoubleNegationRule(instance, classCall, ext, meta, refExpr, typechecker, true));
-          rules.add(new IdentityInverseRule(instance, classCall, ext, meta, refExpr, typechecker, true));
-          rules.add(new NegationPropagationRule(instance, classCall, ext, meta, refExpr, typechecker, true));
+          rules.add(new DoubleNegationRule(instance, classCall, meta, refExpr, typechecker, true));
+          rules.add(new IdentityInverseRule(instance, classCall, meta, refExpr, typechecker, true));
+          rules.add(new NegationPropagationRule(instance, classCall, meta, refExpr, typechecker, true));
         } else if (classCall.getDefinition().isSubClassOf(meta.Group)) {
-          rules.add(new DoubleNegationRule(instance, classCall, ext, meta, refExpr, typechecker, false));
-          rules.add(new IdentityInverseRule(instance, classCall, ext, meta, refExpr, typechecker, false));
-          rules.add(new NegationPropagationRule(instance, classCall, ext, meta, refExpr, typechecker, false));
+          rules.add(new DoubleNegationRule(instance, classCall, meta, refExpr, typechecker, false));
+          rules.add(new IdentityInverseRule(instance, classCall, meta, refExpr, typechecker, false));
+          rules.add(new NegationPropagationRule(instance, classCall, meta, refExpr, typechecker, false));
         }/**/
 
         if (classCall.getDefinition().isSubClassOf(meta.CGroup)) {
-          rules.add(new AbGroupInverseRule(instance, classCall, ext, meta, refExpr, typechecker, false));
+          rules.add(new AbGroupInverseRule(instance, classCall, meta, refExpr, typechecker, false));
         } else if (classCall.getDefinition().isSubClassOf(meta.AbGroup)) {
-          rules.add(new AbGroupInverseRule(instance, classCall, ext, meta, refExpr, typechecker, true));
+          rules.add(new AbGroupInverseRule(instance, classCall, meta, refExpr, typechecker, true));
         } else if (classCall.getDefinition().isSubClassOf(meta.Group)) {
-          rules.add(new GroupInverseRule(instance, classCall, ext, meta, refExpr, typechecker, false));
+          rules.add(new GroupInverseRule(instance, classCall, meta, refExpr, typechecker, false));
         } else if (classCall.getDefinition().isSubClassOf(meta.AddGroup)) {
-          rules.add(new GroupInverseRule(instance, classCall, ext, meta, refExpr, typechecker, true));
+          rules.add(new GroupInverseRule(instance, classCall, meta, refExpr, typechecker, true));
         }/**/
       }
     }
@@ -305,7 +302,7 @@ public class Simplifier {
       return null;
     }
     var proofs = processor.simplificationOccurrences.stream().map(x -> isForward ? x.proj2 : x.proj2.inverse(factory, meta.inv)).collect(Collectors.toList());
-    return RewriteEquationMeta.chainOfTransports(factory.ref(ext.transport.getRef(), refExpr.getPLevels(), refExpr.getHLevels()),
+    return RewriteEquationMeta.chainOfTransports(factory.ref(meta.transport, refExpr.getPLevels(), refExpr.getHLevels()),
             checkedLam.getExpression(), proofs, expression, factory, false);
   }
 }

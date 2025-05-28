@@ -56,18 +56,10 @@ public class StdExtension implements ArendExtension {
   public final TransitivityKey transitivityKey = new TransitivityKey("transitivity", this);
   public final ReflexivityKey reflexivityKey = new ReflexivityKey("reflexivity", this);
 
-  @Dependency(module = "Set")                     public CoreClassDefinition BaseSet;
-  @Dependency(module = "Set", name = "BaseSet.E") public CoreClassField carrier;
-
   @Dependency(module = "Paths")              public CoreFunctionDefinition transport;
   @Dependency(module = "Paths")              public CoreFunctionDefinition transportInv;
   @Dependency(module = "Paths", name = "*>") public CoreFunctionDefinition concat;
   @Dependency(module = "Paths")              public CoreFunctionDefinition inv;
-  @Dependency(module = "Paths")              public CoreFunctionDefinition pmap;
-
-  @Dependency(module = "Data.List", name = "List.nil") public CoreConstructor nil;
-  @Dependency(module = "Data.List", name = "List.::")  public CoreConstructor cons;
-  @Dependency(module = "Data.List", name = "++")       public CoreFunctionDefinition append;
 
   @Dependency(module = "Logic")                       public CoreDataDefinition Empty;
   @Dependency(module = "Logic", name = "prop-isProp") public CoreFunctionDefinition propIsProp;
@@ -125,12 +117,50 @@ public class StdExtension implements ArendExtension {
     provider.getDefinition(ModulePath.fromString("Algebra.Monoid.GCD"), LongName.fromString("DivQuotient.DivQuotientGCDMonoid"), CoreFunctionDefinition.class);
   }
 
+  private static final String LIBRARY_NAME = "arend-lib";
+
   private static ModulePath getLogicModule() {
     return new ModulePath("Logic");
   }
 
+  private static ModulePath getListModule() {
+    return ModulePath.fromString("Data.List");
+  }
+
+  private static ModulePath getSetModule() {
+    return new ModulePath("Set");
+  }
+
   public static boolean isEmpty(ArendRef ref) {
-    return ref.checkName(getLogicModule(), new LongName("Empty"));
+    return ref.checkName(LIBRARY_NAME, getLogicModule(), new LongName("Empty"));
+  }
+
+  public static boolean isAppend(ArendRef ref) {
+    return ref.checkName(LIBRARY_NAME, getListModule(), new LongName("++"));
+  }
+
+  public static boolean isCons(ArendRef ref) {
+    return ref.checkName(LIBRARY_NAME, getListModule(), LongName.fromString("List.::"));
+  }
+
+  public static String getNil() {
+    return "nil";
+  }
+
+  public static boolean isNil(ArendRef ref) {
+    return ref.checkName(LIBRARY_NAME, getListModule(), LongName.fromString("List.nil"));
+  }
+
+  public static boolean isBaseSet(ArendRef ref) {
+    return ref.checkName(LIBRARY_NAME, getSetModule(), new LongName("BaseSet"));
+  }
+
+  public static boolean isCarrier(ArendRef ref) {
+    return ref.checkName(LIBRARY_NAME, getSetModule(), LongName.fromString("BaseSet.E"));
+  }
+
+  public static boolean isSetHierarchy(CoreClassDefinition definition) {
+    return definition.findAncestor(superClass -> superClass.getSuperClasses().isEmpty() && isBaseSet(superClass.getRef())) != null;
   }
 
   private MetaRef makeRef(ModulePath modulePath, String name, MetaResolver resolver, MetaDefinition definition) {
@@ -185,8 +215,8 @@ public class StdExtension implements ArendExtension {
     ModulePath arithInt = ModulePath.fromString("Arith.Int");
     ModulePath arithNat = ModulePath.fromString("Arith.Nat");
     ModulePath arithRat = ModulePath.fromString("Arith.Rat");
-    ModulePath dataList = ModulePath.fromString("Data.List");
-    ModulePath set = new ModulePath("Set");
+    ModulePath dataList = getListModule();
+    ModulePath set = getSetModule();
     String constructorName = "constructor";
 
     contributor.declare(meta, logicMeta);
@@ -309,9 +339,9 @@ public class StdExtension implements ArendExtension {
         text("For example, `rewriteEq (p : b * (c * id) = x) t : T` rewrites `(a * b) * (id * c)` as `a * x` in `T`."),
         text("Similarly to `rewrite` this meta allows specification of occurrence numbers."),
         text("Currently this meta supports noncommutative monoids and categories.")),
-        makeDef(pathsMeta, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, () -> new RewriteEquationMeta(this))));
+        makeDef(pathsMeta, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, RewriteEquationMeta::new)));
     contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
-        makeDef(pathsMeta, "simplify", new DependencyMetaTypechecker(SimplifyMeta.class, () -> new DeferredMetaDefinition(new SimplifyMeta(this), true))));
+        makeDef(pathsMeta, "simplify", new DependencyMetaTypechecker(SimplifyMeta.class, () -> new DeferredMetaDefinition(new SimplifyMeta(), true))));
     ConcreteMetaDefinition simp_coe = makeDef(pathsMeta, "simp_coe", new ClassExtResolver(), new DependencyMetaTypechecker(SimpCoeMeta.class, SimpCoeMeta::new));
     ConcreteMetaDefinition extMeta = makeDef(pathsMeta, "ext", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(false), false, ExtMeta.defermentChecker)));
     contributor.declare(vList(
@@ -376,6 +406,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, ModulePath.fromString("Order.PartialOrder"));
     contributor.declare(algebra, ModulePath.fromString("Order.StrictOrder"));
     contributor.declare(algebra, paths);
+    contributor.declare(algebra, set);
     contributor.declare(multiline("""
         `equation a_1 ... a_n` proves an equation a_0 = a_{n+1} using a_1, ... a_n as intermediate steps
 
@@ -385,7 +416,7 @@ public class StdExtension implements ArendExtension {
         In the former case, the meta will prove an equality in a type without using any additional structure on it.
         In the latter case, the meta will prove an equality using only structure available in the specified class.
         """), makeDef(algebra, "equation", new DependencyMetaTypechecker(EquationMeta.class, () -> new DeferredMetaDefinition(new EquationMeta(this), true))));
-    contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(this), true))));
+    contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
 

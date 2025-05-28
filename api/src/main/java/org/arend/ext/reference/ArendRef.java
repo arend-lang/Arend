@@ -22,8 +22,8 @@ public interface ArendRef {
     return null;
   }
 
-  default boolean checkName(@NotNull ModulePath modulePath, @NotNull LongName name) {
-    return modulePath.equals(getModulePath()) && name.equals(getRefLongName());
+  default boolean checkName(@NotNull String libraryName, @NotNull ModulePath modulePath, @NotNull LongName name) {
+    return name.equals(getRefLongName()) && modulePath.equals(getModulePath());
   }
 
   default boolean isClassField() {

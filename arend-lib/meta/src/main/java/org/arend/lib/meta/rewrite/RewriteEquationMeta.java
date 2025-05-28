@@ -13,7 +13,6 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 
 import org.arend.lib.error.TypeError;
 import org.arend.lib.meta.equation.BaseEquationMeta;
@@ -29,15 +28,10 @@ import java.util.*;
 import java.util.function.Function;
 
 public class RewriteEquationMeta extends BaseEquationMeta {
-  private final StdExtension ext;
   @Dependency private ArendRef transport;
   @Dependency private ArendRef transportInv;
   @Dependency(name = "*>") private ArendRef concat;
   @Dependency private ArendRef pmap;
-
-  public RewriteEquationMeta(StdExtension ext) {
-    this.ext = ext;
-  }
 
   @Override
   public boolean withoutLevels() {
@@ -318,7 +312,7 @@ public class RewriteEquationMeta extends BaseEquationMeta {
       type = expectedType;
     }
 
-    EqualitySolver solver = new EqualitySolver(ext, this, typechecker, factory, refExpr);
+    EqualitySolver solver = new EqualitySolver(this, typechecker, factory, refExpr);
     solver.setValuesType(value.computeType());
     solver.setUseHypotheses(false);
     solver.initializeSolver();
