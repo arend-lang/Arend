@@ -1,10 +1,10 @@
 \import Algebra.Module
-\import Algebra.Module.Category
+\import Algebra.Module.ModuleCategory
 \import Algebra.Module.LinearMap
 \import Algebra.Ring
 \import Category.Functor
 \import Paths.Meta
-\import Set.Category
+\import Set.SetCategory
 
 \instance PowerLModule {R : Ring} (J : \Set) (M : LModule R) : LModule R (J -> M)
   | zro _ => 0

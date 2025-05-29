@@ -1,7 +1,7 @@
 \import Algebra.Linear.Matrix
 \import Algebra.Meta
 \import Algebra.Module
-\import Algebra.Module.Category
+\import Algebra.Module.ModuleCategory
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
 \import Algebra.Ring
@@ -34,11 +34,11 @@
 
     \lemma surj-split {R : Ring} {U : LModule R} {V : FinModule R} (g : LinearMap U V) (gs : isSurj g)
       : ∃ (h : LinearMap V U) ∀ x (g (h x) = x)
-      => surj-lift (id {LModuleCat R} V) g gs
+      => surj-lift LinearMap.id g gs
 
     \lemma basis<=generating {R : NonZeroCRing} {U : LModule R} (l l' : Array U) (lb : U.IsBasis l) (l'g : U.IsGenerated l') : l.len <= l'.len
       => \let | g => arrayLinearMap l'
-              | (inP (f : LinearMap U _, gf=id)) => surj-split {R} {_} {\new FinModule { | LModule => U | isFinModule => inP (l,lb) }} g (arrayLinearMap.surj-char.2 l'g)
+              | (inP (f,gf=id)) => surj-split {R} {_} {\new FinModule { | LModule => U | isFinModule => inP (l,lb) }} g (arrayLinearMap.surj-char.2 l'g)
               | A => toMatrix l ArrayFinModule.basis f
               | B => toMatrix {R} MatrixRing.ide lb g
          \in matrix-split_<= {R} {_} {_} {A} {B} $ inv (toMatrix_* {R} {U} f g l ArrayFinModule.basis lb) *> cong (exts gf=id) *> toMatrix_ide lb

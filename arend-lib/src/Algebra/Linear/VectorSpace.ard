@@ -1,12 +1,13 @@
 \import Algebra.Domain
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupCategory
+\import Algebra.Group.GroupHom
 \import Algebra.Linear.Matrix
 \import Algebra.Linear.Matrix.Smith
 \import Algebra.Meta
 \import Algebra.Module
-\import Algebra.Module.Category
+\import Algebra.Module.ModuleCategory
 \import Algebra.Module.FinModule
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid

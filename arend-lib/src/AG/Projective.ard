@@ -4,7 +4,7 @@
 \import Algebra.Monoid.Sub
 \import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.Ring.Category
+\import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Graded
 \import Algebra.Ring.Graded.Localization
@@ -34,7 +34,6 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set.Category
 \import Set.Fin
 \import Topology.Locale
 \open Ideal

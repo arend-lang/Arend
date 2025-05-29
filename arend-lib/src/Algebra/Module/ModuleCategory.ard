@@ -1,10 +1,11 @@
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupCategory
+\import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Module.LinearMap
 \import Algebra.Module.Sub
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Category
@@ -17,16 +18,8 @@
 
 \instance LModuleCat (R : Ring) : Cat (LModule R)
   | Hom A B => LinearMap A B
-  | id A => \new LinearMap {
-    | func a => a
-    | func-+ => idp
-    | func-*c => idp
-  }
-  | o g f => \new LinearMap {
-    | func a => g (f a)
-    | func-+ => pmap g func-+ *> func-+
-    | func-*c => pmap g func-*c *> func-*c
-  }
+  | id _ => LinearMap.id
+  | o => LinearMap.∘
   | id-left => idp
   | id-right => idp
   | o-assoc => idp

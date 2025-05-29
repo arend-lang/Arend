@@ -3,7 +3,7 @@
 \import Algebra.Domain.Euclidean
 \import Algebra.Field
 \import Algebra.Field.Algebraic
-\import Algebra.Group.Category
+\import Algebra.Group.GroupHom
 \import Algebra.Linear.Matrix.Smith
 \import Algebra.Linear.VectorSpace
 \import Algebra.Meta

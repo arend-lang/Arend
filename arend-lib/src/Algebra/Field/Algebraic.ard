@@ -3,13 +3,12 @@
 \import Algebra.Meta
 \import Algebra.Module(*c)
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.PermSet
 \import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
+\import Algebra.Pointed.PointedHom
 \import Algebra.Ring
-\import Algebra.Ring.Category
 \import Algebra.Ring.Integral
 \import Algebra.Ring.MonoidRing
 \import Algebra.Ring.MPoly
@@ -80,7 +79,7 @@
   }
 
 \func mPoly_integral {K : DiscreteField} {S : CRing} (f : RingHom K S) {a : S} {l : Array S} (p : MPoly (Fin (suc l.len)) K) (p/=0 : p /= 0) (pe : mPolyMapEval f p (a :: l) = 0)
-  : \Sigma (E : CRing) (g : RingHom K E) (l' : Array E l.len) (RingHom.isAlgebraGenerated g l') (h : RingHom E S) (\Pi (j : Fin l.len) -> \Sigma (q : Poly E) (l j = polyMapEval h q a)) (isInj h) (isIntegral h a) (h ∘ g = f)
+  : \Sigma (E : CRing) (g : RingHom K E) (l' : Array E l.len) (RingHom.isAlgebraGenerated g l') (h : RingHom E S) (\Pi (j : Fin l.len) -> \Sigma (q : Poly E) (l j = polyMapEval h q a)) (isInj h) (isIntegral h a) (h RingHom.∘ g = f)
   => \let | d j => pow (suc (mdegree p)) (suc j)
           | l' => mkArray \lam j => l j - pow a (d j)
           | subring : SubRing S => mPolyImage f l'
@@ -102,13 +101,13 @@
 
       \lemma change-vars_map {R S : CRing} {f : RingHom R S} {n : Nat} {p : MPoly (Fin n) R} {d : Nat} {l : Array R n}
         : polyMap f (change-vars p d l) = change-vars (mPoly-map f p) d (map f l)
-        => mPolyRingHom-unique (polyMapRingHom f RingCat.∘ mPolyMapEvalRingHom polyHom _) (mPolyMapEvalRingHom polyHom _ RingCat.∘ mPoly-mapHom f) (\lam r => simplify)
+        => mPolyRingHom-unique (polyMapRingHom f RingHom.∘ mPolyMapEvalRingHom polyHom _) (mPolyMapEvalRingHom polyHom _ RingHom.∘ mPoly-mapHom f) (\lam r => simplify)
             (\lam j => simplify $ (polyMapRingHom f).func-+ *> pmap2 (padd pzero __ + __) f.func-zro (polyMapRingHom.polyMap_*c *> pmap (_ PolyRing.*c) ((polyMapRingHom f).func-+ *>
               pmap (_ +) ((polyMapRingHom f).func-pow *> pmap2 (\lam x y => pow (padd (padd pzero x) y) _) f.func-ide f.func-zro)))) p
 
       \lemma change-vars_eval {R : CRing} {n : Nat} {p : MPoly (Fin n) R} {d : Nat} {l : Array R n} {a : R}
         : polyEval (change-vars p d l) a = mPolyEval (\lam j => l j + pow a (pow d j)) p
-        => mPolyRingHom-unique (polyEvalRingHom a RingCat.∘ mPolyMapEvalRingHom polyHom _) (mPolyEval _) (\lam r => simplify)
+        => mPolyRingHom-unique (polyEvalRingHom a RingHom.∘ mPolyMapEvalRingHom polyHom _) (mPolyEval _) (\lam r => simplify)
             (\lam j => simplify $ (polyEvalRingHom a).func-+ *> simplify (pmap (polyEvalRingHom a) PolyRing.ide_*c *> func-+ *> pmap2 (+) simplify (MonoidHom.func-pow *> simplify (simplify simplify)))) p
 
       \lemma change-vars_BigSum {R : CRing} {n : Nat} {l : Array (MPoly (Fin n) R)} {d : Nat} {a : Array R n}
@@ -190,7 +189,7 @@
     }
 
 \func mPoly_integralExt {K : DiscreteField} {S : CRing} (f : RingHom K S) {n : Nat} {l : Array S (suc n)} (gen : RingHom.isAlgebraGenerated f l) (p : MPoly (Fin (suc n)) K) (p/=0 : p /= 0) (pe : mPolyMapEval f p l = 0)
-  : \Sigma (E : CRing) (g : RingHom K E) (l' : Array E n) (RingHom.isAlgebraGenerated g l') (h : RingHom E S) (isInj h) (isIntegralExt h) (h ∘ g = f)
+  : \Sigma (E : CRing) (g : RingHom K E) (l' : Array E n) (RingHom.isAlgebraGenerated g l') (h : RingHom E S) (isInj h) (isIntegralExt h) (h RingHom.∘ g = f)
   => \case mPoly_integral f p p/=0 pe \with {
        | (E,g,l',gen',h,hg,hinj,hint,hg=f) => (E,g,l',gen',h,hinj, integralExt-finite-char (l 0 :: nil) (RingHom.isAlgebraGenerated-poly \lam x =>
            TruncP.map (gen x) \lam s => (mPolyEval (\lam j => (hg j).1) $ MPoly_Fin-suc' (mPoly-map g s.1), MPoly_Fin-suc'.mapEval-comm h {_} {_} {\lam j => (hg j).1} *> pmap2 (mPolyEval __ __) (exts \case \elim __ \with {

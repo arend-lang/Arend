@@ -2,11 +2,10 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
+\import Algebra.Pointed.PointedHom
 \import Algebra.Ring
-\import Algebra.Ring.Category
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Poly
 \import Algebra.Semiring
@@ -433,7 +432,7 @@
   => zro-right *> pmap (a *) func-ide *> ide-right
 
 \lemma evalMS_map {M N : Monoid} {R : CRing} {f : M -> N} {x : MonoidSet M R} {g : N -> R}
-  : evalMS (monoidSet-map f (id R) x) g = evalMS x (\lam m => g (f m)) \elim x
+  : evalMS (monoidSet-map f RingHom.id x) g = evalMS x (\lam m => g (f m)) \elim x
   | in~ l => idp
 
 \lemma evalMS_map2 {M : \Set} {R S : Semiring} {x : MonoidSet M R} {f : M -> R} (g : SemiringHom R S)

@@ -1,7 +1,7 @@
 \import Algebra.Group
 \import Algebra.Group.Fin
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Arith.Fin

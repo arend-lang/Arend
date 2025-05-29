@@ -10,7 +10,7 @@
 \import Meta
 \import Paths
 \import Paths.Meta
-\import Set.Category
+\import Set.SetCategory
 
 \func isExponential {C : CartesianPrecat} (X : C) => RightAdjoint C C { | LAdj => C.bprodFunctorRight X }
 

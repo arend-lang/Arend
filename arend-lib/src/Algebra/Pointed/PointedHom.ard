@@ -1,0 +1,18 @@
+\import Algebra.Pointed
+\import Set.SetHom
+
+\record PointedHom \extends SetHom {
+  \override Dom : Pointed
+  \override Cod : Pointed
+  | func-ide : func ide = ide
+} \where {
+  \func id {X : Pointed} : PointedHom X X \cowith
+    | func x => x
+    | func-ide => idp
+}
+
+\record AddPointedHom \extends SetHom {
+  \override Dom : AddPointed
+  \override Cod : AddPointed
+  | func-zro : func zro = zro
+}

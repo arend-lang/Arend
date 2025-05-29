@@ -474,7 +474,8 @@ public class StdExtension implements ArendExtension {
     contributor.declare(categoryMeta, paths);
     contributor.declare(categoryMeta, pathsMeta);
     contributor.declare(categoryMeta, set);
-    contributor.declare(categoryMeta, ModulePath.fromString("Set.Category"));
+    contributor.declare(categoryMeta, ModulePath.fromString("Set.SetCategory"));
+    contributor.declare(categoryMeta, ModulePath.fromString("Set.SetHom"));
     contributor.declare(text("Proves univalence for categories. The type of objects must extend `BaseSet` and the Hom-set must extend `SetHom` with properties only."), makeDef(categoryMeta, "sip", new DependencyMetaTypechecker(SIPMeta.class, SIPMeta::new)));
   }
 

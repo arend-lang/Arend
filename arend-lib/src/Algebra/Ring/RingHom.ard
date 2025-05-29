@@ -1,11 +1,10 @@
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupHom
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
 \import Algebra.Ring
-\import Algebra.Ring.Category
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.Poly
 \import Algebra.Semiring
@@ -36,6 +35,18 @@
     \func equals {R S : Ring} {f g : RingHom R S} (p : \Pi (x : R) -> f x = g x) : f = g
       => exts p
 
+    \func id {R : Ring} : RingHom R R \cowith
+      | func x => x
+      | func-ide => idp
+      | func-+ => idp
+      | func-* => idp
+
+    \func \fixl 8 compose \alias \infixl 8 ∘ {R S T : Ring} (g : RingHom S T) (f : RingHom R S) : RingHom R T \cowith
+      | func x => g (f x)
+      | func-ide => pmap g f.func-ide *> g.func-ide
+      | func-+ => pmap g f.func-+ *> g.func-+
+      | func-* => pmap g f.func-* *> g.func-*
+
     \lemma contr-isTerm {R S : Ring} (c : Contr S) : Contr (RingHom R S) \cowith
       | center => \new RingHom {
         | func _ => c.center
@@ -64,7 +75,7 @@
 
     \lemma isAlgebraGenerated-poly {R E : CRing} {f : RingHom R E} {a : E}
                                    (fg : \Pi (x : E) -> ∃ (p : Poly R) (polyMapEval f p a = x)) : isAlgebraGenerated f (a :: nil)
-      => isAlgebraGenerated-comp {R} {E} {E} {f} {id E} {a} {nil} fg \lam x => inP (mConst x, simplify)
+      => isAlgebraGenerated-comp {R} {E} {E} {f} {RingHom.id} {a} {nil} fg \lam x => inP (mConst x, simplify)
 }
 
 \func natMap {R : Semiring} : SemiringHom NatSemiring R \cowith

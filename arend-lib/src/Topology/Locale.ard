@@ -37,7 +37,8 @@
 \import Paths
 \import Paths.Meta
 \import Set
-\import Set.Category
+\import Set.SetHom
+\import Set.SetCategory
 \import Set.Fin
 \import Topology.RatherBelow
 \open Bounded(top,top-univ,bottom,bottom-univ)

@@ -6,14 +6,14 @@
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.PermSet
 \import Algebra.Monoid.Sub
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
+\import Algebra.Pointed.PointedHom
 \import Algebra.Pointed.Sub
 \import Algebra.Ring
-\import Algebra.Ring.Category
+\import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.MPoly
@@ -35,7 +35,7 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set.Category
+\import Set.SetCategory
 \import Set.Fin
 \open Monoid
 
@@ -189,7 +189,7 @@
           (polyEval (MPoly_Fin-suc (mPoly-map (polyImageHom f a) t.1)) (msMonomial (later (a * 1, rewrite ide-right polyImage-element)) ide),
            t.2 *> inv (MPoly_Fin-suc.f_eval (mPoly-map f t.1) l) *> pmap (mPolyEval l) (pmap2 polyEval (pmap MPoly_Fin-suc.f (later $ cases t.1 \with {
              | in~ l' => idp
-           }) *> inv (MPoly_Fin-suc.f_polyMap h (\lam j => pmap (msMonomial __ _) h.func-ide) \lam b => idp)) (pmap (msMonomial __ _) (inv ide-right)) *> polyEval_polyMap {monoidSet-ringHom (MonoidCat.id _) _}))
+           }) *> inv (MPoly_Fin-suc.f_polyMap h (\lam j => pmap (msMonomial __ _) h.func-ide) \lam b => idp)) (pmap (msMonomial __ _) (inv ide-right)) *> polyEval_polyMap {monoidSet-ringHom MonoidHom.id _}))
 
 \lemma integralExt-finite-char {R E : CRing} {f : RingHom R E} (l : Array E) (gen : RingHom.isAlgebraGenerated f l)
   : TFAE (isIntegralExt f,

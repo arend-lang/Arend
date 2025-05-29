@@ -2,13 +2,13 @@
 \import Algebra.Field
 \import Algebra.Field.Splitting
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupHom
 \import Algebra.LatticeColimit
 \import Algebra.Monoid
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
+\import Algebra.Pointed.PointedHom
 \import Algebra.Ring
-\import Algebra.Ring.Category
+\import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Integral
 \import Algebra.Ring.Poly
@@ -24,7 +24,8 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
-\import Set.Category
+\import Set.SetCategory
+\import Set.SetHom
 \import Set.Countable
 
 -- | A ring {K} is algebraically closed if every monic polynomial over {K} of non-zero degree has a root.

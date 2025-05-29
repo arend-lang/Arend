@@ -1,6 +1,6 @@
 \import Algebra.Group.Aut
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Category
 \import Category.Functor
 \import Equiv (Equiv)

@@ -1,12 +1,12 @@
 \import Algebra.Algebra
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupHom
 \import Algebra.Group.Symmetric
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.RingHom

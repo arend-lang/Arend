@@ -1,7 +1,7 @@
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupCategory
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidCategory
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
@@ -18,29 +18,18 @@
 \import Logic.FirstOrder.Term
 \import Paths
 \import Paths.Meta
-\import Set.Category
+\import Set.SetCategory
 \import Set.Fin
 
 \instance RingCat : Cat Ring
   | Hom M N => RingHom M N
-  | id => id
-  | o {x y z : Ring} (g : RingHom y z) (f : RingHom x y) => \new RingHom {
-    | func x => g (f x)
-    | func-ide => pmap g f.func-ide *> g.func-ide
-    | func-+ => pmap g f.func-+ *> g.func-+
-    | func-* => pmap g f.func-* *> g.func-*
-  }
+  | id _ => RingHom.id
+  | o => RingHom.∘
   | id-left => idp
   | id-right => idp
   | o-assoc => idp
   | univalence => sip (\lam {X} {R} {S} (p1 : RingHom) _ => exts (p1.func-zro, \lam _ _ => p1.func-+, \lam _ _ => p1.func-*, AddGroup.negative-equality R S p1.func-zro p1.func-+, p1.func-ide, natCoefUnique R S p1))
   \where {
-    \func id (M : Ring) : RingHom M M \cowith
-      | func x => x
-      | func-ide => idp
-      | func-+ => idp
-      | func-* => idp
-
     \lemma natCoefUnique {X : \Set} (R S : Ring X) (h : RingHom R S (\lam x => x)) (n : Nat) : R.natCoef n = S.natCoef n \elim n
       | 0 => R.natCoefZero *> h.func-zro *> inv S.natCoefZero
       | suc n => R.natCoefSuc n *> h.func-+ *> pmap2 (S.+) (natCoefUnique R S h n) h.func-ide *> inv (S.natCoefSuc n)
@@ -59,7 +48,7 @@
 
     \func forget : Functor RingCat SetCat \cowith
       | F R => R
-      | Func f => func {f}
+      | Func f => f
       | Func-id => idp
       | Func-o => idp
   }
@@ -84,7 +73,7 @@
 
     \func forget : Functor CRingCat SetCat \cowith
       | F R => R
-      | Func f => func {f}
+      | Func f => f
       | Func-id => idp
       | Func-o => idp
       \where {

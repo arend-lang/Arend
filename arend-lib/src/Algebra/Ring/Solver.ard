@@ -1,8 +1,7 @@
 \import Algebra.Algebra
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupHom
 \import Algebra.Module
-\import Algebra.Ring.Category
 \import Arith.Fin
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -415,7 +414,7 @@
   | C => RatField
   | S => RatField
   | R => RatField
-  | alg => RingCat.id RatField
+  | alg => RingHom.id
   | alg-comm x y => RatField.*-comm
 
 \class RatAlgebraData \extends BaseRingData {

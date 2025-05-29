@@ -1,7 +1,7 @@
-\import Algebra.Group
 \import Algebra.Monoid
-\import Algebra.Pointed
-\import Algebra.Pointed.Category
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed.PointedCategory
+\import Algebra.Pointed.PointedHom
 \import Category
 \import Category.Adjoint
 \import Category.Functor
@@ -13,54 +13,12 @@
 \import Logic.FirstOrder.Term
 \import Paths
 \import Paths.Meta
-\import Set.Category
+\import Set.SetCategory
 \import Set.Fin
-
-\record MonoidHom \extends PointedHom {
-  \override Dom : Monoid
-  \override Cod : Monoid
-  | func-* {x y : Dom} : func (x * y) = func x * func y
-
-  \lemma func-pow {x : Dom} {n : Nat} : func (Monoid.pow x n) = Monoid.pow (func x) n \elim n
-    | 0 => func-ide
-    | suc n => func-* *> pmap (`* _) func-pow
-
-  \lemma func-BigProd {l : Array Dom} : func (Monoid.BigProd l) = Monoid.BigProd (\lam j => func (l j)) \elim l
-    | nil => func-ide
-    | a :: l => func-* *> pmap (_ *) func-BigProd
-
-  \lemma func-LDiv {a b : Dom} (d : Monoid.LDiv a b) : Monoid.LDiv (func a) (func b) (func d.inv) \cowith
-    | inv-right => inv func-* *> pmap func d.inv-right
-
-  \lemma func-Inv {a : Dom} (d : Monoid.Inv a) : Monoid.Inv (func a) (func d.inv) \cowith
-    | inv-left => inv func-* *> pmap func d.inv-left *> func-ide
-    | inv-right => inv func-* *> pmap func d.inv-right *> func-ide
-}
-  \where {
-    \func equals {M N : Monoid} {f g : MonoidHom M N} (p : \Pi (x : M) -> f x = g x) : f = g
-      => exts p
-
-    \open Monoid(Inv)
-
-    \func presInv (h : MonoidHom) (e : Inv {h.Dom}) : Inv (h e) \cowith
-      | inv => h e.inv
-      | inv-left => inv h.func-* *> pmap h e.inv-left *> h.func-ide
-      | inv-right => inv h.func-* *> pmap h e.inv-right *> h.func-ide
-
-    \lemma presInvElem (h : MonoidHom) (e : Inv {h.Dom}) (e' : Inv (h e)) : h e.inv = e'.inv
-      => pmap (\lam (j : Inv) => j.inv) (Inv.levelProp (\new Inv (h e) {
-        | inv => h e.inv
-        | inv-left => inv h.func-* *> pmap h e.inv-left *> h.func-ide
-        | inv-right => inv h.func-* *> pmap h e.inv-right *> h.func-ide
-      }) e')
-
-    \lemma func-inverse {G H : Group} (h : MonoidHom G H) {a : G} : h (inverse a) = inverse (h a)
-      => presInvElem h (G.makeInv a) (H.makeInv (h a))
-  }
 
 \instance MonoidCat : Cat Monoid
   | Hom M N => MonoidHom M N
-  | id => id
+  | id _ => MonoidHom.id
   | o {x y z : Monoid} (g : MonoidHom y z) (f : MonoidHom x y) => \new MonoidHom {
     | func x => g (f x)
     | func-ide => pmap g f.func-ide *> g.func-ide
@@ -69,16 +27,11 @@
   | id-left => idp
   | id-right => idp
   | o-assoc => idp
-  | univalence => sip (\lam p1 p2 => exts (func-ide {p1}, \lam _ _ => func-* {p1}))
+  | univalence => sip \lam p1 p2 => exts (p1.func-ide, \lam _ _ => p1.func-*)
   \where {
-    \func id (M : Monoid) : MonoidHom M M \cowith
-      | func x => x
-      | func-ide => idp
-      | func-* => idp
-
     \func forget : Functor MonoidCat SetCat \cowith
       | F R => R
-      | Func f => func {f}
+      | Func f => f
       | Func-id => idp
       | Func-o => idp
   }
@@ -156,7 +109,7 @@
 
     \func monoidToMod (M : Monoid) : Model theory (\lam _ => M) \cowith
       | operation => \case \elim __ \with {
-        | 0 => \lam _ => ide
+        | 0 => \lam _ => M.ide
         | 1 => \lam l => l 0 * l 1
       }
       | relation => \case __
@@ -180,31 +133,9 @@
       }
   }
 
-\record AddMonoidHom \extends AddPointedHom {
-  \override Dom : AddMonoid
-  \override Cod : AddMonoid
-  | func-+ {x y : Dom} : func (x + y) = func x + func y
-
-  \lemma func-BigSum {l : Array Dom} : func (AddMonoid.BigSum l) = AddMonoid.BigSum (\lam j => func (l j)) \elim l
-    | nil => func-zro
-    | a :: l => func-+ *> pmap (_ +) func-BigSum
-} \where {
-  \use \coerce toMonoidHom (f : AddMonoidHom) : MonoidHom \cowith
-    | Dom => f.Dom
-    | Cod => f.Cod
-    | func => f
-    | func-* => func-+
-    | func-ide => func-zro
-
-  \lemma func-FinSum {A B : AbMonoid} (f : AddMonoidHom A B) {J : FinSet} {a : J -> A} : f (A.FinSum a) = B.FinSum (\lam j => f (a j))
-    => \case A.FinSum_char a \with {
-         | inP (e,q) => pmap f q *> f.func-BigSum *> inv (B.FinSum_char2 _ e)
-       }
-}
-
 \instance AddMonoidCat : Cat AddMonoid
   | Hom M N => AddMonoidHom M N
-  | id => id
+  | id _ => AddMonoidHom.id
   | o g f => \new AddMonoidHom {
     | func x => g (f x)
     | func-zro => pmap g func-zro *> func-zro
@@ -213,16 +144,11 @@
   | id-left => idp
   | id-right => idp
   | o-assoc => idp
-  | univalence => sip (\lam {X} {A} {B} (p1 : AddMonoidHom) p2 => exts (p1.func-zro, \lam _ _ => p1.func-+))
+  | univalence => sip \lam p1 p2 => exts (p1.func-zro, \lam _ _ => p1.func-+)
   \where {
-    \func id (M : AddMonoid) : AddMonoidHom M M \cowith
-      | func x => x
-      | func-zro => idp
-      | func-+ => idp
-
     \func forget : Functor AddMonoidCat SetCat \cowith
       | F R => R
-      | Func f => func {f}
+      | Func f => f
       | Func-id => idp
       | Func-o => idp
   }

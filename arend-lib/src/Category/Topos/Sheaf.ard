@@ -13,7 +13,7 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Set.Category
+\import Set.SetCategory
 \import Topology.Locale
 
 -- | Presheaves valued in {D}

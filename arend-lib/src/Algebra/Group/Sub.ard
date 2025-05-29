@@ -12,7 +12,7 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
-\import Set.Category
+\import Set.SetHom
 \open Group \hiding (Dec)
 
 \class SubGroup \extends SubMonoid {

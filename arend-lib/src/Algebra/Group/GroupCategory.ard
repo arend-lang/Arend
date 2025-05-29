@@ -1,96 +1,35 @@
 \import Algebra.Group
+\import Algebra.Group.GroupHom
 \import Algebra.Group.Sub
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidCategory
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
-\import Category (Cat, Iso)
+\import Algebra.Pointed.PointedCategory
+\import Algebra.Pointed.PointedHom
+\import Category
 \import Category.Functor
 \import Category.Meta
 \import Category.Subcat
 \import Equiv
-\import Function
+\import Function (isInj, isSurj)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
 \import Paths
 \import Paths.Meta
-\import Set.Category
-\open Group
-
-\record GroupHom \extends MonoidHom {
-  \override Dom : Group
-  \override Cod : Group
-
-  | func-ide => cancel_*-left (func ide) $ inv func-* *> pmap func ide-left *> inv ide-right
-
-  \lemma func-inverse {x : Dom} : func (inverse x) = inverse (func x) => check-for-inv $
-    func x * func (inverse x)   ==< inv func-* >==
-    func (x * inverse x)        ==< pmap func inverse-right >==
-    func ide                    ==< func-ide >==
-    ide `qed
-
-  \func Kernel : NormalSubGroup Dom \cowith
-    | contains x => func x = ide
-    | contains_ide => func-ide
-    | contains_inverse {x : Dom} (p : func x = ide) =>
-      func (inverse x)     ==< func-inverse >==
-      inverse (func x)     ==< pmap inverse p >==
-      inverse ide          ==< Group.inverse_ide >==
-      ide `qed
-
-    | isNormal g {h} p =>
-      func (g * h * inverse g)                ==< func-* >==
-      func (g * h) * func (inverse g)         ==< pmap (`* (func (inverse g))) func-* >==
-      func g * func h * func (inverse g)      ==< pmap (\lam z => func g * z * func (inverse g)) p >==
-      func g * ide * func (inverse g)         ==< pmap (`* (func (inverse g))) ide-right >==
-      func g * func (inverse g)               ==< inv func-* >==
-      func (g * inverse g)                    ==< pmap func inverse-right >==
-      func ide                                ==< func-ide >==
-      ide `qed
-
-    | contains_* {x} {y} p q =>
-      func (x * y)     ==< func-* >==
-      func x * func y  ==< pmap (`* func y) p >==
-      ide * func y     ==< ide-left >==
-      func y           ==< q >==
-      ide `qed
-
-  \func TrivialKernel : \Prop => \Pi {g : Dom} -> Kernel g -> g = ide
-
-  \func same-images-test {a b : Dom} (p : func a = func b) : Kernel (inverse a * b) =>
-    func (inverse a * b)          ==< func-* >==
-    func (inverse a) * func b     ==< pmap (`* func b) func-inverse >==
-    inverse (func a) * func b     ==< equality-corrolary (func a) (func b) p >==
-    ide `qed
-
-  \lemma Kernel-injectivity-test (p : TrivialKernel) : isInj func =>
-    \lam q => equality-check (p (same-images-test q))
-
-  \lemma Kernel-injectivity-corrolary (p : isInj func) : TrivialKernel =>
-    \lam q => p (q *> inv func-ide)
-
-  \func IsIsomorphism : \Prop => \Sigma (isInj func) (isSurj func)
-}
+\import Set.SetCategory
 
 \instance GroupCat : Cat Group
   | Hom => GroupHom
-  | id (G : Group) : GroupHom G G \cowith {
-    | func x => x
-    | func-ide => idp
-    | func-* => idp
-  }
-  | o {x y z : Group} (g : GroupHom y z) (f : GroupHom x y) => \new GroupHom {
-    | func x => g (f x)
-    | func-ide => pmap g f.func-ide *> g.func-ide
-    | func-* => pmap g f.func-* *> g.func-*
-  }
+  | id _ => GroupHom.id
+  | o => GroupHom.∘
   | id-left => idp
   | id-right => idp
   | o-assoc => idp
-  | univalence => sip \lam f _ => exts (func-ide {f}, \lam _ _ => func-* {f}, \lam _ => GroupHom.func-inverse {f})
+  | univalence => sip \lam f _ => exts (f.func-ide, \lam _ _ => f.func-*, \lam _ => f.func-inverse)
   \where {
     \func ForgetSet : FaithfulFunctor GroupCat SetCat \cowith
       | F G => G
@@ -136,7 +75,7 @@
           => inv (path (\lam i => (f.f_hinv i) b))
 
         \lemma SetIso->Inj+Surj(f : Iso {SetCat}) : \Sigma (isInj f.f) (isSurj f.f)
-          => (Equiv.isInj {SetIso->Equiv f}, Equiv.isSurj {SetIso->Equiv f})
+          => ((SetIso->Equiv f).isInj, (SetIso->Equiv f).isSurj )
 
         \lemma Inj+Surj->SetIso {X Y : \Set} (f : X -> Y) (p : isInj f) (q : isSurj f) : Iso {SetCat} f
           => Equiv->SetIso (Equiv.fromInjSurj f p q)
@@ -179,33 +118,18 @@
   | MonoidHom => ImageMonoidRightHom f
 
 \func ImageSubGroup (f : GroupHom) : SubGroup f.Cod \cowith
-  | contains h => ∃(g : f.Dom)(f g = h)
+  | contains h => ∃ (g : f.Dom) (f g = h)
   | contains_ide => inP (Group.ide {f.Dom}, f.func-ide)
   | contains_* cont1 cont2 => \case \elim  cont1, \elim  cont2 \with {
-    | inP a, inP b => inP(a.1 * b.1, rewrite (f.func-*, a.2, b.2) idp)
+    | inP a, inP b => inP (a.1 * b.1, rewrite (f.func-*, a.2, b.2) idp)
   }
   | contains_inverse cont1 => \case \elim cont1 \with {
     | inP a => inP (inverse a.1, rewrite (f.func-inverse, a.2) idp)
   }
 
-\record AddGroupHom \extends AddMonoidHom {
-  \override Dom : AddGroup
-  \override Cod : AddGroup
-  | func-zro => AddGroup.cancel-left (func 0) (inv func-+ *> pmap func zro-right *> inv zro-right)
-
-  \lemma func-negative {x : Dom} : func (negative x) = negative (func x)
-    => AddGroup.cancel-left (func x) (inv (negative-right *> inv (pmap func negative-right *> func-zro) *> func-+))
-
-  \lemma func-minus {x y : Dom} : func (x - y) = func x - func y
-    => func-+ *> pmap (_ +) func-negative
-
-  \lemma injective (p : \Pi {a : Dom} -> func a = 0 -> a = 0) : isInj func
-    => \lam q => AddGroup.fromZero $ p $ func-+ *> pmap (_ +) func-negative *> AddGroup.toZero q
-}
-
 \instance AddGroupCat : Cat AddGroup
   | Hom G H => AddGroupHom G H
-  | id => id
+  | id _ => AddGroupHom.id
   | o g f => \new AddGroupHom {
     | func x => g (f x)
     | func-+ => pmap g func-+ *> func-+
@@ -213,12 +137,8 @@
   | id-left => idp
   | id-right => idp
   | o-assoc => idp
-  | univalence => sip (\lam {X} {A} {B} (p1 : AddGroupHom) p2 => exts (p1.func-zro, \lam _ _ => p1.func-+, AddGroup.negative-equality A B p1.func-zro p1.func-+))
+  | univalence => sip \lam {X} {A} {B} p1 p2 => exts (p1.func-zro, \lam _ _ => p1.func-+, AddGroup.negative-equality A B p1.func-zro p1.func-+)
   \where {
-    \func id (G : AddGroup) : AddGroupHom G G \cowith
-      | func x => x
-      | func-+ => idp
-
     \func forgetToAddMonoid : Functor AddGroupCat AddMonoidCat \cowith
       | F A => A
       | Func f => f
@@ -227,32 +147,31 @@
 
     \func forget : Functor AddGroupCat SetCat \cowith
       | F R => R
-      | Func f => func {f}
+      | Func f => f
       | Func-id => idp
       | Func-o => idp
   }
 
 \instance AbGroupCat : Cat AbGroup
-  => subCat (\new Embedding {AbGroup} {AddGroup} {
-    | f A => A
-    | isEmb A B => \new Retraction {
-      | sec => AbGroup.equals A B
-      | f_sec => idpe
-    }
-  })
-  \where {
-    \func forgetToAddGroup : Functor AbGroupCat AddGroupCat \cowith
-      | F A => A
-      | Func f => f
-      | Func-id => idp
-      | Func-o => idp
-
-    \func forget : Functor AbGroupCat SetCat \cowith
-      | F R => R
-      | Func f => func {f}
-      | Func-id => idp
-      | Func-o => idp
+=> subCat \new Embedding {AbGroup} {AddGroup} {
+  | f A => A
+  | isEmb A B => \new Retraction {
+    | sec => AbGroup.equals A B
+    | f_sec => idpe
   }
+} \where {
+  \func forgetToAddGroup : Functor AbGroupCat AddGroupCat \cowith
+    | F A => A
+    | Func f => f
+    | Func-id => idp
+    | Func-o => idp
+
+  \func forget : Functor AbGroupCat SetCat \cowith
+    | F R => R
+    | Func f => f
+    | Func-id => idp
+    | Func-o => idp
+}
 
 \instance KerAddGroup (f : AddGroupHom) : AddGroup
   | AddMonoid => KerAddMonoid f
@@ -293,11 +212,3 @@
   | func-* {x y : E} =>
     \have aux {x y z w t e : E} : x * y * z * (w * t * e) = (x * y) * (z * w) * (t * e) => equation
     \in inv $ rewrite (aux, E.inverse-left, E.ide-right) equation
-
-\lemma conjugate-via-id {G : Group} {g : G} : conjugate ide g = g =>
-  conjugate ide g ==< idp >==
-  ide * g * inverse ide ==< *-assoc >==
-  ide * (g * inverse ide) ==< ide-left >==
-  g * inverse ide ==< pmap (g *) inverse_ide >==
-  g * ide ==< ide-right >==
-  g `qed

@@ -2,7 +2,7 @@
 \import Algebra.Group.GSet.ExampleActions
 \import Algebra.Group.GSet
 \import Algebra.Module
-\import Algebra.Module.Category
+\import Algebra.Module.ModuleCategory
 \import Algebra.Module.LinearMap
 \import Algebra.Pointed
 \import Algebra.Ring

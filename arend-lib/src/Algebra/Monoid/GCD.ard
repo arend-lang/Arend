@@ -1,6 +1,6 @@
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.MulOrdered
 \import Algebra.Pointed
 \import Data.Fin

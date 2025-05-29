@@ -1,5 +1,5 @@
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupHom
 \import Algebra.Group.GSet
 \import Algebra.Meta
 \import Algebra.Monoid

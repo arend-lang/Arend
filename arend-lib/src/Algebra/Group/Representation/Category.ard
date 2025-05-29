@@ -3,7 +3,7 @@
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation
 \import Algebra.Module
-\import Algebra.Module.Category
+\import Algebra.Module.ModuleCategory
 \import Algebra.Module.LinearMap
 \import Algebra.Ring
 \import Category

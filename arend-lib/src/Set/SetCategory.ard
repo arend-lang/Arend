@@ -4,7 +4,7 @@
 \import Category.Functor
 \import Category.Limit
 \import Equiv
-\import Function.Meta ($)
+\import Function.Meta
 \import HLevel
 \import Logic
 \import Logic.Meta
@@ -15,9 +15,6 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
-
-\record SetHom (Dom Cod : BaseSet)
-  | \coerce func : Dom -> Cod
 
 \instance SetCat : Cat \Set
   | Hom X Y => X -> Y
@@ -84,14 +81,14 @@
           | coneMap j _ => c'.coneMap j z
           | coneCoh h => ext \lam _ => path (\lam i => c'.coneCoh h i z)
         } \in \new QEquiv {
-            | ret (c' : Cone) z => e.ret (coneMap z c') ()
-            | ret_f h => ext \lam z =>
+          | ret (c' : Cone) z => e.ret (coneMap z c') ()
+          | ret_f h => ext \lam z =>
                 \have t => e.ret_f (\lam _ => h z)
                 \in path (\lam i => t i ())
-            | f_sec (c' : Cone) => exts \lam j => ext \lam z =>
+          | f_sec (c' : Cone) => exts \lam j => ext \lam z =>
                 \have t => e.f_ret (coneMap z c')
                 \in path (\lam i => Cone.coneMap {t i} j ())
-          }
+        }
   }
 
 \type SetColimit {J : SmallPrecat} (F : Functor J SetCat)

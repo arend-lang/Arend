@@ -1,6 +1,6 @@
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
 \import Data.Array
 \import Data.Or
@@ -11,7 +11,6 @@
 \import Paths
 \import Paths.Meta
 \import Set
-\import Set.Category
 \import Set.Fin
 
 \class Group \extends CancelMonoid {
@@ -98,8 +97,8 @@
        }
     \where {
       \lemma inverse-equality (e : G) : coe (p @ __) (inverse e) right = inverse (coe (p @ __) e right)
-        => \let | h' {H' : Monoid} (q : G = {Monoid} H') => transport (\lam (H' : Monoid) => MonoidHom G H') q (MonoidCat.id G)
-                | h => transport (MonoidHom G H __) (Jl (\lam (H' : Monoid) q => func {h' q} = (\lam x => coe (q @ __) x right)) idp p) (h' p)
+        => \let | h' {H' : Monoid} (q : G = {Monoid} H') => transport (\lam (H' : Monoid) => MonoidHom G H') q MonoidHom.id
+                | h => transport (MonoidHom G H __) (Jl (\lam (H' : Monoid) q => (h' q).func = (\lam x => coe (q @ __) x right)) idp p) (h' p)
                 | e' => coe (p @ __) e right
            \in MonoidHom.presInvElem h
                 (\new Inv e (inverse e) inverse-left inverse-right)
@@ -143,6 +142,14 @@
 
 \func conjugate {E : Group} (g h : E)
   => g * h * inverse g
+
+\lemma conjugate-via-id {G : Group} {g : G} : conjugate ide g = g =>
+  conjugate ide g ==< idp >==
+  ide * g * inverse ide ==< *-assoc >==
+  ide * (g * inverse ide) ==< ide-left >==
+  g * inverse ide ==< pmap (g *) Group.inverse_ide >==
+  g * ide ==< ide-right >==
+  g `qed
 
 \class AddGroup \extends AddMonoid {
   | negative : E -> E
