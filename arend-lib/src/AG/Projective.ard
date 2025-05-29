@@ -1,7 +1,6 @@
 \import AG.Scheme
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
 \import Algebra.Monoid.Sub
 \import Algebra.Ordered
 \import Algebra.Pointed

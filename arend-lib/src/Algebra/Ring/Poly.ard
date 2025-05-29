@@ -769,7 +769,7 @@
 \lemma polyDiv-linear {R : StrictIntegralDomain} {p q : Poly R} {l : Array R} (s : p * q = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l))
   : (\Sigma (j : Fin l.len) (polyEval q (l j) = 0)) || Monoid.Inv q \elim l
   | nil => byRight (Monoid.Inv.lmake p s)
-  | a :: l => \case R.zeroProduct {polyEval p a} {polyEval q a} (inv (func-* {polyEvalRingHom a}) *> pmap (polyEval __ a) s *> MonoidHom.func-BigProd {polyEvalRingHom a} {map (\lam a => padd 1 (negative a)) (a :: l)} *> pmap (`* _) (simplify simplify) *> zro_*-left) \with {
+  | a :: l => \case R.zeroProduct {polyEval p a} {polyEval q a} (inv (polyEvalRingHom a).func-* *> pmap (polyEval __ a) s *> (polyEvalRingHom a).func-BigProd {map (\lam a => padd 1 (negative a)) (a :: l)} *> pmap (`* _) (simplify simplify) *> zro_*-left) \with {
     | byLeft r => \have t => inv *-assoc *> pmap (`* _) *-comm *> (rewrite (rootDiv_* r) in s)
                   \in \case polyDiv-linear $ StrictDomain.nonZero-cancel-left {PolyStrictDomain R} {padd 1 (negative a)} (\lam c => R.zro/=ide $ inv $ pmap (polyCoef __ 1) c) t \with {
                     | byLeft r => byLeft (suc r.1, r.2)
@@ -920,7 +920,7 @@
 \lemma degree1PolyDivision {R : CRing} (f : Poly R) (a : R)
   : \Sigma (q : Poly R) (f = q * padd 1 (negative a) + padd pzero (polyEval f a)) \level \lam s1 s2 => ext (degree1PolyDivision-unique f a s1.2 s2.2)
   => \have t => monicPolyDivision f (padd 1 (negative a)) 1 idp idp
-     \in (t.1, t.3 *> pmap (_ +) (fromArray_polyCoef t.4 *> pmap (padd pzero) (later (repeat simplify (rewrite (fromArray_polyCoef t.4) simplify)) *> inv (pmap (polyEval __ a) t.3 *> func-+ {polyEvalRingHom a} *> pmap (`+ _) func-*))))
+     \in (t.1, t.3 *> pmap (_ +) (fromArray_polyCoef t.4 *> pmap (padd pzero) (later (repeat simplify (rewrite (fromArray_polyCoef t.4) simplify)) *> inv (pmap (polyEval __ a) t.3 *> (polyEvalRingHom a).func-+ *> pmap (`+ _) func-*))))
 
 \lemma rootPolyDivision-unique {R : CRing} (f : Poly R) (a : R) (p : polyEval f a = 0) : isProp (LDiv (padd 1 (negative a)) f)
   => \lam s1 s2 => ext $ degree1PolyDivision-unique f a

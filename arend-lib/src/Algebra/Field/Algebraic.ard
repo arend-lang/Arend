@@ -1,6 +1,5 @@
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Group.Category
 \import Algebra.Meta
 \import Algebra.Module(*c)
 \import Algebra.Monoid
@@ -88,7 +87,7 @@
           | t => mPolyImage-finGen f l'
      \in (SubRing.cStruct subring, mPolyImageHom f l', t.1, t.2, subring.embed,
           \lam j => (padd pzero (later (l' j, mPolyImage-element f l' j)) + pow (padd 1 0) (d j),
-                     inv $ func-+ {polyMapEvalRingHom _ _} *> pmap (`+ _) (pmap (`+ _) S.zro_*-left *> zro-left) *> +-assoc *> pmap (l j +) (+-comm *> S.toZero (MonoidHom.func-pow {polyMapEvalRingHom _ _} *> pmap (pow __ _) equation)) *> zro-right),
+                     inv $ (polyMapEvalRingHom _ _).func-+ *> pmap (`+ _) (pmap (`+ _) S.zro_*-left *> zro-left) *> +-assoc *> pmap (l j +) (+-comm *> S.toZero ((polyMapEvalRingHom _ _).func-pow *> pmap (pow __ _) equation)) *> zro-right),
           \lam q => ext q,
           \case MPoly_poly-field (mPolyImageHom f l') p/=0 ((zro, transport (mPolyImage f l') f.func-zro (mPolyImage-ext f l' zro)) :: \lam j => (l' j, mPolyImage-element f l' j)) \with {
             | inP s => isIntegral.fromInv s.2 s.3 $ pmap (polyEval __ a) change-vars_map *> change-vars_eval *> pmap2 (mPolyEval __ __) (ext \case \elim __ \with {
@@ -104,21 +103,21 @@
       \lemma change-vars_map {R S : CRing} {f : RingHom R S} {n : Nat} {p : MPoly (Fin n) R} {d : Nat} {l : Array R n}
         : polyMap f (change-vars p d l) = change-vars (mPoly-map f p) d (map f l)
         => mPolyRingHom-unique (polyMapRingHom f RingCat.∘ mPolyMapEvalRingHom polyHom _) (mPolyMapEvalRingHom polyHom _ RingCat.∘ mPoly-mapHom f) (\lam r => simplify)
-            (\lam j => simplify $ func-+ {polyMapRingHom f} *> pmap2 (padd pzero __ + __) f.func-zro (polyMapRingHom.polyMap_*c *> pmap (_ PolyRing.*c) (func-+ {polyMapRingHom f} *>
-              pmap (_ +) (MonoidHom.func-pow {polyMapRingHom f} *> pmap2 (\lam x y => pow (padd (padd pzero x) y) _) f.func-ide f.func-zro)))) p
+            (\lam j => simplify $ (polyMapRingHom f).func-+ *> pmap2 (padd pzero __ + __) f.func-zro (polyMapRingHom.polyMap_*c *> pmap (_ PolyRing.*c) ((polyMapRingHom f).func-+ *>
+              pmap (_ +) ((polyMapRingHom f).func-pow *> pmap2 (\lam x y => pow (padd (padd pzero x) y) _) f.func-ide f.func-zro)))) p
 
       \lemma change-vars_eval {R : CRing} {n : Nat} {p : MPoly (Fin n) R} {d : Nat} {l : Array R n} {a : R}
         : polyEval (change-vars p d l) a = mPolyEval (\lam j => l j + pow a (pow d j)) p
         => mPolyRingHom-unique (polyEvalRingHom a RingCat.∘ mPolyMapEvalRingHom polyHom _) (mPolyEval _) (\lam r => simplify)
-            (\lam j => simplify $ func-+ {polyEvalRingHom a} *> simplify (pmap (polyEvalRingHom a) PolyRing.ide_*c *> func-+ *> pmap2 (+) simplify (MonoidHom.func-pow *> simplify (simplify simplify)))) p
+            (\lam j => simplify $ (polyEvalRingHom a).func-+ *> simplify (pmap (polyEvalRingHom a) PolyRing.ide_*c *> func-+ *> pmap2 (+) simplify (MonoidHom.func-pow *> simplify (simplify simplify)))) p
 
       \lemma change-vars_BigSum {R : CRing} {n : Nat} {l : Array (MPoly (Fin n) R)} {d : Nat} {a : Array R n}
         : change-vars (BigSum l) d a = BigSum \lam j => change-vars (l j) d a
-        => AddMonoidHom.func-BigSum {mPolyMapEvalRingHom _ _}
+        => (mPolyMapEvalRingHom _ _).func-BigSum
 
       \lemma change-vars_*c {R : CRing} {n : Nat} {x : R} {p : MPoly (Fin n) R} {d : Nat} {a : Array R n}
         : change-vars (x *c p) d a = x PolyRing.*c change-vars p d a
-        => func-* {mPolyMapEvalRingHom polyHom \lam j => padd pzero (a j) + pow (padd 1 0) (pow d j)} *> simplify (pmap (`+ _) (path peq))
+        => (mPolyMapEvalRingHom polyHom \lam j => padd pzero (a j) + pow (padd 1 0) (pow d j)).func-* *> simplify (pmap (`+ _) (path peq))
 
       \lemma change-vars_monomial {R : CRing} {n : Nat} {c : PermSet (Fin n)} {d : Nat} {a : Array R n}
         : change-vars (msMonomial 1 c) d a = permSet-univ (\lam j => padd pzero (a j) + pow (padd 1 0) (pow d j)) c

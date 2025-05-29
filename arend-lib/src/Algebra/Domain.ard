@@ -183,7 +183,7 @@
                   }
                 })
                 | no q, s2 => rewrite (FinSet.search_no_reduce (\lam (j : Fin (suc (suc s.1))) => divQuotient_dec0 (a (suc j))) (\lam p => q p)) at s2 $
-                                inP (suc s.1, transport2 LDiv (r s.1 (\lam p => q p)).2 (r (suc s.1) q).2 $ MonoidHom.func-LDiv {f} s2)
+                                inP (suc s.1, transport2 LDiv (r s.1 (\lam p => q p)).2 (r (suc s.1) q).2 $ f.func-LDiv s2)
               }
           }
 

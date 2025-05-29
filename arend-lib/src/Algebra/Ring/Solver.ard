@@ -2,14 +2,12 @@
 \import Algebra.Group
 \import Algebra.Group.Category
 \import Algebra.Module
-\import Algebra.Monoid.Category
 \import Algebra.Ring.Category
 \import Arith.Fin
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.Solver
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Arith.Bool

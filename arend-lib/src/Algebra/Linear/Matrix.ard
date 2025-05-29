@@ -338,8 +338,8 @@
         | func-*c {r} {a} => rewrite e $ *-assoc *> pmap {Array R (suc n)} (__ k * _) (insert-index {Array R (suc n)}) *> *-assoc *> pmap (r *) (pmap (\lam x => _ * (_ * determinant x)) (minor_insert *> inv minor_insert) *> inv (*-assoc *> pmap {Array R (suc n)} (__ k * _) (insert-index {Array R (suc n)})))
         }
         | no q => \new LinearMap {
-          | func-+ => rewrite (aux/= q, aux/= q, aux/= q) $ pmap (_ *) (inv (path (\lam i' => determinant (minor (replace_insert {_} {M} {j} {replicate (suc n) R.zro} i') i k))) *> pmap determinant (minor_replace q) *> later (rewrite skip_+ $ func-+ {isMultiLinear.toReplace {R} {_} {_} {n} determinant.multilinear _ _} *> pmap2 (determinant __ + determinant __) (inv (minor_replace q) *> path (\lam i' => minor (replace_insert i') i k)) (inv (minor_replace q) *> path (\lam i' => minor (replace_insert i') i k)))) *> ldistr
-          | func-*c {r} {x} => rewrite (aux/= q, aux/= q) $ pmap (_ * _ * __) (inv (path (\lam i' => determinant (minor (replace_insert {_} {M} {j} {replicate (suc n) R.zro} i') i k))) *> pmap determinant (minor_replace q) *> later (rewrite skip_*c $ func-*c {isMultiLinear.toReplace {R} {_} {_} {n} determinant.multilinear _ _} *> pmap (r * determinant __) (inv (minor_replace q))) *> path (\lam i' => r * determinant (minor (replace_insert i') i k)) *> *-comm) *> inv *-assoc *> *-comm
+          | func-+ => rewrite (aux/= q, aux/= q, aux/= q) $ pmap (_ *) (inv (path (\lam i' => determinant (minor (replace_insert {_} {M} {j} {replicate (suc n) R.zro} i') i k))) *> pmap determinant (minor_replace q) *> later (rewrite skip_+ $ (isMultiLinear.toReplace {R} {_} {_} {n} determinant.multilinear _ _).func-+ *> pmap2 (determinant __ + determinant __) (inv (minor_replace q) *> path (\lam i' => minor (replace_insert i') i k)) (inv (minor_replace q) *> path (\lam i' => minor (replace_insert i') i k)))) *> ldistr
+          | func-*c {r} {x} => rewrite (aux/= q, aux/= q) $ pmap (_ * _ * __) (inv (path (\lam i' => determinant (minor (replace_insert {_} {M} {j} {replicate (suc n) R.zro} i') i k))) *> pmap determinant (minor_replace q) *> later (rewrite skip_*c $ (isMultiLinear.toReplace {R} {_} {_} {n} determinant.multilinear _ _).func-*c *> pmap (r * determinant __) (inv (minor_replace q))) *> path (\lam i' => r * determinant (minor (replace_insert i') i k)) *> *-comm) *> inv *-assoc *> *-comm
         }
       }
 
@@ -552,7 +552,7 @@
   \where \open Monoid
 
 \lemma determinant_map {R S : CRing} (f : RingHom R S) {n : Nat} (A : Matrix R n n) : f (determinant A) = determinant (matrix-map f A)
-  => AddMonoidHom.func-FinSum f *> pmap AbMonoid.FinSum (ext \lam e => func-* *> pmap2 (*) (sign.sign_hom f) MonoidHom.func-BigProd)
+  => AddMonoidHom.func-FinSum f *> pmap AbMonoid.FinSum (ext \lam e => func-* *> pmap2 (*) (sign.sign_hom f) f.func-BigProd)
 
 \lemma determinant_block {R : CRing} {n m : Nat} (A : Matrix R n n) (B : Matrix R m m) : determinant (blockMatrix A B) = determinant A * determinant B \elim n
   | 0 => inv (pmap (`* _) (determinant00 A) *> ide-left)

@@ -3,7 +3,6 @@
 \import Algebra.Meta
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Category
@@ -369,7 +368,7 @@
     \func in1 {R : Ring} (A B : LModule R) : LinearMap A (ProductLModule R A B) \cowith
       | func a => (a, 0)
       | func-+ {a} {b} => rewrite (pmap (\lam z => (a A.+ b, z)) (inv B.zro-right)) idp
-      | func-*c{r} {_} => rewrite (inv $ B.*c_zro-right {r}, inv aux, B.*c_zro-right) idp
+      | func-*c {r} {_} => rewrite (inv $ B.*c_zro-right {r}, inv aux, B.*c_zro-right) idp
       \where {
         \private \lemma aux {r : R} {a : A} {b : B} : r LModule.*c {ProductLModule R A B} (a, b) = (r *c a, r *c b) => idp
       }

@@ -12,7 +12,6 @@
 \import Algebra.Linear.Matrix.Smith
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Sub
 \import Algebra.Ring.Ideal
@@ -62,7 +61,7 @@
     => \lam b => \case unitless_adequate' dc (inD a) (inD b) \with {
       | inP (in~ a1, in~ a2, n, a=a1a2, a1|b^n, a2_b) =>
         \have (c : Inv, p) => equivalent-associates a (a1 * a2) (make~ a=a1a2)
-        \in inP (c * a1, a2, n, p *> inv *-assoc, LDiv.trans (LDiv.make c.inv $ *-comm *> inv *-assoc *> pmap (`* _) c.inv-left *> ide-left) (div-from~ $ transportInv (LDiv _) (MonoidHom.func-pow {inDHom M}) a1|b^n), IsCoprime.<=gcd $ gcd-from~ $ IsCoprime.=>gcd a2_b)
+        \in inP (c * a1, a2, n, p *> inv *-assoc, LDiv.trans (LDiv.make c.inv $ *-comm *> inv *-assoc *> pmap (`* _) c.inv-left *> ide-left) (div-from~ $ transportInv (LDiv _) (inDHom M).func-pow a1|b^n), IsCoprime.<=gcd $ gcd-from~ $ IsCoprime.=>gcd a2_b)
     }
 
   \lemma domain_adequate' {M : GCDDomain.Dec} (dc : CMonoid.DivChain {DivQuotientMonoid M.nonZeroGCDMonoid}) {a : M} (a/=0 : a /= 0) : IsAdequate' a

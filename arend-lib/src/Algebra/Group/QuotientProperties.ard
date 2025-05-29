@@ -4,7 +4,6 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.Category
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
 \import Category
 \import Function \hiding (id, o)
 \import Logic
@@ -12,7 +11,6 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set.Category
 \open Group
 
 \func \infix 7 // (G : Group) (H : NormalSubGroup G) : Group => H.quotient

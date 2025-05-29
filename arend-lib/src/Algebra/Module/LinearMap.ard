@@ -161,40 +161,42 @@
                     | f_hinv => exts e.f_ret
                   })
 
-  \func ZeroIm=>Zero-func {R : Ring} {M N : LModule R} {f : LinearMap M N} (p : IsZeroMod (ImageLModule f)) : IsZeroMap f
-    => \lam (m : M) => rewrite (inv (aux-2 m), p (aux-1 m), LinearMap.func-zro {ImageLModuleRightHom f}) idp
+  \lemma ZeroIm=>Zero-func {R : Ring} {M N : LModule R} {f : LinearMap M N} (p : IsZeroMod (ImageLModule f)) : IsZeroMap f
+    => \lam (m : M) => rewrite (inv (aux-2 m), p (aux-1 m), (ImageLModuleRightHom f).func-zro) idp
     \where{
       \func aux-1 (m : M) : ImageLModule f => (f m , inP(m ,idp))
       \func aux-2 (m : M) : ImageLModuleRightHom f (aux-1 m) = f m => idp
     }
 
-  \func FullKer=>Zero-func{R : Ring} {M N : LModule R} {f : LinearMap M N} (p : isSurj (KerLModuleHom f)) : IsZeroMap f
+  \lemma FullKer=>Zero-func {R : Ring} {M N : LModule R} {f : LinearMap M N} (p : isSurj (KerLModuleHom f)) : IsZeroMap f
     => \lam (m : M) => \case  p m \with {
       | inP a => rewrite (inv a.2, a.1.2) idp
     }
 
-  \func zeroKer-FullIm<->inj+surj{R : Ring} {M N : LModule R} {f : LinearMap M N}:
+  \lemma zeroKer-FullIm<->inj+surj{R : Ring} {M N : LModule R} {f : LinearMap M N}:
     (\Sigma (isInj f) (isSurj f)) <-> (\Sigma (IsZeroMod (KerLModule f)) (isSurj (ImageLModuleRightHom f)))
     => (\lam p => (inj->zeroKer p.1, surj->FullIm p.2),
         \lam p => (zeroKer->inj p.1, FullIm->surj p.2)
     )
     \where{
-      \func inj->zeroKer (p : isInj f) : IsZeroMod (KerLModule f) => \lam (a : KerLModule f) =>
-          ext (p {a.1} {M.zro} (rewrite (a.2, f.func-zro) idp))
-      \func surj->FullIm (p : isSurj f) : isSurj (ImageLModuleRightHom f) => \lam (n : N) =>
-          TruncP.map (p n) \lam s => ((n, inP s), idp)
-      \func zeroKer->inj (w : IsZeroMod (KerLModule f)) : isInj f => \lam {a b : M} (p : f a = f b) =>
-          M.fromZero (simple-lemma3 (a - b, rewrite (f.func-minus, N.toZero p ) idp) (w (a - b, rewrite (f.func-minus, N.toZero p ) idp))) -- ext (w (a - b, rewrite (f.func-minus, simple-lemma2 p ) idp))
-      \func FullIm->surj (p : isSurj (ImageLModuleRightHom f)) : isSurj f => \lam (n : N) =>
-          \case p n \with {
-            | inP a => TruncP.map a.1.2 \lam s => (s.1, rewrite (s.2, a.2) idp)
-          }
-      \func simple-lemma3 (x : KerLModule f)(p : x = LModule.zro {KerLModule f}) : x.1 = LModule.zro {M} => pmap (\lam q => q.1) p
+      \lemma inj->zeroKer (p : isInj f) : IsZeroMod (KerLModule f)
+        => \lam (a : KerLModule f) => ext (p {a.1} {M.zro} (rewrite (a.2, f.func-zro) idp))
+
+      \lemma surj->FullIm (p : isSurj f) : isSurj (ImageLModuleRightHom f)
+        => \lam (n : N) => TruncP.map (p n) \lam s => ((n, inP s), idp)
+
+      \lemma zeroKer->inj (w : IsZeroMod (KerLModule f)) : isInj f
+        => \lam {a b : M} (p : f a = f b) => M.fromZero $ pmap __.1 $ w (a - b, rewrite (f.func-minus, N.toZero p) idp)
+
+      \lemma FullIm->surj (p : isSurj (ImageLModuleRightHom f)) : isSurj f
+        => \lam (n : N) => \case p n \with {
+          | inP a => TruncP.map a.1.2 \lam s => (s.1, rewrite (s.2, a.2) idp)
+        }
     }
 
-  \lemma iso<->zeroKer-FullIm{R : Ring} {M N : LModule R} {f : LinearMap M N} :
-    Iso f <-> (\Sigma (IsZeroMod (KerLModule f)) (isSurj (ImageLModuleRightHom f))) => <->trans LinearMap.iso<->inj+surj zeroKer-FullIm<->inj+surj
-
+  \lemma iso<->zeroKer-FullIm{R : Ring} {M N : LModule R} {f : LinearMap M N}
+    : Iso f <-> (\Sigma (IsZeroMod (KerLModule f)) (isSurj (ImageLModuleRightHom f)))
+    => <->trans LinearMap.iso<->inj+surj zeroKer-FullIm<->inj+surj
 
   \lemma iso-basis {R : Ring} {U V : LModule R} (f : Iso {_} {U} {V}) {l : Array U} (lb : U.IsBasis l) : V.IsBasis (map f.f l)
     => (\lam c p j => lb.1 c ((iso<->inj+surj.1 f).1 $ func-BigSum *> pmap BigSum (exts \lam j => func-*c) *> p *> inv func-zro) j,
@@ -278,15 +280,15 @@
     \lemma fromReplace {n : Nat} {f : Array A n -> B} (p : \Pi (l : Array A n) (j : Fin n) -> LinearMap A B (\lam x => f (replace l j x))) : isMultiLinear f \elim n
       | 0 => ()
       | suc n => \lam l j => \new LinearMap {
-        | func-+ => inv (pmap f (replace_insert {_} {l} {j} {A.zro})) *> func-+ {p _ j} *> pmap2 (+) (pmap f replace_insert) (pmap f replace_insert)
-        | func-*c => inv (pmap f (replace_insert {_} {l} {j} {A.zro})) *> func-*c {p _ j} *> pmap (_ *c) (pmap f replace_insert)
+        | func-+ => inv (pmap f (replace_insert {_} {l} {j} {A.zro})) *> (p _ j).func-+ *> pmap2 (+) (pmap f replace_insert) (pmap f replace_insert)
+        | func-*c => inv (pmap f (replace_insert {_} {l} {j} {A.zro})) *> (p _ j).func-*c *> pmap (_ *c) (pmap f replace_insert)
       }
 
     \lemma toReplace {n : Nat} {f : Array A n -> B} (fl : isMultiLinear f) (l : Array A n) (j : Fin n) : LinearMap A B (\lam x => f (replace l j x)) \elim n
       | 0 => \case j
       | suc n => \new LinearMap {
-        | func-+ => inv (pmap f insert_skip) *> func-+ {fl _ j} *> pmap2 (f __ + f __) insert_skip insert_skip
-        | func-*c => inv (pmap f insert_skip) *> func-*c {fl _ j} *> pmap (_ *c f __) insert_skip
+        | func-+ => inv (pmap f insert_skip) *> (fl _ j).func-+ *> pmap2 (f __ + f __) insert_skip insert_skip
+        | func-*c => inv (pmap f insert_skip) *> (fl _ j).func-*c *> pmap (_ *c f __) insert_skip
       }
 
     \type IsLinearComb {R : Ring} {U : LModule R} (x : U) {J : \Set} (g : J -> U)
@@ -362,10 +364,10 @@
       => (isMultiLinear.reduce f fa.1, \lam l s => fa.2 (a :: l) (suc s.1, suc s.2, suc<suc s.3, s.4))
 
     \lemma substract1from0 {n : Nat} {f : Array A (suc (suc n)) -> B} (fa : isAlternating f) {a a' : A} {l : Array A n} : f (a :: a' :: l) = f (a - a' :: a' :: l)
-      => inv $ func-+ {fa.1 (a' :: l) 0} *> pmap (_ +) (AddGroupHom.func-negative {fa.1 (a' :: l) 0} *> pmap negative (fa.2 _ (0, 1, zero<suc, idp)) *> B.negative_zro) *> zro-right
+      => inv $ (fa.1 (a' :: l) 0).func-+ *> pmap (_ +) ((fa.1 (a' :: l) 0).func-negative *> pmap negative (fa.2 _ (0, 1, zero<suc, idp)) *> B.negative_zro) *> zro-right
 
     \lemma add0to1 {n : Nat} {f : Array A (suc (suc n)) -> B} (fa : isAlternating f) {a a' : A} {l : Array A n} : f (a :: a' :: l) = f (a :: a + a' :: l)
-      => inv $ inv (path (\lam i => f (a :: insert_zro i))) *> func-+ {fa.1 (a :: l) 1} *> pmap2 (+) (fa.2 _ (0, 1, zero<suc, inv (path (\lam i => insert_zro i 0)))) (path (\lam i => f (a :: insert_zro i))) *> zro-left
+      => inv $ inv (path (\lam i => f (a :: insert_zro i))) *> (fa.1 (a :: l) 1).func-+ *> pmap2 (+) (fa.2 _ (0, 1, zero<suc, inv (path (\lam i => insert_zro i 0)))) (path (\lam i => f (a :: insert_zro i))) *> zro-left
 
     \lemma alternating_perm {n : Nat} {f : Array A n -> B} (fa : isAlternating f) {l l' : Array A n} (p : Perm l l') : f l = Perm.sign p *c f l' \elim n, l, l', p
       | 0, nil, nil, perm-nil => inv ide_*c
@@ -374,7 +376,7 @@
           f (x :: x' :: l)            ==< substract1from0 fa >==
           f (x - x' :: x' :: l)       ==< add0to1 fa *> simplify >==
           f (x - x' :: x :: l)        ==< substract1from0 fa *> simplify >==
-          f (negative x' :: x :: l)   ==< pmap (\lam y => f (y :: x :: l)) (inv A.neg_ide_*c) *> func-*c {fa.1 (x :: l) 0} *> inv (pmap (`*c _) ide-left) >==
+          f (negative x' :: x :: l)   ==< pmap (\lam y => f (y :: x :: l)) (inv A.neg_ide_*c) *> (fa.1 (x :: l) 0).func-*c *> inv (pmap (`*c _) ide-left) >==
           1 * -1 *c f (x' :: x :: l)  `qed
       | n, l1, l2, perm-trans p1 p2 => alternating_perm fa p1 *> pmap (_ *c) (alternating_perm fa p2) *> inv (pmap (`*c _) (pmap (R.pow -1) Perm.inversions_perm-trans *> R.pow_+) *> *c-assoc)
   }

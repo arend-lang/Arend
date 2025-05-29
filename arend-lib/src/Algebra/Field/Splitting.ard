@@ -3,7 +3,6 @@
 \import Algebra.Group
 \import Algebra.Group.Category
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
 \import Algebra.Pointed.Category
 \import Algebra.Ring.Category
 \import Algebra.Ring.Integral
@@ -73,7 +72,7 @@
                             | (K,PK,f,Ks) => aux rfd.RootFieldP {_} {n} (pmap pred (inv (rewrite (decideEq/=_reduce $ /=-sym zro/=ide) in inv (degree_polyMap RingHom.field-isInj) *> degree_*_= (\lam q => p/=0 $ polyMap-inj RingHom.field-isInj q) (rootDiv_* rfd.isRoot)) *> d)) $ S-factor $ transport S (rootDiv_* rfd.isRoot) (S-hom rfd.rootFieldHom Sp)
                        \in (K, PK, f RingCat.∘ rfd.rootFieldHom, TruncP.map Ks \lam (l,c,fl,q) => later
                             (f rfd.root :: l, c, RingHom.isAlgebraGenerated-comp rfd.RootField-gen fl,
-                             inv (polyMap-comp rfd.rootFieldHom f) *> pmap (polyMap f) (rootDiv_* rfd.isRoot) *> func-* {polyMapRingHom f} *> pmap (`* _) q *> inv PolyRing.*c-comm-left *>
+                             inv (polyMap-comp rfd.rootFieldHom f) *> pmap (polyMap f) (rootDiv_* rfd.isRoot) *> (polyMapRingHom f).func-* *> pmap (`* _) q *> inv PolyRing.*c-comm-left *>
                              pmap (c PolyRing.*c) (pmap (_ *) (pmap2 (\lam x y => padd (padd pzero x) y) func-ide AddGroupHom.func-negative) *> *-comm {_} {_} {padd 1 (negative (f root))})))
     }
 

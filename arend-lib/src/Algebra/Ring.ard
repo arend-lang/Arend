@@ -2,7 +2,6 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
 \import Algebra.Monoid.GCD
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Local
@@ -214,7 +213,7 @@
               | byLeft r => byRight r
               | byRight r => byLeft
                 \let | p => pow {PolyRing \this} (padd 1 1) r.1
-                     | t : polyEval p a = 0 => MonoidHom.func-pow {polyEvalRingHom a} *> pmap (pow __ r.1) equation *> r.2
+                     | t : polyEval p a = 0 => (polyEvalRingHom a).func-pow *> pmap (pow __ r.1) equation *> r.2
                 \in Inv.ldiv $ transport (LDiv a) (lastCoef_pow *> pow_ide) (poly-root-div t)
         }))
 

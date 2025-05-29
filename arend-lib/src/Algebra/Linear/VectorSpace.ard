@@ -10,10 +10,8 @@
 \import Algebra.Module.FinModule
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
 \import Algebra.Monoid.GCD
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Nat
@@ -168,12 +166,12 @@
                                     (pmap V.BigSum (exts \lam j => *c-assoc *> pmap (_ *c) (inv $ pmap f take-index *> g (fin-inc_<= rank<=rows j) *>
                                       pmap (_ *c) (fit_< lv (later $ rewrite toFin=id $ fin_< j <∘l rank<=columns) *>
                                         pmap lv (fin_nat-inj $ later $ toFin=id *> toFin=id *> inv toFin=id)))) *>
-                                     inv (AddMonoidHom.func-BigSum {ImageLModuleRightHom f}) *> pmap __.1 p) j,
+                                     inv (ImageLModuleRightHom f).func-BigSum *> pmap __.1 p) j,
                    \lam v => \have | (inP (u,fu=v)) => v.2
                                    | (inP (c,s)) => bu.2 u
                              \in inP (mkArray \lam j => c (fin-inc_<= rank<=rows j), ext $ inv fu=v *> pmap f s *> f.func-BigSum *>
                                     inv (V.BigSum-subset {_} {\lam j => f (c j *c lu j)} rank<=rows (\lam j => pmap (_ *c f __) take-index *> inv func-*c)
-                                          \lam j r<=j => func-*c *> pmap (_ *c) (g j *> pmap (`*c _) ((d0 j).2 r<=j) *> *c_zro-left) *> *c_zro-right) *> inv (AddMonoidHom.func-BigSum {ImageLModuleRightHom f}))),
+                                          \lam j r<=j => func-*c *> pmap (_ *c) (g j *> pmap (`*c _) ((d0 j).2 r<=j) *> *c_zro-left) *> *c_zro-right) *> inv (ImageLModuleRightHom f).func-BigSum)),
                   rank.rank_M~ $ LinearMap.change-basis_M~ f bu bu' bv bv')
 
     \lemma dimension_rank {f : LinearMap U V} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) : FinModule.dimension (image-fin f) = rank (LinearMap.toMatrix lu bv f)
@@ -199,7 +197,7 @@
                                                                      | inr lv<=k => fit_>= (\lam i => basis-split bu x.1 k * d k *c lv i) lv<=k *> inv (pmap (`*c _) (pmap (_ *) ((d0 k).2 $ rank<=columns <=∘ lv<=k) *> R.zro_*-right) *> V.*c_zro-left)
                                                                    }) *> *c-assoc *> inv (func-*c *> pmap (_ *c) (g k))) *> inv (pmap f (U.basis-split-char {_} {bu}) *> f.func-BigSum) *> x.2) (toFin j j<lv)
                         | inr lv<=j => absurd $ dj/=0 ((d0 j).2 $ rank<=columns <=∘ lv<=j)
-                      }) *> *c_zro-left) *> inv (AddMonoidHom.func-BigSum {KerLModuleHom f})))
+                      }) *> *c_zro-left) *> inv (KerLModuleHom f).func-BigSum))
           \in basisSet_basis KerFin kb
       }
   }
