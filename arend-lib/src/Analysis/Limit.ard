@@ -8,6 +8,7 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Logic.TFAE
 \import Meta
 \import Order.Biordered
 \import Order.Directed

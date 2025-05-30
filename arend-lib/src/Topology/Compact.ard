@@ -6,6 +6,7 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Logic.TFAE
 \import Meta
 \import Order.Lattice
 \import Order.PartialOrder
