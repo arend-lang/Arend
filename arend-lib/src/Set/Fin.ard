@@ -1,4 +1,3 @@
-\import Algebra.Group.Symmetric (symmetric-rec)
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Semiring
@@ -235,9 +234,6 @@
   | suc n, suc k, suc i, 0 => \case p
   | suc n, suc k, suc i, suc i' => pmap fsuc $ sface-inj $ pmap (fpred k) p
 
-\func cyclePerm {n : Nat} (k : Fin n) : QEquiv {Fin n} {Fin n} \elim n
-  | suc n => ret {symmetric-rec} (k,idEquiv)
-
 \instance EmptyFin : FinSet Empty
   | finCard => 0
   | finEq => inP \new QEquiv {
@@ -377,6 +373,10 @@
                 | ret_f => \lam ()
                 | f_sec e => absurd (q e)
               }
+  }
+  \where {
+    \lemma DecSubSet-isFin (S : FinSet) (D : DecSubSet S) : FinSet D.ISet
+      => SigmaFin S (\lam x => DecFin (D.isDec x))
   }
 
 \lemma fin_transport {n m : Nat} {j : Fin n} {p : n = m} : transport Fin p j = {Nat} j \elim p

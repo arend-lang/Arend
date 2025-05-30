@@ -274,6 +274,9 @@
   }
   | f_sec s => pmap (s.1,__) $ Sym.equals \lam j => FinSet.skip_sface
 
+\func cyclePerm {n : Nat} (k : Fin n) : QEquiv {Fin n} {Fin n} \elim n
+  | suc n => symmetric-rec.ret (k,idEquiv)
+
 \instance SymFin (n : Nat) : FinSet (Sym n) (fac n)
   | finEq => inP fin_equiv
   \where {

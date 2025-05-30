@@ -12,6 +12,7 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
+\import Set.Fin
 \import Set.SetHom
 \open Group \hiding (Dec)
 
@@ -175,5 +176,5 @@
 
   \func IFinGroup : FinGroup \cowith
     | Group => IGroup
-    | FinSet => DecSubSet.isFin S \this
+    | FinSet => DecFin.DecSubSet-isFin S \this
 }
