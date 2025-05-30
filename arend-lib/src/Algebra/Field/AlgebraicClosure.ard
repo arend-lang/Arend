@@ -4,6 +4,7 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.LatticeColimit
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom

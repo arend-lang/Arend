@@ -1,3 +1,4 @@
+\import Algebra.Meta
 \import Category
 \import Category.Adjoint
 \import Category.Functor

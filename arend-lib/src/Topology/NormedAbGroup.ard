@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Arith.Real

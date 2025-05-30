@@ -299,30 +299,11 @@ public class StdExtension implements ArendExtension {
         makeDef(meta, "defaultImpl", new DefaultImplMeta()));
 
     ModulePath pathsMeta = ModulePath.fromString("Paths.Meta");
-    contributor.declare(pathsMeta, algebraAlgebra);
-    contributor.declare(pathsMeta, group);
-    contributor.declare(pathsMeta, groupSolver, "NatData", "CGroupData", "GroupTerm");
-    contributor.declare(pathsMeta, algebraModule);
-    contributor.declare(pathsMeta, monoid);
-    contributor.declare(pathsMeta, monoidSolver);
-    contributor.declare(pathsMeta, orderedAlgebra);
-    contributor.declare(pathsMeta, pointed);
-    contributor.declare(pathsMeta, ring);
-    contributor.declare(pathsMeta, ringSolver);
-    contributor.declare(pathsMeta, semiring);
-    contributor.declare(pathsMeta, arithInt);
-    contributor.declare(pathsMeta, arithNat);
-    contributor.declare(pathsMeta, arithRat);
-    contributor.declare(pathsMeta, category, "Precat");
-    contributor.declare(pathsMeta, categorySolver);
-    contributor.declare(pathsMeta, dataList);
     contributor.declare(pathsMeta, equiv);
     contributor.declare(pathsMeta, ModulePath.fromString("Equiv.Univalence"), "Equiv-to-=", "QEquiv-to-=");
-    contributor.declare(pathsMeta, getLogicModule());
+    contributor.declare(pathsMeta, logic);
     contributor.declare(pathsMeta, meta);
-    contributor.declare(pathsMeta, lattice);
     contributor.declare(pathsMeta, paths);
-    contributor.declare(pathsMeta, set);
     ConcreteMetaDefinition rewrite = makeDef(pathsMeta, "rewrite", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(true)));
     contributor.declare(multiline("""
         `rewrite (p : a = b) t : T` replaces occurrences of `a` in `T` with a variable `x` obtaining a type `T[x/a]` and returns `transportInv (\\lam x => T[x/a]) p t`
@@ -334,14 +315,6 @@ public class StdExtension implements ArendExtension {
         """), rewrite);
     contributor.declare(text("`rewriteI p` is equivalent to `rewrite (inv p)`"),
         makeDef(pathsMeta, "rewriteI", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(false))));
-    contributor.declare(vList(
-        hList(text("`rewriteEq (p : a = b) t : T` is similar to "), refDoc(rewrite.getRef()), text(", but it finds and replaces occurrences of `a` up to algebraic equivalences.")),
-        text("For example, `rewriteEq (p : b * (c * id) = x) t : T` rewrites `(a * b) * (id * c)` as `a * x` in `T`."),
-        text("Similarly to `rewrite` this meta allows specification of occurrence numbers."),
-        text("Currently this meta supports noncommutative monoids and categories.")),
-        makeDef(pathsMeta, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, RewriteEquationMeta::new)));
-    contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
-        makeDef(pathsMeta, "simplify", new DependencyMetaTypechecker(SimplifyMeta.class, () -> new DeferredMetaDefinition(new SimplifyMeta(), true))));
     ConcreteMetaDefinition simp_coe = makeDef(pathsMeta, "simp_coe", new ClassExtResolver(), new DependencyMetaTypechecker(SimpCoeMeta.class, SimpCoeMeta::new));
     ConcreteMetaDefinition extMeta = makeDef(pathsMeta, "ext", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(false), false, ExtMeta.defermentChecker)));
     contributor.declare(vList(
@@ -384,6 +357,7 @@ public class StdExtension implements ArendExtension {
     ModulePath algebra = ModulePath.fromString("Algebra.Meta");
     contributor.declare(algebra, algebraAlgebra);
     contributor.declare(algebra, group);
+    contributor.declare(algebra, groupSolver, "NatData", "CGroupData", "GroupTerm");
     contributor.declare(algebra, ModulePath.fromString("Algebra.Linear.Solver"));
     contributor.declare(algebra, algebraModule);
     contributor.declare(algebra, monoid);
@@ -419,6 +393,14 @@ public class StdExtension implements ArendExtension {
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
+    contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
+        makeDef(algebra, "simplify", new DependencyMetaTypechecker(SimplifyMeta.class, () -> new DeferredMetaDefinition(new SimplifyMeta(), true))));
+    contributor.declare(vList(
+            hList(text("`rewriteEq (p : a = b) t : T` is similar to "), refDoc(rewrite.getRef()), text(", but it finds and replaces occurrences of `a` up to algebraic equivalences.")),
+            text("For example, `rewriteEq (p : b * (c * id) = x) t : T` rewrites `(a * b) * (id * c)` as `a * x` in `T`."),
+            text("Similarly to `rewrite` this meta allows specification of occurrence numbers."),
+            text("Currently this meta supports noncommutative monoids and categories.")),
+        makeDef(algebra, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, RewriteEquationMeta::new)));
 
     contributor.declare(logicMeta, getLogicModule());
     contributor.declare(multiline("""

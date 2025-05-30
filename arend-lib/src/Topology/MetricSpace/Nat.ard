@@ -17,7 +17,6 @@
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
-\import Paths.Meta
 \import Set.Fin
 \import Set.Subset
 \import Topology.Compact

@@ -1,4 +1,5 @@
 \import Algebra.Group
+\import Algebra.Meta
 \import Analysis.Limit
 \import Arith.Real
 \import Function.Meta
