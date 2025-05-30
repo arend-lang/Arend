@@ -6,6 +6,7 @@
 \import Algebra.Ring.RingHom
 \import Arith.Fin
 \import Arith.Nat
+\import Arith.Nat.Sequence
 \import Combinatorics.Factorial
 \import Data.Array
 \import Data.Fin \hiding (Index)
