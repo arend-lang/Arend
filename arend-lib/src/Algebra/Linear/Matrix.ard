@@ -12,6 +12,7 @@
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Arith.Fin
+\import Arith.Fin.Order
 \import Arith.Int
 \import Arith.Nat
 \import Data.Array
@@ -348,7 +349,6 @@
       | suc n => (multilinear k, \lam M => aux k M)
       \where {
         \open NatSemiring(<,suc<suc)
-        \open FinLinearOrder (FinLinearOrderInst)
 
         \func permutation1 {R : \Type} {n : Nat} (j : Fin (suc n)) (l : Array R (suc n)) : Perm l (l j :: skip l j) \elim n, j, l
           | 0, 0, l => Perm.perm-refl

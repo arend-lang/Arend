@@ -2,7 +2,7 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Module
-\import Arith.Fin
+\import Arith.Fin.Order
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.Solver
@@ -25,7 +25,6 @@
 \import Paths
 \import Paths.Meta
 \import Set \hiding (#)
-\open FinLinearOrder
 
 \data RingTerm (C V : \Type)
   | coef C

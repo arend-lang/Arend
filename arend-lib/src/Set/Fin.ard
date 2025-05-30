@@ -1,7 +1,7 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Semiring
-\import Arith.Fin (FinLinearOrder)
+\import Arith.Fin.Order
 \import Arith.Nat \using (NatSemiring, pred \as pred')
 \import Data.Bool
 \import Data.Fin (fpred, fsuc, fsuc/=, nat_fin_=)
@@ -35,8 +35,8 @@
   }
 
   \default decideEq x y => \case finEq \with {
-    | inP (e : Equiv) => \case decideEq {FinLinearOrder.FinLinearOrderInst} (e.ret x) (e.ret y) \with {
-      | yes q => yes (Equiv.isInj {symQEquiv e} q)
+    | inP (e : Equiv) => \case (FinOrder _).decideEq (e.ret x) (e.ret y) \with {
+      | yes q => yes ((symQEquiv e).isInj q)
       | no q => no \lam p => q (pmap e.ret p)
     }
   }
@@ -144,7 +144,7 @@
       | suc n, suc k, 0 => idp
       | suc n, suc k, suc i => pmap fsuc skip_sface
 
-    \open NatSemiring(<,suc<suc,zero<suc)
+    \open NatSemiring(suc<suc,zero<suc)
 
     \lemma skip_< {n : Nat} {x0 x x' : Fin (suc n)} {d : x0 /= x} {d' : x0 /= x'} (p : skip x0 x d < skip x0 x' d') : x < x' \elim n, x0, x, x', p
       | _, 0, 0, _, _ => absurd (d idp)
@@ -169,7 +169,7 @@
       | 0, 0, 0, ()
       | suc n, 0, suc x, _ => idp
       | suc n, suc x0, 0, _ => idp
-      | suc n, suc x0, suc x, suc<suc p => pmap suc (skip-right p) *> suc_pred (/=-sym $ StrictPoset.<_/= $ zero<=_ <∘r p)
+      | suc n, suc x0, suc x, suc<suc p => pmap suc (skip-right p) *> suc_pred (/=-sym $ NatSemiring.<_/= $ zero<=_ <∘r p)
 
     \lemma fromArray {A : \Set} (l : Array A) (p : \Pi (a : A) -> ∃ (i : Fin l.len) (l i = a)) (q : \Pi {i j : Fin l.len} -> l i = l j -> i = j) : FinSet A l.len \cowith
       | finEq => inP (Equiv.fromInjSurj l q p)
@@ -192,7 +192,7 @@
   | idp => idp
 
 \func fin-inc_<= {n m : Nat} (p : n <= m) (i : Fin n) : Fin m
-  => toFin i (fin_< i <∘l p)
+  => toFin i (fin_< i NatSemiring.<∘l p)
 
 \func fin-inc {n m : Nat} (i : Fin n) : Fin (n + m) \elim n, i
   | suc n, 0 => 0
@@ -273,7 +273,7 @@
 \instance FinFin (n : Nat) : FinSet (Fin n)
   | finCard => n
   | finEq => inP idEquiv
-  | decideEq => FinLinearOrder.FinLinearOrderInst.decideEq
+  | decideEq => decideEq
 
 \instance OrFin (S T : FinSet) : FinSet (Or S T)
   | finCard => S.finCard + T.finCard

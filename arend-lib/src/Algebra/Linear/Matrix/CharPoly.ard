@@ -20,7 +20,6 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
-\open FinLinearOrder
 
 \func charPoly {R : CRing} {n : Nat} (M : Matrix R n n) : Poly R
   => determinant $ padd 1 0 *c matrix-map (padd 0) 1 - matrix-map (padd 0) M

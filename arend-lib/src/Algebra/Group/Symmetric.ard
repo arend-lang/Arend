@@ -5,6 +5,7 @@
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Arith.Fin
+\import Arith.Fin.Order
 \import Arith.Nat
 \import Arith.Nat.Sequence
 \import Combinatorics.Factorial
@@ -28,7 +29,6 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.Pigeonhole
-\open FinLinearOrder (FinLinearOrderInst)
 
 \type Sym (n : Nat) => Equiv {Fin n} {Fin n}
   \where {

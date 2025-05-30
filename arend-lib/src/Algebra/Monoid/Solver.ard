@@ -1,6 +1,6 @@
 \import Algebra.Monoid
 \import Algebra.Pointed
-\import Arith.Fin
+\import Arith.Fin.Order
 \import Data.List
 \import Function.Meta
 \import Meta
@@ -9,7 +9,6 @@
 \import Paths
 \import Paths.Meta
 \import Set \hiding (#)
-\open FinLinearOrder
 
 \data MonoidTerm (V : \Type)
   | var V
@@ -71,7 +70,7 @@
 \class CMonoidData \extends MonoidData {
   \override M : CMonoid
 
-  \lemma sort-consistent (l : List V) : interpretNF l = interpretNF (sort {FinLinearOrderInst} l)
+  \lemma sort-consistent (l : List V) : interpretNF l = interpretNF (sort l)
     => rewrite sort=insert (perm-consistent (Insertion.sort-perm l))
 
   \lemma perm-consistent {l l' : List V} (p : Perm l l') : interpretNF l = interpretNF l' \elim l, l', p

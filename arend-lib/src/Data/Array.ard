@@ -4,7 +4,6 @@
 \import Algebra.Ordered
 \import Algebra.Ring
 \import Algebra.Semiring
-\import Arith.Fin
 \import Arith.Nat
 \import Data.Bool
 \import Data.Fin

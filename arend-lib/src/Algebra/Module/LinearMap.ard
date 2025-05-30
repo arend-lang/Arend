@@ -10,7 +10,7 @@
 \import Algebra.Pointed.PointedHom
 \import Algebra.Ring
 \import Algebra.Semiring
-\import Arith.Fin
+\import Arith.Fin.Order
 \import Arith.Nat
 \import Category
 \import Data.Array
@@ -410,7 +410,6 @@
                           {l : Array A n} (Ag : A.IsGenerated l) (fl=gl : f l = g l) (a : Array A n) : f a = g a
   => B.fromZero $ alternating-unique_zro (\lam x => f x - g x) (isAlternating_+ fa (isAlternating_negative ga)) l Ag (B.toZero fl=gl) a
   \where {
-    \open FinLinearOrder (FinLinearOrderInst)
     \open Perm
 
     \lemma alternating-unique_zro (f : Array A n -> B) (fa : isAlternating f)

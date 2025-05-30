@@ -1,4 +1,4 @@
-\import Arith.Fin
+\import Arith.Fin.Order
 \import Arith.Nat
 \import Data.Fin
 \import Data.Or
@@ -14,7 +14,6 @@
 \import Set
 \import Set.Fin
 \import Set.Fin.DFin
-\open FinLinearOrder
 
 \class PigeonholeSet \extends BaseSet {
   | pigeonhole (f : Nat -> E) : ∃ (i j : Nat) (i /= j) (f i = f j)

@@ -1,4 +1,4 @@
-\import Arith.Fin (FinLinearOrder)
+\import Arith.Fin.Order
 \import Arith.Nat
 \import Category
 \import Equiv (Equiv, QEquiv)
@@ -15,7 +15,6 @@
 \import Paths.Meta
 \import Set.SetHom
 \import Set.Fin
-\open FinLinearOrder
 
 \lemma monotone-inj {P1 : BiorderedSet} {P2 : LinearOrder.Dec} (f : PosetHom P1 P2) (f-inj : isInj f) : StrictPosetHom P1 P2 (func {f}) \cowith
   | func-< {a} {b} p => \case P2.trichotomy (f a) (f b) \with {
@@ -26,10 +25,10 @@
 
 \lemma monotone-diagonal-fin {n : Nat} (f : Fin (suc n) -> Fin (suc n)) (mon : \Pi (k : Fin n) -> f k < f (suc k)) {k : Fin (suc n)} : k <= f k \elim k
   | 0 => \let A1 => zero<=_ {f 0} \in \lam Q => A1 Q
-  | suc k => \let | A1 => suc_<_<= {k} {f (suc k)} (<-transitive-right {FinLinearOrderInst {suc n}} {k} {f k} {f (suc k)} (monotone-diagonal-fin {n} f mon {k}) (mon k)) \in \lam Q => A1 Q
+  | suc k => \let | A1 => suc_<_<= {k} {f (suc k)} ((FinOrder (suc n)).<-transitive-right {k} {f k} {f (suc k)} (monotone-diagonal-fin {n} f mon {k}) (mon k)) \in \lam Q => A1 Q
 
-\func fin_monotone_iso_unique {n : Nat} (f : PosetHom (FinLinearOrderInst {suc n}) (FinLinearOrderInst {suc n}))
-                              (g : PosetHom (FinLinearOrderInst {suc n}) (FinLinearOrderInst {suc n}))
+\func fin_monotone_iso_unique {n : Nat} (f : PosetHom (FinOrder (suc n)) (FinOrder (suc n)))
+                              (g : PosetHom (FinOrder (suc n)) (FinOrder (suc n)))
                               (fg-comp : f Function.o g = Function.id {Fin (suc n)})
                               (gf-comp : g Function.o f = Function.id {Fin (suc n)}) :
   \Sigma (Function.id {Fin (suc n)} = func {f}) (Function.id {Fin (suc n)} = func {g}) =>
@@ -63,7 +62,7 @@
   | id-left => idp
   | id-right => idp
   | o-assoc => idp \where {
-  \func hom (n m : Nat) => PosetHom (FinLinearOrderInst {n}) (FinLinearOrderInst {m})
+  \func hom (n m : Nat) => PosetHom (FinOrder n) (FinOrder m)
 }
 
 \lemma Simplex_iso {n m : Nat} (iso : Iso {SimplexPrecat} {n} {m}) : n = m => FinSet.FinCardBij (\new Equiv {
@@ -82,8 +81,8 @@
   | 0 => \lam _ _ => ext (ext (ext \lam k => \case k), ext (ext \lam k => \case k))
   | suc n => isContr=>isProp \new Contr {
     | center => \new Iso {SimplexPrecat} {suc n} {suc n} {
-      | f => PosetCat.id (FinLinearOrderInst {suc n})
-      | hinv => PosetCat.id (FinLinearOrderInst {suc n})
+      | f => PosetCat.id (FinOrder (suc n))
+      | hinv => PosetCat.id (FinOrder (suc n))
       | hinv_f => idp
       | f_hinv => idp
     }
