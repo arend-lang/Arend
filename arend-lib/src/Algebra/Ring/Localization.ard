@@ -7,11 +7,9 @@
 \import Algebra.Pointed
 \import Algebra.Pointed.Sub
 \import Algebra.Ring
-\import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Arith.Nat
-\import Category
 \import Function (isInj, isSurj)
 \import Function.Meta
 \import HLevel
@@ -23,6 +21,7 @@
 \import Relation.Equivalence
 \import Set \hiding (#)
 \open Monoid(Inv)
+\open RingHom
 
 \instance SubsetPoset {M : Monoid} : Poset (SubSet M)
   | <= (S S' : SubSet M) => \Pi (x : M) -> S x -> S' x
@@ -39,26 +38,13 @@
     => (Contr.center {local-univ f l}).1
 
   \lemma lift-prop {R'' : CRing} (f : RingHom R R'') (l : \Pi (x : R) -> S x -> Inv (f x)) : lift f l ∘ inL = f
-    => RingHom.equals {R} {R''} {lift f l ∘ inL} (Contr.center {local-univ f l}).2
+    => equals {R} {R''} {lift f l ∘ inL} (Contr.center {local-univ f l}).2
 
   \lemma lift-prop-func {R'' : CRing} (f : RingHom R R'') (l : \Pi (x : R) -> S x -> Inv (f x)) (x : R) : lift f l (inL x) = f x
     => path (\lam i => lift-prop f l i x)
 
   \lemma remove_inL {R'' : CRing} (f g : RingHom R' R'') (p : \Pi (x : R) -> f (inL x) = g (inL x)) : f = g
     => pmap __.1 (isContr=>isProp (local-univ {\this} {R''} (g ∘ inL) (\lam x sx => MonoidHom.presInv g (local x sx))) (f,p) (g, \lam _ => idp))
-} \where {
-  \lemma lift-iso {R : CRing} (S1 S2 : SubSet R) (l1 : Localization R S1) (l2 : Localization R S2)
-                  (p1 : \Pi (x : R) -> S2 x -> Inv (l1.inL x)) (p2 : \Pi (x : R) -> S1 x -> Inv (l2.inL x))
-    : Iso (l1.lift l2.inL p2) \cowith
-    | hinv => l2.lift l1.inL p1
-    | hinv_f => l1.remove_inL {l1.R'} (l2.lift l1.inL p1 ∘ l1.lift l2.inL p2) (id l1.R')
-                  \lam x => pmap (l2.lift l1.inL p1) (l1.lift-prop-func l2.inL p2 x) *> l2.lift-prop-func l1.inL p1 x
-    | f_hinv => l2.remove_inL {l2.R'} (l1.lift l2.inL p2 ∘ l2.lift l1.inL p1) (id l2.R')
-                  \lam x => pmap (l1.lift l2.inL p2) (l2.lift-prop-func l1.inL p1 x) *> l1.lift-prop-func l2.inL p2 x
-
-  \sfunc levelProp (R : CRing) {S : SubSet R} (l1 l2 : Localization R S) : l1 = l2
-    => \have e => lift-iso S S l1 l2 l1.local l2.local
-       \in ext (Cat.isotoid e, Cat.transport_Hom_iso-right e l1.inL (l1.lift-prop l2.inL l2.local))
 }
 
 \instance LocRing {R : CRing} (S : SubMonoid R) : CRing \cowith
@@ -138,18 +124,6 @@
         }
       } -}
 
-    \lemma closure-equiv {R : CRing} (S : SubSet R) (l1 : Localization R S) (l2 : Localization R (closure S))
-      : Iso (l1.lift l2.inL (\lam x x<-S => l2.local x (closure.ext S x x<-S)))
-      => Localization.lift-iso S (closure S) l1 l2 (inv-closure l1) (\lam x x<-S => l2.local x (closure.ext S x x<-S))
-      \where {
-        \open SubMonoid
-        \lemma inv-closure (l : Localization R S) (x : R) (p : closure S x) : Inv (l.inL x) \elim p
-          | inP (0, p) => l.local x p
-          | inP (suc n, byLeft x<-C) => inv-closure l x (inP (n, x<-C))
-          | inP (suc n, byRight (byLeft x=1)) => rewrite (pmap l.inL x=1 *> l.inL.func-ide) (\new Inv ide ide ide-left ide-left)
-          | inP (suc n, byRight (byRight (y, z, y<-C, z<-C, x=y*z))) => rewrite (pmap l.inL x=y*z *> l.inL.func-*) (Inv.product (inv-closure l y (inP (n, y<-C))) (inv-closure l z (inP (n, z<-C))))
-      }
-
     \lemma nilpotent-contr (b : R) (Sb : S b) (n : Nat) (p : R.pow b n = 0) : Contr (LocRing S)
       => isProp=>isContr (\case \elim __, \elim __ \with {
         | in~ x, in~ y => {?} -- TODO[server2]: equals-lem 0 (rewriteI p $ S.contains_pow Sb) simplify
@@ -179,7 +153,7 @@
   | inL => locMap
   | local => elem-inv
   | local-univ {R''} (f : RingHom R R'') l => Contr.make (later (liftHom f l, liftHom-loc f l))
-      \lam q => ext $ locMap-epi {_} {_} {_} {liftHom f l} $ RingHom.equals \lam x => liftHom-loc f l x *> inv (q.2 x)
+      \lam q => ext $ exts $ locMap-epiMap (liftHom f l) _ \lam x => liftHom-loc f l x *> inv (q.2 x)
   \where {
     \open LocRing
 
@@ -191,10 +165,9 @@
         | inv-right => equals1 (*-comm *> pmap (ide *) *-comm)
       }
 
-    \lemma locMap-epi : isEpi locMap => \lam {Q} {g h : RingHom} q =>
-      RingHom.equals \lam (in~ (r,s,p)) =>
+    \lemma locMap-epiMap {Q : CRing} (g h : RingHom (LocRing S) Q) (d : \Pi (a : R) -> g (locMap a) = h (locMap a)) (x : LocRing S) : g x = h x \elim x
+      | in~ (r,s,p) =>
         \have | j => path (~-equiv {SType S} (r,s,p) (r * ide, ide * s, contains_* contains_ide p) (inv *-assoc))
-              | d r' => pmap (\lam (t : RingHom R Q) => t r') q
               | m1 => transport (Inv {Q} __ (g (in~ (ide, s, p)))) (d s) (MonoidHom.presInv g (elem-inv s p))
               | m2 => MonoidHom.presInv h (elem-inv s p)
         \in g (in~ (r,s,p))                                       ==< pmap g j >==

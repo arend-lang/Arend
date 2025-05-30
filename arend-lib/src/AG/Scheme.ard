@@ -6,6 +6,7 @@
 \import Algebra.Monoid.Sub
 \import Algebra.Pointed.PointedHom
 \import Algebra.Ring
+\import Algebra.Ring.Localization.Properties
 \import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Ideal
