@@ -29,6 +29,7 @@
 \import Equiv.Fiber
 \import Equiv.Univalence
 \import Function \hiding (id,o)
+\import Function.Iterate
 \import Function.Meta
 \import HLevel
 \import Logic

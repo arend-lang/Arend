@@ -1,6 +1,6 @@
 \import Equiv
 \import Equiv.Univalence
-\import Function
+\import Function.Iterate
 \import HLevel
 \import Homotopy.Cube
 \import Homotopy.Pushout

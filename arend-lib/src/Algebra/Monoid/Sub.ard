@@ -4,7 +4,7 @@
 \import Algebra.Ring.Localization
 \import Arith.Nat
 \import Data.Array
-\import Function
+\import Function.Iterate
 \import Logic
 \import Logic.Meta
 \import Order.Lattice

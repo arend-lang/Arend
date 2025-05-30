@@ -1,5 +1,5 @@
 \import Equiv.Sigma
-\import Function
+\import Function.Iterate
 \import HLevel
 \import Homotopy.Pointed
 \import Homotopy.Pushout

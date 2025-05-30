@@ -17,7 +17,7 @@
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Noetherian
 \import Algebra.Semiring
-\import Function
+\import Function.Iterate
 \import Function.Meta ($)
 \import Logic
 \import Logic.Meta

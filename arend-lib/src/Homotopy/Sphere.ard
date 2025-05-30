@@ -1,4 +1,4 @@
-\import Function
+\import Function.Iterate
 \import Homotopy.Pointed
 \import Homotopy.Suspension
 \import Logic
