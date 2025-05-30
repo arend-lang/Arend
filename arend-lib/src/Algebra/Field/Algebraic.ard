@@ -21,6 +21,7 @@
 \import Arith.Nat
 \import Category
 \import Data.Array
+\import Data.Array.EPerm
 \import Function \hiding (id, o)
 \import Function.Meta
 \import Logic

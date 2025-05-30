@@ -1,7 +1,6 @@
 \import Logic
 \import Meta
 \import Paths
-\import Set(DecSet, Dec, yes, no)
 
 \data Bool | false | true
 

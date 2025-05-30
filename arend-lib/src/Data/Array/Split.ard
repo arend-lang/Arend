@@ -1,0 +1,28 @@
+\import Data.Array
+\import Data.Array.EPerm
+\import Data.Fin (unfsuc)
+\import Function
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+
+\func nub-split {A : \Type} {B : DecSet} {l : Array (\Sigma A B)} : EPerm l (Big (++) nil (map (\lam b => keep (\lam s => decideEq b s.2) l) (nub (map __.2 l))))
+  => aux (nub (map __.2 l)) nub-isInj (later $ nub-isSurj (map __.2 l))
+  \where
+    \func aux {A : \Type} {B : DecSet} {l : Array (\Sigma A B)} (bs : Array B) (inj : isInj bs) (l<bs : \Pi (j : Fin l.len) -> \Sigma (k : Fin bs.len) (bs k = (l j).2))
+      : EPerm l (Big (++) nil (map (\lam b => keep (\lam s => decideEq b s.2) l) bs)) \elim bs
+      | nil => \case \elim l, \elim l<bs \with {
+        | nil, _ => eperm-nil
+        | s :: l, p => \case (p 0).1
+      }
+      | b :: bs => eperm-trans keep_remove-split $ EPerm.eperm-++-right $
+        eperm-trans (aux bs (\lam p => unfsuc (inj p)) (\lam j =>
+          \have t => remove.preimage j
+          \in \case l<bs t.1 \with {
+            | (0, p) => absurd $ remove.no-element (\lam s => decideEq b s.2) {l} $ inv (pmap __.2 t.2 *> inv p)
+            | (suc k, p) => (k, p *> inv (pmap __.2 t.2))
+          })) $
+        EPerm.eperm-= $ pmap (Big (++) nil) $ exts \lam j => keep_remove=keep \lam p q => \case inj {0} {suc j} (q *> inv p)

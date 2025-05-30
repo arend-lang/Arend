@@ -10,6 +10,8 @@
 \import Arith.Nat
 \import Category.Functor
 \import Data.Array
+\import Data.Array.EPerm
+\import Data.Array.Split
 \import Data.Fin (unfsuc)
 \import Equiv
 \import Equiv.Univalence (Equiv-to-=)

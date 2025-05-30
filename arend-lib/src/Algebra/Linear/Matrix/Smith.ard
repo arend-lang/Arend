@@ -21,6 +21,8 @@
 \import Arith.Fin.Order
 \import Arith.Nat
 \import Data.Array
+\import Data.Array.Perm
+\import Data.Array.Sort
 \import Data.Fin (fsuc, fsuc/=, nat_fin_=)
 \import Data.Or
 \import Function

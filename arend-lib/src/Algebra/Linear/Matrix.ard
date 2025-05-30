@@ -16,6 +16,7 @@
 \import Arith.Int
 \import Arith.Nat
 \import Data.Array
+\import Data.Array.Perm
 \import Data.Fin (fsuc, fsuc/=)
 \import Data.Or
 \import Function.Meta

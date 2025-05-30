@@ -1,0 +1,213 @@
+\import Algebra.Group.Symmetric
+\import Arith.Nat
+\import Data.Array
+\import Data.Array.Perm
+\import Data.Bool
+\import Data.Fin (unfsuc)
+\import Data.Or
+\import Equiv
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+
+\func keep_remove-split {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} : EPerm l (keep D l ++ remove D l) \elim l
+  | nil => eperm-nil
+  | a :: l => mcases \with {
+    | yes p => eperm-:: idp (keep_remove-split {_} {_} {D})
+    | no n => eperm-trans (eperm-:: idp (keep_remove-split {_} {_} {D})) (EPerm.eperm-sym EPerm.EPerm_++-swap)
+  }
+
+\data EPerm {A : \Type} (l1 l2 : Array A) \elim l1, l2
+  | nil, nil => eperm-nil
+  | :: x l1, :: y l2 => eperm-:: (x = y) (EPerm l1 l2)
+  | :: x (:: x' l1), :: y (:: y' l2) => eperm-swap (x = y') (x' = y) (l1 = l2)
+  | l1, l2 => eperm-trans {l : Array A} (EPerm l1 l) (EPerm l l2)
+  \where {
+    \func eperm-refl {A : \Type} {l : Array A} : EPerm l l \elim l
+      | nil => eperm-nil
+      | a :: l => eperm-:: idp eperm-refl
+
+    \func eperm-= {A : \Type} {l l' : Array A} (p : l = l') : EPerm l l' \elim p
+      | idp => eperm-refl
+
+    \func eperm-sym {A : \Type} {l l' : Array A} (e : EPerm l l') : EPerm l' l \elim l, l', e
+      | nil, nil, eperm-nil => eperm-nil
+      | x :: l1, y :: l2, eperm-:: p e => eperm-:: (inv p) (eperm-sym e)
+      | x :: (x' :: l1), y :: (y' :: l2), eperm-swap p1 p2 q => eperm-swap (inv p2) (inv p1) (inv q)
+      | l, l', eperm-trans e1 e2 => eperm-trans (eperm-sym e2) (eperm-sym e1)
+
+    \func eperm-++-comm {A : \Type} {l l' : Array A} : EPerm (l ++ l') (l' ++ l) \elim l, l'
+      | nil, nil => eperm-nil
+      | nil, a :: l => rewrite ++_nil eperm-refl
+      | a :: l, nil => rewrite ++_nil eperm-refl
+      | a :: l, a' :: l' => mkcon eperm-trans {a :: a' :: l' ++ l} (eperm-:: idp eperm-++-comm) $ mkcon eperm-trans {a' :: a :: l ++ l'}
+        (mkcon eperm-trans {a' :: a :: l' ++ l} (eperm-swap idp idp idp) $ eperm-:: idp $ eperm-:: idp $ eperm-sym $ eperm-++-comm) (eperm-:: idp eperm-++-comm)
+
+    \func eperm-++-left {A : \Type} {l1 l2 l : Array A} (e : EPerm l1 l2) : EPerm (l1 ++ l) (l2 ++ l) \elim l1, l2, e
+      | nil, nil, eperm-nil => eperm-refl
+      | x :: l1, y :: l2, eperm-:: p e => eperm-:: p (eperm-++-left e)
+      | x :: (x' :: l1), y :: (y' :: l2), eperm-swap p1 p2 q => eperm-swap p1 p2 (pmap (`++ l) q)
+      | l1, l2, eperm-trans e1 e2 => eperm-trans (eperm-++-left e1) (eperm-++-left e2)
+
+    \func eperm-++-right {A : \Type} {l l1 l2 : Array A} (e : EPerm l1 l2) : EPerm (l ++ l1) (l ++ l2)
+      => eperm-++-comm `eperm-trans` eperm-++-left e `eperm-trans` eperm-++-comm
+
+    \func eperm-++ {A : \Type} {l1 l1' l2 l2' : Array A} (e1 : EPerm l1 l1') (e2 : EPerm l2 l2') : EPerm (l1 ++ l2) (l1' ++ l2')
+      => eperm-++-left e1 `eperm-trans` eperm-++-right e2
+
+    \func EPerm_map {A B : \Type} (f : A -> B) {l l' : Array A} (e : EPerm l l') : EPerm (map f l) (map f l') \elim l, l', e
+      | nil, nil, eperm-nil => eperm-nil
+      | x :: l, y :: l', eperm-:: p e => eperm-:: (pmap f p) (EPerm_map f e)
+      | x :: (x' :: l), y :: (y' :: l'), eperm-swap idp idp q => eperm-swap idp idp $ pmap (map f) q
+      | l, l', eperm-trans e1 e2 => eperm-trans (EPerm_map f e1) (EPerm_map f e2)
+      \where
+        \func conv {A B : \Set} (f : A -> B) (inj : isInj f) {l l' : Array A} (e : EPerm (map f l) (map f l')) : EPerm l l'
+          => aux f inj (EPerm_len e) e
+          \where
+            \private \func aux {A B : \Set} (f : A -> B) (inj : isInj f) {n m : Nat} (p : n = m) {l : Array A n} {l' : Array A m} (e : EPerm (map f l) (map f l')) : EPerm l l' \elim p
+              | idp => Perm_EPerm $ Perm.perm-map.conv f inj $ EPerm_Perm {B} {_} {map f l} e
+
+    \func EPerm_keep {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l l' : Array A} (p : EPerm l l') : EPerm (keep D l) (keep D l') \elim l, l', p
+      | nil, nil, eperm-nil => eperm-nil
+      | x :: l, _ :: l', eperm-:: idp q => mcases \with {
+        | yes _ => eperm-:: idp (EPerm_keep q)
+        | no _ => EPerm_keep q
+      }
+      | x :: (x' :: l), _ :: (_ :: l'), eperm-swap idp idp r => rewrite r $ mcases \with {
+        | yes p, yes q => rewrite (dec_yes_reduce q, dec_yes_reduce p) (eperm-swap idp idp idp)
+        | yes p, no q => rewrite (dec_yes_reduce p, dec_no_reduce q) eperm-refl
+        | no p, yes q => rewrite (dec_no_reduce p, dec_yes_reduce q) eperm-refl
+        | no p, no q => rewrite (dec_no_reduce p, dec_no_reduce q) eperm-refl
+      }
+      | l, l', eperm-trans p1 p2 => eperm-trans (EPerm_keep p1) (EPerm_keep p2)
+
+    \func EPerm_remove {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l l' : Array A} (p : EPerm l l') : EPerm (remove D l) (remove D l') \elim l, l', p
+      | nil, nil, eperm-nil => eperm-nil
+      | x :: l, y :: l', eperm-:: idp q => mcases \with {
+        | yes p => EPerm_remove q
+        | no n => eperm-:: idp (EPerm_remove q)
+      }
+      | x :: (x' :: l), _ :: (_ :: l'), eperm-swap idp idp r => rewrite r $ mcases \with {
+        | yes p, yes q => rewrite (dec_yes_reduce p, dec_yes_reduce q) eperm-refl
+        | yes p, no q => rewrite (dec_yes_reduce p, dec_no_reduce q) eperm-refl
+        | no p, yes q => rewrite (dec_no_reduce p, dec_yes_reduce q) eperm-refl
+        | no p, no q => rewrite (dec_no_reduce p, dec_no_reduce q) (eperm-swap idp idp idp)
+      }
+      | l, l', eperm-trans p1 p2 => eperm-trans (EPerm_remove p1) (EPerm_remove p2)
+
+    \func EPerm_nub {A : DecSet} {l l' : Array A} (p : EPerm l l') : EPerm (nub l) (nub l') \elim l, l', p
+      | nil, nil, eperm-nil => eperm-nil
+      | x :: l, _ :: l', eperm-:: idp q => eperm-:: idp $ EPerm_remove (EPerm_nub q)
+      | x :: (x' :: l), _ :: (_ :: l'), eperm-swap idp idp r => rewrite r $ mcases contradiction \with {
+        | yes p, yes _ => eperm-:: p (eperm-= remove-swap)
+        | no q, no _ => eperm-swap idp idp remove-swap
+      }
+      | l, l', eperm-trans p1 p2 => eperm-trans (EPerm_nub p1) (EPerm_nub p2)
+
+    \func eperm-remove {A : DecSet} {l : Array A} (inj : isInj l) (j : Fin l.len) : EPerm l (l j :: removeElem (l j) l) \elim l, j
+      | a :: l, 0 => eperm-= $ pmap (a ::) $ later $ rewrite (decideEq=_reduce idp) $ inv $ remove-none \lam j p => \case inj {0} {suc j} p
+      | a :: l, suc j => unfold removeElem $ mcases \with {
+        | yes p => \case inj {suc j} {0} p
+        | no q => mkcon eperm-trans {a :: l j :: removeElem (l j) l} (eperm-:: idp $ eperm-remove (\lam p => unfsuc $ inj p) j) (eperm-swap idp idp idp)
+      }
+
+    \func EPerm_filter {A : \Type} (f : A -> Bool) {l l' : Array A} (e : EPerm l l') : EPerm (filter f l) (filter f l') \elim l, l', e
+      | nil, nil, eperm-nil => eperm-nil
+      | x :: l, _ :: l', eperm-:: idp e => cases (f x) \with {
+        | false => EPerm_filter f e
+        | true => eperm-:: idp (EPerm_filter f e)
+      }
+      | x :: (x' :: l), _ :: (_ :: l'), eperm-swap idp idp r => rewrite r $ cases (f x, f x') eperm-refl \with {
+        | true, true => eperm-swap idp idp idp
+      }
+      | l, l', eperm-trans e1 e2 => eperm-trans (EPerm_filter f e1) (EPerm_filter f e2)
+
+    \func EPerm_++-swap {A : \Type} {l l' : Array A} {a : A} : EPerm (l ++ a :: l') (a :: l ++ l') \elim l
+      | nil => eperm-refl
+      | a' :: l => mkcon eperm-trans {a' :: a :: l ++ l'} (eperm-:: idp EPerm_++-swap) (eperm-swap idp idp idp)
+
+    \func Perm_EPerm {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : EPerm l l' \elim n, l, l', p
+      | 0, nil, nil, perm-nil => eperm-nil
+      | suc n, x :: l, y :: l', perm-:: p q => eperm-:: p (Perm_EPerm q)
+      | suc (suc n), x :: (x' :: l), y :: (y' :: l'), perm-swap p1 p2 q => eperm-swap p1 p2 q
+      | n, l, l', perm-trans p1 p2 => eperm-trans (Perm_EPerm p1) (Perm_EPerm p2)
+
+    \func EPerm_Perm {A : \Type} {n : Nat} {l l' : Array A n} (p : EPerm l l') : Perm l l'
+      => \have (e,f) => eperm_equiv p
+         \in transport (Perm l) (exts \lam j => inv (f j)) (Perm.equiv_perm e)
+
+    \func EPerm_Perm_transport {A : \Type} {n m : Nat} {l : Array A n} {l' : Array A m} (e : EPerm l l') (p : n = m) : Perm (transport (\lam n => Array A n) p l) l' \elim p
+      | idp => EPerm_Perm e
+
+    \func eperm_equiv {A : \Type} {l l' : Array A} (p : EPerm l l') : \Sigma (e : Equiv {Fin l'.len} {Fin l.len}) (\Pi (j : Fin l'.len) -> l' j = l (e j)) \elim l, l', p
+      | nil, nil, eperm-nil => (idEquiv, \case __)
+      | x :: l3, y :: l4, eperm-:: p q =>
+        \have (e,f) => eperm_equiv q
+        \in (lift.aux e, \case \elim __ \with {
+          | 0 => inv p
+          | suc j => f j
+        })
+      | x :: (x' :: (l : Array)), y :: (y' :: l'), eperm-swap p1 p2 q => transport (\lam (l'' : Array A) => \Sigma (e : Equiv {Fin (suc (suc l''.len))} {Fin (suc (suc l.len))}) (\Pi (j : Fin (suc (suc l''.len))) -> (y :: y' :: l'') j = (x :: x' :: l) (e j))) q
+        (transposition1 (0 : Fin (suc l.len)), \case \elim __ \with {
+          | 0 => rewrite transposition1.transposition1-left (inv p2)
+          | 1 => rewrite transposition1.transposition1-right (inv p1)
+          | suc (suc j) => rewrite (transposition1.transposition1_/= (later \case __) (later \case __)) idp
+        })
+      | l, l', eperm-trans p1 p2 =>
+        \have | (e1,f1) => eperm_equiv p1
+              | (e2,f2) => eperm_equiv p2
+        \in (transEquiv e2 e1, \lam j => f2 j *> f1 (e2 j))
+      \where {
+        \func conv {A : \Type} {l l' : Array A} (s : \Sigma (e : Equiv {Fin l'.len} {Fin l.len}) (\Pi (j : Fin l'.len) -> l' j = l (e j))) : EPerm l l'
+          => transportInv (\lam n => \Pi (l' : Array A n) -> \Sigma (e : Equiv {Fin l'.len} {Fin l.len}) (\Pi (j : Fin l'.len) -> l' j = l (e j)) -> EPerm l l') (FinSet.FinCardBij s.1) (\lam l' s => Perm_EPerm {_} {l.len} {\new l} (Perm.perm_equiv.conv {_} {_} {\new l} s)) (\new l') s
+      }
+
+    \lemma EPerm_len {A : \Type} {l l' : Array A} (e : EPerm l l') : l.len = l'.len \elim l, l', e
+      | nil, nil, eperm-nil => idp
+      | x :: l, y :: l', eperm-:: p e => pmap suc (EPerm_len e)
+      | x :: (x' :: l), y :: (y' :: l'), eperm-swap _ _ q => pmap (\lam x => suc (suc (DArray.len {x}))) q
+      | l, l', eperm-trans e1 e2 => EPerm_len e1 *> EPerm_len e2
+
+    \func EPermDec {A : DecSet} {l l' : Array A} : Or (EPerm l l') (Not (EPerm l l'))
+      => \case FinSet.searchFin-equiv {EquivFin (FinFin l'.len) (FinFin l.len)} (symQEquiv EquivFin.equiv_fin.2) (\lam e => \Pi (j : Fin l'.len) -> l' j = l (e j)) (\lam e => decide {FunDec \lam j => EqualityDecide A (l' j) (l (e j))}) \with {
+        | inl p => inl (eperm_equiv.conv p)
+        | inr q => inr \lam e => q (eperm_equiv e).1 (eperm_equiv e).2
+      }
+
+    \lemma EPerm_count {A : DecSet} {l l' : Array A} (e : EPerm l l') (a : A) : count l a = count l' a \elim l, l', e
+      | nil, nil, eperm-nil => idp
+      | x :: l, _ :: l', eperm-:: idp e => mcases \with {
+        | yes p => pmap suc (EPerm_count e a)
+        | no n => EPerm_count e a
+      }
+      | x :: (x' :: l), _ :: (_ :: l'), eperm-swap idp idp r => rewrite r $ mcases \with {
+        | yes p, yes p' => rewrite (decideEq=_reduce p, decideEq=_reduce p') idp
+        | yes p, no p' => rewrite (decideEq=_reduce p, decideEq/=_reduce p') idp
+        | no p, yes p' => rewrite (decideEq/=_reduce p, decideEq=_reduce p') idp
+        | no p, no p' => rewrite (decideEq/=_reduce p, decideEq/=_reduce p') idp
+      }
+      | l, l', eperm-trans e1 e2 => EPerm_count e1 a *> EPerm_count e2 a
+
+    \func count_EPerm {A : DecSet} {l l' : Array A} (p : \Pi (a : A) -> count l a = count l' a) : EPerm l l'
+      => aux id<suc p
+      \where \private \func aux {A : DecSet} {l l' : Array A} {n : Nat} (c : l.len < n) (p : \Pi (a : A) -> count l a = count l' a) : EPerm l l' \elim l, l', n
+        | nil, nil, _ => eperm-nil
+        | nil, x :: l, _ => \case rewrite (decideEq=_reduce idp) in p x
+        | x :: l, l', suc n =>
+          \let r => aux {A} {removeElem x (x :: l)} {removeElem x l'} {n} (unfold removeElem (rewrite (decideEq=_reduce idp) remove<=) <∘r NatSemiring.unsuc< c) \lam a => count_remove {_} {_} {decideEq x} {x :: l} (p a)
+          \in keep_remove-split {_} {_} {decideEq x} `eperm-trans` transport2 (\lam x y => EPerm (x ++ _) (y ++ _)) (inv $ keep_count {_} {x :: l} *> pmap (replicate __ x) (p x)) (inv keep_count) (eperm-++-right r) `eperm-trans` eperm-sym (keep_remove-split {_} {_} {decideEq x} {l'})
+
+    \func EPerm-equivalence {A : \Set} : Equivalence (Array A) (\lam l l' => TruncP (EPerm l l')) \cowith
+      | ~-reflexive => inP EPerm.eperm-refl
+      | ~-symmetric (inP e) => inP (EPerm.eperm-sym e)
+      | ~-transitive (inP e1) (inP e2) => inP (eperm-trans e1 e2)
+  }

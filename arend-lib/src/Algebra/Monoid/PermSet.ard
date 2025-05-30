@@ -1,6 +1,7 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Data.Array
+\import Data.Array.EPerm
 \import Data.Or
 \import Function.Meta
 \import Logic

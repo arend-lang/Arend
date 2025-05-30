@@ -14,6 +14,7 @@
 \import Arith.Nat
 \import Category
 \import Data.Array
+\import Data.Array.Perm
 \import Data.Fin (nat_fin_=)
 \import Data.Or
 \import Equiv

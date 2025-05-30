@@ -11,6 +11,9 @@
 \import Algebra.Semiring
 \import Category
 \import Data.Array
+\import Data.Array.EPerm
+\import Data.Array.Pairs
+\import Data.Array.Split
 \import Data.Or
 \import Equiv (Equiv)
 \import Function (isInj)

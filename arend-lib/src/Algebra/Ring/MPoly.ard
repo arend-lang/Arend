@@ -14,6 +14,8 @@
 \import Algebra.Semiring
 \import Arith.Nat
 \import Data.Array
+\import Data.Array.EPerm
+\import Data.Array.Pairs
 \import Data.Fin \hiding (Index)
 \import Equiv
 \import Function (isSurj)

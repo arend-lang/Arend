@@ -2,6 +2,8 @@
 \import Algebra.Pointed
 \import Arith.Nat
 \import Data.Array
+\import Data.Array.EPerm
+\import Data.Array.Perm
 \import Data.Fin (fsuc, fsuc/=)
 \import Data.Or
 \import Equiv
@@ -389,6 +391,17 @@
     | nil, l => inv $ BigSum_zro \lam j => q2 j zero<=_
     | a :: l, nil => {?} -- TODO[server2]: absurd linarith
     | a :: l, a' :: l' => pmap2 (+) (q1 0) $ BigSum-subset (suc<=suc.conv p) (\lam j => q1 (suc j)) (\lam j p => q2 (suc j) (suc<=suc p))
+
+  \lemma fit_BigSum {n : Nat} {l : Array E} (p : \Pi (j : Fin l.len) -> n <= j -> l j = 0) : BigSum (fit 0 {n} l) = BigSum l \elim n, l
+    | 0, l => inv $ BigSum_zro \lam j => p j zero<=_
+    | suc n, nil => BigSum_replicate0 {_} {suc n}
+    | suc n, a :: l => pmap (a +) $ fit_BigSum \lam j n<=j => p (suc j) (suc<=suc n<=j)
+
+  \lemma fit-transpose {n m : Nat} (l : Array (Array E m) n) : BigSum (\lam j => fit zro (l j) j) = BigSum (\lam k => fit zro (l __ k) k) \elim n, m, l
+    | 0, 0, nil => idp
+    | 0, suc m, nil => inv $ BigSum_replicate0 {_} {suc m}
+    | suc n, 0, c :: l => BigSum_replicate0 {_} {suc n}
+    | suc n, suc m, c :: l => pmap (c 0 +) $ fit-transpose \lam i => \lam j => l i (suc j)
 
   \protected \func op : AddMonoid E \cowith
     | zro => 0
