@@ -1,0 +1,67 @@
+\import Equiv
+\import Logic
+\import Paths
+\import Paths.Meta
+
+-- # Prop
+
+\func isProp (A : \Type) => \Pi (a a' : A) -> a = a'
+  \where {
+    \use \sfunc =>isSet {A : \Type} (p : isProp A) (a a' : A) : isProp (a = a')
+      => \lam s t => \have q => Jl (\lam x q => inv (p a a) *> p a x = q) (inv_*> (p a a))
+                     \in inv (q s) *> q t
+
+    \use \level levelProp (A : \Type) (e e' : isProp A) : e = e'
+      => path \lam i a a' => =>isSet e a a' (e a a') (e' a a') i
+  }
+
+\func isSet (A : \Type) => \Pi (a a' : A) (p q : a = a') -> p = q
+  \where {
+    \use \level levelProp {A : \Type} (e e' : isSet A) : e = e'
+      => path \lam i a a' => isProp.levelProp (a = a') (e a a') (e' a a') i
+  }
+
+-- | hLevels are closed under pi-types
+\func pi-isProp {A : \Type} (B : A -> \Type) (p : \Pi (a : A) -> isProp (B a)) : isProp (\Pi (a : A) -> B a)
+  => \lam f f' => path \lam i a => p a (f a) (f' a) i
+
+-- # Contr
+
+\class Contr (A : \Type) (center : A) (contraction : \Pi (a' : A) -> center = a')
+  \where {
+    \func make {A : \Type} (a : A) (p : \Pi (a' : A) -> a = a')  => \new Contr A a p
+
+    \use \level levelProp (A : \Type) (c1 c2 : Contr A) : c1 = c2 => path (\lam i => \new Contr A {
+      | center => c1.contraction c2.center i
+      | contraction a' => pathOver {\lam i => c1.contraction c2.center i = a'} {c1.contraction a'} {c2.contraction a'}
+          (isProp.=>isSet (\lam x y => inv (c1.contraction x) *> c1.contraction y) c2.center a' _ _) i
+    })
+  }
+
+\lemma contr-equiv (A B : Contr) {f : A -> B} : Equiv f
+  => \new QEquiv {
+    | ret _ => A.center
+    | ret_f x => A.contraction x
+    | f_sec y => isContr=>isProp B _ _
+  }
+
+\func isContr=>isProp {A : \Type} (c : Contr A) : isProp A => \lam a a' => inv (c.contraction a) *> c.contraction a'
+
+\lemma isContr'=>isProp {A : \Type} (c : A -> Contr A) : isProp A => \lam a => isContr=>isProp (c a) a
+
+\lemma isProp=>isContr {A : \Type} (p : isProp A) (a : A) : Contr A => Contr.make a (p a)
+
+\lemma isProp'=>isContr {A : \Type} (p : isProp A) (a : TruncP A) : Contr A \elim a
+  | inP a => isProp=>isContr p a
+
+\lemma isProp=>PathContr (A : \Type) (p : isProp A) (a a' : A) : Contr (a = a')
+  => isProp=>isContr (isProp.=>isSet p a a') (p a a')
+
+\lemma pi-Contr {A : \Type} (B : A -> \Type) (p : \Pi (a : A) -> Contr (B a)) : Contr (\Pi (a : A) -> B a)
+  => Contr.make (\lam a => Contr.center {p a}) (\lam f => path (\lam i a => Contr.contraction {p a} (f a) @ i))
+
+-- | Contr-based hLevels are closed under sigma-types
+\lemma sigma-Contr {A : \Type} (B : A -> \Type) (pA : Contr A) (pB : \Pi (a : A) -> Contr (B a)) : Contr (\Sigma (a : A) (B a))
+  => \let | a0 => Contr.center {pA}
+          | p0 => ((a0, Contr.center {pB a0}) : \Sigma (a : A) (B a))
+     \in Contr.make p0 (\lam p => ext (Contr.contraction {pA} p.1, isContr=>isProp (pB p.1) _ _))

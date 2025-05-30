@@ -2,7 +2,7 @@
 \import Equiv.Path
 \import Function
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Homotopy.Fibration
 \import Logic
 \import Logic.Meta

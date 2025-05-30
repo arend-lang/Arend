@@ -1,4 +1,4 @@
-\import HLevel
+\import Logic.Unique
 \import Logic
 
 \lemma assumption (A : \Type) (a : A) (p : isProp A) : A => a

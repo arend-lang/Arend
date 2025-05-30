@@ -15,7 +15,7 @@
 \import Equiv.Univalence (Equiv-to-=)
 \import Function (isInj, isSurj)
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Logic.Classical
 \import Logic.Meta

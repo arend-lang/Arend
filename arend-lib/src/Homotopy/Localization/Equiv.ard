@@ -2,12 +2,13 @@
 \import Equiv.Fiber
 \import Equiv.Univalence
 \import Function
-\import HLevel
+\import Homotopy.HLevel
 \import Homotopy.Fibration
 \import Homotopy.Localization.Accessible
 \import Homotopy.Localization.Connected
 \import Homotopy.Localization.Universe
 \import Logic
+\import Logic.Unique
 \import Paths
 \import Paths.Meta
 

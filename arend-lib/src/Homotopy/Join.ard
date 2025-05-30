@@ -1,7 +1,7 @@
 \import Equiv
 \import Equiv.Univalence
 \import Function.Iterate
-\import HLevel
+\import Logic.Unique
 \import Homotopy.Cube
 \import Homotopy.Pushout
 \import Homotopy.Sphere

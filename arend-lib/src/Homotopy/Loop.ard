@@ -1,6 +1,7 @@
 \import Equiv.Sigma
 \import Function.Iterate
-\import HLevel
+\import Homotopy.HLevel
+\import Logic.Unique
 \import Homotopy.Pointed
 \import Homotopy.Pushout
 \import Homotopy.Sphere

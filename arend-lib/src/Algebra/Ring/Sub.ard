@@ -4,7 +4,7 @@
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring.Sub
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Logic.Meta
 \import Paths

@@ -13,7 +13,7 @@
 \import Arith.Nat
 \import Function (isInj, isSurj)
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Meta
 \import Order.PartialOrder

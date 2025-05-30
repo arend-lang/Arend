@@ -1,6 +1,6 @@
 \import Function
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Logic.Meta
 \import Logic.TFAE

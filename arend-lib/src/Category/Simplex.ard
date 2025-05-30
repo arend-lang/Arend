@@ -3,7 +3,7 @@
 \import Category
 \import Equiv (Equiv, QEquiv)
 \import Function (isInj)
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Meta
 \import Order.Biordered

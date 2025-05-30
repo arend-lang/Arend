@@ -6,7 +6,7 @@
 \import Category.Product
 \import Equiv
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta

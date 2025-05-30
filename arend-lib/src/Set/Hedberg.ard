@@ -2,7 +2,7 @@
 \import Equiv
 \import Equiv.Path
 \import Equiv.Univalence
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Meta
 \import Paths

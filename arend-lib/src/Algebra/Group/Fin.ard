@@ -5,7 +5,7 @@
 \import Arith.Nat
 \import Arith.Nat.Sequence
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Logic.Meta
 \import Meta

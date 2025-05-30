@@ -19,7 +19,7 @@
 \import Equiv
 \import Function \hiding (id, o)
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Meta
 \import Order.LinearOrder

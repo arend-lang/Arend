@@ -1,7 +1,7 @@
 \import Equiv
 \import Equiv.Sigma
 \import Equiv.Univalence
-\import HLevel
+\import Logic.Unique
 \import Homotopy.Image
 \import Homotopy.Localization.Equiv
 \import Homotopy.Localization.Universe
