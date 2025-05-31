@@ -10,10 +10,7 @@
 \instance PointedCat : Cat Pointed
   | Hom X Y => PointedHom X Y
   | id _ => PointedHom.id
-  | o {X Y Z : Pointed} (g : PointedHom Y Z) (f : PointedHom X Y) => \new PointedHom {
-    | func x => g (f x)
-    | func-ide => pmap g f.func-ide *> g.func-ide
-  }
+  | o => PointedHom.∘
   | id-left => idp
   | id-right => idp
   | o-assoc => idp
@@ -21,19 +18,12 @@
 
 \instance AddPointedCat : Cat AddPointed
   | Hom X Y => AddPointedHom X Y
-  | id => id
-  | o {X Y Z : AddPointed} (g : AddPointedHom Y Z) (f : AddPointedHom X Y) => \new AddPointedHom {
-    | func x => g (f x)
-    | func-zro => pmap g f.func-zro *> g.func-zro
-  }
+  | id => AddPointedHom.id
+  | o => AddPointedHom.∘
   | id-left => idp
   | id-right => idp
   | o-assoc => idp
   | univalence => sip (\lam p1 p2 => ext (func-zro {p1}))
-  \where
-    \func id (X : AddPointed) : AddPointedHom X X \cowith
-      | func x => x
-      | func-zro => idp
 
 \type Kernel (f : AddPointedHom) => \Sigma (a : f.Dom) (f a = 0)
 

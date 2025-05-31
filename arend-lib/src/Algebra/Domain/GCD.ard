@@ -1,5 +1,4 @@
 \import Algebra.Domain
-\import Algebra.Domain.IntegrallyClosed
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -72,7 +71,7 @@
       | inv-right => {?} -- TODO[server2]: ldistr *> pmap2 (+) g'|a+bd.inv-right (Ring.negative_*-right *> pmap negative (inv *-assoc *> pmap (`* d) g'|b.inv-right)) *> simplify
     }) g'|b
 } \where {
-  \class Dec \extends GCDDomain, GCDMonoid, IntegralDomain.Dec, IntegrallyClosedDomain {
+  \class Dec \extends GCDDomain, GCDMonoid, IntegralDomain.Dec {- TODO[server2]: , IntegrallyClosedDomain -} {
     | isGCD => gcd nonZeroApart
     | gcd-ldistr c {x} {y} g => \case decideEq c 0 \with {
       | yes c=0 => {?} {- TODO[server2]: rewrite c=0 $ simplify $ inP \new GCD {
@@ -82,6 +81,7 @@
       } -}
       | no c/=0 => TruncP.map (gcd nonZeroApart (c * x) (c * y)) $ GCDMonoid.gcd-ldistr_cancel (\lam {a} {b} => nonZero-cancel-left c/=0) g
     }
+    {- TODO[server2]
     | isIntegrallyClosedDomain x xi => \case Dec.coprime-repr-aux x, \elim xi \with {
       | inP c, inP d => \case loc_poly (\lam s p => nonZero-cancel-right (apartNonZero s) p) d.1 d.2 (rewrite c.5 in d.3) \with {
         | inP e => rewrite c.5 \case decide#0 c.1 \with {
@@ -95,6 +95,7 @@
         }
       }
     }
+    -}
 
     \lemma coprime-repr (x : LocRing subMonoid) => coprime-repr-aux x
 

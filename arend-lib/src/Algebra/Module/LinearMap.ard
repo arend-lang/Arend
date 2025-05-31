@@ -353,11 +353,11 @@
 
 \lemma isMultilinear_linear-left {R : Ring} {n : Nat} {A B C : LModule R} (f : LinearMap A B) {g : Array B n -> C} (gl : isMultiLinear g) : isMultiLinear (\lam l => g (map f l)) \elim n
   | 0 => ()
-  | suc n => \lam l j => transport (LinearMap A C) (ext \lam a => pmap g (inv (map_insert f))) (gl (map f l) j ∘ {LModuleCat R} f)
+  | suc n => \lam l j => transport (LinearMap A C) (ext \lam a => pmap g (inv (map_insert f))) (gl (map f l) j LinearMap.∘ f)
 
 \lemma isMultilinear_linear-right {R : Ring} {n : Nat} {A B C : LModule R} {f : Array A n -> B} (fl : isMultiLinear f) (g : LinearMap B C) : isMultiLinear (\lam l => g (f l)) \elim n
   | 0 => ()
-  | suc n => \lam l j => g ∘ {LModuleCat R} fl l j
+  | suc n => \lam l j => g LinearMap.∘ fl l j
 
 \func isAlternating {R : Ring} {n : Nat} {A B : LModule R} (f : Array A n -> B) : \Prop
   => \Sigma (isMultiLinear f) (\Pi (l : Array A n) -> (\Sigma (i j : Fin n) (i < j) (l i = l j)) -> f l = 0)

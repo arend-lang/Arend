@@ -146,7 +146,7 @@
 
 \lemma polyImage_integralExt {R E : CRing} {f : RingHom R E} (a : E) (ai : isIntegral f a) : isIntegralExt (polyImageHom f a) \elim ai
   | inP (p, inP t, pc) => \lam (x, inP (q,qa=x)) => TruncP.map (poly_integral.aux f a p t.1 t.2 t.3 pc q qa=x)
-      \lam s => (s.1, inP (t.1,s.2,s.3), ext $ inv (polyEval_polyMap {SubRing.embed {polyImage f a}}) *> pmap (polyEval __ x) (polyMap-comp _ _) *> s.4)
+      \lam s => (s.1, inP (t.1,s.2,s.3), ext $ inv (polyEval_polyMap {SubRing.embed {polyImage f a}}) *> pmap (polyEval __ x) (later $ polyMap-comp _ _) *> s.4)
 
 \lemma integral_image-comp {R S E : Ring} {f : RingHom R S} (g : RingHom S E) {a : S} (ai : isIntegral f a) : isIntegral (g ∘ f) (g a) \elim ai
   | inP t => inP (t.1, t.2, pmap (polyEval __ _) (inv (polyMap-comp f g)) *> polyEval_polyMap *> pmap g t.3 *> g.func-zro)
@@ -168,7 +168,7 @@
   => \let | g => factorHom {Ideal.closure1 p} ∘ polyHom
           | fgi => integralExt-comp f g fi $ poly-integralExt pm (Ideal.closure1_LDiv.2 $ inP LDiv.id-div)
      \in \case fgi (in~ (padd 1 0)) \with {
-       | inP (q,qm,r) => TruncP.map (Ideal.closure1_LDiv.1 (FactorRing.unfequiv0 {Ideal.closure1 p} $ inv factorHom_polyMapEval *> pmap (polyEval __ _) (polyMap-comp _ _) *> r)) \lam d => (q,qm,d)
+       | inP (q,qm,r) => TruncP.map (Ideal.closure1_LDiv.1 (FactorRing.unfequiv0 {Ideal.closure1 p} $ inv factorHom_polyMapEval *> pmap (polyEval __ _) (later $ polyMap-comp _ _) *> r)) \lam d => (q,qm,d)
      }
 
 \lemma integralExt-left {R S E : Ring} (f : RingHom R S) (g : RingHom S E) (inj : isInj g) (int : isIntegralExt (g ∘ f)) : isIntegralExt f
@@ -252,7 +252,7 @@
   => \Pi (a : f.Cod) -> isIntegral f a -> ∃ (b : f.Dom) (f b = a)
 
 \lemma integralClosure-integral {R E : CRing} (f : RingHom R E) : isIntegralExt (integralClosure-left f)
-  => \lam a => TruncP.map a.2 \lam t => (t.1, t.2, ext $ inv (polyEval_polyMap {integralClosure-right f}) *> pmap (polyEval __ _) (polyMap-comp _ _) *> t.3)
+  => \lam a => TruncP.map a.2 \lam t => (t.1, t.2, ext $ inv (polyEval_polyMap {integralClosure-right f}) *> pmap (polyEval __ _) (later $ polyMap-comp _ _) *> t.3)
 
 \lemma integralClosure-closed {R E : CRing} (f : RingHom R E) : isIntegrallyClosed (integralClosure-right f)
   => \lam a ai => inP ((a, integral-comp {R} {integralClosure f} (integralClosure-integral f) ai ), idp)

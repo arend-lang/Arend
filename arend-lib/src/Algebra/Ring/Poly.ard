@@ -14,9 +14,7 @@
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
-\import Algebra.Pointed.PointedCategory
 \import Algebra.Ring
-\import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.QPoly
@@ -107,7 +105,7 @@
   | padd p e => padd (polyMap f p) (f e)
   | peq => rewrite f.func-zro peq
 
-\lemma polyMap-comp {A B C : AddPointed} (f : AddPointedHom A B) (g : AddPointedHom B C) {p : Poly A} : polyMap g (polyMap f p) = polyMap (g ∘ f) p \elim p
+\lemma polyMap-comp {A B C : AddPointed} (f : AddPointedHom A B) (g : AddPointedHom B C) {p : Poly A} : polyMap g (polyMap f p) = polyMap (g AddPointedHom.∘ f) p \elim p
   | pzero => idp
   | padd p e => pmap (padd __ _) (polyMap-comp f g)
 
@@ -325,8 +323,8 @@
   | pzero => idp
   | padd p e => unfold polyMapEval $ rewrite polyHom_polyMapEval $ inv padd-expand
 
-\lemma factorHom_polyMapEval {R : CRing} {I : Ideal (PolyAlgebra R)} {p : Poly R} : polyMapEval (factorHom {I} ∘ polyHom) p (in~ (padd 1 0)) = in~ p
-  => pmap (polyEval __ _) (inv (polyMap-comp _ _)) *> polyEval_polyMap *> pmap factorHom polyHom_polyMapEval
+\lemma factorHom_polyMapEval {R : CRing} {I : Ideal (PolyAlgebra R)} {p : Poly R} : polyMapEval (factorHom {I} RingHom.∘ polyHom) p (in~ (padd 1 0)) = in~ p
+  => pmap (polyEval __ _) (inv (later $ polyMap-comp _ _)) *> polyEval_polyMap *> pmap factorHom polyHom_polyMapEval
 
 \instance PolyAlgebra (R : CRing) : CAlgebra R
   | Ring => PolyRing R
@@ -531,7 +529,7 @@
       | padd p y => rewrite polyEval_*c equation
 
 \func polyMapEvalRingHom {R : Ring} {S : CRing} (f : RingHom R S) (a : S) : RingHom (PolyRing R) S
-  => polyEvalRingHom a ∘ polyMapRingHom f
+  => polyEvalRingHom a RingHom.∘ polyMapRingHom f
   \where
     \lemma polyMapEval_*c {R : Ring} {S : CRing} {f : RingHom R S} {x : R} {a : S} {p : Poly R} : polyMapEval f (x PolyRing.*c p) a = f x * polyMapEval f p a
       => pmap (polyEval __ a) polyMapRingHom.polyMap_*c *> polyEvalRingHom.polyEval_*c
