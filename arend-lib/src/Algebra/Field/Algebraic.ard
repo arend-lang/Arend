@@ -16,6 +16,7 @@
 \import Algebra.Ring.Reduced
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Sub
+\import Algebra.Ring.ZeroDimensional
 \import Algebra.Semiring
 \import Arith.Fin
 \import Arith.Nat
@@ -60,7 +61,7 @@
 
 \func polyImage_field {K : DiscreteField} {E : ImpotentCRing} (f : RingHom K E) (a : E) (ai : isIntegral f a)
   : DiscreteField { | CRing => SubRing.cStruct (polyImage f a) }
-  => ImpotentCRing.zeroDim->field {ImpotentCRing.subring {SubRing.cStruct (polyImage f a)} SubRing.embed (\lam p => ext p)} (integralExt-zeroDim (polyImage_integralExt a ai))
+  => zeroDim->field {ImpotentCRing.subring {SubRing.cStruct (polyImage f a)} SubRing.embed \lam p => ext p} (integralExt-zeroDim (polyImage_integralExt a ai))
 
 \lemma integral_dom-zeroDim {R S : CRing} (f : RingHom R S) (inj : isInj f) (fi : isIntegralExt f) (Sd : S.IsZeroDimensional) : R.IsZeroDimensional
   => \lam x => \case Sd (f x) \with {
