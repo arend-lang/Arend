@@ -2492,7 +2492,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
               ClassCallExpression classCall = (ClassCallExpression) defCallParamType;
               for (Map.Entry<ClassField, Expression> entry : classCall.getImplementedHere().entrySet()) {
                 Expression type = entry.getValue().getType();
-                if (type == null || !CompareVisitor.compare(myEquations, CMP.LE, type, classCall.getDefinition().getFieldType(entry.getKey(), levels, new ReferenceExpression(classCall.getThisBinding())), Type.OMEGA, param)) {
+                if (type == null || !CompareVisitor.compare(myEquations, CMP.LE, type, classCall.getDefinition().getFieldType(entry.getKey(), classCall.getDefinition().castLevels(entry.getKey().getParentClass(), levels), new ReferenceExpression(classCall.getThisBinding())), Type.OMEGA, param)) {
                   levels = null;
                   break;
                 }
@@ -3320,7 +3320,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     for (int i = 0; i < arguments.size(); i++, j++) {
       if (j >= notImplementedFields.size()) {
         errorReporter.report(new TypecheckingError("Too many arguments. Class '" + ref.textRepresentation() + "' " + (notImplementedFields.isEmpty() ? "does not have fields" : "has only " + StringUtils.number(notImplementedFields.size(), " field")), arguments.get(i).expression));
-        break;
+        return fun;
       }
 
       ClassField field = notImplementedFields.get(j);
