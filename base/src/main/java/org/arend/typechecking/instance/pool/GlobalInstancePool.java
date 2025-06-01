@@ -15,25 +15,25 @@ import org.arend.ext.instance.InstanceSearchParameters;
 import org.arend.naming.reference.CoreReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
+import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.ext.util.Pair;
-import org.arend.util.list.PersistentList;
 
 import java.util.*;
 import java.util.function.Predicate;
 
 public class GlobalInstancePool implements InstancePool {
-  private final PersistentList<TCDefReferable> myInstances;
+  private final ArendInstances myInstances;
   private final CheckTypeVisitor myCheckTypeVisitor;
   private LocalInstancePool myInstancePool;
 
-  public GlobalInstancePool(PersistentList<TCDefReferable> instances, CheckTypeVisitor checkTypeVisitor) {
+  public GlobalInstancePool(ArendInstances instances, CheckTypeVisitor checkTypeVisitor) {
     myInstances = instances;
     myCheckTypeVisitor = checkTypeVisitor;
   }
 
-  public GlobalInstancePool(PersistentList<TCDefReferable> instances, CheckTypeVisitor checkTypeVisitor, LocalInstancePool instancePool) {
+  public GlobalInstancePool(ArendInstances instances, CheckTypeVisitor checkTypeVisitor, LocalInstancePool instancePool) {
     myInstances = instances;
     myCheckTypeVisitor = checkTypeVisitor;
     myInstancePool = instancePool;
@@ -43,7 +43,7 @@ public class GlobalInstancePool implements InstancePool {
     myInstancePool = instancePool;
   }
 
-  public PersistentList<TCDefReferable> getInstances() {
+  public ArendInstances getInstances() {
     return myInstances;
   }
 
@@ -214,8 +214,8 @@ public class GlobalInstancePool implements InstancePool {
     Concrete.Expression instanceExpr = new Concrete.ReferenceExpression(data, instance);
     DependentLink link = predicate.instanceDef.getParameters();
     ClassDefinition enclosingClass = currentDef != null ? currentDef.getEnclosingClass() : null;
-    if (myInstancePool != null && !myInstancePool.getLocalInstances().isEmpty() && myInstancePool.getLocalInstances().get(0).classDef == enclosingClass && predicate.instanceDef.getEnclosingClass() == enclosingClass) {
-      instanceExpr = Concrete.AppExpression.make(data, instanceExpr, new Concrete.ReferenceExpression(data, new CoreReferable(null, myInstancePool.getLocalInstances().get(0).value.computeTyped())), link.isExplicit());
+    if (myInstancePool != null && !myInstancePool.getLocalInstances().isEmpty() && myInstancePool.getLocalInstances().getFirst().classDef == enclosingClass && predicate.instanceDef.getEnclosingClass() == enclosingClass) {
+      instanceExpr = Concrete.AppExpression.make(data, instanceExpr, new Concrete.ReferenceExpression(data, new CoreReferable(null, myInstancePool.getLocalInstances().getFirst().value.computeTyped())), link.isExplicit());
       link = link.getNext();
     }
     for (; link.hasNext(); link = link.getNext()) {

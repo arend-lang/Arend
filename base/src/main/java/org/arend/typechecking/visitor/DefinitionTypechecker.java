@@ -46,6 +46,7 @@ import org.arend.typechecking.error.ErrorReporterCounter;
 import org.arend.typechecking.error.local.*;
 import org.arend.typechecking.implicitargs.equations.DummyEquations;
 import org.arend.typechecking.implicitargs.equations.LevelEquationsSolver;
+import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.instance.pool.GlobalInstancePool;
 import org.arend.typechecking.instance.pool.LocalInstancePool;
 import org.arend.typechecking.dfs.DFS;
@@ -578,7 +579,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
       if (localInstancePool != null && paramResult instanceof ClassCallExpression && param != null) {
         ClassDefinition classDef = ((ClassCallExpression) paramResult).getDefinition();
-        if (!classDef.isRecord()) {
+        if (!classDef.isRecord() && ArendInstances.getClassRef(parameter.getType(), null) != null) {
           ClassField classifyingField = classDef.getClassifyingField();
           int i = 0;
           for (DependentLink link = param; i < numberOfParameters; link = link.getNext(), i++) {

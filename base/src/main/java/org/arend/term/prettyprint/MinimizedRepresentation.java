@@ -26,10 +26,10 @@ import org.arend.ext.error.ArgInferenceError;
 import org.arend.typechecking.error.local.inference.FunctionArgInferenceError;
 import org.arend.ext.error.InstanceInferenceError;
 import org.arend.typechecking.error.local.inference.LambdaInferenceError;
+import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.instance.pool.GlobalInstancePool;
 import org.arend.typechecking.instance.pool.LocalInstancePool;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
-import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,7 +47,7 @@ final public class MinimizedRepresentation {
      */
     public static @NotNull Concrete.Expression generateMinimizedRepresentation(
             @NotNull Expression expressionToPrint,
-            @Nullable PersistentList<TCDefReferable> instances,
+            @Nullable ArendInstances instances,
             @Nullable DefinitionRenamer definitionRenamer,
             @Nullable Supplier<@NotNull ReferableRenamer> referableRenamer) {
         Expression actualExpression = expressionToPrint.normalize(NormalizationMode.RNF);
@@ -89,7 +89,7 @@ final public class MinimizedRepresentation {
         }
         List<Referable> thisEntries = freeReferables.get("this");
         if (thisEntries != null && thisEntries.size() == 1) {
-            var ref = thisEntries.get(0);
+            var ref = thisEntries.getFirst();
             if (ref instanceof DataLocalReferable && ((DataLocalReferable) ref).getData() instanceof ClassCallExpression) {
                 typechecker.addBinding(ref, ((ClassCallExpression) ((DataLocalReferable) ref).getData()).getThisBinding());
             }
@@ -192,7 +192,7 @@ final public class MinimizedRepresentation {
             protected Concrete.Parameter visitParameter(Concrete.Parameter parameter, Concrete.Parameter wideParameter) {
                 //noinspection DuplicatedCode
                 if (parameter.getType() == null) {
-                    return myFactory.param(parameter.isExplicit(), wideParameter.getRefList().get(0));
+                    return myFactory.param(parameter.isExplicit(), wideParameter.getRefList().getFirst());
                 } else {
                     Concrete.Expression processedType = ((Concrete.TypeParameter) parameter).type.accept(this, ((Concrete.TypeParameter) wideParameter).type);
                     if (wideParameter.getRefList().stream().anyMatch(Objects::nonNull)) {
@@ -238,7 +238,7 @@ final public class MinimizedRepresentation {
         return bindings;
     }
 
-    private static CheckTypeVisitor generateTypechecker(PersistentList<TCDefReferable> instances, List<GeneralError> errorsCollector) {
+    private static CheckTypeVisitor generateTypechecker(ArendInstances instances, List<GeneralError> errorsCollector) {
         var checkTypeVisitor = new CheckTypeVisitor(error -> {
             if (!(error instanceof GoalError)) {
                 errorsCollector.add(error);
@@ -282,7 +282,7 @@ class ErrorFixingConcreteExpressionVisitor extends BiConcreteVisitor {
     public Concrete.Expression visitLam(Concrete.LamExpression expr, Concrete.SourceNode verbose) {
         var errorList = getErrorsForNode(expr);
         if (!errorList.isEmpty()) {
-            var error = errorList.get(0);
+            var error = errorList.getFirst();
             myErrors.clear();
             return fixError(expr, (Concrete.LamExpression) verbose, error);
         }
@@ -324,7 +324,7 @@ class ErrorFixingConcreteExpressionVisitor extends BiConcreteVisitor {
                         .stream()
                         .filter(err -> err instanceof ArgInferenceError)
                         .findFirst()
-                        .orElse(errors.get(0))
+                        .orElse(errors.getFirst())
                 );
     }
 
@@ -352,9 +352,9 @@ class ErrorFixingConcreteExpressionVisitor extends BiConcreteVisitor {
             var incompleteParam = incomplete.getParameters().get(i);
             if (incompleteParam.getRefList().size() != 1) {
                 newParams.add(incompleteParam);
-            } else if (incompleteParam.getRefList().get(0).equals(error.parameter)) {
+            } else if (incompleteParam.getRefList().getFirst().equals(error.parameter)) {
                 newParams.add(complete.getParameters().get(i));
-                incomplete.body = incomplete.body.accept(new SubstConcreteVisitor(Map.of(incompleteParam.getRefList().get(0), new Concrete.ReferenceExpression(null, complete.getParameters().get(i).getRefList().get(0))), null), null);
+                incomplete.body = incomplete.body.accept(new SubstConcreteVisitor(Map.of(incompleteParam.getRefList().getFirst(), new Concrete.ReferenceExpression(null, complete.getParameters().get(i).getRefList().getFirst())), null), null);
             }
         }
         return (Concrete.LamExpression) myFactory.lam(newParams, incomplete.body);

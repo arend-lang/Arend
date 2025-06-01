@@ -26,6 +26,7 @@ import org.arend.term.concrete.ReplaceTCRefVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.computation.*;
+import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.order.Ordering;
 import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.order.listener.CollectingOrderingListener;
@@ -35,7 +36,6 @@ import org.arend.typechecking.provider.SimpleConcreteProvider;
 import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.util.ComputationInterruptedException;
 import org.arend.module.FullName;
-import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -183,7 +183,7 @@ public class ArendCheckerImpl implements ArendChecker {
           ListErrorReporter listErrorReporter = new ListErrorReporter();
           errorReporterMap.put(module, listErrorReporter);
           Map<LongName, DefinitionData> definitionData = new LinkedHashMap<>();
-          new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), listErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), myServer.getParentGroupScope(module, groupData.getRawGroup()), PersistentList.empty(), definitionData);
+          new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), listErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), myServer.getParentGroupScope(module, groupData.getRawGroup()), new ArendInstances(), definitionData);
           resolverResult.put(module, definitionData);
 
           myLogger.info(() -> "Module '" + module + "' is resolved");

@@ -34,10 +34,10 @@ import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.ArendExtensionProvider;
+import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
-import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -97,11 +97,11 @@ public class ArendServerImpl implements ArendServer {
 
   private final InstanceScopeProvider myInstanceScopeProvider = referable -> {
     FullName fullName = referable.getRefFullName();
-    if (fullName.module == null) return PersistentList.empty();
+    if (fullName.module == null) return new ArendInstances();
     GroupData groupData = myGroups.get(fullName.module);
-    if (groupData == null) return PersistentList.empty();
+    if (groupData == null) return new ArendInstances();
     DefinitionData defData = groupData.getDefinitionData(fullName.longName);
-    return defData == null ? PersistentList.empty() : defData.instances();
+    return defData == null ? new ArendInstances() : defData.instances();
   };
 
   public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging) {
@@ -548,7 +548,7 @@ public class ArendServerImpl implements ArendServer {
             }
           }
         }
-      }).resolveGroup(group, scope, PersistentList.empty(), null);
+      }).resolveGroup(group, scope, new ArendInstances(), null);
     } catch (CompletionException ignored) {
     }
 

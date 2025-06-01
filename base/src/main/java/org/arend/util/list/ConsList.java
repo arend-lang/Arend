@@ -36,8 +36,13 @@ public final class ConsList<T> implements PersistentList<T> {
   }
 
   @Override
-  public @NotNull PersistentList<T> remove(@Nullable T value) {
-    return Objects.equals(myValue, value) ? myTail : new ConsList<>(myValue, myTail.remove(value));
+  public @NotNull PersistentList<T> removeFirst(@Nullable T value) {
+    return Objects.equals(myValue, value) ? myTail : new ConsList<>(myValue, myTail.removeFirst(value));
+  }
+
+  @Override
+  public @NotNull PersistentList<T> removeFirst(@NotNull Predicate<T> predicate) {
+    return predicate.test(myValue) ? myTail : new ConsList<>(myValue, myTail.removeFirst(predicate));
   }
 
   public T getValue() {

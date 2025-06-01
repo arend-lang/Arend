@@ -23,10 +23,9 @@ import org.arend.server.impl.DefinitionData;
 import org.arend.term.concrete.*;
 import org.arend.term.group.*;
 import org.arend.typechecking.error.local.LocalErrorReporter;
+import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
-import org.arend.util.list.ConsList;
-import org.arend.util.list.PersistentList;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -599,14 +598,14 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     return true;
   }
 
-  private PersistentList<TCDefReferable> addInstances(PersistentList<TCDefReferable> instances, List<TCDefReferable> list) {
+  private ArendInstances addInstances(ArendInstances instances, List<TCDefReferable> list) {
     for (int i = list.size() - 1; i >= 0; i--) {
-      instances = new ConsList<>(list.get(i), instances);
+      instances = instances.addInstance(list.get(i));
     }
     return instances;
   }
 
-  public void resolveGroup(ConcreteGroup group, Scope scope, PersistentList<TCDefReferable> instances, Map<LongName, DefinitionData> definitionData) {
+  public void resolveGroup(ConcreteGroup group, Scope scope, ArendInstances instances, Map<LongName, DefinitionData> definitionData) {
     LocatedReferable groupRef = group.referable();
     Collection<? extends ConcreteStatement> statements = group.statements();
     Collection<? extends ConcreteGroup> dynamicSubgroups = group.dynamicGroups();
@@ -753,7 +752,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     if (hasSelf && groupRef instanceof TCDefReferable defRef) {
-      instances = instances.remove(defRef);
+      instances = instances.removeFirst(defRef);
     }
     if (definitionData != null && def instanceof Concrete.ResolvableDefinition definition) {
       definitionData.putIfAbsent(definition.getData().getRefLongName(), new DefinitionData(definition, addInstances(instances, newInstances)));

@@ -26,13 +26,13 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.group.*;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.arend.term.prettyprint.ToAbstractVisitor;
+import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.instance.pool.GlobalInstancePool;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.typechecking.visitor.DesugarVisitor;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
-import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.*;
 
 import java.util.*;
@@ -152,7 +152,7 @@ public abstract class Repl {
     var scope = ScopeFactory.forGroup(group, moduleScopeProvider);
     myReplScope.addScope(scope);
     myReplScope.setCurrentLineScope(null);
-    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, errorReporter).resolveGroup(group, myScope, PersistentList.empty(), null);
+    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, errorReporter).resolveGroup(group, myScope, new ArendInstances(), null);
     if (checkErrors()) {
       myMergedScopes.remove(scope);
     } else {
