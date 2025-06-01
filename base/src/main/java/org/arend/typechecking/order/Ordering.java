@@ -140,7 +140,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   @Override
   protected boolean forDependencies(Concrete.ResolvableDefinition definition, Consumer<Concrete.ResolvableDefinition> consumer) {
     Set<TCDefReferable> dependencies = new LinkedHashSet<>();
-    CollectDefCallsVisitor visitor = new CollectDefCallsVisitor(dependencies, myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal(), myStage.ordinal() < Stage.WITHOUT_INSTANCES.ordinal() ? myInstanceScopeProvider.getInstancesFor(definition.getData()) : null, myConcreteProvider);
+    CollectDefCallsVisitor visitor = new CollectDefCallsVisitor(dependencies, myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal(), myStage.ordinal() < Stage.WITHOUT_INSTANCES.ordinal() ? myInstanceScopeProvider.getInstancesFor(definition.getData()) : null, myConcreteProvider, definition instanceof Concrete.ClassDefinition ? definition : definition.getEnclosingClass() == null ? null : myConcreteProvider.getConcrete(definition.getEnclosingClass()));
 
     if (definition.getEnclosingClass() != null) {
       visitor.addDependency(definition.getEnclosingClass());
