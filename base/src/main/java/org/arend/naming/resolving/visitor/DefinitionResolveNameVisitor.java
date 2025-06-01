@@ -299,7 +299,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     if (def.getKind().isUse()) {
       TCDefReferable useParent = def.getUseParent();
       boolean isFunc = useParent.getKind() == GlobalReferable.Kind.FUNCTION || useParent.getKind() == GlobalReferable.Kind.INSTANCE;
-      if (isFunc || useParent.getKind() == GlobalReferable.Kind.CLASS || useParent.getKind() == GlobalReferable.Kind.DATA) {
+      if (isFunc || useParent.getKind().isRecord() || useParent.getKind() == GlobalReferable.Kind.DATA) {
         if (def.getKind() == FunctionKind.COERCE) {
           if (isFunc) {
             myLocalErrorReporter.report(new ParsingError(ParsingError.Kind.MISPLACED_COERCE, def));
@@ -479,7 +479,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
       Concrete.ReferenceExpression superClass = def.getSuperClasses().get(i);
       Concrete.Expression resolved = exprVisitor.visitReference(superClass, true, resolveLevels);
       Referable ref = RedirectingReferable.getOriginalReferable(superClass.getReferent());
-      if (resolved == superClass && myTypingInfo.getBodyDynamicScopeProvider(ref) != null && ref instanceof GlobalReferable globalRef && globalRef.getKind().equals(GlobalReferable.Kind.CLASS)) {
+      if (resolved == superClass && myTypingInfo.getBodyDynamicScopeProvider(ref) != null && ref instanceof GlobalReferable globalRef && globalRef.getKind().isRecord()) {
         superClass.setReferent(ref);
       } else {
         if (!(ref instanceof ErrorReference)) {

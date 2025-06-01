@@ -211,7 +211,7 @@ public class ModuleDeserialization {
     DefinitionProtos.Definition.DefinitionDataCase kind = defProto.getDefinitionDataCase();
     switch (kind) {
       case CLASS -> {
-        return GlobalReferable.Kind.CLASS;
+        return defProto.getClass_().getIsRecord() ? GlobalReferable.Kind.RECORD : GlobalReferable.Kind.CLASS;
       }
       case DATA -> {
         return GlobalReferable.Kind.DATA;

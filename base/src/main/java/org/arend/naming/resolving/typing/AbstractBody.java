@@ -11,7 +11,7 @@ public class AbstractBody {
   public AbstractBody(int parameters, Referable referable, int arguments) {
     myParameters = parameters;
     myReferable = referable;
-    myArguments = referable instanceof GlobalReferable global && global.getKind() == GlobalReferable.Kind.CLASS ? 0 : arguments;
+    myArguments = referable instanceof GlobalReferable global && global.getKind().isRecord() ? 0 : arguments;
   }
 
   public int getParameters() {
