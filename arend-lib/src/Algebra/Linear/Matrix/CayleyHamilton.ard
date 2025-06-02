@@ -9,6 +9,7 @@
 \import Algebra.Monoid
 \import Algebra.Ring
 \import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Instances
 \import Function.Meta
 \import Logic
 \import Meta

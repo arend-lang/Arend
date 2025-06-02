@@ -8,6 +8,7 @@
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Instances
 \import Algebra.Semiring
 \import Category
 \import Data.Array

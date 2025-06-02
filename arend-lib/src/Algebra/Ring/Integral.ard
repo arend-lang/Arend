@@ -19,6 +19,7 @@
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.MonoidRing
 \import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Instances
 \import Algebra.Ring.Sub
 \import Algebra.Semiring
 \import Arith.Nat

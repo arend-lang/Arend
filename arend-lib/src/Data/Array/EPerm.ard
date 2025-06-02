@@ -18,7 +18,6 @@
 \import Relation.Equivalence
 \import Set
 \import Set.Fin
-\import Set.Fin.Instances
 
 \func keep_remove-split {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} : EPerm l (keep D l ++ remove D l) \elim l
   | nil => eperm-nil

@@ -17,6 +17,7 @@
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Integral
 \import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Instances
 \import Algebra.Ring.Reduced
 \import Algebra.Ring.Sub
 \import Algebra.Semiring
@@ -140,7 +141,7 @@
     \lemma finDim_minDegree {R : SmithDomain} {E : CRing} (f : RingHom R E) (S : SubRing E) (SR : \Pi (x : R) -> S (f x)) {l : Array S.IRing} (lb : LModule.IsBasis {homLModule (S.corestrict f SR)} l) {a : E} (Sa : S a)
       : ∃ (p : Poly R) (p /= 0) (polyMapEval f p a = 0) ∀ {q : Poly R} (q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q)
       => \case module-integral f a S SR (inP (l,lb.2)) Sa \with {
-           | inP (p,pm,pe) => minimize p (\lam p=0 => zro/=ide $ monic/=0 pm p=0) pe (suc (degree p)) $ degree<=_degree< (degree<=.fromDegree <=-refl)
+           | inP (p,pm,pe) => minimize p (\lam p=0 => zro/=ide $ monic/=0 pm p=0) pe (suc (degree p)) $ degree<=_degree< (degree_degree<= <=-refl)
          }
       \where {
         \lemma poly-dec (n : Nat) : Dec (∃ (p : Poly R) (p /= 0) (degree< p n) (polyMapEval f p a = 0))
@@ -156,7 +157,7 @@
             | yes (inP (q,q/=0,q<n,qe)) => minimize q q/=0 qe n q<n
             | no r => inP (p, p/=0, pe, \lam {q} q/=0 qe => \case LinearOrder.dec<_<= (degree q) n \with {
               | inl q<n => absurd $ r $ inP (q, q/=0, degree_degree< q<n, qe)
-              | inr n<=q => degree<=.toDegree (degree<_degree<= d) <=∘ n<=q
+              | inr n<=q => degree<=_degree (degree<_degree<= d) <=∘ n<=q
             })
           }
       }
@@ -174,6 +175,6 @@
           | no q/=0 => absurd \have | p<=q => minPoly_degree-char.minPoly_degree f a p pm.2.1 (\lam p=0 => zro/=ide $ monic/=0 pm.1 p=0) pm.2.2 q/=0 $ polyMapEval_fromArray *> inv SubRing.embed.func-BigSum *> pmap __.1 s
                                     | q<p => degree<_degree q/=0 fromArray_degree<
                               \in linarith
-        }, \lam (x, inP (q,s)) => \let (d,r,q=dp+r,r<p) => monicPolyDivision q p (degree p) (degree<=.fromDegree <=-refl) (monic-coef pm.1)
+        }, \lam (x, inP (q,s)) => \let (d,r,q=dp+r,r<p) => monicPolyDivision q p (degree p) (degree_degree<= <=-refl) (monic-coef pm.1)
                                   \in inP (\lam j => polyCoef r j, ext $ inv s *> pmap (polyMapEval f __ a) q=dp+r *> (polyMapEvalRingHom f a).func-+ *> pmap (`+ _) ((polyMapEvalRingHom f a).func-* *> pmap (_ *) pm.2.1 *> zro_*-right) *> zro-left *> polyMapEval_polyCoef r<p *> inv SubRing.embed.func-BigSum))),
       \lam (inP (l,lb)) => inP $ finDim_minPoly f (polyImage f a) (polyImage-ext f a) lb polyImage-element)

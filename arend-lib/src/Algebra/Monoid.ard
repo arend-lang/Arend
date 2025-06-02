@@ -498,11 +498,11 @@
             => BigSum_Perm $ transport (Perm _) (arrayExt \lam j => pmap x $ e.f_ret _) $ Perm.equiv_perm $ transEquiv e' (symQEquiv e)
     }
 
-  \lemma FinSum_char {A : FinSet} (x : A -> E) : ∃ (e : Equiv {Fin A.finCard} {A}) (FinSum x = BigSum (\lam j => x (e j))) =>
-    TruncP.map FinSum.aux.2 \lam t => (t.1, (\peval FinSum x) *> inv t.2)
+  \lemma FinSum_char {A : FinSet} (x : A -> E) : ∃ (e : Equiv {Fin A.finCard} {A}) (FinSum {_} {A} x = BigSum (\lam j => x (e j)))
+    => TruncP.map FinSum.aux.2 \lam t => (t.1, (\peval FinSum {_} {A} x) *> inv t.2)
 
-  \lemma FinSum_char2 {A : FinSet} (x : A -> E) (e : Equiv {Fin A.finCard} {A}) : FinSum x = BigSum (\lam j => x (e j)) =>
-    \case FinSum_char x \with {
+  \lemma FinSum_char2 {A : FinSet} (x : A -> E) (e : Equiv {Fin A.finCard} {A}) : FinSum x = BigSum (\lam j => x (e j))
+    => \case FinSum_char x \with {
       | inP p => p.2 *> FinSum.aux.aux {_} {_} {x} p.1 e
     }
 

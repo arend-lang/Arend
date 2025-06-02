@@ -14,7 +14,6 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
-\import Set.Fin.Instances
 
 \func mkArray {A : \Type} {n : Nat} (f : Fin n -> A) => \new Array A n f
 

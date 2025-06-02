@@ -311,4 +311,44 @@
       }
   }
 
+\instance OrFin (S T : FinSet) : FinSet (Or S T)
+  | finCard => S.finCard + T.finCard
+  | finEq => \case S.finEq, T.finEq \with {
+    | inP Se, inP Te => inP $ =-to-Equiv $ QEquiv-to-= (aux {S.finCard} {T.finCard}) *> pmap2 Or (Equiv-to-= Se) (Equiv-to-= Te)
+  }
+  \where {
+    \func aux {n m : Nat} : QEquiv {Fin (n + m)} {Or (Fin n) (Fin m)} \cowith
+      | f (i : Fin (n + m)) : Or (Fin n) (Fin m) \elim n, i {
+        | 0, i => inr i
+        | suc n, 0 => inl 0
+        | suc n, suc i => Or.map (f i) fsuc id
+      }
+      | ret (e : Or (Fin n) (Fin m)) : Fin (n + m) \with {
+        | inl s => fin-inc s
+        | inr t => fin-raise t
+      }
+      | ret_f (i : Fin (n + m)) : ret (f i) = i \elim n, i {
+        | 0, i => idp
+        | suc n, 0 => idp
+        | suc n, suc i => cases (f i arg addPath) \with {
+          | inl s, p => \have q => inv (pmap ret p) *> ret_f i \in \case \elim n, \elim i, \elim s, \elim q \with {
+            | suc n, i, s, q => pmap fsuc q
+          }
+          | inr t, p => pmap (\lam i => suc i) (inv (pmap ret p) *> ret_f i)
+        }
+      }
+      | f_sec => \case \elim __ \with {
+        | inl s => ret_inl-lem s
+        | inr t => ret_inr-lem t
+      }
+
+    \lemma ret_inl-lem {n m : Nat} (i : Fin n) : OrFin.aux.f {n} {m} (fin-inc i) = inl i \elim n, i
+      | suc n, 0 => idp
+      | suc n, suc i => rewrite ret_inl-lem idp
+
+    \lemma ret_inr-lem {n m : Nat} (t : Fin m) : aux.f (fin-raise {m} {n} t) = inr t \elim n
+      | 0 => idp
+      | suc n => rewrite (ret_inr-lem {n} t) idp
+  }
+
 \func finSet {A : FinSet} => A

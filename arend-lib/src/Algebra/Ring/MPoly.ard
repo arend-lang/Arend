@@ -11,6 +11,7 @@
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.MonoidRing
 \import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Instances
 \import Algebra.Semiring
 \import Arith.Nat
 \import Data.Array
