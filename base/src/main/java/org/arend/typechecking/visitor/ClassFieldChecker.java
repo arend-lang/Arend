@@ -11,11 +11,13 @@ import org.arend.naming.reference.*;
 import org.arend.term.concrete.BaseConcreteExpressionVisitor;
 import org.arend.term.concrete.Concrete;
 import org.arend.ext.error.LocalError;
+import org.arend.typechecking.provider.ConcreteProvider;
 
 import java.util.*;
 
 public class ClassFieldChecker extends BaseConcreteExpressionVisitor<Void> {
   private Referable myThisParameter;
+  private final ConcreteProvider myConcreteProvider;
   private final Set<TCDefReferable> myRecursiveDefs;
   private final TCDefReferable myClassReferable;
   private final Collection<CoreClassDefinition> mySuperClasses;
@@ -24,8 +26,9 @@ public class ClassFieldChecker extends BaseConcreteExpressionVisitor<Void> {
   private final ErrorReporter myErrorReporter;
   private int myClassCallNumber;
 
-  ClassFieldChecker(Referable thisParameter, Set<TCDefReferable> recursiveDefs, TCDefReferable classReferable, Collection<CoreClassDefinition> superClasses, Set<? extends LocatedReferable> fields, Set<TCDefReferable> futureFields, ErrorReporter errorReporter) {
+  ClassFieldChecker(Referable thisParameter, ConcreteProvider concreteProvider, Set<TCDefReferable> recursiveDefs, TCDefReferable classReferable, Collection<CoreClassDefinition> superClasses, Set<? extends LocatedReferable> fields, Set<TCDefReferable> futureFields, ErrorReporter errorReporter) {
     myThisParameter = thisParameter;
+    myConcreteProvider = concreteProvider;
     myRecursiveDefs = recursiveDefs;
     myClassReferable = classReferable;
     mySuperClasses = superClasses;
@@ -47,22 +50,21 @@ public class ClassFieldChecker extends BaseConcreteExpressionVisitor<Void> {
   @Override
   public Concrete.Expression visitReference(Concrete.ReferenceExpression expr, Void params) {
     Referable ref = expr.getReferent();
-    if (ref instanceof TCDefReferable) {
-      if (myFields.contains(ref)) {
-        if (myFutureFields != null && myFutureFields.contains(ref)) {
+    if (ref instanceof TCDefReferable defRef) {
+      if (myFields.contains(defRef)) {
+        if (myFutureFields != null && myFutureFields.contains(defRef)) {
           return makeErrorExpression(expr);
         } else {
           return Concrete.AppExpression.make(expr.getData(), expr, new Concrete.ThisExpression(expr.getData(), myThisParameter), false);
         }
       } else {
         ClassDefinition enclosingClass = null;
-        if (myRecursiveDefs.contains(ref)) {
-          Definition def = myClassReferable.getTypechecked();
-          if (def instanceof ClassDefinition) {
-            enclosingClass = (ClassDefinition) def;
+        if (myRecursiveDefs.contains(defRef)) {
+          if (myConcreteProvider.getConcrete(defRef) instanceof Concrete.Definition def && def.enclosingClass != null && def.enclosingClass.getTypechecked() instanceof ClassDefinition classDef) {
+            enclosingClass = classDef;
           }
         } else {
-          Definition def = ((TCDefReferable) ref).getTypechecked();
+          Definition def = defRef.getTypechecked();
           if (def != null && !(def instanceof ClassField)) {
             enclosingClass = def.getEnclosingClass();
           }

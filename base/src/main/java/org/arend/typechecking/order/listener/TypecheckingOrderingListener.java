@@ -227,7 +227,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       if (definition instanceof Concrete.Definition) {
         WhereVarsFixVisitor.fixDefinition(Collections.singletonList((Concrete.Definition) definition), errorReporter);
       }
-      DesugarVisitor.desugar(definition, checkTypeVisitor.getErrorReporter());
+      DesugarVisitor.desugar(definition, myConcreteProvider, checkTypeVisitor.getErrorReporter());
       DefinitionTypechecker typechecker = new DefinitionTypechecker(checkTypeVisitor, recursive ? Collections.singleton(definition.getData()) : Collections.emptySet());
       List<ExtElimClause> clauses = definition.accept(typechecker, null);
       Definition typechecked = definition.getData().getTypechecked();
@@ -372,7 +372,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     CountingErrorReporter countingErrorReporter = new CountingErrorReporter(myErrorReporter);
     CheckTypeVisitor visitor = myCheckerFactory.create(new LocalErrorReporter(definition.getData(), countingErrorReporter), null, myExtensionProvider.getArendExtension(definition.getData()));
     visitor.setStatus(definition.getStatus().getTypecheckingStatus());
-    DesugarVisitor.desugar(definition, visitor.getErrorReporter());
+    DesugarVisitor.desugar(definition, myConcreteProvider, visitor.getErrorReporter());
     DefinitionTypechecker typechecker = new DefinitionTypechecker(visitor, definition instanceof Concrete.Definition ? ((Concrete.Definition) definition).getRecursiveDefinitions() : Collections.emptySet());
     Definition typechecked = typechecker.typecheckHeader(new GlobalInstancePool(myInstanceScopeProvider.getInstancesFor(definition.getData()), visitor), definition);
     if (typechecked == null) return;

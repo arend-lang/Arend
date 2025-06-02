@@ -71,21 +71,21 @@ public class RecursiveTest extends TypeCheckingTestCase {
   public void bodyBodyTest() {
     typeCheckModule(
       "\\func f (x : Nat) : \\Type => g 0\n" +
-      "\\func g (x : Nat) : \\Type => f 0", 4);
+      "\\func g (x : Nat) : \\Type => f 0", 2);
   }
 
   @Test
   public void bodyBodyTest2() {
     typeCheckModule(
       "\\func f (x : Nat) : Nat => g 0\n" +
-      "\\func g (x : Nat) : Nat => f 0", 4);
+      "\\func g (x : Nat) : Nat => f 0", 2);
   }
 
   @Test
   public void bodyBodyLemmaTest() {
     typeCheckModule(
       "\\lemma f (x : Nat) : x = x => g x\n" +
-      "\\lemma g (x : Nat) : x = x => f x", 4);
+      "\\lemma g (x : Nat) : x = x => f x", 2);
   }
 
   @Test
@@ -103,7 +103,7 @@ public class RecursiveTest extends TypeCheckingTestCase {
       \\class C (n : Nat)
       \\func f (x : Nat) : C => \\new C (C.n {g x})
       \\func g (x : Nat) : C => \\new C (C.n {f x})
-      """, 4);
+      """, 2);
   }
 
   @Test

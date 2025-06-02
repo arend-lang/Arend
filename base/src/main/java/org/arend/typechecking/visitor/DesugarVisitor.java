@@ -15,20 +15,23 @@ import org.arend.term.concrete.BaseConcreteExpressionVisitor;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.LocalFreeReferableVisitor;
 import org.arend.typechecking.error.local.WrongReferable;
+import org.arend.typechecking.provider.ConcreteProvider;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
 public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
+  private final ConcreteProvider myConcreteProvider;
   private final ErrorReporter myErrorReporter;
   private final Set<TCLevelReferable> myLevelRefs = new HashSet<>();
 
-  private DesugarVisitor(ErrorReporter errorReporter) {
+  private DesugarVisitor(ConcreteProvider concreteProvider, ErrorReporter errorReporter) {
+    myConcreteProvider = concreteProvider;
     myErrorReporter = errorReporter;
   }
 
-  public static void desugar(Concrete.ResolvableDefinition definition, ErrorReporter errorReporter) {
-    DesugarVisitor visitor = new DesugarVisitor(errorReporter);
+  public static void desugar(Concrete.ResolvableDefinition definition, ConcreteProvider concreteProvider, ErrorReporter errorReporter) {
+    DesugarVisitor visitor = new DesugarVisitor(concreteProvider, errorReporter);
     definition.accept(visitor, null);
 
     if (!visitor.myLevelRefs.isEmpty() && definition instanceof Concrete.Definition) {
@@ -70,7 +73,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
   }
 
   public static Concrete.Expression desugar(Concrete.Expression expression, ErrorReporter errorReporter) {
-    return expression.accept(new DesugarVisitor(errorReporter), null);
+    return expression.accept(new DesugarVisitor(ConcreteProvider.EMPTY, errorReporter), null);
   }
 
   private void getFields(TCDefReferable ref, Set<TCDefReferable> result) {
@@ -90,7 +93,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
       List<CoreClassDefinition> superClasses = enclosingClass instanceof ClassDefinition ? Collections.singletonList((CoreClassDefinition) enclosingClass) : Collections.emptyList();
 
       Referable thisParameter = new HiddenLocalReferable("this");
-      def.accept(new ClassFieldChecker(thisParameter, def.getRecursiveDefinitions(), def.enclosingClass, superClasses, fields, null, myErrorReporter), null);
+      def.accept(new ClassFieldChecker(thisParameter, myConcreteProvider, def.getRecursiveDefinitions(), def.enclosingClass, superClasses, fields, null, myErrorReporter), null);
       return thisParameter;
     } else {
       return null;
@@ -176,8 +179,8 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
     }
 
     // Check fields
-    ClassFieldChecker classFieldChecker = new ClassFieldChecker(null, def.getRecursiveDefinitions(), def.getData(), superClasses, fields, futureFields, myErrorReporter);
-    ClassFieldChecker myClassFieldChecker = new ClassFieldChecker(null, def.getRecursiveDefinitions(), def.getData(), superClasses, myFields, futureFields, myErrorReporter);
+    ClassFieldChecker classFieldChecker = new ClassFieldChecker(null, myConcreteProvider, def.getRecursiveDefinitions(), def.getData(), superClasses, fields, futureFields, myErrorReporter);
+    ClassFieldChecker myClassFieldChecker = new ClassFieldChecker(null, myConcreteProvider, def.getRecursiveDefinitions(), def.getData(), superClasses, myFields, futureFields, myErrorReporter);
     Concrete.Expression previousType = null;
     for (int i = 0; i < classFields.size(); i++) {
       Concrete.ClassField classField = classFields.get(i);

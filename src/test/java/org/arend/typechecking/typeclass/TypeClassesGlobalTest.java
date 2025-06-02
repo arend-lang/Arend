@@ -111,7 +111,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\func f : \\Set0 => g
       \\class X (A : \\Type0) {
         | B : A -> \\Type0
-      }""");
+      }""", 2);
+    assertThatErrorsAre(cycle(get("D-X"), get("f")), cycle(get("D-X"), get("f")));
   }
 
   // We do not check for duplicate global instances currently

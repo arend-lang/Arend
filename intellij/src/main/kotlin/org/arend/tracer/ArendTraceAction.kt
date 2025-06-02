@@ -27,6 +27,7 @@ import org.arend.term.concrete.Concrete
 import org.arend.typechecking.error.local.GoalDataHolder
 import org.arend.typechecking.instance.ArendInstances
 import org.arend.typechecking.instance.pool.GlobalInstancePool
+import org.arend.typechecking.provider.ConcreteProvider
 import org.arend.typechecking.visitor.DefinitionTypechecker
 import org.arend.typechecking.visitor.DesugarVisitor
 import org.arend.typechecking.visitor.WhereVarsFixVisitor
@@ -170,7 +171,7 @@ class ArendTraceAction : ArendPopupAction() {
             }
             var firstTraceEntryIndex = -1
             ActionUtil.underModalProgress(project, ArendBundle.message("arend.tracer.collecting.tracing.data")) {
-                DesugarVisitor.desugar(definition, tracer.errorReporter)
+                DesugarVisitor.desugar(definition, ConcreteProvider.EMPTY, tracer.errorReporter)
                 WhereVarsFixVisitor.fixDefinition(listOf(definition), tracer.errorReporter)
                 definition.accept(DefinitionTypechecker(tracer, definition.recursiveDefinitions), null)
                 firstTraceEntryIndex = tracer.trace.indexOfEntry(expression)
