@@ -62,6 +62,15 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   }
 
   @Override
+  protected void visitClassHeader(Concrete.ClassDefinition def, Void params) {
+    for (Concrete.ReferenceExpression superClass : def.getSuperClasses()) {
+      if (superClass.getReferent() instanceof TCDefReferable ref && (myExcluded == null || !myExcluded.contains(ref))) {
+        myDependencies.add(ref);
+      }
+    }
+  }
+
+  @Override
   public Void visitClass(Concrete.ClassDefinition def, Void params) {
     visitClassHeader(def, null);
 
