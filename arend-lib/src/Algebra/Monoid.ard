@@ -22,6 +22,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Set.Fin.Instances
 \import Set.Fin.Pigeonhole
 
 \class Semigroup \extends BaseSet {

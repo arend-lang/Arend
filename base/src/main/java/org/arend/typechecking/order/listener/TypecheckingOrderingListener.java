@@ -159,6 +159,14 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       }
       case Concrete.ClassDefinition def -> {
         typechecked = new ClassDefinition(def.getData());
+        for (Concrete.ReferenceExpression superClass : def.getSuperClasses()) {
+          if (superClass.getReferent() instanceof TCDefReferable defRef && defRef.getTypechecked() instanceof ClassDefinition superClassDef) {
+            ((ClassDefinition) typechecked).addSuperClass(superClassDef);
+            for (ClassField field : superClassDef.getNotImplementedFields()) {
+              ((ClassDefinition) typechecked).addField(field);
+            }
+          }
+        }
         for (Concrete.ClassElement element : def.getElements()) {
           if (element instanceof Concrete.ClassField) {
             ClassField classField = new ClassField(((Concrete.ClassField) element).getData(), (ClassDefinition) typechecked, new PiExpression(Sort.PROP, new TypedSingleDependentLink(false, "this", new ClassCallExpression((ClassDefinition) typechecked, typechecked.makeIdLevels()), true), new ErrorExpression()), null);

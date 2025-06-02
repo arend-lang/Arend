@@ -28,6 +28,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Set.Fin.Instances
 \import Set.Fin.Pigeonhole
 
 \type Sym (n : Nat) => Equiv {Fin n} {Fin n}

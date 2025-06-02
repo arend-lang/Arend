@@ -20,6 +20,7 @@
 \import Paths.Meta
 \import Set.SetCategory
 \import Set.Fin
+\import Set.Fin.Instances
 
 \instance RingCat : Cat Ring
   | Hom M N => RingHom M N
@@ -103,14 +104,14 @@
       | PredSymb => Empty
       | predDomain => absurd
       | axioms => arraySubset {Sequent {\this}} (
-          (\lam _ => \Sigma, _, nil, equality (apply 2 (apply 0 nil :: var () :: nil)) (var ())) ::
-          (\lam _ => Fin 3,  _, nil, equality (apply 2 (apply 2 (var 0 :: var 1 :: nil) :: var 2 :: nil)) (apply 2 (var 0 :: apply 2 (var 1 :: var 2 :: nil) :: nil))) ::
-          (\lam _ => \Sigma, _, nil, equality (apply 3 (apply 1 nil :: var () :: nil)) (var ())) ::
-          (\lam _ => Fin 3,  _, nil, equality (apply 3 (apply 3 (var 0 :: var 1 :: nil) :: var 2 :: nil)) (apply 3 (var 0 :: apply 3 (var 1 :: var 2 :: nil) :: nil))) ::
-          (\lam _ => Fin 2,  _, nil, equality (apply 2 (var 0 :: var 1 :: nil)) (apply 2 (var 1 :: var 0 :: nil))) ::
-          (\lam _ => Fin 2,  _, nil, equality (apply 3 (var 0 :: var 1 :: nil)) (apply 3 (var 1 :: var 0 :: nil))) ::
-          (\lam _ => \Sigma,  _, nil, equality (apply 2 (apply 4 (var () :: nil) :: var () :: nil)) (apply 0 nil)) ::
-          (\lam _ => Fin 3,  _, nil, equality (apply 3 (var 0 :: apply 2 (var 1 :: var 2 :: nil) :: nil)) (apply 2 (apply 3 (var 0 :: var 1 :: nil) :: apply 3 (var 0 :: var 2 :: nil) :: nil))) ::
+          (\lam _ => \Sigma, finSet, nil, equality (apply 2 (apply 0 nil :: var () :: nil)) (var ())) ::
+          (\lam _ => Fin 3,  finSet, nil, equality (apply 2 (apply 2 (var 0 :: var 1 :: nil) :: var 2 :: nil)) (apply 2 (var 0 :: apply 2 (var 1 :: var 2 :: nil) :: nil))) ::
+          (\lam _ => \Sigma, finSet, nil, equality (apply 3 (apply 1 nil :: var () :: nil)) (var ())) ::
+          (\lam _ => Fin 3,  finSet, nil, equality (apply 3 (apply 3 (var 0 :: var 1 :: nil) :: var 2 :: nil)) (apply 3 (var 0 :: apply 3 (var 1 :: var 2 :: nil) :: nil))) ::
+          (\lam _ => Fin 2,  finSet, nil, equality (apply 2 (var 0 :: var 1 :: nil)) (apply 2 (var 1 :: var 0 :: nil))) ::
+          (\lam _ => Fin 2,  finSet, nil, equality (apply 3 (var 0 :: var 1 :: nil)) (apply 3 (var 1 :: var 0 :: nil))) ::
+          (\lam _ => \Sigma, finSet, nil, equality (apply 2 (apply 4 (var () :: nil) :: var () :: nil)) (apply 0 nil)) ::
+          (\lam _ => Fin 3,  finSet, nil, equality (apply 3 (var 0 :: apply 2 (var 1 :: var 2 :: nil) :: nil)) (apply 2 (apply 3 (var 0 :: var 1 :: nil) :: apply 3 (var 0 :: var 2 :: nil) :: nil))) ::
           nil)
 
     \func catEquiv : CatEquiv (ModelCat theory) CRingCat modToRing \cowith

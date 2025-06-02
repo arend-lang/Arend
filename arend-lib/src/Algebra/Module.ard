@@ -29,6 +29,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Set.Fin.Instances
 \open AddMonoid
 \open AbMonoid
 

@@ -15,6 +15,7 @@
 \import Paths.Meta
 \import Set.SetCategory
 \import Set.Fin
+\import Set.Fin.Instances
 
 \instance MonoidCat : Cat Monoid
   | Hom M N => MonoidHom M N
@@ -51,9 +52,9 @@
       | PredSymb => Empty
       | predDomain => absurd
       | axioms => arraySubset {Sequent {\this}} (
-          (\lam _ => \Sigma, _, nil, equality (apply 1 (apply 0 nil :: var () :: nil)) (var ())) ::
-          (\lam _ => \Sigma, _, nil, equality (apply 1 (var () :: apply 0 nil :: nil)) (var ())) ::
-          (\lam _ => Fin 3,  _, nil, equality (apply 1 (apply 1 (var 0 :: var 1 :: nil) :: var 2 :: nil)) (apply 1 (var 0 :: apply 1 (var 1 :: var 2 :: nil) :: nil))) ::
+          (\lam _ => \Sigma, finSet, nil, equality (apply 1 (apply 0 nil :: var () :: nil)) (var ())) ::
+          (\lam _ => \Sigma, finSet, nil, equality (apply 1 (var () :: apply 0 nil :: nil)) (var ())) ::
+          (\lam _ => Fin 3,  finSet, nil, equality (apply 1 (apply 1 (var 0 :: var 1 :: nil) :: var 2 :: nil)) (apply 1 (var 0 :: apply 1 (var 1 :: var 2 :: nil) :: nil))) ::
           nil)
 
     \func catEquiv : CatEquiv (ModelCat theory) MonoidCat modToMonoid \cowith

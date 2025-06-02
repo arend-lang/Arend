@@ -18,6 +18,7 @@
 \import Relation.Equivalence
 \import Set
 \import Set.Fin
+\import Set.Fin.Instances
 
 \func keep_remove-split {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l : Array A} : EPerm l (keep D l ++ remove D l) \elim l
   | nil => eperm-nil
@@ -178,7 +179,7 @@
       | l, l', eperm-trans e1 e2 => EPerm_len e1 *> EPerm_len e2
 
     \func EPermDec {A : DecSet} {l l' : Array A} : Or (EPerm l l') (Not (EPerm l l'))
-      => \case FinSet.searchFin-equiv {EquivFin (FinFin l'.len) (FinFin l.len)} (symQEquiv EquivFin.equiv_fin.2) (\lam e => \Pi (j : Fin l'.len) -> l' j = l (e j)) (\lam e => decide {FunDec \lam j => EqualityDecide A (l' j) (l (e j))}) \with {
+      => \case FinSet.searchFin-equiv {EquivFin (FinFin l'.len) (FinFin l.len)} (symQEquiv EquivFin.equiv_fin.2) (\lam e => \Pi (j : Fin l'.len) -> l' j = l (e j)) (\lam e => decide {FinDec \lam j => EqualityDecide A (l' j) (l (e j))}) \with {
         | inl p => inl (eperm_equiv.conv p)
         | inr q => inr \lam e => q (eperm_equiv e).1 (eperm_equiv e).2
       }

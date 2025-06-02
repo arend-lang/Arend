@@ -15,6 +15,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Set.Fin.Instances
 \import Set.Subset
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete

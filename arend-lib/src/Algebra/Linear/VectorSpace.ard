@@ -35,6 +35,7 @@
 \import Relation.Equivalence
 \import Set
 \import Set.Fin
+\import Set.Fin.Instances
 \open LModule \hiding (count)
 
 \class VectorSpace \extends LModule {

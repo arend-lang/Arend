@@ -43,9 +43,10 @@
 }
 
 \lemma pigeonhole-surj (A : BoundedPigeonholeSet) {B : \Set} (f : A -> B) (s : isSurj f) : BoundedPigeonholeSet B A.finCard \cowith
-  | boundedPigeonhole g =>\have | (inP t) => FinSet.finiteAC (\lam j => s (g j))
-                          | (inP r) => boundedPigeonhole (\lam j => (t j).1)
-                    \in inP (r.1, r.2, r.3, inv (t r.1).2 *> pmap f r.4 *> (t r.2).2)
+  | boundedPigeonhole g =>
+    \have | (inP t) => FinSet.finiteAC (\lam j => s (g j))
+          | (inP r) => A.boundedPigeonhole (\lam j => (t j).1)
+    \in inP (r.1, r.2, r.3, inv (t r.1).2 *> pmap f r.4 *> (t r.2).2)
 
 \lemma pigeonhole-fin {n m : Nat} (f : Fin m -> Fin n) (p : n < m) : ∃ (i j : Fin m) (i /= j) (f i = f j)
   => {?} -- TODO[server2]: aux f \lam inj => <-irreflexive $ p <∘l FinSet.FinCardInj f inj

@@ -15,6 +15,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Set.Fin.Instances
 
 \lemma search (A : Nat -> \Prop) (d : \Pi (n : Nat) -> Dec (A n)) (c : ∃ (n : Nat) (A n))
   : Contr (\Sigma (n0 : Nat) (A n0) (\Pi (n : Nat) -> A n -> n0 <= n))

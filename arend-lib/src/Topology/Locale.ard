@@ -41,6 +41,7 @@
 \import Set.SetHom
 \import Set.SetCategory
 \import Set.Fin
+\import Set.Fin.Instances
 \import Topology.RatherBelow
 \open Bounded(top,top-univ,bottom,bottom-univ)
 \open CompleteLattice(SJoin)

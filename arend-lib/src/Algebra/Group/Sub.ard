@@ -13,6 +13,7 @@
 \import Relation.Equivalence
 \import Set
 \import Set.Fin
+\import Set.Fin.Instances
 \import Set.SetHom
 \open Group \hiding (Dec)
 
@@ -176,5 +177,5 @@
 
   \func IFinGroup : FinGroup \cowith
     | Group => IGroup
-    | FinSet => DecFin.DecSubSet-isFin S \this
+    | FinSet => SigmaFin.DecSubSet-isFin S \this
 }
