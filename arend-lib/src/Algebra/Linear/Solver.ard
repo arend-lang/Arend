@@ -4,6 +4,7 @@
 \import Algebra.Ring.Solver
 \import Algebra.Semiring
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Arith.Rat
 \import Data.Array
 \import Data.Bool
@@ -79,7 +80,7 @@
     \where
       \lemma correct {n : Nat} (p : isSuc n = true) : 0 < n \elim n
         | 0 => \case p
-        | suc n => NatSemiring.zero<suc
+        | suc n => NatOrder.zero<suc
 
   \func hasNegative (p : Problem) (c : Cert p.len) : Bool \elim p, c
     | nil, nil => false

@@ -1,5 +1,6 @@
 \import Algebra.Pointed
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Array
 \import Function.Meta
 \import Logic

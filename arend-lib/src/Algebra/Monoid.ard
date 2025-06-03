@@ -1,6 +1,7 @@
 \import Algebra.Meta
 \import Algebra.Pointed
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Array.Perm
@@ -376,9 +377,9 @@
     | a :: l, 0 => pmap (a +) (BigSum_zro \lam j => p (suc j) (\case __)) *> zro-right
     | a :: l, suc i => pmap (a +) (BigSum-unique i \lam j q => p (suc j) (fsuc/= q)) *> pmap (`+ l i) (p 0 (\case __)) *> zro-left
 
-  \lemma BigSum-unique2 {l : Array E} {i j : Fin l.len} (i<j : i NatSemiring.< j) (p : \Pi (k : Fin l.len) -> k /= i -> k /= j -> l k = 0) : BigSum l = l i + l j \elim l, i, j, i<j
+  \lemma BigSum-unique2 {l : Array E} {i j : Fin l.len} (i<j : i NatOrder.< j) (p : \Pi (k : Fin l.len) -> k /= i -> k /= j -> l k = 0) : BigSum l = l i + l j \elim l, i, j, i<j
     | a :: l, 0, suc j, _ => pmap (a +) $ BigSum-unique j \lam k j/=k => p (suc k) (\case __) $ fsuc/= \lam q => j/=k (inv q)
-    | a :: l, suc i, suc j, NatSemiring.suc<suc i<j => pmap (`+ _) (p 0 (\case __) (\case __)) *> zro-left *> BigSum-unique2 i<j (\lam k k/=i k/=j => p (suc k) (fsuc/= k/=i) (fsuc/= k/=j))
+    | a :: l, suc i, suc j, NatOrder.suc<suc i<j => pmap (`+ _) (p 0 (\case __) (\case __)) *> zro-left *> BigSum-unique2 i<j (\lam k k/=i k/=j => p (suc k) (fsuc/= k/=i) (fsuc/= k/=j))
 
   \lemma BigSum-pred {P : E -> \Prop} (P0 : P 0) (P+ : \Pi {x y : E} -> P x -> P y -> P (x + y)) {l : Array E} (p : \Pi (j : Fin l.len) -> P (l j)) : P (BigSum l) \elim l
     | nil => P0

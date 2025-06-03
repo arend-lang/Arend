@@ -20,6 +20,7 @@
 \import Algebra.Semiring
 \import Arith.Fin.Order
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Array
 \import Data.Array.Perm
 \import Data.Array.Sort
@@ -209,7 +210,7 @@
       | _, 1, 1 => inP (A, (\lam {0} {0} p => absurd (p idp), \lam n q => absurd linarith), ~-reflexive)
       | suc k, 1, suc (suc n) => transposed $ aux {_} {k} S linarith (transpose A)
       | suc k, 2, suc (suc (suc n)) => transposed $ aux {_} {k} S linarith (transpose A)
-      | _, 2, 1 => TruncP.map (S linarith <=-refl A) \lam (B,Bd,A~B) => (B, (\lam q => Bd q, \lam i (NatSemiring.suc<suc ())), A~B)
+      | _, 2, 1 => TruncP.map (S linarith <=-refl A) \lam (B,Bd,A~B) => (B, (\lam q => Bd q, \lam i (NatOrder.suc<suc ())), A~B)
       | _, 2, 2 =>
           \let | (inP (B,Bd,A~B)) => S <=-refl <=-refl A
                | (inP (s,t,u,v,p,q)) => smith-isBezout (S linarith NatSemiring.<=-refl) (B 0 0) (B 1 1)
@@ -225,7 +226,7 @@
               | inv => u * v
               | inv-right => unfold BigSum $ rewrite (Bd {1} {0} \case __ \with {}, Bd {0} {1} \case __) equation
             }
-            | suc i, NatSemiring.suc<suc (NatSemiring.suc<suc ()), _
+            | suc i, NatOrder.suc<suc (NatOrder.suc<suc ()), _
           }), ~-transitive A~B $ inP (determinant1_Inv C $ determinant22 {_} {C} *> equation, determinant1_Inv D $ determinant22 {_} {D} *> equation, idp))
       | suc k, suc (suc (suc m)), suc n =>
         \let | (inP (B, Bs, inP (P1 : Inv, Q1 : Inv, A2~B))) => aux {_} {k} S linarith (mkMatrix \lam i j => A i (suc j))
@@ -282,12 +283,12 @@
     => \let C => addColumn (ide :: \lam i => negative (LDiv.inv {d i})) (addRow {R} (replicate n zro) ide)
        \in (C MatrixRing.product A, inP (determinant1_Inv C (determinant_IsLowerTriangular {_} {_} {C} (\case \elim __, \elim __, __ \with {
               | 0, suc j, _ => idp
-              | suc i, suc j, NatSemiring.suc<suc i<j => rewrite (decideEq/=_reduce \lam (p : i = j) => NatSemiring.<-irreflexive $ transportInv {Nat} (i NatSemiring.<) p i<j) idp
+              | suc i, suc j, NatOrder.suc<suc i<j => rewrite (decideEq/=_reduce \lam (p : i = j) => NatSemiring.<-irreflexive $ transportInv {Nat} (i NatOrder.<) p i<j) idp
             }) *> cong (exts \case \elim __ \with {
               | 0 => idp
               | suc j => rewrite (decideEq=_reduce idp) idp
             }) *> BigProd_ide {_} {replicate (suc n) ide} (\lam _ => idp)), Inv.ide-isInv, inv MatrixRing.product_ide-right),
-            \lam i => BigSum-unique2 {_} {\lam j => (::) (negative (LDiv.inv {d i})) (MatrixRing.ide i) j * A j 0} {0} {suc i} NatSemiring.zero<suc (\case \elim __ \with {
+            \lam i => BigSum-unique2 {_} {\lam j => (::) (negative (LDiv.inv {d i})) (MatrixRing.ide i) j * A j 0} {0} {suc i} NatOrder.zero<suc (\case \elim __ \with {
               | 0 => \lam p => absurd (p idp)
               | suc k => \lam _ k/=i => rewrite (decideEq/=_reduce \lam p => k/=i (inv (pmap fsuc p))) zro_*-left
             }) *> rewrite (decideEq=_reduce idp) (pmap2 (+) (R.negative_*-left *> pmap negative (*-comm *> LDiv.inv-right {d i})) ide-left *> negative-left),
@@ -343,7 +344,7 @@
            | n, 0, _, _, _, _ => \lam _ p => absurd (<-irreflexive p)
            | suc n, suc m, C, A, A~C, d00 => \lam _ _ => \have x => M~_LDiv A~C d00 (1 : Fin (n + 2)) (1 : Fin (m + 2)) \in x
          }
-         | suc i => \lam (NatSemiring.suc<suc p) (NatSemiring.suc<suc q) => Cs.2 i p q
+         | suc i => \lam (NatOrder.suc<suc p) (NatOrder.suc<suc q) => Cs.2 i p q
        }), A~C)
 }
 
@@ -501,7 +502,7 @@
           \where {
             \private \lemma aux {n k : Nat} {l : Array (Fin n)} (p : \Pi (j : Fin l.len) -> k <= l j) (q : \Pi {i j : Fin l.len} -> i < j -> l i < l j) {j : Fin l.len} : k + j NatSemiring.<= l j \elim l, j
               | a :: l, 0 => p 0
-              | a :: l, suc j => aux (\lam j => suc_<_<= $ p 0 <∘r q {0} {suc j} NatSemiring.zero<suc) (\lam s => q (NatSemiring.suc<suc s))
+              | a :: l, suc j => aux (\lam j => suc_<_<= $ p 0 <∘r q {0} {suc j} NatOrder.zero<suc) (\lam s => q (NatOrder.suc<suc s))
           }
       }
 

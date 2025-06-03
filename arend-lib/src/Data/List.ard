@@ -1,6 +1,5 @@
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Arith.Nat
 \import Data.Bool
 \import Data.Or
 \import Function
@@ -40,7 +39,7 @@
   | nil => idp
   | :: a l => pmap (a ::) ++_nil
 
-\lemma length_++ {A : \Type} {l l' : List A} : length (l ++ l') = length l + length l' \elim l
+\lemma length_++ {A : \Type} {l l' : List A} : length (l ++ l') = length l Nat.+ length l' \elim l
   | nil => idp
   | :: a l => pmap suc length_++
 

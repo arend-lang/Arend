@@ -1,5 +1,6 @@
 \import Algebra.Group.Symmetric
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Array
 \import Data.Array.Perm
 \import Data.Bool
@@ -203,7 +204,7 @@
         | nil, nil, _ => eperm-nil
         | nil, x :: l, _ => \case rewrite (decideEq=_reduce idp) in p x
         | x :: l, l', suc n =>
-          \let r => aux {A} {removeElem x (x :: l)} {removeElem x l'} {n} (unfold removeElem (rewrite (decideEq=_reduce idp) remove<=) <∘r NatSemiring.unsuc< c) \lam a => count_remove {_} {_} {decideEq x} {x :: l} (p a)
+          \let r => aux {A} {removeElem x (x :: l)} {removeElem x l'} {n} (unfold removeElem (rewrite (decideEq=_reduce idp) remove<=) <∘r NatOrder.unsuc< c) \lam a => count_remove {_} {_} {decideEq x} {x :: l} (p a)
           \in keep_remove-split {_} {_} {decideEq x} `eperm-trans` transport2 (\lam x y => EPerm (x ++ _) (y ++ _)) (inv $ keep_count {_} {x :: l} *> pmap (replicate __ x) (p x)) (inv keep_count) (eperm-++-right r) `eperm-trans` eperm-sym (keep_remove-split {_} {_} {decideEq x} {l'})
 
     \func EPerm-equivalence {A : \Set} : Equivalence (Array A) (\lam l l' => TruncP (EPerm l l')) \cowith

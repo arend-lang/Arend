@@ -7,6 +7,7 @@
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Array
 \import Data.Or
 \import Function.Meta
@@ -256,10 +257,10 @@
   | <_*_negative-left {x y z : E} : x < y -> z < zro -> x * z > y * z
   | <_*_negative-right {x y z : E} : x < zro -> y < z -> x * y > x * z
 
-  \lemma natCoef_< {n m : Nat} (p : n NatSemiring.< m) : natCoef n < natCoef m \elim n, m, p
-    | 0, 1, NatSemiring.zero<suc => rewrite (natCoefZero,natCoefSuc,natCoefZero,zro-left) zro<ide
-    | 0, suc (suc m), NatSemiring.zero<suc => rewrite (natCoefZero,natCoefSuc) $ transport (`< _) (zro-right *> natCoefZero) $ <_+ (natCoef_< NatSemiring.zero<suc) zro<ide
-    | suc n, suc m, NatSemiring.suc<suc p => rewrite (natCoefSuc,natCoefSuc) $ <_+-left ide (natCoef_< p)
+  \lemma natCoef_< {n m : Nat} (p : n NatOrder.< m) : natCoef n < natCoef m \elim n, m, p
+    | 0, 1, NatOrder.zero<suc => rewrite (natCoefZero,natCoefSuc,natCoefZero,zro-left) zro<ide
+    | 0, suc (suc m), NatOrder.zero<suc => rewrite (natCoefZero,natCoefSuc) $ transport (`< _) (zro-right *> natCoefZero) $ <_+ (natCoef_< NatOrder.zero<suc) zro<ide
+    | suc n, suc m, NatOrder.suc<suc p => rewrite (natCoefSuc,natCoefSuc) $ <_+-left ide (natCoef_< p)
 
   \lemma <_*_positive_positive {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) : 0 < x * y
     => transport (`< _) zro_*-right (<_*_positive-right x>0 y>0)
@@ -277,10 +278,10 @@
     | 0 => zro<ide
     | suc k => <_*_positive_positive (pow>0 p) p
 
-  \lemma pow<id {a : E} (a>0 : 0 < a) (a<1 : a < 1) {k : Nat} (k>1 : 1 NatSemiring.< k) : pow a k < a \elim k, k>1
-    | 1, NatSemiring.suc<suc ()
+  \lemma pow<id {a : E} (a>0 : 0 < a) (a<1 : a < 1) {k : Nat} (k>1 : 1 NatOrder.< k) : pow a k < a \elim k, k>1
+    | 1, NatOrder.suc<suc ()
     | 2, _ => transport2 (__ * a < __) (inv ide-left) ide-right $ <_*_positive-right a>0 a<1
-    | suc (suc (suc k)), _ => transport (_ <) ide-right (<_*_positive-right (pow>0 a>0 {suc (suc k)}) a<1) <∘ pow<id a>0 a<1 {suc (suc k)} (NatSemiring.suc<suc NatSemiring.zero<suc)
+    | suc (suc (suc k)), _ => transport (_ <) ide-right (<_*_positive-right (pow>0 a>0 {suc (suc k)}) a<1) <∘ pow<id a>0 a<1 {suc (suc k)} (NatOrder.suc<suc NatOrder.zero<suc)
 }
 
 \class LinearlyOrderedSemiring \extends OrderedSemiring, LinearlyOrderedAbMonoid {
@@ -403,7 +404,7 @@
     | 0 => rewrite natCoefZero <=-refl
     | suc n => transport2 (<=) zro-left (inv (natCoefSuc n)) $ <=_+ natCoef>=0 (<_<= zro<ide)
 
-  \lemma natCoef>0 {n : Nat} (p : 0 NatSemiring.< n) : zro < natCoef n \elim n
+  \lemma natCoef>0 {n : Nat} (p : 0 NatOrder.< n) : zro < natCoef n \elim n
     | 0 => \case p
     | suc n => rewrite natCoefSuc $ transport (`< _) zro-left $ <=_+-left natCoef>=0 zro<ide
 

@@ -15,6 +15,7 @@
 \import Arith.Fin.Order
 \import Arith.Int
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Array
 \import Data.Array.Perm
 \import Data.Fin (fsuc, fsuc/=)
@@ -349,7 +350,7 @@
       | 0 => ((), \lam _ => \case __.1)
       | suc n => (multilinear k, \lam M => aux k M)
       \where {
-        \open NatSemiring(<,suc<suc)
+        \open NatOrder
 
         \func permutation1 {R : \Type} {n : Nat} (j : Fin (suc n)) (l : Array R (suc n)) : Perm l (l j :: skip l j) \elim n, j, l
           | 0, 0, l => Perm.perm-refl
@@ -612,8 +613,8 @@
 \lemma determinant_IsUpperTriangular {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsUpperTriangular A) : determinant A = R.BigProd (\lam j => A j j) \elim n
   | 0 => determinant00 A
   | suc n => inv (determinantN.=determinant {R} {suc n} {0}) *> pmap2 (+)
-              (pmap2 (*) ide-right $ pmap determinant (determinant.minor00 _) *> determinant_IsUpperTriangular {R} {n} {mkMatrix \lam i j => A (suc i) (suc j)} \lam i j i<j => d (suc i) (suc j) (NatSemiring.suc<suc i<j))
-              (R.BigSum_zro \lam j => later $ rewrite (d (suc j) zro NatSemiring.zero<suc, zro_*-left) zro_*-left) *> zro-right
+              (pmap2 (*) ide-right $ pmap determinant (determinant.minor00 _) *> determinant_IsUpperTriangular {R} {n} {mkMatrix \lam i j => A (suc i) (suc j)} \lam i j i<j => d (suc i) (suc j) (NatOrder.suc<suc i<j))
+              (R.BigSum_zro \lam j => later $ rewrite (d (suc j) zro NatOrder.zero<suc, zro_*-left) zro_*-left) *> zro-right
 
 \lemma determinant_IsLowerTriangular {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsLowerTriangular A) : determinant A = R.BigProd (\lam j => A j j)
   => inv (determinant_transpose A) *> determinant_IsUpperTriangular {_} {_} {transpose A} (\lam i j => d j i)

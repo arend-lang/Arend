@@ -14,6 +14,7 @@
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Category
 \import Category.Functor
 \import Category.Slice

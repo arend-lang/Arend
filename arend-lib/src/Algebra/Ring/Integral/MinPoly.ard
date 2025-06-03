@@ -22,6 +22,7 @@
 \import Algebra.Ring.Sub
 \import Algebra.Semiring
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Array
 \import Data.Or
 \import Equiv

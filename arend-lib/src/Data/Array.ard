@@ -1,5 +1,6 @@
 \import Algebra.Meta
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Bool
 \import Data.Fin
 \import Data.List(List, length)
@@ -555,7 +556,7 @@
       | suc n, suc j, 0 => 0
       | suc n, suc j, suc i => suc $ newIndex (\lam q => p (pmap fsuc q))
 
-    \open NatSemiring
+    \open NatOrder
 
     \lemma newIndex_< {n : Nat} {i j k : Fin (suc n)} {pj : j /= i} {pk : k /= i} (q : j < k) : newIndex pj < newIndex pk \elim n, i, j, k, q
       | _, 0, 0, _, _ => absurd (pj idp)
@@ -690,14 +691,14 @@
     | no q => keep_count
   }
 
-\func find {A : \Type} (P : A -> Decide) (l : Array A) : Or (\Sigma (j : Fin l.len) (P (l j)) (\Pi {i : Fin l.len} -> i NatSemiring.< j -> P (l i) -> Empty)) (\Pi {j : Fin l.len} -> P (l j) -> Empty) \elim l
+\func find {A : \Type} (P : A -> Decide) (l : Array A) : Or (\Sigma (j : Fin l.len) (P (l j)) (\Pi {i : Fin l.len} -> i NatOrder.< j -> P (l i) -> Empty)) (\Pi {j : Fin l.len} -> P (l j) -> Empty) \elim l
   | nil => inr \lam {j} => \case j
   | a :: l => \case decide {P a} \with {
     | yes e => inl (0, e, \case __)
     | no q => \case find P l \with {
       | inl e => inl (suc e.1, e.2, \lam {i} => \case \elim i \with {
         | 0 => \lam _ => q
-        | suc i => \lam (NatSemiring.suc<suc p) => e.3 p
+        | suc i => \lam (NatOrder.suc<suc p) => e.3 p
       })
       | inr p => inr \lam {j} => \case \elim j \with {
         | 0 => q
@@ -740,18 +741,18 @@
   | suc n, nil => replicate (suc n) a
   | suc n, b :: l => b :: fit a l
 
-\func fit_< {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin n} (p : j NatSemiring.< l.len) : fit a l j = l (toFin j p) \elim n, l, j, p
+\func fit_< {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin n} (p : j NatOrder.< l.len) : fit a l j = l (toFin j p) \elim n, l, j, p
   | suc n, b :: l, 0, _ => idp
-  | suc n, b :: l, suc j, NatSemiring.suc<suc p => fit_< _ p
+  | suc n, b :: l, suc j, NatOrder.suc<suc p => fit_< _ p
 
 \func fit_>= {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin n} (p : l.len <= j) : fit a l j = a \elim n, l, j
   | suc n, nil, j => idp
   | suc n, b :: l, 0 => absurd linarith
   | suc n, b :: l, suc j => fit_>= l (suc<=suc.conv p)
 
-\func fit_<' {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin l.len} (p : j NatSemiring.< n) : fit a l (toFin j p) = l j \elim n, l, j, p
+\func fit_<' {A : \Type} {a : A} {n : Nat} (l : Array A) {j : Fin l.len} (p : j NatOrder.< n) : fit a l (toFin j p) = l j \elim n, l, j, p
   | suc n, b :: l, 0, _ => idp
-  | suc n, b :: l, suc j, NatSemiring.suc<suc p => fit_<' _ p
+  | suc n, b :: l, suc j, NatOrder.suc<suc p => fit_<' _ p
 
 \func fit_map {A B : \Type} (f : A -> B) {a : A} {b : B} (p : f a = b) {n : Nat} {l : Array A} : map f (fit a {n} l) = fit b (map f l) \elim n, l
   | 0, l => idp
@@ -784,10 +785,10 @@
 
 \func take {A : \Type} (n : Nat) (l : Array A) (p : n <= l.len) : Array A n \elim n, l
   | 0, l => nil
-  | suc n, nil => absurd (p NatSemiring.zero<suc)
+  | suc n, nil => absurd (p NatOrder.zero<suc)
   | suc n, a :: l => a :: take n l (suc<=suc.conv p)
 
 \func take-index {A : \Type} {n : Nat} {l : Array A} {p : n <= l.len} {j : Fin n} : take n l p j = l (fin-inc_<= p j) \elim n, l, j
-  | suc n, nil, j => absurd (p NatSemiring.zero<suc)
+  | suc n, nil, j => absurd (p NatOrder.zero<suc)
   | suc n, a :: l, 0 => idp
   | suc n, a :: l, suc j => take-index

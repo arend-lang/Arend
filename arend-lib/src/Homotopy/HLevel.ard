@@ -1,4 +1,5 @@
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Equiv
 \import Equiv.Path
 \import Logic.Unique

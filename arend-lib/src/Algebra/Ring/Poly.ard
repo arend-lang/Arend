@@ -20,6 +20,7 @@
 \import Algebra.Ring.QPoly
 \import Algebra.Semiring
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Category \hiding (Map,univalence)
 \import Data.Array
 \import Data.Or
@@ -209,7 +210,7 @@
 
 \lemma degree<_padd {R : AddPointed} {p : Poly R} {e : R} {n : Nat} (d : degree< p n) : degree< (padd p e) (suc n)
   => \lam {k} => \case \elim k \with {
-    | 0 => \lam s => absurd (s NatSemiring.zero<suc)
+    | 0 => \lam s => absurd (s NatOrder.zero<suc)
     | suc k => \lam s => d (suc<=suc.conv s)
   }
   \where
@@ -243,7 +244,7 @@
     \lemma toCoefs {R : AddPointed} (p : Poly R) (n : Nat) (d : degree<= p n) {k : Nat} (n<k : n < k) : polyCoef p k = 0 \elim p, n, k, n<k
       | pzero, n, k, _ => idp
       | padd p e, 0, suc k, _ => rewrite d idp
-      | padd p e, suc n, suc k, NatSemiring.suc<suc n<k => toCoefs p n d n<k
+      | padd p e, suc n, suc k, NatOrder.suc<suc n<k => toCoefs p n d n<k
 
     \lemma trivialPoly {R : AddPointed} {p : Poly R} (d : \Pi (k : Nat) -> degree<= p k -> polyCoef p k = 0) : p = pzero
       => \case degree-exists p \with {
@@ -256,8 +257,8 @@
 
     \lemma fromCoefs {R : AddPointed} (p : Poly R) (n : Nat) (d : \Pi {k : Nat} -> n < k -> polyCoef p k = 0) : degree<= p n \elim p, n
       | pzero, n => ()
-      | padd p e, 0 => trivialPoly (\lam k _ => d NatSemiring.zero<suc)
-      | padd p e, suc n => fromCoefs p n (\lam n<k => d (NatSemiring.suc<suc n<k))
+      | padd p e, 0 => trivialPoly (\lam k _ => d NatOrder.zero<suc)
+      | padd p e, suc n => fromCoefs p n (\lam n<k => d (NatOrder.suc<suc n<k))
   }
 
 \lemma degree<=_degree< {R : AddPointed} {p : Poly R} {n : Nat} (d : degree<= p n) : degree< p (suc n)
@@ -279,7 +280,7 @@
 \lemma degree<=-trans {R : AddPointed} {p : Poly R} {n m : Nat} (d : degree<= p n) (n<=m : n <= m) : degree<= p m \elim p, n, m
   | pzero, n, m => ()
   | padd p x, 0, 0 => d
-  | padd p x, suc n, 0 => absurd (n<=m NatSemiring.zero<suc)
+  | padd p x, suc n, 0 => absurd (n<=m NatOrder.zero<suc)
   | padd p x, 0, suc m => rewrite d ()
   | padd p x, suc n, suc m => degree<=-trans d (suc<=suc.conv n<=m)
 

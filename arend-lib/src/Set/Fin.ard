@@ -1,7 +1,8 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Arith.Fin.Order
-\import Arith.Nat \using (NatSemiring, pred \as pred')
+\import Arith.Nat.Base \using (pred \as pred')
+\import Arith.Nat
 \import Data.Bool
 \import Data.Fin (fpred, fsuc, fsuc/=, nat_fin_=)
 \import Data.Or
@@ -140,7 +141,7 @@
       | suc n, suc k, 0 => idp
       | suc n, suc k, suc i => pmap fsuc skip_sface
 
-    \open NatSemiring(suc<suc,zero<suc)
+    \open NatOrder
 
     \lemma skip_< {n : Nat} {x0 x x' : Fin (suc n)} {d : x0 /= x} {d' : x0 /= x'} (p : skip x0 x d < skip x0 x' d') : x < x' \elim n, x0, x, x', p
       | _, 0, 0, _, _ => absurd (d idp)

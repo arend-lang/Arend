@@ -7,6 +7,7 @@
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Or
 \import Function.Meta
 \import Logic
@@ -139,7 +140,7 @@
   | negative x => iabs (suc n Nat.- x)
   | negative-left {x} =>
     \let t => pmap (`+ pos x) (pos_iabs (<=-less (fin_< x))) *> IntRing.+-assoc {pos (suc n)} {neg x} *> pmap (_ +) (IntRing.negative-left {pos x})
-    \in mod_+-left *> transport (__ mod suc n = 0) (inv (pmap iabs t)) (fin_nat-inj (n*_+_mod_n {_} {1} NatSemiring.zero<suc))
+    \in mod_+-left *> transport (__ mod suc n = 0) (inv (pmap iabs t)) (fin_nat-inj (n*_+_mod_n {_} {1} NatOrder.zero<suc))
   | decideEq x y => \case NatSemiring.decideEq x y \with {
     | yes x=y => yes (fin_nat-inj x=y)
     | no x/=y => no (\lam p => x/=y p)
@@ -165,7 +166,7 @@
 
 \instance FinField {n : Nat} {p : Prime (suc n)} : DiscreteField (Fin (suc n))
   | CRing => FinRing {n}
-  | zro/=ide => \case __ *> {Nat} mod_< (NatSemiring.suc<suc (nonZero>0 (\lam n=0 => p.notInv (transportInv (\lam x => Inv (suc x)) n=0 Inv.ide-isInv))))
+  | zro/=ide => \case __ *> {Nat} mod_< (NatOrder.suc<suc (nonZero>0 (\lam n=0 => p.notInv (transportInv (\lam x => Inv (suc x)) n=0 Inv.ide-isInv))))
   | finv x => (IntEuclidean.natDivMod (bezout (pos (suc n)) (pos x)).2 (suc n)).2 mod suc n
   | finv_zro => idp
   | finv-right {x} x/=0 =>

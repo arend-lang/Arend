@@ -3,6 +3,7 @@
 \import Algebra.Pointed.Sub
 \import Algebra.Ring.Localization
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Array
 \import Function.Iterate
 \import Logic

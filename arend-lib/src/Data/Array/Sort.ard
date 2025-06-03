@@ -1,4 +1,4 @@
-\import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Array.Perm
@@ -12,7 +12,7 @@
 \func sort {A : LinearOrder.Dec} (l : Array A) : Array A l.len
   => transport (\lam n => Array A n) (inv (Sort.Perm.perm_length (Sort.Insertion.sort-perm _)) *> toList_length) $ fromList (Sort.Insertion.sort (toList l))
   \where {
-    \func IsSorted {A : Preorder} (l : Array A) => \Pi {i j : Fin l.len} -> i NatSemiring.< j -> l i <= l j
+    \func IsSorted {A : Preorder} (l : Array A) => \Pi {i j : Fin l.len} -> i NatOrder.< j -> l i <= l j
 
     \lemma sorted_transport {A : Preorder} {n m : Nat} {l : Array A n} (p : n = m) (s : IsSorted l) : IsSorted (transport (\lam n => Array A n) p l) \elim p
       | idp => s
@@ -20,8 +20,8 @@
     \lemma list_sorted {A : Preorder} {l : List A} (s : Sort.Sorted l) : IsSorted (fromList l) \elim l, s
       | List.nil, Sort.sorted-nil => \lam {i} => \case i
       | x List.:: l, Sort.sorted-cons p s => \lam {i} {j} p => \case \elim i, \elim j, \elim p \with {
-        | 0, suc j, NatSemiring.zero<suc => p <=∘ headDef_fromList s
-        | suc i, suc j, NatSemiring.suc<suc p => list_sorted s p
+        | 0, suc j, NatOrder.zero<suc => p <=∘ headDef_fromList s
+        | suc i, suc j, NatOrder.suc<suc p => list_sorted s p
       }
       \where {
         \lemma headDef_fromList {a : A} {l : List A} {j : Fin (length l)} (s : Sort.Sorted l) : headDef a l <= fromList l j \elim l, j, s
@@ -33,8 +33,8 @@
       | nil => Sort.sorted-nil
       | a :: {n} l => Sort.sorted-cons (\case \elim n, \elim l, \elim s \with {
         | 0, nil, s => <=-refl
-        | suc n, b :: l, s => s {0} {1} NatSemiring.zero<suc
-      }) $ sorted_list \lam p => s (NatSemiring.suc<suc p)
+        | suc n, b :: l, s => s {0} {1} NatOrder.zero<suc
+      }) $ sorted_list \lam p => s (NatOrder.suc<suc p)
 
     \lemma sort-sorted {A : LinearOrder.Dec} {l : Array A} : IsSorted (sort l)
       => sorted_transport _ (list_sorted (Sort.Insertion.sort-sorted _))

@@ -1,4 +1,4 @@
-\import Arith.Nat
+\import Arith.Nat.Base
 \import Data.List
 \import Data.Or
 \import Logic

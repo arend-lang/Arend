@@ -12,6 +12,7 @@
 \import Algebra.Semiring
 \import Arith.Fin.Order
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Category
 \import Data.Array
 \import Data.Array.Perm
@@ -363,7 +364,7 @@
 \func isAlternating {R : Ring} {n : Nat} {A B : LModule R} (f : Array A n -> B) : \Prop
   => \Sigma (isMultiLinear f) (\Pi (l : Array A n) -> (\Sigma (i j : Fin n) (i < j) (l i = l j)) -> f l = 0)
   \where {
-    \open NatSemiring(<,zero<suc,suc<suc)
+    \open NatOrder
 
     \lemma to/= {f : Array A n -> B} (fa : isAlternating f) (l : Array A n) (t : \Sigma (i j : Fin n) (i /= j) (l i = l j)) : f l = 0
       => fa.2 l \case NatSemiring.trichotomy t.1 t.2 \with {

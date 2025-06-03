@@ -20,6 +20,7 @@
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Array
 \import Data.Or
 \import Function
@@ -403,7 +404,7 @@
     | 0 => idp
     | suc m => later (rewrite dp idp)
   }) polyCoef_*c *> zro-left
-  | padd p x, suc n => polyCoef_+ *> pmap2 (+) (leadCoef-product dp dq) (polyCoef_*c *> pmap (x *) (degree<=.toCoefs q m dq $ <_+-left m NatSemiring.zero<suc) *> zro_*-right) *> zro-right
+  | padd p x, suc n => polyCoef_+ *> pmap2 (+) (leadCoef-product dp dq) (polyCoef_*c *> pmap (x *) (degree<=.toCoefs q m dq $ <_+-left m NatOrder.zero<suc) *> zro_*-right) *> zro-right
 
 \lemma leadCoef_BigProd {R : Ring} {l : Array (Poly R)} (d : Array Nat l.len) (ld : \Pi (j : Fin l.len) -> degree<= (l j) (d j))
   : polyCoef (BigProd l) (AddMonoid.BigSum d) = R.BigProd (\lam j => polyCoef (l j) (d j)) \elim l, d
@@ -452,7 +453,7 @@
       : degree<= p 0 || degree<= q 0 \elim n, m
       | 0, m => byLeft dp
       | suc n, 0 => byRight dq
-      | suc n, suc m => \case zeroProduct $ inv (leadCoef-product dp dq) *> degree<=.toCoefs (p * q) 0 d {suc (suc (n + m))} NatSemiring.zero<suc \with {
+      | suc n, suc m => \case zeroProduct $ inv (leadCoef-product dp dq) *> degree<=.toCoefs (p * q) 0 d {suc (suc (n + m))} NatOrder.zero<suc \with {
         | byLeft c => aux (degree-reduce p n dp c) dq d
         | byRight c => aux dp (degree-reduce q m dq c) d
       }
@@ -559,7 +560,7 @@
   | pzero, n => ()
   | padd p e, 0 => cases (decideEq p 0, q) \with {
     | yes r, q => r
-    | no _, q => absurd (q NatSemiring.zero<suc)
+    | no _, q => absurd (q NatOrder.zero<suc)
   }
   | padd p e, suc n => degree_degree<= $ cases (decideEq p 0, q) \with {
     | yes r, q => rewrite r zero<=_
@@ -718,8 +719,8 @@
   | pzero, padd q a => \case q<p
   | padd p a, pzero => idp
   | padd p a, padd q a' => cases (decideEq p 0, decideEq q 0, q<p) \with {
-    | no p/=0, yes q=0, NatSemiring.zero<suc => rewrite (q=0, PolyRing.zro-right, decideEq/=_reduce p/=0) idp
-    | no p/=0, no q/=0, NatSemiring.suc<suc q<p => mcases \with {
+    | no p/=0, yes q=0, NatOrder.zero<suc => rewrite (q=0, PolyRing.zro-right, decideEq/=_reduce p/=0) idp
+    | no p/=0, no q/=0, NatOrder.suc<suc q<p => mcases \with {
       | yes p+q=0 => \case rewrite (inv $ rewrite p+q=0 in degree_+ q<p) in q<p
       | no _ => pmap suc (degree_+ q<p)
     }
@@ -730,8 +731,8 @@
   | pzero, padd q a => \case q<p
   | padd p a, pzero => idp
   | padd p a, padd q a' => cases (decideEq p 0, decideEq q 0, q<p) \with {
-    | no p/=0, yes q=0, NatSemiring.zero<suc => rewrite (q=0, PolyRing.zro-right, decideEq/=_reduce p/=0) idp
-    | no p/=0, no q/=0, NatSemiring.suc<suc q<p => mcases \with {
+    | no p/=0, yes q=0, NatOrder.zero<suc => rewrite (q=0, PolyRing.zro-right, decideEq/=_reduce p/=0) idp
+    | no p/=0, no q/=0, NatOrder.suc<suc q<p => mcases \with {
       | yes p+q=0 => \case rewrite (inv $ rewrite p+q=0 in degree_+ q<p) in q<p
       | no _ => leadCoef_+ q<p
     }
@@ -758,7 +759,7 @@
   \where
     \lemma degree_< (q/=0 : q /= 0) {a : R} {p : Poly R} (p/=0 : p /= 0) : degree (a PolyRing.*c q) < suc (degree (p * q))
       => \case decideEq a 0 \with {
-        | yes a=0 => rewrite (a=0,PolyRing.zro_*c) NatSemiring.zero<suc
+        | yes a=0 => rewrite (a=0,PolyRing.zro_*c) NatOrder.zero<suc
         | no a/=0 => rewrite (degree_*c a/=0, degree_* p/=0 q/=0) $ <=_+ zero<=_ <=-refl <∘r id<suc
       }
 
@@ -868,8 +869,8 @@
       | padd p a, padd q a' => cases (decideEq p 0, decideEq q 0, s, t) \with {
         | yes p=0, yes q=0, _, a=a' => absurd $ (rewrite (decideEq=_reduce q=0) in dq/=0) idp
         | no p/=0, no q/=0, s, t => mcases \with {
-          | yes _ => NatSemiring.zero<suc
-          | no p-q/=0 => NatSemiring.suc<suc $ diff-lem (pmap pred s) t
+          | yes _ => NatOrder.zero<suc
+          | no p-q/=0 => NatOrder.suc<suc $ diff-lem (pmap pred s) t
               \lam dq=0 => p-q/=0 $ AddGroup.toZero $ degree=0-lem (pmap pred s *> dq=0) *> pmap (padd pzero) t *> inv (degree=0-lem dq=0)
         }
       }

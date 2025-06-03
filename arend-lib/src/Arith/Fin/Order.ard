@@ -1,4 +1,5 @@
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Order.LinearOrder
 
 \instance FinOrder (n : Nat) : LinearOrder.Dec (Fin n)

@@ -3,6 +3,7 @@
 \import Algebra.Monoid
 \import Arith.Int
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Arith.Nat.Sequence
 \import Function.Meta
 \import Logic.Unique

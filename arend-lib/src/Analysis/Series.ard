@@ -7,6 +7,7 @@
 \import Analysis.FuncLimit
 \import Arith.Int
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
@@ -76,7 +77,7 @@
     | inP (N,g) => inP (N, \lam p => transport U (inv (midSum-diff $ suc<=suc p) *> midSum-diff p) $ g id<=suc $ suc<=suc p)
   }, \lam Sc => convergent-topAbGruop-char 2 0 \lam {U} Uo U0 => \case convergent-topAbGruop-char 0 1 Sc Uo U0 \with {
     | inP (N, g) => inP (suc N, \lam {n} => \case \elim n \with {
-      | 0 => \lam p => absurd $ p NatSemiring.zero<suc
+      | 0 => \lam p => absurd $ p NatOrder.zero<suc
       | suc n => \lam p => transport U (inv (midSum-diff $ suc<=suc.conv p) *> midSum-diff p) $ g <=-refl (suc<=suc.conv p)
     })
   })
@@ -96,7 +97,7 @@
 
 \lemma midSum-diff {A : AbGroup} {S : Series A} {n m : Nat} (p : n <= m) : midSum S n m = partialSum S m - partialSum S n \elim n, m
   | 0, m => inv $ rewrite (\peval partialSum S _, \peval partialSum S _) $ pmap (_ +) A.negative_zro *> zro-right
-  | suc n, 0 => absurd $ p NatSemiring.zero<suc
+  | suc n, 0 => absurd $ p NatOrder.zero<suc
   | suc n, suc m => midSum-diff (suc<=suc.conv p) *> rewrite (\peval partialSum S _, \peval partialSum S _, \peval partialSum _ _, \peval partialSum _ _) (inv A.sum-cancel-left)
 
 \lemma midSum_norm {A : PseudoNormedAbGroup} {S : Series A} {n m : Nat} : norm (midSum S n m) <= midSum (\lam j => norm (S j)) n m \elim n, m
@@ -111,15 +112,15 @@
 
 \lemma midSum-split {A : AddMonoid} {b : Series A} {n m k : Nat} (p : n <= m) (q : m <= k) : midSum b n k = midSum b n m + midSum b m k \elim n, m, k
   | 0, 0, k => rewrite (\peval partialSum _ _, \peval partialSum _ _) (inv zro-left)
-  | _, suc m, 0 => absurd (q NatSemiring.zero<suc)
+  | _, suc m, 0 => absurd (q NatOrder.zero<suc)
   | 0, suc m, suc k => (\peval partialSum _ _) *> pmap (_ +) (inv \peval partialSum (\lam j => b (suc j)) _) *> pmap (_ +) (midSum-split zero<=_ $ suc<=suc.conv q) *> pmap (_ + (__ + _)) (\peval partialSum (\lam j => b (suc j)) _) *> inv +-assoc *> pmap (`+ _) (inv \peval partialSum _ _)
-  | suc n, 0, _ => absurd (p NatSemiring.zero<suc)
+  | suc n, 0, _ => absurd (p NatOrder.zero<suc)
   | suc n, suc m, suc k => midSum-split (suc<=suc.conv p) (suc<=suc.conv q)
 
 \lemma midSum_<= {A : LinearlyOrderedAbMonoid} {b c : Series A} {n m : Nat} (s : \Pi {j : Nat} -> n <= j -> j < m -> b j <= c j) : midSum b n m <= midSum c n m \elim n, m
   | 0, m => rewrite (\peval partialSum _ _, \peval partialSum _ _) $ A.BigSum_<= \lam j => s zero<=_ (fin_< j)
   | suc n, 0 => <=-refl
-  | suc n, suc m => midSum_<= \lam p q => s (suc<=suc p) (NatSemiring.suc<suc q)
+  | suc n, suc m => midSum_<= \lam p q => s (suc<=suc p) (NatOrder.suc<suc q)
 
 \lemma midSum_0 {A : AddMonoid} {n m : Nat} : midSum (\lam _ => A.zro) n m = 0 \elim n, m
   | 0, m => (\peval partialSum _ _) *> A.BigSum_replicate0

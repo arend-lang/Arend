@@ -21,6 +21,7 @@
 \import Algebra.Semiring
 \import Arith.Fin
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Category
 \import Data.Array
 \import Data.Array.EPerm

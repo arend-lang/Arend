@@ -8,6 +8,7 @@
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Category.Functor
 \import Data.Array
 \import Data.Array.EPerm

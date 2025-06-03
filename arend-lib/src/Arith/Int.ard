@@ -4,6 +4,7 @@
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Nat
+\import Arith.Nat.Base
 \import Data.Bool
 \import Data.Or
 \import Function.Meta
@@ -442,7 +443,7 @@
 \lemma neg<=neg {n m : Nat} (p : n <= m) : neg m <= neg n \elim n, m
   | 0, 0 => <=-refl
   | 0, suc m => neg<=pos
-  | suc n, 0 => absurd $ p NatSemiring.zero<suc
+  | suc n, 0 => absurd $ p NatOrder.zero<suc
   | suc n, suc m => <=_+ {_} {neg 1} <=-refl $ neg<=neg (suc<=suc.conv p)
   \where
     \lemma conv {n m : Nat} (p : neg n <= neg m) : m <= n \elim n, m
