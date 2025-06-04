@@ -415,6 +415,24 @@
   \protected \func isClosed => \Pi {x : L} -> nucleus x <= nucleus bottom ∨ x
 
   \protected \func IsDense => nucleus bottom <= bottom
+} \where {
+  \protected \func exp {L : Locale} (j j' : Nucleus {L}) : Nucleus \cowith
+    | nucleus x => Meet \lam (p : \Sigma (y : L) (x <= y)) => j p.1 --> j' p.1
+    | nucleus-meet>= {a} {b} =>
+      \have lem {x y z : L} : (x ∧ y) ∧ z = (x ∧ z) ∧ (y ∧ z) => equation
+      \in Meet-univ \lam p => meet-monotone (Meet-cond $ later (a ∨ p.1, join-left)) (Meet-cond $ later (b ∨ p.1, join-left)) <=∘
+      exponent.1 (=_<= lem <=∘ meet-monotone (meet-monotone <=-refl (nucleus-<= join-right) <=∘ eval) (meet-monotone <=-refl (nucleus-<= join-right) <=∘ eval) <=∘
+                               nucleus-meet>= <=∘ nucleus-<= (ldistr>= <=∘ join-univ (L.rdistr>= <=∘ join-univ p.2 meet-left) meet-right))
+    | nucleus-<= x<=y => Meet-univ \lam p => Meet-cond (later (p.1, x<=y <=∘ p.2)) <=∘ exponent.1 eval
+    | nucleus-unit => Meet-univ \lam p => exponent.1 $ meet-left <=∘ p.2 <=∘ nucleus-unit
+    | nucleus-join>= => Meet-univ \lam p => Meet-cond (later (j p.1 --> j' p.1, Meet-cond p)) <=∘ exponent_monotone <=-refl (Nucleus.nucleus_exponent nucleus-join>=) <=∘
+                                                                                                  =_<= exponent-double <=∘ exponent_monotone (meet-univ (nucleus-<= $ exponent.1 $ meet-left <=∘ nucleus-unit) <=-refl) <=-refl
+
+  \protected \lemma exp-univ1 {L : Locale} {j k n : Nucleus {L}} (p : \Pi {x : L} -> NucleusFrame.meet j k x <= n x) {x : L} : j x <= exp k n x
+    => Meet-univ \lam q => exponent.1 $ meet-monotone (nucleus-<= q.2) <=-refl <=∘ p
+
+  \protected \lemma exp-univ2 {L : Locale} {k n : Nucleus {L}} {x y : L} (p : y <= exp k n x) : y ∧ k x <= n x
+    => exponent.2 $ p <=∘ Meet-cond (later (x,<=-refl))
 }
 
 -- | The order of nuclei is inversed. That is, `n <= m` iff `m.locale` is a sublocale of `n.locale`.
@@ -449,27 +467,9 @@
   }
   | Join-cond j {g} {x} => Join-cond $ later (g j x, \lam p => p.2 j)
   | Join-univ c {x} => Join-univ \lam p => p.2 (_,c)
-  | Join-ldistr>= {J} {g} {k} {x} => Join-ldistr>= <=∘ Join-univ (\lam p => Meet-univ \lam q => =_<= meet-comm <=∘ exp-univ2 (p.2 (exp k q.1, \lam j => exp-univ1 \lam {y} => =_<= meet-comm <=∘ q.2 j)))
+  | Join-ldistr>= {J} {g} {k} {x} => Join-ldistr>= <=∘ Join-univ (\lam p => Meet-univ \lam q => =_<= meet-comm <=∘ Nucleus.exp-univ2 (p.2 (Nucleus.exp k q.1, \lam j => Nucleus.exp-univ1 \lam {y} => =_<= meet-comm <=∘ q.2 j)))
   \where {
     \open Topology.Locale(NucleusFrame)
-
-    \func exp {L : Locale} (j j' : Nucleus {L}) : Nucleus \cowith
-      | nucleus x => Meet \lam (p : \Sigma (y : L) (x <= y)) => j p.1 --> j' p.1
-      | nucleus-meet>= {a} {b} =>
-        \have lem {x y z : L} : (x ∧ y) ∧ z = (x ∧ z) ∧ (y ∧ z) => equation
-        \in Meet-univ \lam p => meet-monotone (Meet-cond $ later (a ∨ p.1, join-left)) (Meet-cond $ later (b ∨ p.1, join-left)) <=∘
-          exponent.1 (=_<= lem <=∘ meet-monotone (meet-monotone <=-refl (nucleus-<= join-right) <=∘ eval) (meet-monotone <=-refl (nucleus-<= join-right) <=∘ eval) <=∘
-            nucleus-meet>= <=∘ nucleus-<= (ldistr>= <=∘ join-univ (L.rdistr>= <=∘ join-univ p.2 meet-left) meet-right))
-      | nucleus-<= x<=y => Meet-univ \lam p => Meet-cond (later (p.1, x<=y <=∘ p.2)) <=∘ exponent.1 eval
-      | nucleus-unit => Meet-univ \lam p => exponent.1 $ meet-left <=∘ p.2 <=∘ nucleus-unit
-      | nucleus-join>= => Meet-univ \lam p => Meet-cond (later (j p.1 --> j' p.1, Meet-cond p)) <=∘ exponent_monotone <=-refl (Nucleus.nucleus_exponent nucleus-join>=) <=∘
-          =_<= exponent-double <=∘ exponent_monotone (meet-univ (nucleus-<= $ exponent.1 $ meet-left <=∘ nucleus-unit) <=-refl) <=-refl
-
-    \lemma exp-univ1 {L : Locale} {j k n : Nucleus {L}} (p : \Pi {x : L} -> meet j k x <= n x) {x : L} : j x <= exp k n x
-      => Meet-univ \lam q => exponent.1 $ meet-monotone (nucleus-<= q.2) <=-refl <=∘ p
-
-    \lemma exp-univ2 {L : Locale} {k n : Nucleus {L}} {x y : L} (p : y <= exp k n x) : y ∧ k x <= n x
-      => exponent.2 $ p <=∘ Meet-cond (later (x,<=-refl))
 
     \func <=-map {L : Locale} (j j' : Nucleus {L}) (j<=j' : j <= j') : FrameHom j.locale j'.locale \cowith
       | func x => (j' x.1, nucleus-join>=)

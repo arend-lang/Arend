@@ -33,6 +33,25 @@
     | U-rounded => isDense
 }
 
+\lemma real_meet_U {a b : Rat} {x : ExtendedUpperReal} (x<a : x.U a) (x<b : x.U b) : x.U (a ∧ b)
+  => \case TotalOrder.meet-isMin a b \with {
+    | byLeft p => rewrite p x<a
+    | byRight p => rewrite p x<b
+  }
+
+\record UpperReal \extends ExtendedUpperReal {
+  | U-inh : ∃ U
+
+  \lemma natBounded : ∃ (n : Nat) (U n)
+    => \case U-inh \with {
+      | inP (a,Ua) => inP (iabs $ rat_ceiling a, U_<= Ua $ rat_ceiling>=id <=∘ later (rewrite iabs=abs $ fromInt_<= LinearlyOrderedAbGroup.abs>=id))
+    }
+} \where {
+  \use \coerce fromRat (x : Rat) : UpperReal \cowith
+    | ExtendedUpperReal => ExtendedUpperReal.fromRat x
+    | U-inh => inP (x + 1, linarith)
+}
+
 \instance ExtendedUpperRealAbMonoid : BiorderedLatticeAbMonoid ExtendedUpperReal
   | zro => UpperReal.fromRat 0
   | + => +
@@ -147,23 +166,4 @@
 
     \lemma join_U {x y : ExtendedUpperReal} {a : Rat} : UpperReal.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
       => rewrite (\peval join x y) <->refl
-  }
-
-\record UpperReal \extends ExtendedUpperReal {
-  | U-inh : ∃ U
-
-  \lemma natBounded : ∃ (n : Nat) (U n)
-    => \case U-inh \with {
-      | inP (a,Ua) => inP (iabs $ rat_ceiling a, U_<= Ua $ rat_ceiling>=id <=∘ later (rewrite iabs=abs $ fromInt_<= LinearlyOrderedAbGroup.abs>=id))
-    }
-} \where {
-  \use \coerce fromRat (x : Rat) : UpperReal \cowith
-    | ExtendedUpperReal => ExtendedUpperReal.fromRat x
-    | U-inh => inP (x + 1, linarith)
-}
-
-\lemma real_meet_U {a b : Rat} {x : ExtendedUpperReal} (x<a : x.U a) (x<b : x.U b) : x.U (a ∧ b)
-  => \case TotalOrder.meet-isMin a b \with {
-    | byLeft p => rewrite p x<a
-    | byRight p => rewrite p x<b
   }

@@ -1,4 +1,4 @@
-\import Algebra.Domain.Euclidean
+\import Algebra.Domain.Euclidean \hiding (IntDomain)
 \import Algebra.Domain.GCD
 \import Algebra.Group
 \import Algebra.Monoid

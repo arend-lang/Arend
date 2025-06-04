@@ -353,7 +353,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     Map<GlobalReferable, List<TCDefReferable>> instances = new LinkedHashMap<>();
     for (Concrete.ResolvableDefinition definition : definitions) {
       Set<TCDefReferable> dependencies = new LinkedHashSet<>();
-      definition.accept(new CollectDefCallsVisitor(dependencies, true, true, myInstanceScopeProvider.getInstancesFor(definition.getData()), myConcreteProvider, definition instanceof Concrete.ClassDefinition ? definition : definition.getEnclosingClass() == null ? null : myConcreteProvider.getConcrete(definition.getEnclosingClass())), null);
+      definition.accept(new CollectDefCallsVisitor(dependencies, true, true, myInstanceScopeProvider.getInstancesFor(definition.getData()), myConcreteProvider, definition), null);
       dependencies.retainAll(cycleRefs);
       if (!dependencies.isEmpty()) {
         instances.put(definition.getData(), new ArrayList<>(dependencies));

@@ -14,16 +14,19 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   private ArendInstances myInstances;
   private Map<TCDefReferable, List<TCDefReferable>> myInstanceMap;
   private final ConcreteProvider myConcreteProvider;
-  private final Concrete.ClassDefinition myDefinition;
+  private final Concrete.GeneralDefinition myDefinition;
+  private final Concrete.ClassDefinition myClassDefinition;
   private Set<TCDefReferable> mySuperClasses;
   private Set<TCDefReferable> myExcluded;
 
-  public CollectDefCallsVisitor(Collection<TCDefReferable> dependencies, boolean withBodies, boolean onlyInstances, ArendInstances instances, ConcreteProvider concreteProvider, Concrete.GeneralDefinition definition) {
+  public CollectDefCallsVisitor(Collection<TCDefReferable> dependencies, boolean withBodies, boolean onlyInstances, ArendInstances instances, ConcreteProvider concreteProvider, Concrete.ResolvableDefinition definition) {
     myDependencies = dependencies;
     myWithBodies = withBodies;
     myOnlyInstances = onlyInstances;
     myInstances = instances;
-    myDefinition = definition instanceof Concrete.ClassDefinition classDef ? classDef : null;
+    myDefinition = definition;
+    myClassDefinition = definition instanceof Concrete.ClassDefinition classDef ? classDef : definition == null || definition.getEnclosingClass() == null ? null
+        : concreteProvider.getConcrete(definition.getEnclosingClass()) instanceof Concrete.ClassDefinition classDef ? classDef : null;
     myConcreteProvider = concreteProvider;
   }
 
@@ -120,27 +123,14 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
     while (!toVisit.isEmpty()) {
       TCDefReferable last = toVisit.removeLast();
       if (visited.add(last)) {
-        myInstanceMap.computeIfAbsent(last, k -> new ArrayList<>()).add(instance);
+        if (!(myDefinition instanceof Concrete.CoClauseFunctionDefinition function && instance.equals(function.getUseParent()))) {
+          myInstanceMap.computeIfAbsent(last, k -> new ArrayList<>()).add(instance);
+        }
         if (myConcreteProvider.getConcrete(last) instanceof Concrete.ClassDefinition classDef) {
           for (Concrete.ReferenceExpression refExpr : classDef.getSuperClasses()) {
             if (refExpr.getReferent() instanceof TCDefReferable superClass) {
               toVisit.add(superClass);
             }
-          }
-        }
-      }
-    }
-  }
-
-  private void getSuperClasses() {
-    List<Concrete.ClassDefinition> toVisit = new ArrayList<>();
-    toVisit.add(myDefinition);
-    while (!toVisit.isEmpty()) {
-      Concrete.ClassDefinition last = toVisit.removeLast();
-      if (mySuperClasses.add(last.getRef())) {
-        for (Concrete.ReferenceExpression refExpr : last.getSuperClasses()) {
-          if (refExpr.getReferent() instanceof TCDefReferable superClassRef && myConcreteProvider.getConcrete(superClassRef) instanceof Concrete.ClassDefinition superClass) {
-            toVisit.add(superClass);
           }
         }
       }
@@ -158,11 +148,23 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
       }
     }
 
-    if (myDefinition == null) {
+    if (myClassDefinition == null) {
       mySuperClasses = Collections.emptySet();
-    } else {
-      mySuperClasses = new HashSet<>();
-      getSuperClasses();
+      return;
+    }
+
+    mySuperClasses = new HashSet<>();
+    List<Concrete.ClassDefinition> toVisit = new ArrayList<>();
+    toVisit.add(myClassDefinition);
+    while (!toVisit.isEmpty()) {
+      Concrete.ClassDefinition last = toVisit.removeLast();
+      if (mySuperClasses.add(last.getRef())) {
+        for (Concrete.ReferenceExpression refExpr : last.getSuperClasses()) {
+          if (refExpr.getReferent() instanceof TCDefReferable superClassRef && myConcreteProvider.getConcrete(superClassRef) instanceof Concrete.ClassDefinition superClass) {
+            toVisit.add(superClass);
+          }
+        }
+      }
     }
   }
 

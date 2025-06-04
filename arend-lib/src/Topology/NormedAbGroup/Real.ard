@@ -41,6 +41,21 @@
   | norm_+ => transportInv (_ <=) RealAbGroup.+-rat $ rat_real_<=.1 abs_+
   | norm-ext p => abs_zro-ext $ Real.fromRat-inj p
 
+\func rat_real : NormedIsometricMap RatNormed RealNormedAbGroup Real.fromRat \cowith
+  | func-+ => inv RealAbGroup.+-rat
+  | func-norm-isometry => inv rat_real_abs
+  \where {
+    \lemma dense : rat_real.IsDense
+      => \lam {y} {U} Uo Uy => \case (dist_open {RealNormedAbGroup} {U}).1 Uo Uy \with {
+        | inP (eps,eps>0,p) => \case real_<-rat-char.1 $ transport (`< _) zro-right $ <_+-right y eps>0 \with {
+          | inP (x,y<x,x<y+eps) => inP (x, inP (x, idp), p $ unfold VOBall $ rewrite RealNormedAbGroup.norm-dist $ abs_-_< (transport (_ <) negative-right (RealAbGroup.<_+-left _ $ real_<_U.2 y<x) <∘ eps>0) $ transport2 (<) +-comm (inv +-assoc *> pmap (`+ _) negative-left *> zro-left) $ <_+-right (negative y) $ real_<_L.2 x<y+eps)
+        }
+      }
+
+    \lemma dense-coverEmbedding : CoverMap.IsDenseEmbedding {rat_real}
+      => (dense, rat_real.embedding->coverEmbedding (rat_real.dense->uniformEmbedding dense).2)
+  }
+
 \instance RealNormed : CompleteNormedAbGroup
   | NormedAbGroup => RealNormedAbGroup
   | isStronglyComplete => dense-stronglyComplete (rat_real.dense->weaklyDense rat_real.dense, rat_real.embedding->coverEmbedding (rat_real.dense->uniformEmbedding rat_real.dense).2)
@@ -82,21 +97,6 @@
       | LU-focus eps eps>0 => \case cauchyFilter-metric-char.1 F.isCauchyFilter {eps * ratio 1 4} (real_<_L.2 linarith) \with {
         | inP (x,FB) => inP (x - eps * ratio 1 2, inP (x, _, linarith, FB, linarith), inP (x, _, linarith, FB, linarith))
       }
-  }
-
-\func rat_real : NormedIsometricMap RatNormed RealNormedAbGroup Real.fromRat \cowith
-  | func-+ => inv RealAbGroup.+-rat
-  | func-norm-isometry => inv rat_real_abs
-  \where {
-    \lemma dense : rat_real.IsDense
-      => \lam {y} {U} Uo Uy => \case (dist_open {RealNormedAbGroup} {U}).1 Uo Uy \with {
-        | inP (eps,eps>0,p) => \case real_<-rat-char.1 $ transport (`< _) zro-right $ <_+-right y eps>0 \with {
-          | inP (x,y<x,x<y+eps) => inP (x, inP (x, idp), p $ unfold VOBall $ rewrite RealNormedAbGroup.norm-dist $ abs_-_< (transport (_ <) negative-right (RealAbGroup.<_+-left _ $ real_<_U.2 y<x) <∘ eps>0) $ transport2 (<) +-comm (inv +-assoc *> pmap (`+ _) negative-left *> zro-left) $ <_+-right (negative y) $ real_<_L.2 x<y+eps)
-        }
-      }
-
-    \lemma dense-coverEmbedding : CoverMap.IsDenseEmbedding {rat_real}
-      => (dense, rat_real.embedding->coverEmbedding (rat_real.dense->uniformEmbedding dense).2)
   }
 
 \func open-rat-int (a b : Rat) : Set Real

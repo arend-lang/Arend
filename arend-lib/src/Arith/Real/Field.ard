@@ -39,22 +39,7 @@
 \open DiscreteOrderedField
 \open LinearOrder \hiding (<=)
 
-\instance RealRatAlgebra : OrderedFieldAlgebra RatField
-  | OrderedField => RealField
-  | *c a x => Real.fromRat a RealField.* x
-  | *c-assoc => pmap (RealField.`* _) (inv RealField.*-rat) *> RealField.*-assoc
-  | *c-ldistr => RealField.ldistr
-  | *c-rdistr => pmap (RealField.`* _) (inv RealAbGroup.+-rat) *> RealField.rdistr
-  | ide_*c => RealField.ide-left
-  | *c-comm-left => inv RealField.*-assoc
-  | coefMap => Real.fromRat
-  | coefMap_*c => inv RealField.ide-right
-  | coef_< p => real_<-rat-char.2 (isDense p)
-  | coef_<-inv p => \case real_<-rat-char.1 p \with {
-    | inP (a,x<a,a<y) => x<a <∘ a<y
-  }
-
-\instance RealField : OrderedField Real
+\instance RealField : OrderedFieldAlgebra RatField Real
   | LinearlyOrderedAbGroup => RealAbGroup
   | ide => 1
   | * => *
@@ -96,6 +81,18 @@
           | inr c1>=0, inr d1<=0 => absurd $ <-irreflexive $ c1>=0 <∘r c1<d1 <∘l d1<=0
         }
     }
+  }
+  | *c a x => Real.fromRat a * x
+  | *c-assoc => {?} -- TODO[server2]: pmap (`* _) (inv *-rat) *> RealField.*-assoc
+  | *c-ldistr => {?} -- TODO[server2]: RealField.ldistr
+  | *c-rdistr => {?} -- TODO[server2]: pmap (`* _) (inv RealAbGroup.+-rat) *> RealField.rdistr
+  | ide_*c => {?} -- TODO[server2]: RealField.ide-left
+  | *c-comm-left => {?} -- TODO[server2]: inv RealField.*-assoc
+  | coefMap => Real.fromRat
+  | coefMap_*c => {?} -- TODO[server2]: inv RealField.ide-right
+  | coef_< p => real_<-rat-char.2 (isDense p)
+  | coef_<-inv p => \case real_<-rat-char.1 p \with {
+    | inP (a,x<a,a<y) => x<a <∘ a<y
   }
   \where {
     \open Semigroup(* \as \infixl 7 *')

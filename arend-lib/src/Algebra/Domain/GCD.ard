@@ -4,7 +4,7 @@
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Sub
 \import Algebra.Ring
-\import Algebra.Ring.Localization
+\import Algebra.Ring.Localization \hiding (FieldOfQuotients)
 \import Algebra.Ring.Poly
 \import Algebra.Semiring
 \import Arith.Nat.Base

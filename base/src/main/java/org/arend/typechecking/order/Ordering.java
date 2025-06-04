@@ -140,7 +140,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   @Override
   protected boolean forDependencies(Concrete.ResolvableDefinition definition, Consumer<Concrete.ResolvableDefinition> consumer) {
     Set<TCDefReferable> dependencies = new LinkedHashSet<>();
-    CollectDefCallsVisitor visitor = new CollectDefCallsVisitor(dependencies, myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal(), false, myStage.ordinal() < Stage.WITHOUT_INSTANCES.ordinal() ? myInstanceScopeProvider.getInstancesFor(definition.getData()) : null, myConcreteProvider, definition instanceof Concrete.ClassDefinition ? definition : definition.getEnclosingClass() == null ? null : myConcreteProvider.getConcrete(definition.getEnclosingClass()));
+    CollectDefCallsVisitor visitor = new CollectDefCallsVisitor(dependencies, myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal(), false, myStage.ordinal() < Stage.WITHOUT_INSTANCES.ordinal() ? myInstanceScopeProvider.getInstancesFor(definition.getData()) : null, myConcreteProvider, definition);
 
     if (definition.getEnclosingClass() != null) {
       visitor.addDependency(definition.getEnclosingClass());
@@ -218,76 +218,28 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
       return;
     }
 
-    boolean hasInstances = false;
-    for (Concrete.ResolvableDefinition definition : scc) {
-      if (definition instanceof Concrete.FunctionDefinition && ((Concrete.FunctionDefinition) definition).getKind() == FunctionKind.INSTANCE) {
-        if (myStage.ordinal() >= Stage.WITHOUT_INSTANCES.ordinal()) {
-          myOrderingListener.cycleFound(scc, false);
-          return;
-        }
-        hasInstances = true;
-        break;
-      }
-    }
-
     Set<TCDefReferable> dependencies = new HashSet<>();
     for (Concrete.ResolvableDefinition definition : scc) {
       dependencies.add(definition.getData());
     }
 
-    if (hasInstances) {
-      Map<TCDefReferable, Concrete.FunctionDefinition> instanceMap = new HashMap<>();
-      for (Concrete.ResolvableDefinition definition : scc) {
-        if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind() == FunctionKind.INSTANCE) {
-          instanceMap.put(definition.getData(), funDef);
-        }
-      }
-
-      TarjanSCC<TCDefReferable> tarjan = new TarjanSCC<>() {
-        @Override
-        protected boolean forDependencies(TCDefReferable unit, Consumer<TCDefReferable> consumer) {
-          boolean[] withLoops = new boolean[] { false };
-          for (TCDefReferable instance : myInstanceScopeProvider.getInstancesFor(unit).getInstances()) {
-            if (instanceMap.containsKey(instance)) {
-              consumer.accept(instance);
-              if (unit.equals(instance)) {
-                withLoops[0] = true;
-              }
-            }
-          }
-          return withLoops[0];
-        }
-
-        @Override
-        protected void sccFound(List<TCDefReferable> scc) {
-          List<Concrete.ResolvableDefinition> defs = new ArrayList<>(scc.size());
-          for (TCDefReferable ref : scc) {
-            Concrete.FunctionDefinition def = instanceMap.get(ref);
-            if (def != null) defs.add(def);
-          }
-          if (!defs.isEmpty()) {
-            myOrderingListener.cycleFound(defs, true);
-          }
-        }
-      };
-      for (Concrete.ResolvableDefinition definition : scc) {
-        if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind() == FunctionKind.INSTANCE) {
-          tarjan.order(definition.getData());
-        }
-      }
-
-      Ordering ordering = new Ordering(this, dependencies, Stage.WITHOUT_INSTANCES);
-      for (Concrete.ResolvableDefinition definition : scc) {
-        ordering.order(definition);
-      }
-      return;
-    }
-
+    boolean ok = false;
+    boolean allMeta = true;
     for (Concrete.ResolvableDefinition definition : scc) {
-      if (definition instanceof Concrete.ClassDefinition || !definition.getUsedDefinitions().isEmpty()) {
+      if (definition instanceof Concrete.ClassDefinition || !definition.getUsedDefinitions().isEmpty() || definition instanceof Concrete.FunctionDefinition function && function.getKind() == FunctionKind.INSTANCE && !(function.getBody() instanceof Concrete.ElimFunctionBody)) {
         myOrderingListener.cycleFound(scc, false);
         return;
       }
+      if (definition instanceof Concrete.DataDefinition || definition instanceof Concrete.FunctionDefinition function && function.getBody() instanceof Concrete.ElimFunctionBody) {
+        ok = true;
+      }
+      if (!(definition instanceof Concrete.MetaDefinition)) {
+        allMeta = false;
+      }
+    }
+    if (!ok && !allMeta) {
+      myOrderingListener.cycleFound(scc, false);
+      return;
     }
 
     Set<TCDefReferable> defSet = new HashSet<>();
