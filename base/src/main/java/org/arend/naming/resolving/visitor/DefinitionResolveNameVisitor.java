@@ -246,6 +246,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     if (body instanceof Concrete.TermFunctionBody) {
       ((Concrete.TermFunctionBody) body).setTerm(((Concrete.TermFunctionBody) body).getTerm().accept(exprVisitor, null));
     }
+    boolean instanceTypeOK = true;
     if (body instanceof Concrete.CoelimFunctionBody) {
       DynamicScopeProvider provider = def.getResultType() == null ? null : myTypingInfo.getBodyDynamicScopeProvider(def.getResultType());
       if (provider != null) {
@@ -255,6 +256,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
           }
         }
       } else {
+        instanceTypeOK = false;
         myLocalErrorReporter.report(def.getResultType() != null ? new NameResolverError("Expected a class", def.getResultType()) : new NameResolverError("The type of a function defined by copattern matching must be specified explicitly", def));
         body.getCoClauseElements().clear();
       }
@@ -314,6 +316,10 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
     }
 
     SyntacticDesugarVisitor.desugar(def, myLocalErrorReporter, myTypingInfo);
+
+    if (instanceTypeOK && def.getKind() == FunctionKind.INSTANCE && ArendInstances.getClassRef(def.getResultType(), myConcreteProvider) == null) {
+      myLocalErrorReporter.report(new NameResolverError("Expected a class", def.getResultType() == null ? def : def.getResultType()));
+    }
 
     if (def instanceof Concrete.CoClauseFunctionDefinition function && def.getKind() == FunctionKind.FUNC_COCLAUSE && function.getNumberOfExternalParameters() > 0) {
       BaseConcreteExpressionVisitor<Void> visitor = new BaseConcreteExpressionVisitor<>() {

@@ -98,7 +98,7 @@ public class CycleError extends GeneralError {
     if (!myInstances.isEmpty()) {
       List<Doc> list = new ArrayList<>();
       for (Map.Entry<GlobalReferable, List<TCDefReferable>> entry : myInstances.entrySet()) {
-        list.add(hList(entry.getKey() instanceof LocatedReferable ref ? text(ref.getModulePath() + ":" + ref.getRefLongName()) : refDoc(entry.getKey()), text(": "), hSep(text(", "), entry.getValue().stream().map(DocFactory::refDoc).toList())));
+        list.add(hList(entry.getKey() instanceof LocatedReferable ref ? text((modules.size() > 1 ? ref.getModulePath() + ":" : "") + ref.getRefLongName()) : refDoc(entry.getKey()), text(": "), hSep(text(", "), entry.getValue().stream().map(DocFactory::refDoc).toList())));
       }
       result = vList(result, vHang(text("Instance dependencies:"), vList(list)));
     }

@@ -271,17 +271,6 @@
       | func-ide => idp
       | func-* => idp
 
-    -- | If the original monoid is cancellative, then so is the quotient monoid.
-    \instance DivQuotientCancelMonoid (M : CancelCMonoid) : UnitlessMonoid
-      | CMonoid => DivQuotientMonoid M
-      | cancel_*-left (inD x) {inD y} {inD z} x*y=x*z => path (~-equiv y z (
-          \case make~ x*y=x*z \return y ~ z \with {
-            | (inP x*z|x*y, inP x*y|x*z) => (inP (LDiv.cancel-left x x*z|x*y), inP (LDiv.cancel-left x x*y|x*z))
-          }))
-      | uniqueUnit (j : Inv) => \case j.val \as [x], j.inv \as [y], j.inv-right : [x] * [y] = inD ide \return [x] = inD ide \with {
-        | inD x, inD y, p => path (~-equiv x ide (inv~ide (\have d : LDiv x ide => div-from~ (\new LDiv { | inv => inD y | inv-right => p }) \in Inv.rmake d.inv d.inv-right)))
-      }
-
     \lemma inv~ide {M : CMonoid} (i : Inv {M}) : i ~ ide =>
       (inP (\new LDiv ide i i ide-left), inP (\new LDiv i ide i.inv i.inv-right))
 
@@ -300,6 +289,17 @@
       => \case div-from~' d \with {
            | inP r => r
          }
+
+    -- | If the original monoid is cancellative, then so is the quotient monoid.
+    \instance DivQuotientCancelMonoid (M : CancelCMonoid) : UnitlessMonoid
+      | CMonoid => DivQuotientMonoid M
+      | cancel_*-left (inD x) {inD y} {inD z} x*y=x*z => path (~-equiv y z (
+          \case make~ x*y=x*z \return y ~ z \with {
+            | (inP x*z|x*y, inP x*y|x*z) => (inP (LDiv.cancel-left x x*z|x*y), inP (LDiv.cancel-left x x*y|x*z))
+          }))
+      | uniqueUnit (j : Inv) => \case j.val \as [x], j.inv \as [y], j.inv-right : [x] * [y] = inD ide \return [x] = inD ide \with {
+        | inD x, inD y, p => path (~-equiv x ide (inv~ide (\have d : LDiv x ide => div-from~ (\new LDiv { | inv => inD y | inv-right => p }) \in Inv.rmake d.inv d.inv-right)))
+      }
 
     \func map {M N : CMonoid} (f : MonoidHom M N) : MonoidHom (DivQuotientMonoid M) (DivQuotientMonoid N) \cowith
       | func => Quotient.map f \lam p => later (TruncP.map p.1 f.func-LDiv, TruncP.map p.2 f.func-LDiv)

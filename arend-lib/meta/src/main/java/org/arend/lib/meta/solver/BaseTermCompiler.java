@@ -57,8 +57,8 @@ public abstract class BaseTermCompiler {
     if (kind == RingKind.INT || kind == RingKind.RAT) {
       CoreFunctionDefinition subInstance = kind == RingKind.INT ? meta.NatSemiring : meta.IntRing;
       TypedExpression typed = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(factory.ref(subInstance.getRef()), null));
-      if (typed != null) {
-        subTermCompiler = newInstance((CoreClassCallExpression) subInstance.getResultType(), typed, kind == RingKind.INT ? RingKind.NAT : RingKind.INT, typechecker, marker, values, positiveVars, kind == RingKind.INT, kind == RingKind.RAT);
+      if (typed != null && subInstance.getResultType() instanceof CoreClassCallExpression subClassCall) {
+        subTermCompiler = newInstance(subClassCall, typed, kind == RingKind.INT ? RingKind.NAT : RingKind.INT, typechecker, marker, values, positiveVars, kind == RingKind.INT, kind == RingKind.RAT);
       }
     }
     this.toInt = toInt;

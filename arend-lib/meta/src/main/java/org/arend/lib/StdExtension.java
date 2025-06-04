@@ -9,7 +9,6 @@ import org.arend.ext.typechecking.meta.TrivialMetaTypechecker;
 import org.arend.ext.core.definition.*;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.dependency.Dependency;
-import org.arend.ext.dependency.ArendDependencyProvider;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.MetaRef;
@@ -100,21 +99,6 @@ public class StdExtension implements ArendExtension {
   @Override
   public void setConcreteFactory(@NotNull ConcreteFactory factory) {
     this.factory = factory;
-  }
-
-  @Override
-  public void load(@NotNull ArendDependencyProvider provider) {
-    provider.load(this);
-    provider.getDefinition(new ModulePath("Set"), new LongName("ProductDecide"), CoreFunctionDefinition.class);
-    provider.getDefinition(new ModulePath("Set"), new LongName("NotDecide"), CoreFunctionDefinition.class);
-    provider.getDefinition(new ModulePath("Set"), new LongName("EqualityDecide"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Data.List"), new LongName("ListMonoid"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Arith.Nat"), new LongName("NatSemiring"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Arith.Int"), new LongName("IntRing"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Order.Lexicographical"), new LongName("LexicographicalProduct"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Order.Lexicographical"), new LongName("LexicographicalList"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Algebra.Domain.Euclidean"), new LongName("NatEuclidean"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Algebra.Monoid.GCD"), LongName.fromString("DivQuotient.DivQuotientGCDMonoid"), CoreFunctionDefinition.class);
   }
 
   private static final String LIBRARY_NAME = "arend-lib";

@@ -50,7 +50,7 @@
     | no q => no \lam p => q p.1
   }
 
-\instance ProductDecide (A B : Decide) => SigmaDecide {A} (\lam _ => B)
+\instance ProductDecide (A B : Decide) : Decide => SigmaDecide {A} (\lam _ => B)
 
 \lemma NotDec {P : \Prop} (d : Dec P) : Dec (Not P) \elim d
   | yes a => no \lam f => f a
