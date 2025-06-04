@@ -1,7 +1,6 @@
 \import Algebra.Domain.Euclidean
 \import Algebra.Domain.GCD
 \import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Ring

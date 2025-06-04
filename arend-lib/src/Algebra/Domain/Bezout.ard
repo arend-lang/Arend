@@ -1,6 +1,5 @@
 \import Algebra.Domain.GCD(GCDDomain)
 \import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Ring

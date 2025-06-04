@@ -2,7 +2,6 @@
 \import Algebra.Domain
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ring
 \import Algebra.Semiring
@@ -139,7 +138,7 @@
     => >0_pos (negative_positive x<0)
 
   \lemma positive_negative' {x : E} (x>0 : isPos x) : isNeg (negative x)
-    => unfold (simplify x>0)
+    => {?} -- TODO[server2]: unfold (simplify x>0)
 
   \lemma positive_negative {x : E} (x>0 : x > zro) : negative x < zro
     => transport isPos (unfold (-) $ rewrite (negative-isInv,negative_zro) (zro-right *> inv zro-left)) x>0
@@ -163,17 +162,17 @@
     => transport (`< _) negative-isInv (negative_< p)
 
   \lemma <-diff-mid {x y z : E} (p : x - y < z) : x < z + y
-    => simplify in <_+-left y p
+    => {?} -- TODO[server2]: simplify in <_+-left y p
 
   \lemma <-diff-mid-conv {x y z : E} (p : x < z + y) : x - y < z
-    => simplify in <_+-left (negative y) p
+    => {?} -- TODO[server2]: simplify in <_+-left (negative y) p
 } \where {
   \type \infix 4 < {A : PreorderedAddGroup} (x y : A) => isPos (y - x)
 }
 
 \class OrderedAbGroup \extends OrderedAbMonoid, OrderedAddGroup, AbGroup {
   \lemma <-diff-left {x y z : E} (p : x - y < z) : x - z < y
-    => (simplify, rewrite +-comm) in <_+-right (negative z) (<-diff-mid p)
+    => {?} -- TODO[server2]: (simplify, rewrite +-comm) in <_+-right (negative z) (<-diff-mid p)
 }
 
 \class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid {
@@ -229,7 +228,7 @@
     => join-univ (<=_+ join-left join-left) $ rewrite (negative_+,+-comm) $ <=_+ join-right join-right
 
   \lemma abs_- {x y : E} : abs (x - y) = abs (y - x)
-    => pmap abs (inv negative-isInv) *> abs_negative *> simplify
+    => {?} -- TODO[server2]: pmap abs (inv negative-isInv) *> abs_negative *> simplify
 
   \lemma abs_-left {x y : E} : abs x - abs y <= abs (x - y)
     => transport (_ <=) (+-assoc *> pmap (_ +) negative-right *> zro-right) $ <=_+ (transport (abs __ <= _) (+-assoc *> pmap (x +) negative-left *> zro-right) abs_+) <=-refl
@@ -247,7 +246,7 @@
     => transportInv (_ <=) negative_+ (later $ rewrite negative-isInv <=-refl) <=∘ abs>=neg
 
   \lemma abs_-_< {x y z : E} (p : x - y < z) (q : y - x < z) : abs (x - y) < z
-    => <_join-univ p (simplify q)
+    => {?} -- TODO[server2]: <_join-univ p (simplify q)
 }
 
 \class OrderedSemiring \extends Semiring, OrderedAbMonoid {
@@ -785,7 +784,7 @@
     => \lam p => x<=y (finv_<-conv x>0 p)
 
   \lemma finv>0-diff {x : E} (x>0 : 0 < x) : finv x - finv (x + 1) = finv (x * (x + 1))
-    => finv-diff (\lam x=0 => linarith) (\lam x+1=0 => linarith)
+    => {?} -- TODO[server2]: finv-diff (\lam x=0 => linarith) (\lam x+1=0 => linarith)
 }
 
 \class OrderedAAlgebra \extends AAlgebra, OrderedRing {

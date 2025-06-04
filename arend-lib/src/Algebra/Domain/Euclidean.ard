@@ -3,7 +3,6 @@
 \import Algebra.Domain.GCD
 \import Algebra.Domain.PID
 \import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Ring

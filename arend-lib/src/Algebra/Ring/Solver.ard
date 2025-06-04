@@ -3,7 +3,6 @@
 \import Algebra.Group.GroupHom
 \import Algebra.Module
 \import Arith.Fin.Order
-\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.Solver
 \import Algebra.Pointed
@@ -89,7 +88,8 @@
     | :: a l1 => run {
       rewrite (interpretNF_multiply, interpretRingNF_++),
       rewriteI +-assoc,
-      cong,
+      pmap (`+ _),
+      later,
       rewrite (BaseData.cons, rdistr, interpretNF_map-left),
       +-comm
     }

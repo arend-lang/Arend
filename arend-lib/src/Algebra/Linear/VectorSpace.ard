@@ -175,7 +175,7 @@
                              \in inP (mkArray \lam j => c (fin-inc_<= rank<=rows j), ext $ inv fu=v *> pmap f s *> f.func-BigSum *>
                                     inv (V.BigSum-subset {_} {\lam j => f (c j *c lu j)} rank<=rows (\lam j => pmap (_ *c f __) take-index *> inv func-*c)
                                           \lam j r<=j => func-*c *> pmap (_ *c) (g j *> pmap (`*c _) ((d0 j).2 r<=j) *> *c_zro-left) *> *c_zro-right) *> inv (ImageLModuleRightHom f).func-BigSum)),
-                  rank.rank_M~ $ LinearMap.change-basis_M~ f bu bu' bv bv')
+                  rank.rank_M~ $ change-basis_M~ f bu bu' bv bv')
 
     \lemma dimension_rank {f : LinearMap U V} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) : FinModule.dimension (image-fin f) = rank (LinearMap.toMatrix lu bv f)
       => \case basis f bu bv \with {
