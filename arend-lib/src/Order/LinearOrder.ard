@@ -3,6 +3,7 @@
 \import Function.Meta ($)
 \import Logic
 \import Logic.Meta
+\import Logic.Unique
 \import Meta
 \import Order.Biordered
 \import Order.Lattice
@@ -351,4 +352,5 @@
   | equals (a = a')
   | greater (a > a')
   \where
-    \use \level levelProp : \Prop
+    \use \level levelProp {A : StrictPoset} {a a' : A} : isProp (Tri a a')
+      => isProp-prover

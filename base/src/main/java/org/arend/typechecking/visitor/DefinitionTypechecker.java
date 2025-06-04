@@ -22,14 +22,12 @@ import org.arend.core.sort.Sort;
 import org.arend.core.subst.*;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.error.CountingErrorReporter;
-import org.arend.ext.ArendExtension;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.*;
 import org.arend.ext.prettyprinting.doc.DocFactory;
-import org.arend.ext.typechecking.LevelProver;
 import org.arend.ext.typechecking.MetaDefinition;
 import org.arend.naming.reference.*;
 import org.arend.prelude.Prelude;
@@ -1351,19 +1349,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       Sort sort = type.getSortOfType();
       if (sort == null || !sort.isProp()) {
         DefCallExpression defCall = type.cast(DefCallExpression.class);
-        Integer level = defCall == null ? null : defCall.getUseLevel();
-        Concrete.SourceNode sourceNode = def.getResultType() != null ? def.getResultType() : def;
-        if ((level == null || level != -1) && sort != null && typechecker.getExtension() != null) {
-          LevelProver prover = typechecker.getExtension().getLevelProver();
-          if (prover != null) {
-            TypecheckingResult result = typechecker.finalize(TypecheckingResult.fromChecked(prover.prove(null, type, CheckTypeVisitor.getLevelExpression(new TypeExpression(type, sort), -1), -1, sourceNode, typechecker)), sourceNode, false);
-            if (result != null) {
-              Integer level2 = checkResultTypeLevel(result, targetKind, type, typedDef, null, false, def);
-              return level != null && level2 != null ? Integer.valueOf(Math.min(level, level2)) : level != null ? level : level2;
-            }
-          }
-        }
-        if (!checkLevel(targetKind, level, sort, def)) {
+        if (!checkLevel(targetKind, defCall == null ? null : defCall.getUseLevel(), sort, def)) {
           typedDef.setKind(CoreFunctionDefinition.Kind.SFUNC);
         }
       }
@@ -1453,55 +1439,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     boolean bodyIsOK = false;
     ClassCallExpression consType = null;
     boolean checkCanBeLemma = true;
-    if (def.getKind() == FunctionKind.LEVEL && typedDef.getResultType() instanceof UniverseExpression && ((UniverseExpression) typedDef.getResultType()).getSort().getHLevel().isClosed() && (body instanceof Concrete.TermFunctionBody || body instanceof Concrete.ElimFunctionBody && body.getClauses().isEmpty())) {
-      ArendExtension extension = typechecker.getExtension();
-      LevelProver prover = extension == null ? null : extension.getLevelProver();
-      Definition useParent = def.getUseParent() == null ? null : def.getUseParent().getTypechecked();
-      if (prover != null && useParent instanceof CallableDefinition callableUseParent && (!typedDef.getParameters().hasNext() || DependentLink.Helper.size(typedDef.getParameters()) == DependentLink.Helper.size(useParent.getParameters()))) {
-        try (var ignored = new Utils.RefContextSaver(typechecker.getContext(), typechecker.getLocalExpressionPrettifier())) {
-          boolean ok = true;
-          if (typedDef.getParameters().hasNext()) {
-            ExprSubstitution substitution = new ExprSubstitution();
-            DependentLink useParam = useParent.getParameters();
-            for (DependentLink param = typedDef.getParameters(); param.hasNext(); param = param.getNext(), useParam = useParam.getNext()) {
-              if (!param.getTypeExpr().subst(substitution).isLessOrEquals(useParam.getTypeExpr(), DummyEquations.getInstance(), null)) {
-                ok = false;
-                break;
-              }
-              substitution.add(param, new ReferenceExpression(useParam));
-            }
-          } else {
-            typedDef.setParameters(useParent.getParameters());
-            for (DependentLink param = typedDef.getParameters(); param.hasNext(); param = param.getNext()) {
-              typechecker.addBinding(null, param);
-            }
-          }
-          if (ok) {
-            List<Expression> args = new ArrayList<>();
-            for (DependentLink param = typedDef.getParameters(); param.hasNext(); param = param.getNext()) {
-              args.add(new ReferenceExpression(param));
-            }
-            Expression type = callableUseParent.getDefCall(useParent.makeIdLevels(), args);
-            Sort sort = type.getSortOfType();
-            if (sort != null) {
-              int level = ((UniverseExpression) typedDef.getResultType()).getSort().getHLevel().getConstant();
-              CountingErrorReporter countingErrorReporter = new CountingErrorReporter(GeneralError.Level.ERROR, errorReporter);
-              TypecheckingResult result = typechecker.withErrorReporter(countingErrorReporter, tc ->
-                  typechecker.finalize(TypecheckingResult.fromChecked(prover.prove(body.getTerm(), type, CheckTypeVisitor.getLevelExpression(new TypeExpression(type, sort), level), level, def, tc)), def, false));
-              if (result == null) {
-                if (countingErrorReporter.getErrorsNumber() == 0) {
-                  errorReporter.report(new TypecheckingError("Cannot prove level", def));
-                }
-                typedDef.setResultType(new ErrorExpression());
-              } else {
-                typedDef.setBody(result.expression);
-                typedDef.setResultType(result.type);
-              }
-            }
-          }
-        }
-      }
-    } else if (body instanceof Concrete.ElimFunctionBody elimBody) {
+    if (body instanceof Concrete.ElimFunctionBody elimBody) {
       List<DependentLink> elimParams = ElimTypechecking.getEliminatedParameters(elimBody.getEliminatedReferences(), elimBody.getClauses(), typedDef.getParameters(), typechecker);
       CountingErrorReporter countingErrorReporter = new CountingErrorReporter(PathEndpointMismatchError.class, errorReporter);
       if (elimParams != null) {
@@ -3148,33 +3086,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           DefCallExpression defCall = typeExpr.cast(DefCallExpression.class);
           Integer level = defCall == null ? null : defCall.getUseLevel();
           if (kind == ClassFieldKind.PROPERTY) {
-            boolean check = true;
-            if ((level == null || level != -1) && typechecker.getExtension() != null) {
-              LevelProver prover = typechecker.getExtension().getLevelProver();
-              if (prover != null) {
-                var pair = addPiParametersToContext(def.getParameters(), piType);
-                Type typeType;
-                Expression type = pair.proj2;
-                if (type == null) {
-                  type = typeExpr;
-                  typeType = typeResult;
-                } else if (type instanceof Type) {
-                  typeType = (Type) type;
-                } else {
-                  Sort typeSort = type.getSortOfType();
-                  typeType = new TypeExpression(type, typeSort != null ? typeSort : typeResult.getSortOfType());
-                }
-                TypecheckingResult result = pair.proj2 == null ? null : typechecker.finalize(TypecheckingResult.fromChecked(prover.prove(null, type, CheckTypeVisitor.getLevelExpression(typeType, -1), -1, def.getResultType(), typechecker)), def.getResultType(), false);
-                if (result != null) {
-                  Integer level2 = checkResultTypeLevel(result, LevelMismatchError.TargetKind.PROPERTY, type, null, typedDef, false, def);
-                  if (level2 != null && level2 == -1) {
-                    isProperty = true;
-                  }
-                  check = false;
-                }
-              }
-            }
-            if (check && checkLevel(LevelMismatchError.TargetKind.PROPERTY, level, sort, def)) {
+            if (checkLevel(LevelMismatchError.TargetKind.PROPERTY, level, sort, def)) {
               isProperty = true;
             }
           } else {

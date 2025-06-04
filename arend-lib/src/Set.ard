@@ -2,6 +2,7 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -10,7 +11,8 @@
   | yes E
   | no (Not E)
   \where {
-    \use \level levelProp : \Prop
+    \use \level levelProp {E : \Prop} : isProp (Dec E)
+      => isProp-prover
 
     \func rec {R : \Type} {E : \Prop} (y : E -> R) (n : Not E -> R) (d : Dec E) : R \elim d
       | yes e => y e

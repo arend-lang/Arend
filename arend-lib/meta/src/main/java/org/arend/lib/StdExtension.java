@@ -18,7 +18,6 @@ import org.arend.lib.goal.StdGoalSolver;
 import org.arend.lib.key.IrreflexivityKey;
 import org.arend.lib.key.ReflexivityKey;
 import org.arend.lib.key.TransitivityKey;
-import org.arend.lib.level.StdLevelProver;
 import org.arend.lib.meta.*;
 import org.arend.lib.meta.cases.CasesMeta;
 import org.arend.lib.meta.cases.CasesMetaResolver;
@@ -60,7 +59,6 @@ public class StdExtension implements ArendExtension {
   @Dependency(module = "Paths")              public CoreFunctionDefinition inv;
 
   @Dependency(module = "Logic")                       public CoreDataDefinition Empty;
-  @Dependency(module = "Logic", name = "prop-isProp") public CoreFunctionDefinition propIsProp;
 
   @Dependency(module = "Algebra.Pointed")                          public CoreClassDefinition Pointed;
   @Dependency(module = "Algebra.Pointed")                          public CoreClassDefinition AddPointed;
@@ -80,7 +78,6 @@ public class StdExtension implements ArendExtension {
   public final ContradictionMeta contradictionMeta = new ContradictionMeta(this);
 
   private final StdGoalSolver goalSolver = new StdGoalSolver();
-  private final StdLevelProver levelProver = new StdLevelProver(this);
   private final StdNumberTypechecker numberTypechecker = new StdNumberTypechecker(this);
   private final ListDefinitionListener definitionListener = new ListDefinitionListener().addDeclaredListeners(this);
   public ArendUI ui;
@@ -401,11 +398,6 @@ public class StdExtension implements ArendExtension {
   @Override
   public @Nullable StdGoalSolver getGoalSolver() {
     return goalSolver;
-  }
-
-  @Override
-  public @Nullable LevelProver getLevelProver() {
-    return levelProver;
   }
 
   @Override

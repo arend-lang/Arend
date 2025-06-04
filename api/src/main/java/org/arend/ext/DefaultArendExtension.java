@@ -1,7 +1,6 @@
 package org.arend.ext;
 
 import org.arend.ext.typechecking.GoalSolver;
-import org.arend.ext.typechecking.LevelProver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,17 +24,6 @@ public class DefaultArendExtension implements ArendExtension {
       GoalSolver solver = extension.getGoalSolver();
       if (solver != null) {
         return solver;
-      }
-    }
-    return null;
-  }
-
-  @Override
-  public @Nullable LevelProver getLevelProver() {
-    for (ArendExtension extension : dependencies.values()) {
-      LevelProver prover = extension.getLevelProver();
-      if (prover != null) {
-        return prover;
       }
     }
     return null;

@@ -5,7 +5,6 @@ import org.arend.ext.dependency.ArendDependencyProvider;
 import org.arend.ext.prettifier.ExpressionPrettifier;
 import org.arend.ext.serialization.SerializableKeyRegistry;
 import org.arend.ext.typechecking.GoalSolver;
-import org.arend.ext.typechecking.LevelProver;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.ext.ui.ArendUI;
 import org.arend.ext.variable.VariableRenamerFactory;
@@ -82,13 +81,6 @@ public interface ArendExtension {
    * @return a goal solver that will be used for ordinary goals.
    */
   default @Nullable GoalSolver getGoalSolver() {
-    return null;
-  }
-
-  /**
-   * @return a level prover that will be used to check that types of lemmas and properties are propositions.
-   */
-  default @Nullable LevelProver getLevelProver() {
     return null;
   }
 

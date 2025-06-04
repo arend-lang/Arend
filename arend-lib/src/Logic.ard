@@ -1,3 +1,4 @@
+\import Algebra.Meta
 \import Data.Or
 \import Function.Meta
 \import Logic.Unique
@@ -23,13 +24,13 @@
   \where {
     \use \level levelProp {A : \Type} (a a' : TruncP A) : a = a' => path (truncP a a')
 
-    \lemma remove {A : \Type} (p : isProp A) (t : TruncP A) : A \elim t
+    \lemma remove {A : \Type} (p : isProp A) (t : TruncP A) : A \level p \elim t
       | inP a => a
 
     \lemma remove' {A : \Prop} (t : TruncP A) : A \elim t
       | inP a => a
 
-    \lemma rec {A B : \Type} (p : isProp B) (t : TruncP A) (f : A -> B) : B \elim t
+    \lemma rec {A B : \Type} (p : isProp B) (t : TruncP A) (f : A -> B) : B \level p \elim t
       | inP a => f a
 
     \lemma rec-eval {A B : \Type} {p : isProp B} {a : A} {f : A -> B} : rec p (inP a) f = f a \level isProp.=>isSet p _ _
@@ -64,17 +65,18 @@
 \data ToProp (A : \Type) (p : isProp A)
   | toProp A
   \where {
-    \lemma fromProp {A : \Type} {p : isProp A} (t : ToProp A p) : A \elim t
+    \lemma fromProp {A : \Type} {p : isProp A} (t : ToProp A p) : A \level p \elim t
       | toProp a => a
 
-    \use \level levelProp : \Prop
+    \use \level levelProp {A : \Type} {p : isProp A} (x y : ToProp A p) : x = y \elim x, y
+      | toProp a, toProp a' => pmap toProp (p a a')
   }
 
 \truncated \data \infixr 2 || (A B : \Type) : \Prop
   | byLeft A
   | byRight B
   \where {
-    \lemma rec {A B C : \Type} (p : isProp C) (f : A -> C) (g : B -> C) (t : A || B) : C \elim t
+    \lemma rec {A B C : \Type} (p : isProp C) (f : A -> C) (g : B -> C) (t : A || B) : C \level p \elim t
       | byLeft a => f a
       | byRight b => g b
 
@@ -122,3 +124,5 @@
 
     \lemma conv {A B : \Prop} (p : A = B) (b : B) : A => dir (inv p) b
   }
+
+\meta isProp-prover => \lam x y => cases (x,y) (cong prop-pi <|> contradiction)
