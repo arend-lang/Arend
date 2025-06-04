@@ -15,6 +15,7 @@
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
 \import Algebra.Ring
+\import Algebra.Ring.Factor
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Poly
 \import Algebra.Ring.RingHom

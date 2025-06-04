@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Monoid
+\import Algebra.Ring.Factor
 \import Algebra.Ring.Ideal
 \import Arith.Nat
 \import Arith.Nat.Base

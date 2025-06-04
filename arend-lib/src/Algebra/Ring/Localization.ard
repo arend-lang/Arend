@@ -8,8 +8,6 @@
 \import Algebra.Pointed.Sub
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
-\import Algebra.Semiring
-\import Arith.Nat
 \import Function (isInj, isSurj)
 \import Function.Meta
 \import Logic.Unique
@@ -62,8 +60,8 @@
   | negative => neg
   | negative-left {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
   | *-comm {in~ _} {in~ _} => path (~-equiv _ _ (pmap2 (*) *-comm *-comm))
-  | natCoef n => in~ (natCoef n, 1, contains_ide)
-  | natCoefZero => path (\lam i => in~ (natCoefZero i, 1, contains_ide))
+  | natCoef n => in~ (R.natCoef n, 1, contains_ide)
+  | natCoefZero => path (\lam i => in~ (R.natCoefZero i, 1, contains_ide))
   | natCoefSuc n => {?} -- TODO[server2]: pmap in~ $ ext (natCoefSuc n *> equation, inv ide-left)
   \where {
     \func SType (S : SubMonoid R) => \Sigma (x y : R) (S y)
@@ -202,7 +200,7 @@
       | func-+ {in~ (r1,s1,p1)} {in~ (r2,s2,p2)} =>
           f (r1 * s2 + r2 * s1) * Inv.inv {l (s1 * s2) (contains_* p1 p2)}                                                  ==< pmap2 (*) f.func-+ (func-inv f s1 s2 p1 p2 l) >==
           (f (r1 * s2) + f (r2 * s1)) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1})                                             ==< pmap2 ((__ + __) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1})) f.func-* f.func-* >==
-          (f r1 * f s2 + f r2 * f s1) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1})                                             ==< rdistr >==
+          (f r1 * f s2 + f r2 * f s1) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1})                                             ==< R'.rdistr >==
           (f r1 * f s2) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1}) + (f r2 * f s1) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1}) ==< pmap ((f r1 * f s2) * __ + (f r2 * f s1) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1})) *-comm >==
           (f r1 * f s2) * (Inv.inv {l s1 p1} * Inv.inv {l s2 p2}) + (f r2 * f s1) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1}) ==< pmap2 (+) swap swap >==
           (f r1 * Inv.inv {l s1 p1}) * (f s2 * Inv.inv {l s2 p2}) + (f r2 * Inv.inv {l s2 p2}) * (f s1 * Inv.inv {l s1 p1}) ==< pmap2 ((f r1 * Inv.inv {l s1 p1}) * __ + (f r2 * Inv.inv {l s2 p2}) * __) (Inv.inv-right {l s2 p2}) (Inv.inv-right {l s1 p1}) >==
@@ -232,7 +230,7 @@
 
     \func pow-map (b : R) (n : Nat) : RingHom (LocRing (powers (pow b n))) (LocRing (powers b)) \cowith
       | func => \case __ \with {
-        | in~ (x,y,c) => in~ (x, y, TruncP.map c (\lam p => (n * p.1, rewrite pow_* p.2)))
+        | in~ (x,y,c) => in~ (x, y, TruncP.map c (\lam p => (n Nat.* p.1, rewrite pow_* p.2)))
         | ~-equiv x y r i => ~-equiv _ _ (later r) i
       }
       | func-+ {in~ x} {in~ y} => path (~-equiv _ _ idp)
@@ -298,12 +296,12 @@
 \instance FieldOfQuotients (D : IntegralDomain.Dec) : DiscreteField \cowith
   | CRing => LocRing D.subMonoid
   | zro/=ide p => \case LocRing.unequals p \with {
-    | inP (c,c#0,q) => D.#0-zro (transport D.#0 (inv (q *> *-assoc *> ide-left *> ide-left) *> *-assoc *> zro_*-left) c#0)
+    | inP (c,c#0,q) => D.#0-zro (transport D.#0 (inv (q *> *-assoc *> ide-left *> ide-left) *> *-assoc *> D.zro_*-left) c#0)
      -- TODO[server2]: D.#0-zro (transport D.#0 equation c#0)
   }
   | eitherZeroOrInv => \case \elim __ \with {
     | in~ x => \case decideEq x.1 0 \with {
-      | yes e => byLeft $ LocRing.equals1 $ ide-right *> e *> inv zro_*-left
+      | yes e => byLeft $ LocRing.equals1 $ ide-right *> e *> inv D.zro_*-left
       | no q => byRight $ Monoid.Inv.lmake (inl~ (x.2, x.1, AddGroup.nonZeroApart q)) $ LocRing.equals1 $ ide-right *> *-comm *> inv ide-left
                                                                                         -- TODO[server2]: simplify *-comm
     }

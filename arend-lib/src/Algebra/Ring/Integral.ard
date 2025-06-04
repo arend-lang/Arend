@@ -15,6 +15,7 @@
 \import Algebra.Ring
 \import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
+\import Algebra.Ring.Factor
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.MonoidRing
