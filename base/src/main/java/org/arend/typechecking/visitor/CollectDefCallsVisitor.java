@@ -10,27 +10,31 @@ import java.util.*;
 public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   private final Collection<TCDefReferable> myDependencies;
   private final boolean myWithBodies;
-  private final ArendInstances myInstances;
+  private final boolean myOnlyInstances;
+  private ArendInstances myInstances;
   private Map<TCDefReferable, List<TCDefReferable>> myInstanceMap;
   private final ConcreteProvider myConcreteProvider;
   private final Concrete.ClassDefinition myDefinition;
   private Set<TCDefReferable> mySuperClasses;
   private Set<TCDefReferable> myExcluded;
 
-  public CollectDefCallsVisitor(Collection<TCDefReferable> dependencies, boolean withBodies, ArendInstances instances, ConcreteProvider concreteProvider, Concrete.GeneralDefinition definition) {
+  public CollectDefCallsVisitor(Collection<TCDefReferable> dependencies, boolean withBodies, boolean onlyInstances, ArendInstances instances, ConcreteProvider concreteProvider, Concrete.GeneralDefinition definition) {
     myDependencies = dependencies;
     myWithBodies = withBodies;
+    myOnlyInstances = onlyInstances;
     myInstances = instances;
     myDefinition = definition instanceof Concrete.ClassDefinition classDef ? classDef : null;
     myConcreteProvider = concreteProvider;
   }
 
   public CollectDefCallsVisitor(Collection<TCDefReferable> dependencies, boolean withBodies) {
-    this(dependencies, withBodies, null, null, null);
+    this(dependencies, withBodies, false, null, null, null);
   }
 
   public void addDependency(TCDefReferable dependency) {
-    myDependencies.add(dependency);
+    if (!myOnlyInstances) {
+      myDependencies.add(dependency);
+    }
   }
 
   @Override
@@ -57,6 +61,8 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   @Override
   protected void visitMetaBody(Concrete.MetaDefinition def, Void params) {
     if (myWithBodies) {
+      myInstances = null;
+      myInstanceMap = null;
       super.visitMetaBody(def, params);
     }
   }
@@ -65,7 +71,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   protected void visitClassHeader(Concrete.ClassDefinition def, Void params) {
     for (Concrete.ReferenceExpression superClass : def.getSuperClasses()) {
       if (superClass.getReferent() instanceof TCDefReferable ref && (myExcluded == null || !myExcluded.contains(ref))) {
-        myDependencies.add(ref);
+        addDependency(ref);
       }
     }
   }
@@ -97,7 +103,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
 
   @Override
   protected void visitPattern(Concrete.Pattern pattern, Void params) {
-    if (pattern instanceof Concrete.ConstructorPattern) {
+    if (!myOnlyInstances && pattern instanceof Concrete.ConstructorPattern) {
       Referable constructor = ((Concrete.ConstructorPattern) pattern).getConstructor();
       if (constructor instanceof TCDefReferable) {
         myDependencies.add((TCDefReferable) constructor);
@@ -250,7 +256,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
     if (!(expr.getReferent() instanceof TCDefReferable ref)) return;
 
     if (myExcluded == null || !myExcluded.contains(ref)) {
-      myDependencies.add(ref);
+      addDependency(ref);
     }
 
     if (ref.getKind() == GlobalReferable.Kind.FIELD && !arguments.isEmpty() && !arguments.getFirst().isExplicit() && !(arguments.getFirst().getExpression() instanceof Concrete.HoleExpression)) {

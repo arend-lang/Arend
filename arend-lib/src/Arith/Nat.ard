@@ -306,3 +306,46 @@
 \lemma id<pow2 {n : Nat} : n < Monoid.pow 2 n \elim n
   | 0 => zero<suc
   | suc n => <=_+-left (suc_<_<= $ zero<=_ <∘r id<pow2) id<pow2
+
+-- Properties of mod
+
+\lemma n*_+_mod_n {n q r : Nat} (r<n : r < n) : (n * q + r) mod n = {Nat} r \elim n
+  | 0 => pmap (`+ r) NatSemiring.zro_*-left
+  | suc n => mod-unique (fin_< _) r<n (divModProp (suc n * q + r) (suc n))
+
+\lemma n*_+_mod_n=mod {n q r : Nat} : (suc n * q + r) mod suc n = r mod suc n
+  => run {
+    rewriteI {1} (divModProp r (suc n)),
+    rewriteI (NatSemiring.+-assoc, NatSemiring.ldistr),
+    fin_nat-inj (n*_+_mod_n (fin_< (r mod suc n)))
+  }
+  \where
+    \lemma nat {n q r : Nat} : (n * q + r) mod n = r mod n \elim n
+      | 0 => pmap (`+ r) NatSemiring.zro_*-left
+      | suc n => n*_+_mod_n=mod
+
+\lemma mod_+-left {n a b : Nat} : (a mod suc n + b) mod suc n = (a + b) mod suc n
+  => run {
+    rewriteI {2} (divModProp a (suc n)),
+    rewrite NatSemiring.+-assoc,
+    inv n*_+_mod_n=mod
+  }
+
+\lemma mod_+-right {n a b : Nat} : (a + b mod suc n) mod suc n = (a + b) mod suc n
+  => fin_nat-inj (pmap (`mod _) +-comm *> mod_+-left *> pmap (`mod _) +-comm)
+
+\lemma mod_*-left {n a b : Nat} : (a mod suc n * b) mod suc n = (a * b) mod suc n
+  => run {
+    rewriteI {2} (divModProp a (suc n)),
+    rewrite (NatSemiring.rdistr, NatSemiring.*-assoc),
+    inv n*_+_mod_n=mod
+  }
+
+\lemma mod_*-right {n a b : Nat} : (a * b mod suc n) mod suc n = (a * b) mod suc n
+  => fin_nat-inj (pmap (`mod _) *-comm *> mod_*-left *> pmap (`mod _) *-comm)
+
+\lemma mod_+-cong-left {n c a b : Nat} (p : a mod suc n = b mod suc n) : (c + a) mod suc n = (c + b) mod suc n
+  => inv mod_+-right *> pmap ((c + __) mod suc n) p *> mod_+-right
+
+\lemma mod_+-cong-right {n c a b : Nat} (p : a mod suc n = b mod suc n) : (a + c) mod suc n = (b + c) mod suc n
+  => inv mod_+-left *> pmap ((__ + c) mod suc n) p *> mod_+-left

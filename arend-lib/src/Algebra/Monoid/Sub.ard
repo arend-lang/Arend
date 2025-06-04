@@ -1,7 +1,7 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed.Sub
-\import Algebra.Ring.Localization
+\import Algebra.Ring.Localization()
 \import Arith.Nat
 \import Arith.Nat.Base
 \import Data.Array
@@ -63,6 +63,8 @@
     | contains_ide => inP (1, byRight (byLeft idp))
     | contains_* {x} {y} (inP (n,xr)) (inP (m,yr)) => inP (suc (n ∨ m), byRight (byRight (x, y, apl-inc join-left x xr, apl-inc join-right y yr, idp)))
     \where {
+      \open Algebra.Ring.Localization
+
       \lemma ext {M : Monoid} (S : SubSet M) : S <= closure S
         => \lam x x<-S => inP (0, x<-S)
 

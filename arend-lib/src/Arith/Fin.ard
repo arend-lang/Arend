@@ -1,11 +1,11 @@
-\import Algebra.Domain.Euclidean
+\import Algebra.Domain.Euclidean \hiding (IntDomain)
 \import Algebra.Field
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Prime
 \import Algebra.Ring
 \import Algebra.Semiring
-\import Arith.Int
+\import Arith.Int()
 \import Arith.Nat
 \import Arith.Nat.Base
 \import Data.Or
@@ -22,21 +22,6 @@
 \open Nat(div,mod,divModProp)
 \open AddMonoid
 
-\lemma n*_+_mod_n {n q r : Nat} (r<n : r < n) : (n * q + r) mod n = {Nat} r \elim n
-  | 0 => pmap (`+ r) zro_*-left
-  | suc n => mod-unique (fin_< _) r<n (divModProp (suc n * q + r) (suc n))
-
-\lemma n*_+_mod_n=mod {n q r : Nat} : (suc n * q + r) mod suc n = r mod suc n
-  => run {
-    rewriteI {1} (divModProp r (suc n)),
-    rewriteI (NatSemiring.+-assoc, NatSemiring.ldistr),
-    fin_nat-inj (n*_+_mod_n (fin_< (r mod suc n)))
-  }
-  \where
-    \lemma nat {n q r : Nat} : (n * q + r) mod n = r mod n \elim n
-      | 0 => pmap (`+ r) zro_*-left
-      | suc n => n*_+_mod_n=mod
-
 \lemma int_n*_+_mod_n {n r : Nat} {q : Int} (r<=n : r < suc n) : (pos (suc n) * q + r) mod suc n = r
   => mod-unique {(pos (suc n) * q + r) div suc n} {q} (natMod<right _ _) r<=n (natDivModProp (pos (suc n) * q + r) n)
   \where \open IntEuclidean
@@ -47,40 +32,21 @@
     rewriteI (IntRing.+-assoc {pos (suc n) * q} {pos (suc n) * r div suc n} {pos (r mod suc n)}, IntRing.ldistr {suc n} {q} {r div suc n}),
     int_n*_+_mod_n (natMod<right r n)
   }
-  \where \open IntEuclidean
-
-\lemma mod_+-left {n a b : Nat} : (a mod suc n + b) mod suc n = (a + b) mod suc n
-  => run {
-    rewriteI {2} (divModProp a (suc n)),
-    rewrite NatSemiring.+-assoc,
-    inv n*_+_mod_n=mod
+  \where {
+    \open Arith.Int(IntRing)
+    \open IntEuclidean
   }
-
-\lemma mod_+-right {n a b : Nat} : (a + b mod suc n) mod suc n = (a + b) mod suc n
-  => fin_nat-inj (pmap (`mod _) +-comm *> mod_+-left *> pmap (`mod _) +-comm)
-
-\lemma mod_*-left {n a b : Nat} : (a mod suc n * b) mod suc n = (a * b) mod suc n
-  => run {
-    rewriteI {2} (divModProp a (suc n)),
-    rewrite (NatSemiring.rdistr, NatSemiring.*-assoc),
-    inv n*_+_mod_n=mod
-  }
-
-\lemma mod_*-right {n a b : Nat} : (a * b mod suc n) mod suc n = (a * b) mod suc n
-  => fin_nat-inj (pmap (`mod _) *-comm *> mod_*-left *> pmap (`mod _) *-comm)
-
-\lemma mod_+-cong-left {n c a b : Nat} (p : a mod suc n = b mod suc n) : (c + a) mod suc n = (c + b) mod suc n
- => inv mod_+-right *> pmap ((c + __) mod suc n) p *> mod_+-right
-
-\lemma mod_+-cong-right {n c a b : Nat} (p : a mod suc n = b mod suc n) : (a + c) mod suc n = (b + c) mod suc n
-  => inv mod_+-left *> pmap ((__ + c) mod suc n) p *> mod_+-left
 
 \lemma int_mod_*-left {n : Nat} {a b : Int} : (pos (a mod suc n) * b) mod suc n = (a * b) mod suc n
   => run {
     rewriteI {2} (natDivModProp a n),
     rewrite (IntRing.rdistr, IntRing.*-assoc),
     inv int_n*_+_mod_n=mod
-  } \where \open IntEuclidean
+  }
+  \where {
+    \open Arith.Int(IntRing)
+    \open IntEuclidean
+  }
 
 \lemma int_mod_*-right {n : Nat} {a b : Int} : (a * b mod suc n) mod suc n = (a * b) mod suc n
   => pmap (`mod _) *-comm *> int_mod_*-left *> pmap (`mod _) *-comm
@@ -149,6 +115,9 @@
   | natCoef => Fin.fromNat
   | natCoefZero => idp
   | natCoefSuc m => inv (mod_+-left *> mod_+-right)
+  \where {
+    \open Arith.Int(iabs, pos_iabs, IntRing)
+  }
 
 \instance FinEuclidean {n : Nat} : EuclideanRingData (Fin (suc n))
   | CRing => FinRing {n}

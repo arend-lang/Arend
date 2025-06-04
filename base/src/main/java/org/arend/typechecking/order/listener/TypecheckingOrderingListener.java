@@ -17,6 +17,7 @@ import org.arend.ext.core.ops.CMP;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.typechecking.DefinitionListener;
+import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.term.concrete.Concrete;
@@ -208,7 +209,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       Set<TCDefReferable> dependencies = new HashSet<>();
       definition.accept(new CollectDefCallsVisitor(dependencies, false), null);
       if (dependencies.contains(definition.getData())) {
-        errorReporter.report(new CycleError(Collections.singletonList(definition.getData())));
+        errorReporter.report(new CycleError(Collections.singletonList(definition.getData()), Collections.emptyMap()));
         typecheckingUnitFinished(definition.getData(), newDefinition(definition));
         ok = false;
       }
@@ -328,7 +329,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       for (Concrete.ResolvableDefinition definition : definitions) {
         cycle.add(definition.getData());
       }
-      myErrorReporter.report(new CycleError("Instance dependency cycle", cycle, false));
+      myErrorReporter.report(new CycleError("Instance dependency cycle", cycle, Collections.emptyMap()));
       return;
     }
 
@@ -347,7 +348,18 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
         typecheckingUnitFinished(def.getData(), typechecked);
       }
     }
-    myErrorReporter.report(new CycleError(cycle));
+
+    Set<TCDefReferable> cycleRefs = new HashSet<>(cycle);
+    Map<GlobalReferable, List<TCDefReferable>> instances = new LinkedHashMap<>();
+    for (Concrete.ResolvableDefinition definition : definitions) {
+      Set<TCDefReferable> dependencies = new LinkedHashSet<>();
+      definition.accept(new CollectDefCallsVisitor(dependencies, true, true, myInstanceScopeProvider.getInstancesFor(definition.getData()), myConcreteProvider, definition instanceof Concrete.ClassDefinition ? definition : definition.getEnclosingClass() == null ? null : myConcreteProvider.getConcrete(definition.getEnclosingClass())), null);
+      dependencies.retainAll(cycleRefs);
+      if (!dependencies.isEmpty()) {
+        instances.put(definition.getData(), new ArrayList<>(dependencies));
+      }
+    }
+    myErrorReporter.report(new CycleError(cycle, instances));
   }
 
   @Override
