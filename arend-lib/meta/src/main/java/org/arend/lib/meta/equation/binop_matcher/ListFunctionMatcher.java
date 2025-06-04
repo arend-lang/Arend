@@ -8,7 +8,7 @@ import org.arend.ext.core.expr.CoreFunCallExpression;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
-import org.arend.lib.StdExtension;
+import org.arend.lib.util.Names;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,17 +25,17 @@ public class ListFunctionMatcher implements FunctionMatcher {
 
   @Override
   public List<CoreExpression> match(CoreExpression expr) {
-    if (expr instanceof CoreFunCallExpression && StdExtension.isAppend(((CoreFunCallExpression) expr).getDefinition().getRef())) {
+    if (expr instanceof CoreFunCallExpression && Names.isAppend(((CoreFunCallExpression) expr).getDefinition().getRef())) {
       List<? extends CoreExpression> defCallArgs = ((CoreFunCallExpression) expr).getDefCallArguments();
       List<CoreExpression> args = new ArrayList<>(2);
       args.add(defCallArgs.get(1));
       args.add(defCallArgs.get(2));
       return args;
-    } else if (expr instanceof CoreConCallExpression cons && StdExtension.isCons(cons.getDefinition().getRef())) {
+    } else if (expr instanceof CoreConCallExpression cons && Names.isCons(cons.getDefinition().getRef())) {
       List<? extends CoreExpression> defCallArgs = cons.getDefCallArguments();
       CoreExpression tail = defCallArgs.get(1).normalize(NormalizationMode.WHNF);
-      if (!(tail instanceof CoreConCallExpression && StdExtension.isNil(((CoreConCallExpression) tail).getDefinition().getRef()))) {
-        CoreConstructor nil = cons.getDefinition().getDataType().findConstructor(StdExtension.getNil());
+      if (!(tail instanceof CoreConCallExpression && Names.isNil(((CoreConCallExpression) tail).getDefinition().getRef()))) {
+        CoreConstructor nil = cons.getDefinition().getDataType().findConstructor(Names.getNil());
         if (nil != null) {
           TypedExpression result = typechecker.typecheck(factory.app(factory.ref(cons.getDefinition().getRef()), true, Arrays.asList(factory.core(defCallArgs.getFirst().computeTyped()), factory.ref(nil.getRef()))), null);
           if (result != null) {

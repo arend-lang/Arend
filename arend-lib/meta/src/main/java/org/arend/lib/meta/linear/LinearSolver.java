@@ -20,13 +20,13 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.context.ContextHelper;
 import org.arend.lib.error.LinearSolverError;
 import org.arend.lib.error.TypeError;
 import org.arend.lib.meta.solver.BaseTermCompiler;
 import org.arend.lib.meta.solver.RingKind;
 import org.arend.lib.util.DefImplInstanceSearchParameters;
+import org.arend.lib.util.Names;
 import org.arend.lib.util.RelationData;
 import org.arend.lib.util.Utils;
 
@@ -420,7 +420,7 @@ public class LinearSolver {
     expectedType = expectedType.normalize(NormalizationMode.WHNF);
     Equation<CoreExpression> resultEquation;
     // TODO[server2]: Check that the type is empty instead?
-    if (expectedType instanceof CoreDataCallExpression && StdExtension.isEmpty(((CoreDataCallExpression) expectedType).getDefinition().getRef())) {
+    if (expectedType instanceof CoreDataCallExpression && Names.isEmpty(((CoreDataCallExpression) expectedType).getDefinition().getRef())) {
       resultEquation = null;
     } else {
       resultEquation = typeToEquation(expectedType, null, true);

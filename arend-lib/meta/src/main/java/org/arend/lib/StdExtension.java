@@ -3,13 +3,11 @@ package org.arend.lib;
 import org.arend.ext.*;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
-import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.ext.typechecking.meta.TrivialMetaTypechecker;
 import org.arend.ext.core.definition.*;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.dependency.Dependency;
-import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.MetaRef;
 import org.arend.ext.reference.Precedence;
@@ -39,6 +37,7 @@ import org.arend.lib.meta.linear.LinearSolverMeta;
 import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.meta.rewrite.RewriteMeta;
 import org.arend.lib.meta.simplify.SimplifyMeta;
+import org.arend.lib.util.Names;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -101,52 +100,6 @@ public class StdExtension implements ArendExtension {
     this.factory = factory;
   }
 
-  private static final String LIBRARY_NAME = "arend-lib";
-
-  private static ModulePath getLogicModule() {
-    return new ModulePath("Logic");
-  }
-
-  private static ModulePath getListModule() {
-    return ModulePath.fromString("Data.List");
-  }
-
-  private static ModulePath getSetModule() {
-    return new ModulePath("Set");
-  }
-
-  public static boolean isEmpty(ArendRef ref) {
-    return ref.checkName(LIBRARY_NAME, getLogicModule(), new LongName("Empty"));
-  }
-
-  public static boolean isAppend(ArendRef ref) {
-    return ref.checkName(LIBRARY_NAME, getListModule(), new LongName("++"));
-  }
-
-  public static boolean isCons(ArendRef ref) {
-    return ref.checkName(LIBRARY_NAME, getListModule(), LongName.fromString("List.::"));
-  }
-
-  public static String getNil() {
-    return "nil";
-  }
-
-  public static boolean isNil(ArendRef ref) {
-    return ref.checkName(LIBRARY_NAME, getListModule(), LongName.fromString("List.nil"));
-  }
-
-  public static boolean isBaseSet(ArendRef ref) {
-    return ref.checkName(LIBRARY_NAME, getSetModule(), new LongName("BaseSet"));
-  }
-
-  public static boolean isCarrier(ArendRef ref) {
-    return ref.checkName(LIBRARY_NAME, getSetModule(), LongName.fromString("BaseSet.E"));
-  }
-
-  public static boolean isSetHierarchy(CoreClassDefinition definition) {
-    return definition.findAncestor(superClass -> superClass.getSuperClasses().isEmpty() && isBaseSet(superClass.getRef())) != null;
-  }
-
   private MetaRef makeRef(ModulePath modulePath, String name, MetaResolver resolver, MetaDefinition definition) {
     return factory.metaRef(factory.moduleRef(modulePath), name, Precedence.DEFAULT, null, null, resolver, new TrivialMetaTypechecker(definition));
   }
@@ -199,8 +152,8 @@ public class StdExtension implements ArendExtension {
     ModulePath arithInt = ModulePath.fromString("Arith.Int");
     ModulePath arithNat = ModulePath.fromString("Arith.Nat");
     ModulePath arithRat = ModulePath.fromString("Arith.Rat");
-    ModulePath dataList = getListModule();
-    ModulePath set = getSetModule();
+    ModulePath dataList = Names.getListModule();
+    ModulePath set = Names.getSetModule();
     String constructorName = "constructor";
 
     contributor.declare(meta, logicMeta);
@@ -386,7 +339,7 @@ public class StdExtension implements ArendExtension {
             text("Currently this meta supports noncommutative monoids and categories.")),
         makeDef(algebra, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, RewriteEquationMeta::new)));
 
-    contributor.declare(logicMeta, getLogicModule());
+    contributor.declare(logicMeta, Names.getLogicModule());
     contributor.declare(multiline("""
         Derives a contradiction from assumptions in the context
 

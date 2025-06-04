@@ -13,6 +13,7 @@ import org.arend.ext.instance.SubclassSearchParameters;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
+import org.arend.lib.util.Names;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -42,7 +43,7 @@ public class StdNumberTypechecker implements LiteralTypechecker {
     if (expectedType != null && !(expectedType instanceof CoreDataCallExpression && (((CoreDataCallExpression) expectedType).getDefinition() == typechecker.getPrelude().getNat() || ((CoreDataCallExpression) expectedType).getDefinition() == typechecker.getPrelude().getInt()))) {
       boolean generate;
       TypedExpression instance;
-      if (expectedType instanceof CoreFieldCallExpression fieldCall && StdExtension.isCarrier(fieldCall.getDefinition().getRef())) {
+      if (expectedType instanceof CoreFieldCallExpression fieldCall && Names.isCarrier(fieldCall.getDefinition().getRef())) {
         instance = null;
         generate = true;
       } else {

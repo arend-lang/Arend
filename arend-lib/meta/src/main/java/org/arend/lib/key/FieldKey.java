@@ -15,6 +15,7 @@ import org.arend.ext.serialization.DeserializationException;
 import org.arend.ext.serialization.SerializableKey;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.lib.StdExtension;
+import org.arend.lib.util.Names;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
@@ -82,7 +83,7 @@ public abstract class FieldKey extends SerializableKey<FieldKey.Data> implements
   protected abstract boolean checkField(CoreClassField field);
 
   protected boolean isBaseSetCall(CoreExpression type, CoreClassField field) {
-    return type instanceof CoreFieldCallExpression fieldCall && StdExtension.isCarrier(fieldCall.getDefinition().getRef()) && fieldCall.getArgument() instanceof CoreReferenceExpression refExpr && refExpr.getBinding() == field.getThisParameter();
+    return type instanceof CoreFieldCallExpression fieldCall && Names.isCarrier(fieldCall.getDefinition().getRef()) && fieldCall.getArgument() instanceof CoreReferenceExpression refExpr && refExpr.getBinding() == field.getThisParameter();
   }
 
   protected CoreClassField getFieldApplied(CoreExpression type, CoreBinding var1, CoreBinding var2, CoreClassField field) {
@@ -111,7 +112,7 @@ public abstract class FieldKey extends SerializableKey<FieldKey.Data> implements
       return;
     }
 
-    if (!StdExtension.isSetHierarchy(classDef)) {
+    if (!Names.isSetHierarchy(classDef)) {
       return;
     }
 
