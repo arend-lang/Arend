@@ -53,13 +53,6 @@ public class StdExtension implements ArendExtension {
   public final TransitivityKey transitivityKey = new TransitivityKey("transitivity", this);
   public final ReflexivityKey reflexivityKey = new ReflexivityKey("reflexivity", this);
 
-  @Dependency(module = "Paths")              public CoreFunctionDefinition transport;
-  @Dependency(module = "Paths")              public CoreFunctionDefinition transportInv;
-  @Dependency(module = "Paths", name = "*>") public CoreFunctionDefinition concat;
-  @Dependency(module = "Paths")              public CoreFunctionDefinition inv;
-
-  @Dependency(module = "Logic")                       public CoreDataDefinition Empty;
-
   @Dependency(module = "Algebra.Pointed")                          public CoreClassDefinition Pointed;
   @Dependency(module = "Algebra.Pointed")                          public CoreClassDefinition AddPointed;
   @Dependency(module = "Algebra.Pointed", name = "Pointed.ide")    public CoreClassField ide;
@@ -70,12 +63,6 @@ public class StdExtension implements ArendExtension {
   @Dependency(module = "Algebra.Group", name = "AddGroup.negative")       public CoreClassField negative;
   @Dependency(module = "Algebra.Semiring", name = "Semiring.natCoef")     public CoreClassField natCoef;
   @Dependency(module = "Algebra.Ring", name = "Ring.intCoef")             public CoreFunctionDefinition intCoef;
-
-  @Dependency(module = "Order.LinearOrder")                                         public CoreClassDefinition LinearOrder;
-  @Dependency(module = "Order.StrictOrder", name = "StrictPoset.<")                 public CoreClassField less;
-  @Dependency(module = "Order.Biordered", name = "BiorderedSet.<-transitive-left")  public CoreClassField lessTransitiveLeft;
-
-  public final ContradictionMeta contradictionMeta = new ContradictionMeta(this);
 
   private final StdGoalSolver goalSolver = new StdGoalSolver();
   private final StdNumberTypechecker numberTypechecker = new StdNumberTypechecker(this);
@@ -137,6 +124,8 @@ public class StdExtension implements ArendExtension {
     ModulePath orderedAlgebra = ModulePath.fromString("Algebra.Ordered");
     ModulePath pointed = ModulePath.fromString("Algebra.Pointed");
     ModulePath lattice = ModulePath.fromString("Order.Lattice");
+    ModulePath linearOrder = ModulePath.fromString("Order.LinearOrder");
+    ModulePath strictOrder = ModulePath.fromString("Order.StrictOrder");
     ModulePath algebraAlgebra = ModulePath.fromString("Algebra.Algebra");
     ModulePath group = ModulePath.fromString("Algebra.Group");
     ModulePath groupSolver = ModulePath.fromString("Algebra.Group.Solver");
@@ -310,9 +299,9 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, dataList);
     contributor.declare(algebra, equiv);
     contributor.declare(algebra, lattice);
-    contributor.declare(algebra, ModulePath.fromString("Order.LinearOrder"));
+    contributor.declare(algebra, linearOrder);
     contributor.declare(algebra, ModulePath.fromString("Order.PartialOrder"));
-    contributor.declare(algebra, ModulePath.fromString("Order.StrictOrder"));
+    contributor.declare(algebra, strictOrder);
     contributor.declare(algebra, paths);
     contributor.declare(algebra, set);
     contributor.declare(multiline("""
@@ -337,12 +326,16 @@ public class StdExtension implements ArendExtension {
         makeDef(algebra, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, RewriteEquationMeta::new)));
 
     contributor.declare(logicMeta, Names.getLogicModule());
+    contributor.declare(logicMeta, ModulePath.fromString("Order.Biordered"));
+    contributor.declare(logicMeta, linearOrder);
+    contributor.declare(logicMeta, strictOrder);
+    contributor.declare(logicMeta, paths);
     contributor.declare(multiline("""
         Derives a contradiction from assumptions in the context
 
         A proof of a contradiction can be explicitly specified as an implicit argument
         `using`, `usingOnly`, and `hiding` with a single argument can be used instead of a proof to control the context
-        """), makeDef(logicMeta, "contradiction", contradictionMeta));
+        """), makeDef(logicMeta, "contradiction", new DependencyMetaTypechecker(ContradictionMeta.class, () -> new ContradictionMeta(this))));
     ConcreteMetaDefinition givenMetaRef = makeDef(logicMeta, "Given", new ExistsResolver(GivenMeta.Kind.SIGMA), new TrivialMetaTypechecker(new GivenMeta(GivenMeta.Kind.SIGMA)));
     contributor.declare(multiline("""
         Given constructs a \\Sigma-type:

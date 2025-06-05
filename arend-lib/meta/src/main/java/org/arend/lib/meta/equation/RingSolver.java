@@ -302,7 +302,10 @@ public class RingSolver extends BaseEqualitySolver {
       var idealGen = new ArrayList<Poly<BigInteger>>();
 
       for (Equality axiom : axioms) {
-        idealGen.add(termToPoly(axiom.lhsTerm, numVariables).subtr(termToPoly(axiom.rhsTerm, numVariables)));
+        Poly<BigInteger> poly = termToPoly(axiom.lhsTerm, numVariables).subtr(termToPoly(axiom.rhsTerm, numVariables));
+        if (!poly.isZero()) {
+          idealGen.add(poly);
+        }
       }
 
       var idealCoeffs = new GroebnerIM(new Buchberger()).computeGenDecomposition(p, idealGen);

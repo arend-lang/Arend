@@ -8,6 +8,7 @@ import org.arend.ext.concrete.expr.ConcreteLamExpression;
 import org.arend.ext.concrete.pattern.ConcretePattern;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.context.CoreParameter;
+import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.ext.core.definition.CoreDataDefinition;
@@ -15,7 +16,9 @@ import org.arend.ext.core.expr.*;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.TypecheckingError;
+import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
+import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.lib.StdExtension;
 import org.arend.lib.context.Context;
 import org.arend.lib.context.HidingContext;
@@ -34,6 +37,15 @@ import java.util.function.Function;
 
 public class ContradictionMeta extends BaseMetaDefinition {
   public final StdExtension ext;
+
+  @Dependency                                           private ArendRef transport;
+  @Dependency                                           private ArendRef transportInv;
+  @Dependency(name = "*>")                              private ArendRef concat;
+  @Dependency                                           private ArendRef inv;
+  @Dependency                                           private ArendRef Empty;
+  @Dependency                                           private CoreClassDefinition LinearOrder;
+  @Dependency(name = "StrictPoset.<")                   private ArendRef less;
+  @Dependency(name = "BiorderedSet.<-transitive-left")  private ArendRef lessTransitiveLeft;
 
   public ContradictionMeta(StdExtension ext) {
     this.ext = ext;
@@ -191,11 +203,11 @@ public class ContradictionMeta extends BaseMetaDefinition {
       if (parameters.size() == 1) {
         Triple triple = Triple.make(Utils.unfoldType(parameters.getFirst().getTypeExpr().normalize(NormalizationMode.WHNF)));
         if (triple != null) {
-          if (triple.fun.getDefinition() == ext.less) {
+          if (triple.fun.getDefinition().getRef().equals(less)) {
             CoreExpression argType = triple.fun.getArgument().computeType().normalize(NormalizationMode.WHNF);
-            if (argType instanceof CoreClassCallExpression && ((CoreClassCallExpression) argType).getDefinition().isSubClassOf(ext.LinearOrder)) {
+            if (argType instanceof CoreClassCallExpression && ((CoreClassCallExpression) argType).getDefinition().isSubClassOf(LinearOrder)) {
               Integer index1 = values.addValue(triple.arg2);
-              transGraphs.computeIfAbsent(ext.less, k -> new HashMap<>()).computeIfAbsent(index1, k -> new ArrayList<>())
+              transGraphs.computeIfAbsent(triple.fun.getDefinition(), k -> new HashMap<>()).computeIfAbsent(index1, k -> new ArrayList<>())
                 .add(new Edge<>(index1, values.addValue(triple.arg1), proof, EdgeKind.LESS_OR_EQ, null));
             }
           }
@@ -230,7 +242,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
               if (irrParams.get(0).isExplicit()) {
                 irrArgs.add(factory.arg(factory.hole(), true));
               }
-              irrArgs.add(factory.arg(factory.app(factory.ref(ext.transportInv.getRef()), true, Arrays.asList(factory.core(app1.computeTyped()), args.getFirst(), proof)), irrParams.get(1).isExplicit()));
+              irrArgs.add(factory.arg(factory.app(factory.ref(transportInv), true, Arrays.asList(factory.core(app1.computeTyped()), args.getFirst(), proof)), irrParams.get(1).isExplicit()));
               return factory.app(factory.ref(irreflexivityData.field.getRef()), irrArgs);
             }));
             return true;
@@ -345,9 +357,9 @@ public class ContradictionMeta extends BaseMetaDefinition {
         args.add(factory.arg(path.get(i).proof, transitivityData.parametersExplicitness.get(4)));
         transProof = factory.app(factory.ref(transitivityData.field.getRef()), args);
       } else if (path.get(i).kind == EdgeKind.LESS_OR_EQ) {
-        transProof = factory.app(factory.ref(ext.lessTransitiveLeft.getRef()), true, Arrays.asList(transProof, path.get(i).proof));
+        transProof = factory.app(factory.ref(lessTransitiveLeft), true, Arrays.asList(transProof, path.get(i).proof));
       } else {
-        transProof = factory.app(factory.ref((path.get(i).kind == EdgeKind.EQ ? ext.transport : ext.transportInv).getRef()), true, Arrays.asList(path.get(i0).leftApp, path.get(i).proof, transProof));
+        transProof = factory.app(factory.ref(path.get(i).kind == EdgeKind.EQ ? transport : transportInv), true, Arrays.asList(path.get(i0).leftApp, path.get(i).proof, transProof));
       }
     }
     return transProof;
@@ -380,7 +392,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
     }
 
     if (contr == null) {
-      BunchedEquivalenceClosure<Integer> equivalenceClosure = new BunchedEquivalenceClosure<>(factory.ref(typechecker.getPrelude().getIdpRef()), factory.ref(ext.inv.getRef()), factory.ref(ext.concat.getRef()), factory);
+      BunchedEquivalenceClosure<Integer> equivalenceClosure = new BunchedEquivalenceClosure<>(factory.ref(typechecker.getPrelude().getIdpRef()), factory.ref(inv), factory.ref(concat), factory);
       ValuesRelationClosure closure = new ValuesRelationClosure(values, equivalenceClosure);
       List<Edge<Integer>> equalities = new ArrayList<>();
       Values<CoreExpression> typeValues = new Values<>(typechecker, marker);
@@ -517,7 +529,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
                   if (triple == null || triple.fun.getDefinition() != entry.getKey()) break;
                   if (negation.assumptions.size() == 1) {
                     CoreExpression instanceType = triple.fun.getArgument().computeType().normalize(NormalizationMode.WHNF);
-                    if (instanceType instanceof CoreClassCallExpression && ((CoreClassCallExpression) instanceType).getDefinition().isSubClassOf(ext.LinearOrder)) break;
+                    if (instanceType instanceof CoreClassCallExpression && ((CoreClassCallExpression) instanceType).getDefinition().isSubClassOf(LinearOrder)) break;
                   }
                   triples.add(triple);
                 }
@@ -566,7 +578,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
       }
     }
 
-    return expectedType != null && type != null && expectedType.compare(type, CMP.EQ) ? contr : factory.caseExpr(false, Collections.singletonList(factory.caseArg(contr, null, null)), withExpectedType ? null : factory.ref(ext.Empty.getRef()), null, clauses);
+    return expectedType != null && type != null && expectedType.compare(type, CMP.EQ) ? contr : factory.caseExpr(false, Collections.singletonList(factory.caseArg(contr, null, null)), withExpectedType ? null : factory.ref(Empty), null, clauses);
   }
 
   public static boolean isEmpty(CoreExpression type) {
