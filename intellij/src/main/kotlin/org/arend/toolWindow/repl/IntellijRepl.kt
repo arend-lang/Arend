@@ -29,6 +29,7 @@ import org.arend.toolWindow.repl.action.ShowContextCommandIntellij
 import org.arend.typechecking.*
 import org.arend.typechecking.computation.ComputationRunner
 import org.arend.typechecking.execution.PsiElementComparator
+import org.arend.typechecking.instance.provider.InstanceScopeProvider
 import org.arend.typechecking.order.Ordering
 import org.arend.typechecking.order.dependency.DummyDependencyListener
 import org.arend.typechecking.order.listener.CollectingOrderingListener
@@ -46,7 +47,7 @@ abstract class IntellijRepl private constructor(
 ) : Repl(
     errorReporter,
     server,
-    TypecheckingOrderingListener(null, null, null, errorReporter, null, null),
+    TypecheckingOrderingListener(null, InstanceScopeProvider.EMPTY, emptyMap(), null, errorReporter, null, null),
 ) {
     constructor(
         handler: ArendReplExecutionHandler,

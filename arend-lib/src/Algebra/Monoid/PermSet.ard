@@ -1,5 +1,6 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Or
@@ -89,7 +90,7 @@
 \lemma permSet-univ-natural {A B : CMonoid} (f : MonoidHom A B) {x : PermSet A} : f (permSet-sum x) = permSet-sum (permSet-map f x) \elim x
   | in~ l => f.func-BigProd
 
-\func permSet-zro-dec {A : \Set} (x : PermSet A) : Dec (x = 1) \elim x
+\func permSet-zro-dec {A : \Set} (x : PermSet A) : Dec (x = ide) \elim x
   | in~ nil => yes idp
   | in~ (_ :: _) => no \lam p => \case unext p \with {
     | inP e => \case EPerm.EPerm_len e

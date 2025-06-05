@@ -1,5 +1,6 @@
 package org.arend.typechecking.visitor;
 
+import org.arend.extImpl.DefaultMetaDefinition;
 import org.arend.naming.reference.*;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.instance.ArendInstances;
@@ -8,21 +9,23 @@ import org.arend.typechecking.provider.ConcreteProvider;
 import java.util.*;
 
 public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
-  private final Collection<TCDefReferable> myDependencies;
+  private Collection<TCDefReferable> myDependencies;
+  private final Set<TCDefReferable> myInstanceDependencies;
   private final boolean myWithBodies;
-  private final boolean myOnlyInstances;
   private ArendInstances myInstances;
   private Map<TCDefReferable, List<TCDefReferable>> myInstanceMap;
   private final ConcreteProvider myConcreteProvider;
-  private final Concrete.GeneralDefinition myDefinition;
+  private final Concrete.ResolvableDefinition myDefinition;
   private final Concrete.ClassDefinition myClassDefinition;
   private Set<TCDefReferable> mySuperClasses;
   private Set<TCDefReferable> myExcluded;
+  private Set<TCDefReferable> myVisitedClasses;
+  private final Set<MetaReferable> myVisitedMetas = new HashSet<>();
 
-  public CollectDefCallsVisitor(Collection<TCDefReferable> dependencies, boolean withBodies, boolean onlyInstances, ArendInstances instances, ConcreteProvider concreteProvider, Concrete.ResolvableDefinition definition) {
+  public CollectDefCallsVisitor(Collection<TCDefReferable> dependencies, Set<TCDefReferable> instanceDependencies, boolean withBodies, ArendInstances instances, ConcreteProvider concreteProvider, Concrete.ResolvableDefinition definition) {
     myDependencies = dependencies;
+    myInstanceDependencies = instanceDependencies;
     myWithBodies = withBodies;
-    myOnlyInstances = onlyInstances;
     myInstances = instances;
     myDefinition = definition;
     myClassDefinition = definition instanceof Concrete.ClassDefinition classDef ? classDef : definition == null || definition.getEnclosingClass() == null ? null
@@ -31,11 +34,11 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   }
 
   public CollectDefCallsVisitor(Collection<TCDefReferable> dependencies, boolean withBodies) {
-    this(dependencies, withBodies, false, null, null, null);
+    this(dependencies, null, withBodies, null, null, null);
   }
 
   public void addDependency(TCDefReferable dependency) {
-    if (!myOnlyInstances) {
+    if (myDependencies != null) {
       myDependencies.add(dependency);
     }
   }
@@ -106,7 +109,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
 
   @Override
   protected void visitPattern(Concrete.Pattern pattern, Void params) {
-    if (!myOnlyInstances && pattern instanceof Concrete.ConstructorPattern) {
+    if (myDependencies != null && pattern instanceof Concrete.ConstructorPattern) {
       Referable constructor = ((Concrete.ConstructorPattern) pattern).getConstructor();
       if (constructor instanceof TCDefReferable) {
         myDependencies.add((TCDefReferable) constructor);
@@ -138,6 +141,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
   }
 
   private void initializeInstances() {
+    myVisitedClasses = new HashSet<>();
     myInstanceMap = new HashMap<>();
     for (TCDefReferable instance : myInstances.getInstances()) {
       if (myConcreteProvider.getConcrete(instance) instanceof Concrete.FunctionDefinition function) {
@@ -168,14 +172,25 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
     }
   }
 
-  private void addInstances(TCDefReferable classRef) {
+  private void addInstances(TCDefReferable classRef, boolean withDependencies) {
+    if (!myVisitedClasses.add(classRef)) return;
     List<TCDefReferable> instances = myInstanceMap.get(classRef);
     if (instances != null) {
-      myDependencies.addAll(instances);
+      if (withDependencies && myDependencies != null) {
+        myDependencies.addAll(instances);
+      }
+      if (myInstanceDependencies != null) {
+        myInstanceDependencies.addAll(instances);
+        for (TCDefReferable instance : instances) {
+          if (myConcreteProvider.getConcrete(instance) instanceof Concrete.FunctionDefinition function) {
+            addParametersClassReferences(function.getParameters(), Collections.emptyList(), false);
+          }
+        }
+      }
     }
   }
 
-  private int addParametersClassReferences(List<? extends Concrete.Parameter> parameters, List<? extends Concrete.Argument> arguments) {
+  private int addParametersClassReferences(List<? extends Concrete.Parameter> parameters, List<? extends Concrete.Argument> arguments, boolean withDependencies) {
     boolean[] safeParams = new boolean[parameters.size()];
     int n = 0;
     loop:
@@ -207,7 +222,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
       if (paramType != null) {
         TCDefReferable classRef = ArendInstances.getClassRef(paramType, null);
         if (classRef != null && !mySuperClasses.contains(classRef)) {
-          addInstances(classRef);
+          addInstances(classRef, withDependencies);
         }
       }
     }
@@ -261,6 +276,27 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
       addDependency(ref);
     }
 
+    if (ref instanceof MetaReferable metaRef && myInstances != null) {
+      if (!myVisitedMetas.add(metaRef)) return;
+
+      Concrete.Expression body = null;
+      if (metaRef.getDefinition() instanceof DefaultMetaDefinition metaDef) {
+        body = metaDef.getConcrete().body;
+      } else if (myConcreteProvider != null && myConcreteProvider.getConcrete(metaRef) instanceof Concrete.MetaDefinition metaDef) {
+        body = metaDef.body;
+      }
+
+      if (body != null) {
+        Collection<TCDefReferable> prevDependencies = myDependencies;
+        myDependencies = null;
+        body.accept(this, null);
+        myDependencies = prevDependencies;
+      }
+
+      return;
+    }
+
+
     if (ref.getKind() == GlobalReferable.Kind.FIELD && !arguments.isEmpty() && !arguments.getFirst().isExplicit() && !(arguments.getFirst().getExpression() instanceof Concrete.HoleExpression)) {
       return;
     }
@@ -276,7 +312,7 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
     }
 
     if (ref.getKind() == GlobalReferable.Kind.FIELD) {
-      addInstances(ref.getTypecheckable());
+      addInstances(ref.getTypecheckable(), true);
       return;
     }
 
@@ -296,13 +332,18 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
           parameters = definition.getParameters();
         }
       }
-      int n = addParametersClassReferences(parameters, arguments);
-      if (definition instanceof Concrete.DataDefinition dataDef && !ownerRef.equals(ref)) {
+      boolean isConstructor = definition instanceof Concrete.DataDefinition && !ownerRef.equals(ref);
+      int n = addParametersClassReferences(isConstructor ? parameters.stream().map(param -> {
+        Concrete.Parameter newParam = param.copy(param.getData());
+        newParam.setExplicit(false);
+        return newParam;
+      }).toList() : parameters, arguments, true);
+      if (isConstructor) {
         loop:
-        for (Concrete.ConstructorClause clause : dataDef.getConstructorClauses()) {
+        for (Concrete.ConstructorClause clause : ((Concrete.DataDefinition) definition).getConstructorClauses()) {
           for (Concrete.Constructor constructor : clause.getConstructors()) {
             if (constructor.getData().equals(ref)) {
-              addParametersClassReferences(constructor.getParameters(), arguments.subList(n, arguments.size()));
+              addParametersClassReferences(constructor.getParameters(), arguments.subList(n, arguments.size()), true);
               break loop;
             }
           }

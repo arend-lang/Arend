@@ -100,7 +100,7 @@
   | ret a => in~ $ (a, in~ nil) :: nil
   | ret_f => \case \elim __ \with {
     | in~ l =>
-      \have t j : (l j).2 = 1 => cases (l j).2 \with {
+      \have t j : (l j).2 = ide => cases (l j).2 \with {
         | in~ nil => idp
         | in~ (j :: _) => absurd (e j)
       }
@@ -181,7 +181,7 @@
       | func-+ {p q : Poly (MPoly (Fin n) R)} : ret (p + q) = ret p + ret q \elim p, q {
         | pzero, q => inv zro-left
         | padd p a, pzero => inv zro-right
-        | padd p a, padd q b => rewrite (func-+, (monoidSet-hom (permSet-map fsuc) id).func-+) (equation {Ring})
+        | padd p a, padd q b => {?} -- TODO[server2]: rewrite (func-+, (monoidSet-hom (permSet-map fsuc) id).func-+) (equation {Ring})
       }
       | func-ide => idp
       | func-* {p q : Poly (MPoly (Fin n) R)} : ret (p * q) = ret p * ret q \elim p {
@@ -266,7 +266,7 @@
 \lemma mdegree<-exists {J : \Set} {R : CRing} (p : MPoly J R) : ∃ (d : Nat) (mdegree< p d) \elim p
   | in~ l => inP (suc $ Big (∨) 0 $ map (\lam s => permSet-length s.2) l, inP (l, idp, \lam j => suc_<=_< $ suc<=suc $ later $ NatSemiring.Big_<=_join1 {map (\lam s => permSet-length s.2) l} j))
 
-\lemma mdegree<0 {J : \Set} {R : CRing} {p : MPoly J R} (d : mdegree< p 0) : p = 0 \elim p, d
+\lemma mdegree<0 {J : \Set} {R : CRing} {p : MPoly J R} (d : mdegree< p 0) : p = zro \elim p, d
   | in~ l, inP (nil, q, _) => path \lam i => q i
   | in~ l, inP (a :: l', _, q) => \case q 0
 

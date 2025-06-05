@@ -13,9 +13,7 @@ import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.instance.InstanceSearchParameters;
 import org.arend.naming.reference.CoreReferable;
-import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
-import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.ext.util.Pair;
@@ -24,16 +22,16 @@ import java.util.*;
 import java.util.function.Predicate;
 
 public class GlobalInstancePool implements InstancePool {
-  private final ArendInstances myInstances;
+  private final List<FunctionDefinition> myInstances;
   private final CheckTypeVisitor myCheckTypeVisitor;
   private LocalInstancePool myInstancePool;
 
-  public GlobalInstancePool(ArendInstances instances, CheckTypeVisitor checkTypeVisitor) {
+  public GlobalInstancePool(List<FunctionDefinition> instances, CheckTypeVisitor checkTypeVisitor) {
     myInstances = instances;
     myCheckTypeVisitor = checkTypeVisitor;
   }
 
-  public GlobalInstancePool(ArendInstances instances, CheckTypeVisitor checkTypeVisitor, LocalInstancePool instancePool) {
+  public GlobalInstancePool(List<FunctionDefinition> instances, CheckTypeVisitor checkTypeVisitor, LocalInstancePool instancePool) {
     myInstances = instances;
     myCheckTypeVisitor = checkTypeVisitor;
     myInstancePool = instancePool;
@@ -41,10 +39,6 @@ public class GlobalInstancePool implements InstancePool {
 
   public void setInstancePool(LocalInstancePool instancePool) {
     myInstancePool = instancePool;
-  }
-
-  public ArendInstances getInstances() {
-    return myInstances;
   }
 
   @Override
@@ -178,13 +172,10 @@ public class GlobalInstancePool implements InstancePool {
     }
 
     Expression finalClassifyingExpression = normClassifyingExpression;
-    class MyPredicate implements Predicate<TCDefReferable> {
-      private FunctionDefinition instanceDef = null;
-
+    class MyPredicate implements Predicate<FunctionDefinition> {
       @Override
-      public boolean test(TCDefReferable instance) {
-        instanceDef = (FunctionDefinition) instance.getTypechecked();
-        if (!(instanceDef != null && instanceDef.status().headerIsOK() && instanceDef.getResultType() instanceof ClassCallExpression classCall && parameters.testClass(classCall.getDefinition()) && parameters.testGlobalInstance(instanceDef))) {
+      public boolean test(FunctionDefinition instance) {
+        if (!(instance != null && instance.status().headerIsOK() && instance.getResultType() instanceof ClassCallExpression classCall && parameters.testClass(classCall.getDefinition()) && parameters.testGlobalInstance(instance))) {
           return false;
         }
 
@@ -204,17 +195,23 @@ public class GlobalInstancePool implements InstancePool {
     }
 
     MyPredicate predicate = new MyPredicate();
-    TCDefReferable instance = myInstances.find(predicate);
-    if (instance == null || predicate.instanceDef == null) {
+    FunctionDefinition instance = null;
+    for (FunctionDefinition function : myInstances) {
+      if (predicate.test(function)) {
+        instance = function;
+        break;
+      }
+    }
+    if (instance == null) {
       return null;
     }
 
-    ClassDefinition actualClass = ((ClassCallExpression) predicate.instanceDef.getResultType()).getDefinition();
+    ClassDefinition actualClass = ((ClassCallExpression) instance.getResultType()).getDefinition();
     Object data = sourceNode == null ? null : sourceNode.getData();
-    Concrete.Expression instanceExpr = new Concrete.ReferenceExpression(data, instance);
-    DependentLink link = predicate.instanceDef.getParameters();
+    Concrete.Expression instanceExpr = new Concrete.ReferenceExpression(data, instance.getRef());
+    DependentLink link = instance.getParameters();
     ClassDefinition enclosingClass = currentDef != null ? currentDef.getEnclosingClass() : null;
-    if (myInstancePool != null && !myInstancePool.getLocalInstances().isEmpty() && myInstancePool.getLocalInstances().getFirst().classDef == enclosingClass && predicate.instanceDef.getEnclosingClass() == enclosingClass) {
+    if (myInstancePool != null && !myInstancePool.getLocalInstances().isEmpty() && myInstancePool.getLocalInstances().getFirst().classDef == enclosingClass && instance.getEnclosingClass() == enclosingClass) {
       instanceExpr = Concrete.AppExpression.make(data, instanceExpr, new Concrete.ReferenceExpression(data, new CoreReferable(null, myInstancePool.getLocalInstances().getFirst().value.computeTyped())), link.isExplicit());
       link = link.getNext();
     }
@@ -223,7 +220,7 @@ public class GlobalInstancePool implements InstancePool {
       if (recursiveHoleExpression != null) {
         newRecursiveData.addAll(recursiveHoleExpression.recursiveData);
       }
-      newRecursiveData.add(new RecursiveInstanceData(instance, actualClass.getReferable(), classifyingExpression));
+      newRecursiveData.add(new RecursiveInstanceData(instance.getRef(), actualClass.getReferable(), classifyingExpression));
       instanceExpr = Concrete.AppExpression.make(data, instanceExpr, new RecursiveInstanceHoleExpression(recursiveHoleExpression == null ? data : recursiveHoleExpression.getData(), newRecursiveData), link.isExplicit());
     }
 

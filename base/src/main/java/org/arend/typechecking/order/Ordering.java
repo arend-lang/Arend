@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 
 public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   private final InstanceScopeProvider myInstanceScopeProvider;
+  private final Map<TCDefReferable, List<TCDefReferable>> myInstanceDependencies;
   private final ConcreteProvider myConcreteProvider;
   private OrderingListener myOrderingListener;
   private final DependencyListener myDependencyListener;
@@ -39,6 +40,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     myComparator = comparator;
     myAllowedDependencies = allowedDependencies;
     myStage = stage;
+    myInstanceDependencies = stage.ordinal() < Stage.WITHOUT_INSTANCES.ordinal() ? new HashMap<>() : null;
     myErrorReporter = errorReporter;
   }
 
@@ -52,6 +54,10 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
 
   public Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ErrorReporter errorReporter) {
     this(instanceScopeProvider, concreteProvider, orderingListener, dependencyListener, comparator, true, errorReporter);
+  }
+
+  public Map<TCDefReferable, List<TCDefReferable>> getInstanceDependencies() {
+    return myInstanceDependencies == null ? Collections.emptyMap() : myInstanceDependencies;
   }
 
   public OrderingListener getListener() {
@@ -140,7 +146,8 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   @Override
   protected boolean forDependencies(Concrete.ResolvableDefinition definition, Consumer<Concrete.ResolvableDefinition> consumer) {
     Set<TCDefReferable> dependencies = new LinkedHashSet<>();
-    CollectDefCallsVisitor visitor = new CollectDefCallsVisitor(dependencies, myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal(), false, myStage.ordinal() < Stage.WITHOUT_INSTANCES.ordinal() ? myInstanceScopeProvider.getInstancesFor(definition.getData()) : null, myConcreteProvider, definition);
+    Set<TCDefReferable> instanceDependencies = myInstanceDependencies == null ? null : new HashSet<>();
+    CollectDefCallsVisitor visitor = new CollectDefCallsVisitor(dependencies, instanceDependencies, myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal(), myStage.ordinal() < Stage.WITHOUT_INSTANCES.ordinal() ? myInstanceScopeProvider.getInstancesFor(definition.getData()) : null, myConcreteProvider, definition);
 
     if (definition.getEnclosingClass() != null) {
       visitor.addDependency(definition.getEnclosingClass());
@@ -158,6 +165,21 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     if (myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal()) {
       for (TCDefReferable usedDefinition : definition.getUsedDefinitions()) {
         collectInUsedDefinitions(usedDefinition, visitor);
+      }
+    }
+
+    if (myInstanceDependencies != null && !instanceDependencies.isEmpty()) {
+      List<TCDefReferable> instances = new ArrayList<>();
+      for (TCDefReferable instance : myInstanceScopeProvider.getInstancesFor(definition.getData()).getInstances()) {
+        if (instanceDependencies.contains(instance)) {
+          instances.add(instance);
+        }
+      }
+      if (!instances.isEmpty()) {
+        myInstanceDependencies.put(definition.getData(), instances);
+        for (TCDefReferable usedDefinition : definition.getUsedDefinitions()) {
+          myInstanceDependencies.put(usedDefinition, instances);
+        }
       }
     }
 

@@ -192,7 +192,7 @@
         }
     }
 
-\func mPoly_integralExt {K : DiscreteField} {S : CRing} (f : RingHom K S) {n : Nat} {l : Array S (suc n)} (gen : RingHom.isAlgebraGenerated f l) (p : MPoly (Fin (suc n)) K) (p/=0 : p /= 0) (pe : mPolyMapEval f p l = 0)
+\func mPoly_integralExt {K : DiscreteField} {S : CRing} (f : RingHom K S) {n : Nat} {l : Array S (suc n)} (gen : RingHom.isAlgebraGenerated f l) (p : MPoly (Fin (suc n)) K) (p/=0 : p /= zro) (pe : mPolyMapEval f p l = 0)
   : \Sigma (E : CRing) (g : RingHom K E) (l' : Array E n) (RingHom.isAlgebraGenerated g l') (h : RingHom E S) (isInj h) (isIntegralExt h) (h RingHom.∘ g = f)
   => \case mPoly_integral f p p/=0 pe \with {
        | (E,g,l',gen',h,hg,hinj,hint,hg=f) => (E,g,l',gen',h,hinj, integralExt-finite-char (l 0 :: nil) (RingHom.isAlgebraGenerated-poly \lam x =>

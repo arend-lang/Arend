@@ -1,5 +1,6 @@
 package org.arend.typechecking.instance;
 
+import org.arend.core.definition.FunctionDefinition;
 import org.arend.extImpl.DefaultMetaDefinition;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.MetaReferable;
@@ -11,9 +12,7 @@ import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 
 public class ArendInstances {
@@ -75,6 +74,16 @@ public class ArendInstances {
 
   public @NotNull PersistentList<TCDefReferable> getInstances() {
     return myInstances;
+  }
+
+  public @NotNull List<FunctionDefinition> getInstancesList() {
+    List<FunctionDefinition> result = new ArrayList<>();
+    for (TCDefReferable instance : myInstances) {
+      if (instance.getTypechecked() instanceof FunctionDefinition function) {
+        result.add(function);
+      }
+    }
+    return result;
   }
 
   @Override

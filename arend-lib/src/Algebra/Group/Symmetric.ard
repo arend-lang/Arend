@@ -2,6 +2,7 @@
 \import Algebra.Group.Fin
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Arith.Fin.Order
@@ -138,7 +139,7 @@
       }
 
 \func cycle {n k : Nat} (l : Array (Fin n) k) (inj : isInj l) : Sym n \elim k
-  | 0 => 1
+  | 0 => ide
   | suc k => PigeonholeSet.isEquiv (func l) (func-inj inj)
   \where {
     \func func {n k : Nat} (l : Array (Fin n) (suc k)) (j : Fin n) : Fin n
@@ -343,7 +344,7 @@
         }
       }
 
-\lemma lift_ide {n : Nat} : lift {n} 1 = 1
+\lemma lift_ide {n : Nat} : lift {n} ide = 1
   => Sym.equals (\lam j => cases j idp)
 
 \lemma lift_cycle {n k : Nat} {l : Array (Fin n) k} {inj : isInj l} : lift (cycle l inj) = cycle (map fsuc l) (\lam {i} {j} p => inj (unfsuc p)) \elim k
@@ -465,7 +466,7 @@
       => f.func-pow *> pmap (Monoid.pow __ _) (f.func-negative *> pmap negative f.func-ide)
   }
 
-\lemma sign_ide {R : Ring} {n : Nat} : sign {R} {n} 1 = 1
+\lemma sign_ide {R : Ring} {n : Nat} : sign {R} {n} ide = ide
   => unfold sign $ rewrite sign.inversions_ide idp
 
 \lemma sign_* {R : Ring} {n : Nat} {e e' : Sym n} : sign (e * e') = sign e R.* sign e'

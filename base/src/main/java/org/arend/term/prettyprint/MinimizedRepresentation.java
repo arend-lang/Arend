@@ -244,7 +244,7 @@ final public class MinimizedRepresentation {
                 errorsCollector.add(error);
             }
         }, null, null);
-        checkTypeVisitor.setInstancePool(new GlobalInstancePool(instances, checkTypeVisitor, new LocalInstancePool(checkTypeVisitor)));
+        checkTypeVisitor.setInstancePool(new GlobalInstancePool(instances == null ? Collections.emptyList() : instances.getInstancesList(), checkTypeVisitor, new LocalInstancePool(checkTypeVisitor)));
         return checkTypeVisitor;
     }
 

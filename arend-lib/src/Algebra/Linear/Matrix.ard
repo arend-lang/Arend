@@ -459,7 +459,7 @@
   }
   | suc n => rewrite determinantN.determinant=determinant0 (determinantN.determinantN_ide {R} {suc n} 0)
   \where {
-    \lemma ide_minor {R : Ring} {n : Nat} : minor (MatrixRing.ide {R} {suc n}) 0 0 = 1 \elim n
+    \lemma ide_minor {R : Ring} {n : Nat} : minor (MatrixRing.ide {R} {suc n}) 0 0 = ide \elim n
       | 0 => idp
       | suc n => matrixExt \lam i j => mcases {2} \with {
         | yes p => rewrite (decideEq=_reduce $ pmap fsuc p) idp
@@ -581,7 +581,7 @@
  -     Let `p := charPoly B` (which is equal to `determinant A`). Then `p(B) * U = p *c U = 0` for all `U`, which implies `p(B) = 0`.
  -}
 \lemma equations-determinant {R : CRing} {M : LModule R} {n k : Nat} (A : Matrix R n n) {U : Matrix M n k}
-                             (p : product-gen A U = 0) : MatrixModule.*c-gen (determinant A) U = 0
+                             (p : product-gen A U = zro) : MatrixModule.*c-gen (determinant A) U = zro
   => {?} {- TODO[server2]: \have | r : product-gen (adjugate A) 0 = 0 => matrixExt \lam i j => M.BigSum_zro \lam k => M.*c_zro-right
            | t : product-gen (determinant A *c ide) U = 0
                => pmap (product-gen __ U) (inv adjugate-left) *> product-gen-assoc *> cong p *> r

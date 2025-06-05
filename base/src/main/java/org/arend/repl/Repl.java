@@ -275,7 +275,7 @@ public abstract class Repl {
     expr = DesugarVisitor.desugar(expr, errorReporter);
     if (checkErrors()) return;
     var typechecker = new CheckTypeVisitor(errorReporter, null, null);
-    var instancePool = new GlobalInstancePool(typechecking.getInstanceScopeProvider().getInstancesFor(myModuleReferable), typechecker);
+    var instancePool = new GlobalInstancePool(typechecking.getInstanceScopeProvider().getInstancesFor(myModuleReferable).getInstancesList(), typechecker);
     typechecker.setInstancePool(instancePool);
     var result = typechecker.finalCheckExpr(expr, expectedType);
     if (!checkErrors()) {

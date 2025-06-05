@@ -91,7 +91,7 @@ public abstract class CommonCliRepl extends Repl {
     super(
       errorReporter,
       server,
-      new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, ref -> null /* TODO[server2] */)
+      new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, Collections.emptyMap(), ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, ref -> null /* TODO[server2] */)
     );
     /* TODO[server2]
       myReplLibrary = Files.exists(pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE)) ? libraryResolver.registerLibrary(pwd)

@@ -52,6 +52,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   private final Map<TCDefReferable, Suspension> mySuspensions = new HashMap<>();
   private final ErrorReporter myErrorReporter;
   private final InstanceScopeProvider myInstanceScopeProvider;
+  private final Map<TCDefReferable, List<TCDefReferable>> myInstanceDependencies;
   private final ConcreteProvider myConcreteProvider;
   private final PartialComparator<TCDefReferable> myComparator;
   private final ArendExtensionProvider myExtensionProvider;
@@ -61,18 +62,19 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   private record Suspension(CheckTypeVisitor typechecker, UniverseKind universeKind) {}
 
-  public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
+  public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, Map<TCDefReferable, List<TCDefReferable>> instanceDependencies, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
     myCheckerFactory = factory;
     myErrorReporter = errorReporter;
     myDependencyListener = dependencyListener;
     myInstanceScopeProvider = instanceScopeProvider;
+    myInstanceDependencies = instanceDependencies;
     myConcreteProvider = concreteProvider;
     myComparator = comparator;
     myExtensionProvider = extensionProvider;
   }
 
-  public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, ErrorReporter errorReporter, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
-    this(factory, instanceScopeProvider, concreteProvider, errorReporter, DummyDependencyListener.INSTANCE, comparator, extensionProvider);
+  public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, Map<TCDefReferable, List<TCDefReferable>> instanceDependencies, ConcreteProvider concreteProvider, ErrorReporter errorReporter, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
+    this(factory, instanceScopeProvider, instanceDependencies, concreteProvider, errorReporter, DummyDependencyListener.INSTANCE, comparator, extensionProvider);
   }
 
   public ConcreteProvider getConcreteProvider() {
@@ -196,6 +198,21 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
   }
 
+  private List<FunctionDefinition> getInstances(TCDefReferable definition) {
+    List<TCDefReferable> instances = myInstanceDependencies.get(definition);
+    if (instances == null) {
+      return Collections.emptyList();
+    }
+
+    List<FunctionDefinition> result = new ArrayList<>(instances.size());
+    for (TCDefReferable instance : instances) {
+      if (instance.getTypechecked() instanceof FunctionDefinition function) {
+        result.add(function);
+      }
+    }
+    return result;
+  }
+
   private void typecheckWithUse(Concrete.ResolvableDefinition definition, Set<TCDefReferable> usedDefinitions, boolean recursive, ArendExtension extension, List<Definition> typecheckedList) {
     ErrorReporter errorReporter = new LocalErrorReporter(definition.getData(), myErrorReporter);
     if (usedDefinitions != null && definition instanceof Concrete.Definition def) {
@@ -220,7 +237,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
     if (ok) {
       CheckTypeVisitor checkTypeVisitor = myCheckerFactory.create(errorReporter, null, extension);
-      checkTypeVisitor.setInstancePool(new GlobalInstancePool(myInstanceScopeProvider.getInstancesFor(definition.getData()), checkTypeVisitor));
+      checkTypeVisitor.setInstancePool(new GlobalInstancePool(getInstances(definition.getData()), checkTypeVisitor));
       definition = definition.accept(new ReplaceDataVisitor(), null);
       if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind().isUse()) {
         myDesugaredDefinitions.put(funDef.getData(), funDef);
@@ -353,7 +370,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     Map<GlobalReferable, List<TCDefReferable>> instances = new LinkedHashMap<>();
     for (Concrete.ResolvableDefinition definition : definitions) {
       Set<TCDefReferable> dependencies = new LinkedHashSet<>();
-      definition.accept(new CollectDefCallsVisitor(dependencies, true, true, myInstanceScopeProvider.getInstancesFor(definition.getData()), myConcreteProvider, definition), null);
+      definition.accept(new CollectDefCallsVisitor(null, dependencies, true, myInstanceScopeProvider.getInstancesFor(definition.getData()), myConcreteProvider, definition), null);
       dependencies.retainAll(cycleRefs);
       if (!dependencies.isEmpty()) {
         instances.put(definition.getData(), new ArrayList<>(dependencies));
@@ -386,7 +403,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     visitor.setStatus(definition.getStatus().getTypecheckingStatus());
     DesugarVisitor.desugar(definition, myConcreteProvider, visitor.getErrorReporter());
     DefinitionTypechecker typechecker = new DefinitionTypechecker(visitor, definition instanceof Concrete.Definition ? ((Concrete.Definition) definition).getRecursiveDefinitions() : Collections.emptySet());
-    Definition typechecked = typechecker.typecheckHeader(new GlobalInstancePool(myInstanceScopeProvider.getInstancesFor(definition.getData()), visitor), definition);
+    Definition typechecked = typechecker.typecheckHeader(new GlobalInstancePool(getInstances(definition.getData()), visitor), definition);
     if (typechecked == null) return;
 
     UniverseKind universeKind = typechecked.getUniverseKind();

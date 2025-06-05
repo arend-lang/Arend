@@ -25,7 +25,6 @@ import org.arend.refactoring.collectArendExprs
 import org.arend.refactoring.selectedExpr
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.error.local.GoalDataHolder
-import org.arend.typechecking.instance.ArendInstances
 import org.arend.typechecking.instance.pool.GlobalInstancePool
 import org.arend.typechecking.provider.ConcreteProvider
 import org.arend.typechecking.visitor.DefinitionTypechecker
@@ -167,7 +166,7 @@ class ArendTraceAction : ArendPopupAction() {
         ): ArendTracingData {
             val errorsConsumer = ErrorsConsumer()
             val tracer = ArendTracingTypechecker(errorsConsumer, null /* TODO[server2] */).apply {
-                instancePool = GlobalInstancePool(ArendInstances() /* TODO[server2]: PsiInstanceProviderSet()[definition.data] */, this)
+                instancePool = GlobalInstancePool(ArrayList() /* TODO[server2]: PsiInstanceProviderSet()[definition.data] */, this)
             }
             var firstTraceEntryIndex = -1
             ActionUtil.underModalProgress(project, ArendBundle.message("arend.tracer.collecting.tracing.data")) {
