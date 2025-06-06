@@ -274,7 +274,10 @@ public class LongUnresolvedReference implements UnresolvedReference {
       }
       if (newResolved == null) {
         if (provider != null) {
-          if (onlyTry) return null;
+          if (onlyTry) {
+            resolved = null;
+            return null;
+          }
           resolved = new ErrorReference(i < myReferences.size() && myReferences.get(i) != null ? myReferences.get(i) : myData, resolved, i, myPath.get(i));
           if (resolvedRefs != null) {
             resolvedRefs.add(resolved);
