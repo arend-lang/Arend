@@ -1,5 +1,6 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Function.Meta
 \import Logic
 \import Logic.Meta

@@ -12,7 +12,7 @@ import org.arend.ext.reference.Precedence;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.library.MemoryLibrary;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.AccessModifier;

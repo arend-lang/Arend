@@ -97,7 +97,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
     }
 
     ListErrorReporter errorReporter = new ListErrorReporter();
-    expression = SyntacticDesugarVisitor.desugar(expression.accept(new ExpressionResolveNameVisitor(parentScope, typedContext, TypingInfo.EMPTY, new TestLocalErrorReporter(errorReporter), null), null), errorReporter);
+    expression = SyntacticDesugarVisitor.desugar(expression.accept(new ExpressionResolveNameVisitor(parentScope, typedContext, TypingInfo.EMPTY, new TestLocalErrorReporter(errorReporter), null, null), null), errorReporter);
     assertThat(errorReporter.getErrorList(), containsErrors(errors));
     if (matchers.length > 0) {
       assertThat(errorReporter.getErrorList(), Matchers.contains(matchers));

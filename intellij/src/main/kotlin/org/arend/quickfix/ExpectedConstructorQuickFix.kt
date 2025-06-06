@@ -266,7 +266,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                             val primerOk: Boolean
                             run {
                                 val cer = CountingErrorReporter(DummyErrorReporter.INSTANCE)
-                                val resolver = ExpressionResolveNameVisitor(patternPrimer.scope, ArrayList(), TypingInfo.EMPTY, cer, null)
+                                val resolver = ExpressionResolveNameVisitor(patternPrimer.scope, ArrayList(), TypingInfo.EMPTY, cer, null, null)
                                 val primerList = ArrayList<Concrete.Pattern>()
                                 primerList.add(concretePrimer)
                                 resolver.visitPatterns(primerList, null)

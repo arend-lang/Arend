@@ -3,6 +3,7 @@
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Monoid.Prime
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.RingHom

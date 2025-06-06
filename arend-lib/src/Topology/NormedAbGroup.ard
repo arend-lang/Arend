@@ -3,6 +3,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Arith.Real
 \import Function.Meta
 \import Logic

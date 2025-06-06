@@ -1,5 +1,7 @@
+\import Algebra.Group
 \import Algebra.Module
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Algebra.Semiring
 \import Logic
 \import Operations

@@ -13,6 +13,7 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Sub
+\import Algebra.Pointed
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Noetherian
 \import Algebra.Semiring

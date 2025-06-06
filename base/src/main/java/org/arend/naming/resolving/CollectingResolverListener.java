@@ -2,7 +2,7 @@ package org.arend.naming.resolving;
 
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.DataContainer;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;

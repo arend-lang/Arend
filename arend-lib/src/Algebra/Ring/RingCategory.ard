@@ -2,6 +2,7 @@
 \import Algebra.Group.GroupCategory
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidCategory
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring

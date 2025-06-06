@@ -1,7 +1,7 @@
 package org.arend.refactoring
 
 import org.arend.ext.module.LongName
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.psi.ArendFile
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ancestor

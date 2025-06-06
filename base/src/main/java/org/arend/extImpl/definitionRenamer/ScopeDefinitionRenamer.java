@@ -4,7 +4,7 @@ import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.DefinitionRenamer;
 import org.arend.ext.reference.ArendRef;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.FieldReferable;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocatedReferable;

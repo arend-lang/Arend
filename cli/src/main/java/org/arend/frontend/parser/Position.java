@@ -1,7 +1,7 @@
 package org.arend.frontend.parser;
 
 import org.arend.error.SourcePosition;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 
 public class Position extends SourcePosition {
   public final ModuleLocation module;

@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Arith.Int
 \import Arith.Nat
 \import Arith.Nat.Base

@@ -2,6 +2,7 @@
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Reduced

@@ -3,6 +3,7 @@
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Arith.Real
 \import Arith.Real.Field

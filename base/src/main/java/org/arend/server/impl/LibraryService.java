@@ -8,7 +8,7 @@ import org.arend.extImpl.*;
 import org.arend.library.classLoader.ClassLoaderDelegate;
 import org.arend.library.classLoader.MultiClassLoader;
 import org.arend.library.error.LibraryError;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
 import org.arend.prelude.ConcretePrelude;
 import org.arend.prelude.Prelude;

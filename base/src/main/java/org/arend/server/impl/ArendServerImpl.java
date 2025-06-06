@@ -8,8 +8,8 @@ import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.util.Pair;
-import org.arend.module.FullName;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.FullName;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.module.scopeprovider.SimpleModuleScopeProvider;
 import org.arend.naming.reference.*;
@@ -87,10 +87,8 @@ public class ArendServerImpl implements ArendServer {
 
   private final ArendExtensionProvider myExtensionProvider = new ArendExtensionProvider() {
     @Override
-    public @Nullable ArendExtension getArendExtension(TCDefReferable ref) {
-      ModuleLocation module = ref.getLocation();
-      if (module == null) return null;
-      ArendLibraryImpl library = myLibraryService.getLibrary(module.getLibraryName());
+    public @Nullable ArendExtension getArendExtension(@NotNull String libraryName) {
+      ArendLibraryImpl library = myLibraryService.getLibrary(libraryName);
       return library == null ? null : library.getExtension();
     }
   };
@@ -517,7 +515,8 @@ public class ArendServerImpl implements ArendServer {
       GlobalTypingInfo typingInfo = new GlobalTypingInfo(myTypingInfo);
       Scope scope = getParentGroupScope(module, group);
       new TypingInfoVisitor(typingInfo).processGroup(group, scope);
-      new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(group)), typingInfo, DummyErrorReporter.INSTANCE, new ResolverListener() {
+      ArendExtension extension = myExtensionProvider.getArendExtension(module.getLibraryName());
+      new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(group)), typingInfo, DummyErrorReporter.INSTANCE, extension == null ? null : extension.getLiteralTypechecker(), new ResolverListener() {
         @Override
         public void resolving(AbstractReference abstractReference, Scope scope, Scope.ScopeContext context, boolean finished) {
           if (reference.equals(abstractReference)) {

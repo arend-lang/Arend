@@ -12,13 +12,13 @@ import com.intellij.platform.util.progress.reportSequentialProgress
 import kotlinx.coroutines.*
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.LongName
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
 import org.arend.toolWindow.errors.ArendMessagesService
 import org.arend.typechecking.CoroutineCancellationIndicator
 import org.arend.typechecking.error.NotificationErrorReporter
-import org.arend.module.FullName
+import org.arend.ext.module.FullName
 import org.arend.naming.reference.TCDefReferable
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.visitor.ArendCheckerFactory

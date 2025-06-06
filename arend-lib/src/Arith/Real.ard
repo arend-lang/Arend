@@ -3,6 +3,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Algebra.Semiring
 \import Arith.Rat
 \import Arith.Real.InfReal
@@ -276,13 +277,13 @@
         | inP (b,b<x,a<b) => inP (b * ratio 1 2, transport x.L linarith b<x, b * ratio 1 2, transport x.L linarith b<x, linarith)
       })
 
-    \lemma half>0 {x : Real} (x>0 : 0 RealAbGroup.< x) : 0 RealAbGroup.< half x
+    \lemma half>0 {x : Real} (x>0 : Real.fromRat 0 RealAbGroup.< x) : Real.fromRat 0 RealAbGroup.< half x
       => real_<_L.2 $ unfolds $ real_<_L.1 x>0
 
-    \lemma half<id {x : Real} (x>0 : 0 RealAbGroup.< x) : half x RealAbGroup.< x
+    \lemma half<id {x : Real} (x>0 : Real.fromRat 0 RealAbGroup.< x) : half x RealAbGroup.< x
       => transport2 (RealAbGroup.<) zro-left half+half $ <_+-left (half x) (half>0 x>0)
 
-    \lemma zro<ide : 0 RealAbGroup.< 1
+    \lemma zro<ide : Real.fromRat 0 RealAbGroup.< Real.fromRat 1
       => real_<-rat-char.2 $ inP $ later (ratio 1 2, idp, idp)
 
     \lemma lower_<-char {x y : Real} : x LowerRealAbMonoid.< y <-> x RealAbGroup.< y

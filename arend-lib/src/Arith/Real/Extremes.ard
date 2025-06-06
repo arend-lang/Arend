@@ -3,6 +3,7 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
+\import Algebra.Semiring
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field

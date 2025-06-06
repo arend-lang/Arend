@@ -513,12 +513,12 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
   @Override
   public Boolean visitNumericLiteral(Concrete.NumericLiteral expr1, Concrete.Expression expr2) {
-    return expr2 instanceof Concrete.NumericLiteral && expr1.getNumber().equals(((Concrete.NumericLiteral) expr2).getNumber());
+    return expr2 instanceof Concrete.NumericLiteral literal2 && expr1.getNumber().equals(literal2.getNumber()) && compare(expr1.getResolvedExpression(), literal2.getResolvedExpression());
   }
 
   @Override
   public Boolean visitStringLiteral(Concrete.StringLiteral expr1, Concrete.Expression expr2) {
-    return expr2 instanceof Concrete.StringLiteral && expr1.getUnescapedString().equals(((Concrete.StringLiteral) expr2).getUnescapedString());
+    return expr2 instanceof Concrete.StringLiteral literal2 && expr1.getUnescapedString().equals(literal2.getUnescapedString()) && compare(expr1.getResolvedExpression(), literal2.getResolvedExpression());
   }
 
   @Override

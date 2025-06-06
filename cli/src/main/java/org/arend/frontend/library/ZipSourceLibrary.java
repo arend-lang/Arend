@@ -8,7 +8,7 @@ import org.arend.library.LibraryConfig;
 import org.arend.library.classLoader.ClassLoaderDelegate;
 import org.arend.library.classLoader.ZipClassLoaderDelegate;
 import org.arend.library.error.LibraryIOError;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.source.Source;
 import org.arend.util.FileUtils;
 import org.arend.util.Version;

@@ -1,4 +1,5 @@
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Paths
 
 \instance ProductMonoid (M N : Monoid) : Monoid (\Sigma M N)

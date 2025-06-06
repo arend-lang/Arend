@@ -83,7 +83,7 @@ public abstract class FieldKey extends SerializableKey<FieldKey.Data> implements
   protected abstract boolean checkField(CoreClassField field);
 
   protected boolean isBaseSetCall(CoreExpression type, CoreClassField field) {
-    return type instanceof CoreFieldCallExpression fieldCall && Names.isCarrier(fieldCall.getDefinition().getRef()) && fieldCall.getArgument() instanceof CoreReferenceExpression refExpr && refExpr.getBinding() == field.getThisParameter();
+    return type instanceof CoreFieldCallExpression fieldCall && fieldCall.getDefinition().getRef().checkName(Names.CARRIER) && fieldCall.getArgument() instanceof CoreReferenceExpression refExpr && refExpr.getBinding() == field.getThisParameter();
   }
 
   protected CoreClassField getFieldApplied(CoreExpression type, CoreBinding var1, CoreBinding var2, CoreClassField field) {

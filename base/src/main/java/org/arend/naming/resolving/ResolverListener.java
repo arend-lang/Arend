@@ -1,6 +1,6 @@
 package org.arend.naming.resolving;
 
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.scope.Scope;
 import org.arend.term.abs.AbstractReference;

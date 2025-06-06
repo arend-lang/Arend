@@ -2,7 +2,7 @@ package org.arend.naming.reference;
 
 import org.arend.core.definition.Definition;
 import org.arend.ext.reference.Precedence;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.term.group.AccessModifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

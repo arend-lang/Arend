@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Nat

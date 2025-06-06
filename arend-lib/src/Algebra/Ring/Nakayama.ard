@@ -7,6 +7,7 @@
 \import Algebra.Module.Sub
 \import Algebra.Monoid
 \import Algebra.Monoid.Sub
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Factor
 \import Algebra.Ring.Ideal

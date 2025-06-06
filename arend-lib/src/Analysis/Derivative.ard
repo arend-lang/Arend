@@ -3,6 +3,7 @@
 \import Algebra.Module
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Analysis.Limit
 \import Function.Meta
 \import Logic

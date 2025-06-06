@@ -7,7 +7,7 @@
 \import Set.SetCategory
 
 \instance PowerLModule {R : Ring} (J : \Set) (M : LModule R) : LModule R (J -> M)
-  | zro _ => 0
+  | zro _ => M.zro
   | + f g j => f j M.+ g j
   | zro-left => ext (\lam j => M.zro-left)
   | zro-right => ext (\lam j => M.zro-right)

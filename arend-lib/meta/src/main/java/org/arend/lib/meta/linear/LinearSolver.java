@@ -420,7 +420,7 @@ public class LinearSolver {
     expectedType = expectedType.normalize(NormalizationMode.WHNF);
     Equation<CoreExpression> resultEquation;
     // TODO[server2]: Check that the type is empty instead?
-    if (expectedType instanceof CoreDataCallExpression && Names.isEmpty(((CoreDataCallExpression) expectedType).getDefinition().getRef())) {
+    if (expectedType instanceof CoreDataCallExpression && ((CoreDataCallExpression) expectedType).getDefinition().getRef().checkName(Names.EMPTY)) {
       resultEquation = null;
     } else {
       resultEquation = typeToEquation(expectedType, null, true);

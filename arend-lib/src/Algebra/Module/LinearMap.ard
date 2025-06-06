@@ -5,6 +5,7 @@
 \import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
 \import Algebra.Ring
 \import Algebra.Semiring

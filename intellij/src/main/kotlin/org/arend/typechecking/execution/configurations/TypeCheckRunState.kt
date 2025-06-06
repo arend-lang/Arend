@@ -21,7 +21,7 @@ import com.intellij.openapi.components.service
 import org.arend.ext.module.LongName
 import org.arend.ext.module.ModulePath
 import org.arend.library.error.LibraryError
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.server.ArendServerService
 import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.typechecking.execution.DefinitionNotFoundError

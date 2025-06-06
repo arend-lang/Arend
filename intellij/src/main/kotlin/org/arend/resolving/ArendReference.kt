@@ -7,7 +7,7 @@ import com.intellij.psi.*
 import org.arend.ArendIcons
 import org.arend.codeInsight.completion.ReplaceInsertHandler
 import org.arend.error.DummyErrorReporter
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.naming.reference.*
 import org.arend.psi.*
 import org.arend.psi.ext.*

@@ -349,11 +349,13 @@ public class VoidConcreteVisitor<P> implements ConcreteExpressionVisitor<P,Void>
 
   @Override
   public Void visitNumericLiteral(Concrete.NumericLiteral expr, P params) {
+    if (expr.getResolvedExpression() != null) expr.getResolvedExpression().accept(this, params);
     return null;
   }
 
   @Override
   public Void visitStringLiteral(Concrete.StringLiteral expr, P params) {
+    if (expr.getResolvedExpression() != null) expr.getResolvedExpression().accept(this, params);
     return null;
   }
 

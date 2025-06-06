@@ -11,7 +11,7 @@ import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.ext.reference.Precedence;
 import org.arend.extImpl.definitionRenamer.CachingDefinitionRenamer;
 import org.arend.extImpl.definitionRenamer.ScopeDefinitionRenamer;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.typing.TypingInfo;
@@ -289,7 +289,7 @@ public abstract class Repl {
   public final @Nullable Concrete.Expression preprocessExpr(@NotNull String text) {
     var expr = parseExpr(text);
     if (expr == null || checkErrors()) return null;
-    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(myScope, new ArrayList<>(), TypingInfo.EMPTY, errorReporter, null), null), errorReporter);
+    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(myScope, new ArrayList<>(), TypingInfo.EMPTY, errorReporter, null, null), null), errorReporter);
     if (checkErrors()) return null;
     return expr;
   }

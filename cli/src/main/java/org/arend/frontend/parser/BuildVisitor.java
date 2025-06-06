@@ -10,7 +10,7 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.reference.Precedence;
 import org.arend.extImpl.DefaultMetaTypechecker;
 import org.arend.frontend.reference.*;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.InternalReferableImpl;
 import org.arend.naming.reference.*;
 import org.arend.naming.scope.Scope;

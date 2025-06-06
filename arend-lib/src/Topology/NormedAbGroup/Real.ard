@@ -2,6 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.LowerReal
@@ -79,13 +80,13 @@
 
     \func fromCF (F : StronglyRegularCauchyFilter RatNormed) : Real \cowith
       | L a => ∃ (x eps : Rat) (0 < eps) (F (OBall eps x)) (a < x - eps)
-      | L-inh => \case cauchyFilter-metric-char.1 F.isCauchyFilter {1} RealAbGroup.zro<ide \with {
+      | L-inh => \case cauchyFilter-metric-char.1 F.isCauchyFilter {Real.fromRat 1} RealAbGroup.zro<ide \with {
         | inP (x,FB) => inP (x - 2, inP (x, 1, idp, FB, linarith))
       }
       | L-closed (inP (x,eps,eps>0,FB,q<x-eps)) q'<q => inP (x, eps, eps>0, FB, q'<q <∘ q<x-eps)
       | L-rounded {a} (inP (x,eps,eps>0,FB,a<x-eps)) => inP (RatField.mid a (x - eps), inP (x, eps, eps>0, FB, RatField.mid<right a<x-eps), RatField.mid>left a<x-eps)
       | U b => ∃ (x eps : Rat) (0 < eps) (F (OBall eps x)) (x + eps < b)
-      | U-inh => \case cauchyFilter-metric-char.1 F.isCauchyFilter {1} RealAbGroup.zro<ide \with {
+      | U-inh => \case cauchyFilter-metric-char.1 F.isCauchyFilter {Real.fromRat 1} RealAbGroup.zro<ide \with {
         | inP (x,FB) => inP (x + 2, inP (x, 1, idp, FB, linarith))
       }
       | U-closed (inP (x,eps,eps>0,FB,x+eps<q)) q<q' => inP (x, eps, eps>0, FB, x+eps<q <∘ q<q')

@@ -162,7 +162,7 @@
     \lemma suc-inj {k : Nat} {x y : Fin (suc k)} (p : suc x Nat.mod suc k = suc y Nat.mod suc k) : x = y
       => \case decideEq (x : Nat) k, decideEq (y : Nat) k \with {
         | yes e, yes e' => nat_fin_= (e *> inv e')
-        | yes e, no q => \case (inv (later $ rewrite e id_mod) *> p *> mod_/= q : 0 = suc y)
+        | yes e, no q => \case (inv (later $ rewrite e id_mod) *> p *> mod_/= q : 0 = {Nat} suc y)
         | no q, yes e => \case (inv (mod_/= q) *> p *> rewrite e id_mod : suc x = {Nat} 0)
         | no q, no q' => nat_fin_= $ pmap pred $ inv (mod_/= q) *> p *> mod_/= q'
       }

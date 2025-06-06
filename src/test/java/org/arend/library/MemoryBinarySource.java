@@ -1,6 +1,6 @@
 package org.arend.library;
 
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.source.StreamBinarySource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

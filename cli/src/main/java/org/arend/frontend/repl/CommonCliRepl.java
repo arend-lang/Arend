@@ -16,7 +16,7 @@ import org.arend.frontend.parser.ArendParser;
 import org.arend.frontend.parser.BuildVisitor;
 import org.arend.frontend.parser.ReporterErrorListener;
 import org.arend.frontend.repl.action.*;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.GeneratedVersion;
 import org.arend.repl.Repl;
@@ -27,13 +27,12 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
+import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
-import org.arend.typechecking.order.dependency.DummyDependencyListener;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.util.FileUtils;
-import org.arend.util.Range;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
@@ -91,7 +90,7 @@ public abstract class CommonCliRepl extends Repl {
     super(
       errorReporter,
       server,
-      new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, Collections.emptyMap(), ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, ref -> null /* TODO[server2] */)
+      new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, Collections.emptyMap(), ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, new ArendExtensionProvider() {} /* TODO[server2] */)
     );
     /* TODO[server2]
       myReplLibrary = Files.exists(pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE)) ? libraryResolver.registerLibrary(pwd)

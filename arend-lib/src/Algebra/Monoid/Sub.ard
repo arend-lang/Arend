@@ -1,5 +1,6 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
 \import Algebra.Pointed.Sub
 \import Algebra.Ring.Localization()
 \import Arith.Nat

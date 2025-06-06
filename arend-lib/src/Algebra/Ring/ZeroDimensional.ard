@@ -1,6 +1,7 @@
 \import Algebra.Field
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Local

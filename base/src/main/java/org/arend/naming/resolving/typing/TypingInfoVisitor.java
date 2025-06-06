@@ -81,7 +81,7 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
 
   private static AbstractBody resolveAbstractBody(List<? extends Concrete.Parameter> parameters, Concrete.Expression expr, Scope scope, Boolean isType) {
     if (expr == null) return null;
-    ExpressionResolveNameVisitor exprVisitor = scope == null ? null : new ExpressionResolveNameVisitor(scope, new ArrayList<>(), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, ResolverListener.EMPTY);
+    ExpressionResolveNameVisitor exprVisitor = scope == null ? null : new ExpressionResolveNameVisitor(scope, new ArrayList<>(), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, null, ResolverListener.EMPTY);
     if (exprVisitor != null) exprVisitor.updateScope(parameters);
 
     int paramsNumber = 0;

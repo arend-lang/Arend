@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Function.Meta

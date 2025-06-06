@@ -1,7 +1,7 @@
 package org.arend.module.error;
 
 import org.arend.ext.error.GeneralError;
-import org.arend.module.FullName;
+import org.arend.ext.module.FullName;
 import org.jetbrains.annotations.NotNull;
 
 public class DefinitionNotFoundError extends GeneralError {

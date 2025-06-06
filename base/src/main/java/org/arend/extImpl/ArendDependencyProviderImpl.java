@@ -6,7 +6,7 @@ import org.arend.ext.dependency.ArendDependencyProvider;
 import org.arend.ext.dependency.Dependency;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
@@ -16,7 +16,7 @@ import org.arend.server.ProgressReporter;
 import org.arend.server.impl.ArendServerImpl;
 import org.arend.server.impl.GroupData;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
-import org.arend.module.FullName;
+import org.arend.ext.module.FullName;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;

@@ -1,6 +1,6 @@
 package org.arend.frontend.source;
 
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
 

@@ -2,12 +2,12 @@ package org.arend.server;
 
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.error.ErrorReporter;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.computation.CancellationIndicator;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
-import org.arend.module.FullName;
+import org.arend.ext.module.FullName;
 import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

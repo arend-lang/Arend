@@ -8,16 +8,11 @@ import com.intellij.openapi.editor.ex.util.EditorUtil
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
 import com.intellij.ui.LayeredIcon
-import com.intellij.xdebugger.XDebugProcess
-import com.intellij.xdebugger.XDebugProcessStarter
-import com.intellij.xdebugger.XDebugSession
-import com.intellij.xdebugger.XDebuggerManager
 import org.arend.actions.ArendPopupAction
 import org.arend.codeInsight.ArendPopupHandler
-import org.arend.error.DummyErrorReporter
 import org.arend.ext.error.ErrorReporter
 import org.arend.ext.error.GeneralError
-import org.arend.module.FullName
+import org.arend.ext.module.FullName
 import org.arend.naming.reference.TCDefReferable
 import org.arend.psi.*
 import org.arend.psi.ext.*
@@ -31,7 +26,6 @@ import org.arend.typechecking.visitor.DefinitionTypechecker
 import org.arend.typechecking.visitor.DesugarVisitor
 import org.arend.typechecking.visitor.WhereVarsFixVisitor
 import org.arend.util.ArendBundle
-import org.arend.util.list.PersistentList
 
 class ArendTraceAction : ArendPopupAction() {
     init {

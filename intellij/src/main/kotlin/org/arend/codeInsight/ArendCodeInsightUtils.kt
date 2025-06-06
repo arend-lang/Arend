@@ -140,7 +140,7 @@ class ArendCodeInsightUtils {
                 }
                 val clausePatterns = clause?.patterns?.run {
                     val newList = ArrayList(this)
-                    ExpressionResolveNameVisitor(data.scope, mutableListOf(), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, null).visitPatterns(newList, mutableMapOf())
+                    ExpressionResolveNameVisitor(data.scope, mutableListOf(), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, null, null).visitPatterns(newList, mutableMapOf())
                     newList
                 } ?: throw IllegalStateException()
 

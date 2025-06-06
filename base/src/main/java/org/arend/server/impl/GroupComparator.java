@@ -1,6 +1,6 @@
 package org.arend.server.impl;
 
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.typechecking.order.PartialComparator;
 
@@ -16,7 +16,7 @@ class GroupComparator implements PartialComparator<TCDefReferable> {
   @Override
   public boolean sort(List<TCDefReferable> list) {
     if (list.isEmpty()) return true;
-    ModuleLocation module = list.get(0).getLocation();
+    ModuleLocation module = list.getFirst().getLocation();
     GroupData groupData = module == null ? null : myGroups.get(module);
     if (groupData == null) return false;
 

@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Monoid.Sub
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Graded
 \import Algebra.Ring.Localization

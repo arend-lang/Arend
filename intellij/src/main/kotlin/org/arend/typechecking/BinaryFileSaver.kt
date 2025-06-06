@@ -1,9 +1,7 @@
 package org.arend.typechecking
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.ProjectManagerListener
@@ -15,11 +13,9 @@ import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.psi.PsiManager
 import org.arend.ext.error.ErrorReporter
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.psi.ArendFile
 import org.arend.typechecking.error.NotificationErrorReporter
-import org.arend.util.FileUtils
-import org.arend.util.getRelativeFile
 
 
 @Service(Service.Level.PROJECT)

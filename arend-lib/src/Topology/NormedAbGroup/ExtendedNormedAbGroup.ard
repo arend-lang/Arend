@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Arith.Real
 \import Arith.Real.InfReal
 \import Function.Meta
@@ -28,7 +29,7 @@
   | inP (B',xB') => inP (B + B', norm_dist-bound <∘r transportInv (_ <) RealAbGroup.+-inf (InfRealAbMonoid.<_+ (transport {InfReal} (`< _) dist-symm d) xB'))
 
 \instance BoundedPseudoNormedAbGroup (A : ExtendedPseudoNormedAbGroup) : PseudoNormedAbGroup A.Bounded \cowith
-  | zro => (0, inP (1, transportInv (`< _) norm_zro InfRealAbMonoid.zro<ide))
+  | zro => (0, inP (Real.fromRat 1, transportInv (`< _) norm_zro InfRealAbMonoid.zro<ide))
   | + (x,xb) (y,yb) => (x + y, \case xb, yb \with {
     | inP (B,xB), inP (B',yB') => inP (B + B', transportInv (_ <) RealAbGroup.+-inf $ norm_+ <∘r InfRealAbMonoid.<_+ xB yB')
   })

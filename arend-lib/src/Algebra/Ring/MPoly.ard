@@ -235,7 +235,7 @@
       => simplify $ monoidSet-ext $ ~-pequiv (~-perm $ later $ eperm-swap idp idp idp) *> ~-pequiv (~-zro idp)
 
     \private \lemma fHom_mVar : fHom (mVar (0 : Fin (suc n))) = mConst (padd 1 R.zro)
-      => mPolyMapEval-var (mPolyHom ∘ polyHom) (mConst (padd 1 0) :: mkArray \lam j => mVar j) 0
+      => mPolyMapEval-var (mPolyHom ∘ polyHom) (mConst (padd 1 0) :: mkArray \lam j => mVar j) zero
 
     \lemma map-comm {R S : CRing} (f : RingHom R S) {p : MPoly (Fin n) (PolyAlgebra R)}
       : mPoly-map f (retHom p) = retHom (mPoly-map (polyMapRingHom f) p)

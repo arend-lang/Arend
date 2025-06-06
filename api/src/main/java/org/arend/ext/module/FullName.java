@@ -1,6 +1,5 @@
-package org.arend.module;
+package org.arend.ext.module;
 
-import org.arend.ext.module.LongName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

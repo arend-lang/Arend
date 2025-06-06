@@ -9,7 +9,7 @@ import org.arend.ext.reference.Precedence;
 import org.arend.ext.serialization.DeserializationException;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.*;
 import org.arend.naming.scope.EmptyScope;

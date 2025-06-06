@@ -9,7 +9,7 @@ import com.intellij.psi.PsiManager
 import org.arend.ext.module.ModulePath
 import org.arend.library.LibraryDependency
 import org.arend.module.IntellijClassLoaderDelegate
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.psi.ArendFile
 import org.arend.server.ArendLibrary
 import org.arend.ui.impl.ArendGeneralUI

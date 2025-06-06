@@ -65,7 +65,7 @@ public class StdExtension implements ArendExtension {
   @Dependency(module = "Algebra.Ring", name = "Ring.intCoef")             public CoreFunctionDefinition intCoef;
 
   private final StdGoalSolver goalSolver = new StdGoalSolver();
-  private final StdNumberTypechecker numberTypechecker = new StdNumberTypechecker(this);
+  private final StdNumberTypechecker numberTypechecker = new StdNumberTypechecker();
   private final ListDefinitionListener definitionListener = new ListDefinitionListener().addDeclaredListeners(this);
   public ArendUI ui;
 
@@ -84,12 +84,8 @@ public class StdExtension implements ArendExtension {
     this.factory = factory;
   }
 
-  private MetaRef makeRef(ModulePath modulePath, String name, MetaResolver resolver, MetaDefinition definition) {
-    return factory.metaRef(factory.moduleRef(modulePath), name, Precedence.DEFAULT, null, null, resolver, new TrivialMetaTypechecker(definition));
-  }
-
   private MetaRef makeRef(ModulePath modulePath, String name, MetaDefinition definition) {
-    return makeRef(modulePath, name, definition instanceof MetaResolver ? (MetaResolver) definition : null, definition);
+    return factory.metaRef(factory.moduleRef(modulePath), name, Precedence.DEFAULT, null, null, definition instanceof MetaResolver ? (MetaResolver) definition : null, new TrivialMetaTypechecker(definition));
   }
 
   private MetaRef makeRef(ModulePath modulePath, String name, Precedence precedence, MetaDefinition definition) {
@@ -115,32 +111,7 @@ public class StdExtension implements ArendExtension {
   @Override
   public void declareDefinitions(@NotNull DefinitionContributor contributor) {
     ModulePath meta = new ModulePath("Meta");
-    ModulePath logicMeta = ModulePath.fromString("Logic.Meta");
-    ModulePath paths = new ModulePath("Paths");
-    ModulePath logic = new ModulePath("Logic");
-    ModulePath category = new ModulePath("Category");
-    ModulePath categorySolver = ModulePath.fromString("Category.Solver");
-    ModulePath equiv = new ModulePath("Equiv");
-    ModulePath orderedAlgebra = ModulePath.fromString("Algebra.Ordered");
-    ModulePath pointed = ModulePath.fromString("Algebra.Pointed");
-    ModulePath lattice = ModulePath.fromString("Order.Lattice");
-    ModulePath linearOrder = ModulePath.fromString("Order.LinearOrder");
-    ModulePath strictOrder = ModulePath.fromString("Order.StrictOrder");
-    ModulePath algebraAlgebra = ModulePath.fromString("Algebra.Algebra");
-    ModulePath group = ModulePath.fromString("Algebra.Group");
-    ModulePath groupSolver = ModulePath.fromString("Algebra.Group.Solver");
-    ModulePath algebraModule = ModulePath.fromString("Algebra.Module");
-    ModulePath monoid = ModulePath.fromString("Algebra.Monoid");
-    ModulePath monoidSolver = ModulePath.fromString("Algebra.Monoid.Solver");
-    ModulePath semiring = ModulePath.fromString("Algebra.Semiring");
-    ModulePath ring = ModulePath.fromString("Algebra.Ring");
-    ModulePath ringSolver = ModulePath.fromString("Algebra.Ring.Solver");
-    ModulePath arithInt = ModulePath.fromString("Arith.Int");
-    ModulePath arithNat = ModulePath.fromString("Arith.Nat");
-    ModulePath arithRat = ModulePath.fromString("Arith.Rat");
-    ModulePath dataList = Names.getListModule();
-    ModulePath set = Names.getSetModule();
-    String constructorName = "constructor";
+    ModulePath logicMeta = new ModulePath("Logic", "Meta");
 
     contributor.declare(meta, logicMeta);
     contributor.declare(text("`later meta args` defers the invocation of `meta args`"), makeDef(meta, "later", new LaterMeta()));
@@ -221,12 +192,12 @@ public class StdExtension implements ArendExtension {
     contributor.declare(text("`defaultImpl C F E` returns the default implementation of field `F` in class `C` applied to expression `E`. The third argument can be omitted, in which case either `\\this` or `_` will be used instead,"),
         makeDef(meta, "defaultImpl", new DefaultImplMeta()));
 
-    ModulePath pathsMeta = ModulePath.fromString("Paths.Meta");
-    contributor.declare(pathsMeta, equiv);
-    contributor.declare(pathsMeta, ModulePath.fromString("Equiv.Univalence"), "Equiv-to-=", "QEquiv-to-=");
-    contributor.declare(pathsMeta, logic);
+    ModulePath pathsMeta = new ModulePath("Paths", "Meta");
+    contributor.declare(pathsMeta, Names.getEquivModule());
+    contributor.declare(pathsMeta, Names.getUnivalenceModule(), "Equiv-to-=", "QEquiv-to-=");
+    contributor.declare(pathsMeta, Names.getLogicModule());
     contributor.declare(pathsMeta, meta);
-    contributor.declare(pathsMeta, paths);
+    contributor.declare(pathsMeta, Names.getPathsModule());
     ConcreteMetaDefinition rewrite = makeDef(pathsMeta, "rewrite", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(true)));
     contributor.declare(multiline("""
         `rewrite (p : a = b) t : T` replaces occurrences of `a` in `T` with a variable `x` obtaining a type `T[x/a]` and returns `transportInv (\\lam x => T[x/a]) p t`
@@ -266,7 +237,7 @@ public class StdExtension implements ArendExtension {
         makeDef(pathsMeta, "exts", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(true), false, ExtMeta.defermentChecker))));
 
     MetaDefinition apply = new ApplyMeta();
-    ModulePath function = ModulePath.fromString("Function.Meta");
+    ModulePath function = new ModulePath("Function", "Meta");
     contributor.declare(text("`f $ a` returns `f a`"),
         factory.metaDef(makeRef(function, "$", new Precedence(Precedence.Associativity.RIGHT_ASSOC, (byte) 0, true), apply), Collections.emptyList(), null));
     contributor.declare(text("`f #' a` returns `f a`"),
@@ -277,33 +248,33 @@ public class StdExtension implements ArendExtension {
         ``repeat f x` repeats `f` until it fails and returns `x` in this case
         """), makeDef(function, "repeat", new RepeatMeta()));
 
-    ModulePath algebra = ModulePath.fromString("Algebra.Meta");
-    contributor.declare(algebra, algebraAlgebra);
-    contributor.declare(algebra, group);
-    contributor.declare(algebra, groupSolver, "NatData", "CGroupData", "GroupTerm");
-    contributor.declare(algebra, ModulePath.fromString("Algebra.Linear.Solver"));
-    contributor.declare(algebra, algebraModule);
-    contributor.declare(algebra, monoid);
-    contributor.declare(algebra, monoidSolver);
-    contributor.declare(algebra, orderedAlgebra);
-    contributor.declare(algebra, pointed);
-    contributor.declare(algebra, ring);
-    contributor.declare(algebra, ringSolver);
-    contributor.declare(algebra, semiring);
-    contributor.declare(algebra, arithInt);
-    contributor.declare(algebra, arithNat);
-    contributor.declare(algebra, arithRat);
-    contributor.declare(algebra, category, "Precat");
-    contributor.declare(algebra, categorySolver);
-    contributor.declare(algebra, ModulePath.fromString("Data.Bool"));
-    contributor.declare(algebra, dataList);
-    contributor.declare(algebra, equiv);
-    contributor.declare(algebra, lattice);
-    contributor.declare(algebra, linearOrder);
-    contributor.declare(algebra, ModulePath.fromString("Order.PartialOrder"));
-    contributor.declare(algebra, strictOrder);
-    contributor.declare(algebra, paths);
-    contributor.declare(algebra, set);
+    ModulePath algebra = new ModulePath("Algebra", "Meta");
+    contributor.declare(algebra, Names.getAlgebraModule());
+    contributor.declare(algebra, Names.getGroupModule());
+    contributor.declare(algebra, Names.getGroupSolverModule(), "NatData", "CGroupData", "GroupTerm");
+    contributor.declare(algebra, Names.getLinearSolverModule());
+    contributor.declare(algebra, Names.getModuleModule());
+    contributor.declare(algebra, Names.getMonoidModule());
+    contributor.declare(algebra, Names.getMonoidSolverModule());
+    contributor.declare(algebra, Names.getOrderedModule());
+    contributor.declare(algebra, Names.getPointedModule());
+    contributor.declare(algebra, Names.getRingModule());
+    contributor.declare(algebra, Names.getRingSolverModule());
+    contributor.declare(algebra, Names.getSemiringModule());
+    contributor.declare(algebra, Names.getIntModule());
+    contributor.declare(algebra, Names.getNatModule());
+    contributor.declare(algebra, Names.getRatModule());
+    contributor.declare(algebra, Names.getCategoryModule(), "Precat");
+    contributor.declare(algebra, Names.getCategorySolverModule());
+    contributor.declare(algebra, Names.getBoolModule());
+    contributor.declare(algebra, Names.getListModule());
+    contributor.declare(algebra, Names.getEquivModule());
+    contributor.declare(algebra, Names.getLatticeModule());
+    contributor.declare(algebra, Names.getLinearOrderModule());
+    contributor.declare(algebra, Names.getPartialOrderModule());
+    contributor.declare(algebra, Names.getStrictOrderModule());
+    contributor.declare(algebra, Names.getPathsModule());
+    contributor.declare(algebra, Names.getSetModule());
     contributor.declare(multiline("""
         `equation a_1 ... a_n` proves an equation a_0 = a_{n+1} using a_1, ... a_n as intermediate steps
 
@@ -326,10 +297,10 @@ public class StdExtension implements ArendExtension {
         makeDef(algebra, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, RewriteEquationMeta::new)));
 
     contributor.declare(logicMeta, Names.getLogicModule());
-    contributor.declare(logicMeta, ModulePath.fromString("Order.Biordered"));
-    contributor.declare(logicMeta, linearOrder);
-    contributor.declare(logicMeta, strictOrder);
-    contributor.declare(logicMeta, paths);
+    contributor.declare(logicMeta, Names.getBiorderedModule());
+    contributor.declare(logicMeta, Names.getLinearOrderModule());
+    contributor.declare(logicMeta, Names.getStrictOrderModule());
+    contributor.declare(logicMeta, Names.getPathsModule());
     contributor.declare(multiline("""
         Derives a contradiction from assumptions in the context
 
@@ -361,9 +332,9 @@ public class StdExtension implements ArendExtension {
           * If `P : A -> \\Type`, then `Forall {x y : P} (Q x) (Q y)` is equivalent to `\\Pi {x y : A} -> P x -> P y -> Q x -> Q y`
           """)), makeDef(forallMetaRef));
     contributor.declare(text("Returns either a tuple, a \\new expression, or a single constructor of a data type depending on the expected type"),
-        makeDef(logicMeta, constructorName, new ConstructorMeta(false)));
+        makeDef(logicMeta, "constructor", new ConstructorMeta(false)));
 
-    ModulePath debug = ModulePath.fromString("Debug.Meta");
+    ModulePath debug = new ModulePath("Debug", "Meta");
     contributor.declare(text("Returns current time in milliseconds"), makeDef(debug, "time", new TimeMeta()));
     contributor.declare(text("Prints the argument to the console"), makeDef(debug, "println", new PrintMeta(this)));
     contributor.declare(text("`sleep m` waits for `m` milliseconds"), makeDef(debug, "sleep", new SleepMeta()));
@@ -377,14 +348,14 @@ public class StdExtension implements ArendExtension {
     contributor.declare(nullDoc(), factory.metaDef(factory.metaRef(nfMeta, "whnf", Precedence.DEFAULT, null, null, null, new TrivialMetaTypechecker(new NormalizationMeta(NormalizationMode.WHNF))), Collections.emptyList(), null));
     contributor.declare(nullDoc(), factory.metaDef(factory.metaRef(nfMeta, "rnf", Precedence.DEFAULT, null, null, null, new TrivialMetaTypechecker(new NormalizationMeta(NormalizationMode.RNF))), Collections.emptyList(), null));
 
-    ModulePath categoryMeta = ModulePath.fromString("Category.Meta");
-    contributor.declare(categoryMeta, category);
-    contributor.declare(categoryMeta, equiv);
-    contributor.declare(categoryMeta, paths);
+    ModulePath categoryMeta = new ModulePath("Category", "Meta");
+    contributor.declare(categoryMeta, Names.getCategoryModule());
+    contributor.declare(categoryMeta, Names.getEquivModule());
+    contributor.declare(categoryMeta, Names.getPathsModule());
     contributor.declare(categoryMeta, pathsMeta);
-    contributor.declare(categoryMeta, set);
-    contributor.declare(categoryMeta, ModulePath.fromString("Set.SetCategory"));
-    contributor.declare(categoryMeta, ModulePath.fromString("Set.SetHom"));
+    contributor.declare(categoryMeta, Names.getSetModule());
+    contributor.declare(categoryMeta, Names.getSetCategoryModule());
+    contributor.declare(categoryMeta, Names.getSetHomModule());
     contributor.declare(text("Proves univalence for categories. The type of objects must extend `BaseSet` and the Hom-set must extend `SetHom` with properties only."), makeDef(categoryMeta, "sip", new DependencyMetaTypechecker(SIPMeta.class, SIPMeta::new)));
   }
 

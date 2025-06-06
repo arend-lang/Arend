@@ -2,7 +2,7 @@ package org.arend.server.impl;
 
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.LocatedReferable;
 
 import java.util.*;

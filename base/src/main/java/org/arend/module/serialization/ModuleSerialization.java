@@ -5,7 +5,7 @@ import org.arend.core.definition.Constructor;
 import org.arend.core.definition.Definition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.source.error.LocationError;
 import org.arend.term.group.ConcreteGroup;

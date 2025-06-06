@@ -31,7 +31,7 @@ public interface FunctionMatcher {
       body = ((CoreLamExpression) body).getBody();
     }
     if (param2.hasNext() && !param2.getNext().hasNext() && body instanceof CoreFunCallExpression funCall) {
-      if (Names.isAppend(funCall.getDefinition().getRef())) {
+      if (funCall.getDefinition().getRef().checkName(Names.APPEND)) {
         List<? extends CoreExpression> args = funCall.getDefCallArguments();
         if (args.get(1) instanceof CoreReferenceExpression && ((CoreReferenceExpression) args.get(1)).getBinding() == param1.getBinding() && args.get(2) instanceof CoreReferenceExpression && ((CoreReferenceExpression) args.get(2)).getBinding() == param2.getBinding()) {
           return new ListFunctionMatcher(typechecker, factory);

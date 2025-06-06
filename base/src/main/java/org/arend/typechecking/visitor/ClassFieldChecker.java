@@ -145,4 +145,14 @@ public class ClassFieldChecker extends BaseConcreteExpressionVisitor<Void> {
       super.visitClassFieldImpl(classFieldImpl, params);
     }
   }
+
+  @Override
+  public Concrete.Expression visitNumericLiteral(Concrete.NumericLiteral expr, Void params) {
+    return expr;
+  }
+
+  @Override
+  public Concrete.Expression visitStringLiteral(Concrete.StringLiteral expr, Void params) {
+    return expr;
+  }
 }

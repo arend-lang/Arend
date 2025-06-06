@@ -1,3 +1,5 @@
+\import Algebra.Group
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Arith.Fin.Order
 \import Data.Array

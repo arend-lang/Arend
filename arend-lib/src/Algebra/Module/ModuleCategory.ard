@@ -8,6 +8,7 @@
 \import Algebra.Module.Sub
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Category \hiding (id,∘)

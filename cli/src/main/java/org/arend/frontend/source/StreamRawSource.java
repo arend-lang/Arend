@@ -3,7 +3,7 @@ package org.arend.frontend.source;
 import org.antlr.v4.runtime.*;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.frontend.parser.*;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
 import org.arend.source.Source;
 import org.arend.term.group.ConcreteGroup;

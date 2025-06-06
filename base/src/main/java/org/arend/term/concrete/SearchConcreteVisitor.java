@@ -340,12 +340,16 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
 
   @Override
   public R visitNumericLiteral(Concrete.NumericLiteral expr, P params) {
-    return checkSourceNode(expr, params);
+    R result = checkSourceNode(expr, params);
+    if (result != null) return result;
+    return expr.getResolvedExpression() == null ? null : expr.getResolvedExpression().accept(this, params);
   }
 
   @Override
   public R visitStringLiteral(Concrete.StringLiteral expr, P params) {
-    return checkSourceNode(expr, params);
+    R result = checkSourceNode(expr, params);
+    if (result != null) return result;
+    return expr.getResolvedExpression() == null ? null : expr.getResolvedExpression().accept(this, params);
   }
 
   @Override

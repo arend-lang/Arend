@@ -12,6 +12,7 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.Prime
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Factor

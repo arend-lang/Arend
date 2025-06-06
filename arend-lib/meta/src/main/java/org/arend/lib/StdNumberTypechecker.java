@@ -1,72 +1,72 @@
 package org.arend.lib;
 
 import org.arend.ext.LiteralTypechecker;
-import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.ConcreteExpression;
-import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.expr.CoreDataCallExpression;
 import org.arend.ext.core.expr.CoreExpression;
-import org.arend.ext.core.expr.CoreFieldCallExpression;
 import org.arend.ext.core.ops.NormalizationMode;
-import org.arend.ext.instance.SubclassSearchParameters;
+import org.arend.ext.module.FullName;
+import org.arend.ext.reference.ArendRef;
+import org.arend.ext.reference.ExpressionResolver;
 import org.arend.ext.typechecking.ContextData;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.lib.util.Names;
-import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.math.BigInteger;
-import java.util.Collections;
 
 public class StdNumberTypechecker implements LiteralTypechecker {
-  private final StdExtension ext;
-
-  public StdNumberTypechecker(StdExtension ext) {
-    this.ext = ext;
+  private static ArendRef resolveName(FullName fullName, ExpressionResolver resolver) {
+    ArendRef ref = resolver.resolveName(fullName.longName.getLastName());
+    if (ref != null && ref.checkName(fullName)) {
+      return ref;
+    }
+    ref = resolver.resolveLongName(fullName.longName);
+    return ref != null && ref.checkName(fullName) ? ref : null;
   }
 
   @Override
-  public @Nullable TypedExpression typecheckString(@NotNull String unescapedString, @NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-    return null;
-  }
+  public @Nullable ConcreteExpression resolveNumber(@NotNull BigInteger number, @NotNull ExpressionResolver resolver, @NotNull ContextData contextData) {
+    ArendRef negative;
+    if (number.signum() < 0) {
+      negative = resolveName(Names.NEGATIVE, resolver);
+      if (negative == null) return null;
+    } else {
+      negative = null;
+    }
 
-  private ConcreteExpression applyInstance(ConcreteExpression instance, ConcreteExpression expr, ConcreteFactory factory) {
-    return instance == null ? expr : factory.app(expr, false, Collections.singletonList(instance));
+    boolean isNatCoef = false;
+    FullName fullName;
+    if (number.equals(BigInteger.ZERO)) {
+      fullName = Names.ZRO;
+    } else if (number.abs().equals(BigInteger.ONE)) {
+      fullName = Names.IDE;
+    } else {
+      fullName = Names.NAT_COEF;
+      isNatCoef = true;
+    }
+    ArendRef ref = resolveName(fullName, resolver);
+    if (ref == null) return null;
+
+    ConcreteFactory factory = contextData.getFactory();
+    ConcreteExpression result = factory.ref(ref);
+    if (isNatCoef) {
+      result = factory.app(result, true, factory.number(number));
+    }
+    return negative == null ? result : factory.app(factory.ref(negative), true, result);
   }
 
   @Override
-  public @Nullable TypedExpression typecheckNumber(@NotNull BigInteger number, @NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
-    CoreExpression expectedType = contextData.getExpectedType() == null ? null : contextData.getExpectedType().normalize(NormalizationMode.WHNF);
-    if (expectedType != null && !(expectedType instanceof CoreDataCallExpression && (((CoreDataCallExpression) expectedType).getDefinition() == typechecker.getPrelude().getNat() || ((CoreDataCallExpression) expectedType).getDefinition() == typechecker.getPrelude().getInt()))) {
-      boolean generate;
-      TypedExpression instance;
-      if (expectedType instanceof CoreFieldCallExpression fieldCall && Names.isCarrier(fieldCall.getDefinition().getRef())) {
-        instance = null;
-        generate = true;
-      } else {
-        CoreClassDefinition classDef = number.equals(BigInteger.ZERO) ? ext.AddPointed : number.equals(BigInteger.ONE) ? ext.Pointed : number.signum() == -1 ? ext.Ring : ext.Semiring;
-        instance = classDef == null ? null : Utils.findInstance(new SubclassSearchParameters(classDef), classDef.getClassifyingField(), expectedType, typechecker, contextData.getMarker());
-        generate = instance != null;
-      }
-      if (generate) {
-        ConcreteFactory factory = contextData.getFactory();
-        ConcreteExpression cExpr;
-        ConcreteExpression cInstance = instance == null ? null : factory.core(null, instance);
-        if (number.equals(BigInteger.ZERO) || number.equals(BigInteger.ONE) || number.equals(BigInteger.ONE.negate())) {
-          cExpr = number.equals(BigInteger.ZERO) ? applyInstance(cInstance, factory.ref(ext.zro.getRef()), factory) : number.equals(BigInteger.ONE) ? applyInstance(cInstance, factory.ref(ext.ide.getRef()), factory) : factory.app(applyInstance(cInstance, factory.ref(ext.negative.getRef()), factory), true, factory.ref(ext.ide.getRef()));
-        } else {
-          ConcreteAppBuilder builder = factory.appBuilder(factory.ref((number.signum() == -1 ? ext.intCoef : ext.natCoef).getRef()));
-          if (cInstance != null) {
-            builder.app(cInstance, false);
-          }
-          cExpr = builder.app(factory.number(number)).build();
-        }
-        return typechecker.typecheck(cExpr, expectedType);
+  public @Nullable TypedExpression typecheckNumber(@NotNull BigInteger number, @Nullable ConcreteExpression resolved, @NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
+    if (resolved != null) {
+      CoreExpression expectedType = contextData.getExpectedType() == null ? null : contextData.getExpectedType().normalize(NormalizationMode.WHNF);
+      if (expectedType != null && !(expectedType instanceof CoreDataCallExpression dataCall && (dataCall.getDefinition() == typechecker.getPrelude().getNat() || dataCall.getDefinition() == typechecker.getPrelude().getInt() || dataCall.getDefinition() == typechecker.getPrelude().getFin()))) {
+        return typechecker.typecheck(resolved, expectedType);
       }
     }
-    return typechecker.checkNumber(number, expectedType, contextData.getMarker());
+    return typechecker.checkNumber(number, contextData.getExpectedType(), contextData.getMarker());
   }
 }

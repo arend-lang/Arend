@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Function.Meta
 \import Logic
 \import Meta

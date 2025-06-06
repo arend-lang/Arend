@@ -1,5 +1,6 @@
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Arith.Real
 \import Arith.Real.Field
 \import Function()

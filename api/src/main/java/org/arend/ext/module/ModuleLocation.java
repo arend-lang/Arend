@@ -1,6 +1,4 @@
-package org.arend.module;
-
-import org.arend.ext.module.ModulePath;
+package org.arend.ext.module;
 
 import java.util.Objects;
 

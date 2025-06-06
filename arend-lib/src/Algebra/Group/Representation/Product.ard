@@ -4,6 +4,7 @@
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Module.LinearMap
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Function.Meta
 \import Paths

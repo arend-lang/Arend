@@ -1,12 +1,13 @@
 package org.arend.server.impl;
 
 import org.arend.error.DummyErrorReporter;
+import org.arend.ext.ArendExtension;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
@@ -35,7 +36,7 @@ import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
 import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.util.ComputationInterruptedException;
-import org.arend.module.FullName;
+import org.arend.ext.module.FullName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -183,7 +184,8 @@ public class ArendCheckerImpl implements ArendChecker {
           ListErrorReporter listErrorReporter = new ListErrorReporter();
           errorReporterMap.put(module, listErrorReporter);
           Map<LongName, DefinitionData> definitionData = new LinkedHashMap<>();
-          new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), listErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), myServer.getParentGroupScope(module, groupData.getRawGroup()), new ArendInstances(), definitionData);
+          ArendExtension extension = myServer.getExtensionProvider().getArendExtension(module.getLibraryName());
+          new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), listErrorReporter, extension == null ? null : extension.getLiteralTypechecker(), resolverListener).resolveGroup(groupData.getRawGroup(), myServer.getParentGroupScope(module, groupData.getRawGroup()), new ArendInstances(), definitionData);
           resolverResult.put(module, definitionData);
 
           myLogger.info(() -> "Module '" + module + "' is resolved");

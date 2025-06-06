@@ -3588,7 +3588,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       var checker = myArendExtension.getLiteralTypechecker();
       if (checker != null) {
         int numberOfErrors = getNumberOfErrors();
-        TypecheckingResult result = TypecheckingResult.fromChecked(checker.typecheckNumber(number, this, new ContextDataImpl(expr, Collections.emptyList(), null, null, expectedType, null)));
+        TypecheckingResult result = TypecheckingResult.fromChecked(checker.typecheckNumber(number, expr.getResolvedExpression(), this, new ContextDataImpl(expr, Collections.emptyList(), null, null, expectedType, null)));
         if (result == null && getNumberOfErrors() == numberOfErrors) {
           errorReporter.report(new TypecheckingError("Cannot check number", expr));
         }
@@ -3596,7 +3596,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     }
 
-    return checkNumber(number, expectedType, expr);
+    return expr.getResolvedExpression() != null ? checkExpr(expr.getResolvedExpression(), expectedType) : checkNumber(number, expectedType, expr);
   }
 
   @Override
@@ -3606,7 +3606,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       var checker = myArendExtension.getLiteralTypechecker();
       if (checker != null) {
         int numberOfErrors = getNumberOfErrors();
-        TypecheckingResult result = TypecheckingResult.fromChecked(checker.typecheckString(string, this, new ContextDataImpl(expr, Collections.emptyList(), null, null, expectedType, null)));
+        TypecheckingResult result = TypecheckingResult.fromChecked(checker.typecheckString(string, expr.getResolvedExpression(), this, new ContextDataImpl(expr, Collections.emptyList(), null, null, expectedType, null)));
         if (result == null && getNumberOfErrors() == numberOfErrors) {
           errorReporter.report(new TypecheckingError("Cannot check string", expr));
         }
@@ -3614,7 +3614,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     }
 
-    return checkResult(expectedType, new TypecheckingResult(new StringExpression(string), ExpressionFactory.String()), expr);
+    return expr.getResolvedExpression() != null ? checkExpr(expr.getResolvedExpression(), expectedType) : checkResult(expectedType, new TypecheckingResult(new StringExpression(string), ExpressionFactory.String()), expr);
   }
 
   @Override
