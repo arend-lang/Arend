@@ -303,7 +303,7 @@ public class TermCompiler extends BaseTermCompiler {
       if (arg instanceof CoreIntegerExpression) {
         BigInteger coef = ((CoreIntegerExpression) arg).getBigInteger();
         if (isNeg) coef = coef.negate();
-        freeCoef[0] = freeCoef[0].add(new IntRing(coef));
+        freeCoef[0] = freeCoef[0].add(kind == RingKind.RAT || kind == RingKind.RAT_ALG ? BigRational.makeInt(coef) : new IntRing(coef));
         return factory.app(factory.ref(meta.coefTerm), true, factory.number(coef));
       } else if (subTermCompiler != null) {
         Map<Integer, Ring> newCoefficients = new HashMap<>();
