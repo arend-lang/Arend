@@ -1,6 +1,5 @@
 package org.arend.server.impl;
 
-import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendExtension;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
@@ -283,19 +282,19 @@ public class ArendCheckerImpl implements ArendChecker {
 
   @Override
   public int typecheck(@Nullable List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
-    return typecheck(definitions, null, null, errorReporter, indicator, progressReporter, true);
+    return typecheck(definitions, null, null, errorReporter, indicator, progressReporter);
   }
 
   @Override
   public int typecheck(@Nullable FullName definition, @NotNull ArendCheckerFactory checkerFactory, @Nullable Map<TCDefReferable, TCDefReferable> renamed, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
-    return typecheck(Collections.singletonList(definition), checkerFactory, renamed, errorReporter, indicator, progressReporter, true);
+    return typecheck(Collections.singletonList(definition), checkerFactory, renamed, errorReporter, indicator, progressReporter);
   }
 
   private static Concrete.ResolvableDefinition copyDefinition(Concrete.ResolvableDefinition definition, Map<TCDefReferable, TCDefReferable> renamed) {
     return definition.accept(new ReplaceTCRefVisitor(renamed), null);
   }
 
-  private int typecheck(@Nullable List<FullName> definitions, @Nullable ArendCheckerFactory checkerFactory, @Nullable Map<TCDefReferable, TCDefReferable> renamed, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter, boolean withInstances) {
+  private int typecheck(@Nullable List<FullName> definitions, @Nullable ArendCheckerFactory checkerFactory, @Nullable Map<TCDefReferable, TCDefReferable> renamed, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
     myLogger.info(() -> definitions == null ? "Begin typechecking definitions in " + myModules : "Begin typechecking definitions " + definitions);
 
     if (checkerFactory != null && definitions == null) {
@@ -340,7 +339,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
     DependencyCollector dependencyCollector = new DependencyCollector(myServer);
     CollectingOrderingListener collector = new CollectingOrderingListener();
-    Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies), withInstances, errorReporter);
+    Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies), errorReporter);
 
     TypecheckingCancellationIndicator typecheckingIndicator = new TypecheckingCancellationIndicator(indicator);
     new BooleanComputationRunner().run(typecheckingIndicator, () -> {
@@ -432,10 +431,5 @@ public class ArendCheckerImpl implements ArendChecker {
       }
     }
     return null;
-  }
-
-  @Override
-  public void typecheckExtensionDefinition(@NotNull FullName definition) {
-    typecheck(Collections.singletonList(definition), null, null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty(), false);
   }
 }

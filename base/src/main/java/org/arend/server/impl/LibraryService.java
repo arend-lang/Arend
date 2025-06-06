@@ -156,12 +156,5 @@ public class LibraryService {
     for (Map.Entry<ModuleLocation, ConcreteGroup> entry : contributor.getModules().entrySet()) {
       myServer.addReadOnlyModule(entry.getKey(), entry.getValue());
     }
-
-    ArendDependencyProviderImpl provider = new ArendDependencyProviderImpl(myServer, library.getLibraryName());
-    try {
-      extension.load(provider);
-    } finally {
-      provider.disable();
-    }
   }
 }

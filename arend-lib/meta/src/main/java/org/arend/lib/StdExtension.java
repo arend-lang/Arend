@@ -5,9 +5,7 @@ import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
 import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.ext.typechecking.meta.TrivialMetaTypechecker;
-import org.arend.ext.core.definition.*;
 import org.arend.ext.core.ops.NormalizationMode;
-import org.arend.ext.dependency.Dependency;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.MetaRef;
 import org.arend.ext.reference.Precedence;
@@ -52,17 +50,6 @@ public class StdExtension implements ArendExtension {
   public final IrreflexivityKey irreflexivityKey = new IrreflexivityKey("irreflexivity", this);
   public final TransitivityKey transitivityKey = new TransitivityKey("transitivity", this);
   public final ReflexivityKey reflexivityKey = new ReflexivityKey("reflexivity", this);
-
-  @Dependency(module = "Algebra.Pointed")                          public CoreClassDefinition Pointed;
-  @Dependency(module = "Algebra.Pointed")                          public CoreClassDefinition AddPointed;
-  @Dependency(module = "Algebra.Pointed", name = "Pointed.ide")    public CoreClassField ide;
-  @Dependency(module = "Algebra.Pointed", name = "AddPointed.zro") public CoreClassField zro;
-
-  @Dependency(module = "Algebra.Semiring")                                public CoreClassDefinition Semiring;
-  @Dependency(module = "Algebra.Ring")                                    public CoreClassDefinition Ring;
-  @Dependency(module = "Algebra.Group", name = "AddGroup.negative")       public CoreClassField negative;
-  @Dependency(module = "Algebra.Semiring", name = "Semiring.natCoef")     public CoreClassField natCoef;
-  @Dependency(module = "Algebra.Ring", name = "Ring.intCoef")             public CoreFunctionDefinition intCoef;
 
   private final StdGoalSolver goalSolver = new StdGoalSolver();
   private final StdNumberTypechecker numberTypechecker = new StdNumberTypechecker();

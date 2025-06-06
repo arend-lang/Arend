@@ -6,13 +6,11 @@ import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.computation.CancellationIndicator;
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.ext.module.FullName;
 import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -57,11 +55,6 @@ public interface ArendChecker {
    * @return the number of definitions that were typechecked.
    */
   int typecheck(@NotNull FullName definition, @NotNull ArendCheckerFactory checkerFactory, @Nullable Map<TCDefReferable, TCDefReferable> renamed, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter);
-
-  // TODO[server2]: Delete this. Instead, typecheck extension definitions as needed.
-  default void typecheckExtensionDefinition(@NotNull FullName definition) {
-    typecheck(Collections.singletonList(definition), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-  }
 
   ArendChecker EMPTY = new ArendChecker() {
     @Override

@@ -108,18 +108,14 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     return false;
   }
 
-  public boolean typecheckDefinitions(final Collection<? extends Concrete.ResolvableDefinition> definitions, CancellationIndicator cancellationIndicator, boolean withInstances) {
+  public boolean typecheckDefinitions(final Collection<? extends Concrete.ResolvableDefinition> definitions, CancellationIndicator cancellationIndicator) {
     return run(cancellationIndicator, () -> {
-      Ordering ordering = new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, withInstances, myErrorReporter);
+      Ordering ordering = new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, myErrorReporter);
       for (Concrete.ResolvableDefinition definition : definitions) {
         ordering.order(definition);
       }
       return true;
     });
-  }
-
-  public boolean typecheckDefinitions(final Collection<? extends Concrete.ResolvableDefinition> definitions, CancellationIndicator cancellationIndicator) {
-    return typecheckDefinitions(definitions, cancellationIndicator, true);
   }
 
   public boolean typecheckModules(final Collection<? extends ConcreteGroup> modules, CancellationIndicator cancellationIndicator) {

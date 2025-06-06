@@ -30,7 +30,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   private final ErrorReporter myErrorReporter;
   private final Stage myStage;
 
-  private enum Stage { EVERYTHING, WITHOUT_INSTANCES, WITHOUT_BODIES }
+  private enum Stage { EVERYTHING, WITHOUT_BODIES }
 
   private Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, Set<TCDefReferable> allowedDependencies, Stage stage, ErrorReporter errorReporter) {
     myInstanceScopeProvider = instanceScopeProvider;
@@ -40,7 +40,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     myComparator = comparator;
     myAllowedDependencies = allowedDependencies;
     myStage = stage;
-    myInstanceDependencies = stage.ordinal() < Stage.WITHOUT_INSTANCES.ordinal() ? new HashMap<>() : null;
+    myInstanceDependencies = stage == Stage.EVERYTHING ? new HashMap<>() : null;
     myErrorReporter = errorReporter;
   }
 
@@ -48,12 +48,8 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     this(ordering.myInstanceScopeProvider, ordering.myConcreteProvider, ordering.myOrderingListener, ordering.myDependencyListener, ordering.myComparator, allowedDependencies, stage, ordering.myErrorReporter);
   }
 
-  public Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, boolean withInstances, ErrorReporter errorReporter) {
-    this(instanceScopeProvider, concreteProvider, orderingListener, dependencyListener, comparator, null, withInstances ? Stage.EVERYTHING : Stage.WITHOUT_INSTANCES, errorReporter);
-  }
-
   public Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ErrorReporter errorReporter) {
-    this(instanceScopeProvider, concreteProvider, orderingListener, dependencyListener, comparator, true, errorReporter);
+    this(instanceScopeProvider, concreteProvider, orderingListener, dependencyListener, comparator, null, Stage.EVERYTHING, errorReporter);
   }
 
   public Map<TCDefReferable, List<TCDefReferable>> getInstanceDependencies() {
@@ -147,7 +143,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   protected boolean forDependencies(Concrete.ResolvableDefinition definition, Consumer<Concrete.ResolvableDefinition> consumer) {
     Set<TCDefReferable> dependencies = new LinkedHashSet<>();
     Set<TCDefReferable> instanceDependencies = myInstanceDependencies == null ? null : new HashSet<>();
-    CollectDefCallsVisitor visitor = new CollectDefCallsVisitor(dependencies, instanceDependencies, myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal(), myStage.ordinal() < Stage.WITHOUT_INSTANCES.ordinal() ? myInstanceScopeProvider.getInstancesFor(definition.getData()) : null, myConcreteProvider, definition);
+    CollectDefCallsVisitor visitor = new CollectDefCallsVisitor(dependencies, instanceDependencies, myStage.ordinal() < Stage.WITHOUT_BODIES.ordinal(), myStage == Stage.EVERYTHING ? myInstanceScopeProvider.getInstancesFor(definition.getData()) : null, myConcreteProvider, definition);
 
     if (definition.getEnclosingClass() != null) {
       visitor.addDependency(definition.getEnclosingClass());

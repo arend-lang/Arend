@@ -1,7 +1,6 @@
 package org.arend.ext;
 
 import org.arend.ext.concrete.ConcreteFactory;
-import org.arend.ext.dependency.ArendDependencyProvider;
 import org.arend.ext.prettifier.ExpressionPrettifier;
 import org.arend.ext.serialization.SerializableKeyRegistry;
 import org.arend.ext.typechecking.GoalSolver;
@@ -57,18 +56,6 @@ public interface ArendExtension {
    * All definitions must be declared in this method, that is {@code contributor} cannot be stored and invoked later.
    */
   default void declareDefinitions(@NotNull DefinitionContributor contributor) {}
-
-  /**
-   * This method is invoked last and can be used to initialize the extension.
-   * It should store all the definition that will be used in the extension.
-   * This method can be invoked multiple times if one of the definitions is updated.
-   *
-   * @param dependencyProvider  provides the access to definitions defined in the library; can be used only inside this method.
-   */
-  default void load(@NotNull ArendDependencyProvider dependencyProvider) {
-    dependencyProvider.load(this);
-  }
-
 
   /**
    * @return a listener which is invoked after typechecking of a definition is finished.
