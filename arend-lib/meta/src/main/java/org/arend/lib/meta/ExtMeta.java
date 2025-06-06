@@ -26,6 +26,7 @@ import org.arend.lib.error.SubclassError;
 import org.arend.lib.error.TypeError;
 import org.arend.lib.meta.pi_tree.*;
 import org.arend.lib.meta.util.SubstitutionMeta;
+import org.arend.lib.util.Names;
 import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,7 +41,6 @@ public class ExtMeta extends BaseMetaDefinition {
   @Dependency private ArendRef later;
   @Dependency private ArendRef propExt;
   @Dependency private ArendRef Equiv;
-  @Dependency private CoreClassDefinition QEquiv;
   @Dependency private ArendRef pathOver;
   @Dependency(name = "prop-isProp") private ArendRef propIsProp;
   @Dependency(name = "prop-dpi") private ArendRef propDPI;
@@ -794,7 +794,7 @@ public class ExtMeta extends BaseMetaDefinition {
         TypedExpression typedArg = typechecker.typecheck(arg, expectedType.getExpression());
         if (typedArg == null) return null;
         CoreExpression actualType = typedArg.getType().normalize(NormalizationMode.WHNF);
-        return typechecker.typecheck(factory.app(factory.ref(actualType instanceof CoreClassCallExpression && ((CoreClassCallExpression) actualType).getDefinition().isSubClassOf(QEquiv) ? qEquivToEq : equivToEq), true, Collections.singletonList(factory.core(typedArg))), contextData.getExpectedType());
+        return typechecker.typecheck(factory.app(factory.ref(actualType instanceof CoreClassCallExpression && Names.isSubClass(((CoreClassCallExpression) actualType).getDefinition(), Names.Q_EQUIV) ? qEquivToEq : equivToEq), true, Collections.singletonList(factory.core(typedArg))), contextData.getExpectedType());
       }
     }
 

@@ -1,6 +1,9 @@
 package org.arend.lib.util;
 
 import org.arend.ext.core.definition.CoreClassDefinition;
+import org.arend.ext.core.definition.CoreClassField;
+import org.arend.ext.core.expr.CoreClassCallExpression;
+import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.module.FullName;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModuleLocation;
@@ -18,17 +21,71 @@ public class Names {
   public static final FullName IDE = fullName(getPointedModule(), new LongName("Pointed", "ide"));
   public static final FullName NEGATIVE = fullName(getGroupModule(), new LongName("AddGroup", "negative"));
   public static final FullName NAT_COEF = fullName(getSemiringModule(), new LongName("Semiring", "natCoef"));
+  public static final FullName EQUIV = fullName(getEquivModule(), new LongName("Equiv"));
+  public static final FullName Q_EQUIV = fullName(getEquivModule(), new LongName("QEquiv"));
+  public static final FullName SET_HOM = fullName(getSetHomModule(), new LongName("SetHom"));
+  public static final FullName EQUIV_MAP = fullName(getEquivModule(), new LongName("Map"));
+  public static final FullName CAT_MAP = fullName(getCategoryModule(), new LongName("Map"));
+  public static final FullName PRECAT = fullName(getCategoryModule(), new LongName("Precat"));
 
   private static FullName fullName(ModulePath modulePath, LongName longName) {
     return new FullName(new ModuleLocation(LIBRARY_NAME, ModuleLocation.LocationKind.SOURCE, modulePath), longName);
   }
 
-  public static boolean isSetHierarchy(CoreClassDefinition definition) {
-    return definition.findAncestor(superClass -> superClass.getSuperClasses().isEmpty() && superClass.getRef().checkName(BASE_SET)) != null;
+  public static CoreClassDefinition findBaseSetSuperClass(CoreClassDefinition definition) {
+    return definition.findAncestor(superClass -> superClass.getSuperClasses().isEmpty() && superClass.getRef().checkName(BASE_SET));
   }
+
+  public static boolean isSetHierarchy(CoreClassDefinition definition) {
+    return findBaseSetSuperClass(definition) != null;
+  }
+
+  public static CoreClassDefinition findSuperClass(CoreClassDefinition definition, FullName fullName) {
+    return definition.findAncestor(superClass -> superClass.getRef().checkName(fullName));
+  }
+
+  public static boolean isSubClass(CoreClassDefinition definition, FullName fullName) {
+    return findSuperClass(definition, fullName) != null;
+  }
+
+  public static CoreClassField findSuperField(CoreClassDefinition definition, FullName superClassName, String fieldName) {
+    CoreClassDefinition superClass = definition.findAncestor(it -> it.getRef().checkName(superClassName));
+    return superClass == null ? null : superClass.findField(fieldName);
+  }
+
+  public static CoreExpression getClosedImplementation(CoreClassCallExpression classCall, FullName superClassName, String fieldName) {
+    CoreClassField field = findSuperField(classCall.getDefinition(), superClassName, fieldName);
+    return field == null ? null : classCall.getClosedImplementation(field);
+  }
+
+  // Constructors and fields
 
   public static String getNil() {
     return "nil";
+  }
+
+  public static String getEquivB() {
+    return "B";
+  }
+
+  public static String getSetHomFunc() {
+    return "func";
+  }
+
+  public static String getHom() {
+    return "Hom";
+  }
+
+  public static String getOb() {
+    return "Ob";
+  }
+
+  public static String getId() {
+    return "id";
+  }
+
+  public static String getMapCat() {
+    return "C";
   }
 
   // Modules

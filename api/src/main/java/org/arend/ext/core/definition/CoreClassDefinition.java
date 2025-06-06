@@ -34,4 +34,6 @@ public interface CoreClassDefinition extends CoreDefinition {
   default boolean isSubClassOf(@NotNull CoreClassDefinition classDefinition) {
     return findAncestor(classDefinition::equals) != null;
   }
+
+  @Nullable CoreClassField findField(@NotNull String fieldName);
 }

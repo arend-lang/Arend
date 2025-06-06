@@ -468,6 +468,16 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
   }
 
   @Override
+  public @Nullable ClassField findField(@NotNull String fieldName) {
+    for (ClassField field : myPersonalFields) {
+      if (field.getName().equals(fieldName)) {
+        return field;
+      }
+    }
+    return null;
+  }
+
+  @Override
   public boolean isOverridden(@NotNull CoreClassField field) {
     return field instanceof ClassField && myOverridden.containsKey(field);
   }
