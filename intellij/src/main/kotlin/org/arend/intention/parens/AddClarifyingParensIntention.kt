@@ -1,8 +1,9 @@
-package org.arend.intention
+package org.arend.intention.parens
 
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
+import org.arend.intention.BaseArendIntention
 import org.arend.intention.binOp.BinOpIntentionUtil
 import org.arend.intention.binOp.BinOpSeqProcessor
 import org.arend.intention.binOp.CaretHelper
@@ -31,7 +32,7 @@ class AddClarifyingParensIntention : BaseArendIntention(ArendBundle.message("are
 
 private fun needClarifyingParens(binOpSeq: Concrete.AppExpression): Boolean {
     return binOpSeq.arguments.any {
-        it.isExplicit && it.expression.let { e -> e is Concrete.AppExpression && BinOpIntentionUtil.isBinOpInfixApp(e) }
+        it.isExplicit && it.expression.let { e -> e is Concrete.AppExpression && BinOpIntentionUtil.isBinOpInfixApp(e) && (findBinOpInParens(e)?.let { childBinOp -> doesNotNeedParens(childBinOp, binOpSeq) } ?: true) }
     }
 }
 

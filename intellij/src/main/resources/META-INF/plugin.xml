@@ -286,17 +286,15 @@
 
         <intentionAction>
             <language>Arend</language>
-            <className>org.arend.intention.AddClarifyingParensIntention</className>
+            <className>org.arend.intention.parens.AddClarifyingParensIntention</className>
             <category>Arend</category>
         </intentionAction>
 
-      <!-- TODO[server2]
       <intentionAction>
           <language>Arend</language>
-          <className>org.arend.intention.RemoveClarifyingParensIntention</className>
+          <className>org.arend.intention.parens.RemoveClarifyingParensIntention</className>
           <category>Arend</category>
       </intentionAction>
-      -->
 
         <intentionAction>
             <language>Arend</language>
