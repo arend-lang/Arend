@@ -45,7 +45,7 @@
 } \where {
   \instance RealMetricValueLinearOrder : MetricValueLinearOrder Real
     | LinearlyBiorderedAbMonoid => RealAbGroup
-    | hasPositive => inP (Real.fromRat 1, RealAbGroup.zro<ide)
+    | hasPositive => inP (1, RealAbGroup.zro<ide)
     | +_<-dense {a} {b} a<b => \case isDense a<b \with {
       | inP (c,a<c,c<b) => inP (c - a, transport (`< _) negative-right $ <_+-left _ a<c, transportInv (`< _) (+-comm *> +-assoc *> pmap (c +) negative-left *> zro-right) c<b)
     }

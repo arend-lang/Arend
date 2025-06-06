@@ -88,6 +88,9 @@
     => <=-antisymmetric (rat_real_<=.2 $ RealAbGroup.=_<= p) (rat_real_<=.2 $ RealAbGroup.=_<= $ inv p)
 }
 
+\instance RealPointed : Pointed Real
+  | ide => Real.fromRat 1
+
 \instance RealAbGroup : LinearlyOrderedAbGroup Real
   | zro => Real.fromRat 0
   | + => +

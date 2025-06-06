@@ -42,9 +42,9 @@
 
 \instance RealField : OrderedFieldAlgebra RatField Real
   | LinearlyOrderedAbGroup => RealAbGroup
-  | ide => Real.fromRat 1
+  | ide => 1
   | * => *
-  | ide-left => unique1 (*-cover ∘ tuple (const (Real.fromRat 1)) id) id (\lam x => *-rat *> pmap Real.fromRat ide-left)
+  | ide-left => unique1 (*-cover ∘ tuple (const 1) id) id (\lam x => *-rat *> pmap Real.fromRat ide-left)
   | *-comm => unique2 *-cover (*-cover ∘ tuple proj2 proj1) (\lam x y => *-rat *> pmap Real.fromRat *-comm *> inv *-rat)
   | *-assoc => unique3 (*-cover ∘ prod *-cover id) (*-cover ∘ tuple (proj1 ∘ proj1) (*-cover ∘ prod proj2 id)) (\lam x y z => unfold $ unfold $ rewrite (*-rat,*-rat,*-rat,*-rat) $ pmap Real.fromRat *-assoc)
   | ldistr => unique3 (*-cover ∘ tuple (proj1 ∘ proj1) (+-uniform ∘ prod proj2 id)) (+-uniform ∘ tuple (*-cover ∘ tuple (proj1 ∘ proj1) (proj2 ∘ proj1)) (*-cover ∘ tuple (proj1 ∘ proj1) proj2)) (\lam x y z => unfold $ unfold $ rewrite (RealAbGroup.+-rat,*-rat,*-rat,*-rat,RealAbGroup.+-rat) $ pmap Real.fromRat ldistr)
@@ -110,7 +110,7 @@
 
     \lemma *-rat-locally-uniform : LocallyUniformMap (RatNormed ⨯ RatNormed) RatNormed (\lam s => s.1 *' s.2)
       => LocallyUniformMetricMap.makeLocallyUniformMap2 (*') \lam eps>0 => \case L-rounded (real_<_L.1 eps>0) \with {
-        | inP (eps',eps'<eps,eps'>0) => inP (Real.fromRat 1, RealAbGroup.zro<ide, \lam x0 y0 =>
+        | inP (eps',eps'<eps,eps'>0) => inP (1, RealAbGroup.zro<ide, \lam x0 y0 =>
             \let | gamma => (finv (abs x0 + abs y0 + 3) *' eps') ∧ 1
                  | lem : 0 < abs x0 + abs y0 + 3 => linarith (abs>=0 {_} {x0}, abs>=0 {_} {y0})
                  | gamma>0 : 0 < gamma => <_meet-univ (RatField.<_*_positive_positive (RatField.finv>0 lem) eps'>0) zro<ide
