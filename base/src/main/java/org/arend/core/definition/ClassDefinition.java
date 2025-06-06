@@ -219,7 +219,7 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
   }
 
   @Override
-  public CoerceData getCoerceData() {
+  public @NotNull CoerceData getCoerceData() {
     return myCoerce;
   }
 

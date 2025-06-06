@@ -81,7 +81,7 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
   }
 
   @Override
-  public CoerceData getCoerceData() {
+  public @NotNull CoerceData getCoerceData() {
     return myCoerce;
   }
 

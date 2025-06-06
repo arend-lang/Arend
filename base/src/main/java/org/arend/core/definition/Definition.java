@@ -18,6 +18,7 @@ import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.implicitargs.equations.Equations;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -100,12 +101,12 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
 
   public boolean hasNonTrivialPLevelParameters() {
     List<? extends LevelVariable> params = getLevelParameters();
-    return params != null && (params.isEmpty() || params.get(0) != LevelVariable.PVAR);
+    return params != null && (params.isEmpty() || params.getFirst() != LevelVariable.PVAR);
   }
 
   public boolean hasNonTrivialHLevelParameters() {
     List<? extends LevelVariable> params = getLevelParameters();
-    return params != null && (params.isEmpty() || params.get(params.size() - 1) != LevelVariable.HVAR);
+    return params != null && (params.isEmpty() || params.getLast() != LevelVariable.HVAR);
   }
 
   public boolean isIdLevels(Levels levels) {
@@ -213,7 +214,8 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
 
   public abstract Expression getTypeWithParams(List<? super DependentLink> params, Levels levels);
 
-  public CoerceData getCoerceData() {
+  @Override
+  public @Nullable CoerceData getCoerceData() {
     return null;
   }
 

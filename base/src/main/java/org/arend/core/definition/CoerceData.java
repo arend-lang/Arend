@@ -5,37 +5,25 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.expr.*;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.definition.CoreCoerceData;
+import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
+import org.arend.ext.util.Pair;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.error.local.CoerceClashError;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class CoerceData {
+public class CoerceData implements CoreCoerceData {
   public interface Key {}
 
-  public static class DefinitionKey implements Key {
-    public final Definition definition;
-
-    public DefinitionKey(Definition definition) {
-      this.definition = definition;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      return o instanceof DefinitionKey && definition == ((DefinitionKey) o).definition;
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(definition);
-    }
-  }
+  public record DefinitionKey(Definition definition) implements Key {}
 
   private static class BaseKey implements Key {
     @Override
@@ -83,9 +71,9 @@ public class CoerceData {
   }
 
   private List<Definition> coerceTo(Key key) {
-    if (key instanceof DefinitionKey defKey && defKey.definition instanceof ClassDefinition classDef) {
+    if (key instanceof DefinitionKey(Definition definition) && definition instanceof ClassDefinition classDef) {
       for (Map.Entry<Key, List<Definition>> entry : myMapTo.entrySet()) {
-        if (entry.getKey() instanceof DefinitionKey defKey2 && defKey2.definition instanceof ClassDefinition classDef2 && classDef2.isSubClassOf(classDef)) {
+        if (entry.getKey() instanceof DefinitionKey(Definition definition2) && definition2 instanceof ClassDefinition classDef2 && classDef2.isSubClassOf(classDef)) {
           return entry.getValue();
         }
       }
@@ -95,9 +83,9 @@ public class CoerceData {
   }
 
   private List<Definition> coerceFrom(Key key) {
-    if (key instanceof DefinitionKey defKey && defKey.definition instanceof ClassDefinition classDef) {
+    if (key instanceof DefinitionKey(Definition definition) && definition instanceof ClassDefinition classDef) {
       for (Map.Entry<Key, List<Definition>> entry : myMapFrom.entrySet()) {
-        if (entry.getKey() instanceof DefinitionKey defKey2 && defKey2.definition instanceof ClassDefinition classDef2 && classDef.isSubClassOf(classDef2)) {
+        if (entry.getKey() instanceof DefinitionKey(Definition definition2) && definition2 instanceof ClassDefinition classDef2 && classDef.isSubClassOf(classDef2)) {
           return entry.getValue();
         }
       }
@@ -296,7 +284,7 @@ public class CoerceData {
     }
 
     List<Definition> newList = myMapFrom.compute(key, (k, oldList) -> oldList != null && oldList.size() == 1 ? oldList : Collections.singletonList(coercingDefinition));
-    Definition oldDef = newList.size() == 1 && newList.get(0) != coercingDefinition ? newList.get(0) : null;
+    Definition oldDef = newList.size() == 1 && newList.getFirst() != coercingDefinition ? newList.getFirst() : null;
     if (oldDef != null) {
       return oldDef;
     }
@@ -326,8 +314,8 @@ public class CoerceData {
       return null;
     }
 
-    List<Definition> newList = myMapTo.compute(key, (k, oldList) -> oldList != null && oldList.size() == 1 && oldList.get(0) instanceof FunctionDefinition ? oldList : Collections.singletonList(coercingDefinition));
-    FunctionDefinition oldDef = newList.size() == 1 && newList.get(0) != coercingDefinition ? (FunctionDefinition) newList.get(0) : null;
+    List<Definition> newList = myMapTo.compute(key, (k, oldList) -> oldList != null && oldList.size() == 1 && oldList.getFirst() instanceof FunctionDefinition ? oldList : Collections.singletonList(coercingDefinition));
+    FunctionDefinition oldDef = newList.size() == 1 && newList.getFirst() != coercingDefinition ? (FunctionDefinition) newList.getFirst() : null;
     if (oldDef != null) {
       return oldDef;
     }
@@ -381,5 +369,86 @@ public class CoerceData {
     } else if (errorReporter != null) {
       errorReporter.report(new CoerceClashError(key, cause));
     }
+  }
+
+  private static List<? extends CoreDefinition> getCoerce(Map<Key, List<Definition>> map, Key key) {
+    List<Definition> result = map.get(key);
+    return result == null ? Collections.emptyList() : Collections.unmodifiableList(result);
+  }
+
+  @Override
+  public @NotNull List<? extends CoreDefinition> getCoerceToAny() {
+    return getCoerce(myMapTo, new AnyKey());
+  }
+
+  @Override
+  public @NotNull List<? extends CoreDefinition> getCoerceToPi() {
+    return getCoerce(myMapTo, new PiKey());
+  }
+
+  @Override
+  public @NotNull List<? extends CoreDefinition> getCoerceToSigma() {
+    return getCoerce(myMapTo, new SigmaKey());
+  }
+
+  @Override
+  public @NotNull List<? extends CoreDefinition> getCoerceToUniverse() {
+    return getCoerce(myMapTo, new UniverseKey());
+  }
+
+  @Override
+  public @NotNull List<? extends CoreDefinition> getCoerceToDefinition(@NotNull CoreDefinition definition) {
+    if (!(definition instanceof Definition)) {
+      throw new IllegalArgumentException();
+    }
+    return getCoerce(myMapTo, new DefinitionKey((Definition) definition));
+  }
+
+  private static List<Pair<CoreDefinition, List<? extends CoreDefinition>>> getCoerces(Map<Key, List<Definition>> map) {
+    List<Pair<CoreDefinition, List<? extends CoreDefinition>>> result = new ArrayList<>();
+    for (Map.Entry<Key, List<Definition>> entry : map.entrySet()) {
+      if (entry.getKey() instanceof DefinitionKey(Definition definition)) {
+        result.add(new Pair<>(definition, Collections.unmodifiableList(entry.getValue())));
+      }
+    }
+    return result;
+  }
+
+  @Override
+  public @NotNull List<Pair<CoreDefinition, List<? extends CoreDefinition>>> getDefinitionCoercesTo() {
+    return getCoerces(myMapTo);
+  }
+
+  @Override
+  public @NotNull List<? extends CoreDefinition> getCoerceFromAny() {
+    return getCoerce(myMapFrom, new AnyKey());
+  }
+
+  @Override
+  public @NotNull List<? extends CoreDefinition> getCoerceFromPi() {
+    return getCoerce(myMapFrom, new PiKey());
+  }
+
+  @Override
+  public @NotNull List<? extends CoreDefinition> getCoerceFromSigma() {
+    return getCoerce(myMapFrom, new SigmaKey());
+  }
+
+  @Override
+  public @NotNull List<? extends CoreDefinition> getCoerceFromUniverse() {
+    return getCoerce(myMapFrom, new UniverseKey());
+  }
+
+  @Override
+  public @NotNull List<? extends CoreDefinition> getCoerceFromDefinition(@NotNull CoreDefinition definition) {
+    if (!(definition instanceof Definition)) {
+      throw new IllegalArgumentException();
+    }
+    return getCoerce(myMapFrom, new DefinitionKey((Definition) definition));
+  }
+
+  @Override
+  public @NotNull List<Pair<CoreDefinition, List<? extends CoreDefinition>>> getDefinitionCoercesFrom() {
+    return getCoerces(myMapFrom);
   }
 }
