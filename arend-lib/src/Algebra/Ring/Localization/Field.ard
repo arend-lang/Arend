@@ -25,10 +25,10 @@
   => Inv.lmake (inl~ (a.2 * r, a.1 * r, p)) (equals1 equation)
   \where {
     \lemma converse (j : Inv (inl~ a)) : TruncP (\Sigma (r : R) (S (a.1 * r)))
-      => {?} {- TODO[server2]: \let | (in~ b \as i) => j.inv
+      => \let | (in~ b \as i) => j.inv
               | p : inl~ a * i = ide => j.inv-right
               | (inP (c,cs,q)) => unequals p
-         \in inP (b.1 * (ide * c), rewriteEq q (contains_* (contains_* S.contains_ide (contains_* a.3 b.3)) cs)) -}
+         \in inP (b.1 * (ide * c), rewriteEq q (contains_* (contains_* S.contains_ide (contains_* a.3 b.3)) cs))
   }
 
 \lemma localization-zro {R : CRing} (S : SubMonoid R) (a : SType S) (s : R) (c : S s) (p : a.1 * s = zro) : inl~ a = zro

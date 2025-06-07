@@ -339,7 +339,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
     DependencyCollector dependencyCollector = new DependencyCollector(myServer);
     CollectingOrderingListener collector = new CollectingOrderingListener();
-    Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies), errorReporter);
+    Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies));
 
     TypecheckingCancellationIndicator typecheckingIndicator = new TypecheckingCancellationIndicator(indicator);
     new BooleanComputationRunner().run(typecheckingIndicator, () -> {

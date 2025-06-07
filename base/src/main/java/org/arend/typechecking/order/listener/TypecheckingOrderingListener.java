@@ -110,7 +110,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   public boolean typecheckDefinitions(final Collection<? extends Concrete.ResolvableDefinition> definitions, CancellationIndicator cancellationIndicator) {
     return run(cancellationIndicator, () -> {
-      Ordering ordering = new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, myErrorReporter);
+      Ordering ordering = new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator);
       for (Concrete.ResolvableDefinition definition : definitions) {
         ordering.order(definition);
       }
@@ -120,7 +120,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   public boolean typecheckModules(final Collection<? extends ConcreteGroup> modules, CancellationIndicator cancellationIndicator) {
     return run(cancellationIndicator, () -> {
-      new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator, myErrorReporter).orderModules(modules);
+      new Ordering(myInstanceScopeProvider, myConcreteProvider, this, myDependencyListener, myComparator).orderModules(modules);
       return true;
     });
   }
@@ -336,15 +336,8 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   }
 
   @Override
-  public void cycleFound(List<Concrete.ResolvableDefinition> definitions, boolean isInstance) {
+  public void cycleFound(List<Concrete.ResolvableDefinition> definitions) {
     List<TCDefReferable> cycle = new ArrayList<>();
-    if (isInstance) {
-      for (Concrete.ResolvableDefinition definition : definitions) {
-        cycle.add(definition.getData());
-      }
-      myErrorReporter.report(new CycleError("Instance dependency cycle", cycle, Collections.emptyMap()));
-      return;
-    }
 
     for (Concrete.ResolvableDefinition definition : definitions) {
       if (cycle.isEmpty() || cycle.getLast() != definition.getData()) {

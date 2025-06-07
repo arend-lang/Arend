@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Group.Sub
 \import Algebra.Module
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Sub
@@ -107,7 +108,7 @@
   \func IsPrincipal => ∃ (a : S) (IsGeneratedBy1 a)
 
   \lemma principal->finitelyGenerated (p : IsPrincipal) : IsFinitelyGenerated
-    | inP s => {?} -- TODO[server2]: inP (s.1 :: nil, (\lam _ => s.2.1, \lam {a} c => TruncP.map (s.2.2 c) \lam (d : Monoid.LDiv s.1 a) => (d.inv :: nil, simplify $ inv d.inv-right *> *-comm)))
+    | inP s => inP (s.1 :: nil, (\lam _ => s.2.1, \lam {a} c => TruncP.map (s.2.2 c) \lam (d : Monoid.LDiv s.1 a) => (d.inv :: nil, simplify $ inv d.inv-right *> *-comm)))
 
   \func IsMaximal => \Sigma (Not (contains 1)) (\Pi (x : S) -> contains x || (\Sigma (y : S) (contains (1 - y * x))))
 } \where {
@@ -125,7 +126,7 @@
     => {?} -- TODO[server2]: inP ((1,j) :: nil, equation)
 
   \lemma sclosure-superset {R : CRing} {U : R -> \Prop} {x : R} (Ux : U x) : sclosure U x
-    => {?} -- TODO[server2]: inP ((1,(x,Ux)) :: nil, equation)
+    => inP ((1,(x,Ux)) :: nil, equation)
 
   \lemma closure-univ {R : CRing} {J : \Set} {g : J -> R} {I : Ideal R} (c : \Pi (j : J) -> I (g j)) {x : R} (d : closure g x) : I x \elim d
     | inP (l,p) => transportInv I p $ bigSum _ \lam i => later $ ideal-left (c (l i).2)
@@ -150,9 +151,9 @@
 
   \lemma closure2-lem {R : CRing} {a : R} (f : Bool -> R)
     : closure f a <-> ∃ (c d : R) (a = f true * c + f false * d)
-    => {?} {- TODO[server2]: \have (g,h) => fin-closure-lem f
+    => \have (g,h) => fin-closure-lem f
        \in (\lam s => TruncP.map (g s) (\lam (c, a=fc) => (c true, c false, a=fc *> FinSum_char2 _ BoolFin.equiv *> equation)),
-            \lam (inP (c, d, a=fc)) => h (inP (if __ c d, a=fc *> inv (FinSum_char2 _ BoolFin.equiv *> equation)))) -}
+            \lam (inP (c, d, a=fc)) => h (inP (if __ c d, a=fc *> inv (FinSum_char2 _ BoolFin.equiv *> equation))))
 
   \lemma fin-closure-lem {D : FinSet} {R : CRing} {a : R} (f : D -> R)
     : closure f a <-> ∃ (c : D -> R) (a = FinSum (\lam i => c i * f i))
@@ -234,25 +235,25 @@
     : \Sigma (M : Ideal R) M.IsMaximal (\Pi {a : R} -> I a -> M a)
     => (union (\lam n => (ideal n).1) \lam {_} {a} c => mcases \with {
       | yes _ => c
-      | no _ => {?} -- TODO[server2]: inP (a, 0, c, simplify)
+      | no _ => inP (a, 0, c, simplify)
     }, (\lam (inP c) => ideal-proper c.1 c.2, \lam a => \case pointed-countable-surj R.zro c a \with {
-      | inP (n,fn=a) => {?} {- TODO[server2]: \case Id (next n (ideal n)) (next-fg n (ideal n)) 1 \with {
+      | inP (n,fn=a) => \case Id (next n (ideal n)) (next-fg n (ideal n)) 1 \with {
         | yes (inP (x,y,Ix,p)) => byRight (y, inP (n, transport (ideal n).1 equation Ix))
         | no r => byLeft $ inP (suc n, rewrite (dec_no_reduce r) $ inP (0, 1, contains_zro, equation))
-      } -}
+      }
     }), \lam c => inP (0,c))
     \where {
       \func next (n : Nat) (I : \Sigma (I : Ideal R) I.IsFinitelyGenerated) : Ideal R \cowith
         | contains z => ∃ (x y : R) (I.1 x) (z = x + y * pointed-countable R.zro c n)
-        | contains_zro => {?} -- TODO[server2]: inP (0, 0, contains_zro, simplify)
-        | contains_+ (inP (x1,y1,Ix1,p1)) (inP (x2,y2,Ix2,p2)) => {?} -- TODO[server2]: inP (x1 + x2, y1 + y2, contains_+ Ix1 Ix2, equation)
-        | ideal-left {r} (inP (x,y,Ix,p)) => {?} -- TODO[server2]: inP (r * x, r * y, ideal-left Ix, equation)
+        | contains_zro => inP (0, 0, contains_zro, simplify)
+        | contains_+ (inP (x1,y1,Ix1,p1)) (inP (x2,y2,Ix2,p2)) => inP (x1 + x2, y1 + y2, contains_+ Ix1 Ix2, equation)
+        | ideal-left {r} (inP (x,y,Ix,p)) => inP (r * x, r * y, ideal-left Ix, equation)
 
       \lemma next-fg (n : Nat) (I : \Sigma (I : Ideal R) I.IsFinitelyGenerated) : Ideal.IsFinitelyGenerated {next n I}
-        => {?} {- TODO[server2]: TruncP.map I.2 \lam (l,lg) => (pointed-countable R.zro c n :: l, (\case \elim __ \with {
+        => TruncP.map I.2 \lam (l,lg) => (pointed-countable R.zro c n :: l, (\case \elim __ \with {
              | 0 => inP (0, 1, contains_zro, equation)
              | suc j => inP (l j, 0, lg.1 j, equation)
-           }, \lam (inP (x,y,I1x,p)) => TruncP.map (lg.2 I1x) \lam (l',q) => (y :: l', equation))) -}
+           }, \lam (inP (x,y,I1x,p)) => TruncP.map (lg.2 I1x) \lam (l',q) => (y :: l', equation)))
 
       \func ideal (n : Nat) : \Sigma (I : Ideal R) I.IsFinitelyGenerated \elim n
         | 0 => (I,Ig)
@@ -309,8 +310,8 @@
 \instance IdealMonoid {R : CRing} : CMonoid (Ideal R)
   | ide => IdealLattice.top
   | * => product
-  | ide-left => {?} -- TODO[server2]: <=-antisymmetric (product-right {R} {IdealLattice.top}) \lam {a} c => inP ((1, (1, a, (), c)) :: nil, simplify)
-  | *-assoc {I} {J} {K} => {?} {- TODO[server2]: <=-antisymmetric
+  | ide-left => <=-antisymmetric (product-right {R} {IdealLattice.top}) \lam {a} c => inP ((1, (1, a, (), c)) :: nil, simplify)
+  | *-assoc {I} {J} {K} => <=-antisymmetric
       (Ideal.closure-univ {R} {_} {func (product I J) K} {product I (product J K)} \lam (a, b, inP (l,p), Kb) =>
           unfold func $ rewrite (p,R.BigSum-rdistr) $ Ideal.bigSum {product I (product J K)} _ \lam j => unfold func $
           rewrite *-assoc $ ideal-left {product I (product J K)} $ rewrite *-assoc $ Ideal.closure-superset {R} {_} {func I (product J K)} $
@@ -318,7 +319,7 @@
       (Ideal.closure-univ {R} {_} {func I (product J K)} {product (product I J) K} \lam (a, b, Ia, inP (l,p)) =>
           unfold func $ rewrite (p,R.BigSum-ldistr) $ Ideal.bigSum {product (product I J) K} _ \lam j => unfold func $
           rewrite (*-comm,*-assoc) $ ideal-left {product (product I J) K} $ rewrite (*-comm, inv *-assoc) $ Ideal.closure-superset {R} {_} {func (product I J) K} $
-          later (a * (l j).2.1, (l j).2.2, inP ((1, (a, (l j).2.1, Ia, (l j).2.3)) :: nil, simplify), (l j).2.4)) -}
+          later (a * (l j).2.1, (l j).2.2, inP ((1, (a, (l j).2.1, Ia, (l j).2.3)) :: nil, simplify), (l j).2.4))
   | *-comm =>
     \have lem {I J : Ideal R} : product I J <= product J I => Ideal.closure-univ {R} {_} {func I J}
         \lam s => transport (product J I) *-comm $ Ideal.closure-superset {R} {\Sigma (a b : R) (J a) (I b)} {func J I} (s.2,s.1,s.4,s.3)

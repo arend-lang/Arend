@@ -189,19 +189,19 @@
     \sfunc negative (x : Real) : Real \cowith
       | L a => x.U (RatField.negative a)
       | L-inh => \case x.U-inh \with {
-        | inP (a,x<a) => {?} -- TODO[server2]: inP (RatField.negative a, simplify x<a)
+        | inP (a,x<a) => inP (RatField.negative a, simplify x<a)
       }
       | L-closed x<-q q'<q => x.U-closed x<-q (RatField.negative_< q'<q)
       | L-rounded x<-q => \case x.U-rounded x<-q \with {
-        | inP (r,x<r,r<-q) => {?} -- TODO[server2]: inP (RatField.negative r, simplify x<r, RatField.negative_<-right r<-q)
+        | inP (r,x<r,r<-q) => inP (RatField.negative r, simplify x<r, RatField.negative_<-right r<-q)
       }
       | U a => x.L (RatField.negative a)
       | U-inh => \case x.L-inh \with {
-        | inP (a,a<x) => {?} -- TODO[server2]: inP (RatField.negative a, simplify a<x)
+        | inP (a,a<x) => inP (RatField.negative a, simplify a<x)
       }
       | U-closed -q<x q<q' => x.L-closed -q<x (RatField.negative_< q<q')
       | U-rounded -q<x => \case x.L-rounded -q<x \with {
-        | inP (r,r<x,-q<r) => {?} -- TODO[server2]: inP (RatField.negative r, simplify r<x, RatField.negative_<-left -q<r)
+        | inP (r,r<x,-q<r) => inP (RatField.negative r, simplify r<x, RatField.negative_<-left -q<r)
       }
       | LU-disjoint p q => x.LU-disjoint q p
       | LU-located q<r => \case x.LU-located (RatField.negative_< q<r) \with {

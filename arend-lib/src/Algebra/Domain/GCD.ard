@@ -1,5 +1,6 @@
 \import Algebra.Domain
 \import Algebra.Group
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Sub
@@ -8,6 +9,7 @@
 \import Algebra.Ring.Localization \hiding (FieldOfQuotients)
 \import Algebra.Ring.Poly
 \import Algebra.Semiring
+\import Arith.Nat
 \import Arith.Nat.Base
 \import Data.Or
 \import Function.Meta ($)
@@ -68,17 +70,17 @@
     | res|val2 => g.res|val2
     | res-univ g' (g'|a+bd : LDiv) (g'|b : LDiv) => g.res-univ g' (\new LDiv {
       | inv => g'|a+bd.inv - g'|b.inv * d
-      | inv-right => {?} -- TODO[server2]: ldistr *> pmap2 (+) g'|a+bd.inv-right (Ring.negative_*-right *> pmap negative (inv *-assoc *> pmap (`* d) g'|b.inv-right)) *> simplify
+      | inv-right => ldistr *> pmap2 (+) g'|a+bd.inv-right (Ring.negative_*-right *> pmap negative (inv *-assoc *> pmap (`* d) g'|b.inv-right)) *> simplify
     }) g'|b
 } \where {
   \class Dec \extends GCDDomain, GCDMonoid, IntegralDomain.Dec {- TODO[server2]: , IntegrallyClosedDomain -} {
     | isGCD => gcd nonZeroApart
     | gcd-ldistr c {x} {y} g => \case decideEq c 0 \with {
-      | yes c=0 => {?} {- TODO[server2]: rewrite c=0 $ simplify $ inP \new GCD {
+      | yes c=0 => rewrite c=0 $ simplify $ inP \new GCD {
         | res|val1 => LDiv.id-div
         | res|val2 => LDiv.id-div
         | res-univ g g|0 _ => g|0
-      } -}
+      }
       | no c/=0 => TruncP.map (gcd nonZeroApart (c * x) (c * y)) $ GCDMonoid.gcd-ldistr_cancel (\lam {a} {b} => nonZero-cancel-left c/=0) g
     }
     {- TODO[server2]
@@ -100,7 +102,7 @@
     \lemma coprime-repr (x : LocRing subMonoid) => coprime-repr-aux x
 
     \lemma oneDimensional_Bezout (d : Dim<= 1) : IsStrictBezout
-      => {?} {- TODO[server2]: \lam a b => \case isGCD a b \with {
+      => \lam a b => \case isGCD a b \with {
         | inP (g : GCD) => \case decideEq a 0 \with {
           | yes a=0 => inP (1, 1, 1, 0, equation, simplify)
           | no a/=0 =>
@@ -111,7 +113,7 @@
                  | (inP (d,q)) => coprime_*_div p (IsCoprime_pow-right $ IsCoprime.<=gcd g')
             \in inP (c, d, u, v, rewriteI (g.res|val1.inv-right,g.res|val2.inv-right) equation, equation)
         }
-      } -}
+      }
 
     \lemma split_* {a b c : E} (a|bc : LDiv a (b * c)) : ∃ (a1 a2 : E) (a = a1 * a2) (LDiv a1 b) (LDiv a2 c)
       => \case decideEq a 0 \with {
@@ -144,24 +146,24 @@
 
     \lemma coprime-repr-aux {D : GCDDomain} {dec : IntegralDomain.Dec { | IntegralDomain => D }} (x : LocRing D.subMonoid)
       : ∃ (a b : D) (b#0 : D.#0 b) (GCD a b 1) (x = inl~ (a, b, b#0)) \elim x
-      | in~ (x,y,y#0) => {?} {- TODO[server2]: \case decideEq x 0 \with {
+      | in~ (x,y,y#0) => \case decideEq x 0 \with {
         | yes x=0 => inP (0, 1, zro#ide, GCD.swap {div_gcd LDiv.ide-div}, LocRing.equals1 equation)
         | no x/=0 => TruncP.map (isGCDDomain x y (dec.nonZeroApart x/=0) y#0) \lam (gcd : GCD x y) =>
             (gcd.res|val1.inv, gcd.res|val2.inv, D.#0-*-right $ transportInv D.#0 gcd.res|val2.inv-right y#0,
              gcd.reduce \lam {x} {y} => D.nonZero-cancel-left \lam gcd=0 => x/=0 $ inv gcd.res|val1.inv-right *> equation,
              LocRing.equals1 $ equation {usingOnly (gcd.res|val1.inv-right, gcd.res|val2.inv-right)})
-      } -}
+      }
 
     \lemma loc_poly {R : CRing} {S : SubMonoid R} (nt : \Pi {a : R} -> S a -> \Pi {x y : R} -> x * a = y * a -> x = y)
                     (p : Poly R) (m : isMonic p) {a b : R} {Sb : S b} (e : polyEval (polyMap locMap p) (inl~ (a,b,Sb)) = 0)
       : ∃ (n : Nat) (LDiv b (pow a n)) \elim m
       | inP (n, d, m) => inP (n, \new LDiv {
         | inv => negative $ R.BigSum \new Array R n \lam j => polyCoef p j * pow a j * pow b (n -' suc j)
-        | inv-right => {?} {- TODO[server2]: \have | s i q : locMap (polyCoef p i * pow a i * pow b (n -' i)) = polyCoef (polyMap locMap p) i * pow (inl~ (a,b,Sb)) i * pow (locMap b) n
+        | inv-right => \have | s i q : locMap (polyCoef p i * pow a i * pow b (n -' i)) = polyCoef (polyMap locMap p) i * pow (inl~ (a,b,Sb)) i * pow (locMap b) n
                                  => locMap.func-* *> pmap (locMap _ *) locMap.func-pow *> pmap (`* _) (locMap.func-* *> pmap2 (*) (inv (polyCoef_polyMap {locMap})) locMap.func-pow) *> *-assoc *> pmap (_ *) (later $ rewriteI {2} (<=_exists q) $ rewrite pow_+ $ pmap (`* _) (pmap (pow __ i) (LocRing.equals1 simplify) *> CMonoid.pow_*-comm) *> *-assoc) *> inv *-assoc
                              | t => inv (R.BigSum_suc {n} {\lam j => polyCoef p j * pow a j * pow b (n -' j)}) *> locMap-inj nt (locMap.func-BigSum {\new Array R (suc n) \lam j => polyCoef p j * pow a j * pow b (n -' j)} *> path (\lam i => AddMonoid.BigSum (\new Array (LocRing S) (suc n) \lam j => s j (<_suc_<= $ fin_< j) i)) *> inv (Semiring.BigSum-rdistr {_} {\new Array (LocRing S) (suc n) \lam j => polyCoef (polyMap locMap p) j * pow (inl~ (a,b,Sb)) j}) *> pmap (`* pow (locMap b) n) (inv (polyEval_polyCoef $ degree<=_degree< $ degree<=_polyMap d) *> e) *> zro_*-left)
                              | q (j : Fin n) => *-comm *> pmap (pow b) {suc (n -' suc j)} (NatSemiring.cancel-left j $ <=_exists (suc_<_<= $ fin_< j) *> inv (<=_exists $ LinearOrder.<_<= $ fin_< j))
-                       \in R.negative-unique _ (pmap (`+ _) (R.negative_*-right *> pmap negative (R.BigSum-ldistr *> pmap R.BigSum (exts \lam j => equation {usingOnly (q j)}))) *> negative-left) (pmap (_ +) (later (rewrite (m,-'id) simplify) *> inv (pmap (\lam x => polyCoef p x * pow a x * pow b (n -' x)) (mod_< id<suc))) *> t) -}
+                       \in R.negative-unique _ (pmap (`+ _) (R.negative_*-right *> pmap negative (R.BigSum-ldistr *> pmap R.BigSum (exts \lam j => equation {usingOnly (q j)}))) *> negative-left) (pmap (_ +) (later (rewrite (m,-'id) simplify) *> inv (pmap (\lam x => polyCoef p x * pow a x * pow b (n -' x)) (mod_< id<suc))) *> t)
       })
   }
 }

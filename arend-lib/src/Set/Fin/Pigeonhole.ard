@@ -62,11 +62,11 @@
         }
 
     \lemma aux {n : Nat} {A : DecSet} (f : Fin n -> A) (p : Not (isInj f)) : ∃ (i j : Fin n) (i /= j) (f i = f j)
-      => {?} {- TODO[server2]: \case search-pair f \with {
+      => \case search-pair f \with {
         | yes e => e
         | no q => absurd $ p \lam {i} {j} p => \case decideEq i j \with {
           | yes e => e
           | no r => absurd $ q $ inP (i, j, r, p)
         }
-      } -}
+      }
   }

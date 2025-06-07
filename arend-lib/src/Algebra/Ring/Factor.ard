@@ -1,9 +1,12 @@
 \import Algebra.Domain.Bezout
 \import Algebra.Field
 \import Algebra.Group
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.Prime
+\import Algebra.Monoid.Sub
 \import Algebra.Pointed
+\import Algebra.Pointed.Sub
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.RingHom
@@ -12,6 +15,7 @@
 \import Logic
 \import Meta
 \import Paths
+\import Paths.Meta
 \import Relation.Equivalence
 \open Monoid
 
@@ -20,45 +24,45 @@
   | zro => inF 0
   | + (x y : Type I) : Type I \with {
     | in~ a, in~ b => in~ (a Ring.+ b)
-    | in~ a, ~-equiv b c r => {?} -- TODO[server2]: fequiv (simplify r)
-    | ~-equiv b c r, in~ a => {?} -- TODO[server2]: fequiv (simplify r)
+    | in~ a, ~-equiv b c r => fequiv (simplify r)
+    | ~-equiv b c r, in~ a => fequiv (simplify r)
   }
   | zro-left {x} => \case \elim x \with {
-    | in~ a => {?} -- TODO[server2]: fequiv (simplify contains_zro)
+    | in~ a => fequiv (simplify contains_zro)
   }
   | +-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
-    | in~ a, in~ b, in~ c => {?} -- TODO[server2]: fequiv (simplify contains_zro)
+    | in~ a, in~ b, in~ c => fequiv (simplify contains_zro)
   }
   | +-comm {x} {y} => \case \elim x, \elim y \with {
-    | in~ a, in~ b => {?} -- TODO[server2]: fequiv (simplify contains_zro)
+    | in~ a, in~ b => fequiv (simplify contains_zro)
   }
   | ide => inF 1
   | * (x y : Type I) : Type I \with {
     | in~ a, in~ b => inF (a Ring.* b)
-    | in~ a, ~-equiv b c r => {?} -- TODO[server2]: fequiv $ transport I equation (I.ideal-left {a} r)
-    | ~-equiv b c r, in~ a => {?} -- TODO[server2]: fequiv $ transport I equation (I.ideal-right {a} r)
+    | in~ a, ~-equiv b c r => fequiv $ transport I equation (I.ideal-left {a} r)
+    | ~-equiv b c r, in~ a => fequiv $ transport I equation (I.ideal-right {a} r)
   }
   | ide-left {x} => \case \elim x \with {
-    | in~ a => {?} -- TODO[server2]: fequiv (simplify contains_zro)
+    | in~ a => fequiv (simplify contains_zro)
   }
   | *-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
-    | in~ a, in~ b, in~ c => {?} -- TODO[server2]: fequiv (transport I equation contains_zro)
+    | in~ a, in~ b, in~ c => fequiv (transport I equation contains_zro)
   }
   | ldistr {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
-    | in~ a, in~ b, in~ c => {?} -- TODO[server2]: fequiv (transport I equation contains_zro)
+    | in~ a, in~ b, in~ c => fequiv (transport I equation contains_zro)
   }
   | natCoef n => inF (natCoef n)
-  | natCoefZero => {?} -- TODO[server2]: fequiv $ simplify (transportInv I natCoefZero contains_zro)
-  | natCoefSuc n => {?} -- TODO[server2]: fequiv $ later $ rewrite natCoefSuc (simplify contains_zro)
+  | natCoefZero => fequiv $ simplify (transportInv I natCoefZero contains_zro)
+  | natCoefSuc n => fequiv $ later $ rewrite natCoefSuc (simplify contains_zro)
   | negative (x : Type I) : Type I \with {
     | in~ a => inF (Ring.negative a)
-    | ~-equiv a b r => {?} -- TODO[server2]: fequiv $ transport I equation (I.ideal-left { -1} r)
+    | ~-equiv a b r => fequiv $ transport I equation (I.ideal-left { -1} r)
   }
   | negative-left {x} => \case \elim x \with {
-    | in~ a => {?} -- TODO[server2]: fequiv (simplify contains_zro)
+    | in~ a => fequiv (simplify contains_zro)
   }
   | *-comm {x} {y} => \case \elim x, \elim y \with {
-    | in~ a, in~ b => {?} -- TODO[server2]: fequiv (transport I equation contains_zro)
+    | in~ a, in~ b => fequiv (transport I equation contains_zro)
   }
   \where {
     \type Type (I : Ideal) => Quotient {I.S} (\lam a b => I (a - b))
@@ -72,11 +76,11 @@
       => fequiv $ transportInv I (pmap (a Ring.+) AddGroup.negative_zro *> zro-right) p
 
     \lemma unfequiv {I : Ideal} {a b : I.S} (p : inF a = inF b) : I (a - b)
-      => {?} {- TODO[server2]: Quotient.equalityEquiv (\new Equivalence I.S (\lam a b => I (a - b)) {
+      => Quotient.equalityEquiv (\new Equivalence I.S (\lam a b => I (a - b)) {
         | ~-transitive c d => transport I equation (contains_+ c d)
         | ~-reflexive => simplify contains_zro
         | ~-symmetric c => transport I equation (I.ideal-left { -1} c)
-      }) $ path (\lam i => p i) -}
+      }) $ path (\lam i => p i)
 
     \lemma unfequiv0 {I : Ideal} {a : I.S} (p : inF a = inF 0) : I a
       => transport I (pmap (a Ring.+) AddGroup.negative_zro *> zro-right) (unfequiv p)
@@ -124,24 +128,24 @@
   | CRing => FactorRing (Ideal.closure1 p)
   | zro/=ide q => p.notInv (trivial_Inv.1 q)
   | eitherZeroOrInv => zeroOrInv-char.2 \lam a => \case isBezout p a \with {
-    | inP (s, t, d|p : Monoid.LDiv, d|a : Monoid.LDiv) => {?} {- TODO[server2]: \case p.isIrr (inv d|p.inv-right) \with {
+    | inP (s, t, d|p : Monoid.LDiv, d|a : Monoid.LDiv) => \case p.isIrr (inv d|p.inv-right) \with {
       | byLeft (c : Inv) => byRight (t * c.inv, s * c.inv, equation {usingOnly c.inv-right})
       | byRight (c : Inv) => byLeft \new Monoid.LDiv {
         | inv => c.inv * d|a.inv
         | inv-right => equation {usingOnly (d|a.inv-right, c.inv-right, d|p.inv-right)}
       }
-    } -}
+    }
   }
   \where {
     \open FactorRing \hiding (+,*,negative)
 
     \lemma trivial_Inv {R : CRing} {p : R} : (0 = {FactorRing (Ideal.closure1 p)} 1) <-> Inv p
-      => {?} {- TODO[server2]: (\lam q => \case Ideal.closure1-lem.1 $ unfequiv (inv q) \with {
+      => (\lam q => \case Ideal.closure1-lem.1 $ unfequiv (inv q) \with {
         | inP t => Inv.lmake t.1 (*-comm *> inv t.2 *> simplify)
-      }, \lam (e : Inv p) => inv $ fequiv $ Ideal.closure1-lem.2 $ simplify $ inP (e.inv, inv e.inv-right)) -}
+      }, \lam (e : Inv p) => inv $ fequiv $ Ideal.closure1-lem.2 $ simplify $ inP (e.inv, inv e.inv-right))
 
     \lemma zeroOrInv-char {R : CRing} {p : R} : (\Pi (a : FactorRing (Ideal.closure1 p)) -> (a = 0) || Inv a) <-> (\Pi (a : R) -> Monoid.LDiv p a || (\Sigma (s t : R) (s * a + t * p = 1)))
-      => {?} {- TODO[server2]: (\lam f a => \case f (in~ a) \with {
+      => (\lam f a => \case f (in~ a) \with {
         | byLeft a~0 => \case Ideal.closure1-lem.1 (unfequiv a~0) \with {
           | inP s => byLeft (\new Monoid.LDiv {
             | inv => s.1
@@ -154,7 +158,7 @@
       }, \lam f => \case \elim __ \with {
         | in~ a => ||.map (\lam (p|a : Monoid.LDiv p a) => fequiv $ Ideal.closure1-lem.2 $ inP (p|a.inv, simplify $ inv p|a.inv-right))
             (\lam (s,t,q) => Inv.lmake {_} {inF a} (inF s) $ fequiv $ (Ideal.closure1-lem {R} {p} {s * a - 1}).2 $ inP (negative t, equation)) (f a)
-      }) -}
+      })
 
     \lemma conv {R : CRing} {p : R} (c : \Pi {x y : R} -> p * x = p * y -> x = y) (d : DiscreteField { | CRing => FactorRing (Ideal.closure1 p) }) : Prime p \cowith
       | notInv pi => zro/=ide (trivial_Inv.2 pi)
@@ -164,7 +168,7 @@
         | _, byLeft p|y => byRight p|y
         | byRight (s,t,sx+tp=1), byRight (u,v,uy+vp=1) => byLeft \new Monoid.LDiv {
           | inv => x * (s * u * z + v + t - v * t * p)
-          | inv-right => {?} -- TODO[server2]: equation
+          | inv-right => equation
         }
       }
   }

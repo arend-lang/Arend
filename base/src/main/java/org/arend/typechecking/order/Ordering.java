@@ -1,7 +1,6 @@
 package org.arend.typechecking.order;
 
 import org.arend.core.definition.Definition;
-import org.arend.ext.error.ErrorReporter;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
@@ -9,7 +8,6 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.computation.ComputationRunner;
-import org.arend.typechecking.error.DefinitionOrderingError;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DependencyListener;
 import org.arend.typechecking.order.listener.OrderingListener;
@@ -27,12 +25,11 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   private final DependencyListener myDependencyListener;
   private final PartialComparator<TCDefReferable> myComparator;
   private final Set<TCDefReferable> myAllowedDependencies;
-  private final ErrorReporter myErrorReporter;
   private final Stage myStage;
 
   private enum Stage { EVERYTHING, WITHOUT_BODIES }
 
-  private Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, Set<TCDefReferable> allowedDependencies, Stage stage, ErrorReporter errorReporter) {
+  private Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, Set<TCDefReferable> allowedDependencies, Stage stage) {
     myInstanceScopeProvider = instanceScopeProvider;
     myConcreteProvider = concreteProvider;
     myOrderingListener = orderingListener;
@@ -41,15 +38,14 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     myAllowedDependencies = allowedDependencies;
     myStage = stage;
     myInstanceDependencies = stage == Stage.EVERYTHING ? new HashMap<>() : null;
-    myErrorReporter = errorReporter;
   }
 
   private Ordering(Ordering ordering, Set<TCDefReferable> allowedDependencies, Stage stage) {
-    this(ordering.myInstanceScopeProvider, ordering.myConcreteProvider, ordering.myOrderingListener, ordering.myDependencyListener, ordering.myComparator, allowedDependencies, stage, ordering.myErrorReporter);
+    this(ordering.myInstanceScopeProvider, ordering.myConcreteProvider, ordering.myOrderingListener, ordering.myDependencyListener, ordering.myComparator, allowedDependencies, stage);
   }
 
-  public Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ErrorReporter errorReporter) {
-    this(instanceScopeProvider, concreteProvider, orderingListener, dependencyListener, comparator, null, Stage.EVERYTHING, errorReporter);
+  public Ordering(InstanceScopeProvider instanceScopeProvider, ConcreteProvider concreteProvider, OrderingListener orderingListener, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator) {
+    this(instanceScopeProvider, concreteProvider, orderingListener, dependencyListener, comparator, null, Stage.EVERYTHING);
   }
 
   public Map<TCDefReferable, List<TCDefReferable>> getInstanceDependencies() {
@@ -215,7 +211,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
       myOrderingListener.unitFound(unit, withLoops);
     } else {
       if (withLoops) {
-        myOrderingListener.cycleFound(Collections.singletonList(unit), false);
+        myOrderingListener.cycleFound(Collections.singletonList(unit));
       } else {
         myOrderingListener.headerFound(unit);
       }
@@ -225,7 +221,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   @Override
   protected void sccFound(List<Concrete.ResolvableDefinition> scc) {
     if (myStage.ordinal() >= Stage.WITHOUT_BODIES.ordinal()) {
-      myOrderingListener.cycleFound(scc, false);
+      myOrderingListener.cycleFound(scc);
       return;
     }
     if (scc.isEmpty()) {
@@ -245,7 +241,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
     boolean allMeta = true;
     for (Concrete.ResolvableDefinition definition : scc) {
       if (definition instanceof Concrete.ClassDefinition || !definition.getUsedDefinitions().isEmpty() || definition instanceof Concrete.FunctionDefinition function && function.getKind() == FunctionKind.INSTANCE && !(function.getBody() instanceof Concrete.ElimFunctionBody)) {
-        myOrderingListener.cycleFound(scc, false);
+        myOrderingListener.cycleFound(scc);
         return;
       }
       if (definition instanceof Concrete.DataDefinition || definition instanceof Concrete.FunctionDefinition function && function.getBody() instanceof Concrete.ElimFunctionBody) {
@@ -256,7 +252,7 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
       }
     }
     if (!ok && !allMeta) {
-      myOrderingListener.cycleFound(scc, false);
+      myOrderingListener.cycleFound(scc);
       return;
     }
 
@@ -270,14 +266,15 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
       }
     }
 
+    if (!new DefinitionComparator(myComparator).sort(defs)) {
+      myOrderingListener.cycleFound(scc);
+      return;
+    }
+
     myOrderingListener.preBodiesFound(defs);
     Ordering ordering = new Ordering(this, dependencies, Stage.WITHOUT_BODIES);
     for (Concrete.ResolvableDefinition definition : scc) {
       ordering.order(definition);
-    }
-
-    if (!new DefinitionComparator(myComparator).sort(defs)) {
-      myErrorReporter.report(new DefinitionOrderingError(defs));
     }
 
     myOrderingListener.bodiesFound(defs);

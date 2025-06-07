@@ -1,6 +1,7 @@
 \import Algebra.Domain.Euclidean
 \import Algebra.Field
 \import Algebra.Group
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Sub
@@ -178,7 +179,7 @@
   | finv_zro => idp
   | finv-right {x} x/=0 =>
     \have t : ratNom x IntRing.* ratNom (finv x) = ratDenom x Nat.* ratDenom (finv x) => \case \elim x, \elim x/=0 \with {
-      | rat 0 b _ r, x/=0 => {?} -- TODO[server2]: absurd (x/=0 (rat_alt-inj (LocRing.equals1 (later simplify))))
+      | rat 0 b _ r, x/=0 => absurd (x/=0 (rat_alt-inj (LocRing.equals1 (later simplify))))
       | rat (pos (suc n)) b b/=0 reduced, _ => pmap pos *-comm
       | rat (neg (suc n)) b b/=0 reduced, _ => pmap pos *-comm
     }
@@ -252,7 +253,7 @@
 
     \lemma +=+' {x y : Rat} : x + y = x +' y
       => mcases {+} \with {
-        | rat xNom 1 xDenom/=0 reduced, rat yNom 1 yDenom/=0 reduced1 => {?} -- TODO[server2]: Rat.ext simplify idp
+        | rat xNom 1 xDenom/=0 reduced, rat yNom 1 yDenom/=0 reduced1 => Rat.ext simplify idp
         | rat xNom xDenom xDenom/=0 reduced, rat yNom yDenom yDenom/=0 reduced1 => idp
       }
 
@@ -299,14 +300,14 @@
   }
 
 \lemma fromInt_<= {x y : Int} (p : x <= y) : x <= {RatField} y
-  => {?} -- TODO[server2]: RatField.<=-char (simplify p)
+  => RatField.<=-char (simplify p)
   \where {
     \lemma conv {x y : Int} (p : x <= {RatField} y) : x <= y
       => transport2 (<=) ide-right ide-right (RatField.<=-char-conv p)
   }
 
 \lemma fromInt_< {x y : Int} (p : x < y) : x < {RatField} y
-  => {?} -- TODO[server2]: RatField.<-char (simplify p)
+  => RatField.<-char (simplify p)
   \where {
     \lemma conv {x y : Int} (p : x < {RatField} y) : x < y
       => transport2 (<) ide-right ide-right (RatField.<-char-conv p)
@@ -359,8 +360,8 @@
 
 \lemma rat_floor>id-1 {r : Rat} : r - 1 < rat_floor r
   => \case LinearOrder.dec<_<= r (rat_floor r + 1) \with {
-    | inl p => {?} -- TODO[server2]: linarith
-    | inr p => {?} -- TODO[server2]: linarith (rat_floor-univ p)
+    | inl p => linarith
+    | inr p => linarith (rat_floor-univ p)
   }
 
 \func rat_ceiling (r : Rat) : Int

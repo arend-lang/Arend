@@ -176,7 +176,7 @@
           \case (smap a.3 c.3 t1.1 t1.2 t1.3 t1.4 t1.5 t1.6 e).2, (smap b.3 c.3 t2.1 t2.2 t2.3 t2.4 t2.5 t2.6 (smap a.3 b.3 t3.1 t3.2 t3.3 t3.4 t3.5 t3.6 e).1).2, (smap a.3 b.3 t3.1 t3.2 t3.3 t3.4 t3.5 t3.6 e).2 \with {
             | inP (s1,q1), inP (s2,q2), inP (s3,q3) => inv q1 *> ext (\case LocRing.unequals $ pmap __.1 $ inv s1.4 *> s3.4, LocRing.unequals $ pmap __.1 $ q3 *> s2.4 \with {
               | inP (_, inP (m1, idp), d1), inP (_, inP (m2, idp), d2) => LocRing.equals-lem {_} {powers c.1} (pow c.1 (t1.1 * (s3.2 + m1) + t2.1 * (t3.1 * s3.2 + m2))) (inP (_, idp)) $
-                  {?} -- TODO[server2]: later $ repeat (rewrite pow_* <|> rewrite pow_*-comm <|> rewrite pow_+ <|> rewrite t1.5 <|> rewrite t2.5 <|> rewrite t3.5) $ rewrite (pow_*,t3.5,pow_*-comm) at d2 $ equation
+                  later $ repeat (rewrite pow_* <|> rewrite pow_*-comm <|> rewrite pow_+ <|> rewrite t1.5 <|> rewrite t2.5 <|> rewrite t3.5) $ rewrite (pow_*,t3.5,pow_*-comm) at d2 $ equation
             }) *> q2
           }
         ) *> pmap2 (∘) p2 p3

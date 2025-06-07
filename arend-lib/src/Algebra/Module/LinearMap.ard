@@ -2,6 +2,7 @@
 \import Algebra.Group.GroupHom
 \import Algebra.Linear.Matrix
 \import Algebra.Linear.Matrix.Smith (M~)
+\import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
@@ -165,8 +166,8 @@
   | func-*c => pmap negative f.func-*c *> inv B.*c_negative-right
 
 \lemma linearMap_BigSum {R : Ring} {A B : LModule R} {m : Nat} (f : Fin m -> LinearMap A B) : LinearMap A B (\lam a => BigSum (\lam i => f i a)) \cowith
-  | func-+ => {?} -- TODO[server2]: cong (ext (\lam i => func-+)) *> B.BigSum_+
-  | func-*c => {?} -- TODO[server2]: cong (ext (\lam i => func-*c)) *> inv B.*c_BigSum-ldistr
+  | func-+ => cong (ext (\lam i => func-+)) *> B.BigSum_+
+  | func-*c => cong (ext (\lam i => func-*c)) *> inv B.*c_BigSum-ldistr
 
 \func arrayLinearMap {R : Ring} {V : LModule R} (v : Array V) : LinearMap (ArrayLModule v.len (RingLModule R)) V \cowith
   | func c => BigSum \lam j => c j *c v j
@@ -294,13 +295,12 @@
     \lemma alternating_perm {n : Nat} {f : Array A n -> B} (fa : isAlternating f) {l l' : Array A n} (p : Perm l l') : f l = Perm.sign p *c f l' \elim n, l, l', p
       | 0, nil, nil, perm-nil => inv ide_*c
       | suc n, x :: l, _ :: l', perm-:: idp p => alternating_perm (reduce (\lam l => f l) fa) p *> pmap (R.pow -1 __ `*c _) (inv Perm.inversions_perm-::)
-      | suc (suc n), x :: x' :: l, _ :: _ :: _, perm-swap idp idp idp => {?} {- TODO[server2]:
+      | suc (suc n), x :: x' :: l, _ :: _ :: _, perm-swap idp idp idp =>
           f (x :: x' :: l)            ==< substract1from0 fa >==
           f (x - x' :: x' :: l)       ==< add0to1 fa *> simplify >==
           f (x - x' :: x :: l)        ==< substract1from0 fa *> simplify >==
           f (negative x' :: x :: l)   ==< pmap (\lam y => f (y :: x :: l)) (inv A.neg_ide_*c) *> (fa.1 (x :: l) 0).func-*c *> inv (pmap (`*c _) ide-left) >==
           1 * -1 *c f (x' :: x :: l)  `qed
-          -}
       | n, l1, l2, perm-trans p1 p2 => alternating_perm fa p1 *> pmap (_ *c) (alternating_perm fa p2) *> inv (pmap (`*c _) (pmap (R.pow -1) Perm.inversions_perm-trans *> R.pow_+) *> *c-assoc)
   }
 

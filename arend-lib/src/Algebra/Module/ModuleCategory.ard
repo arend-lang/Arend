@@ -3,6 +3,7 @@
 \import Algebra.Group.GroupHom
 \import Algebra.Linear.Matrix
 \import Algebra.Linear.Matrix.Smith
+\import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Module.LinearMap
 \import Algebra.Module.Sub
@@ -146,8 +147,8 @@
 \func toLinearMapIso {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (A : Monoid.Inv {MatrixRing R n}) : Iso {_} {U} {V} \cowith
   | f => toLinearMap bu lv A.val
   | hinv => toLinearMap bv lu A.inv
-  | hinv_f => {?} -- TODO[server2]: inv (toLinearMap_* A.val A.inv bu bv bu) *> cong A.inv-right *> toLinearMap_ide bu
-  | f_hinv => {?} -- TODO[server2]: inv (toLinearMap_* A.inv A.val bv bu bv) *> cong A.inv-left *> toLinearMap_ide bv
+  | hinv_f => inv (toLinearMap_* A.val A.inv bu bv bu) *> cong A.inv-right *> toLinearMap_ide bu
+  | f_hinv => inv (toLinearMap_* A.inv A.val bv bu bv) *> cong A.inv-left *> toLinearMap_ide bv
 
 \func toMatrixInv {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (e : Iso {_} {U} {V}) : Monoid.Inv {MatrixRing R n} \cowith
   | val => toMatrix lu bv e.f

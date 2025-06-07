@@ -2,6 +2,7 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Group.Symmetric
+\import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
@@ -73,13 +74,12 @@
 
 \lemma blockMatrix_* {R : Ring} {n m n' m' k k' : Nat} (A : Matrix R n m) (B : Matrix R n' m') (C : Matrix R m k) (D : Matrix R m' k')
   : blockMatrix A B MatrixRing.product blockMatrix C D = blockMatrix (A MatrixRing.product C) (B MatrixRing.product D)
-  => {?} {- TODO[server2]: matrixExt \lam i j => R.BigSum-split *> \case ++'.split-index i, ++'.split-index j \with {
+  => matrixExt \lam i j => R.BigSum-split *> \case ++'.split-index i, ++'.split-index j \with {
     | inl (i',p), inl (j',q) => rewrite (p,q) $ pmap2 (+) (cong $ ext \lam i => pmap2 (*) (blockMatrix.elem00 i' i) (blockMatrix.elem00 i j')) (R.BigSum_zro \lam j => pmap (_ *) (blockMatrix.elem10 j j') *> zro_*-right) *> zro-right *> inv (blockMatrix.elem00 {_} {_} {_} {_} {_} {A MatrixRing.product C} {B MatrixRing.product D} i' j')
     | inl (i',p), inr (j',q) => rewrite (p,q) $ pmap2 (+) (R.BigSum_zro \lam i => pmap (_ *) (blockMatrix.elem01 i j') *> zro_*-right) (R.BigSum_zro \lam j => pmap (`* _) (blockMatrix.elem01 i' j) *> zro_*-left) *> zro-right *> inv (blockMatrix.elem01 {_} {_} {_} {_} {_} {A MatrixRing.product C} {B MatrixRing.product D} i' j')
     | inr (i',p), inl (j',q) => rewrite (p,q) $ pmap2 (+) (R.BigSum_zro \lam i => pmap (`* _) (blockMatrix.elem10 i' i) *> zro_*-left) (R.BigSum_zro \lam j => pmap (_ *) (blockMatrix.elem10 j j') *> zro_*-right) *> zro-right *> inv (blockMatrix.elem10 {_} {_} {_} {_} {_} {A MatrixRing.product C} {B MatrixRing.product D} i' j')
     | inr (i',p), inr (j',q) => rewrite (p,q) $ pmap2 (+) (R.BigSum_zro \lam i => pmap (_ *) (blockMatrix.elem01 i j') *> zro_*-right) (cong $ ext \lam j => pmap2 (*) (blockMatrix.elem11 i' j) (blockMatrix.elem11 j j')) *> zro-left *> inv (blockMatrix.elem11 {_} {_} {_} {_} {_} {A MatrixRing.product C} {B MatrixRing.product D} i' j')
   }
-  -}
 
 \func block21Matrix {R : AddPointed} {n m k : Nat} (A : Matrix R n k) (B : Matrix R m k) : Matrix R (n + m) k
   => makeMatrix (A ++' B)
@@ -383,7 +383,7 @@
               : pow -1 (i Nat.+ k) * determinant (minor M i k) + pow -1 (j Nat.+ k) * determinant (minor M j k) = 0
               => rewrite (minor=minor', minor=minor', isAlternating.alternating_perm {R} determinant.alternating $ permutation i<j (map (skip __ k) M) $ pmap (skip __ k) p) $
                  rewriteI *-assoc $ inv rdistr *> pmap (`* _) (unfold Perm.sign $ rewrite (permutation_inversions, inv R.pow_+, inv R.pow_-1_+2)
-                  \have s : i Nat.+ k Nat.+ (j -' suc i) Nat.+ 2 = suc (j Nat.+ k) => pmap suc $ unpos $ pmap (pos (suc (i Nat.+ k)) +) (-'=- $ suc_<_<= i<j) *> {?} -- TODO[server2]: linarith
+                  \have s : i Nat.+ k Nat.+ (j -' suc i) Nat.+ 2 = suc (j Nat.+ k) => pmap suc $ unpos $ pmap (pos (suc (i Nat.+ k)) +) (-'=- $ suc_<_<= i<j) *> linarith
                   \in pmap (R.pow -1 __ + _) s *> pmap (`+ _) R.negative_ide-right *> negative-left) *> zro_*-left
 
         \lemma minor-lem' {R : CRing} {n : Nat} {i j k : Fin (suc n)} {M : Matrix R (suc n) (suc n)} (i/=j : i /= j) (p : \Pi (k : Fin (suc n)) -> M k i = M k j)
@@ -398,9 +398,8 @@
 
     \lemma determinantN_ide {R : CRing} {n : Nat} (k : Fin n) : determinantN k (MatrixRing.ide {R} {n}) = 1 \elim n
       | 0 => idp
-      | suc n => {?} {- TODO[server2]: R.BigSum-unique {\lam i => MatrixRing.ide i k * R.pow -1 (i Nat.+ k) * determinant (minor MatrixRing.ide i k)} k (\lam j k/=j => rewrite (decideEq/=_reduce \lam p => k/=j $ inv p) simplify) *>
+      | suc n => R.BigSum-unique {\lam i => MatrixRing.ide i k * R.pow -1 (i Nat.+ k) * determinant (minor MatrixRing.ide i k)} k (\lam j k/=j => rewrite (decideEq/=_reduce \lam p => k/=j $ inv p) simplify) *>
                   rewrite (decideEq=_reduce idp, ide-left) (pmap2 (*) R.pow_-1_even (pmap determinant (pmap (minor __ k k) MatrixRing.ide=ide' *> ide'_minor k *> inv MatrixRing.ide=ide') *> determinant_ide {R} {n}) *> ide-left)
-                  -}
       \where {
         \func double-skip {R : \Set} {n m : Nat} {M : Array (Array R n) (suc m)} {k : Fin (suc m)} {i : Fin m} {j : Fin n}
           : skip {Array R _} M k i j = skip (map {Array R n} (__ j) M) k i \elim m, M, k, i
@@ -411,7 +410,7 @@
         \lemma ide'_minor {R : Ring} {n : Nat} (k : Fin (suc n)) : minor (MatrixRing.ide' {R}) k k = MatrixRing.ide' \elim n, k
           | 0, k => idp
           | suc n, 0 => idp
-          | suc n, suc k => {?} -- TODO[server2]: pmap makeMatrix $ pmap2 (::) (pmap (\lam l => R.ide :: l) (skip_replicate R.zro)) $ arrayExt \lam i => pmap2 (::) (double-skip *> pmap {Array R _} (__ i) (skip_replicate R.zro {k})) $ cong (arrayExt \lam j => double-skip *> inv double-skip) *> pmap {Matrix R n n} (__ i) (ide'_minor k)
+          | suc n, suc k => pmap makeMatrix $ pmap2 (::) (pmap (\lam l => R.ide :: l) (skip_replicate R.zro)) $ arrayExt \lam i => pmap2 (::) (double-skip *> pmap {Array R _} (__ i) (skip_replicate R.zro {k})) $ cong (arrayExt \lam j => double-skip *> inv double-skip) *> pmap {Matrix R n n} (__ i) (ide'_minor k)
       }
 
     \lemma =determinant {R : CRing} {n : Nat} {k : Fin n} {M : Matrix R n n} : determinantN k M = determinant M
@@ -421,13 +420,12 @@
     \open Monoid
 
     \lemma determinant=determinant0 {R : CRing} {n : Nat} {M : Matrix R (suc n) (suc n)} : determinant M = determinantN {R} {suc n} 0 M
-      => {?} {- TODO[server2]: \have t (e : Sym (suc n)) : BigProd (\lam j => minor M (e 0) 0 (Sym.reduce e j) j) = BigProd (\lam j => M (e (fsuc j)) (fsuc j)) => cong (ext \lam j => minor_Sym)
+      => \have t (e : Sym (suc n)) : BigProd (\lam j => minor M (e 0) 0 (Sym.reduce e j) j) = BigProd (\lam j => M (e (fsuc j)) (fsuc j)) => cong (ext \lam j => minor_Sym)
          \in FinSum (\lam (e : Sym (suc n)) => sign e * BigProd (\lam j => M (e j) j)) ==< pmap FinSum (ext \lam e => rewrite (t,R.pow_+) equation) *> inv (FinSum_Equiv symmetric-rec) >==
              FinSum (\lam (p : \Sigma (Fin (suc n)) (Sym n)) => M p.1 0 * pow -1 p.1 * (sign p.2 * BigProd (\lam j => minor M p.1 0 (p.2 j) j))) ==< inv FinSum-double >==
              FinSum (\lam i => FinSum (\lam (e : Sym n) => M i 0 * pow -1 i * (sign e * BigProd (\lam j => minor M i 0 (e j) j)))) ==< cong (ext \lam i => inv R.FinSum-ldistr) >==
              FinSum (\lam i => M i 0 * pow -1 i * determinant (minor M i 0)) ==< FinSum=BigSum >==
              R.BigSum (\lam i => M i 0 * pow -1 i * determinant (minor M i 0)) `qed
-             -}
       \where {
         \func skip_skip {A : \Type} {n : Nat} {l : Array A (suc n)} {k j : Fin (suc n)} {d : k /= j} : skip l k (FinSet.skip k j d) = l j \elim n, l, k, j
           | n, l, 0, 0 => absurd (d idp)
@@ -444,12 +442,11 @@
   => determinant_ide
 
 \lemma determinant11 {R : CRing} (A : Matrix R 1 1) : determinant A = A 0 0
-  => {?} -- TODO[server2]: inv (determinantN.=determinant {R} {1} {0}) *> simplify (pmap (_ *) (determinant_ide {R} {0}) *> ide-right)
+  => inv (determinantN.=determinant {R} {1} {0}) *> simplify (pmap (_ *) (determinant_ide {R} {0}) *> ide-right)
 
 \lemma determinant22 {R : CRing} {A : Matrix R 2 2} : determinant A = A 0 0 * A 1 1 - A 1 0 * A 0 1
-  => {?} {- TODO[server2]: inv (determinantN.=determinant {R} {2} {0}) *> simplify (pmap2 (+) (pmap (_ *) $ determinant11 (minor A 0 0)) $
+  => inv (determinantN.=determinant {R} {2} {0}) *> simplify (pmap2 (+) (pmap (_ *) $ determinant11 (minor A 0 0)) $
       pmap (\lam x => negative $ _ * x) (determinant11 (minor A 1 0)))
-      -}
 
 \open determinant(minor)
 
@@ -526,7 +523,7 @@
   => product
   \where
     \lemma product {R : CRing} {n m k : Nat} {M : Matrix R n m} {M' : Matrix R m k} : transpose (M MatrixRing.product M') = transpose M' MatrixRing.product transpose M
-      => {?} -- TODO[server2]: matrixExt \lam i j => cong $ ext \lam k => *-comm
+      => matrixExt \lam i j => cong $ ext \lam k => *-comm
 
 \lemma adjugate-right {R : CRing} {n : Nat} {M : Matrix R n n} : M * adjugate M = determinant M *c 1
   => pmap (M *) (adjugate_transpose (transpose M)) *> inv (transpose_* {R} {n} {adjugate (transpose M)} {transpose M}) *> pmap transpose adjugate-left *> matrixExt (\lam i j => pmap2 (*) (determinant_transpose M) $ later $ mcases {1} \with {
@@ -560,14 +557,13 @@
 
 \lemma determinant_block {R : CRing} {n m : Nat} (A : Matrix R n n) (B : Matrix R m m) : determinant (blockMatrix A B) = determinant A * determinant B \elim n
   | 0 => inv (pmap (`* _) (determinant00 A) *> ide-left)
-  | suc n => {?} {- TODO[server2]: inv (determinantN.=determinant {R} {suc (n + m)} {0} {blockMatrix A B}) *>
+  | suc n => inv (determinantN.=determinant {R} {suc (n + m)} {0} {blockMatrix A B}) *>
       (cong (++'-split {R} {suc n} *> pmap2 (::) (pmap (_ *) (pmap determinant (blockMatrix_minor 0 0) *> determinant_block (minor A 0 0) B) *> inv *-assoc)
                                            (cong (ext \lam j => pmap2 (*) (pmap2 (*) (blockMatrix.elem00 {R} {suc n} {suc n} (suc j) 0) $ later $ rewrite fin-inc.char idp) (pmap determinant (blockMatrix_minor (suc j) 0) *> determinant_block (minor A (suc j) 0) B) *> inv *-assoc)
                                                  (exts \lam j => *-assoc *> pmap (`* _) (blockMatrix.elem10 {R} {suc n} {suc n} j 0) *> zro_*-left)))
             *> R.BigSum_++' {\lam i => A i 0 * R.pow -1 i * determinant (minor A i 0) * determinant B} *> pmap (_ +) (R.BigSum_replicate0 {m}) *> zro-right
         : R.BigSum (\lam i => blockMatrix A B i 0 * R.pow -1 i * determinant (minor (blockMatrix A B) i 0)) = R.BigSum (\lam i => A i 0 * R.pow -1 i * determinant (minor A i 0) * determinant B))
       *> inv (R.BigSum-rdistr {\lam i => A i 0 * R.pow -1 i * determinant (minor A i 0)}) *> pmap (`* _) (determinantN.=determinant {R} {suc n} {0})
-      -}
 
 {- | If {M} is an R-module, {U} is a matrix over {M}, and {A} is a matrix over {R} such that `A * U = 0`, then `determinant A *c U = 0`.
  -
@@ -582,11 +578,10 @@
  -}
 \lemma equations-determinant {R : CRing} {M : LModule R} {n k : Nat} (A : Matrix R n n) {U : Matrix M n k}
                              (p : product-gen A U = zro) : MatrixModule.*c-gen (determinant A) U = zro
-  => {?} {- TODO[server2]: \have | r : product-gen (adjugate A) 0 = 0 => matrixExt \lam i j => M.BigSum_zro \lam k => M.*c_zro-right
+  => \have | r : product-gen (adjugate A) 0 = 0 => matrixExt \lam i j => M.BigSum_zro \lam k => M.*c_zro-right
            | t : product-gen (determinant A *c ide) U = 0
                => pmap (product-gen __ U) (inv adjugate-left) *> product-gen-assoc *> cong p *> r
      \in matrixExt \lam i j => pmap (`*c _) (inv ide-right) *> (rewrite (decideEq=_reduce idp) in inv (M.BigSum-unique i \lam k i/=k => later $ rewrite (decideEq/=_reduce i/=k) $ pmap (`*c _) R.zro_*-right *> M.*c_zro-left) *> path (\lam i' => t i' i j))
-     -}
   \where \open MatrixRing
 
 \type IsDiagonal {R : AddPointed} {n m : Nat} (A : Matrix R n m) : \Prop
@@ -596,10 +591,10 @@
       => \lam i/=j => d (/=-sym i/=j)
 
     \lemma =>upperTriangular {R : AddPointed} {n m : Nat} {A : Matrix R n m} (d : IsDiagonal A) : IsUpperTriangular A
-      => {?} -- TODO[server2]: \lam i j j<i => d \lam p => linarith
+      => \lam i j j<i => d \lam p => linarith
 
     \lemma =>lowerTriangular {R : AddPointed} {n m : Nat} {A : Matrix R n m} (d : IsDiagonal A) : IsLowerTriangular A
-      => {?} -- TODO[server2]: \lam i j j<i => d \lam p => linarith
+      => \lam i j j<i => d \lam p => linarith
   }
 
 \lemma *c_IsDiagonal {R : Ring} {n m : Nat} {A : Matrix R n m} {a : R} (Ad : IsDiagonal A) : IsDiagonal (a *c A)
@@ -631,13 +626,13 @@
 
 \lemma determinant-nonSquare {R : CRing} {n m : Nat} (m<n : m < n) {A : Matrix R n m} {B : Matrix R m n} : determinant (A MatrixRing.product B) = 0
   => \have r : \Pi (A : Matrix R n m) (B : Matrix R m n) -> determinant (A MatrixRing.product B) = 0
-             => {?} -- TODO[server2]: rewriteI (<=_exists (LinearOrder.<_<= m<n), NatSemiring.+-comm) \lam A B => determinant-nonSquare_+ \lam p => linarith (-'_<= p)
+             => rewriteI (<=_exists (LinearOrder.<_<= m<n), NatSemiring.+-comm) \lam A B => determinant-nonSquare_+ \lam p => linarith (-'_<= p)
      \in r A B
   \where {
     \lemma determinant-nonSquare_+ {R : CRing} {n k : Nat} (k/=0 : k /= 0) {A : Matrix R (k + n) n} {B : Matrix R n (k + n)} : determinant (A MatrixRing.product B) = 0 =>
       \let | A' => block12Matrix 0 A
            | B' => block21Matrix 0 B
-           | p : A' * B' = A MatrixRing.product B => block12_21_* 0 A 0 B *> {?} -- TODO[server2]: cong (MatrixRing.product_zro-left 0) *> zro-left
+           | p : A' * B' = A MatrixRing.product B => block12_21_* 0 A 0 B *> cong (MatrixRing.product_zro-left 0) *> zro-left
       \in pmap determinant (inv p) *> determinant_* {_} {_} {A'} {B'} *> pmap (`* _) (determinant_block12 k/=0 A) *> zro_*-left
 
     \lemma determinant_block12 {R : CRing} {n k : Nat} (k/=0 : k /= 0) (A : Matrix R (k + n) n) : determinant (block12Matrix 0 A) = 0 \elim k

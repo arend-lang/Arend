@@ -10,6 +10,7 @@
 \import Algebra.Domain.GCD
 \import Algebra.Group
 \import Algebra.Linear.Matrix.Smith
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Sub
@@ -66,23 +67,23 @@
 
   \lemma domain_adequate' {M : GCDDomain.Dec} (dc : CMonoid.DivChain {DivQuotientMonoid M.nonZeroGCDMonoid}) {a : M} (a/=0 : a /= 0) : IsAdequate' a
     => \lam b => \case decideEq b 0 \with {
-      | yes b=0 => {?} -- TODO[server2]: inP (a, 1, 1, inv ide-right, rewrite b=0 $ simplify M.zero-div, IsCoprime.IsCoprime_ide-left)
+      | yes b=0 => inP (a, 1, 1, inv ide-right, rewrite b=0 $ simplify M.zero-div, IsCoprime.IsCoprime_ide-left)
       | no b/=0 => TruncP.map (monoid_adequate' dc (a, M.nonZeroApart a/=0) (b, M.nonZeroApart b/=0)) \lam (a1,a2,n,a=a1a2,a1|b^n,a2_b) =>
           (a1.1, a2.1, n, pmap __.1 a=a1a2, transport (LDiv _) M.subMonoid.embedMonoid.func-pow (M.nonZero_ldiv a1|b^n),
            \lam z z|a2 z|b => M.nonZero_inv $ a2_b (z, M.nonZeroApart $ M.ldiv/=0 b/=0 z|b) (M.ldiv_nonZero z|a2) (M.ldiv_nonZero z|b))
     }
 
   \lemma oneDim_adequate' {R : GCDDomain.Dec} (d : R.Dim<= 1) {a : R} (a/=0 : a /= 0) : IsAdequate' a
-    => {?} {- TODO[server2]: \lam b =>
+    => \lam b =>
         \have | (inP (v,n,d)) => R.oneDimensional-char.1 d a b a/=0
               | (inP (a1,a2,a=a1a2,a1|b^n,(c,p))) => R.split_* d
-        \in inP (a1, a2, n, a=a1a2, a1|b^n, BezoutRing.bezout_coprime {_} {c} {v} equation) -}
+        \in inP (a1, a2, n, a=a1a2, a1|b^n, BezoutRing.bezout_coprime {_} {c} {v} equation)
 
   \lemma bezout_1Dim<->adequate' {R : BezoutDomain.Dec} : R.Dim<= 1 <-> (\Pi {a : R} -> a /= 0 -> IsAdequate' a)
-    => {?} {- TODO[server2]: (oneDim_adequate', \lam f => R.oneDimensional-char.2 \lam a u a/=0 =>
+    => (oneDim_adequate', \lam f => R.oneDimensional-char.2 \lam a u a/=0 =>
         \have | (inP (a1,a2,n,a=a1a2,a1|u^n,a2_u)) => f a/=0 u
               | (inP (s,v,p)) => R.gcd_bezout (IsCoprime.=>gcd a2_u)
-        \in inP (v, n, rewrite a=a1a2 $ LDiv.product a1|u^n $ LDiv.make s equation)) -}
+        \in inP (v, n, rewrite a=a1a2 $ LDiv.product a1|u^n $ LDiv.make s equation))
 
   \lemma adequate_kaplansky {R : BezoutDomain.Dec} (adeq : \Pi {a : R} -> a /= 0 -> IsAdequate a) : SmithRing.IsKaplansky R
     => \lam a b c a_b_c => \case R.coprime_bezoutArray a_b_c, decideEq a 0 \with {
