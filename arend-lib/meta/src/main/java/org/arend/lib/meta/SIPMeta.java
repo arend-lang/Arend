@@ -61,8 +61,7 @@ public class SIPMeta extends BaseMetaDefinition {
       return null;
     }
 
-    CoreClassField equivRight = Names.findSuperField(classCall.getDefinition(), Names.EQUIV_MAP, Names.getEquivB());
-    CoreExpression isoArg = equivRight == null ? null : classCall.getAbsImplementationHere(equivRight);
+    CoreExpression isoArg = Names.getAbsImplementation(classCall, Names.EQUIV_MAP, Names.getEquivB());
     if (isoArg != null) isoArg = isoArg.normalize(NormalizationMode.WHNF);
     CoreExpression cat = isoArg instanceof CoreClassCallExpression ? Names.getClosedImplementation((CoreClassCallExpression) isoArg, Names.CAT_MAP, Names.getMapCat()) : null;
     if (cat == null) {

@@ -30,8 +30,6 @@ import java.util.function.Function;
 public class RewriteEquationMeta extends BaseEquationMeta {
   @Dependency private ArendRef transport;
   @Dependency private ArendRef transportInv;
-  @Dependency(name = "*>") private ArendRef concat;
-  @Dependency private ArendRef pmap;
 
   @Override
   public boolean withoutLevels() {

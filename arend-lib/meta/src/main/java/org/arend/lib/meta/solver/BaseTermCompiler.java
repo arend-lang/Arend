@@ -2,6 +2,8 @@ package org.arend.lib.meta.solver;
 
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteSourceNode;
+import org.arend.ext.core.definition.CoreClassDefinition;
+import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.expr.*;
@@ -12,6 +14,7 @@ import org.arend.ext.util.Pair;
 import org.arend.lib.meta.equation.BaseAlgebraicMeta;
 import org.arend.lib.meta.equation.binop_matcher.DefinitionFunctionMatcher;
 import org.arend.lib.meta.equation.binop_matcher.FunctionMatcher;
+import org.arend.lib.util.Names;
 import org.arend.lib.util.Utils;
 import org.arend.lib.util.Values;
 
@@ -79,16 +82,14 @@ public abstract class BaseTermCompiler {
   public static RingKind getTermCompilerKind(CoreExpression instance, BaseAlgebraicMeta meta) {
     CoreExpression instanceNorm = instance.normalize(NormalizationMode.WHNF);
     CoreFunctionDefinition instanceDef = instanceNorm instanceof CoreFunCallExpression ? ((CoreFunCallExpression) instanceNorm).getDefinition() : null;
-    RingKind kind = instanceDef == meta.NatSemiring ? RingKind.NAT : instanceDef == meta.IntRing ? RingKind.INT : instanceDef == meta.RatField ? RingKind.RAT : RingKind.NONE;
+    RingKind kind = instanceDef == meta.NatSemiring ? RingKind.NAT : instanceDef == meta.IntRing ? RingKind.INT : instanceDef != null && instanceDef.getRef().checkName(Names.RAT_FIELD) ? RingKind.RAT : RingKind.NONE;
     if (kind != RingKind.NONE) return kind;
-    CoreExpression type = instanceNorm.computeType().normalize(NormalizationMode.WHNF);
-    if (type instanceof CoreClassCallExpression classCall && classCall.getDefinition().isSubClassOf(meta.OrderedAAlgebra)) {
-      CoreExpression ringImpl = classCall.getAbsImplementationHere(meta.moduleRing);
-      if (ringImpl != null) {
-        ringImpl = ringImpl.normalize(NormalizationMode.WHNF);
-        if (ringImpl instanceof CoreFunCallExpression funCall && funCall.getDefinition() == meta.RatField) {
-          return RingKind.RAT_ALG;
-        }
+    if (instanceNorm.computeType().normalize(NormalizationMode.WHNF) instanceof CoreClassCallExpression classCall) {
+      CoreClassDefinition orderedAssocAlgebra = Names.findSuperClass(classCall.getDefinition(), Names.ORDERED_ASSOC_ALGEBRA);
+      CoreClassField ringField = orderedAssocAlgebra == null ? null : Names.findSuperField(orderedAssocAlgebra, Names.LEFT_MODULE, Names.getModuleRing());
+      CoreExpression ringImpl = ringField == null ? null : classCall.getAbsImplementationHere(ringField);
+      if (ringImpl != null && ringImpl.normalize(NormalizationMode.WHNF) instanceof CoreFunCallExpression funCall && funCall.getDefinition().getRef().checkName(Names.RAT_FIELD)) {
+        return RingKind.RAT_ALG;
       }
     }
     return RingKind.NONE;

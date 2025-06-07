@@ -8,7 +8,6 @@ import org.arend.ext.concrete.expr.ConcreteLamExpression;
 import org.arend.ext.concrete.pattern.ConcretePattern;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.context.CoreParameter;
-import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.ext.core.definition.CoreDataDefinition;
@@ -27,6 +26,7 @@ import org.arend.lib.key.FieldKey;
 import org.arend.lib.meta.closure.BunchedEquivalenceClosure;
 import org.arend.lib.meta.closure.ValuesRelationClosure;
 import org.arend.lib.context.ContextHelper;
+import org.arend.lib.util.Names;
 import org.arend.lib.util.Utils;
 import org.arend.lib.util.Values;
 import org.jetbrains.annotations.NotNull;
@@ -43,8 +43,6 @@ public class ContradictionMeta extends BaseMetaDefinition {
   @Dependency(name = "*>")                              private ArendRef concat;
   @Dependency                                           private ArendRef inv;
   @Dependency                                           private ArendRef Empty;
-  @Dependency                                           private CoreClassDefinition LinearOrder;
-  @Dependency(name = "StrictPoset.<")                   private ArendRef less;
   @Dependency(name = "BiorderedSet.<-transitive-left")  private ArendRef lessTransitiveLeft;
 
   public ContradictionMeta(StdExtension ext) {
@@ -203,9 +201,9 @@ public class ContradictionMeta extends BaseMetaDefinition {
       if (parameters.size() == 1) {
         Triple triple = Triple.make(Utils.unfoldType(parameters.getFirst().getTypeExpr().normalize(NormalizationMode.WHNF)));
         if (triple != null) {
-          if (triple.fun.getDefinition().getRef().equals(less)) {
+          if (triple.fun.getDefinition().getRef().checkName(Names.LESS)) {
             CoreExpression argType = triple.fun.getArgument().computeType().normalize(NormalizationMode.WHNF);
-            if (argType instanceof CoreClassCallExpression && ((CoreClassCallExpression) argType).getDefinition().isSubClassOf(LinearOrder)) {
+            if (argType instanceof CoreClassCallExpression && Names.isSubClass(((CoreClassCallExpression) argType).getDefinition(), Names.LINEAR_ORDER)) {
               Integer index1 = values.addValue(triple.arg2);
               transGraphs.computeIfAbsent(triple.fun.getDefinition(), k -> new HashMap<>()).computeIfAbsent(index1, k -> new ArrayList<>())
                 .add(new Edge<>(index1, values.addValue(triple.arg1), proof, EdgeKind.LESS_OR_EQ, null));
@@ -529,7 +527,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
                   if (triple == null || triple.fun.getDefinition() != entry.getKey()) break;
                   if (negation.assumptions.size() == 1) {
                     CoreExpression instanceType = triple.fun.getArgument().computeType().normalize(NormalizationMode.WHNF);
-                    if (instanceType instanceof CoreClassCallExpression && ((CoreClassCallExpression) instanceType).getDefinition().isSubClassOf(LinearOrder)) break;
+                    if (instanceType instanceof CoreClassCallExpression && Names.isSubClass(((CoreClassCallExpression) instanceType).getDefinition(), Names.LINEAR_ORDER)) break;
                   }
                   triples.add(triple);
                 }

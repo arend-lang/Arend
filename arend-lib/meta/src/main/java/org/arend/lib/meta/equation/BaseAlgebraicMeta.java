@@ -1,6 +1,5 @@
 package org.arend.lib.meta.equation;
 
-import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.reference.ArendRef;
@@ -8,11 +7,11 @@ import org.arend.ext.typechecking.BaseMetaDefinition;
 import org.arend.ext.typechecking.meta.Dependency;
 
 public class BaseAlgebraicMeta extends BaseMetaDefinition {
+  @Dependency                                           public ArendRef pmap;
+  @Dependency                                           public ArendRef inv;
+
   @Dependency                                           public CoreFunctionDefinition NatSemiring;
   @Dependency                                           public CoreFunctionDefinition IntRing;
-  @Dependency                                           public CoreFunctionDefinition RatField;
-  @Dependency                                           public CoreClassDefinition OrderedAAlgebra;
-  @Dependency(name = "LModule.R")                       public CoreClassField moduleRing;
   @Dependency(name = "Bounded.JoinSemilattice.bottom")  public CoreClassField bottom;
   @Dependency(name = "Bounded.MeetSemilattice.top")     public CoreClassField top;
   @Dependency(name = "JoinSemilattice.join")            public CoreClassField join;

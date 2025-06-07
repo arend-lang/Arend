@@ -11,8 +11,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class LinearSolverMeta extends BaseAlgebraicMeta {
-  @Dependency                                         ArendRef inv;
-  @Dependency                                         ArendRef pmap;
   @Dependency                                         ArendRef Bool;
   @Dependency(name = "Bool.true")                     ArendRef true_;
 

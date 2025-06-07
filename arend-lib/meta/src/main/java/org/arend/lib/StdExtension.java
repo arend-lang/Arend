@@ -240,7 +240,6 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getGroupModule());
     contributor.declare(algebra, Names.getGroupSolverModule(), "NatData", "CGroupData", "GroupTerm");
     contributor.declare(algebra, Names.getLinearSolverModule());
-    contributor.declare(algebra, Names.getModuleModule());
     contributor.declare(algebra, Names.getMonoidModule());
     contributor.declare(algebra, Names.getMonoidSolverModule());
     contributor.declare(algebra, Names.getOrderedModule());
@@ -285,8 +284,6 @@ public class StdExtension implements ArendExtension {
 
     contributor.declare(logicMeta, Names.getLogicModule());
     contributor.declare(logicMeta, Names.getBiorderedModule());
-    contributor.declare(logicMeta, Names.getLinearOrderModule());
-    contributor.declare(logicMeta, Names.getStrictOrderModule());
     contributor.declare(logicMeta, Names.getPathsModule());
     contributor.declare(multiline("""
         Derives a contradiction from assumptions in the context

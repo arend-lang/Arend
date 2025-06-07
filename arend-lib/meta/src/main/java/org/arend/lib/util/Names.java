@@ -27,6 +27,11 @@ public class Names {
   public static final FullName EQUIV_MAP = fullName(getEquivModule(), new LongName("Map"));
   public static final FullName CAT_MAP = fullName(getCategoryModule(), new LongName("Map"));
   public static final FullName PRECAT = fullName(getCategoryModule(), new LongName("Precat"));
+  public static final FullName LINEAR_ORDER = fullName(getLinearOrderModule(), new LongName("LinearOrder"));
+  public static final FullName LESS = fullName(getStrictOrderModule(), new LongName("StrictPoset", "<"));
+  public static final FullName ORDERED_ASSOC_ALGEBRA = fullName(getOrderedModule(), new LongName("OrderedAAlgebra"));
+  public static final FullName LEFT_MODULE = fullName(getModuleModule(), new LongName("LModule"));
+  public static final FullName RAT_FIELD = fullName(getRatModule(), new LongName("RatField"));
 
   private static FullName fullName(ModulePath modulePath, LongName longName) {
     return new FullName(new ModuleLocation(LIBRARY_NAME, ModuleLocation.LocationKind.SOURCE, modulePath), longName);
@@ -49,13 +54,18 @@ public class Names {
   }
 
   public static CoreClassField findSuperField(CoreClassDefinition definition, FullName superClassName, String fieldName) {
-    CoreClassDefinition superClass = definition.findAncestor(it -> it.getRef().checkName(superClassName));
+    CoreClassDefinition superClass = findSuperClass(definition, superClassName);
     return superClass == null ? null : superClass.findField(fieldName);
   }
 
   public static CoreExpression getClosedImplementation(CoreClassCallExpression classCall, FullName superClassName, String fieldName) {
     CoreClassField field = findSuperField(classCall.getDefinition(), superClassName, fieldName);
     return field == null ? null : classCall.getClosedImplementation(field);
+  }
+
+  public static CoreExpression getAbsImplementation(CoreClassCallExpression classCall, FullName superClassName, String fieldName) {
+    CoreClassField field = findSuperField(classCall.getDefinition(), superClassName, fieldName);
+    return field == null ? null : classCall.getAbsImplementationHere(field);
   }
 
   // Constructors and fields
@@ -86,6 +96,10 @@ public class Names {
 
   public static String getMapCat() {
     return "C";
+  }
+
+  public static String getModuleRing() {
+    return "R";
   }
 
   // Modules
