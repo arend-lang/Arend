@@ -824,6 +824,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
                 \func foo (a : Nat) => a `lol{-caret-}
             """, """
                 \import A
+
                 \func foo (a : Nat) => a Foo.`lol{-caret-}
             """)
 

@@ -39,6 +39,7 @@ import org.arend.settings.ArendSettings
 import org.arend.term.concrete.Concrete
 import org.arend.term.group.AccessModifier
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
+import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.util.FileUtils
 import org.arend.util.addGeneratedModule
 import org.arend.util.findExternalLibrary
@@ -266,6 +267,7 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
     }
 
     private fun setupLibraryManager(config: ExternalLibraryConfig) {
+        project.service<ArendServerService>().server.updateLibrary(config, NotificationErrorReporter(project))
         addGeneratedModules(config.name) {
             declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "using", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(config.libraryName, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta")))), null, null, emptyList(), null))
             declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "$", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(config.libraryName, ModuleLocation.LocationKind.GENERATED, ModulePath("Function", "Meta")))), null, null, emptyList(), null))

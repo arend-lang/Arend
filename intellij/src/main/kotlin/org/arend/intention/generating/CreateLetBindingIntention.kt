@@ -26,8 +26,10 @@ import org.arend.intention.AbstractGenerateFunctionIntention
 import org.arend.intention.BaseArendIntention
 import org.arend.intention.ExtractExpressionToFunctionIntention
 import org.arend.intention.checkNotGeneratePreview
-import org.arend.psi.*
+import org.arend.intention.getElementScope
+import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ext.*
+import org.arend.psi.getSelectionWithoutErrors
 import org.arend.refactoring.addNewClause
 import org.arend.refactoring.rangeOfConcrete
 import org.arend.refactoring.replaceExprSmart
@@ -208,7 +210,8 @@ class CreateLetBindingIntention : AbstractGenerateFunctionIntention() {
     private fun runDocumentChanges(wrappableOption: WrappableOption, editor: Editor, selection: SelectionResult, freeVariables: List<Pair<Binding, ParameterExplicitnessState>>) {
         val elementToWrap = wrappableOption.psi.element ?: return
         val project = elementToWrap.project
-        val scope = elementToWrap.scope
+        val scope = getElementScope(selection.contextPsi)
+
         val actualFreeVariables = freeVariables.filter { scope.resolveName(it.first.name) == null }
         val freeName = generateFreeName("x", scope)
         val concrete = buildNewCallConcrete(actualFreeVariables, freeName)

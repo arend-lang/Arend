@@ -802,7 +802,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   }
 
   @Override
-  public Concrete.Expression visitFieldAccs(@Nullable Object data, @NotNull Abstract.Expression expression, @NotNull List<Abstract.FieldAcc> fieldAccs, @Nullable AbstractReference infixReference, @Nullable String infixName, boolean isInfix, Void params) {
+  public Concrete.Expression visitFieldAccs(@Nullable Object data, @NotNull Abstract.Expression expression, @NotNull List<Abstract.FieldAcc> fieldAccs, @Nullable AbstractReference infixReference, @Nullable String infixName, @Nullable Fixity fixity, Void params) {
     Concrete.Expression result = expression.accept(this, null);
 
     int i = 0;
@@ -823,7 +823,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
         names.add(infixName);
       }
       Referable referable = Objects.requireNonNull(LongUnresolvedReference.make(data, references, names));
-      result = infixName != null ? new Concrete.FixityReferenceExpression(data, referable, isInfix ? Fixity.INFIX : Fixity.POSTFIX) : new Concrete.ReferenceExpression(data, referable);
+      result = infixName != null ? new Concrete.FixityReferenceExpression(data, referable, fixity == Fixity.INFIX ? Fixity.INFIX : Fixity.POSTFIX) : new Concrete.ReferenceExpression(data, referable);
     }
 
     for (; i < fieldAccs.size(); i ++) {

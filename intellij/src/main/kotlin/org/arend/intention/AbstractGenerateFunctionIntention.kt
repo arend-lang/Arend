@@ -29,7 +29,6 @@ import org.arend.naming.reference.DataLocalReferable
 import org.arend.naming.reference.LocalReferable
 import org.arend.naming.renamer.MapReferableRenamer
 import org.arend.naming.renamer.ReferableRenamer
-import org.arend.naming.scope.EmptyScope
 import org.arend.naming.scope.Scope
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ext.*
@@ -96,7 +95,8 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
             editor: Editor, project: Project
     ) {
         val baseIdentifier = selection.identifier ?: getName(selection.contextPsi)
-        val newFunctionName = generateFreeName(baseIdentifier, selection.contextPsi.scope)
+        val scope = getElementScope(selection.contextPsi)
+        val newFunctionName = generateFreeName(baseIdentifier, scope)
         val newCallConcrete = buildNewCallConcrete(freeVariables, newFunctionName)
         val definitionRepresentation = buildNewFunctionRepresentation(selection, freeVariables, newFunctionName)
 
@@ -215,7 +215,7 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
     }
 
     private fun getDefinitionRenamer(selection: SelectionResult): DefinitionRenamer =
-        CachingDefinitionRenamer(ScopeDefinitionRenamer(EmptyScope.INSTANCE /* TODO[server2]: selection.contextPsi.scope.let { CachingScope.make(ConvertingScope(ArendReferableConverter, it)) } */))
+        CachingDefinitionRenamer(ScopeDefinitionRenamer(getElementScope(selection.contextPsi)))
 
     private fun Boolean.toExplicitnessState(): ParameterExplicitnessState = if (this) EXPLICIT else IMPLICIT
 
@@ -273,6 +273,7 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
             .getPsiFile(editor.document)
             ?.findElementAt(functionOffset)
             ?.parentOfType<PsiNameIdentifierOwner>() ?: return
+        newFunctionDefinition.nameIdentifier?.startOffset?.let { editor.caretModel.moveToOffset(it) }
         ArendGlobalReferableRenameHandler().doRename(newFunctionDefinition, editor, null)
     }
 

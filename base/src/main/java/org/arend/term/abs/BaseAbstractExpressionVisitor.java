@@ -82,7 +82,7 @@ public class BaseAbstractExpressionVisitor<P, R> implements AbstractExpressionVi
   }
 
   @Override
-  public R visitFieldAccs(@Nullable Object data, @NotNull Abstract.Expression expression, @NotNull List<Abstract.FieldAcc> fieldAccs, @Nullable AbstractReference infixReference, @Nullable String infixName, boolean isInfix, P params) {
+  public R visitFieldAccs(@Nullable Object data, Abstract.@NotNull Expression expression, @NotNull List<Abstract.FieldAcc> fieldAccs, @Nullable AbstractReference infixReference, @Nullable String infixName, @Nullable Fixity fixity, P params) {
     return defaultValue;
   }
 

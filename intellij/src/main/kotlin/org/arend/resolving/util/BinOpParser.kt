@@ -11,6 +11,7 @@ import org.arend.psi.ancestor
 import org.arend.psi.ext.*
 import org.arend.term.Fixity
 import org.arend.term.abs.Abstract
+import org.arend.term.abs.AbstractReference
 import org.arend.term.abs.BaseAbstractExpressionVisitor
 import org.arend.term.concrete.Concrete
 
@@ -69,7 +70,11 @@ fun resolveReference(data: Any?, referent: Referable, fixity: Fixity?): Concrete
 private fun getExpression(expr: Abstract.Expression?): Concrete.Expression {
     val ref = expr?.accept(object : BaseAbstractExpressionVisitor<Void, Concrete.Expression?>(null) {
         override fun visitReference(data: Any?, referent: Referable, lp: Int, lh: Int, params: Void?) = resolveReference(data, referent, null)
-        override fun visitReference(data: Any?, referent: Referable, fixity: Fixity?, pLevels: Collection<Abstract.LevelExpression>?, hLevels: Collection<Abstract.LevelExpression>?, params: Void?) = resolveReference(data, referent, fixity)    }, null)
+        override fun visitReference(data: Any?, referent: Referable, fixity: Fixity?, pLevels: Collection<Abstract.LevelExpression>?, hLevels: Collection<Abstract.LevelExpression>?, params: Void?) = resolveReference(data, referent, fixity)
+        override fun visitFieldAccs(data: Any?, expression: Abstract.Expression, fieldAccs: List<Abstract.FieldAcc?>, infixReference: AbstractReference?, infixName: String?, fixity: Fixity?, params: Void?): Concrete.Expression? {
+          return fieldAccs.lastOrNull()?.let { fieldAcc -> fieldAcc.fieldRef?.let { resolveReference(data, it, fixity) } }
+        }
+    }, null)
 
     return if (ref is Concrete.ReferenceExpression || ref is Concrete.AppExpression && ref.function is Concrete.ReferenceExpression) ref else Concrete.HoleExpression(expr)
 }
