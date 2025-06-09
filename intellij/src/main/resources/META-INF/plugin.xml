@@ -184,13 +184,11 @@
 
         <!-- Inspections -->
         <lang.inspectionSuppressor language="Arend" implementationClass="org.arend.inspection.ArendInspectionSuppressor"/>
-        <!-- TODO[server2]
         <localInspection language="Arend" groupPath="Arend"
                          bundle="messages.ArendBundle" key="arend.inspection.redundant.parentheses.name"
                          groupBundle="messages.InspectionsBundle" groupKey="group.names.declaration.redundancy"
                          enabledByDefault="true" level="WEAK WARNING"
                          implementationClass="org.arend.inspection.RedundantParensInspection"/>
-        -->
 
         <localInspection language="Arend" groupPath="Arend" key="arend.inspection.unused.import"
                          groupBundle="messages.InspectionsBundle"
@@ -432,8 +430,8 @@
         <highlightingPassFactory implementation="org.arend.highlight.NameShadowingHighlighterPassFactory"/>
         <!-- TODO[server2]
         <highlightingPassFactory implementation="org.arend.highlight.ArendUnusedImportHighlightingPassFactory"/>
-        <highlightingPassFactory implementation="org.arend.highlight.RedundantParensPassFactory"/>
         -->
+        <highlightingPassFactory implementation="org.arend.highlight.RedundantParensPassFactory"/>
 
         <!-- Tool Windows -->
 
