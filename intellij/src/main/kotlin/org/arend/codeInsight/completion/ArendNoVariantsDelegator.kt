@@ -5,8 +5,12 @@ import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionResult
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.impl.BetterPrefixMatcher
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.application.ex.ApplicationEx
+import com.intellij.openapi.application.ex.ApplicationManagerEx
 import com.intellij.openapi.components.service
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiManager
 import com.intellij.psi.stubs.StubIndex
 import com.intellij.util.Consumer
 import org.arend.ext.reference.DataContainer
@@ -78,7 +82,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                         else ->
                             StubIndex.getElements(ArendFileIndex.KEY, "$name.ard", project, ArendFileScope(project), ArendFile::class.java)
                     }
-                    locatedReferables.forEach {
+                    locatedReferables.filter { it.isValid }.forEach {
                         val isInsideTest = (it.containingFile as? ArendFile)?.moduleLocation?.locationKind == ModuleLocation.LocationKind.TEST
                         val isImportAllowed = it.accessModifier != AccessModifier.PRIVATE && isVisible(it.containingFile as ArendFile, file)
                         if (!tracker.variants.contains(it) && (isTestFile || !isInsideTest) && isImportAllowed)
