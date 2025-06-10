@@ -830,6 +830,7 @@ public class MonoidSolver extends BaseEqualitySolver {
       return isCat ? factory.app(factory.ref(meta.idCTerm.getRef()), true, singletonList(factory.ref(typechecker.getPrelude().getIdpRef()))) : factory.ref(meta.ideMTerm.getRef());
     }
 
+    if (isCat && (dom == -1 || cod == -1)) return null;
 
     List<CoreExpression> args = mulMatcher.match(expr);
     if (args != null) {
@@ -838,12 +839,10 @@ public class MonoidSolver extends BaseEqualitySolver {
       var left = computeTerm(args.get(args.size() - 2), nf);
       var right = computeTerm(args.getLast(), nf);
       if (isCat) {
-        if (dom != -1 && cod != -1) {
-          implArgs.add(vdata);
-          implArgs.add(factory.number(dom));
-          implArgs.add(factory.number(cod));
-          implArgs.add(hdata);
-        }
+        implArgs.add(vdata);
+        implArgs.add(factory.number(dom));
+        implArgs.add(factory.number(cod));
+        implArgs.add(hdata);
         cArgs.add(factory.number(obValues.addValue(args.get(1))));
       }
       cArgs.add(left);
@@ -858,14 +857,12 @@ public class MonoidSolver extends BaseEqualitySolver {
     int index = values.addValue(expr);
     nf.add(index);
     if (isCat) {
-      if (dom != -1 && cod != -1) {
-        domMap.put(index, dom);
-        codomMap.put(index, cod);
-        Map<Integer, Integer> list = homMap.computeIfAbsent(new Pair<>(dom, cod), k -> new HashMap<>());
-        int newIndex = list.size();
-        Integer prev = list.putIfAbsent(index, newIndex);
-        index = prev != null ? prev : newIndex;
-      }
+      domMap.put(index, dom);
+      codomMap.put(index, cod);
+      Map<Integer, Integer> list = homMap.computeIfAbsent(new Pair<>(dom, cod), k -> new HashMap<>());
+      int newIndex = list.size();
+      Integer prev = list.putIfAbsent(index, newIndex);
+      index = prev != null ? prev : newIndex;
     }
     return factory.app(factory.ref((isCat ? meta.varCTerm : meta.varMTerm).getRef()), true, singletonList(factory.number(index)));
   }
