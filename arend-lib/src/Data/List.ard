@@ -442,11 +442,11 @@
 
           \lemma toList_balanceLeft {A : \Set} (c : Color) (l : RBTree A) (v : A) (r : RBTree A)
             : toList (balanceLeft c l v r) = toList (rbBranch c l v r)
-            => mcases {balanceLeft} {?} -- TODO[server2]: equation
+            => mcases {balanceLeft} equation.monoid
 
           \lemma toList_balanceRight {A : \Set} (c : Color) (l : RBTree A) (v : A) (r : RBTree A)
             : toList (balanceRight c l v r) = toList (rbBranch c l v r)
-            => mcases {balanceRight} {?} -- TODO[server2]: equation
+            => mcases {balanceRight} equation.monoid
 
           \lemma insert_++-left {A : Dec} {a a1 : A} (a<=a1 : a <= a1) {l1 l2 : List A} (s : Sorted (l1 ++ a1 :: l2))
             : Insertion.sort.insert a (l1 ++ a1 :: l2) = Insertion.sort.insert a l1 ++ a1 :: l2 \elim l1, s

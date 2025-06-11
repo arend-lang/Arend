@@ -27,6 +27,7 @@ import org.arend.lib.meta.debug.RandomMeta;
 import org.arend.lib.meta.debug.SleepMeta;
 import org.arend.lib.meta.debug.TimeMeta;
 import org.arend.lib.meta.equation.EquationMeta;
+import org.arend.lib.meta.equationNew.MonoidEquationMeta;
 import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
 import org.arend.lib.meta.exists.ExistsResolver;
@@ -247,6 +248,8 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getRingModule());
     contributor.declare(algebra, Names.getRingSolverModule());
     contributor.declare(algebra, Names.getSemiringModule());
+    contributor.declare(algebra, Names.getSolverModule());
+    contributor.declare(algebra, Names.getNewMonoidSolverModule());
     contributor.declare(algebra, Names.getIntModule());
     contributor.declare(algebra, Names.getNatModule());
     contributor.declare(algebra, Names.getRatModule());
@@ -261,6 +264,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getStrictOrderModule());
     contributor.declare(algebra, Names.getPathsModule());
     contributor.declare(algebra, Names.getSetModule());
+    ConcreteMetaDefinition equation = makeDef(algebra, "equation", new DependencyMetaTypechecker(EquationMeta.class, () -> new DeferredMetaDefinition(new EquationMeta(this), true)));
     contributor.declare(multiline("""
         `equation a_1 ... a_n` proves an equation a_0 = a_{n+1} using a_1, ... a_n as intermediate steps
 
@@ -269,7 +273,8 @@ public class StdExtension implements ArendExtension {
         The first implicit argument can be either a universe or a subclass of either `Algebra.Monoid.Monoid`, `Algebra.Monoid.AddMonoid`, or `Order.Lattice.Bounded.MeetSemilattice`.
         In the former case, the meta will prove an equality in a type without using any additional structure on it.
         In the latter case, the meta will prove an equality using only structure available in the specified class.
-        """), makeDef(algebra, "equation", new DependencyMetaTypechecker(EquationMeta.class, () -> new DeferredMetaDefinition(new EquationMeta(this), true))));
+        """), equation);
+    contributor.declare(nullDoc(), makeDef(factory.metaRef(equation.getRef(), "monoid", Precedence.DEFAULT, null, null, null, new DependencyMetaTypechecker(MonoidEquationMeta.class, MonoidEquationMeta::new))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));

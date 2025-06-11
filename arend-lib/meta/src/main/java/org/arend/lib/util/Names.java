@@ -152,6 +152,14 @@ public class Names {
     return new ModulePath("Algebra", "Semiring");
   }
 
+  public static ModulePath getSolverModule() {
+    return new ModulePath("Algebra", "Solver");
+  }
+
+  public static ModulePath getNewMonoidSolverModule() {
+    return new ModulePath("Algebra", "Solver", "Monoid");
+  }
+
   public static ModulePath getIntModule() {
     return new ModulePath("Arith", "Int");
   }

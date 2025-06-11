@@ -123,7 +123,7 @@
   \func sclosure {R : CRing} (U : R -> \Prop) => closure (\lam (p : \Sigma (x : R) (U x)) => p.1)
 
   \lemma closure-superset {R : CRing} {J : \Set} {g : J -> R} (j : J) : closure g (g j)
-    => {?} -- TODO[server2]: inP ((1,j) :: nil, equation)
+    => inP ((1,j) :: nil, simplify)
 
   \lemma sclosure-superset {R : CRing} {U : R -> \Prop} {x : R} (Ux : U x) : sclosure U x
     => inP ((1,(x,Ux)) :: nil, equation)

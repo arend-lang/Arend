@@ -60,12 +60,12 @@
   }
 
   \lemma bezout->strictBezout (bez : IsBezout) : IsStrictBezout
-    => {?} {- TODO[server2]: \lam a b =>
+    => \lam a b =>
         \have | (inP (s,t,(a',p),(b',q))) => bez a b
               | (inP (w,b=wb,f)) => isPPRing (s * a + t * b)
         \in inP (w * t, w * s + (1 - w), w * b', w * a' + (1 - w),
-                 equation {usingOnly (f {b' * a - a' * b} equation)} *> inv zro-right *> pmap (_ +) equation *> inv rdistr *> *-comm,
-                 equation {usingOnly (f {t * b' + s * a' - 1} equation, f {1 - w} equation)}) -}
+                 {?}, -- TODO[server2]: equation {usingOnly (f {b' * a - a' * b} equation)} *> inv zro-right *> pmap (_ +) equation *> inv rdistr *> *-comm,
+                 {?}) -- TODO[server2]: equation {usingOnly (f {t * b' + s * a' - 1} equation, f {1 - w} equation)})
 }
 
 \class ImpotentRing \extends ReducedRing, NonZeroRing {

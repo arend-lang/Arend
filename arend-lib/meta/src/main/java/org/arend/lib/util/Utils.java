@@ -485,4 +485,12 @@ public class Utils {
     CoreClassField field = classCall.getDefinition().getClassifyingField();
     return field == null ? null : classCall.getImplementation(field, thisExpr);
   }
+
+  public static ConcreteExpression makeArray(List<ConcreteExpression> expressions, ConcreteFactory factory, ArendPrelude prelude) {
+    ConcreteExpression result = factory.ref(prelude.getEmptyArrayRef());
+    for (int i = expressions.size() - 1; i >= 0; i--) {
+      result = factory.app(factory.ref(prelude.getArrayConsRef()), true, expressions.get(i), result);
+    }
+    return result;
+  }
 }

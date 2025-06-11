@@ -1,0 +1,39 @@
+\import Data.Maybe
+\import Paths
+
+\class SolverModel (M : \Set) {
+  | \protected Term : \Set -> \Set
+  | \protected NF : \Set -> \Set
+  | \protected nfVar {V : \Set} : V -> NF V
+  | \protected \infixl 2 >>= {U V : \Set} : NF U -> (U -> NF V) -> NF V
+  | \protected normalize {V : \Set} : Term V -> NF V
+  | \protected interpret {V : \Set} (env : V -> M) : Term V -> M
+  | \protected interpretNF {V : \Set} (env : V -> M) : NF V -> M
+  | \protected normalize-consistent {V : \Set} {env : V -> M} (t : Term V) : interpret env t = interpretNF env (normalize t)
+  | \protected >>=-consistent {U V : \Set} {env : V -> M} (nf : NF U) (k k' : U -> NF V)
+    : (\Pi (u : U) -> interpretNF env (k u) = interpretNF env (k' u)) -> interpretNF env (nf >>= k) = interpretNF env (nf >>= k')
+  {-
+  | \protected abstractAll {n : Nat} : NF (Fin n) -> NF (Fin n) -> Maybe (NF (Maybe (Fin n)))
+  | \protected abstractIndex {n : Nat} : Nat -> NF (Fin n) -> NF (Fin n) -> Maybe (NF (Maybe (Fin n)))
+  -}
+
+  \lemma terms-equality (env : Array M) (t s : Term (Fin env.len)) (p : interpretNF env (normalize t) = interpretNF env (normalize s)) : interpret env t = interpret env s
+    => normalize-consistent t *> p *> inv (normalize-consistent s)
+
+  \protected \func Axiom (env : Array M) => \Sigma (t s : NF (Fin env.len)) (interpretNF env t = interpretNF env s)
+
+  \func makeAxiom (env : Array M) (t s : Term (Fin env.len)) (p : interpret env t = interpret env s) : Axiom env
+    => (normalize t, normalize s, inv (normalize-consistent t) *> p *> normalize-consistent s)
+
+  \lemma apply-axiom (env : Array M) (t : NF (Maybe (Fin env.len))) (ax : Axiom env) : interpretNF env (t >>= maybe ax.1 nfVar) = interpretNF env (t >>= maybe ax.2 nfVar)
+    => >>=-consistent t _ _ \case \elim __ \with {
+      | nothing => ax.3
+      | just u => idp
+    }
+
+  {-
+  \protected \lemma rewriteAll (env : Array M) (t : Term (Fin env.len)) (ax : Axiom env) {s : NF (Maybe (Fin env.len))}
+                               (p : abstractAll (normalize t) ax.1 = just s) : interpret env t = interpretNF env (s >>= maybe ax.2 nfVar)
+    => normalize-consistent t *> {?}
+  -}
+}

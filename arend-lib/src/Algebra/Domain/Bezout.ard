@@ -94,13 +94,13 @@
 
 \class StrictBezoutRing \extends BezoutRing {
   | isStrictBezout : IsStrictBezout
-  \default isBezout a b => {?} {- TODO[server2]: TruncP.map (isStrictBezout a b) \lam (s,t,u,v,p,q) => (t, s, \new LDiv {
+  \default isBezout a b => TruncP.map (isStrictBezout a b) \lam (s,t,u,v,p,q) => (t, s, \new LDiv {
     | inv => v
-    | inv-right => equation
+    | inv-right => {?} -- TODO[server2]: equation
   }, \new LDiv {
     | inv => u
-    | inv-right => equation
-  }) -}
+    | inv-right => {?} -- TODO[server2]: equation
+  })
 
   \lemma bezoutArray {n : Nat} (a : Array E (suc n)) : ∃ (s u : Array E (suc n)) (BigSum (\lam j => s j * u j) = 1) (d : E) (\Pi (j : Fin (suc n)) -> a j = u j * d) \elim n, a
     | 0, a :: nil => inP (1 :: nil, 1 :: nil, simplify, a, \lam (0) => inv ide-left)

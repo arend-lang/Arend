@@ -57,7 +57,7 @@
       | no _ => (finv y * x, 0)
     }
     | isDivMod x y => mcases \with {
-      | yes _ => {?} -- TODO[server2]: equation
+      | yes _ => simplify
       | no q => zro-right *> inv *-assoc *> rewrite (finv-right q) ide-left
     }
     | isEuclideanMap x y y/=0 => mcases {1} \with {
@@ -84,7 +84,7 @@
   }
 
   | locality x => \case eitherZeroOrInv x \with {
-    | byLeft x=0 => {?} -- TODO[server2]: byRight (Inv.lmake ide equation)
+    | byLeft x=0 => byRight (Inv.lmake ide {?}) -- TODO[server2]: equation
     | byRight xInv => byLeft xInv
   }
   \default decideEq x y => \case eitherZeroOrInv (x - y) \with {

@@ -1,0 +1,56 @@
+\import Algebra.Monoid
+\import Algebra.Solver
+\import Data.List
+\import Function.Meta
+\import Paths
+\import Paths.Meta
+
+\func MonoidSolverModel (M : Monoid) : SolverModel M \cowith
+  | Term => Term
+  | NF => List
+  | nfVar v => v :: nil
+  | >>= => >>=
+  | normalize t => normalize-aux t nil
+  | interpret {V : \Set} (env : V -> M) (t : Term V) : M \elim t {
+    | var x => env x
+    | :ide => M.ide
+    | :* t s => interpret env t * interpret env s
+  }
+  | interpretNF {V : \Set} (env : V -> M) (l : List V) : M \elim l {
+    | nil => M.ide
+    | x :: nil => env x
+    | x :: l => env x * interpretNF env l
+  }
+  | normalize-consistent t => inv ide-right *> normalize-consistent-aux t nil
+  | >>=-consistent {U V : \Set} {env : V -> M} (l : List U) (k k' : U -> List V) (p : \Pi (u : U) -> interpretNF env (k u) = interpretNF env (k' u)) : interpretNF env (l >>= k) = interpretNF env (l >>= k') \elim l {
+    | nil => idp
+    | u :: l => interpretNF_++ *> pmap2 (*) (p u) (>>=-consistent l k k' p) *> inv interpretNF_++
+  }
+  \where {
+    \data Term (V : \Set)
+      | var V
+      | :ide
+      | \infixl 7 :* (t s : Term V)
+
+    \func \infixl 2 >>= {U V : \Set} (l : List U) (k : U -> List V) : List V \elim l
+      | nil => nil
+      | u :: l => k u ++ (l >>= k)
+
+    \private \func normalize-aux {V : \Set} (t : Term V) (acc : List V) : List V \elim t
+      | var v => v :: acc
+      | :ide => acc
+      | :* t s => normalize-aux t (normalize-aux s acc)
+
+    \private \lemma interpretNF_:: {M : Monoid} {V : \Set} {env : V -> M} {x : V} {l : List V} : interpretNF env (x :: l) = env x * interpretNF env l \elim l
+      | nil => inv ide-right
+      | :: a l => idp
+
+    \private \lemma interpretNF_++ {M : Monoid} {V : \Set} {env : V -> M} {t s : List V} : interpretNF env (t ++ s) = interpretNF env t * interpretNF env s \elim t
+      | nil => inv ide-left
+      | v :: l => rewrite (interpretNF_::,interpretNF_::) $ pmap (_ *) interpretNF_++ *> inv *-assoc
+
+    \private \lemma normalize-consistent-aux {M : Monoid} {V : \Set} {env : V -> M} (t : Term V) (acc : List V) : interpret env t * interpretNF env acc = interpretNF env (normalize-aux t acc) \elim t
+      | var x => inv interpretNF_::
+      | :ide => ide-left
+      | :* t s => *-assoc *> pmap (interpret env t *) (normalize-consistent-aux s acc) *> normalize-consistent-aux t (normalize-aux s acc)
+  }

@@ -9,7 +9,11 @@
 
 \lemma test1 {M : Monoid} (x y z w : M)
   : (x * (ide * y)) * ((ide * z) * w) = x * ((y * (z * ide)) * w)
-  => equation
+  => equation.monoid
+
+\lemma test1a {M : Monoid} (x y z w : M) (p : x * (y * (z * w)) = w * (z * (y * x)))
+  : (x * (ide * y)) * ((ide * z) * w) = w * ((z * (y * ide)) * x)
+  => equation.monoid p
 
 \lemma test2 {M : Monoid} (x y : M) (p : ide = x * y)
   : (x * x) * (y * y) = ide

@@ -50,20 +50,20 @@
   | E => Type
   | zro => in~ (zro, ide, contains_ide)
   | + => ++
-  | zro-left {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
-  | +-assoc {in~ _} {in~ _} {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ (pmap2 (*) equation (inv *-assoc)))
-  | +-comm {in~ _} {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
+  | zro-left {in~ _} => ~-pequiv simplify
+  | +-assoc {in~ _} {in~ _} {in~ _} => ~-pequiv {?} -- TODO[server2]: path (~-equiv _ _ (pmap2 (*) equation (inv *-assoc)))
+  | +-comm {in~ _} {in~ _} => ~-pequiv {?} -- TODO[server2]: path (~-equiv _ _ equation)
   | ide => in~ (ide, ide, contains_ide)
   | * => **
-  | ide-left {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
-  | *-assoc {in~ _} {in~ _} {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
-  | ldistr {in~ _} {in~ _} {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
+  | ide-left {in~ _} => ~-pequiv simplify -- TODO[server2]: path (~-equiv _ _ equation)
+  | *-assoc {in~ _} {in~ _} {in~ _} => ~-pequiv equation.monoid
+  | ldistr {in~ _} {in~ _} {in~ _} => ~-pequiv {?} -- TODO[server2]: path (~-equiv _ _ equation)
   | negative => neg
-  | negative-left {in~ _} => {?} -- TODO[server2]: path (~-equiv _ _ equation)
+  | negative-left {in~ _} => ~-pequiv simplify
   | *-comm {in~ _} {in~ _} => path (~-equiv _ _ (pmap2 (*) *-comm *-comm))
   | natCoef n => in~ (R.natCoef n, 1, contains_ide)
   | natCoefZero => path (\lam i => in~ (R.natCoefZero i, 1, contains_ide))
-  | natCoefSuc n => {?} -- TODO[server2]: pmap in~ $ ext (natCoefSuc n *> equation, inv ide-left)
+  | natCoefSuc n => ~-pequiv $ simplify (R.natCoefSuc n)
   \where {
     \func SType (S : SubMonoid R) => \Sigma (x y : R) (S y)
 
@@ -303,7 +303,6 @@
   | eitherZeroOrInv => \case \elim __ \with {
     | in~ x => \case decideEq x.1 0 \with {
       | yes e => byLeft $ LocRing.equals1 $ ide-right *> e *> inv D.zro_*-left
-      | no q => byRight $ Monoid.Inv.lmake (inl~ (x.2, x.1, AddGroup.nonZeroApart q)) $ LocRing.equals1 $ ide-right *> *-comm *> inv ide-left
-                                                                                        -- TODO[server2]: simplify *-comm
+      | no q => byRight $ Monoid.Inv.lmake (inl~ (x.2, x.1, AddGroup.nonZeroApart q)) $ LocRing.equals1 $ simplify *-comm
     }
   }

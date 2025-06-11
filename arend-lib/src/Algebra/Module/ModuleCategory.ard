@@ -45,33 +45,17 @@
 \instance LModulePreAdditive (R : Ring) : PreAdditivePrecat \cowith
   | Precat => LModuleCat R
   | AbHom => \new AbGroup {
-    | zro => zeroMap
-    | + => addMaps
+    | zro => linearMap_zro
+    | + => linearMap_+
     | zro-left => exts \lam _ => LModule.zro-left
     | zro-right => exts \lam _ => LModule.zro-right
     | +-assoc => exts \lam _ => LModule.+-assoc
-    | negative => negativeMap
+    | negative => linearMap_negative
     | negative-left => exts \lam _ => LModule.negative-left
     | +-comm => exts \lam _ => LModule.+-comm
   }
   | l-bilinear => exts \lam _ => func-+
   | r-bilinear => exts \lam _ => idp
-  \where {
-    \func zeroMap {M N : LModule R} : LinearMap M N \cowith
-      | func _ => N.zro
-      | func-+ => inv N.zro-right
-      | func-*c => inv N.*c_zro-right
-
-    \func addMaps {M N : LModule R} (f g : LinearMap M N)  : LinearMap M N \cowith
-      | func m => f m N.+ g m
-      | func-+ => rewrite (f.func-+, g.func-+) {?} -- TODO[server2]: equation
-      | func-*c => rewrite (f.func-*c, g.func-*c, N.*c-ldistr) idp
-
-    \func negativeMap {M N : LModule R} (f : LinearMap M N) : LinearMap M N \cowith
-      | func m => negative (f m)
-      | func-+ => rewrite (f.func-+, inv N.neg_ide_*c, inv N.neg_ide_*c, inv N.neg_ide_*c, N.*c-ldistr) idp
-      | func-*c => rewrite (f.func-*c, inv N.neg_ide_*c, inv N.neg_ide_*c, inv N.*c-assoc, inv N.*c-assoc, R.negative_ide-right, R.negative_ide-left) idp
-  }
 
 \instance LinearMapLModule {R : CRing} (A B : LModule R) : LModule R \cowith
   | AbGroup => AbHom {LModulePreAdditive R} {A} {B}
