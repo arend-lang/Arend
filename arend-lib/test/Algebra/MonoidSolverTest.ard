@@ -15,6 +15,10 @@
   : (x * (ide * y)) * ((ide * z) * w) = w * ((z * (y * ide)) * x)
   => equation.monoid p
 
+\lemma test1b {M : Monoid} (x y z w : M) (p : (x * (ide * y)) * ((ide * z) * w) = w * ((z * (y * ide)) * x))
+  : x * (y * (z * w)) = w * (z * (y * x))
+  => equation.monoid in p
+
 \lemma test2 {M : Monoid} (x y : M) (p : ide = x * y)
   : (x * x) * (y * y) = ide
   => equation

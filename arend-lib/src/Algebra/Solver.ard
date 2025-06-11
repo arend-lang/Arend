@@ -20,6 +20,9 @@
   \lemma terms-equality (env : Array M) (t s : Term (Fin env.len)) (p : interpretNF env (normalize t) = interpretNF env (normalize s)) : interpret env t = interpret env s
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 
+  \lemma terms-equality-conv (env : Array M) (t s : Term (Fin env.len)) (p : interpret env t = interpret env s) : interpretNF env (normalize t) = interpretNF env (normalize s)
+    => inv (normalize-consistent t) *> p *> normalize-consistent s
+
   \protected \func Axiom (env : Array M) => \Sigma (t s : NF (Fin env.len)) (interpretNF env t = interpretNF env s)
 
   \func makeAxiom (env : Array M) (t s : Term (Fin env.len)) (p : interpret env t = interpret env s) : Axiom env

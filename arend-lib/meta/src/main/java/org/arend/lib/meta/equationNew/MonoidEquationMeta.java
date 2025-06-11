@@ -10,6 +10,7 @@ import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.expr.CoreFunCallExpression;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.GeneralError;
+import org.arend.ext.error.MissingArgumentsError;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.instance.SubclassSearchParameters;
 import org.arend.ext.reference.ArendRef;
@@ -35,15 +36,16 @@ import java.util.Arrays;
 import java.util.List;
 
 public class MonoidEquationMeta extends BaseMetaDefinition {
-  @Dependency                                       ArendRef MonoidSolverModel;
-  @Dependency                                       CoreClassDefinition Monoid;
-  @Dependency(name = "BaseSet.E")                   CoreClassField carrier;
-  @Dependency(name = "Pointed.ide")                 CoreClassField ide;
-  @Dependency(name = "Semigroup.*")                 CoreClassField mul;
-  @Dependency(name = "MonoidSolverModel.Term.var")  ArendRef varTerm;
-  @Dependency(name = "MonoidSolverModel.Term.:ide") ArendRef ideTerm;
-  @Dependency(name = "MonoidSolverModel.Term.:*")   ArendRef mulTerm;
-  @Dependency(name = "SolverModel.terms-equality")  ArendRef termsEquality;
+  @Dependency                                           ArendRef MonoidSolverModel;
+  @Dependency                                           CoreClassDefinition Monoid;
+  @Dependency(name = "BaseSet.E")                       CoreClassField carrier;
+  @Dependency(name = "Pointed.ide")                     CoreClassField ide;
+  @Dependency(name = "Semigroup.*")                     CoreClassField mul;
+  @Dependency(name = "MonoidSolverModel.Term.var")      ArendRef varTerm;
+  @Dependency(name = "MonoidSolverModel.Term.:ide")     ArendRef ideTerm;
+  @Dependency(name = "MonoidSolverModel.Term.:*")       ArendRef mulTerm;
+  @Dependency(name = "SolverModel.terms-equality")      ArendRef termsEquality;
+  @Dependency(name = "SolverModel.terms-equality-conv") ArendRef termsEqualityConv;
 
   @Override
   public boolean @Nullable [] argumentExplicitness() {
@@ -53,11 +55,6 @@ public class MonoidEquationMeta extends BaseMetaDefinition {
   @Override
   public int numberOfOptionalExplicitArguments() {
     return 1;
-  }
-
-  @Override
-  public boolean requireExpectedType() {
-    return true;
   }
 
   private List<Integer> normalize(EquationTerm term) {
@@ -93,9 +90,28 @@ public class MonoidEquationMeta extends BaseMetaDefinition {
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     ConcreteExpression marker = contextData.getMarker();
-    CoreFunCallExpression equality = Utils.toEquality(contextData.getExpectedType().normalize(NormalizationMode.WHNF), typechecker.getErrorReporter(), marker);
-    if (equality == null) {
-      return null;
+    CoreFunCallExpression equality;
+    boolean isForward = contextData.getExpectedType() == null;
+    TypedExpression argTyped;
+
+    if (isForward) {
+      if (contextData.getArguments().isEmpty()) {
+        typechecker.getErrorReporter().report(new MissingArgumentsError(1, marker));
+        return null;
+      }
+
+      argTyped = typechecker.typecheck(contextData.getArguments().getFirst().getExpression(), null);
+      if (argTyped == null) {
+        return null;
+      }
+
+      equality = Utils.toEquality(argTyped.getType().normalize(NormalizationMode.WHNF), typechecker.getErrorReporter(), marker);
+    } else {
+      argTyped = null;
+      equality = Utils.toEquality(contextData.getExpectedType().normalize(NormalizationMode.WHNF), typechecker.getErrorReporter(), marker);
+      if (equality == null) {
+        return null;
+      }
     }
 
     Pair<TypedExpression, CoreClassCallExpression> instance = Utils.findInstanceWithClassCall(new SubclassSearchParameters(Monoid), carrier, equality.getDefCallArguments().getFirst(), typechecker, marker, Monoid);
@@ -116,7 +132,9 @@ public class MonoidEquationMeta extends BaseMetaDefinition {
     List<Integer> rightNF = normalize(right);
 
     ConcreteExpression proof;
-    if (leftNF.equals(rightNF)) {
+    if (argTyped != null) {
+      proof = factory.core(argTyped);
+    } else if (leftNF.equals(rightNF)) {
       proof = factory.ref(typechecker.getPrelude().getIdpRef());
       if (!contextData.getArguments().isEmpty()) {
         typechecker.getErrorReporter().report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Argument is ignored", contextData.getArguments().getFirst().getExpression()));
@@ -140,7 +158,7 @@ public class MonoidEquationMeta extends BaseMetaDefinition {
       proof = factory.core(proofCore);
     }
 
-    return typechecker.typecheck(factory.appBuilder(factory.ref(termsEquality))
+    return typechecker.typecheck(factory.appBuilder(factory.ref(isForward ? termsEqualityConv : termsEquality))
         .app(factory.app(factory.ref(MonoidSolverModel), true, factory.core(instance.proj1)), false)
         .app(Utils.makeArray(values.getValues().stream().map(it -> factory.core(it.computeTyped())).toList(), factory, typechecker.getPrelude()))
         .app(left.generateReflectedTerm(factory, varTerm))
