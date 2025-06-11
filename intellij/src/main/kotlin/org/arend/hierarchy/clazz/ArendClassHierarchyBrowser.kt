@@ -23,6 +23,7 @@ import org.arend.graph.GraphSimulator
 import org.arend.hierarchy.ArendHierarchyNodeDescriptor
 import org.arend.psi.ext.ArendDefClass
 import org.arend.psi.ext.fullNameText
+import org.arend.search.ClassDescendantsSearch
 import org.arend.settings.ArendProjectSettings
 import java.util.*
 import javax.swing.*
@@ -176,14 +177,14 @@ class ArendClassHierarchyBrowser(project: Project, method: PsiElement) : TypeHie
 
             val from = currentNode.fullNameText
 
-            /* TODO[server2]
+            // TODO[server2]
             val children = if (isSuperTypes) {
-                currentNode.superClassReferences
+                currentNode.superClassList.mapNotNull { it.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass? }
             } else {
                 myProject.service<ClassDescendantsSearch>().search(currentNode)
             }.mapNotNull { it as? ArendDefClass? }
             for (child in children) {
-                val to = child.refLongName.toString()
+                val to = child.fullNameText
                 if (isSuperTypes) {
                     edges.add(GraphEdge(to, from))
                 } else {
@@ -194,7 +195,6 @@ class ArendClassHierarchyBrowser(project: Project, method: PsiElement) : TypeHie
                     findEdges(child, isSuperTypes)
                 }
             }
-            */
         }
 
         override fun actionPerformed(e: AnActionEvent) {
@@ -207,14 +207,15 @@ class ArendClassHierarchyBrowser(project: Project, method: PsiElement) : TypeHie
             findEdges(root, myProject.service<ArendProjectSettings>().data.hierarchyViewType == getSupertypesHierarchyType())
 
             myProject.service<GraphSimulator>().displayOrthogonal(
-                this.toString(),
                 if (currentViewType == getSubtypesHierarchyType()) {
                     "Subtypes_${root.fullNameText}"
                 } else {
                     "Supertypes_${root.fullNameText}"
                 },
+                usedNodes.map { GraphNode(it.fullNameText) }.toSet(),
                 edges,
-                usedNodes.map { GraphNode(it.fullNameText) }.toSet()
+                emptySet(),
+                emptySet()
             )
         }
     }

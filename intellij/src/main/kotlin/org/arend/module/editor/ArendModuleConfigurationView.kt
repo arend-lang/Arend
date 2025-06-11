@@ -242,7 +242,13 @@ class ArendModuleConfigurationView(
                         }
                     }
 
-                    module.project.service<GraphSimulator>().displayOrthogonal(this.toString(), "${e.project?.name}_modules", edges, usedNodes.map { GraphNode(it.name) }.toSet())
+                    module.project.service<GraphSimulator>().displayOrthogonal(
+                        "${e.project?.name}_modules",
+                        usedNodes.map { GraphNode(it.name) }.toSet(),
+                        edges,
+                        emptySet(),
+                        emptySet()
+                    )
                 }
             })
         }

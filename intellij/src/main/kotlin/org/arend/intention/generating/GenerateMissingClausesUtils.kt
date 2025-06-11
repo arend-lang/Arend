@@ -10,10 +10,13 @@ import com.intellij.psi.util.elementType
 import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.startOffset
 import org.arend.ext.error.MissingClausesError
+import org.arend.naming.reference.LocatedReferable
+import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.psi.ArendElementTypes
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.quickfix.ImplementMissingClausesQuickFix
+import org.arend.server.ArendServerService
 import org.arend.typechecking.error.ErrorService
 
 internal fun checkMissingClauses(element: PsiElement): Boolean {
@@ -38,21 +41,16 @@ internal fun deleteFunctionBody(element: PsiElement): Pair<ArendGroup, Int>? {
 }
 
 internal fun fixMissingClausesError(project: Project, file: ArendFile, editor: Editor, group: ArendGroup, offset: Int) {
-    val errorService = project.service<ErrorService>()
-    (group as? ArendDefFunction?)?.let { errorService.clearTypecheckingErrors(it) }
+    val server = project.service<ArendServerService>().server
+    file.moduleLocation?.let { server.getCheckerFor(listOf(it)).typecheckExtensionDefinition(group.fullName) }
 
-    // TODO[server2]: ArendTypechecking.create(project).typecheckModules(listOf(group), null)
-
-    val error = errorService.getErrors(file).filter { it.error is MissingClausesError }.find {
-        it.definition?.endOffset == offset
+    val error = server.errorMap.values.flatten().filter { it is MissingClausesError }.find {
+        (((it as MissingClausesError).definition as? LocatedReferableImpl)?.data as? PsiElement)?.endOffset == offset
     } ?: return
-    error.definition?.let {
-        errorService.clearTypecheckingErrors(it)
-    }
     runWriteAction {
         ImplementMissingClausesQuickFix(
-            error.error as MissingClausesError,
-            SmartPointerManager.createPointer(error.cause as ArendCompositeElement)
+            error as MissingClausesError,
+            SmartPointerManager.createPointer((error.definition as LocatedReferableImpl).data as ArendCompositeElement)
         ).invoke(project, editor, file)
     }
 }

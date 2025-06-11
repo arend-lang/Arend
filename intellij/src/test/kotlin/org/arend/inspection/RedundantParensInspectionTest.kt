@@ -23,8 +23,8 @@ class RedundantParensInspectionTest : QuickFixTestBase() {
        \data Empty
        \axiom prop-pi {A : \Prop} (x y : A) : x = y
        \lemma p => prop-pi {Empty}
-       \func test4 : $LEVEL ${rp("(Empty)")} ${rp("(p)")} => {?}
-       \func test5 : $LEVEL Empty (prop-pi {Empty}) => {?}
+       \func test4 : \level ${rp("(Empty)")} ${rp("(p)")} => {?}
+       \func test5 : \level Empty (prop-pi {Empty}) => {?}
 
        \class Unit
        \func test6 => f2 (\new Unit) 1
@@ -59,7 +59,7 @@ class RedundantParensInspectionTest : QuickFixTestBase() {
 
        \func test1 : ${rp("(1 = 1)")} => idp
        \axiom prop-pi {A : \Prop} (x y : A) : x = y
-       \func test2 : Empty $LEVEL ${rp("(prop-pi {Empty})")} => {?} 
+       \func test2 : Empty \level ${rp("(prop-pi {Empty})")} => {?} 
     """)
 
     fun testParameterType() = doWeakWarningsCheck(myFixture,"""
@@ -334,7 +334,5 @@ class RedundantParensInspectionTest : QuickFixTestBase() {
     companion object {
 
         fun rp(text: String): String = "<weak_warning descr=\"Redundant parentheses\">$text</weak_warning>"
-
-        const val LEVEL = "<weak_warning descr=\"\\level is ignored\">\\level</weak_warning>"
     }
 }

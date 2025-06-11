@@ -48,12 +48,16 @@ class RedundantParensInspection : ArendInspectionBase() {
                 val expression = unwrapParens(element) ?: return
                 if (expression is ArendArrExpr && withAncestors(ArendAtom::class.java, ArendAtomFieldsAcc::class.java, ArendArgumentAppExpr::class.java, ArendNewExpr::class.java, ArendReturnExpr::class.java, ArendCaseExpr::class.java).accepts(element)) return
                 if (element is ArendTuple && (neverNeedsParens(expression) || isCommonRedundantParensPattern(element, expression)/* || isApplicationUsedAsBinOpArgument(element, expression)*/) ||
-                    element is ArendTypeTele && typeTeleDoesntNeedParens(expression)) {
+                    element is ArendTypeTele && hasTypeTeleParens(element) && typeTeleDoesntNeedParens(expression)) {
                     registerFix(element)
                 }
             }
         }
     }
+}
+
+private fun hasTypeTeleParens(element: ArendTypeTele): Boolean {
+    return element.lparen != null
 }
 
 private fun isRedundantParensInArendMaybeAtomLevelExprs(element: ArendMaybeAtomLevelExprs): Boolean {
@@ -165,7 +169,15 @@ private fun isRedundantParensInTupleParent(parent: ArendTupleExpr, expression: A
 
 internal fun isBinOpApp(app: ArendArgumentAppExpr): Boolean {
     val binOpSeq = appExprToConcrete(app)
-    return binOpSeq is Concrete.AppExpression && isBinOp(binOpSeq.function.data as? ArendReferenceContainer)
+    if (binOpSeq is Concrete.AppExpression) {
+        val data = binOpSeq.function.data
+        return when (data) {
+            is ArendReferenceContainer -> isBinOp(data)
+            is ArendAtomFieldsAcc -> isBinOp(data.fieldAccList.lastOrNull()?.refIdentifier)
+            else -> false
+        }
+    }
+    return false
 }
 
 private class UnwrapParensFix(element: PsiElement) : LocalQuickFixOnPsiElement(element) {

@@ -22,6 +22,6 @@ public class TestCallGraph extends BaseCallGraph<TestVertex> {
   }
 
   public static Boolean testTermination(Set<BaseCallMatrix<TestVertex>> g) {
-    return new TestCallGraph(g).checkTermination();
+    return new TestCallGraph(g).checkTermination().proj1;
   }
 }

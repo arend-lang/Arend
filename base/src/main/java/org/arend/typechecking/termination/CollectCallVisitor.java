@@ -40,9 +40,13 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
       for (Pair<Expression, Expression> pair : elim.getCases()) {
         ExpressionPattern old = patternList.get(i);
         patternList.set(i, new ConstructorExpressionPattern(ExpressionFactory.Left(), Collections.emptyList()));
-        pair.proj1.accept(this, null);
+        if (pair.proj1 != null) {
+          pair.proj1.accept(this, null);
+        }
         patternList.set(i, new ConstructorExpressionPattern(ExpressionFactory.Right(), Collections.emptyList()));
-        pair.proj2.accept(this, null);
+        if (pair.proj2 != null) {
+          pair.proj2.accept(this, null);
+        }
         patternList.set(i, old);
       }
 

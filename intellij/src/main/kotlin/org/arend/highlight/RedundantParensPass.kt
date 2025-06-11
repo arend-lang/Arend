@@ -55,6 +55,14 @@ class RedundantParensPass(file: ArendFile, editor: Editor):
                 }
                 return null
             }
+
+            override fun visitApp(expr: Concrete.AppExpression?, params: Void?): Void? {
+                super.visitApp(expr, params)
+                if (expr != null && psiOfConcrete(expr)?.parent?.parent?.parent == tuple) {
+                    result = isApplicationUsedAsBinOpArgument(parent, tupleExpression)
+                }
+                return null
+            }
         }, null)
         return result
     }

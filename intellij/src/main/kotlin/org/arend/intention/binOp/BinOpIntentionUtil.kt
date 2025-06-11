@@ -9,8 +9,8 @@ import org.arend.psi.ext.ArendLongName
 import org.arend.psi.ext.ArendRefIdentifier
 import org.arend.psi.ext.ArendReferenceContainer
 import org.arend.refactoring.rangeOfConcrete
-import org.arend.resolving.util.parseBinOp
 import org.arend.term.concrete.Concrete
+import org.arend.util.appExprToConcrete
 import org.arend.util.isBinOp
 
 object BinOpIntentionUtil {
@@ -22,7 +22,7 @@ object BinOpIntentionUtil {
     }
 
     internal fun toConcreteBinOpInfixApp(app: ArendArgumentAppExpr): Concrete.AppExpression? {
-        val binOpSeq = parseBinOp(app)
+        val binOpSeq = appExprToConcrete(app)
         return if (binOpSeq is Concrete.AppExpression && isBinOpInfixApp(binOpSeq)) binOpSeq else null
     }
 

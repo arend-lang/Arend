@@ -605,11 +605,11 @@ public class ArendServerImpl implements ArendServer {
     @NotNull ErrorReporter errorReporter,
     Boolean ignoreInternal) {
     // Check that referables are located in available modules and collect them in refMap
-    ModuleLocation anchorModule = anchor.parent().getLocation();
+    ModuleLocation anchorModuleLocation = anchor.parent().getLocation();
     List<RawModifier> nsCmdActions = new ArrayList<>();
     List<LongName> result = new ArrayList<>();
 
-    if (anchorModule == null) {
+    if (anchorModuleLocation == null) {
       errorReporter.report(LocationError.definition(anchor.parent(), null));
       return new Pair<>(new RawSequenceModifier(nsCmdActions), result);
     }
@@ -622,7 +622,7 @@ public class ArendServerImpl implements ArendServer {
         continue;
       }
 
-      ModuleLocation found = findModule(module.getModulePath(), anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+      ModuleLocation found = findModule(module.getModulePath(), anchorModuleLocation.getLibraryName(), anchorModuleLocation.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
       if (!module.equals(found)) {
         errorReporter.report(LocationError.definition(null, module.getModulePath()));
       }
@@ -661,27 +661,13 @@ public class ArendServerImpl implements ArendServer {
         if (group != null) targetModuleDefinitions.add(group.referable());
       }
 
-      AtomicReference<ConcreteNamespaceCommand> namespaceCommand = new AtomicReference<>();
-
-      currentFile.traverseGroup(subgroup -> subgroup.statements().forEach(statement -> {
-        ConcreteNamespaceCommand command = statement.command();
-        if (command != null && command.isImport()) {
-          boolean isPrelude = Prelude.MODULE_PATH.toList().equals(command.module().getPath());
-
-          ModuleLocation commandTarget = isPrelude ? Prelude.MODULE_LOCATION : findModule(new ModulePath(command.module().getPath()),
-            anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
-
-          if (commandTarget != null && commandTarget.equals(referable.getLocation())) {
-            namespaceCommand.set(command);
-          }
-        }
-      }));
+      AtomicReference<ConcreteNamespaceCommand> namespaceCommand = getConcreteNamespaceCommandAtomicReference(currentFile, referable, anchorModuleLocation);
 
       boolean nonEmptyScopeIntersection = (!Prelude.MODULE_LOCATION.equals(targetModuleLocation) &&
         targetModuleDefinitions.stream().anyMatch(stat -> currentScope.resolveName(stat.getRefName()) != null));
       List<String> calculatedName = new ArrayList<>();
 
-      if (namespaceCommand.get() != null || anchorModule.equals(targetModuleLocation)) {
+      if (namespaceCommand.get() != null || anchorModuleLocation.equals(targetModuleLocation)) {
         LocatedReferable currReferable;
         LocatedReferable parent = referable;
         boolean foundNameInScope = false;
@@ -722,9 +708,9 @@ public class ArendServerImpl implements ArendServer {
         final LocatedReferable topLevelReferable = currReferable;
         boolean topLevelReferableIsProtected = topLevelReferable.getAccessModifier() == AccessModifier.PROTECTED;
 
-        if (contextName == null) contextName = calculatedName.getFirst();
+        if (contextName == null && !calculatedName.isEmpty()) contextName = calculatedName.getFirst();
 
-        boolean scopeObstructed = !foundNameInScope && currentScope.resolveName(contextName) != null;
+        boolean scopeObstructed = !foundNameInScope && contextName != null && currentScope.resolveName(contextName) != null;
 
         if (scopeObstructed && targetModuleLocation != null) {
           calculatedName.addAll(0, targetModuleLocation.getModulePath().toList());
@@ -738,7 +724,7 @@ public class ArendServerImpl implements ArendServer {
             nameHiding.reference().getRefName().equals(topLevelReferable.getRefName())
           );
 
-          if (!foundNameInScope && !topLevelNameImported && !scopeObstructed) {
+          if (!foundNameInScope && !topLevelNameImported && !scopeObstructed && contextName != null) {
             itemsToAdd.computeIfAbsent(cmd, c -> new HashSet<>()).add(contextName);
           }
         }
@@ -809,7 +795,7 @@ public class ArendServerImpl implements ArendServer {
       nsCmdActions.add(new RawImportAdder(newCommand));
     }
 
-    for (Map.Entry<ModuleLocation, HashSet<String>> entry : importsToAdd.entrySet()) if (!entry.getKey().equals(anchorModule)) {
+    for (Map.Entry<ModuleLocation, HashSet<String>> entry : importsToAdd.entrySet()) if (!entry.getKey().equals(anchorModuleLocation)) {
       ArrayList<ConcreteNamespaceCommand.NameRenaming> renamings;
       HashSet<String> individualImports = entry.getValue();
       if (individualImports != null) renamings = new ArrayList<>(individualImports.stream().map(name ->
@@ -824,6 +810,25 @@ public class ArendServerImpl implements ArendServer {
     }
 
     return new Pair<>(new RawSequenceModifier(nsCmdActions), result);
+  }
+
+  private @NotNull AtomicReference<ConcreteNamespaceCommand> getConcreteNamespaceCommandAtomicReference(@NotNull ConcreteGroup currentFile, LocatedReferable referable, ModuleLocation anchorModule) {
+    AtomicReference<ConcreteNamespaceCommand> namespaceCommand = new AtomicReference<>();
+
+    currentFile.traverseGroup(subgroup -> subgroup.statements().forEach(statement -> {
+      ConcreteNamespaceCommand command = statement.command();
+      if (command != null && command.isImport()) {
+        boolean isPrelude = Prelude.MODULE_PATH.toList().equals(command.module().getPath());
+
+        ModuleLocation commandTarget = isPrelude ? Prelude.MODULE_LOCATION : findModule(new ModulePath(command.module().getPath()),
+          anchorModule.getLibraryName(), anchorModule.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+
+        if (commandTarget != null && commandTarget.equals(referable.getLocation())) {
+          namespaceCommand.set(command);
+        }
+      }
+    }));
+    return namespaceCommand;
   }
 
 }

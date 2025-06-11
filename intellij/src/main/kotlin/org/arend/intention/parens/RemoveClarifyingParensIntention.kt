@@ -1,20 +1,16 @@
-package org.arend.intention
+package org.arend.intention.parens
 
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
+import org.arend.intention.BaseArendIntention
 import org.arend.intention.binOp.BinOpIntentionUtil
 import org.arend.intention.binOp.BinOpSeqProcessor
 import org.arend.intention.binOp.CaretHelper
-import org.arend.naming.binOp.MetaBinOpParser
-import org.arend.naming.reference.GlobalReferable
 import org.arend.psi.*
 import org.arend.psi.ext.*
-import org.arend.refactoring.rangeOfConcrete
 import org.arend.refactoring.surroundingTupleExpr
-import org.arend.refactoring.unwrapParens
 import org.arend.term.concrete.Concrete
-import org.arend.typechecking.order.PartialComparator
 import org.arend.util.ArendBundle
 
 class RemoveClarifyingParensIntention : BaseArendIntention(ArendBundle.message("arend.expression.removeClarifyingParentheses")) {
@@ -68,46 +64,23 @@ private fun hasClarifyingParens(binOpSeq: Concrete.AppExpression): Boolean {
                 continue
             }
             val expression = arg.expression
-            if (expression is Concrete.HoleExpression) {
-                val binOp = findBinOpInParens(expression)
-                if (binOp != null) {
-                    if (doesNotNeedParens(binOp, parentBinOpApp)) {
-                        clarifyingParensFound = true
-                        break
-                    }
-                    queue.add(binOp)
-                }
+            if (expression is Concrete.HoleExpression && checkParens(expression, parentBinOpApp, queue)) {
+              clarifyingParensFound = true
+              break
             }
             if (expression is Concrete.AppExpression && BinOpIntentionUtil.isBinOpInfixApp(expression)) {
-                queue.add(expression)
+                val queueSize = queue.size
+                if (checkParens(expression, parentBinOpApp, queue)) {
+                    clarifyingParensFound = true
+                    break
+                } else if (queueSize == queue.size) {
+                    queue.add(expression)
+                }
             }
         }
     }
     return clarifyingParensFound
 }
-
-private fun findBinOpInParens(expression: Concrete.HoleExpression): Concrete.AppExpression? {
-    val tuple = (expression.data as? ArendAtomFieldsAcc)?.descendantOfType<ArendTuple>() ?: return null
-    val appExprPsi = unwrapAppExprInParens(tuple) ?: return null
-    return BinOpIntentionUtil.toConcreteBinOpInfixApp(appExprPsi)
-}
-
-private fun unwrapAppExprInParens(tuple: ArendTuple): ArendArgumentAppExpr? {
-    val expr = unwrapParens(tuple) ?: return null
-    return (expr as? ArendNewExpr)?.appExpr as? ArendArgumentAppExpr ?: return null
-}
-
-private fun doesNotNeedParens(childBinOp: Concrete.AppExpression, parentBinOp: Concrete.AppExpression): Boolean {
-    val childPrecedence = getPrecedence(childBinOp.function) ?: return false
-    val parentPrecedence = getPrecedence(parentBinOp.function) ?: return false
-    val childIsLeftArg = rangeOfConcrete(childBinOp).endOffset < rangeOfConcrete(parentBinOp.function).startOffset
-    return if (childIsLeftArg)
-        MetaBinOpParser.comparePrecedence(childPrecedence, parentPrecedence) == PartialComparator.Result.GREATER
-    else MetaBinOpParser.comparePrecedence(parentPrecedence, childPrecedence) == PartialComparator.Result.LESS
-}
-
-private fun getPrecedence(function: Concrete.Expression) =
-        ((function as? Concrete.ReferenceExpression)?.referent as? GlobalReferable)?.precedence
 
 class RemoveClarifyingParensProcessor : BinOpSeqProcessor() {
     override fun mapArgument(arg: Concrete.Argument,
@@ -118,15 +91,19 @@ class RemoveClarifyingParensProcessor : BinOpSeqProcessor() {
             return implicitArgumentText(arg, editor)
         }
         val expression = arg.expression
-        if (expression is Concrete.HoleExpression) {
-            val binOp = findBinOpInParens(expression)
+        if (expression is Concrete.HoleExpression || (expression is Concrete.AppExpression && BinOpIntentionUtil.isBinOpInfixApp(expression))) {
+            val binOp = when (expression) {
+                is Concrete.HoleExpression -> findBinOpInParens(expression)
+                is Concrete.AppExpression -> findBinOpInParens(expression)
+                else -> null
+            }
             if (binOp != null) {
                 val binOpText = mapBinOp(binOp, editor, caretHelper)
                 return if (doesNotNeedParens(binOp, parentBinOp)) binOpText else "($binOpText)"
             }
-        }
-        if (expression is Concrete.AppExpression && BinOpIntentionUtil.isBinOpInfixApp(expression)) {
-            return mapBinOp(expression, editor, caretHelper)
+            if (expression is Concrete.AppExpression) {
+                return mapBinOp(expression, editor, caretHelper)
+            }
         }
         return text(arg.expression, editor)
     }
