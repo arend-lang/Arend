@@ -54,3 +54,6 @@
       | :ide => ide-left
       | :* t s => *-assoc *> pmap (interpret env t *) (normalize-consistent-aux s acc) *> normalize-consistent-aux t (normalize-aux s acc)
   }
+
+\func AddMonoidSolverModel (A : AddMonoid) : SolverModel A
+  => MonoidSolverModel (AddMonoid.toMonoid A)

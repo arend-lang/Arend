@@ -19,6 +19,18 @@
   : x * (y * (z * w)) = w * (z * (y * x))
   => equation.monoid in p
 
+\lemma testAdd1 {M : AddMonoid} (x y z w : M)
+  : (x + (zro + y)) + ((zro + z) + w) = x + ((y + (z + zro)) + w)
+  => equation.addMonoid
+
+\lemma testAdd1a {M : AddMonoid} (x y z w : M) (p : x + (y + (z + w)) = w + (z + (y + x)))
+  : (x + (zro + y)) + ((zro + z) + w) = w + ((z + (y + zro)) + x)
+  => equation.addMonoid p
+
+\lemma testAdd1b {M : AddMonoid} (x y z w : M) (p : (x + (zro + y)) + ((zro + z) + w) = w + ((z + (y + zro)) + x))
+  : x + (y + (z + w)) = w + (z + (y + x))
+  => equation.addMonoid in p
+
 \lemma test2 {M : Monoid} (x y : M) (p : ide = x * y)
   : (x * x) * (y * y) = ide
   => equation
