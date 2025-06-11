@@ -9,15 +9,16 @@ import com.intellij.psi.SmartPointerManager
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.startOffset
+import org.arend.error.DummyErrorReporter
 import org.arend.ext.error.MissingClausesError
-import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.psi.ArendElementTypes
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.quickfix.ImplementMissingClausesQuickFix
 import org.arend.server.ArendServerService
-import org.arend.typechecking.error.ErrorService
+import org.arend.server.ProgressReporter
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 
 internal fun checkMissingClauses(element: PsiElement): Boolean {
     return element.elementType == ArendElementTypes.TGOAL
@@ -42,7 +43,7 @@ internal fun deleteFunctionBody(element: PsiElement): Pair<ArendGroup, Int>? {
 
 internal fun fixMissingClausesError(project: Project, file: ArendFile, editor: Editor, group: ArendGroup, offset: Int) {
     val server = project.service<ArendServerService>().server
-    file.moduleLocation?.let { server.getCheckerFor(listOf(it)).typecheckExtensionDefinition(group.fullName) }
+    file.moduleLocation?.let { server.getCheckerFor(listOf(it)).typecheck(listOf(group.fullName), DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty()) }
 
     val error = server.errorMap.values.flatten().filter { it is MissingClausesError }.find {
         (((it as MissingClausesError).definition as? LocatedReferableImpl)?.data as? PsiElement)?.endOffset == offset
