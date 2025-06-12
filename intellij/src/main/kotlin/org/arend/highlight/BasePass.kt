@@ -6,6 +6,7 @@ import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.text.Strings
@@ -59,9 +60,11 @@ import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer
 import org.arend.typechecking.error.local.*
 import org.arend.typechecking.error.local.CertainTypecheckingError.Kind.*
 import org.arend.ext.error.InstanceInferenceError
+import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.TCDefReferable
 import org.arend.psi.ArendExpressionCodeFragment
 import org.arend.quickfix.instance.AddRecursiveInstanceArgumentQuickFix
+import org.arend.server.ArendServerService
 import org.arend.term.group.ConcreteNamespaceCommand
 import org.arend.typechecking.error.local.inference.FunctionArgInferenceError
 import org.arend.typechecking.error.local.inference.LambdaInferenceError
@@ -290,13 +293,18 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                         registerFix(builder, RemoveCoClauseQuickFix(SmartPointerManager.createPointer(errorCause)))
                     }
                 } else {
-                    /* TODO[server2]
                     val ref = error.classRef
-                    val classRef = if (ref is Referable) ref.underlyingReferable else ref
-                    if (classRef is ClassReferable) {
-                        registerFix(builder, ImplementFieldsQuickFix(SmartPointerManager.createPointer(cause), false, makeFieldList(error.fields, classRef)))
+                    val classRef = if (ref is LocatedReferable) ref.abstractReferable else ref
+                    if (classRef is ArendDefClass) {
+                        val fieldList = ArrayList<Pair<LocatedReferable, Boolean>>()
+                        val scope = myProject.service<ArendServerService>().server.getReferableScope(error.definition as LocatedReferable)
+                        error.fields.map { field ->
+                            val shortNameResolvesToOtherId = scope?.resolveName(field.refName)?.let { it != field } == true
+                            val p = Pair(field as LocatedReferable, shortNameResolvesToOtherId)
+                            fieldList.add(p)
+                        }
+                        registerFix(builder, ImplementFieldsQuickFix(SmartPointerManager.createPointer(cause), false, fieldList))
                     }
-                    */
                     if (cause is ArendNewExpr) {
                         cause.putUserData(CoClausesKey, null)
                     }
