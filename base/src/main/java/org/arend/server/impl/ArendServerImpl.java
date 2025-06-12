@@ -603,8 +603,7 @@ public class ArendServerImpl implements ArendServer {
     @NotNull List<LocatedReferable> referables,
     @NotNull ConcreteGroup currentFile,
     @NotNull RawAnchor anchor,
-    @NotNull ErrorReporter errorReporter,
-    Boolean ignoreInternal) {
+    @NotNull ErrorReporter errorReporter) {
     // Check that referables are located in available modules and collect them in refMap
     ModuleLocation anchorModuleLocation = anchor.parent().getLocation();
     List<RawModifier> nsCmdActions = new ArrayList<>();
@@ -700,9 +699,6 @@ public class ArendServerImpl implements ArendServer {
             parent = parent.getLocatedReferableParent();
           }
 
-          if (currReferable instanceof InternalReferable && ignoreInternal) {
-            continue;
-          }
           calculatedName.addFirst(currReferable.getRefName());
         } while (parent != null && !(parent instanceof ModuleReferable));
 

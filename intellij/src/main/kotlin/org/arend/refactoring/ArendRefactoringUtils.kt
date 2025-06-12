@@ -326,8 +326,8 @@ fun doAddIdToOpen(psiFactory: ArendPsiFactory, openedName: List<String>, positio
 
         if (anchor != null) {
             val targetContainer = when (elementReferable) {
-                is ArendGroup -> elementReferable.parentGroup
-                else -> elementReferable
+                is ReferableBase<*> -> elementReferable.locatedReferableParent
+                else -> null// elementReferable
             }
             if (openedName.size > 1 && targetContainer != null) {
                 val containingFile = positionInFile.containingFile as? ArendFile

@@ -140,7 +140,7 @@ class ReplaceWithShortNameIntentionTest: QuickFixTestBase() {
          | M.inj1{-caret-} a => 1
          | M.inj2 b => 2 
     """, """
-       \open M (inj1) 
+       \open M.union (inj1) 
         
        \module M \where {
          \data \infixl 2 union (A B : \Type)
