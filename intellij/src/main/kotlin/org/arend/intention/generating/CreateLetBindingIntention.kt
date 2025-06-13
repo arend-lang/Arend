@@ -26,7 +26,7 @@ import org.arend.intention.AbstractGenerateFunctionIntention
 import org.arend.intention.BaseArendIntention
 import org.arend.intention.ExtractExpressionToFunctionIntention
 import org.arend.intention.checkNotGeneratePreview
-import org.arend.intention.getElementScope
+import org.arend.util.getElementScope
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ext.*
 import org.arend.psi.getSelectionWithoutErrors

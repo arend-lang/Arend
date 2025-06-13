@@ -1,4 +1,4 @@
-package org.arend.intention
+package org.arend.util
 
 import com.intellij.openapi.components.service
 import com.intellij.psi.PsiElement
@@ -9,7 +9,7 @@ import org.arend.naming.scope.local.ListScope
 import org.arend.psi.ext.ArendDefinition
 import org.arend.psi.topmostAncestor
 import org.arend.server.ArendServerService
-import org.arend.term.concrete.LocalVariablesCollector.getLocalReferables
+import org.arend.util.LocalVariablesScopeCollector.Companion.getLocalVariables
 
 fun getElementScope(element: PsiElement): Scope {
   val server = element.project.service<ArendServerService>().server
@@ -17,6 +17,6 @@ fun getElementScope(element: PsiElement): Scope {
   val definitionData = tcReferable?.let { server.getResolvedDefinition(it) }
 
   val referableScope = tcReferable?.let { server.getReferableScope(it) } ?: EmptyScope.INSTANCE
-  val localReferables = getLocalReferables(definitionData?.definition, null)
+  val localReferables = getLocalVariables(definitionData?.definition, null)
   return MergeScope(ListScope(localReferables), referableScope)
 }
