@@ -153,6 +153,12 @@ public class MonoidSolver extends BaseEqualitySolver {
     CompiledTerm term = compileTerm(expr.getExpression());
     SubexprOccurrences result = new SubexprOccurrences();
 
+    if (subExTerm == null || term == null) {
+      result.occurrenceVar = null;
+      result.subExprMissed = true;
+      return result;
+    }
+
     result.occurrenceVar = factory.local("occurVar");
     result.subExprMissed = term.nf.size() == 1 && (expr.getExpression() instanceof CoreAppExpression);
 
@@ -795,7 +801,8 @@ public class MonoidSolver extends BaseEqualitySolver {
 
   private CompiledTerm compileTerm(CoreExpression expression) {
     List<Integer> nf = new ArrayList<>();
-    return new CompiledTerm(computeTerm(expression, nf), nf);
+    var compiled =  computeTerm(expression, nf);
+    return compiled != null ? new CompiledTerm(compiled, nf) : null;
   }
 
   private ConcreteExpression computeTerm(CoreExpression expression, List<Integer> nf) {
@@ -838,6 +845,7 @@ public class MonoidSolver extends BaseEqualitySolver {
       List<ConcreteExpression> implArgs = new ArrayList<>();
       var left = computeTerm(args.get(args.size() - 2), nf);
       var right = computeTerm(args.getLast(), nf);
+      if (left == null || right == null) return null;
       if (isCat) {
         implArgs.add(vdata);
         implArgs.add(factory.number(dom));
