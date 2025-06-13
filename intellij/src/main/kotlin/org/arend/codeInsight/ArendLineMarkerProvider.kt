@@ -142,7 +142,6 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
     val defsToPsiElement = mutableMapOf<FunctionDefinition, ArendDefFunction>()
     val coreToConcrete = mutableMapOf<Expression, Concrete.AppExpression>()
 
-    server.getCheckerFor(listOf(moduleLocation)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
     val definitions = server.getResolvedDefinitions(moduleLocation)
     for (definition in definitions) {
       ProgressManager.checkCanceled()
@@ -219,7 +218,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
   ) {
     val server = project.service<ArendServerService>().server
     val files = definitions.mapNotNull { it.containingFile as? ArendFile? }
-    server.getCheckerFor(files.mapNotNull { it.moduleLocation }).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+    server.getCheckerFor(files.mapNotNull { it.moduleLocation }.filter { !server.modules.contains(it) }).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
 
     for (definition in definitions) {
       val file = definition.containingFile as? ArendFile? ?: continue
