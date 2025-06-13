@@ -244,7 +244,7 @@
 
     \lemma product_*c-comm-right {R : CRing} {n m k : Nat} {a : R} {A : Matrix R n m} {B : Matrix R m k}
       : a *c (A MatrixRing.product B) = A MatrixRing.product (a *c B)
-      => {?} -- TODO[server2]: matrixExt \lam i j => R.BigSum-ldistr *> path (\lam i' => R.BigSum \lam k => (equation : a * (A i k * B k j) = A i k * (a * B k j)) i')
+      => matrixExt \lam i j => R.BigSum-ldistr *> pmap R.BigSum (exts \lam k => equation.cMonoid)
   }
 
 \func determinant {R : CRing} {n : Nat} (M : Matrix R n n)

@@ -8,10 +8,10 @@
   | \protected \infixl 2 >>= {U V : \Set} : NF U -> (U -> NF V) -> NF V
   | \protected normalize {V : \Set} : Term V -> NF V
   | \protected interpret {V : \Set} (env : V -> M) : Term V -> M
-  | \protected interpretNF {V : \Set} (env : V -> M) : NF V -> M
-  | \protected normalize-consistent {V : \Set} {env : V -> M} (t : Term V) : interpret env t = interpretNF env (normalize t)
-  | \protected >>=-consistent {U V : \Set} {env : V -> M} (nf : NF U) (k k' : U -> NF V)
-    : (\Pi (u : U) -> interpretNF env (k u) = interpretNF env (k' u)) -> interpretNF env (nf >>= k) = interpretNF env (nf >>= k')
+  | \protected interpretNF {n : Nat} (env : Fin n -> M) : NF (Fin n) -> M
+  | \protected normalize-consistent {n : Nat} {env : Fin n -> M} (t : Term (Fin n)) : interpret env t = interpretNF env (normalize t)
+  | \protected >>=-consistent {V : \Set} {n : Nat} {env : Fin n -> M} (nf : NF V) (k k' : V -> NF (Fin n))
+    : (\Pi (u : V) -> interpretNF env (k u) = interpretNF env (k' u)) -> interpretNF env (nf >>= k) = interpretNF env (nf >>= k')
   {-
   | \protected abstractAll {n : Nat} : NF (Fin n) -> NF (Fin n) -> Maybe (NF (Maybe (Fin n)))
   | \protected abstractIndex {n : Nat} : Nat -> NF (Fin n) -> NF (Fin n) -> Maybe (NF (Maybe (Fin n)))

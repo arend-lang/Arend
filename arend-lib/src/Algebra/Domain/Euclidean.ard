@@ -192,7 +192,7 @@
     | 0 => simplify
     | suc s => mcases \with {
       | yes _ => simplify
-      | no _ => {?} -- TODO[server2]: pmap (_ * __ + _) (inv (isDivMod a b)) *> equation *> bezoutIdentity-fueled s b (divMod a b).2
+      | no _ => pmap (_ * __ + _) (inv (isDivMod a b)) *> {?} {- TODO[server2]: equation -} *> bezoutIdentity-fueled s b (divMod a b).2
     }
 
   \lemma bezoutIdentity (a b : E) : (bezout a b).1 * a + (bezout a b).2 * b = gcd a b

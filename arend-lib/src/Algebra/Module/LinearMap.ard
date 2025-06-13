@@ -158,7 +158,7 @@
   | func-*c => inv B.*c_zro-right
 
 \lemma linearMap_+ {R : Ring} {A B : LModule R} (f g : LinearMap A B) : LinearMap A B (\lam a => f a + g a) \cowith
-  | func-+ => pmap2 (+) f.func-+ g.func-+ *> {?} -- TODO[server2]: equation
+  | func-+ => pmap2 (+) f.func-+ g.func-+ *> equation.abMonoid
   | func-*c => pmap2 (+) f.func-*c g.func-*c *> inv *c-ldistr
 
 \lemma linearMap_negative {R : Ring} {A B : LModule R} (f : LinearMap A B) : LinearMap A B (\lam a => negative (f a)) \cowith

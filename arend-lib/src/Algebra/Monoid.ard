@@ -463,7 +463,7 @@
 
   \lemma BigSum_+ {n : Nat} {l l' : Array E n} : BigSum (\lam i => l i + l' i) = BigSum l + BigSum l' \elim n, l, l'
     | 0, _, _ => inv zro-left
-    | suc n, :: a l, :: a' l' => unfold BigSum $ rewrite (BigSum_+ {_} {n} {l}) {?} -- TODO[server2]: equation
+    | suc n, :: a l, :: a' l' => unfold BigSum $ rewrite (BigSum_+ {_} {n} {l}) equation.abMonoid
 
   \lemma BigSum-transpose {m n : Nat} (f : Fin m -> Fin n -> E)
     : BigSum (\lam i => BigSum (f i)) = BigSum (\lam j => BigSum (f __ j)) \elim n

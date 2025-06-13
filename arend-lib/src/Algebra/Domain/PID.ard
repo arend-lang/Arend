@@ -87,14 +87,14 @@
 
   \lemma adequate_kaplansky {R : BezoutDomain.Dec} (adeq : \Pi {a : R} -> a /= 0 -> IsAdequate a) : SmithRing.IsKaplansky R
     => \lam a b c a_b_c => \case R.coprime_bezoutArray a_b_c, decideEq a 0 \with {
-      | inP (s,p), yes a=0 => {?} -- TODO[server2]: inP (s 1, s 2, BezoutRing.bezout_coprime {_} {0} {1} equation)
+      | inP (s,p), yes a=0 => inP (s 1, s 2, BezoutRing.bezout_coprime {_} {0} {1} {?}) -- TODO[server2]: equation
       | _, no a/=0 =>
-        {?} {- TODO[server2]: \have | (inP r) => adeq a/=0 c
+        \have | (inP r) => adeq a/=0 c
               | (inP (c',c*,cp)) => R.gcd_bezout (IsCoprime.=>gcd r.3)
         \in inP (1, c* * (1 - b), simplify \lam d d1 (y,p) =>
             \have | d_c : IsCoprime d c => \lam z (x1,p1) (x2,p2) => a_b_c z
-                            (LDiv.trans (LDiv.make x1 p1) d1, LDiv.make (x1 * y - x2 * c* * (1 - b)) equation, LDiv.make x2 p2)
-                  | d_R : IsCoprime d r.1 => BezoutRing.bezout_coprime {_} {y} {(1 - b) * c'} equation
-            \in d_R d LDiv.id-div $ Domain.Dec.LDiv_TruncP $ r.4 d d1 d_c) -}
+                            (LDiv.trans (LDiv.make x1 p1) d1, LDiv.make (x1 * y - x2 * c* * (1 - b)) {?} {- TODO[server2]: equation -}, LDiv.make x2 p2)
+                  | d_R : IsCoprime d r.1 => BezoutRing.bezout_coprime {_} {y} {(1 - b) * c'} {?} -- TODO[server2]: equation
+            \in d_R d LDiv.id-div $ Domain.Dec.LDiv_TruncP $ r.4 d d1 d_c)
     }
 }

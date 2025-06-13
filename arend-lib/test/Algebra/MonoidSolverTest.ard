@@ -31,6 +31,32 @@
   : x + (y + (z + w)) = w + (z + (y + x))
   => equation.addMonoid in p
 
+
+\lemma testComm1 {M : CMonoid} (x y z w : M)
+  : (w * (ide * x)) * ((ide * y) * z) = x * ((y * (z * ide)) * w)
+  => equation.cMonoid
+
+\lemma testComm2 {M : CMonoid} (x y z w : M) (p : w * (x * (x * z)) = w * (x * (z * y)))
+  : (w * (ide * x)) * ((ide * x) * z) = x * ((y * (z * ide)) * w)
+  => equation.cMonoid p
+
+\lemma testComm3 {M : CMonoid} (x y z w : M) (p : (w * (ide * x)) * ((ide * x) * z) = x * ((y * (z * ide)) * w))
+  : w * (x * (x * z)) = w * (x * (z * y))
+  => equation.cMonoid in p
+
+\lemma testAb1 {M : AbMonoid} (x y z w : M)
+  : (w + (zro + x)) + ((zro + y) + z) = x + ((y + (z + zro)) + w)
+  => equation.abMonoid
+
+\lemma testAb2 {M : AbMonoid} (x y z w : M) (p : w + (x + (x + z)) = w + (x + (z + y)))
+  : (w + (zro + x)) + ((zro + x) + z) = x + ((y + (z + zro)) + w)
+  => equation.abMonoid p
+
+\lemma testAb3 {M : AbMonoid} (x y z w : M) (p : (w + (zro + x)) + ((zro + x) + z) = x + ((y + (z + zro)) + w))
+  : w + (x + (x + z)) = w + (x + (z + y))
+  => equation.abMonoid in p
+
+
 \lemma test2 {M : Monoid} (x y : M) (p : ide = x * y)
   : (x * x) * (y * y) = ide
   => equation

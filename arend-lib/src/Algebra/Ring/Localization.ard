@@ -11,6 +11,7 @@
 \import Algebra.Ring.RingHom
 \import Function (isInj, isSurj)
 \import Function.Meta
+\import Logic.Meta
 \import Logic.Unique
 \import Logic
 \import Meta
@@ -74,23 +75,22 @@
 
     \lemma equals-lem {a b : SType S} (c : R) (s : S c) (p : a.1 * b.2 * c = b.1 * a.2 * c) : inl~ a = inl~ b
       => \let a' : SType S => (a.1 * c, a.2 * c, contains_* a.3 s)
-         \in path (~-equiv a a' equation) *>
-             path (~-equiv a' b equation)
+         \in path (~-pequiv equation.cMonoid) *>
+             path (~-equiv a' b $ {?} {- TODO[server2]: equation -})
 
     \lemma equals1 {a b : SType S} (p : a.1 * b.2 = b.1 * a.2) : inl~ a = inl~ b
-      => {?} -- TODO[server2]: equals-lem 1 S.contains_ide (simplify p)
+      => equals-lem 1 S.contains_ide (simplify p)
 
-    \lemma unequals {a b : SType S} (p : inl~ a = inl~ b)
-      : TruncP (\Sigma (c : R) (S c) (a.1 * b.2 * c = b.1 * a.2 * c))
-      => {?} {- TODO[server2]: Equivalence.Closure.univ (\new Equivalence (SType S) {
-        | ~ x y => TruncP (\Sigma (z : R) (S z) (x.1 * y.2 * z = y.1 * x.2 * z))
+    \lemma unequals {a b : SType S} (p : inl~ a = inl~ b) : ∃ (c : R) (S c) (a.1 * b.2 * c = b.1 * a.2 * c)
+      => Equivalence.Closure.univ (\new Equivalence (SType S) {
+        | ~ x y => ∃ (z : R) (S z) (x.1 * y.2 * z = y.1 * x.2 * z)
         | ~-reflexive => inP (ide, contains_ide, idp)
         | ~-symmetric (inP (z,c,p)) => inP (z, c, inv p)
-        | ~-transitive {x} {y} (inP (t,ct,pt)) (inP (s,cs,ps)) => inP (y.2 * (t * s), contains_* y.3 (contains_* ct cs), equation)
+        | ~-transitive {x} {y} (inP (t,ct,pt)) (inP (s,cs,ps)) => inP (y.2 * (t * s), contains_* y.3 (contains_* ct cs), {?} {- TODO[server2]: equation -})
       }) (\lam x~y => inP (ide, contains_ide, simplify x~y))
-         (Quotient.equality p) -}
+         (Quotient.equality p)
 
-    \lemma equality {a b : SType S} : (inl~ a = inl~ b) = TruncP (\Sigma (c : R) (S c) (a.1 * b.2 * c = b.1 * a.2 * c))
+    \lemma equality {a b : SType S} : (inl~ a = inl~ b) = ∃ (c : R) (S c) (a.1 * b.2 * c = b.1 * a.2 * c)
       => propExt unequals (\lam (inP (c,s,p)) => equals-lem c s p)
 
     \lemma swap {R : CMonoid} {r1 r2 s1 s2 : R} : (r1 * r2) * (s1 * s2) = (r1 * s1) * (r2 * s2)
@@ -99,21 +99,21 @@
     \func neg (a : Type) : Type \elim a
       | in~ (r,s,p) => in~ (negative r, s, p)
       | ~-equiv (r,s,p) (r',s',p') rs~rs' i =>
-        {?} -- TODO[server2]: ~-equiv (negative r, s, p) (negative r', s', p') equation i
+        ~-equiv (negative r, s, p) (negative r', s', p') {?} {- TODO[server2]: equation -} i
 
     \func ++ (a b : Type) : Type \elim a, b
       | in~ (r1,s1,p1), in~ (r2,s2,p2) => in~ (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2)
       | ~-equiv (r1,s1,p1) (r1',s1',p1') rs1~rs1' i, in~ (r2,s2,p2) =>
-        {?} -- TODO[server2]: ~-equiv (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2) (r1' * s2 + r2 * s1', s1' * s2, contains_* p1' p2) equation i
+        ~-equiv (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2) (r1' * s2 + r2 * s1', s1' * s2, contains_* p1' p2) {?} {- TODO[server2]: equation -} i
       | in~ (r1,s1,p1), ~-equiv (r2,s2,p2) (r2',s2',p2') rs2~rs2' i =>
-        {?} -- TODO[server2]: ~-equiv (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2) (r1 * s2' + r2' * s1, s1 * s2', contains_* p1 p2') equation i
+        ~-equiv (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2) (r1 * s2' + r2' * s1, s1 * s2', contains_* p1 p2') {?} {- TODO[server2]: equation -} i
 
     \func ** (a b : Type) : Type \elim a, b
       | in~ (r1,s1,p1), in~ (r2,s2,p2) => in~ (r1 * r2, s1 * s2, contains_* p1 p2)
       | ~-equiv (r1,s1,p1) (r1',s1',p1') rs1~rs1' i, in~ (r2,s2,p2) =>
-        {?} -- TODO[server2]: ~-equiv (r1 * r2, s1 * s2, contains_* p1 p2) (r1' * r2, s1' * s2, contains_* p1' p2) equation i
+        ~-equiv (r1 * r2, s1 * s2, contains_* p1 p2) (r1' * r2, s1' * s2, contains_* p1' p2) {?} {- TODO[server2]: equation -} i
       | in~ (r1,s1,p1), ~-equiv (r2,s2,p2) (r2',s2',p2') rs2~rs2' i =>
-        {?} -- TODO[server2]: ~-equiv (r1 * r2, s1 * s2, contains_* p1 p2) (r1 * r2', s1 * s2', contains_* p1 p2') equation i
+        ~-equiv (r1 * r2, s1 * s2, contains_* p1 p2) (r1 * r2', s1 * s2', contains_* p1 p2') {?} {- TODO[server2]: equation -} i
 
     \lemma trivial {x : R} (n : R.IsNilpotent x) (s : S x) : Contr (LocRing S) \elim n
       | inP (n,p) => \new Contr {

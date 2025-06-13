@@ -33,6 +33,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public abstract class BaseMonoidEquationMeta extends BaseMetaDefinition {
@@ -42,6 +43,12 @@ public abstract class BaseMonoidEquationMeta extends BaseMetaDefinition {
   @Dependency(name = "MonoidSolverModel.Term.:*")       ArendRef mulTerm;
   @Dependency(name = "SolverModel.terms-equality")      ArendRef termsEquality;
   @Dependency(name = "SolverModel.terms-equality-conv") ArendRef termsEqualityConv;
+
+  private final boolean isCommutative;
+
+  protected BaseMonoidEquationMeta(boolean isCommutative) {
+    this.isCommutative = isCommutative;
+  }
 
   @Override
   public boolean @Nullable [] argumentExplicitness() {
@@ -64,6 +71,9 @@ public abstract class BaseMonoidEquationMeta extends BaseMetaDefinition {
   private List<Integer> normalize(EquationTerm term) {
     List<Integer> result = new ArrayList<>();
     normalize(term, result);
+    if (isCommutative) {
+      Collections.sort(result);
+    }
     return result;
   }
 

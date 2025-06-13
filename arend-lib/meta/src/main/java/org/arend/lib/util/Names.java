@@ -156,6 +156,10 @@ public class Names {
     return new ModulePath("Algebra", "Solver");
   }
 
+  public static ModulePath getCommMonoidSolverModule() {
+    return new ModulePath("Algebra", "Solver", "CMonoid");
+  }
+
   public static ModulePath getNewMonoidSolverModule() {
     return new ModulePath("Algebra", "Solver", "Monoid");
   }

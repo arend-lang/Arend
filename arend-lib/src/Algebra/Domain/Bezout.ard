@@ -36,7 +36,7 @@
   \lemma gcd_bezout {a b c : E} (gcd : GCD a b c) : ∃ (s t : E) (s * a + t * b = c)
     => TruncP.map (isBezout a b) \lam (s,t,d1,d2) =>
         \let (w,q) => gcd.res-univ (s * a + t * b) d1 d2
-        \in (w * s, w * t, equation)
+        \in (w * s, w * t, {?}) -- TODO[server2]: equation
 
   \lemma bezoutArray_LDiv (l : Array E) : ∃ (c : Array E l.len) ∀ j (LDiv (BigSum (\lam i => c i * l i)) (l j)) \elim l
     | nil => inP (nil, \case __)

@@ -524,8 +524,8 @@
     }
     | :ide, suc n => (ide-left, idp)
     | :inv t, suc n => (pmap (_ *) pow-lem *> *-comm *> inv G.inverse_* *> pmap inverse (removeVar-lem t v (not withInv)).1, (removeVar-lem t v (not withInv)).2)
-    | :* t1 t2, suc n => {?} {- TODO[server2]: (rewrite sum-lem $ pmap (_ *) G.pow_+ *> rewrite (removeVar-lem t1 v withInv).2 (equation *> pmap2 (*) (removeVar-lem t1 v withInv {suc n}).1 (removeVar-lem t2 v withInv {suc n -' countVar t1 v withInv}).1),
-                          (removeVar-lem _ v withInv).2 *> rewrite (removeVar-lem t1 v withInv).2 -'-') -}
+    | :* t1 t2, suc n => (rewrite sum-lem $ pmap (_ *) G.pow_+ *> rewrite (removeVar-lem t1 v withInv).2 (equation.cMonoid *> pmap2 (*) (removeVar-lem t1 v withInv {suc n}).1 (removeVar-lem t2 v withInv {suc n -' countVar t1 v withInv}).1),
+                          (removeVar-lem _ v withInv).2 *> rewrite (removeVar-lem t1 v withInv).2 -'-')
     \where {
       \open NatBSemilattice
 

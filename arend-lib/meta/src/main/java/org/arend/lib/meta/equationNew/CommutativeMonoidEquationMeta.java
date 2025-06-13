@@ -5,33 +5,33 @@ import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 
-public class AdditiveMonoidEquationMeta extends BaseMonoidEquationMeta {
-  @Dependency                           ArendRef AddMonoidSolverModel;
-  @Dependency                           CoreClassDefinition AddMonoid;
-  @Dependency(name = "AddPointed.zro")  CoreClassField zro;
-  @Dependency(name = "AddMonoid.+")     CoreClassField add;
+public class CommutativeMonoidEquationMeta extends BaseMonoidEquationMeta {
+  @Dependency ArendRef CMonoidSolverModel;
+  @Dependency CoreClassDefinition CMonoid;
+  @Dependency(name = "Pointed.ide") CoreClassField ide;
+  @Dependency(name = "Semigroup.*") CoreClassField mul;
 
-  public AdditiveMonoidEquationMeta() {
-    super(false);
+  public CommutativeMonoidEquationMeta() {
+    super(true);
   }
 
   @Override
   protected CoreClassField getIde() {
-    return zro;
+    return ide;
   }
 
   @Override
   protected CoreClassField getMul() {
-    return add;
+    return mul;
   }
 
   @Override
   protected CoreClassDefinition getMonoid() {
-    return AddMonoid;
+    return CMonoid;
   }
 
   @Override
   protected ArendRef getSolverModel() {
-    return AddMonoidSolverModel;
+    return CMonoidSolverModel;
   }
 }

@@ -11,6 +11,10 @@ public class MonoidEquationMeta extends BaseMonoidEquationMeta {
   @Dependency(name = "Pointed.ide") CoreClassField ide;
   @Dependency(name = "Semigroup.*") CoreClassField mul;
 
+  public MonoidEquationMeta() {
+    super(false);
+  }
+
   @Override
   protected CoreClassField getIde() {
     return ide;

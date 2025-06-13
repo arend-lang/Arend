@@ -5,14 +5,14 @@ import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 
-public class AdditiveMonoidEquationMeta extends BaseMonoidEquationMeta {
-  @Dependency                           ArendRef AddMonoidSolverModel;
-  @Dependency                           CoreClassDefinition AddMonoid;
+public class AbelianMonoidEquationMeta extends BaseMonoidEquationMeta {
+  @Dependency                           ArendRef AbMonoidSolverModel;
+  @Dependency                           CoreClassDefinition AbMonoid;
   @Dependency(name = "AddPointed.zro")  CoreClassField zro;
   @Dependency(name = "AddMonoid.+")     CoreClassField add;
 
-  public AdditiveMonoidEquationMeta() {
-    super(false);
+  public AbelianMonoidEquationMeta() {
+    super(true);
   }
 
   @Override
@@ -27,11 +27,11 @@ public class AdditiveMonoidEquationMeta extends BaseMonoidEquationMeta {
 
   @Override
   protected CoreClassDefinition getMonoid() {
-    return AddMonoid;
+    return AbMonoid;
   }
 
   @Override
   protected ArendRef getSolverModel() {
-    return AddMonoidSolverModel;
+    return AbMonoidSolverModel;
   }
 }

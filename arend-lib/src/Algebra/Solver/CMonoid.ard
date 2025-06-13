@@ -1,0 +1,36 @@
+\import Algebra.Monoid
+\import Algebra.Solver
+\import Algebra.Solver.Monoid
+\import Arith.Fin.Order
+\import Data.List
+\import Function.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\open MonoidSolverModel
+\open Sort
+
+\func CMonoidSolverModel (M : CMonoid) : SolverModel M \cowith
+  | Term => Term
+  | NF => List
+  | nfVar v => v :: nil
+  | >>= => >>=
+  | normalize => (MonoidSolverModel M).normalize
+  | interpret => MonoidSolverModel.interpret
+  | interpretNF env nf => MonoidSolverModel.interpretNF env (RedBlack.sort nf)
+  | normalize-consistent t => (MonoidSolverModel M).normalize-consistent t *> sort-consistent
+  | >>=-consistent nf k k' p => inv sort-consistent *> (MonoidSolverModel M).>>=-consistent nf k k' (\lam v => sort-consistent *> p v *> inv sort-consistent) *> sort-consistent
+  \where {
+    \lemma sort-consistent {n : Nat} {env : Fin n -> M} {l : List (Fin n)}
+      : (MonoidSolverModel M).interpretNF env l = (MonoidSolverModel M).interpretNF env (RedBlack.sort l)
+      => rewrite RedBlack.sort=insert (perm-consistent (Sort.Insertion.sort-perm l))
+
+    \protected \lemma perm-consistent {n : Nat} {env : Fin n -> M} {l l' : List (Fin n)} (p : Sort.Perm l l') : MonoidSolverModel.interpretNF env l = MonoidSolverModel.interpretNF env l' \elim l, l', p
+      | nil, nil, perm-nil => idp
+      | :: a1 l1, :: a2 l2, perm-:: idp p => repeat {2} (rewrite MonoidSolverModel.interpretNF_::) $ pmap (env a1 *) (perm-consistent p)
+      | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite MonoidSolverModel.interpretNF_::) $ inv *-assoc *> pmap (`* _) *-comm *> *-assoc
+      | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
+  }
+
+\func AbMonoidSolverModel (A : AbMonoid) : SolverModel A
+  => CMonoidSolverModel (AbMonoid.toCMonoid A)
