@@ -6,13 +6,18 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 
 public class CommutativeMonoidEquationMeta extends BaseMonoidEquationMeta {
-  @Dependency ArendRef CMonoidSolverModel;
-  @Dependency CoreClassDefinition CMonoid;
+  @Dependency                       ArendRef CMonoidSolverModel;
+  @Dependency                       CoreClassDefinition CMonoid;
   @Dependency(name = "Pointed.ide") CoreClassField ide;
   @Dependency(name = "Semigroup.*") CoreClassField mul;
 
   public CommutativeMonoidEquationMeta() {
     super(true);
+  }
+
+  @Override
+  protected boolean isMultiplicative() {
+    return true;
   }
 
   @Override
@@ -26,7 +31,7 @@ public class CommutativeMonoidEquationMeta extends BaseMonoidEquationMeta {
   }
 
   @Override
-  protected CoreClassDefinition getMonoid() {
+  protected CoreClassDefinition getClassDef() {
     return CMonoid;
   }
 

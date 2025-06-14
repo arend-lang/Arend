@@ -1,0 +1,136 @@
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Solver \using (>>=-consistent)
+\import Algebra.Solver.Monoid
+\import Arith.Fin.Order
+\import Data.Bool
+\import Data.List
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+
+\func GroupSolverModel (G : Group) : SolverModel G \cowith
+  | Term => Term
+  | NF V => List (\Sigma Bool V)
+  | normalize => normalize
+  | interpret {V : \Set} (env : V -> G) (t : Term V) : G \elim t {
+    | var x => env x
+    | :ide => G.ide
+    | :inverse t => inverse (interpret env t)
+    | t :* s => interpret env t * interpret env s
+  }
+  | interpretNF env l => interpretNF' env (reduce l)
+  | interpretNF-consistent => interpretNF'_reduce *> interpretNF'-consistent
+  | nfVar v => (true,v) :: nil
+  | >>= => >>=
+  | >>=-consistent => interpretNF'_reduce *> interpretNF'_>>= *> pmap (interpretNF' __ _) (ext \lam v => inv interpretNF'_reduce) *> inv interpretNF'_reduce
+  \where {
+    \data Term (V : \Set)
+      | var V
+      | :ide
+      | :inverse (Term V)
+      | \infixl 7 :* (t s : Term V)
+
+    \private \func inverseNF {V : \Set} (l acc : List (\Sigma Bool V)) : List (\Sigma Bool V) \elim l
+      | nil => acc
+      | x :: l => inverseNF l ((not x.1, x.2) :: acc)
+
+    \private \func normalize {V : \Set} (t : Term V) : List (\Sigma Bool V) \elim t
+      | var v => (true,v) :: nil
+      | :ide => nil
+      | :inverse t => inverseNF (normalize t) nil
+      | t :* s => normalize t ++ normalize s
+
+    \private \func reduce {n : Nat} (l : List (\Sigma Bool (Fin n))) : List (\Sigma Bool (Fin n)) \elim l
+      | nil => nil
+      | x :: tail => \case reduce tail \with {
+        | nil => x :: nil
+        | y :: l => \case decideEq x.1 y.1, decideEq x.2 y.2 \with {
+          | yes e, _ => x :: y :: l
+          | no q, yes e => l
+          | no q, no q' => x :: y :: l
+        }
+      }
+
+    \private \func interpretNF' {V : \Set} (env : V -> G) (l : List (\Sigma Bool V)) : G \elim l
+      | nil => G.ide
+      | x :: nil => if x.1 (env x.2) (inverse (env x.2))
+      | x :: l => if x.1 (env x.2) (inverse (env x.2)) * interpretNF' env l
+      \where \protected {
+        \func simple (env : V -> G) (l : List (\Sigma Bool V)) : G \elim l
+          | nil => G.ide
+          | x :: l => if x.1 (env x.2) (inverse (env x.2)) * simple env l
+
+        \lemma =simple {l : List (\Sigma Bool V)} : interpretNF' env l = simple env l \elim l
+          | nil => idp
+          | x :: nil => inv ide-right
+          | x :: y :: l => pmap (_ *) =simple
+      }
+
+    \private \lemma interpretNF'_:: {V : \Set} {env : V -> G} {x : \Sigma Bool V} {l : List (\Sigma Bool V)}
+      : interpretNF' env (x :: l) = if x.1 (env x.2) (inverse (env x.2)) * interpretNF' env l \elim l
+      | nil => inv ide-right
+      | y :: l => idp
+
+    \private \lemma interpretNF'_reduce {n : Nat} {env : Fin n -> G} {l : List (\Sigma Bool (Fin n))} : interpretNF' env (reduce l) = interpretNF' env l
+      => interpretNF'.=simple *> simple_reduce l *> inv interpretNF'.=simple
+      \where
+        \private \lemma simple_reduce (l : List (\Sigma Bool (Fin n))) : interpretNF'.simple env (reduce l) = interpretNF'.simple env l \elim l
+          | nil => idp
+          | x :: tail => mcases {1} {arg addPath} \with {
+            | nil, p => pmap (_ *) (inv (pmap (interpretNF'.simple env) p) *> simple_reduce tail)
+            | y :: l, p => mcases (pmap (_ *) $ inv (pmap (interpretNF'.simple env) p) *> simple_reduce tail) \with {
+              | no q, yes e => rewrite (inv $ simple_reduce tail, p) $ inv (pmap (`* _) (later $ cases (x.1, y.1, q) \with {
+                | false, true, _ => rewrite e inverse-left
+                | true, false, _ => rewrite e inverse-right
+                | false, false, q => absurd (q idp)
+                | true, true, q => absurd (q idp)
+              }) *> ide-left) *> *-assoc
+            }
+          }
+
+    \private \lemma interpretNF'_++ {V : \Set} {env : V -> G} {l l' : List (\Sigma Bool V)}
+      : interpretNF' env (l ++ l') = interpretNF' env l * interpretNF' env l'
+      => interpretNF'.=simple *> _simple *> inv (pmap2 (*) interpretNF'.=simple interpretNF'.=simple)
+      \where
+        \protected \lemma _simple {l : List (\Sigma Bool V)} : interpretNF'.simple env (l ++ l') = interpretNF'.simple env l * interpretNF'.simple env l' \elim l
+          | nil => inv ide-left
+          | x :: l => pmap (_ *) _simple *> inv *-assoc
+
+    \private \lemma interpretNF'_inverseNF {V : \Set} {env : V -> G} {l acc : List (\Sigma Bool V)}
+      : interpretNF' env (inverseNF l acc) = inverse (interpretNF' env l) * interpretNF' env acc
+      => interpretNF'.=simple *> _simple *> inv (pmap2 (inverse __ * __) interpretNF'.=simple interpretNF'.=simple)
+      \where
+        \protected \lemma _simple {l acc : List (\Sigma Bool V)} : interpretNF'.simple env (inverseNF l acc) = inverse (interpretNF'.simple env l) * interpretNF'.simple env acc \elim l
+          | nil => inv $ pmap (`* _) G.inverse_ide *> ide-left
+          | (b,v) :: l => _simple *> inv *-assoc *> pmap (`* _) \case \elim b \with {
+            | false => inv $ G.inverse_* *> pmap (_ *) G.inverse-isInv
+            | true => inv G.inverse_*
+          }
+
+    \private \lemma interpretNF'-consistent {V : \Set} {env : V -> G} {t : Term V} : interpretNF' env (normalize t) = interpret env t \elim t
+      | var v => idp
+      | :ide => idp
+      | :inverse t => interpretNF'_inverseNF *> ide-right *> pmap inverse interpretNF'-consistent
+      | t :* s => interpretNF'_++ *> pmap2 (*) interpretNF'-consistent interpretNF'-consistent
+
+    \func \infixl 2 >>= {U V : \Set} (l : List (\Sigma Bool U)) (k : U -> List (\Sigma Bool V)) : List (\Sigma Bool V) \elim l
+      | nil => nil
+      | (true,u) :: l => k u ++ (l >>= k)
+      | (false,u) :: l => inverseNF (k u) nil ++ (l >>= k)
+
+    \private \func interpretNF'_>>= {m n : Nat} {env : Fin n -> G} {l : List (\Sigma Bool (Fin m))} {k : Fin m -> List (\Sigma Bool (Fin n))}
+      : interpretNF' env (l >>= k) = interpretNF' (\lam v => interpretNF' env (k v)) l
+      => interpretNF'.=simple *> _simple *> inv (interpretNF'.=simple *> pmap (interpretNF'.simple __ l) (ext \lam v => interpretNF'.=simple))
+      \where
+        \private \func _simple {l : List (\Sigma Bool (Fin m))} : interpretNF'.simple env (l >>= k) = interpretNF'.simple (\lam v => interpretNF'.simple env (k v)) l \elim l
+          | nil => idp
+          | (true,u) :: l => interpretNF'_++._simple *> pmap (_ *) _simple
+          | (false,u) :: l => interpretNF'_++._simple *> pmap2 (*) (interpretNF'_inverseNF._simple *> ide-right) _simple
+  }
+
+\func AddGroupSolverModel (A : AddGroup) : SolverModel A
+  => GroupSolverModel (AddGroup.toGroup A)

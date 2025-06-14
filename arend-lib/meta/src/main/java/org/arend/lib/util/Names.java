@@ -160,6 +160,10 @@ public class Names {
     return new ModulePath("Algebra", "Solver", "CMonoid");
   }
 
+  public static ModulePath getNewGroupSolverModule() {
+    return new ModulePath("Algebra", "Solver", "Group");
+  }
+
   public static ModulePath getNewMonoidSolverModule() {
     return new ModulePath("Algebra", "Solver", "Monoid");
   }

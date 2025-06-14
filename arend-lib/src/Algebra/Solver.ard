@@ -1,38 +1,42 @@
-\import Data.Maybe
+\import Data.Fin
+\import Logic
 \import Paths
+\import Paths.Meta
 
 \class SolverModel (M : \Set) {
   | \protected Term : \Set -> \Set
   | \protected NF : \Set -> \Set
-  | \protected nfVar {V : \Set} : V -> NF V
-  | \protected \infixl 2 >>= {U V : \Set} : NF U -> (U -> NF V) -> NF V
   | \protected normalize {V : \Set} : Term V -> NF V
   | \protected interpret {V : \Set} (env : V -> M) : Term V -> M
   | \protected interpretNF {n : Nat} (env : Fin n -> M) : NF (Fin n) -> M
-  | \protected normalize-consistent {n : Nat} {env : Fin n -> M} (t : Term (Fin n)) : interpret env t = interpretNF env (normalize t)
-  | \protected >>=-consistent {V : \Set} {n : Nat} {env : Fin n -> M} (nf : NF V) (k k' : V -> NF (Fin n))
-    : (\Pi (u : V) -> interpretNF env (k u) = interpretNF env (k' u)) -> interpretNF env (nf >>= k) = interpretNF env (nf >>= k')
+  | \protected interpretNF-consistent {n : Nat} {env : Fin n -> M} {t : Term (Fin n)} : interpretNF env (normalize t) = interpret env t
+
+  | \protected nfVar {V : \Set} : V -> NF V
+  | \protected \infixl 2 >>= {U V : \Set} : NF U -> (U -> NF V) -> NF V
+  | \protected >>=-consistent {m n : Nat} {env : Fin n -> M} {nf : NF (Fin m)} {k : Fin m -> NF (Fin n)}
+    : interpretNF env (nf >>= k) = interpretNF (\lam v => interpretNF env (k v)) nf
+
   {-
   | \protected abstractAll {n : Nat} : NF (Fin n) -> NF (Fin n) -> Maybe (NF (Maybe (Fin n)))
   | \protected abstractIndex {n : Nat} : Nat -> NF (Fin n) -> NF (Fin n) -> Maybe (NF (Maybe (Fin n)))
   -}
 
-  \lemma terms-equality (env : Array M) (t s : Term (Fin env.len)) (p : interpretNF env (normalize t) = interpretNF env (normalize s)) : interpret env t = interpret env s
-    => normalize-consistent t *> p *> inv (normalize-consistent s)
+  \protected \lemma terms-equality (env : Array M) (t s : Term (Fin env.len)) (p : interpretNF env (normalize t) = interpretNF env (normalize s)) : interpret env t = interpret env s
+    => inv interpretNF-consistent *> p *> interpretNF-consistent
 
-  \lemma terms-equality-conv (env : Array M) (t s : Term (Fin env.len)) (p : interpret env t = interpret env s) : interpretNF env (normalize t) = interpretNF env (normalize s)
-    => inv (normalize-consistent t) *> p *> normalize-consistent s
+  \protected \lemma terms-equality-conv (env : Array M) (t s : Term (Fin env.len)) (p : interpret env t = interpret env s) : interpretNF env (normalize t) = interpretNF env (normalize s)
+    => interpretNF-consistent *> p *> inv interpretNF-consistent
 
   \protected \func Axiom (env : Array M) => \Sigma (t s : NF (Fin env.len)) (interpretNF env t = interpretNF env s)
 
   \func makeAxiom (env : Array M) (t s : Term (Fin env.len)) (p : interpret env t = interpret env s) : Axiom env
-    => (normalize t, normalize s, inv (normalize-consistent t) *> p *> normalize-consistent s)
+    => (normalize t, normalize s, interpretNF-consistent *> p *> inv interpretNF-consistent)
 
-  \lemma apply-axiom (env : Array M) (t : NF (Maybe (Fin env.len))) (ax : Axiom env) : interpretNF env (t >>= maybe ax.1 nfVar) = interpretNF env (t >>= maybe ax.2 nfVar)
-    => >>=-consistent t _ _ \case \elim __ \with {
-      | nothing => ax.3
-      | just u => idp
-    }
+  \lemma apply-axiom (env : Array M) (t : NF (Fin (suc env.len))) (ax : Axiom env) : interpretNF env (t >>= fcase ax.1 nfVar) = interpretNF env (t >>= fcase ax.2 nfVar)
+    => >>=-consistent *> pmap (interpretNF __ t) (ext \case \elim __ \with {
+      | 0 => ax.3
+      | suc v => idp
+    }) *> inv >>=-consistent
 
   {-
   \protected \lemma rewriteAll (env : Array M) (t : Term (Fin env.len)) (ax : Axiom env) {s : NF (Maybe (Fin env.len))}

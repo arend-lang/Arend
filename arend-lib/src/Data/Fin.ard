@@ -18,6 +18,10 @@
   | 0 => def
   | suc x => x
 
+\func fcase {A : \Type} {n : Nat} (a : A) (f : Fin n -> A) (j : Fin (suc n)) : A \elim j
+  | 0 => a
+  | suc j => f j
+
 \lemma unfsuc {n : Nat} {x y : Fin n} (p : suc x = suc y) : x = y
   => pmap (fpred x) p
 

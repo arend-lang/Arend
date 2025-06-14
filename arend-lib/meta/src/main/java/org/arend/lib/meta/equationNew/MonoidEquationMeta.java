@@ -16,6 +16,11 @@ public class MonoidEquationMeta extends BaseMonoidEquationMeta {
   }
 
   @Override
+  protected boolean isMultiplicative() {
+    return true;
+  }
+
+  @Override
   protected CoreClassField getIde() {
     return ide;
   }
@@ -26,7 +31,7 @@ public class MonoidEquationMeta extends BaseMonoidEquationMeta {
   }
 
   @Override
-  protected CoreClassDefinition getMonoid() {
+  protected CoreClassDefinition getClassDef() {
     return Monoid;
   }
 

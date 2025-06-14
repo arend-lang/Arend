@@ -1,5 +1,5 @@
 \import Algebra.Monoid
-\import Algebra.Solver
+\import Algebra.Solver \using (interpretNF)
 \import Algebra.Solver.Monoid
 \import Arith.Fin.Order
 \import Data.List
@@ -13,17 +13,17 @@
 \func CMonoidSolverModel (M : CMonoid) : SolverModel M \cowith
   | Term => Term
   | NF => List
-  | nfVar v => v :: nil
-  | >>= => >>=
   | normalize => (MonoidSolverModel M).normalize
   | interpret => MonoidSolverModel.interpret
   | interpretNF env nf => MonoidSolverModel.interpretNF env (RedBlack.sort nf)
-  | normalize-consistent t => (MonoidSolverModel M).normalize-consistent t *> sort-consistent
-  | >>=-consistent nf k k' p => inv sort-consistent *> (MonoidSolverModel M).>>=-consistent nf k k' (\lam v => sort-consistent *> p v *> inv sort-consistent) *> sort-consistent
+  | interpretNF-consistent => sort-consistent *> (MonoidSolverModel M).interpretNF-consistent
+  | nfVar v => v :: nil
+  | >>= => >>=
+  | >>=-consistent => sort-consistent *> (MonoidSolverModel M).>>=-consistent *> pmap (interpretNF __ _) (ext \lam v => inv sort-consistent) *> inv sort-consistent
   \where {
     \lemma sort-consistent {n : Nat} {env : Fin n -> M} {l : List (Fin n)}
-      : (MonoidSolverModel M).interpretNF env l = (MonoidSolverModel M).interpretNF env (RedBlack.sort l)
-      => rewrite RedBlack.sort=insert (perm-consistent (Sort.Insertion.sort-perm l))
+      : (MonoidSolverModel M).interpretNF env (RedBlack.sort l) = (MonoidSolverModel M).interpretNF env l
+      => inv $ rewrite RedBlack.sort=insert (perm-consistent (Sort.Insertion.sort-perm l))
 
     \protected \lemma perm-consistent {n : Nat} {env : Fin n -> M} {l l' : List (Fin n)} (p : Sort.Perm l l') : MonoidSolverModel.interpretNF env l = MonoidSolverModel.interpretNF env l' \elim l, l', p
       | nil, nil, perm-nil => idp

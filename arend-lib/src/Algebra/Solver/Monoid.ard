@@ -8,8 +8,6 @@
 \func MonoidSolverModel (M : Monoid) : SolverModel M \cowith
   | Term => Term
   | NF => List
-  | nfVar v => v :: nil
-  | >>= => >>=
   | normalize t => normalize-aux t nil
   | interpret {V : \Set} (env : V -> M) (t : Term V) : M \elim t {
     | var x => env x
@@ -17,17 +15,15 @@
     | :* t s => interpret env t * interpret env s
   }
   | interpretNF => interpretNF
-  | normalize-consistent t => inv ide-right *> normalize-consistent-aux t nil
+  | interpretNF-consistent => interpretNF-consistent-aux *> ide-right
+  | nfVar v => v :: nil
+  | >>= => >>=
   | >>=-consistent => >>=-consistent
   \where {
     \data Term (V : \Set)
       | var V
       | :ide
       | \infixl 7 :* (t s : Term V)
-
-    \func \infixl 2 >>= {U V : \Set} (l : List U) (k : U -> List V) : List V \elim l
-      | nil => nil
-      | u :: l => k u ++ (l >>= k)
 
     \private \func normalize-aux {V : \Set} (t : Term V) (acc : List V) : List V \elim t
       | var v => v :: acc
@@ -39,7 +35,7 @@
       | x :: nil => env x
       | x :: l => env x * interpretNF env l
 
-    \protected \lemma interpretNF_:: {V : \Set} {env : V -> M} {x : V} (l : List V) : interpretNF env (x :: l) = env x * interpretNF env l \elim l
+    \protected \lemma interpretNF_:: {V : \Set} {env : V -> M} {x : V} {l : List V} : interpretNF env (x :: l) = env x * interpretNF env l \elim l
       | nil => inv ide-right
       | :: a l => idp
 
@@ -47,14 +43,19 @@
       | nil => inv ide-left
       | v :: l => rewrite (interpretNF_::,interpretNF_::) $ pmap (_ *) interpretNF_++ *> inv *-assoc
 
-    \private \lemma normalize-consistent-aux {V : \Set} {env : V -> M} (t : Term V) (acc : List V) : interpret env t * interpretNF env acc = interpretNF env (normalize-aux t acc) \elim t
-      | var x => inv (interpretNF_:: acc)
-      | :ide => ide-left
-      | :* t s => *-assoc *> pmap (interpret env t *) (normalize-consistent-aux s acc) *> normalize-consistent-aux t (normalize-aux s acc)
+    \private \lemma interpretNF-consistent-aux {V : \Set} {env : V -> M} {t : Term V} {acc : List V} : interpretNF env (normalize-aux t acc) = interpret env t * interpretNF env acc \elim t
+      | var x => interpretNF_::
+      | :ide => inv ide-left
+      | :* t s => interpretNF-consistent-aux *> pmap (_ *) interpretNF-consistent-aux *> inv *-assoc
 
-    \private \func >>=-consistent {U V : \Set} {env : V -> M} (l : List U) (k k' : U -> List V) (p : \Pi (u : U) -> interpretNF env (k u) = interpretNF env (k' u)) : interpretNF env (l >>= k) = interpretNF env (l >>= k') \elim l
+    \func \infixl 2 >>= {U V : \Set} (l : List U) (k : U -> List V) : List V \elim l
+      | nil => nil
+      | u :: l => k u ++ (l >>= k)
+
+    \private \lemma >>=-consistent {U V : \Set} {env : V -> M} {l : List U} {k : U -> List V}
+      : interpretNF env (l >>= k) = interpretNF (\lam u => interpretNF env (k u)) l \elim l
       | nil => idp
-      | u :: l => interpretNF_++ *> pmap2 (*) (p u) (>>=-consistent l k k' p) *> inv interpretNF_++
+      | u :: l => interpretNF_++ *> pmap (_ *) >>=-consistent *> inv interpretNF_::
   }
 
 \func AddMonoidSolverModel (A : AddMonoid) : SolverModel A

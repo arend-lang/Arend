@@ -16,6 +16,11 @@ public class AdditiveMonoidEquationMeta extends BaseMonoidEquationMeta {
   }
 
   @Override
+  protected boolean isMultiplicative() {
+    return false;
+  }
+
+  @Override
   protected CoreClassField getIde() {
     return zro;
   }
@@ -26,7 +31,7 @@ public class AdditiveMonoidEquationMeta extends BaseMonoidEquationMeta {
   }
 
   @Override
-  protected CoreClassDefinition getMonoid() {
+  protected CoreClassDefinition getClassDef() {
     return AddMonoid;
   }
 

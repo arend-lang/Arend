@@ -3,6 +3,7 @@ package org.arend.lib;
 import org.arend.ext.*;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
+import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.ext.typechecking.meta.TrivialMetaTypechecker;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -27,10 +28,7 @@ import org.arend.lib.meta.debug.RandomMeta;
 import org.arend.lib.meta.debug.SleepMeta;
 import org.arend.lib.meta.debug.TimeMeta;
 import org.arend.lib.meta.equation.EquationMeta;
-import org.arend.lib.meta.equationNew.AbelianMonoidEquationMeta;
-import org.arend.lib.meta.equationNew.AdditiveMonoidEquationMeta;
-import org.arend.lib.meta.equationNew.CommutativeMonoidEquationMeta;
-import org.arend.lib.meta.equationNew.MonoidEquationMeta;
+import org.arend.lib.meta.equationNew.*;
 import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
 import org.arend.lib.meta.exists.ExistsResolver;
@@ -97,6 +95,10 @@ public class StdExtension implements ArendExtension {
 
   private ConcreteMetaDefinition makeDef(ModulePath modulePath, String name, DependencyMetaTypechecker typechecker) {
     return makeDef(modulePath, name, null, typechecker);
+  }
+
+  private ConcreteMetaDefinition makeDef(ArendRef parent, String name, DependencyMetaTypechecker typechecker) {
+    return makeDef(factory.metaRef(parent, name, Precedence.DEFAULT, null, null, null, typechecker));
   }
 
   @Override
@@ -253,6 +255,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getSemiringModule());
     contributor.declare(algebra, Names.getSolverModule());
     contributor.declare(algebra, Names.getCommMonoidSolverModule());
+    contributor.declare(algebra, Names.getNewGroupSolverModule());
     contributor.declare(algebra, Names.getNewMonoidSolverModule());
     contributor.declare(algebra, Names.getIntModule());
     contributor.declare(algebra, Names.getNatModule());
@@ -278,12 +281,15 @@ public class StdExtension implements ArendExtension {
         In the former case, the meta will prove an equality in a type without using any additional structure on it.
         In the latter case, the meta will prove an equality using only structure available in the specified class.
         """), equation);
-    MetaRef monoidSolver = factory.metaRef(equation.getRef(), "monoid", Precedence.DEFAULT, null, null, null, new DependencyMetaTypechecker(MonoidEquationMeta.class, () -> new DeferredMetaDefinition(new MonoidEquationMeta(), true)));
-    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(monoidSolver));
-    contributor.declare(hList(text("Additive version of "), refDoc(monoidSolver)), makeDef(factory.metaRef(equation.getRef(), "addMonoid", Precedence.DEFAULT, null, null, null, new DependencyMetaTypechecker(AdditiveMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new AdditiveMonoidEquationMeta(), true)))));
-    MetaRef commMonoidSolver = factory.metaRef(equation.getRef(), "cMonoid", Precedence.DEFAULT, null, null, null, new DependencyMetaTypechecker(CommutativeMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new CommutativeMonoidEquationMeta(), true)));
-    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(commMonoidSolver));
-    contributor.declare(hList(text("Additive version of "), refDoc(commMonoidSolver)), makeDef(factory.metaRef(equation.getRef(), "abMonoid", Precedence.DEFAULT, null, null, null, new DependencyMetaTypechecker(AbelianMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new AbelianMonoidEquationMeta(), true)))));
+    ConcreteMetaDefinition monoidSolver = makeDef(equation.getRef(), "monoid", new DependencyMetaTypechecker(MonoidEquationMeta.class, () -> new DeferredMetaDefinition(new MonoidEquationMeta(), true)));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, monoidSolver);
+    contributor.declare(hList(text("Additive version of "), refDoc(monoidSolver.getRef())), makeDef(equation.getRef(), "addMonoid", new DependencyMetaTypechecker(AdditiveMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new AdditiveMonoidEquationMeta(), true))));
+    ConcreteMetaDefinition commMonoidSolver = makeDef(equation.getRef(), "cMonoid", new DependencyMetaTypechecker(CommutativeMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new CommutativeMonoidEquationMeta(), true)));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, commMonoidSolver);
+    contributor.declare(hList(text("Additive version of "), refDoc(commMonoidSolver.getRef())), makeDef(equation.getRef(), "abMonoid", new DependencyMetaTypechecker(AbelianMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new AbelianMonoidEquationMeta(), true))));
+    ConcreteMetaDefinition groupSolver = makeDef(equation.getRef(), "group", new DependencyMetaTypechecker(GroupEquationMeta.class, () -> new DeferredMetaDefinition(new GroupEquationMeta(), true)));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, groupSolver);
+    contributor.declare(hList(text("Additive version of "), refDoc(groupSolver.getRef())), makeDef(equation.getRef(), "addGroup", new DependencyMetaTypechecker(AdditiveGroupEquationMeta.class, () -> new DeferredMetaDefinition(new AdditiveGroupEquationMeta(), true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
