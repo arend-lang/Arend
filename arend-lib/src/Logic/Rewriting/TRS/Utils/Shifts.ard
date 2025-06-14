@@ -1,8 +1,9 @@
+\import Data.Fin
 \import Data.List
+\import Logic.Rewriting.TRS.Utils.FinFunctions
 \import Meta
 \import Paths
 \import Paths.Meta
-\import Data.Fin
 \import Data.SubList
 
 \func shift-index {A : \Set} {a b : List A} (sublist : SubList a b) (ind : Index a) : Fin (length b)
