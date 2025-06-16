@@ -96,7 +96,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
   }
 
   private fun addCoreWithConcrete(concrete: Concrete.Definition, typechecked: Definition, coreToConcrete: MutableMap<Expression, Concrete.AppExpression>) {
-    val subConcreteExpressions = (concrete as? Concrete.FunctionDefinition?)?.body?.clauses?.flatMap { getAllConcreteSubAppExpression(it.expression) } ?: emptyList()
+    val subConcreteExpressions = (concrete as? Concrete.FunctionDefinition?)?.body?.clauses?.flatMap { it.expression?.let { expr -> getAllConcreteSubAppExpression(expr) } ?: emptyList() } ?: emptyList()
     val subExpressions = mutableListOf<Pair<Expression, Concrete.AppExpression>>()
     for (subExpr in subConcreteExpressions) {
       val subDefVisitor = CorrespondedSubDefVisitor(subExpr)

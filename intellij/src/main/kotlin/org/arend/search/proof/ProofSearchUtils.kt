@@ -82,7 +82,7 @@ fun generateProofSearchResults(
                     ?: return@processElements true
 
                 val parameterRangesRegistry = mutableMapOf<Int, List<TextRange>>()
-                val rangeComputer = caching { e : Concrete.Expression -> (((e as? Concrete.ReferenceExpression)?.referent as? DataContainer)?.data as? ArendDefData)?.nameIdentifier?.textRange ?: rangeOfConcrete(e) }
+                val rangeComputer = caching { e : Concrete.Expression -> rangeOfConcrete(e) }
                 for ((parameterConcrete, ranges) in parameterResults) {
                     val index = parameters.indexOf(parameterConcrete)
                     val existing = parameterRangesRegistry.getOrDefault(index, emptyList())
