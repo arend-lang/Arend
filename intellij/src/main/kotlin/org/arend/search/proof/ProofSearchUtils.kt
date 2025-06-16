@@ -257,9 +257,7 @@ fun getCompleteModuleLocation(def: ReferableBase<*>): String? {
             }
         }.get()
     }
-    if (file == null) {
-        return null
-    }
+    file ?: return null
 
     val module = def.parentsOfType<ArendGroup>(false).toList().reversed().drop(1).map { it.name }
     return (listOf(file) + module).joinToString(".")
