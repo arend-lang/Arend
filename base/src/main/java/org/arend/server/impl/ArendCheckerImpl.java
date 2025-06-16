@@ -7,6 +7,7 @@ import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.module.ModuleLocation;
+import org.arend.ext.util.Pair;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
@@ -151,6 +152,7 @@ public class ArendCheckerImpl implements ArendChecker {
       Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
       ConcreteProvider concreteProvider = new SimpleConcreteProvider(defMap);
       Collection<? extends ModuleLocation> currentModules = resolveDependencies ? dependencies.keySet() : modules;
+      List<Pair<ModuleLocation,ConcreteGroup>> toResolve = new ArrayList<>();
       for (ModuleLocation module : currentModules) {
         GroupData groupData = dependencies.get(module);
         if (groupData != null) {
@@ -162,6 +164,7 @@ public class ArendCheckerImpl implements ArendChecker {
                 defMap.put(group.referable(), definition.accept(new ReplaceDataVisitor(true), null));
               }
             });
+            toResolve.add(new Pair<>(module, groupData.getRawGroup()));
           } else {
             for (DefinitionData data : definitionData) {
               defMap.put(data.definition().getData(), data.definition());
@@ -173,23 +176,21 @@ public class ArendCheckerImpl implements ArendChecker {
       CollectingResolverListener resolverListener = new CollectingResolverListener(myServer.doCacheReferences());
       Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
       Map<ModuleLocation, Map<LongName, DefinitionData>> resolverResult = new HashMap<>();
-      progressReporter.beginProcessing(currentModules.size());
-      for (ModuleLocation module : currentModules) {
+      progressReporter.beginProcessing(toResolve.size());
+      for (Pair<ModuleLocation, ConcreteGroup> pair : toResolve) {
+        ModuleLocation module = pair.proj1;
         indicator.checkCanceled();
         progressReporter.beginItem(module);
-        GroupData groupData = dependencies.get(module);
-        if (groupData != null && !groupData.isResolved()) {
-          resolverListener.moduleLocation = module;
-          ListErrorReporter listErrorReporter = new ListErrorReporter();
-          errorReporterMap.put(module, listErrorReporter);
-          Map<LongName, DefinitionData> definitionData = new LinkedHashMap<>();
-          ArendExtension extension = myServer.getExtensionProvider().getArendExtension(module.getLibraryName());
-          new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), listErrorReporter, extension == null ? null : extension.getLiteralTypechecker(), resolverListener).resolveGroup(groupData.getRawGroup(), myServer.getParentGroupScope(module, groupData.getRawGroup()), new ArendInstances(), definitionData);
-          resolverResult.put(module, definitionData);
+        resolverListener.moduleLocation = module;
+        ListErrorReporter listErrorReporter = new ListErrorReporter();
+        errorReporterMap.put(module, listErrorReporter);
+        Map<LongName, DefinitionData> definitionData = new LinkedHashMap<>();
+        ArendExtension extension = myServer.getExtensionProvider().getArendExtension(module.getLibraryName());
+        new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), listErrorReporter, extension == null ? null : extension.getLiteralTypechecker(), resolverListener).resolveGroup(pair.proj2, myServer.getParentGroupScope(module, pair.proj2), new ArendInstances(), definitionData);
+        resolverResult.put(module, definitionData);
 
-          myLogger.info(() -> "Module '" + module + "' is resolved");
-        }
-        progressReporter.endItem(module);
+        myLogger.info(() -> "Module '" + module + "' is resolved");
+        progressReporter.endItem(pair.proj1);
       }
 
       synchronized (myServer) {
