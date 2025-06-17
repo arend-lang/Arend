@@ -96,7 +96,7 @@ public class SimplifyMeta extends BaseMetaDefinition {
     }
 
     if (type == null) {
-      return Utils.typecheckWithAdditionalArguments(expression, typechecker, factory, 0, false);
+      return Utils.typecheckWithAdditionalArguments(expression, typechecker, 0, false);
     }
 
     var transportedExpr = new Simplifier(this, typechecker, refExpr, factory, typechecker.getErrorReporter()).simplifyTypeOfExpression(expression, type, isForward);

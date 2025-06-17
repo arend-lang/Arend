@@ -195,7 +195,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
   public record Hint<NF>(TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {}
 
   protected @Nullable Hint<NF> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
-    TypedExpression typed = typechecker.typecheck(hint, null);
+    TypedExpression typed = Utils.typecheckWithAdditionalArguments(hint, typechecker, 0, false);
     if (typed == null) {
       return null;
     }

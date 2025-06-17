@@ -265,7 +265,7 @@ public class RewriteEquationMeta extends BaseEquationMeta {
     boolean isInverse = !reverse;
 
     // Add inference holes to functions and type-check the path argument
-    TypedExpression path = Utils.typecheckWithAdditionalArguments(arg0, typechecker, factory, 0, false);
+    TypedExpression path = Utils.typecheckWithAdditionalArguments(arg0, typechecker, 0, false);
     if (path == null) {
       return null;
     }

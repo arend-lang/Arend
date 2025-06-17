@@ -168,8 +168,8 @@ public class Utils {
     return args;
   }
 
-  public static TypedExpression typecheckWithAdditionalArguments(ConcreteExpression expr, ExpressionTypechecker typechecker, ConcreteFactory factory, int expectedParameters, boolean addGoals) {
-    factory = factory.withData(expr);
+  public static TypedExpression typecheckWithAdditionalArguments(ConcreteExpression expr, ExpressionTypechecker typechecker, int expectedParameters, boolean addGoals) {
+    ConcreteFactory factory = typechecker.getFactory().withData(expr);
     List<ConcreteExpression> args = addArguments(expr, typechecker, factory.withData(expr), expectedParameters, addGoals);
     TypedExpression result = typechecker.typecheck(args.isEmpty() ? expr : factory.app(expr, true, args), null);
     if (result == null) {
