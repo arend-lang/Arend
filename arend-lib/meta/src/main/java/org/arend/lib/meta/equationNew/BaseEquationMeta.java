@@ -72,62 +72,83 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     return null;
   }
 
-  protected @Nullable Pair<ConcreteExpression, NF> applyHints(@NotNull List<Hint<NF>> hints, @NotNull NF left, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
-    ConcreteExpression result = null;
-    NF current = left;
+  protected record HintResult<NF>(ConcreteExpression proof, NF newNF) {}
+
+  protected @Nullable HintResult<NF> applyHint(@NotNull Hint<NF> hint, @NotNull NF current, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ConcreteFactory factory) {
+    NF newNF, abstracted;
+    ArendRef lemmaRef;
+    if (hint.leftNF.equals(current)) {
+      lemmaRef = termsEqualityConv;
+      abstracted = null;
+      newNF = hint.rightNF;
+    } else {
+      lemmaRef = getApplyAxiom();
+      if (lemmaRef == null) return null;
+      Pair<NF,NF> pair = abstractNF(hint, current);
+      if (pair == null) return null;
+      abstracted = pair.proj1;
+      newNF = pair.proj2;
+    }
+
+    ConcreteAppBuilder builder = factory.appBuilder(factory.ref(lemmaRef))
+        .app(factory.ref(solverRef.get()), false)
+        .app(factory.ref(envRef.get()))
+        .app(hint.left.generateReflectedTerm(factory, getVarTerm()))
+        .app(hint.right.generateReflectedTerm(factory, getVarTerm()))
+        .app(factory.core(hint.typed));
+    if (abstracted != null) {
+      builder.app(nfToConcrete(abstracted, factory));
+    }
+    return new HintResult<>(builder.build(), newNF);
+  }
+
+  protected @Nullable Pair<HintResult<NF>, HintResult<NF>> applyHints(@NotNull List<Hint<NF>> hints, @NotNull NF left, @NotNull NF right, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
+    ConcreteExpression proofLeft = null;
+    ConcreteExpression proofRight = null;
+    NF currentLeft = left;
+    NF currentRight = right;
+
     for (Hint<NF> hint : hints) {
-      NF abstracted;
-      ArendRef lemmaRef;
-      if (hint.leftNF.equals(current)) {
-        lemmaRef = termsEqualityConv;
-        abstracted = null;
-        current = hint.rightNF;
-      } else {
-        lemmaRef = getApplyAxiom();
-        if (lemmaRef == null) {
-          typechecker.getErrorReporter().report(new EquationTypeMismatchError<>(getNFPrettyPrinter(), current, null, hint.leftNF, hint.rightNF, values.getValues(), hint.originalExpression));
-          return null;
-        }
-
-        Pair<NF,NF> pair = abstractNF(hint, current);
-        if (pair == null) {
-          typechecker.getErrorReporter().report(new EquationFindError<>(getNFPrettyPrinter(), hint.leftNF, current, values.getValues(), hint.originalExpression));
-          return null;
-        }
-        abstracted = pair.proj1;
-        current = pair.proj2;
+      if (currentLeft.equals(currentRight)) {
+        typechecker.getErrorReporter().report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Argument is ignored", hint.originalExpression));
+        continue;
       }
 
-      ConcreteAppBuilder builder = factory.appBuilder(factory.ref(lemmaRef))
-          .app(factory.ref(solverRef.get()), false)
-          .app(factory.ref(envRef.get()))
-          .app(hint.left.generateReflectedTerm(factory, getVarTerm()))
-          .app(hint.right.generateReflectedTerm(factory, getVarTerm()))
-          .app(factory.core(hint.typed));
-      if (abstracted != null) {
-        builder.app(nfToConcrete(abstracted, factory));
+      HintResult<NF> resultLeft = applyHint(hint, currentLeft, solverRef, envRef, factory);
+      HintResult<NF> resultRight = applyHint(hint, currentRight, solverRef, envRef, factory);
+      if (resultLeft == null && resultRight == null) {
+        typechecker.getErrorReporter().report(getApplyAxiom() == null
+            ? new EquationTypeMismatchError<>(getNFPrettyPrinter(), currentLeft, currentRight, hint.leftNF, hint.rightNF, values.getValues(), hint.originalExpression)
+            : new EquationFindError<>(getNFPrettyPrinter(), currentLeft, currentRight, hint.leftNF, values.getValues(), hint.originalExpression));
+        return null;
       }
-      ConcreteExpression step = builder.build();
-      if (result == null) {
-        result = step;
-      } else {
-        result = factory.app(factory.ref(concat), true, result, step);
+
+      if (resultLeft != null) {
+        proofLeft = proofLeft == null ? resultLeft.proof : factory.app(factory.ref(concat), true, proofLeft, resultLeft.proof);
+        currentLeft = resultLeft.newNF;
+      }
+      if (resultRight != null) {
+        proofRight = proofRight == null ? resultRight.proof : factory.app(factory.ref(concat), true, proofRight, resultRight.proof);
+        currentRight = resultRight.newNF;
       }
     }
-    return new Pair<>(result, current);
+
+    return new Pair<>(new HintResult<>(proofLeft, currentLeft), new HintResult<>(proofRight, currentRight));
   }
 
   /**
    * Applies a hint to an argument in the forward mode.
    */
   protected @Nullable ConcreteExpression applyForward(@NotNull List<Hint<NF>> hints, @NotNull NF left, @NotNull NF right, @NotNull ConcreteExpression proof, @NotNull Values<CoreExpression> values, @NotNull TypedExpression instance, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
-    if (!hints.isEmpty()) {
-      var pair = applyHints(hints, left, solverRef, envRef, values, typechecker, factory);
-      if (pair == null) return null;
-      left = pair.proj2;
-      proof = factory.app(factory.ref(concat), true, factory.app(factory.ref(inv), true, pair.proj1), proof);
+    var pair = applyHints(hints, left, right, solverRef, envRef, values, typechecker, factory);
+    if (pair == null) return null;
+    if (pair.proj2.proof != null) {
+      proof = factory.app(factory.ref(concat), true, proof, pair.proj2.proof);
     }
-    return factory.typed(proof, factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, nfToConcrete(left, values, instance, factory), nfToConcrete(right, values, instance, factory)));
+    if (pair.proj1.proof != null) {
+      proof = factory.app(factory.ref(concat), true, factory.app(factory.ref(inv), true, pair.proj1.proof), proof);
+    }
+    return factory.typed(proof, factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, nfToConcrete(pair.proj1.newNF, values, instance, factory), nfToConcrete(pair.proj2.newNF, values, instance, factory)));
   }
 
   /**
@@ -135,33 +156,30 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
    */
   protected @Nullable ConcreteExpression solve(@NotNull List<Hint<NF>> hints, @Nullable ConcreteExpression proof, @NotNull NF left, @NotNull NF right, @NotNull Values<CoreExpression> values, @Nullable TypedExpression instance, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteExpression marker) {
     ConcreteFactory factory = typechecker.getFactory().withData(marker);
+    var pair = applyHints(hints, left, right, solverRef, envRef, values, typechecker, factory);
+    if (pair == null) return null;
 
-    if (!hints.isEmpty()) {
-      var pair = applyHints(hints, left, solverRef, envRef, values, typechecker, factory);
-      if (pair == null) return null;
-
-      if (pair.proj2.equals(right)) {
-        if (proof != null) {
-          typechecker.getErrorReporter().report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Argument is ignored", proof));
-        }
-        return pair.proj1;
-      } else {
-        if (proof == null) {
-          typechecker.getErrorReporter().report(new EquationTypeMismatchError<>(getNFPrettyPrinter(), left, right, left, pair.proj2, values.getValues(), marker));
-          return null;
-        } else {
-          ConcreteExpression step = checkProof(proof, pair.proj2, right, values, instance, typechecker, factory);
-          return step == null ? null : factory.app(factory.ref(concat), true, pair.proj1, step);
-        }
+    if (pair.proj1.newNF.equals(pair.proj2.newNF)) {
+      if (proof != null) {
+        typechecker.getErrorReporter().report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Argument is ignored", proof));
       }
+      return pair.proj1.proof == null && pair.proj2.proof == null ? factory.ref(typechecker.getPrelude().getIdpRef()) : pair.proj2.proof == null ? pair.proj1.proof : pair.proj1.proof == null ? pair.proj2.proof : factory.app(factory.ref(concat), true, pair.proj1.proof, factory.app(factory.ref(inv), true, pair.proj2.proof));
     }
 
     if (proof == null) {
-      typechecker.getErrorReporter().report(new EquationSolveError<>(getNFPrettyPrinter(), left, right, values.getValues(), marker));
+      typechecker.getErrorReporter().report(new EquationSolveError<>(getNFPrettyPrinter(), left, right, pair.proj1.newNF, pair.proj2.newNF, values.getValues(), marker));
       return null;
+    } else {
+      ConcreteExpression result = checkProof(proof, pair.proj1.newNF, pair.proj2.newNF, values, instance, typechecker, factory);
+      if (result == null) return null;
+      if (pair.proj2.proof != null) {
+        result = factory.app(factory.ref(concat), true, result, factory.app(factory.ref(inv), true, pair.proj2.proof));
+      }
+      if (pair.proj1.proof != null) {
+        result = factory.app(factory.ref(concat), true, pair.proj1.proof, result);
+      }
+      return result;
     }
-
-    return checkProof(proof, left, right, values, instance, typechecker, factory);
   }
 
   protected @Nullable ConcreteExpression checkProof(@NotNull ConcreteExpression proof, @NotNull NF left, @NotNull NF right, @NotNull Values<CoreExpression> values, @Nullable TypedExpression instance, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {

@@ -70,7 +70,7 @@
   => equation.monoid {p}
 
 \lemma testProof5 {M : AddMonoid} (x y : M) (p : x + y = zro) : (x + x) + (y + x) + y = x + x + y
-  => equation.addMonoid {p, pmap (x +) (inv p)}
+  => equation.addMonoid {p}
 
 \lemma testProofComm1 {M : CMonoid} (x y : M) (p : y * x = ide) : (y * x) * (y * x) = ide
   => equation.cMonoid {pmap (x * __ * y) p, p}

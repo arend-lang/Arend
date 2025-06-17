@@ -31,7 +31,7 @@ public class EquationTypeMismatchError<NF> extends BaseEquationError<NF> {
   public Doc getBodyDoc(PrettyPrinterConfig ppConfig) {
     return vList(
         hList(text("Expected type: "), nfToDoc(expectedLeft), text(" = "), nfToDoc(expectedRight)),
-        hList(text("  Actual type: "), nfToDoc(actualLeft), text(" = "), nfToDoc(actualRight)),
+        hList(text("    Hint type: "), nfToDoc(actualLeft), text(" = "), nfToDoc(actualRight)),
         getWhereDoc(Arrays.asList(expectedLeft, expectedRight, actualLeft, actualRight), ppConfig));
   }
 }
