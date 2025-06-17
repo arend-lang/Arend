@@ -3,6 +3,7 @@
 \import Algebra.Group.GroupHom
 \import Algebra.Module
 \import Arith.Fin.Order
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.Solver
 \import Algebra.Pointed
@@ -77,7 +78,7 @@
       repeat {2} (rewrite BaseData.cons),
       repeat {2} (rewrite mData.interpretNF_++),
       rewrite (alg.func-*, interpretNF_map, ldistr, rdistr),
-      pmap (`+ _) {?} -- TODO[server2]: (equation {Monoid} {usingOnly (alg-comm a.2 (mData.interpretNF a2))})
+      pmap (`+ _) $ equation.monoid {alg-comm a.2 (mData.interpretNF a2)}
     }
 
   \lemma interpretNF_map-left (a1 : C) (a2 : List V) (l : List (\Sigma (List V) C)) : interpretRingNF (map (\lam b => (a2 ++ b.1, a1 * b.2)) l) = alg a1 * mData.interpretNF a2 * interpretRingNF l
