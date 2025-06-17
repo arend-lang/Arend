@@ -4,17 +4,14 @@ import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
+import org.arend.lib.error.equation.NonCommutativeMonoidEquationMeta;
 import org.jetbrains.annotations.NotNull;
 
-public class AdditiveMonoidEquationMeta extends BaseMonoidEquationMeta {
+public class AdditiveMonoidEquationMeta extends NonCommutativeMonoidEquationMeta {
   @Dependency                           ArendRef AddMonoidSolverModel;
   @Dependency                           CoreClassDefinition AddMonoid;
   @Dependency(name = "AddPointed.zro")  CoreClassField zro;
   @Dependency(name = "AddMonoid.+")     CoreClassField add;
-
-  public AdditiveMonoidEquationMeta() {
-    super(false);
-  }
 
   @Override
   protected boolean isMultiplicative() {

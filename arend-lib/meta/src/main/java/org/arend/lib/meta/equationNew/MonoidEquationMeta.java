@@ -4,17 +4,14 @@ import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
+import org.arend.lib.error.equation.NonCommutativeMonoidEquationMeta;
 import org.jetbrains.annotations.NotNull;
 
-public class MonoidEquationMeta extends BaseMonoidEquationMeta {
+public class MonoidEquationMeta extends NonCommutativeMonoidEquationMeta {
   @Dependency ArendRef              MonoidSolverModel;
   @Dependency CoreClassDefinition   Monoid;
   @Dependency(name = "Pointed.ide") CoreClassField ide;
   @Dependency(name = "Semigroup.*") CoreClassField mul;
-
-  public MonoidEquationMeta() {
-    super(false);
-  }
 
   @Override
   protected boolean isMultiplicative() {

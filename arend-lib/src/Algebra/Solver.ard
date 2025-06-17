@@ -16,31 +16,15 @@
   | \protected >>=-consistent {m n : Nat} {env : Fin n -> M} {nf : NF (Fin m)} {k : Fin m -> NF (Fin n)}
     : interpretNF env (nf >>= k) = interpretNF (\lam v => interpretNF env (k v)) nf
 
-  {-
-  | \protected abstractAll {n : Nat} : NF (Fin n) -> NF (Fin n) -> Maybe (NF (Maybe (Fin n)))
-  | \protected abstractIndex {n : Nat} : Nat -> NF (Fin n) -> NF (Fin n) -> Maybe (NF (Maybe (Fin n)))
-  -}
-
   \protected \lemma terms-equality (env : Array M) (t s : Term (Fin env.len)) (p : interpretNF env (normalize t) = interpretNF env (normalize s)) : interpret env t = interpret env s
     => inv interpretNF-consistent *> p *> interpretNF-consistent
 
   \protected \lemma terms-equality-conv (env : Array M) (t s : Term (Fin env.len)) (p : interpret env t = interpret env s) : interpretNF env (normalize t) = interpretNF env (normalize s)
     => interpretNF-consistent *> p *> inv interpretNF-consistent
 
-  \protected \func Axiom (env : Array M) => \Sigma (t s : NF (Fin env.len)) (interpretNF env t = interpretNF env s)
-
-  \func makeAxiom (env : Array M) (t s : Term (Fin env.len)) (p : interpret env t = interpret env s) : Axiom env
-    => (normalize t, normalize s, interpretNF-consistent *> p *> inv interpretNF-consistent)
-
-  \lemma apply-axiom (env : Array M) (t : NF (Fin (suc env.len))) (ax : Axiom env) : interpretNF env (t >>= fcase ax.1 nfVar) = interpretNF env (t >>= fcase ax.2 nfVar)
-    => >>=-consistent *> pmap (interpretNF __ t) (ext \case \elim __ \with {
-      | 0 => ax.3
+  \lemma apply-axiom (env : Array M) (t s : Term (Fin env.len)) (p : interpret env t = interpret env s) (pattern : NF (Fin (suc env.len))) : interpretNF env (pattern >>= fcase (normalize t) nfVar) = interpretNF env (pattern >>= fcase (normalize s) nfVar)
+    => >>=-consistent *> pmap (interpretNF __ pattern) (ext \case \elim __ \with {
+      | 0 => terms-equality-conv env t s p
       | suc v => idp
     }) *> inv >>=-consistent
-
-  {-
-  \protected \lemma rewriteAll (env : Array M) (t : Term (Fin env.len)) (ax : Axiom env) {s : NF (Maybe (Fin env.len))}
-                               (p : abstractAll (normalize t) ax.1 = just s) : interpret env t = interpretNF env (s >>= maybe ax.2 nfVar)
-    => normalize-consistent t *> {?}
-  -}
 }

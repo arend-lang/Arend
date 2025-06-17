@@ -63,6 +63,12 @@
 \lemma testProof2 {M : AddMonoid} (x y : M) (p : x + y = zro) : (x + x) + (y + y) = zro
   => equation.addMonoid {pmap (x + __ + y) p} p
 
+\lemma testProof3 {M : Monoid} (x y : M) (p : x * y = ide) : (x * x) * (y * y) = ide
+  => equation.monoid {p,p}
+
+\lemma testProof4 {M : Monoid} (x y : M) (p : x * y = ide) : (x * x) * (y * x) * y = x
+  => equation.monoid {p}
+
 \lemma testProofComm1 {M : CMonoid} (x y : M) (p : y * x = ide) : (y * x) * (y * x) = ide
   => equation.cMonoid {pmap (x * __ * y) p, p}
 

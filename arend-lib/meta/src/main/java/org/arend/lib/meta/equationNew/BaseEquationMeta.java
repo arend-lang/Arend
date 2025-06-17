@@ -1,5 +1,6 @@
 package org.arend.lib.meta.equationNew;
 
+import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteLetClause;
 import org.arend.ext.concrete.expr.ConcreteArgument;
@@ -22,6 +23,7 @@ import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
+import org.arend.lib.error.equation.EquationFindError;
 import org.arend.lib.error.equation.EquationSolveError;
 import org.arend.lib.error.equation.EquationTypeMismatchError;
 import org.arend.lib.error.equation.NFPrettyPrinter;
@@ -58,27 +60,58 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
 
   protected abstract @NotNull ArendRef getVarTerm();
 
+  protected @Nullable ArendRef getApplyAxiom() {
+    return null;
+  }
+
+  protected @Nullable Pair<NF,NF> abstractNF(@NotNull Hint<NF> hint, @NotNull NF nf) {
+    return null;
+  }
+
+  protected ConcreteExpression nfToConcrete(NF nf, ConcreteFactory factory) {
+    return null;
+  }
+
   protected @Nullable Pair<ConcreteExpression, NF> applyHints(@NotNull List<Hint<NF>> hints, @NotNull NF left, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
     ConcreteExpression result = null;
     NF current = left;
     for (Hint<NF> hint : hints) {
+      NF abstracted;
+      ArendRef lemmaRef;
       if (hint.leftNF.equals(current)) {
-        ConcreteExpression step = factory.appBuilder(factory.ref(termsEqualityConv))
-            .app(factory.ref(solverRef.get()), false)
-            .app(factory.ref(envRef.get()))
-            .app(hint.left.generateReflectedTerm(factory, getVarTerm()))
-            .app(hint.right.generateReflectedTerm(factory, getVarTerm()))
-            .app(factory.core(hint.typed))
-            .build();
-        if (result == null) {
-          result = step;
-        } else {
-          result = factory.app(factory.ref(concat), true, result, step);
-        }
+        lemmaRef = termsEqualityConv;
+        abstracted = null;
         current = hint.rightNF;
       } else {
-        typechecker.getErrorReporter().report(new EquationTypeMismatchError<>(getNFPrettyPrinter(), current, null, hint.leftNF, hint.rightNF, values.getValues(), hint.originalExpression));
-        return null;
+        lemmaRef = getApplyAxiom();
+        if (lemmaRef == null) {
+          typechecker.getErrorReporter().report(new EquationTypeMismatchError<>(getNFPrettyPrinter(), current, null, hint.leftNF, hint.rightNF, values.getValues(), hint.originalExpression));
+          return null;
+        }
+
+        Pair<NF,NF> pair = abstractNF(hint, current);
+        if (pair == null) {
+          typechecker.getErrorReporter().report(new EquationFindError<>(getNFPrettyPrinter(), hint.leftNF, current, values.getValues(), hint.originalExpression));
+          return null;
+        }
+        abstracted = pair.proj1;
+        current = pair.proj2;
+      }
+
+      ConcreteAppBuilder builder = factory.appBuilder(factory.ref(lemmaRef))
+          .app(factory.ref(solverRef.get()), false)
+          .app(factory.ref(envRef.get()))
+          .app(hint.left.generateReflectedTerm(factory, getVarTerm()))
+          .app(hint.right.generateReflectedTerm(factory, getVarTerm()))
+          .app(factory.core(hint.typed));
+      if (abstracted != null) {
+        builder.app(nfToConcrete(abstracted, factory));
+      }
+      ConcreteExpression step = builder.build();
+      if (result == null) {
+        result = step;
+      } else {
+        result = factory.app(factory.ref(concat), true, result, step);
       }
     }
     return new Pair<>(result, current);
@@ -114,8 +147,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
         return pair.proj1;
       } else {
         if (proof == null) {
-          Hint<NF> hint = hints.getLast();
-          typechecker.getErrorReporter().report(new EquationTypeMismatchError<>(getNFPrettyPrinter(), hint.leftNF, right, hint.leftNF, hint.rightNF, values.getValues(), hint.originalExpression));
+          typechecker.getErrorReporter().report(new EquationTypeMismatchError<>(getNFPrettyPrinter(), left, right, left, pair.proj2, values.getValues(), marker));
           return null;
         } else {
           ConcreteExpression step = checkProof(proof, pair.proj2, right, values, instance, typechecker, factory);
@@ -142,23 +174,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     return proofCore == null ? null : factory.core(proofCore);
   }
 
-  protected static class Hint<NF> {
-    final TypedExpression typed;
-    final EquationTerm left;
-    final EquationTerm right;
-    final NF leftNF;
-    final NF rightNF;
-    final ConcreteExpression originalExpression;
-
-    protected Hint(TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {
-      this.typed = typed;
-      this.left = left;
-      this.right = right;
-      this.leftNF = leftNF;
-      this.rightNF = rightNF;
-      this.originalExpression = originalExpression;
-    }
-  }
+  public record Hint<NF>(TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {}
 
   protected @Nullable Hint<NF> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
     TypedExpression typed = typechecker.typecheck(hint, null);
