@@ -6,19 +6,20 @@ import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.CoreClassCallExpression;
 import org.arend.ext.core.expr.CoreExpression;
-import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
-import org.arend.lib.error.GroupEquationError;
+import org.arend.lib.error.equation.GroupNFPrettyPrinter;
+import org.arend.lib.error.equation.NFPrettyPrinter;
 import org.arend.lib.meta.equation.binop_matcher.FunctionMatcher;
 import org.arend.lib.meta.equationNew.term.EquationTerm;
 import org.arend.lib.meta.equationNew.term.OpTerm;
 import org.arend.lib.meta.equationNew.term.TermOperation;
 import org.arend.lib.meta.equationNew.term.VarTerm;
 import org.arend.lib.util.Values;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,7 +40,7 @@ public abstract class BaseGroupEquationMeta extends BaseEquationMeta<List<Pair<B
   protected abstract CoreClassField getInverse();
 
   @Override
-  protected List<TermOperation> getOperations(TypedExpression instance, CoreClassCallExpression instanceType, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteExpression marker) {
+  protected @NotNull List<TermOperation> getOperations(TypedExpression instance, CoreClassCallExpression instanceType, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteExpression marker) {
     return Arrays.asList(
         new TermOperation(ideTerm, FunctionMatcher.makeFieldMatcher(instanceType, instance, getIde(), typechecker, factory, marker, 0)),
         new TermOperation(mulTerm, FunctionMatcher.makeFieldMatcher(instanceType, instance, getMul(), typechecker, factory, marker, 2)),
@@ -66,7 +67,7 @@ public abstract class BaseGroupEquationMeta extends BaseEquationMeta<List<Pair<B
   }
 
   @Override
-  protected List<Pair<Boolean,Integer>> normalize(EquationTerm term) {
+  protected @NotNull List<Pair<Boolean,Integer>> normalize(EquationTerm term) {
     List<Pair<Boolean,Integer>> list = new ArrayList<>();
     normalize(term, list);
     if (list.isEmpty()) return list;
@@ -90,7 +91,7 @@ public abstract class BaseGroupEquationMeta extends BaseEquationMeta<List<Pair<B
   }
 
   @Override
-  protected ArendRef getVarTerm() {
+  protected @NotNull ArendRef getVarTerm() {
     return varTerm;
   }
 
@@ -105,7 +106,7 @@ public abstract class BaseGroupEquationMeta extends BaseEquationMeta<List<Pair<B
   }
 
   @Override
-  protected ConcreteExpression nfToConcrete(List<Pair<Boolean,Integer>> nf, Values<CoreExpression> values, TypedExpression instance, ConcreteFactory factory) {
+  protected @NotNull ConcreteExpression nfToConcrete(List<Pair<Boolean,Integer>> nf, Values<CoreExpression> values, TypedExpression instance, ConcreteFactory factory) {
     if (nf.isEmpty()) return factory.ref(getIde().getRef());
     ConcreteExpression result = pairToConcrete(nf.getLast(), values, instance, factory);
     for (int i = nf.size() - 2; i >= 0; i--) {
@@ -119,7 +120,7 @@ public abstract class BaseGroupEquationMeta extends BaseEquationMeta<List<Pair<B
   }
 
   @Override
-  protected TypecheckingError getError(List<Pair<Boolean,Integer>> nf1, List<Pair<Boolean,Integer>> nf2, List<CoreExpression> values, ConcreteExpression marker) {
-    return new GroupEquationError(isMultiplicative(), nf1, nf2, values, marker);
+  protected @NotNull NFPrettyPrinter<List<Pair<Boolean, Integer>>> getNFPrettyPrinter() {
+    return new GroupNFPrettyPrinter(isMultiplicative());
   }
 }

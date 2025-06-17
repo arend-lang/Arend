@@ -1,4 +1,4 @@
-package org.arend.lib.error;
+package org.arend.lib.error.equation;
 
 import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.core.expr.CoreExpression;
@@ -6,6 +6,7 @@ import org.arend.ext.core.expr.CoreReferenceExpression;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.Doc;
+import org.arend.ext.prettyprinting.doc.LineDoc;
 import org.arend.ext.util.Pair;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,14 +18,16 @@ import static org.arend.ext.prettyprinting.doc.DocFactory.nullDoc;
 import static org.arend.ext.prettyprinting.doc.DocFactory.text;
 import static org.arend.ext.prettyprinting.doc.DocFactory.vList;
 
-public abstract class EquationError extends TypecheckingError {
+public abstract class BaseEquationError<NF> extends TypecheckingError {
   private static final String BASE_NAME = "v";
-  protected final List<Pair<String,CoreExpression>> names;
+  private final NFPrettyPrinter<NF> prettyPrinter;
+  private final List<Pair<String, CoreExpression>> names;
   private final boolean hasExpressions;
 
-  public EquationError(List<CoreExpression> values, @Nullable ConcreteSourceNode cause) {
-    super("Cannot solve equation", cause);
+  public BaseEquationError(String message, NFPrettyPrinter<NF> prettyPrinter, List<CoreExpression> values, @Nullable ConcreteSourceNode cause) {
+    super(message, cause);
     names = new ArrayList<>(values.size());
+    this.prettyPrinter = prettyPrinter;
 
     Map<String, Integer> count = new HashMap<>();
     for (CoreExpression value : values) {
@@ -46,17 +49,24 @@ public abstract class EquationError extends TypecheckingError {
     this.hasExpressions = hasExpressions;
   }
 
-  protected abstract Set<Integer> getUsedIndices();
+  protected LineDoc nfToDoc(NF nf) {
+    return nf == null ? text("_") : prettyPrinter.nfToDoc(nf, names);
+  }
 
-  protected Doc getWhereDoc(PrettyPrinterConfig ppConfig) {
+  protected Doc getWhereDoc(List<NF> nfList, PrettyPrinterConfig ppConfig) {
     List<Doc> whereDocs = new ArrayList<>();
-    Set<Integer> usedIndices = getUsedIndices();
+    Set<Integer> usedIndices = new HashSet<>();
+    for (NF nf : nfList) {
+      if (nf != null) prettyPrinter.getUsedIndices(nf, usedIndices);
+    }
+
     for (int i = 0; i < names.size(); i++) {
       Pair<String, CoreExpression> pair = names.get(i);
       if (pair.proj2 != null && usedIndices.contains(i)) {
         whereDocs.add(hang(text(pair.proj1 + " ="), termDoc(pair.proj2, ppConfig)));
       }
     }
+
     return whereDocs.isEmpty() ? nullDoc() : hang(text("where"), vList(whereDocs));
   }
 

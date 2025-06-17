@@ -3521,7 +3521,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     } else {
       Expression typeExpr = type.getExpr();
       TypecheckingResult result = checkExpr(expr.expression, typeExpr);
-      if (result != null && typeExpr instanceof DataCallExpression && (((DataCallExpression) typeExpr).getDefinition() == Prelude.NAT || ((DataCallExpression) typeExpr).getDefinition() == Prelude.FIN)) {
+      if (result != null) {
         result.type = typeExpr;
       }
       return checkResult(expectedType, result, expr);

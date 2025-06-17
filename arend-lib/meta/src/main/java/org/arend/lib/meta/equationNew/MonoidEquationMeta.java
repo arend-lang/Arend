@@ -4,6 +4,7 @@ import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
+import org.jetbrains.annotations.NotNull;
 
 public class MonoidEquationMeta extends BaseMonoidEquationMeta {
   @Dependency ArendRef              MonoidSolverModel;
@@ -31,12 +32,12 @@ public class MonoidEquationMeta extends BaseMonoidEquationMeta {
   }
 
   @Override
-  protected CoreClassDefinition getClassDef() {
+  protected @NotNull CoreClassDefinition getClassDef() {
     return Monoid;
   }
 
   @Override
-  protected ArendRef getSolverModel() {
+  protected @NotNull ArendRef getSolverModel() {
     return MonoidSolverModel;
   }
 }

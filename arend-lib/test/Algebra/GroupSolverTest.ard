@@ -3,6 +3,7 @@
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Meta
+\import Paths
 
 \lemma testSimp {M : Group} (x y z w : M)
   : (x * (z * inverse y)) * ((ide * y) * (ide * inverse z)) * w = x * ((ide * (y * ide)) * inverse y) * w
@@ -27,3 +28,10 @@
 \lemma testForwardAdd {M : AddGroup} (x y z : M) (p : (x + (z + negative y)) + ((zro + y) + (zro + negative z)) + x = x + ((zro + (y + zro)) + negative y) + negative x)
   : x + x = zro
   => equation.addGroup in p
+
+
+\lemma testProof1 {M : Group} (x y : M) (p : x * y * inverse x = ide) : y = ide
+  => equation.group {pmap (inverse x * __ * x) p}
+
+\lemma testProof2 {M : AddGroup} (x y : M) (p : y = zro) : x + y - x = zro
+  => equation.addGroup {pmap (x + __ - x) p}

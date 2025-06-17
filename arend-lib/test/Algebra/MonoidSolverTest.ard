@@ -57,23 +57,24 @@
   => equation.abMonoid in p
 
 
-\lemma test2 {M : Monoid} (x y : M) (p : ide = x * y)
-  : (x * x) * (y * y) = ide
-  => equation
+\lemma testProof1 {M : Monoid} (x y : M) (p : x * y = ide) : (x * x) * (y * y) = ide
+  => equation.monoid {pmap (x * __ * y) p, p}
 
-\lemma test2a {M : Monoid} (x y : M) (p : ide = x * y)
-  : (x * x) * (y * y) = ide
-  => equation {usingOnly (inv p)}
+\lemma testProof2 {M : AddMonoid} (x y : M) (p : x + y = zro) : (x + x) + (y + y) = zro
+  => equation.addMonoid {pmap (x + __ + y) p} p
 
-\lemma test2b {M : Monoid} (x y : M) (p : ide = x * y)
-  => fails {(x * x) * (y * y) = ide} equation {usingOnly p}
+\lemma testProofComm1 {M : CMonoid} (x y : M) (p : y * x = ide) : (y * x) * (y * x) = ide
+  => equation.cMonoid {pmap (x * __ * y) p, p}
 
-\lemma test2c {M : Monoid} (x y : M) (p : ide = x * y)
-  => fails {(x * x) * (y * y) = ide} equation {usingOnly ()}
+\lemma testProofComm2 {M : AbMonoid} (x y : M) (p : y + x = zro) : (y + x) + (y + x) = zro
+  => equation.abMonoid {pmap (x + __ + y) p} p
 
-\lemma test2d {M : Monoid} (x y : M) (p : ide = x * y)
-  : (x * x) * (y * y) = ide
-  => equation {using ()}
+\lemma testProofArg1 {M : Monoid} (x y z : M) (p : x * y = ide) (q : (x * x) * (y * y) = z) : x * y = z
+  => equation.monoid {pmap (x * __ * y) p} in q
+
+\lemma testProofArg2 {M : AddMonoid} (x y z : M) (p : x + y = zro) (q : (x + x) + (y + y) = z) : zro = z
+  => equation.addMonoid {pmap (x + __ + y) p, p} in q
+
 
 \lemma test3 {M : Monoid} (x y z : M) (p : x * z = z * x) (q : y * z = z * y)
   : (y * x) * (y * z) = (y * z) * (x * y)

@@ -4,6 +4,7 @@ import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
+import org.jetbrains.annotations.NotNull;
 
 public class AdditiveGroupEquationMeta extends BaseGroupEquationMeta {
   @Dependency                             CoreClassDefinition AddGroup;
@@ -13,12 +14,12 @@ public class AdditiveGroupEquationMeta extends BaseGroupEquationMeta {
   @Dependency                             ArendRef AddGroupSolverModel;
 
   @Override
-  protected CoreClassDefinition getClassDef() {
+  protected @NotNull CoreClassDefinition getClassDef() {
     return AddGroup;
   }
 
   @Override
-  protected ArendRef getSolverModel() {
+  protected @NotNull ArendRef getSolverModel() {
     return AddGroupSolverModel;
   }
 
