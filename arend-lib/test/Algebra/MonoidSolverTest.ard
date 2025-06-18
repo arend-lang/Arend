@@ -72,8 +72,14 @@
 \lemma testProof5 {M : AddMonoid} (x y : M) (p : x + y = zro) : (x + x) + (y + x) + y = x + x + y
   => equation.addMonoid {p}
 
-\lemma testProof6 {M : Monoid} (x : M) (p : \Pi (y : M) -> x * y = ide) : x * x = ide
+\lemma testProofFunction {M : Monoid} (x : M) (p : \Pi (y : M) -> x * y = ide) : x * x = ide
   => equation.monoid {p}
+
+\lemma testProofPos1 {M : Monoid} (x y z w : M) (p : x * y = ide) (q : x * y = w) : x * y * z * x * y = w * z
+  => equation.monoid {2 p, q}
+
+\lemma testProofPos2 {M : AddMonoid} (x y z w : M) (p : x + y = zro) (q : x + y = w) : x + y + z + x + y = w + z
+  => equation.addMonoid {1 q, p}
 
 \lemma testProofComm1 {M : CMonoid} (x y : M) (p : y * x = ide) : (y * x) * (y * x) = ide
   => equation.cMonoid {pmap (x * __ * y) p, p}

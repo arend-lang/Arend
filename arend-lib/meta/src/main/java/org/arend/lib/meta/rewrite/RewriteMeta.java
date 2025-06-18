@@ -39,8 +39,8 @@ public class RewriteMeta extends BaseMetaDefinition {
   }
 
   private void getNumber(ConcreteExpression expression, List<Integer> result, ErrorReporter errorReporter) {
-    int n = Utils.getNumber(expression, errorReporter);
-    if (n >= 0) {
+    Integer n = Utils.getNumber(expression, errorReporter, true);
+    if (n != null) {
       result.add(n);
     }
   }

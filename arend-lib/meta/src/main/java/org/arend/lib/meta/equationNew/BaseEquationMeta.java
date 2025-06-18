@@ -3,8 +3,7 @@ package org.arend.lib.meta.equationNew;
 import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteLetClause;
-import org.arend.ext.concrete.expr.ConcreteArgument;
-import org.arend.ext.concrete.expr.ConcreteExpression;
+import org.arend.ext.concrete.expr.*;
 import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.CoreClassCallExpression;
@@ -35,9 +34,7 @@ import org.arend.lib.util.Values;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
   @Dependency                                           ArendRef inv;
@@ -64,7 +61,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     return null;
   }
 
-  protected @Nullable Pair<NF,NF> abstractNF(@NotNull Hint<NF> hint, @NotNull NF nf) {
+  protected @Nullable Pair<NF,NF> abstractNF(@NotNull Hint<NF> hint, @NotNull NF nf, int[] position) {
     return null;
   }
 
@@ -74,7 +71,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
 
   protected record HintResult<NF>(ConcreteExpression proof, NF newNF) {}
 
-  protected @Nullable HintResult<NF> applyHint(@NotNull Hint<NF> hint, @NotNull NF current, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ConcreteFactory factory) {
+  protected @Nullable HintResult<NF> applyHint(@NotNull Hint<NF> hint, @NotNull NF current, int[] position, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ConcreteFactory factory) {
     NF newNF, abstracted;
     ArendRef lemmaRef;
     if (hint.leftNF.equals(current)) {
@@ -84,7 +81,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     } else {
       lemmaRef = getApplyAxiom();
       if (lemmaRef == null) return null;
-      Pair<NF,NF> pair = abstractNF(hint, current);
+      Pair<NF,NF> pair = abstractNF(hint, current, position);
       if (pair == null) return null;
       abstracted = pair.proj1;
       newNF = pair.proj2;
@@ -114,13 +111,23 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
         continue;
       }
 
-      HintResult<NF> resultLeft = applyHint(hint, currentLeft, solverRef, envRef, factory);
-      HintResult<NF> resultRight = applyHint(hint, currentRight, solverRef, envRef, factory);
+      int[] position = new int[] { 0 };
+      HintResult<NF> resultLeft = applyHint(hint, currentLeft, position, solverRef, envRef, factory);
+      HintResult<NF> resultRight = applyHint(hint, currentRight, position, solverRef, envRef, factory);
       if (resultLeft == null && resultRight == null) {
         typechecker.getErrorReporter().report(getApplyAxiom() == null
             ? new EquationTypeMismatchError<>(getNFPrettyPrinter(), currentLeft, currentRight, hint.leftNF, hint.rightNF, values.getValues(), hint.originalExpression)
             : new EquationFindError<>(getNFPrettyPrinter(), currentLeft, currentRight, hint.leftNF, values.getValues(), hint.originalExpression));
         return null;
+      }
+
+      if (hint.positions != null) {
+        for (Integer allowedPos : hint.positions) {
+          if (allowedPos > position[0]) {
+            typechecker.getErrorReporter().report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Positions >" + position[0] + " are ignored", hint.originalExpression instanceof ConcreteAppExpression appExpr ? appExpr.getFunction() : hint.originalExpression));
+            break;
+          }
+        }
       }
 
       if (resultLeft != null) {
@@ -192,9 +199,39 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     return proofCore == null ? null : factory.core(proofCore);
   }
 
-  public record Hint<NF>(TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {}
+  public record Hint<NF>(@Nullable Set<Integer> positions, TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {}
+
+  protected @Nullable Set<Integer> getPositions(ConcreteExpression expression) {
+    if (expression instanceof ConcreteNumberExpression) {
+      Integer position = Utils.getNumber(expression, null, true);
+      return position == null ? null : Collections.singleton(position);
+    } else if (expression instanceof ConcreteTupleExpression tupleExpr && !tupleExpr.getFields().isEmpty()) {
+      Set<Integer> result = new HashSet<>();
+      for (ConcreteExpression field : tupleExpr.getFields()) {
+        Integer position = Utils.getNumber(field, null, true);
+        if (position == null) return null;
+        result.add(position);
+      }
+      return result;
+    } else {
+      return null;
+    }
+  }
 
   protected @Nullable Hint<NF> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
+    Set<Integer> positions;
+    if (getApplyAxiom() != null && hint instanceof ConcreteAppExpression appExpr && appExpr.getArguments().getFirst().isExplicit()) {
+      positions = getPositions(appExpr.getFunction());
+      if (positions != null) {
+        hint = appExpr.getArguments().getFirst().getExpression();
+        if (appExpr.getArguments().size() > 1) {
+          hint = typechecker.getFactory().withData(hint).app(hint, appExpr.getArguments().subList(1, appExpr.getArguments().size()));
+        }
+      }
+    } else {
+      positions = null;
+    }
+
     TypedExpression typed = Utils.typecheckWithAdditionalArguments(hint, typechecker, 0, false);
     if (typed == null) {
       return null;
@@ -207,7 +244,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
 
     EquationTerm left = EquationTerm.match(equality.getDefCallArguments().get(1), operations, values);
     EquationTerm right = EquationTerm.match(equality.getDefCallArguments().get(2), operations, values);
-    return new Hint<>(typed, left, right, normalize(left), normalize(right), hint);
+    return new Hint<>(positions, typed, left, right, normalize(left), normalize(right), hint);
   }
 
   protected @Nullable List<Hint<NF>> parseHints(@Nullable ConcreteExpression hints, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {

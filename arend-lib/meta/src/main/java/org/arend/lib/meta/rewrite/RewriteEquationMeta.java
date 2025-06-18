@@ -42,8 +42,8 @@ public class RewriteEquationMeta extends BaseEquationMeta {
   }
 
   private static void getNumber(ConcreteExpression expression, List<Integer> result, ErrorReporter errorReporter) {
-    int n = Utils.getNumber(expression, errorReporter);
-    if (n >= 1) {
+    Integer n = Utils.getNumber(expression, errorReporter, true);
+    if (n != null && n >= 1) {
       result.add(n - 1);
     }
   }

@@ -27,7 +27,7 @@ public abstract class NonCommutativeMonoidEquationMeta extends BaseMonoidEquatio
   }
 
   @Override
-  protected @Nullable Pair<List<Integer>, List<Integer>> abstractNF(@NotNull Hint<List<Integer>> hint, @NotNull List<Integer> nf) {
+  protected @Nullable Pair<List<Integer>, List<Integer>> abstractNF(@NotNull Hint<List<Integer>> hint, @NotNull List<Integer> nf, int[] position) {
     if (hint.leftNF().isEmpty()) return null;
 
     boolean found = false;
@@ -35,7 +35,7 @@ public abstract class NonCommutativeMonoidEquationMeta extends BaseMonoidEquatio
     List<Integer> right = new ArrayList<>();
     for (int i = 0; i < nf.size();) {
       int n = i + hint.leftNF().size();
-      if (n <= nf.size() && nf.subList(i, n).equals(hint.leftNF())) {
+      if (n <= nf.size() && nf.subList(i, n).equals(hint.leftNF()) && (hint.positions() == null || hint.positions().contains(++position[0]))) {
         abstracted.add(0);
         right.addAll(hint.rightNF());
         i = n;

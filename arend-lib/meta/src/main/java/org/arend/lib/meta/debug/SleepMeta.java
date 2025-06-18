@@ -30,8 +30,8 @@ public class SleepMeta extends BaseMetaDefinition {
   @Override
   public @Nullable TypedExpression invokeMeta(@NotNull ExpressionTypechecker typechecker, @NotNull ContextData contextData) {
     List<? extends ConcreteArgument> args = contextData.getArguments();
-    int millis = Utils.getNumber(args.getFirst().getExpression(), typechecker.getErrorReporter());
-    if (millis < 0) return null;
+    Integer millis = Utils.getNumber(args.getFirst().getExpression(), typechecker.getErrorReporter(), true);
+    if (millis == null) return null;
 
     try {
       Thread.sleep(millis);

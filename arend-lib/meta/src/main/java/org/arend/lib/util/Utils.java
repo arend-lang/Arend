@@ -27,14 +27,29 @@ import java.util.*;
 import java.util.function.Function;
 
 public class Utils {
-  public static int getNumber(ConcreteExpression expression, ErrorReporter errorReporter) {
-    if (expression instanceof ConcreteNumberExpression) {
-      return ((ConcreteNumberExpression) expression).getNumber().intValue();
-    } else {
-      if (errorReporter != null) {
-        errorReporter.report(new TypecheckingError("Expected a number", expression));
+  public static Integer getNumber(ConcreteExpression expression, ErrorReporter errorReporter, boolean nonNegative) {
+    try {
+      if (!(expression instanceof ConcreteNumberExpression)) {
+        if (errorReporter != null) {
+          errorReporter.report(new TypecheckingError("Expected a number", expression));
+        }
+        return null;
       }
-      return -1;
+
+      int value = ((ConcreteNumberExpression) expression).getNumber().intValueExact();
+      if (nonNegative && value < 0) {
+        if (errorReporter != null) {
+          errorReporter.report(new TypecheckingError("Expected a non-negative number", expression));
+        }
+        return null;
+      }
+
+      return value;
+    } catch (ArithmeticException ignored) {
+      if (errorReporter != null) {
+        errorReporter.report(new TypecheckingError("Expected a small number", expression));
+      }
+      return null;
     }
   }
 
