@@ -10,9 +10,9 @@
 \open MonoidSolverModel
 \open Sort
 
-\func CMonoidSolverModel (M : CMonoid) : SolverModel M \cowith
+\func CMonoidSolverModel (M : CMonoid) : SubstSolverModel M \cowith
   | Term => Term
-  | NF => List
+  | NF n => List (Fin n)
   | normalize => (MonoidSolverModel M).normalize
   | interpret => MonoidSolverModel.interpret
   | interpretNF env nf => MonoidSolverModel.interpretNF env (RedBlack.sort nf)
@@ -32,5 +32,5 @@
       | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
   }
 
-\func AbMonoidSolverModel (A : AbMonoid) : SolverModel A
+\func AbMonoidSolverModel (A : AbMonoid) : SubstSolverModel A
   => CMonoidSolverModel (AbMonoid.toCMonoid A)

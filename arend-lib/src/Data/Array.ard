@@ -792,3 +792,9 @@
   | suc n, nil, j => absurd (p NatOrder.zero<suc)
   | suc n, a :: l, 0 => idp
   | suc n, a :: l, suc j => take-index
+
+\func single {A : \Type} {n : Nat} (j : Fin n) (value def : A) : Array A n \cowith
+  | at i => \case decideEq j i \with {
+    | yes _ => value
+    | no _ => def
+  }

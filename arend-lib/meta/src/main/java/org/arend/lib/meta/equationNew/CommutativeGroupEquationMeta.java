@@ -6,21 +6,16 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.jetbrains.annotations.NotNull;
 
-public class GroupEquationMeta extends BaseNonCommutativeGroupEquationMeta {
-  @Dependency                         CoreClassDefinition Group;
+public class CommutativeGroupEquationMeta extends BaseCommutativeGroupEquationMeta {
+  @Dependency                         CoreClassDefinition CGroup;
   @Dependency(name = "Pointed.ide")   CoreClassField ide;
   @Dependency(name = "Semigroup.*")   CoreClassField mul;
   @Dependency(name = "Group.inverse") CoreClassField inverse;
-  @Dependency                         ArendRef GroupSolverModel;
+  @Dependency                         ArendRef CGroupSolverModel;
 
   @Override
   protected @NotNull CoreClassDefinition getClassDef() {
-    return Group;
-  }
-
-  @Override
-  protected @NotNull ArendRef getSolverModel() {
-    return GroupSolverModel;
+    return CGroup;
   }
 
   @Override
@@ -41,5 +36,10 @@ public class GroupEquationMeta extends BaseNonCommutativeGroupEquationMeta {
   @Override
   protected CoreClassField getInverse() {
     return inverse;
+  }
+
+  @Override
+  protected @NotNull ArendRef getSolverModel() {
+    return CGroupSolverModel;
   }
 }

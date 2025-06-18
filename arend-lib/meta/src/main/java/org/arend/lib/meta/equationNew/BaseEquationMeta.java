@@ -43,6 +43,8 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
   @Dependency(name = "SolverModel.terms-equality")      ArendRef termsEquality;
   @Dependency(name = "SolverModel.terms-equality-conv") ArendRef termsEqualityConv;
 
+  protected abstract boolean isMultiplicative();
+
   protected abstract @NotNull CoreClassDefinition getClassDef();
 
   protected abstract @NotNull List<TermOperation> getOperations(TypedExpression instance, CoreClassCallExpression instanceType, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteExpression marker);

@@ -12,11 +12,11 @@
 \import Paths.Meta
 \import Set
 
-\func GroupSolverModel (G : Group) : SolverModel G \cowith
+\func GroupSolverModel (G : Group) : SubstSolverModel G \cowith
   | Term => Term
-  | NF V => List (\Sigma Bool V)
+  | NF n => List (\Sigma Bool (Fin n))
   | normalize => normalize
-  | interpret {V : \Set} (env : V -> G) (t : Term V) : G \elim t {
+  | interpret {n : Nat} (env : Fin n -> G) (t : Term n) : G \elim t {
     | var x => env x
     | :ide => G.ide
     | :inverse t => inverse (interpret env t)
@@ -28,17 +28,17 @@
   | >>= => >>=
   | >>=-consistent => interpretNF'_reduce *> interpretNF'_>>= *> pmap (interpretNF' __ _) (ext \lam v => inv interpretNF'_reduce) *> inv interpretNF'_reduce
   \where {
-    \data Term (V : \Set)
-      | var V
+    \data Term (n : Nat)
+      | var (Fin n)
       | :ide
-      | :inverse (Term V)
-      | \infixl 7 :* (t s : Term V)
+      | :inverse (Term n)
+      | \infixl 7 :* (t s : Term n)
 
     \private \func inverseNF {V : \Set} (l acc : List (\Sigma Bool V)) : List (\Sigma Bool V) \elim l
       | nil => acc
       | x :: l => inverseNF l ((not x.1, x.2) :: acc)
 
-    \private \func normalize {V : \Set} (t : Term V) : List (\Sigma Bool V) \elim t
+    \private \func normalize {n : Nat} (t : Term n) : List (\Sigma Bool (Fin n)) \elim t
       | var v => (true,v) :: nil
       | :ide => nil
       | :inverse t => inverseNF (normalize t) nil
@@ -111,7 +111,7 @@
             | true => inv G.inverse_*
           }
 
-    \private \lemma interpretNF'-consistent {V : \Set} {env : V -> G} {t : Term V} : interpretNF' env (normalize t) = interpret env t \elim t
+    \private \lemma interpretNF'-consistent {n : Nat} {env : Fin n -> G} {t : Term n} : interpretNF' env (normalize t) = interpret env t \elim t
       | var v => idp
       | :ide => idp
       | :inverse t => interpretNF'_inverseNF *> ide-right *> pmap inverse interpretNF'-consistent
@@ -132,5 +132,5 @@
           | (false,u) :: l => interpretNF'_++._simple *> pmap2 (*) (interpretNF'_inverseNF._simple *> ide-right) _simple
   }
 
-\func AddGroupSolverModel (A : AddGroup) : SolverModel A
+\func AddGroupSolverModel (A : AddGroup) : SubstSolverModel A
   => GroupSolverModel (AddGroup.toGroup A)

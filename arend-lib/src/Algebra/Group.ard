@@ -2,6 +2,7 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
+\import Arith.Int()
 \import Data.Array
 \import Data.Or
 \import Equiv
@@ -43,8 +44,31 @@
       y * ide             ==< ide-right >==
       y                   `qed
 
-  \lemma inverse-isInv {x : E} : inverse (inverse x) = x =>
-     AddGroup.negative-isInv {AddGroup.fromGroup \this}
+  \func ipow (a : E) (x : Int) : E \elim x
+    | pos n => pow a n
+    | neg n => pow (inverse a) n
+
+  \lemma ipow_+ {a : E} {x y : Int} : ipow a (x + y) = ipow a x * ipow a y \elim x, y
+    | pos n, pos m => pow_+
+    | pos n, neg m => ipow_-
+    | neg n, pos m => ipow_- *> pow-comm2 (inverse-right *> inv inverse-left)
+    | neg n, neg m => pow_+
+    \where {
+      \open Arith.Int.IntRing(+,+-comm)
+
+      \lemma ipow_- {a : E} {n m : Nat} : ipow a (n Nat.- m) = pow a n * pow (inverse a) m \elim n, m
+        | 0, m => inv ide-left
+        | suc n, 0 => inv ide-right
+        | suc n, suc m => equation.monoid {ipow_-, inv (pow-left {_} {inverse a}), inverse-right {_} {a}}
+    }
+
+  \lemma ipow_negaitve {a : E} {x : Int} : ipow a (negative x) = inverse (ipow a x) \elim x
+    | pos n => inv inverse_pow
+    | neg n => inv inverse-isInv *> pmap inverse inverse_pow
+    \where \open Arith.Int.IntRing(negative)
+
+  \lemma inverse-isInv {x : E} : inverse (inverse x) = x
+    => AddGroup.negative-isInv {AddGroup.fromGroup \this}
 
   \lemma inverse_ide : inverse ide = ide
     => inv ide-right *> inverse-left
@@ -252,8 +276,12 @@
 
 \func \infixl 6 - {G : AddGroup} (x y : G) => x + negative y
 
-\class CGroup \extends Group, CancelCMonoid
+\class CGroup \extends Group, CancelCMonoid {
   | inverse-right => *-comm *> inverse-left
+
+  \lemma BigProd_inverse {l : Array E} : inverse (BigProd l) = BigProd (map inverse l)
+    => AbGroup.BigSum_negative {AbGroup.fromCGroup \this}
+}
 
 \class AbGroup \extends AddGroup, AbMonoid {
   | negative-right => +-comm *> negative-left

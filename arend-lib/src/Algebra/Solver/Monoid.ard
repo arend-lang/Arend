@@ -5,11 +5,11 @@
 \import Paths
 \import Paths.Meta
 
-\func MonoidSolverModel (M : Monoid) : SolverModel M \cowith
+\func MonoidSolverModel (M : Monoid) : SubstSolverModel M \cowith
   | Term => Term
-  | NF => List
+  | NF n => List (Fin n)
   | normalize t => normalize-aux t nil
-  | interpret {V : \Set} (env : V -> M) (t : Term V) : M \elim t {
+  | interpret {n : Nat} (env : Fin n -> M) (t : Term n) : M \elim t {
     | var x => env x
     | :ide => M.ide
     | :* t s => interpret env t * interpret env s
@@ -20,12 +20,12 @@
   | >>= => >>=
   | >>=-consistent => >>=-consistent
   \where {
-    \data Term (V : \Set)
-      | var V
+    \data Term (n : Nat)
+      | var (Fin n)
       | :ide
-      | \infixl 7 :* (t s : Term V)
+      | \infixl 7 :* (t s : Term n)
 
-    \private \func normalize-aux {V : \Set} (t : Term V) (acc : List V) : List V \elim t
+    \private \func normalize-aux {n : Nat} (t : Term n) (acc : List (Fin n)) : List (Fin n) \elim t
       | var v => v :: acc
       | :ide => acc
       | :* t s => normalize-aux t (normalize-aux s acc)
@@ -43,7 +43,7 @@
       | nil => inv ide-left
       | v :: l => rewrite (interpretNF_::,interpretNF_::) $ pmap (_ *) interpretNF_++ *> inv *-assoc
 
-    \private \lemma interpretNF-consistent-aux {V : \Set} {env : V -> M} {t : Term V} {acc : List V} : interpretNF env (normalize-aux t acc) = interpret env t * interpretNF env acc \elim t
+    \private \lemma interpretNF-consistent-aux {n : Nat} {env : Fin n -> M} {t : Term n} {acc : List (Fin n)} : interpretNF env (normalize-aux t acc) = interpret env t * interpretNF env acc \elim t
       | var x => interpretNF_::
       | :ide => inv ide-left
       | :* t s => interpretNF-consistent-aux *> pmap (_ *) interpretNF-consistent-aux *> inv *-assoc
@@ -58,5 +58,5 @@
       | u :: l => interpretNF_++ *> pmap (_ *) >>=-consistent *> inv interpretNF_::
   }
 
-\func AddMonoidSolverModel (A : AddMonoid) : SolverModel A
+\func AddMonoidSolverModel (A : AddMonoid) : SubstSolverModel A
   => MonoidSolverModel (AddMonoid.toMonoid A)

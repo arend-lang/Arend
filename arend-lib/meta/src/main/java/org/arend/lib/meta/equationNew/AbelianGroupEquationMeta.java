@@ -6,40 +6,40 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.jetbrains.annotations.NotNull;
 
-public class GroupEquationMeta extends BaseNonCommutativeGroupEquationMeta {
-  @Dependency                         CoreClassDefinition Group;
-  @Dependency(name = "Pointed.ide")   CoreClassField ide;
-  @Dependency(name = "Semigroup.*")   CoreClassField mul;
-  @Dependency(name = "Group.inverse") CoreClassField inverse;
-  @Dependency                         ArendRef GroupSolverModel;
+public class AbelianGroupEquationMeta extends BaseCommutativeGroupEquationMeta {
+  @Dependency                             CoreClassDefinition AbGroup;
+  @Dependency(name = "AddPointed.zro")    CoreClassField zro;
+  @Dependency(name = "AddMonoid.+")       CoreClassField add;
+  @Dependency(name = "AddGroup.negative") CoreClassField negative;
+  @Dependency                             ArendRef AbGroupSolverModel;
 
   @Override
   protected @NotNull CoreClassDefinition getClassDef() {
-    return Group;
+    return AbGroup;
   }
 
   @Override
   protected @NotNull ArendRef getSolverModel() {
-    return GroupSolverModel;
+    return AbGroupSolverModel;
   }
 
   @Override
   protected boolean isMultiplicative() {
-    return true;
+    return false;
   }
 
   @Override
   protected CoreClassField getIde() {
-    return ide;
+    return zro;
   }
 
   @Override
   protected CoreClassField getMul() {
-    return mul;
+    return add;
   }
 
   @Override
   protected CoreClassField getInverse() {
-    return inverse;
+    return negative;
   }
 }

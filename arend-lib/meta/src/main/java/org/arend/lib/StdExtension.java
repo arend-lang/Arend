@@ -254,6 +254,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getRingSolverModule());
     contributor.declare(algebra, Names.getSemiringModule());
     contributor.declare(algebra, Names.getSolverModule());
+    contributor.declare(algebra, Names.getCommGroupSolverModule());
     contributor.declare(algebra, Names.getCommMonoidSolverModule());
     contributor.declare(algebra, Names.getNewGroupSolverModule());
     contributor.declare(algebra, Names.getNewMonoidSolverModule());
@@ -290,6 +291,9 @@ public class StdExtension implements ArendExtension {
     ConcreteMetaDefinition groupSolver = makeDef(equation.getRef(), "group", new DependencyMetaTypechecker(GroupEquationMeta.class, () -> new DeferredMetaDefinition(new GroupEquationMeta(), true)));
     contributor.declare(nullDoc() /* TODO[server2]: Write a description */, groupSolver);
     contributor.declare(hList(text("Additive version of "), refDoc(groupSolver.getRef())), makeDef(equation.getRef(), "addGroup", new DependencyMetaTypechecker(AdditiveGroupEquationMeta.class, () -> new DeferredMetaDefinition(new AdditiveGroupEquationMeta(), true))));
+    ConcreteMetaDefinition commGroupSolver = makeDef(equation.getRef(), "cGroup", new DependencyMetaTypechecker(CommutativeGroupEquationMeta.class, () -> new DeferredMetaDefinition(new CommutativeGroupEquationMeta(), true)));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, commGroupSolver);
+    contributor.declare(hList(text("Additive version of "), refDoc(commGroupSolver.getRef())), makeDef(equation.getRef(), "abGroup", new DependencyMetaTypechecker(AbelianGroupEquationMeta.class, () -> new DeferredMetaDefinition(new AbelianGroupEquationMeta(), true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));

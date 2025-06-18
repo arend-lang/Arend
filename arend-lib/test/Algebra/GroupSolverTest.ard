@@ -17,21 +17,45 @@
   : x * x = ide
   => equation.group in p
 
-\lemma testSimpAdd {M : AddGroup} (x y z w : M)
+\lemma testAddSimp {M : AddGroup} (x y z w : M)
   : (x + (z + negative y)) + ((zro + y) + (zro + negative z)) + w = x + ((zro + (y + zro)) + negative y) + w
   => equation.addGroup
 
-\lemma testArgAdd {M : AddGroup} (x y z : M) (p : x + x = zro)
+\lemma testAddArg {M : AddGroup} (x y z : M) (p : x + x = zro)
   : (x + (z + negative y)) + ((zro + y) + (zro + negative z)) + x = x + ((zro + (y + zro)) + negative y) + negative x
   => equation.addGroup p
 
-\lemma testForwardAdd {M : AddGroup} (x y z : M) (p : (x + (z + negative y)) + ((zro + y) + (zro + negative z)) + x = x + ((zro + (y + zro)) + negative y) + negative x)
+\lemma testAddForward {M : AddGroup} (x y z : M) (p : (x + (z + negative y)) + ((zro + y) + (zro + negative z)) + x = x + ((zro + (y + zro)) + negative y) + negative x)
   : x + x = zro
   => equation.addGroup in p
-
 
 \lemma testProof1 {M : Group} (x y : M) (p : x * y * inverse x = ide) : y = ide
   => equation.group {pmap (inverse x * __ * x) p}
 
 \lemma testProof2 {M : AddGroup} (x y : M) (p : y = zro) : x + y - x = zro
   => equation.addGroup {pmap (x + __ - x) p}
+
+
+\lemma testCommSimp {M : CGroup} (x y z w : M)
+  : (x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y = y * ((ide * (x * ide)) * inverse y) * w
+  => equation.cGroup
+
+\lemma testCommArg {M : CGroup} (x y z w : M) (p : x * (x * w) = ide)
+  : (x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y * x = y * ((ide * (x * ide)) * inverse y) * inverse x
+  => equation.cGroup p
+
+\lemma testCommForward {M : CGroup} (x y z w : M) (p : (x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y * x = y * ((ide * (x * ide)) * inverse y) * inverse x)
+  : x * (x * w) = ide
+  => equation.cGroup in p
+
+\lemma testAbSimp {M : AbGroup} (x y z w : M)
+  : (x + (z - y)) + ((zro + w) + (zro - z)) + y = y + ((zro + (x + zro)) - y) + w
+  => equation.abGroup
+
+\lemma testAbArg {M : AbGroup} (x y z w : M) (p : x + (x + w) = zro)
+  : (x + (z - y)) + ((zro + w) + (zro - z)) + y + x = y + ((zro + (x + zro)) - y) - x
+  => equation.abGroup p
+
+\lemma testAbForward {M : AbGroup} (x y z w : M) (p : (x + (z - y)) + ((zro + w) + (zro - z)) + y + x = y + ((zro + (x + zro)) - y) - x)
+  : x + (x + w) = zro
+  => equation.abGroup in p

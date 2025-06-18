@@ -156,6 +156,10 @@ public class Names {
     return new ModulePath("Algebra", "Solver");
   }
 
+  public static ModulePath getCommGroupSolverModule() {
+    return new ModulePath("Algebra", "Solver", "CGroup");
+  }
+
   public static ModulePath getCommMonoidSolverModule() {
     return new ModulePath("Algebra", "Solver", "CMonoid");
   }

@@ -1,0 +1,61 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Solver
+\import Algebra.Solver.Group
+\import Algebra.Solver.Monoid
+\import Arith.Int
+\import Data.Array
+\import Data.Bool
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\open GroupSolverModel
+
+\func CGroupSolverModel (G : CGroup) : SolverModel G \cowith
+  | Term => Term
+  | NF n => Array Int n
+  | normalize => normalize
+  | interpret => interpret
+  | interpretNF env l => sBigProd (toArray l env)
+  | interpretNF-consistent => interpretNF-correct _ *> interpretNF-consistent'
+  \where {
+    \func toArray (cs : Array Int) (env : Array G cs.len) : Array G \elim cs, env
+      | nil, nil => nil
+      | 0 :: cs, _ :: env => toArray cs env
+      | pos (suc n) :: cs, a :: env => a :: toArray (pos n :: cs) (a :: env)
+      | neg (suc n) :: cs, a :: env => inverse a :: toArray (neg n :: cs) (a :: env)
+
+    \func sBigProd (l : Array G) : G \elim l
+      | nil => G.ide
+      | a :: nil => a
+      | a :: l => a * sBigProd l
+
+    \lemma sBigProd_:: {a : G} {l : Array G} : sBigProd (a :: l) = a * sBigProd l \elim l
+      | nil => inv ide-right
+      | b :: l => idp
+
+    \lemma interpretNF-correct (cs : Array Int) {env : Array G cs.len} : sBigProd (toArray cs env) = G.BigProd \lam j => G.ipow (env j) (cs j) \elim cs, env
+      | nil, nil => idp
+      | 0 :: cs, _ :: env => interpretNF-correct cs *> inv ide-left
+      | pos (suc m) :: cs, a :: env => equation.monoid {sBigProd_::, interpretNF-correct (_ :: cs), inv G.pow-left}
+      | neg (suc m) :: cs, a :: env => equation.monoid {sBigProd_::, interpretNF-correct (_ :: cs), inv G.pow-left}
+
+    \lemma interpretNF-consistent' {n : Nat} {env : Fin n -> G} {t : Term n} : G.BigProd (\lam j => G.ipow (env j) (normalize t j)) = interpret env t \elim t
+      | var i => G.BigProd-unique i (\lam j p => later $ rewrite (decideEq/=_reduce p) idp) *> rewrite (decideEq=_reduce idp) ide-left
+      | :ide => G.BigProd_replicate1
+      | :inverse t => G.BigProd-ext (\lam i => G.ipow_negaitve) *> inv G.BigProd_inverse *> pmap inverse interpretNF-consistent'
+      | t :* s => G.BigProd-ext (\lam i => G.ipow_+) *> G.BigProd_* *> pmap2 (*) interpretNF-consistent' interpretNF-consistent'
+
+    \private \func normalize {n : Nat} (t : Term n) : Array Int n \elim t
+      | var v => single v (pos 1) 0
+      | :ide => replicate n (pos 0)
+      | :inverse t => map IntRing.negative (normalize t)
+      | t :* s => mkArray \lam j => normalize t j IntRing.+ normalize s j
+  }
+
+\func AbGroupSolverModel (A : AbGroup) : SolverModel A
+  => CGroupSolverModel (AbGroup.toCGroup A)

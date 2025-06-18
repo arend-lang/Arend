@@ -36,8 +36,6 @@ public abstract class BaseMonoidEquationMeta extends BaseEquationMeta<List<Integ
     this.isCommutative = isCommutative;
   }
 
-  protected abstract boolean isMultiplicative();
-
   protected abstract CoreClassField getIde();
 
   protected abstract CoreClassField getMul();
@@ -72,7 +70,7 @@ public abstract class BaseMonoidEquationMeta extends BaseEquationMeta<List<Integ
           normalize(argument, result);
         }
       }
-      case VarTerm varTerm1 -> result.add(varTerm1.index());
+      case VarTerm(int index) -> result.add(index);
     }
   }
 

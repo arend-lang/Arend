@@ -51,15 +51,28 @@
     | 0 => idp
     | suc m => pow_+ *> pmap (`* _) pow_*
 
+  \lemma pow-comm1 {a b : E} (p : a * b = b * a) {n : Nat} : pow a n * b = b * pow a n \elim n
+    | 0 => ide-left *> inv ide-right
+    | suc n => equation.monoid {p, pow-comm1 p}
+
+  \lemma pow-comm2 {a b : E} (p : a * b = b * a) {n m : Nat} : pow a n * pow b m = pow b m * pow a n
+    => pow-comm1 $ inv $ pow-comm1 (inv p)
+
+  \lemma pow-comm {a b : E} (p : a * b = b * a) {n : Nat} : pow (a * b) n = pow a n * pow b n \elim n
+    | 0 => inv ide-left
+    | suc n => equation.monoid {pow-comm p, pow-comm1 (inv p)}
+
   \lemma pow_ide {n : Nat} : pow ide n = ide \elim n
     | 0 => idp
     | suc n => ide-right *> pow_ide
 
-  \lemma pow-left {a : E} {n : Nat} : a * pow a n = pow a n * a \elim n
-    | 0 => ide-right *> inv ide-left
-    | suc n => inv *-assoc *> pmap (`* a) pow-left
+  \lemma pow-left {a : E} {n : Nat} : a * pow a n = pow a n * a
+    => inv (pow-comm1 idp)
 
   \func BigProd (l : Array E) => Big (*) ide l
+
+  \lemma BigProd-ext {n : Nat} {l l' : Array E n} (p : \Pi (i : Fin n) -> l i = l' i) : BigProd l = BigProd l'
+    => pmap BigProd (arrayExt p)
 
   \lemma BigProd_ide {l : Array E} (p : \Pi (j : Fin l.len) -> l j = ide) : BigProd l = ide
     => AddMonoid.BigSum_zro {AddMonoid.fromMonoid \this} p
@@ -426,12 +439,14 @@
   \lemma divInv {x y : E} (cancel : \Pi {a b : E} -> x * a = x * b -> a = b) (xy|x : LDiv (x * y) x) : Inv y
     => Inv.lmake xy|x.inv (*-comm *> cancel (inv *-assoc *> xy|x.inv-right *> inv ide-right))
 
-  \lemma pow_*-comm {a b : E} {n : Nat} : pow (a * b) n = pow a n * pow b n \elim n
-    | 0 => inv ide-left
-    | suc n => rewrite pow_*-comm equation
+  \lemma pow_*-comm {a b : E} {n : Nat} : pow (a * b) n = pow a n * pow b n
+    => pow-comm *-comm
 
   \func DivChain : \Prop
     => \Pi (a : Nat -> E) -> (\Pi (i : Nat) -> TruncP (LDiv (a (suc i)) (a i))) -> ∃ (j : Nat) (LDiv (a j) (a (suc j)))
+
+  \lemma BigProd_* {n : Nat} {l l' : Array E n} : BigProd (\lam i => l i * l' i) = BigProd l * BigProd l'
+    => AbMonoid.BigSum_+ {AbMonoid.fromCMonoid \this}
 
   \lemma BigProd_EPerm {l l' : Array E} (e : EPerm l l') : BigProd l = BigProd l'
     => AbMonoid.BigSum_EPerm {AbMonoid.fromCMonoid \this} e

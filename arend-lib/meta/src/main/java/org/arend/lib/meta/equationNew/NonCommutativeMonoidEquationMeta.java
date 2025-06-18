@@ -1,11 +1,10 @@
-package org.arend.lib.error.equation;
+package org.arend.lib.meta.equationNew;
 
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
-import org.arend.lib.meta.equationNew.BaseMonoidEquationMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,9 +12,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class NonCommutativeMonoidEquationMeta extends BaseMonoidEquationMeta {
-  @Dependency(name = "SolverModel.apply-axiom") ArendRef applyAxiom;
-  @Dependency(name = "List.::")                 ArendRef cons;
-  @Dependency(name = "List.nil")                ArendRef nil;
+  @Dependency(name = "SubstSolverModel.apply-axiom")  ArendRef applyAxiom;
+  @Dependency(name = "List.::")                       ArendRef cons;
+  @Dependency(name = "List.nil")                      ArendRef nil;
 
   protected NonCommutativeMonoidEquationMeta() {
     super(false);

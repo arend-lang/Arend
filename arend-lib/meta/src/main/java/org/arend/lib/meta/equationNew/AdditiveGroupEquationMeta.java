@@ -6,7 +6,7 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.jetbrains.annotations.NotNull;
 
-public class AdditiveGroupEquationMeta extends BaseGroupEquationMeta {
+public class AdditiveGroupEquationMeta extends BaseNonCommutativeGroupEquationMeta {
   @Dependency                             CoreClassDefinition AddGroup;
   @Dependency(name = "AddPointed.zro")    CoreClassField zro;
   @Dependency(name = "AddMonoid.+")       CoreClassField add;
