@@ -1,5 +1,6 @@
 package org.arend.ext.concrete;
 
+import org.arend.ext.ArendPrelude;
 import org.arend.ext.concrete.definition.*;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.concrete.pattern.ConcretePattern;
@@ -130,4 +131,6 @@ public interface ConcreteFactory {
 
   @NotNull ConcreteFactory copy();
   @NotNull ConcreteFactory withData(@Nullable Object data);
+
+  @NotNull ArendPrelude getPrelude();
 }

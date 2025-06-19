@@ -53,7 +53,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
 
   protected abstract @NotNull NFPrettyPrinter<NF> getNFPrettyPrinter();
 
-  protected abstract @NotNull ConcreteExpression nfToConcrete(NF nf, Values<CoreExpression> values, TypedExpression instance, ConcreteFactory factory);
+  protected abstract @NotNull ConcreteExpression nfToConcreteTerm(NF nf, Values<CoreExpression> values, TypedExpression instance, ConcreteFactory factory);
 
   protected abstract @NotNull ArendRef getSolverModel();
 
@@ -61,6 +61,10 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
 
   protected @Nullable ArendRef getApplyAxiom() {
     return null;
+  }
+
+  protected boolean needSolverForApplyAxiom() {
+    return true;
   }
 
   protected @Nullable Pair<NF,NF> abstractNF(@NotNull Hint<NF> hint, @NotNull NF nf, int[] position) {
@@ -76,10 +80,12 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
   protected @Nullable HintResult<NF> applyHint(@NotNull Hint<NF> hint, @NotNull NF current, int[] position, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ConcreteFactory factory) {
     NF newNF, abstracted;
     ArendRef lemmaRef;
+    boolean needSolver;
     if (hint.leftNF.equals(current)) {
       lemmaRef = termsEqualityConv;
       abstracted = null;
       newNF = hint.rightNF;
+      needSolver = true;
     } else {
       lemmaRef = getApplyAxiom();
       if (lemmaRef == null) return null;
@@ -87,11 +93,14 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
       if (pair == null) return null;
       abstracted = pair.proj1;
       newNF = pair.proj2;
+      needSolver = needSolverForApplyAxiom();
     }
 
-    ConcreteAppBuilder builder = factory.appBuilder(factory.ref(lemmaRef))
-        .app(factory.ref(solverRef.get()), false)
-        .app(factory.ref(envRef.get()))
+    ConcreteAppBuilder builder = factory.appBuilder(factory.ref(lemmaRef));
+    if (needSolver) {
+        builder.app(factory.ref(solverRef.get()), false);
+    }
+    builder.app(factory.ref(envRef.get()))
         .app(hint.left.generateReflectedTerm(factory, getVarTerm()))
         .app(hint.right.generateReflectedTerm(factory, getVarTerm()))
         .app(factory.core(hint.typed));
@@ -157,7 +166,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     if (pair.proj1.proof != null) {
       proof = factory.app(factory.ref(concat), true, factory.app(factory.ref(inv), true, pair.proj1.proof), proof);
     }
-    return factory.typed(proof, factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, nfToConcrete(pair.proj1.newNF, values, instance, factory), nfToConcrete(pair.proj2.newNF, values, instance, factory)));
+    return factory.typed(proof, factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, nfToConcreteTerm(pair.proj1.newNF, values, instance, factory), nfToConcreteTerm(pair.proj2.newNF, values, instance, factory)));
   }
 
   /**
@@ -192,7 +201,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
   }
 
   protected @Nullable ConcreteExpression checkProof(@NotNull ConcreteExpression proof, @NotNull NF left, @NotNull NF right, @NotNull Values<CoreExpression> values, @Nullable TypedExpression instance, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
-    TypedExpression type = typechecker.typecheckType(factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, nfToConcrete(left, values, instance, factory), nfToConcrete(right, values, instance, factory)));
+    TypedExpression type = typechecker.typecheckType(factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, nfToConcreteTerm(left, values, instance, factory), nfToConcreteTerm(right, values, instance, factory)));
     if (type == null) {
       return null;
     }

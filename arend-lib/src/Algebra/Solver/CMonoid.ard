@@ -1,5 +1,5 @@
 \import Algebra.Monoid
-\import Algebra.Solver \using (interpretNF)
+\import Algebra.Solver \using (interpretNF, interpretNF-consistent)
 \import Algebra.Solver.Monoid
 \import Arith.Fin.Order
 \import Data.List
@@ -10,16 +10,13 @@
 \open MonoidSolverModel
 \open Sort
 
-\func CMonoidSolverModel (M : CMonoid) : SubstSolverModel M \cowith
+\func CMonoidSolverModel (M : CMonoid) : SolverModel M \cowith
   | Term => Term
   | NF n => List (Fin n)
   | normalize => (MonoidSolverModel M).normalize
-  | interpret => MonoidSolverModel.interpret
+  | interpret => interpret
   | interpretNF env nf => MonoidSolverModel.interpretNF env (RedBlack.sort nf)
   | interpretNF-consistent => sort-consistent *> (MonoidSolverModel M).interpretNF-consistent
-  | nfVar v => v :: nil
-  | >>= => >>=
-  | >>=-consistent => sort-consistent *> (MonoidSolverModel M).>>=-consistent *> pmap (interpretNF __ _) (ext \lam v => inv sort-consistent) *> inv sort-consistent
   \where {
     \lemma sort-consistent {n : Nat} {env : Fin n -> M} {l : List (Fin n)}
       : (MonoidSolverModel M).interpretNF env (RedBlack.sort l) = (MonoidSolverModel M).interpretNF env l
@@ -30,7 +27,15 @@
       | :: a1 l1, :: a2 l2, perm-:: idp p => repeat {2} (rewrite MonoidSolverModel.interpretNF_::) $ pmap (env a1 *) (perm-consistent p)
       | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite MonoidSolverModel.interpretNF_::) $ inv *-assoc *> pmap (`* _) *-comm *> *-assoc
       | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
+
+    \lemma apply-axiom (env : Array M) (t s : Term env.len) (p : interpret env t = interpret env s) (add : List (Fin env.len))
+      : MonoidSolverModel.interpretNF env (RedBlack.sort ((MonoidSolverModel M).normalize t ++ add)) = MonoidSolverModel.interpretNF env (RedBlack.sort ((MonoidSolverModel M).normalize s ++ add))
+      => sort-consistent *> MonoidSolverModel.interpretNF_++ *> pmap (`* _) ((MonoidSolverModel M).interpretNF-consistent *> p *> inv (MonoidSolverModel M).interpretNF-consistent) *> inv (sort-consistent *> MonoidSolverModel.interpretNF_++)
   }
 
-\func AbMonoidSolverModel (A : AbMonoid) : SubstSolverModel A
+\func AbMonoidSolverModel (A : AbMonoid) : SolverModel A
   => CMonoidSolverModel (AbMonoid.toCMonoid A)
+  \where {
+    \lemma apply-axiom (env : Array A) (t s : Term env.len) (p : interpret {AbMonoid.toCMonoid A} env t = interpret {AbMonoid.toCMonoid A} env s) (add : List (Fin env.len))
+      => CMonoidSolverModel.apply-axiom env t s p add
+  }

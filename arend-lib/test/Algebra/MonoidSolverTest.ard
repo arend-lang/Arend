@@ -87,6 +87,12 @@
 \lemma testProofComm2 {M : AbMonoid} (x y : M) (p : y + x = zro) : (y + x) + (y + x) = zro
   => equation.abMonoid {pmap (x + __ + y) p} p
 
+\lemma testProofComm3 {M : CMonoid} (x y : M) (p : y * x = ide) : (y * x) * (y * x) = ide
+  => equation.cMonoid {p,p}
+
+\lemma testProofComm4 {M : AbMonoid} (x y z : M) (p : y + x + y = zro) (q : x + x = y) : x + x + x + x + x = zro
+  => equation.abMonoid {q,q,p}
+
 \lemma testProofArg1 {M : Monoid} (x y z : M) (p : x * y = ide) (q : (x * x) * (y * y) = z) : x * y = z
   => equation.monoid {pmap (x * __ * y) p} in q
 

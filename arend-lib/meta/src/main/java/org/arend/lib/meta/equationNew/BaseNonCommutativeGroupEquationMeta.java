@@ -65,7 +65,7 @@ public abstract class BaseNonCommutativeGroupEquationMeta extends BaseGroupEquat
   }
 
   @Override
-  protected @NotNull ConcreteExpression nfToConcrete(List<Pair<Boolean,Integer>> nf, Values<CoreExpression> values, TypedExpression instance, ConcreteFactory factory) {
+  protected @NotNull ConcreteExpression nfToConcreteTerm(List<Pair<Boolean,Integer>> nf, Values<CoreExpression> values, TypedExpression instance, ConcreteFactory factory) {
     if (nf.isEmpty()) return factory.ref(getIde().getRef());
     ConcreteExpression result = pairToConcrete(nf.getLast(), values, instance, factory);
     for (int i = nf.size() - 2; i >= 0; i--) {

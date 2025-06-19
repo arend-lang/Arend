@@ -5,16 +5,14 @@ import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class AbelianMonoidEquationMeta extends BaseMonoidEquationMeta {
+public class AbelianMonoidEquationMeta extends BaseCommutativeMonoidEquationMeta {
   @Dependency                           ArendRef AbMonoidSolverModel;
   @Dependency                           CoreClassDefinition AbMonoid;
   @Dependency(name = "AddPointed.zro")  CoreClassField zro;
   @Dependency(name = "AddMonoid.+")     CoreClassField add;
-
-  public AbelianMonoidEquationMeta() {
-    super(true);
-  }
+  @Dependency(name = "AbMonoidSolverModel.apply-axiom") ArendRef applyAxiom;
 
   @Override
   protected boolean isMultiplicative() {
@@ -39,5 +37,10 @@ public class AbelianMonoidEquationMeta extends BaseMonoidEquationMeta {
   @Override
   protected @NotNull ArendRef getSolverModel() {
     return AbMonoidSolverModel;
+  }
+
+  @Override
+  protected @Nullable ArendRef getApplyAxiom() {
+    return applyAxiom;
   }
 }

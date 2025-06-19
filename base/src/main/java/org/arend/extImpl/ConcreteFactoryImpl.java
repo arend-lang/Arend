@@ -2,6 +2,7 @@ package org.arend.extImpl;
 
 import org.arend.core.context.binding.Binding;
 import org.arend.core.expr.ReferenceExpression;
+import org.arend.ext.ArendPrelude;
 import org.arend.ext.concrete.*;
 import org.arend.ext.concrete.definition.*;
 import org.arend.ext.concrete.expr.*;
@@ -926,5 +927,10 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
   public ConcreteFactory withData(@Nullable Object data) {
     Object actualData = data instanceof ConcreteSourceNode ? ((ConcreteSourceNode) data).getData() : data;
     return actualData == myData ? this : new ConcreteFactoryImpl(actualData, myLibraryName);
+  }
+
+  @Override
+  public @NotNull ArendPrelude getPrelude() {
+    return Prelude.INSTANCE;
   }
 }

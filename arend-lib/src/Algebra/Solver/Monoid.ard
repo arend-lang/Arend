@@ -39,7 +39,7 @@
       | nil => inv ide-right
       | :: a l => idp
 
-    \private \lemma interpretNF_++ {V : \Set} {env : V -> M} {t s : List V} : interpretNF env (t ++ s) = interpretNF env t * interpretNF env s \elim t
+    \protected \lemma interpretNF_++ {V : \Set} {env : V -> M} {t s : List V} : interpretNF env (t ++ s) = interpretNF env t * interpretNF env s \elim t
       | nil => inv ide-left
       | v :: l => rewrite (interpretNF_::,interpretNF_::) $ pmap (_ *) interpretNF_++ *> inv *-assoc
 
