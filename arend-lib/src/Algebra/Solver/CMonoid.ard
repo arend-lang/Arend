@@ -3,6 +3,7 @@
 \import Algebra.Solver.Monoid
 \import Arith.Fin.Order
 \import Data.List
+\import Function.Iterate
 \import Function.Meta
 \import Meta
 \import Paths
@@ -28,14 +29,19 @@
       | :: a1 (:: a1' l1), :: a2 (:: a2' l2), perm-swap idp idp idp => repeat {2} (rewrite MonoidSolverModel.interpretNF_::) $ inv *-assoc *> pmap (`* _) *-comm *> *-assoc
       | l1, l2, perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
 
-    \lemma apply-axiom (env : Array M) (t s : Term env.len) (p : interpret env t = interpret env s) (add : List (Fin env.len))
-      : MonoidSolverModel.interpretNF env (RedBlack.sort ((MonoidSolverModel M).normalize t ++ add)) = MonoidSolverModel.interpretNF env (RedBlack.sort ((MonoidSolverModel M).normalize s ++ add))
-      => sort-consistent *> MonoidSolverModel.interpretNF_++ *> pmap (`* _) ((MonoidSolverModel M).interpretNF-consistent *> p *> inv (MonoidSolverModel M).interpretNF-consistent) *> inv (sort-consistent *> MonoidSolverModel.interpretNF_++)
+    \lemma interpretNF_iterr {env : Array M} {l : List (Fin env.len)} {v : List (Fin env.len)} {n : Nat}
+      : MonoidSolverModel.interpretNF env (iterr (l ++) n v) = M.pow (MonoidSolverModel.interpretNF env l) n * MonoidSolverModel.interpretNF env v \elim n
+      | 0 => inv ide-left
+      | suc n => MonoidSolverModel.interpretNF_++ *> pmap (_ *) interpretNF_iterr *> inv *-assoc *> pmap (`* _) M.pow-left
+
+    \lemma apply-axiom (env : Array M) (t s : Term env.len) (p : interpret env t = interpret env s) (n : Nat) (add : List (Fin env.len))
+      : MonoidSolverModel.interpretNF env (RedBlack.sort (iterr ((MonoidSolverModel M).normalize t ++) n add)) = MonoidSolverModel.interpretNF env (RedBlack.sort (iterr ((MonoidSolverModel M).normalize s ++) n add))
+      => sort-consistent *> interpretNF_iterr *> pmap (M.pow __ n * _) ((MonoidSolverModel M).interpretNF-consistent *> p *> inv (MonoidSolverModel M).interpretNF-consistent) *> inv (sort-consistent *> interpretNF_iterr)
   }
 
 \func AbMonoidSolverModel (A : AbMonoid) : SolverModel A
   => CMonoidSolverModel (AbMonoid.toCMonoid A)
   \where {
-    \lemma apply-axiom (env : Array A) (t s : Term env.len) (p : interpret {AbMonoid.toCMonoid A} env t = interpret {AbMonoid.toCMonoid A} env s) (add : List (Fin env.len))
-      => CMonoidSolverModel.apply-axiom env t s p add
+    \lemma apply-axiom (env : Array A) (t s : Term env.len) (p : interpret {AbMonoid.toCMonoid A} env t = interpret {AbMonoid.toCMonoid A} env s) (n : Nat) (add : List (Fin env.len))
+      => CMonoidSolverModel.apply-axiom env t s p n add
   }

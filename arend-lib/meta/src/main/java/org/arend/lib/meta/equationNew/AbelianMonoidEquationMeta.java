@@ -5,7 +5,6 @@ import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class AbelianMonoidEquationMeta extends BaseCommutativeMonoidEquationMeta {
   @Dependency                           ArendRef AbMonoidSolverModel;
@@ -40,7 +39,7 @@ public class AbelianMonoidEquationMeta extends BaseCommutativeMonoidEquationMeta
   }
 
   @Override
-  protected @Nullable ArendRef getApplyAxiom() {
+  protected @NotNull ArendRef getApplyAxiom() {
     return applyAxiom;
   }
 }
