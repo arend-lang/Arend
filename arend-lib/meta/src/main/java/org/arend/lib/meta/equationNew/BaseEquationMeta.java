@@ -134,7 +134,8 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
       if (proof != null) {
         typechecker.getErrorReporter().report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Argument is ignored", proof));
       }
-      return pair.proj1.proof == null && pair.proj2.proof == null ? factory.ref(typechecker.getPrelude().getIdpRef()) : pair.proj2.proof == null ? pair.proj1.proof : pair.proj1.proof == null ? pair.proj2.proof : factory.app(factory.ref(concat), true, pair.proj1.proof, factory.app(factory.ref(inv), true, pair.proj2.proof));
+      ConcreteExpression proof2 = pair.proj2.proof == null ? null : factory.app(factory.ref(inv), true, pair.proj2.proof);
+      return pair.proj1.proof == null && proof2 == null ? factory.ref(typechecker.getPrelude().getIdpRef()) : proof2 == null ? pair.proj1.proof : pair.proj1.proof == null ? proof2 : factory.app(factory.ref(concat), true, pair.proj1.proof, proof2);
     }
 
     if (proof == null) {

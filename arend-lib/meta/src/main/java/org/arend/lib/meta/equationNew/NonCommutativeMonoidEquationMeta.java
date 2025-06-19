@@ -78,20 +78,12 @@ public abstract class NonCommutativeMonoidEquationMeta extends BaseMonoidEquatio
     }
   }
 
-  private @Nullable Set<Integer> getPositions(ConcreteExpression expression, ErrorReporter errorReporter) {
+  private @Nullable Set<Integer> getPositions(ConcreteExpression expression) {
     Set<Integer> result = new HashSet<>();
-    List<ConcreteExpression> zeros = new ArrayList<>();
     for (ConcreteExpression arg : Utils.getArgumentList(expression)) {
       Integer position = Utils.getNumber(arg, null, true);
       if (position == null) return null;
-      if (position == 0) {
-        zeros.add(arg);
-      } else {
-        result.add(position);
-      }
-    }
-    for (ConcreteExpression arg : zeros) {
-      errorReporter.report(new TypecheckingError(GeneralError.Level.WARNING, "Position 0 is ignored", arg));
+      result.add(position);
     }
     return result;
   }
@@ -100,7 +92,7 @@ public abstract class NonCommutativeMonoidEquationMeta extends BaseMonoidEquatio
   protected @Nullable Hint<List<Integer>> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
     Set<Integer> positions;
     if (hint instanceof ConcreteAppExpression appExpr && appExpr.getArguments().getFirst().isExplicit()) {
-      positions = getPositions(appExpr.getFunction(), typechecker.getErrorReporter());
+      positions = getPositions(appExpr.getFunction());
       if (positions != null) {
         hint = appExpr.getArguments().getFirst().getExpression();
         if (appExpr.getArguments().size() > 1) {
@@ -120,8 +112,11 @@ public abstract class NonCommutativeMonoidEquationMeta extends BaseMonoidEquatio
     if (!(((MyHint<List<Integer>>) hint).positions != null && hint.originalExpression instanceof ConcreteAppExpression appExpr)) return;
     for (ConcreteExpression arg : Utils.getArgumentList(appExpr.getFunction())) {
       Integer pos = Utils.getNumber(arg, null, true);
-      if (pos != null && pos > position[0]) {
+      if (pos == null) continue;
+      if (pos > position[0]) {
         errorReporter.report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Maximal available position is " + position[0], arg));
+      } else if (pos == 0 && !hint.leftNF.isEmpty()) {
+        errorReporter.report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "Position 0 is ignored", arg));
       }
     }
   }
@@ -145,22 +140,37 @@ public abstract class NonCommutativeMonoidEquationMeta extends BaseMonoidEquatio
   }
 
   private @Nullable Pair<List<Integer>, List<Integer>> abstractNF(@NotNull MyHint<List<Integer>> hint, @NotNull List<Integer> nf, int[] position) {
-    if (hint.leftNF.isEmpty()) return null;
-
     boolean found = false;
     List<Integer> abstracted = new ArrayList<>();
     List<Integer> right = new ArrayList<>();
-    for (int i = 0; i < nf.size();) {
-      int n = i + hint.leftNF.size();
-      if (n <= nf.size() && nf.subList(i, n).equals(hint.leftNF) && (hint.positions == null || hint.positions.contains(++position[0]))) {
-        abstracted.add(0);
-        right.addAll(hint.rightNF);
-        i = n;
-        found = true;
-      } else {
-        abstracted.add(nf.get(i) + 1);
-        right.add(nf.get(i));
-        i++;
+
+    if (hint.leftNF.isEmpty()) {
+      if (hint.positions == null) return null;
+      for (Integer value : nf) {
+        abstracted.add(value + 1);
+      }
+      right.addAll(nf);
+      for (int i = nf.size(); i >= 0; i--) {
+        if (hint.positions.contains(i + position[0])) {
+          abstracted.add(i, 0);
+          right.addAll(i, hint.rightNF);
+          found = true;
+        }
+      }
+      position[0] += nf.size() + 1;
+    } else {
+      for (int i = 0; i < nf.size(); ) {
+        int n = i + hint.leftNF.size();
+        if (n <= nf.size() && nf.subList(i, n).equals(hint.leftNF) && (hint.positions == null || hint.positions.contains(++position[0]))) {
+          abstracted.add(0);
+          right.addAll(hint.rightNF);
+          i = n;
+          found = true;
+        } else {
+          abstracted.add(nf.get(i) + 1);
+          right.add(nf.get(i));
+          i++;
+        }
       }
     }
 
