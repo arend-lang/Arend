@@ -1,0 +1,29 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Meta
+
+\lemma testCommSimp {M : CGroup} (x y z w : M)
+  : (x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y = y * ((ide * (x * ide)) * inverse y) * w
+  => equation.cGroup
+
+\lemma testCommArg {M : CGroup} (x y z w : M) (p : x * (x * w) = ide)
+  : (x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y * x = y * ((ide * (x * ide)) * inverse y) * inverse x
+  => equation.cGroup p
+
+\lemma testCommForward {M : CGroup} (x y z w : M) (p : (x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y * x = y * ((ide * (x * ide)) * inverse y) * inverse x)
+  : x * (x * w) = ide
+  => equation.cGroup in p
+
+\lemma testAbSimp {M : AbGroup} (x y z w : M)
+  : (x + (z - y)) + ((zro + w) + (zro - z)) + y = y + ((zro + (x + zro)) - y) + w
+  => equation.abGroup
+
+\lemma testAbArg {M : AbGroup} (x y z w : M) (p : x + (x + w) = zro)
+  : (x + (z - y)) + ((zro + w) + (zro - z)) + y + x = y + ((zro + (x + zro)) - y) - x
+  => equation.abGroup p
+
+\lemma testAbForward {M : AbGroup} (x y z w : M) (p : (x + (z - y)) + ((zro + w) + (zro - z)) + y + x = y + ((zro + (x + zro)) - y) - x)
+  : x + (x + w) = zro
+  => equation.abGroup in p

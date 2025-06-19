@@ -2,14 +2,56 @@
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Order.Lattice \hiding (MeetSemilattice)
+\import Meta
+\import Paths
 
-\lemma test1 {M : CMonoid} (x y z w : M)
-  : (x * (1 * y)) * ((1 * z) * w) = x * ((y * (z * 1)) * w)
-  => equation
+\lemma testComm1 {M : CMonoid} (x y z w : M)
+  : (w * (ide * x)) * ((ide * y) * z) = x * ((y * (z * ide)) * w)
+  => equation.cMonoid
 
-\lemma test2 {M : CMonoid} (x y z w : M)
-  : (y * (1 * z)) * ((1 * x) * w) = x * ((y * (z * 1)) * w)
-  => equation
+\lemma testComm2 {M : CMonoid} (x y z w : M) (p : w * (x * (x * z)) = w * (x * (z * y)))
+  : (w * (ide * x)) * ((ide * x) * z) = x * ((y * (z * ide)) * w)
+  => equation.cMonoid p
+
+\lemma testComm3 {M : CMonoid} (x y z w : M) (p : (w * (ide * x)) * ((ide * x) * z) = x * ((y * (z * ide)) * w))
+  : w * (x * (x * z)) = w * (x * (z * y))
+  => equation.cMonoid in p
+
+\lemma testAb1 {M : AbMonoid} (x y z w : M)
+  : (w + (zro + x)) + ((zro + y) + z) = x + ((y + (z + zro)) + w)
+  => equation.abMonoid
+
+\lemma testAb2 {M : AbMonoid} (x y z w : M) (p : w + (x + (x + z)) = w + (x + (z + y)))
+  : (w + (zro + x)) + ((zro + x) + z) = x + ((y + (z + zro)) + w)
+  => equation.abMonoid p
+
+\lemma testAb3 {M : AbMonoid} (x y z w : M) (p : (w + (zro + x)) + ((zro + x) + z) = x + ((y + (z + zro)) + w))
+  : w + (x + (x + z)) = w + (x + (z + y))
+  => equation.abMonoid in p
+
+
+\lemma testProofComm1 {M : CMonoid} (x y : M) (p : y * x = ide) : (y * x) * (y * x) = ide
+  => equation.cMonoid {pmap (x * __ * y) p, p}
+
+\lemma testProofComm2 {M : AbMonoid} (x y : M) (p : y + x = zro) : (y + x) + (y + x) = zro
+  => equation.abMonoid {pmap (x + __ + y) p} p
+
+\lemma testProofComm3 {M : CMonoid} (x y : M) (p : y * x = ide) : (y * x) * (y * x) = ide
+  => equation.cMonoid {p,p}
+
+\lemma testProofComm4 {M : AbMonoid} (x y : M) (p : y + x + y = zro) (q : x + x = y) : x + x + x + x + x = zro
+  => equation.abMonoid {q,q,p}
+
+\lemma testProofComm5 {M : CMonoid} (x y : M) (p : x = y) (q : y * y = x) : x * x * x * x * x = x * y
+  => equation.cMonoid {5 p, 2 q, 2 p, q}
+
+\lemma testProofComm6 {M : AbMonoid} (x y z w : M) (p : x = y) (q : y + z = y + w) : x + z = x + w
+  => equation.abMonoid {p,q}
+
+\lemma testProofComm7 {M : CMonoid} (x y z : M) (p : x * x = y) (q : x * x * y = y) : x * x * y = x * x
+  => equation.cMonoid { -1 p, q }
+
+-- old tests
 
 \lemma testOneAx {M : CMonoid} (x y z : M) (p : x = y)
   : y * z = z * x
@@ -34,8 +76,4 @@
 \open Bounded(MeetSemilattice,top)
 
 \lemma test3 {L : MeetSemilattice} (x y z : L) : (x ∧ y) ∧ ((top ∧ x) ∧ z) = z ∧ ((y ∧ x) ∧ (z ∧ y))
-  => equation
-
-\lemma addTest {M : AbMonoid} (x y z w : M)
-  : (y + (0 + z)) + ((0 + x) + w) = x + ((y + (z + 0)) + w)
   => equation
