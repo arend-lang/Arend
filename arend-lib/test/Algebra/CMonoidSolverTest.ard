@@ -42,8 +42,8 @@
 \lemma testProofComm4 {M : AbMonoid} (x y : M) (p : y + x + y = zro) (q : x + x = y) : x + x + x + x + x = zro
   => equation.abMonoid {q,q,p}
 
-\lemma testProofComm5 {M : CMonoid} (x y : M) (p : x = y) (q : y * y = x) : x * x * x * x * x = x * y
-  => equation.cMonoid {5 p, 2 q, 2 p, q}
+\lemma testProofComm5 {M : CMonoid} (x y : M) (p : x = y) (q : y * y = x) : x * x * x * x * x = x
+  => equation.cMonoid {5 p, 2 q, 2 p, q, 1 p, q}
 
 \lemma testProofComm6 {M : AbMonoid} (x y z w : M) (p : x = y) (q : y + z = y + w) : x + z = x + w
   => equation.abMonoid {p,q}

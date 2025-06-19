@@ -4,20 +4,37 @@ import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.core.expr.CoreExpression;
+import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.TypedExpression;
+import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
 import org.arend.lib.error.equation.GroupNFPrettyPrinter;
 import org.arend.lib.error.equation.NFPrettyPrinter;
 import org.arend.lib.meta.equationNew.term.EquationTerm;
 import org.arend.lib.meta.equationNew.term.OpTerm;
 import org.arend.lib.meta.equationNew.term.VarTerm;
+import org.arend.lib.util.Lazy;
 import org.arend.lib.util.Values;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public abstract class BaseNonCommutativeGroupEquationMeta extends BaseGroupEquationMeta<List<Pair<Boolean,Integer>>> {
+  @Dependency(name = "SolverModel.terms-equality")      ArendRef termsEquality;
+  @Dependency(name = "SolverModel.terms-equality-conv") ArendRef termsEqualityConv;
+
+  @Override
+  protected @NotNull ConcreteExpression getTermsEquality(@NotNull Lazy<ArendRef> solverRef, @Nullable ConcreteExpression solver, @NotNull ConcreteFactory factory) {
+    return factory.app(factory.ref(termsEquality), false, solver == null || solverRef.isUsed() ? factory.ref(solverRef.get()) : solver);
+  }
+
+  @Override
+  protected @NotNull ConcreteExpression getTermsEqualityConv(@NotNull Lazy<ArendRef> solverRef, @NotNull ConcreteFactory factory) {
+    return factory.app(factory.ref(termsEqualityConv), false, factory.ref(solverRef.get()));
+  }
+
   private void normalize(EquationTerm term, List<Pair<Boolean,Integer>> result) {
     switch (term) {
       case OpTerm opTerm -> {

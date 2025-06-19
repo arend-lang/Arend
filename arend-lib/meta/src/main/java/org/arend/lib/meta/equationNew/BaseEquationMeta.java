@@ -39,8 +39,6 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
   @Dependency                                           ArendRef inv;
   @Dependency(name = "*>")                              ArendRef concat;
   @Dependency(name = "BaseSet.E")                       CoreClassField carrier;
-  @Dependency(name = "SolverModel.terms-equality")      ArendRef termsEquality;
-  @Dependency(name = "SolverModel.terms-equality-conv") ArendRef termsEqualityConv;
 
   protected abstract boolean isMultiplicative();
 
@@ -58,16 +56,14 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
 
   protected abstract @NotNull ArendRef getVarTerm();
 
+  protected abstract @NotNull ConcreteExpression getTermsEquality(@NotNull Lazy<ArendRef> solverRef, @Nullable ConcreteExpression solver, @NotNull ConcreteFactory factory);
+
+  protected abstract @NotNull ConcreteExpression getTermsEqualityConv(@NotNull Lazy<ArendRef> solverRef, @NotNull ConcreteFactory factory);
+
   protected record HintResult<NF>(ConcreteExpression proof, NF newNF) {}
 
   protected @Nullable HintResult<NF> applyHint(@NotNull Hint<NF> hint, @NotNull NF current, int[] position, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ConcreteFactory factory) {
-    return hint.leftNF.equals(current) ? new HintResult<>(factory.appBuilder(factory.ref(termsEqualityConv))
-        .app(factory.ref(solverRef.get()), false)
-        .app(factory.ref(envRef.get()))
-        .app(hint.left.generateReflectedTerm(factory, getVarTerm()))
-        .app(hint.right.generateReflectedTerm(factory, getVarTerm()))
-        .app(factory.core(hint.typed))
-        .build(), hint.rightNF) : null;
+    return hint.leftNF.equals(current) ? new HintResult<>(factory.app(getTermsEqualityConv(solverRef, factory), true, factory.ref(envRef.get()), hint.left.generateReflectedTerm(factory, getVarTerm()), hint.right.generateReflectedTerm(factory, getVarTerm()), factory.core(hint.typed)), hint.rightNF) : null;
   }
 
   protected void checkHint(@NotNull Hint<NF> hint, int[] position, @NotNull ErrorReporter errorReporter) {}
@@ -119,7 +115,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     if (pair.proj1.proof != null) {
       proof = factory.app(factory.ref(concat), true, factory.app(factory.ref(inv), true, pair.proj1.proof), proof);
     }
-    return factory.typed(proof, factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, nfToConcreteTerm(pair.proj1.newNF, values, instance, factory), nfToConcreteTerm(pair.proj2.newNF, values, instance, factory)));
+    return factory.typed(proof, getProofType(pair.proj1.newNF, pair.proj2.newNF, values, instance, typechecker, factory));
   }
 
   /**
@@ -154,8 +150,12 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     }
   }
 
+  protected @NotNull ConcreteExpression getProofType(@NotNull NF left, @NotNull NF right, @NotNull Values<CoreExpression> values, @Nullable TypedExpression instance, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
+    return factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, nfToConcreteTerm(left, values, instance, factory), nfToConcreteTerm(right, values, instance, factory));
+  }
+
   protected @Nullable ConcreteExpression checkProof(@NotNull ConcreteExpression proof, @NotNull NF left, @NotNull NF right, @NotNull Values<CoreExpression> values, @Nullable TypedExpression instance, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
-    TypedExpression type = typechecker.typecheckType(factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, nfToConcreteTerm(left, values, instance, factory), nfToConcreteTerm(right, values, instance, factory)));
+    TypedExpression type = typechecker.typecheckType(getProofType(left, right, values, instance, typechecker, factory));
     if (type == null) {
       return null;
     }
@@ -275,13 +275,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     if (argTyped != null) {
       List<Hint<NF>> hints = parseHints(hint, equality.getDefCallArguments().getFirst(), operations, values, typechecker);
       if (hints == null) return null;
-      ConcreteExpression argConcrete = factory.appBuilder(factory.ref(termsEqualityConv))
-          .app(factory.ref(solverRef.get()), false)
-          .app(factory.ref(envRef.get()))
-          .app(left.generateReflectedTerm(factory, getVarTerm()))
-          .app(right.generateReflectedTerm(factory, getVarTerm()))
-          .app(factory.core(argTyped))
-          .build();
+      ConcreteExpression argConcrete = factory.app(getTermsEqualityConv(solverRef, factory), true, factory.ref(envRef.get()), left.generateReflectedTerm(factory, getVarTerm()), right.generateReflectedTerm(factory, getVarTerm()), factory.core(argTyped));
       proof = applyForward(hints, leftNF, rightNF, argConcrete, values, instance.proj1, solverRef, envRef, typechecker, factory);
       if (proof == null) {
         return null;
@@ -305,13 +299,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
 
     ConcreteExpression solver = factory.app(factory.ref(getSolverModel()), true, factory.core(instance.proj1));
     ConcreteExpression env = Utils.makeArray(values.getValues().stream().map(it -> factory.core(it.computeTyped())).toList(), factory, typechecker.getPrelude());
-    ConcreteExpression result = isForward ? proof : factory.appBuilder(factory.ref(termsEquality))
-        .app(solverRef.isUsed() ? factory.ref(solverRef.get()) : solver, false)
-        .app(envRef.isUsed() ? factory.ref(envRef.get()) : env)
-        .app(left.generateReflectedTerm(factory, getVarTerm()))
-        .app(right.generateReflectedTerm(factory, getVarTerm()))
-        .app(proof)
-        .build();
+    ConcreteExpression result = isForward ? proof : factory.app(getTermsEquality(solverRef, solver, factory), true, envRef.isUsed() ? factory.ref(envRef.get()) : env, left.generateReflectedTerm(factory, getVarTerm()), right.generateReflectedTerm(factory, getVarTerm()), proof);
     if (solverRef.isUsed() || envRef.isUsed()) {
       List<ConcreteLetClause> clauses = new ArrayList<>(2);
       if (solverRef.isUsed()) {

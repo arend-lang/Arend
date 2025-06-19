@@ -4,7 +4,7 @@
 \import Algebra.Solver
 \import Algebra.Solver.Group
 \import Algebra.Solver.Monoid
-\import Arith.Int
+\import Arith.Int()
 \import Data.Array
 \import Data.Bool
 \import Function.Meta
@@ -20,8 +20,8 @@
   | NF n => Array Int n
   | normalize => normalize
   | interpret => interpret
-  | interpretNF env l => sBigProd (toArray l env)
-  | interpretNF-consistent => interpretNF-correct _ *> interpretNF-consistent'
+  | interpretNF => interpretNF
+  | interpretNF-consistent => interpretNF-consistent _
   \where {
     \func toArray (cs : Array Int) (env : Array G cs.len) : Array G \elim cs, env
       | nil, nil => nil
@@ -38,6 +38,9 @@
       | nil => inv ide-right
       | b :: l => idp
 
+    \func interpretNF {n : Nat} (env : Fin n -> G) (l : Array Int n) : G
+      => sBigProd (toArray l env)
+
     \lemma interpretNF-correct (cs : Array Int) {env : Array G cs.len} : sBigProd (toArray cs env) = G.BigProd \lam j => G.ipow (env j) (cs j) \elim cs, env
       | nil, nil => idp
       | 0 :: cs, _ :: env => interpretNF-correct cs *> inv ide-left
@@ -50,12 +53,32 @@
       | :inverse t => G.BigProd-ext (\lam i => G.ipow_negaitve) *> inv G.BigProd_inverse *> pmap inverse interpretNF-consistent'
       | t :* s => G.BigProd-ext (\lam i => G.ipow_+) *> G.BigProd_* *> pmap2 (*) interpretNF-consistent' interpretNF-consistent'
 
-    \private \func normalize {n : Nat} (t : Term n) : Array Int n \elim t
+    \lemma interpretNF-consistent {n : Nat} {env : Fin n -> G} (t : Term n) : interpretNF env (normalize t) = interpret env t
+      => interpretNF-correct _ *> interpretNF-consistent'
+
+    \open Arith.Int.IntRing(negative,+)
+
+    \func normalize {n : Nat} (t : Term n) : Array Int n \elim t
       | var v => single v (pos 1) 0
       | :ide => replicate n (pos 0)
-      | :inverse t => map IntRing.negative (normalize t)
-      | t :* s => mkArray \lam j => normalize t j IntRing.+ normalize s j
+      | :inverse t => map negative (normalize t)
+      | t :* s => mkArray \lam j => normalize t j + normalize s j
+
+    \lemma terms-equality (env : Array G) (t s : Term env.len) (p : interpretNF env (normalize (t :* :inverse s)) = G.ide) : interpret env t = interpret env s
+      => inv (*-assoc *> pmap (_ *) inverse-left *> G.ide-right) *> pmap (`* _) (inv (interpretNF-consistent (t :* :inverse s)) *> p) *> G.ide-left
+
+    \lemma terms-equality-conv (env : Array G) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize (t :* :inverse s)) = G.ide
+      => interpretNF-consistent (t :* :inverse s) *> pmap (`* _) p *> inverse-right
   }
 
 \func AbGroupSolverModel (A : AbGroup) : SolverModel A
   => CGroupSolverModel (AbGroup.toCGroup A)
+  \where {
+    \open CGroupSolverModel
+
+    \lemma terms-equality (env : Array A) (t s : Term env.len) (p : interpretNF {AbGroup.toCGroup A} env (normalize (t :* :inverse s)) = A.zro)
+      => CGroupSolverModel.terms-equality env t s p
+
+    \lemma terms-equality-conv (env : Array A) (t s : Term env.len) (p : interpret {AbGroup.toCGroup A} env t = interpret {AbGroup.toCGroup A} env s)
+      => CGroupSolverModel.terms-equality-conv env t s p
+  }

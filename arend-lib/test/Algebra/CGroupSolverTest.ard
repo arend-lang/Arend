@@ -27,3 +27,9 @@
 \lemma testAbForward {M : AbGroup} (x y z w : M) (p : (x + (z - y)) + ((zro + w) + (zro - z)) + y + x = y + ((zro + (x + zro)) - y) - x)
   : x + (x + w) = zro
   => equation.abGroup in p
+
+\lemma testSide {M : CGroup} (x y z : M) (p : y = ide) : x * z = z * inverse y * x
+  => equation.cGroup p
+
+\lemma testSideForward {M : CGroup} (x y z : M) (p : x * z = z * inverse y * x) : y = ide
+  => equation.cGroup in p
