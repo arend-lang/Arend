@@ -26,10 +26,10 @@ import org.arend.intention.AbstractGenerateFunctionIntention
 import org.arend.intention.BaseArendIntention
 import org.arend.intention.ExtractExpressionToFunctionIntention
 import org.arend.intention.checkNotGeneratePreview
-import org.arend.util.getElementScope
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ext.*
 import org.arend.psi.getSelectionWithoutErrors
+import org.arend.psi.topmostAncestor
 import org.arend.refactoring.addNewClause
 import org.arend.refactoring.rangeOfConcrete
 import org.arend.refactoring.replaceExprSmart
@@ -39,6 +39,7 @@ import org.arend.util.ArendBundle
 import org.arend.util.ParameterExplicitnessState
 import org.arend.util.appExprToConcrete
 import org.arend.util.forEachRange
+import org.arend.util.getReferableScope
 import org.jetbrains.annotations.NonNls
 import java.awt.Component
 import javax.swing.DefaultListCellRenderer
@@ -210,7 +211,7 @@ class CreateLetBindingIntention : AbstractGenerateFunctionIntention() {
     private fun runDocumentChanges(wrappableOption: WrappableOption, editor: Editor, selection: SelectionResult, freeVariables: List<Pair<Binding, ParameterExplicitnessState>>) {
         val elementToWrap = wrappableOption.psi.element ?: return
         val project = elementToWrap.project
-        val scope = getElementScope(selection.contextPsi)
+        val scope = getReferableScope(selection.contextPsi.topmostAncestor<ReferableBase<*>>())
 
         val actualFreeVariables = freeVariables.filter { scope.resolveName(it.first.name) == null }
         val freeName = generateFreeName("x", scope)
