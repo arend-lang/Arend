@@ -82,7 +82,7 @@ fun generateProofSearchResults(
                     ?: return@processElements true
 
                 val parameterRangesRegistry = mutableMapOf<Int, List<TextRange>>()
-                val rangeComputer = caching { e : Concrete.Expression -> (((e as? Concrete.ReferenceExpression)?.referent as? DataContainer)?.data as? ArendDefData)?.nameIdentifier?.textRange ?: rangeOfConcrete(e) }
+                val rangeComputer = caching { e : Concrete.Expression -> rangeOfConcrete(e) }
                 for ((parameterConcrete, ranges) in parameterResults) {
                     val index = parameters.indexOf(parameterConcrete)
                     val existing = parameterRangesRegistry.getOrDefault(index, emptyList())
@@ -257,9 +257,7 @@ fun getCompleteModuleLocation(def: ReferableBase<*>): String? {
             }
         }.get()
     }
-    if (file == null) {
-        return null
-    }
+    file ?: return null
 
     val module = def.parentsOfType<ArendGroup>(false).toList().reversed().drop(1).map { it.name }
     return (listOf(file) + module).joinToString(".")

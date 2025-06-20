@@ -33,6 +33,7 @@ import org.arend.naming.renamer.ReferableRenamer
 import org.arend.naming.scope.Scope
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ext.*
+import org.arend.psi.topmostAncestor
 import org.arend.refactoring.addToWhere
 import org.arend.refactoring.rename.ArendGlobalReferableRenameHandler
 import org.arend.refactoring.replaceExprSmart
@@ -96,7 +97,7 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
             editor: Editor, project: Project
     ) {
         val baseIdentifier = selection.identifier ?: getName(selection.contextPsi)
-        val scope = getElementScope(selection.contextPsi)
+        val scope = getReferableScope(selection.contextPsi.topmostAncestor<ReferableBase<*>>())
         val newFunctionName = generateFreeName(baseIdentifier, scope)
         val newCallConcrete = buildNewCallConcrete(freeVariables, newFunctionName)
         val definitionRepresentation = buildNewFunctionRepresentation(selection, freeVariables, newFunctionName)
@@ -216,7 +217,7 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
     }
 
     private fun getDefinitionRenamer(selection: SelectionResult): DefinitionRenamer =
-        CachingDefinitionRenamer(ScopeDefinitionRenamer(getElementScope(selection.contextPsi)))
+        CachingDefinitionRenamer(ScopeDefinitionRenamer(getReferableScope(selection.contextPsi.topmostAncestor<ReferableBase<*>>())))
 
     private fun Boolean.toExplicitnessState(): ParameterExplicitnessState = if (this) EXPLICIT else IMPLICIT
 

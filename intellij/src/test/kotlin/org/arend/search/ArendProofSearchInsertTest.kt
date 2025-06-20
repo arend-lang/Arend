@@ -25,7 +25,7 @@ class ArendProofSearchInsertTest : ArendTestBase() {
             \data Bool
 
             \func foo : Nat -> Bool => {?}
-            \func lol => (foo)
+            \func lol => foo
         """.trimIndent())
     }
 }

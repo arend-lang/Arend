@@ -14,8 +14,8 @@ import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.psi.parentOfType
 import org.arend.server.ArendServerService
-import org.arend.term.concrete.LocalVariablesCollector
 import org.arend.util.ArendBundle
+import org.arend.util.LocalVariablesScopeCollector.Companion.getLocalVariables
 
 class NameShadowingHighlighterPass(file: ArendFile, editor: Editor) :
     BasePass(file, editor, "Arend name shadowing annotator", TextRange(0, editor.document.textLength)) {
@@ -43,7 +43,7 @@ class NameShadowingHighlighterPass(file: ArendFile, editor: Editor) :
         }
         val server = definition?.project?.service<ArendServerService>()?.server
         val definitionData = definition?.tcReferable?.let { server?.getResolvedDefinition(it) }
-        val elements = LocalVariablesCollector.getLocalReferables(definitionData?.definition(), tele).mapNotNull { ((it as? DataLocalReferable)?.data as? PsiNamedElement?)?.name }
+        val elements = getLocalVariables(definitionData?.definition(), tele).mapNotNull { ((it as? DataLocalReferable)?.data as? PsiNamedElement?)?.name }
 
         for (identifier in identifiers) {
             val name = identifier.name

@@ -13,12 +13,17 @@ import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parentOfType
+import com.intellij.psi.util.parentsOfType
 import com.intellij.util.concurrency.annotations.RequiresWriteLock
+import org.arend.core.definition.ClassDefinition
 import org.arend.core.definition.Definition.TypeCheckingStatus.NO_ERRORS
 import org.arend.core.expr.FunCallExpression
 import org.arend.ext.concrete.definition.FunctionKind
 import org.arend.ext.module.ModulePath
+import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.Referable
+import org.arend.naming.scope.EmptyScope
+import org.arend.naming.scope.NamespaceCommandNamespace
 import org.arend.naming.scope.Scope
 import org.arend.prelude.Prelude
 import org.arend.psi.*
@@ -29,8 +34,13 @@ import org.arend.settings.ArendCustomCodeStyleSettings
 import org.arend.settings.ArendCustomCodeStyleSettings.OptimizeImportsPolicy
 import org.arend.typechecking.visitor.SearchVisitor
 import org.arend.util.ArendBundle
+import org.arend.util.getFileGroup
+import org.arend.util.getReferableConcreteGroup
+import org.arend.util.getFileScope
+import org.arend.util.getReferableScope
 import org.arend.util.mapToSet
 import org.jetbrains.annotations.Contract
+import java.util.*
 import java.util.Collections.singletonList
 import kotlin.reflect.jvm.internal.impl.utils.SmartSet
 
@@ -270,12 +280,14 @@ private fun doAddNamespaceCommands(
 }
 
 fun getScopeProvider(isForModule: Boolean, group: ArendGroup): ScopeProvider {
+    val server = group.project.service<ArendServerService>().server
     return if (isForModule) {
-        {
-            group.scope.resolveNamespace(it.toList())
-        }
+        { (if (group is ArendFile) {
+            group.moduleLocation?.let { moduleLocation -> getFileScope(group.project, moduleLocation) }
+        } else {
+            getReferableScope(group as? ReferableBase<*>)
+        })?.resolveNamespace(it.toList()) }
     } else {
-        val server = group.project.service<ArendServerService>().server
         { path -> server.getModuleScopeProvider(null, true).forModule(path) }
     }
 }
@@ -372,7 +384,7 @@ private class ImportStructureCollector(
     override fun visitElement(element: PsiElement) {
         progressIndicator?.checkCanceled()
         if (element is ArendDefinition<*>) {
-            currentFrame.definitions.add((element as Referable).refName)
+            currentFrame.definitions.add(element.refName)
             registerCoClauses(element)
             addCoreGlobalInstances(element)
         }
@@ -416,9 +428,11 @@ private class ImportStructureCollector(
         if (!allDefinitionsTypechecked) return
         tcReferable!!.accept(object : SearchVisitor<Unit>() { // not-null assertion implied by '&&' above
             override fun visitFunCall(expr: FunCallExpression?, params: Unit?): Boolean {
-                val pointerToDefinition = expr?.definition?.referable?.data as? SmartPsiElementPointer<*>
-                val globalInstance =
-                    (pointerToDefinition?.element as? ArendDefInstance)?.takeIf { it.isDefinitelyInstance() }
+                val data = expr?.definition?.referable?.data
+                val globalInstance = (if (data is SmartPsiElementPointer<*>) {
+                    data.element as? ArendDefInstance
+                } else data as? ArendDefInstance)?.takeIf { it.isDefinitelyInstance() }
+
                 if (globalInstance != null) {
                     currentFrame.instancesFromCore.add(globalInstance)
                 }
@@ -429,16 +443,22 @@ private class ImportStructureCollector(
 
     private fun addSyntacticGlobalInstances(element: ArendGroup) {
         // only \open-ed instances can participate in instance candidate resolution
-        /* TODO[server2]
-        val scope = element.scope
+        val (scope, concreteGroup) = if (element is ReferableBase<*>) {
+            getReferableScope(element) to getReferableConcreteGroup(element)
+        } else {
+            (element as? ArendFile)?.moduleLocation?.let { getFileScope(element.project, it) to getFileGroup(element.project, it) } ?: (EmptyScope.INSTANCE to null)
+        }
         val referables =
-            element.statements.flatMap { stat -> stat.namespaceCommand?.let { NamespaceCommandNamespace.makeNamespace(scope, it).elements } ?: emptyList() }
+            concreteGroup?.statements?.flatMap { stat -> stat.command?.let { NamespaceCommandNamespace.resolveNamespace(scope, it).elements } ?: emptyList() } ?: emptyList()
         for (instanceCandidate in referables) {
-            if (instanceCandidate is ArendDefInstance && instanceCandidate.isDefinitelyInstance()) {
-                currentFrame.instancesFromScope.add(instanceCandidate)
+            if (instanceCandidate !is LocatedReferableImpl) {
+                continue
+            }
+            val data = instanceCandidate.data
+            if (data is ArendDefInstance && data.isDefinitelyInstance()) {
+                currentFrame.instancesFromScope.add(data)
             }
         }
-        */
     }
 
     private fun ArendDefInstance.isDefinitelyInstance(): Boolean = functionKind == FunctionKind.INSTANCE
@@ -519,11 +539,10 @@ private fun isSuperAffectsElement(
 ): Boolean {
     if (PsiTreeUtil.isAncestor(resolvedScope, element, false)) return true
     if (element is ArendGroup && resolvedScope is ArendGroup && element.where != null && element.where == resolvedScope.where) return true
-    /* TODO[server2]
     if (resolvedScope is ArendDefClass && isFieldOrDynamic(resolvedScope, resolved)) {
-        return element.parentsOfType<ArendDefClass>().any { it.isSubClassOf(resolvedScope) }
+        val resolvedClassDefinition = resolvedScope.tcReferable?.typechecked as? ClassDefinition ?: return false
+        return element.parentsOfType<ArendDefClass>().mapNotNull { it.tcReferable?.typechecked }.filterIsInstance<ClassDefinition>().any { it.isSubClassOf(resolvedClassDefinition) }
     }
-    */
     return false
 }
 

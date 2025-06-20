@@ -2,10 +2,15 @@ package org.arend.util
 
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import org.arend.module.ModuleLocation
+import org.arend.naming.scope.CachingScope
+import org.arend.naming.scope.Scope
+import org.arend.naming.scope.ScopeFactory
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.psi.ext.fullNameText
 import org.arend.server.ArendServerService
+import org.arend.term.group.ConcreteGroup
 import java.lang.StringBuilder
 
 fun StringBuilder.addImports(project: Project, referables: Set<PsiLocatedReferable>): StringBuilder {
@@ -43,4 +48,14 @@ fun StringBuilder.addImports(project: Project, referables: Set<PsiLocatedReferab
         append("\n")
     }
     return this
+}
+
+fun getFileGroup(project: Project, moduleLocation: ModuleLocation): ConcreteGroup? {
+    val server = project.service<ArendServerService>().server
+    return server.getRawGroup(moduleLocation)
+}
+
+fun getFileScope(project: Project, moduleLocation: ModuleLocation): Scope {
+    val server = project.service<ArendServerService>().server
+    return CachingScope.make(ScopeFactory.forGroup(server.getRawGroup(moduleLocation), server.getModuleScopeProvider(null, true)))
 }

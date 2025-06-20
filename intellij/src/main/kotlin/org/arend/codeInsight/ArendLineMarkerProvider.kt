@@ -96,7 +96,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
   }
 
   private fun addCoreWithConcrete(concrete: Concrete.Definition, typechecked: Definition, coreToConcrete: MutableMap<Expression, Concrete.AppExpression>) {
-    val subConcreteExpressions = (concrete as? Concrete.FunctionDefinition?)?.body?.clauses?.flatMap { getAllConcreteSubAppExpression(it.expression) } ?: emptyList()
+    val subConcreteExpressions = (concrete as? Concrete.FunctionDefinition?)?.body?.clauses?.flatMap { it.expression?.let { expr -> getAllConcreteSubAppExpression(expr) } ?: emptyList() } ?: emptyList()
     val subExpressions = mutableListOf<Pair<Expression, Concrete.AppExpression>>()
     for (subExpr in subConcreteExpressions) {
       val subDefVisitor = CorrespondedSubDefVisitor(subExpr)
@@ -121,8 +121,9 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
 
     val markers = recursiveLineMarkers(file)
     markers.forEach {
-      it.element?.let {
-        defFunction -> if (!fileDefFunctions.contains(defFunction)) {
+      it.element?.let { id ->
+        val defFunction = id.parent.parent as? ArendDefFunction ?: return@forEach
+        if (!fileDefFunctions.contains(defFunction)) {
           fileDefFunctions.add(defFunction)
           result.add(it)
         }
@@ -130,7 +131,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
     }
   }
 
-  private fun recursiveLineMarkers(file: ArendFile): List<LineMarkerInfo<ArendDefFunction>> {
+  private fun recursiveLineMarkers(file: ArendFile): List<LineMarkerInfo<PsiElement>> {
     val project = file.project
 
     val server = project.service<ArendServerService>().server
@@ -142,7 +143,6 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
     val defsToPsiElement = mutableMapOf<FunctionDefinition, ArendDefFunction>()
     val coreToConcrete = mutableMapOf<Expression, Concrete.AppExpression>()
 
-    server.getCheckerFor(listOf(moduleLocation)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
     val definitions = server.getResolvedDefinitions(moduleLocation)
     for (definition in definitions) {
       ProgressManager.checkCanceled()
@@ -170,7 +170,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
     val terminationResult = graph.checkTermination()
     val newGraph = terminationResult.proj2
     val vertices = graph.graph.map { Pair(it.key, defsToPsiElement[it.key]) }.toMap()
-    val result = mutableListOf<LineMarkerInfo<ArendDefFunction>>()
+    val result = mutableListOf<LineMarkerInfo<PsiElement>>()
     for (entryVertex in graph.graph.entries) {
       val (vertex, otherVertices) = entryVertex
       val element = defsToPsiElement[vertex] ?: continue
@@ -184,13 +184,17 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
         }
       }
       if (isMutualRecursive) {
-        result.add(LineMarkerInfo(element, element.textRange, MUTUAL_RECURSIVE,
+        element.defIdentifier?.id?.let {
+          result.add(LineMarkerInfo(it, element.textRange, MUTUAL_RECURSIVE,
           { "Show the call graph" }, { _, _ -> mutualRecursiveCall(project, graph, newGraph, entryVertex, newGraph.entries.firstOrNull { entryVertex.key == it.key }, vertices, coreToConcrete) },
           GutterIconRenderer.Alignment.CENTER) { "callGraph" })
+        }
       } else if (toTextOfCallMatrix(entryVertex).isNotEmpty()) {
-        result.add(LineMarkerInfo(element, element.textRange, AllIcons.Gutter.RecursiveMethod,
-          { "Show the call matrix" }, { _, _ -> selfRecursiveCall(entryVertex) },
-          GutterIconRenderer.Alignment.CENTER) { "callMatrix" })
+        element.defIdentifier?.id?.let {
+          result.add(LineMarkerInfo(it, element.textRange, AllIcons.Gutter.RecursiveMethod,
+            { "Show the call matrix" }, { _, _ -> selfRecursiveCall(entryVertex) },
+            GutterIconRenderer.Alignment.CENTER) { "callMatrix" })
+        }
       }
     }
     return result
@@ -219,7 +223,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
   ) {
     val server = project.service<ArendServerService>().server
     val files = definitions.mapNotNull { it.containingFile as? ArendFile? }
-    server.getCheckerFor(files.mapNotNull { it.moduleLocation }).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+    server.getCheckerFor(files.mapNotNull { it.moduleLocation }.filter { !server.modules.contains(it) }).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
 
     for (definition in definitions) {
       val file = definition.containingFile as? ArendFile? ?: continue
