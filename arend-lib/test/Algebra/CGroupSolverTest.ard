@@ -33,3 +33,18 @@
 
 \lemma testSideForward {M : CGroup} (x y z : M) (p : x * z = z * inverse y * x) : y = ide
   => equation.cGroup in p
+
+\lemma testProof1 {M : CGroup} (x y z : M) (p : y = ide) : x * z = z * inverse y * x
+  => equation.cGroup {p}
+
+\lemma testProof2 {M : AbGroup} (x y z : M) (p : y - z = z) (q : z + z + z + z + z = x) : x + y + y + z = x + y - z + x - z
+  => equation.abGroup {p,q}
+
+\lemma testProof3 {M : CGroup} (x y z : M) (p : z * z = inverse z * inverse y) (q : x * z * z = ide) : x * inverse y * x = y * inverse x
+  => equation.cGroup {3 q, -2 p}
+
+\lemma testProofArg {M : AbGroup} (x y z : M) (p : x + y + y + y = zro) (q : negative y + (z + z) = 0) : x + y + y + z = negative z
+  => equation.abGroup {p} q
+
+\lemma testProofForward {M : CGroup} (x y z : M) (p : x * z = z * inverse y * x) (q : x * y * z = inverse y) : x * z = ide
+  => equation.cGroup {2 p} in q

@@ -67,6 +67,17 @@
     | neg n => inv inverse-isInv *> pmap inverse inverse_pow
     \where \open Arith.Int.IntRing(negative)
 
+  \lemma ipow_* {a : E} {x y : Int} : ipow a (x * y) = ipow (ipow a x) y \elim x, y
+    | pos n, pos m => pow_*
+    | pos n, neg m => pow_* *> pmap (pow __ m) (inv inverse_pow)
+    | neg (suc n), pos m => pow_*
+    | neg (suc n), neg m => pow_* *> pmap (pow __ m) (inv (inverse_pow {_} {_} {suc n} *> pmap (pow __ (suc n)) inverse-isInv))
+    \where \open Arith.Int.IntRing(*)
+
+  \lemma ipow_ide {x : Int} : ipow ide x = ide \elim x
+    | pos n => pow_ide
+    | neg n => pmap (pow __ n) inverse_ide *> pow_ide
+
   \lemma inverse-isInv {x : E} : inverse (inverse x) = x
     => AddGroup.negative-isInv {AddGroup.fromGroup \this}
 
@@ -281,6 +292,10 @@
 
   \lemma BigProd_inverse {l : Array E} : inverse (BigProd l) = BigProd (map inverse l)
     => AbGroup.BigSum_negative {AbGroup.fromCGroup \this}
+
+  \lemma BigProd_ipow {k : Int} {l : Array E} : BigProd (\lam i => ipow (l i) k) = ipow (BigProd l) k \elim k
+    | pos n => BigProd_pow
+    | neg n => later (BigProd-ext {_} {l.len} \lam i => inv inverse_pow) *> inv BigProd_inverse *> pmap inverse BigProd_pow *> inverse_pow
 }
 
 \class AbGroup \extends AddGroup, AbMonoid {

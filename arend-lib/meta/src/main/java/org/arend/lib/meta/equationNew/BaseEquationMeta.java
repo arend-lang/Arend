@@ -298,7 +298,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     }
 
     ConcreteExpression solver = factory.app(factory.ref(getSolverModel()), true, factory.core(instance.proj1));
-    ConcreteExpression env = Utils.makeArray(values.getValues().stream().map(it -> factory.core(it.computeTyped())).toList(), factory, typechecker.getPrelude());
+    ConcreteExpression env = Utils.makeArray(values.getValues().stream().map(it -> factory.core(it.computeTyped())).toList(), factory);
     ConcreteExpression result = isForward ? proof : factory.app(getTermsEquality(solverRef, solver, factory), true, envRef.isUsed() ? factory.ref(envRef.get()) : env, left.generateReflectedTerm(factory, getVarTerm()), right.generateReflectedTerm(factory, getVarTerm()), proof);
     if (solverRef.isUsed() || envRef.isUsed()) {
       List<ConcreteLetClause> clauses = new ArrayList<>(2);

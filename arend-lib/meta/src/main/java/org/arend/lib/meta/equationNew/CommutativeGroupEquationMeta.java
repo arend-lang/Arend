@@ -18,6 +18,7 @@ public class CommutativeGroupEquationMeta extends BaseCommutativeGroupEquationMe
   @Dependency                         ArendRef CGroupSolverModel;
   @Dependency(name = "CGroupSolverModel.terms-equality")      ArendRef termsEquality;
   @Dependency(name = "CGroupSolverModel.terms-equality-conv") ArendRef termsEqualityConv;
+  @Dependency(name = "CGroupSolverModel.apply-axioms")        ArendRef applyAxioms;
 
   @Override
   protected @NotNull ConcreteExpression getTermsEquality(@NotNull Lazy<ArendRef> solverRef, @Nullable ConcreteExpression solver, @NotNull ConcreteFactory factory) {
@@ -57,5 +58,10 @@ public class CommutativeGroupEquationMeta extends BaseCommutativeGroupEquationMe
   @Override
   protected @NotNull ArendRef getSolverModel() {
     return CGroupSolverModel;
+  }
+
+  @Override
+  protected @NotNull ArendRef getApplyAxiom() {
+    return applyAxioms;
   }
 }

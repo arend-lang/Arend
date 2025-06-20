@@ -18,6 +18,7 @@ public class AbelianGroupEquationMeta extends BaseCommutativeGroupEquationMeta {
   @Dependency                             ArendRef AbGroupSolverModel;
   @Dependency(name = "AbGroupSolverModel.terms-equality")       ArendRef termsEquality;
   @Dependency(name = "AbGroupSolverModel.terms-equality-conv")  ArendRef termsEqualityConv;
+  @Dependency(name = "AbGroupSolverModel.apply-axioms")         ArendRef applyAxioms;
 
   @Override
   protected @NotNull ConcreteExpression getTermsEquality(@NotNull Lazy<ArendRef> solverRef, @Nullable ConcreteExpression solver, @NotNull ConcreteFactory factory) {
@@ -57,5 +58,10 @@ public class AbelianGroupEquationMeta extends BaseCommutativeGroupEquationMeta {
   @Override
   protected CoreClassField getInverse() {
     return negative;
+  }
+
+  @Override
+  protected @NotNull ArendRef getApplyAxiom() {
+    return applyAxioms;
   }
 }

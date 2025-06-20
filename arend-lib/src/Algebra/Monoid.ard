@@ -448,6 +448,10 @@
   \lemma BigProd_* {n : Nat} {l l' : Array E n} : BigProd (\lam i => l i * l' i) = BigProd l * BigProd l'
     => AbMonoid.BigSum_+ {AbMonoid.fromCMonoid \this}
 
+  \lemma BigProd_pow {k : Nat} {l : Array E} : BigProd (\lam i => pow (l i) k) = pow (BigProd l) k \elim k
+    | 0 => BigProd_replicate1
+    | suc k => BigProd_* {_} {_} {\lam i => pow (l i) k} *> pmap (`* _) BigProd_pow
+
   \lemma BigProd_EPerm {l l' : Array E} (e : EPerm l l') : BigProd l = BigProd l'
     => AbMonoid.BigSum_EPerm {AbMonoid.fromCMonoid \this} e
 
