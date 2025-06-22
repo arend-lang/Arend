@@ -45,15 +45,15 @@
       | :zro => nil
       | :ide => (nil, 1) :: nil
       | t :+ s => normalize t ++ normalize s
-      | t :* s => remove0 (collapse (multiply' (normalize t) (normalize s)))
+      | t :* s => remove0 (collapse (multiply (normalize t) (normalize s)))
 
-    \func multiply' {n : Nat} {C : Monoid} (l1 l2 : NF C n) : NF C n \elim l2
+    \func multiply {n : Nat} {C : Monoid} (l1 l2 : NF C n) : NF C n \elim l2
       | nil => nil
-      | l2 => multiply l1 l2 nil
+      | l2 => multiply' l1 l2 nil
 
-    \func multiply {n : Nat} {C : Monoid} (l1 l2 acc : NF C n) : NF C n \elim l1
+    \func multiply' {n : Nat} {C : Monoid} (l1 l2 acc : NF C n) : NF C n \elim l1
       | nil => acc
-      | :: a l1 => multiply l1 l2 (map (\lam b => (a.1 ++ b.1, a.2 * b.2)) l2 ++ acc)
+      | :: a l1 => multiply' l1 l2 (map (\lam b => (a.1 ++ b.1, a.2 * b.2)) l2 ++ acc)
 
     \func collapse1 {n : Nat} {C : AddMonoid} (c : C) (m : List (Fin n)) (l : NF C n) : NF C n \elim l
       | nil => (m, c) :: nil
@@ -158,11 +158,11 @@
         : interpretNF' (map (\lam b => (a2 ++ b.1, a1 * b.2)) l) = alg a1 * MonoidSolverModel.interpretNF env a2 * interpretNF' l
         => inv (path (\lam i => interpretNF' (map (\lam b => (a2 ++ ++_nil {_} {b.1} i , a1 * b.2)) l))) *> interpretNF_map *> ide-right
 
-      \lemma interpretNF_multiply {l1 l2 : NF} {acc : NF}
-        : interpretNF' (multiply l1 l2 acc) = interpretNF' l1 * interpretNF' l2 + interpretNF' acc \elim l1
+      \lemma interpretNF_multiply' {l1 l2 : NF} {acc : NF}
+        : interpretNF' (multiply' l1 l2 acc) = interpretNF' l1 * interpretNF' l2 + interpretNF' acc \elim l1
         | nil => rewrite R.zro_*-left (inv zro-left)
         | :: a l1 => run {
-          rewrite (interpretNF_multiply, interpretNF_++),
+          rewrite (interpretNF_multiply', interpretNF_++),
           rewriteI +-assoc,
           pmap (`+ _),
           later,
@@ -170,9 +170,9 @@
           +-comm
         }
 
-      \lemma interpretNF_multiply' {l1 l2 : NF} : interpretNF' (multiply' l1 l2) = interpretNF' l1 * interpretNF' l2 \elim l2
+      \lemma interpretNF_multiply {l1 l2 : NF} : interpretNF' (multiply l1 l2) = interpretNF' l1 * interpretNF' l2 \elim l2
         | nil => inv zro_*-right
-        | :: a l2 => interpretNF_multiply *> zro-right
+        | :: a l2 => interpretNF_multiply' *> zro-right
 
       \lemma normalize'-consistent {t : Term C env.len} : interpretNF' (normalize t) = interpret t \elim t
         | coef c => idp
@@ -180,12 +180,22 @@
         | :zro => idp
         | :ide => func-ide
         | :+ t s => interpretNF_++ *> pmap2 (+) normalize'-consistent normalize'-consistent
-        | :* t s => remove0-consistent *> collapse-consistent *> interpretNF_multiply' *> pmap2 (*) normalize'-consistent normalize'-consistent
+        | :* t s => remove0-consistent *> collapse-consistent *> interpretNF_multiply *> pmap2 (*) normalize'-consistent normalize'-consistent
+
+      \lemma interpretNF-correct {l : NF} : interpretNF l = interpretNF' l
+        => remove0-consistent *> collapse-consistent *> sort-consistent
 
       \lemma interpretNF-consistent {t : Term C env.len} : interpretNF (normalize t) = interpret t
-        => remove0-consistent *> collapse-consistent *> sort-consistent *> normalize'-consistent
+        => interpretNF-correct *> normalize'-consistent
+
+      \lemma apply-axiom2 (t s : Term C env.len) (p : interpret t = interpret s) (left right add : NF)
+        : interpretNF (multiply left (multiply (normalize t) right) ++ add) = interpretNF (multiply left (multiply (normalize s) right) ++ add)
+        => interpretNF-correct *> interpretNF_++ *> pmap (`+ _) (interpretNF_multiply *> pmap (_ *) (interpretNF_multiply *> pmap (`* _) (normalize'-consistent *> p *> inv normalize'-consistent) *> inv interpretNF_multiply) *> inv interpretNF_multiply) *> inv (interpretNF-correct *> interpretNF_++)
     }
 
     \func SemiringData {R : Semiring} (env : Array R) : Data NatSemiring NatSemiring natMap env \cowith
       | alg-comm => natComm
+
+    \lemma apply-axiom (env : Array R) (t s : Term Nat env.len) (p : (SemiringData env).interpret t = (SemiringData env).interpret s) (left right add : NF Nat env.len)
+      => (SemiringData env).apply-axiom2 t s p left right add
   }

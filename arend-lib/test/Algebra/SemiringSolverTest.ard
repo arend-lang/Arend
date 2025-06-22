@@ -19,7 +19,7 @@
 \lemma natCoefTest {R : Semiring} (a b c d : R) : a + b * (3 * c + d + 2 + 2) + a = 2 * a + 3 * b * c + 4 * b + b * d
   => equation.semiring
 
-\lemma zeroTest {R : Semiring} (a : R) : a * natCoef 0 = 0
+\lemma zeroTest {R : Semiring} (a : R) : a * 0 = 0
   => equation.semiring
 
 \lemma semiringArgTest {R : Semiring} (a b c : R) (p : 2 * (a * b) + a * c = 0) : a * (b + c) + a * b = 0
@@ -27,3 +27,9 @@
 
 \lemma semiringForwardTest {R : Semiring} (a b c : R) (p : a * (b + c) + a * b = 0) : 2 * (a * b) + a * c = 0
   => equation.semiring in p
+
+\lemma semiringProofTest {R : Semiring} (a b c d : R) (p : b * c = 0) (q : a * d = 1) : (a + b) * (c + d) = a * c + b * d + 1
+  => equation.semiring {p,q}
+
+\lemma semiringProofTest2 {R : Semiring} (a b c d : R) (p : 0 = b * c) : a * c + b * d + a * d = (a + b) * (c + d)
+  => equation.semiring {1 p}

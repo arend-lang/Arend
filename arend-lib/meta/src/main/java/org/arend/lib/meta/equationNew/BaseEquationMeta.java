@@ -180,7 +180,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     }
   }
 
-  protected @Nullable Hint<NF> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
+  protected static <NF> @Nullable Hint<NF> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker, @NotNull BaseEquationMeta<NF> meta) {
     TypedExpression typed = Utils.typecheckWithAdditionalArguments(hint, typechecker, 0, false);
     if (typed == null) {
       return null;
@@ -193,7 +193,11 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
 
     EquationTerm left = EquationTerm.match(equality.getDefCallArguments().get(1), operations, values);
     EquationTerm right = EquationTerm.match(equality.getDefCallArguments().get(2), operations, values);
-    return new Hint<>(typed, left, right, normalize(left), normalize(right), hint);
+    return new Hint<>(typed, left, right, meta.normalize(left), meta.normalize(right), hint);
+  }
+
+  protected @Nullable Hint<NF> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
+    return parseHint(hint, hintType, operations, values, typechecker, this);
   }
 
   protected @Nullable List<Hint<NF>> parseHints(@Nullable ConcreteExpression hints, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {

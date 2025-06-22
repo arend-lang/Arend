@@ -88,12 +88,12 @@ public abstract class BaseCommutativeMonoidEquationMeta extends BaseMonoidEquati
     return new CommutativeGroupNFPrettyPrinter(isMultiplicative());
   }
 
-  protected static class MyHint<NF> extends BaseEquationMeta.Hint<NF> {
-    final boolean applyToLeft;
-    final boolean applyToRight;
-    final int count;
+  public static class MyHint<NF> extends BaseEquationMeta.Hint<NF> {
+    public final boolean applyToLeft;
+    public final boolean applyToRight;
+    public final int count;
 
-    MyHint(boolean applyToLeft, boolean fromRight, int count, TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {
+    public MyHint(boolean applyToLeft, boolean fromRight, int count, TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {
       super(typed, left, right, leftNF, rightNF, originalExpression);
       this.applyToLeft = applyToLeft;
       this.applyToRight = fromRight;
@@ -101,8 +101,7 @@ public abstract class BaseCommutativeMonoidEquationMeta extends BaseMonoidEquati
     }
   }
 
-  @Override
-  protected @Nullable MyHint<List<Integer>> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
+  public static <NF> @Nullable MyHint<NF> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker, @NotNull BaseEquationMeta<NF> meta) {
     Integer number;
     if (hint instanceof ConcreteAppExpression appExpr && appExpr.getArguments().getFirst().isExplicit()) {
       number = Utils.getNumber(appExpr.getFunction(), null, false);
@@ -119,8 +118,13 @@ public abstract class BaseCommutativeMonoidEquationMeta extends BaseMonoidEquati
       number = null;
     }
 
-    BaseEquationMeta.Hint<List<Integer>> result = super.parseHint(hint, hintType, operations, values, typechecker);
+    BaseEquationMeta.Hint<NF> result = BaseEquationMeta.parseHint(hint, hintType, operations, values, typechecker, meta);
     return result == null ? null : new MyHint<>(number == null || number >= 0, number == null || number < 0, number == null ? 1 : Math.abs(number), result.typed, result.left, result.right, result.leftNF, result.rightNF, result.originalExpression);
+  }
+
+  @Override
+  protected @Nullable MyHint<List<Integer>> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
+    return parseHint(hint, hintType, operations, values, typechecker, this);
   }
 
   protected abstract @NotNull ArendRef getApplyAxiom();
@@ -132,7 +136,7 @@ public abstract class BaseCommutativeMonoidEquationMeta extends BaseMonoidEquati
     if (position[0] == 1 && !myHint.applyToLeft || position[0] == 2 && !myHint.applyToRight) {
       return null;
     }
-    if (hint.leftNF.equals(current)) {
+    if (myHint.count == 1 && hint.leftNF.equals(current)) {
       return super.applyHint(hint, current, position, solverRef, envRef, factory);
     }
 

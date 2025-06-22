@@ -14,6 +14,10 @@ public record Monomial(BigInteger coefficient, List<Integer> elements) implement
     return new Monomial(coefficient.multiply(m.coefficient), newElements);
   }
 
+  public Monomial multiply(int c) {
+    return c == 1 ? this : new Monomial(coefficient.multiply(BigInteger.valueOf(c)), elements);
+  }
+
   public static void multiply(List<Monomial> list1, List<Monomial> list2, List<Monomial> result) {
     for (Monomial monomial1 : list1) {
       for (Monomial monomial2 : list2) {

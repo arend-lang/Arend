@@ -15,6 +15,7 @@ import org.arend.lib.error.equation.NFPrettyPrinter;
 import org.arend.lib.error.equation.RingNFPrettyPrinter;
 import org.arend.lib.meta.equation.binop_matcher.FunctionMatcher;
 import org.arend.lib.meta.equationNew.BaseEquationMeta;
+import org.arend.lib.meta.equationNew.monoid.BaseCommutativeMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.NonCommutativeMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.term.*;
 import org.arend.lib.ring.Monomial;
@@ -45,6 +46,9 @@ public class SemiringEquationMeta extends BaseEquationMeta<List<Monomial>> {
   @Dependency(name = "SemiringSolverModel.Term.:*")     ArendRef mulTerm;
   @Dependency(name = "SemiringSolverModel.Term.coef")   ArendRef coefTerm;
   @Dependency(name = "SemiringSolverModel.Term.var")    ArendRef varTerm;
+  @Dependency(name = "SemiringSolverModel.apply-axiom") ArendRef applyAxiom;
+  @Dependency(name = "List.::")                         ArendRef cons;
+  @Dependency(name = "List.nil")                        ArendRef nil;
 
   @Override
   protected @NotNull CoreClassDefinition getClassDef() {
@@ -88,12 +92,33 @@ public class SemiringEquationMeta extends BaseEquationMeta<List<Monomial>> {
     }
   }
 
+  private static List<Monomial> addNF(List<Monomial> poly1, List<Monomial> poly2) {
+    List<Monomial> result = new ArrayList<>(poly1.size() + poly2.size());
+    result.addAll(poly1);
+    result.addAll(poly2);
+    return result;
+  }
+
+  private static List<Monomial> mulCoefNF(int coef, List<Monomial> poly) {
+    if (coef == 1) return poly;
+    if (coef == 0) return Collections.emptyList();
+    List<Monomial> result = new ArrayList<>();
+    for (Monomial monomial : poly) {
+      result.add(new Monomial(monomial.coefficient().multiply(BigInteger.valueOf(coef)), monomial.elements()));
+    }
+    return result;
+  }
+
+  private static List<Monomial> normalizeNF(List<Monomial> poly) {
+    Collections.sort(poly);
+    return Monomial.collapse(poly);
+  }
+
   @Override
   protected @NotNull List<Monomial> normalize(EquationTerm term) {
     List<Monomial> result = new ArrayList<>();
     normalize(term, result);
-    Collections.sort(result);
-    return Monomial.collapse(result);
+    return normalizeNF(result);
   }
 
   @Override
@@ -142,5 +167,110 @@ public class SemiringEquationMeta extends BaseEquationMeta<List<Monomial>> {
   @Override
   protected @NotNull ConcreteExpression getTermsEqualityConv(@NotNull Lazy<ArendRef> solverRef, @NotNull ConcreteFactory factory) {
     return factory.app(factory.ref(termsEqualityConv), false, factory.ref(solverRef.get()));
+  }
+
+  @Override
+  protected @Nullable Hint<List<Monomial>> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
+    return BaseCommutativeMonoidEquationMeta.parseHint(hint, hintType, operations, values, typechecker, this);
+  }
+
+  @Override
+  protected @Nullable BaseEquationMeta.HintResult<List<Monomial>> applyHint(@NotNull BaseEquationMeta.Hint<List<Monomial>> hint, @NotNull List<Monomial> current, int[] position, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ConcreteFactory factory) {
+    position[0]++;
+    BaseCommutativeMonoidEquationMeta.MyHint<List<Monomial>> myHint = (BaseCommutativeMonoidEquationMeta.MyHint<List<Monomial>>) hint;
+    if (position[0] == 1 && !myHint.applyToLeft || position[0] == 2 && !myHint.applyToRight) {
+      return null;
+    }
+    if (myHint.count == 1 && hint.leftNF.equals(current)) {
+      return super.applyHint(hint, current, position, solverRef, envRef, factory);
+    }
+
+    AbstractNFResult result = // myHint.applyToLeft || myHint.applyToRight ? abstractExactNF(myHint, current) : abstractNF(myHint, current);
+      abstractExactNF(myHint, current);
+    return result == null ? null : new BaseEquationMeta.HintResult<>(factory.appBuilder(factory.ref(applyAxiom))
+        .app(factory.ref(envRef.get()))
+        .app(hint.left.generateReflectedTerm(factory, getVarTerm()))
+        .app(hint.right.generateReflectedTerm(factory, getVarTerm()))
+        .app(factory.core(hint.typed))
+        .app(nfToConcrete(result.leftMultiplier, factory))
+        .app(nfToConcrete(result.rightMultiplier, factory))
+        .app(nfToConcrete(result.addition, factory))
+        .build(), result.newNF);
+  }
+
+  private record AbstractNFResult(List<Monomial> leftMultiplier, List<Monomial> rightMultiplier, List<Monomial> addition, List<Monomial> newNF) {}
+
+  // applies a hint without multipliers
+  private @Nullable AbstractNFResult abstractExactNF(@NotNull BaseCommutativeMonoidEquationMeta.MyHint<List<Monomial>> hint, @NotNull List<Monomial> nf) {
+    List<Monomial> addition = new ArrayList<>(nf);
+    for (Monomial monomial : hint.leftNF) {
+      if (!addition.remove(monomial.multiply(hint.count))) {
+        return null;
+      }
+    }
+
+    return new AbstractNFResult(
+        Collections.singletonList(new Monomial(BigInteger.valueOf(hint.count), Collections.emptyList())),
+        Collections.singletonList(new Monomial(BigInteger.ONE, Collections.emptyList())),
+        addition,
+        normalizeNF(addNF(addition, mulCoefNF(hint.count, hint.rightNF))));
+  }
+
+  /*
+  private static List<Pair<Monomial,Monomial>> divideMonomial(Monomial m1, Monomial m2) {
+    if (m2.elements().size() > m1.elements().size()) return null;
+    BigInteger[] divRem = m1.coefficient().divideAndRemainder(m2.coefficient());
+    if (!divRem[1].equals(BigInteger.ZERO)) return null;
+
+    List<Pair<Monomial,Monomial>> result = new ArrayList<>();
+    int n = m1.elements().size() - m2.elements().size();
+    for (int i = 0; i <= n; i++) {
+      if (m1.elements().subList(i, i + m2.elements().size()).equals(m2.elements())) {
+        result.add(new Pair<>(new Monomial(divRem[0], m1.elements().subList(0, i)), new Monomial(BigInteger.ONE, m1.elements().subList(i + m2.elements().size(), m1.elements().size()))));
+      }
+    }
+    return result;
+  }
+
+  private @Nullable AbstractNFResult abstractNF(@NotNull BaseCommutativeMonoidEquationMeta.MyHint<List<Monomial>> hint, @NotNull List<Monomial> nf) {
+    record Triple(Monomial left, Monomial right, List<Monomial> addition) {}
+
+    List<Monomial> left = mulCoefNF(hint.count, hint.leftNF);
+    Monomial first = left.getFirst();
+    List<Triple> multipliers = new ArrayList<>(); // the list consist of triples (l,r,a) such that l * first * r + a = nf
+    for (int i = 0; i < nf.size(); i++) {
+      Monomial monomial = nf.get(i);
+      List<Pair<Monomial,Monomial>> list = divideMonomial(monomial, first);
+      if (list != null) {
+        for (Pair<Monomial, Monomial> pair : list) {
+          List<Monomial> addition = new ArrayList<>(nf.size() - 1);
+          for (int j = 0; j < nf.size(); j++) {
+            if (i != j) addition.add(nf.get(j));
+          }
+          multipliers.add(new Triple(pair.proj1, pair.proj2, addition));
+        }
+      }
+    }
+
+    for (int i = 1; i < left.size(); i++) {
+
+    }
+  }
+  */
+
+  private ConcreteExpression monomialToConcrete(Monomial monomial, ConcreteFactory factory) {
+    ConcreteExpression result = factory.ref(nil);
+    for (int i = monomial.elements().size() - 1; i >= 0; i--) {
+      result = factory.app(factory.ref(cons), true, factory.number(monomial.elements().get(i)), result);
+    }
+    return factory.tuple(result, factory.number(monomial.coefficient()));
+  }
+
+  private ConcreteExpression nfToConcrete(List<Monomial> nf, ConcreteFactory factory) {
+    ConcreteExpression result = factory.ref(nil);
+    for (int i = nf.size() - 1; i >= 0; i--) {
+      result = factory.app(factory.ref(cons), true, monomialToConcrete(nf.get(i), factory), result);
+    }
+    return result;
   }
 }
