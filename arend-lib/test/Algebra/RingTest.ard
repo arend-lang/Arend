@@ -10,18 +10,6 @@
 \import Arith.Rat
 \import Order.Lattice
 
-\lemma semiringTest1 {R : Semiring} (a b c d : R) : a + b * (c + d) = b * c + a + b * d
-  => equation
-
-\lemma semiringTest2 {R : Semiring} (a b c d e : R) : a * ((b + c) * d + e) = a * e + (a * (b + c)) * d
-  => equation
-
-\lemma natCoefTest {R : Semiring} (a b c d : R) : a + b * (3 * c + d + 2 + 2) + a = 2 * a + 3 * b * c + 4 * b + b * d
-  => equation
-
-\lemma zeroTest {R : Semiring} (a : R) : a * natCoef 0 = 0
-  => equation
-
 \lemma ringTest {R : Ring} (a b c d : R) : a * ((b + c) * d) - (a * b) * d = a * (c * d)
   => equation
 

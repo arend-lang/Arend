@@ -66,20 +66,20 @@ public class RingSolver extends BaseEqualitySolver {
   }
 
   private void toCommutativeNF(List<Monomial> nf) {
-    nf.replaceAll(monomial -> new Monomial(monomial.coefficient, CountingSort.sort(monomial.elements)));
+    nf.replaceAll(monomial -> new Monomial(monomial.coefficient(), CountingSort.sort(monomial.elements())));
   }
 
   private ConcreteExpression nfToRingTerm(List<Monomial> nf) {
     if (nf.isEmpty()) return factory.ref(meta.zroTerm);
     var monomialTerms = new ArrayList<ConcreteExpression>();
     for (Monomial m : nf) {
-      var isNegative = m.coefficient.signum() == -1;
-      var mTerm = factory.app(factory.ref(meta.coefTerm), true, Collections.singletonList(factory.number(m.coefficient.abs())));
+      var isNegative = m.coefficient().signum() == -1;
+      var mTerm = factory.app(factory.ref(meta.coefTerm), true, Collections.singletonList(factory.number(m.coefficient().abs())));
       if(isNegative) {
         mTerm = factory.app(factory.ref(meta.negativeTerm), true, Collections.singletonList(mTerm));
       }
 
-      for (Integer v : m.elements) {
+      for (Integer v : m.elements()) {
         var varTerm = factory.app(factory.ref(meta.varTerm), true, singletonList(factory.number(v)));
         mTerm = factory.app(factory.ref(meta.mulTerm), true, Arrays.asList(mTerm, varTerm));
       }
@@ -149,7 +149,7 @@ public class RingSolver extends BaseEqualitySolver {
   }
 
   private static void removeDuplicates(List<Monomial> list) {
-    list.replaceAll(monomial -> new Monomial(monomial.coefficient, MonoidSolver.removeDuplicates(monomial.elements)));
+    list.replaceAll(monomial -> new Monomial(monomial.coefficient(), MonoidSolver.removeDuplicates(monomial.elements())));
   }
 
   private static List<Monomial> latticeCollapse(List<Monomial> list) {
@@ -201,14 +201,14 @@ public class RingSolver extends BaseEqualitySolver {
       var poly = Poly.constant(BigInteger.ZERO, numVars, Ring.Z);
 
       for (Monomial m : term.nf) {
-        poly = poly.add(new org.arend.lib.util.algorithms.polynomials.Monomial<>(m.coefficient, ComMonoidWP.elemsSeqToPowersSeq(m.elements, numVars), Ring.Z));
+        poly = poly.add(new org.arend.lib.util.algorithms.polynomials.Monomial<>(m.coefficient(), ComMonoidWP.elemsSeqToPowersSeq(m.elements(), numVars), Ring.Z));
       }
       return poly;
     }
 
     private List<Monomial> polyToNF(Poly<BigInteger> poly) {
       var nf =  poly.monomials.stream().map(m -> new Monomial(m.coefficient, ComMonoidWP.powersSeqToElemsSeq(m.degreeVector))).collect(Collectors.toList());
-      if (nf.size() > 1 && nf.getFirst().elements.isEmpty() && nf.getFirst().coefficient.equals(BigInteger.ZERO)) {
+      if (nf.size() > 1 && nf.getFirst().elements().isEmpty() && nf.getFirst().coefficient().equals(BigInteger.ZERO)) {
         nf.removeFirst();
       }
       return nf;
@@ -274,7 +274,7 @@ public class RingSolver extends BaseEqualitySolver {
 
     private int numVarsInNF(List<Monomial> nf) {
       if (nf.isEmpty()) return 0;
-      return Collections.max(nf.stream().map(m -> m.elements.isEmpty() ? 0 : Collections.max(m.elements)).toList()) + 1;
+      return Collections.max(nf.stream().map(m -> m.elements().isEmpty() ? 0 : Collections.max(m.elements())).toList()) + 1;
     }
 
     private ConcreteExpression minusRingTerm(ConcreteExpression a, ConcreteExpression b) {

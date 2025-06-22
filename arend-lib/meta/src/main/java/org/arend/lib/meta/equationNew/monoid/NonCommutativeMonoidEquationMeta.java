@@ -1,4 +1,4 @@
-package org.arend.lib.meta.equationNew;
+package org.arend.lib.meta.equationNew.monoid;
 
 import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
@@ -47,21 +47,26 @@ public abstract class NonCommutativeMonoidEquationMeta extends BaseMonoidEquatio
         }
       }
       case VarTerm(int index) -> result.add(index);
+      default -> throw new IllegalStateException();
     }
   }
 
-  @Override
-  protected @NotNull ConcreteExpression nfToConcreteTerm(List<Integer> nf, Values<CoreExpression> values, TypedExpression instance, ConcreteFactory factory) {
-    if (nf.isEmpty()) return factory.ref(getIde().getRef());
+  public static ConcreteExpression nfToConcreteTerm(List<Integer> nf, Values<CoreExpression> values, TypedExpression instance, ConcreteFactory factory, ArendRef ide, ArendRef mul) {
+    if (nf.isEmpty()) return factory.ref(ide);
     ConcreteExpression result = factory.core(values.getValue(nf.getLast()).computeTyped());
     for (int i = nf.size() - 2; i >= 0; i--) {
-      ConcreteAppBuilder builder = factory.appBuilder(factory.ref(getMul().getRef()));
+      ConcreteAppBuilder builder = factory.appBuilder(factory.ref(mul));
       if (instance != null) {
         builder.app(factory.core(instance), false);
       }
       result = builder.app(factory.core(values.getValue(nf.get(i)).computeTyped())).app(result).build();
     }
     return result;
+  }
+
+  @Override
+  protected @NotNull ConcreteExpression nfToConcreteTerm(List<Integer> nf, Values<CoreExpression> values, TypedExpression instance, ConcreteFactory factory) {
+    return nfToConcreteTerm(nf, values, instance, factory, getIde().getRef(), getMul().getRef());
   }
 
   @Override

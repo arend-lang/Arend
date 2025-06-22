@@ -40,8 +40,6 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
   @Dependency(name = "*>")                              ArendRef concat;
   @Dependency(name = "BaseSet.E")                       CoreClassField carrier;
 
-  protected abstract boolean isMultiplicative();
-
   protected abstract @NotNull CoreClassDefinition getClassDef();
 
   protected abstract @NotNull List<TermOperation> getOperations(TypedExpression instance, CoreClassCallExpression instanceType, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteExpression marker);
@@ -60,7 +58,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
 
   protected abstract @NotNull ConcreteExpression getTermsEqualityConv(@NotNull Lazy<ArendRef> solverRef, @NotNull ConcreteFactory factory);
 
-  protected record HintResult<NF>(ConcreteExpression proof, NF newNF) {}
+  public record HintResult<NF>(ConcreteExpression proof, NF newNF) {}
 
   protected @Nullable HintResult<NF> applyHint(@NotNull Hint<NF> hint, @NotNull NF current, int[] position, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ConcreteFactory factory) {
     return hint.leftNF.equals(current) ? new HintResult<>(factory.app(getTermsEqualityConv(solverRef, factory), true, factory.ref(envRef.get()), hint.left.generateReflectedTerm(factory, getVarTerm()), hint.right.generateReflectedTerm(factory, getVarTerm()), factory.core(hint.typed)), hint.rightNF) : null;
@@ -164,15 +162,15 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     return proofCore == null ? null : factory.core(proofCore);
   }
 
-  protected static class Hint<NF> {
-    final TypedExpression typed;
-    final EquationTerm left;
-    final EquationTerm right;
-    final NF leftNF;
-    final NF rightNF;
-    final ConcreteExpression originalExpression;
+  public static class Hint<NF> {
+    public final TypedExpression typed;
+    public final EquationTerm left;
+    public final EquationTerm right;
+    public final NF leftNF;
+    public final NF rightNF;
+    public final ConcreteExpression originalExpression;
 
-    Hint(TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {
+    public Hint(TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {
       this.typed = typed;
       this.left = left;
       this.right = right;

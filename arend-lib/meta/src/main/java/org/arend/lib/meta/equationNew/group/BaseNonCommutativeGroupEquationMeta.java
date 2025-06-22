@@ -1,4 +1,4 @@
-package org.arend.lib.meta.equationNew;
+package org.arend.lib.meta.equationNew.group;
 
 import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
@@ -37,19 +37,20 @@ public abstract class BaseNonCommutativeGroupEquationMeta extends BaseGroupEquat
 
   private void normalize(EquationTerm term, List<Pair<Boolean,Integer>> result) {
     switch (term) {
-      case OpTerm opTerm -> {
-        if (opTerm.operation().reflectionRef().equals(inverseTerm)) {
-          List<Pair<Boolean,Integer>> args = normalize(opTerm.arguments().getFirst());
+      case OpTerm(var operation, var arguments) -> {
+        if (operation.reflectionRef().equals(inverseTerm)) {
+          List<Pair<Boolean,Integer>> args = normalize(arguments.getFirst());
           for (int i = args.size() - 1; i >= 0; i--) {
             result.add(new Pair<>(!args.get(i).proj1, args.get(i).proj2));
           }
         } else {
-          for (EquationTerm argument : opTerm.arguments()) {
+          for (EquationTerm argument : arguments) {
             normalize(argument, result);
           }
         }
       }
       case VarTerm(int index) -> result.add(new Pair<>(true, index));
+      default -> throw new IllegalStateException();
     }
   }
 

@@ -1,4 +1,4 @@
-package org.arend.lib.meta.equationNew;
+package org.arend.lib.meta.equationNew.group;
 
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.ConcreteExpression;
@@ -10,15 +10,15 @@ import org.arend.lib.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class AbelianGroupEquationMeta extends BaseCommutativeGroupEquationMeta {
-  @Dependency                             CoreClassDefinition AbGroup;
-  @Dependency(name = "AddPointed.zro")    CoreClassField zro;
-  @Dependency(name = "AddMonoid.+")       CoreClassField add;
-  @Dependency(name = "AddGroup.negative") CoreClassField negative;
-  @Dependency                             ArendRef AbGroupSolverModel;
-  @Dependency(name = "AbGroupSolverModel.terms-equality")       ArendRef termsEquality;
-  @Dependency(name = "AbGroupSolverModel.terms-equality-conv")  ArendRef termsEqualityConv;
-  @Dependency(name = "AbGroupSolverModel.apply-axioms")         ArendRef applyAxioms;
+public class CommutativeGroupEquationMeta extends BaseCommutativeGroupEquationMeta {
+  @Dependency                         CoreClassDefinition CGroup;
+  @Dependency(name = "Pointed.ide")   CoreClassField ide;
+  @Dependency(name = "Semigroup.*")   CoreClassField mul;
+  @Dependency(name = "Group.inverse") CoreClassField inverse;
+  @Dependency                         ArendRef CGroupSolverModel;
+  @Dependency(name = "CGroupSolverModel.terms-equality")      ArendRef termsEquality;
+  @Dependency(name = "CGroupSolverModel.terms-equality-conv") ArendRef termsEqualityConv;
+  @Dependency(name = "CGroupSolverModel.apply-axioms")        ArendRef applyAxioms;
 
   @Override
   protected @NotNull ConcreteExpression getTermsEquality(@NotNull Lazy<ArendRef> solverRef, @Nullable ConcreteExpression solver, @NotNull ConcreteFactory factory) {
@@ -32,32 +32,32 @@ public class AbelianGroupEquationMeta extends BaseCommutativeGroupEquationMeta {
 
   @Override
   protected @NotNull CoreClassDefinition getClassDef() {
-    return AbGroup;
-  }
-
-  @Override
-  protected @NotNull ArendRef getSolverModel() {
-    return AbGroupSolverModel;
+    return CGroup;
   }
 
   @Override
   protected boolean isMultiplicative() {
-    return false;
+    return true;
   }
 
   @Override
   protected CoreClassField getIde() {
-    return zro;
+    return ide;
   }
 
   @Override
   protected CoreClassField getMul() {
-    return add;
+    return mul;
   }
 
   @Override
   protected CoreClassField getInverse() {
-    return negative;
+    return inverse;
+  }
+
+  @Override
+  protected @NotNull ArendRef getSolverModel() {
+    return CGroupSolverModel;
   }
 
   @Override

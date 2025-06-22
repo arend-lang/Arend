@@ -1,0 +1,29 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Meta
+
+\lemma semiringTest1 {R : Semiring} (a b c d : R) : a + b * (c + d) = b * c + a + b * d
+  => equation.semiring
+
+\lemma semiringTest2 {R : Semiring} (a b c d e : R) : a * ((b + c) * d + e) = a * e + (a * (b + c)) * d
+  => equation.semiring
+
+\lemma semiringTest3 {R : Semiring} (a b c : R) : a + b + a = a + a + b
+  => equation.semiring
+
+\lemma semiringTest4 {R : Semiring} (a b : R) : a + a + b = 2 * a + b
+  => equation.semiring
+
+\lemma natCoefTest {R : Semiring} (a b c d : R) : a + b * (3 * c + d + 2 + 2) + a = 2 * a + 3 * b * c + 4 * b + b * d
+  => equation.semiring
+
+\lemma zeroTest {R : Semiring} (a : R) : a * natCoef 0 = 0
+  => equation.semiring
+
+\lemma semiringArgTest {R : Semiring} (a b c : R) (p : 2 * (a * b) + a * c = 0) : a * (b + c) + a * b = 0
+  => equation.semiring p
+
+\lemma semiringForwardTest {R : Semiring} (a b c : R) (p : a * (b + c) + a * b = 0) : 2 * (a * b) + a * c = 0
+  => equation.semiring in p

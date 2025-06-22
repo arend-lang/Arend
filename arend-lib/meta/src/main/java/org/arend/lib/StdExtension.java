@@ -28,7 +28,15 @@ import org.arend.lib.meta.debug.RandomMeta;
 import org.arend.lib.meta.debug.SleepMeta;
 import org.arend.lib.meta.debug.TimeMeta;
 import org.arend.lib.meta.equation.EquationMeta;
-import org.arend.lib.meta.equationNew.*;
+import org.arend.lib.meta.equationNew.group.AbelianGroupEquationMeta;
+import org.arend.lib.meta.equationNew.group.AdditiveGroupEquationMeta;
+import org.arend.lib.meta.equationNew.group.CommutativeGroupEquationMeta;
+import org.arend.lib.meta.equationNew.group.GroupEquationMeta;
+import org.arend.lib.meta.equationNew.monoid.AbelianMonoidEquationMeta;
+import org.arend.lib.meta.equationNew.monoid.AdditiveMonoidEquationMeta;
+import org.arend.lib.meta.equationNew.monoid.CommutativeMonoidEquationMeta;
+import org.arend.lib.meta.equationNew.monoid.MonoidEquationMeta;
+import org.arend.lib.meta.equationNew.ring.SemiringEquationMeta;
 import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
 import org.arend.lib.meta.exists.ExistsResolver;
@@ -258,6 +266,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getCommMonoidSolverModule());
     contributor.declare(algebra, Names.getNewGroupSolverModule());
     contributor.declare(algebra, Names.getNewMonoidSolverModule());
+    contributor.declare(algebra, Names.getNewSemiringSolverModule());
     contributor.declare(algebra, Names.getIntModule());
     contributor.declare(algebra, Names.getNatModule());
     contributor.declare(algebra, Names.getRatModule());
@@ -294,6 +303,7 @@ public class StdExtension implements ArendExtension {
     ConcreteMetaDefinition commGroupSolver = makeDef(equation.getRef(), "cGroup", new DependencyMetaTypechecker(CommutativeGroupEquationMeta.class, () -> new DeferredMetaDefinition(new CommutativeGroupEquationMeta(), true)));
     contributor.declare(nullDoc() /* TODO[server2]: Write a description */, commGroupSolver);
     contributor.declare(hList(text("Additive version of "), refDoc(commGroupSolver.getRef())), makeDef(equation.getRef(), "abGroup", new DependencyMetaTypechecker(AbelianGroupEquationMeta.class, () -> new DeferredMetaDefinition(new AbelianGroupEquationMeta(), true))));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "semiring", new DependencyMetaTypechecker(SemiringEquationMeta.class, () -> new DeferredMetaDefinition(new SemiringEquationMeta(), true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));

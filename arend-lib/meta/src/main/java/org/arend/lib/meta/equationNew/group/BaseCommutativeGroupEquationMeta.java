@@ -1,4 +1,4 @@
-package org.arend.lib.meta.equationNew;
+package org.arend.lib.meta.equationNew.group;
 
 import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
@@ -13,6 +13,7 @@ import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
 import org.arend.lib.error.equation.CommutativeGroupNFPrettyPrinter;
 import org.arend.lib.error.equation.NFPrettyPrinter;
+import org.arend.lib.meta.equationNew.BaseEquationMeta;
 import org.arend.lib.meta.equationNew.term.EquationTerm;
 import org.arend.lib.meta.equationNew.term.OpTerm;
 import org.arend.lib.meta.equationNew.term.TermOperation;
@@ -32,11 +33,11 @@ public abstract class BaseCommutativeGroupEquationMeta extends BaseGroupEquation
 
   private void normalize(EquationTerm term, boolean isPositive, List<Integer> result) {
     switch (term) {
-      case OpTerm opTerm -> {
-        if (opTerm.operation().reflectionRef().equals(inverseTerm)) {
+      case OpTerm(var operation, var arguments) -> {
+        if (operation.reflectionRef().equals(inverseTerm)) {
           isPositive = !isPositive;
         }
-        for (EquationTerm argument : opTerm.arguments()) {
+        for (EquationTerm argument : arguments) {
           normalize(argument, isPositive, result);
         }
       }
@@ -46,6 +47,7 @@ public abstract class BaseCommutativeGroupEquationMeta extends BaseGroupEquation
         }
         result.set(index, result.get(index) + (isPositive ? 1 : -1));
       }
+      default -> throw new IllegalStateException();
     }
   }
 
@@ -96,7 +98,7 @@ public abstract class BaseCommutativeGroupEquationMeta extends BaseGroupEquation
     return new CommutativeGroupNFPrettyPrinter(isMultiplicative());
   }
 
-  protected static class MyHint<NF> extends Hint<NF> {
+  protected static class MyHint<NF> extends BaseEquationMeta.Hint<NF> {
     final int coefficient;
 
     MyHint(int coefficient, TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {
@@ -123,7 +125,7 @@ public abstract class BaseCommutativeGroupEquationMeta extends BaseGroupEquation
       number = null;
     }
 
-    Hint<List<Integer>> result = super.parseHint(hint, hintType, operations, values, typechecker);
+    BaseEquationMeta.Hint<List<Integer>> result = super.parseHint(hint, hintType, operations, values, typechecker);
     return result == null ? null : new MyHint<>(number == null ? 1 : number, result.typed, result.left, result.right, result.leftNF, result.rightNF, result.originalExpression);
   }
 
@@ -149,12 +151,12 @@ public abstract class BaseCommutativeGroupEquationMeta extends BaseGroupEquation
   }
 
   @Override
-  protected @Nullable Pair<HintResult<List<Integer>>, HintResult<List<Integer>>> applyHints(@NotNull List<Hint<List<Integer>>> hints, @NotNull List<Integer> left, @NotNull List<Integer> right, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
+  protected @Nullable Pair<BaseEquationMeta.HintResult<List<Integer>>, BaseEquationMeta.HintResult<List<Integer>>> applyHints(@NotNull List<BaseEquationMeta.Hint<List<Integer>>> hints, @NotNull List<Integer> left, @NotNull List<Integer> right, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
     List<Integer> newNF = new ArrayList<>(left);
     addNF(newNF, -1, right);
 
     List<ConcreteExpression> axioms = new ArrayList<>();
-    for (Hint<List<Integer>> hint : hints) {
+    for (BaseEquationMeta.Hint<List<Integer>> hint : hints) {
       int c = ((MyHint<List<Integer>>) hint).coefficient;
       addNF(newNF, -c, hint.leftNF);
       addNF(newNF, c, hint.rightNF);
@@ -162,6 +164,6 @@ public abstract class BaseCommutativeGroupEquationMeta extends BaseGroupEquation
     }
 
     trimZeros(newNF);
-    return new Pair<>(new HintResult<>(factory.app(factory.ref(getApplyAxiom()), true, factory.ref(envRef.get()), Utils.makeArray(axioms, factory), nfToConcrete(newNF, values.getValues().size(), factory)), newNF), new HintResult<>(null, Collections.emptyList()));
+    return new Pair<>(new BaseEquationMeta.HintResult<>(factory.app(factory.ref(getApplyAxiom()), true, factory.ref(envRef.get()), Utils.makeArray(axioms, factory), nfToConcrete(newNF, values.getValues().size(), factory)), newNF), new BaseEquationMeta.HintResult<>(null, Collections.emptyList()));
   }
 }

@@ -1,4 +1,4 @@
-package org.arend.lib.meta.equationNew;
+package org.arend.lib.meta.equationNew.monoid;
 
 import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
@@ -6,12 +6,11 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.jetbrains.annotations.NotNull;
 
-public class CommutativeMonoidEquationMeta extends BaseCommutativeMonoidEquationMeta {
-  @Dependency                       ArendRef CMonoidSolverModel;
-  @Dependency                       CoreClassDefinition CMonoid;
+public class MonoidEquationMeta extends NonCommutativeMonoidEquationMeta {
+  @Dependency ArendRef              MonoidSolverModel;
+  @Dependency CoreClassDefinition   Monoid;
   @Dependency(name = "Pointed.ide") CoreClassField ide;
   @Dependency(name = "Semigroup.*") CoreClassField mul;
-  @Dependency(name = "CMonoidSolverModel.apply-axiom")  ArendRef applyAxiom;
 
   @Override
   protected boolean isMultiplicative() {
@@ -30,16 +29,11 @@ public class CommutativeMonoidEquationMeta extends BaseCommutativeMonoidEquation
 
   @Override
   protected @NotNull CoreClassDefinition getClassDef() {
-    return CMonoid;
+    return Monoid;
   }
 
   @Override
   protected @NotNull ArendRef getSolverModel() {
-    return CMonoidSolverModel;
-  }
-
-  @Override
-  protected @NotNull ArendRef getApplyAxiom() {
-    return applyAxiom;
+    return MonoidSolverModel;
   }
 }

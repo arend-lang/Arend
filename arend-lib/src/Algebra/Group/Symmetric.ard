@@ -11,7 +11,7 @@
 \import Arith.Nat.Sequence
 \import Combinatorics.Factorial
 \import Data.Array
-\import Data.Fin \hiding (Index)
+\import Data.Fin
 \import Data.Or
 \import Equiv
 \import Equiv.Sigma

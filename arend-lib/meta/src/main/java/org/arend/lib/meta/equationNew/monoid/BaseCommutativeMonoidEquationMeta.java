@@ -1,4 +1,4 @@
-package org.arend.lib.meta.equationNew;
+package org.arend.lib.meta.equationNew.monoid;
 
 import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
@@ -14,6 +14,7 @@ import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
 import org.arend.lib.error.equation.CommutativeGroupNFPrettyPrinter;
 import org.arend.lib.error.equation.NFPrettyPrinter;
+import org.arend.lib.meta.equationNew.BaseEquationMeta;
 import org.arend.lib.meta.equationNew.term.EquationTerm;
 import org.arend.lib.meta.equationNew.term.OpTerm;
 import org.arend.lib.meta.equationNew.term.TermOperation;
@@ -44,6 +45,7 @@ public abstract class BaseCommutativeMonoidEquationMeta extends BaseMonoidEquati
         }
         result.set(index, result.get(index) + 1);
       }
+      default -> throw new IllegalStateException();
     }
   }
 
@@ -86,7 +88,7 @@ public abstract class BaseCommutativeMonoidEquationMeta extends BaseMonoidEquati
     return new CommutativeGroupNFPrettyPrinter(isMultiplicative());
   }
 
-  protected static class MyHint<NF> extends Hint<NF> {
+  protected static class MyHint<NF> extends BaseEquationMeta.Hint<NF> {
     final boolean applyToLeft;
     final boolean applyToRight;
     final int count;
@@ -117,14 +119,14 @@ public abstract class BaseCommutativeMonoidEquationMeta extends BaseMonoidEquati
       number = null;
     }
 
-    Hint<List<Integer>> result = super.parseHint(hint, hintType, operations, values, typechecker);
+    BaseEquationMeta.Hint<List<Integer>> result = super.parseHint(hint, hintType, operations, values, typechecker);
     return result == null ? null : new MyHint<>(number == null || number >= 0, number == null || number < 0, number == null ? 1 : Math.abs(number), result.typed, result.left, result.right, result.leftNF, result.rightNF, result.originalExpression);
   }
 
   protected abstract @NotNull ArendRef getApplyAxiom();
 
   @Override
-  protected @Nullable HintResult<List<Integer>> applyHint(@NotNull Hint<List<Integer>> hint, @NotNull List<Integer> current, int[] position, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ConcreteFactory factory) {
+  protected @Nullable BaseEquationMeta.HintResult<List<Integer>> applyHint(@NotNull BaseEquationMeta.Hint<List<Integer>> hint, @NotNull List<Integer> current, int[] position, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ConcreteFactory factory) {
     position[0]++;
     MyHint<List<Integer>> myHint = (MyHint<List<Integer>>) hint;
     if (position[0] == 1 && !myHint.applyToLeft || position[0] == 2 && !myHint.applyToRight) {
@@ -135,7 +137,7 @@ public abstract class BaseCommutativeMonoidEquationMeta extends BaseMonoidEquati
     }
 
     Pair<List<Integer>,List<Integer>> pair = abstractNF(myHint, current);
-    return pair == null ? null : new HintResult<>(factory.appBuilder(factory.ref(getApplyAxiom()))
+    return pair == null ? null : new BaseEquationMeta.HintResult<>(factory.appBuilder(factory.ref(getApplyAxiom()))
         .app(factory.ref(envRef.get()))
         .app(hint.left.generateReflectedTerm(factory, getVarTerm()))
         .app(hint.right.generateReflectedTerm(factory, getVarTerm()))

@@ -5,17 +5,8 @@ import org.jetbrains.annotations.NotNull;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
-public class Monomial implements Comparable<Monomial> {
-  public final BigInteger coefficient;
-  public final List<Integer> elements;
-
-  public Monomial(BigInteger coefficient, List<Integer> elements) {
-    this.coefficient = coefficient;
-    this.elements = elements;
-  }
-
+public record Monomial(BigInteger coefficient, List<Integer> elements) implements Comparable<Monomial> {
   public Monomial multiply(Monomial m) {
     List<Integer> newElements = new ArrayList<>(elements.size() + m.elements.size());
     newElements.addAll(elements);
@@ -44,10 +35,10 @@ public class Monomial implements Comparable<Monomial> {
   public static List<Monomial> collapse(List<Monomial> list) {
     List<Monomial> result = new ArrayList<>(list.size());
     for (Monomial monomial : list) {
-      if (!result.isEmpty() && result.get(result.size() - 1).elements.equals(monomial.elements)) {
-        BigInteger coef = result.get(result.size() - 1).coefficient.add(monomial.coefficient);
+      if (!result.isEmpty() && result.getLast().elements.equals(monomial.elements)) {
+        BigInteger coef = result.getLast().coefficient.add(monomial.coefficient);
         if (coef.equals(BigInteger.ZERO)) {
-          result.remove(result.size() - 1);
+          result.removeLast();
         } else {
           result.set(result.size() - 1, new Monomial(coef, monomial.elements));
         }
@@ -58,7 +49,7 @@ public class Monomial implements Comparable<Monomial> {
     return result;
   }
 
-  public enum ComparisonResult { LESS, GREATER, EQUALS, UNCOMPARABLE }
+  public enum ComparisonResult {LESS, GREATER, EQUALS, UNCOMPARABLE}
 
   public ComparisonResult compare(Monomial m) {
     if (elements.size() == m.elements.size()) {
@@ -83,11 +74,6 @@ public class Monomial implements Comparable<Monomial> {
     if (o == null || getClass() != o.getClass()) return false;
     Monomial monomial = (Monomial) o;
     return coefficient.equals(monomial.coefficient) && elements.equals(monomial.elements);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(coefficient, elements);
   }
 
   @Override

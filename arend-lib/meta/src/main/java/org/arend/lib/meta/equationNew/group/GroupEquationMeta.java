@@ -1,4 +1,4 @@
-package org.arend.lib.meta.equationNew;
+package org.arend.lib.meta.equationNew.group;
 
 import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
@@ -6,40 +6,40 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.jetbrains.annotations.NotNull;
 
-public class AdditiveGroupEquationMeta extends BaseNonCommutativeGroupEquationMeta {
-  @Dependency                             CoreClassDefinition AddGroup;
-  @Dependency(name = "AddPointed.zro")    CoreClassField zro;
-  @Dependency(name = "AddMonoid.+")       CoreClassField add;
-  @Dependency(name = "AddGroup.negative") CoreClassField negative;
-  @Dependency                             ArendRef AddGroupSolverModel;
+public class GroupEquationMeta extends BaseNonCommutativeGroupEquationMeta {
+  @Dependency                         CoreClassDefinition Group;
+  @Dependency(name = "Pointed.ide")   CoreClassField ide;
+  @Dependency(name = "Semigroup.*")   CoreClassField mul;
+  @Dependency(name = "Group.inverse") CoreClassField inverse;
+  @Dependency                         ArendRef GroupSolverModel;
 
   @Override
   protected @NotNull CoreClassDefinition getClassDef() {
-    return AddGroup;
+    return Group;
   }
 
   @Override
   protected @NotNull ArendRef getSolverModel() {
-    return AddGroupSolverModel;
+    return GroupSolverModel;
   }
 
   @Override
   protected boolean isMultiplicative() {
-    return false;
+    return true;
   }
 
   @Override
   protected CoreClassField getIde() {
-    return zro;
+    return ide;
   }
 
   @Override
   protected CoreClassField getMul() {
-    return add;
+    return mul;
   }
 
   @Override
   protected CoreClassField getInverse() {
-    return negative;
+    return inverse;
   }
 }
