@@ -42,9 +42,9 @@ class ArendLineMarkerProviderTest : ArendTestBase() {
         super.visitElement(element)
       }
     })
-    val h = elements.find { it is ArendDefFunction && it.name == "h" }
-    val f = elements.find { it is ArendDefFunction && it.name == "f" }
-    val g = elements.find { it is ArendDefFunction && it.name == "g" }
+    val h = (elements.find { it is ArendDefFunction && it.name == "h" } as? ArendDefFunction)?.defIdentifier?.id
+    val f = (elements.find { it is ArendDefFunction && it.name == "f" } as? ArendDefFunction)?.defIdentifier?.id
+    val g = (elements.find { it is ArendDefFunction && it.name == "g" } as? ArendDefFunction)?.defIdentifier?.id
 
     val provider = ArendLineMarkerProvider()
     val markers = mutableListOf<LineMarkerInfo<*>>()
