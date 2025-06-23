@@ -10,15 +10,6 @@
 \import Arith.Rat
 \import Order.Lattice
 
-\lemma ringTest {R : Ring} (a b c d : R) : a * ((b + c) * d) - (a * b) * d = a * (c * d)
-  => equation
-
-\lemma intCoefTest {R : Ring} (b c d : R) : b * 2 * c + b * (3 * c + d + 4) + b * -3 = 5 * b * c + b * (d + 1)
-  => equation
-
-\lemma zeroTest2 {R : Ring} (a b c d : R) : a + a * -1 = 0
-  => equation
-
 \lemma commRingTest {R : CRing} (a b c d e : R) : a * b - b * (a + c) + c * b * a = b * c * (a - 1)
   => equation
 

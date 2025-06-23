@@ -174,23 +174,23 @@
         | nil => inv zro_*-right
         | :: a l2 => interpretNF_multiply' *> zro-right
 
-      \lemma normalize'-consistent {t : Term C env.len} : interpretNF' (normalize t) = interpret t \elim t
+      \lemma normalize-consistent {t : Term C env.len} : interpretNF' (normalize t) = interpret t \elim t
         | coef c => idp
         | var v => rewrite (decideEq=_reduce idp) idp
         | :zro => idp
         | :ide => func-ide
-        | :+ t s => interpretNF_++ *> pmap2 (+) normalize'-consistent normalize'-consistent
-        | :* t s => remove0-consistent *> collapse-consistent *> interpretNF_multiply *> pmap2 (*) normalize'-consistent normalize'-consistent
+        | :+ t s => interpretNF_++ *> pmap2 (+) normalize-consistent normalize-consistent
+        | :* t s => remove0-consistent *> collapse-consistent *> interpretNF_multiply *> pmap2 (*) normalize-consistent normalize-consistent
 
       \lemma interpretNF-correct {l : NF} : interpretNF l = interpretNF' l
         => remove0-consistent *> collapse-consistent *> sort-consistent
 
       \lemma interpretNF-consistent {t : Term C env.len} : interpretNF (normalize t) = interpret t
-        => interpretNF-correct *> normalize'-consistent
+        => interpretNF-correct *> normalize-consistent
 
       \lemma apply-axiom2 (t s : Term C env.len) (p : interpret t = interpret s) (left right add : NF)
         : interpretNF (multiply left (multiply (normalize t) right) ++ add) = interpretNF (multiply left (multiply (normalize s) right) ++ add)
-        => interpretNF-correct *> interpretNF_++ *> pmap (`+ _) (interpretNF_multiply *> pmap (_ *) (interpretNF_multiply *> pmap (`* _) (normalize'-consistent *> p *> inv normalize'-consistent) *> inv interpretNF_multiply) *> inv interpretNF_multiply) *> inv (interpretNF-correct *> interpretNF_++)
+        => interpretNF-correct *> interpretNF_++ *> pmap (`+ _) (interpretNF_multiply *> pmap (_ *) (interpretNF_multiply *> pmap (`* _) (normalize-consistent *> p *> inv normalize-consistent) *> inv interpretNF_multiply) *> inv interpretNF_multiply) *> inv (interpretNF-correct *> interpretNF_++)
     }
 
     \func SemiringData {R : Semiring} (env : Array R) : Data R NatSemiring NatSemiring natMap env \cowith

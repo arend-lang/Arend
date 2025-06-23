@@ -1,0 +1,72 @@
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Solver
+\import Algebra.Solver.Semiring
+\import Arith.Int
+\import Data.List
+\import Function.Meta
+\import Paths
+\import Set
+\open SemiringSolverModel
+
+\func RingSolverModel (R : Ring) : SolverModel R \cowith
+  | Term => Term Int
+  | NF => NF Int
+  | normalize => normalize
+  | interpret env => interpret env
+  | interpretNF env => (RingData env).interpretNF
+  | interpretNF-consistent {_} {env} {_} => (RingData env).interpretNF-correct *> normalize-consistent
+  \where {
+    \data Term (C : \Set) (n : Nat)
+      | var (Fin n)
+      | coef C
+      | :zro
+      | :ide
+      | :negative (Term C n)
+      | \infixl 6 :+ (t s : Term C n)
+      | \infixl 7 :* (t s : Term C n)
+
+    \func normalize {n : Nat} {C : Ring.Dec} (t : Term C n) : NF C n \elim t
+      | var v => (v :: nil, 1) :: nil
+      | coef c => (nil, c) :: nil
+      | :zro => nil
+      | :ide => (nil, 1) :: nil
+      | :negative t => map (\lam s => (s.1, C.negative s.2)) (normalize t)
+      | t :+ s => normalize t ++ normalize s
+      | t :* s => remove0 (collapse (multiply (normalize t) (normalize s)))
+
+    \func interpret (env : Array R) (t : Term Int env.len) : R \elim t
+      | coef c => R.intCoef c
+      | var c => env c
+      | :zro => 0
+      | :ide => 1
+      | :negative t => negative (interpret env t)
+      | :+ t s => interpret env t + interpret env s
+      | :* t s => interpret env t * interpret env s
+
+    \func RingData (env : Array R) : Data R IntRing IntRing intMap env \cowith
+      | alg-comm => intComm
+
+    \lemma interpretNF_negative {env : Array R} {l : NF Int env.len}
+      : (RingData env).interpretNF' (map (\lam s => (s.1, negative s.2)) l) = negative ((RingData env).interpretNF' l) \elim l
+      | nil => inv R.negative_zro
+      | a :: l => (RingData env).interpretNF_:: *> +-comm *> pmap2 (+) interpretNF_negative (pmap (`* _) intMap.func-negative *> R.negative_*-left) *> inv (pmap negative (RingData env).interpretNF_:: *> R.negative_+)
+
+    \lemma normalize-consistent {env : Array R} {t : Term Int env.len} : (RingData env).interpretNF' (normalize t) = interpret env t \elim t
+      | coef c => idp
+      | var v => idp
+      | :zro => idp
+      | :ide => intMap.func-ide
+      | :negative t => interpretNF_negative *> pmap negative normalize-consistent
+      | :+ t s => (RingData env).interpretNF_++ *> pmap2 (+) normalize-consistent normalize-consistent
+      | :* t s => (RingData env).remove0-consistent *> (RingData env).collapse-consistent *> (RingData env).interpretNF_multiply *> pmap2 (*) normalize-consistent normalize-consistent
+
+    \lemma terms-equality (env : Array R) (t s : Term Int env.len) (p : (RingData env).interpretNF (normalize (t :+ :negative s)) = 0) : interpret env t = interpret env s
+      => R.fromZero $ inv ((RingData env).interpretNF-correct *> (RingData env).interpretNF_++ *> pmap2 (+) normalize-consistent (interpretNF_negative *> pmap negative normalize-consistent)) *> p
+
+    \lemma terms-equality-conv (env : Array R) (t s : Term Int env.len) (p : interpret env t = interpret env s) : (RingData env).interpretNF (normalize (t :+ :negative s)) = 0
+      => (RingData env).interpretNF-correct *> (RingData env).interpretNF_++ *> pmap (_ +) interpretNF_negative *> R.toZero (normalize-consistent *> p *> inv normalize-consistent)
+  }

@@ -176,6 +176,10 @@ public class Names {
     return new ModulePath("Algebra", "Solver", "Monoid");
   }
 
+  public static ModulePath getNewRingSolverModule() {
+    return new ModulePath("Algebra", "Solver", "Ring");
+  }
+
   public static ModulePath getNewSemiringSolverModule() {
     return new ModulePath("Algebra", "Solver", "Semiring");
   }

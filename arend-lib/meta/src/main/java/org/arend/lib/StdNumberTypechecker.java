@@ -34,6 +34,7 @@ public class StdNumberTypechecker implements LiteralTypechecker {
     if (number.signum() < 0) {
       negative = resolveName(Names.NEGATIVE, resolver);
       if (negative == null) return null;
+      number = number.negate();
     } else {
       negative = null;
     }
@@ -42,7 +43,7 @@ public class StdNumberTypechecker implements LiteralTypechecker {
     FullName fullName;
     if (number.equals(BigInteger.ZERO)) {
       fullName = Names.ZRO;
-    } else if (number.abs().equals(BigInteger.ONE)) {
+    } else if (number.equals(BigInteger.ONE)) {
       fullName = Names.IDE;
     } else {
       fullName = Names.NAT_COEF;
