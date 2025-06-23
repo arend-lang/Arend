@@ -1,0 +1,27 @@
+\import Algebra.Monoid
+\import Algebra.Semiring
+\import Algebra.Solver
+\import Algebra.Solver.CMonoid
+\import Algebra.Solver.Semiring
+\import Arith.Nat
+\import Arith.Fin.Order
+\import Data.List
+\import Function.Meta
+\import Paths
+\open SemiringSolverModel
+
+\func CSemiringSolverModel (R : CSemiring) : SolverModel R \cowith
+  | Term => Term Nat
+  | NF => NF Nat
+  | normalize => normalize
+  | interpret env => (SemiringData env).interpret
+  | interpretNF env nf => (SemiringData env).interpretNF $ map (\lam s => (Sort.RedBlack.sort s.1, s.2)) nf
+  | interpretNF-consistent {_} {env} {_} =>
+    \have d => SemiringData env
+    \in d.interpretNF-correct *> interpretNF_sort *> d.normalize'-consistent
+  \where {
+    \lemma interpretNF_sort {R : CSemiring} {d : Data R} {l : NF} : interpretNF' (map (\lam s => (Sort.RedBlack.sort s.1, s.2)) l) = interpretNF' l \elim l
+      | nil => idp
+      | a :: l => interpretNF_:: *> pmap2 (_ * __ + __) CMonoidSolverModel.sort-consistent interpretNF_sort *> inv interpretNF_::
+      \where \open SemiringSolverModel.Data
+  }

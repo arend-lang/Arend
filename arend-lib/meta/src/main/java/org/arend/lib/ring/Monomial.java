@@ -14,6 +14,25 @@ public record Monomial(BigInteger coefficient, List<Integer> elements) implement
     return new Monomial(coefficient.multiply(m.coefficient), newElements);
   }
 
+  public Monomial multiplyComm(Monomial m) {
+    List<Integer> newElements = new ArrayList<>(elements.size() + m.elements.size());
+    int i = 0, j = 0;
+    while (i < elements.size() && j < m.elements.size()) {
+      if (elements.get(i) <= m.elements.get(j)) {
+        newElements.add(elements.get(i++));
+      } else {
+        newElements.add(m.elements.get(j++));
+      }
+    }
+    for (; i < elements.size(); i++) {
+      newElements.add(elements.get(i));
+    }
+    for (; j < m.elements.size(); j++) {
+      newElements.add(m.elements.get(j));
+    }
+    return new Monomial(coefficient.multiply(m.coefficient), newElements);
+  }
+
   public Monomial multiply(int c) {
     return c == 1 ? this : new Monomial(coefficient.multiply(BigInteger.valueOf(c)), elements);
   }
@@ -22,6 +41,14 @@ public record Monomial(BigInteger coefficient, List<Integer> elements) implement
     for (Monomial monomial1 : list1) {
       for (Monomial monomial2 : list2) {
         result.add(monomial1.multiply(monomial2));
+      }
+    }
+  }
+
+  public static void multiplyComm(List<Monomial> list1, List<Monomial> list2, List<Monomial> result) {
+    for (Monomial monomial1 : list1) {
+      for (Monomial monomial2 : list2) {
+        result.add(monomial1.multiplyComm(monomial2));
       }
     }
   }

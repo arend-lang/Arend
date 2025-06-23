@@ -1,0 +1,24 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Arith.Nat
+\import Meta
+
+\lemma cSemiringTest1 {R : CSemiring} (a b c d : R) : a + b * (c + d) = c * b + a + d * b
+  => equation.cSemiring
+
+\lemma cSemiringTest2 {R : CSemiring} (a b : R) : (a + b) * (a + b) = a * a + 2 * a * b + b * b
+  => equation.cSemiring
+
+\lemma cSemiringTest3 {R : CSemiring} (a b c d e : R) : d * ((b + c) * a + e) = e * d + d * (a * (c + b))
+  => equation.cSemiring
+
+\lemma natTest (x y z : Nat) : suc x * (y + z) = z * x + y * suc x + z
+  => equation.cSemiring
+
+\lemma cSemiringArgTest {R : CSemiring} (a b : R) (p : a + a * b = a * b) : (a + 0) * (1 + b) = b * a
+  => equation.cSemiring p
+
+\lemma cSemiringForwardTest {R : CSemiring} (a b : R) (p : (a + 0) * (1 + b) = b * a) : a + a * b = a * b
+  => equation.cSemiring in p

@@ -164,6 +164,10 @@ public class Names {
     return new ModulePath("Algebra", "Solver", "CMonoid");
   }
 
+  public static ModulePath getCommSemiringSolverModule() {
+    return new ModulePath("Algebra", "Solver", "CSemiring");
+  }
+
   public static ModulePath getNewGroupSolverModule() {
     return new ModulePath("Algebra", "Solver", "Group");
   }

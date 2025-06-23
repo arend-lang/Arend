@@ -73,7 +73,7 @@
         | no n => a :: remove0 l
       }
 
-    \class Data \noclassifying {R : Semiring} (C : Semiring) (D : LinearOrder.Dec C) (alg : SemiringHom C R) (env : Array R) {
+    \class Data \noclassifying (R : Semiring) (C : Semiring) (D : LinearOrder.Dec C) (alg : SemiringHom C R) (env : Array R) {
       | alg-comm (x : C) (y : R) : alg x R.* y = y R.* alg x
 
       \func NF => SemiringSolverModel.NF C env.len
@@ -193,7 +193,7 @@
         => interpretNF-correct *> interpretNF_++ *> pmap (`+ _) (interpretNF_multiply *> pmap (_ *) (interpretNF_multiply *> pmap (`* _) (normalize'-consistent *> p *> inv normalize'-consistent) *> inv interpretNF_multiply) *> inv interpretNF_multiply) *> inv (interpretNF-correct *> interpretNF_++)
     }
 
-    \func SemiringData {R : Semiring} (env : Array R) : Data NatSemiring NatSemiring natMap env \cowith
+    \func SemiringData {R : Semiring} (env : Array R) : Data R NatSemiring NatSemiring natMap env \cowith
       | alg-comm => natComm
 
     \lemma apply-axiom (env : Array R) (t s : Term Nat env.len) (p : (SemiringData env).interpret t = (SemiringData env).interpret s) (left right add : NF Nat env.len)
