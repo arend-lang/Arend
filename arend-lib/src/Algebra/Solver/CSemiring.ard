@@ -15,13 +15,24 @@
   | NF => NF Nat
   | normalize => normalize
   | interpret env => (SemiringData env).interpret
-  | interpretNF env nf => (SemiringData env).interpretNF $ map (\lam s => (Sort.RedBlack.sort s.1, s.2)) nf
+  | interpretNF env nf => (SemiringData env).interpretNF (sortMonomials nf)
   | interpretNF-consistent {_} {env} {_} =>
     \have d => SemiringData env
     \in d.interpretNF-correct *> interpretNF_sort *> d.normalize'-consistent
   \where {
-    \lemma interpretNF_sort {R : CSemiring} {d : Data R} {l : NF} : interpretNF' (map (\lam s => (Sort.RedBlack.sort s.1, s.2)) l) = interpretNF' l \elim l
+    \func sortMonomials {n : Nat} {C : \Set} (l : NF C n) => map (\lam s => (Sort.RedBlack.sort s.1, s.2)) l
+
+    \lemma interpretNF_sort {R : CSemiring} {d : Data R} {l : NF} : interpretNF' (sortMonomials l) = interpretNF' l \elim l
       | nil => idp
       | a :: l => interpretNF_:: *> pmap2 (_ * __ + __) CMonoidSolverModel.sort-consistent interpretNF_sort *> inv interpretNF_::
       \where \open SemiringSolverModel.Data
+
+    \lemma apply-axiom (env : Array R) (t s : Term Nat env.len) (p : (SemiringData env).interpret t = (SemiringData env).interpret s) (mul add : NF Nat env.len)
+      => apply-axiom' {R} {SemiringData env} t s p mul add
+      \where {
+        \private \lemma apply-axiom' {R : CSemiring} {d : Data R} (t s : Term C env.len) (p : interpret t = interpret s) (mul add : NF)
+          : interpretNF (sortMonomials (multiply mul (normalize t)) ++ add) = interpretNF (sortMonomials (multiply mul (normalize s)) ++ add)
+          => interpretNF-correct *> interpretNF_++ *> pmap (`+ _) (interpretNF_sort *> interpretNF_multiply *> pmap (_ *) (normalize'-consistent *> p *> inv normalize'-consistent) *> inv interpretNF_multiply *> inv interpretNF_sort) *> inv (interpretNF-correct *> interpretNF_++)
+          \where \open SemiringSolverModel.Data
+      }
   }

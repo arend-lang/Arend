@@ -22,3 +22,18 @@
 
 \lemma cSemiringForwardTest {R : CSemiring} (a b : R) (p : (a + 0) * (1 + b) = b * a) : a + a * b = a * b
   => equation.cSemiring in p
+
+\lemma cSemiringProofTest1 {R : CSemiring} (a b : R) (p : a * b = 0) : (a + b) * (b + a) = a * a + b * b
+  => equation.cSemiring {p}
+
+\lemma cSemiringProofTest2 {R : CSemiring} (a b : R) (p : 2 * a = 0) : (a + b) * (b + a) = a * a + b * b
+  => equation.cSemiring {p}
+
+\lemma cSemiringProofTest3 {R : CSemiring} (a b c d : R) (p : a + b = 0) : a * c + a * d + b * c = a * d
+  => equation.cSemiring {p}
+
+\lemma cSemiringProofTest4 {R : CSemiring} (a b c d : R) (p : a + b = 0) : a * d + a * c + b * c = a * d
+  => equation.cSemiring {p}
+
+\lemma cSemiringProofTest5 {R : CSemiring} (a b : R) (p : a * b = 0) : a * a + b * b = (a + b) * (b + a)
+  => equation.cSemiring { -2 p}

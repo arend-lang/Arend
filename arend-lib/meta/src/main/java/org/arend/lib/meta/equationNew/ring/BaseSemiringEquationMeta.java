@@ -14,6 +14,7 @@ import org.arend.lib.error.equation.NFPrettyPrinter;
 import org.arend.lib.error.equation.RingNFPrettyPrinter;
 import org.arend.lib.meta.equation.binop_matcher.FunctionMatcher;
 import org.arend.lib.meta.equationNew.BaseEquationMeta;
+import org.arend.lib.meta.equationNew.monoid.BaseCommutativeMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.NonCommutativeMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.term.*;
 import org.arend.lib.ring.Monomial;
@@ -42,11 +43,12 @@ public abstract class BaseSemiringEquationMeta extends BaseEquationMeta<List<Mon
   @Dependency(name = "SemiringSolverModel.Term.:*")     ArendRef mulTerm;
   @Dependency(name = "SemiringSolverModel.Term.coef")   ArendRef coefTerm;
   @Dependency(name = "SemiringSolverModel.Term.var")    ArendRef varTerm;
-  @Dependency(name = "SemiringSolverModel.apply-axiom") ArendRef applyAxiom;
   @Dependency(name = "List.::")                         ArendRef cons;
   @Dependency(name = "List.nil")                        ArendRef nil;
 
   protected abstract boolean isCommutative();
+
+  protected abstract @NotNull ArendRef getApplyAxiom();
 
   @Override
   protected @NotNull List<TermOperation> getOperations(TypedExpression instance, CoreClassCallExpression instanceType, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteExpression marker) {
@@ -175,5 +177,52 @@ public abstract class BaseSemiringEquationMeta extends BaseEquationMeta<List<Mon
       result = factory.app(factory.ref(cons), true, monomialToConcrete(nf.get(i), factory), result);
     }
     return result;
+  }
+
+  @Override
+  protected @Nullable Hint<List<Monomial>> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
+    return BaseCommutativeMonoidEquationMeta.parseHint(hint, hintType, operations, values, typechecker, this);
+  }
+
+  protected record AbstractNFResult(List<Monomial> leftMultiplier, List<Monomial> rightMultiplier, List<Monomial> addition, List<Monomial> newNF) {}
+
+  // This implementation applies a hint without multipliers
+  protected @Nullable AbstractNFResult abstractNF(@NotNull BaseCommutativeMonoidEquationMeta.MyHint<List<Monomial>> hint, @NotNull List<Monomial> nf) {
+    List<Monomial> addition = new ArrayList<>(nf);
+    for (Monomial monomial : hint.leftNF) {
+      if (!addition.remove(monomial.multiply(hint.count))) {
+        return null;
+      }
+    }
+
+    return new AbstractNFResult(
+        Collections.singletonList(new Monomial(BigInteger.valueOf(hint.count), Collections.emptyList())),
+        Collections.singletonList(new Monomial(BigInteger.ONE, Collections.emptyList())),
+        addition,
+        normalizeNF(addNF(addition, mulCoefNF(hint.count, hint.rightNF))));
+  }
+
+  @Override
+  protected @Nullable BaseEquationMeta.HintResult<List<Monomial>> applyHint(@NotNull BaseEquationMeta.Hint<List<Monomial>> hint, @NotNull List<Monomial> current, int[] position, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ConcreteFactory factory) {
+    position[0]++;
+    BaseCommutativeMonoidEquationMeta.MyHint<List<Monomial>> myHint = (BaseCommutativeMonoidEquationMeta.MyHint<List<Monomial>>) hint;
+    if (position[0] == 1 && !myHint.applyToLeft || position[0] == 2 && !myHint.applyToRight) {
+      return null;
+    }
+    if (myHint.count == 1 && hint.leftNF.equals(current)) {
+      return super.applyHint(hint, current, position, solverRef, envRef, factory);
+    }
+
+    AbstractNFResult result = abstractNF(myHint, current);
+    if (result == null) return null;
+    ConcreteAppBuilder builder = factory.appBuilder(factory.ref(getApplyAxiom()))
+        .app(factory.ref(envRef.get()))
+        .app(hint.left.generateReflectedTerm(factory, getVarTerm()))
+        .app(hint.right.generateReflectedTerm(factory, getVarTerm()))
+        .app(factory.core(hint.typed));
+    if (result.leftMultiplier != null) builder.app(nfToConcrete(result.leftMultiplier, factory));
+    if (result.rightMultiplier != null) builder.app(nfToConcrete(result.rightMultiplier, factory));
+    if (result.addition != null) builder.app(nfToConcrete(result.addition, factory));
+    return new BaseEquationMeta.HintResult<>(builder.build(), result.newNF);
   }
 }
