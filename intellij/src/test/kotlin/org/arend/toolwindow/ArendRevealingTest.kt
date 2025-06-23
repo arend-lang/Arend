@@ -8,7 +8,8 @@ import org.arend.ext.prettyprinting.PrettyPrinterConfig
 import org.arend.ext.prettyprinting.PrettyPrinterFlag
 import org.arend.injection.actions.NormalizationCache
 import org.arend.injection.findRevealableCoreAtOffset
-import org.arend.typechecking.error.ErrorService
+import org.arend.psi.ArendFile
+import org.arend.server.ArendServerService
 import org.arend.typechecking.error.local.GoalError
 import org.intellij.lang.annotations.Language
 import java.util.*
@@ -19,7 +20,8 @@ class ArendRevealingTest : ArendTestBase() {
     private fun testRevealing(@Language("Arend") typecheckable: String, docString: String, expectedRepr: String?, vararg flags : PrettyPrinterFlag) {
         val file = myFixture.addFileToProject("Main.ard", typecheckable)
         typecheck()
-        val error = project.service<ErrorService>().errors[file]!!.single().error as GoalError
+        val server = project.service<ArendServerService>().server
+        val error = server.errorMap[(file as? ArendFile)?.moduleLocation]!!.single() as GoalError
         val config = getConfig(*flags)
         val doc = error.getBodyDoc(config)!!
         val docOffset = docString.findAnyOf(listOf(CARET_MARKER))!!.first
