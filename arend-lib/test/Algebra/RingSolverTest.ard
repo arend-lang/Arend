@@ -15,8 +15,8 @@
 \lemma zeroTest2 {R : Ring} (a b c d : R) : a + a * -1 = 0
   => equation.ring
 
-\lemma ringArgTest {R : Ring} (a b : R) (p : negative (natCoef 1) * (a * b) + b * a = 0) : (a + b) * (a - b) = a * a - b * b
+\lemma ringArgTest {R : Ring} (a b : R) (p : -1 * (a * b) + b * a = 0) : (a + b) * (a - b) = a * a - b * b
   => equation.ring p
 
-\lemma ringForwardTest {R : Ring} (a b : R) (p : (a + b) * (a - b) = a * a - b * b) : negative (natCoef 1) * (a * b) + b * a = 0
+\lemma ringForwardTest {R : Ring} (a b : R) (p : (a + b) * (a - b) = a * a - b * b) : -1 * (a * b) + b * a = 0
   => equation.ring in p

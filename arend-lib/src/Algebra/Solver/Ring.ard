@@ -47,16 +47,29 @@
       | :+ t s => interpret env t + interpret env s
       | :* t s => interpret env t * interpret env s
 
-    \func RingData (env : Array R) : Data R IntRing IntRing intMap env \cowith
-      | alg-comm => intComm
+    \func intCoef (x : Int) : R
+      | pos n => R.natCoef n
+      | neg 1 => negative ide
+      | neg (suc _ \as n) => negative (R.natCoef n)
+
+    \lemma intCoef-correct {x : Int} : R.intCoef x = intCoef x \elim x
+      | pos n => idp
+      | neg 1 => pmap negative $ R.natCoefSuc 0 *> pmap (`+ ide) R.natCoefZero *> zro-left
+      | neg (suc (suc n)) => idp
+
+    \lemma intMap' : RingHom IntRing R intCoef
+      => transport (RingHom IntRing R) (path \lam i x => intCoef-correct {_} {x} i) intMap
+
+    \func RingData (env : Array R) : Data R IntRing IntRing intMap' env \cowith
+      | alg-comm x a => inv (pmap (`* a) intCoef-correct) *> intComm x a *> pmap (a *) intCoef-correct
 
     \lemma interpretNF_negative {env : Array R} {l : NF Int env.len}
       : (RingData env).interpretNF' (map (\lam s => (s.1, negative s.2)) l) = negative ((RingData env).interpretNF' l) \elim l
       | nil => inv R.negative_zro
-      | a :: l => (RingData env).interpretNF_:: *> +-comm *> pmap2 (+) interpretNF_negative (pmap (`* _) intMap.func-negative *> R.negative_*-left) *> inv (pmap negative (RingData env).interpretNF_:: *> R.negative_+)
+      | a :: l => (RingData env).interpretNF_:: *> +-comm *> pmap2 (+) interpretNF_negative (pmap (`* _) intMap'.func-negative *> R.negative_*-left) *> inv (pmap negative (RingData env).interpretNF_:: *> R.negative_+)
 
     \lemma normalize-consistent {env : Array R} {t : Term Int env.len} : (RingData env).interpretNF' (normalize t) = interpret env t \elim t
-      | coef c => idp
+      | coef c => inv intCoef-correct
       | var v => idp
       | :zro => idp
       | :ide => intMap.func-ide

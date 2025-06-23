@@ -135,7 +135,8 @@ public abstract class BaseAlgebraEquationMeta extends BaseEquationMeta<List<Mono
   }
 
   private ConcreteExpression numberToConcrete(BigInteger number, ConcreteFactory factory) {
-    ConcreteExpression result = factory.app(factory.ref(natCoef.getRef()), true, factory.number(number.abs()));
+    BigInteger pos = number.abs();
+    ConcreteExpression result = pos.equals(BigInteger.ONE) ? factory.ref(ide.getRef()) : factory.app(factory.ref(natCoef.getRef()), true, factory.number(pos));
     return number.signum() < 0 ? factory.app(factory.ref(getNegative().getRef()), true, result) : result;
   }
 
