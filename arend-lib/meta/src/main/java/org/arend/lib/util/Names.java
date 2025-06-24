@@ -164,6 +164,10 @@ public class Names {
     return new ModulePath("Algebra", "Solver", "CMonoid");
   }
 
+  public static ModulePath getCommRingSolverModule() {
+    return new ModulePath("Algebra", "Solver", "CRing");
+  }
+
   public static ModulePath getCommSemiringSolverModule() {
     return new ModulePath("Algebra", "Solver", "CSemiring");
   }

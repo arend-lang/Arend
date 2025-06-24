@@ -1,0 +1,19 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Algebra.Ring
+\import Meta
+
+\lemma commRingTest {R : CRing} (a b c : R) : a * b - b * (a + c) + c * b * a = b * c * (a - 1)
+  => equation.cRing
+
+\lemma commRingTest2 {R : CRing} (a b : R) : (a + b) * (a - b) = a * a - b * b
+  => equation.cRing
+
+\lemma commRingArgTest {R : CRing} (a b : R) (p : 2 * (a * b) = 0) : (a + b) * (a + b) = a * a + b * b
+  => equation.cRing p
+
+\lemma commRingForwardTest {R : CRing} (a b : R) (p : (a + b) * (a + b) = a * a + b * b) : 2 * (a * b) = 0
+  => equation.cRing in p

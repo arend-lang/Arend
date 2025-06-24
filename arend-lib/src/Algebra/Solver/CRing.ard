@@ -1,0 +1,27 @@
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Solver
+\import Algebra.Solver.CSemiring
+\import Algebra.Solver.Ring
+\import Algebra.Solver.Semiring
+\import Arith.Int
+\import Function.Meta
+\import Paths
+\open RingSolverModel
+\open SemiringSolverModel(NF)
+\open CSemiringSolverModel
+
+\func CRingSolverModel (R : CRing) : SolverModel R \cowith
+  | Term => Term Int
+  | NF => NF Int
+  | normalize => normalize
+  | interpret env => interpret env
+  | interpretNF env nf => (RingData env).interpretNF (sortMonomials nf)
+  | interpretNF-consistent {_} {env} {_} => (RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env} *> normalize-consistent
+  \where {
+    \lemma terms-equality (env : Array R) (t s : Term Int env.len) (p : (RingData env).interpretNF (sortMonomials (normalize (t :+ :negative s))) = 0) : interpret env t = interpret env s
+      => RingSolverModel.terms-equality env t s $ (RingData env).interpretNF-correct *> inv ((RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env}) *> p
+
+    \lemma terms-equality-conv (env : Array R) (t s : Term Int env.len) (p : interpret env t = interpret env s) : (RingData env).interpretNF (sortMonomials (normalize (t :+ :negative s))) = 0
+      => (RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env} *> inv (RingData env).interpretNF-correct *> RingSolverModel.terms-equality-conv env t s p
+  }

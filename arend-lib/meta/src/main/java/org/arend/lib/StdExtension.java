@@ -36,6 +36,7 @@ import org.arend.lib.meta.equationNew.monoid.AbelianMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.AdditiveMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.CommutativeMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.MonoidEquationMeta;
+import org.arend.lib.meta.equationNew.ring.CRingEquationMeta;
 import org.arend.lib.meta.equationNew.ring.CSemiringEquationMeta;
 import org.arend.lib.meta.equationNew.ring.RingEquationMeta;
 import org.arend.lib.meta.equationNew.ring.SemiringEquationMeta;
@@ -266,6 +267,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getSolverModule());
     contributor.declare(algebra, Names.getCommGroupSolverModule());
     contributor.declare(algebra, Names.getCommMonoidSolverModule());
+    contributor.declare(algebra, Names.getCommRingSolverModule());
     contributor.declare(algebra, Names.getCommSemiringSolverModule());
     contributor.declare(algebra, Names.getNewGroupSolverModule());
     contributor.declare(algebra, Names.getNewMonoidSolverModule());
@@ -310,6 +312,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "semiring", new DependencyMetaTypechecker(SemiringEquationMeta.class, () -> new DeferredMetaDefinition(new SemiringEquationMeta(), true))));
     contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "cSemiring", new DependencyMetaTypechecker(CSemiringEquationMeta.class, () -> new DeferredMetaDefinition(new CSemiringEquationMeta(), true))));
     contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "ring", new DependencyMetaTypechecker(RingEquationMeta.class, () -> new DeferredMetaDefinition(new RingEquationMeta(), true))));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "cRing", new DependencyMetaTypechecker(CRingEquationMeta.class, () -> new DeferredMetaDefinition(new CRingEquationMeta(), true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
