@@ -256,7 +256,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
       return null;
     }
 
-    Pair<TypedExpression, CoreClassCallExpression> instance = Utils.findInstanceWithClassCall(new SubclassSearchParameters(getClassDef()), carrier, equality.getDefCallArguments().getFirst(), typechecker, marker, getClassDef());
+    Pair<TypedExpression, CoreClassCallExpression> instance = Utils.findInstanceWithClassCall(new SubclassSearchParameters(getClassDef()), carrier, equality.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF), typechecker, marker, getClassDef());
     if (instance == null) {
       return null;
     }
