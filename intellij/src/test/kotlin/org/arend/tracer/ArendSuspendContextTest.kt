@@ -45,7 +45,7 @@ class ArendSuspendContextTest : ArendTraceTestBase() {
         val traceEntry = getFirstEntry(tracingData)!!
         val suspendContext = ArendSuspendContext(traceEntry, contextView)
         val frame = suspendContext.activeExecutionStack.topFrame!!
-        assertPresentation(ArendIcons.EXPRESSION, "pmap suc (pmap suc very_long_parameter_${StringUtil.ELLIPSIS} (Main.ard:3)", frame)
+        assertPresentation(ArendIcons.FUNCTION_DEFINITION, "pmap suc (pmap suc very_long_parameter_${StringUtil.ELLIPSIS} (Main.ard:3)", frame)
     }
 
     fun `test cowith function body`() {

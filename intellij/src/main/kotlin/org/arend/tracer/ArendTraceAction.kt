@@ -3,6 +3,7 @@ package org.arend.tracer
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ex.util.EditorUtil
 import com.intellij.openapi.project.Project
@@ -14,7 +15,6 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import org.arend.actions.ArendPopupAction
 import org.arend.codeInsight.ArendPopupHandler
-import org.arend.error.DummyErrorReporter
 import org.arend.ext.error.ErrorReporter
 import org.arend.ext.error.GeneralError
 import org.arend.module.FullName
@@ -23,9 +23,13 @@ import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.refactoring.collectArendExprs
 import org.arend.refactoring.selectedExpr
+import org.arend.server.ArendServerService
+import org.arend.server.impl.ArendLibraryImpl
 import org.arend.term.concrete.Concrete
+import org.arend.typechecking.ArendExtensionProvider
 import org.arend.typechecking.error.local.GoalDataHolder
 import org.arend.typechecking.instance.pool.GlobalInstancePool
+import org.arend.typechecking.instance.provider.InstanceScopeProvider
 import org.arend.typechecking.visitor.DefinitionTypechecker
 import org.arend.typechecking.visitor.DesugarVisitor
 import org.arend.typechecking.visitor.WhereVarsFixVisitor
@@ -59,11 +63,10 @@ class ArendTraceAction : ArendPopupAction() {
 
     override fun getHandler() = object : ArendPopupHandler(requestFocus) {
         override fun invoke(project: Project, editor: Editor, file: PsiFile) {
-            /* TODO[server2]
             val (expression, definitionRef) = getElementAtCursor(file, editor)
                 ?: return displayErrorHint(editor, ArendBundle.message("arend.trace.action.cannot.find.expression"))
-            val definition = PsiConcreteProvider(project, DummyErrorReporter.INSTANCE, null, true)
-                .getConcrete(definitionRef) as? Concrete.Definition
+            val definition = project.service<ArendServerService>().server
+                .getResolvedDefinition(definitionRef)?.definition as? Concrete.Definition
                 ?: return displayErrorHint(
                     editor, ArendBundle.message(
                         "arend.trace.action.cannot.find.concrete.definition",
@@ -81,7 +84,6 @@ class ArendTraceAction : ArendPopupAction() {
                 false,
                 starter
             )
-            */
         }
     }
 
@@ -164,8 +166,11 @@ class ArendTraceAction : ArendPopupAction() {
             expression: ArendExpr
         ): ArendTracingData {
             val errorsConsumer = ErrorsConsumer()
-            val tracer = ArendTracingTypechecker(errorsConsumer, null /* TODO[server2] */).apply {
-                instancePool = GlobalInstancePool(PersistentList.empty() /* TODO[server2]: PsiInstanceProviderSet()[definition.data] */, this)
+            val server = project.service<ArendServerService>().server
+            val extension = definition.data.getLocation()?.libraryName?.let { server.getLibrary(it) as? ArendLibraryImpl }?.extension
+            val instances = server.getResolvedDefinition(definition.data)?.instances ?: PersistentList.empty()
+            val tracer = ArendTracingTypechecker(errorsConsumer, extension).apply {
+                instancePool = GlobalInstancePool(instances, this)
             }
             var firstTraceEntryIndex = -1
             ActionUtil.underModalProgress(project, ArendBundle.message("arend.tracer.collecting.tracing.data")) {
