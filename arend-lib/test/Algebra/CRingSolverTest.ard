@@ -22,7 +22,10 @@
   => equation.cRing {p}
 
 \lemma commRingProofTest2 {R : CRing} (a b : R) (p : b = negative b) : (a + b) * (a + b) = a * a + b * b
-  => equation.cRing {p}
+  => equation.cRing {R.toZero p}
 
 \lemma commRingProofTest3 {R : CRing} (a b c : R) (p : a = b) : a * c = c * b
   => equation.cRing {p}
+
+\lemma commRingProofTest4 {R : CRing} (a b c : R) (p : a = b) (q : b * c = 0) : a * c = 0
+  => equation.cRing {p,q}

@@ -63,16 +63,15 @@ public class CRingEquationMeta extends BaseRingEquationMeta {
       Integer c = getHintCoefficient(hint);
       if (c == null) {
         newNF = normalizeNF(newNF);
-        List<Monomial> axiom = new ArrayList<>(hint.leftNF);
-        addNF(axiom, -1, hint.rightNF);
-        axiom = normalizeNF(axiom);
-        var divRem = Monomial.divideAndRemainder(newNF, axiom);
+        var divRem = Monomial.divideAndRemainder(newNF, hint.leftNF);
         if (divRem.proj1.isEmpty()) {
-          typechecker.getErrorReporter().report(new EquationFindError<>(getNFPrettyPrinter(), newNF, Collections.emptyList(), axiom, values.getValues(), hint.originalExpression));
+          typechecker.getErrorReporter().report(new EquationFindError<>(getNFPrettyPrinter(), newNF, Collections.emptyList(), hint.leftNF, values.getValues(), hint.originalExpression));
           return null;
         }
         axioms.add(getConcreteAxiom(divRem.proj1, hint, factory));
-        newNF = divRem.proj2;
+        newNF = new ArrayList<>();
+        Monomial.multiplyComm(hint.rightNF, divRem.proj1, newNF);
+        newNF.addAll(divRem.proj2);
       } else {
         axioms.add(applyHint(hint, newNF, factory));
       }
