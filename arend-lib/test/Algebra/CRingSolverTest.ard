@@ -5,6 +5,7 @@
 \import Algebra.Semiring
 \import Algebra.Ring
 \import Meta
+\import Paths
 
 \lemma commRingTest {R : CRing} (a b c : R) : a * b - b * (a + c) + c * b * a = b * c * (a - 1)
   => equation.cRing
@@ -29,3 +30,9 @@
 
 \lemma commRingProofTest4 {R : CRing} (a b c : R) (p : a = b) (q : b * c = 0) : a * c = 0
   => equation.cRing {p,q}
+
+\lemma commRingProofTest5 {R : CRing} (q : 1 = {R} 0) : 2 = {R} 0
+  => equation.cRing {q}
+
+\lemma commRingProofTest6 {R : CRing} (a b : R) (p : a = b) : a * a + b * b = a * b + a * b
+  => equation.cRing {p, R.toZero p}

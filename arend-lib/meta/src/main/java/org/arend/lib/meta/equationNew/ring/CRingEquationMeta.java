@@ -61,7 +61,7 @@ public class CRingEquationMeta extends BaseRingEquationMeta {
     List<ConcreteExpression> axioms = new ArrayList<>();
     for (Hint<List<Monomial>> hint : hints) {
       Integer c = getHintCoefficient(hint);
-      if (c == null) {
+      if (c == null && !hint.leftNF.isEmpty()) {
         newNF = normalizeNF(newNF);
         var divRem = Monomial.divideAndRemainder(newNF, hint.leftNF);
         if (divRem.proj1.isEmpty()) {

@@ -16,7 +16,7 @@
 \lemma latticeTest2 {L : Bounded.DistributiveLattice} (a b c d : L) : (c ∧ d ∧ c) ∨ b ∨ ((b ∧ b ∨ c) ∧ a) = b ∨ (c ∧ (a ∨ d))
   => equation
 
-\lemma commRingAxTest1 {R : CRing} (q : zro {R} = ide) : natCoef {R} 2 = zro
+\lemma commRingAxTest1 {R : CRing} (q : 0 = {R} 1) : 2 = {R} 0
   => equation
 
 \lemma commRingAxTest2 {R : CRing} (a b : R) (p : a = b) : a * a + b * b = a * b + a * b
