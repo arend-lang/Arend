@@ -17,3 +17,12 @@
 
 \lemma commRingForwardTest {R : CRing} (a b : R) (p : (a + b) * (a + b) = a * a + b * b) : 2 * (a * b) = 0
   => equation.cRing in p
+
+\lemma commRingProofTest1 {R : CRing} (a b : R) (p : a * b = 0) : (a + b) * (a + b) = a * a + b * b
+  => equation.cRing {p}
+
+\lemma commRingProofTest2 {R : CRing} (a b : R) (p : b = negative b) : (a + b) * (a + b) = a * a + b * b
+  => equation.cRing {p}
+
+\lemma commRingProofTest3 {R : CRing} (a b c : R) (p : a = b) : a * c = c * b
+  => equation.cRing {p}

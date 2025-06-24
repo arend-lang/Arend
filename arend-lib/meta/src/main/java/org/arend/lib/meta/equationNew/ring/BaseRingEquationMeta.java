@@ -1,5 +1,6 @@
 package org.arend.lib.meta.equationNew.ring;
 
+import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.CoreExpression;
@@ -13,6 +14,8 @@ import org.arend.lib.util.Values;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigInteger;
+import java.util.Collections;
 import java.util.List;
 
 public abstract class BaseRingEquationMeta extends BaseAlgebraEquationMeta {
@@ -68,5 +71,30 @@ public abstract class BaseRingEquationMeta extends BaseAlgebraEquationMeta {
   @Override
   protected @Nullable BaseCommutativeGroupEquationMeta.MyHint<List<Monomial>> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
     return BaseCommutativeGroupEquationMeta.parseCoefHint(hint, hintType, operations, values, typechecker, this);
+  }
+
+  protected Integer getHintCoefficient(Hint<List<Monomial>> hint) {
+    return ((BaseCommutativeGroupEquationMeta.MyHint<List<Monomial>>) hint).coefficient;
+  }
+
+  protected static void addNF(List<Monomial> poly, int coef, List<Monomial> add) {
+    for (Monomial monomial : add) {
+      poly.add(monomial.multiply(coef));
+    }
+  }
+
+  protected ConcreteExpression getConcreteAxiom(List<Monomial> factor, Hint<List<Monomial>> hint, ConcreteFactory factory) {
+    return factory.tuple(
+        nfToConcrete(factor, factory),
+        hint.left.generateReflectedTerm(factory, getVarTerm()),
+        hint.right.generateReflectedTerm(factory, getVarTerm()),
+        factory.core(hint.typed));
+  }
+
+  protected ConcreteExpression applyHint(Hint<List<Monomial>> hint, List<Monomial> newNF, ConcreteFactory factory) {
+    int c = ((BaseCommutativeGroupEquationMeta.MyHint<List<Monomial>>) hint).getCoefficient();
+    addNF(newNF, -c, hint.leftNF);
+    addNF(newNF, c, hint.rightNF);
+    return getConcreteAxiom(Collections.singletonList(new Monomial(BigInteger.valueOf(c), Collections.emptyList())), hint, factory);
   }
 }

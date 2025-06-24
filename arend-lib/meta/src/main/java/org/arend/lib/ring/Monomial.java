@@ -1,9 +1,12 @@
 package org.arend.lib.ring;
 
+import org.arend.ext.util.Pair;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public record Monomial(BigInteger coefficient, List<Integer> elements) implements Comparable<Monomial> {
@@ -51,6 +54,67 @@ public record Monomial(BigInteger coefficient, List<Integer> elements) implement
         result.add(monomial1.multiplyComm(monomial2));
       }
     }
+  }
+
+  public @Nullable Monomial divide(Monomial monomial) {
+    if (monomial.elements.size() > elements.size()) return null;
+    BigInteger[] divRem = coefficient.divideAndRemainder(monomial.coefficient);
+    if (!divRem[1].equals(BigInteger.ZERO)) return null;
+
+    int i = 0;
+    List<Integer> result = new ArrayList<>();
+    for (int j = 0; j < monomial.elements.size(); i++) {
+      if (i >= elements.size() || elements.get(i) > monomial.elements.get(j)) return null;
+      if (elements.get(i).equals(monomial.elements.get(j))) {
+        j++;
+      } else {
+        result.add(elements.get(i));
+      }
+    }
+    result.addAll(elements.subList(i, elements.size()));
+    return new Monomial(divRem[0], result);
+  }
+
+  /**
+   * @return a pair (d,r) such that poly1 = d * poly2 + r.
+   */
+  public static @NotNull Pair<List<Monomial>, List<Monomial>> divideAndRemainder(List<Monomial> poly1, List<Monomial> poly2) {
+    Monomial first = poly2.getFirst();
+    List<Monomial> factor = new ArrayList<>();
+    for (Monomial monomial : poly1) {
+      Monomial factorMonomial = monomial.divide(first);
+      if (factorMonomial != null) {
+        factor.add(factorMonomial);
+      }
+    }
+
+    factor.removeIf(factorMonomial -> {
+      for (int i = 1; i < poly2.size(); i++) {
+        if (!poly1.contains(factorMonomial.multiplyComm(poly2.get(i)))) {
+          return true;
+        }
+      }
+      return false;
+    });
+    if (factor.isEmpty()) return new Pair<>(Collections.emptyList(), poly1);
+
+    List<Monomial> leftMultiplied = new ArrayList<>();
+    multiplyComm(poly2, factor, leftMultiplied);
+    Collections.sort(leftMultiplied);
+    leftMultiplied = collapse(leftMultiplied);
+
+    List<Monomial> remainder = new ArrayList<>();
+    for (Monomial monomial : poly1) {
+      if (!leftMultiplied.remove(monomial)) {
+        remainder.add(monomial);
+      }
+    }
+
+    if (!leftMultiplied.isEmpty()) {
+      return new Pair<>(Collections.emptyList(), poly1);
+    }
+    Collections.sort(factor);
+    return new Pair<>(factor, remainder);
   }
 
   public Monomial negate() {

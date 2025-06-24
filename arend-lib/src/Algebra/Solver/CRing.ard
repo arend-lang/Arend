@@ -5,10 +5,12 @@
 \import Algebra.Solver.Ring
 \import Algebra.Solver.Semiring
 \import Arith.Int
+\import Data.Array(Big,map)
+\import Data.List(++)
 \import Function.Meta
 \import Paths
 \open RingSolverModel
-\open SemiringSolverModel(NF)
+\open SemiringSolverModel(NF,multiply)
 \open CSemiringSolverModel
 
 \func CRingSolverModel (R : CRing) : SolverModel R \cowith
@@ -24,4 +26,8 @@
 
     \lemma terms-equality-conv (env : Array R) (t s : Term Int env.len) (p : interpret env t = interpret env s) : (RingData env).interpretNF (sortMonomials (normalize (t :+ :negative s))) = 0
       => (RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env} *> inv (RingData env).interpretNF-correct *> RingSolverModel.terms-equality-conv env t s p
+
+    \lemma apply-axioms (env : Array R) (l : Array (\Sigma (NF Int env.len) (t s : Term Int env.len) (p : interpret env t = interpret env s))) (add : NF Int env.len)
+      : (RingData env).interpretNF (sortMonomials (Big (++) add (map (\lam s => multiply s.1 (normalize (s.2 :+ :negative s.3))) l))) = (RingData env).interpretNF' add
+      => (RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env} *> inv (RingData env).interpretNF-correct *> RingSolverModel.apply-axioms env l add
   }

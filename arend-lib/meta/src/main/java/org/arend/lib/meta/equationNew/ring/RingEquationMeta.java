@@ -9,7 +9,6 @@ import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
 import org.arend.lib.meta.equationNew.BaseEquationMeta;
-import org.arend.lib.meta.equationNew.group.BaseCommutativeGroupEquationMeta;
 import org.arend.lib.ring.Monomial;
 import org.arend.lib.util.Lazy;
 import org.arend.lib.util.Utils;
@@ -17,7 +16,6 @@ import org.arend.lib.util.Values;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -54,12 +52,6 @@ public class RingEquationMeta extends BaseRingEquationMeta {
     return factory.ref(termsEqualityConv);
   }
 
-  private static void addNF(List<Monomial> poly, int coef, List<Monomial> add) {
-    for (Monomial monomial : add) {
-      poly.add(monomial.multiply(coef));
-    }
-  }
-
   @Override
   protected @Nullable Pair<HintResult<List<Monomial>>, HintResult<List<Monomial>>> applyHints(@NotNull List<Hint<List<Monomial>>> hints, @NotNull List<Monomial> left, @NotNull List<Monomial> right, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
     List<Monomial> newNF = new ArrayList<>(left);
@@ -67,14 +59,7 @@ public class RingEquationMeta extends BaseRingEquationMeta {
 
     List<ConcreteExpression> axioms = new ArrayList<>();
     for (Hint<List<Monomial>> hint : hints) {
-      int c = ((BaseCommutativeGroupEquationMeta.MyHint<List<Monomial>>) hint).getCoefficient();
-      addNF(newNF, -c, hint.leftNF);
-      addNF(newNF, c, hint.rightNF);
-      axioms.add(factory.tuple(
-          nfToConcrete(Collections.singletonList(new Monomial(BigInteger.valueOf(c), Collections.emptyList())), factory),
-          hint.left.generateReflectedTerm(factory, getVarTerm()),
-          hint.right.generateReflectedTerm(factory, getVarTerm()),
-          factory.core(hint.typed)));
+      axioms.add(applyHint(hint, newNF, factory));
     }
 
     newNF = normalizeNF(newNF);
