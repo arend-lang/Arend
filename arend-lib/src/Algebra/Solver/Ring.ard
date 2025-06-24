@@ -6,8 +6,10 @@
 \import Algebra.Solver
 \import Algebra.Solver.Semiring
 \import Arith.Int
+\import Data.Array(Big, map \as arrayMap)
 \import Data.List
 \import Function.Meta
+\import Meta
 \import Paths
 \import Set
 \open SemiringSolverModel
@@ -82,4 +84,12 @@
 
     \lemma terms-equality-conv (env : Array R) (t s : Term Int env.len) (p : interpret env t = interpret env s) : (RingData env).interpretNF (normalize (t :+ :negative s)) = 0
       => (RingData env).interpretNF-correct *> (RingData env).interpretNF_++ *> pmap (_ +) interpretNF_negative *> R.toZero (normalize-consistent *> p *> inv normalize-consistent)
+
+    \lemma apply-axioms' (env : Array R) (l : Array (\Sigma (NF Int env.len) (t s : Term Int env.len) (p : interpret env t = interpret env s))) (add : NF Int env.len)
+      : (RingData env).interpretNF' (Big (++) add (arrayMap (\lam s => multiply s.1 (normalize (s.2 :+ :negative s.3))) l)) = (RingData env).interpretNF' add
+      => \have d => RingData env
+         \in d.interpretNF_Big_++ *> pmap (`+ _) (R.BigSum_zro \lam j => d.interpretNF_multiply *> pmap (_ *) (d.interpretNF_++ *> pmap (_ +) interpretNF_negative *> R.toZero (normalize-consistent *> later (l j).4 *> inv normalize-consistent)) *> R.zro_*-right) *> zro-left
+
+    \lemma apply-axioms (env : Array R) (l : Array (\Sigma (NF Int env.len) (t s : Term Int env.len) (p : interpret env t = interpret env s))) (add : NF Int env.len)
+      => (RingData env).interpretNF-correct *> apply-axioms' env l add *> inv (RingData env).interpretNF-correct
   }

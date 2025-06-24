@@ -20,3 +20,9 @@
 
 \lemma ringForwardTest {R : Ring} (a b : R) (p : (a + b) * (a - b) = a * a - b * b) : -1 * (a * b) + b * a = 0
   => equation.ring in p
+
+\lemma ringProofTest1 {R : Ring} (a b : R) (p : a * b = b * a) : (a + b) * (a - b) = a * a - b * b
+  => equation.ring { -1 p}
+
+\lemma ringProofTest2 {R : Ring} (a b : R) (p : a * a = b * b) : (a + b) * (a - b) = b * a - a * b
+  => equation.ring {p}

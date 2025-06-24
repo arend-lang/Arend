@@ -11,6 +11,7 @@
 \import Algebra.Solver.Monoid
 \import Arith.Fin.Order
 \import Arith.Nat
+\import Data.Array(Big, map \as arrayMap)
 \import Data.List
 \import Function.Meta
 \import Meta
@@ -18,6 +19,7 @@
 \import Order.LinearOrder
 \import Paths
 \import Paths.Meta
+\import Prelude
 \import Set
 \open Sort
 
@@ -147,6 +149,10 @@
           rewrite interpretNF_++,
           inv +-assoc
         }
+
+      \lemma interpretNF_Big_++ {l : Array NF} {a : NF} : interpretNF' (Big (++) a l) = R.BigSum (arrayMap interpretNF' l) + interpretNF' a \elim l
+        | Prelude.nil => inv zro-left
+        | b Prelude.:: l => interpretNF_++ *> pmap (_ +) interpretNF_Big_++ *> inv +-assoc
 
       \lemma interpretNF_map {a1 : C} {a2 a3 : List (Fin env.len)} {l : NF}
         : interpretNF' (map (\lam b => (a2 ++ b.1 ++ a3, a1 * b.2)) l) = alg a1 * MonoidSolverModel.interpretNF env a2 * interpretNF' l * MonoidSolverModel.interpretNF env a3 \elim l

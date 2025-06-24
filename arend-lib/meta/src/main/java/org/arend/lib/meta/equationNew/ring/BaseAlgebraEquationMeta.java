@@ -33,6 +33,8 @@ public abstract class BaseAlgebraEquationMeta extends BaseEquationMeta<List<Mono
   @Dependency(name = "AddMonoid.+")       CoreClassField add;
   @Dependency(name = "Semigroup.*")       CoreClassField mul;
   @Dependency(name = "Semiring.natCoef")  CoreClassField natCoef;
+  @Dependency(name = "List.::")           ArendRef cons;
+  @Dependency(name = "List.nil")          ArendRef nil;
 
   protected abstract boolean isCommutative();
 
@@ -132,6 +134,22 @@ public abstract class BaseAlgebraEquationMeta extends BaseEquationMeta<List<Mono
   @Override
   protected @NotNull NFPrettyPrinter<List<Monomial>> getNFPrettyPrinter() {
     return new RingNFPrettyPrinter();
+  }
+
+  private ConcreteExpression monomialToConcrete(Monomial monomial, ConcreteFactory factory) {
+    ConcreteExpression result = factory.ref(nil);
+    for (int i = monomial.elements().size() - 1; i >= 0; i--) {
+      result = factory.app(factory.ref(cons), true, factory.number(monomial.elements().get(i)), result);
+    }
+    return factory.tuple(result, factory.number(monomial.coefficient()));
+  }
+
+  protected ConcreteExpression nfToConcrete(List<Monomial> nf, ConcreteFactory factory) {
+    ConcreteExpression result = factory.ref(nil);
+    for (int i = nf.size() - 1; i >= 0; i--) {
+      result = factory.app(factory.ref(cons), true, monomialToConcrete(nf.get(i), factory), result);
+    }
+    return result;
   }
 
   private ConcreteExpression numberToConcrete(BigInteger number, ConcreteFactory factory) {

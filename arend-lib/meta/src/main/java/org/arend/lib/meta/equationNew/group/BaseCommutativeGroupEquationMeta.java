@@ -98,17 +98,20 @@ public abstract class BaseCommutativeGroupEquationMeta extends BaseGroupEquation
     return new CommutativeGroupNFPrettyPrinter(isMultiplicative());
   }
 
-  protected static class MyHint<NF> extends BaseEquationMeta.Hint<NF> {
-    final int coefficient;
+  public static class MyHint<NF> extends BaseEquationMeta.Hint<NF> {
+    public final @Nullable Integer coefficient;
 
-    MyHint(int coefficient, TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {
+    MyHint(@Nullable Integer coefficient, TypedExpression typed, EquationTerm left, EquationTerm right, NF leftNF, NF rightNF, ConcreteExpression originalExpression) {
       super(typed, left, right, leftNF, rightNF, originalExpression);
       this.coefficient = coefficient;
     }
+
+    public int getCoefficient() {
+      return coefficient == null ? 1 : coefficient;
+    }
   }
 
-  @Override
-  protected @Nullable MyHint<List<Integer>> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
+  public static <NF> @Nullable MyHint<NF> parseCoefHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker, BaseEquationMeta<NF> meta) {
     Integer number;
     if (hint instanceof ConcreteAppExpression appExpr && appExpr.getArguments().getFirst().isExplicit()) {
       number = Utils.getNumber(appExpr.getFunction(), null, false);
@@ -125,8 +128,13 @@ public abstract class BaseCommutativeGroupEquationMeta extends BaseGroupEquation
       number = null;
     }
 
-    BaseEquationMeta.Hint<List<Integer>> result = super.parseHint(hint, hintType, operations, values, typechecker);
-    return result == null ? null : new MyHint<>(number == null ? 1 : number, result.typed, result.left, result.right, result.leftNF, result.rightNF, result.originalExpression);
+    BaseEquationMeta.Hint<NF> result = BaseEquationMeta.parseHint(hint, hintType, operations, values, typechecker, meta);
+    return result == null ? null : new MyHint<>(number, result.typed, result.left, result.right, result.leftNF, result.rightNF, result.originalExpression);
+  }
+
+  @Override
+  protected @Nullable MyHint<List<Integer>> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
+    return parseCoefHint(hint, hintType, operations, values, typechecker, this);
   }
 
   private void addNF(List<Integer> nf1, int coefficient, List<Integer> nf2) {
@@ -157,7 +165,7 @@ public abstract class BaseCommutativeGroupEquationMeta extends BaseGroupEquation
 
     List<ConcreteExpression> axioms = new ArrayList<>();
     for (BaseEquationMeta.Hint<List<Integer>> hint : hints) {
-      int c = ((MyHint<List<Integer>>) hint).coefficient;
+      int c = ((MyHint<List<Integer>>) hint).getCoefficient();
       addNF(newNF, -c, hint.leftNF);
       addNF(newNF, c, hint.rightNF);
       axioms.add(factory.tuple(factory.number(c), hint.left.generateReflectedTerm(factory, getVarTerm()), hint.right.generateReflectedTerm(factory, getVarTerm()), factory.core(hint.typed)));
