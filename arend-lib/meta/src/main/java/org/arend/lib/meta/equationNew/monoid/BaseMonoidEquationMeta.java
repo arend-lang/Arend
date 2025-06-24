@@ -8,13 +8,16 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.typechecking.meta.Dependency;
+import org.arend.lib.meta.equation.binop_matcher.DefinitionFunctionMatcher;
 import org.arend.lib.meta.equation.binop_matcher.FunctionMatcher;
 import org.arend.lib.meta.equationNew.BaseEquationMeta;
 import org.arend.lib.meta.equationNew.term.TermOperation;
+import org.arend.lib.meta.equationNew.term.TermType;
 import org.arend.lib.util.Lazy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -49,9 +52,18 @@ public abstract class BaseMonoidEquationMeta<NF> extends BaseEquationMeta<NF> {
 
   @Override
   protected @NotNull List<TermOperation> getOperations(TypedExpression instance, CoreClassCallExpression instanceType, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteExpression marker) {
-    return Arrays.asList(
-        new TermOperation(ideTerm, FunctionMatcher.makeFieldMatcher(instanceType, instance, getIde(), typechecker, factory, marker, 0), Collections.emptyList()),
-        new TermOperation(mulTerm, FunctionMatcher.makeFieldMatcher(instanceType, instance, getMul(), typechecker, factory, marker, 2), Arrays.asList(TermOperation.Type.TERM, TermOperation.Type.TERM))
-    );
+    List<TermType> same2 = Arrays.asList(new TermType.OpType(null), new TermType.OpType(null));
+    List<TermOperation> operations = new ArrayList<>(3);
+    operations.add(new TermOperation(ideTerm, FunctionMatcher.makeFieldMatcher(instanceType, instance, getIde(), typechecker, factory, marker, 0), Collections.emptyList()));
+    operations.add(new TermOperation(mulTerm, FunctionMatcher.makeFieldMatcher(instanceType, instance, getMul(), typechecker, factory, marker, 2), same2));
+
+    if (isMultiplicative()) {
+      return operations;
+    }
+
+    if (isIntInstance(instance.getExpression())) {
+      operations.add(new TermOperation(new DefinitionFunctionMatcher(typechecker.getPrelude().getPos(), 1), Collections.singletonList(new TermType.OpType(Collections.singletonList(new TermOperation(mulTerm, new DefinitionFunctionMatcher(typechecker.getPrelude().getPlus(), 2), same2))))));
+    }
+    return operations;
   }
 }

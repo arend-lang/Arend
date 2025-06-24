@@ -1,5 +1,6 @@
 package org.arend.lib.meta.equation.binop_matcher;
 
+import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.ext.core.definition.CoreDataDefinition;
 import org.arend.ext.core.definition.CoreDefinition;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
@@ -24,7 +25,7 @@ public class DefinitionFunctionMatcher implements FunctionMatcher {
   public List<CoreExpression> match(CoreExpression expr) {
     List<CoreExpression> args = new ArrayList<>(numberOfArguments);
     CoreExpression function = Utils.getAppArguments(expr, numberOfArguments, args);
-    if (args.size() == numberOfArguments || definition instanceof CoreFunctionDefinition || definition instanceof CoreDataDefinition) {
+    if (args.size() == numberOfArguments || definition instanceof CoreFunctionDefinition || definition instanceof CoreDataDefinition || definition instanceof CoreConstructor) {
       function = function.normalize(NormalizationMode.WHNF);
       if (function instanceof CoreDefCallExpression && ((CoreDefCallExpression) function).getDefinition() == definition) {
         if (args.size() != numberOfArguments) {

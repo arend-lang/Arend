@@ -2,6 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
+\import Arith.Int
 \import Meta
 
 \lemma testCommSimp {M : CGroup} (x y z w : M)
@@ -48,3 +49,12 @@
 
 \lemma testProofForward {M : CGroup} (x y z : M) (p : x * z = z * inverse y * x) (q : x * y * z = inverse y) : x * z = ide
   => equation.cGroup {2 p} in q
+
+\lemma intTest1 {n m : Nat} : pos (n Nat.+ m) = pos (m Nat.+ n)
+  => equation.abGroup
+
+\lemma intTest2 {n : Nat} {p : pos n = 0} : neg n = 0
+  => equation.abGroup { -1 p }
+
+\lemma intTest3 {n m k : Nat} : n Nat.- (m Nat.+ k) = n Nat.- m - k
+  => equation.abGroup

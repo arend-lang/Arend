@@ -2,6 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
+\import Arith.Int
 \import Meta
 \import Paths
 
@@ -34,3 +35,12 @@
 
 \lemma testProof2 {M : AddGroup} (x y : M) (p : y = zro) : x + y - x = zro
   => equation.addGroup {pmap (x + __ - x) p}
+
+\lemma intTest1 {n m k : Nat} : pos ((n Nat.+ m) Nat.+ k) = pos (n Nat.+ (m Nat.+ k))
+  => equation.addGroup
+
+\lemma intTest2 {n m k : Nat} : neg ((n Nat.+ m) Nat.+ k) = neg (n Nat.+ (m Nat.+ k))
+  => equation.addGroup
+
+\lemma intTest3 {n m k : Nat} : n Nat.- (m Nat.+ k) = n Nat.- k - m
+  => equation.addGroup

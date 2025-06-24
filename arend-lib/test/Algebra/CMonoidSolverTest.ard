@@ -1,6 +1,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
+\import Arith.Int
 \import Order.Lattice \hiding (MeetSemilattice)
 \import Meta
 \import Paths
@@ -50,6 +51,12 @@
 
 \lemma testProofComm7 {M : CMonoid} (x y z : M) (p : x * x = y) (q : x * x * y = y) : x * x * y = x * x
   => equation.cMonoid { -1 p, q }
+
+\lemma intTest1 {n m : Nat} : pos (n Nat.+ m) = pos (m Nat.+ n)
+  => equation.abMonoid
+
+\lemma intTest2 {n m k : Nat} : pos ((n Nat.+ m) Nat.+ k) = pos ((k Nat.+ m) Nat.+ n)
+  => equation.abMonoid
 
 -- old tests
 

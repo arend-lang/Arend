@@ -25,8 +25,8 @@ public sealed interface EquationTerm permits OpTerm, VarTerm, NumberTerm {
         List<EquationTerm> termArgs = new ArrayList<>(args.size());
         for (int i = 0; i < args.size(); i++) {
           switch (operation.argTypes().get(i)) {
-            case TERM -> termArgs.add(match(args.get(i), operations, values));
-            case NAT -> {
+            case TermType.OpType(var newOperations) -> termArgs.add(match(args.get(i), newOperations == null ? operations : newOperations, values));
+            case TermType.NatType ignored -> {
               if (args.get(i).normalize(NormalizationMode.WHNF) instanceof CoreIntegerExpression intExpr) {
                 termArgs.add(new NumberTerm(intExpr.getBigInteger()));
               } else {

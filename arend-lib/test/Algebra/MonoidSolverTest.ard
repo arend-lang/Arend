@@ -2,6 +2,7 @@
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Arith.Nat
+\import Arith.Int
 \import Category
 \import Data.List
 \import Meta
@@ -87,6 +88,9 @@
 
 \lemma testIde2 {M : AddMonoid} (x y z : M) (p : x + y = zro) (q : y + z = zro) : x = z
   => equation.addMonoid {2 inv p, q}
+
+\lemma intTest {n m k : Nat} : pos ((n Nat.+ m) Nat.+ k) = pos (n Nat.+ (m Nat.+ k))
+  => equation.addMonoid
 
 -- old tests
 

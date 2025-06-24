@@ -38,7 +38,14 @@ public abstract class BaseNonCommutativeGroupEquationMeta extends BaseGroupEquat
   private void normalize(EquationTerm term, List<Pair<Boolean,Integer>> result) {
     switch (term) {
       case OpTerm(var operation, var arguments) -> {
-        if (operation.reflectionRef().equals(inverseTerm)) {
+        if (MINUS_TAG.equals(operation.data())) {
+          if (arguments.size() != 2) throw new IllegalStateException();
+          normalize(arguments.get(0), result);
+          List<Pair<Boolean,Integer>> args = normalize(arguments.get(1));
+          for (int i = args.size() - 1; i >= 0; i--) {
+            result.add(new Pair<>(!args.get(i).proj1, args.get(i).proj2));
+          }
+        } else if (inverseTerm.equals(operation.data())) {
           List<Pair<Boolean,Integer>> args = normalize(arguments.getFirst());
           for (int i = args.size() - 1; i >= 0; i--) {
             result.add(new Pair<>(!args.get(i).proj1, args.get(i).proj2));

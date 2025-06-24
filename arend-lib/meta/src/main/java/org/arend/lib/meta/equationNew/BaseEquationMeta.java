@@ -10,10 +10,7 @@ import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.expr.CoreFunCallExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
-import org.arend.ext.error.ErrorReporter;
-import org.arend.ext.error.GeneralError;
-import org.arend.ext.error.MissingArgumentsError;
-import org.arend.ext.error.TypecheckingError;
+import org.arend.ext.error.*;
 import org.arend.ext.instance.SubclassSearchParameters;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.BaseMetaDefinition;
@@ -28,6 +25,7 @@ import org.arend.lib.error.equation.NFPrettyPrinter;
 import org.arend.lib.meta.equationNew.term.EquationTerm;
 import org.arend.lib.meta.equationNew.term.TermOperation;
 import org.arend.lib.util.Lazy;
+import org.arend.lib.util.Names;
 import org.arend.lib.util.Utils;
 import org.arend.lib.util.Values;
 import org.jetbrains.annotations.NotNull;
@@ -57,6 +55,10 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
   protected abstract @NotNull ConcreteExpression getTermsEquality(@NotNull Lazy<ArendRef> solverRef, @Nullable ConcreteExpression solver, @NotNull ConcreteFactory factory);
 
   protected abstract @NotNull ConcreteExpression getTermsEqualityConv(@NotNull Lazy<ArendRef> solverRef, @NotNull ConcreteFactory factory);
+
+  protected boolean isIntInstance(CoreExpression instance) {
+    return instance.normalize(NormalizationMode.WHNF) instanceof CoreFunCallExpression funCall && funCall.getDefinition().getRef().checkName(Names.INT_RING);
+  }
 
   public record HintResult<NF>(ConcreteExpression proof, NF newNF) {}
 
@@ -187,7 +189,9 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     }
 
     CoreFunCallExpression equality = Utils.toEquality(typed.getType().normalize(NormalizationMode.WHNF), typechecker.getErrorReporter(), hint);
-    if (equality == null || !typechecker.compare(equality.getDefCallArguments().getFirst(), hintType, CMP.LE, hint, true, true, false)) {
+    if (equality == null) return null;
+    if (!typechecker.compare(equality.getDefCallArguments().getFirst(), hintType, CMP.LE, hint, true, true, false)) {
+      typechecker.getErrorReporter().report(new TypeMismatchError("Mismatch between equation types", equality.getDefCallArguments().getFirst(), hintType, hint));
       return null;
     }
 
@@ -300,7 +304,11 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     }
 
     ConcreteExpression solver = factory.app(factory.ref(getSolverModel()), true, factory.core(instance.proj1));
-    ConcreteExpression env = Utils.makeArray(values.getValues().stream().map(it -> factory.core(it.computeTyped())).toList(), factory);
+    boolean isInt = isIntInstance(instance.proj1.getExpression());
+    ConcreteExpression env = Utils.makeArray(values.getValues().stream().map(it -> {
+      ConcreteExpression result = factory.core(it.computeTyped());
+      return isInt ? factory.typed(result, factory.ref(factory.getPrelude().getIntRef())) : result;
+    }).toList(), factory);
     ConcreteExpression result = isForward ? proof : factory.app(getTermsEquality(solverRef, solver, factory), true, envRef.isUsed() ? factory.ref(envRef.get()) : env, left.generateReflectedTerm(factory, getVarTerm()), right.generateReflectedTerm(factory, getVarTerm()), proof);
     if (solverRef.isUsed() || envRef.isUsed()) {
       List<ConcreteLetClause> clauses = new ArrayList<>(2);

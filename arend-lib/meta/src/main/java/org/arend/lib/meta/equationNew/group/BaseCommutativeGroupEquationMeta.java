@@ -34,11 +34,17 @@ public abstract class BaseCommutativeGroupEquationMeta extends BaseGroupEquation
   private void normalize(EquationTerm term, boolean isPositive, List<Integer> result) {
     switch (term) {
       case OpTerm(var operation, var arguments) -> {
-        if (operation.reflectionRef().equals(inverseTerm)) {
-          isPositive = !isPositive;
-        }
-        for (EquationTerm argument : arguments) {
-          normalize(argument, isPositive, result);
+        if (MINUS_TAG.equals(operation.data())) {
+          if (arguments.size() != 2) throw new IllegalStateException();
+          normalize(arguments.get(0), isPositive, result);
+          normalize(arguments.get(1), !isPositive, result);
+        } else {
+          if (inverseTerm.equals(operation.data())) {
+            isPositive = !isPositive;
+          }
+          for (EquationTerm argument : arguments) {
+            normalize(argument, isPositive, result);
+          }
         }
       }
       case VarTerm(int index) -> {
