@@ -52,6 +52,10 @@
 \lemma testProofComm7 {M : CMonoid} (x y z : M) (p : x * x = y) (q : x * x * y = y) : x * x * y = x * x
   => equation.cMonoid { -1 p, q }
 
+\lemma testProofComm8 {M : CMonoid} (x1 x2 y1 y2 z1 z2 : M) (p : x1 * y2 = y1 * x2) (q : y1 * z2 = z1 * y2)
+  : x1 * z2 * y2 = z1 * x2 * y2
+  => equation.cMonoid {p,q}
+
 \lemma intTest1 {n m : Nat} : pos (n Nat.+ m) = pos (m Nat.+ n)
   => equation.abMonoid
 

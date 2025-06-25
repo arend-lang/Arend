@@ -49,10 +49,17 @@ public abstract class BaseCommutativeMonoidEquationMeta extends BaseMonoidEquati
     }
   }
 
+  private void trimZeros(List<Integer> nf) {
+    while (!nf.isEmpty() && nf.getLast() == 0) {
+      nf.removeLast();
+    }
+  }
+
   @Override
   protected @NotNull List<Integer> normalize(EquationTerm term) {
     List<Integer> result = new ArrayList<>();
     normalize(term, result);
+    trimZeros(result);
     return result;
   }
 
@@ -170,6 +177,7 @@ public abstract class BaseCommutativeMonoidEquationMeta extends BaseMonoidEquati
       }
     }
 
+    trimZeros(newNF);
     return new Pair<>(addition, newNF);
   }
 
