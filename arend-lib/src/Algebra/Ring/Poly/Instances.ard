@@ -79,7 +79,7 @@
   | ide-left => pmap2 (+) (path peq) ide_*c
   | ide-right {p : Poly R} : p * padd pzero 1 = p \elim p {
     | pzero => idp
-    | padd p e => pmap2 padd (zro-right *> ide-right) equation
+    | padd p e => pmap2 padd (zro-right *> ide-right) simplify
   }
   | *-assoc {p q s : Poly R} : (p * q) * s = p * (q * s) \elim p {
     | pzero => idp
@@ -141,7 +141,7 @@
 
     \lemma padd0_*-comm {R : Ring} {p q : Poly R} : p * padd q 0 = padd (p * q) 0 \elim p
       | pzero => inv (path peq)
-      | padd p e => pmap2 (\lam x => padd (x + _)) padd0_*-comm equation
+      | padd p e => pmap2 (\lam x => padd (x + _)) padd0_*-comm simplify
 
     \lemma *c_* {R : Ring} {c : R} {p : Poly R} : c *c p = padd pzero c * p
       => inv $ pmap (`+ _) peq
@@ -358,17 +358,17 @@
   | func-+ {p q : Poly R} : polyEval (p + q) a = polyEval p a + polyEval q a \elim p, q {
     | pzero, q => inv zro-left
     | padd p x, pzero => inv zro-right
-    | padd p x, padd q y => rewrite func-+ equation
+    | padd p x, padd q y => rewrite func-+ equation.semiring
   }
-  | func-ide => equation
+  | func-ide => simplify
   | func-* {p q : Poly R} : polyEval (p * q) a = polyEval p a * polyEval q a \elim p {
     | pzero => inv zro_*-left
-    | padd p x => func-+ *> rewrite (func-*,polyEval_*c) equation
+    | padd p x => func-+ *> rewrite (func-*,polyEval_*c) equation.cSemiring
   }
   \where
     \lemma polyEval_*c {R : Ring} {x a : R} {p : Poly R} : polyEval (x PolyRing.*c p) a = x * polyEval p a \elim p
       | pzero => inv zro_*-right
-      | padd p y => rewrite polyEval_*c equation
+      | padd p y => rewrite polyEval_*c equation.semiring
 
 \func polyMapEvalRingHom {R : Ring} {S : CRing} (f : RingHom R S) (a : S) : RingHom (PolyRing R) S
   => polyEvalRingHom a RingHom.∘ polyMapRingHom f
@@ -498,7 +498,7 @@
 \lemma polyDiv-linear {R : StrictIntegralDomain} {p q : Poly R} {l : Array R} (s : p * q = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l))
   : (\Sigma (j : Fin l.len) (polyEval q (l j) = 0)) || Monoid.Inv q \elim l
   | nil => byRight (Monoid.Inv.lmake p s)
-  | a :: l => \case R.zeroProduct {polyEval p a} {polyEval q a} (inv (polyEvalRingHom a).func-* *> pmap (polyEval __ a) s *> (polyEvalRingHom a).func-BigProd {map (\lam a => padd 1 (negative a)) (a :: l)} *> pmap (`* _) (simplify simplify) *> zro_*-left) \with {
+  | a :: l => \case R.zeroProduct {polyEval p a} {polyEval q a} (inv (polyEvalRingHom a).func-* *> pmap (polyEval __ a) s *> (polyEvalRingHom a).func-BigProd {map (\lam a => padd 1 (negative a)) (a :: l)} *> pmap (`* _) simplify *> zro_*-left) \with {
     | byLeft r => \have t => inv *-assoc *> pmap (`* _) *-comm *> (rewrite (rootDiv_* r) in s)
                   \in \case polyDiv-linear $ StrictDomain.nonZero-cancel-left {PolyStrictDomain R} {padd 1 (negative a)} (\lam c => R.zro/=ide $ inv $ pmap (polyCoef __ 1) c) t \with {
         | byLeft r => byLeft (suc r.1, r.2)
@@ -637,20 +637,20 @@
 
 \func polyDivision {R : CRing} (f g : Poly R) (k m n : Nat) (p : suc m = k + n) (df : degree<= f m) (dg : degree<= g n)
   : \Sigma (q r : Poly R) (pow (polyCoef g n) k *c f = q * g + r) (degree< r n) \elim k, m, n
-  | 0, m, n => (pzero, f, PolyRing.ide_*c *> equation, rewriteI p $ degree<=_degree< df)
+  | 0, m, n => (pzero, f, PolyRing.ide_*c *> equation.semiring, rewriteI p $ degree<=_degree< df)
   | 1, 0, 0 => (f, pzero, rewrite (degree<=0 g dg, ide-left, zro-right) $ PolyRing.*c_* *> *-comm, \lam _ => idp)
   | 1, 0, suc n => \case p
   | suc (suc k), 0, n => \case p
   | suc k, suc m, n => \let f1 => polyCoef g n *c f - monomial (polyCoef f (suc m)) k * g \in
     \have rec => polyDivision f1 g k m n (pmap pred p) (degree-reduce f1 m
       (degree<=_+ (degree<=_*c df) (degree<=_negative $ rewrite (pmap pred p) $ degree<=_* degree<=_monomial dg))
-      (polyCoef_+ *> pmap (_ +) polyCoef_negative *> rewrite polyCoef_*c (rewrite {3} (pmap pred p) $ rewrite (polyCoef_*,*-comm) negative-right))) dg
-    \in (rec.1 + monomial (pow (polyCoef g n) k * polyCoef f (suc m)) k, rec.2, rewrite (PolyRing.*c-assoc, rdistr) $ unfold f1 (rewrite (PolyRing.*c-ldistr, PolyRing.*c_negative, PolyRing.*c-comm-left, *c_monomial) equation) *> pmap (_ +) rec.3 *> inv +-assoc *> pmap (`+ _) +-comm, rec.4)
+      (polyCoef_+ *> pmap (_ +) polyCoef_negative *> rewrite (polyCoef_*c, 3 pmap pred p, polyCoef_*, *-comm) negative-right)) dg
+    \in (rec.1 + monomial (pow (polyCoef g n) k * polyCoef f (suc m)) k, rec.2, rewrite (PolyRing.*c-assoc, rdistr) $ unfold f1 (rewrite (PolyRing.*c-ldistr, PolyRing.*c_negative, PolyRing.*c-comm-left, *c_monomial) equation.abGroup) *> pmap (_ +) rec.3 *> inv +-assoc *> pmap (`+ _) +-comm, rec.4)
 
 \lemma monicPolyDivisionContr {R : CRing} (f g : Poly R) (n : Nat) (dg : degree<= g n) (dm : polyCoef g n = 1) : Contr (\Sigma (q r : Poly R) (f = q * g + r) (degree< r n))
   => \case degree-exists f \with {
     | inP (l,df) => isProp=>isContr (\lam s1 s2 =>
-      \have | s : (s1.1 - s2.1) * g = s2.2 - s1.2 => equation {CRing} {usingOnly {s1.3, s2.3}}
+      \have | s : (s1.1 - s2.1) * g = s2.2 - s1.2 => equation.cRing {inv s1.3, s2.3}
             | t => aux (s1.1 - s2.1) g n dg dm $ rewrite s $ degree<_+ s2.4 $ degree<_negative s1.4
       \in ext (AddGroup.fromZero t, inv $ AddGroup.fromZero $ inv s *> pmap (`* g) t))
       \have s => polyDivision f g (suc l) (l + n) n idp (degree<=-trans df $ <=_+ <=-refl zero<=_) dg
@@ -852,7 +852,7 @@
                | m => monomial (leadCoef p * finv (leadCoef q)) (degree p -' degree q)
                | lm/=0 : leadCoef p * finv (leadCoef q) /= 0 => Domain.nonZero_* (p/=0 $ leadCoef=0-lem __) (R.inv-nonZero $ R.finv-Inv lq/=0)
                | dp=dmq : degree p = degree (m * q) => inv $ degree_* (transportInv (`/= 0) (leadCoef_monomial {R}) lm/=0 $ pmap leadCoef __) q/=0 *> rewrite (degree_monomial lm/=0) (+-comm *> <=_exists q<=p)
-          \in equation {CRing} {usingOnly (divMod_fuel-correct (p - m * q) q dq/=0 $ diff-lem dp=dmq (inv $ leadCoef_* *> pmap (`* _) leadCoef_monomial *> *-assoc *> pmap (_ *) (R.finv-left lq/=0) *> ide-right) (\lam dmq=0 => dq/=0 $ <=_exists $ transport (_ <=) (dp=dmq *> dmq=0) q<=p) <∘l <_suc_<= s)}
+          \in equation.cRing {divMod_fuel-correct (p - m * q) q dq/=0 $ diff-lem dp=dmq (inv $ leadCoef_* *> pmap (`* _) leadCoef_monomial *> *-assoc *> pmap (_ *) (R.finv-left lq/=0) *> ide-right) (\lam dmq=0 => dq/=0 $ <=_exists $ transport (_ <=) (dp=dmq *> dmq=0) q<=p) <∘l <_suc_<= s}
       }
 
     \lemma divMod_fuel-rem-lem {R : DiscreteField} (p q : Poly R) (dq/=0 : degree q /= 0) {n : Nat} : degree (divMod_fuel p q n).2 < degree q \elim n
@@ -908,12 +908,12 @@
   }
   | *c-ldistr {p : Poly R} {a b : U} : poly_func p f (a + b) = poly_func p f a + poly_func p f b \elim p {
     | pzero => inv zro-left
-    | padd p e => pmap (f __ + _) *c-ldistr *> pmap2 (+) f.func-+ U.*c-ldistr *> equation
+    | padd p e => pmap (f __ + _) *c-ldistr *> pmap2 (+) f.func-+ U.*c-ldistr *> equation.abMonoid
   }
   | *c-rdistr {p q : Poly R} {a : U} : poly_func (p + q) f a = poly_func p f a + poly_func q f a \elim p, q {
     | pzero, q => inv zro-left
     | padd p b, pzero => inv zro-right
-    | padd p b, padd q c => pmap (f __ + _) *c-rdistr *> pmap2 (+) f.func-+ U.*c-rdistr *> equation
+    | padd p b, padd q c => pmap (f __ + _) *c-rdistr *> pmap2 (+) f.func-+ U.*c-rdistr *> equation.abMonoid
   }
   | ide_*c => pmap2 (+) f.func-zro ide_*c *> zro-left
   \where {
