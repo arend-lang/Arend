@@ -13,12 +13,12 @@
 \import Algebra.Pointed.PointedHom
 \import Algebra.Pointed.Sub
 \import Algebra.Ring
+\import Algebra.Ring.MonoidRing(evalMS,evalMS_map2,monoidSet-ringHom,msMonomial)
 \import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
-\import Algebra.Ring.Factor
+\import Algebra.Ring.Factor(FactorRing,factorHom,factor-lift)
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.MPoly
-\import Algebra.Ring.MonoidRing
 \import Algebra.Ring.Poly
 \import Algebra.Ring.Poly.Instances
 \import Algebra.Ring.Sub

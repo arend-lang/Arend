@@ -1,0 +1,120 @@
+\import Algebra.Domain
+\import Algebra.Domain.Bezout
+\import Algebra.Domain.Euclidean
+\import Algebra.Domain.GCD
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Instances
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Nat.Base
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Countable
+\open Monoid
+
+\instance PolyEuclideanRingData (R : DiscreteField) : EuclideanRingData (Poly R)
+  | CRing => PolyAlgebra R
+  | decideEq => PolyDecRing.decideEq
+  | euclideanMap => degree
+  | divMod p q => \case decideEq (degree q) 0 \with {
+    | yes _ => \case decideEq q 0 \with {
+      | yes _ => (0,p)
+      | no _ => (finv (leadCoef q) PolyRing.*c p, 0)
+    }
+    | no _ => divMod_fuel p q (EuclideanSemiringData.suc' (degree p))
+  }
+  | isDivMod p q => cases (decideEq (degree q) 0) \with {
+    | yes dq=0 => mcases \with {
+      | yes _ => pmap (`+ p) Ring.zro_*-right
+      | no q/=0 => zro-right *> pmap (`* _) (degree=0-lem dq=0) *> pmap (`+ _) peq *> inv PolyRing.*c-assoc *> pmap (PolyRing.`*c p) (R.finv-right (q/=0 $ leadCoef=0-lem __)) *> PolyRing.ide_*c
+    }
+    | no dq/=0 => divMod_fuel-correct p q dq/=0 $ rewrite EuclideanSemiringData.suc'=suc id<suc
+  }
+  | isEuclideanMap p q q/=0 => cases (decideEq (degree q) 0) \with {
+    | yes dq=0 => rewrite (decideEq/=_reduce q/=0) \lam r/=0 => absurd (r/=0 idp)
+    | no dq/=0 => \lam _ => divMod_fuel-rem-lem p q dq/=0
+  }
+  \where {
+    \func divMod_fuel {R : DiscreteField} (p q : Poly R) (n : Nat) : \Sigma (Poly R) (Poly R) \elim n
+      | 0 => (0,0)
+      | suc n => \case LinearOrder.dec<_<= (degree p) (degree q) \with {
+        | inl _ => (0,p)
+        | inr _ =>
+          \let | m => monomial (leadCoef p * finv (leadCoef q)) (degree p -' degree q)
+               | (d,r) => divMod_fuel (p - m * q) q n
+          \in (d + m, r)
+      }
+
+    \lemma divMod_fuel-correct {R : DiscreteField} (p q : Poly R) (dq/=0 : degree q /= 0) {n : Nat} (s : degree p < n) : q * (divMod_fuel p q n).1 + (divMod_fuel p q n).2 = p \elim n
+      | 0 => \case s
+      | suc n => mcases \with {
+        | inl p<q => pmap (`+ p) Ring.zro_*-right
+        | inr q<=p =>
+          \let | p/=0 : p /= 0 => dq/=0 $ <=_exists $ rewrite __ in q<=p
+               | q/=0 => dq/=0 $ pmap degree __
+               | lq/=0 => q/=0 $ leadCoef=0-lem __
+               | m => monomial (leadCoef p * finv (leadCoef q)) (degree p -' degree q)
+               | lm/=0 : leadCoef p * finv (leadCoef q) /= 0 => Domain.nonZero_* (p/=0 $ leadCoef=0-lem __) (R.inv-nonZero $ R.finv-Inv lq/=0)
+               | dp=dmq : degree p = degree (m * q) => inv $ degree_* (transportInv (`/= 0) (leadCoef_monomial {R}) lm/=0 $ pmap leadCoef __) q/=0 *> rewrite (degree_monomial lm/=0) (+-comm *> <=_exists q<=p)
+          \in equation.cRing {divMod_fuel-correct (p - m * q) q dq/=0 $ diff-lem dp=dmq (inv $ leadCoef_* *> pmap (`* _) leadCoef_monomial *> *-assoc *> pmap (_ *) (R.finv-left lq/=0) *> ide-right) (\lam dmq=0 => dq/=0 $ <=_exists $ transport (_ <=) (dp=dmq *> dmq=0) q<=p) <∘l <_suc_<= s}
+      }
+
+    \lemma divMod_fuel-rem-lem {R : DiscreteField} (p q : Poly R) (dq/=0 : degree q /= 0) {n : Nat} : degree (divMod_fuel p q n).2 < degree q \elim n
+      | 0 => nonZero>0 dq/=0
+      | suc n => mcases \with {
+        | inl p<q => p<q
+        | inr q<=p => divMod_fuel-rem-lem _ q dq/=0
+      }
+
+    \lemma diff-lem {R : Ring.Dec} {p q : Poly R} (s : degree p = degree q) (t : leadCoef p = leadCoef q) (dq/=0 : degree q /= 0) : degree (p - q) < degree p \elim p, q
+      | _, pzero => absurd (dq/=0 idp)
+      | pzero, padd q a => absurd (cases (decideEq q 0, s, t) \with {
+        | yes q=0, _, a=0 => dq/=0 $ rewrite (decideEq=_reduce q=0) idp
+      })
+      | padd p a, padd q a' => cases (decideEq p 0, decideEq q 0, s, t) \with {
+        | yes p=0, yes q=0, _, a=a' => absurd $ (rewrite (decideEq=_reduce q=0) in dq/=0) idp
+        | no p/=0, no q/=0, s, t => mcases \with {
+          | yes _ => NatOrder.zero<suc
+          | no p-q/=0 => NatOrder.suc<suc $ diff-lem (pmap pred s) t
+              \lam dq=0 => p-q/=0 $ AddGroup.toZero $ degree=0-lem (pmap pred s *> dq=0) *> pmap (padd pzero) t *> inv (degree=0-lem dq=0)
+        }
+      }
+  }
+
+\instance PolyEuclideanDomain (R : DiscreteField) : EuclideanDomain (Poly R)
+  | IntegralDomain.Dec => PolyDecIntegralDomain R
+  | isEuclidean => inP (PolyEuclideanRingData R)
+
+\lemma poly-dec-unit {R : DiscreteField} (p : Poly R) : Dec (Inv p) \elim p
+  | pzero => no \lam e => NonZeroSemiring.inv-nonZero e idp
+  | padd p a => \case decideEq p 0, decideEq a 0 \with {
+    | yes p=0, no a/=0 => yes $ rewrite p=0 $ Inv.lmake (padd pzero (finv a)) $ pmap (padd pzero) $ zro-left *> R.finv-left a/=0
+    | yes p=0, yes a=0 => no \lam e => NonZeroSemiring.inv-nonZero e $ pmap2 padd p=0 a=0 *> peq
+    | no p/=0, _ => no \lam e => \case polyInv e \with {
+      | inP (_,q,_) => p/=0 (pmap polyShift q)
+    }
+  }
+
+\lemma poly-dec-div {R : DiscreteField} (a b : Poly R) : Dec (TruncP (LDiv a b))
+  => GCDDomain.Dec.div_unit.2 poly-dec-unit a b
+
+\func poly-maximal-ideal {K : DiscreteField} (c : Countable K) (p : Poly K) (pc : Not (Monoid.Inv p))
+  : \Sigma (M : Ideal (PolyAlgebra K)) M.IsMaximal (M p)
+  => \let (M,Mm,g) => BezoutRing.maximal-ideal (Poly.poly-countable c) poly-dec-div (p :: nil) (\lam c => pc $ c p \lam (0) => LDiv.id-div)
+     \in (M, Mm, g 0)

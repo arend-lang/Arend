@@ -19,6 +19,7 @@
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Integral
 \import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Euclidean
 \import Algebra.Ring.Poly.Instances
 \import Algebra.Ring.Reduced
 \import Algebra.Ring.Sub
