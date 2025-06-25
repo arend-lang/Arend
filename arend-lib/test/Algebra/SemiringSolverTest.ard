@@ -24,7 +24,10 @@
 \lemma zeroTest {R : Semiring} (a : R) : a * 0 = 0
   => equation.semiring
 
-\lemma semiringArgTest {R : Semiring} (a b c : R) (p : 2 * (a * b) + a * c = 0) : a * (b + c) + a * b = 0
+\lemma semiringArgTest1 {R : Semiring} (a b c : R) (p : 2 * (a * b) + a * c = 0) : a * (b + c) + a * b = 0
+  => equation.semiring p
+
+\lemma semiringArgTest2 {R : Semiring} (a : R) (p : 1 + a = 0) : a + 1 = 0
   => equation.semiring p
 
 \lemma semiringForwardTest {R : Semiring} (a b c : R) (p : a * (b + c) + a * b = 0) : 2 * (a * b) + a * c = 0

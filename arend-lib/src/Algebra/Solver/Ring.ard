@@ -50,12 +50,12 @@
       | :* t s => interpret env t * interpret env s
 
     \func intCoef (x : Int) : R
-      | pos n => R.natCoef n
+      | pos n => natCoef n
       | neg 1 => negative ide
       | neg (suc _ \as n) => negative (R.natCoef n)
 
     \lemma intCoef-correct {x : Int} : R.intCoef x = intCoef x \elim x
-      | pos n => idp
+      | pos n => natCoef-correct
       | neg 1 => pmap negative $ R.natCoefSuc 0 *> pmap (`+ ide) R.natCoefZero *> zro-left
       | neg (suc (suc n)) => idp
 
@@ -74,7 +74,7 @@
       | coef c => inv intCoef-correct
       | var v => idp
       | :zro => idp
-      | :ide => intMap.func-ide
+      | :ide => idp
       | :negative t => interpretNF_negative *> pmap negative normalize-consistent
       | :+ t s => (RingData env).interpretNF_++ *> pmap2 (+) normalize-consistent normalize-consistent
       | :* t s => (RingData env).remove0-consistent *> (RingData env).collapse-consistent *> (RingData env).interpretNF_multiply *> pmap2 (*) normalize-consistent normalize-consistent

@@ -12,10 +12,13 @@
 \lemma intCoefTest {R : Ring} (b c d : R) : b * 2 * c + b * (3 * c + d + 4) + b * -3 = 5 * b * c + b * (d + 1)
   => equation.ring
 
-\lemma zeroTest2 {R : Ring} (a b c d : R) : a + a * -1 = 0
+\lemma zeroTest {R : Ring} (a b c d : R) : a + a * -1 = 0
   => equation.ring
 
-\lemma ringArgTest {R : Ring} (a b : R) (p : -1 * (a * b) + b * a = 0) : (a + b) * (a - b) = a * a - b * b
+\lemma ringArgTest1 {R : Ring} (a b : R) (p : -1 * (a * b) + b * a = 0) : (a + b) * (a - b) = a * a - b * b
+  => equation.ring p
+
+\lemma ringArgTest2 {R : Ring} (a : R) (p : 1 + a = 0) : a + 1 = 0
   => equation.ring p
 
 \lemma ringForwardTest {R : Ring} (a b : R) (p : (a + b) * (a - b) = a * a - b * b) : -1 * (a * b) + b * a = 0

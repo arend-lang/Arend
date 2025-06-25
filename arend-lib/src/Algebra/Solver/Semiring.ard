@@ -199,8 +199,21 @@
         => interpretNF-correct *> interpretNF_++ *> pmap (`+ _) (interpretNF_multiply *> pmap (_ *) (interpretNF_multiply *> pmap (`* _) (normalize-consistent *> p *> inv normalize-consistent) *> inv interpretNF_multiply) *> inv interpretNF_multiply) *> inv (interpretNF-correct *> interpretNF_++)
     }
 
-    \func SemiringData {R : Semiring} (env : Array R) : Data R NatSemiring NatSemiring natMap env \cowith
-      | alg-comm => natComm
+    \func natCoef (x : Nat) : R
+      | 0 => 0
+      | 1 => 1
+      | n => R.natCoef n
+
+    \lemma natCoef-correct {n : Nat} : R.natCoef n = natCoef n \elim n
+      | 0 => R.natCoefZero
+      | 1 => R.natCoefSuc 0 *> pmap (`+ 1) R.natCoefZero *> zro-left
+      | suc (suc n) => idp
+
+    \lemma natMap' : SemiringHom NatSemiring R natCoef
+      => transport (SemiringHom NatSemiring R) (path \lam i n => natCoef-correct {_} {n} i) natMap
+
+    \func SemiringData (env : Array R) : Data R NatSemiring NatSemiring natMap' env \cowith
+      | alg-comm n a => inv (pmap (`* a) natCoef-correct) *> natComm n a *> pmap (a *) natCoef-correct
 
     \lemma apply-axiom (env : Array R) (t s : Term Nat env.len) (p : (SemiringData env).interpret t = (SemiringData env).interpret s) (left right add : NF Nat env.len)
       => (SemiringData env).apply-axiom2 t s p left right add
