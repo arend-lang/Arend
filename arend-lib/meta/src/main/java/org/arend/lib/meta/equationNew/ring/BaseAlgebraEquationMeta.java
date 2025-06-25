@@ -6,12 +6,14 @@ import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.CoreClassCallExpression;
 import org.arend.ext.core.expr.CoreExpression;
+import org.arend.ext.core.expr.CoreIntegerExpression;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.lib.error.equation.NFPrettyPrinter;
 import org.arend.lib.error.equation.RingNFPrettyPrinter;
+import org.arend.lib.meta.equation.binop_matcher.DefinitionFunctionMatcher;
 import org.arend.lib.meta.equation.binop_matcher.FunctionMatcher;
 import org.arend.lib.meta.equationNew.BaseEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.NonCommutativeMonoidEquationMeta;
@@ -54,28 +56,58 @@ public abstract class BaseAlgebraEquationMeta extends BaseEquationMeta<List<Mono
 
   @Override
   protected @NotNull List<TermOperation> getOperations(TypedExpression instance, CoreClassCallExpression instanceType, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteExpression marker) {
+    List<TermType> same2 = Arrays.asList(new TermType.OpType(null), new TermType.OpType(null));
     List<TermOperation> result = new ArrayList<>();
     result.add(new TermOperation(getZroTerm(), FunctionMatcher.makeFieldMatcher(instanceType, instance, zro, typechecker, factory, marker, 0), Collections.emptyList()));
     result.add(new TermOperation(getIdeTerm(), FunctionMatcher.makeFieldMatcher(instanceType, instance, ide, typechecker, factory, marker, 0), Collections.emptyList()));
-    result.add(new TermOperation(getAddTerm(), FunctionMatcher.makeFieldMatcher(instanceType, instance, add, typechecker, factory, marker, 2), Arrays.asList(new TermType.OpType(null), new TermType.OpType(null))));
-    result.add(new TermOperation(getMulTerm(), FunctionMatcher.makeFieldMatcher(instanceType, instance, mul, typechecker, factory, marker, 2), Arrays.asList(new TermType.OpType(null), new TermType.OpType(null))));
+    result.add(new TermOperation(getAddTerm(), FunctionMatcher.makeFieldMatcher(instanceType, instance, add, typechecker, factory, marker, 2), same2));
+    result.add(new TermOperation(getMulTerm(), FunctionMatcher.makeFieldMatcher(instanceType, instance, mul, typechecker, factory, marker, 2), same2));
     if (getNegativeTerm() != null && getNegative() != null) {
       result.add(new TermOperation(getNegativeTerm(), FunctionMatcher.makeFieldMatcher(instanceType, instance, getNegative(), typechecker, factory, marker, 1), Collections.singletonList(new TermType.OpType(null))));
     }
-    result.add(new TermOperation(getCoefTerm(), FunctionMatcher.makeFieldMatcher(instanceType, instance, natCoef, typechecker, factory, marker, 1), Collections.singletonList(new TermType.NatType())));
+
+    if (isIntInstance(instance.getExpression())) {
+      TermType natType = new TermType.OpType(Arrays.asList(
+          new TermOperation(getAddTerm(), new DefinitionFunctionMatcher(typechecker.getPrelude().getPlus(), 2), same2),
+          new TermOperation(getMulTerm(), new DefinitionFunctionMatcher(typechecker.getPrelude().getMul(), 2), same2),
+          new TermOperation(SUC_TAG, (factory1, args) -> {
+            if (args.size() != 1) throw new IllegalStateException();
+            return factory.app(factory1.ref(getAddTerm()), true, args.getFirst(), factory1.app(factory.ref(getCoefTerm()), true, factory.number(1)));
+          }, new DefinitionFunctionMatcher(typechecker.getPrelude().getSuc(), 1), Collections.singletonList(new TermType.OpType(null))),
+          new TermOperation(getCoefTerm(), expr -> expr instanceof CoreIntegerExpression ? Collections.singletonList(expr) : null, Collections.singletonList(new TermType.NatType()))
+      ));
+
+      result.add(new TermOperation(POS_TAG, new DefinitionFunctionMatcher(typechecker.getPrelude().getPos(), 1), Collections.singletonList(natType)));
+      if (getNegativeTerm() != null) {
+        result.add(new TermOperation(getNegativeTerm(), new DefinitionFunctionMatcher(typechecker.getPrelude().getNeg(), 1), Collections.singletonList(natType)));
+        result.add(new TermOperation(MINUS_TAG, (factory1, args) -> {
+          if (args.size() != 2) throw new IllegalStateException();
+          return factory.app(factory1.ref(getAddTerm()), true, args.get(0), factory1.app(factory.ref(getNegativeTerm()), true, args.get(1)));
+        }, new DefinitionFunctionMatcher(typechecker.getPrelude().getMinus(), 2), Arrays.asList(natType, natType)));
+      }
+    } else {
+      result.add(new TermOperation(getCoefTerm(), FunctionMatcher.makeFieldMatcher(instanceType, instance, natCoef, typechecker, factory, marker, 1), Collections.singletonList(new TermType.NatType())));
+    }
+
     return result;
   }
 
   private void normalize(EquationTerm term, List<Monomial> result) {
     switch (term) {
       case OpTerm(var operation, var arguments) -> {
-        if (operation.data().equals(getIdeTerm())) {
+        Object data = operation.data();
+        if (data.equals(getIdeTerm())) {
           result.add(new Monomial(BigInteger.ONE, Collections.emptyList()));
-        } else if (operation.data().equals(getAddTerm())) {
+        } else if (data.equals(getAddTerm()) || data.equals(POS_TAG)) {
           for (EquationTerm argument : arguments) {
             normalize(argument, result);
           }
-        } else if (operation.data().equals(getMulTerm())) {
+        } else if (data.equals(SUC_TAG)) {
+          for (EquationTerm argument : arguments) {
+            normalize(argument, result);
+          }
+          result.add(new Monomial(BigInteger.ONE, Collections.emptyList()));
+        } else if (data.equals(getMulTerm())) {
           List<Monomial> nf1 = new ArrayList<>(), nf2 = new ArrayList<>();
           normalize(arguments.get(0), nf1);
           normalize(arguments.get(1), nf2);
@@ -87,13 +119,20 @@ public abstract class BaseAlgebraEquationMeta extends BaseEquationMeta<List<Mono
           }
           Collections.sort(newNF);
           result.addAll(Monomial.collapse(newNF));
-        } else if (operation.data().equals(getNegativeTerm())) {
+        } else if (data.equals(getNegativeTerm())) {
           List<Monomial> nf = new ArrayList<>();
           normalize(arguments.getFirst(), nf);
           for (Monomial monomial : nf) {
             result.add(monomial.negate());
           }
-        } else if (operation.data().equals(getCoefTerm())) {
+        } else if (data.equals(MINUS_TAG)) {
+          normalize(arguments.get(0), result);
+          List<Monomial> nf = new ArrayList<>();
+          normalize(arguments.get(1), nf);
+          for (Monomial monomial : nf) {
+            result.add(monomial.negate());
+          }
+        } else if (data.equals(getCoefTerm())) {
           result.add(new Monomial(((NumberTerm) arguments.getFirst()).number(), Collections.emptyList()));
         }
       }

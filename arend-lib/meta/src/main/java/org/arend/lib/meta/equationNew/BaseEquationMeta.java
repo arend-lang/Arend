@@ -1,5 +1,6 @@
 package org.arend.lib.meta.equationNew;
 
+import org.arend.ext.concrete.ConcreteAppBuilder;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteLetClause;
 import org.arend.ext.concrete.expr.*;
@@ -37,6 +38,10 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
   @Dependency                                           ArendRef inv;
   @Dependency(name = "*>")                              ArendRef concat;
   @Dependency(name = "BaseSet.E")                       CoreClassField carrier;
+
+  protected static final String POS_TAG = "pos";
+  protected static final String MINUS_TAG = "minus";
+  protected static final String SUC_TAG = "suc";
 
   protected abstract @NotNull CoreClassDefinition getClassDef();
 
@@ -121,7 +126,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
   /**
    * Solves the goal.
    */
-  protected @Nullable ConcreteExpression solve(@NotNull List<Hint<NF>> hints, @Nullable ConcreteExpression proof, @NotNull NF left, @NotNull NF right, @NotNull Values<CoreExpression> values, @Nullable TypedExpression instance, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteExpression marker) {
+  protected @Nullable ConcreteExpression solve(@NotNull List<Hint<NF>> hints, @Nullable ConcreteExpression proof, @NotNull NF left, @NotNull NF right, @NotNull Values<CoreExpression> values, @NotNull TypedExpression instance, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteExpression marker) {
     ConcreteFactory factory = typechecker.getFactory().withData(marker);
     var pair = applyHints(hints, left, right, solverRef, envRef, values, typechecker, factory);
     if (pair == null) return null;
@@ -150,11 +155,15 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     }
   }
 
-  protected @NotNull ConcreteExpression getProofType(@NotNull NF left, @NotNull NF right, @NotNull Values<CoreExpression> values, @Nullable TypedExpression instance, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
-    return factory.app(factory.ref(typechecker.getPrelude().getEqualityRef()), true, nfToConcreteTerm(left, values, instance, factory), nfToConcreteTerm(right, values, instance, factory));
+  protected @NotNull ConcreteExpression getProofType(@NotNull NF left, @NotNull NF right, @NotNull Values<CoreExpression> values, @NotNull TypedExpression instance, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
+    ConcreteAppBuilder builder = factory.appBuilder(factory.ref(typechecker.getPrelude().getEqualityRef()));
+    if (isIntInstance(instance.getExpression())) {
+      builder.app(factory.ref(factory.getPrelude().getIntRef()), false);
+    }
+    return builder.app(nfToConcreteTerm(left, values, instance, factory)).app(nfToConcreteTerm(right, values, instance, factory)).build();
   }
 
-  protected @Nullable ConcreteExpression checkProof(@NotNull ConcreteExpression proof, @NotNull NF left, @NotNull NF right, @NotNull Values<CoreExpression> values, @Nullable TypedExpression instance, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
+  protected @Nullable ConcreteExpression checkProof(@NotNull ConcreteExpression proof, @NotNull NF left, @NotNull NF right, @NotNull Values<CoreExpression> values, @NotNull TypedExpression instance, @NotNull ExpressionTypechecker typechecker, @NotNull ConcreteFactory factory) {
     TypedExpression type = typechecker.typecheckType(getProofType(left, right, values, instance, typechecker, factory));
     if (type == null) {
       return null;

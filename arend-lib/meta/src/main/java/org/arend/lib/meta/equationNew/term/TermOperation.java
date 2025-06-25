@@ -13,8 +13,8 @@ public record TermOperation(Object data, BiFunction<ConcreteFactory, List<Concre
     this(reflectionRef, (factory, args) -> factory.app(factory.ref(reflectionRef), true, args), matcher, argTypes);
   }
 
-  public TermOperation(FunctionMatcher matcher, List<TermType> argTypes) {
-    this(null, (factory, args) -> {
+  public TermOperation(Object data, FunctionMatcher matcher, List<TermType> argTypes) {
+    this(data, (factory, args) -> {
       if (args.size() != 1) throw new IllegalStateException();
       return args.getFirst();
     }, matcher, argTypes);

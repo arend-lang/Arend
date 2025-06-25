@@ -2,6 +2,8 @@
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Int
 \import Meta
 
 \lemma semiringTest1 {R : Semiring} (a b c d : R) : a + b * (c + d) = b * c + a + b * d
@@ -33,3 +35,21 @@
 
 \lemma semiringProofTest2 {R : Semiring} (a b c d : R) (p : 0 = b * c) : a * c + b * d + a * d = (a + b) * (c + d)
   => equation.semiring {1 p}
+
+\lemma natTest1 (x : Nat) : 2 * x = x + x
+  => equation.semiring
+
+\lemma natTest2 (x y : Nat) : suc y * x = x + y * x
+  => equation.semiring
+
+\lemma intTest1 (x : Nat) : pos (0 * x) = 0
+  => equation.semiring
+
+\lemma intTest2 (x : Nat) : pos (1 * x) = pos x
+  => equation.semiring
+
+\lemma intTest3 (x : Nat) : pos (2 * x) = pos (x + x)
+  => equation.semiring
+
+\lemma intTest4 (y x : Nat) : pos (suc y * x) = pos (x + y * x)
+  => equation.semiring

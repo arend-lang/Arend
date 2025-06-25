@@ -37,8 +37,6 @@ public abstract class BaseGroupEquationMeta<NF> extends BaseEquationMeta<NF> {
 
   protected abstract CoreClassField getInverse();
 
-  protected static final String MINUS_TAG = "minus";
-
   @Override
   protected @NotNull List<TermOperation> getOperations(TypedExpression instance, CoreClassCallExpression instanceType, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteExpression marker) {
     List<TermType> same2 = Arrays.asList(new TermType.OpType(null), new TermType.OpType(null));
@@ -53,8 +51,8 @@ public abstract class BaseGroupEquationMeta<NF> extends BaseEquationMeta<NF> {
 
     if (isIntInstance(instance.getExpression())) {
       TermType natType = new TermType.OpType(Collections.singletonList(new TermOperation(mulTerm, new DefinitionFunctionMatcher(typechecker.getPrelude().getPlus(), 2), same2)));
-      operations.add(new TermOperation(new DefinitionFunctionMatcher(typechecker.getPrelude().getPos(), 1), Collections.singletonList(new TermType.OpType(Collections.singletonList(new TermOperation(mulTerm, new DefinitionFunctionMatcher(typechecker.getPrelude().getPlus(), 2), same2))))));
-      operations.add(new TermOperation(inverseTerm, new DefinitionFunctionMatcher(typechecker.getPrelude().getNeg(), 1), Collections.singletonList(new TermType.OpType(Collections.singletonList(new TermOperation(mulTerm, new DefinitionFunctionMatcher(typechecker.getPrelude().getPlus(), 2), same2))))));
+      operations.add(new TermOperation(POS_TAG, new DefinitionFunctionMatcher(typechecker.getPrelude().getPos(), 1), Collections.singletonList(natType)));
+      operations.add(new TermOperation(inverseTerm, new DefinitionFunctionMatcher(typechecker.getPrelude().getNeg(), 1), Collections.singletonList(natType)));
       operations.add(new TermOperation(MINUS_TAG, (factory1, args) -> {
         if (args.size() != 2) throw new IllegalStateException();
         return factory.app(factory1.ref(mulTerm), true, args.get(0), factory1.app(factory.ref(inverseTerm), true, args.get(1)));

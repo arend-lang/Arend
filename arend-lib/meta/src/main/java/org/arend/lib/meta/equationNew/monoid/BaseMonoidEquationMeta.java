@@ -62,7 +62,7 @@ public abstract class BaseMonoidEquationMeta<NF> extends BaseEquationMeta<NF> {
     }
 
     if (isIntInstance(instance.getExpression())) {
-      operations.add(new TermOperation(new DefinitionFunctionMatcher(typechecker.getPrelude().getPos(), 1), Collections.singletonList(new TermType.OpType(Collections.singletonList(new TermOperation(mulTerm, new DefinitionFunctionMatcher(typechecker.getPrelude().getPlus(), 2), same2))))));
+      operations.add(new TermOperation(POS_TAG, new DefinitionFunctionMatcher(typechecker.getPrelude().getPos(), 1), Collections.singletonList(new TermType.OpType(Collections.singletonList(new TermOperation(mulTerm, new DefinitionFunctionMatcher(typechecker.getPrelude().getPlus(), 2), same2))))));
     }
     return operations;
   }
