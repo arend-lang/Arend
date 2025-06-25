@@ -188,7 +188,7 @@
         | inP (N,g), inP (M,h) => inP (N ∨ M, \lam p => midSum_norm {_} {_} {N ∨ M} <∘r
             transport2 (<=) zro-left (inv $ midSum-split join-right p) (<=_+ (midSum>=0 \lam j => <=_*_positive_positive (LinearOrder.<_<= delta1>0) norm>=0) $
                 midSum_<= \lam {j} p' _ => transportInv (`<= _) (RealField.abs-ofPos norm>=0) (A.norm_*_<= <=∘ <=_*_positive-left (linarith $ norm_-right <∘r transport (`< 1) A.norm-dist (g $ join-left <=∘ p')) norm>=0)) <∘r
-            (rewrite (pinv-right,ide-left,midSum-ldistr) in transportInv (_ <) RealField.*-assoc (RealField.<_*_positive-right delta1>0 $ RealField.abs>=id <∘r h (join-right <=∘ p))))
+            (rewrite (pinv-right,ide-left,midSum-ldistr) in transportInv (_ <) *-assoc (RealField.<_*_positive-right delta1>0 $ RealField.abs>=id <∘r h (join-right <=∘ p))))
       }
 
 \lemma geometric-series-conv {x : Real} (p : RealAbGroup.abs x < 1) : seriesSum (pow x) = defined (pinv (diff-pos p))

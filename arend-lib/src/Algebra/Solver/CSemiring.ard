@@ -8,7 +8,7 @@
 \import Data.List
 \import Function.Meta
 \import Paths
-\open SemiringSolverModel
+\open SemiringSolverModel \hiding (natCoef)
 
 \func CSemiringSolverModel (R : CSemiring) : SolverModel R \cowith
   | Term => Term Nat

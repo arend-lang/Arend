@@ -21,6 +21,7 @@ import org.arend.ext.reference.ExpressionResolver;
 import org.arend.ext.reference.MetaRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.util.Pair;
+import org.jetbrains.annotations.Nullable;
 
 import java.math.BigInteger;
 import java.util.*;
@@ -507,5 +508,28 @@ public class Utils {
       result = factory.app(factory.ref(factory.getPrelude().getArrayConsRef()), true, expressions.get(i), result);
     }
     return result;
+  }
+
+  private static @Nullable Set<Integer> getPositions(ConcreteExpression expression) {
+    Set<Integer> result = new HashSet<>();
+    for (ConcreteExpression arg : Utils.getArgumentList(expression)) {
+      Integer position = Utils.getNumber(arg, null, true);
+      if (position == null) return null;
+      result.add(position);
+    }
+    return result;
+  }
+
+  public static Pair<Set<Integer>, ConcreteExpression> getFirstNumbers(ConcreteExpression expression, ConcreteFactory factory) {
+    Set<Integer> positions;
+    if (!(expression instanceof ConcreteAppExpression appExpr && appExpr.getArguments().getFirst().isExplicit())) return null;
+    positions = getPositions(appExpr.getFunction());
+    if (positions == null) return null;
+
+    expression = appExpr.getArguments().getFirst().getExpression();
+    if (appExpr.getArguments().size() > 1) {
+      expression = factory.withData(expression).app(expression, appExpr.getArguments().subList(1, appExpr.getArguments().size()));
+    }
+    return new Pair<>(positions, expression);
   }
 }

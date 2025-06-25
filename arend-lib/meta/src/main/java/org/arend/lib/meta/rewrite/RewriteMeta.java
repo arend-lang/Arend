@@ -38,7 +38,7 @@ public class RewriteMeta extends BaseMetaDefinition {
     return new boolean[] { false, true, true };
   }
 
-  private void getNumber(ConcreteExpression expression, List<Integer> result, ErrorReporter errorReporter) {
+  private void getNumber(ConcreteExpression expression, Set<Integer> result, ErrorReporter errorReporter) {
     Integer n = Utils.getNumber(expression, errorReporter, true);
     if (n != null) {
       result.add(n);
@@ -74,12 +74,15 @@ public class RewriteMeta extends BaseMetaDefinition {
       }
       return typechecker.typecheck(factory.app(result, args.subList(currentArg, args.size())), contextData.getExpectedType());
     }
-    ConcreteExpression arg0 = args0.getFirst();
+    var argPair = Utils.getFirstNumbers(args0.getFirst(), factory);
+    ConcreteExpression arg0 = argPair == null ? args0.getFirst() : argPair.proj2;
 
     // Collect occurrences
-    List<Integer> occurrences;
-    if (occurrencesArg != null) {
-      occurrences = new ArrayList<>();
+    Set<Integer> occurrences;
+    if (argPair != null) {
+      occurrences = argPair.proj1;
+    } else if (occurrencesArg != null) {
+      occurrences = new LinkedHashSet<>();
       for (ConcreteExpression expr : Utils.getArgumentList(occurrencesArg)) {
         getNumber(expr, occurrences, errorReporter);
       }
@@ -111,7 +114,7 @@ public class RewriteMeta extends BaseMetaDefinition {
       if (var instanceof CoreInferenceReferenceExpression && ((CoreInferenceReferenceExpression) var).getVariable() == ((CoreInferenceReferenceExpression) expectedType).getVariable()) {
         if (!(occurrences == null || occurrences.isEmpty() || occurrences.size() == 1 && occurrences.contains(1))) {
           occurrences.remove(1);
-          errorReporter.report(new SubexprError(typechecker.getExpressionPrettifier(), occurrences, var, null, expectedType, refExpr));
+          errorReporter.report(new SubexprError(typechecker.getExpressionPrettifier(), new ArrayList<>(occurrences), var, null, expectedType, refExpr));
           return null;
         }
         ArendRef ref = factory.local("T");
@@ -182,7 +185,7 @@ public class RewriteMeta extends BaseMetaDefinition {
             occurrences.removeIf(i -> i <= num[0]);
           }
           if (num[0] == 0 || occurrences != null && !occurrences.isEmpty()) {
-            errorReporter.report(new SubexprError(typechecker.getExpressionPrettifier(), occurrences, value, null, normType, refExpr));
+            errorReporter.report(new SubexprError(typechecker.getExpressionPrettifier(), occurrences == null ? null : new ArrayList<>(occurrences), value, null, normType, refExpr));
             return null;
           }
           return typechecker.check(absExpr, refExpr);

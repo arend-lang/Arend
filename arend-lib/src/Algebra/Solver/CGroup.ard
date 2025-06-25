@@ -60,7 +60,7 @@
       => interpretNF-correct _ *> interpretNF-consistent'
 
     \func normalize {n : Nat} (t : Term n) : Array Int n \elim t
-      | var v => single v (pos 1) 0
+      | var v => singleAt v (pos 1) 0
       | :ide => replicate n (pos 0)
       | :inverse t => map negative (normalize t)
       | t :* s => mkArray \lam j => normalize t j + normalize s j

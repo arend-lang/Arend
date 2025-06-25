@@ -83,33 +83,11 @@ public abstract class NonCommutativeMonoidEquationMeta extends BaseMonoidEquatio
     }
   }
 
-  private @Nullable Set<Integer> getPositions(ConcreteExpression expression) {
-    Set<Integer> result = new HashSet<>();
-    for (ConcreteExpression arg : Utils.getArgumentList(expression)) {
-      Integer position = Utils.getNumber(arg, null, true);
-      if (position == null) return null;
-      result.add(position);
-    }
-    return result;
-  }
-
   @Override
   protected @Nullable Hint<List<Integer>> parseHint(@NotNull ConcreteExpression hint, @NotNull CoreExpression hintType, @NotNull List<TermOperation> operations, @NotNull Values<CoreExpression> values, @NotNull ExpressionTypechecker typechecker) {
-    Set<Integer> positions;
-    if (hint instanceof ConcreteAppExpression appExpr && appExpr.getArguments().getFirst().isExplicit()) {
-      positions = getPositions(appExpr.getFunction());
-      if (positions != null) {
-        hint = appExpr.getArguments().getFirst().getExpression();
-        if (appExpr.getArguments().size() > 1) {
-          hint = typechecker.getFactory().withData(hint).app(hint, appExpr.getArguments().subList(1, appExpr.getArguments().size()));
-        }
-      }
-    } else {
-      positions = null;
-    }
-
-    Hint<List<Integer>> result = super.parseHint(hint, hintType, operations, values, typechecker);
-    return result == null ? null : new MyHint<>(positions, result.typed, result.left, result.right, result.leftNF, result.rightNF, result.originalExpression);
+    var pair = Utils.getFirstNumbers(hint, typechecker.getFactory());
+    Hint<List<Integer>> result = super.parseHint(pair == null ? hint : pair.proj2, hintType, operations, values, typechecker);
+    return result == null ? null : new MyHint<>(pair == null ? null : pair.proj1, result.typed, result.left, result.right, result.leftNF, result.rightNF, result.originalExpression);
   }
 
   @Override

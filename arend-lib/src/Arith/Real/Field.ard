@@ -44,10 +44,10 @@
   | LinearlyOrderedAbGroup => RealAbGroup
   | ide => 1
   | * => *
-  | ide-left => unique1 (*-cover ∘ tuple (const 1) id) id (\lam x => *-rat *> pmap Real.fromRat ide-left)
-  | *-comm => unique2 *-cover (*-cover ∘ tuple proj2 proj1) (\lam x y => *-rat *> pmap Real.fromRat *-comm *> inv *-rat)
-  | *-assoc => unique3 (*-cover ∘ prod *-cover id) (*-cover ∘ tuple (proj1 ∘ proj1) (*-cover ∘ prod proj2 id)) (\lam x y z => unfold $ unfold $ rewrite (*-rat,*-rat,*-rat,*-rat) $ pmap Real.fromRat *-assoc)
-  | ldistr => unique3 (*-cover ∘ tuple (proj1 ∘ proj1) (+-uniform ∘ prod proj2 id)) (+-uniform ∘ tuple (*-cover ∘ tuple (proj1 ∘ proj1) (proj2 ∘ proj1)) (*-cover ∘ tuple (proj1 ∘ proj1) proj2)) (\lam x y z => unfold $ unfold $ rewrite (RealAbGroup.+-rat,*-rat,*-rat,*-rat,RealAbGroup.+-rat) $ pmap Real.fromRat ldistr)
+  | ide-left {x : Real} : 1 * x = x => unique1 (*-cover ∘ tuple (const 1) id) id (\lam x => *-rat *> pmap Real.fromRat Monoid.ide-left)
+  | *-comm {x y : Real} : x * y = y * x => unique2 *-cover (*-cover ∘ tuple proj2 proj1) (\lam x y => *-rat *> pmap Real.fromRat CMonoid.*-comm *> inv *-rat)
+  | *-assoc {x y z : Real} : x * y * z = x * (y * z) => unique3 (*-cover ∘ prod *-cover id) (*-cover ∘ tuple (proj1 ∘ proj1) (*-cover ∘ prod proj2 id)) (\lam x y z => unfold $ unfold $ rewrite (*-rat,*-rat,*-rat,*-rat) $ pmap Real.fromRat Monoid.*-assoc)
+  | ldistr {x y z : Real} : x * (y + z) = x * y + x * z => unique3 (*-cover ∘ tuple (proj1 ∘ proj1) (+-uniform ∘ prod proj2 id)) (+-uniform ∘ tuple (*-cover ∘ tuple (proj1 ∘ proj1) (proj2 ∘ proj1)) (*-cover ∘ tuple (proj1 ∘ proj1) proj2)) (\lam x y z => unfold $ unfold $ rewrite (RealAbGroup.+-rat,*-rat,*-rat,*-rat,RealAbGroup.+-rat) $ pmap Real.fromRat Ring.ldistr)
   | ide>zro => idp
   | positive_* x>0 y>0 => (*_positive-L x>0 y>0).2 \case L-rounded x>0, L-rounded y>0 \with {
     | inP (a,a<x,a>0), inP (a',a'<y,a'>0) => inP (a, a', a>0, a'>0, a<x, a'<y, RatField.<_*_positive_positive a>0 a'>0)
@@ -60,14 +60,14 @@
         | inP (b,bc<x,x<b) => \case L-rounded bc<x, L-rounded x>0 \with {
           | inP (a',a'<x,bc<a'), inP (a'',a''<x,a''>0) =>
             \have b>0 => Real.LU-less x>0 x<b
-            \in inP (finv b, a' ∨ a'', finv>0 b>0, a''>0 <∘l join-right, byRight $ transportInv x.U RatField.finv_finv x<b, real_join_L a'<x a''<x, transport (`< _) (inv *-assoc *> pmap (`*' c) (RatField.finv-left $ RatField.>_/= b>0) *> ide-left) (RatField.<_*_positive-right (finv>0 b>0) bc<a') <∘l LinearlyOrderedSemiring.<=_*_positive-right (<_<= $ finv>0 b>0) join-left)
+            \in inP (finv b, a' ∨ a'', finv>0 b>0, a''>0 <∘l join-right, byRight $ transportInv x.U RatField.finv_finv x<b, real_join_L a'<x a''<x, transport (`< _) (inv Monoid.*-assoc *> pmap (`*' c) (RatField.finv-left $ RatField.>_/= b>0) *> Monoid.ide-left) (RatField.<_*_positive-right (finv>0 b>0) bc<a') <∘l LinearlyOrderedSemiring.<=_*_positive-right (<_<= $ finv>0 b>0) join-left)
         }
       }),
        \lam d => ext (\lam u => \case (*_positive-U (real-pos-inv>0 x>0) x>0).1 u \with {
          | inP (b,b',(b>0,b1<x),x<b',bb'<d) => transport (`< _) (finv-right $ RatField.>_/= b>0) (RatField.<_*_positive-right b>0 $ Real.LU-less b1<x x<b') <∘ bb'<d
        }, \lam d>1 => (*_positive-U (real-pos-inv>0 x>0) x>0).2 \case Real.LU_*-focus-right x>0 d>1 \with {
          | inP (a,a>0,a<x,x<ad) => \case U-rounded x<ad \with {
-           | inP (b',x<b',b'<ad) => inP (finv a, b', (finv>0 a>0, transportInv x.L RatField.finv_finv a<x), x<b', transport (_ <) (inv *-assoc *> pmap (`*' _) (RatField.finv-left $ RatField.>_/= a>0) *> ide-left) $ <_*_positive-right (finv>0 a>0) b'<ad)
+           | inP (b',x<b',b'<ad) => inP (finv a, b', (finv>0 a>0, transportInv x.L RatField.finv_finv a<x), x<b', transport (_ <) (inv Monoid.*-assoc *> pmap (`*' _) (RatField.finv-left $ RatField.>_/= a>0) *> Monoid.ide-left) $ <_*_positive-right (finv>0 a>0) b'<ad)
          }
        }))
   | #0=>eitherPosOrNeg {x} (xi : Monoid.Inv x) => \case U-inh {x * xi.inv} \with {
@@ -84,13 +84,13 @@
     }
   }
   | *c a x => Real.fromRat a * x
-  | *c-assoc => {?} -- TODO[server2]: pmap (`* _) (inv *-rat) *> RealField.*-assoc
-  | *c-ldistr => {?} -- TODO[server2]: RealField.ldistr
-  | *c-rdistr => {?} -- TODO[server2]: pmap (`* _) (inv RealAbGroup.+-rat) *> RealField.rdistr
-  | ide_*c => {?} -- TODO[server2]: RealField.ide-left
-  | *c-comm-left => {?} -- TODO[server2]: inv RealField.*-assoc
+  | *c-assoc => pmap (`* _) (inv *-rat) *> *-assoc
+  | *c-ldistr => ldistr
+  | *c-rdistr => *-comm *> pmap (_ *) (inv RealAbGroup.+-rat) *> ldistr *> pmap2 (+) *-comm *-comm
+  | ide_*c => ide-left
+  | *c-comm-left => inv *-assoc
   | coefMap => Real.fromRat
-  | coefMap_*c => {?} -- TODO[server2]: inv RealField.ide-right
+  | coefMap_*c => inv $ *-comm *> ide-left
   | coef_< p => real_<-rat-char.2 (isDense p)
   | coef_<-inv p => \case real_<-rat-char.1 p \with {
     | inP (a,x<a,a<y) => x<a <∘ a<y
@@ -124,7 +124,7 @@
                                                                        (RatField.<=_*_positive-right abs>=0 $ <_<= xx'<gamma) <∘r
                 transport (`< _) rdistr (<_*_positive-left (linarith (abs_-right {_} {x0} {x}, abs_-right {_} {y0} {y}, abs_-right {_} {y} {y'}, meet-right : gamma <= 1) : abs x + abs y' < abs x0 + abs y0 + 3) gamma>0 <∘l
                   RatField.<=_*_positive-right (<_<= lem) meet-left <=∘ Preorder.=_<=
-                    (inv *-assoc *> pmap (`*' _) (finv-right $ StrictPoset.>_/= $ later lem) *> ide-left)))))
+                    (inv Monoid.*-assoc *> pmap (`*' _) (finv-right $ StrictPoset.>_/= $ later lem) *> Monoid.ide-left)))))
       }
 
     \private \func *-cover-def : CoverMap (RealNormed ⨯ RealNormed) RealNormed
