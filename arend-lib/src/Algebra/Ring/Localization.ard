@@ -52,13 +52,13 @@
   | zro => in~ (zro, ide, contains_ide)
   | + => ++
   | zro-left {in~ _} => ~-pequiv simplify
-  | +-assoc {in~ _} {in~ _} {in~ _} => ~-pequiv {?} -- TODO[server2]: path (~-equiv _ _ (pmap2 (*) equation (inv *-assoc)))
-  | +-comm {in~ _} {in~ _} => ~-pequiv {?} -- TODO[server2]: path (~-equiv _ _ equation)
+  | +-assoc {in~ _} {in~ _} {in~ _} => ~-pequiv equation.cRing
+  | +-comm {in~ _} {in~ _} => ~-pequiv equation.cRing
   | ide => in~ (ide, ide, contains_ide)
   | * => **
-  | ide-left {in~ _} => ~-pequiv simplify -- TODO[server2]: path (~-equiv _ _ equation)
+  | ide-left {in~ _} => ~-pequiv simplify
   | *-assoc {in~ _} {in~ _} {in~ _} => ~-pequiv equation.monoid
-  | ldistr {in~ _} {in~ _} {in~ _} => ~-pequiv {?} -- TODO[server2]: path (~-equiv _ _ equation)
+  | ldistr {in~ _} {in~ _} {in~ _} => ~-pequiv equation.cRing
   | negative => neg
   | negative-left {in~ _} => ~-pequiv simplify
   | *-comm {in~ _} {in~ _} => path (~-equiv _ _ (pmap2 (*) *-comm *-comm))
@@ -75,8 +75,7 @@
 
     \lemma equals-lem {a b : SType S} (c : R) (s : S c) (p : a.1 * b.2 * c = b.1 * a.2 * c) : inl~ a = inl~ b
       => \let a' : SType S => (a.1 * c, a.2 * c, contains_* a.3 s)
-         \in path (~-pequiv equation.cMonoid) *>
-             path (~-equiv a' b $ {?} {- TODO[server2]: equation -})
+         \in ~-pequiv equation.cMonoid *> path (~-equiv a' b $ equation.cMonoid {p})
 
     \lemma equals1 {a b : SType S} (p : a.1 * b.2 = b.1 * a.2) : inl~ a = inl~ b
       => equals-lem 1 S.contains_ide (simplify p)
@@ -86,7 +85,7 @@
         | ~ x y => ∃ (z : R) (S z) (x.1 * y.2 * z = y.1 * x.2 * z)
         | ~-reflexive => inP (ide, contains_ide, idp)
         | ~-symmetric (inP (z,c,p)) => inP (z, c, inv p)
-        | ~-transitive {x} {y} (inP (t,ct,pt)) (inP (s,cs,ps)) => inP (y.2 * (t * s), contains_* y.3 (contains_* ct cs), {?} {- TODO[server2]: equation -})
+        | ~-transitive {x} {y} (inP (t,ct,pt)) (inP (s,cs,ps)) => inP (y.2 * (t * s), contains_* y.3 (contains_* ct cs), equation.cMonoid {pt,ps})
       }) (\lam x~y => inP (ide, contains_ide, simplify x~y))
          (Quotient.equality p)
 
@@ -98,22 +97,17 @@
 
     \func neg (a : Type) : Type \elim a
       | in~ (r,s,p) => in~ (negative r, s, p)
-      | ~-equiv (r,s,p) (r',s',p') rs~rs' i =>
-        ~-equiv (negative r, s, p) (negative r', s', p') {?} {- TODO[server2]: equation -} i
+      | ~-equiv x y p => ~-pequiv (equation.cRing {p})
 
     \func ++ (a b : Type) : Type \elim a, b
       | in~ (r1,s1,p1), in~ (r2,s2,p2) => in~ (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2)
-      | ~-equiv (r1,s1,p1) (r1',s1',p1') rs1~rs1' i, in~ (r2,s2,p2) =>
-        ~-equiv (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2) (r1' * s2 + r2 * s1', s1' * s2, contains_* p1' p2) {?} {- TODO[server2]: equation -} i
-      | in~ (r1,s1,p1), ~-equiv (r2,s2,p2) (r2',s2',p2') rs2~rs2' i =>
-        ~-equiv (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2) (r1 * s2' + r2' * s1, s1 * s2', contains_* p1 p2') {?} {- TODO[server2]: equation -} i
+      | ~-equiv x y p, in~ z => ~-pequiv (equation.cRing {p})
+      | in~ x, ~-equiv y z p => ~-pequiv (equation.cRing {p})
 
     \func ** (a b : Type) : Type \elim a, b
       | in~ (r1,s1,p1), in~ (r2,s2,p2) => in~ (r1 * r2, s1 * s2, contains_* p1 p2)
-      | ~-equiv (r1,s1,p1) (r1',s1',p1') rs1~rs1' i, in~ (r2,s2,p2) =>
-        ~-equiv (r1 * r2, s1 * s2, contains_* p1 p2) (r1' * r2, s1' * s2, contains_* p1' p2) {?} {- TODO[server2]: equation -} i
-      | in~ (r1,s1,p1), ~-equiv (r2,s2,p2) (r2',s2',p2') rs2~rs2' i =>
-        ~-equiv (r1 * r2, s1 * s2, contains_* p1 p2) (r1 * r2', s1 * s2', contains_* p1 p2') {?} {- TODO[server2]: equation -} i
+      | ~-equiv x y p, in~ z => ~-pequiv (equation.cMonoid {p})
+      | in~ x, ~-equiv y z p => ~-pequiv (equation.cMonoid {p})
 
     \lemma trivial {x : R} (n : R.IsNilpotent x) (s : S x) : Contr (LocRing S) \elim n
       | inP (n,p) => \new Contr {
@@ -178,53 +172,30 @@
 
     \func lift {R' : CRing} (f : RingHom R R') (l : \Pi (x : R) -> S x -> Inv (f x)) (a : Type {R} {S}) : R' \elim a
       | in~ (r,s,p) => f r * Inv.inv {l s p}
-      | ~-equiv (r,s,p) (r',s',p') rs~rs' =>
-          f r * Inv.inv {l s p}                                ==< pmap (`* Inv.inv {l s p}) (inv ide-right) >==
-          (f r * ide) * Inv.inv {l s p}                        ==< pmap ((f r * __) * Inv.inv {l s p}) (inv (Inv.inv-right {l s' p'})) >==
-          (f r * (f s' * Inv.inv {l s' p'})) * Inv.inv {l s p} ==< pmap (`* Inv.inv {l s p}) (inv *-assoc) >==
-          ((f r * f s') * Inv.inv {l s' p'}) * Inv.inv {l s p} ==< pmap ((__ * Inv.inv {l s' p'}) * Inv.inv {l s p}) (inv f.func-*) >==
-          (f (r * s') * Inv.inv {l s' p'}) * Inv.inv {l s p}   ==< *-assoc >==
-          f (r * s') * (Inv.inv {l s' p'} * Inv.inv {l s p})   ==< pmap (f __ * (Inv.inv {l s' p'} * Inv.inv {l s p})) rs~rs' >==
-          f (r' * s) * (Inv.inv {l s' p'} * Inv.inv {l s p})   ==< pmap (`* (Inv.inv {l s' p'} * Inv.inv {l s p})) f.func-* >==
-          (f r' * f s) * (Inv.inv {l s' p'} * Inv.inv {l s p}) ==< swap >==
-          (f r' * Inv.inv {l s' p'}) * (f s * Inv.inv {l s p}) ==< pmap ((f r' * Inv.inv {l s' p'}) *) (Inv.inv-right {l s p}) >==
-          (f r' * Inv.inv {l s' p'}) * ide                     ==< ide-right >==
-          f r' * Inv.inv {l s' p'}                             `qed
+      | ~-equiv (r,s,p) (r',s',p') rs~rs' => equation.cMonoid {
+          1 inv (l s' p').inv-right,
+          inv (f.func-* {r} {s'}),
+          pmap f rs~rs',
+          f.func-* {r'} {s},
+          (l s p).inv-right
+        }
 
     \func liftHom {R' : CRing} (f : RingHom R R') (l : \Pi (x : R) -> S x -> Inv (f x)) : RingHom (LocRing S) R' \cowith
       | func => lift f l
-      | func-ide => pmap (f ide *) (
-          Inv.inv {l ide contains_ide}         ==< inv ide-right >==
-          Inv.inv {l ide contains_ide} * ide   ==< pmap (Inv.inv {l ide contains_ide} *) (inv f.func-ide) >==
-          Inv.inv {l ide contains_ide} * f ide ==< Inv.inv-left {l ide contains_ide} >==
-          ide                                  `qed) *> ide-right *> f.func-ide
-      | func-+ {in~ (r1,s1,p1)} {in~ (r2,s2,p2)} =>
-          f (r1 * s2 + r2 * s1) * Inv.inv {l (s1 * s2) (contains_* p1 p2)}                                                  ==< pmap2 (*) f.func-+ (func-inv f s1 s2 p1 p2 l) >==
-          (f (r1 * s2) + f (r2 * s1)) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1})                                             ==< pmap2 ((__ + __) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1})) f.func-* f.func-* >==
-          (f r1 * f s2 + f r2 * f s1) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1})                                             ==< R'.rdistr >==
-          (f r1 * f s2) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1}) + (f r2 * f s1) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1}) ==< pmap ((f r1 * f s2) * __ + (f r2 * f s1) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1})) *-comm >==
-          (f r1 * f s2) * (Inv.inv {l s1 p1} * Inv.inv {l s2 p2}) + (f r2 * f s1) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1}) ==< pmap2 (+) swap swap >==
-          (f r1 * Inv.inv {l s1 p1}) * (f s2 * Inv.inv {l s2 p2}) + (f r2 * Inv.inv {l s2 p2}) * (f s1 * Inv.inv {l s1 p1}) ==< pmap2 ((f r1 * Inv.inv {l s1 p1}) * __ + (f r2 * Inv.inv {l s2 p2}) * __) (Inv.inv-right {l s2 p2}) (Inv.inv-right {l s1 p1}) >==
-          (f r1 * Inv.inv {l s1 p1}) * ide + (f r2 * Inv.inv {l s2 p2}) * ide                                               ==< pmap2 (+) ide-right ide-right >==
-          f r1 * Inv.inv {l s1 p1} + f r2 * Inv.inv {l s2 p2}                                                               `qed
-      | func-* {in~ (r1,s1,p1)} {in~ (r2,s2,p2)} =>
-          f (r1 * r2) * Inv.inv {l (s1 * s2) (contains_* p1 p2)}  ==< pmap2 (*) f.func-* (func-inv f s1 s2 p1 p2 l) >==
-          (f r1 * f r2) * (Inv.inv {l s2 p2} * Inv.inv {l s1 p1}) ==< pmap ((f r1 * f r2) *) *-comm >==
-          (f r1 * f r2) * (Inv.inv {l s1 p1} * Inv.inv {l s2 p2}) ==< swap >==
-          (f r1 * Inv.inv {l s1 p1}) * (f r2 * Inv.inv {l s2 p2}) `qed
+      | func-ide => Inv.inv-right
+      | func-+ {in~ (r1,s1,p1)} {in~ (r2,s2,p2)} => equation.cRing {
+          f.func-+ *> pmap2 (+) f.func-* f.func-*,
+          func-inv,
+          (l s1 p1).inv-right,
+          (l s2 p2).inv-right
+        }
+      | func-* {in~ (r1,s1,p1)} {in~ (r2,s2,p2)} => equation.cMonoid {f.func-*, func-inv}
       \where
-        \lemma func-inv {R' : CRing} (f : RingHom R R') (s1 s2 : R) (p1 : S s1) (p2 : S s2)
-                        (l : \Pi (x : R) -> S x -> Inv (f x))
-          : Inv.inv {l (s1 * s2) (contains_* p1 p2)} = Inv.inv {l s2 p2} * Inv.inv {l s1 p1}
-          => \have e => \new Inv (f s1 * f s2) {
-                          | inv => Inv.inv {l (s1 * s2) (contains_* p1 p2)}
-                          | inv-left => pmap (Inv.inv {l (s1 * s2) (contains_* p1 p2)} *) (inv f.func-*) *> Inv.inv-left {l (s1 * s2) (contains_* p1 p2)}
-                          | inv-right => pmap (`* Inv.inv {l (s1 * s2) (contains_* p1 p2)}) (inv f.func-*) *> Inv.inv-right {l (s1 * s2) (contains_* p1 p2)}
-                        }
-             \in pmap (\lam (t : Inv (f s1 * f s2)) => t.inv) (Inv.levelProp e Inv.product.func)
+        \lemma func-inv {s1 s2 : R} {p1 : S s1} {p2 : S s2} : Inv.inv {l (s1 * s2) (contains_* p1 p2)} = Inv.inv {l s2 p2} * Inv.inv {l s1 p1}
+          => pmap (\lam (t : Inv) => t.inv) $ Inv.levelProp (Inv.lmake _ $ pmap (_ *) (inv f.func-*) *> Inv.inv-left) Inv.product.func
 
     \lemma liftHom-loc {R' : CRing} (f : RingHom R R') (l : \Pi (x : R) -> S x -> Inv (f x)) (x : R) : liftHom f l (locMap x) = f x
-      => pmap (f x *) (inv ide-right *> pmap (Inv.inv {l ide contains_ide} *) (inv f.func-ide) *> Inv.inv-left {l ide contains_ide}) *> ide-right
+      => pmap (f x *) (inv ide-right *> pmap (_ *) (inv f.func-ide) *> Inv.inv-left) *> ide-right
 
     \open SubMonoid(powers)
     \open Monoid
@@ -232,30 +203,30 @@
     \func pow-map (b : R) (n : Nat) : RingHom (LocRing (powers (pow b n))) (LocRing (powers b)) \cowith
       | func => \case __ \with {
         | in~ (x,y,c) => in~ (x, y, TruncP.map c (\lam p => (n Nat.* p.1, rewrite pow_* p.2)))
-        | ~-equiv x y r i => ~-equiv _ _ (later r) i
+        | ~-equiv x y r => ~-pequiv r
       }
-      | func-+ {in~ x} {in~ y} => path (~-equiv _ _ idp)
-      | func-ide => path (~-equiv _ _ idp)
-      | func-* {in~ x} {in~ y} => path (~-equiv _ _ idp)
+      | func-+ {in~ x} {in~ y} => ~-pequiv idp
+      | func-ide => ~-pequiv idp
+      | func-* {in~ x} {in~ y} => ~-pequiv idp
 
     \lemma pow-map_loc (b : R) (n : Nat) : pow-map b n ∘ locMap = locMap
-      => exts \lam x => path (~-equiv _ _ idp)
+      => exts \lam x => ~-pequiv idp
 
     \lemma div-map_loc {a b : R} (a|b : LDiv a b) : div-map a|b ∘ locMap = locMap
       => exts \lam x => \case (div-map.aux a|b (x, ide, contains_ide {powers a})).2 \with {
-        | inP ((n,a^n=1),p) => inv p *> path (~-equiv _ _ equation)
+        | inP ((n,a^n=1),p) => inv p *> ~-pequiv (rewrite a^n=1 *-assoc)
       }
 
     \func div-map {a b : R} (a|b : LDiv a b) : RingHom (LocRing (powers a)) (LocRing (powers b)) \cowith
       | func => aux-func a|b
       | func-+ {in~ x} {in~ y} => \case (aux a|b x).2, (aux a|b y).2, (aux a|b _).2 \with {
-        | inP ((n,a^n=x2),p1), inP ((m,a^m=y2),p2), inP ((k,a^k=x2y2),p3) => inv p3 *> path (~-equiv _ _ equation) *> pmap2 (+) p1 p2
+        | inP ((n,a^n=x2),p1), inP ((m,a^m=y2),p2), inP ((k,a^k=x2y2),p3) => inv p3 *> ~-pequiv equation *> pmap2 (+) p1 p2
       }
       | func-ide => \case (aux a|b _).2 \with {
-        | inP ((n,a^n=1),p) => inv p *> path (~-equiv _ _ equation)
+        | inP ((n,a^n=1),p) => inv p *> ~-pequiv equation
       }
       | func-* {in~ x} {in~ y} => \case (aux a|b x).2, (aux a|b y).2, (aux a|b _).2 \with {
-        | inP ((n,a^n=x2),p1), inP ((m,a^m=y2),p2), inP ((k,a^k=x2y2),p3) => inv p3 *> path (~-equiv _ _ equation) *> pmap2 (*) p1 p2
+        | inP ((n,a^n=x2),p1), inP ((m,a^m=y2),p2), inP ((k,a^k=x2y2),p3) => inv p3 *> ~-pequiv equation *> pmap2 (*) p1 p2
       }
       \where {
         \lemma aux {a b : R} (a|b : LDiv a b) (x : SType (powers a))
@@ -265,7 +236,7 @@
           => \case \elim x \with {
             | in~ x => (aux a|b x).1
             | ~-equiv x y r => \case (aux a|b x).2, (aux a|b y).2 \with {
-              | inP ((n,a^n=x2),p), inP ((m,a^m=y2),q) => inv p *> path (~-equiv _ _ equation) *> q
+              | inP ((n,a^n=x2),p), inP ((m,a^m=y2),q) => inv p *> ~-pequiv equation *> q
             }
           }
       }
@@ -297,12 +268,11 @@
 \instance FieldOfQuotients (D : IntegralDomain.Dec) : DiscreteField \cowith
   | CRing => LocRing D.subMonoid
   | zro/=ide p => \case LocRing.unequals p \with {
-    | inP (c,c#0,q) => D.#0-zro (transport D.#0 (inv (q *> *-assoc *> ide-left *> ide-left) *> *-assoc *> D.zro_*-left) c#0)
-     -- TODO[server2]: D.#0-zro (transport D.#0 equation c#0)
+    | inP (c,c#0,q) => D.#0-zro $ transportInv D.#0 (simplify in q) c#0
   }
   | eitherZeroOrInv => \case \elim __ \with {
     | in~ x => \case decideEq x.1 0 \with {
       | yes e => byLeft $ LocRing.equals1 $ ide-right *> e *> inv D.zro_*-left
-      | no q => byRight $ Monoid.Inv.lmake (inl~ (x.2, x.1, AddGroup.nonZeroApart q)) $ LocRing.equals1 $ simplify *-comm
+      | no q => byRight $ Inv.lmake (inl~ (x.2, x.1, AddGroup.nonZeroApart q)) $ LocRing.equals1 $ simplify *-comm
     }
   }

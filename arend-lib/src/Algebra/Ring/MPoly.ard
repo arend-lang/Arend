@@ -18,7 +18,7 @@
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Array.Pairs
-\import Data.Fin \hiding (Index)
+\import Data.Fin
 \import Equiv
 \import Function (isSurj)
 \import Function.Meta ($)
@@ -246,7 +246,7 @@
       : mPolyEval (a :: l) (retHom p) = mPolyEval l (mPoly-map (polyEvalRingHom a) p)
       => mPolyRingHom-unique (mPolyEval (a :: l) ∘ retHom) (mPolyEval l ∘ mPoly-mapHom {_} {PolyAlgebra R} (polyEvalRingHom a))
           (polyMapEval-unique (mPolyEval (a :: l) ∘ retHom ∘ mPolyHom) (mPolyEval l ∘ mPoly-mapHom {_} {PolyAlgebra R} (polyEvalRingHom a) ∘ mPolyHom {_} {PolyAlgebra R})
-              (\lam r => simplify simplify) (simplify $ simplify $ inv ide-left)) (\lam j => simplify $ simplify $ inv ide-left) p
+              (\lam r => simplify) simplify) (\lam j => simplify) p
 
     \lemma mapEval-comm {R S : CRing} (f : RingHom R S) {p : MPoly (Fin (suc n)) R} {a : S} {l : Array (Poly R) n}
       : polyMapEval f (mPolyEval l (fHom p)) a = mPolyMapEval f p (a :: map (polyMapEval f __ a) l)

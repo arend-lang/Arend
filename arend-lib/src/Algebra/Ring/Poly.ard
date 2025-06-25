@@ -1,34 +1,17 @@
-\import Algebra.Algebra
-\import Algebra.Domain
-\import Algebra.Domain.Bezout
-\import Algebra.Domain.Euclidean
-\import Algebra.Domain.GCD
-\import Algebra.Field
-\import Algebra.Group
-\import Algebra.Group.GroupHom
 \import Algebra.Meta
-\import Algebra.Module
-\import Algebra.Module.LinearMap
 \import Algebra.Monoid
-\import Algebra.Monoid.MonoidHom
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Pointed.PointedHom
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
-\import Algebra.Ring.Ideal
 \import Algebra.Ring.QPoly
-\import Algebra.Semiring
 \import Arith.Nat
 \import Arith.Nat.Base
-\import Category \hiding (Map,univalence)
 \import Data.Array
-\import Data.Or
 \import Equiv
 \import Equiv.Fiber
 \import Equiv.Univalence
-\import Function \hiding (id,o)
-\import Function.Iterate
+\import Function
 \import Function.Meta
 \import Logic.Unique
 \import Logic
@@ -41,9 +24,7 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set
 \import Set.Countable
-\import Set.Fin
 \open Monoid
 
 \data Poly (R : AddPointed)
@@ -123,14 +104,14 @@
 \func polyEval {R : Ring} (p : Poly R) (a : R) : R \elim p
   | pzero => 0
   | padd p e => polyEval p a * a + e
-  | peq => zro-right *> zro_*-left
+  | peq => zro-right *> R.zro_*-left
 
 \func polyMapEval {A : AddPointed} {R : Ring} (f : AddPointedHom A R) (p : Poly A) (a : R) : R
   => polyEval (polyMap f p) a
 
 \lemma polyEval_polyMap {f : RingHom} {p : Poly f.Dom} {a : f.Dom} : polyEval (polyMap f p) (f a) = f (polyEval p a) \elim p
   | pzero => inv func-zro
-  | padd p e => inv $ func-+ *> pmap (`+ _) (f.func-* *> pmap (`* _) (inv polyEval_polyMap))
+  | padd p e => inv $ f.func-+ *> pmap (`+ _) (f.func-* *> pmap (`* _) (inv polyEval_polyMap))
 
 \func polyCoef {R : AddPointed} (p : Poly R) (n : Nat) : R \elim p, n
   | pzero, _ => 0
@@ -167,12 +148,12 @@
   | peq => idp
 
 \lemma poly-root-div {R : CRing} {p : Poly R} {a : R} (q : polyEval p a = 0)
-  : LDiv a (polyCoef p 0) (negative (polyEval (polyShift p) a)) \elim p
+  : LDiv a (polyCoef p 0) (R.negative (polyEval (polyShift p) a)) \elim p
   | pzero => \new LDiv {
     | inv-right => simplify
   }
   | padd p e => \new LDiv {
-    | inv-right => R.negative_*-right *> inv (AddGroup.fromZero $ +-comm *> pmap (`+ e) (R.negative-isInv *> *-comm) *> q)
+    | inv-right => R.negative_*-right *> inv (R.fromZero $ +-comm *> pmap (`+ e) (R.negative-isInv *> *-comm) *> q)
   }
 
 \lemma padd=pzero {R : AddPointed} {p : Poly R} {a : R} (q : padd p a = pzero) : \Sigma (p = pzero) (a = 0)
@@ -193,7 +174,7 @@
 
 \lemma polyEval_monomial {R : Ring} {c a : R} {n : Nat} : polyEval (monomial c n) a = c * pow a n \elim n
   | 0 => simplify
-  | suc n => rewrite polyEval_monomial equation
+  | suc n => rewrite polyEval_monomial equation.semiring
 
 \lemma polyMapEval_monomial {f : RingHom} {a : f.Cod} {n : Nat} : polyMapEval f (monomial 1 n) a = pow a n
   => pmap (polyEval __ a) polyMap_monomial *> polyEval_monomial *> pmap (`* _) func-ide *> ide-left

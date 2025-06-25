@@ -71,7 +71,6 @@
   \lemma BigSum_replicate {x : E} {n : Nat} : BigSum (replicate n x) = natCoef n * x \elim n
     | 0 => rewrite natCoefZero (inv zro_*-left)
     | suc n => rewrite natCoefSuc $ pmap (x +) BigSum_replicate *> +-comm *> inv (rdistr *> pmap (_ +) ide-left)
-                                                 -- TODO[server2]: equation
 
   \lemma BigSum_replicate1 {n : Nat} : BigSum (replicate n ide) = natCoef n
     => BigSum_replicate *> ide-right

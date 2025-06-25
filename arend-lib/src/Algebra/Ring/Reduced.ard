@@ -16,6 +16,7 @@
 \import Paths
 \import Paths.Meta
 \open Monoid(LDiv,Inv)
+\open equation(cRing)
 
 \class ReducedRing \extends Ring {
   | isReduced {a : E} : a * a = 0 -> a = 0
@@ -61,11 +62,16 @@
 
   \lemma bezout->strictBezout (bez : IsBezout) : IsStrictBezout
     => \lam a b =>
-        \have | (inP (s,t,(a',p),(b',q))) => bez a b
-              | (inP (w,b=wb,f)) => isPPRing (s * a + t * b)
+        \let | (inP (s,t,(a',p),(b',q))) => bez a b
+             | g => s * a + t * b
+             | (inP (w,g=wg,f)) => isPPRing g
+             | g[1-w]=0 : g * (1 - w) = 0 => cRing {1 g=wg}
         \in inP (w * t, w * s + (1 - w), w * b', w * a' + (1 - w),
-                 {?}, -- TODO[server2]: equation {usingOnly (f {b' * a - a' * b} equation)} *> inv zro-right *> pmap (_ +) equation *> inv rdistr *> *-comm,
-                 {?}) -- TODO[server2]: equation {usingOnly (f {t * b' + s * a' - 1} equation, f {1 - w} equation)})
+                 cRing { f {b' * a - a' * b} $ cRing {p,q}, inv q, g[1-w]=0 },
+                 cRing {
+                   cRing {f {1 - w} g[1-w]=0} : w * w = w,
+                   f {t * b' + s * a' - 1} $ cRing {p,q}
+                 })
 }
 
 \class ImpotentRing \extends ReducedRing, NonZeroRing {

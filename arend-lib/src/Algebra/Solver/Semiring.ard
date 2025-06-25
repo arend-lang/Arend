@@ -19,7 +19,7 @@
 \import Order.LinearOrder
 \import Paths
 \import Paths.Meta
-\import Prelude
+\import Prelude \hiding (nil,::)
 \import Set
 \open Sort
 

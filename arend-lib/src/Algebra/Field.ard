@@ -84,7 +84,7 @@
   }
 
   | locality x => \case eitherZeroOrInv x \with {
-    | byLeft x=0 => byRight (Inv.lmake ide {?}) -- TODO[server2]: equation
+    | byLeft x=0 => byRight $ Inv.lmake ide (equation.semiring {x=0})
     | byRight xInv => byLeft xInv
   }
   \default decideEq x y => \case eitherZeroOrInv (x - y) \with {
