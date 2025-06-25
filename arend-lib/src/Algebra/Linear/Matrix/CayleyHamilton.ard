@@ -26,7 +26,7 @@
           | t => equations-determinant B {E} $
                   MatrixRing.product-gen_negative-rdistr (padd 1 0 *c matrix-map (padd pzero) 1) (matrix-map (padd pzero) A) {E} *>
                   AddGroup.toZero {MatrixAbGroup M n 1} {MatrixRing.product-gen (padd 1 0 *c matrix-map (padd pzero) 1) E} {MatrixRing.product-gen (matrix-map (padd pzero) A) E}
-                    (matrixExt \lam i (0) => AddMonoid.BigSum-unique i (\lam j i/=j => later $ rewrite (decideEq/=_reduce i/=j) $ exts \lam k => simplify $ zro-right *> R.BigSum_zro \lam l => simplify $ pmap (_ *) (R.BigSum_zro \lam _ => R.zro_*-right) *> R.zro_*-right) *>
+                    (matrixExt \lam i (0) => AddMonoid.BigSum-unique i (\lam j i/=j => later $ rewrite (decideEq/=_reduce i/=j) $ exts \lam k => simplify $ R.BigSum_zro \lam l => simplify $ pmap (_ *) (R.BigSum_zro \lam _ => R.zro_*-right) *> R.zro_*-right) *>
                     rewrite (decideEq=_reduce idp) (exts \lam k => simplify (R.BigSum-unique i (\lam j i/=j => later $ rewrite (decideEq/=_reduce i/=j) (pmap (_ *) (simplify $ R.BigSum_zro \lam _ => R.zro_*-right) *> R.zro_*-right)) *> later (rewrite (decideEq=_reduce idp, decideEq=_reduce idp) (pmap (_ *) (simplify $ pmap (`+ _) (R.BigSum_zro \lam _ => R.zro_*-right) *> zro-left) *> ide-right *> inv zro-left *> inv (pmap2 (+) (R.BigSum_zro \lam _ => R.zro_*-right) ide-right))) *> inv (R.BigSum-unique k (\lam j k/=j => later $ rewrite (decideEq/=_reduce (/=-sym k/=j)) $ simplify $ R.BigSum_zro \lam _ => R.zro_*-right))) *> inv ArrayLModule.BigSum-index))
      \in matrixExt (poly_func_matrix (charPoly A) A) *> pmap toMatrix t
   \where {

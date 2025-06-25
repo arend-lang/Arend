@@ -57,7 +57,7 @@
     },
     \lam c => \case __ \with {
       | inP (0, n/=0, pd, pc) => absurd (n/=0 idp)
-      | inP (suc n, _, pd, pc) => TruncP.map (c (suc n) pd pc) \lam s => (s.1 0, rewrite s.2 $ (polyEvalRingHom _).func-* {padd 1 (negative (s.1 0))} *> pmap (`* _) (simplify simplify) *> K.zro_*-left)
+      | inP (suc n, _, pd, pc) => TruncP.map (c (suc n) pd pc) \lam s => (s.1 0, rewrite s.2 $ (polyEvalRingHom _).func-* {padd 1 (negative (s.1 0))} *> pmap (`* _) simplify *> K.zro_*-left)
     })
   \where {
     \private \lemma aux {K : CRing} (ac : IsAlgebraicallyClosed K) {p : Poly K} {n : Nat} (pd : degree<= p n) (pc : polyCoef p n = 1) : ∃ (l : Array K n) (p = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l)) \elim n

@@ -112,7 +112,7 @@
       \lemma change-vars_eval {R : CRing} {n : Nat} {p : MPoly (Fin n) R} {d : Nat} {l : Array R n} {a : R}
         : polyEval (change-vars p d l) a = mPolyEval (\lam j => l j + pow a (pow d j)) p
         => mPolyRingHom-unique (polyEvalRingHom a RingHom.∘ mPolyMapEvalRingHom polyHom _) (mPolyEval _) (\lam r => simplify)
-            (\lam j => simplify $ (polyEvalRingHom a).func-+ *> simplify (pmap (polyEvalRingHom a) PolyRing.ide_*c *> func-+ *> pmap2 (+) simplify (MonoidHom.func-pow *> simplify (simplify simplify)))) p
+            (\lam j => simplify $ (polyEvalRingHom a).func-+ *> simplify (pmap (polyEvalRingHom a) PolyRing.ide_*c *> func-+ *> pmap2 (+) simplify (MonoidHom.func-pow *> simplify simplify))) p
 
       \lemma change-vars_BigSum {R : CRing} {n : Nat} {l : Array (MPoly (Fin n) R)} {d : Nat} {a : Array R n}
         : change-vars (BigSum l) d a = BigSum \lam j => change-vars (l j) d a
