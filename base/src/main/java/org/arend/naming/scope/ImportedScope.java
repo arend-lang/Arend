@@ -61,6 +61,7 @@ public class ImportedScope implements Scope {
   @Nullable
   @Override
   public Referable find(Predicate<Referable> pred, @Nullable ScopeContext context) {
+    if (context != ScopeContext.STATIC) return null;
     for (Triple triple : myExpectedNamesTree.map.values()) {
       if (triple.scope != null && pred.test(triple.referable)) {
         return triple.referable;
