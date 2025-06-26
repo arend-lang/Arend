@@ -12,7 +12,6 @@
 \import Algebra.Ring.Factor
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Poly
-\import Algebra.Ring.Poly.Instances
 \import Data.Array
 \import Equiv
 \import Function

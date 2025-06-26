@@ -12,7 +12,6 @@
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.Poly
 \import Algebra.Ring.Poly.Euclidean
-\import Algebra.Ring.Poly.Instances
 \import Algebra.Semiring
 \import Arith.Nat
 \import Category

@@ -7,7 +7,6 @@
 \import Algebra.Ring.Local
 \import Algebra.Ring.Nakayama
 \import Algebra.Ring.Poly
-\import Algebra.Ring.Poly.Instances
 \import Algebra.Ring.Reduced
 \import Arith.Nat
 \import Function.Meta

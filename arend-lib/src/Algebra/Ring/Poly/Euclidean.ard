@@ -9,7 +9,6 @@
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Poly
-\import Algebra.Ring.Poly.Instances
 \import Algebra.Pointed
 \import Algebra.Semiring
 \import Arith.Nat

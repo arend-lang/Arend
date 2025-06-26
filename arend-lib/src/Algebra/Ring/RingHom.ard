@@ -8,7 +8,6 @@
 \import Algebra.Ring
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.Poly()
-\import Algebra.Ring.Poly.Instances()
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
@@ -68,7 +67,6 @@
       => ∃ (l : Array E) (isAlgebraGenerated f l)
 
     \open Algebra.Ring.Poly
-    \open Algebra.Ring.Poly.Instances
 
     \lemma isAlgebraGenerated-comp {R E S : CRing} {f : RingHom R E} {g : RingHom E S} {a : E} {l : Array S}
                                    (fg : \Pi (x : E) -> ∃ (p : Poly R) (polyMapEval f p a = x)) (gg : isAlgebraGenerated g l) : isAlgebraGenerated (g ∘ f) (g a :: l)

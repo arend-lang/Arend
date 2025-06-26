@@ -13,7 +13,6 @@
 \import Algebra.Ring.MonoidRing
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.Poly
-\import Algebra.Ring.Poly.Instances
 \import Algebra.Ring.Reduced
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Sub

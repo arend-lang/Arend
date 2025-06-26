@@ -19,8 +19,7 @@
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Integral
 \import Algebra.Ring.Poly
-\import Algebra.Ring.Poly.Euclidean
-\import Algebra.Ring.Poly.Instances
+\import Algebra.Ring.Poly.Euclidean()
 \import Algebra.Ring.Reduced
 \import Algebra.Ring.Sub
 \import Algebra.Semiring
@@ -76,7 +75,7 @@
 \lemma minPoly_degree-char {K : DiscreteField} {E : CRing} (f : RingHom K E) (a : E) (p : Poly K) (pe : polyMapEval f p a = 0) (p/=0 : p /= 0)
   : (\Pi {q : Poly K} -> q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q) <-> (\Pi {q : Poly K} (qe : polyEval (polyMap f q) a = 0) -> TruncP (Monoid.LDiv p q))
   => (\lam c {q} qe =>
-        \let d : EuclideanRingData (Poly K) => PolyEuclideanRingData K
+        \let d : EuclideanRingData (Poly K) => Algebra.Ring.Poly.Euclidean.PolyEuclideanRingData K
         \in \case decideEq (d.divMod q p).2 0 \with {
           | yes r=0 => inP \new Monoid.LDiv {
             | inv => (d.divMod q p).1
@@ -102,7 +101,7 @@
     \lemma aux {K : DiscreteField} {E : NonZeroCRing} (f : RingHom K E) (a : E) (p : Irr {PolyAlgebra K}) (pe : polyMapEval f p a = 0) {n : Nat}
                {q : Poly K} (qd : degree q < n) (q/=0 : q /= 0) (qe : polyEval (polyMap f q) a = 0) : degree p <= degree q \elim n
       | suc n =>
-        \have d : EuclideanRingData (Poly K) => PolyEuclideanRingData K
+        \have d : EuclideanRingData (Poly K) => Algebra.Ring.Poly.Euclidean.PolyEuclideanRingData K
         \in \case decideEq p 0, decideEq (d.divMod p q).2 0 \with {
           | yes p=0, _ => rewrite p=0 zero<=_
           | no p/=0, yes r=0 =>

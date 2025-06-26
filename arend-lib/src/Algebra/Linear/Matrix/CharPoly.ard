@@ -10,8 +10,6 @@
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Poly
-\import Algebra.Ring.Poly.Euclidean
-\import Algebra.Ring.Poly.Instances
 \import Algebra.Semiring
 \import Arith.Fin
 \import Data.Array
