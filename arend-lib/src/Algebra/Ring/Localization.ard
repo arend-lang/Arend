@@ -1,4 +1,4 @@
-\import Algebra.Domain(Domain,IntegralDomain)
+\import Algebra.Domain
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta

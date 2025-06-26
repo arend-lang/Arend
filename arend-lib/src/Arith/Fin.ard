@@ -1,11 +1,11 @@
-\import Algebra.Domain.Euclidean \hiding (IntDomain)
+\import Algebra.Domain.Euclidean
 \import Algebra.Field
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Prime
 \import Algebra.Ring
 \import Algebra.Semiring
-\import Arith.Int()
+\import Arith.Int
 \import Arith.Nat
 \import Arith.Nat.Base
 \import Data.Or
@@ -32,10 +32,7 @@
     rewriteI (IntRing.+-assoc {pos (suc n) * q} {pos (suc n) * r div suc n} {pos (r mod suc n)}, IntRing.ldistr {suc n} {q} {r div suc n}),
     int_n*_+_mod_n (natMod<right r n)
   }
-  \where {
-    \open Arith.Int(IntRing)
-    \open IntEuclidean
-  }
+  \where \open IntEuclidean
 
 \lemma int_mod_*-left {n : Nat} {a b : Int} : (pos (a mod suc n) * b) mod suc n = (a * b) mod suc n
   => run {
@@ -43,10 +40,7 @@
     rewrite (IntRing.rdistr, IntRing.*-assoc),
     inv int_n*_+_mod_n=mod
   }
-  \where {
-    \open Arith.Int(IntRing)
-    \open IntEuclidean
-  }
+  \where \open IntEuclidean
 
 \lemma int_mod_*-right {n : Nat} {a b : Int} : (a * b mod suc n) mod suc n = (a * b) mod suc n
   => pmap (`mod _) *-comm *> int_mod_*-left *> pmap (`mod _) *-comm
@@ -115,9 +109,6 @@
   | natCoef => Fin.fromNat
   | natCoefZero => idp
   | natCoefSuc m => inv (mod_+-left *> mod_+-right)
-  \where {
-    \open Arith.Int(iabs, pos_iabs, IntRing)
-  }
 
 \instance FinEuclidean {n : Nat} : EuclideanRingData (Fin (suc n))
   | CRing => FinRing {n}
