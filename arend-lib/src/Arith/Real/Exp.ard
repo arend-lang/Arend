@@ -7,7 +7,6 @@
 \import Analysis.Series
 \import Arith.Int
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field

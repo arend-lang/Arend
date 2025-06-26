@@ -5,7 +5,6 @@
 \import Algebra.Pointed
 \import Arith.Bool
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Bool
 \import Data.List
 \import Data.Maybe

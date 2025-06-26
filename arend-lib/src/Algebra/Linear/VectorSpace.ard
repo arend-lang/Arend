@@ -16,7 +16,6 @@
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Category
 \import Data.Array
 \import Data.Or

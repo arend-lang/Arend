@@ -1,4 +1,4 @@
-\import Arith.Nat.Base
+\import Arith.Nat
 \import Function
 
 \func iterl {A : \Type} (f : A -> A) (n : Nat) (a : A) : A \elim n

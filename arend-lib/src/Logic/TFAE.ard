@@ -1,5 +1,4 @@
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Array (Index, forall, forall-char, map, taild)
 \import Data.Bool
 \import Data.Fin (nat_fin_=)

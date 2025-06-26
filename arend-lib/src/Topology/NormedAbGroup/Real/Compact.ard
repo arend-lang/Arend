@@ -4,7 +4,7 @@
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Arith.Int
-\import Arith.Nat.Base
+\import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field

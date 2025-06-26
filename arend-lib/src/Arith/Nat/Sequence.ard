@@ -1,5 +1,4 @@
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Or
 \import Equiv (QEquiv)
 \import Equiv.Univalence

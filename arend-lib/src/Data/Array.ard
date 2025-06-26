@@ -1,6 +1,5 @@
 \import Algebra.Meta
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Bool
 \import Data.Fin
 \import Data.List(List, length)

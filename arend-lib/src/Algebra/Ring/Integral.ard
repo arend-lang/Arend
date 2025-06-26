@@ -23,7 +23,7 @@
 \import Algebra.Ring.Poly.Instances
 \import Algebra.Ring.Sub
 \import Algebra.Semiring
-\import Arith.Nat.Base
+\import Arith.Nat
 \import Category
 \import Category.Functor
 \import Data.Array

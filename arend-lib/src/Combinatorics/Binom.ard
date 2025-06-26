@@ -4,7 +4,6 @@
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Array
 \import Order.StrictOrder
 \import Paths

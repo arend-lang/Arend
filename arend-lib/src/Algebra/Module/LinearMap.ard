@@ -12,7 +12,6 @@
 \import Algebra.Semiring
 \import Arith.Fin.Order
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Category
 \import Data.Array
 \import Data.Array.Perm

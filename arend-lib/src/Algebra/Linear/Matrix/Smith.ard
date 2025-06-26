@@ -20,7 +20,6 @@
 \import Algebra.Semiring
 \import Arith.Fin.Order
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Array
 \import Data.Array.Perm
 \import Data.Array.Sort

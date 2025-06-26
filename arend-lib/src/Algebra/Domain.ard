@@ -8,7 +8,6 @@
 \import Algebra.Ring.Reduced
 \import Algebra.Semiring
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Function
 \import Function.Meta ($)
 \import Logic

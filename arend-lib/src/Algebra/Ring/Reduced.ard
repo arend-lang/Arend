@@ -6,7 +6,6 @@
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.RingHom
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Function
 \import Function.Meta
 \import Logic

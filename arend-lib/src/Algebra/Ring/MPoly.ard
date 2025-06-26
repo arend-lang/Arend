@@ -14,7 +14,6 @@
 \import Algebra.Ring.Poly.Instances
 \import Algebra.Semiring
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Array.Pairs

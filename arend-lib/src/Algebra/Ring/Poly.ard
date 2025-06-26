@@ -6,7 +6,6 @@
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.QPoly
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Array
 \import Equiv
 \import Equiv.Fiber

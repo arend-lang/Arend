@@ -5,7 +5,6 @@
 \import Algebra.Ordered
 \import Arith.Int
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Bool
 \import Logic
 \import Meta

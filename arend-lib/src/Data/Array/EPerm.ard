@@ -1,6 +1,5 @@
 \import Algebra.Group.Symmetric
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Array
 \import Data.Array.Perm
 \import Data.Bool

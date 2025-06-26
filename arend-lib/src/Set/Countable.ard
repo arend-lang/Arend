@@ -3,7 +3,6 @@
 \import Algebra.Ring.Factor
 \import Algebra.Ring.Ideal
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Array
 \import Data.Maybe
 \import Data.Or

@@ -1,4 +1,4 @@
-\import Arith.Nat.Base
+\import Arith.Nat
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Array.Perm

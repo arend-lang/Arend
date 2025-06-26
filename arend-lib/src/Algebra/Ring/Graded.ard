@@ -4,7 +4,6 @@
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Array
 \import Data.Fin (fsuc/=, nat_fin_=)
 \import Data.Or

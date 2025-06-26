@@ -1,8 +1,7 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Arith.Fin.Order
-\import Arith.Nat.Base \using (pred \as pred')
-\import Arith.Nat
+\import Arith.Nat \using (pred \as pred')
 \import Data.Bool
 \import Data.Fin (fpred, fsuc, fsuc/=, nat_fin_=)
 \import Data.Or

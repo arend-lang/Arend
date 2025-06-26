@@ -1,4 +1,4 @@
-\import Arith.Nat.Base
+\import Arith.Nat(pred)
 \import Logic
 \import Paths
 

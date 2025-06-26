@@ -1,7 +1,6 @@
 \import Algebra.Meta
 \import Algebra.Pointed
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Array.Perm

@@ -15,7 +15,6 @@
 \import Algebra.Ring.Poly.Instances
 \import Algebra.Semiring
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Category
 \import Data.Array
 \import Function.Meta ($)

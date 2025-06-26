@@ -13,7 +13,6 @@
 \import Arith.Fin
 \import Arith.Int
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Bool
 \import Data.Or
 \import Function.Meta ($)

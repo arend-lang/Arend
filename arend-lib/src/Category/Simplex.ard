@@ -1,6 +1,5 @@
 \import Arith.Fin.Order
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Category
 \import Equiv (Equiv, QEquiv)
 \import Function (isInj)

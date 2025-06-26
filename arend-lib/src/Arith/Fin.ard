@@ -7,7 +7,6 @@
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Or
 \import Function.Meta
 \import Logic

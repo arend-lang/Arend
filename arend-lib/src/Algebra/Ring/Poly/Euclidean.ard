@@ -13,7 +13,6 @@
 \import Algebra.Pointed
 \import Algebra.Semiring
 \import Arith.Nat
-\import Arith.Nat.Base
 \import Data.Or
 \import Function.Meta
 \import Logic
