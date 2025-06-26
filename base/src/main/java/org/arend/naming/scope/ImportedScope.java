@@ -49,6 +49,7 @@ public class ImportedScope implements Scope {
       return myElementsScope.getElements(context);
     }
 
+    if (context != ScopeContext.STATIC) return new ArrayList<>();
     List<Referable> result = new ArrayList<>();
     for (Triple triple : myExpectedNamesTree.map.values()) {
       if (triple.scope != null) {
@@ -73,6 +74,7 @@ public class ImportedScope implements Scope {
   @Nullable
   @Override
   public Referable resolveName(@NotNull String name, @Nullable ScopeContext context) {
+    if (context != ScopeContext.STATIC) return null;
     Triple triple = myExpectedNamesTree.map.get(name);
     return triple == null || triple.scope == null ? null : triple.referable;
   }
