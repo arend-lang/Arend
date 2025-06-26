@@ -678,7 +678,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         continue;
       }
 
-      LongUnresolvedReference reference = namespaceCommand.module();
+      LongUnresolvedReference reference = namespaceCommand.module().copy();
       Scope importedScope = namespaceCommand.isImport() ? namespaceScope.getImportedSubscope() : namespaceScope;
       List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
       reference.resolve(importedScope, resolvedRefs, myResolverListener);
