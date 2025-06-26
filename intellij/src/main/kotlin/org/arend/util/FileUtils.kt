@@ -2,7 +2,7 @@ package org.arend.util
 
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.naming.scope.CachingScope
 import org.arend.naming.scope.Scope
 import org.arend.naming.scope.ScopeFactory
