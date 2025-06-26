@@ -213,7 +213,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     Referable referable = RedirectingReferable.getOriginalReferable(refExpr.getReferent());
     refExpr.setReferent(referable);
     if (referable instanceof UnresolvedReference unresolved) {
-      Concrete.Expression resolved = unresolved.tryResolveExpression(scope, myTypingInfo, resolvedRefs, null);
+      Concrete.Expression resolved = unresolved.tryResolveExpression(scope, myTypingInfo, resolvedRefs, myResolverListener);
       if (unresolved.isResolved()) {
         refExpr.setReferent(unresolved.resolve(scope, null, null));
       }
