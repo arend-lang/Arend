@@ -8,7 +8,7 @@ import org.arend.ext.prettyprinting.doc.DocFactory;
 import org.arend.frontend.parser.*;
 import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.library.MemoryLibrary;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.FullModuleReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.term.concrete.Concrete;

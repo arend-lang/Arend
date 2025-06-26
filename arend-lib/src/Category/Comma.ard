@@ -33,4 +33,4 @@
   | univalence => Cat.makeUnivalence \lam (e : Iso) =>
       \have | e1 => Functor.Func-iso {commaPrecat.leftForget F G} e
             | e2 => Functor.Func-iso {commaPrecat.rightForget F G} e
-      \in (ext (Cat.isotoid e1, Cat.isotoid e2, Cat.transport_Hom_Func_iso e1 e2 F G (inv e.f.3)), simp_coe (Cat.transport_Hom_iso-right e1 _ id-right, Cat.transport_Hom_iso-right e2 _ id-right))
+      \in (ext (Cat.isotoid e1, Cat.isotoid e2, Functor.transport_Hom_iso e1 e2 F G (inv e.f.3)), simp_coe (Cat.transport_Hom_iso-right e1 _ id-right, Cat.transport_Hom_iso-right e2 _ id-right))

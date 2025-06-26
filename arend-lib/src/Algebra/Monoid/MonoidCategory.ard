@@ -1,0 +1,209 @@
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed.PointedCategory
+\import Algebra.Pointed.PointedHom
+\import Category
+\import Category.Adjoint
+\import Category.Functor
+\import Category.Limit
+\import Category.Meta
+\import Logic
+\import Logic.FirstOrder.Algebraic
+\import Logic.FirstOrder.Algebraic.Category
+\import Logic.FirstOrder.Term
+\import Paths
+\import Paths.Meta
+\import Set.SetCategory
+\import Set.Fin
+\import Set.Fin.Instances
+
+\instance MonoidCat : Cat Monoid
+  | Hom M N => MonoidHom M N
+  | id _ => MonoidHom.id
+  | o {x y z : Monoid} (g : MonoidHom y z) (f : MonoidHom x y) => \new MonoidHom {
+    | func x => g (f x)
+    | func-ide => pmap g f.func-ide *> g.func-ide
+    | func-* => pmap g f.func-* *> g.func-*
+  }
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam p1 p2 => exts (p1.func-ide, \lam _ _ => p1.func-*)
+  \where {
+    \func forget : Functor MonoidCat SetCat \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+  }
+
+\instance MonoidBicat : BicompleteCat
+  | Cat => MonoidCat
+  | limit => CompletePrecat.applyEquiv catEquiv
+  | colimit => CocompletePrecat.applyEquiv catEquiv
+  \where {
+    \instance theory : Theory
+      | Sort => \Sigma
+      | Symb _ => Fin 2
+      | domain => \case __ \with {
+        | 0 => nil
+        | 1 => () :: () :: nil
+      }
+      | PredSymb => Empty
+      | predDomain => absurd
+      | axioms => arraySubset {Sequent {\this}} (
+          (\lam _ => \Sigma, finSet, nil, equality (apply 1 (apply 0 nil :: var () :: nil)) (var ())) ::
+          (\lam _ => \Sigma, finSet, nil, equality (apply 1 (var () :: apply 0 nil :: nil)) (var ())) ::
+          (\lam _ => Fin 3,  finSet, nil, equality (apply 1 (apply 1 (var 0 :: var 1 :: nil) :: var 2 :: nil)) (apply 1 (var 0 :: apply 1 (var 1 :: var 2 :: nil) :: nil))) ::
+          nil)
+
+    \func catEquiv : CatEquiv (ModelCat theory) MonoidCat modToMonoid \cowith
+      | Func (f : ModelHom) => \new MonoidHom {
+        | func => f.funcs
+        | func-ide => f.func-op 0 nil
+        | func-* {x} {y} => f.func-op 1 (x :: y :: nil)
+      }
+      | Func-id => idp
+      | Func-o => idp
+      | LAdj => monoidToMod.functor
+      | eta {
+        | trans M => id M
+        | natural f => idp
+      }
+      | eta-iso {X} => \new Iso {
+        | hinv => id X
+        | hinv_f => idp
+        | f_hinv => idp
+      }
+      | epsilon {
+        | trans M => \new ModelHom {
+          | funcs x => x
+          | func-op => \case \elim __ \with {
+            | 0 => \lam d => idp
+            | 1 => \lam d => idp
+          }
+          | func-rel => \case __
+        }
+        | natural f => idp
+      }
+      | eta_epsilon-left => idp
+      | eta_epsilon-right => idp
+      | epsilon-iso {Y} => \new Iso {
+        | hinv => \new ModelHom {
+          | funcs y => y
+          | func-op => \case \elim __ \with {
+            | 0 => \lam d => idp
+            | 1 => \lam d => idp
+          }
+          | func-rel => \case __
+        }
+        | hinv_f => idp
+        | f_hinv => idp
+      }
+
+    \func modToMonoid (M : Model theory) : Monoid (M ()) \cowith
+      | ide => operation 0 nil
+      | * x y => operation 1 (x :: y :: nil)
+      | ide-left {x} => M.isModel _ (inP (0,idp)) (\lam _ => x) (\case __)
+      | ide-right {x} => M.isModel _ (inP (1,idp)) (\lam _ => x) (\case __)
+      | *-assoc {x} {y} {z} => M.isModel _ (inP (2,idp)) (\lam {_} => x :: y :: z :: nil) (\case __)
+
+    \func monoidToMod (M : Monoid) : Model theory (\lam _ => M) \cowith
+      | operation => \case \elim __ \with {
+        | 0 => \lam _ => M.ide
+        | 1 => \lam l => l 0 * l 1
+      }
+      | relation => \case __
+      | isModel => \case \elim __, __ \with {
+        | _, inP (0,idp) => \lam rho _ => ide-left
+        | _, inP (1,idp) => \lam rho _ => ide-right
+        | _, inP (2,idp) => \lam rho _ => *-assoc
+      }
+      \where {
+        \func functor : Functor MonoidCat (ModelCat theory) monoidToMod \cowith
+          | Func (f : MonoidHom) => \new ModelHom {
+            | funcs => f
+            | func-op => \case \elim __ \with {
+              | 0 => \lam _ => f.func-ide
+              | 1 => \lam d => f.func-*
+            }
+            | func-rel => \case __
+          }
+          | Func-id => idp
+          | Func-o => idp
+      }
+  }
+
+\instance AddMonoidCat : Cat AddMonoid
+  | Hom M N => AddMonoidHom M N
+  | id _ => AddMonoidHom.id
+  | o g f => \new AddMonoidHom {
+    | func x => g (f x)
+    | func-zro => pmap g func-zro *> func-zro
+    | func-+ => pmap g func-+ *> func-+
+  }
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip \lam p1 p2 => exts (p1.func-zro, \lam _ _ => p1.func-+)
+  \where {
+    \func forget : Functor AddMonoidCat SetCat \cowith
+      | F R => R
+      | Func f => f
+      | Func-id => idp
+      | Func-o => idp
+  }
+
+\instance KerAddMonoid (f : AddMonoidHom) : AddMonoid
+  | AddPointed => KerAddPointed f
+  | + a b => (a.1 + b.1, func-+ *> pmap2 (+) a.2 b.2 *> zro-left)
+  | zro-left => ext zro-left
+  | zro-right => ext zro-right
+  | +-assoc => ext +-assoc
+
+\func KerMonoidHom (f : AddMonoidHom) : AddMonoidHom (KerAddMonoid f) f.Dom \cowith
+  | AddPointedHom => KerPointedHom f
+  | func-+ => idp
+
+\instance KerAbMonoid {A : AbMonoid} (f : AddMonoidHom A) : AbMonoid (Kernel f)
+  | AddMonoid => KerAddMonoid f
+  | +-comm => ext +-comm
+
+\instance ImageAddMonoid (f : AddMonoidHom) : AddMonoid
+  | AddPointed => ImageAddPointed f
+  | + a b => (a.1 + b.1, \case a.2, b.2 \with {
+    | inP t, inP s => inP (t.1 + s.1, func-+ *> pmap2 (+) t.2 s.2)
+  })
+  | zro-left => ext zro-left
+  | zro-right => ext zro-right
+  | +-assoc => ext +-assoc
+
+\instance ImageMonoid (f : MonoidHom) : Monoid
+  | Pointed => ImagePointed f
+  | * a b => (a.1 * b.1, \case a.2, b.2 \with {
+    | inP t, inP s => inP (t.1 * s.1, func-* *> pmap2 (*) t.2 s.2)
+  })
+  | ide-left => ext ide-left
+  | ide-right => ext ide-right
+  | *-assoc => ext *-assoc
+
+\func ImageMonoidLeftHom(f : MonoidHom) : MonoidHom f.Dom (ImageMonoid f) \cowith
+  | PointedHom => ImagePointedLeftHom f
+  | func-* => ext func-*
+
+\func ImageMonoidRightHom (f : MonoidHom) : MonoidHom (ImageMonoid f) f.Cod \cowith
+  | PointedHom => ImagePointedRightHom f
+  | func-* => idp
+
+
+\func ImageAddMonoidLeftHom (f : AddMonoidHom) : AddMonoidHom f.Dom (ImageAddMonoid f) \cowith
+  | AddPointedHom => ImageAddPointedLeftHom f
+  | func-+ => ext func-+
+
+\func ImageAddMonoidRightHom (f : AddMonoidHom) : AddMonoidHom (ImageAddMonoid f) f.Cod \cowith
+  | AddPointedHom => ImageAddPointedRightHom f
+  | func-+ => idp
+
+\instance ImageAbMonoid {A : AddMonoid} {B : AbMonoid} (f : AddMonoidHom A B) : AbMonoid
+  | AddMonoid => ImageAddMonoid f
+  | +-comm => ext +-comm

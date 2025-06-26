@@ -2,11 +2,12 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Logic.Rewriting.TRS.Utils.FinFunctions
+\import Logic.Rewriting.TRS.Utils.Shifts
 \import Meta
 \import Paths
 \import Paths.Meta
 \import Data.Fin
-\import Data.Shifts
 \import Data.SubList
 \import Logic.Rewriting.TRS.HRS
 

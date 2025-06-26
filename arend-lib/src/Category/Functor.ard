@@ -21,6 +21,24 @@
     | hinv => Func e.hinv
     | hinv_f => inv Func-o *> pmap Func e.hinv_f *> Func-id
     | f_hinv => inv Func-o *> pmap Func e.f_hinv *> Func-id
+} \where {
+  \lemma transport_Hom {C D E : Precat} {x1 y1 : C} (p1 : x1 = y1) {x2 y2 : D} (p2 : x2 = y2) (F : Functor C E) (G : Functor D E) {g : Hom (F x1) (G x2)} {f : Hom (F y1) (G y2)}
+                       (h : transport (Hom (G x2)) (pmap G p2) (id (G x2)) ∘ g = f ∘ transport (Hom (F x1)) (pmap F p1) (id (F x1)))
+    : coe (\lam i => Hom (F (p1 @ i)) (G (p2 @ i))) g right = f \elim p1, p2
+    | idp, idp => inv id-left *> h *> id-right
+
+  \lemma transport_Hom-right {C D : Precat} {x y : C} (p : x = y) {z : D} (F : Functor C D) {g : Hom z (F x)}
+    : transport (Hom z) (pmap F p) g = F.Func (transport (Hom x) p (id x)) ∘ g \elim p
+    | idp => inv (pmap (`∘ g) Func-id *> id-left)
+
+  \lemma transport_Hom_iso-right {C : Cat} {D : Precat} (e : Iso {C}) {z : D} (F : Functor C D) {g : Hom z (F e.dom)}
+    : transport (Hom z) (pmap F (C.isotoid e)) g = F.Func e.f ∘ g
+    => transport_Hom-right (C.isotoid e) F *> cong (C.transport_iso e)
+
+  \lemma transport_Hom_iso {C D : Cat} {E : Precat} (e1 : Iso {C}) (e2 : Iso {D}) (F : Functor C E) (G : Functor D E) {g : Hom (F e1.dom) (G e2.dom)} {f : Hom (F e1.cod) (G e2.cod)}
+                           (h : G.Func e2.f ∘ g = f ∘ F.Func e1.f)
+    : coe (\lam i => Hom (F (C.isotoid e1 @ i)) (G (D.isotoid e2 @ i))) g right = f
+    => transport_Hom (C.isotoid e1) (D.isotoid e2) F G (pmap (`∘ g) (transport_Hom_iso-right e2 G *> id-right) *> h *> pmap (f ∘) (inv (transport_Hom_iso-right e1 F *> id-right)))
 }
 
 \func Id {C : Precat} : Functor C C \cowith
@@ -66,7 +84,7 @@
     | natural f => inv H.Func-o *> pmap H.Func (a.natural f) *> H.Func-o
 }
 
-\instance FunctorPrecat  {C D : SmallPrecat} : Precat (Functor C D)
+\instance FunctorPrecat {C D : SmallPrecat} : Precat (Functor C D)
   | Hom => NatTrans
   | id F => \new NatTrans {
     | trans X => id (F X)

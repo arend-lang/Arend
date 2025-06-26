@@ -1,12 +1,13 @@
 package org.arend.server.impl;
 
-import org.arend.error.DummyErrorReporter;
+import org.arend.ext.ArendExtension;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
+import org.arend.ext.util.Pair;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
@@ -26,6 +27,7 @@ import org.arend.term.concrete.ReplaceTCRefVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.computation.*;
+import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.order.Ordering;
 import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.order.listener.CollectingOrderingListener;
@@ -34,8 +36,7 @@ import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
 import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.util.ComputationInterruptedException;
-import org.arend.module.FullName;
-import org.arend.util.list.PersistentList;
+import org.arend.ext.module.FullName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -151,6 +152,7 @@ public class ArendCheckerImpl implements ArendChecker {
       Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
       ConcreteProvider concreteProvider = new SimpleConcreteProvider(defMap);
       Collection<? extends ModuleLocation> currentModules = resolveDependencies ? dependencies.keySet() : modules;
+      List<Pair<ModuleLocation,ConcreteGroup>> toResolve = new ArrayList<>();
       for (ModuleLocation module : currentModules) {
         GroupData groupData = dependencies.get(module);
         if (groupData != null) {
@@ -162,6 +164,7 @@ public class ArendCheckerImpl implements ArendChecker {
                 defMap.put(group.referable(), definition.accept(new ReplaceDataVisitor(true), null));
               }
             });
+            toResolve.add(new Pair<>(module, groupData.getRawGroup()));
           } else {
             for (DefinitionData data : definitionData) {
               defMap.put(data.definition().getData(), data.definition());
@@ -173,22 +176,21 @@ public class ArendCheckerImpl implements ArendChecker {
       CollectingResolverListener resolverListener = new CollectingResolverListener(myServer.doCacheReferences());
       Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
       Map<ModuleLocation, Map<LongName, DefinitionData>> resolverResult = new HashMap<>();
-      progressReporter.beginProcessing(currentModules.size());
-      for (ModuleLocation module : currentModules) {
+      progressReporter.beginProcessing(toResolve.size());
+      for (Pair<ModuleLocation, ConcreteGroup> pair : toResolve) {
+        ModuleLocation module = pair.proj1;
         indicator.checkCanceled();
         progressReporter.beginItem(module);
-        GroupData groupData = dependencies.get(module);
-        if (groupData != null && !groupData.isResolved()) {
-          resolverListener.moduleLocation = module;
-          ListErrorReporter listErrorReporter = new ListErrorReporter();
-          errorReporterMap.put(module, listErrorReporter);
-          Map<LongName, DefinitionData> definitionData = new LinkedHashMap<>();
-          new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), listErrorReporter, resolverListener).resolveGroup(groupData.getRawGroup(), myServer.getParentGroupScope(module, groupData.getRawGroup()), PersistentList.empty(), definitionData);
-          resolverResult.put(module, definitionData);
+        resolverListener.moduleLocation = module;
+        ListErrorReporter listErrorReporter = new ListErrorReporter();
+        errorReporterMap.put(module, listErrorReporter);
+        Map<LongName, DefinitionData> definitionData = new LinkedHashMap<>();
+        ArendExtension extension = myServer.getExtensionProvider().getArendExtension(module.getLibraryName());
+        new DefinitionResolveNameVisitor(concreteProvider, myServer.getTypingInfo(), listErrorReporter, extension == null ? null : extension.getLiteralTypechecker(), resolverListener).resolveGroup(pair.proj2, myServer.getParentGroupScope(module, pair.proj2), new ArendInstances(), definitionData);
+        resolverResult.put(module, definitionData);
 
-          myLogger.info(() -> "Module '" + module + "' is resolved");
-        }
-        progressReporter.endItem(module);
+        myLogger.info(() -> "Module '" + module + "' is resolved");
+        progressReporter.endItem(pair.proj1);
       }
 
       synchronized (myServer) {
@@ -281,19 +283,19 @@ public class ArendCheckerImpl implements ArendChecker {
 
   @Override
   public int typecheck(@Nullable List<FullName> definitions, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
-    return typecheck(definitions, null, null, errorReporter, indicator, progressReporter, true);
+    return typecheck(definitions, null, null, errorReporter, indicator, progressReporter);
   }
 
   @Override
   public int typecheck(@Nullable FullName definition, @NotNull ArendCheckerFactory checkerFactory, @Nullable Map<TCDefReferable, TCDefReferable> renamed, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
-    return typecheck(Collections.singletonList(definition), checkerFactory, renamed, errorReporter, indicator, progressReporter, true);
+    return typecheck(Collections.singletonList(definition), checkerFactory, renamed, errorReporter, indicator, progressReporter);
   }
 
   private static Concrete.ResolvableDefinition copyDefinition(Concrete.ResolvableDefinition definition, Map<TCDefReferable, TCDefReferable> renamed) {
     return definition.accept(new ReplaceTCRefVisitor(renamed), null);
   }
 
-  private int typecheck(@Nullable List<FullName> definitions, @Nullable ArendCheckerFactory checkerFactory, @Nullable Map<TCDefReferable, TCDefReferable> renamed, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter, boolean withInstances) {
+  private int typecheck(@Nullable List<FullName> definitions, @Nullable ArendCheckerFactory checkerFactory, @Nullable Map<TCDefReferable, TCDefReferable> renamed, @NotNull ErrorReporter errorReporter, @NotNull CancellationIndicator indicator, @NotNull ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter) {
     myLogger.info(() -> definitions == null ? "Begin typechecking definitions in " + myModules : "Begin typechecking definitions " + definitions);
 
     if (checkerFactory != null && definitions == null) {
@@ -338,7 +340,7 @@ public class ArendCheckerImpl implements ArendChecker {
 
     DependencyCollector dependencyCollector = new DependencyCollector(myServer);
     CollectingOrderingListener collector = new CollectingOrderingListener();
-    Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies), withInstances, errorReporter);
+    Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies));
 
     TypecheckingCancellationIndicator typecheckingIndicator = new TypecheckingCancellationIndicator(indicator);
     new BooleanComputationRunner().run(typecheckingIndicator, () -> {
@@ -364,8 +366,8 @@ public class ArendCheckerImpl implements ArendChecker {
         myLogger.info(() -> "Collected definitions (" + collector.getElements().size() + ") for " + (definitions == null ? myModules : definitions));
 
         ListErrorReporter listErrorReporter = new ListErrorReporter();
-        TypecheckingOrderingListener dependencyTypechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider());
-        TypecheckingOrderingListener typechecker = checkerFactory == null ? dependencyTypechecker : new TypecheckingOrderingListener(checkerFactory, myServer.getInstanceScopeProvider(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider());
+        TypecheckingOrderingListener dependencyTypechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider());
+        TypecheckingOrderingListener typechecker = checkerFactory == null ? dependencyTypechecker : new TypecheckingOrderingListener(checkerFactory, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider());
 
         try {
           progressReporter.beginProcessing(collector.getElements().size());
@@ -430,10 +432,5 @@ public class ArendCheckerImpl implements ArendChecker {
       }
     }
     return null;
-  }
-
-  @Override
-  public void typecheckExtensionDefinition(@NotNull FullName definition) {
-    typecheck(Collections.singletonList(definition), null, null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty(), false);
   }
 }

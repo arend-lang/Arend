@@ -5,7 +5,7 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.util.Pair;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.Referable;

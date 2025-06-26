@@ -1,0 +1,219 @@
+\import Algebra.Group
+\import Algebra.Group.GroupCategory
+\import Algebra.Group.GroupHom
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Smith
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Module.Sub
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Category \hiding (id,∘)
+\import Category.Meta
+\import Category.PreAdditive
+\import Data.Array
+\import Equiv
+\import Function \hiding (id,o)
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\open LinearMap
+
+\instance LModuleCat (R : Ring) : Cat (LModule R)
+  | Hom A B => LinearMap A B
+  | id _ => id
+  | o => ∘
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip (\lam (f : LinearMap) g => exts (f.func-zro, \lam x x' => f.func-+, \lam x => f.func-negative, \lam e x => f.func-*c))
+\where {
+  \func in {N : LModule R} (S : SubLModule R N) : LinearMap S.IModule N \cowith
+    | func x => x.1
+    | func-+ => idp
+    | func-*c => idp
+
+  \lemma in-mono {N : LModule R} (S : SubLModule R N) : isInj (in S) => \lam p => exts p
+}
+
+\instance LModulePreAdditive (R : Ring) : PreAdditivePrecat \cowith
+  | Precat => LModuleCat R
+  | AbHom => \new AbGroup {
+    | zro => linearMap_zro
+    | + => linearMap_+
+    | zro-left => exts \lam _ => LModule.zro-left
+    | zro-right => exts \lam _ => LModule.zro-right
+    | +-assoc => exts \lam _ => LModule.+-assoc
+    | negative => linearMap_negative
+    | negative-left => exts \lam _ => LModule.negative-left
+    | +-comm => exts \lam _ => LModule.+-comm
+  }
+  | l-bilinear => exts \lam _ => func-+
+  | r-bilinear => exts \lam _ => idp
+
+\instance LinearMapLModule {R : CRing} (A B : LModule R) : LModule R \cowith
+  | AbGroup => AbHom {LModulePreAdditive R} {A} {B}
+  | *c (c : R) (f : LinearMap A B) : LinearMap A B \cowith {
+    | func a => c B.*c f a
+    | func-+ => rewrite (f.func-+, B.*c-ldistr) idp
+    | func-*c => rewrite (f.func-*c, inv B.*c-assoc, inv B.*c-assoc, R.*-comm) idp
+  }
+  | *c-assoc => exts \lam _ => B.*c-assoc
+  | *c-ldistr => exts \lam _ => B.*c-ldistr
+  | *c-rdistr => exts \lam _ => B.*c-rdistr
+  | ide_*c => exts \lam _ => B.ide_*c
+
+\func IsZeroMod {R : Ring} (M : LModule R) => \Pi (m : M) -> m = 0
+
+\func IsZeroMap {R : Ring} {M N : LModule R} (f : LinearMap M N) => \Pi (m : M) -> f m = 0
+
+\instance KerLModule {R : Ring} {A B : LModule R} (f : LinearMap A B) : LModule R
+  | AbGroup => KerAbGroup f
+  | *c r a => (r *c a.1, func-*c *> pmap (r *c) a.2 *> B.*c_zro-right)
+  | *c-assoc => ext *c-assoc
+  | *c-ldistr => ext *c-ldistr
+  | *c-rdistr => ext *c-rdistr
+  | ide_*c => ext ide_*c
+
+\func KerLModuleHom {R : Ring} {A B : LModule R} (f : LinearMap A B) : LinearMap (KerLModule f) A \cowith
+  | AddGroupHom => KerGroupHom f
+  | func-*c => idp
+
+\instance ImageLModule {R : Ring} {A B : LModule R} (f : LinearMap A B) : LModule R
+  | AbGroup => ImageAbGroup f
+  | *c r a => (r *c a.1, TruncP.map a.2 \lam s => (r *c s.1, func-*c *> pmap (r *c) s.2))
+  | *c-assoc => ext *c-assoc
+  | *c-ldistr => ext *c-ldistr
+  | *c-rdistr => ext *c-rdistr
+  | ide_*c => ext ide_*c
+
+\func ImageLModuleLeftHom {R : Ring} {A B : LModule R} (f : LinearMap A B) : LinearMap A (ImageLModule f) \cowith
+  | AddGroupHom => ImageAddGroupLeftHom f
+  | func-*c => ext func-*c
+
+\func ImageLModuleRightHom {R : Ring} {A B : LModule R} (f : LinearMap A B) : LinearMap (ImageLModule f) B \cowith
+  | AddGroupHom => ImageAddGroupRightHom f
+  | func-*c => idp
+
+\instance LinearMapRing {R : Ring} (U : LModule R) : Ring (LinearMap U U)
+  | zro => linearMap_zro
+  | + => linearMap_+
+  | zro-left => exts \lam _ => U.zro-left
+  | +-assoc => exts \lam _ => U.+-assoc
+  | +-comm => exts \lam _ => U.+-comm
+  | negative => linearMap_negative
+  | negative-left => exts \lam _ => U.negative-left
+  | ide => id
+  | * f g => g ∘ f
+  | ide-left => idp
+  | ide-right => idp
+  | *-assoc => idp
+  | ldistr => idp
+  | rdistr => exts \lam _ => func-+
+  \where {
+    \func *c-hom {R : CRing} {U : LModule R} : RingHom R (LinearMapRing U) \cowith
+      | func (r : R) : LinearMap U U \cowith {
+        | func u => r *c u
+        | func-+ => *c-ldistr
+        | func-*c => inv *c-assoc *> pmap (`*c _) R.*-comm *> *c-assoc
+      }
+      | func-+ => exts \lam _ => *c-rdistr
+      | func-ide => exts \lam _ => ide_*c
+      | func-* => exts \lam u => pmap (`*c u) R.*-comm *> *c-assoc
+  }
+
+\func toLinearMapIso {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (A : Monoid.Inv {MatrixRing R n}) : Iso {_} {U} {V} \cowith
+  | f => toLinearMap bu lv A.val
+  | hinv => toLinearMap bv lu A.inv
+  | hinv_f => inv (toLinearMap_* A.val A.inv bu bv bu) *> cong A.inv-right *> toLinearMap_ide bu
+  | f_hinv => inv (toLinearMap_* A.inv A.val bv bu bv) *> cong A.inv-left *> toLinearMap_ide bv
+
+\func toMatrixInv {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (e : Iso {_} {U} {V}) : Monoid.Inv {MatrixRing R n} \cowith
+  | val => toMatrix lu bv e.f
+  | inv => toMatrix lv bu e.hinv
+  | inv-left => inv (toMatrix_* e.hinv e.f lv bu bv) *> pmap (toMatrix lv bv) e.f_hinv *> toMatrix_ide bv
+  | inv-right => inv (toMatrix_* e.f e.hinv lu bv bu) *> pmap (toMatrix lu bu) e.hinv_f *> toMatrix_ide bu
+
+\lemma iso<->inj+surj {R : Ring} {U V : LModule R} {f : LinearMap U V} : Iso f <-> (\Sigma (isInj f) (isSurj f))
+  => (\lam e => (\lam {u} {u'} p => inv (path (\lam i => hinv_f {e} i u)) *> pmap (hinv {e}) p *> path (\lam i => hinv_f {e} i u'),
+                 \lam v => inP (hinv {e} v, path (\lam i => f_hinv {e} i v))),
+      \lam s => \let e : Equiv f => Equiv.fromInjSurj f s.1 s.2
+                \in \new Iso {
+          | hinv => \new LinearMap {
+            | func => e.ret
+            | func-+ => e.isInj $ e.f_ret _ *> inv (pmap2 (+) (e.f_ret _) (e.f_ret _)) *> inv f.func-+
+            | func-*c => e.isInj $ e.f_ret _ *> pmap (_ *c) (inv (e.f_ret _)) *> inv f.func-*c
+          }
+          | hinv_f => exts e.ret_f
+          | f_hinv => exts e.f_ret
+        })
+
+\lemma ZeroIm=>Zero-func {R : Ring} {M N : LModule R} {f : LinearMap M N} (p : IsZeroMod (ImageLModule f)) : IsZeroMap f
+  => \lam (m : M) => rewrite (inv (aux-2 m), p (aux-1 m), (ImageLModuleRightHom f).func-zro) idp
+  \where{
+    \func aux-1 (m : M) : ImageLModule f => (f m , inP(m ,idp))
+    \func aux-2 (m : M) : ImageLModuleRightHom f (aux-1 m) = f m => idp
+  }
+
+\lemma FullKer=>Zero-func {R : Ring} {M N : LModule R} {f : LinearMap M N} (p : isSurj (KerLModuleHom f)) : IsZeroMap f
+  => \lam (m : M) => \case  p m \with {
+    | inP a => rewrite (inv a.2, a.1.2) idp
+  }
+
+\lemma zeroKer-FullIm<->inj+surj{R : Ring} {M N : LModule R} {f : LinearMap M N}:
+  (\Sigma (isInj f) (isSurj f)) <-> (\Sigma (IsZeroMod (KerLModule f)) (isSurj (ImageLModuleRightHom f)))
+  => (\lam p => (inj->zeroKer p.1, surj->FullIm p.2),
+      \lam p => (zeroKer->inj p.1, FullIm->surj p.2)
+  )
+  \where{
+    \lemma inj->zeroKer (p : isInj f) : IsZeroMod (KerLModule f)
+      => \lam (a : KerLModule f) => ext (p {a.1} {M.zro} (rewrite (a.2, f.func-zro) idp))
+
+    \lemma surj->FullIm (p : isSurj f) : isSurj (ImageLModuleRightHom f)
+      => \lam (n : N) => TruncP.map (p n) \lam s => ((n, inP s), idp)
+
+    \lemma zeroKer->inj (w : IsZeroMod (KerLModule f)) : isInj f
+      => \lam {a b : M} (p : f a = f b) => M.fromZero $ pmap __.1 $ w (a - b, rewrite (f.func-minus, N.toZero p) idp)
+
+    \lemma FullIm->surj (p : isSurj (ImageLModuleRightHom f)) : isSurj f
+      => \lam (n : N) => \case p n \with {
+        | inP a => TruncP.map a.1.2 \lam s => (s.1, rewrite (s.2, a.2) idp)
+      }
+  }
+
+\lemma iso<->zeroKer-FullIm{R : Ring} {M N : LModule R} {f : LinearMap M N}
+  : Iso f <-> (\Sigma (IsZeroMod (KerLModule f)) (isSurj (ImageLModuleRightHom f)))
+  => <->trans iso<->inj+surj zeroKer-FullIm<->inj+surj
+
+\lemma iso-basis {R : Ring} {U V : LModule R} (f : Iso {_} {U} {V}) {l : Array U} (lb : U.IsBasis l) : V.IsBasis (map f.f l)
+  => (\lam c p j => lb.1 c ((iso<->inj+surj.1 f).1 $ f.f.func-BigSum *> pmap AddMonoid.BigSum (exts \lam j => func-*c) *> p *> inv f.f.func-zro) j,
+      \lam v => TruncP.map (lb.2 (f.hinv v)) \lam s => (s.1, (iso<->inj+surj.1 f.reverse).1 $ s.2 *> pmap AddMonoid.BigSum (exts \lam j => inv $ func-*c *> path (\lam i => _ *c f.hinv_f i (l j))) *> inv AddMonoidHom.func-BigSum))
+
+\lemma change-basis-right {R : Ring} {U V W : LModule R} (f : Iso {_} {U} {V}) {lv : Array V} {lw : Array W} (bv : V.IsBasis lv) (bw : W.IsBasis lw) (A : Matrix R lv.len lw.len)
+  : toLinearMap bv lw A ∘ f.f = toLinearMap (iso-basis f.reverse bv) lw A
+  => exts \lam u => pmap AddMonoid.BigSum $ exts \lam j => pmap (`*c _) $ V.basis-split-unique bv _ (pmap f.f (U.basis-split-char {_} {iso-basis f.reverse bv}) *> AddMonoidHom.func-BigSum *> pmap AddMonoid.BigSum (exts \lam k => func-*c *> path (\lam i => _ *c f.f_hinv i (lv k)))) j
+
+\func basis-iso {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) : Iso {_} {U} {V} \cowith
+  | f => extend bu lv
+  | hinv => extend bv lu
+  | hinv_f => exts $ basis-ext (extend bv lu ∘ extend bu lv) id bu.2 \lam j => pmap (extend bv lu) (extend-char bu lv j) *> extend-char bv lu j
+  | f_hinv => exts $ basis-ext (extend bu lv ∘ extend bv lu) id bv.2 \lam j => pmap (extend bu lv) (extend-char bv lu j) *> extend-char bu lv j
+
+\lemma change-basis_matrix-left {R : Ring} {U V : LModule R} (f : LinearMap U V) {n : Nat} {lu lu' : Array U n} (bu : U.IsBasis lu) (bu' : U.IsBasis lu') {lv : Array V} (bv : V.IsBasis lv)
+  : toMatrix lu bu (Iso.f {basis-iso bu' bu}) MatrixRing.product toMatrix lu' bv f = toMatrix lu bv f
+  => inv $ (matrix-equiv bu bv).adjointInv $ inv $ toLinearMap_* (toMatrix lu bu (extend bu' lu)) (toMatrix lu' bv f) bu bu' bv *>
+      pmap2 (∘) ((matrix-equiv bu' bv).ret_f f) {_} {id} (exts \lam u => toLinearMap_toMatrix-right bu bu bu' *> pmap AddMonoid.BigSum (exts \lam j => pmap (`*c _) $ U.basis-split-unique bu _ idp j) *> inv (U.basis-split-char {lu'} {bu'}))
+
+\lemma change-basis_matrix-right {R : Ring} {U V : LModule R} (f : LinearMap U V) {lu : Array U} (bu : U.IsBasis lu) {n : Nat} {lv lv' : Array V n} (bv : V.IsBasis lv) (bv' : V.IsBasis lv')
+  : toMatrix lu bv' f MatrixRing.product toMatrix lv bv (Iso.f {basis-iso bv bv'}) = toMatrix lu bv f
+  => inv $ Equiv.adjointInv {matrix-equiv bu bv} $ unfold $ inv $ toLinearMap_* (toMatrix lu bv' f) (toMatrix lv bv (extend bv lv')) bu bv' bv *>
+      pmap2 (∘) {_} {id} (exts \lam u => toLinearMap_toMatrix-left bv bv' *> pmap AddMonoid.BigSum (exts \lam j => pmap (`*c _) $ V.basis-split-unique bv _ idp j) *> inv (V.basis-split-char {lv'} {bv'})) (ret_f {matrix-equiv bu bv'} f)
+
+\lemma change-basis_M~ {R : Ring} {U V : LModule R} (f : LinearMap U V) {n m : Nat} {lu lu' : Array U n} (bu : U.IsBasis lu) (bu' : U.IsBasis lu') {lv lv' : Array V m} (bv : V.IsBasis lv) (bv' : V.IsBasis lv') : toMatrix lu bv f M~ toMatrix lu' bv' f
+  => inP (toMatrixInv bu' bu' (basis-iso bu bu'), toMatrixInv bv' bv' (basis-iso bv' bv), inv $ pmap (MatrixRing.`product toMatrix lv' bv' (extend bv' lv)) (change-basis_matrix-left f bu' bu bv) *> change-basis_matrix-right f bu' bv' bv)

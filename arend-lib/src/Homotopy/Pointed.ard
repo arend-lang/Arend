@@ -1,4 +1,4 @@
-\import Algebra.Pointed.Category
+\import Algebra.Pointed.PointedHom
 \import Homotopy.Space
 \import Logic
 \import Meta
@@ -26,10 +26,10 @@
   }
 
 {- | Mapping from Pointed Types to Pointed Sets -}
-\func PointedTrunc0 (X :  Pointed) : AlgPointed \cowith
+\func PointedTrunc0 (X : Pointed) : AlgPointed \cowith
   | E => Trunc0 X
   | ide => in0 X.base
 
-\func PointedTrunc0-Func {X Y : Pointed}(f : X ->* Y) : PointedHom (PointedTrunc0 X) (PointedTrunc0 Y) \cowith
+\func PointedTrunc0-Func {X Y : Pointed} (f : X ->* Y) : PointedHom (PointedTrunc0 X) (PointedTrunc0 Y) \cowith
   | func x => Trunc0.map x f.1
   | func-ide => rewrite f.2 idp

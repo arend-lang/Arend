@@ -1,0 +1,63 @@
+\import Arith.Nat
+\import Data.Array
+\import Data.Array.EPerm
+\import Data.Array.Perm
+\import Data.List(List, Sort, headDef, length)
+\import Function.Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+
+\func sort {A : LinearOrder.Dec} (l : Array A) : Array A l.len
+  => transport (\lam n => Array A n) (inv (Sort.Perm.perm_length (Sort.Insertion.sort-perm _)) *> toList_length) $ fromList (Sort.Insertion.sort (toList l))
+  \where {
+    \func IsSorted {A : Preorder} (l : Array A) => \Pi {i j : Fin l.len} -> i NatOrder.< j -> l i <= l j
+
+    \lemma sorted_transport {A : Preorder} {n m : Nat} {l : Array A n} (p : n = m) (s : IsSorted l) : IsSorted (transport (\lam n => Array A n) p l) \elim p
+      | idp => s
+
+    \lemma list_sorted {A : Preorder} {l : List A} (s : Sort.Sorted l) : IsSorted (fromList l) \elim l, s
+      | List.nil, Sort.sorted-nil => \lam {i} => \case i
+      | x List.:: l, Sort.sorted-cons p s => \lam {i} {j} p => \case \elim i, \elim j, \elim p \with {
+        | 0, suc j, NatOrder.zero<suc => p <=∘ headDef_fromList s
+        | suc i, suc j, NatOrder.suc<suc p => list_sorted s p
+      }
+      \where {
+        \lemma headDef_fromList {a : A} {l : List A} {j : Fin (length l)} (s : Sort.Sorted l) : headDef a l <= fromList l j \elim l, j, s
+          | b List.:: l, 0, _ => <=-refl
+          | b List.:: l, suc j, Sort.sorted-cons p s => p <=∘ headDef_fromList s
+      }
+
+    \lemma sorted_list {A : Preorder} {l : Array A} (s : IsSorted l) : Sort.Sorted (toList l) \elim l
+      | nil => Sort.sorted-nil
+      | a :: {n} l => Sort.sorted-cons (\case \elim n, \elim l, \elim s \with {
+        | 0, nil, s => <=-refl
+        | suc n, b :: l, s => s {0} {1} NatOrder.zero<suc
+      }) $ sorted_list \lam p => s (NatOrder.suc<suc p)
+
+    \lemma sort-sorted {A : LinearOrder.Dec} {l : Array A} : IsSorted (sort l)
+      => sorted_transport _ (list_sorted (Sort.Insertion.sort-sorted _))
+
+    \sfunc sort-perm {A : LinearOrder.Dec} {n : Nat} {l : Array A n} : Perm l (sort l)
+      => Perm.perm-sym $ EPerm.EPerm_Perm_transport (EPerm.eperm-sym sort-eperm) _
+      \where {
+        \func list_perm {A : \Type} {l l' : List A} (p : Sort.Perm l l') : EPerm (fromList l) (fromList l') \elim l, l', p
+          | List.nil, List.nil, Sort.perm-nil => eperm-nil
+          | x List.:: l, y List.:: l', Sort.perm-:: p q => eperm-:: p (list_perm q)
+          | x List.:: (x' List.:: l), y List.:: (y' List.:: l'), Sort.perm-swap p1 p2 q => eperm-swap p1 p2 (pmap fromList q)
+          | l, l', Sort.perm-trans p1 p2 => eperm-trans (list_perm p1) (list_perm p2)
+
+        \func sort-eperm {A : LinearOrder.Dec} {l : Array A} : EPerm l (fromList (Sort.Insertion.sort (toList l)))
+          => transport (EPerm __ _) fromList_toList $ list_perm (Sort.Insertion.sort-perm _)
+      }
+
+    \func perm_list {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : Sort.Perm (toList l) (toList l') \elim n, l, l', p
+      | 0, nil, nil, perm-nil => Sort.perm-nil
+      | suc n, x :: l, y :: l', perm-:: p q => Sort.perm-:: p (perm_list q)
+      | suc (suc n), x :: (x' :: l), y :: (y' :: l'), perm-swap p1 p2 q => Sort.perm-swap p1 p2 (pmap toList q)
+      | n, l, l', perm-trans p1 p2 => Sort.perm-trans (perm_list p1) (perm_list p2)
+
+    \lemma perm_= {A : LinearOrder.Dec} {n : Nat} {l l' : Array A n} (p : Perm l l') (s : IsSorted l) (s' : IsSorted l') : l = l'
+      => exts $ array-unext $ inv fromList_toList *> pmap fromList (inv (Sort.Insertion.sorted_sort (sorted_list s)) *> Sort.Insertion.perm_sort (perm_list p) *> Sort.Insertion.sorted_sort (sorted_list s')) *> fromList_toList
+  }

@@ -1,0 +1,93 @@
+\import Arith.Nat
+\import Equiv
+\import Equiv.Path
+\import Logic.Unique
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+
+\func \infix 2 ofHLevel_-1+ (A : \Type) (n : Nat) : \Type \elim n
+  | 0 => isProp A
+  | suc n => \Pi (a a' : A) -> (a = a') ofHLevel_-1+ n
+  \where
+    \use \level levelProp (A : \Type) (n : Nat) (e e' : A ofHLevel_-1+ n) : e = e' \elim n
+      | 0 => isProp.levelProp A e e'
+      | suc n => path \lam i a a' => levelProp (a = a') n (e a a') (e' a a') i
+
+\func hLevel-inh {A : \Type} (n : Nat) (f : A -> A ofHLevel_-1+ n) : A ofHLevel_-1+ n \elim n
+  | 0 => \lam a => f a a
+  | suc n => \lam a => f a a
+
+\func I-isContr : Contr I \cowith
+  | center => left
+  | contraction i => path (I.squeeze i)
+
+\func \infix 2 ofHLevel_-2+ (A : \Type) (n : Nat) : \Prop \elim n
+  | 0 => Contr A
+  | suc n => \Pi (a a' : A) -> (a = a') ofHLevel_-2+ n
+
+-- # Prop-based and Contr-base hLevels are equivalent
+
+\func HLevel_-2+1=>HLevel_-1 (A : \Type) (n : Nat) (p : A ofHLevel_-2+ suc n) : A ofHLevel_-1+ n \elim n
+  | 0 => \lam a a' => Contr.center {p a a'}
+  | suc n => \lam a a' => HLevel_-2+1=>HLevel_-1 (a = a') n (p a a')
+
+\lemma HLevel_-1=>HLevel_-2+1 (A : \Type) (n : Nat) (p : A ofHLevel_-1+ n) : A ofHLevel_-2+ suc n \elim n
+  | 0 => isProp=>PathContr A p
+  | suc n => \lam a a' => HLevel_-1=>HLevel_-2+1 (a = a') n (p a a')
+
+-- # Every k-level is n-level whenever k <= n
+
+\func HLevel_-1_suc {A : \Type} {n : Nat} (p : A ofHLevel_-1+ n) : A ofHLevel_-1+ suc n \elim n
+  | 0 => isProp.=>isSet p
+  | suc n => \lam a a' => HLevel_-1_suc (p a a')
+
+\func HLevel_-1_+ {A : \Type} {k : Nat} (n : Nat) (p : A ofHLevel_-1+ k) : A ofHLevel_-1+ k Nat.+ n \elim n
+  | 0 => p
+  | suc n => HLevel_-1_suc (HLevel_-1_+ n p)
+
+\func HLevel_-1_<= {A : \Type} (k : Nat) (n : Nat) (q : k <= n) (p : A ofHLevel_-1+ k) : A ofHLevel_-1+ n
+  => rewriteI (<=_exists q) (HLevel_-1_+ (n -' k) p)
+
+{- # Properties of hLevels
+ - I'm not sure which version of ofHLevel is more convenient, so I proved each lemma twice.
+ -}
+
+-- ## Properties of prop-based hLevels
+
+-- | hLevels are closed under retracts
+\func HLevel-retracts (s : Section) {n : Nat} (p : s.B ofHLevel_-1+ n) : s.A ofHLevel_-1+ n \elim n
+  | 0 => \lam a a' => inv (s.ret_f a) *> pmap s.ret (p (s a) (s a')) *> s.ret_f a'
+  | suc n => \lam a a' => HLevel-retracts (pmapSection s) (p (s a) (s a'))
+
+-- | hLevels are closed under pi-types
+\func HLevels-pi {A : \Type} (B : A -> \Type) {n : Nat} (p : \Pi (a : A) -> B a ofHLevel_-1+ n) : (\Pi (a : A) -> B a) ofHLevel_-1+ n \elim n
+  | 0 => pi-isProp B p
+  | suc n => \lam f f' => HLevel-retracts (piEquiv B f f') (HLevels-pi (\lam a => f a = f' a) (\lam a => p a (f a) (f' a)))
+
+-- | hLevels are closed under sigma-types
+\func HLevels-sigma {A : \Type} (B : A -> \Type) {n : Nat} (pA : A ofHLevel_-1+ n) (pB : \Pi (a : A) -> B a ofHLevel_-1+ n) : (\Sigma (a : A) (B a)) ofHLevel_-1+ n \elim n
+  | 0 => \lam p p' => ext (pA p.1 p'.1, pB p'.1 _ _)
+  | suc n => \lam p p' => HLevel-retracts (sigmaEquiv B p p') (HLevels-sigma (transport B __ p.2 = p'.2) (pA p.1 p'.1) (\lam s => pB _ _ _))
+
+-- | hLevels are closed under embeddings
+\func HLevels-embeddings (e : Embedding) {n : Nat} (p : e.B ofHLevel_-1+ n) : e.A ofHLevel_-1+ n \elim n
+  | 0 => \lam a a' => sec {e.isEmb a a'} (p (e a) (e a'))
+  | suc n => \lam a a' => HLevels-embeddings (pmapEmbedding e) (p (e a) (e a'))
+
+-- ## Properties of contr-based hLevels
+
+-- | Contr-based hLevels are closed under retracts
+\lemma HLevel_-2-retracts (s : Section) {n : Nat} (p : s.B ofHLevel_-2+ n) : s.A ofHLevel_-2+ n \elim n
+  | 0 => \have a0 => s.ret (Contr.center {p}) \in Contr.make a0 (\lam a => inv (s.ret_f a0) *> pmap s.ret (isContr=>isProp p (s a0) (s a)) *> s.ret_f a)
+  | suc n => \lam a a' => HLevel_-2-retracts (pmapSection s) (p (s a) (s a'))
+
+-- | Contr-based hLevels are closed under pi-types
+\lemma HLevels_-2-pi {A : \Type} (B : A -> \Type) {n : Nat} (p : \Pi (a : A) -> B a ofHLevel_-2+ n) : (\Pi (a : A) -> B a) ofHLevel_-2+ n \elim n
+  | 0 => pi-Contr B p
+  | suc n => \lam f f' => HLevel_-2-retracts (piEquiv B f f') (HLevels_-2-pi (\lam a => f a = f' a) (\lam a => p a (f a) (f' a)))
+
+-- | Contr-based hLevels are closed under sigma-types
+\lemma HLevels_-2-sigma {A : \Type} (B : A -> \Type) {n : Nat} (pA : A ofHLevel_-2+ n) (pB : \Pi (a : A) -> B a ofHLevel_-2+ n) : (\Sigma (a : A) (B a)) ofHLevel_-2+ n \elim n
+  | 0 => sigma-Contr B pA pB
+  | suc n => \lam p p' => HLevel_-2-retracts (sigmaEquiv B p p') (HLevels_-2-sigma (transport B __ p.2 = p'.2) (pA p.1 p'.1) (\lam s => pB _ _ _))

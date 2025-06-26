@@ -15,9 +15,10 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import org.arend.actions.ArendPopupAction
 import org.arend.codeInsight.ArendPopupHandler
+import org.arend.core.definition.FunctionDefinition
 import org.arend.ext.error.ErrorReporter
 import org.arend.ext.error.GeneralError
-import org.arend.module.FullName
+import org.arend.ext.module.FullName
 import org.arend.naming.reference.TCDefReferable
 import org.arend.psi.*
 import org.arend.psi.ext.*
@@ -26,15 +27,13 @@ import org.arend.refactoring.selectedExpr
 import org.arend.server.ArendServerService
 import org.arend.server.impl.ArendLibraryImpl
 import org.arend.term.concrete.Concrete
-import org.arend.typechecking.ArendExtensionProvider
 import org.arend.typechecking.error.local.GoalDataHolder
 import org.arend.typechecking.instance.pool.GlobalInstancePool
-import org.arend.typechecking.instance.provider.InstanceScopeProvider
+import org.arend.typechecking.provider.ConcreteProvider
 import org.arend.typechecking.visitor.DefinitionTypechecker
 import org.arend.typechecking.visitor.DesugarVisitor
 import org.arend.typechecking.visitor.WhereVarsFixVisitor
 import org.arend.util.ArendBundle
-import org.arend.util.list.PersistentList
 
 class ArendTraceAction : ArendPopupAction() {
     init {
@@ -165,16 +164,17 @@ class ArendTraceAction : ArendPopupAction() {
             definition: Concrete.Definition,
             expression: ArendExpr
         ): ArendTracingData {
+            // TODO[server2]: Rewrite this using ArendChecker
             val errorsConsumer = ErrorsConsumer()
             val server = project.service<ArendServerService>().server
             val extension = definition.data.getLocation()?.libraryName?.let { server.getLibrary(it) as? ArendLibraryImpl }?.extension
-            val instances = server.getResolvedDefinition(definition.data)?.instances ?: PersistentList.empty()
+            val instances = server.getResolvedDefinition(definition.data)?.instances?.instancesList ?: emptyList<FunctionDefinition>()
             val tracer = ArendTracingTypechecker(errorsConsumer, extension).apply {
                 instancePool = GlobalInstancePool(instances, this)
             }
             var firstTraceEntryIndex = -1
             ActionUtil.underModalProgress(project, ArendBundle.message("arend.tracer.collecting.tracing.data")) {
-                DesugarVisitor.desugar(definition, tracer.errorReporter)
+                DesugarVisitor.desugar(definition, ConcreteProvider.EMPTY, tracer.errorReporter)
                 WhereVarsFixVisitor.fixDefinition(listOf(definition), tracer.errorReporter)
                 definition.accept(DefinitionTypechecker(tracer, definition.recursiveDefinitions), null)
                 firstTraceEntryIndex = tracer.trace.indexOfEntry(expression)

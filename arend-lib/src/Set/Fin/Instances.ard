@@ -1,0 +1,60 @@
+\import Algebra.Monoid
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Or
+\import Equiv
+\import Equiv.Sigma
+\import Function
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+\lemma SigmaFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Sigma (i : S) (Q i)) (AbMonoid.FinSum (\lam i => (Q i).finCard))
+  => \case AbMonoid.FinSum_char (\lam i => (Q i).finCard) \with {
+    | inP p => rewrite p.2 \new FinSet {
+      | finEq => \case FinSet.finiteAC (\lam i => finEq {Q (p.1 i)}) \with {
+        | inP d => inP $ aux `transEquiv` sigma-right d `transEquiv` sigma-left p.1
+      }
+    }
+  }
+  \where {
+    \open AddMonoid
+
+    \func aux {n : Nat} {Q : Fin n -> Nat} : QEquiv {Fin (BigSum Q)} {\Sigma (i : Fin n) (Fin (Q i))} \cowith
+      | f (k : Fin (BigSum Q)) : \Sigma (i : Fin n) (Fin (Q i)) \elim n {
+        | suc n => \case OrFin.aux.f k \with {
+          | inl s => (0,s)
+          | inr t => \have (i,r) => f t \in (suc i, r)
+        }
+      }
+      | ret (p : \Sigma (i : Fin n) (Fin (Q i))) : Fin (BigSum Q) \elim n, p {
+        | 0, ((),_)
+        | suc n, (0, j) => fin-inc j
+        | suc n, (suc i, j) => fin-raise (ret (i,j))
+      }
+      | ret_f (k : Fin (BigSum Q)) : ret (f k) = k \elim n {
+        | suc n => mcases {_} {arg addPath} \with {
+          | inl s, p => inv (pmap OrFin.aux.ret p) *> OrFin.aux.ret_f k
+          | inr t, p => pmap fin-raise (ret_f t) *> inv (pmap OrFin.aux.ret p) *> OrFin.aux.ret_f k
+        }
+      }
+      | f_sec (p : \Sigma (i : Fin n) (Fin (Q i))) : f (ret p) = p \elim n, p {
+        | 0, ((),_)
+        | suc n, (0, j) => rewrite OrFin.ret_inl-lem idp
+        | suc n, (suc i, j) => rewrite OrFin.ret_inr-lem (rewrite (f_sec {n} {\lam i => Q (suc i)} (i,j)) idp)
+      }
+
+    \lemma DecSubSet-isFin (S : FinSet) (D : DecSubSet S) : FinSet D.ISet
+      => SigmaFin S (\lam x => DecFin (D.isDec x))
+  }
+
+\instance ProdFin (A B : FinSet) : FinSet (\Sigma A B) (A.finCard Nat.* B.finCard)
+  => transport (FinSet _) Semiring.FinSum_replicate $ SigmaFin A (\lam _ => B)
+  \where {
+    \func prod_equiv {n m : Nat} : Equiv {Fin (n Nat.* m)} {\Sigma (Fin n) (Fin m)}
+      => transport (\lam x => Equiv {Fin x} {_}) Semiring.BigSum_replicate $ SigmaFin.aux {n} {\lam _ => m}
+  }

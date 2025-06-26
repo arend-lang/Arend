@@ -15,20 +15,23 @@ import org.arend.term.concrete.BaseConcreteExpressionVisitor;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.LocalFreeReferableVisitor;
 import org.arend.typechecking.error.local.WrongReferable;
+import org.arend.typechecking.provider.ConcreteProvider;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
 public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
+  private final ConcreteProvider myConcreteProvider;
   private final ErrorReporter myErrorReporter;
   private final Set<TCLevelReferable> myLevelRefs = new HashSet<>();
 
-  private DesugarVisitor(ErrorReporter errorReporter) {
+  private DesugarVisitor(ConcreteProvider concreteProvider, ErrorReporter errorReporter) {
+    myConcreteProvider = concreteProvider;
     myErrorReporter = errorReporter;
   }
 
-  public static void desugar(Concrete.ResolvableDefinition definition, ErrorReporter errorReporter) {
-    DesugarVisitor visitor = new DesugarVisitor(errorReporter);
+  public static void desugar(Concrete.ResolvableDefinition definition, ConcreteProvider concreteProvider, ErrorReporter errorReporter) {
+    DesugarVisitor visitor = new DesugarVisitor(concreteProvider, errorReporter);
     definition.accept(visitor, null);
 
     if (!visitor.myLevelRefs.isEmpty() && definition instanceof Concrete.Definition) {
@@ -70,7 +73,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
   }
 
   public static Concrete.Expression desugar(Concrete.Expression expression, ErrorReporter errorReporter) {
-    return expression.accept(new DesugarVisitor(errorReporter), null);
+    return expression.accept(new DesugarVisitor(ConcreteProvider.EMPTY, errorReporter), null);
   }
 
   private void getFields(TCDefReferable ref, Set<TCDefReferable> result) {
@@ -90,7 +93,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
       List<CoreClassDefinition> superClasses = enclosingClass instanceof ClassDefinition ? Collections.singletonList((CoreClassDefinition) enclosingClass) : Collections.emptyList();
 
       Referable thisParameter = new HiddenLocalReferable("this");
-      def.accept(new ClassFieldChecker(thisParameter, def.getRecursiveDefinitions(), def.enclosingClass, superClasses, fields, null, myErrorReporter), null);
+      def.accept(new ClassFieldChecker(thisParameter, myConcreteProvider, def.getRecursiveDefinitions(), def.enclosingClass, superClasses, fields, null, myErrorReporter), null);
       return thisParameter;
     } else {
       return null;
@@ -112,10 +115,10 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
       if (def instanceof Concrete.CoClauseFunctionDefinition && def.getKind() == FunctionKind.FUNC_COCLAUSE) {
         ((Concrete.CoClauseFunctionDefinition) def).setNumberOfExternalParameters(((Concrete.CoClauseFunctionDefinition) def).getNumberOfExternalParameters() + 1);
       }
-      def.getParameters().add(0, new Concrete.TelescopeParameter(def.getData(), false, Collections.singletonList(thisParameter), makeThisClassCall(def.getData(), def.enclosingClass), false));
+      def.getParameters().addFirst(new Concrete.TelescopeParameter(def.getData(), false, Collections.singletonList(thisParameter), makeThisClassCall(def.getData(), def.enclosingClass), false));
       if (def.getBody().getEliminatedReferences().isEmpty()) {
         for (Concrete.FunctionClause clause : def.getBody().getClauses()) {
-          clause.getPatterns().add(0, new Concrete.NamePattern(clause.getData(), false, thisParameter, null));
+          clause.getPatterns().addFirst(new Concrete.NamePattern(clause.getData(), false, thisParameter, null));
         }
       }
     }
@@ -130,10 +133,10 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
     // Add this parameter
     Referable thisParameter = checkDefinition(def);
     if (thisParameter != null) {
-      def.getParameters().add(0, new Concrete.TelescopeParameter(def.getData(), false, Collections.singletonList(thisParameter), makeThisClassCall(def.getData(), def.enclosingClass), false));
+      def.getParameters().addFirst(new Concrete.TelescopeParameter(def.getData(), false, Collections.singletonList(thisParameter), makeThisClassCall(def.getData(), def.enclosingClass), false));
       if (def.getEliminatedReferences() != null && def.getEliminatedReferences().isEmpty()) {
         for (Concrete.ConstructorClause clause : def.getConstructorClauses()) {
-          clause.getPatterns().add(0, new Concrete.NamePattern(clause.getData(), false, thisParameter, null));
+          clause.getPatterns().addFirst(new Concrete.NamePattern(clause.getData(), false, thisParameter, null));
         }
       }
     }
@@ -176,8 +179,8 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
     }
 
     // Check fields
-    ClassFieldChecker classFieldChecker = new ClassFieldChecker(null, def.getRecursiveDefinitions(), def.getData(), superClasses, fields, futureFields, myErrorReporter);
-    ClassFieldChecker myClassFieldChecker = new ClassFieldChecker(null, def.getRecursiveDefinitions(), def.getData(), superClasses, myFields, futureFields, myErrorReporter);
+    ClassFieldChecker classFieldChecker = new ClassFieldChecker(null, myConcreteProvider, def.getRecursiveDefinitions(), def.getData(), superClasses, fields, futureFields, myErrorReporter);
+    ClassFieldChecker myClassFieldChecker = new ClassFieldChecker(null, myConcreteProvider, def.getRecursiveDefinitions(), def.getData(), superClasses, myFields, futureFields, myErrorReporter);
     Concrete.Expression previousType = null;
     for (int i = 0; i < classFields.size(); i++) {
       Concrete.ClassField classField = classFields.get(i);
@@ -192,7 +195,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
       } else {
         previousType = classField.getParameters().isEmpty() ? fieldType : null;
         checker.visitParameters(classField.getParameters(), null);
-        classField.getParameters().add(0, new Concrete.TelescopeParameter(classField.getParameters().isEmpty() ? fieldType.getData() : classField.getParameters().get(0).getData(), false, Collections.singletonList(thisParameter), makeThisClassCall(fieldType.getData(), def.getData()), false));
+        classField.getParameters().addFirst(new Concrete.TelescopeParameter(classField.getParameters().isEmpty() ? fieldType.getData() : classField.getParameters().getFirst().getData(), false, Collections.singletonList(thisParameter), makeThisClassCall(fieldType.getData(), def.getData()), false));
         classField.setResultType(fieldType.accept(checker, null));
         if (classField.getResultTypeLevel() != null) {
           classField.setResultTypeLevel(classField.getResultTypeLevel().accept(checker, null));
@@ -215,7 +218,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
         Referable thisParameter = new HiddenLocalReferable("this");
         classFieldChecker.setThisParameter(thisParameter);
         classFieldChecker.visitParameters(field.getParameters(), null);
-        field.getParameters().add(0, new Concrete.TelescopeParameter(field.getResultType().getData(), false, Collections.singletonList(thisParameter), makeThisClassCall(field.getResultType().getData(), def.getData()), false));
+        field.getParameters().addFirst(new Concrete.TelescopeParameter(field.getResultType().getData(), false, Collections.singletonList(thisParameter), makeThisClassCall(field.getResultType().getData(), def.getData()), false));
         field.setResultType(field.getResultType().accept(classFieldChecker, null));
         if (field.getResultTypeLevel() != null) {
           field.setResultTypeLevel(field.getResultTypeLevel().accept(classFieldChecker, null));
@@ -267,7 +270,7 @@ public class DesugarVisitor extends BaseConcreteExpressionVisitor<Void> {
       result.add(classFieldImpl);
     } else {
       boolean ok = true;
-      if (classFieldImpl.getImplementedField() instanceof GlobalReferable && ((GlobalReferable) classFieldImpl.getImplementedField()).getKind() == GlobalReferable.Kind.CLASS) {
+      if (classFieldImpl.getImplementedField() instanceof GlobalReferable && ((GlobalReferable) classFieldImpl.getImplementedField()).getKind().isRecord()) {
         if (classFieldImpl.getSubCoclauseList().isEmpty()) {
           myErrorReporter.report(new RedundantCoclauseError(classFieldImpl));
         }

@@ -42,7 +42,7 @@ class PsiInjectionTextFile(provider: FileViewProvider) : PsiFileImpl(InjectionTe
             val expr = (pair.first.firstChild as? ArendReplLine)?.expr
             if (expr != null) {
                 val concrete = ConcreteBuilder.convertExpression(expr)
-                concrete.accept(ExpressionResolveNameVisitor(scope, mutableListOf(), typingInfo, DummyErrorReporter.INSTANCE, listener), null)
+                concrete.accept(ExpressionResolveNameVisitor(scope, mutableListOf(), typingInfo, DummyErrorReporter.INSTANCE, null, listener), null)
                 concreteExpressions.add(concrete)
             } else {
                 concreteExpressions.add(null)

@@ -1,0 +1,111 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Solver
+\import Algebra.Solver.Group
+\import Algebra.Solver.Monoid
+\import Arith.Int
+\import Data.Array
+\import Data.Bool
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\open GroupSolverModel
+
+\func CGroupSolverModel (G : CGroup) : SolverModel G \cowith
+  | Term => Term
+  | NF n => Array Int n
+  | normalize => normalize
+  | interpret => interpret
+  | interpretNF => interpretNF
+  | interpretNF-consistent => interpretNF-consistent _
+  \where {
+    \func toArray (cs : Array Int) (env : Array G cs.len) : Array G \elim cs, env
+      | nil, nil => nil
+      | 0 :: cs, _ :: env => toArray cs env
+      | pos (suc n) :: cs, a :: env => a :: toArray (pos n :: cs) (a :: env)
+      | neg (suc n) :: cs, a :: env => inverse a :: toArray (neg n :: cs) (a :: env)
+
+    \func sBigProd (l : Array G) : G \elim l
+      | nil => G.ide
+      | a :: nil => a
+      | a :: l => a * sBigProd l
+
+    \lemma sBigProd_:: {a : G} {l : Array G} : sBigProd (a :: l) = a * sBigProd l \elim l
+      | nil => inv ide-right
+      | b :: l => idp
+
+    \func interpretNF {n : Nat} (env : Fin n -> G) (l : Array Int n) : G
+      => sBigProd (toArray l env)
+
+    \func interpretNF'  (l : Array Int) (env : Array G l.len) : G
+      => G.BigProd \lam j => G.ipow (env j) (l j)
+
+    \lemma interpretNF-correct (cs : Array Int) {env : Array G cs.len} : sBigProd (toArray cs env) = interpretNF' cs env \elim cs, env
+      | nil, nil => idp
+      | 0 :: cs, _ :: env => interpretNF-correct cs *> inv ide-left
+      | pos (suc m) :: cs, a :: env => equation.monoid {sBigProd_::, interpretNF-correct (_ :: cs), inv G.pow-left}
+      | neg (suc m) :: cs, a :: env => equation.monoid {sBigProd_::, interpretNF-correct (_ :: cs), inv G.pow-left}
+
+    \lemma interpretNF-consistent' {n : Nat} {env : Fin n -> G} {t : Term n} : interpretNF' (normalize t) env = interpret env t \elim t
+      | var i => G.BigProd-unique i (\lam j p => later $ rewrite (decideEq/=_reduce p) idp) *> rewrite (decideEq=_reduce idp) ide-left
+      | :ide => G.BigProd_replicate1
+      | :inverse t => G.BigProd-ext (\lam i => G.ipow_negaitve) *> inv G.BigProd_inverse *> pmap inverse interpretNF-consistent'
+      | t :* s => G.BigProd-ext (\lam i => G.ipow_+) *> G.BigProd_* *> pmap2 (*) interpretNF-consistent' interpretNF-consistent'
+
+    \lemma interpretNF-consistent {n : Nat} {env : Fin n -> G} (t : Term n) : interpretNF env (normalize t) = interpret env t
+      => interpretNF-correct _ *> interpretNF-consistent'
+
+    \func normalize {n : Nat} (t : Term n) : Array Int n \elim t
+      | var v => singleAt v (pos 1) 0
+      | :ide => replicate n (pos 0)
+      | :inverse t => map negative (normalize t)
+      | t :* s => mkArray \lam j => normalize t j + normalize s j
+
+    \lemma terms-equality (env : Array G) (t s : Term env.len) (p : interpretNF env (normalize (t :* :inverse s)) = G.ide) : interpret env t = interpret env s
+      => inv (*-assoc *> pmap (_ *) inverse-left *> G.ide-right) *> pmap (`* _) (inv (interpretNF-consistent (t :* :inverse s)) *> p) *> G.ide-left
+
+    \lemma terms-equality-conv (env : Array G) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize (t :* :inverse s)) = G.ide
+      => interpretNF-consistent (t :* :inverse s) *> pmap (`* _) p *> inverse-right
+
+    \lemma apply-axioms' {n : Nat} (env : Array G n) (l : Array (\Sigma Int (t s : Term n) (interpret env t = interpret env s)))
+      : interpretNF' (mkArray \lam j => IntRing.BigSum \lam i => (l i).1 * (normalize (l i).2 j - normalize (l i).3 j)) env = G.ide
+      => interpretNF_BigSum (\lam i => mkArray \lam j => (l i).1 * (normalize (l i).2 j - normalize (l i).3 j)) *> G.BigProd_ide \lam i => later $
+          interpretNF-coef *> pmap (G.ipow __ _) (interpretNF_+ {G} {n} *> pmap (_ *) interpretNF_negative *> pmap (`* _) (interpretNF-consistent' *> (l i).4 *> inv interpretNF-consistent') *> inverse-right) *> G.ipow_ide
+      \where {
+        \lemma interpretNF_+ {n : Nat} {env : Array G n} {l l' : Array Int n} : interpretNF' (mkArray \lam j => l j + l' j) env = interpretNF' l env * interpretNF' l' env
+          => G.BigProd-ext (\lam j => G.ipow_+) *> G.BigProd_*
+
+        \lemma interpretNF_negative {l : Array Int} {env : Array G l.len} : interpretNF' (map negative l) env = inverse (interpretNF' l env)
+          => later (G.BigProd-ext {l.len} \lam j => G.ipow_negaitve) *> inv G.BigProd_inverse
+
+        \lemma interpretNF-coef {n : Nat} {l : Array Int n} {env : Array G l.len} {c : Int} : interpretNF' (map (c *) l) env = G.ipow (interpretNF' l env) c
+          => later (G.BigProd-ext {l.len} \lam i => pmap (G.ipow _) *-comm *> G.ipow_*) *> G.BigProd_ipow
+
+        \lemma interpretNF_BigSum {n : Nat} {env : Array G n} (ls : Array (Array Int n)) : interpretNF' (mkArray \lam j => IntRing.BigSum (ls __ j)) env = G.BigProd \lam i => interpretNF' (ls i) env \elim ls
+          | nil => G.BigProd_replicate1
+          | l :: ls => interpretNF_+ *> pmap (_ *) (interpretNF_BigSum ls)
+      }
+
+    \lemma apply-axioms {n : Nat} (env : Array G n) (l : Array (\Sigma Int (t s : Term n) (interpret env t = interpret env s))) (right : Array Int n)
+      : interpretNF env (mkArray \lam j => IntRing.BigSum (\lam i => (l i).1 * (normalize (l i).2 j - normalize (l i).3 j)) + right j) = interpretNF env right
+      => interpretNF-correct (mkArray _) *> apply-axioms'.interpretNF_+ *> pmap (`* _) (apply-axioms' env l) *> ide-left *> inv (interpretNF-correct right)
+  }
+
+\func AbGroupSolverModel (A : AbGroup) : SolverModel A
+  => CGroupSolverModel (AbGroup.toCGroup A)
+  \where {
+    \open CGroupSolverModel
+
+    \lemma terms-equality (env : Array A) (t s : Term env.len) (p : interpretNF {AbGroup.toCGroup A} env (normalize (t :* :inverse s)) = A.zro)
+      => CGroupSolverModel.terms-equality env t s p
+
+    \lemma terms-equality-conv (env : Array A) (t s : Term env.len) (p : interpret {AbGroup.toCGroup A} env t = interpret {AbGroup.toCGroup A} env s)
+      => CGroupSolverModel.terms-equality-conv env t s p
+
+    \lemma apply-axioms {n : Nat} (env : Array A n) (l : Array (\Sigma Int (t s : Term env.len) (interpret {AbGroup.toCGroup A} env t = interpret {AbGroup.toCGroup A} env s))) (right : Array Int env.len)
+      => CGroupSolverModel.apply-axioms {AbGroup.toCGroup A} env l right
+  }

@@ -27,5 +27,7 @@ public sealed interface PersistentList<T> extends Iterable<T> permits NilList, C
     return new PersistentListIterator<>(this);
   }
 
-  @NotNull PersistentList<T> remove(@Nullable T value);
+  @NotNull PersistentList<T> removeFirst(@Nullable T value);
+
+  @NotNull PersistentList<T> removeFirst(@NotNull Predicate<T> predicate);
 }

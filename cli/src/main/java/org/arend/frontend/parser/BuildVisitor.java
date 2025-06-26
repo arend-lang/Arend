@@ -10,7 +10,7 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.reference.Precedence;
 import org.arend.extImpl.DefaultMetaTypechecker;
 import org.arend.frontend.reference.*;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.InternalReferableImpl;
 import org.arend.naming.reference.*;
 import org.arend.naming.scope.Scope;
@@ -946,8 +946,8 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     String name = defId.ID().getText();
     Precedence prec = visitPrecedence(defId.precedence());
     Pair<String, Precedence> alias = visitAlias(defId.alias());
-    LocatedReferableImpl reference = new LocatedReferableImpl(pos, accessModifier, prec, name, alias.proj2, alias.proj1, parent.referable(), GlobalReferable.Kind.CLASS);
     boolean isRecord = ctx.classKw() instanceof ClassKwRecordContext;
+    LocatedReferableImpl reference = new LocatedReferableImpl(pos, accessModifier, prec, name, alias.proj2, alias.proj1, parent.referable(), isRecord ? GlobalReferable.Kind.RECORD : GlobalReferable.Kind.CLASS);
     ClassBodyContext classBodyCtx = ctx.classBody();
     List<ClassStatContext> classStatCtxs = classBodyCtx instanceof ClassBodyStatsContext ? ((ClassBodyStatsContext) classBodyCtx).classStat() : Collections.emptyList();
     List<ClassFieldOrImplContext> classFieldOrImplCtxs = classBodyCtx instanceof ClassBodyFieldOrImplContext ? ((ClassBodyFieldOrImplContext) classBodyCtx).classFieldOrImpl() : Collections.emptyList();

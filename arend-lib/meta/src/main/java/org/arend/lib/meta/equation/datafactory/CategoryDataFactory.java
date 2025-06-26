@@ -1,5 +1,6 @@
 package org.arend.lib.meta.equation.datafactory;
 
+import org.arend.ext.ArendPrelude;
 import org.arend.ext.concrete.ConcreteClause;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteLetClause;
@@ -8,22 +9,24 @@ import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.meta.equation.EquationMeta;
+import org.arend.lib.meta.equation.BaseEquationMeta;
 import org.arend.lib.util.Values;
 
 import java.util.*;
 
 public class CategoryDataFactory implements DataFactory {
-  protected final EquationMeta meta;
-  protected final ConcreteFactory factory;
-  protected final TypedExpression instance;
-  protected final Values<CoreExpression> homValues;
-  protected final Values<CoreExpression> obValues;
-  protected final Map<Pair<Integer,Integer>, Map<Integer,Integer>> homMap;
-  protected final ArendRef dataRef;
+  private final BaseEquationMeta meta;
+  private final ArendPrelude prelude;
+  private final ConcreteFactory factory;
+  private final TypedExpression instance;
+  private final Values<CoreExpression> homValues;
+  private final Values<CoreExpression> obValues;
+  private final Map<Pair<Integer,Integer>, Map<Integer,Integer>> homMap;
+  private final ArendRef dataRef;
 
-  public CategoryDataFactory(EquationMeta meta, ArendRef dataRef, Values<CoreExpression> homValues, Values<CoreExpression> obValues, Map<Pair<Integer,Integer>, Map<Integer,Integer>> homMap, ConcreteFactory factory, TypedExpression instance) {
+  public CategoryDataFactory(BaseEquationMeta meta, ArendPrelude prelude, ArendRef dataRef, Values<CoreExpression> homValues, Values<CoreExpression> obValues, Map<Pair<Integer,Integer>, Map<Integer,Integer>> homMap, ConcreteFactory factory, TypedExpression instance) {
     this.meta = meta;
+    this.prelude = prelude;
     this.factory = factory;
     this.instance = instance;
     this.homValues = homValues;
@@ -38,10 +41,10 @@ public class CategoryDataFactory implements DataFactory {
     List<CoreExpression> valueList = obValues.getValues();
     List<ConcreteClause> caseClauses = new ArrayList<>();
     for (Map.Entry<Pair<Integer, Integer>, Map<Integer, Integer>> entry : homMap.entrySet()) {
-      caseClauses.add(factory.clause(Arrays.asList(factory.numberPattern(entry.getKey().proj1), factory.numberPattern(entry.getKey().proj2)), DataFactoryBase.makeFin(entry.getValue().size(), factory, meta.ext.prelude.getFinRef())));
+      caseClauses.add(factory.clause(Arrays.asList(factory.numberPattern(entry.getKey().proj1), factory.numberPattern(entry.getKey().proj2)), DataFactoryBase.makeFin(entry.getValue().size(), factory, prelude.getFinRef())));
     }
     if (homMap.size() < valueList.size() * valueList.size()) {
-      caseClauses.add(factory.clause(Arrays.asList(factory.refPattern(null, null), factory.refPattern(null, null)), DataFactoryBase.makeFin(0, factory, meta.ext.prelude.getFinRef())));
+      caseClauses.add(factory.clause(Arrays.asList(factory.refPattern(null, null), factory.refPattern(null, null)), DataFactoryBase.makeFin(0, factory, prelude.getFinRef())));
     }
     return factory.lam(Arrays.asList(factory.param(lamParam1), factory.param(lamParam2)),
             factory.caseExpr(false, Arrays.asList(factory.caseArg(factory.ref(lamParam1), null, null), factory.caseArg(factory.ref(lamParam2), null, null)), null, null, caseClauses));
@@ -66,9 +69,9 @@ public class CategoryDataFactory implements DataFactory {
   public ConcreteExpression wrapWithData(ConcreteExpression expression) {
     List<ConcreteLetClause> letClauses = new ArrayList<>();
     letClauses.add(null);
-    letClauses.set(0, factory.letClause(dataRef, Collections.emptyList(), null, factory.newExpr(factory.appBuilder(factory.ref(meta.HData.getRef()))
+    letClauses.set(0, factory.letClause(dataRef, Collections.emptyList(), null, factory.newExpr(factory.appBuilder(factory.ref(meta.HData))
             .app(factory.core(instance), false)
-            .app(DataFactoryBase.makeLambda(obValues, factory, meta))
+            .app(DataFactoryBase.makeLambda(obValues, factory, prelude))
             .app(makeLambda2())
             .app(makeLambda3())
             .build())));

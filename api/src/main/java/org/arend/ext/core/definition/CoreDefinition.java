@@ -5,6 +5,7 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.userData.UserDataHolder;
 import org.arend.ext.variable.Variable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 
@@ -29,4 +30,6 @@ public interface CoreDefinition extends Variable, UserDataHolder {
    * If the definition is recursive, then the result will be a singleton set consisting of the given definition.
    */
   @NotNull Set<? extends CoreDefinition> getRecursiveDefinitions();
+
+  @Nullable CoreCoerceData getCoerceData();
 }

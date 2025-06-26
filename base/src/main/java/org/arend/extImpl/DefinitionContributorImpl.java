@@ -5,7 +5,7 @@ import org.arend.ext.concrete.definition.ConcreteDefinition;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.doc.*;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.DataModuleReferable;
 import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.LongUnresolvedReference;

@@ -28,6 +28,10 @@ public class DefaultMetaDefinition implements MetaDefinition {
     myDefinition = definition;
   }
 
+  public Concrete.MetaDefinition getConcrete() {
+    return myDefinition;
+  }
+
   @Override
   public boolean checkArguments(@NotNull List<? extends ConcreteArgument> arguments) {
     return checkArguments(arguments, null, null, null);

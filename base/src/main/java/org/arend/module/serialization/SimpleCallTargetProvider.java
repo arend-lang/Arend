@@ -3,7 +3,7 @@ package org.arend.module.serialization;
 import org.arend.core.definition.Definition;
 import org.arend.ext.module.LongName;
 import org.arend.ext.serialization.DeserializationException;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.*;
 
 import java.util.ArrayList;

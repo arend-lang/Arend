@@ -1,0 +1,22 @@
+\import Arith.Nat
+\import Function
+
+\func iterl {A : \Type} (f : A -> A) (n : Nat) (a : A) : A \elim n
+  | 0 => a
+  | suc n => iterl f n (f a)
+
+\func iterr {A : \Type} (f : A -> A) (n : Nat) (a : A) : A \elim n
+  | 0 => a
+  | suc n => f (iterr f n a)
+
+\func iterr-ind {A : \Type} {P : A -> \Type} {f : A -> A} {a0 : A} (p0 : P a0) (s : \Pi {a : A} -> P a -> P (f a)) (n : Nat) : P (iterr f n a0) \elim n
+  | 0 => p0
+  | suc n => s (iterr-ind p0 s n)
+
+\func iterr-index-ind {A : \Type} {P : Nat -> A -> \Type} {f : A -> A} {a0 : A} (p0 : P 0 a0) (s : \Pi {n : Nat} {a : A} -> P n a -> P (suc n) (f a)) (n : Nat) : P n (iterr f n a0) \elim n
+  | 0 => p0
+  | suc n => s (iterr-index-ind p0 s n)
+
+\lemma iterr_inj {A : \Set} (f : A -> A) (inj : isInj f) (a : A) (n m : Nat) (p : n NatOrder.< m) (q : iterr f n a = iterr f m a) : a = iterr f (suc (pred (m -' n))) a \elim n, m, p
+  | 0, suc m, NatOrder.zero<suc => q
+  | suc n, suc m, NatOrder.suc<suc p => iterr_inj f inj a n m p (inj q)

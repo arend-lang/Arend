@@ -8,7 +8,9 @@ import org.jetbrains.annotations.Nullable;
 
 public interface GlobalReferable extends Referable {
   enum Kind {
-    DATA, CLASS, FUNCTION, COCLAUSE_FUNCTION, INSTANCE,
+    DATA, FUNCTION, COCLAUSE_FUNCTION, INSTANCE,
+    CLASS { @Override public boolean isRecord() { return true; } },
+    RECORD { @Override public boolean isRecord() { return true; } },
     DEFINED_CONSTRUCTOR { @Override public boolean isConstructor() { return true; } },
     CONSTRUCTOR {
       @Override public boolean isTypecheckable() { return false; }
@@ -24,6 +26,10 @@ public interface GlobalReferable extends Referable {
     }
 
     public boolean isConstructor() {
+      return false;
+    }
+
+    public boolean isRecord() {
       return false;
     }
   }

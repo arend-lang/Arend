@@ -26,7 +26,12 @@ public final class NilList<T> implements PersistentList<T> {
   }
 
   @Override
-  public @NotNull PersistentList<T> remove(@Nullable T value) {
+  public @NotNull PersistentList<T> removeFirst(@Nullable T value) {
+    return this;
+  }
+
+  @Override
+  public @NotNull PersistentList<T> removeFirst(@NotNull Predicate<T> predicate) {
     return this;
   }
 

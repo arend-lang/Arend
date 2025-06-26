@@ -11,7 +11,7 @@ import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.ext.reference.Precedence;
 import org.arend.extImpl.definitionRenamer.CachingDefinitionRenamer;
 import org.arend.extImpl.definitionRenamer.ScopeDefinitionRenamer;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.*;
 import org.arend.naming.resolving.typing.TypingInfo;
@@ -26,13 +26,13 @@ import org.arend.term.concrete.Concrete;
 import org.arend.term.group.*;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.arend.term.prettyprint.ToAbstractVisitor;
+import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.instance.pool.GlobalInstancePool;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.typechecking.visitor.DesugarVisitor;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
-import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.*;
 
 import java.util.*;
@@ -152,7 +152,7 @@ public abstract class Repl {
     var scope = ScopeFactory.forGroup(group, moduleScopeProvider);
     myReplScope.addScope(scope);
     myReplScope.setCurrentLineScope(null);
-    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, errorReporter).resolveGroup(group, myScope, PersistentList.empty(), null);
+    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, errorReporter).resolveGroup(group, myScope, new ArendInstances(), null);
     if (checkErrors()) {
       myMergedScopes.remove(scope);
     } else {
@@ -275,7 +275,7 @@ public abstract class Repl {
     expr = DesugarVisitor.desugar(expr, errorReporter);
     if (checkErrors()) return;
     var typechecker = new CheckTypeVisitor(errorReporter, null, null);
-    var instancePool = new GlobalInstancePool(typechecking.getInstanceScopeProvider().getInstancesFor(myModuleReferable), typechecker);
+    var instancePool = new GlobalInstancePool(typechecking.getInstanceScopeProvider().getInstancesFor(myModuleReferable).getInstancesList(), typechecker);
     typechecker.setInstancePool(instancePool);
     var result = typechecker.finalCheckExpr(expr, expectedType);
     if (!checkErrors()) {
@@ -289,7 +289,7 @@ public abstract class Repl {
   public final @Nullable Concrete.Expression preprocessExpr(@NotNull String text) {
     var expr = parseExpr(text);
     if (expr == null || checkErrors()) return null;
-    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(myScope, new ArrayList<>(), TypingInfo.EMPTY, errorReporter, null), null), errorReporter);
+    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(myScope, new ArrayList<>(), TypingInfo.EMPTY, errorReporter, null, null), null), errorReporter);
     if (checkErrors()) return null;
     return expr;
   }

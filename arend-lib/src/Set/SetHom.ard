@@ -1,0 +1,4 @@
+\import Set
+
+\record SetHom (Dom Cod : BaseSet)
+  | \coerce func : Dom -> Cod

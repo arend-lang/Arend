@@ -1,6 +1,6 @@
 package org.arend.server;
 
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.abs.AbstractReferable;

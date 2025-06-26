@@ -29,7 +29,7 @@ public class CollectingOrderingListener implements OrderingListener {
       if (definitions.size() != 1) {
         throw new IllegalArgumentException();
       }
-      return new MyHeader(definitions.get(0));
+      return new MyHeader(definitions.getFirst());
     }
   }
 
@@ -49,19 +49,18 @@ public class CollectingOrderingListener implements OrderingListener {
       if (definitions.size() != 1) {
         throw new IllegalArgumentException();
       }
-      return new MyUnit(definitions.get(0), withLoops);
+      return new MyUnit(definitions.getFirst(), withLoops);
     }
   }
 
   private record MyDefinitions(List<? extends Concrete.ResolvableDefinition> definitions, CollectingOrderingListener.MyDefinitions.Kind kind) implements Element {
-    enum Kind { CYCLE, INSTANCE_CYCLE, PRE_BODIES, BODIES }
+    enum Kind { CYCLE, PRE_BODIES, BODIES }
 
     @SuppressWarnings("unchecked")
     @Override
     public void feedTo(OrderingListener listener) {
       switch (kind) {
-        case CYCLE -> listener.cycleFound((List<Concrete.ResolvableDefinition>) definitions, false);
-        case INSTANCE_CYCLE -> listener.cycleFound((List<Concrete.ResolvableDefinition>) definitions, true);
+        case CYCLE -> listener.cycleFound((List<Concrete.ResolvableDefinition>) definitions);
         case PRE_BODIES -> listener.preBodiesFound((List<Concrete.ResolvableDefinition>) definitions);
         case BODIES -> listener.bodiesFound((List<Concrete.ResolvableDefinition>) definitions);
       }
@@ -98,8 +97,8 @@ public class CollectingOrderingListener implements OrderingListener {
   }
 
   @Override
-  public void cycleFound(List<Concrete.ResolvableDefinition> definitions, boolean isInstance) {
-    myElements.add(new MyDefinitions(definitions, isInstance ? MyDefinitions.Kind.INSTANCE_CYCLE : MyDefinitions.Kind.CYCLE));
+  public void cycleFound(List<Concrete.ResolvableDefinition> definitions) {
+    myElements.add(new MyDefinitions(definitions, MyDefinitions.Kind.CYCLE));
   }
 
   @Override

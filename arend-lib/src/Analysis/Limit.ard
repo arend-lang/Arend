@@ -2,12 +2,14 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Logic.TFAE
 \import Meta
 \import Order.Biordered
 \import Order.Directed

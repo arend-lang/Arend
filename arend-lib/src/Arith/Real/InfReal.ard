@@ -3,6 +3,8 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Semiring
 \import Arith.Int
 \import Arith.Rat
 \import Arith.Real.LowerReal
@@ -68,11 +70,11 @@
       | inr r<=q => absurd $ LU-disjoint Lq (U_<= Ur r<=q)
     }
 } \where {
-    \use \coerce fromRat (x : Rat) : InfReal \cowith
-      | LowerReal => LowerReal.fromRat x
-      | ExtendedUpperReal => ExtendedUpperReal.fromRat x
-      | LU-disjoint q<x x<q => <-irreflexive (q<x <∘ x<q)
-      | LU-focus-bound B {eps} eps>0 => byRight (x - eps * finv 2, linarith, linarith)
+  \use \coerce fromRat (x : Rat) : InfReal \cowith
+    | LowerReal => LowerReal.fromRat x
+    | ExtendedUpperReal => ExtendedUpperReal.fromRat x
+    | LU-disjoint q<x x<q => <-irreflexive (q<x <∘ x<q)
+    | LU-focus-bound B {eps} eps>0 => byRight (x - eps * finv 2, linarith, linarith)
 
   \lemma pow>id (n : Nat) : Monoid.pow (ratio 3 2) n > n \elim n
     | 0 => idp
@@ -258,7 +260,7 @@
     \lemma join_U {x y : InfReal} {a : Rat} : InfReal.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
       => rewrite (\peval join x y, \peval ExtendedUpperRealAbMonoid.join x y) <->refl
 
-    \lemma zro<ide : 0 < 1
+    \lemma zro<ide : InfReal.fromRat 0 < InfReal.fromRat 1
       => inP (ratio 1 2, idp, idp)
 
     \lemma <_L {a : Rat} {x : InfReal} : (a : InfReal) < x <-> x.L a

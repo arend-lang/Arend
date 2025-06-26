@@ -2,8 +2,8 @@
 \import Data.Maybe
 \import Logic
 \import Logic.Meta
+\import Logic.Rewriting.TRS.Utils.FinFunctions
 \import Paths
-\import Data.Fin
 \import Logic.Rewriting.TRS.HRS
 
 \meta impossible-lambda => \lam e => contradiction

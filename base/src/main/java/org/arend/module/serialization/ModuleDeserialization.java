@@ -9,7 +9,7 @@ import org.arend.ext.reference.Precedence;
 import org.arend.ext.serialization.DeserializationException;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.reference.*;
 import org.arend.naming.scope.EmptyScope;
@@ -211,7 +211,7 @@ public class ModuleDeserialization {
     DefinitionProtos.Definition.DefinitionDataCase kind = defProto.getDefinitionDataCase();
     switch (kind) {
       case CLASS -> {
-        return GlobalReferable.Kind.CLASS;
+        return defProto.getClass_().getIsRecord() ? GlobalReferable.Kind.RECORD : GlobalReferable.Kind.CLASS;
       }
       case DATA -> {
         return GlobalReferable.Kind.DATA;

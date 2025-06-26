@@ -8,8 +8,8 @@ import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.util.Pair;
-import org.arend.module.FullName;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.FullName;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.module.scopeprovider.SimpleModuleScopeProvider;
 import org.arend.naming.reference.*;
@@ -34,10 +34,10 @@ import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.typechecking.ArendExtensionProvider;
+import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.dependency.DependencyCollector;
 import org.arend.typechecking.provider.SimpleConcreteProvider;
-import org.arend.util.list.PersistentList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -87,21 +87,19 @@ public class ArendServerImpl implements ArendServer {
 
   private final ArendExtensionProvider myExtensionProvider = new ArendExtensionProvider() {
     @Override
-    public @Nullable ArendExtension getArendExtension(TCDefReferable ref) {
-      ModuleLocation module = ref.getLocation();
-      if (module == null) return null;
-      ArendLibraryImpl library = myLibraryService.getLibrary(module.getLibraryName());
+    public @Nullable ArendExtension getArendExtension(@NotNull String libraryName) {
+      ArendLibraryImpl library = myLibraryService.getLibrary(libraryName);
       return library == null ? null : library.getExtension();
     }
   };
 
   private final InstanceScopeProvider myInstanceScopeProvider = referable -> {
     FullName fullName = referable.getRefFullName();
-    if (fullName.module == null) return PersistentList.empty();
+    if (fullName.module == null) return new ArendInstances();
     GroupData groupData = myGroups.get(fullName.module);
-    if (groupData == null) return PersistentList.empty();
+    if (groupData == null) return new ArendInstances();
     DefinitionData defData = groupData.getDefinitionData(fullName.longName);
-    return defData == null ? PersistentList.empty() : defData.instances();
+    return defData == null ? new ArendInstances() : defData.instances();
   };
 
   public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging) {
@@ -517,7 +515,8 @@ public class ArendServerImpl implements ArendServer {
       GlobalTypingInfo typingInfo = new GlobalTypingInfo(myTypingInfo);
       Scope scope = getParentGroupScope(module, group);
       new TypingInfoVisitor(typingInfo).processGroup(group, scope);
-      new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(group)), typingInfo, DummyErrorReporter.INSTANCE, new ResolverListener() {
+      ArendExtension extension = myExtensionProvider.getArendExtension(module.getLibraryName());
+      new DefinitionResolveNameVisitor(new SimpleConcreteProvider(updateDefinitions(group)), typingInfo, DummyErrorReporter.INSTANCE, extension == null ? null : extension.getLiteralTypechecker(), new ResolverListener() {
         @Override
         public void resolving(AbstractReference abstractReference, Scope scope, Scope.ScopeContext context, boolean finished) {
           if (reference.equals(abstractReference)) {
@@ -548,7 +547,7 @@ public class ArendServerImpl implements ArendServer {
             }
           }
         }
-      }).resolveGroup(group, scope, PersistentList.empty(), null);
+      }).resolveGroup(group, scope, new ArendInstances(), null);
     } catch (CompletionException ignored) {
     }
 
@@ -590,7 +589,7 @@ public class ArendServerImpl implements ArendServer {
       return null;
     }
 
-    if (referable.getKind() == GlobalReferable.Kind.CLASS) {
+    if (referable.getKind().isRecord()) {
       DynamicScopeProvider dynamicScopeProvider = myTypingInfo.getDynamicScopeProvider(referable);
       return dynamicScopeProvider == null ? scope : new MergeScope(new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC), scope);
     }

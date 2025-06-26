@@ -5,7 +5,7 @@
 \import Function (isInj, isSurj)
 \import Paths
 \import Paths.Meta
-\import Set.Category
+\import Set.SetHom
 
 \record EquivariantMap (G : Group) \extends SetHom {
   \override Dom : GroupAction G

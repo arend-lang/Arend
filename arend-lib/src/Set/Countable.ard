@@ -1,5 +1,6 @@
 \import Algebra.Group
 \import Algebra.Monoid
+\import Algebra.Ring.Factor
 \import Algebra.Ring.Ideal
 \import Arith.Nat
 \import Data.Array
@@ -42,7 +43,7 @@
 
     \lemma aux {k n m : Nat} (p : n + m < k) : f (ret (n,m)) = (n,m) \elim k, n, m
       | suc k, 0, 0 => idp
-      | suc k, suc n, 0 => pmap f aux2 *> rewrite (aux {k} {0} $ NatSemiring.unsuc< p) idp
+      | suc k, suc n, 0 => pmap f aux2 *> rewrite (aux {k} {0} $ NatOrder.unsuc< p) idp
       | suc k, n, suc m => rewrite (aux {suc k} {suc n} p) idp
   }
 

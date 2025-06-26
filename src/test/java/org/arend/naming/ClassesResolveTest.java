@@ -216,7 +216,7 @@ public class ClassesResolveTest extends TypeCheckingTestCase {
 
   @Test
   public void instanceRecord() {
-    typeCheckModule("""
+    resolveNamesModule("""
       \\record X (A : \\Type0) {
         | B : A -> \\Type0
       }

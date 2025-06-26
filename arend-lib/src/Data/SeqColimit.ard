@@ -1,6 +1,6 @@
 \import Equiv
 \import Equiv.Univalence
-\import HLevel
+\import Logic.Unique
 \import Homotopy.Fibration
 \import Logic
 \import Paths

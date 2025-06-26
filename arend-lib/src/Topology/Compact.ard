@@ -1,3 +1,4 @@
+\import Algebra.Pointed
 \import Arith.Nat
 \import Arith.Real
 \import Data.Or
@@ -6,6 +7,7 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Logic.TFAE
 \import Meta
 \import Order.Lattice
 \import Order.PartialOrder
@@ -14,6 +16,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Set.Fin.Instances
 \import Set.Subset
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete

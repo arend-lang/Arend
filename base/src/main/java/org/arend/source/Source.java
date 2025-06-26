@@ -1,7 +1,7 @@
 package org.arend.source;
 
 import org.arend.ext.error.ErrorReporter;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.server.ArendServer;
 import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;

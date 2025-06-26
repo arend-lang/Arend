@@ -15,6 +15,7 @@ import org.arend.ext.serialization.DeserializationException;
 import org.arend.ext.serialization.SerializableKey;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.lib.StdExtension;
+import org.arend.lib.util.Names;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
@@ -82,31 +83,23 @@ public abstract class FieldKey extends SerializableKey<FieldKey.Data> implements
   protected abstract boolean checkField(CoreClassField field);
 
   protected boolean isBaseSetCall(CoreExpression type, CoreClassField field) {
-    if (!(type instanceof CoreFieldCallExpression)) {
-      return false;
-    }
-
-    CoreFieldCallExpression fieldCall = (CoreFieldCallExpression) type;
-    return fieldCall.getDefinition() == ext.carrier && fieldCall.getArgument() instanceof CoreReferenceExpression && ((CoreReferenceExpression) fieldCall.getArgument()).getBinding() == field.getThisParameter();
+    return type instanceof CoreFieldCallExpression fieldCall && fieldCall.getDefinition().getRef().checkName(Names.CARRIER) && fieldCall.getArgument() instanceof CoreReferenceExpression refExpr && refExpr.getBinding() == field.getThisParameter();
   }
 
   protected CoreClassField getFieldApplied(CoreExpression type, CoreBinding var1, CoreBinding var2, CoreClassField field) {
-    if (!(type instanceof CoreAppExpression)) {
+    if (!(type instanceof CoreAppExpression app2)) {
       return null;
     }
 
-    CoreAppExpression app2 = (CoreAppExpression) type;
-    if (!(app2.getFunction() instanceof CoreAppExpression && app2.getArgument() instanceof CoreReferenceExpression && ((CoreReferenceExpression) app2.getArgument()).getBinding() == var2)) {
+    if (!(app2.getFunction() instanceof CoreAppExpression app1 && app2.getArgument() instanceof CoreReferenceExpression refExpr2 && refExpr2.getBinding() == var2)) {
       return null;
     }
 
-    CoreAppExpression app1 = (CoreAppExpression) app2.getFunction();
-    if (!(app1.getFunction() instanceof CoreFieldCallExpression && app1.getArgument() instanceof CoreReferenceExpression && ((CoreReferenceExpression) app1.getArgument()).getBinding() == var1)) {
+    if (!(app1.getFunction() instanceof CoreFieldCallExpression fieldCall && app1.getArgument() instanceof CoreReferenceExpression refExpr1 && refExpr1.getBinding() == var1)) {
       return null;
     }
 
-    CoreFieldCallExpression fieldCall = (CoreFieldCallExpression) app1.getFunction();
-    if (!(fieldCall.getArgument() instanceof CoreReferenceExpression && ((CoreReferenceExpression) fieldCall.getArgument()).getBinding() == field.getThisParameter())) {
+    if (!(fieldCall.getArgument() instanceof CoreReferenceExpression refExpr && refExpr.getBinding() == field.getThisParameter())) {
       return null;
     }
 
@@ -115,12 +108,11 @@ public abstract class FieldKey extends SerializableKey<FieldKey.Data> implements
 
   @Override
   public void typechecked(@NotNull CoreDefinition definition) {
-    if (!(definition instanceof CoreClassDefinition)) {
+    if (!(definition instanceof CoreClassDefinition classDef)) {
       return;
     }
 
-    CoreClassDefinition classDef = (CoreClassDefinition) definition;
-    if (ext.BaseSet == null || !classDef.isSubClassOf(ext.BaseSet)) {
+    if (!Names.isSetHierarchy(classDef)) {
       return;
     }
 

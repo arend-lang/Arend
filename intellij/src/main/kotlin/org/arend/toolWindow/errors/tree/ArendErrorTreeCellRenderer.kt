@@ -3,7 +3,7 @@ package org.arend.toolWindow.errors.tree
 import com.intellij.openapi.util.Iconable
 import com.intellij.ui.render.LabelBasedRenderer
 import org.arend.ArendIcons
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.naming.reference.GlobalReferable
 import java.awt.Component
 import javax.swing.JTree

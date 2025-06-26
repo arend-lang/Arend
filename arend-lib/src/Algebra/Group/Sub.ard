@@ -12,7 +12,9 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
-\import Set.Category
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.SetHom
 \open Group \hiding (Dec)
 
 \class SubGroup \extends SubMonoid {
@@ -110,8 +112,8 @@
     | ide => in~ 1
     | * (x y : Cosets) : Cosets \with {
       | in~ g, in~ g' => in~ (g Group.* g')
-      | in~ g, ~-equiv x y r =>  ~-pequiv $ rewriteEq (inverse_*, inverse-left {S} {g}, ide-left) r
-      | ~-equiv x y r, in~ g =>  ~-pequiv $ rewriteEq inverse_* $ transport contains equation (isNormal' g r)
+      | in~ g, ~-equiv x y r => ~-pequiv $ rewriteEq (inverse_*, inverse-left {S} {g}, ide-left) r
+      | ~-equiv x y r, in~ g => ~-pequiv $ rewriteEq inverse_* $ transport contains equation (isNormal' g r)
     }
     | ide-left {x} => cases x \with {
       | in~ a => pmap in~ ide-left
@@ -175,5 +177,5 @@
 
   \func IFinGroup : FinGroup \cowith
     | Group => IGroup
-    | FinSet => DecSubSet.isFin S \this
+    | FinSet => SigmaFin.DecSubSet-isFin S \this
 }

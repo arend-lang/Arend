@@ -1,0 +1,48 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Algebra.Ring
+\import Arith.Int
+\import Meta
+\import Paths
+
+\lemma commRingTest {R : CRing} (a b c : R) : a * b - b * (a + c) + c * b * a = b * c * (a - 1)
+  => equation.cRing
+
+\lemma commRingTest2 {R : CRing} (a b : R) : (a + b) * (a - b) = a * a - b * b
+  => equation.cRing
+
+\lemma commRingArgTest {R : CRing} (a b : R) (p : 2 * (a * b) = 0) : (a + b) * (a + b) = a * a + b * b
+  => equation.cRing p
+
+\lemma commRingForwardTest {R : CRing} (a b : R) (p : (a + b) * (a + b) = a * a + b * b) : 2 * (a * b) = 0
+  => equation.cRing in p
+
+\lemma commRingProofTest1 {R : CRing} (a b : R) (p : a * b = 0) : (a + b) * (a + b) = a * a + b * b
+  => equation.cRing {p}
+
+\lemma commRingProofTest2 {R : CRing} (a b : R) (p : b = negative b) : (a + b) * (a + b) = a * a + b * b
+  => equation.cRing {R.toZero p}
+
+\lemma commRingProofTest3 {R : CRing} (a b c : R) (p : a = b) : a * c = c * b
+  => equation.cRing {p}
+
+\lemma commRingProofTest4 {R : CRing} (a b c : R) (p : a = b) (q : b * c = 0) : a * c = 0
+  => equation.cRing {p,q}
+
+\lemma commRingProofTest5 {R : CRing} (q : 1 = {R} 0) : 2 = {R} 0
+  => equation.cRing {q}
+
+\lemma commRingProofTest6 {R : CRing} (a b : R) (p : a = b) : a * a + b * b = a * b + a * b
+  => equation.cRing {p, R.toZero p}
+
+\lemma intTest1 {n m : Nat} : pos (n Nat.+ m) = pos (m Nat.+ n)
+  => equation.cRing
+
+\lemma intTest2 {n m : Nat} : pos n + (m Nat.- n) = pos m
+  => equation.cRing
+
+\lemma intTest3 {n : Nat} (p : pos n = 0) : 0 = neg n
+  => equation.cRing p

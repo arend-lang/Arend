@@ -1,5 +1,5 @@
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Data.List
 \import Function
 \import Paths.Meta

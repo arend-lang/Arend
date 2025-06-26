@@ -21,20 +21,36 @@ import org.arend.ext.reference.ExpressionResolver;
 import org.arend.ext.reference.MetaRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.util.Pair;
+import org.jetbrains.annotations.Nullable;
 
 import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Function;
 
 public class Utils {
-  public static int getNumber(ConcreteExpression expression, ErrorReporter errorReporter) {
-    if (expression instanceof ConcreteNumberExpression) {
-      return ((ConcreteNumberExpression) expression).getNumber().intValue();
-    } else {
-      if (errorReporter != null) {
-        errorReporter.report(new TypecheckingError("Expected a number", expression));
+  public static Integer getNumber(ConcreteExpression expression, ErrorReporter errorReporter, boolean nonNegative) {
+    try {
+      if (!(expression instanceof ConcreteNumberExpression)) {
+        if (errorReporter != null) {
+          errorReporter.report(new TypecheckingError("Expected a number", expression));
+        }
+        return null;
       }
-      return -1;
+
+      int value = ((ConcreteNumberExpression) expression).getNumber().intValueExact();
+      if (nonNegative && value < 0) {
+        if (errorReporter != null) {
+          errorReporter.report(new TypecheckingError("Expected a non-negative number", expression));
+        }
+        return null;
+      }
+
+      return value;
+    } catch (ArithmeticException ignored) {
+      if (errorReporter != null) {
+        errorReporter.report(new TypecheckingError("Expected a small number", expression));
+      }
+      return null;
     }
   }
 
@@ -168,8 +184,8 @@ public class Utils {
     return args;
   }
 
-  public static TypedExpression typecheckWithAdditionalArguments(ConcreteExpression expr, ExpressionTypechecker typechecker, ConcreteFactory factory, int expectedParameters, boolean addGoals) {
-    factory = factory.withData(expr);
+  public static TypedExpression typecheckWithAdditionalArguments(ConcreteExpression expr, ExpressionTypechecker typechecker, int expectedParameters, boolean addGoals) {
+    ConcreteFactory factory = typechecker.getFactory().withData(expr);
     List<ConcreteExpression> args = addArguments(expr, typechecker, factory.withData(expr), expectedParameters, addGoals);
     TypedExpression result = typechecker.typecheck(args.isEmpty() ? expr : factory.app(expr, true, args), null);
     if (result == null) {
@@ -484,5 +500,36 @@ public class Utils {
   public static CoreExpression getClassifyingExpression(CoreClassCallExpression classCall, TypedExpression thisExpr) {
     CoreClassField field = classCall.getDefinition().getClassifyingField();
     return field == null ? null : classCall.getImplementation(field, thisExpr);
+  }
+
+  public static ConcreteExpression makeArray(List<ConcreteExpression> expressions, ConcreteFactory factory) {
+    ConcreteExpression result = factory.ref(factory.getPrelude().getEmptyArrayRef());
+    for (int i = expressions.size() - 1; i >= 0; i--) {
+      result = factory.app(factory.ref(factory.getPrelude().getArrayConsRef()), true, expressions.get(i), result);
+    }
+    return result;
+  }
+
+  private static @Nullable Set<Integer> getPositions(ConcreteExpression expression) {
+    Set<Integer> result = new HashSet<>();
+    for (ConcreteExpression arg : Utils.getArgumentList(expression)) {
+      Integer position = Utils.getNumber(arg, null, true);
+      if (position == null) return null;
+      result.add(position);
+    }
+    return result;
+  }
+
+  public static Pair<Set<Integer>, ConcreteExpression> getFirstNumbers(ConcreteExpression expression, ConcreteFactory factory) {
+    Set<Integer> positions;
+    if (!(expression instanceof ConcreteAppExpression appExpr && appExpr.getArguments().getFirst().isExplicit())) return null;
+    positions = getPositions(appExpr.getFunction());
+    if (positions == null) return null;
+
+    expression = appExpr.getArguments().getFirst().getExpression();
+    if (appExpr.getArguments().size() > 1) {
+      expression = factory.withData(expression).app(expression, appExpr.getArguments().subList(1, appExpr.getArguments().size()));
+    }
+    return new Pair<>(positions, expression);
   }
 }

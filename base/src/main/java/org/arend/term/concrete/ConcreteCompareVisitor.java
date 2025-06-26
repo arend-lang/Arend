@@ -69,11 +69,16 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
   public Boolean visitReference(Concrete.ReferenceExpression expr1, Concrete.Expression expr2) {
     if (!(expr2 instanceof Concrete.ReferenceExpression refExpr2 && (expr1 instanceof Concrete.FixityReferenceExpression) == (expr2 instanceof Concrete.FixityReferenceExpression))) return false;
     if (expr1 instanceof Concrete.FixityReferenceExpression fixity1 && fixity1.fixity != ((Concrete.FixityReferenceExpression) expr2).fixity) return false;
-    Referable ref1 = mySubstitution.get(expr1.getReferent());
-    if (ref1 == null) {
-      ref1 = expr1.getReferent();
+    if ((expr1.getReferent() instanceof LocalReferable) != (refExpr2.getReferent() instanceof LocalReferable)) return false;
+    if (expr1.getReferent() instanceof LocalReferable) {
+      Referable ref1 = mySubstitution.get(expr1.getReferent());
+      // If ref1 == null, it's probably because of some meta resolver.
+      // We should probably forbid such unbound references in meta resolvers.
+      if (ref1 != null && !ref1.equals(refExpr2.getReferent())) return false;
+    } else {
+      if (!expr1.getReferent().equals(refExpr2.getReferent())) return false;
     }
-    return ref1.equals(refExpr2.getReferent()) && compareLevels(expr1.getPLevels(), refExpr2.getPLevels()) && compareLevels(expr1.getHLevels(), refExpr2.getHLevels());
+    return compareLevels(expr1.getPLevels(), refExpr2.getPLevels()) && compareLevels(expr1.getHLevels(), refExpr2.getHLevels());
   }
 
   @Override
@@ -513,12 +518,12 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
   @Override
   public Boolean visitNumericLiteral(Concrete.NumericLiteral expr1, Concrete.Expression expr2) {
-    return expr2 instanceof Concrete.NumericLiteral && expr1.getNumber().equals(((Concrete.NumericLiteral) expr2).getNumber());
+    return expr2 instanceof Concrete.NumericLiteral literal2 && expr1.getNumber().equals(literal2.getNumber()) && compare(expr1.getResolvedExpression(), literal2.getResolvedExpression());
   }
 
   @Override
   public Boolean visitStringLiteral(Concrete.StringLiteral expr1, Concrete.Expression expr2) {
-    return expr2 instanceof Concrete.StringLiteral && expr1.getUnescapedString().equals(((Concrete.StringLiteral) expr2).getUnescapedString());
+    return expr2 instanceof Concrete.StringLiteral literal2 && expr1.getUnescapedString().equals(literal2.getUnescapedString()) && compare(expr1.getResolvedExpression(), literal2.getResolvedExpression());
   }
 
   @Override

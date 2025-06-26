@@ -1,0 +1,12 @@
+\import Arith.Nat
+\import Order.LinearOrder
+
+\instance FinOrder (n : Nat) : LinearOrder.Dec (Fin n)
+  | < i j => i NatSemiring.< j
+  | <-irreflexive => NatSemiring.<-irreflexive
+  | <-transitive => NatSemiring.<-transitive
+  | trichotomy i j => \case NatSemiring.trichotomy i j \with {
+    | less r => less r
+    | equals r => equals (fin_nat-inj r)
+    | greater r => greater r
+  }

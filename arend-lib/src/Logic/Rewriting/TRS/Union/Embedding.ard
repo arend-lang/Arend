@@ -1,12 +1,13 @@
+\import Arith.Fin.Order
 \import Data.List \hiding (Sort)
 \import Data.Maybe
 \import Logic
 \import Logic.Meta
+\import Logic.Rewriting.TRS.Utils.FinFunctions
 \import Paths
 \import Paths.Meta
 \import Logic.Rewriting.ARS.Relation
 \import Set
-\import Data.Fin
 \import Data.SubList
 \import Logic.Rewriting.TRS.HRS
 \import Logic.Rewriting.TRS.Linearity
@@ -88,7 +89,7 @@
                  (rewriteI r-coherence idp))) color-eq))
     | func f-A arguments-A, func f-B arguments-B, rewrite-with-parameter-f idp index rd eq =>
       \let | (global-color, color, bpr) => embed-rewrite-relation (arguments-A index) (arguments-B index) rd
-           | (someColor, mediator, inrd, cwr) => collect-reductions-together-raw f-A arguments-A arguments-B (\lam i => \case (fin-eq-dec i index) \with {
+           | (someColor, mediator, inrd, cwr) => collect-reductions-together-raw f-A arguments-A arguments-B (\lam i => \case decideEq i index \with {
              | yes e => rewrite e (color, bpr)
              | no n => (nothing, equal-trees (eq i n))
            })

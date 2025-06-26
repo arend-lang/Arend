@@ -2,6 +2,8 @@
 \import Algebra.Pointed
 \import Arith.Nat
 \import Data.Array
+\import Data.Array.EPerm
+\import Data.Array.Perm
 \import Data.Fin (fsuc, fsuc/=)
 \import Data.Or
 \import Equiv
@@ -9,7 +11,7 @@
 \import Equiv.Univalence
 \import Function
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Logic.Classical
 \import Logic.Meta
@@ -20,6 +22,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Fin
+\import Set.Fin.Instances
 \import Set.Fin.Pigeonhole
 
 \class Semigroup \extends BaseSet {
@@ -47,15 +50,28 @@
     | 0 => idp
     | suc m => pow_+ *> pmap (`* _) pow_*
 
+  \lemma pow-comm1 {a b : E} (p : a * b = b * a) {n : Nat} : pow a n * b = b * pow a n \elim n
+    | 0 => ide-left *> inv ide-right
+    | suc n => equation.monoid {p, pow-comm1 p}
+
+  \lemma pow-comm2 {a b : E} (p : a * b = b * a) {n m : Nat} : pow a n * pow b m = pow b m * pow a n
+    => pow-comm1 $ inv $ pow-comm1 (inv p)
+
+  \lemma pow-comm {a b : E} (p : a * b = b * a) {n : Nat} : pow (a * b) n = pow a n * pow b n \elim n
+    | 0 => inv ide-left
+    | suc n => equation.monoid {pow-comm p, pow-comm1 (inv p)}
+
   \lemma pow_ide {n : Nat} : pow ide n = ide \elim n
     | 0 => idp
     | suc n => ide-right *> pow_ide
 
-  \lemma pow-left {a : E} {n : Nat} : a * pow a n = pow a n * a \elim n
-    | 0 => ide-right *> inv ide-left
-    | suc n => inv *-assoc *> pmap (`* a) pow-left
+  \lemma pow-left {a : E} {n : Nat} : a * pow a n = pow a n * a
+    => inv (pow-comm1 idp)
 
   \func BigProd (l : Array E) => Big (*) ide l
+
+  \lemma BigProd-ext {n : Nat} {l l' : Array E n} (p : \Pi (i : Fin n) -> l i = l' i) : BigProd l = BigProd l'
+    => pmap BigProd (arrayExt p)
 
   \lemma BigProd_ide {l : Array E} (p : \Pi (j : Fin l.len) -> l j = ide) : BigProd l = ide
     => AddMonoid.BigSum_zro {AddMonoid.fromMonoid \this} p
@@ -328,7 +344,7 @@
   }
 
 \func associates-sym {M : Monoid} {x y : M} (a : associates x y) : associates y x
-  => (Monoid.Inv.reverse {a.1}, inv $ pmap (_ *) a.2 *> inv *-assoc *> pmap (`* y) (Monoid.Inv.inv-left {a.1}) *> ide-left)
+  => (Monoid.Inv.reverse {a.1}, inv $ pmap (_ *) a.2 *> inv *-assoc *> pmap (`* y) a.1.inv-left *> ide-left)
 
 \class AddMonoid \extends AddPointed {
   | \infixl 6 + : E -> E -> E
@@ -373,9 +389,9 @@
     | a :: l, 0 => pmap (a +) (BigSum_zro \lam j => p (suc j) (\case __)) *> zro-right
     | a :: l, suc i => pmap (a +) (BigSum-unique i \lam j q => p (suc j) (fsuc/= q)) *> pmap (`+ l i) (p 0 (\case __)) *> zro-left
 
-  \lemma BigSum-unique2 {l : Array E} {i j : Fin l.len} (i<j : i NatSemiring.< j) (p : \Pi (k : Fin l.len) -> k /= i -> k /= j -> l k = 0) : BigSum l = l i + l j \elim l, i, j, i<j
+  \lemma BigSum-unique2 {l : Array E} {i j : Fin l.len} (i<j : i NatOrder.< j) (p : \Pi (k : Fin l.len) -> k /= i -> k /= j -> l k = 0) : BigSum l = l i + l j \elim l, i, j, i<j
     | a :: l, 0, suc j, _ => pmap (a +) $ BigSum-unique j \lam k j/=k => p (suc k) (\case __) $ fsuc/= \lam q => j/=k (inv q)
-    | a :: l, suc i, suc j, NatSemiring.suc<suc i<j => pmap (`+ _) (p 0 (\case __) (\case __)) *> zro-left *> BigSum-unique2 i<j (\lam k k/=i k/=j => p (suc k) (fsuc/= k/=i) (fsuc/= k/=j))
+    | a :: l, suc i, suc j, NatOrder.suc<suc i<j => pmap (`+ _) (p 0 (\case __) (\case __)) *> zro-left *> BigSum-unique2 i<j (\lam k k/=i k/=j => p (suc k) (fsuc/= k/=i) (fsuc/= k/=j))
 
   \lemma BigSum-pred {P : E -> \Prop} (P0 : P 0) (P+ : \Pi {x y : E} -> P x -> P y -> P (x + y)) {l : Array E} (p : \Pi (j : Fin l.len) -> P (l j)) : P (BigSum l) \elim l
     | nil => P0
@@ -389,6 +405,17 @@
     | nil, l => inv $ BigSum_zro \lam j => q2 j zero<=_
     | a :: l, nil => absurd linarith
     | a :: l, a' :: l' => pmap2 (+) (q1 0) $ BigSum-subset (suc<=suc.conv p) (\lam j => q1 (suc j)) (\lam j p => q2 (suc j) (suc<=suc p))
+
+  \lemma fit_BigSum {n : Nat} {l : Array E} (p : \Pi (j : Fin l.len) -> n <= j -> l j = 0) : BigSum (fit 0 {n} l) = BigSum l \elim n, l
+    | 0, l => inv $ BigSum_zro \lam j => p j zero<=_
+    | suc n, nil => BigSum_replicate0 {_} {suc n}
+    | suc n, a :: l => pmap (a +) $ fit_BigSum \lam j n<=j => p (suc j) (suc<=suc n<=j)
+
+  \lemma fit-transpose {n m : Nat} (l : Array (Array E m) n) : BigSum (\lam j => fit zro (l j) j) = BigSum (\lam k => fit zro (l __ k) k) \elim n, m, l
+    | 0, 0, nil => idp
+    | 0, suc m, nil => inv $ BigSum_replicate0 {_} {suc m}
+    | suc n, 0, c :: l => BigSum_replicate0 {_} {suc n}
+    | suc n, suc m, c :: l => pmap (c 0 +) $ fit-transpose \lam i => \lam j => l i (suc j)
 
   \protected \func op : AddMonoid E \cowith
     | zro => 0
@@ -411,12 +438,18 @@
   \lemma divInv {x y : E} (cancel : \Pi {a b : E} -> x * a = x * b -> a = b) (xy|x : LDiv (x * y) x) : Inv y
     => Inv.lmake xy|x.inv (*-comm *> cancel (inv *-assoc *> xy|x.inv-right *> inv ide-right))
 
-  \lemma pow_*-comm {a b : E} {n : Nat} : pow (a * b) n = pow a n * pow b n \elim n
-    | 0 => inv ide-left
-    | suc n => rewrite pow_*-comm equation
+  \lemma pow_*-comm {a b : E} {n : Nat} : pow (a * b) n = pow a n * pow b n
+    => pow-comm *-comm
 
   \func DivChain : \Prop
     => \Pi (a : Nat -> E) -> (\Pi (i : Nat) -> TruncP (LDiv (a (suc i)) (a i))) -> ∃ (j : Nat) (LDiv (a j) (a (suc j)))
+
+  \lemma BigProd_* {n : Nat} {l l' : Array E n} : BigProd (\lam i => l i * l' i) = BigProd l * BigProd l'
+    => AbMonoid.BigSum_+ {AbMonoid.fromCMonoid \this}
+
+  \lemma BigProd_pow {k : Nat} {l : Array E} : BigProd (\lam i => pow (l i) k) = pow (BigProd l) k \elim k
+    | 0 => BigProd_replicate1
+    | suc k => BigProd_* {_} {_} {\lam i => pow (l i) k} *> pmap (`* _) BigProd_pow
 
   \lemma BigProd_EPerm {l l' : Array E} (e : EPerm l l') : BigProd l = BigProd l'
     => AbMonoid.BigSum_EPerm {AbMonoid.fromCMonoid \this} e
@@ -448,7 +481,7 @@
 
   \lemma BigSum_+ {n : Nat} {l l' : Array E n} : BigSum (\lam i => l i + l' i) = BigSum l + BigSum l' \elim n, l, l'
     | 0, _, _ => inv zro-left
-    | suc n, :: a l, :: a' l' => unfold BigSum (rewrite (BigSum_+ {_} {n} {l}) equation)
+    | suc n, :: a l, :: a' l' => unfold BigSum $ rewrite (BigSum_+ {_} {n} {l}) equation.abMonoid
 
   \lemma BigSum-transpose {m n : Nat} (f : Fin m -> Fin n -> E)
     : BigSum (\lam i => BigSum (f i)) = BigSum (\lam j => BigSum (f __ j)) \elim n
@@ -468,7 +501,7 @@
   \lemma BigSum_EPerm {l l' : Array E} (e : EPerm l l') : BigSum l = BigSum l' \elim l, l', e
     | nil, nil, eperm-nil => idp
     | x :: l1, y :: l2, eperm-:: p e => pmap2 (+) p (BigSum_EPerm e)
-    | x :: (x' :: l1), y :: (y' :: l2), eperm-swap p q r => equation {using (pmap BigSum r)}
+    | x :: (x' :: l1), y :: (y' :: l2), eperm-swap idp idp r => equation.abMonoid {pmap BigSum r}
     | l, l', eperm-trans e1 e2 => BigSum_EPerm e1 *> BigSum_EPerm e2
 
   \lemma BigSum_Perm {n : Nat} {l l' : Array E n} (p : Perm l l') : BigSum l = BigSum l'
@@ -484,11 +517,11 @@
             => BigSum_Perm $ transport (Perm _) (arrayExt \lam j => pmap x $ e.f_ret _) $ Perm.equiv_perm $ transEquiv e' (symQEquiv e)
     }
 
-  \lemma FinSum_char {A : FinSet} (x : A -> E) : ∃ (e : Equiv {Fin A.finCard} {A}) (FinSum x = BigSum (\lam j => x (e j))) =>
-    TruncP.map FinSum.aux.2 \lam t => (t.1, (\peval FinSum x) *> inv t.2)
+  \lemma FinSum_char {A : FinSet} (x : A -> E) : ∃ (e : Equiv {Fin A.finCard} {A}) (FinSum {_} {A} x = BigSum (\lam j => x (e j)))
+    => TruncP.map FinSum.aux.2 \lam t => (t.1, (\peval FinSum {_} {A} x) *> inv t.2)
 
-  \lemma FinSum_char2 {A : FinSet} (x : A -> E) (e : Equiv {Fin A.finCard} {A}) : FinSum x = BigSum (\lam j => x (e j)) =>
-    \case FinSum_char x \with {
+  \lemma FinSum_char2 {A : FinSet} (x : A -> E) (e : Equiv {Fin A.finCard} {A}) : FinSum x = BigSum (\lam j => x (e j))
+    => \case FinSum_char x \with {
       | inP p => p.2 *> FinSum.aux.aux {_} {_} {x} p.1 e
     }
 

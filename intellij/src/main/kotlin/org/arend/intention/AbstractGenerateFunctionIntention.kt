@@ -27,7 +27,6 @@ import org.arend.extImpl.definitionRenamer.CachingDefinitionRenamer
 import org.arend.extImpl.definitionRenamer.ScopeDefinitionRenamer
 import org.arend.naming.reference.DataLocalReferable
 import org.arend.naming.reference.LocalReferable
-import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.MapReferableRenamer
 import org.arend.naming.renamer.ReferableRenamer
 import org.arend.naming.scope.Scope
@@ -41,9 +40,9 @@ import org.arend.server.ArendServerService
 import org.arend.term.concrete.Concrete
 import org.arend.term.prettyprint.MinimizedRepresentation
 import org.arend.term.prettyprint.ToAbstractVisitor
+import org.arend.typechecking.instance.ArendInstances
 import org.arend.util.*
 import org.arend.util.ParameterExplicitnessState.*
-import org.arend.util.list.PersistentList
 import java.util.*
 import java.util.function.Supplier
 
@@ -70,7 +69,7 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
         val bodyCore: Expression?,
         val additionalArguments: List<TypedSingleDependentLink> = emptyList()
     ) {
-        val instances: PersistentList<TCDefReferable>?
+        val instances: ArendInstances?
             get() {
                 val tcRef = (contextPsi.parentOfType<PsiLocatedReferable>() as? ReferableBase<*>)?.tcReferable ?: return null
                 return contextPsi.project.service<ArendServerService>().server.getResolvedDefinition(tcRef)?.instances

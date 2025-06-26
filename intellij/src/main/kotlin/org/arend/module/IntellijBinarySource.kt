@@ -1,11 +1,10 @@
 package org.arend.module
 
-import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.vfs.VirtualFile
+import org.arend.ext.module.ModuleLocation
 import org.arend.util.getRelativeFile
 import org.arend.source.StreamBinarySource
 import org.arend.util.FileUtils
-import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 

@@ -2,7 +2,7 @@ package org.arend.source;
 
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.jetbrains.annotations.NotNull;
 
 /**

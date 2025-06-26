@@ -29,7 +29,7 @@ import org.arend.ext.error.LocalError
 import org.arend.ext.error.MissingClausesError
 import org.arend.ext.reference.ArendRef
 import org.arend.ext.reference.DataContainer
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.psi.ext.ArendGoal
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.server.ArendServerService

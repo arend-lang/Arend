@@ -1,4 +1,5 @@
 \import Algebra.Group
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed (ide)
 \import Homotopy.Cube

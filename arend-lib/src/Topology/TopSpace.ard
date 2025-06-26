@@ -8,7 +8,7 @@
 \import Paths
 \import Paths.Meta
 \import Set
-\import Set.Category
+\import Set.SetHom
 \import Set.Filter
 \import Set.Subset
 \open Bounded(top)

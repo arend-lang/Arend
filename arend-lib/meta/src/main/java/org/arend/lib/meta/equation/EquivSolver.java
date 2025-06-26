@@ -72,12 +72,12 @@ public class EquivSolver implements EquationSolver {
 
   @Override
   public TypedExpression getTrivialResult(TypedExpression expression) {
-    return typechecker.typecheck(factory.app(factory.ref(meta.idEquiv.getRef()), false, Collections.singletonList(factory.core(null, expression))), null);
+    return typechecker.typecheck(factory.app(factory.ref(meta.idEquiv), false, Collections.singletonList(factory.core(null, expression))), null);
   }
 
   @Override
   public ConcreteExpression combineResults(ConcreteExpression expr1, ConcreteExpression expr2) {
-    return factory.app(factory.ref(meta.transEquiv.getRef()), true, Arrays.asList(expr1, expr2));
+    return factory.app(factory.ref(meta.transEquiv), true, Arrays.asList(expr1, expr2));
   }
 
   @Override

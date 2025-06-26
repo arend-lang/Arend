@@ -246,11 +246,13 @@ public class BaseConcreteExpressionVisitor<P> implements ConcreteExpressionVisit
 
   @Override
   public Concrete.Expression visitNumericLiteral(Concrete.NumericLiteral expr, P params) {
+    if (expr.getResolvedExpression() != null) expr.setResolvedExpression(expr.getResolvedExpression().accept(this, params));
     return expr;
   }
 
   @Override
   public Concrete.Expression visitStringLiteral(Concrete.StringLiteral expr, P params) {
+    if (expr.getResolvedExpression() != null) expr.setResolvedExpression(expr.getResolvedExpression().accept(this, params));
     return expr;
   }
 

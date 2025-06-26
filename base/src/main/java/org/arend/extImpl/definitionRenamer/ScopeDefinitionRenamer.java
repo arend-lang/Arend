@@ -4,15 +4,13 @@ import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.DefinitionRenamer;
 import org.arend.ext.reference.ArendRef;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.naming.scope.CachingScope;
 import org.arend.naming.scope.Scope;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-
-import static org.arend.prelude.Prelude.MODULE_PATH;
 
 public class ScopeDefinitionRenamer implements DefinitionRenamer {
   private final Scope myScope;

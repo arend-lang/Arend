@@ -4,7 +4,7 @@
 \import Algebra.Group.Representation
 \import Algebra.Group.Representation.Sub
 \import Algebra.Module
-\import Algebra.Module.Category
+\import Algebra.Module.ModuleCategory
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
 \import Algebra.Ring
@@ -48,7 +48,7 @@
           => rewrite (SumOverGroup_Sub, SumOverGroup.FinSumEquality (\lam (g : G) => SumOverGroup_subrepr-property g t)) idp
 
         \lemma SumOverGroup_subrepr-property (g : G) (t : S) : g S.**'in f (inverse g E.** S.in t) = t
-          => rewrite (inv $ InterwiningMap.func-** {S.in}, p (inverse g S.**'in t), **-assoc, G.inverse-right, id-action) idp
+          => rewrite (inv $ S.in.func-**, p (inverse g S.**'in t), **-assoc, G.inverse-right, id-action) idp
       }
     }
 }

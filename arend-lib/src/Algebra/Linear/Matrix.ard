@@ -1,20 +1,21 @@
 \import Algebra.Algebra
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupHom
 \import Algebra.Group.Symmetric
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Module.LinearMap
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
-\import Arith.Fin
+\import Arith.Fin.Order
 \import Arith.Int
 \import Arith.Nat
 \import Data.Array
+\import Data.Array.Perm
 \import Data.Fin (fsuc, fsuc/=)
 \import Data.Or
 \import Function.Meta
@@ -242,7 +243,7 @@
 
     \lemma product_*c-comm-right {R : CRing} {n m k : Nat} {a : R} {A : Matrix R n m} {B : Matrix R m k}
       : a *c (A MatrixRing.product B) = A MatrixRing.product (a *c B)
-      => matrixExt \lam i j => R.BigSum-ldistr *> path (\lam i' => R.BigSum \lam k => (equation : a * (A i k * B k j) = A i k * (a * B k j)) i')
+      => matrixExt \lam i j => R.BigSum-ldistr *> pmap R.BigSum (exts \lam k => equation.cMonoid)
   }
 
 \func determinant {R : CRing} {n : Nat} (M : Matrix R n n)
@@ -338,8 +339,8 @@
         | func-*c {r} {a} => rewrite e $ *-assoc *> pmap {Array R (suc n)} (__ k * _) (insert-index {Array R (suc n)}) *> *-assoc *> pmap (r *) (pmap (\lam x => _ * (_ * determinant x)) (minor_insert *> inv minor_insert) *> inv (*-assoc *> pmap {Array R (suc n)} (__ k * _) (insert-index {Array R (suc n)})))
         }
         | no q => \new LinearMap {
-          | func-+ => rewrite (aux/= q, aux/= q, aux/= q) $ pmap (_ *) (inv (path (\lam i' => determinant (minor (replace_insert {_} {M} {j} {replicate (suc n) R.zro} i') i k))) *> pmap determinant (minor_replace q) *> later (rewrite skip_+ $ func-+ {isMultiLinear.toReplace {R} {_} {_} {n} determinant.multilinear _ _} *> pmap2 (determinant __ + determinant __) (inv (minor_replace q) *> path (\lam i' => minor (replace_insert i') i k)) (inv (minor_replace q) *> path (\lam i' => minor (replace_insert i') i k)))) *> ldistr
-          | func-*c {r} {x} => rewrite (aux/= q, aux/= q) $ pmap (_ * _ * __) (inv (path (\lam i' => determinant (minor (replace_insert {_} {M} {j} {replicate (suc n) R.zro} i') i k))) *> pmap determinant (minor_replace q) *> later (rewrite skip_*c $ func-*c {isMultiLinear.toReplace {R} {_} {_} {n} determinant.multilinear _ _} *> pmap (r * determinant __) (inv (minor_replace q))) *> path (\lam i' => r * determinant (minor (replace_insert i') i k)) *> *-comm) *> inv *-assoc *> *-comm
+          | func-+ => rewrite (aux/= q, aux/= q, aux/= q) $ pmap (_ *) (inv (path (\lam i' => determinant (minor (replace_insert {_} {M} {j} {replicate (suc n) R.zro} i') i k))) *> pmap determinant (minor_replace q) *> later (rewrite skip_+ $ (isMultiLinear.toReplace {R} {_} {_} {n} determinant.multilinear _ _).func-+ *> pmap2 (determinant __ + determinant __) (inv (minor_replace q) *> path (\lam i' => minor (replace_insert i') i k)) (inv (minor_replace q) *> path (\lam i' => minor (replace_insert i') i k)))) *> ldistr
+          | func-*c {r} {x} => rewrite (aux/= q, aux/= q) $ pmap (_ * _ * __) (inv (path (\lam i' => determinant (minor (replace_insert {_} {M} {j} {replicate (suc n) R.zro} i') i k))) *> pmap determinant (minor_replace q) *> later (rewrite skip_*c $ (isMultiLinear.toReplace {R} {_} {_} {n} determinant.multilinear _ _).func-*c *> pmap (r * determinant __) (inv (minor_replace q))) *> path (\lam i' => r * determinant (minor (replace_insert i') i k)) *> *-comm) *> inv *-assoc *> *-comm
         }
       }
 
@@ -347,8 +348,7 @@
       | 0 => ((), \lam _ => \case __.1)
       | suc n => (multilinear k, \lam M => aux k M)
       \where {
-        \open NatSemiring(<,suc<suc)
-        \open FinLinearOrder (FinLinearOrderInst)
+        \open NatOrder
 
         \func permutation1 {R : \Type} {n : Nat} (j : Fin (suc n)) (l : Array R (suc n)) : Perm l (l j :: skip l j) \elim n, j, l
           | 0, 0, l => Perm.perm-refl
@@ -455,7 +455,7 @@
   }
   | suc n => rewrite determinantN.determinant=determinant0 (determinantN.determinantN_ide {R} {suc n} 0)
   \where {
-    \lemma ide_minor {R : Ring} {n : Nat} : minor (MatrixRing.ide {R} {suc n}) 0 0 = 1 \elim n
+    \lemma ide_minor {R : Ring} {n : Nat} : minor (MatrixRing.ide {R} {suc n}) 0 0 = ide \elim n
       | 0 => idp
       | suc n => matrixExt \lam i j => mcases {2} \with {
         | yes p => rewrite (decideEq=_reduce $ pmap fsuc p) idp
@@ -552,7 +552,7 @@
   \where \open Monoid
 
 \lemma determinant_map {R S : CRing} (f : RingHom R S) {n : Nat} (A : Matrix R n n) : f (determinant A) = determinant (matrix-map f A)
-  => AddMonoidHom.func-FinSum f *> pmap AbMonoid.FinSum (ext \lam e => func-* *> pmap2 (*) (sign.sign_hom f) MonoidHom.func-BigProd)
+  => AddMonoidHom.func-FinSum f *> pmap AbMonoid.FinSum (ext \lam e => func-* *> pmap2 (*) (sign.sign_hom f) f.func-BigProd)
 
 \lemma determinant_block {R : CRing} {n m : Nat} (A : Matrix R n n) (B : Matrix R m m) : determinant (blockMatrix A B) = determinant A * determinant B \elim n
   | 0 => inv (pmap (`* _) (determinant00 A) *> ide-left)
@@ -576,7 +576,7 @@
  -     Let `p := charPoly B` (which is equal to `determinant A`). Then `p(B) * U = p *c U = 0` for all `U`, which implies `p(B) = 0`.
  -}
 \lemma equations-determinant {R : CRing} {M : LModule R} {n k : Nat} (A : Matrix R n n) {U : Matrix M n k}
-                             (p : product-gen A U = 0) : MatrixModule.*c-gen (determinant A) U = 0
+                             (p : product-gen A U = zro) : MatrixModule.*c-gen (determinant A) U = zro
   => \have | r : product-gen (adjugate A) 0 = 0 => matrixExt \lam i j => M.BigSum_zro \lam k => M.*c_zro-right
            | t : product-gen (determinant A *c ide) U = 0
                => pmap (product-gen __ U) (inv adjugate-left) *> product-gen-assoc *> cong p *> r
@@ -611,8 +611,8 @@
 \lemma determinant_IsUpperTriangular {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsUpperTriangular A) : determinant A = R.BigProd (\lam j => A j j) \elim n
   | 0 => determinant00 A
   | suc n => inv (determinantN.=determinant {R} {suc n} {0}) *> pmap2 (+)
-              (pmap2 (*) ide-right $ pmap determinant (determinant.minor00 _) *> determinant_IsUpperTriangular {R} {n} {mkMatrix \lam i j => A (suc i) (suc j)} \lam i j i<j => d (suc i) (suc j) (NatSemiring.suc<suc i<j))
-              (R.BigSum_zro \lam j => later $ rewrite (d (suc j) zro NatSemiring.zero<suc, zro_*-left) zro_*-left) *> zro-right
+              (pmap2 (*) ide-right $ pmap determinant (determinant.minor00 _) *> determinant_IsUpperTriangular {R} {n} {mkMatrix \lam i j => A (suc i) (suc j)} \lam i j i<j => d (suc i) (suc j) (NatOrder.suc<suc i<j))
+              (R.BigSum_zro \lam j => later $ rewrite (d (suc j) zero NatOrder.zero<suc, zro_*-left) zro_*-left) *> zro-right
 
 \lemma determinant_IsLowerTriangular {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsLowerTriangular A) : determinant A = R.BigProd (\lam j => A j j)
   => inv (determinant_transpose A) *> determinant_IsUpperTriangular {_} {_} {transpose A} (\lam i j => d j i)

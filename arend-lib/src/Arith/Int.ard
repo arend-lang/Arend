@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Nat
@@ -36,6 +37,33 @@
   | neg n => idp
 
 -- # Properties of +, *, and <
+
+\func signum (x : Int) : Int
+  | pos 0 => 0
+  | pos (suc _) => 1
+  | neg (suc _) => -1
+  \where {
+    \lemma *-comm {x y : Int} : signum (x IntRing.* y) = signum x IntRing.* signum y
+      => mcases {signum,2,3} idp \with {
+        | 0, pos (suc n) => pmap (\lam t => signum (pos t)) zro_*-left
+        | 0, neg (suc n) => pmap (\lam t => signum (neg t)) zro_*-left
+      }
+
+    \lemma signum_pos {n : Nat} (n/=0 : Not (n = 0)) : signum n = 1 \elim n
+      | 0 => absurd (n/=0 idp)
+      | suc _ => idp
+
+    \lemma signum_neg {n : Nat} (n/=0 : Not (n = 0)) : signum (neg n) = -1 \elim n
+      | 0 => absurd (n/=0 idp)
+      | suc _ => idp
+
+    \lemma signum_neg/=1 {n : Nat} (p : signum (neg n) = 1) : Empty \elim n, p
+      | 0, ()
+
+    \lemma signum_- {x y : Int} : signum (x - y) = negative (signum (y - x))
+      => pmap signum (inv (ldistr *> +-comm *> pmap2 (+) (Ring.negative_ide-left *> AddGroup.negative-isInv) Ring.negative_ide-left)) *> *-comm *> Ring.negative_ide-left
+      \where \open Arith.Int(IntRing)
+  }
 
 \instance IntRing : OrderedCRing.Dec Int
   | zro => pos 0
@@ -257,32 +285,6 @@
       | suc n => \case __
   }
 
-\func signum (x : Int) : Int
-  | pos 0 => 0
-  | pos (suc _) => 1
-  | neg (suc _) => -1
-  \where {
-    \lemma *-comm {x y : Int} : signum (x IntRing.* y) = signum x IntRing.* signum y
-      => mcases {signum,2,3} idp \with {
-        | 0, pos (suc n) => pmap (\lam t => signum (pos t)) zro_*-left
-        | 0, neg (suc n) => pmap (\lam t => signum (neg t)) zro_*-left
-      }
-
-    \lemma signum_pos {n : Nat} (n/=0 : Not (n = 0)) : signum n = 1 \elim n
-      | 0 => absurd (n/=0 idp)
-      | suc _ => idp
-
-    \lemma signum_neg {n : Nat} (n/=0 : Not (n = 0)) : signum (neg n) = -1 \elim n
-      | 0 => absurd (n/=0 idp)
-      | suc _ => idp
-
-    \lemma signum_neg/=1 {n : Nat} (p : signum (neg n) = 1) : Empty \elim n, p
-      | 0, ()
-
-    \lemma signum_- {x y : Int} : signum (x - y) = negative (signum (y - x))
-      => pmap signum (inv (ldistr *> +-comm *> pmap2 (+) (Ring.negative_ide-left *> AddGroup.negative-isInv) Ring.negative_ide-left)) *> *-comm *> Ring.negative_ide-left
-  }
-
 \func iabs (x : Int) : Nat
   | pos n => n
   | neg n => n
@@ -442,7 +444,7 @@
 \lemma neg<=neg {n m : Nat} (p : n <= m) : neg m <= neg n \elim n, m
   | 0, 0 => <=-refl
   | 0, suc m => neg<=pos
-  | suc n, 0 => absurd $ p NatSemiring.zero<suc
+  | suc n, 0 => absurd $ p NatOrder.zero<suc
   | suc n, suc m => <=_+ {_} {neg 1} <=-refl $ neg<=neg (suc<=suc.conv p)
   \where
     \lemma conv {n m : Nat} (p : neg n <= neg m) : m <= n \elim n, m

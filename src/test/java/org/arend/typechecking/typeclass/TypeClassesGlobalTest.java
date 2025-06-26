@@ -111,7 +111,8 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\func f : \\Set0 => g
       \\class X (A : \\Type0) {
         | B : A -> \\Type0
-      }""");
+      }""", 2);
+    assertThatErrorsAre(cycle(get("D-X"), get("f")), cycle(get("D-X"), get("f")));
   }
 
   // We do not check for duplicate global instances currently
@@ -357,7 +358,7 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class C | x : Nat
       \\func f {c : (C,C).1} => x {c}
       \\func g : Nat => f
-        \\where \\instance ccc : C | x => 1""");
+        \\where \\instance ccc : C | x => 1""", 1);
   }
 
   @Test
@@ -366,7 +367,7 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
       \\class C (X : \\Type) | x : X
       \\func f {c : (C Nat, C Nat).1} => x {c}
       \\func g : Nat => f
-        \\where \\instance ccc : C Nat | x => 1""");
+        \\where \\instance ccc : C Nat | x => 1""", 1);
   }
 
   @Test
@@ -424,7 +425,7 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
           | 0 => x
           | suc n => n
         }
-        \\where \\instance inst => \\new C Nat 0""");
+        \\where \\instance inst : C => \\new C Nat 0""");
   }
 
   @Test
@@ -463,7 +464,7 @@ public class TypeClassesGlobalTest extends TypeCheckingTestCase {
         \\instance inst2 : C Nat
           | f x => x
       }
-      """, 2);
+      """);
   }
 
   @Test

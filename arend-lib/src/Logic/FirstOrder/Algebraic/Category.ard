@@ -15,7 +15,7 @@
 \import Paths
 \import Paths.Meta
 \import Set \hiding (#)
-\import Set.Category
+\import Set.SetCategory
 \import Set.Fin
 
 \record ModelHom {T : Theory} (Dom Cod : Model T)

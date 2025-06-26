@@ -83,6 +83,7 @@ object ArendIcons {
 
     fun referableToIcon(ref: GlobalReferable): Icon? = when (ref.kind) {
         GlobalReferable.Kind.DATA -> DATA_DEFINITION
+        GlobalReferable.Kind.RECORD -> RECORD_DEFINITION
         GlobalReferable.Kind.CLASS -> CLASS_DEFINITION
         GlobalReferable.Kind.FUNCTION, GlobalReferable.Kind.COCLAUSE_FUNCTION, GlobalReferable.Kind.DEFINED_CONSTRUCTOR -> FUNCTION_DEFINITION
         GlobalReferable.Kind.INSTANCE -> CLASS_INSTANCE

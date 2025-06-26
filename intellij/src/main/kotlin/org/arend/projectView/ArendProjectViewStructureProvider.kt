@@ -10,7 +10,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.LibraryOrderEntry
 import com.intellij.openapi.vfs.VirtualFile
 import org.arend.ext.module.ModulePath
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.module.config.LibraryConfig
 import org.arend.psi.ArendFile
 import org.arend.server.ArendServerService

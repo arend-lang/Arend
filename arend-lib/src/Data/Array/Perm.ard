@@ -1,0 +1,99 @@
+\import Algebra.Group
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Arith.Fin.Order
+\import Data.Array
+\import Data.Array.EPerm
+\import Data.Fin (fpred, fsuc, fsuc_fpred)
+\import Equiv
+\import Function
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.DFin
+
+\data Perm {A : \Type} {n : Nat} (l1 l2 : Array A n) \elim n, l1, l2
+  | 0, nil, nil => perm-nil
+  | suc n, :: x l1, :: y l2 => perm-:: (x = y) (Perm l1 l2)
+  | suc (suc n), :: x (:: x' l1), :: y (:: y' l2) => perm-swap (x = y') (x' = y) (l1 = l2)
+  | n, l1, l2 => perm-trans {l : Array A n} (Perm l1 l) (Perm l l2)
+  \where {
+    \func perm-refl {A : \Type} {n : Nat} {l : Array A n} : Perm l l \elim n, l
+      | 0, nil => perm-nil
+      | suc n, a :: l => perm-:: idp perm-refl
+
+    \func perm-sym {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : Perm l' l \elim n, l, l', p
+      | 0, nil, nil, perm-nil => perm-nil
+      | suc n, x :: l, y :: l', perm-:: p q => perm-:: (inv p) (perm-sym q)
+      | suc (suc n), x :: (x' :: l), y :: (y' :: l'), perm-swap p1 p2 q => perm-swap (inv p2) (inv p1) (inv q)
+      | n, l, l', perm-trans p1 p2 => perm-trans (perm-sym p2) (perm-sym p1)
+
+    \func inversions {A : \Type} {n : Nat} {l1 l2 : Array A n} (p : Perm l1 l2) : Nat \elim n, l1, l2, p
+      | 0, nil, nil, perm-nil => 0
+      | suc n, x :: l3, y :: l4, perm-:: _ p => inversions p
+      | suc (suc n), x :: (x' :: l3), y :: (y' :: l4), perm-swap p p1 p2 => 1
+      | n, l3, l4, perm-trans p1 p2 => inversions p1 Nat.+ inversions p2
+
+    \lemma inversions_perm-:: {A : \Type} {n : Nat} {x y : A} {l1 l2 : Array A n} {q : x = y} {p : Perm l1 l2} : inversions (perm-:: q p) = inversions p \elim n, l1, l2
+      | 0, nil, nil => idp
+      | suc n, a1 :: l1, a2 :: l2 => idp
+
+    \lemma inversions_perm-trans {A : \Type} {n : Nat} {l1 l l2 : Array A n} {p1 : Perm l1 l} {p2 : Perm l l2} : inversions (perm-trans p1 p2) = inversions p1 Nat.+ inversions p2 \elim n, l1, l2
+      | 0, nil, nil => idp
+      | 1, a1 :: l1, a2 :: l2 => idp
+      | suc (suc n), a1 :: l1, a2 :: l2 => idp
+
+    \lemma inversions_perm-refl {A : \Type} {n : Nat} {l : Array A n} : inversions (perm-refl {A} {n} {l}) = 0 \elim n, l
+      | 0, nil => idp
+      | suc n, a :: l => inversions_perm-:: *> inversions_perm-refl
+
+    \func sign {R : Ring} {A : \Type} {n : Nat} {l1 l2 : Array A n} (p : Perm l1 l2) : R
+      => R.pow -1 (inversions p)
+
+    \func perm-map {A B : \Type} (f : A -> B) {n : Nat} {l1 l2 : Array A n} (p : Perm l1 l2) : Perm (map f l1) (map f l2) \elim n, l1, l2, p
+      | 0, nil, nil, perm-nil => perm-nil
+      | suc n, a1 :: l1, a2 :: l2, perm-:: p q => perm-:: (pmap f p) (perm-map f q)
+      | suc (suc n), a1 :: (a1' :: l), a2 :: (a2' :: _), perm-swap p1 p2 idp => perm-swap (pmap f p1) (pmap f p2) idp
+      | n, l1, l2, perm-trans p1 p2 => perm-trans (perm-map f p1) (perm-map f p2)
+      \where
+        \func conv {A B : \Set} (f : A -> B) (inj : isInj f) {n : Nat} {l1 l2 : Array A n} (p : Perm (map f l1) (map f l2)) : Perm l1 l2
+          => \have (e,f) => perm_equiv {_} {_} {map f l1} p
+             \in transport (Perm l1) (exts \lam j => inj $ inv $ f j) (equiv_perm e)
+
+    \func perm-remove {A : DecSet} {n : Nat} (l : Array A (suc n)) (j : Fin (suc n)) : Perm l (l j :: remove1 (l j) l) \elim n, l, j
+      | 0, a :: nil, 0 => perm-refl
+      | suc n, l, 0 => rewrite (decideEq=_reduce idp) perm-refl
+      | suc n, a :: l, suc j => mcases \with {
+        | yes p => rewrite p perm-refl
+        | no q => perm-trans (perm-:: idp (perm-remove l j)) (perm-swap idp idp idp)
+      }
+
+    \func perm-fin {n : Nat} (l : Array (Fin n) n) (l-inj : isInj l) : Perm l (\lam j => j) \elim n
+      | 0 => perm-nil
+      | 1 => perm-:: (cases (l 0) idp) perm-nil
+      | suc (suc n) => aux2 {suc n} l l-inj 0
+      \where {
+        \func aux {n : Nat} (l : Array (Fin (suc n)) n) (q : \Pi (j : Fin n) -> l j /= 0) (d : Fin n) (r : Perm (map (fpred d) l) (\lam j => j)) : Perm l (\lam j => suc j)
+          => transport (Perm __ _) (arrayExt \lam j => fsuc_fpred (q j)) $ perm-map fsuc {n} r
+
+        \func aux2 {n : Nat} (l : Array (Fin (suc n)) (suc n)) (l-inj : isInj l) (d : Fin n) : Perm l (\lam j => j)
+          => \have | (j,lj=0) => isDFin.isSplit {Fin (suc n)} (isDFin.fromPigeonhole (FinFin _)) l l-inj 0
+                   | remove/=0 i : remove1 (l j) l i /= 0 => rewrite lj=0 (remove1/= l-inj)
+             \in perm-trans (perm-remove l j) $ perm-:: lj=0 $ aux (remove1 (l j) l) remove/=0 d $ perm-fin (map (fpred d) (remove1 (l j) l))
+              \lam {i} {j} p => remove1-inj l-inj $ inv (fsuc_fpred (remove/=0 i)) *> pmap fsuc p *> fsuc_fpred (remove/=0 j)
+      }
+
+    \func equiv_perm {A : \Type} {n : Nat} {l : Array A n} (e : Equiv {Fin n} {Fin n}) : Perm l (\lam j => l (e j))
+      => perm-map l $ perm-sym $ perm-fin (\lam j => e j) e.isInj
+
+    \func perm_equiv {A : \Type} {n : Nat} {l l' : Array A n} (p : Perm l l') : \Sigma (e : Equiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))
+      => EPerm.eperm_equiv (EPerm.Perm_EPerm p)
+      \where {
+        \func conv {A : \Type} {n : Nat} {l l' : Array A n} (s : \Sigma (e : Equiv {Fin n} {Fin n}) (\Pi (j : Fin n) -> l' j = l (e j))) : Perm l l'
+          => transportInv (Perm l) (exts s.2) (equiv_perm s.1)
+      }
+  }

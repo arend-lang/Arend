@@ -1,5 +1,6 @@
 \import Equiv
 \import Function
+\import Function.Iterate
 \import Function.Meta
 \import Logic
 \import Paths

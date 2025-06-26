@@ -14,7 +14,7 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.stubs.StubIndex
 import com.intellij.util.Consumer
 import org.arend.ext.reference.DataContainer
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.naming.scope.ScopeFactory.isGlobalScopeVisible
 import org.arend.psi.*
 import org.arend.psi.ext.*

@@ -1,14 +1,14 @@
 \import Algebra.Meta
 \import Logic.Rewriting.ARS.Relation
 \import Data.List (!!, ++, ++_nil, ++-assoc, List, nil, ::)
-\import Data.Fin
 \import Data.Maybe
-\import Data.Shifts
 \import Data.SubList
 \import Data.Or
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Logic.Rewriting.TRS.Utils.FinFunctions
+\import Logic.Rewriting.TRS.Utils.Shifts
 \import Paths
 \import Paths.Meta
 \import Set

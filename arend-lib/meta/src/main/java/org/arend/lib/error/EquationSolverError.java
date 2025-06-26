@@ -55,11 +55,11 @@ public class EquationSolverError extends TypecheckingError {
     List<LineDoc> docs = new ArrayList<>(nf.size());
     for (Monomial m : nf) {
       List<LineDoc> mDocs = new ArrayList<>();
-      for (Integer n : m.elements) {
+      for (Integer n : m.elements()) {
         mDocs.add(text(BASE_NAME + n));
       }
       LineDoc mDoc = mDocs.isEmpty() ? text("1") : hSep(text(" * "), mDocs);
-      docs.add(m.coefficient.equals(BigInteger.ONE) ? mDoc : mDocs.isEmpty() ? text(m.coefficient.toString()) : hList(text(m.coefficient + " * "), mDoc));
+      docs.add(m.coefficient().equals(BigInteger.ONE) ? mDoc : mDocs.isEmpty() ? text(m.coefficient().toString()) : hList(text(m.coefficient() + " * "), mDoc));
     }
     return hSep(text(" + "), docs);
   }

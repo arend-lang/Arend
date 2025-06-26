@@ -9,7 +9,7 @@
 \import Paths
 \import Paths.Meta
 \import Set
-\import Set.Category
+\import Set.SetHom
 \import Set.Fin
 
 \record FinSuppFunc \extends SetHom {

@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public interface CoreClassDefinition extends CoreDefinition {
   @NotNull Set<? extends CoreClassDefinition> getSuperClasses();
@@ -23,10 +24,16 @@ public interface CoreClassDefinition extends CoreDefinition {
   boolean isRecord();
   @Nullable CoreClassField getClassifyingField();
 
-  boolean isSubClassOf(@NotNull CoreClassDefinition classDefinition);
+  @Nullable CoreClassDefinition findAncestor(@NotNull Predicate<CoreClassDefinition> superClass);
   boolean isImplemented(@NotNull CoreClassField field);
   @Nullable CoreAbsExpression getImplementation(@NotNull CoreClassField field);
   @NotNull Collection<? extends CoreClassField> getImplementedFields();
   boolean isOverridden(@NotNull CoreClassField field);
   @Nullable CoreAbsExpression getOverriddenType(@NotNull CoreClassField field);
+
+  default boolean isSubClassOf(@NotNull CoreClassDefinition classDefinition) {
+    return findAncestor(classDefinition::equals) != null;
+  }
+
+  @Nullable CoreClassField findField(@NotNull String fieldName);
 }

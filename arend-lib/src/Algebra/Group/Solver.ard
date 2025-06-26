@@ -18,7 +18,7 @@
 \import Order.Lattice
 \import Order.Lexicographical
 \import Order.LinearOrder
-\import Order.PartialOrder \hiding (ProductPoset)
+\import Order.PartialOrder \hiding (ProductPreorder, ProductPoset)
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
@@ -33,7 +33,7 @@
   | :inv (GroupTerm V)
   | \infixl 6 :* (t s : GroupTerm V)
 
-\class Data \noclassifying {G : Group} {V : \Set} (f : V -> G) {
+\class GroupData \noclassifying {G : Group} {V : \Set} (f : V -> G) {
   \func interpret (t : GroupTerm V) : G \elim t
     | var x => f x
     | :ide => ide
@@ -41,14 +41,14 @@
     | :* t s => interpret t * interpret s
 }
 
-\class NatData \extends Data {
+\class NatData \extends GroupData {
   | V => Nat
 
   \func rp-correctness-both-inside (t : GroupTerm V) (nf-pf : isInNF t) (fstLeafToRemoveInd : Nat) (p : interpret (get-leaf t fstLeafToRemoveInd) = inverse (interpret $ get-leaf t (suc fstLeafToRemoveInd)))
                                    (lb : 1 <= fstLeafToRemoveInd) (ub : fstLeafToRemoveInd < count-leaves t) : interpret (remove-pair t fstLeafToRemoveInd).1 = interpret t \elim t
     | l :* r \as t => mcases {1} \with {
       | less q => \let | pl : interpret (get-leaf l fstLeafToRemoveInd) = inverse (interpret $ get-leaf l (suc fstLeafToRemoveInd))
-                        => rewrite (LinearOrder.dec<_reduce (q <∘ id<suc), LinearOrder.dec<_reduce (NatSemiring.suc<suc q)) in p \in
+                        => rewrite (LinearOrder.dec<_reduce (q <∘ id<suc), LinearOrder.dec<_reduce (NatOrder.suc<suc q)) in p \in
         mcases {1} {arg addPath} \with {
           | true, w => \let | l-is-product => rp-returns-true-lemma l fstLeafToRemoveInd w lb q
                             | l-is-ide : interpret l = ide => rewrite (pl, inverse-left) in l-is-product
@@ -71,7 +71,7 @@
                           | lb' : 1 <= fstLeafToRemoveInd -' count-leaves l
          => rewrite (-'+-comm {_} {_} {1} <=-refl, -'id) in -'-monotone-left {_} {_} {count-leaves l} (suc_<_<= q)
                           | ub' : fstLeafToRemoveInd -' count-leaves l < count-leaves r
-         => suc_<=_< $ rewrite (+-comm {NatSemiring} {count-leaves l} {count-leaves r}, -'+, -'+-comm {fstLeafToRemoveInd} {count-leaves l} {1} (\lam w => <-irreflexive $ w <∘ q)) in -'-monotone-left {_} {_} {count-leaves l} (suc_<_<= ub)
+         => suc_<=_< $ rewrite (NatSemiring.+-comm {count-leaves l} {count-leaves r}, -'+, -'+-comm {fstLeafToRemoveInd} {count-leaves l} {1} (\lam w => <-irreflexive $ w <∘ q)) in -'-monotone-left {_} {_} {count-leaves l} (suc_<_<= ub)
                      \in
         mcases {1} {arg addPath} \with {
         | true, w => \let | r-is-product =>
@@ -91,8 +91,8 @@
     : interpret t = interpret (get-leaf t 1) * interpret (remove-pair t 0).1 \elim t
     | l :* r => mcases {2} \with {
       | less q => mcases {2} {arg addPath} \with {
-        | true, w => rewrite ((rp-returns-true-lemma-left l w).1, LinearOrder.dec<_reduce (NatSemiring.suc<suc q)) idp
-        | false, w => rewrite (rp-correctness-one-inside-left l nf-pf.1, LinearOrder.dec<_reduce (NatSemiring.suc<suc q), *-assoc) idp
+        | true, w => rewrite ((rp-returns-true-lemma-left l w).1, LinearOrder.dec<_reduce (NatOrder.suc<suc q)) idp
+        | false, w => rewrite (rp-correctness-one-inside-left l nf-pf.1, LinearOrder.dec<_reduce (NatOrder.suc<suc q), *-assoc) idp
       }
       | equals q => \let | rp-l-0 : interpret (remove-pair l 0).1 = ide => get-leaf-zro-leaves-lemma (remove-pair l 0).1 (<=-antisymmetric (rewrite (inv q) in rp-count-leaves-lemma l 0) zero<=_) (rp-preserves-nf l nf-pf.1 0) \in
         mcases {2} {arg addPath, arg addPath} \with {
@@ -510,7 +510,7 @@
      })
 }
 
-\class CData \extends NatData {
+\class CGroupData \extends NatData {
   \override G : CGroup
 
   \lemma removeVar-lem (t : GroupTerm V) (v : V) (withInv : Bool) {n : Nat}
@@ -523,7 +523,7 @@
     }
     | :ide, suc n => (ide-left, idp)
     | :inv t, suc n => (pmap (_ *) pow-lem *> *-comm *> inv G.inverse_* *> pmap inverse (removeVar-lem t v (not withInv)).1, (removeVar-lem t v (not withInv)).2)
-    | :* t1 t2, suc n => (rewrite sum-lem $ pmap (_ *) G.pow_+ *> rewrite (removeVar-lem t1 v withInv).2 (equation *> pmap2 (*) (removeVar-lem t1 v withInv {suc n}).1 (removeVar-lem t2 v withInv {suc n -' countVar t1 v withInv}).1),
+    | :* t1 t2, suc n => (rewrite sum-lem $ pmap (_ *) G.pow_+ *> rewrite (removeVar-lem t1 v withInv).2 (equation.cMonoid *> pmap2 (*) (removeVar-lem t1 v withInv {suc n}).1 (removeVar-lem t2 v withInv {suc n -' countVar t1 v withInv}).1),
                           (removeVar-lem _ v withInv).2 *> rewrite (removeVar-lem t1 v withInv).2 -'-')
     \where {
       \open NatBSemilattice

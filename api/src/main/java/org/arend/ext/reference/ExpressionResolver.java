@@ -3,6 +3,7 @@ package org.arend.ext.reference;
 import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.error.ErrorReporter;
+import org.arend.ext.module.LongName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,6 +15,11 @@ public interface ExpressionResolver {
    * Resolves the specified short name.
    */
   @Nullable ArendRef resolveName(@NotNull String name);
+
+  /**
+   * Resolves the specified long name.
+   */
+  @Nullable ArendRef resolveLongName(@NotNull LongName name);
 
   /**
    * Resolves names in the given expression.

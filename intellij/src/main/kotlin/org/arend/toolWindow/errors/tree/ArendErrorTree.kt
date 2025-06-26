@@ -12,7 +12,7 @@ import org.arend.ext.prettyprinting.PrettyPrinterConfig
 import org.arend.ext.prettyprinting.doc.DocStringBuilder
 import org.arend.ext.reference.ArendRef
 import org.arend.highlight.BasePass
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.Referable
 import org.arend.psi.ArendFile

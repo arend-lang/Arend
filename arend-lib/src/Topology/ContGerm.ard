@@ -1,7 +1,8 @@
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupHom
 \import Algebra.Module
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Function.Meta

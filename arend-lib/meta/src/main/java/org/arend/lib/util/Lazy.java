@@ -16,4 +16,8 @@ public class Lazy<V> {
     }
     return value = supplier.get();
   }
+
+  public boolean isUsed() {
+    return value != null;
+  }
 }

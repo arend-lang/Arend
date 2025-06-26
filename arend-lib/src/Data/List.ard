@@ -1,6 +1,5 @@
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Arith.Nat
 \import Data.Bool
 \import Data.Or
 \import Function
@@ -40,7 +39,7 @@
   | nil => idp
   | :: a l => pmap (a ::) ++_nil
 
-\lemma length_++ {A : \Type} {l l' : List A} : length (l ++ l') = length l + length l' \elim l
+\lemma length_++ {A : \Type} {l l' : List A} : length (l ++ l') = length l Nat.+ length l' \elim l
   | nil => idp
   | :: a l => pmap suc length_++
 
@@ -443,11 +442,11 @@
 
           \lemma toList_balanceLeft {A : \Set} (c : Color) (l : RBTree A) (v : A) (r : RBTree A)
             : toList (balanceLeft c l v r) = toList (rbBranch c l v r)
-            => mcases {balanceLeft} equation
+            => mcases {balanceLeft} equation.monoid
 
           \lemma toList_balanceRight {A : \Set} (c : Color) (l : RBTree A) (v : A) (r : RBTree A)
             : toList (balanceRight c l v r) = toList (rbBranch c l v r)
-            => mcases {balanceRight} equation
+            => mcases {balanceRight} equation.monoid
 
           \lemma insert_++-left {A : Dec} {a a1 : A} (a<=a1 : a <= a1) {l1 l2 : List A} (s : Sorted (l1 ++ a1 :: l2))
             : Insertion.sort.insert a (l1 ++ a1 :: l2) = Insertion.sort.insert a l1 ++ a1 :: l2 \elim l1, s

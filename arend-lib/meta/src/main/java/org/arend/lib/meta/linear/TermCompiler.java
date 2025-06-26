@@ -10,7 +10,6 @@ import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.solver.BaseTermCompiler;
 import org.arend.lib.meta.solver.RingKind;
 import org.arend.lib.ring.BigRational;
@@ -23,17 +22,21 @@ import java.math.BigInteger;
 import java.util.*;
 
 public class TermCompiler extends BaseTermCompiler {
-  private TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, StdExtension ext, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
-    super(classCall, classCall.getDefinition().isSubClassOf(ext.equationMeta.OrderedRing), false, instance, kind, ext, typechecker, marker, values, positiveVars, toInt, toRat);
+  private TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, LinearSolverMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
+    super(classCall, classCall.getDefinition().isSubClassOf(meta.OrderedRing), false, instance, kind, meta, typechecker, marker, values, positiveVars, toInt, toRat);
   }
 
-  public TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, StdExtension ext, ExpressionTypechecker typechecker, ConcreteSourceNode marker) {
-    super(classCall, classCall.getDefinition().isSubClassOf(ext.equationMeta.OrderedRing), false, instance, ext, typechecker, marker, new Values<>(typechecker, marker));
+  public TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, LinearSolverMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker) {
+    super(classCall, classCall.getDefinition().isSubClassOf(meta.OrderedRing), false, instance, meta, typechecker, marker, new Values<>(typechecker, marker));
   }
 
   @Override
-  protected BaseTermCompiler newInstance(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, StdExtension ext, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
-    return new TermCompiler(classCall, instance, kind, ext, typechecker, marker, values, positiveVars, toInt, toRat);
+  protected BaseTermCompiler newInstance(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
+    return new TermCompiler(classCall, instance, kind, getMeta(), typechecker, marker, values, positiveVars, toInt, toRat);
+  }
+
+  private LinearSolverMeta getMeta() {
+    return (LinearSolverMeta) meta;
   }
 
   private TermCompiler getSubTermCompiler() {
@@ -129,17 +132,17 @@ public class TermCompiler extends BaseTermCompiler {
       coefficients.compute(entry.getKey(), (k,v) -> v == null ? entry.getValue().negate() : v.subtract(entry.getValue()));
     }
     freeCoef[0] = freeCoef[0].subtract(newFreeCoef[0]);
-    return factory.app(factory.ref(meta.negativeTerm.getRef()), true, term);
+    return factory.app(factory.ref(meta.negativeTerm), true, term);
   }
 
   private ConcreteExpression computePlus(CoreExpression arg1, CoreExpression arg2, Map<Integer, Ring> coefficients, Ring[] freeCoef, Set<Integer> vars) {
-    return factory.app(factory.ref(meta.addTerm.getRef()), true, computeTerm(arg1, coefficients, freeCoef, vars), computeTerm(arg2, coefficients, freeCoef, vars));
+    return factory.app(factory.ref(meta.addTerm), true, computeTerm(arg1, coefficients, freeCoef, vars), computeTerm(arg2, coefficients, freeCoef, vars));
   }
 
   private ConcreteExpression computeMinus(CoreExpression arg1, CoreExpression arg2, Map<Integer, Ring> coefficients, Ring[] freeCoef, Set<Integer> vars) {
     ConcreteExpression cArg1 = computeTerm(arg1, coefficients, freeCoef, vars);
     ConcreteExpression cArg2 = computeNegative(arg2, coefficients, freeCoef, vars);
-    return factory.app(factory.ref(meta.addTerm.getRef()), true, cArg1, cArg2);
+    return factory.app(factory.ref(meta.addTerm), true, cArg1, cArg2);
   }
 
   private ConcreteExpression computeMul(CoreExpression arg1, CoreExpression arg2, CoreExpression expr, Map<Integer, Ring> coefficients, Ring[] freeCoef, Set<Integer> vars) {
@@ -166,7 +169,7 @@ public class TermCompiler extends BaseTermCompiler {
       values.getValues().subList(valuesSize, values.getValues().size()).clear();
       return computeVal(expr, coefficients, vars);
     }
-    return factory.app(factory.ref(meta.mulTerm.getRef()), true, leftTerm, rightTerm);
+    return factory.app(factory.ref(meta.mulTerm), true, leftTerm, rightTerm);
   }
 
   private ConcreteExpression computeVal(CoreExpression expr, Map<Integer, Ring> coefficients, Set<Integer> vars) {
@@ -174,7 +177,7 @@ public class TermCompiler extends BaseTermCompiler {
       expr = toPos(expr, typechecker, factory);
       if (expr == null) return null;
     } else if (toRat) {
-      expr = toRat(expr, typechecker, factory, meta.ext);
+      expr = toRat(expr, typechecker, factory, getMeta());
       if (expr == null) return null;
     }
     int index = values.addValue(expr);
@@ -183,7 +186,7 @@ public class TermCompiler extends BaseTermCompiler {
       positiveVars.add(index);
     }
     coefficients.compute(index, (k,v) -> v == null ? getOne() : v.add(getOne()));
-    return factory.app(factory.ref(meta.varTerm.getRef()), true, factory.number(index));
+    return factory.app(factory.ref(meta.varTerm), true, factory.number(index));
   }
 
   private ConcreteExpression computeTerm(CoreExpression expression, Map<Integer, Ring> coefficients, Ring[] freeCoef, Set<Integer> vars) {
@@ -210,12 +213,12 @@ public class TermCompiler extends BaseTermCompiler {
       }
       if (fieldCall != null) {
         CoreClassField field = fieldCall.getDefinition();
-        if (((field == meta.ext.zro || field == meta.ext.ide) && arg1 == null || (field == meta.plus || field == meta.mul) && arg2 != null || field == meta.negative && arg1 != null && arg2 == null) && typechecker.compare(fieldCall.getArgument(), instance, CMP.EQ, marker, false, true, false)) {
-          if (field == meta.ext.zro) {
-            return factory.ref(meta.zroTerm.getRef());
-          } else if (field == meta.ext.ide) {
+        if (((field == meta.zro || field == meta.ide) && arg1 == null || (field == meta.plus || field == meta.mul) && arg2 != null || field == meta.negative && arg1 != null && arg2 == null) && typechecker.compare(fieldCall.getArgument(), instance, CMP.EQ, marker, false, true, false)) {
+          if (field == meta.zro) {
+            return factory.ref(meta.zroTerm);
+          } else if (field == meta.ide) {
             freeCoef[0] = freeCoef[0].add(getOne());
-            return factory.ref(meta.ideTerm.getRef());
+            return factory.ref(meta.ideTerm);
           } else if (field == meta.negative) {
             return computeNegative(arg1, coefficients, freeCoef, vars);
           } else if (field == meta.plus) {
@@ -229,7 +232,7 @@ public class TermCompiler extends BaseTermCompiler {
     expr = expr.normalize(NormalizationMode.WHNF);
 
     if (zroMatcher.match(expr) != null) {
-      return factory.ref(meta.zroTerm.getRef());
+      return factory.ref(meta.zroTerm);
     }
 
     List<CoreExpression> addArgs = addMatcher.match(expr);
@@ -239,7 +242,7 @@ public class TermCompiler extends BaseTermCompiler {
 
     if (ideMatcher.match(expr) != null) {
       freeCoef[0] = freeCoef[0].add(getOne());
-      return factory.ref(meta.ideTerm.getRef());
+      return factory.ref(meta.ideTerm);
     }
 
     if (subTermCompiler != null && subTermCompiler.minusMatcher != null) {
@@ -271,7 +274,7 @@ public class TermCompiler extends BaseTermCompiler {
       BigInteger denom = getInt(denomExpr);
       if (nom != null && denom != null) {
         freeCoef[0] = freeCoef[0].add(BigRational.make(nom, denom));
-        return factory.app(factory.ref(meta.coefTerm.getRef()), true, factory.core(typedExpr));
+        return factory.app(factory.ref(meta.coefTerm), true, factory.core(typedExpr));
       }
       if (denom != null && denom.equals(BigInteger.ONE) && subTermCompiler != null) {
         Map<Integer, Ring> newCoefficients = new HashMap<>();
@@ -300,8 +303,8 @@ public class TermCompiler extends BaseTermCompiler {
       if (arg instanceof CoreIntegerExpression) {
         BigInteger coef = ((CoreIntegerExpression) arg).getBigInteger();
         if (isNeg) coef = coef.negate();
-        freeCoef[0] = freeCoef[0].add(new IntRing(coef));
-        return factory.app(factory.ref(meta.coefTerm.getRef()), true, factory.number(coef));
+        freeCoef[0] = freeCoef[0].add(kind == RingKind.RAT || kind == RingKind.RAT_ALG ? BigRational.makeInt(coef) : new IntRing(coef));
+        return factory.app(factory.ref(meta.coefTerm), true, factory.number(coef));
       } else if (subTermCompiler != null) {
         Map<Integer, Ring> newCoefficients = new HashMap<>();
         Ring[] newFreeCoef = new Ring[] { getZero() };
@@ -311,7 +314,7 @@ public class TermCompiler extends BaseTermCompiler {
             coefficients.compute(entry.getKey(), (k,v) -> v == null ? (isNeg ? entry.getValue().negate() : entry.getValue()) : isNeg ? v.subtract(entry.getValue()) : v.add(entry.getValue()));
           }
           freeCoef[0] = isNeg ? freeCoef[0].subtract(newFreeCoef[0]) : freeCoef[0].add(newFreeCoef[0]);
-          return isNeg ? factory.app(factory.ref(meta.negativeTerm.getRef()), true, term) : term;
+          return isNeg ? factory.app(factory.ref(meta.negativeTerm), true, term) : term;
         }
       }
     }
@@ -329,13 +332,13 @@ public class TermCompiler extends BaseTermCompiler {
     return result == null ? null : result.getExpression();
   }
 
-  public static CoreExpression toRat(CoreExpression expr, ExpressionTypechecker typechecker, ConcreteFactory factory, StdExtension ext) {
-    TypedExpression result = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(factory.app(factory.ref(ext.equationMeta.fromInt.getRef()), true, factory.core(expr.computeTyped())), null));
+  public static CoreExpression toRat(CoreExpression expr, ExpressionTypechecker typechecker, ConcreteFactory factory, LinearSolverMeta meta) {
+    TypedExpression result = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(factory.app(factory.ref(meta.fromInt), true, factory.core(expr.computeTyped())), null));
     return result == null ? null : result.getExpression();
   }
 
-  public static CoreExpression toRatAlgebra(CoreExpression expr, ExpressionTypechecker typechecker, ConcreteFactory factory, StdExtension ext) {
-    TypedExpression result = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(factory.app(factory.ref(ext.linearSolverMeta.coefMap.getRef()), true, factory.core(expr.computeTyped())), null));
+  public static CoreExpression toRatAlgebra(CoreExpression expr, ExpressionTypechecker typechecker, ConcreteFactory factory, LinearSolverMeta meta) {
+    TypedExpression result = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(factory.app(factory.ref(meta.coefMap.getRef()), true, factory.core(expr.computeTyped())), null));
     return result == null ? null : result.getExpression();
   }
 }

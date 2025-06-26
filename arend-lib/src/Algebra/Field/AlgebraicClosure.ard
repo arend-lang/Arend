@@ -2,14 +2,14 @@
 \import Algebra.Field
 \import Algebra.Field.Splitting
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupHom
 \import Algebra.LatticeColimit
+\import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
+\import Algebra.Pointed.PointedHom
 \import Algebra.Ring
-\import Algebra.Ring.Category
+\import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Integral
 \import Algebra.Ring.Poly
@@ -20,12 +20,14 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Logic.TFAE
 \import Meta
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
-\import Set.Category
+\import Set.SetCategory
+\import Set.SetHom
 \import Set.Countable
 
 -- | A ring {K} is algebraically closed if every monic polynomial over {K} of non-zero degree has a root.
@@ -54,7 +56,7 @@
     },
     \lam c => \case __ \with {
       | inP (0, n/=0, pd, pc) => absurd (n/=0 idp)
-      | inP (suc n, _, pd, pc) => TruncP.map (c (suc n) pd pc) \lam s => (s.1 0, rewrite s.2 $ func-* {polyEvalRingHom _} {padd 1 (negative (s.1 0))} *> pmap (`* _) (simplify simplify) *> K.zro_*-left)
+      | inP (suc n, _, pd, pc) => TruncP.map (c (suc n) pd pc) \lam s => (s.1 0, rewrite s.2 $ (polyEvalRingHom _).func-* {padd 1 (negative (s.1 0))} *> pmap (`* _) simplify *> K.zro_*-left)
     })
   \where {
     \private \lemma aux {K : CRing} (ac : IsAlgebraicallyClosed K) {p : Poly K} {n : Nat} (pd : degree<= p n) (pc : polyCoef p n = 1) : ∃ (l : Array K n) (p = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l)) \elim n
@@ -76,7 +78,7 @@
 \lemma algebraicallyClosed-integrallyClosed {K : CRing} (ac : IsAlgebraicallyClosed K) {E : StrictIntegralDomain} (f : RingHom K E) : isIntegrallyClosed f
   => \lam a => \case __ \with {
     | inP (p, inP (n, pd, pc), pe) => \case algebraicallyClosed<->split 0 2 ac n pd pc \with {
-      | inP s => \case E.zeroBigProd $ inv (MonoidHom.func-BigProd {polyMapEvalRingHom f a}) *> (rewrite s.2 in pe) \with {
+      | inP s => \case E.zeroBigProd $ inv (polyMapEvalRingHom f a).func-BigProd *> (rewrite s.2 in pe) \with {
         | inP (j,q) => inP (s.1 j, inv $ E.fromZero $ simplify (rewrite (f.func-ide,f.func-negative) simplify) *> q)
       }
     }
@@ -113,7 +115,7 @@
               | inP (n,q) => \case splitting-monic {_} {_} {polyMap (S n).3 (ps n)} (rewrite q $ polyMap_isMonic pm) (sf n).4 \with {
                 | inP (l,_,lq) => inP (map (h (suc n)) l, later rewrite q (
                     pmap {RingHom (F 0) (CRingLatticeColimit F)} (polyMap __ p) {h 0} {h (suc n) ∘ ((sf n).3 ∘ (S n).3)} (exts \lam a => SetColimit.~-cequiv zero<=_ $ pmap (sf n).3 $ pmap (NatFunctor.natHom {CRingCat} __ a) (NatFunctor.sigma-isProp _ _) *> sequence3)
-                      *> inv (polyMap-comp _ _) *> pmap (polyMap _) (inv (polyMap-comp _ _))) *> pmap (polyMapRingHom _) lq *> MonoidHom.func-BigProd {polyMapRingHom (h (suc n))} *> pmap Monoid.BigProd (exts \lam j => pmap2 (\lam x y => padd (padd pzero x) y) func-ide AddGroupHom.func-negative))
+                      *> inv (polyMap-comp (_ RingHom.∘ _) (h _)) *> pmap (polyMap _) (inv (later $ polyMap-comp _ _))) *> pmap (polyMapRingHom _) lq *> (polyMapRingHom (h (suc n))).func-BigProd  *> pmap Monoid.BigProd (exts \lam j => pmap2 (\lam x y => padd (padd pzero x) y) func-ide AddGroupHom.func-negative))
               }
             })
   \where \private {

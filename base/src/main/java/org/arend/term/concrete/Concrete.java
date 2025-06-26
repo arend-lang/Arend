@@ -1502,16 +1502,30 @@ public final class Concrete {
 
   public static class NumericLiteral extends Expression implements ConcreteNumberExpression {
     private final BigInteger myNumber;
+    private Concrete.Expression myResolved;
 
-    public NumericLiteral(Object data, BigInteger number) {
+    public NumericLiteral(Object data, BigInteger number, Concrete.Expression resolved) {
       super(data);
       myNumber = number;
+      myResolved = resolved;
+    }
+
+    public NumericLiteral(Object data, BigInteger number) {
+      this(data, number, null);
     }
 
     @Override
     @NotNull
     public BigInteger getNumber() {
       return myNumber;
+    }
+
+    public Concrete.Expression getResolvedExpression() {
+      return myResolved;
+    }
+
+    public void setResolvedExpression(Concrete.Expression resolved) {
+      myResolved = resolved;
     }
 
     @Override
@@ -1522,15 +1536,29 @@ public final class Concrete {
 
   public static class StringLiteral extends Expression implements ConcreteStringExpression {
     private final String myUnescapedString;
+    private Concrete.Expression myResolved;
 
-    public StringLiteral(Object data, String unescapedString) {
+    public StringLiteral(Object data, String unescapedString, Concrete.Expression resolved) {
       super(data);
       myUnescapedString = unescapedString;
+      myResolved = resolved;
+    }
+
+    public StringLiteral(Object data, String unescapedString) {
+      this(data, unescapedString, null);
     }
 
     @Override
     public @NotNull String getUnescapedString() {
       return myUnescapedString;
+    }
+
+    public Concrete.Expression getResolvedExpression() {
+      return myResolved;
+    }
+
+    public void setResolvedExpression(Concrete.Expression resolved) {
+      myResolved = resolved;
     }
 
     @Override

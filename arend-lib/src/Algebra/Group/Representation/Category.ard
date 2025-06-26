@@ -3,7 +3,7 @@
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation
 \import Algebra.Module
-\import Algebra.Module.Category
+\import Algebra.Module.ModuleCategory
 \import Algebra.Module.LinearMap
 \import Algebra.Ring
 \import Category
@@ -19,22 +19,22 @@
   | func-** {e : Dom} {g : G} : func (g ** e) = g ** func e -- equivariance
   }
 
-\instance RepresentationCat(R : Ring)(G : Group) : Cat (LinRepres R G)
+\instance RepresentationCat (R : Ring) (G : Group) : Cat (LinRepres R G)
   | Hom => InterwiningMap
   | id => id-interwining
   | o {X Y Z : LinRepres R G} (f : InterwiningMap Y Z) (g : InterwiningMap X Y) => \new InterwiningMap {
-    | LinearMap => Cat.o {LModuleCat R} f g
+    | LinearMap => f LinearMap.∘ g
     | func-** =>  rewrite (g.func-**, f.func-**) idp
   }
   | id-left => ext idp
   | id-right => ext idp
   | o-assoc => ext idp
-  | univalence => sip (\lam (e : InterwiningMap) _ => exts (e.func-zro, \lam _ _ => e.func-+,
-                                                            \lam _ => e.func-negative, \lam _ _ => e.func-*c,
-                                                            \lam _ _ => e.func-** ))
+  | univalence => sip \lam (e : InterwiningMap) _ => exts (e.func-zro, \lam _ _ => e.func-+,
+                                                           \lam _ => e.func-negative, \lam _ _ => e.func-*c,
+                                                           \lam _ _ => e.func-** )
   \where {
     \func id-interwining (X : LinRepres R G) : InterwiningMap X X \cowith
-      | LinearMap => Cat.id {LModuleCat R} X
+      | LinearMap => LinearMap.id
       | func-** => idp
   }
 
@@ -102,14 +102,15 @@
   | ide_*c => exts (\lam _ => B.ide_*c)
   \where {
     \func zeroInterwining : InterwiningMap A B \cowith
-      | LinearMap => LModulePreAdditive.zeroMap
+      | LinearMap => linearMap_zro
       | func-** => inv B.g**-zro
+
     \func addInterwining (f g : InterwiningMap A B) : InterwiningMap A B \cowith
-      | LinearMap => LModulePreAdditive.addMaps f g
+      | LinearMap => linearMap_+ f g
       | func-** => unfold (rewrite (f.func-**, g.func-**, B.**-ldistr) idp)
 
     \func negativeInterwining (f : InterwiningMap A B) : InterwiningMap A B \cowith
-      | LinearMap => LModulePreAdditive.negativeMap f
+      | LinearMap => linearMap_negative f
       | func-** => unfold (rewrite (f.func-**, B.g**-negative) idp)
 
     \func mulconstInterwining(c : R)(f : InterwiningMap A B) : InterwiningMap A B \cowith

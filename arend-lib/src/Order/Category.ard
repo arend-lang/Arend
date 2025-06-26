@@ -7,7 +7,7 @@
 \import Order.StrictOrder
 \import Paths.Meta
 \import Set
-\import Set.Category
+\import Set.SetHom
 
 \record PosetHom \extends SetHom {
   \override Dom : Poset

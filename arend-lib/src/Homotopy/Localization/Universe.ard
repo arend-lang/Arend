@@ -4,7 +4,7 @@
 \import Equiv.Sigma
 \import Equiv.Univalence
 \import Function
-\import HLevel
+\import Logic.Unique
 \import Homotopy.Square
 \import Logic
 \import Paths

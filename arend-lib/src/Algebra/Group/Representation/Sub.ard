@@ -1,7 +1,7 @@
 \import Algebra.Group
 \import Algebra.Group.Representation.Category
 \import Algebra.Group.Representation
-\import Algebra.Module.Category
+\import Algebra.Module.ModuleCategory
 \import Algebra.Ring
 \import Function
 \import Logic

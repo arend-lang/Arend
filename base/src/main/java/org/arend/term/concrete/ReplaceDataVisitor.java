@@ -241,12 +241,12 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
   @Override
   public Concrete.Expression visitNumericLiteral(Concrete.NumericLiteral expr, Void params) {
-    return new Concrete.NumericLiteral(getData(expr), expr.getNumber());
+    return new Concrete.NumericLiteral(getData(expr), expr.getNumber(), expr.getResolvedExpression() == null ? null : expr.getResolvedExpression().accept(this, null));
   }
 
   @Override
   public Concrete.Expression visitStringLiteral(Concrete.StringLiteral expr, Void params) {
-    return new Concrete.StringLiteral(getData(expr), expr.getUnescapedString());
+    return new Concrete.StringLiteral(getData(expr), expr.getUnescapedString(), expr.getResolvedExpression() == null ? null : expr.getResolvedExpression().accept(this, null));
   }
 
   @Override

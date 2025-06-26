@@ -10,7 +10,6 @@ import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.typechecking.ExpressionTypechecker;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 import org.arend.lib.meta.solver.BaseTermCompiler;
 import org.arend.lib.meta.solver.RingKind;
 import org.arend.lib.ring.Monomial;
@@ -26,35 +25,39 @@ public class TermCompiler extends BaseTermCompiler {
   public final boolean isLattice;
   public final boolean isRing;
 
-  private TermCompiler(CoreClassCallExpression classCall, boolean isRing, boolean isLattice, TypedExpression instance, RingKind kind, StdExtension ext, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat, CoreClassDefinition forcedClass) {
-    super(classCall, isRing, isLattice, instance, kind, ext, typechecker, marker, values, positiveVars, toInt, toRat);
+  private TermCompiler(CoreClassCallExpression classCall, boolean isRing, boolean isLattice, TypedExpression instance, RingKind kind, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat, CoreClassDefinition forcedClass) {
+    super(classCall, isRing, isLattice, instance, kind, meta, typechecker, marker, values, positiveVars, toInt, toRat);
     this.forcedClass = forcedClass;
     this.isLattice = isLattice;
     this.isRing = isRing;
   }
 
-  private TermCompiler(CoreClassCallExpression classCall, boolean isRing, boolean isLattice, TypedExpression instance, StdExtension ext, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, CoreClassDefinition forcedClass) {
-    super(classCall, isRing, isLattice, instance, ext, typechecker, marker, values);
+  private TermCompiler(CoreClassCallExpression classCall, boolean isRing, boolean isLattice, TypedExpression instance, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, CoreClassDefinition forcedClass) {
+    super(classCall, isRing, isLattice, instance, meta, typechecker, marker, values);
     this.forcedClass = forcedClass;
     this.isLattice = isLattice;
     this.isRing = isRing;
   }
 
-  public TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, StdExtension ext, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, CoreClassDefinition forcedClass) {
-    this(classCall, isRing(classCall, ext.equationMeta, forcedClass), isLattice(classCall, ext.equationMeta, forcedClass), instance, ext, typechecker, marker, values, forcedClass);
+  public TermCompiler(CoreClassCallExpression classCall, TypedExpression instance, BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, CoreClassDefinition forcedClass) {
+    this(classCall, isRing(classCall, meta, forcedClass), isLattice(classCall, meta, forcedClass), instance, meta, typechecker, marker, values, forcedClass);
   }
 
-  private static boolean isLattice(CoreClassCallExpression classCall, EquationMeta meta, CoreClassDefinition forcedClass) {
+  private static boolean isLattice(CoreClassCallExpression classCall, BaseEquationMeta meta, CoreClassDefinition forcedClass) {
     return classCall.getDefinition().isSubClassOf(meta.BoundedDistributiveLattice) && (forcedClass == null || forcedClass.isSubClassOf(meta.BoundedDistributiveLattice));
   }
 
-  private static boolean isRing(CoreClassCallExpression classCall, EquationMeta meta, CoreClassDefinition forcedClass) {
+  private static boolean isRing(CoreClassCallExpression classCall, BaseEquationMeta meta, CoreClassDefinition forcedClass) {
     return classCall.getDefinition().isSubClassOf(meta.Ring) && (forcedClass == null || forcedClass.isSubClassOf(meta.Ring));
   }
 
+  private BaseEquationMeta getMeta() {
+    return (BaseEquationMeta) meta;
+  }
+
   @Override
-  protected BaseTermCompiler newInstance(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, StdExtension ext, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
-    return new TermCompiler(classCall, isRing(classCall, ext.equationMeta, forcedClass), isLattice(classCall, ext.equationMeta, forcedClass), instance, kind, ext, typechecker, marker, values, positiveVars, toInt, toRat, forcedClass);
+  protected BaseTermCompiler newInstance(CoreClassCallExpression classCall, TypedExpression instance, RingKind kind, ExpressionTypechecker typechecker, ConcreteSourceNode marker, Values<CoreExpression> values, Set<Integer> positiveVars, boolean toInt, boolean toRat) {
+    return new TermCompiler(classCall, isRing(classCall, getMeta(), forcedClass), isLattice(classCall, getMeta(), forcedClass), instance, kind, getMeta(), typechecker, marker, values, positiveVars, toInt, toRat, forcedClass);
   }
 
   private TermCompiler getSubTermCompiler() {
@@ -65,13 +68,13 @@ public class TermCompiler extends BaseTermCompiler {
     List<Monomial> nf1 = new ArrayList<>();
     List<ConcreteExpression> cArgs = Collections.singletonList(computeTerm(arg, nf1));
     Monomial.negate(nf1, nf);
-    return factory.app(factory.ref(meta.negativeTerm.getRef()), true, cArgs);
+    return factory.app(factory.ref(meta.negativeTerm), true, cArgs);
   }
 
   private ConcreteExpression computeMinus(CoreExpression arg1, CoreExpression arg2, List<Monomial> nf) {
     ConcreteExpression cArg1 = computeTerm(arg1, nf);
     ConcreteExpression cArg2 = computeNegative(arg2, nf);
-    return factory.app(factory.ref(meta.addTerm.getRef()), true, cArg1, cArg2);
+    return factory.app(factory.ref(meta.addTerm), true, cArg1, cArg2);
   }
 
   public static class CompiledTerm {
@@ -94,11 +97,11 @@ public class TermCompiler extends BaseTermCompiler {
   private ConcreteExpression computeTerm(CoreExpression expression, List<Monomial> nf) {
     CoreExpression expr = expression.normalize(NormalizationMode.WHNF);
     if (zroMatcher.match(expr) != null) {
-      return factory.ref(meta.zroTerm.getRef());
+      return factory.ref(meta.zroTerm);
     }
     if (ideMatcher.match(expr) != null) {
       nf.add(new Monomial(BigInteger.ONE, Collections.emptyList()));
-      return factory.ref(meta.ideTerm.getRef());
+      return factory.ref(meta.ideTerm);
     }
 
     if (subTermCompiler != null && subTermCompiler.minusMatcher != null) {
@@ -113,7 +116,7 @@ public class TermCompiler extends BaseTermCompiler {
       List<ConcreteExpression> cArgs = new ArrayList<>(2);
       cArgs.add(computeTerm(addArgs.get(0), nf));
       cArgs.add(computeTerm(addArgs.get(1), nf));
-      return factory.app(factory.ref(meta.addTerm.getRef()), true, cArgs);
+      return factory.app(factory.ref(meta.addTerm), true, cArgs);
     }
 
     List<CoreExpression> mulArgs = mulMatcher.match(expr);
@@ -127,13 +130,13 @@ public class TermCompiler extends BaseTermCompiler {
       Monomial.multiply(nf1, nf2, newNF);
       Collections.sort(newNF);
       nf.addAll(Monomial.collapse(newNF));
-      return factory.app(factory.ref(meta.mulTerm.getRef()), true, cArgs);
+      return factory.app(factory.ref(meta.mulTerm), true, cArgs);
     }
 
     if (isRing) {
       List<CoreExpression> negativeArgs = negativeMatcher.match(expr);
       if (negativeArgs != null) {
-        return computeNegative(negativeArgs.get(0), nf);
+        return computeNegative(negativeArgs.getFirst(), nf);
       }
     }
 
@@ -145,11 +148,11 @@ public class TermCompiler extends BaseTermCompiler {
       coefArgs = natCoefMatcher.match(expr);
     }
     if (coefArgs != null) {
-      CoreExpression arg = coefArgs.get(0).normalize(NormalizationMode.WHNF);
+      CoreExpression arg = coefArgs.getFirst().normalize(NormalizationMode.WHNF);
       if (arg instanceof CoreIntegerExpression) {
         BigInteger coef = ((CoreIntegerExpression) arg).getBigInteger();
         nf.add(new Monomial(coef, Collections.emptyList()));
-        return factory.app(factory.ref(meta.coefTerm.getRef()), true, Collections.singletonList(factory.number(coef)));
+        return factory.app(factory.ref(meta.coefTerm), true, Collections.singletonList(factory.number(coef)));
       } else if (subTermCompiler != null) {
         List<Monomial> newNF = new ArrayList<>();
         ConcreteExpression term = getSubTermCompiler().computeTerm(arg, newNF);
@@ -159,13 +162,13 @@ public class TermCompiler extends BaseTermCompiler {
           } else {
             nf.addAll(newNF);
           }
-          return isNeg ? factory.app(factory.ref(meta.negativeTerm.getRef()), true, term) : term;
+          return isNeg ? factory.app(factory.ref(meta.negativeTerm), true, term) : term;
         }
       }
     }
 
     int index = values.addValue(expr);
     nf.add(new Monomial(BigInteger.ONE, Collections.singletonList(index)));
-    return factory.app(factory.ref(meta.varTerm.getRef()), true, singletonList(factory.number(index)));
+    return factory.app(factory.ref(meta.varTerm), true, singletonList(factory.number(index)));
   }
 }

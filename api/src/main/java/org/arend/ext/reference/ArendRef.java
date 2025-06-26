@@ -1,5 +1,6 @@
 package org.arend.ext.reference;
 
+import org.arend.ext.module.FullName;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.jetbrains.annotations.NotNull;
@@ -20,6 +21,10 @@ public interface ArendRef {
    */
   default @Nullable LongName getRefLongName() {
     return null;
+  }
+
+  default boolean checkName(@NotNull FullName fullName) {
+    return fullName.longName.equals(getRefLongName()) && fullName.module != null && fullName.module.getModulePath().equals(getModulePath());
   }
 
   default boolean isClassField() {

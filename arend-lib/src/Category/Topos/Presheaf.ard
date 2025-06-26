@@ -12,7 +12,7 @@
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
-\import Set.Category
+\import Set.SetCategory
 
 \instance VPresheafComplete (C : SmallPrecat) (D : CompleteCat (\suc \lp)) : CompleteCat
   | Cat => VPresheafCat D C

@@ -1,24 +1,24 @@
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Group.Category
 \import Algebra.LatticeColimit
 \import Algebra.Linear.Matrix
 \import Algebra.Linear.Matrix.CharPoly
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.PermSet
 \import Algebra.Monoid.Sub
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
+\import Algebra.Pointed.PointedHom
 \import Algebra.Pointed.Sub
 \import Algebra.Ring
-\import Algebra.Ring.Category
+\import Algebra.Ring.MonoidRing(evalMS,evalMS_map2,monoidSet-ringHom,msMonomial)
+\import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
+\import Algebra.Ring.Factor(FactorRing,factorHom,factor-lift)
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.MPoly
-\import Algebra.Ring.MonoidRing
 \import Algebra.Ring.Poly
 \import Algebra.Ring.Sub
 \import Algebra.Semiring
@@ -31,12 +31,13 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Logic.TFAE
 \import Meta
 \import Order.Lattice
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set.Category
+\import Set.SetCategory
 \import Set.Fin
 \open Monoid
 
@@ -65,9 +66,9 @@
 -- | A map `R[x] -> R[a]` given by `p |-> p(a)`.
 \func polyImageHomPoly {R : Ring} {E : CRing} (f : RingHom R E) (a : E) : RingHom (PolyRing R) (SubRing.cStruct (polyImage f a)) \cowith
   | func p => (polyEval (polyMap f p) a, inP (p, idp))
-  | func-+ => ext $ func-+ {polyMapEvalRingHom f a}
+  | func-+ => ext (polyMapEvalRingHom f a).func-+
   | func-ide => ext $ simplify f.func-ide
-  | func-* => ext $ func-* {polyMapEvalRingHom f a}
+  | func-* => ext (polyMapEvalRingHom f a).func-*
 
 \func mPolyImage {R E : CRing} (f : RingHom R E) (l : Array E) : SubRing E
   => ringHomImage (mPolyEval l ∘ mPoly-mapHom f)
@@ -146,7 +147,7 @@
 
 \lemma polyImage_integralExt {R E : CRing} {f : RingHom R E} (a : E) (ai : isIntegral f a) : isIntegralExt (polyImageHom f a) \elim ai
   | inP (p, inP t, pc) => \lam (x, inP (q,qa=x)) => TruncP.map (poly_integral.aux f a p t.1 t.2 t.3 pc q qa=x)
-      \lam s => (s.1, inP (t.1,s.2,s.3), ext $ inv (polyEval_polyMap {SubRing.embed {polyImage f a}}) *> pmap (polyEval __ x) (polyMap-comp _ _) *> s.4)
+      \lam s => (s.1, inP (t.1,s.2,s.3), ext $ inv (polyEval_polyMap {SubRing.embed {polyImage f a}}) *> pmap (polyEval __ x) (later $ polyMap-comp _ _) *> s.4)
 
 \lemma integral_image-comp {R S E : Ring} {f : RingHom R S} (g : RingHom S E) {a : S} (ai : isIntegral f a) : isIntegral (g ∘ f) (g a) \elim ai
   | inP t => inP (t.1, t.2, pmap (polyEval __ _) (inv (polyMap-comp f g)) *> polyEval_polyMap *> pmap g t.3 *> g.func-zro)
@@ -168,7 +169,7 @@
   => \let | g => factorHom {Ideal.closure1 p} ∘ polyHom
           | fgi => integralExt-comp f g fi $ poly-integralExt pm (Ideal.closure1_LDiv.2 $ inP LDiv.id-div)
      \in \case fgi (in~ (padd 1 0)) \with {
-       | inP (q,qm,r) => TruncP.map (Ideal.closure1_LDiv.1 (FactorRing.unfequiv0 {Ideal.closure1 p} $ inv factorHom_polyMapEval *> pmap (polyEval __ _) (polyMap-comp _ _) *> r)) \lam d => (q,qm,d)
+       | inP (q,qm,r) => TruncP.map (Ideal.closure1_LDiv.1 (FactorRing.unfequiv0 {Ideal.closure1 p} $ inv factorHom_polyMapEval *> pmap (polyEval __ _) (later $ polyMap-comp _ _) *> r)) \lam d => (q,qm,d)
      }
 
 \lemma integralExt-left {R S E : Ring} (f : RingHom R S) (g : RingHom S E) (inj : isInj g) (int : isIntegralExt (g ∘ f)) : isIntegralExt f
@@ -185,12 +186,12 @@
   | nil => inP (1 :: nil, \lam x => TruncP.map (gen x) \lam t => (mLastCoef t.1 :: nil, t.2 *> unfold (rewriteI {1} (ret_f {MPoly_Empty {Fin 0} \case __} t.1) $ pmap (`+ 0) simplify)))
   | a :: (l : Array) =>
     \let | g => polyImageHom f a
-         | h => SubRing.embed {polyImage f a}
+         | h => (polyImage f a).embed
     \in LModule.generated-pullback g (integral-generated f a (fi 0)) $ integralExt-generated h (\lam j => integral-right g h (l j) (fi (suc j))) \lam x => TruncP.map (gen x) \lam t =>
           (polyEval (MPoly_Fin-suc (mPoly-map (polyImageHom f a) t.1)) (msMonomial (later (a * 1, rewrite ide-right polyImage-element)) ide),
            t.2 *> inv (MPoly_Fin-suc.f_eval (mPoly-map f t.1) l) *> pmap (mPolyEval l) (pmap2 polyEval (pmap MPoly_Fin-suc.f (later $ cases t.1 \with {
              | in~ l' => idp
-           }) *> inv (MPoly_Fin-suc.f_polyMap h (\lam j => pmap (msMonomial __ _) (func-ide {h})) \lam b => idp)) (pmap (msMonomial __ _) (inv ide-right)) *> polyEval_polyMap {monoidSet-ringHom (MonoidCat.id _) _}))
+           }) *> inv (MPoly_Fin-suc.f_polyMap h (\lam j => pmap (msMonomial __ _) h.func-ide) \lam b => idp)) (pmap (msMonomial __ _) (inv ide-right)) *> polyEval_polyMap {monoidSet-ringHom MonoidHom.id _}))
 
 \lemma integralExt-finite-char {R E : CRing} {f : RingHom R E} (l : Array E) (gen : RingHom.isAlgebraGenerated f l)
   : TFAE (isIntegralExt f,
@@ -252,7 +253,7 @@
   => \Pi (a : f.Cod) -> isIntegral f a -> ∃ (b : f.Dom) (f b = a)
 
 \lemma integralClosure-integral {R E : CRing} (f : RingHom R E) : isIntegralExt (integralClosure-left f)
-  => \lam a => TruncP.map a.2 \lam t => (t.1, t.2, ext $ inv (polyEval_polyMap {integralClosure-right f}) *> pmap (polyEval __ _) (polyMap-comp _ _) *> t.3)
+  => \lam a => TruncP.map a.2 \lam t => (t.1, t.2, ext $ inv (polyEval_polyMap {integralClosure-right f}) *> pmap (polyEval __ _) (later $ polyMap-comp _ _) *> t.3)
 
 \lemma integralClosure-closed {R E : CRing} (f : RingHom R E) : isIntegrallyClosed (integralClosure-right f)
   => \lam a ai => inP ((a, integral-comp {R} {integralClosure f} (integralClosure-integral f) ai ), idp)
@@ -261,7 +262,7 @@
 \func integral_factor {R E : CRing} (f : RingHom R E) (a : E) (p : Poly R) (e : polyEval (polyMap f p) a = 0)
   : RingHom (FactorRing (Ideal.closure1 p)) (SubRing.cStruct (polyImage f a))
   => factor-lift (polyImageHomPoly f a) \lam {q} c => ext $ unfold \case Ideal.closure1-lem.1 c \with {
-    | inP (d,q=pd) => rewrite (q=pd, func-* {polyMapEvalRingHom f a}) equation
+    | inP (d,q=pd) => rewrite (q=pd, (polyMapEvalRingHom f a).func-*) equation
   }
 
 \lemma integralExt-directColimit {J : Bounded.JoinSemilattice} (F : Functor J RingCat) (p : \Pi {j j' : J} (f : Hom j j') -> isIntegralExt (F.Func f)) (j : J) : isIntegralExt (RingLatticeColimit.inMap j)

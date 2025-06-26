@@ -18,7 +18,7 @@ import org.arend.IArendFile
 import org.arend.ext.prettyprinting.doc.Doc
 import org.arend.ext.prettyprinting.doc.DocFactory
 import org.arend.ext.reference.Precedence
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.LibraryConfig
 import org.arend.module.orderRoot.ArendConfigOrderRootType

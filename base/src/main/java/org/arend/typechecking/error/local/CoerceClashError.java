@@ -24,6 +24,6 @@ public class CoerceClashError extends TypecheckingError {
       : key instanceof CoerceData.UniverseKey ? " for universes"
       : "";
     LineDoc doc = DocFactory.text("There is already a \\coerce rule" + s);
-    return key instanceof CoerceData.DefinitionKey ? DocFactory.hList(doc, DocFactory.refDoc(((CoerceData.DefinitionKey) key).definition.getRef())) : doc;
+    return key instanceof CoerceData.DefinitionKey ? DocFactory.hList(doc, DocFactory.refDoc(((CoerceData.DefinitionKey) key).definition().getRef())) : doc;
   }
 }

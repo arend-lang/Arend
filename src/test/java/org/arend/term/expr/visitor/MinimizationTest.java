@@ -6,7 +6,7 @@ import org.arend.core.expr.LetExpression;
 import org.arend.core.subst.LevelPair;
 import org.arend.term.prettyprint.MinimizedRepresentation;
 import org.arend.typechecking.TypeCheckingTestCase;
-import org.arend.util.list.PersistentList;
+import org.arend.typechecking.instance.ArendInstances;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -20,7 +20,7 @@ public class MinimizationTest extends TypeCheckingTestCase {
     private void selectiveCheck(String module, String expected, boolean isGround, Function<? super FunctionDefinition, ? extends Expression> selector) {
         typeCheckModule(module);
         var selected = selector.apply((FunctionDefinition) getDefinition("test"));
-        var minimizedConcrete = MinimizedRepresentation.generateMinimizedRepresentation(selected, PersistentList.empty(), null, null);
+        var minimizedConcrete = MinimizedRepresentation.generateMinimizedRepresentation(selected, new ArendInstances(), null, null);
         assertEquals(expected, minimizedConcrete.toString());
         if (isGround) {
             typeCheckExpr(minimizedConcrete, selected.getType());

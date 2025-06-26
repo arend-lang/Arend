@@ -5,11 +5,13 @@ import org.arend.ext.error.GeneralError;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.Doc;
+import org.arend.ext.prettyprinting.doc.DocFactory;
 import org.arend.ext.prettyprinting.doc.LineDoc;
 import org.arend.ext.reference.ArendRef;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.LocatedReferable;
+import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,22 +24,22 @@ public class CycleError extends GeneralError {
   public final List<? extends GlobalReferable> cycle;
   public Concrete.SourceNode cause;
   private final GlobalReferable myCauseReferable;
-  private final boolean myDoCycle;
+  private final Map<GlobalReferable, List<TCDefReferable>> myInstances;
 
-  private CycleError(String message, List<? extends GlobalReferable> cycle, boolean doCycle, GlobalReferable causeReferable, Concrete.SourceNode cause) {
+  private CycleError(String message, List<? extends GlobalReferable> cycle, Map<GlobalReferable, List<TCDefReferable>> instances, GlobalReferable causeReferable, Concrete.SourceNode cause) {
     super(Level.ERROR, message);
     this.cycle = cycle;
     this.cause = cause;
-    myDoCycle = doCycle;
+    myInstances = instances;
     myCauseReferable = causeReferable;
   }
 
-  public CycleError(String message, List<? extends GlobalReferable> cycle, boolean doCycle) {
-    this(message, cycle, doCycle, null, null);
+  public CycleError(String message, List<? extends GlobalReferable> cycle, Map<GlobalReferable, List<TCDefReferable>> instances) {
+    this(message, cycle, instances, null, null);
   }
 
-  public CycleError(List<? extends GlobalReferable> cycle) {
-    this("Dependency cycle", cycle, true);
+  public CycleError(List<? extends GlobalReferable> cycle, Map<GlobalReferable, List<TCDefReferable>> instances) {
+    this("Dependency cycle", cycle, instances);
   }
 
   @Override
@@ -65,7 +67,7 @@ public class CycleError extends GeneralError {
   @Override
   public Doc getCauseDoc(PrettyPrinterConfig ppConfig) {
     Doc causeDoc = super.getCauseDoc(ppConfig);
-    return causeDoc != null ? causeDoc : refDoc(cycle.get(0));
+    return causeDoc != null ? causeDoc : refDoc(cycle.getFirst());
   }
 
   @Override
@@ -84,9 +86,6 @@ public class CycleError extends GeneralError {
     for (GlobalReferable definition : cycle) {
       docs.add(refDoc(definition));
     }
-    if (myDoCycle) {
-      docs.add(refDoc(cycle.get(0)));
-    }
     Doc result = hSep(text(" - "), docs);
     if (modules.size() > 1) {
       List<LineDoc> modulesDocs = new ArrayList<>(modules.size());
@@ -95,6 +94,15 @@ public class CycleError extends GeneralError {
       }
       result = vList(result, hList(text("Located in modules: "), hSep(text(", "), modulesDocs)));
     }
+
+    if (!myInstances.isEmpty()) {
+      List<Doc> list = new ArrayList<>();
+      for (Map.Entry<GlobalReferable, List<TCDefReferable>> entry : myInstances.entrySet()) {
+        list.add(hList(entry.getKey() instanceof LocatedReferable ref ? text((modules.size() > 1 ? ref.getModulePath() + ":" : "") + ref.getRefLongName()) : refDoc(entry.getKey()), text(": "), hSep(text(", "), entry.getValue().stream().map(DocFactory::refDoc).toList())));
+      }
+      result = vList(result, vHang(text("Instance dependencies:"), vList(list)));
+    }
+
     return result;
   }
 
@@ -105,7 +113,7 @@ public class CycleError extends GeneralError {
       consumer.accept((GlobalReferable) causeData, this);
     } else {
       for (GlobalReferable ref : cycle) {
-        consumer.accept(ref, new CycleError(message, cycle, myDoCycle, ref, cause));
+        consumer.accept(ref, new CycleError(message, cycle, myInstances, ref, cause));
       }
     }
   }

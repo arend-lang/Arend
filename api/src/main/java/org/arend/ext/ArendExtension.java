@@ -1,11 +1,9 @@
 package org.arend.ext;
 
 import org.arend.ext.concrete.ConcreteFactory;
-import org.arend.ext.dependency.ArendDependencyProvider;
 import org.arend.ext.prettifier.ExpressionPrettifier;
 import org.arend.ext.serialization.SerializableKeyRegistry;
 import org.arend.ext.typechecking.GoalSolver;
-import org.arend.ext.typechecking.LevelProver;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.ext.ui.ArendUI;
 import org.arend.ext.variable.VariableRenamerFactory;
@@ -60,18 +58,6 @@ public interface ArendExtension {
   default void declareDefinitions(@NotNull DefinitionContributor contributor) {}
 
   /**
-   * This method is invoked last and can be used to initialize the extension.
-   * It should store all the definition that will be used in the extension.
-   * This method can be invoked multiple times if one of the definitions is updated.
-   *
-   * @param dependencyProvider  provides the access to definitions defined in the library; can be used only inside this method.
-   */
-  default void load(@NotNull ArendDependencyProvider dependencyProvider) {
-    dependencyProvider.load(this);
-  }
-
-
-  /**
    * @return a listener which is invoked after typechecking of a definition is finished.
    */
   default @Nullable DefinitionListener getDefinitionListener() {
@@ -82,13 +68,6 @@ public interface ArendExtension {
    * @return a goal solver that will be used for ordinary goals.
    */
   default @Nullable GoalSolver getGoalSolver() {
-    return null;
-  }
-
-  /**
-   * @return a level prover that will be used to check that types of lemmas and properties are propositions.
-   */
-  default @Nullable LevelProver getLevelProver() {
     return null;
   }
 

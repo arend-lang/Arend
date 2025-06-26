@@ -19,6 +19,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ThrowableRunnable
 import com.maddyhome.idea.vim.VimPlugin
 import org.arend.ext.DefinitionContributor
+import org.arend.ext.module.ModuleLocation
 import org.arend.ext.typechecking.meta.TrivialMetaTypechecker
 import org.arend.ext.module.ModulePath
 import org.arend.ext.prettyprinting.doc.DocFactory
@@ -78,7 +79,9 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
     }
 
     protected fun makeMeta(name: String, resolver: MetaResolver?, definition: MetaDefinition?): Concrete.MetaDefinition =
-        Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, name, TrivialMetaTypechecker(definition), resolver, FullModuleReferable(ModuleLocation(module.name, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta")))), null, null, emptyList(), null)
+        Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, name, TrivialMetaTypechecker(definition), resolver, FullModuleReferable(
+            ModuleLocation(module.name, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta"))
+        )), null, null, emptyList(), null)
 
     protected fun addGeneratedModules(filler: DefinitionContributor.() -> Unit) {
         addGeneratedModules(this.library.name, filler)

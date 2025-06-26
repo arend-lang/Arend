@@ -4,11 +4,13 @@ import org.arend.core.context.Utils;
 import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.error.CountingErrorReporter;
+import org.arend.ext.LiteralTypechecker;
 import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.LocalError;
+import org.arend.ext.module.LongName;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.DataContainer;
 import org.arend.ext.reference.ExpressionResolver;
@@ -43,23 +45,25 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
   private final List<TypedReferable> myContext;
   private final TypingInfo myTypingInfo;
   private final CountingErrorReporter myErrorReporter;
+  private final LiteralTypechecker myLiteralTypechecker;
   private final ResolverListener myResolverListener;
 
-  private ExpressionResolveNameVisitor(Scope parentScope, Scope scope, List<TypedReferable> context, TypingInfo typingInfo, ErrorReporter errorReporter, ResolverListener resolverListener) {
+  private ExpressionResolveNameVisitor(Scope parentScope, Scope scope, List<TypedReferable> context, TypingInfo typingInfo, ErrorReporter errorReporter, LiteralTypechecker literalTypechecker, ResolverListener resolverListener) {
     myParentScope = parentScope;
     myScope = scope;
     myContext = context;
     myTypingInfo = new LocalTypingInfo(typingInfo, context);
     myErrorReporter = new CountingErrorReporter(GeneralError.Level.ERROR, errorReporter);
+    myLiteralTypechecker = literalTypechecker;
     myResolverListener = resolverListener;
   }
 
-  public ExpressionResolveNameVisitor(Scope parentScope, List<TypedReferable> context, TypingInfo typingInfo, ErrorReporter errorReporter, ResolverListener resolverListener, List<? extends Referable> pLevels, List<? extends Referable> hLevels) {
-    this(parentScope, context == null && pLevels.isEmpty() && hLevels.isEmpty() ? parentScope : new ContextScope(parentScope, context == null ? Collections.emptyList() : context, pLevels, hLevels), context, typingInfo, errorReporter, resolverListener);
+  public ExpressionResolveNameVisitor(Scope parentScope, List<TypedReferable> context, TypingInfo typingInfo, ErrorReporter errorReporter, LiteralTypechecker literalTypechecker, ResolverListener resolverListener, List<? extends Referable> pLevels, List<? extends Referable> hLevels) {
+    this(parentScope, context == null && pLevels.isEmpty() && hLevels.isEmpty() ? parentScope : new ContextScope(parentScope, context == null ? Collections.emptyList() : context, pLevels, hLevels), context, typingInfo, errorReporter, literalTypechecker, resolverListener);
   }
 
-  public ExpressionResolveNameVisitor(Scope parentScope, List<TypedReferable> context, TypingInfo typingInfo, ErrorReporter errorReporter, ResolverListener resolverListener) {
-    this(parentScope, context, typingInfo, errorReporter, resolverListener, Collections.emptyList(), Collections.emptyList());
+  public ExpressionResolveNameVisitor(Scope parentScope, List<TypedReferable> context, TypingInfo typingInfo, ErrorReporter errorReporter, LiteralTypechecker literalTypechecker, ResolverListener resolverListener) {
+    this(parentScope, context, typingInfo, errorReporter, literalTypechecker, resolverListener, Collections.emptyList(), Collections.emptyList());
   }
 
   @Override
@@ -78,7 +82,13 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
   @Override
   public @Nullable ArendRef resolveName(@NotNull String name) {
     Referable result = tryResolve(new NamedUnresolvedReference(null, name), myScope, null);
-    return result != null && !(result instanceof NamedUnresolvedReference) ? result : null;
+    return result != null && !(result instanceof UnresolvedReference) ? result : null;
+  }
+
+  @Override
+  public @Nullable ArendRef resolveLongName(@NotNull LongName name) {
+    Referable result = tryResolve(LongUnresolvedReference.make(null, name.toList()), myScope, null);
+    return result != null && !(result instanceof UnresolvedReference) ? result : null;
   }
 
   @Override
@@ -95,10 +105,10 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       throw new IllegalArgumentException();
     }
     if (arguments.size() == 1) {
-      if (!(arguments.get(0).getExpression() instanceof Concrete.Expression)) {
+      if (!(arguments.getFirst().getExpression() instanceof Concrete.Expression)) {
         throw new IllegalArgumentException();
       }
-      return ((Concrete.Expression) arguments.get(0).getExpression()).accept(this, null);
+      return ((Concrete.Expression) arguments.getFirst().getExpression()).accept(this, null);
     }
 
     List<Concrete.BinOpSequenceElem<Concrete.Expression>> elems = new ArrayList<>(arguments.size());
@@ -120,7 +130,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
 
   @Override
   public @NotNull ExpressionResolver hideRefs(@NotNull Set<? extends ArendRef> refs) {
-    return new ExpressionResolveNameVisitor(myParentScope, new ElimScope(myScope, refs), myContext, myTypingInfo, myErrorReporter, myResolverListener);
+    return new ExpressionResolveNameVisitor(myParentScope, new ElimScope(myScope, refs), myContext, myTypingInfo, myErrorReporter, myLiteralTypechecker, myResolverListener);
   }
 
   @Override
@@ -137,7 +147,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       }
       scope = new ContextScope(newRefs);
     }
-    return new ExpressionResolveNameVisitor(myParentScope, scope, myContext, myTypingInfo, myErrorReporter, myResolverListener);
+    return new ExpressionResolveNameVisitor(myParentScope, scope, myContext, myTypingInfo, myErrorReporter, myLiteralTypechecker, myResolverListener);
   }
 
   @Override
@@ -263,9 +273,9 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
   public Concrete.Expression invokeMetaWithoutArguments(Concrete.Expression expr) {
     Concrete.Expression function;
     Concrete.Expression argument;
-    if (expr instanceof Concrete.AppExpression appExpr && appExpr.getArguments().size() == 1 && !appExpr.getArguments().get(0).isExplicit()) {
+    if (expr instanceof Concrete.AppExpression appExpr && appExpr.getArguments().size() == 1 && !appExpr.getArguments().getFirst().isExplicit()) {
       function = appExpr.getFunction();
-      argument = appExpr.getArguments().get(0).expression;
+      argument = appExpr.getArguments().getFirst().expression;
     } else {
       function = expr;
       argument = null;
@@ -420,7 +430,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       return visitClassExt(data, expr, coclauses);
     }
     if (expr.getSequence().size() == 1 && expr.getClauses() == null) {
-      return visitClassExt(data, expr.getSequence().get(0).getComponent().accept(this, null), coclauses);
+      return visitClassExt(data, expr.getSequence().getFirst().getComponent().accept(this, null), coclauses);
     }
 
     boolean hasMeta = false;
@@ -864,24 +874,27 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
   @Override
   public Concrete.Expression visitClassExt(Concrete.ClassExtExpression expr, Void params) {
     Concrete.Expression baseExpr = expr.getBaseClassExpression();
-    if (baseExpr instanceof Concrete.ReferenceExpression) {
-      baseExpr = visitReference((Concrete.ReferenceExpression) baseExpr, false, true);
-      Concrete.Expression metaResult = visitMeta(baseExpr, Collections.emptyList(), expr.getCoclauses());
-      if (metaResult != null) {
-        return metaResult;
+    switch (baseExpr) {
+      case Concrete.ReferenceExpression referenceExpression -> {
+        baseExpr = visitReference(referenceExpression, false, true);
+        Concrete.Expression metaResult = visitMeta(baseExpr, Collections.emptyList(), expr.getCoclauses());
+        if (metaResult != null) {
+          return metaResult;
+        }
       }
-    } else if (baseExpr instanceof Concrete.AppExpression) {
-      Concrete.Expression function = ((Concrete.AppExpression) baseExpr).getFunction();
-      function = function instanceof Concrete.ReferenceExpression ? visitReference((Concrete.ReferenceExpression) function, false, true) : function.accept(this, null);
-      Concrete.Expression metaResult = visitMeta(function, ((Concrete.AppExpression) baseExpr).getArguments(), expr.getCoclauses());
-      if (metaResult != null) {
-        return metaResult;
+      case Concrete.AppExpression appExpression -> {
+        Concrete.Expression function = appExpression.getFunction();
+        function = function instanceof Concrete.ReferenceExpression ? visitReference((Concrete.ReferenceExpression) function, false, true) : function.accept(this, null);
+        Concrete.Expression metaResult = visitMeta(function, appExpression.getArguments(), expr.getCoclauses());
+        if (metaResult != null) {
+          return metaResult;
+        }
+        baseExpr = visitArguments(function, appExpression.getArguments());
       }
-      baseExpr = visitArguments(function, ((Concrete.AppExpression) baseExpr).getArguments());
-    } else if (baseExpr instanceof Concrete.BinOpSequenceExpression) {
-      return visitBinOpSequence(expr.getData(), (Concrete.BinOpSequenceExpression) baseExpr, expr.getCoclauses());
-    } else {
-      baseExpr = expr.getBaseClassExpression().accept(this, null);
+      case Concrete.BinOpSequenceExpression binOpSequenceExpression -> {
+        return visitBinOpSequence(expr.getData(), binOpSequenceExpression, expr.getCoclauses());
+      }
+      default -> baseExpr = expr.getBaseClassExpression().accept(this, null);
     }
 
     expr.setBaseClassExpression(baseExpr);
@@ -959,7 +972,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
         } else {
           ArrayList<Concrete.Pattern> newPattern = new ArrayList<>(List.of(pattern));
           visitPatterns(newPattern, null, new HashMap<>(), true);
-          pattern = newPattern.get(0);
+          pattern = newPattern.getFirst();
         }
         letClauses.add(new Concrete.LetClause(clause.getParameters(), clauseResultType, newClauseTerm, pattern));
       }
@@ -967,6 +980,20 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       Concrete.Expression newBody = expr.expression.accept(this, null);
       return new Concrete.LetExpression(expr.getData(), expr.isHave(), expr.isStrict(), letClauses, newBody);
     }
+  }
+
+  @Override
+  public Concrete.Expression visitNumericLiteral(Concrete.NumericLiteral expr, Void params) {
+    if (myLiteralTypechecker == null) return expr;
+    ConcreteExpression result = myLiteralTypechecker.resolveNumber(expr.getNumber(), this, new ContextDataImpl(expr, Collections.emptyList(), null, null, null, null));
+    return result instanceof Concrete.Expression ? new Concrete.NumericLiteral(expr.getData(), expr.getNumber(), (Concrete.Expression) result) : expr;
+  }
+
+  @Override
+  public Concrete.Expression visitStringLiteral(Concrete.StringLiteral expr, Void params) {
+    if (myLiteralTypechecker == null) return expr;
+    ConcreteExpression result = myLiteralTypechecker.resolveString(expr.getUnescapedString(), this, new ContextDataImpl(expr, Collections.emptyList(), null, null, null, null));
+    return result instanceof Concrete.Expression ? new Concrete.StringLiteral(expr.getData(), expr.getUnescapedString(), (Concrete.Expression) result) : expr;
   }
 
   @Override

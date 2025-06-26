@@ -3,9 +3,9 @@
 \import Logic
 \import Logic.Meta
 \import Paths
-\import Data.Fin
 \import Data.SubList
 \import Logic.Rewriting.TRS.Substitutions
+\import Logic.Rewriting.TRS.Utils.FinFunctions
 \import Paths.Meta
 
 -- | The family of functional term symbols

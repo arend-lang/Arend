@@ -1,0 +1,62 @@
+\import Algebra.Monoid
+\import Algebra.Solver
+\import Data.List
+\import Function.Meta
+\import Paths
+\import Paths.Meta
+
+\func MonoidSolverModel (M : Monoid) : SubstSolverModel M \cowith
+  | Term => Term
+  | NF n => List (Fin n)
+  | normalize t => normalize-aux t nil
+  | interpret {n : Nat} (env : Fin n -> M) (t : Term n) : M \elim t {
+    | var x => env x
+    | :ide => M.ide
+    | :* t s => interpret env t * interpret env s
+  }
+  | interpretNF => interpretNF
+  | interpretNF-consistent => interpretNF-consistent-aux *> ide-right
+  | nfVar v => v :: nil
+  | >>= => >>=
+  | >>=-consistent => >>=-consistent
+  \where {
+    \data Term (n : Nat)
+      | var (Fin n)
+      | :ide
+      | \infixl 7 :* (t s : Term n)
+
+    \private \func normalize-aux {n : Nat} (t : Term n) (acc : List (Fin n)) : List (Fin n) \elim t
+      | var v => v :: acc
+      | :ide => acc
+      | :* t s => normalize-aux t (normalize-aux s acc)
+
+    \protected \func interpretNF {V : \Set} (env : V -> M) (l : List V) : M \elim l
+      | nil => M.ide
+      | x :: nil => env x
+      | x :: l => env x * interpretNF env l
+
+    \protected \lemma interpretNF_:: {V : \Set} {env : V -> M} {x : V} {l : List V} : interpretNF env (x :: l) = env x * interpretNF env l \elim l
+      | nil => inv ide-right
+      | :: a l => idp
+
+    \protected \lemma interpretNF_++ {V : \Set} {env : V -> M} {t s : List V} : interpretNF env (t ++ s) = interpretNF env t * interpretNF env s \elim t
+      | nil => inv ide-left
+      | v :: l => rewrite (interpretNF_::,interpretNF_::) $ pmap (_ *) interpretNF_++ *> inv *-assoc
+
+    \private \lemma interpretNF-consistent-aux {n : Nat} {env : Fin n -> M} {t : Term n} {acc : List (Fin n)} : interpretNF env (normalize-aux t acc) = interpret env t * interpretNF env acc \elim t
+      | var x => interpretNF_::
+      | :ide => inv ide-left
+      | :* t s => interpretNF-consistent-aux *> pmap (_ *) interpretNF-consistent-aux *> inv *-assoc
+
+    \func \infixl 2 >>= {U V : \Set} (l : List U) (k : U -> List V) : List V \elim l
+      | nil => nil
+      | u :: l => k u ++ (l >>= k)
+
+    \private \lemma >>=-consistent {U V : \Set} {env : V -> M} {l : List U} {k : U -> List V}
+      : interpretNF env (l >>= k) = interpretNF (\lam u => interpretNF env (k u)) l \elim l
+      | nil => idp
+      | u :: l => interpretNF_++ *> pmap (_ *) >>=-consistent *> inv interpretNF_::
+  }
+
+\func AddMonoidSolverModel (A : AddMonoid) : SubstSolverModel A
+  => MonoidSolverModel (AddMonoid.toMonoid A)

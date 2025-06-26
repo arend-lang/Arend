@@ -1,5 +1,5 @@
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -207,6 +207,26 @@
     | inP (y,q) => inP (y, StronglyRegularCauchyFilter.Reg_CF~_<= {_} {pointSCF y} $ ~-transitive {_} {pointSCF y} (CF~_<= {_} {pointSCF y} $ q <=∘ func-weak-cauchy_<= (sregCF $ weaklyDense-filter-lift f fd F) (weaklyDense-filter-lift f fd F) \lam u => u <=-refl) $ weaklyDense-filter-lift.map-equiv fd)
   }
 
+\func strongCompletion {S : StronglyRegularCoverSpace} : CoverMap S StrongCompletion.coverSpace \cowith
+  | func => pointSCF
+  | func-cover (inP (C,Cc,f)) => cauchy-refine (isRegular Cc)
+    \case __ \with {
+      | inP (U',CU',U<=<U') => \case f CU' \with {
+        | inP (V,DV,p) => inP (pointSCF ^-1 V, inP (V, DV, idp), \lam Ux => p $ <=<-right (single_<= Ux) U<=<U')
+      }
+    }
+  \where {
+    \protected \lemma dense-aux {F : StronglyRegularCauchyFilter S} {V : Set (StronglyRegularCauchyFilter S)} (r : single F <=< {StrongCompletion.coverSpace} V) : F \lam x => V (strongCompletion x) \elim r
+      | inP (C,Cc,f) =>
+        \have | (inP (U', inP (U, CU, U'<=<U), FU')) => isCauchyFilter {F} (isRegular Cc)
+              | (inP (W,g,U<=W)) => f CU
+        \in filter-mono FU' \lam U'x => g (F, (idp, U<=W $ filter-mono FU' $ <=<_<= U'<=<U)) $ U<=W $ <=<-right (single_<= U'x) U'<=<U
+
+    \lemma isDenseEmbedding : PrecoverMap.IsWeaklyDenseEmbedding {strongCompletion {S}}
+      => (\lam {U} Uo c s => isWeaklyProper $ filter-mono (dense-aux $ StrongCompletion.coverSpace.open-char.1 Uo s.2) \lam {x} Ux => absurd $ c (_, inP (x, idp), Ux),
+          \lam {C} Cc => inP (C, Cc, \lam {U} CU => inP (StrongCompletion.mkSet U, inP (U, CU, <=<_<= __ idp), <=-refl)))
+  }
+
 \instance StrongCompletion (X : StronglyRegularCoverSpace) : StronglyCompleteCoverSpace (StronglyRegularCauchyFilter X)
   | StronglyRegularCoverSpace => coverSpace
   | isSeparatedCoverSpace p => StronglyRegularCauchyFilter.equality \lam Cc => \case p (makeCover Cc) \with {
@@ -267,24 +287,4 @@
           | byRight r => mkSet_<= $ Preorder.=_<= r
         }, <=-refl))
       })
-  }
-
-\func strongCompletion {S : StronglyRegularCoverSpace} : CoverMap S StrongCompletion.coverSpace \cowith
-  | func => pointSCF
-  | func-cover (inP (C,Cc,f)) => cauchy-refine (isRegular Cc)
-      \case __ \with {
-        | inP (U',CU',U<=<U') => \case f CU' \with {
-          | inP (V,DV,p) => inP (pointSCF ^-1 V, inP (V, DV, idp), \lam Ux => p $ <=<-right (single_<= Ux) U<=<U')
-        }
-      }
-  \where {
-    \protected \lemma dense-aux {F : StronglyRegularCauchyFilter S} {V : Set (StronglyRegularCauchyFilter S)} (r : single F <=< {StrongCompletion.coverSpace} V) : F \lam x => V (strongCompletion x) \elim r
-      | inP (C,Cc,f) =>
-        \have | (inP (U', inP (U, CU, U'<=<U), FU')) => isCauchyFilter {F} (isRegular Cc)
-              | (inP (W,g,U<=W)) => f CU
-        \in filter-mono FU' \lam U'x => g (F, (idp, U<=W $ filter-mono FU' $ <=<_<= U'<=<U)) $ U<=W $ <=<-right (single_<= U'x) U'<=<U
-
-    \lemma isDenseEmbedding : PrecoverMap.IsWeaklyDenseEmbedding {strongCompletion {S}}
-      => (\lam {U} Uo c s => isWeaklyProper $ filter-mono (dense-aux $ StrongCompletion.coverSpace.open-char.1 Uo s.2) \lam {x} Ux => absurd $ c (_, inP (x, idp), Ux),
-          \lam {C} Cc => inP (C, Cc, \lam {U} CU => inP (StrongCompletion.mkSet U, inP (U, CU, <=<_<= __ idp), <=-refl)))
   }

@@ -1,10 +1,12 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Arith.Int
 \import Arith.Nat
+\import Arith.Nat.Sequence
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Logic.Meta
 \import Meta

@@ -1,6 +1,6 @@
 package org.arend.naming.reference;
 
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

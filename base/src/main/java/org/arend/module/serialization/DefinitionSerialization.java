@@ -326,7 +326,7 @@ public class DefinitionSerialization implements ArendSerializer {
   private DefinitionProtos.Definition.CoerceData.Element writeCoerceDataElement(Map.Entry<CoerceData.Key, List<Definition>> entry) {
     DefinitionProtos.Definition.CoerceData.Element.Builder elementBuilder = DefinitionProtos.Definition.CoerceData.Element.newBuilder();
     if (entry.getKey() instanceof CoerceData.DefinitionKey) {
-      elementBuilder.setDefinitionKey(DefinitionProtos.Definition.CoerceData.DefinitionKey.newBuilder().setClassifyingDef(myCallTargetIndexProvider.getDefIndex(((CoerceData.DefinitionKey) entry.getKey()).definition)));
+      elementBuilder.setDefinitionKey(DefinitionProtos.Definition.CoerceData.DefinitionKey.newBuilder().setClassifyingDef(myCallTargetIndexProvider.getDefIndex(((CoerceData.DefinitionKey) entry.getKey()).definition())));
     } else if (entry.getKey() instanceof CoerceData.PiKey) {
       elementBuilder.setConstantKey(DefinitionProtos.Definition.CoerceData.ConstantKey.PI);
     } else if (entry.getKey() instanceof CoerceData.SigmaKey) {

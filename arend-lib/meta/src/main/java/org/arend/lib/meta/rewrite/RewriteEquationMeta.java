@@ -5,7 +5,6 @@ import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.ConcreteParameter;
 import org.arend.ext.concrete.expr.*;
 import org.arend.ext.core.context.CoreBinding;
-import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.*;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -14,9 +13,9 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.util.Pair;
-import org.arend.lib.StdExtension;
 
 import org.arend.lib.error.TypeError;
+import org.arend.lib.meta.equation.BaseEquationMeta;
 import org.arend.lib.meta.equation.EqualitySolver;
 import org.arend.lib.meta.equation.EquationSolver;
 import org.arend.lib.meta.util.SubstitutionMeta;
@@ -28,19 +27,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Function;
 
-public class RewriteEquationMeta extends BaseMetaDefinition {
-  private final StdExtension ext;
-  @Dependency(name = "Precat.Hom") private ArendRef catHom;
-  @Dependency(name = "Precat.o")   private CoreClassField catComp;
-  @Dependency(name = "Precat.id")  private CoreClassField catId;
+public class RewriteEquationMeta extends BaseEquationMeta {
   @Dependency private ArendRef transport;
   @Dependency private ArendRef transportInv;
-  @Dependency(name = "*>") private ArendRef concat;
-  @Dependency private ArendRef pmap;
-
-  public RewriteEquationMeta(StdExtension ext) {
-    this.ext = ext;
-  }
 
   @Override
   public boolean withoutLevels() {
@@ -53,8 +42,8 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
   }
 
   private static void getNumber(ConcreteExpression expression, List<Integer> result, ErrorReporter errorReporter) {
-    int n = Utils.getNumber(expression, errorReporter);
-    if (n >= 1) {
+    Integer n = Utils.getNumber(expression, errorReporter, true);
+    if (n != null && n >= 1) {
       result.add(n - 1);
     }
   }
@@ -276,7 +265,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
     boolean isInverse = !reverse;
 
     // Add inference holes to functions and type-check the path argument
-    TypedExpression path = Utils.typecheckWithAdditionalArguments(arg0, typechecker, factory, 0, false);
+    TypedExpression path = Utils.typecheckWithAdditionalArguments(arg0, typechecker, 0, false);
     if (path == null) {
       return null;
     }
@@ -321,7 +310,7 @@ public class RewriteEquationMeta extends BaseMetaDefinition {
       type = expectedType;
     }
 
-    EqualitySolver solver = new EqualitySolver(ext.equationMeta, typechecker, factory, refExpr, catHom, catComp, catId);
+    EqualitySolver solver = new EqualitySolver(this, typechecker, factory, refExpr);
     solver.setValuesType(value.computeType());
     solver.setUseHypotheses(false);
     solver.initializeSolver();

@@ -1,12 +1,10 @@
-\import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Sub
 \import Algebra.Ring
-\import Algebra.Ring.Localization
 \import Algebra.Ring.Reduced
 \import Algebra.Semiring
 \import Arith.Nat
@@ -183,7 +181,7 @@
                   }
                 })
                 | no q, s2 => rewrite (FinSet.search_no_reduce (\lam (j : Fin (suc (suc s.1))) => divQuotient_dec0 (a (suc j))) (\lam p => q p)) at s2 $
-                                inP (suc s.1, transport2 LDiv (r s.1 (\lam p => q p)).2 (r (suc s.1) q).2 $ MonoidHom.func-LDiv {f} s2)
+                                inP (suc s.1, transport2 LDiv (r s.1 (\lam p => q p)).2 (r (suc s.1) q).2 $ f.func-LDiv s2)
               }
           }
 
@@ -199,18 +197,6 @@
       })
   }
 }
-
-\instance FieldOfQuotients (D : IntegralDomain.Dec) : DiscreteField \cowith
-  | CRing => LocRing D.subMonoid
-  | zro/=ide p => \case LocRing.unequals p \with {
-    | inP (c,c#0,q) => D.#0-zro (transport D.#0 equation c#0)
-  }
-  | eitherZeroOrInv => \case \elim __ \with {
-    | in~ x => \case decideEq x.1 0 \with {
-      | yes e => byLeft $ LocRing.equals1 $ ide-right *> e *> inv zro_*-left
-      | no q => byRight $ Monoid.Inv.lmake (inl~ (x.2, x.1, AddGroup.nonZeroApart q)) $ LocRing.equals1 (simplify *-comm)
-    }
-  }
 
 \class StrictDomain \extends Ring, NonZeroSemiring, ImpotentRing {
   | zeroProduct {x y : E} : x * y = zro -> (x = zro) || (y = zro)

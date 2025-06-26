@@ -1,4 +1,5 @@
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Algebra.Ring.Graded
 \import Algebra.Ring.Ideal
 \import Data.Array

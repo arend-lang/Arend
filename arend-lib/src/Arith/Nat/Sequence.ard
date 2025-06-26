@@ -1,0 +1,40 @@
+\import Arith.Nat
+\import Data.Or
+\import Equiv (QEquiv)
+\import Equiv.Univalence
+\import Function.Meta
+\import Logic.Unique
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+
+\lemma search (A : Nat -> \Prop) (d : \Pi (n : Nat) -> Dec (A n)) (c : ∃ (n : Nat) (A n))
+  : Contr (\Sigma (n0 : Nat) (A n0) (\Pi (n : Nat) -> A n -> n0 <= n))
+  => \case \elim c \with {
+    | inP (n,An) => isProp=>isContr (\lam t s => ext $ <=-antisymmetric (t.3 s.1 s.2) (s.3 t.1 t.2))
+      \have t => Contr.center {FinSet.searchFin-unique (\lam j => A j) (\lam j => d j) (inP (n, transportInv A (mod_< id<suc) An))}
+      \in (t.1, t.2, \lam k Ak => \case LinearOrder.dec<_<= k t.1 \with {
+        | inl k<t1 =>
+          \have s => mod_< $ NatSemiring.<-transitive k<t1 (fin_< t.1)
+          \in absurd $ <-irreflexive $ k<t1 <∘l transport (t.1 <=) s (t.3 (k Nat.mod suc n) (transportInv A s Ak))
+        | inr t1<=k => t1<=k
+      })
+  }
+
+\lemma NatFinSubset (A : Nat -> \Prop) (d : \Pi (n : Nat) -> Dec (A n)) (M : Nat) (c : \Pi (n : Nat) -> A n -> n < M)
+  : FinSet (\Sigma (n : Nat) (A n))
+  => transport FinSet (QEquiv-to-= $ later \new QEquiv {
+    | f s => s
+    | ret s => (toFin s.1 (c s.1 s.2), transportInv A toFin=id s.2)
+    | ret_f s => ext (fin_nat-inj toFin=id)
+    | f_sec s => ext toFin=id
+  }) (SigmaFin (FinFin M) \lam j => DecFin (d j))

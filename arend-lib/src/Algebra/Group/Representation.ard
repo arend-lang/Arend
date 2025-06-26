@@ -2,7 +2,6 @@
 \import Algebra.Group.GSet.ExampleActions
 \import Algebra.Group.GSet
 \import Algebra.Module
-\import Algebra.Module.Category
 \import Algebra.Module.LinearMap
 \import Algebra.Pointed
 \import Algebra.Ring
@@ -27,7 +26,8 @@
     | func-+ => **-ldistr
     | func-*c => **-*c
 
-  \lemma toLinearMap-ide : toLinearMap ide = Ring.ide {LinearMapRing \this} => exts \lam _ => unfold id-action
+  \lemma toLinearMap-ide : toLinearMap ide = LinearMap.id
+    => exts \lam _ => unfold id-action
 }
 
 \func TrivialAction {R : Ring} (E : LModule R) (G : Group) : LinRepres R G \cowith

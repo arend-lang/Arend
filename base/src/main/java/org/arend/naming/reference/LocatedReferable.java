@@ -2,8 +2,8 @@ package org.arend.naming.reference;
 
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
-import org.arend.module.FullName;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.FullName;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.scopeprovider.ModuleScopeProvider;
 import org.arend.naming.scope.Scope;
 import org.jetbrains.annotations.NotNull;
@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public interface LocatedReferable extends GlobalReferable {
   @Nullable ModuleLocation getLocation();
@@ -22,6 +23,13 @@ public interface LocatedReferable extends GlobalReferable {
     List<String> longName = new ArrayList<>();
     LocatedReferable.Helper.getLocation(this, longName);
     return new LongName(longName);
+  }
+
+  @Override
+  default boolean checkName(@NotNull FullName fullName) {
+    List<String> longName = new ArrayList<>();
+    ModuleLocation module = LocatedReferable.Helper.getLocation(this, longName);
+    return fullName.longName.toList().equals(longName) && Objects.equals(fullName.module, module);
   }
 
   default FullName getRefFullName() {

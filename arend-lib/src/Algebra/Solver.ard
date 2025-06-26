@@ -1,0 +1,32 @@
+\import Data.Fin
+\import Logic
+\import Paths
+\import Paths.Meta
+
+\class SolverModel (M : \Set) {
+  | \protected Term : Nat -> \Set
+  | \protected NF : Nat -> \Set
+  | \protected normalize {n : Nat} : Term n -> NF n
+  | \protected interpret {n : Nat} (env : Fin n -> M) : Term n -> M
+  | \protected interpretNF {n : Nat} (env : Fin n -> M) : NF n -> M
+  | \protected interpretNF-consistent {n : Nat} {env : Fin n -> M} {t : Term n} : interpretNF env (normalize t) = interpret env t
+
+  \protected \lemma terms-equality (env : Array M) (t s : Term env.len) (p : interpretNF env (normalize t) = interpretNF env (normalize s)) : interpret env t = interpret env s
+    => inv interpretNF-consistent *> p *> interpretNF-consistent
+
+  \protected \lemma terms-equality-conv (env : Array M) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize t) = interpretNF env (normalize s)
+    => interpretNF-consistent *> p *> inv interpretNF-consistent
+}
+
+\class SubstSolverModel \extends SolverModel {
+  | \protected nfVar {n : Nat} : Fin n -> NF n
+  | \protected \infixl 2 >>= {m n : Nat} : NF m -> (Fin m -> NF n) -> NF n
+  | \protected >>=-consistent {m n : Nat} {env : Fin n -> M} {nf : NF m} {k : Fin m -> NF n}
+    : interpretNF env (nf >>= k) = interpretNF (\lam v => interpretNF env (k v)) nf
+
+  \lemma apply-axiom (env : Array M) (t s : Term env.len) (p : interpret env t = interpret env s) (pattern : NF (suc env.len)) : interpretNF env (pattern >>= fcase (normalize t) nfVar) = interpretNF env (pattern >>= fcase (normalize s) nfVar)
+    => >>=-consistent *> pmap (interpretNF __ pattern) (ext \case \elim __ \with {
+      | 0 => terms-equality-conv env t s p
+      | suc v => idp
+    }) *> inv >>=-consistent
+}

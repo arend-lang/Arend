@@ -1,4 +1,4 @@
-\import Arith.Nat
+\import Arith.Nat(id<suc)
 \import Data.Array
 \import Data.Or
 \import Function

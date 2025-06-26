@@ -56,7 +56,7 @@ public interface Ring<E> {
 
     @Override
     public BigInteger div(BigInteger a, BigInteger b) {
-      if (!a.abs().mod(b.abs()).equals(BigInteger.ZERO)) return null;
+      if (b.equals(BigInteger.ZERO) || !a.abs().mod(b.abs()).equals(BigInteger.ZERO)) return null;
       return a.divide(b);
     }
 

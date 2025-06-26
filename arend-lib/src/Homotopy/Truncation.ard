@@ -1,7 +1,8 @@
 \import Equiv
 \import Equiv.Path
 \import Equiv.Univalence
-\import HLevel
+\import Homotopy.HLevel
+\import Logic.Unique
 \import Homotopy.Loop
 \import Homotopy.Pointed
 \import Homotopy.Sphere

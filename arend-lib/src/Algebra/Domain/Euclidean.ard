@@ -6,6 +6,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Semiring
 \import Arith.Int
@@ -190,7 +191,7 @@
     | 0 => simplify
     | suc s => mcases \with {
       | yes _ => simplify
-      | no _ => pmap (_ * __ + _) (inv (isDivMod a b)) *> equation *> bezoutIdentity-fueled s b (divMod a b).2
+      | no _ => pmap (_ * __ + _) (inv (isDivMod a b)) *> equation.cRing *> bezoutIdentity-fueled s b (divMod a b).2
     }
 
   \lemma bezoutIdentity (a b : E) : (bezout a b).1 * a + (bezout a b).2 * b = gcd a b
@@ -243,7 +244,7 @@
     | 0 => absurd (d/=0 idp)
     | suc _ \as d => \new Monoid.LDiv {
       | inv => div y d
-      | inv-right => pmap (d * y div d +) (mod-unique {d} {z} {0} {x + y div d} {y mod d} NatSemiring.zero<suc (fin_< (y mod d)) (inv (pmap (`+ _) ldistr *> +-assoc *> pmap (_ +) (divModProp y d) *> dx+y=dz))) *> divModProp y d
+      | inv-right => pmap (d * y div d +) (mod-unique {d} {z} {0} {x + y div d} {y mod d} NatOrder.zero<suc (fin_< (y mod d)) (inv (pmap (`+ _) ldistr *> +-assoc *> pmap (_ +) (divModProp y d) *> dx+y=dz))) *> divModProp y d
     }
   }
   \where {
@@ -298,7 +299,7 @@
 
     \lemma intMod<right (x : Int) (n : Nat) : iabs (IntEuclidean.divMod x (suc n)).2 < suc n
       => \case decideEq (IntEuclidean.divMod x (suc n)).2 0 \with {
-        | yes e => rewrite e NatSemiring.zero<suc
+        | yes e => rewrite e NatOrder.zero<suc
         | no e => IntEuclidean.isEuclideanMap x (suc n) (\case __) e
       }
 

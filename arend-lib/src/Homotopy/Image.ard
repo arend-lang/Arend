@@ -5,7 +5,7 @@
 \import Data.SeqColimit
 \import Equiv
 \import Equiv.Univalence
-\import HLevel
+\import Logic.Unique
 \import Homotopy.Fibration
 \import Homotopy.Pushout
 \import Logic

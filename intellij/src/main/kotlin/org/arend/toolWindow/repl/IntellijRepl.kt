@@ -29,6 +29,7 @@ import org.arend.toolWindow.repl.action.ShowContextCommandIntellij
 import org.arend.typechecking.*
 import org.arend.typechecking.computation.ComputationRunner
 import org.arend.typechecking.execution.PsiElementComparator
+import org.arend.typechecking.instance.provider.InstanceScopeProvider
 import org.arend.typechecking.order.Ordering
 import org.arend.typechecking.order.dependency.DummyDependencyListener
 import org.arend.typechecking.order.listener.CollectingOrderingListener
@@ -46,7 +47,7 @@ abstract class IntellijRepl private constructor(
 ) : Repl(
     errorReporter,
     server,
-    TypecheckingOrderingListener(null, null, null, errorReporter, null, null),
+    TypecheckingOrderingListener(null, InstanceScopeProvider.EMPTY, emptyMap(), null, errorReporter, null, null),
 ) {
     constructor(
         handler: ArendReplExecutionHandler,
@@ -112,7 +113,7 @@ abstract class IntellijRepl private constructor(
 
     override fun checkExpr(expr: Concrete.Expression, expectedType: Expression?, continuation: Consumer<TypecheckingResult>) {
         val collector = CollectingOrderingListener()
-        Ordering(typechecking.instanceScopeProvider, typechecking.concreteProvider, collector, DummyDependencyListener.INSTANCE, PsiElementComparator, errorReporter).orderExpression(expr)
+        Ordering(typechecking.instanceScopeProvider, typechecking.concreteProvider, collector, DummyDependencyListener.INSTANCE, PsiElementComparator).orderExpression(expr)
         ApplicationManager.getApplication().executeOnPooledThread {
             val indicator = ModificationCancellationIndicator(PsiModificationTracker.getInstance(project))
             ComputationRunner<Unit>().run(indicator) {
@@ -128,7 +129,7 @@ abstract class IntellijRepl private constructor(
 
     override fun typecheckStatements(group: ConcreteGroup, scope: Scope) {
         val collector = CollectingOrderingListener()
-        Ordering(typechecking.instanceScopeProvider, typechecking.concreteProvider, collector, DummyDependencyListener.INSTANCE, PsiElementComparator, errorReporter).orderModule(group)
+        Ordering(typechecking.instanceScopeProvider, typechecking.concreteProvider, collector, DummyDependencyListener.INSTANCE, PsiElementComparator).orderModule(group)
         ApplicationManager.getApplication().executeOnPooledThread {
             val ok = typechecking.typecheckCollected(collector, ModificationCancellationIndicator(PsiModificationTracker.getInstance(project)))
             runReadAction {

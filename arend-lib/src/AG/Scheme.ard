@@ -1,12 +1,14 @@
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.Sub
-\import Algebra.Pointed.Category
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
 \import Algebra.Ring
-\import Algebra.Ring.Category
+\import Algebra.Ring.Localization.Properties
+\import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Localization
@@ -26,7 +28,7 @@
 \import Equiv.Path
 \import Equiv.Sigma
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -35,7 +37,7 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set.Category
+\import Set.SetCategory
 \import Topology.Locale
 \open Monoid
 \open CompleteLattice (SJoin)
@@ -156,7 +158,7 @@
     | f => FrameCat.id L.L
     | f# => \new NatTrans {
       | trans x => Cat.id _
-      | natural p => ext $ pmap (\lam x => func {L.R.F.Func x}) prop-pi
+      | natural p => ext $ pmap (\lam x => (L.R.F.Func x).func) prop-pi
     }
   }
   | o {L M N : RingedLocale} (g : RingedLocaleHom M N) (f : RingedLocaleHom L M) : RingedLocaleHom L N \cowith {
@@ -179,10 +181,10 @@
     \func homMap {L M : RingedLocale} {f g : RingedLocaleHom M L} (p : f = g) (a : L) : RingHom (M.R (f a)) (M.R (g a))
       => M.R.F.Func (Preorder.=_<= (inv (path (\lam i => p i a))))
 
-    \lemma homMap-lem {L M : RingedLocale} {f g : RingedLocaleHom M L} (p : f = g) (a : L) : transport (\lam (h : RingedLocaleHom M L) => RingHom (M.R (f a)) (M.R (h a))) p (RingCat.id _) = homMap p a \elim p
+    \lemma homMap-lem {L M : RingedLocale} {f g : RingedLocaleHom M L} (p : f = g) (a : L) : transport (\lam (h : RingedLocaleHom M L) => RingHom (M.R (f a)) (M.R (h a))) p RingHom.id = homMap p a \elim p
       | idp => inv M.R.F.Func-id *> pmap M.R.F.Func prop-pi
 
-    \lemma homMap-lem2 {L M : RingedLocale} {f g : RingedLocaleHom M L} (p : f = g) (a : L) : homMap p a Cat.∘ homMap (inv p) a = CRingCat.id (M.R (g a)) \elim p
+    \lemma homMap-lem2 {L M : RingedLocale} {f g : RingedLocaleHom M L} (p : f = g) (a : L) : homMap p a Cat.∘ homMap (inv p) a = RingHom.id {M.R (g a)} \elim p
       | idp => inv (pmap2 (Cat.∘) (homMap-lem idp a) (homMap-lem idp a)) *> id-left
 
     \func homMap-natural {L M : RingedLocale} {f g : RingedLocaleHom M L} (p : f = g) : NatTrans (Comp M.R f.f.functor.op) (Comp M.R g.f.functor.op) \cowith
@@ -193,9 +195,9 @@
       : NatTrans (Comp L.R (Functor.op {FrameHom.functor {e.f}})) M.R \cowith
       | trans x => homMap e.f_hinv x Cat.∘ f (e.f x)
       | natural {a} {b} h =>
-        \let t : homMap e.f_hinv b Cat.∘ M.R.F.Func (Func {Functor.op {FrameHom.functor {e.hinv}}} (func-<= {e.f} h)) = M.R.F.Func h Cat.∘ homMap e.f_hinv a
+        \let t : homMap e.f_hinv b Cat.∘ M.R.F.Func (Func {Functor.op {FrameHom.functor {e.hinv}}} (e.f.func-<= h)) = M.R.F.Func h Cat.∘ homMap e.f_hinv a
                => pmap (_ Cat.∘ M.R.F.Func __) prop-pi *> natural {homMap-natural e.f_hinv} h *> pmap (Cat.`∘ _) (pmap M.R.F.Func prop-pi)
-        \in unfold Func $ rewrite (prop-isProp (Func {Functor.op {FrameHom.functor {e.f}}} h) (func-<= {e.f} h)) $ o-assoc *> rewrite (f.natural (func-<= {e.f} h)) (inv o-assoc *> path (\lam i => t i Cat.∘ f (e.f a)) *> o-assoc)
+        \in unfold Func $ rewrite (prop-isProp (Func {Functor.op {FrameHom.functor {e.f}}} h) (e.f.func-<= h)) $ o-assoc *> rewrite (f.natural (e.f.func-<= h)) (inv o-assoc *> path (\lam i => t i Cat.∘ f (e.f a)) *> o-assoc)
 
     \lemma homMap_o {L L' : RingedLocale} (f : RingedLocaleHom L L') (g : RingedLocaleHom L' L) (p : f RingedLocalePrecat.∘ g = id L') (a : L')
       : g.f# (f a) Cat.∘ f.f# a = homMap (inv p) a
@@ -203,11 +205,11 @@
          \in transport-rotate (\lam (h : RingedLocaleHom L' L') => RingHom (L'.R a) (L'.R (h a))) p t *> homMap-lem (inv p) a
 
     \lemma homMap_o-right {L L' : RingedLocale} (f : RingedLocaleHom L L') (g : RingedLocaleHom L' L) (p : f RingedLocalePrecat.∘ g = id L') (q : g RingedLocalePrecat.∘ f = id L) (a : L')
-      : f.f# a Cat.∘ homMap p a Cat.∘ g.f# (f a) = RingCat.id (L.R (f a))
+      : f.f# a Cat.∘ homMap p a Cat.∘ g.f# (f a) = RingHom.id {L.R (f a)}
       => pmap (Cat.`∘ _) (f.f#.natural _) *> CRingCat.o-assoc {L.R (f a)} {L'.R (g (f a))} {L.R (f (g (f a)))} {L.R (f a)} *> rewrite (homMap_o g f q (f a)) (inv L.R.F.Func-o *> pmap L.R.F.Func prop-pi *> L.R.F.Func-id)
 
     \lemma homMap_o-left {L L' : RingedLocale} (f : RingedLocaleHom L L') (g : RingedLocaleHom L' L) (p : f RingedLocalePrecat.∘ g = id L') (a : L')
-      : homMap p a Cat.∘ g.f# (f a) Cat.∘ f.f# a = RingCat.id (L'.R a)
+      : homMap p a Cat.∘ g.f# (f a) Cat.∘ f.f# a = RingHom.id {L'.R a}
       => o-assoc *> rewrite (homMap_o f g p a) (homMap-lem2 p a)
 
     \func fromIso {L L' : RingedLocale} (e : Iso {RingedLocalePrecat} {L} {L'}) : Iso {VSheafCat CRingCat L'.L} {VSheaf.direct_image_locale e.f L.R} {L'.R} \cowith
@@ -292,7 +294,7 @@
           exts \lam j => pmap (_ *) (element-lem j) *> inv func-* *> pmap (F.F.Func (embed_Cover j.2)) yi.inv-left *> func-ide
       \where
         \lemma element-lem (j : \Sigma (x : P) (embed x <= embed b)) : y.1 j = F.F.Func (embed_Cover j.2) (y.1 (b, <=-refl))
-          => inv $ path (\lam i => func {coneCoh {extend.lim (embed b)} (embed_Cover j.2) i} y)
+          => inv $ path (\lam i => (extend.lim (embed b)).coneCoh (embed_Cover j.2) i y)
 
     \func toPresented {P : RingedFramePres} {a b : P} (p : Cover1 b a) (U : PresentedFrame P) (Ua : U.1 a) (x : extend.lim {P} {CRingBicat} {P.R} U)
       (e : EitherInv P p (x.1 (a, \lam {z} c => U.2 z $ Cover.cover-trans1 c $ cover-inj (a,Ua) idp)))
@@ -347,7 +349,7 @@
       | Func c => (functorial (SpecPres.cover_ideal c)).1
       | Func-id {a} => locMap-epi {_} {_} {LocRing (powers a)} $ (functorial (SpecPres.cover_ideal (id {framePresSite $ SpecPres R} a))).2 *> inv id-left
       | Func-o {a} {b} {c} {g} {f} => locMap-epi {_} {_} {LocRing (powers c)} $ (functorial (SpecPres.cover_ideal (f ∘ {framePresSite $ SpecPres R} g))).2 *>
-                                      inv (o-assoc *> pmap (_ RingCat.∘) (functorial (SpecPres.cover_ideal f)).2 *> (functorial (SpecPres.cover_ideal g)).2)
+                                      inv (o-assoc *> pmap (_ RingHom.∘) (functorial (SpecPres.cover_ideal f)).2 *> (functorial (SpecPres.cover_ideal g)).2)
     }
 
     \lemma functorial {R : CRing} {a b : R} (r : radical {closure1 a} b)

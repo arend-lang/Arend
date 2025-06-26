@@ -17,6 +17,7 @@
 \import Set
 \open Nat(mod,-)
 \open Monoid
+\open NatOrder \hiding (<)
 
 -- A few characterizations of primality for natural numbers
 
@@ -60,7 +61,7 @@
   => propExt (\lam p => (\case \elim n, p \with {
     | 0, p : Prime 0 => \case p.isCancelable-left {0} {1} idp
     | 1, p : Prime 1 => absurd (p.notInv Inv.ide-isInv)
-    | suc (suc n), _ => NatSemiring.suc<suc NatSemiring.zero<suc
+    | suc (suc n), _ => suc<suc zero<suc
   }, dir p)) (\lam t => conv t.1 t.2)
   \where {
     \lemma dir {n : Nat} (p : Irr n) {k : Nat} (k<n : k < n) (k|n : LDiv k n) : k = 1

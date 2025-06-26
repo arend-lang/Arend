@@ -45,15 +45,15 @@ public class RepeatMeta extends MetaInvocationMeta {
     List<? extends ConcreteArgument> args = contextData.getArguments();
     ConcreteFactory factory = contextData.getFactory();
 
-    int steps = -1;
+    Integer steps = null;
     if (!implicitArguments.isEmpty()) {
-      steps = Utils.getNumber(implicitArguments.getFirst(), errorReporter);
-      if (steps < 0) {
+      steps = Utils.getNumber(implicitArguments.getFirst(), errorReporter, true);
+      if (steps == null) {
         return null;
       }
     }
 
-    if (steps == -1) {
+    if (steps == null) {
       typechecker.checkCancelled();
 
       TypedExpression result = Utils.tryTypecheck(typechecker, tc -> tc.typecheck(factory.app(args.getFirst().getExpression(), true, Collections.singletonList(factory.app(contextData.getReferenceExpression(), args.subList(0, 2)))), args.size() <= 2 ? contextData.getExpectedType() : null));

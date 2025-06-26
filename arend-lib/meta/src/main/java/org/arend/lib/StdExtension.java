@@ -3,13 +3,10 @@ package org.arend.lib;
 import org.arend.ext.*;
 import org.arend.ext.concrete.ConcreteFactory;
 import org.arend.ext.concrete.definition.ConcreteMetaDefinition;
+import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.meta.MetaTypechecker;
 import org.arend.ext.typechecking.meta.TrivialMetaTypechecker;
-import org.arend.ext.core.definition.*;
 import org.arend.ext.core.ops.NormalizationMode;
-import org.arend.ext.dependency.Dependency;
-import org.arend.ext.dependency.ArendDependencyProvider;
-import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.MetaRef;
 import org.arend.ext.reference.Precedence;
@@ -20,7 +17,6 @@ import org.arend.lib.goal.StdGoalSolver;
 import org.arend.lib.key.IrreflexivityKey;
 import org.arend.lib.key.ReflexivityKey;
 import org.arend.lib.key.TransitivityKey;
-import org.arend.lib.level.StdLevelProver;
 import org.arend.lib.meta.*;
 import org.arend.lib.meta.cases.CasesMeta;
 import org.arend.lib.meta.cases.CasesMetaResolver;
@@ -32,6 +28,18 @@ import org.arend.lib.meta.debug.RandomMeta;
 import org.arend.lib.meta.debug.SleepMeta;
 import org.arend.lib.meta.debug.TimeMeta;
 import org.arend.lib.meta.equation.EquationMeta;
+import org.arend.lib.meta.equationNew.group.AbelianGroupEquationMeta;
+import org.arend.lib.meta.equationNew.group.AdditiveGroupEquationMeta;
+import org.arend.lib.meta.equationNew.group.CommutativeGroupEquationMeta;
+import org.arend.lib.meta.equationNew.group.GroupEquationMeta;
+import org.arend.lib.meta.equationNew.monoid.AbelianMonoidEquationMeta;
+import org.arend.lib.meta.equationNew.monoid.AdditiveMonoidEquationMeta;
+import org.arend.lib.meta.equationNew.monoid.CommutativeMonoidEquationMeta;
+import org.arend.lib.meta.equationNew.monoid.MonoidEquationMeta;
+import org.arend.lib.meta.equationNew.ring.CRingEquationMeta;
+import org.arend.lib.meta.equationNew.ring.CSemiringEquationMeta;
+import org.arend.lib.meta.equationNew.ring.RingEquationMeta;
+import org.arend.lib.meta.equationNew.ring.SemiringEquationMeta;
 import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
 import org.arend.lib.meta.exists.ExistsResolver;
@@ -39,6 +47,7 @@ import org.arend.lib.meta.linear.LinearSolverMeta;
 import org.arend.lib.meta.rewrite.RewriteEquationMeta;
 import org.arend.lib.meta.rewrite.RewriteMeta;
 import org.arend.lib.meta.simplify.SimplifyMeta;
+import org.arend.lib.util.Names;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -55,42 +64,8 @@ public class StdExtension implements ArendExtension {
   public final TransitivityKey transitivityKey = new TransitivityKey("transitivity", this);
   public final ReflexivityKey reflexivityKey = new ReflexivityKey("reflexivity", this);
 
-  @Dependency(module = "Set")                     public CoreClassDefinition BaseSet;
-  @Dependency(module = "Set", name = "BaseSet.E") public CoreClassField carrier;
-
-  @Dependency(module = "Paths")              public CoreFunctionDefinition transport;
-  @Dependency(module = "Paths")              public CoreFunctionDefinition transportInv;
-  @Dependency(module = "Paths", name = "*>") public CoreFunctionDefinition concat;
-  @Dependency(module = "Paths")              public CoreFunctionDefinition inv;
-  @Dependency(module = "Paths")              public CoreFunctionDefinition Jl;
-  @Dependency(module = "Paths")              public CoreFunctionDefinition pathOver;
-  @Dependency(module = "Paths")              public CoreFunctionDefinition pmap;
-
-  @Dependency(module = "Data.List", name = "List.nil") public CoreConstructor nil;
-  @Dependency(module = "Data.List", name = "List.::")  public CoreConstructor cons;
-  @Dependency(module = "Data.List", name = "++")       public CoreFunctionDefinition append;
-
-  @Dependency(module = "Logic")                       public CoreDataDefinition Empty;
-  @Dependency(module = "Logic")                       public CoreDataDefinition TruncP;
-  @Dependency(module = "Logic")                       public CoreFunctionDefinition propExt;
-  @Dependency(module = "Logic", name = "prop-isProp") public CoreFunctionDefinition propIsProp;
-  @Dependency(module = "Logic", name = "prop-dpi")    public CoreFunctionDefinition propDPI;
-
-  @Dependency(module = "Algebra.Pointed")                          public CoreClassDefinition Pointed;
-  @Dependency(module = "Algebra.Pointed")                          public CoreClassDefinition AddPointed;
-  @Dependency(module = "Algebra.Pointed", name = "Pointed.ide")    public CoreClassField ide;
-  @Dependency(module = "Algebra.Pointed", name = "AddPointed.zro") public CoreClassField zro;
-
-  @Dependency(module = "Data.Bool")                       public CoreDataDefinition Bool;
-  @Dependency(module = "Data.Bool", name = "Bool.true")   public CoreConstructor true_;
-
-  public final EquationMeta equationMeta = new EquationMeta(this);
-  public final LinearSolverMeta linearSolverMeta = new LinearSolverMeta(this);
-  public final ContradictionMeta contradictionMeta = new ContradictionMeta(this);
-
   private final StdGoalSolver goalSolver = new StdGoalSolver();
-  private final StdLevelProver levelProver = new StdLevelProver(this);
-  private final StdNumberTypechecker numberTypechecker = new StdNumberTypechecker(this);
+  private final StdNumberTypechecker numberTypechecker = new StdNumberTypechecker();
   private final ListDefinitionListener definitionListener = new ListDefinitionListener().addDeclaredListeners(this);
   public ArendUI ui;
 
@@ -109,29 +84,8 @@ public class StdExtension implements ArendExtension {
     this.factory = factory;
   }
 
-  @Override
-  public void load(@NotNull ArendDependencyProvider provider) {
-    provider.load(this);
-    provider.getDefinition(new ModulePath("Set"), new LongName("ProductDecide"), CoreFunctionDefinition.class);
-    provider.getDefinition(new ModulePath("Set"), new LongName("NotDecide"), CoreFunctionDefinition.class);
-    provider.getDefinition(new ModulePath("Set"), new LongName("EqualityDecide"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Data.List"), new LongName("ListMonoid"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Arith.Nat"), new LongName("NatSemiring"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Arith.Int"), new LongName("IntRing"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Order.Lexicographical"), new LongName("LexicographicalProduct"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Order.Lexicographical"), new LongName("LexicographicalList"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Algebra.Domain.Euclidean"), new LongName("NatEuclidean"), CoreFunctionDefinition.class);
-    provider.getDefinition(ModulePath.fromString("Algebra.Monoid.GCD"), LongName.fromString("DivQuotient.DivQuotientGCDMonoid"), CoreFunctionDefinition.class);
-    provider.load(equationMeta);
-    provider.load(linearSolverMeta);
-  }
-
-  private MetaRef makeRef(ModulePath modulePath, String name, MetaResolver resolver, MetaDefinition definition) {
-    return factory.metaRef(factory.moduleRef(modulePath), name, Precedence.DEFAULT, null, null, resolver, new TrivialMetaTypechecker(definition));
-  }
-
   private MetaRef makeRef(ModulePath modulePath, String name, MetaDefinition definition) {
-    return makeRef(modulePath, name, definition instanceof MetaResolver ? (MetaResolver) definition : null, definition);
+    return factory.metaRef(factory.moduleRef(modulePath), name, Precedence.DEFAULT, null, null, definition instanceof MetaResolver ? (MetaResolver) definition : null, new TrivialMetaTypechecker(definition));
   }
 
   private MetaRef makeRef(ModulePath modulePath, String name, Precedence precedence, MetaDefinition definition) {
@@ -154,15 +108,14 @@ public class StdExtension implements ArendExtension {
     return makeDef(modulePath, name, null, typechecker);
   }
 
+  private ConcreteMetaDefinition makeDef(ArendRef parent, String name, DependencyMetaTypechecker typechecker) {
+    return makeDef(factory.metaRef(parent, name, Precedence.DEFAULT, null, null, null, typechecker));
+  }
+
   @Override
   public void declareDefinitions(@NotNull DefinitionContributor contributor) {
     ModulePath meta = new ModulePath("Meta");
-    ModulePath logicMeta = ModulePath.fromString("Logic.Meta");
-    ModulePath paths = new ModulePath("Paths");
-    ModulePath logic = new ModulePath("Logic");
-    ModulePath category = new ModulePath("Category");
-    ModulePath equiv = new ModulePath("Equiv");
-    String constructorName = "constructor";
+    ModulePath logicMeta = new ModulePath("Logic", "Meta");
 
     contributor.declare(meta, logicMeta);
     contributor.declare(text("`later meta args` defers the invocation of `meta args`"), makeDef(meta, "later", new LaterMeta()));
@@ -243,13 +196,12 @@ public class StdExtension implements ArendExtension {
     contributor.declare(text("`defaultImpl C F E` returns the default implementation of field `F` in class `C` applied to expression `E`. The third argument can be omitted, in which case either `\\this` or `_` will be used instead,"),
         makeDef(meta, "defaultImpl", new DefaultImplMeta()));
 
-    ModulePath pathsMeta = ModulePath.fromString("Paths.Meta");
-    contributor.declare(pathsMeta, category);
-    contributor.declare(pathsMeta, equiv);
-    contributor.declare(pathsMeta, ModulePath.fromString("Equiv.Univalence"), "Equiv-to-=", "QEquiv-to-=");
-    contributor.declare(pathsMeta, logic);
+    ModulePath pathsMeta = new ModulePath("Paths", "Meta");
+    contributor.declare(pathsMeta, Names.getEquivModule());
+    contributor.declare(pathsMeta, Names.getUnivalenceModule(), "Equiv-to-=", "QEquiv-to-=");
+    contributor.declare(pathsMeta, Names.getLogicModule());
     contributor.declare(pathsMeta, meta);
-    contributor.declare(pathsMeta, paths);
+    contributor.declare(pathsMeta, Names.getPathsModule());
     ConcreteMetaDefinition rewrite = makeDef(pathsMeta, "rewrite", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(true)));
     contributor.declare(multiline("""
         `rewrite (p : a = b) t : T` replaces occurrences of `a` in `T` with a variable `x` obtaining a type `T[x/a]` and returns `transportInv (\\lam x => T[x/a]) p t`
@@ -261,14 +213,6 @@ public class StdExtension implements ArendExtension {
         """), rewrite);
     contributor.declare(text("`rewriteI p` is equivalent to `rewrite (inv p)`"),
         makeDef(pathsMeta, "rewriteI", new DependencyMetaTypechecker(RewriteMeta.class, () -> new RewriteMeta(false))));
-    contributor.declare(vList(
-        hList(text("`rewriteEq (p : a = b) t : T` is similar to "), refDoc(rewrite.getRef()), text(", but it finds and replaces occurrences of `a` up to algebraic equivalences.")),
-        text("For example, `rewriteEq (p : b * (c * id) = x) t : T` rewrites `(a * b) * (id * c)` as `a * x` in `T`."),
-        text("Similarly to `rewrite` this meta allows specification of occurrence numbers."),
-        text("Currently this meta supports noncommutative monoids and categories.")),
-        makeDef(pathsMeta, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, () -> new RewriteEquationMeta(this))));
-    contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
-        makeDef(pathsMeta, "simplify", new DeferredMetaDefinition(new SimplifyMeta(this), true)));
     ConcreteMetaDefinition simp_coe = makeDef(pathsMeta, "simp_coe", new ClassExtResolver(), new DependencyMetaTypechecker(SimpCoeMeta.class, SimpCoeMeta::new));
     ConcreteMetaDefinition extMeta = makeDef(pathsMeta, "ext", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(false), false, ExtMeta.defermentChecker)));
     contributor.declare(vList(
@@ -297,7 +241,7 @@ public class StdExtension implements ArendExtension {
         makeDef(pathsMeta, "exts", new ClassExtResolver(), new DependencyMetaTypechecker(ExtMeta.class, () -> new DeferredMetaDefinition(new ExtMeta(true), false, ExtMeta.defermentChecker))));
 
     MetaDefinition apply = new ApplyMeta();
-    ModulePath function = ModulePath.fromString("Function.Meta");
+    ModulePath function = new ModulePath("Function", "Meta");
     contributor.declare(text("`f $ a` returns `f a`"),
         factory.metaDef(makeRef(function, "$", new Precedence(Precedence.Associativity.RIGHT_ASSOC, (byte) 0, true), apply), Collections.emptyList(), null));
     contributor.declare(text("`f #' a` returns `f a`"),
@@ -308,9 +252,42 @@ public class StdExtension implements ArendExtension {
         ``repeat f x` repeats `f` until it fails and returns `x` in this case
         """), makeDef(function, "repeat", new RepeatMeta()));
 
-    ModulePath algebra = ModulePath.fromString("Algebra.Meta");
-    contributor.declare(algebra, paths);
-    contributor.declare(algebra, category);
+    ModulePath algebra = new ModulePath("Algebra", "Meta");
+    contributor.declare(algebra, Names.getAlgebraModule());
+    contributor.declare(algebra, Names.getGroupModule());
+    contributor.declare(algebra, Names.getGroupSolverModule(), "NatData", "CGroupData", "GroupTerm");
+    contributor.declare(algebra, Names.getLinearSolverModule());
+    contributor.declare(algebra, Names.getMonoidModule());
+    contributor.declare(algebra, Names.getMonoidSolverModule());
+    contributor.declare(algebra, Names.getOrderedModule());
+    contributor.declare(algebra, Names.getPointedModule());
+    contributor.declare(algebra, Names.getRingModule());
+    contributor.declare(algebra, Names.getRingSolverModule());
+    contributor.declare(algebra, Names.getSemiringModule());
+    contributor.declare(algebra, Names.getSolverModule());
+    contributor.declare(algebra, Names.getCommGroupSolverModule());
+    contributor.declare(algebra, Names.getCommMonoidSolverModule());
+    contributor.declare(algebra, Names.getCommRingSolverModule());
+    contributor.declare(algebra, Names.getCommSemiringSolverModule());
+    contributor.declare(algebra, Names.getNewGroupSolverModule());
+    contributor.declare(algebra, Names.getNewMonoidSolverModule());
+    contributor.declare(algebra, Names.getNewRingSolverModule());
+    contributor.declare(algebra, Names.getNewSemiringSolverModule());
+    contributor.declare(algebra, Names.getIntModule());
+    contributor.declare(algebra, Names.getNatModule());
+    contributor.declare(algebra, Names.getRatModule());
+    contributor.declare(algebra, Names.getCategoryModule(), "Precat");
+    contributor.declare(algebra, Names.getCategorySolverModule());
+    contributor.declare(algebra, Names.getBoolModule());
+    contributor.declare(algebra, Names.getListModule());
+    contributor.declare(algebra, Names.getEquivModule());
+    contributor.declare(algebra, Names.getLatticeModule());
+    contributor.declare(algebra, Names.getLinearOrderModule());
+    contributor.declare(algebra, Names.getPartialOrderModule());
+    contributor.declare(algebra, Names.getStrictOrderModule());
+    contributor.declare(algebra, Names.getPathsModule());
+    contributor.declare(algebra, Names.getSetModule());
+    ConcreteMetaDefinition equation = makeDef(algebra, "equation", new DependencyMetaTypechecker(EquationMeta.class, () -> new DeferredMetaDefinition(new EquationMeta(this), true)));
     contributor.declare(multiline("""
         `equation a_1 ... a_n` proves an equation a_0 = a_{n+1} using a_1, ... a_n as intermediate steps
 
@@ -319,18 +296,44 @@ public class StdExtension implements ArendExtension {
         The first implicit argument can be either a universe or a subclass of either `Algebra.Monoid.Monoid`, `Algebra.Monoid.AddMonoid`, or `Order.Lattice.Bounded.MeetSemilattice`.
         In the former case, the meta will prove an equality in a type without using any additional structure on it.
         In the latter case, the meta will prove an equality using only structure available in the specified class.
-        """), makeDef(algebra, "equation", new DependencyMetaTypechecker(EquationMeta.class, () -> new DeferredMetaDefinition(equationMeta, true))));
-    contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DeferredMetaDefinition(linearSolverMeta, true)));
+        """), equation);
+    ConcreteMetaDefinition monoidSolver = makeDef(equation.getRef(), "monoid", new DependencyMetaTypechecker(MonoidEquationMeta.class, () -> new DeferredMetaDefinition(new MonoidEquationMeta(), true)));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, monoidSolver);
+    contributor.declare(hList(text("Additive version of "), refDoc(monoidSolver.getRef())), makeDef(equation.getRef(), "addMonoid", new DependencyMetaTypechecker(AdditiveMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new AdditiveMonoidEquationMeta(), true))));
+    ConcreteMetaDefinition commMonoidSolver = makeDef(equation.getRef(), "cMonoid", new DependencyMetaTypechecker(CommutativeMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new CommutativeMonoidEquationMeta(), true)));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, commMonoidSolver);
+    contributor.declare(hList(text("Additive version of "), refDoc(commMonoidSolver.getRef())), makeDef(equation.getRef(), "abMonoid", new DependencyMetaTypechecker(AbelianMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new AbelianMonoidEquationMeta(), true))));
+    ConcreteMetaDefinition groupSolver = makeDef(equation.getRef(), "group", new DependencyMetaTypechecker(GroupEquationMeta.class, () -> new DeferredMetaDefinition(new GroupEquationMeta(), true)));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, groupSolver);
+    contributor.declare(hList(text("Additive version of "), refDoc(groupSolver.getRef())), makeDef(equation.getRef(), "addGroup", new DependencyMetaTypechecker(AdditiveGroupEquationMeta.class, () -> new DeferredMetaDefinition(new AdditiveGroupEquationMeta(), true))));
+    ConcreteMetaDefinition commGroupSolver = makeDef(equation.getRef(), "cGroup", new DependencyMetaTypechecker(CommutativeGroupEquationMeta.class, () -> new DeferredMetaDefinition(new CommutativeGroupEquationMeta(), true)));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, commGroupSolver);
+    contributor.declare(hList(text("Additive version of "), refDoc(commGroupSolver.getRef())), makeDef(equation.getRef(), "abGroup", new DependencyMetaTypechecker(AbelianGroupEquationMeta.class, () -> new DeferredMetaDefinition(new AbelianGroupEquationMeta(), true))));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "semiring", new DependencyMetaTypechecker(SemiringEquationMeta.class, () -> new DeferredMetaDefinition(new SemiringEquationMeta(), true))));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "cSemiring", new DependencyMetaTypechecker(CSemiringEquationMeta.class, () -> new DeferredMetaDefinition(new CSemiringEquationMeta(), true))));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "ring", new DependencyMetaTypechecker(RingEquationMeta.class, () -> new DeferredMetaDefinition(new RingEquationMeta(), true))));
+    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "cRing", new DependencyMetaTypechecker(CRingEquationMeta.class, () -> new DeferredMetaDefinition(new CRingEquationMeta(), true))));
+    contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
+    contributor.declare(text("Simplifies the expected type or the type of the argument if the expected type is unknown."),
+        makeDef(algebra, "simplify", new DependencyMetaTypechecker(SimplifyMeta.class, () -> new DeferredMetaDefinition(new SimplifyMeta(), true))));
+    contributor.declare(vList(
+            hList(text("`rewriteEq (p : a = b) t : T` is similar to "), refDoc(rewrite.getRef()), text(", but it finds and replaces occurrences of `a` up to algebraic equivalences.")),
+            text("For example, `rewriteEq (p : b * (c * id) = x) t : T` rewrites `(a * b) * (id * c)` as `a * x` in `T`."),
+            text("Similarly to `rewrite` this meta allows specification of occurrence numbers."),
+            text("Currently this meta supports noncommutative monoids and categories.")),
+        makeDef(algebra, "rewriteEq", new DependencyMetaTypechecker(RewriteEquationMeta.class, RewriteEquationMeta::new)));
 
-    contributor.declare(logicMeta, logic);
+    contributor.declare(logicMeta, Names.getLogicModule());
+    contributor.declare(logicMeta, Names.getBiorderedModule());
+    contributor.declare(logicMeta, Names.getPathsModule());
     contributor.declare(multiline("""
         Derives a contradiction from assumptions in the context
 
         A proof of a contradiction can be explicitly specified as an implicit argument
         `using`, `usingOnly`, and `hiding` with a single argument can be used instead of a proof to control the context
-        """), makeDef(logicMeta, "contradiction", contradictionMeta));
+        """), makeDef(logicMeta, "contradiction", new DependencyMetaTypechecker(ContradictionMeta.class, () -> new ContradictionMeta(this))));
     ConcreteMetaDefinition givenMetaRef = makeDef(logicMeta, "Given", new ExistsResolver(GivenMeta.Kind.SIGMA), new TrivialMetaTypechecker(new GivenMeta(GivenMeta.Kind.SIGMA)));
     contributor.declare(multiline("""
         Given constructs a \\Sigma-type:
@@ -356,9 +359,9 @@ public class StdExtension implements ArendExtension {
           * If `P : A -> \\Type`, then `Forall {x y : P} (Q x) (Q y)` is equivalent to `\\Pi {x y : A} -> P x -> P y -> Q x -> Q y`
           """)), makeDef(forallMetaRef));
     contributor.declare(text("Returns either a tuple, a \\new expression, or a single constructor of a data type depending on the expected type"),
-        makeDef(logicMeta, constructorName, new ConstructorMeta(false)));
+        makeDef(logicMeta, "constructor", new ConstructorMeta(false)));
 
-    ModulePath debug = ModulePath.fromString("Debug.Meta");
+    ModulePath debug = new ModulePath("Debug", "Meta");
     contributor.declare(text("Returns current time in milliseconds"), makeDef(debug, "time", new TimeMeta()));
     contributor.declare(text("Prints the argument to the console"), makeDef(debug, "println", new PrintMeta(this)));
     contributor.declare(text("`sleep m` waits for `m` milliseconds"), makeDef(debug, "sleep", new SleepMeta()));
@@ -372,24 +375,17 @@ public class StdExtension implements ArendExtension {
     contributor.declare(nullDoc(), factory.metaDef(factory.metaRef(nfMeta, "whnf", Precedence.DEFAULT, null, null, null, new TrivialMetaTypechecker(new NormalizationMeta(NormalizationMode.WHNF))), Collections.emptyList(), null));
     contributor.declare(nullDoc(), factory.metaDef(factory.metaRef(nfMeta, "rnf", Precedence.DEFAULT, null, null, null, new TrivialMetaTypechecker(new NormalizationMeta(NormalizationMode.RNF))), Collections.emptyList(), null));
 
-    ModulePath categoryMeta = ModulePath.fromString("Category.Meta");
-    contributor.declare(categoryMeta, category);
-    contributor.declare(categoryMeta, equiv);
-    contributor.declare(categoryMeta, paths);
+    ModulePath categoryMeta = new ModulePath("Category", "Meta");
+    contributor.declare(categoryMeta, Names.getCategoryModule());
+    contributor.declare(categoryMeta, Names.getPathsModule());
     contributor.declare(categoryMeta, pathsMeta);
-    contributor.declare(categoryMeta, new ModulePath("Set"));
-    contributor.declare(categoryMeta, ModulePath.fromString("Set.Category"));
+    contributor.declare(categoryMeta, Names.getSetCategoryModule());
     contributor.declare(text("Proves univalence for categories. The type of objects must extend `BaseSet` and the Hom-set must extend `SetHom` with properties only."), makeDef(categoryMeta, "sip", new DependencyMetaTypechecker(SIPMeta.class, SIPMeta::new)));
   }
 
   @Override
   public @Nullable StdGoalSolver getGoalSolver() {
     return goalSolver;
-  }
-
-  @Override
-  public @Nullable LevelProver getLevelProver() {
-    return levelProver;
   }
 
   @Override

@@ -1,18 +1,19 @@
 \import Algebra.Algebra
 \import Algebra.Group
-\import Algebra.Group.Category
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
+\import Algebra.Pointed.PointedHom
 \import Algebra.Ring
-\import Algebra.Ring.Category
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Poly
 \import Algebra.Semiring
 \import Category
 \import Data.Array
+\import Data.Array.EPerm
+\import Data.Array.Pairs
+\import Data.Array.Split
 \import Data.Or
 \import Equiv (Equiv)
 \import Function (isInj)
@@ -434,7 +435,7 @@
   => zro-right *> pmap (a *) func-ide *> ide-right
 
 \lemma evalMS_map {M N : Monoid} {R : CRing} {f : M -> N} {x : MonoidSet M R} {g : N -> R}
-  : evalMS (monoidSet-map f (id R) x) g = evalMS x (\lam m => g (f m)) \elim x
+  : evalMS (monoidSet-map f RingHom.id x) g = evalMS x (\lam m => g (f m)) \elim x
   | in~ l => idp
 
 \lemma evalMS_map2 {M : \Set} {R S : Semiring} {x : MonoidSet M R} {f : M -> R} (g : SemiringHom R S)
@@ -470,7 +471,7 @@
 
 \lemma polyToMonoidSet-eval {R : CRing} {M : Monoid} {p : Poly R} {f : MonoidHom M R} {m : M} : evalMS (polyToMonoidSet m p) f = polyEval p (f m) \elim p
   | pzero => idp
-  | padd p a => func-+ {evalMSRingHom f} *> pmap2 (+) (func-* *> pmap2 (*) polyToMonoidSet-eval simplify) (unfold $ rewrite f.func-ide simplify)
+  | padd p a => (evalMSRingHom f).func-+ *> pmap2 (+) (func-* *> pmap2 (*) polyToMonoidSet-eval simplify) (unfold $ rewrite f.func-ide simplify)
 
 \lemma monoidRingHom-unique {M : Monoid} {R S : CRing} {f g : RingHom (MonoidRing M R) S} (p : \Pi (r : R) -> f (msMonomial r ide) = g (msMonomial r ide)) (q : \Pi (m : M) -> f (msMonomial 1 m) = g (msMonomial 1 m)) (x : MonoidSet M R) : f x = g x \elim x
   | in~ l => pmap f monoidSet-list *> f.func-BigSum *> pmap BigSum (exts \lam j => simplify *> f.func-* *> pmap2 (*) (p (l j).1) (q (l j).2) *> inv g.func-* *> simplify) *> inv g.func-BigSum *> inv (pmap g monoidSet-list)

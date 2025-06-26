@@ -1,8 +1,9 @@
 \import Function
 \import Function.Meta
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Logic.Meta
+\import Logic.TFAE
 \import Meta
 \import Order.Lattice
 \import Order.PartialOrder
@@ -339,6 +340,25 @@
     | inP (y,q) => inP (y, RegularCauchyFilter.Reg_CF~_<= {_} {pointCF y} $ ~-transitive {_} {pointCF y} (CF~_<= {_} {pointCF y} $ q <=∘ func-cauchy_<= (regCF $ dense-filter-lift f fd F) (dense-filter-lift f fd F) \lam u => u <=-refl) $ dense-filter-lift.map-equiv fd)
   }
 
+\func completion {S : CoverSpace} : CoverMap S Completion.coverSpace \cowith
+  | func => pointCF
+  | func-cover (inP (C,Cc,f)) => cauchy-refine (isRegular Cc)
+    \case __ \with {
+      | inP (U',CU',U<=<U') => \case f CU' \with {
+        | inP (V,DV,p) => inP (pointCF ^-1 V, inP (V, DV, idp), \lam Ux => p $ <=<-right (single_<= Ux) U<=<U')
+      }
+    }
+  \where {
+    \protected \lemma dense-aux {F : RegularCauchyFilter S} {V : Set (RegularCauchyFilter S)} (r : single F <=< {Completion.coverSpace} V) : F \lam x => V (completion x) \elim r
+      | inP (C,Cc,f) =>
+        \have | (inP (U', inP (U, CU, U'<=<U), FU')) => isCauchyFilter {F} (isRegular Cc)
+              | (inP (W,g,U<=W)) => f CU
+        \in filter-mono FU' \lam U'x => g (F, (idp, U<=W $ filter-mono FU' $ <=<_<= U'<=<U)) $ U<=W $ <=<-right (single_<= U'x) U'<=<U
+
+    \lemma isDenseEmbedding : completion.IsDenseEmbedding
+      => (dense-char.2 \lam r => isProper (dense-aux r), \lam {C} Cc => inP (C, Cc, \lam {U} CU => inP (Completion.mkSet U, inP (U, CU, <=<_<= __ idp), <=-refl)))
+  }
+
 \instance Completion (X : CoverSpace) : CompleteCoverSpace (RegularCauchyFilter X)
   | CoverSpace => coverSpace
   | isSeparatedCoverSpace p => RegularCauchyFilter.equality \lam Cc => \case p (makeCover Cc) \with {
@@ -404,25 +424,6 @@
         \in inP (_, isRegular Cc, \lam {U'} (inP (U,CU,U'<=<U)) => \case f CU \with {
           | inP (V,DV,U<=V) => inP (mkSet U', inP (V, DV, <=<-left (<=<_mkFilters U'<=<U) U<=V), <=-refl)
         })
-  }
-
-\func completion {S : CoverSpace} : CoverMap S Completion.coverSpace \cowith
-  | func => pointCF
-  | func-cover (inP (C,Cc,f)) => cauchy-refine (isRegular Cc)
-      \case __ \with {
-        | inP (U',CU',U<=<U') => \case f CU' \with {
-          | inP (V,DV,p) => inP (pointCF ^-1 V, inP (V, DV, idp), \lam Ux => p $ <=<-right (single_<= Ux) U<=<U')
-        }
-      }
-  \where {
-    \protected \lemma dense-aux {F : RegularCauchyFilter S} {V : Set (RegularCauchyFilter S)} (r : single F <=< {Completion.coverSpace} V) : F \lam x => V (completion x) \elim r
-      | inP (C,Cc,f) =>
-        \have | (inP (U', inP (U, CU, U'<=<U), FU')) => isCauchyFilter {F} (isRegular Cc)
-              | (inP (W,g,U<=W)) => f CU
-        \in filter-mono FU' \lam U'x => g (F, (idp, U<=W $ filter-mono FU' $ <=<_<= U'<=<U)) $ U<=W $ <=<-right (single_<= U'x) U'<=<U
-
-    \lemma isDenseEmbedding : completion.IsDenseEmbedding
-      => (dense-char.2 \lam r => isProper (dense-aux r), \lam {C} Cc => inP (C, Cc, \lam {U} CU => inP (Completion.mkSet U, inP (U, CU, <=<_<= __ idp), <=-refl)))
   }
 
 \func completion-lift {X : CoverSpace} {Z : CompleteCoverSpace} (g : CoverMap X Z) : PrecoverMap (Completion X) Z

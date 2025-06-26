@@ -11,7 +11,7 @@
 \import Meta
 \import Paths
 \import Paths.Meta
-\import Set.Category
+\import Set.SetCategory
 
 \lemma subSheaf {C : Site} {F : Presheaf C} {G : Sheaf C} (e : NatTrans (\suc \lp) F G) (isEmb : \Pi (a : C) {x y : F a} -> e a x = e a y -> x = y)
                 (cl : \Pi {a : C} {s : Sieve a} -> isCover a s -> \Pi (x : G a) -> (\Pi {b : C} (f : Hom b a) -> s f -> \Sigma (y : F b) (e b y = G.F.Func f x)) -> ∃ (y : F a) (e a y = x))

@@ -317,12 +317,12 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
 
   @Override
   public Concrete.Expression visitNumericLiteral(Concrete.NumericLiteral expr, Void ignored) {
-    return myData == null ? expr : new Concrete.NumericLiteral(myData, expr.getNumber());
+    return myData == null && expr.getResolvedExpression() == null ? expr : new Concrete.NumericLiteral(myData != null ? myData : expr.getData(), expr.getNumber(), expr.getResolvedExpression() == null ? null : expr.getResolvedExpression().accept(this, null));
   }
 
   @Override
   public Concrete.Expression visitStringLiteral(Concrete.StringLiteral expr, Void ignored) {
-    return myData == null ? expr : new Concrete.StringLiteral(myData, expr.getUnescapedString());
+    return myData == null && expr.getResolvedExpression() == null ? expr : new Concrete.StringLiteral(myData != null ? myData : expr.getData(), expr.getUnescapedString(), expr.getResolvedExpression() == null ? null : expr.getResolvedExpression().accept(this, null));
   }
 
   @Override

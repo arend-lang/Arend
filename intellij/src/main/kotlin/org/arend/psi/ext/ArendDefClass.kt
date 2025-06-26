@@ -72,7 +72,7 @@ class ArendDefClass : ArendDefinition<ArendDefClassStub>, StubBasedPsiElement<Ar
 
     override fun getCoClauseElements(): List<ArendClassImplement> = classStatList.mapNotNull { it.classImplement } + classImplementList
 
-    override fun getKind() = GlobalReferable.Kind.CLASS
+    override fun getKind() = if (isRecord) GlobalReferable.Kind.RECORD else GlobalReferable.Kind.CLASS
 
     override fun <R : Any?> accept(visitor: AbstractDefinitionVisitor<out R>): R = visitor.visitClass(this)
 

@@ -8,7 +8,7 @@ import org.arend.extImpl.*;
 import org.arend.library.classLoader.ClassLoaderDelegate;
 import org.arend.library.classLoader.MultiClassLoader;
 import org.arend.library.error.LibraryError;
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
 import org.arend.prelude.ConcretePrelude;
 import org.arend.prelude.Prelude;
@@ -155,13 +155,6 @@ public class LibraryService {
     }
     for (Map.Entry<ModuleLocation, ConcreteGroup> entry : contributor.getModules().entrySet()) {
       myServer.addReadOnlyModule(entry.getKey(), entry.getValue());
-    }
-
-    ArendDependencyProviderImpl provider = new ArendDependencyProviderImpl(myServer, library.getLibraryName());
-    try {
-      extension.load(provider);
-    } finally {
-      provider.disable();
     }
   }
 }

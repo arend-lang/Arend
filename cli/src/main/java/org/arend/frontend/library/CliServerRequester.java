@@ -1,6 +1,6 @@
 package org.arend.frontend.library;
 
-import org.arend.module.ModuleLocation;
+import org.arend.ext.module.ModuleLocation;
 import org.arend.server.ArendServer;
 import org.arend.server.ArendServerRequester;
 import org.arend.source.Source;

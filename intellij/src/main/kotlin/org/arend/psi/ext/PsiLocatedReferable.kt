@@ -5,7 +5,7 @@ import org.arend.naming.reference.GlobalReferable
 import org.arend.psi.ArendFile
 import org.arend.psi.ancestor
 import org.arend.term.abs.Abstract
-import org.arend.module.FullName
+import org.arend.ext.module.FullName
 
 
 interface PsiLocatedReferable : Abstract.AbstractLocatedReferable, PsiReferable {

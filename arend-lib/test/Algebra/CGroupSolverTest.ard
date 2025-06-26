@@ -1,0 +1,60 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Int
+\import Meta
+
+\lemma testCommSimp {M : CGroup} (x y z w : M)
+  : (x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y = y * ((ide * (x * ide)) * inverse y) * w
+  => equation.cGroup
+
+\lemma testCommArg {M : CGroup} (x y z w : M) (p : x * (x * w) = ide)
+  : (x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y * x = y * ((ide * (x * ide)) * inverse y) * inverse x
+  => equation.cGroup p
+
+\lemma testCommForward {M : CGroup} (x y z w : M) (p : (x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y * x = y * ((ide * (x * ide)) * inverse y) * inverse x)
+  : x * (x * w) = ide
+  => equation.cGroup in p
+
+\lemma testAbSimp {M : AbGroup} (x y z w : M)
+  : (x + (z - y)) + ((zro + w) + (zro - z)) + y = y + ((zro + (x + zro)) - y) + w
+  => equation.abGroup
+
+\lemma testAbArg {M : AbGroup} (x y z w : M) (p : x + (x + w) = zro)
+  : (x + (z - y)) + ((zro + w) + (zro - z)) + y + x = y + ((zro + (x + zro)) - y) - x
+  => equation.abGroup p
+
+\lemma testAbForward {M : AbGroup} (x y z w : M) (p : (x + (z - y)) + ((zro + w) + (zro - z)) + y + x = y + ((zro + (x + zro)) - y) - x)
+  : x + (x + w) = zro
+  => equation.abGroup in p
+
+\lemma testSide {M : CGroup} (x y z : M) (p : y = ide) : x * z = z * inverse y * x
+  => equation.cGroup p
+
+\lemma testSideForward {M : CGroup} (x y z : M) (p : x * z = z * inverse y * x) : y = ide
+  => equation.cGroup in p
+
+\lemma testProof1 {M : CGroup} (x y z : M) (p : y = ide) : x * z = z * inverse y * x
+  => equation.cGroup {p}
+
+\lemma testProof2 {M : AbGroup} (x y z : M) (p : y - z = z) (q : z + z + z + z + z = x) : x + y + y + z = x + y - z + x - z
+  => equation.abGroup {p,q}
+
+\lemma testProof3 {M : CGroup} (x y z : M) (p : z * z = inverse z * inverse y) (q : x * z * z = ide) : x * inverse y * x = y * inverse x
+  => equation.cGroup {3 q, -2 p}
+
+\lemma testProofArg {M : AbGroup} (x y z : M) (p : x + y + y + y = zro) (q : negative y + (z + z) = 0) : x + y + y + z = negative z
+  => equation.abGroup {p} q
+
+\lemma testProofForward {M : CGroup} (x y z : M) (p : x * z = z * inverse y * x) (q : x * y * z = inverse y) : x * z = ide
+  => equation.cGroup {2 p} in q
+
+\lemma intTest1 {n m : Nat} : pos (n Nat.+ m) = pos (m Nat.+ n)
+  => equation.abGroup
+
+\lemma intTest2 {n : Nat} {p : pos n = 0} : neg n = 0
+  => equation.abGroup { -1 p }
+
+\lemma intTest3 {n m k : Nat} : n Nat.- (m Nat.+ k) = n Nat.- m - k
+  => equation.abGroup

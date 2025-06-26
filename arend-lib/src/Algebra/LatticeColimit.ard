@@ -1,12 +1,14 @@
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Group.Category
+\import Algebra.Group.GroupCategory
+\import Algebra.Group.GroupHom
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
+\import Algebra.Monoid.MonoidCategory
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
-\import Algebra.Pointed.Category
+\import Algebra.Pointed.PointedHom
 \import Algebra.Ring
-\import Algebra.Ring.Category
+\import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Category
@@ -19,7 +21,7 @@
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
-\import Set.Category
+\import Set.SetCategory
 \open SetColimit
 
 \instance MonoidLatticeColimit {D : Bounded.JoinSemilattice} (F : Functor D MonoidCat) : Monoid (SetColimit (Comp MonoidCat.forget F))

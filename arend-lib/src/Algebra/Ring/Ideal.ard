@@ -1,17 +1,13 @@
-\import Algebra.Domain.Bezout
-\import Algebra.Field
 \import Algebra.Group
 \import Algebra.Group.Sub
-\import Algebra.Meta
 \import Algebra.Module
+\import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Monoid.Category
 \import Algebra.Monoid.GCD
-\import Algebra.Monoid.Prime
 \import Algebra.Monoid.Sub
+\import Algebra.Pointed
 \import Algebra.Pointed.Sub
 \import Algebra.Ring
-\import Algebra.Ring.RingHom
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
@@ -34,7 +30,6 @@
 \import Set.Fin
 \open AddMonoid
 \open AbMonoid
-\open Monoid
 
 -- | Left ideal
 \record LIdeal \extends SubAddGroup {
@@ -127,7 +122,7 @@
   \func sclosure {R : CRing} (U : R -> \Prop) => closure (\lam (p : \Sigma (x : R) (U x)) => p.1)
 
   \lemma closure-superset {R : CRing} {J : \Set} {g : J -> R} (j : J) : closure g (g j)
-    => inP ((1,j) :: nil, equation)
+    => inP ((1,j) :: nil, simplify)
 
   \lemma sclosure-superset {R : CRing} {U : R -> \Prop} {x : R} (Ux : U x) : sclosure U x
     => inP ((1,(x,Ux)) :: nil, equation)
@@ -341,158 +336,4 @@
 
     \lemma product_meet {R : CRing} {I J : Ideal R} : product I J <= I ∧ J
       => meet-univ product-left product-right
-  }
-
-\instance FactorRing (I : Ideal) : CRing
-  | E => Type I
-  | zro => inF 0
-  | + (x y : Type I) : Type I \with {
-    | in~ a, in~ b => in~ (a Ring.+ b)
-    | in~ a, ~-equiv b c r => fequiv (simplify r)
-    | ~-equiv b c r, in~ a => fequiv (simplify r)
-  }
-  | zro-left {x} => \case \elim x \with {
-    | in~ a => fequiv (simplify contains_zro)
-  }
-  | +-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
-    | in~ a, in~ b, in~ c => fequiv (simplify contains_zro)
-  }
-  | +-comm {x} {y} => \case \elim x, \elim y \with {
-    | in~ a, in~ b => fequiv (simplify contains_zro)
-  }
-  | ide => inF 1
-  | * (x y : Type I) : Type I \with {
-    | in~ a, in~ b => inF (a Ring.* b)
-    | in~ a, ~-equiv b c r => fequiv $ transport I equation (I.ideal-left {a} r)
-    | ~-equiv b c r, in~ a => fequiv $ transport I equation (I.ideal-right {a} r)
-  }
-  | ide-left {x} => \case \elim x \with {
-    | in~ a => fequiv (simplify contains_zro)
-  }
-  | *-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
-    | in~ a, in~ b, in~ c => fequiv (transport I equation contains_zro)
-  }
-  | ldistr {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
-    | in~ a, in~ b, in~ c => fequiv (transport I equation contains_zro)
-  }
-  | natCoef n => inF (natCoef n)
-  | natCoefZero => fequiv $ simplify (transportInv I natCoefZero contains_zro)
-  | natCoefSuc n => fequiv $ later $ rewrite natCoefSuc (simplify contains_zro)
-  | negative (x : Type I) : Type I \with {
-    | in~ a => inF (Ring.negative a)
-    | ~-equiv a b r => fequiv $ transport I equation (I.ideal-left { -1} r)
-  }
-  | negative-left {x} => \case \elim x \with {
-    | in~ a => fequiv (simplify contains_zro)
-  }
-  | *-comm {x} {y} => \case \elim x, \elim y \with {
-    | in~ a, in~ b => fequiv (transport I equation contains_zro)
-  }
-  \where {
-    \type Type (I : Ideal) => Quotient {I.S} (\lam a b => I (a - b))
-
-    \func inF {I : Ideal} (a : I.S) : Type I => in~ a
-
-    \lemma fequiv {I : Ideal} {a b : I.S} (p : I (a - b)) : inF a = inF b
-      => path (\lam i => ~-equiv a b p i)
-
-    \lemma fequiv0 {I : Ideal} {a : I.S} (p : I a) : inF a = inF 0
-      => fequiv $ transportInv I (pmap (a Ring.+) AddGroup.negative_zro *> zro-right) p
-
-    \lemma unfequiv {I : Ideal} {a b : I.S} (p : inF a = inF b) : I (a - b)
-      => Quotient.equalityEquiv (\new Equivalence I.S (\lam a b => I (a - b)) {
-        | ~-transitive c d => transport I equation (contains_+ c d)
-        | ~-reflexive => simplify contains_zro
-        | ~-symmetric c => transport I equation (I.ideal-left { -1} c)
-      }) $ path (\lam i => p i)
-
-    \lemma unfequiv0 {I : Ideal} {a : I.S} (p : inF a = inF 0) : I a
-      => transport I (pmap (a Ring.+) AddGroup.negative_zro *> zro-right) (unfequiv p)
-  }
-
-\func factorHom {I : Ideal} : RingHom I.S (FactorRing I) \cowith
-  | func => FactorRing.inF
-  | func-+ => idp
-  | func-ide => idp
-  | func-* => idp
-
-\func factor-lift {I : Ideal} {R : Ring} (f : RingHom I.S R) (p : \Pi {a : I.S} -> I a -> f a = 0) : RingHom (FactorRing I) R \cowith
-  | func (x : FactorRing I) : R \with {
-    | in~ a => f a
-    | ~-equiv a b r => R.fromZero $ inv (f.func-+ *> pmap (_ +) f.func-negative) *> p r
-  }
-  | func-+ {x} {y} => \case \elim x, \elim y \with {
-    | in~ a, in~ b => f.func-+
-  }
-  | func-ide => f.func-ide
-  | func-* {x} {y} => \case \elim x, \elim y \with {
-    | in~ a, in~ b => f.func-*
-  }
-
-\instance FactorField {I : Ideal} (Im : I.IsMaximal) : DiscreteField
-  | CRing => FactorRing I
-  | zro/=ide p => Im.1 $ unfequiv0 (inv p)
-  | eitherZeroOrInv => \case \elim __ \with {
-    | in~ a => \case Im.2 a \with {
-      | byLeft r => byLeft $ fequiv0 r
-      | byRight s => byRight $ Monoid.Inv.lmake (inF s.1) $ inv $ later $ fequiv s.2
-    }
-  }
-  \where {
-    \open FactorRing
-
-    \lemma conv {I : Ideal} (p : 0 /= {FactorRing I} 1) (q : \Pi (x : FactorRing I) -> (x = 0) || Monoid.Inv x) : I.IsMaximal
-      => (\lam c => p $ inv $ fequiv0 c, \lam x => \case q (inF x) \with {
-            | byLeft r => byLeft $ unfequiv0 r
-            | byRight (in~ y, s, _) => byRight $ (y, unfequiv $ inv s)
-          })
-  }
-
-\instance FactorIrrField (R : BezoutRing) (p : Irr {R}) : DiscreteField
-  | CRing => FactorRing (Ideal.closure1 p)
-  | zro/=ide q => p.notInv (trivial_Inv.1 q)
-  | eitherZeroOrInv => zeroOrInv-char.2 \lam a => \case isBezout p a \with {
-    | inP (s, t, d|p : Monoid.LDiv, d|a : Monoid.LDiv) => \case p.isIrr (inv d|p.inv-right) \with {
-      | byLeft (c : Inv) => byRight (t * c.inv, s * c.inv, equation {usingOnly c.inv-right})
-      | byRight (c : Inv) => byLeft \new Monoid.LDiv {
-        | inv => c.inv * d|a.inv
-        | inv-right => equation {usingOnly (d|a.inv-right, c.inv-right, d|p.inv-right)}
-      }
-    }
-  }
-  \where {
-    \open FactorRing \hiding (+,*,negative)
-
-    \lemma trivial_Inv {R : CRing} {p : R} : (0 = {FactorRing (Ideal.closure1 p)} 1) <-> Inv p
-      => (\lam q => \case Ideal.closure1-lem.1 $ unfequiv (inv q) \with {
-        | inP t => Inv.lmake t.1 (*-comm *> inv t.2 *> simplify)
-      }, \lam (e : Inv p) => inv $ fequiv $ Ideal.closure1-lem.2 $ simplify $ inP (e.inv, inv e.inv-right))
-
-    \lemma zeroOrInv-char {R : CRing} {p : R} : (\Pi (a : FactorRing (Ideal.closure1 p)) -> (a = 0) || Inv a) <-> (\Pi (a : R) -> Monoid.LDiv p a || (\Sigma (s t : R) (s * a + t * p = 1)))
-      => (\lam f a => \case f (in~ a) \with {
-        | byLeft a~0 => \case Ideal.closure1-lem.1 (unfequiv a~0) \with {
-          | inP s => byLeft (\new Monoid.LDiv {
-            | inv => s.1
-            | inv-right => inv s.2 *> simplify
-          })
-        }
-        | byRight (in~ b, q, _) => \case Ideal.closure1-lem.1 (unfequiv q) \with {
-          | inP (c,u) => byRight (b, negative c, equation)
-        }
-      }, \lam f => \case \elim __ \with {
-        | in~ a => ||.map (\lam (p|a : Monoid.LDiv p a) => fequiv $ Ideal.closure1-lem.2 $ inP (p|a.inv, simplify $ inv p|a.inv-right))
-            (\lam (s,t,q) => Inv.lmake {_} {inF a} (inF s) $ fequiv $ (Ideal.closure1-lem {R} {p} {s * a - 1}).2 $ inP (negative t, equation)) (f a)
-      })
-
-    \lemma conv {R : CRing} {p : R} (c : \Pi {x y : R} -> p * x = p * y -> x = y) (d : DiscreteField { | CRing => FactorRing (Ideal.closure1 p) }) : Prime p \cowith
-      | notInv pi => zro/=ide (trivial_Inv.2 pi)
-      | isCancelable-left => c
-      | isPrime {x} {y} (z,pz=xy) => \case zeroOrInv-char.1 d.eitherZeroOrInv x, zeroOrInv-char.1 d.eitherZeroOrInv y \with {
-        | byLeft p|x, _ => byLeft p|x
-        | _, byLeft p|y => byRight p|y
-        | byRight (s,t,sx+tp=1), byRight (u,v,uy+vp=1) => byLeft \new Monoid.LDiv {
-          | inv => x * (s * u * z + v + t - v * t * p)
-          | inv-right => equation
-        }
-      }
   }

@@ -20,7 +20,7 @@ import org.arend.ext.prettyprinting.doc.ReferenceDoc
 import org.arend.ext.reference.ArendRef
 import org.arend.injection.InjectedArendEditor
 import org.arend.module.ArendModuleType
-import org.arend.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.ExternalLibraryConfig
 import org.arend.module.config.LibraryConfig

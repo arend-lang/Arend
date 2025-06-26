@@ -1,0 +1,151 @@
+\import Algebra.Monoid
+\import Arith.Nat
+\import Category
+\import Category.Functor
+\import Category.Limit
+\import Equiv
+\import Function.Meta
+\import Logic.Unique
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+
+\instance SetCat : Cat \Set
+  | Hom X Y => X -> Y
+  | id _ => \lam x => x
+  | o g f => \lam x => g (f x)
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => Cat.makeUnivalence $ later \lam (e : Iso) =>
+    \let p => path (iso e.f e.hinv (\lam x => path ((e.hinv_f @ __) x)) (\lam y => path ((e.f_hinv @ __) y)))
+    \in (p, simp_coe (\lam d => idp))
+
+\sfunc SIP_Set (Str : \Set -> \hType (\suc \lp)) (isHom : \Pi {x y : \Set} -> Str x -> Str y -> (x -> y) -> \hType (\suc \lp))
+               (st : \Pi {X : \Set} {S1 S2 : Str X} -> isHom S1 S2 (\lam x => x) -> isHom S2 S1 (\lam x => x) -> S1 = S2)
+               {X Y : \Set} (e : Iso {SetCat} {X} {Y}) (S1 : Str X) (S2 : Str Y) (p : isHom S1 S2 e.f) (q : isHom S2 S1 e.hinv)
+  : \Sigma (p : X = Y) (Path (\lam i => Str (p @ i)) S1 S2) (\Pi (x : X) -> transport (\lam Z => Z) p x = e.f x)
+  => \have (p,q,s) => SIP SetCat Str isHom st e S1 S2 p q
+     \in (p, q, \lam x => inv (transport_pi (\lam _ => X) (\lam Z => Z) p (\lam z => z) x) *> path (\lam i => (s @ i) x))
+
+\instance SetCoproduct {J : \Type} (F : J -> \Set) : Product {J} {SetCat.op} F
+  | apex => Trunc0 (\Sigma (j : J) (F j))
+  | proj j x => in0 (j,x)
+  | tupleMap f (in0 (j,x)) => f j x
+  | tupleBeta => idp
+  | tupleEq e => ext \case \elim __ \with {
+    | in0 (j,x) => pmap (__ x) (e j)
+  }
+
+\instance SetCoequalizer {X Y : \Set} (f g : X -> Y) : Equalizer {SetCat.op} f g
+  | apex => Quotient (\lam y y' => \Sigma (x : X) (f x = y) (g x = y'))
+  | eql => in~
+  | equal => ext (\lam x => path (~-equiv _ _ (later (x,idp,idp))))
+  | isEqualizer Z => \new QEquiv {
+    | ret (h,p) => \case __ \with {
+      | in~ y => h y
+      | ~-equiv y y' (x,fx=y,gx=y') => inv (pmap h fx=y) *> pmap (__ x) p *> pmap h gx=y'
+    }
+    | ret_f h => ext \case \elim __ \with {
+      | in~ y => idp
+    }
+    | f_sec (h,p) => ext idp
+  }
+
+\instance SetBicat : BicompleteCat
+  | Cat => SetCat
+  | limit F => \new Limit {
+    | apex => Cone F (\Sigma)
+    | coneMap j x => coneMap {x} j ()
+    | coneCoh h => ext (\lam s => pmap (__ ()) (coneCoh {s}  h))
+    | isLimit Z => \new QEquiv {
+      | ret c z => \new Cone {
+        | coneMap j _ => coneMap {c} j z
+        | coneCoh h => ext (\lam _ => pmap (__ z) (coneCoh {c} h ))
+      }
+      | ret_f => idpe
+      | f_sec => idpe
+    }
+  }
+  | colimit {J : Precat} G => limits<=pr+eq {SetCat.op} (\lam J G => SetCoproduct G) (\lam {X} {Y} f g => SetCoequalizer f g) {J.op} (Functor.op {G})
+  \where {
+    \lemma cone-isLim (c : Cone { | D => SetCat }) (e : Equiv (conePullback c (\Sigma))) : Limit { | Cone => c } \cowith
+      | isLimit Z =>
+        \have coneMap (z : Z) (c' : Cone c.G Z) : Cone c.G (\Sigma) => \new Cone {
+          | coneMap j _ => c'.coneMap j z
+          | coneCoh h => ext \lam _ => path (\lam i => c'.coneCoh h i z)
+        } \in \new QEquiv {
+          | ret (c' : Cone) z => e.ret (coneMap z c') ()
+          | ret_f h => ext \lam z =>
+                \have t => e.ret_f (\lam _ => h z)
+                \in path (\lam i => t i ())
+          | f_sec (c' : Cone) => exts \lam j => ext \lam z =>
+                \have t => e.f_ret (coneMap z c')
+                \in path (\lam i => Cone.coneMap {t i} j ())
+        }
+  }
+
+\type SetColimit {J : SmallPrecat} (F : Functor J SetCat)
+  => Quotient {\Sigma (j : J) (F j)} \lam s s' => \Sigma (p : Hom s.1 s'.1) (F.Func p s.2 = s'.2)
+  \where {
+    \func inC {J : SmallPrecat} {F : Functor J SetCat} (s : \Sigma (j : J) (F j)) : SetColimit F => in~ s
+
+    \lemma ~-cequiv {J : SmallPrecat} {F : Functor J SetCat} {s s' : \Sigma (j : J) (F j)} (f : Hom s.1 s'.1) (p : F.Func f s.2 = s'.2)
+      : in~ s = {SetColimit F} in~ s'
+      => path (\lam i => ~-equiv s s' (f,p) i)
+
+    \lemma unext-ub {J : JoinSemilattice} {F : Functor J SetCat} {s s' : \Sigma (j : J) (F j)} (p : inC s = inC s')
+      : ∃ (j : J) (p : s.1 <= j) (q : s'.1 <= j) (F.Func p s.2 = F.Func q s'.2)
+      => Quotient.equalityClosure (\new Equivalence (\Sigma (j : J) (F j)) _ {
+        | ~-transitive => later \lam (inP s) (inP t) => inP (s.1 ∨ t.1, s.2 <=∘ join-left, t.3 <=∘ join-right, Func-app F *> pmap (F.Func join-left) s.4 *> inv (Func-app F) *> poset-app *> Func-app F *> pmap (F.Func join-right) t.4 *> inv (Func-app F))
+        | ~-reflexive {x} => later $ inP (x.1, <=-refl, <=-refl, idp)
+        | ~-symmetric => later \lam (inP s) => inP (s.1, s.3, s.2, inv s.4)
+      }) (later \lam {x} {y} s => inP (x.1 ∨ y.1, join-left, join-right, Func-app F *> pmap (F.Func join-right) s.2)) (path \lam i => p i)
+
+    \lemma Func-app {J : SmallPrecat} (F : Functor J SetCat) {j1 j2 j3 : J} {f : Hom j1 j2} {g : Hom j2 j3} {a : F j1} : F.Func (g ∘ f) a = F.Func g (F.Func f a)
+      => pmap (__ a) F.Func-o
+
+    \lemma poset-app {J : Poset} {F : Functor J SetCat} {j j' : J} {f g : j <= j'} {a : F j} : F.Func f a = F.Func g a
+      => pmap (F.Func __ a) prop-pi
+
+    \lemma poset-id {J : Poset} {F : Functor J SetCat} {j : J} {p : j <= j} {a : F j} : F.Func p a = a
+      => poset-app *> pmap (__ a) F.Func-id
+
+    \func inMap (j : J) (a : F j) : SetColimit F
+      => in~ (j,a)
+
+    \lemma inMap-coh {j j' : J} (f : Hom j j') (a : F j) : inMap j a = inMap j' (F.Func f a)
+      => ~-cequiv f idp
+  }
+
+\func NatFunctor {C : Precat} (F : Nat -> C) (f : \Pi {n : Nat} -> Hom (F n) (F (suc n))) : Functor NatSemiring C \cowith
+  | F => F
+  | Func p => natHom (_, <=_exists p)
+  | Func-id => pmap natHom (sigma-isProp _ (0,idp)) *> natHom_id
+  | Func-o => pmap natHom (sigma-isProp _ _) *> natHom-comp
+  \where {
+    \lemma sigma-isProp {n m : Nat} : isProp (\Sigma (k : Nat) (n + k = m))
+      => \lam s t => ext $ NatSemiring.cancel-left n $ s.2 *> inv t.2
+
+    \func natHom {n m : Nat} (s : \Sigma (k : Nat) (n + k = m)) : Hom (F n) (F m) \elim m, s
+      | _, (0, idp) => id (F n)
+      | 0, (suc k, ())
+      | suc m, (suc k, q) => f ∘ natHom (k, pmap pred q)
+
+    \lemma natHom_id {n : Nat} : natHom (0,idp) = id (F n) \elim n
+      | 0 => idp
+      | suc n => idp
+
+    \lemma natHom-comp {n m k : Nat} {s : \Sigma (l : Nat) (n + l = m)} {t : \Sigma (l : Nat) (m + l = k)}
+      : natHom (s.1 + t.1, inv +-assoc *> pmap (`+ _) s.2 *> t.2) = natHom t ∘ natHom s \elim k, t
+      | 0, (0, idp) => pmap natHom (sigma-isProp _ _) *> inv id-left
+      | suc k, (0, idp) => pmap natHom (sigma-isProp _ _) *> inv id-left
+      | 0, (suc m, ())
+      | suc k, (suc m, q) => pmap (f ∘) (pmap natHom (sigma-isProp _ _) *> natHom-comp) *> inv o-assoc
+  }

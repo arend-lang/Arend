@@ -17,6 +17,7 @@ import org.arend.term.concrete.ReplaceDataVisitor;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.TestLocalErrorReporter;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
+import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.DesugarVisitor;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
 import org.hamcrest.Matcher;
@@ -81,7 +82,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
   public Concrete.ResolvableDefinition getConcreteDesugarized(String path) {
     Concrete.ResolvableDefinition def = (Concrete.ResolvableDefinition) getConcrete(path);
     Concrete.ResolvableDefinition result = def.accept(new ReplaceDataVisitor(), null);
-    DesugarVisitor.desugar(result, DummyErrorReporter.INSTANCE);
+    DesugarVisitor.desugar(result, ConcreteProvider.EMPTY, DummyErrorReporter.INSTANCE);
     return result;
   }
 
@@ -96,7 +97,7 @@ public abstract class NameResolverTestCase extends ParserTestCase {
     }
 
     ListErrorReporter errorReporter = new ListErrorReporter();
-    expression = SyntacticDesugarVisitor.desugar(expression.accept(new ExpressionResolveNameVisitor(parentScope, typedContext, TypingInfo.EMPTY, new TestLocalErrorReporter(errorReporter), null), null), errorReporter);
+    expression = SyntacticDesugarVisitor.desugar(expression.accept(new ExpressionResolveNameVisitor(parentScope, typedContext, TypingInfo.EMPTY, new TestLocalErrorReporter(errorReporter), null, null), null), errorReporter);
     assertThat(errorReporter.getErrorList(), containsErrors(errors));
     if (matchers.length > 0) {
       assertThat(errorReporter.getErrorList(), Matchers.contains(matchers));

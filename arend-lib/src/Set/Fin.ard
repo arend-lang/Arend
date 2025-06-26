@@ -1,31 +1,26 @@
-\import Algebra.Group.Symmetric (symmetric-rec)
 \import Algebra.Monoid
 \import Algebra.Ordered
-\import Algebra.Semiring
-\import Arith.Fin (FinLinearOrder)
-\import Arith.Nat \using (NatSemiring, pred \as pred')
+\import Arith.Fin.Order
+\import Arith.Nat \using (pred \as pred')
 \import Data.Bool
 \import Data.Fin (fpred, fsuc, fsuc/=, nat_fin_=)
 \import Data.Or
 \import Equiv
-\import Equiv.Sigma
 \import Equiv.Univalence
 \import Function
 \import Function.Meta ($)
-\import HLevel
+\import Logic.Unique
 \import Logic
 \import Logic.Classical
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Set
 \import Set.Fin.KFin
-\import Set.Fin.Pigeonhole
 
 \class FinSet \extends KFinSet, Choice, DecSet {
   | finEq : TruncP (Equiv {Fin finCard} {E})
@@ -36,8 +31,8 @@
   }
 
   \default decideEq x y => \case finEq \with {
-    | inP (e : Equiv) => \case decideEq {FinLinearOrder.FinLinearOrderInst} (e.ret x) (e.ret y) \with {
-      | yes q => yes (Equiv.isInj {symQEquiv e} q)
+    | inP (e : Equiv) => \case (FinOrder _).decideEq (e.ret x) (e.ret y) \with {
+      | yes q => yes ((symQEquiv e).isInj q)
       | no q => no \lam p => q (pmap e.ret p)
     }
   }
@@ -145,7 +140,7 @@
       | suc n, suc k, 0 => idp
       | suc n, suc k, suc i => pmap fsuc skip_sface
 
-    \open NatSemiring(<,suc<suc,zero<suc)
+    \open NatOrder
 
     \lemma skip_< {n : Nat} {x0 x x' : Fin (suc n)} {d : x0 /= x} {d' : x0 /= x'} (p : skip x0 x d < skip x0 x' d') : x < x' \elim n, x0, x, x', p
       | _, 0, 0, _, _ => absurd (d idp)
@@ -170,7 +165,7 @@
       | 0, 0, 0, ()
       | suc n, 0, suc x, _ => idp
       | suc n, suc x0, 0, _ => idp
-      | suc n, suc x0, suc x, suc<suc p => pmap suc (skip-right p) *> suc_pred (/=-sym $ StrictPoset.<_/= $ zero<=_ <∘r p)
+      | suc n, suc x0, suc x, suc<suc p => pmap suc (skip-right p) *> suc_pred (/=-sym $ NatSemiring.<_/= $ zero<=_ <∘r p)
 
     \lemma fromArray {A : \Set} (l : Array A) (p : \Pi (a : A) -> ∃ (i : Fin l.len) (l i = a)) (q : \Pi {i j : Fin l.len} -> l i = l j -> i = j) : FinSet A l.len \cowith
       | finEq => inP (Equiv.fromInjSurj l q p)
@@ -192,8 +187,11 @@
 \lemma transport_suc {n m : Nat} (p : n = m) (x : Fin n) : transport Fin (pmap suc p) (suc x) = suc (transport Fin p x) \elim p
   | idp => idp
 
+\lemma fin_transport {n m : Nat} {j : Fin n} {p : n = m} : transport Fin p j = {Nat} j \elim p
+  | idp => idp
+
 \func fin-inc_<= {n m : Nat} (p : n <= m) (i : Fin n) : Fin m
-  => toFin i (fin_< i <∘l p)
+  => toFin i (fin_< i NatSemiring.<∘l p)
 
 \func fin-inc {n m : Nat} (i : Fin n) : Fin (n + m) \elim n, i
   | suc n, 0 => 0
@@ -235,9 +233,6 @@
   | suc n, suc k, suc i, 0 => \case p
   | suc n, suc k, suc i, suc i' => pmap fsuc $ sface-inj $ pmap (fpred k) p
 
-\func cyclePerm {n : Nat} (k : Fin n) : QEquiv {Fin n} {Fin n} \elim n
-  | suc n => ret {symmetric-rec} (k,idEquiv)
-
 \instance EmptyFin : FinSet Empty
   | finCard => 0
   | finEq => inP \new QEquiv {
@@ -277,7 +272,44 @@
 \instance FinFin (n : Nat) : FinSet (Fin n)
   | finCard => n
   | finEq => inP idEquiv
-  | decideEq => FinLinearOrder.FinLinearOrderInst.decideEq
+  | decideEq => decideEq
+
+\func DecFin {P : \Prop} (d : Dec P) : FinSet P \cowith
+  | finCard => Dec.rec (\lam _ => 1) (\lam _ => 0) d
+  | finEq => inP $ \case \elim d \with {
+    | yes e => \new QEquiv {
+                 | f _ => e
+                 | ret _ => 0
+                 | ret_f (0) => idp
+                 | f_sec => prop-isProp e
+               }
+    | no q => \new QEquiv {
+                | f => \lam ()
+                | ret e => absurd (q e)
+                | ret_f => \lam ()
+                | f_sec e => absurd (q e)
+              }
+  }
+
+\func FinDec {A : FinSet} (B : A -> Decide) : Decide (\Pi (a : A) -> B a) \cowith
+  | decide => \case A.finEq \with {
+    | inP (e : Equiv) => \case fin-dec (\lam j => B (e j)) \with {
+      | yes p => yes \lam a => transport (B __) (e.f_ret a) $ p (e.ret a)
+      | no q => no \lam f => q \lam j => f (e j)
+    }
+  }
+  \where {
+    \func fin-dec {n : Nat} (B : Fin n -> Decide) : Dec (\Pi (j : Fin n) -> B j) \elim n
+      | 0 => yes \case __
+      | suc n => \case decide {B 0}, fin-dec (\lam j => B (suc j)) \with {
+        | yes p, yes q => yes \case \elim __ \with {
+          | 0 => p
+          | suc j => q j
+        }
+        | _, no q => no \lam f => q \lam j => f (suc j)
+        | no p, _ => no \lam f => p (f 0)
+      }
+  }
 
 \instance OrFin (S T : FinSet) : FinSet (Or S T)
   | finCard => S.finCard + T.finCard
@@ -319,85 +351,4 @@
       | suc n => rewrite (ret_inr-lem {n} t) idp
   }
 
-\lemma SigmaFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Sigma (i : S) (Q i)) (AbMonoid.FinSum (\lam i => finCard {Q i}))
-  => \case AbMonoid.FinSum_char (\lam i => finCard {Q i}) \with {
-       | inP p => rewrite p.2 \new FinSet {
-         | finEq => \case FinSet.finiteAC (\lam i => finEq {Q (p.1 i)}) \with {
-           | inP d => inP $ aux `transEquiv` sigma-right d `transEquiv` sigma-left p.1
-         }
-       }
-     }
-  \where {
-    \open AddMonoid
-
-    \func aux {n : Nat} {Q : Fin n -> Nat} : QEquiv {Fin (BigSum Q)} {\Sigma (i : Fin n) (Fin (Q i))} \cowith
-      | f (k : Fin (BigSum Q)) : \Sigma (i : Fin n) (Fin (Q i)) \elim n {
-        | suc n => \case OrFin.aux.f k \with {
-          | inl s => (0,s)
-          | inr t => \have (i,r) => f t \in (suc i, r)
-        }
-      }
-      | ret (p : \Sigma (i : Fin n) (Fin (Q i))) : Fin (BigSum Q) \elim n, p {
-        | 0, ((),_)
-        | suc n, (0, j) => fin-inc j
-        | suc n, (suc i, j) => fin-raise (ret (i,j))
-      }
-      | ret_f (k : Fin (BigSum Q)) : ret (f k) = k \elim n {
-        | suc n => mcases {_} {arg addPath} \with {
-          | inl s, p => inv (pmap OrFin.aux.ret p) *> OrFin.aux.ret_f k
-          | inr t, p => pmap fin-raise (ret_f t) *> inv (pmap OrFin.aux.ret p) *> OrFin.aux.ret_f k
-        }
-      }
-      | f_sec (p : \Sigma (i : Fin n) (Fin (Q i))) : f (ret p) = p \elim n, p {
-        | 0, ((),_)
-        | suc n, (0, j) => rewrite OrFin.ret_inl-lem idp
-        | suc n, (suc i, j) => rewrite OrFin.ret_inr-lem (rewrite (f_sec {n} {\lam i => Q (suc i)} (i,j)) idp)
-      }
-  }
-
-\instance ProdFin (A B : FinSet) : FinSet (\Sigma A B) (A.finCard Nat.* B.finCard)
-  => transport (FinSet _) Semiring.FinSum_replicate $ SigmaFin A (\lam _ => B)
-  \where {
-    \func prod_equiv {n m : Nat} : Equiv {Fin (n Nat.* m)} {\Sigma (Fin n) (Fin m)}
-      => transport (\lam x => Equiv {Fin x} {_}) Semiring.BigSum_replicate $ SigmaFin.aux {n} {\lam _ => m}
-  }
-
-\func DecFin {P : \Prop} (d : Dec P) : FinSet P \cowith
-  | finCard => Dec.rec (\lam _ => 1) (\lam _ => 0) d
-  | finEq => inP $ \case \elim d \with {
-    | yes e => \new QEquiv {
-                 | f _ => e
-                 | ret _ => 0
-                 | ret_f (0) => idp
-                 | f_sec => prop-isProp e
-               }
-    | no q => \new QEquiv {
-                | f => \lam ()
-                | ret e => absurd (q e)
-                | ret_f => \lam ()
-                | f_sec e => absurd (q e)
-              }
-  }
-
-\lemma fin_transport {n m : Nat} {j : Fin n} {p : n = m} : transport Fin p j = {Nat} j \elim p
-  | idp => idp
-
-\func FunDec {A : FinSet} (B : A -> Decide) : Decide (\Pi (a : A) -> B a) \cowith
-  | decide => \case A.finEq \with {
-    | inP (e : Equiv) => \case fin-dec (\lam j => B (e j)) \with {
-      | yes p => yes \lam a => transport (B __) (e.f_ret a) $ p (e.ret a)
-      | no q => no \lam f => q \lam j => f (e j)
-    }
-  }
-  \where {
-    \func fin-dec {n : Nat} (B : Fin n -> Decide) : Dec (\Pi (j : Fin n) -> B j) \elim n
-      | 0 => yes \case __
-      | suc n => \case decide {B 0}, fin-dec (\lam j => B (suc j)) \with {
-        | yes p, yes q => yes \case \elim __ \with {
-          | 0 => p
-          | suc j => q j
-        }
-        | _, no q => no \lam f => q \lam j => f (suc j)
-        | no p, _ => no \lam f => p (f 0)
-      }
-  }
+\func finSet {A : FinSet} => A

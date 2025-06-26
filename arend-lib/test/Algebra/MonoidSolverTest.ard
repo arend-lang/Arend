@@ -2,6 +2,7 @@
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Arith.Nat
+\import Arith.Int
 \import Category
 \import Data.List
 \import Meta
@@ -9,25 +10,89 @@
 
 \lemma test1 {M : Monoid} (x y z w : M)
   : (x * (ide * y)) * ((ide * z) * w) = x * ((y * (z * ide)) * w)
-  => equation
+  => equation.monoid
 
-\lemma test2 {M : Monoid} (x y : M) (p : ide = x * y)
-  : (x * x) * (y * y) = ide
-  => equation
+\lemma test1a {M : Monoid} (x y z w : M) (p : x * (y * (z * w)) = w * (z * (y * x)))
+  : (x * (ide * y)) * ((ide * z) * w) = w * ((z * (y * ide)) * x)
+  => equation.monoid p
 
-\lemma test2a {M : Monoid} (x y : M) (p : ide = x * y)
-  : (x * x) * (y * y) = ide
-  => equation {usingOnly (inv p)}
+\lemma test1b {M : Monoid} (x y z w : M) (p : (x * (ide * y)) * ((ide * z) * w) = w * ((z * (y * ide)) * x))
+  : x * (y * (z * w)) = w * (z * (y * x))
+  => equation.monoid in p
 
-\lemma test2b {M : Monoid} (x y : M) (p : ide = x * y)
-  => fails {(x * x) * (y * y) = ide} equation {usingOnly p}
+\lemma testAdd1 {M : AddMonoid} (x y z w : M)
+  : (x + (zro + y)) + ((zro + z) + w) = x + ((y + (z + zro)) + w)
+  => equation.addMonoid
 
-\lemma test2c {M : Monoid} (x y : M) (p : ide = x * y)
-  => fails {(x * x) * (y * y) = ide} equation {usingOnly ()}
+\lemma testAdd1a {M : AddMonoid} (x y z w : M) (p : x + (y + (z + w)) = w + (z + (y + x)))
+  : (x + (zro + y)) + ((zro + z) + w) = w + ((z + (y + zro)) + x)
+  => equation.addMonoid p
 
-\lemma test2d {M : Monoid} (x y : M) (p : ide = x * y)
-  : (x * x) * (y * y) = ide
-  => equation {using ()}
+\lemma testAdd1b {M : AddMonoid} (x y z w : M) (p : (x + (zro + y)) + ((zro + z) + w) = w + ((z + (y + zro)) + x))
+  : x + (y + (z + w)) = w + (z + (y + x))
+  => equation.addMonoid in p
+
+
+\lemma testProof1 {M : Monoid} (x y : M) (p : x * y = ide) : (x * x) * (y * y) = ide
+  => equation.monoid {pmap (x * __ * y) p, p}
+
+\lemma testProof2 {M : AddMonoid} (x y : M) (p : x + y = zro) : (x + x) + (y + y) = zro
+  => equation.addMonoid {pmap (x + __ + y) p} p
+
+\lemma testProof3 {M : Monoid} (x y : M) (p : x * y = ide) : (x * x) * (y * y) = ide
+  => equation.monoid {p,p}
+
+\lemma testProof4 {M : Monoid} (x y : M) (p : x * y = ide) : (x * x) * (y * x) * y = x
+  => equation.monoid {p}
+
+\lemma testProof5 {M : AddMonoid} (x y : M) (p : x + y = zro) : (x + x) + (y + x) + y = x + x + y
+  => equation.addMonoid {p}
+
+\lemma testProof6 {M : AddMonoid} (x y z : M) (q : y + z = zro) : x = x + (y + z)
+  => equation.addMonoid {q}
+
+\lemma testProofFunction {M : Monoid} (x : M) (p : \Pi (y : M) -> x * y = ide) : x * x = ide
+  => equation.monoid {p}
+
+\lemma testProofPos1 {M : Monoid} (x y z w : M) (p : x * y = ide) (q : x * y = w) : x * y * z * x * y = w * z
+  => equation.monoid {2 p, q}
+
+\lemma testProofPos2 {M : AddMonoid} (x y z w : M) (p : x + y = zro) (q : x + y = w) : x + y + z + x + y = w + z
+  => equation.addMonoid {1 q, p}
+
+\lemma testProofArg1 {M : Monoid} (x y z : M) (p : x * y = ide) (q : (x * x) * (y * y) = z) : x * y = z
+  => equation.monoid {pmap (x * __ * y) p} in q
+
+\lemma testProofArg2 {M : AddMonoid} (x y z : M) (p : x + y = zro) (q : (x + x) + (y + y) = z) : zro = z
+  => equation.addMonoid {pmap (x + __ + y) p, p} in q
+
+\lemma testProofArg3 {M : Monoid} (x y : M) (p : x * y = ide) (q : (x * x) * (y * x) * y = x * y) : x = ide
+  => equation.monoid {p} in q
+
+\lemma testProofArg4 {M : AddMonoid} (x y : M) (p : x + y = zro) (q : (x + x) + (y + y) = x + x + y) : zro = x
+  => equation.addMonoid {p,p} in q
+
+
+\lemma testInstance (x y z : Nat) (p : x * y = z) : (z * x) * y = z * (1 * z)
+  => equation.monoid {p}
+
+\lemma testListInstance {A : \Set} (x : A) (xs ys zs : List A) : zs ++ x :: xs ++ ys = (zs ++ x :: nil) ++ xs ++ ys
+  => equation.monoid
+
+
+\lemma testMul {M : Monoid} (x y z : M) (p : x * z = x) (q : z * z = y) (s : x * y = y) : x = y
+  => equation.monoid {inv p, inv p, q, s}
+
+\lemma testIde1 {M : Monoid} (x y z : M) (p : x * y = ide) (q : y * z = ide) : x = z
+  => equation.monoid {1 inv q, p}
+
+\lemma testIde2 {M : AddMonoid} (x y z : M) (p : x + y = zro) (q : y + z = zro) : x = z
+  => equation.addMonoid {2 inv p, q}
+
+\lemma intTest {n m k : Nat} : pos ((n Nat.+ m) Nat.+ k) = pos (n Nat.+ (m Nat.+ k))
+  => equation.addMonoid
+
+-- old tests
 
 \lemma test3 {M : Monoid} (x y z : M) (p : x * z = z * x) (q : y * z = z * y)
   : (y * x) * (y * z) = (y * z) * (x * y)
@@ -59,21 +124,6 @@
   => equation
 
 \lemma test7a {M : Monoid} (x y : M) (p : x * y = x) : x = x * y * y
-  => equation
-
-\lemma test8 {M : Monoid} (x y z : M) (p : x * y = ide) (q : y * z = ide) : x = z
-  => equation {inv ide-right *> pmap (x *) (inv q) *> inv *-assoc} (x * y * z)
-
-\lemma test8a {M : Monoid} (x y z : M) (p : x * z = x) (q : z * z = y) (s : x * y = y) : x = y
-  => equation (x * z * z) {*-assoc *> pmap (x *) q *> s}
-
-\lemma testInstance (x y z : Nat) (p : x * y = z) : (z * x) * y = z * (1 * z)
-  => equation {Monoid}
-
-\lemma testListInstance {A : \Set} (x : A) (xs ys zs : List A) : zs ++ x :: xs ++ ys = (zs ++ x :: nil) ++ xs ++ ys
-  => equation
-
-\lemma addTest {M : AddMonoid} (x y : M) (p : x + y + 0 = x) : x = x + y + y
   => equation
 
 \lemma catTest {C : Precat} {a b c d e : C} (p : Hom a b) (q : Hom b c) (r : Hom c d) (s : Hom d e)

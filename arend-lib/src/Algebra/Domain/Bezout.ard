@@ -3,6 +3,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
+\import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.Reduced
@@ -24,18 +25,18 @@
   | isGCD a b => TruncP.map (isBezout a b) \lam (s,t,d1,d2) => \new GCD a b (s * a + t * b) {
     | res|val1 => d1
     | res|val2 => d2
-    | res-univ g (x,p) (y,q) => LDiv.make (s * x + t * y) equation
+    | res-univ g (x,p) (y,q) => LDiv.make (s * x + t * y) (equation.cRing {p,q})
   }
   | gcd-ldistr c {a} {b} {z} (g : GCD a b z) => TruncP.map (isBezout a b) \lam (s,t,d1,d2) => \new GCD (c * a) (c * b) (c * z) {
     | res|val1 => LDiv.product-left c g.res|val1
     | res|val2 => LDiv.product-left c g.res|val2
-    | res-univ d (x,p) (y,q) => LDiv.trans (later $ rewrite ldistr $ LDiv_+ (LDiv.make (s * x) equation) (LDiv.make (t * y) equation)) $ LDiv.product-left c (g.res-univ _ d1 d2)
+    | res-univ d (x,p) (y,q) => LDiv.trans (later $ rewrite ldistr $ LDiv_+ (LDiv.make (s * x) (equation.cMonoid {p})) (LDiv.make (t * y) (equation.cMonoid {q}))) $ LDiv.product-left c (g.res-univ _ d1 d2)
   }
 
   \lemma gcd_bezout {a b c : E} (gcd : GCD a b c) : ∃ (s t : E) (s * a + t * b = c)
     => TruncP.map (isBezout a b) \lam (s,t,d1,d2) =>
         \let (w,q) => gcd.res-univ (s * a + t * b) d1 d2
-        \in (w * s, w * t, equation)
+        \in (w * s, w * t, equation.cSemiring {q})
 
   \lemma bezoutArray_LDiv (l : Array E) : ∃ (c : Array E l.len) ∀ j (LDiv (BigSum (\lam i => c i * l i)) (l j)) \elim l
     | nil => inP (nil, \case __)
@@ -95,10 +96,10 @@
   | isStrictBezout : IsStrictBezout
   \default isBezout a b => TruncP.map (isStrictBezout a b) \lam (s,t,u,v,p,q) => (t, s, \new LDiv {
     | inv => v
-    | inv-right => equation
+    | inv-right => equation.cRing {inv p, q}
   }, \new LDiv {
     | inv => u
-    | inv-right => equation
+    | inv-right => equation.cRing {p, q}
   })
 
   \lemma bezoutArray {n : Nat} (a : Array E (suc n)) : ∃ (s u : Array E (suc n)) (BigSum (\lam j => s j * u j) = 1) (d : E) (\Pi (j : Fin (suc n)) -> a j = u j * d) \elim n, a

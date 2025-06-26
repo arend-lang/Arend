@@ -2492,7 +2492,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
               ClassCallExpression classCall = (ClassCallExpression) defCallParamType;
               for (Map.Entry<ClassField, Expression> entry : classCall.getImplementedHere().entrySet()) {
                 Expression type = entry.getValue().getType();
-                if (type == null || !CompareVisitor.compare(myEquations, CMP.LE, type, classCall.getDefinition().getFieldType(entry.getKey(), levels, new ReferenceExpression(classCall.getThisBinding())), Type.OMEGA, param)) {
+                if (type == null || !CompareVisitor.compare(myEquations, CMP.LE, type, classCall.getDefinition().getFieldType(entry.getKey(), classCall.getDefinition().castLevels(entry.getKey().getParentClass(), levels), new ReferenceExpression(classCall.getThisBinding())), Type.OMEGA, param)) {
                   levels = null;
                   break;
                 }
@@ -3320,7 +3320,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     for (int i = 0; i < arguments.size(); i++, j++) {
       if (j >= notImplementedFields.size()) {
         errorReporter.report(new TypecheckingError("Too many arguments. Class '" + ref.textRepresentation() + "' " + (notImplementedFields.isEmpty() ? "does not have fields" : "has only " + StringUtils.number(notImplementedFields.size(), " field")), arguments.get(i).expression));
-        break;
+        return fun;
       }
 
       ClassField field = notImplementedFields.get(j);
@@ -3521,7 +3521,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     } else {
       Expression typeExpr = type.getExpr();
       TypecheckingResult result = checkExpr(expr.expression, typeExpr);
-      if (result != null && typeExpr instanceof DataCallExpression && (((DataCallExpression) typeExpr).getDefinition() == Prelude.NAT || ((DataCallExpression) typeExpr).getDefinition() == Prelude.FIN)) {
+      if (result != null) {
         result.type = typeExpr;
       }
       return checkResult(expectedType, result, expr);
@@ -3588,7 +3588,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       var checker = myArendExtension.getLiteralTypechecker();
       if (checker != null) {
         int numberOfErrors = getNumberOfErrors();
-        TypecheckingResult result = TypecheckingResult.fromChecked(checker.typecheckNumber(number, this, new ContextDataImpl(expr, Collections.emptyList(), null, null, expectedType, null)));
+        TypecheckingResult result = TypecheckingResult.fromChecked(checker.typecheckNumber(number, expr.getResolvedExpression(), this, new ContextDataImpl(expr, Collections.emptyList(), null, null, expectedType, null)));
         if (result == null && getNumberOfErrors() == numberOfErrors) {
           errorReporter.report(new TypecheckingError("Cannot check number", expr));
         }
@@ -3596,7 +3596,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     }
 
-    return checkNumber(number, expectedType, expr);
+    return expr.getResolvedExpression() != null ? checkExpr(expr.getResolvedExpression(), expectedType) : checkNumber(number, expectedType, expr);
   }
 
   @Override
@@ -3606,7 +3606,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       var checker = myArendExtension.getLiteralTypechecker();
       if (checker != null) {
         int numberOfErrors = getNumberOfErrors();
-        TypecheckingResult result = TypecheckingResult.fromChecked(checker.typecheckString(string, this, new ContextDataImpl(expr, Collections.emptyList(), null, null, expectedType, null)));
+        TypecheckingResult result = TypecheckingResult.fromChecked(checker.typecheckString(string, expr.getResolvedExpression(), this, new ContextDataImpl(expr, Collections.emptyList(), null, null, expectedType, null)));
         if (result == null && getNumberOfErrors() == numberOfErrors) {
           errorReporter.report(new TypecheckingError("Cannot check string", expr));
         }
@@ -3614,7 +3614,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     }
 
-    return checkResult(expectedType, new TypecheckingResult(new StringExpression(string), ExpressionFactory.String()), expr);
+    return expr.getResolvedExpression() != null ? checkExpr(expr.getResolvedExpression(), expectedType) : checkResult(expectedType, new TypecheckingResult(new StringExpression(string), ExpressionFactory.String()), expr);
   }
 
   @Override

@@ -10,7 +10,6 @@ import org.arend.ext.concrete.expr.ConcreteReferenceExpression;
 import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.definition.CoreClassDefinition;
 import org.arend.ext.core.definition.CoreClassField;
-import org.arend.ext.core.definition.CoreConstructor;
 import org.arend.ext.core.expr.*;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -56,7 +55,7 @@ public class MonoidSolver extends BaseEqualitySolver {
   private final Map<Integer, Integer> domMap; // indices of morphisms in `values` to indices of domains.
   private final Map<Integer, Integer> codomMap; // indices of morphisms in `values` to indices of codomains.
 
-  public MonoidSolver(EquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreFunCallExpression equality, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses, CoreClassField catComp, CoreClassField catId) {
+  public MonoidSolver(BaseEquationMeta meta, ExpressionTypechecker typechecker, ConcreteFactory factory, ConcreteReferenceExpression refExpr, CoreFunCallExpression equality, TypedExpression instance, CoreClassCallExpression classCall, CoreClassDefinition forcedClass, boolean useHypotheses, CoreClassField catComp, CoreClassField catId) {
     super(meta, typechecker, factory, refExpr, instance, useHypotheses);
     this.equality = equality;
 
@@ -65,10 +64,10 @@ public class MonoidSolver extends BaseEqualitySolver {
     isSemilattice = !isCat && classCall.getDefinition().isSubClassOf(meta.MSemilattice) && (forcedClass == null || forcedClass.isSubClassOf(meta.MSemilattice));
     isMultiplicative = !isSemilattice && !isCat && classCall.getDefinition().isSubClassOf(meta.Monoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.Monoid));
     isCommutative = !isCat && (isSemilattice || isMultiplicative && classCall.getDefinition().isSubClassOf(meta.CMonoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.CMonoid)) || !isMultiplicative && classCall.getDefinition().isSubClassOf(meta.AbMonoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.AbMonoid)));
-    CoreClassField ide = isSemilattice ? meta.top : isMultiplicative ? meta.ext.ide : meta.ext.zro;
+    CoreClassField ide = isSemilattice ? meta.top : isMultiplicative ? meta.ide : meta.zro;
     CoreClassField mul = isSemilattice ? meta.meet : isMultiplicative ? meta.mul : meta.plus;
-    mulMatcher = isCat ? new DefinitionFunctionMatcher(catComp, 5) : FunctionMatcher.makeFieldMatcher(classCall, instance, mul, typechecker, factory, refExpr, meta.ext, 2);
-    ideMatcher = isCat ? new DefinitionFunctionMatcher(catId, 1) : FunctionMatcher.makeFieldMatcher(classCall, instance, ide, typechecker, factory, refExpr, meta.ext, 0);
+    mulMatcher = isCat ? new DefinitionFunctionMatcher(catComp, 5) : FunctionMatcher.makeFieldMatcher(classCall, instance, mul, typechecker, factory, refExpr, 2);
+    ideMatcher = isCat ? new DefinitionFunctionMatcher(catId, 1) : FunctionMatcher.makeFieldMatcher(classCall, instance, ide, typechecker, factory, refExpr, 0);
     obValues = isCat ? new Values<>(typechecker, refExpr) : null;
     homMap = isCat ? new HashMap<>() : null;
     domMap = isCat ? new HashMap<>() : null;
@@ -90,9 +89,9 @@ public class MonoidSolver extends BaseEqualitySolver {
       return null;
     }
 
-    var mul = isCat ? factory.ref(meta.catMul.getRef()) : factory.ref(meta.mul.getRef());
-    var interpretNF = isCat ? factory.ref(meta.catInterpretNF.getRef()) : factory.ref(meta.monoidInterpretNF.getRef());
-    var interpretNFConcat = isCat ? factory.ref(meta.catInterpretNFConcat.getRef()) : factory.ref(meta.monoidInterpretNFConcat.getRef());
+    var mul = isCat ? factory.ref(meta.catComp.getRef()) : factory.ref(meta.mul.getRef());
+    var interpretNF = isCat ? factory.ref(meta.catInterpretNF) : factory.ref(meta.monoidInterpretNF);
+    var interpretNFConcat = isCat ? factory.ref(meta.catInterpretNFConcat) : factory.ref(meta.monoidInterpretNFConcat);
     var nfConcatProof = factory.appBuilder(interpretNFConcat).app(nf).app(nfPatch).build();
 
     if (oldProof == null) {
@@ -103,7 +102,7 @@ public class MonoidSolver extends BaseEqualitySolver {
     var nfVar = factory.local("nfVar");
     var pmapLambda = factory.lam(Collections.singletonList(factory.param(nfVar)), factory.appBuilder(mul).app(factory.ref(nfVar)).app(nfPatchInterpreted).build());
 
-    return factory.appBuilder(factory.ref(meta.ext.concat.getRef())).app(nfConcatProof).app(factory.appBuilder(factory.ref(meta.ext.pmap.getRef())).app(pmapLambda).app(oldProof).build()).build();
+    return factory.appBuilder(factory.ref(meta.concat)).app(nfConcatProof).app(factory.appBuilder(factory.ref(meta.pmap)).app(pmapLambda).app(oldProof).build()).build();
   }
 
   private Pair<List<List<Integer>>, Integer> cutAccordingToOccurrences(List<Integer> subExpr, List<Integer> expr, List<Integer> occurrences) {
@@ -187,8 +186,8 @@ public class MonoidSolver extends BaseEqualitySolver {
         }
       }
 
-      var mul = isCat ? factory.ref(meta.catMul.getRef()) : factory.ref(meta.mul.getRef());
-      var interpretNF = isCat ? factory.ref(meta.catInterpretNF.getRef()) : factory.ref(meta.monoidInterpretNF.getRef());
+      var mul = isCat ? factory.ref(meta.catComp.getRef()) : factory.ref(meta.mul.getRef());
+      var interpretNF = isCat ? factory.ref(meta.catInterpretNF) : factory.ref(meta.monoidInterpretNF);
       var subExprNF = computeNFTerm(subExTerm.nf);
       var constructedExprNF = pieces.getFirst() == null ? new ArrayList<>(subExTerm.nf) : new ArrayList<>(pieces.getFirst());
       ConcreteExpression concatNFsProof = null;
@@ -205,7 +204,7 @@ public class MonoidSolver extends BaseEqualitySolver {
         if (piece == null) constructedExprNF.addAll(subExTerm.nf); else constructedExprNF.addAll(piece);
       }
 
-      var normConsist = isCat ? meta.catNormConsist.getRef() : meta.monoidNormConsist.getRef();
+      var normConsist = isCat ? meta.catNormConsist : meta.monoidNormConsist;
 
       ConcreteExpression normConsistSubExpr;
       ConcreteExpression normConsistExpr;
@@ -230,15 +229,15 @@ public class MonoidSolver extends BaseEqualitySolver {
 
       var occLambda = factory.lam(Collections.singletonList(factory.param(result.occurrenceVar)), result.exprWithOccurrences);
               // factory.lam(Collections.singletonList(factory.param(Collections.singletonList(result.occurrenceVar), factory.core(subExpr.getType().computeTyped()))), result.exprWithOccurrences);
-      var pmapOccurrence = factory.appBuilder(factory.ref(meta.ext.pmap.getRef()))
-              .app(occLambda).app(factory.appBuilder(factory.ref(meta.ext.inv.getRef())).app(normConsistSubExpr).build()).build();
+      var pmapOccurrence = factory.appBuilder(factory.ref(meta.pmap))
+              .app(occLambda).app(factory.appBuilder(factory.ref(meta.inv)).app(normConsistSubExpr).build()).build();
       if (concatNFsProof == null) {
       //  return new SubexprOccurrences(null, null, null, allOccurrences.size());
-        result.equalityProof = factory.appBuilder(factory.ref(meta.ext.concat.getRef())).app(normConsistExpr)
+        result.equalityProof = factory.appBuilder(factory.ref(meta.concat)).app(normConsistExpr)
                 .app(pmapOccurrence).build();
       } else {
-        result.equalityProof = factory.appBuilder(factory.ref(meta.ext.concat.getRef())).app(normConsistExpr)
-                .app(factory.appBuilder(factory.ref(meta.ext.concat.getRef())).app(concatNFsProof).app(pmapOccurrence).build()).build();
+        result.equalityProof = factory.appBuilder(factory.ref(meta.concat)).app(normConsistExpr)
+                .app(factory.appBuilder(factory.ref(meta.concat)).app(concatNFsProof).app(pmapOccurrence).build()).build();
       }
       result.wrapExprWithOccurrences(factory.core(subExpr.getType().computeTyped()), factory);
       return result;
@@ -352,10 +351,10 @@ public class MonoidSolver extends BaseEqualitySolver {
 
           ConcreteExpression cExpr = rule.binding != null ? factory.ref(rule.binding) : factory.core(null, rule.expression);
           if (rule.direction == Direction.BACKWARD) {
-            cExpr = factory.app(factory.ref(meta.ext.inv.getRef()), true, singletonList(cExpr));
+            cExpr = factory.app(factory.ref(meta.inv), true, singletonList(cExpr));
           }
           if (!isNF(rule.lhsTerm) || !isNF(rule.rhsTerm)) {
-            cExpr = factory.appBuilder(factory.ref(meta.termsEqConv.getRef()))
+            cExpr = factory.appBuilder(factory.ref(meta.termsEqConv))
               .app(factory.ref(dataRef), false)
               .app(rule.lhsTerm)
               .app(rule.rhsTerm)
@@ -373,7 +372,7 @@ public class MonoidSolver extends BaseEqualitySolver {
       }
 
       ConcreteExpression expr1 = trace1.isEmpty() ? null : traceToExpr(term1.nf, trace1, dataRef, factory);
-      ConcreteExpression expr2 = trace2.isEmpty() ? null : factory.app(factory.ref(meta.ext.inv.getRef()), true, singletonList(traceToExpr(term2.nf, trace2, dataRef, factory)));
+      ConcreteExpression expr2 = trace2.isEmpty() ? null : factory.app(factory.ref(meta.inv), true, singletonList(traceToExpr(term2.nf, trace2, dataRef, factory)));
       if (expr1 == null && expr2 == null) {
         lastArgument = factory.ref(typechecker.getPrelude().getIdpRef());
       } else if (expr2 == null) {
@@ -381,13 +380,13 @@ public class MonoidSolver extends BaseEqualitySolver {
       } else if (expr1 == null) {
         lastArgument = expr2;
       } else {
-        lastArgument = factory.appBuilder(factory.ref(meta.ext.concat.getRef())).app(expr1).app(expr2).build();
+        lastArgument = factory.appBuilder(factory.ref(meta.concat)).app(expr1).app(expr2).build();
       }
     } else {
       lastArgument = factory.ref(typechecker.getPrelude().getIdpRef());
     }
 
-    ConcreteAppBuilder builder = factory.appBuilder(factory.ref((isCat ? meta.catTermsEq : semilattice ? meta.semilatticeTermsEq : commutative ? meta.commTermsEq : meta.termsEq).getRef()))
+    ConcreteAppBuilder builder = factory.appBuilder(factory.ref(isCat ? meta.catTermsEq : semilattice ? meta.semilatticeTermsEq : commutative ? meta.commTermsEq : meta.termsEq))
       .app(factory.ref(dataRef), false);
     if (isCat) {
       CoreExpression type = leftExpr.getType().normalize(NormalizationMode.WHNF);
@@ -467,11 +466,11 @@ public class MonoidSolver extends BaseEqualitySolver {
         ConcreteExpression nfProofTerm = equalityToApply.binding; // factory.ref(equalityToApply.binding);
 
         if (!isDirect) {
-          nfProofTerm = factory.app(factory.ref(meta.ext.inv.getRef()), true, singletonList(nfProofTerm));
+          nfProofTerm = factory.app(factory.ref(meta.inv), true, singletonList(nfProofTerm));
         }
 
         //if (!isNF(equalityToApply.lhsTerm) || !isNF(equalityToApply.rhsTerm)) {
-          nfProofTerm = factory.appBuilder(factory.ref(meta.commTermsEqConv.getRef()))
+          nfProofTerm = factory.appBuilder(factory.ref(meta.commTermsEqConv))
                   .app(factory.ref(dataRef), false)
                   .app(lhsTerm)
                   .app(rhsTerm)
@@ -500,14 +499,14 @@ public class MonoidSolver extends BaseEqualitySolver {
         }
 
         if (subwordToReplace.size() > 1) {
-          ConcreteExpression sortProofLeft = factory.appBuilder(factory.ref(meta.sortDef.getRef())).app(computeNFTerm(subwordToReplace)).build();
-          nfProofTerm = factory.app(factory.ref(meta.ext.concat.getRef()), true, Arrays.asList(sortProofLeft, nfProofTerm));
+          ConcreteExpression sortProofLeft = factory.appBuilder(factory.ref(meta.sortDef)).app(computeNFTerm(subwordToReplace)).build();
+          nfProofTerm = factory.app(factory.ref(meta.concat), true, Arrays.asList(sortProofLeft, nfProofTerm));
         }
-        ConcreteExpression sortProofRight = factory.appBuilder(factory.ref(meta.sortDef.getRef())).app(rhsTermNF).build();
-        sortProofRight = factory.app(factory.ref(meta.ext.inv.getRef()), true, singletonList(sortProofRight));
-        nfProofTerm = factory.app(factory.ref(meta.ext.concat.getRef()), true, Arrays.asList(nfProofTerm, sortProofRight));
+        ConcreteExpression sortProofRight = factory.appBuilder(factory.ref(meta.sortDef)).app(rhsTermNF).build();
+        sortProofRight = factory.app(factory.ref(meta.inv), true, singletonList(sortProofRight));
+        nfProofTerm = factory.app(factory.ref(meta.concat), true, Arrays.asList(nfProofTerm, sortProofRight));
 
-        ConcreteExpression stepProofTerm = factory.appBuilder(factory.ref(meta.commReplaceDef.getRef()))
+        ConcreteExpression stepProofTerm = factory.appBuilder(factory.ref(meta.commReplaceDef))
                 .app(factory.ref(dataRef), false)
                 .app(computeNFTerm(curWord))
                 .app(computeNFTerm(indexesToReplace))
@@ -517,7 +516,7 @@ public class MonoidSolver extends BaseEqualitySolver {
         if (proofTerm == null) {
           proofTerm = stepProofTerm;
         } else {
-          proofTerm = factory.app(factory.ref(meta.ext.concat.getRef()), true, Arrays.asList(proofTerm, stepProofTerm));
+          proofTerm = factory.app(factory.ref(meta.concat), true, Arrays.asList(proofTerm, stepProofTerm));
         }
 
         curWord = newWord;
@@ -526,11 +525,11 @@ public class MonoidSolver extends BaseEqualitySolver {
       if (proofTerm == null) {
         proofTerm = factory.ref(typechecker.getPrelude().getIdpRef());
       } else {
-        ConcreteExpression sortProof = factory.appBuilder(factory.ref(meta.sortDef.getRef())).app(computeNFTerm(curWord)).build();
-        proofTerm = factory.app(factory.ref(meta.ext.concat.getRef()), true, Arrays.asList(proofTerm, sortProof));
+        ConcreteExpression sortProof = factory.appBuilder(factory.ref(meta.sortDef)).app(computeNFTerm(curWord)).build();
+        proofTerm = factory.app(factory.ref(meta.concat), true, Arrays.asList(proofTerm, sortProof));
       }
 
-      return factory.appBuilder(factory.ref(meta.commTermsEq.getRef()))
+      return factory.appBuilder(factory.ref(meta.commTermsEq))
               .app(factory.ref(dataRef), false)
               .app(term1.concrete)
               .app(term2.concrete)
@@ -629,7 +628,7 @@ public class MonoidSolver extends BaseEqualitySolver {
   private ConcreteExpression traceToExpr(List<Integer> nf, List<Step> trace, ArendRef dataRef, ConcreteFactory factory) {
     ConcreteExpression result = null;
     for (Step step : trace) {
-      ConcreteExpression expr = factory.appBuilder(factory.ref(meta.replaceDef.getRef()))
+      ConcreteExpression expr = factory.appBuilder(factory.ref(meta.replaceDef))
         .app(factory.ref(dataRef), false)
         .app(computeNFTerm(nf))
         .app(factory.number(step.position))
@@ -640,7 +639,7 @@ public class MonoidSolver extends BaseEqualitySolver {
       if (result == null) {
         result = expr;
       } else {
-        result = factory.app(factory.ref(meta.ext.concat.getRef()), true, Arrays.asList(result, expr));
+        result = factory.app(factory.ref(meta.concat), true, Arrays.asList(result, expr));
       }
       nf = step.apply(nf);
     }
@@ -661,9 +660,9 @@ public class MonoidSolver extends BaseEqualitySolver {
 
   private ConcreteExpression computeNFTerm(List<Integer> nf) {
     if (isCat) {
-      ConcreteExpression result = factory.appBuilder(factory.ref(meta.nilCatNF.getRef())).app(factory.ref(typechecker.getPrelude().getIdpRef())).build();
-      ConcreteExpression hdata = factory.appBuilder(factory.ref(meta.HDataFunc.getRef())).app(factory.ref(dataRef), false).build();
-      ConcreteExpression vdata = factory.appBuilder(factory.ref(meta.VDataFunc.getRef())).app(factory.ref(dataRef), false).build();
+      ConcreteExpression result = factory.appBuilder(factory.ref(meta.nilCatNF)).app(factory.ref(typechecker.getPrelude().getIdpRef())).build();
+      ConcreteExpression hdata = factory.appBuilder(factory.ref(meta.HDataFunc)).app(factory.ref(dataRef), false).build();
+      ConcreteExpression vdata = factory.appBuilder(factory.ref(meta.VDataFunc)).app(factory.ref(dataRef), false).build();
       Integer domNF = null;
       for (int i = nf.size() - 1; i >= 0; i--) {
         int dom = domMap.get(nf.get(i));
@@ -672,7 +671,7 @@ public class MonoidSolver extends BaseEqualitySolver {
         if (domNF == null) {
           domNF = dom;
         }
-        result = factory.appBuilder(factory.ref(meta.consCatNF.getRef()))
+        result = factory.appBuilder(factory.ref(meta.consCatNF))
                 //.app(factory.ref(typechecker.getPrelude().getNat().getRef()), false)
                 .app(vdata, false)
                 .app(factory.number(domNF), false)
@@ -684,14 +683,14 @@ public class MonoidSolver extends BaseEqualitySolver {
       }
       return result;
     }
-    return formList(nf.stream().map(factory::number).collect(Collectors.toList()), factory, meta.ext.nil, meta.ext.cons);
+    return formList(nf.stream().map(factory::number).collect(Collectors.toList()), factory, meta.nil, meta.cons);
   }
 
   // TODO: create a proper util method somewhere else instead of this
-  public static ConcreteExpression formList(List<ConcreteExpression> nf, ConcreteFactory factory, CoreConstructor nil, CoreConstructor cons) {
-    ConcreteExpression result = factory.ref(nil.getRef());
+  public static ConcreteExpression formList(List<ConcreteExpression> nf, ConcreteFactory factory, ArendRef nil, ArendRef cons) {
+    ConcreteExpression result = factory.ref(nil);
     for (int i = nf.size() - 1; i >= 0; i--) {
-      result = factory.appBuilder(factory.ref(cons.getRef())).app(nf.get(i)).app(result).build();
+      result = factory.appBuilder(factory.ref(cons)).app(nf.get(i)).app(result).build();
     }
     return result;
   }
@@ -801,8 +800,8 @@ public class MonoidSolver extends BaseEqualitySolver {
   private ConcreteExpression computeTerm(CoreExpression expression, List<Integer> nf) {
     CoreExpression expr = expression.normalize(NormalizationMode.WHNF);
     int dom = -1, cod = -1;
-    ConcreteExpression hdata = isCat ? factory.appBuilder(factory.ref(meta.HDataFunc.getRef())).app(factory.ref(dataRef), false).build() : null;
-    ConcreteExpression vdata = isCat ? factory.appBuilder(factory.ref(meta.VDataFunc.getRef())).app(factory.ref(dataRef), false).build() : null;
+    ConcreteExpression hdata = isCat ? factory.appBuilder(factory.ref(meta.HDataFunc)).app(factory.ref(dataRef), false).build() : null;
+    ConcreteExpression vdata = isCat ? factory.appBuilder(factory.ref(meta.VDataFunc)).app(factory.ref(dataRef), false).build() : null;
 
     if (isCat) {
       CoreExpression type = expr.computeType().normalize(NormalizationMode.WHNF);
@@ -818,7 +817,7 @@ public class MonoidSolver extends BaseEqualitySolver {
     if (ideMatcher.match(expr) != null) {
       if (isCat) {
         if (dom != -1 && cod != -1) {
-          return factory.appBuilder(factory.ref(meta.idCTerm.getRef()))
+          return factory.appBuilder(factory.ref(meta.idCTerm))
                   .app(vdata, false)
                   .app(factory.number(dom), false)
                   .app(factory.number(cod), false)
@@ -827,7 +826,7 @@ public class MonoidSolver extends BaseEqualitySolver {
                   .build();
         }
       }
-      return isCat ? factory.app(factory.ref(meta.idCTerm.getRef()), true, singletonList(factory.ref(typechecker.getPrelude().getIdpRef()))) : factory.ref(meta.ideMTerm.getRef());
+      return isCat ? factory.app(factory.ref(meta.idCTerm), true, singletonList(factory.ref(typechecker.getPrelude().getIdpRef()))) : factory.ref(meta.ideMTerm);
     }
 
 
@@ -848,7 +847,7 @@ public class MonoidSolver extends BaseEqualitySolver {
       }
       cArgs.add(left);
       cArgs.add(right);
-      ConcreteExpression comp = factory.ref((isCat ? meta.compCTerm : meta.mulMTerm).getRef());
+      ConcreteExpression comp = factory.ref(isCat ? meta.compCTerm : meta.mulMTerm);
       if (!implArgs.isEmpty()) {
         comp = factory.app(comp, false, implArgs);
       }
@@ -867,7 +866,7 @@ public class MonoidSolver extends BaseEqualitySolver {
         index = prev != null ? prev : newIndex;
       }
     }
-    return factory.app(factory.ref((isCat ? meta.varCTerm : meta.varMTerm).getRef()), true, singletonList(factory.number(index)));
+    return factory.app(factory.ref(isCat ? meta.varCTerm : meta.varMTerm), true, singletonList(factory.number(index)));
   }
 
   @Override
@@ -875,9 +874,9 @@ public class MonoidSolver extends BaseEqualitySolver {
     DataFactory dataFactory;
 
     if (!isCat) {
-      dataFactory = new MonoidDataFactory(meta, dataRef, values, letClauses, factory, instance, isSemilattice, isCommutative, isMultiplicative);
+      dataFactory = new MonoidDataFactory(meta, typechecker.getPrelude(), dataRef, values, letClauses, factory, instance, isSemilattice, isCommutative);
     } else {
-      dataFactory = new CategoryDataFactory(meta, dataRef, values, obValues, homMap, factory, instance);
+      dataFactory = new CategoryDataFactory(meta, typechecker.getPrelude(), dataRef, values, obValues, homMap, factory, instance);
     }
 
     return typechecker.typecheck(dataFactory.wrapWithData(result), null);
