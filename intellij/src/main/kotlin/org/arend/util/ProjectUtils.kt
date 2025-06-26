@@ -121,7 +121,7 @@ private fun groupMatch(group1: ConcreteGroup, group2: ArendGroup, function: (Con
         val subgroup1 = stats1[i].group()
         val subgroup2 = stats2[i].getGroup()
         if (subgroup1 == null && subgroup2 == null) continue
-        if (subgroup1 == null || subgroup2 == null || !function(subgroup1, subgroup2)) return false
+        if (subgroup1 == null || subgroup2 == null || !function(subgroup1, subgroup2) || !groupMatch(subgroup1, subgroup2, function)) return false
     }
     return true
 }

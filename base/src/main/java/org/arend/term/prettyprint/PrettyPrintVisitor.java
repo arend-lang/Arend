@@ -102,10 +102,11 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   }
 
   public void printStatements(List<? extends ConcreteStatement> statements) {
-    boolean first = true;
-    for (ConcreteStatement statement : statements) {
-      if (first) first = false;
-      else myBuilder.append("\n\n");
+    for (int i = 0; i < statements.size(); i++) {
+      ConcreteStatement statement = statements.get(i);
+      if (i > 0) {
+        myBuilder.append(statement.command() != null && statements.get(i - 1).command() != null ? "\n" : "\n\n");
+      }
 
       ConcreteGroup group = statement.group();
       if (group != null) {

@@ -8,6 +8,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.util.TextRange
 import org.arend.IArendFile
+import org.arend.ext.module.ModuleLocation
 import org.arend.psi.*
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
@@ -36,6 +37,7 @@ class ArendHighlightingPass(file: IArendFile, editor: Editor, textRange: TextRan
     override fun applyInformationWithProgress() {
         super.applyInformationWithProgress()
         myProject.service<ArendMessagesService>().update(module)
+        if (module?.locationKind == ModuleLocation.LocationKind.GENERATED) return
 
         if (module != null && service<ArendSettings>().isBackgroundTypechecking) {
             invokeLater {
