@@ -1,5 +1,6 @@
 package org.arend.quickfix
 
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import org.arend.ext.ArendExtension
 import org.arend.ext.concrete.expr.ConcreteExpression
@@ -10,6 +11,8 @@ import org.arend.ext.typechecking.GoalSolver
 import org.arend.ext.typechecking.InteractiveGoalSolver
 import org.arend.ext.ui.ArendUI
 import org.arend.psi.ArendPsiFactory
+import org.arend.server.ArendServerService
+import org.arend.server.impl.ArendLibraryImpl
 import org.arend.term.abs.ConcreteBuilder
 import org.intellij.lang.annotations.Language
 import java.util.function.Consumer
@@ -44,14 +47,12 @@ class InteractiveGoalSolverQuickFixTest : QuickFixTestBase() {
         @Language("Arend") before: String,
         @Language("Arend") after: String
     ) {
-        /* TODO[server2]
-        library.arendExtension = object : ArendExtension {
+        (project.service<ArendServerService>().server.getLibrary(library.name) as? ArendLibraryImpl)?.extension = object : ArendExtension {
             override fun getGoalSolver() = object : GoalSolver {
                 override fun getAdditionalSolvers(): MutableCollection<out InteractiveGoalSolver> =
                     mutableListOf(solver)
             }
         }
-        */
         typedQuickFixTest(solver.shortDescription, before, after)
     }
 
