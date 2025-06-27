@@ -20,7 +20,7 @@
         <projectImportProvider implementation="org.arend.project.ArendProjectImportProvider"/>
         <projectOpenProcessor implementation="org.arend.project.ArendProjectOpenProcessor"/>
         <projectImportBuilder implementation="org.arend.project.ArendProjectImportBuilder"/>
-        <!-- TODO[server2]: <additionalLibraryRootsProvider implementation="org.arend.project.ArendPreludeLibraryRootProvider"/> -->
+        <additionalLibraryRootsProvider implementation="org.arend.project.ArendPreludeLibraryRootProvider"/>
         <treeStructureProvider implementation="org.arend.projectView.ArendProjectViewStructureProvider"/>
 
         <!-- Module -->

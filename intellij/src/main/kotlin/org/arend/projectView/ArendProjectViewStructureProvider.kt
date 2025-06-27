@@ -26,11 +26,12 @@ class ArendProjectViewStructureProvider : TreeStructureProvider {
             return children
         }
         val name = (parent.value?.orderEntry as? LibraryOrderEntry)?.library?.name ?: return children
-        val config = parent.project?.findLibrary(name) ?: return children
-        val server = parent.project?.service<ArendServerService>()?.server ?: return children
+        val project = parent.project
+        val server = project?.service<ArendServerService>()?.server ?: return children
+        val config = project.findLibrary(name) ?: return children
         val modules = server.modules.filter { it.locationKind == ModuleLocation.LocationKind.GENERATED && it.libraryName == name }
         if (modules.isEmpty()) return children
-        return mutableListOf(ArendMetasNode(parent.project, config, modules, settings), *children.toTypedArray())
+        return mutableListOf(ArendMetasNode(project, config, modules, settings), *children.toTypedArray())
     }
 }
 
@@ -46,7 +47,7 @@ private class ArendMetasNode(project: Project?,
     override fun getChildren(): MutableCollection<out AbstractTreeNode<*>> {
         return modules
                 .mapNotNull {
-                    config.findArendFile(it.modulePath, it.locationKind == ModuleLocation.LocationKind.GENERATED, it.locationKind == ModuleLocation.LocationKind.TEST)
+                    config.findArendFile(it)
                             ?.let { file -> ArendMetaModuleNode(parent.project, it.modulePath, file, settings) }
                 }.toMutableList()
     }

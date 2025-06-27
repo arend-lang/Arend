@@ -15,6 +15,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.PlatformTestUtil
+import com.intellij.testFramework.TestModeFlags
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ThrowableRunnable
 import com.maddyhome.idea.vim.VimPlugin
@@ -44,6 +45,7 @@ import org.arend.util.FileUtils
 import org.arend.util.addGeneratedModule
 import org.arend.util.findExternalLibrary
 import org.arend.util.register
+import org.arend.util.stdLib
 import org.intellij.lang.annotations.Language
 
 abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
@@ -262,18 +264,18 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
         val libRoot = LocalFileSystem.getInstance().findFileByPath("${ArendTestCase.testResourcesPath}/org/arend")!!
         val arendLibConfig = project.findExternalLibrary(libRoot, AREND_LIB)
                 ?: throw IllegalStateException("Cannot find arend-lib")
-        setupLibraryManager(arendLibConfig)
+        setupLibraryManager(arendLibConfig, name)
         setupProjectModel(arendLibConfig, name)
     }
 
-    private fun setupLibraryManager(config: ExternalLibraryConfig) {
+    private fun setupLibraryManager(config: ExternalLibraryConfig, libName: String) {
         project.service<ArendServerService>().server.updateLibrary(config, NotificationErrorReporter(project))
-        addGeneratedModules(config.name) {
-            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "using", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(config.libraryName, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta")))), null, null, emptyList(), null))
-            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "$", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(config.libraryName, ModuleLocation.LocationKind.GENERATED, ModulePath("Function", "Meta")))), null, null, emptyList(), null))
-            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "rewrite", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(config.libraryName, ModuleLocation.LocationKind.GENERATED, ModulePath("Paths", "Meta")))), null, null, emptyList(), null))
+        addGeneratedModules(libName) {
+            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "using", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(libName, ModuleLocation.LocationKind.GENERATED, ModulePath("Meta")))), null, null, emptyList(), null))
+            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "$", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(libName, ModuleLocation.LocationKind.GENERATED, ModulePath("Function", "Meta")))), null, null, emptyList(), null))
+            declare(DocFactory.nullDoc(), Concrete.MetaDefinition(MetaReferable(AccessModifier.PUBLIC, Precedence.DEFAULT, "rewrite", TrivialMetaTypechecker(null), null, FullModuleReferable(ModuleLocation(libName, ModuleLocation.LocationKind.GENERATED, ModulePath("Paths", "Meta")))), null, null, emptyList(), null))
         }
-        // TODO[server2]: TypeCheckingService.LibraryManagerTestingOptions.setStdLibrary(arendLib, testRootDisposable)
+        TestModeFlags.set(stdLib, config, testRootDisposable)
     }
 
     private fun setupProjectModel(config: ExternalLibraryConfig, libName: String) {
