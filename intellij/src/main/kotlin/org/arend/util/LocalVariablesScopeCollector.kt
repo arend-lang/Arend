@@ -15,6 +15,10 @@ class LocalVariablesScopeCollector(private val myAnchor: Any?) : SearchConcreteV
         myContext.add(referable)
     }
 
+    override fun freeReferable(referable: Referable?, params: Void?) {
+        myAnchor?.let { myContext.remove(referable) }
+    }
+
     override fun checkSourceNode(sourceNode: Concrete.SourceNode, params: Void?): Boolean? {
         if (myAnchor == sourceNode.getData()) {
             return true
