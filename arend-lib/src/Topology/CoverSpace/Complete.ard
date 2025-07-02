@@ -231,7 +231,7 @@
       })
   }
 
-\lemma embedding-inj {X : SeparatedCoverSpace} {Y : PrecoverSpace} {f : PrecoverMap X Y} (fe : f.IsEmbedding) : isInj f
+\lemma embedding-inj {X : SeparatedCoverSpace} {Y : PrecoverSpace} {f : PrecoverMap X Y} (fe : f.IsEmbedding) : IsInj f
   => \lam {x} {y} p => isSeparatedCoverSpace \lam Cc => \case cauchy-cover (fe Cc) (f y) \with {
     | inP (V, inP (U,CU,q), Vfy) => inP (U, CU, (q $ unfolds $ rewrite p Vfy, q Vfy))
   }
@@ -459,9 +459,9 @@
 
 \lemma Separated-char (X : CoverSpace) : TFAE (
     {- 0 -} SeparatedCoverSpace { | CoverSpace => X },
-    {- 1 -} \Pi {Y : PrecoverSpace} {f : PrecoverMap X Y} -> f.IsEmbedding -> isInj f,
-    {- 2 -} isInj (completion {X}),
-    {- 3 -} ∃ (Y : SeparatedCoverSpace) (f : PrecoverMap X Y) (isInj f)
+    {- 1 -} \Pi {Y : PrecoverSpace} {f : PrecoverMap X Y} -> f.IsEmbedding -> IsInj f,
+    {- 2 -} IsInj (completion {X}),
+    {- 3 -} ∃ (Y : SeparatedCoverSpace) (f : PrecoverMap X Y) (IsInj f)
   ) => TFAE.cycle (
     \lam Xs {_} {f} fe {x} {x'} fx=fx' => isSeparatedCoverSpace {Xs} $ SeparatedCoverSpace.separated-char 4 7 \lam x<=<U => \case cauchy-cover (fe x<=<U) (f x) \with {
       | inP (V, inP (W,h,p), Vfx) => h (x, (idp, p Vfx)) (p $ rewrite fx=fx' in Vfx)

@@ -13,7 +13,7 @@
 \import Set.Fin.Pigeonhole
 
 \class KFinSet \extends BoundedPigeonholeSet {
-  | finSurj : ∃ (f : Fin finCard -> E) (isSurj f)
+  | finSurj : ∃ (f : Fin finCard -> E) (IsSurj f)
   | boundedPigeonhole => \case finSurj \with {
     | inP (f,s) => boundedPigeonhole {pigeonhole-surj (\new BoundedPigeonholeSet (Fin finCard) finCard (pigeonhole-fin __ id<suc)) f s}
   }

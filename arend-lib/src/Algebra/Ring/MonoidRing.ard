@@ -16,7 +16,7 @@
 \import Data.Array.Split
 \import Data.Or
 \import Equiv (Equiv)
-\import Function (isInj)
+\import Function (IsInj)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -119,10 +119,10 @@
 \lemma msCoef_monomial {M : DecSet} {R : AbMonoid} {r : R} {m : M} : msCoef (msMonomial r m) m = r
   => unfold msCoef $ rewrite (decideEq=_reduce idp) zro-right
 
-\lemma msCoef_map {M N : DecSet} {f : M -> N} (inj : isInj f) {R E : AbMonoid} {g : AddMonoidHom R E} {p : MonoidSet M R} {m : M} : msCoef (monoidSet-map f g p) (f m) = g (msCoef p m) \elim p
+\lemma msCoef_map {M N : DecSet} {f : M -> N} (inj : IsInj f) {R E : AbMonoid} {g : AddMonoidHom R E} {p : MonoidSet M R} {m : M} : msCoef (monoidSet-map f g p) (f m) = g (msCoef p m) \elim p
   | in~ l => pmap E.BigSum (keep-lem inj g) *> inv g.func-BigSum
   \where {
-    \private \lemma keep-lem {A D : \Set} {B C : DecSet} {f : B -> C} (inj : isInj f) (g : A -> D) {l : Array (\Sigma A B)} {b : B}
+    \private \lemma keep-lem {A D : \Set} {B C : DecSet} {f : B -> C} (inj : IsInj f) (g : A -> D) {l : Array (\Sigma A B)} {b : B}
       : map __.1 (keep (\lam s => decideEq (f b) s.2) (map (\lam s => (g s.1, f s.2)) l)) = {Array D} \lam j => g (keep (\lam s => decideEq b s.2) l j).1 \elim l
       | nil => idp
       | s :: l => cases (decideEq b s.2) \with {
@@ -380,7 +380,7 @@
       => pmap (\lam x => remove _ (map (\lam m => (msCoef (inMS s.1) m, m)) x)) (nub_id $ later s.2) *> pmap (remove _) (exts \lam j => pmap (__, (s.1 j).2) $
           pmap {Array (\Sigma R M)} (\lam x => BigSum $ map __.1 x) (keep-unique idp \lam i q => s.2 (inv q)) *> zro-right) *> remove-none s.3
 
-    \lemma msNormVars-norm {Rd : DecSet R} {p : MonoidSet M R} {l : Array M} (inj : isInj l) (s : \Pi (j : Fin l.len) -> msCoef p (l j) /= 0) : msNormVars p (map (\lam m => (msCoef p m, m)) l) = l
+    \lemma msNormVars-norm {Rd : DecSet R} {p : MonoidSet M R} {l : Array M} (inj : IsInj l) (s : \Pi (j : Fin l.len) -> msCoef p (l j) /= 0) : msNormVars p (map (\lam m => (msCoef p m, m)) l) = l
       => pmap (remove _) (nub_id inj) *> remove-none s
 
     \func msNorm_~ {Rd : DecSet R} {l l' : Array (\Sigma R M)} (e : l ~ l') : EPerm (msNorm l) (msNorm l')

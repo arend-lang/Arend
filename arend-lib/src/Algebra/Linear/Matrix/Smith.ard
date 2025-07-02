@@ -471,7 +471,7 @@
       => inv $ determinant_IsDiagonal {_} {_} {subMatrix A (index p) (index q)} \lam i/=j => Ad \lam p => i/=j $ inv toFin=id *> p *> toFin=id
 
     \func determinant_subMatrix {R : CRing} {n m k : Nat} {A : Matrix R n m} (Ad : IsDiagonal A) {li : Array (Fin n) k} {lj : Array (Fin m) k}
-                                (lis : sort.IsSorted li) (ljs : sort.IsSorted lj) (inj : isInj li)
+                                (lis : sort.IsSorted li) (ljs : sort.IsSorted lj) (inj : IsInj li)
       : determinant (subMatrix A li lj) = BigProd \lam j => A (li j) (lj j)
       => AbMonoid.FinSum-unique 1 (later \lam e e/=1 => pmap (_ *) (\case decideEq {ArrayDec NatSemiring k} (\lam j => li (e j)) (\lam j => lj j) \with {
            | yes p => \have | t => sort.perm_= {NatSemiring} {k} {\lam i => li i} (transport (Perm {Nat} li) p (Perm.equiv_perm {Nat} {_} {li} e)) (\lam p q => lis p q) (\lam p q => ljs p q)
@@ -493,7 +493,7 @@
            }
          }) LDiv.factor-right) LDiv.factor-right
       \where {
-        \lemma sorted-monotone {n : Nat} {l : Array (Fin n)} (s : sort.IsSorted l) (inj : isInj l) {j : Fin l.len} : j NatSemiring.<= l j
+        \lemma sorted-monotone {n : Nat} {l : Array (Fin n)} (s : sort.IsSorted l) (inj : IsInj l) {j : Fin l.len} : j NatSemiring.<= l j
           => aux (\lam _ => zero<=_) \lam {i} {j} p => \case LinearOrder.dec<_<= (l i) (l j) \with {
             | inl r => r
             | inr r => absurd $ <-irreflexive $ rewrite (inj $ <=-antisymmetric (s p) r) in p

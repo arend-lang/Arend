@@ -33,6 +33,8 @@
       => Big CoverInter (single (top {SetLattice X})) Cs
   }
 
+\type Elem {X : \Type} (U : Set X) => \Sigma (x : X) (\property U x)
+
 \func single {X : \Set} (a : X) : Set X
   => a =
 

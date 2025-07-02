@@ -166,8 +166,8 @@ public class LinearSolver {
     }
   }
 
-  private Hypothesis<CoreExpression> bindingToHypothesis(CoreBinding binding) {
-    return binding == null ? null : typeToEquation(binding.getTypeExpr().normalize(NormalizationMode.WHNF), binding, false);
+  private Hypothesis<CoreExpression> bindingToHypothesis(CoreBinding binding, boolean reportError) {
+    return binding == null ? null : typeToEquation(binding.getTypeExpr().normalize(NormalizationMode.WHNF), binding, reportError);
   }
 
   private List<BigInteger> solveEquations(List<? extends Equation<CompiledTerm>> equations, int var) {
@@ -388,7 +388,9 @@ public class LinearSolver {
   }
 
   private Hypothesis<CoreExpression> convertHypothesis(Hypothesis<CoreExpression> rule, CoreExpression instance, RingKind from, RingKind to) {
-    if (from == RingKind.RAT_ALG || to == RingKind.NAT) return rule;
+    if (from == RingKind.RAT_ALG || to == RingKind.NAT) {
+      return from == to ? rule : null;
+    }
     if (from == RingKind.NAT) {
       rule = natToIntHypothesis(rule, instance);
       if (rule == null) return null;
@@ -429,8 +431,12 @@ public class LinearSolver {
 
     List<Hypothesis<CoreExpression>> rules = new ArrayList<>();
     ContextHelper helper = new ContextHelper(hint);
-    for (CoreBinding binding : helper.getAllBindings(typechecker)) {
-      Hypothesis<CoreExpression> hypothesis = bindingToHypothesis(binding);
+    for (CoreBinding binding : helper.getContextBindings(typechecker)) {
+      Hypothesis<CoreExpression> hypothesis = bindingToHypothesis(binding, false);
+      if (hypothesis != null) rules.add(hypothesis);
+    }
+    for (CoreBinding binding : helper.getAdditionalBindings(typechecker)) {
+      Hypothesis<CoreExpression> hypothesis = bindingToHypothesis(binding, true);
       if (hypothesis != null) rules.add(hypothesis);
     }
 

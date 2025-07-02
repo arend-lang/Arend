@@ -41,7 +41,7 @@
     | nil, nil => func-zro
     | b :: c, a :: l => unfold BigSum $ func-+ *> pmap2 (+) func-*c linearComb
 
-  \lemma inj->independent {l : Array Dom} (li : LModule.IsIndependent (map func l)) (inj : isInj func) : LModule.IsIndependent l
+  \lemma inj->independent {l : Array Dom} (li : LModule.IsIndependent (map func l)) (inj : IsInj func) : LModule.IsIndependent l
     => \lam c p j => li c (inv (linearComb {_} {c}) *> pmap func p *> func-zro) j
 
   \lemma IsIndependentSet_func {J : \Set} {g : J -> Dom} (fgi : LModule.IsIndependentSet (\lam j => func (g j))) : LModule.IsIndependentSet g
@@ -50,7 +50,7 @@
   \lemma IsIndependentDec_func {J : DecSet} {g : J -> Dom} (fgi : LModule.IsIndependentDec (\lam j => func (g j))) : LModule.IsIndependentDec g
     => LModule.IsIndependentSet<->IsIndependentDec.1 $ IsIndependentSet_func $ LModule.IsIndependentSet<->IsIndependentDec.2 fgi
 
-  \lemma IsIndependentSet-left-inj {J : \Set} (inj : isInj func) {g : J -> Dom} (gi : LModule.IsIndependentSet g) : LModule.IsIndependentSet (\lam j => func (g j))
+  \lemma IsIndependentSet-left-inj {J : \Set} (inj : IsInj func) {g : J -> Dom} (gi : LModule.IsIndependentSet g) : LModule.IsIndependentSet (\lam j => func (g j))
     => \lam c p => gi c $ inj $ func-BigSum *> pmap BigSum (exts \lam j => func-*c) *> p *> inv func-zro
 } \where {
   \func id {R : Ring} {M : LModule R} : LinearMap M M \cowith
@@ -173,10 +173,10 @@
   | func-+ {x} {y} => pmap BigSum (exts \lam j => *c-rdistr) *> V.BigSum_+ {_} {\lam j => x j *c v j}
   | func-*c => pmap BigSum (exts \lam j => *c-assoc) *> inv V.*c_BigSum-ldistr
   \where {
-    \lemma surj-char {v : Array V} : isSurj (arrayLinearMap v) <-> V.IsGenerated v
+    \lemma surj-char {v : Array V} : IsSurj (arrayLinearMap v) <-> V.IsGenerated v
       => (\lam s x => TruncP.map (s x) \lam t => (t.1, inv t.2), \lam g x => TruncP.map (g x) \lam t => (t.1, inv t.2))
 
-    \lemma inj-char {v : Array V} : isInj (arrayLinearMap v) <-> V.IsIndependent v
+    \lemma inj-char {v : Array V} : IsInj (arrayLinearMap v) <-> V.IsIndependent v
       => (\lam inj c p j => path (\lam i => inj {c} {\lam _ => 0} (p *> inv (BigSum_zro \lam j => V.*c_zro-left)) i j),
           \lam ind {l} {l'} p => unfold at p $ exts \lam j => R.fromZero $ ind (\lam j => l j - l' j) (later (pmap BigSum (exts \lam j => V.*c-rdistr *> pmap (_ +) V.*c_negative-left) *> V.BigSum_+ {_} {\lam j => l j *c v j}) *> pmap (_ +) (inv V.BigSum_negative) *> V.toZero p) j )
 

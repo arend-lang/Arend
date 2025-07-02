@@ -15,7 +15,7 @@
 \import Data.Fin (unfsuc)
 \import Equiv
 \import Equiv.Univalence (Equiv-to-=)
-\import Function (isInj, isSurj)
+\import Function (IsInj, IsSurj)
 \import Function.Meta
 \import Logic.Unique
 \import Logic
@@ -136,7 +136,7 @@
         => fromZero $ +-comm *> pmap (`+ _) (sum_negative g) *> later (inv (sum_++ g)) *> IsZeroSum_= g p
     }
 
-  \lemma IsIndependentSet-right-inj {J K : \Set} {f : J -> K} (inj : isInj f) {g : K -> E} (gi : IsIndependentSet g) : IsIndependentSet (\lam j => g (f j))
+  \lemma IsIndependentSet-right-inj {J K : \Set} {f : J -> K} (inj : IsInj f) {g : K -> E} (gi : IsIndependentSet g) : IsIndependentSet (\lam j => g (f j))
     => \lam c p => \case IsZeroSum.nonEmpty $ gi (map (\lam s => (s.1, f s.2)) c) p \with {
          | inP (l1 : Array, e, h) => inP
            \let | g (s : \Sigma R J) => (s.1, f s.2)
@@ -152,7 +152,7 @@
        }
 
   \type IsIndependentDec {J : \Set} (g : J -> E) : \Prop
-    => \Pi (l : Array J) (c : Array R l.len) -> isInj l -> BigSum (\lam j => c j *c g (l j)) = 0 -> \Pi (j : Fin c.len) -> c j = 0
+    => \Pi (l : Array J) (c : Array R l.len) -> IsInj l -> BigSum (\lam j => c j *c g (l j)) = 0 -> \Pi (j : Fin c.len) -> c j = 0
 
   \lemma IsIndependentSet<->IsIndependentDec {J : DecSet} {g : J -> E} : IsIndependentSet g <-> IsIndependentDec g
     => (\lam li l c inj p j => inv (count-unique {_} {J} {_} {c} inj j) *> IsZeroSum_count (li (\lam j => (c j, l j)) p) (l j),
@@ -183,7 +183,7 @@
                | (inP e) => finEq {K}
          \in inP (\lam j => c (e j), p *> FinSum_Equiv e *> FinSum=BigSum))
 
-  \lemma IsGeneratingSet-surj {J K : \Set} {f : J -> K} (surj : isSurj f) {g : K -> E} (gi : IsGeneratingSet g) : IsGeneratingSet (\lam j => g (f j))
+  \lemma IsGeneratingSet-surj {J K : \Set} {f : J -> K} (surj : IsSurj f) {g : K -> E} (gi : IsGeneratingSet g) : IsGeneratingSet (\lam j => g (f j))
     => \lam x =>
         \have | (inP s) => gi x
               | (inP h) => FinSet.finiteAC (\lam i => surj (s.1 i).2)
@@ -268,7 +268,7 @@
     => R.BigSum_zro \lam k => later \let t => keep.preimage k
                                     \in absurd $ p t.1 $ keep.satisfies (\lam s => decideEq j s.2) {l} *> pmap __.2 t.2
 
-  \lemma count-unique {R : Semiring} {J : DecSet} {l : Array J} {c : Array R l.len} (inj : isInj l) (k : Fin l.len) : count (\lam j => (c j, l j)) (l k) = c k \elim l, k
+  \lemma count-unique {R : Semiring} {J : DecSet} {l : Array J} {c : Array R l.len} (inj : IsInj l) (k : Fin l.len) : count (\lam j => (c j, l j)) (l k) = c k \elim l, k
     | j :: l, 0 => unfold count $ rewrite (decideEq=_reduce idp) $ pmap (_ +) (pmap (\lam x => BigSum (map {\Sigma R J} __.1 x)) (keep-none \lam k p => \case inj {0} {suc k} p)) *> zro-right
     | j :: l, suc k => unfold count $ mcases \with {
       | yes p => \case inj {suc k} {0} p

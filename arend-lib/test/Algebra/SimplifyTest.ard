@@ -1,4 +1,5 @@
 \import Algebra.Group
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Algebra.Ring
@@ -6,7 +7,6 @@
 \import Arith.Int
 \import Arith.Real
 \import Meta
-\import Paths.Meta
 \import Arith.Nat(NatSemiring)
 
 \func test1 {M : Monoid} (x : M) : x = x * ide

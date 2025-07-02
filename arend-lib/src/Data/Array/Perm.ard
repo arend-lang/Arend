@@ -60,7 +60,7 @@
       | suc (suc n), a1 :: (a1' :: l), a2 :: (a2' :: _), perm-swap p1 p2 idp => perm-swap (pmap f p1) (pmap f p2) idp
       | n, l1, l2, perm-trans p1 p2 => perm-trans (perm-map f p1) (perm-map f p2)
       \where
-        \func conv {A B : \Set} (f : A -> B) (inj : isInj f) {n : Nat} {l1 l2 : Array A n} (p : Perm (map f l1) (map f l2)) : Perm l1 l2
+        \func conv {A B : \Set} (f : A -> B) (inj : IsInj f) {n : Nat} {l1 l2 : Array A n} (p : Perm (map f l1) (map f l2)) : Perm l1 l2
           => \have (e,f) => perm_equiv {_} {_} {map f l1} p
              \in transport (Perm l1) (exts \lam j => inj $ inv $ f j) (equiv_perm e)
 
@@ -72,7 +72,7 @@
         | no q => perm-trans (perm-:: idp (perm-remove l j)) (perm-swap idp idp idp)
       }
 
-    \func perm-fin {n : Nat} (l : Array (Fin n) n) (l-inj : isInj l) : Perm l (\lam j => j) \elim n
+    \func perm-fin {n : Nat} (l : Array (Fin n) n) (l-inj : IsInj l) : Perm l (\lam j => j) \elim n
       | 0 => perm-nil
       | 1 => perm-:: (cases (l 0) idp) perm-nil
       | suc (suc n) => aux2 {suc n} l l-inj 0
@@ -80,7 +80,7 @@
         \func aux {n : Nat} (l : Array (Fin (suc n)) n) (q : \Pi (j : Fin n) -> l j /= 0) (d : Fin n) (r : Perm (map (fpred d) l) (\lam j => j)) : Perm l (\lam j => suc j)
           => transport (Perm __ _) (arrayExt \lam j => fsuc_fpred (q j)) $ perm-map fsuc {n} r
 
-        \func aux2 {n : Nat} (l : Array (Fin (suc n)) (suc n)) (l-inj : isInj l) (d : Fin n) : Perm l (\lam j => j)
+        \func aux2 {n : Nat} (l : Array (Fin (suc n)) (suc n)) (l-inj : IsInj l) (d : Fin n) : Perm l (\lam j => j)
           => \have | (j,lj=0) => isDFin.isSplit {Fin (suc n)} (isDFin.fromPigeonhole (FinFin _)) l l-inj 0
                    | remove/=0 i : remove1 (l j) l i /= 0 => rewrite lj=0 (remove1/= l-inj)
              \in perm-trans (perm-remove l j) $ perm-:: lj=0 $ aux (remove1 (l j) l) remove/=0 d $ perm-fin (map (fpred d) (remove1 (l j) l))

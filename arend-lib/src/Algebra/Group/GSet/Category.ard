@@ -2,7 +2,7 @@
 \import Algebra.Group.GSet
 \import Category
 \import Category.Meta
-\import Function (isInj, isSurj)
+\import Function (IsInj, IsSurj)
 \import Paths
 \import Paths.Meta
 \import Set.SetHom
@@ -12,7 +12,7 @@
   \override Cod : GroupAction G
   | func-** {e : Dom} {g : G} : func (g ** e) = g ** func e -- equivariance
 
-  \func IsIso => \Sigma (isSurj func) (isInj func)
+  \func IsIso => \Sigma (IsSurj func) (IsInj func)
 }
 
 \func id-equivar {G : Group} (X : GroupAction G) : EquivariantMap G X X \cowith

@@ -63,7 +63,7 @@
   : DiscreteField { | CRing => SubRing.cStruct (polyImage f a) }
   => zeroDim->field {ImpotentCRing.subring {SubRing.cStruct (polyImage f a)} SubRing.embed \lam p => ext p} (integralExt-zeroDim (polyImage_integralExt a ai))
 
-\lemma integral_dom-zeroDim {R S : CRing} (f : RingHom R S) (inj : isInj f) (fi : isIntegralExt f) (Sd : S.IsZeroDimensional) : R.IsZeroDimensional
+\lemma integral_dom-zeroDim {R S : CRing} (f : RingHom R S) (inj : IsInj f) (fi : isIntegralExt f) (Sd : S.IsZeroDimensional) : R.IsZeroDimensional
   => \lam x => \case Sd (f x) \with {
     | inP (y,k,s) => \case fi y \with {
       | inP (p, inP (d,pd,pm), pe) => TruncP.map (aux pd pm s 0 $ rewrite (pe,f.func-zro) simplify) \lam s => (s.1, k, inj $ f.func-pow *> s.2 *> pmap (`* _) (pmap (`* _) (inv f.func-pow) *> inv f.func-*) *> inv f.func-*)
@@ -81,7 +81,7 @@
   }
 
 \func mPoly_integral {K : DiscreteField} {S : CRing} (f : RingHom K S) {a : S} {l : Array S} (p : MPoly (Fin (suc l.len)) K) (p/=0 : p /= 0) (pe : mPolyMapEval f p (a :: l) = 0)
-  : \Sigma (E : CRing) (g : RingHom K E) (l' : Array E l.len) (RingHom.isAlgebraGenerated g l') (h : RingHom E S) (\Pi (j : Fin l.len) -> \Sigma (q : Poly E) (l j = polyMapEval h q a)) (isInj h) (isIntegral h a) (h RingHom.∘ g = f)
+  : \Sigma (E : CRing) (g : RingHom K E) (l' : Array E l.len) (RingHom.isAlgebraGenerated g l') (h : RingHom E S) (\Pi (j : Fin l.len) -> \Sigma (q : Poly E) (l j = polyMapEval h q a)) (IsInj h) (isIntegral h a) (h RingHom.∘ g = f)
   => \let | d j => pow (suc (mdegree p)) (suc j)
           | l' => mkArray \lam j => l j - pow a (d j)
           | subring : SubRing S => mPolyImage f l'
@@ -130,7 +130,7 @@
                  (polyCoef (permSet-univ ps c) (permSet-univ {_} {AbMonoid.toCMonoid NatSemiring} d c) = 1) \elim c
         | in~ l => (degree<=_BigProd {_} {map ps l} (map d l) \lam j => (p (l j)).1, leadCoef_BigProd {_} {map ps l} (map d l) (\lam j => (p (l j)).1) *> BigProd_ide \lam j => later $ (p (l j)).2)
 
-      \lemma MPoly_poly {R : CRing} {n : Nat} (pl : Array (PermSet (Fin n))) (pli : isInj pl) (pc : Array R pl.len) (pci : \Pi (j : Fin pl.len) -> Inv (pc j))
+      \lemma MPoly_poly {R : CRing} {n : Nat} (pl : Array (PermSet (Fin n))) (pli : IsInj pl) (pc : Array R pl.len) (pci : \Pi (j : Fin pl.len) -> Inv (pc j))
                         {d : Nat} (pd : \Pi (j : Fin pl.len) -> permSet-length (pl j) < d) (a : Array R n) (pl/=0 : pl.len /= 0) {p : MPoly (Fin n) R} (pp : p = BigSum \lam j => msMonomial (pc j) (pl j))
         : ∃ (m : Nat) (degree<= (change-vars p d a) m) (Inv (polyCoef (change-vars p d a) m)) \elim pp
         | idp =>
@@ -156,7 +156,7 @@
               => R.BigSum_EPerm (EPerm.EPerm_map f (group l)) *> pmap BigSum (inv (Big++_map f {\new Array _ _ _})) *> BigSum_Big++ *> pmap BigSum (exts \lam j => R.BigSum_replicate)
 
             \func leadCoef_BigSum {R : CRing} {n : Nat} {l : Array (Poly R) (suc n)} (pd : Array Nat (suc n))
-                                  (pc : \Pi (j : Fin (suc n)) -> degree<= (l j) (pd j)) (inj : isInj pd)
+                                  (pc : \Pi (j : Fin (suc n)) -> degree<= (l j) (pd j)) (inj : IsInj pd)
               : \Sigma (m : Nat) (degree<= (BigSum l) m) (j : Fin (suc n)) (polyCoef (BigSum l) m = polyCoef (l j) (pd j))
               => (NatSemiring.Big_∨ pd, degree<=_BigSum \lam j => degree<=-trans (pc j) $ NatSemiring.Big_join-cond, (LinearOrder.findMax pd).1,
                   rewrite (LinearOrder.findMax pd).2 $ polyCoef_BigSum {_} {l} *> BigSum-unique {_} {map (polyCoef __ _) l} _ \lam k j/=k =>
@@ -164,14 +164,14 @@
               )
 
             \func leadCoef_BigSum_/=0 {R : CRing} {l : Array (Poly R)} (pd : Array Nat l.len)
-                                      (pc : \Pi (j : Fin l.len) -> degree<= (l j) (pd j)) (inj : isInj pd) (l/=0 : l.len /= 0)
+                                      (pc : \Pi (j : Fin l.len) -> degree<= (l j) (pd j)) (inj : IsInj pd) (l/=0 : l.len /= 0)
               : \Sigma (m : Nat) (degree<= (BigSum l) m) (j : Fin l.len) (polyCoef (BigSum l) m = polyCoef (l j) (pd j)) \elim l
               | nil => absurd (l/=0 idp)
               | a :: l => leadCoef_BigSum pd pc inj
 
             \func poly-degrees {R : CRing} {l : Array (Poly R)} (pc : Array R l.len) (pd : Array Nat l.len)
                                (pdp : \Pi (j : Fin l.len) -> \Sigma (degree<= (l j) (pd j)) (polyCoef (l j) (pd j) = 1))
-                               (pcp : \Pi (j : Fin l.len) -> Monoid.Inv (pc j)) (inj : isInj pd) (l/=0 : l.len /= 0)
+                               (pcp : \Pi (j : Fin l.len) -> Monoid.Inv (pc j)) (inj : IsInj pd) (l/=0 : l.len /= 0)
                                {p : Poly R} (pp : p = AddMonoid.BigSum \lam j => pc j PolyRing.*c l j)
               : \Sigma (m : Nat) (degree<= p m) (Monoid.Inv (polyCoef p m)) \elim pp
               | idp => \let t => leadCoef_BigSum_/=0 {R} {\lam j => pc j PolyRing.*c l j} pd (\lam j => degree<=_*c (pdp j).1) inj l/=0
@@ -191,7 +191,7 @@
     }
 
 \func mPoly_integralExt {K : DiscreteField} {S : CRing} (f : RingHom K S) {n : Nat} {l : Array S (suc n)} (gen : RingHom.isAlgebraGenerated f l) (p : MPoly (Fin (suc n)) K) (p/=0 : p /= zro) (pe : mPolyMapEval f p l = 0)
-  : \Sigma (E : CRing) (g : RingHom K E) (l' : Array E n) (RingHom.isAlgebraGenerated g l') (h : RingHom E S) (isInj h) (isIntegralExt h) (h RingHom.∘ g = f)
+  : \Sigma (E : CRing) (g : RingHom K E) (l' : Array E n) (RingHom.isAlgebraGenerated g l') (h : RingHom E S) (IsInj h) (isIntegralExt h) (h RingHom.∘ g = f)
   => \case mPoly_integral f p p/=0 pe \with {
        | (E,g,l',gen',h,hg,hinj,hint,hg=f) => (E,g,l',gen',h,hinj, integralExt-finite-char (l 0 :: nil) (RingHom.isAlgebraGenerated-poly \lam x =>
            TruncP.map (gen x) \lam s => (mPolyEval (\lam j => (hg j).1) $ MPoly_Fin-suc' (mPoly-map g s.1), MPoly_Fin-suc'.mapEval-comm h {_} {_} {\lam j => (hg j).1} *> pmap2 (mPolyEval __ __) (exts \case \elim __ \with {

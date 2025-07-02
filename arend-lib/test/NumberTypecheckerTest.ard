@@ -1,3 +1,4 @@
+\import Algebra.Group
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Semiring

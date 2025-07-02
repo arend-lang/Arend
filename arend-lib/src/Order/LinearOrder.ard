@@ -1,5 +1,6 @@
 \import Data.Array
 \import Data.Or
+\import Function
 \import Function.Meta ($)
 \import Logic
 \import Logic.Meta
@@ -322,6 +323,9 @@
       | inr r => (1, <=-antisymmetric (join-univ <=-refl r) join-left)
     }
 }
+
+\lemma monotone-injective {X : LinearOrder} {Y : StrictPoset} (f : X -> Y) (fm : IsStrictlyMonotone f) : IsInj f
+  => \lam p => <-connectedness (\lam q => <-irreflexive $ rewrite p in fm q) (\lam q => <-irreflexive $ rewrite p in fm q)
 
 \class LinearLattice \extends LinearOrder, BiorderedLattice {
   | <_meet-univ {x} {y} {z} x<y x<z => \case <-comparison (y ∧ z) x<y \with {

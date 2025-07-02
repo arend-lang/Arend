@@ -1,0 +1,29 @@
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths.Meta
+\import Set.Subset
+
+\instance ElemStrictPoset {X : StrictPoset} (U : Set X) : StrictPoset (Elem U)
+  | < x y => x.1 < y.1
+  | <-irreflexive => <-irreflexive
+  | <-transitive => <∘
+
+\instance ElemPoset {X : Poset} (U : Set X) : Poset (Elem U)
+  | <= x y => x.1 <= y.1
+  | <=-refl => <=-refl
+  | <=-transitive => <=∘
+  | <=-antisymmetric p q => ext (<=-antisymmetric p q)
+
+\instance ElemBiordered {X : BiorderedSet} (U : Set X) : BiorderedSet (Elem U)
+  | StrictPoset => ElemStrictPoset U
+  | Poset => ElemPoset U
+  | <-transitive-right => <∘r
+  | <-transitive-left => <∘l
+  | <=-less => <=-less
+
+\instance ElemLinearOrder {X : LinearOrder} (U : Set X) : LinearOrder (Elem U)
+  | StrictPoset => ElemStrictPoset U
+  | <-comparison y p => <-comparison y.1 p
+  | <-connectedness p q => ext (<-connectedness p q)

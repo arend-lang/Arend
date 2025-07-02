@@ -27,7 +27,7 @@
 \import Category.Functor
 \import Data.Array
 \import Equiv
-\import Function (isInj, isSurj)
+\import Function (IsInj, IsSurj)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -152,7 +152,7 @@
 \lemma integral_image-comp {R S E : Ring} {f : RingHom R S} (g : RingHom S E) {a : S} (ai : isIntegral f a) : isIntegral (g ∘ f) (g a) \elim ai
   | inP t => inP (t.1, t.2, pmap (polyEval __ _) (inv (polyMap-comp f g)) *> polyEval_polyMap *> pmap g t.3 *> g.func-zro)
 
-\lemma integralExt-surj (f : RingHom) (s : isSurj f) : isIntegralExt f
+\lemma integralExt-surj (f : RingHom) (s : IsSurj f) : isIntegralExt f
   => \lam a => TruncP.map (s a) \lam (b,fb=a) => (padd 1 (negative b), inP (1, idp, idp), rewrite (f.func-ide,f.func-negative,fb=a) simplify)
 
 \lemma integralExt_id {R : Ring} : isIntegralExt (id R)
@@ -172,7 +172,7 @@
        | inP (q,qm,r) => TruncP.map (Ideal.closure1_LDiv.1 (FactorRing.unfequiv0 {Ideal.closure1 p} $ inv factorHom_polyMapEval *> pmap (polyEval __ _) (later $ polyMap-comp _ _) *> r)) \lam d => (q,qm,d)
      }
 
-\lemma integralExt-left {R S E : Ring} (f : RingHom R S) (g : RingHom S E) (inj : isInj g) (int : isIntegralExt (g ∘ f)) : isIntegralExt f
+\lemma integralExt-left {R S E : Ring} (f : RingHom R S) (g : RingHom S E) (inj : IsInj g) (int : isIntegralExt (g ∘ f)) : isIntegralExt f
   => \lam x => TruncP.map (int (g x)) \lam t => (t.1, t.2, inj $ inv polyEval_polyMap *> pmap (polyEval __ _) (polyMap-comp f g) *> t.3 *> inv g.func-zro)
 
 \lemma integral-right {R S E : Ring} (f : RingHom R S) (g : RingHom S E) (x : E) (int : isIntegral (g ∘ f) x) : isIntegral g x

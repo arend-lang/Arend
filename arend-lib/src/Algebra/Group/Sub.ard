@@ -144,7 +144,7 @@
       \func help-condition : a equivalence.~ 1 => equivalence.~-symmetric {1} {a} (contains->equiv p)
 
   {- | probably it can be re-done with Quotient.in-surj function -}
-  \func quotIsSurj : isSurj quotient-proj-setwise =>
+  \func quotIsSurj : IsSurj quotient-proj-setwise =>
     \lam (z : quotient) => \case \elim z \with{
       | in~ a => inP (a, quotient-proj-setwise a ==< idp >== in~ a `qed)
     }

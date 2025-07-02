@@ -1,0 +1,18 @@
+\import Paths.Meta
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.MetricSpace
+\import Topology.TopSpace
+\import Topology.UniformSpace
+
+\instance ElemTopSpace {X : TopSpace} (S : Set X) : TopSpace (Elem S)
+  => TopTransfer {Elem S} (\lam s => s.1)
+
+\instance ElemCoverSpace {X : CoverSpace} (S : Set X) : CoverSpace (Elem S)
+  => CoverTransfer {Elem S} (\lam s => s.1)
+
+\instance ElemUniformSpace {X : UniformSpace} (S : Set X) : UniformSpace (Elem S)
+  => UniformTransfer {Elem S} (\lam s => s.1)
+
+\instance ElemMetricSpace {X : MetricSpace} (S : Set X) : MetricSpace (Elem S)
+  => MetricTransfer {Elem S} (\lam s => s.1) \lam p => ext p

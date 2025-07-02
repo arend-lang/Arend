@@ -1,0 +1,147 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Order.Elem
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Subset
+\import Topology.Elem
+\import Topology.MetricSpace
+\import Topology.MetricSpace.ValuedMetricSpace
+\import Topology.NormedAbGroup.Real
+\import Topology.TopSpace
+\open IntervalSubset
+
+-- | A subset of {Real} containing a closed interval.
+\func IntervalSubset => \Sigma (U : Set Real) (a b : Real) (a < b) (\Pi {x : Real} -> a <= x -> x <= b -> U x)
+  \where {
+    \func left (S : IntervalSubset) : Elem S.1 => (S.2, S.5 <=-refl (<=-less S.4))
+
+    \func right (S : IntervalSubset) : Elem S.1 => (S.3, S.5 (<=-less S.4) <=-refl)
+
+    \func inside (S : IntervalSubset) : Set Real => \lam x => \Sigma (S.2 <= x) (x <= S.3)
+  }
+
+-- | The intermediate value theorem for strictly monotone functions.
+\lemma IVT-monotone {S : IntervalSubset} (f : Elem S.1 -> Real) (fm : IsStrictlyMonotone f) (fc : IsCont f)
+                    (y : Real) (fa<=y : f (left S) <= y) (y<=fb : y <= f (right S))
+  : Contr (\Sigma (x : Elem S.1) (f x = y))
+  => isProp=>isContr (\lam s t => ext $ monotone-injective f fm $ s.2 *> inv t.2) (elem fm, image fm $ cont-char.1 fc _)
+  \where {
+    \func point (fm : IsStrictlyMonotone f) : Real \cowith
+      | L q => ∃ (x : Real) (x.L q) (p1 : S.2 <= x) (p2 : x <= S.3) (f (x, S.5 p1 p2) <= y)
+      | L-inh => \case S.2.L-inh \with {
+        | inP (q,q<a) => inP (q, inP (S.2, q<a, <=-refl, <=-less S.4, fa<=y))
+      }
+      | L-closed (inP (x,q<x,a<=x,x<=b,fx<=y)) q'<q => inP (x, x.L-closed q<x q'<q, a<=x, x<=b, fx<=y)
+      | L-rounded (inP (x,q<x,a<=x,x<=b,fx<=y)) => \case x.L-rounded q<x \with {
+        | inP (r,r<x,q<r) => inP (r, inP (x, r<x, a<=x, x<=b, fx<=y), q<r)
+      }
+      | U r => ∃ (x : Real) (x.U r) (p1 : S.2 <= x) (p2 : x <= S.3) (y <= f (x, S.5 p1 p2))
+      | U-inh => \case S.3.U-inh \with {
+        | inP (r,b<r) => inP (r, inP (S.3, b<r, <=-less S.4, <=-refl, y<=fb))
+      }
+      | U-closed (inP (x,x<q,a<=x,x<=b,y<=fx)) q<q' => inP (x, x.U-closed x<q q<q', a<=x, x<=b, y<=fx)
+      | U-rounded (inP (x,x<q,a<=x,x<=b,y<=fx)) => \case x.U-rounded x<q \with {
+        | inP (r,x<r,r<q) => inP (r, inP (x, x<r, a<=x, x<=b, y<=fx), r<q)
+      }
+      | LU-disjoint {q} (inP (x1,q<x1,_,_,fx1<=y)) (inP (x2,x2<q,_,_,y<=fx2)) =>
+          fx1<=y <=∘ y<=fx2 $ fm $ real_<-rat-char.2 $ inP (q, x2<q, q<x1)
+      | LU-located {q} {r} q<r =>
+        \let | q1 => (2 * q + r) * ratio 1 3
+             | r1 => (q + 2 * r) * ratio 1 3
+             | q<q1 : Real.fromRat q < q1 => real_<_L.2 linarith
+             | r1<r : Real.fromRat r1 < r => real_<_L.2 linarith
+             | q1<r1 : Real.fromRat q1 < r1 => real_<_L.2 linarith
+        \in \case real-located {S.2} q1<r1, real-located {S.3} q1<r1 \with {
+          | byLeft q1<a, _ => byLeft $ inP (S.2, real_<_L.1 $ q<q1 <∘ q1<a, <=-refl, <=-less S.4, fa<=y)
+          | _, byRight b<r1 => byRight $ inP (S.3, real_<_U.1 $ b<r1 <∘ r1<r, <=-less S.4, <=-refl, y<=fb)
+          | byRight a<r1, byLeft q1<b =>
+            \let | q2 => Real.fromRat q1 ∨ S.2
+                 | r2 => Real.fromRat r1 ∧ S.3
+                 | q2<=b => <=-less (<_join-univ q1<b S.4)
+                 | a<=r2 => <=-less (<_meet-univ a<r1 S.4)
+                 | q2<r2 => <_meet-univ (<_join-univ q1<r1 a<r1) (<_join-univ q1<b S.4)
+            \in \case real-located {y} (fm {q2, S.5 join-right q2<=b} {r2, S.5 a<=r2 meet-right} q2<r2) \with {
+                | byLeft fq2<y => byLeft $ inP (q2, real_<_L.1 $ q<q1 <∘l RealAbGroup.join-left, join-right, q2<=b, <=-less fq2<y)
+                | byRight y<fr2 => byRight $ inP (r2, real_<_U.1 $ meet-left <∘r r1<r, a<=r2, meet-right, <=-less y<fr2)
+              }
+        }
+
+    \lemma point>=left (fm : IsStrictlyMonotone f) : S.2 <= point fm
+      => \lam p<a => \case real_<-rat-char.1 p<a \with {
+        | inP (e, inP (x,x<e,a<=x,_,_), e<a) => a<=x $ real_<_U.2 x<e <∘ real_<_L.2 e<a
+      }
+
+    \lemma point<=right (fm : IsStrictlyMonotone f) : point fm <= S.3
+      => \lam b<p => \case real_<-rat-char.1 b<p \with {
+        | inP (e, b<e, inP (x,e<x,_,x<=b,_)) => x<=b $ real_<_U.2 b<e <∘ real_<_L.2 e<x
+      }
+
+    \lemma point<-char (fm : IsStrictlyMonotone f) {x : Real} : x < point fm <-> ∃ (x' : Real) (x < x') (p : S.2 <= x') (q : x' <= S.3) (f (x', S.5 p q) <= y)
+      => (\lam x<p => \case real_<-rat-char.1 x<p \with {
+        | inP (q, x<q, inP (x',q<x',p1,p2,fx'<=y)) => inP (x', real_<-rat-char.2 $ inP (q,x<q,q<x'), p1, p2, fx'<=y)
+      }, \lam (inP (x',x<x',p1,p2,fx'<=y)) => \case real_<-rat-char.1 x<x' \with {
+        | inP (q,x<q,q<x') => real_<-rat-char.2 $ inP (q, x<q, inP $ later (x', q<x', p1, p2, fx'<=y))
+      })
+
+    \lemma point>-char (fm : IsStrictlyMonotone f) {x : Real} : point fm < x <-> ∃ (x' : Real) (x' < x) (p : S.2 <= x') (q : x' <= S.3) (y <= f (x', S.5 p q))
+      => (\lam p<x => \case real_<-rat-char.1 p<x \with {
+        | inP (q, inP (x',x'<q,p1,p2,y<=fx'), q<x) => inP (x', real_<-rat-char.2 $ inP (q, x'<q, q<x), p1, p2, y<=fx')
+      }, \lam (inP (x',x'<x,p1,p2,y<=fx')) => \case real_<-rat-char.1 x'<x \with {
+        | inP (q,x'<q,q<x) => real_<-rat-char.2 $ inP (q, inP $ later (x', x'<q, p1, p2, y<=fx'), q<x)
+      })
+
+    \protected \func elem (fm : IsStrictlyMonotone f) : Elem S.1
+      => (point fm, S.5 (point>=left fm) (point<=right fm))
+
+    \lemma point<-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<b : x < S.3) (fc : IsContAt f (x, S.5 a<=x (<=-less x<b))) (fx<y : f (x, S.5 a<=x (<=-less x<b)) < y) : x < point fm
+      => \let | eps => y - f (x, S.5 a<=x (<=-less x<b))
+              | eps>0 : 0 < eps => hiding fm linarith
+              | (inP (delta,delta>0,g)) => metric-contAt-char.1 fc eps>0
+              | x' => (x + half delta) ∧ S.3
+              | x<=x' : x <= x' => meet-univ (hiding fm linarith) (<=-less x<b)
+              | a<=x' => a<=x <=∘ x<=x'
+         \in (point<-char fm).2 $ hiding fm $ inP (x', <_meet-univ linarith x<b, a<=x', meet-right, linarith $ RealAbGroup.abs>=neg <∘r g {x', S.5 a<=x' meet-right} (RealAbGroup.abs_-_< linarith $ linarith RealAbGroup.meet-left))
+
+    \lemma point>-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<x : S.2 < x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 (<=-less a<x) x<=b)) (fx<y : y < f (x, S.5 (<=-less a<x) x<=b)) : point fm < x
+      => \let | eps => f (x, S.5 (<=-less a<x) x<=b) - y
+              | eps>0 : 0 < eps => hiding fm linarith
+              | (inP (delta,delta>0,g)) => metric-contAt-char.1 fc eps>0
+              | x' => (x - half delta) ∨ S.2
+              | x'<=x : x' <= x => join-univ (hiding fm linarith) (<=-less a<x)
+              | x'<=b => x'<=x <=∘ x<=b
+         \in (point>-char fm).2 $ hiding fm $ inP (x', <_join-univ linarith a<x, join-right, x'<=b, linarith $ RealAbGroup.abs>=id <∘r g {x', S.5 join-right x'<=b} (RealAbGroup.abs_-_< (linarith $ RealAbGroup.join-left {x - half delta}) linarith))
+
+    \lemma point>=-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 a<=x x<=b)) (p<=x : point fm <= x) : y <= f (x, S.5 a<=x x<=b)
+      => \lam fx<y => negated-dec (x < S.3) \case __ \with {
+        | yes x<b => p<=x $ point<-cont-char fm a<=x x<b fc fx<y
+        | no b<=x => y<=fb $ transport (f __ < y) (ext $ <=-antisymmetric x<=b b<=x) fx<y
+      }
+
+    \lemma point<=-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 a<=x x<=b)) (x<=p : x <= point fm) : f (x, S.5 a<=x x<=b) <= y
+      => \lam y<fx => negated-dec (S.2 < x) \case __ \with {
+        | yes a<x => x<=p $ point>-cont-char fm a<x x<=b fc y<fx
+        | no x<=a => fa<=y $ transport (y < f __) (ext $ <=-antisymmetric x<=a a<=x) y<fx
+      }
+
+    \protected \lemma image (fm : IsStrictlyMonotone f) (fc : IsContAt f (elem fm)) : f (elem fm) = y
+      => <=-antisymmetric (point<=-cont-char fm (point>=left fm) (point<=right fm) fc RealAbGroup.<=-refl)
+                          (point>=-cont-char fm (point>=left fm) (point<=right fm) fc RealAbGroup.<=-refl)
+  }

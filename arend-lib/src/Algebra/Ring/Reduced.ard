@@ -82,7 +82,7 @@
       | byRight b=1 => byRight (inv ide-right *> pmap (a *) (inv b=1) *> ab=0, b=1)
     }
 } \where {
-  \func subring {R : Ring} {E : ImpotentRing} (f : RingHom R E) (inj : isInj f) : ImpotentRing { | Ring => R } \cowith
+  \func subring {R : Ring} {E : ImpotentRing} (f : RingHom R E) (inj : IsInj f) : ImpotentRing { | Ring => R } \cowith
     | zro/=ide p => E.zro/=ide $ inv f.func-zro *> pmap f p *> f.func-ide
     | isReduced aa=0 => inj $ isReduced (inv f.func-* *> pmap f aa=0 *> f.func-zro) *> inv f.func-zro
     | isImpotent aa=a => \case isImpotent (inv f.func-* *> pmap f aa=a) \with {
@@ -93,6 +93,6 @@
 
 \class ImpotentCRing \extends ImpotentRing, ReducedCRing, NonZeroCRing
   \where {
-    \func subring {R : CRing} {E : ImpotentRing} (f : RingHom R E) (inj : isInj f) : ImpotentCRing { | CRing => R } \cowith
+    \func subring {R : CRing} {E : ImpotentRing} (f : RingHom R E) (inj : IsInj f) : ImpotentCRing { | CRing => R } \cowith
       | ImpotentRing => ImpotentRing.subring f inj
   }

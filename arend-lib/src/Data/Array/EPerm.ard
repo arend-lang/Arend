@@ -70,10 +70,10 @@
       | x :: (x' :: l), y :: (y' :: l'), eperm-swap idp idp q => eperm-swap idp idp $ pmap (map f) q
       | l, l', eperm-trans e1 e2 => eperm-trans (EPerm_map f e1) (EPerm_map f e2)
       \where
-        \func conv {A B : \Set} (f : A -> B) (inj : isInj f) {l l' : Array A} (e : EPerm (map f l) (map f l')) : EPerm l l'
+        \func conv {A B : \Set} (f : A -> B) (inj : IsInj f) {l l' : Array A} (e : EPerm (map f l) (map f l')) : EPerm l l'
           => aux f inj (EPerm_len e) e
           \where
-            \private \func aux {A B : \Set} (f : A -> B) (inj : isInj f) {n m : Nat} (p : n = m) {l : Array A n} {l' : Array A m} (e : EPerm (map f l) (map f l')) : EPerm l l' \elim p
+            \private \func aux {A B : \Set} (f : A -> B) (inj : IsInj f) {n m : Nat} (p : n = m) {l : Array A n} {l' : Array A m} (e : EPerm (map f l) (map f l')) : EPerm l l' \elim p
               | idp => Perm_EPerm $ Perm.perm-map.conv f inj $ EPerm_Perm {B} {_} {map f l} e
 
     \func EPerm_keep {A : \Type} {P : A -> \Prop} {D : \Pi (a : A) -> Dec (P a)} {l l' : Array A} (p : EPerm l l') : EPerm (keep D l) (keep D l') \elim l, l', p
@@ -113,7 +113,7 @@
       }
       | l, l', eperm-trans p1 p2 => eperm-trans (EPerm_nub p1) (EPerm_nub p2)
 
-    \func eperm-remove {A : DecSet} {l : Array A} (inj : isInj l) (j : Fin l.len) : EPerm l (l j :: removeElem (l j) l) \elim l, j
+    \func eperm-remove {A : DecSet} {l : Array A} (inj : IsInj l) (j : Fin l.len) : EPerm l (l j :: removeElem (l j) l) \elim l, j
       | a :: l, 0 => eperm-= $ pmap (a ::) $ later $ rewrite (decideEq=_reduce idp) $ inv $ remove-none \lam j p => \case inj {0} {suc j} p
       | a :: l, suc j => unfold removeElem $ mcases \with {
         | yes p => \case inj {suc j} {0} p

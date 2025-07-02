@@ -7,7 +7,7 @@
 --\import Category.Subobj
 --\import Category.SubobjectPoset
 \import Equiv
-\import Function (isInj)
+\import Function (IsInj)
 \import Function.Meta
 \import Logic
 \import Meta
@@ -383,7 +383,7 @@
                }
         ))
   \where {
-    \func mono-is-inj {A B : SetBicat} (m : Mono {SetBicat} {A} {B}) : isInj m.f => \lam {a} {b} p =>
+    \func mono-is-inj {A B : SetBicat} (m : Mono {SetBicat} {A} {B}) : IsInj m.f => \lam {a} {b} p =>
         run {
           name-inj,
           m.isMono,

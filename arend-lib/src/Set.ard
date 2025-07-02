@@ -19,6 +19,9 @@
       | no q => n q
   }
 
+\lemma negated-dec (E : \Prop) {P : NegatedProp} (f : Dec E -> P) : P
+  => isNegated \lam g => g $ f $ no \lam e => g $ f (yes e)
+
 \func decToBool {E : \Prop} (d : Dec E) : Bool
   | yes _ => true
   | no _ => false

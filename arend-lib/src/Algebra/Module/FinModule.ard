@@ -26,14 +26,14 @@
   \where {
     \open LinearMap
 
-    \lemma surj-lift {R : Ring} {F : FinModule R} {U V : LModule R} (f : LinearMap F V) (g : LinearMap U V) (gs : isSurj g)
+    \lemma surj-lift {R : Ring} {F : FinModule R} {U V : LModule R} (f : LinearMap F V) (g : LinearMap U V) (gs : IsSurj g)
       : ∃ (h : LinearMap F U) ∀ x (g (h x) = f x)
       => \have | (inP (l,lb)) => F.isFinModule
                | (inP s) => FinSet.finiteAC (\lam j => gs (f (l j)))
                | h => extend lb \lam j => (s j).1
          \in inP (h, basis-ext (g ∘ h) f lb.2 \lam j => pmap g (U.BigSum-unique {\lam k => F.basis-split lb (l j) k *c (s k).1} j (\lam k j/=k => pmap (`*c _) (F.basis_split_/= j/=k) *> U.*c_zro-left) *> pmap (`*c _) F.basis_split_= *> ide_*c) *> (s j).2)
 
-    \lemma surj-split {R : Ring} {U : LModule R} {V : FinModule R} (g : LinearMap U V) (gs : isSurj g)
+    \lemma surj-split {R : Ring} {U : LModule R} {V : FinModule R} (g : LinearMap U V) (gs : IsSurj g)
       : ∃ (h : LinearMap V U) ∀ x (g (h x) = x)
       => surj-lift LinearMap.id g gs
 
@@ -69,13 +69,13 @@
         | suc n, inP (l,lb) => absurd $ R.zro/=ide $ inv $ lb.1 (replicate (suc n) (1 : R)) (f _) 0
       })
 
-    \lemma surj-iso {R : NonZeroCRing} {U V : FinModule R} (p : dimension U = dimension V) (g : LinearMap U V) (gs : isSurj g) : Iso {LModuleCat R} g
+    \lemma surj-iso {R : NonZeroCRing} {U V : FinModule R} (p : dimension U = dimension V) (g : LinearMap U V) (gs : IsSurj g) : Iso {LModuleCat R} g
       => \case dimension-char, dimension-char \with {
         | inP s, inP (lv,bv) => \let (lu,bu) => rewrite p s
                                 \in basis-surj-iso bu bv g gs
       }
       \where
-        \lemma basis-surj-iso {R : CRing} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (g : LinearMap U V) (gs : isSurj g) : Iso g
+        \lemma basis-surj-iso {R : CRing} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (g : LinearMap U V) (gs : IsSurj g) : Iso g
           => \case surj-split {R} {U} {\new FinModule { | LModule => V | isFinModule => inP (lv,bv) }} g gs \with {
             | inP (h,gh=id) => rewriteI (ret_f {matrix-equiv bu bv} g) $ toLinearMapIso bu bv $ matirx-inv {R} {n} {toMatrix lv bu h} {toMatrix lu bv g} $ inv (toMatrix_* {R} {V} h g lv bu bv) *> cong (exts gh=id) *> toMatrix_ide bv
           }

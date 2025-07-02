@@ -9,9 +9,9 @@
 
 \class SubLRepres {R : Ring} {G : Group} (E : LinRepres R G) (\classifying S : LinRepres R G) {
   | in : InterwiningMap S E
-  | in-mono : isInj in
+  | in-mono : IsInj in
 
-  \func isTrivial => IsZeroMod S || isSurj in
+  \func isTrivial => IsZeroMod S || IsSurj in
 
   \func \infix 7 **'in (g : G)(s : S) : S => (LinRepres.** {S}) g s
 

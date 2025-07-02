@@ -10,11 +10,11 @@
 
 \func \infixr 8 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam x => g (f x)
 
-\func isInj {A B : \Set} (f : A -> B) => \Pi {a a' : A} -> f a = f a' -> a = a'
+\func IsInj {A B : \Set} (f : A -> B) => \Pi {a a' : A} -> f a = f a' -> a = a'
 
-\func isSurj {A B : \Type} (f : A -> B) => \Pi (y : B) -> ∃ (x : A) (f x = y)
+\func IsSurj {A B : \Type} (f : A -> B) => \Pi (y : B) -> ∃ (x : A) (f x = y)
   \where {
-    \lemma comp {A B C : \Type} {f : A -> B} (fs : isSurj f) {g : B -> C} (gs : isSurj g) : isSurj (g o f)
+    \lemma comp {A B C : \Type} {f : A -> B} (fs : IsSurj f) {g : B -> C} (gs : IsSurj g) : IsSurj (g o f)
       => \lam z => \have | (inP (y,gy=z)) => gs z
                          | (inP (x,fx=y)) => fs y
                    \in inP (x, pmap g fx=y *> gy=z)

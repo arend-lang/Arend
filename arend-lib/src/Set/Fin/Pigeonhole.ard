@@ -25,7 +25,7 @@
       | greater c => (t.2, t.1, c, inv t.4)
     }
 
-  \lemma isEquiv (f : E -> E) (inj : isInj f) : Equiv f
+  \lemma isEquiv (f : E -> E) (inj : IsInj f) : Equiv f
     => isDFin.isEquiv (isDFin.fromPigeonhole \this) f inj
 }
 
@@ -42,7 +42,7 @@
     }
 }
 
-\lemma pigeonhole-surj (A : BoundedPigeonholeSet) {B : \Set} (f : A -> B) (s : isSurj f) : BoundedPigeonholeSet B A.finCard \cowith
+\lemma pigeonhole-surj (A : BoundedPigeonholeSet) {B : \Set} (f : A -> B) (s : IsSurj f) : BoundedPigeonholeSet B A.finCard \cowith
   | boundedPigeonhole g =>
     \have | (inP t) => FinSet.finiteAC (\lam j => s (g j))
           | (inP r) => A.boundedPigeonhole (\lam j => (t j).1)
@@ -61,7 +61,7 @@
           | inr q => no \lam (inP (i,j,e,p)) => q i (inP (j, e, p))
         }
 
-    \lemma aux {n : Nat} {A : DecSet} (f : Fin n -> A) (p : Not (isInj f)) : ∃ (i j : Fin n) (i /= j) (f i = f j)
+    \lemma aux {n : Nat} {A : DecSet} (f : Fin n -> A) (p : Not (IsInj f)) : ∃ (i j : Fin n) (i /= j) (f i = f j)
       => \case search-pair f \with {
         | yes e => e
         | no q => absurd $ p \lam {i} {j} p => \case decideEq i j \with {

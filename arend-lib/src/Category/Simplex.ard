@@ -2,7 +2,7 @@
 \import Arith.Nat
 \import Category
 \import Equiv (Equiv, QEquiv)
-\import Function (isInj)
+\import Function (IsInj)
 \import Logic.Unique
 \import Logic
 \import Meta
@@ -16,7 +16,7 @@
 \import Set.SetHom
 \import Set.Fin
 
-\lemma monotone-inj {P1 : BiorderedSet} {P2 : LinearOrder.Dec} (f : PosetHom P1 P2) (f-inj : isInj f) : StrictPosetHom P1 P2 (func {f}) \cowith
+\lemma monotone-inj {P1 : BiorderedSet} {P2 : LinearOrder.Dec} (f : PosetHom P1 P2) (f-inj : IsInj f) : StrictPosetHom P1 P2 (func {f}) \cowith
   | func-< {a} {b} p => \case P2.trichotomy (f a) (f b) \with {
     | less p1 => p1
     | equals p1 => absurd (<-irreflexive (rewrite (f-inj p1) in p))
@@ -33,12 +33,12 @@
                               (gf-comp : g Function.o f = Function.id {Fin (suc n)}) :
   \Sigma (Function.id {Fin (suc n)} = func {f}) (Function.id {Fin (suc n)} = func {g}) =>
   \let
-    | isInj-g : isInj g => \lam {a} {b} leq => run {
+    | isInj-g : IsInj g => \lam {a} {b} leq => run {
       \have A0 => pmap f leq,
       rewrite (pmap (\lam f => f a) fg-comp, pmap (\lam k => k b) fg-comp) at A0,
       A0
     }
-    | isInj-f : isInj f => \lam {a} {b} leq => run {
+    | isInj-f : IsInj f => \lam {a} {b} leq => run {
       \have A0 => pmap g leq,
       rewrite (pmap (\lam f => f a) gf-comp, pmap (\lam k => k b) gf-comp) at A0,
       A0

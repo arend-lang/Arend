@@ -63,7 +63,7 @@
   \func isInj {a a' : A} (p : f a = f a') : a = a'
     => inv (ret_f a) *> pmap ret p *> ret_f a'
 
-  \lemma isSurj : Function.isSurj f
+  \lemma isSurj : Function.IsSurj f
     => \lam y => inP (ret y, f_ret y)
 
   \func adjoint {a : A} {b : B} (p : f a = b) : a = ret b
@@ -85,7 +85,7 @@
         | Retraction => pathOver (Retraction.levelProp e' (rewriteI p (\new Retraction e.f e.sec e.f_sec)) (\new Retraction e'.f e'.sec e'.f_sec)) @ i
       }
 
-    \lemma fromInjSurj {A B : \Set} (f : A -> B) (inj : Function.isInj f) (surj : Function.isSurj f) : Equiv f
+    \lemma fromInjSurj {A B : \Set} (f : A -> B) (inj : Function.IsInj f) (surj : Function.IsSurj f) : Equiv f
       => \new ESEquiv {
         | Embedding => Embedding.fromInjection inj
         | isSurjMap => surj

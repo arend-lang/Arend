@@ -84,7 +84,7 @@
       | a :: l, 0 => idp
       | a :: l, suc i => pmap suc index-left-nat
 
-    \lemma index-left-inj {A : \Type} {l m : Array A} : isInj (index-left {A} {l} {m})
+    \lemma index-left-inj {A : \Type} {l m : Array A} : IsInj (index-left {A} {l} {m})
       => \lam p => nat_fin_= $ inv index-left-nat *> p *> index-left-nat
 
     \func index-right {A : \Type} {l m : Array A} (i : Fin m.len) : Fin (DArray.len {l ++ m}) \elim l
@@ -99,7 +99,7 @@
       | nil => idp
       | a :: l => pmap suc index-right-nat
 
-    \lemma index-right-inj {A : \Type} {l m : Array A} : isInj (index-right {A} {l} {m})
+    \lemma index-right-inj {A : \Type} {l m : Array A} : IsInj (index-right {A} {l} {m})
       => \lam p => nat_fin_= $ NatSemiring.cancel-left l.len $ inv index-right-nat *> p *> index-right-nat
 
     \lemma index-left/=right {A : \Type} {l m m' : Array A} {i : Fin l.len} {j : Fin m'.len} : index-left {A} {l} {m} i /= {Nat} index-right {A} {l} j
@@ -464,7 +464,7 @@
     }
   }
 
-\lemma remove1/= {A : DecSet} {a : A} {n : Nat} {l : Array A (suc n)} (inj : isInj l) {j : Fin n} : remove1 a l j /= a \elim n, l
+\lemma remove1/= {A : DecSet} {a : A} {n : Nat} {l : Array A (suc n)} (inj : IsInj l) {j : Fin n} : remove1 a l j /= a \elim n, l
   | 0, b :: l => \case j
   | suc n, b :: l => mcases \with {
     | yes p => \lam q => \case inj {suc j} {0} (q *> p)
@@ -474,7 +474,7 @@
     }
   }
 
-\lemma remove1-inj {A : DecSet} {a : A} {n : Nat} {l : Array A (suc n)} (inj : isInj l) {i j : Fin n} (p : remove1 a l i = remove1 a l j) : i = j \elim n, l
+\lemma remove1-inj {A : DecSet} {a : A} {n : Nat} {l : Array A (suc n)} (inj : IsInj l) {i j : Fin n} (p : remove1 a l i = remove1 a l j) : i = j \elim n, l
   | 0, b :: l => \case i
   | suc n, b :: l => cases (decideEq a b, p) \with {
     | yes _, p => pmap (fpred i) $ inj {suc i} {suc j} p
@@ -527,7 +527,7 @@
   | a :: l, suc i, 0 => absurd (remove.no-element (decideEq a) (inv p))
   | a :: l, suc i, suc j => pmap fsuc $ remove.no-repeats nub-isInj p
 
-\func nub_id {A : DecSet} {l : Array A} (inj : isInj l) : nub l = l \elim l
+\func nub_id {A : DecSet} {l : Array A} (inj : IsInj l) : nub l = l \elim l
   | nil => idp
   | a :: l => pmap (a ::) $ remove-none (\lam j p => \case inj {0} {suc (nub-preimage j).1} $ p *> (nub-preimage j).2) *> nub_id \lam p => unfsuc (inj p)
 
@@ -712,7 +712,7 @@
        | inr q => inr \lam p => q p.2
      }
 
-\func repeats-dec {A : DecSet} (l : Array A) : Or (\Sigma (i j : Fin l.len) (i /= j) (l i = l j)) (isInj l) \elim l
+\func repeats-dec {A : DecSet} (l : Array A) : Or (\Sigma (i j : Fin l.len) (i /= j) (l i = l j)) (IsInj l) \elim l
   | nil => inr \lam {i} => \case i
   | a :: l => \case index-dec l a \with {
     | inl e => inl (suc e.1, 0, (\case __), e.2)

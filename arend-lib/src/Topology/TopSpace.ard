@@ -121,10 +121,13 @@
 \lemma cont-limit {I : DirectedSet} {X Y : TopSpace} {f : I -> X} {l : X} (p : X.IsLimit f l) (g : ContMap X Y) : Y.IsLimit (\lam n => g (f n)) (g l)
   => \lam Uo Ugl => p (g.func-cont Uo) Ugl
 
+\func IsCont {X Y : TopSpace} (f : X -> Y) : \Prop
+  => ContMap X Y f
+
 \func IsContAt {X Y : TopSpace} (f : X -> Y) (x : X) : \Prop
   => ∀ {V : Y.isOpen} (V (f x)) ∃ (U : X.isOpen) (U x) (U ⊆ f ^-1 V)
 
-\lemma cont-char {X Y : TopSpace} {f : X -> Y} : ContMap X Y f <-> (\Pi (x : X) -> IsContAt f x)
+\lemma cont-char {X Y : TopSpace} {f : X -> Y} : IsCont f <-> (\Pi (x : X) -> IsContAt f x)
   => (\lam fc x Vo Vfx => inP (_, func-cont {fc} Vo, Vfx, <=-refl), \lam fc => \new ContMap {
     | func-cont {V} Vo => X.cover-open \lam Vfx => fc _ Vo Vfx
   })

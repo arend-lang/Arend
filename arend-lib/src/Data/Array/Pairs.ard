@@ -64,7 +64,7 @@
                                  \in (pmap fsuc t.1, t.2)
 
     \lemma pairs-index-surj {A B C : \Type} {f : A -> B -> C} {l : Array A} {l' : Array B}
-      : isSurj (\lam (s : \Sigma (Fin l.len) (Fin l'.len)) => (pairs-index {_} {_} {_} {f} s.1 s.2).1) \elim l
+      : IsSurj (\lam (s : \Sigma (Fin l.len) (Fin l'.len)) => (pairs-index {_} {_} {_} {f} s.1 s.2).1) \elim l
       | nil => \case __
       | a :: l => \lam k => \case ++.split-index k \with {
         | inl r => inP ((0, r.1), inv r.2)

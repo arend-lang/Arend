@@ -137,7 +137,7 @@
         }
       }
 
-\func cycle {n k : Nat} (l : Array (Fin n) k) (inj : isInj l) : Sym n \elim k
+\func cycle {n k : Nat} (l : Array (Fin n) k) (inj : IsInj l) : Sym n \elim k
   | 0 => ide
   | suc k => PigeonholeSet.isEquiv (func l) (func-inj inj)
   \where {
@@ -147,7 +147,7 @@
         | inr _ => j
       }
 
-    \lemma func-inj {n k : Nat} {l : Array (Fin n) (suc k)} (inj : isInj l) {i j : Fin n} (q : func l i = func l j) : i = j
+    \lemma func-inj {n k : Nat} {l : Array (Fin n) (suc k)} (inj : IsInj l) {i j : Fin n} (q : func l i = func l j) : i = j
       => unfold func at q $ cases (index-dec l i, index-dec l j, q) \with {
         | inl p1, inl p2, q => inv p1.2 *> pmap l (suc-inj $ inj q) *> p2.2
         | inl _, inr p, q => absurd $ p (_, q)
@@ -166,13 +166,13 @@
         | no q, no q' => nat_fin_= $ pmap pred $ inv (mod_/= q) *> p *> mod_/= q'
       }
 
-    \func step {n k : Nat} {l : Array (Fin n) k} (k>0 : k > 0) (inj : isInj l) (i : Fin k) : cycle l inj (l i) = l (mod_Fin (suc i) k>0) \elim k
+    \func step {n k : Nat} {l : Array (Fin n) k} (k>0 : k > 0) (inj : IsInj l) (i : Fin k) : cycle l inj (l i) = l (mod_Fin (suc i) k>0) \elim k
       | suc k => unfold $ unfold func $ cases (index-dec l (l i)) \with {
         | inl (j,lj=li) => rewrite (inj lj=li) idp
         | inr r => absurd $ r (i,idp)
       }
 
-    \lemma steps {n k : Nat} {m : Fin (suc k)} {l : Array (Fin n) (suc k)} {inj : isInj l}
+    \lemma steps {n k : Nat} {m : Fin (suc k)} {l : Array (Fin n) (suc k)} {inj : IsInj l}
       : Monoid.pow {SymmetricGroup n} (PigeonholeSet.isEquiv (func l) (func-inj inj)) m (l 0) = l m \elim k, m
       | k, 0 => idp
       | suc k, suc m => unfold $ rewrite steps $ step NatOrder.zero<suc inj m *> pmap l (nat_fin_= $ mod_< $ NatOrder.suc<suc $ fin_< m)
@@ -234,14 +234,14 @@
       => transposition-isInv
   }
 
-\func Support_cycle {n k : Nat} {l : Array (Fin n) k} (inj : isInj l) {i : Fin n} (s : Support (cycle l inj) i) : \Sigma (j : Fin k) (l j = i) \elim k
+\func Support_cycle {n k : Nat} {l : Array (Fin n) k} (inj : IsInj l) {i : Fin n} (s : Support (cycle l inj) i) : \Sigma (j : Fin k) (l j = i) \elim k
   | 0 => absurd (s idp)
   | suc k => (unfold Support, unfold, unfold cycle.func) at s $ cases (index-dec l i, s) \with {
     | inl r, _ => r
     | inr _, s => absurd (s idp)
   }
 
-\lemma cycle_Support {n k : Nat} {l : Array (Fin n) k} (k>1 : k > 1) {inj : isInj l} {j : Fin k} : Support (cycle l inj) (l j) \elim k, k>1
+\lemma cycle_Support {n k : Nat} {l : Array (Fin n) k} (k>1 : k > 1) {inj : IsInj l} {j : Fin k} : Support (cycle l inj) (l j) \elim k, k>1
   | suc k, NatOrder.suc<suc k>0 => unfold Support $ unfold $ unfold cycle.func $ cases (index-dec l (l j)) \with {
     | inl r => \lam q =>
       \have t => inj q *> inv (inj r.2)
@@ -252,7 +252,7 @@
     | inr r => absurd $ r (j,idp)
   }
 
-\lemma cycle-isCycle {n k : Nat} {l : Array (Fin n) k} {inj : isInj l} (k>1 : k > 1) : isCycle (cycle l inj) \elim k, k>1
+\lemma cycle-isCycle {n k : Nat} {l : Array (Fin n) k} {inj : IsInj l} (k>1 : k > 1) : isCycle (cycle l inj) \elim k, k>1
   | suc k, NatOrder.suc<suc k>0 => inP (l 0, unfold Support $ unfold $ unfold cycle.func $ cases (index-dec l (l 0)) \with {
     | inl r => \lam q => \case inv (rewrite (inj r.2) in inj q) *> {Nat} mod_< (NatOrder.suc<suc k>0)
     | inr r => absurd $ r (0,idp)
@@ -346,7 +346,7 @@
 \lemma lift_ide {n : Nat} : lift {n} ide = 1
   => Sym.equals (\lam j => cases j idp)
 
-\lemma lift_cycle {n k : Nat} {l : Array (Fin n) k} {inj : isInj l} : lift (cycle l inj) = cycle (map fsuc l) (\lam {i} {j} p => inj (unfsuc p)) \elim k
+\lemma lift_cycle {n k : Nat} {l : Array (Fin n) k} {inj : IsInj l} : lift (cycle l inj) = cycle (map fsuc l) (\lam {i} {j} p => inj (unfsuc p)) \elim k
   | 0 => lift_ide
   | suc k => Sym.equals \case \elim __ \with {
     | 0 => unfold $ unfold cycle.func $ mcases \with {
@@ -590,7 +590,7 @@
               | 1, q => absurd $ d.2 $ later (rewrite q idp) *> t.2.2
               | suc (suc x), q => NatOrder.suc<suc NatOrder.zero<suc
             }
-            | inj : isInj l => \lam {i} {j} q => nat_fin_= \case LinearOrder.trichotomy i j \with {
+            | inj : IsInj l => \lam {i} {j} q => nat_fin_= \case LinearOrder.trichotomy i j \with {
               | less i<j => absurd $ <-irreflexive $ t.3 (j -' i) (<_-' i<j, pow-lem i<j q) <∘r -'<=id <∘r fin_< j
               | equals i=j => i=j
               | greater j<i => absurd $ <-irreflexive $ t.3 (i -' j) (<_-' j<i, pow-lem j<i (inv q)) <∘r -'<=id <∘r fin_< i
@@ -608,7 +608,7 @@
               }) *> q)
             }
           \in \have
-            | supp-f-inj : isInj supp-f => \lam {x} {y} => \case \elim x, \elim y \with {
+            | supp-f-inj : IsInj supp-f => \lam {x} {y} => \case \elim x, \elim y \with {
               | inl j, inl j' => \lam s => pmap inl $ inj (pmap __.1 s)
               | inl j, inr p => \lam s => absurd $ r-supp $ rewrite (pmap __.1 s) p.2
               | inr p, inl j => \lam s => absurd $ r-supp $ rewriteI (pmap __.1 s) p.2

@@ -2,7 +2,7 @@
 \import Algebra.Pointed.PointedHom
 \import Category
 \import Category.Meta
-\import Function (Image, isInj, isSurj)
+\import Function (Image, IsInj, IsSurj)
 \import Logic
 \import Paths
 \import Paths.Meta
@@ -34,7 +34,7 @@
   | func => __.1
   | func-zro => idp
 
-\lemma kernel-inj {f : AddPointedHom} : isInj (KerPointedHom f)
+\lemma kernel-inj {f : AddPointedHom} : IsInj (KerPointedHom f)
   => \lam p => ext p
 
 \instance ImageAddPointed (f : AddPointedHom) : AddPointed (Image f)
@@ -62,8 +62,8 @@
   | func => __.1
   | func-zro => idp
 
-\lemma image-surj {f : AddPointedHom} : isSurj (ImageAddPointedLeftHom f)
+\lemma image-surj {f : AddPointedHom} : IsSurj (ImageAddPointedLeftHom f)
   => \lam y => TruncP.map y.2 \lam s => (s.1, ext s.2)
 
-\lemma image-inj {f : AddPointedHom} : isInj (ImageAddPointedRightHom f)
+\lemma image-inj {f : AddPointedHom} : IsInj (ImageAddPointedRightHom f)
   => \lam p => ext p

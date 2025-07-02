@@ -555,7 +555,7 @@
                  \in FinSum_char2 x (transEquiv p.1 e) *> inv p.2 *> pmap {FinSet A} (FinSum {_} {__} _) (FinSet.levelProp A' A)
     }
 
-  \lemma FinSum-inj {A B : FinSet} (f : A -> B) (inj : isInj f) {x : B -> E} (p : \Pi (b : B) -> (\Pi (a : A) -> f a /= b) -> x b = 0) : FinSum x = FinSum (\lam a => x (f a))
+  \lemma FinSum-inj {A B : FinSet} (f : A -> B) (inj : IsInj f) {x : B -> E} (p : \Pi (b : B) -> (\Pi (a : A) -> f a /= b) -> x b = 0) : FinSum x = FinSum (\lam a => x (f a))
     => \have dec (b : B) : Decide (∃ (a : A) (f a = b)) => \new Decide { | decide => FinSet.search (\lam a => f a = b) (\lam a => decideEq (f a) b) }
        \in FinSum_Equiv (later \new QEquiv {
          | f => \case __ \with {

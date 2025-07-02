@@ -18,7 +18,7 @@
 \import Data.Array.Pairs
 \import Data.Fin
 \import Equiv
-\import Function (isSurj)
+\import Function (IsSurj)
 \import Function.Meta ($)
 \import Logic
 \import Logic.Meta
@@ -207,7 +207,7 @@
       }))
   }
 
-\lemma MPoly-surj {J : \Set} {R S : CRing} (f : AddMonoidHom R S) (fs : isSurj f) : isSurj (mPoly-map {J} f)
+\lemma MPoly-surj {J : \Set} {R S : CRing} (f : AddMonoidHom R S) (fs : IsSurj f) : IsSurj (mPoly-map {J} f)
   => \case \elim __ \with {
        | in~ l => \case FinSet.finiteAC (\lam j => fs (l j).1) \with {
          | inP g => inP (inMS \lam j => ((g j).1, (l j).2), pmap inMS $ exts \lam j => ext ((g j).2, idp))

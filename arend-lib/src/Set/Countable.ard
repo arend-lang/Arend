@@ -127,22 +127,22 @@
    | 0 => nothing
    | suc n => c.1 n
 
-\lemma countable-func-surj {A : \Type} (c : Countable A) : isSurj (countable-func c)
+\lemma countable-func-surj {A : \Type} (c : Countable A) : IsSurj (countable-func c)
   => \case \elim __ \with {
     | nothing => inP (0, idp)
     | just a => TruncP.map (c.2 a) \lam (n,p) => (suc n, p)
   }
 
-\func func-countable {A : \Type} (f : Nat -> A) (fs : isSurj f) : Countable A
+\func func-countable {A : \Type} (f : Nat -> A) (fs : IsSurj f) : Countable A
   => (\lam n => just (f n), \lam a => TruncP.map (fs a) (\lam (n,p) => (n, pmap just p)))
 
 \func pointed-countable {A : \Type} (a0 : A) (c : Countable A) (n : Nat) : A
   => maybe a0 (\lam a => a) (c.1 n)
 
-\func pointed-countable-surj {A : \Type} (a0 : A) (c : Countable A) : isSurj (pointed-countable a0 c)
+\func pointed-countable-surj {A : \Type} (a0 : A) (c : Countable A) : IsSurj (pointed-countable a0 c)
   => \lam a => TruncP.map (c.2 a) \lam (n,p) => (n, pmap (maybe a0 \lam a => a) p)
 
-\func surj-countable {A B : \Type} (c : Countable A) {f : A -> B} (fs : isSurj f) : Countable B
+\func surj-countable {A B : \Type} (c : Countable A) {f : A -> B} (fs : IsSurj f) : Countable B
   => (\lam n => Maybe.map f (c.1 n), \lam b => \case fs b \with {
        | inP (a,fa=b) => \case c.2 a \with {
          | inP (n,p) => inP (n, rewrite p $ pmap just fa=b)
@@ -152,7 +152,7 @@
 \func array-countable {A : \Type} (c : Countable A) : Countable (Array A)
   => surj-countable (surj-countable (func-countable natArray-countable natArray-countable.isSurj) {map (countable-func c)} (map-surj (countable-func-surj c))) func-array-surj
   \where {
-    \func map-surj {A B : \Type} {f : A -> B} (fs : isSurj f) : isSurj (map f)
+    \func map-surj {A B : \Type} {f : A -> B} (fs : IsSurj f) : IsSurj (map f)
       => \lam (l : Array B) => \case FinSet.finiteAC (\lam j => fs (l j)) \with {
            | inP g => inP (\lam j => (g j).1, exts \lam j => (g j).2)
          }
@@ -166,7 +166,7 @@
       | nil => idp
       | a :: l => pmap (a ::) (func-array_just l)
 
-    \lemma func-array-surj {A : \Type} : isSurj (func-array {A})
+    \lemma func-array-surj {A : \Type} : IsSurj (func-array {A})
       => \lam l => inP (map just l, func-array_just l)
   }
 

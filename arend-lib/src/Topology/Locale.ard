@@ -23,7 +23,7 @@
 \import Data.Or
 \import Equiv
 \import Equiv.Univalence (Equiv-to-=)
-\import Function (isSurj)
+\import Function (IsSurj)
 \import Function.Meta ($, repeat)
 \import Homotopy.Fibration
 \import Logic
@@ -293,7 +293,7 @@
 
   \type isStronglyDense => \Pi {P : \Prop} {x : Dom} -> func x <= pHat P -> x <= pHat P
 
-  \func isWeaklyClosed => \Sigma (isSurj func) (\Pi (j : Nucleus) ->
+  \func isWeaklyClosed => \Sigma (IsSurj func) (\Pi (j : Nucleus) ->
       (\Pi {P : \Prop} {x : Dom} -> func x <= pHat P -> x <= j (pHat P)) -> \Pi {x : Dom} -> direct (func x) <= j x)
 
   -- | The weak closure of the image
@@ -321,7 +321,7 @@
     => \lam {y} => direct-<= join-right <=∘ c <=∘ join-monotone (direct-<= bottom-univ) <=-refl
 
   -- | If the image of an embedding is closed, then it is a closed map.
-  \lemma closed-embedding_image (s : isSurj func) (c : image.isClosed) : isClosed
+  \lemma closed-embedding_image (s : IsSurj func) (c : image.isClosed) : isClosed
     => \lam {x} {y} => \case s x \with {
       | inP (a,p) => rewriteI (p,func-join) (c <=∘ join-univ (direct-<= (func-<= bottom-univ) <=∘ join-left) (join-monotone direct-unit <=-refl))
     }
@@ -329,12 +329,12 @@
   -- | A map is open if and only if the image of an open sublocale is open.
   \func IsOpen => \Pi (x : Cod) -> ∃ (z : Dom) ∀ y (direct (x --> func y) = z --> y)
 
-  \lemma surjective-split (s : isSurj func) (x : Cod) : func (direct x) = x
+  \lemma surjective-split (s : IsSurj func) (x : Cod) : func (direct x) = x
     => \case s x \with {
       | inP (y,p) => rewriteI p func_direct_func
     }
 
-  \lemma surj_nucleus (s : isSurj func) : Equiv factor => \new QEquiv {
+  \lemma surj_nucleus (s : IsSurj func) : Equiv factor => \new QEquiv {
     | ret y => (direct y, direct-<= direct-counit)
     | ret_f x => ext (<=-antisymmetric x.2 direct-unit)
     | f_sec y => surjective-split s y
@@ -398,7 +398,7 @@
     | func-meet => ext nucleus-meet
     | func-Join>= => nucleus-<= $ Join-univ \lam j => nucleus-unit <=∘ Join-cond j
     \where {
-      \lemma surjective : isSurj map
+      \lemma surjective : IsSurj map
         => \lam y => inP (y.1, ext $ <=-antisymmetric y.2 nucleus-unit)
     }
 
@@ -477,7 +477,7 @@
       | func-meet>= => nucleus-meet>=
       | func-Join>= => unfold $ nucleus-<= j<=j' <=∘ nucleus-join>= <=∘ nucleus-<= (Join-univ (\lam j => nucleus-unit <=∘ Join-cond j))
       \where
-        \lemma surjective {L : Locale} {j j' : Nucleus {L}} (j<=j' : j <= j') : isSurj (<=-map j j' j<=j')
+        \lemma surjective {L : Locale} {j j' : Nucleus {L}} (j<=j' : j <= j') : IsSurj (<=-map j j' j<=j')
           => \lam y => inP ((y.1, j<=j' <=∘ y.2), ext $ <=-antisymmetric y.2 nucleus-unit)
 
     \lemma double-nucleus-left {L : Locale} {j k : Nucleus {L}} (j<=k : j <= k) (x : L) : k (j x) = k x
@@ -513,7 +513,7 @@
       => \have coh : j.map ∘ {LocaleCat} <=-map j (j ∨ k) (join-left {_} {j}) = k.map ∘ {LocaleCat} <=-map k (j ∨ k) (join-right {_} {j})
            => exts \lam x => ext $ double-nucleus-left {_} {j} {j ∨ k} (join-left {_} {j} {k}) x *> inv (double-nucleus-left {_} {k} {j ∨ k} (join-right {_} {j} {k}) x)
          \in regularSubobj_meet-pullback.exact {LocaleCat} j.map (surj_regular $ Nucleus.map.surjective {j}) k.map (surj_regular $ Nucleus.map.surjective {k}) {<=-map j (j ∨ k) (join-left {NucleusFrame L})} coh
-              (surj_regular {_} {_} {j.map ∘ {LocaleCat} <=-map j (j ∨ k) (join-left {_} {j})} (isSurj.comp Nucleus.map.surjective (<=-map.surjective (join-left {_} {j}))))
+              (surj_regular {_} {_} {j.map ∘ {LocaleCat} <=-map j (j ∨ k) (join-left {_} {j})} (IsSurj.comp Nucleus.map.surjective (<=-map.surjective (join-left {_} {j}))))
               (inP (_, idp), inP (_, inv coh), \case \elim __ \with {
                 | regSubobj {sub} (f : FrameHom) fm => \lam (inP (h1,jh1=f)) (inP (h2,kh2=f)) =>
                     \have jk<=f : j ∨ k <= f.image => join-univ
@@ -1234,7 +1234,7 @@
 \lemma open-comp {L M K : Locale} (f : Hom L M) (fo : IsOpen {f}) (g : Hom M K) (go : IsOpen {g}) : IsOpen {g LocaleCat.∘ f}
   => {?} -- [2, Corollary 1.6.3]
 
-\lemma regular_surj {L M : Locale} {f : Hom L M} (reg : isRegularMono {LocaleCat} f) : isSurj f \elim reg
+\lemma regular_surj {L M : Locale} {f : Hom L M} (reg : isRegularMono {LocaleCat} f) : IsSurj f \elim reg
   | inP (E : Equalizer) => \lam y =>
     \let | E' : Equalizer => LocaleCat.equalizer E.f E.g
          | s => PresentedFrame.surj-map E'.eql regular_surj-lemma
@@ -1256,7 +1256,7 @@
       | funit => inP (top, func-top *> exts (\lam e => ext (\lam _ => cover-basic (byRight idp), \lam _ => ())))
   }
 
-\lemma surj_regular {L M : Locale} {f : FrameHom M L} (sur : isSurj f) : isRegularMono {LocaleCat} f
+\lemma surj_regular {L M : Locale} {f : FrameHom M L} (sur : IsSurj f) : isRegularMono {LocaleCat} f
   => \let pb : Pullback => FrameBicat.pullback f f
      \in inP (\new Equalizer {LocaleCat} {M} {pb} pb.pbProj1 pb.pbProj2 L f pb.pbCoh {
        | isEqualizer Z => \new ESEquiv {
@@ -1274,7 +1274,7 @@
        }
      })
 
-\func surj_equiv {f : FrameHom} (sur : isSurj f) : Iso {FrameCat} {f.image.locale} {f.Cod}
+\func surj_equiv {f : FrameHom} (sur : IsSurj f) : Iso {FrameCat} {f.image.locale} {f.Cod}
   => FrameCat.equiv_iso {\new FrameHom f.image.locale f.Cod {
     | func x => f x.1
     | func-top => func-top
@@ -1286,7 +1286,7 @@
     | f_sec x => f.surjective-split sur x
   })
   \where {
-    \lemma map-comm {f : FrameHom} (sur : isSurj f) (x : f.Dom) : Iso.f {surj_equiv sur} (f.image.map x) = f x
+    \lemma map-comm {f : FrameHom} (sur : IsSurj f) (x : f.Dom) : Iso.f {surj_equiv sur} (f.image.map x) = f x
       => f.surjective-split sur (f x)
   }
 
@@ -1362,7 +1362,7 @@
 
 \func dense_closed_ofs : OFS {LocaleCat} \cowith
   | L f => FrameHom.IsDense {f}
-  | R (f : FrameHom) => \Sigma f.image.isClosed (isSurj f)
+  | R (f : FrameHom) => \Sigma f.image.isClosed (IsSurj f)
   | factors {L} {M} (h : FrameHom) =>
     \have n : Nucleus => closed (h.direct bottom)
     \in (n.locale,

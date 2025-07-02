@@ -64,7 +64,7 @@
 
 \lemma dependentTest (n : Nat) (p : n <= 0) : n = 0 => cases (n,p) \with {
   | 0, _ => idp
-  | suc n1, p => \case p NatSemiring.zero<suc
+  | suc n1, p => \case p NatOrder.zero<suc
 }
 
 \func arrayTest (a : Array Nat) : Nat => cases a \with {

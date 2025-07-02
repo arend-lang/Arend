@@ -108,7 +108,7 @@
       \in <=-antisymmetric (FinCardInj e  (\lam {x} {y} => sec {e.isEmb  x y}))
                            (FinCardInj e' (\lam {x} {y} => sec {e'.isEmb x y}))
 
-    \lemma FinCardInj {n m : Nat} (f : Fin n -> Fin m) (f-inj : isInj f) : n <= m \elim n, m
+    \lemma FinCardInj {n m : Nat} (f : Fin n -> Fin m) (f-inj : IsInj f) : n <= m \elim n, m
       | 0, _ => zero<=_
       | suc n, 0 => \case f 0
       | suc n, suc m => suc<=suc (FinCardInj (\lam x => skip (f 0) (f (suc x)) (\lam f_0=f_suc => \case f-inj f_0=f_suc))
@@ -176,7 +176,7 @@
     | inP e1, inP e2 => FinSet.FinCardBij $ e1 `transEquiv` e `transEquiv` symQEquiv e2
   }
 
-\lemma finCard_inj {A B : FinSet} (f : A -> B) (inj : isInj f) : A.finCard <= B.finCard
+\lemma finCard_inj {A B : FinSet} (f : A -> B) (inj : IsInj f) : A.finCard <= B.finCard
   => \case A.finEq, B.finEq \with {
     | inP (e1 : Equiv), inP (e2 : Equiv) => FinSet.FinCardInj (\lam x => e2.ret (f (e1 x))) \lam p => e1.isInj $ inj $ Equiv.isInj {symQEquiv e2} p
   }

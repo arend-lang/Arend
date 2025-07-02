@@ -50,13 +50,13 @@
     inverse (func a) * func b     ==< Group.equality-corrolary (func a) (func b) p >==
     ide `qed
 
-  \lemma Kernel-injectivity-test (p : TrivialKernel) : isInj func =>
+  \lemma Kernel-injectivity-test (p : TrivialKernel) : IsInj func =>
     \lam q => Group.equality-check (p (same-images-test q))
 
-  \lemma Kernel-injectivity-corrolary (p : isInj func) : TrivialKernel =>
+  \lemma Kernel-injectivity-corrolary (p : IsInj func) : TrivialKernel =>
     \lam q => p (q *> inv func-ide)
 
-  \func IsIsomorphism : \Prop => \Sigma (isInj func) (isSurj func)
+  \func IsIsomorphism : \Prop => \Sigma (IsInj func) (IsSurj func)
 } \where {
   \func id {G : Group} : GroupHom G G \cowith
     | func x => x
@@ -78,7 +78,7 @@
   \lemma func-minus {x y : Dom} : func (x - y) = func x - func y
     => func-+ *> pmap (_ +) func-negative
 
-  \lemma injective (p : \Pi {a : Dom} -> func a = 0 -> a = 0) : isInj func
+  \lemma injective (p : \Pi {a : Dom} -> func a = 0 -> a = 0) : IsInj func
     => \lam q => AddGroup.fromZero $ p $ func-+ *> pmap (_ +) func-negative *> AddGroup.toZero q
 } \where {
   \func id {G : AddGroup} : AddGroupHom G G \cowith

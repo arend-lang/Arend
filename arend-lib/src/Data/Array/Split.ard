@@ -12,7 +12,7 @@
 \func nub-split {A : \Type} {B : DecSet} {l : Array (\Sigma A B)} : EPerm l (Big (++) nil (map (\lam b => keep (\lam s => decideEq b s.2) l) (nub (map __.2 l))))
   => aux (nub (map __.2 l)) nub-isInj (later $ nub-isSurj (map __.2 l))
   \where
-    \func aux {A : \Type} {B : DecSet} {l : Array (\Sigma A B)} (bs : Array B) (inj : isInj bs) (l<bs : \Pi (j : Fin l.len) -> \Sigma (k : Fin bs.len) (bs k = (l j).2))
+    \func aux {A : \Type} {B : DecSet} {l : Array (\Sigma A B)} (bs : Array B) (inj : IsInj bs) (l<bs : \Pi (j : Fin l.len) -> \Sigma (k : Fin bs.len) (bs k = (l j).2))
       : EPerm l (Big (++) nil (map (\lam b => keep (\lam s => decideEq b s.2) l) bs)) \elim bs
       | nil => \case \elim l, \elim l<bs \with {
         | nil, _ => eperm-nil

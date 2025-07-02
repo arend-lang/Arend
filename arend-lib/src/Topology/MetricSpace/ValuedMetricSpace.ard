@@ -138,7 +138,7 @@
   }
 
 \func IsBoundedSet {X : ValuedPseudoMetricSpace} (S : Set X) : \Prop
-  => ∃ (B : X.V) (0 < B) ∀ {x y : S} (dist x y < B)
+  => ∃ (B : X.V) (0 < B) (x : S) ∀ {y : S} (dist x y < B)
 
 \class MetricValueLinearOrder \extends MetricValueOrder, LinearlyBiorderedAbMonoid
 
@@ -168,3 +168,18 @@
       | inP (_, inP (z,idp), (zx<eps,zy<eps)) => <-irreflexive $ dist-triang <∘r <=_+ (<=-less $ transport (`< _) dist-symm zx<eps) (<=-less zy<eps) <∘r eps+eps<xy
     }
   }) dist>=0
+
+\lemma metric-ext {X : LinearlyValuedMetricSpace} {x y : X} (p : \Pi {eps : X.V} -> 0 < eps -> dist x y < eps) : x = y
+  => dist-ext $ <=-antisymmetric (\lam dist>0 => <-irreflexive (p dist>0)) dist>=0
+
+\lemma metric-contAt-char {X Y : ValuedPseudoMetricSpace} {f : X -> Y} {x : X}
+  : IsContAt f x <-> ∀ {eps : Y.V} (0 < eps) ∃ (delta : X.V) (0 < delta) ∀ {x'} (dist x x' < delta -> dist (f x) (f x') < eps)
+  => (\lam fc {eps} eps>0 => \case fc {VOBall eps (f x)} OBall-open (OBall-center eps>0) \with {
+    | inP (U,Uo,Ux,p) => \case dist_open.1 Uo Ux \with {
+      | inP (delta,delta>0,q) => inP (delta, delta>0, \lam xx'<delta => p $ q xx'<delta)
+    }
+  }, \lam fc Vo Vfx => \case dist_open.1 Vo Vfx \with {
+    | inP (eps,eps>0,p) => \case fc eps>0 \with {
+      | inP (delta,delta>0,q) => inP (VOBall delta x, OBall-open, OBall-center delta>0, \lam d => p $ q d)
+    }
+  })

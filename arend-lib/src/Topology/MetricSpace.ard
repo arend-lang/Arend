@@ -4,6 +4,7 @@
 \import Algebra.Pointed
 \import Arith.Rat
 \import Arith.Real
+\import Function
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -20,6 +21,7 @@
 \import Set.Subset
 \import Topology.CoverSpace
 \import Topology.MetricSpace.ValuedMetricSpace
+\import Topology.TopSpace
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Complete
 \import Topology.UniformSpace.Product
@@ -164,3 +166,28 @@
       }
     }
   })
+
+\func PseudoMetricTransfer {X : \Set} {Y : PseudoMetricSpace} (f : X -> Y) : PseudoMetricSpace X \cowith
+  | TopSpace => TopTransfer f
+  | dist x x' => dist (f x) (f x')
+  | dist-refl => dist-refl
+  | dist-symm => dist-symm
+  | dist-triang => dist-triang
+  | cauchy-open {S} => later (\lam (inP (V,Vo,p)) Sx => ClosurePrecoverSpace.closure \case dist_open.1 Vo (rewrite p in Sx) \with {
+    | inP (eps,eps>0,q) => inP (half eps, half>0 eps>0, \lam x' => inP (\lam x'' => dist (f x') (f x'') < half eps, \lam d1 {x''} d2 => rewrite p $ q $ halving d1 d2, \lam e => e))
+  }, \lam c => inP (Set.Union \lam V' => \Sigma (isOpen V') (f ^-1 V' ⊆ S), open-Union __.1, <=-antisymmetric (later \lam {x} Sx => \case ClosurePrecoverSpace.closure-filter (MetricSpace.NFilter {PseudoMetricTransfer' f} x) (\lam (inP (eps,eps>0,h)) => \case h x \with {
+    | inP (U,CU,g) => inP (U, CU, inP (eps, eps>0, g __))
+  }) (c Sx) \with {
+    | inP (U, q, inP (eps,eps>0,p)) => inP (OBall eps (f x), (OBall-open, \lam {x'} d => q (p $ OBall-center eps>0) (p d)), OBall-center eps>0)
+  }) (\lam (inP (U,(Uo,p),Ufx)) => p Ufx)))
+  \where {
+    \private \func PseudoMetricTransfer' {X : \Set} {Y : PseudoMetricSpace} (f : X -> Y) : PseudoMetricSpace X \cowith
+      | dist x x' => dist (f x) (f x')
+      | dist-refl => dist-refl
+      | dist-symm => dist-symm
+      | dist-triang => dist-triang
+  }
+
+\func MetricTransfer {X : \Set} {Y : MetricSpace} (f : X -> Y) (fi : IsInj f) : MetricSpace X \cowith
+  | PseudoMetricSpace => PseudoMetricTransfer f
+  | dist-ext p => fi (dist-ext p)

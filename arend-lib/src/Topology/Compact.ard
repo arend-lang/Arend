@@ -32,7 +32,7 @@
     \protected \func Cond {X : CoverSpace} (P Q : Set (Set (Set X))) => ∀ {C : P} ∃ (U : Array (Set X)) (Q \lam V => ∃ (W : U) (W = V)) (∀ (V : U) (C V))
 
     \lemma cond-char {X : CoverSpace} (Q : Set (Set (Set X))) (C : Set (Set X))
-      : ∃ (U : Array (Set X)) (Q \lam V => ∃ (W : U) (W = V)) (∀ (V : U) (C V)) <-> ∃ (D : Q) (n : Nat) (f : Fin n -> Set.Total D) (isSurj f) (D ⊆ C)
+      : ∃ (U : Array (Set X)) (Q \lam V => ∃ (W : U) (W = V)) (∀ (V : U) (C V)) <-> ∃ (D : Q) (n : Nat) (f : Fin n -> Set.Total D) (IsSurj f) (D ⊆ C)
       => (\case \elim __ \with {
         | inP (U : Array, QU, h) => inP (\lam V => ∃ (W : U) (W = V), QU, U.len, \lam j => (U j, inP (j,idp)), \lam (_, inP (j,idp)) => inP (j,idp), \lam {V} (inP (j,p)) => rewriteI p (h j))
       }, \case \elim __ \with {
@@ -193,8 +193,9 @@
 \lemma locallyTotallyBounded-locallyUniform {X : StronglyRegularUniformSpace} (Xltb : X.isUniform IsTotallyBoundedSet) (Xd : X.IsProperUniform) : IsLocallyUniformSpace X
   => inP (\lam U => \Sigma (IsTotallyBoundedSet U) (∃ U), Xd Xltb, locallyUniform-cover-char (later __.1) (later __.2))
 
-\lemma metric-cover-char {X : PseudoMetricSpace} (Xbtb : \Pi {S : Set X} -> Given S -> IsBoundedSet S -> IsTotallyBoundedSet S) : IsLocallyUniformSpace X
-  => locallyTotallyBounded-locallyUniform (uniform-subset (X.metricUniform (RealAbGroup.half>0 RealAbGroup.zro<ide)) $ later \lam {_} (inP (x,idp)) => Xbtb (x, later $ rewrite X.dist-refl $ RealAbGroup.half>0 RealAbGroup.zro<ide) $ inP (1, RealAbGroup.zro<ide, \lam {y} {z} => PseudoMetricSpace.halving)) X.metricProperUniform
+\lemma metric-cover-char {X : PseudoMetricSpace} (Xbtb : \Pi {S : Set X} -> IsBoundedSet S -> IsTotallyBoundedSet S) : IsLocallyUniformSpace X
+  => locallyTotallyBounded-locallyUniform (uniform-subset (X.metricUniform RealAbGroup.zro<ide) $ later \lam {_} (inP (x,idp)) =>
+    Xbtb $ inP (1, RealAbGroup.zro<ide, x, later $ rewrite X.dist-refl RealAbGroup.zro<ide, \lam d => d)) X.metricProperUniform
 
 \lemma locallyUniformMapFromCover {X Y : UniformSpace} (Xlu : IsLocallyUniformSpace X) (f : CoverMap X Y) : LocallyUniformMap X Y f \cowith
   | func-locally-uniform Eu => \case Xlu \with {

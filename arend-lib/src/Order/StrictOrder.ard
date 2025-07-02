@@ -32,3 +32,6 @@
     \func \infix 2 <<< {P : StrictPoset} (x : P) {y : P} (p : x < y) => p
   }
 }
+
+\func IsStrictlyMonotone {X Y : StrictPoset} (f : X -> Y)
+  => \Pi {x x' : X} -> x < x' -> f x < f x'

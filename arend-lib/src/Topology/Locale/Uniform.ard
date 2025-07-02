@@ -8,7 +8,7 @@
 \import Category.Meta
 \import Category.Subcat
 \import Equiv
-\import Function (isSurj)
+\import Function (IsSurj)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -69,7 +69,7 @@
 }
 
 \record UniformEmbedding \extends UniformHom {
-  | isEmbedding : isSurj func
+  | isEmbedding : IsSurj func
   | isUniformEmbedding {U : Cod -> \Prop} : isUniform U -> ∃ (V : isUniform) ∀ {x} (V x -> U (func x))
 
   \lemma direct-uniform {U : Cod -> \Prop} : isUniform U -> isUniform (\lam x => ∃ (y : Cod) (U y) (x <= direct y))
@@ -79,7 +79,7 @@
 } \where {
     \func comp {L M K : PreuniformLocale} (g : UniformEmbedding M K) (f : UniformEmbedding L M) : UniformEmbedding L K \cowith
       | UniformHom => g PreuniformCat.∘ f
-      | isEmbedding => isSurj.comp f.isEmbedding g.isEmbedding
+      | isEmbedding => IsSurj.comp f.isEmbedding g.isEmbedding
       | isUniformEmbedding => \lam uU =>
           \have | (inP (V,uV,cV)) => g.isUniformEmbedding uU
                 | (inP (W,uW,cW)) => f.isUniformEmbedding uV

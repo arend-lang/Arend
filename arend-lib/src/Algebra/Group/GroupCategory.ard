@@ -13,7 +13,7 @@
 \import Category.Meta
 \import Category.Subcat
 \import Equiv
-\import Function (isInj, isSurj)
+\import Function (IsInj, IsSurj)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -74,10 +74,10 @@
         \lemma aux'' {A B : \Set} (f : Iso {SetCat} {A} {B}) {b : B} : b = f.f (f.hinv b)
           => inv (path (\lam i => (f.f_hinv i) b))
 
-        \lemma SetIso->Inj+Surj(f : Iso {SetCat}) : \Sigma (isInj f.f) (isSurj f.f)
+        \lemma SetIso->Inj+Surj(f : Iso {SetCat}) : \Sigma (IsInj f.f) (IsSurj f.f)
           => ((SetIso->Equiv f).isInj, (SetIso->Equiv f).isSurj )
 
-        \lemma Inj+Surj->SetIso {X Y : \Set} (f : X -> Y) (p : isInj f) (q : isSurj f) : Iso {SetCat} f
+        \lemma Inj+Surj->SetIso {X Y : \Set} (f : X -> Y) (p : IsInj f) (q : IsSurj f) : Iso {SetCat} f
           => Equiv->SetIso (Equiv.fromInjSurj f p q)
 
         \lemma Equiv->SetIso {X Y : \Set} {f : X -> Y} (eq : Equiv f) : Iso {SetCat} f \cowith
@@ -93,9 +93,9 @@
       }
 
     \lemma Iso<->TrivialKer+Surj {G H : Group} (f : GroupHom G H)
-      : Iso {GroupCat} f <-> (\Sigma f.TrivialKernel (isSurj f))
+      : Iso {GroupCat} f <-> (\Sigma f.TrivialKernel (IsSurj f))
       => <->trans (Iso<->Inj+Surj f) helper
-      \where \private \func helper : (\Sigma (isInj f)(isSurj f)) <-> (\Sigma f.TrivialKernel (isSurj f)) =>
+      \where \private \func helper : (\Sigma (IsInj f) (IsSurj f)) <-> (\Sigma f.TrivialKernel (IsSurj f)) =>
         (\lam p => (f.Kernel-injectivity-corrolary p.1, p.2),
          \lam p => (f.Kernel-injectivity-test p.1, p.2))
   }
@@ -186,7 +186,7 @@
   | AddGroup => KerAddGroup f
   | AbMonoid => KerAbMonoid f
 
-\lemma kernel=0<->inj {f : AddGroupHom} : isInj f <-> (\Pi (x : Kernel f) -> x = 0)
+\lemma kernel=0<->inj {f : AddGroupHom} : IsInj f <-> (\Pi (x : Kernel f) -> x = 0)
   => (\lam fi x => ext $ fi $ x.2 *> inv func-zro,
       \lam c {a} {a'} p => AddGroup.fromZero $ pmap __.1 (c (a - a', func-+ *> pmap (_ +) f.func-negative *> AddGroup.toZero p)))
 

@@ -158,7 +158,7 @@
     \lemma fromNonZeroDivChain (cc : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}) : CMonoid.DivChain {DivQuotientMonoid \this}
       => \lam a ac =>
           \have | f => map {SubMonoid.cStruct subMonoid} subMonoid.embedMonoid
-                | f-inj : isInj f => \lam {x} {y} => \case \elim x, \elim y \with {
+                | f-inj : IsInj f => \lam {x} {y} => \case \elim x, \elim y \with {
                   | in~ x, in~ y => \lam p => \have t => make~ p \in ~-pequiv (TruncP.map t.1 ldiv_nonZero, TruncP.map t.2 ldiv_nonZero)
                 }
                 | r n (q : Not (∃ (j : Fin (suc (suc n))) (a (suc j) = in~ 0))) => TruncP.rec {_} {\Sigma (x : DivQuotient nonZeroCMonoid) (f x = a (suc n))} (\lam s s' => ext $ f-inj $ s.2 *> inv s'.2) (Quotient.in-surj (a (suc n)))
