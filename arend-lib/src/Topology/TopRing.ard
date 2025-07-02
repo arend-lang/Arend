@@ -10,9 +10,15 @@
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \open ContMap
+\open ProductTopSpace
 
-\class TopMonoid \extends TopSpace, Monoid
+\class TopMonoid \extends TopSpace, Monoid {
   | *-cont : ContMap (ProductTopSpace \this \this) \this \lam s => s.1 * s.2
+
+  \lemma pow-cont {n : Nat} : IsCont (pow __ n) \elim n
+    | 0 => ContMap.const 1
+    | suc n => *-cont ∘ tuple pow-cont id
+}
 
 \class TopRing \extends TopAbGroup, TopMonoid, Ring
 

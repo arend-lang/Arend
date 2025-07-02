@@ -70,3 +70,22 @@
   : CoverMap X Y \lam x => Y.BigSum \lam j => fs j x \elim fs
   | nil => CoverMap.const 0
   | f :: fs => +-uniform CoverMap.∘ ProductCoverSpace.tuple f (BigSum-cover fs)
+
+{- TODO: Is this even true?
+\lemma bilinear-locallyUniform {A B C : TopAbGroup} (f : A -> B -> C) (fc : ContMap (A ⨯ B) C (\lam s => f s.1 s.2))
+  (fl : \Pi (b : B) -> AddGroupHom A C (f __ b)) (fr : \Pi (a : A) -> AddGroupHom B C (f a)) : LocallyUniformMap (A ⨯ B) C (\lam s => f s.1 s.2) \cowith
+  | func-locally-uniform Eu =>
+    \have | (inP (W,Wo,W0,h)) => neighborhood-uniform.1 Eu
+          | (inP (W',W'o,W'0,W'<=<W)) => C.shrink Wo W0
+          | (inP (U,Uo,U0,V,Vo,V0,g)) => fc.func-cont W'o {0,0} (transportInv W' (fl 0).func-zro W'0)
+    \in inP (_, ProductUniformSpace.prodCover (A.topAbUniform Uo U0) (B.topAbUniform Vo V0),
+             \lam {_} (inP (_, inP (a,idp), _, inP (b,idp), idp)) => {- inP ({?A}, {?}, {?B}, {?}, \lam {_} (inP (U',AU',V',BV',idp)) => inP (_, \case h (f a b) \with {
+               | inP (R,ER,Rh) => inP (R, ER, later \lam {z} ((t1,t2),(t3,t4)) => Rh {?})
+             }, <=-refl)) -}
+    \case fc.func-cont W'o {a,0} {?}, fc.func-cont W'o {0,b} {?} \with {
+               | inP (U1,U1o,U1a,V1,V1o,V10,g1), inP (U2,U2o,U20,V2,V2o,V2b,g2) => inP (_, A.topAbUniform U2o U20, _, B.topAbUniform V1o V10,
+                  \lam {_} (inP (_, inP (a',idp), _, inP (b',idp), idp)) => inP (_,
+                    \let | a0 => a | b0 => b' | (inP (R,ER,Rh)) => h (f a0 b0)
+                    \in inP (R, ER, later \lam {z} ((t1,t2),(t3,t4)) => Rh {?}), <=-refl))
+             })
+-}

@@ -8,6 +8,9 @@
 \instance ElemTopSpace {X : TopSpace} (S : Set X) : TopSpace (Elem S)
   => TopTransfer {Elem S} (\lam s => s.1)
 
+\lemma elemCont {X : TopSpace} {S : Set X} : ContMap (ElemTopSpace S) X \lam s => s.1
+  => TopTransfer-map \lam (s : Elem S) => s.1
+
 \instance ElemCoverSpace {X : CoverSpace} (S : Set X) : CoverSpace (Elem S)
   => CoverTransfer {Elem S} (\lam s => s.1)
 
