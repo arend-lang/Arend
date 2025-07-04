@@ -81,8 +81,8 @@
           }))
 
     \lemma totallyBounded : IsTotallyBounded NatMetricSpace
-      => totallyBounded-uniform-char NatMetricSpace.metricProperUniform 1 0 \lam Cu => \case uniform-char.1 Cu \with {
-        | inP (U,CU,N,g,h) => inP (U :: \lam j => (h j).1, uniform-char.2 $ inP $ later (U, inP (0,idp), N, g, \lam j => ((h j).1, inP (suc j, idp), (h j).3)), \case \elim __ \with {
+      => totallyBounded-uniform-char \lam Cu => later \case uniform-char.1 Cu \with {
+        | inP (U,CU,N,g,h) => inP (U :: \lam j => (h j).1, uniform-cover $ uniform-char.2 $ inP $ later (U, inP (0,idp), N, g, \lam j => ((h j).1, inP (suc j, idp), (h j).3)), \case \elim __ \with {
           | 0 => CU
           | suc j => (h j).2
         })

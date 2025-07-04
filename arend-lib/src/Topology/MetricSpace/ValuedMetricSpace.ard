@@ -80,7 +80,7 @@
       })
     }
 
-  \lemma metricUniform {eps : V} (eps>0 : 0 < eps) : UniformSpace.isUniform \lam U => ∃ (x : E) (U = \lam y => dist x y < eps)
+  \lemma metricUniform {eps : V} (eps>0 : 0 < eps) : PreuniformSpace.isUniform \lam U => ∃ (x : E) (U = \lam y => dist x y < eps)
     => dist-uniform.2 $ inP $ later (eps, eps>0, \lam x => inP (_, inP (x, idp), \lam r => r))
 
   \func NFilter (x : E) : SetFilter E \cowith

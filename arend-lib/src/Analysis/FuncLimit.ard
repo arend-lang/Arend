@@ -66,7 +66,7 @@
     }))
   }
   \where {
-    \protected \lemma split {I : DirectedSet} {X : CoverSpace} {Y : UniformSpace} (f : I -> CoverMap X Y)
+    \protected \lemma split {I : DirectedSet} {X : CoverSpace} {Y : RegularPreuniformSpace} (f : I -> CoverMap X Y)
                             (fc : ∀ {E : Y.isUniform} ∃ (C : X.isCauchy) ∀ {U : C} ∃ (N : I) (D : X.isCauchy)
                                   ∀ {V : D} ∃ (W : E) ∀ {n} (N <= n) ∀ {x} (U x -> V x -> W (f n x)))
       : IsFuncConvergent (\lam n => f n)
@@ -83,7 +83,7 @@
           }) (uniform-cauchy.1 Dc)
       }
 
-    \protected \lemma conv {I : DirectedSet} {X : CoverSpace} {Y : UniformSpace} (f : I -> CoverMap X Y) (fc : IsFuncConvergent \lam n => f n)
+    \protected \lemma conv {I : DirectedSet} {X : CoverSpace} {Y : RegularPreuniformSpace} (f : I -> CoverMap X Y) (fc : IsFuncConvergent \lam n => f n)
       : ∀ {E : Y.isUniform} (X.isCauchy \lam U => ∃ (N : I) ∀ {x : U} ∃ (W : E) ∀ {n} (N <= n -> W (f n x)))
       => \lam Eu => cauchy-subset (funcConvergent-char.conv f fc $ Y.makeCauchy Eu) \lam (inP (N,V,EV,h)) => inP $ later (N, \lam Ux => inP (V, EV, h __ Ux))
   }
@@ -122,7 +122,7 @@
       }
   }
 
-\func IsUniFuncConvergent {I : DirectedSet} {X : \Set} {Y : UniformSpace} (f : I -> X -> Y) : \Prop
+\func IsUniFuncConvergent {I : DirectedSet} {X : \Set} {Y : PreuniformSpace} (f : I -> X -> Y) : \Prop
   => ∀ {D : Y.isUniform} ∃ (N : I) ∀ x ∃ (V : D) ∀ {n} (N <= n -> V (f n x))
 
 \lemma funcCovergent-uni {I : DirectedSet} {X : CoverSpace} {Y : UniformSpace} (f : I -> CoverMap X Y) (fc : IsUniFuncConvergent \lam n => f n) : IsFuncConvergent \lam n => f n

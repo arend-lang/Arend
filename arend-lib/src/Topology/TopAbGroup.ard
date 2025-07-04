@@ -73,7 +73,7 @@
       })
     }
 
-  \func topAbUniform {U : Set E} (Uo : isOpen U) (U0 : U 0) : UniformSpace.isUniform \lam V => ∃ (x : E) (V = \lam y => U (x - y))
+  \func topAbUniform {U : Set E} (Uo : isOpen U) (U0 : U 0) : PreuniformSpace.isUniform \lam V => ∃ (x : E) (V = \lam y => U (x - y))
     => neighborhood-uniform.2 $ inP (U, Uo, U0, \lam x => inP (_, inP $ later (x, idp), \lam u => u))
 
   \lemma shrink {U : Set E} (Uo : isOpen U) (U0 : U 0) : ∃ (V : isOpen) (V 0) (V <=<ta U)

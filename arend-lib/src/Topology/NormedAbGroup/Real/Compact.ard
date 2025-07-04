@@ -47,4 +47,4 @@
   }
 
 \lemma real-bounded-tb {S : Set Real} (Sb : IsBoundedSet S) : IsTotallyBoundedSet S \elim Sb
-  | inP (B,B>0,x0,Sx0,Bb) => totallyBoundedSet-metric-char.2 \lam eps>0 => {?}
+  | inP (B,B>0,x0,Sx0,Bb) => {?} -- totallyBoundedSet-metric-char.2 \lam eps>0 => {?}

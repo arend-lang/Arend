@@ -83,7 +83,7 @@
         }
       })
 
-\lemma convergent-uniform-char {I : DirectedSet} {X : UniformSpace} {f : I -> X} (p : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))) : IsConvergent f
+\lemma convergent-uniform-char {I : DirectedSet} {X : RegularPreuniformSpace} {f : I -> X} (p : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))) : IsConvergent f
   => convergent-char \lam Cc => \case ClosurePrecoverSpace.closure-filter (\new SetFilter X {
     | F U => ∃ (N : I) ∀ {n} (N <= n -> U (f n))
     | filter-mono (inP (N,g)) p => inP (N, \lam q => p (g q))
@@ -99,7 +99,7 @@
     | inP (U, CU, inP (N,g)) => inP (U, CU, N, g)
   }
   \where
-    \protected \lemma conv {I : DirectedSet} {X : UniformSpace} {f : I -> X} (fc : IsConvergent f) : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))
+    \protected \lemma conv {I : DirectedSet} {X : RegularPreuniformSpace} {f : I -> X} (fc : IsConvergent f) : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))
       => \lam Cu => convergent-char.conv fc (X.makeCauchy Cu)
 
 \lemma convergent-topAbGruop-char {I : DirectedSet} {X : TopAbGroup} {f : I -> X} : TFAE (

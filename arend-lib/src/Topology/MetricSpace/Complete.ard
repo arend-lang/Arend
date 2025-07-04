@@ -50,7 +50,7 @@
   | dist-symm {y} {y'} => weaklyDense-lift-unique (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding).1 dist-cover (dist-cover ∘ tuple proj2 proj1) (\lam x => dist-char *> dist-symm *> inv dist-char) (y,y')
   | dist-triang => filter-dist-triang _ _ _
   | dist-uniform => dist-uniform-lem
-  | dist-ext {F} {G} FG=0 => isSeparatedCoverSpace $ UniformSpace.uniform-separated.2 $ later \case dist-uniform-lem.1 __ \with {
+  | dist-ext {F} {G} FG=0 => isSeparatedCoverSpace $ PreuniformSpace.uniform-separated.2 $ later \case dist-uniform-lem.1 __ \with {
     | inP (eps,eps>0,h) => later \case h F \with {
       | inP (U,CU,g) => inP (U, CU, (g $ rewrite dist-refl-lem eps>0, g $ rewrite FG=0 eps>0))
     }

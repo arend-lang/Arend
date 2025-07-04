@@ -36,7 +36,7 @@
   \lemma halving {z x y : E} {eps : Real} (d1 : dist z x < half eps) (d2 : dist z y < half eps) : dist x y < eps
     => dist-triang <∘r OrderedAddMonoid.<_+ (rewrite dist-symm in d1) d2 <∘l Preorder.=_<= half+half
 
-  \lemma dist-uniform-rat {C : Set (Set E)} : UniformSpace.isUniform C <-> ∃ (eps : Rat) (0 < eps) ∀ x ∃ (U : C) ∀ {y} (dist x y < eps -> U y)
+  \lemma dist-uniform-rat {C : Set (Set E)} : PreuniformSpace.isUniform C <-> ∃ (eps : Rat) (0 < eps) ∀ x ∃ (U : C) ∀ {y} (dist x y < eps -> U y)
     => (\lam Cu => \case dist-uniform.1 Cu \with {
           | inP (eps,eps>0,h) => \case real_<-rat-char.1 eps>0 \with {
             | inP (eps',eps'>0,eps'<eps) => inP (eps', eps'>0, \lam x => \case h x \with {
