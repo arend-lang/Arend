@@ -841,7 +841,7 @@
 
 \lemma degree<_degree {R : Ring.Dec} {p : Poly R} {n : Nat} (p/=0 : p /= 0) (d : degree< p n) : degree p < n \elim n
   | 0 => absurd $ p/=0 $ degree<=.trivialPoly \lam k _ => d zero<=_
-  | suc n => suc_<=_< $ suc<=suc $ degree<=_degree $ degree<_degree<= d
+  | suc n => <=_<_suc $ degree<=_degree $ degree<_degree<= d
 
 \lemma degree_degree<= {R : Ring.Dec} {p : Poly R} {n : Nat} (q : degree p <= n) : degree<= p n \elim p, n
   | pzero, n => ()

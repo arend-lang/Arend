@@ -325,7 +325,7 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
         clauses.add(factory.letClause(solverRef.get(), Collections.emptyList(), null, solver));
       }
       if (envRef.isUsed()) {
-        clauses.add(factory.letClause(envRef.get(), Collections.emptyList(), null, env));
+        clauses.add(factory.letClause(envRef.get(), Collections.emptyList(), factory.app(factory.ref(typechecker.getPrelude().getArrayRef()), true, factory.core(equality.getDefCallArguments().getFirst().computeTyped()), factory.number(values.getValues().size())), env));
       }
       result = factory.letExpr(false, false, clauses, result);
     }

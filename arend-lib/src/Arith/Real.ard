@@ -251,6 +251,15 @@
     \lemma join_U {x y : Real} {a : Rat} : Real.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
       => <->trans (<->_=.2 $ pmap (\lam z => Real.U {z} a) join-inf) InfRealAbMonoid.join_U
 
+    \lemma join-rat {x y : Rat} : join x y = {Real} x ∨ y
+      => Real.real-ext \lam {a} => <->trans join_L (\case __ \with {
+        | byLeft a<x => a<x <∘l join-left
+        | byRight a<y => a<y <∘l join-right
+      }, \lam a<xy => \case dec<_<= a x \with {
+        | inl a<x => byLeft a<x
+        | inr x<=a => byRight $ transport (a <) (join/=left $ StrictPoset.<_/= $ x<=a <∘r a<xy) a<xy
+      })
+
     \func half (x : Real) : Real \cowith
       | L a => x.L (a * 2)
       | L-inh => \case x.L-inh \with {
@@ -295,6 +304,15 @@
       }, \case real_<-char.1 __ \with {
         | inP (a,x<a,a<y) => inP (a, real_<_L.1 a<y, \lam {b} b<x => real_<_L.1 $ real_<_L.2 b<x <∘ x<a)
       })
+
+    \lemma diff-rat {x y : Rat} : x - {RealAbGroup} y = {Real} x - y
+      => pmap (x +) negative-rat *> +-rat
+
+    \lemma abs-rat {x : Rat} : RealAbGroup.abs x = {Real} RatField.abs x
+      => pmap (join x) negative-rat *> join-rat
+
+    \lemma dist-rat {x y : Rat} : RealAbGroup.abs (x - {RealAbGroup} y) = {Real} RatField.abs (x - y)
+      => pmap RealAbGroup.abs diff-rat *> abs-rat
 
     {-
     \lemma *'-char {x y : Real} {a : Rat} {b : Rat} (b<x : x.L b) {c : Rat} (c<y : y.L c) (b>=0 : 0 <= b) (c>=0 : 0 <= c) (a<=bc : a <= b * c)

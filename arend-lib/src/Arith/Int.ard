@@ -333,6 +333,12 @@
   | neg (suc n), pos m => idp
   | neg (suc n), neg m => idp
 
+\lemma <_+1_<= {x y : Int} (p : x < y + 1) : x <= y \elim x, y
+  | pos n, pos m => pos<=pos $ <_suc_<= $ pos<pos.conv p
+  | pos n, neg (suc m) => absurd $ neg<=pos p
+  | neg n, pos m => neg<=pos
+  | neg n, neg (suc m) => neg<=neg $ suc_<_<= $ neg<neg.conv p
+
 \open Monoid(LDiv)
 
 \lemma ldiv_iabs {x y : Int} (d : LDiv x y) : LDiv (iabs x) (iabs y) (iabs d.inv) \cowith
@@ -426,6 +432,14 @@
   => \case LinearOrder.dec<_<= (neg m) (neg n) \with {
     | inl q => q
     | inr q => absurd $ <-irreflexive $ p <∘l neg<=neg.conv q
+  }
+  \where {
+    \lemma conv {n m : Nat} (p : neg m < neg n) : n < m
+      => \case trichotomy n m \with {
+        | less n<m => n<m
+        | equals n=m => absurd $ <-irreflexive (rewrite n=m in p)
+        | greater m<n => absurd $ <-irreflexive $ p <∘ neg<neg m<n
+      }
   }
 
 \lemma pos<=pos {n m : Nat} (p : n <= m) : pos n <= pos m

@@ -262,7 +262,7 @@
   | in~ l, inP (l',p,q) => inP (map (\lam s => (f s.1, s.2)) l', Transitive.Closure.toEquality (\lam l => inMS~ $ map (\lam s => later (f s.1, s.2)) l) (\lam q => ~-pequiv $ MonoidSet.~_map f (\lam x => x) q) $ MonoidSet.toClosure (path \lam i => p i), q)
 
 \lemma mdegree<-exists {J : \Set} {R : CRing} (p : MPoly J R) : ∃ (d : Nat) (mdegree< p d) \elim p
-  | in~ l => inP (suc $ Big (∨) 0 $ map (\lam s => permSet-length s.2) l, inP (l, idp, \lam j => suc_<=_< $ suc<=suc $ later $ NatSemiring.Big_<=_join1 {map (\lam s => permSet-length s.2) l} j))
+  | in~ l => inP (suc $ Big (∨) 0 $ map (\lam s => permSet-length s.2) l, inP (l, idp, \lam j => <=_<_suc $ later $ NatSemiring.Big_<=_join1 {map (\lam s => permSet-length s.2) l} j))
 
 \lemma mdegree<0 {J : \Set} {R : CRing} {p : MPoly J R} (d : mdegree< p 0) : p = zro \elim p, d
   | in~ l, inP (nil, q, _) => path \lam i => q i

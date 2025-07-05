@@ -710,7 +710,7 @@
     }
   | negative=>#0 x<0 => transport #0 negative-isInv (Ring.negative_inv (positive=>#0 x<0))
 
-  \func pinv {x : E} (x>0 : 0 < x) : E
+  \func pinv {x : E} (\property x>0 : 0 < x) : E
     => Inv.inv {pos#0 x>0}
 
   \lemma pinv-left {x : E} (x>0 : 0 < x) : pinv x>0 * x = 1

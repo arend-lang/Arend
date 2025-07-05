@@ -7,44 +7,46 @@
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
+\import Arith.Real.Approximate
 \import Arith.Real.Field
-\import Arith.Real.LowerReal
+\import Data.Fin
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
-\import Order.Lattice
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
-\import Set.Subset
+\import Paths.Meta
 \import Topology.Compact
 \import Topology.MetricSpace
 \import Topology.MetricSpace.ValuedMetricSpace
 \import Topology.NormedAbGroup.Real
 
--- TODO: Divide the interval into N equal parts instead and use this to define this splitting.
-\lemma real-split (a b : Real) {eps : Real} (eps>0 : 0 < eps) : ∃ (D : Array Real) (\Pi {x : Real} -> a < x -> x < b -> ∃ (y : D) (dist y x < eps))
-  => \case a.L-inh, b.U-inh, L-rounded (real_<_L .1 eps>0) \with {
-    | inP (a',a'<a), inP (b',b<b'), inP (eps',eps'<eps,eps'>0) => \case Real.natBounded {(b + eps' - a') * RatField.finv eps'} \with {
-      | inP (N,Nb) => inP (\new Array Real N \lam j => a' RealAbGroup.+ (j : Nat) RealField.* eps', \lam {x} a<x x<b => \case LU-focus {x} eps' linarith \with {
-          | inP (x',x'<x,x<x'+eps') =>
-            \let | j0 => (x' + eps' - a') * RatField.finv eps'
-                 | j1 => rat_floor j0
-                 | j1<=j0 : j1 RatField.<= j0 => rat_floor<=id
-                 | j0-1<=jj : j0 - 1 RatField.< j1 => rat_floor>id-1
-                 | j2 => iabs j1
-                 | j1=j2 : j1 = j2 => inv $ iabs.ofPos $ rat_floor-univ $ LinearOrder.<_<= $ OrderedSemiring.<_*_positive_positive (rat_real_<.2 $ transport (_ RealAbGroup.<) RealAbGroup.minus-rat $ linarith (real_<_L.2 a'<a, real_<_U.2 x<x'+eps')) (RatField.finv>0 eps'>0)
-                 | j2<N : j2 < N => pos<pos.conv $ transport (`< _) j1=j2 $ fromInt_<.conv $ j1<=j0 <∘r rat_real_<.2 (transport (`< _) RealField.*-rat (later $ <_*_positive-left (transport (`< _) RealAbGroup.minus-rat $ <_+-left _ $ transport (`< _) RealAbGroup.+-rat $ <_+-left _ $ real_<_L.2 x'<x <∘ x<b) $ rat_real_<.1 $ RatField.finv>0 eps'>0) <∘ real_<_U.2 Nb)
-                 | j => toFin j2 j2<N
-                 | j1=j : j1 = j => j1=j2 *> pmap pos (inv toFin=id)
-                 | j*eps'<x+eps'-a' : pos j RealField.* eps' <= x' + eps' - a' => {?}
-            \in inP (j, join-univ {?} {?} <∘r real_<_L.2 eps'<eps)
-        })
-    }
+-- | Splits the interval `[a,b]` into `n` equal parts.
+\func real-split (a b : Real) (n : Nat) : Array Real (suc n) \cowith
+  | at j => a + Real.fromRat (j : Nat) * ((b - a) * RatField.finv n)
+  \where {
+    \lemma real-approx (a<b : a < b) (n/=0 : n /= 0) {x : Real} (x>=a : a <= x) (x<=b : x <= b)
+      : ∃ (i : Fin (suc n)) (dist (real-split a b n i) x < (b - a) * RatField.finv n)
+      =>  \let | b-a>0 : 0 < b - a => linarith
+               | b-a/n>0 : 0 < (b - a) * RatField.finv n => RealField.<_*_positive_positive b-a>0 $ rat_real_<.1 $ RatField.finv>0 $ fromInt_< $ pos<pos $ nonZero>0 n/=0
+               | /b-a => RealField.pinv b-a>0
+          -- Rescale the interval [a,b] as [0,n] and use the natural number approximation.
+          \in \case real-nat-approx {(x - a) * n * /b-a} $ RealField.<=_*_positive_positive (RealField.<=_*_positive_positive linarith $ rat_real_<=.1 $ fromInt_<= $ pos<=pos zero<=_) $ <=-less $ RealField.pinv>0 b-a>0 \with {
+            | inP (j,d) =>
+              \have | p : (x - a) * n * /b-a <= n => transportInv (RealField.`<= _) *-assoc $ transport (_ <=) {(b - a) * (n RealField.* /b-a)} (equation.cMonoid {RealField.pinv-right b-a>0}) $ RealField.<=_*_positive-left (RealAbGroup.<=_+ x<=b <=-refl) $ RealField.<=_*_positive_positive (rat_real_<=.1 $ fromInt_<= $ pos<=pos zero<=_) $ <=-less $ RealField.pinv>0 b-a>0
+                    | j<n+1 : j < suc n => pos<pos.conv $ fromInt_<.conv $ rat_real_<.2 $ transport (_ RealAbGroup.<) (RealAbGroup.+-rat {n} {1}) $ linarith (RealAbGroup.abs>=id <∘r d)
+              \in inP (toFin j j<n+1, transport2 (<) (pmap (_ *) (inv $ RealAbGroup.abs-ofPos $ <=-less b-a/n>0) *> inv RealField.abs_* *> pmap RealAbGroup.abs (later $ rewrite toFin=id $ equation.cRing {RealField.pinv-left b-a>0, RealField.finv-right {n} \lam p => n/=0 $ pmap (\lam x => iabs (ratNom x)) p})) ide-left $ RealField.<_*_positive-left {_} {_} {(b - a) * RatField.finv n} d $ b-a/n>0)
+          }
   }
 
-\lemma real-bounded-tb {S : Set Real} (Sb : IsBoundedSet S) : IsTotallyBoundedSet S \elim Sb
-  | inP (B,B>0,x0,Sx0,Bb) => {?} -- totallyBoundedSet-metric-char.2 \lam eps>0 => {?}
+\lemma real-bounded-tb : BallsTotallyBounded RealNormed
+  => \lam x {B} B>0 => totallyBoundedSet-metric-char.2 \lam {eps} eps>0 => \case ((x + B - (x - B)) RealField.* RealField.pinv eps>0).natBounded \with {
+    | inP (N,p) =>
+      \have N/=0 : N /= 0 => /=-sym $ StrictPoset.<_/= $ pos<pos.conv $ fromInt_<.conv $ rat_real_<.2 $ RealField.<_*_positive_positive linarith (RealField.pinv>0 eps>0) <∘ real_<_U.2 p
+      \in inP (real-split (x - B) (x + B) N, \lam {y} xy<B => \case real-split.real-approx linarith N/=0 (linarith (RealAbGroup.abs>=id <∘r xy<B)) (linarith (RealAbGroup.abs>=neg <∘r xy<B)) \with {
+        | inP (i,q) => inP (i, q <∘ hiding (y,xy<B,i,q) (transport2 (RealAbGroup.<) (equation.monoid {RealField.pinv-left eps>0}) (equation.cMonoid {RealField.finv-right {N} \lam N=0 => N/=0 $ pmap (\lam x => iabs (ratNom x)) N=0}) $ RealField.<_*_positive-left (real_<_U.2 p) $ RealField.<_*_positive_positive eps>0 $ rat_real_<.1 $ RatField.finv>0 $ fromInt_< $ pos<pos $ nonZero>0 N/=0))
+      })
+  }

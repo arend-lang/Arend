@@ -372,6 +372,18 @@
 \lemma rat_ceiling-univ {r : Rat} {x : Int} (r<=x : r <= x) : rat_ceiling r <= x
   => transport (_ <=) IntRing.negative-isInv $ IntRing.negative_<= $ rat_floor-univ $ RatField.negative_<= {r} {x} r<=x
 
+\sfunc rat_round (r : Rat) : Int
+  => \case LinearOrder.dec<_<= (r - rat_floor r) (ratio 1 2) \with {
+    | inl a => rat_floor r
+    | inr b => rat_floor r + 1
+  }
+
+\lemma rat_round-dist {r : Rat} : RatField.abs (Rat.fromInt (rat_round r) - r) <= ratio 1 2
+  => rewrite (\peval rat_round r) $ mcases {1} \with {
+    | inl p => transportInv (`<= _) (RatField.abs_- *> RatField.abs-ofPos (linarith rat_floor<=id)) (<=-less p)
+    | inr p => transportInv (`<= _) (RatField.abs-ofPos $ linarith $ rat_floor>id-1 {r}) linarith
+  }
+
 \lemma rat_<=-dec {r q : Rat} {so : So (rat_<=_Bool r q)} : r <= q
   => RatField.<=-char $ int_<=-dec {_} {_} {so}
   \where

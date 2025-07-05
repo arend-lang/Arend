@@ -309,6 +309,9 @@
 \lemma suc_<=_< {n m : Nat} (p : suc n <= m) : n < m
   => id<suc <∘l p
 
+\lemma <=_<_suc {n m : Nat} (p : n <= m) : n < suc m
+  => suc_<=_< (suc<=suc p)
+
 \lemma id<=suc {n : Nat} : n <= suc n => <=_+ <=-refl (zero<=_ {1})
 
 \lemma n*_+_<n {n q r : Nat} (p : n * q + r < n) : q = 0 \elim q

@@ -1,0 +1,42 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Arith.Int
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Topology.MetricSpace.ValuedMetricSpace
+\import Topology.NormedAbGroup.Real
+
+\lemma real-rat-approx (x : Real) {eps : Real} (eps>0 : 0 < eps) : ∃ (q : Rat) (RealNormed.dist q x < eps)
+  => \case real_<-rat-char.1 eps>0 \with {
+    | inP (eps',eps'>0,eps'<eps) => \case x.LU-focus eps' eps'>0 \with {
+      | inP (q,q<x,x<q+eps') => inP (q, RealAbGroup.abs_-_< (linarith (real_<_L.2 q<x)) $ linarith (transportInv (x <) RealAbGroup.+-rat $ real_<_U.2 x<q+eps', real_<_L.2 eps'<eps))
+    }
+  }
+
+\lemma real-int-approx (x : Real) : ∃ (n : Int) (RealNormed.dist n x < 1)
+  => \case exact x {ratio 1 2} linarith \with {
+    | inP (n,d) => inP (n, transport (_ <) linarith d)
+  }
+  \where {
+    \lemma exact (x : Real) {eps : Real} (eps>0 : 0 < eps) : ∃ (n : Int) (RealNormed.dist n x < Real.fromRat (ratio 1 2) + eps)
+      => \case real-rat-approx x eps>0 \with {
+        | inP (q,d) => inP (rat_round q, RealNormed.dist-triang <∘r RealAbGroup.<=_+-left (transportInv (`<= _) RealAbGroup.dist-rat $ rat_real_<=.1 rat_round-dist) d)
+      }
+  }
+
+\lemma real-nat-approx {x : Real} (x>=0 : 0 <= x) : ∃ (n : Nat) (RealNormed.dist n x < 1)
+  => \case real-int-approx x \with {
+    | inP (n,d) => inP (iabs n, transportInv (RealNormed.dist __ x < 1) (iabs.ofPos $ <_+1_<= $ fromInt_<.conv $ rat_real_<.2 $ transport (_ RealAbGroup.<) (RealAbGroup.+-rat {n} {1}) $ linarith $ RealAbGroup.abs>=neg <∘r d) d)
+  }
