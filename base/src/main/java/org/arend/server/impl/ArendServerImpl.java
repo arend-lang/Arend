@@ -327,7 +327,7 @@ public class ArendServerImpl implements ArendServer {
     });
   }
 
-  private static @NotNull Map<GlobalReferable, Concrete.GeneralDefinition> updateDefinitions(ConcreteGroup group) {
+  public static @NotNull Map<GlobalReferable, Concrete.GeneralDefinition> updateDefinitions(ConcreteGroup group) {
     Map<GlobalReferable, Concrete.GeneralDefinition> defMap = new HashMap<>();
     group.traverseGroup(subgroup -> {
       Concrete.ResolvableDefinition definition = subgroup.definition();
