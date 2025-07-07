@@ -1,6 +1,5 @@
 package org.arend.codeInsight
 
-import androidx.compose.ui.util.fastMap
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProviderDescriptor
 import com.intellij.codeInsight.daemon.impl.LineMarkerNavigator
@@ -34,7 +33,6 @@ import org.arend.graph.GraphEdge
 import org.arend.graph.GraphNode
 import org.arend.graph.GraphSimulator
 import org.arend.graph.GraphSimulator.Companion.FrameType
-import org.arend.graph.call.CallGraphSettings
 import org.arend.graph.call.getCallMatrix
 import org.arend.naming.reference.TCDefReferable
 import org.arend.psi.ArendFile
@@ -43,6 +41,7 @@ import org.arend.search.ClassDescendantsSearch
 import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
+import org.arend.server.impl.DefinitionData
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.typechecking.error.TerminationCheckError
@@ -53,18 +52,23 @@ import org.arend.typechecking.termination.DefinitionCallGraph
 import org.arend.util.ArendBundle
 import java.awt.MouseInfo
 import java.awt.event.MouseEvent
+import java.util.concurrent.ConcurrentHashMap
 import javax.swing.JScrollPane
 
 class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
   private val url = "https://www.cse.chalmers.se/~abela/foetus.pdf"
+
+  val previousDefinitions = ConcurrentHashMap<ArendFile, Set<DefinitionData>>()
 
   override fun getName() = "Arend line markers"
 
   override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? = null
 
   override fun collectSlowLineMarkers(elements: List<PsiElement>, result: MutableCollection<in LineMarkerInfo<*>>) {
+    if (elements.isEmpty()) return
+    val file = elements.firstOrNull()?.containingFile as? ArendFile
     subclassesLineMarkers(elements, result)
-    recursiveLineMarkers(elements, result)
+    file?.let { recursiveLineMarkers(it, result, elements) }
   }
 
   private fun subclassesLineMarkers(elements: List<PsiElement>, result: MutableCollection<in LineMarkerInfo<*>>) {
@@ -107,24 +111,11 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
     coreToConcrete.putAll(subExpressions)
   }
 
-  private fun recursiveLineMarkers(elements: List<PsiElement>, result: MutableCollection<in LineMarkerInfo<*>>) {
-    val file = elements.firstOrNull()?.containingFile as? ArendFile ?: return
-
-    val project = file.project
-    val settings = project.service<CallGraphSettings>()
-    val usedDefFunctions = settings.usedDefFunctions
-    var fileDefFunctions = usedDefFunctions[file]
-    if (fileDefFunctions == null) {
-      usedDefFunctions[file] = mutableSetOf()
-      fileDefFunctions = usedDefFunctions[file]!!
-    }
-
-    val markers = recursiveLineMarkers(file)
-    markers.forEach {
+  private fun recursiveLineMarkers(file: ArendFile, result: MutableCollection<in LineMarkerInfo<*>>, elements: List<PsiElement>) {
+    recursiveLineMarkers(file).forEach {
       it.element?.let { id ->
-        val defFunction = id.parent.parent as? ArendDefFunction ?: return@forEach
-        if (!fileDefFunctions.contains(defFunction)) {
-          fileDefFunctions.add(defFunction)
+        ProgressManager.checkCanceled()
+        if (elements.contains(id)) {
           result.add(it)
         }
       }
@@ -143,7 +134,14 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
     val defsToPsiElement = mutableMapOf<FunctionDefinition, ArendDefFunction>()
     val coreToConcrete = mutableMapOf<Expression, Concrete.AppExpression>()
 
-    val definitions = server.getResolvedDefinitions(moduleLocation)
+    var definitions = server.getResolvedDefinitions(moduleLocation).toSet()
+    if (definitions.isNotEmpty()) {
+      previousDefinitions.put(file, definitions)
+    } else {
+      definitions = previousDefinitions[file] ?: run {
+        return emptyList()
+      }
+    }
     for (definition in definitions) {
       ProgressManager.checkCanceled()
       val concrete = definition.definition as? Concrete.Definition ?: continue
@@ -155,6 +153,10 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
       addCoreWithConcrete(concrete, oldTypechecked, coreToConcrete)
 
       val clauses = getClauses(server, file, typechecked, defReferable)
+
+      if (clauses.isEmpty()) {
+        continue
+      }
 
       concreteDefs.putIfAbsent(typechecked, concrete)
       defsClauses.putIfAbsent(typechecked, clauses)
@@ -185,13 +187,13 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
       }
       if (isMutualRecursive) {
         element.defIdentifier?.id?.let {
-          result.add(LineMarkerInfo(it, element.textRange, MUTUAL_RECURSIVE,
+          result.add(LineMarkerInfo(it, it.textRange, MUTUAL_RECURSIVE,
           { "Show the call graph" }, { _, _ -> mutualRecursiveCall(project, graph, newGraph, entryVertex, newGraph.entries.firstOrNull { entryVertex.key == it.key }, vertices, coreToConcrete) },
           GutterIconRenderer.Alignment.CENTER) { "callGraph" })
         }
       } else if (toTextOfCallMatrix(entryVertex).isNotEmpty()) {
         element.defIdentifier?.id?.let {
-          result.add(LineMarkerInfo(it, element.textRange, AllIcons.Gutter.RecursiveMethod,
+          result.add(LineMarkerInfo(it, it.textRange, AllIcons.Gutter.RecursiveMethod,
             { "Show the call matrix" }, { _, _ -> selfRecursiveCall(entryVertex) },
             GutterIconRenderer.Alignment.CENTER) { "callMatrix" })
         }
@@ -210,7 +212,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
 
   private fun getClauses(server: ArendServer, file: ArendFile, functionDefinition: FunctionDefinition, defReferable: TCDefReferable): List<ElimClause<ExpressionPattern>> {
     return (((getFunctionDefinition(server, file, functionDefinition, defReferable)?.actualBody as? ElimBody?)?.clauses)
-      ?: emptyList()).fastMap { ExtElimClause(Pattern.toExpressionPatterns(it.patterns, functionDefinition.parameters), it.expression, ExprSubstitution()) }
+      ?: emptyList()).map { ExtElimClause(Pattern.toExpressionPatterns(it.patterns, functionDefinition.parameters), it.expression, ExprSubstitution()) }
   }
 
   private fun addOtherDefinitions(

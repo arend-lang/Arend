@@ -14,6 +14,7 @@ import org.arend.module.IntellijClassLoaderDelegate
 import org.arend.naming.reference.DataModuleReferable
 import org.arend.psi.ArendFile
 import org.arend.server.ArendLibrary
+import org.arend.server.ArendServerService
 import org.arend.ui.impl.ArendGeneralUI
 import org.arend.util.*
 import org.arend.util.FileUtils.EXTENSION
@@ -152,7 +153,7 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
         }
 
     fun findArendFile(moduleLocation: ModuleLocation): ArendFile? {
-        val server = project.service<ArendServerService>().server
+            val server = project.service<ArendServerService>().server
         return ((server.getRawGroup(moduleLocation)?.referable as? DataModuleReferable)?.data as? ArendFile) ?:
             findArendFile(moduleLocation.modulePath, moduleLocation.locationKind == ModuleLocation.LocationKind.GENERATED, moduleLocation.locationKind == ModuleLocation.LocationKind.TEST)
     }
