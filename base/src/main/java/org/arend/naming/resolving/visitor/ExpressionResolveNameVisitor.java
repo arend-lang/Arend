@@ -742,7 +742,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     Referable constructor = parsedPattern.getConstructor();
     if (!(constructor instanceof GlobalReferable) || !((GlobalReferable) constructor).getKind().isConstructor()) {
       GeneralError error = constructor instanceof GlobalReferable ?
-              new ExpectedConstructorError((GlobalReferable) constructor, null, null, parsedPattern, null, EmptyDependentLink.getInstance(), null) :
+              new ExpectedConstructorError((GlobalReferable) constructor, null, null, parsedPattern, null, EmptyDependentLink.getInstance(), null, null) :
               new CannotFindConstructorError(pattern);
       getErrorReporter().report(error);
     }
@@ -842,7 +842,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
       if (referable instanceof ErrorReference) {
         myErrorReporter.report(((ErrorReference) referable).getError());
       } else if (referable instanceof GlobalReferable && !((GlobalReferable) referable).getKind().isConstructor()) {
-        myErrorReporter.report(new ExpectedConstructorError((GlobalReferable) referable, null, null, pattern, null, EmptyDependentLink.getInstance(), null));
+        myErrorReporter.report(new ExpectedConstructorError((GlobalReferable) referable, null, null, pattern, null, EmptyDependentLink.getInstance(), null, null));
       }
 
       ((Concrete.ConstructorPattern) pattern).setConstructor(referable);

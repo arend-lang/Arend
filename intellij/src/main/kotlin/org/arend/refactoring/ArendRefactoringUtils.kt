@@ -21,6 +21,7 @@ import org.arend.ext.variable.VariableImpl
 import org.arend.naming.reference.GlobalReferable
 import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.Referable
+import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.StringRenamer
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
 import org.arend.naming.scope.local.ElimScope
@@ -32,7 +33,9 @@ import org.arend.psi.ext.*
 import org.arend.psi.ext.ArendGroup
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
+import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
+import org.arend.server.ProgressReporter
 import org.arend.settings.ArendSettings
 import org.arend.term.Fixity
 import org.arend.term.abs.Abstract
@@ -40,6 +43,7 @@ import org.arend.term.abs.AbstractExpressionVisitor
 import org.arend.term.abs.AbstractReference
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.ConcreteExpressionVisitor
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.util.getBounds
 import java.lang.IllegalArgumentException
 import java.math.BigInteger
@@ -897,4 +901,20 @@ private object ConcretePrecVisitor : ConcreteExpressionVisitor<Void?, Int> {
     override fun visitTyped(expr: Concrete.TypedExpression, params: Void?) = MIN_PREC
     override fun visitApplyHole(expr: Concrete.ApplyHoleExpression, params: Void?) = MAX_PREC
     override fun visitBox(expr: Concrete.BoxExpression?, params: Void?) = APP_PREC
+}
+
+fun getTcDefReferable(globalReferable: ReferableBase<*>): TCDefReferable? {
+    globalReferable.tcReferable?.let { return it }
+
+    val project = globalReferable.project
+    val arendServer = project.service<ArendServerService>().server
+    val targetFile = globalReferable.containingFile as? ArendFile
+    val targetFileLocation = targetFile?.moduleLocation
+    if (targetFileLocation != null) {
+        val requester = ArendServerRequesterImpl(project)
+        requester.doUpdateModule(arendServer, targetFileLocation, targetFile)
+        //TODO: This operation may be slow
+        arendServer.getCheckerFor(listOf(targetFileLocation)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+    }
+    return globalReferable.tcReferable
 }

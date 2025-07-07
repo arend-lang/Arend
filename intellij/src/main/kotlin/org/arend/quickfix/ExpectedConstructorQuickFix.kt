@@ -3,8 +3,11 @@ package org.arend.quickfix
 import com.intellij.codeInsight.hint.HintManager
 import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.TextRange
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
@@ -12,50 +15,50 @@ import org.arend.core.context.binding.Binding
 import org.arend.core.context.binding.TypedBinding
 import org.arend.core.context.param.DependentLink
 import org.arend.core.context.param.EmptyDependentLink
-import org.arend.core.context.param.UntypedDependentLink
-import org.arend.core.definition.ClassDefinition
 import org.arend.core.definition.Constructor
 import org.arend.core.definition.DataDefinition
+import org.arend.core.definition.Definition
 import org.arend.core.expr.*
 import org.arend.core.pattern.BindingPattern
 import org.arend.core.pattern.ConstructorExpressionPattern
 import org.arend.core.pattern.ExpressionPattern
-import org.arend.core.pattern.Pattern
 import org.arend.core.subst.ExprSubstitution
 import org.arend.core.subst.SubstVisitor
-import org.arend.error.CountingErrorReporter
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.core.level.LevelSubstitution
+import org.arend.ext.error.ListErrorReporter
+import org.arend.ext.module.ModuleLocation
 import org.arend.ext.prettyprinting.DefinitionRenamer
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
+import org.arend.ext.reference.DataContainer
+import org.arend.ext.reference.Precedence
 import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
-import org.arend.intention.SplitAtomPatternIntention
-import org.arend.intention.SplitAtomPatternIntention.Companion.doReplacePattern
-import org.arend.naming.reference.NamedUnresolvedReference
-import org.arend.naming.reference.TCDefReferable
-import org.arend.naming.renamer.Renamer
+import org.arend.extImpl.definitionRenamer.ScopeDefinitionRenamer
+import org.arend.naming.reference.*
+import org.arend.naming.renamer.ReferableRenamer
 import org.arend.naming.renamer.StringRenamer
-import org.arend.naming.resolving.typing.TypingInfo
-import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
-import org.arend.prelude.Prelude
+import org.arend.naming.scope.Scope
 import org.arend.psi.*
 import org.arend.psi.ext.*
-import org.arend.quickfix.referenceResolve.ResolveReferenceAction
-import org.arend.refactoring.PsiLocatedRenamer
+import org.arend.server.ArendServer
+import org.arend.server.ArendServerService
+import org.arend.server.RawAnchor
 import org.arend.term.abs.Abstract
-import org.arend.term.abs.ConcreteBuilder.convertPattern
 import org.arend.term.concrete.Concrete
+import org.arend.term.concrete.LocalVariablesCollector
+import org.arend.term.concrete.SubstConcreteVisitor
+import org.arend.term.prettyprint.PrettyPrintVisitor
 import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.typechecking.error.local.ExpectedConstructorError
+import org.arend.typechecking.patternmatching.ElimTypechecking
 import org.arend.typechecking.patternmatching.ExpressionMatcher
 import org.arend.typechecking.patternmatching.PatternTypechecking
+import org.arend.typechecking.visitor.CheckTypeVisitor
 import org.arend.typechecking.visitor.VoidConcreteVisitor
 import org.arend.util.ArendBundle
 import org.arend.util.Decision
-import org.arend.util.mapToSet
 import java.util.Collections.singletonList
-import kotlin.math.abs
 
 class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause: SmartPsiElementPointer<ArendCompositeElement>) : IntentionAction {
     override fun startInWriteAction(): Boolean = true
@@ -67,109 +70,101 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
     override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean = true
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+        val server = project.service<ArendServerService>().server
         val caseExprPsi = cause.element?.ancestor<ArendCaseExpr>()
-        val quickFix = if (caseExprPsi == null) ElimWithExpectedConstructorErrorQuickFix(error, cause, project) else CaseExpectedConstructorErrorQuickFix(error, cause, project, caseExprPsi)
-        quickFix.runQuickFix(editor)
+        val constructorPsi = cause.element?.ancestor<ArendConstructor>()
+
+        val definition = error.definition as? TCDefReferable ?: return
+        var concreteDefinition = server.getResolvedDefinition(definition)?.definition as Concrete.GeneralDefinition
+        var typecheckedDefinition = (error.definition as? LocatedReferableImpl)?.typechecked
+
+        if (constructorPsi != null) {
+            var constructorFound = false
+            var index = 0
+            ccLoop@for (constructorClause in (concreteDefinition as Concrete.DataDefinition).constructorClauses)
+                for (concreteConstructor in constructorClause.constructors) {
+                    if (concreteConstructor.data.data == constructorPsi) {
+                        typecheckedDefinition = (typecheckedDefinition as? DataDefinition)?.constructors?.get(index)
+                        concreteDefinition = concreteConstructor
+                        constructorFound = true
+                        break@ccLoop
+                    }
+                    index++
+                }
+            if (!constructorFound)
+                throw java.lang.IllegalStateException()
+        }
+
+        val quickFix = if (caseExprPsi == null)
+            typecheckedDefinition?.let { typecheckedDefinition ->
+                ElimWithExpectedConstructorErrorQuickFix(error, project, concreteDefinition, constructorPsi, typecheckedDefinition)
+            }
+        else {
+            var concreteCaseExprVar: Concrete.CaseExpression? = null
+            if (concreteDefinition is Concrete.BaseFunctionDefinition) { // TODO:
+                val children = ArrayList<Concrete.Expression>()
+                when (val b = concreteDefinition.body) {
+                    is Concrete.ElimFunctionBody -> for (clause in b.clauses) children.add(clause.expression)
+                    is Concrete.TermFunctionBody -> children.add(b.term)
+                    is Concrete.CoelimFunctionBody -> for (coClauseElement in b.coClauseElements) if (coClauseElement is Concrete.ClassFieldImpl) children.add(coClauseElement.implementation)
+                }
+
+                val searcher = object : VoidConcreteVisitor<Void>() {
+                    override fun visitCase(expr: Concrete.CaseExpression?, params: Void?): Void? {
+                        if (expr?.data == caseExprPsi) concreteCaseExprVar = expr
+                        return super.visitCase(expr, params)
+                    }
+                }
+                for (child in children) child.accept(searcher, null)
+            }
+
+            if (concreteCaseExprVar != null && typecheckedDefinition != null)
+                CaseExpectedConstructorErrorQuickFix(error, project, caseExprPsi, concreteCaseExprVar, concreteDefinition, typecheckedDefinition)
+            else null
+        }
+        quickFix?.runQuickFix(editor)
     }
 
     companion object {
-
-        abstract class AbstractExpectedConstructorErrorEntry(val error: ExpectedConstructorError, val clause: Concrete.Clause, val substitution: ExprSubstitution, val constructorTypechecked: Constructor) {
+        private abstract class ClauseEntry(
+            val error: ExpectedConstructorError,
+            val clause: Concrete.Clause,
+            val substitution: ExprSubstitution,
+            val constructorTypechecked: Constructor) {
             val correctedSubsts = HashMap<Variable, ExpressionPattern>()
-            val patternPrimers = HashMap<Variable, ArendPattern>()
-            val insertData = HashMap<Pair<PsiElement, PsiElement?>, MutableList<Pair<Int, Variable>>>()
-
-            override fun toString(): String {
-                val result = StringBuffer()
-                val currentClause = clause.data as ArendClause
-
-                result.appendLine("Constructor: ${constructorTypechecked.name}; ")
-                result.appendLine("Clause: ${currentClause.text}")
-
-                if (substitution.keys.isNotEmpty()) {
-                    result.appendLine("\nerror.substitution contents:")
-                    printExprSubstitution(substitution, result)
-                    result.appendLine()
-                }
-
-                result.appendLine()
-
-                return result.toString()
-            }
-            companion object {
-                fun Variable.toString1(): String = "${this}@${this.hashCode().rem(100000)}"
-
-                fun printExprSubstitution(substitution: ExprSubstitution, buffer: StringBuffer) {
-                    for (variable in substitution.keys) {
-                        val binding = (substitution.get(variable) as? ReferenceExpression)?.binding
-                        buffer.appendLine("${variable.toString1()} -> ${binding?.toString1() ?: substitution[variable]}")
-                    }
-                }
-            }
         }
 
-        class CaseErrorEntry(error: ExpectedConstructorError, clause: Concrete.Clause, substitution: ExprSubstitution, constructorTypechecked: Constructor) : AbstractExpectedConstructorErrorEntry(error, clause, substitution, constructorTypechecked) {
-            var caseMatchData : Pair<DataCallExpression, List<ExpressionMatcher.MatchResult>>? = null
-
-            override fun toString(): String {
-                val result = StringBuffer()
-                val valCaseMatchData = caseMatchData
-
-                if (valCaseMatchData != null) {
-                    result.append("Case argument: ${error.parameter}\n")
-                    result.append("Case argument type: ${valCaseMatchData.first}\n")
-                    for (mr in valCaseMatchData.second) {
-                        result.append("Case pattern: ${(mr.pattern as? ExpressionPattern)?.toExpression()}; Binding: ${mr.binding}; Expression: ${mr.expression}@${mr.expression.hashCode() % 10000}; \n")
-                    }
-                }
-                return result.toString() + super.toString()
-            }
+        private class CaseClauseEntry(error: ExpectedConstructorError, clause: Concrete.Clause, substitution: ExprSubstitution, constructorTypechecked: Constructor) :
+            ClauseEntry(error, clause, substitution, constructorTypechecked) {
+            var matchedDataCall : DataCallExpression? = null
+            val matchedSubstitutions = ArrayList<ExpressionMatcher.MatchResult>()
         }
 
-        class ElimWithErrorEntry(error: ExpectedConstructorError, clause: Concrete.Clause, substitution: ExprSubstitution, constructorTypechecked: Constructor) : AbstractExpectedConstructorErrorEntry(error, clause, substitution, constructorTypechecked) {
+        private class ElimClauseEntry(error: ExpectedConstructorError, clause: Concrete.Clause, substitution: ExprSubstitution, constructorTypechecked: Constructor) :
+            ClauseEntry(error, clause, substitution, constructorTypechecked) {
             val matchData = HashMap<DependentLink, VariableLocationDescriptor>()
             val clauseParametersToSpecialize = HashSet<Variable>()
-            val clauseDefinitionParametersToEliminate = HashSet<Variable>()
+            val clauseDefinitionParametersToEliminate = HashSet<DependentLink>()
 
-            override fun toString(): String {
-                val result = StringBuffer()
-                if (matchData.isNotEmpty()) result.appendLine("Result of matching local clause parameters with abstract PSI:")
-                for (mdEntry in matchData) when (val mdValue = mdEntry.value) {
-                    is ExplicitNamePattern ->
-                        result.appendLine("${mdEntry.key.toString1()} -> existing parameter ${mdValue.bindingPsi.javaClass.simpleName}/${mdValue.bindingPsi.text}")
-                    is ImplicitConstructorPattern ->
-                        result.appendLine("${mdEntry.key.toString1()} -> implicit parameter of ${mdValue.enclosingNode.javaClass.simpleName}/\"${mdValue.enclosingNode.text}\" before \"${mdValue.followingParameter?.text}\" after ${mdValue.implicitArgCount} implicit args")
-                }
-
-                if (clauseDefinitionParametersToEliminate.isNotEmpty()) {
-                    result.append("Definition parameters which need to be eliminated: {")
-                    for (v in clauseDefinitionParametersToEliminate) result.append("${v.toString1()}; ")
-                    result.appendLine("}")
-                }
-
-                if (clauseParametersToSpecialize.isNotEmpty()) {
-                    result.append("Local clause variables which need to be specialized: {")
-                    for (v in clauseParametersToSpecialize) result.append("${v.toString1()}; ")
-                    result.appendLine("}\n")
-                }
-
-                return super.toString() + result.toString()
-            }
+            val patterns = ArrayList<Concrete.Pattern>()
+            val matchDataConcrete = HashMap<DependentLink, ConcreteVariableLocationDescriptor>()
+            val processedConcreteSubstitutions = HashMap<Referable, Concrete.Expression>()
         }
 
-        sealed class ExpectedConstructorQuickFixRunner<K : AbstractExpectedConstructorErrorEntry>(val thisError: ExpectedConstructorError, val cause: SmartPsiElementPointer<ArendCompositeElement>, val project: Project) {
+        private sealed class ExpectedConstructorQuickFixRunner<K : ClauseEntry>(
+            val thisError: ExpectedConstructorError,
+            val project: Project,
+            val concreteDefinition: Concrete.GeneralDefinition,
+            val typecheckedDefinition: Definition) {
+
             val errorHintBuffer = StringBuffer()
-            val psiFactory = ArendPsiFactory(project)
+            val server = project.service<ArendServerService>().server
+            val definition = thisError.definition as TCDefReferable
+            val definitionPsi = definition.data
+            val clauseToEntryMap = HashMap<Abstract.Clause, ClauseEntry>()
+            private val entriesToRemove = ArrayList<ClauseEntry>()
 
-            private val entriesToRemove = ArrayList<AbstractExpectedConstructorErrorEntry>()
-            val definition = thisError.definition as? TCDefReferable
-            private val definitionPsi = definition?.data
-            val constructorPsi = cause.element?.ancestor<ArendConstructor>()
-            val bodyPsi = (definitionPsi as? ArendFunctionDefinition<*>)?.body
-            val dataBodyPsi = (definitionPsi as? ArendDefData)?.dataBody
-            val clauseToEntryMap = HashMap<Abstract.Clause, AbstractExpectedConstructorErrorEntry>()
-
-            fun reportError(ecEntry: AbstractExpectedConstructorErrorEntry, currentClause: Abstract.Clause) {
+            fun reportError(ecEntry: ClauseEntry, currentClause: Abstract.Clause) {
                 entriesToRemove.add(ecEntry)
                 errorHintBuffer.append("Constructor: ${ecEntry.constructorTypechecked.name}\n")
                 errorHintBuffer.append("Patterns of the constructor: ${ecEntry.constructorTypechecked.patterns.map{ it.toExpression() }.toList()}\n")
@@ -177,45 +172,21 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
             }
 
             fun runQuickFix(editor: Editor?) {
-                val clausesListPsi : List<Abstract.Clause>? = computeClauses()
                 var typecheckedParameters: DependentLink? = null
 
                 if (definitionPsi is Abstract.Definition) {
-                    //STEP 0: Typecheck patterns of the function definition for the 2nd time
-                    val elimParams: List<DependentLink> = emptyList()
+                    var elimParams: List<DependentLink> = emptyList()
                     val expectedConstructorErrorEntries = ArrayList<K>()
 
-                    /* TODO[server2]
                     run {
-                        val cer = CountingErrorReporter(GeneralError.Level.ERROR, DummyErrorReporter.INSTANCE)
-                        val psiConcreteProvider = PsiConcreteProvider(project, cer, null)
-                        val resolveNameVisitor = DefinitionResolveNameVisitor(psiConcreteProvider, TypingInfo.EMPTY, cer)
                         val errorReporter = ListErrorReporter()
-                        var concreteDefinition : Concrete.GeneralDefinition = convert(definitionPsi as Abstract.Definition, null, cer)
-
-                        when (concreteDefinition) {
-                            is Concrete.BaseFunctionDefinition -> resolveNameVisitor.visitFunction(concreteDefinition, definitionPsi.scope)
-                            is Concrete.DataDefinition -> resolveNameVisitor.visitData(concreteDefinition, definitionPsi.scope)
-                        }
-
-                        if (constructorPsi != null) {
-                            var constructorFound = false
-                            ccLoop@for (cC in (concreteDefinition as Concrete.DataDefinition).constructorClauses) for (c in cC.constructors) {
-                                if ((c.data as? DataLocatedReferable)?.data?.element == constructorPsi) {
-                                    concreteDefinition = c
-                                    constructorFound = true
-                                    break@ccLoop
-                                }
-                            }
-                            if (!constructorFound) throw java.lang.IllegalStateException()
-                        }
-
                         val data = preparePatternTypechecking(concreteDefinition)
                         typecheckedParameters = data.typecheckedParameters
 
                         val context = HashMap<Referable, Binding>()
                         if (data.parameters != null) for (pair in data.parameters.map { it.referableList }.flatten().zip(DependentLink.Helper.toList(typecheckedParameters))) context[pair.first] = pair.second
-                        elimParams = if (data.eliminatedReferences != null) ElimTypechecking.getEliminatedParameters(data.eliminatedReferences, data.clauses, typecheckedParameters, errorReporter, context) else emptyList()
+                        elimParams = if (data.eliminatedReferences != null)
+                            ElimTypechecking.getEliminatedParameters(data.eliminatedReferences, data.clauses, typecheckedParameters, errorReporter, context) else emptyList()
 
                         val typechecker = CheckTypeVisitor(errorReporter, null, null)
 
@@ -229,179 +200,44 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                             val relevantErrors = errorReporter.errorList.filterIsInstance<ExpectedConstructorError>()
                             if (relevantErrors.size == 1) {
                                 val relevantError = relevantErrors[0]
-                                val constructorTypechecked = (relevantError.referable as? DataLocatedReferable)?.typechecked
-                                if (constructorTypechecked is Constructor) expectedConstructorErrorEntries.add(createEcEntry(relevantError, clause, substitution, constructorTypechecked))
+                                val constructorTypechecked = (relevantError.referable as InternalReferableImpl).typechecked
+                                if (constructorTypechecked is Constructor)
+                                    expectedConstructorErrorEntries.add(createClauseEntry(relevantError, clause, substitution, constructorTypechecked))
                             }
                         }
                     }
-                    */
 
-                    val definitionParameters = DependentLink.Helper.toList(typecheckedParameters)
+                    val typecheckedDefinitionParameters = DependentLink.Helper.toList(typecheckedParameters)
 
-                    for (ecEntry in expectedConstructorErrorEntries) computeMatchingPatterns(ecEntry, definitionParameters, elimParams)
+                    for (ecEntry in expectedConstructorErrorEntries)
+                        computeMatchingPatterns(ecEntry, typecheckedDefinitionParameters, elimParams)
 
-                    for (ecEntry in expectedConstructorErrorEntries) calculateEntriesToEliminate(ecEntry)
+                    for (ecEntry in expectedConstructorErrorEntries)
+                        calculateEntriesToEliminate(ecEntry)
 
                     expectedConstructorErrorEntries.removeAll(entriesToRemove.toSet())
 
-                    for (entry in expectedConstructorErrorEntries) clauseToEntryMap[entry.clause.data as Abstract.Clause] = entry
+                    for (entry in expectedConstructorErrorEntries)
+                        clauseToEntryMap[entry.clause.data as Abstract.Clause] = entry
 
-                    // === Modification of PSI is not started until this point ====
+                    val scope = server.getReferableScope(definition) ?: return
 
-                    // STEP 4: Eliminate global variables and insert primers corresponding to definitionVariablesToEliminate
-                    // We may need to modify all clauses not just the one upon which this refactoring was invoked.
+                    val newConcrete = rebuildDefinition(scope, expectedConstructorErrorEntries, elimParams)
 
-                    doEliminateAndInitializePrimers(expectedConstructorErrorEntries, clausesListPsi, definitionParameters, elimParams)
-
-                    for (ecEntry in expectedConstructorErrorEntries) {
-                        val currentClause = ecEntry.clause.data as Abstract.Clause
-                        val processedSubstitutions = HashMap<PsiElement, ExpressionPattern>()
-                        val newPrimers = HashMap<ImplicitConstructorPattern, ExpressionPattern>()
-                        val mismatchedPatterns = HashMap<PsiElement, Pair<ExpressionPattern, List<PsiElement>>>()
-
-                        // STEP 6: Unify matched patterns with existing patterns and calculate elementary substitutions (of the form "variable" -> "expression")
-                        for (cS in ecEntry.correctedSubsts) {
-                            val patternPrimer = ecEntry.patternPrimers[cS.key] ?: continue
-                            var concretePrimer = convertPattern(patternPrimer, null, null)
-                            val primerOk: Boolean
-                            run {
-                                val cer = CountingErrorReporter(DummyErrorReporter.INSTANCE)
-                                val resolver = ExpressionResolveNameVisitor(patternPrimer.scope, ArrayList(), TypingInfo.EMPTY, cer, null, null)
-                                val primerList = ArrayList<Concrete.Pattern>()
-                                primerList.add(concretePrimer)
-                                resolver.visitPatterns(primerList, null)
-                                concretePrimer = primerList[0]
-                                resolver.resolvePattern(concretePrimer)
-                                primerOk = cer.errorsNumber == 0
-                            }
-
-                            if (primerOk) unify(cS.value, concretePrimer, processedSubstitutions, newPrimers, mismatchedPatterns)
-                        }
-
-                        // STEP 7: Insert new primers
-                        val newPrimerInsertData = HashMap<Pair<PsiElement, PsiElement?>, MutableList<Pair<Int, Variable>>>()
-                        val tempVarMatchInfo = HashMap<Variable, ExpressionPattern>()
-                        for (p in newPrimers) {
-                            val descriptor = p.key
-                            val positionKey = Pair(descriptor.enclosingNode, descriptor.followingParameter)
-                            var positionList = newPrimerInsertData[positionKey]
-                            if (positionList == null) {
-                                positionList = ArrayList()
-                                newPrimerInsertData[positionKey] = positionList
-                            }
-                            val temp = VariableImpl("_")
-                            positionList.add(Pair(descriptor.implicitArgCount, temp))
-                            tempVarMatchInfo[temp] = p.value
-                        }
-
-                        insertPrimers(psiFactory, newPrimerInsertData) {tempVar, createdPrimer -> tempVarMatchInfo[tempVar]?.let{ processedSubstitutions[createdPrimer] = it}}
-
-                        // STEP 8: Perform actual substitutions (at this point all keys of substEntry should be simple NamePatterns...)
-                        val clauseExpressionList : List<PsiElement?> = when (currentClause) {
-                            is ArendClause -> singletonList(currentClause.expression)
-                            is ArendConstructorClause -> currentClause.constructors
-                            else -> emptyList()
-                        }
-                        val variablePatterns = SplitAtomPatternIntention.findAllVariablePatterns(emptyList(), null)
-                        val newVariables = ArrayList<String>()
-
-                        for (clauseExpression in clauseExpressionList) if (clauseExpression != null)
-                            for (mismatchedEntry in mismatchedPatterns) {
-                                for (varToRemove in mismatchedEntry.value.second) {
-                                    val defIdentifier = varToRemove.descendantOfType<ArendDefIdentifier>()
-                                    if (defIdentifier != null) SplitAtomPatternIntention.doSubstituteUsages(project, defIdentifier, clauseExpression, "{?${defIdentifier.name}}")
-                                }
-                            }
-
-                        for (mismatchedEntry in mismatchedPatterns) {
-                            val printData = printPattern(mismatchedEntry.value.first, currentClause as ArendCompositeElement, variablePatterns.map{ VariableImpl(it)}.toList(), newVariables, StringRenamer())
-                            doReplacePattern(psiFactory, mismatchedEntry.key as ArendPattern, printData.patternString, printData.requiresParentheses)
-                        }
-
-                        val varsNoLongerUsed = HashSet<ArendDefIdentifier>()
-
-                        for (substEntry in processedSubstitutions) {
-                            val renamer = StringRenamer()
-                            fun computePrintData() =
-                                printPattern(substEntry.value, currentClause as ArendCompositeElement, getOccupiedNames(HashSet()).minus(varsNoLongerUsed.mapToSet { it.name }).map { VariableImpl(it) }.toList(), newVariables, renamer)
-
-                            var printData = computePrintData()
-                            val namePatternToReplace = substEntry.key as ArendPattern
-
-                            val idOrUnderscore = namePatternToReplace.descendantOfType<ArendDefIdentifier>() ?: namePatternToReplace.underscore
-                            val asPiece = namePatternToReplace.parent.descendantOfType<ArendAsPattern>()
-                            val asDefIdentifier = asPiece?.referable
-
-                            if (idOrUnderscore is ArendDefIdentifier) (substEntry.value.toExpression().type as? DataCallExpression)?.definition?.let{ renamer.setParameterName(it, idOrUnderscore.name) }
-
-                            val target = asDefIdentifier ?: if (idOrUnderscore is ArendDefIdentifier) idOrUnderscore else null
-                            val nonCachedResolver : (ArendRefIdentifier) -> PsiElement? = {
-                                val name = it.name
-                                it.scope.resolveName(name) as? PsiElement
-                            }
-
-                            val noOfUsages = if (target != null) {
-                                fun calculateNumberOfUsages(element: PsiElement): Int {
-                                    return if (element is ArendRefIdentifier && nonCachedResolver.invoke(element) == target /* do not use cache! */ ) 1
-                                    else {
-                                        var result = 0
-                                        for (child in element.children) result += calculateNumberOfUsages(child)
-                                        result
-                                    }
-                                }
-                                var noOfUsages = 0
-                                for (clauseExpression in clauseExpressionList) noOfUsages += if (clauseExpression != null) calculateNumberOfUsages(clauseExpression) else 0
-                                noOfUsages
-                            } else 0
-
-                            val useAsPattern = asDefIdentifier != null || ((printData.complexity > 2 || printData.containsClassConstructor) && noOfUsages > 0)
-
-                            if (!useAsPattern && asPiece == null && idOrUnderscore is ArendDefIdentifier) {
-                                varsNoLongerUsed.add(idOrUnderscore)
-                                newVariables.clear()
-                                printData = computePrintData() //Recompute print data, this time allowing the variable being substituted to be reused in the substituted pattern (as one of its NamePatterns)
-                            }
-
-                            val existingAsName = asPiece?.referable
-                            for (clauseExpression in clauseExpressionList) if (clauseExpression != null) {
-                                if (existingAsName == null && !useAsPattern && idOrUnderscore is ArendDefIdentifier)
-                                    SplitAtomPatternIntention.doSubstituteUsages(project, idOrUnderscore, clauseExpression, printData.patternString, nonCachedResolver)
-                            }
-
-                            if (idOrUnderscore != null) {
-                                var asName: String = if (!useAsPattern) "" else {
-                                    val n = existingAsName?.name ?: (idOrUnderscore as? ArendDefIdentifier)?.name
-                                    if (n != null) n else {
-                                        val freshName = Renamer().generateFreshName(VariableImpl("_x"), (variablePatterns.map{ VariableImpl(it) } + newVariables.map { VariableImpl(it) }).toList())
-                                        newVariables.add(freshName)
-                                        freshName
-                                    }
-                                }
-                                (((((substEntry.value as? ConstructorExpressionPattern)?.dataExpression as? ClassCallExpression)?.definition?.referable?.data) as? SmartPsiElementPointer<*>)?.element as? PsiLocatedReferable)?.let {
-                                    ResolveReferenceAction.getTargetName(it, currentClause as ArendCompositeElement)?.let{ (name, namespaceCommand) ->
-                                        namespaceCommand?.execute()
-                                        if (asName.isNotEmpty()) asName += " : $name"
-                                    }
-                                }
-
-                                val actualPatternToReplace = if ((namePatternToReplace.parent as? ArendPattern)?.asPattern != null) namePatternToReplace.parent as ArendPattern else namePatternToReplace
-                                var result: ArendPattern? = doReplacePattern(psiFactory, actualPatternToReplace, printData.patternString, printData.requiresParentheses, asName)
-                                var number = result?.integer
-                                if (number != null) {
-                                    var needsReplace = false
-                                    while (result != null && isSucPattern(result.parent)) {
-                                        number++
-                                        result = result.parent as? ArendPattern
-                                        needsReplace = true
-                                    }
-
-                                    if (needsReplace && result != null) {
-                                        doReplacePattern(psiFactory, result, number.toString(), false)
-                                    }
-                                }
-                            }
-                        }
+                    val builder = StringBuilder()
+                    val visitor = PrettyPrintVisitor(builder, 0)
+                    when (newConcrete) {
+                        is Concrete.Constructor -> visitor.prettyPrintConstructor(newConcrete)
+                        is Concrete.DataDefinition -> visitor.visitData(newConcrete, null)
+                        is Concrete.FunctionDefinition -> visitor.visitFunction(newConcrete, null)
+                        is Concrete.CaseExpression -> newConcrete.accept(visitor, Precedence(Precedence.Associativity.NON_ASSOC, Concrete.CaseExpression.PREC, false))
                     }
+
+                    // Modification of the file text starts here
+                    val textFile = (definitionPsi as PsiElement).containingFile.fileDocument
+                    val textRange = getTextRange()
+                    textFile.replaceString(textRange.startOffset, textRange.endOffset, builder.toString())
+                    PsiDocumentManager.getInstance(project).commitDocument(textFile)
                 }
 
                 if (editor != null && errorHintBuffer.isNotEmpty()) ApplicationManager.getApplication().invokeLater {
@@ -410,78 +246,181 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 }
             }
 
-            private fun isSucPattern(pattern: PsiElement): Boolean {
-                if (pattern !is ArendPattern || pattern.sequence.size != 2) {
-                    return false
+            abstract fun computeMatchingPatterns(ecEntry: K, definitionParameters: List<DependentLink>, elimParams: List<DependentLink>)
+            abstract fun preparePatternTypechecking(concreteDefinition: Concrete.GeneralDefinition): PatternTypecheckingData
+            abstract fun createClauseEntry(error: ExpectedConstructorError, clause: Concrete.Clause, substitution: ExprSubstitution, constructorTypechecked: Constructor): K
+            abstract fun calculateEntriesToEliminate(ecEntry: K)
+
+            abstract fun rebuildDefinition(scope: Scope, expectedConstructorErrorEntries: List<K>, elimParams: List<DependentLink>): Concrete.SourceNode
+            abstract fun getTextRange(): TextRange
+
+            companion object {
+                fun reconstructList(scope: Scope,
+                                    parameters: List<DependentLink>,
+                                    concreteParameters: List<Referable>?,
+                                    eliminatedParameters: Set<DependentLink>?,
+                                    concretePatterns: List<Concrete.Pattern>,
+                                    substitutions: Map<Variable, ExpressionPattern>?,
+                                    sink: MutableMap<Referable, Concrete.Expression>,
+                                    clauseLinkListIterator: Iterator<DependentLink>,
+                                    sampleData: DataDefinition? = null,
+                                    sampleName: String? = null): List<Concrete.Pattern> {
+                    val result = ArrayList<Concrete.Pattern>()
+                    val elimMode = eliminatedParameters != null
+                    val sampleIterator = parameters.iterator()
+                    val concreteParameterIterator = concreteParameters?.iterator()
+                    val concreteIterator = concretePatterns.iterator()
+                    var skippedPatterns = 0
+                    var currentConcretePattern: Concrete.Pattern? = if (concreteIterator.hasNext()) concreteIterator.next() else null
+
+                    while (sampleIterator.hasNext()) {
+                        val sample = sampleIterator.next()
+                        val concreteParameter = concreteParameterIterator?.next()
+
+                        val sampleIsExplicit = if (elimMode) eliminatedParameters.contains(sample) else sample.isExplicit
+                        val substitutedPattern = substitutions?.let{ it[sample] }
+                        if (sampleIsExplicit == currentConcretePattern?.isExplicit) {
+                            val (data, name) = if (sample.name != null && sample.type is DataCallExpression) Pair((sample.type as? DataCallExpression)?.definition, sample.name) else Pair(sampleData, sampleName)
+                            val reconstructedPattern = reconstructPattern(scope, substitutedPattern, currentConcretePattern, substitutions, sink, clauseLinkListIterator, data, name)
+                            result.add(reconstructedPattern)
+                            currentConcretePattern = if (concreteIterator.hasNext()) concreteIterator.next() else null
+                            skippedPatterns = 0
+                            continue
+                        } else if (!sampleIsExplicit) {
+                            val pattern = reconstructPattern(scope, substitutedPattern,
+                                Concrete.NamePattern(null, elimMode, concreteParameter, null), substitutions, sink, clauseLinkListIterator,
+                                (sample.type as? DataCallExpression)?.definition, sample.name)
+                            if (pattern !is Concrete.NamePattern) {
+                                while (skippedPatterns > 0) {
+                                    result.add(Concrete.NamePattern(null, false, null, null))
+                                    skippedPatterns--
+                                }
+                                result.add(pattern)
+                            } else if (!elimMode) {
+                                skippedPatterns++
+                            }
+                        }
+                    }
+
+                    return result
                 }
 
-                val subPattern = pattern.sequence[0]
-                val constructor = (subPattern.referenceElement?.unresolvedReference ?: subPattern.singleReferable?.refName?.let { NamedUnresolvedReference(subPattern, it) })?.resolve(pattern.ancestor<ArendDefinition<*>>()?.scope ?: return false, null, null) as? ArendConstructor
-                        ?: return false
-                return constructor.name == Prelude.SUC.name && constructor.ancestor<ArendDefData>()?.tcReferable?.typechecked == Prelude.NAT ||
-                       constructor.name == Prelude.FIN_SUC.name && constructor.ancestor<ArendDefData>()?.tcReferable?.typechecked == Prelude.FIN
-            }
+                fun findNamePatterns(concretePattern: Concrete.Pattern): List<Referable> {
+                    return when (concretePattern) {
+                        is Concrete.NamePattern -> concretePattern.referable?.let{ singletonList(it) } ?: emptyList()
+                        is Concrete.ConstructorPattern -> concretePattern.patterns.map { findNamePatterns(it) }.fold(ArrayList()) { acc, el -> acc.addAll(el); acc}
+                        is Concrete.TuplePattern -> concretePattern.patterns.map { findNamePatterns(it) }.fold(ArrayList()) { acc, el -> acc.addAll(el); acc}
+                        else -> emptyList()
+                    }
+                }
 
-            abstract fun computeMatchingPatterns(ecEntry: K, definitionParameters: List<DependentLink>, elimParams: List<DependentLink>)
-            abstract fun computeClauses(): List<Abstract.Clause>?
-            abstract fun preparePatternTypechecking(concreteDefinition: Concrete.GeneralDefinition): PatternTypecheckingData
-            abstract fun createEcEntry(error: ExpectedConstructorError, clause: Concrete.Clause, substitution: ExprSubstitution, constructorTypechecked: Constructor): K
-            abstract fun calculateEntriesToEliminate(ecEntry: K)
-            abstract fun doEliminateAndInitializePrimers(expectedConstructorErrorEntries: List<K>, clausesListPsi: List<Abstract.Clause>?, definitionParameters: List<DependentLink>, elimParams: List<DependentLink>)
-            abstract fun getOccupiedNames(variablePatterns: HashSet<ArendDefIdentifier>): HashSet<String?>
+                fun reconstructPattern(scope: Scope,
+                                       substitutedCorePattern: ExpressionPattern?,
+                                       concretePattern: Concrete.Pattern,
+                                       substitutions: Map<Variable, ExpressionPattern>?,
+                                       sink: MutableMap<Referable, Concrete.Expression>,
+                                       clauseLinkListIterator: Iterator<DependentLink>,
+                                       sampleData: DataDefinition? = null,
+                                       sampleName: String? = null): Concrete.Pattern {
+                    var mismatched = false
+                    when (concretePattern) {
+                        is Concrete.NamePattern -> {
+                            val correspondingClauseParameter = if (clauseLinkListIterator.hasNext()) clauseLinkListIterator.next() else null
+                            val corePattern = substitutedCorePattern ?: substitutions?.let{ if (correspondingClauseParameter != null) it[correspondingClauseParameter] else null }
+                            if (corePattern != null && corePattern !is BindingPattern) {
+                                val pair = ToAbstractVisitor.convertPattern(scope, corePattern, concretePattern.isExplicit, PrettyPrinterConfig.DEFAULT, sampleData, sampleName)
+                                concretePattern.referable?.let { sink[it] = pair.proj2 }
+                                pair.proj1.asReferable = concretePattern.asReferable
+                                return pair.proj1
+                            }
+                        }
+                        is Concrete.ConstructorPattern -> {
+                            val existingConstructor = concretePattern.constructor as TCDefReferable
+                            val substitutedConstructor = (substitutedCorePattern?.constructor)?.referable
+
+                            val constructorParameters = DependentLink.Helper.toList(existingConstructor.typechecked.parameters)
+                            val newSubstitutions = HashMap<Variable, ExpressionPattern>()
+                            if (substitutions != null) newSubstitutions.putAll(substitutions)
+                            if (substitutedCorePattern is ConstructorExpressionPattern) for ((constructorParameter, matchedPattern) in constructorParameters.zip(substitutedCorePattern.subPatterns))
+                                newSubstitutions[constructorParameter] = matchedPattern
+
+                            val reconstructedPatterns = reconstructList(scope, constructorParameters, null, null, concretePattern.patterns, newSubstitutions, sink, clauseLinkListIterator, sampleData, sampleName)
+                            mismatched = substitutedCorePattern != null && (substitutedCorePattern !is ConstructorExpressionPattern || substitutedConstructor != existingConstructor)
+                            if (!mismatched)
+                                return Concrete.ConstructorPattern(null, concretePattern.isExplicit, concretePattern.constructorData, existingConstructor, reconstructedPatterns, concretePattern.asReferable)
+                        }
+                        is Concrete.NumberPattern -> if (substitutedCorePattern != null && substitutedCorePattern.match(SmallIntegerExpression(concretePattern.number), ArrayList()) != Decision.YES) {
+                            mismatched = true
+                        }
+                        is Concrete.TuplePattern -> {
+                            if (substitutedCorePattern is ConstructorExpressionPattern && substitutedCorePattern.constructor == null && substitutedCorePattern.subPatterns.size == concretePattern.patterns.size) {
+                                val tuplePatterns = concretePattern.patterns.zip(substitutedCorePattern.subPatterns).map {
+                                        (concretePattern, substitutedCorePattern) ->
+                                    reconstructPattern(scope, substitutedCorePattern, concretePattern, substitutions, sink, clauseLinkListIterator)
+                                }
+                                return Concrete.TuplePattern(null, concretePattern.isExplicit, tuplePatterns, concretePattern.asReferable)
+                            } else if (substitutedCorePattern == null) {
+                                val tuplePatterns = concretePattern.patterns.map { reconstructPattern(scope,null, it, substitutions, sink, clauseLinkListIterator) }.toList()
+                                return Concrete.TuplePattern(null, concretePattern.isExplicit, tuplePatterns, concretePattern.asReferable)
+                            } else {
+                                mismatched = true
+                            }
+                        }
+                    }
+                    if (mismatched) {
+                        val mismatchedReferables = findNamePatterns(concretePattern)
+                        for (ref in mismatchedReferables) sink[ref] = Concrete.GoalExpression(null, ref.refName, null)
+                        val concreteSubstitutedPattern = ToAbstractVisitor.convertPattern(scope, substitutedCorePattern, concretePattern.isExplicit, PrettyPrinterConfig.DEFAULT, null, null)
+                        return concreteSubstitutedPattern.proj1
+                    }
+
+                    return concretePattern
+                }
+            }
         }
 
-        data class PatternTypecheckingData(val mode: PatternTypechecking.Mode?, val typecheckedParameters: DependentLink?, val clauses: List<Concrete.Clause>?, val eliminatedReferences: List<Concrete.ReferenceExpression>?, val parameters: List<Concrete.Parameter>?)
+        data class PatternTypecheckingData(val mode: PatternTypechecking.Mode?,
+                                           val typecheckedParameters: DependentLink?,
+                                           val clauses: List<Concrete.Clause>?,
+                                           val eliminatedReferences: List<Concrete.ReferenceExpression>?,
+                                           val parameters: List<Concrete.Parameter>?)
 
-        class CaseExpectedConstructorErrorQuickFix(thisError: ExpectedConstructorError, cause: SmartPsiElementPointer<ArendCompositeElement>, project: Project, val caseExprPsi: ArendCaseExpr): ExpectedConstructorQuickFixRunner<CaseErrorEntry>(thisError, cause, project) {
-            private val caseBindings = LinkedHashMap<Binding, Pair</* case arg that depends on this binding */ ArendCaseArg, /* corresponding expression */ Expression>>()
-            private val caseTypeQualifications = HashMap<ArendCaseArg, DataCallExpression /* case arg expression */>()
-            private val parameterToCaseArgMap = HashMap<DependentLink, ArendCaseArg>()
+        private class CaseExpectedConstructorErrorQuickFix(thisError: ExpectedConstructorError,
+                                                           project: Project,
+                                                           val caseExprPsi: ArendCaseExpr,
+                                                           val concreteCaseExpression: Concrete.CaseExpression,
+                                                           concreteDefinition: Concrete.GeneralDefinition,
+                                                           typecheckedDefinition: Definition):
+            ExpectedConstructorQuickFixRunner<CaseClauseEntry>(thisError, project, concreteDefinition, typecheckedDefinition) {
+            private val concreteCaseBindings = LinkedHashMap<Binding, Pair<Concrete.CaseArgument /* case arg that depends on this binding */ , Expression /* corresponding expression */>>()
+            private val concreteCaseTypeQualifications = HashMap<Concrete.CaseArgument, DataCallExpression>()
+            private val concreteParameterToCaseArgMap = HashMap<DependentLink, Concrete.CaseArgument>()
             private val parameterToCaseExprMap = ExprSubstitution()
-            private val caseOccupiedLocalNames = HashSet<String>()
 
-            override fun computeMatchingPatterns(ecEntry: CaseErrorEntry, definitionParameters: List<DependentLink>, elimParams: List<DependentLink>) {
+            override fun getTextRange(): TextRange = caseExprPsi.textRange
+
+            override fun computeMatchingPatterns(ecEntry: CaseClauseEntry, definitionParameters: List<DependentLink>, elimParams: List<DependentLink>) {
                 val parameterType = ecEntry.error.parameter?.type
                 val currentClause = ecEntry.clause.data as Abstract.Clause
 
                 // STEP 1C: Compute matching expressions
-                val matchResults = ArrayList<ExpressionMatcher.MatchResult>()
-                val matchResult = if (parameterType is DataCallExpression) ExpressionMatcher.computeMatchingExpressions(parameterType, ecEntry.constructorTypechecked, true, matchResults) else null
-                if (matchResult == null) {
+                ecEntry.matchedDataCall = if (parameterType is DataCallExpression) ExpressionMatcher.computeMatchingExpressions(parameterType, ecEntry.constructorTypechecked, true, ecEntry.matchedSubstitutions) else null
+                if (ecEntry.matchedDataCall == null) {
                     errorHintBuffer.append("ExpectedConstructorError quickfix was unable to compute matching expressions for the case parameter ${ecEntry.error.parameter}\n")
                     reportError(ecEntry, currentClause)
                     return
                 }
-                ecEntry.caseMatchData = Pair(matchResult, matchResults)
 
-                if (ecEntry.error.caseExpressions != null) for (triple in DependentLink.Helper.toList(thisError.clauseParameters).zip(ecEntry.error.caseExpressions.zip(caseExprPsi.caseArguments))) {
-                    parameterToCaseArgMap[triple.first] = triple.second.second
-                    parameterToCaseExprMap.add(triple.first, triple.second.first)
+                if (ecEntry.error.caseExpressions != null) {
+                    for (triple in DependentLink.Helper.toList(thisError.clauseParameters)
+                        .zip(ecEntry.error.caseExpressions.zip(concreteCaseExpression.arguments))) {
+                        parameterToCaseExprMap.add(triple.first, triple.second.first)
+                        concreteParameterToCaseArgMap[triple.first] = triple.second.second
+                    }
                 }
             }
 
-            override fun computeClauses(): List<Abstract.Clause>? = caseExprPsi.withBody?.clauseList
-
             override fun preparePatternTypechecking(concreteDefinition: Concrete.GeneralDefinition): PatternTypecheckingData {
-                var concreteCaseExpr: Concrete.CaseExpression? = null
-
-                if (concreteDefinition is Concrete.BaseFunctionDefinition) {
-                    val children = ArrayList<Concrete.Expression>()
-                    when (val b = concreteDefinition.body) {
-                        is Concrete.ElimFunctionBody -> for (c in b.clauses) children.add(c.expression)
-                        is Concrete.TermFunctionBody -> children.add(b.term)
-                        is Concrete.CoelimFunctionBody -> for (cce in b.coClauseElements) if (cce is Concrete.ClassFieldImpl) children.add(cce.implementation)
-                    }
-
-                    val searcher = object : VoidConcreteVisitor<Void>() {
-                        override fun visitCase(expr: Concrete.CaseExpression?, params: Void?): Void? {
-                            if (expr?.data == caseExprPsi) concreteCaseExpr = expr
-                            return super.visitCase(expr, params)
-                        }
-                    }
-                    for (child in children) child.accept(searcher, null)
-                }
-
                 val eliminatedReferences = when (concreteDefinition) {
                     is Concrete.BaseFunctionDefinition -> (concreteDefinition.body as? Concrete.ElimFunctionBody)?.eliminatedReferences
                     is Concrete.DataDefinition -> concreteDefinition.eliminatedReferences
@@ -489,87 +428,221 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                     else -> null
                 }
 
-                val concreteCaseExprVal = concreteCaseExpr ?: throw IllegalStateException("ExpectedConstructorError quickfix failed to find \"concrete\" version of the case expression upon which it was invoked")
-
-                return PatternTypecheckingData(PatternTypechecking.Mode.CASE, thisError.clauseParameters, concreteCaseExprVal.clauses, eliminatedReferences, null)
+                return PatternTypecheckingData(PatternTypechecking.Mode.CASE, thisError.clauseParameters, concreteCaseExpression.clauses, eliminatedReferences, null)
             }
 
-            override fun createEcEntry(error: ExpectedConstructorError, clause: Concrete.Clause, substitution: ExprSubstitution, constructorTypechecked: Constructor) = CaseErrorEntry(error, clause, substitution, constructorTypechecked)
+            override fun createClauseEntry(error: ExpectedConstructorError, clause: Concrete.Clause, substitution: ExprSubstitution, constructorTypechecked: Constructor) =
+                CaseClauseEntry(error, clause, substitution, constructorTypechecked)
 
-            override fun calculateEntriesToEliminate(ecEntry: CaseErrorEntry) {
+            override fun calculateEntriesToEliminate(ecEntry: CaseClauseEntry) {
                 // STEP 2C: Calculate the list of expressions which need to be eliminated or specialized
-                val cmd = ecEntry.caseMatchData
-                if (cmd != null) {
+                val matchedDataCall = ecEntry.matchedDataCall
+                if (matchedDataCall != null) {
                     val stuckParameter = ecEntry.error.parameter
-                    val correspondingCaseArg = parameterToCaseArgMap[stuckParameter]!! //Safe as stuckParameter is one error.clauseParameters
-                    val sampleQualification = caseTypeQualifications[correspondingCaseArg]
-                    if (sampleQualification == null) {
-                        caseTypeQualifications[correspondingCaseArg] = cmd.first
-                        for (mr in cmd.second) {
-                            caseBindings[mr.binding] = Pair(correspondingCaseArg, mr.expression)
+                    val correspondingConcreteCaseArg = concreteParameterToCaseArgMap[stuckParameter]!!
+
+                    val concreteSampleQualification = concreteCaseTypeQualifications[correspondingConcreteCaseArg]
+                    if (concreteSampleQualification == null) {
+                        concreteCaseTypeQualifications[correspondingConcreteCaseArg] = matchedDataCall
+
+                        for (mr in ecEntry.matchedSubstitutions) {
+                            concreteCaseBindings[mr.binding] = Pair(correspondingConcreteCaseArg, mr.expression)
                             val mrPattern = mr.pattern
-                            if (mrPattern !is BindingPattern && mrPattern is ExpressionPattern) ecEntry.correctedSubsts[mr.binding] = mrPattern
+                            if (mrPattern !is BindingPattern && mrPattern is ExpressionPattern)
+                                ecEntry.correctedSubsts[mr.binding] = mrPattern
                         }
                     } else {
                         val substitution = ExprSubstitution()
-                        sBELoop@for (sampleBindingEntry in caseBindings) for (mr in cmd.second) {
-                            val expr1 = mr.expression
+                        sBELoop@for (sampleBindingEntry in concreteCaseBindings) for (matchResult in ecEntry.matchedSubstitutions) {
+                            val expr1 = matchResult.expression
                             val expr2 = sampleBindingEntry.value.second
                             if (expr1 == expr2) {
-                                substitution.add(mr.binding, ReferenceExpression(sampleBindingEntry.key))
+                                substitution.add(matchResult.binding, ReferenceExpression(sampleBindingEntry.key))
                                 continue@sBELoop
                             }
                         }
-                        val cmdType = cmd.first.accept(SubstVisitor(substitution, LevelSubstitution.EMPTY), null)
-                        if (cmdType != sampleQualification) {
+                        val cmdType = matchedDataCall.accept(SubstVisitor(substitution, LevelSubstitution.EMPTY), null)
+                        if (cmdType != concreteSampleQualification) {
                             errorHintBuffer.append("Calculated type expressions for the case argument do not match between the clauses")
-                            errorHintBuffer.append("Case argument: ${parameterToCaseArgMap[stuckParameter]?.text}")
                             reportError(ecEntry, ecEntry.clause.data as Abstract.Clause)
-                        } else for (mr in cmd.second) {
-                            val matchedCaseBinding = (substitution.get(mr.binding) as? ReferenceExpression)?.binding
-                            val mrPattern = mr.pattern
-                            if (matchedCaseBinding != null && mrPattern !is BindingPattern && mrPattern is ExpressionPattern) ecEntry.correctedSubsts[matchedCaseBinding] = mrPattern
+                        } else for (matchResult in ecEntry.matchedSubstitutions) {
+                            val matchedCaseBinding = (substitution.get(matchResult.binding) as? ReferenceExpression)?.binding
+                            val mrPattern = matchResult.pattern
+                            if (matchedCaseBinding != null && mrPattern !is BindingPattern && mrPattern is ExpressionPattern)
+                                ecEntry.correctedSubsts[matchedCaseBinding] = mrPattern
                         }
                     }
                 }
             }
 
-            override fun doEliminateAndInitializePrimers(expectedConstructorErrorEntries: List<CaseErrorEntry>, clausesListPsi: List<Abstract.Clause>?, definitionParameters: List<DependentLink>, elimParams: List<DependentLink>) {
-                val bindingToCaseArgMap = HashMap<Binding, ArendCaseArg>()
-                val oldCaseArgs = caseExprPsi.caseArguments
+            override fun rebuildDefinition(
+                scope: Scope,
+                expectedConstructorErrorEntries: List<CaseClauseEntry>,
+                elimParams: List<DependentLink>
+            ): Concrete.CaseExpression {
+                val bindingToCaseArgMap = HashMap<Binding, Concrete.CaseArgument>()
+                val newCaseArgs = ArrayList<Pair<Concrete.CaseArgument, Concrete.CaseArgument?>>(concreteCaseExpression.arguments.map { Pair(it, it) })
 
-                doInitOccupiedLocalNames(caseExprPsi, caseOccupiedLocalNames)
+                val definitionRenamer = ScopeDefinitionRenamer(scope)
+                val ppConfig = object : PrettyPrinterConfig { override fun getDefinitionRenamer(): DefinitionRenamer = definitionRenamer }
+                val occupiedNames = HashSet<String>()
+                val localReferables = HashMap<Any, Referable>()
 
-                cBLoop@for (caseBinding in caseBindings) {
-                    val caseBindingUsedInSubsts = expectedConstructorErrorEntries.any { it.correctedSubsts.keys.contains(caseBinding.key) }
-                    if (!caseBindingUsedInSubsts) continue@cBLoop
-                    val expression = caseBinding.value.second.accept(SubstVisitor(parameterToCaseExprMap, LevelSubstitution.EMPTY), null)
-
-                    doInsertCaseArgs(psiFactory, caseExprPsi, oldCaseArgs, caseBinding.key, expression, caseBinding.value.first, thisError.caseExpressions, caseOccupiedLocalNames, bindingToCaseArgMap,expectedConstructorErrorEntries)
+                for (clause in concreteCaseExpression.clauses) clause.expression?.data?.let {
+                    val collector = LocalVariablesCollector(it)
+                    (concreteDefinition as? Concrete.BaseFunctionDefinition)?.accept(collector, null)
+                    occupiedNames.addAll(collector.names)
+                    collector.result?.forEach { container -> if (container is DataContainer) container.data?.let { d -> localReferables[d] = container } }
                 }
 
-                val toInsertedBindingsSubstitution = ExprSubstitution()
-                for (e in bindingToCaseArgMap) toInsertedBindingsSubstitution.add(e.key, ReferenceExpression(UntypedDependentLink(e.value.referable!!.name))) // all caseArgExprAs in this map actually have "as"-part, so this is safe to write
+                cBLoop@for ((binding, pair) in concreteCaseBindings) {
+                    val (dependentCaseArg, expression) = pair
 
-                for (ctq in caseTypeQualifications) doWriteTypeQualification(psiFactory, ctq.value.subst(toInsertedBindingsSubstitution), ctq.key)
+                    val caseBindingUsedInSubsts = expectedConstructorErrorEntries.any { it.correctedSubsts.keys.contains(binding) }
+                    if (!caseBindingUsedInSubsts) continue@cBLoop
+                    val expressionAfterSubstitution = expression.accept(SubstVisitor(parameterToCaseExprMap, LevelSubstitution.EMPTY), null)
 
-                if (clausesListPsi != null) doInsertPatternPrimers(psiFactory, clausesListPsi, caseExprPsi, oldCaseArgs, bindingToCaseArgMap, clauseToEntryMap) else throw IllegalStateException()
+                    val compositeMap = HashMap<Binding, LocalReferable>()
+                    for (binding in thisError.myDataContext) (localReferables[binding.value] as? LocalReferable)?.let { compositeMap[binding.key] = it }
+                    doInsertCaseArgsConcrete(ppConfig, concreteCaseExpression.arguments, newCaseArgs, binding, expressionAfterSubstitution, dependentCaseArg, thisError.caseExpressions, occupiedNames, bindingToCaseArgMap, concreteCaseTypeQualifications, compositeMap)
+                }
+
+                val referableRenamer = object: ReferableRenamer() {
+                    override fun generateFreshNames(variables: Collection<Variable?>?) {
+                        super.generateFreshNames(variables?.filter { !bindingToCaseArgMap.keys.contains(it) })
+                    }
+                }
+                for ((binding, caseArg) in bindingToCaseArgMap.entries) {
+                    val caseReferable = caseArg.referable
+                    if (caseReferable is LocalReferable)
+                        referableRenamer.addNewName(binding, caseReferable)
+                }
+
+                for (caseArg in newCaseArgs) {
+                    val qualification = concreteCaseTypeQualifications[caseArg.second]
+                    if (qualification != null) caseArg.first.type = ToAbstractVisitor.convert(qualification, ppConfig, referableRenamer)
+                }
+
+                val newClauses = ArrayList<Concrete.FunctionClause>()
+                for (clause in concreteCaseExpression.clauses) {
+                    val patterns = ArrayList<Concrete.Pattern>()
+                    val entry = clauseToEntryMap[clause.data]
+                    val correctedSubstsNew = HashMap<Variable, ExpressionPattern>()
+                    entry?.correctedSubsts?.let { correctedSubstsNew.putAll(it) }
+                    val sink = HashMap<Referable, Concrete.Expression>()
+                    val newPatterns = HashMap<Concrete.CaseArgument, Concrete.Pattern>()
+
+                    if (entry != null) for (substEntry in entry.correctedSubsts) {
+                        val newCaseArg = bindingToCaseArgMap[substEntry.key]!!
+                        val oldCaseArg = newCaseArgs.first { it.first == newCaseArg }.second
+                        val index = concreteCaseExpression.arguments.indexOf(oldCaseArg)
+
+                        if (index != -1) {
+                            newPatterns[newCaseArg] = reconstructPattern(scope, substEntry.value, clause.patterns[index], correctedSubstsNew, sink, emptyList<DependentLink>().iterator())
+                        } else {
+                            val localReferable = (newCaseArg.expression as? Concrete.ReferenceExpression)?.referent as? LocalReferable
+                            newPatterns[newCaseArg] = reconstructPattern(scope, substEntry.value, Concrete.NamePattern(null, true, localReferable ?: newCaseArg.referable, null),
+                                correctedSubstsNew, sink, emptyList<DependentLink>().iterator(), ((substEntry.key as? TypedBinding)?.type as? DataCallExpression)?.definition, newCaseArg.referable?.refName)
+                        }
+                    }
+
+                    for (caseArg in newCaseArgs) {
+                        val index = concreteCaseExpression.arguments.indexOf(caseArg.second)
+                        patterns.add(newPatterns[caseArg.first] ?: if (index == -1) {
+                            Concrete.NamePattern(null, true, LocalReferable(caseArg.first.referable!!.refName), null)
+                        } else {
+                            clause.patterns[index]
+                        })
+                    }
+
+                    val arendFile = (definitionPsi as? PsiElement)?.containingFile as? ArendFile
+                    val substVisitor = ScopeAwareSubstConcreteVisitor(server, typecheckedDefinition.referable ?: if (arendFile != null) FullModuleReferable(arendFile.moduleLocation) else null, arendFile?.moduleLocation, sink)
+                    val substResult = clause.expression.accept(substVisitor, null)
+
+                    newClauses.add(Concrete.FunctionClause(null, patterns, substResult))
+                }
+
+                val arendFile = (definitionPsi as? PsiElement)?.containingFile as? ArendFile
+                val longNameFixingVisitor = ScopeAwareSubstConcreteVisitor(server, typecheckedDefinition.referable ?: if (arendFile != null) FullModuleReferable(arendFile.moduleLocation) else null, arendFile?.moduleLocation, emptyMap())
+
+                return Concrete.CaseExpression(null, concreteCaseExpression.isSCase, newCaseArgs.map {
+                    Concrete.CaseArgument(it.first.expression.accept(longNameFixingVisitor, null),
+                        it.first.referable,
+                        it.first.type?.accept(longNameFixingVisitor, null), it.first.isElim) }, concreteCaseExpression.resultType,
+                    concreteCaseExpression.resultTypeLevel, newClauses)
             }
 
-            override fun getOccupiedNames(variablePatterns: HashSet<ArendDefIdentifier>): HashSet<String?> = caseOccupiedLocalNames.map { it }.toHashSet()
+            private fun doInsertCaseArgsConcrete(ppConfig: PrettyPrinterConfig,
+                                                 oldCaseArgs: List<Concrete.CaseArgument>,
+                                                 newCaseArgs: MutableList<Pair<Concrete.CaseArgument, Concrete.CaseArgument?>>,
+                                                 binding: Binding,
+                                                 expression: Expression,
+                                                 dependentCaseArg: Concrete.CaseArgument,
+                                                 caseExpressions: List<Expression>,
+                                                 caseOccupiedLocalNames: HashSet<String>,
+                                                 bindingToCaseArgMap: HashMap<Binding, Concrete.CaseArgument>,
+                                                 typeQualifications: Map<Concrete.CaseArgument, DataCallExpression>,
+                                                 localReferables: Map<Binding, LocalReferable>) {
+                val renamer = StringRenamer()
+                val freshName = if (expression is ReferenceExpression) expression.binding.name else
+                    renamer.generateFreshName(TypedBinding(null, binding.typeExpr), caseOccupiedLocalNames.map{ VariableImpl(it) })
+                caseOccupiedLocalNames.add(freshName)
+                var replaceKey: Concrete.CaseArgument? = null
+                var replaceValue: Concrete.CaseArgument? = null
+                var foundExpression = false
+
+                for (ce in caseExpressions.zip(oldCaseArgs))
+                    if (expression == ce.first) {
+                        foundExpression = true
+                        bindingToCaseArgMap[binding] = if (ce.second.referable == null) {
+                            val type = typeQualifications[ce.second]?.let { ToAbstractVisitor.convert(it, ppConfig) } ?: ce.second.type
+                            val newBinding = Concrete.CaseArgument(ce.second.expression, LocalReferable(freshName), type)
+                            replaceKey = ce.second
+                            replaceValue = newBinding
+                            newBinding
+                        } else
+                            ce.second
+
+                        break
+                    }
+
+                if (replaceKey != null && replaceValue != null) {
+                    val index = newCaseArgs.indexOfFirst {it.second == replaceKey}
+                    if (index != -1) {
+                        newCaseArgs.removeAt(index)
+                        newCaseArgs.add(index, Pair(replaceValue, replaceKey))
+                    }
+                }
+
+                if (foundExpression) return
+
+                val referableRenamer = object : ReferableRenamer() {
+                    override fun generateFreshNames(variables: Collection<Variable?>?) {
+                        super.generateFreshNames(variables?.filter { !localReferables.keys.contains(it) })
+                    }
+                }
+                for (entry in localReferables) referableRenamer.addNewName(entry.key, entry.value)
+                val abstractExpr = ToAbstractVisitor.convert(expression, ppConfig, referableRenamer)
+                val newCaseArg = Concrete.CaseArgument(abstractExpr, LocalReferable(freshName), null)
+                val index = newCaseArgs.indexOfFirst {it.second == dependentCaseArg}
+                newCaseArgs.add(index, Pair(newCaseArg, null))
+                bindingToCaseArgMap[binding] = newCaseArg
+            }
         }
 
-        class ElimWithExpectedConstructorErrorQuickFix(thisError: ExpectedConstructorError, cause: SmartPsiElementPointer<ArendCompositeElement>, project: Project): ExpectedConstructorQuickFixRunner<ElimWithErrorEntry>(thisError, cause, project) {
-            private val elimPsi = when {
-                bodyPsi != null -> bodyPsi.elim
-                constructorPsi != null -> constructorPsi.elim
-                dataBodyPsi != null -> dataBodyPsi.elim
-                else -> null
-            }
+        private class ElimWithExpectedConstructorErrorQuickFix(
+            thisError: ExpectedConstructorError,
+            project: Project,
+            concreteDefinition: Concrete.GeneralDefinition,
+            val constructorPsi: PsiElement?,
+            typecheckedDefinition: Definition):
+            ExpectedConstructorQuickFixRunner<ElimClauseEntry>(thisError, project, concreteDefinition, typecheckedDefinition) {
+            private val definitionParametersToEliminate = HashSet<DependentLink>() // Subset of definitionParameters (global)
 
-            private val definitionParametersToEliminate = HashSet<Variable>() // Subset of definitionParameters (global)
+            override fun getTextRange(): TextRange =
+                (concreteDefinition.data.data as PsiElement).textRange
 
-            override fun computeMatchingPatterns(ecEntry: ElimWithErrorEntry, definitionParameters: List<DependentLink>, elimParams: List<DependentLink>) {
+            override fun computeMatchingPatterns(ecEntry: ElimClauseEntry, definitionParameters: List<DependentLink>, elimParams: List<DependentLink>) {
                 val parameterType = ecEntry.error.parameter?.type
                 val currentClause = ecEntry.clause.data as Abstract.Clause
                 val concreteCurrentClause = ecEntry.clause
@@ -598,7 +671,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 //This piece of code filters out trivial substitutions and also ensures that the key of each substitution is either an element of definitionParametersToEliminate or clauseParametersToSpecialize
                 for (subst in rawSubsts) if (subst.value !is BindingPattern) {
                     if (definitionParameters.contains(subst.key)) {
-                        ecEntry.clauseDefinitionParametersToEliminate.add(subst.key)
+                        ecEntry.clauseDefinitionParametersToEliminate.add(subst.key as DependentLink)
                         ecEntry.correctedSubsts[subst.key] = subst.value
                     } else {
                         val localClauseBinding =
@@ -607,7 +680,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                             val definitionBinding = clauseToDefinitionMap[localClauseBinding]
                             if (definitionBinding != null && definitionParameters.contains(definitionBinding)) {
                                 ecEntry.correctedSubsts[definitionBinding] = subst.value
-                                ecEntry.clauseDefinitionParametersToEliminate.add(definitionBinding)
+                                ecEntry.clauseDefinitionParametersToEliminate.add(definitionBinding as DependentLink)
                             } else if (clauseParameters.contains(localClauseBinding)) {
                                 ecEntry.correctedSubsts[localClauseBinding] = subst.value
                                 ecEntry.clauseParametersToSpecialize.add(localClauseBinding)
@@ -617,16 +690,11 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 }
 
                 //STEP 3: Match clauseParameters with currentClause PSI
-                if (!matchConcreteWithWellTyped(currentClause as PsiElement, concreteCurrentClause.patterns, prepareExplicitnessMask(definitionParameters, elimParams), clauseParameters.iterator(), ecEntry.matchData) ||
+                if (!matchConcreteWithWellTyped(currentClause as PsiElement, concreteCurrentClause,
+                        concreteCurrentClause.patterns, prepareExplicitnessMask(definitionParameters, elimParams),
+                        clauseParameters.iterator(), ecEntry.matchData, ecEntry.matchDataConcrete) ||
                     ecEntry.clauseParametersToSpecialize.any { ecEntry.matchData[it] == null })
                     throw IllegalStateException("ExpectedConstructorError quickfix failed to calculate the correspondence between psi and concrete name patterns")
-            }
-
-            override fun computeClauses(): List<Abstract.Clause>? = when {
-                bodyPsi is ArendFunctionBody -> bodyPsi.functionClauses?.clauseList
-                constructorPsi != null -> constructorPsi.clauses
-                dataBodyPsi != null -> dataBodyPsi.constructorClauseList
-                else -> null
             }
 
             override fun preparePatternTypechecking(concreteDefinition: Concrete.GeneralDefinition): PatternTypecheckingData {
@@ -645,10 +713,8 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 }
 
                 val typecheckedParameters = when {
-                    constructorPsi != null -> {
-                        (definition?.typechecked as? DataDefinition)?.constructors?.firstOrNull { it.referable.data == constructorPsi }?.parameters
-                    }
-                    else -> definition?.typechecked?.parameters
+                    constructorPsi != null -> (definition.typechecked as? DataDefinition)?.constructors?.firstOrNull { it.referable.data == constructorPsi }?.parameters
+                    else -> definition.typechecked?.parameters
                 } ?: EmptyDependentLink.getInstance()
 
                 val clauses = when (concreteDefinition) {
@@ -668,401 +734,111 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 return PatternTypecheckingData(mode, typecheckedParameters, clauses, eliminatedReferences, parameters)
             }
 
-            override fun createEcEntry(error: ExpectedConstructorError, clause: Concrete.Clause, substitution: ExprSubstitution, constructorTypechecked: Constructor) = ElimWithErrorEntry(error, clause, substitution, constructorTypechecked)
+            override fun createClauseEntry(error: ExpectedConstructorError, clause: Concrete.Clause, substitution: ExprSubstitution, constructorTypechecked: Constructor) =
+                ElimClauseEntry(error, clause, substitution, constructorTypechecked)
 
-            override fun calculateEntriesToEliminate(ecEntry: ElimWithErrorEntry) {
+            override fun calculateEntriesToEliminate(ecEntry: ElimClauseEntry) {
                 definitionParametersToEliminate.addAll(ecEntry.clauseDefinitionParametersToEliminate)
             }
 
-            override fun doEliminateAndInitializePrimers(expectedConstructorErrorEntries: List<ElimWithErrorEntry>, clausesListPsi: List<Abstract.Clause>?, definitionParameters: List<DependentLink>, elimParams: List<DependentLink>) {
-                if (elimParams.isNotEmpty() && elimPsi != null) { //elim
-                    val paramsMap = HashMap<DependentLink, ArendRefIdentifier>()
-                    for (e in elimParams.zip(elimPsi.refIdentifierList)) paramsMap[e.first] = e.second
-                    for (ecEntry in expectedConstructorErrorEntries) for (e in elimParams.zip((ecEntry.clause.data as Abstract.Clause).patterns)) (e.second as? ArendPattern)?.let { ecEntry.patternPrimers[e.first] = it}
+            override fun rebuildDefinition(scope: Scope, expectedConstructorErrorEntries: List<ElimClauseEntry>, elimParams: List<DependentLink>): Concrete.GeneralDefinition {
+                val oldEliminatedReferences = ArrayList<Concrete.ReferenceExpression>()
+                val newEliminatedReferences = ArrayList<Concrete.ReferenceExpression>()
 
-                    definitionParametersToEliminate.removeAll(elimParams.toSet())
+                when (concreteDefinition) {
+                    is Concrete.FunctionDefinition -> oldEliminatedReferences.addAll((concreteDefinition.body as Concrete.ElimFunctionBody).eliminatedReferences)
+                    is Concrete.DataDefinition -> oldEliminatedReferences.addAll(
+                        concreteDefinition.eliminatedReferences ?: emptyList()
+                    )
 
-                    doInsertElimVars(psiFactory, definitionParameters, definitionParametersToEliminate, elimPsi, paramsMap)
+                    is Concrete.Constructor -> oldEliminatedReferences.addAll(concreteDefinition.eliminatedReferences)
+                    else -> throw IllegalStateException()
+                }
 
-                    if (clausesListPsi != null) for (transformedClause in clausesListPsi)
-                        doInsertPrimers(psiFactory, transformedClause, definitionParameters, elimParams, definitionParametersToEliminate, clauseToEntryMap[transformedClause]?.patternPrimers) { p -> p.name }
-                } else if (clausesListPsi != null) {
-                    for (ecEntry in expectedConstructorErrorEntries) {
-                        val currentClause = ecEntry.clause.data as ArendClause
-                        val parameterIterator = definitionParameters.iterator()
-                        val patternIterator = currentClause.patterns.iterator()
-                        val patternMatchedParameters = LinkedHashSet<Variable>()
-                        while (parameterIterator.hasNext() && patternIterator.hasNext()) {
-                            val pattern = patternIterator.next()
-                            var parameter: DependentLink? = parameterIterator.next()
-                            if (pattern.isExplicit) while (parameter != null && !parameter.isExplicit)
-                                parameter = if (parameterIterator.hasNext()) parameterIterator.next() else null
-                            if (parameter != null && pattern.isExplicit == parameter.isExplicit) {
-                                patternMatchedParameters.add(parameter)
-                                ecEntry.patternPrimers[parameter] = pattern
-                            }
-                        }
+                val typecheckedParameters =
+                    DependentLink.Helper.toList(typecheckedDefinition.parameters).filter { !it.isHidden }
+                val concreteParameters = concreteDefinition.parameters.map { p -> p.referableList }.flatten().toList()
 
-                        val newVars = definitionParametersToEliminate.minus(patternMatchedParameters)
-                        val newVarsPlusPrecedingImplicitVars = HashSet<Variable>(newVars)
-                        var implicitFlag = false
-                        for (param in definitionParameters.reversed()) {
-                            if (implicitFlag && !param.isExplicit) newVarsPlusPrecedingImplicitVars.add(param)
-                            if (newVars.contains(param) && !param.isExplicit) implicitFlag = true
-                            if (param.isExplicit) implicitFlag = false
-                        }
+                val isWithMode = oldEliminatedReferences.isEmpty()
 
-                        doInsertPrimers(psiFactory, currentClause, definitionParameters, ArrayList(patternMatchedParameters), newVarsPlusPrecedingImplicitVars, ecEntry.patternPrimers) { binding ->
-                            val builder = StringBuilder()
-                            if (binding is DependentLink && !binding.isExplicit) builder.append("{")
-                            builder.append(if (newVars.contains(binding)) binding.name else "_")
-                            if (binding is DependentLink && !binding.isExplicit) builder.append("}")
-                            builder.toString()
-                        }
+                for ((concreteParameter, typecheckedParameter) in concreteParameters.zip(typecheckedParameters)) { //TODO: This may not correctly process 100% of cases
+                    if (oldEliminatedReferences.indexOfFirst { it.referent == concreteParameter } != -1 ||
+                        definitionParametersToEliminate.contains(typecheckedParameter) && !isWithMode) {
+                        newEliminatedReferences.add(Concrete.ReferenceExpression(null, concreteParameter))
                     }
                 }
 
-                for (ecEntry in expectedConstructorErrorEntries) {
-                    for (p in ecEntry.clauseParametersToSpecialize) {
-                        when (val descriptor = ecEntry.matchData[p]) {
-                            is ExplicitNamePattern -> ecEntry.patternPrimers[p] = descriptor.bindingPsi.let { if (it is ArendPattern) it else it.parent as ArendPattern }
-                            is ImplicitConstructorPattern -> {
-                                val positionKey = Pair(descriptor.enclosingNode, descriptor.followingParameter)
-                                var positionList = ecEntry.insertData[positionKey]
-                                if (positionList == null) {
-                                    positionList = ArrayList()
-                                    ecEntry.insertData[positionKey] = positionList
+                for (clauseEntry in expectedConstructorErrorEntries) {
+                    val clauseParameters = DependentLink.Helper.toList(clauseEntry.error.patternParameters)
+                    clauseEntry.patterns.addAll(reconstructList(scope, typecheckedParameters, concreteParameters, if (isWithMode) null else elimParams.toSet(), clauseEntry.clause.patterns, clauseEntry.correctedSubsts, clauseEntry.processedConcreteSubstitutions, clauseParameters.iterator()))
+                }
+
+                val clauses = ArrayList<Concrete.FunctionClause>()
+                val constructorClauses = ArrayList<Concrete.ConstructorClause>()
+
+                for (entry in expectedConstructorErrorEntries) {
+                    val patterns = entry.patterns
+                    val arendFile = (definitionPsi as? PsiElement)?.containingFile as? ArendFile
+                    val substVisitor = ScopeAwareSubstConcreteVisitor(server, typecheckedDefinition.referable ?: if (arendFile != null) FullModuleReferable(arendFile.moduleLocation) else null, arendFile?.moduleLocation, entry.processedConcreteSubstitutions)
+                    when (entry.clause) {
+                        is Concrete.ConstructorClause -> {
+                            val constructors = ArrayList<Concrete.Constructor>()
+                            for (constructor in entry.clause.constructors) {
+                                val typeParameters = ArrayList<Concrete.TypeParameter>()
+                                for (parameter in constructor.parameters) {
+                                    val type = parameter.type.accept(substVisitor, null)
+                                    typeParameters.add(Concrete.TypeParameter(parameter.isExplicit, type, parameter.isProperty ))
                                 }
-                                positionList.add(Pair(descriptor.implicitArgCount, p))
+                                val newConstructor = Concrete.Constructor(constructor.data, typeParameters, constructor.eliminatedReferences, constructor.clauses, constructor.isCoerce)
+                                constructors.add(newConstructor)
                             }
+                            constructorClauses.add(Concrete.ConstructorClause(entry.clause.data, patterns, constructors))
+                        }
+                        is Concrete.FunctionClause -> {
+                            val newExpression = entry.clause.expression.accept(substVisitor, null)
+                            clauses.add(Concrete.FunctionClause(entry.clause.data, patterns, newExpression))
                         }
                     }
-
-                    insertPrimers(psiFactory, ecEntry.insertData) { a, b -> ecEntry.patternPrimers[a] = b }
                 }
-            }
 
-            override fun getOccupiedNames(variablePatterns: HashSet<ArendDefIdentifier>): HashSet<String?> = variablePatterns.map { it.name }.toHashSet()
-        }
+                when (concreteDefinition) {
+                    is Concrete.Constructor -> return Concrete.Constructor(concreteDefinition.data, concreteDefinition.parameters, newEliminatedReferences, clauses, concreteDefinition.isCoerce)
+                    is Concrete.DataDefinition -> {
+                        return Concrete.DataDefinition(concreteDefinition.data, concreteDefinition.pLevelParameters, concreteDefinition.hLevelParameters, concreteDefinition.parameters,
+                            newEliminatedReferences, concreteDefinition.isTruncated, concreteDefinition.universe, constructorClauses)
+                    }
 
-        private fun collectBindings(pattern: Concrete.Pattern, collectedVariables: MutableList<PsiElement>) {
-            val data = pattern.data as PsiElement
-            when (pattern) {
-                is Concrete.NamePattern -> collectedVariables.add(data)
-                is Concrete.ConstructorPattern -> for (p in pattern.patterns) collectBindings(p, collectedVariables)
-                is Concrete.TuplePattern -> for (p in pattern.patterns) collectBindings(p, collectedVariables)
-                else -> {
-                }
-            }
-        }
-
-        data class PatternPrintResult(val patternString: String, val requiresParentheses: Boolean, val complexity: Int, val containsClassConstructor: Boolean)
-
-        fun printPattern(pattern: Pattern,
-                         location: ArendCompositeElement,
-                         occupiedVariables: List<Variable>,
-                         newVariables: MutableList<String>,
-                         renamer: Renamer): PatternPrintResult {
-            if (pattern.isAbsurd)
-                return PatternPrintResult("()", false, 1, false)
-            else {
-                val binding = pattern.binding
-                if (binding != null) {
-                    val result = renamer.generateFreshName(binding, occupiedVariables + newVariables.map { VariableImpl(it) })
-                    newVariables.add(result)
-                    return PatternPrintResult(result, false, 1, false)
-                } else {
-                    val integralNumber = ImplementMissingClausesQuickFix.getIntegralNumber(pattern)
-                    if (integralNumber != null && abs(integralNumber) < Concrete.NumberPattern.MAX_VALUE)
-                        return PatternPrintResult(integralNumber.toString(), false, 1, false)
-                    else {
-                        val constructor = pattern.constructor
-                        val tupleMode = constructor == null
-                        var constructorArgument: DependentLink = pattern.parameters
-                        val locatedReferable = if (constructor != null) PsiLocatedReferable.fromReferable(constructor.referable) else null
-                        var result = if (locatedReferable != null) ResolveReferenceAction.getTargetName(locatedReferable, location)?.let { (name, namespaceCommand) ->
-                            namespaceCommand?.execute()
-                            "$name "
-                        } ?: "" else "("
-                        val patternIterator = pattern.subPatterns.iterator()
-                        var complexity = 1
-                        var containsClassConstructor = tupleMode && pattern.definition is ClassDefinition
-
-                        while (patternIterator.hasNext()) {
-                            val argumentPattern = patternIterator.next()
-                            val argumentData = printPattern(argumentPattern, location, occupiedVariables, newVariables, renamer)
-                            complexity += argumentData.complexity
-                            if (argumentData.containsClassConstructor) containsClassConstructor = true
-
-                            result += when {
-                                !constructorArgument.isExplicit -> "{${argumentData.patternString}}"
-                                !tupleMode && argumentData.requiresParentheses -> "(${argumentData.patternString})"
-                                else -> argumentData.patternString
-                            }
-                            if (patternIterator.hasNext()) result += if (tupleMode) ", " else " "
-
-                            if (constructorArgument.hasNext()) constructorArgument = constructorArgument.next
-                        }
-
-                        if (tupleMode) result += ")"
-
-                        return PatternPrintResult(result, pattern.subPatterns.isNotEmpty() && !tupleMode, complexity, containsClassConstructor)
+                    is Concrete.FunctionDefinition -> {
+                        val oldBody = concreteDefinition.body as Concrete.ElimFunctionBody
+                        val newBody = Concrete.ElimFunctionBody(oldBody.data, newEliminatedReferences, clauses)
+                        return Concrete.FunctionDefinition(concreteDefinition.kind, concreteDefinition.data, concreteDefinition.pLevelParameters, concreteDefinition.hLevelParameters,
+                            concreteDefinition.parameters, concreteDefinition.resultType, concreteDefinition.resultTypeLevel, newBody)
                     }
                 }
-            }
-        }
 
-        fun unify(pattern: ExpressionPattern, concretePattern: Concrete.Pattern,
-                  processedSubstitutions: MutableMap<PsiElement, ExpressionPattern>,
-                  newPrimers: MutableMap<ImplicitConstructorPattern, ExpressionPattern>,
-                  mismatchedPatterns: MutableMap<PsiElement, Pair<ExpressionPattern, List<PsiElement>>>) {
-            val data = concretePattern.data as PsiElement
 
-            fun processMismatchedPattern() {
-                val bindingsToRemove = ArrayList<PsiElement>()
-                collectBindings(concretePattern, bindingsToRemove)
-                mismatchedPatterns[data] = Pair(pattern, bindingsToRemove)
-            }
-
-            when (concretePattern) {
-                is Concrete.NamePattern -> if (pattern !is BindingPattern) processedSubstitutions[data] = pattern
-                is Concrete.ConstructorPattern -> { //TODO: Code too similar to "matchConcreteWithWellTyped". Could we somehow isolate common pieces of code for these functions?
-                    val existingConstructor = concretePattern.constructor
-                    val substitutedConstructor = (pattern.constructor)?.referable
-                    if (pattern is ConstructorExpressionPattern && existingConstructor != null && substitutedConstructor == existingConstructor) {
-                        val bindingsIterator = DependentLink.Helper.toList(substitutedConstructor.typechecked.parameters).iterator()
-                        val constructorExpressionParameters = pattern.subPatterns.iterator()
-                        val concreteSubPatternsIterator = concretePattern.patterns.iterator()
-
-                        var concreteSubPattern: Concrete.Pattern? = null
-                        var skippedParameters = 0
-                        fun nextConcretePattern() {
-                            concreteSubPattern = if (concreteSubPatternsIterator.hasNext()) concreteSubPatternsIterator.next() else null
-                            skippedParameters = 0
-                        }
-                        nextConcretePattern()
-
-                        while (bindingsIterator.hasNext() && constructorExpressionParameters.hasNext()) {
-                            val currentBinding = bindingsIterator.next()
-                            val currentSubpattern = constructorExpressionParameters.next()
-                            val concreteSubPatternVal = concreteSubPattern
-
-                            if (concreteSubPatternVal != null && concreteSubPatternVal.isExplicit == currentBinding.isExplicit) {
-                                if (currentSubpattern !is BindingPattern) unify(currentSubpattern, concreteSubPatternVal, processedSubstitutions, newPrimers, mismatchedPatterns)
-                                nextConcretePattern()
-                            } else if (concreteSubPatternVal == null || concreteSubPatternVal.isExplicit && !currentBinding.isExplicit) {
-                                val enclosingNode = (concretePattern.data as PsiElement)
-
-                                if (currentSubpattern !is BindingPattern) newPrimers[ImplicitConstructorPattern(enclosingNode, concreteSubPatternVal?.data as? PsiElement, skippedParameters)] = currentSubpattern
-                                skippedParameters++
-                            }
-                        }
-                    } else processMismatchedPattern()
-
-                }
-                is Concrete.NumberPattern ->  if (pattern.match(SmallIntegerExpression(concretePattern.number), ArrayList()) != Decision.YES) processMismatchedPattern()
-                is Concrete.TuplePattern -> if (pattern is ConstructorExpressionPattern && pattern.constructor == null) for (pair in concretePattern.patterns.zip(pattern.subPatterns)) {
-                    unify(pair.second, pair.first, processedSubstitutions, newPrimers, mismatchedPatterns)
-                } else processMismatchedPattern()
+                return concreteDefinition
             }
         }
 
         fun prepareExplicitnessMask(sampleParameters: List<DependentLink>, elimParams: List<DependentLink>?): List<Boolean> =
-                if (!elimParams.isNullOrEmpty()) sampleParameters.map { elimParams.contains(it) } else sampleParameters.map { it.isExplicit }
-
-
-        fun insertPrimers(psiFactory: ArendPsiFactory, insertData: HashMap<Pair<PsiElement, PsiElement?>, MutableList<Pair<Int, Variable>>>, callback: (Variable, ArendPattern) -> Unit) {
-            for (insertDataEntry in insertData) {
-                val toInsertList = insertDataEntry.value
-                var enclosingNode = insertDataEntry.key.first as ArendPattern
-                val position = insertDataEntry.key.second as? ArendPattern
-
-                var skippedParams = 0
-                toInsertList.sortBy { it.first }
-
-                for (entry in toInsertList) {
-                    var patternLine = ""
-                    for (i in 0 until entry.first - skippedParams) patternLine += " {_}"
-                    patternLine += " {${entry.second.name}}"
-                    val atomPattern = psiFactory.createPattern(patternLine)
-                    val templateList = atomPattern.sequence.takeIf { it.isNotEmpty() } ?: listOf(atomPattern)
-                    if (position == null) {
-                        enclosingNode = if (enclosingNode.parent is ArendPattern && enclosingNode.singleReferable != null && !enclosingNode.isTuplePattern) {
-                            enclosingNode.replace(psiFactory.createPattern("(${enclosingNode.text})")) as ArendPattern
-                        } else {
-                            enclosingNode
-                        }
-                        if (!enclosingNode.isExplicit || enclosingNode.isTuplePattern && enclosingNode.sequence.size == 1) {
-                            val rightBrace = enclosingNode.lastChild
-                            val first = enclosingNode.addRangeBefore(templateList.first(), templateList.last(), rightBrace)
-                            enclosingNode.addBefore(psiFactory.createWhitespace(" "), first)
-                            (rightBrace.findPrevSibling() as? ArendPattern)?.let { callback.invoke(entry.second, it) }
-                        } else {
-                            if (enclosingNode.sequence.isEmpty()) {
-                                enclosingNode = enclosingNode.replace(psiFactory.createPattern("${enclosingNode.text}$patternLine")) as ArendPattern
-                            } else {
-                                val first = enclosingNode.addRangeAfter(templateList.first(), templateList.last(), enclosingNode.sequence.last())
-                                enclosingNode.addBefore(psiFactory.createWhitespace(" "), first)
-                            }
-                            enclosingNode.sequence.last().let { callback.invoke(entry.second, it) }
-                        }
-                    } else {
-                        val actualPosition = absorbParenthesesUp(position)
-                        enclosingNode.addRangeBefore(templateList.first(), templateList.last(), actualPosition)
-                        enclosingNode.addBefore(psiFactory.createWhitespace(" "), actualPosition)
-                        (actualPosition.findPrevSibling() as? ArendPattern)?.let { callback.invoke(entry.second, it) }
-                    }
-                    skippedParams = entry.first + 1
-                }
-            }
-        }
-
-        private fun absorbParenthesesUp(pattern: ArendPattern) : ArendPattern {
-            val parent = pattern.parent
-            return if (parent is ArendPattern && parent.isTuplePattern && parent.sequence.size == 1) {
-                absorbParenthesesUp(parent)
-            } else {
-                pattern
-            }
-        }
-
-        fun doInsertPrimers(psiFactory: ArendPsiFactory,
-                            clause: Abstract.Clause,
-                            typecheckedParams: List<Binding>,
-                            eliminatedParams: List<Variable>,
-                            eliminatedVars: HashSet<Variable>,
-                            patternPrimers: HashMap<Variable, ArendPattern>?,
-                            nameCalculator: (Binding) -> String) {
-            if (clause !is PsiElement) return
-            val patternsMap = HashMap<Variable, ArendPattern>()
-            for (e in eliminatedParams.zip(clause.patterns)) (e.second as? ArendPattern)?.let { patternsMap[e.first] = it }
-
-            var anchor: PsiElement? = null
-
-            for (param in typecheckedParams) anchor = if (eliminatedVars.contains(param)) doInsertPattern(psiFactory, anchor, param, clause, patternPrimers, nameCalculator) else patternsMap[param]
-        }
-
-        fun doInsertElimVars(psiFactory: ArendPsiFactory, definitionParameters: List<DependentLink>, definitionParametersToEliminate: HashSet<Variable>, elimPsi: ArendElim, paramsMap: HashMap<DependentLink, ArendRefIdentifier>) {
-            var anchor: PsiElement? = null
-            for (param in definitionParameters) if (definitionParametersToEliminate.contains(param)) {
-                val template = psiFactory.createRefIdentifier("${param.name}, dummy")
-                val comma = template.nextSibling
-                var commaInserted = false
-                if (anchor != null) {
-                    anchor = elimPsi.addAfter(comma, anchor)
-                    commaInserted = true
-                }
-                anchor = elimPsi.addAfter(template, anchor ?: elimPsi.elimKw)
-                elimPsi.addBefore(psiFactory.createWhitespace(" "), anchor)
-                if (!commaInserted) {
-                    elimPsi.addAfter(comma, anchor)
-                }
-            } else {
-                anchor = paramsMap[param]
-            }
-        }
-
-        fun doInitOccupiedLocalNames(caseExprPsi: ArendCaseExpr, caseOccupiedLocalNames: HashSet<String>) {
-            caseOccupiedLocalNames.addAll(caseExprPsi.scope.elements.filterIsInstance<ArendDefIdentifier>().map { it.name })
-            caseOccupiedLocalNames.addAll(caseExprPsi.caseArguments.mapNotNull { it.referable?.name })
-        }
-
-        fun doInsertCaseArgs(psiFactory: ArendPsiFactory, caseExprPsi: ArendCaseExpr, oldCaseArgs: List<ArendCaseArg>,
-            binding: Binding, expression: Expression, dependentCaseArg: ArendCaseArg,
-            caseExpressions: List<Expression>, caseOccupiedLocalNames: HashSet<String>, bindingToCaseArgMap: HashMap<Binding, ArendCaseArg>,
-            expectedConstructorErrorEntries: List<CaseErrorEntry>?) {
-            val renamer = StringRenamer()
-            val ppConfig = object : PrettyPrinterConfig { override fun getDefinitionRenamer(): DefinitionRenamer = PsiLocatedRenamer(caseExprPsi) }
-            val freshName = if (expression is ReferenceExpression) expression.binding.name else renamer.generateFreshName(TypedBinding(null, binding.typeExpr), caseOccupiedLocalNames.map{ VariableImpl(it) })
-            caseOccupiedLocalNames.add(freshName)
-
-            for (ce in caseExpressions.zip(caseExprPsi.caseArguments)) if (expression == ce.first) {
-                bindingToCaseArgMap[binding] = ce.second
-                if (ce.second.referable == null) {
-                    val newCaseArgExprAs = psiFactory.createCaseArg("0 \\as $freshName")
-                    if (newCaseArgExprAs != null) ce.second.addRangeAfter(newCaseArgExprAs.firstChild.nextSibling, newCaseArgExprAs.lastChild, ce.second.expression)
-                }
-
-                if (expectedConstructorErrorEntries != null) {
-                    val index = oldCaseArgs.indexOf(ce.second)
-                    if (index != -1) for (ecEntry in expectedConstructorErrorEntries) {
-                        val clausePsi = ecEntry.clause.data as ArendClause
-                        ecEntry.patternPrimers[binding] = clausePsi.patterns[index]
-                    }
-                }
-
-                return
-            }
-
-            val abstractExpr = ToAbstractVisitor.convert(expression, ppConfig)
-            val newCaseArg = psiFactory.createCaseArg("$abstractExpr \\as $freshName")!!
-            val comma = newCaseArg.findNextSibling()!!
-            bindingToCaseArgMap[binding] = dependentCaseArg.parent.addBefore(newCaseArg, dependentCaseArg) as ArendCaseArg
-            dependentCaseArg.parent.addBefore(comma, dependentCaseArg)
-        }
-
-        fun doWriteTypeQualification(psiFactory: ArendPsiFactory, expression: Expression, caseArg: ArendCaseArg) {
-            val ppConfig = object : PrettyPrinterConfig { override fun getDefinitionRenamer(): DefinitionRenamer = PsiLocatedRenamer(caseArg) }
-            val typeExpr = psiFactory.createExpression(ToAbstractVisitor.convert(expression, ppConfig).toString())
-            val caseArgExpr = caseArg.type
-            if (caseArgExpr != null) {
-                caseArgExpr.replace(typeExpr)
-            } else {
-                caseArg.add(psiFactory.createWhitespace(" "))
-                caseArg.add(psiFactory.createColon())
-                caseArg.add(typeExpr)
-            }
-        }
-
-        fun doInsertPatternPrimers(psiFactory: ArendPsiFactory, clausesListPsi: List<Abstract.Clause>, caseExprPsi: ArendCaseExpr, oldCaseArgs: List<ArendCaseArg>, bindingToCaseArgMap: Map<Binding, ArendCaseArg>, clauseToEntryMap: Map<Abstract.Clause, AbstractExpectedConstructorErrorEntry>?) {
-            for (clause in clausesListPsi) {
-                val anchorMap = HashMap<ArendCaseArg, Abstract.Pattern>()
-                val caseArgToBindingMap = HashMap<ArendCaseArg, Binding>()
-                for (p in oldCaseArgs.zip(clause.patterns)) anchorMap[p.first] = p.second
-                for (e in bindingToCaseArgMap) caseArgToBindingMap[e.value] = e.key
-                val ecEntry = if (clauseToEntryMap != null) clauseToEntryMap[clause] else null
-
-                var anchor: PsiElement? = null
-                for (actualCaseArg in caseExprPsi.caseArguments) {
-                    anchor = if (oldCaseArgs.contains(actualCaseArg)) {
-                        anchorMap[actualCaseArg] as? PsiElement
-                    } else {
-                        doInsertPattern(psiFactory, anchor, caseArgToBindingMap[actualCaseArg]!!, clause as PsiElement, ecEntry?.patternPrimers) { binding ->
-                            val matchingCaseArg = bindingToCaseArgMap[binding]
-                            matchingCaseArg?.referable?.name ?: binding.name
-                        }
-                    }
-                }
-            }
-        }
-
-        private fun doInsertPattern(psiFactory: ArendPsiFactory, anchor: PsiElement?, param: Binding,
-                                    clause: PsiElement, patternPrimers: HashMap<Variable, ArendPattern>?,
-                                    nameCalculator: (Binding) -> String): PsiElement {
-            val template = psiFactory.createClause("${nameCalculator.invoke(param)}, dummy").descendantOfType<ArendPattern>()!!
-            val comma = template.nextSibling
-            var commaInserted = false
-            var insertedPsi : PsiElement?
-            if (anchor != null) {
-                insertedPsi = clause.addAfter(comma, anchor)
-                commaInserted = true
-                insertedPsi = clause.addAfter(template, insertedPsi ?: clause.firstChild)
-                clause.addBefore(psiFactory.createWhitespace(" "), insertedPsi)
-            } else {
-                insertedPsi = clause.addBefore(template, clause.firstChild)
-            }
-            if (patternPrimers != null) patternPrimers[param] = insertedPsi as ArendPattern
-            if (!commaInserted) clause.addAfter(comma, insertedPsi)
-            return insertedPsi!!
-        }
+            if (!elimParams.isNullOrEmpty()) sampleParameters.map { elimParams.contains(it) } else sampleParameters.map { it.isExplicit }
 
         interface VariableLocationDescriptor
         data class ExplicitNamePattern(val bindingPsi: PsiElement) : VariableLocationDescriptor
         data class ImplicitConstructorPattern(val enclosingNode: PsiElement, val followingParameter: PsiElement?, val implicitArgCount: Int) : VariableLocationDescriptor
 
-        fun matchConcreteWithWellTyped(enclosingNode: PsiElement, patterns: List<Concrete.Pattern>, explicitnessMask: List<Boolean>,
+        interface ConcreteVariableLocationDescriptor
+        data class ConcreteExplicitNamePattern(val bindingPsi: Concrete.Pattern) : ConcreteVariableLocationDescriptor
+        data class ConcreteImplicitConstructorPattern(val enclosingNode: Concrete.SourceNode, val followingParameter: Concrete.Pattern?, val implicitArgCount: Int) : ConcreteVariableLocationDescriptor
+
+        fun matchConcreteWithWellTyped(enclosingNode: PsiElement,
+                                       enclosingConcrete: Concrete.SourceNode,
+                                       patterns: List<Concrete.Pattern>,
+                                       explicitnessMask: List<Boolean>,
                                        patternParameterIterator: MutableIterator<DependentLink>,
-                                       result: MutableMap<DependentLink, VariableLocationDescriptor>): Boolean {
+                                       result: MutableMap<DependentLink, VariableLocationDescriptor>,
+                                       sink: MutableMap<DependentLink, ConcreteVariableLocationDescriptor>): Boolean {
             var concretePatternIndex = 0
             var skippedParameters = 0
             for (spExplicit in explicitnessMask) {
@@ -1076,16 +852,17 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
 
                     when (concretePattern) {
                         is Concrete.TuplePattern -> {
-                            matchConcreteWithWellTyped(data, concretePattern.patterns, List(concretePattern.patterns.size) { true }, patternParameterIterator, result)
+                            matchConcreteWithWellTyped(data, concretePattern, concretePattern.patterns, List(concretePattern.patterns.size) { true }, patternParameterIterator, result, sink)
                         }
                         is Concrete.NamePattern -> {
                             val patternParameter = patternParameterIterator.next()
                             result[patternParameter] = ExplicitNamePattern(data)
+                            sink[patternParameter] = ConcreteExplicitNamePattern(concretePattern)
                         }
                         is Concrete.ConstructorPattern -> {
                             val typechecked = (concretePattern.constructor as? TCDefReferable)?.typechecked as? Constructor
-                                    ?: return false
-                            if (!matchConcreteWithWellTyped(data, concretePattern.patterns, prepareExplicitnessMask(DependentLink.Helper.toList(typechecked.parameters), null), patternParameterIterator, result)) return false
+                                ?: return false
+                            if (!matchConcreteWithWellTyped(data, concretePattern, concretePattern.patterns, prepareExplicitnessMask(DependentLink.Helper.toList(typechecked.parameters), null), patternParameterIterator, result, sink)) return false
                         }
                     }
                     continue
@@ -1093,11 +870,25 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 if (!spExplicit) {
                     val patternParameter = patternParameterIterator.next()
                     result[patternParameter] = ImplicitConstructorPattern(enclosingNode, data, skippedParameters)
+                    sink[patternParameter] = ConcreteImplicitConstructorPattern(enclosingConcrete, concretePattern, skippedParameters)
                     skippedParameters += 1
                 }
             }
             return true
         }
+
+        class ScopeAwareSubstConcreteVisitor(val arendServer: ArendServer, val anchorReferable: LocatedReferable?, val anchorFileLocation: ModuleLocation?, substitutions: Map<Referable, Concrete.Expression>): SubstConcreteVisitor(substitutions, null) {
+            override fun visitReference(expr: Concrete.ReferenceExpression?, ignored: Void?): Concrete.Expression? {
+                if (expr?.referent is LocatedReferable) {
+                    val anchor = if (anchorReferable != null) RawAnchor(anchorReferable, null) else null
+                    val fileGroup = if (anchorFileLocation != null) arendServer.getRawGroup(anchorFileLocation) else null
+                    val longName = if (anchor != null && fileGroup != null) arendServer.makeReferencesAvailable(singletonList(expr.referent as LocatedReferable), fileGroup, anchor, DummyErrorReporter.INSTANCE).proj2 else null
+                    if (longName != null && longName.size == 1)
+                        return Concrete.LongReferenceExpression(null, expr, longName.first(), expr.referent)
+                }
+
+                return super.visitReference(expr, ignored)
+            }
+        }
     }
 }
-

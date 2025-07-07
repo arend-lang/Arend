@@ -41,7 +41,6 @@ import org.arend.typechecking.subexpr.FindBinding
 import org.arend.typechecking.subexpr.SubExprError
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor
 import org.arend.resolving.util.parseBinOp
-import org.arend.search.proof.getTcDefReferable
 import org.arend.server.ArendServerService
 
 /**

@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.startOffset
 import com.intellij.util.containers.tail
+import org.arend.codeInsight.completion.withAncestors
 import org.arend.ext.variable.Variable
 import org.arend.core.context.param.DependentLink
 import org.arend.core.definition.Definition
@@ -575,53 +576,34 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
             }
         }
 
-        fun doSubstituteUsages(project: Project, elementToReplace: ArendReferenceElement?, element: PsiElement, expressionLine: String, resolver: (ArendRefIdentifier) -> PsiElement? = { it.reference?.resolve() }) {
+        fun doSubstituteUsages(project: Project, elementToReplace: ArendReferenceElement?, element: PsiElement, expressionLine: String, resolver: (ArendReferenceElement) -> PsiElement? = { it.reference?.resolve() }) {
             if (elementToReplace == null || element is ArendWhere) return
-            if (element is ArendRefIdentifier && resolver(element) == elementToReplace) {
-                val longName = element.parent as? ArendLongName
-                val field = if (longName != null && longName.refIdentifierList.size > 1) longName.refIdentifierList[1] else null
-                val fieldTarget = field?.reference?.resolve()
-                val expressionToInsert = if (longName != null && fieldTarget is ArendClassField) createFieldConstructorInvocation(element, longName.refIdentifierList.drop(1), expressionLine) else expressionLine
+            val resolved = (element as? ArendReferenceElement)?.let { resolver.invoke(it) }
+
+            if ((element is ArendRefIdentifier || element is ArendIPName) &&
+                resolved == elementToReplace &&
+                withAncestors(ArendLiteral::class.java, ArendAtom::class.java, ArendAtomFieldsAcc::class.java, ArendArgumentAppExpr::class.java).accepts(element)) {
+                val literal = element.parent as ArendLiteral
+                val atom = literal.parent as ArendAtom
                 val factory = ArendPsiFactory(project)
 
-                val literal = longName?.parent as? ArendLiteral
-                val atom = literal?.parent as? ArendAtom
-                if (atom != null) {
-                    val atomFieldsAcc = atom.parent as? ArendAtomFieldsAcc
-                    val argumentAppExpr = atomFieldsAcc?.parent as? ArendArgumentAppExpr
-                    val arendNewExpr = argumentAppExpr?.parent as? ArendNewExpr
+                val atomFieldsAcc = atom.parent as? ArendAtomFieldsAcc
+                val argumentAppExpr = atomFieldsAcc?.parent as? ArendArgumentAppExpr
+                val arendNewExpr = argumentAppExpr?.parent as? ArendNewExpr
 
-                    val substitutedExpression = factory.createExpression(expressionToInsert) as ArendNewExpr
-                    val substitutedAtom = if (needParentheses(element, element.textRange, substitutedExpression, null))
-                        factory.createExpression("($expressionToInsert)").descendantOfType() else substitutedExpression.descendantOfType<ArendAtom>()
+                val substitutedExpression = factory.createExpression(expressionLine) as ArendNewExpr
+                val substitutedAtom = if (needParentheses(element, element.textRange, substitutedExpression, null))
+                    factory.createExpression("($expressionLine)").descendantOfType() else
+                        substitutedExpression.descendantOfType<ArendAtom>()
 
-                    if (arendNewExpr != null && atomFieldsAcc.fieldAccList.isEmpty() && argumentAppExpr.argumentList.isEmpty() &&
-                            arendNewExpr.let { it.lbrace == null && it.rbrace == null }) {
-                        arendNewExpr.replace(substitutedExpression)
-                    } else if (substitutedAtom is PsiElement) {
-                        atom.replace(substitutedAtom)
-                    }
+                if (arendNewExpr != null && atomFieldsAcc.fieldAccList.isEmpty() && argumentAppExpr.argumentList.isEmpty() &&
+                    arendNewExpr.let { it.lbrace == null && it.rbrace == null }) {
+                    arendNewExpr.replace(substitutedExpression)
+                } else if (substitutedAtom is PsiElement) {
+                    atom.replace(substitutedAtom)
                 }
             } else for (child in element.children)
-                doSubstituteUsages(project, elementToReplace, child, expressionLine, resolver)
-        }
-
-        private fun createFieldConstructorInvocation(element: ArendRefIdentifier,
-                                                     longNameTail: List<ArendRefIdentifier>,
-                                                     substitutedExpression: String): String {
-            val field = if (longNameTail.isNotEmpty()) longNameTail[0] else null
-            val fieldTarget = field?.reference?.resolve()
-            if (fieldTarget is ArendClassField) getTargetName(fieldTarget, element)?.let {
-                val (fieldName, namespaceCommand) = it
-                namespaceCommand?.execute()
-                return createFieldConstructorInvocation(element, longNameTail.drop(1), "$fieldName {${substitutedExpression}}")
-            }
-
-            return if (longNameTail.isEmpty()) {
-                substitutedExpression
-            } else {
-                "($substitutedExpression)${longNameTail.foldRight("") { ref, acc -> "$acc.${ref.referenceName}" }}"
-            }
+                doSubstituteUsages(project, elementToReplace, child, expressionLine)
         }
     }
 }

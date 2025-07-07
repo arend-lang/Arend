@@ -7,6 +7,7 @@ import org.arend.core.context.binding.PersistentEvaluatingBinding;
 import org.arend.core.context.binding.inference.InferenceLevelVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
+import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.elimtree.Body;
 import org.arend.core.elimtree.ElimBody;
@@ -19,6 +20,7 @@ import org.arend.core.expr.let.LetClausePattern;
 import org.arend.core.expr.visitor.BaseExpressionVisitor;
 import org.arend.core.pattern.BindingPattern;
 import org.arend.core.pattern.EmptyPattern;
+import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
@@ -36,15 +38,19 @@ import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.ext.util.Pair;
 import org.arend.ext.variable.Variable;
+import org.arend.ext.variable.VariableImpl;
 import org.arend.extImpl.definitionRenamer.ConflictDefinitionRenamer;
+import org.arend.extImpl.definitionRenamer.ScopeDefinitionRenamer;
 import org.arend.naming.reference.*;
 import org.arend.naming.renamer.ReferableRenamer;
 import org.arend.naming.renamer.Renamer;
+import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.visitor.VoidConcreteVisitor;
 import org.arend.util.SingletonList;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -144,6 +150,31 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     ToAbstractVisitor visitor = new ToAbstractVisitor(null, config, definitionRenamer, collector, renamer);
     renamer.generateFreshNames(variables);
     return definition.accept(visitor, null);
+  }
+
+  public static Pair<Concrete.Pattern, Concrete.Expression> convertPattern(Scope scope, ExpressionPattern pattern, Boolean isExplicit, PrettyPrinterConfig config,
+                                                                           @Nullable DataDefinition sampleData,
+                                                                           @Nullable String sampleName) {
+    DefinitionRenamer renamer = new ScopeDefinitionRenamer(scope);
+    CollectFreeVariablesVisitor collector = new CollectFreeVariablesVisitor(renamer);
+    ToAbstractVisitor visitor = new ToAbstractVisitor(null, config, renamer, collector, new ReferableRenamer() {
+      @Override
+      public LocalReferable generateFreshReferable(Variable var, Collection<? extends Variable> variables) {
+        if (var instanceof TypedDependentLink link) {
+          if (link.getType() instanceof DataCallExpression dataCall && dataCall.getDefinition() == sampleData) {
+            LocalReferable referable = ref(super.generateFreshName(new VariableImpl(sampleName), variables));
+            addNewName(link, referable);
+            return referable;
+          }
+        }
+        return super.generateFreshReferable(var, variables);
+      }
+
+    });
+
+    List<Concrete.Pattern> list = new ArrayList<>();
+    visitor.visitElimPattern(pattern, isExplicit, list);
+    return new Pair<>(list.getLast(), visitor.convertExpr(pattern.toExpression()));
   }
 
   Concrete.Expression convertExpr(Expression expr) {
@@ -964,16 +995,18 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     return result;
   }
 
-  private void visitElimPattern(Pattern pattern, boolean isExplicit, List<Concrete.Pattern> patterns) {
+  protected void visitElimPattern(Pattern pattern, boolean isExplicit, List<Concrete.Pattern> patterns) {
     if (pattern instanceof BindingPattern) {
       DependentLink link = pattern.getFirstBinding();
-      patterns.add(cNamePattern(isExplicit, makeLocalReference(link, myFreeVariablesCollector.getFreeVariables(link.getNextTyped(null)), false)));
+      patterns.add(cNamePattern(isExplicit, makeLocalReference(link, myFreeVariablesCollector.getFreeVariables(link.getNextTyped(null)), true)));
     } else if (pattern instanceof EmptyPattern) {
       patterns.add(cEmptyPattern(isExplicit));
     } else {
       Definition def = pattern.getConstructor();
       if (def == Prelude.ZERO) {
-        patterns.add(new Concrete.NumberPattern(null, 0, null));
+        Concrete.NumberPattern pattern1 = new Concrete.NumberPattern(null, 0, null);
+        pattern1.setExplicit(isExplicit);
+        patterns.add(pattern1);
       } else {
         List<Concrete.Pattern> subPatterns = new ArrayList<>();
         DependentLink param = pattern.getParameters();

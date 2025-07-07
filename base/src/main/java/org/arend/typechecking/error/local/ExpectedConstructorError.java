@@ -1,6 +1,8 @@
 package org.arend.typechecking.error.local;
 
+import org.arend.core.context.binding.Binding;
 import org.arend.core.context.param.DependentLink;
+import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.Constructor;
 import org.arend.core.expr.DataCallExpression;
 import org.arend.core.expr.DefCallExpression;
@@ -8,13 +10,18 @@ import org.arend.core.expr.Expression;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.LineDoc;
+import org.arend.ext.reference.DataContainer;
 import org.arend.naming.reference.GlobalReferable;
+import org.arend.naming.reference.LocatedReferable;
+import org.arend.naming.reference.Referable;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
@@ -26,6 +33,7 @@ public class ExpectedConstructorError extends TypecheckingError {
   public final DependentLink patternParameters;
   public final DependentLink clauseParameters;
   private final boolean myConstructorOfData;
+  public final Map<TypedDependentLink, Object> myDataContext = new HashMap<>();
 
   public ExpectedConstructorError(GlobalReferable referable,
                                   @Nullable DefCallExpression defCall,
@@ -33,7 +41,8 @@ public class ExpectedConstructorError extends TypecheckingError {
                                   Concrete.SourceNode cause,
                                   @Nullable List<Expression> caseExpressions,
                                   DependentLink patternParameters,
-                                  @Nullable DependentLink clauseParameters) {
+                                  @Nullable DependentLink clauseParameters,
+                                  @Nullable Map<Referable, Binding> context) {
     super("", cause);
     this.referable = referable;
     this.defCall = defCall;
@@ -41,6 +50,10 @@ public class ExpectedConstructorError extends TypecheckingError {
     this.caseExpressions = caseExpressions;
     this.patternParameters = patternParameters;
     this.clauseParameters = clauseParameters;
+
+      if (context != null) for (Map.Entry<Referable, Binding> entry : context.entrySet())
+        if (entry.getValue() instanceof TypedDependentLink typedLink && entry.getKey() instanceof DataContainer data)
+          myDataContext.put(typedLink, data.getData());
 
     boolean constructorOfData = false;
     if (defCall instanceof DataCallExpression) {
