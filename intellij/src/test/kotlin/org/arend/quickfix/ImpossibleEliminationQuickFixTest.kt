@@ -3,7 +3,7 @@ package org.arend.quickfix
 import org.arend.util.ArendBundle
 
 class ImpossibleEliminationQuickFixTest: QuickFixTestBase() {
-    private fun doTest(contents: String, result: String) = simpleQuickFixTest(ArendBundle.message("arend.pattern.doMatching"), contents, result)
+    private fun doTest(contents: String, result: String) = typedQuickFixTest(ArendBundle.message("arend.pattern.doMatching"), contents, result)
     
     fun test68_Empty01() = doTest(ExpectedConstructorQuickFixTest.data1 + """ 
       \func test {A : \Type} {n : Nat} (xs : Vec A n) : Nat \elim xs

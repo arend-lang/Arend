@@ -47,6 +47,7 @@ import org.arend.server.RawAnchor
 import org.arend.term.abs.Abstract
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.LocalVariablesCollector
+import org.arend.term.concrete.SearchConcreteVisitor
 import org.arend.term.concrete.SubstConcreteVisitor
 import org.arend.term.prettyprint.PrettyPrintVisitor
 import org.arend.term.prettyprint.ToAbstractVisitor
@@ -55,7 +56,6 @@ import org.arend.typechecking.patternmatching.ElimTypechecking
 import org.arend.typechecking.patternmatching.ExpressionMatcher
 import org.arend.typechecking.patternmatching.PatternTypechecking
 import org.arend.typechecking.visitor.CheckTypeVisitor
-import org.arend.typechecking.visitor.VoidConcreteVisitor
 import org.arend.util.ArendBundle
 import org.arend.util.Decision
 import java.util.Collections.singletonList
@@ -100,26 +100,10 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 ElimWithExpectedConstructorErrorQuickFix(error, project, concreteDefinition, constructorPsi, typecheckedDefinition)
             }
         else {
-            var concreteCaseExprVar: Concrete.CaseExpression? = null
-            if (concreteDefinition is Concrete.BaseFunctionDefinition) { // TODO:
-                val children = ArrayList<Concrete.Expression>()
-                when (val b = concreteDefinition.body) {
-                    is Concrete.ElimFunctionBody -> for (clause in b.clauses) children.add(clause.expression)
-                    is Concrete.TermFunctionBody -> children.add(b.term)
-                    is Concrete.CoelimFunctionBody -> for (coClauseElement in b.coClauseElements) if (coClauseElement is Concrete.ClassFieldImpl) children.add(coClauseElement.implementation)
-                }
+            val concreteCaseExpr = (concreteDefinition as? Concrete.Definition)?.let{ findConcreteByPsi(it, Concrete.CaseExpression::class.java, caseExprPsi) } ?: return
 
-                val searcher = object : VoidConcreteVisitor<Void>() {
-                    override fun visitCase(expr: Concrete.CaseExpression?, params: Void?): Void? {
-                        if (expr?.data == caseExprPsi) concreteCaseExprVar = expr
-                        return super.visitCase(expr, params)
-                    }
-                }
-                for (child in children) child.accept(searcher, null)
-            }
-
-            if (concreteCaseExprVar != null && typecheckedDefinition != null)
-                CaseExpectedConstructorErrorQuickFix(error, project, caseExprPsi, concreteCaseExprVar, concreteDefinition, typecheckedDefinition)
+            if (typecheckedDefinition != null)
+                CaseExpectedConstructorErrorQuickFix(error, project, caseExprPsi, concreteCaseExpr, concreteDefinition, typecheckedDefinition)
             else null
         }
         quickFix?.runQuickFix(editor)
@@ -889,6 +873,17 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
 
                 return super.visitReference(expr, ignored)
             }
+        }
+
+        fun <R : Concrete.SourceNode>findConcreteByPsi(concreteDefinition: Concrete.Definition, clazz: Class<R>, psi: PsiElement): R? {
+            val searcher = object : SearchConcreteVisitor<Void, R?>() {
+                override fun checkSourceNode(sourceNode: Concrete.SourceNode?, params: Void?): R? {
+                    if (clazz.isInstance(sourceNode) && sourceNode?.data == psi) return clazz.cast(sourceNode)
+                    return super.checkSourceNode(sourceNode, params)
+                }
+            }
+
+            return concreteDefinition.accept(searcher, null)
         }
     }
 }
