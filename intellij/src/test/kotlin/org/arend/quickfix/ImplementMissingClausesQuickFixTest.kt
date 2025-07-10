@@ -8,10 +8,10 @@ import org.arend.ext.typechecking.MetaResolver
 import org.arend.extImpl.ConcreteFactoryImpl
 import org.arend.util.ArendBundle
 
-class MissingClausesQuickFixTest: QuickFixTestBase() {
+class ImplementMissingClausesQuickFixTest: QuickFixTestBase() {
     private val fixName = ArendBundle.message("arend.clause.implement")
 
-    private fun doTest(contents: String, result: String) = simpleQuickFixTest(fixName, contents, result)
+    private fun doTest(contents: String, result: String) = typedQuickFixTest(fixName, contents, result)
 
     private val listDefinition =
         """
@@ -240,14 +240,14 @@ class MissingClausesQuickFixTest: QuickFixTestBase() {
         \func lol{-caret-} {A B : \Type} (a b : Logic.|| A B) : Nat
           | Logic.byLeft x, Logic.byLeft y => {?} 
         """, """
-        \import Logic (byRight, ||)
+        \import Logic (byRight)
 
         \func byLeft => 101
 
         \func lol {A B : \Type} (a b : Logic.|| A B) : Nat
           | Logic.byLeft x, Logic.byLeft y => {?}
           | byRight b, b1 => {?}
-          | ||.byLeft x, byRight b => {?} 
+          | Logic.byLeft x, byRight b => {?} 
         """)
 
     fun testNaturalNumbers() = typedQuickFixTest(fixName,

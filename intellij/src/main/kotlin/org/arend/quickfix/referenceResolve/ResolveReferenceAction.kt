@@ -6,6 +6,7 @@ import org.arend.ext.error.ListErrorReporter
 import org.arend.ext.module.LongName
 import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.LocatedReferable
+import org.arend.naming.reference.TCDefReferable
 import org.arend.psi.ArendFile
 import org.arend.psi.ancestor
 import org.arend.psi.ext.ArendCompositeElement
@@ -13,6 +14,7 @@ import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.psi.ext.ReferableBase
 import org.arend.refactoring.*
+import org.arend.server.ArendServer
 import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
 import org.arend.server.RawAnchor
@@ -84,6 +86,33 @@ class ResolveReferenceAction(val target: PsiLocatedReferable,
                     NsCmdRawModifierAction(nsFix, anchorFile) }
 
             return Pair(name, action)
+        }
+
+        class MultiReferenceResolver(val server: ArendServer, val anchor: ArendCompositeElement) {
+            val resolvedTargets = HashMap<PsiLocatedReferable, LongName>()
+            val anchorFile = anchor.containingFile as? ArendFile
+            val rawModifiers = ArrayList<RawModifier>()
+
+            fun resolveReference(target: PsiLocatedReferable): LongName {
+                if (resolvedTargets.containsKey(target)) return resolvedTargets[target]!!
+                val p = doGetProposedFix(target, anchor) ?: return LongName(target.refName)
+                p.proj1?.let { rawModifiers.add(it) }
+                val result = p.proj2.firstOrNull() ?: LongName(target.refName)
+                resolvedTargets[target] = result
+                return result
+            }
+
+            fun executeAllModifiers() {
+                if (anchorFile != null) for (nsFix in rawModifiers) {
+                    val action = if (nsFix is RawSequenceModifier && nsFix.sequence.isEmpty()) null else
+                            if (nsFix is RawSequenceModifier && nsFix.sequence.size == 1) NsCmdRawModifierAction(
+                                nsFix.sequence.first(),
+                                anchorFile
+                            ) else
+                                NsCmdRawModifierAction(nsFix, anchorFile)
+                    action?.execute()
+                }
+            }
         }
     }
 }

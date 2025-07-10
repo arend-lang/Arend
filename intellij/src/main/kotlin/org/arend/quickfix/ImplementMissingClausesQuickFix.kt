@@ -15,19 +15,28 @@ import org.arend.core.pattern.ConstructorExpressionPattern
 import org.arend.ext.core.body.CorePattern
 import org.arend.ext.core.context.CoreBinding
 import org.arend.ext.core.context.CoreParameter
+import org.arend.ext.error.MissingClausesError
 import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
+import org.arend.naming.reference.LocatedReferable
+import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.StringRenamer
 import org.arend.prelude.Prelude
-import org.arend.psi.*
-import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
-import org.arend.refactoring.*
+import org.arend.psi.ArendPsiFactory
+import org.arend.psi.ancestor
+import org.arend.psi.descendantOfType
+import org.arend.psi.ext.*
+import org.arend.psi.findPrevSibling
+import org.arend.quickfix.referenceResolve.ResolveReferenceAction
+import org.arend.refactoring.PatternMatchingOnIdpResult
+import org.arend.refactoring.admitsPatternMatchingOnIdp
+import org.arend.refactoring.calculateOccupiedNames
+import org.arend.refactoring.getCorrectPreludeItemStringReference
+import org.arend.server.ArendServerService
 import org.arend.settings.ArendSettings
 import org.arend.term.concrete.Concrete
-import org.arend.ext.error.MissingClausesError
-import org.arend.psi.ext.*
+import org.arend.term.concrete.LocalVariablesCollector
 import org.arend.util.ArendBundle
-import java.lang.IllegalStateException
 import kotlin.math.abs
 
 class ImplementMissingClausesQuickFix(private val missingClausesError: MissingClausesError,
@@ -44,9 +53,43 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
         val psiFactory = ArendPsiFactory(project)
+        val server = project.service<ArendServerService>().server
+        val definition = missingClausesError.definition as? TCDefReferable
+        val concreteDefinition = definition?.let { server.getResolvedDefinition(it)?.definition as? Concrete.Definition }
         val element = causeRef.element ?: return
+        val referenceResolver = ResolveReferenceAction.Companion.MultiReferenceResolver(server, element)
+        val causeData = missingClausesError.cause.data
+
         clauses.clear()
-        val definedVariables: List<Variable> = collectDefinedVariables(element)
+        val definedVariables = ArrayList<Variable>()
+        val collector = object: LocalVariablesCollector(causeData) {
+            override fun checkSourceNode(sourceNode: Concrete.SourceNode?, params: Void?): Boolean? {
+                if (sourceNode != null && sourceNode.data == causeData && sourceNode !is Concrete.CaseExpression) return null
+                return super.checkSourceNode(sourceNode, params)
+            }
+
+            override fun visitCase(expr: Concrete.CaseExpression?, params: Void?): Boolean? {
+                if (expr != null && expr.data == causeData) {
+                    for (argument in expr.arguments)
+                        if (argument.isElim && argument.expression is Concrete.ReferenceExpression) {
+                        freeReferable((argument.expression as Concrete.ReferenceExpression).referent, params)
+                    }
+
+                    return checkSourceNode(expr, params)
+                } else
+                    return super.visitCase(expr, params)
+            }
+        }
+        if (causeData is LocatedReferable) {
+            val allReferables = concreteDefinition?.parameters?.map { parameter -> parameter.referableList }?.flatten()
+            val eliminatedReferables = ((concreteDefinition as Concrete.FunctionDefinition).body as? Concrete.ElimFunctionBody)?.eliminatedReferences?.map { it.referent }
+            if (eliminatedReferables?.isNotEmpty() == true && allReferables?.isNotEmpty() == true) {
+                definedVariables.addAll(allReferables.minus(eliminatedReferables).map { VariableImpl(it.refName) })
+            }
+        } else {
+            concreteDefinition?.accept(collector, null)
+            collector.result?.let { result -> definedVariables.addAll(result.map { VariableImpl(it.refName) }) }
+        }
 
         missingClausesError.setMaxListSize(service<ArendSettings>().clauseActualLimit)
         for (clause in missingClausesError.limitedMissingClauses.reversed()) if (clause != null) {
@@ -63,7 +106,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                     val pattern = iterator.next()
                     val recTypeUsagesInPattern = HashSet<CorePattern>()
                     val sampleParameter = if (elimMode) missingClausesError.eliminatedParameters[i] else parameter?.binding
-                    previewResults.add(previewPattern(pattern, filters, if (parameter == null || parameter.isExplicit) Companion.Braces.NONE else Companion.Braces.BRACES, recTypeUsagesInPattern, (sampleParameter?.typeExpr as? DefCallExpression)?.definition))
+                    previewResults.add(previewPattern(pattern, filters, if (parameter == null || parameter.isExplicit) Braces.NONE else Braces.BRACES, recTypeUsagesInPattern, (sampleParameter?.typeExpr as? DefCallExpression)?.definition))
                     recursiveTypeUsagesInBindings.add(recTypeUsagesInPattern.size)
                     parameter = if (parameter != null && parameter.hasNext()) parameter.next else null
                     i++
@@ -84,9 +127,9 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                 while (iterator.hasNext()) {
                     val pattern = iterator.next()
                     val nRecursiveBindings = recursiveTypeUsagesInBindingsIterator.next()
-                    val braces = if (parameter2 == null || parameter2.isExplicit) Companion.Braces.NONE else Companion.Braces.BRACES
+                    val braces = if (parameter2 == null || parameter2.isExplicit) Braces.NONE else Braces.BRACES
                     val sampleParameter = if (elimMode) missingClausesError.eliminatedParameters[i] else parameter2!!.binding
-                    val patternData = doTransformPattern(pattern, element, project, filters, braces, clauseBindings, sampleParameter, nRecursiveBindings, eliminatedBindings, missingClausesError)
+                    val patternData = doTransformPattern(pattern, element, project, filters, braces, clauseBindings, sampleParameter, nRecursiveBindings, eliminatedBindings, missingClausesError, referenceResolver)
                     patternStrings.add(patternData.first)
                     containsEmptyPattern = containsEmptyPattern || patternData.second
                     parameter2 = if (parameter2 != null && parameter2.hasNext()) parameter2.next else null
@@ -98,6 +141,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
         }
 
         insertClauses(psiFactory, element, clauses)
+        referenceResolver.executeAllModifiers()
     }
 
     companion object {
@@ -158,7 +202,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                                 body.lbrace
                             } ?: (cause.addAfter(psiFactory.createWithBody(), caseExprAnchor) as ArendWithBody).lbrace))
                 }
-                is ArendLongName -> {
+                is ArendRefIdentifier -> {
                     findWithBodyAnchor(cause.ancestor(), psiFactory)
                 }
                 is ArendWithBody -> findWithBodyAnchor(cause.parent as? ArendNewExpr, psiFactory)
@@ -194,13 +238,13 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
             var doNotSkipPatterns = false
             for (previewResult in input.reversed()) {
                 when (previewResult) {
-                    Companion.PatternKind.IMPLICIT_ARG -> {
+                    PatternKind.IMPLICIT_ARG -> {
                         result.add(0, doNotSkipPatterns)
                     }
-                    Companion.PatternKind.IMPLICIT_EXPR -> {
+                    PatternKind.IMPLICIT_EXPR -> {
                         result.add(0, true); doNotSkipPatterns = true
                     }
-                    Companion.PatternKind.EXPLICIT -> {
+                    PatternKind.EXPLICIT -> {
                         result.add(0, true); doNotSkipPatterns = false
                     }
                 }
@@ -229,7 +273,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                     if (recursiveTypeDefinition != null && bindingType is DefCallExpression && bindingType.definition == recursiveTypeDefinition && binding.name == null) {
                         recursiveTypeUsages.add(pattern)
                     }
-                    return if (paren == Companion.Braces.BRACES) Companion.PatternKind.IMPLICIT_ARG else Companion.PatternKind.EXPLICIT
+                    return if (paren == Braces.BRACES) PatternKind.IMPLICIT_ARG else PatternKind.EXPLICIT
                 } else {
                     val previewResults = ArrayList<PatternKind>()
 
@@ -239,7 +283,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                     while (patternIterator.hasNext()) {
                         val argumentPattern = patternIterator.next()
                         previewResults.add(previewPattern(argumentPattern, filters,
-                                if (constructorArgument.isExplicit) Companion.Braces.PARENTHESES else Companion.Braces.BRACES, recursiveTypeUsages, recursiveTypeDefinition))
+                                if (constructorArgument.isExplicit) Braces.PARENTHESES else Braces.BRACES, recursiveTypeUsages, recursiveTypeDefinition))
                         if (constructorArgument.hasNext()) constructorArgument = constructorArgument.next
                     }
 
@@ -247,7 +291,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                 }
             }
 
-            return if (paren == Companion.Braces.BRACES) Companion.PatternKind.IMPLICIT_EXPR else Companion.PatternKind.EXPLICIT
+            return if (paren == Braces.BRACES) PatternKind.IMPLICIT_EXPR else PatternKind.EXPLICIT
         }
 
         fun getIntegralNumber(pattern: CorePattern): Int? {
@@ -274,7 +318,9 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                                sampleParameter: CoreBinding,
                                nRecursiveBindings: Int,
                                eliminatedBindings: MutableSet<CoreBinding>,
-                               missingClausesError: MissingClausesError): Pair<String, Boolean> {
+                               missingClausesError: MissingClausesError,
+                               referenceResolver: ResolveReferenceAction.Companion.MultiReferenceResolver
+        ): Pair<String, Boolean> {
             var containsEmptyPattern = false
 
             val parameterName: String? = sampleParameter.name
@@ -328,12 +374,12 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                             while (patternIterator.hasNext()) {
                                 val argumentPattern = patternIterator.next()
                                 val argumentParen = when {
-                                    tupleMode -> Companion.Braces.NONE
-                                    constructorArgument.isExplicit -> Companion.Braces.PARENTHESES
-                                    else -> Companion.Braces.BRACES
+                                    tupleMode -> Braces.NONE
+                                    constructorArgument.isExplicit -> Braces.PARENTHESES
+                                    else -> Braces.BRACES
                                 }
 
-                                val argPattern = doTransformPattern(argumentPattern, cause, project, filters, argumentParen, occupiedNames, sampleParameter, nRecursiveBindings, eliminatedBindings, missingClausesError)
+                                val argPattern = doTransformPattern(argumentPattern, cause, project, filters, argumentParen, occupiedNames, sampleParameter, nRecursiveBindings, eliminatedBindings, missingClausesError, referenceResolver)
                                 argumentPatterns.add(argPattern.first)
                                 if (constructorArgument.isExplicit) {
                                     nExplicit++
@@ -348,8 +394,8 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                         val filter = filters[pattern]
                         val arguments = concat(argumentPatterns, filter, if (tupleMode) "," else " ")
                         val result = buildString {
-                            val (defCall, namespaceCommand) = referable?.let { getTargetName(referable, cause) } ?: Pair(definition?.name, null)
-                            namespaceCommand?.execute()
+                            val defCall = referable?.let { referenceResolver.resolveReference(referable) }
+
                             if (infixMode && nExplicit == 2) {
                                 append(explicitPatterns[0])
                                 append(" ")
@@ -368,12 +414,12 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                             if (tupleMode) append(")")
                         }
 
-                        if (paren == Companion.Braces.PARENTHESES && arguments.isNotEmpty()) "($result)" else result
+                        if (paren == Braces.PARENTHESES && arguments.isNotEmpty()) "($result)" else result
                     }
                 }
             }
 
-            return Pair(if (paren == Companion.Braces.BRACES) "{$result}" else result, containsEmptyPattern)
+            return Pair(if (paren == Braces.BRACES) "{$result}" else result, containsEmptyPattern)
         }
 
 
