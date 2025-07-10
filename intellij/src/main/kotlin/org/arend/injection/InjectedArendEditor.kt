@@ -207,19 +207,24 @@ abstract class InjectedArendEditor(
                 WriteCommandAction.runWriteCommandAction(project, null, id, action)
                 runReadAction {
                     getInjectionFile()?.annotate(fileScope)
-                }
-                val support = EditorHyperlinkSupport.get(editor)
-                support.clearHyperlinks()
-                for (hyperlink in visitor.hyperlinks) {
-                    support.createHyperlink(hyperlink.first.startOffset, hyperlink.first.endOffset, null, hyperlink.second)
-                }
+                    val support = EditorHyperlinkSupport.get(editor)
+                    support.clearHyperlinks()
+                    val documentRange = TextRange(0, editor.document.textLength)
+                    for (hyperlink in visitor.hyperlinks) {
+                        if (hyperlink.first in documentRange) {
+                            support.createHyperlink(hyperlink.first.startOffset, hyperlink.first.endOffset, null, hyperlink.second)
+                        }
+                    }
 
-                for (diffInfo in diffInfos) {
-                    support.createHyperlink(
-                        diffInfo.startOffset,
-                        diffInfo.endOffset,
-                        null,
-                        DiffHyperlinkInfo(Pair(diffInfo.firstDocumentContent, diffInfo.secondDocumentContent)))
+                    for (diffInfo in diffInfos) {
+                        if (TextRange(diffInfo.startOffset, diffInfo.endOffset) in documentRange) {
+                            support.createHyperlink(
+                                diffInfo.startOffset,
+                                diffInfo.endOffset,
+                                null,
+                                DiffHyperlinkInfo(Pair(diffInfo.firstDocumentContent, diffInfo.secondDocumentContent)))
+                        }
+                    }
                 }
             }
         }
