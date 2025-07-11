@@ -15,24 +15,29 @@ import org.arend.core.pattern.ConstructorExpressionPattern
 import org.arend.ext.core.body.CorePattern
 import org.arend.ext.core.context.CoreBinding
 import org.arend.ext.core.context.CoreParameter
+import org.arend.ext.error.ListErrorReporter
 import org.arend.ext.error.MissingClausesError
 import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
+import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.StringRenamer
 import org.arend.prelude.Prelude
+import org.arend.psi.ArendFile
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ancestor
 import org.arend.psi.descendantOfType
 import org.arend.psi.ext.*
 import org.arend.psi.findPrevSibling
-import org.arend.quickfix.referenceResolve.ResolveReferenceAction
+import org.arend.refactoring.NsCmdRawModifierAction
 import org.arend.refactoring.PatternMatchingOnIdpResult
 import org.arend.refactoring.admitsPatternMatchingOnIdp
 import org.arend.refactoring.calculateOccupiedNames
 import org.arend.refactoring.getCorrectPreludeItemStringReference
 import org.arend.server.ArendServerService
+import org.arend.server.RawAnchor
+import org.arend.server.impl.MultipleReferenceResolver
 import org.arend.settings.ArendSettings
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.LocalVariablesCollector
@@ -57,7 +62,12 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
         val definition = missingClausesError.definition as? TCDefReferable
         val concreteDefinition = definition?.let { server.getResolvedDefinition(it)?.definition as? Concrete.Definition }
         val element = causeRef.element ?: return
-        val referenceResolver = ResolveReferenceAction.Companion.MultiReferenceResolver(server, element)
+
+        val anchorFile = element.containingFile as? ArendFile ?: return
+        val anchorReferable: LocatedReferable = definition ?: FullModuleReferable(anchorFile.moduleLocation)
+        val concreteFile = server.getRawGroup(anchorFile.moduleLocation!!) ?: return
+        val referenceResolver = MultipleReferenceResolver(server,
+            ListErrorReporter(), RawAnchor(anchorReferable, element), concreteFile)
         val causeData = missingClausesError.cause.data
 
         clauses.clear()
@@ -141,7 +151,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
         }
 
         insertClauses(psiFactory, element, clauses)
-        referenceResolver.executeAllModifiers()
+        NsCmdRawModifierAction(referenceResolver.modifier, anchorFile).execute()
     }
 
     companion object {
@@ -319,7 +329,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                                nRecursiveBindings: Int,
                                eliminatedBindings: MutableSet<CoreBinding>,
                                missingClausesError: MissingClausesError,
-                               referenceResolver: ResolveReferenceAction.Companion.MultiReferenceResolver
+                               referenceResolver: MultipleReferenceResolver
         ): Pair<String, Boolean> {
             var containsEmptyPattern = false
 
@@ -394,12 +404,12 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                         val filter = filters[pattern]
                         val arguments = concat(argumentPatterns, filter, if (tupleMode) "," else " ")
                         val result = buildString {
-                            val defCall = referable?.let { referenceResolver.resolveReference(referable) }
+                            val longName = (referable as? ReferableBase<*>)?.tcReferable?.let{ referenceResolver.makeReferencesAvailable(it) } ?: ""
 
                             if (infixMode && nExplicit == 2) {
                                 append(explicitPatterns[0])
                                 append(" ")
-                                append(defCall)
+                                append(longName)
                                 append(" ")
                                 append(concat(implicitPatterns, filter, " "))
                                 append(" ")
@@ -407,7 +417,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                                 return@buildString
                             }
                             if (tupleMode) append("(") else {
-                                append(defCall)
+                                append(longName)
                                 if (arguments.isNotEmpty()) append(" ")
                             }
                             append(arguments)

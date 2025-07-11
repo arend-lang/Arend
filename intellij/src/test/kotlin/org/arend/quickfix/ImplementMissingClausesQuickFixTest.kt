@@ -250,6 +250,23 @@ class ImplementMissingClausesQuickFixTest: QuickFixTestBase() {
           | Logic.byLeft x, byRight b => {?} 
         """)
 
+    fun testResolveReference2() = typedQuickFixTest(fixName,
+        """
+            -- ! Logic.ard
+            \$orDefinition
+        
+            -- ! Main.ard
+            \import Logic (Or)
+            
+            \func Or-to-||{-caret-} {A B : \Prop} (a-or-b : Or A B) : Or A B \elim a-or-b              
+        """, """
+            \import Logic (Or, inl, inr)          
+
+            \func Or-to-|| {A B : \Prop} (a-or-b : Or A B) : Or A B \elim a-or-b
+              | inl a => {?}
+              | inr b => {?}
+        """)
+
     fun testNaturalNumbers() = typedQuickFixTest(fixName,
         """
         -- ! Main.ard    
