@@ -31,14 +31,14 @@ public class MultipleReferenceResolver {
     ArendServer myServer;
     @NotNull ErrorReporter myErrorReporter;
     @NotNull RawAnchor myAnchor;
-    @NotNull ConcreteGroup myCurrentFile;
+    @Nullable ConcreteGroup myCurrentFile;
     HashMap<ConcreteNamespaceCommand, @Nullable HashSet<String>> itemsToAdd = new HashMap<>();
     HashMap<ModuleLocation, @Nullable HashSet<String>> importsToAdd = new HashMap<>();
 
     public MultipleReferenceResolver(@NotNull ArendServer server,
                                      @NotNull ErrorReporter errorReporter,
                                      @NotNull RawAnchor anchor,
-                                     @NotNull ConcreteGroup currentFile) {
+                                     @Nullable ConcreteGroup currentFile) {
         myServer = server;
         myErrorReporter = errorReporter;
         myAnchor = anchor;
@@ -46,7 +46,7 @@ public class MultipleReferenceResolver {
     }
 
 
-    public @Nullable LongName makeReferencesAvailable(@NotNull LocatedReferable referable) {
+    public @Nullable LongName makeTargetAvailable(@NotNull LocatedReferable referable) {
         // Check that referables are located in available modules and collect them in refMap
         ModuleLocation anchorModuleLocation = myAnchor.parent().getLocation();
 
@@ -252,10 +252,10 @@ public class MultipleReferenceResolver {
         return new RawSequenceModifier(result);
     }
 
-    private @NotNull AtomicReference<ConcreteNamespaceCommand> getConcreteNamespaceCommandAtomicReference(@NotNull ConcreteGroup currentFile, LocatedReferable referable, ModuleLocation anchorModule) {
+    private @NotNull AtomicReference<ConcreteNamespaceCommand> getConcreteNamespaceCommandAtomicReference(@Nullable ConcreteGroup currentFile, LocatedReferable referable, ModuleLocation anchorModule) {
         AtomicReference<ConcreteNamespaceCommand> namespaceCommand = new AtomicReference<>();
 
-        currentFile.traverseGroup(subgroup -> subgroup.statements().forEach(statement -> {
+        if (currentFile != null) currentFile.traverseGroup(subgroup -> subgroup.statements().forEach(statement -> {
             ConcreteNamespaceCommand command = statement.command();
             if (command != null && command.isImport()) {
                 boolean isPrelude = Prelude.MODULE_PATH.toList().equals(command.module().getPath());
@@ -268,6 +268,7 @@ public class MultipleReferenceResolver {
                 }
             }
         }));
+
         return namespaceCommand;
     }
 }

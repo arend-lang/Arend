@@ -404,7 +404,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                         val filter = filters[pattern]
                         val arguments = concat(argumentPatterns, filter, if (tupleMode) "," else " ")
                         val result = buildString {
-                            val longName = (referable as? ReferableBase<*>)?.tcReferable?.let{ referenceResolver.makeReferencesAvailable(it) } ?: ""
+                            val longName = (referable as? ReferableBase<*>)?.tcReferable?.let{ referenceResolver.makeTargetAvailable(it) } ?: ""
 
                             if (infixMode && nExplicit == 2) {
                                 append(explicitPatterns[0])

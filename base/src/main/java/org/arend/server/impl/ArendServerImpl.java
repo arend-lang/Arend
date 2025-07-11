@@ -589,11 +589,11 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
-  public @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @NotNull ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter) {
+  public @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @Nullable ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter) {
     MultipleReferenceResolver resolver = new MultipleReferenceResolver(this, errorReporter, anchor, group);
     ArrayList<LongName> longNames = new ArrayList<>(referables.size());
     for (LocatedReferable referable : referables) {
-      longNames.add(resolver.makeReferencesAvailable(referable));
+      longNames.add(resolver.makeTargetAvailable(referable));
     }
     return new Pair<>(resolver.getModifier(), longNames);
   }
