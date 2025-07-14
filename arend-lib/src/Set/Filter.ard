@@ -10,6 +10,13 @@
   | filter-mono {a b : A} : F a -> a <= b -> F b
   | filter-top : F Bounded.top
   | filter-meet {a b : A} : F a -> F b -> F (a ∧ b)
+  \where {
+    \func principal {A : Bounded.MeetSemilattice} (a : A) : Filter A \cowith
+      | F => a <=
+      | filter-mono => <=∘
+      | filter-top => Bounded.top-univ
+      | filter-meet => meet-univ
+  }
 
 \record CompleteFilter \extends Filter {
   \override A : CompleteLattice

@@ -19,7 +19,7 @@
 \import Topology.UniformSpace.InfReal
 \open BooleanPseudoRing \hiding (<=)
 
-\class PseudoPremeasureRing \extends BooleanPseudoRing, ExtendedPseudoNormedAbGroup {
+\class PremeasurePseudoRing \extends BooleanPseudoRing, ExtendedPseudoNormedAbGroup {
   | norm-positive {x : E} : 0 InfRealAbMonoid.<= norm x
   | norm-disjoint {x y : E} : x * y = 0 -> norm (x ∨ y) = norm x InfRealAbMonoid.+ norm y
   | norm-mono {x y : E} : x <= y -> norm x InfRealAbMonoid.<= norm y
@@ -28,16 +28,16 @@
   | norm_+ => transportInv (InfRealAbMonoid.`<= _) (pmap norm +_diff *> norm-disjoint diff_*_diff) $ <=_+ (norm-mono diff_<=) (norm-mono diff_<=)
 
   \func IsFinite : \Prop
-    => \Pi (x : E) -> ∃ (B : Real) (norm x < B)
+    => \Pi (x : E) -> IsBounded x
 
   \func IsSigmaFinite : \Prop
-    => \Pi (x : E) -> ∃ (a : Nat -> E) (IsJoin a x) ∀ n ∃ (B : Real) (norm (a n) < B)
+    => \Pi (x : E) -> ∃ (a : Nat -> E) (IsJoin a x) ∀ n (IsBounded (a n))
 }
 
-\lemma norm-measure {X : PseudoPremeasureRing} {x y : X} : norm x + norm y = norm (x ∨ y) + norm (x ∧ y)
+\lemma norm-measure {X : PremeasurePseudoRing} {x y : X} : norm x + norm y = norm (x ∨ y) + norm (x ∧ y)
   => pmap (_ +) (pmap norm (later $ split *> pmap (_ ∨) *-comm) *> norm-disjoint (inv *-assoc *> pmap (`* y) diff_* *> zro_*-left)) *> inv +-assoc *> inv (pmap (`+ _) $ pmap norm (<=-antisymmetric (join-univ join-left $ transportInv (`<= _) split $ join-univ join-right $ meet-right <=∘ join-left) $ join-univ join-left $ diff_<= <=∘ join-right) *> X.norm-disjoint (*-comm *> diff_*))
 
-\class PseudoMeasureRing \extends PseudoPremeasureRing
+\class MeasurePseudoRing \extends PremeasurePseudoRing
   | norm-countable {x : Nat -> E} {a : E} {v : InfReal} : (\Pi (i j : Nat) -> i /= j -> x i * x j = 0) -> IsJoin x a -> IsSeriesSum {_} {InfRealUniformSpace} (\lam n => norm (x n)) v -> norm a = v
   | norm-disjoint {x} {y} xy=0 =>
     norm-countable {_} {\case __ \with { | 0 => x | 1 => y | suc (suc _) => 0 }} (\case \elim __, \elim __ \with {
@@ -60,4 +60,4 @@
       | suc (suc n) => \lam _ => norm_zro
     }
 
-\class PseudoMeasureAlgebra \extends PseudoMeasureRing, BooleanRing
+\class PseudoMeasureAlgebra \extends MeasurePseudoRing, BooleanRing

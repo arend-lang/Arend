@@ -154,24 +154,24 @@
   \lemma pHat-impl {P Q : \Prop} (f : P -> Q) : pHat P <= pHat Q
     => Join-univ (\lam p => Join-cond (f p))
 
-  \func isPositive (a : E) => \Pi (P : \Prop) -> a <= pHat P -> P
+  \func IsPositive (a : E) => \Pi (P : \Prop) -> a <= pHat P -> P
 
-  \lemma positive_<= {a b : E} (p : isPositive a) (a<=b : a <= b) : isPositive b
+  \lemma positive_<= {a b : E} (p : IsPositive a) (a<=b : a <= b) : IsPositive b
     => \lam g q => p g (a<=b <=∘ q)
 
-  \lemma positive_cover {a : E} (p : isPositive a) {J : \Set} (g : J -> E) (c : a <= Join g) : TruncP J
+  \lemma positive_cover {a : E} (p : IsPositive a) {J : \Set} (g : J -> E) (c : a <= Join g) : TruncP J
     => p _ $ c <=∘ Join-univ (\lam j => top-univ <=∘ Join-cond (inP j))
 
-  \lemma positive_Join (o : isOvert) {J : \Set} {f : J -> E} (Jf>0 : isPositive (Join f)) : ∃ (j : J) (isPositive (f j))
+  \lemma positive_Join (o : IsOvert) {J : \Set} {f : J -> E} (Jf>0 : IsPositive (Join f)) : ∃ (j : J) (IsPositive (f j))
     => Jf>0 _ $ Join-univ \lam j => o (f j) <=∘ pHat-impl (\lam fj>0 => inP $ later (j,fj>0))
     \where
-      \lemma conv {J : \Set} {f : J -> E} (p : ∃ (j : J) (isPositive (f j))) : isPositive (Join f) \elim p
+      \lemma conv {J : \Set} {f : J -> E} (p : ∃ (j : J) (IsPositive (f j))) : IsPositive (Join f) \elim p
         | inP (j,fj>0) => \lam P Jf<=P => fj>0 P $ Join-cond j <=∘ Jf<=P
 
-  \func isOvert => \Pi (a : E) -> a <= pHat (isPositive a)
+  \func IsOvert => \Pi (a : E) -> a <= pHat (IsPositive a)
 
-  \lemma overt_cover (o : isOvert) {a : E} : a <= Join (\lam (_ : isPositive a) => a)
-    => meet-univ <=-refl (o a) <=∘ Join-ldistr>= <=∘ Join-univ (\lam p => meet-left <=∘ Join-cond {_} {isPositive a} p)
+  \lemma overt_cover (o : IsOvert) {a : E} : a <= Join (\lam (_ : IsPositive a) => a)
+    => meet-univ <=-refl (o a) <=∘ Join-ldistr>= <=∘ Join-univ (\lam p => meet-left <=∘ Join-cond {_} {IsPositive a} p)
 
   \func restrict (a : E) : Locale \cowith
     | E => \Sigma (b : E) (b <= a)
@@ -1223,11 +1223,11 @@
   => {?} -- [3, Lemma 1.9]
 
 -- | A locale {L} is overt if and only the unique map from L to the terminal locale is open.
-\lemma overt=open {L : Locale} : L.isOvert <-> IsOpen {LocaleCat.terminalMap {L}}
-  => coe2 (\lam i => L.isOvert <-> (\Pi (x : L) -> ∃ (P : \Sigma -> \Prop) ∀ (Q : \Sigma -> \Prop) (LocaleCat.terminal-direct (x --> pHat (Q ())) i = discrete.exponent P Q @ i))) right
-      (\lam o x => inP (\lam _ => isPositive x, \lam Q => ext \lam _ => ext (\lam x<=Q x>0 => x>0 (Q ()) $ meet-univ top-univ <=-refl <=∘ exponent.2 x<=Q, \lam f => exponent.1 $ meet-right <=∘ o x <=∘ pHat-impl f)),
+\lemma overt=open {L : Locale} : L.IsOvert <-> IsOpen {LocaleCat.terminalMap {L}}
+  => coe2 (\lam i => L.IsOvert <-> (\Pi (x : L) -> ∃ (P : \Sigma -> \Prop) ∀ (Q : \Sigma -> \Prop) (LocaleCat.terminal-direct (x --> pHat (Q ())) i = discrete.exponent P Q @ i))) right
+      (\lam o x => inP (\lam _ => IsPositive x, \lam Q => ext \lam _ => ext (\lam x<=Q x>0 => x>0 (Q ()) $ meet-univ top-univ <=-refl <=∘ exponent.2 x<=Q, \lam f => exponent.1 $ meet-right <=∘ o x <=∘ pHat-impl f)),
        \lam f x => \case f x \with {
-         | inP (P,g) => meet-univ top-univ <=-refl <=∘ exponent.2 (propExt.conv (pmap (__ ()) $ g (\lam _ => isPositive x)) (\lam p Q x<=Q => propExt.dir (pmap (__ ()) $ g (\lam _ => Q)) (exponent.1 $ meet-right <=∘ x<=Q) p))
+         | inP (P,g) => meet-univ top-univ <=-refl <=∘ exponent.2 (propExt.conv (pmap (__ ()) $ g (\lam _ => IsPositive x)) (\lam p Q x<=Q => propExt.dir (pmap (__ ()) $ g (\lam _ => Q)) (exponent.1 $ meet-right <=∘ x<=Q) p))
        }) left
 
 -- | Open maps are closed under composition.
@@ -1405,16 +1405,16 @@
 \lemma wregular_wHausdorff {L : Locale} (reg : L.IsWeaklyRegularLocale) : isWeaklyHausdorff L
   => {?} -- [4, Corollary 3.4]
 
-\lemma overt-fromPres {P : FramePres} (o : P.isOvert) : isOvert {PresentedFrame P}
+\lemma overt-fromPres {P : FramePres} (o : P.isOvert) : IsOvert {PresentedFrame P}
   => \lam U {x} Ux => cover-trans (o x) \lam i => cover-inj (\lam Q p => TruncP.remove' $ TruncP.map (i _ (p Ux)) __.1, x, ()) idp
 
-\lemma sdense_positive {f : FrameHom} (d : f.isStronglyDense) {x : f.Dom} (p : isPositive x) : isPositive (f x)
+\lemma sdense_positive {f : FrameHom} (d : f.isStronglyDense) {x : f.Dom} (p : IsPositive x) : IsPositive (f x)
   => \lam P fx<=P => p P (d fx<=P)
 
-\lemma func_positive {f : FrameHom} {x : f.Dom} (p : isPositive (f x)) : isPositive x
+\lemma func_positive {f : FrameHom} {x : f.Dom} (p : IsPositive (f x)) : IsPositive x
   => \lam P x<=P => p P (func-<= x<=P <=∘ func-Join>= <=∘ Join-univ (\lam q => top-univ <=∘ Join-cond q))
 
-\lemma sdense_overt {f : FrameHom} (d : f.isStronglyDense) (o : isOvert {f.Cod}) : isOvert {f.Dom}
+\lemma sdense_overt {f : FrameHom} (d : f.isStronglyDense) (o : IsOvert {f.Cod}) : IsOvert {f.Dom}
   => \lam a => d $ o _ <=∘ Join-univ (\lam h => Join-cond $ func_positive h)
 
 \lemma sdense-fromPres {P : FramePres} {L : Locale} {f : FramePresHom P (FrameUnitalSubcat.F L)}

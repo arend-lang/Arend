@@ -170,7 +170,7 @@
 \func LocaleCoverSpaceFunctor : Functor LocaleCat PrecoverSpaceCat \cowith
   | F => LocalePrecoverSpace
   | Func f => \new PrecoverMap {
-    | func => PointsSpaceFunctor.Func f
+    | func => PointsSpaceFunctor.filter-map f
     | func-cover c => func-top>= <=∘ func-<= {f} c <=∘ func-Join>= <=∘ Join-univ \lam (V,DV) => func-Join>= <=∘ Join-univ \lam (b,p) => points^*-points_* (\lam c => later $ p $ later c) <=∘ Join-cond (later (_, inP (V, DV, idp)))
   }
   | Func-id => idp
