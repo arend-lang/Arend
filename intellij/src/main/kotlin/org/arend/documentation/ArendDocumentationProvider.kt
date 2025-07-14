@@ -8,8 +8,12 @@ import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.ui.popup.JBPopupListener
+import com.intellij.openapi.ui.popup.LightweightWindowEvent
 import com.intellij.openapi.util.Pair
+import com.intellij.openapi.wm.WindowManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
@@ -18,10 +22,16 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import org.arend.documentation.ArendKeyword.Companion.isArendKeyword
+import org.arend.ext.module.LongName
+import org.arend.naming.reference.LocatedReferableImpl
+import org.arend.naming.reference.RedirectingReferable
+import org.arend.naming.scope.EmptyScope
+import org.arend.naming.scope.Scope
 import org.arend.psi.ArendFile
 import org.arend.psi.doc.ArendDocComment
 import org.arend.psi.ext.*
 import org.arend.term.abs.Abstract
+import org.arend.util.getReferableScope
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
@@ -30,8 +40,11 @@ import java.awt.MouseInfo
 import java.awt.Toolkit
 import java.awt.event.ActionListener
 import java.awt.event.KeyEvent
+import java.awt.event.WindowEvent
+import java.awt.event.WindowFocusListener
 import java.io.File
 import javax.swing.KeyStroke
+import javax.swing.SwingUtilities
 import javax.swing.UIManager
 import kotlin.math.roundToInt
 
@@ -51,17 +64,15 @@ class ArendDocumentationProvider : AbstractDocumentationProvider() {
             val elementText = link.removePrefix(ACTION_PREFIX)
             invokeLater {
                 val color = getHtmlRgbFormat(UIManager.getColor("PopupMenu.foreground").rgb)
-                showInCefBrowser(elementText, color)
+                showInCefBrowser(elementText, color, psiManager?.project ?: context?.project)
             }
             return null
         }
-        /* TODO[server2]
         val longName = link.removePrefix(FULL_PREFIX)
-        val scope = ArendDocComment.getScope((context as? ArendDocComment)?.owner ?: context) ?: return null
+        val scope = getReferableScope(((context as? ArendDocComment)?.owner as? ReferableBase<*>) ?: (context as? ReferableBase<*>))
+        if (scope is EmptyScope) return null
         val ref = RedirectingReferable.getOriginalReferable(Scope.resolveName(scope, LongName.fromString(longName).toList()))
-        return if (ref is PsiReferable && longName.length != link.length) ref.documentation else ref as? PsiElement
-        */
-        return null
+        return if (ref is PsiReferable && longName.length != link.length) ref.documentation else ((ref as? LocatedReferableImpl)?.data as? PsiElement)
     }
 
     override fun getCustomDocumentationElement(editor: Editor, file: PsiFile, contextElement: PsiElement?, targetOffset: Int): PsiElement? {
@@ -167,7 +178,7 @@ class ArendDocumentationProvider : AbstractDocumentationProvider() {
         browser.loadHTML(popupCefBrowserHtml)
     }
 
-    private fun showInCefBrowser(title: String, linkColor: String) {
+    private fun showInCefBrowser(title: String, linkColor: String, project: Project?) {
         val browser = JBCefBrowser()
         browser.component.preferredSize = Dimension(1, 1)
 
@@ -184,10 +195,24 @@ class ArendDocumentationProvider : AbstractDocumentationProvider() {
             .setResizable(true)
             .setMovable(true)
             .setTitle(title)
+            .setFocusable(true)
             .setRequestFocus(true)
             .setCancelOnWindowDeactivation(true)
             .setKeyboardActions(actions)
             .createPopup()
+
+        popup.addListener(object : JBPopupListener {
+            override fun beforeShown(event: LightweightWindowEvent) {
+                val window = SwingUtilities.getWindowAncestor(event.asPopup().content)
+                window?.addWindowFocusListener(object : WindowFocusListener {
+                    override fun windowLostFocus(e: WindowEvent?) {
+                        popup.cancel()
+                    }
+
+                    override fun windowGainedFocus(e: WindowEvent?) {}
+                })
+            }
+        })
 
         val queryWidth = JBCefJSQuery.create(browser as JBCefBrowserBase)
         val queryHeight = JBCefJSQuery.create(browser as JBCefBrowserBase)

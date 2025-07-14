@@ -34,7 +34,7 @@ class ArendDocParser : PsiParser, LightPsiParser {
                     DOC_HEADER_1, DOC_HEADER_2,
                     DOC_BLOCKQUOTES -> builder.advanceLexer()
                 DOC_LBRACKET -> parseReferenceText(builder)
-                LBRACE -> parseReference(builder, builder.mark())
+                LBRACE, DOC_OPEN_LINK -> parseReference(builder, builder.mark())
                 DOC_CODE_BLOCK_BORDER -> parseCodeBlock(builder)
                 DOC_END -> {
                     builder.advanceLexer()
@@ -88,6 +88,12 @@ class ArendDocParser : PsiParser, LightPsiParser {
 
         loop@ while (!builder.eof()) {
             when (val token = builder.tokenType) {
+                DOC_OPEN_LINK -> {
+                    builder.advanceLexer()
+                    refTextMarker.done(DOC_REFERENCE_TEXT)
+                    parseLink(builder, refMarker)
+                    return
+                }
                 DOC_RBRACKET -> {
                     builder.advanceLexer()
                     if (builder.tokenType == LBRACE) {
@@ -103,6 +109,26 @@ class ArendDocParser : PsiParser, LightPsiParser {
 
         refTextMarker.drop()
         refMarker.drop()
+    }
+
+    private fun parseLink(builder: PsiBuilder, refMarker: Marker) {
+        val marker = builder.mark()
+
+         while (!builder.eof()) {
+            when (val token = builder.tokenType) {
+                RPAREN -> {
+                    builder.advanceLexer()
+                    marker.done(DOC_LINK_TEXT)
+                    refMarker.done(DOC_LINK)
+                    return
+                }
+                else -> parseBad(token, builder)
+            }
+        }
+
+        builder.error("Expected ')'")
+        marker.done(DOC_LINK_TEXT)
+        refMarker.done(DOC_LINK)
     }
 
     private fun parseReference(builder: PsiBuilder, refMarker: Marker) {

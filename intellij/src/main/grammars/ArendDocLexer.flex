@@ -50,6 +50,7 @@ import static org.arend.psi.ArendElementTypes.*;
 %state CLOSE_ITALICS_CODE
 %state CLOSE_BOLD_CODE
 %state REFERENCE
+%state LINK
 %state REFERENCE_TEXT
 
 START_CHAR          = [~!@#$%\^&*\-+=<>?/|\[\]:a-zA-Z_\u2200-\u22FF\u2A00-\u2AFF]
@@ -85,6 +86,10 @@ HEADER_2            = {NEW_LINE} "-" "-"+ " "*
     "{" {
         yybegin(REFERENCE);
         return LBRACE;
+    }
+    "](" {
+        yybegin(LINK);
+        return DOC_OPEN_LINK;
     }
     "[" {
         textStart = zzMarkedPos;
@@ -176,7 +181,7 @@ HEADER_2            = {NEW_LINE} "-" "-"+ " "*
 }
 
 <TEXT> {
-    ("{" | "[" | "`" | "$$" | "$" | "*" | "_" | "**" | "__" | {LINEBREAK} | {NEW_LINE}) {
+    ("{" | "](" | "[" | "`" | "$$" | "$" | "*" | "_" | "**" | "__" | {LINEBREAK} | {NEW_LINE}) {
         zzMarkedPos = zzStartRead;
         zzStartRead = textStart;
         yybegin(CONTENTS);
@@ -194,7 +199,21 @@ HEADER_2            = {NEW_LINE} "-" "-"+ " "*
     {ID} { return ID; }
 }
 
+<LINK> {
+    ")" {
+        yybegin(CONTENTS);
+        return RPAREN;
+    }
+    [^] {}
+}
+
 <REFERENCE_TEXT> {
+    "](" {
+        zzMarkedPos -= 2;
+        zzStartRead = textStart;
+        yybegin(CONTENTS);
+        return DOC_TEXT;
+    }
     "]" {
         zzMarkedPos--;
         zzStartRead = textStart;

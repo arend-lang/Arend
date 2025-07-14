@@ -130,10 +130,7 @@ class ArendEnterAtIndentHandler : EnterHandlerDelegateAdapter() {
         private fun insertTabs(file: PsiFile, editor: Editor, offset: Int) {
             val document = editor.document
             var element = file.findElementAt(offset - LENGTH_DOC_NEWLINE - 1)
-            if (element.elementType == DOC_PARAGRAPH_SEP) {
-                return
-            }
-            while (element != null && element.elementType != DOC_NEWLINE && element.elementType != DOC_LINEBREAK) {
+            while (element != null && element.elementType != DOC_NEWLINE && element.elementType != DOC_LINEBREAK && element.elementType != DOC_PARAGRAPH_SEP) {
                 element = element.prevElement
             }
             if (element?.nextElement?.elementType == DOC_TABS) {
