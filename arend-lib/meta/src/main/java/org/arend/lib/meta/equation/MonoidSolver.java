@@ -155,7 +155,6 @@ public class MonoidSolver extends BaseEqualitySolver {
 
     if (subExTerm == null || term == null) {
       result.occurrenceVar = null;
-      result.subExprMissed = true;
       return result;
     }
 
@@ -224,6 +223,12 @@ public class MonoidSolver extends BaseEqualitySolver {
         int subExprCod = codomMap.get(subExTerm.nf.getFirst());
         int exprDom = domMap.get(term.nf.getLast());
         int exprCod = codomMap.get(term.nf.getFirst());
+
+        if (subExprCod == -1 || subExprDom == -1 || exprCod == -1 || exprDom == -1) {
+          result.occurrenceVar = null;
+          return result;
+        }
+
         normConsistSubExpr = factory.appBuilder(factory.ref(normConsist))
                 .app(factory.ref(dataRef), false)
                 .app(factory.number(subExprDom), false).app(factory.number(subExprCod), false)
@@ -259,6 +264,10 @@ public class MonoidSolver extends BaseEqualitySolver {
     CompiledTerm term2 = compileTerm(rightExpr.getExpression());
     lastTerm = rightExpr;
     lastCompiled = term2;
+
+    if (term1 == null || term2 == null) {
+      return null;
+    }
 
     // TODO: get rid of this shit with flags
     boolean oldCommutative = isCommutative;
@@ -575,6 +584,7 @@ public class MonoidSolver extends BaseEqualitySolver {
     List<Integer> rhs = new ArrayList<>();
     ConcreteExpression lhsTerm = computeTerm(eq.getDefCallArguments().get(1), lhs);
     ConcreteExpression rhsTerm = computeTerm(eq.getDefCallArguments().get(2), rhs);
+    if (lhsTerm == null || rhsTerm == null) return false;
     if (binding == null) {
       rules.add(new RuleExt(typed, null, Direction.FORWARD, lhs, rhs, lhsTerm, rhsTerm));
     } else {
