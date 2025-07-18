@@ -78,7 +78,6 @@ message Expression {
         Expression expression = 1;
         bool is_goal = 2;
         string goal_name = 4;
-        bool use_expression = 3;
     }
     message FieldCall {
         int32 field_ref = 1;

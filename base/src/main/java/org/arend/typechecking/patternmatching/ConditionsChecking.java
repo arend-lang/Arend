@@ -195,12 +195,12 @@ public class ConditionsChecking {
         List<ElimClause<Pattern>> clauses = new ArrayList<>(3);
         clauses.add(new ElimClause<>(Collections.singletonList(ConstructorPattern.make(Prelude.LEFT, Collections.emptyList())), conPattern.getDataTypeArguments().get(1)));
         clauses.add(new ElimClause<>(Collections.singletonList(ConstructorPattern.make(Prelude.RIGHT, Collections.emptyList())), conPattern.getDataTypeArguments().get(2)));
-        clauses.add(new ElimClause<>(Collections.singletonList(new BindingPattern(lamParam)), AppExpression.make(conPattern.getSubPatterns().get(0).toExpression(), lamRef, true)));
+        clauses.add(new ElimClause<>(Collections.singletonList(new BindingPattern(lamParam)), AppExpression.make(conPattern.getSubPatterns().getFirst().toExpression(), lamRef, true)));
         BranchElimTree elimTree = new BranchElimTree(0, true);
         elimTree.addChild(Prelude.LEFT, new LeafElimTree(0, Collections.emptyList(), 0));
         elimTree.addChild(Prelude.RIGHT, new LeafElimTree(0, Collections.emptyList(), 1));
         elimTree.addChild(null, new LeafElimTree(0, null, 1));
-        substitution.add(((BindingPattern) conPattern.getSubPatterns().get(0)).getBinding(), new LamExpression(new Sort(conPattern.getLevels().toLevelPair().get(LevelVariable.PVAR), Level.INFINITY), lamParam, new CaseExpression(false, lamParam, AppExpression.make(conPattern.getDataTypeArguments().get(0), lamRef, true), null, new ElimBody(clauses, elimTree), Collections.singletonList(lamRef))));
+        substitution.add(((BindingPattern) conPattern.getSubPatterns().getFirst()).getBinding(), new LamExpression(new Sort(conPattern.getLevels().toLevelPair().get(LevelVariable.PVAR), Level.INFINITY), lamParam, new CaseExpression(false, lamParam, AppExpression.make(conPattern.getDataTypeArguments().getFirst(), lamRef, true), null, new ElimBody(clauses, elimTree), Collections.singletonList(lamRef))));
       }
     }
   }
@@ -273,7 +273,7 @@ public class ConditionsChecking {
         if (evaluatedExpr1 != null && goalExpr.goalError.hasConditions()) {
           goalExpr.goalError.addCondition(new Condition(null, pair.proj2, evaluatedExpr1));
         }
-        if (goalExpr.useExpression() && !checkCondition(goalExpr.getExpression(), pair, evaluatedExpr1, clause, definition, sourceNode, new ListErrorReporter(goalExpr.goalError.errors))) {
+        if (goalExpr.getExpression() != null && !checkCondition(goalExpr.getExpression(), pair, evaluatedExpr1, clause, definition, sourceNode, new ListErrorReporter(goalExpr.goalError.errors))) {
           ok = false;
         }
       } else {

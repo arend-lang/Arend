@@ -78,7 +78,7 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
       do {
         n++;
         List<Expression> args = ((ConCallExpression) it).getDefCallArguments();
-        it = args.get(0).accept(this, null);
+        it = args.getFirst().accept(this, null);
         args.set(0, it);
       } while (it instanceof ConCallExpression && ((ConCallExpression) it).getDefinition() == Prelude.SUC);
 
@@ -229,7 +229,7 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
     if (expr instanceof GoalErrorExpression) {
       return expr.replaceExpression(expr.getExpression().accept(new StripVisitor(myBoundEvaluatingBindings, new ListErrorReporter(((GoalErrorExpression) expr).goalError.errors), myEvaluateBindings), null));
     } else {
-      return new ErrorExpression(null, expr.getGoalName(), expr.useExpression());
+      return new ErrorExpression(null, expr.getGoalName());
     }
   }
 
@@ -293,23 +293,25 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
   }
 
   public Body visitBody(Body body) {
-    if (body instanceof IntervalElim intervalElim) {
-      List<IntervalElim.CasePair> cases = intervalElim.getCases();
-      for (int i = 0; i < cases.size(); i++) {
-        Pair<Expression, Expression> pair = cases.get(i);
-        cases.set(i, new IntervalElim.CasePair(pair.proj1 == null ? null : pair.proj1.accept(this, null), pair.proj2 == null ? null : pair.proj2.accept(this, null)));
+    switch (body) {
+      case IntervalElim intervalElim -> {
+        List<IntervalElim.CasePair> cases = intervalElim.getCases();
+        for (int i = 0; i < cases.size(); i++) {
+          Pair<Expression, Expression> pair = cases.get(i);
+          cases.set(i, new IntervalElim.CasePair(pair.proj1 == null ? null : pair.proj1.accept(this, null), pair.proj2 == null ? null : pair.proj2.accept(this, null)));
+        }
+        if (intervalElim.getOtherwise() != null) {
+          visitElimBody(intervalElim.getOtherwise());
+        }
       }
-      if (intervalElim.getOtherwise() != null) {
-        visitElimBody(intervalElim.getOtherwise());
+      case Expression expression -> {
+        return expression.accept(this, null);
       }
-    } else if (body instanceof Expression) {
-      return ((Expression) body).accept(this, null);
-    } else if (body instanceof ElimBody) {
-      visitElimBody((ElimBody) body);
-    } else {
-      assert body == null;
+      case ElimBody elimBody -> visitElimBody(elimBody);
+      case null, default -> {
+        assert body == null;
+      }
     }
-
     return body;
   }
 

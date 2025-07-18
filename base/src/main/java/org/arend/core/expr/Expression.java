@@ -231,7 +231,7 @@ public abstract class Expression implements Body, CoreExpression {
       @Override
       public Expression visitError(ErrorExpression expr, Void params) {
         Expression result = super.visitError(expr, params);
-        return result == expr ? new ErrorExpression(expr.getExpression(), expr.getGoalName(), expr.useExpression()) : result;
+        return result == expr ? new ErrorExpression(expr.getExpression(), expr.getGoalName()) : result;
       }
 
       @Override
@@ -429,7 +429,7 @@ public abstract class Expression implements Body, CoreExpression {
       return !n.equals(BigInteger.ZERO);
     }
     if (conCall.getDefinition() == Prelude.SUC) {
-      return n.equals(BigInteger.ZERO) || checkInteger(n.subtract(BigInteger.ONE), conCall.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF));
+      return n.equals(BigInteger.ZERO) || checkInteger(n.subtract(BigInteger.ONE), conCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF));
     }
     return false;
   }

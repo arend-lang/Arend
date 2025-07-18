@@ -22,13 +22,11 @@ import org.jetbrains.annotations.Nullable;
 public class ErrorExpression extends Expression implements CoreErrorExpression, Type {
   private final Expression myExpression;
   private final String myGoalName;
-  private final boolean myUseExpression;
   private LocalError myError;
 
   public ErrorExpression(Expression expression, LocalError error) {
-    myExpression = expression;
     myGoalName = error instanceof GoalError ? ((GoalError) error).goalName : error != null && error.level == GeneralError.Level.GOAL ? "" : null;
-    myUseExpression = expression != null && error instanceof GoalError && ((GoalError) error).errors.isEmpty();
+    myExpression = error instanceof GoalError && ((GoalError) error).errors.isEmpty() ? expression : null;
     myError = error;
   }
 
@@ -36,24 +34,15 @@ public class ErrorExpression extends Expression implements CoreErrorExpression, 
     this(null, error);
   }
 
-  public ErrorExpression(Expression expression, String goalName, boolean useExpression) {
+  public ErrorExpression(Expression expression, String goalName) {
     myExpression = expression;
     myGoalName = goalName;
-    myUseExpression = useExpression && expression != null;
-    myError = null;
-  }
-
-  public ErrorExpression(Expression expression) {
-    myExpression = expression;
-    myGoalName = null;
-    myUseExpression = false;
     myError = null;
   }
 
   public ErrorExpression() {
     myExpression = null;
     myGoalName = null;
-    myUseExpression = false;
     myError = null;
   }
 
@@ -62,7 +51,7 @@ public class ErrorExpression extends Expression implements CoreErrorExpression, 
   }
 
   public ErrorExpression replaceExpression(Expression expr) {
-    return new ErrorExpression(expr, myGoalName, myUseExpression);
+    return new ErrorExpression(expr, myGoalName);
   }
 
   public String getGoalName() {
@@ -91,10 +80,6 @@ public class ErrorExpression extends Expression implements CoreErrorExpression, 
     return isError();
   }
 
-  public boolean useExpression() {
-    return myUseExpression;
-  }
-
   @Override
   public boolean canBeConstructor() {
     return false;
@@ -118,21 +103,6 @@ public class ErrorExpression extends Expression implements CoreErrorExpression, 
   @Override
   public <P, R> R accept(@NotNull CoreExpressionVisitor<? super P, ? extends R> visitor, P params) {
     return visitor.visitError(this, params);
-  }
-
-  @Override
-  public @NotNull Expression getUnderlyingExpression() {
-    return myUseExpression ? myExpression.getUnderlyingExpression() : this;
-  }
-
-  @Override
-  public <T extends Expression> boolean isInstance(Class<T> clazz) {
-    return myUseExpression && myExpression.isInstance(clazz) || clazz.isInstance(this);
-  }
-
-  @Override
-  public <T extends Expression> T cast(Class<T> clazz) {
-    return clazz.isInstance(this) ? clazz.cast(this) : myUseExpression ? myExpression.cast(clazz) : null;
   }
 
   @Override
@@ -164,11 +134,7 @@ public class ErrorExpression extends Expression implements CoreErrorExpression, 
 
   @Override
   public Type strip(StripVisitor visitor) {
-    if (myExpression == null) {
-      return this;
-    }
-
-    return new ErrorExpression(myExpression.accept(visitor, null), myGoalName, myUseExpression);
+    return myExpression == null ? this : new ErrorExpression(myExpression.accept(visitor, null), myGoalName);
   }
 
   @Override

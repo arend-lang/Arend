@@ -2926,14 +2926,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
         TypecheckingResult result = checkExpr(letClause.getTerm(), type.getExpr());
         if (result == null) {
-          return new TypecheckingResult(new ErrorExpression(type.getExpr()), type.getExpr());
+          return new TypecheckingResult(new ErrorExpression(), type.getExpr());
         }
         ErrorExpression errorExpr = result.expression.cast(ErrorExpression.class);
-        if (errorExpr != null && !errorExpr.useExpression()) {
-          errorExpr = errorExpr.replaceExpression(type.getExpr());
-          if (!errorExpr.useExpression()) {
-            result.expression = errorExpr;
-          }
+        if (errorExpr != null && errorExpr.getExpression() == null) {
+          result.expression = errorExpr.replaceExpression(type.getExpr());
         }
         return useSpecifiedType ? new TypecheckingResult(result.expression, type.getExpr()) : result;
       } else {
@@ -3872,16 +3869,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   public TypecheckingResult visitApplyHole(Concrete.ApplyHoleExpression expr, Expression params) {
     errorReporter.report(new TypecheckingError("`__` not allowed here", expr));
     return null;
-  }
-
-  public static Expression getLevelExpression(Type type, int level) {
-    if (level < -1) {
-      return type.getExpr();
-    }
-
-    SingleDependentLink params = ExpressionFactory.singleParams(true, Arrays.asList("x" + (level + 2), "y" + (level + 2)), type);
-    Sort sort = type.getSortOfType();
-    return new PiExpression(sort, params, getLevelExpression(new TypeExpression(FunCallExpression.make(Prelude.PATH_INFIX, new LevelPair(sort.getPLevel(), sort.getHLevel()), Arrays.asList(type.getExpr(), new ReferenceExpression(params), new ReferenceExpression(params.getNext()))), sort), level - 1));
   }
 
   public Integer getExpressionLevel(DependentLink link, Expression type, Expression expr, Equations equations, Concrete.SourceNode sourceNode) {

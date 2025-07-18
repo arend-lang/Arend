@@ -115,7 +115,7 @@ class ExpressionDeserialization {
       }
       Type type = readType(proto.getType());
       DependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
-        ? new TypedDependentLink(!proto.getIsNotExplicit(), unfixedNames.get(0), type, true, EmptyDependentLink.getInstance())
+        ? new TypedDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, EmptyDependentLink.getInstance())
         : ExpressionFactory.parameter(!proto.getIsNotExplicit(), proto.getIsProperty(), unfixedNames, type);
       for (DependentLink link = tele; link.hasNext(); link = link.getNext()) {
         registerBinding(link);
@@ -132,7 +132,7 @@ class ExpressionDeserialization {
     }
     Type type = readType(proto.getType());
     SingleDependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
-      ? new TypedSingleDependentLink(!proto.getIsNotExplicit(), unfixedNames.get(0), type, true)
+      ? new TypedSingleDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true)
       : ExpressionFactory.singleParams(!proto.getIsNotExplicit(), unfixedNames, type);
     for (DependentLink link = tele; link.hasNext(); link = link.getNext()) {
       registerBinding(link);
@@ -360,7 +360,7 @@ class ExpressionDeserialization {
       throw new DeserializationException("Empty constructors list");
     }
 
-    ConCallExpression result = readConCall(conCalls.get(0), conCalls.size() == 1);
+    ConCallExpression result = readConCall(conCalls.getFirst(), conCalls.size() == 1);
     ConCallExpression expr = result;
     for (int i = 1; i < conCalls.size(); i++) {
       ConCallExpression arg = readConCall(conCalls.get(i), i == conCalls.size() - 1);
@@ -455,7 +455,7 @@ class ExpressionDeserialization {
   }
 
   private ErrorExpression readError(ExpressionProtos.Expression.Error proto) throws DeserializationException {
-    return new ErrorExpression(proto.hasExpression() ? readExpr(proto.getExpression()) : null, proto.getIsGoal() ? proto.getGoalName() : null, proto.getUseExpression());
+    return new ErrorExpression(proto.hasExpression() ? readExpr(proto.getExpression()) : null, proto.getIsGoal() ? proto.getGoalName() : null);
   }
 
   private TupleExpression readTuple(ExpressionProtos.Expression.Tuple proto) throws DeserializationException {

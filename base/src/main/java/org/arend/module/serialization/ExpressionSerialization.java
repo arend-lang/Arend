@@ -217,14 +217,14 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
         arrayDataBuilder.setLevels(writeLevels(funCall.getLevels(), funCall.getDefinition()));
         if (funCall.getDefinition() == Prelude.ARRAY_CONS) {
           if (!funCall.getDefCallArguments().isEmpty() && funCall.getDefCallArguments().get(0) != null) {
-            arrayDataBuilder.setLength(funCall.getDefCallArguments().get(0).accept(this, null));
+            arrayDataBuilder.setLength(funCall.getDefCallArguments().getFirst().accept(this, null));
           }
           if (funCall.getDefCallArguments().size() >= 2 && funCall.getDefCallArguments().get(1) != null) {
             arrayDataBuilder.setElementsType(funCall.getDefCallArguments().get(1).accept(this, null));
           }
         } else {
-          if (!funCall.getDefCallArguments().isEmpty() && funCall.getDefCallArguments().get(0) != null) {
-            arrayDataBuilder.setElementsType(funCall.getDefCallArguments().get(0).accept(this, null));
+          if (!funCall.getDefCallArguments().isEmpty() && funCall.getDefCallArguments().getFirst() != null) {
+            arrayDataBuilder.setElementsType(funCall.getDefCallArguments().getFirst().accept(this, null));
           }
         }
         pBuilder.setArrayData(arrayDataBuilder.build());
@@ -511,7 +511,6 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     if (expr.getGoalName() != null) {
       builder.setGoalName(expr.getGoalName());
     }
-    builder.setUseExpression(expr.useExpression());
     return ExpressionProtos.Expression.newBuilder().setError(builder).build();
   }
 

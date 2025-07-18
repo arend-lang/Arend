@@ -237,7 +237,7 @@ public class CoerceData implements CoreCoerceData {
           if (argStrict) {
             return null;
           }
-          result.expression = new ErrorExpression(result.expression);
+          result.expression = new ErrorExpression();
         }
 
         substitution.add(link, result.expression);
@@ -256,7 +256,7 @@ public class CoerceData implements CoreCoerceData {
       if (resultStrict) {
         return null;
       }
-      result.expression = new ErrorExpression(result.expression);
+      result.expression = new ErrorExpression();
     }
     return result;
   }
