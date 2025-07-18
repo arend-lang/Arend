@@ -105,8 +105,8 @@ public class TwoStageEquations implements Equations {
         origExpr1 = normalize ? origExpr1.accept(substVisitor, null) : expr1;
       }
     }
-    InferenceVariable inf1 = expr1.getInferenceVariable();
-    InferenceVariable inf2 = expr2.getInferenceVariable();
+    InferenceVariable inf1 = expr1.getInferenceVariable(true);
+    InferenceVariable inf2 = expr2.getInferenceVariable(true);
 
     // expr1 == expr2 == ?x
     if (inf1 == inf2 && inf1 != null) {
@@ -408,8 +408,8 @@ public class TwoStageEquations implements Equations {
       Equation equation = myEquations.get(i);
       if (equation.expr1 instanceof DataCallExpression && equation.expr2 instanceof DataCallExpression && ((DataCallExpression) equation.expr1).getDefinition() == Prelude.FIN && ((DataCallExpression) equation.expr2).getDefinition() == Prelude.FIN) {
         myEquations.remove(i--);
-        Expression arg1 = ((DataCallExpression) equation.expr1).getDefCallArguments().get(0);
-        Expression arg2 = ((DataCallExpression) equation.expr2).getDefCallArguments().get(0);
+        Expression arg1 = ((DataCallExpression) equation.expr1).getDefCallArguments().getFirst();
+        Expression arg2 = ((DataCallExpression) equation.expr2).getDefCallArguments().getFirst();
         if (!CompareVisitor.compare(this, CMP.EQ, arg1, arg2, Nat(), equation.sourceNode)) {
           myVisitor.getErrorReporter().report(new SolveEquationsError(myVisitor.getExpressionPrettifier(), Collections.singletonList(new Equation(arg1, arg2, Nat(), CMP.EQ, equation.sourceNode)), equation.sourceNode));
         }
@@ -556,7 +556,7 @@ public class TwoStageEquations implements Equations {
   }
 
   private ClassDefinition checkClasses(InferenceVariable var, List<ClassCallExpression> bounds, CMP cmp) {
-    ClassDefinition classDef = bounds.get(0).getDefinition();
+    ClassDefinition classDef = bounds.getFirst().getDefinition();
     for (ClassCallExpression classCall : bounds) {
       if (cmp == CMP.LE) {
         if (!classCall.getDefinition().isSubClassOf(classDef)) {
@@ -679,7 +679,7 @@ public class TwoStageEquations implements Equations {
     loop:
     for (Pair<InferenceVariable, List<ClassCallExpression>> pair : list) {
       if (pair.proj2.size() == 1) {
-        solve(pair.proj1, pair.proj2.get(0), true);
+        solve(pair.proj1, pair.proj2.getFirst(), true);
         solved = true;
         continue;
       }
@@ -790,7 +790,7 @@ public class TwoStageEquations implements Equations {
         solution.setSort(classDef.computeSort(implementations, solution.getThisBinding()));
         solution.updateHasUniverses();
 
-        if (!pair.proj2.get(0).getLevels().compare(levels, CMP.LE, this, pair.proj1.getSourceNode())) {
+        if (!pair.proj2.getFirst().getLevels().compare(levels, CMP.LE, this, pair.proj1.getSourceNode())) {
           reportBoundsError(pair.proj1, pair.proj2, CMP.GE);
           allOK = false;
           continue;
@@ -803,7 +803,7 @@ public class TwoStageEquations implements Equations {
           }
         }
       } else {
-        solution = pair.proj2.get(0);
+        solution = pair.proj2.getFirst();
         Map<ClassField, Expression> map = solution.getImplementedHere();
         Expression thisExpr = new ReferenceExpression(solution.getThisBinding());
         for (int i = 1; i < pair.proj2.size(); i++) {
