@@ -105,8 +105,8 @@ public class TwoStageEquations implements Equations {
         origExpr1 = normalize ? origExpr1.accept(substVisitor, null) : expr1;
       }
     }
-    InferenceVariable inf1 = expr1.getInferenceVariable(true);
-    InferenceVariable inf2 = expr2.getInferenceVariable(true);
+    InferenceVariable inf1 = expr1.getInferenceVariable();
+    InferenceVariable inf2 = expr2.getInferenceVariable();
 
     // expr1 == expr2 == ?x
     if (inf1 == inf2 && inf1 != null) {
@@ -239,7 +239,7 @@ public class TwoStageEquations implements Equations {
       }
     }
 
-    if (cmp == CMP.EQ && (inf1 != null && inf2 == null || inf2 != null && inf1 == null)) {
+    if (cmp == CMP.EQ && (inf1 != null && inf2 == null && expr2.getInferenceVariable(true) == null || inf2 != null && inf1 == null && expr1.getInferenceVariable(true) == null)) {
       Expression prev = myNotSolvableFromEquationsVars.putIfAbsent(inf1 != null ? inf1 : inf2, inf1 != null ? expr2 : expr1);
       if (prev != null) {
         return CompareVisitor.compare(this, CMP.EQ, prev, inf1 != null ? expr2 : expr1, type, sourceNode);
