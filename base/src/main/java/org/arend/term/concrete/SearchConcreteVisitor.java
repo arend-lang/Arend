@@ -61,7 +61,9 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
   public void freeReferable(Referable referable, P params) {}
 
   public void freeParameter(Concrete.Parameter parameter, P params) {
-    for (Referable referable : parameter.getReferableList()) {
+    List<? extends Referable> referableList = parameter.getReferableList();
+    for (int i = referableList.size() - 1; i >= 0; i--) {
+      Referable referable = referableList.get(i);
       if (referable != null) freeReferable(referable, params);
     }
   }
@@ -73,8 +75,8 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
   }
 
   public void freeEliminatedParameters(List<? extends Concrete.Parameter> parameters, List<? extends Concrete.ReferenceExpression> eliminated, P params) {
-    for (Concrete.ReferenceExpression reference : eliminated) {
-      freeReferable(reference.getReferent(), params);
+    for (int i = eliminated.size() - 1; i >= 0; i--) {
+      freeReferable(eliminated.get(i).getReferent(), params);
     }
   }
 
@@ -207,8 +209,8 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
   }
 
   public void freePatterns(List<? extends Concrete.Pattern> patterns, P params) {
-    if (patterns != null) for (Concrete.Pattern pattern : patterns) {
-      freePattern(pattern, params);
+    if (patterns != null) for (int i = patterns.size() - 1; i >= 0; i--) {
+      freePattern(patterns.get(i), params);
     }
   }
 
@@ -242,13 +244,15 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
     R result = checkSourceNode(expr, params);
     if (result != null) return result;
 
-    for (Concrete.CaseArgument arg : expr.getArguments()) {
+    List<? extends Concrete.CaseArgument> arguments = expr.getArguments();
+    for (Concrete.CaseArgument arg : arguments) {
       result = arg.expression.accept(this, params);
       if (result != null) return result;
       result = arg.type != null ? arg.type.accept(this, params) : null;
       if (result != null) return result;
       if (arg.referable != null) visitReferable(arg.referable, params);
     }
+
     if (expr.getResultType() != null) {
       result = expr.getResultType().accept(this, params);
       if (result != null) return result;
@@ -257,9 +261,12 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
       result = expr.getResultTypeLevel().accept(this, params);
       if (result != null) return result;
     }
-    for (Concrete.CaseArgument arg : expr.getArguments()) {
+
+    for (int i = arguments.size() - 1; i >= 0; i--) {
+      Concrete.CaseArgument arg = arguments.get(i);
       if (arg.referable != null) freeReferable(arg.referable, params);
     }
+
     return visitClauses(expr.getClauses(), params);
   }
 
@@ -332,13 +339,13 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
       }
       result = clause.term.accept(this, params);
       if (result != null) return result;
+      freeParameters(clause.getParameters(), params);
     }
 
     result = expr.expression.accept(this, params);
     if (result != null) return result;
 
     for (Concrete.LetClause clause : expr.getClauses()) {
-      freeParameters(clause.getParameters(), params);
       freePattern(clause.getPattern(), params);
     }
 

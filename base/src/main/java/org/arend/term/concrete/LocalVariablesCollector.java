@@ -55,7 +55,12 @@ public class LocalVariablesCollector extends SearchConcreteVisitor<Void, Boolean
 
   @Override
   public void freeReferable(Referable referable, Void params) {
-    myContext.remove(referable);
+    for (int i = myContext.size() - 1; i >= 0; i--) {
+      if (myContext.get(i).equals(referable)) {
+        myContext.remove(i);
+        return;
+      }
+    }
   }
 
   @Override
