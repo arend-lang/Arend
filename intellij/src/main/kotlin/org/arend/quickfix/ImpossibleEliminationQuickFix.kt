@@ -1,6 +1,7 @@
 package org.arend.quickfix
 
 import com.intellij.codeInsight.intention.IntentionAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -34,9 +35,13 @@ import org.arend.psi.ext.*
 import org.arend.psi.findNextSibling
 import org.arend.quickfix.removers.RemoveClauseQuickFix.Companion.doRemoveClause
 import org.arend.refactoring.PsiLocatedRenamer
+import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
+import org.arend.term.concrete.Concrete
+import org.arend.term.concrete.LocalVariablesCollector
 import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.typechecking.error.local.ImpossibleEliminationError
+import org.arend.typechecking.visitor.VoidConcreteVisitor
 import org.arend.util.ArendBundle
 
 class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val cause: SmartPsiElementPointer<ArendCompositeElement>) : IntentionAction {
@@ -50,10 +55,13 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
         error.caseExpressions != null || error.elimParams != null // this prevents quickfix from showing in the "no matching constructor" case
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+        val server = project.service<ArendServerService>().server
         val psiFactory = ArendPsiFactory(project)
         val dataDefinition = error.defCall.definition as? DataDefinition ?: return
         val definition = error.definition as? TCDefReferable ?: return
         val definitionPsi = definition.data
+        val concreteDefinition = server.getResolvedDefinition(definition)?.definition as Concrete.GeneralDefinition
+
         val constructorPsi = cause.element?.ancestor<ArendConstructor>()
         val typecheckedParameters = when {
             constructorPsi != null -> {
@@ -88,16 +96,20 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
             val caseExprPsi = cause.element?.ancestor<ArendCaseExpr>()
             val clausesListPsi = caseExprPsi?.withBody?.clauseList
             if (caseExprPsi != null && stuckParameterType is DataCallExpression && clausesListPsi != null) {
+                val concreteCaseExpr = (concreteDefinition as? Concrete.Definition)?.let{ ExpectedConstructorQuickFix.findConcreteByPsi(it, Concrete.CaseExpression::class.java, caseExprPsi) }
                 val exprsToEliminate = stuckParameterType.defCallArguments.zip(toList(dataDefinition.parameters)).filter { ddEliminatedParameters.contains(it.second) }.toList()
                 val sampleDataCall = DataCallExpression.make(dataDefinition, error.defCall.levels, toList(dataDefinition.parameters).map { it.makeReference() })
                 val toActualParametersSubstitution = ExprSubstitution(); for (entry in stuckParameterType.defCallArguments.zip(toList(dataDefinition.parameters))) toActualParametersSubstitution.add(entry.second, entry.first)
                 val oldCaseArgs = caseExprPsi.caseArguments
                 val parameterToCaseArgMap = HashMap<DependentLink, ArendCaseArg>()
                 val parameterToCaseExprMap = ExprSubstitution()
-                val caseOccupiedLocalNames = HashSet<String>(); doInitOccupiedLocalNames(caseExprPsi, caseOccupiedLocalNames)
+                val caseOccupiedLocalNames = HashSet<String>();
+                if (concreteDefinition is Concrete.Definition && concreteCaseExpr != null)
+                    doInitOccupiedLocalNames(concreteCaseExpr, concreteDefinition, caseOccupiedLocalNames)
+
                 val bindingToCaseArgMap = HashMap<Binding, ArendCaseArg>()
 
-                if (error.caseExpressions != null) for (triple in toList(error.clauseParameters).zip(error.caseExpressions.zip(caseExprPsi.caseArguments))) {
+                for (triple in toList(error.clauseParameters).zip(error.caseExpressions.zip(caseExprPsi.caseArguments))) {
                     parameterToCaseArgMap[triple.first] = triple.second.second
                     parameterToCaseExprMap.add(triple.first, triple.second.first)
                 }
@@ -107,7 +119,7 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
                 for (expression in exprsToEliminate) {
                     val exprSubst =
                         expression.first.accept(SubstVisitor(parameterToCaseExprMap, LevelSubstitution.EMPTY), null)
-                    doInsertCaseArgs(psiFactory, caseExprPsi, oldCaseArgs, expression.second, exprSubst, dependentCaseArg, error.caseExpressions, caseOccupiedLocalNames, bindingToCaseArgMap)
+                    doInsertCaseArgs(psiFactory, caseExprPsi, expression.second, exprSubst, dependentCaseArg, error.caseExpressions, caseOccupiedLocalNames, bindingToCaseArgMap)
                 }
 
                 val toInsertedBindingsSubstitution = ExprSubstitution(); for (e in bindingToCaseArgMap) toInsertedBindingsSubstitution.add(e.key, ReferenceExpression(UntypedDependentLink(e.value.referable!!.name)))
@@ -225,7 +237,6 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
 
         fun doInsertCaseArgs(psiFactory: ArendPsiFactory,
                              caseExprPsi: ArendCaseExpr,
-                             oldCaseArgs: List<ArendCaseArg>,
                              binding: Binding,
                              expression: Expression,
                              dependentCaseArg: ArendCaseArg,
@@ -268,9 +279,15 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
             }
         }
 
-        fun doInitOccupiedLocalNames(caseExprPsi: ArendCaseExpr, caseOccupiedLocalNames: HashSet<String>) {
-            caseOccupiedLocalNames.addAll(caseExprPsi.scope.elements.filterIsInstance<ArendDefIdentifier>().map { it.name })
-            caseOccupiedLocalNames.addAll(caseExprPsi.caseArguments.mapNotNull { it.referable?.name })
+        fun doInitOccupiedLocalNames(caseExpr: Concrete.CaseExpression, enclosingDefinition: Concrete.Definition, sink: MutableSet<String>) {
+            for (clause in caseExpr.clauses) {
+                val expression = clause.expression
+                if (expression != null && expression.data != null) {
+                    val collector = LocalVariablesCollector(expression.data)
+                    enclosingDefinition.accept(collector, null)
+                    sink.addAll(collector.names)
+                }
+            }
         }
 
         fun doInsertElimVars(psiFactory: ArendPsiFactory, definitionParameters: List<DependentLink>, definitionParametersToEliminate: HashSet<Variable>, elimPsi: ArendElim, paramsMap: HashMap<DependentLink, ArendRefIdentifier>) {

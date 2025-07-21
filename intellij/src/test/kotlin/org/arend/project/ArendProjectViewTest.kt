@@ -33,8 +33,8 @@ class ArendProjectViewTest : ArendTestBase() {
                 | -External Libraries
                 |  -Library: arend-lib
                 |   -ext
-                |    Meta.ard
                 |    Function.Meta.ard
+                |    Meta.ard
                 |    Paths.Meta.ard
                 |   -PsiDirectory: src
                 |    Function.ard
@@ -53,8 +53,8 @@ class ArendProjectViewTest : ArendTestBase() {
                 | -External Libraries
                 |  -Library: arend-lib_1
                 |   -ext
-                |    Meta.ard
                 |    Function.Meta.ard
+                |    Meta.ard
                 |    Paths.Meta.ard
                 |   -PsiDirectory: src
                 |    Function.ard

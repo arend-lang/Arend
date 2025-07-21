@@ -19,10 +19,7 @@ import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 
 public interface ArendServer {
@@ -161,5 +158,5 @@ public interface ArendServer {
    *
    * @return the modifier and the list of long names that should be used to refer to the given referables.
    */
-  @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @NotNull ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter);
+  @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @Nullable ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter);
 }

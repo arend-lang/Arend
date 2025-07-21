@@ -85,7 +85,7 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
                     requestUpdate(server, config, withTests)
                 }
             } else {
-                requestUpdate(server, project.findInternalLibrary(library) ?: return@runReadAction, withTests)
+                requestUpdate(server, project.findInternalLibrary(library) as? ArendModuleConfigService ?: return@runReadAction, withTests)
             }
         }
     }

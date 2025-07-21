@@ -21,7 +21,7 @@ import org.arend.psi.ext.ArendCompositeElement
 
 class ArendTypedHandler : TypedHandlerDelegate() {
 
-    private fun changeCorrespondingBracket(c: Char, project: Project, editor: Editor, file: PsiFile) {
+    private fun changeCorrespondingBracket(c: Char, editor: Editor, file: PsiFile) {
         var element = file.findElementAt(editor.selectionModel.selectionStart)
         while (element !is ArendCompositeElement?) {
             element = element?.parent
@@ -37,10 +37,7 @@ class ArendTypedHandler : TypedHandlerDelegate() {
             else -> element.childOfType(LPAREN)?.textOffset
         } ?: return
 
-        val document = editor.document
-        PsiDocumentManager.getInstance(project).commitDocument(document)
-
-        document.replaceString(
+        editor.document.replaceString(
             correspondingElementOffset,
             correspondingElementOffset + 1,
             when (c) {
@@ -52,31 +49,30 @@ class ArendTypedHandler : TypedHandlerDelegate() {
         )
     }
 
-    private fun addParensToGoal(project: Project, editor: Editor, file: PsiFile) {
+    private fun addParensToGoal(editor: Editor, file: PsiFile) {
         val element = file.findElementAt(editor.selectionModel.selectionStart) ?: return
         val document = editor.document
-        PsiDocumentManager.getInstance(project).commitDocument(document)
         document.insertString(element.startOffset, "(")
         document.insertString(element.endOffset + 1, ")")
     }
 
-    private fun addBrackets(project: Project, editor: Editor) {
+    private fun addBrackets(editor: Editor) {
         val document = editor.document
-        PsiDocumentManager.getInstance(project).commitDocument(document)
         document.insertString(editor.selectionModel.selectionStart, "{")
         document.insertString(editor.selectionModel.selectionEnd, "}")
     }
 
     override fun beforeSelectionRemoved(c: Char, project: Project, editor: Editor, file: PsiFile): Result {
+        PsiDocumentManager.getInstance(project).doPostponedOperationsAndUnblockDocument(editor.document)
         val selectedText = editor.selectionModel.selectedText
         if (c == '(' && selectedText == "{?}") {
-            addParensToGoal(project, editor, file)
+            addParensToGoal(editor, file)
             return Result.STOP
         } else if (BRACKETS.contains(c.toString()) && BRACKETS.contains(selectedText)) {
-            changeCorrespondingBracket(c, project, editor, file)
+            changeCorrespondingBracket(c, editor, file)
             return Result.CONTINUE
         } else if (c == '{' && selectedText?.isNotEmpty() == true) {
-            addBrackets(project, editor)
+            addBrackets(editor)
             return Result.STOP
         }
         return SelectionQuotingTypedHandler().beforeSelectionRemoved(c, project, editor, file)
@@ -90,13 +86,13 @@ class ArendTypedHandler : TypedHandlerDelegate() {
             return Result.STOP // To prevent auto-formatting
         }
 
+        PsiDocumentManager.getInstance(project).doPostponedOperationsAndUnblockDocument(editor.document)
         val offset = editor.caretModel.offset
         val document = editor.document
         val text = document.charsSequence
 
         val atRBrace = offset < text.length && text[offset] == '}'
         if (atRBrace && c == '}' && offset > 2 && text[offset - 3] == '{' && text[offset - 2] == '?') {
-            PsiDocumentManager.getInstance(project).commitDocument(document)
             document.deleteString(offset, offset + 1)
             return Result.STOP
         }
@@ -109,8 +105,6 @@ class ArendTypedHandler : TypedHandlerDelegate() {
         if (style == ArendSettings.MatchingCommentStyle.DO_NOTHING || style == ArendSettings.MatchingCommentStyle.INSERT_MINUS && !CodeInsightSettings.getInstance().AUTOINSERT_PAIR_BRACKET) {
             return Result.CONTINUE
         }
-
-        PsiDocumentManager.getInstance(project).commitDocument(document)
 
         if (atRBrace && offset > 1 && text[offset - 2] == '{') {
             if (style == ArendSettings.MatchingCommentStyle.INSERT_MINUS) {

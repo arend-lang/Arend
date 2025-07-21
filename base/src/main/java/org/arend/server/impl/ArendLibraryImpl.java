@@ -18,7 +18,7 @@ public class ArendLibraryImpl implements ArendLibrary {
   private final boolean myExternalLibrary;
   private final long myModificationStamp;
   private final List<String> myDependencies;
-  private final ArendExtension myExtension;
+  private ArendExtension myExtension;
   private final Map<String, LocatedReferable> myGeneratedNames;
 
   public ArendLibraryImpl(String libraryName, boolean externalLibrary, long modificationStamp, List<String> dependencies, ArendExtension extension, Map<String, LocatedReferable> generatedNames) {
@@ -67,6 +67,10 @@ public class ArendLibraryImpl implements ArendLibrary {
 
   public ArendExtension getExtension() {
     return myExtension;
+  }
+
+  public void setExtension(ArendExtension extension) {
+    myExtension = extension;
   }
 
   @Override

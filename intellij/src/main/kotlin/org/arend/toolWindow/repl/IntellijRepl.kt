@@ -13,9 +13,7 @@ import org.arend.ext.error.ListErrorReporter
 import org.arend.ext.module.ModulePath
 import org.arend.library.LibraryDependency
 import org.arend.module.config.LibraryConfig
-import org.arend.naming.scope.CachingScope
 import org.arend.naming.scope.Scope
-import org.arend.naming.scope.ScopeFactory
 import org.arend.psi.ArendPsiFactory
 import org.arend.repl.Repl
 import org.arend.server.ArendServer
@@ -34,7 +32,6 @@ import org.arend.typechecking.order.Ordering
 import org.arend.typechecking.order.dependency.DummyDependencyListener
 import org.arend.typechecking.order.listener.CollectingOrderingListener
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener
-import org.arend.typechecking.provider.ConcreteProvider
 import org.arend.typechecking.result.TypecheckingResult
 import java.lang.StringBuilder
 import java.util.function.Consumer

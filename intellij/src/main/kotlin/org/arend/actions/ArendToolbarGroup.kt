@@ -12,7 +12,8 @@ class ArendToolbarGroup : ActionGroup() {
     return arrayOf(
         Separator.getInstance(),
         ArendNormalizeToggleAction,
-        ArendPrintOptionsActionGroup(project, PrintOptionKind.POPUP_PRINT_OPTIONS)
+        ArendPrintOptionsActionGroup(project, PrintOptionKind.POPUP_PRINT_OPTIONS),
+        Separator.getInstance()
     )
   }
 }

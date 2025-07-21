@@ -8,10 +8,14 @@ import com.intellij.psi.util.elementType
 import org.arend.parser.ParserMixin.*
 import org.arend.psi.childrenWithLeaves
 import org.arend.psi.doc.ArendDocCodeBlock
+import org.arend.psi.doc.ArendDocLink
 import org.arend.psi.doc.ArendDocReference
 import org.arend.psi.doc.ArendDocReferenceText
 import org.arend.psi.ext.PsiReferable
 import java.net.URL
+
+private const val CLOSING_TAG_HTML = "</li>"
+private const val OPENING_TAG_HTML = "<li class=\"row\">"
 
 internal data class ArendDocCommentInfo(var hasLatexCode: Boolean, var wasPrevRow: Boolean, var itemContextLastIndex: Int = -1, val suggestedFont: Float)
 
@@ -108,15 +112,19 @@ private fun StringBuilder.processDocCommentElement(
             }
             docCommentInfo.wasPrevRow = false
             append("<br>")
-            if (elementType == DOC_PARAGRAPH_SEP && !full) {
-                append("<a href=\"${PSI_ELEMENT_PROTOCOL}$FULL_PREFIX${ref.refName}\">more...</a>")
-                return docElements.lastIndex + 1
-            }
         }
-        docElement is ArendDocReference -> {
-            val url = docElement.longName.text
+        docElement is ArendDocReference || docElement is ArendDocLink -> {
+            val (url, referenceText) = when (docElement) {
+                is ArendDocReference -> docElement.longName.text to docElement.docReferenceText
+                is ArendDocLink -> (docElement.docLinkText?.text?.removeSuffix(")") ?: "") to docElement.docReferenceText
+                else -> "" to null
+            }
+
             if (isValidUrl(url)) {
-                append("<a href=\"$url\">${docElement.docReferenceText?.let { getReferenceText(it).joinToString() } ?: url}</a>")
+                append("<a href=\"$url\">${referenceText?.let { getReferenceText(it).joinToString() } ?: url}</a>")
+                return index + 1
+            }
+            if (docElement !is ArendDocReference) {
                 return index + 1
             }
             val longName = docElement.longName
@@ -127,9 +135,8 @@ private fun StringBuilder.processDocCommentElement(
             }
 
             append("<code>")
-            val text = docElement.docReferenceText
-            if (text != null) {
-                getReferenceText(text).forEach { html(it) }
+            if (referenceText != null) {
+                getReferenceText(referenceText).forEach { html(it) }
             } else {
                 append(link)
             }
@@ -200,14 +207,7 @@ private fun StringBuilder.appendListItems(
     append("<li class=\"row\">")
     docCommentInfo.itemContextLastIndex = context.lastIndex
 
-    val closingTagHtml = "</li>"
-    val defaultOpeningTagHtml = "<li class=\"row\">"
-    val openingTagHtml = if (docCommentInfo.hasLatexCode && elementType == DOC_UNORDERED_LIST) {
-        "$defaultOpeningTagHtml• "
-    } else {
-        defaultOpeningTagHtml
-    }
-    val newIndex = processBlock(index + 1, docElements, ref, full, context, docCommentInfo, openingTagHtml, closingTagHtml)
+    val newIndex = processBlock(index + 1, docElements, ref, full, context, docCommentInfo)
 
     if (elementType == DOC_UNORDERED_LIST) {
         append("</ul>")
@@ -230,7 +230,7 @@ private fun StringBuilder.appendBlockQuotes(
     context.add(Triple(element.elementType!!, null, numberOfTabs))
     append("<blockquote><p class=\"row\">")
 
-    val newIndex = processBlock(index + 1, docElements, ref, full, context, docCommentInfo, " ", "")
+    val newIndex = processBlock(index + 1, docElements, ref, full, context, docCommentInfo)
 
     append("</p></blockquote>")
     return newIndex
@@ -242,17 +242,13 @@ private fun StringBuilder.processBlock(
     ref: PsiReferable,
     full: Boolean,
     context: MutableList<Triple<IElementType, Int?, Int>>,
-    docCommentInfo: ArendDocCommentInfo,
-    openingTagHtml: String,
-    closingTagHtml: String
+    docCommentInfo: ArendDocCommentInfo
 ): Int {
     var curIndex = index
     while (curIndex <= docElements.lastIndex) {
         val curElementType = docElements[curIndex].elementType
-        if (curElementType == DOC_PARAGRAPH_SEP) {
-            break
-        } else if (curElementType == DOC_NEWLINE || curElementType == DOC_LINEBREAK) {
-            if (curElementType == DOC_LINEBREAK) {
+        if (curElementType == DOC_NEWLINE || curElementType == DOC_LINEBREAK || curElementType == DOC_PARAGRAPH_SEP) {
+            if (curElementType == DOC_LINEBREAK || curElementType == DOC_PARAGRAPH_SEP) {
                 append("<br>")
             }
             val result = checkContext(curIndex, docElements, context)
@@ -262,9 +258,9 @@ private fun StringBuilder.processBlock(
                     curIndex++
                 }
                 if (docCommentInfo.itemContextLastIndex == context.lastIndex) {
-                    append(closingTagHtml)
+                    append(CLOSING_TAG_HTML)
                 }
-                append(openingTagHtml)
+                append(OPENING_TAG_HTML)
 
                 if (docCommentInfo.hasLatexCode && docElements.getOrNull(curIndex).elementType == DOC_ORDERED_LIST) {
                     context.last().let { (_, oldIndex, tabs) ->
@@ -276,7 +272,7 @@ private fun StringBuilder.processBlock(
                 }
                 docCommentInfo.itemContextLastIndex = context.lastIndex
             } else if (isNestedList(curIndex, docElements, context)) {
-                append(closingTagHtml)
+                append(CLOSING_TAG_HTML)
                 curIndex = appendListItems(
                     curIndex + 2,
                     docElements,
@@ -288,7 +284,7 @@ private fun StringBuilder.processBlock(
                 continue
             } else {
                 if (docCommentInfo.itemContextLastIndex == context.lastIndex) {
-                    append(closingTagHtml)
+                    append(CLOSING_TAG_HTML)
                 }
                 break
             }
@@ -306,7 +302,7 @@ private fun checkContext(elementIndex: Int, docElements: List<PsiElement>, conte
     val element = docElements.getOrNull(elementIndex + 1)
     val elementType = element?.elementType
     val numberTabs = if (elementType == DOC_TABS) {
-         (element!!.text.length + AREND_DOC_COMMENT_TABS_SIZE - 1) / AREND_DOC_COMMENT_TABS_SIZE
+         (element.text.length + AREND_DOC_COMMENT_TABS_SIZE - 1) / AREND_DOC_COMMENT_TABS_SIZE
     } else {
         0
     }

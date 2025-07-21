@@ -16,9 +16,11 @@ import org.arend.ext.core.context.CoreParameter
 import org.arend.ext.core.expr.CoreExpression
 import org.arend.ext.core.expr.CoreReferenceExpression
 import org.arend.ext.module.LongName
+import org.arend.ext.reference.DataContainer
 import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
 import org.arend.naming.reference.GlobalReferable
+import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.Referable
 import org.arend.naming.reference.TCDefReferable
@@ -247,7 +249,13 @@ fun getCorrectPreludeItemStringReference(project: Project, location: ArendCompos
     //Notice that this method may modify PSI (by writing "import Prelude" in the file header)
     val itemName = preludeItem.name
     val itemReferable = project.service<ArendServerService>().server.getModuleScopeProvider(Prelude.LIBRARY_NAME, false).forModule(Prelude.MODULE_PATH)?.resolveName(itemName)
-    val data = ResolveReferenceAction.getTargetName(itemReferable as PsiLocatedReferable, location)
+    val psiReferable = when (itemReferable) {
+        is PsiLocatedReferable -> itemReferable
+        is DataContainer -> itemReferable.data as? PsiLocatedReferable ?: return ""
+        else -> return ""
+    }
+
+    val data = getTargetName(psiReferable, location)
     data?.second?.execute()
     return data?.first ?: ""
 }
@@ -736,28 +744,6 @@ fun isInfix(prec: ArendPrec?): Boolean = ReferableBase.calcPrecedence(prec).isIn
 fun calculateOccupiedNames(occupiedNames: Collection<Variable>, parameterName: String?, nRecursiveBindings: Int) =
         if (nRecursiveBindings > 1 && !parameterName.isNullOrEmpty() && !Character.isDigit(parameterName.last()))
             occupiedNames.plus(VariableImpl(parameterName)) else occupiedNames
-
-fun collectDefinedVariables(startElement: ArendCompositeElement): List<Variable> {
-    val elementScope = startElement.scope
-
-    val excluded: Set<Referable> = if (startElement is ArendCaseExpr) {
-        startElement.caseArguments.mapNotNullTo(HashSet()) { caseArg ->
-            caseArg.takeIf { it.elimKw != null }?.eliminatedReference?.let { ExpressionResolveNameVisitor.resolve(it.referent, elementScope) }
-        }
-    } else emptySet()
-
-    val added: List<Referable?> = /* TODO[server2]: if ((startElement as? ArendDefFunction)?.body?.elim?.elimKw != null) {
-        val eliminated = startElement.eliminatedExpressions.mapTo(HashSet()) { it.referenceName }
-        startElement.parameters.flatMap { it.referableList }.filter { it != null && !eliminated.contains(it.refName) }
-    } else */ emptyList()
-
-    val scope = when {
-        excluded.isNotEmpty() -> ElimScope(elementScope, excluded)
-        added.isNotEmpty() -> ListScope(elementScope, added)
-        else -> elementScope
-    }
-    return scope.elements.mapNotNull { if (it is GlobalReferable) null else VariableImpl(it.refName) }
-}
 
 /**
  * The purpose of this function is to insert a pair of parenthesis

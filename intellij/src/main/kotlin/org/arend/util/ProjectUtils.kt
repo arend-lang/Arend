@@ -9,11 +9,13 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ui.configuration.ProjectStructureConfigurable
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.JarFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiManager
+import com.intellij.testFramework.TestModeFlags
 import org.arend.ArendLanguage
 import org.arend.ext.prettyprinting.doc.BaseDocVisitor
 import org.arend.ext.prettyprinting.doc.ReferenceDoc
@@ -53,8 +55,15 @@ val Project.allModules: List<Module>
             ?.filter { ArendModuleType.has(it) } ?: arendModules
     }
 
-fun Project.findInternalLibrary(name: String): ArendModuleConfigService? =
+val stdLib: Key<LibraryConfig?> = Key.create("AREND_TEST_STD_LIBRARY")
+
+fun Project.findInternalLibrary(name: String): LibraryConfig? =
     ModuleManager.getInstance(this).modules.firstOrNull { ArendModuleType.has(it) && it.name == name }?.service<ArendModuleConfigService>()
+        ?: if (ApplicationManager.getApplication().isUnitTestMode) {
+            TestModeFlags.get(stdLib)
+        } else {
+            null
+        }
 
 val Project.moduleConfigs: List<ArendModuleConfigService>
     get() = allModules.map { it.service<ArendModuleConfigService>() }

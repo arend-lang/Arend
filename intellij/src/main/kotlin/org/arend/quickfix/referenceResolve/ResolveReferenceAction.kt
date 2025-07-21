@@ -13,12 +13,14 @@ import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.psi.ext.ReferableBase
 import org.arend.refactoring.*
+import org.arend.repl.Repl
 import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
 import org.arend.server.RawAnchor
 import org.arend.server.modifier.RawModifier
 import org.arend.server.modifier.RawSequenceModifier
 import org.arend.term.group.AccessModifier
+import org.arend.toolWindow.repl.ArendReplService
 import java.util.Collections.singletonList
 
 class ResolveReferenceAction(val target: PsiLocatedReferable,
@@ -56,12 +58,13 @@ class ResolveReferenceAction(val target: PsiLocatedReferable,
 
             val referableBase = anchor.ancestor<ReferableBase<*>>()
             val anchorFile = anchor.containingFile as? ArendFile ?: return null
-            val anchorReferable: LocatedReferable = referableBase?.tcReferable ?: FullModuleReferable(anchorFile.moduleLocation)
+            val anchorReferable: LocatedReferable = (if (anchorFile.isRepl) project.service<ArendReplService>().getRepl()?.moduleReferable else referableBase?.tcReferable ?: anchorFile.moduleLocation?.let { FullModuleReferable(it) }) ?: return null
+
             ArendServerRequesterImpl(project).doUpdateModule(arendServer, targetFileLocation, targetFile)
 
             val rawAnchor = RawAnchor(anchorReferable, anchor)
             val targetReferable : LocatedReferable? = (target as? ReferableBase<*>)?.tcReferable ?: return null
-            val concreteGroup = arendServer.getRawGroup(anchorFile.moduleLocation ?: return null) ?: return null
+            val concreteGroup = anchorFile.moduleLocation?.let { arendServer.getRawGroup(it) }
 
             return arendServer.makeReferencesAvailable(singletonList(targetReferable), concreteGroup, rawAnchor, errorReporter)
         }

@@ -332,10 +332,17 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
       }
       result = clause.term.accept(this, params);
       if (result != null) return result;
+    }
+
+    result = expr.expression.accept(this, params);
+    if (result != null) return result;
+
+    for (Concrete.LetClause clause : expr.getClauses()) {
       freeParameters(clause.getParameters(), params);
       freePattern(clause.getPattern(), params);
     }
-    return expr.expression.accept(this, params);
+
+    return null;
   }
 
   @Override

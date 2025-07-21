@@ -1,11 +1,15 @@
 package org.arend.quickfix
 
+import com.intellij.openapi.components.service
 import org.arend.ext.ArendExtension
 import org.arend.ext.concrete.expr.ConcreteGoalExpression
 import org.arend.ext.core.expr.CoreExpression
 import org.arend.ext.typechecking.ExpressionTypechecker
 import org.arend.ext.typechecking.GoalSolver
+import org.arend.ext.typechecking.InteractiveGoalSolver
 import org.arend.prelude.Prelude
+import org.arend.server.ArendServerService
+import org.arend.server.impl.ArendLibraryImpl
 import org.arend.term.concrete.Concrete
 import org.arend.util.ArendBundle
 
@@ -38,14 +42,12 @@ class GoalFillingQuickFixTest: QuickFixTestBase() {
     """)
 
     private fun setGoalSolver() {
-        /* TODO[server2]
-        library.arendExtension = object : ArendExtension {
+        (project.service<ArendServerService>().server.getLibrary(library.name) as? ArendLibraryImpl)?.extension = object : ArendExtension {
             override fun getGoalSolver() = object : GoalSolver {
                 override fun checkGoal(typechecker: ExpressionTypechecker, goalExpression: ConcreteGoalExpression, expectedType: CoreExpression?) =
                     GoalSolver.CheckGoalResult(Concrete.ReferenceExpression(null, Prelude.ZERO.ref), null)
             }
         }
-        */
     }
 
     fun `test custom fix`() = doTestWithGoalSolver("""

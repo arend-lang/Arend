@@ -20,7 +20,7 @@
         <projectImportProvider implementation="org.arend.project.ArendProjectImportProvider"/>
         <projectOpenProcessor implementation="org.arend.project.ArendProjectOpenProcessor"/>
         <projectImportBuilder implementation="org.arend.project.ArendProjectImportBuilder"/>
-        <!-- TODO[server2]: <additionalLibraryRootsProvider implementation="org.arend.project.ArendPreludeLibraryRootProvider"/> -->
+        <additionalLibraryRootsProvider implementation="org.arend.project.ArendPreludeLibraryRootProvider"/>
         <treeStructureProvider implementation="org.arend.projectView.ArendProjectViewStructureProvider"/>
 
         <!-- Module -->
@@ -563,8 +563,9 @@
                class="org.arend.actions.ArendToolbarGroup"
                text="Arend Editor Toolbar"
                description="Arend editor toolbar">
-            <add-to-group group-id="NavBarToolBar"
-                          relative-to-action="ToolbarRunGroup" anchor="after"/>
+            <add-to-group group-id="MainToolbarRight"
+                          anchor="after"
+                          relative-to-action="NewUiRunWidget"/>
         </group>
         <group id="Arend.MarkRootGroup" searchable="false">
             <action id="ArendMarkSourceRootAction" class="org.arend.actions.mark.ArendMarkSourceRootAction"/>

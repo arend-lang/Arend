@@ -5,7 +5,6 @@ import com.intellij.openapi.wm.RegisterToolWindowTask
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowAnchor
 import com.intellij.openapi.wm.ToolWindowManager
-import org.arend.toolWindow.repl.ArendReplService
 
 abstract class SimpleToolWindowService(@JvmField protected val project: Project) {
     @JvmField protected var myToolWindow: ToolWindow? = null

@@ -324,6 +324,10 @@ public abstract class Repl {
     statements.clear();
   }
 
+  public TCDefReferable getModuleReferable() {
+    return myModuleReferable;
+  }
+
   private static class ShowLoadedLibrariesCommand implements ReplCommand {
     private static final ShowLoadedLibrariesCommand INSTANCE = new ShowLoadedLibrariesCommand();
 

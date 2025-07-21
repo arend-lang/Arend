@@ -1,17 +1,20 @@
 package org.arend.module.config
 
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.*
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiFileSystemItem
 import com.intellij.psi.PsiManager
+import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
 import org.arend.library.LibraryDependency
 import org.arend.module.IntellijClassLoaderDelegate
-import org.arend.ext.module.ModuleLocation
+import org.arend.naming.reference.DataModuleReferable
 import org.arend.psi.ArendFile
 import org.arend.server.ArendLibrary
+import org.arend.server.ArendServerService
 import org.arend.ui.impl.ArendGeneralUI
 import org.arend.util.*
 import org.arend.util.FileUtils.EXTENSION
@@ -148,6 +151,12 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
             (if (withAdditional) additionalModules[modulePath] else null) ?:
                 findArendFile(modulePath, false) ?: if (withTests) findArendFile(modulePath, true) else null
         }
+
+    fun findArendFile(moduleLocation: ModuleLocation): ArendFile? {
+            val server = project.service<ArendServerService>().server
+        return ((server.getRawGroup(moduleLocation)?.referable as? DataModuleReferable)?.data as? ArendFile) ?:
+            findArendFile(moduleLocation.modulePath, moduleLocation.locationKind == ModuleLocation.LocationKind.GENERATED, moduleLocation.locationKind == ModuleLocation.LocationKind.TEST)
+    }
 
     fun findArendFileOrDirectory(modulePath: ModulePath, withAdditional: Boolean, withTests: Boolean): PsiFileSystemItem? {
         if (modulePath.size() == 0) {

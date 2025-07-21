@@ -19,6 +19,12 @@ class NameShadowingInspectionTest : QuickFixTestBase() {
        \data D | con {I : \Set} 
     """)
 
+    fun testConstructors() = doWarningsCheck(myFixture, """
+       \data D
+          | con1 (a b : Nat)
+          | con2 (a b : Nat)
+    """)
+
     companion object {
         fun nsWarning(text: String) = "<warning descr=\"${ArendBundle.message("arend.inspection.name.shadowed", text)}\" textAttributesKey=\"WARNING_ATTRIBUTES\">$text</warning>"
     }

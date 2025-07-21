@@ -95,7 +95,7 @@ class ArendClassHierarchyBrowser(project: Project, method: PsiElement) : TypeHie
     fun buildChildren(children: Array<ArendHierarchyNodeDescriptor>, treeType: String): Array<ArendHierarchyNodeDescriptor> {
         for (node in children) {
             node.update()
-            if (ArendSuperClassTreeStructure.getChildren(node, myProject).isEmpty() || pathsToExpand.contains(ArendHierarchyNodeDescriptor.nodePath(node))) {
+            if (pathsToExpand.contains(ArendHierarchyNodeDescriptor.nodePath(node))) {
                 ApplicationManager.getApplication().invokeLater {
                     runWriteAction {
                         val tree = getJTree(treeType)

@@ -33,6 +33,7 @@ class ReplaceBracketsIntention : SelfTargetingIntention<PsiElement>(PsiElement::
     }
 
     override fun isApplicableTo(element: PsiElement, caretOffset: Int, editor: Editor): Boolean {
+        PsiDocumentManager.getInstance(element.project).doPostponedOperationsAndUnblockDocument(editor.document)
         val (left, right) = getBrackets(element)
         text = if (left.elementType == LPAREN) {
             ArendBundle.message("arend.replaceBrackets")
@@ -58,10 +59,10 @@ class ReplaceBracketsIntention : SelfTargetingIntention<PsiElement>(PsiElement::
     }
 
     override fun applyTo(element: PsiElement, project: Project, editor: Editor) {
-        val (left, right) = getBrackets(element)
-
         val document = editor.document
-        PsiDocumentManager.getInstance(project).commitDocument(document)
+        PsiDocumentManager.getInstance(project).doPostponedOperationsAndUnblockDocument(document)
+
+        val (left, right) = getBrackets(element)
 
         if (left != null && right != null) {
             changeBrackets(left, document)

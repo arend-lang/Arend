@@ -20,6 +20,8 @@ import org.arend.psi.doc.ArendDocReferenceText
 import org.arend.psi.ext.*
 import org.arend.psi.stubs.ArendFileStub
 import org.arend.psi.ArendExpressionCodeFragmentElementType
+import org.arend.psi.doc.ArendDocLink
+import org.arend.psi.doc.ArendDocLinkText
 import org.arend.refactoring.move.ArendLongNameCodeFragmentElementType
 
 class ArendParserDefinition : ParserDefinition {
@@ -46,7 +48,9 @@ class ArendParserDefinition : ParserDefinition {
     override fun createElement(node: ASTNode): PsiElement = when (val type = node.elementType) {
         DOC_CODE_BLOCK -> ArendDocCodeBlock(node)
         DOC_REFERENCE -> ArendDocReference(node)
+        DOC_LINK -> ArendDocLink(node)
         DOC_REFERENCE_TEXT -> ArendDocReferenceText(node)
+        DOC_LINK_TEXT -> ArendDocLinkText(node)
         ALIAS -> ArendAlias(node)
         ALIAS_IDENTIFIER -> ArendAliasIdentifier(node)
         APP_EXPR -> ArendAppExpr(node)

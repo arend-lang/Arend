@@ -25,9 +25,14 @@ import org.arend.ext.prettyprinting.DefinitionRenamer
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
 import org.arend.intention.checkNotGeneratePreview
 import org.arend.naming.resolving.ResolverListener
+import org.arend.naming.resolving.typing.TypingInfo
+import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor
 import org.arend.psi.*
-import org.arend.psi.ancestor
 import org.arend.psi.ext.*
+import org.arend.resolving.util.parseBinOp
+import org.arend.server.ArendServerService
+import org.arend.server.impl.ArendLibraryImpl
+import org.arend.server.impl.ArendServerImpl
 import org.arend.settings.ArendProjectSettings
 import org.arend.term.Fixity
 import org.arend.term.abs.Abstract
@@ -36,12 +41,15 @@ import org.arend.term.concrete.Concrete
 import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.typechecking.ProgressCancellationIndicator
 import org.arend.typechecking.computation.ComputationRunner
+import org.arend.typechecking.instance.ArendInstances
+import org.arend.typechecking.provider.SimpleConcreteProvider
 import org.arend.typechecking.subexpr.CorrespondedSubDefVisitor
 import org.arend.typechecking.subexpr.FindBinding
 import org.arend.typechecking.subexpr.SubExprError
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor
 import org.arend.resolving.util.parseBinOp
-import org.arend.server.ArendServerService
+import org.arend.util.getReferableConcreteGroup
+import org.arend.util.getReferableScope
 
 /**
  * @param def for storing function-level elim/clauses bodies
@@ -125,7 +133,13 @@ fun correspondedSubExpr(range: TextRange, file: PsiFile, project: Project): SubE
     val psiDef = exprAncestor.topmostAncestor<ReferableBase<*>>()
         ?: throw SubExprException("selected text is not in a definition")
     val arendServer = project.service<ArendServerService>().server
-    val concreteDef = getTcDefReferable(psiDef)?.let { arendServer.getResolvedDefinition(it) }?.definition as? Concrete.Definition
+    val concreteDef = psiDef.tcReferable?.let { arendServer.getResolvedDefinition(it) }?.definition as? Concrete.Definition
+
+    val extension = concreteDef?.data?.getLocation()?.libraryName?.let { arendServer.getLibrary(it) as? ArendLibraryImpl }?.extension
+    getReferableConcreteGroup(psiDef)?.let { concreteGroup ->
+        DefinitionResolveNameVisitor(SimpleConcreteProvider(ArendServerImpl.updateDefinitions(concreteGroup)), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, extension?.literalTypechecker, resolver)
+            .resolveGroup(concreteGroup, getReferableScope(psiDef), ArendInstances(), LinkedHashMap())
+    }
     val body = concreteDef?.let { it to psiDef }
 
     val errors: List<SubExprError>
