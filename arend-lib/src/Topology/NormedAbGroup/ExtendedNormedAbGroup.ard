@@ -1,3 +1,4 @@
+{- TODO[server2]: Delete this?
 \import Algebra.Group
 \import Algebra.Monoid
 \import Algebra.Pointed
@@ -42,3 +43,4 @@
   | norm_zro => Real.real-lower-ext A.norm_zro
   | norm_negative => Real.real-lower-ext A.norm_negative
   | norm_+ => real_<=_InfReal.2 $ transportInv {InfReal} (_ <=) RealAbGroup.+-inf (later A.norm_+)
+-}

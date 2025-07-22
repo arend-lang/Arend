@@ -12,9 +12,10 @@
 \open ContMap
 \open ProductTopSpace
 
-\class TopMonoid \extends TopSpace, Monoid {
+\class TopSemigroup \extends TopSpace, Semigroup
   | *-cont : ContMap (ProductTopSpace \this \this) \this \lam s => s.1 * s.2
 
+\class TopMonoid \extends TopSemigroup, Monoid {
   \lemma pow-cont {n : Nat} : IsCont (pow __ n) \elim n
     | 0 => ContMap.const 1
     | suc n => *-cont ∘ tuple pow-cont id

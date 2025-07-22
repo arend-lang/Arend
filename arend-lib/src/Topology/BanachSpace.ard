@@ -16,7 +16,6 @@
 \import Order.StrictOrder
 \import Paths
 \import Topology.NormedAbGroup
-\import Topology.NormedAbGroup.ValuedNormedAbGroup
 \import Topology.NormedAlgebra
 \import Topology.NormedModule
 \import Topology.NormedRing

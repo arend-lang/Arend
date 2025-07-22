@@ -9,7 +9,6 @@
 \import Order.StrictOrder
 \import Paths
 \import Topology.MetricSpace
-\import Topology.MetricSpace.ValuedMetricSpace
 \import Topology.UniformSpace.Product
 \open LinearlyOrderedAbMonoid
 

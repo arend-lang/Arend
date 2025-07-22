@@ -27,7 +27,6 @@
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
 \import Topology.MetricSpace
-\import Topology.MetricSpace.ValuedMetricSpace
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup
 \import Topology.TopAbGroup.Product

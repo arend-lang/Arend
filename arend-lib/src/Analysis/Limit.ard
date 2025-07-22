@@ -26,7 +26,6 @@
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Directed
 \import Topology.MetricSpace
-\import Topology.MetricSpace.ValuedMetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.TopAbGroup

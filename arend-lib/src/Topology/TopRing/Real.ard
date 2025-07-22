@@ -4,7 +4,7 @@
 \import Arith.Real.Field
 \import Function.Meta
 \import Logic
-\import Topology.MetricSpace.ValuedMetricSpace
+\import Topology.MetricSpace
 \import Topology.NormedAbGroup.Real
 \import Topology.TopRing
 

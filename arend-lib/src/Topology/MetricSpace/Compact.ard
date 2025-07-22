@@ -14,7 +14,6 @@
 \import Topology.CoverSpace.Product
 \import Topology.MetricSpace
 \import Topology.MetricSpace.ManhattanProduct
-\import Topology.MetricSpace.ValuedMetricSpace
 
 \lemma product-balls-tb {X Y : PseudoMetricSpace} (Xb : BallsTotallyBounded X) (Yb : BallsTotallyBounded Y)
   : BallsTotallyBounded (ManhattanProductPseudoMetricSpace X Y)

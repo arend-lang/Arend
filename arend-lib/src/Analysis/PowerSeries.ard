@@ -27,7 +27,6 @@
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
-\import Topology.NormedAbGroup.ValuedNormedAbGroup
 \import Topology.NormedRing
 \import Topology.TopSpace
 \open Monoid(pow)

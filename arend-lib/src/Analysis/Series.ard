@@ -26,10 +26,9 @@
 \import Set.Partial
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
-\import Topology.MetricSpace.ValuedMetricSpace
+\import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
-\import Topology.NormedAbGroup.ValuedNormedAbGroup
 \import Topology.NormedRing
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Complete

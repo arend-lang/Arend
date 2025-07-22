@@ -172,10 +172,10 @@
       => rewrite (\peval x + y, \peval x InfRealAbMonoid.+ y, \peval x LowerRealAbMonoid.+ y) <->refl
 
     \lemma +_U {x y : Real} {a : Rat} : Real.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c < a)
-      => rewrite (\peval x + y, \peval x InfRealAbMonoid.+ y, \peval x ExtendedUpperRealAbMonoid.+ y) <->refl
+      => rewrite (\peval x + y, \peval x InfRealAbMonoid.+ y, \peval x ExtendedUpperReal.+ y) <->refl
       \where
-        \lemma upper {x y : Real} : x + y = {ExtendedUpperReal} x ExtendedUpperRealAbMonoid.+ y
-          => exts \lam a => <->_=.1 +_U *> inv (<->_=.1 ExtendedUpperRealAbMonoid.+_U)
+        \lemma upper {x y : Real} : x + y = {ExtendedUpperReal} x UpperRealAbMonoid.+ y
+          => exts \lam a => <->_=.1 +_U *> inv (<->_=.1 UpperRealAbMonoid.+_U)
 
     \lemma +-lower {x y : Real} : x + y = {LowerReal} x LowerRealAbMonoid.+ y
       => exts \lam a => <->_=.1 +_L *> inv (<->_=.1 LowerRealAbMonoid.+_L)
@@ -304,6 +304,9 @@
       }, \case real_<-char.1 __ \with {
         | inP (a,x<a,a<y) => inP (a, real_<_L.1 a<y, \lam {b} b<x => real_<_L.1 $ real_<_L.2 b<x <∘ x<a)
       })
+
+    \lemma lower_<=-char {x y : Real} : x LowerRealAbMonoid.<= y <-> x RealAbGroup.<= y
+      => (\lam p => <=_L-char.2 $ unfolds in p, \lam p => unfolds $ <=_L-char.1 p)
 
     \lemma diff-rat {x y : Rat} : x - {RealAbGroup} y = {Real} x - y
       => pmap (x +) negative-rat *> +-rat

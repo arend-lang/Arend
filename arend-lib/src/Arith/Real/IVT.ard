@@ -24,7 +24,6 @@
 \import Set.Subset
 \import Topology.Elem
 \import Topology.MetricSpace
-\import Topology.MetricSpace.ValuedMetricSpace
 \import Topology.NormedAbGroup.Real
 \import Topology.TopSpace
 \open IntervalSubset

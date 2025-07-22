@@ -18,7 +18,6 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
-\import Topology.MetricSpace.ValuedMetricSpace
 \import Topology.UniformSpace
 \open IsTotallyBounded(IsCover,Cond)
 \open ClosurePrecoverSpace

@@ -20,7 +20,6 @@
 \import Topology.CoverSpace.Directed
 \import Topology.CoverSpace.Product
 \import Topology.MetricSpace
-\import Topology.MetricSpace.ValuedMetricSpace
 \import Topology.TopAbGroup
 \import Topology.TopSpace
 \import Topology.UniformSpace

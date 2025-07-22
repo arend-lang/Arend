@@ -11,7 +11,6 @@
 \import Paths
 \import Topology.CoverSpace
 \import Topology.MetricSpace
-\import Topology.MetricSpace.ValuedMetricSpace
 \open OrderedField
 
 \record LipschitzMap (C : Real) (C>0 : 0 < C) \extends UniformMetricMap {

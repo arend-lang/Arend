@@ -21,7 +21,6 @@
 \import Paths.Meta
 \import Topology.Compact
 \import Topology.MetricSpace
-\import Topology.MetricSpace.ValuedMetricSpace
 \import Topology.NormedAbGroup.Real
 
 -- | Splits the interval `[a,b]` into `n` equal parts.

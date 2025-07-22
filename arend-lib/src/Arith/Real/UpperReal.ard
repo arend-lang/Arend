@@ -31,6 +31,39 @@
     | U => x <
     | U-closed => <∘
     | U-rounded => isDense
+
+  \sfunc \infixl 6 + (x y : ExtendedUpperReal) : ExtendedUpperReal \cowith
+    | U a => ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
+    | U-closed (inP (a,a<x,b,b<y,a+b<q)) q<q' => inP (a, a<x, b, b<y, a+b<q <∘ q<q')
+    | U-rounded {q} (inP (a,a<x,b,b<y,a+b<q)) => inP (RatField.mid (a RatField.+ b) q, inP (a, a<x, b, b<y, RatField.mid>left a+b<q), RatField.mid<right a+b<q)
+
+  \lemma +_U {x y : ExtendedUpperReal} {a : Rat} : UpperReal.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
+    => rewrite (\peval x + y) <->refl
+
+  \sfunc meet (x y : ExtendedUpperReal) : ExtendedUpperReal \cowith
+    | U a => x.U a || y.U a
+    | U-closed e q'<q => ||.map (x.U-closed __ q'<q) (y.U-closed __ q'<q) e
+    | U-rounded => \case \elim __ \with {
+      | byLeft q<x => \case x.U-rounded q<x \with {
+        | inP (r,r<x,q<r) => inP (r, byLeft r<x, q<r)
+      }
+      | byRight q<y => \case y.U-rounded q<y \with {
+        | inP (r,r<y,q<r) => inP (r, byRight r<y, q<r)
+      }
+    }
+
+  \lemma meet_U {x y : ExtendedUpperReal} {a : Rat} : UpperReal.U {meet x y} a <-> x.U a || y.U a
+    => rewrite (\peval meet x y) <->refl
+
+  \sfunc join (x y : ExtendedUpperReal) : ExtendedUpperReal \cowith
+    | U a => \Sigma (x.U a) (y.U a)
+    | U-closed (q<x,q<y) q'<q => (x.U-closed q<x q'<q, y.U-closed q<y q'<q)
+    | U-rounded (q<x,q<y) => \case x.U-rounded q<x, y.U-rounded q<y \with {
+      | inP (r,r<x,q<r), inP (r',r'<y,q<r') => inP (r ∨ r', (x.U_<= r<x join-left, y.U_<= r'<y join-right), RatField.<_join-univ q<r q<r')
+    }
+
+  \lemma join_U {x y : ExtendedUpperReal} {a : Rat} : UpperReal.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
+    => rewrite (\peval join x y) <->refl
 }
 
 \lemma real_meet_U {a b : Rat} {x : ExtendedUpperReal} (x<a : x.U a) (x<b : x.U b) : x.U (a ∧ b)
@@ -52,7 +85,7 @@
     | U-inh => inP (x + 1, linarith)
 }
 
-\instance ExtendedUpperRealAbMonoid : BiorderedLatticeAbMonoid ExtendedUpperReal
+\instance UpperRealAbMonoid : BiorderedLatticeAbMonoid UpperReal
   | zro => UpperReal.fromRat 0
   | + => +
   | zro-left => (\peval _ + _) *> exts \lam a => ext (\lam (inP (b,b<0,c,c<x,a<b+c)) => U-closed c<x linarith, \lam a<x => \case U-rounded a<x \with {
@@ -72,7 +105,7 @@
   }, \lam r => \case +_U.1 r \with {
     | inP (c,c<y,b,b<x,a<c+b) => +_U.2 $ inP $ later (b, b<x, c, c<y, rewrite RatField.+-comm a<c+b)
   })
-  | <= => <=
+  | <= x y => x <= y
   | <=-refl x<a => x<a
   | <=-transitive p q x<a => p (q x<a)
   | <=-antisymmetric p q => exts \lam a => ext (q,p)
@@ -87,7 +120,7 @@
   | join-left s => (join_U.1 s).1
   | join-right s => (join_U.1 s).2
   | join-univ z<=x z<=y a<z => join_U.2 (z<=x a<z, z<=y a<z)
-  | < => <
+  | < x y => x < y
   | <-irreflexive (inP (b,y<b,p)) => <-irreflexive (p y<b)
   | <-transitive (inP (a,x<a,a<=y)) (inP (b,y<b,b<=z)) => inP (a, x<a, \lam {c} z<c => a<=y y<b <∘ b<=z z<c)
   | <-transitive-right e (inP (b,a2<b,b<=a3)) => inP (b, e a2<b, b<=a3)
@@ -126,12 +159,15 @@
   \where {
     \open ExtendedUpperReal
 
-    \sfunc \infixl 6 + (x y : ExtendedUpperReal) : ExtendedUpperReal \cowith
+    \sfunc \infixl 6 + (x y : UpperReal) : UpperReal \cowith
       | U a => ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
       | U-closed (inP (a,a<x,b,b<y,a+b<q)) q<q' => inP (a, a<x, b, b<y, a+b<q <∘ q<q')
       | U-rounded {q} (inP (a,a<x,b,b<y,a+b<q)) => inP (RatField.mid (a RatField.+ b) q, inP (a, a<x, b, b<y, RatField.mid>left a+b<q), RatField.mid<right a+b<q)
+      | U-inh => \case x.U-inh, y.U-inh \with {
+        | inP (q,x<q), inP (r,y<r) => inP (q RatField.+ r RatField.+ 1, inP (q, x<q, r, y<r, linarith))
+      }
 
-    \lemma +_U {x y : ExtendedUpperReal} {a : Rat} : UpperReal.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
+    \lemma +_U {x y : UpperReal} {a : Rat} : UpperReal.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
       => rewrite (\peval x + y) <->refl
 
     \lemma +-rat {x y : Rat} : UpperReal.fromRat x + UpperReal.fromRat y = UpperReal.fromRat (x RatField.+ y)
@@ -142,7 +178,13 @@
 
     \type \infix 4 < (x y : ExtendedUpperReal) => ∃ (a : x.U) (a <= y)
 
-    \sfunc meet (x y : ExtendedUpperReal) : ExtendedUpperReal \cowith
+    \lemma <=-rat {x y : Rat} : x <= y <-> x RatField.<= y
+      => (\lam x<=y y<x => <-irreflexive (x<=y y<x), \lam x<=y y<b => x<=y <∘r y<b)
+
+    \lemma <-rat {x : ExtendedUpperReal} {y : Rat} : x < y <-> x.U y
+      => (\lam (inP (a,x<a,a<=y)) => x.U_<= x<a (<=-rat.1 a<=y), \lam x<y => inP (y, x<y, <=-rat.2 <=-refl))
+
+    \sfunc meet (x y : UpperReal) : UpperReal \cowith
       | U a => x.U a || y.U a
       | U-closed e q'<q => ||.map (x.U-closed __ q'<q) (y.U-closed __ q'<q) e
       | U-rounded => \case \elim __ \with {
@@ -153,17 +195,26 @@
           | inP (r,r<y,q<r) => inP (r, byRight r<y, q<r)
         }
       }
+      | U-inh => \case x.U-inh \with {
+        | inP (q,x<q) => inP (q, byLeft x<q)
+      }
 
-    \lemma meet_U {x y : ExtendedUpperReal} {a : Rat} : UpperReal.U {meet x y} a <-> x.U a || y.U a
+    \lemma meet_U {x y : UpperReal} {a : Rat} : UpperReal.U {meet x y} a <-> x.U a || y.U a
       => rewrite (\peval meet x y) <->refl
 
-    \sfunc join (x y : ExtendedUpperReal) : ExtendedUpperReal \cowith
+    \sfunc join (x y : UpperReal) : UpperReal \cowith
       | U a => \Sigma (x.U a) (y.U a)
       | U-closed (q<x,q<y) q'<q => (x.U-closed q<x q'<q, y.U-closed q<y q'<q)
       | U-rounded (q<x,q<y) => \case x.U-rounded q<x, y.U-rounded q<y \with {
         | inP (r,r<x,q<r), inP (r',r'<y,q<r') => inP (r ∨ r', (x.U_<= r<x join-left, y.U_<= r'<y join-right), RatField.<_join-univ q<r q<r')
       }
+      | U-inh => \case x.U-inh, y.U-inh \with {
+        | inP (q,x<q), inP (r,y<r) => inP (q RatField.∨ r, (x.U_<= x<q join-left, y.U_<= y<r join-right))
+      }
 
-    \lemma join_U {x y : ExtendedUpperReal} {a : Rat} : UpperReal.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
+    \lemma join_U {x y : UpperReal} {a : Rat} : UpperReal.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
       => rewrite (\peval join x y) <->refl
+
+    \lemma zro<ide : 0 < 1
+      => inP (1, idp, \lam p => p)
   }

@@ -1,3 +1,4 @@
+\import Data.Bool
 \import Function.Meta ($)
 \import Logic
 \import Logic.Meta
@@ -11,11 +12,11 @@
 \import Set.SetHom
 \import Set.Filter
 \import Set.Subset
-\open Bounded(top)
+\open Bounded(top,bottom)
 
 \class TopSpace \extends BaseSet {
   | isOpen : Set E -> \Prop
-  | open-top : isOpen Bounded.top
+  | open-top : isOpen top
   | open-inter {U V : Set E} : isOpen U -> isOpen V -> isOpen (U ∧ V)
   | open-Union {S : Set (Set E)} : ∀ {U : S} (isOpen U) -> isOpen (Set.Union S)
 
@@ -26,6 +27,15 @@
   \lemma open-IUnion {J : \hType} (g : J -> Given isOpen) : isOpen \lam x => ∃ (j : J) ((g j).1 x)
     => \have uo => open-Union {_} {\lam U => ∃ (j : J) ((g j).1 = U)} \lam (inP (j,p)) => transport isOpen p (g j).2
        \in transport isOpen (ext \lam x => ext (\lam (inP (U, inP (j,p), Ux)) => inP (j, rewrite p Ux), \lam (inP (j,c)) => inP ((g j).1, inP (j, idp), c))) uo
+
+  \lemma open-bottom : isOpen bottom
+    => cover-open \lam e => bottom-empty e
+
+  \lemma open-union {U V : Set E} (Uo : isOpen U) (Vo : isOpen V) : isOpen (U ∨ V)
+    => cover-open $ later \case \elim __ \with {
+      | inP (true,Ux) => inP (U, Uo, Ux, join-left)
+      | inP (false,Vx) => inP (V, Vo, Vx, join-right)
+    }
 
   \type \infix 4 <=<T (V U : Set E) : \Prop
     => \Pi (y : E) -> ∃ (W : isOpen) (W y) (Given (V ∧ W) -> W ⊆ U)
