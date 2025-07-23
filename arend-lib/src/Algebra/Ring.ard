@@ -17,7 +17,7 @@
 \import Set.Fin
 
 {- | Associative ring -}
-\class PseudoRing \extends PseudoSemiring, AbGroup
+\class PseudoRing \extends PseudoSemiring, AbGroup {
   | zro_*-left {x} => AddGroup.cancel-left (zro * x) (
     zro * x + zro * x ==< inv rdistr >==
     (zro + zro) * x   ==< pmap (`* x) zro-left >==
@@ -31,26 +31,11 @@
     x * zro + zro     `qed
   )
 
-\class Ring \extends PseudoRing, Semiring {
-  \func intCoef (x : Int) : E
-    | pos n => natCoef n
-    | neg (suc _ \as n) => negative (natCoef n)
-
-  \lemma intCoef_neg (n : Nat) : intCoef (neg n) = negative (natCoef n)
-    | 0 => natCoefZero *> inv (pmap negative natCoefZero *> AddGroup.negative_zro)
-    | suc n => idp
-
   \lemma negative_*-left {x y : E} : negative x * y = negative (x * y)
     => negative-unique (x * y) (inv rdistr *> pmap (`* y) negative-left *> zro_*-left) negative-right
 
   \lemma negative_*-right {x y : E} : x * negative y = negative (x * y)
     => op.negative_*-left
-
-  \lemma negative_ide-left {x : E} : negative ide * x = negative x
-    => negative_*-left *> pmap negative ide-left
-
-  \lemma negative_ide-right {x : E} : x * negative ide = negative x
-    => negative_*-right *> pmap negative ide-right
 
   \lemma negative_* {x y : E} : negative x * negative y = x * y =>
     negative x * negative y     ==< negative_*-left >==
@@ -63,6 +48,26 @@
 
   \lemma rdistr_- {x y z : E} : (x - y) * z = x * z - y * z
     => rdistr *> pmap (_ +) negative_*-left
+
+  \protected \func op : PseudoRing \cowith
+    | AbGroup => \this
+    | PseudoSemiring => PseudoSemiring.op
+}
+
+\class Ring \extends PseudoRing, Semiring {
+  \func intCoef (x : Int) : E
+    | pos n => natCoef n
+    | neg (suc _ \as n) => negative (natCoef n)
+
+  \lemma intCoef_neg (n : Nat) : intCoef (neg n) = negative (natCoef n)
+    | 0 => natCoefZero *> inv (pmap negative natCoefZero *> AddGroup.negative_zro)
+    | suc n => idp
+
+  \lemma negative_ide-left {x : E} : negative ide * x = negative x
+    => negative_*-left *> pmap negative ide-left
+
+  \lemma negative_ide-right {x : E} : x * negative ide = negative x
+    => negative_*-right *> pmap negative ide-right
 
   \lemma negative_inv (j : Monoid.Inv {\this}) : Monoid.Inv (negative j) (negative j.inv)
     => \new Monoid.Inv {

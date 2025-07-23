@@ -377,4 +377,80 @@ public class OverrideTest extends TypeCheckingTestCase {
         => \\new U (\\new S 0 x)
       """);
   }
+
+  @Test
+  public void overrideImplementationTest() {
+    typeCheckModule("""
+      \\record R (x : Nat)
+      \\record S (y : Nat) \\extends R
+      
+      \\record A (r : R)
+      \\record B \\extends A {
+        | r => \\new R 0
+      }
+      \\record C \\extends A {
+        \\override r : S
+      }
+      \\record D \\extends B, C {
+        | r => \\new S { | x => 0 | y => 1 }
+      }
+      """);
+  }
+
+  @Test
+  public void overrideImplementationError() {
+    typeCheckModule("""
+      \\record R (x : Nat)
+      \\record S (y : Nat) \\extends R
+      
+      \\record A (r : R)
+      \\record B \\extends A {
+        | r => \\new R 0
+      }
+      \\record C \\extends A {
+        \\override r : S
+      }
+      \\record D \\extends B, C {
+        | r => \\new S { | x => 1 | y => 0 }
+      }
+      """, 1);
+  }
+
+  @Test
+  public void overrideImplementationError2() {
+    typeCheckModule("""
+      \\record R (x : Nat)
+      \\record S (y : Nat) \\extends R
+      
+      \\record A (r : R)
+      \\record B \\extends A {
+        | r => \\new R 0
+      }
+      \\record C \\extends A {
+        \\override r : S
+      }
+      \\record D \\extends B, C {
+        | r => \\new R 0
+      }
+      """, 1);
+    assertThatErrorsAre(typeMismatchError());
+  }
+
+  @Test
+  public void overrideImplementationError3() {
+    typeCheckModule("""
+      \\record R (x : Nat)
+      \\record S (y : Nat) \\extends R
+      
+      \\record A (r : R)
+      \\record B \\extends A {
+        | r => \\new R 0
+      }
+      \\record C \\extends A {
+        \\override r : S
+      }
+      \\record D \\extends B, C
+      """, 1);
+    assertThatErrorsAre(typeMismatchError());
+  }
 }

@@ -9,11 +9,20 @@
 \import Relation.Equivalence
 \import Set.Fin
 
-\class PseudoSemiring \extends AbMonoid, Semigroup
+\class PseudoSemiring \extends AbMonoid, Semigroup {
   | ldistr {x y z : E} : x * (y + z) = x * y + x * z
   | rdistr {x y z : E} : (x + y) * z = x * z + y * z
   | zro_*-left {x : E} : zro * x = zro
   | zro_*-right {x : E} : x * zro = zro
+
+  \protected \func op : PseudoSemiring \cowith
+    | AbMonoid => \this
+    | Semigroup => Semigroup.op
+    | ldistr => rdistr
+    | rdistr => ldistr
+    | zro_*-left => zro_*-right
+    | zro_*-right => zro_*-left
+}
 
 \class Semiring \extends PseudoSemiring, Monoid {
   | natCoef : Nat -> E
@@ -93,12 +102,8 @@
     | suc n => zro_*-right
 
   \protected \func op : Semiring \cowith
-    | AbMonoid => \this
+    | PseudoSemiring => PseudoSemiring.op
     | Monoid => Monoid.op
-    | ldistr => rdistr
-    | rdistr => ldistr
-    | zro_*-left => zro_*-right
-    | zro_*-right => zro_*-left
 } \where {
     \open Monoid(LDiv)
   }

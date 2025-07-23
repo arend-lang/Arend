@@ -42,7 +42,7 @@
               rewrite norm-dist at xx'<gamma $ rewrite norm-dist at aa'<gamma $ rewrite norm-dist at x0x<1 $ rewrite norm-dist at a0a<1 $ rewrite norm-dist $
               \have t : norm (x *c (a - a') + (x - x') *c a') < eps => norm_+ <∘r <=_+ norm_*c_<= norm_*c_<= <∘r
                   <=_+ (<=_*_positive-right norm>=0 $ LinearOrder.<_<= aa'<gamma) (<=_*_positive-left (LinearOrder.<_<= xx'<gamma) norm>=0) <∘r
-                  rewrite {2} *-comm (transport (`< _) rdistr $ <_*_positive-left (hiding norm_*c_<= $ linarith (norm_-right {_} {x0} {x}, norm_-right {_} {a0} {a}, norm_-right {_} {a} {a'}, meet-right : gamma <= 1) : norm x + norm a' < norm x0 + norm a0 + 3) gamma>0 <∘l
+                  later (rewrite {2} *-comm $ transport (`< _) rdistr $ <_*_positive-left (hiding norm_*c_<= $ linarith (norm_-right {_} {x0} {x}, norm_-right {_} {a0} {a}, norm_-right {_} {a} {a'}, meet-right : gamma <= 1) : norm x + norm a' < norm x0 + norm a0 + 3) gamma>0 <∘l
                     <=_*_positive-right (LinearOrder.<_<= lem) meet-left <=∘ Preorder.=_<= (inv *-assoc *> pmap (`* _) (OrderedField.pinv-right lem) *> ide-left))
               \in (rewrite (A.*c-ldistr_-, A.*c-rdistr_-, +-assoc), rewriteI {2} +-assoc, rewrite (negative-left,zro-left)) in t))
 }

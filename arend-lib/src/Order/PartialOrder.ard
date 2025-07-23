@@ -61,6 +61,9 @@
   \func IsJoin {J : \Set} (f : J -> E) (a : E) => \Sigma (\Pi (j : J) -> f j <= a) (\Pi {b : E} -> (\Pi (j : J) -> f j <= b) -> a <= b)
 }
 
+\lemma =_<= {P : Preorder} {x y : P} (p : x = y) : x <= y
+  | idp => <=-refl
+
 \class Poset \extends Preorder, Cat (\lp,\lp) {
   | <=-antisymmetric {x y : E} : x <= y -> y <= x -> x = y
   | univalence => Cat.makeUnivalence \lam (e : Iso) => (<=-antisymmetric e.f e.hinv, prop-pi)
@@ -68,9 +71,6 @@
   \protected \func op : Poset \cowith
     | Preorder => Preorder.op
     | <=-antisymmetric p q => <=-antisymmetric q p
-
-  \lemma <=_= {x y : E} (p : x = y) : x <= y
-    | idp => <=-refl
 }
 
 \instance ProductPreorder (P Q : Preorder) : Preorder (\Sigma P Q)

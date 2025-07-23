@@ -109,9 +109,9 @@
   | func-ide => natMap.func-ide
   | func-* {x y : Int} : R.intCoef (x * y) = intCoef x * intCoef y \elim x, y {
     | pos n, pos m => natMap.func-*
-    | pos n, neg (suc _ \as m) => intCoef_neg _ *> pmap negative natMap.func-* *> inv negative_*-right
-    | neg (suc _ \as n), pos m => intCoef_neg _ *> pmap negative natMap.func-* *> inv negative_*-left
-    | neg (suc _ \as n), neg m => natMap.func-* *> inv (pmap (negative (natCoef n) *) (intCoef_neg m) *> negative_*)
+    | pos n, neg (suc _ \as m) => intCoef_neg _ *> pmap negative natMap.func-* *> inv R.negative_*-right
+    | neg (suc _ \as n), pos m => intCoef_neg _ *> pmap negative natMap.func-* *> inv R.negative_*-left
+    | neg (suc _ \as n), neg m => natMap.func-* *> inv (pmap (negative (natCoef n) *) (intCoef_neg m) *> R.negative_*)
   }
   \where {
     \open AddGroup(negative_zro,negative_+)

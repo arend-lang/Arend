@@ -171,17 +171,18 @@
   })
 
 \class UpperPseudoMetricSpace \extends ValuedPseudoMetricSpace {
-  | V => UpperRealMetricValueLinearOrder
+  | V => UpperRealMetricValueOrder
 } \where {
-  \open UpperRealAbMonoid
+  \open UpperRealAbMonoid(<-rat)
+  \open PosUpperRealSemiring(+_U)
 
-  \instance UpperRealMetricValueLinearOrder : MetricValueOrder UpperReal
-    | BiorderedLatticeAbMonoid => UpperRealAbMonoid
-    | hasPositive => inP (1 : Real, zro<ide)
+  \instance UpperRealMetricValueOrder : MetricValueOrder PosUpperReal
+    | BiorderedLatticeAbMonoid => PosUpperRealLattice
+    | hasPositive => inP (1, PosUpperRealSemiring.zro<ide)
     | +_<-dense (inP (c,a<c,c<=b)) => \case U-rounded a<c \with {
-      | inP (d,a<d,d<c) => inP ((c - d) * ratio 1 4, <-rat.2 linarith, inP (c, +_U.2 $ inP (d, a<d, (c - d) * ratio 1 2, linarith, linarith), c<=b))
+      | inP (d,a<d,d<c) => inP (PosUpperReal.fromRat ((c - d) * ratio 1 4) linarith, <-rat.2 linarith, inP (c, +_U.2 $ inP (d, a<d, (c - d) * ratio 1 2, linarith, linarith), c<=b))
     }
-    | bounded-negative p {b} b>0 => <-rat.1 $ p {b} $ <-rat.2 b>0
+    | bounded-negative p {b} b>0 => <-rat.1 $ p {PosUpperReal.fromRat b $ <=-less b>0} $ <-rat.2 b>0
     | double-positive a+a>=0 a<b => linarith $ a+a>=0 \case U-rounded a<b \with {
       | inP (c,a<c,c<b) => +_U.2 $ inP (c, a<c, c, a<c, RatField.<_+ c<b c<b)
     }
@@ -254,11 +255,11 @@
 
 \class MetricSpace \extends PseudoMetricSpace, ValuedMetricSpace
 
-\record LocallyUniformMetricMap \extends LocallyUniformMap {
-  \override Dom : PseudoMetricSpace
-  \override Cod : PseudoMetricSpace
+\record LocallyUniformMetricMap (V : MetricValueOrder) \extends LocallyUniformMap {
+  \override Dom : ValuedPseudoMetricSpace V
+  \override Cod : ValuedPseudoMetricSpace V
 
-  | func-dist-locally-uniform : ∀ {eps : Real} (0 < eps) ∃ (delta : Real) (0 < delta) ∀ (x0 : Dom) ∃ (gamma : Real) (0 < gamma) ∀ {x x' : Dom} (dist x0 x < delta -> dist x x' < gamma -> dist (func x) (func x') < eps)
+  | func-dist-locally-uniform : ∀ {eps : V} (0 < eps) ∃ (delta : V) (0 < delta) ∀ (x0 : Dom) ∃ (gamma : V) (0 < gamma) ∀ {x x' : Dom} (dist x0 x < delta -> dist x x' < gamma -> dist (func x) (func x') < eps)
   | func-locally-uniform Eu => \case dist-uniform.1 Eu \with {
     | inP (eps,eps>0,h) => \case func-dist-locally-uniform eps>0 \with {
       | inP (delta,delta>0,g) => inP (_, metricUniform delta>0, \lam (inP (x0,p)) => \case g x0 \with {
@@ -271,20 +272,21 @@
     }
   }
 } \where {
-  \lemma fromLocallyUniformMap {X Y : PseudoMetricSpace} (f : LocallyUniformMap X Y) : LocallyUniformMetricMap X Y f \cowith
-    | func-dist-locally-uniform eps>0 => \case f.func-locally-uniform (metricUniform $ half>0 eps>0) \with {
-      | inP (C,Cu,h) => \case dist-uniform.1 Cu \with {
-        | inP (delta,delta>0,g) => inP (half delta, half>0 delta>0, \lam x0 => \case g x0 \with {
-          | inP (U,CU,e) => \case dist-uniform.1 (h CU) \with {
-            | inP (gamma,gamma>0,g') => inP (gamma ∧ half delta, <_meet-univ gamma>0 (half>0 delta>0), \lam {x} {x'} d1 d2 => \case g' x \with {
-              | inP (V, inP (W, inP (y, q), p), r) => rewrite q at p $ halving (p (e $ d1 <∘ half<id delta>0, r $ rewrite X.dist-refl gamma>0)) (p (e $ halving (rewrite X.dist-symm in d1) $ d2 <∘l meet-right, r $ d2 <∘l meet-left))
-            })
-          }
-        })
-      }
-    }
+  \lemma fromLocallyUniformMap {V : MetricValueOrder} {X Y : ValuedPseudoMetricSpace V} (f : LocallyUniformMap X Y) : LocallyUniformMetricMap V X Y f \cowith
+    | func-dist-locally-uniform eps>0 =>
+      \have | (inP (eps/2,eps/2>0,eps/2<eps,eps/2+eps/2<eps)) => V.shrink2 eps>0
+            | (inP (C,Cu,h)) => f.func-locally-uniform (metricUniform eps/2>0)
+            | (inP (delta,delta>0,g)) => dist-uniform.1 Cu
+            | (inP (delta/2,delta/2>0,delta/2<delta,delta/2+delta/2<delta)) => V.shrink2 delta>0
+      \in inP (delta/2, delta/2>0, \lam x0 => \case g x0 \with {
+        | inP (U,CU,e) => \case dist-uniform.1 (h CU) \with {
+          | inP (gamma,gamma>0,g') => inP (gamma ∧ delta/2, <_meet-univ gamma>0 delta/2>0, \lam {x} {x'} d1 d2 => \case g' x \with {
+            | inP (V, inP (W, inP (y, q), p), r) => rewrite q at p $ dist-triang <∘r <=_+ (<=-less $ transport (`< _) dist-symm $ p (e $ d1 <∘ delta/2<delta, r $ transportInv (`< _) dist-refl gamma>0)) (<=-less $ p (e $ dist-triang <∘r <=_+ (<=-less d1) (<=-less d2 <=∘ meet-right) <∘r delta/2+delta/2<delta, r $ d2 <∘l meet-left)) <∘r eps/2+eps/2<eps
+          })
+        }
+      })
 
-  \lemma makeLocallyUniformMap2 {X Y Z : PseudoMetricSpace} (f : X -> Y -> Z) (fc : ∀ {eps : Real} (0 < eps) ∃ (delta : Real) (0 < delta) ∀ x0 y0 ∃ (gamma : Real) (0 < gamma) ∀ {x x'} {y y'} (dist x0 x < delta -> dist y0 y < delta -> dist x x' < gamma -> dist y y' < gamma -> dist (f x y) (f x' y') < eps))
+  \lemma makeLocallyUniformMap2 {V : MetricValueOrder} {X Y Z : ValuedPseudoMetricSpace V} (f : X -> Y -> Z) (fc : ∀ {eps : V} (0 < eps) ∃ (delta : V) (0 < delta) ∀ x0 y0 ∃ (gamma : V) (0 < gamma) ∀ {x x'} {y y'} (dist x0 x < delta -> dist y0 y < delta -> dist x x' < gamma -> dist y y' < gamma -> dist (f x y) (f x' y') < eps))
     : LocallyUniformMap (X ⨯ Y) Z (\lam s => f s.1 s.2) \cowith
     | func-locally-uniform Eu => \case dist-uniform.1 Eu \with {
       | inP (eps,eps>0,h) => \case fc eps>0 \with {
@@ -298,6 +300,7 @@
 }
 
 \record UniformMetricMap \extends LocallyUniformMetricMap, UniformMap {
+  | V => PseudoMetricSpace.RealMetricValueLinearOrder
   \override Dom : PseudoMetricSpace
   \override Cod : PseudoMetricSpace
 

@@ -2,6 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Semiring
 \import Arith.Int
 \import Arith.Rat
 \import Data.Or
@@ -160,9 +161,7 @@
     \open ExtendedUpperReal
 
     \sfunc \infixl 6 + (x y : UpperReal) : UpperReal \cowith
-      | U a => ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
-      | U-closed (inP (a,a<x,b,b<y,a+b<q)) q<q' => inP (a, a<x, b, b<y, a+b<q <∘ q<q')
-      | U-rounded {q} (inP (a,a<x,b,b<y,a+b<q)) => inP (RatField.mid (a RatField.+ b) q, inP (a, a<x, b, b<y, RatField.mid>left a+b<q), RatField.mid<right a+b<q)
+      | ExtendedUpperReal => \eval x ExtendedUpperReal.+ y
       | U-inh => \case x.U-inh, y.U-inh \with {
         | inP (q,x<q), inP (r,y<r) => inP (q RatField.+ r RatField.+ 1, inP (q, x<q, r, y<r, linarith))
       }
@@ -185,16 +184,7 @@
       => (\lam (inP (a,x<a,a<=y)) => x.U_<= x<a (<=-rat.1 a<=y), \lam x<y => inP (y, x<y, <=-rat.2 <=-refl))
 
     \sfunc meet (x y : UpperReal) : UpperReal \cowith
-      | U a => x.U a || y.U a
-      | U-closed e q'<q => ||.map (x.U-closed __ q'<q) (y.U-closed __ q'<q) e
-      | U-rounded => \case \elim __ \with {
-        | byLeft q<x => \case x.U-rounded q<x \with {
-          | inP (r,r<x,q<r) => inP (r, byLeft r<x, q<r)
-        }
-        | byRight q<y => \case y.U-rounded q<y \with {
-          | inP (r,r<y,q<r) => inP (r, byRight r<y, q<r)
-        }
-      }
+      | ExtendedUpperReal => \eval ExtendedUpperReal.meet x y
       | U-inh => \case x.U-inh \with {
         | inP (q,x<q) => inP (q, byLeft x<q)
       }
@@ -203,11 +193,7 @@
       => rewrite (\peval meet x y) <->refl
 
     \sfunc join (x y : UpperReal) : UpperReal \cowith
-      | U a => \Sigma (x.U a) (y.U a)
-      | U-closed (q<x,q<y) q'<q => (x.U-closed q<x q'<q, y.U-closed q<y q'<q)
-      | U-rounded (q<x,q<y) => \case x.U-rounded q<x, y.U-rounded q<y \with {
-        | inP (r,r<x,q<r), inP (r',r'<y,q<r') => inP (r ∨ r', (x.U_<= r<x join-left, y.U_<= r'<y join-right), RatField.<_join-univ q<r q<r')
-      }
+      | ExtendedUpperReal => \eval ExtendedUpperReal.join x y
       | U-inh => \case x.U-inh, y.U-inh \with {
         | inP (q,x<q), inP (r,y<r) => inP (q RatField.∨ r, (x.U_<= x<q join-left, y.U_<= y<r join-right))
       }
@@ -217,4 +203,158 @@
 
     \lemma zro<ide : 0 < 1
       => inP (1, idp, \lam p => p)
+  }
+
+\record PosUpperReal \extends UpperReal
+  | U-pos {q : Rat} : U q -> 0 RatField.< q
+  \where {
+    \func fromRat (x : Rat) (\property x>=0 : 0 RatField.<= x) : PosUpperReal \cowith
+      | UpperReal => UpperReal.fromRat x
+      | U-pos x<q => x>=0 <∘r x<q
+  }
+
+\instance PosUpperRealSemiring : CSemiring PosUpperReal
+  | zro => PosUpperReal.fromRat 0 <=-refl
+  | + => +
+  | zro-left => upper-ext $ +-upper *> UpperRealAbMonoid.zro-left
+  | +-assoc => upper-ext $ +-upper *> pmap (UpperRealAbMonoid.`+ _) +-upper *> UpperRealAbMonoid.+-assoc *> inv (+-upper *> pmap (_ UpperRealAbMonoid.+) +-upper)
+  | +-comm => upper-ext $ +-upper *> UpperRealAbMonoid.+-comm *> inv +-upper
+  | * => *
+  | *-assoc => exts \lam q => ext (\lam xyz<q => \case *_U.1 xyz<q \with {
+    | inP (a',xy<a',c,z<c,a'c<q) => \case *_U.1 xy<a' \with {
+      | inP (a,x<a,b,y<b,ab<a') => *_U.2 $ inP (a, x<a, b RatField.* c, *_U_<=.2 $ inP (b,y<b,c,z<c,<=-refl), transport (`< _) *-assoc $ <_*_positive-left ab<a' (U-pos z<c) <∘ a'c<q)
+    }
+  }, \lam xyz<q => \case *_U.1 xyz<q \with {
+    | inP (a,x<a,b',yz<b',ab'<q) => \case *_U.1 yz<b' \with {
+      | inP (b,y<b,c,z<c,bc<b') => *_U.2 $ inP (a RatField.* b, *_U_<=.2 $ inP (a,x<a,b,y<b,<=-refl), c, z<c, transportInv (`< _) *-assoc $ RatField.<_*_positive-right (U-pos x<a) bc<b' <∘ ab'<q)
+    }
+  })
+  | ldistr => exts \lam q => ext (\lam r => \case *_U.1 r \with {
+    | inP (a,x<a,b',y+z<b',ab'<q) => \case +_U.1 y+z<b' \with {
+      | inP (b,y<b,c,z<c,b+c<b') => +_U.2 $ inP (a RatField.* b, *_U_<=.2 $ inP (a,x<a,b,y<b,<=-refl), a RatField.* c, *_U_<=.2 $ inP (a,x<a,c,z<c,<=-refl), transport (`< _) ldistr (RatField.<_*_positive-right (U-pos x<a) b+c<b') <∘ ab'<q)
+    }
+  }, \lam r => \case +_U.1 r \with {
+    | inP (b',xy<b',c',xz<c',b'+c'<q) => \case *_U.1 xy<b', *_U.1 xz<c' \with {
+      | inP (a1,x<a1,b,y<b,a1b<b'), inP (a2,x<a2,c,z<c,a2c<c') => *_U.2 $ inP (a1 ∧ a2, real_meet_U x<a1 x<a2, b RatField.+ c, +_U_<=.2 $ inP (b,y<b,c,z<c,<=-refl), transportInv (`< _) ldistr $ RatField.<_+ (RatField.<=_*_positive-left meet-left (<=-less $ U-pos y<b) <∘r a1b<b') (RatField.<=_*_positive-left meet-right (<=-less $ U-pos z<c) <∘r a2c<c') <∘ b'+c'<q)
+    }
+  })
+  | zro_*-left {x} => exts \lam q => ext (U-pos, \lam q>0 => \case x.U-inh \with {
+    | inP (c,x<c) => *_U_<=.2 $ inP (q RatField.* RatField.finv c, RatField.<_*_positive_positive q>0 $ RatField.finv>0 $ U-pos x<c, c, x<c, Preorder.=_<= $ *-assoc *> pmap (q RatField.*) (RatField.finv-left $ RatField.>_/= $ U-pos x<c) *> ide-right)
+  })
+  | ide => PosUpperReal.fromRat 1 (<=-less OrderedSemiring.zro<ide)
+  | ide-left => exts \lam q => ext (\lam c => \case *_U.1 c \with {
+    | inP (b,b>1,c,x<c,bc<q) => U-closed x<c $ transport (`< _) ide-left (<_*_positive-left b>1 $ U-pos x<c) <∘ bc<q
+  }, \lam x<q => \case U-rounded x<q \with {
+    | inP (r,x<r,r<q) => *_U_<=.2 $ inP (q RatField.* RatField.finv r, transport (`< _) (RatField.finv-right $ RatField.>_/= $ U-pos x<r) $ <_*_positive-left r<q $ RatField.finv>0 $ U-pos x<r, r, x<r, Preorder.=_<= $ *-assoc *> pmap (q RatField.*) (RatField.finv-left $ RatField.>_/= $ U-pos x<r) *> ide-right)
+  })
+  | *-comm => exts \lam q => ext (\lam xy<q => \case *_U.1 xy<q \with {
+    | inP (b,x<b,c,y<c,bc<q) => *_U.2 $ inP (c, y<c, b, x<b, transport (`< _) *-comm bc<q)
+  }, \lam yx<q => \case *_U.1 yx<q \with {
+    | inP (b,y<b,c,x<c,bc<q) => *_U.2 $ inP (c, x<c, b, y<b, transport (`< _) *-comm bc<q)
+  })
+  \where {
+    \sfunc \infixl 6 + (x y : PosUpperReal) : PosUpperReal \cowith
+      | UpperReal => \eval x UpperRealAbMonoid.+ y
+      | U-pos (inP (b,x<b,c,y<c,b+c<q)) => transport (`< _) zro-left (RatField.<_+ (U-pos x<b) (U-pos y<c)) <∘ b+c<q
+
+    \lemma +_U {x y : PosUpperReal} {a : Rat} : UpperReal.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c < a)
+      => rewrite (\peval x + y) <->refl
+
+    \lemma +_U_<= {x y : PosUpperReal} {a : Rat} : UpperReal.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c <= a)
+      => <->trans +_U $ later (\lam (inP (b,x<b,c,y<c,b+c<a)) => inP (b, x<b, c, y<c, <=-less b+c<a), \lam (inP (b,x<b,c,y<c,b+c<=a)) => \case U-rounded x<b \with {
+        | inP (b',x<b',b'<b) => inP (b', x<b', c, y<c, <_+-left c b'<b <∘l b+c<=a)
+      })
+
+    \sfunc \infixl 7 * (x y : PosUpperReal) : PosUpperReal \cowith
+      | U a => ∃ (b : x.U) (c : y.U) (b RatField.* c < a)
+      | U-closed (inP (b,x<b,c,y<c,bc<q)) q<q' => inP (b, x<b, c, y<c, bc<q <∘ q<q')
+      | U-rounded (inP (b,x<b,c,y<c,bc<q)) => inP (_, inP (b, x<b, c, y<c, RatField.mid>left bc<q), RatField.mid<right bc<q)
+      | U-inh => \case x.U-inh, y.U-inh \with {
+        | inP (b,x<b), inP (c,y<c) => inP (b RatField.* c RatField.+ 1, inP (b, x<b, c, y<c, linarith))
+      }
+      | U-pos (inP (b,x<b,c,y<c,bc<q)) => RatField.<_*_positive_positive (U-pos x<b) (U-pos y<c) <∘ bc<q
+
+    \lemma *_U {x y : PosUpperReal} {a : Rat} : UpperReal.U {x * y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.* c < a)
+      => rewrite (\peval x * y) <->refl
+
+    \lemma *_U_<= {x y : PosUpperReal} {a : Rat} : UpperReal.U {x * y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.* c <= a)
+      => <->trans *_U $ later (\lam (inP (b,x<b,c,y<c,bc<a)) => inP (b, x<b, c, y<c, <=-less bc<a), \lam (inP (b,x<b,c,y<c,bc<=a)) => \case U-rounded x<b \with {
+        | inP (b',x<b',b'<b) => inP (b', x<b', c, y<c, <_*_positive-left b'<b (U-pos y<c) <∘l bc<=a)
+      })
+
+    \lemma upper-ext {x y : PosUpperReal} (p : x = {UpperReal} y) : x = y
+      => ext $ pmap (UpperReal.U {__}) p
+
+    \lemma +-upper {x y : PosUpperReal} : x + y = x UpperRealAbMonoid.+ y
+      => exts \lam q => ext (\lam p => UpperRealAbMonoid.+_U.2 $ +_U.1 p, \lam p => +_U.2 $ UpperRealAbMonoid.+_U.1 p)
+
+    \lemma zro<ide : PosUpperRealSemiring.zro UpperRealAbMonoid.< PosUpperRealSemiring.ide
+      => inP (1, idp, \lam p => p)
+
+    \lemma <=_* {x y x' y' : PosUpperReal} (x<=x' : x UpperRealAbMonoid.<= x') (y<=y' : y UpperRealAbMonoid.<= y') : x * y UpperRealAbMonoid.<= x' * y'
+      => \lam {q} => \case *_U.1 __ \with {
+        | inP (a,x'<a,b,y'<b,ab<q) => *_U.2 $ inP (a, x<=x' x'<a, b, y<=y' y'<b, ab<q)
+      }
+
+    \lemma <_* {x y x' y' : PosUpperReal} (x<x' : x UpperRealAbMonoid.< x') (y<y' : y UpperRealAbMonoid.< y') : x * y UpperRealAbMonoid.< x' * y' \elim x<x', y<y'
+      | inP (a,x<a,a<=x'), inP (b,y<b,b<=y') => inP (a RatField.* b, *_U_<=.2 $ inP (a, x<a, b, y<b, <=-refl), \lam {q} x'y'<q => \case *_U.1 x'y'<q \with {
+        | inP (a',x'<a',b',y'<b',a'b'<q) => <_*_positive-right (U-pos x<a) (b<=y' y'<b') <∘ <_*_positive-left (a<=x' x'<a') (U-pos y'<b') <∘ a'b'<q
+      })
+  }
+
+\instance PosUpperRealLattice : BiorderedLatticeAbMonoid
+  | AbMonoid => PosUpperRealSemiring
+  | < x y => x UpperRealAbMonoid.< y
+  | <-irreflexive (inP (b,y<b,p)) => <-irreflexive (p y<b)
+  | <-transitive (inP (a,x<a,a<=y)) (inP (b,y<b,b<=z)) => inP (a, x<a, \lam {c} z<c => a<=y y<b <∘ b<=z z<c)
+  | <= x y => x UpperRealAbMonoid.<= y
+  | <=-refl x<a => x<a
+  | <=-transitive p q x<a => p (q x<a)
+  | <=-antisymmetric p q => exts \lam a => ext (q,p)
+  | <-transitive-right e (inP (b,a2<b,b<=a3)) => inP (b, e a2<b, b<=a3)
+  | <-transitive-left (inP (b,a1<b,b<=a2)) e => inP (b, a1<b, \lam {c} a3<c => b<=a2 (e a3<c))
+  | <=-less (inP (b,a1<b,b<=a2)) a2<a => U-closed a1<b (b<=a2 a2<a)
+  | <=_+ p q {x} r => \case +_U.1 r \with {
+    | inP (b',b<b',d',d<d',b'+d'<x) => +_U.2 $ inP (b', p b<b', d', q d<d', b'+d'<x)
+  }
+  | meet => meet
+  | meet-left x<a => meet_U.2 (byLeft x<a)
+  | meet-right y<a => meet_U.2 (byRight y<a)
+  | meet-univ x<=z y<=z r => \case meet_U.1 r \with {
+    | byLeft a<x => x<=z a<x
+    | byRight a<y => y<=z a<y
+  }
+  | join => join
+  | join-left s => (join_U.1 s).1
+  | join-right s => (join_U.1 s).2
+  | join-univ z<=x z<=y a<z => join_U.2 (z<=x a<z, z<=y a<z)
+  | <_meet-univ x<y x<z => transportInv (_ UpperRealAbMonoid.<) meet-upper (UpperRealAbMonoid.<_meet-univ x<y x<z)
+  | <_join-univ x<z y<z => transportInv (UpperRealAbMonoid.`< _) join-upper (UpperRealAbMonoid.<_join-univ x<z y<z)
+  | meet_+-left => upper-ext $ +-upper *> pmap (_ UpperRealAbMonoid.+) meet-upper *> UpperRealAbMonoid.meet_+-left *> inv (meet-upper *> pmap2 UpperRealAbMonoid.meet +-upper +-upper)
+  | join_+-left => upper-ext $ +-upper *> pmap (_ UpperRealAbMonoid.+) join-upper *> UpperRealAbMonoid.join_+-left *> inv (join-upper *> pmap2 UpperRealAbMonoid.join +-upper +-upper)
+  \where {
+    \open PosUpperRealSemiring
+
+    \sfunc meet (x y : PosUpperReal) : PosUpperReal \cowith
+      | UpperReal => \eval UpperRealAbMonoid.meet x y
+      | U-pos => \case \elim __ \with {
+        | byLeft x<q => U-pos x<q
+        | byRight y<q => U-pos y<q
+      }
+
+    \lemma meet_U {x y : PosUpperReal} {a : Rat} : UpperReal.U {meet x y} a <-> x.U a || y.U a
+      => rewrite (\peval meet x y) <->refl
+
+    \lemma meet-upper {x y : PosUpperReal} : meet x y = UpperRealAbMonoid.meet x y
+      => exts \lam q => ext (\lam p => UpperRealAbMonoid.meet_U.2 $ meet_U.1 p, \lam p => meet_U.2 $ UpperRealAbMonoid.meet_U.1 p)
+
+    \sfunc join (x y : PosUpperReal) : PosUpperReal \cowith
+      | UpperReal => \eval UpperRealAbMonoid.join x y
+      | U-pos (x<q,_) => U-pos x<q
+
+    \lemma join_U {x y : PosUpperReal} {a : Rat} : UpperReal.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
+      => rewrite (\peval join x y) <->refl
+
+    \lemma join-upper {x y : PosUpperReal} : join x y = UpperRealAbMonoid.join x y
+      => exts \lam q => ext (\lam p => UpperRealAbMonoid.join_U.2 $ join_U.1 p, \lam p => join_U.2 $ UpperRealAbMonoid.join_U.1 p)
   }

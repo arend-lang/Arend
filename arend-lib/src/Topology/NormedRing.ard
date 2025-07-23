@@ -8,8 +8,10 @@
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
+\import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
+\import Logic.Meta
 \import Meta
 \import Operations
 \import Order.Biordered
@@ -21,7 +23,7 @@
 \import Paths.Meta
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
-\import Topology.MetricSpace
+\import Topology.MetricSpace \using (hasPositive)
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.TopRing
@@ -31,47 +33,92 @@
 \open LinearlyOrderedAbMonoid
 \open LinearlyOrderedSemiring
 
-\class PseudoNormedRing \extends PseudoNormedAbGroup, TopRing
-  | norm_*_<= {x y : E} : norm (x * y) <= norm x RealField.* norm y
-  | norm_ide_<= : norm 1 <= 1
+\class MetricValueRing \extends MetricValueOrder, CSemiring
+  | \protected zro<ide : zro < ide
+  | \protected metric-div {a b : E} : 0 < a -> 0 < b -> ∃ (c : E) (0 < c) (a * c <= b)
+  | \protected <=_*_positive-right {a b c : E} : 0 <= a -> b <= c -> a * b <= a * c
+
+\class ValuedPseudoNormedPseudoRing \extends ValuedPseudoNormedAbGroup, TopSemigroup, PseudoRing {
+  \override V : MetricValueRing
+  | norm_*_<= {x y : E} : norm (x * y) <= norm x * {V} norm y
   | *-cont => *-locally-uniform norm_*_<=
+} \where {
+  \protected \lemma *-locally-uniform {V : MetricValueRing} {R : PseudoRing} {X : ValuedPseudoNormedAbGroup V R { | zro => R.zro | + => + | negative => negative }} (norm_*_<= : \Pi {x y : R} -> norm (x * y) <= norm x * norm y) : LocallyUniformMap (X ⨯ X) X (\lam s => s.1 * s.2)
+    => LocallyUniformMetricMap.makeLocallyUniformMap2 (*) \lam {eps} eps>0 => \case V.shrink2 eps>0 \with {
+      | inP (eps',eps'>0,eps'<eps,_) => inP (1, zro<ide, \lam x0 y0 => \case metric-div {_} {(norm x0 + 1) + (norm y0 + 1 + 1)} (zro<ide <∘l transport (`<= _) (zro-right *> zro-left) (<=_+ (<=_+ norm>=0 <=-refl) $ V.<=_+-positive (V.<=_+-positive norm>=0 (<=-less zro<ide)) (<=-less zro<ide))) eps'>0 \with {
+        | inP (gamma,gamma>0,gamma-m) => inP (gamma ∧ 1, <_meet-univ gamma>0 zro<ide, \lam {x} {x'} {y} {y'} x0x<1 y0y<1 xx'<gamma yy'<gamma =>
+          rewrite norm-dist at xx'<gamma $ rewrite norm-dist at yy'<gamma $ rewrite norm-dist at x0x<1 $ rewrite norm-dist at y0y<1 $ rewrite norm-dist $
+          transport (norm __ < eps) (pmap2 (+) R.ldistr_- R.rdistr_- *> simplify : x * (y - y') + (x - x') * y' = x * y - x' * y') $ norm_+ <∘r
+            <=_+ norm_*_<= norm_*_<= <∘r transport (_ + __ < eps) *-comm (<=_+ (<=_*_positive-right norm>=0 $ <=-less yy'<gamma) (<=_*_positive-right norm>=0 (<=-less xx'<gamma)) <∘r
+            transport (`<= _) rdistr (<=_*_positive-right (transport (`<= _) zro-left $ <=_+ norm>=0 norm>=0) meet-left <=∘ transport2 (<=) *-comm *-comm (<=_*_positive-right (<=-less gamma>0)
+              \have lem {x1 x2 : X} (d : norm (x1 - x2) < 1) : norm x2 <= norm x1 + 1 => transport (_ <= _ + __) norm_- (=_<= (pmap norm equation.abGroup) <=∘ norm_+) <=∘ <=_+ <=-refl (<=-less d)
+              \in <=_+ (lem x0x<1) $ lem (yy'<gamma <∘l  meet-right) <=∘ <=_+ (lem y0y<1) <=-refl)) <∘r gamma-m <∘r eps'<eps))
+      })
+    }
+}
+
+\lemma *-locally-uniform {X : ValuedPseudoNormedPseudoRing} : LocallyUniformMap (X ⨯ X) X (\lam s => s.1 * s.2)
+  => ValuedPseudoNormedPseudoRing.*-locally-uniform norm_*_<=
+
+\class UpperPseudoNormedPseudoRing \extends ValuedPseudoNormedPseudoRing, UpperPseudoMetricSpace
+  | V => UpperRealMetricValueRing
   \where {
-    \protected \lemma *-locally-uniform {R : Ring} {X : PseudoNormedAbGroup R { | zro => R.zro | + => + | negative => negative }} (norm_*_<= : \Pi {x y : R} -> norm (x * y) <= norm x * norm y) : LocallyUniformMap (X ⨯ X) X (\lam s => s.1 * s.2)
-      => LocallyUniformMetricMap.makeLocallyUniformMap2 (*) \lam {eps} eps>0 => inP (1, RealAbGroup.zro<ide, \lam x0 y0 =>
-          \let | lem : 0 < norm x0 + norm y0 + 3 => linarith $ usingOnly (norm>=0 {_} {x0}, norm>=0 {_} {y0})
-               | gamma => (RealField.pinv lem * eps) ∧ 1
-               | gamma>0 : 0 < gamma => <_meet-univ (RealField.<_*_positive_positive (RealField.pinv>0 lem) eps>0) zro<ide
-          \in inP (gamma, gamma>0, \lam {x} {x'} {y} {y'} x0x<1 y0y<1 xx'<gamma yy'<gamma =>
-              rewrite norm-dist at xx'<gamma $ rewrite norm-dist at yy'<gamma $ rewrite norm-dist at x0x<1 $ rewrite norm-dist at y0y<1 $ rewrite norm-dist $
-              rewrite (equation : x * y - x' * y' = x * (y - y') + (x - x') * y') $ norm_+ <∘r
-                <=_+ norm_*_<= norm_*_<= <∘r later (<=_+ (<=_*_positive-right norm>=0 $ LinearOrder.<_<= yy'<gamma) (<=_*_positive-left (LinearOrder.<_<= xx'<gamma) norm>=0) <∘r
-                  rewrite {2} *-comm (transport (`< _) rdistr $ <_*_positive-left (hiding norm_*_<= $ linarith (norm_-right {_} {x0} {x}, norm_-right {_} {y0} {y}, norm_-right {_} {y} {y'}, meet-right : gamma <= 1)
-                      : norm x + norm y' < norm x0 + norm y0 + 3) gamma>0 <∘l
-                    <=_*_positive-right (LinearOrder.<_<= lem) meet-left <=∘ Preorder.=_<= (inv *-assoc *> pmap (`* _) (OrderedField.pinv-right lem) *> ide-left)))))
+    \instance UpperRealMetricValueRing : MetricValueRing
+      | MetricValueOrder => UpperPseudoMetricSpace.UpperRealMetricValueOrder
+      | CSemiring => PosUpperRealSemiring
+      | zro<ide => UpperRealAbMonoid.zro<ide
+      | metric-div {a} {b} a>0 b>0 => \case a.U-inh \with {
+        | inP (q,a<q) => inP (PosUpperReal.fromRat (RatField.finv q) (<=-less $ RatField.finv>0 $ U-pos a<q) * b,
+                              transport (`< _) (zro_*-right {_} {0}) $ PosUpperRealSemiring.<_* (later $ UpperRealAbMonoid.<-rat.2 $ RatField.finv>0 $ U-pos a<q) b>0,
+                              \lam {r} b<r => PosUpperRealSemiring.*_U_<=.2 $ inP (q, a<q, RatField.finv q * r, \case U-rounded b<r \with {
+                                | inP (r',b<r',r'<r) => PosUpperRealSemiring.*_U_<=.2 $ inP (RatField.finv q * (r * RatField.finv r'), transport (`< _) ide-right $ RatField.<_*_positive-right (RatField.finv>0 $ U-pos a<q) $ transport (`< _) (RatField.finv-right $ RatField.>_/= $ U-pos b<r') $ RatField.<_*_positive-left r'<r $ RatField.finv>0 $ U-pos b<r', r', b<r', =_<= $ *-assoc *> pmap (_ *) (*-assoc *> pmap (r *) (RatField.finv-left $ RatField.>_/= $ U-pos b<r') *> ide-right))
+                              }, =_<= $ inv *-assoc *> pmap (`* r) (RatField.finv-right $ RatField.>_/= $ U-pos a<q) *> ide-left))
+      }
+      | <=_*_positive-right _ b<=c => \case PosUpperRealSemiring.*_U.1 __ \with {
+        | inP (q,a<q,r,c<r,qr<b) => PosUpperRealSemiring.*_U.2 $ inP (q, a<q, r, b<=c c<r, qr<b)
+      }
   }
 
-\class PseudoNormedCRing \extends PseudoNormedRing, CRing
+\class MetricValueLinearRing \extends MetricValueRing, MetricValueLinearOrder
 
-\lemma *-locally-uniform {X : PseudoNormedRing} : LocallyUniformMap (X ⨯ X) X (\lam s => s.1 * s.2)
-  => PseudoNormedRing.*-locally-uniform norm_*_<=
+\class PseudoNormedPseudoRing \extends ValuedPseudoNormedPseudoRing, PseudoNormedAbGroup {
+  \override V : MetricValueLinearRing
+  | V => RealMetricValueLinearRing
+} \where {
+  \instance RealMetricValueLinearRing : MetricValueLinearRing
+    | MetricValueLinearOrder => PseudoMetricSpace.RealMetricValueLinearOrder
+    | CSemiring => RealField
+    | zro<ide => RealAbGroup.zro<ide
+    | metric-div {a} {b} a>0 b>0 => inP (b * RealField.pinv a>0, RealField.<_*_positive_positive b>0 $ RealField.pinv>0 a>0, =_<= $ *-comm *> *-assoc *> pmap (b *) (RealField.pinv-left a>0) *> ide-right)
+    | <=_*_positive-right => RealField.<=_*_positive-right
+}
+
+\class ValuedPseudoNormedRing \extends ValuedPseudoNormedPseudoRing, TopRing
+  | norm_ide_<= : norm 1 <= 1
+
+\class PseudoNormedRing \extends ValuedPseudoNormedRing, PseudoNormedPseudoRing {
+  \override V : MetricValueLinearRing
+}
+
+\class PseudoNormedCRing \extends PseudoNormedRing, CRing
 
 \lemma pow-cover {X : PseudoNormedRing} (n : Nat) : CoverMap X X (pow __ n) \elim n
   | 0 => CoverMap.const 1
   | suc n => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (pow-cover n) CoverMap.id
 
-\class NormedRing \extends PseudoNormedRing, NormedAbGroup
+\class NormedRing \extends PseudoNormedRing, NormedAbGroup {
+  \override V : MetricValueLinearRing
+}
 
-\class NormedCRing \extends NormedRing, PseudoNormedCRing
-
-\class CompleteNormedRing \extends NormedRing, CompleteNormedAbGroup
-
-\class CompleteNormedCRing \extends CompleteNormedRing, NormedCRing
+\class CompleteNormedRing \extends NormedRing, CompleteNormedAbGroup {
+  \override V : MetricValueLinearRing
+}
 
 \lemma norm_zro_ide {X : PseudoNormedRing} : (X.norm 1 = (0 : Real)) || (X.norm 1 = (1 : Real))
   => \have t => rewrite ide-left in X.norm_*_<= {1} {1}
      \in \case RealField.locality_- (X.norm 1) \with {
       | byLeft q => byRight $ <=-antisymmetric norm_ide_<= $ RealField.<=_Inv-cancel-left q norm>=0 $ transportInv (`<= _) ide-right t
-      | byRight q => byLeft $ <=-antisymmetric (RealField.<=_Inv-cancel-left q (linarith norm_ide_<=) $ transport2 (<=) (inv rdistr) (inv zro_*-right) $ later $ rewrite (ide-left,Ring.negative_*-left) linarith) norm>=0
+      | byRight q => byLeft $ <=-antisymmetric (RealField.<=_Inv-cancel-left q (linarith X.norm_ide_<=) $ transport2 (<=) (inv rdistr) (inv zro_*-right) $ later $ rewrite (ide-left,Ring.negative_*-left) linarith) norm>=0
     }
 
 \lemma norm_ide=0 {X : PseudoNormedRing} (p : X.norm 1 = (0 : Real)) {x : X} : norm x = (0 : Real)
@@ -84,18 +131,12 @@
 \class PseudoValuedRing \extends PseudoNormedRing
   | norm_* {x y : E} : norm (x * y) = norm x RealField.* norm y
   | norm_ide : norm 1 = (1 : Real)
-  | norm_*_<= => Preorder.=_<= norm_*
-  | norm_ide_<= => Preorder.=_<= norm_ide
+  | norm_*_<= => =_<= norm_*
+  | norm_ide_<= => =_<= norm_ide
 
-\class PseudoValuedCRing \extends PseudoValuedRing, PseudoNormedCRing
+\class CompleteValuedRing \extends PseudoValuedRing, CompleteNormedRing
 
-\class ValuedRing \extends PseudoValuedRing, NormedRing
-
-\class ValuedCRing \extends ValuedRing, NormedCRing
-
-\class CompleteValuedRing \extends ValuedRing, CompleteNormedRing
-
-\class CompleteValuedCRing \extends CompleteValuedRing, CompleteNormedCRing
+\class CompleteValuedCRing \extends CompleteValuedRing, NormedRing, PseudoNormedCRing
 
 \lemma norm_pow {X : PseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = pow (norm x) n \elim n
   | 0 => norm_ide
@@ -105,4 +146,4 @@
   | CompleteNormedAbGroup => RealNormed
   | CRing => RealField
   | norm_* => RealField.abs_*
-  | norm_ide => RealField.abs-ofPos $ LinearOrder.<_<= zro<ide
+  | norm_ide => RealField.abs-ofPos $ LinearOrder.<_<= RealAbGroup.zro<ide

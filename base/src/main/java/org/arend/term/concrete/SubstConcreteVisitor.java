@@ -287,7 +287,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
       var subClassFieldImpls = subCoclauses == null ? null : new Concrete.Coclauses(
         myData != null ? myData : subCoclauses.getData(),
         subCoclauses.getCoclauseList().stream().map(this::visitClassElement).collect(Collectors.toList()));
-      return (T) new Concrete.ClassFieldImpl(myData != null ? myData : element.getData(), field.getImplementedField(), field.implementation.accept(this, null), subClassFieldImpls, field.isDefault());
+      return (T) new Concrete.ClassFieldImpl(myData != null ? myData : element.getData(), field.getImplementedField(), field.implementation == null ? null : field.implementation.accept(this, null), subClassFieldImpls, field.isDefault());
     } else if (Concrete.ClassField.class.equals(element.getClass())) {
       var field = (Concrete.ClassField) element;
       // Ideally we should replace this `field.getData()` too

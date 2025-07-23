@@ -2594,7 +2594,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     for (ClassDefinition superClass : typedDef.getSuperClasses()) {
       for (ClassField field : superClass.getNotImplementedFields()) {
         if (field.getReferable().isParameterField()) {
-          typedDef.getNotImplementedFields().remove(field);
+          typedDef.getNotImplementedFields().remove(field); // Add this field again to reorder fields correctly
           typedDef.addField(field);
         }
       }
@@ -2609,10 +2609,19 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
     Concrete.SourceNode alreadyImplementedSourceNode = null;
     List<FieldReferable> alreadyImplementFields = new ArrayList<>();
+    Set<Referable> implementedHere = new HashSet<>();
+    for (Concrete.ClassElement element : def.getElements()) {
+      if (element instanceof Concrete.ClassFieldImpl classFieldImpl && !classFieldImpl.isDefault()) {
+        implementedHere.add(classFieldImpl.getImplementedField());
+      }
+    }
     for (Concrete.ReferenceExpression aSuperClass : def.getSuperClasses()) {
       Definition superClassDef = aSuperClass.getReferent() instanceof TCDefReferable ? ((TCDefReferable) aSuperClass.getReferent()).getTypechecked() : null;
       if (superClassDef instanceof ClassDefinition superClass) {
         for (Map.Entry<ClassField, AbsExpression> entry : superClass.getImplemented()) {
+          if (implementedHere.contains(entry.getKey().getReferable())) {
+            continue;
+          }
           Levels levels = typedDef.getSuperLevels().get(superClass);
           if (!implementField(entry.getKey(), entry.getValue().subst(new ExprSubstitution(), levels == null ? idLevels.makeSubstitution(superClass) : levels.makeSubstitution(superClass)), typedDef, alreadyImplementFields)) {
             classOk = false;
@@ -2764,6 +2773,20 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
             ok = false;
           } else {
             typedDef.addDefaultImplDependencies(field, dependencies);
+          }
+        }
+        if (ok && result != null && !classFieldImpl.isDefault()) {
+          for (ClassDefinition superClass : typedDef.getSuperClasses()) {
+            AbsExpression oldAbsImpl = superClass.getImplementation(field);
+            if (oldAbsImpl == null) continue;
+            Levels levels = typedDef.getSuperLevels().get(superClass);
+            LevelSubstitution levelSubstitution = levels == null ? idLevels.makeSubstitution(superClass) : levels.makeSubstitution(superClass);
+            Expression thisExpr = new ReferenceExpression(thisBinding);
+            Expression oldImpl = oldAbsImpl.apply(thisExpr, levelSubstitution);
+            if (!CompareVisitor.compare(DummyEquations.getInstance(), CMP.EQ, oldImpl, result.expression, superClass.getFieldType(field, levelSubstitution, thisExpr), classFieldImpl)) {
+              errorReporter.report(new FieldImplementationMismatchError(superClass, oldImpl, classFieldImpl));
+              ok = false;
+            }
           }
         }
         if (ok) {
