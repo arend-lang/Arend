@@ -43,7 +43,7 @@
   | isBounded : ∃ (C : Real) (0 < C) ∀ x (norm (func x) <= C * norm x)
 
   \default func-norm-uniform {eps} eps>0 => \case isBounded \with {
-    | inP (C,C>0,h) => inP (pinv C>0 * eps, OrderedSemiring.<_*_positive_positive (pinv>0 C>0) eps>0, \lam {x} p => h x <∘r <_*_positive-right C>0 p <∘l Preorder.=_<= (inv *-assoc *> pmap (`* _) (pinv-right C>0) *> ide-left))
+    | inP (C,C>0,h) => inP (pinv C>0 * eps, OrderedSemiring.<_*_positive_positive (pinv>0 C>0) eps>0, \lam {x} p => h x <∘r <_*_positive-right C>0 p <∘l =_<= (inv *-assoc *> pmap (`* _) (pinv-right C>0) *> ide-left))
   }
   \default isBounded => \case func-norm-uniform RealAbGroup.zro<ide \with {
     | inP (delta,delta>0,h) => inP (pinv delta>0, pinv>0 delta>0, \lam x => <=_U-char.2 \lam {a} p => real_<_U.1

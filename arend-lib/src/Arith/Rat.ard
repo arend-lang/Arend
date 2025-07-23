@@ -331,7 +331,7 @@
   | rat (pos n) d _ _ => RatField.<=-char $ pos<=pos div_*<=id
   | rat (neg (suc _ \as n)) d d/=0 c => mcases {1} {arg addPath} \with {
     | 0, p => \have d=1 => nat_gcd-isUnique (GCD.swap {div_gcd (mod_div p)}) (EuclideanSemiringData.gcd-isGCD n d) *> c
-              \in Preorder.=_<= $ Rat.ext (later $ rewrite d=1 idp) (inv d=1)
+              \in =_<= $ Rat.ext (later $ rewrite d=1 idp) (inv d=1)
     | suc _, _ => \lam c => (unfolds, rewrite RatField.+=+' in, inv makeRat.signum_nom *>, unfold) at c $
       \have | s : n Nat.- n Nat.div d * d = n Nat.mod d
                 => IntRing.cancel-right (n Nat.div d * d) $ IntRing.+-assoc {n} {neg _} *> pmap (pos n +) IntRing.minus__ *> pmap pos (inv (Nat.divModProp n d) *> pmap (`+ _) *-comm *> +-comm)

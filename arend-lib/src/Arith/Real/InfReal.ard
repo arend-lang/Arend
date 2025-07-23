@@ -58,7 +58,7 @@
                   | pr>0 => RatField.<_*_positive_positive (RatField.finv>0 eps>0) (r-q>0 Lq Ur)
                   | c>0 => fromInt_<.conv $ pr>0 <∘l rat_ceiling>=id
                   | s : (r' - q') * (finv eps * (r - q)) < r - q
-                  => <_*_positive-right (r-q>0 Lq' Ur') (rat_ceiling>=id <∘r fromInt_<= (Preorder.=_<= $ inv $ iabs.ofPos $ LinearOrder.<_<= c>0) <∘r pow>id _) <∘l p
+                  => <_*_positive-right (r-q>0 Lq' Ur') (rat_ceiling>=id <∘r fromInt_<= (=_<= $ inv $ iabs.ofPos $ LinearOrder.<_<= c>0) <∘r pow>id _) <∘l p
                   | t => transport (_ <) (pmap (_ *) RatField.finv_* *> inv *-assoc *> pmap (`* _) (finv-right $ RatField.>_/= $ r-q>0 Lq Ur) *> ide-left *> RatField.finv_finv) (RatField.<_rotate-right pr>0 s)
             \in linarith (usingOnly t))
       }
@@ -86,7 +86,7 @@
     | 0 => inP (q, r, Pqr, transportInv (`<= _) ide-right <=-refl)
     | suc n => \case f q r Pqr \with {
       | inP (q',r',Pq'r',c) => \case focus-iter rat rat>=0 P f n q' r' Pq'r' \with {
-        | inP (q'',r'',Pq''r'',d) => inP (q'', r'', Pq''r'', Preorder.=_<= (inv *-assoc) <=∘ RatField.<=_*_positive-left d rat>=0 <=∘ c)
+        | inP (q'',r'',Pq''r'',d) => inP (q'', r'', Pq''r'', =_<= (inv *-assoc) <=∘ RatField.<=_*_positive-left d rat>=0 <=∘ c)
       }
     }
 

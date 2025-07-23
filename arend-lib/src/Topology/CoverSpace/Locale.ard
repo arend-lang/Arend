@@ -73,7 +73,7 @@
               | inP (W, byRight (i,fi=W), W'<=<W) => cauchy-subset (cover-char (d i) (rewrite (inv fi=W) in W'<=<W)) \lam e => byRight $ later (i, rewrite fi=W W'<=<W, e)
             }
         \in cauchy-refine t \case __ \with {
-          | inP (V, W, inP (U, byLeft e, V<=<U), _, Z=VW) => inP (_, byLeft idp, rewrite Z=VW $ meet-left <=∘ s<=<_<= V<=<U <=∘ Preorder.=_<= e)
+          | inP (V, W, inP (U, byLeft e, V<=<U), _, Z=VW) => inP (_, byLeft idp, rewrite Z=VW $ meet-left <=∘ s<=<_<= V<=<U <=∘ =_<= e)
           | inP (V, W, inP (U, _, V<=<U), byLeft e2, Z=VW) => inP (_, byLeft idp, rewrite Z=VW $ meet-left <=∘ s<=<_<= e2)
           | inP (V, W, inP (U, _, V<=<U), byRight (i, V<=<fi, byLeft e), Z=VW) => inP (_, byLeft idp, rewrite (Z=VW,e) \lam (Vx,nVx) => absurd $ nVx Vx)
           | inP (V, W, inP (U, _, V<=<U), byRight (i, V<=<fi, byRight (j,gj=W)), Z=VW) => inP (_, byRight (j,idp), rewrite (Z=VW,gj=W) meet-right)
@@ -96,7 +96,7 @@
         \in cauchy-refine (cauchy-inter t1 t2) \case __ \with {
           | inP (V1, V2, byLeft e1, _, r) => inP (_, byLeft idp, rewrite (r,e1) meet-left)
           | inP (V1, V2, _, byLeft e2, r) => inP (_, byLeft idp, rewrite (r,e2) meet-right)
-          | inP (_, _, byRight (j,idp), byRight idp, r) => inP (_, byRight (j, idp), rewrite (r, q j) $ Preorder.=_<= MeetSemilattice.meet-comm)
+          | inP (_, _, byRight (j,idp), byRight idp, r) => inP (_, byRight (j, idp), rewrite (r, q j) $ =_<= MeetSemilattice.meet-comm)
         }
 
     \lemma cover-point-char {X : StronglyRegularCoverSpace} {U : Set X} {J : \Set} {g : J -> Set X} (c : Cover {framePres} U g) {x : X} (x<=<U : single x <=< U) : ∃ (j : J) (single x <=< g j)
@@ -208,7 +208,7 @@
       | func a => Join \lam (s : \Sigma (b : M) (b M.<=< a)) => points_* $ f ^-1 points^* s.1
       | func-<= p => Join-univ \lam (b,b<=<x) => Join-cond $ later (b, <=<-left b<=<x p)
       | func-top>= => Join-cond (later (top, \lam _ => filter-top)) <=∘ Join-cond (later (top, <=<_top))
-      | func-meet>= => Locale.Join-distr>= <=∘ Join-univ \lam ((b,b<=<x),(c,c<=<y)) => Preorder.=_<= (inv $ pmap points_* (pmap (f ^-1) points^*_meet *> func-meet {^-1_FrameHom f} {points^* b} {points^* c}) *> points_*_meet) <=∘ Join-cond (later (b ∧ c , <=<_meet b<=<x c<=<y))
+      | func-meet>= => Locale.Join-distr>= <=∘ Join-univ \lam ((b,b<=<x),(c,c<=<y)) => =_<= (inv $ pmap points_* (pmap (f ^-1) points^*_meet *> func-meet {^-1_FrameHom f} {points^* b} {points^* c}) *> points_*_meet) <=∘ Join-cond (later (b ∧ c , <=<_meet b<=<x c<=<y))
       | func-Join>= {J} {g} => Join-univ \lam (b,p) =>
           \have Mc : top <= M.SJoin (\lam c => (c = M.neg b) || (\Sigma (j : J) (c M.<=< g j)))
                    => p <=∘ join-univ (M.SJoin-cond $ byLeft idp) (Join-univ \lam j => Mr (g j) <=∘ M.SJoin-univ \lam x<=<gj => M.SJoin-cond $ byRight $ later (j,x<=<gj))

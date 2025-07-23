@@ -239,13 +239,13 @@
     }
   })
   | zro_*-left {x} => exts \lam q => ext (U-pos, \lam q>0 => \case x.U-inh \with {
-    | inP (c,x<c) => *_U_<=.2 $ inP (q RatField.* RatField.finv c, RatField.<_*_positive_positive q>0 $ RatField.finv>0 $ U-pos x<c, c, x<c, Preorder.=_<= $ *-assoc *> pmap (q RatField.*) (RatField.finv-left $ RatField.>_/= $ U-pos x<c) *> ide-right)
+    | inP (c,x<c) => *_U_<=.2 $ inP (q RatField.* RatField.finv c, RatField.<_*_positive_positive q>0 $ RatField.finv>0 $ U-pos x<c, c, x<c, =_<= $ *-assoc *> pmap (q RatField.*) (RatField.finv-left $ RatField.>_/= $ U-pos x<c) *> ide-right)
   })
   | ide => PosUpperReal.fromRat 1 (<=-less OrderedSemiring.zro<ide)
   | ide-left => exts \lam q => ext (\lam c => \case *_U.1 c \with {
     | inP (b,b>1,c,x<c,bc<q) => U-closed x<c $ transport (`< _) ide-left (<_*_positive-left b>1 $ U-pos x<c) <∘ bc<q
   }, \lam x<q => \case U-rounded x<q \with {
-    | inP (r,x<r,r<q) => *_U_<=.2 $ inP (q RatField.* RatField.finv r, transport (`< _) (RatField.finv-right $ RatField.>_/= $ U-pos x<r) $ <_*_positive-left r<q $ RatField.finv>0 $ U-pos x<r, r, x<r, Preorder.=_<= $ *-assoc *> pmap (q RatField.*) (RatField.finv-left $ RatField.>_/= $ U-pos x<r) *> ide-right)
+    | inP (r,x<r,r<q) => *_U_<=.2 $ inP (q RatField.* RatField.finv r, transport (`< _) (RatField.finv-right $ RatField.>_/= $ U-pos x<r) $ <_*_positive-left r<q $ RatField.finv>0 $ U-pos x<r, r, x<r, =_<= $ *-assoc *> pmap (q RatField.*) (RatField.finv-left $ RatField.>_/= $ U-pos x<r) *> ide-right)
   })
   | *-comm => exts \lam q => ext (\lam xy<q => \case *_U.1 xy<q \with {
     | inP (b,x<b,c,y<c,bc<q) => *_U.2 $ inP (c, y<c, b, x<b, transport (`< _) *-comm bc<q)

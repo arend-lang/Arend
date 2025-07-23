@@ -16,6 +16,7 @@
 \import Meta
 \import Order.Biordered
 \import Order.LinearOrder
+\import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
@@ -32,7 +33,7 @@
       => power-ratio-test-inf _ (\lam n => Real.fromRat $ RatField.finv (suc n)) (\lam n => later $
           rewrite (RealAbGroup.abs-ofPos $ rat_real_<=.1 $ LinearOrder.<_<= $ RatField.finv>0 $ fromInt_< $ pos<pos $ fac>0 {suc n},
                    RealAbGroup.abs-ofPos $ rat_real_<=.1 $ LinearOrder.<_<= $ RatField.finv>0 $ fromInt_< $ pos<pos fac>0) $
-           RealAbGroup.=_<= $ pmap Real.fromRat (pmap (\lam x => finv (Rat.fromInt (pos x))) *-comm *> RatField.finv_* {fac n} {suc n} *> *-comm) *> inv RealField.*-rat) inv-limit
+           =_<= $ pmap Real.fromRat (pmap (\lam x => finv (Rat.fromInt (pos x))) *-comm *> RatField.finv_* {fac n} {suc n} *> *-comm) *> inv RealField.*-rat) inv-limit
 
     \lemma inv-limit : RealNormed.IsLimit (\lam n => RatField.finv (suc n)) 0
       => \lam Uo U0 => \case (dist_open {RealNormed}).1 Uo U0 \with {

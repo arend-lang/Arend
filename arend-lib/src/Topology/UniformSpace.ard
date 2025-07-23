@@ -220,7 +220,7 @@
 \lemma s<=*_<=* {X : PreuniformSpace} {V U : Set X} (p : V s<=* U) : V <=* U
   => <=*-char.2 $ uniform-subset (unfolds in p) \lam {W} e s => \case \elim e \with {
     | byLeft q => absurd $ later $ (rewrite q in s.2.2) s.2.1
-    | byRight q => Preorder.=_<= q
+    | byRight q => =_<= q
   }
 
 \instance StronglyStarRatherBelow {X : PreuniformSpace} : RatherBelow (s<=* {X})

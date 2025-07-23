@@ -49,7 +49,6 @@
 \open JoinSemilattice
 \open PresentedFrame \hiding (<=)
 \open Locale
-\open Preorder (=_<=)
 
 \class Locale \extends CompleteLattice, Bounded.DistributiveLattice, SiteWithBasis {
   | join x y => Join (if __ x y)

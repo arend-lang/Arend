@@ -222,7 +222,7 @@
   | V => RealMetricValueLinearOrder
 
   \lemma halving {z x y : E} {eps : Real} (d1 : dist z x < half eps) (d2 : dist z y < half eps) : dist x y < eps
-    => dist-triang <∘r OrderedAddMonoid.<_+ (rewrite dist-symm in d1) d2 <∘l Preorder.=_<= half+half
+    => dist-triang <∘r OrderedAddMonoid.<_+ (rewrite dist-symm in d1) d2 <∘l =_<= half+half
 
   \lemma dist-uniform-rat {C : Set (Set E)} : PreuniformSpace.isUniform C <-> ∃ (eps : Rat) (0 < eps) ∀ x ∃ (U : C) ∀ {y} (dist x y < eps -> U y)
     => (\lam Cu => \case dist-uniform.1 Cu \with {
@@ -331,7 +331,7 @@
 
 \record IsometricMap \extends MetricMap {
   | func-isometry {x y : Dom} : dist (func x) (func y) = dist x y
-  | func-dist => Preorder.=_<= func-isometry
+  | func-dist => =_<= func-isometry
 
   \lemma dense->uniformEmbedding (d : IsDense) : UniformMap.IsDenseUniformEmbedding
     => (d, \lam Cu => \case dist-uniform.1 Cu \with {

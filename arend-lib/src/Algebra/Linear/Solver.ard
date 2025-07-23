@@ -32,7 +32,7 @@
   \lemma interpretEq_<= (e : Equation) (h : interpretEq e) : interpret e.1 <= interpret e.3 \elim e
     | (t1, Less, t2) => LinearOrder.<_<= h
     | (t1, LessOrEquals, t2) => h
-    | (t1, Equals, t2) => Preorder.=_<= h
+    | (t1, Equals, t2) => =_<= h
 
   \func Problem => Array Equation
 

@@ -61,7 +61,7 @@
     | contains_zro => inP (1, transportInv contains ide-left contains_zro)
     | contains_+ {x} {y} (inP (n,xS)) (inP (m,yS)) => inP (n + m, transportInv contains (binom.expansion x y (n + m)) (bigSum
         (\new Array S (suc (n + m)) (\lam i => natCoef (binom (n + m) i) * (Monoid.pow x i * Monoid.pow y (iabs (n + m Nat.- i)))))
-        (\lam i => ideal-left (\let j => iabs (n + m Nat.- i) \in \case NatSemiring.splitSum (Preorder.=_<= (pmap iabs (inv (pmap (`+ (n + m)) IntRing.minus__) *> IntRing.minus+pos i i (n + m) *> pmap (pos i +) (inv (pos_iabs (<_suc_<= (fin_< i))))))) \with {
+        (\lam i => ideal-left (\let j => iabs (n + m Nat.- i) \in \case NatSemiring.splitSum (=_<= (pmap iabs (inv (pmap (`+ (n + m)) IntRing.minus__) *> IntRing.minus+pos i i (n + m) *> pmap (pos i +) (inv (pos_iabs (<_suc_<= (fin_< i))))))) \with {
           | byLeft n<=i => ideal-right (rewriteI (<=_exists n<=i) (rewrite Monoid.pow_+ (ideal-right xS)))
           | byRight m<=j => ideal-left (rewriteI (<=_exists m<=j) (rewrite Monoid.pow_+ (ideal-right yS)))
         }))))

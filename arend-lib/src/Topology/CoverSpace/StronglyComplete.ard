@@ -284,7 +284,7 @@
       => (\lam p => filter-mono (pointSCF_^-1_<=< p) (<=<_<= __ idp), \lam FU => \case isStronglyRegularFilter FU \with {
         | inP (V,V<=<U,FV) => inP (_, V<=<U, \lam {W} e => inP (mkSet W, \lam (_,(idp,FW)) => \case \elim e \with {
           | byLeft r => absurd $ F.isWeaklyProper $ filter-mono (filter-meet FW FV) $ rewrite r \lam s => absurd $ s.1 s.2
-          | byRight r => mkSet_<= $ Preorder.=_<= r
+          | byRight r => mkSet_<= $ =_<= r
         }, <=-refl))
       })
   }

@@ -19,9 +19,6 @@
   | \infix 4 >= : E -> E -> \Prop
   | >= x y => y <= x
 
-  \lemma =_<= {x y : E} (p : x = y) : x <= y
-    | idp => <=-refl
-
   \protected \func op : Preorder E \cowith
     | <= x y => y <= x
     | <=-refl => <=-refl

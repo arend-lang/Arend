@@ -95,7 +95,7 @@
   => absConv-isConv $ ratio-test (\lam j => b j * x) (\lam j => later $ rewrite
         (RealField.abs-ofPos $ <=_*_positive_positive (c>=0 (suc j)) (pow>=0 {_} {_} {suc j} x>=0),
          RealField.abs-ofPos (<=_*_positive_positive (c>=0 j) (pow>=0 x>=0))) $
-        <=_*_positive-left (bp j) (pow>=0 {_} {_} {suc j} x>=0) <=∘ Preorder.=_<= (equation {CRing})) lx $
+        <=_*_positive-left (bp j) (pow>=0 {_} {_} {suc j} x>=0) <=∘ =_<= (equation {CRing})) lx $
       cont-limit bl $ RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const x)
 
 \lemma power-ratio-test-inf {X : PseudoNormedRing} (cs : Series X) (b : Series Real)

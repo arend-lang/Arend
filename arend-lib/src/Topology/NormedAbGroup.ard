@@ -136,7 +136,7 @@
   \override Cod : PseudoNormedAbGroup
 
   | func-norm-isometry {x : Dom} : norm (func x) = norm x
-  | func-norm => Preorder.=_<= func-norm-isometry
+  | func-norm => =_<= func-norm-isometry
   | func-isometry => norm-dist *> pmap norm (inv func-minus) *> func-norm-isometry *> inv norm-dist
 }
 

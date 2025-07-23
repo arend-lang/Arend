@@ -85,7 +85,7 @@
     => real-ext \lam {a} => transport (\lam (y : LowerReal) => x.L a <-> y.L a) p <->refl
 
   \lemma fromRat-inj {x y : Rat} (p : fromRat x = fromRat y) : x = y
-    => <=-antisymmetric (rat_real_<=.2 $ RealAbGroup.=_<= p) (rat_real_<=.2 $ RealAbGroup.=_<= $ inv p)
+    => <=-antisymmetric (rat_real_<=.2 $ =_<= {RealAbGroup} p) (rat_real_<=.2 $ =_<= {RealAbGroup} $ inv p)
 }
 
 \instance RealPointed : Pointed Real
@@ -378,7 +378,7 @@
       }
 
     \lemma rdistr' {x y z : Real} (x>0 : x.L 0) (y>0 : y.L 0) (z>0 : z.L 0) : (x>0 +' y>0) *' {x + y} z>0 = x>0 *' z>0 + y>0 *' z>0
-      => exts (\lam a => ext (\lam (inP (b, inP (d,d<x,e,e<y,b<d+e), c, c<z, b>0, c>0, a<bc)) => inP (d RatField.* c, *'-char (real_join_L d<x x>0) c<z join-right (<_<= c>0) $ RatField.<=_*_positive-left join-left $ <_<= c>0, e RatField.* c, {?}, a<bc <∘ <_*_positive-left b<d+e c>0 <∘l Preorder.=_<= rdistr), {?}), {?})
+      => exts (\lam a => ext (\lam (inP (b, inP (d,d<x,e,e<y,b<d+e), c, c<z, b>0, c>0, a<bc)) => inP (d RatField.* c, *'-char (real_join_L d<x x>0) c<z join-right (<_<= c>0) $ RatField.<=_*_positive-left join-left $ <_<= c>0, e RatField.* c, {?}, a<bc <∘ <_*_positive-left b<d+e c>0 <∘l =_<= rdistr), {?}), {?})
 
     \lemma \infixl 7 *_ (x : Real) {y : Real} (y>0 : y.L 0)
       => TruncP.rec-set (diff-pos x) (\lam (x1,x2,x1>0,x2>0,p1) => x1>0 *' y>0 - x2>0 *' y>0) \lam s t => {?}

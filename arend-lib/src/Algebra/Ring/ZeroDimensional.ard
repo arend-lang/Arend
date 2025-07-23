@@ -95,7 +95,7 @@
       | inP (b,p) => rewrite p $ closure-superset {_} {_} {IdealMonoid.func I J} $ later (a * b, a, ideal-right (IdealLattice.meet-left c), IdealLattice.meet-right c)
     }) IdealMonoid.product_meet),
   ((4,3), \lam f I => inv (f I I) *> IdealLattice.meet-idemp),
-  ((3,2), \lam f I Ifg => nakayama-ideal Ifg (Preorder.=_<= (inv (f I))))
+  ((3,2), \lam f I Ifg => nakayama-ideal Ifg (=_<= (inv (f I))))
 )
   \where \open Ideal
 
