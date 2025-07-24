@@ -64,6 +64,10 @@
   \lemma neg_ide_*c {a : E} : -1 *c a = negative a
     => *c_negative-left *> pmap negative ide_*c
 
+  \lemma natCoef_*c {n : Nat} {a : E} : natCoef n *c a = n *n a \elim n
+    | 0 => pmap (`*c a) natCoefZero *> *c_zro-left
+    | suc n => pmap (`*c a) (natCoefSuc n) *> *c-rdistr *> pmap2 (+) natCoef_*c ide_*c
+
   \lemma *c_BigSum-rdistr {l : Array R} {a : E} : R.BigSum l *c a = BigSum (\lam i => l i *c a) \elim l
     | nil => *c_zro-left
     | r :: l => *c-rdistr *> pmap (_ +) *c_BigSum-rdistr

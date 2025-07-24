@@ -355,6 +355,17 @@
   \lemma negative-unique {x z : E} (y : E) (p : x + y = zro) (q : y + z = zro) : x = z
     => inv (+-assoc *> pmap (x +) q *> zro-right) *> pmap (`+ z) p *> zro-left
 
+  \func \infixl 7 *n (n : Nat) (a : E) : E \elim n
+    | 0 => zro
+    | suc n => n *n a + a
+
+  \protected \lemma *n_pow {n : Nat} {a : E} : n *n a = \this.pow a n \elim n
+    | 0 => idp
+    | suc n => pmap (`+ a) *n_pow
+
+  \lemma *n-rdistr {n m : Nat} {a : E} : (n Nat.+ m) *n a = n *n a + m *n a
+    => *n_pow *> \this.pow_+ *> inv (pmap2 (+) *n_pow *n_pow)
+
   \func BigSum (l : Array E) => Big (+) zro l
 
   \lemma BigSum-ext {n : Nat} {l l' : Array E n} (p : \Pi (i : Fin n) -> l i = l' i) : BigSum l = BigSum l'
@@ -478,6 +489,10 @@
   | +-comm {x y : E} : x + y = y + x
   \default zro-left => +-comm *> zro-right
   \default zro-right => +-comm *> zro-left
+
+  \lemma *n-ldistr {n : Nat} {a b : E} : n *n (a + b) = n *n a + n *n b \elim n
+    | 0 => inv zro-left
+    | suc n => inv +-assoc *> pmap (`+ b) (pmap (`+ a) *n-ldistr *> +-assoc *> pmap (_ +) +-comm *> inv +-assoc) *> +-assoc
 
   \lemma BigSum_+ {n : Nat} {l l' : Array E n} : BigSum (\lam i => l i + l' i) = BigSum l + BigSum l' \elim n, l, l'
     | 0, _, _ => inv zro-left

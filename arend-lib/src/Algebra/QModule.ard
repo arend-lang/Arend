@@ -1,0 +1,78 @@
+\import Algebra.Group
+\import Algebra.Module
+\import Algebra.Monoid
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+
+\class DivisibleGroup \extends AbGroup
+  | isDivisible (a : E) {n : Nat} : n /= 0 -> ∃ (b : E) (n *n b = a)
+
+\class TorsionFreeGroup \extends AbGroup {
+  | noTorsion {a : E} {n : Nat} : n /= 0 -> n *n a = 0 -> a = 0
+
+  \lemma noTorsion-div {a b : E} {n : Nat} (n/=0 : n /= 0) (p : n *n a = n *n b) : a = b
+    => fromZero $ noTorsion n/=0 $ *n-ldistr_- *> toZero p
+}
+
+\class QModule \extends DivisibleGroup, TorsionFreeGroup {
+  \lemma uniquelyDivisible (a : E) {n : Nat} (n/=0 : n /= 0) : Contr (\Sigma (b : E) (n *n b = a))
+    => isProp'=>isContr (\lam s t => ext $ fromZero $ noTorsion n/=0 $ *n-ldistr_- *> toZero (s.2 *> inv t.2)) (isDivisible a n/=0)
+
+  \sfunc \infixl 7 *q (q : Rat) (a : E) : E
+    => ratNom q *i (uniquelyDivisible a (ratDenom/=0 q)).center.1
+
+  \protected \lemma ud-cond {a : E} {n : Nat} {n/=0 : n /= 0} : n *n (uniquelyDivisible a n/=0).center.1 = a
+    => (uniquelyDivisible a n/=0).center.2
+
+  \protected \lemma ud-unique {a b : E} {n : Nat} {n/=0 : n /= 0} (p : n *n b = a) : (uniquelyDivisible a n/=0).center.1 = b
+    => pmap __.1 $ (uniquelyDivisible a n/=0).contraction (b,p)
+
+  \protected \lemma ud-pi {a : E} {n m : Nat} {n/=0 : n /= 0} {m/=0 : m /= 0} (p : n = m) : (uniquelyDivisible a n/=0).center.1 = (uniquelyDivisible a m/=0).center.1 \elim p
+    | idp => idp
+
+  \protected \func \infixl 7 *aq (q : Rat.AltRat) (a : E) : E \elim q
+    | in~ (n, d, d>0) => n *i (uniquelyDivisible a $ >_/= d>0).center.1
+    | ~-equiv (n1, d1, d1>0) (n2, d2, d2>0) r => noTorsion-div (>_/= d1>0) $
+        inv (*i-assoc {_} {iabs d1}) *> pmap (`*i _) *-comm *> *i-assoc *> pmap (n1 *i) (ud-cond *> inv ud-cond *> pmap (`*i _) (>_iabs d2>0)) *> inv *i-assoc *> pmap (`*i _) (r *> pmap (n2 *) (inv (>_iabs d1>0)) *> *-comm) *> *i-assoc {_} {iabs d1}
+    \where {
+      \lemma >_/= {d : Int} (p : signum d = 1) : iabs d /= 0 \elim d
+        | pos n => \lam n=0 => \case rewrite n=0 p
+        | neg n => \lam n=0 => \case rewrite n=0 p
+
+      \lemma >_iabs {d : Int} (p : signum d = 1) : pos (iabs d) = d \elim d
+        | pos n => iabs.ofPos (pos<=pos zero<=_)
+        | neg (suc n) => \case p
+    }
+
+  \protected \lemma *q_*aq {q : Rat} {a : E} : q *q a = rat_alt q *aq a
+    => \peval q *q a
+
+  \protected \lemma *aq-assoc {q r : Rat.AltRat} {a : E} : q Rat.AltRat.* r *aq a = q *aq (r *aq a) \elim q, r
+    | in~ q, in~ r => *i-assoc *> pmap (q.1 *i) (noTorsion-div (*aq.>_/= q.3) $ inv (*i-assoc {_} {iabs q.2}) *> pmap (`*i _) *-comm *> *i-assoc *> pmap (r.1 *i) (noTorsion-div (*aq.>_/= r.3) $ inv (*i-assoc {_} {iabs r.2} {iabs q.2}) *> pmap (`*n _) (*-comm *> inv iabs_*) *> ud-cond *> inv ud-cond) *> inv ud-cond)
+
+  \protected \lemma *aq-rdistr {q r : Rat.AltRat} {a : E} : (q Rat.AltRat.+ r) *aq a = q *aq a + r *aq a \elim q, r
+    | in~ q, in~ r => *i-rdistr *> pmap2 (+)
+        (*i-assoc *> pmap (q.1 *i) (noTorsion-div (*aq.>_/= q.3) $ inv (*i-assoc {_} {iabs q.2}) *> pmap (`*i _) (pmap (_ *) (inv (*aq.>_iabs r.3)) *> pmap pos (inv iabs_*)) *> ud-cond *> inv ud-cond))
+        (*i-assoc *> pmap (r.1 *i) (noTorsion-div (*aq.>_/= r.3) $ inv (*i-assoc {_} {iabs r.2}) *> pmap (`*i _) (*-comm *> pmap (`* _) (inv (*aq.>_iabs q.3)) *> pmap pos (inv iabs_*)) *> ud-cond *> inv ud-cond))
+} \where {
+  \func toLModule (M : QModule) : LModule RatField \cowith
+    | AbGroup => M
+    | *c => M.*q
+    | *c-assoc {q} {r} {a} => M.*q_*aq *> pmap (M.`*aq a) RatField.*_alt *> M.*aq-assoc {rat_alt q} {rat_alt r} *> inv (pmap (_ M.*q) M.*q_*aq *> M.*q_*aq)
+    | *c-ldistr => (\peval _ M.*q _) *> pmap (_ M.*i) (M.ud-unique $ M.*n-ldistr *> pmap2 (M.+) M.ud-cond M.ud-cond) *> M.*i_+-comm *> inv (pmap2 (M.+) (\peval _ M.*q _) (\peval _ M.*q _))
+    | *c-rdistr {r} {s} {a} => M.*q_*aq *> pmap (M.`*aq a) RatField.+_alt *> M.*aq-rdistr {rat_alt r} {rat_alt s} *> inv (pmap2 (+) M.*q_*aq M.*q_*aq)
+    | ide_*c => (\peval _ M.*q _) *> M.zro-left *> M.ud-unique M.zro-left
+
+  \func fromLModule (M : LModule RatField) : QModule \cowith
+    | AbGroup => M
+    | isDivisible a {n} n/0 => inP (RatField.finv n *c a, inv (*c-assoc *> M.natCoef_*c) *> pmap (`*c a) (RatField.finv-right $ natRat/=0 n/0) *> ide_*c)
+    | noTorsion n/=0 na=0 => inv (pmap (`*c _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*c) *> *c-assoc *> pmap (_ *c) (M.natCoef_*c *> na=0) *> M.*c_zro-right
+}

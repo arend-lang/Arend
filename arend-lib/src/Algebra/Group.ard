@@ -219,6 +219,24 @@
 
   \lemma toZero {x y : E} (x=y : x = y) : x - y = zro => rewriteI x=y negative-right
 
+  \lemma *n_negative {n : Nat} {a : E} : n *n negative a = negative (n *n a)
+    => *n_pow *> inv \this.inverse_pow *> inv (pmap negative *n_pow)
+
+  \func \infixl 7 *i (x : Int) (a : E) : E \elim x
+    | pos n => n *n a
+    | neg n => n *n negative a
+
+  \protected \lemma *i_ipow {x : Int} {a : E} : x *i a = \this.ipow a x \elim x
+    | pos n => *n_pow
+    | neg n => *n_pow
+
+  \lemma *i-assoc {x y : Int} {a : E} : (x * y) *i a = x *i (y *i a)
+    => pmap (`*i _) *-comm *> *i_ipow *> \this.ipow_* *> inv (pmap (_ *i) *i_ipow *> *i_ipow)
+    \where \open Arith.Int.IntRing(*,*-comm)
+
+  \lemma *i-rdistr {x y : Int} {a : E} : (x Arith.Int.IntRing.+ y) *i a = x *i a + y *i a
+    => *i_ipow *> \this.ipow_+ *> inv (pmap2 (+) *i_ipow *i_ipow)
+
   \lemma diff_+ {x y z : E} : (z - y) + (y - x) = z - x =>
     (z - y) + (y - x)          ==< +-assoc >==
     z + (negative y + (y - x)) ==< inv (pmap (z +) +-assoc) >==
@@ -290,6 +308,10 @@
 \class CGroup \extends Group, CancelCMonoid {
   | inverse-right => *-comm *> inverse-left
 
+  \lemma ipow_*-comm {a b : E} {x : Int} : ipow (a * b) x = ipow a x * ipow b x \elim x
+    | pos n => pow_*-comm
+    | neg n => pmap (pow __ n) (inverse_* *> *-comm) *> pow_*-comm
+
   \lemma BigProd_inverse {l : Array E} : inverse (BigProd l) = BigProd (map inverse l)
     => AbGroup.BigSum_negative {AbGroup.fromCGroup \this}
 
@@ -300,6 +322,12 @@
 
 \class AbGroup \extends AddGroup, AbMonoid {
   | negative-right => +-comm *> negative-left
+
+  \lemma *n-ldistr_- {n : Nat} {a b : E} : n *n (a - b) = n *n a - n *n b
+    => *n-ldistr *> pmap (_ +) *n_negative
+
+  \lemma *i_+-comm {a b : E} {x : Int} : x *i (a + b) = x *i a + x *i b
+    => *i_ipow *> \this.ipow_*-comm *> inv (pmap2 (+) *i_ipow *i_ipow)
 
   \lemma BigSum_negative {l : Array E} : negative (BigSum l) = BigSum (map negative l) \elim l
     | nil => negative_zro

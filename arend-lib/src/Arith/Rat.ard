@@ -312,6 +312,12 @@
       => transport2 (<) ide-right ide-right (RatField.<-char-conv p)
   }
 
+\lemma intRat/=0 {x : Int} (x/=0 : x /= 0) : Rat.fromInt x /= 0
+  => \lam p => x/=0 (pmap ratNom p)
+
+\lemma natRat/=0 {n : Nat} (n/=0 : n /= 0) : Rat.fromInt n /= 0
+  => intRat/=0 \lam p => n/=0 (pmap iabs p)
+
 \func ratio (nom : Int) (denom : Nat) : Rat \elim denom
   | 0 => 0
   | suc d \as denom => makeRat nom denom (\case __)
