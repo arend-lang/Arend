@@ -70,6 +70,10 @@
 
   \default dist x y : V => norm (x - y)
   \default norm-dist \as norm-dist-impl {x} {y} : dist x y = norm (x - y) => idp
+
+  \lemma norm_*n<= {n : Nat} {a : E} : norm (n *n a) <= n V.*n norm a \elim n
+    | 0 => =_<= norm_zro
+    | suc n => norm_+ <=∘ <=_+ norm_*n<= <=-refl
 }
 
 \lemma norm>=0 {X : ValuedPseudoNormedAbGroup} {x : X} : 0 <= norm x
@@ -109,10 +113,10 @@
 \class NormedAbGroup \extends ValuedNormedAbGroup, PseudoNormedAbGroup, MetricSpace
 
 \record UniformNormedAbGroupMap \extends UniformMetricMap, TopAbGroupMap {
-  \override Dom : PseudoNormedAbGroup
-  \override Cod : PseudoNormedAbGroup
+  \override Dom : ValuedPseudoNormedAbGroup V
+  \override Cod : ValuedPseudoNormedAbGroup V
 
-  | func-norm-uniform : ∀ {eps : Real} (0 < eps) ∃ (delta : Real) (0 < delta) ∀ {x : Dom} (norm x < delta -> norm (func x) < eps)
+  | func-norm-uniform : ∀ {eps : V} (0 < eps) ∃ (delta : V) (0 < delta) ∀ {x : Dom} (norm x < delta -> norm (func x) < eps)
   | func-dist-uniform eps>0 => \case func-norm-uniform eps>0 \with {
     | inP (delta,delta>0,h) => inP (delta, delta>0, unfold \lam d => rewrite (norm-dist {Cod}, inv AddGroupHom.func-minus) $ h $ rewriteI (norm-dist {Dom}) d)
   }
@@ -123,8 +127,8 @@
 }
 
 \record NormedAbGroupMap \extends UniformNormedAbGroupMap, MetricMap {
-  \override Dom : PseudoNormedAbGroup
-  \override Cod : PseudoNormedAbGroup
+  \override Dom : ValuedPseudoNormedAbGroup V
+  \override Cod : ValuedPseudoNormedAbGroup V
 
   | func-norm {x : Dom} : norm (func x) <= norm x
   | func-norm-uniform {eps} eps>0 => inP (eps, eps>0, \lam d => func-norm <∘r d)
@@ -132,8 +136,8 @@
 }
 
 \record NormedIsometricMap \extends NormedAbGroupMap, IsometricMap {
-  \override Dom : PseudoNormedAbGroup
-  \override Cod : PseudoNormedAbGroup
+  \override Dom : ValuedPseudoNormedAbGroup V
+  \override Cod : ValuedPseudoNormedAbGroup V
 
   | func-norm-isometry {x : Dom} : norm (func x) = norm x
   | func-norm => =_<= func-norm-isometry

@@ -1,56 +1,70 @@
-{- TODO[server2]
-\import Algebra.Algebra
-\import Algebra.Module
-\import Algebra.Module.LinearMap
+\import Algebra.Group.GroupHom
 \import Algebra.Monoid
 \import Algebra.Ordered
-\import Algebra.Pointed
-\import Algebra.Ring
-\import Arith.Real
-\import Arith.Real.Field
+\import Algebra.QModule
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Meta
 \import Order.Biordered
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
+\import Topology.MetricSpace
 \import Topology.NormedAbGroup
-\import Topology.NormedAlgebra
-\import Topology.NormedModule
 \import Topology.NormedRing
-\open OrderedField
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Complete
+\import Topology.UniformSpace
+\open PosUpperReal
 
-\class BanachSpace \extends CompleteNormedLModule {
-  \override R : NormedAAlgebra RealValuedRing
+\class PreBanachSpace (A : RatValue) \extends ValuedPseudoNormedAbGroup, UpperPseudoMetricSpace, DivisibleGroup {
+  | norm_*n {n : Nat} {x : E} : norm (n *n x) = A.norm n * norm x
+
+  \lemma norm_*i {n : Int} {x : E} : norm (n *i x) = A.norm n * norm x \elim n
+    | pos n => norm_*n
+    | neg n => pmap norm *n_negative *> norm_negative *> norm_*n *> pmap (`* _) (inv A.norm_negative)
 }
 
-\lemma norm_*r {R : PseudoNormedCRing} {A : PseudoNormedAAlgebra R} {X : PseudoNormedLModule A} {a : R} {x : X} : norm (a *r x) = norm a * norm x
-  => \case norm_zro_ide \with {
-    | byLeft p => norm_ide=0-module p *> inv Ring.zro_*-right *> pmap (_ *) (inv $ norm_ide=0-module p)
-    | byRight p => norm_*c *> pmap (`* _) (pmap norm coefMap_*c *> norm_*c *> pmap (_ *) p *> ide-right)
-  }
+\class BanachSpace \extends PreBanachSpace, ValuedNormedAbGroup, CompleteTopAbGroup, QModule {
+  | noTorsion {a} {n} n/=0 na=0 => norm-ext $ inv ide-left *> pmap (`* _) (inv (pmap A.norm (RatField.finv-left $ natRat/=0 n/=0) *> A.norm_ide) *> A.norm_*) *> *-assoc *> pmap (A.norm (RatField.finv n) *) (inv norm_*n *> pmap norm na=0 *> norm_zro) *> zro_*-right
 
-\lemma norm_*r-ofPos {A : PseudoNormedAAlgebra RealValuedRing} {X : PseudoNormedLModule A} {a : Real} (a>=0 : 0 <= a) {x : X} : norm (a *r x) = a * norm x
-  => norm_*r *> pmap (`* _) (RealField.abs-ofPos a>=0)
+  \lemma norm_*q {q : Rat} {x : E} : norm (q *q x) = A.norm q * norm x
+    => Monoid.LInv.cancel (A.norm_Inv $ RatField.nonZero-Inv $ natRat/=0 $ ratDenom/=0 q) $
+        inv norm_*n *> pmap norm (inv (*q-assoc *> *q_*n) *> pmap (`*q _) rat*denom-left *> *q_*i) *> norm_*i *> pmap (`* _) (inv (pmap A.norm rat*denom-left) *> A.norm_*) *> *-assoc
+}
 
-\record BoundedLinearMap \extends LinearMap, UniformNormedAbGroupMap {
-  \override R : NormedAAlgebra RealValuedRing
-  \override Dom : PseudoNormedLModule R
-  \override Cod : PseudoNormedLModule R
+\class RealPreBanachSpace \extends PreBanachSpace
+  | A => RatValue.Real
 
-  | isBounded : ∃ (C : Real) (0 < C) ∀ x (norm (func x) <= C * norm x)
+\class RealBanachSpace \extends RealPreBanachSpace, BanachSpace {
+  \lemma norm_*q-ofPos {q : Rat} (q>=0 : 0 <= q) {x : E} : norm (q *q x) = fromRat q * norm x
+    => norm_*q *> pmap (fromRat __ * _) (RatField.abs-ofPos q>=0)
+}
+
+\record BoundedLinearMap \extends UniformNormedAbGroupMap {
+  | V => UpperPseudoMetricSpace.UpperRealMetricValueOrder
+  \override Dom : RealBanachSpace
+  \override Cod : RealBanachSpace
+
+  | isBounded : ∃ (C : PosUpperReal) (0 UpperRealAbMonoid.< C) ∀ x (norm (func x) <= C * norm x)
 
   \default func-norm-uniform {eps} eps>0 => \case isBounded \with {
-    | inP (C,C>0,h) => inP (pinv C>0 * eps, OrderedSemiring.<_*_positive_positive (pinv>0 C>0) eps>0, \lam {x} p => h x <∘r <_*_positive-right C>0 p <∘l =_<= (inv *-assoc *> pmap (`* _) (pinv-right C>0) *> ide-left))
+    | inP (C,C>0,h) => \case C.U-inh \with {
+      | inP (delta,C<delta) =>
+        \have | delta>=0 => <=-less (U-pos C<delta)
+              | delta1>=0 => <=-less $ RatField.finv>0 $ U-pos C<delta
+        \in inP (fromRat (RatField.finv delta) * eps, PosUpperRealSemiring.<_*-positive (fromRat_< <=-refl $ RatField.finv>0 $ U-pos C<delta) eps>0, \lam {x} |x|<delta => h x <∘r transport (_ <) (inv *-assoc *> pmap (`* _) (PosUpperRealSemiring.*-rat delta>=0 delta1>=0 *> pmap fromRat (RatField.finv-right $ RatField.>_/= $ U-pos C<delta)) *> ide-left) (PosUpperRealSemiring.<_* (U_<_fromRat C<delta) |x|<delta))
+    }
   }
-  \default isBounded => \case func-norm-uniform RealAbGroup.zro<ide \with {
-    | inP (delta,delta>0,h) => inP (pinv delta>0, pinv>0 delta>0, \lam x => <=_U-char.2 \lam {a} p => real_<_U.1
-        \have a>0 : 0 < Real.fromRat a => LinearlyOrderedSemiring.<=_*_positive_positive (LinearOrder.<_<= $ pinv>0 delta>0) norm>=0 <∘r real_<_U.2 p
-        \in transport2 (RealField.<) (inv (norm_*r-ofPos $ LinearOrder.<_<= a>0) *> pmap norm (pmap (_ *r) func-*c *> inv *r-assoc *> pmap (`*c _) (pmap coefMap (pinv-right a>0) *> AAlgebra.coefHom.func-ide) *> ide_*c)) ide-right $
-              RealField.<_*_positive-right a>0 $ h {pinv a>0 *r x} $ transport2 (<) (*-comm *> inv (norm_*r-ofPos $ LinearOrder.<_<= $ pinv>0 a>0)) (*-assoc *> pmap (_ *) (pinv-right a>0) *> ide-right) $
-                <_*_positive-left (transport (`< _) (inv *-assoc *> pmap (`* _) (pinv-right delta>0) *> ide-left) $ RealField.<_*_positive-right delta>0 (real_<_U.2 p)) (pinv>0 a>0))
+  \default isBounded => \case func-norm-uniform PosUpperRealSemiring.zro<ide \with {
+    | inP (delta, inP (delta',delta'>0,delta'<=delta), h) => inP (fromRat (RatField.finv delta'), U_<_fromRat $ RatField.finv>0 $ fromRat_U_< delta'>0, \lam x {q} p =>
+        \have | q1>=0 => <=-less $ RatField.finv>0 $ U-pos p
+              | |x|<delta'*q => PosUpperRealSemiring.finv_<-rotate-right (fromRat_U_< delta'>0) (U_<_fromRat p)
+        \in <_U_fromRat (<=-less $ U-pos p) $ transport (_ <) ide-right $ PosUpperRealSemiring.finv_<-rotate-right (U-pos p) $ transport (`< _) (RealBanachSpace.norm_*q-ofPos q1>=0) $ transport (norm __ < _) (func-*q \this) $ h {RatField.finv q QModule.*q x} $ transportInv (`< _) (RealBanachSpace.norm_*q-ofPos q1>=0) $ PosUpperRealSemiring.finv_<-rotate-left (U-pos p) $ |x|<delta'*q <∘l =_<= *-comm <=∘ PosUpperRealSemiring.<=_* <=-refl (transportInv (UpperRealAbMonoid.`<= _) (fromRat-upper $ <=-less $ fromRat_U_< delta'>0) delta'<=delta))
   }
 }
--}

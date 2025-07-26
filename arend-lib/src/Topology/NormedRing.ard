@@ -66,12 +66,12 @@
     \instance UpperRealMetricValueRing : MetricValueRing
       | MetricValueOrder => UpperPseudoMetricSpace.UpperRealMetricValueOrder
       | CSemiring => PosUpperRealSemiring
-      | zro<ide => UpperRealAbMonoid.zro<ide
+      | zro<ide => PosUpperReal.fromRat_< <=-refl RatField.zro<ide
       | metric-div {a} {b} a>0 b>0 => \case a.U-inh \with {
-        | inP (q,a<q) => inP (PosUpperReal.fromRat (RatField.finv q) (<=-less $ RatField.finv>0 $ U-pos a<q) * b,
-                              transport (`< _) (zro_*-right {_} {0}) $ PosUpperRealSemiring.<_* (later $ UpperRealAbMonoid.<-rat.2 $ RatField.finv>0 $ U-pos a<q) b>0,
+        | inP (q,a<q) => inP (PosUpperReal.fromRat (RatField.finv q) * b,
+                              PosUpperRealSemiring.<_*-positive (PosUpperReal.fromRat_< <=-refl $ RatField.finv>0 $ U-pos a<q) b>0,
                               \lam {r} b<r => PosUpperRealSemiring.*_U_<=.2 $ inP (q, a<q, RatField.finv q * r, \case U-rounded b<r \with {
-                                | inP (r',b<r',r'<r) => PosUpperRealSemiring.*_U_<=.2 $ inP (RatField.finv q * (r * RatField.finv r'), transport (`< _) ide-right $ RatField.<_*_positive-right (RatField.finv>0 $ U-pos a<q) $ transport (`< _) (RatField.finv-right $ RatField.>_/= $ U-pos b<r') $ RatField.<_*_positive-left r'<r $ RatField.finv>0 $ U-pos b<r', r', b<r', =_<= $ *-assoc *> pmap (_ *) (*-assoc *> pmap (r *) (RatField.finv-left $ RatField.>_/= $ U-pos b<r') *> ide-right))
+                                | inP (r',b<r',r'<r) => PosUpperRealSemiring.*_U_<=.2 $ inP (RatField.finv q * (r * RatField.finv r'), PosUpperReal.fromRat_U (<=-less $ RatField.finv>0 $ U-pos a<q) $ transport (`< _) ide-right $ RatField.<_*_positive-right (RatField.finv>0 $ U-pos a<q) $ transport (`< _) (RatField.finv-right $ RatField.>_/= $ U-pos b<r') $ RatField.<_*_positive-left r'<r $ RatField.finv>0 $ U-pos b<r', r', b<r', =_<= $ equation.monoid {RatField.finv-left $ RatField.>_/= $ U-pos b<r'})
                               }, =_<= $ inv *-assoc *> pmap (`* r) (RatField.finv-right $ RatField.>_/= $ U-pos a<q) *> ide-left))
       }
       | <=_*_positive-right _ b<=c => \case PosUpperRealSemiring.*_U.1 __ \with {
@@ -96,21 +96,11 @@
 \class ValuedPseudoNormedRing \extends ValuedPseudoNormedPseudoRing, TopRing
   | norm_ide_<= : norm 1 <= 1
 
-\class PseudoNormedRing \extends ValuedPseudoNormedRing, PseudoNormedPseudoRing {
-  \override V : MetricValueLinearRing
-}
-
-\class PseudoNormedCRing \extends PseudoNormedRing, CRing
-
-\lemma pow-cover {X : PseudoNormedRing} (n : Nat) : CoverMap X X (pow __ n) \elim n
+\lemma pow-cover {X : ValuedPseudoNormedRing} (n : Nat) : CoverMap X X (pow __ n) \elim n
   | 0 => CoverMap.const 1
   | suc n => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (pow-cover n) CoverMap.id
 
-\class NormedRing \extends PseudoNormedRing, NormedAbGroup {
-  \override V : MetricValueLinearRing
-}
-
-\class CompleteNormedRing \extends NormedRing, CompleteNormedAbGroup {
+\class PseudoNormedRing \extends ValuedPseudoNormedRing, PseudoNormedPseudoRing {
   \override V : MetricValueLinearRing
 }
 
@@ -128,19 +118,39 @@
   | 0 => norm_ide_<=
   | suc n => norm_*_<= <=∘ RealField.<=_*_positive-left norm_<=_pow norm>=0
 
-\class PseudoValuedRing \extends PseudoNormedRing
-  | norm_* {x y : E} : norm (x * y) = norm x RealField.* norm y
-  | norm_ide : norm 1 = (1 : Real)
+\class ValuedPseudoValuedPseudoRing \extends ValuedPseudoNormedPseudoRing
+  | norm_* {x y : E} : norm (x * y) = norm x * {V} norm y
   | norm_*_<= => =_<= norm_*
+
+\class ValuedPseudoValuedRing \extends ValuedPseudoValuedPseudoRing, ValuedPseudoNormedRing, Ring {
+  | norm_ide : norm 1 = 1
   | norm_ide_<= => =_<= norm_ide
 
-\class CompleteValuedRing \extends PseudoValuedRing, CompleteNormedRing
-
-\class CompleteValuedCRing \extends CompleteValuedRing, NormedRing, PseudoNormedCRing
-
-\lemma norm_pow {X : PseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = pow (norm x) n \elim n
+  \lemma norm_Inv {x : E} (d : Monoid.Inv x) : Monoid.Inv (norm x) (norm d.inv) \cowith
+    | inv-left => inv norm_* *> pmap norm d.inv-left *> norm_ide
+    | inv-right => inv norm_* *> pmap norm d.inv-right *> norm_ide
+}
+\lemma norm_pow {X : ValuedPseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = pow (norm x) n \elim n
   | 0 => norm_ide
   | suc n => norm_* *> pmap (`* _) norm_pow
+
+\class UpperPseudoValuedRing \extends UpperPseudoNormedPseudoRing, ValuedPseudoValuedRing
+
+\func RatValue => UpperPseudoValuedRing { | E => Rat | * => RatField.* | ide => RatField.ide | negative => RatField.negative }
+  \where {
+    \protected \func Real : RatValue \cowith
+      | Ring => RatField
+      | norm q => PosUpperReal.fromRat (RatField.abs q)
+      | norm_zro => idp
+      | norm_negative => pmap PosUpperReal.fromRat RatField.abs_negative
+      | norm_+ => transportInv (_ <=) (PosUpperRealSemiring.+-rat RatField.abs>=0 RatField.abs>=0) $ PosUpperReal.fromRat_<= RatField.abs>=0 RatField.abs_+
+      | norm_* => pmap PosUpperReal.fromRat RatField.abs_* *> inv (PosUpperRealSemiring.*-rat RatField.abs>=0 RatField.abs>=0)
+      | norm_ide => idp
+  }
+
+\class CompleteValuedCRing \extends ValuedPseudoValuedRing, PseudoNormedRing, CompleteNormedAbGroup, CRing {
+  \override V : MetricValueLinearRing
+}
 
 \instance RealValuedRing : CompleteValuedCRing Real
   | CompleteNormedAbGroup => RealNormed

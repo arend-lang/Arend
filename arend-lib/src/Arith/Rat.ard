@@ -318,6 +318,15 @@
 \lemma natRat/=0 {n : Nat} (n/=0 : n /= 0) : Rat.fromInt n /= 0
   => intRat/=0 \lam p => n/=0 (pmap iabs p)
 
+\lemma rat*denom-right {q : Rat} : q * ratDenom q = ratNom q
+  => rat_alt-inj $ RatField.*_alt *> ~-pequiv *-assoc
+
+\lemma rat*denom-left {q : Rat} : ratDenom q RatField.* q = ratNom q
+  => *-comm *> rat*denom-right
+
+\lemma rat-split {q : Rat} : q = ratNom q RatField.* RatField.finv (ratDenom q)
+  => inv (*-assoc *> pmap (q *) (RatField.finv-right $ natRat/=0 $ ratDenom/=0 q) *> ide-right) *> pmap (`* _) rat*denom-right
+
 \func ratio (nom : Int) (denom : Nat) : Rat \elim denom
   | 0 => 0
   | suc d \as denom => makeRat nom denom (\case __)

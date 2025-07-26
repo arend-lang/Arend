@@ -1,4 +1,5 @@
 \import Algebra.Group
+\import Algebra.Group.GroupHom
 \import Algebra.Module
 \import Algebra.Monoid
 \import Arith.Int
@@ -28,6 +29,18 @@
 
   \sfunc \infixl 7 *q (q : Rat) (a : E) : E
     => ratNom q *i (uniquelyDivisible a (ratDenom/=0 q)).center.1
+
+  \lemma *q_*i {x : Int} {a : E} : x *q a = x *i a
+    => (\peval _ *q _) *> pmap (x *i) (ud-unique zro-left)
+
+  \lemma *q_*n {n : Nat} {a : E} : n *q a = n *n a
+    => *q_*i
+
+  \lemma ide_*q {a : E} : 1 *q a = a
+    => (\peval _ *q _) *> zro-left *> ud-unique zro-left
+
+  \lemma *q-assoc {q r : Rat} {a : E} : q * r *q a = q *q (r *q a)
+    => *q_*aq *> pmap (`*aq a) RatField.*_alt *> *aq-assoc {_} {rat_alt q} {rat_alt r} *> inv (pmap (_ *q) *q_*aq *> *q_*aq)
 
   \protected \lemma ud-cond {a : E} {n : Nat} {n/=0 : n /= 0} : n *n (uniquelyDivisible a n/=0).center.1 = a
     => (uniquelyDivisible a n/=0).center.2
@@ -66,13 +79,16 @@
   \func toLModule (M : QModule) : LModule RatField \cowith
     | AbGroup => M
     | *c => M.*q
-    | *c-assoc {q} {r} {a} => M.*q_*aq *> pmap (M.`*aq a) RatField.*_alt *> M.*aq-assoc {rat_alt q} {rat_alt r} *> inv (pmap (_ M.*q) M.*q_*aq *> M.*q_*aq)
+    | *c-assoc => M.*q-assoc
     | *c-ldistr => (\peval _ M.*q _) *> pmap (_ M.*i) (M.ud-unique $ M.*n-ldistr *> pmap2 (M.+) M.ud-cond M.ud-cond) *> M.*i_+-comm *> inv (pmap2 (M.+) (\peval _ M.*q _) (\peval _ M.*q _))
     | *c-rdistr {r} {s} {a} => M.*q_*aq *> pmap (M.`*aq a) RatField.+_alt *> M.*aq-rdistr {rat_alt r} {rat_alt s} *> inv (pmap2 (+) M.*q_*aq M.*q_*aq)
-    | ide_*c => (\peval _ M.*q _) *> M.zro-left *> M.ud-unique M.zro-left
+    | ide_*c => M.ide_*q
 
   \func fromLModule (M : LModule RatField) : QModule \cowith
     | AbGroup => M
     | isDivisible a {n} n/0 => inP (RatField.finv n *c a, inv (*c-assoc *> M.natCoef_*c) *> pmap (`*c a) (RatField.finv-right $ natRat/=0 n/0) *> ide_*c)
     | noTorsion n/=0 na=0 => inv (pmap (`*c _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*c) *> *c-assoc *> pmap (_ *c) (M.natCoef_*c *> na=0) *> M.*c_zro-right
 }
+
+\lemma func-*q {A B : QModule} (f : AddGroupHom A B) {q : Rat} {a : A} : f (q A.*q a) = q B.*q f a
+  => pmap f (\peval _ A.*q _) *> f.func-*i *> pmap (_ B.*i) (inv $ B.ud-unique $ inv f.func-*n *> pmap f A.ud-cond) *> inv (\peval _ B.*q _)

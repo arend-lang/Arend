@@ -119,7 +119,7 @@
 \lemma OBall-open {X : ValuedPseudoMetricSpace} {eps : X.V} {x : X} : isOpen (VOBall eps x)
   => cauchy-open.2 \lam {y} xy<eps => \case +_<-dense xy<eps \with {
     | inP (delta,delta>0,xy+delta<eps) => \case X.V.shrink2 delta>0 \with {
-      | inP (delta',delta'>0,delta'<delta,delta'+delta'<delta) => X.makeCauchy $ uniform-refine (X.metricUniform delta'>0) \lam {_} (inP (z,idp)) => inP (_, later \lam zy<delta' {w} zw<delta' => dist-triang <∘r <=_+ <=-refl (dist-triang {_} {_} {z} <=∘ <=_+ (<=-less $ transport (`< _) dist-symm zy<delta') (<=-less zw<delta') <=∘ <=-less delta'+delta'<delta) <∘r xy+delta<eps, <=-refl)
+      | inP (delta',delta'>0,delta'<delta,delta'+delta'<delta) => X.makeCauchy $ uniform-refine (X.metricUniform delta'>0) \lam {_} (inP (z,idp)) => inP (_, later \lam zy<delta' {w} zw<delta' => dist-triang <∘r <=_+ <=-refl (dist-triang <=∘ <=_+ (<=-less $ transport (`< _) dist-symm zy<delta') (<=-less zw<delta') <=∘ <=-less delta'+delta'<delta) <∘r xy+delta<eps, <=-refl)
     }
   }
 
@@ -151,7 +151,7 @@
   => \case +_<-dense delta<eps \with {
     | inP (d,d>0,delta+d<eps) => \case X.V.shrink2 d>0 \with {
       | inP (e,e>0,e<d,e+e<d) => inP (_, X.metricUniform e>0, \lam {w} (inP (_, (inP (y,idp), (z,(xz<delta,yz<e))), yw<e)) =>
-        dist-triang <∘r <=_+ (<=-less xz<delta) (dist-triang {_} {_} {y} <=∘ <=_+ (<=-less $ transport (`< _) dist-symm yz<e) (<=-less yw<e) <=∘ <=-less e+e<d) <∘r delta+d<eps)
+        dist-triang <∘r <=_+ (<=-less xz<delta) (dist-triang <=∘ <=_+ (<=-less $ transport (`< _) dist-symm yz<e) (<=-less yw<e) <=∘ <=-less e+e<d) <∘r delta+d<eps)
     }
   }
 
@@ -175,17 +175,16 @@
 } \where {
   \open UpperRealAbMonoid(<-rat)
   \open PosUpperRealSemiring(+_U)
+  \open PosUpperReal
 
   \instance UpperRealMetricValueOrder : MetricValueOrder PosUpperReal
     | BiorderedLatticeAbMonoid => PosUpperRealLattice
     | hasPositive => inP (1, PosUpperRealSemiring.zro<ide)
     | +_<-dense (inP (c,a<c,c<=b)) => \case U-rounded a<c \with {
-      | inP (d,a<d,d<c) => inP (PosUpperReal.fromRat ((c - d) * ratio 1 4) linarith, <-rat.2 linarith, inP (c, +_U.2 $ inP (d, a<d, (c - d) * ratio 1 2, linarith, linarith), c<=b))
+      | inP (d,a<d,d<c) => inP (fromRat ((c - d) * ratio 1 4), fromRat_< <=-refl linarith, inP (c, +_U.2 $ inP (d, a<d, (c - d) * ratio 1 2, fromRat_U linarith linarith, linarith), c<=b))
     }
-    | bounded-negative p {b} b>0 => <-rat.1 $ p {PosUpperReal.fromRat b $ <=-less b>0} $ <-rat.2 b>0
-    | double-positive a+a>=0 a<b => linarith $ a+a>=0 \case U-rounded a<b \with {
-      | inP (c,a<c,c<b) => +_U.2 $ inP (c, a<c, c, a<c, RatField.<_+ c<b c<b)
-    }
+    | bounded-negative p {b} b>0 => <-rat.1 $ transport (_ UpperRealAbMonoid.<) (fromRat-upper $ <=-less $ U-pos b>0) $ p {fromRat b} (fromRat_< <=-refl $ fromRat_U_< b>0)
+    | double-positive _ a<b => fromRat_U <=-refl (U-pos a<b)
 }
 
 \class ValuedMetricSpace \extends ValuedPseudoMetricSpace, SeparatedCoverSpace
@@ -300,11 +299,10 @@
 }
 
 \record UniformMetricMap \extends LocallyUniformMetricMap, UniformMap {
-  | V => PseudoMetricSpace.RealMetricValueLinearOrder
-  \override Dom : PseudoMetricSpace
-  \override Cod : PseudoMetricSpace
+  \override Dom : ValuedPseudoMetricSpace V
+  \override Cod : ValuedPseudoMetricSpace V
 
-  | func-dist-uniform : ∀ {eps : Real} (0 < eps) ∃ (delta : Real) (0 < delta) ∀ {x x' : Dom} (dist x x' < delta -> dist (func x) (func x') < eps)
+  | func-dist-uniform : ∀ {eps : V} (0 < eps) ∃ (delta : V) (0 < delta) ∀ {x x' : Dom} (dist x x' < delta -> dist (func x) (func x') < eps)
   | func-dist-locally-uniform eps>0 => \case func-dist-uniform eps>0 \with {
     | inP (delta,delta>0,h) => inP (delta, delta>0, \lam x0 => inP (delta, delta>0, \lam _ => h))
   }
@@ -316,11 +314,13 @@
     }
   }
 } \where {
-  \lemma fromUniformMap {X Y : PseudoMetricSpace} (f : UniformMap X Y) : UniformMetricMap X Y f \cowith
-    | func-dist-uniform eps>0 => \case dist-uniform.1 $ f.func-uniform (metricUniform $ half>0 eps>0) \with {
-      | inP (delta,delta>0,h) => inP (delta, delta>0, \lam {x} d => \case h x \with {
-        | inP (U, inP (V, inP (y, q), p), g) => rewrite (p,q) at g $ halving (g $ rewrite X.dist-refl delta>0) (g d)
-      })
+  \lemma fromUniformMap {V : MetricValueOrder} {X Y : ValuedPseudoMetricSpace V} (f : UniformMap X Y) : UniformMetricMap V X Y f \cowith
+    | func-dist-uniform eps>0 => \case V.shrink2 eps>0 \with {
+      | inP (eps/2,eps/2>0,_,eps/2+eps/2<eps) => \case dist-uniform.1 $ f.func-uniform (metricUniform eps/2>0) \with {
+        | inP (delta,delta>0,h) => inP (delta, delta>0, \lam {x} d => \case h x \with {
+          | inP (U, inP (V, inP (y, q), p), g) => rewrite (p,q) at g $ Y.dist-triang <∘r <=_+ (transport (`<= _) dist-symm $ <=-less $ g $ rewrite X.dist-refl delta>0) (<=-less (g d)) <∘r eps/2+eps/2<eps
+        })
+      }
     }
 }
 
@@ -335,11 +335,13 @@
 
   \lemma dense->uniformEmbedding (d : IsDense) : UniformMap.IsDenseUniformEmbedding
     => (d, \lam Cu => \case dist-uniform.1 Cu \with {
-      | inP (eps,eps>0,h) => dist-uniform.2 $ inP (half eps, half>0 eps>0, \lam y => \case d {y} OBall-open (OBall-center (half>0 eps>0)) \with {
-        | inP (_, inP (x,idp), yfx<eps/2) => \case h x \with {
-          | inP (U,CU,g) => inP (OBall (half eps) y, inP $ later (U, CU, \lam {x'} yfx'<eps/2 => g $ rewrite func-isometry in halving yfx<eps/2 yfx'<eps/2), \lam d => d)
-        }
-      })
+      | inP (eps,eps>0,h) => \case V.shrink2 eps>0 \with {
+        | inP (eps/2,eps/2>0,_,eps/2+eps/2<eps) => dist-uniform.2 $ inP (eps/2, eps/2>0, \lam y => \case d {y} OBall-open (OBall-center eps/2>0) \with {
+          | inP (_, inP (x,idp), yfx<eps/2) => \case h x \with {
+            | inP (U,CU,g) => inP (VOBall eps/2 y, inP $ later (U, CU, \lam {x'} yfx'<eps/2 => g $ transport (`< _) func-isometry $ dist-triang <∘r <=_+ (transport (`<= _) dist-symm $ <=-less yfx<eps/2) (<=-less yfx'<eps/2) <∘r eps/2+eps/2<eps), \lam d => d)
+          }
+        })
+      }
     })
 }
 
