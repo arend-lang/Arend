@@ -40,7 +40,7 @@
   | norm_+ => transportInv (_ <=) RealAbGroup.+-rat $ rat_real_<=.1 abs_+
   | norm-ext p => abs_zro-ext $ Real.fromRat-inj p
 
-\func rat_real : NormedIsometricMap RatNormed RealNormedAbGroup Real.fromRat \cowith
+\func rat_real : NormedIsometricMap PseudoMetricSpace.RealMetricValueLinearOrder RatNormed RealNormedAbGroup Real.fromRat \cowith
   | func-+ => inv RealAbGroup.+-rat
   | func-norm-isometry => inv rat_real_abs
   \where {

@@ -17,7 +17,7 @@
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
 
-\lemma norm-metric {X : PseudoNormedAbGroup} : MetricMap X RealNormed norm \cowith
+\lemma norm-metric {X : PseudoNormedAbGroup} : MetricMap PseudoMetricSpace.RealMetricValueLinearOrder X RealNormed norm \cowith
   | func-dist => rewrite (X.norm-dist,RealNormed.norm-dist) $ join-univ norm_-left $ simplify norm_-right
 
 \lemma dist-uniform-map {X : PseudoMetricSpace} : UniformMap (X ⨯ X) RealNormed (\lam s => dist s.1 s.2) \cowith

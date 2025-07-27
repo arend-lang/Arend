@@ -30,7 +30,7 @@
 \import Topology.UniformSpace
 \import Topology.UniformSpace.StronglyComplete
 
-\func dense-metric-lift {X Y : MetricSpace} {Z : CompleteMetricSpace} (f : IsometricMap X Y) (fd : f.IsWeaklyDenseUniformEmbedding) (g : MetricMap X Z) : MetricMap Y Z \cowith
+\func dense-metric-lift {X Y : MetricSpace} {Z : CompleteMetricSpace} (f : IsometricMap PseudoMetricSpace.RealMetricValueLinearOrder X Y) (fd : f.IsWeaklyDenseUniformEmbedding) (g : MetricMap PseudoMetricSpace.RealMetricValueLinearOrder X Z) : MetricMap PseudoMetricSpace.RealMetricValueLinearOrder Y Z \cowith
   | UniformMap => weaklyDense-uniform-lift f fd g
   | func-dist {y} {y'} =>
     \have | g~ : UniformMap Y Z => weaklyDense-uniform-lift f fd g

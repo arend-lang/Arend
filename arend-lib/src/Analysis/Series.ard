@@ -235,7 +235,7 @@
 
     \protected \lemma generalized {X : CompleteValuedRing} {x : X} (xi : Inv (1 - x)) (|x|<1 : norm x < 1) : seriesSum (pow x) = defined xi.inv
       => seriesSum_defined {_} {pow x} \lam {eps} eps>0 =>
-          \have |1-x|>0 : 0 < norm (1 - x) => linarith norm_ide <∘l norm_-left
+          \have |1-x|>0 : 0 < norm (1 - x) => linarith X.norm_ide <∘l norm_-left
           \in \case pow_<1-bound |x|<1 {eps * norm (1 - x)} $ RealField.<_*_positive_positive eps>0 |1-x|>0 \with {
             | inP (N,q) => inP (N, later \lam N<=n => rewrite (\peval partialSum _ _, X.geometric-partial-sum) $ norm_*_<= <∘r <=_*_positive-left norm_<=_pow norm>=0 <∘r
                 transport (_ <) (*-assoc *> pmap (_ *) (inv norm_* *> pmap norm xi.inv-right *> norm_ide) *> ide-right) (<_*_positive-left (pow_<=-degree norm>=0 (LinearOrder.<_<= |x|<1) N<=n <∘r q) $

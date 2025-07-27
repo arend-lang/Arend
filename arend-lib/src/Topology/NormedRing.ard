@@ -130,11 +130,16 @@
     | inv-left => inv norm_* *> pmap norm d.inv-left *> norm_ide
     | inv-right => inv norm_* *> pmap norm d.inv-right *> norm_ide
 }
+
 \lemma norm_pow {X : ValuedPseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = pow (norm x) n \elim n
   | 0 => norm_ide
   | suc n => norm_* *> pmap (`* _) norm_pow
 
 \class UpperPseudoValuedRing \extends UpperPseudoNormedPseudoRing, ValuedPseudoValuedRing
+
+\class PseudoValuedRing \extends PseudoNormedRing, ValuedPseudoValuedRing {
+  \override V : MetricValueLinearRing
+}
 
 \func RatValue => UpperPseudoValuedRing { | E => Rat | * => RatField.* | ide => RatField.ide | negative => RatField.negative }
   \where {
@@ -148,9 +153,11 @@
       | norm_ide => idp
   }
 
-\class CompleteValuedCRing \extends ValuedPseudoValuedRing, PseudoNormedRing, CompleteNormedAbGroup, CRing {
+\class CompleteValuedRing \extends PseudoValuedRing, CompleteNormedAbGroup {
   \override V : MetricValueLinearRing
 }
+
+\class CompleteValuedCRing \extends CompleteValuedRing, CRing
 
 \instance RealValuedRing : CompleteValuedCRing Real
   | CompleteNormedAbGroup => RealNormed
