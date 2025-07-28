@@ -1018,7 +1018,7 @@ public class PatternTypechecking {
       if (dataCall != null) {
         if (!conResult.varSubst.isEmpty()) {
           conCall = (ConCallExpression) new SubstVisitor(conResult.varSubst, LevelSubstitution.EMPTY).visitConCall(conCall, null);
-        }
+    }
         resultPattern = new ConstructorExpressionPattern(conCall, conResult.patterns);
       } else {
         Expression elementsType = classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE);

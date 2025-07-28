@@ -2752,7 +2752,7 @@ public final class Concrete {
   }
 
   public static abstract class Pattern extends SourceNodeImpl implements ConcretePattern {
-    public static final byte PREC = 11;
+    public static final byte PREC = 10;
     private boolean myExplicit;
     private TypedReferable myAsReferable;
 
@@ -2809,7 +2809,7 @@ public final class Concrete {
 
     @Override
     public void prettyPrint(PrettyPrintVisitor visitor, Precedence prec) {
-      visitor.prettyPrintPattern(this, prec.priority, false);
+      visitor.prettyPrintPattern(this, prec, false, PrettyPrintVisitor.ArgumentPosition.RIGHT);
     }
   }
 

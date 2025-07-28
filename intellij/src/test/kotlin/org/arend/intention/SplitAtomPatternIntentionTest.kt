@@ -174,8 +174,8 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
 
        \func foo (l : List Nat) : Nat
          | nil => 0
-         | :: x nil => (foo nil) Nat.+ x 
-         | :: x (a :: xs) => (foo (a :: xs)) Nat.+ x
+         | x :: nil => foo nil Nat.+ x 
+         | x :: a :: xs => foo (a :: xs) Nat.+ x
     """)
 
     fun testSimpleResolving() = doTest("""
@@ -259,7 +259,7 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
     """, """
        \func foo (s : Fin 2) : Nat
          | 0 => 0
-         | 1 => zero
+         | 1 => Fin.zero
     """)
 
     fun testElim() = typedQuickFixTest("Split",
@@ -274,8 +274,8 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
          | foo Nat
          
        \func plus {a : Nat} (b : Foo) : Nat \elim b
-         | foo ((2)) => zero
-         | foo ((suc ((Nat.suc (suc b))))) => suc b 
+         | foo 2 => zero
+         | foo (suc (suc (suc b))) => suc b 
     """)
 
     fun testTuple1() = typedQuickFixTest("Split",
@@ -284,7 +284,7 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
          | p{-caret-} => p.1 
     """, """
        \func test3 {A : \Type} (B : A -> \Type) (p : \Sigma (x : A) (B x)) : A \elim p
-         | (x,b) => (x,b).1 
+         | (x, b) => (x, b).1 
     """)
 
     fun testRecord1() = typedQuickFixTest("Split",
@@ -297,7 +297,7 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
        $pairDefinition
        
        \func test4 {A B : \Type} (p : Pair A B) : A \elim p
-         | (a,b) => fst {\new Pair A B a b} 
+         | (a, b) => fst {\new Pair A B a b} 
     """)
 
     fun testRecord2() = typedQuickFixTest("Split",
@@ -305,12 +305,12 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
        $pairDefinition
        
        \func test5 {A B : \Type} (p : Pair A B) : A \elim p
-         | p{-caret-} : Pair => p.fst         
+         | p{-caret-} : Pair => p.fst
     """, """
        $pairDefinition
        
        \func test5 {A B : \Type} (p : Pair A B) : A \elim p
-         | (a,b) : Pair => fst {\new Pair A B a b} 
+         | (a, b) => fst {\new Pair A B a b}
     """)
 
     fun testRecord3() = typedQuickFixTest("Split",
@@ -323,7 +323,7 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
        $pairDefinition2
        
        \func test6 {A B : \Type} (p : Pair {Not A} (Not B)) : A -> Empty \elim p
-         | (a,b) : Pair => fst {\new Pair {Not A} (Not B) a b} 
+         | (a, b) => fst {\new Pair {Not A} (Not B) a b} 
     """)
 
     fun testRecord4() = typedQuickFixTest("Split",
@@ -336,7 +336,7 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
        \module Foo \where \record Pair (A : \Type) (B : \Type) | fst : A | snd : B
 
        \func test7 {A B : \Type} (p : Foo.Pair A B) : A \elim p
-         | (a,b) : Foo.Pair => Foo.fst {\new Foo.Pair A B a b} 
+         | (a, b) => Foo.fst {\new Foo.Pair A B a b} 
     """)
 
     fun testRecord5() = typedQuickFixTest("Split",
@@ -347,7 +347,7 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
     """, """
        $pairDefinition3
        \func test8 {A B : \Type} (p : Pair2 A B) : A \elim p
-         | (p,p1) : Pair2 => fst {fst2 {\new Pair2 A B p p1}}
+         | (p, p1) => fst {fst2 {\new Pair2 A B p p1}}
     """)
 
     fun testRecord6() = doTest("""
@@ -357,7 +357,7 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
     """, """
        $pairDefinition3 
        \func test9 (p : Pair2) : Nat \elim p
-         | (A,B,p,p1) : Pair2 => (snd {snd2 {\new Pair2 A B p p1}}).2
+         | (A, B, p, p1) => (snd {snd2 {\new Pair2 A B p p1}}).2
     """)
 
     fun testCase() = doTest("""
@@ -464,7 +464,7 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
     """, """
        \func foo (a : Array Nat) : Nat
          | nil => {?}
-         | a :: a1 => {?} 
+         | :: {n} a a1 => {?} 
     """)
 
     fun test_arrays2() = doTest("""
@@ -614,5 +614,41 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
       | e :: e1 :: nill => 0
       | e :: e1 :: n :: a => 0
    """)
+
+    fun testInfix8() = typedQuickFixTest("Split", """
+    \data BinTree {A : \Type}
+      | leaf A
+      | \infixl 6 branch (BinTree {A}) A (BinTree {A})
+
+    \func idd (tree : BinTree {Nat}) : BinTree {Nat}
+      | tree{-caret-} => tree 
+    """, """
+    \data BinTree {A : \Type}
+      | leaf A
+      | \infixl 6 branch (BinTree {A}) A (BinTree {A})
+
+    \func idd (tree : BinTree {Nat}) : BinTree {Nat}
+      | leaf a => leaf a
+      | branch tree a tree1 => (branch) tree a tree1    
+    """)
+
+    fun testInfix9() = typedQuickFixTest("Split", contents = """
+       \data BinTree {A : \Type}
+         | leaf A
+         | \infixl 6 branch (BinTree {A}) {A} (BinTree {A})
+
+       \func idd (tree : BinTree {Nat}) : BinTree {Nat}
+         | leaf a => leaf a
+         | branch tree1{-caret-} {a} tree2 => {?} 
+    """, """
+       \data BinTree {A : \Type}
+         | leaf A
+         | \infixl 6 branch (BinTree {A}) {A} (BinTree {A})
+
+       \func idd (tree : BinTree {Nat}) : BinTree {Nat}
+         | leaf a => leaf a
+         | branch (leaf a1) {a} tree2 => {?} 
+         | branch (branch tree1 {a1} tree3) {a} tree2 => {?}
+    """)
 
 }

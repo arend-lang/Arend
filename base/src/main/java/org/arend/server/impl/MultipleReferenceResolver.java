@@ -104,10 +104,12 @@ public class MultipleReferenceResolver {
         boolean nonEmptyScopeIntersection = (!Prelude.MODULE_LOCATION.equals(targetModuleLocation) &&
                 targetModuleDefinitions.stream().anyMatch(stat -> currentScope.resolveName(stat.getRefName()) != null));
         List<String> calculatedName = new ArrayList<>();
+        @Nullable List<String> alternativeName = (referable instanceof InternalReferable) ? new ArrayList<>() : null;
+        LocatedReferable currReferable;
+        @Nullable LocatedReferable alternativeReferable = null;
+        LocatedReferable parent = referable;
 
         if (namespaceCommand.get() != null || anchorModuleLocation.equals(targetModuleLocation)) {
-            LocatedReferable currReferable;
-            LocatedReferable parent = referable;
             boolean foundNameInScope = false;
             String contextName;
 
@@ -164,28 +166,41 @@ public class MultipleReferenceResolver {
                 }
             }
         } else {
-            LocatedReferable currReferable;
-            LocatedReferable parent = referable;
             do {
                 currReferable = parent;
 
-                if (currReferable.getAliasName() != null)
-                    calculatedName.addFirst(currReferable.getAliasName()); else
+                if (currReferable.getAliasName() != null) {
+                    calculatedName.addFirst(currReferable.getAliasName());
+                    if (alternativeName != null) alternativeName.addFirst(currReferable.getAliasName());
+                } else {
                     calculatedName.addFirst(currReferable.getRefName());
+                    if (alternativeName != null) alternativeName.addFirst(currReferable.getRefName());
+                }
 
                 parent = currReferable.getLocatedReferableParent();
 
                 if (currReferable instanceof InternalReferable &&
                         !(currReferable instanceof FieldReferable fieldReferable && fieldReferable.isParameterField()) &&
                         parent != null && !(parent instanceof ModuleReferable)) {
+                    if (alternativeName != null) {
+                        alternativeName.addFirst(parent.getRefName());
+                        alternativeReferable = parent;
+                    }
                     parent = parent.getLocatedReferableParent();
                 }
             } while (parent != null && !(parent instanceof ModuleReferable));
 
             Referable referableInScope = currentScope.resolveName(currReferable.getRefName());
+            @Nullable Referable alternativeReferableInScope = (alternativeReferable != null) ? currentScope.resolveName(alternativeReferable.getRefName()) : null;
+
             String topLevelName = calculatedName.getFirst();
             boolean topLevelReferableIsProtected = currReferable.getAccessModifier() == AccessModifier.PROTECTED;
-            boolean scopeObstructed = referableInScope != null && referableInScope != currReferable;
+            boolean scopeObstructed = false;
+
+            if (referableInScope != null && referableInScope != currReferable) {
+                scopeObstructed = alternativeReferableInScope == null || alternativeReferableInScope != alternativeReferable;
+                if (alternativeName != null) calculatedName = alternativeName;
+            }
 
             if (scopeObstructed && targetModuleLocation != null) {
                 calculatedName.addAll(0, targetModuleLocation.getModulePath().toList());

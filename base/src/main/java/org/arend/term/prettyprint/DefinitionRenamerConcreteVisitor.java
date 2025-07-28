@@ -14,6 +14,12 @@ public class DefinitionRenamerConcreteVisitor extends BaseConcreteExpressionVisi
   }
 
   @Override
+  protected void visitPattern(Concrete.Pattern pattern, Void params) {
+    //TODO: FIXME; Implement this method using some analogue of LongNameReferences for patterns
+    super.visitPattern(pattern, params);
+  }
+
+  @Override
   public Concrete.Expression visitReference(Concrete.ReferenceExpression expr, Void params) {
     if (expr.getReferent() instanceof LocatedReferable) {
       LongName longName = myDefinitionRenamer.renameDefinition(expr.getReferent());

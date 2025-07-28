@@ -19,25 +19,15 @@ import org.arend.ext.module.LongName
 import org.arend.ext.reference.DataContainer
 import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
-import org.arend.naming.reference.GlobalReferable
-import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.Referable
-import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.StringRenamer
-import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
-import org.arend.naming.scope.local.ElimScope
-import org.arend.naming.scope.local.ListScope
 import org.arend.prelude.Prelude
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
-import org.arend.psi.ext.ArendGroup
-import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
-import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
-import org.arend.server.ProgressReporter
 import org.arend.settings.ArendSettings
 import org.arend.term.Fixity
 import org.arend.term.abs.Abstract
@@ -45,13 +35,10 @@ import org.arend.term.abs.AbstractExpressionVisitor
 import org.arend.term.abs.AbstractReference
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.ConcreteExpressionVisitor
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator
+import org.arend.term.concrete.SearchConcreteVisitor
 import org.arend.util.getBounds
-import java.lang.IllegalArgumentException
 import java.math.BigInteger
 import java.util.Collections.singletonList
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.math.max
 
 private fun addId(id: String, newName: String?, factory: ArendPsiFactory, using: ArendNsUsing): ArendNsId? {
@@ -145,7 +132,7 @@ fun doAddIdToHiding(statCmd: ArendStatCmd, idList: List<String>) : List<ArendRef
 }
 
 fun doRemoveRefFromStatCmd(id: ArendRefIdentifier, deleteEmptyCommands: Boolean = true) {
-    val elementToRemove = if (id.parent is ArendNsId) id.parent else id
+    val elementToRemove = id.parent as? ArendNsId ?: id
     val parent = elementToRemove.parent
 
     val prevSibling = elementToRemove.findPrevSibling()
@@ -154,10 +141,10 @@ fun doRemoveRefFromStatCmd(id: ArendRefIdentifier, deleteEmptyCommands: Boolean 
     elementToRemove.delete()
 
     if (prevSibling?.node?.elementType == COMMA) {
-        prevSibling?.delete()
+        prevSibling.delete()
     } else if (prevSibling?.node?.elementType == LPAREN) {
         if (nextSibling?.node?.elementType == COMMA) {
-            nextSibling?.delete()
+            nextSibling.delete()
         }
     }
 
@@ -889,18 +876,13 @@ private object ConcretePrecVisitor : ConcreteExpressionVisitor<Void?, Int> {
     override fun visitBox(expr: Concrete.BoxExpression?, params: Void?) = APP_PREC
 }
 
-fun getTcDefReferable(globalReferable: ReferableBase<*>): TCDefReferable? {
-    globalReferable.tcReferable?.let { return it }
-
-    val project = globalReferable.project
-    val arendServer = project.service<ArendServerService>().server
-    val targetFile = globalReferable.containingFile as? ArendFile
-    val targetFileLocation = targetFile?.moduleLocation
-    if (targetFileLocation != null) {
-        val requester = ArendServerRequesterImpl(project)
-        requester.doUpdateModule(arendServer, targetFileLocation, targetFile)
-        //TODO: This operation may be slow
-        arendServer.getCheckerFor(listOf(targetFileLocation)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+fun <R : Concrete.SourceNode>findConcreteByPsi(concreteDefinition: Concrete.Definition, clazz: Class<R>, psi: PsiElement): R? {
+    val searcher = object : SearchConcreteVisitor<Void, R?>() {
+        override fun checkSourceNode(sourceNode: Concrete.SourceNode?, params: Void?): R? {
+            if (clazz.isInstance(sourceNode) && sourceNode?.data == psi) return clazz.cast(sourceNode)
+            return super.checkSourceNode(sourceNode, params)
+        }
     }
-    return globalReferable.tcReferable
+
+    return concreteDefinition.accept(searcher, null)
 }

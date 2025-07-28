@@ -213,7 +213,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
     if (pattern == null) return null;
     var data = myData != null ? myData : pattern.getData();
     return switch (pattern) {
-      case Concrete.NamePattern namePattern -> new Concrete.NamePattern(data, namePattern.isExplicit(), namePattern.getReferable(), namePattern.type);
+      case Concrete.NamePattern namePattern -> new Concrete.NamePattern(data, namePattern.isExplicit(), namePattern.getReferable(), namePattern.type == null ? null : namePattern.type.accept(this, null));
       case Concrete.ConstructorPattern conPattern -> new Concrete.ConstructorPattern(data, conPattern.isExplicit(), conPattern.getConstructorData(), conPattern.getConstructor(), visitPatterns(conPattern.getPatterns()), visitTypedReferable(conPattern.getAsReferable()));
       case Concrete.TuplePattern tuplePattern -> new Concrete.TuplePattern(data, tuplePattern.isExplicit(), visitPatterns(tuplePattern.getPatterns()), visitTypedReferable(tuplePattern.getAsReferable()));
       case Concrete.NumberPattern numberPattern -> new Concrete.NumberPattern(data, numberPattern.getNumber(), visitTypedReferable(numberPattern.getAsReferable()));
@@ -231,7 +231,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   }
 
   @SuppressWarnings("unchecked")
-  protected <T extends Concrete.Clause> T visitClause(T clause) {
+  public <T extends Concrete.Clause> T visitClause(T clause) {
     if (Concrete.ConstructorClause.class.equals(clause.getClass())) {
       var conClause = (Concrete.ConstructorClause) clause;
       return (T) new Concrete.ConstructorClause(myData != null ? myData : clause.getData(), visitPatterns(clause.getPatterns()), new ArrayList<>(conClause.getConstructors()));

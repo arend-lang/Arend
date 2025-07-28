@@ -22,6 +22,7 @@ import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
 import org.arend.util.StringEscapeUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -492,7 +493,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
             @Override
             void printListElement(PrettyPrintVisitor ppv, Concrete.SourceNode s) {
               if (s instanceof Concrete.Pattern) {
-                ppv.prettyPrintPattern((Concrete.Pattern) s, (byte) (Concrete.Pattern.PREC + 1), false);
+                ppv.prettyPrintPattern((Concrete.Pattern) s, new Precedence(Precedence.Associativity.NON_ASSOC, (byte) (Concrete.Pattern.PREC + 1), false), false, ArgumentPosition.RIGHT);
               } else {
                 ppv.prettyPrintParameter((Concrete.Parameter) s);
               }
@@ -878,7 +879,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
         }
       }.doPrettyPrint(this, noIndent);
     } else {
-      prettyPrintPatterns(clause.getPatterns(), true);
+      prettyPrintPatterns(clause.getPatterns(), new Precedence(Precedence.Associativity.NON_ASSOC, Concrete.Pattern.PREC, false), true);
     }
   }
 
@@ -1027,7 +1028,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     if (printPipe) {
       myBuilder.append("| ");
     }
-    prettyPrintPattern(letClause.getPattern(), Concrete.Pattern.PREC, true);
+    prettyPrintPattern(letClause.getPattern(), new Precedence(Precedence.Associativity.NON_ASSOC, Concrete.Pattern.PREC, false), true, ArgumentPosition.RIGHT);
     for (Concrete.Parameter arg : letClause.getParameters()) {
       myBuilder.append(" ");
       prettyPrintParameter(arg);
@@ -1385,10 +1386,10 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     if (clause.getPatterns() == null) {
       return;
     }
-    prettyPrintPatterns(clause.getPatterns(), true);
+    prettyPrintPatterns(clause.getPatterns(), new Precedence(Precedence.Associativity.NON_ASSOC, Concrete.Pattern.PREC, false), true);
   }
 
-  private void prettyPrintPatterns(List<? extends Concrete.Pattern> patterns, boolean withComma) {
+  private void prettyPrintPatterns(List<? extends Concrete.Pattern> patterns, Precedence prec, boolean withComma) {
     boolean first = true;
     for (Concrete.Pattern pattern : patterns) {
       if (first) {
@@ -1396,11 +1397,13 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       } else {
         myBuilder.append(withComma ? ", " : " ");
       }
-      prettyPrintPattern(pattern, withComma ? Concrete.Pattern.PREC : Concrete.Pattern.PREC + 1, false);
+      prettyPrintPattern(pattern, withComma ? null : prec, false, ArgumentPosition.RIGHT);
     }
   }
 
-  public void prettyPrintPattern(Concrete.Pattern pattern, byte prec, boolean withParens) {
+  public enum ArgumentPosition {LEFT, RIGHT}
+
+  public void prettyPrintPattern(Concrete.Pattern pattern, @Nullable Precedence parentPrec, boolean withParens, @Nullable ArgumentPosition position) {
     if (!pattern.isExplicit()) {
       myBuilder.append("{");
     }
@@ -1421,20 +1424,53 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       case Concrete.NumberPattern numberPattern -> myBuilder.append(numberPattern.getNumber());
       case Concrete.TuplePattern ignored -> {
         myBuilder.append('(');
-        prettyPrintPatterns(pattern.getPatterns(), true);
+        prettyPrintPatterns(pattern.getPatterns(), new Precedence(Precedence.Associativity.NON_ASSOC, Concrete.Pattern.PREC, false), true);
         myBuilder.append(')');
       }
       case Concrete.ConstructorPattern conPattern -> {
-        if ((withParens || !conPattern.getPatterns().isEmpty() && prec > Concrete.Pattern.PREC) && pattern.isExplicit())
-          myBuilder.append('(');
-
-        myBuilder.append(conPattern.getConstructor() == null ? "_" : conPattern.getConstructor().textRepresentation());
-        if (!conPattern.getPatterns().isEmpty()) {
-          myBuilder.append(' ');
-          prettyPrintPatterns(conPattern.getPatterns(), false);
+        Referable constructor = conPattern.getConstructor();
+        Precedence consPrec = new Precedence(Precedence.Associativity.NON_ASSOC, Concrete.Pattern.PREC, false);
+        if (constructor instanceof GlobalReferable globalReferable) {
+          consPrec = globalReferable.getPrecedence();
         }
 
-        if ((withParens || !conPattern.getPatterns().isEmpty() && prec > Concrete.Pattern.PREC) && pattern.isExplicit())
+        int indexOfFirstExplicit = -1;
+        List<Concrete.Pattern> patterns = new ArrayList<>(conPattern.getPatterns());
+        for (int i = 0; i < patterns.size(); i++) if (patterns.get(i).isExplicit()) {
+          indexOfFirstExplicit = i;
+          break;
+        }
+
+        boolean referableIsInfix = false;
+        if (conPattern.getConstructor() instanceof GlobalReferable globalReferable) {
+          referableIsInfix = globalReferable.getPrecedence().isInfix;
+        }
+
+        boolean needsParens = withParens || !patterns.isEmpty() && (
+                parentPrec != null && !parentPrec.isInfix ||
+                        (parentPrec != null && parentPrec.priority > consPrec.priority) ||
+                        (parentPrec != null && parentPrec != consPrec && parentPrec.priority == consPrec.priority) ||
+                        (parentPrec != null && parentPrec == consPrec && parentPrec.associativity != Precedence.Associativity.LEFT_ASSOC && position == ArgumentPosition.LEFT) ||
+                        (parentPrec != null && parentPrec == consPrec && parentPrec.associativity != Precedence.Associativity.RIGHT_ASSOC && position == ArgumentPosition.RIGHT));
+
+        if (needsParens && pattern.isExplicit())
+          myBuilder.append('(');
+
+        if (referableIsInfix && indexOfFirstExplicit != -1 && patterns.size() == 2) {
+          prettyPrintPattern(patterns.get(indexOfFirstExplicit), consPrec, false, ArgumentPosition.LEFT);
+          myBuilder.append(' ');
+          patterns.remove(indexOfFirstExplicit);
+        } else { // If this is not infix notation -- then force normal behavior of parentheses
+          consPrec = new Precedence(Precedence.Associativity.NON_ASSOC, Concrete.Pattern.PREC, false);
+        }
+
+        myBuilder.append(conPattern.getConstructor() == null ? "_" : conPattern.getConstructor().textRepresentation());
+        if (!patterns.isEmpty()) {
+          myBuilder.append(' ');
+          prettyPrintPatterns(patterns, consPrec, false);
+        }
+
+        if (needsParens && pattern.isExplicit())
           myBuilder.append(')');
       }
       default -> {}

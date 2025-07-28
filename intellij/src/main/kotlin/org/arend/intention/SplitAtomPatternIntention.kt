@@ -1,48 +1,56 @@
 package org.arend.intention
 
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.TextRange
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
+import com.intellij.psi.codeStyle.CodeStyleManager
+import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.startOffset
-import com.intellij.util.containers.tail
 import org.arend.codeInsight.completion.withAncestors
-import org.arend.ext.variable.Variable
 import org.arend.core.context.param.DependentLink
 import org.arend.core.definition.Definition
+import org.arend.core.definition.FunctionDefinition
+import org.arend.core.elimtree.ElimBody
+import org.arend.core.elimtree.IntervalElim
 import org.arend.core.expr.*
-import org.arend.term.prettyprint.ToAbstractVisitor
+import org.arend.core.pattern.BindingPattern
 import org.arend.core.pattern.ConstructorExpressionPattern
 import org.arend.core.pattern.ExpressionPattern
+import org.arend.core.pattern.Pattern.toExpressionPatterns
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.core.ops.NormalizationMode
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
-import org.arend.ext.reference.Precedence
+import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
-import org.arend.naming.reference.GlobalReferable
-import org.arend.naming.reference.TCDefReferable
-import org.arend.naming.renamer.StringRenamer
-import org.arend.naming.resolving.typing.TypingInfo
-import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
+import org.arend.naming.reference.LocalReferable
+import org.arend.naming.reference.Referable
+import org.arend.naming.renamer.ReferableRenamer
 import org.arend.prelude.Prelude
 import org.arend.psi.*
 import org.arend.psi.ext.*
-import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
 import org.arend.refactoring.*
+import org.arend.refactoring.utils.ServerBasedDefinitionRenamer
+import org.arend.refactoring.utils.NumberSimplifyingConcreteVisitor
+import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
-import org.arend.term.abs.ConcreteBuilder
 import org.arend.term.concrete.Concrete
-import org.arend.term.prettyprint.PrettyPrintVisitor
+import org.arend.term.concrete.LocalVariablesCollector
+import org.arend.term.concrete.SubstConcreteVisitor
+import org.arend.term.prettyprint.DefinitionRenamerConcreteVisitor
+import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.util.ArendBundle
 import java.util.*
 import java.util.Collections.singletonList
-import kotlin.collections.HashSet
 
 class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement::class.java, ArendBundle.message("arend.pattern.split")) {
     private var splitPatternEntries: List<SplitPatternEntry>? = null
     private var caseClauseParameters: DependentLink? = null
 
     override fun isApplicableTo(element: PsiElement, caretOffset: Int, editor: Editor): Boolean {
-        val defIdentifier = when (element) {
+        val recursiveParameterName = when (element) {
             is ArendPattern -> element.singleReferable?.refName
             else -> null
         }
@@ -55,22 +63,40 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
             is DataCallExpression -> {
                 val canDoPatternMatchingOnIdp = admitsPatternMatchingOnIdp(type, caseClauseParameters)
                 if (project != null && canDoPatternMatchingOnIdp == PatternMatchingOnIdpResult.IDP) {
-                    singletonList(IdpPatternEntry(project))
+                    singletonList(IdpPatternEntry(project, element.isExplicit))
                 } else if (canDoPatternMatchingOnIdp != PatternMatchingOnIdpResult.DO_NOT_ELIMINATE) {
                     val constructors = type.matchedConstructors ?: return false
-                    constructors.map { ConstructorSplitPatternEntry(it.definition, defIdentifier, type.definition) }
+                    constructors.map { ConstructorSplitPatternEntry(it.definition, element.isExplicit, type.definition, recursiveParameterName) }
                 } else null
             }
-            is SigmaExpression -> singletonList(TupleSplitPatternEntry(type.parameters))
+            is SigmaExpression -> singletonList(TupleSplitPatternEntry(type, element.isExplicit))
             is ClassCallExpression -> {
                 if (type.definition == Prelude.DEP_ARRAY) {
                     val isEmpty = ConstructorExpressionPattern.isArrayEmpty(type)
+                    val implementedHere = type.definition.notImplementedFields.filter { type.isImplementedHere(it) }
+                    val lenImplemented = implementedHere.contains(Prelude.ARRAY_LENGTH)
+
                     val result = ArrayList<SplitPatternEntry>()
                     for (p in arrayOf(Pair(true, Prelude.EMPTY_ARRAY), Pair(false, Prelude.ARRAY_CONS)))
-                        if (isEmpty == null || isEmpty == p.first) result.add(ConstructorSplitPatternEntry(p.second, defIdentifier, type.definition))
+                        if (isEmpty == null || isEmpty == p.first) {
+                            val allParameters = DependentLink.Helper.toList(p.second.parameters)
+                            val parametersToHideInPattern = if (p.first) allParameters else {
+                                if (lenImplemented) allParameters.subList(0, 2) else singletonList(allParameters[1])
+                            }
+
+                            result.add(
+                                ConstructorSplitPatternEntry(
+                                    p.second,
+                                    element.isExplicit,
+                                    type.definition,
+                                    recursiveParameterName,
+                                    parametersToHideInPattern
+                                )
+                            )
+                        }
                     result
                 } else {
-                    singletonList(ClassSplitPatternEntry(type))
+                    singletonList(ClassSplitPatternEntry(type, element.isExplicit))
                 }
             }
             else -> null
@@ -86,10 +112,11 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
         val project = editor.project
         caseClauseParameters = null
         if (project == null) return null
+        val server = project.service<ArendServerService>().server
+
         var definition: PsiLocatedReferable? = null
         val (patternOwner, indexList) = locatePattern(element) ?: return null
         val ownerParent = (patternOwner as PsiElement).parent
-        var abstractPatterns: List<Abstract.Pattern>? = null
         var coClauseName: String? = null
 
         var clauseIndex = -1
@@ -98,7 +125,6 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
                 if (it.kind == ArendFunctionBody.Kind.COCLAUSE) it.parent.ancestor() else it
             }
             val func = body?.parent
-            abstractPatterns = patternOwner.patterns
 
             if (ownerParent is ArendFunctionClauses)
                 clauseIndex = ownerParent.clauseList.indexOf(patternOwner)
@@ -118,37 +144,38 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
             return null // TODO: Implement some behavior for constructor clauses as well
         }
 
-        /* TODO[server2]
         if (definition != null && clauseIndex != -1) {
-            var typeCheckedDefinition = project.service<ArendServerService>().server.getTCReferable(definition)?.typechecked
-            var concreteClauseOwner = (element.containingFile as? ArendFile)?.concreteDefinitions?.get(definition.refLongName) as? Concrete.FunctionDefinition ?: PsiConcreteProvider(project, DummyErrorReporter.INSTANCE, null).getConcreteFunction(definition) ?: return null
-            if (typeCheckedDefinition is FunctionDefinition && definition is Abstract.ParametersHolder && definition is Abstract.EliminatedExpressionsHolder && abstractPatterns != null) {
+            val tcReferable = (definition as? ReferableBase<*>)?.tcReferable
+            var typeCheckedDefinition: Definition = tcReferable?.typechecked ?: return null
+            var concreteClauseOwner = server.getResolvedDefinition(tcReferable)?.definition as? Concrete.GeneralDefinition ?: return null
+
+            if (typeCheckedDefinition is FunctionDefinition && concreteClauseOwner is Concrete.FunctionDefinition && definition is Abstract.ParametersHolder && definition is Abstract.EliminatedExpressionsHolder) {
                 if (coClauseName != null) {
                   val classCallExpression = typeCheckedDefinition.resultType as? ClassCallExpression
                   val expr = classCallExpression?.implementations?.firstOrNull { it.key.name == coClauseName }?.value
                   typeCheckedDefinition = ((expr as? LamExpression)?.body as? FunCallExpression)?.definition ?: typeCheckedDefinition
-                  concreteClauseOwner = PsiConcreteProvider(project, DummyErrorReporter.INSTANCE, null).getConcrete(typeCheckedDefinition.ref.underlyingReferable as GlobalReferable) as? Concrete.FunctionDefinition ?: concreteClauseOwner
+                  concreteClauseOwner = server.getResolvedDefinition(typeCheckedDefinition.referable)?.definition as? Concrete.FunctionDefinition ?: concreteClauseOwner
                 }
 
                 val elimBody = (((typeCheckedDefinition as? FunctionDefinition)?.actualBody as? IntervalElim)?.otherwise
                         ?: ((typeCheckedDefinition as? FunctionDefinition)?.actualBody as? ElimBody) ?: return null)
 
-                val corePatterns = elimBody.clauses.getOrNull(clauseIndex)?.patterns?.let { Pattern.toExpressionPatterns(it, typeCheckedDefinition.parameters) }
+                val corePatterns = elimBody.clauses.getOrNull(clauseIndex)?.patterns?.let { toExpressionPatterns(it, typeCheckedDefinition.parameters) }
                         ?: return null
 
-                val parameters = ArrayList<Referable>(); for (pp in definition.parameters) parameters.addAll(pp.referableList)
+                val parameters = ArrayList<Abstract.AbstractReferable>(); for (pp in definition.parameters) parameters.addAll(pp.referableList)
                 val elimVars = definition.eliminatedExpressions ?: emptyList()
                 val isElim = elimVars.isNotEmpty()
                 val elimVarPatterns: List<ExpressionPattern> = if (isElim) elimVars.map { reference ->
                     if (reference is ArendRefIdentifier) {
-                        val parameterIndex = (reference.reference?.resolve() as? Referable)?.let { parameters.indexOf(it) }
+                        val parameterIndex = (reference.reference?.resolve() as? Abstract.AbstractReferable)?.let { parameters.indexOf(it) }
                                 ?: -1
                         if (parameterIndex < corePatterns.size && parameterIndex != -1) corePatterns[parameterIndex] else throw IllegalStateException()
                     } else throw IllegalStateException()
                 } else corePatterns
 
                 if (indexList.isNotEmpty()) {
-                    val concreteClause = concreteClauseOwner.body.clauses[clauseIndex]
+                    val concreteClause = (concreteClauseOwner as Concrete.FunctionDefinition).body.clauses[clauseIndex]
                     val index = patternOwner
                             .patterns
                             .filterIsInstance<ArendPattern>()
@@ -164,7 +191,6 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
                 }
             }
         }
-        */
 
         if (ownerParent is ArendWithBody && patternOwner is ArendClause) {
             val clauseIndex2 = ownerParent.clauseList.indexOf(patternOwner)
@@ -182,271 +208,159 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
     }
 
     companion object {
-        interface SplitPatternEntry {
-            fun initParams(occupiedNames: MutableSet<Variable>)
-            fun patternString(location: ArendCompositeElement): String
-            fun expressionString(location: ArendCompositeElement): String
-            fun requiresParentheses(): Boolean
-        }
+        abstract class SplitPatternEntry(recursiveDefinition: Definition?,
+                                         recursiveParameterName: String?,
+                                         val isExplicit: Boolean) {
+            protected val referableRenamer = ReferableRenamer()
 
-        abstract class DependentLinkSplitPatternEntry(private val parameterName: String?,
-                                                      private val recursiveTypeDefinition: Definition?) : SplitPatternEntry {
-            val params: ArrayList<String> = ArrayList()
-
-            abstract fun getDependentLink(): DependentLink
-
-            override fun initParams(occupiedNames: MutableSet<Variable>) {
-                params.clear()
-                var parameter = getDependentLink()
-                var nRecursiveBindings = 0
-
-                if (recursiveTypeDefinition != null && !parameterName.isNullOrEmpty() && !Character.isDigit(parameterName.last())) {
-                    while (parameter.hasNext()) {
-                        val parameterType = parameter.type
-                        if (parameterType is DataCallExpression && parameterType.definition == recursiveTypeDefinition && parameter.name == null) nRecursiveBindings += 1
-                        parameter = parameter.next
-                    }
-                    parameter = getDependentLink()
-                }
-
-                val renamer = StringRenamer()
-                renamer.setParameterName(recursiveTypeDefinition, parameterName)
-
-                while (parameter.hasNext()) {
-                    val name = renamer.generateFreshName(parameter, calculateOccupiedNames(occupiedNames, parameterName, nRecursiveBindings))
-                    occupiedNames.add(parameter)
-                    if (parameter.isExplicit)
-                        params.add(name)
-                    parameter = parameter.next
-                }
+            init {
+                referableRenamer.setParameterName(recursiveDefinition, recursiveParameterName)
             }
+
+            abstract fun patternConcrete(freeVars: Collection<Variable>): Pair<Concrete.Pattern, Concrete.Expression>
+
+            protected fun generateConcreteParameters(parameters: List<Variable>, freeVars: Collection<Variable>): List<Referable> {
+                val concreteParameters = ArrayList<LocalReferable>()
+                val freeVarsSet = HashSet(freeVars)
+                for (parameter in parameters) {
+                    concreteParameters.add (referableRenamer.generateFreshReferable(parameter, freeVarsSet))
+                    freeVarsSet.add(parameter)
+                }
+                return concreteParameters
+            }
+
         }
 
         class ConstructorSplitPatternEntry(val constructor: Definition,
-                                           parameterName: String?,
-                                           recursiveTypeDefinition: Definition?) : DependentLinkSplitPatternEntry(parameterName, recursiveTypeDefinition) {
-            override fun getDependentLink(): DependentLink = constructor.parameters
-
-            override fun patternString(location: ArendCompositeElement): String {
-                val locatedReferable = PsiLocatedReferable.fromReferable(constructor.referable)
-                val (constructorName, namespaceCommand) = locatedReferable?.let{ getTargetName(locatedReferable, location) } ?: Pair(constructor.name, null)
-                namespaceCommand?.execute()
-
-                val isInfix = constructor.referable.precedence.isInfix
-                return buildString {
-                    if (params.isEmpty()) {
-                        append("$constructorName ")
-                        return@buildString
-                    } else if (isInfix) {
-                        append("${params[0]} $constructorName ")
-                    } else {
-                        append("$constructorName ${params[0]} ")
-                    }
-                    for (p in params.tail()) append("$p ")
-                }.trim()
-            }
-
-            override fun expressionString(location: ArendCompositeElement): String {
-                val locatedReferable = PsiLocatedReferable.fromReferable(constructor.referable)
-                val (constructorName, namespaceCommand) = locatedReferable?.let{ getTargetName(locatedReferable, location) } ?: Pair(constructor.name, null)
-                namespaceCommand?.execute()
-
-                return if (constructor.referable.precedence.isInfix && params.size == 2)
-                    "${params[0]} $constructorName ${params[1]}" else patternString(location)
-            }
-
-            override fun requiresParentheses(): Boolean = params.isNotEmpty()
-        }
-
-        class TupleSplitPatternEntry(private val link: DependentLink) : DependentLinkSplitPatternEntry(null, null) {
-            override fun getDependentLink(): DependentLink = link
-
-            override fun patternString(location: ArendCompositeElement): String = printTuplePattern(params)
-
-            override fun expressionString(location: ArendCompositeElement): String = patternString(location)
-
-            override fun requiresParentheses(): Boolean = false
-
-            companion object {
-                fun printTuplePattern(params: ArrayList<String>) = buildString {
-                    append("(")
-                    for (p in params.withIndex()) {
-                        append(p.value)
-                        if (p.index < params.size - 1)
-                            append(",")
-                    }
-                    append(")")
-                }
-            }
-        }
-
-        class ClassSplitPatternEntry(private val classCall: ClassCallExpression) : SplitPatternEntry {
-            val params: ArrayList<String> = ArrayList()
-
-            override fun initParams(occupiedNames: MutableSet<Variable>) {
-                params.clear()
-                val renamer = StringRenamer()
-                renamer.setForceTypeSCName(true)
-
-                for (field in classCall.definition.notImplementedFields) {
-                    if (!classCall.isImplementedHere(field)) {
-                        val name = renamer.generateFreshName(field, occupiedNames)
-                        occupiedNames.add(field)
-                        params.add(name)
-                    }
-                }
-            }
-
-            override fun patternString(location: ArendCompositeElement): String = TupleSplitPatternEntry.printTuplePattern(params)
-
-            override fun expressionString(location: ArendCompositeElement): String = buildString {
-                append("\\new ")
-                val locatedReferable = PsiLocatedReferable.fromReferable(classCall.definition.referable)
-                val (recordName, namespaceCommand) = locatedReferable?.let { getTargetName(locatedReferable, location) } ?: Pair(classCall.definition.name, null)
-                namespaceCommand?.execute()
-
-                append("$recordName ")
-                val expr = ToAbstractVisitor.convert(classCall, object : PrettyPrinterConfig {
-                    override fun getNormalizationMode(): NormalizationMode? {
-                        return null
-                    }
+                                           isExplicit: Boolean,
+                                           recursiveDefinition: Definition?,
+                                           recursiveParameterName: String?,
+                                           val parametersToRemove: Collection<DependentLink> = emptyList<DependentLink>()) : SplitPatternEntry(recursiveDefinition, recursiveParameterName, isExplicit) {
+            override fun patternConcrete(freeVars: Collection<Variable>): Pair<Concrete.Pattern, Concrete.Expression> {
+                val coreParameters = DependentLink.Helper.toList(constructor.parameters).minus(parametersToRemove)
+                val concreteParameters = generateConcreteParameters(coreParameters, freeVars)
+                val concreteParametersWithExplicitness = coreParameters.map { it.isExplicit }.toList().zip(concreteParameters)
+                val resultPattern = Concrete.ConstructorPattern(null, isExplicit, null, constructor.referable, concreteParametersWithExplicitness.map { Concrete.NamePattern(null, it.first, it.second, null) }, null)
+                val resultExpression = Concrete.AppExpression.make(null, Concrete.ReferenceExpression(null, constructor.referable), concreteParametersWithExplicitness.map {
+                    Concrete.Argument(Concrete.ReferenceExpression(null, it.second), it.first)
                 })
-                if (expr is Concrete.AppExpression) {
-                    PrettyPrintVisitor.printArguments(PrettyPrintVisitor(this, 0), expr.arguments, false)
-                    append(" ")
-                }
-                for (p in params) append("$p ")
-            }.trim()
+                return Pair(resultPattern, resultExpression)
+            }
 
-            override fun requiresParentheses(): Boolean = true
         }
 
-        class IdpPatternEntry(val project: Project): SplitPatternEntry {
-            override fun initParams(occupiedNames: MutableSet<Variable>) { }
-
-            override fun patternString(location: ArendCompositeElement): String = getCorrectPreludeItemStringReference(project, location, Prelude.IDP)
-
-            override fun expressionString(location: ArendCompositeElement): String = patternString(location)
-
-            override fun requiresParentheses(): Boolean = false
+        class TupleSplitPatternEntry(val type: SigmaExpression,
+                                     isExplicit: Boolean) : SplitPatternEntry(null, null, isExplicit) {
+            override fun patternConcrete(freeVars: Collection<Variable>): Pair<Concrete.Pattern, Concrete.Expression> {
+                val concreteParameters = generateConcreteParameters(DependentLink.Helper.toList(type.parameters), freeVars)
+                val resultPattern = Concrete.TuplePattern(null, isExplicit, concreteParameters.map { Concrete.NamePattern(null, true, it, null) }, null)
+                val resultExpression = Concrete.TupleExpression(null, concreteParameters.map { Concrete.ReferenceExpression(null, it) })
+                return Pair(resultPattern, resultExpression)
+            }
         }
 
-        fun doSplitPattern(element: PsiElement, project: Project, splitPatternEntries: Collection<SplitPatternEntry>, generateBody: Boolean = false) {
-            if (element !is ArendPattern) {
-                return
+        class ClassSplitPatternEntry(val classCall: ClassCallExpression,
+                                     isExplicit: Boolean) : SplitPatternEntry(null, null, isExplicit) {
+            val notImplementedFields = classCall.definition.notImplementedFields.filter { !classCall.isImplementedHere(it) }
+
+            init {
+                referableRenamer.setForceTypeSCName(true)
             }
-            val (localClause, localIndexList) = locatePattern(element) ?: return
-            if (localClause !is ArendClause) return
 
-            val topLevelPatterns = localClause.patterns.mapTo(mutableListOf()) {
-                ConcreteBuilder.convertPattern(it, DummyErrorReporter.INSTANCE, null)
+            override fun patternConcrete(freeVars: Collection<Variable>): Pair<Concrete.Pattern, Concrete.Expression> {
+                val concreteParameters = generateConcreteParameters(notImplementedFields, freeVars)
+                val expr = ToAbstractVisitor.convert(classCall, object : PrettyPrinterConfig { override fun getNormalizationMode(): NormalizationMode? = null })
+                val additionalArguments = concreteParameters.map { Concrete.Argument(Concrete.ReferenceExpression(null, it), true) }
+                val appExpr = if (expr is Concrete.AppExpression) { expr.arguments.addAll(additionalArguments); expr } else
+                    Concrete.AppExpression.make(null, expr, additionalArguments)
+
+                val resultPattern = Concrete.TuplePattern(null, isExplicit, concreteParameters.map { Concrete.NamePattern(null, true, it, null) }, null)
+                val resultExpression = Concrete.NewExpression(null, appExpr)
+                return Pair(resultPattern, resultExpression)
             }
-            ExpressionResolveNameVisitor(localClause.scope, mutableListOf(), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, null, null).visitPatterns(topLevelPatterns, mutableMapOf())
+        }
 
-            val localNames = HashSet<Variable>()
-            localNames.addAll(findAllVariablePatterns(topLevelPatterns, element).map(::VariableImpl))
+        class IdpPatternEntry(val project: Project, isExplicit: Boolean): SplitPatternEntry(null, null, isExplicit) {
+            override fun patternConcrete(freeVars: Collection<Variable>): Pair<Concrete.Pattern, Concrete.Expression> {
+                val resultPattern = Concrete.ConstructorPattern(null, isExplicit, null, Prelude.IDP.ref, emptyList(), null)
+                val resultExpression = Concrete.AppExpression.make(null, Concrete.ReferenceExpression(null, Prelude.IDP.ref), emptyList())
+                return Pair(resultPattern, resultExpression)
+            }
+        }
 
-            val factory = ArendPsiFactory(project)
-            if (splitPatternEntries.isEmpty()) {
-                doReplacePattern(factory, element, "()", false)
-                localClause.expression?.delete()
-                localClause.fatArrow?.delete()
-            } else {
-                var first = true
-                if (generateBody && localClause.fatArrow == null) {
-                    var currAnchor = localClause.lastChild
-                    val sampleClause = factory.createClause("()")
-                    currAnchor = localClause.addAfter(sampleClause.fatArrow!!, currAnchor)
-                    localClause.addBefore(factory.createWhitespace(" "), currAnchor)
-                    localClause.addAfter(sampleClause.expression!!, currAnchor)
-                    localClause.addAfter(factory.createWhitespace(" "), currAnchor)
-                }
+        fun doSplitPattern(patternPsiToSplit: PsiElement,
+                           project: Project,
+                           splitPatternEntries: Collection<SplitPatternEntry>) {
+            if (patternPsiToSplit !is ArendPattern || !patternPsiToSplit.isValid) return
 
-                val clauseCopy = localClause.copy()
-                val pipe: PsiElement = factory.createClause("zero").findPrevSibling()!!
-                var currAnchor: PsiElement = localClause
+            val server = project.service<ArendServerService>().server
+            val docManager = PsiDocumentManager.getInstance(project)
+            val arendFile = patternPsiToSplit.containingFile as? ArendFile ?: return
+            val document = docManager.getDocument(arendFile) ?: return
 
-                val offsetOfReplaceablePsi = (findReplaceablePsiElement(localIndexList.drop(1), topLevelPatterns.firstNotNullOfOrNull { findDeepInArguments(it, localIndexList[0]) })?.data as? PsiElement)?.startOffset ?: return
-                val offsetOfCurrentAnchor = currAnchor.startOffset
-                val relativeOffsetOfReplaceablePsi = offsetOfReplaceablePsi - offsetOfCurrentAnchor
+            val tcReferable = (patternPsiToSplit.ancestor<ReferableBase<*>>())?.tcReferable ?: return
+            val concreteClauseOwner = tcReferable.let { server.getResolvedDefinition(it) }?.definition as? Concrete.Definition ?: return
+            val concreteClause = findConcreteByPsi(concreteClauseOwner, Concrete.FunctionClause::class.java, patternPsiToSplit.ancestor<ArendClause>()!!)
+                ?: return
+            val clausePsi = (concreteClause.data as? PsiElement) ?: return
+            val pipe = clausePsi.findPrevSibling() ?: return // Leading PIPE
+            val textRangeToReplace = TextRange(pipe.textRange.startOffset, clausePsi.textRange.endOffset)
+            val patternToSplit = findConcreteByPsi(concreteClauseOwner, Concrete.Pattern::class.java, patternPsiToSplit) as? Concrete.NamePattern
+                ?: return
 
+            val referableToReplace = patternToSplit.referable
+            val newClauses = ArrayList<Concrete.Clause>()
+            val serverBasedDefinitionRenamer = ServerBasedDefinitionRenamer(server, DummyErrorReporter.INSTANCE, tcReferable, arendFile)
+            for (entry in splitPatternEntries) {
+                val freeVars = HashSet<Variable>()
 
-                for (splitPatternEntry in splitPatternEntries) {
-                    splitPatternEntry.initParams(localNames)
-                    val patternString = splitPatternEntry.patternString(localClause)
-                    val expressionString = splitPatternEntry.expressionString(localClause)
+                val collector = LocalVariablesCollector(concreteClause.expression.data ?: concreteClause.data)
+                concreteClauseOwner.accept(collector, null)
+                val names = collector.names
+                names.remove(patternToSplit.referable?.refName)
+                freeVars.addAll(names.filterNotNull().map{ VariableImpl(it) })
 
-                    if (first) {
-                        doSubstituteUsages(project, element.descendantOfType(), currAnchor, expressionString)
+                val p = entry.patternConcrete(freeVars)
 
-                        var inserted = false
-                        if (splitPatternEntry is ConstructorSplitPatternEntry && (splitPatternEntry.constructor == Prelude.ZERO || splitPatternEntry.constructor == Prelude.FIN_ZERO)) {
-                            var number = 0
-                            val concretePattern = topLevelPatterns.firstNotNullOfOrNull { findDeepInArguments(it, localIndexList[0]) }
-                            var path = localIndexList.drop(1)
-                            while (path.isNotEmpty()) {
-                                var i = 0
-                                while (i < path.size && path[path.lastIndex - i].skipSingleTuples() == path.last()) {
-                                    i++
-                                }
-                                val patternPiece = findReplaceablePsiElement(path.dropLast(i), concretePattern)
-                                if (patternPiece?.data !is PsiElement || !isSucPattern(patternPiece)) break
-                                path = path.dropLast(i)
-                                number += 1
-                            }
-                            val psiToReplace = localIndexList[path.size]
-                            doReplacePattern(factory, psiToReplace, number.toString(), false)
-                            inserted = true
+                val substitution = HashMap<Referable, Concrete.Expression>()
+                if (referableToReplace != null) substitution[referableToReplace] = p.second
+
+                val numberSimpifyingVisitor = NumberSimplifyingConcreteVisitor()
+                val renamerConcreteVisitor = DefinitionRenamerConcreteVisitor(serverBasedDefinitionRenamer)
+                val substVisitor = object: SubstConcreteVisitor(substitution, null) {
+                    override fun visitPattern(pattern: Concrete.Pattern?): Concrete.Pattern? {
+                        if (pattern is Concrete.NamePattern && pattern == patternToSplit) {
+                            return p.first
                         }
-
-                        if (!inserted) {
-                            val referable = (splitPatternEntry as? ConstructorSplitPatternEntry)?.constructor?.referable
-                            doReplacePattern(factory, element, patternString, splitPatternEntry.requiresParentheses(), insertedReferable = referable)
-                        }
-                    } else {
-                        val anchorParent = currAnchor.parent
-                        currAnchor = anchorParent.addAfter(pipe, currAnchor)
-                        anchorParent.addBefore(factory.createWhitespace("\n"), currAnchor)
-                        currAnchor = anchorParent.addAfter(clauseCopy, currAnchor)
-                        anchorParent.addBefore(factory.createWhitespace(" "), currAnchor)
-
-                        if (currAnchor is ArendClause) {
-                            val elementCopy = currAnchor.findElementAt(relativeOffsetOfReplaceablePsi)?.parentOfType<ArendPattern>()/*?.goUpIfImplicit()*/
-
-                            if (elementCopy != null) {
-                                doSubstituteUsages(project, elementCopy.descendantOfType(), currAnchor, expressionString)
-                                val referable = (splitPatternEntry as? ConstructorSplitPatternEntry)?.constructor?.referable
-                                doReplacePattern(factory, elementCopy, patternString, splitPatternEntry.requiresParentheses(), insertedReferable = referable)
-                            }
-                        }
+                        return super.visitPattern(pattern)
                     }
-
-                    first = false
                 }
-            }
-        }
 
-        fun isSucPattern(pattern: Concrete.Pattern): Boolean {
-            if (pattern !is Concrete.ConstructorPattern) return false
-            val typechecked = (pattern.constructor as? TCDefReferable)?.typechecked
-            return typechecked == Prelude.SUC || typechecked == Prelude.FIN_SUC
-        }
+                val x1 = substVisitor.visitClause(concreteClause)
+                renamerConcreteVisitor.visitClauses(singletonList(x1), null)
+                val x3 = numberSimpifyingVisitor.visitClause(x1)
 
-        fun findAllVariablePatterns(patterns: List<Concrete.Pattern>, excludedPsi: ArendPattern?): HashSet<String> {
-            val result = HashSet<String>()
-
-            for (pattern in patterns) doFindVariablePatterns(result, pattern, excludedPsi)
-            result.remove(excludedPsi?.singleReferable?.refName)
-
-            val function = excludedPsi?.parentOfType<ArendFunctionDefinition<*>>() ?: return result
-            val elim = function.body?.elim ?: return result
-            if (elim.elimKw != null) {
-                val allParams = function.parameters.flatMap { it.referableList.mapNotNull { it?.refName } }
-                val eliminatedParams = elim.refIdentifierList.mapTo(HashSet()) { it.referenceName }
-                result.addAll((allParams - eliminatedParams))
+                newClauses.add(x3)
             }
 
-            return result
+            val builder = StringBuilder()
+            var isFirst = true
+            for (newClause in newClauses) {
+                if (!isFirst) builder.append("\n")
+                builder.append(newClause.prettyPrint(PrettyPrinterConfig.DEFAULT))
+                isFirst = false
+            }
+
+            if (newClauses.isEmpty() && clausePsi is ArendClause) {
+                clausePsi.fatArrow?.let {document.replaceString(it.startOffset, clausePsi.textRange.endOffset, "")}
+                document.replaceString(patternPsiToSplit.startOffset, patternPsiToSplit.endOffset, "()")
+            } else {
+                document.replaceString(textRangeToReplace.startOffset, textRangeToReplace.endOffset, builder.toString())
+                CodeStyleManager.getInstance(project).reformatText(arendFile, textRangeToReplace.startOffset, textRangeToReplace.startOffset + builder.length)
+            }
+
+            docManager.commitDocument(document)
+            serverBasedDefinitionRenamer.getAction().execute()
         }
 
         private fun doFindVariablePatterns(variables: MutableSet<String>, pattern: Concrete.Pattern, excludedPsi: PsiElement?) {
@@ -497,7 +411,10 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
             return null
         }
 
-        private fun findMatchingPattern(concretePatterns: List<Concrete.Pattern>, parameters: DependentLink, typecheckedPatterns: List<ExpressionPattern>, requiredPsi: ArendPattern): Pair<ExpressionPattern, Concrete.Pattern>? {
+        private fun findMatchingPattern(concretePatterns: List<Concrete.Pattern>,
+                                        parameters: DependentLink,
+                                        typecheckedPatterns: List<ExpressionPattern>,
+                                        requiredPsi: ArendPattern): Pair<ExpressionPattern, Concrete.Pattern>? {
             var link = parameters
             var i = 0
             var j = 0
@@ -524,65 +441,13 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
             return null
         }
 
-        fun doReplacePattern(factory: ArendPsiFactory, elementToReplace: ArendPattern, patternLine: String, mayRequireParentheses: Boolean, asExpression: String = "", insertedReferable: GlobalReferable? = null): ArendPattern {
-            val pLine = if (asExpression.isNotEmpty()) "$patternLine \\as $asExpression" else patternLine
-            val replacementPattern: ArendPattern = factory.createPattern(
-                    if (!elementToReplace.isExplicit) "{$pLine}"
-                    else if (needParentheses(elementToReplace, mayRequireParentheses, asExpression, patternLine, insertedReferable)) "($pLine)"
-                    else pLine
-            )
-
-            return elementToReplace.replace(replacementPattern) as ArendPattern
-        }
-
-        private fun needParentheses(elementToReplace: ArendPattern, mayRequireParentheses: Boolean, asExpression: String, patternLine: String, referable: GlobalReferable?) : Boolean {
-            val enclosingPattern = elementToReplace.parent as? ArendPattern ?: return false
-            if (asExpression.isNotEmpty()) return true
-            if (!mayRequireParentheses) return false
-            if (enclosingPattern.isTuplePattern) return false
-            if (patternLine.startsWith("(") && patternLine.endsWith(")")) return false
-            val patternList = mutableListOf(ConcreteBuilder.convertPattern(enclosingPattern, DummyErrorReporter.INSTANCE, null))
-            ExpressionResolveNameVisitor(enclosingPattern.scope, mutableListOf(), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, null, null).visitPatterns(patternList, mutableMapOf())
-            val parsedConcretePattern = patternList[0]
-            val correspondingConcrete = findParentConcrete(parsedConcretePattern, elementToReplace)
-            if (correspondingConcrete !is Concrete.ConstructorPattern) {
-                return false
-            }
-            if ((parsedConcretePattern.patterns.firstOrNull()?.data as? ArendPattern)?.skipSingleTuples()?.startOffset != enclosingPattern.skipSingleTuples().startOffset) {
-                // infix pattern may be written in a prefix form
-                // this way we should wrap the call with parentheses
-                return true
-            }
-            val enclosingPrecedence = (correspondingConcrete.constructor as? GlobalReferable)?.precedence ?: return false
-            if (!enclosingPrecedence.isInfix) {
-                // non-fix, argument of a function call should be parenthesized
-                return true
-            }
-            val precedence = referable?.precedence ?: return false
-            if (precedence.priority > enclosingPrecedence.priority) {
-                return false
-            } else if (precedence.priority < enclosingPrecedence.priority) {
-                return true
-            }
-            if (correspondingConcrete.constructor != referable) {
-                return true
-            }
-            val addedLeft = (correspondingConcrete.patterns.getOrNull(0)?.data as? ArendPattern)?.skipSingleTuples() == elementToReplace
-            val addedRight = (correspondingConcrete.patterns.getOrNull(1)?.data as? ArendPattern)?.skipSingleTuples() == elementToReplace
-            return when (precedence.associativity) {
-                Precedence.Associativity.NON_ASSOC -> true
-                Precedence.Associativity.LEFT_ASSOC -> !addedLeft
-                Precedence.Associativity.RIGHT_ASSOC -> !addedRight
-            }
-        }
-
         fun doSubstituteUsages(project: Project, elementToReplace: ArendReferenceElement?, element: PsiElement, expressionLine: String, resolver: (ArendReferenceElement) -> PsiElement? = { it.reference?.resolve() }) {
             if (elementToReplace == null || element is ArendWhere) return
             val resolved = (element as? ArendReferenceElement)?.let { resolver.invoke(it) }
 
             if ((element is ArendRefIdentifier || element is ArendIPName) &&
                 resolved == elementToReplace &&
-                withAncestors(ArendLiteral::class.java, ArendAtom::class.java, ArendAtomFieldsAcc::class.java, ArendArgumentAppExpr::class.java).accepts(element)) {
+                withAncestors(ArendLiteral::class.java, ArendAtom::class.java, ArendAtomFieldsAcc::class.java).accepts(element)) {
                 val literal = element.parent as ArendLiteral
                 val atom = literal.parent as ArendAtom
                 val factory = ArendPsiFactory(project)
@@ -599,7 +464,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
                 if (arendNewExpr != null && atomFieldsAcc.fieldAccList.isEmpty() && argumentAppExpr.argumentList.isEmpty() &&
                     arendNewExpr.let { it.lbrace == null && it.rbrace == null }) {
                     arendNewExpr.replace(substitutedExpression)
-                } else if (substitutedAtom is PsiElement) {
+                } else if (substitutedAtom != null) {
                     atom.replace(substitutedAtom)
                 }
             } else for (child in element.children)
@@ -647,7 +512,6 @@ private fun findParentConcrete(node: Concrete.Pattern, element: ArendPattern) : 
         node.patterns.firstNotNullOfOrNull { findParentConcrete(it, element) }
     }
 }
-
 
 private tailrec fun ArendPattern.skipSingleTuples() : ArendPattern {
     return if (this.type != null && this.sequence.size == 1) {
