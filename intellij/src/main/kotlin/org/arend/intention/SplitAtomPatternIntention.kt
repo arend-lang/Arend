@@ -305,19 +305,19 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
             val clausePsi = (concreteClause.data as? PsiElement) ?: return
             val pipe = clausePsi.findPrevSibling() ?: return // Leading PIPE
             val textRangeToReplace = TextRange(pipe.textRange.startOffset, clausePsi.textRange.endOffset)
-            val patternToSplit = findConcreteByPsi(concreteClauseOwner, Concrete.Pattern::class.java, patternPsiToSplit) as? Concrete.NamePattern
+            val patternToSplit = findConcreteByPsi(concreteClauseOwner, Concrete.Pattern::class.java, patternPsiToSplit)
                 ?: return
 
-            val referableToReplace = patternToSplit.referable
+            val referableToReplace = (patternToSplit as? Concrete.NamePattern)?.referable
             val newClauses = ArrayList<Concrete.Clause>()
             val serverBasedDefinitionRenamer = ServerBasedDefinitionRenamer(server, DummyErrorReporter.INSTANCE, tcReferable, arendFile)
             for (entry in splitPatternEntries) {
                 val freeVars = HashSet<Variable>()
 
-                val collector = LocalVariablesCollector(concreteClause.expression.data ?: concreteClause.data)
+                val collector = LocalVariablesCollector(concreteClause.expression?.data ?: concreteClause.data)
                 concreteClauseOwner.accept(collector, null)
                 val names = collector.names
-                names.remove(patternToSplit.referable?.refName)
+                if (referableToReplace != null) names.remove(referableToReplace.refName)
                 freeVars.addAll(names.filterNotNull().map{ VariableImpl(it) })
 
                 val p = entry.patternConcrete(freeVars)
@@ -329,7 +329,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
                 val renamerConcreteVisitor = DefinitionRenamerConcreteVisitor(serverBasedDefinitionRenamer)
                 val substVisitor = object: SubstConcreteVisitor(substitution, null) {
                     override fun visitPattern(pattern: Concrete.Pattern?): Concrete.Pattern? {
-                        if (pattern is Concrete.NamePattern && pattern == patternToSplit) {
+                        if (pattern == patternToSplit) {
                             return p.first
                         }
                         return super.visitPattern(pattern)
@@ -339,6 +339,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
                 val x1 = substVisitor.visitClause(concreteClause)
                 renamerConcreteVisitor.visitClauses(singletonList(x1), null)
                 val x3 = numberSimpifyingVisitor.visitClause(x1)
+                if (x3.expression == null) x3.expression = Concrete.GoalExpression(null, "", null)
 
                 newClauses.add(x3)
             }

@@ -331,9 +331,7 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                                 registerFix(builder, MakePatternExplicitQuickFix(SmartPointerManager.createPointer(it as ArendPattern), single))
                             }
                         }
-                    }
-
-                    if (!single || cause.nextSibling.findNextSibling { it is ArendPattern } != null) {
+                    } else {
                         registerFix(builder, RemovePatternsQuickFix(SmartPointerManager.createPointer(cause as ArendPattern), single))
                     }
                 }
