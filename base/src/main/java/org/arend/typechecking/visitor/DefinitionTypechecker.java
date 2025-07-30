@@ -2826,7 +2826,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       Set<ClassField> added = new HashSet<>();
       for (Map.Entry<ClassField, Pair<AbsExpression, Boolean>> entry : superClass.getDefaults()) {
         Levels levels = typedDef.getSuperLevels().get(superClass);
-        if (typedDef.addDefaultIfAbsent(entry.getKey(), entry.getValue().proj1.subst(new ExprSubstitution(), levels == null ? idLevels.makeSubstitution(superClass) : levels.makeSubstitution(superClass)), entry.getValue().proj2)) {
+        LevelSubstitution levelSubstitution = levels == null ? idLevels.makeSubstitution(superClass) : levels.makeSubstitution(superClass);
+        AbsExpression defaultImpl = entry.getValue().proj1.subst(new ExprSubstitution(), levelSubstitution);
+        if (CompareVisitor.compare(DummyEquations.getInstance(), CMP.LE, defaultImpl.getExpression().getType(), typedDef.getFieldType(entry.getKey(), levelSubstitution, new ReferenceExpression(defaultImpl.getBinding())), Type.OMEGA, def) && typedDef.addDefaultIfAbsent(entry.getKey(), defaultImpl, entry.getValue().proj2)) {
           added.add(entry.getKey());
         }
       }

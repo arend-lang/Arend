@@ -432,4 +432,22 @@ public class DefaultImplTest extends TypeCheckingTestCase {
       \\open L
       """);
   }
+
+  @Test
+  public void defaultOverrideTest() {
+    typeCheckModule("""
+      \\record A (x : Nat)
+      \\record B (y : Nat) \\extends A
+      
+      \\record S {
+        | a : A
+        \\default a => \\new A 3
+      }
+      \\record T \\extends S {
+        \\override a : B
+      }
+      \\func test : T \\cowith
+      """, 1);
+    assertThatErrorsAre(Matchers.fieldsImplementation(false, Collections.singletonList(get("S.a"))));
+  }
 }
