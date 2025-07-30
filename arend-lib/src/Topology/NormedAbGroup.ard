@@ -75,6 +75,9 @@
     | 0 => =_<= norm_zro
     | suc n => norm_+ <=∘ <=_+ norm_*n<= <=-refl
 
+  \func IsBounded (x : E) : \Prop
+    => ∃ (B : Rat) ((norm x).U B)
+
   \func IsUnbounded : \Prop
     => \Pi (B : Nat) -> ∃ (x : E) (ExUpperReal.fromRat B <= norm x)
 

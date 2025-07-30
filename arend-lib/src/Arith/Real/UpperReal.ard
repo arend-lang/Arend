@@ -2,6 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Arith.Int
 \import Arith.Rat
 \import Data.Or
@@ -140,6 +141,9 @@
   -}
 }
 
+\instance ExUpperRealPointed : Pointed ExUpperReal
+  | ide => ExUpperReal.fromRat 1
+
 \lemma real_meet_U {a b : Rat} {x : ExUpperReal} (x<a : x.U a) (x<b : x.U b) : x.U (a ∧ b)
   => \case TotalOrder.meet-isMin a b \with {
     | byLeft p => rewrite p x<a
@@ -147,7 +151,7 @@
   }
 
 \instance ExUpperRealAbMonoid : PosetAbMonoid ExUpperReal
-  | zro => 0
+  | zro => ExUpperReal.fromRat 0
   | + => +
   | zro-left => (\peval _ + _) *> exts \lam a => ext (\lam (inP (b,b<0,c,c<x,a<b+c)) => U-closed c<x linarith, \lam a<x => \case U-rounded a<x \with {
     | inP (b,b<x,a<b) => inP ((a - b) RatField.* ratio 1 2, linarith, b, b<x, linarith)

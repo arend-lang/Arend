@@ -418,3 +418,26 @@
   \where
     \func rat_<_Bool (r q : Rat) : Bool
       => int_<=-dec.int_<=_Bool (isuc (ratNom r * ratDenom q)) (ratNom q * ratDenom r)
+
+\sfunc rat_natBound (q : Rat) : \Sigma (n : Nat) (q < n)
+  => (iabs $ rat_ceiling (q + 1), rewrite iabs=abs $ (linarith : q < q + 1) <∘l rat_ceiling>=id <=∘ fromInt_<= LinearlyOrderedAbGroup.abs>=id)
+
+\sfunc rat_>1_pow-bound {q : Rat} (q>1 : 1 RatField.< q) (B : Rat) : \Sigma (n : Nat) (B < RatField.pow q n)
+  => \have | R => rat_natBound $ B * RatField.finv (q - 1)
+           | q-1>0 : 0 RatField.< q - 1 => linarith
+           | t => rewrite (linarith : 1 RatField.+ (q - 1) = q) $ aux (<=-less q-1>0) {R.1}
+           | s => transport (`< _) (*-assoc *> pmap (B *) (RatField.finv-left $ RatField.>_/= q-1>0) *> ide-right) $ <_*_positive-left R.2 q-1>0
+     \in (R.1, linarith)
+  \where {
+    \protected \lemma aux {eps : Rat} (eps>=0 : 0 RatField.<= eps) {n : Nat} : 1 RatField.+ n RatField.* eps <= RatField.pow (1 RatField.+ eps) n \elim n
+      | 0 => =_<= $ pmap (_ +) zro_*-left *> zro-right
+      | suc n => later (rewrite (ldistr,ide-right,+-assoc) $ <=_+ <=-refl $ transportInv (`<= _) (RatField.rdistr {n} {1}) $ <=_+ <=-refl $ RatField.<=_*_positive-left (RatField.<=_+ {_} {_} {0} <=-refl $ RatField.<=_*_positive_positive (fromInt_<= $ pos<=pos zero<=_) eps>=0) eps>=0) <=∘ RatField.<=_*_positive-left (aux eps>=0) (RatField.<=_+-positive (<=-less RatField.zro<ide) eps>=0)
+  }
+
+\sfunc rat_<1_pow-bound {q : Rat} (q<1 : q < 1) {eps : Rat} (eps>0 : 0 RatField.< eps) : \Sigma (n : Nat) (RatField.pow q n < eps)
+  => \case LinearOrder.dec<_<= (0 : Rat) q \with {
+    | inl q>0 =>
+      \have R => rat_>1_pow-bound (RatField.finv>1 q>0 q<1) (RatField.finv eps)
+      \in (R.1, RatField.finv_<-conv eps>0 $ transportInv (_ <) RatField.finv_pow R.2)
+    | inr q<=0 => (1, transportInv (`<= _) ide-left q<=0 <∘r eps>0)
+  }

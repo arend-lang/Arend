@@ -6,13 +6,17 @@
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
+\import Arith.Real.InfReal
 \import Arith.Real.UpperReal
+\import Data.Or
 \import Function.Meta
 \import Logic
 \import Meta
 \import Operations
+\import Order.Biordered
 \import Order.LinearOrder
 \import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 \import Topology.CoverSpace.Complete
@@ -59,19 +63,36 @@
 
 \class PseudoNormedRing \extends ExPseudoNormedRing, PseudoNormedPseudoRing
 
--- TODO[server2]: Prove that for an ExPseudoNormedRing ||1|| /= 0 -> ||1|| = 1
-\lemma norm_zro_ide {X : PseudoNormedRing} : (X.norm 1 = (0 : Real)) || (X.norm 1 = (1 : Real))
-  => \have t => rewrite ide-left in X.norm_*_<= {1} {1}
-     \in {?} {- TODO[server2]:
-      \case RealField.locality_- (X.norm 1) \with {
-      | byLeft q => byRight $ <=-antisymmetric norm_ide_<= $ RealField.<=_Inv-cancel-left q norm>=0 $ transportInv (`<= _) ide-right t
-      | byRight q => byLeft $ <=-antisymmetric (RealField.<=_Inv-cancel-left q (linarith X.norm_ide_<=) $ transport2 (<=) (inv rdistr) (inv zro_*-right) $ later $ rewrite (ide-left,Ring.negative_*-left) linarith) norm>=0
-    } -}
+-- | If the norm of 1 is zero, then all bounded elements have zero norm.
+\lemma norm_ide=0 {X : ExPseudoNormedRing} (p : X.norm 1 = 0) {x : X} (xb : X.IsBounded x) : norm x = 0 \elim xb
+  | inP (B,x<B) => pmap norm (inv ide-right) *> <=-antisymmetric (norm_*_<= <=∘ ExUpperRealSemigroup.<=_*-left (ExUpperReal.<_<= x<B) <=∘ =_<= (pmap (B ExUpperRealSemigroup.*) p *> ExUpperReal.*-rat (<=-less $ norm>=0 x<B) <=-refl *> pmap ExUpperReal.fromRat RatField.zro_*-right)) norm>=0
 
-{- TODO[server2]: Generalize to ExPseudoNormedRings
-\lemma norm_ide=0 {X : PseudoNormedRing} (p : X.norm 1 = (0 : Real)) {x : X} : norm x = (0 : Real)
-  => pmap norm (inv ide-right) *> <=-antisymmetric (norm_*_<= <=∘ rewrite (p,RealField.zro_*-right) <=-refl) norm>=0
--}
+-- | If the norm of 1 is less than 1, then it is zero.
+\lemma norm_ide<1 {X : ExPseudoNormedRing} (|1|<1 : (X.norm 1).U 1) : X.norm 1 = 0
+  => <=-antisymmetric (\case U-rounded |1|<1 \with {
+    | inP (q,|1|<q,q<1) => \lam {eps} eps>0 =>
+      \have R => rat_<1_pow-bound q<1 {eps} eps>0
+      \in U-closed (aux (norm>=0 |1|<q) q<1 |1|<q) R.2
+  }) norm>=0
+  \where {
+    \protected \lemma aux {q : Rat} (q>0 : q > 0) (q<1 : q < 1) (p : (X.norm 1).U q) {n : Nat} : (X.norm 1).U (pow q n) \elim n
+      | 0 => U-closed p q<1
+      | suc n => transport (norm __ <= _) ide-left X.norm_*_<= $ ExUpperReal.*_U_<=.2 $ inP (pow q n, aux q>0 q<1 p, RatField.pow>0 q>0, q, p, q>0, <=-refl)
+  }
+
+-- | If the norm of 1 is non-zero, then it equals 1.
+\lemma norm_ide/=0 {X : ExPseudoNormedRing} (p : X.norm 1 /= 0) : X.norm 1 = 1
+  => <=-antisymmetric norm_ide_<= \lam {b} |1|<b => \case LinearOrder.dec<_<= (1 : Rat) b \with {
+    | inl r => r
+    | inr b<=1 => absurd $ p $ norm_ide<1 $ ExUpperReal.U_<= |1|<b b<=1
+  }
+
+-- | The norm of 1 is either 0 or 1.
+\lemma norm_zro_ide {X : PseudoNormedRing} : (X.norm 1 = (0 : Real)) || (X.norm 1 = (1 : Real))
+  => \case LU-located {X.norm 1} {0} {1} idp \with {
+    | byLeft p => byRight $ Real.=-upper.2 $ later $ norm_ide/=0 \lam q => \case rewrite ((Real.=-upper {X.norm 1} {0}).2 q) p
+    | byRight p => byLeft $ Real.=-upper.2 $ later $ norm_ide<1 p
+  }
 
 -- TODO[server2]
 \lemma norm_<=_pow {X : PseudoNormedRing} {x : X} {n : Nat} : lnorm (pow x n) <= pow (lnorm x) n \elim n

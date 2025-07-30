@@ -108,6 +108,12 @@
   \lemma finv/=0 {x : E} (x/=0 : x /= 0) : finv x /= 0
     => inv-nonZero (finv-Inv x/=0)
 
+  \lemma finv_ide : finv ide = ide
+    => inv ide-right *> \case decideEq ide zro \with {
+      | yes e => pmap (_ *) e *> zro_*-right *> inv e
+      | no p => finv-left p
+    }
+
   \lemma finv_* {x y : E} : finv (x * y) = finv y * finv x
     => \case decideEq x 0, decideEq y 0 \with {
       | yes x=0, _ => rewrite (x=0,zro_*-left,finv_zro) (inv zro_*-right)
@@ -115,6 +121,10 @@
       | no x/=0, no y/=0 => Inv.inv-isUnique (nonZero-Inv (nonZero_* x/=0 y/=0))
           (Inv.lmake (finv y * finv x) (equation {usingOnly (finv-left x/=0, finv-left y/=0)})) idp
     }
+
+  \lemma finv_pow {x : E} {n : Nat} : finv (pow x n) = pow (finv x) n \elim n
+    | 0 => finv_ide
+    | suc n => finv_* *> pmap (_ *) finv_pow *> *-comm
 
   \lemma finv_finv {x : E} : finv (finv x) = x
     => \case decideEq x 0 \with {
