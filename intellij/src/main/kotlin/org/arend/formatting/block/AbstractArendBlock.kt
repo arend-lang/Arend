@@ -2,12 +2,20 @@ package org.arend.formatting.block
 
 import com.intellij.formatting.*
 import com.intellij.lang.ASTNode
+import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.components.service
 import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings
 import com.intellij.psi.formatter.common.AbstractBlock
+import org.arend.psi.ArendFile
 import org.arend.psi.ext.ArendArgumentAppExpr
+import org.arend.psi.ext.ArendExpr
+import org.arend.server.ArendServerService
+import org.arend.server.ProgressReporter
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
+import org.arend.util.appExprToConcreteOnlyTopLevel
 
 abstract class AbstractArendBlock(node: ASTNode, val settings: CommonCodeStyleSettings?, wrap: Wrap?, alignment: Alignment?, private val myIndent: Indent?,
                                   private val parentBlock: AbstractArendBlock?) : AbstractBlock(node, wrap, alignment) {
@@ -22,9 +30,29 @@ abstract class AbstractArendBlock(node: ASTNode, val settings: CommonCodeStyleSe
 
     fun createArendBlock(childNode: ASTNode, childWrap: Wrap?, childAlignment: Alignment?, indent: Indent?): AbstractArendBlock {
         val childPsi = childNode.psi
-        return if (childPsi is ArendArgumentAppExpr && childPsi.argumentList.isNotEmpty())
-            ArgumentAppExprBlock(childNode, settings, childWrap, childAlignment, indent, this)
-        else SimpleArendBlock(childNode, settings, childWrap, childAlignment, indent, this)
+        if (childPsi is ArendArgumentAppExpr && childPsi.argumentList.isNotEmpty()) {
+            val cExpr = runReadAction {
+                val psi = node.psi
+                val project = psi.project
+                if (psi is ArendExpr/* && !DumbService.isDumb(project)*/) {
+                    val arendServer = project.service<ArendServerService>().server
+                    val targetFile = psi.containingFile as? ArendFile
+                    val targetFileLocation = targetFile?.moduleLocation
+
+                    if (targetFileLocation != null) {
+                        //TODO: This operation may be slow
+                        arendServer.getCheckerFor(listOf(targetFileLocation)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+                    }
+
+                    val result = appExprToConcreteOnlyTopLevel(psi)
+                    result
+                } else
+                    null
+            }
+
+            if (cExpr != null) return ArgumentAppExprBlock(cExpr, childNode, settings, childWrap, childAlignment, indent, this)
+        }
+        return SimpleArendBlock(childNode, settings, childWrap, childAlignment, indent, this)
     }
 
 

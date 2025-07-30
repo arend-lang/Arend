@@ -5,6 +5,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.parentOfType
+import com.intellij.util.containers.SortedList
 import org.arend.naming.reference.AliasReferable
 import org.arend.naming.reference.GlobalReferable
 import org.arend.psi.ancestor
