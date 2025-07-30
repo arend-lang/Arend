@@ -86,6 +86,12 @@
 
   \lemma fromRat-inj {x y : Rat} (p : fromRat x = fromRat y) : x = y
     => <=-antisymmetric (rat_real_<=.2 $ =_<= {RealAbGroup} p) (rat_real_<=.2 $ =_<= {RealAbGroup} $ inv p)
+
+  \lemma <=-upper {x y : Real} : x RealAbGroup.<= y <-> x ExUpperRealAbMonoid.<= y
+    => (<=_U-char.1 __ __, \lam x<=y => <=_U-char.2 \lam p => x<=y p)
+
+  \lemma =-upper {x y : Real} : (x = y) <-> (x = {ExUpperReal} y)
+    => (\lam p => p, \lam p => RealAbGroup.<=-antisymmetric (<=_U-char.2 \lam y<a => rewrite p y<a) (<=_U-char.2 \lam x<a => rewriteI p x<a))
 }
 
 \instance RealPointed : Pointed Real
@@ -172,10 +178,10 @@
       => rewrite (\peval x + y, \peval x InfRealAbMonoid.+ y, \peval x LowerRealAbMonoid.+ y) <->refl
 
     \lemma +_U {x y : Real} {a : Rat} : Real.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c < a)
-      => rewrite (\peval x + y, \peval x InfRealAbMonoid.+ y, \peval x ExtendedUpperReal.+ y) <->refl
-      \where
-        \lemma upper {x y : Real} : x + y = {ExtendedUpperReal} x UpperRealAbMonoid.+ y
-          => exts \lam a => <->_=.1 +_U *> inv (<->_=.1 UpperRealAbMonoid.+_U)
+      => rewrite (\peval x + y, \peval x InfRealAbMonoid.+ y, \peval x ExUpperReal.+ y) <->refl
+
+    \lemma +-upper {x y : Real} : x + y = {ExUpperReal} x ExUpperReal.+ y
+      => exts \lam a => <->_=.1 +_U *> inv (<->_=.1 ExUpperReal.+_U)
 
     \lemma +-lower {x y : Real} : x + y = {LowerReal} x LowerRealAbMonoid.+ y
       => exts \lam a => <->_=.1 +_L *> inv (<->_=.1 LowerRealAbMonoid.+_L)
@@ -260,6 +266,7 @@
         | inr x<=a => byRight $ transport (a <) (join/=left $ StrictPoset.<_/= $ x<=a <∘r a<xy) a<xy
       })
 
+    -- TODO[server2]: Do we still need these 'half' related functions
     \func half (x : Real) : Real \cowith
       | L a => x.L (a * 2)
       | L-inh => \case x.L-inh \with {

@@ -32,7 +32,7 @@
 \class OrderedAbMonoid \extends OrderedAddMonoid, AbMonoid
   | <_+-right z x<y => transport2 (<) +-comm +-comm (<_+-left z x<y)
 
-\class BiorderedAddMonoid \extends AddMonoid, BiorderedSet {
+\class PosetAddMonoid \extends AddMonoid, Poset {
   | <=_+ {a b c d : E} : a <= b -> c <= d -> a + c <= b + d
 
   \lemma BigSum_<= {n : Nat} {l l' : Array E n} (p : \Pi (j : Fin n) -> l j <= l' j) : BigSum l <= BigSum l' \elim n, l, l'
@@ -46,7 +46,12 @@
     => transport (`<= _) zro-left $ <=_+ a>=0 b>=0
 }
 
-\class BiorderedAbMonoid \extends BiorderedAddMonoid, AbMonoid
+\class PosetAbMonoid \extends PosetAddMonoid, AbMonoid
+
+-- TODO[server2]: Do we really need biordered monoids?
+\class BiorderedAddMonoid \extends PosetAddMonoid, BiorderedSet
+
+\class BiorderedAbMonoid \extends BiorderedAddMonoid, PosetAbMonoid
 
 \class BiorderedLatticeAbMonoid \extends BiorderedAbMonoid, BiorderedLattice
   | meet_+-left {a b c : E} : a + b ∧ c = (a + b) ∧ (a + c)
@@ -170,6 +175,18 @@
 
   \lemma <-diff-mid-conv {x y z : E} (p : x < z + y) : x - y < z
     => simplify in <_+-left (negative y) p
+
+  \lemma from>0 {x y : E} (p : 0 < y - x) : x < y
+    => transport (`< _) (zro-left *> negative-isInv) (<-diff-mid-conv p)
+
+  \lemma to>0 {x y : E} (p : x < y) : 0 < y - x
+    => <-diff-mid $ transportInv (`< _) (zro-left *> negative-isInv) p
+
+  \lemma from<0 {x y : E} (p : x - y < 0) : x < y
+    => transport (x <) zro-left (<-diff-mid p)
+
+  \lemma to<0 {x y : E} (p : x < y) : x - y < 0
+    => <-diff-mid-conv $ transportInv (x <) zro-left p
 } \where {
   \type \infix 4 < {A : PreorderedAddGroup} (x y : A) => isPos (y - x)
 }

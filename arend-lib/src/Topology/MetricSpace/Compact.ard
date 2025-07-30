@@ -1,25 +1,23 @@
 \import Algebra.Meta
-\import Arith.Real
-\import Arith.Real.Field
+\import Algebra.Monoid
+\import Arith.Rat
+\import Arith.Real.UpperReal
 \import Data.Array.Pairs
 \import Function.Meta
 \import Logic
-\import Meta
 \import Order.Biordered
 \import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
 \import Paths.Meta
-\import Set.Subset
 \import Topology.Compact
-\import Topology.CoverSpace
-\import Topology.CoverSpace.Product
 \import Topology.MetricSpace
 \import Topology.MetricSpace.ManhattanProduct
 
-\lemma product-balls-tb {X Y : PseudoMetricSpace} (Xb : BallsTotallyBounded X) (Yb : BallsTotallyBounded Y)
+\lemma product-balls-tb {X Y : ExPseudoMetricSpace} (Xb : BallsTotallyBounded X) (Yb : BallsTotallyBounded Y)
   : BallsTotallyBounded (ManhattanProductPseudoMetricSpace X Y)
-  => \lam s {B} B>0 => totallyBoundedSet-metric-char.2 \lam eps>0 =>
-    \case totallyBoundedSet-metric-char.1 (Xb s.1 B>0) $ half>0 eps>0, totallyBoundedSet-metric-char.1 (Yb s.2 B>0) $ half>0 eps>0 \with {
-      | inP (D,Dh), inP (E,Eh) => inP (pairs (__,__) D E, \lam {s'} ss'<B => \case Dh {s'.1} $ linarith $ dist>=0 {Y}, Eh {s'.2} $ linarith $ dist>=0 {X} \with {
-        | inP (i,d), inP (j,e) => inP ((pairs.pairs-index i j).1, rewrite (pairs.pairs-index i j).2 linarith)
-      })
-    }
+  => \lam s {B} B>0 => totallyBoundedSet-metric-char.2 \lam eps>0 => \case totallyBoundedSet-metric-char.1 (Xb s.1 B>0) (RatField.half>0 eps>0), totallyBoundedSet-metric-char.1 (Yb s.2 B>0) (RatField.half>0 eps>0) \with {
+    | inP (D,Dh), inP (E,Eh) => inP (pairs (__,__) D E, \lam {s'} ss'<B => \case Dh {s'.1} $ transport (`<= _) zro-right (ExUpperRealAbMonoid.<=_+ <=-refl dist>=0) ss'<B, Eh {s'.2} $ transport (`<= _) zro-left (ExUpperRealAbMonoid.<=_+ dist>=0 <=-refl) ss'<B \with {
+      | inP (i,d), inP (j,e) => inP ((pairs.pairs-index i j).1, rewrite (pairs.pairs-index i j).2 $ ExUpperReal.+_U_<=.2 $ inP (_, d, _, e, linarith))
+    })
+  }

@@ -108,7 +108,9 @@
       => dense-lift-unique (prod (prod rat_real rat_real) rat_real) (ProductTopSpace.prod.isDense (ProductTopSpace.prod.isDense rat_real.dense rat_real.dense) rat_real.dense) f g (\lam s => p s.1.1 s.1.2 s.2) ((x,y),z)
 
     \lemma *-rat-locally-uniform : LocallyUniformMap (RatNormed ⨯ RatNormed) RatNormed (\lam s => s.1 *' s.2)
-      => LocallyUniformMetricMap.makeLocallyUniformMap2 {PseudoMetricSpace.RealMetricValueLinearOrder} (*') \lam eps>0 => \case L-rounded (real_<_L.1 eps>0) \with {
+      => {?}
+    {- TODO[server2]
+       LocallyUniformMetricMap.makeLocallyUniformMap2 (*') \lam eps>0 => \case L-rounded (real_<_L.1 eps>0) \with {
         | inP (eps',eps'<eps,eps'>0) => inP (1, RealAbGroup.zro<ide, \lam x0 y0 =>
             \let | gamma => (finv (abs x0 + abs y0 + 3) *' eps') ∧ 1
                  | lem : 0 < abs x0 + abs y0 + 3 => linarith (abs>=0 {_} {x0}, abs>=0 {_} {y0})
@@ -125,6 +127,7 @@
                   RatField.<=_*_positive-right (<_<= lem) meet-left <=∘ =_<=
                     (inv Monoid.*-assoc *> pmap (`*' _) (RatField.finv-right $ StrictPoset.>_/= $ later lem) *> Monoid.ide-left)))))
       }
+        -}
 
     \private \func *-cover-def : CoverMap (RealNormed ⨯ RealNormed) RealNormed
       => real-lift2 (rat_real ∘ *-rat-locally-uniform)
@@ -134,6 +137,9 @@
 
     \lemma *-rat {x y : Rat} : x * y = {Real} x *' y
       => (\peval x * y) *> dense-lift-char (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding) {rat_real ∘ *-rat-locally-uniform} (x,y)
+
+    \lemma *-upper {x y : Real} : x * y = {ExUpperReal} x ExUpperReal.* y
+      => {?} -- TODO[server2]
 
     \lemma *-cover : CoverMap (ProductCoverSpace RealNormed RealNormed) RealNormed (\lam s => s.1 * s.2)
       => transportInv (CoverMap _ _) (ext \lam s => \peval s.1 * s.2) *-cover-def
@@ -217,26 +223,6 @@
 
     \lemma finv-right {x : Rat} (x/=0 : x /= 0) : x * finv x = 1
       => *-rat *> pmap Real.fromRat (RatField.finv-right x/=0)
+
+    \func half (x : Real) => x * ratio 1 2
   }
-
-\func half (x : Real) => x * ratio 1 2
-
-\lemma half>0 {x : Real} (x>0 : 0 < x) : 0 < half x
-  => linarith
-
-\lemma half<id {x : Real} (x>0 : 0 < x) : half x < x
-  => linarith
-
-\func halfs (n : Nat) (x : Real) : Real \elim n
-  | 0 => x
-  | suc n => half (halfs n x)
-
-\lemma halfs>0 (n : Nat) {x : Real} (x>0 : 0 < x) : 0 < halfs n x \elim n
-  | 0 => x>0
-  | suc n => half>0 (halfs>0 n x>0)
-
-\lemma half+half {x : Real} : half x + half x = x
-  => linarith
-
-\lemma halving {X : PseudoMetricSpace} {z x y : X} {eps : Real} (d1 : dist z x < half eps) (d2 : dist z y < half eps) : dist x y < eps
-  => dist-triang <∘r OrderedAddMonoid.<_+ (rewrite X.dist-symm in d1) d2 <∘l =_<= half+half

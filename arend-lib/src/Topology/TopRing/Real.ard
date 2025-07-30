@@ -12,9 +12,12 @@
   | CRing => RealField
   | TopAbGroup => RealNormed
   | *-cont => RealField.*-cover
-  | inv-dense {x} Uo Ux => \case (dist_open {RealNormed}).1 Uo Ux \with {
+  | inv-dense {x} Uo Ux => {?}
+  {- TODO[server2]
+    \case (dist_open {RealNormed}).1 Uo Ux \with {
     | inP (eps,eps>0,h) => \case real-located {0} {x} {x + half eps} linarith \with {
       | byLeft x<0 => inP (x, RealField.neg#0 x<0, Ux)
       | byRight p => inP (x + half eps, RealField.pos#0 p, h $ RealAbGroup.abs_-_< linarith linarith)
     }
   }
+  -}

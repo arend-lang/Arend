@@ -3,6 +3,7 @@
 \import Algebra.Pointed
 \import Arith.Real
 \import Arith.Real.Field
+\import Arith.Real.UpperReal
 \import Function()
 \import Function.Meta
 \import Logic
@@ -30,13 +31,19 @@
 \import Topology.UniformSpace
 \import Topology.UniformSpace.StronglyComplete
 
-\func dense-metric-lift {X Y : MetricSpace} {Z : CompleteMetricSpace} (f : IsometricMap PseudoMetricSpace.RealMetricValueLinearOrder X Y) (fd : f.IsWeaklyDenseUniformEmbedding) (g : MetricMap PseudoMetricSpace.RealMetricValueLinearOrder X Z) : MetricMap PseudoMetricSpace.RealMetricValueLinearOrder Y Z \cowith
+-- TODO[server2]: Rewrite using located metric spaces.
+
+-- TODO[server2]: Construct completion for general ones.
+
+\func dense-metric-lift {X Y : PseudoMetricSpace} {Z : CompleteMetricSpace} (f : IsometricMap X Y) (fd : f.IsWeaklyDenseUniformEmbedding) (g : MetricMap X Z) : MetricMap Y Z \cowith
   | UniformMap => weaklyDense-uniform-lift f fd g
-  | func-dist {y} {y'} =>
+  | func-dist {y} {y'} => {?}
+  {- TODO[server2]
     \have | g~ : UniformMap Y Z => weaklyDense-uniform-lift f fd g
           | g-char {x} : g~ (f x) = g x => weaklyDense-lift-char (fd.1, f.embedding->coverEmbedding fd.2) x
-    \in Function.id {dist (g~ y) (g~ y') <= dist y y'} $ RealAbGroup.meet_<=' $ weaklyDense-lift-unique (prod f f) (prod.isWeaklyDense fd.1 fd.1) (real-meet-uniform ∘ tuple (dist-uniform-map ∘ prod g~ g~) dist-uniform-map) (dist-uniform-map ∘ prod g~ g~)
-          (\lam (x,x') => Function.id {dist (g~ (f x)) (g~ (f x')) ∧ dist (f x) (f x') = dist (g~ (f x)) (g~ (f x'))} $ rewrite (g-char,g-char) $ RealAbGroup.meet_<= $ later $ rewrite f.func-isometry g.func-dist) (y,y')
+    \in Function.id {ldist (g~ y) (g~ y') <= ldist y y'} $ RealAbGroup.meet_<=' $ weaklyDense-lift-unique (prod f f) (prod.isWeaklyDense fd.1 fd.1) (real-meet-uniform ∘ tuple (dist-uniform-map ∘ prod g~ g~) dist-uniform-map) (dist-uniform-map ∘ prod g~ g~)
+          (\lam (x,x') => Function.id {ldist (g~ (f x)) (g~ (f x')) ∧ ldist (f x) (f x') = ldist (g~ (f x)) (g~ (f x'))} $ rewrite (g-char,g-char) $ RealAbGroup.meet_<= $ later $ rewrite f.func-isometry g.func-dist) (y,y')
+      -}
   \where {
     \open ProductTopSpace
     \open ContMap
@@ -46,14 +53,17 @@
   | StronglyCompleteUniformSpace => UniformStrongCompletion X
   | dist x y => dist-cover (x,y)
   | dist-refl => dist-refl-lem
-  | dist-symm {y} {y'} => weaklyDense-lift-unique (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding).1 dist-cover (dist-cover ∘ tuple proj2 proj1) (\lam x => dist-char *> dist-symm *> inv dist-char) (y,y')
-  | dist-triang => filter-dist-triang _ _ _
-  | dist-uniform => dist-uniform-lem
-  | dist-ext {F} {G} FG=0 => isSeparatedCoverSpace $ PreuniformSpace.uniform-separated.2 $ later \case dist-uniform-lem.1 __ \with {
+  | dist-symm {y} {y'} => weaklyDense-lift-unique (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding).1 dist-cover (dist-cover ∘ tuple proj2 proj1) (\lam x => dist-char *> ldist-symm *> inv dist-char) (y,y')
+  | dist-triang => {?} -- TODO[server2]: filter-dist-triang _ _ _
+  | dist-uniform => {?} -- TODO[server2]: dist-uniform-lem
+  | dist-ext {F} {G} FG=0 => {?}
+  {- TODO[server2]
+    isSeparatedCoverSpace $ PreuniformSpace.uniform-separated.2 $ later \case dist-uniform-lem.1 __ \with {
     | inP (eps,eps>0,h) => later \case h F \with {
       | inP (U,CU,g) => inP (U, CU, (g $ rewrite dist-refl-lem eps>0, g $ rewrite FG=0 eps>0))
     }
   }
+  -}
   \where {
     \open ProductCoverSpace
     \open CoverMap
@@ -61,12 +71,13 @@
     \sfunc dist-cover : CoverMap (StrongCompletion X ⨯ StrongCompletion X) RealNormed
       => weaklyDense-lift {_} {ProductStronglyRegularCoverSpace (StrongCompletion X) (StrongCompletion X)} (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) dist-uniform-map
 
-    \lemma dist-char {x y : X} : dist-cover (pointSCF x, pointSCF y) = dist x y
+    \lemma dist-char {x y : X} : dist-cover (pointSCF x, pointSCF y) = ldist x y
       => rewrite (\peval dist-cover) $ weaklyDense-lift-char (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) (x,y)
 
     \private \lemma dist-refl-lem {F : StronglyRegularCauchyFilter X} : dist-cover (F, F) = (0 : Real)
-      => weaklyDense-lift-unique strongCompletion strongCompletion.isDenseEmbedding.1 (dist-cover ∘ tuple id id) (const 0) (\lam x => dist-char *> dist-refl) F
+      => weaklyDense-lift-unique strongCompletion strongCompletion.isDenseEmbedding.1 (dist-cover ∘ tuple id id) (const 0) (\lam x => dist-char *> ldist-refl) F
 
+    {- TODO[server2]
     \private \lemma dist-uniform-lem {C : Set (Set (StrongCompletion X))} : isUniform C <-> ∃ (eps : Real) (0 < eps) ∀ x ∃ (U : C) ∀ {y} (dist-cover (x,y) < eps -> U y)
       => (later \lam (inP (D,Du,g)) => \case dist-uniform.1 Du \with {
         | inP (eps,eps>0,h) => inP (halfs 2 eps, halfs>0 2 eps>0, \lam F => \case isCauchyFilter (X.makeCauchy $ X.metricUniform (halfs>0 4 eps>0)) \with {
@@ -90,10 +101,11 @@
           (real-meet-uniform ∘ tuple (dist-cover ∘ prod proj1 id) (+-uniform ∘ tuple (dist-cover ∘ proj1) (dist-cover ∘ prod proj2 id)))
           (dist-cover ∘ prod proj1 id)
           (\lam ((x,y),z) => Function.id {dist-cover (pointSCF x, pointSCF z) ∧ (dist-cover (pointSCF x, pointSCF y) + dist-cover (pointSCF y, pointSCF z)) = dist-cover (pointSCF x, pointSCF z)} $
-            rewrite (dist-char,dist-char,dist-char) $ RealAbGroup.meet_<= dist-triang)
+            rewrite (dist-char,dist-char,dist-char) $ RealAbGroup.meet_<= ldist-triang)
           ((x,y),z)
 
     \lemma dist-neighborhood (F G : StronglyRegularCauchyFilter X) {eps : Real} (eps>0 : 0 < eps) {x : X} (Fx : F (OBall (half (half eps)) x)) (Gx : G (OBall (half (half eps)) x)) : dist-cover (F,G) < eps
       => rewrite (\peval dist-cover) $ simplify in RealAbGroup.abs>=_- <∘r <=<_<= ((strongCompletion-lift-neighborhood2 (dist-uniform-map {X}) F G (OBall eps 0)).2 $ inP
           (OBall (half eps) 0, s<=*_s<=< $ OBall_s<=* (half<id eps>0), _, Fx, _, Gx, \lam {z1} d1 {z2} d2 => RealAbGroup.abs_-_< (linarith (dist>=0 {X} {z1}, half>0 eps>0)) $ simplify $ halving d1 d2)) idp
+      -}
   }

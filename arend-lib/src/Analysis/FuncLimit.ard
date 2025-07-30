@@ -2,6 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Pointed
 \import Analysis.Limit
+\import Arith.Rat
 \import Arith.Real
 \import Function.Meta
 \import Logic
@@ -88,7 +89,7 @@
   }
 
 \lemma funcCovergent-metric-char {I : DirectedSet} {X : CoverSpace} {Y : PseudoMetricSpace} (f : I -> CoverMap X Y)
-                                 (fc : \Pi {eps : Real} -> 0 < eps -> X.isCauchy \lam U => ∃ (N : I) ∀ {x : U} ∀ {n} (N <= n -> dist (f n x) (f N x) < eps))
+                                 (fc : \Pi {eps : Rat} -> 0 < eps -> X.isCauchy \lam U => ∃ (N : I) ∀ {x : U} ∀ {n} (N <= n -> (dist (f n x) (f N x)).U eps))
   : IsFuncConvergent (\lam n => f n)
   => funcConvergent-uniform-char f \lam Eu => \case dist-uniform.1 Eu \with {
     | inP (eps,eps>0,h) => cauchy-subset (fc eps>0) \lam (inP (N,g)) => inP $ later (N, \lam {x} Ux => \case h (f N x) \with {
@@ -97,9 +98,9 @@
   }
   \where {
     \protected \lemma conv {I : DirectedSet} {X : CoverSpace} {Y : PseudoMetricSpace} (f : I -> CoverMap X Y) (fc : IsFuncConvergent (\lam n => f n))
-      : \Pi {eps : Real} -> 0 < eps -> X.isCauchy \lam U => ∃ (N : I) ∀ {x : U} ∀ {n} (N <= n -> dist (f n x) (f N x) < eps)
-      => \lam eps>0 => cauchy-subset (funcConvergent-uniform-char.conv f fc $ Y.metricUniform $ RealAbGroup.half>0 eps>0) \lam (inP (N,g)) => inP $ later (N, \lam Ux p => \case g Ux \with {
-        | inP (_, inP (y,idp), h) => Y.halving (h p) (h <=-refl)
+      : \Pi {eps : Rat} -> 0 < eps -> X.isCauchy \lam U => ∃ (N : I) ∀ {x : U} ∀ {n} (N <= n -> (dist (f n x) (f N x)).U eps)
+      => \lam eps>0 => cauchy-subset (funcConvergent-uniform-char.conv f fc $ Y.metricUniform $ RatField.half>0 eps>0) \lam (inP (N,g)) => inP $ later (N, \lam Ux p => \case g Ux \with {
+        | inP (_, inP (y,idp), h) => Y.halving1/2 (h p) (h <=-refl)
       })
   }
 

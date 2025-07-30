@@ -11,6 +11,8 @@
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Data.Or
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -65,8 +67,13 @@
 \lemma seriesSum-char {A : CompleteTopAbGroup} {S : Series A} {l : A} : (seriesSum S = defined l) <-> IsSeriesSum S l
   => limit-char
 
-\func IsAbsConvSeries {A : PseudoNormedAbGroup} (S : Series A) : \Prop
-  => IsConvSeries \lam j => norm (S j)
+\func midSum {A : AddMonoid} (S : Series A) (n m : Nat) : A \elim n, m
+  | 0, m => partialSum S m
+  | suc n, 0 => 0
+  | suc n, suc m => midSum (\lam j => S (suc j)) n m
+
+\func IsAbsConvSeries {A : ExPseudoNormedAbGroup} (S : Series A) : \Prop
+  => ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (midSum (\lam k => A.norm (S k)) N n).U eps)
 
 \lemma zeroSeries-sum {A : TopAbGroup} : IsSeriesSum (\lam _ => A.zro) 0
   => \lam {U} _ U0 => inP (0, \lam _ => rewrite (\peval partialSum _ _) $ transportInv U A.BigSum_replicate0 U0)
@@ -85,11 +92,6 @@
   | 0 => <->refl
   | suc N => <->trans (series-shifts-conv N) series-shift-conv
 
-\func midSum {A : AddMonoid} (S : Series A) (n m : Nat) : A \elim n, m
-  | 0, m => partialSum S m
-  | suc n, 0 => 0
-  | suc n, suc m => midSum (\lam j => S (suc j)) n m
-
 \lemma midSum_suc {A : AddMonoid} {S : Series A} {n : Nat} : midSum S n (suc n) = S n \elim n
   | 0 => (\peval partialSum _ _) *> zro-right
   | suc n => midSum_suc
@@ -99,15 +101,21 @@
   | suc n, 0 => absurd $ p NatOrder.zero<suc
   | suc n, suc m => midSum-diff (suc<=suc.conv p) *> rewrite (\peval partialSum S _, \peval partialSum S _, \peval partialSum _ _, \peval partialSum _ _) (inv A.sum-cancel-left)
 
-\lemma midSum_norm {A : PseudoNormedAbGroup} {S : Series A} {n m : Nat} : norm (midSum S n m) <= midSum (\lam j => norm (S j)) n m \elim n, m
+\lemma midSum_norm {A : ExPseudoNormedAbGroup} {S : Series A} {n m : Nat} : norm (midSum S n m) <= midSum (\lam j => norm (S j)) n m \elim n, m
   | 0, m => rewrite (\peval partialSum _ _, \peval partialSum _ _) A.norm_BigSum
   | suc n, 0 => A.norm_BigSum {nil}
   | suc n, suc m => midSum_norm
 
-\lemma midSum-ldistr {R : Ring} {x : R} {b : Series R} {n m : Nat} : x * midSum b n m = midSum (\lam j => x * b j) n m \elim n, m
-  | 0, m => rewrite (\peval partialSum _ _, \peval partialSum _ _) R.BigSum-ldistr
-  | suc n, 0 => zro_*-right
-  | suc n, suc m => midSum-ldistr
+\lemma midSum_<=-ldistr {x : ExUpperReal} {b : Series ExUpperReal} (b>=0 : \Pi (j : Nat) -> 0 <= b j) {n m : Nat}
+  : midSum (\lam j => x * b j) n m <= x * midSum b n m \elim n, m
+  | 0, m => rewrite (\peval partialSum _ _, \peval partialSum _ _) $ BigSum_<=-ldistr \lam j => b>=0 j
+  | suc n, 0 => ExUpperRealSemigroup.*_>=0
+  | suc n, suc m => midSum_<=-ldistr \lam j => b>=0 (suc j)
+  \where {
+    \lemma BigSum_<=-ldistr {x : ExUpperReal} {l : Array ExUpperReal} (l>=0 : \Pi (j : Fin l.len) -> 0 <= l j) : AddMonoid.BigSum (\lam j => x * l j) <= x * AddMonoid.BigSum l \elim l
+      | nil => ExUpperRealSemigroup.*_>=0
+      | a :: l => transportInv (_ <=) (ExUpperRealSemigroup.ldistr (l>=0 0) $ ExUpperRealAbMonoid.BigSum_>=0 \lam j => l>=0 (suc j)) $ <=_+ <=-refl $ BigSum_<=-ldistr \lam j => l>=0 (suc j)
+  }
 
 \lemma midSum-split {A : AddMonoid} {b : Series A} {n m k : Nat} (p : n <= m) (q : m <= k) : midSum b n k = midSum b n m + midSum b m k \elim n, m, k
   | 0, 0, k => rewrite (\peval partialSum _ _, \peval partialSum _ _) (inv zro-left)
@@ -116,7 +124,17 @@
   | suc n, 0, _ => absurd (p NatOrder.zero<suc)
   | suc n, suc m, suc k => midSum-split (suc<=suc.conv p) (suc<=suc.conv q)
 
-\lemma midSum_<= {A : LinearlyOrderedAbMonoid} {b c : Series A} {n m : Nat} (s : \Pi {j : Nat} -> n <= j -> j < m -> b j <= c j) : midSum b n m <= midSum c n m \elim n, m
+\lemma midSum-degenerate {A : AddMonoid} {b : Series A} {n m : Nat} (m<n : m < n) : midSum b n m = 0 \elim n, m, m<n
+  | suc n, 0, NatOrder.zero<suc => idp
+  | suc n, suc m, NatOrder.suc<suc m<n => midSum-degenerate m<n
+
+\lemma midSum_<=-left {A : PosetAddMonoid} {b : Series A} {n m k : Nat} (p : n <= m) (s : \Pi (j : Nat) -> 0 <= b j) : midSum b m k <= midSum b n k
+  => \case LinearOrder.dec<_<= k m \with {
+    | inl k<m => transportInv (`<= _) (midSum-degenerate k<m) (midSum>=0 s)
+    | inr m<=k => transport2 (<=) zro-left (inv $ midSum-split p m<=k) $ <=_+ (midSum>=0 s) <=-refl
+  }
+
+\lemma midSum_<= {A : PosetAddMonoid} {b c : Series A} {n m : Nat} (s : \Pi {j : Nat} -> n <= j -> j < m -> b j <= c j) : midSum b n m <= midSum c n m \elim n, m
   | 0, m => rewrite (\peval partialSum _ _, \peval partialSum _ _) $ A.BigSum_<= \lam j => s zero<=_ (fin_< j)
   | suc n, 0 => <=-refl
   | suc n, suc m => midSum_<= \lam p q => s (suc<=suc p) (NatOrder.suc<suc q)
@@ -126,24 +144,29 @@
   | suc n, 0 => idp
   | suc n, suc m => midSum_0
 
-\lemma midSum>=0 {A : LinearlyOrderedAbMonoid} {b : Series A} {n m : Nat} (s : \Pi (j : Nat) -> 0 <= b j) : 0 <= midSum b n m
+\lemma midSum>=0 {A : PosetAddMonoid} {b : Series A} {n m : Nat} (s : \Pi (j : Nat) -> 0 <= b j) : 0 <= midSum b n m
   => transport (`<= _) midSum_0 (midSum_<= \lam _ _ => s _)
 
-\lemma series-conv {A : PseudoNormedAbGroup} {S : Series A}
-                   (p : ∀ {eps : Real} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> norm (midSum S N n) < eps))
-  : IsConvSeries S
-  => convergent-metric-char 1 0 \lam eps>0 => \case p eps>0 \with {
+\lemma series-conv {A : ExPseudoNormedAbGroup} {S : Series A}
+  : IsConvSeries S <-> ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (midSum S N n)).U eps)
+  => (\lam p eps>0 => \case convergent-metric-char.1 p eps>0 \with {
+    | inP (N,g) => inP (N, \lam q => rewrite (midSum-diff q) $ rewriteI A.norm-dist $ g q)
+  }, \lam p => convergent-metric-char.2 \lam eps>0 => \case p eps>0 \with {
     | inP (N,g) => inP (N, \lam q => rewrite (norm-dist, inv (midSum-diff q)) (g q))
-  }
-  \where {
-    \protected \lemma conv (p : IsConvSeries S) : ∀ {eps : Real} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> norm (midSum S N n) < eps)
-      => \lam eps>0 => \case convergent-metric-char 0 1 p eps>0 \with {
-        | inP (N,g) => inP (N, \lam q => rewrite (midSum-diff q, inv A.norm-dist) (g q))
-      }
-  }
+  })
 
-\lemma seriesSum_defined {A : CompleteNormedAbGroup} {S : Series A} {a : A}
-                         (p : ∀ {eps : Real} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> norm (a - partialSum S n) < eps))
+\lemma series-conv-real {A : PseudoNormedAbGroup} {S : Series A}
+  : IsConvSeries S <-> ∀ {eps : Real} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> A.norm (midSum S N n) < eps)
+  => <->trans series-conv $ later (\lam sc eps>0 => \case real_<-rat-char.1 eps>0 \with {
+    | inP (eps',eps'>0,eps'<eps) => \case sc eps'>0 \with {
+      | inP (N,h) => inP (N, \lam p => real_<_U.2 (h p) <∘ real_<_L.2 eps'<eps)
+    }
+  }, \lam sc eps>0 => \case sc (rat_real_<.1 eps>0) \with {
+    | inP (N,h) => inP (N, \lam p => real_<_U.1 $ h p)
+  })
+
+\lemma seriesSum_defined {A : CompleteExNormedAbGroup} {S : Series A} {a : A}
+                         (p : ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (a - partialSum S n)).U eps))
   : seriesSum S = defined a
   => seriesSum-char.2 \lam Uo Ua => \case dist_open.1 Uo Ua \with {
     | inP (eps,eps>0,h) => \case p eps>0 \with {
@@ -151,15 +174,15 @@
     }
   }
   \where {
-    \lemma conv (p : seriesSum S = defined a) : ∀ {eps : Real} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> norm (a - partialSum S n) < eps)
-      => \lam eps>0 => \case seriesConv-sum (defined-ext.isDefined {_} {seriesSum S} p) OBall-open $ unfold VOBall $ rewrite (defined-ext.value {_} {seriesSum S} p, A.dist-refl) eps>0 \with {
+    \lemma conv (p : seriesSum S = defined a) : ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (a - partialSum S n)).U eps)
+      => \lam eps>0 => \case seriesConv-sum (defined-ext.isDefined {_} {seriesSum S} p) OBall-open $ unfold OBall $ rewrite (defined-ext.value {_} {seriesSum S} p, A.dist-refl) eps>0 \with {
         | inP (N,g) => inP (N, \lam q => rewriteI A.norm-dist (g q))
       }
   }
 
-\lemma absConv-isConv {A : PseudoNormedAbGroup} {S : Series A} (Sc : IsAbsConvSeries S) : IsConvSeries S
-  => series-conv \lam eps>0 => \case series-conv.conv Sc eps>0 \with {
-    | inP (N,g) => inP (N, \lam p => midSum_norm <∘r RealAbGroup.abs>=id <∘r g p)
+\lemma absConv-isConv {A : ExPseudoNormedAbGroup} {S : Series A} (Sc : IsAbsConvSeries S) : IsConvSeries S
+  => series-conv.2 \lam eps>0 => \case Sc eps>0 \with {
+    | inP (N,g) => inP (N, \lam p => midSum_norm (g p))
   }
 
 \lemma series-limit {A : TopAbGroup} {S : Series A} (Sc : IsConvSeries S) : A.IsLimit S 0
@@ -168,26 +191,39 @@
   }
 
 \lemma series_<= {b c : Series Real} (b>=0 : \Pi (j : Nat) -> 0 <= b j) (s : \Pi (j : Nat) -> b j <= c j) (cc : IsConvSeries c) : IsConvSeries b
-  => series-conv \lam eps>0 => \case series-conv.conv cc eps>0 \with {
+  => series-conv-real.2 \lam eps>0 => \case series-conv-real.1 cc eps>0 \with {
     | inP (N,g) => inP (N, \lam p => transport2 (<=)
         (inv $ RealField.abs-ofPos $ midSum>=0 b>=0)
         (inv $ RealField.abs-ofPos $ midSum>=0 \lam j => b>=0 j <=∘ s j)
         (midSum_<= \lam {j} _ _ => s j) <∘r g p)
   }
 
-\lemma series_<=-abs {A : PseudoNormedAbGroup} {b c : Series A} (s : \Pi (j : Nat) -> norm (b j) <= norm (c j)) (cc : IsAbsConvSeries c) : IsAbsConvSeries b
-  => series_<= (\lam j => norm>=0) s cc
+\lemma series_<=-abs {A : ExPseudoNormedAbGroup} {b c : Series A} (s : \Pi (j : Nat) -> norm (b j) <= norm (c j)) (cc : IsAbsConvSeries c) : IsAbsConvSeries b
+  => \lam eps>0 => \case cc eps>0 \with {
+    | inP (N,h) => inP (N, \lam p => midSum_<= {ExUpperRealAbMonoid} (\lam _ _ => s _) (h p))
+  }
 
-\lemma series_*_lim {A : PseudoNormedRing} {b c : Series A} {l : A} (bl : A.IsLimit b l) (cc : IsAbsConvSeries c) : IsAbsConvSeries \lam n => b n * c n
-  => series-conv \lam {eps} eps>0 =>
-      \have | delta1>0 : 0 < norm l + 1 => linarith $ norm>=0 {A}
-            | delta2>0 : 0 < pinv delta1>0 * eps => OrderedSemiring.<_*_positive_positive (pinv>0 delta1>0) eps>0
-      \in \case limit-metric-char.1 bl RealAbGroup.zro<ide, series-conv.conv cc delta2>0 \with {
-        | inP (N,g), inP (M,h) => inP (N ∨ M, \lam p => midSum_norm {_} {_} {N ∨ M} <∘r
-            transport2 (<=) zro-left (inv $ midSum-split join-right p) (<=_+ (midSum>=0 \lam j => <=_*_positive_positive (LinearOrder.<_<= delta1>0) norm>=0) $
-                midSum_<= \lam {j} p' _ => transportInv (`<= _) (RealField.abs-ofPos norm>=0) (A.norm_*_<= <=∘ <=_*_positive-left (linarith $ norm_-right <∘r transport (`< 1) A.norm-dist (g $ join-left <=∘ p')) norm>=0)) <∘r
-            (rewrite (pinv-right,ide-left,midSum-ldistr) in transportInv (_ <) *-assoc (RealField.<_*_positive-right delta1>0 $ RealField.abs>=id <∘r h (join-right <=∘ p))))
-      }
+\lemma series_*-bounded {A : ExPseudoNormedPseudoRing} {b c : Series A} (M : Nat) {B : Rat} (bB : \Pi {j : Nat} -> M <= j -> (norm (b j)).U B) (cc : IsAbsConvSeries c) : IsAbsConvSeries \lam n => b n * c n
+  => \let | B1 => B ∨ 1
+          | B1>0 : 0 < B1 => zro<ide <∘l join-right
+     \in \lam {eps} eps>0 => \case cc {RatField.finv B1 * eps} $ RatField.<_*_positive_positive (RatField.finv>0 $ RatField.zro<ide <∘l join-right) eps>0 \with {
+      | inP (N,h) => inP (M ∨ N, \lam {n} MN<=n =>
+        \have t : midSum (\lam k => norm (b k * c k)) (M ∨ N) n <= B1 ExUpperReal.* midSum (\lam k => norm (c k)) (M ∨ N) n
+                => midSum_<= (\lam {j} jp _ => norm_*_<= <=∘ ExUpperRealSemigroup.<=_*-left (ExUpperReal.<_<= $ ExUpperReal.U_<= (bB $ join-left <=∘ jp) join-left)) <=∘ midSum_<=-ldistr \lam j => norm>=0
+        \in t $ transport ExUpperReal.U (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= B1>0) *> ide-left) $ later $ ExUpperRealSemigroup.<_*-right B1>0 (RatField.<_*_positive_positive (RatField.finv>0 B1>0) eps>0) $ midSum_<=-left join-right (\lam j => norm>=0) $ h (join-right <=∘ MN<=n))
+    }
+
+\lemma series-lim-bound {A : ExPseudoNormedPseudoRing} {b : Series A} {l : A} (lb : ∃ (q : Rat) ((norm l).U q)) (bl : A.IsLimit b l) : ∃ (N : Nat) (B : Rat) ∀ {j} (N <= j -> (norm (b j)).U B)
+  => \case limit-metric-char.1 bl zro<ide, lb \with {
+    | inP (N,h), inP (B,l<B) => inP (N, 1 + B, \lam {j} N<=j =>
+      \have t => transport (norm __ <= _) (+-assoc *> pmap (_ +) negative-left *> zro-right) $ A.norm_+ {b j - l} {l}
+      \in t $ ExUpperReal.+_U_<=.2 $ inP (1, rewriteI (norm_-, A.norm-dist) (h N<=j), B, l<B, <=-refl))
+  }
+
+\lemma series_*-lim {A : ExPseudoNormedPseudoRing} {b c : Series A} {l : A} (lb : ∃ (q : Rat) ((norm l).U q)) (bl : A.IsLimit b l) (cc : IsAbsConvSeries c) : IsAbsConvSeries \lam n => b n * c n
+  => \case series-lim-bound lb bl \with {
+    | inP (M,B,bB) => series_*-bounded M bB cc
+  }
 
 \lemma geometric-series-conv {x : Real} (p : RealAbGroup.abs x < 1) : seriesSum (pow x) = defined (pinv (diff-pos p))
   => generalized (RealField.pos#0 $ linarith $ RealField.abs>=id <∘r p) p
@@ -233,33 +269,39 @@
         }
       }
 
-    \protected \lemma generalized {X : CompleteValuedRing} {x : X} (xi : Inv (1 - x)) (|x|<1 : norm x < 1) : seriesSum (pow x) = defined xi.inv
-      => seriesSum_defined {_} {pow x} \lam {eps} eps>0 =>
+    \protected \lemma generalized {X : CompleteValuedRing} {x : X} (xi : Inv (1 - x)) (|x|<1 : X.norm x < 1) : seriesSum (pow x) = defined xi.inv
+      => {?}
+    {- TODO[server2]
+       seriesSum_defined {_} {pow x} \lam {eps} eps>0 =>
           \have |1-x|>0 : 0 < norm (1 - x) => linarith X.norm_ide <∘l norm_-left
           \in \case pow_<1-bound |x|<1 {eps * norm (1 - x)} $ RealField.<_*_positive_positive eps>0 |1-x|>0 \with {
             | inP (N,q) => inP (N, later \lam N<=n => rewrite (\peval partialSum _ _, X.geometric-partial-sum) $ norm_*_<= <∘r <=_*_positive-left norm_<=_pow norm>=0 <∘r
                 transport (_ <) (*-assoc *> pmap (_ *) (inv norm_* *> pmap norm xi.inv-right *> norm_ide) *> ide-right) (<_*_positive-left (pow_<=-degree norm>=0 (LinearOrder.<_<= |x|<1) N<=n <∘r q) $
                   <_*_positive-cancel-right (LinearOrder.<_<= |1-x|>0) $ transport2 (<) (inv zro_*-left) (inv norm_ide *> pmap norm (inv xi.inv-left) *> norm_*) zro<ide))
           }
+        -}
 
     \protected \lemma diff-pos {x y : Real} (p : RealAbGroup.abs x < y) : 0 < y - x
       => linarith $ RealAbGroup.abs>=id {x}
   }
 
-\lemma geometric-series-absConv {X : PseudoNormedRing} {x : X} (p : norm x < 1) : IsAbsConvSeries (pow x)
-  => series_<= (\lam j => norm>=0) (\lam j => norm_<=_pow) $ defined-ext.isDefined $ geometric-series-conv $ rewrite (RealField.abs-ofPos norm>=0) p
+\lemma geometric-series-absConv {X : PseudoNormedRing} {x : X} (p : X.norm x < 1) : IsAbsConvSeries (pow x)
+  => {?} -- TODO[server2]: series_<= (\lam j => lnorm>=0) (\lam j => norm_<=_pow) $ defined-ext.isDefined $ geometric-series-conv $ rewrite (RealField.abs-ofPos norm>=0) p
 
-\lemma ratio-test {X : PseudoNormedAbGroup} {S : Series X} (b : Series Real) (bp : \Pi (n : Nat) -> norm (S (suc n)) <= norm (S n) * b n)
+\lemma ratio-test {X : PseudoNormedAbGroup} {S : Series X} (b : Series Real) (bp : \Pi (n : Nat) -> X.norm (S (suc n)) <= X.norm (S n) * b n)
                   {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsAbsConvSeries S
-  => \case real_<-char.1 (<_join-univ l<1 zro<ide) \with {
+  => {?}
+    {- TODO[server2]
+    \case real_<-char.1 (<_join-univ l<1 zro<ide) \with {
     | inP (r,lz<r,r<1) => \case bl (OBall-open {_} {(r : Real) - l} {l}) (rewrite RealNormed.dist-refl $ linarith (usingOnly (join-left <∘r lz<r))) \with {
       | inP (N,g) => (series-shifts-conv N).2
           \have r>=0 => join-right <=∘ LinearOrder.<_<= lz<r
           \in series_<= (\lam j => norm>=0) (iter-bound (\lam j => norm>=0) r>=0 (\lam j => bp (j + N))
                   (\lam j => linarith (usingOnly (RealAbGroup.abs>=_- <=∘ LinearOrder.<_<= (rewrite RealNormed.norm-dist in g (<=_+ zero<=_ <=-refl)))))) $
-                absConv-isConv $ series_*_lim const-limit $ geometric-series-absConv $ later $ rewrite (RealAbGroup.abs-ofPos r>=0) r<1
+                absConv-isConv $ series_*-lim const-limit $ geometric-series-absConv $ later $ rewrite (RealAbGroup.abs-ofPos r>=0) r<1
     }
   }
+  -}
   \where {
     \lemma iter-bound {f b : Nat -> Real} (f>=0 : \Pi (j : Nat) -> 0 <= f j) {r : Real} (r>=0 : 0 <= r)
                       (bp : \Pi (n : Nat) -> f (suc n) <= f n * b n) (bb : \Pi (n : Nat) -> b n <= r) (j : Nat) : f j <= f 0 * pow r j \elim j
@@ -267,16 +309,19 @@
       | suc j => bp j <=∘ <=_*_positive-right (f>=0 j) (bb j) <=∘ transport (_ <=) *-assoc (<=_*_positive-left (iter-bound f>=0 r>=0 bp bb j) r>=0)
   }
 
-\lemma MTest {X : \Set} {Y : PseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Nat -> Real)
-             (Mp : \Pi (n : Nat) (x : X) -> norm (f n x) <= M n) (Mc : IsConvSeries M) : IsUniFuncConvergent \lam n x => partialSum (f __ x) n
-  => \lam Du => \case dist-uniform.1 Du \with {
+\lemma MTest {X : \Set} {Y : ExPseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Nat -> Real)
+             (Mp : \Pi (n : Nat) (x : X) -> Y.norm (f n x) <= M n) (Mc : IsConvSeries M) : IsUniFuncConvergent \lam n x => partialSum (f __ x) n
+  => {?}
+  {- TODO[server2]
+    \lam Du => \case dist-uniform.1 Du \with {
     | inP (eps,eps>0,h) => \case series-conv.conv Mc eps>0 \with {
       | inP (N,g) => inP (N, \lam x => \case h (partialSum (f __ x) N) \with {
         | inP (V,DV,Vg) => inP (V, DV, \lam p => Vg $ rewrite (Y.norm-dist, norm_- {Y}, inv $ midSum-diff {_} {f __ x} p) $
-            rewrite (RealAbGroup.abs-ofPos $ midSum>=0 \lam j => norm>=0 <=∘ Mp j x) (midSum_norm <=∘ midSum_<= \lam _ _ => Mp _ x) <∘r g p)
+            rewrite (RealAbGroup.abs-ofPos $ midSum>=0 \lam j => lnorm>=0 <=∘ Mp j x) (midSum_norm <=∘ midSum_<= \lam _ _ => Mp _ x) <∘r g p)
       })
     }
   }
+    -}
 
 \lemma partialSum-cover {X : CoverSpace} {Y : TopAbGroup} (f : Nat -> CoverMap X Y) (n : Nat) : CoverMap X Y \lam x => partialSum (f __ x) n
   => transportInv (CoverMap X Y) (ext \lam x => \peval partialSum _ _) $ BigSum-cover \lam (j : Fin n) => f j

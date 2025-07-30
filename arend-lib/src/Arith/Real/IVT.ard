@@ -114,8 +114,8 @@
     \lemma point<-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<b : x < S.3) (fc : IsContAt f (x, S.5 a<=x (<=-less x<b))) (fx<y : f (x, S.5 a<=x (<=-less x<b)) < y) : x < point fm
       => \let | eps => y - f (x, S.5 a<=x (<=-less x<b))
               | eps>0 : 0 < eps => hiding fm linarith
-              | (inP (delta,delta>0,g)) => metric-contAt-char.1 fc eps>0
-              | x' => (x + half delta) ∧ S.3
+              | (inP (delta,delta>0,g)) => metric-contAt-real.1 fc eps>0
+              | x' => (x + RealField.half delta) ∧ S.3
               | x<=x' : x <= x' => meet-univ (hiding fm linarith) (<=-less x<b)
               | a<=x' => a<=x <=∘ x<=x'
          \in (point<-char fm).2 $ hiding fm $ inP (x', <_meet-univ linarith x<b, a<=x', meet-right, linarith $ RealAbGroup.abs>=neg <∘r g {x', S.5 a<=x' meet-right} (RealAbGroup.abs_-_< linarith $ linarith RealAbGroup.meet-left))
@@ -123,11 +123,11 @@
     \lemma point>-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<x : S.2 < x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 (<=-less a<x) x<=b)) (fx<y : y < f (x, S.5 (<=-less a<x) x<=b)) : point fm < x
       => \let | eps => f (x, S.5 (<=-less a<x) x<=b) - y
               | eps>0 : 0 < eps => hiding fm linarith
-              | (inP (delta,delta>0,g)) => metric-contAt-char.1 fc eps>0
-              | x' => (x - half delta) ∨ S.2
+              | (inP (delta,delta>0,g)) => metric-contAt-real.1 fc eps>0
+              | x' => (x - RealField.half delta) ∨ S.2
               | x'<=x : x' <= x => join-univ (hiding fm linarith) (<=-less a<x)
               | x'<=b => x'<=x <=∘ x<=b
-         \in (point>-char fm).2 $ hiding fm $ inP (x', <_join-univ linarith a<x, join-right, x'<=b, linarith $ RealAbGroup.abs>=id <∘r g {x', S.5 join-right x'<=b} (RealAbGroup.abs_-_< (linarith $ RealAbGroup.join-left {x - half delta}) linarith))
+         \in (point>-char fm).2 $ hiding fm $ inP (x', <_join-univ linarith a<x, join-right, x'<=b, linarith $ RealAbGroup.abs>=id <∘r g {x', S.5 join-right x'<=b} (RealAbGroup.abs_-_< (linarith $ RealAbGroup.join-left {x - RealField.half delta}) linarith))
 
     \lemma point>=-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 a<=x x<=b)) (p<=x : point fm <= x) : y <= f (x, S.5 a<=x x<=b)
       => \lam fx<y => negated-dec (x < S.3) \case __ \with {
