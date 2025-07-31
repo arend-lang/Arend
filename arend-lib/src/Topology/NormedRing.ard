@@ -63,6 +63,9 @@
 
 \class PseudoNormedRing \extends ExPseudoNormedRing, PseudoNormedPseudoRing
 
+\lemma lnorm_ide_<= {X : PseudoNormedRing} : X.norm 1 <= 1
+  => Real.<=-upper.2 (later norm_ide_<=)
+
 -- | If the norm of 1 is zero, then all bounded elements have zero norm.
 \lemma norm_ide=0 {X : ExPseudoNormedRing} (p : X.norm 1 = 0) {x : X} (xb : X.IsBounded x) : norm x = 0 \elim xb
   | inP (B,x<B) => pmap norm (inv ide-right) *> <=-antisymmetric (norm_*_<= <=∘ ExUpperRealSemigroup.<=_*-left (ExUpperReal.<_<= x<B) <=∘ =_<= (pmap (B ExUpperRealSemigroup.*) p *> ExUpperReal.*-rat (<=-less $ norm>=0 x<B) <=-refl *> pmap ExUpperReal.fromRat RatField.zro_*-right)) norm>=0
@@ -94,14 +97,16 @@
     | byRight p => byLeft $ Real.=-upper.2 $ later $ norm_ide<1 p
   }
 
--- TODO[server2]
-\lemma norm_<=_pow {X : PseudoNormedRing} {x : X} {n : Nat} : lnorm (pow x n) <= pow (lnorm x) n \elim n
-  | 0 => {?} -- norm_ide_<=
-  | suc n => {?} -- norm_*_<= <=∘ RealField.<=_*_positive-left norm_<=_pow norm>=0
+\lemma lnorm_<=_pow {X : PseudoNormedRing} {x : X} {n : Nat} : lnorm (pow x n) <= pow (lnorm x) n \elim n
+  | 0 => lnorm_ide_<=
+  | suc n => lnorm_*_<= <=∘ RealField.<=_*_positive-left lnorm_<=_pow lnorm>=0
 
 \class ExPseudoValuedPseudoRing \extends ExPseudoNormedPseudoRing
   | norm_* {x y : E} : norm (x * y) = norm x ExUpperReal.* norm y
   | norm_*_<= => =_<= norm_*
+
+\lemma lnorm_* {X : PseudoValuedRing} {x y : X} : lnorm (x * y) = lnorm x * lnorm y
+  => Real.=-upper.2 $ later norm_* *> {ExUpperReal} inv {ExUpperReal} RealField.*-upper
 
 \class ExPseudoValuedRing \extends ExPseudoValuedPseudoRing, ExPseudoNormedRing, Ring {
   | norm_ide : norm 1 = ExUpperReal.fromRat 1
@@ -114,40 +119,29 @@
   -}
 }
 
--- TODO[server2]
-\lemma norm_pow {X : PseudoValuedRing} {x : X} {n : Nat} : lnorm (pow x n) = pow (lnorm x) n \elim n
-  | 0 => {?} -- norm_ide
-  | suc n => {?} -- norm_* *> pmap (`* _) norm_pow
-
 \class PseudoValuedRing \extends PseudoNormedRing, ExPseudoValuedRing
 
+\lemma lnorm_ide {X : PseudoValuedRing} : X.norm 1 = 1
+  => (Real.=-upper {_} {1}).2 (later norm_ide)
+
+\lemma lnorm_pow {X : PseudoValuedRing} {x : X} {n : Nat} : lnorm (pow x n) = pow (lnorm x) n \elim n
+  | 0 => lnorm_ide
+  | suc n => lnorm_* *> pmap (`* _) lnorm_pow
+
 \func RatValue => ExPseudoValuedRing { | E => Rat | * => RatField.* | ide => RatField.ide | negative => RatField.negative }
-  \where {
-    {- TODO[server2]: Just use RatValuedRing instead
-    \protected \func Real : RatValue \cowith
-      | Ring => RatField
-      | norm q => ExUpperReal.fromRat (RatField.abs q)
-      | norm_zro => idp
-      | norm_negative => pmap PosUpperReal.fromRat RatField.abs_negative
-      | norm_+ => transportInv (_ <=) (PosUpperRealSemiring.+-rat RatField.abs>=0 RatField.abs>=0) $ PosUpperReal.fromRat_<= RatField.abs>=0 RatField.abs_+
-      | norm_* => pmap PosUpperReal.fromRat RatField.abs_* *> inv (PosUpperRealSemiring.*-rat RatField.abs>=0 RatField.abs>=0)
-      | norm_ide => idp
-    -}
-  }
+
+\instance RatValuedRing : PseudoValuedRing Rat
+  | PseudoNormedAbGroup => RatNormed
+  | Ring => RatField
+  | norm_* => pmap ExUpperReal.fromRat RatField.abs_* *> inv (ExUpperReal.*-rat RatField.abs>=0 RatField.abs>=0)
+  | norm_ide => idp
 
 \class CompleteValuedRing \extends PseudoValuedRing, CompleteNormedAbGroup
 
 \class CompleteValuedCRing \extends CompleteValuedRing, CRing
 
--- TODO[server2]:
-\instance RatValuedRing : PseudoValuedRing Rat
-  | PseudoNormedAbGroup => RatNormed
-  | Ring => RatField
-  | norm_* => {?}
-  | norm_ide => {?}
-
 \instance RealValuedRing : CompleteValuedCRing Real
   | CompleteNormedAbGroup => RealNormed
   | CRing => RealField
-  | norm_* => {?} -- RealField.abs_*
+  | norm_* => Real.=-upper.1 RealField.abs_* *> {ExUpperReal} RealField.*-upper
   | norm_ide => RealField.abs-ofPos $ LinearOrder.<_<= RealAbGroup.zro<ide
