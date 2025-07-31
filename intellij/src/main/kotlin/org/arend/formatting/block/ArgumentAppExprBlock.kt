@@ -135,18 +135,12 @@ class ArgumentAppExprBlock(val cExpr: Concrete.Expression, node: ASTNode, settin
         } else if (cExpr is Concrete.LamExpression) { // we are dealing with right sections
             return GroupBlock(settings, aaeBlocks.map { createArendBlock(it, null, null, Indent.getNoneIndent()) }.toMutableList(), null, align, indent, this)
         } else if (cExprData is PsiElement) {
-            var psi: PsiElement? = null
-            for (aaeBlock in aaeBlocks) if (aaeBlock.textRange.contains(cExprData.node.textRange)) {
-                psi = aaeBlock.psi
-                break
+            val blocks = aaeBlocks.map { createArendBlock(it, null, align, indent) as Block }.toMutableList()
+
+            if (aaeBlocks.size == 1)
+                return blocks.first() as AbstractArendBlock else {
+                return GroupBlock(settings, blocks, null, align, indent, this)
             }
-            if (psi == null)
-                throw IllegalStateException()
-
-            val singletonSet = HashSet<PsiElement>()
-            singletonSet.add(psi)
-
-            return createArendBlock(psi.node, null, align, indent)
         }
         else throw IllegalStateException()
     }
