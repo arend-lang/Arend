@@ -138,8 +138,34 @@
     \lemma *-rat {x y : Rat} : x * y = {Real} x *' y
       => (\peval x * y) *> dense-lift-char (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding) {rat_real ∘ *-rat-locally-uniform} (x,y)
 
-    \lemma *-upper {x y : Real} : x * y = {ExUpperReal} x ExUpperReal.* y
-      => {?} -- TODO[server2]
+    \lemma *_>=0-char {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {d : Rat} : (x * y).U d <-> ∃ (a : x.U) (b : y.U) (a *' b <= d)
+      => (\lam xy<d => \case y.LU-located {0} {1} idp \with {
+        | byLeft y>0 => *_>0-char2 x>=0 (real_<_L.2 y>0) xy<d
+        | byRight y<1 => \case x.LU-located {0} {d} $ rat_real_<.2 $ RealField.<=_*_positive_positive x>=0 y>=0 <∘r real_<_U.2 xy<d \with {
+          | byLeft x>0 => \case *_>0-char2 y>=0 (real_<_L.2 x>0) (rewrite *-comm xy<d) \with {
+            | inP (b,y<b,a,x<a,ba<=d) => inP (a, x<a, b, y<b, transport (`<= _) RatField.*-comm ba<=d)
+          }
+          | byRight x<d => inP (d, x<d, 1, y<1, =_<= ide-right)
+        }
+      }, \lam (inP (a,x<a,b,y<b,ab<d)) => real_<_U.1 $ RealField.<=_*_positive-left (<=-less $ real_<_U.2 x<a) y>=0 <∘r transport (_ <) *-rat (RealField.<_*_positive-right (x>=0 <∘r real_<_U.2 x<a) (real_<_U.2 y<b)) <∘l rat_real_<=.1 ab<d)
+      \where {
+        \lemma *_>0-char {x y d : Real} (y>0 : 0 < y) (xy<d : x * y < d) : ∃ (a : x.U) (a * y < d)
+          => \case real_<-rat-char.1 $ transport (`< _) (*-assoc *> pmap (_ *) (RealField.pinv-right y>0) *> RealField.ide-right) $ RealField.<_*_positive-left xy<d (RealField.pinv>0 y>0) \with {
+            | inP (a,x<a,p) => inP (a, x<a, transport (_ <) (*-assoc *> pmap (d *) (RealField.pinv-left y>0) *> RealField.ide-right) $ RealField.<_*_positive-left (real_<_L.2 p) y>0)
+          }
+
+        \lemma *_>0-char2 {x y : Real} (x>=0 : 0 <= x) (y>0 : 0 < y) {d : Rat} (xy<d : (x * y).U d) : ∃ (a : x.U) (b : y.U) (a *' b <= d)
+          => \case *_>0-char y>0 (real_<_U.2 xy<d) \with {
+            | inP (a,x<a,ay<d) => \case *_>0-char (x>=0 <∘r real_<_U.2 x<a) $ transport (`< _) *-comm ay<d \with {
+              | inP (b,y<b,ba<d) => inP (a, x<a, b, y<b, <=-less $ rat_real_<.2 $ transport (`< _) (*-comm *> *-rat) ba<d)
+            }
+          }
+      }
+
+    \lemma *-upper {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) : x * y = {ExUpperReal} x ExUpperReal.* y
+      => exts \lam d => ext $ <->trans (*_>=0-char x>=0 y>=0) $ <->trans (later
+         (\lam (inP (a,x<a,b,y<b,ab<=d)) => inP (a, x<a, rat_real_<.2 $ x>=0 <∘r real_<_U.2 x<a, b, y<b, rat_real_<.2 $ y>=0 <∘r real_<_U.2 y<b, ab<=d),
+          \lam (inP (a,x<a,_,b,y<b,_,ab<=d)) => inP (a,x<a,b,y<b,ab<=d))) (<->sym ExUpperReal.*_U_<=)
 
     \lemma *-cover : CoverMap (ProductCoverSpace RealNormed RealNormed) RealNormed (\lam s => s.1 * s.2)
       => transportInv (CoverMap _ _) (ext \lam s => \peval s.1 * s.2) *-cover-def
@@ -215,7 +241,7 @@
     \lemma real-pos-inv>0 {x : Real} (x>0 : x.L 0) : LowerReal.L {real-pos-inv x>0} 0
       => byLeft <=-refl
 
-    \lemma pos-inv_rat {x : Rat} (x>0 : 0 < Real.fromRat x) : RealField.pinv x>0 = Real.fromRat (finv x)
+    \lemma pos-inv_rat {x : Rat} (x>0 : 0 < Real.fromRat x) : RealField.pinv x x>0 = Real.fromRat (finv x)
       => Monoid.Inv.inv-isUnique (RealField.pos#0 x>0) (Monoid.Inv.lmake _ $ *-rat *> pmap Real.fromRat (RatField.finv-left \lam x=0 => <-irreflexive $ rewrite x=0 in x>0)) idp
 
     \lemma finv-left {x : Rat} (x/=0 : x /= 0) : finv x * x = 1

@@ -225,7 +225,7 @@
     | inP (M,B,bB) => series_*-bounded M bB cc
   }
 
-\lemma geometric-series-conv {x : Real} (p : RealAbGroup.abs x < 1) : seriesSum (pow x) = defined (pinv (diff-pos p))
+\lemma geometric-series-conv {x : Real} (p : RealAbGroup.abs x < 1) : seriesSum (pow x) = defined (pinv _ (diff-pos p))
   => generalized (RealField.pos#0 $ linarith $ RealField.abs>=id <∘r p) p
   \where {
     \lemma pow_+1-bound {e : Real} (e>=0 : 0 <= e) {n : Nat} : 1 + e * n <= pow (e + 1) n \elim n
@@ -237,7 +237,7 @@
       | 0 => inP (0, RealAbGroup.zro<ide)
       | 1 => inP (1, rewrite ide-left b>1)
       | 2 => \have b-1>0 : 0 < b - 1 => linarith
-             \in \case Real.natBounded {pinv b-1>0} \with {
+             \in \case Real.natBounded {pinv (b - 1) b-1>0} \with {
                | inP (n,nb) => inP (n, rewrite (linarith : b = (b - 1) + 1, linarith : Real.fromRat 2 = (1 : Real) + 1) $
                   <_+-right 1 (transport (`< _) (pinv-right b-1>0) $ later $ <_*_positive-right b-1>0 $ real_<_U.2 nb) <∘l pow_+1-bound (LinearOrder.<_<= b-1>0))
              }
@@ -246,7 +246,7 @@
             <_*_positive-right (real_<_L.2 $ later idp) p <∘ <_*_positive-left p (RealField.pow>0 linarith))
       }
 
-    \lemma pow_1/2-bound {n : Nat} : RealField.pow (ratio 1 2) n <= RealField.pinv {suc n} (real_<_L.2 $ later idp) \elim n
+    \lemma pow_1/2-bound {n : Nat} : RealField.pow (ratio 1 2) n <= RealField.pinv (suc n) (real_<_L.2 $ later idp) \elim n
       | 0 => transportInv (_ <=) pinv_ide <=-refl
       | suc n => <=_*_positive-left pow_1/2-bound linarith <=∘
           \have zro<2 : RealField.zro < Real.fromRat 2 => linarith
@@ -254,9 +254,9 @@
                 later $ rewrite RealField.*-rat $ rat_real_<=.1 linarith
 
     \lemma pow_<1-bound {a : Real} (a<1 : a < 1) {eps : Real} (eps>0 : 0 < eps) : ∃ (n : Nat) (pow a n < eps)
-      => \case Real.natBounded {pinv eps>0} \with {
+      => \case Real.natBounded {pinv eps eps>0} \with {
         | inP (B,Bb) => \case real-located {a} {0} {ratio 1 2} (real_<_L.2 $ later idp) \with {
-          | byLeft a>0 => \case pow_>1-bound {pinv a>0} (pinv>1 a>0 a<1) B \with {
+          | byLeft a>0 => \case pow_>1-bound {pinv a a>0} (pinv>1 a>0 a<1) B \with {
             | inP (n,p) => inP (n, pinv_<-conv (RealField.pow>0 a>0) eps>0 $ real_<_U.2 Bb <∘ transport (_ <) (pinv_pow a>0) p)
           }
           | byRight a<1/2 => \case real-located {a} {RealField.negative (ratio 1 2)} {0} linarith \with {

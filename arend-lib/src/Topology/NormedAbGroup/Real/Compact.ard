@@ -31,7 +31,7 @@
       : ∃ (i : Fin (suc n)) (ldist (real-split a b n i) x < (b - a) * RatField.finv n)
       =>  \let | b-a>0 : 0 < b - a => linarith
                | b-a/n>0 : 0 < (b - a) * RatField.finv n => RealField.<_*_positive_positive b-a>0 $ rat_real_<.1 $ RatField.finv>0 $ fromInt_< $ pos<pos $ nonZero>0 n/=0
-               | /b-a => RealField.pinv b-a>0
+               | /b-a => RealField.pinv (b - a) b-a>0
           -- Rescale the interval [a,b] as [0,n] and use the natural number approximation.
           \in \case real-nat-approx {(x - a) * n * /b-a} $ RealField.<=_*_positive_positive (RealField.<=_*_positive_positive linarith $ rat_real_<=.1 $ fromInt_<= $ pos<=pos zero<=_) $ <=-less $ RealField.pinv>0 b-a>0 \with {
             | inP (j,d) =>
@@ -44,7 +44,7 @@
 \lemma real-bounded-tb : BallsTotallyBounded RealNormed
   => \lam x {B} B>0 => totallyBoundedSet-metric-char.2 \lam {eps} _eps>0 =>
     \have eps>0 => rat_real_<.1 _eps>0
-    \in \case ((x + B - (x - B)) RealField.* RealField.pinv eps>0).natBounded \with {
+    \in \case ((x + B - (x - B)) RealField.* RealField.pinv eps eps>0).natBounded \with {
       | inP (N,p) => rat_real_<.1 at B>0 $
         \have N/=0 : N /= 0 => /=-sym $ StrictPoset.<_/= $ pos<pos.conv $ fromInt_<.conv $ rat_real_<.2 $ RealField.<_*_positive_positive linarith (RealField.pinv>0 eps>0) <∘ real_<_U.2 p
         \in inP (real-split (x - B) (x + B) N, \lam {y} xy<B => \case real-split.real-approx {x - B} {x + B} linarith N/=0 {y} (linarith (RealAbGroup.abs>=id <∘r real_<_U.2 xy<B)) (linarith (RealAbGroup.abs>=neg <∘r real_<_U.2 xy<B)) \with {

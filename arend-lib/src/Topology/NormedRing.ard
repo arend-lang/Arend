@@ -52,7 +52,7 @@
 \class PseudoNormedPseudoRing \extends ExPseudoNormedPseudoRing, PseudoNormedAbGroup
 
 \lemma lnorm_*_<= {X : PseudoNormedPseudoRing} {x y : X} : lnorm (x * y) <= lnorm x * lnorm y
-  => Real.<=-upper.2 $ transportInv (_ ExUpperReal.<=) RealField.*-upper X.norm_*_<=
+  => Real.<=-upper.2 $ transportInv (_ ExUpperReal.<=) (RealField.*-upper lnorm>=0 lnorm>=0) X.norm_*_<=
 
 \class ExPseudoNormedRing \extends ExPseudoNormedPseudoRing, TopRing
   | norm_ide_<= : norm 1 <= ExUpperReal.fromRat 1
@@ -106,7 +106,7 @@
   | norm_*_<= => =_<= norm_*
 
 \lemma lnorm_* {X : PseudoValuedRing} {x y : X} : lnorm (x * y) = lnorm x * lnorm y
-  => Real.=-upper.2 $ later norm_* *> {ExUpperReal} inv {ExUpperReal} RealField.*-upper
+  => Real.=-upper.2 $ later norm_* *> {ExUpperReal} inv {ExUpperReal} (RealField.*-upper lnorm>=0 lnorm>=0)
 
 \class ExPseudoValuedRing \extends ExPseudoValuedPseudoRing, ExPseudoNormedRing, Ring {
   | norm_ide : norm 1 = ExUpperReal.fromRat 1
@@ -143,5 +143,5 @@
 \instance RealValuedRing : CompleteValuedCRing Real
   | CompleteNormedAbGroup => RealNormed
   | CRing => RealField
-  | norm_* => Real.=-upper.1 RealField.abs_* *> {ExUpperReal} RealField.*-upper
+  | norm_* => Real.=-upper.1 RealField.abs_* *> {ExUpperReal} RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0
   | norm_ide => RealField.abs-ofPos $ LinearOrder.<_<= RealAbGroup.zro<ide
