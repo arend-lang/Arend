@@ -9,7 +9,9 @@ import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.elementType
+import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.siblings
+import com.intellij.psi.util.startOffset
 import org.arend.core.definition.Definition
 import org.arend.ext.core.context.CoreBinding
 import org.arend.ext.core.context.CoreParameter
@@ -218,9 +220,12 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
                         }
                         is ArendPattern -> element.replace(longName)
                         else -> {
-                          val newAtomFieldAcc: PsiElement? = factory.createExpression(longNameStr).descendantOfType<ArendAtomFieldsAcc>()
-                          val atomFieldAcc = element.ancestor<ArendAtomFieldsAcc>();
-                          if (newAtomFieldAcc != null) atomFieldAcc?.replace(newAtomFieldAcc)
+                          val atomFieldsAcc: ArendAtomFieldsAcc? = element.ancestor<ArendAtomFieldsAcc>()
+                          val postfixFieldsAcc = atomFieldsAcc?.fieldAccList?.filter { it.startOffset > element.endOffset }
+                          val postfix = if (postfixFieldsAcc?.isNotEmpty() == true) "." + atomFieldsAcc.containingFile.text.substring(postfixFieldsAcc.first().startOffset, postfixFieldsAcc.last().endOffset) else ""
+
+                          val newAtomFieldAcc: PsiElement? = factory.createExpression(longNameStr+postfix).descendantOfType<ArendAtomFieldsAcc>()
+                          if (newAtomFieldAcc != null) atomFieldsAcc?.replace(newAtomFieldAcc)
                         }
                     }
                     editor?.caretModel?.moveToOffset(longNameStartOffset + offset)
