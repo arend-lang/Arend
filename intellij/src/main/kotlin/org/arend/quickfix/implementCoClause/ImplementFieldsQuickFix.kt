@@ -113,6 +113,8 @@ open class ImplementFieldsQuickFix(private val instanceRef: SmartPsiElementPoint
 
     private fun addField(field: Referable, inserter: AbstractCoClauseInserter, editor: Editor?, psiFactory: ArendPsiFactory, needQualifiedName: Boolean = false) {
         val coClauses = inserter.coClausesList
+
+
         val fieldClass = (field as? LocatedReferable)?.locatedReferableParent
         val name = if (needQualifiedName && fieldClass != null) "${fieldClass.textRepresentation()}.${field.textRepresentation()}" else field.textRepresentation()
 

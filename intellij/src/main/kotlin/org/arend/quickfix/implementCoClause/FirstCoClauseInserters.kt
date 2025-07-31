@@ -49,7 +49,7 @@ class CoClauseInserter(private val coClause: CoClauseBase) : AbstractCoClauseIns
 }
 
 open class ArendFunctionalInserter(private val definition: ArendFunctionDefinition<*>) : AbstractCoClauseInserter() {
-    override val coClausesList get(): List<ArendCoClause> = definition.body?.coClauseList ?: emptyList()
+    override val coClausesList get(): List<ArendLocalCoClause> = definition.body?.coClauseList ?: emptyList()
 
     override fun insertFirstCoClause(name: String, factory: ArendPsiFactory, editor: Editor?) {
         val body = definition.body
@@ -79,9 +79,23 @@ class FunctionDefinitionInserter(private val functionDefinition: ArendDefFunctio
 }
 
 class ArendInstanceInserter(private val instance: ArendDefInstance) : ArendFunctionalInserter(instance) {
+    override val coClausesList get(): List<ArendLocalCoClause> {
+        var result = super.coClausesList
+        val expr = instance.returnExpr?.type
+        if (result.isEmpty() && expr is ArendNewExpr)
+            result = expr.localCoClauseList
+
+        return result
+    }
+
     override fun insertFirstCoClause(name: String, factory: ArendPsiFactory, editor: Editor?) {
         var instanceBody = instance.body
-        if (instanceBody == null) {
+        val expr = instance.returnExpr?.type
+        if (instanceBody == null && expr is ArendNewExpr) {
+            val localCoClause = factory.createLocalCoClause(name)
+            val insertedLocalCoClause = expr.addAfter(localCoClause, expr.lbrace)
+            moveCaretToEndOffset(editor, insertedLocalCoClause)
+        } else if (instanceBody == null) {
             val instanceBodySample = factory.createCoClause(name).parent as ArendFunctionBody
             val anchor = instance.returnExpr ?: instance.defIdentifier
             instanceBody = instance.addAfter(instanceBodySample, anchor) as ArendFunctionBody
