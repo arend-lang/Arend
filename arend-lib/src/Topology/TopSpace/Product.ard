@@ -6,6 +6,7 @@
 \import Order.Directed
 \import Order.Lattice
 \import Order.PartialOrder
+\import Paths.Meta
 \import Set.Subset
 \import Topology.TopSpace
 \open Bounded(top)
@@ -89,3 +90,19 @@
 \lemma cont2-limit {I : DirectedSet} {X Y Z : TopSpace} {f : I -> X} {g : I -> Y} {lx : X} {ly : Y}
                    (px : X.IsLimit f lx) (py : Y.IsLimit g ly) (h : ContMap (X ⨯ Y) Z) : Z.IsLimit (\lam n => h (f n, g n)) (h (lx,ly))
   => cont-limit (limit-tuple px py) h
+
+\lemma denseSet_<= {X : TopSpace} {Y : HausdorffTopSpace} {P : JoinSemilattice Y} (jc : ContMap (Y ⨯ Y) Y \lam s => s.1 ∨ s.2)
+                   {S : Set X} (Sd : IsDenseSet S) (f g : ContMap X Y) (p : \Pi {x : X} -> S x -> f x <= g x) {x : X} : f x <= g x
+  => join-left <=∘ =_<= (denseSet-lift-unique Sd (jc ContMap.∘ ProductTopSpace.tuple f g) g \lam Sx => <=-antisymmetric (join-univ (p Sx) <=-refl) join-right)
+
+\lemma dense_<= {X Y : TopSpace} {Z : HausdorffTopSpace} {P : JoinSemilattice Z} (jc : ContMap (Z ⨯ Z) Z \lam s => s.1 ∨ s.2)
+                (f : ContMap X Y) (fd : f.IsDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) <= h (f x)) (y : Y) : g y <= h y
+  => denseSet_<= jc fd g h \lam (inP (x,q)) => rewriteI q (p x)
+
+\lemma weaklyDenseSet_<= {X : TopSpace} {Y : StronglyHausdorffTopSpace} {P : JoinSemilattice Y} (jc : ContMap (Y ⨯ Y) Y \lam s => s.1 ∨ s.2)
+                         {S : Set X} (Sd : IsWeaklyDenseSet S) (f g : ContMap X Y) (p : \Pi {x : X} -> S x -> f x <= g x) {x : X} : f x <= g x
+  => join-left <=∘ =_<= (weaklyDenseSet-lift-unique Sd (jc ContMap.∘ ProductTopSpace.tuple f g) g \lam Sx => <=-antisymmetric (join-univ (p Sx) <=-refl) join-right)
+
+\lemma weaklyDense_<= {X Y : TopSpace} {Z : StronglyHausdorffTopSpace} {P : JoinSemilattice Z} (jc : ContMap (Z ⨯ Z) Z \lam s => s.1 ∨ s.2)
+                      (f : ContMap X Y) (fd : f.IsWeaklyDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) <= h (f x)) (y : Y) : g y <= h y
+  => weaklyDenseSet_<= jc fd g h \lam (inP (x,q)) => rewriteI q (p x)

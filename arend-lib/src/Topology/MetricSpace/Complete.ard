@@ -31,19 +31,12 @@
 \import Topology.UniformSpace
 \import Topology.UniformSpace.StronglyComplete
 
--- TODO[server2]: Rewrite using located metric spaces.
-
--- TODO[server2]: Construct completion for general ones.
-
 \func dense-metric-lift {X Y : PseudoMetricSpace} {Z : CompleteMetricSpace} (f : IsometricMap X Y) (fd : f.IsWeaklyDenseUniformEmbedding) (g : MetricMap X Z) : MetricMap Y Z \cowith
   | UniformMap => weaklyDense-uniform-lift f fd g
-  | func-dist {y} {y'} => {?}
-  {- TODO[server2]
-    \have | g~ : UniformMap Y Z => weaklyDense-uniform-lift f fd g
+  | func-dist {y} {y'} =>
+    \have | g~ => weaklyDense-uniform-lift f fd g
           | g-char {x} : g~ (f x) = g x => weaklyDense-lift-char (fd.1, f.embedding->coverEmbedding fd.2) x
-    \in Function.id {ldist (g~ y) (g~ y') <= ldist y y'} $ RealAbGroup.meet_<=' $ weaklyDense-lift-unique (prod f f) (prod.isWeaklyDense fd.1 fd.1) (real-meet-uniform ∘ tuple (dist-uniform-map ∘ prod g~ g~) dist-uniform-map) (dist-uniform-map ∘ prod g~ g~)
-          (\lam (x,x') => Function.id {ldist (g~ (f x)) (g~ (f x')) ∧ ldist (f x) (f x') = ldist (g~ (f x)) (g~ (f x'))} $ rewrite (g-char,g-char) $ RealAbGroup.meet_<= $ later $ rewrite f.func-isometry g.func-dist) (y,y')
-      -}
+    \in Real.<=-upper.1 $ weaklyDense_<= real-join-uniform (prod f f) (prod.isWeaklyDense fd.1 fd.1) (ldist-uniform-map ∘ prod g~ g~) ldist-uniform-map (\lam s => unfold $ unfold $ rewrite (g-char,g-char) $ func-ldist <=∘ =_<= (inv func-lisometry)) (y,y')
   \where {
     \open ProductTopSpace
     \open ContMap

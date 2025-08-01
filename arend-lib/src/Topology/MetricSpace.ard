@@ -283,6 +283,9 @@
   | func-dist-uniform {eps} eps>0 => inP (eps, eps>0, func-dist __)
   | func-cont {U} => defaultImpl PrecoverMap func-cont {_} {U}
 
+\lemma func-ldist {X Y : PseudoMetricSpace} {f : MetricMap X Y} {x x' : X} : Y.dist (f x) (f x') <= X.dist x x'
+  => Real.<=-upper.2 f.func-dist
+
 \record IsometricMap \extends MetricMap {
   | func-isometry {x y : Dom} : dist (func x) (func y) = dist x y
   | func-dist => =_<= func-isometry
@@ -296,6 +299,9 @@
       })
     })
 }
+
+\lemma func-lisometry {X Y : PseudoMetricSpace} {f : IsometricMap X Y} {x x' : X} : Y.dist (f x) (f x') = X.dist x x'
+  => Real.=-upper.2 f.func-isometry
 
 \class CompleteExMetricSpace \extends ExMetricSpace, CompleteUniformSpace
 
