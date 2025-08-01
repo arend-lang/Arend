@@ -209,19 +209,19 @@
      \in \lam {eps} eps>0 => \case cc {RatField.finv B1 * eps} $ RatField.<_*_positive_positive (RatField.finv>0 $ RatField.zro<ide <∘l join-right) eps>0 \with {
       | inP (N,h) => inP (M ∨ N, \lam {n} MN<=n =>
         \have t : midSum (\lam k => norm (b k * c k)) (M ∨ N) n <= B1 ExUpperReal.* midSum (\lam k => norm (c k)) (M ∨ N) n
-                => midSum_<= (\lam {j} jp _ => norm_*_<= <=∘ ExUpperRealSemigroup.<=_*-left (ExUpperReal.<_<= $ ExUpperReal.U_<= (bB $ join-left <=∘ jp) join-left)) <=∘ midSum_<=-ldistr \lam j => norm>=0
-        \in t $ transport ExUpperReal.U (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= B1>0) *> ide-left) $ later $ ExUpperRealSemigroup.<_*-right B1>0 (RatField.<_*_positive_positive (RatField.finv>0 B1>0) eps>0) $ midSum_<=-left join-right (\lam j => norm>=0) $ h (join-right <=∘ MN<=n))
+                => midSum_<= (\lam {j} jp _ => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= $ ExUpperReal.U_<= (bB $ join-left <=∘ jp) join-left) <=-refl) <=∘ midSum_<=-ldistr \lam j => norm>=0
+        \in t $ transport ExUpperReal.U (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= B1>0) *> ide-left) $ later $ ExUpperRealSemigroup.<_*_U-right B1>0 (RatField.<_*_positive_positive (RatField.finv>0 B1>0) eps>0) $ midSum_<=-left join-right (\lam j => norm>=0) $ h (join-right <=∘ MN<=n))
     }
 
-\lemma series-lim-bound {A : ExPseudoNormedPseudoRing} {b : Series A} {l : A} (lb : A.IsBounded l) (bl : A.IsLimit b l) : ∃ (N : Nat) (B : Rat) ∀ {j} (N <= j -> (norm (b j)).U B)
-  => \case limit-metric-char.1 bl zro<ide, lb \with {
+\lemma series-lim-bound {A : ExPseudoNormedPseudoRing} {b : Series A} {l : A} (bl : A.IsLimit b l) : ∃ (N : Nat) (B : Rat) ∀ {j} (N <= j -> (norm (b j)).U B)
+  => \case limit-metric-char.1 bl zro<ide, norm-bounded l \with {
     | inP (N,h), inP (B,l<B) => inP (N, 1 + B, \lam {j} N<=j =>
       \have t => transport (norm __ <= _) (+-assoc *> pmap (_ +) negative-left *> zro-right) $ A.norm_+ {b j - l} {l}
       \in t $ ExUpperReal.+_U_<=.2 $ inP (1, rewriteI (norm_-, A.norm-dist) (h N<=j), B, l<B, <=-refl))
   }
 
-\lemma series_*-lim {A : ExPseudoNormedPseudoRing} {b c : Series A} {l : A} (lb : A.IsBounded l) (bl : A.IsLimit b l) (cc : IsAbsConvSeries c) : IsAbsConvSeries \lam n => b n * c n
-  => \case series-lim-bound lb bl \with {
+\lemma series_*-lim {A : ExPseudoNormedPseudoRing} {b c : Series A} {l : A} (bl : A.IsLimit b l) (cc : IsAbsConvSeries c) : IsAbsConvSeries \lam n => b n * c n
+  => \case series-lim-bound bl \with {
     | inP (M,B,bB) => series_*-bounded M bB cc
   }
 

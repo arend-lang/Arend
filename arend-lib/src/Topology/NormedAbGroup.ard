@@ -11,6 +11,7 @@
 \import Logic
 \import Logic.Meta
 \import Meta
+\import Operations
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
@@ -173,3 +174,26 @@
 \class CompleteExNormedAbGroup \extends ExNormedAbGroup, CompleteExMetricSpace, CompleteTopAbGroup
 
 \class CompleteNormedAbGroup \extends CompleteExNormedAbGroup, NormedAbGroup, CompleteMetricSpace
+
+-- | A bilinear map bounded by the product of norms is locally uniform.
+\lemma bilinear-locally-uniform {A B C : ExPseudoNormedAbGroup} (f : A -> B -> C)
+                                (fl : \Pi {a a' : A} {b : B} -> f (a - a') b = f a b - f a' b)
+                                (fr : \Pi {a : A} {b b' : B} -> f a (b - b') = f a b - f a b')
+                                (boundA : \Pi (x : A) -> A.IsBounded x) (boundB : \Pi (x : B) -> B.IsBounded x)
+                                (norm_*_<= : \Pi {x : A} {y : B} -> norm (f x y) <= norm x * norm y)
+  : LocallyUniformMap (A ⨯ B) C (\lam s => f s.1 s.2)
+  => LocallyUniformMetricMap.makeLocallyUniformMap2 f \lam {eps} eps>0 => inP (1, zro<ide, \lam x0 y0 => \case boundA x0, boundB y0 \with {
+    | inP (x0b,|x0|<x0b), inP (y0b,|y0|<y0b) => \case ExUpperRealSemigroup.div-lb-rat {(x0b + 1) + (y0b + 1 + 1)} {Real.fromRat eps} (inP (1, idp, <=-rat.1 $ linarith (norm>=0 |x0|<x0b, norm>=0 |y0|<y0b))) (<-rat.2 eps>0) \with {
+      | inP (gamma,gamma>0,gamma-m) => inP (gamma ∧ 1, <_meet-univ gamma>0 zro<ide, \lam {x} {x'} {y} {y'} x0x<1 y0y<1 xx'<gamma yy'<gamma =>
+        rewrite norm-dist at xx'<gamma $ rewrite norm-dist at yy'<gamma $ rewrite norm-dist at x0x<1 $ rewrite norm-dist at y0y<1 $ rewrite norm-dist $
+        <-rat.1 $ transport (norm __ < eps) (pmap2 (+) fr fl *> simplify : f x (y - y') + f (x - x') y' = f x y - f x' y') $ norm_+ <∘r
+          <=_+ norm_*_<= norm_*_<= <∘r transport (_ + __ < _) *-comm (<=_+ (ExUpperRealSemigroup.<=_* <=-refl $ <=-less $ <-rat.2 yy'<gamma) (ExUpperRealSemigroup.<=_* <=-refl (<=-less $ <-rat.2 xx'<gamma)) <∘r
+          transport (`< _) (ExUpperRealSemigroup.rdistr norm>=0 norm>=0) (ExUpperRealSemigroup.<=_* <=-refl (<=-rat.1 meet-left) <∘r ExUpperRealSemigroup.<_*-left' (
+            \have lem {X : ExPseudoNormedAbGroup} {x1 x2 : X} (d : (norm (x1 - x2)).U 1) : norm x2 <= norm x1 + 1 => transport (_ <= _ + __) norm_- (=_<= (pmap norm equation.abGroup) <=∘ norm_+) <=∘ <=_+ <=-refl (<=-less $ <-rat.2 d)
+            \in <=_+ (lem x0x<1) (lem (U_<= yy'<gamma meet-right) <=∘ <=_+ (lem y0y<1) <=-refl) <∘r transport (_ <) +-rat (<_+ (transport (_ <) +-rat $ <_+-left $ <-rat.2 |x0|<x0b) $ transport (_ < ) +-rat $ <_+-left $ transport (_ <) +-rat $ <_+-left $ <-rat.2 |y0|<y0b)) (ExUpperRealAbMonoid.<=_+-positive norm>=0 norm>=0) gamma>0 <∘l gamma-m)))
+    }
+  })
+  \where {
+    \open ExUpperReal(<=-rat,+-rat,U_<=)
+    \open ExUpperRealAbMonoid(<-rat,<_+,<_+-left)
+  }
