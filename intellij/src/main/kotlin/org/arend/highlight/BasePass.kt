@@ -152,6 +152,7 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
 
         if (error is NotInScopeError) {
             val ref: ArendReferenceElement? = when (cause) {
+                is ArendAtomFieldsAcc -> cause.atom.literal?.refIdentifier
                 is ArendLongName -> cause.refIdentifierList.getOrNull(error.index)
                 is ArendReferenceElement -> cause
                 is ArendStatCmd -> cause.longName?.refIdentifierList?.getOrNull(error.index)

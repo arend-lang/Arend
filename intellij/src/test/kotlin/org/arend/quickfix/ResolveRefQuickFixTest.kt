@@ -946,4 +946,21 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
         
        \func bar => Bar.foo.1 
     """)
+
+    fun testLongNamesWithFields2() = simpleImportFixTest("""
+       -- ! Foo.ard
+       
+       \module Bar \where {
+         \module Bar2 \where 
+           \func foo : \Sigma Nat Nat => (1, 1)
+       }
+        
+       -- ! Main.ard
+        
+       \func bar => Bar2.foo.1{-caret-}
+    """, """
+       \import Foo
+        
+       \func bar => Bar.Bar2.foo.1 
+    """)
 }
