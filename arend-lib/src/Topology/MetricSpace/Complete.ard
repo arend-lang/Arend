@@ -48,15 +48,24 @@
   | dist x y => dist-cover (x,y)
   | dist-refl => dist-refl-lem
   | dist-symm {y} {y'} => weaklyDense-lift-unique (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding).1 dist-cover (dist-cover ∘ tuple proj2 proj1) (\lam x => dist-char *> ldist-symm *> inv dist-char) (y,y')
-  | dist-triang => PseudoMetricSpace.from-ldist-triang filter-dist-triang
-  | dist-uniform => {?} -- TODO[server2]: dist-uniform-lem
-  {- TODO[server2]
-    isSeparatedCoverSpace $ PreuniformSpace.uniform-separated.2 $ later \case dist-uniform-lem.1 __ \with {
-    | inP (eps,eps>0,h) => later \case h F \with {
-      | inP (U,CU,g) => inP (U, CU, (g $ rewrite dist-refl-lem eps>0, g $ rewrite FG=0 eps>0))
-    }
-  }
-  -}
+  | dist-triang => PseudoMetricSpace.from-ldist-triang $ filter-dist-triang _ _ _
+  | dist-uniform => (\lam (inP (D,Du,g)) => \case dist-uniform.1 Du \with {
+    | inP (eps,eps>0,h) => inP (RatField.half $ RatField.half eps, RatField.half>0 $ RatField.half>0 eps>0, \lam F => \case isCauchyFilter {F} (X.makeCauchy $ X.metricUniform (RatField.half>0 $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 eps>0)) \with {
+      | inP (_, inP (x,idp), Fx) => \case h x \with {
+        | inP (V,DV,Vd) => \case g DV \with {
+          | inP (U,CU,VU) => inP (U, CU, \lam {G} d => \case isCauchyFilter {G} (X.makeCauchy $ X.metricUniform (RatField.half>0 $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 eps>0)) \with {
+            | inP (_, inP (y,idp), Gy) => VU $ filter-mono Gy \lam {z} d' => Vd
+              \have | t => real_<_U.2 $ dist-neighborhood (pointSCF x) F (RatField.half>0 $ RatField.half>0 eps>0) (OBall-center_<=< $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 eps>0) Fx
+                    | s => real_<_U.2 $ dist-neighborhood G (pointSCF y) (RatField.half>0 $ RatField.half>0 eps>0) Gy (OBall-center_<=< $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 eps>0)
+              \in rewriteI dist-char $ rewriteI dist-char at d' $ real_<_U.1 $ filter-dist-triang (pointSCF x) F (pointSCF z) <∘r RealAbGroup.<=_+ (<=-less t) (filter-dist-triang F G (pointSCF z) <=∘ RealAbGroup.<=_+ (<=-less $ real_<_U.2 d) (filter-dist-triang G (pointSCF y) (pointSCF z) <=∘ <=-less (RealAbGroup.<_+ s (real_<_U.2 d')))) <∘r
+                    rewrite (RealAbGroup.+-rat, RealAbGroup.+-rat, RealAbGroup.+-rat) (rat_real_<.1 linarith)
+          })
+        }
+      }
+    })
+  }, \lam (inP (eps,eps>0,h)) => inP (_, X.metricUniform {RatField.half (RatField.half eps)} $ RatField.half>0 $ RatField.half>0 eps>0, \lam {_} (inP (x,idp)) => \case h (pointSCF x) \with {
+    | inP (U,CU,g) => inP (U, CU, \lam {F} Fx => g $ dist-neighborhood _ _ eps>0 {x} (OBall-center_<=< $ RatField.half>0 $ RatField.half>0 eps>0) Fx)
+  }))
   \where {
     \open ProductCoverSpace
     \open CoverMap
@@ -70,7 +79,7 @@
     \private \lemma dist-refl-lem {F : StronglyRegularCauchyFilter X} : dist-cover (F, F) = 0
       => weaklyDense-lift-unique strongCompletion strongCompletion.isDenseEmbedding.1 (dist-cover ∘ tuple id id) (const 0) (\lam x => dist-char *> ldist-refl) F
 
-    \lemma filter-dist-triang {x y z : StronglyRegularCauchyFilter X} : dist-cover (x,z) <= dist-cover (x,y) + dist-cover (y,z)
+    \lemma filter-dist-triang (x y z : StronglyRegularCauchyFilter X) : dist-cover (x,z) <= dist-cover (x,y) + dist-cover (y,z)
       => RealAbGroup.meet_<=' $ weaklyDense-lift-unique (prod (prod strongCompletion strongCompletion) strongCompletion) (prod.isWeaklyDenseEmbedding (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) strongCompletion.isDenseEmbedding).1
           (real-meet-uniform ∘ tuple (dist-cover ∘ prod proj1 id) (+-uniform ∘ tuple (dist-cover ∘ proj1) (dist-cover ∘ prod proj2 id)))
           (dist-cover ∘ prod proj1 id)
@@ -78,29 +87,7 @@
             rewrite (dist-char,dist-char,dist-char) $ RealAbGroup.meet_<= ldist-triang)
           ((x,y),z)
 
-    \lemma dist-neighborhood (F G : StronglyRegularCauchyFilter X) {eps : Rat} (eps>0 : 0 < eps) {x : X} (Fx : F (OBall (RatField.half (RatField.half eps)) x)) (Gx : G (OBall (RatField.half (RatField.half eps)) x)) : dist-cover (F,G) < eps
-      => rewrite (\peval dist-cover) $ {?}
-      -- simplify in RealAbGroup.abs>=_- <∘r <=<_<= ((strongCompletion-lift-neighborhood2 (dist-uniform-map {X}) F G (OBall eps 0)).2 $ inP
-      --    (OBall (RatField.half eps) 0, s<=*_s<=< $ OBall_s<=* (linarith : RatField.half eps < eps), _, Fx, _, Gx, \lam {z1} d1 {z2} d2 => RealAbGroup.abs_-_< (linarith (ldist>=0 {X} {z1}, RatField.half>0 eps>0)) $ {?} -- simplify $ ExPseudoMetricSpace.halving d1 d2
-      --    )) idp
-
-    {- TODO[server2]
-    \private \lemma dist-uniform-lem {C : Set (Set (StrongCompletion X))} : isUniform C <-> ∃ (eps : Real) (0 < eps) ∀ x ∃ (U : C) ∀ {y} (dist-cover (x,y) < eps -> U y)
-      => (later \lam (inP (D,Du,g)) => \case dist-uniform.1 Du \with {
-        | inP (eps,eps>0,h) => inP (halfs 2 eps, halfs>0 2 eps>0, \lam F => \case isCauchyFilter (X.makeCauchy $ X.metricUniform (halfs>0 4 eps>0)) \with {
-          | inP (_, inP (x,idp), Fx) => \case h x \with {
-            | inP (V,DV,Vd) => \case g DV \with {
-              | inP (U,CU,VU) => inP (U, CU, \lam {G} d => \case isCauchyFilter (X.makeCauchy $ X.metricUniform (halfs>0 4 eps>0)) \with {
-                | inP (_, inP (y,idp), Gy) => VU $ filter-mono Gy \lam {z} d' => Vd
-                    \have | t => dist-neighborhood (pointSCF x) F (halfs>0 2 eps>0) (OBall-center_<=< $ halfs>0 4 eps>0) Fx
-                          | s => dist-neighborhood G (pointSCF y) (halfs>0 2 eps>0) Gy (OBall-center_<=< $ halfs>0 4 eps>0)
-                    \in later $ rewriteI dist-char $ rewriteI dist-char at d' $ linarith (filter-dist-triang (pointSCF x) F (pointSCF z), filter-dist-triang F G (pointSCF z), filter-dist-triang G (pointSCF y) (pointSCF z))
-              })
-            }
-          }
-        })
-      }, \lam (inP (eps,eps>0,h)) => inP (_, X.metricUniform {half (half eps)} $ half>0 $ half>0 eps>0, \lam {_} (inP (x,idp)) => \case h (pointSCF x) \with {
-        | inP (U,CU,g) => inP (U, CU, \lam {F} Fx => g $ dist-neighborhood _ _ eps>0 {x} (OBall-center_<=< $ half>0 $ half>0 eps>0) Fx)
-      }))
-      -}
+    \lemma dist-neighborhood (F G : StronglyRegularCauchyFilter X) {eps : Rat} (eps>0 : 0 < eps) {x : X} (Fx : F (OBall (RatField.half (RatField.half eps)) x)) (Gx : G (OBall (RatField.half (RatField.half eps)) x)) : (dist-cover (F,G)).U eps
+      => rewrite (\peval dist-cover) $ real_<_U.1 $ simplify in RealAbGroup.abs>=_- <∘r real_<_U.2 (<=<_<= ((strongCompletion-lift-neighborhood2 {_} {_} {RealNormed} (ldist-uniform-map {X}) F G (OBall eps 0)).2 $ inP
+            (OBall (RatField.half eps) 0, s<=*_s<=< $ OBall_s<=* (linarith : RatField.half eps < eps), _, Fx, _, Gx, \lam {z1} d1 {z2} d2 => real_<_U.1 $ RealAbGroup.abs_-_< (linarith (ldist>=0 {X} {z1}, rat_real_<.1 $ RatField.half>0 eps>0)) $ simplify $ real_<_U.2 $ ExPseudoMetricSpace.halving1/2 d1 d2)) idp)
   }
