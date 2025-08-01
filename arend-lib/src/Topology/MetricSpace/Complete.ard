@@ -69,7 +69,7 @@
     \open CoverMap
 
     \sfunc dist-cover : CoverMap (StrongCompletion X ⨯ StrongCompletion X) RealNormed
-      => weaklyDense-lift {_} {ProductStronglyRegularCoverSpace (StrongCompletion X) (StrongCompletion X)} (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) dist-uniform-map
+      => weaklyDense-lift {_} {ProductStronglyRegularCoverSpace (StrongCompletion X) (StrongCompletion X)} (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) ldist-uniform-map
 
     \lemma dist-char {x y : X} : dist-cover (pointSCF x, pointSCF y) = ldist x y
       => rewrite (\peval dist-cover) $ weaklyDense-lift-char (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) (x,y)

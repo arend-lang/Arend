@@ -17,7 +17,7 @@
 \import Topology.TopAbGroup
 \import Topology.UniformSpace
 
-\instance ExUpperRealMetricSpace : CompleteExMetricSpace ExUpperReal
+\instance ExUpperRealMetric : CompleteExMetricSpace ExUpperReal
   | dist (x y : ExUpperReal) : ExUpperReal \cowith {
     | U q => ∃ (a : `< q) (0 <= a) (x <= y + a) (y <= x + a)
     | U-closed (inP (a,a<q,a>=0,x<=y+a,y<=x+a)) q<q' => inP (a, a<q <∘ q<q', a>=0, x<=y+a, y<=x+a)
