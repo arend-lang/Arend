@@ -152,11 +152,16 @@
     }
   })
 
-\class ExMetricSpace \extends ExPseudoMetricSpace, SeparatedCoverSpace
+\class ExMetricSpace \extends ExPseudoMetricSpace, SeparatedCoverSpace {
   | dist-ext {x y : E} : dist x y = 0 -> x = y
-  | isSeparatedCoverSpace f => dist-ext $ <=-antisymmetric (\lam b>0 => \case f $ makeCauchy $ metricUniform (half>0 b>0) \with {
+
+  \default isSeparatedCoverSpace f => dist-ext $ <=-antisymmetric (\lam b>0 => \case f $ makeCauchy $ metricUniform (half>0 b>0) \with {
     | inP (_, inP (z,idp), (zx<b/2,zy<b/2)) => halving1/2 zx<b/2 zy<b/2
   }) dist>=0
+  \default dist-ext p => isSeparatedCoverSpace $ SeparatedCoverSpace.separated-char 4 7 \lam x<=<U => \case <=<-ball x<=<U \with {
+    | inP (eps,eps>0,q) => q $ transportInv (ExUpperReal.U {__} eps) p eps>0
+  }
+}
 
 \lemma metric-ext {X : ExMetricSpace} {x y : X} (p : \Pi {eps : Rat} -> 0 < eps -> (dist x y).U eps) : x = y
   => dist-ext $ <=-antisymmetric (p __) dist>=0
@@ -171,6 +176,8 @@
       })
     })
   }
+} \where {
+  \meta from-ldist-triang p => transport (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper (Real.<=-upper.1 p)
 }
 
 \func ldist {X : PseudoMetricSpace} (x y : X) : Real

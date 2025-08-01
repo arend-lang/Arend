@@ -1,9 +1,17 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Arith.Rat
 \import Arith.Real.UpperReal
 \import Function.Meta
+\import Logic
+\import Logic.Meta
 \import Meta
+\import Order.Biordered
 \import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set.Filter
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup.Real.Functions
@@ -21,3 +29,37 @@
     \open ProductTopSpace
     \open ContMap
   }
+
+\instance ExMetricCompletion (X : ExPseudoMetricSpace) : CompleteExMetricSpace
+  | CompleteUniformSpace => UniformCompletion X
+  | dist (F G : RegularCauchyFilter X) : ExUpperReal \cowith {
+    | U q => ∃ (r : `< q) (U : F.F) (V : G.F) ∀ (x : U) (y : V) (X.dist x y < r)
+    | U-closed (inP (r,r<q,U,FU,V,GV,h)) q<q' => inP (r, r<q <∘ q<q', U, FU, V, GV, h)
+    | U-rounded {q} (inP (r,r<q,U,FU,V,GV,h)) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, U, FU, V, GV, h), RatField.mid<right r<q)
+  }
+  | dist-refl {F} => <=-antisymmetric (\lam {b} b>0 => \case F.isCauchyFilter $ X.makeCauchy $ X.metricUniform (RatField.half>0 $ RatField.half>0 b>0) \with {
+    | inP (_, inP (x,idp), FU) => inP (RatField.half b, linarith, _, FU, _, FU, \lam y xy<b/4 z xz<b/4 => ExUpperRealAbMonoid.<-rat.2 $ X.halving1/2 xy<b/4 xz<b/4)
+  }) (\lam {b} (inP (r,r<b,U,FU,V,FV,h)) => \case isProper FU, isProper FV \with {
+    | inP (x,Ux), inP (y,Vy) => ExUpperRealAbMonoid.<-rat.1 (dist>=0 <∘r h x Ux y Vy) <∘ r<b
+  })
+  | dist-symm =>
+    \have lem {F G : RegularCauchyFilter X} : dist F G <= dist G F => \lam {b} (inP (r,r<b,V,GV,U,FU,h)) => inP (r, r<b, U, FU, V, GV, \lam x Ux y Vy => transport (`< _) dist-symm $ h y Vy x Ux)
+    \in <=-antisymmetric lem lem
+  | dist-triang {F} {G} {H} {d} p => \case ExUpperReal.+_U.1 p \with {
+    | inP (a, inP (q,q<a,U,FU,V,GV,g), b, inP (r,r<b,V',GV',W,HW,h), a+b<d) => inP (q + r, RatField.<_+ q<a r<b <∘ a+b<d, U, FU, W, HW, \lam x Ux z Wz => \case isProper (filter-meet GV GV') \with {
+      | inP (y,(Vy,V'y)) => transport (_ <) ExUpperReal.+-rat $ dist-triang <∘r ExUpperRealAbMonoid.<_+ (g x Ux y Vy) (h y V'y z Wz)
+    })
+  }
+  | dist-uniform => (\lam (inP (D,Du,g)) => \case dist-uniform.1 Du \with {
+    | inP (eps,eps>0,h) => inP (RatField.half eps, RatField.half>0 eps>0, \lam F => \case F.isCauchyFilter $ X.makeCauchy $ X.metricUniform (RatField.half>0 eps>0) \with {
+      | inP (W, inP (x,Wp), FW) => \case h x \with {
+        | inP (V,DV,Vp) => \case g DV \with {
+          | inP (U,CU,Up) => inP (U, CU, \lam {G} (inP (a,a<eps/2,U',FU',V',GV',h')) => Up $ filter-mono GV' \lam {y} V'y => \case isProper (filter-meet FW FU') \with {
+            | inP (x',(Wx',U'x')) => Vp $ X.halving (rewrite Wp in Wx') (ExUpperRealAbMonoid.<-rat.1 $ h' x' U'x' y V'y <∘ ExUpperRealAbMonoid.<-rat.2 a<eps/2) linarith
+          })
+        }
+      }
+    })
+  }, \lam (inP (eps,eps>0,h)) => inP (_, X.metricUniform $ RatField.half>0 $ RatField.half>0 eps>0, \lam {_} (inP (x,idp)) => \case h (pointCF x) \with {
+    | inP (U,CU,g) => inP (U, CU, \lam {F} Fx => g $ inP (RatField.half eps, linarith, OBall (RatField.half $ RatField.half eps) x, OBall-center_<=< $ RatField.half>0 $ RatField.half>0 eps>0, _, Fx, \lam z xz<eps/4 y xy<eps/4 => ExUpperRealAbMonoid.<-rat.2 $ X.halving1/2 xz<eps/4 xy<eps/4))
+  }))

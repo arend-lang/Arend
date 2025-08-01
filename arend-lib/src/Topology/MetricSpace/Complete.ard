@@ -1,6 +1,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Pointed
+\import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
 \import Arith.Real.UpperReal
@@ -47,9 +48,8 @@
   | dist x y => dist-cover (x,y)
   | dist-refl => dist-refl-lem
   | dist-symm {y} {y'} => weaklyDense-lift-unique (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding).1 dist-cover (dist-cover ∘ tuple proj2 proj1) (\lam x => dist-char *> ldist-symm *> inv dist-char) (y,y')
-  | dist-triang => {?} -- TODO[server2]: filter-dist-triang _ _ _
+  | dist-triang => PseudoMetricSpace.from-ldist-triang filter-dist-triang
   | dist-uniform => {?} -- TODO[server2]: dist-uniform-lem
-  | dist-ext {F} {G} FG=0 => {?}
   {- TODO[server2]
     isSeparatedCoverSpace $ PreuniformSpace.uniform-separated.2 $ later \case dist-uniform-lem.1 __ \with {
     | inP (eps,eps>0,h) => later \case h F \with {
@@ -67,8 +67,22 @@
     \lemma dist-char {x y : X} : dist-cover (pointSCF x, pointSCF y) = ldist x y
       => rewrite (\peval dist-cover) $ weaklyDense-lift-char (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) (x,y)
 
-    \private \lemma dist-refl-lem {F : StronglyRegularCauchyFilter X} : dist-cover (F, F) = (0 : Real)
+    \private \lemma dist-refl-lem {F : StronglyRegularCauchyFilter X} : dist-cover (F, F) = 0
       => weaklyDense-lift-unique strongCompletion strongCompletion.isDenseEmbedding.1 (dist-cover ∘ tuple id id) (const 0) (\lam x => dist-char *> ldist-refl) F
+
+    \lemma filter-dist-triang {x y z : StronglyRegularCauchyFilter X} : dist-cover (x,z) <= dist-cover (x,y) + dist-cover (y,z)
+      => RealAbGroup.meet_<=' $ weaklyDense-lift-unique (prod (prod strongCompletion strongCompletion) strongCompletion) (prod.isWeaklyDenseEmbedding (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) strongCompletion.isDenseEmbedding).1
+          (real-meet-uniform ∘ tuple (dist-cover ∘ prod proj1 id) (+-uniform ∘ tuple (dist-cover ∘ proj1) (dist-cover ∘ prod proj2 id)))
+          (dist-cover ∘ prod proj1 id)
+          (\lam ((x,y),z) => Function.id {dist-cover (pointSCF x, pointSCF z) ∧ (dist-cover (pointSCF x, pointSCF y) + dist-cover (pointSCF y, pointSCF z)) = dist-cover (pointSCF x, pointSCF z)} $
+            rewrite (dist-char,dist-char,dist-char) $ RealAbGroup.meet_<= ldist-triang)
+          ((x,y),z)
+
+    \lemma dist-neighborhood (F G : StronglyRegularCauchyFilter X) {eps : Rat} (eps>0 : 0 < eps) {x : X} (Fx : F (OBall (RatField.half (RatField.half eps)) x)) (Gx : G (OBall (RatField.half (RatField.half eps)) x)) : dist-cover (F,G) < eps
+      => rewrite (\peval dist-cover) $ {?}
+      -- simplify in RealAbGroup.abs>=_- <∘r <=<_<= ((strongCompletion-lift-neighborhood2 (dist-uniform-map {X}) F G (OBall eps 0)).2 $ inP
+      --    (OBall (RatField.half eps) 0, s<=*_s<=< $ OBall_s<=* (linarith : RatField.half eps < eps), _, Fx, _, Gx, \lam {z1} d1 {z2} d2 => RealAbGroup.abs_-_< (linarith (ldist>=0 {X} {z1}, RatField.half>0 eps>0)) $ {?} -- simplify $ ExPseudoMetricSpace.halving d1 d2
+      --    )) idp
 
     {- TODO[server2]
     \private \lemma dist-uniform-lem {C : Set (Set (StrongCompletion X))} : isUniform C <-> ∃ (eps : Real) (0 < eps) ∀ x ∃ (U : C) ∀ {y} (dist-cover (x,y) < eps -> U y)
@@ -88,17 +102,5 @@
       }, \lam (inP (eps,eps>0,h)) => inP (_, X.metricUniform {half (half eps)} $ half>0 $ half>0 eps>0, \lam {_} (inP (x,idp)) => \case h (pointSCF x) \with {
         | inP (U,CU,g) => inP (U, CU, \lam {F} Fx => g $ dist-neighborhood _ _ eps>0 {x} (OBall-center_<=< $ half>0 $ half>0 eps>0) Fx)
       }))
-
-    \lemma filter-dist-triang (x y z : StronglyRegularCauchyFilter X) : dist-cover (x,z) <= dist-cover (x,y) + dist-cover (y,z)
-      => RealAbGroup.meet_<=' $ weaklyDense-lift-unique (prod (prod strongCompletion strongCompletion) strongCompletion) (prod.isWeaklyDenseEmbedding (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) strongCompletion.isDenseEmbedding).1
-          (real-meet-uniform ∘ tuple (dist-cover ∘ prod proj1 id) (+-uniform ∘ tuple (dist-cover ∘ proj1) (dist-cover ∘ prod proj2 id)))
-          (dist-cover ∘ prod proj1 id)
-          (\lam ((x,y),z) => Function.id {dist-cover (pointSCF x, pointSCF z) ∧ (dist-cover (pointSCF x, pointSCF y) + dist-cover (pointSCF y, pointSCF z)) = dist-cover (pointSCF x, pointSCF z)} $
-            rewrite (dist-char,dist-char,dist-char) $ RealAbGroup.meet_<= ldist-triang)
-          ((x,y),z)
-
-    \lemma dist-neighborhood (F G : StronglyRegularCauchyFilter X) {eps : Real} (eps>0 : 0 < eps) {x : X} (Fx : F (OBall (half (half eps)) x)) (Gx : G (OBall (half (half eps)) x)) : dist-cover (F,G) < eps
-      => rewrite (\peval dist-cover) $ simplify in RealAbGroup.abs>=_- <∘r <=<_<= ((strongCompletion-lift-neighborhood2 (dist-uniform-map {X}) F G (OBall eps 0)).2 $ inP
-          (OBall (half eps) 0, s<=*_s<=< $ OBall_s<=* (half<id eps>0), _, Fx, _, Gx, \lam {z1} d1 {z2} d2 => RealAbGroup.abs_-_< (linarith (dist>=0 {X} {z1}, half>0 eps>0)) $ simplify $ halving d1 d2)) idp
       -}
   }

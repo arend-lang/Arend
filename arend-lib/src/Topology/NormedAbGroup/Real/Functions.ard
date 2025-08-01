@@ -87,3 +87,6 @@
             (<=_+ <=-refl meet-right <∘r RealAbGroup.abs>=_- <∘r real_<_U.2 x'y'<eps)))
     })
   }
+
+\lemma upper-+-uniform : UniformMap (ExUpperRealMetric ⨯ ExUpperRealMetric) ExUpperRealMetric \lam s => s.1 + s.2 \cowith
+  | func-uniform => {?}
