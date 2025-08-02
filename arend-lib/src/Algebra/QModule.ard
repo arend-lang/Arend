@@ -90,5 +90,5 @@
     | noTorsion n/=0 na=0 => inv (pmap (`*c _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*c) *> *c-assoc *> pmap (_ *c) (M.natCoef_*c *> na=0) *> M.*c_zro-right
 }
 
-\lemma func-*q {A B : QModule} (f : AddGroupHom A B) {q : Rat} {a : A} : f (q A.*q a) = q B.*q f a
+\lemma func-*q {A B : QModule} {f : AddGroupHom A B} {q : Rat} {a : A} : f (q A.*q a) = q B.*q f a
   => pmap f (\peval _ A.*q _) *> f.func-*i *> pmap (_ B.*i) (inv $ B.ud-unique $ inv f.func-*n *> pmap f A.ud-cond) *> inv (\peval _ B.*q _)

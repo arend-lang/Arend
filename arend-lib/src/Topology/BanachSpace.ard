@@ -30,14 +30,11 @@
 }
 
 \class BanachSpace \extends PreBanachSpace, CompleteExNormedAbGroup, QModule {
-  | noTorsion {a} {n} n/=0 na=0 => {?} -- TODO[server2]: norm-ext $ inv ide-left *> pmap (`* _) (inv (pmap A.norm (RatField.finv-left $ natRat/=0 n/=0) *> A.norm_ide) *> A.norm_*) *> *-assoc *> pmap (A.norm (RatField.finv n) *) (inv norm_*n *> pmap norm na=0 *> norm_zro) *> zro_*-right
+  | noTorsion {a} {n} n/=0 na=0 => norm-ext $ inv (ExUpperRealSemigroup.ide-left norm>=0) *> pmap (`* _) (inv (pmap A.norm (RatField.finv-left $ natRat/=0 n/=0) *> A.norm_ide) *> A.norm_*) *> *-assoc *> pmap (A.norm (RatField.finv n) *) (inv norm_*n *> pmap norm na=0 *> norm_zro) *> ExUpperRealSemigroup.zro_*-right (norm-bounded _)
 
   \lemma norm_*q {q : Rat} {x : E} : norm (q *q x) = A.norm q ExUpperReal.* norm x
-    => {?}
-      {- TODO[server2]
-      Monoid.LInv.cancel (A.norm_Inv $ RatField.nonZero-Inv $ natRat/=0 $ ratDenom/=0 q) $
+    => A.norm_Inv-cancel-left (RatField.nonZero-Inv $ natRat/=0 $ ratDenom/=0 q) norm>=0 ExUpperRealSemigroup.*_>=0 $
         inv norm_*n *> pmap norm (inv (*q-assoc *> *q_*n) *> pmap (`*q _) rat*denom-left *> *q_*i) *> norm_*i *> pmap (`* _) (inv (pmap A.norm rat*denom-left) *> A.norm_*) *> *-assoc
-        -}
 }
 
 \class RealPreBanachSpace \extends PreBanachSpace
@@ -56,21 +53,16 @@
 
   \default func-norm-uniform {eps} eps>0 => \case isBounded \with {
     | inP (C,C>0,h) => \case C.U-inh \with {
-      | inP (delta,C<delta) => {?}
-      {- TODO[server2]
-        \have | delta>=0 => <=-less (U-pos C<delta)
-              | delta1>=0 => <=-less $ RatField.finv>0 $ U-pos C<delta
-        \in inP (fromRat (RatField.finv delta) * eps, PosUpperRealSemiring.<_*-positive (fromRat_< <=-refl $ RatField.finv>0 $ U-pos C<delta) eps>0, \lam {x} |x|<delta => h x <∘r transport (_ <) (inv *-assoc *> pmap (`* _) (PosUpperRealSemiring.*-rat delta>=0 delta1>=0 *> pmap fromRat (RatField.finv-right $ RatField.>_/= $ U-pos C<delta)) *> ide-left) (PosUpperRealSemiring.<_* (U_<_fromRat C<delta) |x|<delta))
-      -}
+      | inP (delta,C<delta) => inP (RatField.finv delta * eps, RatField.<_*_positive_positive (RatField.finv>0 $ C>0 <∘ C<delta) eps>0, \lam {x} |x|<delta =>
+        \have delta>0 => C>0 <∘ C<delta
+        \in <-rat.1 $ h x <∘r transport (_ <) (pmap (_ *) (inv (ExUpperReal.*-rat (<=-less $ RatField.finv>0 delta>0) (<=-less eps>0))) *> inv *-assoc *> pmap (`* _) (ExUpperReal.*-rat (<=-less delta>0) (<=-less $ RatField.finv>0 delta>0) *> pmap ExUpperReal.fromRat (RatField.finv-right $ RatField.>_/= delta>0)) *> ExUpperRealSemigroup.ide-left (ExUpperReal.<=-rat.1 $ <=-less eps>0)) (ExUpperRealSemigroup.<_* (ExUpperReal.<=-rat.1 $ <=-less C>0) norm>=0 (<-rat.2 C<delta) (<-rat.2 |x|<delta)))
     }
   }
-  \default isBounded => {?}
-  {- TODO[server2]
-    \case func-norm-uniform PosUpperRealSemiring.zro<ide \with {
-    | inP (delta, inP (delta',delta'>0,delta'<=delta), h) => inP (fromRat (RatField.finv delta'), U_<_fromRat $ RatField.finv>0 $ fromRat_U_< delta'>0, \lam x {q} p =>
-        \have | q1>=0 => <=-less $ RatField.finv>0 $ U-pos p
-              | |x|<delta'*q => PosUpperRealSemiring.finv_<-rotate-right (fromRat_U_< delta'>0) (U_<_fromRat p)
-        \in <_U_fromRat (<=-less $ U-pos p) $ transport (_ <) ide-right $ PosUpperRealSemiring.finv_<-rotate-right (U-pos p) $ transport (`< _) (RealBanachSpace.norm_*q-ofPos q1>=0) $ transport (norm __ < _) (func-*q \this) $ h {RatField.finv q QModule.*q x} $ transportInv (`< _) (RealBanachSpace.norm_*q-ofPos q1>=0) $ PosUpperRealSemiring.finv_<-rotate-left (U-pos p) $ |x|<delta'*q <∘l =_<= *-comm <=∘ PosUpperRealSemiring.<=_* <=-refl (transportInv (UpperRealAbMonoid.`<= _) (fromRat-upper $ <=-less $ fromRat_U_< delta'>0) delta'<=delta))
+  \default isBounded => \case func-norm-uniform zro<ide \with {
+    | inP (delta,delta>0,h) => inP (RatField.finv delta, RatField.finv>0 delta>0, \lam x {q} p =>
+      \have q>0 => ExUpperRealSemigroup.*_>=0 p
+      \in <-rat.1 $ transport (_ <) (ExUpperReal.*-rat (<=-less q>0) (<=-less zro<ide) *> pmap ExUpperReal.fromRat ide-right) $ ExUpperRealSemigroup.finv_<-rotate-right q>0 $ transport (`< _) (pmap norm func-*q *> BanachSpace.norm_*q *> pmap (ExUpperReal.`* _) (RatField.abs-ofPos $ <=-less $ RatField.finv>0 q>0)) $ <-rat.2 $ h $ <-rat.1 $ transportInv (`< _) (BanachSpace.norm_*q *> pmap (`* _) (pmap ExUpperReal.fromRat $ RatField.abs-ofPos $ <=-less $ RatField.finv>0 q>0)) $ ExUpperRealSemigroup.finv_<-rotate-left q>0 (<-rat.2 delta>0) $ transport (_ <) *-comm $ ExUpperRealSemigroup.finv_<-rotate-right delta>0 (<-rat.2 p))
   }
-  -}
+} \where {
+  \open ExUpperRealAbMonoid(<-rat)
 }

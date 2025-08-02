@@ -98,11 +98,11 @@
   | norm_ide : norm 1 = ExUpperReal.fromRat 1
   | norm_ide_<= => =_<= norm_ide
 
-  {- TODO[server2]
-  \lemma norm_Inv {x : E} (d : Monoid.Inv x) : Monoid.Inv (norm x) (norm d.inv) \cowith
-    | inv-left => inv norm_* *> pmap norm d.inv-left *> norm_ide
-    | inv-right => inv norm_* *> pmap norm d.inv-right *> norm_ide
-  -}
+  \lemma norm_Inv-cancel-left {x : E} (d : Monoid.Inv x) {y z : ExUpperReal} (y>=0 : 0 <= y) (z>=0 : 0 <= z) (p : norm x ExUpperRealSemigroup.* y = norm x ExUpperRealSemigroup.* z) : y = z
+    => inv (pmap (ExUpperRealSemigroup.`* _) (inv norm_* *> pmap norm d.inv-left *> norm_ide) *> ExUpperRealSemigroup.ide-left y>=0) *> ExUpperRealSemigroup.*-assoc *> pmap (ExUpperRealSemigroup.* _) p *> inv ExUpperRealSemigroup.*-assoc *> pmap (ExUpperRealSemigroup.`* _) (inv norm_* *> pmap norm d.inv-left *> norm_ide) *> ExUpperRealSemigroup.ide-left z>=0
+
+  \lemma norm_Inv-cancel-right {x y : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {z : E} (d : Monoid.Inv z) (p : x ExUpperRealSemigroup.* norm z = y ExUpperRealSemigroup.* norm z) : x = y
+    => norm_Inv-cancel-left d x>=0 y>=0 (*-comm *> p *> *-comm)
 }
 
 \class PseudoValuedRing \extends PseudoNormedRing, ExPseudoValuedRing
