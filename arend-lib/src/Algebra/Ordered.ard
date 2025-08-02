@@ -46,19 +46,14 @@
     => transport (`<= _) zro-left $ <=_+ a>=0 b>=0
 }
 
-\class PosetAbMonoid \extends PosetAddMonoid, AbMonoid
-
--- TODO[server2]: Do we really need biordered monoids?
-\class BiorderedAddMonoid \extends PosetAddMonoid, BiorderedSet
-
-\class BiorderedAbMonoid \extends BiorderedAddMonoid, PosetAbMonoid
-
-\class BiorderedLatticeAbMonoid \extends BiorderedAbMonoid, BiorderedLattice
+\class BiorderedLatticeAddMonoid \extends PosetAddMonoid, BiorderedLattice
   | meet_+-left {a b c : E} : a + b ∧ c = (a + b) ∧ (a + c)
   | join_+-left {a b c : E} : a + (b ∨ c) = (a + b) ∨ (a + c)
   | meet_+-right {a b c : E} : a ∧ b + c = (a + c) ∧ (b + c)
-  | meet_+-right => +-comm *> meet_+-left *> pmap2 (∧) +-comm +-comm
   | join_+-right {a b c : E} : (a ∨ b) + c = (a + c) ∨ (b + c)
+
+\class BiorderedLatticeAbMonoid \extends BiorderedLatticeAddMonoid, AbMonoid
+  | meet_+-right => +-comm *> meet_+-left *> pmap2 (∧) +-comm +-comm
   | join_+-right => +-comm *> join_+-left *> pmap2 (∨) +-comm +-comm
 
 \class LinearlyBiorderedAbMonoid \extends BiorderedLatticeAbMonoid, LinearLattice
