@@ -17,6 +17,7 @@
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
+\import Order.LinearOrder
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
@@ -607,6 +608,17 @@
     => \case FinSum_char a \with {
          | inP (e : Equiv, q) => q *> BigSum-unique (e.ret j) (\lam i c => p (e i) \lam s => c $ inv $ e.adjoint s) *> pmap a (e.f_ret j)
        }
+
+  \lemma FinSum-unique2 {J : FinSet} {i j : J} (i/=j : i /= j) {x : J -> E} (p : \Pi (k : J) -> k /= i -> k /= j -> x k = 0) : FinSum x = x i + x j
+    => \case FinSum_char x \with {
+      | inP (e,q) => q *> \case LinearOrder.dec<_<= {NatSemiring} (e.ret i) (e.ret j) \with {
+        | inl i<j => BigSum-unique2 i<j (\lam k k/=i k/=j => p (e k) (\lam ek=i => k/=i $ inv (e.ret_f k) *> pmap e.ret ek=i) (\lam ek=j => k/=j $ inv (e.ret_f k) *> pmap e.ret ek=j)) *> pmap2 (x __ + x __) (e.f_ret i) (e.f_ret j)
+        | inr j<=i => BigSum-unique2 (\case LinearOrder.dec<_<= {NatSemiring} (e.ret j) (e.ret i) \with {
+          | inl j<i => j<i
+          | inr i<=j => absurd $ i/=j $ inv (e.f_ret i) *> pmap e (fin_nat-inj $ NatSemiring.<=-antisymmetric i<=j j<=i) *> e.f_ret j
+        }) (\lam k k/=j k/=i => p (e k) (\lam ek=i => k/=i $ inv (e.ret_f k) *> pmap e.ret ek=i) (\lam ek=j => k/=j $ inv (e.ret_f k) *> pmap e.ret ek=j)) *> pmap2 (x __ + x __) (e.f_ret j) (e.f_ret i) *> +-comm
+      }
+    }
 
   \lemma FinSum-pred {P : E -> \Prop} (P0 : P 0) (P+ : \Pi {x y : E} -> P x -> P y -> P (x + y)) {J : FinSet} {a : J -> E} (p : \Pi (j : J) -> P (a j)) : P (AbMonoid.FinSum a)
     => \case FinSum_char a \with {
