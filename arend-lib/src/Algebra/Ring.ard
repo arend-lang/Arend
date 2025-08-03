@@ -6,6 +6,7 @@
 \import Algebra.Ring.Ideal
 \import Algebra.Semiring
 \import Arith.Nat
+\import Equiv
 \import Function.Meta ($)
 \import Logic
 \import Logic.Meta
@@ -105,10 +106,26 @@
     | Semiring => Semiring.op
 } \where {
   -- | A ring with a tight apartness relation.
-  \class With# \extends Ring, AddGroup.With#
+  \class With# \extends Ring, AddGroup.With# {
     | #0-*-left {x y : E} : (x * y) `#0 -> x `#0
     | #0-*-right {x y : E} : (x * y) `#0 -> y `#0
     | #0-negative {x} x#0 => #0-*-left (transport #0 (inv (negative_* *> ide-right)) x#0)
+
+    \lemma #0-FinSum {J : FinSet} {x : J -> E} (p : FinSum x `#0) : ∃ (j : J) (x j `#0)
+      => \case FinSum_char x \with {
+        | inP (e,q) => \case #0-BigSum (transport #0 q p) \with {
+          | inP (j,xej#0) => inP (e j, xej#0)
+        }
+      }
+
+    \lemma #0-FinSum-conv {J : FinSet} {x : J -> E} {i : J} (xi#0 : x i `#0) : FinSum x `#0 || (\Sigma (j : J) (j /= i) (x j `#0))
+      => \case FinSum_char x \with {
+        | inP (e, p) => \case #0-BigSum-conv {_} {\new Array E J.finCard \lam j => x (e j)} $ rewrite e.f_ret xi#0 \with {
+          | byLeft r => byLeft $ transportInv #0 p r
+          | byRight (j,j/=i,xej#0) => byRight (e j, \lam ej=i => j/=i $ inv (e.ret_f j) *> pmap e.ret ej=i, xej#0)
+        }
+      }
+  }
 
   -- | A ring with decidable equality.
   \class Dec \extends AddGroup.Dec, With#

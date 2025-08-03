@@ -269,6 +269,9 @@
         }
       }
 
+    \protected \lemma generalized' {X : CompleteExNormedRing} {x : X} (|x|<1 : X.norm x < 1) : \Sigma (xi : Inv (1 - x)) (IsSeriesSum (pow x) xi.inv)
+      => {?}
+
     \protected \lemma generalized {X : CompleteValuedRing} {x : X} (xi : Inv (1 - x)) (|x|<1 : X.norm x < 1) : seriesSum (pow x) = defined xi.inv
       => {?}
     {- TODO[server2]

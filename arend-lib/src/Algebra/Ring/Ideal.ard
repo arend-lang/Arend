@@ -151,8 +151,8 @@
   \lemma closure2-lem {R : CRing} {a : R} (f : Bool -> R)
     : closure f a <-> ∃ (c d : R) (a = f true * c + f false * d)
     => \have (g,h) => fin-closure-lem f
-       \in (\lam s => TruncP.map (g s) (\lam (c, a=fc) => (c true, c false, a=fc *> FinSum_char2 _ BoolFin.equiv *> equation)),
-            \lam (inP (c, d, a=fc)) => h (inP (if __ c d, a=fc *> inv (FinSum_char2 _ BoolFin.equiv *> equation))))
+       \in (\lam s => TruncP.map (g s) (\lam (c, a=fc) => (c true, c false, a=fc *> FinSum_char2 BoolFin.equiv *> equation)),
+            \lam (inP (c, d, a=fc)) => h (inP (if __ c d, a=fc *> inv (FinSum_char2 BoolFin.equiv *> equation))))
 
   \lemma fin-closure-lem {D : FinSet} {R : CRing} {a : R} (f : D -> R)
     : closure f a <-> ∃ (c : D -> R) (a = FinSum (\lam i => c i * f i))
@@ -164,10 +164,10 @@
                  TruncP.map (g (inP (map (\lam (r, d) => (r, eq.ret d)) l,
                                      a=fl *> pmap BigSum (exts (\lam j => pmap (_ * f __) (inv (eq.f_ret _)))))))
                      (\lam (c, a=fc) => (\lam d => c (eq.ret d),
-                                         a=fc *> pmap BigSum (exts (\lam j => pmap (c __ * _) (inv (eq.ret_f _)))) *> inv (FinSum_char2 _ eq)
+                                         a=fc *> pmap BigSum (exts (\lam j => pmap (c __ * _) (inv (eq.ret_f _)))) *> inv (FinSum_char2 eq)
                                         )),
              \lam (inP (c, a=fc)) =>
-                 TruncP.map (h (inP (\lam i => c (eq i), a=fc *> FinSum_char2 _ eq))) (\lam (l, a=fl) => (map (\lam (r, i) => (r, eq i)) l, a=fl)))
+                 TruncP.map (h (inP (\lam i => c (eq i), a=fc *> FinSum_char2 eq))) (\lam (l, a=fl) => (map (\lam (r, i) => (r, eq i)) l, a=fl)))
        }
 
   \lemma closureN-lem {R : CRing} {a : R} {B : Array R}

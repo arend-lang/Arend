@@ -47,6 +47,8 @@
   | 0 => CoverMap.const 1
   | suc n => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (pow-cover n) CoverMap.id
 
+\class CompleteExNormedRing \extends ExPseudoNormedRing, CompleteExNormedAbGroup
+
 \class PseudoNormedRing \extends ExPseudoNormedRing, PseudoNormedPseudoRing
 
 \lemma lnorm_ide_<= {X : PseudoNormedRing} : X.norm 1 <= 1
@@ -122,7 +124,7 @@
   | norm_* => pmap ExUpperReal.fromRat RatField.abs_* *> {ExUpperReal} inv (ExUpperReal.*-rat RatField.abs>=0 RatField.abs>=0)
   | norm_ide => idp
 
-\class CompleteValuedRing \extends PseudoValuedRing, CompleteNormedAbGroup
+\class CompleteValuedRing \extends PseudoValuedRing, CompleteExNormedRing, CompleteNormedAbGroup
 
 \class CompleteValuedCRing \extends CompleteValuedRing, CRing
 

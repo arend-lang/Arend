@@ -62,7 +62,7 @@
 
   \lemma FinSum-ldistr {A : FinSet} {x : E} {y : A -> E} : x * FinSum y = FinSum (x * y __)
     => \case FinSum_char y \with {
-      | inP p => pmap (x *) p.2 *> BigSum-ldistr *> inv (FinSum_char2 _ p.1)
+      | inP p => pmap (x *) p.2 *> BigSum-ldistr *> inv (FinSum_char2 p.1)
     }
 
   \lemma BigSum-rdistr {l : Array E} {z : E} : BigSum l * z = BigSum (\lam i => l i * z) \elim l
@@ -71,7 +71,7 @@
 
   \lemma FinSum-rdistr {A : FinSet} {x : E} {y : A -> E} : FinSum y * x = FinSum (y __ * x)
     => \case FinSum_char y \with {
-      | inP p => pmap (`* x) p.2 *> BigSum-rdistr *> inv (FinSum_char2 _ p.1)
+      | inP p => pmap (`* x) p.2 *> BigSum-rdistr *> inv (FinSum_char2 p.1)
     }
 
   \lemma FinSum-distr {A B : FinSet} {x : A -> E} {y : B -> E} : FinSum x * FinSum y = FinSum (\lam (s : \Sigma A B) => x s.1 * y s.2)
