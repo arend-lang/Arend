@@ -103,10 +103,14 @@
   | norm-ext {x : E} : norm x = ExUpperRealAbMonoid.zro -> x = 0
   | dist-ext p => fromZero $ norm-ext $ inv norm-dist *> p
 
-\class PseudoNormedAbGroup \extends ExPseudoNormedAbGroup, PseudoMetricSpace {
+\class BoundedExPseudoNormedAbGroup \extends ExPseudoNormedAbGroup
+  | norm-bounded (x : E) : IsBounded x
+
+\class PseudoNormedAbGroup \extends BoundedExPseudoNormedAbGroup, PseudoMetricSpace {
   \override norm : E -> Real
   \default dist x y : Real => norm (x - y)
   \default norm-dist \as norm-dist-impl {x} {y} : dist x y = norm (x - y) => idp
+  | norm-bounded x => U-inh
 }
 
 \func lnorm {X : PseudoNormedAbGroup} (x : X) : Real

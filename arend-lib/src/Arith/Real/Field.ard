@@ -149,6 +149,10 @@
          (\lam (inP (a,x<a,b,y<b,ab<=d)) => inP (a, x<a, rat_real_<.2 $ x>=0 <∘r real_<_U.2 x<a, b, y<b, rat_real_<.2 $ y>=0 <∘r real_<_U.2 y<b, ab<=d),
           \lam (inP (a,x<a,_,b,y<b,_,ab<=d)) => inP (a,x<a,b,y<b,ab<=d))) (<->sym ExUpperReal.*_U_<=)
 
+    \lemma pow-upper {x : Real} (x>=0 : 0 <= x) {n : Nat} : RealField.pow x n = {ExUpperReal} ExUpperRealSemigroup.pow x n \elim n
+      | 0 => idp
+      | suc n => *-upper (RealField.pow>=0 x>=0) x>=0 *> {ExUpperReal} pmap (ExUpperReal.`* _) (pow-upper x>=0)
+
     \lemma *-cover : CoverMap (ProductCoverSpace RealNormed RealNormed) RealNormed (\lam s => s.1 * s.2)
       => transportInv (CoverMap _ _) (ext \lam s => \peval s.1 * s.2) *-cover-def
 

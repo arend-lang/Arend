@@ -26,8 +26,7 @@
 \import Topology.UniformSpace.Product
 \open Monoid(pow)
 
-\class ExPseudoNormedPseudoRing \extends ExPseudoNormedAbGroup, TopSemigroup, PseudoRing
-  | norm-bounded (x : E) : IsBounded x
+\class ExPseudoNormedPseudoRing \extends BoundedExPseudoNormedAbGroup, TopSemigroup, PseudoRing
   | norm_*_<= {x y : E} : norm (x * y) <= norm x ExUpperReal.* norm y
   | *-cont => bilinear-locally-uniform (*) rdistr_- ldistr_- norm-bounded norm-bounded norm_*_<=
 
@@ -35,7 +34,6 @@
   => bilinear-locally-uniform (*) X.rdistr_- X.ldistr_- norm-bounded norm-bounded norm_*_<=
 
 \class PseudoNormedPseudoRing \extends ExPseudoNormedPseudoRing, PseudoNormedAbGroup
-  | norm-bounded x => U-inh
 
 \lemma lnorm_*_<= {X : PseudoNormedPseudoRing} {x y : X} : lnorm (x * y) <= lnorm x * lnorm y
   => Real.<=-upper.2 $ transportInv (_ ExUpperReal.<=) (RealField.*-upper lnorm>=0 lnorm>=0) X.norm_*_<=
