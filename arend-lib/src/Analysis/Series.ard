@@ -82,6 +82,11 @@
   | suc n, 0 => 0
   | suc n, suc m => midSum (\lam j => S (suc j)) n m
 
+\lemma midSum_hom {A B : AddMonoid} (f : AddMonoidHom A B) {S : Series A} {n m : Nat} : f (midSum S n m) = midSum (\lam i => f (S i)) n m \elim n, m
+  | 0, m => partialSum_hom f
+  | suc n, 0 => f.func-zro
+  | suc n, suc m => midSum_hom f
+
 \func IsConvUpperSeries (S : Series ExUpperReal) : \Prop
   => ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (midSum S N n).U eps)
 
@@ -297,18 +302,15 @@
   }
 
 \lemma MTest {X : \Set} {Y : ExPseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Nat -> Real)
-             (Mp : \Pi (n : Nat) (x : X) -> Y.norm (f n x) <= M n) (Mc : IsConvSeries M) : IsUniFuncConvergent \lam n x => partialSum (f __ x) n
-  => {?}
-  {- TODO[server2]
-    \lam Du => \case dist-uniform.1 Du \with {
-    | inP (eps,eps>0,h) => \case series-conv.conv Mc eps>0 \with {
-      | inP (N,g) => inP (N, \lam x => \case h (partialSum (f __ x) N) \with {
-        | inP (V,DV,Vg) => inP (V, DV, \lam p => Vg $ rewrite (Y.norm-dist, norm_- {Y}, inv $ midSum-diff {_} {f __ x} p) $
-            rewrite (RealAbGroup.abs-ofPos $ midSum>=0 \lam j => lnorm>=0 <=∘ Mp j x) (midSum_norm <=∘ midSum_<= \lam _ _ => Mp _ x) <∘r g p)
+             (Mp : \Pi (n : Nat) (x : X) -> norm (f n x) <= M n) (Mc : IsConvSeries M) : IsUniFuncConvergent \lam n x => partialSum (f __ x) n
+  => \lam Du => \case dist-uniform.1 Du \with {
+    | inP (eps,eps>0,h) => \case series-conv.1 Mc eps>0 \with {
+      | inP (N,g) => inP (N, \lam x => \case h $ partialSum (f __ x) N \with {
+        | inP (V,DV,Vg) => inP (V, DV, \lam p => Vg $ rewrite (norm-dist, norm_-, inv $ midSum-diff p) $
+             ExUpperRealAbMonoid.<-rat.1 $ midSum_norm <∘r transportInv (_ ExUpperRealAbMonoid.<=) (midSum_hom real-upperReal) (midSum_<= \lam {j} _ _ => Mp j x) <∘r Real.<=-upper.1 join-left <∘r ExUpperRealAbMonoid.<-rat.2 (g p))
       })
     }
   }
-    -}
 
 \lemma partialSum-cover {X : CoverSpace} {Y : TopAbGroup} (f : Nat -> CoverMap X Y) (n : Nat) : CoverMap X Y \lam x => partialSum (f __ x) n
   => transportInv (CoverMap X Y) (ext \lam x => \peval partialSum _ _) $ BigSum-cover \lam (j : Fin n) => f j

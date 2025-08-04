@@ -2,6 +2,7 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Semiring
@@ -93,6 +94,10 @@
   \lemma =-upper {x y : Real} : (x = y) <-> (x = {ExUpperReal} y)
     => (\lam p => p, \lam p => RealAbGroup.<=-antisymmetric (<=_U-char.2 \lam y<a => rewrite p y<a) (<=_U-char.2 \lam x<a => rewriteI p x<a))
 }
+
+\lemma real-upperReal : AddMonoidHom RealAbGroup ExUpperRealAbMonoid (\lam x => x) \cowith
+  | func-zro => idp
+  | func-+ => RealAbGroup.+-upper
 
 \instance RealPointed : Pointed Real
   | ide => Real.fromRat 1
