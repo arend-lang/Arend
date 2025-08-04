@@ -393,6 +393,9 @@
     | 0, :: a nil => simplify
     | suc n, :: a l => pmap (a +) (BigSum_suc {_} {n} {l} *> pmap (_ + (a :: l) __) (fin_nat-inj (pmap suc (mod_< id<suc) *> inv (mod_< id<suc)))) *> inv +-assoc
 
+  \lemma BigSum_suc-nat {n : Nat} {f : Nat -> E} : BigSum (\new Array E (suc n) (f __)) = BigSum (\new Array E n (f __)) + f n
+    => BigSum_suc {_} {n} {f __} *> pmap (_ + f __) (mod_< id<suc)
+
   \lemma BigSum_zro {l : Array E} (p : \Pi (j : Fin l.len) -> l j = zro) : BigSum l = zro \elim l
     | nil => idp
     | :: a arr => pmap2 (+) (p 0) (BigSum_zro (\lam j => p (suc j))) *> zro-left

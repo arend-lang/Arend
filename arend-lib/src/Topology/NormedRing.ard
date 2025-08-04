@@ -43,6 +43,10 @@
 \class ExPseudoNormedRing \extends ExPseudoNormedPseudoRing, TopRing
   | norm_ide_<= : norm 1 <= ExUpperReal.fromRat 1
 
+\lemma norm_<=_pow {X : ExPseudoNormedRing} {x : X} {n : Nat} : norm (pow x n) <= ExUpperRealSemigroup.pow (norm x) n \elim n
+  | 0 => norm_ide_<=
+  | suc n => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* norm_<=_pow <=-refl
+
 \lemma pow-cover {X : ExPseudoNormedRing} (n : Nat) : CoverMap X X (pow __ n) \elim n
   | 0 => CoverMap.const 1
   | suc n => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (pow-cover n) CoverMap.id

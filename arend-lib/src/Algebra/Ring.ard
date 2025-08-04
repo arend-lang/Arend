@@ -76,11 +76,9 @@
       | inv-right => negative_* *> j.inv-right
     }
 
-  \lemma geometric-partial-sum {n : Nat} {x : E} (xi : Monoid.Inv (1 - x)) : xi.inv - BigSum (\new Array E n (\lam j => Monoid.pow x j)) = Monoid.pow x n * xi.inv
-    => inv (rdistr_- *> pmap2 (-) ide-left (*-assoc *> pmap (_ *) xi.inv-right *> ide-right)) *> pmap (`* _) (pmap (1 -) ldistr_- *> \case \elim n \with {
-      | 0 => simplify
-      | suc n => later $ rewrite (ide-right, 2 BigSum_suc, rdistr, toFin'=id id<suc, BigSum-rdistr) equation.abGroup
-    })
+  \lemma geometric-partial-sum {n : Nat} {x : E} : (1 - x) * BigSum (\new Array E n (\lam j => pow x j)) = 1 - pow x n \elim n
+    | 0 => zro_*-right *> inv negative-right
+    | suc n => pmap (_ *) (AddMonoid.BigSum_suc-nat {_} {n} {pow x}) *> ldistr *> pmap2 (+) geometric-partial-sum rdistr *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (_ +) negative_*-left *> pmap (`+ _) (pmap (_ +) ide-left *> negative-left) *> zro-left *> pmap negative pow-left)
 
   \func IsNilpotent (x : E) => ∃ (n : Nat) (pow x n = 0)
 

@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Arith.Int
@@ -224,6 +225,10 @@
       => transport2 (<) ExUpperRealAbMonoid.+-comm ExUpperRealAbMonoid.+-comm (<_+-left y<z)
   }
 
+\lemma rat-upperReal : AddMonoidHom RatField ExUpperRealAbMonoid ExUpperReal.fromRat \cowith
+  | func-zro => idp
+  | func-+ => inv ExUpperReal.+-rat
+
 \instance ExUpperRealSemigroup : CSemigroup ExUpperReal
   | * => *
   | *-assoc => <=-antisymmetric (\lam {d} xyz<d => \case *_U.1 xyz<d \with {
@@ -342,6 +347,18 @@
 
     \lemma finv_<-rotate-left {a : Rat} (a>0 : 0 RatField.< a) {b c : ExUpperReal} (c>0 : 0 < c) (p : b < a * c) : RatField.finv a * b < c
       => transport (_ <) (inv ExUpperRealSemigroup.*-assoc *> pmap (`* c) (*-rat (<=-less $ RatField.finv>0 a>0) (<=-less a>0) *> pmap fromRat (RatField.finv-left $ RatField.>_/= a>0)) *> ide-left (<=-less c>0)) $ <_*-right (RatField.finv>0 a>0) p $ <_*-positive (<-rat.2 a>0) c>0
+
+    \func pow (x : ExUpperReal) (n : Nat) : ExUpperReal \elim n
+      | 0 => 1
+      | suc n => pow x n * x
+
+    \lemma rat-pow {x : Rat} (x>=0 : 0 RatField.<= x) {n : Nat} : pow x n = ExUpperReal.fromRat (RatField.pow x n) \elim n
+      | 0 => idp
+      | suc n => pmap (`* x) (rat-pow x>=0) *> *-rat (RatField.pow>=0 x>=0) x>=0
+
+    \lemma pow_<= {x y : ExUpperReal} (x<=y : x <= y) {n : Nat} : pow x n <= pow y n \elim n
+      | 0 => <=-refl
+      | suc n => <=_* (pow_<= x<=y) x<=y
   }
 
 \record UpperReal \extends ExUpperReal {
