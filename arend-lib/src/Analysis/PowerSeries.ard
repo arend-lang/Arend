@@ -17,6 +17,7 @@
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
+\import Order.Lattice
 \import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -94,25 +95,24 @@
         }
 
 \lemma powerSeries-unbounded-conv {X : ExPseudoValuedRing} (Xu : X.IsUnbounded) {cs : Nat -> X} (Sc : \Pi (x : X) -> IsConvSeries (powerSeries cs __ x)) : IsPowerSeriesConv cs
-  => \lam {a} a>=0 => {?}
-  {-
-    \case Real.natBounded {a} \with {
+  => \lam {a} a>=0 => \case Real.natBounded {a} \with {
     | inP (B,a<B) => \case Xu B \with {
-      | inP (x,B<|x|) => convRadius-conv cs a>=0 $ <LU-transitive (inP (B, a<B, real_<_L.1 B<|x|)) $ convRadius-div cs (Sc x)
+      | inP (x,B<=|x|) => \case convRadius-div cs (Sc x) (ExUpperRealAbMonoid.<-rat.2 a<B <∘l B<=|x|) \with {
+        | inP (b,a<b,bB) => series_<= (\lam n => ExUpperRealSemigroup.<=_* <=-refl (ExUpperReal.<=-rat.1 $ RatField.pow_<=-monotone a>=0 $ <=-less a<b)) bB
+      }
     }
   }
-  -}
 
-\lemma power-ratio-test {c b : Series Real} (c>=0 : \Pi (j : Nat) -> 0 <= c j) (bp : \Pi (n : Nat) -> c (suc n) <= c n * b n) {l : Real}
-                        (bl : RealNormed.IsLimit b l) {x : Real} (x>=0 : 0 <= x) (lx : l * x < 1) : IsConvSeries \lam j => c j * pow x j
-  => absConv-isConv $ ratio-test (\lam j => b j * x) (\lam j => later $ rewrite
-        (RealField.abs-ofPos $ <=_*_positive_positive (c>=0 (suc j)) (pow>=0 {_} {_} {suc j} x>=0),
-         RealField.abs-ofPos (<=_*_positive_positive (c>=0 j) (pow>=0 x>=0))) $
-          transport (_ ExUpperRealAbMonoid.<=) (RealField.*-upper {?} {?}) {?}
-        -- <=_*_positive-left (bp j) (pow>=0 {_} {_} {suc j} x>=0) <=∘ =_<= (equation {CRing})
-                                                     ) lx $
-      cont-limit bl $ RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const x)
+\lemma power-ratio-test {X : ExPseudoNormedRing} {c : Series X} {b : Series Real} (bp : \Pi (n : Nat) -> norm (c (suc n)) <= norm (c n) * b n)
+                        {l : Real} (bl : RealNormed.IsLimit b l) {a : Rat} (a>=0 : 0 <= a) (la<1 : l * a < 1) : IsConvUpperSeries \lam j => norm (c j) * pow a j
+  => upper-ratio-test (\lam n => ExUpperRealSemigroup.*_>=0) (rewrite (ExUpperRealSemigroup.ide-right norm>=0) (norm-bounded (c 0))) (\lam n => b n * a)
+    (\lam n => <=_* (bp n) <=-refl <=∘ transport2 (<=) (inv *-assoc) (inv *-assoc) (<=_* <=-refl $
+      transport2 (<=) (*-comm *> *-assoc *> pmap (_ *) (*-comm *> ExUpperReal.*-rat (RatField.pow>=0 a>=0) a>=0)) (inv ExUpperRealSemigroup.*_join) $
+      <=_* join-left $ transport (_ <=) (inv {ExUpperReal} (RealField.*-upper join-right (rat_real_<=.1 a>=0)) *> {ExUpperReal}
+        RealField.join_*-right (rat_real_<=.1 a>=0) *> {ExUpperReal} pmap (_ RealAbGroup.∨) RealField.zro_*-left *> {ExUpperReal} RealAbGroup.join-upper) $ <=_* (Real.<=-upper.1 join-left) <=-refl))
+    la<1 (cont-limit bl $ RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const (Real.fromRat a)))
+  \where \open ExUpperRealSemigroup(<=_*)
 
 \lemma power-ratio-test-inf {X : ExPseudoNormedRing} (cs : Series X) (b : Series Real)
                             (bp : \Pi (n : Nat) -> norm (cs (suc n)) <= norm (cs n) * b n) (bl : RealNormed.IsLimit b 0) : IsPowerSeriesConv cs
-  => \lam a>=0 => {?} -- power-ratio-test (\lam j => lnorm>=0) bp bl a>=0 $ rewrite Ring.zro_*-left zro<ide
+  => \lam a>=0 => power-ratio-test bp bl a>=0 $ rewrite Ring.zro_*-left zro<ide

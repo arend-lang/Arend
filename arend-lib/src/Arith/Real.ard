@@ -271,6 +271,9 @@
         | inr x<=a => byRight $ transport (a <) (join/=left $ StrictPoset.<_/= $ x<=a <∘r a<xy) a<xy
       })
 
+    \lemma join-upper {x y : Real} : join x y = {ExUpperReal} ExUpperReal.join x y
+      => <=-antisymmetric (\lam p => join_U.2 (ExUpperReal.join_U.1 p)) (\lam p => ExUpperReal.join_U.2 (join_U.1 p))
+
     \lemma zro<ide : Real.fromRat 0 RealAbGroup.< Real.fromRat 1
       => real_<-rat-char.2 $ inP $ later (ratio 1 2, idp, idp)
 

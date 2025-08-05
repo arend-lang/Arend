@@ -261,6 +261,11 @@
         | inP (a,x'<a,a>0,b,y'<b,b>0,ab<d) => *_U.2 $ inP (a, x<=x' x'<a, a>0, b, y<=y' y'<b, b>0, ab<d)
       }
 
+    \lemma *_join {x y : ExUpperReal} : x * y = join x 0 * join y 0
+      => <=-antisymmetric (<=_* join-left join-left) \lam {d} xy<d => \case *_U.1 xy<d \with {
+        | inP (a,x<a,a>0,b,y<b,b>0,ab<d) => *_U.2 $ inP (a, join_U.2 (x<a,a>0), a>0, b, join_U.2 (y<b,b>0), b>0, ab<d)
+      }
+
     \lemma <_* {x x' y y' : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) (x<x' : x < x') (y<y' : y < y') : x * y < x' * y' \elim x<x', y<y'
       | inP (a,x<a,a<=x'), inP (b,y<b,b<=y') => inP (a RatField.* b, *_U_<=.2 $ inP (a, x<a, x>=0 x<a, b, y<b, y>=0 y<b, <=-refl), transport (`<= _) (*-rat (<=-less $ x>=0 x<a) (<=-less $ y>=0 y<b)) $ <=_* a<=x' b<=y')
 

@@ -300,16 +300,16 @@
 \lemma geometric-series-absConv {X : ExPseudoNormedRing} {x : X} (|x|<1 : (norm x).U 1) : IsAbsConvSeries (pow x)
   => series_<= (\lam j => norm_<=_pow) $ geometric-upper-series-conv norm>=0 |x|<1
 
-\lemma ratio-test {X : BoundedExPseudoNormedAbGroup} {S : Series X} (b : Series Real) (bp : \Pi (n : Nat) -> X.norm (S (suc n)) <= X.norm (S n) * b n)
-                  {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsAbsConvSeries S
+\lemma upper-ratio-test {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (S0b : ∃ (B : Rat) ((S 0).U B))
+                        (b : Series Real) (bp : \Pi (n : Nat) -> S (suc n) <= S n * b n)
+                        {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsConvUpperSeries S
   => \case real_<-char.1 (<_join-univ l<1 zro<ide) \with {
     | inP (r,lz<r,r<1) => \case (real_<-rat-char {0} {(r : Real) - l}).1 $ linarith $ usingOnly (join-left <∘r lz<r) \with {
       | inP (q,q>0,q<r-l) => \case bl (OBall-open {_} {q} {l}) $ rewrite RealNormed.dist-refl q>0 \with {
-        | inP (N,g) => (series-shifts-absConv N).2
+        | inP (N,g) => (upperSeries-shifts-conv S>=0 N).2
           \have r>=0 => join-right <=∘ <=-less lz<r
-          \in series_<= (iter-bound (\lam j => norm>=0) r>=0 (\lam j => bp (j + N)) (\lam j => linarith (RealAbGroup.abs>=_- <=∘ <=-less (real_<_U.2 $ g $ <=_+ zero<=_ <=-refl), real_<_L.2 q<r-l))) \case norm-bounded (S N) \with {
-            | inP (B,|SN|<B) => series_*-bounded (\lam j => Real.<=-upper.1 $ RealField.pow>=0 r>=0) (inP (B, \lam _ => |SN|<B)) $ transport IsConvUpperSeries (path \lam i n => inv {ExUpperReal} (RealField.pow-upper r>=0 {n}) i) $ geometric-upper-series-conv (ExUpperReal.<=-rat.1 $ rat_real_<=.2 r>=0) (rat_real_<.2 r<1)
-          }
+          \in series_<= (iter-bound (\lam j => S>=0 (j + N)) r>=0 (\lam j => bp (j + N)) (\lam j => linarith (RealAbGroup.abs>=_- <=∘ <=-less (real_<_U.2 $ g $ <=_+ zero<=_ <=-refl), real_<_L.2 q<r-l))) $
+          series_*-bounded (\lam j => Real.<=-upper.1 $ RealField.pow>=0 r>=0) (TruncP.map (S-bounded N) \lam (B,p) => (B, \lam _ => p)) $ transport IsConvUpperSeries (path \lam i n => inv {ExUpperReal} (RealField.pow-upper r>=0 {n}) i) $ geometric-upper-series-conv (ExUpperReal.<=-rat.1 $ rat_real_<=.2 r>=0) (rat_real_<.2 r<1)
       }
     }
   }
@@ -318,7 +318,17 @@
                       (bp : \Pi (n : Nat) -> f (suc n) <= f n * b n) (bb : \Pi (n : Nat) -> b n <= r) (j : Nat) : f j <= f 0 * pow r j \elim j
       | 0 => transportInv (_ <=) (ExUpperRealSemigroup.ide-right $ f>=0 0) <=-refl
       | suc j => bp j <=∘ ExUpperRealSemigroup.<=_* <=-refl (Real.<=-upper.1 $ bb j) <=∘ transport (_ <=) (*-assoc *> inv (pmap (_ *) (RealField.*-upper (RealField.pow>=0 r>=0) r>=0))) (ExUpperRealSemigroup.<=_* (iter-bound f>=0 r>=0 bp bb j) <=-refl)
+
+    \private \lemma S-bounded (n : Nat) : ∃ (B : Rat) ((S n).U B) \elim n
+      | 0 => S0b
+      | suc n => \case S-bounded n, (b n).U-inh \with {
+        | inP (B,Sn<B), inP (C,bn<C) => inP (B * (C ∨ 0) + 1, ExUpperRealAbMonoid.<-rat.1 $ bp n <∘r ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= Sn<B) (ExUpperReal.<_<= bn<C <=∘ ExUpperReal.<=-rat.1 join-left) <∘r transportInv (ExUpperRealAbMonoid.`< _) (ExUpperReal.*-rat (<=-less $ S>=0 n Sn<B) join-right) (ExUpperRealAbMonoid.<-rat.2 linarith))
+      }
   }
+
+\lemma ratio-test {X : BoundedExPseudoNormedAbGroup} {S : Series X} (b : Series Real) (bp : \Pi (n : Nat) -> norm (S (suc n)) <= norm (S n) * b n)
+                  {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsAbsConvSeries S
+  => upper-ratio-test (\lam j => norm>=0) (norm-bounded (S 0)) b bp l<1 bl
 
 \lemma MTest {X : \Set} {Y : ExPseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Series ExUpperReal)
              (Mp : \Pi (n : Nat) (x : X) -> norm (f n x) <= M n) (Mc : IsConvUpperSeries M) : IsUniFuncConvergent \lam n x => partialSum (f __ x) n
