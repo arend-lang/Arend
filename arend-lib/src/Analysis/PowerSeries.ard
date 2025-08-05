@@ -33,39 +33,34 @@
 \open Monoid(pow)
 \open LinearlyOrderedSemiring
 
-\func powerSeries {X : PseudoNormedRing} (cs : Nat -> X) (n : Nat) (x : X)
+\func powerSeries {X : ExPseudoNormedRing} (cs : Nat -> X) (n : Nat) (x : X)
   => cs n * pow x n
 
-\lemma powerSeries_0 {X : PseudoNormedRing} {cs : Nat -> X} : IsConvSeries (powerSeries cs __ 0)
-  => series-shift-conv.2 $ transport IsConvSeries (ext \lam n => inv $ pmap (_ *) Ring.zro_*-right *> Ring.zro_*-right) (seriesSum-conv zeroSeries-sum)
+\lemma powerSeries_0 {cs : Series ExUpperReal} (csb : \Pi (j : Nat) -> ∃ (B : Rat) ((cs j).U B)) : IsConvUpperSeries \lam j => cs j * RatField.pow 0 j
+  => (upperSeries-shift-conv \lam j => ExUpperRealSemigroup.*_>=0).2 \lam eps>0 => inP (0, \lam _ => transportInv (ExUpperReal.U {__} _) ((\peval partialSum _ _) *> AddMonoid.BigSum_zro \lam j => later $ pmap (_ *) (pmap ExUpperReal.fromRat $ RatField.pow_0 suc/=0) *> ExUpperRealSemigroup.zro_*-right (csb _)) eps>0)
 
-\func convRadius {X : PseudoNormedRing} (cs : Nat -> X) : LowerReal \cowith
-  | L a => ∃ (b : Real) (b.L a) (IsConvSeries \lam j => X.norm (cs j) * pow b j)
-  | L-inh => inP (-1, inP (0, idp, powerSeries_0))
-  | L-closed (inP (b,q<b,h)) q'<q => inP (b, L-closed q<b q'<q, h)
-  | L-rounded {a} (inP (b,a<b,h)) => \case L-rounded a<b \with {
-    | inP (a',a'<b,a<a') => inP (a', inP (b, a'<b, h), a<a')
-  }
+\func convRadius {X : ExPseudoNormedRing} (cs : Nat -> X) : LowerReal \cowith
+  | L a => ∃ (b : `> a) (IsConvUpperSeries \lam j => X.norm (cs j) * pow b j)
+  | L-inh => inP (-1, inP (0, idp, powerSeries_0 \lam j => norm-bounded _))
+  | L-closed (inP (b,q<b,h)) q'<q => inP (b, q'<q <∘ q<b, h)
+  | L-rounded {a} (inP (b,a<b,h)) => inP (RatField.mid a b, inP (b, RatField.mid<right a<b, h), RatField.mid>left a<b)
 
-\lemma convRadius-conv {X : PseudoNormedRing} (cs : Nat -> X) {x : Real} (x>=0 : 0 <= x) (p : x <LU convRadius cs)
-  : IsConvSeries (\lam j => X.norm (cs j) * pow x j) \elim p
-  | inP (a, |x|<a, inP (b,a<b,cc)) => series_<= (\lam j => <=_*_positive_positive lnorm>=0 (pow>=0 x>=0)) (\lam j => <=_*_positive-right lnorm>=0 (pow_<=-monotone x>=0 $ LinearOrder.<_<= $ real_<_U.2 |x|<a <∘ real_<_L.2 a<b)) cc
+\lemma convRadius-absConv {X : ExPseudoNormedRing} (cs : Nat -> X) {x : X} (p : norm x <LU convRadius cs) : IsAbsConvSeries (powerSeries cs __ x) \elim p
+  | inP (a, |x|<a, inP (b,a<b,cc)) => series_<= (\lam j => norm_*_<= <=∘ later (ExUpperRealSemigroup.<=_* <=-refl $ transport (_ <=) (ExUpperRealSemigroup.rat-pow $ <=-less $ norm>=0 |x|<a <∘ a<b) $ norm_<=_pow <=∘ ExUpperRealSemigroup.pow_<= (ExUpperReal.<_<= |x|<a <=∘ ExUpperReal.<=-rat.1 (<=-less a<b)))) cc
 
-\lemma convRadius-absConv {X : PseudoNormedRing} (cs : Nat -> X) {x : X} (p : X.norm x <LU convRadius cs) : IsAbsConvSeries (powerSeries cs __ x)
-  => {?} -- TODO[server2]: series_<= (\lam j => lnorm>=0) (\lam j => lnorm_*_<= <=∘ later (<=_*_positive-right lnorm>=0 norm_<=_pow)) (convRadius-conv cs lnorm>=0 p)
-
-\lemma convRadius-div {X : PseudoValuedRing} (cs : Nat -> X) {x : X} (p : IsConvSeries (powerSeries cs __ x)) : X.norm x LowerRealAbMonoid.<= convRadius cs
-  => \lam {a} a<|x| => \case LinearOrder.dec<_<= a 0, L-rounded a<|x| \with {
-    | inl a<0, _ => inP (0, a<0, powerSeries_0)
-    | inr a>=0, inP (b,b<|x|,a<b) => {?}
-    {- TODO[server2]
-      \have |x|>0 => rat_real_<=.1 a>=0 <∘r real_<_L.2 a<|x|
-      \in inP (b, a<b, transport IsConvSeries {\lam j => X.norm (powerSeries cs j x) * pow (Real.fromRat b * RealField.pinv |x|>0) j}
-          (ext \lam j => pmap2 (*) norm_* CMonoid.pow_*-comm *> *-assoc *> pmap (_ *) (pmap (_ *) *-comm *> inv *-assoc *> pmap (`* _) (pmap (`* _) norm_pow *> inv CMonoid.pow_*-comm *> pmap (pow __ j) (RealField.pinv-right |x|>0) *> Monoid.pow_ide) *> ide-left)) $
-          absConv-isConv $ series_*-lim (cont-limit (series-limit p) norm-metric) $ geometric-series-absConv $ later $
-            rewrite (RealField.abs-ofPos $ <=_*_positive_positive (rat_real_<=.1 $ a>=0 <=∘ LinearOrder.<_<= a<b) $ LinearOrder.<_<= $ OrderedField.pinv>0 |x|>0) $
-            rewrite OrderedField.pinv-right in <_*_positive-left (real_<_L.2 b<|x|) (OrderedField.pinv>0 |x|>0))
-    -}
+\lemma convRadius-div {X : ExPseudoValuedRing} (cs : Nat -> X) {x : X} (p : IsConvSeries (powerSeries cs __ x))
+                      {a : Rat} (a<|x| : a ExUpperRealAbMonoid.< norm x) : (convRadius cs).L a
+  => \case LinearOrder.dec<_<= a 0, \elim a<|x| \with {
+    | inl a<0, _ => inP (0, a<0, powerSeries_0 \lam j => norm-bounded _)
+    | inr a>=0, inP (c,a<c,c<=|x|) => \case isDense a<c \with {
+      | inP (b,a<b,b<c) =>
+        \have bc'>=0 => <=-less $ RatField.<_*_positive_positive (a>=0 <∘r a<b) $ RatField.finv>0 (a>=0 <∘r a<c)
+        \in inP (b, a<b, transport IsConvUpperSeries {\lam j => norm (cs j) * pow c j * ExUpperRealSemigroup.pow (b * RatField.finv c) j}
+                (later $ ext \lam n => *-assoc *> pmap (_ *) (pmap (_ *) (ExUpperRealSemigroup.rat-pow bc'>=0) *> ExUpperReal.*-rat (<=-less $ RatField.pow>0 $ a>=0 <∘r a<c) (RatField.pow>=0 bc'>=0) *> pmap ExUpperReal.fromRat (inv RatField.pow_*-comm *> pmap (pow __ n) (*-comm *> *-assoc *> pmap (b *) (RatField.finv-left $ RatField.>_/= $ a>=0 <∘r a<c) *> ide-right))))
+                (series_*-bounded (\lam j => ExUpperRealSemigroup.pow_>=0) (upperSeries-bounded_<= {_} {\lam n => norm (cs n * pow x n)}
+                    (\lam n => ExUpperRealSemigroup.<=_* {_} {_} {pow c n} <=-refl (transport2 (<=) (ExUpperRealSemigroup.rat-pow $ <=-less $ a>=0 <∘r a<c) (inv norm_pow) $ ExUpperRealSemigroup.pow_<= c<=|x|) <=∘ =_<= (inv X.norm_*)) $ series-lim-bound $ series-limit p) $
+                  geometric-upper-series-conv (ExUpperReal.<=-rat.1 bc'>=0) $ transport (`< _) *-comm $ RatField.<_rotate-left (a>=0 <∘r a<c) $ transportInv (b <) ide-right b<c))
+    }
   }
 
 \type IsPowerSeriesConv {X : PseudoNormedRing} (cs : Nat -> X) : \Prop

@@ -24,7 +24,7 @@
 \import Paths.Meta
 \open LinearOrder \hiding (<=)
 
-\func \infix 4 <LU (x : UpperReal) (y : LowerReal) : \Prop
+\func \infix 4 <LU (x : ExUpperReal) (y : LowerReal) : \Prop
   => ∃ (a : Rat) (x.U a) (y.L a)
 
 \lemma <LU-transitive {x : UpperReal} {y z : LowerReal} (p : x <LU y) (q : y <= z) : x <LU z \elim p

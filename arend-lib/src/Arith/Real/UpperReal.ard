@@ -359,6 +359,10 @@
     \lemma pow_<= {x y : ExUpperReal} (x<=y : x <= y) {n : Nat} : pow x n <= pow y n \elim n
       | 0 => <=-refl
       | suc n => <=_* (pow_<= x<=y) x<=y
+
+    \lemma pow_>=0 {x : ExUpperReal} {n : Nat} : 0 <= pow x n \elim n
+      | 0 => <=-less zro<ide
+      | suc n => *_>=0
   }
 
 \record UpperReal \extends ExUpperReal {

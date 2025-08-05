@@ -109,6 +109,10 @@
     => norm_Inv-cancel-left d x>=0 y>=0 (*-comm *> p *> *-comm)
 }
 
+\lemma norm_pow {X : ExPseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = ExUpperRealSemigroup.pow (norm x) n \elim n
+  | 0 => norm_ide
+  | suc n => norm_* *> pmap (`* _) norm_pow
+
 \class PseudoValuedRing \extends PseudoNormedRing, ExPseudoValuedRing
 
 \lemma lnorm_ide {X : PseudoValuedRing} : X.norm 1 = 1
