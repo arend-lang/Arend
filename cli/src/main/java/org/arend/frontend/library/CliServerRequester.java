@@ -13,6 +13,10 @@ public class CliServerRequester implements ArendServerRequester {
     myLibraryManager = libraryManager;
   }
 
+  public LibraryManager getLibraryManager() {
+    return myLibraryManager;
+  }
+
   @Override
   public void requestModuleUpdate(@NotNull ArendServer server, @NotNull ModuleLocation module) {
     if (module.getLocationKind() == ModuleLocation.LocationKind.GENERATED) return;

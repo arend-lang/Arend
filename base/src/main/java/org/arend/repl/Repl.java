@@ -122,12 +122,6 @@ public abstract class Repl {
     return quit;
   }
 
-  /* TODO[server2]
-  protected final boolean typecheckLibrary(@NotNull Library library) {
-    return typechecking.typecheckLibrary(library);
-  }
-  */
-
   @Contract(pure = true)
   public final @NotNull ModuleScopeProvider getAvailableModuleScopeProvider() {
     return myServer.getModuleScopeProvider(null, true);
