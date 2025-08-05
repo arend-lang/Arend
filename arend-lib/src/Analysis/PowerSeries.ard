@@ -30,6 +30,7 @@
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedRing
 \import Topology.TopSpace
+\import Topology.UniformSpace
 \open Monoid(pow)
 \open LinearlyOrderedSemiring
 
@@ -63,28 +64,36 @@
     }
   }
 
-\type IsPowerSeriesConv {X : PseudoNormedRing} (cs : Nat -> X) : \Prop
-  => \Pi {a : Real} -> 0 <= a -> IsConvSeries (\lam n => X.norm (cs n) * pow a n)
+\type IsPowerSeriesConv {X : ExPseudoNormedRing} (cs : Nat -> X) : \Prop
+  => \Pi {a : Rat} -> 0 <= a -> IsConvUpperSeries (\lam n => norm (cs n) * pow a n)
+  \where {
+    \protected \lemma upper (cc : IsPowerSeriesConv cs) {a : ExUpperReal} (a>=0 : 0 <= a) (aB : ∃ (B : Rat) (a.U B)) : IsConvUpperSeries \lam n => norm (cs n) * ExUpperRealSemigroup.pow a n \elim aB
+      | inP (B,a<B) => series_<= (\lam n => ExUpperRealSemigroup.<=_* <=-refl (transport (_ <=) (ExUpperRealSemigroup.rat-pow $ <=-less $ a>=0 a<B) $ ExUpperRealSemigroup.pow_<= $ ExUpperReal.<_<= a<B)) $ cc $ <=-less $ a>=0 a<B
 
-\lemma powerSeriesConv-absConv {X : PseudoNormedRing} {cs : Nat -> X} (p : IsPowerSeriesConv cs) {x : X} : IsAbsConvSeries (powerSeries cs __ x)
-  => {?} -- TODO[server2]: series_<= {_} {\lam j => lnorm (cs j) * pow (X.norm x) j} (\lam j => lnorm>=0) (\lam j => lnorm_*_<= <=∘ <=_*_positive-right lnorm>=0 norm_<=_pow) (p lnorm>=0)
+    \protected \lemma atPoint (cc : IsPowerSeriesConv cs) {x : X} : IsConvUpperSeries \lam n => norm (cs n) * ExUpperRealSemigroup.pow (norm x) n
+      => upper cc norm>=0 (norm-bounded x)
+  }
 
-\lemma powerSeriesConv-funcConv {X : PseudoNormedRing} {cs : Nat -> X} (p : IsPowerSeriesConv cs)
+\lemma powerSeriesConv-absConv {X : ExPseudoNormedRing} {cs : Nat -> X} (p : IsPowerSeriesConv cs) {x : X} : IsAbsConvSeries (powerSeries cs __ x)
+  => \case norm-bounded x \with {
+    | inP (B,|x|<B) => convRadius-absConv cs $ inP (B, |x|<B, inP (B + 1, linarith, p $ linarith $ norm>=0 |x|<B))
+  }
+
+\lemma powerSeriesConv-funcConv {X : ExPseudoNormedRing} {cs : Nat -> X} (p : IsPowerSeriesConv cs)
   : IsFuncConvergent \lam n x => partialSum (powerSeries cs __ x) n
-  => {?}
-    {- TODO[server2]
-    funcCovergent-metric-char (partialSum-cover \lam j => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (cs j)) (pow-cover j)) \lam {eps} eps>0 =>
-      X.makeCauchy $ X.uniform-refine (X.metricUniform eps>0) \lam {_} (inP (x,idp)) =>
-        \case MTest {\Sigma (y : X) (norm y < norm x + eps)} (\lam n s => powerSeries cs n s.1) (\lam n => norm (cs n) * pow (norm x + eps) n)
-                  (\lam n s => norm_*_<= <=∘ <=_*_positive-right norm>=0 (norm_<=_pow <=∘ pow_<=-monotone norm>=0 (LinearOrder.<_<= s.2)))
-                  (p $ linarith $ norm>=0 {X}) (X.metricUniform $ half>0 eps>0) \with {
-          | inP (N,h) => inP (_, inP $ later (N, \lam {y} d N<=n => \case h (y, linarith $ lnorm_-right <∘r (rewrite X.norm-dist in d)) \with {
-            | inP (_, inP (z,idp), g) => halving (g N<=n) (g <=-refl)
-          }), <=-refl)
+  => funcCovergent-metric-char (partialSum-cover \lam j => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (CoverMap.const (cs j)) (pow-cover j)) \lam {eps} eps>0 =>
+      X.makeCauchy $ uniform-subset (X.metricUniform eps>0) \lam {_} (inP (x,idp)) =>
+        \case MTest {\Sigma (y : X) (norm y <= norm x + eps)} (\lam n s => powerSeries cs n s.1)
+                (\lam n => norm (cs n) * ExUpperRealSemigroup.pow (norm x + eps) n)
+                (\lam n s => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* <=-refl (norm_<=_pow <=∘ ExUpperRealSemigroup.pow_<= s.2))
+                (IsPowerSeriesConv.upper p (ExUpperRealAbMonoid.<=_+-positive norm>=0 $ ExUpperReal.<_<= eps>0) $ TruncP.map (norm-bounded x) \lam (B,|x|<B) => (B + eps, ExUpperRealAbMonoid.<-rat.1 $ transport (_ <) ExUpperReal.+-rat $ ExUpperRealAbMonoid.<_+-left $ ExUpperRealAbMonoid.<-rat.2 |x|<B))
+                (X.metricUniform $ RatField.half>0 eps>0) \with {
+          | inP (N,h) => inP $ later (N, \lam {y} xy<eps N<=n => \case h (y, transport (_ <=) +-comm $ norm_dist-bound <=∘ ExUpperRealAbMonoid.<=_+ (transport (`<= _) X.dist-symm $ ExUpperReal.<_<= xy<eps) <=-refl) \with {
+            | inP (_, inP (z,idp), g) => X.halving1/2 (g N<=n) (g <=-refl)
+          })
         }
-      -}
 
-\lemma powerSeries-unbounded-conv {X : PseudoValuedRing} (Xu : X.IsUnbounded) {cs : Nat -> X} (Sc : \Pi (x : X) -> IsConvSeries (powerSeries cs __ x)) : IsPowerSeriesConv cs
+\lemma powerSeries-unbounded-conv {X : ExPseudoValuedRing} (Xu : X.IsUnbounded) {cs : Nat -> X} (Sc : \Pi (x : X) -> IsConvSeries (powerSeries cs __ x)) : IsPowerSeriesConv cs
   => \lam {a} a>=0 => {?}
   {-
     \case Real.natBounded {a} \with {
@@ -104,6 +113,6 @@
                                                      ) lx $
       cont-limit bl $ RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const x)
 
-\lemma power-ratio-test-inf {X : PseudoNormedRing} (cs : Series X) (b : Series Real)
-                            (bp : \Pi (n : Nat) -> X.norm (cs (suc n)) <= lnorm (cs n) * b n) (bl : RealNormed.IsLimit b 0) : IsPowerSeriesConv cs
-  => \lam a>=0 => power-ratio-test (\lam j => lnorm>=0) bp bl a>=0 $ rewrite Ring.zro_*-left zro<ide
+\lemma power-ratio-test-inf {X : ExPseudoNormedRing} (cs : Series X) (b : Series Real)
+                            (bp : \Pi (n : Nat) -> norm (cs (suc n)) <= norm (cs n) * b n) (bl : RealNormed.IsLimit b 0) : IsPowerSeriesConv cs
+  => \lam a>=0 => {?} -- power-ratio-test (\lam j => lnorm>=0) bp bl a>=0 $ rewrite Ring.zro_*-left zro<ide

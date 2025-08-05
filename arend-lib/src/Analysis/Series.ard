@@ -320,13 +320,13 @@
       | suc j => bp j <=∘ ExUpperRealSemigroup.<=_* <=-refl (Real.<=-upper.1 $ bb j) <=∘ transport (_ <=) (*-assoc *> inv (pmap (_ *) (RealField.*-upper (RealField.pow>=0 r>=0) r>=0))) (ExUpperRealSemigroup.<=_* (iter-bound f>=0 r>=0 bp bb j) <=-refl)
   }
 
-\lemma MTest {X : \Set} {Y : ExPseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Nat -> Real)
-             (Mp : \Pi (n : Nat) (x : X) -> norm (f n x) <= M n) (Mc : IsConvSeries M) : IsUniFuncConvergent \lam n x => partialSum (f __ x) n
+\lemma MTest {X : \Set} {Y : ExPseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Series ExUpperReal)
+             (Mp : \Pi (n : Nat) (x : X) -> norm (f n x) <= M n) (Mc : IsConvUpperSeries M) : IsUniFuncConvergent \lam n x => partialSum (f __ x) n
   => \lam Du => \case dist-uniform.1 Du \with {
-    | inP (eps,eps>0,h) => \case series-conv.1 Mc eps>0 \with {
+    | inP (eps,eps>0,h) => \case Mc eps>0 \with {
       | inP (N,g) => inP (N, \lam x => \case h $ partialSum (f __ x) N \with {
         | inP (V,DV,Vg) => inP (V, DV, \lam p => Vg $ rewrite (norm-dist, norm_-, inv $ midSum-diff p) $
-             ExUpperRealAbMonoid.<-rat.1 $ midSum_norm <∘r transportInv (_ ExUpperRealAbMonoid.<=) (midSum_hom real-upperReal) (midSum_<= \lam {j} _ _ => Mp j x) <∘r Real.<=-upper.1 join-left <∘r ExUpperRealAbMonoid.<-rat.2 (g p))
+             ExUpperRealAbMonoid.<-rat.1 $ midSum_norm <∘r  midSum_<= (\lam {j} _ _ => Mp j x) <∘r ExUpperRealAbMonoid.<-rat.2 (g p))
       })
     }
   }
