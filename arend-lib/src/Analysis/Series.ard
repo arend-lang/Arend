@@ -309,7 +309,7 @@
         | inP (N,g) => (upperSeries-shifts-conv S>=0 N).2
           \have r>=0 => join-right <=∘ <=-less lz<r
           \in series_<= (iter-bound (\lam j => S>=0 (j + N)) r>=0 (\lam j => bp (j + N)) (\lam j => linarith (RealAbGroup.abs>=_- <=∘ <=-less (real_<_U.2 $ g $ <=_+ zero<=_ <=-refl), real_<_L.2 q<r-l))) $
-          series_*-bounded (\lam j => Real.<=-upper.1 $ RealField.pow>=0 r>=0) (TruncP.map (S-bounded N) \lam (B,p) => (B, \lam _ => p)) $ transport IsConvUpperSeries (path \lam i n => inv {ExUpperReal} (RealField.pow-upper r>=0 {n}) i) $ geometric-upper-series-conv (ExUpperReal.<=-rat.1 $ rat_real_<=.2 r>=0) (rat_real_<.2 r<1)
+          series_*-bounded (\lam j => Real.<=-upper.1 $ RealField.pow>=0 r>=0) (TruncP.map (S-bounded N) \lam (B,p) => (B, \lam _ => p)) $ transport IsConvUpperSeries (path \lam i n => inv (RealField.pow-upper r>=0 {n}) i) $ geometric-upper-series-conv (ExUpperReal.<=-rat.1 $ rat_real_<=.2 r>=0) (rat_real_<.2 r<1)
       }
     }
   }

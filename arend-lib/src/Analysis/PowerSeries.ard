@@ -108,8 +108,8 @@
   => upper-ratio-test (\lam n => ExUpperRealSemigroup.*_>=0) (rewrite (ExUpperRealSemigroup.ide-right norm>=0) (norm-bounded (c 0))) (\lam n => b n * a)
     (\lam n => <=_* (bp n) <=-refl <=∘ transport2 (<=) (inv *-assoc) (inv *-assoc) (<=_* <=-refl $
       transport2 (<=) (*-comm *> *-assoc *> pmap (_ *) (*-comm *> ExUpperReal.*-rat (RatField.pow>=0 a>=0) a>=0)) (inv ExUpperRealSemigroup.*_join) $
-      <=_* join-left $ transport (_ <=) (inv {ExUpperReal} (RealField.*-upper join-right (rat_real_<=.1 a>=0)) *> {ExUpperReal}
-        RealField.join_*-right (rat_real_<=.1 a>=0) *> {ExUpperReal} pmap (_ RealAbGroup.∨) RealField.zro_*-left *> {ExUpperReal} RealAbGroup.join-upper) $ <=_* (Real.<=-upper.1 join-left) <=-refl))
+      <=_* join-left $ transport (_ <=) (inv (RealField.*-upper join-right (rat_real_<=.1 a>=0)) *>
+        RealField.join_*-right (rat_real_<=.1 a>=0) *> pmap (_ RealAbGroup.∨) RealField.zro_*-left *> RealAbGroup.join-upper) $ <=_* (Real.<=-upper.1 join-left) <=-refl))
     la<1 (cont-limit bl $ RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const (Real.fromRat a)))
   \where \open ExUpperRealSemigroup(<=_*)
 

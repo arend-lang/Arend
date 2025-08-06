@@ -185,10 +185,10 @@
     \lemma +_U {x y : Real} {a : Rat} : Real.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c < a)
       => rewrite (\peval x + y, \peval x InfRealAbMonoid.+ y, \peval x ExUpperReal.+ y) <->refl
 
-    \lemma +-upper {x y : Real} : x + y = {ExUpperReal} x ExUpperReal.+ y
+    \lemma +-upper {x y : Real} : x + y = x ExUpperReal.+ y
       => exts \lam a => <->_=.1 +_U *> inv (<->_=.1 ExUpperReal.+_U)
 
-    \lemma +-lower {x y : Real} : x + y = {LowerReal} x LowerRealAbMonoid.+ y
+    \lemma +-lower {x y : Real} : x + y = x LowerRealAbMonoid.+ y
       => exts \lam a => <->_=.1 +_L *> inv (<->_=.1 LowerRealAbMonoid.+_L)
 
     \lemma +-rat {x y : Rat} : x + y = {Real} x RatField.+ y
@@ -271,7 +271,7 @@
         | inr x<=a => byRight $ transport (a <) (join/=left $ StrictPoset.<_/= $ x<=a <∘r a<xy) a<xy
       })
 
-    \lemma join-upper {x y : Real} : join x y = {ExUpperReal} ExUpperReal.join x y
+    \lemma join-upper {x y : Real} : join x y = ExUpperReal.join x y
       => <=-antisymmetric (\lam p => join_U.2 (ExUpperReal.join_U.1 p)) (\lam p => ExUpperReal.join_U.2 (join_U.1 p))
 
     \lemma zro<ide : Real.fromRat 0 RealAbGroup.< Real.fromRat 1

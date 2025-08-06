@@ -790,13 +790,8 @@ public class TwoStageEquations implements Equations {
         solution.setSort(classDef.computeSort(implementations, solution.getThisBinding()));
         solution.updateHasUniverses();
 
-        if (!pair.proj2.getFirst().getLevels().compare(levels, CMP.LE, this, pair.proj1.getSourceNode())) {
-          reportBoundsError(pair.proj1, pair.proj2, CMP.GE);
-          allOK = false;
-          continue;
-        }
         for (ClassCallExpression lowerBound : pair.proj2) {
-          if (!new CompareVisitor(this, CMP.LE, pair.proj1.getSourceNode()).compareClassCallLevels(lowerBound, solution)) {
+          if (!lowerBound.getLevels(classDef).compare(levels, CMP.LE, this, pair.proj1.getSourceNode()) || !new CompareVisitor(this, CMP.LE, pair.proj1.getSourceNode()).compareClassCallLevels(lowerBound, solution)) {
             reportBoundsError(pair.proj1, pair.proj2, CMP.GE);
             allOK = false;
             continue loop;
