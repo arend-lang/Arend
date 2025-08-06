@@ -113,6 +113,6 @@
     la<1 (cont-limit bl $ RealField.*-cover CoverMap.∘ ProductCoverSpace.tuple CoverMap.id (CoverMap.const (Real.fromRat a)))
   \where \open ExUpperRealSemigroup(<=_*)
 
-\lemma power-ratio-test-inf {X : ExPseudoNormedRing} (cs : Series X) (b : Series Real)
+\lemma power-ratio-test-inf {X : ExPseudoNormedRing} {cs : Series X} (b : Series Real)
                             (bp : \Pi (n : Nat) -> norm (cs (suc n)) <= norm (cs n) * b n) (bl : RealNormed.IsLimit b 0) : IsPowerSeriesConv cs
   => \lam a>=0 => power-ratio-test bp bl a>=0 $ rewrite Ring.zro_*-left zro<ide

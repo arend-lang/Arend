@@ -1,0 +1,11 @@
+\import Arith.Rat
+\import Arith.Real.UpperReal
+\import Paths
+\import Topology.BanachSpace
+\import Topology.NormedRing
+
+\class BanachAlgebra \extends BanachSpace, CompleteExNormedRing {
+  \func fromRat (q : Rat) => q *q 1
+}
+
+\class RealBanachAlgebra \extends BanachAlgebra, RealBanachSpace

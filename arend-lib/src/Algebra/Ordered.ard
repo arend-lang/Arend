@@ -813,6 +813,9 @@
   \lemma finv_<= {x y : E} (x>0 : 0 < x) (x<=y : x <= y) : finv y <= finv x
     => \lam p => x<=y (finv_<-conv x>0 p)
 
+  \lemma finv>=0 {x : E} (x>=0 : 0 <= x) : 0 <= finv x
+    => \lam p => x>=0 $ transport (`< 0) finv_finv (finv<0 p)
+
   \lemma finv>0-diff {x : E} (x>0 : 0 < x) : finv x - finv (x + 1) = finv (x * (x + 1))
     => finv-diff (\lam x=0 => linarith) (\lam x+1=0 => linarith)
 }

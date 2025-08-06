@@ -1,0 +1,44 @@
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Analysis.FuncLimit
+\import Analysis.PowerSeries
+\import Analysis.Series
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.UpperReal
+\import Combinatorics.Factorial
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.BanachAlgebra
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+
+\sfunc exp {A : RealBanachAlgebra} : CoverMap A A
+  => funcLimit (\lam n x => partialSum (powerSeries (\lam n => A.fromRat (RatField.finv (fac n))) __ x) n) (powerSeriesConv-funcConv exp-series-conv)
+  \where {
+    \open ExUpperRealSemigroup(<=_*, ide-right)
+
+    \lemma exp-series-conv : IsPowerSeriesConv \lam n => A.fromRat (RatField.finv (fac n))
+      => power-ratio-test-inf (\lam n => RatField.finv (suc n)) (\lam n => =_<= $ A.norm_*q *> *-comm *> pmap (_ *) (pmap ExUpperReal.fromRat
+          (RatField.abs-ofPos (RatField.finv>=0 $ <=_ratNom $ pos<=pos zero<=_) *> RatField.finv_* {suc n} *>
+          pmap (`* _) (inv $ RatField.abs-ofPos $ RatField.finv>=0 $ <=_ratNom $ pos<=pos zero<=_)) *>
+          inv (ExUpperReal.*-rat RatField.abs>=0 $ <=_ratNom $ pos<=pos zero<=_)) *> inv (pmap (`* _) (A.norm_*q {RatField.finv (fac n)} {1} *> *-comm) *> *-assoc))
+        inv-limit
+
+    \lemma inv-limit : RealNormed.IsLimit (\lam n => RatField.finv (suc n)) 0
+      => \lam Uo U0 =>
+        \have | (inP (eps,eps>0,h)) => (dist_open {RealNormed}).1 Uo U0
+              | (N,eps'<N) => rat_natBound (RatField.finv eps)
+        \in inP (N, \lam {n} N<=n => h $ unfold OBall $ rewriteI (norm_dist {RealNormed}) $
+              rewrite (RealAbGroup.abs-ofPos $ rat_real_<=.1 $ <=_ratNom $ pos<=pos zero<=_) $
+              RatField.finv_<-left {eps} {suc n} eps>0 $ eps'<N <∘l fromInt_<= (pos<=pos $ N<=n <=∘ id<=suc))
+  }
