@@ -134,6 +134,12 @@
       }
     }
   })
+  \where {
+    \protected \lemma double (fc : IsConvergent f) {eps : Rat} (eps>0 : 0 < eps) : ∃ (N : I) ∀ {n m} (N <= n -> N <= m -> (dist (f n) (f m)).U eps)
+      => \case convergent-metric-char.1 fc (RatField.half>0 eps>0) \with {
+        | inP (N,h) => inP (N, \lam N<=n N<=m => X.halving1/2 (rewrite dist-symm in h N<=n) (rewrite dist-symm in h N<=m))
+      }
+  }
 
 \lemma convergent-metric-real {I : DirectedSet} {X : PseudoMetricSpace} {f : I -> X}
   : IsConvergent f <-> ∀ {eps : Real} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> X.dist (f n) (f N) < eps)

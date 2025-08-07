@@ -209,6 +209,18 @@
   \lemma negative_<= {x y : E} (x<=y : x <= y) : negative y <= negative x
     => \lam -x<-y => x<=y $ repeat {2} (rewrite negative-isInv in) (negative_< -x<-y)
 
+  \lemma from>=0 {x y : E} (p : 0 <= y - x) : x <= y
+    => \lam y<x => p (to<0 y<x)
+
+  \lemma to>=0 {x y : E} (p : x <= y) : 0 <= y - x
+    => \lam q => p (from<0 q)
+
+  \lemma from<=0 {x y : E} (p : x - y <= 0) : x <= y
+    => \lam y<x => p (to>0 y<x)
+
+  \lemma to<=0 {x y : E} (p : x <= y) : x - y <= 0
+    => \lam q => p (from>0 q)
+
   \lemma meet_negative {x y : E} : negative (x ∧ y) = negative x ∨ negative y
     => <=-antisymmetric (\lam p => <-irreflexive $ join-right <∘r (rewrite (LinearOrder.meet/=left $ <_/= $ negative_<-inv $ join-left <∘r p) in p)) $
         join-univ (negative_<= meet-left) (negative_<= meet-right)
@@ -454,7 +466,8 @@
     | 0 => <=-refl
     | suc k => pow<=id a>=0 a<=1 {suc k} (\case __) <=∘ a<=1
 
-  \lemma pow_<=-degree {a : E} (a>=0 : 0 <= a) (a<=1 : a <= 1) {n k : Nat} (n<=k : n NatSemiring.<= k) : pow a k <= pow a n
+  \lemma
+    pow_<=-degree {a : E} (a>=0 : 0 <= a) (a<=1 : a <= 1) {n k : Nat} (n<=k : n NatSemiring.<= k) : pow a k <= pow a n
     => rewrite (inv (<=_exists n<=k), pow_+) $ transport (_ <=) ide-right $ <=_*_positive-right (pow>=0 a>=0) $ pow<=1 a>=0 a<=1
 
   \lemma meet_*-left {a b c : E} (a>=0 : 0 <= a) : a * (b ∧ c) = (a * b) ∧ (a * c)
@@ -809,6 +822,12 @@
 
   \lemma <_rotate-left {x y z : E} (y>0 : 0 < y) (p : x < y * z) : finv y * x < z
     => transport (_ <) (inv *-assoc *> pmap (`* z) (finv-left (>_/= y>0)) *> ide-left) (<_*_positive-right (finv>0 y>0) p)
+
+  \lemma <_rotate-right-conv {x y z : E} (y>0 : 0 < y) (p : x < z * finv y) : x * y < z
+    => transport (`< z) (*-comm *> pmap (x *) finv_finv) $ <_rotate-left (finv>0 y>0) $ transport (x <) *-comm p
+
+  \lemma <_rotate-left-conv {x y z : E} (y>0 : 0 < y) (p : finv y * x < z) : x < y * z
+    => transport (x <) (pmap (z *) finv_finv *> *-comm) $ <_rotate-right (finv>0 y>0) $ transport (`< z) *-comm p
 
   \lemma finv_<= {x y : E} (x>0 : 0 < x) (x<=y : x <= y) : finv y <= finv x
     => \lam p => x<=y (finv_<-conv x>0 p)

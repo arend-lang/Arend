@@ -85,6 +85,7 @@ public abstract class BaseAlgebraEquationMeta extends BaseEquationMeta<List<Mono
           return factory.app(factory1.ref(getAddTerm()), true, args.get(0), factory1.app(factory.ref(getNegativeTerm()), true, args.get(1)));
         }, new DefinitionFunctionMatcher(typechecker.getPrelude().getMinus(), 2), Arrays.asList(natType, natType)));
       }
+    // TODO: } else if (isRatInstance(instance.getExpression())) {
     } else {
       result.add(new TermOperation(getCoefTerm(), FunctionMatcher.makeFieldMatcher(instanceType, instance, natCoef, typechecker, factory, marker, 1), Collections.singletonList(new TermType.NatType())));
     }

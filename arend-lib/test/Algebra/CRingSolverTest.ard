@@ -5,6 +5,7 @@
 \import Algebra.Semiring
 \import Algebra.Ring
 \import Arith.Int
+\import Arith.Rat
 \import Meta
 \import Paths
 
@@ -46,3 +47,7 @@
 
 \lemma intTest3 {n : Nat} (p : pos n = 0) : 0 = neg n
   => equation.cRing p
+
+-- TODO
+-- \lemma ratTest {x : Rat} : ratio 1 2 * x + ratio 1 2 * x = x
+--   => equation.cRing
