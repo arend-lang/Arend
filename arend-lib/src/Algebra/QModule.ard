@@ -1,7 +1,10 @@
+\import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Module
 \import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
 \import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
@@ -92,3 +95,21 @@
 
 \lemma func-*q {A B : QModule} {f : AddGroupHom A B} {q : Rat} {a : A} : f (q A.*q a) = q B.*q f a
   => pmap f (\peval _ A.*q _) *> f.func-*i *> pmap (_ B.*i) (inv $ B.ud-unique $ inv f.func-*n *> pmap f A.ud-cond) *> inv (\peval _ B.*q _)
+
+\class QAlgebra \extends QModule, Ring {
+  \lemma *q-comm-left {r : Rat} {a b : E} : r *q (a * b) = r *q a * b
+    => inv $ func-*q {_} {_} {*-addGroupHom-right}
+
+  \lemma *q-comm-right {r : Rat} {a b : E} : r *q (a * b) = a * (r *q b)
+    => inv $ func-*q {_} {_} {*-addGroupHom-left}
+} \where {
+    \func toAlgebra (R : QAlgebra) : AAlgebra RatField \cowith
+      | LModule => QModule.toLModule R
+      | Ring => R
+      | *c-comm-left => R.*q-comm-left
+      | *c-comm-right => R.*q-comm-right
+
+    \func fromAlgebra (R : AAlgebra RatField) : QAlgebra \cowith
+      | QModule => QModule.fromLModule R
+      | Ring => R
+  }

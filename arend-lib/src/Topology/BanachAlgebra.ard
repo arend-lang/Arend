@@ -29,13 +29,11 @@
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 
-\class BanachAlgebra \extends BanachSpace, CompleteExNormedRing {
+\class BanachAlgebra \extends BanachSpace, QAlgebra, CompleteExNormedRing {
   \func fromRat (q : Rat) => q *q 1
 }
 
-\class RealBanachAlgebra \extends BanachAlgebra, RealBanachSpace
-
-\class RealCBanachAlgebra \extends RealBanachAlgebra, CRing {
+\class RealBanachAlgebra \extends BanachAlgebra, RealBanachSpace {
   \sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) ExUpperReal.<= RatField.ide) : E
     => limit zfunc zfunc-conv
     \where \protected {
@@ -48,8 +46,12 @@
         | suc n => rewrite (\peval yfunc (suc n), \peval rfunc (suc n), norm_*q, inv $ ExUpperReal.*-rat rat_<=-dec $ RatField.<=_+-positive rat_<=-dec $ RatField.<=_*_positive_positive rfunc>=0 rfunc>=0) $
           ExUpperRealSemigroup.<=_* (ExUpperReal.<=-rat.1 rat_<=-dec) $ transport (_ <=) ExUpperReal.+-rat $ norm_+ <=∘ ExUpperRealAbMonoid.<=_+ |1-x|<=1 (transport (_ <=) (ExUpperReal.*-rat rfunc>=0 rfunc>=0) $ norm_*_<= <=∘ ExUpperRealSemigroup.<=_* yfunc<=rfunc yfunc<=rfunc)
 
+      \lemma yfunc-comm {a : E} (p : a * x = x * a) {n : Nat} : yfunc n * a = a * yfunc n \elim n
+        | 0 => pmap (`* a) (\peval yfunc 0) *> zro_*-left *> inv (pmap (a *) (\peval yfunc 0) *> zro_*-right)
+        | suc n => pmap (`* _) (\peval yfunc (suc n)) *> inv *q-comm-left *> pmap (_ *q) (rdistr *> pmap2 (+) (rdistr_- *> pmap2 (-) (ide-left *> inv ide-right) (inv p) *> inv ldistr_-) (*-assoc *> pmap (_ *) (yfunc-comm p) *> inv *-assoc *> pmap (`* _) (yfunc-comm p) *> *-assoc) *> inv ldistr) *> *q-comm-right *> inv (pmap (_ *) (\peval yfunc (suc n)))
+
       \lemma yfunc-rec {n : Nat} : yfunc (suc (suc n)) - yfunc (suc n) = ratio 1 2 *q ((yfunc (suc n) + yfunc n) * (yfunc (suc n) - yfunc n))
-        => pmap2 (-) (\peval yfunc (suc (suc n))) (\peval yfunc (suc n)) *> inv (QModule.toLModule \this).*c-ldistr_- *> pmap (_ *q) equation.cRing
+        => pmap2 (-) (\peval yfunc (suc (suc n))) (\peval yfunc (suc n)) *> inv (QModule.toLModule \this).*c-ldistr_- *> pmap (_ *q) (simplify $ inv $ sum_diff $ yfunc-comm $ yfunc-comm idp)
 
       \lemma yfunc_rfunc-diff1 {n : Nat} : norm (yfunc (suc n) - yfunc n) <= rfunc (suc n) - rfunc n \elim n
         | 0 => rewrite (\peval yfunc 0, \peval rfunc 0) (simplify yfunc<=rfunc)
@@ -70,7 +72,7 @@
         }
 
       \lemma isSquare : sqrt x |1-x|<=1 * sqrt x |1-x|<=1 = x
-        => pmap2 (*) (\peval sqrt _ _) (\peval sqrt _ _) *> HausdorffTopSpace.limit-unique
+        => pmap2 (*) (\peval sqrt _ _) (\peval sqrt _ _) *> limit-unique
             (\have zl => limit-isLimit $ zfunc-conv {_} {x} {|1-x|<=1}
              \in cont2-limit zl zl *-cont)
             (limit-metric-char.2 \lam eps>0 => \case convergent-metric-char.double (limit-conv rfunc-limit) (RatField.half>0 eps>0) \with {
@@ -78,7 +80,7 @@
             })
         \where {
           \lemma dist-lem (n : Nat) : zfunc n * zfunc n - x = RatField.natCoef 2 *q (yfunc (suc n) - yfunc n)
-            => rewrite (\peval yfunc (suc n), (QModule.toLModule \this).*c-ldistr_-, inv *q-assoc, ide_*q, (QModule.toLModule \this).*c-rdistr {RatField.ide} {RatField.ide}, ide_*q) equation.cRing
+            => rewrite (\peval yfunc (suc n), (QModule.toLModule \this).*c-ldistr_-, inv *q-assoc, ide_*q, (QModule.toLModule \this).*c-rdistr {RatField.ide} {RatField.ide}, ide_*q) equation.ring
         }
     }
 } \where \protected {
@@ -116,6 +118,6 @@
       })
 }
 
-\class CC*Algebra \extends RealCBanachAlgebra
+\class C*Algebra \extends RealBanachAlgebra
   | c*-square {a : E} : norm a ExUpperReal.* norm a <= norm (a * a)
   | c*-sum {a b : E} : norm (a * a) <= norm (a * a + b * b)

@@ -20,6 +20,14 @@
 \import Paths
 \import Paths.Meta
 
+\lemma *-addMonoidHom-left {R : PseudoSemiring} {a : R} : AddMonoidHom R R (a *) \cowith
+  | func-zro => zro_*-right
+  | func-+ => ldistr
+
+\lemma *-addMonoidHom-right {R : PseudoSemiring} {a : R} : AddMonoidHom R R (`* a) \cowith
+  | func-zro => zro_*-left
+  | func-+ => rdistr
+
 \record SemiringHom \extends AddMonoidHom, MonoidHom {
   \override Dom : Semiring
   \override Cod : Semiring
@@ -28,6 +36,12 @@
     | 0 => rewrite (natCoefZero,natCoefZero) func-zro
     | suc n => rewrite (natCoefSuc,natCoefSuc) $ func-+ *> pmap2 (+) func-natCoef func-ide
 }
+
+\lemma *-addGroupHom-left {R : PseudoRing} {a : R} : AddGroupHom R R (a *) \cowith
+  | func-+ => ldistr
+
+\lemma *-addGroupHom-right {R : PseudoRing} {a : R} : AddGroupHom R R (`* a) \cowith
+  | func-+ => rdistr
 
 \record RingHom \extends SemiringHom, AddGroupHom {
   \override Dom : Ring

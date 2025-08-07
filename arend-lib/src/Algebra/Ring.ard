@@ -50,6 +50,9 @@
   \lemma rdistr_- {x y z : E} : (x - y) * z = x * z - y * z
     => rdistr *> pmap (_ +) negative_*-left
 
+  \lemma sum_diff {x y : E} (p : x * y = y * x) : (x + y) * (x - y) = x * x - y * y
+    => rdistr *> pmap2 (+) ldistr_- ldistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (`+ _) (pmap (_ +) (inv p) *> negative-left) *> zro-left)
+
   \protected \func op : PseudoRing \cowith
     | AbGroup => \this
     | PseudoSemiring => PseudoSemiring.op
