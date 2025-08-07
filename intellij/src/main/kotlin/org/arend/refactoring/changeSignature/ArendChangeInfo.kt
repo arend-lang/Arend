@@ -12,11 +12,11 @@ import org.arend.ArendLanguage
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
-import org.arend.refactoring.NsCmdRefactoringAction
+import org.arend.server.impl.MultiFileReferenceResolver
+import org.arend.server.impl.SingleFileReferenceResolver
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.Abstract.ClassDefinition
 import org.arend.term.abs.Abstract.ParametersHolder
-import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 
 data class ArendChangeInfo (
@@ -24,7 +24,8 @@ data class ArendChangeInfo (
     private val returnType: String?,
     val name: String,
     val locatedReferable: PsiLocatedReferable,
-    val deferredNsCmds: MutableList<NsCmdRefactoringAction> = ArrayList()) : ChangeInfo {
+    val multiResolver: MultiFileReferenceResolver
+) : ChangeInfo {
 
     private val pLevelsKw = locatedReferable.childrenWithLeaves.firstOrNull {it.elementType == PLEVELS_KW}
     private val pLevelParam = (locatedReferable as? ArendDefinition<*>)?.pLevelParameters

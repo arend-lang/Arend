@@ -1,6 +1,7 @@
 package org.arend.refactoring.move
 
 import com.intellij.ide.util.EditorHelper
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Ref
 import com.intellij.openapi.util.TextRange
@@ -32,6 +33,8 @@ import org.arend.refactoring.*
 import org.arend.refactoring.changeSignature.*
 import org.arend.refactoring.changeSignature.ArendChangeSignatureProcessor.Companion.getUsagesPreprocessor
 import org.arend.resolving.util.resolveReference
+import org.arend.server.ArendServerService
+import org.arend.server.impl.MultiFileReferenceResolver
 import org.arend.term.abs.Abstract.ParametersHolder
 import org.arend.term.concrete.Concrete
 import java.util.Collections.singletonList
@@ -134,6 +137,7 @@ class ArendMoveRefactoringProcessor(project: Project,
     override fun performRefactoring(usages: Array<out UsageInfo>) {
         var insertAnchor: PsiElement?
         val psiFactory = ArendPsiFactory(myProject)
+        val server = myProject.service<ArendServerService>().server
 
         insertAnchor = if (myTargetContainer is ArendFile) {
             myTargetContainer.lastChild //null means file is empty
@@ -157,15 +161,17 @@ class ArendMoveRefactoringProcessor(project: Project,
 
             val (descriptors, changeSignatureUsages) = getUsagesToPreprocess(myMembers, insertIntoDynamicPart, myTargetContainer, thisVarNameMap)
             val fileChangeMap = LinkedHashMap<PsiFile, SortedList<Pair<TextRange, String>>>()
-            val deferredNsCmds = ArrayList<NsCmdRefactoringAction>()
+            val multiFileReferenceResolver = MultiFileReferenceResolver(server)
             val usagesPreprocessor = getUsagesPreprocessor(changeSignatureUsages, myProject, fileChangeMap,
-                HashSet(), HashSet(), ArrayList(), deferredNsCmds) //TODO: properly initialize these parameters
+                HashSet(), HashSet(), multiFileReferenceResolver) //TODO: properly initialize these parameters
 
             usagesPreprocessor.run()
 
             writeFileChangeMap(myProject, fileChangeMap)
 
-            for (nsCmd in deferredNsCmds) nsCmd.execute()
+            for (resolver in multiFileReferenceResolver.multiResolverMap.values) {
+                //TODO: NsCmdRawModifierAction(resolver.modifier, resolver.currentFile?.referable).execute()
+            }             
 
             for (descriptor in descriptors)
                 descriptor.fixEliminator()
@@ -176,7 +182,7 @@ class ArendMoveRefactoringProcessor(project: Project,
                     val definition = descriptor.getAffectedDefinition()
                     val definitionName = definition?.name
                     if (definitionName != null && definition is PsiLocatedReferable && definition !is ArendConstructor) {
-                        val changeInfo = ArendChangeInfo(parameterInfo, null, definitionName, definition, ArrayList())
+                        val changeInfo = ArendChangeInfo(parameterInfo, null, definitionName, definition, MultiFileReferenceResolver(server))
                         changeInfo.modifySignature()
                     }
                 }

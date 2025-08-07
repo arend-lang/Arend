@@ -20,17 +20,20 @@ import org.arend.error.DummyErrorReporter
 import org.arend.ext.error.GeneralError
 import org.arend.highlight.BasePass
 import org.arend.naming.reference.GlobalReferable
-import org.arend.naming.reference.Referable
 import org.arend.psi.ArendFile
 import org.arend.psi.ancestor
 import org.arend.psi.ext.*
 import org.arend.refactoring.NsCmdRefactoringAction
 import org.arend.refactoring.changeSignature.entries.CoClauseEntry
 import org.arend.refactoring.changeSignature.entries.NoArgumentsEntry
+import org.arend.server.ArendServerService
+import org.arend.server.impl.MultiFileReferenceResolver
+import org.arend.term.abs.AbstractReferable
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.error.ErrorService
 import org.arend.util.ArendBundle
 import org.arend.util.appExprToConcrete
+import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getBounds
 import org.arend.util.patternToConcrete
 import java.util.Collections.singletonList
@@ -57,9 +60,7 @@ class ArendChangeSignatureProcessor(project: Project,
         if (changeInfo.isParameterSetOrOrderChanged) {
             val usages = refUsages.get().filterIsInstance<ArendUsageInfo>()
             val changeSignatureName = RefactoringBundle.message("changeSignature.refactoring.name")
-            val changeInfoNsCmds = (changeInfo as? ArendChangeInfo)?.deferredNsCmds ?: ArrayList()
-
-            val usagesPreprocessor = getUsagesPreprocessor(usages, myProject, fileChangeMap, rootPsiWithArendErrors, rootPsiWithErrors, changeInfoNsCmds, deferredNsCmds)
+            val usagesPreprocessor = getUsagesPreprocessor(usages, myProject, fileChangeMap, rootPsiWithArendErrors, rootPsiWithErrors, (changeInfo as ArendChangeInfo).multiResolver)
             if (!ProgressManager.getInstance().runProcessWithProgressSynchronously(usagesPreprocessor, changeSignatureName, true, myProject)) return false
 
             if (rootPsiWithErrors.size > 0 || rootPsiWithArendErrors.size > 0) {
@@ -96,8 +97,7 @@ class ArendChangeSignatureProcessor(project: Project,
                                   fileChangeMap: MutableMap<PsiFile, SortedList<Pair<TextRange, String>>>,
                                   rootPsiWithArendErrors: MutableSet<PsiElement>,
                                   rootPsiWithErrors: MutableSet<PsiElement>,
-                                  changeInfoNsCmds: List<NsCmdRefactoringAction>,
-                                  deferredNsCmds: MutableList<NsCmdRefactoringAction>): Runnable =
+                                  multiResolver: MultiFileReferenceResolver): Runnable =
             Runnable {
             val concreteSet = LinkedHashSet<ConcreteDataItem>()
             val textReplacements =
@@ -106,10 +106,6 @@ class ArendChangeSignatureProcessor(project: Project,
             val rootPsiEntries = usages.filter { it.psiParentRoot != null }.map { it.psiParentRoot }
                 .toCollection(LinkedHashSet())
             val referableData = usages.map { it.task }.toCollection(HashSet()).toList()
-
-            for (action in changeInfoNsCmds)
-                if (!deferredNsCmds.contains(action))
-                    deferredNsCmds.add(action)
 
             runReadAction {
                 val progressIndicator = ProgressManager.getInstance().progressIndicator
@@ -132,16 +128,16 @@ class ArendChangeSignatureProcessor(project: Project,
                         progressIndicator.checkCanceled()
                         val errorReporter = CountingErrorReporter(GeneralError.Level.ERROR, DummyErrorReporter.INSTANCE)
                         when (rootPsi) {
-                            is ArendArgumentAppExpr ->
-                                appExprToConcrete(rootPsi)?.let {
+                            is ArendArgumentAppExpr -> {
+                                val concrete = appExprToConcreteOnlyTopLevel(rootPsi)
+                                concrete?.let { if (errorReporter.errorsNumber == 0) concreteSet.add(ConcreteDataItem(rootPsi, it)) }
+                            }
+
+                            is ArendAtomFieldsAcc -> appExprToConcreteOnlyTopLevel(rootPsi)?.let {
                                 if (errorReporter.errorsNumber == 0) concreteSet.add(ConcreteDataItem(rootPsi, it))
                             }
 
-                            is ArendAtomFieldsAcc -> appExprToConcrete(rootPsi)?.let {
-                                if (errorReporter.errorsNumber == 0) concreteSet.add(ConcreteDataItem(rootPsi, it))
-                            }
-
-                            is ArendTypeTele -> rootPsi.type?.let { appExprToConcrete(it) }?.let { concreteSet.add(ConcreteDataItem(rootPsi, it)) }
+                            is ArendTypeTele -> rootPsi.type?.let { appExprToConcreteOnlyTopLevel(it) }?.let { concreteSet.add(ConcreteDataItem(rootPsi, it)) }
 
                             is ArendPattern -> patternToConcrete(rootPsi)?.let {
                                 if (errorReporter.errorsNumber == 0) concreteSet.add(ConcreteDataItem(rootPsi, it))
@@ -156,7 +152,7 @@ class ArendChangeSignatureProcessor(project: Project,
                 for ((index, callEntry) in concreteSet.withIndex()) {
                     progressIndicator.fraction = index.toDouble() / concreteSet.size
                     progressIndicator.checkCanceled()
-                    val refactoringContext = ChangeSignatureRefactoringContext(referableData, textReplacements, rangeData, deferredNsCmds)
+                    val refactoringContext = ChangeSignatureRefactoringContext(referableData, textReplacements, rangeData, project.service<ArendServerService>().server, multiResolver)
                     rangeData.clear()
 
                     try {
@@ -171,9 +167,10 @@ class ArendChangeSignatureProcessor(project: Project,
                             is ArendTypeTele -> {
                                 val expr = callEntry.concreteExpr as Concrete.Expression
                                 if (expr is Concrete.ReferenceExpression) {
-                                    val d = refactoringContext.identifyDescriptor(expr.referent)
+                                    val referable = expr.referent.abstractReferable
+                                    val d = referable?.let { refactoringContext.identifyDescriptor(it) }
                                     if (d != null) {
-                                        val printResult = NoArgumentsEntry(expr, refactoringContext, d).printUsageEntry(expr.referent as? GlobalReferable)
+                                        val printResult = NoArgumentsEntry(expr, refactoringContext, d).printUsageEntry((expr.referent as? GlobalReferable)?.abstractReferable as? ReferableBase<*>)
                                         if (!callEntry.psi.isExplicit) "{${printResult.text}}" else if (printResult.isAtomic) printResult.text else "(${printResult.text})"
                                     } else null
                                 } else null
@@ -200,7 +197,7 @@ class ArendChangeSignatureProcessor(project: Project,
                             }
 
                             is CoClauseBase -> {
-                                val referable = callEntry.psi.longName?.resolve as? Referable
+                                val referable = callEntry.psi.longName?.resolve as? AbstractReferable
                                 if (referable != null) {
                                     val descriptor = refactoringContext.identifyDescriptor(referable)
                                     CoClauseEntry(callEntry.psi, refactoringContext, descriptor!!).printUsageEntry().text //TODO: Null safety
@@ -215,7 +212,6 @@ class ArendChangeSignatureProcessor(project: Project,
                         rootPsiWithErrors.add(callEntry.psi)
                     }
 
-                    for (action in refactoringContext.deferredNsCmds) if (!deferredNsCmds.contains(action)) deferredNsCmds.add(action)
                 }
 
                 for ((psi, text) in textReplacements) {

@@ -10,21 +10,23 @@ import org.arend.refactoring.NsCmdRawModifierAction
 import org.arend.refactoring.NsCmdRefactoringAction
 import org.arend.server.ArendServer
 import org.arend.server.RawAnchor
-import org.arend.server.impl.MultipleReferenceResolver
+import org.arend.server.impl.SingleFileReferenceResolver
 
 class ServerBasedDefinitionRenamer(arendServer: ArendServer,
                                    errorReporter: ErrorReporter,
-                                   anchorReferable: LocatedReferable,
+                                   val anchorReferable: LocatedReferable,
                                    val anchorFile: ArendFile): DefinitionRenamer {
     private val anchorFileLocation = anchorFile.moduleLocation
-    private val multipleReferenceResolver = MultipleReferenceResolver(arendServer, errorReporter,
-        RawAnchor(anchorReferable, null),
-        if (anchorFileLocation != null) arendServer.getRawGroup(anchorFileLocation) else null)
+    private val multipleReferenceResolver = SingleFileReferenceResolver(
+        arendServer,
+        errorReporter,
+        if (anchorFileLocation != null) arendServer.getRawGroup(anchorFileLocation) else null
+    )
 
     override fun renameDefinition(ref: ArendRef?): LongName? {
         if (ref !is LocatedReferable) return null
 
-        return multipleReferenceResolver.makeTargetAvailable(ref)
+        return multipleReferenceResolver.calculateLongName(ref, RawAnchor(anchorReferable, null))
     }
 
     fun getRawModifier() = multipleReferenceResolver.modifier

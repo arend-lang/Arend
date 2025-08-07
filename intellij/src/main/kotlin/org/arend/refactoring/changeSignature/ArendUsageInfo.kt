@@ -7,6 +7,8 @@ import org.arend.psi.ancestor
 import org.arend.psi.childOfType
 import org.arend.psi.descendantOfType
 import org.arend.psi.ext.*
+import org.arend.term.concrete.Concrete
+import org.arend.util.appExprToConcreteOnlyTopLevel
 
 class ArendUsageInfo(val psi: PsiElement, val task: ChangeSignatureRefactoringDescriptor) : UsageInfo(psi),
     Comparable<ArendUsageInfo> {
@@ -14,19 +16,35 @@ class ArendUsageInfo(val psi: PsiElement, val task: ChangeSignatureRefactoringDe
 
     init {
         var e: PsiElement? = psi
-        while (e != null && !(e is ArendPattern ||
-                    e is ArendArgumentAppExpr && !(isParenthesizedLongName(e)) ||
-                    e is CoClauseBase ||
-                    e is ArendTypeTele ||
-                    e is ArendAtomFieldsAcc && e.fieldAccList.isNotEmpty())) {
-            e = e.parent
+        var root: PsiElement? = null
+
+        while (e != null) {
+            while (e != null && !(e is ArendPattern ||
+                        e is ArendArgumentAppExpr && !(isParenthesizedLongName(e)) ||
+                        e is CoClauseBase ||
+                        e is ArendTypeTele)
+            ) {
+                e = e.parent
+            }
+
+            root = when {
+                (e is ArendPattern && e.parent is ArendPattern) -> e.parent
+                e != null -> e
+                else -> null
+            }
+
+            if (root is ArendArgumentAppExpr) {
+                val concrete = appExprToConcreteOnlyTopLevel(root)
+                if (concrete != null) {
+                    break
+                } else {
+                    e = e?.parent
+                }
+            } else
+                break
         }
 
-        psiParentRoot = when {
-            (e is ArendPattern && e.parent is ArendPattern) -> e.parent
-            e != null -> e
-            else -> null
-        }
+        psiParentRoot = root
     }
 
     override fun compareTo(other: ArendUsageInfo): Int {

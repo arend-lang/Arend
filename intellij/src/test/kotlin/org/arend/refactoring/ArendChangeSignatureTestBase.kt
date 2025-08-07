@@ -1,10 +1,13 @@
 package org.arend.refactoring
 
+import com.intellij.openapi.components.service
 import org.arend.ArendTestBase
 import org.arend.fileTreeFromText
 import org.arend.psi.ancestor
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.refactoring.changeSignature.*
+import org.arend.server.ArendServerService
+import org.arend.server.impl.MultiFileReferenceResolver
 import org.arend.term.abs.Abstract.ParametersHolder
 import org.intellij.lang.annotations.Language
 import kotlin.math.abs
@@ -17,6 +20,7 @@ abstract class ArendChangeSignatureTestBase: ArendTestBase() {
                         newName: String? = null,
                         typecheck: Boolean = true,
                         fileName: String = "Main.ard") {
+        val server = project.service<ArendServerService>().server
         val fileTree = fileTreeFromText(contents)
         fileTree.createAndOpenFileWithCaretMarker()
         val sourceElement = myFixture.elementAtCaret.ancestor<PsiLocatedReferable>() ?: throw AssertionError("Cannot find source anchor")
@@ -54,7 +58,8 @@ abstract class ArendChangeSignatureTestBase: ArendTestBase() {
         if (!ArendChangeSignatureHandler.checkExternalParametersOk(sourceElement as ParametersHolder))
             throw AssertionError("External parameters have not been inferred properly")
 
-        ArendChangeSignatureProcessor(project, ArendChangeInfo(ArendParametersInfo(sourceElement, newParams), null, newNameActual, sourceElement), false).run()
+        ArendChangeSignatureProcessor(project, ArendChangeInfo(
+          ArendParametersInfo(sourceElement, newParams), null, newNameActual, sourceElement, MultiFileReferenceResolver(server)), false).run()
         myFixture.checkResult(fileName, resultingContent.trimIndent(), false)
     }
 }

@@ -37,7 +37,7 @@ import org.arend.refactoring.calculateOccupiedNames
 import org.arend.refactoring.getCorrectPreludeItemStringReference
 import org.arend.server.ArendServerService
 import org.arend.server.RawAnchor
-import org.arend.server.impl.MultipleReferenceResolver
+import org.arend.server.impl.SingleFileReferenceResolver
 import org.arend.settings.ArendSettings
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.LocalVariablesCollector
@@ -66,8 +66,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
         val anchorFile = element.containingFile as? ArendFile ?: return
         val anchorReferable: LocatedReferable = definition ?: FullModuleReferable(anchorFile.moduleLocation)
         val concreteFile = server.getRawGroup(anchorFile.moduleLocation!!) ?: return
-        val referenceResolver = MultipleReferenceResolver(server,
-            ListErrorReporter(), RawAnchor(anchorReferable, element), concreteFile)
+        val referenceResolver = SingleFileReferenceResolver(server, ListErrorReporter(), concreteFile)
         val causeData = missingClausesError.cause.data
 
         clauses.clear()
@@ -139,7 +138,8 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                     val nRecursiveBindings = recursiveTypeUsagesInBindingsIterator.next()
                     val braces = if (parameter2 == null || parameter2.isExplicit) Braces.NONE else Braces.BRACES
                     val sampleParameter = if (elimMode) missingClausesError.eliminatedParameters[i] else parameter2!!.binding
-                    val patternData = doTransformPattern(pattern, element, project, filters, braces, clauseBindings, sampleParameter, nRecursiveBindings, eliminatedBindings, missingClausesError, referenceResolver)
+                    val patternData = doTransformPattern(pattern, element, project, filters, braces, clauseBindings, sampleParameter, nRecursiveBindings, eliminatedBindings, missingClausesError, referenceResolver,
+                        RawAnchor(anchorReferable, element))
                     patternStrings.add(patternData.first)
                     containsEmptyPattern = containsEmptyPattern || patternData.second
                     parameter2 = if (parameter2 != null && parameter2.hasNext()) parameter2.next else null
@@ -329,7 +329,8 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                                nRecursiveBindings: Int,
                                eliminatedBindings: MutableSet<CoreBinding>,
                                missingClausesError: MissingClausesError,
-                               referenceResolver: MultipleReferenceResolver
+                               referenceResolver: SingleFileReferenceResolver,
+                               rawAnchor: RawAnchor
         ): Pair<String, Boolean> {
             var containsEmptyPattern = false
 
@@ -389,7 +390,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                                     else -> Braces.BRACES
                                 }
 
-                                val argPattern = doTransformPattern(argumentPattern, cause, project, filters, argumentParen, occupiedNames, sampleParameter, nRecursiveBindings, eliminatedBindings, missingClausesError, referenceResolver)
+                                val argPattern = doTransformPattern(argumentPattern, cause, project, filters, argumentParen, occupiedNames, sampleParameter, nRecursiveBindings, eliminatedBindings, missingClausesError, referenceResolver, rawAnchor)
                                 argumentPatterns.add(argPattern.first)
                                 if (constructorArgument.isExplicit) {
                                     nExplicit++
@@ -404,7 +405,9 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
                         val filter = filters[pattern]
                         val arguments = concat(argumentPatterns, filter, if (tupleMode) "," else " ")
                         val result = buildString {
-                            val longName = (referable as? ReferableBase<*>)?.tcReferable?.let{ referenceResolver.makeTargetAvailable(it) } ?: ""
+                            val longName = (referable as? ReferableBase<*>)?.tcReferable?.let{
+                                referenceResolver.calculateLongName(it, rawAnchor)
+                            } ?: ""
 
                             if (infixMode && nExplicit == 2) {
                                 append(explicitPatterns[0])

@@ -82,7 +82,9 @@ class ArendChangeSignatureUsageProcessor : ChangeSignatureUsageProcessor {
         val changeInfos = ArrayList<ArendChangeInfo>()
         changeInfos.add(changeInfo)
         changeInfos.addAll(secondaryParametersInfos.filterNotNull().map { secondaryParameterInfo ->
-            ArendChangeInfo(secondaryParameterInfo, null, secondaryParameterInfo.locatedReferable.name ?: "", secondaryParameterInfo.locatedReferable)
+            ArendChangeInfo(secondaryParameterInfo, null,
+                secondaryParameterInfo.locatedReferable.name ?: "",
+                secondaryParameterInfo.locatedReferable, changeInfo.multiResolver)
         })
 
         for (d in descriptors) d.fixEliminator()

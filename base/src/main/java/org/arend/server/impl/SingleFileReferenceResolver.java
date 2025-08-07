@@ -4,6 +4,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
+import org.arend.ext.util.Pair;
 import org.arend.naming.reference.*;
 import org.arend.naming.scope.MergeScope;
 import org.arend.naming.scope.Scope;
@@ -16,7 +17,6 @@ import org.arend.server.modifier.RawImportRemover;
 import org.arend.server.modifier.RawModifier;
 import org.arend.server.modifier.RawSequenceModifier;
 import org.arend.source.error.LocationError;
-import org.arend.term.concrete.LocalVariablesCollector;
 import org.arend.term.group.AccessModifier;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteNamespaceCommand;
@@ -27,39 +27,78 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class MultipleReferenceResolver {
+public class SingleFileReferenceResolver {
     ArendServer myServer;
     @NotNull ErrorReporter myErrorReporter;
-    @NotNull RawAnchor myAnchor;
     @Nullable ConcreteGroup myCurrentFile;
     HashMap<ConcreteNamespaceCommand, @Nullable HashSet<String>> itemsToAdd = new HashMap<>();
     HashMap<ModuleLocation, @Nullable HashSet<String>> importsToAdd = new HashMap<>();
 
-    public MultipleReferenceResolver(@NotNull ArendServer server,
-                                     @NotNull ErrorReporter errorReporter,
-                                     @NotNull RawAnchor anchor,
-                                     @Nullable ConcreteGroup currentFile) {
+    public SingleFileReferenceResolver(@NotNull ArendServer server,
+                                       @NotNull ErrorReporter errorReporter,
+                                       @Nullable ModuleLocation currentFile) {
         myServer = server;
         myErrorReporter = errorReporter;
-        myAnchor = anchor;
+        myCurrentFile = (currentFile != null) ? server.getRawGroup(currentFile) : null;
+
+    }
+
+    public SingleFileReferenceResolver(@NotNull ArendServer server,
+                                       @NotNull ErrorReporter errorReporter,
+                                       @Nullable ConcreteGroup currentFile) {
+        myServer = server;
+        myErrorReporter = errorReporter;
         myCurrentFile = currentFile;
     }
 
+    public @Nullable ModuleLocation getModuleLocation() {
+        if (myCurrentFile == null) return null;
+        return myCurrentFile.referable().getLocation();
 
-    public @Nullable LongName makeTargetAvailable(@NotNull LocatedReferable referable) {
+    }
+
+    public @Nullable ConcreteGroup getCurrentFile() {
+        return myCurrentFile;
+    }
+
+
+    /**
+     * Calculates the long name of the given referable in the context of the provided anchor.
+     * This method modifies the state of the {@code MultipleReferenceResolver}.
+     *
+     * @param referable the referable whose long name is to be calculated; must not be null.
+     * @param anchor the context in which the referable's long name is calculated; must not be null.
+     * @return the calculated long name as a {@code LongName} object, or null if the calculation fails.
+     */
+    public @Nullable LongName calculateLongName(@NotNull LocatedReferable referable, @NotNull RawAnchor anchor) {
+        Pair<@Nullable ModulePath, List<Pair<String, Referable>>> result = makeTargetAvailable(referable, anchor);
+        List<String> longName = new ArrayList<>();
+        if (result == null) return null;
+        if (result.proj1 != null) longName.addAll(result.proj1.toList());
+        longName.addAll(result.proj2.stream().map(pair -> pair.proj1).toList());
+        return new LongName(longName);
+    }
+
+    public @Nullable Pair<@Nullable ModulePath, List<Pair<String, Referable>>> makeTargetAvailable(@NotNull LocatedReferable targetReferable, @NotNull RawAnchor anchor) {
         // Check that referables are located in available modules and collect them in refMap
-        ModuleLocation anchorModuleLocation = myAnchor.parent().getLocation();
+        ModuleLocation anchorModuleLocation = anchor.parent().getLocation();
+        ModuleLocation currentFileLocation = (myCurrentFile != null) ? myCurrentFile.referable().getLocation(): null;
+
+        if (anchorModuleLocation != null && currentFileLocation != null && !anchorModuleLocation.equals(currentFileLocation))
+            throw new IllegalStateException();
 
         if (anchorModuleLocation == null) {
-            myErrorReporter.report(LocationError.definition(myAnchor.parent(), null));
+            myErrorReporter.report(LocationError.definition(anchor.parent(), null));
             return null;
         }
 
+        ConcreteGroup anchorModuleGroup = myServer.getRawGroup(anchorModuleLocation);
+
         Map<ModulePath, List<LocatedReferable>> refMap = new HashMap<>();
 
-        ModuleLocation module = referable.getLocation();
+        ModuleLocation module = targetReferable.getLocation();
         if (module == null) {
-            myErrorReporter.report(LocationError.definition(referable, null));
+            myErrorReporter.report(LocationError.definition(targetReferable, null));
             return null;
         }
 
@@ -68,21 +107,30 @@ public class MultipleReferenceResolver {
             myErrorReporter.report(LocationError.definition(null, module.getModulePath()));
         }
 
-        refMap.computeIfAbsent(module.getModulePath(), m -> new ArrayList<>()).add(referable);
+        refMap.computeIfAbsent(module.getModulePath(), m -> new ArrayList<>()).add(targetReferable);
 
-
-        // Calculate the set of local referables
-        List<Referable> localReferables = new ArrayList<>();
-        if (myAnchor.data() != null && myAnchor.parent() instanceof TCDefReferable tcRef) {
-            DefinitionData definitionData = myServer.getResolvedDefinition(tcRef);
-            if (definitionData != null) {
-                localReferables = LocalVariablesCollector.getLocalReferables(definitionData.definition(), myAnchor.data());
+        // Calculate the set of dynamic referables of the ambient classes
+        List<Referable> additionalDynamicReferables = new ArrayList<>();
+        @Nullable LocatedReferable parent = anchor.parent();
+        while (parent != null && !(parent instanceof ModuleReferable)) {
+            if (parent.getKind() == GlobalReferable.Kind.CLASS) {
+                AtomicReference<ConcreteGroup> classGroupReference = new AtomicReference<>();
+                final LocatedReferable classReferable = parent;
+                if (anchorModuleGroup != null) anchorModuleGroup.traverseGroup(concreteGroup -> {
+                    if (concreteGroup.referable() == classReferable)
+                        classGroupReference.set(concreteGroup);
+                });
+                @Nullable ConcreteGroup classGroup = classGroupReference.get();
+                if (classGroup != null)
+                    additionalDynamicReferables.addAll(classGroup.dynamicGroups().stream().map(ConcreteGroup::referable).toList());
             }
+            additionalDynamicReferables.add(parent);
+            parent = parent.getLocatedReferableParent();
         }
 
-        Scope referableScope = myServer.getReferableScope(myAnchor.parent());
-        Scope currentScope = referableScope == null ? new ListScope(localReferables) : new MergeScope(new ListScope(localReferables), referableScope);
-        Collection<? extends Referable> currentScopeElements = currentScope.getElements();
+        Scope referableScope = myServer.getReferableScope(anchor.parent());
+        Scope currentScope = referableScope == null ? new ListScope(additionalDynamicReferables) : new MergeScope(new ListScope(additionalDynamicReferables), referableScope);
+        Set<? extends Referable> currentScopeElements = new HashSet<>(currentScope.getElements());
         HashMap<Referable, String> currentScopeMap = new HashMap<>();
         for (Referable currentScopeElement : currentScopeElements) {
             if (currentScopeElement instanceof RedirectingReferable)
@@ -90,8 +138,7 @@ public class MultipleReferenceResolver {
             currentScopeMap.put(currentScopeElement, currentScopeElement.getRefName());
         }
 
-
-        ModuleLocation targetModuleLocation = referable.getLocation();
+        ModuleLocation targetModuleLocation = targetReferable.getLocation();
         ConcreteGroup targetModuleFile = targetModuleLocation != null ? myServer.getRawGroup(targetModuleLocation) : null;
         List<Referable> targetModuleDefinitions = new LinkedList<>();
         if (targetModuleFile != null) for (ConcreteStatement statement : targetModuleFile.statements()) {
@@ -99,17 +146,24 @@ public class MultipleReferenceResolver {
             if (group != null) targetModuleDefinitions.add(group.referable());
         }
 
-        AtomicReference<ConcreteNamespaceCommand> namespaceCommand = getConcreteNamespaceCommandAtomicReference(myCurrentFile, referable, anchorModuleLocation);
+        AtomicReference<ConcreteNamespaceCommand> namespaceCommand = getConcreteNamespaceCommandAtomicReference(myCurrentFile, targetReferable, anchorModuleLocation);
+        ArrayList<LocatedReferable> targetAncestors = new ArrayList<>();
+        LocatedReferable.Helper.getAncestors(targetReferable, targetAncestors);
+        Boolean someAncestorIsVisible = targetAncestors.stream().anyMatch(currentScopeElements::contains);
 
         boolean nonEmptyScopeIntersection = (!Prelude.MODULE_LOCATION.equals(targetModuleLocation) &&
                 targetModuleDefinitions.stream().anyMatch(stat -> currentScope.resolveName(stat.getRefName()) != null));
-        List<String> calculatedName = new ArrayList<>();
-        @Nullable List<String> alternativeName = (referable instanceof InternalReferable) ? new ArrayList<>() : null;
+
+        List<Pair<String, Referable>> calculatedName = new ArrayList<>();
+        @Nullable ModulePath modulePrefix = null;
+        @Nullable List<Pair<String, Referable>> alternativeName = (targetReferable instanceof InternalReferable) ? new ArrayList<>() : null; // Name which uses the name of parent class/datatype
+
         LocatedReferable currReferable;
         @Nullable LocatedReferable alternativeReferable = null;
-        LocatedReferable parent = referable;
+        parent = targetReferable;
 
-        if (namespaceCommand.get() != null || anchorModuleLocation.equals(targetModuleLocation)) {
+        if (namespaceCommand.get() != null || someAncestorIsVisible ||
+                anchorModuleLocation.equals(targetModuleLocation)) {
             boolean foundNameInScope = false;
             String contextName;
 
@@ -123,11 +177,11 @@ public class MultipleReferenceResolver {
                     if (resolveResult instanceof RedirectingReferable redirecting) resolveResult = redirecting.getOriginalReferable();
 
                     if (resolveResult == currReferable) {
-                        calculatedName.addFirst(contextName);
+                        calculatedName.addFirst(new Pair<>(contextName, resolveResult));
                         foundNameInScope = true;
                         break;
                     } else if (currReferable.getAliasName() != null && currentScope.resolveName(currReferable.getAliasName()) == currReferable) {
-                        calculatedName.addFirst(currReferable.getAliasName());
+                        calculatedName.addFirst(new Pair<>(currReferable.getAliasName(), currReferable));
                         foundNameInScope = true;
                         break;
                     }
@@ -139,18 +193,20 @@ public class MultipleReferenceResolver {
                     parent = parent.getLocatedReferableParent();
                 }
 
-                calculatedName.addFirst(currReferable.getRefName());
+                if (currReferable.hasAlias())
+                    calculatedName.addFirst(new Pair<>(currReferable.getAliasName(), currReferable)); else
+                        calculatedName.addFirst(new Pair<>(currReferable.getRefName(), currReferable));
             } while (parent != null && !(parent instanceof ModuleReferable));
 
             final LocatedReferable topLevelReferable = currReferable;
             boolean topLevelReferableIsProtected = topLevelReferable.getAccessModifier() == AccessModifier.PROTECTED;
 
-            if (contextName == null && !calculatedName.isEmpty()) contextName = calculatedName.getFirst();
+            if (contextName == null && !calculatedName.isEmpty()) contextName = calculatedName.getFirst().proj1;
 
             boolean scopeObstructed = !foundNameInScope && contextName != null && currentScope.resolveName(contextName) != null;
 
             if (scopeObstructed && targetModuleLocation != null) {
-                calculatedName.addAll(0, targetModuleLocation.getModulePath().toList());
+                modulePrefix = targetModuleLocation.getModulePath();
             }
 
             ConcreteNamespaceCommand cmd = namespaceCommand.get();
@@ -170,11 +226,11 @@ public class MultipleReferenceResolver {
                 currReferable = parent;
 
                 if (currReferable.getAliasName() != null) {
-                    calculatedName.addFirst(currReferable.getAliasName());
-                    if (alternativeName != null) alternativeName.addFirst(currReferable.getAliasName());
+                    calculatedName.addFirst(new Pair<>(currReferable.getAliasName(), currReferable));
+                    if (alternativeName != null) alternativeName.addFirst(new Pair<>(currReferable.getAliasName(), currReferable));
                 } else {
-                    calculatedName.addFirst(currReferable.getRefName());
-                    if (alternativeName != null) alternativeName.addFirst(currReferable.getRefName());
+                    calculatedName.addFirst(new Pair<>(currReferable.getRefName(), currReferable));
+                    if (alternativeName != null) alternativeName.addFirst(new Pair<>(currReferable.getRefName(), currReferable));
                 }
 
                 parent = currReferable.getLocatedReferableParent();
@@ -183,7 +239,7 @@ public class MultipleReferenceResolver {
                         !(currReferable instanceof FieldReferable fieldReferable && fieldReferable.isParameterField()) &&
                         parent != null && !(parent instanceof ModuleReferable)) {
                     if (alternativeName != null) {
-                        alternativeName.addFirst(parent.getRefName());
+                        alternativeName.addFirst(new Pair<>(parent.getRefName(), parent));
                         alternativeReferable = parent;
                     }
                     parent = parent.getLocatedReferableParent();
@@ -193,7 +249,7 @@ public class MultipleReferenceResolver {
             Referable referableInScope = currentScope.resolveName(currReferable.getRefName());
             @Nullable Referable alternativeReferableInScope = (alternativeReferable != null) ? currentScope.resolveName(alternativeReferable.getRefName()) : null;
 
-            String topLevelName = calculatedName.getFirst();
+            String topLevelName = calculatedName.getFirst().proj1;
             boolean topLevelReferableIsProtected = currReferable.getAccessModifier() == AccessModifier.PROTECTED;
             boolean scopeObstructed = false;
 
@@ -203,7 +259,7 @@ public class MultipleReferenceResolver {
             }
 
             if (scopeObstructed && targetModuleLocation != null) {
-                calculatedName.addAll(0, targetModuleLocation.getModulePath().toList());
+                modulePrefix = targetModuleLocation.getModulePath();
             }
             if (itemsToAdd.containsKey(namespaceCommand.get())) {
                 HashSet<String> individualImports = itemsToAdd.get(namespaceCommand.get());
@@ -222,11 +278,11 @@ public class MultipleReferenceResolver {
             }
         }
 
-        return new LongName(calculatedName);
+        return new Pair<>(modulePrefix, calculatedName);
     }
 
     public RawModifier getModifier() {
-        ModuleLocation anchorModuleLocation = myAnchor.parent().getLocation();
+        ModuleLocation anchorModuleLocation = myCurrentFile.referable().getLocation();
 
         List<RawModifier> result = new ArrayList<>();
         for (Map.Entry<ConcreteNamespaceCommand, HashSet<String>> entry : itemsToAdd.entrySet()) {

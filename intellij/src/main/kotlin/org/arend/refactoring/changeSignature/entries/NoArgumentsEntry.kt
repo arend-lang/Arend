@@ -11,5 +11,6 @@ class NoArgumentsEntry(refExpr: Concrete.ReferenceExpression, refactoringContext
 
     override fun getArguments(): List<ArgumentPrintResult> = emptyList()
 
-    override fun getContextName(): String = contextName
+    override fun getContextName(): String =
+        contextName
 }
