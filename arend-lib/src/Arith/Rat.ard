@@ -301,6 +301,9 @@
 
     \lemma half>0 {a : Rat} (a>0 : 0 RatField.< a) : 0 RatField.< half a
       => linarith
+
+    \lemma half<id {a : Rat} (a>0 : 0 RatField.< a) : half a RatField.< a
+      => linarith
   }
 
 \lemma fromInt_<= {x y : Int} (p : x <= y) : x <= {RatField} y

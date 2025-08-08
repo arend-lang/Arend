@@ -177,9 +177,19 @@
   \func IsWeaklyDenseUniformEmbedding : \Prop
     => \Sigma IsWeaklyDense IsUniformEmbedding
 } \where {
+  \func id {X : RegularPreuniformSpace} : UniformMap X X \cowith
+    | func x => x
+    | func-uniform Eu => uniform-subset Eu \lam {U} EU => inP $ later (U, EU, idp)
+
   \func compose \alias \infixl 8 ∘ {X Y Z : RegularPreuniformSpace} (g : UniformMap Y Z) (f : UniformMap X Y) : UniformMap X Z \cowith
     | func x => g (f x)
     | func-uniform Du => uniform-subset (f.func-uniform $ g.func-uniform Du) \lam (inP (V, inP (W,DW,q), p)) => inP $ later (W, DW, p *> rewrite q idp)
+
+  \func const {X Y : RegularPreuniformSpace} (y : Y) : UniformMap X Y \cowith
+    | func _ => y
+    | func-uniform Eu => top-uniform \case uniform-cover Eu y \with {
+      | inP (U,EU,Uy) => inP $ later (U, EU, <=-antisymmetric (\lam _ => Uy) top-univ)
+    }
 }
 
 \func RegularPreuniformTransfer {X : \Set} {Y : RegularPreuniformSpace} (f : X -> Y) : RegularPreuniformSpace X \cowith

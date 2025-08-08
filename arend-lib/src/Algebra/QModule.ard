@@ -83,7 +83,7 @@
     | AbGroup => M
     | *c => M.*q
     | *c-assoc => M.*q-assoc
-    | *c-ldistr => (\peval _ M.*q _) *> pmap (_ M.*i) (M.ud-unique $ M.*n-ldistr *> pmap2 (M.+) M.ud-cond M.ud-cond) *> M.*i_+-comm *> inv (pmap2 (M.+) (\peval _ M.*q _) (\peval _ M.*q _))
+    | *c-ldistr => (\peval _ M.*q _) *> pmap (_ M.*i) (M.ud-unique $ M.*n-ldistr *> pmap2 (M.+) M.ud-cond M.ud-cond) *> M.*i-ldistr *> inv (pmap2 (M.+) (\peval _ M.*q _) (\peval _ M.*q _))
     | *c-rdistr {r} {s} {a} => M.*q_*aq *> pmap (M.`*aq a) RatField.+_alt *> M.*aq-rdistr {rat_alt r} {rat_alt s} *> inv (pmap2 (+) M.*q_*aq M.*q_*aq)
     | ide_*c => M.ide_*q
 

@@ -108,8 +108,8 @@
       => dense-lift-unique (prod (prod rat_real rat_real) rat_real) (ProductTopSpace.prod.isDense (ProductTopSpace.prod.isDense rat_real.dense rat_real.dense) rat_real.dense) f g (\lam s => p s.1.1 s.1.2 s.2) ((x,y),z)
 
     \lemma *-rat-locally-uniform : LocallyUniformMap (RatNormed ⨯ RatNormed) RatNormed (\lam s => s.1 *' s.2)
-      => bilinear-locally-uniform (*') RatField.rdistr_- RatField.ldistr_- (\lam x => inP (abs x + 1, linarith)) (\lam x => inP (abs x + 1, linarith))
-          \lam {x} {y} => transportInv (_ ExUpperReal.<=) (ExUpperReal.*-rat abs>=0 abs>=0) $ =_<= $ pmap ExUpperReal.fromRat RatField.abs_*
+      => bilinear-locally-uniform (*') RatField.rdistr_- RatField.ldistr_- \lam {x} {y} =>
+        transportInv (_ ExUpperReal.<=) (ExUpperReal.*-rat abs>=0 abs>=0) $ =_<= $ pmap ExUpperReal.fromRat RatField.abs_*
 
     \private \func *-cover-def : CoverMap (RealNormed ⨯ RealNormed) RealNormed
       => real-lift2 (rat_real ∘ *-rat-locally-uniform)

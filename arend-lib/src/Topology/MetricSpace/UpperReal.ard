@@ -63,4 +63,10 @@
     })
   \where {
     \open ExUpperRealAbMonoid(<-rat,<_+)
+
+    \lemma dist-left {x y : ExUpperReal} {a : Rat} (xy<a : (dist x y).U a) : x <= y + a \elim xy<a
+      | inP (b,b<a,_,p,_) => p <=∘ ExUpperRealAbMonoid.<=_+ <=-refl (<=-less $ ExUpperRealAbMonoid.<-rat.2 b<a)
+
+    \lemma dist-right {x y : ExUpperReal} {a : Rat} (xy<a : (dist x y).U a) : y <= x + a \elim xy<a
+      | inP (b,b<a,_,_,p) => p <=∘ ExUpperRealAbMonoid.<=_+ <=-refl (<=-less $ ExUpperRealAbMonoid.<-rat.2 b<a)
   }

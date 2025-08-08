@@ -28,6 +28,9 @@
       | inl q<r => U-closed Uq q<r
       | inr q=r => transport U q=r Uq
     }
+
+  \func IsBounded : \Prop
+    => ∃ U
 } \where {
   \use \coerce fromRat (x : Rat) : ExUpperReal \cowith
     | U => x <
@@ -302,14 +305,20 @@
         | inP (a,x<a,a>0,b,y<b,b>0,ab<d) => RatField.<_*_positive_positive a>0 b>0 <∘ ab<d
       }
 
-    \protected \lemma ldistr {x y z : ExUpperReal} (y>=0 : 0 <= y) (z>=0 : 0 <= z) : x * (y + z) = x * y + x * z
-      => <=-antisymmetric (\lam {d} xy+xz<d => \case +_U.1 xy+xz<d \with {
+    \protected \lemma ldistr_<= {x y z : ExUpperReal} : x * (y + z) <= x * y + x * z
+      => \lam {d} xy+xz<d => \case +_U.1 xy+xz<d \with {
         | inP (b',xy<b',c',xz<c',b'+c'<d) => \case *_U.1 xy<b', *_U.1 xz<c' \with {
           | inP (a1,x<a1,a1>0,b,y<b,b>0,a1b<b'), inP (a2,x<a2,a2>0,c,z<c,c>0,a2c<c') => *_U.2 $ inP (
               a1 ∧ a2, real_meet_U x<a1 x<a2, <_meet-univ a1>0 a2>0, b RatField.+ c, +_U_<=.2 $ inP (b,y<b,c,z<c,<=-refl), linarith,
               transportInv (RatField.`< _) RatField.ldistr (RatField.<_+ (RatField.<=_*_positive-left meet-left (<=-less b>0) <∘r a1b<b') (RatField.<=_*_positive-left meet-right (<=-less c>0) <∘r a2c<c')) <∘ b'+c'<d)
         }
-      }) \lam {d} x[y+z]<d => \case *_U.1 x[y+z]<d \with {
+      }
+
+    \protected \lemma rdistr_<= {x y z : ExUpperReal} : (x + y) * z <= x * z + y * z
+      => transport (`<= _) ExUpperRealSemigroup.*-comm $ ldistr_<= <=∘ =_<= (pmap2 (+) ExUpperRealSemigroup.*-comm ExUpperRealSemigroup.*-comm)
+
+    \protected \lemma ldistr {x y z : ExUpperReal} (y>=0 : 0 <= y) (z>=0 : 0 <= z) : x * (y + z) = x * y + x * z
+      => <=-antisymmetric ldistr_<= \lam {d} x[y+z]<d => \case *_U.1 x[y+z]<d \with {
         | inP (a,x<a,a>0,d',y+z<d',d'>0,ad'<d) => \case +_U.1 y+z<d' \with {
           | inP (b,y<b,c,z<c,b+c<d') => +_U.2 $ inP (a RatField.* b, *_U_<=.2 $ inP (a, x<a, a>0, b, y<b, y>=0 y<b, <=-refl), a RatField.* c, *_U_<=.2 $ inP (a, x<a, a>0, c, z<c, z>=0 z<c, <=-refl), transport (RatField.`< _) RatField.ldistr (RatField.<_*_positive-right a>0 b+c<d') <∘ ad'<d)
         }
@@ -318,7 +327,7 @@
     \protected \lemma rdistr {x y z : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) : (x + y) * z = x * z + y * z
       => ExUpperRealSemigroup.*-comm *> ldistr x>=0 y>=0 *> pmap2 (+) ExUpperRealSemigroup.*-comm ExUpperRealSemigroup.*-comm
 
-    \protected \lemma zro_*-left {x : ExUpperReal} (xb : ∃ (B : Rat) (x.U B)) : 0 * x = 0 \elim xb
+    \protected \lemma zro_*-left {x : ExUpperReal} (xb : x.IsBounded) : 0 * x = 0 \elim xb
       | inP (q,x<q) => <=-antisymmetric (\lam {b} b>0 => *_U_<=.2
         \have | p1 => RatField.zro<ide <∘l join-right
               | p2 => RatField.<_*_positive_positive b>0 (RatField.finv>0 p1)
@@ -326,7 +335,7 @@
           | inP (a,_,a>0,c,x<c,c>0,ac<b) => RatField.<_*_positive_positive a>0 c>0 <∘ ac<b
         })
 
-    \protected \lemma zro_*-right {x : ExUpperReal} (xb : ∃ (B : Rat) (x.U B)) : x * 0 = 0
+    \protected \lemma zro_*-right {x : ExUpperReal} (xb : x.IsBounded) : x * 0 = 0
       => ExUpperRealSemigroup.*-comm *> zro_*-left xb
 
     \lemma <_*-positive {x y : ExUpperReal} (x>0 : 0 < x) (y>0 : 0 < y) : 0 < x * y \elim x>0, y>0

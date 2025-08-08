@@ -28,10 +28,10 @@
 
 \class ExPseudoNormedPseudoRing \extends BoundedExPseudoNormedAbGroup, TopSemigroup, PseudoRing
   | norm_*_<= {x y : E} : norm (x * y) <= norm x ExUpperReal.* norm y
-  | *-cont => bilinear-locally-uniform (*) rdistr_- ldistr_- norm-bounded norm-bounded norm_*_<=
+  | *-cont => bilinear-locally-uniform (*) rdistr_- ldistr_- norm_*_<=
 
 \lemma *-locally-uniform {X : ExPseudoNormedPseudoRing} : LocallyUniformMap (X ⨯ X) X (\lam s => s.1 * s.2)
-  => bilinear-locally-uniform (*) X.rdistr_- X.ldistr_- norm-bounded norm-bounded norm_*_<=
+  => bilinear-locally-uniform (*) X.rdistr_- X.ldistr_- norm_*_<=
 
 \class PseudoNormedPseudoRing \extends ExPseudoNormedPseudoRing, PseudoNormedAbGroup
 
@@ -57,7 +57,7 @@
   => Real.<=-upper.2 (later norm_ide_<=)
 
 -- | If the norm of 1 is zero, then all bounded elements have zero norm.
-\lemma norm_ide=0 {X : ExPseudoNormedRing} (p : X.norm 1 = 0) {x : X} (xb : X.IsBounded x) : norm x = 0 \elim xb
+\lemma norm_ide=0 {X : ExPseudoNormedRing} (p : X.norm 1 = 0) {x : X} (xb : (norm x).IsBounded) : norm x = 0 \elim xb
   | inP (B,x<B) => pmap norm (inv ide-right) *> <=-antisymmetric (norm_*_<= <=∘ ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= x<B) <=-refl <=∘ =_<= (pmap (B ExUpperRealSemigroup.*) p *> ExUpperReal.*-rat (<=-less $ norm>=0 x<B) <=-refl *> pmap ExUpperReal.fromRat RatField.zro_*-right)) norm>=0
 
 -- | If the norm of 1 is less than 1, then it is zero.

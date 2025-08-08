@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Pointed
 \import Arith.Rat
 \import Arith.Real.UpperReal
 \import Function.Meta
@@ -12,6 +13,8 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Relation.Equivalence
+\import Set.Subset
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
@@ -19,6 +22,7 @@
 \import Topology.MetricSpace.UpperReal
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real.Functions
+\import Topology.RatherBelow
 \import Topology.TopAbGroup.Complete
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
@@ -39,15 +43,89 @@
   | norm-dist {F} {G} => dense-lift-unique (ProductTopSpace.prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1) (dist-uniform-map {ExMetricCompletion X}) (norm-cont ContMap.∘ (TopAbGroupCompletion X).subtract-cont)
     (\lam s => completion-ex-isometry.func-isometry *> norm-dist *> norm_dist *> dist-symm *> inv completion-ex-isometry.func-isometry *> inv filter-norm_dist *> pmap norm (inv TopAbGroupCompletion.subtract-char *> TopAbGroupCompletion.subtract_- {X})) (F,G)
   \where \private {
-    \lemma filter-norm_dist {F : RegularCauchyFilter X} : norm F = (ExMetricCompletion X).dist F (pointCF X.zro)
+    \lemma filter-norm_dist {F : RegularCauchyFilter X} : norm F = (ExMetricCompletion X).dist F (pointCF 0)
       => <=-antisymmetric (\lam (inP (a,a<b,U,FU,V,V0,h)) => inP (a, a<b, U, FU, \lam Ux => rewrite (norm_dist,dist-symm) $ h Ux $ <=<_<= V0 idp))
-        \lam {b} (inP (a,a<b,U,FU,h)) => inP (RatField.mid a b, RatField.mid<right a<b, U, FU, OBall (RatField.half (b - a)) X.zro, OBall-center_<=< $ RatField.half>0 $ RatField.to>0 a<b,
+        \lam {b} (inP (a,a<b,U,FU,h)) => inP (RatField.mid a b, RatField.mid<right a<b, U, FU, OBall (RatField.half (b - a)) 0, OBall-center_<=< $ RatField.half>0 $ RatField.to>0 a<b,
           \lam {x'} Ux' y0 => rewrite norm-dist $ ExUpperRealAbMonoid.<-rat.1 $ norm_+ <∘r transport (_ <) (pmap ExUpperReal.fromRat linarith) (transport (_ <) ExUpperReal.+-rat $ ExUpperRealAbMonoid.<_+ (ExUpperRealAbMonoid.<-rat.2 $ h Ux') $ transportInv (`< _) (norm_negative *> norm_dist) $ ExUpperRealAbMonoid.<-rat.2 y0))
 
     \lemma norm-cont : ContMap (ExMetricCompletion X) ExUpperRealMetric norm
-      => transportInv (ContMap _ _) {norm} {dist __ _} (ext \lam F => filter-norm_dist) $ dist-uniform-map ContMap.∘ ProductTopSpace.tuple ContMap.id (ContMap.const (pointCF X.zro))
+      => transportInv (ContMap _ _) {norm} {dist __ _} (ext \lam F => filter-norm_dist) $ dist-uniform-map ContMap.∘ ProductTopSpace.tuple ContMap.id (ContMap.const (pointCF 0))
   }
 
 \func completion-exNormed-isometry {X : ExPseudoNormedAbGroup} : NormedIsometricMap X (ExNormedAbGroupCompletion X) \cowith
   | IsometricMap => completion-ex-isometry
   | func-+ => completion-topAb.func-+
+
+\instance SeparatedNormedAbGroupReflection (X : ExPseudoNormedAbGroup) : ExNormedAbGroup (Quot X)
+  | zro => in~ 0
+  | + (a b : Quot X) : Quot X \with {
+    | in~ x, in~ x' => in~ (x X.+ x')
+    | in~ a, ~-equiv x y r => ~-nequiv (simplify r)
+    | ~-equiv x y r, in~ a => ~-nequiv (simplify r)
+  }
+  | zro-left {x} => \case \elim x \with {
+    | in~ x => ~-nequiv (simplify norm_zro)
+  }
+  | +-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
+    | in~ x, in~ y, in~ z => ~-nequiv (simplify norm_zro)
+  }
+  | negative (a : Quot X) : Quot X \with {
+    | in~ x => in~ (X.negative x)
+    | ~-equiv x y r => ~-nequiv (inv norm_negative *> simplify (pmap X.norm +-comm *> r))
+  }
+  | negative-left {x} => \case \elim x \with {
+    | in~ x => ~-nequiv (simplify norm_zro)
+  }
+  | +-comm {x} {y} => \case \elim x, \elim y \with {
+    | in~ x, in~ y => ~-nequiv (simplify norm_zro)
+  }
+  | norm (a : Quot X) : ExUpperReal \with {
+    | in~ x => X.norm x
+    | ~-equiv x y r => <=-antisymmetric
+      (transport2 (X.norm __ <= __) {x - y X.+ y} simplify zro-left $ norm_+ <=∘ ExUpperRealAbMonoid.<=_+ (=_<= r) <=-refl)
+      (transport2 (X.norm __ <= __) {y - x X.+ x} simplify zro-left $ norm_+ <=∘ ExUpperRealAbMonoid.<=_+ (=_<= $ norm_- *> r) <=-refl)
+  }
+  | norm_zro => norm_zro
+  | norm_negative {x} => \case \elim x \with {
+    | in~ x => norm_negative
+  }
+  | norm_+ {x} {y} => \case \elim x, \elim y \with {
+    | in~ x, in~ y => norm_+
+  }
+  | norm-ext {x} => \case \elim x \with {
+    | in~ x => \lam p => ~-nequiv $ pmap X.norm simplify *> p
+  }
+  \where {
+    \type Quot (X : ExPseudoNormedAbGroup) => Quotient {X} \lam x x' => X.norm (x - x') = 0
+
+    \func inN {X : ExPseudoNormedAbGroup} (x : X) : Quot X => in~ x
+
+    \lemma ~-nequiv {X : ExPseudoNormedAbGroup} {x x' : X} (e : X.norm (x - x') = 0) : inN x = inN x'
+      => path \lam i => ~-pequiv e i
+
+    \lemma inN-isometry {X : ExPseudoNormedAbGroup} : NormedIsometricMap X (SeparatedNormedAbGroupReflection X) inN \cowith
+      | func-+ => idp
+      | func-norm-isometry => idp
+  }
+
+\func separated-completion {X : ExPseudoNormedAbGroup} : NormedIsometricMap (SeparatedNormedAbGroupReflection X) (ExNormedAbGroupCompletion X) \cowith
+  | func (a : SeparatedNormedAbGroupReflection.Quot X) : RegularCauchyFilter X \with {
+    | in~ x => pointCF x
+    | ~-equiv x y r =>
+      \have lem {x y : X} (p : norm (x - y) = 0) {U : Set X} (x<=<U : pointCF x U) : pointCF y U => \case <=<-ball x<=<U \with {
+        | inP (eps,eps>0,q) => <=<-left (OBall-center_<=< eps>0) \lam {z} d => q
+          \have xz<=yz => dist-triang <=∘ =_<= (pmap (`+ _) (norm-dist *> p) *> zro-left)
+          \in xz<=yz d
+      }
+      \in exts \lam U => ext (lem r, lem $ norm_- *> r)
+  }
+  | func-+ {x} {y} => \case \elim x, \elim y \with {
+    | in~ x, in~ y => inv TopAbGroupCompletion.+-char
+  }
+  | func-norm-isometry {x} => \case \elim x \with {
+    | in~ x => completion-exNormed-isometry.func-norm-isometry
+  }
+  \where {
+    \lemma isDense : (separated-completion {X}).IsDense
+      => {?}
+  }

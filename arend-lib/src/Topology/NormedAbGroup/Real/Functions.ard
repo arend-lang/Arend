@@ -17,6 +17,7 @@
 \import Paths
 \import Paths.Meta
 \import Topology.MetricSpace
+\import Topology.MetricSpace.ManhattanProduct
 \import Topology.MetricSpace.UpperReal
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
@@ -34,6 +35,9 @@
           X.dist-triang <=∘ transport (`<= _) +-comm (<=_+ X.dist-triang <=-refl <=∘ transportInv (`<= _) +-assoc (<=_+ <=-refl $ transport (_ <=) ExUpperReal.+-rat $ <=-less $ ExUpperRealAbMonoid.<_+ (ExUpperRealAbMonoid.<-rat.2 x'y'<eps/4) (transport (`< _) dist-symm $ ExUpperRealAbMonoid.<-rat.2 xy<eps/4)))))
     })
   }
+
+\lemma norm-uniform-map {X : ExPseudoNormedAbGroup} : UniformMap X ExUpperRealMetric norm
+  => transportInv (UniformMap X ExUpperRealMetric) (ext \lam x => norm_dist) $ dist-uniform-map UniformMap.∘ ProductUniformSpace.tuple (UniformMap.const X.zro) UniformMap.id
 
 \lemma ldist-uniform-map {X : PseudoMetricSpace} : UniformMap (X ⨯ X) RealNormed (\lam s => X.dist s.1 s.2) \cowith
   | func-uniform Eu => \case dist-uniform.2 Eu \with {
@@ -88,5 +92,19 @@
     })
   }
 
-\lemma upper-+-uniform : UniformMap (ExUpperRealMetric ⨯ ExUpperRealMetric) ExUpperRealMetric \lam s => s.1 + s.2 \cowith
-  | func-uniform => {?}
+\lemma upper-+-uniform : MetricMap (ManhattanProductPseudoMetricSpace ExUpperRealMetric ExUpperRealMetric) ExUpperRealMetric \lam s => s.1 + s.2 \cowith
+  | func-dist {x} {y} {d} xy<d => \case ExUpperReal.+_U.1 xy<d \with {
+    | inP (a,x1y1<a,b,x2y2<b,a+b<d) => inP (a + b, a+b<d, RatField.<=_+-positive (<=-less $ dist>=0 {ExUpperRealMetric} x1y1<a) (<=-less $ dist>=0 {ExUpperRealMetric} x2y2<b),
+        ExUpperRealAbMonoid.<=_+ (ExUpperRealMetric.dist-left x1y1<a) (ExUpperRealMetric.dist-left x2y2<b) <=∘ transport (_ <= _ + __) ExUpperReal.+-rat (=_<= equation.abMonoid),
+        ExUpperRealAbMonoid.<=_+  (ExUpperRealMetric.dist-right x1y1<a)  (ExUpperRealMetric.dist-right x2y2<b) <=∘ transport (_ <= _ + __) ExUpperReal.+-rat (=_<= equation.abMonoid))
+  }
+
+\lemma upper-*-left-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (a *) \cowith
+  | func-dist-uniform {eps} eps>0 => \case \elim aB \with {
+    | inP (B,a<B) => inP (RatField.finv (B ∨ 1) * eps, RatField.<_*_positive_positive (RatField.finv>0 $ zro<ide <∘l join-right) eps>0, \lam (inP (b,bp,b>=0,x<=x'+b,x'<=x+b)) =>
+      \have lem {x x' : ExUpperReal} (x<=x'+b : x <= x' + b) => ExUpperRealSemigroup.<=_* <=-refl x<=x'+b <=∘ ExUpperRealSemigroup.ldistr_<= <=∘ ExUpperRealAbMonoid.<=_+ <=-refl (transport (_ <=) (ExUpperReal.*-rat (<=-less zro<ide <=∘ join-right) b>=0) $ ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= $ ExUpperReal.U_<= a<B join-left) <=-refl)
+      \in inP ((B ∨ 1) * b, RatField.<_*_positive-right (zro<ide <∘l join-right) bp <∘l =_<= (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= $ zro<ide <∘l join-right) *> ide-left), RatField.<=_*_positive_positive (<=-less zro<ide <=∘ join-right) b>=0, lem x<=x'+b, lem x'<=x+b))
+  }
+
+\lemma upper-*-right-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (`* a)
+  => transport (UniformMetricMap ExUpperRealMetric ExUpperRealMetric) (ext \lam b => *-comm) (upper-*-left-uniform aB)

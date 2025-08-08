@@ -352,7 +352,7 @@
   \lemma *n-ldistr_- {n : Nat} {a b : E} : n *n (a - b) = n *n a - n *n b
     => *n-ldistr *> pmap (_ +) *n_negative
 
-  \lemma *i_+-comm {a b : E} {x : Int} : x *i (a + b) = x *i a + x *i b
+  \lemma *i-ldistr {a b : E} {x : Int} : x *i (a + b) = x *i a + x *i b
     => *i_ipow *> \this.ipow_*-comm *> inv (pmap2 (+) *i_ipow *i_ipow)
 
   \lemma BigSum_negative {l : Array E} : negative (BigSum l) = BigSum (map negative l) \elim l

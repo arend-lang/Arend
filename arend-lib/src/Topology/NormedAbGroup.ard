@@ -81,9 +81,6 @@
     | 0 => =_<= norm_zro
     | suc n => norm_+ <=∘ <=_+ norm_*n<= <=-refl
 
-  \func IsBounded (x : E) : \Prop
-    => ∃ (B : Rat) ((norm x).U B)
-
   \func IsUnbounded : \Prop
     => \Pi (B : Nat) -> ∃ (x : E) (ExUpperReal.fromRat B <= norm x)
 
@@ -112,7 +109,7 @@
 }
 
 \class BoundedExPseudoNormedAbGroup \extends ExPseudoNormedAbGroup
-  | norm-bounded (x : E) : IsBounded x
+  | norm-bounded (x : E) : (norm x).IsBounded
 
 \class PseudoNormedAbGroup \extends BoundedExPseudoNormedAbGroup, PseudoMetricSpace {
   \override norm : E -> Real
@@ -190,13 +187,12 @@
 \class CompleteNormedAbGroup \extends CompleteExNormedAbGroup, NormedAbGroup, CompleteMetricSpace
 
 -- | A bilinear map bounded by the product of norms is locally uniform.
-\lemma bilinear-locally-uniform {A B C : ExPseudoNormedAbGroup} (f : A -> B -> C)
+\lemma bilinear-locally-uniform {A B : BoundedExPseudoNormedAbGroup} {C : ExPseudoNormedAbGroup} (f : A -> B -> C)
                                 (fl : \Pi {a a' : A} {b : B} -> f (a - a') b = f a b - f a' b)
                                 (fr : \Pi {a : A} {b b' : B} -> f a (b - b') = f a b - f a b')
-                                (boundA : \Pi (x : A) -> A.IsBounded x) (boundB : \Pi (x : B) -> B.IsBounded x)
                                 (norm_*_<= : \Pi {x : A} {y : B} -> norm (f x y) <= norm x * norm y)
   : LocallyUniformMap (A ⨯ B) C (\lam s => f s.1 s.2)
-  => LocallyUniformMetricMap.makeLocallyUniformMap2 f \lam {eps} eps>0 => inP (1, zro<ide, \lam x0 y0 => \case boundA x0, boundB y0 \with {
+  => LocallyUniformMetricMap.makeLocallyUniformMap2 f \lam {eps} eps>0 => inP (1, zro<ide, \lam x0 y0 => \case norm-bounded x0, norm-bounded y0 \with {
     | inP (x0b,|x0|<x0b), inP (y0b,|y0|<y0b) => \case ExUpperRealSemigroup.div-lb-rat {(x0b + 1) + (y0b + 1 + 1)} {Real.fromRat eps} (inP (1, idp, <=-rat.1 $ linarith (norm>=0 |x0|<x0b, norm>=0 |y0|<y0b))) (<-rat.2 eps>0) \with {
       | inP (gamma,gamma>0,gamma-m) => inP (gamma ∧ 1, <_meet-univ gamma>0 zro<ide, \lam {x} {x'} {y} {y'} x0x<1 y0y<1 xx'<gamma yy'<gamma =>
         rewrite norm-dist at xx'<gamma $ rewrite norm-dist at yy'<gamma $ rewrite norm-dist at x0x<1 $ rewrite norm-dist at y0y<1 $ rewrite norm-dist $
