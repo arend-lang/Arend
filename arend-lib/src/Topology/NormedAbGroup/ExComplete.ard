@@ -1,0 +1,53 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Arith.Rat
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.MetricSpace.ExComplete
+\import Topology.MetricSpace.UpperReal
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup.Complete
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+
+\func dense-normed-lift {X Y : ExPseudoNormedAbGroup} {Z : CompleteExNormedAbGroup} (f : NormedIsometricMap X Y) (fd : f.IsDense) (g : NormedAbGroupMap X Z) : NormedAbGroupMap Y Z \cowith
+  | MetricMap => dense-metric-lift f fd g
+  | TopAbGroupMap => dense-topAb-lift f (fd, f.embedding->topEmbedding $ f.embedding->coverEmbedding (f.dense->uniformEmbedding fd).2) g
+  | func-norm => rewrite (norm_dist,norm_dist) $ transport (dist __ _ <= _) (dense-topAb-lift f (fd, f.embedding->topEmbedding $ f.embedding->coverEmbedding (f.dense->uniformEmbedding fd).2) g).func-zro $ func-dist {dense-metric-lift f fd g}
+
+\instance ExNormedAbGroupCompletion (X : ExPseudoNormedAbGroup) : CompleteExNormedAbGroup
+  | CompleteExMetricSpace => ExMetricCompletion X
+  | CompleteTopAbGroup => TopAbGroupCompletion X
+  | norm (F : RegularCauchyFilter X) : ExUpperReal \cowith {
+    | U q => ∃ (r : `< q) (U : F.F) ∀ {x : U} ((X.norm x).U r)
+    | U-closed (inP (r,r<q,U,FU,h)) q<q' => inP (r, r<q <∘ q<q', U, FU, h)
+    | U-rounded {q} (inP (r,r<q,U,FU,h)) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, U, FU, h), RatField.mid<right r<q)
+  }
+  | norm-dist {F} {G} => dense-lift-unique (ProductTopSpace.prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1) (dist-uniform-map {ExMetricCompletion X}) (norm-cont ContMap.∘ (TopAbGroupCompletion X).subtract-cont)
+    (\lam s => completion-ex-isometry.func-isometry *> norm-dist *> norm_dist *> dist-symm *> inv completion-ex-isometry.func-isometry *> inv filter-norm_dist *> pmap norm (inv TopAbGroupCompletion.subtract-char *> TopAbGroupCompletion.subtract_- {X})) (F,G)
+  \where \private {
+    \lemma filter-norm_dist {F : RegularCauchyFilter X} : norm F = (ExMetricCompletion X).dist F (pointCF X.zro)
+      => <=-antisymmetric (\lam (inP (a,a<b,U,FU,V,V0,h)) => inP (a, a<b, U, FU, \lam Ux => rewrite (norm_dist,dist-symm) $ h Ux $ <=<_<= V0 idp))
+        \lam {b} (inP (a,a<b,U,FU,h)) => inP (RatField.mid a b, RatField.mid<right a<b, U, FU, OBall (RatField.half (b - a)) X.zro, OBall-center_<=< $ RatField.half>0 $ RatField.to>0 a<b,
+          \lam {x'} Ux' y0 => rewrite norm-dist $ ExUpperRealAbMonoid.<-rat.1 $ norm_+ <∘r transport (_ <) (pmap ExUpperReal.fromRat linarith) (transport (_ <) ExUpperReal.+-rat $ ExUpperRealAbMonoid.<_+ (ExUpperRealAbMonoid.<-rat.2 $ h Ux') $ transportInv (`< _) (norm_negative *> norm_dist) $ ExUpperRealAbMonoid.<-rat.2 y0))
+
+    \lemma norm-cont : ContMap (ExMetricCompletion X) ExUpperRealMetric norm
+      => transportInv (ContMap _ _) {norm} {dist __ _} (ext \lam F => filter-norm_dist) $ dist-uniform-map ContMap.∘ ProductTopSpace.tuple ContMap.id (ContMap.const (pointCF X.zro))
+  }
+
+\func completion-exNormed-isometry {X : ExPseudoNormedAbGroup} : NormedIsometricMap X (ExNormedAbGroupCompletion X) \cowith
+  | IsometricMap => completion-ex-isometry
+  | func-+ => completion-topAb.func-+

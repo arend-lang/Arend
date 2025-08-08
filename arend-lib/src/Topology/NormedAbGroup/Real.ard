@@ -101,7 +101,7 @@
   => \lam (x : Real) => \Sigma (x.L a) (x.U b)
 
 \lemma dense-lift-real-char {X Y : CoverSpace} {f : CoverMap X Y} (fd : f.IsDenseEmbedding) {g : CoverMap X RealNormed} (y : Y) (a b : Rat)
-  : open-rat-int a b (dense-lift f fd g y) <-> ∃ (a' b' : Rat) (a < a') (b' < b) (V : Set Y) (f ^-1 V ⊆ g ^-1 open-rat-int a' b') (single y <=< V)
+  : open-rat-int a b (cauchy-lift f fd g y) <-> ∃ (a' b' : Rat) (a < a') (b' < b) (V : Set Y) (f ^-1 V ⊆ g ^-1 open-rat-int a' b') (single y <=< V)
   => (\lam (a<z,z<b) => \case L-rounded a<z, U-rounded z<b \with {
     | inP (a',a'<z,a<a'), inP (b',z<b',b'<b) => \case (dense-lift-neighborhood fd y (open-rat-int a' b')).1 (point_<=< a'<z z<b') \with {
       | inP (W,W<=<a'b',V,q,y<=<V) => inP (a', b', a<a', b'<b, V, q <=∘ <=<_<= (<=<_^-1 W<=<a'b'), y<=<V)

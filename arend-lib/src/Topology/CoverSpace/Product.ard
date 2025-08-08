@@ -181,7 +181,7 @@
   }
 
 \lemma completion-lift-neighborhood2 {X Y : CoverSpace} {Z : CompleteCoverSpace} (g : CoverMap (X ⨯ Y) Z) (F : Completion X) (G : Completion Y) (W : Set Z)
-  : single (dense-lift (prod completion completion) (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) g (F,G)) <=< W <->
+  : single (cauchy-lift (prod completion completion) (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) g (F,G)) <=< W <->
     ∃ (W' : Set Z) (W' <=< W) (V1 : Set X) (F V1) (V2 : Set Y) (G V2) (∀ {x : V1} {y : V2} (W' (g (x,y))))
   => <->trans (dense-lift-neighborhood (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) (F,G) W) $ later
       (\lam (inP (W',W'<=<W,V,p,FG<=<V)) => \case prod-neighborhood.1 FG<=<V \with {

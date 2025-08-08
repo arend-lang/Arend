@@ -113,3 +113,7 @@
       ∃ (U' : Set (Completion X)) (U' <=< U) (V1 : Set X) (F V1) (V2 : Set X) (G V2) ∀ {x : V1} {y : V2} (U' (pointCF (x - y)))
       => rewrite (inv subtract_-, \peval subtract-cover) $ completion-lift-neighborhood2 (completion ∘ +-uniform ∘ prod id negative-uniform) F G U
   }
+
+\func completion-topAb {X : TopAbGroup} : TopAbGroupMap X (TopAbGroupCompletion X) \cowith
+  | UniformMap => uniform-completion
+  | func-+ => inv TopAbGroupCompletion.+-char

@@ -89,6 +89,9 @@
 
   \lemma UBall-point {U : Set E} {x : E} (Ux : U x) : UBall U x 0
     => transportInv U simplify Ux
+
+  \lemma subtract-cont : ContMap (ProductTopSpace \this \this) \this \lam s => s.1 - s.2
+    => +-cont ∘ prod id negative-cont
 } \where {
   \open ContMap
   \open ProductTopSpace

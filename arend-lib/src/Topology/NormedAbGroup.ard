@@ -65,12 +65,17 @@
   | open-top => defaultImpl PrecoverSpace open-top
   | open-inter {U} {V} => defaultImpl PrecoverSpace open-inter {_} {U} {V}
   | open-Union {S} => defaultImpl PrecoverSpace open-Union {_} {S}
-  | dist-refl => norm-dist *> pmap norm negative-right *> norm_zro
-  | dist-symm => norm-dist *> simplify *> norm_negative *> inv norm-dist
-  | dist-triang => repeat {3} (rewrite norm-dist) $ transport (norm __ <= _) simplify norm_+
 
   \default dist x y : ExUpperReal => norm (x - y)
   \default norm-dist \as norm-dist-impl {x} {y} : dist x y = norm (x - y) => idp
+
+  \default norm_zro => inv (norm-dist *> pmap norm (pmap (zro +) negative_zro *> zro-right)) *> dist-refl
+  \default norm_negative => pmap norm (inv zro-left) *> inv norm-dist *> dist-symm *> norm-dist *> pmap norm (pmap (_ +) negative_zro *> zro-right)
+  \default norm_+ => transport (\lam z => norm (_ + z) <= _) negative-isInv $ =_<= (inv norm-dist) <=∘ dist-triang {_} {_} {0} <=∘ =_<= (pmap2 (ExUpperReal.+) (norm-dist *> pmap norm (pmap (_ +) negative_zro *> zro-right)) (norm-dist *> pmap norm (pmap (0 +) negative-isInv *> zro-left)))
+
+  \default dist-refl => norm-dist *> pmap norm negative-right *> norm_zro
+  \default dist-symm => norm-dist *> simplify *> norm_negative *> inv norm-dist
+  \default dist-triang => repeat {3} (rewrite norm-dist) $ transport (norm __ <= _) simplify norm_+
 
   \lemma norm_*n<= {n : Nat} {a : E} : norm (n *n a) <= n ExUpperRealAbMonoid.*n norm a \elim n
     | 0 => =_<= norm_zro
@@ -99,9 +104,12 @@
 \lemma norm_dist-bound {X : ExPseudoNormedAbGroup} {x y : X} : norm x <= dist x y + norm y
   => rewrite norm-dist $ transport (norm  __ <= _) simplify norm_+
 
-\class ExNormedAbGroup \extends ExPseudoNormedAbGroup, ExMetricSpace
+\class ExNormedAbGroup \extends ExPseudoNormedAbGroup, ExMetricSpace {
   | norm-ext {x : E} : norm x = ExUpperRealAbMonoid.zro -> x = 0
-  | dist-ext p => fromZero $ norm-ext $ inv norm-dist *> p
+
+  \default dist-ext p => fromZero $ norm-ext $ inv norm-dist *> p
+  \default norm-ext p => dist-ext $ norm-dist *> pmap norm (pmap (_ +) negative_zro *> zro-right) *> p
+}
 
 \class BoundedExPseudoNormedAbGroup \extends ExPseudoNormedAbGroup
   | norm-bounded (x : E) : IsBounded x
@@ -172,7 +180,9 @@
 
   | func-norm-isometry {x : Dom} : norm (func x) = norm x
   | func-norm => =_<= func-norm-isometry
-  | func-isometry => norm-dist *> pmap norm (inv func-minus) *> func-norm-isometry *> inv norm-dist
+
+  \default func-isometry => norm-dist *> pmap norm (inv func-minus) *> func-norm-isometry *> inv norm-dist
+  \default func-norm-isometry => norm_dist *> pmap (dist __ _) (inv func-zro) *> func-isometry *> inv norm_dist
 }
 
 \class CompleteExNormedAbGroup \extends ExNormedAbGroup, CompleteExMetricSpace, CompleteTopAbGroup
