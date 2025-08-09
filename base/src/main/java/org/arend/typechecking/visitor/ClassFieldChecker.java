@@ -47,6 +47,10 @@ public class ClassFieldChecker extends BaseConcreteExpressionVisitor<Void> {
     return new Concrete.ErrorHoleExpression(expr.getData(), error);
   }
 
+  private Concrete.Expression getThisExpression(Object data) {
+    return myFutureFields == null ? new Concrete.ReferenceExpression(data, myThisParameter) : new Concrete.ThisExpression(data, myThisParameter);
+  }
+
   @Override
   public Concrete.Expression visitReference(Concrete.ReferenceExpression expr, Void params) {
     Referable ref = expr.getReferent();
@@ -55,7 +59,7 @@ public class ClassFieldChecker extends BaseConcreteExpressionVisitor<Void> {
         if (myFutureFields != null && myFutureFields.contains(defRef)) {
           return makeErrorExpression(expr);
         } else {
-          return Concrete.AppExpression.make(expr.getData(), expr, new Concrete.ThisExpression(expr.getData(), myThisParameter), false);
+          return Concrete.AppExpression.make(expr.getData(), expr, getThisExpression(expr.getData()), false);
         }
       } else {
         ClassDefinition enclosingClass = null;
@@ -74,7 +78,7 @@ public class ClassFieldChecker extends BaseConcreteExpressionVisitor<Void> {
             return makeErrorExpression(expr);
           }
           if (ClassDefinition.findAncestor(new ArrayDeque<>(mySuperClasses), enclosingClass::equals) != null) {
-            return Concrete.AppExpression.make(expr.getData(), expr, new Concrete.ThisExpression(expr.getData(), myThisParameter), false);
+            return Concrete.AppExpression.make(expr.getData(), expr, getThisExpression(expr.getData()), false);
           }
         }
       }
@@ -83,11 +87,8 @@ public class ClassFieldChecker extends BaseConcreteExpressionVisitor<Void> {
   }
 
   @Override
-  public Concrete.ThisExpression visitThis(Concrete.ThisExpression expr, Void params) {
-    if (myClassCallNumber == 0) {
-      expr.setReferent(myThisParameter);
-    }
-    return expr;
+  public Concrete.Expression visitThis(Concrete.ThisExpression expr, Void params) {
+    return myClassCallNumber == 0 ? getThisExpression(expr.getData()) : expr;
   }
 
   @Override
