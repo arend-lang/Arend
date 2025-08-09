@@ -3,6 +3,7 @@
 \import Data.Array
 \import Function.Meta
 \import Logic
+\import Logic.Meta
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -100,6 +101,8 @@
   \lemma pow_0 {n : Nat} (n/=0 : n /= 0) : pow 0 n = 0 \elim n
     | 0 => absurd (n/=0 idp)
     | suc n => zro_*-right
+
+  \func IsSquare (x : E) => ∃ (y : E) (y * y = x)
 
   \protected \func op : Semiring \cowith
     | PseudoSemiring => PseudoSemiring.op

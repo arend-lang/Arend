@@ -4,6 +4,7 @@
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Semiring
+\import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
@@ -17,6 +18,7 @@
 \import Order.Lattice
 \import Order.PartialOrder
 \import Paths
+\import Paths.Meta
 \import Set.Subset
 \import Topology.Elem
 \import Topology.NormedAbGroup.Real
@@ -26,8 +28,9 @@
 \open Monoid(pow)
 \open ContMap
 
-\sfunc rootR (n : Nat) (n/=0 : n /= 0) (x : Real) (\property x>=0 : 0 <= x) : Real
-  => ((rootEquiv n/=0).ret (x,x>=0)).1
+\func root (n : Nat) (x : Real) : Real \elim n
+  | 0 => 0
+  | suc n => ((rootEquiv {suc n} suc/=0).ret (x ∨ 0, join-right)).1
   \where {
     \func rootEquiv {n : Nat} (n/=0 : n /= 0) : Equiv {Elem {Real} (0 <=)} {Elem {Real} (0 <=)}
       => monotone-inverse (\lam s => pow s.1 n)
@@ -37,11 +40,22 @@
         (\lam {v} v>=0 => inP (0, v ∨ 1, zro<ide <∘l join-right, \lam p _ => p, transportInv (`<= v) (Semiring.pow_0 n/=0) v>=0, join-left <=∘ RealField.pow>=id join-right n/=0))
   }
 
-\lemma rootR>=0 {n : Nat} {n/=0 : n /= 0} {x : Real} {x>=0 : 0 <= x} : 0 <= rootR n n/=0 x x>=0
-  => transportInv (0 <=) (\peval rootR n n/=0 x x>=0) ((rootR.rootEquiv n/=0).ret (x,x>=0)).2
+\lemma root>=0 {n : Nat} {x : Real} : 0 <= root n x \elim n
+  | 0 => <=-refl
+  | suc n => ((root.rootEquiv {suc n} suc/=0).ret (x ∨ 0, join-right)).2
 
-\lemma rootR_pow {n : Nat} {n/=0 : n /= 0} {x : Real} {x>=0 : 0 <= x} : rootR n n/=0 (pow x n) (RealField.pow>=0 x>=0) = x
-  => (\peval rootR n n/=0 _ _) *> pmap __.1 ((rootR.rootEquiv n/=0).ret_f (x,x>=0))
+\lemma root_pow {n : Nat} (n/=0 : n /= 0) {x : Real} (x>=0 : 0 <= x) : root n (pow x n) = x \elim n
+  | 0 => absurd (n/=0 idp)
+  | suc n => pmap (\lam y => ((root.rootEquiv n/=0).ret y).1) (ext $ RealAbGroup.join-comm *> RealAbGroup.join_<= (RealField.pow>=0 {x} {suc n} x>=0)) *> pmap __.1 ((root.rootEquiv n/=0).ret_f (x, x>=0))
 
-\lemma pow_rootR {n : Nat} {n/=0 : n /= 0} {x : Real} {x>=0 : 0 <= x} : pow (rootR n n/=0 x x>=0) n = x
-  => pmap (pow __ n) (\peval rootR n n/=0 x x>=0) *> pmap __.1 ((rootR.rootEquiv n/=0).f_ret _)
+\lemma pow_root {n : Nat} (n/=0 : n /= 0) {x : Real} (x>=0 : 0 <= x) : pow (root n x) n = x \elim n
+  | 0 => absurd (n/=0 idp)
+  | suc n => pmap (\lam y => pow ((root.rootEquiv n/=0).ret y).1 (suc n)) (ext $ RealAbGroup.join-comm *> RealAbGroup.join_<= x>=0) *> pmap __.1 ((root.rootEquiv n/=0).f_ret (x,x>=0))
+
+\sfunc sqrt (x : Real) => root 2 x
+
+\lemma sqrt_pow {x : Real} (x>=0 : 0 <= x) : sqrt (x * x) = x
+  => (\peval sqrt _) *> pmap (\lam y => root 2 (y * x)) (inv ide-left) *> root_pow suc/=0 x>=0
+
+\lemma pow_sqrt {x : Real} (x>=0 : 0 <= x) : sqrt x * sqrt x = x
+  => pmap2 (*) (\peval sqrt x) (\peval sqrt x) *> pmap (`* _) (inv ide-left) *> pow_root suc/=0 x>=0

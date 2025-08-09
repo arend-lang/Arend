@@ -11,6 +11,7 @@
 \import Analysis.Limit
 \import Arith.Nat
 \import Arith.Rat
+\import Arith.Real
 \import Arith.Real.UpperReal
 \import Data.Or
 \import Function.Meta
@@ -24,6 +25,8 @@
 \import Paths
 \import Paths.Meta
 \import Topology.BanachSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedRing
 \import Topology.TopSpace
@@ -34,7 +37,7 @@
 }
 
 \class RealBanachAlgebra \extends BanachAlgebra, RealBanachSpace {
-  \sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) ExUpperReal.<= RatField.ide) : E
+  \sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) <= RatField.ide) : E
     => limit zfunc zfunc-conv
     \where \protected {
       \sfunc yfunc (n : Nat) : E \elim n
@@ -51,7 +54,7 @@
         | suc n => pmap (`* _) (\peval yfunc (suc n)) *> inv *q-comm-left *> pmap (_ *q) (rdistr *> pmap2 (+) (rdistr_- *> pmap2 (-) (ide-left *> inv ide-right) (inv p) *> inv ldistr_-) (*-assoc *> pmap (_ *) (yfunc-comm p) *> inv *-assoc *> pmap (`* _) (yfunc-comm p) *> *-assoc) *> inv ldistr) *> *q-comm-right *> inv (pmap (_ *) (\peval yfunc (suc n)))
 
       \lemma yfunc-rec {n : Nat} : yfunc (suc (suc n)) - yfunc (suc n) = ratio 1 2 *q ((yfunc (suc n) + yfunc n) * (yfunc (suc n) - yfunc n))
-        => pmap2 (-) (\peval yfunc (suc (suc n))) (\peval yfunc (suc n)) *> inv (QModule.toLModule \this).*c-ldistr_- *> pmap (_ *q) (simplify $ inv $ sum_diff $ yfunc-comm $ yfunc-comm idp)
+        => pmap2 (-) (\peval yfunc (suc (suc n))) (\peval yfunc (suc n)) *> inv toRatModule.*c-ldistr_- *> pmap (_ *q) (simplify $ inv $ sum_diff $ yfunc-comm $ yfunc-comm idp)
 
       \lemma yfunc_rfunc-diff1 {n : Nat} : norm (yfunc (suc n) - yfunc n) <= rfunc (suc n) - rfunc n \elim n
         | 0 => rewrite (\peval yfunc 0, \peval rfunc 0) (simplify yfunc<=rfunc)
@@ -80,10 +83,25 @@
             })
         \where {
           \lemma dist-lem (n : Nat) : zfunc n * zfunc n - x = RatField.natCoef 2 *q (yfunc (suc n) - yfunc n)
-            => rewrite (\peval yfunc (suc n), (QModule.toLModule \this).*c-ldistr_-, inv *q-assoc, ide_*q, (QModule.toLModule \this).*c-rdistr {RatField.ide} {RatField.ide}, ide_*q) equation.ring
+            => rewrite (\peval yfunc (suc n), toRatModule.*c-ldistr_-, inv *q-assoc, ide_*q, toRatModule.*c-rdistr {RatField.ide} {RatField.ide}, ide_*q) equation.ring
         }
     }
+
+  \lemma *r-comm-left {r : Real} {a b : E} : r *r (a * b) = r *r a * b
+    => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (*r-cover ∘ tuple id (const a)) (const b)) (\lam x => *r-char *> *q-comm-left *> pmap (`* b) (inv *r-char)) r
+
+  \lemma *r-comm-right {r : Real} {a b : E} : r *r (a * b) = a * (r *r b)
+    => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (const a) (*r-cover ∘ tuple id (const b))) (\lam x => *r-char *> *q-comm-right *> pmap (a *) (inv *r-char)) r
+
+  \lemma norm-square {x : E} (p : norm (1 - x) <= RatField.ide) : IsSquare x
+    => inP (sqrt x p, sqrt.isSquare)
+
+  \lemma norm-square' {x : E} (p : norm x <= RatField.ide) : IsSquare (1 - x)
+    => norm-square (simplify p)
 } \where \protected {
+  \open CoverMap
+  \open ProductCoverSpace
+
   \sfunc rfunc (n : Nat) : Rat \elim n
     | 0 => 0
     | suc n => ratio 1 2 * (1 + rfunc n * rfunc n)
@@ -99,7 +117,7 @@
   \lemma rfunc-inc {n : Nat} : rfunc n <= rfunc (suc n) \elim n
     | 0 => rewrite (\peval rfunc 0) rfunc>=0
     | suc n => rewrite (\peval rfunc (suc (suc n))) $ RatField.from>=0 $ transport (0 <=) {ratio 1 2 * ((1 - rfunc (suc n)) * (1 - rfunc (suc n)))}
-      (later $ rewrite (RatField.ldistr_-, RatField.rdistr_-, RatField.rdistr_-) linarith) -- TODO: equation.cRing should work here, but it doesn't support rational coefficients yet
+      (later $ rewrite (RatField.ldistr_-, RatField.rdistr_-, RatField.rdistr_-) linarith) -- TODO: equation.ring should work here, but it doesn't support rational coefficients yet
       $ RatField.<=_*_positive_positive rat_<=-dec RatField.square_>=0
 
   \lemma rfunc-rec {n : Nat} : rfunc (suc (suc n)) - rfunc (suc n) = ratio 1 2 * ((rfunc (suc n) + rfunc n) * (rfunc (suc n) - rfunc n))
@@ -117,7 +135,3 @@
         | inr r => rfunc-bound eps>0 linarith <∘r RatField.pow_<=-degree (linarith rfunc>=0) linarith B<=n <∘r B.2
       })
 }
-
-\class C*Algebra \extends RealBanachAlgebra
-  | c*-square {a : E} : norm a ExUpperReal.* norm a <= norm (a * a)
-  | c*-sum {a b : E} : norm (a * a) <= norm (a * a + b * b)

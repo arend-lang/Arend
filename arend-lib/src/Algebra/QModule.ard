@@ -78,16 +78,16 @@
     | in~ q, in~ r => *i-rdistr *> pmap2 (+)
         (*i-assoc *> pmap (q.1 *i) (noTorsion-div (*aq.>_/= q.3) $ inv (*i-assoc {_} {iabs q.2}) *> pmap (`*i _) (pmap (_ *) (inv (*aq.>_iabs r.3)) *> pmap pos (inv iabs_*)) *> ud-cond *> inv ud-cond))
         (*i-assoc *> pmap (r.1 *i) (noTorsion-div (*aq.>_/= r.3) $ inv (*i-assoc {_} {iabs r.2}) *> pmap (`*i _) (*-comm *> pmap (`* _) (inv (*aq.>_iabs q.3)) *> pmap pos (inv iabs_*)) *> ud-cond *> inv ud-cond))
-} \where {
-  \func toLModule (M : QModule) : LModule RatField \cowith
-    | AbGroup => M
-    | *c => M.*q
-    | *c-assoc => M.*q-assoc
-    | *c-ldistr => (\peval _ M.*q _) *> pmap (_ M.*i) (M.ud-unique $ M.*n-ldistr *> pmap2 (M.+) M.ud-cond M.ud-cond) *> M.*i-ldistr *> inv (pmap2 (M.+) (\peval _ M.*q _) (\peval _ M.*q _))
-    | *c-rdistr {r} {s} {a} => M.*q_*aq *> pmap (M.`*aq a) RatField.+_alt *> M.*aq-rdistr {rat_alt r} {rat_alt s} *> inv (pmap2 (+) M.*q_*aq M.*q_*aq)
-    | ide_*c => M.ide_*q
 
-  \func fromLModule (M : LModule RatField) : QModule \cowith
+  \func toRatModule : LModule RatField \cowith
+    | AbGroup => \this
+    | *c => *q
+    | *c-assoc => *q-assoc
+    | *c-ldistr => (\peval _ *q _) *> pmap (_ *i) (ud-unique $ *n-ldistr *> pmap2 (+) ud-cond ud-cond) *> *i-ldistr *> inv (pmap2 (+) (\peval _ *q _) (\peval _ *q _))
+    | *c-rdistr {r} {s} {a} => *q_*aq *> pmap (`*aq a) RatField.+_alt *> *aq-rdistr {_} {rat_alt r} {rat_alt s} *> inv (pmap2 (+) *q_*aq *q_*aq)
+    | ide_*c => ide_*q
+} \where {
+  \func fromRatModule (M : LModule RatField) : QModule \cowith
     | AbGroup => M
     | isDivisible a {n} n/0 => inP (RatField.finv n *c a, inv (*c-assoc *> M.natCoef_*c) *> pmap (`*c a) (RatField.finv-right $ natRat/=0 n/0) *> ide_*c)
     | noTorsion n/=0 na=0 => inv (pmap (`*c _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*c) *> *c-assoc *> pmap (_ *c) (M.natCoef_*c *> na=0) *> M.*c_zro-right
@@ -102,14 +102,17 @@
 
   \lemma *q-comm-right {r : Rat} {a b : E} : r *q (a * b) = a * (r *q b)
     => inv $ func-*q {_} {_} {*-addGroupHom-left}
-} \where {
-    \func toAlgebra (R : QAlgebra) : AAlgebra RatField \cowith
-      | LModule => QModule.toLModule R
-      | Ring => R
-      | *c-comm-left => R.*q-comm-left
-      | *c-comm-right => R.*q-comm-right
 
-    \func fromAlgebra (R : AAlgebra RatField) : QAlgebra \cowith
-      | QModule => QModule.fromLModule R
+  \func toRatAlgebra : AAlgebra RatField \cowith
+    | LModule => toRatModule
+    | Ring => \this
+    | *c-comm-left => *q-comm-left
+    | *c-comm-right => *q-comm-right
+
+  \lemma *q-square {q : Rat} {a : E} (qs : RatField.IsSquare q) (as : IsSquare a) : IsSquare (q *q a) \elim qs, as
+    | inP (r,rr=q), inP (b,bb=a) => inP (r *q b, inv *q-comm-left *> pmap (r *q) (inv *q-comm-right) *> inv *q-assoc *> pmap2 (*q) rr=q bb=a)
+} \where {
+    \func fromRatAlgebra (R : AAlgebra RatField) : QAlgebra \cowith
+      | QModule => QModule.fromRatModule R
       | Ring => R
   }

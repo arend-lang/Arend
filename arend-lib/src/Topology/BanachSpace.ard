@@ -60,7 +60,7 @@
 }
 
 \lemma *q-right-uniform {X : SeparatedPreBanachSpace} {q : Rat} : UniformNormedAbGroupMap X X (q X.*q) \cowith
-  | func-+ => (QModule.toLModule X).*c-ldistr
+  | func-+ => X.toRatModule.*c-ldistr
   | func-norm-uniform {eps} eps>0 => \case X.A.norm-bounded q \with {
     | inP (B,|q|<B) =>
       \have B'eps>0 => RatField.<_*_positive_positive (RatField.finv>0 $ norm>=0 |q|<B) eps>0
@@ -68,7 +68,7 @@
   }
 
 \lemma *q-uniform {X : SeparatedPreBanachSpace} : LocallyUniformMap (X.A ⨯ X) X \lam s => s.1 QModule.*q s.2
-  => bilinear-locally-uniform {X.A} (X.*q) (QModule.toLModule X).*c-rdistr_- (QModule.toLModule X).*c-ldistr_- \lam {q} {x} => =_<= X.norm_*q
+  => bilinear-locally-uniform {X.A} (X.*q) X.toRatModule.*c-rdistr_- X.toRatModule.*c-ldistr_- \lam {q} {x} => =_<= X.norm_*q
 
 \class BanachSpace \extends SeparatedPreBanachSpace, CompleteExNormedAbGroup
 
@@ -90,17 +90,17 @@
 
   \lemma *r-char {q : Rat} {a : E} : q *r a = q *q a
     => (\peval q *r a) *> dense-lift-char (ProductCoverSpace.prod.isDenseEmbedding _ _) (q,a)
+
+  \func toRealModule : LModule RealField \cowith
+    | AbGroup => \this
+    | *c => *r
+    | *c-assoc {r} {r'} {a} => dense-lift-unique (prod rat_real rat_real) (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding).1 (*r-cover ∘ tuple id (const a) ∘ RealField.*-cover) (*r-cover ∘ prod id (*r-cover ∘ tuple id (const a))) (\lam rr' => pmap (`*r _) RealField.*-rat *> *r-char *> *q-assoc *> pmap (_ *q) (inv *r-char) *> inv *r-char) (r,r')
+    | *c-ldistr {r} {a} {b} => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (+-uniform ∘ tuple (*r-cover ∘ tuple id (const a)) (*r-cover ∘ tuple id (const b))) (\lam q => *r-char *> toRatModule.*c-ldistr *> inv (pmap2 (+) *r-char *r-char)) r
+    | *c-rdistr {r} {r'} {a} => dense-lift-unique (prod rat_real rat_real) (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding).1 (*r-cover ∘ tuple id (const a) ∘ +-uniform) (+-uniform ∘ prod (*r-cover ∘ tuple id (const a)) (*r-cover ∘ tuple id (const a))) (\lam rr' => pmap (`*r a) RealAbGroup.+-rat *> *r-char *> toRatModule.*c-rdistr *> inv (pmap2 (+) *r-char *r-char)) (r,r')
+    | ide_*c => *r-char *> ide_*q
 } \where {
   \open CoverMap
   \open ProductCoverSpace
-
-  \func toLModule (X : RealBanachSpace) : LModule RealField \cowith
-    | AbGroup => X
-    | *c => X.*r
-    | *c-assoc {r} {r'} {a} => dense-lift-unique (prod rat_real rat_real) (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding).1 (X.*r-cover ∘ tuple id (const a) ∘ RealField.*-cover) (X.*r-cover ∘ prod id (X.*r-cover ∘ tuple id (const a))) (\lam rr' => pmap (X.`*r _) RealField.*-rat *> X.*r-char *> X.*q-assoc *> pmap (_ X.*q) (inv X.*r-char) *> inv X.*r-char) (r,r')
-    | *c-ldistr {r} {a} {b} => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (X.*r-cover ∘ tuple id (const _)) (+-uniform ∘ tuple (X.*r-cover ∘ tuple id (const a)) (X.*r-cover ∘ tuple id (const b))) (\lam q => X.*r-char *> (QModule.toLModule X).*c-ldistr *> inv (pmap2 (+) X.*r-char X.*r-char)) r
-    | *c-rdistr {r} {r'} {a} => dense-lift-unique (prod rat_real rat_real) (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding).1 (X.*r-cover ∘ tuple id (const a) ∘ +-uniform) (+-uniform ∘ prod (X.*r-cover ∘ tuple id (const a)) (X.*r-cover ∘ tuple id (const a))) (\lam rr' => pmap (X.`*r a) RealAbGroup.+-rat *> X.*r-char *> (QModule.toLModule X).*c-rdistr *> inv (pmap2 (+) X.*r-char X.*r-char)) (r,r')
-    | ide_*c => X.*r-char *> X.ide_*q
 }
 
 \record BoundedLinearMap \extends UniformNormedAbGroupMap {
@@ -143,6 +143,6 @@
    | CompleteExNormedAbGroup => ExNormedAbGroupCompletion X
    | isDivisible F {n} n/=0 =>
      \have *q-lift => dense-uniform-lift separated-completion (separated-completion.dense->uniformEmbedding separated-completion.isDense) (separated-completion UniformMap.∘ *q-right-uniform {SeparatedBanachReflection X} {RatField.finv n})
-     \in inP (*q-lift F, dense-lift-unique separated-completion separated-completion.isDense (*n-uniform {_} {n} UniformMap.∘ *q-lift) UniformMap.id (\lam x => pmap (n AddMonoid.*n) (dense-lift-char ((IsometricMap.dense->uniformEmbedding separated-completion.isDense).1, UniformMap.embedding->coverEmbedding _) x) *> inv separated-completion.func-*n *> pmap separated-completion (inv (QModule.*q_*i {_} {pos n}) *> inv QModule.*q-assoc *> pmap (QModule.`*q _) (RatField.finv-right $ natRat/=0 n/=0) *> QModule.ide_*q)) F)
+     \in inP (*q-lift F, dense-lift-unique separated-completion separated-completion.isDense (*n-uniform {_} {n} UniformMap.∘ *q-lift) UniformMap.id (\lam x => pmap (n AddMonoid.*n) (dense-lift-char ((IsometricMap.dense->uniformEmbedding separated-completion.isDense).1, UniformMap.embedding->coverEmbedding _) x) *> inv separated-completion.func-*n *> pmap separated-completion (inv QModule.*q_*n *> inv QModule.*q-assoc *> pmap (QModule.`*q _) (RatField.finv-right $ natRat/=0 n/=0) *> QModule.ide_*q)) F)
    | norm_*n {n} {F} => completion-lift-unique (norm-uniform-map {ExNormedAbGroupCompletion X} UniformMap.∘ *n-uniform) (upper-*-left-uniform (A.norm-bounded _) UniformMap.∘ norm-uniform-map {ExNormedAbGroupCompletion X})
      (\lam x => pmap norm (inv completion-topAb.func-*n) *> completion-exNormed-isometry.func-norm-isometry *> norm_*n *> pmap (_ *) (inv completion-exNormed-isometry.func-norm-isometry)) F
