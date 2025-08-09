@@ -128,7 +128,7 @@
   | 0 => lnorm_ide
   | suc n => lnorm_* *> pmap (`* _) lnorm_pow
 
-\func RatValue => ExPseudoValuedRing { | E => Rat | * => RatField.* | ide => RatField.ide | negative => RatField.negative }
+\func RatValue => ExPseudoValuedRing { | E => Rat | * => RatField.* | ide => RatField.ide | + => RatField.+ | negative => RatField.negative }
 
 \instance RatValuedRing : PseudoValuedRing Rat
   | PseudoNormedAbGroup => RatNormed
