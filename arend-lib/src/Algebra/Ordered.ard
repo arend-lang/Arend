@@ -44,6 +44,10 @@
 
   \lemma <=_+-positive {a b : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) : 0 <= a + b
     => transport (`<= _) zro-left $ <=_+ a>=0 b>=0
+
+  \lemma *n_>=0 {n : Nat} {a : E} (a>=0 : 0 <= a) : 0 <= n *n a \elim n
+    | 0 => <=-refl
+    | suc n => <=_+-positive (*n_>=0 a>=0) a>=0
 }
 
 \class BiorderedLatticeAddMonoid \extends PosetAddMonoid, BiorderedLattice
@@ -191,7 +195,39 @@
     => (simplify, rewrite +-comm) in <_+-right (negative z) (<-diff-mid p)
 }
 
-\class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid {
+\class PosetAddGroup \extends PosetAddMonoid, AddGroup {
+  \lemma from>=0 {x y : E} (p : 0 <= y - x) : x <= y
+    => transport2 (<=) zro-left (+-assoc *> pmap (y +) negative-left *> zro-right) (<=_+ p <=-refl)
+
+  \lemma to>=0 {x y : E} (p : x <= y) : 0 <= y - x
+    => transport (`<= _) negative-right (<=_+ p <=-refl)
+
+  \lemma from<=0 {x y : E} (p : x - y <= 0) : x <= y
+    => transport2 (<=) (+-assoc *> pmap (x +) negative-left *> zro-right) zro-left (<=_+ p <=-refl)
+
+  \lemma to<=0 {x y : E} (p : x <= y) : x - y <= 0
+    => transport (_ <=) negative-right (<=_+ p <=-refl)
+
+  \lemma negative_<= {x y : E} (x<=y : x <= y) : negative y <= negative x
+    => transport2 (<=) (inv +-assoc *> pmap (`- y) negative-left *> zro-left) zro-right $ <=_+ <=-refl (to<=0 x<=y)
+
+  \lemma negative_<=-conv {x y : E} (p : negative y <= negative x) : x <= y
+    => transport2 (<=) negative-isInv negative-isInv (negative_<= p)
+
+  \lemma negative>=0 {x : E} (x<=0 : x <= 0) : 0 <= negative x
+    => transport (`<= _) negative_zro (negative_<= x<=0)
+
+  \lemma negative-to<=0 {x : E} (p : 0 <= negative x) : x <= 0
+    => negative_<=-conv $ transportInv (`<= _) negative_zro p
+
+  \lemma negative<=0 {x : E} (x>=0 : 0 <= x) : negative x <= 0
+    => transport (_ <=) negative_zro (negative_<= x>=0)
+
+  \lemma negative-to>=0 {x : E} (p : negative x <= 0) : 0 <= x
+    => negative_<=-conv $ transportInv (_ <=) negative_zro p
+}
+
+\class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, PosetAddGroup {
   | <_+-comparison (x y : E) : isPos (x + y) -> isPos x || isPos y
   | <_+-connectedness {x : E} : Not (isPos x) -> Not (isNeg x) -> x = zro
 
@@ -205,21 +241,6 @@
     | byRight p => byLeft p
   }
   | <-connectedness x/<y y/<x => fromZero $ <_+-connectedness (y/<x __) \lam p => x/<y (fromNeg p)
-
-  \lemma negative_<= {x y : E} (x<=y : x <= y) : negative y <= negative x
-    => \lam -x<-y => x<=y $ repeat {2} (rewrite negative-isInv in) (negative_< -x<-y)
-
-  \lemma from>=0 {x y : E} (p : 0 <= y - x) : x <= y
-    => \lam y<x => p (to<0 y<x)
-
-  \lemma to>=0 {x y : E} (p : x <= y) : 0 <= y - x
-    => \lam q => p (from<0 q)
-
-  \lemma from<=0 {x y : E} (p : x - y <= 0) : x <= y
-    => \lam y<x => p (to>0 y<x)
-
-  \lemma to<=0 {x y : E} (p : x <= y) : x - y <= 0
-    => \lam q => p (from>0 q)
 
   \lemma meet_negative {x y : E} : negative (x ∧ y) = negative x ∨ negative y
     => <=-antisymmetric (\lam p => <-irreflexive $ join-right <∘r (rewrite (LinearOrder.meet/=left $ <_/= $ negative_<-inv $ join-left <∘r p) in p)) $

@@ -108,19 +108,24 @@
       | inP (b',x<b',b'<b) => *_U.2 $ inP (b' ∨ RatField.mid 0 b, ExUpperReal.U_<= x<b' join-left, RatField.mid>left b>0 <∘l join-right, c, y<c, c>0, <_*_positive-left (<_join-univ b'<b $ RatField.mid<right b>0) c>0 <∘l bc<=a)
     })
 
+  \lemma *_U_< {x y : ExUpperReal} {a : Rat} : UpperReal.U {x * y} a <-> ∃ (b : Rat) (x <= b) (0 RatField.<= b) (c : Rat) (y <= c) (0 RatField.<= c) (b RatField.* c < a)
+    => <->trans *_U $ later (\lam (inP (b,x<b,b>0,c,y<c,c>0,bc<a)) => inP (b, <_<= x<b, <=-less b>0, c, <_<= y<c, <=-less c>0, bc<a), \lam (inP (b,x<=b,b>=0,c,y<=c,c>=0,bc<a)) => \case LinearOrder.dec<_<= 0 c \with {
+      | inl c>0 =>
+        \let | b' => RatField.mid b (RatField.finv c RatField.* a)
+             | bp => transport (_ <) *-comm (RatField.<_rotate-right c>0 bc<a)
+             | b'>0 => b>=0 <∘r RatField.mid>left bp
+             | c' => RatField.mid c (a RatField.* RatField.finv b')
+             | cp => RatField.<_rotate-right b'>0 $ transport (`< _) *-comm $ RatField.<_rotate-right-conv c>0 $ transport (_ <) *-comm (RatField.mid<right bp)
+        \in inP (b', x<=b $ RatField.mid>left bp, b'>0, c', y<=c $ RatField.mid>left cp, c>0 <∘ RatField.mid>left cp, transport2 (<) *-comm (*-assoc *> pmap (a RatField.*) (RatField.finv-left $ RatField.>_/= b'>0) *> ide-right) $ RatField.<_*_positive-left (RatField.mid<right cp) b'>0)
+      | inr c<=0 =>
+        \let | c' => RatField.half (a RatField.* RatField.finv (b RatField.+ 1))
+             | b'>0 : 0 < b RatField.+ 1 => linarith
+             | c'2>0 => RatField.<_*_positive_positive (transport (`< a) (pmap (b RatField.*) (<=-antisymmetric c<=0 c>=0) *> RatField.zro_*-right) bc<a) (RatField.finv>0 b'>0)
+        \in inP (b RatField.+ 1, x<=b linarith, b'>0, c', y<=c $ c<=0 <∘r RatField.half>0 c'2>0, RatField.half>0 c'2>0, transport (`< _) *-comm $ RatField.<_rotate-right-conv b'>0 $ RatField.half<id c'2>0)
+    })
+
   \lemma *-rat {x y : Rat} (x>=0 : 0 RatField.<= x) (y>=0 : 0 RatField.<= y) : fromRat x * fromRat y = fromRat (x RatField.* y)
-    => ExUpperRealAbMonoid.<=-antisymmetric (\lam {d} xy<d => *_U_<=.2 $ inP \case LinearOrder.dec<_<= (0 : Rat) x \with {
-      | inl x>0 =>
-        \let | b => RatField.mid y (RatField.finv x RatField.* d)
-             | bp => transport (`< _) (inv *-assoc *> pmap (RatField.`* y) (RatField.finv-left $ RatField.>_/= x>0) *> ide-left) $ RatField.<_*_positive-right (RatField.finv>0 x>0) xy<d
-             | b>0 => y>=0 <∘r RatField.mid>left bp
-             | a => RatField.mid x (d RatField.* RatField.finv b)
-             | ap => transport (`< _) (*-assoc *> pmap (x RatField.*) (RatField.finv-right $ RatField.>_/= b>0) *> ide-right) $ RatField.<_*_positive-left (transport (_ <) (inv *-assoc *> pmap (RatField.`* d) (RatField.finv-right $ RatField.>_/= x>0) *> ide-left) $ RatField.<_*_positive-right x>0 (RatField.mid<right bp)) $ RatField.finv>0 b>0
-        \in (a, RatField.mid>left ap, x>=0 <∘r RatField.mid>left ap, b, RatField.mid>left bp, b>0, <=-less $ <_*_positive-left (RatField.mid<right ap) b>0 <∘l =_<= (*-assoc *> pmap (d RatField.*) (RatField.finv-left $ RatField.>_/= b>0) *> ide-right))
-      | inr x<=0 =>
-        \have t => RatField.<_*_positive_positive (RatField.<=_*_positive_positive x>=0 y>=0 <∘r xy<d) (RatField.finv>0 linarith)
-        \in (d RatField.* RatField.finv (y RatField.+ 1), x<=0 <∘r t, t, y RatField.+ 1, linarith, linarith, =_<= $ *-assoc *> pmap (d RatField.*) (RatField.finv-left \lam p => linarith) *> ide-right)
-    }) (\lam {d} xy<d => \case *_U.1 xy<d \with {
+    => ExUpperRealAbMonoid.<=-antisymmetric (\lam {d} xy<d => *_U_<.2 $ inP (x, <=-rat.1 <=-refl, x>=0, y, <=-rat.1 <=-refl, y>=0, xy<d)) (\lam {d} xy<d => \case *_U.1 xy<d \with {
       | inP (a,x<a,a>0,b,y<b,b>0,ab<d) => RatField.<=_*_positive-left (<=-less x<a) y>=0 <∘r <=-less (<_*_positive-right a>0 y<b) <∘r ab<d
     })
 }

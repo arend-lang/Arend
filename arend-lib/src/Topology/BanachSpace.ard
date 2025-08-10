@@ -72,8 +72,13 @@
 
 \class BanachSpace \extends SeparatedPreBanachSpace, CompleteExNormedAbGroup
 
-\class RealPreBanachSpace \extends PreBanachSpace
+\class RealPreBanachSpace \extends PreBanachSpace {
+  | norm_*n_>= {n : Nat} {x : E} : n ExUpperReal.* norm x <= norm (n *n x)
   | A => RatValuedRing
+
+  \default norm_*n => <=-antisymmetric norm_*n_<= norm_*n_>= *> pmap (ExUpperReal.`* _) (inv $ RatField.abs-ofPos fromNat_>=0)
+  \default norm_*n_>= => ExUpperRealSemigroup.<=_* (ExUpperReal.<=-rat.1 RatField.abs>=id) <=-refl <=∘ =_<= (inv norm_*n)
+}
 
 \class RealBanachSpace \extends RealPreBanachSpace, BanachSpace {
   \lemma norm_*q-ofPos {q : Rat} (q>=0 : 0 <= q) {x : E} : norm (q *q x) = q ExUpperReal.* norm x

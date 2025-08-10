@@ -77,9 +77,9 @@
   \default dist-symm => norm-dist *> simplify *> norm_negative *> inv norm-dist
   \default dist-triang => repeat {3} (rewrite norm-dist) $ transport (norm __ <= _) simplify norm_+
 
-  \lemma norm_*n<= {n : Nat} {a : E} : norm (n *n a) <= n ExUpperRealAbMonoid.*n norm a \elim n
-    | 0 => =_<= norm_zro
-    | suc n => norm_+ <=∘ <=_+ norm_*n<= <=-refl
+  \lemma norm_*n_<= {n : Nat} {a : E} : norm (n *n a) <= n ExUpperReal.* norm a \elim n
+    | 0 => transportInv (`<= _) norm_zro ExUpperRealSemigroup.*_>=0
+    | suc n => norm_+ <=∘ <=_+ norm_*n_<= <=-refl <=∘ =_<= (pmap (_ ExUpperReal.+) (inv $ ExUpperRealSemigroup.ide-left norm>=0) *> inv (ExUpperRealSemigroup.rdistr (ExUpperReal.<=-rat.1 fromNat_>=0) (ExUpperReal.<=-rat.1 rat_<=-dec)) *> pmap (`* _) ExUpperReal.+-rat)
 
   \func IsUnbounded : \Prop
     => \Pi (B : Nat) -> ∃ (x : E) (ExUpperReal.fromRat B <= norm x)

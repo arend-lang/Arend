@@ -33,9 +33,9 @@
                | b-a/n>0 : 0 < (b - a) * RatField.finv n => RealField.<_*_positive_positive b-a>0 $ rat_real_<.1 $ RatField.finv>0 $ fromInt_< $ pos<pos $ nonZero>0 n/=0
                | /b-a => RealField.pinv (b - a) b-a>0
           -- Rescale the interval [a,b] as [0,n] and use the natural number approximation.
-          \in \case real-nat-approx {(x - a) * n * /b-a} $ RealField.<=_*_positive_positive (RealField.<=_*_positive_positive linarith $ rat_real_<=.1 $ fromInt_<= $ pos<=pos zero<=_) $ <=-less $ RealField.pinv>0 b-a>0 \with {
+          \in \case real-nat-approx {(x - a) * n * /b-a} $ RealField.<=_*_positive_positive (RealField.<=_*_positive_positive linarith $ rat_real_<=.1 fromNat_>=0) $ <=-less $ RealField.pinv>0 b-a>0 \with {
             | inP (j,d) =>
-              \have | p : (x - a) * n * /b-a <= n => transportInv (RealField.`<= _) *-assoc $ transport (_ <=) {(b - a) * (n RealField.* /b-a)} (equation.cMonoid {RealField.pinv-right b-a>0}) $ RealField.<=_*_positive-left (RealAbGroup.<=_+ x<=b <=-refl) $ RealField.<=_*_positive_positive (rat_real_<=.1 $ fromInt_<= $ pos<=pos zero<=_) $ <=-less $ RealField.pinv>0 b-a>0
+              \have | p : (x - a) * n * /b-a <= n => transportInv (RealField.`<= _) *-assoc $ transport (_ <=) {(b - a) * (n RealField.* /b-a)} (equation.cMonoid {RealField.pinv-right b-a>0}) $ RealField.<=_*_positive-left (RealAbGroup.<=_+ x<=b <=-refl) $ RealField.<=_*_positive_positive (rat_real_<=.1 fromNat_>=0) $ <=-less $ RealField.pinv>0 b-a>0
                     | j<n+1 : j < suc n => pos<pos.conv $ fromInt_<.conv $ rat_real_<.2 $ transport (_ RealAbGroup.<) (RealAbGroup.+-rat {n} {1}) $ linarith (RealAbGroup.abs>=id <∘r d)
               \in inP (toFin j j<n+1, transport2 (<) (pmap (_ *) (inv $ RealAbGroup.abs-ofPos $ <=-less b-a/n>0) *> inv RealField.abs_* *> pmap RealAbGroup.abs (later $ rewrite toFin=id $ equation.cRing {RealField.pinv-left b-a>0, RealField.finv-right {n} \lam p => n/=0 $ pmap (\lam x => iabs (ratNom x)) p})) ide-left $ RealField.<_*_positive-left {_} {_} {(b - a) * RatField.finv n} d $ b-a/n>0)
           }

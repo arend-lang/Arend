@@ -7,29 +7,83 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
+\import Algebra.QModule
 \import Algebra.Ring
+\import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Root
 \import Arith.Real.UpperReal
+\import Data.Or
 \import Function.Meta
 \import Logic
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
 \import Order.Lattice
+\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set
 \import Topology.BanachAlgebra
 \import Topology.BanachSpace
 \import Topology.NormedAbGroup
 
-\class RealPreC*Algebra \extends Ring, PosetAddMonoid
+\class RealPreC*Algebra \extends QAlgebra, PosetAddGroup {
+  | c*-positive-div {n : Nat} (n/=0 : n /= 0) {a : E} : 0 <= n *n a -> 0 <= a
+  | c*-archimedean (a : E) : ∃ (B : Nat) (a <= B *n 1)
+  | c*-<=_* {a : E} : a <= 1 -> negative a <= 1 -> a * a <= 1
+  | c*-<=-square {a : E} : a * a <= 1 -> a <= 1
 
-\class RealC*Algebra \extends RealPreC*Algebra, RealBanachAlgebra {
+  | noTorsion n/=0 na=0 => <=-antisymmetric (negative-to<=0 $ c*-positive-div n/=0 $ transportInv (0 <=) *n_negative $ negative>=0 $ =_<= na=0) (c*-positive-div n/=0 $ =_<= $ inv na=0)
+
+  \lemma zro<=ide : 0 <= 1
+    => c*-positive-div {_} {2} suc/=0 $ transport2 (__ <= __ + 1) negative-left (inv zro-left) $ <=_+ (c*-<=-square (=_<= $ negative_* *> ide-left)) <=-refl
+
+  \lemma *q_>=0 {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a : E} (a>=0 : 0 <= a) : 0 <= q *q a
+    => c*-positive-div (ratDenom/=0 q) $ transport (0 <=) (pmap (`*i a) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q a) (inv rat*denom-left) *> *q-assoc *> *q_*n) (*n_>=0 a>=0)
+
+  \lemma <=_*q-left {q r : Rat} (q<=r : q RatField.<= r) {a : E} (a>=0 : 0 <= a) : q *q a <= r *q a
+    => from>=0 $ transport (0 <=) toRatModule.*c-rdistr_- $ *q_>=0 (RatField.to>=0 q<=r) a>=0
+
+  \lemma <=_*n-cancel-left {n : Nat} (n/=0 : n /= 0) {a b : E} (na<=nb : n *n a <= n *n b) : a <= b
+    => from>=0 $ c*-positive-div n/=0 $ transportInv (0 <=) *n-ldistr_- (to>=0 na<=nb)
+
+  \func toBanach : RealPreBanachSpace \cowith
+    | DivisibleGroup => \this
+    | norm (a : E) : ExUpperReal \cowith {
+      | U q => ∃ (r : `< q) (0 < r) (a <= r *q 1) (negative a <= r *q 1)
+      | U-closed (inP (r,r<q,r>0,a<=r,-a<=r)) q<q' => inP (r, r<q <∘ q<q', r>0, a<=r, -a<=r)
+      | U-rounded {q} (inP (r,r<q,r>0,a<=r,-a<=r)) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, r>0, a<=r, -a<=r), RatField.mid<right r<q)
+    }
+    | norm_zro => exts \lam q => ext (\lam (inP (r,r<q,r>0,r>=0,_)) => r>0 <∘ r<q, \lam q>0 =>
+      \have q/2>=0 => *q_>=0 (<=-less $ RatField.half>0 q>0) zro<=ide
+      \in inP (RatField.half q, RatField.half<id q>0, RatField.half>0 q>0, q/2>=0, transportInv (`<= _) negative_zro q/2>=0))
+    | norm_negative => exts \lam q => ext
+      (\lam (inP (r,r<q,r>0,-x<=r,x<=r)) => inP (r, r<q, r>0, transport (`<= _) negative-isInv x<=r, -x<=r),
+       \lam (inP (r,r<q,r>0,x<=r,-x<=r)) => inP (r, r<q, r>0, -x<=r, transportInv (`<= _) negative-isInv x<=r))
+    | norm_+ {x} {y} {d} p => \case ExUpperReal.+_U.1 p \with {
+      | inP (a, inP (a',a'<a,a'>0,x<=a',-x<=a'), b, inP (b',b'<b,b'>0,y<=b',-y<=b'), a+b<d) =>
+        inP (a' RatField.+ b', RatField.<_+ a'<a b'<b <∘ a+b<d, RatField.<_+ a'>0 b'>0,
+             <=_+ x<=a' y<=b' <=∘ =_<= (inv toRatModule.*c-rdistr),
+             transport2 (<=) (+-comm *> inv negative_+) (inv toRatModule.*c-rdistr) $ <=_+ -x<=a' -y<=b')
+    }
+    | norm_*n_>= {n} {x} (inP (a,a<b,a>0,nx<=a,-nx<=a)) => \case decideEq n 0 \with {
+      | yes n=0 => rewrite (n=0, ExUpperRealSemigroup.zro_*-left \case c*-archimedean x, c*-archimedean (negative x) \with {
+        | inP (B1,x<=B1), inP (B2,-x<=B2) => inP ((B1 ∨ B2) Nat.+ 2, inP $ later (suc (B1 ∨ B2), linarith, linarith, x<=B1 <=∘ transport (`<= _) *q_*n (<=_*q-left (fromInt_<= $ pos<=pos $ join-left NatSemiring.<=∘ id<=suc) zro<=ide), -x<=B2 <=∘ transport (`<= _) *q_*n (<=_*q-left (fromInt_<= $ pos<=pos $ join-right NatSemiring.<=∘ id<=suc) zro<=ide)))
+      }) (a>0 <∘ a<b)
+      | no n/=0 =>
+        \let | a' => RatField.finv n RatField.* a
+             | a'>0 : 0 < a' => RatField.<_*_positive_positive (RatField.finv>0 $ fromInt_< $ pos<pos $ nonZero>0 n/=0) a>0
+             | lem => pmap (`*q 1) (inv RatField.ide-left *> pmap (RatField.`* a) (inv $ RatField.finv-right $ natRat/=0 n/=0) *> RatField.*-assoc) *> *q-assoc *> *q_*n
+        \in ExUpperReal.*_U_<.2 $ inP (n, ExUpperRealAbMonoid.<=-refl, fromNat_>=0, a', \lam {d} a'<d => inP $ later (_, a'<d, a'>0, <=_*n-cancel-left n/=0 $ transport (_ <=) lem nx<=a, <=_*n-cancel-left n/=0 $ transport2 (<=) (inv *n_negative) lem -nx<=a), <=-less a'>0, =_<= (inv RatField.*-assoc *> pmap (RatField.`* a) (RatField.finv-right $ natRat/=0 n/=0) *> RatField.ide-left) <∘r a<b)
+    }
+}
+
+\class RealC*Algebra \extends RealBanachAlgebra, RealPreC*Algebra {
   | c*-sum {a b : E} : norm (a * a) ExUpperReal.<= norm (a * a + b * b)
   | c*-square {a : E} : norm a ExUpperReal.* norm a ExUpperReal.<= norm (a * a)
   | <= => RealC*Algebra.<=
@@ -37,6 +91,11 @@
   | <=-transitive y-x-sq z-y-sq => transport IsSquare simplify (square-sum c*-sum z-y-sq y-x-sq)
   | <=-antisymmetric (inP (a,aa=y-x)) (inP (b,bb=x-y)) => inv $ fromZero $ inv aa=y-x *> norm-ext (ExUpperRealAbMonoid.<=-antisymmetric (c*-sum ExUpperRealAbMonoid.<=∘ =_<= {ExUpperRealAbMonoid} (pmap norm (simplify in pmap (_ +) bb=x-y *> pmap (`+ _) aa=y-x) *> norm_zro)) norm>=0)
   | <=_+ p q => transport IsSquare equation.abGroup (square-sum c*-sum p q)
+
+  | c*-positive-div n/=0 na>=0 => {?}
+  | c*-archimedean => {?}
+  | c*-<=_* => {?}
+  | c*-<=-square => {?}
 
   \lemma square-lem {x : E} : (\Sigma (IsSquare x) (IsSquare (1 - x))) <-> (\Sigma (norm x ExUpperReal.<= ExUpperRealPointed.ide) (norm (1 - x) ExUpperReal.<= ExUpperRealPointed.ide))
     => (\lam s => (simplify in square-lem-aux c*-sum s.2 (simplify s.1), square-lem-aux c*-sum s.1 s.2), \lam s => (norm-square s.2, norm-square' s.1))
