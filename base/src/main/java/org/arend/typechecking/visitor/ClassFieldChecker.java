@@ -48,7 +48,7 @@ public class ClassFieldChecker extends BaseConcreteExpressionVisitor<Void> {
   }
 
   private Concrete.Expression getThisExpression(Object data) {
-    return myFutureFields == null ? new Concrete.ReferenceExpression(data, myThisParameter) : new Concrete.ThisExpression(data, myThisParameter);
+    return new Concrete.ReferenceExpression(data, myThisParameter);
   }
 
   @Override
