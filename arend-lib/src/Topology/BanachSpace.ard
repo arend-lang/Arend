@@ -93,16 +93,16 @@
   \lemma *r-cover : CoverMap (ProductCoverSpace RealNormed \this) \this (\lam s => s.1 *r s.2)
     => transport (CoverMap _ _) (ext \lam s => inv (\peval s.1 *r s.2)) *r.lift
 
-  \lemma *r-char {q : Rat} {a : E} : q *r a = q *q a
+  \lemma *r_*q {q : Rat} {a : E} : q *r a = q *q a
     => (\peval q *r a) *> dense-lift-char (ProductCoverSpace.prod.isDenseEmbedding _ _) (q,a)
 
   \func toRealModule : LModule RealField \cowith
     | AbGroup => \this
     | *c => *r
-    | *c-assoc {r} {r'} {a} => dense-lift-unique (prod rat_real rat_real) (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding).1 (*r-cover ∘ tuple id (const a) ∘ RealField.*-cover) (*r-cover ∘ prod id (*r-cover ∘ tuple id (const a))) (\lam rr' => pmap (`*r _) RealField.*-rat *> *r-char *> *q-assoc *> pmap (_ *q) (inv *r-char) *> inv *r-char) (r,r')
-    | *c-ldistr {r} {a} {b} => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (+-uniform ∘ tuple (*r-cover ∘ tuple id (const a)) (*r-cover ∘ tuple id (const b))) (\lam q => *r-char *> toRatModule.*c-ldistr *> inv (pmap2 (+) *r-char *r-char)) r
-    | *c-rdistr {r} {r'} {a} => dense-lift-unique (prod rat_real rat_real) (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding).1 (*r-cover ∘ tuple id (const a) ∘ +-uniform) (+-uniform ∘ prod (*r-cover ∘ tuple id (const a)) (*r-cover ∘ tuple id (const a))) (\lam rr' => pmap (`*r a) RealAbGroup.+-rat *> *r-char *> toRatModule.*c-rdistr *> inv (pmap2 (+) *r-char *r-char)) (r,r')
-    | ide_*c => *r-char *> ide_*q
+    | *c-assoc {r} {r'} {a} => dense-lift-unique (prod rat_real rat_real) (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding).1 (*r-cover ∘ tuple id (const a) ∘ RealField.*-cover) (*r-cover ∘ prod id (*r-cover ∘ tuple id (const a))) (\lam rr' => pmap (`*r _) RealField.*-rat *> *r_*q *> *q-assoc *> pmap (_ *q) (inv *r_*q) *> inv *r_*q) (r,r')
+    | *c-ldistr {r} {a} {b} => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (+-uniform ∘ tuple (*r-cover ∘ tuple id (const a)) (*r-cover ∘ tuple id (const b))) (\lam q => *r_*q *> toRatModule.*c-ldistr *> inv (pmap2 (+) *r_*q *r_*q)) r
+    | *c-rdistr {r} {r'} {a} => dense-lift-unique (prod rat_real rat_real) (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding).1 (*r-cover ∘ tuple id (const a) ∘ +-uniform) (+-uniform ∘ prod (*r-cover ∘ tuple id (const a)) (*r-cover ∘ tuple id (const a))) (\lam rr' => pmap (`*r a) RealAbGroup.+-rat *> *r_*q *> toRatModule.*c-rdistr *> inv (pmap2 (+) *r_*q *r_*q)) (r,r')
+    | ide_*c => *r_*q *> ide_*q
 } \where {
   \open CoverMap
   \open ProductCoverSpace

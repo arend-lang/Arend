@@ -71,16 +71,23 @@
       => completion-lift-natural EventualityFilter
   }
 
-\lemma limit-isLimit {I : DirectedSet} {X : CompleteCoverSpace} (fc : CoverMap (DirectedCoverSpace I) X) : X.IsLimit fc (limit fc fc)
-  => rewrite limit.char \lam Uo Ul => CompleteCoverSpace.filter-point-sub (X.open-char.1 Uo Ul)
+\lemma limit-isLimit {I : DirectedSet} {X : CompleteCoverSpace} {f : I -> X} {fc : IsConvergent f} : X.IsLimit f (limit f fc)
+  => rewrite (limit.char fc) \lam Uo Ul => CompleteCoverSpace.filter-point-sub (X.open-char.1 Uo Ul)
 
 \lemma limit-char {I : DirectedSet} {X : CompleteCoverSpace} {f : I -> X} {l : X} : (limit f = defined l) <-> X.IsLimit f l
-  => (\lam p => rewriteI (defined-ext.value {_} {limit f} p) $ limit-isLimit (defined-ext.isDefined {_} {limit f} p),
+  => (\lam p => rewriteI (defined-ext.value {_} {limit f} p) limit-isLimit,
       \lam fl => defined-ext {_} {limit f} (limit-conv fl) $ inv $ isSeparatedCoverSpace $ SeparatedCoverSpace.separated-char 4 7 \lam {U} l<=<U => \case <=<-inter l<=<U \with {
         | inP (U',l<=<U',U'<=<U) => \case fl X.interior l<=<U' \with {
           | inP (N,g) => transportInv U (limit.char (limit-conv fl)) $ <=<_<= (CompleteCoverSpace.filter-point-elem U'<=<U $ inP $ later (N, \lam p => <=<_<= (g p) idp)) idp
         }
       })
+
+\lemma limit-apply {I : DirectedSet} {X Y : CompleteCoverSpace} {f : I -> X} {fc : IsConvergent f} {g : X -> Y} (gc : CoverMap X Y g)
+  : g (limit f fc) = limit (\lam i => g (f i)) (gc CoverMap.∘ fc)
+  => Y.limit-unique (cont-limit limit-isLimit gc) limit-isLimit
+
+\lemma limit-ext {I : DirectedSet} {X : CompleteCoverSpace} (f g : I -> X) {fc : IsConvergent f} {gc : IsConvergent g} (p : \Pi (i : I) -> f i = g i) : limit f fc = limit g gc
+  => X.limit-unique limit-isLimit $ transportInv (X.IsLimit __ (limit g gc)) (ext p) limit-isLimit
 
 \lemma convergent-uniform-char {I : DirectedSet} {X : RegularPreuniformSpace} {f : I -> X} (p : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))) : IsConvergent f
   => convergent-char \lam Cc => \case ClosurePrecoverSpace.closure-filter (\new SetFilter X {

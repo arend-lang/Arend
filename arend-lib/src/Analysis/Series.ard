@@ -74,7 +74,7 @@
   => limit (partialSum S)
 
 \lemma seriesConv-sum {A : CompleteTopAbGroup} {S : Series A} (Sc : IsConvSeries S) : IsSeriesSum S (seriesSum S Sc)
-  => limit-isLimit Sc
+  => limit-isLimit
 
 \lemma seriesSum-char {A : CompleteTopAbGroup} {S : Series A} {l : A} : (seriesSum S = defined l) <-> IsSeriesSum S l
   => limit-char

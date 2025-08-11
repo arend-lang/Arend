@@ -382,6 +382,14 @@
     \lemma pow_>=0 {x : ExUpperReal} {n : Nat} : 0 <= pow x n \elim n
       | 0 => <=-less zro<ide
       | suc n => *_>=0
+
+    \lemma square<=1 {x : ExUpperReal} (xx<=1 : x * x <= 1) : x <= 1
+      => \lam {d} d>1 => \case *_U.1 (xx<=1 d>1) \with {
+        | inP (a,x<a,a>0,b,x<b,b>0,ab<d) => \case LinearOrder.dec<_<= 1 a \with {
+          | inl a>1 => U-closed x<b $ transport (RatField.`< _) RatField.ide-left (RatField.<_*_positive-left a>1 b>0) <∘ ab<d
+          | inr a<=1 => U-closed x<a (a<=1 <∘r d>1)
+        }
+      }
   }
 
 \record UpperReal \extends ExUpperReal {

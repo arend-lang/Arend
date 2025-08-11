@@ -93,6 +93,8 @@
   \lemma BigProd_replicate1 {n : Nat} : BigProd (replicate n ide) = ide
     => BigProd_replicate *> pow_ide
 
+  \func IsSquare (x : E) => ∃ (y : E) (y * y = x)
+
   \protected \func op : Monoid E \cowith
     | ide => ide
     | * x y => y * x
@@ -366,6 +368,9 @@
 
   \lemma *n-rdistr {n m : Nat} {a : E} : (n Nat.+ m) *n a = n *n a + m *n a
     => *n_pow *> \this.pow_+ *> inv (pmap2 (+) *n_pow *n_pow)
+
+  \lemma *n-assoc {n m : Nat} {a : E} : (n Nat.* m) *n a = n *n (m *n a)
+    => pmap (`*n a) NatSemiring.*-comm *> *n_pow *> \this.pow_* *> inv *n_pow *> pmap (n *n) (inv *n_pow)
 
   \func BigSum (l : Array E) => Big (+) zro l
 

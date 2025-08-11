@@ -12,6 +12,7 @@
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
+\import Arith.Real.Root \using (sqrt \as sqrtR)
 \import Arith.Real.UpperReal
 \import Data.Or
 \import Function.Meta
@@ -37,7 +38,7 @@
 }
 
 \class RealBanachAlgebra \extends BanachAlgebra, RealBanachSpace {
-  \sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) <= RatField.ide) : E
+  \sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) ExUpperReal.<= RatField.ide) : E
     => limit zfunc zfunc-conv
     \where \protected {
       \sfunc yfunc (n : Nat) : E \elim n
@@ -66,6 +67,9 @@
 
       \func zfunc (n : Nat) => 1 - yfunc n
 
+      \lemma zfunc-comm {a : E} (p : a * x = x * a) {n : Nat} : zfunc n * a = a * zfunc n
+        => rdistr_- *> pmap2 (-) (ide-left *> inv ide-right) (yfunc-comm p) *> inv ldistr_-
+
       \lemma zfunc_rfunc-diff {n k : Nat} (n<=k : n <= k) : norm (zfunc k - zfunc n) <= rfunc k - rfunc n
         => transport (ExUpperReal.`<= _) norm_negative $ simplify $ rewrite (+-comm, inv $ <=_exists n<=k) yfunc_rfunc-diff
 
@@ -75,9 +79,7 @@
         }
 
       \lemma isSquare : sqrt x |1-x|<=1 * sqrt x |1-x|<=1 = x
-        => pmap2 (*) (\peval sqrt _ _) (\peval sqrt _ _) *> limit-unique
-            (\have zl => limit-isLimit $ zfunc-conv {_} {x} {|1-x|<=1}
-             \in cont2-limit zl zl *-cont)
+        => pmap2 (*) (\peval sqrt _ _) (\peval sqrt _ _) *> limit-unique (cont2-limit limit-isLimit limit-isLimit *-cont)
             (limit-metric-char.2 \lam eps>0 => \case convergent-metric-char.double (limit-conv rfunc-limit) (RatField.half>0 eps>0) \with {
               | inP (N,h) => inP (N, \lam {n} N<=n => rewrite (dist-symm, norm-dist, dist-lem n, norm_*q) $ ExUpperRealSemigroup.<=_* <=-refl yfunc_rfunc-diff1 $ rewrite (ExUpperReal.*-rat rat_<=-dec $ RatField.to>=0 rfunc-inc) $ transport (`< _) RatField.*-comm $ RatField.<_rotate-right-conv rat_<-dec $ RatField.abs>=id <∘r h (N<=n <=∘ id<=suc) N<=n)
             })
@@ -85,19 +87,28 @@
           \lemma dist-lem (n : Nat) : zfunc n * zfunc n - x = RatField.natCoef 2 *q (yfunc (suc n) - yfunc n)
             => rewrite (\peval yfunc (suc n), toRatModule.*c-ldistr_-, inv *q-assoc, ide_*q, toRatModule.*c-rdistr {RatField.ide} {RatField.ide}, ide_*q) equation.ring
         }
+
+      \lemma comm {y : E} (yx=xy : y * x = x * y) : sqrt x |1-x|<=1 * y = y * sqrt x |1-x|<=1
+        => rewrite (\peval sqrt x _) $ limit-apply (*-locally-uniform ∘ tuple id (const y)) *> limit-ext (zfunc __ * y) (y * zfunc __) (\lam i => zfunc-comm yx=xy) *> inv (limit-apply (*-locally-uniform ∘ tuple (const y) id))
     }
 
   \lemma *r-comm-left {r : Real} {a b : E} : r *r (a * b) = r *r a * b
-    => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (*r-cover ∘ tuple id (const a)) (const b)) (\lam x => *r-char *> *q-comm-left *> pmap (`* b) (inv *r-char)) r
+    => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (*r-cover ∘ tuple id (const a)) (const b)) (\lam x => *r_*q *> *q-comm-left *> pmap (`* b) (inv *r_*q)) r
 
   \lemma *r-comm-right {r : Real} {a b : E} : r *r (a * b) = a * (r *r b)
-    => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (const a) (*r-cover ∘ tuple id (const b))) (\lam x => *r-char *> *q-comm-right *> pmap (a *) (inv *r-char)) r
+    => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (const a) (*r-cover ∘ tuple id (const b))) (\lam x => *r_*q *> *q-comm-right *> pmap (a *) (inv *r_*q)) r
 
   \lemma norm-square {x : E} (p : norm (1 - x) <= RatField.ide) : IsSquare x
     => inP (sqrt x p, sqrt.isSquare)
 
   \lemma norm-square' {x : E} (p : norm x <= RatField.ide) : IsSquare (1 - x)
     => norm-square (simplify p)
+
+  \lemma *r_>=0-square {r : Real} {a : E} (r>=0 : 0 <= r) (as : IsSquare a) : IsSquare (r *r a) \elim as
+    | inP (b,bb=a) => inP (sqrtR r *r b, inv *r-comm-left *> pmap (_ *r) (inv *r-comm-right) *> inv toRealModule.*c-assoc *> pmap2 (*r) (pow_sqrt r>=0) bb=a)
+
+  \lemma *q_>=0-square {q : Rat} {a : E} (q>=0 : 0 <= q) (as : IsSquare a) : IsSquare (q *q a)
+    => transport IsSquare *r_*q $ *r_>=0-square (rat_real_<=.1 q>=0) as
 } \where \protected {
   \open CoverMap
   \open ProductCoverSpace

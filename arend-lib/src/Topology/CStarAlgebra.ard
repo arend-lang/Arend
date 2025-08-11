@@ -34,7 +34,7 @@
 
 \class RealPreC*Algebra \extends QAlgebra, PosetAddGroup {
   | c*-positive-div {n : Nat} (n/=0 : n /= 0) {a : E} : 0 <= n *n a -> 0 <= a
-  | c*-archimedean (a : E) : ∃ (B : Nat) (a <= B *n 1)
+  | c*-archimedean (a : E) : ∃ (B : Nat) (a <= natCoef B)
   | c*-<=_* {a : E} : a <= 1 -> negative a <= 1 -> a * a <= 1
   | c*-<=-square {a : E} : a * a <= 1 -> a <= 1
 
@@ -73,7 +73,7 @@
     }
     | norm_*n_>= {n} {x} (inP (a,a<b,a>0,nx<=a,-nx<=a)) => \case decideEq n 0 \with {
       | yes n=0 => rewrite (n=0, ExUpperRealSemigroup.zro_*-left \case c*-archimedean x, c*-archimedean (negative x) \with {
-        | inP (B1,x<=B1), inP (B2,-x<=B2) => inP ((B1 ∨ B2) Nat.+ 2, inP $ later (suc (B1 ∨ B2), linarith, linarith, x<=B1 <=∘ transport (`<= _) *q_*n (<=_*q-left (fromInt_<= $ pos<=pos $ join-left NatSemiring.<=∘ id<=suc) zro<=ide), -x<=B2 <=∘ transport (`<= _) *q_*n (<=_*q-left (fromInt_<= $ pos<=pos $ join-right NatSemiring.<=∘ id<=suc) zro<=ide)))
+        | inP (B1,x<=B1), inP (B2,-x<=B2) => inP ((B1 ∨ B2) Nat.+ 2, inP $ later (suc (B1 ∨ B2), linarith, linarith, x<=B1 <=∘ transport (`<= _) (*q_*n *> inv natCoef_*n) (<=_*q-left (fromInt_<= $ pos<=pos $ join-left NatSemiring.<=∘ id<=suc) zro<=ide), -x<=B2 <=∘ transport (`<= _) (*q_*n *> inv natCoef_*n) (<=_*q-left (fromInt_<= $ pos<=pos $ join-right NatSemiring.<=∘ id<=suc) zro<=ide)))
       }) (a>0 <∘ a<b)
       | no n/=0 =>
         \let | a' => RatField.finv n RatField.* a
@@ -86,16 +86,43 @@
 \class RealC*Algebra \extends RealBanachAlgebra, RealPreC*Algebra {
   | c*-sum {a b : E} : norm (a * a) ExUpperReal.<= norm (a * a + b * b)
   | c*-square {a : E} : norm a ExUpperReal.* norm a ExUpperReal.<= norm (a * a)
+
   | <= => RealC*Algebra.<=
   | <=-refl => inP (0, zro_*-right *> inv negative-right)
   | <=-transitive y-x-sq z-y-sq => transport IsSquare simplify (square-sum c*-sum z-y-sq y-x-sq)
   | <=-antisymmetric (inP (a,aa=y-x)) (inP (b,bb=x-y)) => inv $ fromZero $ inv aa=y-x *> norm-ext (ExUpperRealAbMonoid.<=-antisymmetric (c*-sum ExUpperRealAbMonoid.<=∘ =_<= {ExUpperRealAbMonoid} (pmap norm (simplify in pmap (_ +) bb=x-y *> pmap (`+ _) aa=y-x) *> norm_zro)) norm>=0)
   | <=_+ p q => transport IsSquare equation.abGroup (square-sum c*-sum p q)
 
-  | c*-positive-div n/=0 na>=0 => {?}
-  | c*-archimedean => {?}
-  | c*-<=_* => {?}
-  | c*-<=-square => {?}
+  | c*-positive-div {n} n/=0 na>=0 => \case *n_>=0 na>=0 \with {
+    | inP (b,bb=nna) => inP (RatField.finv n *q b, simplify $ simplify at bb=nna $ inv *q-comm-left *> pmap (_ *q) (inv *q-comm-right) *> pmap (RatField.finv n *q) (pmap (RatField.finv n *q) (bb=nna *> inv *q_*n) *> inv *q-assoc *> pmap (`*q _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*q *> inv *q_*n) *> inv *q-assoc *> pmap (`*q _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*q)
+  }
+  | c*-archimedean a => \case norm-bounded a \with {
+    | inP (B,|a|<B) =>
+      \let | (N,B<N) => rat_natBound B
+           | NN>0 => RatField.<_*_positive_positive (norm>=0 |a|<B <∘ B<N) (norm>=0 |a|<B <∘ B<N)
+           | a' => RatField.finv (N Nat.* N) *q a
+           | |a'|<=1 : norm a' ExUpperReal.<= ExUpperRealPointed.ide => transportInv (ExUpperReal.`<= _) (norm_*q-ofPos $ <=-less $ RatField.finv>0 NN>0) $ ExUpperRealSemigroup.<=_* ExUpperRealAbMonoid.<=-refl (ExUpperReal.<_<= |a|<B) ExUpperRealAbMonoid.<=∘ transportInv (ExUpperReal.`<= _) (ExUpperReal.*-rat (<=-less $ RatField.finv>0 NN>0) (<=-less $ norm>=0 |a|<B)) (ExUpperReal.<=-rat.1 $ <=-less $ RatField.<_rotate-left NN>0 $ B<N <∘l transport2 (RatField.<=) RatField.ide-right (inv RatField.ide-right) (RatField.<=_*_positive-right fromNat_>=0 $ fromInt_<= $ pos<=pos $ suc_<_<= $ pos<pos.conv $ fromInt_<.conv $ norm>=0 |a|<B <∘ B<N))
+           | (inP (b,bb=1-a')) => norm-square' |a'|<=1
+      \in inP (N Nat.* N, inP (natCoef N * b, equation.monoid {inv $ natCoef-comm {_} {N} {b}, inv natCoef_*, bb=1-a'} $ ldistr_- *> pmap2 (-) ide-right (natCoef_*_*n *> inv *q_*n *> inv *q-assoc *> pmap (`*q a) (RatField.finv-right $ RatField.>_/= NN>0) *> ide_*q)))
+  }
+  | c*-<=_* {a} a<=1 -a<=1 =>
+    \let | a1 => ratio 1 2 *q (1 - a)
+         | a2 => ratio 1 2 *q (1 + a)
+         | a2=1-a1 => pmap (_ *q) {_} {2 *q 1 - (1 - a)} (later $ rewrite *q_*n equation.abGroup) *> toRatModule.*c-ldistr_- *> pmap (`- a1) (inv *q-assoc *> ide_*q)
+         | a1-square => *q_>=0-square rat_<=-dec a<=1
+         | a2-square => *q_>=0-square rat_<=-dec (transport IsSquare simplify -a<=1)
+         | |1-a1|<=1 => square-lem-aux c*-sum a1-square (transport IsSquare a2=1-a1 a2-square)
+         | |1-a2|<=1 => square-lem-aux c*-sum a2-square $ rewrite a2=1-a1 (simplify a1-square)
+         | s1 => sqrt a1 |1-a1|<=1
+         | s2 => sqrt a2 |1-a2|<=1
+         | s-comm : s2 * s1 = s1 * s2 => RealBanachAlgebra.sqrt.comm $ RealBanachAlgebra.sqrt.comm $ inv *q-comm-left *> pmap (_ *q) (inv *q-comm-right *> pmap (_ *q) (sum_diff (ide-left *> inv ide-right) *> inv (diff_sum $ ide-left *> inv ide-right)) *> *q-comm-right) *> *q-comm-left
+    \in inP (2 * s1 * s2, equation.monoid {
+          2 (natCoef-comm {_} {2} {s1}), s-comm, inv $ natCoef-comm {_} {2} {s2},
+          RealBanachAlgebra.sqrt.isSquare, RealBanachAlgebra.sqrt.isSquare {_} {a2},
+          natCoef_*_*q {_} {2} {a1}, inv *q-assoc, ide_*q,
+          natCoef_*_*q {_} {2} {a2}, inv $ *q-assoc {_} {2} {ratio 1 2} {1 + a}, ide_*q {_} {1 + a}
+        } $ diff_sum (ide-left *> inv ide-right) *> pmap (`+ _) ide-left)
+  | c*-<=-square {a} (inP (b,bb=1-aa)) => norm-square' $ ExUpperRealSemigroup.square<=1 $ c*-square ExUpperRealAbMonoid.<=∘ transport (_ ExUpperReal.<= norm __) {_} {1} (equation.abGroup {bb=1-aa}) (c*-sum {_} {a} {b}) ExUpperRealAbMonoid.<=∘ norm_ide_<=
 
   \lemma square-lem {x : E} : (\Sigma (IsSquare x) (IsSquare (1 - x))) <-> (\Sigma (norm x ExUpperReal.<= ExUpperRealPointed.ide) (norm (1 - x) ExUpperReal.<= ExUpperRealPointed.ide))
     => (\lam s => (simplify in square-lem-aux c*-sum s.2 (simplify s.1), square-lem-aux c*-sum s.1 s.2), \lam s => (norm-square s.2, norm-square' s.1))
@@ -108,7 +135,7 @@
   \private \lemma square-sum1 {X : RealBanachAlgebra} (c*-sum : \Pi {a b : X} -> X.norm (a * a) ExUpperReal.<= X.norm (a * a + b * b)) {x y : X} (qx : X.norm x ExUpperReal.<= 1) (qy : X.norm y ExUpperReal.<= 1) (px : X.IsSquare x) (py : X.IsSquare y) : X.IsSquare (x + y)
     => \let | lem => transport (_ ExUpperReal.<=) (ExUpperReal.*-rat rat_<=-dec rat_<=-dec) $ ExUpperRealSemigroup.<=_* {ratio 1 2} ExUpperRealAbMonoid.<=-refl $ transport (_ ExUpperReal.<=) ExUpperReal.+-rat (X.norm_+ <=∘ ExUpperRealAbMonoid.<=_+ (square-lem-aux c*-sum px (X.norm-square' qx)) (square-lem-aux c*-sum py (X.norm-square' qy)))
             | sqrt[x+y]/2 => X.sqrt (ratio 1 2 X.*q (x + y)) $ =_<= (pmap X.norm (inv (X.toRatModule.*c-ldistr_- *> pmap (`- _) (pmap (_ X.*q) (inv $ X.*q_*n {2}) *> inv X.*q-assoc *> X.ide_*q)) *> pmap (_ X.*q) {2 X.*n 1 - (x + y)} equation.ring) *> X.norm_*q-ofPos rat_<=-dec) <=∘ lem
-       \in inP (sqrt 2 X.*r sqrt[x+y]/2, inv (X.toRealModule.*c-assoc *> pmap (_ X.*r) X.*r-comm-right *> X.*r-comm-left) *> pmap (_ X.*r) RealBanachAlgebra.sqrt.isSquare *> pmap (X.`*r _) (pow_sqrt $ rat_real_<=.1 rat_<=-dec) *> X.*r-char *> inv X.*q-assoc *> X.ide_*q)
+       \in inP (sqrt 2 X.*r sqrt[x+y]/2, inv (X.toRealModule.*c-assoc *> pmap (_ X.*r) X.*r-comm-right *> X.*r-comm-left) *> pmap (_ X.*r) RealBanachAlgebra.sqrt.isSquare *> pmap (X.`*r _) (pow_sqrt $ rat_real_<=.1 rat_<=-dec) *> X.*r_*q *> inv X.*q-assoc *> X.ide_*q)
 
   \private \lemma square-sum {X : RealBanachAlgebra} (c*-sum : \Pi {a b : X} -> X.norm (a * a) ExUpperReal.<= X.norm (a * a + b * b)) {x y : X} (px : X.IsSquare x) (py : X.IsSquare y) : X.IsSquare (x + y)
     => \case X.norm-bounded x, X.norm-bounded y \with {

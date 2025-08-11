@@ -53,9 +53,24 @@
     | inv => BigSum (\lam j => LDiv.inv {p j})
     | inv-right => BigSum-ldistr *> pmap BigSum (later $ exts \lam j => LDiv.inv-right {p j})
 
-  \lemma natCoef_+ (n m : Nat) : natCoef (n Nat.+ m) = natCoef n + natCoef m \elim m
+  \lemma natCoef_*_*n {n : Nat} {a : E} : natCoef n * a = n *n a \elim n
+    | 0 => pmap (`* a) natCoefZero *> zro_*-left
+    | suc n => pmap (`* a) (natCoefSuc n) *> rdistr *> pmap2 (+) natCoef_*_*n ide-left
+
+  \lemma natCoef_*n {n : Nat} : natCoef n = n *n 1
+    => inv ide-right *> natCoef_*_*n
+
+  \lemma natCoef_+ {n m : Nat} : natCoef (n Nat.+ m) = natCoef n + natCoef m \elim m
     | 0 => inv (pmap (_ +) natCoefZero *> zro-right)
-    | suc m => natCoefSuc _ *> pmap (`+ 1) (natCoef_+ n m) *> +-assoc *> inv (pmap (_ +) (natCoefSuc m))
+    | suc m => natCoefSuc _ *> pmap (`+ 1) natCoef_+ *> +-assoc *> inv (pmap (_ +) (natCoefSuc m))
+
+  \lemma natCoef-comm {n : Nat} {a : E} : natCoef n * a = a * natCoef n \elim n
+    | 0 => pmap (`* a) natCoefZero *> zro_*-left *> inv (pmap (a *) natCoefZero *> zro_*-right)
+    | suc n => pmap (`* a) (natCoefSuc n) *> rdistr *> pmap2 (+) natCoef-comm ide-left *> inv (pmap (a *) (natCoefSuc n) *> ldistr *> pmap (_ +) ide-right)
+
+  \lemma natCoef_* {n m : Nat} : natCoef (n Nat.* m) = natCoef n * natCoef m \elim m
+    | 0 => natCoefZero *> inv (pmap (_ *) natCoefZero *> zro_*-right)
+    | suc m => natCoef_+ *> pmap (`+ _) natCoef_* *> inv (pmap (_ *) (natCoefSuc m) *> ldistr *> pmap (_ +) ide-right)
 
   \lemma BigSum-ldistr {x : E} {l : Array E} : x * BigSum l = BigSum (map (x *) l) \elim l
     | nil => zro_*-right
@@ -101,8 +116,6 @@
   \lemma pow_0 {n : Nat} (n/=0 : n /= 0) : pow 0 n = 0 \elim n
     | 0 => absurd (n/=0 idp)
     | suc n => zro_*-right
-
-  \func IsSquare (x : E) => ∃ (y : E) (y * y = x)
 
   \protected \func op : Semiring \cowith
     | PseudoSemiring => PseudoSemiring.op

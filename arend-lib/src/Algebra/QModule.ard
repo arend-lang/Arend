@@ -103,6 +103,9 @@
   \lemma *q-comm-right {r : Rat} {a b : E} : r *q (a * b) = a * (r *q b)
     => inv $ func-*q {_} {_} {*-addGroupHom-left}
 
+  \lemma natCoef_*_*q {n : Nat} {a : E} : natCoef n * a = n *q a
+    => natCoef_*_*n *> inv *q_*n
+
   \func toRatAlgebra : AAlgebra RatField \cowith
     | LModule => toRatModule
     | Ring => \this
