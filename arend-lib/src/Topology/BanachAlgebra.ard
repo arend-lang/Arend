@@ -1,5 +1,5 @@
 {- | Some of the definitions and proofs are taken from
-     [1] Coquand, Spitters, Constructive Gelfand Duality for C*-algebras, 2009.
+     [1] Coquand, Spitters, Constructive Gelfand Duality for C*-algebras, 2009, https://arxiv.org/abs/0808.1518
  -}
 
 \import Algebra.Group
@@ -38,6 +38,7 @@
 }
 
 \class RealBanachAlgebra \extends BanachAlgebra, RealBanachSpace {
+  -- | [1] Lemma 1
   \sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) ExUpperReal.<= RatField.ide) : E
     => limit zfunc zfunc-conv
     \where \protected {

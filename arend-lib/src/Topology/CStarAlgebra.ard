@@ -1,5 +1,5 @@
 {- | Some of the definitions and proofs are taken from
-     [1] Coquand, Spitters, Constructive Gelfand Duality for C*-algebras, 2009.
+     [1] Coquand, Spitters, Constructive Gelfand Duality for C*-algebras, 2009, https://arxiv.org/abs/0808.1518
  -}
 
 \import Algebra.Group
@@ -124,8 +124,33 @@
         } $ diff_sum (ide-left *> inv ide-right) *> pmap (`+ _) ide-left)
   | c*-<=-square {a} (inP (b,bb=1-aa)) => norm-square' $ ExUpperRealSemigroup.square<=1 $ c*-square ExUpperRealAbMonoid.<=∘ transport (_ ExUpperReal.<= norm __) {_} {1} (equation.abGroup {bb=1-aa}) (c*-sum {_} {a} {b}) ExUpperRealAbMonoid.<=∘ norm_ide_<=
 
-  \lemma square-lem {x : E} : (\Sigma (IsSquare x) (IsSquare (1 - x))) <-> (\Sigma (norm x ExUpperReal.<= ExUpperRealPointed.ide) (norm (1 - x) ExUpperReal.<= ExUpperRealPointed.ide))
-    => (\lam s => (simplify in square-lem-aux c*-sum s.2 (simplify s.1), square-lem-aux c*-sum s.1 s.2), \lam s => (norm-square s.2, norm-square' s.1))
+  \lemma <=_*q {x y : E} (x<=y : x <= y) {q : Rat} (q>=0 : RatField.zro RatField.<= q) : q *q x <= q *q y
+    => transport IsSquare toRatModule.*c-ldistr_- (*q_>=0-square q>=0 x<=y)
+
+  \lemma norm_<=_*q {x : E} {q : Rat} (|x|<=q : norm x ExUpperReal.<= q) : x <= q *q 1
+    => \case LinearOrder.dec<_<= 0 q \with {
+      | inl q>0 =>
+        \let | y => RatField.finv q *q x
+             | q'>=0 => <=-less (RatField.finv>0 q>0)
+             | y<=1 : y <= 1 => norm-square' $ transport2 (ExUpperReal.<=) (inv $ norm_*q-ofPos q'>=0) (ExUpperReal.*-rat q'>=0 (<=-less q>0) *> pmap ExUpperReal.fromRat (RatField.finv-left $ RatField.>_/= q>0)) $ ExUpperRealSemigroup.<=_* ExUpperRealAbMonoid.<=-refl |x|<=q
+        \in transport (`<= _) (inv *q-assoc *> pmap (`*q x) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ <=_*q y<=1 (<=-less q>0)
+      | inr q<=0 => \have x=0 => norm-ext (ExUpperRealAbMonoid.<=-antisymmetric (|x|<=q ExUpperRealAbMonoid.<=∘ ExUpperReal.<=-rat.1 q<=0) norm>=0)
+                    \in transport2 (<=) (inv x=0) (inv toRatModule.*c_zro-left *> pmap (`*q 1) (RatField.<=-antisymmetric (ExUpperReal.<=-rat.2 $ norm>=0 ExUpperRealAbMonoid.<=∘ |x|<=q) q<=0)) <=-refl
+    }
+
+  -- | [1] Theorem 1
+  \lemma norm-char {x : E} : norm x = toBanach.norm x
+    => ExUpperRealAbMonoid.<=-antisymmetric (\lam (inP (a,a<b,a>0,x<=a,-x<=a)) =>
+      \let | y => RatField.finv a *q x
+           | yy<=1 =>
+             \have lem {x} (x<=a : x <= a *q 1) => transport (_ <=) (inv *q-assoc *> pmap (`*q 1) (RatField.finv-left $ RatField.>_/= a>0) *> ide_*q) $ <=_*q x<=a (<=-less $ RatField.finv>0 a>0)
+             \in c*-<=_* (lem x<=a) $ transport (`<= 1) toRatModule.*c_negative-right (lem -x<=a)
+           | |yy|<=1 => simplify in square-lem-aux c*-sum yy<=1 (inP (y, simplify idp))
+           | |y|<=1 => ExUpperRealSemigroup.square<=1 $ c*-square ExUpperRealAbMonoid.<=∘ |yy|<=1
+           | |x|<=a => transport (norm __ ExUpperReal.<= a) (inv *q-assoc *> pmap (`*q x) (RatField.finv-right $ RatField.>_/= a>0) *> ide_*q) $ transport2 (ExUpperReal.<=) (inv $ norm_*q-ofPos $ <=-less a>0) (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 $ <=-less a>0) $ ExUpperRealSemigroup.<=_* (ExUpperRealAbMonoid.<=-refl {a}) |y|<=1
+      \in |x|<=a a<b) \lam |x|<b => \case U-rounded |x|<b \with {
+      | inP (a,|x|<a,a<b) => inP (a, a<b, norm>=0 |x|<a, norm_<=_*q $ ExUpperReal.<_<= |x|<a, norm_<=_*q $ transportInv (ExUpperReal.`<= _) norm_negative $ ExUpperReal.<_<= |x|<a)
+    }
 } \where {
   \type \infix 4 <= {R : Ring} (x y : R) => R.IsSquare (y - x)
 
@@ -137,6 +162,7 @@
             | sqrt[x+y]/2 => X.sqrt (ratio 1 2 X.*q (x + y)) $ =_<= (pmap X.norm (inv (X.toRatModule.*c-ldistr_- *> pmap (`- _) (pmap (_ X.*q) (inv $ X.*q_*n {2}) *> inv X.*q-assoc *> X.ide_*q)) *> pmap (_ X.*q) {2 X.*n 1 - (x + y)} equation.ring) *> X.norm_*q-ofPos rat_<=-dec) <=∘ lem
        \in inP (sqrt 2 X.*r sqrt[x+y]/2, inv (X.toRealModule.*c-assoc *> pmap (_ X.*r) X.*r-comm-right *> X.*r-comm-left) *> pmap (_ X.*r) RealBanachAlgebra.sqrt.isSquare *> pmap (X.`*r _) (pow_sqrt $ rat_real_<=.1 rat_<=-dec) *> X.*r_*q *> inv X.*q-assoc *> X.ide_*q)
 
+  -- | [1] Proposition 2
   \private \lemma square-sum {X : RealBanachAlgebra} (c*-sum : \Pi {a b : X} -> X.norm (a * a) ExUpperReal.<= X.norm (a * a + b * b)) {x y : X} (px : X.IsSquare x) (py : X.IsSquare y) : X.IsSquare (x + y)
     => \case X.norm-bounded x, X.norm-bounded y \with {
       | inP (a,|x|<a), inP (b,|y|<b) =>
