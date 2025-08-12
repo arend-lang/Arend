@@ -225,6 +225,12 @@
 
   \lemma negative-to>=0 {x : E} (p : negative x <= 0) : 0 <= x
     => negative_<=-conv $ transportInv (_ <=) negative_zro p
+
+  \lemma <=_+-cancel-left (x : E) {y z : E} (p : x + y <= x + z) : y <= z
+    => transport2 (<=) (inv +-assoc *> pmap (`+ y) negative-left *> zro-left) (inv +-assoc *> pmap (`+ z) negative-left *> zro-left) (<=_+ <=-refl p)
+
+  \lemma <=_+-cancel-right (z : E) {x y : E} (p : x + z <= y + z) : x <= y
+    => transport2 (<=) (+-assoc *> pmap (x +) negative-right *> zro-right) (+-assoc *> pmap (y +) negative-right *> zro-right) (<=_+ p <=-refl)
 }
 
 \class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, PosetAddGroup {

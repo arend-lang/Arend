@@ -205,6 +205,9 @@
   \lemma negative_+ {x y : E} : negative (x + y) = negative y - x
     => Group.inverse_* {toGroup \this}
 
+  \lemma negative_- {x y : E} : negative (x - y) = y - x
+    => negative_+ *> pmap (`- x) negative-isInv
+
   \lemma negative_zro : negative zro = zro
     => inv zro-right *> negative-left
 
