@@ -37,7 +37,9 @@
   \func fromRat (q : Rat) => q *q 1
 }
 
-\class RealBanachAlgebra \extends BanachAlgebra, RealBanachSpace {
+\class RealPreBanachAlgebra \extends RealPreBanachSpace, ExPseudoNormedRing
+
+\class RealBanachAlgebra \extends BanachAlgebra, RealBanachSpace, RealPreBanachAlgebra {
   -- | [1] Lemma 1
   \sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) ExUpperReal.<= RatField.ide) : E
     => limit zfunc zfunc-conv

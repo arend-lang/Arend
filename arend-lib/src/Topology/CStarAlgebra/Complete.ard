@@ -22,11 +22,15 @@
 \import Topology.CStarAlgebra
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.ExComplete
+\import Topology.NormedRing
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
 \open QModule
 
 \record PreC*AlgebraHom \extends RingHom, PosetHom {
-  \override Dom : RealPreC*Algebra
-  \override Cod : RealPreC*Algebra
+  \override Dom : PreC*Algebra
+  \override Cod : PreC*Algebra
 
   \func IsDense : \Prop
     => ∀ {eps} (0 < eps) y ∃ (x : Dom) (func x - y <= eps *q 1) (y - func x <= eps *q 1)
@@ -52,13 +56,13 @@
   \lemma isometry-toNormed : IsIsometric <-> (\Pi {x : Dom} -> toBanach.norm (func x) = toBanach.norm x)
     => (\lam c {x} => <=-antisymmetric toNormed.func-norm \lam {b} (inP (a',a'<b,a'>0,fx<=a',-fx<=a')) => \case isDense a'<b \with {
       | inP (a,a'<a,a<b) =>
-        \have | lem => =_<= (inv *q-assoc *> pmap (`*q 1) (RatField.finv-left $ RatField.>_/= a'>0) *> ide_*q)
-              | x<=a {x} (fx<=a' : func x <= a' *q 1) (-fx<=a' : negative (func x) <= a' *q 1) => <=_*q-cancel-left (RatField.finv>0 a'>0) $ transport (_ <=) *q-assoc $ c
-                       (=_<= func-*q <=∘ <=_*q-right (RatField.<=-less $ RatField.finv>0 a'>0) fx<=a' <=∘ lem)
-                       (=_<= (pmap negative func-*q *> inv (later toRatModule.*c_negative-right)) <=∘ <=_*q-right (RatField.<=-less $ RatField.finv>0 a'>0) -fx<=a' <=∘ lem)
-                       (transport (_ <) *-comm $ RatField.<_rotate-right a'>0 $ transportInv (`< _) ide-left a'<a)
+        \have x<=a {x} (fx<=a' : func x <= a' *q 1) (-fx<=a' : negative (func x) <= a' *q 1)
+              => <=_*q-cancel-left (RatField.finv>0 a'>0) $ transport (_ <=) *q-assoc $ c
+                  (=_<= func-*q <=∘ <=_*q-rotate-left a'>0 fx<=a')
+                  (=_<= (pmap negative func-*q *> inv (later toRatModule.*c_negative-right)) <=∘ <=_*q-rotate-left a'>0 -fx<=a')
+                  (transport (_ <) *-comm $ RatField.<_rotate-right a'>0 $ transportInv (`< _) ide-left a'<a)
         \in inP (a, a<b, a'>0 <∘ a'<a, x<=a fx<=a' -fx<=a', x<=a (rewrite func-negative -fx<=a') $ rewrite (func-negative,AddGroup.negative-isInv) fx<=a')
-    }, \lam c {x} fx<=1 -fx<=1 q>1 => \case transport (`<= _) c (norm<=1 fx<=1 -fx<=1) q>1 \with {
+    }, \lam c {x} fx<=1 -fx<=1 q>1 => \case transport (`<= _) c (toBanach_norm<=1 fx<=1 -fx<=1) q>1 \with {
       | inP (r,r<q,_,x<=r,_) => x<=r <=∘ <=_*q-left (RatField.<=-less r<q) zro<=ide
     })
 
@@ -66,17 +70,39 @@
     | NormedAbGroupMap => toNormed
     | func-norm-isometry => isometry-toNormed.1 p
 } \where {
-  \open RealPreC*Algebra
+  \open PreC*Algebra
+
+  \lemma fromNormed {X : PreC*Algebra} {Y : C*Algebra} (f : RingHom X Y) (fn : \Pi {x : X} -> norm (f x) <= X.toBanach.norm x) : PreC*AlgebraHom X Y f \cowith
+    | RingHom => f
+    | func-<= =>
+      \have lem {a} (a>=0 : 0 <= a) : 0 <= f a => \case X.*q-upperBound a \with {
+        | inP (q,q>0,a<=q) => transport (0 <=) (pmap (q *q) func-*q *> inv *q-assoc *> pmap (`*q _) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (RatField.<=-less q>0) $ Y.norm-c*-positive $ =_<= (inv $ pmap norm (f.func-minus *> pmap (`- _) f.func-ide)) <=∘ fn <=∘ toBanach_norm<=1 (<=_+ <=-refl (PosetAddGroup.negative<=0 $ *q_>=0 (RatField.<=-less $ RatField.finv>0 q>0) a>=0) <=∘ =_<= zro-right) (PosetAddGroup.negative<=0 (PosetAddGroup.to>=0 (<=_*q-rotate-left q>0 a<=q)) <=∘ zro<=ide)
+      }
+      \in \lam x<=y => Y.from>=0 $ transport (0 <=) f.func-minus $ lem (X.to>=0 x<=y)
 }
 
 \record C*AlgebraHom \extends PreC*AlgebraHom, BoundedLinearMap {
-  \override Dom : RealC*Algebra
-  \override Cod : RealC*Algebra
+  \override Dom : C*Algebra
+  \override Cod : C*Algebra
 
   | func-<= (inP (a,aa=y-x)) => inP (func a, inv func-* *> pmap func aa=y-x *> func-minus)
   | isBounded => inP (1, idp, \lam x => transportInv (_ <=) (ExUpperRealSemigroup.ide-left norm>=0) $
-      transport2 (<=) (inv RealC*Algebra.norm-char) (inv RealC*Algebra.norm-char) toNormed.func-norm)
+      transport2 (<=) (inv C*Algebra.norm-char) (inv C*Algebra.norm-char) toNormed.func-norm)
 } \where {
-  \lemma fromRingHom {X Y : RealC*Algebra} (f : RingHom X Y) : C*AlgebraHom X Y f \cowith
+  \lemma fromRingHom {X Y : C*Algebra} (f : RingHom X Y) : C*AlgebraHom X Y f \cowith
     | RingHom => f
 }
+
+\sfunc dense-c*-lift {X Y : PreC*Algebra} {Z : C*Algebra} (f : PreC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : PreC*AlgebraHom X Z) : PreC*AlgebraHom Y Z
+  => \let | map => dense-normed-lift (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
+          | map-char => dense-normed-lift.char (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
+     \in PreC*AlgebraHom.fromNormed \new RingHom {
+       | func => map
+       | func-+ => map.func-+
+       | func-ide => pmap map (inv f.func-ide) *> map-char *> g.func-ide
+       | func-* {x} {y} => dense-lift-unique (ProductTopSpace.prod f.toNormed f.toNormed) (ProductTopSpace.prod.isDense (f.dense-toNormed.1 fd) (f.dense-toNormed.1 fd)) (map ContMap.∘ *-locally-uniform) (*-locally-uniform ContMap.∘ ProductTopSpace.prod map map) (\lam s => pmap map (inv f.func-*) *> map-char *> g.func-* *> inv (pmap2 (*) map-char map-char)) (x,y)
+     } map.func-norm
+  \where {
+    \protected \lemma char {X Y : PreC*Algebra} {Z : C*Algebra} (f : PreC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : PreC*AlgebraHom X Z) {x : X} : dense-c*-lift f fd fi g (f x) = g x
+      => rewrite (\peval dense-c*-lift f fd fi g) $ dense-normed-lift.char (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
+  }

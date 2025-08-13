@@ -31,6 +31,10 @@
   | MetricMap => dense-metric-lift f fd g
   | TopAbGroupMap => dense-topAb-lift f (fd, f.embedding->topEmbedding $ f.embedding->coverEmbedding (f.dense->uniformEmbedding fd).2) g
   | func-norm => rewrite (norm_dist,norm_dist) $ transport (dist __ _ <= _) (dense-topAb-lift f (fd, f.embedding->topEmbedding $ f.embedding->coverEmbedding (f.dense->uniformEmbedding fd).2) g).func-zro $ func-dist {dense-metric-lift f fd g}
+  \where {
+    \protected \lemma char {X Y : ExPseudoNormedAbGroup} {Z : CompleteExNormedAbGroup} (f : NormedIsometricMap X Y) (fd : f.IsDense) (g : NormedAbGroupMap X Z) {x : X} : dense-normed-lift f fd g (f x) = g x
+      => dense-lift-char _ x
+  }
 
 \instance ExNormedAbGroupCompletion (X : ExPseudoNormedAbGroup) : CompleteExNormedAbGroup
   | CompleteExMetricSpace => ExMetricCompletion X
@@ -127,5 +131,7 @@
   }
   \where {
     \lemma isDense : (separated-completion {X}).IsDense
-      => {?}
+      => \lam Uo Ux => \case completion.isDenseEmbedding.1 Uo Ux \with {
+        | inP (z, inP (y,y=z), Uz) => inP (z, inP (in~ y, y=z), Uz)
+      }
   }
