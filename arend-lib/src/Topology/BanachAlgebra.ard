@@ -19,6 +19,7 @@
 \import Logic
 \import Logic.Meta
 \import Meta
+\import Operations
 \import Order.Biordered
 \import Order.LinearOrder
 \import Order.PartialOrder
@@ -27,9 +28,13 @@
 \import Paths.Meta
 \import Topology.BanachSpace
 \import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.CompletionTools
 \import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup.ExComplete
 \import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedRing
+\import Topology.TopAbGroup.Complete
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 
@@ -149,3 +154,30 @@
         | inr r => rfunc-bound eps>0 linarith <∘r RatField.pow_<=-degree (linarith rfunc>=0) linarith B<=n <∘r B.2
       })
 }
+
+\instance BanachAlgebraCompletion (X : RealPreBanachAlgebra) : RealBanachAlgebra
+  | BanachSpace => BanachCompletion X
+  | * => *-func
+  | *-assoc => unique3 (*-cover ∘ prod *-cover id) (*-cover ∘ tuple (proj1 ∘ proj1) (*-cover ∘ prod proj2 id))
+      \lam x y z => pmap (*-func __ _) lift2-char *> lift2-char *> pmap pointCF *-assoc *> inv (pmap (*-func _) lift2-char *> lift2-char)
+  | ldistr => unique3 (*-cover ∘ tuple (proj1 ∘ proj1) (+-cover ∘ prod proj2 id)) (+-cover ∘ tuple (*-cover ∘ proj1) (*-cover ∘ tuple (proj1 ∘ proj1) proj2))
+      \lam x y z => pmap (*-func _) +-char *> lift2-char *> pmap pointCF X.ldistr *> inv (pmap2 +-func lift2-char lift2-char *> +-char)
+  | rdistr => unique3 (*-cover ∘ prod +-cover id) (+-cover ∘ tuple (*-cover ∘ tuple (proj1 ∘ proj1) proj2) (*-cover ∘ tuple (proj2 ∘ proj1) proj2))
+      \lam x y z => pmap (*-func __ _) +-char *> lift2-char *> pmap pointCF X.rdistr *> inv (pmap2 +-func lift2-char lift2-char *> +-char)
+  | ide => pointCF 1
+  | ide-left => unique1 (*-cover ∘ tuple (const _) id) id \lam x => lift2-char *> pmap pointCF ide-left
+  | ide-right => unique1 (*-cover ∘ tuple id (const _)) id \lam x => lift2-char *> pmap pointCF ide-right
+  | norm_*_<= => unique1_<= (norm-uniform-map {BanachCompletion X} ∘ *-cover ∘ tuple id (const _)) (upper-*-right-uniform ((BanachCompletion X).norm-bounded _) ∘ norm-uniform-map {BanachCompletion X})
+    \lam x => unique1_<= (norm-uniform-map {BanachCompletion X} ∘ *-cover ∘ tuple (const _) id) (upper-*-left-uniform ((BanachCompletion X).norm-bounded _) ∘ norm-uniform-map {BanachCompletion X})
+    \lam y => transport2 (<=) (inv $ pmap ExNormedAbGroupCompletion.norm lift2-char *> completion-exNormed-isometry.func-norm-isometry) (inv $ pmap2 (*) completion-exNormed-isometry.func-norm-isometry completion-exNormed-isometry.func-norm-isometry) X.norm_*_<=
+  | norm_ide_<= => completion-exNormed-isometry.func-norm <=∘ norm_ide_<=
+  \where {
+    \open ProductCoverSpace
+    \open CoverMap
+    \open TopAbGroupCompletion
+
+    \func *-cover : CoverMap (Completion X ⨯ Completion X) (Completion X)
+      => lift2 *-locally-uniform
+
+    \func *-func (x y : RegularCauchyFilter X) => *-cover (x,y)
+  }

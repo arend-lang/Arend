@@ -13,6 +13,7 @@
 \import Set.Subset
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.CompletionTools
 \import Topology.CoverSpace.Product
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Product
@@ -77,14 +78,11 @@
       | negative-left => unique1 (+-cover ∘ tuple negative-cover id) (const _) \lam x => pmap (+-func __ _) negative-char *> +-char *> pmap pointCF negative-left
       | +-comm => unique2 +-cover (+-cover ∘ tuple proj2 proj1) \lam x y => +-char *> pmap pointCF +-comm *> inv +-char
 
-    \sfunc subtract-cover : CoverMap (Completion X ⨯ Completion X) (Completion X)
-      => dense-lift (prod completion completion) (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) (completion CoverMap.∘ +-uniform ∘ prod id negative-uniform)
-
-    \lemma subtract-char {x y : X} : subtract-cover (pointCF x, pointCF y) = pointCF (x - y)
-      => rewrite (\peval subtract-cover) $ dense-lift-char (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) (x,y)
+    \func subtract-cover : CoverMap (Completion X ⨯ Completion X) (Completion X)
+      => lift2 (+-uniform ∘ prod id negative-uniform)
 
     \lemma subtract_- {F G : RegularCauchyFilter X} : subtract-cover (F,G) = F - {abGroup} G
-      => unique2 subtract-cover (+-cover ∘ prod id negative-cover) \lam x y => subtract-char *> inv +-char *> pmap (+-func _) (inv negative-char)
+      => unique2 subtract-cover (+-cover ∘ prod id negative-cover) \lam x y => lift2-char *> inv +-char *> pmap (+-func _) (inv negative-char)
 
     \sfunc +-cover : CoverMap (Completion X ⨯ Completion X) (Completion X)
       => subtract-cover ∘ prod id negative-cover
@@ -92,26 +90,17 @@
     \func +-func (x y : RegularCauchyFilter X) => +-cover (x,y)
 
     \lemma +-char {x y : X} : +-cover (pointCF x, pointCF y) = pointCF (x + y)
-      => rewrite (\peval +-cover) $ pmap (\lam z => subtract-cover (pointCF x, z)) negative-char *> subtract-char *> simplify
+      => rewrite (\peval +-cover) $ pmap (\lam z => subtract-cover (pointCF x, z)) negative-char *> lift2-char *> simplify
 
     \sfunc negative-cover : CoverMap (Completion X) (Completion X)
       => subtract-cover ∘ tuple (const $ pointCF 0) id
 
     \lemma negative-char {x : X} : negative-cover (pointCF x) = pointCF (negative x)
-      => rewrite (\peval negative-cover) $ subtract-char *> simplify
-
-    \lemma unique1 (f g : CoverMap (Completion X) (Completion X)) (p : \Pi (x : X) -> f (pointCF x) = g (pointCF x)) {x : RegularCauchyFilter X} : f x = g x
-      => dense-lift-unique completion completion.isDenseEmbedding.1 f g p x
-
-    \lemma unique2 (f g : CoverMap (Completion X ⨯ Completion X) (Completion X)) (p : \Pi (x y : X) -> f (pointCF x, pointCF y) = g (pointCF x, pointCF y)) {x y : RegularCauchyFilter X} : f (x,y) = g (x,y)
-      => dense-lift-unique (prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1) f g (\lam s => p s.1 s.2) (x,y)
-
-    \lemma unique3 (f g : CoverMap (Completion X ⨯ Completion X ⨯ Completion X) (Completion X)) (p : \Pi (x y z : X) -> f ((pointCF x, pointCF y), pointCF z) = g ((pointCF x, pointCF y), pointCF z)) {x y z : RegularCauchyFilter X} : f ((x,y),z) = g ((x,y),z)
-      => dense-lift-unique (prod (prod completion completion) completion) (ProductTopSpace.prod.isDense (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1) completion.isDenseEmbedding.1) f g (\lam s => p s.1.1 s.1.2 s.2) ((x,y),z)
+      => rewrite (\peval negative-cover) $ lift2-char *> simplify
 
     \lemma topAb-neighborhood {F G : RegularCauchyFilter X} {U : Set (Completion X)} : single (F - {abGroup} G) <=< U <->
       ∃ (U' : Set (Completion X)) (U' <=< U) (V1 : Set X) (F V1) (V2 : Set X) (G V2) ∀ {x : V1} {y : V2} (U' (pointCF (x - y)))
-      => rewrite (inv subtract_-, \peval subtract-cover) $ completion-lift-neighborhood2 (completion ∘ +-uniform ∘ prod id negative-uniform) F G U
+      => rewrite (inv subtract_-, \peval lift2 (+-uniform ∘ prod id negative-uniform)) $ completion-lift-neighborhood2 (completion ∘ +-uniform ∘ prod id negative-uniform) F G U
   }
 
 \func completion-topAb {X : TopAbGroup} : TopAbGroupMap X (TopAbGroupCompletion X) \cowith

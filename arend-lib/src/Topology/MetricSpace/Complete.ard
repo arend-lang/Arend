@@ -88,6 +88,6 @@
           ((x,y),z)
 
     \lemma dist-neighborhood (F G : StronglyRegularCauchyFilter X) {eps : Rat} (eps>0 : 0 < eps) {x : X} (Fx : F (OBall (RatField.half (RatField.half eps)) x)) (Gx : G (OBall (RatField.half (RatField.half eps)) x)) : (dist-cover (F,G)).U eps
-      => rewrite (\peval dist-cover) $ real_<_U.1 $ simplify in RealAbGroup.abs>=_- <∘r real_<_U.2 (<=<_<= ((strongCompletion-lift-neighborhood2 {_} {_} {RealNormed} (ldist-uniform-map {X}) F G (OBall eps 0)).2 $ inP
+      => rewrite (\peval dist-cover) $ real_<_U.1 $ simplify in RealAbGroup.abs>=_- <∘r real_<_U.2 (<=<_<= ((CompletionTools.strongCompletion-lift-neighborhood2 {_} {_} {RealNormed} (ldist-uniform-map {X}) F G (OBall eps 0)).2 $ inP
             (OBall (RatField.half eps) 0, s<=*_s<=< $ OBall_s<=* (linarith : RatField.half eps < eps), _, Fx, _, Gx, \lam {z1} d1 {z2} d2 => real_<_U.1 $ RealAbGroup.abs_-_< (linarith (ldist>=0 {X} {z1}, rat_real_<.1 $ RatField.half>0 eps>0)) $ simplify $ real_<_U.2 $ ExPseudoMetricSpace.halving1/2 d1 d2)) idp)
   }
