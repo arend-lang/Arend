@@ -167,9 +167,8 @@
   | ide => pointCF 1
   | ide-left => unique1 (*-cover ∘ tuple (const _) id) id \lam x => lift2-char *> pmap pointCF ide-left
   | ide-right => unique1 (*-cover ∘ tuple id (const _)) id \lam x => lift2-char *> pmap pointCF ide-right
-  | norm_*_<= => unique1_<= (norm-uniform-map {BanachCompletion X} ∘ *-cover ∘ tuple id (const _)) (upper-*-right-uniform ((BanachCompletion X).norm-bounded _) ∘ norm-uniform-map {BanachCompletion X})
-    \lam x => unique1_<= (norm-uniform-map {BanachCompletion X} ∘ *-cover ∘ tuple (const _) id) (upper-*-left-uniform ((BanachCompletion X).norm-bounded _) ∘ norm-uniform-map {BanachCompletion X})
-    \lam y => transport2 (<=) (inv $ pmap ExNormedAbGroupCompletion.norm lift2-char *> completion-exNormed-isometry.func-norm-isometry) (inv $ pmap2 (*) completion-exNormed-isometry.func-norm-isometry completion-exNormed-isometry.func-norm-isometry) X.norm_*_<=
+  | norm_*_<= => unique2_<= (norm-metric-map {BanachCompletion X} ∘ *-cover) (ex-upper-*-locally-uniform ∘ prod (bnorm-metric-map {BanachCompletion X}) (bnorm-metric-map {BanachCompletion X}))
+      \lam x y => transport2 (<=) (inv $ pmap ExNormedAbGroupCompletion.norm lift2-char *> completion-exNormed-isometry.func-norm-isometry) (inv $ pmap2 (*) completion-exNormed-isometry.func-norm-isometry completion-exNormed-isometry.func-norm-isometry) X.norm_*_<=
   | norm_ide_<= => completion-exNormed-isometry.func-norm <=∘ norm_ide_<=
   \where {
     \open ProductCoverSpace

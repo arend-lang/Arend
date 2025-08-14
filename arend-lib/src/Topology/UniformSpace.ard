@@ -190,6 +190,9 @@
     | func-uniform Eu => top-uniform \case uniform-cover Eu y \with {
       | inP (U,EU,Uy) => inP $ later (U, EU, <=-antisymmetric (\lam _ => Uy) top-univ)
     }
+
+  \lemma lift {X Y Z : RegularPreuniformSpace} {f : X -> Y} (g : UniformMap Y Z) (ge : g.IsUniformEmbedding) (fg : UniformMap X Z (\lam x => g (f x))) : UniformMap X Y f \cowith
+    | func-uniform Eu => uniform-refine (fg.func-uniform (ge Eu)) \lam {_} (inP (V, inP (U,EU,p), idp)) => inP (_, inP (U, EU, idp), ^-1_<= f p)
 }
 
 \func RegularPreuniformTransfer {X : \Set} {Y : RegularPreuniformSpace} (f : X -> Y) : RegularPreuniformSpace X \cowith

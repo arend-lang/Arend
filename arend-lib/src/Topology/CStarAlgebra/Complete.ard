@@ -18,12 +18,18 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Topology.BanachAlgebra
 \import Topology.BanachSpace
 \import Topology.CStarAlgebra
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.CompletionTools
+\import Topology.CoverSpace.Product
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.ExComplete
+\import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedRing
+\import Topology.TopAbGroup.Complete
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \open QModule
@@ -105,4 +111,17 @@
   \where {
     \protected \lemma char {X Y : PreC*Algebra} {Z : C*Algebra} (f : PreC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : PreC*AlgebraHom X Z) {x : X} : dense-c*-lift f fd fi g (f x) = g x
       => rewrite (\peval dense-c*-lift f fd fi g) $ dense-normed-lift.char (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
+  }
+
+\instance C*AlgebraCompletion (X : PreC*Algebra) : C*Algebra
+  | RealBanachAlgebra => BanachAlgebraCompletion X.toBanach
+  | c*-sum => unique2_<= (norm-metric-map {BanachCompletion X.toBanach} ∘ *-cover ∘ tuple id id ∘ proj1) (norm-metric-map {BanachCompletion X.toBanach} ∘ +-cover ∘ prod (*-cover ∘ tuple id id) (*-cover ∘ tuple id id))
+      \lam x y => transport2 (<=) (inv $ pmap ExNormedAbGroupCompletion.norm lift2-char *> completion-exNormed-isometry.func-norm-isometry) (inv $ pmap ExNormedAbGroupCompletion.norm (pmap2 +-func lift2-char lift2-char *> +-char) *> completion-exNormed-isometry.func-norm-isometry) X.toBanach_c*-sum
+  | c*-square => unique1_<= (ex-upper-*-locally-uniform ∘ tuple (bnorm-metric-map {BanachCompletion X.toBanach}) bnorm-metric-map) (bnorm-metric-map ∘ *-locally-uniform ∘ tuple id id)
+      \lam x => transport2 (\lam y z => y * y <= z) (inv completion-exNormed-isometry.func-norm-isometry) (inv $ pmap ExNormedAbGroupCompletion.norm lift2-char *> completion-exNormed-isometry.func-norm-isometry) X.toBanach_c*-square
+  \where {
+    \open ProductCoverSpace
+    \open CoverMap
+    \open TopAbGroupCompletion
+    \open BanachAlgebraCompletion
   }

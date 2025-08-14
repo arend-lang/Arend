@@ -16,6 +16,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
 \import Topology.MetricSpace.ManhattanProduct
 \import Topology.MetricSpace.UpperReal
@@ -36,8 +37,13 @@
     })
   }
 
-\lemma norm-uniform-map {X : ExPseudoNormedAbGroup} : UniformMap X ExUpperRealMetric norm
-  => transportInv (UniformMap X ExUpperRealMetric) (ext \lam x => norm_dist) $ dist-uniform-map UniformMap.∘ ProductUniformSpace.tuple (UniformMap.const X.zro) UniformMap.id
+\lemma norm-metric-map {X : ExPseudoNormedAbGroup} : MetricMap X ExUpperRealMetric norm \cowith
+  | func-dist => \lam xy<b => \case U-rounded xy<b \with {
+    | inP (a,xy<a,a<b) => inP (a, a<b, <=-less $ dist>=0 xy<a, norm_dist-right <=∘ <=_+ <=-refl (ExUpperReal.<_<= xy<a), norm_dist-right <=∘ <=_+ <=-refl (rewrite dist-symm $ ExUpperReal.<_<= xy<a))
+  }
+
+\lemma bnorm-metric-map {X : BoundedExPseudoNormedAbGroup} : MetricMap X UpperRealMetric bnorm \cowith
+  | func-dist => norm-metric-map.func-dist
 
 \lemma ldist-uniform-map {X : PseudoMetricSpace} : UniformMap (X ⨯ X) RealNormed (\lam s => X.dist s.1 s.2) \cowith
   | func-uniform Eu => \case dist-uniform.2 Eu \with {
@@ -108,3 +114,24 @@
 
 \lemma upper-*-right-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (`* a)
   => transport (UniformMetricMap ExUpperRealMetric ExUpperRealMetric) (ext \lam b => *-comm) (upper-*-left-uniform aB)
+
+\lemma upper-*-locally-uniform : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) UpperRealMetric (\lam s => s.1 * s.2)
+  => LocallyUniformMetricMap.makeLocallyUniformMap2 (*) \lam {eps} eps>0 => inP (1, idp, \lam x0 y0 => \case x0.U-inh_>0, y0.U-inh_>0 \with {
+    | inP (x0b,x0<x0b,x0b>0), inP (y0b,y0<y0b,y0b>0) => \case ExUpperRealSemigroup.div-lb-rat {(y0b + 1 + 1) + (x0b + 1 + 1)} (inP (1, idp, <=-rat.1 linarith)) $ <-rat.2 (RatField.half>0 eps>0) \with {
+      | inP (gamma,gamma>0,gamma-m) => inP (gamma ∧ 1, <_meet-univ gamma>0 zro<ide, \lam {x} {x'} {y} {y'} (inP x0x<1) (inP y0y<1) (inP xx'<gamma) (inP yy'<gamma) =>
+        \have | x<=x0b+1 => transport (_ <=) +-rat $ x0x<1.5 <=∘ <=_+ (<_<= x0<x0b) (<=-rat.1 (<=-less x0x<1.2))
+              | y<=y0b+1 : y ExUpperReal.<= y0b + 1 => transport (_ <=) +-rat $ y0y<1.5 <=∘ <=_+ (<_<= y0<y0b) (<=-rat.1 (<=-less y0y<1.2))
+        \in transport (ExUpperReal.`<= _) (pmap (ExUpperReal.`* _) (inv +-rat) *> ExUpperRealSemigroup.rdistr (<=-rat.1 linarith) (<=-rat.1 linarith)) at gamma-m $
+            unfold $ rewrite (UpperRealSemigroup.*-ex,UpperRealSemigroup.*-ex) $ inP (RatField.half eps, RatField.half<id eps>0, <=-less $ RatField.half>0 eps>0,
+              <=_* <=-refl yy'<gamma.4 <=∘ ldistr_<= <=∘ <=_+ (<=_* xx'<gamma.4 <=-refl <=∘ rdistr_<=) <=-refl <=∘ =_<= +-assoc <=∘ <=_+ <=-refl (<=_+ (=_<= *-comm <=∘ <=_* (transport (_ <=) +-rat $ yy'<gamma.5 <=∘ <=_+ y<=y0b+1 (<=-rat.1 $ <=-less yy'<gamma.2 <=∘ meet-right)) (<=-rat.1 $ <=-less xx'<gamma.2 <=∘ meet-left)) (<=_* (x<=x0b+1 <=∘ <=-rat.1 linarith) (<=-rat.1 $ <=-less yy'<gamma.2 <=∘ meet-left)) <=∘ gamma-m),
+              <=_* <=-refl yy'<gamma.5 <=∘ ldistr_<= <=∘ <=_+ (<=_* xx'<gamma.5 <=-refl <=∘ rdistr_<=) <=-refl <=∘ =_<= +-assoc <=∘ <=_+ <=-refl (<=_+ (=_<= *-comm <=∘ <=_* (y<=y0b+1 <=∘ <=-rat.1 linarith) (<=-rat.1 $ <=-less xx'<gamma.2 <=∘ meet-left)) (<=_* (transport (_ <=) +-rat $ xx'<gamma.5 <=∘ <=_+ x<=x0b+1 (<=-rat.1 $ <=-less xx'<gamma.2 <=∘ meet-right)) (<=-rat.1 $ <=-less yy'<gamma.2 <=∘ meet-left)) <=∘ gamma-m)))
+    }
+  })
+  \where {
+    \open ExUpperReal(<=-rat,+-rat,U_<=,<_<=)
+    \open ExUpperRealAbMonoid(<-rat,<_+,<_+-left)
+    \open ExUpperRealSemigroup(<=_*,ldistr_<=,rdistr_<=)
+  }
+
+\lemma ex-upper-*-locally-uniform : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) ExUpperRealMetric (\lam s => s.1 ExUpperReal.* s.2)
+  => transport (LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) ExUpperRealMetric) (ext \lam s => UpperRealSemigroup.*-ex) upper-*-locally-uniform

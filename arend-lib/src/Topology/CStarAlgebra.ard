@@ -108,6 +108,12 @@
   \lemma toBanach_norm<=1 {x : E} (x<=1 : x <= 1) (-x<=1 : negative x <= 1) : toBanach.norm x ExUpperReal.<= ExUpperRealPointed.ide
     => \lam b>1 => inP (RatField.ide, b>1, idp, rewrite ide_*q x<=1, rewrite ide_*q -x<=1)
 
+  \lemma toBanach_c*-sum {a b : E} : toBanach.norm (a * a) ExUpperReal.<= toBanach.norm (a * a + b * b)
+    => {?}
+
+  \lemma toBanach_c*-square {a : E} : toBanach.norm a ExUpperRealSemigroup.* toBanach.norm a ExUpperReal.<= toBanach.norm (a * a)
+    => {?}
+
   \lemma *q-upperBound (a : E) : ∃ (q : Rat) (0 < q) (a <= q *q ide)
     => \case c*-archimedean a \with {
       | inP (B,a<=B) => inP (suc B, fromInt_< $ pos<pos NatOrder.zero<suc, a<=B <=∘ =_<= (natCoef_*n *> inv *q_*n) <=∘ <=_*q-left (fromInt_<= $ pos<=pos id<=suc) zro<=ide)

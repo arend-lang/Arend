@@ -89,7 +89,7 @@
                 (\lam n s => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* <=-refl (norm_<=_pow <=∘ ExUpperRealSemigroup.pow_<= s.2))
                 (IsPowerSeriesConv.upper p (ExUpperRealAbMonoid.<=_+-positive norm>=0 $ ExUpperReal.<_<= eps>0) $ TruncP.map (norm-bounded x) \lam (B,|x|<B) => (B + eps, ExUpperRealAbMonoid.<-rat.1 $ transport (_ <) ExUpperReal.+-rat $ ExUpperRealAbMonoid.<_+-left $ ExUpperRealAbMonoid.<-rat.2 |x|<B))
                 (X.metricUniform $ RatField.half>0 eps>0) \with {
-          | inP (N,h) => inP $ later (N, \lam {y} xy<eps N<=n => \case h (y, transport (_ <=) +-comm $ norm_dist-bound <=∘ ExUpperRealAbMonoid.<=_+ (transport (`<= _) X.dist-symm $ ExUpperReal.<_<= xy<eps) <=-refl) \with {
+          | inP (N,h) => inP $ later (N, \lam {y} xy<eps N<=n => \case h (y, transport (_ <=) +-comm $ norm_dist-left <=∘ ExUpperRealAbMonoid.<=_+ (transport (`<= _) X.dist-symm $ ExUpperReal.<_<= xy<eps) <=-refl) \with {
             | inP (_, inP (z,idp), g) => X.halving1/2 (g N<=n) (g <=-refl)
           })
         }

@@ -400,10 +400,36 @@
       | inP (a,Ua) => inP (iabs $ rat_ceiling a, U_<= Ua $ rat_ceiling>=id <=∘ later (rewrite iabs=abs $ fromInt_<= LinearlyOrderedAbGroup.abs>=id))
     }
 
+  \lemma U-inh_>0 : ∃ (q : U) (0 < q)
+    => \case U-inh \with {
+      | inP (q,Uq) => inP (q ∨ 1, U_<= Uq join-left, zro<ide <∘l join-right)
+    }
+
   \type IsLocated : \Prop
     => \Pi {a b : Rat} -> a < b -> ∀ {c : U} (a < c) || U b
 } \where {
   \use \coerce fromRat (x : Rat) : UpperReal \cowith
     | ExUpperReal => ExUpperReal.fromRat x
     | U-inh => inP (x + 1, linarith)
+
+  \lemma ex-ext {x y : UpperReal} (p : x = {ExUpperReal} y) : x = y
+    => ext $ pmap (ExUpperReal.U {__}) p
 }
+
+\instance UpperRealSemigroup : CSemigroup UpperReal
+  | * => *
+  | *-assoc => UpperReal.ex-ext $ *-ex *> pmap (ExUpperReal.`* _) *-ex *> ExUpperRealSemigroup.*-assoc *> inv (*-ex *> pmap (_ ExUpperReal.*) *-ex)
+  | *-comm => UpperReal.ex-ext $ *-ex *> ExUpperRealSemigroup.*-comm *> inv *-ex
+  \where {
+    \sfunc \infixl 7 * (x y : UpperReal) : UpperReal \cowith
+      | ExUpperReal => \eval x ExUpperReal.* y
+      | U-inh => \case x.U-inh_>0, y.U-inh_>0 \with {
+        | inP (q,x<q,q>0), inP (r,y<r,r>0) => inP (q RatField.* r + 1, inP (q, x<q, q>0, r, y<r, r>0, linarith))
+      }
+
+    \lemma *_U {x y : UpperReal} {a : Rat} : UpperReal.U {x * y} a <-> ∃ (b : x.U) (0 RatField.< b) (c : y.U) (0 RatField.< c) (b RatField.* c RatField.< a)
+      => rewrite (\peval x * y) <->refl
+
+    \lemma *-ex {x y : UpperReal} : x * y = x ExUpperReal.* y
+      => exts \lam q => ext (<->trans *_U $ <->sym ExUpperReal.*_U)
+  }

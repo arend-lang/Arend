@@ -98,7 +98,10 @@
 \lemma norm_- {X : ExPseudoNormedAbGroup} {x y : X} : norm (x - y) = norm (y - x)
   => pmap norm (inv X.negative-isInv) *> norm_negative *> simplify
 
-\lemma norm_dist-bound {X : ExPseudoNormedAbGroup} {x y : X} : norm x <= dist x y + norm y
+\lemma norm_dist-left {X : ExPseudoNormedAbGroup} {x y : X} : norm x <= dist x y + norm y
+  => rewrite norm-dist $ transport (norm  __ <= _) simplify norm_+
+
+\lemma norm_dist-right {X : ExPseudoNormedAbGroup} {x y : X} : norm x <= norm y + dist x y
   => rewrite norm-dist $ transport (norm  __ <= _) simplify norm_+
 
 \class ExNormedAbGroup \extends ExPseudoNormedAbGroup, ExMetricSpace {
@@ -110,6 +113,10 @@
 
 \class BoundedExPseudoNormedAbGroup \extends ExPseudoNormedAbGroup
   | norm-bounded (x : E) : (norm x).IsBounded
+
+\func bnorm {X : BoundedExPseudoNormedAbGroup} (x : X) : UpperReal \cowith
+  | ExUpperReal => norm x
+  | U-inh => norm-bounded x
 
 \class PseudoNormedAbGroup \extends BoundedExPseudoNormedAbGroup, PseudoMetricSpace {
   \override norm : E -> Real

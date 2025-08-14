@@ -310,10 +310,25 @@
 \lemma func-lisometry {X Y : PseudoMetricSpace} {f : IsometricMap X Y} {x x' : X} : Y.dist (f x) (f x') = X.dist x x'
   => Real.=-upper.2 f.func-isometry
 
-\class CompleteExMetricSpace \extends ExMetricSpace, CompleteUniformSpace
+\class CompleteExMetricSpace \extends ExMetricSpace, CompleteUniformSpace {
+  | isCompleteMetric (F : ProperFilter E) : ∀ {eps} (0 < eps) ∃ (x : E) (F (OBall eps x)) -> ∃ (x : E) ∀ {eps} (0 < eps) (F (OBall eps x))
 
-\lemma cauchyFilter-metric-char {X : ExPseudoMetricSpace} {F : SetFilter X} : ∀ {C : isCauchy} ∃ (U : C) (F U) <->
-  (\Pi {eps : Rat} -> 0 < eps -> ∃ (x : X) (F (OBall eps x)))
+  \default isComplete F => \case isCompleteMetric F (cauchyFilter-metric-char.1 F.isCauchyFilter) \with {
+    | inP (x,h) => inP (x, \lam {U} x<=<U => \case <=<-ball x<=<U \with {
+      | inP (eps,eps>0,Up) => filter-mono (h eps>0) Up
+    })
+  }
+  \default isCompleteMetric F Fc =>
+    \have F' => \new CauchyFilter \this {
+      | ProperFilter => F
+      | isCauchyFilter => cauchyFilter-metric-char.2 Fc
+    }
+    \in \case isComplete (regCF F') \with {
+      | inP (x,xF) => inP (x, \lam eps>0 => regCF_<= {_} {F'} $ xF $ OBall-center_<=< eps>0)
+    }
+}
+
+\lemma cauchyFilter-metric-char {X : ExPseudoMetricSpace} {F : SetFilter X} : IsCauchyFilter F <-> ∀ {eps} (0 < eps) ∃ (x : X) (F (OBall eps x))
   => <->trans cauchyFilter-uniform-char $ later (\lam f eps>0 => \case f $ metricUniform eps>0 \with {
     | inP (_, inP (x, idp), FB) => inP (x, FB)
   }, \lam f Cu => \case dist-uniform.1 Cu \with {
@@ -324,27 +339,27 @@
     }
   })
 
-\func PseudoMetricTransfer {X : \Set} {Y : PseudoMetricSpace} (f : X -> Y) : PseudoMetricSpace X \cowith
+\func ExPseudoMetricTransfer {X : \Set} {Y : ExPseudoMetricSpace} (f : X -> Y) : ExPseudoMetricSpace X \cowith
   | TopSpace => TopTransfer f
-  | dist x x' => Y.dist (f x) (f x')
+  | dist x x' => dist (f x) (f x')
   | dist-refl => dist-refl
   | dist-symm => dist-symm
   | dist-triang => dist-triang
   | cauchy-open {S} => later (\lam (inP (V,Vo,p)) Sx => ClosurePrecoverSpace.closure \case dist_open.1 Vo (rewrite p in Sx) \with {
     | inP (eps,eps>0,q) => inP (half eps, half>0 eps>0, \lam x' => inP (_, \lam d1 {x''} d2 => rewrite p $ q (Y.halving1/2 d1 d2), \lam e => e))
-  }, \lam c => inP (Set.Union \lam V' => \Sigma (isOpen V') (f ^-1 V' ⊆ S), open-Union __.1, <=-antisymmetric (later \lam {x} Sx => \case ClosurePrecoverSpace.closure-filter (ExMetricSpace.NFilter {PseudoMetricTransfer' f} x) (\lam (inP (eps,eps>0,h)) => \case h x \with {
+  }, \lam c => inP (Set.Union \lam V' => \Sigma (isOpen V') (f ^-1 V' ⊆ S), open-Union __.1, <=-antisymmetric (later \lam {x} Sx => \case ClosurePrecoverSpace.closure-filter (ExMetricSpace.NFilter {\new ExPseudoMetricSpace X { | dist x y => dist (f x) (f y) | dist-refl => dist-refl | dist-symm => dist-symm | dist-triang => dist-triang }} x) (\lam (inP (eps,eps>0,h)) => \case h x \with {
     | inP (U,CU,g) => inP (U, CU, inP (eps, eps>0, g __))
   }) (c Sx) \with {
     | inP (U, q, inP (eps,eps>0,p)) => inP (OBall eps (f x), (OBall-open, \lam {x'} d => q (p $ OBall-center eps>0 {f x}) (p d)), OBall-center eps>0)
   }) (\lam (inP (U,(Uo,p),Ufx)) => p Ufx)))
-  \where {
-    \private \func PseudoMetricTransfer' {X : \Set} {Y : PseudoMetricSpace} (f : X -> Y) : PseudoMetricSpace X \cowith
-      | dist x x' => Y.dist (f x) (f x')
-      | dist-refl => dist-refl
-      | dist-symm => dist-symm
-      | dist-triang => dist-triang
-  }
+
+\func ExMetricTransfer {X : \Set} {Y : ExMetricSpace} (f : X -> Y) (fi : IsInj f) : ExMetricSpace X \cowith
+  | ExPseudoMetricSpace => ExPseudoMetricTransfer f
+  | dist-ext p => fi (dist-ext p)
+
+\func PseudoMetricTransfer {X : \Set} {Y : PseudoMetricSpace} (f : X -> Y) : PseudoMetricSpace X \cowith
+  | ExPseudoMetricSpace => ExPseudoMetricTransfer f
 
 \func MetricTransfer {X : \Set} {Y : MetricSpace} (f : X -> Y) (fi : IsInj f) : MetricSpace X \cowith
-  | ExPseudoMetricSpace => PseudoMetricTransfer f
+  | ExPseudoMetricSpace => ExPseudoMetricTransfer f
   | dist-ext p => fi (dist-ext p)
