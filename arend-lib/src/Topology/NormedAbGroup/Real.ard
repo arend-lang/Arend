@@ -14,6 +14,7 @@
 \import Operations
 \import Order.Biordered
 \import Order.Lattice
+\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -146,3 +147,11 @@
         }
       }, \lam (inP (a',b',c1,d1,c2,d2,a<a',b'<b,c1<x,x<d1,c2<y,y<d2,q)) => inP (a', b', a<a', b'<b, \lam z => \Sigma (open-rat-int c1 d1 z.1) (open-rat-int c2 d2 z.2),
           \lam s => q s.1 s.2, RatherBelow.<=<_meet-same (<=<-right (later \lam s => pmap __.1 s) $ <=<_^-1 {_} {_} {proj1} $ dense-lift-real-char.point_<=< c1<x x<d1) (<=<-right (later \lam s => pmap __.2 s) $ <=<_^-1 {_} {_} {proj2} $ dense-lift-real-char.point_<=< c2<y y<d2)))
+
+\lemma real-dist>0 {x y : Real} (xy>0 : 0 < ldist x y) : x < y || y < x
+  => \case real-located {y} {x} {x + ldist x y} $ transport (`< _) zro-right $ <_+-right x xy>0 \with {
+    | byLeft x<y => byLeft x<y
+    | byRight y<x+d => byRight
+      \have d=x-y => LinearOrder.join/=right {RealAbGroup} \lam p => <-irreflexive $ (rewriteI p in y<x+d) <∘l transportInv (`<= _) (pmap (x +) RealAbGroup.negative_- *> +-comm *> +-assoc *> pmap (y +) negative-left *> zro-right) <=-refl
+      \in RealAbGroup.from>0 (rewrite d=x-y in xy>0)
+  }

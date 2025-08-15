@@ -137,6 +137,9 @@
 \lemma lnorm_+ {X : PseudoNormedAbGroup} {x y : X} : lnorm (x + y) <= lnorm x + lnorm y
   => Real.<=-upper.2 $ transportInv (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper X.norm_+
 
+\lemma lnorm-ldist {X : PseudoNormedAbGroup} {x y : X} : ldist x y = lnorm (x - y)
+  => Real.=-upper.2 (later norm-dist)
+
 \lemma lnorm_BigSum {X : PseudoNormedAbGroup} {l : Array X} : lnorm (X.BigSum l) <= RealAbGroup.BigSum \lam j => lnorm (l j) \elim l
   | nil => transportInv (`<= _) lnorm_zro <=-refl
   | x :: l => lnorm_+ <=∘ <=_+ <=-refl lnorm_BigSum
