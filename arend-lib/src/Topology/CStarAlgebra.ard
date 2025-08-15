@@ -239,3 +239,13 @@
             } $ X.diff_sum (ide-left *> inv ide-right) *> pmap (`+ _) ide-left)
        \in ExUpperRealSemigroup.square<=1 $ c*-square ExUpperRealAbMonoid.<=∘ (simplify in square-lem-aux c*-sum xx<=1 (inP (x, simplify idp)))
 }
+
+\class PreC*CAlgebra \extends PreC*Algebra, CRing {
+  | c*-<=_*-square {a : E} : a <= 1 -> negative a <= 1 -> a * a <= 1
+
+  \default c*-<=_* {a} {b} a<=1 -a<=1 b<=1 -b<=1 => from>=0 $ c*-positive-div {_} {2} suc/=0 $ c*-square-positive {_} {a - b} <=∘
+    transport (`<= _) equation.cRing (<=_+ (<=_+ <=-refl (<=_+ (c*-<=_*-square a<=1 -a<=1) <=-refl)) (<=_+ (c*-<=_*-square b<=1 -b<=1) <=-refl))
+  \default c*-<=_*-square a<=1 -a<=1 => c*-<=_* a<=1 -a<=1 a<=1 -a<=1
+}
+
+\class C*CAlgebra \extends C*Algebra, PreC*CAlgebra
