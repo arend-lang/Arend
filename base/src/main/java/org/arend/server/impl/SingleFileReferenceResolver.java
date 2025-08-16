@@ -101,7 +101,7 @@ public class SingleFileReferenceResolver {
             return null;
         }
 
-        ModuleLocation found = myServer.findModule(module.getModulePath(), anchorModuleLocation.getLibraryName(), anchorModuleLocation.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
+        ModuleLocation found = myServer.findModule(module.getModulePath(), module.getLibraryName(), anchorModuleLocation.getLocationKind() == ModuleLocation.LocationKind.TEST, true);
         if (!module.equals(found)) {
             myErrorReporter.report(LocationError.definition(null, module.getModulePath()));
         }
@@ -161,12 +161,7 @@ public class SingleFileReferenceResolver {
                             currentScope.resolveName(name.getFirst().proj1) == null).toList();
             boolean needsToImport = true;
 
-            if (currentScopeMap.get(targetReferable) != null) {
-                List<String> availableNames = currentScopeMap.get(targetReferable).stream().toList();
-                result = new ArrayList<>();
-                result.add(new Pair<>(availableNames.getFirst(), targetReferable));
-                needsToImport = false;
-            } else if (!importableNames.isEmpty() &&
+            if (!importableNames.isEmpty() &&
                     importableNames.getFirst().getFirst().proj2 == targetReferable &&
                     namespaceCommand.get() != null) { // Our opportunity to import the target referable with a short name
                 result = importableNames.getFirst();

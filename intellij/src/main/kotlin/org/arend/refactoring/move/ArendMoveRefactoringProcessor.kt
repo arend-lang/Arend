@@ -129,7 +129,7 @@ class ArendMoveRefactoringProcessor(project: Project,
         val psiFactory = ArendPsiFactory(myProject)
 
         val sourceFile = mySourceContainer as? ArendFile ?: (mySourceContainer.containingFile as? ArendFile ?: return)
-        val moduleLocationsToInvalidate = ArrayList<ModuleLocation>();
+        val moduleLocationsToInvalidate = HashSet<ModuleLocation>();
         sourceFile.moduleLocation?.let { moduleLocationsToInvalidate.add(it) }
 
         insertAnchor = if (myTargetContainer is ArendFile) {
@@ -158,8 +158,9 @@ class ArendMoveRefactoringProcessor(project: Project,
             val (descriptors, changeSignatureUsages) = getUsagesToPreprocess(myServer, myMembers, insertIntoDynamicPart, myTargetContainer, thisVarNameMap, null, multiFileReferenceResolver)
             val fileChangeMap = LinkedHashMap<PsiFile, SortedList<Pair<TextRange, String>>>()
             val usagesPreprocessor = getUsagesPreprocessor(changeSignatureUsages, myProject, fileChangeMap,
-                HashSet(), HashSet(), multiFileReferenceResolver) //TODO: properly initialize these parameters
+                HashSet(), HashSet(), multiFileReferenceResolver)
 
+            resetServer(moduleLocationsToInvalidate, true)
             usagesPreprocessor.run()
 
             writeFileChangeMap(myProject, fileChangeMap)
@@ -180,7 +181,7 @@ class ArendMoveRefactoringProcessor(project: Project,
             }
         }
 
-        val updatedUsages = findUsages()
+        resetServer(moduleLocationsToInvalidate, true) //needed for correct resolution of references after previous refactoring
 
         //Replace \this literals with local `this` parameters
         for ((referable, thisVarName) in thisVarNameMap) {
@@ -195,9 +196,7 @@ class ArendMoveRefactoringProcessor(project: Project,
         }
 
         //Resolve references in the elements that are to be moved. This is needed to distinguish between long names and field accesses
-        sourceFile.moduleLocation?.let{
-            myServer.getCheckerFor(singletonList(it)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-        }
+        resetServer(moduleLocationsToInvalidate, true)
 
         //Memorize references in myMembers being moved
         val descriptorsOfAllMembersBeingMoved = HashMap<PsiLocatedReferable, LocationDescriptor>() //This set may be strictly larger than the set of myReferableDescriptors
@@ -223,6 +222,10 @@ class ArendMoveRefactoringProcessor(project: Project,
 
         //Determine which moved members should be added to the "remainder" namespace command
         val remainderReferables = HashSet<LocationDescriptor>()
+
+        resetServer(moduleLocationsToInvalidate, true)
+        val updatedUsages = findUsages()
+
         for (usage in updatedUsages) if (usage is ArendUsageLocationInfo) {
             val referenceElement = usage.reference?.element
 
@@ -330,12 +333,9 @@ class ArendMoveRefactoringProcessor(project: Project,
 
                 while (remainderAnchor !is ArendCompositeElement && remainderAnchor != null) remainderAnchor = remainderAnchor.parent
 
-                if (remainderAnchor is ArendCompositeElement) {
-                    val openedName = ResolveReferenceAction.getTargetLongName(remainderAnchor, multiFileReferenceResolver, myTargetContainer)
-
-                    if (openedName != null && movedReferablesUniqueNames.isNotEmpty()) {
-                        val openedName: List<String> = openedName.toList()
-
+                if (remainderAnchor is ArendCompositeElement && movedReferablesUniqueNames.isNotEmpty()) {
+                    val openedName = ResolveReferenceAction.getTargetLongName(remainderAnchor, multiFileReferenceResolver, myTargetContainer)?.toList()
+                    if (openedName != null) {
                         val renamings = movedReferablesUniqueNames.map { Pair(it, null as String?) }.sortedBy { it.second ?: it.first } // filter this list
                         val groupMember = if (uppermostHole.kind == PositionKind.INSIDE_EMPTY_ANCHOR) {
                             if (remainderAnchor.children.isNotEmpty()) remainderAnchor.firstChild else null
@@ -392,15 +392,14 @@ class ArendMoveRefactoringProcessor(project: Project,
             for (nsId in nsIdToRemove) doRemoveRefFromStatCmd(nsId.refIdentifier)
         }
 
-        ResolveReferenceAction.flushNamespaceCommands(multiFileReferenceResolver);
+        //ResolveReferenceAction.flushNamespaceCommands(multiFileReferenceResolver);
 
-        // Reset server for the 2nd time
         resetServer(moduleLocationsToInvalidate)
 
         //Prepare fix references of "normal" usages
         val sink = ArrayList<RenameReferenceAction>()
         for (usage in updatedUsages) if (usage is ArendUsageLocationInfo) {
-            val referenceElement = usage.reference?.element
+            val referenceElement = usage.smartPointer.element
             val referenceParent = referenceElement?.parent
 
             if (referenceElement is ArendRefIdentifier && referenceParent is ArendScId && referenceElement.isValid) //Usage in the "hiding" list of a namespace which we simply delete
@@ -412,10 +411,11 @@ class ArendMoveRefactoringProcessor(project: Project,
             }
         }
 
+        resetServer(moduleLocationsToInvalidate)
+
         //Prepare fix references in the elements that have been moved
         for ((mIndex, m) in myMembers.withIndex()) restoreReferences(emptyList(), m, mIndex, bodiesRefsFixData, multiFileReferenceResolver, sink)
 
-        //
         for (action in sink) action.execute(null)
 
         ResolveReferenceAction.flushNamespaceCommands(multiFileReferenceResolver)
@@ -437,9 +437,12 @@ class ArendMoveRefactoringProcessor(project: Project,
         }
     }
 
-    private fun resetServer(modules: List<ModuleLocation>) {
+    private fun resetServer(modules: Set<ModuleLocation>, typecheck: Boolean = false) {
         modules.forEach { module -> myServer.removeModule(module) }
-        myServer.getCheckerFor(modules).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+        val checker = myServer.getCheckerFor(modules.toList().reversed())
+        if (typecheck)
+          checker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+          else checker.resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
     }
 
     private fun locateChild(element: PsiElement, childPath: List<Int>): PsiElement? {
@@ -566,7 +569,7 @@ class ArendMoveRefactoringProcessor(project: Project,
 
     data class LocationDescriptor(val groupNumber: Int, val childPath: List<Int>)
 
-    class ArendUsageLocationInfo(reference: PsiReference, val referableDescriptor: LocationDescriptor) : UsageInfo(reference)
+    class ArendUsageLocationInfo(reference: PsiReference,  val referableDescriptor: LocationDescriptor) : UsageInfo(reference)
 
     class ArendStatCmdUsageInfo(val command: ArendStatCmd, reference: PsiReference) : UsageInfo(reference)
 

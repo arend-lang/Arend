@@ -207,13 +207,13 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                 \module Bar \where {
                   \open Foo
 
-                  \func lol => foo + Foo.foo + bar.foobar + Foo.bar.foobar
+                  \func lol => foo + foo + bar.foobar + bar.foobar
                 }
 
                 \func goo => 4
                   \where {
                     \module Foo \where {
-                      \func foo => bar.foobar + Foo.bar.foobar + bar.foobar
+                      \func foo => bar.foobar + bar.foobar + bar.foobar
                 
                       \func bar => 2 \where {
                         \func foobar => foo + bar
@@ -295,9 +295,8 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
             """, """
                 \import Foo
                 \import Goo
-                \open FooM (lol \as lol')
 
-                \func foobar => lol'
+                \func foobar => FooM.lol
             """, "Foo", "FooM", "Goo", "GooM.lol")
 
     fun testMoveFromWhereBlock1() =
@@ -532,10 +531,8 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                     | A
                     | B
 
-                  \open MyNat2 (A \as A')
-
                   \func lol (a : MyNat1) (b : MyNat2) \elim a, b
-                    | A, A' => 1
+                    | A, MyNat2.A => 1
                     | B, MyNat2.B => 0
 
                   \data MyNat2
@@ -640,7 +637,7 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                \module FooBar \where {
                  \open Bar (foo \as foo1, foo \as foo2)
 
-                 \func lol => foo1 + foo2
+                 \func lol => foo1 + foo1
                }
             """, "Main", "Bar")
 
@@ -659,12 +656,12 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                  \func lol => foo1 + foo2
                }
             """, """
-               \import Bar \using (foo \as foo1, foo \as foo2)
+               \import Bar
                \import Foo ()
                \open Nat
 
                \module FooBar \where {
-                 \func lol => foo1 + foo2
+                 \func lol => foo + foo
                }
             """, "Bar", "", "Foo", "foo")
 
@@ -684,7 +681,7 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                \module Foo \where {
                  \open Bar (lol, lol \as lol1)
 
-                 \func bar => lol1
+                 \func bar => lol
                }
 
                \module Bar \where {
@@ -828,7 +825,6 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                }
             ""","""
                \module Foo \where {
-                 \open A (fooBar)
                }
 
                \module Bar \where {
@@ -1446,7 +1442,7 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                \class D \extends C {
                  \func fubar => foo {{?} {-\new C {| number => 1}-}}
 
-                 \func foo => bar Nat.+ (bar {\this}) Nat.+ number
+                 \func foo => C.bar Nat.+ (C.bar {\this}) Nat.+ number
                }
             """, "Main", "D", targetIsDynamic = true) //Note: There are instance inference errors in the resulting code
 
@@ -1820,9 +1816,9 @@ $testMOR8Header
        \class Bar \extends Foo {
          \func lol1 => 101 +++ {{?}} {0} 102
 
-         \func \infixl 1 +++ {w : Nat} (x y : Nat) => u Nat.+ v Nat.+ w Nat.+ x Nat.+ y
+         \func \infixl 1 +++ {w : Nat} (x y : Nat) => Foo.u Nat.+ v Nat.+ w Nat.+ x Nat.+ y
        } \where {
-         \func lol2 => 101 +++ {{?} {-\new Foo {101} 102-}} {0} 102
+         \func lol2 => 101 Bar.+++ {{?} {-\new Foo {101} 102-}} {0} 102
        }       
     """, "Main", "Bar", typecheck = true, targetIsDynamic = true)
 
@@ -1858,11 +1854,11 @@ $testMOR8Header
        }
 
        \class Bar \extends Foo {
-         \func lol1 => (+++ {\this} {0}) 101 102
+         \func lol1 => 101 +++ {\this} {0} 102
        } \where {
          \func lol2 => 101 +++ {\new Foo {101} 102} {0} 102
 
-         \func \infixl 1 +++ {this : Foo} {w : Nat} (x y : Nat) => u {this} Nat.+ v {this} Nat.+ w Nat.+ x Nat.+ y
+         \func \infixl 1 +++ {this : Foo} {w : Nat} (x y : Nat) => Foo.u {this} Nat.+ v {this} Nat.+ w Nat.+ x Nat.+ y
        }
     """, "Main", "Bar", typecheck = true, targetIsDynamic = false)
 
