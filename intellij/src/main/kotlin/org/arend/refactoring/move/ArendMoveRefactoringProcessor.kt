@@ -20,42 +20,32 @@ import com.intellij.util.containers.SortedList
 import org.arend.codeInsight.*
 import org.arend.codeInsight.ArendCodeInsightUtils.Companion.getExternalParameters
 import org.arend.ext.module.LongName
+import org.arend.ext.module.ModuleLocation
 import org.arend.ext.variable.VariableImpl
 import org.arend.naming.reference.LongUnresolvedReference
+import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.StringRenamer
+import org.arend.naming.scope.DynamicScope
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
-import org.arend.psi.ext.ArendGroup
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
-import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
 import org.arend.refactoring.*
 import org.arend.refactoring.changeSignature.*
 import org.arend.refactoring.changeSignature.ArendChangeSignatureProcessor.Companion.getUsagesPreprocessor
-import org.arend.resolving.util.resolveReference
+import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
+import org.arend.server.ProgressReporter
 import org.arend.server.impl.MultiFileReferenceResolver
 import org.arend.term.abs.Abstract.ParametersHolder
 import org.arend.term.concrete.Concrete
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
+import org.arend.util.exprToConcrete1
+import org.jetbrains.kotlin.psi.psiUtil.parameterIndex
 import java.util.Collections.singletonList
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.List
-import kotlin.collections.MutableMap
-import kotlin.collections.MutableSet
-import kotlin.collections.any
-import kotlin.collections.emptyList
-import kotlin.collections.iterator
-import kotlin.collections.lastOrNull
-import kotlin.collections.map
-import kotlin.collections.mapIndexed
-import kotlin.collections.plus
-import kotlin.collections.set
-import kotlin.collections.toSet
-import kotlin.collections.toTypedArray
-import kotlin.collections.withIndex
 
 class ArendMoveRefactoringProcessor(project: Project,
+                                    private val multiFileReferenceResolver: MultiFileReferenceResolver,
                                     private val myMoveCallback: () -> Unit,
                                     private var myMembers: List<ArendGroup>,
                                     private val mySourceContainer: ArendGroup,
@@ -65,6 +55,7 @@ class ArendMoveRefactoringProcessor(project: Project,
                                     private val myOptimizeImportsAfterMove: Boolean = true) : BaseRefactoringProcessor(project, myMoveCallback) {
     private val myReferableDescriptors = HashMap<PsiLocatedReferable, LocationDescriptor>()
     private val myMovedReferables = ArrayList<PsiLocatedReferable>()
+    private val myServer = myProject.service<ArendServerService>().server
 
     override fun findUsages(): Array<UsageInfo> {
         val usagesList = ArrayList<UsageInfo>()
@@ -77,8 +68,7 @@ class ArendMoveRefactoringProcessor(project: Project,
 
         for (psiReference in ReferencesSearch.search(mySourceContainer)) {
             val statCmd = isStatCmdUsage(psiReference, true)
-            if (statCmd is ArendStatCmd && psiReference.element.findNextSibling(DOT) !is ArendReferenceElement &&
-                    myMembers.any { getImportedNames(statCmd, it.name).isNotEmpty() }) {
+            if (statCmd is ArendStatCmd) {
                 statCmdsToFix[statCmd] = psiReference
                 statCmd.ancestor<ArendGroup>()?.let{ containers.add(it) }
             }
@@ -96,7 +86,7 @@ class ArendMoveRefactoringProcessor(project: Project,
 
                     if (!isInMovedMember(psiReference.element)) {
                         val statCmd = isStatCmdUsage(psiReference, false)
-                        val isUsageInHiding = referenceElement is ArendRefIdentifier && referenceParent is ArendStatCmd
+                        val isUsageInHiding = referenceElement is ArendRefIdentifier && referenceParent is ArendScId
                         if (statCmd == null || isUsageInHiding || !statCmdsToFix.contains(statCmd))
                             usagesList.add(ArendUsageLocationInfo(psiReference, descriptor))
                     }
@@ -137,10 +127,13 @@ class ArendMoveRefactoringProcessor(project: Project,
     override fun performRefactoring(usages: Array<out UsageInfo>) {
         var insertAnchor: PsiElement?
         val psiFactory = ArendPsiFactory(myProject)
-        val server = myProject.service<ArendServerService>().server
+
+        val sourceFile = mySourceContainer as? ArendFile ?: (mySourceContainer.containingFile as? ArendFile ?: return)
+        val moduleLocationsToInvalidate = ArrayList<ModuleLocation>();
+        sourceFile.moduleLocation?.let { moduleLocationsToInvalidate.add(it) }
 
         insertAnchor = if (myTargetContainer is ArendFile) {
-            myTargetContainer.lastChild //null means file is empty
+            myTargetContainer.lastChild //null means that the target file is empty
         } else if (myTargetContainer is ArendDefClass && insertIntoDynamicPart) {
             if (myTargetContainer.lbrace == null && myTargetContainer.rbrace == null) surroundWithBraces(psiFactory, myTargetContainer)
             myTargetContainer.classStatList.lastOrNull() ?: myTargetContainer.lbrace!!
@@ -157,21 +150,19 @@ class ArendMoveRefactoringProcessor(project: Project,
 
             for (member in myMembers) filesToProcess.add(member.containingFile)
             val documentManager = PsiDocumentManager.getInstance(myProject)
-            for (file in filesToProcess) documentManager.getDocument(file)?.let { documentManager.doPostponedOperationsAndUnblockDocument(it) }
+            for (file in filesToProcess) {
+                if (file is ArendFile) file.moduleLocation?.let { moduleLocationsToInvalidate.add(it) }
+                documentManager.getDocument(file)?.let { documentManager.doPostponedOperationsAndUnblockDocument(it) }
+            }
 
-            val (descriptors, changeSignatureUsages) = getUsagesToPreprocess(myMembers, insertIntoDynamicPart, myTargetContainer, thisVarNameMap)
+            val (descriptors, changeSignatureUsages) = getUsagesToPreprocess(myServer, myMembers, insertIntoDynamicPart, myTargetContainer, thisVarNameMap, null, multiFileReferenceResolver)
             val fileChangeMap = LinkedHashMap<PsiFile, SortedList<Pair<TextRange, String>>>()
-            val multiFileReferenceResolver = MultiFileReferenceResolver(server)
             val usagesPreprocessor = getUsagesPreprocessor(changeSignatureUsages, myProject, fileChangeMap,
                 HashSet(), HashSet(), multiFileReferenceResolver) //TODO: properly initialize these parameters
 
             usagesPreprocessor.run()
 
             writeFileChangeMap(myProject, fileChangeMap)
-
-            for (resolver in multiFileReferenceResolver.multiResolverMap.values) {
-                //TODO: NsCmdRawModifierAction(resolver.modifier, resolver.currentFile?.referable).execute()
-            }             
 
             for (descriptor in descriptors)
                 descriptor.fixEliminator()
@@ -182,7 +173,7 @@ class ArendMoveRefactoringProcessor(project: Project,
                     val definition = descriptor.getAffectedDefinition()
                     val definitionName = definition?.name
                     if (definitionName != null && definition is PsiLocatedReferable && definition !is ArendConstructor) {
-                        val changeInfo = ArendChangeInfo(parameterInfo, null, definitionName, definition, MultiFileReferenceResolver(server))
+                        val changeInfo = ArendChangeInfo(parameterInfo, null, definitionName, definition, multiFileReferenceResolver)
                         changeInfo.modifySignature()
                     }
                 }
@@ -191,7 +182,7 @@ class ArendMoveRefactoringProcessor(project: Project,
 
         val updatedUsages = findUsages()
 
-        //Replace \this literals with local this parameters
+        //Replace \this literals with local `this` parameters
         for ((referable, thisVarName) in thisVarNameMap) {
             fun doSubstituteThisKwWithThisVar(psi: PsiElement, stopAtPsiLocatedReferable: Boolean = false) {
                 if (psi is ArendWhere || psi is PsiLocatedReferable && stopAtPsiLocatedReferable) return
@@ -201,6 +192,11 @@ class ArendMoveRefactoringProcessor(project: Project,
                 } else for (c in psi.children) doSubstituteThisKwWithThisVar(c, true)
             }
             doSubstituteThisKwWithThisVar(referable)
+        }
+
+        //Resolve references in the elements that are to be moved. This is needed to distinguish between long names and field accesses
+        sourceFile.moduleLocation?.let{
+            myServer.getCheckerFor(singletonList(it)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
         }
 
         //Memorize references in myMembers being moved
@@ -229,6 +225,7 @@ class ArendMoveRefactoringProcessor(project: Project,
         val remainderReferables = HashSet<LocationDescriptor>()
         for (usage in updatedUsages) if (usage is ArendUsageLocationInfo) {
             val referenceElement = usage.reference?.element
+
             if (referenceElement is ArendReferenceElement &&
                     mySourceContainer.textRange.contains(referenceElement.textOffset) && !memberReferences.contains(referenceElement)) { // Normal usage inside source container
                 val member = referenceElement.reference?.resolve()
@@ -243,7 +240,6 @@ class ArendMoveRefactoringProcessor(project: Project,
         }
 
         //Calculate original signatures of members being moved
-
         val movedReferablesMap = LinkedHashMap<LocationDescriptor, PsiLocatedReferable>()
 
         //Do move myMembers
@@ -304,7 +300,10 @@ class ArendMoveRefactoringProcessor(project: Project,
         for (descriptor in descriptorsOfAllMembersBeingMoved.values) (locateChild(descriptor) as? PsiLocatedReferable)?.let {
             movedReferablesMap[descriptor] = it
         }
-        
+
+        // reset server for the 1st time
+        resetServer(moduleLocationsToInvalidate)
+
         myMovedReferables.addAll(myReferableDescriptors.values.mapNotNull { movedReferablesMap[it] })
         val movedReferablesNamesSet = myMovedReferables.mapNotNull { it.name }.toSet()
         run {
@@ -317,7 +316,7 @@ class ArendMoveRefactoringProcessor(project: Project,
                 if (name != null && movedReferablesUniqueNames.contains(name)) referablesWithUniqueNames[name] = entry.value
             }
 
-            //Prepare the "remainder" namespace command (the one which is inserted in the place where one of the moved definitions was)
+            //Prepare the "remainder" namespace command (the one that is inserted in the position where one of the moved definitions has been placed)
             if (holes.isNotEmpty()) {
                 val uppermostHole = holes.asSequence().sorted().first()
                 var remainderAnchor: PsiElement? = uppermostHole.anchor
@@ -332,13 +331,11 @@ class ArendMoveRefactoringProcessor(project: Project,
                 while (remainderAnchor !is ArendCompositeElement && remainderAnchor != null) remainderAnchor = remainderAnchor.parent
 
                 if (remainderAnchor is ArendCompositeElement) {
-                    val importData = getTargetName(myTargetContainer, remainderAnchor)
+                    val openedName = ResolveReferenceAction.getTargetLongName(remainderAnchor, multiFileReferenceResolver, myTargetContainer)
 
-                    if (importData != null && movedReferablesUniqueNames.isNotEmpty()) {
-                        val importAction: NsCmdRefactoringAction? = importData.second
-                        val openedName: List<String> = importData.first.split(".")
+                    if (openedName != null && movedReferablesUniqueNames.isNotEmpty()) {
+                        val openedName: List<String> = openedName.toList()
 
-                        importAction?.execute()
                         val renamings = movedReferablesUniqueNames.map { Pair(it, null as String?) }.sortedBy { it.second ?: it.first } // filter this list
                         val groupMember = if (uppermostHole.kind == PositionKind.INSIDE_EMPTY_ANCHOR) {
                             if (remainderAnchor.children.isNotEmpty()) remainderAnchor.firstChild else null
@@ -348,7 +345,7 @@ class ArendMoveRefactoringProcessor(project: Project,
                         for (nsId in nsIds) {
                             val target = nsId.refIdentifier.reference?.resolve()
                             val name = nsId.refIdentifier.referenceName
-                            if (target != referablesWithUniqueNames[name]) /* reference that we added to the namespace command is corrupt, so we need to remove it right after it was added */
+                            if (target != referablesWithUniqueNames[name]) /* the reference that we added to the namespace command is corrupt, so we need to remove it right after it was added */
                                 doRemoveRefFromStatCmd(nsId.refIdentifier)
                         }
                     }
@@ -359,11 +356,12 @@ class ArendMoveRefactoringProcessor(project: Project,
             if (where != null && where.statList.isEmpty() && (sourceContainerWhereBlockFreshlyCreated || where.lbrace == null))  where.delete()
         }
 
+        resetServer(moduleLocationsToInvalidate)
+
         //Fix usages of namespace commands
         for (usage in updatedUsages) if (usage is ArendStatCmdUsageInfo) {
             val statCmd = usage.command
             val statCmdStatement = statCmd.parent
-            val usageFile = statCmd.containingFile as ArendFile
             val renamings = ArrayList<Pair<String, String?>>()
             val nsIdToRemove = HashSet<ArendNsId>()
 
@@ -378,39 +376,49 @@ class ArendMoveRefactoringProcessor(project: Project,
                 }
             }
 
-            val importData = getTargetName(myTargetContainer, statCmd)
-            val currentName: List<String>? = importData?.first?.split(".")
+            val currentName: List<String>? = ResolveReferenceAction.getTargetLongName(statCmd, multiFileReferenceResolver, myTargetContainer )?.toList() //importData?.first?.split(".")
 
             if (renamings.isNotEmpty() && currentName != null) {
-                importData.second?.execute()
                 val name = when {
                     currentName.isNotEmpty() -> LongName(currentName).toString()
                     myTargetContainer is ArendFile -> myTargetContainer.moduleLocation?.modulePath?.lastName ?: ""
                     else -> ""
                 }
+
+                if (myTargetContainer !is ArendFile && !myTargetContainer.textRange.contains(statCmdStatement.textRange))
                 addIdToUsing(statCmdStatement, myTargetContainer, name, renamings, psiFactory, RelativePosition(PositionKind.AFTER_ANCHOR, statCmdStatement))
             }
 
             for (nsId in nsIdToRemove) doRemoveRefFromStatCmd(nsId.refIdentifier)
         }
 
-        //Now fix references of "normal" usages
+        ResolveReferenceAction.flushNamespaceCommands(multiFileReferenceResolver);
+
+        // Reset server for the 2nd time
+        resetServer(moduleLocationsToInvalidate)
+
+        //Prepare fix references of "normal" usages
+        val sink = ArrayList<RenameReferenceAction>()
         for (usage in updatedUsages) if (usage is ArendUsageLocationInfo) {
             val referenceElement = usage.reference?.element
             val referenceParent = referenceElement?.parent
 
-            if (referenceElement is ArendRefIdentifier && referenceParent is ArendStatCmd && referenceElement.isValid) //Usage in "hiding" list which we simply delete
+            if (referenceElement is ArendRefIdentifier && referenceParent is ArendScId && referenceElement.isValid) //Usage in the "hiding" list of a namespace which we simply delete
                 doRemoveRefFromStatCmd(referenceElement)
             else if (referenceElement is ArendReferenceElement && referenceElement.isValid) {//Normal usage which we try to fix
                 movedReferablesMap[usage.referableDescriptor]?.let {
-                    val proposedFix = ResolveReferenceAction.getProposedFix(it, referenceElement)
-                    proposedFix?.execute(null)
+                    ResolveReferenceAction.fixLongName(referenceElement, multiFileReferenceResolver, it, sink)
                 }
             }
         }
 
-        //Fix references in the elements that have been moved
-        for ((mIndex, m) in myMembers.withIndex()) restoreReferences(emptyList(), m, mIndex, bodiesRefsFixData)
+        //Prepare fix references in the elements that have been moved
+        for ((mIndex, m) in myMembers.withIndex()) restoreReferences(emptyList(), m, mIndex, bodiesRefsFixData, multiFileReferenceResolver, sink)
+
+        //
+        for (action in sink) action.execute(null)
+
+        ResolveReferenceAction.flushNamespaceCommands(multiFileReferenceResolver)
 
         //Optimize imports
         if (myOptimizeImportsAfterMove) {
@@ -427,6 +435,11 @@ class ArendMoveRefactoringProcessor(project: Project,
             val item = myMembers.first()
             if (item.isValid) EditorHelper.openInEditor(item)
         }
+    }
+
+    private fun resetServer(modules: List<ModuleLocation>) {
+        modules.forEach { module -> myServer.removeModule(module) }
+        myServer.getCheckerFor(modules).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
     }
 
     private fun locateChild(element: PsiElement, childPath: List<Int>): PsiElement? {
@@ -448,49 +461,65 @@ class ArendMoveRefactoringProcessor(project: Project,
                                         memberData: MutableMap<PsiLocatedReferable, LocationDescriptor>,
                                         memberReferences: MutableSet<ArendReferenceElement>) {
         when (element) {
-            //TODO: What about IPName?
-            is ArendFieldDefIdentifier -> memberData[element] = LocationDescriptor(groupNumber, prefix)
-            is ArendLongName -> {
-                val refList = element.refIdentifierList
-                val unresolvedReference = LongUnresolvedReference.make(element, refList, refList.map { it.referenceName })
-                var concreteExpr = resolveReference(element, unresolvedReference, null)
-                while (concreteExpr is Concrete.AppExpression) concreteExpr = concreteExpr.arguments.first().expression
-                if (concreteExpr is Concrete.ReferenceExpression) {
-                    val reference = element.refIdentifierList.withIndex().firstOrNull {
-                        it.value.reference?.resolve() == concreteExpr.referent
+            is ArendFieldDefIdentifier ->  {
+                memberData[element] = LocationDescriptor(groupNumber, prefix)
+                return
+            }
+            is ArendLongName, is ArendAtomFieldsAcc -> {
+                val refList: List<Pair<ArendRefIdentifier, List<Int>>> = when (element) {
+                    is ArendLongName -> element.refIdentifierList.withIndex().map { Pair(it.value, singletonList(it.index)) }
+                    is ArendAtomFieldsAcc -> element.atom.literal?.refIdentifier?.let { atomRefId ->
+                        val firstNull = element.fieldAccList.indexOfFirst { it.refIdentifier == null }
+                        val subListBeforeNull = if (firstNull == -1) element.fieldAccList else element.fieldAccList.subList(0, firstNull)
+                        singletonList(Pair(atomRefId, listOf(0, 0, 0))) +
+                                subListBeforeNull.map { Pair(it.refIdentifier!!, listOf(element.children.indexOf(it), 0)) }
+                    } ?: emptyList()
+                    else -> emptyList()
+                }
+
+                val concrete = exprToConcrete1(element as ArendExpr).firstOrNull()
+                if (concrete is Concrete.ReferenceExpression) {
+                    val reference = refList.firstOrNull {
+                        it.first.resolve() == concrete.referent
                     }
                     if (reference != null)
-                        collectUsagesAndMembers(prefix + singletonList(reference.index), reference.value, groupNumber, usagesData, memberData, memberReferences)
+                        collectUsagesAndMembers(prefix + reference.second, reference.first,
+                            groupNumber, usagesData, memberData, memberReferences)
+                    return
                 }
             }
-            is ArendReferenceElement ->
-                if (!(element is ArendDefIdentifier && element.reference?.resolve() == null)) element.reference?.resolve().let {
-                    if (it is PsiLocatedReferable) {
-                        var set = usagesData[it]
-                        if (set == null) {
-                            set = HashSet()
-                            usagesData[it] = set
+            is ArendReferenceElement -> {
+                if (!(element is ArendDefIdentifier && element.reference?.resolve() == null)) element.reference?.resolve()
+                    .let {
+                        if (it is PsiLocatedReferable) {
+                            var set = usagesData[it]
+                            if (set == null) {
+                                set = HashSet()
+                                usagesData[it] = set
+                            }
+                            set.add(LocationDescriptor(groupNumber, prefix))
+                            memberReferences.add(element)
                         }
-                        set.add(LocationDescriptor(groupNumber, prefix))
-                        memberReferences.add(element)
                     }
-                }
-            else -> {
-                if (element is PsiLocatedReferable) memberData[element] = LocationDescriptor(groupNumber, prefix)
-                element.children.mapIndexed { i, e -> collectUsagesAndMembers(prefix + singletonList(i), e, groupNumber, usagesData, memberData, memberReferences) }
+                return
             }
         }
+
+        if (element is PsiLocatedReferable) memberData[element] = LocationDescriptor(groupNumber, prefix)
+        element.children.mapIndexed { i, e -> collectUsagesAndMembers(prefix + singletonList(i), e, groupNumber, usagesData, memberData, memberReferences) }
     }
 
     private fun restoreReferences(prefix: List<Int>, element: PsiElement, groupIndex: Int,
-                                  fixMap: HashMap<LocationDescriptor, TargetReference>) {
+                                  fixMap: HashMap<LocationDescriptor, TargetReference>,
+                                  multiFileReferenceResolver: MultiFileReferenceResolver,
+                                  sink: MutableList<RenameReferenceAction>) {
         if (element is ArendReferenceElement) {
             val descriptor = LocationDescriptor(groupIndex, prefix)
             val correctTarget = fixMap[descriptor]?.resolve()
             if (correctTarget != null && correctTarget !is ArendFile) {
-                ResolveReferenceAction.getProposedFix(correctTarget, element)?.execute(null)
+                ResolveReferenceAction.fixLongName(element, multiFileReferenceResolver, correctTarget, sink)
             }
-        } else element.children.mapIndexed { i, e -> restoreReferences(prefix + singletonList(i), e, groupIndex, fixMap) }
+        } else element.children.mapIndexed { i, e -> restoreReferences(prefix + singletonList(i), e, groupIndex, fixMap, multiFileReferenceResolver, sink) }
     }
 
     override fun preprocessUsages(refUsages: Ref<Array<UsageInfo>>): Boolean {
@@ -527,7 +556,7 @@ class ArendMoveRefactoringProcessor(project: Project,
 
     private fun isStatCmdUsage(reference: PsiReference, insideLongNameOnly: Boolean): ArendStatCmd? {
         val parent = reference.element.parent
-        if (parent is ArendStatCmd && !insideLongNameOnly) return parent
+        if ((parent is ArendNsId || parent is ArendScId) && !insideLongNameOnly) return parent.ancestor<ArendStatCmd>()
         if (parent is ArendLongName) {
             val grandparent = parent.parent
             if (grandparent is ArendStatCmd) return grandparent
@@ -560,11 +589,13 @@ class ArendMoveRefactoringProcessor(project: Project,
     }
 
     companion object {
-        fun getUsagesToPreprocess(myMembers: List<ArendGroup>,
+        fun getUsagesToPreprocess(server: ArendServer,
+                                  myMembers: List<ArendGroup>,
                                   insertIntoDynamicPart: Boolean,
                                   myTargetContainer: ArendGroup,
                                   thisVarNameMap: MutableMap<PsiLocatedReferable, String>,
-                                  unreliableReferables: MutableSet<PsiLocatedReferable>? = null):
+                                  unreliableReferables: MutableSet<PsiLocatedReferable>? = null,
+                                  multiFileReferenceResolver: MultiFileReferenceResolver):
                 Pair<ArrayList<ChangeSignatureRefactoringDescriptor>, List<ArendUsageInfo>> {
             val membersBeingMoved = LinkedHashSet<PsiLocatedReferable>()
             val descriptors = ArrayList<ChangeSignatureRefactoringDescriptor>()
@@ -599,45 +630,53 @@ class ArendMoveRefactoringProcessor(project: Project,
 
                         if (oldThisParameterClass != null) {
                             fun collectClassMembers(group: ArendGroup, sink: MutableSet<PsiLocatedReferable>) {
-                                if (group !is ArendDefClass) sink.add(group)
-                                /* TODO[server2]
                                 if (group is ArendDefClass) {
-                                    for (classMember in ClassFieldImplScope(group, true).elements)
-                                        if (classMember is PsiLocatedReferable) {
-                                            sink.add(classMember)
-                                            if (classMember is ArendGroup) collectClassMembers(classMember, sink)
-                                        }
+                                    ArendCodeInsightUtils.ensureIsTypechecked(group)
+                                    val classReferable = group.tcReferable
+                                    val scope = DynamicScope(
+                                        server.typingInfo.getDynamicScopeProvider(classReferable),
+                                        server.typingInfo,
+                                        DynamicScope.Extent.WITH_DYNAMIC
+                                    )
+                                    for (element in scope.elements)
+                                        if (element is TCDefReferable)
+                                        (element.data as? PsiLocatedReferable)?.let { sink.add(it) }
                                 }
-                                */
+                            }
 
-                                for (member in group.dynamicSubgroups) collectClassMembers(member, sink)
+                            val newSuperclasses = newThisParameterClass?.superClassList?.map {
+                                it.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass?
+                            }?.toSet()
+                            val oldSuperclasses = oldThisParameterClass.superClassList.map {
+                                it.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass?
                             }
 
                             when {
                                 oldThisParameterClass == newThisParameterClass -> // Class unchanged
                                     thisPrefix.add(DefaultParameterDescriptorFactory.createThisParameter(oldThisParameter))
-                                /* TODO[server2]
-                                newThisParameterClass?.isSubClassOf(oldThisParameterClass) == true -> { // Move into descendant
+                                newSuperclasses?.contains(oldThisParameterClass) == true -> { // Move into descendant
                                     thisPrefix.add(DefaultParameterDescriptorFactory.createThisParameter(newThisParameterClass))
                                 }
-                                newThisParameterClass != null && oldThisParameterClass.isSubClassOf(newThisParameterClass) -> { // Move into ancestor
+                                newThisParameterClass != null && oldSuperclasses.contains(newThisParameterClass) -> { // Move into ancestor
                                     thisPrefix.add(DefaultParameterDescriptorFactory.createThisParameter(oldThisParameter))
                                     collectClassMembers(oldThisParameterClass, unmovedMembersThatRequireLocalSignatureModification)
                                     val ancestorLevelParameters = HashSet<PsiLocatedReferable>()
                                     collectClassMembers(newThisParameterClass, ancestorLevelParameters)
                                     unmovedMembersThatRequireLocalSignatureModification.removeAll(ancestorLevelParameters)
                                 }
-                                */
-                                else -> { // Move into unrelated class or static context
+                                else -> { // Move into an unrelated class or static context
                                     if (newThisParameterClass != null) thisPrefix.add(DefaultParameterDescriptorFactory.createThisParameter(newThisParameterClass))
 
                                     val freshName = StringRenamer().generateFreshName(VariableImpl("this"), getAllBindings(referable).map { VariableImpl(it) }.toList())
                                     thisVarNameMap[referable] = freshName
+
                                     val classNameGetter: () -> String = {
-                                        getTargetName(oldThisParameterClass, referable)?.let { (targetName, namespaceCommand) ->
+                                        ResolveReferenceAction.getTargetLongName(referable, multiFileReferenceResolver, oldThisParameterClass)?.toString() ?: ""
+
+                                        /* getTargetName(oldThisParameterClass, referable)?.let { (targetName, namespaceCommand) ->
                                             namespaceCommand?.execute()
                                             targetName
-                                        } ?: ""
+                                        } ?: "" */
                                     }
 
                                     val internalizedThisDescriptor = if (referable is ArendConstructor) {

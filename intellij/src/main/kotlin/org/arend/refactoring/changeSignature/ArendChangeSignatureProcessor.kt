@@ -32,7 +32,6 @@ import org.arend.term.abs.AbstractReferable
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.error.ErrorService
 import org.arend.util.ArendBundle
-import org.arend.util.appExprToConcrete
 import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getBounds
 import org.arend.util.patternToConcrete

@@ -247,6 +247,10 @@ fun printAppExpr(expr: Concrete.Expression, psiElement: ArendArgumentAppExpr, re
             val text = UsageEntry.getContextName(expr.underlyingReferable, psiElement, refactoringContext)
             return IntermediatePrintResult(text, null, true, false, null)
         }
+    } else if (expr is Concrete.ProjExpression) {
+       val printResult = printAppExpr(expr.expression, psiElement, refactoringContext)
+       val text = if (printResult.isAtomic) "${printResult.text}.${expr.field+1}" else "(${printResult.text}).${expr.field+1}"
+       return IntermediatePrintResult(text, null, true, false, null)
     }
 
 

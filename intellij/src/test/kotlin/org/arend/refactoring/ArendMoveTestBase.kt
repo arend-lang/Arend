@@ -11,6 +11,8 @@ import org.arend.refactoring.move.ArendMoveMembersDialog.Companion.determineClas
 import org.arend.refactoring.move.ArendMoveMembersDialog.Companion.getLocateErrorMessage
 import org.arend.refactoring.move.ArendMoveMembersDialog.Companion.simpleLocate
 import org.arend.refactoring.move.ArendMoveRefactoringProcessor
+import org.arend.server.ArendServerService
+import org.arend.server.impl.MultiFileReferenceResolver
 import org.arend.settings.ArendSettings
 import org.intellij.lang.annotations.Language
 import java.lang.IllegalArgumentException
@@ -22,7 +24,7 @@ abstract class ArendMoveTestBase : ArendTestBase() {
                               targetName: String,
                               targetIsDynamic: Boolean = false,
                               useOpenCommands: Boolean = false,
-                              typecheck: Boolean = false,
+                              typecheck: Boolean = true,
                               fileToCheck: String? = null) {
         val arendSettings = service<ArendSettings>()
         arendSettings.autoImportWriteOpenCommands = useOpenCommands
@@ -72,8 +74,9 @@ abstract class ArendMoveTestBase : ArendTestBase() {
 
         val myTargetGroup = ArendMoveMembersDialog.locateTargetGroupWithChecks(targetFile, targetName, myFixture.module, container, sourceElements, determineClassPart(sourceElements), targetIsDynamic)
         val group = myTargetGroup.first
+        val server = project.service<ArendServerService>().server
         if (group != null) {
-            val processor = ArendMoveRefactoringProcessor(myFixture.project, {}, sourceElements, container, group, targetIsDynamic,
+            val processor = ArendMoveRefactoringProcessor(myFixture.project, MultiFileReferenceResolver(server), {}, sourceElements, container, group, targetIsDynamic,
                 myOpenInEditor = false,
                 myOptimizeImportsAfterMove = false
             )

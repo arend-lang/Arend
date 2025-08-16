@@ -560,19 +560,26 @@ public class ArendServerImpl implements ArendServer {
 
     ConcreteGroup group = groupData.getRawGroup();
     Scope scope = LexicalScope.insideOf(group, getParentGroupScope(module, groupData.getRawGroup()), false);
-    loop:
-    for (LocatedReferable ancestor : ancestors) {
+    loop: for (LocatedReferable ancestor : ancestors) {
+      int nextAncestorIndex = ancestors.indexOf(ancestor) + 1;
+
       for (ConcreteStatement statement : group.statements()) {
         ConcreteGroup subgroup = statement.group();
         if (subgroup != null && subgroup.referable().equals(ancestor)) {
-          scope = LexicalScope.insideOf(subgroup, scope, false);
+          boolean isDynamicContext = nextAncestorIndex < ancestors.size() &&
+            subgroup.dynamicGroups().stream().anyMatch(it ->
+              it.referable() == ancestors.get(nextAncestorIndex));
+          scope = LexicalScope.insideOf(subgroup, scope, isDynamicContext);
           group = subgroup;
           continue loop;
         }
       }
       for (ConcreteGroup subgroup : group.dynamicGroups()) {
         if (subgroup.referable().equals(ancestor)) {
-          scope = LexicalScope.insideOf(subgroup, scope, false);
+          boolean isDynamicContext = nextAncestorIndex < ancestors.size() &&
+            subgroup.dynamicGroups().stream().anyMatch(it ->
+              it.referable() == ancestors.get(nextAncestorIndex));
+          scope = LexicalScope.insideOf(subgroup, scope, isDynamicContext);
           group = subgroup;
           continue loop;
         }

@@ -31,5 +31,5 @@ class ServerBasedDefinitionRenamer(arendServer: ArendServer,
 
     fun getRawModifier() = multipleReferenceResolver.modifier
 
-    fun getAction(): NsCmdRefactoringAction = NsCmdRawModifierAction(getRawModifier(), anchorFile)
+    fun getAction(): NsCmdRefactoringAction? = getRawModifier()?.let { NsCmdRawModifierAction(it, anchorFile) }
 }

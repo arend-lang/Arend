@@ -12,9 +12,11 @@ import org.arend.naming.reference.*
 import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.server.ArendServerService
+import org.arend.server.ProgressReporter
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractReferable
 import org.arend.term.concrete.Concrete
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getBounds
 import org.arend.util.patternToConcrete
@@ -439,9 +441,21 @@ class ArendCodeInsightUtils {
 
         }
 
+        fun ensureIsTypechecked(def: ReferableBase<*>) {
+            if (def.tcReferable == null) {
+                val moduleLocation = (def.containingFile as? ArendFile)?.moduleLocation
+                if (moduleLocation != null) {
+                    val checker = def.project.service<ArendServerService>().server.getCheckerFor(singletonList(moduleLocation))
+                    checker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+                }
+            }
+        }
+
         private fun getClassParameterList(def: ArendDefClass, externalParameters: List<ParameterDescriptor>?, parameterDescriptorFactory: ParameterDescriptor.Companion.Factory = DefaultParameterDescriptorFactory): Pair<List<ParameterDescriptor>, Boolean> {
             val externalParametersMap = HashMap<String, ParameterDescriptor>()
             if (externalParameters != null) for (eP in externalParameters) eP.name?.let{ externalParametersMap[it] = eP }
+
+            ensureIsTypechecked(def)
 
             val result = (def.tcReferable?.typechecked as? ClassDefinition)?.notImplementedFields?.map {
                 val psiReferable = it.referable?.data as? PsiReferable

@@ -116,8 +116,6 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                 \func foo => bar
                 \func bar{-caret-} => foo
             """, """
-                \import DirB.Main
-
                 \module Foo \where {
                   \func foo => 101
 
@@ -464,7 +462,7 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
             \module Foo \where {
               \func lol => 0
 
-              \func foo{-caret-} => lol + Foo.lol + FooBar.lol + A.FooBar.lol
+              \func foo{-caret-} => 101
             }
 
             \module Bar \where {
@@ -490,9 +488,9 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
             \module FooBar \where {
               \open Bar (bar \as foo)
 
-              \func lol => foo + foo
+              \func lol => Bar.bar + foo
 
-              \func foo => Foo.lol + Foo.lol + FooBar.lol + A.FooBar.lol
+              \func foo => 101
             }
             """, "A", "FooBar")
 
@@ -1045,7 +1043,7 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                 }
 
                 \module M2 \where {
-                  \func foo {this : M.R} (a : C1) => (field1 {this}, field1 {M.field2 {this}}, M.C2.field2 {this}, field1 {a})
+                  \func foo {this : M.R} (a : C1) => (field1 {this}, field1 {M.field2 {this}}, M.field2 {this}, field1 {a})
                 }
             """, "Main", "M2", typecheck = true)
 
@@ -1513,7 +1511,7 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
          
          \func foo {n : Nat} => number Nat.+ n Nat.+ number2 {{?}}
        } \where {
-         \func bar {m : Nat} => D.foo {\new D 42 101} {m}
+         \func bar {m : Nat} => C.foo {\new D 42 101} {m}
        }
 
        \class D \extends C {
@@ -1601,7 +1599,7 @@ $testMOR8Header
 
        \func foo (x : Foo) => succ {succ {succ}} 
          \where {
-           \func succ {this : Foo} : Foo => \new Foo (Nat.suc (n {this}))
+           \func succ {this : Foo} : Foo => \new Foo (suc (n {this}))
          }  
     """, "Main", "foo")
 
@@ -1892,7 +1890,7 @@ $testMOR8Header
        }
 
        \module M \where {
-         \func succ {this : Foo} : Foo => \new Foo (Nat.suc (n {this}))
+         \func succ {this : Foo} : Foo => \new Foo (suc (n {this}))
        }
     """, "Main", "M")
 
@@ -1982,7 +1980,7 @@ $testMOR8Header
          | false => 0
        }
     """, """
-       \import B
+       \import B ()
        \import Main
        
        \func lol => 42

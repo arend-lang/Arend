@@ -194,10 +194,10 @@ abstract class UsageEntry(val refactoringContext: ChangeSignatureRefactoringCont
                         "{?}"
                     commentedText != null ->
                         "{?} {-${commentedText}-}"
-                    /* TODO[server2]
-                    contextClass != null && contextClass.isSubClassOf(parameterClass) ->
+                    contextClass != null && (contextClass == parameterClass || contextClass.superClassList.map {
+                        it.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass
+                    }.contains(parameterClass)) ->
                         "\\this"
-                    */
                     contextClass != null -> "{?}"
                     else -> "_"
                 }

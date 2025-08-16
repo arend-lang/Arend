@@ -361,7 +361,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
             }
 
             docManager.commitDocument(document)
-            serverBasedDefinitionRenamer.getAction().execute()
+            serverBasedDefinitionRenamer.getAction()?.execute()
         }
 
         private fun doFindVariablePatterns(variables: MutableSet<String>, pattern: Concrete.Pattern, excludedPsi: PsiElement?) {

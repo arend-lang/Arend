@@ -41,7 +41,7 @@ class ArendStatCmd(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.Namespac
 
     override fun getRenamings(): List<ArendNsId> = nsUsing?.nsIdList ?: emptyList()
 
-    override fun getHidings(): List<ArendScId> = getChildrenOfType()
+    override fun getHidings(): List<ArendScId> = getChildrenOfType<ArendScId>().filter { it.textLength > 0 }
 
     override fun getOpenedReference() = longName
 
