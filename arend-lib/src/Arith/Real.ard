@@ -197,6 +197,10 @@
     \lemma +-inf {x y : Real} : x + y = x InfRealAbMonoid.+ y
       => InfReal.real-lower-ext $ +-lower *> {LowerReal} inv {LowerReal} InfRealAbMonoid.+-lower
 
+    \lemma *n-upper {n : Nat} {x : Real} : n RealAbGroup.*n x = n ExUpperRealAbMonoid.*n x \elim n
+      | 0 => idp
+      | suc n => +-upper *> pmap (ExUpperReal.`+ x) *n-upper
+
     \sfunc negative (x : Real) : Real \cowith
       | L a => x.U (RatField.negative a)
       | L-inh => \case x.U-inh \with {

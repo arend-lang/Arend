@@ -30,6 +30,8 @@
   | \infixl 7 * : E -> E -> E
   | *-assoc {x y z : E} : (x * y) * z = x * (y * z)
 
+  \func IsSquare (x : E) => ∃ (y : E) (y * y = x)
+
   \protected \func op : Semigroup E \cowith
     | * x y => y * x
     | *-assoc => inv *-assoc
@@ -92,8 +94,6 @@
 
   \lemma BigProd_replicate1 {n : Nat} : BigProd (replicate n ide) = ide
     => BigProd_replicate *> pow_ide
-
-  \func IsSquare (x : E) => ∃ (y : E) (y * y = x)
 
   \protected \func op : Monoid E \cowith
     | ide => ide

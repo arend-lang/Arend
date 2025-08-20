@@ -20,7 +20,7 @@
 \import Paths.Meta
 \import Topology.BanachAlgebra
 \import Topology.BanachSpace
-\import Topology.CStarAlgebra
+\import Topology.StoneCStarAlgebra
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.CompletionTools
 \import Topology.CoverSpace.Product
@@ -34,9 +34,9 @@
 \import Topology.TopSpace.Product
 \open QModule
 
-\record PreC*AlgebraHom \extends RingHom, PosetHom {
-  \override Dom : PreC*Algebra
-  \override Cod : PreC*Algebra
+\record OrderedC*AlgebraHom \extends RingHom, PosetHom {
+  \override Dom : OrderedC*Algebra
+  \override Cod : OrderedC*Algebra
 
   \func IsDense : \Prop
     => ∀ {eps} (0 < eps) y ∃ (x : Dom) (func x - y <= eps *q 1) (y - func x <= eps *q 1)
@@ -76,9 +76,9 @@
     | NormedAbGroupMap => toNormed
     | func-norm-isometry => isometry-toNormed.1 p
 } \where {
-  \open PreC*Algebra
+  \open OrderedC*Algebra
 
-  \lemma fromNormed {X : PreC*Algebra} {Y : C*Algebra} (f : RingHom X Y) (fn : \Pi {x : X} -> norm (f x) <= X.toBanach.norm x) : PreC*AlgebraHom X Y f \cowith
+  \lemma fromNormed {X : OrderedC*Algebra} {Y : StoneC*Algebra} (f : RingHom X Y) (fn : \Pi {x : X} -> norm (f x) <= X.toBanach.norm x) : OrderedC*AlgebraHom X Y f \cowith
     | RingHom => f
     | func-<= =>
       \have lem {a} (a>=0 : 0 <= a) : 0 <= f a => \case X.*q-upperBound a \with {
@@ -87,33 +87,33 @@
       \in \lam x<=y => Y.from>=0 $ transport (0 <=) f.func-minus $ lem (X.to>=0 x<=y)
 }
 
-\record C*AlgebraHom \extends PreC*AlgebraHom, BoundedLinearMap {
-  \override Dom : C*Algebra
-  \override Cod : C*Algebra
+\record StoneC*AlgebraHom \extends OrderedC*AlgebraHom, BoundedLinearMap {
+  \override Dom : StoneC*Algebra
+  \override Cod : StoneC*Algebra
 
   | func-<= (inP (a,aa=y-x)) => inP (func a, inv func-* *> pmap func aa=y-x *> func-minus)
   | isBounded => inP (1, idp, \lam x => transportInv (_ <=) (ExUpperRealSemigroup.ide-left norm>=0) $
-      transport2 (<=) (inv C*Algebra.norm-char) (inv C*Algebra.norm-char) toNormed.func-norm)
+      transport2 (<=) (inv StoneC*Algebra.norm-char) (inv StoneC*Algebra.norm-char) toNormed.func-norm)
 } \where {
-  \lemma fromRingHom {X Y : C*Algebra} (f : RingHom X Y) : C*AlgebraHom X Y f \cowith
+  \lemma fromRingHom {X Y : StoneC*Algebra} (f : RingHom X Y) : StoneC*AlgebraHom X Y f \cowith
     | RingHom => f
 }
 
-\sfunc dense-c*-lift {X Y : PreC*Algebra} {Z : C*Algebra} (f : PreC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : PreC*AlgebraHom X Z) : PreC*AlgebraHom Y Z
+\sfunc dense-c*-lift {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) : OrderedC*AlgebraHom Y Z
   => \let | map => dense-normed-lift (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
           | map-char => dense-normed-lift.char (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
-     \in PreC*AlgebraHom.fromNormed \new RingHom {
+     \in OrderedC*AlgebraHom.fromNormed \new RingHom {
        | func => map
        | func-+ => map.func-+
        | func-ide => pmap map (inv f.func-ide) *> map-char *> g.func-ide
        | func-* {x} {y} => dense-lift-unique (ProductTopSpace.prod f.toNormed f.toNormed) (ProductTopSpace.prod.isDense (f.dense-toNormed.1 fd) (f.dense-toNormed.1 fd)) (map ContMap.∘ *-locally-uniform) (*-locally-uniform ContMap.∘ ProductTopSpace.prod map map) (\lam s => pmap map (inv f.func-*) *> map-char *> g.func-* *> inv (pmap2 (*) map-char map-char)) (x,y)
      } map.func-norm
   \where {
-    \protected \lemma char {X Y : PreC*Algebra} {Z : C*Algebra} (f : PreC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : PreC*AlgebraHom X Z) {x : X} : dense-c*-lift f fd fi g (f x) = g x
+    \protected \lemma char {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) {x : X} : dense-c*-lift f fd fi g (f x) = g x
       => rewrite (\peval dense-c*-lift f fd fi g) $ dense-normed-lift.char (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
   }
 
-\instance C*AlgebraCompletion (X : PreC*Algebra) : C*Algebra
+\instance StoneC*AlgebraCompletion (X : OrderedC*Algebra) : StoneC*Algebra
   | RealBanachAlgebra => BanachAlgebraCompletion X.toBanach
   | c*-sum => unique2_<= (norm-metric-map {BanachCompletion X.toBanach} ∘ *-cover ∘ tuple id id ∘ proj1) (norm-metric-map {BanachCompletion X.toBanach} ∘ +-cover ∘ prod (*-cover ∘ tuple id id) (*-cover ∘ tuple id id))
       \lam x y => transport2 (<=) (inv $ pmap ExNormedAbGroupCompletion.norm lift2-char *> completion-exNormed-isometry.func-norm-isometry) (inv $ pmap ExNormedAbGroupCompletion.norm (pmap2 +-func lift2-char lift2-char *> +-char) *> completion-exNormed-isometry.func-norm-isometry) X.toBanach_c*-sum

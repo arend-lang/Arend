@@ -84,6 +84,9 @@
   \lemma norm_*q-ofPos {q : Rat} (q>=0 : 0 <= q) {x : E} : norm (q *q x) = q ExUpperReal.* norm x
     => norm_*q *> pmap (__ ExUpperReal.* _) (RatField.abs-ofPos q>=0)
 
+  \lemma norm_*n-comm {n : Nat} {x : E} : norm (n *n x) = n ExUpperRealAbMonoid.*n norm x
+    => norm_*n *> pmap (`* _) (pmap ExUpperReal.fromRat $ RatField.abs-ofPos fromNat_>=0) *> inv (ExUpperRealSemigroup.*n_* norm>=0 (norm-bounded x))
+
   \sfunc \infixl 7 *r (r : Real) (a : E) : E
     => lift (r,a)
     \where {
@@ -95,6 +98,13 @@
 
   \lemma *r_*q {q : Rat} {a : E} : q *r a = q *q a
     => (\peval q *r a) *> dense-lift-char (ProductCoverSpace.prod.isDenseEmbedding _ _) (q,a)
+
+  \lemma *r_*n {n : Nat} {a : E} : n *r a = n *n a
+    => *r_*q *> *q_*n
+
+  \lemma norm_*r {r : Real} {a : E} : norm (r *r a) = RealAbGroup.abs r ExUpperReal.* norm a
+    => RealField.unique1 (norm-metric-map ∘ *r-cover ∘ tuple id (const a)) (ex-upper-*-locally-uniform ∘ tuple bnorm-metric-map (const (bnorm a)))
+        \lam q => pmap norm *r_*q *> norm_*q *> pmap (ExUpperReal.`* _) (inv RealAbGroup.abs-rat)
 
   \func toRealModule : LModule RealField \cowith
     | AbGroup => \this

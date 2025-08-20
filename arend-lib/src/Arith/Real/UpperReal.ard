@@ -5,7 +5,9 @@
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Arith.Int
+\import Arith.Nat
 \import Arith.Rat
+\import Data.Bool
 \import Data.Or
 \import Function.Meta
 \import Logic
@@ -92,6 +94,9 @@
 
   \lemma join_U {x y : ExUpperReal} {a : Rat} : UpperReal.U {join x y} a <-> (\Sigma (x.U a) (y.U a))
     => rewrite (\peval join x y) <->refl
+
+  \lemma join-bounded {x y : ExUpperReal} (xb : x.IsBounded) (yb : y.IsBounded) : (join x y).IsBounded \elim xb, yb
+    | inP (a,x<a), inP (b,y<b) => inP (a ∨ b, join_U.2 (x.U_<= x<a join-left, y.U_<= y<b join-right))
 
   \sfunc \infixl 7 * (x y : ExUpperReal) : ExUpperReal \cowith
     | U a => ∃ (b : x.U) (0 RatField.< b) (c : y.U) (0 RatField.< c) (b RatField.* c RatField.< a)
@@ -231,6 +236,20 @@
 
     \lemma <_+-right {x : Rat} {y z : ExUpperReal} (y<z : y < z) : x + y < x + z
       => transport2 (<) ExUpperRealAbMonoid.+-comm ExUpperRealAbMonoid.+-comm (<_+-left y<z)
+
+    \lemma *n_U {n : Nat} (n/=0 : n /= 0) {x : ExUpperReal} {q : Rat} : (n ExUpperRealAbMonoid.*n x).U q <-> ∃ (r : x.U) (n RatField.* r RatField.<= q) \elim n
+      | 0 => absurd (n/=0 idp)
+      | 1 => rewrite zro-left (\lam x<q => inP (q, x<q, =_<= ide-left), \lam (inP (r,x<r,r<=q)) => x.U_<= x<r $ rewrite RatField.ide-left in r<=q)
+      | suc (suc n) => (\lam c => \case +_U_<=.1 c \with {
+        | inP (a,ap,b,x<b,a+b<=q) => \case (*n_U {suc n} suc/=0).1 ap \with {
+          | inP (r,x<r,rp) => inP (b ∧ r, real_meet_U x<b x<r, =_<= (RatField.rdistr {suc n}) <=∘ <=_+ (RatField.<=_*_positive-right rat_<=-dec meet-right <=∘ rp) (=_<= ide-left <=∘ meet-left) <=∘ a+b<=q)
+        }
+      }, \lam (inP (r,x<r,rp)) => +_U_<=.2 $ inP (suc n RatField.* r, (*n_U {suc n} suc/=0 {x} {suc n RatField.* r}).2 $ inP (r,x<r,<=-refl), r, x<r, =_<= (inv $ RatField.rdistr *> pmap (_ RatField.+) ide-left) <=∘ rp))
+
+    \lemma *n_finv {n : Nat} (n/=0 : n /= 0) {x : ExUpperReal} {q : Rat} : (n ExUpperRealAbMonoid.*n x).U q <-> x.U (RatField.finv n RatField.* q)
+      => <->trans (*n_U n/=0) (
+        \lam (inP (r,x<r,nr<=q)) => x.U_<= x<r $ =_<= (inv (pmap (RatField.`* r) (RatField.finv-left $ natRat/=0 n/=0) *> ide-left) *> *-assoc) <=∘ RatField.<=_*_positive-right (RatField.finv>=0 fromNat_>=0) nr<=q,
+        \lam x<q/n => inP (_, x<q/n, =_<= $ inv *-assoc *> pmap (RatField.`* q) (RatField.finv-right $ natRat/=0 n/=0) *> ide-left))
   }
 
 \lemma rat-upperReal : AddMonoidHom RatField ExUpperRealAbMonoid ExUpperReal.fromRat \cowith
@@ -343,6 +362,10 @@
     \protected \lemma zro_*-right {x : ExUpperReal} (xb : x.IsBounded) : x * 0 = 0
       => ExUpperRealSemigroup.*-comm *> zro_*-left xb
 
+    \lemma *n_* {n : Nat} {x : ExUpperReal} (x>=0 : 0 <= x) (xb : x.IsBounded) : n AddMonoid.*n x = n * x \elim n
+      | 0 => inv (zro_*-left xb)
+      | suc n => pmap2 (+) (*n_* x>=0 xb) (inv $ ide-left x>=0) *> inv (rdistr (<=-rat.1 fromNat_>=0) $ <=-less zro<ide) *> pmap (`* x) +-rat
+
     \lemma <_*-positive {x y : ExUpperReal} (x>0 : 0 < x) (y>0 : 0 < y) : 0 < x * y \elim x>0, y>0
       | inP (a,a>0,a<=x), inP (b,b>0,b<=y) => inP (a RatField.* b, RatField.<_*_positive_positive a>0 b>0, transport (`<= _) (*-rat (<=-less a>0) (<=-less b>0)) $ ExUpperRealSemigroup.<=_* a<=x b<=y)
 
@@ -390,6 +413,40 @@
           | inr a<=1 => U-closed x<a (a<=1 <∘r d>1)
         }
       }
+  }
+
+\instance ExUpperRealLattice : CompleteLattice ExUpperReal
+  | Order.Lattice.Lattice => ExUpperRealAbMonoid
+  | Meet {J : \Set} (g : J -> ExUpperReal) : ExUpperReal \cowith {
+    | U q => ∃ (j : J) ((g j).U q)
+    | U-closed (inP (j,gj<q)) q<q' => inP (j, U-closed gj<q q<q')
+    | U-rounded (inP (j,gj<q)) => \case U-rounded gj<q \with {
+      | inP (r,gj<r,r<q) => inP (r, inP (j,gj<r), r<q)
+    }
+  }
+  | Meet-cond j fj<b => inP (j,fj<b)
+  | Meet-univ c (inP (j,fj<b)) => c j fj<b
+  | Join {J : \Set} (g : J -> ExUpperReal) : ExUpperReal \cowith {
+    | U q => ∃ (r : `< q) ∀ (j : J) ((g j).U r)
+    | U-closed (inP (r,r<q,c)) q<q' => inP (r, r<q <∘ q<q', c)
+    | U-rounded {q} (inP (r,r<q,c)) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, c), RatField.mid<right r<q)
+  }
+  | Join-cond j (inP (r,r<b,c)) => U-closed (c j) r<b
+  | Join-univ c e<b => \case U-rounded e<b \with {
+    | inP (a,e<a,a<b) => inP (a, a<b, \lam j => c j e<a)
+  }
+  \where {
+    \lemma *n_Join {n : Nat} (n/=0 : n /= 0) {J : \Set} {g : J -> ExUpperReal} : n AddMonoid.*n Join g = Join (\lam j => n AddMonoid.*n g j)
+      => <=-antisymmetric (\lam (inP (a,a<b,f)) => (ExUpperRealAbMonoid.*n_finv n/=0).2 $ inP $ later
+            (RatField.finv n * a, RatField.<_*_positive-right (RatField.finv>0 $ fromInt_< $ pos<pos $ nonZero>0 n/=0) a<b, \lam j => (ExUpperRealAbMonoid.*n_finv n/=0).1 (f j))) $
+          ExUpperRealLattice.Join-univ \lam j => ExUpperRealAbMonoid.*n_<= (ExUpperRealLattice.Join-cond j)
+
+    \lemma *n_Join' {n : Nat} {J : \Set} (j : ∃ J) {g : J -> ExUpperReal} : n AddMonoid.*n Join g = Join (\lam j => n AddMonoid.*n g j) \elim n, j
+      | 0, inP j => <=-antisymmetric (ExUpperRealLattice.Join-cond j {\lam _ => 0}) $ ExUpperRealLattice.Join-univ {_} {\lam _ => 0} \lam _ => <=-refl
+      | suc n, _ => *n_Join suc/=0
+
+    \lemma *n_join {n : Nat} {x y : ExUpperReal} : n AddMonoid.*n (x ∨ y) = n AddMonoid.*n x ∨ n AddMonoid.*n y
+      => pmap (n AddMonoid.*n) ExUpperRealLattice.join_Join *> *n_Join' (inP true) *> CompleteLattice.Join_= (later \lam b => cases b idp) *> inv ExUpperRealLattice.join_Join
   }
 
 \record UpperReal \extends ExUpperReal {

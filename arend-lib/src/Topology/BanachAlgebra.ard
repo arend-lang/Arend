@@ -2,6 +2,7 @@
      [1] Coquand, Spitters, Constructive Gelfand Duality for C*-algebras, 2009, https://arxiv.org/abs/0808.1518
  -}
 
+\import Algebra.Algebra
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -12,6 +13,7 @@
 \import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
+\import Arith.Real.Field
 \import Arith.Real.Root \using (sqrt \as sqrtR)
 \import Arith.Real.UpperReal
 \import Data.Or
@@ -30,6 +32,7 @@
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.CompletionTools
 \import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.ExComplete
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
@@ -44,7 +47,30 @@
 
 \class RealPreBanachAlgebra \extends RealPreBanachSpace, ExPseudoNormedRing
 
-\class RealBanachAlgebra \extends BanachAlgebra, RealBanachSpace, RealPreBanachAlgebra {
+\class RealBanachPseudoAlgebra \extends RealBanachSpace, QPseudoAlgebra, ExPseudoNormedPseudoRing, CompleteExNormedAbGroup {
+  \lemma *r-comm-left {r : Real} {a b : E} : r *r (a * b) = r *r a * b
+    => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (*r-cover ∘ tuple id (const a)) (const b)) (\lam x => *r_*q *> *q-comm-left *> pmap (`* b) (inv *r_*q)) r
+
+  \lemma *r-comm-right {r : Real} {a b : E} : r *r (a * b) = a * (r *r b)
+    => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (const a) (*r-cover ∘ tuple id (const b))) (\lam x => *r_*q *> *q-comm-right *> pmap (a *) (inv *r_*q)) r
+
+  \lemma *r_>=0-square {r : Real} {a : E} (r>=0 : 0 <= r) (as : IsSquare a) : IsSquare (r *r a) \elim as
+    | inP (b,bb=a) => inP (sqrtR r *r b, inv *r-comm-left *> pmap (_ *r) (inv *r-comm-right) *> inv toRealModule.*c-assoc *> pmap2 (*r) (pow_sqrt r>=0) bb=a)
+
+  \lemma *q_>=0-square {q : Rat} {a : E} (q>=0 : 0 <= q) (as : IsSquare a) : IsSquare (q *q a)
+    => transport IsSquare *r_*q $ *r_>=0-square (rat_real_<=.1 q>=0) as
+
+  \func toRealAlgebra : PseudoAlgebra RealField \cowith
+    | LModule => toRealModule
+    | PseudoRing => \this
+    | *c-comm-left => *r-comm-left
+    | *c-comm-right => *r-comm-right
+} \where {
+  \open CoverMap
+  \open ProductCoverSpace
+}
+
+\class RealBanachAlgebra \extends RealBanachPseudoAlgebra, BanachAlgebra, RealPreBanachAlgebra {
   -- | [1] Lemma 1
   \sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) ExUpperReal.<= RatField.ide) : E
     => limit zfunc zfunc-conv
@@ -100,23 +126,11 @@
         => rewrite (\peval sqrt x _) $ limit-apply (*-locally-uniform ∘ tuple id (const y)) *> limit-ext (zfunc __ * y) (y * zfunc __) (\lam i => zfunc-comm yx=xy) *> inv (limit-apply (*-locally-uniform ∘ tuple (const y) id))
     }
 
-  \lemma *r-comm-left {r : Real} {a b : E} : r *r (a * b) = r *r a * b
-    => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (*r-cover ∘ tuple id (const a)) (const b)) (\lam x => *r_*q *> *q-comm-left *> pmap (`* b) (inv *r_*q)) r
-
-  \lemma *r-comm-right {r : Real} {a b : E} : r *r (a * b) = a * (r *r b)
-    => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (*-locally-uniform ∘ tuple (const a) (*r-cover ∘ tuple id (const b))) (\lam x => *r_*q *> *q-comm-right *> pmap (a *) (inv *r_*q)) r
-
   \lemma norm-square {x : E} (p : norm (1 - x) <= RatField.ide) : IsSquare x
     => inP (sqrt x p, sqrt.isSquare)
 
   \lemma norm-square' {x : E} (p : norm x <= RatField.ide) : IsSquare (1 - x)
     => norm-square (simplify p)
-
-  \lemma *r_>=0-square {r : Real} {a : E} (r>=0 : 0 <= r) (as : IsSquare a) : IsSquare (r *r a) \elim as
-    | inP (b,bb=a) => inP (sqrtR r *r b, inv *r-comm-left *> pmap (_ *r) (inv *r-comm-right) *> inv toRealModule.*c-assoc *> pmap2 (*r) (pow_sqrt r>=0) bb=a)
-
-  \lemma *q_>=0-square {q : Rat} {a : E} (q>=0 : 0 <= q) (as : IsSquare a) : IsSquare (q *q a)
-    => transport IsSquare *r_*q $ *r_>=0-square (rat_real_<=.1 q>=0) as
 } \where \protected {
   \open CoverMap
   \open ProductCoverSpace

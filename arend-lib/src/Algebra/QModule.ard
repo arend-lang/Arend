@@ -96,24 +96,34 @@
 \lemma func-*q {A B : QModule} {f : AddGroupHom A B} {q : Rat} {a : A} : f (q A.*q a) = q B.*q f a
   => pmap f (\peval _ A.*q _) *> f.func-*i *> pmap (_ B.*i) (inv $ B.ud-unique $ inv f.func-*n *> pmap f A.ud-cond) *> inv (\peval _ B.*q _)
 
-\class QAlgebra \extends QModule, Ring {
+\class QPseudoAlgebra \extends QModule, PseudoRing {
   \lemma *q-comm-left {r : Rat} {a b : E} : r *q (a * b) = r *q a * b
     => inv $ func-*q {_} {_} {*-addGroupHom-right}
 
   \lemma *q-comm-right {r : Rat} {a b : E} : r *q (a * b) = a * (r *q b)
     => inv $ func-*q {_} {_} {*-addGroupHom-left}
 
+  \lemma *q-square {q : Rat} {a : E} (qs : RatField.IsSquare q) (as : IsSquare a) : IsSquare (q *q a) \elim qs, as
+    | inP (r,rr=q), inP (b,bb=a) => inP (r *q b, inv *q-comm-left *> pmap (r *q) (inv *q-comm-right) *> inv *q-assoc *> pmap2 (*q) rr=q bb=a)
+
+  \func toRatAlgebra : PseudoAlgebra RatField \cowith
+    | LModule => toRatModule
+    | PseudoRing => \this
+    | *c-comm-left => *q-comm-left
+    | *c-comm-right => *q-comm-right
+} \where {
+  \func fromRatAlgebra (R : PseudoAlgebra RatField) : QPseudoAlgebra \cowith
+    | QModule => QModule.fromRatModule R
+    | PseudoRing => R
+}
+
+\class QAlgebra \extends QPseudoAlgebra, Ring {
   \lemma natCoef_*_*q {n : Nat} {a : E} : natCoef n * a = n *q a
     => natCoef_*_*n *> inv *q_*n
 
   \func toRatAlgebra : AAlgebra RatField \cowith
-    | LModule => toRatModule
+    | PseudoAlgebra => QPseudoAlgebra.toRatAlgebra
     | Ring => \this
-    | *c-comm-left => *q-comm-left
-    | *c-comm-right => *q-comm-right
-
-  \lemma *q-square {q : Rat} {a : E} (qs : RatField.IsSquare q) (as : IsSquare a) : IsSquare (q *q a) \elim qs, as
-    | inP (r,rr=q), inP (b,bb=a) => inP (r *q b, inv *q-comm-left *> pmap (r *q) (inv *q-comm-right) *> inv *q-assoc *> pmap2 (*q) rr=q bb=a)
 } \where {
     \func fromRatAlgebra (R : AAlgebra RatField) : QAlgebra \cowith
       | QModule => QModule.fromRatModule R

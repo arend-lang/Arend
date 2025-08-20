@@ -57,8 +57,18 @@
     | 0 => pmap (`* a) natCoefZero *> zro_*-left
     | suc n => pmap (`* a) (natCoefSuc n) *> rdistr *> pmap2 (+) natCoef_*_*n ide-left
 
+  \lemma natCoef_*_*n-right {n : Nat} {a : E} : a * natCoef n = n *n a \elim n
+    | 0 => pmap (a *) natCoefZero *> zro_*-right
+    | suc n => pmap (a *) (natCoefSuc n) *> ldistr *> pmap2 (+) natCoef_*_*n-right ide-right
+
   \lemma natCoef_*n {n : Nat} : natCoef n = n *n 1
     => inv ide-right *> natCoef_*_*n
+
+  \lemma *n-comm-left {n : Nat} {a b : E} : n *n (a * b) = (n *n a) * b
+    => inv natCoef_*_*n *> inv *-assoc *> pmap (`* b) natCoef_*_*n
+
+  \lemma *n-comm-right {n : Nat} {a b : E} : n *n (a * b) = a * (n *n b)
+    => inv natCoef_*_*n-right *> *-assoc *> pmap (a *) natCoef_*_*n-right
 
   \lemma natCoef_+ {n m : Nat} : natCoef (n Nat.+ m) = natCoef n + natCoef m \elim m
     | 0 => inv (pmap (_ +) natCoefZero *> zro-right)

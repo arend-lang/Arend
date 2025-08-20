@@ -45,6 +45,10 @@
   \lemma <=_+-positive {a b : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) : 0 <= a + b
     => transport (`<= _) zro-left $ <=_+ a>=0 b>=0
 
+  \lemma *n_<= {n : Nat} {a b : E} (a<=b : a <= b) : n *n a <= n *n b \elim n
+    | 0 => <=-refl
+    | suc n => <=_+ (*n_<= a<=b) a<=b
+
   \lemma *n_>=0 {n : Nat} {a : E} (a>=0 : 0 <= a) : 0 <= n *n a \elim n
     | 0 => <=-refl
     | suc n => <=_+-positive (*n_>=0 a>=0) a>=0
@@ -302,6 +306,18 @@
 
   \lemma abs_-_< {x y z : E} (p : x - y < z) (q : y - x < z) : abs (x - y) < z
     => <_join-univ p (simplify q)
+
+  \lemma abs_*n {n : Nat} {x : E} : n *n abs x = abs (n *n x)
+    => <=-antisymmetric (<=_+-cancel-right ((NatSemiring.pow 2 n -' n) *n abs x) $ =_<= (inv *n-rdistr) <=∘ =_<= (pmap (`*n _) (<=_exists $ NatSemiring.<=-less id<pow2) *> power *> pmap abs (pmap (`*n x) (inv $ <=_exists $ NatSemiring.<=-less id<pow2) *> *n-rdistr)) <=∘ abs_+ <=∘ <=_+ <=-refl abs_*n_<=) abs_*n_<=
+    \where {
+      \private \lemma power {k : Nat} {x : E} : NatSemiring.pow 2 k *n abs x = abs (NatSemiring.pow 2 k *n x) \elim k
+        | 0 => zro-left *> pmap abs (inv zro-left)
+        | suc k => *n-rdistr *> pmap2 (+) power power *> <=-antisymmetric (=_<= join_+-left <=∘ join-univ (=_<= join_+-right <=∘ join-univ abs>=id (=_<= negative-left <=∘ abs>=0)) (=_<= join_+-right <=∘ join-univ (=_<= negative-right <=∘ abs>=0) (=_<= (inv negative_+) <=∘ abs>=neg))) abs_+ *> pmap abs (inv *n-rdistr)
+
+      \private \lemma abs_*n_<= {n : Nat} {x : E} : abs (n *n x) <= n *n abs x \elim n
+        | 0 => =_<= abs_zro
+        | suc n => abs_+ <=∘ <=_+ abs_*n_<= <=-refl
+    }
 }
 
 \class OrderedSemiring \extends Semiring, OrderedAbMonoid {

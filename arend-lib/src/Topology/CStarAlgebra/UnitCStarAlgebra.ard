@@ -1,0 +1,51 @@
+{- | The construction of {UnitC*Algebra} is taken from
+     [1] Simon Henry, Constructive Gelfand Duality for non-unital commutative C*-algebras, 2014, https://arxiv.org/abs/1412.2009
+ -}
+
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.QModule
+\import Algebra.Ring
+\import Algebra.Ring.UnitAlgebra
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.BanachAlgebra
+\import Topology.BanachSpace
+\import Topology.NormedAbGroup
+\import Topology.StoneCStarAlgebra
+\import Topology.NormedRing
+
+\instance UnitC*Algebra (A : C*PseudoAlgebra) : StoneC*Algebra (\Sigma Real A)
+  | Ring => UnitAlgebra RealField A.toRealAlgebra
+  | *-comm => ext (RealField.*-comm, equation.abGroup $ A.toZero A.*-comm)
+  | isDivisible x n/=0 => \case RealStoneC*Algebra.isDivisible x.1 n/=0, A.isDivisible x.2 n/=0 \with {
+    | inP (y,ny=x1), inP (b,nb=x2) => inP ((y,b), UnitAlgebra.*n-comm *> pmap2 (__,__) ny=x1 nb=x2)
+  }
+  | norm (a,x) => RealAbGroup.abs a ExUpperRealLattice.∨ Join \lam (s : \Sigma (y : A) (norm y <= 1)) => norm (a A.*r s.1 + x * s.1)
+  | norm_zro => <=-antisymmetric
+    (join-univ (Real.<=-upper.1 $ =_<= {RealAbGroup} RealAbGroup.abs_zro) $ Join-univ \lam s => =_<= $ pmap norm (pmap2 (+) A.toRealModule.*c_zro-left A.zro_*-left *> zro-right) *> norm_zro)
+    (Real.<=-upper.1 RealAbGroup.abs>=0 <=∘ ExUpperRealLattice.join-left)
+  | norm_negative => pmap2 (__ ∨ Join __) RealStoneC*Algebra.norm_negative $ ext \lam s => pmap norm (pmap2 (+) A.toRealModule.*c_negative-left A.negative_*-left *> +-comm *> inv A.negative_+) *> norm_negative
+  | norm_+ => join-univ (transport (_ ExUpperReal.<=) RealAbGroup.+-upper (later $ Real.<=-upper.1 RealAbGroup.abs_+) <=∘ <=_+ join-left join-left) $
+    Join-univ \lam s => =_<= (pmap norm $ pmap2 (+) A.toRealModule.*c-rdistr A.rdistr *> equation.abMonoid) <=∘ norm_+ <=∘ <=_+ (Join-cond s <=∘ join-right) (Join-cond s <=∘ join-right)
+  | norm_*n_>= {n} {x} => =_<= $ inv (ExUpperRealSemigroup.*n_* (later (Real.<=-upper.1 RealAbGroup.abs>=0) <=∘ join-left) $ ExUpperReal.join-bounded U-inh \case (RealAbGroup.abs x.1).U-inh, norm-bounded x.2 \with {
+    | inP (B1,|x1|<B1), inP (B2,|x2|<B2) => inP (B1 + B2 + 1, inP $ later (B1 + B2, linarith, \lam s => norm_+ $ ExUpperReal.+_U_<=.2 $ inP (B1, (=_<= A.norm_*r <=∘ ExUpperRealSemigroup.<=_* <=-refl s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ Real.<=-upper.1 RealAbGroup.abs>=0)) |x1|<B1, B2, (norm_*_<= <=∘ ExUpperRealSemigroup.<=_* <=-refl s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right norm>=0)) |x2|<B2, <=-refl)))
+  }) *> ExUpperRealLattice.*n_join *> pmap2 (∨) (inv RealAbGroup.*n-upper *> RealAbGroup.abs_*n *> pmap RealAbGroup.abs (inv UnitAlgebra.*n-comm1)) (ExUpperRealLattice.*n_Join' (inP $ later (A.zro, transportInv (`<= _) norm_zro $ <=-less ExUpperRealAbMonoid.zro<ide)) *> ExUpperRealLattice.Join_= \lam s => inv A.norm_*n-comm *> pmap norm (A.*n-ldistr *> pmap2 (+) (inv A.*r_*n *> inv A.toRealAlgebra.*c-assoc *> pmap (A.`*r _) (RealField.natCoef_*_*n *> inv (UnitAlgebra.*n-comm1 {_} {A.toRealAlgebra}))) (A.*n-comm-left *> pmap (`* _) (inv $ UnitAlgebra.*n-comm2 {_} {A.toRealAlgebra}))))
+  | norm_*_<= => join-univ (transportInv (`<= _) (RealField.abs_* *> RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0) $ ExUpperRealSemigroup.<=_* join-left join-left) $
+    Join-univ \lam s => {?}
+  | norm_ide_<= => join-univ RealStoneC*Algebra.norm_ide_<= $ Join-univ \lam s => =_<= (pmap norm $ pmap2 (+) A.toRealModule.ide_*c A.zro_*-left *> zro-right) <=∘ s.2
+  | norm-ext => {?}
+  | isCompleteMetric => {?}
+  | c*-sum => {?}
+  | c*-square => {?}

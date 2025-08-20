@@ -94,6 +94,9 @@
   | coef_<-inv p => \case real_<-rat-char.1 p \with {
     | inP (a,x<a,a<y) => x<a <∘ a<y
   }
+  | natCoef n => Real.fromRat (natCoef n)
+  | natCoefZero => pmap Real.fromRat natCoefZero
+  | natCoefSuc n => pmap Real.fromRat (natCoefSuc n) *> inv RealAbGroup.+-rat
   \where {
     \open Semigroup(* \as \infixl 7 *')
     \open CoverMap
