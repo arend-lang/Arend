@@ -142,11 +142,19 @@
     }
 }
 
-\class C*PseudoAlgebra \extends RealBanachPseudoAlgebra, CRing
+\class StoneC*PseudoAlgebra \extends RealBanachPseudoAlgebra, CRing {
   | c*-sum {a b : E} : norm (a * a) ExUpperReal.<= norm (a * a + b * b)
   | c*-square {a : E} : norm a ExUpperReal.* norm a ExUpperReal.<= norm (a * a)
 
-\class StoneC*Algebra \extends C*PseudoAlgebra, RealBanachAlgebra, OrderedC*Algebra {
+  \lemma norm_*-char {x : E} : norm x = Join \lam (s : \Sigma (y : E) (norm y <= ExUpperRealPointed.ide)) => norm (x * s.1)
+    => <=-antisymmetric (\lam {b} (inP (a,a<b,f)) =>
+      \have a>0 => norm>=0 $ f (0, =_<= norm_zro <=∘ <=-less ExUpperRealAbMonoid.zro<ide)
+      \in ExUpperRealSemigroup.square-bound-div (norm-bounded x) (<=-less a>0) (ExUpperRealSemigroup.finv_<=-rotate-right a>0 \lam {c} |x|<c =>
+        \have |xx|<ca => ExUpperRealSemigroup.finv_<-rotate-right (norm>=0 |x|<c) $ transport (ExUpperRealAbMonoid.`< a) (norm_*q-ofPos $ <=-less $ RatField.finv>0 $ norm>=0 |x|<c) $ transportInv (norm __ < a) toRatAlgebra.*c-comm-right $ ExUpperRealAbMonoid.<-rat.2 $ f (RatField.finv c *q x, <=-less $ transportInv (`< _) (norm_*q-ofPos $ <=-less $ RatField.finv>0 $ norm>=0 |x|<c) $ ExUpperRealSemigroup.finv_<-rotate-left (norm>=0 |x|<c) ExUpperRealAbMonoid.zro<ide $ transportInv (_ <) (ExUpperRealSemigroup.ide-right $ <=-less $ ExUpperRealAbMonoid.<-rat.2 $ norm>=0 |x|<c) $ ExUpperRealAbMonoid.<-rat.2 |x|<c)
+        \in ExUpperRealAbMonoid.<-rat.1 $ ExUpperRealSemigroup.finv_<-rotate-left a>0 (ExUpperRealAbMonoid.<-rat.2 $ norm>=0 |x|<c) $ transport (_ <) ExUpperRealSemigroup.*-comm $ c*-square <∘r |xx|<ca) a<b) $ Join-univ \lam s => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* <=-refl s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right norm>=0)
+}
+
+\class StoneC*Algebra \extends StoneC*PseudoAlgebra, RealBanachAlgebra, OrderedC*Algebra {
   | <= => StoneC*Algebra.<=
   | <=-refl => inP (0, zro_*-right *> inv negative-right)
   | <=-transitive y-x-sq z-y-sq => transport IsSquare simplify (square-sum c*-sum z-y-sq y-x-sq)

@@ -5,6 +5,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Algebra.QModule
 \import Algebra.Ring
 \import Algebra.Ring.UnitAlgebra
@@ -26,7 +27,7 @@
 \import Topology.StoneCStarAlgebra
 \import Topology.NormedRing
 
-\instance UnitC*Algebra (A : C*PseudoAlgebra) : StoneC*Algebra (\Sigma Real A)
+\instance UnitC*Algebra (A : StoneC*PseudoAlgebra) : StoneC*Algebra (\Sigma Real A)
   | Ring => UnitAlgebra RealField A.toRealAlgebra
   | *-comm => ext (RealField.*-comm, equation.abGroup $ A.toZero A.*-comm)
   | isDivisible x n/=0 => \case RealStoneC*Algebra.isDivisible x.1 n/=0, A.isDivisible x.2 n/=0 \with {
@@ -45,7 +46,9 @@
   | norm_*_<= => join-univ (transportInv (`<= _) (RealField.abs_* *> RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0) $ ExUpperRealSemigroup.<=_* join-left join-left) $
     Join-univ \lam s => {?}
   | norm_ide_<= => join-univ RealStoneC*Algebra.norm_ide_<= $ Join-univ \lam s => =_<= (pmap norm $ pmap2 (+) A.toRealModule.ide_*c A.zro_*-left *> zro-right) <=∘ s.2
-  | norm-ext => {?}
+  | norm-ext {x} p =>
+    \have x1=0 => RealAbGroup.abs_zro-ext $ RealAbGroup.<=-antisymmetric ((Real.<=-upper {_} {0}).2 $ join-left <=∘ =_<= p) RealAbGroup.abs>=0
+    \in ext (x1=0, norm-ext $ <=-antisymmetric (=_<= A.norm_*-char <=∘ Join-univ \lam s => =_<= (pmap norm $ inv $ pmap (`+ _) (pmap (RealBanachSpace.`*r _) x1=0 *> A.toRealAlgebra.*c_zro-left) *> zro-left) <=∘ Join-cond s <=∘ join-right <=∘ =_<= p) norm>=0)
   | isCompleteMetric => {?}
   | c*-sum => {?}
   | c*-square => {?}
