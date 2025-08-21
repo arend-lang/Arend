@@ -15,13 +15,13 @@
 \lemma zeroTest {R : Ring} (a b c d : R) : a + a * -1 = 0
   => equation.ring
 
-\lemma ringArgTest1 {R : Ring} (a b : R) (p : -1 * (a * b) + b * a = 0) : (a + b) * (a - b) = a * a - b * b
+\lemma ringArgTest1 {R : Ring} (a b : R) (p : negative (a * b) + b * a = 0) : (a + b) * (a - b) = a * a - b * b
   => equation.ring p
 
 \lemma ringArgTest2 {R : Ring} (a : R) (p : 1 + a = 0) : a + 1 = 0
   => equation.ring p
 
-\lemma ringForwardTest {R : Ring} (a b : R) (p : (a + b) * (a - b) = a * a - b * b) : -1 * (a * b) + b * a = 0
+\lemma ringForwardTest {R : Ring} (a b : R) (p : (a + b) * (a - b) = a * a - b * b) : negative (a * b) + b * a = 0
   => equation.ring in p
 
 \lemma ringProofTest1 {R : Ring} (a b : R) (p : a * b = b * a) : (a + b) * (a - b) = a * a - b * b

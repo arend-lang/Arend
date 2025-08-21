@@ -204,7 +204,7 @@ public abstract class BaseAlgebraEquationMeta extends BaseEquationMeta<List<Mono
     }
 
     ConcreteExpression result = NonCommutativeMonoidEquationMeta.nfToConcreteTerm(monomial.elements(), values, instance, factory, ide.getRef(), mul.getRef());
-    return monomial.coefficient().equals(BigInteger.ONE) ? result : factory.app(factory.ref(mul.getRef()), true, numberToConcrete(monomial.coefficient(), factory), result);
+    return monomial.coefficient().equals(BigInteger.ONE) ? result : monomial.coefficient().equals(BigInteger.ONE.negate()) ? factory.app(factory.ref(getNegative().getRef()), true, result)  : factory.app(factory.ref(mul.getRef()), true, numberToConcrete(monomial.coefficient(), factory), result);
   }
 
   @Override

@@ -18,16 +18,16 @@
   | NF => NF Int
   | normalize => normalize
   | interpret env => interpret env
-  | interpretNF env nf => (RingData env).interpretNF (sortMonomials nf)
-  | interpretNF-consistent {_} {env} {_} => (RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env} *> normalize-consistent
+  | interpretNF env nf => ringInterpretNF env (sortMonomials nf)
+  | interpretNF-consistent {_} {env} {_} => ringInterpretNF-correct *> (RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env} *> normalize-consistent
   \where {
-    \lemma terms-equality (env : Array R) (t s : Term Int env.len) (p : (RingData env).interpretNF (sortMonomials (normalize (t :+ :negative s))) = 0) : interpret env t = interpret env s
-      => RingSolverModel.terms-equality env t s $ (RingData env).interpretNF-correct *> inv ((RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env}) *> p
+    \lemma terms-equality (env : Array R) (t s : Term Int env.len) (p : ringInterpretNF env (sortMonomials (normalize (t :+ :negative s))) = 0) : interpret env t = interpret env s
+      => RingSolverModel.terms-equality env t s $ ringInterpretNF-correct *> (RingData env).interpretNF-correct *> inv ((RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env}) *> inv ringInterpretNF-correct *> p
 
-    \lemma terms-equality-conv (env : Array R) (t s : Term Int env.len) (p : interpret env t = interpret env s) : (RingData env).interpretNF (sortMonomials (normalize (t :+ :negative s))) = 0
-      => (RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env} *> inv (RingData env).interpretNF-correct *> RingSolverModel.terms-equality-conv env t s p
+    \lemma terms-equality-conv (env : Array R) (t s : Term Int env.len) (p : interpret env t = interpret env s) : ringInterpretNF env (sortMonomials (normalize (t :+ :negative s))) = 0
+      => ringInterpretNF-correct *> (RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env} *> inv (RingData env).interpretNF-correct *> inv ringInterpretNF-correct *> RingSolverModel.terms-equality-conv env t s p
 
     \lemma apply-axioms (env : Array R) (l : Array (\Sigma (NF Int env.len) (t s : Term Int env.len) (p : interpret env t = interpret env s))) (add : NF Int env.len)
-      : (RingData env).interpretNF (sortMonomials (Big (++) add (map (\lam s => multiply s.1 (normalize (s.2 :+ :negative s.3))) l))) = (RingData env).interpretNF' add
-      => (RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env} *> inv (RingData env).interpretNF-correct *> RingSolverModel.apply-axioms env l add
+      : ringInterpretNF env (sortMonomials (Big (++) add (map (\lam s => multiply s.1 (normalize (s.2 :+ :negative s.3))) l))) = ringInterpretNF' add
+      => ringInterpretNF-correct *> (RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env} *> inv (RingData env).interpretNF-correct *> inv ringInterpretNF-correct *> RingSolverModel.apply-axioms env l add
   }
