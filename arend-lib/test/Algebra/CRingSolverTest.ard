@@ -21,6 +21,9 @@
 \lemma commRingArgTest2 {R : CRing} (a : R) (p : negative a = 0) : 0 = a
   => equation.cRing p
 
+\lemma commRingArgTest3 {R : CRing} (a b : R) (p : a * a - 2 * (a * b) = 0) : (a - b) * (a - b) = b * b
+  => equation.cRing p
+
 \lemma commRingForwardTest {R : CRing} (a b : R) (p : (a + b) * (a + b) = a * a + b * b) : 2 * (a * b) = 0
   => equation.cRing in p
 

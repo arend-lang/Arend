@@ -21,6 +21,9 @@
 \lemma ringArgTest2 {R : Ring} (a : R) (p : 1 + a = 0) : a + 1 = 0
   => equation.ring p
 
+\lemma ringArgTest3 {R : Ring} (a : R) (p : negative (2 * a) = 0) : 0 = a + a
+  => equation.ring p
+
 \lemma ringForwardTest {R : Ring} (a b : R) (p : (a + b) * (a - b) = a * a - b * b) : negative (a * b) + b * a = 0
   => equation.ring in p
 

@@ -69,15 +69,12 @@
     \func RingData (env : Array R) : Data R IntRing IntRing intMap' env \cowith
       | alg-comm x a => inv (pmap (`* a) intCoef-correct) *> intComm x a *> pmap (a *) intCoef-correct
 
-    \func ringMulCoef {env : Array R} (c : Int) (l : List (Fin env.len)) : R \elim l
-      | nil => intMap' c
-      | l => \case decideEq c -1 \with {
-        | yes _ => negative (MonoidSolverModel.interpretNF env l)
-        | no _ => \case decideEq c 1 \with {
-          | yes _ => MonoidSolverModel.interpretNF env l
-          | no _ => intMap' c * MonoidSolverModel.interpretNF env l
-        }
-      }
+    \func signMulCoef (c : Int) (r : R) : R \elim c
+      | pos _ => r
+      | neg (suc _) => negative r
+
+    \func ringMulCoef {env : Array R} (c : Int) (l : List (Fin env.len)) : R
+      => signMulCoef c $ (RingData env).mulCoef (iabs c) l
 
     \func ringInterpretNF' {env : Array R} (l : SemiringSolverModel.NF Int env.len) : R \elim l
       | nil => 0
@@ -86,12 +83,9 @@
 
     \func ringInterpretNF (env : Array R) (l : SemiringSolverModel.NF Int env.len) => ringInterpretNF' (remove0 (collapse (Sort.RedBlack.sort l)))
 
-    \lemma ringMulCoef-correct {env : Array R} {c : Int} {l : List (Fin env.len)} : ringMulCoef c l = (RingData env).mulCoef c l \elim l
-      | nil => idp
-      | a :: l => mcases {1} \with {
-        | yes c=-1 => rewrite (decideEq/=_reduce {IntRing} {c} {1} \lam c=1 => \case inv c=1 *> c=-1 \with {}, c=-1) $ inv $ R.negative_*-left *> pmap negative ide-left
-        | no _ => idp
-      }
+    \lemma ringMulCoef-correct {env : Array R} {c : Int} {l : List (Fin env.len)} : ringMulCoef c l = (RingData env).mulCoef c l \elim c
+      | pos n => idp
+      | neg (suc n) => pmap negative (RingData env).mulCoef-consistent *> inv R.negative_*-left *> pmap (`* _) (inv $ intMap'.func-negative {suc n}) *> inv (RingData env).mulCoef-consistent
 
     \lemma ringInterpretNF-correct {env : Array R} {l : SemiringSolverModel.NF Int env.len} : ringInterpretNF' l = (RingData env).interpretNF' l \elim l
       | nil => idp
