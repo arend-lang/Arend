@@ -16,6 +16,7 @@
 \import Arith.Real.Field
 \import Arith.Real.Root
 \import Arith.Real.UpperReal
+\import Arith.Real.UpperRealLattice
 \import Data.Or
 \import Function.Meta
 \import Logic
@@ -112,7 +113,7 @@
     | norm_*_<= {x} {y} {d} |x||y|<d => \case ExUpperReal.*_U.1 |x||y|<d \with {
       | inP (a, inP (a',a'<a,a'>0,x<=a',-x<=a'), a>0, b, inP (b',b'<b,b'>0,y<=b',-y<=b'), b>0, ab<d) =>
         \have lem {x} (x<=a' : x <= a' *q 1) (-x<=a' : negative x <= a' *q 1) => transportInv (_ <=) *q-assoc $ <=_*q-rotate-right a'>0 $ transportInv (`<= _) *q-comm-left $ <=_*q-rotate-right b'>0 $ transportInv (`<= _) *q-comm-right $ c*-<=_* (<=_*q-rotate-left a'>0 x<=a') (transport (`<= _) toRatModule.*c_negative-right $ <=_*q-rotate-left a'>0 -x<=a') (<=_*q-rotate-left b'>0 y<=b') (transport (`<= _) toRatModule.*c_negative-right $ <=_*q-rotate-left b'>0 -y<=b')
-        \in inP (a' RatField.* b', RatField.<_*_positive-left a'<a b'>0 <∘ RatField.<_*_positive-right (a'>0 <∘ a'<a) b'<b <∘ ab<d, RatField.<_*_positive_positive a'>0 b'>0, lem x<=a' -x<=a', transport (`<= _) negative_*-left $ lem -x<=a' $ transportInv (`<= _) negative-isInv x<=a')
+        \in inP (a' RatField.* b', RatField.<_* a'>0 b'>0 a'<a b'<b <∘ ab<d, RatField.<_*_positive_positive a'>0 b'>0, lem x<=a' -x<=a', transport (`<= _) negative_*-left $ lem -x<=a' $ transportInv (`<= _) negative-isInv x<=a')
     }
     | norm_ide_<= b>1 => inP (1, b>1, idp, transportInv (1 <=) ide_*q <=-refl, transportInv (_ <=) ide_*q $ negative<=0 zro<=ide <=∘ zro<=ide)
 
@@ -123,17 +124,11 @@
     => \lam {d} (inP (c,c<d,c>0,aa+bb<=c,_)) => inP (c, c<d, c>0, =_<= (inv zro-right) <=∘ <=_+ <=-refl c*-square-positive <=∘ aa+bb<=c, negative<=0 c*-square-positive <=∘ *q_>=0 (<=-less c>0) zro<=ide)
 
   \lemma toBanach_c*-square {a : E} : toBanach.norm a ExUpperRealSemigroup.* toBanach.norm a ExUpperReal.<= toBanach.norm (a * a)
-    => \lam {d} (inP (c,c<d,c>0,aa<=c,_)) => \case real_<-char.1 $ sqrt-monotone {c} {d} (<=-less $ rat_real_<.1 c>0) (rat_real_<.1 c<d) \with {
-      | inP (q,sc<q,q<sd) =>
-        \have | |a|<q : (toBanach.norm a).U q => \case real_<-char.1 sc<q \with {
-                | inP (r,sc<r,r<q) =>
-                  \have | r>0 => rat_real_<.2 (sqrt>=0 <∘r sc<r)
-                        | aa<=rr => aa<=c <=∘ <=_*q-left (rat_real_<=.2 $ =_<= (inv $ pow_sqrt $ <=-less $ rat_real_<.1 c>0) RealAbGroup.<=∘ RealField.<=_*_positive-left (<=-less sc<r) sqrt>=0 RealAbGroup.<=∘ transport (_ RealAbGroup.<=) RealField.*-rat (RealField.<=_*_positive-right (<=-less $ rat_real_<.1 r>0) (<=-less sc<r))) zro<=ide
-                  \in inP (r, rat_real_<.2 r<q, rat_real_<.2 $ sqrt>=0 <∘r sc<r, <=-square r>0 aa<=rr, <=-square_negative r>0 aa<=rr)
-              }
-              | d>0 => rat_real_<.1 (c>0 <∘ c<d)
-              | q>0 : 0 < q => rat_real_<.2 $ sqrt>=0 <∘r sc<q
-        \in ExUpperReal.*_U.2 $ inP (q, |a|<q, q>0, q, |a|<q, q>0, rat_real_<.2 $ transport2 (RealAbGroup.<) RealField.*-rat (pow_sqrt $ <=-less d>0) $ RealField.<_*_positive-left q<sd (rat_real_<.1 q>0) <∘ RealField.<_*_positive-right (sqrt>0 d>0) q<sd)
+    => \lam {d} (inP (c,c<d,c>0,aa<=c,_)) => \case sqrt-rat (<=-less c>0) c<d \with {
+      | inP (q,r,q>0,q<r,c<qq,rr<d) =>
+        \have | aa<=qq : a * a <= q RatField.* q *q ide => aa<=c <=∘ <=_*q-left (<=-less c<qq) zro<=ide
+              | |a|<r : (toBanach.norm a).U r => inP (q, q<r, q>0, <=-square q>0 aa<=qq, <=-square_negative q>0 aa<=qq)
+        \in ExUpperReal.*_U.2 $ inP (r, |a|<r, q>0 <∘ q<r, r, |a|<r, q>0 <∘ q<r, rr<d)
     }
 
   \lemma *q-upperBound (a : E) : ∃ (q : Rat) (0 < q) (a <= q *q ide)

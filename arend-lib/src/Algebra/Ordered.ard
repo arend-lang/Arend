@@ -344,6 +344,9 @@
   \lemma <_*_negative_positive {x y : E} (x<0 : x < 0) (y>0 : 0 < y) : x * y < 0
     => transport (_ <) zro_*-left (<_*_positive-left x<0 y>0)
 
+  \lemma <_* {a b c d : E} (a>0 : 0 < a) (c>0 : 0 < c) (a<b : a < b) (c<d : c < d) : a * c < b * d
+    => <_*_positive-left a<b c>0 <∘ <_*_positive-right (a>0 <∘ a<b) c<d
+
   \lemma pow>0 {a : E} (p : 0 < a) {k : Nat} : 0 < pow a k \elim k
     | 0 => zro<ide
     | suc k => <_*_positive_positive (pow>0 p) p

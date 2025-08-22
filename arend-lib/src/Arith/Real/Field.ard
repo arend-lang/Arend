@@ -123,6 +123,10 @@
     \lemma *-rat {x y : Rat} : x * y = {Real} x *' y
       => (\peval x * y) *> dense-lift-char (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding) {rat_real ∘ *-rat-locally-uniform} (x,y)
 
+    \lemma pow-rat {x : Rat} {n : Nat} : RealField.pow x n = {Real} RatField.pow x n \elim n
+      | 0 => idp
+      | suc n => pmap (`* x) pow-rat *> *-rat
+
     \lemma *_>=0-char {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {d : Rat} : (x * y).U d <-> ∃ (a : x.U) (b : y.U) (a *' b <= d)
       => (\lam xy<d => \case y.LU-located {0} {1} idp \with {
         | byLeft y>0 => *_>0-char2 x>=0 (real_<_L.2 y>0) xy<d
@@ -168,8 +172,7 @@
                    (h (Real.LU-less c1<x x<d1', d1'<d1) (Real.LU-less c2<y y<d2', d2'<d2)).2 <∘ b'<d)
           }, \lam (inP (a,b,a',b',a>0,a'>0,(a<x,x<b),(a'<y,y<b'),c<aa',bb'<d)) => \case isDense c<aa', isDense bb'<d \with {
             | inP (c',c<c',c'<aa'), inP (d',bb'<d',d'<d) => inP (c', d', a, b, a', b', c<c', d'<d, a<x, x<b, a'<y, y<b', \lam (a<x',x'<b) (a'<y',y'<b') =>
-                (c'<aa' <∘ <_*_positive-left a<x' a'>0 <∘ <_*_positive-right (a>0 <∘ a<x') a'<y',
-                 <_*_positive-left x'<b (a'>0 <∘ a'<y') <∘ <_*_positive-right (a>0 <∘ a<x' <∘ x'<b) y'<b' <∘ bb'<d'))
+                (c'<aa' <∘ RatField.<_* a>0 a'>0 a<x' a'<y', RatField.<_* (a>0 <∘ a<x') (a'>0 <∘ a'<y') x'<b y'<b' <∘ bb'<d'))
           })
 
     \lemma *_positive-L {x y : Real} (x>0 : x.L 0) (y>0 : y.L 0) {c : Rat} : LowerReal.L {x * y} c <-> ∃ (a a' : Rat) (0 < a) (0 < a') (x.L a) (y.L a') (c < a *' a')

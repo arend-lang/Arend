@@ -14,6 +14,8 @@
 \import Equiv
 \import Function.Meta
 \import Logic
+\import Logic.Meta
+\import Meta
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
@@ -66,6 +68,14 @@
 \lemma root>0 {n : Nat} (n/=0 : n /= 0) {x : Real} (x>0 : 0 < x) : 0 < root n x
   => transport (`< _) root_zro (root-monotone n/=0 <=-refl x>0)
 
+\lemma root-rat {n : Nat} (n/=0 : n /= 0) {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < pow q n) (pow r n < b)
+  => \case real_<-char.1 $ root-monotone n/=0 (rat_real_<=.1 a>=0) (rat_real_<.1 a<b) \with {
+    | inP (q,a'<q,q<b') => \case real_<-char.1 q<b' \with {
+      | inP (r,q<r,r<b') => inP (q, r, rat_real_<.2 $ root>=0 <∘r a'<q, rat_real_<.2 q<r, rat_real_<.2 $ transport2 (<) (pow_root n/=0 $ rat_real_<=.1 a>=0) RealField.pow-rat $ RealField.pow_<-monotone n/=0 root>=0 a'<q,
+                                 rat_real_<.2 $ transport2 (<) RealField.pow-rat (pow_root n/=0 $ rat_real_<=.1 $ a>=0 <=∘ <=-less a<b) $ RealField.pow_<-monotone n/=0 (<=-less $ root>=0 <∘r a'<q <∘ q<r) r<b')
+    }
+  }
+
 \sfunc sqrt (x : Real) => root 2 x
 
 \lemma sqrt>=0 {x : Real} : 0 <= sqrt x
@@ -88,3 +98,8 @@
 
 \lemma sqrt>0 {x : Real} (x>0 : 0 < x) : 0 < sqrt x
   => transportInv (0 <) (\peval sqrt x) (root>0 suc/=0 x>0)
+
+\lemma sqrt-rat {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < q * q) (r * r < b)
+  => \case root-rat {2} suc/=0 a>=0 a<b \with {
+    | inP (q,r,q>0,q<r,a<qq,rr<b) => inP (q, r, q>0, q<r, rewrite ide-left in a<qq, rewrite ide-left in rr<b)
+  }

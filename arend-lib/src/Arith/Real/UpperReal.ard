@@ -7,7 +7,6 @@
 \import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
-\import Data.Bool
 \import Data.Or
 \import Function.Meta
 \import Logic
@@ -439,40 +438,6 @@
           | 0 => transportInv (x <= q RatField.+ __) RatField.ide-right x<=q+e
           | suc n => rewriteI RatField.*-assoc $ step (RatField.<=_*_positive_positive e>=0 $ RatField.pow>=0 rat_<=-dec) (aux e>=0 x<=q+e n)
       }
-  }
-
-\instance ExUpperRealLattice : CompleteLattice ExUpperReal
-  | Order.Lattice.Lattice => ExUpperRealAbMonoid
-  | Meet {J : \Set} (g : J -> ExUpperReal) : ExUpperReal \cowith {
-    | U q => ∃ (j : J) ((g j).U q)
-    | U-closed (inP (j,gj<q)) q<q' => inP (j, U-closed gj<q q<q')
-    | U-rounded (inP (j,gj<q)) => \case U-rounded gj<q \with {
-      | inP (r,gj<r,r<q) => inP (r, inP (j,gj<r), r<q)
-    }
-  }
-  | Meet-cond j fj<b => inP (j,fj<b)
-  | Meet-univ c (inP (j,fj<b)) => c j fj<b
-  | Join {J : \Set} (g : J -> ExUpperReal) : ExUpperReal \cowith {
-    | U q => ∃ (r : `< q) ∀ (j : J) ((g j).U r)
-    | U-closed (inP (r,r<q,c)) q<q' => inP (r, r<q <∘ q<q', c)
-    | U-rounded {q} (inP (r,r<q,c)) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, c), RatField.mid<right r<q)
-  }
-  | Join-cond j (inP (r,r<b,c)) => U-closed (c j) r<b
-  | Join-univ c e<b => \case U-rounded e<b \with {
-    | inP (a,e<a,a<b) => inP (a, a<b, \lam j => c j e<a)
-  }
-  \where {
-    \lemma *n_Join {n : Nat} (n/=0 : n /= 0) {J : \Set} {g : J -> ExUpperReal} : n AddMonoid.*n Join g = Join (\lam j => n AddMonoid.*n g j)
-      => <=-antisymmetric (\lam (inP (a,a<b,f)) => (ExUpperRealAbMonoid.*n_finv n/=0).2 $ inP $ later
-            (RatField.finv n * a, RatField.<_*_positive-right (RatField.finv>0 $ fromInt_< $ pos<pos $ nonZero>0 n/=0) a<b, \lam j => (ExUpperRealAbMonoid.*n_finv n/=0).1 (f j))) $
-          ExUpperRealLattice.Join-univ \lam j => ExUpperRealAbMonoid.*n_<= (ExUpperRealLattice.Join-cond j)
-
-    \lemma *n_Join' {n : Nat} {J : \Set} (j : ∃ J) {g : J -> ExUpperReal} : n AddMonoid.*n Join g = Join (\lam j => n AddMonoid.*n g j) \elim n, j
-      | 0, inP j => <=-antisymmetric (ExUpperRealLattice.Join-cond j {\lam _ => 0}) $ ExUpperRealLattice.Join-univ {_} {\lam _ => 0} \lam _ => <=-refl
-      | suc n, _ => *n_Join suc/=0
-
-    \lemma *n_join {n : Nat} {x y : ExUpperReal} : n AddMonoid.*n (x ∨ y) = n AddMonoid.*n x ∨ n AddMonoid.*n y
-      => pmap (n AddMonoid.*n) ExUpperRealLattice.join_Join *> *n_Join' (inP true) *> CompleteLattice.Join_= (later \lam b => cases b idp) *> inv ExUpperRealLattice.join_Join
   }
 
 \record UpperReal \extends ExUpperReal {
