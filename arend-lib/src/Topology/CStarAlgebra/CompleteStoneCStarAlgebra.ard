@@ -115,6 +115,8 @@
 
 \instance StoneC*AlgebraCompletion (X : OrderedC*Algebra) : StoneC*Algebra
   | RealBanachAlgebra => BanachAlgebraCompletion X.toBanach
+  | *-comm => unique2 *-cover (*-cover ∘ tuple proj2 proj1)
+    \lam x y => lift2-char *> pmap pointCF *-comm *> inv lift2-char
   | c*-sum => unique2_<= (norm-metric-map {BanachCompletion X.toBanach} ∘ *-cover ∘ tuple id id ∘ proj1) (norm-metric-map {BanachCompletion X.toBanach} ∘ +-cover ∘ prod (*-cover ∘ tuple id id) (*-cover ∘ tuple id id))
       \lam x y => transport2 (<=) (inv $ pmap ExNormedAbGroupCompletion.norm lift2-char *> completion-exNormed-isometry.func-norm-isometry) (inv $ pmap ExNormedAbGroupCompletion.norm (pmap2 +-func lift2-char lift2-char *> +-char) *> completion-exNormed-isometry.func-norm-isometry) X.toBanach_c*-sum
   | c*-square => unique1_<= (ex-upper-*-locally-uniform ∘ tuple (bnorm-metric-map {BanachCompletion X.toBanach}) bnorm-metric-map) (bnorm-metric-map ∘ *-locally-uniform ∘ tuple id id)
