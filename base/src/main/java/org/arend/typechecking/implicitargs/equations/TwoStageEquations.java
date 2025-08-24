@@ -242,7 +242,12 @@ public class TwoStageEquations implements Equations {
     if (cmp == CMP.EQ && (inf1 != null && inf2 == null && expr2.getInferenceVariable(true) == null || inf2 != null && inf1 == null && expr1.getInferenceVariable(true) == null)) {
       Expression prev = myNotSolvableFromEquationsVars.putIfAbsent(inf1 != null ? inf1 : inf2, inf1 != null ? expr2 : expr1);
       if (prev != null) {
-        return CompareVisitor.compare(this, CMP.EQ, prev, inf1 != null ? expr2 : expr1, type, sourceNode);
+        Expression normalizedPrev = prev.normalize(NormalizationMode.WHNF);
+        if (normalizedPrev instanceof InferenceReferenceExpression infRefExpr && infRefExpr.getInferenceVariable().equals(inf1 != null ? inf1 : inf2)) {
+          myNotSolvableFromEquationsVars.put(inf1 != null ? inf1 : inf2, inf1 != null ? expr2 : expr1);
+        } else {
+          return CompareVisitor.compare(this, CMP.EQ, prev, inf1 != null ? expr2 : expr1, type, sourceNode);
+        }
       }
     }
 
