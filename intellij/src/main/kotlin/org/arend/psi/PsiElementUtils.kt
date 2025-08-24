@@ -16,6 +16,7 @@ import com.intellij.psi.util.descendants
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.startOffset
 import com.intellij.util.SmartList
+import org.arend.ext.reference.ArendRef
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.LibraryConfig
 import org.arend.psi.ArendElementTypes.*
@@ -439,7 +440,7 @@ fun getStrippedPsi(expression: PsiElement): Pair<PsiElement, Boolean> {
         }
         break
     }
-    val isAtomic = expr is ArendAtom || expr is ArendDefIdentifier || expr is ArendLongName || expr is ArendTuple || expr is ArendLiteral ||
+    val isAtomic = expr is ArendAtom || expr is ArendDefIdentifier || expr is ArendLongName || expr is ArendTuple || expr is ArendLiteral || expr is ArendRefIdentifier ||
             expr.text == "_" || expr is ArendAtomFieldsAcc ||
             (expr is ArendPattern && (expr.referenceElement != null || expr.singleReferable != null || expr.isUnnamed || expr.isTuplePattern))
 

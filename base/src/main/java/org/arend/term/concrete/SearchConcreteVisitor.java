@@ -479,7 +479,8 @@ public class SearchConcreteVisitor<P,R> implements ConcreteExpressionVisitor<P,R
     if (def.getEliminatedReferences() != null) {
       freeEliminatedParameters(def.getParameters(), def.getEliminatedReferences(), params);
     }
-    visitClauses(def.getConstructorClauses(), params);
+    result = visitClauses(def.getConstructorClauses(), params);
+    if (result != null) return result;
 
     if (def.getEliminatedReferences() == null) {
       freeParameters(def.getParameters(), params);

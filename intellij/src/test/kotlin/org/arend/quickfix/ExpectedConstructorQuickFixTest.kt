@@ -437,6 +437,22 @@ class ExpectedConstructorQuickFixTest : QuickFixTestBase() {
         | 1, suc b, con2 => suc b Nat.+ suc b 
     """)
 
+    private val data13 = data1 + """
+      \data DVec (A : \Type) (n : Nat) (v : Vec A n) \elim n, v
+        | 0, nil => Dnil
+        | suc n, cons a vs => DCons (DVec A n vs)
+    """
+
+    fun test69_24() = doTest(data13 + """         
+      \func foobar (A : \Type) (n : Nat) (v1 v2 : Vec A n) (sv1 : DVec A n v1) (sv2 : DVec A n v2) : Nat \elim n, v1, sv1, sv2
+        | 0, nil, Dnil, Dnil{-caret-} => {?}
+        | suc n, cons a v1, DCons sv1, DCons sv2 => {?} 
+    """, data13 + """
+      \func foobar (A : \Type) (n : Nat) (v1 v2 : Vec A n) (sv1 : DVec A n v1) (sv2 : DVec A n v2) : Nat \elim n, v1, v2, sv1, sv2
+        | 0, nil, nil, Dnil, Dnil => {?}
+        | suc n, cons a v1, cons a1 v2, DCons sv1, DCons sv2 => {?}  
+    """)
+
     companion object {
         const val data1 = """
       \data Vec (A : \Type) (n : Nat) \elim n

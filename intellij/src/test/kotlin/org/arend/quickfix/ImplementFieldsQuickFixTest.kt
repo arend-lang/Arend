@@ -331,4 +331,23 @@ class ImplementFieldsQuickFixTest : QuickFixTestBase() {
                \func F : C \cowith
                  | field => {?}
             """)
+
+    fun testInstance() = typedQuickFixTest(implement, """
+       \class Foo
+        | foo : Nat
+        | foo1 : Nat
+        
+       \instance{-caret-} FooI : Foo {
+       
+       } 
+    """, """
+       \class Foo
+        | foo : Nat
+        | foo1 : Nat
+        
+       \instance FooI : Foo {
+         | foo => {?}{-caret-}
+         | foo1 => {?}
+       } 
+    """)
 }

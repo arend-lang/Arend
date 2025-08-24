@@ -65,7 +65,7 @@ class CoClauseEntry(private val psiLocalCoClause: CoClauseBase,
 
     override fun getArguments(): List<ArgumentPrintResult> = procArguments
 
-    override fun printUsageEntryInternal(globalReferable: GlobalReferable?,
+    override fun printUsageEntryInternal(globalReferable: ReferableBase<*>?,
                                          newParameters: List<ParameterDescriptor>,
                                          parameterMap: MutableMap<ParameterDescriptor, ArgumentPrintResult?>,
                                          hasExplicitExternalArgument: Boolean,

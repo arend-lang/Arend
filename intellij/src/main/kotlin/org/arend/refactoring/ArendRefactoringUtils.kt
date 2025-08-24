@@ -9,6 +9,7 @@ import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.elementType
+import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.siblings
 import org.arend.core.definition.Definition
 import org.arend.ext.core.context.CoreBinding
@@ -19,25 +20,15 @@ import org.arend.ext.module.LongName
 import org.arend.ext.reference.DataContainer
 import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
-import org.arend.naming.reference.GlobalReferable
-import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.Referable
-import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.StringRenamer
-import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
-import org.arend.naming.scope.local.ElimScope
-import org.arend.naming.scope.local.ListScope
 import org.arend.prelude.Prelude
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
-import org.arend.psi.ext.ArendGroup
-import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction.Companion.getTargetName
-import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
-import org.arend.server.ProgressReporter
 import org.arend.settings.ArendSettings
 import org.arend.term.Fixity
 import org.arend.term.abs.Abstract
@@ -45,13 +36,10 @@ import org.arend.term.abs.AbstractExpressionVisitor
 import org.arend.term.abs.AbstractReference
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.ConcreteExpressionVisitor
-import org.arend.typechecking.computation.UnstoppableCancellationIndicator
+import org.arend.term.concrete.SearchConcreteVisitor
 import org.arend.util.getBounds
-import java.lang.IllegalArgumentException
 import java.math.BigInteger
 import java.util.Collections.singletonList
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.math.max
 
 private fun addId(id: String, newName: String?, factory: ArendPsiFactory, using: ArendNsUsing): ArendNsId? {
@@ -145,8 +133,14 @@ fun doAddIdToHiding(statCmd: ArendStatCmd, idList: List<String>) : List<ArendRef
 }
 
 fun doRemoveRefFromStatCmd(id: ArendRefIdentifier, deleteEmptyCommands: Boolean = true) {
-    val elementToRemove = if (id.parent is ArendNsId) id.parent else id
-    val parent = elementToRemove.parent
+    val (elementToRemove, anchor) = when (val element = id.parent) {
+        is ArendNsId -> Pair(element, element.parent)
+        is ArendScId -> Pair(element, element)
+        else ->
+            return
+    }
+    val statCmd = anchor?.parent as? ArendStatCmd ?:
+      return
 
     val prevSibling = elementToRemove.findPrevSibling()
     val nextSibling = elementToRemove.findNextSibling()
@@ -154,29 +148,23 @@ fun doRemoveRefFromStatCmd(id: ArendRefIdentifier, deleteEmptyCommands: Boolean 
     elementToRemove.delete()
 
     if (prevSibling?.node?.elementType == COMMA) {
-        prevSibling?.delete()
+        prevSibling.delete()
     } else if (prevSibling?.node?.elementType == LPAREN) {
         if (nextSibling?.node?.elementType == COMMA) {
-            nextSibling?.delete()
+            nextSibling.delete()
         }
     }
 
-    if (parent is ArendStatCmd && parent.hidings.isEmpty()) { // This means that we are removing something from "hiding" list
-        parent.lparen?.delete()
-        parent.rparen?.delete()
-        parent.hidingKw?.delete()
+    if (elementToRemove is ArendScId && statCmd.hidings.isEmpty()) { // This means that we are removing something from "hiding" list
+        statCmd.lparen?.delete()
+        statCmd.rparen?.delete()
+        statCmd.hidingKw?.delete()
     }
 
-    val statCmd = if (parent is ArendStatCmd) parent else {
-        val grandParent = parent.parent
-        if (grandParent is ArendStatCmd) grandParent else null
-    }
-
-    if (statCmd?.openKw != null && deleteEmptyCommands) { //Remove open command with null effect
+    if (statCmd.openKw != null && deleteEmptyCommands) { //Remove open command with null effect
         val nsUsing = statCmd.nsUsing
         if (nsUsing != null && nsUsing.usingKw == null && nsUsing.nsIdList.isEmpty()) {
-            val statCmdStatement = statCmd.parent
-            statCmdStatement.delete()
+                statCmd.parent.delete() // delete namespace command statement
         }
     }
 }
@@ -194,52 +182,57 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
             doAddIdToOpen(factory, newName, element, target)) singletonList(newName.last()) else newName
         val needsModification = element.longName != id
 
-        when (element) {
-            is ArendIPName -> {
-                if (!needsModification) return
-                val argumentStr = buildString {
-                    if (id.size > 1) {
-                        append(LongName(id.dropLast(1)))
-                        append(".")
-                    }
-                    if (element.fixity == Fixity.INFIX || element.fixity == Fixity.POSTFIX) append("`")
-                    append(id.last())
-                    if (element.fixity == Fixity.INFIX) append("`")
+        if (!needsModification) return
 
-                }
-                val parentAtomFieldsAcc = element.ancestor<ArendAtomFieldsAcc>()
-                val replacementLiteral = factory.createExpression(argumentStr).descendantOfType<ArendAtomFieldsAcc>()
-                if (replacementLiteral != null && parentAtomFieldsAcc != null)
-                  parentAtomFieldsAcc.replace(replacementLiteral)
-            }
-            else -> {
-                val longNameStr = LongName(id).toString()
-                val longNameStartOffset = if (parent is ArendFieldAcc) {
-                  parent.parent.textOffset
-                } else {
-                  parent.textOffset
-                }
-                val relativePosition = max(0, (editor?.caretModel?.offset ?: 0) - longNameStartOffset)
-                val offset = max(0, relativePosition + LongName(id).toString().length - LongName(element.longName).toString().length)
+        var atomFieldsAcc : ArendAtomFieldsAcc? = null;
+        var longName: ArendLongName? = null
+        var pattern: ArendPattern? = null
 
-                val longName = factory.createLongName(longNameStr)
-                if (needsModification) {
-                    when (parent) {
-                        is ArendLongName -> {
-                            parent.addRangeAfter(longName.firstChild, longName.lastChild, element)
-                            parent.deleteChildRange(parent.firstChild, element)
-                        }
-                        is ArendPattern -> element.replace(longName)
-                        else -> {
-                          val newAtomFieldAcc: PsiElement? = factory.createExpression(longNameStr).descendantOfType<ArendAtomFieldsAcc>()
-                          val atomFieldAcc = element.ancestor<ArendAtomFieldsAcc>();
-                          if (newAtomFieldAcc != null) atomFieldAcc?.replace(newAtomFieldAcc)
-                        }
-                    }
-                    editor?.caretModel?.moveToOffset(longNameStartOffset + offset)
+        // Analyze what is being modified
+        if (element is ArendRefIdentifier) {
+            when (parent) {
+                is ArendLiteral -> atomFieldsAcc = parent.parent.parent as ArendAtomFieldsAcc
+                is ArendFieldAcc -> atomFieldsAcc = parent.parent as ArendAtomFieldsAcc
+                is ArendLongName -> {
+                    longName = parent
+                    pattern = longName.parent as? ArendPattern
                 }
+                else ->
+                    throw UnsupportedOperationException()
             }
+        } else if (element is ArendIPName) {
+            atomFieldsAcc = when (parent) {
+                is ArendLiteral -> parent.parent.parent as ArendAtomFieldsAcc
+                is ArendAtomFieldsAcc -> parent
+                else -> throw UnsupportedOperationException()
+            }
+        } else if (element is ArendDefIdentifier && element.parent is ArendPattern)
+            pattern = element.parent as ArendPattern
+          else
+            throw UnsupportedOperationException()
+
+        // Extract suffix from the existing long name (if any)
+        val suffixTR = if (atomFieldsAcc != null)
+            TextRange(element.endOffset, atomFieldsAcc.endOffset)
+         else if (longName != null)
+            TextRange(element.endOffset, longName.endOffset)
+         else null
+
+        val suffix = if (suffixTR != null) element.containingFile.text.substring(suffixTR.startOffset, suffixTR.endOffset) else ""
+        val prefix = newName.dropLast(1).joinToString(".").let { if (it.isEmpty()) "" else "$it." }
+        val resultingName = prefix + (if (element is ArendIPName) "`" else "") + newName.last() + (if (element is ArendIPName && element.infix != null) "`" else "") + suffix
+
+        val (oldPsi, newPsi) = when {
+            atomFieldsAcc != null ->
+                Pair (atomFieldsAcc, factory.createExpression(resultingName).descendantOfType<ArendAtomFieldsAcc>())
+            pattern != null ->
+                Pair( pattern,factory.createPattern(resultingName))
+            longName != null ->
+                Pair(longName, factory.createLongName(resultingName))
+            else -> throw UnsupportedOperationException()
         }
+
+        oldPsi.replace(newPsi!!)
     }
 }
 
@@ -889,18 +882,13 @@ private object ConcretePrecVisitor : ConcreteExpressionVisitor<Void?, Int> {
     override fun visitBox(expr: Concrete.BoxExpression?, params: Void?) = APP_PREC
 }
 
-fun getTcDefReferable(globalReferable: ReferableBase<*>): TCDefReferable? {
-    globalReferable.tcReferable?.let { return it }
-
-    val project = globalReferable.project
-    val arendServer = project.service<ArendServerService>().server
-    val targetFile = globalReferable.containingFile as? ArendFile
-    val targetFileLocation = targetFile?.moduleLocation
-    if (targetFileLocation != null) {
-        val requester = ArendServerRequesterImpl(project)
-        requester.doUpdateModule(arendServer, targetFileLocation, targetFile)
-        //TODO: This operation may be slow
-        arendServer.getCheckerFor(listOf(targetFileLocation)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+fun <R : Concrete.SourceNode>findConcreteByPsi(concreteDefinition: Concrete.Definition, clazz: Class<R>, psi: PsiElement): R? {
+    val searcher = object : SearchConcreteVisitor<Void, R?>() {
+        override fun checkSourceNode(sourceNode: Concrete.SourceNode?, params: Void?): R? {
+            if (clazz.isInstance(sourceNode) && sourceNode?.data == psi) return clazz.cast(sourceNode)
+            return super.checkSourceNode(sourceNode, params)
+        }
     }
-    return globalReferable.tcReferable
+
+    return concreteDefinition.accept(searcher, null)
 }

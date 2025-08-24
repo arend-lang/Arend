@@ -12,17 +12,18 @@ import org.arend.codeInsight.DefaultParameterDescriptorFactory
 import org.arend.codeInsight.ParameterDescriptor
 import org.arend.ext.reference.DataContainer
 import org.arend.ext.reference.Precedence
-import org.arend.naming.reference.GlobalReferable
-import org.arend.naming.reference.Referable
+import org.arend.naming.reference.LocatedReferable
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
-import org.arend.refactoring.NsCmdRefactoringAction
 import org.arend.refactoring.changeSignature.entries.*
 import org.arend.refactoring.changeSignature.entries.UsageEntry.Companion.RenderedParameterKind
 import org.arend.refactoring.rename.ArendRenameProcessor
 import org.arend.refactoring.rename.ArendRenameRefactoringContext
+import org.arend.server.ArendServer
+import org.arend.server.impl.MultiFileReferenceResolver
 import org.arend.term.abs.Abstract.ParametersHolder
+import org.arend.term.abs.AbstractReferable
 import org.arend.term.concrete.Concrete
 import java.util.*
 import kotlin.collections.ArrayList
@@ -109,16 +110,17 @@ fun modifyExternalParameters(oldParameters: List<ParameterDescriptor>,
  * This class encodes the context of usages-modifying functionality of ChangeSignatureRefactoring
 *  */
 data class ChangeSignatureRefactoringContext(val refactoringDescriptors: List<ChangeSignatureRefactoringDescriptor>,
-                                             val textReplacements: HashMap<PsiElement, String>,
-                                             val rangeData: HashMap<Concrete.SourceNode, TextRange>,
-                                             val deferredNsCmds: MutableList<NsCmdRefactoringAction> = ArrayList()) {
+                                             val textReplacements: MutableMap<PsiElement, String>,
+                                             val rangeData: MutableMap<Concrete.SourceNode, TextRange>,
+                                             val server: ArendServer,
+                                             val multiResolver: MultiFileReferenceResolver) {
     fun textGetter(psi: PsiElement): String =
         textReplacements[psi] ?: buildString {
             if (psi.firstChild == null) append(psi.text) else
                 for (c in psi.childrenWithLeaves.toList()) append(textGetter(c))
         }
 
-    fun identifyDescriptor(referable: Referable): ChangeSignatureRefactoringDescriptor? = refactoringDescriptors.firstOrNull {
+    fun identifyDescriptor(referable: AbstractReferable): ChangeSignatureRefactoringDescriptor? = refactoringDescriptors.firstOrNull {
         it.getAffectedDefinition() == referable
     }
 }
@@ -129,7 +131,8 @@ data class IntermediatePrintResult(val text: String,
                                    val parenthesizedPrefixText: String?,
                                    val isAtomic: Boolean,
                                    val isLambda: Boolean,
-                                   val referable: GlobalReferable?)
+                                   val referable: ReferableBase<*>?)
+
 data class ArgumentPrintResult(val printResult: IntermediatePrintResult,
                                val isExplicit: Boolean,
                                val spacingText: String?)
@@ -142,13 +145,13 @@ fun isIdentifier(text: String) =
 
 fun printAppExpr(expr: Concrete.Expression, psiElement: ArendArgumentAppExpr, refactoringContext: ChangeSignatureRefactoringContext): IntermediatePrintResult {
     if (expr is Concrete.AppExpression) {
-        val underlyingReferable = expr.function.underlyingReferable
-        val underlyingReferableIsInfix = underlyingReferable is GlobalReferable && underlyingReferable.precedence.isInfix
-        val descriptor = if (underlyingReferable is Referable) refactoringContext.identifyDescriptor(underlyingReferable) else null
+        val underlyingReferable = expr.function.underlyingReferable.abstractReferable
+        val underlyingReferableIsInfix = underlyingReferable is ReferableBase<*> && underlyingReferable.precedence.isInfix
+        val descriptor = underlyingReferable?.let { refactoringContext.identifyDescriptor(it) }
         val appExprEntry = AppExpressionEntry(refactoringContext, psiElement, descriptor, expr)
 
         return if (descriptor != null) {
-            appExprEntry.printUsageEntry(underlyingReferable as? GlobalReferable)
+            appExprEntry.printUsageEntry(underlyingReferable as? ReferableBase<*>)
         } else {
             val doubleBuilder = DoubleStringBuilder()
             var explicitArgCount = 0
@@ -157,8 +160,11 @@ fun printAppExpr(expr: Concrete.Expression, psiElement: ArendArgumentAppExpr, re
             val functionIsField = functionName.startsWith(".")
 
             for (block in appExprEntry.blocks) when (block) {
-                is Int -> if (block == FUNCTION_INDEX)
+                is Int -> if (block == FUNCTION_INDEX) {
+                    if (appExprEntry.isInfix() && (appExprEntry.target as? LocatedReferable)?.precedence?.isInfix != true)
+                        doubleBuilder.append("`")
                     doubleBuilder.append(functionName)
+                }
                 else appExprEntry.getArguments()[block].let {
                     if (it.isExplicit) explicitArgCount++
                     val textInBrackets = "{${it.printResult.text}}"
@@ -168,7 +174,7 @@ fun printAppExpr(expr: Concrete.Expression, psiElement: ArendArgumentAppExpr, re
                         explicitArgCount == 2 -> RenderedParameterKind.INFIX_RIGHT
                         else -> null
                     }
-                    val inhibitParens = if (!it.printResult.isLambda && it.printResult.referable != null && parameterInfo != null && underlyingReferable is GlobalReferable) {
+                    val inhibitParens = if (!it.printResult.isLambda && it.printResult.referable != null && parameterInfo != null && underlyingReferable is ReferableBase<*>) {
                         if (it.printResult.referable == underlyingReferable) {
                             parameterInfo == RenderedParameterKind.INFIX_LEFT && underlyingReferable.precedence.associativity == Precedence.Associativity.LEFT_ASSOC ||
                                     parameterInfo == RenderedParameterKind.INFIX_RIGHT && underlyingReferable.precedence.associativity == Precedence.Associativity.RIGHT_ASSOC
@@ -197,16 +203,16 @@ fun printAppExpr(expr: Concrete.Expression, psiElement: ArendArgumentAppExpr, re
                 doubleBuilder.alternativeBuilder.toString(),
                 isAtomic,
                 false,
-                underlyingReferable as? GlobalReferable)
+                underlyingReferable as? ReferableBase<*>)
         }
-    } else if (expr is Concrete.LamExpression && expr.data == null) {
+    } else if (expr is Concrete.LamExpression && expr.data !is ArendLamExpr /* && (expr.data !is ArendArgumentAppExpr || expr.data is ArendLiteral)*/) {
         val builder = StringBuilder()
         val exprBody = expr.body
         if (exprBody is Concrete.AppExpression) {
             val function = exprBody.function.data as PsiElement
-            val underlyingReferable = exprBody.underlyingReferable
-            val isPostfix = (function as ArendIPName).postfix != null
-            val descriptor = if (underlyingReferable is Referable) refactoringContext.identifyDescriptor(underlyingReferable) else null
+            val underlyingReferable = exprBody.underlyingReferable.abstractReferable
+            val isPostfix = (function as? ArendIPName)?.postfix != null
+            val descriptor = underlyingReferable?.let { refactoringContext.identifyDescriptor(it) }
             if (isPostfix && descriptor != null) {
                 val entry = object: AppExpressionEntry(refactoringContext, psiElement, descriptor, exprBody) {
                     override fun getLambdaParams(parameterMap: Set<ParameterDescriptor>, includingSuperfluousTrailingParams: Boolean): List<ParameterDescriptor> =
@@ -230,22 +236,24 @@ fun printAppExpr(expr: Concrete.Expression, psiElement: ArendArgumentAppExpr, re
         builder.append(printAppExpr(exprBody, psiElement, refactoringContext).text)
         return IntermediatePrintResult(builder.toString(),  null, isAtomic = false, isLambda = true, referable = null)
     } else if (expr is Concrete.ReferenceExpression) {
-        val d = refactoringContext.identifyDescriptor(expr.referent)
+        val referable = expr.referent.abstractReferable
+        val d = referable?.let { refactoringContext.identifyDescriptor(it) }
         if (d != null) {
-            return NoArgumentsEntry(expr, refactoringContext, d).printUsageEntry(expr.referent as? GlobalReferable)
-        } else if ((expr.referent as? GlobalReferable)?.precedence?.isInfix == true) {
+            return NoArgumentsEntry(expr, refactoringContext, d).printUsageEntry(expr.referent.abstractReferable as? ReferableBase<*>)
+        } else if ((expr.referent as? LocatedReferable)?.precedence?.isInfix == true) {
             val text = refactoringContext.textGetter(expr.data as PsiElement)
             return IntermediatePrintResult("(${text})",  null, isAtomic = true, isLambda = false, referable = null)
-        } else if (expr.data is ArendLongName) {
-            val target = expr.underlyingReferable
-            val contextName = if (target is PsiLocatedReferable) UsageEntry.getContextName(target, psiElement, refactoringContext) else target.refName
-            return IntermediatePrintResult(contextName, contextName,
-                isAtomic = true,
-                isLambda = false,
-                referable = null
-            )
+        } else if (expr.data is ArendAtomFieldsAcc) {
+            val text = UsageEntry.getContextName(expr.underlyingReferable, psiElement, refactoringContext)
+            return IntermediatePrintResult(text, null, true, false, null)
         }
+    } else if (expr is Concrete.ProjExpression) {
+       val printResult = printAppExpr(expr.expression, psiElement, refactoringContext)
+       val text = if (printResult.isAtomic) "${printResult.text}.${expr.field+1}" else "(${printResult.text}).${expr.field+1}"
+       return IntermediatePrintResult(text, null, true, false, null)
     }
+
+
 
     val (exprData, isAtomic) = getStrippedPsi(expr.data as PsiElement)
     return IntermediatePrintResult(refactoringContext.textGetter(exprData), null, isAtomic, false, null)
@@ -257,18 +265,18 @@ fun printPattern(pattern: Concrete.Pattern, psiElement: ArendPattern, refactorin
 
     if (pattern is Concrete.ConstructorPattern && !isInsideAppExprLeaf) {
         val constructor = (pattern.constructor as? DataContainer)?.data
-        val constructorIsInfix = constructor is GlobalReferable && constructor.precedence.isInfix
+        val constructorIsInfix = constructor is ReferableBase<*> && constructor.precedence.isInfix
         val asTextWithWhitespace = (psiElement.asPattern?.getWhitespace(SpaceDirection.LeadingSpace) ?: "") + (psiElement.asPattern?.text ?: "")
-        val descriptor = if (constructor is Referable) refactoringContext.identifyDescriptor(constructor) else null
+        val descriptor = if (constructor is AbstractReferable) refactoringContext.identifyDescriptor(constructor) else null
         val patternEntry = PatternEntry(refactoringContext, psiElement, descriptor, pattern)
 
         return if (descriptor != null) {
-            val processResult = patternEntry.printUsageEntry(constructor as? GlobalReferable)
+            val processResult = patternEntry.printUsageEntry(constructor as? ReferableBase<*>)
             val baseText = processResult.text + asTextWithWhitespace
             IntermediatePrintResult(baseText, processResult.parenthesizedPrefixText,
                 isAtomic = false,
                 isLambda = false,
-                referable = constructor as? GlobalReferable
+                referable = constructor as? ReferableBase<*>
             )
         } else {
             val builder = StringBuilder()
@@ -286,7 +294,7 @@ fun printPattern(pattern: Concrete.Pattern, psiElement: ArendPattern, refactorin
                 }
                 is PsiElement -> builder.append(refactoringContext.textGetter(block))
             }
-            IntermediatePrintResult(strippedText ?: builder.toString().let { if (isAtomic && constructorIsInfix) "($it)" else it}, null, isAtomic, false, constructor as? GlobalReferable
+            IntermediatePrintResult(strippedText ?: builder.toString().let { if (isAtomic && constructorIsInfix) "($it)" else it}, null, isAtomic, false, constructor as? ReferableBase<*>
             )
         }
     }

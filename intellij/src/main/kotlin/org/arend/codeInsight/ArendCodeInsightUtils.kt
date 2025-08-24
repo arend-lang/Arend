@@ -1,5 +1,6 @@
 package org.arend.codeInsight
 
+import com.intellij.openapi.components.service
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -7,18 +8,15 @@ import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.startOffset
 import org.arend.core.definition.ClassDefinition
-import org.arend.error.CountingErrorReporter
-import org.arend.error.DummyErrorReporter
-import org.arend.ext.error.GeneralError
 import org.arend.naming.reference.*
-import org.arend.naming.resolving.typing.TypingInfo
-import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
 import org.arend.psi.*
 import org.arend.psi.ext.*
+import org.arend.server.ArendServerService
+import org.arend.server.ProgressReporter
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractReferable
-import org.arend.term.abs.ConcreteBuilder
 import org.arend.term.concrete.Concrete
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getBounds
 import org.arend.util.patternToConcrete
@@ -132,17 +130,14 @@ class ArendCodeInsightUtils {
                 val dataBody = constructorClause?.parent as? ArendDataBody
                 val elim = dataBody?.elim ?: throw IllegalStateException()
 
-                val concreteData: Concrete.GeneralDefinition = ConcreteBuilder.convert(data, null, CountingErrorReporter(GeneralError.Level.ERROR, DummyErrorReporter.INSTANCE), null, null)
-                if (concreteData !is Concrete.DataDefinition) throw IllegalStateException()
+                val concreteData: Concrete.DataDefinition =
+                    data.tcReferable?.let { data.project.service<ArendServerService>().server.getResolvedDefinition(it)?.definition } as? Concrete.DataDefinition ?:
+                    throw IllegalStateException()
 
                 val clause = concreteData.constructorClauses.firstOrNull { clause ->
                     clause.constructors.any { it.data.data == constructor }
                 }
-                val clausePatterns = clause?.patterns?.run {
-                    val newList = ArrayList(this)
-                    ExpressionResolveNameVisitor(data.scope, mutableListOf(), TypingInfo.EMPTY, DummyErrorReporter.INSTANCE, null, null).visitPatterns(newList, mutableMapOf())
-                    newList
-                } ?: throw IllegalStateException()
+                val clausePatterns = clause?.patterns ?: throw IllegalStateException()
 
                 fun collectNamePatterns(pattern: Concrete.Pattern): List<Concrete.NamePattern> =
                     if (pattern is Concrete.NamePattern) singletonList(pattern) else pattern.patterns.map {
@@ -393,7 +388,7 @@ class ArendCodeInsightUtils {
                 else -> null
             }
             return if (concreteReferent != null)
-                getAllParametersForReferable(concreteReferent.abstractReferable, getData(concrete) as ArendCompositeElement, addTailParameters = true) else
+                getAllParametersForReferable(concreteReferent.abstractReferable, getData(concrete) as? ArendCompositeElement, addTailParameters = true) else
                 null
         }
 
@@ -446,9 +441,21 @@ class ArendCodeInsightUtils {
 
         }
 
+        fun ensureIsTypechecked(def: ReferableBase<*>) {
+            if (def.tcReferable == null) {
+                val moduleLocation = (def.containingFile as? ArendFile)?.moduleLocation
+                if (moduleLocation != null) {
+                    val checker = def.project.service<ArendServerService>().server.getCheckerFor(singletonList(moduleLocation))
+                    checker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+                }
+            }
+        }
+
         private fun getClassParameterList(def: ArendDefClass, externalParameters: List<ParameterDescriptor>?, parameterDescriptorFactory: ParameterDescriptor.Companion.Factory = DefaultParameterDescriptorFactory): Pair<List<ParameterDescriptor>, Boolean> {
             val externalParametersMap = HashMap<String, ParameterDescriptor>()
             if (externalParameters != null) for (eP in externalParameters) eP.name?.let{ externalParametersMap[it] = eP }
+
+            ensureIsTypechecked(def)
 
             val result = (def.tcReferable?.typechecked as? ClassDefinition)?.notImplementedFields?.map {
                 val psiReferable = it.referable?.data as? PsiReferable

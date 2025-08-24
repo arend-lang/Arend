@@ -2,8 +2,10 @@ package org.arend.quickfix.referenceResolve
 
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
+import com.intellij.psi.PsiElement
 import org.arend.ext.error.ListErrorReporter
 import org.arend.ext.module.LongName
+import org.arend.naming.reference.DataModuleReferable
 import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.LocatedReferable
 import org.arend.psi.ArendFile
@@ -13,10 +15,10 @@ import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.psi.ext.ReferableBase
 import org.arend.refactoring.*
-import org.arend.repl.Repl
 import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
 import org.arend.server.RawAnchor
+import org.arend.server.impl.MultiFileReferenceResolver
 import org.arend.server.modifier.RawModifier
 import org.arend.server.modifier.RawSequenceModifier
 import org.arend.term.group.AccessModifier
@@ -47,6 +49,40 @@ class ResolveReferenceAction(val target: PsiLocatedReferable,
             return isVisible(target.containingFile as ArendFile, containingFile)
         }
 
+        fun getTargetLongName(anchorReferenceElement: PsiElement, multiFileReferenceResolver: MultiFileReferenceResolver, targetReferable: PsiLocatedReferable): LongName? {
+            val anchorModuleLocation = (anchorReferenceElement.containingFile as? ArendFile)?.moduleLocation ?: return null
+            val singleFileResolver = multiFileReferenceResolver.getFileResolver(anchorModuleLocation)
+            val anchorReferable: LocatedReferable = (anchorReferenceElement.ancestor<ReferableBase<*>>())?.tcReferable
+                ?: FullModuleReferable(anchorModuleLocation)
+
+            return when (targetReferable) {
+                is ReferableBase<*> ->  targetReferable.tcReferable?.let { tcReferable ->
+                    val result = singleFileResolver.calculateLongName(tcReferable, RawAnchor(anchorReferable, anchorReferenceElement))
+                    result
+                }
+
+                is ArendFile -> targetReferable.moduleLocation?.let { LongName(it.modulePath.toList()) }
+                else -> null
+            }
+        }
+
+         fun fixLongName(anchorReferenceElement: ArendReferenceElement, multiFileReferenceResolver: MultiFileReferenceResolver, targetReferable: PsiLocatedReferable,
+                         sink: MutableList<RenameReferenceAction>) {
+            val name = getTargetLongName(anchorReferenceElement, multiFileReferenceResolver, targetReferable) ?: return
+            sink.add(RenameReferenceAction(anchorReferenceElement, name.toList(), targetReferable))
+        }
+
+        fun flushNamespaceCommands(multiFileReferenceResolver: MultiFileReferenceResolver) {
+            for (modifier in multiFileReferenceResolver.multiResolverMap.values ) {
+                val file = (modifier?.currentFile?.referable as? DataModuleReferable)?.data
+                val m = modifier.modifier
+                if (file is ArendFile && m != null)
+                    NsCmdRawModifierAction(m, file).execute()
+                modifier.reset()
+            }
+
+        }
+
 
         private fun doGetProposedFix(target: PsiLocatedReferable, anchor: ArendCompositeElement): org.arend.ext.util.Pair<RawModifier, List<LongName>>? {
             val project = target.project
@@ -58,18 +94,18 @@ class ResolveReferenceAction(val target: PsiLocatedReferable,
 
             val referableBase = anchor.ancestor<ReferableBase<*>>()
             val anchorFile = anchor.containingFile as? ArendFile ?: return null
-            val anchorReferable: LocatedReferable = (if (anchorFile.isRepl) project.service<ArendReplService>().getRepl()?.moduleReferable else referableBase?.tcReferable ?: anchorFile.moduleLocation?.let { FullModuleReferable(it) }) ?: return null
 
             ArendServerRequesterImpl(project).doUpdateModule(arendServer, targetFileLocation, targetFile)
 
+            val anchorReferable: LocatedReferable = (if (anchorFile.isRepl) project.service<ArendReplService>().getRepl()?.moduleReferable else referableBase?.tcReferable ?: anchorFile.moduleLocation?.let { FullModuleReferable(it) }) ?: return null
             val rawAnchor = RawAnchor(anchorReferable, anchor)
-            val targetReferable : LocatedReferable? = (target as? ReferableBase<*>)?.tcReferable ?: return null
+            val targetReferable : LocatedReferable = (target as? ReferableBase<*>)?.tcReferable ?: return null
             val concreteGroup = anchorFile.moduleLocation?.let { arendServer.getRawGroup(it) }
 
             return arendServer.makeReferencesAvailable(singletonList(targetReferable), concreteGroup, rawAnchor, errorReporter)
         }
 
-        fun getProposedFix(target: PsiLocatedReferable, anchor: ArendReferenceElement): ResolveReferenceAction? {
+        @Deprecated("Use fixLongName instead") fun getProposedFix(target: PsiLocatedReferable, anchor: ArendReferenceElement): ResolveReferenceAction? {
             if (!target.isValid) return null
             val anchorFile = anchor.containingFile as? ArendFile ?: return null
             val fix: org.arend.ext.util.Pair<RawModifier, List<LongName>>? = doGetProposedFix(target, anchor) ?: return null
@@ -77,7 +113,7 @@ class ResolveReferenceAction(val target: PsiLocatedReferable,
             return ResolveReferenceAction(target, name.toList(), NsCmdRawModifierAction(fix.proj1, anchorFile), RenameReferenceAction(anchor, name.toList(), target))
         }
 
-        fun getTargetName(target: PsiLocatedReferable, element: ArendCompositeElement): Pair<String, NsCmdRefactoringAction?>? {
+        @Deprecated("Use getTargetLongName instead") fun getTargetName(target: PsiLocatedReferable, element: ArendCompositeElement): Pair<String, NsCmdRefactoringAction?>? {
             if (!target.isValid) return null
             val anchorFile = element.containingFile as? ArendFile ?: return null
             val fix: org.arend.ext.util.Pair<RawModifier, List<LongName>>? = doGetProposedFix(target, element) ?: return null

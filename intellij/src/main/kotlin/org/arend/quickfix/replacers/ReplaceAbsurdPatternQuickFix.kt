@@ -16,12 +16,15 @@ class ReplaceAbsurdPatternQuickFix(private val constructors: Collection<Definiti
 
     override fun getFamilyName(): String = text
 
-    override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean = causeRef.element != null
+    override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean =
+        causeRef.element != null
 
     override fun getText(): String  = ArendBundle.message("arend.pattern.replaceWithConstructors")
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
         val cause = causeRef.element ?: return
-        SplitAtomPatternIntention.doSplitPattern(cause, project, constructors.map { SplitAtomPatternIntention.Companion.ConstructorSplitPatternEntry(it, null, null) }, generateBody = true)
+        SplitAtomPatternIntention.doSplitPattern(cause, project, constructors.map {
+            SplitAtomPatternIntention.Companion.ConstructorSplitPatternEntry(it, true, null, null)
+        })
     }
 }

@@ -34,9 +34,9 @@ import com.intellij.ui.table.TableView
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.Consumer
 import org.arend.ArendFileTypeInstance
+import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.LongName
 import org.arend.naming.reference.LocatedReferable
-import org.arend.naming.scope.MergeScope
 import org.arend.naming.scope.Scope
 import org.arend.naming.scope.local.ListScope
 import org.arend.psi.ArendCodeFragmentController
@@ -44,8 +44,11 @@ import org.arend.psi.ArendElementTypes
 import org.arend.psi.ArendExpressionCodeFragment
 import org.arend.psi.ext.ArendFunctionDefinition
 import org.arend.psi.ext.ArendReferenceElement
+import org.arend.psi.ext.ReferableBase
 import org.arend.psi.oneLineText
-import org.arend.refactoring.NsCmdRefactoringAction
+import org.arend.server.ArendServerService
+import org.arend.server.impl.MultiFileReferenceResolver
+import org.arend.server.impl.SingleFileReferenceResolver
 import org.arend.util.FileUtils.isCorrectDefinitionName
 import java.awt.Component
 import java.util.Collections.singletonList
@@ -66,7 +69,7 @@ class ArendChangeSignatureDialog(project: Project,
     private lateinit var parameterToUsages: MutableMap<ArendChangeSignatureDialogParameterTableModelItem, MutableMap<ArendExpressionCodeFragment, MutableSet<TextRange>>>
     private lateinit var parameterToDependencies: MutableMap<ArendExpressionCodeFragment, MutableSet<ArendChangeSignatureDialogParameterTableModelItem>>
     lateinit var commonTypeFragmentListener: ArendChangeSignatureCustomDocumentListener
-    private lateinit var deferredNsCmds : MutableList<NsCmdRefactoringAction>
+    private lateinit var singleFileReferenceResolver: SingleFileReferenceResolver
 
     private fun deleteFragmentDependencyData(fragment: ArendExpressionCodeFragment, includingDependencies: Boolean = false) {
         if (includingDependencies) {
@@ -103,9 +106,7 @@ class ArendChangeSignatureDialog(project: Project,
         }
     }
 
-    override fun scopeModified(deferredNsCmd: NsCmdRefactoringAction) {
-        deferredNsCmds.add(deferredNsCmd)
-    }
+    override fun getMultiResolver(): SingleFileReferenceResolver = singleFileReferenceResolver
 
     override fun getFragmentScope(codeFragment: ArendExpressionCodeFragment): Scope {
         val items = this.myParametersTableModel.items
@@ -210,7 +211,11 @@ class ArendChangeSignatureDialog(project: Project,
     }
 
     private fun evaluateChangeInfo(parametersModel: ArendParameterTableModel): ArendChangeInfo {
-        return ArendChangeInfo(ArendParametersInfo(myMethod.method, parametersModel.items.map {  it.parameter }.toMutableList()), myReturnTypeCodeFragment?.text, myNameField.text, myMethod.method, deferredNsCmds)
+        val server = myProject.service<ArendServerService>().server
+        val multiResolver = MultiFileReferenceResolver(server)
+        multiResolver.addSingleResolver(singleFileReferenceResolver)
+        return ArendChangeInfo(ArendParametersInfo(myMethod.method, parametersModel.items.map {  it.parameter }.toMutableList()),
+            myReturnTypeCodeFragment?.text, myNameField.text, myMethod.method, multiResolver)
     }
 
     override fun calculateSignature(): String =
@@ -220,7 +225,13 @@ class ArendChangeSignatureDialog(project: Project,
 
     override fun createParametersPanel(hasTabsInDialog: Boolean): JPanel {
         commonTypeFragmentListener = ArendChangeSignatureCustomDocumentListener(this)
-        deferredNsCmds = ArrayList()
+        val referableLocation = (descriptor.method as? ReferableBase<*>)?.tcReferable?.location
+        singleFileReferenceResolver = SingleFileReferenceResolver(
+            project.service<ArendServerService>().server,
+            DummyErrorReporter.INSTANCE,
+            referableLocation
+        )
+
         myParametersTable = object : TableView<ArendChangeSignatureDialogParameterTableModelItem?>(myParametersTableModel) {
             override fun removeEditor() {
                 clearEditorListeners()

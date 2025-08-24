@@ -5,12 +5,8 @@ import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionResult
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.impl.BetterPrefixMatcher
-import com.intellij.openapi.application.ReadAction
-import com.intellij.openapi.application.ex.ApplicationEx
-import com.intellij.openapi.application.ex.ApplicationManagerEx
 import com.intellij.openapi.components.service
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiManager
 import com.intellij.psi.stubs.StubIndex
 import com.intellij.util.Consumer
 import org.arend.ext.reference.DataContainer
@@ -22,6 +18,7 @@ import org.arend.psi.stubs.index.ArendDefinitionIndex
 import org.arend.psi.stubs.index.ArendFileIndex
 import org.arend.psi.stubs.index.ArendGotoClassIndex
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
+import org.arend.refactoring.RenameReferenceAction
 import org.arend.refactoring.isVisible
 import org.arend.resolving.ArendReferenceBase
 import org.arend.server.ArendServerService
@@ -55,13 +52,14 @@ class ArendNoVariantsDelegator : CompletionContributor() {
         val file = parameters.originalFile as? ArendFile ?: return
         val isTestFile = file.moduleLocation?.locationKind == ModuleLocation.LocationKind.TEST
         val refElementAtCaret = file.findElementAt(parameters.offset - 1)?.parent
-        val parent = refElementAtCaret?.parent
+        val parentPsi = refElementAtCaret?.parent
+        val anchorReferable = refElementAtCaret?.ancestor<ReferableBase<*>>()?.tcReferable
 
-        val isInsideValidExpr = refElementAtCaret is ArendRefIdentifier && parent is ArendLiteral &&
+        val isInsideValidExpr = refElementAtCaret is ArendRefIdentifier && parentPsi is ArendLiteral &&
                 refElementAtCaret.prevSibling == null && isGlobalScopeVisible(refElementAtCaret.topmostEquivalentSourceNode)
-        val isInsideValidNsCmd = refElementAtCaret is ArendRefIdentifier && parent is ArendLongName &&
+        val isInsideValidNsCmd = refElementAtCaret is ArendRefIdentifier && parentPsi is ArendLongName &&
                 refElementAtCaret.prevSibling == null && refElementAtCaret.topmostEquivalentSourceNode.parent is Abstract.NamespaceCommand
-        val isClassExtension = parent?.parent is ArendDefClass
+        val isClassExtension = parentPsi?.parent is ArendDefClass
 
         val editor = parameters.editor
         val project = editor.project
@@ -94,12 +92,15 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                                             val refIdentifier = context.file.findElementAt(context.tailOffset - 1)?.parent
                                             val locatedReferable = item.`object`
                                             if (refIdentifier is ArendReferenceElement && locatedReferable is PsiLocatedReferable && locatedReferable !is ArendFile) {
-                                                val fix = ResolveReferenceAction.getProposedFix(locatedReferable, refIdentifier)
-                                                val f = refIdentifier.containingFile
-                                                if (f is ArendExpressionCodeFragment) {
-                                                    fix?.statCmdFixAction?.let { cmd -> f.scopeModified(cmd) }
-                                                    fix?.nameFixAction?.execute(editor)
+                                                val file = refIdentifier.containingFile
+                                                if (file is ArendExpressionCodeFragment) {
+                                                    val targetReferable = (locatedReferable as? ReferableBase<*>)?.tcReferable
+                                                    if (targetReferable != null && anchorReferable != null) {
+                                                        val longName = file.getMultiResolver()?.calculateLongName(targetReferable, org.arend.server.RawAnchor(anchorReferable, refElementAtCaret))
+                                                        if (longName != null) RenameReferenceAction(refIdentifier, longName.toList(), locatedReferable).execute(editor)
+                                                    }
                                                 } else {
+                                                    val fix = ResolveReferenceAction.getProposedFix(locatedReferable, refIdentifier)
                                                     fix?.execute(editor)
                                                 }
                                             } else if (locatedReferable is ArendFile) {

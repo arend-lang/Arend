@@ -5,7 +5,7 @@ import org.arend.util.ArendBundle
 
 class ChangeArgumentExplicitnessIntentionTest : QuickFixTestBase() {
     private val fixName = ArendBundle.message("arend.coClause.changeArgumentExplicitness")
-    private fun doTest(contents: String, result: String) = simpleQuickFixTest(fixName, contents, result)
+    private fun doTest(contents: String, result: String) = typedQuickFixTest(fixName, contents, result)
 
     // `IE` means changing from implicit to explicit
     // `EI` means changing from explicit to implicit
@@ -363,7 +363,7 @@ class ChangeArgumentExplicitnessIntentionTest : QuickFixTestBase() {
         """,
         """
         \func mp (A B : \Type) (a : A) (ab : A -> B) => ab a
-        \func g => (mp Nat _ 42) (\lam n => n + 1)
+        \func g => mp Nat _ 42 (\lam n => n + 1)
         """
     )
 

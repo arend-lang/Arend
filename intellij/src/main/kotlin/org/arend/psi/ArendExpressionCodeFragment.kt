@@ -9,14 +9,12 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.PsiCodeFragmentImpl
 import com.intellij.psi.impl.source.tree.ICodeFragmentElementType
 import com.intellij.psi.tree.IElementType
-import com.intellij.psi.util.elementType
 import org.arend.ArendLanguage
 import org.arend.IArendFile
 import org.arend.naming.scope.Scope
 import org.arend.parser.ArendParser
-import org.arend.psi.ext.ArendExpr
-import org.arend.refactoring.NsCmdRefactoringAction
 import org.arend.resolving.ArendReference
+import org.arend.server.impl.SingleFileReferenceResolver
 
 class ArendExpressionCodeFragment(project: Project, expression: String,
                                   context: PsiElement?,
@@ -28,14 +26,14 @@ class ArendExpressionCodeFragment(project: Project, expression: String,
 
     override fun positionTextRepresentation(): String? = null
 
-    fun getExpr(): ArendExpr? {
+    /*fun getExpr(): ArendExpr? {
         val firstChild = firstChild
         return if (firstChild is ArendExpr && firstChild.elementType != ArendElementTypes.EXPR) firstChild else null
     }
 
-    fun fragmentResolved() { fragmentController?.expressionFragmentResolved(this) }
+    fun fragmentResolved() { fragmentController?.expressionFragmentResolved(this) } */
 
-    fun scopeModified(nsCmd: NsCmdRefactoringAction) { fragmentController?.scopeModified(nsCmd) }
+    fun getMultiResolver(): SingleFileReferenceResolver? = fragmentController?.getMultiResolver()
 }
 
 abstract class ArendCodeFragmentElementType(debugName: String, val elementType: IElementType) : ICodeFragmentElementType(debugName, ArendLanguage.INSTANCE) {
@@ -60,7 +58,7 @@ object ArendExpressionCodeFragmentElementType : ArendCodeFragmentElementType("AR
 interface ArendCodeFragmentController {
     fun expressionFragmentResolved(codeFragment: ArendExpressionCodeFragment)
 
-    fun scopeModified(deferredNsCmd: NsCmdRefactoringAction)
+    fun getMultiResolver(): SingleFileReferenceResolver
 
     fun getFragmentScope(codeFragment: ArendExpressionCodeFragment): Scope
 }

@@ -4,7 +4,6 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import org.arend.codeInsight.ParameterDescriptor
 import org.arend.ext.module.LongName
-import org.arend.naming.reference.GlobalReferable
 import org.arend.naming.reference.Referable
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.childrenWithLeaves
@@ -99,7 +98,7 @@ abstract class AbstractExpressionEntry(
         }
     }
 
-    override fun printUsageEntryInternal(globalReferable: GlobalReferable?,
+    override fun printUsageEntryInternal(globalReferable: ReferableBase<*>?,
                                          newParameters: List<ParameterDescriptor>,
                                          parameterMap: MutableMap<ParameterDescriptor, ArgumentPrintResult?>,
                                          hasExplicitExternalArgument: Boolean,
@@ -132,7 +131,8 @@ abstract class AbstractExpressionEntry(
 
     override fun getArguments(): List<ArgumentPrintResult> = partiallyPrintedArguments
     
-    fun getFunctionName(): String = contextName
+    fun getFunctionName(): String =
+        contextName
 
     fun isInfix() = isInfixNotation
 

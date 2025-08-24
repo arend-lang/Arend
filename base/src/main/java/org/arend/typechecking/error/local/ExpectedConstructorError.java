@@ -12,7 +12,6 @@ import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.LineDoc;
 import org.arend.ext.reference.DataContainer;
 import org.arend.naming.reference.GlobalReferable;
-import org.arend.naming.reference.LocatedReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;

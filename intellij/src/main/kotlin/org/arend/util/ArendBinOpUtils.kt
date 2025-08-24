@@ -17,10 +17,32 @@ import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.SearchConcreteVisitor
 import org.arend.term.concrete.SubstConcreteVisitor
 
+fun exprToConcrete1(appExpr: ArendExpr): List<Concrete.SourceNode> {
+    val result = ArrayList<Concrete.SourceNode>()
+    val definition = appExpr.ancestor<ArendDefinition<*>>()?.tcReferable ?: return result
+    val concrete = appExpr.project.service<ArendServerService>().server.getResolvedDefinition(definition)?.definition ?: return result
+    concrete.accept(object : SearchConcreteVisitor<Any?, Concrete.SourceNode?>() {
+        override fun checkSourceNode(sourceNode: Concrete.SourceNode, params: Any?): Concrete.SourceNode? {
+            var data: PsiElement? = sourceNode.data as? PsiElement
+            val textRange = data?.textRange ?: return null
+            while (data != null && data.textRange == textRange) {
+                if (data == appExpr && sourceNode is Concrete.Expression) {
+                    result.add(sourceNode)
+                    return null
+                }
+
+                data = data.parent
+            }
+            return null
+        }
+    }, null) as? Concrete.Expression
+    return result
+}
+
 fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
-    val definition = appExpr.ancestor<ArendDefinition<*>>()?.tcReferable ?: return null
+    /* val definition = appExpr.ancestor<ArendDefinition<*>>()?.tcReferable ?: return null
     val concrete = appExpr.project.service<ArendServerService>().server.getResolvedDefinition(definition)?.definition ?: return null
-    return concrete.accept(object : SearchConcreteVisitor<Any?, Concrete.SourceNode?>() {
+    val result = concrete.accept(object : SearchConcreteVisitor<Any?, Concrete.SourceNode?>() {
         override fun checkSourceNode(sourceNode: Concrete.SourceNode, params: Any?): Concrete.SourceNode? {
             var data: PsiElement? = sourceNode.data as? PsiElement
             val textRange = data?.textRange ?: return null
@@ -32,6 +54,11 @@ fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
             return null
         }
     }, null) as? Concrete.Expression
+    if (result != exprToConcrete1(appExpr).firstOrNull()) {
+        println("foo")
+    } */
+
+    return exprToConcrete1(appExpr).firstOrNull() as? Concrete.Expression
 }
 
 /**
@@ -117,6 +144,8 @@ fun getBounds(cExpr: Concrete.SourceNode, aaeBlocks: List<ASTNode>, rangesMap: H
         }
     } else if (cExpr is Concrete.LamExpression) { //cExpr.data == null, so this is most likely a postfix or apply hole expression
         result = getBounds(cExpr.body, aaeBlocks, rangesMap)
+    } else if (cExpr is Concrete.ProjExpression) {
+        result = getBounds(cExpr.expression, aaeBlocks, rangesMap)
     } else if (cExprData is PsiElement) {
         for (psi in aaeBlocks)
             if (psi.textRange.contains(cExprData.node.textRange)) {

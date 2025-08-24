@@ -35,13 +35,13 @@ import org.arend.psi.ext.*
 import org.arend.psi.findNextSibling
 import org.arend.quickfix.removers.RemoveClauseQuickFix.Companion.doRemoveClause
 import org.arend.refactoring.PsiLocatedRenamer
+import org.arend.refactoring.findConcreteByPsi
 import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.LocalVariablesCollector
 import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.typechecking.error.local.ImpossibleEliminationError
-import org.arend.typechecking.visitor.VoidConcreteVisitor
 import org.arend.util.ArendBundle
 
 class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val cause: SmartPsiElementPointer<ArendCompositeElement>) : IntentionAction {
@@ -96,14 +96,14 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
             val caseExprPsi = cause.element?.ancestor<ArendCaseExpr>()
             val clausesListPsi = caseExprPsi?.withBody?.clauseList
             if (caseExprPsi != null && stuckParameterType is DataCallExpression && clausesListPsi != null) {
-                val concreteCaseExpr = (concreteDefinition as? Concrete.Definition)?.let{ ExpectedConstructorQuickFix.findConcreteByPsi(it, Concrete.CaseExpression::class.java, caseExprPsi) }
+                val concreteCaseExpr = (concreteDefinition as? Concrete.Definition)?.let{ findConcreteByPsi(it, Concrete.CaseExpression::class.java, caseExprPsi) }
                 val exprsToEliminate = stuckParameterType.defCallArguments.zip(toList(dataDefinition.parameters)).filter { ddEliminatedParameters.contains(it.second) }.toList()
                 val sampleDataCall = DataCallExpression.make(dataDefinition, error.defCall.levels, toList(dataDefinition.parameters).map { it.makeReference() })
                 val toActualParametersSubstitution = ExprSubstitution(); for (entry in stuckParameterType.defCallArguments.zip(toList(dataDefinition.parameters))) toActualParametersSubstitution.add(entry.second, entry.first)
                 val oldCaseArgs = caseExprPsi.caseArguments
                 val parameterToCaseArgMap = HashMap<DependentLink, ArendCaseArg>()
                 val parameterToCaseExprMap = ExprSubstitution()
-                val caseOccupiedLocalNames = HashSet<String>();
+                val caseOccupiedLocalNames = HashSet<String>()
                 if (concreteDefinition is Concrete.Definition && concreteCaseExpr != null)
                     doInitOccupiedLocalNames(concreteCaseExpr, concreteDefinition, caseOccupiedLocalNames)
 

@@ -20,11 +20,11 @@ public class CollectFreeVariablesVisitor extends VoidExpressionVisitor<Set<Varia
   private final Map<Binding, Set<Variable>> myFreeVariables = new HashMap<>();
   private final Map<String, Variable> myRenamed = new HashMap<>();
 
-  CollectFreeVariablesVisitor(DefinitionRenamer definitionRenamer) {
+  public CollectFreeVariablesVisitor(DefinitionRenamer definitionRenamer) {
     myDefinitionRenamer = definitionRenamer;
   }
 
-  Set<Variable> getFreeVariables(Binding binding) {
+  protected Set<Variable> getFreeVariables(Binding binding) {
     Set<Variable> freeVars = myFreeVariables.get(binding);
     return freeVars == null ? Collections.emptySet() : freeVars;
   }

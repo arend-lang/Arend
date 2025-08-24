@@ -190,7 +190,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        \module M \where {
          \func foobar \alias fu {a b : Nat} => b Nat.+ a
   
-         \func bar => foobar {2} {1}
+         \func bar => fu {2} {1}
          
          \func bar2 => fu {2} {1}
        }
@@ -224,8 +224,8 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
          | suc n' => \infixl 1 consSuc (MyData2 X n' y x) (MyData2 X n' y x)
 
        \func usage (n : Nat) (d : M.MyData2 _ n Nat Nat) : M.MyData2 _ n 1 1 \with
-         | zero, M.consZero p => M.MyData2.consZero {_} {1} {1} idp
-         | suc n', d M.consSuc d2 => (usage n' d) M.MyData2.consSuc (usage n' d)
+         | zero, M.consZero p => M.consZero {_} {1} {1} idp
+         | suc n', d M.consSuc d2 => (usage n' d) M.consSuc (usage n' d)
 
 
        \module M2 \where {
@@ -233,7 +233,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
          \func bar : MyData2 Nat 1 1 1 => consZero idp consSuc (consZero) {_} {1} {1} idp
        }
 
-       \func bar2 => M.consZero idp M.MyData2.consSuc (M.consZero) {_} {1} {1} idp
+       \func bar2 => M.consZero idp M.consSuc (M.consZero) {_} {1} {1} idp
     """, listOf(Pair(-1, "X"),
                 Pair(5, "n"),
                 Pair(4, "y"),
@@ -251,10 +251,10 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        \class C {Z : \Type} {
          \data Bar \alias Fu (X : \Type) (n m : Nat) \elim n
            | zero => nil X Z
-           | suc n => cons X (Bar {\this} X n {?})
+           | suc n => cons X (Fu {\this} X n {?})
        }
 
-       \func lol (I : C {Nat}) : C.Fu _ 2 {?} => C.cons {_} {_} {_} {{?}} 1 (C.cons {_} {_} {_} {{?}} 2 (C.Fu.nil {I} {_} {{?}} 3 4)) 
+       \func lol (I : C {Nat}) : C.Fu _ 2 {?} => C.cons {_} {_} {_} {{?}} 1 (C.cons {_} {_} {_} {{?}} 2 (C.nil {I} {_} {{?}} 3 4)) 
     """, listOf(Pair(-1, "X"), Pair(3, "n"), "m"), listOf(Pair("m", Pair(true, "Nat"))), "Bar")
 
     fun testCombineData2b() = changeSignature("""
@@ -269,10 +269,10 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        \class C {Z : \Type} {
          \data Bar \alias Fu {X : \Type} (n m : Nat) \elim n
            | zero => nil X Z
-           | suc n => cons X (Bar {\this} {X} n {?})
+           | suc n => cons X (Fu {\this} {X} n {?})
        }
 
-       \func lol (I : C {Nat}) : C.Fu 2 {?} => C.cons {_} {_} {_} {{?}} 1 (C.cons {_} {_} {_} {{?}} 2 (C.Fu.nil {I} {_} {{?}} 3 4)) 
+       \func lol (I : C {Nat}) : C.Fu 2 {?} => C.cons {_} {_} {_} {{?}} 1 (C.cons {_} {_} {_} {{?}} 2 (C.nil {I} {_} {{?}} 3 4)) 
     """, listOf(Pair(1, "X"), Pair(3, "n"), "m"), listOf(Pair("m", Pair(true, "Nat"))), "Bar")
 
     fun testData3() = changeSignature("""
@@ -592,7 +592,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
     """, """       
        \import A (foo, bar)
        
-       \func test => foo {101} Nat.+ bar {101}
+       \func test => bar {101} Nat.+ bar {101}
     """, listOf(-1), fileName = "Main.ard")
 
     fun testClassImplement() = changeSignature("""

@@ -38,20 +38,15 @@ import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.ext.util.Pair;
 import org.arend.ext.variable.Variable;
-import org.arend.ext.variable.VariableImpl;
 import org.arend.extImpl.definitionRenamer.ConflictDefinitionRenamer;
-import org.arend.extImpl.definitionRenamer.ScopeDefinitionRenamer;
 import org.arend.naming.reference.*;
 import org.arend.naming.renamer.ReferableRenamer;
 import org.arend.naming.renamer.Renamer;
-import org.arend.naming.scope.Scope;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.visitor.VoidConcreteVisitor;
 import org.arend.util.SingletonList;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.util.*;
 
 import static org.arend.term.concrete.ConcreteExpressionFactory.*;
@@ -65,7 +60,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   private final ExpressionPrettifier myDefaultPrettifier = (expression, defaultPrettifier) ->
       expression instanceof Expression ? ((Expression) expression).accept(ToAbstractVisitor.this, null) : null;
 
-  ToAbstractVisitor(ExpressionPrettifier prettifier, PrettyPrinterConfig config, DefinitionRenamer definitionRenamer, CollectFreeVariablesVisitor collector, ReferableRenamer renamer) {
+  public ToAbstractVisitor(ExpressionPrettifier prettifier, PrettyPrinterConfig config, DefinitionRenamer definitionRenamer, CollectFreeVariablesVisitor collector, ReferableRenamer renamer) {
     myPrettifier = prettifier;
     myConfig = config;
     myDefinitionRenamer = definitionRenamer;
@@ -152,29 +147,10 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     return definition.accept(visitor, null);
   }
 
-  public static Pair<Concrete.Pattern, Concrete.Expression> convertPattern(Scope scope, ExpressionPattern pattern, Boolean isExplicit, PrettyPrinterConfig config,
-                                                                           @Nullable DataDefinition sampleData,
-                                                                           @Nullable String sampleName) {
-    DefinitionRenamer renamer = new ScopeDefinitionRenamer(scope);
-    CollectFreeVariablesVisitor collector = new CollectFreeVariablesVisitor(renamer);
-    ToAbstractVisitor visitor = new ToAbstractVisitor(null, config, renamer, collector, new ReferableRenamer() {
-      @Override
-      public LocalReferable generateFreshReferable(Variable var, Collection<? extends Variable> variables) {
-        if (var instanceof TypedDependentLink link) {
-          if (link.getType() instanceof DataCallExpression dataCall && dataCall.getDefinition() == sampleData) {
-            LocalReferable referable = ref(super.generateFreshName(new VariableImpl(sampleName), variables));
-            addNewName(link, referable);
-            return referable;
-          }
-        }
-        return super.generateFreshReferable(var, variables);
-      }
-
-    });
-
+  public Pair<Concrete.Pattern, Concrete.Expression> convertPattern(ExpressionPattern pattern, boolean isExplicit) {
     List<Concrete.Pattern> list = new ArrayList<>();
-    visitor.visitElimPattern(pattern, isExplicit, list);
-    return new Pair<>(list.getLast(), visitor.convertExpr(pattern.toExpression()));
+    visitElimPattern(pattern, isExplicit, list);
+    return new Pair<>(list.getLast(), convertExpr(pattern.toExpression()));
   }
 
   Concrete.Expression convertExpr(Expression expr) {

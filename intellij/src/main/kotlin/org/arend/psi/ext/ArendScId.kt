@@ -12,5 +12,6 @@ class ArendScId(node: ASTNode) : ArendSourceNodeImpl(node), Abstract.NameHiding 
 
     override fun getScopeContext() = ArendStatCmd.getScopeContext(firstRelevantChild)
 
-    override fun getHiddenReference(): NamedUnresolvedReference = refIdentifier.referent
+    override fun getHiddenReference(): NamedUnresolvedReference =
+        refIdentifier.referent
 }

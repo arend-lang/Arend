@@ -1,15 +1,20 @@
 package org.arend.intention
 
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
+import org.arend.error.DummyErrorReporter
 import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.psi.ext.ArendCompositeElement
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.refactoring.*
 import org.arend.refactoring.changeSignature.*
+import org.arend.server.ArendServerService
+import org.arend.server.impl.MultiFileReferenceResolver
+import org.arend.server.impl.SingleFileReferenceResolver
 import org.arend.term.abs.Abstract.ParametersHolder
 import org.arend.util.*
 import java.util.Collections.singletonList
@@ -26,6 +31,8 @@ class ChangeArgumentExplicitnessIntention : SelfTargetingIntention<ArendComposit
     }
 
     override fun applyTo(element: ArendCompositeElement, project: Project, editor: Editor) {
+        val server = project.service<ArendServerService>().server
+        val containingFile = element.containingFile as? ArendFile ?: return
         val elementOnCaret = element.containingFile.findElementAt(editor.caretModel.offset)
         val switchedArgIndexInTele = getSwitchedArgIndex(element, elementOnCaret)
         val def = element.ancestor() as? PsiLocatedReferable ?: return
@@ -47,7 +54,7 @@ class ChangeArgumentExplicitnessIntention : SelfTargetingIntention<ArendComposit
         }
 
         val externalParametersOk = if (def is ParametersHolder) ArendChangeSignatureHandler.checkExternalParametersOk(def) else null
-        val primaryChangeInfo = ArendChangeInfo(modifiedParameterInfo, null, def.name!!, def)
+        val primaryChangeInfo = ArendChangeInfo(modifiedParameterInfo, null, def.name!!, def, MultiFileReferenceResolver(server))
         if (externalParametersOk == true)
             ArendChangeSignatureProcessor(project, primaryChangeInfo, false, true).run()
     }

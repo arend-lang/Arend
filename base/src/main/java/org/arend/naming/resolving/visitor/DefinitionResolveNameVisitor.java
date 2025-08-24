@@ -729,7 +729,11 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
         }
 
         for (ConcreteNamespaceCommand.NameHiding nameHiding : namespaceCommand.hidings()) {
+          Referable oldRef = nameHiding.reference();
           Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.reference(), new PrivateFilteredScope(curScope, true), nameHiding.scopeContext());
+          if (myResolverListener != null) {
+            myResolverListener.hidingResolved(nameHiding, oldRef, ref);
+          }
           if (ref instanceof ErrorReference) {
             localErrorReporter.report(((ErrorReference) ref).getError());
           }

@@ -20,30 +20,12 @@ import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getBounds
 
-class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wrap: Wrap?, alignment: Alignment?, myIndent: Indent?, parentBlock: AbstractArendBlock?) :
+class ArgumentAppExprBlock(val cExpr: Concrete.Expression, node: ASTNode, settings: CommonCodeStyleSettings?, wrap: Wrap?, alignment: Alignment?, myIndent: Indent?, parentBlock: AbstractArendBlock?) :
         AbstractArendBlock(node, settings, wrap, alignment, myIndent, parentBlock) {
     override fun buildChildren(): MutableList<Block> {
-        val cExpr = runReadAction {
-            val psi = node.psi
-            val project = psi.project
-            if (psi is ArendExpr && !DumbService.isDumb(project)) {
-                val arendServer = project.service<ArendServerService>().server
-                val targetFile = psi.containingFile as? ArendFile
-                val targetFileLocation = targetFile?.moduleLocation
-
-                if (targetFileLocation != null) {
-                    //TODO: This operation may be slow
-                    arendServer.getCheckerFor(listOf(targetFileLocation)).resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-                }
-
-                appExprToConcreteOnlyTopLevel(psi)
-            } else null
-        }
         val children = myNode.getChildren(null).filter { it.elementType != TokenType.WHITE_SPACE }.toList()
-
-        if (cExpr != null) return transform(cExpr, children, Alignment.createAlignment(), Indent.getNoneIndent()).subBlocks
-
-        return ArrayList()
+        val result = transform(cExpr, children, Alignment.createAlignment(), Indent.getNoneIndent())
+        return ArrayList(result.subBlocks)
     }
 
     override fun getSpacing(child1: Block?, child2: Block): Spacing = oneSpaceWrap
@@ -55,7 +37,7 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
             val child = subBlocks[newChildIndex-1]
 
             val isLast = newChildIndex == subBlocks.size
-            val alignNeeded = if (isLast) subBlocks.any { hasLfBefore(it) } else true
+            val alignNeeded = if (isLast) subBlocks.filterNotNull().any { hasLfBefore(it) } else true
 
             val indent = if (child == null) Indent.getNoneIndent() else child.indent
             val align = if (alignNeeded) child?.alignment else getGrandParentAlignment()
@@ -153,18 +135,12 @@ class ArgumentAppExprBlock(node: ASTNode, settings: CommonCodeStyleSettings?, wr
         } else if (cExpr is Concrete.LamExpression) { // we are dealing with right sections
             return GroupBlock(settings, aaeBlocks.map { createArendBlock(it, null, null, Indent.getNoneIndent()) }.toMutableList(), null, align, indent, this)
         } else if (cExprData is PsiElement) {
-            var psi: PsiElement? = null
-            for (aaeBlock in aaeBlocks) if (aaeBlock.textRange.contains(cExprData.node.textRange)) {
-                psi = aaeBlock.psi
-                break
+            val blocks = aaeBlocks.map { createArendBlock(it, null, align, indent) as Block }.toMutableList()
+
+            if (aaeBlocks.size == 1)
+                return blocks.first() as AbstractArendBlock else {
+                return GroupBlock(settings, blocks, null, align, indent, this)
             }
-            if (psi == null)
-                throw IllegalStateException()
-
-            val singletonSet = HashSet<PsiElement>()
-            singletonSet.add(psi)
-
-            return createArendBlock(psi.node, null, align, indent)
         }
         else throw IllegalStateException()
     }

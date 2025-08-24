@@ -89,7 +89,8 @@ public class CollectingResolverListener implements ResolverListener {
 
   @Override
   public void patternResolved(Referable originalRef, Referable newRef, Concrete.Pattern pattern, List<Referable> resolvedRefs) {
-    cacheReference(originalRef instanceof UnresolvedReference ? (UnresolvedReference) originalRef : new NamedUnresolvedReference(originalRef, originalRef.getRefName()), newRef, resolvedRefs);
+    cacheReference(originalRef instanceof UnresolvedReference ? (UnresolvedReference) originalRef :
+      new NamedUnresolvedReference(originalRef.getAbstractReferable(), originalRef.getRefName()), newRef, resolvedRefs);
   }
 
   @Override
@@ -124,6 +125,13 @@ public class CollectingResolverListener implements ResolverListener {
 
   @Override
   public void renamingResolved(ConcreteNamespaceCommand.NameRenaming renaming, Referable originalRef, Referable resolvedRef) {
+    if (originalRef instanceof UnresolvedReference) {
+      cacheReference((UnresolvedReference) originalRef, resolvedRef, null);
+    }
+  }
+
+  @Override
+  public void hidingResolved(ConcreteNamespaceCommand.NameHiding hiding, Referable originalRef, Referable resolvedRef) {
     if (originalRef instanceof UnresolvedReference) {
       cacheReference((UnresolvedReference) originalRef, resolvedRef, null);
     }

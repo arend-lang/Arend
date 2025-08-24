@@ -2,6 +2,7 @@ package org.arend.refactoring.move
 
 import com.intellij.ide.actions.CreateFileFromTemplateAction.createFileFromTemplate
 import com.intellij.ide.fileTemplates.FileTemplateManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
@@ -29,6 +30,8 @@ import org.arend.naming.scope.Scope
 import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.refactoring.move.ArendMoveRefactoringProcessor.Companion.getUsagesToPreprocess
+import org.arend.server.ArendServerService
+import org.arend.server.impl.MultiFileReferenceResolver
 import org.arend.util.ArendBundle
 import org.arend.util.aligned
 import java.awt.BorderLayout
@@ -221,9 +224,10 @@ class ArendMoveMembersDialog(project: Project,
 
         //Validate that dynamically inferred implicit parameters of functions being moved are known
         val problematicGroups = LinkedHashSet<PsiLocatedReferable>()
+        val server = project.service<ArendServerService>().server
+        val multiFileReferenceResolver = MultiFileReferenceResolver(server)
         if (!showErrorMessage && targetContainer != null) {
-            getUsagesToPreprocess(elementsToMove, dynamicGroup.isSelected, targetContainer, HashMap(), problematicGroups)
-
+            getUsagesToPreprocess(server, elementsToMove, dynamicGroup.isSelected, targetContainer, HashMap(), problematicGroups, multiFileReferenceResolver)
             for (def in elementsToMove) if (def is ArendDefinition<*>) {
                 val list = ArendCodeInsightUtils.getExternalParameters(def)
                 if (list == null) problematicGroups.add(def)
@@ -252,7 +256,7 @@ class ArendMoveMembersDialog(project: Project,
         }
 
         if (targetContainer != null && problematicGroups.isEmpty())
-            invokeRefactoring(ArendMoveRefactoringProcessor(project, {}, elementsToMove, sourceGroup as ArendGroup, targetContainer, dynamicGroup.isSelected, isOpenInEditor))
+            invokeRefactoring(ArendMoveRefactoringProcessor(project, multiFileReferenceResolver, {}, elementsToMove, sourceGroup as ArendGroup, targetContainer, dynamicGroup.isSelected, isOpenInEditor))
         else if (showErrorMessage) CommonRefactoringUtil.showErrorMessage(MoveMembersImpl.getRefactoringName(), getLocateErrorMessage(locateResult.second), HelpID.MOVE_MEMBERS, myProject)
     }
 

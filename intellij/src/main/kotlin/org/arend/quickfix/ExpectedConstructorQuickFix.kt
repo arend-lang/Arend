@@ -27,28 +27,28 @@ import org.arend.core.subst.SubstVisitor
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.core.level.LevelSubstitution
 import org.arend.ext.error.ListErrorReporter
-import org.arend.ext.module.ModuleLocation
 import org.arend.ext.prettyprinting.DefinitionRenamer
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
 import org.arend.ext.reference.DataContainer
 import org.arend.ext.reference.Precedence
 import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
-import org.arend.extImpl.definitionRenamer.ScopeDefinitionRenamer
 import org.arend.naming.reference.*
 import org.arend.naming.renamer.ReferableRenamer
 import org.arend.naming.renamer.StringRenamer
 import org.arend.naming.scope.Scope
 import org.arend.psi.*
 import org.arend.psi.ext.*
-import org.arend.server.ArendServer
+import org.arend.refactoring.findConcreteByPsi
+import org.arend.refactoring.utils.ArendRefactoringToAbstractVisitor
+import org.arend.refactoring.utils.ServerBasedDefinitionRenamer
 import org.arend.server.ArendServerService
-import org.arend.server.RawAnchor
 import org.arend.term.abs.Abstract
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.LocalVariablesCollector
 import org.arend.term.concrete.SearchConcreteVisitor
 import org.arend.term.concrete.SubstConcreteVisitor
+import org.arend.term.prettyprint.DefinitionRenamerConcreteVisitor
 import org.arend.term.prettyprint.PrettyPrintVisitor
 import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.typechecking.error.local.ExpectedConstructorError
@@ -148,6 +148,11 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
             val clauseToEntryMap = HashMap<Abstract.Clause, ClauseEntry>()
             private val entriesToRemove = ArrayList<ClauseEntry>()
 
+            val arendFile = (definitionPsi as? PsiElement)?.containingFile as? ArendFile
+            val serverRenamer = arendFile?.let { ServerBasedDefinitionRenamer(server, DummyErrorReporter.INSTANCE,
+            typecheckedDefinition.referable ?: FullModuleReferable(arendFile.moduleLocation), arendFile) }
+            val renamingVisitor = serverRenamer?.let { DefinitionRenamerConcreteVisitor(serverRenamer) }
+
             fun reportError(ecEntry: ClauseEntry, currentClause: Abstract.Clause) {
                 entriesToRemove.add(ecEntry)
                 errorHintBuffer.append("Constructor: ${ecEntry.constructorTypechecked.name}\n")
@@ -222,6 +227,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                     val textRange = getTextRange()
                     textFile.replaceString(textRange.startOffset, textRange.endOffset, builder.toString())
                     PsiDocumentManager.getInstance(project).commitDocument(textFile)
+                    serverRenamer?.getAction()?.execute()
                 }
 
                 if (editor != null && errorHintBuffer.isNotEmpty()) ApplicationManager.getApplication().invokeLater {
@@ -240,6 +246,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
 
             companion object {
                 fun reconstructList(scope: Scope,
+                                    occupiedLocalNames: HashSet<Variable>,
                                     parameters: List<DependentLink>,
                                     concreteParameters: List<Referable>?,
                                     eliminatedParameters: Set<DependentLink>?,
@@ -265,13 +272,13 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                         val substitutedPattern = substitutions?.let{ it[sample] }
                         if (sampleIsExplicit == currentConcretePattern?.isExplicit) {
                             val (data, name) = if (sample.name != null && sample.type is DataCallExpression) Pair((sample.type as? DataCallExpression)?.definition, sample.name) else Pair(sampleData, sampleName)
-                            val reconstructedPattern = reconstructPattern(scope, substitutedPattern, currentConcretePattern, substitutions, sink, clauseLinkListIterator, data, name)
+                            val reconstructedPattern = reconstructPattern(scope, occupiedLocalNames, substitutedPattern, currentConcretePattern, substitutions, sink, clauseLinkListIterator, data, name)
                             result.add(reconstructedPattern)
                             currentConcretePattern = if (concreteIterator.hasNext()) concreteIterator.next() else null
                             skippedPatterns = 0
                             continue
                         } else if (!sampleIsExplicit) {
-                            val pattern = reconstructPattern(scope, substitutedPattern,
+                            val pattern = reconstructPattern(scope, occupiedLocalNames, substitutedPattern,
                                 Concrete.NamePattern(null, elimMode, concreteParameter, null), substitutions, sink, clauseLinkListIterator,
                                 (sample.type as? DataCallExpression)?.definition, sample.name)
                             if (pattern !is Concrete.NamePattern) {
@@ -299,6 +306,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 }
 
                 fun reconstructPattern(scope: Scope,
+                                       occupiedLocalNames: HashSet<Variable>,
                                        substitutedCorePattern: ExpressionPattern?,
                                        concretePattern: Concrete.Pattern,
                                        substitutions: Map<Variable, ExpressionPattern>?,
@@ -312,7 +320,8 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                             val correspondingClauseParameter = if (clauseLinkListIterator.hasNext()) clauseLinkListIterator.next() else null
                             val corePattern = substitutedCorePattern ?: substitutions?.let{ if (correspondingClauseParameter != null) it[correspondingClauseParameter] else null }
                             if (corePattern != null && corePattern !is BindingPattern) {
-                                val pair = ToAbstractVisitor.convertPattern(scope, corePattern, concretePattern.isExplicit, PrettyPrinterConfig.DEFAULT, sampleData, sampleName)
+                                val toAbstractVisitor = ArendRefactoringToAbstractVisitor(scope, occupiedLocalNames, sampleData, sampleName)
+                                val pair = toAbstractVisitor.convertPattern(corePattern, concretePattern.isExplicit)
                                 concretePattern.referable?.let { sink[it] = pair.proj2 }
                                 pair.proj1.asReferable = concretePattern.asReferable
                                 return pair.proj1
@@ -328,7 +337,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                             if (substitutedCorePattern is ConstructorExpressionPattern) for ((constructorParameter, matchedPattern) in constructorParameters.zip(substitutedCorePattern.subPatterns))
                                 newSubstitutions[constructorParameter] = matchedPattern
 
-                            val reconstructedPatterns = reconstructList(scope, constructorParameters, null, null, concretePattern.patterns, newSubstitutions, sink, clauseLinkListIterator, sampleData, sampleName)
+                            val reconstructedPatterns = reconstructList(scope, occupiedLocalNames, constructorParameters, null, null, concretePattern.patterns, newSubstitutions, sink, clauseLinkListIterator, sampleData, sampleName)
                             mismatched = substitutedCorePattern != null && (substitutedCorePattern !is ConstructorExpressionPattern || substitutedConstructor != existingConstructor)
                             if (!mismatched)
                                 return Concrete.ConstructorPattern(null, concretePattern.isExplicit, concretePattern.constructorData, existingConstructor, reconstructedPatterns, concretePattern.asReferable)
@@ -340,11 +349,11 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                             if (substitutedCorePattern is ConstructorExpressionPattern && substitutedCorePattern.constructor == null && substitutedCorePattern.subPatterns.size == concretePattern.patterns.size) {
                                 val tuplePatterns = concretePattern.patterns.zip(substitutedCorePattern.subPatterns).map {
                                         (concretePattern, substitutedCorePattern) ->
-                                    reconstructPattern(scope, substitutedCorePattern, concretePattern, substitutions, sink, clauseLinkListIterator)
+                                    reconstructPattern(scope, occupiedLocalNames, substitutedCorePattern, concretePattern, substitutions, sink, clauseLinkListIterator)
                                 }
                                 return Concrete.TuplePattern(null, concretePattern.isExplicit, tuplePatterns, concretePattern.asReferable)
                             } else if (substitutedCorePattern == null) {
-                                val tuplePatterns = concretePattern.patterns.map { reconstructPattern(scope,null, it, substitutions, sink, clauseLinkListIterator) }.toList()
+                                val tuplePatterns = concretePattern.patterns.map { reconstructPattern(scope,occupiedLocalNames, null, it, substitutions, sink, clauseLinkListIterator) }.toList()
                                 return Concrete.TuplePattern(null, concretePattern.isExplicit, tuplePatterns, concretePattern.asReferable)
                             } else {
                                 mismatched = true
@@ -354,9 +363,18 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                     if (mismatched) {
                         val mismatchedReferables = findNamePatterns(concretePattern)
                         for (ref in mismatchedReferables) sink[ref] = Concrete.GoalExpression(null, ref.refName, null)
-                        val concreteSubstitutedPattern = ToAbstractVisitor.convertPattern(scope, substitutedCorePattern, concretePattern.isExplicit, PrettyPrinterConfig.DEFAULT, null, null)
+                        val toAbstractVisitor = ArendRefactoringToAbstractVisitor(scope, occupiedLocalNames, sampleData, sampleName)
+                        val concreteSubstitutedPattern = toAbstractVisitor.convertPattern(substitutedCorePattern, concretePattern.isExplicit)
                         return concreteSubstitutedPattern.proj1
                     }
+
+                    val collector = object: SearchConcreteVisitor<Void, Void>() {
+                        override fun visitReferable(referable: Referable?, params: Void?) {
+                            referable?.refName?.let { occupiedLocalNames.add(VariableImpl(it)) }
+                        }
+                    }
+
+                    collector.visitPattern(concretePattern, null)
 
                     return concretePattern
                 }
@@ -467,8 +485,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 val bindingToCaseArgMap = HashMap<Binding, Concrete.CaseArgument>()
                 val newCaseArgs = ArrayList<Pair<Concrete.CaseArgument, Concrete.CaseArgument?>>(concreteCaseExpression.arguments.map { Pair(it, it) })
 
-                val definitionRenamer = ScopeDefinitionRenamer(scope)
-                val ppConfig = object : PrettyPrinterConfig { override fun getDefinitionRenamer(): DefinitionRenamer = definitionRenamer }
+                val ppConfig = if (serverRenamer != null) object : PrettyPrinterConfig { override fun getDefinitionRenamer(): DefinitionRenamer = serverRenamer } else PrettyPrinterConfig.DEFAULT
                 val occupiedNames = HashSet<String>()
                 val localReferables = HashMap<Any, Referable>()
 
@@ -488,7 +505,9 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
 
                     val compositeMap = HashMap<Binding, LocalReferable>()
                     for (binding in thisError.myDataContext) (localReferables[binding.value] as? LocalReferable)?.let { compositeMap[binding.key] = it }
-                    doInsertCaseArgsConcrete(ppConfig, concreteCaseExpression.arguments, newCaseArgs, binding, expressionAfterSubstitution, dependentCaseArg, thisError.caseExpressions, occupiedNames, bindingToCaseArgMap, concreteCaseTypeQualifications, compositeMap)
+                    doInsertCaseArgsConcrete(ppConfig, concreteCaseExpression.arguments, newCaseArgs, binding,
+                        expressionAfterSubstitution, dependentCaseArg, thisError.caseExpressions,
+                        occupiedNames, bindingToCaseArgMap, concreteCaseTypeQualifications, compositeMap)
                 }
 
                 val referableRenamer = object: ReferableRenamer() {
@@ -505,7 +524,9 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 for (caseArg in newCaseArgs) {
                     val qualification = concreteCaseTypeQualifications[caseArg.second]
                     if (qualification != null) caseArg.first.type = ToAbstractVisitor.convert(qualification, ppConfig, referableRenamer)
+                    caseArg.first.referable?.refName?.let { occupiedNames.remove(it) }
                 }
+
 
                 val newClauses = ArrayList<Concrete.FunctionClause>()
                 for (clause in concreteCaseExpression.clauses) {
@@ -515,6 +536,8 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                     entry?.correctedSubsts?.let { correctedSubstsNew.putAll(it) }
                     val sink = HashMap<Referable, Concrete.Expression>()
                     val newPatterns = HashMap<Concrete.CaseArgument, Concrete.Pattern>()
+                    val occupiedLocalNames = HashSet<Variable>()
+                    occupiedNames.forEach { occupiedLocalNames.add(VariableImpl(it)) }
 
                     if (entry != null) for (substEntry in entry.correctedSubsts) {
                         val newCaseArg = bindingToCaseArgMap[substEntry.key]!!
@@ -522,10 +545,10 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                         val index = concreteCaseExpression.arguments.indexOf(oldCaseArg)
 
                         if (index != -1) {
-                            newPatterns[newCaseArg] = reconstructPattern(scope, substEntry.value, clause.patterns[index], correctedSubstsNew, sink, emptyList<DependentLink>().iterator())
+                            newPatterns[newCaseArg] = reconstructPattern(scope, occupiedLocalNames, substEntry.value, clause.patterns[index], correctedSubstsNew, sink, emptyList<DependentLink>().iterator())
                         } else {
                             val localReferable = (newCaseArg.expression as? Concrete.ReferenceExpression)?.referent as? LocalReferable
-                            newPatterns[newCaseArg] = reconstructPattern(scope, substEntry.value, Concrete.NamePattern(null, true, localReferable ?: newCaseArg.referable, null),
+                            newPatterns[newCaseArg] = reconstructPattern(scope, occupiedLocalNames, substEntry.value, Concrete.NamePattern(null, true, localReferable ?: newCaseArg.referable, null),
                                 correctedSubstsNew, sink, emptyList<DependentLink>().iterator(), ((substEntry.key as? TypedBinding)?.type as? DataCallExpression)?.definition, newCaseArg.referable?.refName)
                         }
                     }
@@ -539,20 +562,17 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                         })
                     }
 
-                    val arendFile = (definitionPsi as? PsiElement)?.containingFile as? ArendFile
-                    val substVisitor = ScopeAwareSubstConcreteVisitor(server, typecheckedDefinition.referable ?: if (arendFile != null) FullModuleReferable(arendFile.moduleLocation) else null, arendFile?.moduleLocation, sink)
+                    val substVisitor = SubstConcreteVisitor(sink, null)
                     val substResult = clause.expression.accept(substVisitor, null)
+                    val renamedExpression = if (renamingVisitor != null) substResult.accept(renamingVisitor, null) else substResult
 
-                    newClauses.add(Concrete.FunctionClause(null, patterns, substResult))
+                    newClauses.add(Concrete.FunctionClause(null, patterns, renamedExpression))
                 }
 
-                val arendFile = (definitionPsi as? PsiElement)?.containingFile as? ArendFile
-                val longNameFixingVisitor = ScopeAwareSubstConcreteVisitor(server, typecheckedDefinition.referable ?: if (arendFile != null) FullModuleReferable(arendFile.moduleLocation) else null, arendFile?.moduleLocation, emptyMap())
-
                 return Concrete.CaseExpression(null, concreteCaseExpression.isSCase, newCaseArgs.map {
-                    Concrete.CaseArgument(it.first.expression.accept(longNameFixingVisitor, null),
+                    Concrete.CaseArgument(it.first.expression.accept(renamingVisitor, null),
                         it.first.referable,
-                        it.first.type?.accept(longNameFixingVisitor, null), it.first.isElim) }, concreteCaseExpression.resultType,
+                        it.first.type?.accept(renamingVisitor, null), it.first.isElim) }, concreteCaseExpression.resultType,
                     concreteCaseExpression.resultTypeLevel, newClauses)
             }
 
@@ -568,9 +588,9 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                                                  typeQualifications: Map<Concrete.CaseArgument, DataCallExpression>,
                                                  localReferables: Map<Binding, LocalReferable>) {
                 val renamer = StringRenamer()
+                val occupiedVars = caseOccupiedLocalNames.map { VariableImpl(it) }
                 val freshName = if (expression is ReferenceExpression) expression.binding.name else
-                    renamer.generateFreshName(TypedBinding(null, binding.typeExpr), caseOccupiedLocalNames.map{ VariableImpl(it) })
-                caseOccupiedLocalNames.add(freshName)
+                    renamer.generateFreshName(TypedBinding(null, binding.typeExpr), occupiedVars)
                 var replaceKey: Concrete.CaseArgument? = null
                 var replaceValue: Concrete.CaseArgument? = null
                 var foundExpression = false
@@ -608,6 +628,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 for (entry in localReferables) referableRenamer.addNewName(entry.key, entry.value)
                 val abstractExpr = ToAbstractVisitor.convert(expression, ppConfig, referableRenamer)
                 val newCaseArg = Concrete.CaseArgument(abstractExpr, LocalReferable(freshName), null)
+                caseOccupiedLocalNames.add(freshName)
                 val index = newCaseArgs.indexOfFirst {it.second == dependentCaseArg}
                 newCaseArgs.add(index, Pair(newCaseArg, null))
                 bindingToCaseArgMap[binding] = newCaseArg
@@ -754,7 +775,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
 
                 for (clauseEntry in expectedConstructorErrorEntries) {
                     val clauseParameters = DependentLink.Helper.toList(clauseEntry.error.patternParameters)
-                    clauseEntry.patterns.addAll(reconstructList(scope, typecheckedParameters, concreteParameters, if (isWithMode) null else elimParams.toSet(), clauseEntry.clause.patterns, clauseEntry.correctedSubsts, clauseEntry.processedConcreteSubstitutions, clauseParameters.iterator()))
+                    clauseEntry.patterns.addAll(reconstructList(scope, HashSet(), typecheckedParameters, concreteParameters, if (isWithMode) null else elimParams.toSet(), clauseEntry.clause.patterns, clauseEntry.correctedSubsts, clauseEntry.processedConcreteSubstitutions, clauseParameters.iterator()))
                 }
 
                 val clauses = ArrayList<Concrete.FunctionClause>()
@@ -762,8 +783,8 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
 
                 for (entry in expectedConstructorErrorEntries) {
                     val patterns = entry.patterns
-                    val arendFile = (definitionPsi as? PsiElement)?.containingFile as? ArendFile
-                    val substVisitor = ScopeAwareSubstConcreteVisitor(server, typecheckedDefinition.referable ?: if (arendFile != null) FullModuleReferable(arendFile.moduleLocation) else null, arendFile?.moduleLocation, entry.processedConcreteSubstitutions)
+                    val substVisitor = SubstConcreteVisitor(entry.processedConcreteSubstitutions, null)
+
                     when (entry.clause) {
                         is Concrete.ConstructorClause -> {
                             val constructors = ArrayList<Concrete.Constructor>()
@@ -771,7 +792,8 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                                 val typeParameters = ArrayList<Concrete.TypeParameter>()
                                 for (parameter in constructor.parameters) {
                                     val type = parameter.type.accept(substVisitor, null)
-                                    typeParameters.add(Concrete.TypeParameter(parameter.isExplicit, type, parameter.isProperty ))
+                                    val renamedType = if (renamingVisitor != null) type.accept(renamingVisitor, null) else type
+                                    typeParameters.add(Concrete.TypeParameter(parameter.isExplicit, renamedType, parameter.isProperty ))
                                 }
                                 val newConstructor = Concrete.Constructor(constructor.data, typeParameters, constructor.eliminatedReferences, constructor.clauses, constructor.isCoerce)
                                 constructors.add(newConstructor)
@@ -780,7 +802,8 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                         }
                         is Concrete.FunctionClause -> {
                             val newExpression = entry.clause.expression.accept(substVisitor, null)
-                            clauses.add(Concrete.FunctionClause(entry.clause.data, patterns, newExpression))
+                            val renamedExpression = if (renamingVisitor != null) newExpression.accept(renamingVisitor, null) else newExpression
+                            clauses.add(Concrete.FunctionClause(entry.clause.data, patterns, renamedExpression))
                         }
                     }
                 }
@@ -859,31 +882,6 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 }
             }
             return true
-        }
-
-        class ScopeAwareSubstConcreteVisitor(val arendServer: ArendServer, val anchorReferable: LocatedReferable?, val anchorFileLocation: ModuleLocation?, substitutions: Map<Referable, Concrete.Expression>): SubstConcreteVisitor(substitutions, null) {
-            override fun visitReference(expr: Concrete.ReferenceExpression?, ignored: Void?): Concrete.Expression? {
-                if (expr?.referent is LocatedReferable) {
-                    val anchor = if (anchorReferable != null) RawAnchor(anchorReferable, null) else null
-                    val fileGroup = if (anchorFileLocation != null) arendServer.getRawGroup(anchorFileLocation) else null
-                    val longName = if (anchor != null && fileGroup != null) arendServer.makeReferencesAvailable(singletonList(expr.referent as LocatedReferable), fileGroup, anchor, DummyErrorReporter.INSTANCE).proj2 else null
-                    if (longName != null && longName.size == 1)
-                        return Concrete.LongReferenceExpression(null, expr, longName.first(), expr.referent)
-                }
-
-                return super.visitReference(expr, ignored)
-            }
-        }
-
-        fun <R : Concrete.SourceNode>findConcreteByPsi(concreteDefinition: Concrete.Definition, clazz: Class<R>, psi: PsiElement): R? {
-            val searcher = object : SearchConcreteVisitor<Void, R?>() {
-                override fun checkSourceNode(sourceNode: Concrete.SourceNode?, params: Void?): R? {
-                    if (clazz.isInstance(sourceNode) && sourceNode?.data == psi) return clazz.cast(sourceNode)
-                    return super.checkSourceNode(sourceNode, params)
-                }
-            }
-
-            return concreteDefinition.accept(searcher, null)
         }
     }
 }

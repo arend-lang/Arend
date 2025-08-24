@@ -7,6 +7,7 @@ import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.startOffset
 import org.arend.codeInsight.*
 import org.arend.naming.reference.FieldReferable
+import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.Referable
 import org.arend.psi.ArendElementTypes
 import org.arend.psi.ancestor
@@ -365,14 +366,15 @@ class ChangeSignatureRefactoringDescriptor private constructor(val affectedDefin
                                         externalScope = externalScope
                                     )
                             }
-                            /* TODO[server2]
+
                             for ((index, field) in typecheckedNotImplementedFields.withIndex())
-                                if ((field.parentClass.referable as? DataLocatedReferable)?.data?.element == locatedReferable && (field.referable !is FieldDataLocatedReferable || field.referable.isParameterField)) {
+                                if ((field.parentClass.referable as? LocatedReferable)?.abstractReferable == locatedReferable &&
+                                  (field.referable.isParameterField)) {
                                     notImplementedFields[field.name] = descendantOldParameters[index]
                                     if (modifiedArgumentStart == -1) modifiedArgumentStart = index
                                     modifiedArgumentEnd = index
                                 }
-                            */
+
                         } else { // Fallback code for dumb mode
                             descendantOldParameters = emptyList() /* TODO[server2]: ClassReferable.Helper.getNotImplementedFields(classDescendant).filterIsInstance<PsiElement>().withIndex().map { (index, field) ->
                                 val classParent = field.ancestor<ArendDefClass>()!!

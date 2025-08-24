@@ -6,7 +6,6 @@ import org.arend.naming.reference.NamedUnresolvedReference;
 import org.arend.naming.reference.Referable;
 import org.arend.term.concrete.Concrete;
 import org.jetbrains.annotations.NotNull;
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,10 +33,6 @@ public class ReferableRenamer extends Renamer {
     return newName;
   }
 
-  public LocalReferable getNewReferable(Variable variable) {
-    return myMap.get(variable);
-  }
-
   public Concrete.Expression getConcreteExpression(Variable variable) {
     return makeReference(myMap.get(variable));
   }
@@ -46,8 +41,8 @@ public class ReferableRenamer extends Renamer {
     return cVar(referable == null ? new NamedUnresolvedReference(null, "\\this") : referable);
   }
 
-  public LocalReferable generateFreshReferable(Variable var, Collection<? extends Variable> variables) {
-    String newName = super.generateFreshName(var, variables);
+  public LocalReferable generateFreshReferable(Variable var, Collection<? extends Variable> freeVariables) {
+    String newName = super.generateFreshName(var, freeVariables);
     LocalReferable referable = ref(newName);
     addNewName(var, referable);
     return referable;
