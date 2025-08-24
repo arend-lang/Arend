@@ -79,7 +79,7 @@ produces an interwining linear map $f'$ via the following formula
 
     \func FinSum-equivariance (h : G) {x : G -> B} : h B.** B.FinSum x = B.FinSum (\lam z => h B.** x z)
       => \case B.FinSum_char x  \with {
-        | inP p => rewrite (p.2, B.FinSum_char2 (h B.** x __) p.1, BigSum-equivariance) idp
+        | inP p => rewrite (p.2, B.FinSum_char2 p.1, BigSum-equivariance) idp
       }
       \where {
         \func act_array (h : G)(e : Array B) : Array B => \lam i => h B.** e i
@@ -91,7 +91,7 @@ produces an interwining linear map $f'$ via the following formula
 
     \func FinSumEquality {E : AbMonoid} {A : FinSet} {x y : A -> E} (eq : \Pi (a : A) -> x a = y a)
       : E.FinSum x = E.FinSum y => \case E.FinSum_char x \with {
-      | inP a => rewrite (a.2, E.FinSum_char2 y a.1, BigSumEquality) idp
+      | inP a => rewrite (a.2, E.FinSum_char2 a.1, BigSumEquality) idp
     }\where {
       \func BigSumEquality {a : Equiv {Fin A.finCard} {A}}
         : AddMonoid.BigSum (\new Array E A.finCard (\lam j => x (a j))) =
@@ -103,7 +103,7 @@ produces an interwining linear map $f'$ via the following formula
 
     \func FinSumRewrite (x : G -> Ab) (a : A)
       : (Ab.FinSum x) a = B.FinSum (\lam e => (x e) a) => \case Ab.FinSum_char x \with {
-      | inP a1 => rewrite (a1.2, B.FinSum_char2 (x __ a) a1.1, BigSumRewrite) idp
+      | inP a1 => rewrite (a1.2, B.FinSum_char2 a1.1, BigSumRewrite) idp
     }
       \where {
         \func Ab_Helper {f g : Ab}{x : A} : (f + g) x = f x + g x => idp

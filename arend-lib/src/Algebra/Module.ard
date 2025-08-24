@@ -78,12 +78,12 @@
 
   \lemma *c_FinSum-rdistr {J : FinSet} {f : J -> R} {a : E} : R.FinSum f *c a = FinSum (\lam j => f j *c a)
     => \case R.FinSum_char f \with {
-         | inP (e,p) => pmap (`*c a) p *> *c_BigSum-rdistr *> inv (FinSum_char2 _ e)
+         | inP (e,p) => pmap (`*c a) p *> *c_BigSum-rdistr *> inv (FinSum_char2 e)
        }
 
   \lemma *c_FinSum-ldistr {r : R} {J : FinSet} {f : J -> E} : r *c FinSum f = FinSum (\lam j => r *c f j)
     => \case FinSum_char f \with {
-         | inP (e,p) => pmap (r *c) p *> *c_BigSum-ldistr *> inv (FinSum_char2 _ e)
+         | inP (e,p) => pmap (r *c) p *> *c_BigSum-ldistr *> inv (FinSum_char2 e)
        }
 
   \func IsDependent (l : Array E) : \Prop

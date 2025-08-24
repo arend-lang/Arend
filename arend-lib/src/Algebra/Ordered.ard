@@ -44,21 +44,24 @@
 
   \lemma <=_+-positive {a b : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) : 0 <= a + b
     => transport (`<= _) zro-left $ <=_+ a>=0 b>=0
+
+  \lemma *n_<= {n : Nat} {a b : E} (a<=b : a <= b) : n *n a <= n *n b \elim n
+    | 0 => <=-refl
+    | suc n => <=_+ (*n_<= a<=b) a<=b
+
+  \lemma *n_>=0 {n : Nat} {a : E} (a>=0 : 0 <= a) : 0 <= n *n a \elim n
+    | 0 => <=-refl
+    | suc n => <=_+-positive (*n_>=0 a>=0) a>=0
 }
 
-\class PosetAbMonoid \extends PosetAddMonoid, AbMonoid
-
--- TODO[server2]: Do we really need biordered monoids?
-\class BiorderedAddMonoid \extends PosetAddMonoid, BiorderedSet
-
-\class BiorderedAbMonoid \extends BiorderedAddMonoid, PosetAbMonoid
-
-\class BiorderedLatticeAbMonoid \extends BiorderedAbMonoid, BiorderedLattice
+\class BiorderedLatticeAddMonoid \extends PosetAddMonoid, BiorderedLattice
   | meet_+-left {a b c : E} : a + b ∧ c = (a + b) ∧ (a + c)
   | join_+-left {a b c : E} : a + (b ∨ c) = (a + b) ∨ (a + c)
   | meet_+-right {a b c : E} : a ∧ b + c = (a + c) ∧ (b + c)
-  | meet_+-right => +-comm *> meet_+-left *> pmap2 (∧) +-comm +-comm
   | join_+-right {a b c : E} : (a ∨ b) + c = (a + c) ∨ (b + c)
+
+\class BiorderedLatticeAbMonoid \extends BiorderedLatticeAddMonoid, AbMonoid
+  | meet_+-right => +-comm *> meet_+-left *> pmap2 (∧) +-comm +-comm
   | join_+-right => +-comm *> join_+-left *> pmap2 (∨) +-comm +-comm
 
 \class LinearlyBiorderedAbMonoid \extends BiorderedLatticeAbMonoid, LinearLattice
@@ -196,7 +199,45 @@
     => (simplify, rewrite +-comm) in <_+-right (negative z) (<-diff-mid p)
 }
 
-\class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid {
+\class PosetAddGroup \extends PosetAddMonoid, AddGroup {
+  \lemma from>=0 {x y : E} (p : 0 <= y - x) : x <= y
+    => transport2 (<=) zro-left (+-assoc *> pmap (y +) negative-left *> zro-right) (<=_+ p <=-refl)
+
+  \lemma to>=0 {x y : E} (p : x <= y) : 0 <= y - x
+    => transport (`<= _) negative-right (<=_+ p <=-refl)
+
+  \lemma from<=0 {x y : E} (p : x - y <= 0) : x <= y
+    => transport2 (<=) (+-assoc *> pmap (x +) negative-left *> zro-right) zro-left (<=_+ p <=-refl)
+
+  \lemma to<=0 {x y : E} (p : x <= y) : x - y <= 0
+    => transport (_ <=) negative-right (<=_+ p <=-refl)
+
+  \lemma negative_<= {x y : E} (x<=y : x <= y) : negative y <= negative x
+    => transport2 (<=) (inv +-assoc *> pmap (`- y) negative-left *> zro-left) zro-right $ <=_+ <=-refl (to<=0 x<=y)
+
+  \lemma negative_<=-conv {x y : E} (p : negative y <= negative x) : x <= y
+    => transport2 (<=) negative-isInv negative-isInv (negative_<= p)
+
+  \lemma negative>=0 {x : E} (x<=0 : x <= 0) : 0 <= negative x
+    => transport (`<= _) negative_zro (negative_<= x<=0)
+
+  \lemma negative-to<=0 {x : E} (p : 0 <= negative x) : x <= 0
+    => negative_<=-conv $ transportInv (`<= _) negative_zro p
+
+  \lemma negative<=0 {x : E} (x>=0 : 0 <= x) : negative x <= 0
+    => transport (_ <=) negative_zro (negative_<= x>=0)
+
+  \lemma negative-to>=0 {x : E} (p : negative x <= 0) : 0 <= x
+    => negative_<=-conv $ transportInv (_ <=) negative_zro p
+
+  \lemma <=_+-cancel-left (x : E) {y z : E} (p : x + y <= x + z) : y <= z
+    => transport2 (<=) (inv +-assoc *> pmap (`+ y) negative-left *> zro-left) (inv +-assoc *> pmap (`+ z) negative-left *> zro-left) (<=_+ <=-refl p)
+
+  \lemma <=_+-cancel-right (z : E) {x y : E} (p : x + z <= y + z) : x <= y
+    => transport2 (<=) (+-assoc *> pmap (x +) negative-right *> zro-right) (+-assoc *> pmap (y +) negative-right *> zro-right) (<=_+ p <=-refl)
+}
+
+\class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, PosetAddGroup {
   | <_+-comparison (x y : E) : isPos (x + y) -> isPos x || isPos y
   | <_+-connectedness {x : E} : Not (isPos x) -> Not (isNeg x) -> x = zro
 
@@ -210,9 +251,6 @@
     | byRight p => byLeft p
   }
   | <-connectedness x/<y y/<x => fromZero $ <_+-connectedness (y/<x __) \lam p => x/<y (fromNeg p)
-
-  \lemma negative_<= {x y : E} (x<=y : x <= y) : negative y <= negative x
-    => \lam -x<-y => x<=y $ repeat {2} (rewrite negative-isInv in) (negative_< -x<-y)
 
   \lemma meet_negative {x y : E} : negative (x ∧ y) = negative x ∨ negative y
     => <=-antisymmetric (\lam p => <-irreflexive $ join-right <∘r (rewrite (LinearOrder.meet/=left $ <_/= $ negative_<-inv $ join-left <∘r p) in p)) $
@@ -268,6 +306,18 @@
 
   \lemma abs_-_< {x y z : E} (p : x - y < z) (q : y - x < z) : abs (x - y) < z
     => <_join-univ p (simplify q)
+
+  \lemma abs_*n {n : Nat} {x : E} : n *n abs x = abs (n *n x)
+    => <=-antisymmetric (<=_+-cancel-right ((NatSemiring.pow 2 n -' n) *n abs x) $ =_<= (inv *n-rdistr) <=∘ =_<= (pmap (`*n _) (<=_exists $ NatSemiring.<=-less id<pow2) *> power *> pmap abs (pmap (`*n x) (inv $ <=_exists $ NatSemiring.<=-less id<pow2) *> *n-rdistr)) <=∘ abs_+ <=∘ <=_+ <=-refl abs_*n_<=) abs_*n_<=
+    \where {
+      \private \lemma power {k : Nat} {x : E} : NatSemiring.pow 2 k *n abs x = abs (NatSemiring.pow 2 k *n x) \elim k
+        | 0 => zro-left *> pmap abs (inv zro-left)
+        | suc k => *n-rdistr *> pmap2 (+) power power *> <=-antisymmetric (=_<= join_+-left <=∘ join-univ (=_<= join_+-right <=∘ join-univ abs>=id (=_<= negative-left <=∘ abs>=0)) (=_<= join_+-right <=∘ join-univ (=_<= negative-right <=∘ abs>=0) (=_<= (inv negative_+) <=∘ abs>=neg))) abs_+ *> pmap abs (inv *n-rdistr)
+
+      \private \lemma abs_*n_<= {n : Nat} {x : E} : abs (n *n x) <= n *n abs x \elim n
+        | 0 => =_<= abs_zro
+        | suc n => abs_+ <=∘ <=_+ abs_*n_<= <=-refl
+    }
 }
 
 \class OrderedSemiring \extends Semiring, OrderedAbMonoid {
@@ -293,6 +343,9 @@
 
   \lemma <_*_negative_positive {x y : E} (x<0 : x < 0) (y>0 : 0 < y) : x * y < 0
     => transport (_ <) zro_*-left (<_*_positive-left x<0 y>0)
+
+  \lemma <_* {a b c d : E} (a>0 : 0 < a) (c>0 : 0 < c) (a<b : a < b) (c<d : c < d) : a * c < b * d
+    => <_*_positive-left a<b c>0 <∘ <_*_positive-right (a>0 <∘ a<b) c<d
 
   \lemma pow>0 {a : E} (p : 0 < a) {k : Nat} : 0 < pow a k \elim k
     | 0 => zro<ide
@@ -459,7 +512,8 @@
     | 0 => <=-refl
     | suc k => pow<=id a>=0 a<=1 {suc k} (\case __) <=∘ a<=1
 
-  \lemma pow_<=-degree {a : E} (a>=0 : 0 <= a) (a<=1 : a <= 1) {n k : Nat} (n<=k : n NatSemiring.<= k) : pow a k <= pow a n
+  \lemma
+    pow_<=-degree {a : E} (a>=0 : 0 <= a) (a<=1 : a <= 1) {n k : Nat} (n<=k : n NatSemiring.<= k) : pow a k <= pow a n
     => rewrite (inv (<=_exists n<=k), pow_+) $ transport (_ <=) ide-right $ <=_*_positive-right (pow>=0 a>=0) $ pow<=1 a>=0 a<=1
 
   \lemma meet_*-left {a b c : E} (a>=0 : 0 <= a) : a * (b ∧ c) = (a * b) ∧ (a * c)
@@ -730,43 +784,43 @@
     }
   | negative=>#0 x<0 => transport #0 negative-isInv (Ring.negative_inv (positive=>#0 x<0))
 
-  \func pinv {x : E} (\property x>0 : 0 < x) : E
+  \func pinv (x : E) (\property x>0 : 0 < x) : E
     => Inv.inv {pos#0 x>0}
 
-  \lemma pinv-left {x : E} (x>0 : 0 < x) : pinv x>0 * x = 1
+  \lemma pinv-left {x : E} (x>0 : 0 < x) : pinv x x>0 * x = 1
     => Inv.inv-left {pos#0 x>0}
 
-  \lemma pinv-right {x : E} (x>0 : 0 < x) : x * pinv x>0 = 1
+  \lemma pinv-right {x : E} (x>0 : 0 < x) : x * pinv x x>0 = 1
     => Inv.inv-right {pos#0 x>0}
 
-  \lemma pinv_pos-inv {x : E} (x>0 : 0 < x) : pinv (pinv>0 x>0) = x
+  \lemma pinv_pos-inv {x : E} (x>0 : 0 < x) : pinv (pinv x x>0) (pinv>0 x>0) = x
     => inv $ Inv.inv-isUnique (Inv.reverse {pos#0 x>0}) (pos#0 $ pinv>0 x>0) idp
 
-  \lemma pinv_< {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (x<y : x < y) : pinv y>0 < pinv x>0
+  \lemma pinv_< {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (x<y : x < y) : pinv y y>0 < pinv x x>0
     => pinv_<-conv (pinv>0 y>0) (pinv>0 x>0) $ transport2 (<) (inv $ pinv_pos-inv x>0) (inv $ pinv_pos-inv y>0) x<y
 
-  \lemma pinv_<-conv {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (p : pinv y>0 < pinv x>0) : x < y
+  \lemma pinv_<-conv {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (p : pinv y y>0 < pinv x x>0) : x < y
     => transport2 (<) (inv *-assoc *> pmap (`* x) (pinv-right y>0) *> ide-left) ide-right $ <_*_positive-right y>0 $ transport (_ <) (pinv-left x>0) (<_*_positive-left p x>0)
 
-  \lemma pinv_<= {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (x<=y : x <= y) : pinv y>0 <= pinv x>0
+  \lemma pinv_<= {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (x<=y : x <= y) : pinv y y>0 <= pinv x x>0
     => \lam q => x<=y (pinv_<-conv y>0 x>0 q)
 
-  \lemma pinv_<=-conv {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (p : pinv y>0 <= pinv x>0) : x <= y
+  \lemma pinv_<=-conv {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (p : pinv y y>0 <= pinv x x>0) : x <= y
     => \lam q => p (pinv_< y>0 x>0 q)
 
-  \lemma pinv>0 {x : E} (x>0 : 0 < x) : 0 < pinv x>0
+  \lemma pinv>0 {x : E} (x>0 : 0 < x) : 0 < pinv x x>0
     => positive_*-cancel-left (transportInv (0 <) (pinv-right x>0) zro<ide) x>0
 
-  \lemma pinv>1 {x : E} (x>0 : 0 < x) (x<1 : x < 1) : 1 < pinv x>0
+  \lemma pinv>1 {x : E} (x>0 : 0 < x) (x<1 : x < 1) : 1 < pinv x x>0
     => transport (`< _) pinv_ide $ pinv_< x>0 zro<ide x<1
 
-  \lemma pinv_ide : pinv zro<ide = 1
+  \lemma pinv_ide : pinv 1 zro<ide = 1
     => inv ide-left *> pinv-right zro<ide
 
-  \lemma pinv_* {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) : pinv x>0 * pinv y>0 = pinv (<_*_positive_positive x>0 y>0)
+  \lemma pinv_* {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) : pinv x x>0 * pinv y y>0 = pinv (x * y) (<_*_positive_positive x>0 y>0)
     => Inv.inv-isUnique (Inv.lmake _ $ *-assoc *> pmap (_ *) (inv *-assoc *> pmap (`* x) (pinv-left y>0) *> ide-left) *> pinv-left x>0) (pos#0 $ <_*_positive_positive x>0 y>0) *-comm
 
-  \lemma pinv_pow {x : E} (x>0 : 0 < x) {n : Nat} : pow (pinv x>0) n = pinv (pow>0 x>0 {n}) \elim n
+  \lemma pinv_pow {x : E} (x>0 : 0 < x) {n : Nat} : pow (pinv x x>0) n = pinv (pow x n) (pow>0 x>0) \elim n
     | 0 => inv pinv_ide
     | suc n => pmap (`* _) (pinv_pow x>0) *> pinv_* (pow>0 x>0) x>0
 }
@@ -815,8 +869,17 @@
   \lemma <_rotate-left {x y z : E} (y>0 : 0 < y) (p : x < y * z) : finv y * x < z
     => transport (_ <) (inv *-assoc *> pmap (`* z) (finv-left (>_/= y>0)) *> ide-left) (<_*_positive-right (finv>0 y>0) p)
 
+  \lemma <_rotate-right-conv {x y z : E} (y>0 : 0 < y) (p : x < z * finv y) : x * y < z
+    => transport (`< z) (*-comm *> pmap (x *) finv_finv) $ <_rotate-left (finv>0 y>0) $ transport (x <) *-comm p
+
+  \lemma <_rotate-left-conv {x y z : E} (y>0 : 0 < y) (p : finv y * x < z) : x < y * z
+    => transport (x <) (pmap (z *) finv_finv *> *-comm) $ <_rotate-right (finv>0 y>0) $ transport (`< z) *-comm p
+
   \lemma finv_<= {x y : E} (x>0 : 0 < x) (x<=y : x <= y) : finv y <= finv x
     => \lam p => x<=y (finv_<-conv x>0 p)
+
+  \lemma finv>=0 {x : E} (x>=0 : 0 <= x) : 0 <= finv x
+    => \lam p => x>=0 $ transport (`< 0) finv_finv (finv<0 p)
 
   \lemma finv>0-diff {x : E} (x>0 : 0 < x) : finv x - finv (x + 1) = finv (x * (x + 1))
     => finv-diff (\lam x=0 => linarith) (\lam x+1=0 => linarith)

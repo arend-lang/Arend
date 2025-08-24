@@ -187,11 +187,11 @@
         | inP (b',x<b',b<b') => +_L.2 $ inP (b', x<b', c, c<y, a<=b+c <∘r <_+-left c b<b')
       }
 
-    \lemma +-upper {x y : InfReal} : x + y = {ExUpperReal} x ExUpperReal.+ y
+    \lemma +-upper {x y : InfReal} : x + y = x ExUpperReal.+ y
       => \peval _ + _
 
     \lemma +_U {x y : InfReal} {a : Rat} : InfReal.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
-      => <->trans (<->_=.2 $ pmap {ExUpperReal} (\lam t => InfReal.U {t} a) +-upper) ExUpperReal.+_U
+      => <->trans (<->_=.2 $ pmap (\lam t => InfReal.U {t} a) +-upper) ExUpperReal.+_U
 
     \lemma +_U_<= {x y : InfReal} {a b : Rat} (x<b : x.U b) {c : Rat} (y<c : y.U c) (b+c<=a : b RatField.+ c RatField.<= a) : InfReal.U {x + y} a
       => \case U-rounded x<b \with {

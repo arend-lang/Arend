@@ -4,6 +4,7 @@
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Semiring
+\import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
@@ -13,10 +14,14 @@
 \import Equiv
 \import Function.Meta
 \import Logic
+\import Logic.Meta
+\import Meta
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
+\import Paths.Meta
 \import Set.Subset
 \import Topology.Elem
 \import Topology.NormedAbGroup.Real
@@ -26,8 +31,9 @@
 \open Monoid(pow)
 \open ContMap
 
-\sfunc rootR (n : Nat) (n/=0 : n /= 0) (x : Real) (\property x>=0 : 0 <= x) : Real
-  => ((rootEquiv n/=0).ret (x,x>=0)).1
+\sfunc root (n : Nat) (x : Real) : Real \elim n
+  | 0 => 0
+  | suc n => ((rootEquiv {suc n} suc/=0).ret (x ∨ 0, join-right)).1
   \where {
     \func rootEquiv {n : Nat} (n/=0 : n /= 0) : Equiv {Elem {Real} (0 <=)} {Elem {Real} (0 <=)}
       => monotone-inverse (\lam s => pow s.1 n)
@@ -37,11 +43,63 @@
         (\lam {v} v>=0 => inP (0, v ∨ 1, zro<ide <∘l join-right, \lam p _ => p, transportInv (`<= v) (Semiring.pow_0 n/=0) v>=0, join-left <=∘ RealField.pow>=id join-right n/=0))
   }
 
-\lemma rootR>=0 {n : Nat} {n/=0 : n /= 0} {x : Real} {x>=0 : 0 <= x} : 0 <= rootR n n/=0 x x>=0
-  => transportInv (0 <=) (\peval rootR n n/=0 x x>=0) ((rootR.rootEquiv n/=0).ret (x,x>=0)).2
+\lemma root>=0 {n : Nat} {x : Real} : 0 <= root n x \elim n
+  | 0 => transportInv (0 <=) (\peval root 0 x) <=-refl
+  | suc n => transportInv (0 <=) (\peval root (suc n) x) $ ((root.rootEquiv {suc n} suc/=0).ret (x ∨ 0, join-right)).2
 
-\lemma rootR_pow {n : Nat} {n/=0 : n /= 0} {x : Real} {x>=0 : 0 <= x} : rootR n n/=0 (pow x n) (RealField.pow>=0 x>=0) = x
-  => (\peval rootR n n/=0 _ _) *> pmap __.1 ((rootR.rootEquiv n/=0).ret_f (x,x>=0))
+\lemma root_pow {n : Nat} (n/=0 : n /= 0) {x : Real} (x>=0 : 0 <= x) : root n (pow x n) = x \elim n
+  | 0 => absurd (n/=0 idp)
+  | suc n => (\peval root (suc n) _) *> pmap (\lam y => ((root.rootEquiv n/=0).ret y).1) (ext $ RealAbGroup.join-comm *> RealAbGroup.join_<= (RealField.pow>=0 {x} {suc n} x>=0)) *> pmap __.1 ((root.rootEquiv n/=0).ret_f (x, x>=0))
 
-\lemma pow_rootR {n : Nat} {n/=0 : n /= 0} {x : Real} {x>=0 : 0 <= x} : pow (rootR n n/=0 x x>=0) n = x
-  => pmap (pow __ n) (\peval rootR n n/=0 x x>=0) *> pmap __.1 ((rootR.rootEquiv n/=0).f_ret _)
+\lemma pow_root {n : Nat} (n/=0 : n /= 0) {x : Real} (x>=0 : 0 <= x) : pow (root n x) n = x \elim n
+  | 0 => absurd (n/=0 idp)
+  | suc n => pmap (pow __ (suc n)) (\peval root (suc n) x) *> pmap (\lam y => pow ((root.rootEquiv n/=0).ret y).1 (suc n)) (ext $ RealAbGroup.join-comm *> RealAbGroup.join_<= x>=0) *> pmap __.1 ((root.rootEquiv n/=0).f_ret (x,x>=0))
+
+\lemma root_zro {n : Nat} : root n 0 = 0 \elim n
+  | 0 => \peval root 0 0
+  | suc n => pmap (root (suc n)) (inv zro_*-right) *> root_pow suc/=0 <=-refl
+
+\lemma root_ide {n : Nat} (n/=0 : n /= 0) : root n 1 = 1
+  => pmap (root n) (inv Monoid.pow_ide) *> root_pow n/=0 (<=-less zro<ide)
+
+\lemma root-monotone {n : Nat} (n/=0 : n /= 0) {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : root n x < root n y
+  => real-cont_<-inv-mono {pow __ n} (\lam p => RealField.pow_<=-monotone root>=0 $ <=-less p) (cont-char.1 TopMonoid.pow-cont _) $ transport2 (<) (inv $ pow_root n/=0 x>=0) (inv $ pow_root n/=0 $ x>=0 <=∘ <=-less x<y) x<y
+
+\lemma root>0 {n : Nat} (n/=0 : n /= 0) {x : Real} (x>0 : 0 < x) : 0 < root n x
+  => transport (`< _) root_zro (root-monotone n/=0 <=-refl x>0)
+
+\lemma root-rat {n : Nat} (n/=0 : n /= 0) {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < pow q n) (pow r n < b)
+  => \case real_<-char.1 $ root-monotone n/=0 (rat_real_<=.1 a>=0) (rat_real_<.1 a<b) \with {
+    | inP (q,a'<q,q<b') => \case real_<-char.1 q<b' \with {
+      | inP (r,q<r,r<b') => inP (q, r, rat_real_<.2 $ root>=0 <∘r a'<q, rat_real_<.2 q<r, rat_real_<.2 $ transport2 (<) (pow_root n/=0 $ rat_real_<=.1 a>=0) RealField.pow-rat $ RealField.pow_<-monotone n/=0 root>=0 a'<q,
+                                 rat_real_<.2 $ transport2 (<) RealField.pow-rat (pow_root n/=0 $ rat_real_<=.1 $ a>=0 <=∘ <=-less a<b) $ RealField.pow_<-monotone n/=0 (<=-less $ root>=0 <∘r a'<q <∘ q<r) r<b')
+    }
+  }
+
+\sfunc sqrt (x : Real) => root 2 x
+
+\lemma sqrt>=0 {x : Real} : 0 <= sqrt x
+  => transportInv (0 <=) (\peval sqrt x) root>=0
+
+\lemma sqrt_pow {x : Real} (x>=0 : 0 <= x) : sqrt (x * x) = x
+  => (\peval sqrt _) *> pmap (\lam y => root 2 (y * x)) (inv ide-left) *> root_pow suc/=0 x>=0
+
+\lemma pow_sqrt {x : Real} (x>=0 : 0 <= x) : sqrt x * sqrt x = x
+  => pmap2 (*) (\peval sqrt x) (\peval sqrt x) *> pmap (`* _) (inv ide-left) *> pow_root suc/=0 x>=0
+
+\lemma sqrt_zro : sqrt 0 = 0
+  => (\peval sqrt 0) *> root_zro
+
+\lemma sqrt_ide : sqrt 1 = 1
+  => (\peval sqrt 1) *> root_ide suc/=0
+
+\lemma sqrt-monotone {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : sqrt x < sqrt y
+  => transport2 (<) (inv \peval sqrt x) (inv \peval sqrt y) $ root-monotone suc/=0 x>=0 x<y
+
+\lemma sqrt>0 {x : Real} (x>0 : 0 < x) : 0 < sqrt x
+  => transportInv (0 <) (\peval sqrt x) (root>0 suc/=0 x>0)
+
+\lemma sqrt-rat {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < q * q) (r * r < b)
+  => \case root-rat {2} suc/=0 a>=0 a<b \with {
+    | inP (q,r,q>0,q<r,a<qq,rr<b) => inP (q, r, q>0, q<r, rewrite ide-left in a<qq, rewrite ide-left in rr<b)
+  }

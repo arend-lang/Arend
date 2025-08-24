@@ -242,7 +242,12 @@ public class TwoStageEquations implements Equations {
     if (cmp == CMP.EQ && (inf1 != null && inf2 == null && expr2.getInferenceVariable(true) == null || inf2 != null && inf1 == null && expr1.getInferenceVariable(true) == null)) {
       Expression prev = myNotSolvableFromEquationsVars.putIfAbsent(inf1 != null ? inf1 : inf2, inf1 != null ? expr2 : expr1);
       if (prev != null) {
-        return CompareVisitor.compare(this, CMP.EQ, prev, inf1 != null ? expr2 : expr1, type, sourceNode);
+        Expression normalizedPrev = prev.normalize(NormalizationMode.WHNF);
+        if (normalizedPrev instanceof InferenceReferenceExpression infRefExpr && infRefExpr.getInferenceVariable().equals(inf1 != null ? inf1 : inf2)) {
+          myNotSolvableFromEquationsVars.put(inf1 != null ? inf1 : inf2, inf1 != null ? expr2 : expr1);
+        } else {
+          return CompareVisitor.compare(this, CMP.EQ, prev, inf1 != null ? expr2 : expr1, type, sourceNode);
+        }
       }
     }
 
@@ -790,13 +795,8 @@ public class TwoStageEquations implements Equations {
         solution.setSort(classDef.computeSort(implementations, solution.getThisBinding()));
         solution.updateHasUniverses();
 
-        if (!pair.proj2.getFirst().getLevels().compare(levels, CMP.LE, this, pair.proj1.getSourceNode())) {
-          reportBoundsError(pair.proj1, pair.proj2, CMP.GE);
-          allOK = false;
-          continue;
-        }
         for (ClassCallExpression lowerBound : pair.proj2) {
-          if (!new CompareVisitor(this, CMP.LE, pair.proj1.getSourceNode()).compareClassCallLevels(lowerBound, solution)) {
+          if (!lowerBound.getLevels(classDef).compare(levels, CMP.LE, this, pair.proj1.getSourceNode()) || !new CompareVisitor(this, CMP.LE, pair.proj1.getSourceNode()).compareClassCallLevels(lowerBound, solution)) {
             reportBoundsError(pair.proj1, pair.proj2, CMP.GE);
             allOK = false;
             continue loop;

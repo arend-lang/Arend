@@ -38,5 +38,5 @@
                               inv (R.BigSum_suc {suc n} {\new Array R (suc (suc n)) (\lam i => natCoef (binom n i) * (pow x i * pow y (iabs (suc n Nat.- i))))})
                  \in ldistr *> pmap2 (+) t1 (t2 *> pmap (natCoef __ * _ + _) binom_0) *> +-comm *> +-assoc *> pmap (_ +) +-comm *>
                      inv (pmap (_ +) (R.BigSum_+ {suc n} {mkArray (\lam i => natCoef (binom n i) * xy i)} {mkArray (\lam i => natCoef (binom n (suc i)) * xy i)})) *>
-                     inv (path (\lam j => _ + BigSum (\new Array R (suc n) (\lam i => (pmap (`* xy i) (Semiring.natCoef_+ (binom n i) (binom n (suc i))) *> rdistr) @ j))))
+                     inv (path (\lam j => _ + BigSum (\new Array R (suc n) (\lam i => (pmap (`* xy i) (R.natCoef_+ {binom n i} {binom n (suc i)}) *> rdistr) @ j))))
   }

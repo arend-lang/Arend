@@ -4,10 +4,12 @@
 \import Algebra.Pointed
 \import Arith.Int()
 \import Data.Array
+\import Data.Fin
 \import Data.Or
 \import Equiv
 \import Function.Meta ($)
 \import Logic
+\import Logic.Meta
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -203,6 +205,9 @@
   \lemma negative_+ {x y : E} : negative (x + y) = negative y - x
     => Group.inverse_* {toGroup \this}
 
+  \lemma negative_- {x y : E} : negative (x - y) = y - x
+    => negative_+ *> pmap (`- x) negative-isInv
+
   \lemma negative_zro : negative zro = zro
     => inv zro-right *> negative-left
 
@@ -275,6 +280,30 @@
 
     \lemma #0-+-right {x y : E} (y#0 : #0 y) : #0 (x + y) || #0 x
       => ||.rec' (\lam r => byRight (#0-negative-inv r)) byLeft $ #0-+ {_} {negative x} {x + y} $ transportInv #0 simplify y#0
+
+    \lemma #0-BigSum {l : Array E} (p : BigSum l `#0) : ∃ (j : Fin l.len) (l j `#0) \elim l
+      | nil => absurd (#0-zro p)
+      | a :: l => \case #0-+ p \with {
+        | byLeft a#0 => inP (0, a#0)
+        | byRight p' => \case #0-BigSum p' \with {
+          | inP (j,lj#0) => inP (suc j, lj#0)
+        }
+      }
+
+    \lemma #0-BigSum-conv {l : Array E} {i : Fin l.len} (p : l i `#0) : BigSum l `#0 || (\Sigma (j : Fin l.len) (j /= i) (l j `#0)) \elim l, i
+      | a :: l, 0 => \case #0-+-left p \with {
+        | byLeft r => byLeft r
+        | byRight l#0 => \case #0-BigSum l#0 \with {
+          | inP (j,lj#0) => byRight (suc j, \case __ \with {}, lj#0)
+        }
+      }
+      | a :: l, suc i => \case #0-BigSum-conv p \with {
+        | byLeft l#0 => \case #0-+-right {_} {a} l#0 \with {
+          | byLeft r => byLeft r
+          | byRight a#0 => byRight (0, \case __ \with {}, a#0)
+        }
+        | byRight (j,j/=i,lj#0) => byRight (suc j, fsuc/= j/=i, lj#0)
+      }
   }
 
   -- | An additive group with decidable equality.
@@ -326,7 +355,7 @@
   \lemma *n-ldistr_- {n : Nat} {a b : E} : n *n (a - b) = n *n a - n *n b
     => *n-ldistr *> pmap (_ +) *n_negative
 
-  \lemma *i_+-comm {a b : E} {x : Int} : x *i (a + b) = x *i a + x *i b
+  \lemma *i-ldistr {a b : E} {x : Int} : x *i (a + b) = x *i a + x *i b
     => *i_ipow *> \this.ipow_*-comm *> inv (pmap2 (+) *i_ipow *i_ipow)
 
   \lemma BigSum_negative {l : Array E} : negative (BigSum l) = BigSum (map negative l) \elim l

@@ -1,8 +1,11 @@
 \import Algebra.Group
 \import Algebra.Meta
+\import Algebra.Monoid
 \import Algebra.Ordered
+\import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
+\import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
 \import Meta
@@ -10,55 +13,125 @@
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
 \import Paths.Meta
+\import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
+\import Topology.MetricSpace.ManhattanProduct
+\import Topology.MetricSpace.UpperReal
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
 
-\lemma norm-metric {X : PseudoNormedAbGroup} : MetricMap X RealNormed X.norm \cowith
-  | func-dist => rewrite (X.norm-dist,RealNormed.norm-dist) $ {?} -- TODO[server2]: join-univ lnorm_-left $ simplify lnorm_-right
+\lemma lnorm-metric {X : PseudoNormedAbGroup} : MetricMap X RealNormed X.norm \cowith
+  | func-dist => rewrite (X.norm-dist,RealNormed.norm-dist) $ Real.<=-upper.1 $ join-univ lnorm_-left $ simplify lnorm_-right
 
-\lemma dist-uniform-map {X : PseudoMetricSpace} : UniformMap (X ⨯ X) RealNormed (\lam s => X.dist s.1 s.2) \cowith
-  | func-uniform Eu => {?}
-{- TODO[server2]
- \case dist-uniform.2 Eu \with {
-    | inP (eps,eps>0,h) => inP (_, X.metricUniform (RealAbGroup.half>0 eps>0), _, X.metricUniform (RealAbGroup.half>0 eps>0), \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (dist x x') \with {
-      | inP (W,EW,g) => inP (_, inP (W, EW, idp), \lam {(y,y')} (xy<eps/2,x'y'<eps/2) => g $ <_join-univ
-          (linarith (RealAbGroup.half+half, X.dist-triang {x} {y} {x'}, X.dist-triang {y} {y'} {x'}, X.dist-symm {x'} {y'}))
-          (linarith (RealAbGroup.half+half, X.dist-triang {y} {x} {y'}, X.dist-triang {x} {x'} {y'}, X.dist-symm {x} {y})))
+\lemma dist-uniform-map {X : ExPseudoMetricSpace} : UniformMap (X ⨯ X) ExUpperRealMetric (\lam s => dist s.1 s.2) \cowith
+  | func-uniform Eu => \case dist-uniform.2 Eu \with {
+    | inP (eps,eps>0,h) => inP (_, X.metricUniform {eps * ratio 1 4} linarith, _, X.metricUniform {eps * ratio 1 4} linarith, \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (X.dist x x') \with {
+      | inP (W,EW,g) => inP (_, inP (W, EW, idp), \lam {(y,y')} (xy<eps/4,x'y'<eps/4) => g $ inP (eps * ratio 1 4 + eps * ratio 1 4, linarith, linarith,
+          X.dist-triang <=∘ transport (`<= _) +-comm (<=_+ X.dist-triang <=-refl <=∘ transportInv (`<= _) +-assoc (<=_+ <=-refl $ transport (_ <=) ExUpperReal.+-rat $ <=-less $ ExUpperRealAbMonoid.<_+ (transport (`< _) dist-symm $ ExUpperRealAbMonoid.<-rat.2 x'y'<eps/4) (ExUpperRealAbMonoid.<-rat.2 xy<eps/4))),
+          X.dist-triang <=∘ transport (`<= _) +-comm (<=_+ X.dist-triang <=-refl <=∘ transportInv (`<= _) +-assoc (<=_+ <=-refl $ transport (_ <=) ExUpperReal.+-rat $ <=-less $ ExUpperRealAbMonoid.<_+ (ExUpperRealAbMonoid.<-rat.2 x'y'<eps/4) (transport (`< _) dist-symm $ ExUpperRealAbMonoid.<-rat.2 xy<eps/4)))))
     })
-  } -}
+  }
+
+\lemma norm-metric-map {X : ExPseudoNormedAbGroup} : MetricMap X ExUpperRealMetric norm \cowith
+  | func-dist => \lam xy<b => \case U-rounded xy<b \with {
+    | inP (a,xy<a,a<b) => inP (a, a<b, <=-less $ dist>=0 xy<a, norm_dist-right <=∘ <=_+ <=-refl (ExUpperReal.<_<= xy<a), norm_dist-right <=∘ <=_+ <=-refl (rewrite dist-symm $ ExUpperReal.<_<= xy<a))
+  }
+
+\lemma bnorm-metric-map {X : BoundedExPseudoNormedAbGroup} : MetricMap X UpperRealMetric bnorm \cowith
+  | func-dist => norm-metric-map.func-dist
+
+\lemma ldist-uniform-map {X : PseudoMetricSpace} : UniformMap (X ⨯ X) RealNormed (\lam s => X.dist s.1 s.2) \cowith
+  | func-uniform Eu => \case dist-uniform.2 Eu \with {
+    | inP (eps,eps>0,h) => inP (_, X.metricUniform (RatField.half>0 eps>0), _, X.metricUniform (RatField.half>0 eps>0), \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (X.dist x x') \with {
+      | inP (W,EW,g) => inP (_, inP (W, EW, idp), \lam {(y,y')} (xy<eps/2,x'y'<eps/2) => g $ real_<_U.1 $ <_join-univ
+          (linarith (real_<_U.2 xy<eps/2, real_<_U.2 x'y'<eps/2, RealAbGroup.half+half, ldist-triang {X} {x} {y} {x'}, ldist-triang {X} {y} {y'} {x'}, ldist-symm {X} {x'} {y'}))
+          (linarith (real_<_U.2 xy<eps/2, real_<_U.2 x'y'<eps/2, RealAbGroup.half+half, ldist-triang {X} {y} {x} {y'}, ldist-triang {X} {x} {x'} {y'}, ldist-symm {X} {x} {y})))
+    })
+  }
+
+\lemma upper-meet-uniform : UniformMap (ExUpperRealMetric ⨯ ExUpperRealMetric) ExUpperRealMetric \lam s => s.1 ∧ s.2 \cowith
+  | func-uniform Eu => \case dist-uniform.2 Eu \with {
+    | inP (eps,eps>0,h) => inP (_, ExUpperRealMetric.metricUniform eps>0, _, ExUpperRealMetric.metricUniform eps>0, \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (x ∧ x') \with {
+      | inP (W,EW,g) => inP (_, inP (W,EW,idp), \lam {(y,y')} (inP (a,a<eps,a>=0,x<=y+a,y<=x+a), inP (b,b<eps,b>=0,x'<=y'+b,y'<=x'+b)) => g $ inP (a ∨ b, <_join-univ a<eps b<eps, a>=0 <=∘ join-left,
+          transportInv (_ <=) meet_+-right $ meet-univ (meet-left <=∘ x<=y+a <=∘ <=_+ <=-refl (ExUpperReal.<=-rat.1 join-left)) (meet-right <=∘ x'<=y'+b <=∘ <=_+ <=-refl (ExUpperReal.<=-rat.1 join-right)),
+          transportInv (_ <=) meet_+-right $ meet-univ (meet-left <=∘ y<=x+a <=∘ <=_+ <=-refl (ExUpperReal.<=-rat.1 join-left)) (meet-right <=∘ y'<=x'+b <=∘ <=_+ <=-refl (ExUpperReal.<=-rat.1 join-right))))
+    })
+  }
 
 \lemma real-meet-uniform : UniformMap (RealNormed ⨯ RealNormed) RealNormed \lam s => s.1 ∧ s.2 \cowith
-  | func-uniform Eu => {?}
-    {- TODO[server2]
-    \case dist-uniform.2 Eu \with {
+  | func-uniform Eu => \case dist-uniform.2 Eu \with {
     | inP (eps,eps>0,h) => inP (_, RealNormed.metricUniform eps>0, _, RealNormed.metricUniform eps>0, \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (x ∧ x') \with {
-      | inP (W,EW,g) => inP (_, inP (W, EW, idp), \lam {(y,y')} (xy<eps,x'y'<eps) => g $ RealAbGroup.abs_-_<
+      | inP (W,EW,g) => inP (_, inP (W, EW, idp), \lam {(y,y')} (xy<eps,x'y'<eps) => g $ real_<_U.1 $ RealAbGroup.abs_-_<
           (unfold (-) $ rewrite (RealAbGroup.meet_negative, join_+-left) $ <_join-univ
-            (RealAbGroup.<=_+ meet-left <=-refl <∘r RealAbGroup.abs>=id <∘r xy<eps)
-            (RealAbGroup.<=_+ meet-right <=-refl <∘r RealAbGroup.abs>=id <∘r x'y'<eps))
+            (RealAbGroup.<=_+ meet-left <=-refl <∘r RealAbGroup.abs>=id <∘r real_<_U.2 xy<eps)
+            (RealAbGroup.<=_+ meet-right <=-refl <∘r RealAbGroup.abs>=id <∘r real_<_U.2 x'y'<eps))
           (unfold (-) $ rewrite (RealAbGroup.meet_negative, join_+-left) $ <_join-univ
-            (RealAbGroup.<=_+ meet-left <=-refl <∘r RealAbGroup.abs>=_- <∘r xy<eps)
-            (RealAbGroup.<=_+ meet-right <=-refl <∘r RealAbGroup.abs>=_- <∘r x'y'<eps)))
+            (RealAbGroup.<=_+ meet-left <=-refl <∘r RealAbGroup.abs>=_- <∘r real_<_U.2 xy<eps)
+            (RealAbGroup.<=_+ meet-right <=-refl <∘r RealAbGroup.abs>=_- <∘r real_<_U.2 x'y'<eps)))
     })
   }
-  -}
+
+\lemma upper-join-uniform : UniformMap (ExUpperRealMetric ⨯ ExUpperRealMetric) ExUpperRealMetric \lam s => s.1 ∨ s.2 \cowith
+  | func-uniform Eu => \case dist-uniform.2 Eu \with {
+    | inP (eps,eps>0,h) => inP (_, ExUpperRealMetric.metricUniform eps>0, _, ExUpperRealMetric.metricUniform eps>0, \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (x ∨ x') \with {
+      | inP (W,EW,g) => inP (_, inP (W,EW,idp), \lam {(y,y')} (inP (a,a<eps,a>=0,x<=y+a,y<=x+a), inP (b,b<eps,b>=0,x'<=y'+b,y'<=x'+b)) => g $ inP (a ∨ b, <_join-univ a<eps b<eps, a>=0 <=∘ join-left,
+          join-univ (x<=y+a <=∘ <=_+ join-left (ExUpperReal.<=-rat.1 join-left)) (x'<=y'+b <=∘ <=_+ join-right (ExUpperReal.<=-rat.1 join-right)),
+          join-univ (y<=x+a <=∘ <=_+ join-left (ExUpperReal.<=-rat.1 join-left)) (y'<=x'+b <=∘ <=_+ join-right (ExUpperReal.<=-rat.1 join-right))))
+    })
+  }
 
 \lemma real-join-uniform : UniformMap (RealNormed ⨯ RealNormed) RealNormed \lam s => s.1 ∨ s.2 \cowith
-  | func-uniform Eu => {?}
-    {- TODO[server2]
-    \case dist-uniform.2 Eu \with {
+  | func-uniform Eu => \case dist-uniform.2 Eu \with {
     | inP (eps,eps>0,h) => inP (_, RealNormed.metricUniform eps>0, _, RealNormed.metricUniform eps>0, \lam {_} (inP (_, inP (x,idp), _, inP (x',idp), idp)) => \case h (x ∨ x') \with {
-      | inP (W,EW,g) => inP (_, inP (W, EW, idp), \lam {(y,y')} (xy<eps,x'y'<eps) => g $ RealAbGroup.abs_-_<
+      | inP (W,EW,g) => inP (_, inP (W, EW, idp), \lam {(y,y')} (xy<eps,x'y'<eps) => g $ real_<_U.1 $ RealAbGroup.abs_-_<
           (unfold (-) $ rewrite (RealAbGroup.join_negative, join_+-right) $ <_join-univ
-            (<=_+ <=-refl meet-left <∘r RealAbGroup.abs>=id <∘r xy<eps)
-            (<=_+ <=-refl meet-right <∘r RealAbGroup.abs>=id <∘r x'y'<eps))
+            (<=_+ <=-refl meet-left <∘r RealAbGroup.abs>=id <∘r real_<_U.2 xy<eps)
+            (<=_+ <=-refl meet-right <∘r RealAbGroup.abs>=id <∘r real_<_U.2 x'y'<eps))
           (unfold (-) $ rewrite (RealAbGroup.join_negative, join_+-right) $ <_join-univ
-            (<=_+ <=-refl meet-left <∘r RealAbGroup.abs>=_- <∘r xy<eps)
-            (<=_+ <=-refl meet-right <∘r RealAbGroup.abs>=_- <∘r x'y'<eps)))
+            (<=_+ <=-refl meet-left <∘r RealAbGroup.abs>=_- <∘r real_<_U.2 xy<eps)
+            (<=_+ <=-refl meet-right <∘r RealAbGroup.abs>=_- <∘r real_<_U.2 x'y'<eps)))
     })
   }
-  -}
+
+\lemma upper-+-uniform : MetricMap (ManhattanProductPseudoMetricSpace ExUpperRealMetric ExUpperRealMetric) ExUpperRealMetric \lam s => s.1 + s.2 \cowith
+  | func-dist {x} {y} {d} xy<d => \case ExUpperReal.+_U.1 xy<d \with {
+    | inP (a,x1y1<a,b,x2y2<b,a+b<d) => inP (a + b, a+b<d, RatField.<=_+-positive (<=-less $ dist>=0 {ExUpperRealMetric} x1y1<a) (<=-less $ dist>=0 {ExUpperRealMetric} x2y2<b),
+        ExUpperRealAbMonoid.<=_+ (ExUpperRealMetric.dist-left x1y1<a) (ExUpperRealMetric.dist-left x2y2<b) <=∘ transport (_ <= _ + __) ExUpperReal.+-rat (=_<= equation.abMonoid),
+        ExUpperRealAbMonoid.<=_+  (ExUpperRealMetric.dist-right x1y1<a)  (ExUpperRealMetric.dist-right x2y2<b) <=∘ transport (_ <= _ + __) ExUpperReal.+-rat (=_<= equation.abMonoid))
+  }
+
+\lemma upper-*-left-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (a *) \cowith
+  | func-dist-uniform {eps} eps>0 => \case \elim aB \with {
+    | inP (B,a<B) => inP (RatField.finv (B ∨ 1) * eps, RatField.<_*_positive_positive (RatField.finv>0 $ zro<ide <∘l join-right) eps>0, \lam (inP (b,bp,b>=0,x<=x'+b,x'<=x+b)) =>
+      \have lem {x x' : ExUpperReal} (x<=x'+b : x <= x' + b) => ExUpperRealSemigroup.<=_* <=-refl x<=x'+b <=∘ ExUpperRealSemigroup.ldistr_<= <=∘ ExUpperRealAbMonoid.<=_+ <=-refl (transport (_ <=) (ExUpperReal.*-rat (<=-less zro<ide <=∘ join-right) b>=0) $ ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= $ ExUpperReal.U_<= a<B join-left) <=-refl)
+      \in inP ((B ∨ 1) * b, RatField.<_*_positive-right (zro<ide <∘l join-right) bp <∘l =_<= (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= $ zro<ide <∘l join-right) *> ide-left), RatField.<=_*_positive_positive (<=-less zro<ide <=∘ join-right) b>=0, lem x<=x'+b, lem x'<=x+b))
+  }
+
+\lemma upper-*-right-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (`* a)
+  => transport (UniformMetricMap ExUpperRealMetric ExUpperRealMetric) (ext \lam b => *-comm) (upper-*-left-uniform aB)
+
+\lemma upper-*-locally-uniform : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) UpperRealMetric (\lam s => s.1 * s.2)
+  => LocallyUniformMetricMap.makeLocallyUniformMap2 (*) \lam {eps} eps>0 => inP (1, idp, \lam x0 y0 => \case x0.U-inh_>0, y0.U-inh_>0 \with {
+    | inP (x0b,x0<x0b,x0b>0), inP (y0b,y0<y0b,y0b>0) => \case ExUpperRealSemigroup.div-lb-rat {(y0b + 1 + 1) + (x0b + 1 + 1)} (inP (1, idp, <=-rat.1 linarith)) $ <-rat.2 (RatField.half>0 eps>0) \with {
+      | inP (gamma,gamma>0,gamma-m) => inP (gamma ∧ 1, <_meet-univ gamma>0 zro<ide, \lam {x} {x'} {y} {y'} (inP x0x<1) (inP y0y<1) (inP xx'<gamma) (inP yy'<gamma) =>
+        \have | x<=x0b+1 => transport (_ <=) +-rat $ x0x<1.5 <=∘ <=_+ (<_<= x0<x0b) (<=-rat.1 (<=-less x0x<1.2))
+              | y<=y0b+1 : y ExUpperReal.<= y0b + 1 => transport (_ <=) +-rat $ y0y<1.5 <=∘ <=_+ (<_<= y0<y0b) (<=-rat.1 (<=-less y0y<1.2))
+        \in transport (ExUpperReal.`<= _) (pmap (ExUpperReal.`* _) (inv +-rat) *> ExUpperRealSemigroup.rdistr (<=-rat.1 linarith) (<=-rat.1 linarith)) at gamma-m $
+            unfold $ rewrite (UpperRealSemigroup.*-ex,UpperRealSemigroup.*-ex) $ inP (RatField.half eps, RatField.half<id eps>0, <=-less $ RatField.half>0 eps>0,
+              <=_* <=-refl yy'<gamma.4 <=∘ ldistr_<= <=∘ <=_+ (<=_* xx'<gamma.4 <=-refl <=∘ rdistr_<=) <=-refl <=∘ =_<= +-assoc <=∘ <=_+ <=-refl (<=_+ (=_<= *-comm <=∘ <=_* (transport (_ <=) +-rat $ yy'<gamma.5 <=∘ <=_+ y<=y0b+1 (<=-rat.1 $ <=-less yy'<gamma.2 <=∘ meet-right)) (<=-rat.1 $ <=-less xx'<gamma.2 <=∘ meet-left)) (<=_* (x<=x0b+1 <=∘ <=-rat.1 linarith) (<=-rat.1 $ <=-less yy'<gamma.2 <=∘ meet-left)) <=∘ gamma-m),
+              <=_* <=-refl yy'<gamma.5 <=∘ ldistr_<= <=∘ <=_+ (<=_* xx'<gamma.5 <=-refl <=∘ rdistr_<=) <=-refl <=∘ =_<= +-assoc <=∘ <=_+ <=-refl (<=_+ (=_<= *-comm <=∘ <=_* (y<=y0b+1 <=∘ <=-rat.1 linarith) (<=-rat.1 $ <=-less xx'<gamma.2 <=∘ meet-left)) (<=_* (transport (_ <=) +-rat $ xx'<gamma.5 <=∘ <=_+ x<=x0b+1 (<=-rat.1 $ <=-less xx'<gamma.2 <=∘ meet-right)) (<=-rat.1 $ <=-less yy'<gamma.2 <=∘ meet-left)) <=∘ gamma-m)))
+    }
+  })
+  \where {
+    \open ExUpperReal(<=-rat,+-rat,U_<=,<_<=)
+    \open ExUpperRealAbMonoid(<-rat,<_+,<_+-left)
+    \open ExUpperRealSemigroup(<=_*,ldistr_<=,rdistr_<=)
+  }
+
+\lemma ex-upper-*-locally-uniform : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) ExUpperRealMetric (\lam s => s.1 ExUpperReal.* s.2)
+  => transport (LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) ExUpperRealMetric) (ext \lam s => UpperRealSemigroup.*-ex) upper-*-locally-uniform

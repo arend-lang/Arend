@@ -125,7 +125,7 @@
   \where \protected \use \level levelProp (s t : HasInf A) : s = t => ext (IsInf.isUnique s.2 t.2)
 
 \func makeSupInf {A : Set Real} {b : Real} (bs : IsSup (\lam x => A (negative x)) (negative b)) : IsInf A b
-  => (\lam Aa => transport2 (<=) AddGroup.negative-isInv AddGroup.negative-isInv $ negative_<= $ bs.1 $ transportInv A AddGroup.negative-isInv Aa,
+  => (\lam Aa => transport2 (<=) AddGroup.negative-isInv AddGroup.negative-isInv $ PosetAddGroup.negative_<= $ bs.1 $ transportInv A AddGroup.negative-isInv Aa,
       \lam eps>0 => \case bs.2 eps>0 \with {
         | inP (x,A-x,-b<x+eps) => inP (negative x, A-x, linarith)
       })

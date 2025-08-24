@@ -85,6 +85,7 @@ public abstract class BaseAlgebraEquationMeta extends BaseEquationMeta<List<Mono
           return factory.app(factory1.ref(getAddTerm()), true, args.get(0), factory1.app(factory.ref(getNegativeTerm()), true, args.get(1)));
         }, new DefinitionFunctionMatcher(typechecker.getPrelude().getMinus(), 2), Arrays.asList(natType, natType)));
       }
+    // TODO: } else if (isRatInstance(instance.getExpression())) {
     } else {
       result.add(new TermOperation(getCoefTerm(), FunctionMatcher.makeFieldMatcher(instanceType, instance, natCoef, typechecker, factory, marker, 1), Collections.singletonList(new TermType.NatType())));
     }
@@ -192,18 +193,19 @@ public abstract class BaseAlgebraEquationMeta extends BaseEquationMeta<List<Mono
   }
 
   private ConcreteExpression numberToConcrete(BigInteger number, ConcreteFactory factory) {
-    BigInteger pos = number.abs();
-    ConcreteExpression result = pos.equals(BigInteger.ONE) ? factory.ref(ide.getRef()) : factory.app(factory.ref(natCoef.getRef()), true, factory.number(pos));
-    return number.signum() < 0 ? factory.app(factory.ref(getNegative().getRef()), true, result) : result;
+    return number.equals(BigInteger.ONE) ? factory.ref(ide.getRef()) : factory.app(factory.ref(natCoef.getRef()), true, factory.number(number));
   }
 
   private ConcreteExpression monomialToConcrete(Monomial monomial, Values<CoreExpression> values, TypedExpression instance, ConcreteFactory factory) {
+    BigInteger pos = monomial.coefficient().abs();
+    ConcreteExpression result;
     if (monomial.elements().isEmpty()) {
-      return numberToConcrete(monomial.coefficient(), factory);
+      result = numberToConcrete(pos, factory);
+    } else {
+      result = NonCommutativeMonoidEquationMeta.nfToConcreteTerm(monomial.elements(), values, instance, factory, ide.getRef(), mul.getRef());
+      result = pos.equals(BigInteger.ONE) ? result : factory.app(factory.ref(mul.getRef()), true, numberToConcrete(pos, factory), result);
     }
-
-    ConcreteExpression result = NonCommutativeMonoidEquationMeta.nfToConcreteTerm(monomial.elements(), values, instance, factory, ide.getRef(), mul.getRef());
-    return monomial.coefficient().equals(BigInteger.ONE) ? result : factory.app(factory.ref(mul.getRef()), true, numberToConcrete(monomial.coefficient(), factory), result);
+    return monomial.coefficient().signum() < 0 ? factory.app(factory.ref(getNegative().getRef()), true, result) : result;
   }
 
   @Override

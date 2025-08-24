@@ -1,6 +1,7 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring
@@ -12,6 +13,7 @@
 \import Arith.Real
 \import Arith.Real.Field
 \import Arith.Real.UpperReal
+\import Data.Array
 \import Data.Or
 \import Function.Meta
 \import Logic
@@ -25,6 +27,7 @@
 \import Paths
 \import Paths.Meta
 \import Analysis.Limit
+\import Set.Fin
 \import Set.Partial
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
@@ -45,6 +48,15 @@
 \sfunc partialSum {A : AddMonoid} (S : Series A) (n : Nat) : A
   => A.BigSum \new Array A n \lam j => S j
 
+\lemma partialSum-empty {A : AddMonoid} {S : Series A} : partialSum S 0 = 0
+  => \peval partialSum S 0
+
+\lemma partialSum_<= {A : PosetAddMonoid} {S T : Series A} {n : Nat} (p : \Pi (k : Nat) -> S k <= T k) : partialSum S n <= partialSum T n
+  => transport2 (<=) (inv \peval partialSum S n) (inv \peval partialSum T n) (A.BigSum_<= \lam j => p j)
+
+\lemma partialSum_hom {A B : AddMonoid} (f : AddMonoidHom A B) {S : Series A} {n : Nat} : f (partialSum S n) = partialSum (\lam i => f (S i)) n
+  => pmap f (\peval partialSum S n) *> f.func-BigSum *> inv \peval partialSum _ n
+
 \func IsConvSeries {A : TopAbGroup} (S : Series A) : \Prop
   => IsConvergent (partialSum S)
 
@@ -62,7 +74,7 @@
   => limit (partialSum S)
 
 \lemma seriesConv-sum {A : CompleteTopAbGroup} {S : Series A} (Sc : IsConvSeries S) : IsSeriesSum S (seriesSum S Sc)
-  => limit-isLimit Sc
+  => limit-isLimit
 
 \lemma seriesSum-char {A : CompleteTopAbGroup} {S : Series A} {l : A} : (seriesSum S = defined l) <-> IsSeriesSum S l
   => limit-char
@@ -72,8 +84,29 @@
   | suc n, 0 => 0
   | suc n, suc m => midSum (\lam j => S (suc j)) n m
 
+\lemma midSum_hom {A B : AddMonoid} (f : AddMonoidHom A B) {S : Series A} {n m : Nat} : f (midSum S n m) = midSum (\lam i => f (S i)) n m \elim n, m
+  | 0, m => partialSum_hom f
+  | suc n, 0 => f.func-zro
+  | suc n, suc m => midSum_hom f
+
+\func IsConvUpperSeries (S : Series ExUpperReal) : \Prop
+  => ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (midSum S N n).U eps)
+
 \func IsAbsConvSeries {A : ExPseudoNormedAbGroup} (S : Series A) : \Prop
-  => ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (midSum (\lam k => A.norm (S k)) N n).U eps)
+  => IsConvUpperSeries \lam j => norm (S j)
+
+\func midSum' {A : AddMonoid} (S : Series A) (n m : Nat) : A
+  => partialSum (\lam k => S (n + k)) m
+
+\lemma midSum'_midSum {A : AddMonoid} {S : Series A} {n m : Nat} : midSum' S n m = midSum S n (n + m) \elim n
+  | 0 => idp
+  | suc n => midSum'_midSum
+
+\lemma midSum_midSum' {A : AddMonoid} {S : Series A} {n m : Nat} : midSum S n m = midSum' S n (m -' n) \elim n, m
+  | 0, 0 => idp
+  | 0, suc m => idp
+  | suc n, 0 => inv partialSum-empty
+  | suc n, suc m => midSum_midSum'
 
 \lemma zeroSeries-sum {A : TopAbGroup} : IsSeriesSum (\lam _ => A.zro) 0
   => \lam {U} _ U0 => inP (0, \lam _ => rewrite (\peval partialSum _ _) $ transportInv U A.BigSum_replicate0 U0)
@@ -88,9 +121,25 @@
     })
   })
 
-\lemma series-shifts-conv {A : TopAbGroup} {S : Series A} (N : Nat) : IsConvSeries S <-> IsConvSeries \lam n => S (n + N) \elim N
+\lemma upperSeries-shift-conv {S : Series ExUpperReal} (S>=0 : \Pi (j : Nat) -> 0 <= S j) : IsConvUpperSeries S <-> IsConvUpperSeries \lam n => S (suc n)
+  => (\lam c eps>0 => \case c eps>0 \with {
+    | inP (M,h) => inP (M, \lam M<=n => midSum_<=-left id<=suc S>=0 $ h (M<=n <=∘ id<=suc))
+  }, \lam c eps>0 => \case c eps>0 \with {
+    | inP (M,h) => inP (suc M, \lam {n} => \case \elim n \with {
+      | 0 => \lam p => absurd linarith
+      | suc n => \lam p => h (suc<=suc.conv p)
+    })
+  })
+
+\lemma upperSeries-shifts-conv {S : Series ExUpperReal} (S>=0 : \Pi (j : Nat) -> 0 <= S j) (N : Nat) : IsConvUpperSeries S <-> IsConvUpperSeries \lam n => S (n + N) \elim N
   | 0 => <->refl
-  | suc N => <->trans (series-shifts-conv N) series-shift-conv
+  | suc N => <->trans (upperSeries-shifts-conv S>=0 N) $ upperSeries-shift-conv \lam j => S>=0 (j + N)
+
+\lemma series-shift-absConv {A : ExPseudoNormedAbGroup} {S : Series A} : IsAbsConvSeries S <-> IsAbsConvSeries \lam n => S (suc n)
+  => upperSeries-shift-conv \lam j => norm>=0
+
+\lemma series-shifts-absConv {A : ExPseudoNormedAbGroup} {S : Series A} (N : Nat) : IsAbsConvSeries S <-> IsAbsConvSeries \lam n => S (n + N)
+  => upperSeries-shifts-conv (\lam j => norm>=0) N
 
 \lemma midSum_suc {A : AddMonoid} {S : Series A} {n : Nat} : midSum S n (suc n) = S n \elim n
   | 0 => (\peval partialSum _ _) *> zro-right
@@ -190,7 +239,7 @@
     | inP (N,g) => inP (N, \lam {n} p => transport U (inv (midSum-diff {_} {S} id<=suc) *> midSum_suc) (g p id<=suc))
   }
 
-\lemma series_<= {b c : Series Real} (b>=0 : \Pi (j : Nat) -> 0 <= b j) (s : \Pi (j : Nat) -> b j <= c j) (cc : IsConvSeries c) : IsConvSeries b
+\lemma real-series_<= {b c : Series Real} (b>=0 : \Pi (j : Nat) -> 0 <= b j) (s : \Pi (j : Nat) -> b j <= c j) (cc : IsConvSeries c) : IsConvSeries b
   => series-conv-real.2 \lam eps>0 => \case series-conv-real.1 cc eps>0 \with {
     | inP (N,g) => inP (N, \lam p => transport2 (<=)
         (inv $ RealField.abs-ofPos $ midSum>=0 b>=0)
@@ -198,130 +247,99 @@
         (midSum_<= \lam {j} _ _ => s j) <∘r g p)
   }
 
-\lemma series_<=-abs {A : ExPseudoNormedAbGroup} {b c : Series A} (s : \Pi (j : Nat) -> norm (b j) <= norm (c j)) (cc : IsAbsConvSeries c) : IsAbsConvSeries b
+\lemma series_<= {b c : Series ExUpperReal} (s : \Pi (j : Nat) -> b j <= c j) (cc : IsConvUpperSeries c) : IsConvUpperSeries b
   => \lam eps>0 => \case cc eps>0 \with {
     | inP (N,h) => inP (N, \lam p => midSum_<= {ExUpperRealAbMonoid} (\lam _ _ => s _) (h p))
   }
 
-\lemma series_*-bounded {A : ExPseudoNormedPseudoRing} {b c : Series A} (M : Nat) {B : Rat} (bB : \Pi {j : Nat} -> M <= j -> (norm (b j)).U B) (cc : IsAbsConvSeries c) : IsAbsConvSeries \lam n => b n * c n
-  => \let | B1 => B ∨ 1
-          | B1>0 : 0 < B1 => zro<ide <∘l join-right
-     \in \lam {eps} eps>0 => \case cc {RatField.finv B1 * eps} $ RatField.<_*_positive_positive (RatField.finv>0 $ RatField.zro<ide <∘l join-right) eps>0 \with {
-      | inP (N,h) => inP (M ∨ N, \lam {n} MN<=n =>
-        \have t : midSum (\lam k => norm (b k * c k)) (M ∨ N) n <= B1 ExUpperReal.* midSum (\lam k => norm (c k)) (M ∨ N) n
-                => midSum_<= (\lam {j} jp _ => norm_*_<= <=∘ ExUpperRealSemigroup.<=_*-left (ExUpperReal.<_<= $ ExUpperReal.U_<= (bB $ join-left <=∘ jp) join-left)) <=∘ midSum_<=-ldistr \lam j => norm>=0
-        \in t $ transport ExUpperReal.U (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= B1>0) *> ide-left) $ later $ ExUpperRealSemigroup.<_*-right B1>0 (RatField.<_*_positive_positive (RatField.finv>0 B1>0) eps>0) $ midSum_<=-left join-right (\lam j => norm>=0) $ h (join-right <=∘ MN<=n))
-    }
+\func IsBoundedUpperSeries (S : Series ExUpperReal) : \Prop
+  => ∃ (B : Rat) ∀ n ((S n).U B)
+  \where {
+    \lemma shifted {N : Nat} (SN : \Pi {n : Nat} -> n < N -> ∃ (S n).U) {B : Rat} (SB : \Pi {n : Nat} -> N <= n -> (S n).U B) : IsBoundedUpperSeries S
+      => \case FinSet.finiteAC (\lam j => SN (fin_< j)) \with {
+        | inP h => inP (Big (∨) B \lam j => (h j).1, \lam n => \case LinearOrder.dec<_<= n N \with {
+          | inl n<N => transport (\lam x => ExUpperReal.U {S x} _) toFin=id $ ExUpperReal.U_<= (h (toFin n n<N)).2 $ RatField.Big_<=_join1 (toFin n n<N)
+          | inr N<=n => ExUpperReal.U_<= (SB N<=n) RatField.Big_<=_join0
+        })
+      }
+  }
 
-\lemma series-lim-bound {A : ExPseudoNormedPseudoRing} {b : Series A} {l : A} (lb : ∃ (q : Rat) ((norm l).U q)) (bl : A.IsLimit b l) : ∃ (N : Nat) (B : Rat) ∀ {j} (N <= j -> (norm (b j)).U B)
-  => \case limit-metric-char.1 bl zro<ide, lb \with {
-    | inP (N,h), inP (B,l<B) => inP (N, 1 + B, \lam {j} N<=j =>
+\lemma upperSeries-bounded_<= {a b : Series ExUpperReal} (a<=b : \Pi (n : Nat) -> a n <= b n) (bB : IsBoundedUpperSeries b) : IsBoundedUpperSeries a \elim bB
+  | inP (B,bB) => inP (B, \lam n => a<=b n (bB n))
+
+\func IsBoundedSeries {A : ExPseudoNormedAbGroup} (S : Series A) : \Prop
+  => IsBoundedUpperSeries \lam n => norm (S n)
+
+\lemma series-lim-bound {A : BoundedExPseudoNormedAbGroup} {b : Series A} {l : A} (bl : A.IsLimit b l) : IsBoundedSeries b
+  => \case limit-metric-char.1 bl zro<ide, norm-bounded l \with {
+    | inP (N,h), inP (B,l<B) => IsBoundedUpperSeries.shifted (\lam _ => norm-bounded _) \lam {j} N<=j =>
       \have t => transport (norm __ <= _) (+-assoc *> pmap (_ +) negative-left *> zro-right) $ A.norm_+ {b j - l} {l}
-      \in t $ ExUpperReal.+_U_<=.2 $ inP (1, rewriteI (norm_-, A.norm-dist) (h N<=j), B, l<B, <=-refl))
+      \in t $ ExUpperReal.+_U_<=.2 $ inP (1, rewriteI (norm_-, A.norm-dist) (h N<=j), B, l<B, <=-refl)
   }
 
-\lemma series_*-lim {A : ExPseudoNormedPseudoRing} {b c : Series A} {l : A} (lb : ∃ (q : Rat) ((norm l).U q)) (bl : A.IsLimit b l) (cc : IsAbsConvSeries c) : IsAbsConvSeries \lam n => b n * c n
-  => \case series-lim-bound lb bl \with {
-    | inP (M,B,bB) => series_*-bounded M bB cc
+\lemma series_*-bounded {b c : Series ExUpperReal} (c>=0 : \Pi (j : Nat) -> 0 <= c j) (bB : IsBoundedUpperSeries b) (cc : IsConvUpperSeries c) : IsConvUpperSeries \lam n => b n * c n \elim bB
+  | inP (B, bB) =>
+    \let | B1 => B ∨ 1
+         | B1>0 : 0 < B1 => zro<ide <∘l join-right
+    \in \lam {eps} eps>0 => \case cc {RatField.finv B1 * eps} $ RatField.<_*_positive_positive (RatField.finv>0 $ RatField.zro<ide <∘l join-right) eps>0 \with {
+      | inP (N,h) => inP (N, \lam {n} N<=n =>
+        \have t : midSum (\lam k => b k * c k) N n <= B1 ExUpperReal.* midSum c N n
+                => midSum_<= (\lam {j} jp _ => ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= $ ExUpperReal.U_<= (bB j) join-left) <=-refl) <=∘ midSum_<=-ldistr c>=0
+        \in t $ transport ExUpperReal.U (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= B1>0) *> ide-left) $ later $ ExUpperRealSemigroup.<_*_U-right B1>0 (RatField.<_*_positive_positive (RatField.finv>0 B1>0) eps>0) (h N<=n))
+    }
+
+\lemma geometric-upper-series-conv {r : ExUpperReal} (r>=0 : 0 <= r) (r<1 : r.U 1) : IsConvUpperSeries (ExUpperRealSemigroup.pow r)
+  => \case U-rounded r<1 \with {
+    | inP (q,r<q,q<1) => series_<= {_} {pow q __} (\lam j => transport (_ <=) (ExUpperRealSemigroup.rat-pow $ <=-less $ r>=0 r<q) $ ExUpperRealSemigroup.pow_<= (ExUpperReal.<_<= r<q)) \lam {eps} eps>0 =>
+      \have B => rat_<1_pow-bound q<1 {eps * (1 - q)} $ RatField.<_*_positive_positive eps>0 linarith
+      \in inP (B.1, \lam {n} B<=n => rewrite midSum_midSum' $ ExUpperRealAbMonoid.<-rat.1 $ transport {Series ExUpperReal} (partialSum __ _ < eps) {\lam k => pow q B.1 * pow q k} (later $ ext \lam k => pmap ExUpperReal.fromRat $ inv pow_+) $
+            transport (ExUpperRealAbMonoid.`< _) (partialSum_hom rat-upperReal) $ ExUpperRealAbMonoid.<-rat.2 $ transportInv (`< _) (\peval partialSum _ _) $ later $ transport (`< _) (RatField.BigSum-ldistr {pow q B.1} {\new Array Rat (n -' B.1) (pow q __)}) $
+            RatField.<=_*_positive-left (<=-less B.2) (RatField.BigSum_>=0 \lam j => RatField.pow>=0 $ <=-less $ r>=0 r<q) <∘r transport2 (<) (inv *-assoc) ide-right (RatField.<_*_positive-right eps>0 $ transportInv (`< _) RatField.geometric-partial-sum $ linarith $ RatField.pow>0 $ r>=0 r<q))
   }
 
-\lemma geometric-series-conv {x : Real} (p : RealAbGroup.abs x < 1) : seriesSum (pow x) = defined (pinv (diff-pos p))
-  => generalized (RealField.pos#0 $ linarith $ RealField.abs>=id <∘r p) p
-  \where {
-    \lemma pow_+1-bound {e : Real} (e>=0 : 0 <= e) {n : Nat} : 1 + e * n <= pow (e + 1) n \elim n
-      | 0 => simplify <=-refl
-      | suc n => later (rewrite (inv (RealAbGroup.+-rat {n} {1}), ldistr, ldistr, rdistr) $
-          linarith (<=_*_positive_positive (<=_*_positive_positive e>=0 $ rat_real_<=.1 $ fromInt_<= $ pos<=pos zero<=_) e>=0 : 0 <= e * n * e)) <=∘ <=_*_positive-left (pow_+1-bound e>=0) linarith
+\lemma geometric-series-absConv {X : ExPseudoNormedRing} {x : X} (|x|<1 : (norm x).U 1) : IsAbsConvSeries (pow x)
+  => series_<= (\lam j => norm_<=_pow) $ geometric-upper-series-conv norm>=0 |x|<1
 
-    \lemma pow_>1-bound {b : Real} (b>1 : 1 < b) (B : Nat) : ∃ (n : Nat) ((B : Real) < pow b n) \elim B
-      | 0 => inP (0, RealAbGroup.zro<ide)
-      | 1 => inP (1, rewrite ide-left b>1)
-      | 2 => \have b-1>0 : 0 < b - 1 => linarith
-             \in \case Real.natBounded {pinv b-1>0} \with {
-               | inP (n,nb) => inP (n, rewrite (linarith : b = (b - 1) + 1, linarith : Real.fromRat 2 = (1 : Real) + 1) $
-                  <_+-right 1 (transport (`< _) (pinv-right b-1>0) $ later $ <_*_positive-right b-1>0 $ real_<_U.2 nb) <∘l pow_+1-bound (LinearOrder.<_<= b-1>0))
-             }
-      | suc (suc (suc B)) => \case pow_>1-bound b>1 (suc (suc B)) \with {
-        | inP (N,p) => inP (N + N, rewrite pow_+ $ later (rewrite RealField.*-rat $ real_<_L.2 $ fromInt_< linarith) <∘
-            <_*_positive-right (real_<_L.2 $ later idp) p <∘ <_*_positive-left p (RealField.pow>0 linarith))
+\lemma upper-ratio-test {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (S0b : ∃ (B : Rat) ((S 0).U B))
+                        (b : Series Real) (bp : \Pi (n : Nat) -> S (suc n) <= S n * b n)
+                        {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsConvUpperSeries S
+  => \case real_<-char.1 (<_join-univ l<1 zro<ide) \with {
+    | inP (r,lz<r,r<1) => \case (real_<-rat-char {0} {(r : Real) - l}).1 $ linarith $ usingOnly (join-left <∘r lz<r) \with {
+      | inP (q,q>0,q<r-l) => \case bl (OBall-open {_} {q} {l}) $ rewrite RealNormed.dist-refl q>0 \with {
+        | inP (N,g) => (upperSeries-shifts-conv S>=0 N).2
+          \have r>=0 => join-right <=∘ <=-less lz<r
+          \in series_<= (iter-bound (\lam j => S>=0 (j + N)) r>=0 (\lam j => bp (j + N)) (\lam j => linarith (RealAbGroup.abs>=_- <=∘ <=-less (real_<_U.2 $ g $ <=_+ zero<=_ <=-refl), real_<_L.2 q<r-l))) $
+          series_*-bounded (\lam j => Real.<=-upper.1 $ RealField.pow>=0 r>=0) (TruncP.map (S-bounded N) \lam (B,p) => (B, \lam _ => p)) $ transport IsConvUpperSeries (path \lam i n => inv (RealField.pow-upper r>=0 {n}) i) $ geometric-upper-series-conv (ExUpperReal.<=-rat.1 $ rat_real_<=.2 r>=0) (rat_real_<.2 r<1)
       }
-
-    \lemma pow_1/2-bound {n : Nat} : RealField.pow (ratio 1 2) n <= RealField.pinv {suc n} (real_<_L.2 $ later idp) \elim n
-      | 0 => transportInv (_ <=) pinv_ide <=-refl
-      | suc n => <=_*_positive-left pow_1/2-bound linarith <=∘
-          \have zro<2 : RealField.zro < Real.fromRat 2 => linarith
-          \in rewrite (inv (RealField.pos-inv_rat zro<2), pinv_*) $ pinv_<= (real_<_L.2 $ later idp) (RealField.<_*_positive_positive (real_<_L.2 $ later idp) zro<2) $
-                later $ rewrite RealField.*-rat $ rat_real_<=.1 linarith
-
-    \lemma pow_<1-bound {a : Real} (a<1 : a < 1) {eps : Real} (eps>0 : 0 < eps) : ∃ (n : Nat) (pow a n < eps)
-      => \case Real.natBounded {pinv eps>0} \with {
-        | inP (B,Bb) => \case real-located {a} {0} {ratio 1 2} (real_<_L.2 $ later idp) \with {
-          | byLeft a>0 => \case pow_>1-bound {pinv a>0} (pinv>1 a>0 a<1) B \with {
-            | inP (n,p) => inP (n, pinv_<-conv (RealField.pow>0 a>0) eps>0 $ real_<_U.2 Bb <∘ transport (_ <) (pinv_pow a>0) p)
-          }
-          | byRight a<1/2 => \case real-located {a} {RealField.negative (ratio 1 2)} {0} linarith \with {
-            | byLeft a>-1/2 => inP (B, RealField.abs>=id <∘r transportInv (`< _) OrderedRing.abs_pow
-                (pow_<=-monotone RealField.abs>=0 (join-univ (LinearOrder.<_<= a<1/2) (LinearOrder.<_<= $ RealField.negative_<-left a>-1/2)) <∘r
-                  pow_1/2-bound <∘r transport (_ <) (pinv_pos-inv eps>0)
-                    (pinv_< (pinv>0 eps>0) (real_<_L.2 $ later idp) $ real_<_U.2 Bb <∘ real_<_L.2 (fromInt_< $ pos<pos id<suc))))
-            | byRight a<0 => inP (1, transportInv (`< _) ide-left $ a<0 <∘ eps>0)
-          }
-        }
-      }
-
-    \protected \lemma generalized {X : CompleteValuedRing} {x : X} (xi : Inv (1 - x)) (|x|<1 : X.norm x < 1) : seriesSum (pow x) = defined xi.inv
-      => {?}
-    {- TODO[server2]
-       seriesSum_defined {_} {pow x} \lam {eps} eps>0 =>
-          \have |1-x|>0 : 0 < norm (1 - x) => linarith X.norm_ide <∘l norm_-left
-          \in \case pow_<1-bound |x|<1 {eps * norm (1 - x)} $ RealField.<_*_positive_positive eps>0 |1-x|>0 \with {
-            | inP (N,q) => inP (N, later \lam N<=n => rewrite (\peval partialSum _ _, X.geometric-partial-sum) $ norm_*_<= <∘r <=_*_positive-left norm_<=_pow norm>=0 <∘r
-                transport (_ <) (*-assoc *> pmap (_ *) (inv norm_* *> pmap norm xi.inv-right *> norm_ide) *> ide-right) (<_*_positive-left (pow_<=-degree norm>=0 (LinearOrder.<_<= |x|<1) N<=n <∘r q) $
-                  <_*_positive-cancel-right (LinearOrder.<_<= |1-x|>0) $ transport2 (<) (inv zro_*-left) (inv norm_ide *> pmap norm (inv xi.inv-left) *> norm_*) zro<ide))
-          }
-        -}
-
-    \protected \lemma diff-pos {x y : Real} (p : RealAbGroup.abs x < y) : 0 < y - x
-      => linarith $ RealAbGroup.abs>=id {x}
-  }
-
-\lemma geometric-series-absConv {X : PseudoNormedRing} {x : X} (p : X.norm x < 1) : IsAbsConvSeries (pow x)
-  => {?} -- TODO[server2]: series_<= (\lam j => lnorm>=0) (\lam j => norm_<=_pow) $ defined-ext.isDefined $ geometric-series-conv $ rewrite (RealField.abs-ofPos norm>=0) p
-
-\lemma ratio-test {X : PseudoNormedAbGroup} {S : Series X} (b : Series Real) (bp : \Pi (n : Nat) -> X.norm (S (suc n)) <= X.norm (S n) * b n)
-                  {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsAbsConvSeries S
-  => {?}
-    {- TODO[server2]
-    \case real_<-char.1 (<_join-univ l<1 zro<ide) \with {
-    | inP (r,lz<r,r<1) => \case bl (OBall-open {_} {(r : Real) - l} {l}) (rewrite RealNormed.dist-refl $ linarith (usingOnly (join-left <∘r lz<r))) \with {
-      | inP (N,g) => (series-shifts-conv N).2
-          \have r>=0 => join-right <=∘ LinearOrder.<_<= lz<r
-          \in series_<= (\lam j => norm>=0) (iter-bound (\lam j => norm>=0) r>=0 (\lam j => bp (j + N))
-                  (\lam j => linarith (usingOnly (RealAbGroup.abs>=_- <=∘ LinearOrder.<_<= (rewrite RealNormed.norm-dist in g (<=_+ zero<=_ <=-refl)))))) $
-                absConv-isConv $ series_*-lim const-limit $ geometric-series-absConv $ later $ rewrite (RealAbGroup.abs-ofPos r>=0) r<1
     }
   }
-  -}
   \where {
-    \lemma iter-bound {f b : Nat -> Real} (f>=0 : \Pi (j : Nat) -> 0 <= f j) {r : Real} (r>=0 : 0 <= r)
+    \lemma iter-bound {f : Nat -> ExUpperReal} {b : Nat -> Real} (f>=0 : \Pi (j : Nat) -> 0 <= f j) {r : Real} (r>=0 : 0 <= r)
                       (bp : \Pi (n : Nat) -> f (suc n) <= f n * b n) (bb : \Pi (n : Nat) -> b n <= r) (j : Nat) : f j <= f 0 * pow r j \elim j
-      | 0 => rewrite ide-right <=-refl
-      | suc j => bp j <=∘ <=_*_positive-right (f>=0 j) (bb j) <=∘ transport (_ <=) *-assoc (<=_*_positive-left (iter-bound f>=0 r>=0 bp bb j) r>=0)
+      | 0 => transportInv (_ <=) (ExUpperRealSemigroup.ide-right $ f>=0 0) <=-refl
+      | suc j => bp j <=∘ ExUpperRealSemigroup.<=_* <=-refl (Real.<=-upper.1 $ bb j) <=∘ transport (_ <=) (*-assoc *> inv (pmap (_ *) (RealField.*-upper (RealField.pow>=0 r>=0) r>=0))) (ExUpperRealSemigroup.<=_* (iter-bound f>=0 r>=0 bp bb j) <=-refl)
+
+    \private \lemma S-bounded (n : Nat) : ∃ (B : Rat) ((S n).U B) \elim n
+      | 0 => S0b
+      | suc n => \case S-bounded n, (b n).U-inh \with {
+        | inP (B,Sn<B), inP (C,bn<C) => inP (B * (C ∨ 0) + 1, ExUpperRealAbMonoid.<-rat.1 $ bp n <∘r ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= Sn<B) (ExUpperReal.<_<= bn<C <=∘ ExUpperReal.<=-rat.1 join-left) <∘r transportInv (ExUpperRealAbMonoid.`< _) (ExUpperReal.*-rat (<=-less $ S>=0 n Sn<B) join-right) (ExUpperRealAbMonoid.<-rat.2 linarith))
+      }
   }
 
-\lemma MTest {X : \Set} {Y : ExPseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Nat -> Real)
-             (Mp : \Pi (n : Nat) (x : X) -> Y.norm (f n x) <= M n) (Mc : IsConvSeries M) : IsUniFuncConvergent \lam n x => partialSum (f __ x) n
-  => {?}
-  {- TODO[server2]
-    \lam Du => \case dist-uniform.1 Du \with {
-    | inP (eps,eps>0,h) => \case series-conv.conv Mc eps>0 \with {
-      | inP (N,g) => inP (N, \lam x => \case h (partialSum (f __ x) N) \with {
-        | inP (V,DV,Vg) => inP (V, DV, \lam p => Vg $ rewrite (Y.norm-dist, norm_- {Y}, inv $ midSum-diff {_} {f __ x} p) $
-            rewrite (RealAbGroup.abs-ofPos $ midSum>=0 \lam j => lnorm>=0 <=∘ Mp j x) (midSum_norm <=∘ midSum_<= \lam _ _ => Mp _ x) <∘r g p)
+\lemma ratio-test {X : BoundedExPseudoNormedAbGroup} {S : Series X} (b : Series Real) (bp : \Pi (n : Nat) -> norm (S (suc n)) <= norm (S n) * b n)
+                  {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsAbsConvSeries S
+  => upper-ratio-test (\lam j => norm>=0) (norm-bounded (S 0)) b bp l<1 bl
+
+\lemma MTest {X : \Set} {Y : ExPseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Series ExUpperReal)
+             (Mp : \Pi (n : Nat) (x : X) -> norm (f n x) <= M n) (Mc : IsConvUpperSeries M) : IsUniFuncConvergent \lam n x => partialSum (f __ x) n
+  => \lam Du => \case dist-uniform.1 Du \with {
+    | inP (eps,eps>0,h) => \case Mc eps>0 \with {
+      | inP (N,g) => inP (N, \lam x => \case h $ partialSum (f __ x) N \with {
+        | inP (V,DV,Vg) => inP (V, DV, \lam p => Vg $ rewrite (norm-dist, norm_-, inv $ midSum-diff p) $
+             ExUpperRealAbMonoid.<-rat.1 $ midSum_norm <∘r  midSum_<= (\lam {j} _ _ => Mp j x) <∘r ExUpperRealAbMonoid.<-rat.2 (g p))
       })
     }
   }
-    -}
 
 \lemma partialSum-cover {X : CoverSpace} {Y : TopAbGroup} (f : Nat -> CoverMap X Y) (n : Nat) : CoverMap X Y \lam x => partialSum (f __ x) n
   => transportInv (CoverMap X Y) (ext \lam x => \peval partialSum _ _) $ BigSum-cover \lam (j : Fin n) => f j

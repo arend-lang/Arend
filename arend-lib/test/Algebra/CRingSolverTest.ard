@@ -5,6 +5,7 @@
 \import Algebra.Semiring
 \import Algebra.Ring
 \import Arith.Int
+\import Arith.Rat
 \import Meta
 \import Paths
 
@@ -15,6 +16,12 @@
   => equation.cRing
 
 \lemma commRingArgTest {R : CRing} (a b : R) (p : 2 * (a * b) = 0) : (a + b) * (a + b) = a * a + b * b
+  => equation.cRing p
+
+\lemma commRingArgTest2 {R : CRing} (a : R) (p : negative a = 0) : 0 = a
+  => equation.cRing p
+
+\lemma commRingArgTest3 {R : CRing} (a b : R) (p : a * a - 2 * (a * b) = 0) : (a - b) * (a - b) = b * b
   => equation.cRing p
 
 \lemma commRingForwardTest {R : CRing} (a b : R) (p : (a + b) * (a + b) = a * a + b * b) : 2 * (a * b) = 0
@@ -46,3 +53,7 @@
 
 \lemma intTest3 {n : Nat} (p : pos n = 0) : 0 = neg n
   => equation.cRing p
+
+-- TODO
+-- \lemma ratTest {x : Rat} : ratio 1 2 * x + ratio 1 2 * x = x
+--   => equation.cRing

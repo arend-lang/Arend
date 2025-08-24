@@ -368,6 +368,12 @@
   \lemma SJoin-univ {U : E -> \Prop} {e : E} (c : \Pi {x : E} -> U x -> x <= e) : SJoin U <= e
     => Join-univ \lam s => c s.2
 
+  \lemma join_Join {x y : E} : x ∨ y = Join (\lam b => if b x y)
+    => <=-antisymmetric (join-univ (Join-cond true) (Join-cond false)) $ Join-univ \case \elim __ \with {
+      | true => join-left
+      | false => join-right
+    }
+
   \protected \func op : CompleteLattice => \new CompleteLattice {
     | Order.Lattice.Lattice => Order.Lattice.Lattice.op
     | Join => Meet

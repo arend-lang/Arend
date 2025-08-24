@@ -4,6 +4,7 @@
 \import Meta
 \import Order.Lattice
 \import Order.PartialOrder
+\import Paths
 \import Paths.Meta
 \import Set.Filter
 \import Set.Subset
@@ -20,7 +21,7 @@
 \func dense-uniform-lift {X Y : UniformSpace} {Z : CompleteUniformSpace} (f : UniformMap X Y) (fd : f.IsDenseUniformEmbedding) (g : UniformMap X Z) : UniformMap Y Z \cowith
   | CoverMap => dense-lift f (fd.1, f.embedding->coverEmbedding fd.2) g
   | func-uniform Dc => uniform-refine (Y.<=<-regular $ fd.2 $ g.func-uniform $ Z.<=<-regular Dc) \lam {V'} (inP (V, inP (U, inP (W', inP (W, DW, W'<=<W), p), q), V'<=<V)) =>
-      inP (_, inP (W, DW, idp), \lam {y} V'y => <=<_<= (Z.filter-point-elem W'<=<W \case <=<-inter (<=<-right (single_<= V'y) V'<=<V) \with {
+      inP (_, inP (W, DW, idp), \lam {y} V'y => transportInv W (\peval cauchy-lift f _ g y) $ <=<_<= (Z.filter-point-elem W'<=<W \case <=<-inter (<=<-right (single_<= V'y) V'<=<V) \with {
         | inP (V'',y<=<V'',V''<=<V) => inP $ later (V'', V, rewrite p in q, V''<=<V, y<=<V'')
       }) idp)
 

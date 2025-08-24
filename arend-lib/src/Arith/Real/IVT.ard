@@ -153,3 +153,14 @@
     | inP (a,b,a<b,abU,fa<=v,v<=fb) => \have p => (IVT-monotone {U,a,b,a<b,abU} f fm fc v.1 fa<=v v<=fb).center
                                        \in inP (p.1, ext p.2)
   }
+
+\lemma real-cont_<-inv {f : Real -> Real} {x y : Real} (fc : IsContAt f x) (fx<fy : f x < f y) : x < y || y < x
+  => real-dist>0 \case metric-contAt-real.1 fc (RealAbGroup.to>0 fx<fy) \with {
+    | inP (delta,delta>0,h) => delta>0 <∘l \lam xy<delta => <-irreflexive $ RealAbGroup.abs>=_- <∘r h xy<delta
+  }
+
+\lemma real-cont_<-inv-mono {f : Real -> Real} {x y : Real} (fm : y < x -> f y <= f x) (fc : IsContAt f x) (fx<fy : f x < f y) : x < y
+  => \case real-cont_<-inv fc fx<fy \with {
+    | byLeft x<y => x<y
+    | byRight y<x => absurd (fm y<x fx<fy)
+  }

@@ -1,0 +1,96 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Rat
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Set.Subset
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.TopAbGroup
+\import Topology.UniformSpace
+
+\instance ExUpperRealMetric : CompleteExMetricSpace ExUpperReal
+  | dist (x y : ExUpperReal) : ExUpperReal \cowith {
+    | U q => ∃ (a : `< q) (0 <= a) (x <= y + a) (y <= x + a)
+    | U-closed (inP (a,a<q,a>=0,x<=y+a,y<=x+a)) q<q' => inP (a, a<q <∘ q<q', a>=0, x<=y+a, y<=x+a)
+    | U-rounded {q} (inP (a,a<q,a>=0,x<=y+a,y<=x+a)) => inP (RatField.mid a q, inP (a, RatField.mid>left a<q, a>=0, x<=y+a, y<=x+a), RatField.mid<right a<q)
+  }
+  | dist-refl => <=-antisymmetric (\lam b>0 => inP (0, b>0, <=-refl, transportInv (_ <=) zro-right <=-refl, transportInv (_ <=) zro-right <=-refl))
+                                  (\lam (inP (a,a<b,a>=0,_,_)) => a>=0 <∘r a<b)
+  | dist-symm => <=-antisymmetric (\lam (inP (a,a<b,a>=0,p,q)) => inP (a,a<b,a>=0,q,p)) (\lam (inP (a,a<b,a>=0,p,q)) => inP (a,a<b,a>=0,q,p))
+  | dist-triang {x} {y} {z} {d} xy+yz<d => \case ExUpperReal.+_U.1 xy+yz<d \with {
+    | inP (a, inP (a',a'<a,a'>=0,x<=y+a',y<=x+a'), b, inP (b',b'<b,b'>=0,y<=z+b',z<=y+b'), a+b<d) =>
+      inP (a' + b', RatField.<_+ a'<a b'<b <∘ a+b<d, RatField.<=_+-positive a'>=0 b'>=0,
+           transport (_ <=) (+-assoc *> pmap (z +) (+-comm *> ExUpperReal.+-rat)) $ x<=y+a' <=∘ ExUpperRealAbMonoid.<=_+ y<=z+b' ExUpperRealAbMonoid.<=-refl,
+           transport (_ <=) (+-assoc *> pmap (x +) ExUpperReal.+-rat) $ z<=y+b' <=∘ ExUpperRealAbMonoid.<=_+ y<=x+a' ExUpperRealAbMonoid.<=-refl)
+  }
+  | dist-ext {x} {y} xy=0 => <=-antisymmetric
+    (\lam {b} y<b => \case U-rounded y<b \with {
+      | inP (a,y<a,a<b) => \case transportInv (ExUpperReal.U {__} (b - a)) xy=0 linarith \with {
+        | inP (eps,eps<b-a,_,x<=y+eps,_) => x<=y+eps $ ExUpperReal.+_U_<=.2 $ inP (a, y<a, b - a, eps<b-a, linarith)
+      }
+    })
+    (\lam {b} x<b => \case U-rounded x<b \with {
+      | inP (a,x<a,a<b) => \case transportInv (ExUpperReal.U {__} (b - a)) xy=0 linarith \with {
+        | inP (eps,eps<b-a,_,_,y<=x+eps) => y<=x+eps $ ExUpperReal.+_U_<=.2 $ inP (a, x<a, b - a, eps<b-a, linarith)
+      }
+    })
+  | isCompleteMetric F Fc => inP (cfPoint F, \lam {eps} eps>0 => \case Fc (RatField.half>0 eps>0) \with {
+    | inP (x,FU) => filter-mono FU \lam {y} (inP (a,a<eps/2,a>=0,x<=y+a,y<=x+a)) => inP (a + RatField.half eps, linarith, linarith,
+        \lam {d} dp => \case ExUpperReal.+_U.1 dp \with {
+          | inP (b,y<b,c,a+eps/2<c,b+c<d) => inP (b + c, b+c<d, _, FU, \lam {z} (inP (e,e<eps/2,e>=0,_,z<=x+e)) => z<=x+e <∘r ExUpperRealAbMonoid.<=_+ x<=y+a (<=-less $ <-rat.2 e<eps/2) <∘r transport2 (<) (inv +-assoc) ExUpperReal.+-rat (<_+ (<-rat.2 y<b) $ transportInv (`< _) ExUpperReal.+-rat $ <-rat.2 a+eps/2<c))
+        },
+        \lam {d} dp => \case ExUpperReal.+_U.1 dp \with {
+          | inP (b, inP (b',b'<b,V,FV,V<b'), c, a+eps/2<c, b+c<d) => y<=x+a $ ExUpperReal.+_U.2 $ inP (b + RatField.half eps, \case isProper (filter-meet FU FV) \with {
+            | inP (z, (inP (e,e<eps/2,_,x<=z+e,_), Vz)) => x<=z+e $ <-rat.1 $ transport (_ <) ExUpperReal.+-rat $ <_+ (V<b' Vz <∘ <-rat.2 b'<b) (<-rat.2 e<eps/2)
+          }, c - RatField.half eps, linarith, linarith)
+        })
+  })
+  \where {
+    \open ExUpperRealAbMonoid(<-rat,<_+)
+
+    \lemma dist-left {x y : ExUpperReal} {a : Rat} (xy<a : (dist x y).U a) : x <= y + a \elim xy<a
+      | inP (b,b<a,_,p,_) => p <=∘ ExUpperRealAbMonoid.<=_+ <=-refl (<=-less $ ExUpperRealAbMonoid.<-rat.2 b<a)
+
+    \lemma dist-right {x y : ExUpperReal} {a : Rat} (xy<a : (dist x y).U a) : y <= x + a \elim xy<a
+      | inP (b,b<a,_,_,p) => p <=∘ ExUpperRealAbMonoid.<=_+ <=-refl (<=-less $ ExUpperRealAbMonoid.<-rat.2 b<a)
+
+    \func cfPoint (F : Set ExUpperReal -> \Prop) : ExUpperReal \cowith
+      | U q => ∃ (a : `< q) (U : F) ∀ {x : U} (x < a)
+      | U-closed (inP (a,a<q,U,FU,h)) q<q' => inP (a, a<q <∘ q<q', U, FU, h)
+      | U-rounded {q} (inP (a,a<q,U,FU,h)) => inP (RatField.mid a q, inP (a, RatField.mid>left a<q, U, FU, h), RatField.mid<right a<q)
+  }
+
+\instance UpperRealMetric : CompleteExMetricSpace UpperReal
+  | dist x y => ExUpperRealMetric.dist x y
+  | dist-refl => ExUpperRealMetric.dist-refl
+  | dist-symm => ExUpperRealMetric.dist-symm
+  | dist-triang => ExUpperRealMetric.dist-triang
+  | dist-ext p => UpperReal.ex-ext (ExUpperRealMetric.dist-ext p)
+  | isCompleteMetric F Fc => \case ExUpperRealMetric.isCompleteMetric (ProperFilter-map (\lam x => x) F) Fc \with {
+    | inP (x,h) => inP (\new UpperReal {
+      | ExUpperReal => x
+      | U-inh => \case Fc {1} idp \with {
+        | inP (y,Fy) => \case y.U-inh \with {
+          | inP (q,y<q) => inP (q + 2, \case isProper $ filter-meet (h {1} idp) Fy \with {
+            | inP (z,(xz,yz)) => \case ExUpperRealMetric.halving yz (rewrite dist-symm xz) <=-refl \with {
+              | inP (a,a<2,a>=0,_,x<=y+a) => x<=y+a $ ExUpperReal.+_U_<=.2 $ inP (q, y<q, 2, a<2, <=-refl)
+            }
+          })
+        }
+      }
+    }, h)
+  }
+
+\func upper-ex-isometry : IsometricMap UpperRealMetric ExUpperRealMetric (\lam x => x) \cowith
+  | func-isometry => idp

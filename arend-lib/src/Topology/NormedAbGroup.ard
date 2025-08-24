@@ -11,6 +11,7 @@
 \import Logic
 \import Logic.Meta
 \import Meta
+\import Operations
 \import Order.Biordered
 \import Order.Lattice
 \import Order.PartialOrder
@@ -64,16 +65,21 @@
   | open-top => defaultImpl PrecoverSpace open-top
   | open-inter {U} {V} => defaultImpl PrecoverSpace open-inter {_} {U} {V}
   | open-Union {S} => defaultImpl PrecoverSpace open-Union {_} {S}
-  | dist-refl => norm-dist *> pmap norm negative-right *> norm_zro
-  | dist-symm => norm-dist *> simplify *> norm_negative *> inv norm-dist
-  | dist-triang => repeat {3} (rewrite norm-dist) $ transport (norm __ <= _) simplify norm_+
 
   \default dist x y : ExUpperReal => norm (x - y)
   \default norm-dist \as norm-dist-impl {x} {y} : dist x y = norm (x - y) => idp
 
-  \lemma norm_*n<= {n : Nat} {a : E} : norm (n *n a) <= n ExUpperRealAbMonoid.*n norm a \elim n
-    | 0 => =_<= norm_zro
-    | suc n => norm_+ <=∘ <=_+ norm_*n<= <=-refl
+  \default norm_zro => inv (norm-dist *> pmap norm (pmap (zro +) negative_zro *> zro-right)) *> dist-refl
+  \default norm_negative => pmap norm (inv zro-left) *> inv norm-dist *> dist-symm *> norm-dist *> pmap norm (pmap (_ +) negative_zro *> zro-right)
+  \default norm_+ => transport (\lam z => norm (_ + z) <= _) negative-isInv $ =_<= (inv norm-dist) <=∘ dist-triang {_} {_} {0} <=∘ =_<= (pmap2 (ExUpperReal.+) (norm-dist *> pmap norm (pmap (_ +) negative_zro *> zro-right)) (norm-dist *> pmap norm (pmap (0 +) negative-isInv *> zro-left)))
+
+  \default dist-refl => norm-dist *> pmap norm negative-right *> norm_zro
+  \default dist-symm => norm-dist *> simplify *> norm_negative *> inv norm-dist
+  \default dist-triang => repeat {3} (rewrite norm-dist) $ transport (norm __ <= _) simplify norm_+
+
+  \lemma norm_*n_<= {n : Nat} {a : E} : norm (n *n a) <= n ExUpperReal.* norm a \elim n
+    | 0 => transportInv (`<= _) norm_zro ExUpperRealSemigroup.*_>=0
+    | suc n => norm_+ <=∘ <=_+ norm_*n_<= <=-refl <=∘ =_<= (pmap (_ ExUpperReal.+) (inv $ ExUpperRealSemigroup.ide-left norm>=0) *> inv (ExUpperRealSemigroup.rdistr (ExUpperReal.<=-rat.1 fromNat_>=0) (ExUpperReal.<=-rat.1 rat_<=-dec)) *> pmap (`* _) ExUpperReal.+-rat)
 
   \func IsUnbounded : \Prop
     => \Pi (B : Nat) -> ∃ (x : E) (ExUpperReal.fromRat B <= norm x)
@@ -92,17 +98,31 @@
 \lemma norm_- {X : ExPseudoNormedAbGroup} {x y : X} : norm (x - y) = norm (y - x)
   => pmap norm (inv X.negative-isInv) *> norm_negative *> simplify
 
-\lemma norm_dist-bound {X : ExPseudoNormedAbGroup} {x y : X} : norm x <= dist x y + norm y
+\lemma norm_dist-left {X : ExPseudoNormedAbGroup} {x y : X} : norm x <= dist x y + norm y
   => rewrite norm-dist $ transport (norm  __ <= _) simplify norm_+
 
-\class ExNormedAbGroup \extends ExPseudoNormedAbGroup, ExMetricSpace
-  | norm-ext {x : E} : norm x = ExUpperRealAbMonoid.zro -> x = 0
-  | dist-ext p => fromZero $ norm-ext $ inv norm-dist *> p
+\lemma norm_dist-right {X : ExPseudoNormedAbGroup} {x y : X} : norm x <= norm y + dist x y
+  => rewrite norm-dist $ transport (norm  __ <= _) simplify norm_+
 
-\class PseudoNormedAbGroup \extends ExPseudoNormedAbGroup, PseudoMetricSpace {
+\class ExNormedAbGroup \extends ExPseudoNormedAbGroup, ExMetricSpace {
+  | norm-ext {x : E} : norm x = ExUpperRealAbMonoid.zro -> x = 0
+
+  \default dist-ext p => fromZero $ norm-ext $ inv norm-dist *> p
+  \default norm-ext p => dist-ext $ norm-dist *> pmap norm (pmap (_ +) negative_zro *> zro-right) *> p
+}
+
+\class BoundedExPseudoNormedAbGroup \extends ExPseudoNormedAbGroup
+  | norm-bounded (x : E) : (norm x).IsBounded
+
+\func bnorm {X : BoundedExPseudoNormedAbGroup} (x : X) : UpperReal \cowith
+  | ExUpperReal => norm x
+  | U-inh => norm-bounded x
+
+\class PseudoNormedAbGroup \extends BoundedExPseudoNormedAbGroup, PseudoMetricSpace {
   \override norm : E -> Real
   \default dist x y : Real => norm (x - y)
   \default norm-dist \as norm-dist-impl {x} {y} : dist x y = norm (x - y) => idp
+  | norm-bounded x => U-inh
 }
 
 \func lnorm {X : PseudoNormedAbGroup} (x : X) : Real
@@ -116,6 +136,9 @@
 
 \lemma lnorm_+ {X : PseudoNormedAbGroup} {x y : X} : lnorm (x + y) <= lnorm x + lnorm y
   => Real.<=-upper.2 $ transportInv (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper X.norm_+
+
+\lemma lnorm-ldist {X : PseudoNormedAbGroup} {x y : X} : ldist x y = lnorm (x - y)
+  => Real.=-upper.2 (later norm-dist)
 
 \lemma lnorm_BigSum {X : PseudoNormedAbGroup} {l : Array X} : lnorm (X.BigSum l) <= RealAbGroup.BigSum \lam j => lnorm (l j) \elim l
   | nil => transportInv (`<= _) lnorm_zro <=-refl
@@ -164,9 +187,33 @@
 
   | func-norm-isometry {x : Dom} : norm (func x) = norm x
   | func-norm => =_<= func-norm-isometry
-  | func-isometry => norm-dist *> pmap norm (inv func-minus) *> func-norm-isometry *> inv norm-dist
+
+  \default func-isometry => norm-dist *> pmap norm (inv func-minus) *> func-norm-isometry *> inv norm-dist
+  \default func-norm-isometry => norm_dist *> pmap (dist __ _) (inv func-zro) *> func-isometry *> inv norm_dist
 }
 
 \class CompleteExNormedAbGroup \extends ExNormedAbGroup, CompleteExMetricSpace, CompleteTopAbGroup
 
 \class CompleteNormedAbGroup \extends CompleteExNormedAbGroup, NormedAbGroup, CompleteMetricSpace
+
+-- | A bilinear map bounded by the product of norms is locally uniform.
+\lemma bilinear-locally-uniform {A B : BoundedExPseudoNormedAbGroup} {C : ExPseudoNormedAbGroup} (f : A -> B -> C)
+                                (fl : \Pi {a a' : A} {b : B} -> f (a - a') b = f a b - f a' b)
+                                (fr : \Pi {a : A} {b b' : B} -> f a (b - b') = f a b - f a b')
+                                (norm_*_<= : \Pi {x : A} {y : B} -> norm (f x y) <= norm x * norm y)
+  : LocallyUniformMap (A ⨯ B) C (\lam s => f s.1 s.2)
+  => LocallyUniformMetricMap.makeLocallyUniformMap2 f \lam {eps} eps>0 => inP (1, zro<ide, \lam x0 y0 => \case norm-bounded x0, norm-bounded y0 \with {
+    | inP (x0b,|x0|<x0b), inP (y0b,|y0|<y0b) => \case ExUpperRealSemigroup.div-lb-rat {(x0b + 1) + (y0b + 1 + 1)} {Real.fromRat eps} (inP (1, idp, <=-rat.1 $ linarith (norm>=0 |x0|<x0b, norm>=0 |y0|<y0b))) (<-rat.2 eps>0) \with {
+      | inP (gamma,gamma>0,gamma-m) => inP (gamma ∧ 1, <_meet-univ gamma>0 zro<ide, \lam {x} {x'} {y} {y'} x0x<1 y0y<1 xx'<gamma yy'<gamma =>
+        rewrite norm-dist at xx'<gamma $ rewrite norm-dist at yy'<gamma $ rewrite norm-dist at x0x<1 $ rewrite norm-dist at y0y<1 $ rewrite norm-dist $
+        <-rat.1 $ transport (norm __ < eps) (pmap2 (+) fr fl *> simplify : f x (y - y') + f (x - x') y' = f x y - f x' y') $ norm_+ <∘r
+          <=_+ norm_*_<= norm_*_<= <∘r transport (_ + __ < _) *-comm (<=_+ (ExUpperRealSemigroup.<=_* <=-refl $ <=-less $ <-rat.2 yy'<gamma) (ExUpperRealSemigroup.<=_* <=-refl (<=-less $ <-rat.2 xx'<gamma)) <∘r
+          transport (`< _) (ExUpperRealSemigroup.rdistr norm>=0 norm>=0) (ExUpperRealSemigroup.<=_* <=-refl (<=-rat.1 meet-left) <∘r ExUpperRealSemigroup.<_*-left' (
+            \have lem {X : ExPseudoNormedAbGroup} {x1 x2 : X} (d : (norm (x1 - x2)).U 1) : norm x2 <= norm x1 + 1 => transport (_ <= _ + __) norm_- (=_<= (pmap norm equation.abGroup) <=∘ norm_+) <=∘ <=_+ <=-refl (<=-less $ <-rat.2 d)
+            \in <=_+ (lem x0x<1) (lem (U_<= yy'<gamma meet-right) <=∘ <=_+ (lem y0y<1) <=-refl) <∘r transport (_ <) +-rat (<_+ (transport (_ <) +-rat $ <_+-left $ <-rat.2 |x0|<x0b) $ transport (_ < ) +-rat $ <_+-left $ transport (_ <) +-rat $ <_+-left $ <-rat.2 |y0|<y0b)) (ExUpperRealAbMonoid.<=_+-positive norm>=0 norm>=0) gamma>0 <∘l gamma-m)))
+    }
+  })
+  \where {
+    \open ExUpperReal(<=-rat,+-rat,U_<=)
+    \open ExUpperRealAbMonoid(<-rat,<_+,<_+-left)
+  }

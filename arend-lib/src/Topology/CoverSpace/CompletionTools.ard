@@ -1,0 +1,59 @@
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Operations
+\import Order.PartialOrder
+\import Paths.Meta
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.CoverSpace.StronglyComplete
+\import Topology.MetricSpace.UpperReal
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open ProductCoverSpace
+
+\sfunc lift2 {X : CoverSpace} (f : CoverMap (X ⨯ X) X) : CoverMap (Completion X ⨯ Completion X) (Completion X)
+  => dense-lift (prod completion completion) (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) (completion CoverMap.∘ f)
+
+\lemma lift2-char {X : CoverSpace} {f : CoverMap (X ⨯ X) X} {x y : X} : lift2 f (pointCF x, pointCF y) = pointCF (f (x,y))
+  => rewrite (\peval lift2 f) $ dense-lift-char (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) (x,y)
+
+\lemma unique1 {X : CoverSpace} (f g : ContMap (Completion X) (Completion X)) (p : \Pi (x : X) -> f (pointCF x) = g (pointCF x)) {x : RegularCauchyFilter X} : f x = g x
+  => dense-lift-unique completion completion.isDenseEmbedding.1 f g p x
+
+\lemma unique2 {X : CoverSpace} (f g : ContMap (Completion X ⨯ Completion X) (Completion X)) (p : \Pi (x y : X) -> f (pointCF x, pointCF y) = g (pointCF x, pointCF y)) {x y : RegularCauchyFilter X} : f (x,y) = g (x,y)
+  => dense-lift-unique (prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1) f g (\lam s => p s.1 s.2) (x,y)
+
+\lemma unique3 {X : CoverSpace} (f g : ContMap (Completion X ⨯ Completion X ⨯ Completion X) (Completion X)) (p : \Pi (x y z : X) -> f ((pointCF x, pointCF y), pointCF z) = g ((pointCF x, pointCF y), pointCF z)) {x y z : RegularCauchyFilter X} : f ((x,y),z) = g ((x,y),z)
+  => dense-lift-unique (prod (prod completion completion) completion) (ProductTopSpace.prod.isDense (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1) completion.isDenseEmbedding.1) f g (\lam s => p s.1.1 s.1.2 s.2) ((x,y),z)
+
+\lemma unique1_<= {X : CoverSpace} (f g : ContMap (Completion X) ExUpperRealMetric) (p : \Pi (x : X) -> f (pointCF x) <= g (pointCF x)) {x : RegularCauchyFilter X} : f x <= g x
+  => dense_<= upper-join-uniform completion completion.isDenseEmbedding.1 f g p x
+
+\lemma unique2_<= {X : CoverSpace} (f g : ContMap (Completion X ⨯ Completion X) ExUpperRealMetric) (p : \Pi (x y : X) -> f (pointCF x, pointCF y) <= g (pointCF x, pointCF y)) {x y : RegularCauchyFilter X} : f (x,y) <= g (x,y)
+  => dense_<= upper-join-uniform (prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1) f g (\lam s => p s.1 s.2) (x,y)
+
+\lemma completion-lift-neighborhood2 {X Y : CoverSpace} {Z : CompleteCoverSpace} (g : CoverMap (X ⨯ Y) Z) (F : Completion X) (G : Completion Y) (W : Set Z)
+  : single (cauchy-lift (prod completion completion) (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) g (F,G)) <=< W <->
+    ∃ (W' : Set Z) (W' <=< W) (V1 : Set X) (F V1) (V2 : Set Y) (G V2) (∀ {x : V1} {y : V2} (W' (g (x,y))))
+  => <->trans (dense-lift-neighborhood (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) (F,G) W) $ later
+      (\lam (inP (W',W'<=<W,V,p,FG<=<V)) => \case prod-neighborhood.1 FG<=<V \with {
+        | inP (V1,V2,F<=<V1,G<=<V2,g) => inP (W', W'<=<W, pointCF ^-1 V1, pointCF_^-1_<=< F<=<V1, pointCF ^-1 V2, pointCF_^-1_<=< G<=<V2, \lam V1x V2y => p $ g V1x V2y)
+      }, \lam (inP (W',W'<=<W,V1,FV1,V2,GV2,h)) => inP (W', W'<=<W, Set.Prod (mkSet V1) (mkSet V2), \lam s => h (<=<_<= s.1 idp) (<=<_<= s.2 idp), prod-neighborhood.2 $
+          inP (mkSet V1, mkSet V2, mkSet_<=<-point.2 FV1, mkSet_<=<-point.2 GV2, \lam p q => (p,q))))
+  \where \open Completion
+
+\lemma strongCompletion-lift-neighborhood2 {X Y : StronglyRegularCoverSpace} {Z : StronglyCompleteCoverSpace} (g : CoverMap (X ⨯ Y) Z) (F : StrongCompletion X) (G : StrongCompletion Y) (W : Set Z)
+  : single (weaklyDense-lift (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) g (F,G)) <=< W <->
+    ∃ (W' : Set Z) (W' s<=< W) (V1 : Set X) (F V1) (V2 : Set Y) (G V2) (∀ {x : V1} {y : V2} (W' (g (x,y))))
+  => <->trans (weaklyDense-lift-neighborhood (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) (F,G) W) $ later
+     (\lam (inP (W',W'<=<W,V,p,FG<=<V)) => \case prod-neighborhood.1 FG<=<V \with {
+       | inP (V1,V2,F<=<V1,G<=<V2,g) => inP (W', W'<=<W, pointSCF ^-1 V1, pointSCF_^-1_<=< F<=<V1, pointSCF ^-1 V2, pointSCF_^-1_<=< G<=<V2, \lam V1x V2y => p $ g V1x V2y)
+     }, \lam (inP (W',W'<=<W,V1,FV1,V2,GV2,h)) => inP (W', W'<=<W, Set.Prod (mkSet V1) (mkSet V2), \lam s => h (<=<_<= s.1 idp) (<=<_<= s.2 idp), prod-neighborhood.2 $
+        inP (mkSet V1, mkSet V2, mkSet_<=<-point.2 FV1, mkSet_<=<-point.2 GV2, \lam p q => (p,q))))
+  \where \open StrongCompletion

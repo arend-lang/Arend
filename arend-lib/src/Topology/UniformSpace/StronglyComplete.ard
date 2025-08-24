@@ -12,11 +12,12 @@
 \import Topology.CoverSpace.StronglyComplete
 \import Topology.RatherBelow
 \import Topology.UniformSpace
+\import Topology.UniformSpace.Complete (CompleteUniformSpace)
 \open ClosurePrecoverSpace
 \open Bounded(top)
 \open StrongCompletion
 
-\class StronglyCompleteUniformSpace \extends StronglyRegularUniformSpace, StronglyCompleteCoverSpace
+\class StronglyCompleteUniformSpace \extends StronglyRegularUniformSpace, CompleteUniformSpace, StronglyCompleteCoverSpace
 
 \func weaklyDense-uniform-lift {X : RegularPreuniformSpace} {Y : StronglyRegularUniformSpace} {Z : StronglyCompleteUniformSpace} (f : UniformMap X Y) (fd : f.IsWeaklyDenseUniformEmbedding) (g : UniformMap X Z) : UniformMap Y Z \cowith
   | CoverMap => weaklyDense-lift f (fd.1, f.embedding->coverEmbedding fd.2) g

@@ -66,6 +66,22 @@
   | func-+ => equation
   | func-cont => +-cont.func-cont
 
+\lemma *n-uniform {X : TopAbGroup} {n : Nat} : TopAbGroupMap X X (n X.*n) \cowith
+  | func-+ => X.*n-ldistr
+  | func-cont => *n-cont.func-cont
+  \where {
+    \private \lemma *n-cont {n : Nat} : ContMap X X (n X.*n) \elim n
+      | 0 => ContMap.const 0
+      | suc n => +-uniform ContMap.∘ ProductTopSpace.tuple *n-cont ContMap.id
+  }
+
+\lemma *i-uniform {X : TopAbGroup} {n : Int} : TopAbGroupMap X X (n X.*i) \cowith
+  | func-+ => X.*i-ldistr
+  | func-cont => \case \elim n \with {
+    | pos n => *n-uniform.func-cont
+    | neg n => (*n-uniform ContMap.∘ negative-cont).func-cont
+  }
+
 \lemma BigSum-cover {X : CoverSpace} {Y : TopAbGroup} (fs : Array (CoverMap X Y))
   : CoverMap X Y \lam x => Y.BigSum \lam j => fs j x \elim fs
   | nil => CoverMap.const 0

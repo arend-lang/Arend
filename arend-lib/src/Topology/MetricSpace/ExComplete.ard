@@ -1,0 +1,78 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Arith.Rat
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\import Topology.UniformSpace.Complete
+
+\func dense-metric-lift {X Y : ExPseudoMetricSpace} {Z : CompleteExMetricSpace} (f : IsometricMap X Y) (fd : f.IsDense) (g : MetricMap X Z) : MetricMap Y Z \cowith
+  | UniformMap => dense-uniform-lift f (f.dense->uniformEmbedding fd) g
+  | func-dist {y} {y'} =>
+    \have | g~ => dense-uniform-lift f (f.dense->uniformEmbedding fd) g
+          | g-char {x} => dense-lift-char (fd, f.embedding->coverEmbedding (f.dense->uniformEmbedding fd).2) x
+    \in dense_<= upper-join-uniform (prod f f) (prod.isDense fd fd) (dist-uniform-map ∘ prod g~ g~) dist-uniform-map (\lam s => unfold $ unfold $ rewrite (g-char,g-char) $ g.func-dist <=∘ =_<= (inv f.func-isometry)) (y,y')
+  \where {
+    \open ProductTopSpace
+    \open ContMap
+  }
+
+\instance ExMetricCompletion (X : ExPseudoMetricSpace) : CompleteExMetricSpace
+  | CompleteUniformSpace => UniformCompletion X
+  | dist (F G : RegularCauchyFilter X) : ExUpperReal \cowith {
+    | U q => ∃ (r : `< q) (U : F.F) (V : G.F) ∀ {x : U} {y : V} ((X.dist x y).U r)
+    | U-closed (inP (r,r<q,U,FU,V,GV,h)) q<q' => inP (r, r<q <∘ q<q', U, FU, V, GV, h)
+    | U-rounded {q} (inP (r,r<q,U,FU,V,GV,h)) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, U, FU, V, GV, h), RatField.mid<right r<q)
+  }
+  | dist-refl {F} => <=-antisymmetric (\lam {b} b>0 => \case F.isCauchyFilter $ X.makeCauchy $ X.metricUniform (RatField.half>0 $ RatField.half>0 b>0) \with {
+    | inP (_, inP (x,idp), FU) => inP (RatField.half b, linarith, _, FU, _, FU, \lam {y} xy<b/4 {z} xz<b/4 => X.halving1/2 xy<b/4 xz<b/4)
+  }) (\lam {b} (inP (r,r<b,U,FU,V,FV,h)) => \case isProper FU, isProper FV \with {
+    | inP (x,Ux), inP (y,Vy) => dist>=0 (h Ux Vy) <∘ r<b
+  })
+  | dist-symm =>
+    \have lem {F G : RegularCauchyFilter X} : dist F G <= dist G F => \lam {b} (inP (r,r<b,V,GV,U,FU,h)) => inP (r, r<b, U, FU, V, GV, \lam Ux Vy => rewrite dist-symm (h Vy Ux))
+    \in <=-antisymmetric lem lem
+  | dist-triang {F} {G} {H} {d} p => \case ExUpperReal.+_U.1 p \with {
+    | inP (a, inP (q,q<a,U,FU,V,GV,g), b, inP (r,r<b,V',GV',W,HW,h), a+b<d) => inP (q + r, RatField.<_+ q<a r<b <∘ a+b<d, U, FU, W, HW, \lam Ux {z} Wz => \case isProper (filter-meet GV GV') \with {
+      | inP (y,(Vy,V'y)) => ExUpperRealAbMonoid.<-rat.1 $ transport (_ <) ExUpperReal.+-rat $ dist-triang <∘r ExUpperRealAbMonoid.<_+ (ExUpperRealAbMonoid.<-rat.2 $ g Ux Vy) (ExUpperRealAbMonoid.<-rat.2 $ h V'y Wz)
+    })
+  }
+  | dist-uniform => (\lam (inP (D,Du,g)) => \case dist-uniform.1 Du \with {
+    | inP (eps,eps>0,h) => inP (RatField.half eps, RatField.half>0 eps>0, \lam F => \case F.isCauchyFilter $ X.makeCauchy $ X.metricUniform (RatField.half>0 eps>0) \with {
+      | inP (W, inP (x,Wp), FW) => \case h x \with {
+        | inP (V,DV,Vp) => \case g DV \with {
+          | inP (U,CU,Up) => inP (U, CU, \lam {G} (inP (a,a<eps/2,U',FU',V',GV',h')) => Up $ filter-mono GV' \lam {y} V'y => \case isProper (filter-meet FW FU') \with {
+            | inP (x',(Wx',U'x')) => Vp $ X.halving (rewrite Wp in Wx') (U-closed (h' U'x' V'y) a<eps/2) linarith
+          })
+        }
+      }
+    })
+  }, \lam (inP (eps,eps>0,h)) => inP (_, X.metricUniform $ RatField.half>0 $ RatField.half>0 eps>0, \lam {_} (inP (x,idp)) => \case h (pointCF x) \with {
+    | inP (U,CU,g) => inP (U, CU, \lam {F} Fx => g $ inP (RatField.half eps, linarith, OBall (RatField.half $ RatField.half eps) x, OBall-center_<=< $ RatField.half>0 $ RatField.half>0 eps>0, _, Fx, \lam {z} xz<eps/4 {y} xy<eps/4 => X.halving1/2 xz<eps/4 xy<eps/4))
+  }))
+
+\func completion-ex-isometry {X : ExPseudoMetricSpace} : IsometricMap X (ExMetricCompletion X) \cowith
+  | UniformMap => uniform-completion
+  | func-isometry {x} {y} => <=-antisymmetric (\lam xy<b => \case U-rounded xy<b \with {
+    | inP (c,xy<c,c<b) => \case U-rounded xy<c \with {
+      | inP (a,xy<a,a<c) => inP (c, c<b, OBall (RatField.half (c - a)) x, OBall-center_<=< $ RatField.half>0 $ RatField.to>0 a<c, OBall (RatField.half (c - a)) y, OBall-center_<=< $ RatField.half>0 $ RatField.to>0 a<c,
+          \lam {x'} xx' {y'} yy' => ExUpperRealAbMonoid.<-rat.1 $ X.dist-triang {_} {y} <∘r ExUpperRealAbMonoid.<=_+ (X.dist-triang {_} {x}) <=-refl <∘r
+          transport (_ <) {ExUpperReal.fromRat $ RatField.half (c - a) + a + RatField.half (c - a)} (pmap ExUpperReal.fromRat linarith)
+          (transport (_ <) ExUpperReal.+-rat $ ExUpperRealAbMonoid.<_+ (transport (_ <) ExUpperReal.+-rat $ ExUpperRealAbMonoid.<_+ (transport (`< _) dist-symm $ ExUpperRealAbMonoid.<-rat.2 xx') (ExUpperRealAbMonoid.<-rat.2 xy<a)) (ExUpperRealAbMonoid.<-rat.2 yy')))
+    }
+  }) (\lam (inP (a,a<b,U,x<=<U,V,y<=<V,h)) => U-closed (h (<=<_<= x<=<U idp) (<=<_<= y<=<V idp)) a<b)
