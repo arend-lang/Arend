@@ -25,6 +25,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import static java.util.Collections.singletonList;
 
@@ -113,20 +114,28 @@ public class SingleFileReferenceResolver {
           EmptyScope.INSTANCE :
           referableScope;
         Set<? extends Referable> currentScopeElements = new LinkedHashSet<>(currentScope.getElements());
-        HashMap<Referable, Set<String>> currentScopeMap = new HashMap<>(); /* all possible aliases for referable that are in current scope */
+        Set<RedirectingReferable> redirectingReferables = new LinkedHashSet<>();
+        Set<Referable> targetReferables = new LinkedHashSet<>();
 
-        for (Referable currentScopeElement : currentScopeElements) {
-            Referable resolveTarget = currentScope.resolveName(currentScopeElement.getRefName());
-            if (resolveTarget instanceof RedirectingReferable redirecting) resolveTarget = redirecting.getOriginalReferable();
-            boolean resolveOk = resolveTarget == currentScopeElement || currentScopeElement instanceof RedirectingReferable redirecting &&
-                    redirecting.getOriginalReferable() == resolveTarget;
-
-            if (resolveOk) {
-                if (currentScopeElement instanceof RedirectingReferable)
-                    currentScopeMap.computeIfAbsent(((RedirectingReferable) currentScopeElement).getOriginalReferable(), referable -> new HashSet<>()).add(currentScopeElement.getRefName());
-                else currentScopeMap.computeIfAbsent(currentScopeElement, referable -> new HashSet<>()).add(currentScopeElement.getRefName());
-            }
+        for (Referable currentScopeElement : currentScopeElements) if (currentScopeElement instanceof RedirectingReferable redirectingReferable) {
+            redirectingReferables.add(redirectingReferable);
+            targetReferables.add(redirectingReferable.getOriginalReferable());
+        } else {
+            targetReferables.add(currentScopeElement);
         }
+
+        Function<Referable, Set<String>> aliasCalculator = referable -> {
+            Set<String> candidates = getPossibleAliasNames(referable, redirectingReferables);
+
+            Set<String> result = new HashSet<>();
+            for (String candidate : candidates) {
+                Referable resolveTarget = currentScope.resolveName(candidate);
+                if (resolveTarget instanceof RedirectingReferable redirecting) resolveTarget = redirecting.getOriginalReferable();
+                if (resolveTarget == referable) result.add(candidate);
+            }
+            return result;
+        };
+
 
         ModuleLocation targetModuleLocation = targetReferable.getLocation();
         if (targetModuleLocation == null) return null;
@@ -140,14 +149,14 @@ public class SingleFileReferenceResolver {
         AtomicReference<ConcreteNamespaceCommand> namespaceCommand = getConcreteNamespaceCommandAtomicReference(myCurrentFile, targetReferable, anchorModuleLocation);
         ArrayList<LocatedReferable> targetAncestors = new ArrayList<>();
         LocatedReferable.Helper.getAncestors(targetReferable, targetAncestors);
-        boolean someAncestorIsVisible = targetAncestors.stream().anyMatch(currentScopeMap.keySet()::contains);
+        boolean someAncestorIsVisible = targetAncestors.stream().anyMatch(targetReferables::contains);
 
         @Nullable ModulePath modulePrefix = null;
         @Nullable List<Pair<String, Referable>> result;
 
         if (namespaceCommand.get() != null || someAncestorIsVisible ||
                 anchorModuleLocation.equals(targetModuleLocation)) {
-            List<List<Pair<String, Referable>>> possibleNames = calculatePossibleNames(targetReferable, currentScopeMap);
+            List<List<Pair<String, Referable>>> possibleNames = calculatePossibleNames(targetReferable, aliasCalculator);
             List<List<Pair<String, Referable>>> accessibleNames = new ArrayList<>();
 
             for (List<Pair<String, Referable>> name : possibleNames) {
@@ -315,9 +324,22 @@ public class SingleFileReferenceResolver {
         importsToAdd.clear();
     }
 
+    private static @NotNull Set<String> getPossibleAliasNames(Referable referable, Set<RedirectingReferable> redirectingReferables) {
+        Set<String> candidates = new HashSet<>();
+        for (RedirectingReferable redirectingReferable : redirectingReferables) {
+            if (redirectingReferable.getOriginalReferable() == referable) {
+                candidates.add(redirectingReferable.getRefName());
+            }
+        }
+        candidates.add(referable.getRefName());
+        if (referable instanceof GlobalReferable globalReferable && globalReferable.getAliasName() != null)
+            candidates.add(globalReferable.getAliasName());
+        return candidates;
+    }
+
     private static List<List<Pair<String, Referable>>> calculatePossibleNames(
       LocatedReferable targetReferable,
-      @Nullable HashMap<Referable, Set<String>> currentScopeMap) {
+      @Nullable Function<Referable, Set<String>> currentScopeMap) {
       List<List<Pair<String, Referable>>> possibleNames = singletonList(new ArrayList<>());
 
       boolean foundNameInScope = false;
@@ -336,7 +358,7 @@ public class SingleFileReferenceResolver {
           possibleNamesPrefix.add(new ArrayList<>()); // allow referencing to a constructor or a classfield without referring to the parent class/datatype
         }
 
-        @Nullable Set<String> aliases = currentScopeMap != null ? currentScopeMap.get(currReferable) : null;
+        @Nullable Set<String> aliases = currentScopeMap != null ? currentScopeMap.apply(currReferable) : null;
         ArrayList<String> currReferableAliases = new ArrayList<>();
         if (aliases != null) currReferableAliases.addAll(aliases);
         currReferableAliases.sort(Comparator.comparingInt(String::length).thenComparing(Comparator.naturalOrder()));
