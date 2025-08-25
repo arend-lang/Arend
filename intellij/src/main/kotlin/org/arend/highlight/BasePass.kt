@@ -92,12 +92,14 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                 val list = error.cause?.let { it as? Collection<*> ?: listOf(it) }?.mapSmartNotNull { getCauseElement(it)?.validOrNull() }
                 if (list.isNullOrEmpty()) {
                     val psi = ((error as? LocalError)?.definition as? DataContainer)?.data as? PsiElement
-                    if (psi != null) {
+                    if (psi != null && psi.isValid) {
                         reportToEditor(error, psi)
                     }
                 } else {
                     for (psi in list) {
-                        reportToEditor(error, psi)
+                        if (psi.isValid) {
+                            reportToEditor(error, psi)
+                        }
                     }
                 }
             }
