@@ -719,7 +719,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
         for (ConcreteNamespaceCommand.NameRenaming renaming : namespaceCommand.renamings()) {
           Referable oldRef = renaming.reference();
-          Referable ref = ExpressionResolveNameVisitor.resolve(oldRef, new PrivateFilteredScope(curScope, true), null);
+          Referable ref = ExpressionResolveNameVisitor.resolve(oldRef, new PrivateFilteredScope(curScope, true), null, myResolverListener);
           if (myResolverListener != null) {
             myResolverListener.renamingResolved(renaming, oldRef, ref);
           }
@@ -730,7 +730,7 @@ public class DefinitionResolveNameVisitor implements ConcreteResolvableDefinitio
 
         for (ConcreteNamespaceCommand.NameHiding nameHiding : namespaceCommand.hidings()) {
           Referable oldRef = nameHiding.reference();
-          Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.reference(), new PrivateFilteredScope(curScope, true), nameHiding.scopeContext());
+          Referable ref = ExpressionResolveNameVisitor.resolve(nameHiding.reference(), new PrivateFilteredScope(curScope, true), nameHiding.scopeContext(), myResolverListener);
           if (myResolverListener != null) {
             myResolverListener.hidingResolved(nameHiding, oldRef, ref);
           }

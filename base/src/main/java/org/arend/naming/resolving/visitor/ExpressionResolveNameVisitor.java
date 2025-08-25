@@ -182,23 +182,23 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     return myScope;
   }
 
-  public static Referable resolve(Referable referable, Scope scope, boolean withArg, List<Referable> resolvedRefs, @Nullable Scope.ScopeContext context, TypingInfo typingInfo) {
+  public static Referable resolve(Referable referable, Scope scope, boolean withArg, List<Referable> resolvedRefs, @Nullable Scope.ScopeContext context, TypingInfo typingInfo, @Nullable ResolverListener listener) {
     referable = RedirectingReferable.getOriginalReferable(referable);
     if (referable instanceof UnresolvedReference) {
       if (withArg) {
         ((UnresolvedReference) referable).resolveExpression(scope, typingInfo, resolvedRefs, null);
       }
-      referable = RedirectingReferable.getOriginalReferable(((UnresolvedReference) referable).resolve(scope, withArg ? null : resolvedRefs, context, null));
+      referable = RedirectingReferable.getOriginalReferable(((UnresolvedReference) referable).resolve(scope, withArg ? null : resolvedRefs, context, listener));
     }
     return referable;
   }
 
-  public static Referable resolve(Referable referable, Scope scope, @Nullable Scope.ScopeContext context) {
-    return resolve(referable, scope, false, null, context, TypingInfo.EMPTY);
+  public static Referable resolve(Referable referable, Scope scope, @Nullable Scope.ScopeContext context, @Nullable ResolverListener listener) {
+    return resolve(referable, scope, false, null, context, TypingInfo.EMPTY, listener);
   }
 
   public static Referable resolve(Referable referable, Scope scope) {
-    return resolve(referable, scope, false, null, Scope.ScopeContext.STATIC, TypingInfo.EMPTY);
+    return resolve(referable, scope, false, null, Scope.ScopeContext.STATIC, TypingInfo.EMPTY, null);
   }
 
   public static Referable tryResolve(Referable referable, Scope scope, List<Referable> resolvedRefs) {
@@ -838,7 +838,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     Referable origReferable = ((Concrete.ConstructorPattern) pattern).getConstructor();
     if (origReferable instanceof UnresolvedReference) {
       List<Referable> resolvedList = myResolverListener == null ? null : new ArrayList<>();
-      Referable referable = resolve(origReferable, myParentScope, false, resolvedList, Scope.ScopeContext.STATIC, myTypingInfo);
+      Referable referable = resolve(origReferable, myParentScope, false, resolvedList, Scope.ScopeContext.STATIC, myTypingInfo, myResolverListener);
       if (referable instanceof ErrorReference) {
         myErrorReporter.report(((ErrorReference) referable).getError());
       } else if (referable instanceof GlobalReferable && !((GlobalReferable) referable).getKind().isConstructor()) {
@@ -904,7 +904,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
   Referable visitClassFieldReference(Concrete.ClassElement element, Referable oldField, DynamicScopeProvider provider) {
     if (oldField instanceof UnresolvedReference) {
       List<Referable> resolvedRefs = myResolverListener == null ? null : new ArrayList<>();
-      Referable field = resolve(oldField, new MergeScope(true, new DynamicScope(provider, myTypingInfo, DynamicScope.Extent.WITH_SUPER), myScope), false, resolvedRefs, Scope.ScopeContext.STATIC, myTypingInfo);
+      Referable field = resolve(oldField, new MergeScope(true, new DynamicScope(provider, myTypingInfo, DynamicScope.Extent.WITH_SUPER), myScope), false, resolvedRefs, Scope.ScopeContext.STATIC, myTypingInfo, myResolverListener);
       if (myResolverListener != null) {
         if (element instanceof Concrete.CoClauseElement) {
           myResolverListener.coPatternResolved((Concrete.CoClauseElement) element, oldField, field, resolvedRefs);
@@ -1032,7 +1032,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
   @Override
   public Concrete.LevelExpression visitVar(Concrete.VarLevelExpression expr, LevelVariable type) {
     Scope.ScopeContext scopeContext = type == LevelVariable.HVAR ? Scope.ScopeContext.HLEVEL : Scope.ScopeContext.PLEVEL;
-    Referable ref = resolve(expr.getReferent(), myScope, scopeContext);
+    Referable ref = resolve(expr.getReferent(), myScope, scopeContext, myResolverListener);
     if (ref instanceof ErrorReference) {
       myErrorReporter.report(((ErrorReference) ref).getError());
     }
