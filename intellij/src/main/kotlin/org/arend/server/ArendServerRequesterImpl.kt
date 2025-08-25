@@ -1,6 +1,7 @@
 package org.arend.server
 
 import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.findDirectory
 import org.arend.error.DummyErrorReporter
@@ -15,7 +16,9 @@ import org.arend.psi.ext.ReferableBase
 import org.arend.term.abs.AbstractReferable
 import org.arend.term.abs.AbstractReference
 import org.arend.term.abs.ConcreteBuilder
+import org.arend.term.group.ConcreteGroup
 import org.arend.util.FileUtils
+import org.arend.util.addGeneratedModule
 import org.arend.util.findInternalLibrary
 import org.arend.util.findLibrary
 import org.arend.util.moduleConfigs
@@ -27,6 +30,10 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
             val file = project.findInternalLibrary(module.libraryName)?.findArendFile(module.modulePath, module.locationKind == ModuleLocation.LocationKind.TEST)
             doUpdateModule(server, module, file ?: return@runReadAction)
         }
+    }
+
+    override fun setupGeneratedModule(module: ModuleLocation, group: ConcreteGroup) {
+        project.addGeneratedModule(module, group)
     }
 
     override fun getFiles(libraryName: String, inTests: Boolean, prefix: List<String>): List<String>? {
