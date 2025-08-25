@@ -589,10 +589,12 @@ public class ArendServerImpl implements ArendServer {
 
     if (referable.getKind().isRecord()) {
       DynamicScopeProvider dynamicScopeProvider = myTypingInfo.getDynamicScopeProvider(referable);
-      return dynamicScopeProvider == null ? scope : new MergeScope(new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC), scope);
+      if (dynamicScopeProvider != null) {
+        scope = new MergeScope(new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC), scope);
+      }
     }
 
-    return scope;
+    return CachingScope.make(scope);
   }
 
   @Override
