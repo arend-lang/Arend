@@ -59,7 +59,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                 refElementAtCaret.prevSibling == null && isGlobalScopeVisible(refElementAtCaret.topmostEquivalentSourceNode)
         val isInsideValidNsCmd = refElementAtCaret is ArendRefIdentifier && parentPsi is ArendLongName &&
                 refElementAtCaret.prevSibling == null && refElementAtCaret.topmostEquivalentSourceNode.parent is Abstract.NamespaceCommand
-        val isClassExtension = parentPsi?.parent is ArendDefClass
+        val isClassExtension = parentPsi is ArendLongName && parentPsi.parent is ArendSuperClass
 
         val editor = parameters.editor
         val project = editor.project
@@ -71,11 +71,13 @@ class ArendNoVariantsDelegator : CompletionContributor() {
             }
         }
 
-        if (project != null && (isInsideValidExpr || isInsideValidNsCmd) && (tracker.variants.isEmpty() && tracker.nullPsiVariants.isEmpty() || !parameters.isAutoPopup)) {
+        val noVariants = tracker.variants.isEmpty() && tracker.nullPsiVariants.isEmpty() || !parameters.isAutoPopup
+
+        if (project != null && (isInsideValidExpr || isInsideValidNsCmd || isClassExtension) && noVariants) {
             val consumer = { name: String, refs: List<PsiLocatedReferable>? ->
                 if (bpm.prefixMatches(name)) {
                     val locatedReferables = refs?.filter { it is ArendFile || !isInsideValidNsCmd } ?: when {
-                        isInsideValidExpr ->
+                        isInsideValidExpr || isClassExtension ->
                             StubIndex.getElements(if (isClassExtension) ArendGotoClassIndex.KEY else ArendDefinitionIndex.KEY, name, project, ArendFileScope(project), PsiReferable::class.java).filterIsInstance<PsiLocatedReferable>()
                         else ->
                             StubIndex.getElements(ArendFileIndex.KEY, "$name.ard", project, ArendFileScope(project), ArendFile::class.java)
