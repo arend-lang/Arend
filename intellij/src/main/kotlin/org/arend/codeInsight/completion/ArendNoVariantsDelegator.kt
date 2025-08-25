@@ -39,7 +39,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                     if (!elementIsWithinFileBeingEdited) variants.add(elementPsi) else {
                         val originalPosition = parameters.originalPosition
                         if (originalPosition != null) {
-                            if (!parameters.position.ancestors.contains(elementPsi))
+                            if (!originalPosition.ancestors.contains(elementPsi))
                                 variants.add(elementPsi)
                         }
                     }
