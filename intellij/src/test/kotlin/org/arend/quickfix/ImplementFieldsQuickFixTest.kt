@@ -38,8 +38,9 @@ class ImplementFieldsQuickFixTest : QuickFixTestBase() {
                 \class Foo {
                 | A : Nat
                 }
-                \instance Bar : Foo {}
+                \instance Bar : Foo {
                   | A => {?}{-caret-}
+                }
             """)
 
     fun `test adding implementation for a field`() = typedQuickFixTest(replaceWithEmptyImplementation,

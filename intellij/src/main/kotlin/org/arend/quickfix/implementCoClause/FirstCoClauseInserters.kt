@@ -91,7 +91,7 @@ class ArendInstanceInserter(private val instance: ArendDefInstance) : ArendFunct
     override fun insertFirstCoClause(name: String, factory: ArendPsiFactory, editor: Editor?) {
         var instanceBody = instance.body
         val expr = instance.returnExpr?.type
-        if (instanceBody == null && expr is ArendNewExpr) {
+        if (instanceBody == null && expr is ArendNewExpr && expr.lbrace != null) {
             val localCoClause = factory.createLocalCoClause(name)
             val insertedLocalCoClause = expr.addAfter(localCoClause, expr.lbrace)
             moveCaretToEndOffset(editor, insertedLocalCoClause)
