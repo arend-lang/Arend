@@ -219,8 +219,8 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
          else null
 
         val suffix = if (suffixTR != null) element.containingFile.text.substring(suffixTR.startOffset, suffixTR.endOffset) else ""
-        val prefix = newName.dropLast(1).joinToString(".").let { if (it.isEmpty()) "" else "$it." }
-        val resultingName = prefix + (if (element is ArendIPName) "`" else "") + newName.last() + (if (element is ArendIPName && element.infix != null) "`" else "") + suffix
+        val prefix = id.dropLast(1).joinToString(".").let { if (it.isEmpty()) "" else "$it." }
+        val resultingName = prefix + (if (element is ArendIPName) "`" else "") + id.last() + (if (element is ArendIPName && element.infix != null) "`" else "") + suffix
 
         val (oldPsi, newPsi) = when {
             atomFieldsAcc != null ->
