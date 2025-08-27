@@ -240,14 +240,14 @@ class ImplementMissingClausesQuickFixTest: QuickFixTestBase() {
         \func lol{-caret-} {A B : \Type} (a b : Logic.|| A B) : Nat
           | Logic.byLeft x, Logic.byLeft y => {?} 
         """, """
-        \import Logic (byRight)
+        \import Logic (byRight, ||)
 
         \func byLeft => 101
 
         \func lol {A B : \Type} (a b : Logic.|| A B) : Nat
           | Logic.byLeft x, Logic.byLeft y => {?}
           | byRight b, b1 => {?}
-          | Logic.byLeft x, byRight b => {?} 
+          | ||.byLeft x, byRight b => {?} 
         """)
 
     fun testResolveReference2() = typedQuickFixTest(fixName,

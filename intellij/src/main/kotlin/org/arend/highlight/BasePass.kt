@@ -200,7 +200,11 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                 }
                 val coClauseBase = cause.ancestor<CoClauseBase>()
                 val coClauseBaseFixData = coClauseBase?.getUserData(CoClausesKey)
-                if (coClauseBaseFixData != null) registerFix(builder, object : ImplementFieldsQuickFix(SmartPointerManager.createPointer(coClauseBase), true, coClauseBaseFixData) {
+                if (coClauseBaseFixData != null)
+                    registerFix(builder, object : ImplementFieldsQuickFix(
+                        SmartPointerManager.createPointer(coClauseBase),
+                        null,
+                        true, coClauseBaseFixData) {
                     override fun getText(): String = ArendBundle.getMessage("arend.coClause.replaceWithEmptyImplementation")
                 })
 
@@ -306,7 +310,8 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                             val p = Pair(field as LocatedReferable, shortNameResolvesToOtherId)
                             fieldList.add(p)
                         }
-                        registerFix(builder, ImplementFieldsQuickFix(SmartPointerManager.createPointer(cause), false, fieldList))
+                        registerFix(builder, ImplementFieldsQuickFix(SmartPointerManager.createPointer(cause),
+                            ((error.classRef as? TCDefReferable)?.data as? ArendDefClass)?.let { SmartPointerManager.createPointer(it) }, false, fieldList))
                     }
                     if (cause is ArendNewExpr) {
                         cause.putUserData(CoClausesKey, null)

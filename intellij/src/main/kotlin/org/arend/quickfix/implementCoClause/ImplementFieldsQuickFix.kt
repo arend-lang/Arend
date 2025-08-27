@@ -26,7 +26,9 @@ import org.arend.term.abs.Abstract
 import org.arend.util.ArendBundle
 import kotlin.math.min
 
-open class ImplementFieldsQuickFix(private val instanceRef: SmartPsiElementPointer<PsiElement>,
+open class ImplementFieldsQuickFix(
+                              private val instanceRef: SmartPsiElementPointer<PsiElement>,
+                              private val classRef: SmartPsiElementPointer<ArendDefClass>?,
                               private val needsBulb: Boolean,
                               private val fieldsToImplement: List<Pair<LocatedReferable, Boolean>>): IntentionAction, Iconable {
     private var caretMoved = false
@@ -40,14 +42,12 @@ open class ImplementFieldsQuickFix(private val instanceRef: SmartPsiElementPoint
     override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean =
         instanceRef.element != null
 
-    /* TODO[server2]
     private fun collectDefaultStatements(defClass: ArendDefClass, defaultFields: MutableSet<ArendClassStat>) {
         defaultFields.addAll(defClass.classStatList.filter { it.isDefault })
-        for (superClass in defClass.superClassReferences) {
+        for (superClass in defClass.superClassList) (superClass.longName.refIdentifierList.lastOrNull()?.resolve as? ArendDefClass)?.let { superClass ->
             (superClass as? ArendDefClass?)?.let { collectDefaultStatements(it, defaultFields) }
         }
     }
-    */
 
     private fun getMinGroup(defaultFields: Set<PsiElement>, rules: Map<PsiElement, List<PsiElement>>): Set<Set<PsiElement>> {
         val results = mutableSetOf<Set<PsiElement>>()
@@ -80,11 +80,11 @@ open class ImplementFieldsQuickFix(private val instanceRef: SmartPsiElementPoint
 
     private fun getMinDefaultFields(): Pair<Set<Set<PsiElement>>, Set<PsiElement>> {
         val defaultStatements = mutableSetOf<ArendClassStat>()
-        /*
-        ((instanceRef.element as Abstract.ClassReferenceHolder).classReference as? ArendDefClass?)?.let {
+
+        classRef?.element?.let {
             collectDefaultStatements(it, defaultStatements)
         }
-        */
+
         val defaultFields = defaultStatements.mapNotNull { it.coClause?.longName?.resolve }.toSet()
 
         val rules = mutableMapOf<PsiElement, MutableList<PsiElement>>()

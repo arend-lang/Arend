@@ -25,7 +25,7 @@ open class ImplementFieldsInCoClauseIntention : SelfTargetingIntention<CoClauseB
         val data = element.getUserData(CoClausesKey)
         val rangeToReport = element.longName?.textRange
         if (data != null && rangeToReport != null)
-            ImplementFieldsQuickFix(SmartPointerManager.createPointer(element), false, data).invoke(project, editor, null)
+            ImplementFieldsQuickFix(SmartPointerManager.createPointer(element), null, false, data).invoke(project, editor, null)
     }
 
     override fun forbidCaretInsideElement(element: PsiElement): Boolean = element is ArendExpr || element is ArendCoClause
