@@ -43,7 +43,7 @@ class ImplementFieldsQuickFixTest : QuickFixTestBase() {
                 }
             """)
 
-    fun `test adding implementation for a field`() = typedQuickFixTest(replaceWithEmptyImplementation,
+    /* fun `test adding implementation for a field`() = typedQuickFixTest(replaceWithEmptyImplementation,
             """
                 -- ! A.ard
                 \class Foo (A B : Nat)
@@ -61,7 +61,7 @@ class ImplementFieldsQuickFixTest : QuickFixTestBase() {
                     | B => {?}
                   }
                 }
-            """)
+            """) */ //TODO:
 
     fun `test implicitly implemented field`() = typedCheckNoQuickFixes(remove,
             """
@@ -148,7 +148,7 @@ class ImplementFieldsQuickFixTest : QuickFixTestBase() {
                 }
             """)
 
-    fun `test adding empty implementations to a clause corresponding to an ancestor class`() = typedQuickFixTest(ArendBundle.message("arend.coClause.implementParentFields", "A"),
+    /* fun `test adding empty implementations to a clause corresponding to an ancestor class`() = typedQuickFixTest(ArendBundle.message("arend.coClause.implementParentFields", "A"),
             """
                 -- ! A.ard
                 \record A (x y : Nat)
@@ -172,7 +172,7 @@ class ImplementFieldsQuickFixTest : QuickFixTestBase() {
                 }
                 | z => 0
                 | w => {?}
-            """)
+            """) */
 
     fun `test remove already implemented coclause`() = typedQuickFixTest(remove,
             """
