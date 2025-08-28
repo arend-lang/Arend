@@ -163,7 +163,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
       defsToPsiElement[typechecked] = defFunction
 
       otherDefs.addAll(PsiTreeUtil.findChildrenOfType(defFunction, ArendRefIdentifier::class.java)
-        .map { it.resolve }.filterIsInstance<ArendDefFunction>().filter { it.containingFile != file })
+        .map { it.resolve }.filterIsInstance<ArendDefFunction>().filter { it.isValid }.filter { it.containingFile != file })
     }
 
     addOtherDefinitions(project, otherDefs, concreteDefs, defsClauses, defsToPsiElement, coreToConcrete)
