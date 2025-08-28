@@ -1,0 +1,55 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidLocalization
+\import Algebra.Monoid.Sub
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\open LocAbType
+
+\instance LocPosetAbMonoid {M : PosetAbMonoid} (S : SubAddMonoid M) : PosetAbMonoid (LocAbType S) \cowith
+  | AbMonoid => LocAbMonoid S
+  | <= (x y : LocAbType S) : \Prop \with {
+    | in~ a, in~ b => ∃ (c : S.contains) (a.1 + b.2 + c M.<= a.2 + b.1 + c)
+    | in~ a, ~-equiv x y r => ext (
+      \lam (inP (c,Sc,q)) => inP (x.2 + c, S.contains_+ x.3 Sc, transport2 (M.<=) equation.abMonoid (equation.abMonoid {r}) $ <=_+ q $ M.<=-refl {y.2}),
+      \lam (inP (c,Sc,q)) => inP (y.2 + c, S.contains_+ y.3 Sc, transport2 (M.<=) equation.abMonoid (equation.abMonoid {r}) $ <=_+ q $ M.<=-refl {x.2}))
+    | ~-equiv x y r, in~ a => ext (
+      \lam (inP (c,Sc,q)) => inP (x.2 + c, S.contains_+ x.3 Sc, transport2 (M.<=) (equation.abMonoid {r}) equation.abMonoid $ <=_+ q $ M.<=-refl {y.2}),
+      \lam (inP (c,Sc,q)) => inP (y.2 + c, S.contains_+ y.3 Sc, transport2 (M.<=) (equation.abMonoid {r}) equation.abMonoid $ <=_+ q $ M.<=-refl {x.2}))
+  }
+  | <=-refl {in~ a} => inP (0, S.contains_zro, =_<= equation.abMonoid)
+  | <=-transitive {in~ a} {in~ b} {in~ c} (inP (d,Sd,p)) (inP (e,Se,q)) => inP (b.2 + (d + e), S.contains_+ b.3 $ S.contains_+ Sd Se,
+      transport2 (M.<=) equation.abMonoid equation.abMonoid $ <=_+ p (M.<=-refl {c.2 + e}) <=∘ =_<= equation.abMonoid <=∘ <=_+ q (M.<=-refl {a.2 + d}))
+  | <=-antisymmetric {in~ a} {in~ b} (inP (d,Sd,p)) (inP (e,Se,q)) => LocAbType.~-lequiv-right (S.contains_+ Sd Se) $ <=-antisymmetric
+      (transport2 (M.<=) equation.abMonoid equation.abMonoid $ <=_+ p $ M.<=-refl {e})
+      (transport2 (M.<=) equation.abMonoid equation.abMonoid $ <=_+ q $ M.<=-refl {d})
+  | <=_+ {in~ a} {in~ b} {in~ c} {in~ d} (inP (e,Se,ep)) (inP (f,Sf,fp)) => inP (e + f, S.contains_+ Se Sf, transport2 (M.<=) equation.abMonoid equation.abMonoid $ <=_+ ep fp)
+
+\instance GrothendieckOrderedAbGroup (M : PosetAbMonoid) : PosetAbGroup (MaxLocAbType M)
+  | AbGroup => GrothendieckAbGroup M
+  | PosetAbMonoid => LocPosetAbMonoid SubAddMonoid.max
+
+\instance LocPosetMeetSemilattice {M : MeetSemilatticeAbMonoid} (S : SubAddMonoid M) : MeetSemilatticeAbMonoid (LocAbType S) \cowith
+  | PosetAbMonoid => LocPosetAbMonoid S
+  | meet (x y : LocAbType S) : LocAbType S \with {
+    | in~ a, in~ b => inl~ ((a.1 + b.2) ∧ (a.2 + b.1), a.2 + b.2, contains_+ a.3 b.3)
+    | in~ a, ~-equiv x y r => ~-lequiv $ meet_+-right *> pmap2 (∧) equation.abMonoid (equation.abMonoid {r}) *> inv meet_+-right
+    | ~-equiv x y r, in~ a => ~-lequiv $ meet_+-right *> pmap2 (∧) (equation.abMonoid {r}) equation.abMonoid *> inv meet_+-right
+  }
+  | meet-left {in~ a} {in~ b} => inP (0, S.contains_zro, <=_+ (<=_+ meet-left <=-refl <=∘ =_<= equation.abMonoid) <=-refl)
+  | meet-right {in~ a} {in~ b} => inP (0, S.contains_zro, <=_+ (<=_+ meet-right <=-refl <=∘ =_<= equation.abMonoid) <=-refl)
+  | meet-univ {in~ a} {in~ b} {in~ c} (inP (d,Sd,dp)) (inP (e,Se,ep)) => inP (d + e, contains_+ Sd Se, meet-univ (transport2 (<=) equation.abMonoid equation.abMonoid $ <=_+ dp (<=-refl {_} {b.2 + e})) (transport2 (<=) equation.abMonoid equation.abMonoid $ <=_+ ep (<=-refl {_} {a.2 + d})) <=∘ =_<= (inv meet_+-right) <=∘ <=_+ (=_<= $ inv meet_+-left) <=-refl)
+  | meet_+-left {in~ a} {in~ b} {in~ c} => ~-lequiv $ pmap (`+ _) meet_+-left *> meet_+-right *> pmap2 (∧) equation.abMonoid equation.abMonoid *> inv meet_+-right
+
+\instance GrothendieckMeetLattice (M : MeetSemilatticeAbMonoid) : LatticeAbGroup.FromMeet (MaxLocAbType M)
+  | PosetAbGroup => GrothendieckOrderedAbGroup M
+  | MeetSemilatticeAbMonoid => LocPosetMeetSemilattice SubAddMonoid.max

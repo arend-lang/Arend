@@ -14,6 +14,7 @@
 \import Logic.Meta
 \import Meta
 \import Order.Biordered
+\import Order.Lattice
 \import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -54,15 +55,23 @@
     | suc n => <=_+-positive (*n_>=0 a>=0) a>=0
 }
 
-\class BiorderedLatticeAddMonoid \extends PosetAddMonoid, BiorderedLattice
-  | meet_+-left {a b c : E} : a + b ∧ c = (a + b) ∧ (a + c)
+\class PosetAbMonoid \extends PosetAddMonoid, AbMonoid
+
+\class JoinSemilatticeAddMonoid \extends PosetAddMonoid, JoinSemilattice
   | join_+-left {a b c : E} : a + (b ∨ c) = (a + b) ∨ (a + c)
-  | meet_+-right {a b c : E} : a ∧ b + c = (a + c) ∧ (b + c)
   | join_+-right {a b c : E} : (a ∨ b) + c = (a + c) ∨ (b + c)
 
-\class BiorderedLatticeAbMonoid \extends BiorderedLatticeAddMonoid, AbMonoid
-  | meet_+-right => +-comm *> meet_+-left *> pmap2 (∧) +-comm +-comm
+\class MeetSemilatticeAddMonoid \extends PosetAddMonoid, MeetSemilattice
+  | meet_+-left {a b c : E} : a + b ∧ c = (a + b) ∧ (a + c)
+  | meet_+-right {a b c : E} : a ∧ b + c = (a + c) ∧ (b + c)
+
+\class JoinSemilatticeAbMonoid \extends JoinSemilatticeAddMonoid, PosetAbMonoid
   | join_+-right => +-comm *> join_+-left *> pmap2 (∨) +-comm +-comm
+
+\class MeetSemilatticeAbMonoid \extends MeetSemilatticeAddMonoid, PosetAbMonoid
+  | meet_+-right => +-comm *> meet_+-left *> pmap2 (∧) +-comm +-comm
+
+\class BiorderedLatticeAbMonoid \extends BiorderedLattice, JoinSemilatticeAbMonoid, MeetSemilatticeAbMonoid, AbMonoid
 
 \class LinearlyBiorderedAbMonoid \extends BiorderedLatticeAbMonoid, LinearLattice
 
@@ -237,7 +246,27 @@
     => transport2 (<=) (+-assoc *> pmap (x +) negative-right *> zro-right) (+-assoc *> pmap (y +) negative-right *> zro-right) (<=_+ p <=-refl)
 }
 
-\class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, PosetAddGroup {
+\class PosetAbGroup \extends PosetAddGroup, PosetAbMonoid, AbGroup
+
+\class LatticeAbGroup \extends PosetAbGroup, MeetSemilatticeAbMonoid, JoinSemilatticeAbMonoid, Lattice
+  | meet_+-left {a} {b} {c} => <=-antisymmetric (meet-univ (<=_+ <=-refl meet-left) (<=_+ <=-refl meet-right)) $ <=_+-cancel-left (negative a) $ meet-univ (<=_+ <=-refl meet-left <=∘ =_<= (inv +-assoc *> pmap (`+ b) negative-left *> zro-left)) (<=_+ <=-refl meet-right <=∘ =_<= (inv +-assoc *> pmap (`+ c) negative-left *> zro-left)) <=∘ =_<= (inv zro-left *> pmap (`+ _) (inv negative-left) *> +-assoc)
+  | join_+-left {a} {b} {c} => <=-antisymmetric (<=_+-cancel-left (negative a) $ =_<= (inv +-assoc *> pmap (`+ _) negative-left *> zro-left) <=∘ join-univ (<=_+-cancel-left a $ join-left <=∘ =_<= (inv zro-left *> pmap (`+ _) (inv negative-right) *> +-assoc)) (<=_+-cancel-left a $ join-right <=∘ =_<= (inv zro-left *> pmap (`+ _) (inv negative-right) *> +-assoc))) $ join-univ (<=_+ <=-refl join-left) (<=_+ <=-refl join-right)
+  \where {
+    -- TODO: Make constructor classes
+    \protected \class FromMeet \extends LatticeAbGroup
+      | join a b => negative (negative a ∧ negative b)
+      | join-left => =_<= (inv negative-isInv) <=∘ negative_<= meet-left
+      | join-right => =_<= (inv negative-isInv) <=∘ negative_<= meet-right
+      | join-univ x<=z y<=z => negative_<= (meet-univ (negative_<= x<=z) (negative_<= y<=z)) <=∘ =_<= negative-isInv
+
+    \protected \class FromJoin \extends LatticeAbGroup
+      | meet a b => negative (negative a ∨ negative b)
+      | meet-left => negative_<= join-left <=∘ =_<= negative-isInv
+      | meet-right => negative_<= join-right <=∘ =_<= negative-isInv
+      | meet-univ z<=x z<=y => =_<= (inv negative-isInv) <=∘ negative_<= (join-univ (negative_<= z<=x) (negative_<= z<=y))
+  }
+
+\class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, LatticeAbGroup {
   | <_+-comparison (x y : E) : isPos (x + y) -> isPos x || isPos y
   | <_+-connectedness {x : E} : Not (isPos x) -> Not (isNeg x) -> x = zro
 

@@ -216,7 +216,7 @@
         }
         | inP (c, a<c, f, inP (inr _, _, u, _), t) => \case SpecPres.cover_ideal $ ProjPres.cover_spec (transportInv (Cover1 a) u a<c) \with {
           | inP (n, inP t) =>
-            \have c : Contr => LocRing.nilpotent-contr {_} {powers a.1} a.1 (inP (1, ide-left)) n $ t.2 *> path (\lam i => BigSum (map (\lam p => R.zro_*-right {p.1} i) t.1)) *> R.BigSum_replicate0
+            \have c : Contr => LocRing.trivial {_} {powers a.1} (inP (n, t.2 *> path (\lam i => BigSum (map (\lam p => R.zro_*-right {p.1} i) t.1)) *> R.BigSum_replicate0)) (inP (1, ide-left))
             \in inP ((0, 1, inP (0, idp)), inv (c.contraction _) *> c.contraction _, 0, homogen-zro, R.homogen-ide)
         }
       }
@@ -229,7 +229,7 @@
                | (inP (c,cd,ch,b^n=ac)) => R.homogen-factor b^n=ac (R.homogen-pow bh) ah
          \in \case R.degree-unique (R.homogen-pow bh) (rewrite b^n=ac $ homogen-* ah ch) \with {
                | inl b^n=0 =>
-                   \have c : Contr => RingHom.contr-isTerm $ SubRing.comm-isContr $ LocRing.nilpotent-contr {_} {powers b} b (inP (1, ide-left)) n b^n=0
+                   \have c : Contr => RingHom.contr-isTerm $ SubRing.comm-isContr $ LocRing.trivial {_} {powers b} (inP (n, b^n=0)) (inP (1, ide-left))
                    \in (c.center, inP ((n + ad, 0, bd * (n + ad) -' ad, homogen-zro, pow_+ *> later (rewrite b^n=0 zro_*-left) *> inv zro_*-right,
                      unpos $ inv $ pmap (pos ad +) (-'=- $ transportInv (ad <=) ldistr $ <=_+ zero<=_ \case \elim bd, \elim bd/=0 \with {
                        | 0, bd/=0 => absurd (bd/=0 idp)
@@ -254,7 +254,7 @@
           : \Sigma (z : HomogenLocRing (powers b)) (∃ (t : \Sigma (y : R) (k : Nat) (yh : isHomogen y (ad * k)) (x = fromSType (y, pow a k, later $ inP (k,idp)) yh (R.homogen-pow ah))) (sfunc bh n c cd ch bd*n=ad+cd t.2 t.3 = z))
           => TruncP.rec-set (\case x.2 \with {
             | inP ((y1, _, inP (k, idp)),x=[y],yd,y1h,y2h) => later $ inP \case R.degree-unique y2h (R.homogen-pow ah) \with {
-              | inl a^k=0 => (0, 0, homogen-zro, ext $ isContr=>isProp (LocRing.nilpotent-contr {_} {powers a} a (inP (1,ide-left)) k a^k=0) _ _)
+              | inl a^k=0 => (0, 0, homogen-zro, ext $ isContr=>isProp (LocRing.trivial {_} {powers a} (inP (k,a^k=0)) (inP (1,ide-left))) _ _)
               | inr yd=ad*k => (y1, k, rewrite yd=ad*k in y1h, ext x=[y])
             }
           }) (\lam t => sfunc bh n c cd ch bd*n=ad+cd t.2 {t.1} t.3) \lam q1 q2 => ext

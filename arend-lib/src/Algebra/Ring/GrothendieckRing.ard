@@ -1,0 +1,29 @@
+\import Algebra.Meta
+\import Algebra.Monoid.MonoidLocalization
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Function.Meta
+\import Paths
+\import Relation.Equivalence
+
+\instance GrothendieckRing (R : Semiring) : Ring \cowith
+  | AbGroup => GrothendieckAbGroup R
+  | * (x y : MaxLocAbType R) : MaxLocAbType R \with {
+    | in~ a, in~ b => inl~ (a.1 R.* b.1 R.+ a.2 R.* b.2, a.2 R.* b.1 R.+ a.1 R.* b.2, ())
+    | in~ a, ~-equiv x y r => ~-lequiv $ equation.semiring {pmap (a.1 R.*) r, -1 pmap (a.2 R.*) r}
+    | ~-equiv x y r, in~ a => ~-lequiv $ equation.semiring {pmap (R.`* a.1) r, -1 pmap (R.`* a.2) r}
+  }
+  | ide => inl~ (1,0,())
+  | *-assoc {in~ a} {in~ b} {in~ c} => ~-lequiv equation.semiring
+  | ldistr {in~ a} {in~ b} {in~ c} => ~-lequiv equation.semiring
+  | rdistr {in~ a} {in~ b} {in~ c} => ~-lequiv equation.semiring
+  | zro_*-left {in~ a} => ~-lequiv equation.semiring
+  | zro_*-right {in~ a} => ~-lequiv equation.semiring
+  | ide-left {in~ a} => ~-lequiv equation.semiring
+  | ide-right {in~ a} => ~-lequiv equation.semiring
+  \where \open LocAbType
+
+\instance GrothendieckCRing (R : CSemiring) : CRing \cowith
+  | Ring => GrothendieckRing R
+  | *-comm {in~ a} {in~ b} => LocAbType.~-lequiv equation.cSemiring

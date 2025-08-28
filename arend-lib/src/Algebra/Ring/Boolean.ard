@@ -11,9 +11,9 @@
 \import Paths
 \import Paths.Meta
 
-\class BooleanPseudoRing \extends PseudoCRing, DistributiveLattice, Bounded.JoinSemilattice {
+\class BooleanRing \extends PseudoCRing, DistributiveLattice, Bounded.JoinSemilattice {
   | isBooleanRing {x : E} : x * x = x
-  | <= => BooleanPseudoRing.<=
+  | <= => BooleanRing.<=
   | <=-refl => isBooleanRing
   | <=-transitive xy=x yz=y => pmap (`* _) (inv xy=x) *> *-assoc *> pmap (_ *) yz=y *> xy=x
   | <=-antisymmetric xy=x yx=y => inv xy=x *> *-comm *> yx=y
@@ -63,7 +63,7 @@
   \type \infix 4 <= {R : Semigroup} (x y : R) => x * y = x
 }
 
-\class BooleanRing \extends BooleanPseudoRing, CRing, BooleanAlgebra
+\class UnitalBooleanRing \extends BooleanRing, CRing, BooleanAlgebra
   | top => 1
   | top-univ => ide-right
   | compl a => a + 1
@@ -74,7 +74,7 @@
     \open JoinSemilattice
     \open Bounded
 
-    \use \coerce fromBooleanAlgebra (R : BooleanAlgebra) : BooleanRing R \cowith
+    \use \coerce fromBooleanAlgebra (R : BooleanAlgebra) : UnitalBooleanRing R \cowith
       | zro => R.bottom
       | + a b => a ∧ compl b ∨ b ∧ compl a
       | zro-left => <=-antisymmetric (join-univ (meet-left <=∘ bottom-univ) meet-left) $ meet-univ <=-refl (top-univ <=∘ compl-join <=∘ join-univ bottom-univ <=-refl) <=∘ join-right
@@ -95,5 +95,5 @@
       | isBooleanRing => meet-idemp
   }
 
-\instance HeytingBooleanRing (R : HeytingAlebra) : BooleanRing (NegatedElem R)
-  => BooleanRing.fromBooleanAlgebra (HeytingBooleanAlgebra R)
+\instance HeytingBooleanRing (R : HeytingAlebra) : UnitalBooleanRing (NegatedElem R)
+  => UnitalBooleanRing.fromBooleanAlgebra (HeytingBooleanAlgebra R)

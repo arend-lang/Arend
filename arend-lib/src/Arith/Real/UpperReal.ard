@@ -236,6 +236,35 @@
     \lemma <_+-right {x : Rat} {y z : ExUpperReal} (y<z : y < z) : x + y < x + z
       => transport2 (<) ExUpperRealAbMonoid.+-comm ExUpperRealAbMonoid.+-comm (<_+-left y<z)
 
+    \lemma <=_+-cancel-left {x y z : ExUpperReal} (xb : x.IsBounded) {q : Rat} (q<=x : q <= x) (p : x + y <= x + z) : y <= z \elim xb
+      | inP (B,x<B) => \lam {b} z<b => \case U-rounded z<b \with {
+        | inP (b',z<b',b'<b) =>
+          \have N => rat_natBound $ RatField.finv (b - b') RatField.* (B - q)
+          \in \case steps (RatField.to>0 b'<b) x<B z<b' N.1 \with {
+            | byLeft r => absurd $ <-irreflexive $ RatField.<-diff-left (RatField.<_rotate-left-conv (RatField.to>0 b'<b) N.2) <∘ q<=x r
+            | byRight r => transport y.U linarith r
+          }
+      }
+      \where \private {
+        \lemma step {eps : Rat} (eps>0 : 0 RatField.< eps) {a : Rat} (x<a : x.U a) {b : Rat} (z<b : z.U b) : x.U (a - eps) || y.U (b RatField.+ eps)
+          => \case +_U.1 $ p $ +_U_<=.2 $ inP (a, x<a, b, z<b, <=-refl) \with {
+            | inP (a',x<a',b',y<b',a'+b'<a+b) => \case LinearOrder.dec<_<= (a - eps) a' \with {
+              | inl a-eps<a' => byRight $ U-closed y<b' linarith
+              | inr a'<=a-eps => byLeft $ x.U_<= x<a' a'<=a-eps
+            }
+          }
+
+        \lemma steps {eps : Rat} (eps>0 : 0 RatField.< eps) {a : Rat} (x<a : x.U a) {b : Rat} (z<b : z.U b) (n : Nat) : x.U (a - eps RatField.* n) || y.U (b RatField.+ eps) \elim n
+          | 0 => byLeft $ transport x.U linarith x<a
+          | suc n => \case step eps>0 x<a z<b \with {
+            | byLeft x<a-eps => \case steps eps>0 x<a-eps z<b n \with {
+              | byLeft r => byLeft $ transport x.U (+-assoc *> pmap (a RatField.+) (inv RatField.negative_+ *> pmap negative (pmap (_ RatField.+) (inv ide-right) *> inv RatField.ldistr))) r
+              | byRight r => byRight r
+            }
+            | byRight r => byRight r
+          }
+      }
+
     \lemma *n_U {n : Nat} (n/=0 : n /= 0) {x : ExUpperReal} {q : Rat} : (n ExUpperRealAbMonoid.*n x).U q <-> ∃ (r : x.U) (n RatField.* r RatField.<= q) \elim n
       | 0 => absurd (n/=0 idp)
       | 1 => rewrite zro-left (\lam x<q => inP (q, x<q, =_<= ide-left), \lam (inP (r,x<r,r<=q)) => x.U_<= x<r $ rewrite RatField.ide-left in r<=q)

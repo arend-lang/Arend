@@ -1,0 +1,78 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Sub
+\import Algebra.Pointed
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Paths
+\import Relation.Equivalence
+\import Set
+
+\type LocType {M : CMonoid} (S : SubMonoid M) => Quotient (~)
+  \where {
+    \func SType {M : CMonoid} (S : SubMonoid M) => \Sigma (x y : M) (S y)
+
+    \protected \func \infix 4 ~ (a b : SType S) => a.1 * b.2 = b.1 * a.2
+
+    \func inl~ (a : SType S) : LocType S => in~ a
+
+    \lemma ~-lequiv {a b : SType S} (p : a ~ b) : inl~ a = inl~ b
+      => path \lam i => ~-equiv a b p i
+
+    \lemma ~-lequiv-right {a b : SType S} {c : M} (Sc : S c) (p : a.1 * b.2 * c = b.1 * a.2 * c) : inl~ a = inl~ b
+      => \let a' : SType S => (a.1 * c, a.2 * c, contains_* a.3 Sc)
+         \in ~-lequiv equation.cMonoid *> ~-lequiv {_} {_} {a'} (equation.cMonoid {p})
+  }
+
+\instance LocMonoid {M : CMonoid} (S : SubMonoid M) : CMonoid (LocType S) \cowith
+  | ide => in~ (1, 1, S.contains_ide)
+  | * (x y : LocType S) : LocType S \with {
+    | in~ a, in~ b => in~ (a.1 M.* b.1, a.2 M.* b.2, S.contains_* a.3 b.3)
+    | in~ a, ~-equiv x y r => ~-lequiv $ equation.cMonoid {r}
+    | ~-equiv x y r, in~ a => ~-lequiv $ equation.cMonoid {r}
+  }
+  | ide-left {in~ a} => ~-lequiv equation.cMonoid
+  | *-assoc {in~ a} {in~ b} {in~ c} => ~-lequiv equation.cMonoid
+  | *-comm {in~ a} {in~ b} => ~-lequiv equation.cMonoid
+  \where \open LocType
+
+\type LocAbType {M : AbMonoid} (S : SubAddMonoid M) => Quotient (~)
+  \where {
+    \func SType {M : AbMonoid} (S : SubAddMonoid M) => \Sigma (x y : M) (S y)
+
+    \protected \func \infix 4 ~ (a b : SType S) => a.1 + b.2 = b.1 + a.2
+
+    \func inl~ (a : SType S) : LocAbType S => in~ a
+
+    \lemma ~-lequiv {a b : SType S} (p : a ~ b) : inl~ a = inl~ b
+      => path \lam i => ~-equiv a b p i
+
+    \lemma ~-lequiv-right {a b : SType S} {c : M} (Sc : S c) (p : a.1 + b.2 + c = b.1 + a.2 + c) : inl~ a = inl~ b
+      => \let a' : SType S => (a.1 + c, a.2 + c, contains_+ a.3 Sc)
+         \in ~-lequiv equation.abMonoid *> ~-lequiv {_} {_} {a'} (equation.abMonoid {p})
+  }
+
+\instance LocAbMonoid {M : AbMonoid} (S : SubAddMonoid M) : AbMonoid (LocAbType S) \cowith
+  | zro => in~ (0, 0, S.contains_zro)
+  | + (x y : LocAbType S) : LocAbType S \with {
+    | in~ a, in~ b => in~ (a.1 M.+ b.1, a.2 M.+ b.2, S.contains_+ a.3 b.3)
+    | in~ a, ~-equiv x y r => ~-lequiv $ equation.abMonoid {r}
+    | ~-equiv x y r, in~ a => ~-lequiv $ equation.abMonoid {r}
+  }
+  | zro-left {in~ a} => ~-lequiv equation.abMonoid
+  | +-assoc {in~ a} {in~ b} {in~ c} => ~-lequiv equation.abMonoid
+  | +-comm {in~ a} {in~ b} => ~-lequiv equation.abMonoid
+  \where \open LocAbType
+
+\func MaxLocAbType (M : AbMonoid) => LocAbType {M} SubAddMonoid.max
+
+\instance GrothendieckAbGroup (M : AbMonoid) : AbGroup (MaxLocAbType M)
+  | AbMonoid => LocAbMonoid SubAddMonoid.max
+  | negative (x : MaxLocAbType M) : MaxLocAbType M \with {
+    | in~ a => in~ (a.2, a.1, ())
+    | ~-equiv x y r => LocAbType.~-lequiv $ equation.abMonoid {r}
+  }
+  | negative-left {in~ a} => LocAbType.~-lequiv equation.abMonoid
