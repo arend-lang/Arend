@@ -125,6 +125,7 @@ class ArendChangeSignatureProcessor(project: Project,
                     if (rootPsi != null && !rootPsiWithArendErrors.contains(rootPsi)) {
                         progressIndicator.fraction = index.toDouble() / rootPsiEntries.size
                         progressIndicator.checkCanceled()
+
                         val errorReporter = CountingErrorReporter(GeneralError.Level.ERROR, DummyErrorReporter.INSTANCE)
                         when (rootPsi) {
                             is ArendArgumentAppExpr -> {

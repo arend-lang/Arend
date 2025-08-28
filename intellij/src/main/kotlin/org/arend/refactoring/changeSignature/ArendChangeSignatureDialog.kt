@@ -225,7 +225,7 @@ class ArendChangeSignatureDialog(project: Project,
 
     override fun createParametersPanel(hasTabsInDialog: Boolean): JPanel {
         commonTypeFragmentListener = ArendChangeSignatureCustomDocumentListener(this)
-        val referableLocation = (descriptor.method as? ReferableBase<*>)?.tcReferable?.location
+        val referableLocation = (myMethod.method as? ReferableBase<*>)?.tcReferable?.location
         singleFileReferenceResolver = SingleFileReferenceResolver(
             project.service<ArendServerService>().server,
             DummyErrorReporter.INSTANCE,
