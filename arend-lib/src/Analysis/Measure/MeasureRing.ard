@@ -1,12 +1,11 @@
-{- TODO[server2]: Delete or rewrite this
+\import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Pointed
 \import Algebra.Ring.Boolean
-\import Algebra.Semiring
-\import Analysis.Series
-\import Arith.Real
-\import Arith.Real.InfReal
+\import Arith.Rat
+\import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -15,51 +14,131 @@
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
-\import Topology.NormedAbGroup.ExtendedNormedAbGroup
-\import Topology.NormedAbGroup.ValuedNormedAbGroup
-\import Topology.UniformSpace.InfReal
-\open BooleanPseudoRing \hiding (<=)
+\import Paths.Meta
+\import Set.Filter
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.NormedAbGroup
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Complete
+\import Topology.TopSpace
+\import Topology.UniformSpace.Complete
+\open BooleanRing \hiding (<=)
 
-\class PremeasurePseudoRing \extends BooleanPseudoRing, ExtendedPseudoNormedAbGroup {
-  | norm-positive {x : E} : 0 InfRealAbMonoid.<= norm x
-  | norm-disjoint {x y : E} : x * y = 0 -> norm (x ∨ y) = norm x InfRealAbMonoid.+ norm y
-  | norm-mono {x y : E} : x <= y -> norm x InfRealAbMonoid.<= norm y
-  | norm-mono p => transport2 (InfRealAbMonoid.<=) InfRealAbMonoid.zro-left (inv (norm-disjoint (rdistr *> pmap (_ +) (*-assoc *> pmap (_ *) isBooleanRing) *> double=0)) *> pmap norm (inv (split_<= p))) $ <=_+ norm-positive InfRealAbMonoid.<=-refl
-  | norm_negative => pmap norm neative=id
-  | norm_+ => transportInv (InfRealAbMonoid.`<= _) (pmap norm +_diff *> norm-disjoint diff_*_diff) $ <=_+ (norm-mono diff_<=) (norm-mono diff_<=)
+\class PremeasureRing \extends BooleanRing, TopAbGroup {
+  | meas : E -> ExUpperReal
+  | meas_zro : meas 0 = 0
+  | meas>=0 {x : E} : 0 ExUpperReal.<= meas x
+  | meas-disjoint {x y : E} : x * y = 0 -> meas (x ∨ y) = meas x ExUpperReal.+ meas y
+  | meas-mono {x y : E} : x <= y -> meas x ExUpperReal.<= meas y
+  | meas-mono p => transport2 (ExUpperReal.<=) ExUpperRealAbMonoid.zro-left (inv (meas-disjoint (rdistr *> pmap (_ +) (*-assoc *> pmap (_ *) isBooleanRing) *> double=0)) *> pmap meas (inv (split_<= p))) (<=_+ meas>=0 ExUpperRealAbMonoid.<=-refl)
+  | meas_+ {x y : E} : meas (x + y) ExUpperReal.<= meas x ExUpperReal.+ meas y
+  | meas_+ => transportInv (ExUpperReal.`<= _) (pmap meas +_diff *> meas-disjoint diff_*_diff) $ <=_+ (meas-mono diff_<=) (meas-mono diff_<=)
+  | isOpen U => ∀ {x : U} ∃ (a : E) (eps : `> 0) ∀ {y : E} ((meas (a * (x + y))).U eps -> U y)
+  | open-top _ => inP (0, 1, zro<ide, \lam _ => ())
+  | open-inter Uo Vo (Ux,Vx) => \case Uo Ux, Vo Vx \with {
+    | inP (a,eps,eps>0,g), inP (b,delta,delta>0,h) => inP (a ∨ b, eps RatField.∧ delta, RatField.<_meet-univ eps>0 delta>0, \lam c =>
+      (g $ meas-mono (meet-monotone join-left <=-refl) $ ExUpperReal.U_<= c RatField.meet-left,
+       h $ meas-mono (meet-monotone join-right <=-refl) $ ExUpperReal.U_<= c RatField.meet-right))
+  }
+  | open-Union So (inP (U,SU,Ux)) => \case So SU Ux \with {
+    | inP (a,eps,eps>0,h) => inP (a, eps, eps>0, \lam c => inP (U, SU, h c))
+  }
+  | +-cont => \new ContMap {
+    | func-cont Uo {s} Us => \case Uo Us \with {
+      | inP (a,eps,eps>0,h) =>
+        \let | Ball c z => (meas (a * (c + z))).U (RatField.half eps)
+             | Ball-open c : isOpen (Ball c) => \lam {x} => \case U-rounded __ \with {
+               | inP (q,cx<q,q<eps/2) => inP (a, _, RatField.to>0 q<eps/2, \lam xy => transport2 (\lam x y => ExUpperReal.U {meas x} y) (inv ldistr *> pmap (a *) (equation.addMonoid {double=0 {_} {x}})) linarith $ ExUpperReal.<=_+-char meas_+ cx<q xy)
+             }
+             | Ball-center c : Ball c c => transportInv (ExUpperReal.U {__} _) (pmap meas (pmap (a *) double=0 *> zro_*-right) *> meas_zro) (RatField.half>0 eps>0)
+        \in inP (Ball s.1, Ball-open s.1, Ball-center s.1, Ball s.2, Ball-open s.2, Ball-center s.2, \lam sx sy => h $ transport2 (\lam x y => ExUpperReal.U {meas x} y) (inv ldistr *> pmap (a *) equation.abMonoid) linarith $ ExUpperReal.<=_+-char meas_+ sx sy)
+    }
+  }
 
-  \func IsFinite : \Prop
-    => \Pi (x : E) -> IsBounded x
+  \func OBall (a : E) (eps : Rat) (c : E) : Set E => \lam z => (meas (a * (c + z))).U eps
 
-  \func IsSigmaFinite : \Prop
-    => \Pi (x : E) -> ∃ (a : Nat -> E) (IsJoin a x) ∀ n (IsBounded (a n))
-}
-
-\lemma norm-measure {X : PremeasurePseudoRing} {x y : X} : norm x + norm y = norm (x ∨ y) + norm (x ∧ y)
-  => pmap (_ +) (pmap norm (later $ split *> pmap (_ ∨) *-comm) *> norm-disjoint (inv *-assoc *> pmap (`* y) diff_* *> zro_*-left)) *> inv +-assoc *> inv (pmap (`+ _) $ pmap norm (<=-antisymmetric (join-univ join-left $ transportInv (`<= _) split $ join-univ join-right $ meet-right <=∘ join-left) $ join-univ join-left $ diff_<= <=∘ join-right) *> X.norm-disjoint (*-comm *> diff_*))
-
-\class MeasurePseudoRing \extends PremeasurePseudoRing
-  | norm-countable {x : Nat -> E} {a : E} {v : InfReal} : (\Pi (i j : Nat) -> i /= j -> x i * x j = 0) -> IsJoin x a -> IsSeriesSum {_} {InfRealUniformSpace} (\lam n => norm (x n)) v -> norm a = v
-  | norm-disjoint {x} {y} xy=0 =>
-    norm-countable {_} {\case __ \with { | 0 => x | 1 => y | suc (suc _) => 0 }} (\case \elim __, \elim __ \with {
-      | 0, 0 => \case __ idp
-      | 0, 1 => \lam _ => xy=0
-      | 1, 0 => \lam _ => *-comm *> xy=0
-      | 1, 1 => \case __ idp
-      | 0, suc (suc m) => \lam _ => zro_*-right
-      | 1, suc (suc m) => \lam _ => zro_*-right
-      | suc (suc n), 0 => \lam _ => zro_*-left
-      | suc (suc n), 1 => \lam _ => zro_*-left
-      | suc (suc n), suc (suc m) => \lam _ => zro_*-right
-    }) (\case \elim __ \with {
-      | 0 => join-left
-      | 1 => join-right
-      | suc (suc n) => bottom-univ
-    }, \lam f => join-univ (f 0) (f 1)) $ transport (IsSeriesSum _) (inv InfRealAbMonoid.+-assoc *> InfRealAbMonoid.zro-right) $ seriesSum-fin 2 \lam {j} => \case \elim j \with {
-      | 0 => \lam p => absurd linarith
-      | 1 => \lam p => absurd linarith
-      | suc (suc n) => \lam _ => norm_zro
+  \lemma OBall-open (a : E) {eps : Rat} {c : E} : isOpen (OBall a eps c) => \lam {x} => \case U-rounded __ \with {
+      | inP (q,cx<q,q<eps) => inP (a, _, RatField.to>0 q<eps, \lam xy => transport2 (\lam x y => ExUpperReal.U {meas x} y) (inv ldistr *> pmap (a *) (equation.addMonoid {double=0 {_} {x}})) linarith $ ExUpperReal.<=_+-char meas_+ cx<q xy)
     }
 
-\class PseudoMeasureAlgebra \extends MeasurePseudoRing, BooleanRing
--}
+  \lemma OBall-center {a : E} {eps : Rat} (eps>0 : 0 < eps) {c : E} : OBall a eps c c
+    => transportInv (ExUpperReal.U {__} _) (pmap meas (pmap (a *) double=0 *> zro_*-right) *> meas_zro) eps>0
+
+  \lemma OBall-center_<=< {a : E} {eps : Rat} (eps>0 : 0 < eps) {x : E} : single x <=< OBall a eps x
+    => open-char.1 (OBall-open a) (OBall-center eps>0)
+
+  \func toPseudoNormed : ExPseudoNormedAbGroup \cowith
+    | AbGroup => \this
+    | norm => meas
+    | norm_zro => meas_zro
+    | norm_negative => pmap meas negative=id
+    | norm_+ => meas_+
+}
+
+\lemma meas-<=<-ball {X : PremeasureRing} {x : X} {U : Set X} (x<=<U : single x <=< U) : ∃ (a : X) (eps : `> 0) (X.OBall a eps x ⊆ U)
+  => \case X.interior x<=<U \with {
+    | inP (a,eps,eps>0,h) => inP (a, eps, eps>0, \lam {y} p => <=<_<= (h p) idp)
+  }
+
+\class MeasureRing \extends PremeasureRing, SeparatedCoverSpace {
+  | meas-ext {x : E} : meas x = ExUpperRealAbMonoid.zro -> x = 0
+
+  \default isSeparatedCoverSpace {x} {y} f => fromZero $ meas-ext $ ExUpperRealAbMonoid.<=-antisymmetric (\lam {b} b>0 => \case f $ makeCauchy $ topAbUniform (OBall-open (x - y)) $ OBall-center (RatField.half>0 b>0) \with {
+    | inP (_, inP (z,idp), (Ux,Uy)) => transport2 (\lam x y => ExUpperReal.U {meas x} y) (inv ldistr *> pmap (_ *) (equation.abMonoid {double=0,negative=id}) *> isBooleanRing) linarith $ ExUpperReal.<=_+-char meas_+ Ux Uy
+  }) meas>=0
+  \default meas-ext p => isSeparatedCoverSpace $ SeparatedCoverSpace.separated-char 4 7 \lam x<=<U => \case meas-<=<-ball x<=<U \with {
+    | inP (a,eps,eps>0,h) => h $ transportInv (ExUpperReal.U {__} _) {_} {0} (ExUpperRealAbMonoid.<=-antisymmetric (meas-mono meet-right ExUpperRealAbMonoid.<=∘ =_<= (pmap meas zro-right *> p)) meas>=0) eps>0
+  }
+
+  \func toNormed : ExNormedAbGroup \cowith
+    | ExPseudoNormedAbGroup => toPseudoNormed
+    | norm-ext => meas-ext
+}
+
+\lemma meas-modular {X : PremeasureRing} {x y : X} : meas x + meas y = meas (x ∨ y) + meas (x ∧ y)
+  => pmap (_ +) (pmap meas (later $ split *> pmap (_ ∨) *-comm) *> meas-disjoint (inv *-assoc *> pmap (`* y) diff_* *> X.zro_*-left)) *> inv +-assoc *> inv (pmap (`+ _) $ pmap meas (<=-antisymmetric (join-univ join-left $ transportInv (`<= _) split $ join-univ join-right $ meet-right <=∘ join-left) $ join-univ join-left $ diff_<= <=∘ join-right) *> X.meas-disjoint (*-comm *> diff_*))
+
+\lemma cauchyFilter-measure-char {X : PremeasureRing} {F : SetFilter X} : IsCauchyFilter F <-> ∀ a {eps : `> 0} ∃ (x : X) (F (X.OBall a eps x))
+  => <->trans cauchyFilter-uniform-char $ later (\lam f a eps>0 => \case f $ X.topAbUniform (X.OBall-open a) (X.OBall-center eps>0) \with {
+    | inP (_, inP (x, idp), FB) => inP (x, transport F (ext \lam y => pmap (\lam z => ExUpperReal.U {meas (a * z)} _) $ zro-left *> pmap (x +) negative=id) FB)
+  }, \lam f Cu => \case neighborhood-uniform.1 Cu \with {
+    | inP (U,Uo,U0,h) => \case Uo U0 \with {
+      | inP (a,eps,eps>0,g) => \case f a eps>0 \with {
+        | inP (x,Fx) => \case h x \with {
+          | inP (V,CV,UV) => inP (V, CV, filter-mono Fx \lam {y} xy => UV $ g $ transportInv (\lam z => ExUpperReal.U {meas (a * z)} eps) (zro-left *> pmap (x +) negative=id) xy)
+        }
+      }
+    }
+  })
+
+\class CompleteMeasureRing \extends MeasureRing, CompleteTopAbGroup {
+  | isCompleteMeasure (F : ProperFilter E) : ∀ a {eps : `> 0} ∃ (x : E) (F (OBall a eps x)) -> ∃ (x : E) ∀ a {eps : `> 0} (F (OBall a eps x))
+
+  \default isComplete F => \case isCompleteMeasure F (cauchyFilter-measure-char.1 F.isCauchyFilter) \with {
+    | inP (x,h) => inP (x, \lam {U} x<=<U => \case meas-<=<-ball x<=<U \with {
+      | inP (a,eps,eps>0,Up) => filter-mono (h a eps>0) Up
+    })
+  }
+  \default isCompleteMeasure F Fc =>
+    \have F' => \new CauchyFilter \this {
+      | ProperFilter => F
+      | isCauchyFilter => cauchyFilter-measure-char.2 Fc
+    }
+    \in \case isComplete (regCF F') \with {
+      | inP (x,xF) => inP (x, \lam a eps>0 => regCF_<= {_} {F'} $ xF $ OBall-center_<=< eps>0)
+    }
+
+  \func toCompleteNormed : CompleteExNormedAbGroup \cowith
+    | ExNormedAbGroup => toNormed
+    | isCompleteMetric F Fc => \case isCompleteMeasure F (\lam a eps>0 => TruncP.map (Fc eps>0) \lam (x,Fx) => (x, filter-mono Fx \lam {y} => meas-mono $ meet-right <=∘ =_<= (pmap (x +) $ inv negative=id))) \with {
+      | inP (x,h) => inP (x, \lam {eps} eps>0 => \case Fc {eps RatField.* ratio 1 4} linarith \with {
+        | inP (x0,F1) => filter-mono (filter-meet (filter-meet F1 $ h x0 {eps RatField.* ratio 1 4} linarith) $ h x (RatField.half>0 eps>0)) \lam {y} ((p1,p2),p3) =>
+          meas-mono
+            -- TODO: implement a solver for Boolean rings
+            (=_<= (pmap (x +) negative=id *> +-comm *> +_diff) <=∘ join-monotone (diff-trans {_} {_} {x0} <=∘ =_<= (inv (+_join $ <=-antisymmetric (meet-monotone <=-refl diff_<= <=∘ =_<= diff_*) bottom-univ) *> unfold (-) (rewrite (ldistr, *-comm {_} {x0} {y}, negative=id) equation.abMonoid))) (=_<= $ inv $ ldistr *> pmap (`+ _) isBooleanRing) <=∘ =_<= (inv $ +_join $ pmap (_ *) *-comm *> inv *-assoc *> pmap (`* x) (rdistr *> pmap2 (+) rdistr_- (*-assoc *> pmap (x0 *) isBooleanRing) *> +-comm *> inv +-assoc *> pmap (`+ _) double=0 *> zro-left *> negative=id *> ldistr) *> rdistr *> pmap2 (__ + __ * x) (*-assoc *> pmap (y *) isBooleanRing) isBooleanRing *> double=0))
+            $ transport ExUpperReal.U {_} {eps} linarith $ ExUpperReal.<=_+-char meas_+ (ExUpperReal.<=_+-char meas_+ p1 p2) p3
+      })
+    }
+}
