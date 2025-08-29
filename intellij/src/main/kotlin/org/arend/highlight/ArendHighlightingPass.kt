@@ -10,6 +10,7 @@ import com.intellij.openapi.util.TextRange
 import org.arend.IArendFile
 import org.arend.ext.module.ModuleLocation
 import org.arend.psi.*
+import org.arend.refactoring.move.ArendLongNameCodeFragment
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
 import org.arend.settings.ArendSettings
@@ -20,7 +21,11 @@ import org.arend.typechecking.runner.RunnerService
 class ArendHighlightingPass(file: IArendFile, editor: Editor, textRange: TextRange)
     : BasePass(file, editor, "Arend resolver annotator", textRange) {
 
-    private val module = (file as? ArendFile)?.moduleLocation
+    private val module = when (file) {
+        is ArendFile -> file.moduleLocation
+        is ArendExpressionCodeFragment, is ArendLongNameCodeFragment -> (file.context?.containingFile as? ArendFile)?.moduleLocation
+        else -> null
+    }
 
     public override fun collectInformationWithProgress(progress: ProgressIndicator) {
         progress.isIndeterminate = true

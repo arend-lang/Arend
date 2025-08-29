@@ -13,6 +13,7 @@ import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.psi.ext.ReferableBase
 import org.arend.refactoring.ArendNamesValidator
+import org.arend.refactoring.move.ArendLongNameCodeFragment
 import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractReferable
@@ -99,8 +100,13 @@ open class ArendReferenceImpl<T : ArendReferenceElement>(element: T) : ArendRefe
     override fun bindToElement(element: PsiElement) = element
 
     override fun getVariants(): Array<Any> {
-        val file = element.containingFile as? ArendFile ?: return emptyArray()
-        return file.project.service<ArendServerService>().server.getCompletionVariants(ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE), element).mapNotNull {
+        val file = when (val f = element.containingFile) {
+            is ArendFile -> f
+            is ArendExpressionCodeFragment, is ArendLongNameCodeFragment -> f.context?.containingFile as? ArendFile ?: return emptyArray()
+            else -> return emptyArray()
+        }
+        val group = ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE)
+        return file.project.service<ArendServerService>().server.getCompletionVariants(group, element).mapNotNull {
             origElement -> createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false)
         }.toTypedArray()
     }

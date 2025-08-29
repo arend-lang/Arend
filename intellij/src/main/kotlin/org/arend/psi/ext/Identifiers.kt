@@ -1,16 +1,20 @@
 package org.arend.psi.ext
 
 import com.intellij.lang.ASTNode
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.util.Computable
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.SearchScope
+import org.arend.ext.module.ModuleLocation
 import org.arend.ext.reference.Precedence
 import org.arend.naming.reference.*
 import org.arend.psi.*
 import org.arend.psi.doc.ArendDocComment
 import org.arend.psi.doc.ArendDocReference
+import org.arend.refactoring.move.ArendLongNameCodeFragment
 import org.arend.resolving.*
 import org.arend.term.abs.Abstract
 import org.arend.util.mapUntilNotNull
@@ -28,8 +32,20 @@ abstract class ArendIdentifierBase(node: ASTNode) : PsiReferableImpl(node), Aren
 
     override fun getReferenceText(): String = referenceName
 
-    override fun getReferenceModule() = runReadAction {
-        (containingFile as? ArendFile)?.moduleLocation
+    override fun getReferenceModule(): ModuleLocation? {
+        val getter : Computable<ModuleLocation?> = Computable<ModuleLocation?> {
+            when (val f = containingFile) {
+                is ArendFile -> f.moduleLocation
+                is ArendLongNameCodeFragment, is ArendExpressionCodeFragment -> (f.context?.containingFile as? ArendFile)?.moduleLocation
+                else -> null
+            }
+        }
+
+        return if (ApplicationManager.getApplication().isReadAccessAllowed)  {
+            getter.compute()
+        } else runReadAction {
+            getter.compute()
+        }
     }
 
     private fun getTopmostExpression(element: PsiElement): ArendCompositeElement? {
