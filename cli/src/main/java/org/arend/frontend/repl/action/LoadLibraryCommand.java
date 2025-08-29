@@ -1,5 +1,6 @@
 package org.arend.frontend.repl.action;
 
+import org.arend.frontend.library.SourceLibrary;
 import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.repl.action.DirectoryArgumentCommand;
 import org.arend.util.FileUtils;
@@ -16,14 +17,11 @@ public final class LoadLibraryCommand implements CliReplCommand, DirectoryArgume
 
   @Override
   public void invoke(@NotNull String line, @NotNull CommonCliRepl api, @NotNull Supplier<@NotNull String> scanner) {
-/*
     if (!FileUtils.isLibraryName(line)) {
       api.eprintln("[ERROR] `" + line + "` is not a valid library name.");
       return;
     }
-*/
-    /* TODO[server2]
-    Library library = api.createLibrary(line);
+    SourceLibrary library = api.createLibrary(line);
     if (library == null || api.checkErrors()) {
       api.eprintln("[ERROR] Cannot find a library at '" + line + "'.");
       // check again in case `library == null`
@@ -34,7 +32,6 @@ public final class LoadLibraryCommand implements CliReplCommand, DirectoryArgume
       api.checkErrors();
       api.eprintln("[ERROR] No library loaded.");
     }
-    */
   }
 
   @Override

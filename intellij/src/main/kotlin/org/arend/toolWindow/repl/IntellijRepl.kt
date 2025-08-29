@@ -57,10 +57,6 @@ abstract class IntellijRepl private constructor(
     override fun parseExpr(text: String) = psiFactory.createExpressionMaybe(text)
         ?.let { ConcreteBuilder.convertExpression(it) }
 
-    fun clearScope() {
-        myMergedScopes.clear()
-    }
-
     override fun getPrettyPrinterFlags() = project.service<ArendProjectSettings>().replPrintingOptionsFilterSet
 
     override fun getNormalizationMode(): NormalizationMode? {

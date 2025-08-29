@@ -17,13 +17,14 @@ import java.util.stream.StreamSupport;
 
 public final class LoadModuleCommand implements CliReplCommand {
   public static final @NotNull LoadModuleCommand INSTANCE = new LoadModuleCommand();
+  public static final @NotNull String ALL_MODULES = "all";
 
   private LoadModuleCommand() {
   }
 
   @Override
   public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
-    return "Load an Arend module from working directory";
+    return "Load an Arend module from working directory or all modules (:load all)";
   }
 
   @Override
@@ -35,7 +36,7 @@ public final class LoadModuleCommand implements CliReplCommand {
           .stream(Paths.get(line).normalize().spliterator(), false)
           .map(Objects::toString)
           .collect(Collectors.toList());
-        if (Objects.equals(paths.get(0), ".")) paths.remove(0);
+        if (Objects.equals(paths.getFirst(), ".")) paths.removeFirst();
         line = String.join(".", paths);
       }
       loadModule(api, ModulePath.fromString(line));
@@ -45,6 +46,13 @@ public final class LoadModuleCommand implements CliReplCommand {
   }
 
   private static void loadModule(@NotNull CommonCliRepl api, ModulePath modulePath) {
+    if (!Objects.equals(modulePath.toString(), ALL_MODULES) && !api.getAllModules().contains(modulePath)) {
+      api.eprintln("[ERROR] Module " + modulePath + " is not exist.");
+      return;
+    }
+    if (Objects.equals(modulePath.toString(), ALL_MODULES)) {
+      api.clearScope();
+    }
     Scope existingScope = api.getAvailableModuleScopeProvider().forModule(modulePath);
     if (existingScope != null) api.removeScope(existingScope);
     Scope scope = api.loadModule(modulePath);

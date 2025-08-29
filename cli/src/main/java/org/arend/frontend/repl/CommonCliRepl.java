@@ -20,6 +20,7 @@ import org.arend.frontend.parser.ReporterErrorListener;
 import org.arend.frontend.repl.action.*;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.frontend.source.PreludeResourceSource;
+import org.arend.naming.scope.EmptyScope;
 import org.arend.naming.scope.Scope;
 import org.arend.prelude.GeneratedVersion;
 import org.arend.prelude.Prelude;
@@ -38,10 +39,9 @@ import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
-import org.arend.typechecking.provider.ConcreteProvider;
+import org.arend.typechecking.provider.SimpleConcreteProvider;
 import org.arend.typechecking.visitor.ArendCheckerFactory;
 import org.arend.util.FileUtils;
-import org.arend.util.SingletonList;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
@@ -53,6 +53,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import static org.arend.frontend.repl.action.LoadModuleCommand.ALL_MODULES;
 
 public abstract class CommonCliRepl extends Repl {
   public static final @NotNull String APP_NAME = "Arend REPL";
@@ -99,7 +102,15 @@ public abstract class CommonCliRepl extends Repl {
     super(
       errorReporter,
       server,
-      new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY /* TODO[server2] */, Collections.emptyMap(), ConcreteProvider.EMPTY /* TODO[server2] */, errorReporter, PositionComparator.INSTANCE, new ArendExtensionProvider() {} /* TODO[server2] */)
+      new TypecheckingOrderingListener(
+        ArendCheckerFactory.DEFAULT,
+        server instanceof ArendServerImpl ? ((ArendServerImpl) server).getInstanceScopeProvider() : InstanceScopeProvider.EMPTY,
+        Collections.emptyMap(),
+        new SimpleConcreteProvider(Collections.emptyMap()),
+        errorReporter,
+        PositionComparator.INSTANCE,
+        server instanceof ArendServerImpl ? ((ArendServerImpl) server).getExtensionProvider() : new ArendExtensionProvider() {}
+      )
     );
     Path configFile = pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE);
     myReplLibrary = Files.exists(configFile) ? FileSourceLibrary.fromConfigFile(configFile, false, errorReporter)
@@ -196,21 +207,17 @@ public abstract class CommonCliRepl extends Repl {
     registerAction("reload", LoadModuleCommand.ReloadModuleCommand.INSTANCE);
     registerAction("prompt", new ChangePromptCommand());
     registerAction("lib", LoadLibraryCommand.INSTANCE);
+    registerAction("unlib", UnloadLibraryCommand.INSTANCE);
     registerAction("pwd", new PwdCommand());
     registerAction("cd", new CdCommand());
   }
 
-  /* TODO[server2]
-  public @Nullable Library createLibrary(@NotNull String path) {
-    var library = myLibraryResolver.resolve(myReplLibrary, path);
-    if (library != null) return library;
-    return myLibraryResolver.registerLibrary(pwd.resolve(path).toAbsolutePath().normalize());
-    return null;
-  }
-  */
-
-  public final void addLibraryDirectories(@NotNull Collection<? extends Path> libDirs) {
-    // TODO[server2]: myLibraryResolver.addLibraryDirectories(libDirs);
+  public @Nullable SourceLibrary createLibrary(@NotNull String libraryName) {
+    Path configFile = ((myReplLibrary.getLibraryName().equals(libraryName))
+      ? pwd
+      : pwd.resolve(libraryName)
+    ).resolve(FileUtils.LIBRARY_CONFIG_FILE);
+    return Files.exists(configFile) ? FileSourceLibrary.fromConfigFile(configFile, false, errorReporter) : null;
   }
 
   @Override
@@ -242,15 +249,54 @@ public abstract class CommonCliRepl extends Repl {
     this(new TreeSet<>(), new ListErrorReporter(new ArrayList<>()));
   }
 
-  private ModuleLocation getLocationByModulePath(ModulePath modulePath) {
-    ModuleLocation moduleLocation = myServer.findModule(modulePath, myReplLibrary.getLibraryName(), false, false);
-    return moduleLocation != null ? moduleLocation : new ModuleLocation(myReplLibrary.getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath);
+  private List<ModuleLocation> getLocationsByModulePath(ModulePath modulePath) {
+    List<ModuleLocation> moduleLocations = new ArrayList<>();
+    for (String libraryName : getLibraries()) {
+      SourceLibrary library = createLibrary(libraryName);
+      if (library != null && library.findModules(false).contains(modulePath)) {
+        ModuleLocation moduleLocation = new ModuleLocation(libraryName, ModuleLocation.LocationKind.SOURCE, modulePath);
+        moduleLocations.add(moduleLocation);
+      }
+    }
+    return moduleLocations;
+  }
+
+  private List<ModuleLocation> getLoadedLocationsByModulePath(ModulePath modulePath) {
+    List<ModuleLocation> moduleLocations = new ArrayList<>();
+    for (String libraryName : getLibraries()) {
+      ModuleLocation moduleLocation = myServer.findModule(modulePath, libraryName, false, false);
+      if (moduleLocation != null) {
+        moduleLocations.add(moduleLocation);
+      }
+    }
+    return moduleLocations;
   }
 
   public final boolean loadLibrary(@NotNull SourceLibrary library) {
     myServer.updateLibrary(library, errorReporter);
     if (myServer instanceof ArendServerImpl && ((ArendServerImpl) myServer).getRequester() instanceof CliServerRequester cliServerRequester) {
-      cliServerRequester.getLibraryManager().updateLibrary(myReplLibrary, myServer);
+      cliServerRequester.getLibraryManager().updateLibrary(library, myServer);
+    }
+    return true;
+  }
+
+  public final boolean unloadLibrary(@NotNull String libraryName) {
+    myServer.removeLibrary(libraryName);
+    SourceLibrary library = createLibrary(libraryName);
+    if (library == null) {
+      return false;
+    }
+    List<ModulePath> modulePaths = library.findModules(false);
+    for (ModulePath modulePath : modulePaths) {
+      ModuleLocation moduleLocation = myServer.findModule(modulePath, libraryName, false, false);
+      if (moduleLocation != null) {
+        myServer.removeModule(moduleLocation);
+      }
+    }
+    Set<ModulePath> loadedModulePaths = myServer.getModules().stream().map(ModuleLocation::getModulePath).collect(Collectors.toSet());
+    modulePaths.stream().filter(modulePath -> !loadedModulePaths.contains(modulePath)).forEach(myModules::remove);
+    if (myServer instanceof ArendServerImpl && ((ArendServerImpl) myServer).getRequester() instanceof CliServerRequester cliServerRequester) {
+      cliServerRequester.getLibraryManager().removeLibrary(libraryName, myServer);
     }
     return true;
   }
@@ -269,6 +315,7 @@ public abstract class CommonCliRepl extends Repl {
       if (preludeData != null) {
         myReplScope.addPreludeScope(preludeData.getFileScope());
       }
+      myModules.add(Prelude.MODULE_PATH);
     }
     myServer.updateLibrary(myReplLibrary, errorReporter);
     if (myServer instanceof ArendServerImpl && ((ArendServerImpl) myServer).getRequester() instanceof CliServerRequester cliServerRequester) {
@@ -281,15 +328,23 @@ public abstract class CommonCliRepl extends Repl {
    * This will <strong>not</strong> modify the REPL scope.
    */
   public final @Nullable Scope loadModule(@NotNull ModulePath modulePath) {
+    if (Objects.equals(modulePath.toString(), ALL_MODULES)) {
+      Set<ModulePath> allModules = getAllModules();
+      ArendChecker arendChecker = myServer.getCheckerFor(allModules.stream().map(this::getLocationsByModulePath).flatMap(List::stream).toList());
+      arendChecker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+      myModules.addAll(allModules);
+      allModules.stream().map(newModulePath -> getAvailableModuleScopeProvider().forModule(newModulePath)).filter(Objects::nonNull).forEach(this::addScope);
+      return EmptyScope.INSTANCE;
+    }
     myModules.add(modulePath);
-    ArendChecker arendChecker = myServer.getCheckerFor(new SingletonList<>(getLocationByModulePath(modulePath)));
+    ArendChecker arendChecker = myServer.getCheckerFor(getLocationsByModulePath(modulePath));
     arendChecker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-    return myServer.getModuleScopeProvider(myReplLibrary.getLibraryName(), false).forModule(modulePath);
+    return getAvailableModuleScopeProvider().forModule(modulePath);
   }
 
   public final void loadModules(Collection<@NotNull ModulePath> modulePaths) {
     myModules.addAll(modulePaths);
-    ArendChecker arendChecker = myServer.getCheckerFor(modulePaths.stream().map(this::getLocationByModulePath).toList());
+    ArendChecker arendChecker = myServer.getCheckerFor(modulePaths.stream().map(this::getLocationsByModulePath).flatMap(List::stream).toList());
     arendChecker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
   }
 
@@ -300,11 +355,51 @@ public abstract class CommonCliRepl extends Repl {
    * @return true if the module is already loaded before.
    */
   public final boolean unloadModule(@NotNull ModulePath modulePath) {
+    if (Objects.equals(modulePath.toString(), ALL_MODULES)) {
+      Collection<? extends ModuleLocation> moduleLocations = myServer.getModules();
+      for (ModuleLocation moduleLocation : moduleLocations) {
+        myServer.removeModule(moduleLocation);
+      }
+      myModules.clear();
+      myModules.add(Prelude.MODULE_PATH);
+      return true;
+    }
     boolean isLoadedBefore = myModules.remove(modulePath);
     if (isLoadedBefore) {
-      myServer.removeModule(getLocationByModulePath(modulePath));
+      for (ModuleLocation moduleLocation : getLoadedLocationsByModulePath(modulePath)) {
+        myServer.removeModule(moduleLocation);
+      }
     }
     return isLoadedBefore;
+  }
+
+  public @NotNull Set<ModulePath> getLoadedModules() {
+    return myModules;
+  }
+
+  public @NotNull Set<ModuleLocation> getLoadedModuleLocations() {
+    return myModules.stream().map(this::getLocationsByModulePath).flatMap(List::stream).collect(Collectors.toSet());
+  }
+
+  public @NotNull Set<ModulePath> getAllModules() {
+    Set<ModulePath> result = new HashSet<>();
+    for (String libraryName : getLibraries()) {
+      SourceLibrary library = createLibrary(libraryName);
+      if (library != null) {
+        result.addAll(library.findModules(false));
+      } else if (libraryName.equals(Prelude.LIBRARY_NAME)) {
+        result.add(Prelude.MODULE_PATH);
+      }
+    }
+    return result;
+  }
+
+  public @NotNull Set<String> getLibraries() {
+    return myServer.getLibraries();
+  }
+
+  public List<GeneralError> getErrorList(ModuleLocation moduleLocation) {
+    return myServer.getErrorMap().get(moduleLocation);
   }
 
   private final class ChangePromptCommand implements ReplCommand {

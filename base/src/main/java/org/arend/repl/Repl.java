@@ -127,6 +127,11 @@ public abstract class Repl {
     return myServer.getModuleScopeProvider(null, true);
   }
 
+  @Contract(pure = true)
+  public final @NotNull ModuleScopeProvider getLibraryModuleScopeProvider(String libraryName) {
+    return myServer.getModuleScopeProvider(libraryName, true);
+  }
+
   public @NotNull String prompt() {
     return ">";
   }
@@ -214,6 +219,10 @@ public abstract class Repl {
       if (element instanceof TCDefReferable)
         ((TCDefReferable) element).setTypechecked(null);
     return myMergedScopes.remove(scope);
+  }
+
+  public final void clearScope() {
+    myMergedScopes.clear();
   }
 
   /**

@@ -322,4 +322,8 @@ public class LexicalScope implements Scope {
   public @Nullable ImportedScope getImportedSubscope() {
     return myParent.getImportedSubscope();
   }
+
+  public ConcreteGroup getGroup() {
+    return myGroup;
+  }
 }
