@@ -35,7 +35,7 @@ fun exprToConcrete1(appExpr: ArendExpr): List<Concrete.SourceNode> {
             }
             return null
         }
-    }, null) as? Concrete.Expression
+    }, null)
     return result
 }
 

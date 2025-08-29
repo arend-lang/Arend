@@ -12,7 +12,7 @@ class CreateLetBindingIntentionTest : QuickFixTestBase() {
         if (uiShown) {
             UiInterceptors.register(ChooserInterceptor(null, StringUtil.escapeToRegexp(expr)))
         }
-        simpleQuickFixTest(ArendBundle.message("arend.create.let.binding"), contents.trimIndent(), result.trimIndent())
+        typedQuickFixTest(ArendBundle.message("arend.create.let.binding"), contents.trimIndent(), result.trimIndent())
     }
 
     override fun tearDown() {

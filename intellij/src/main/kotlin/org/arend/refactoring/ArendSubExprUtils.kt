@@ -29,15 +29,14 @@ import org.arend.naming.resolving.typing.TypingInfo
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor
 import org.arend.psi.*
 import org.arend.psi.ext.*
-import org.arend.resolving.util.parseBinOp
 import org.arend.server.ArendServerService
 import org.arend.server.impl.ArendLibraryImpl
 import org.arend.server.impl.ArendServerImpl
 import org.arend.settings.ArendProjectSettings
 import org.arend.term.Fixity
 import org.arend.term.abs.Abstract
-import org.arend.term.abs.ConcreteBuilder
 import org.arend.term.concrete.Concrete
+import org.arend.term.concrete.SearchConcreteVisitor
 import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.typechecking.ProgressCancellationIndicator
 import org.arend.typechecking.computation.ComputationRunner
@@ -46,8 +45,7 @@ import org.arend.typechecking.provider.SimpleConcreteProvider
 import org.arend.typechecking.subexpr.CorrespondedSubDefVisitor
 import org.arend.typechecking.subexpr.FindBinding
 import org.arend.typechecking.subexpr.SubExprError
-import org.arend.typechecking.visitor.SyntacticDesugarVisitor
-import org.arend.resolving.util.parseBinOp
+import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getReferableConcreteGroup
 import org.arend.util.getReferableScope
 
@@ -116,20 +114,20 @@ private class MyResolverListener(private val data: Any) : ResolverListener {
 @Throws(SubExprException::class)
 fun correspondedSubExpr(range: TextRange, file: PsiFile, project: Project): SubExprResult {
     val exprAncestor = selectedExpr(file, range) { throw SubExprException(it) }
+    val errorMsg = "cannot find a suitable concrete expression"
 
-    val (head, tail) = collectArendExprs(exprAncestor.parent, range)
-        ?: throw SubExprException("cannot find a suitable concrete expression")
-    val subExpr =
-        if (tail.isNotEmpty()) {
-            val data = if (exprAncestor.textRange == range) {
-              exprAncestor.descendantOfType<ArendTuple>() ?: exprAncestor
-            } else null
-            parseBinOp(data, head, tail)
+    val definition = exprAncestor.ancestor<ArendDefinition<*>>()?.tcReferable ?: throw SubExprException(errorMsg)
+    val concrete = exprAncestor.project.service<ArendServerService>().server.getResolvedDefinition(definition)?.definition ?: throw SubExprException(errorMsg)
+
+    val subExpr = concrete.accept(object : SearchConcreteVisitor<Any?, Concrete.SourceNode?>() {
+        override fun checkSourceNode(sourceNode: Concrete.SourceNode, params: Any?): Concrete.SourceNode? {
+            var data: PsiElement? = sourceNode.data as? PsiElement
+            val textRange = data?.textRange ?: return null
+            return if (sourceNode is Concrete.Expression && textRange in range) sourceNode else null
         }
-        else SyntacticDesugarVisitor.desugar(ConcreteBuilder.convertExpression(head), DummyErrorReporter.INSTANCE)
-    val resolver = subExpr.underlyingReferenceExpression?.let { refExpr -> refExpr.data?.let { MyResolverListener(it) } }
+    }, null)
+    val resolver = (subExpr as? Concrete.Expression)?.underlyingReferenceExpression?.let { refExpr -> refExpr.data?.let { MyResolverListener(it) } }
 
-    // if (possibleParent is PsiWhiteSpace) return "selected text are whitespaces"
     val psiDef = exprAncestor.topmostAncestor<ReferableBase<*>>()
         ?: throw SubExprException("selected text is not in a definition")
     val arendServer = project.service<ArendServerService>().server
@@ -147,7 +145,7 @@ fun correspondedSubExpr(range: TextRange, file: PsiFile, project: Project): SubE
         concreteDef ?: throw SubExprException("selected text is not in a definition")
         val def = psiDef.tcReferable?.typechecked
             ?: throw SubExprException("underlying definition is not type checked")
-        val subDefVisitor = CorrespondedSubDefVisitor(resolver?.result ?: subExpr)
+        val subDefVisitor = CorrespondedSubDefVisitor(resolver?.result ?: subExpr as? Concrete.Expression ?: throw SubExprException(""))
         errors = subDefVisitor.exprError
         concreteDef.accept(subDefVisitor, def)
     } ?: throw SubExprException(buildString {
