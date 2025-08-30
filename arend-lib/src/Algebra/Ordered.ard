@@ -351,6 +351,9 @@
 
   \lemma abs_*n {n : Nat} {x : E} : n *n abs x = abs (n *n x)
     => join_*n *> pmap (_ ∨) *n_negative
+
+  \lemma meet_*n {n : Nat} {x y : E} : n *n (x ∧ y) = (n *n x) ∧ (n *n y)
+    => inv negative-isInv *> pmap negative (inv *n_negative *> pmap (n *n) meet_negative *> join_*n *> pmap2 (∨) *n_negative *n_negative *> inv meet_negative) *> negative-isInv
 }
 
 \class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, AbsAbGroup {

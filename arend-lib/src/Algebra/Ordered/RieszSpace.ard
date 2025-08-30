@@ -1,20 +1,59 @@
 \import Algebra.Ordered
 \import Algebra.QModule
+\import Arith.Int
 \import Arith.Nat
+\import Arith.Rat
 \import Function.Meta
 \import Logic
+\import Order.Biordered
 \import Order.PartialOrder
+\import Order.StrictOrder
 \import Paths
 \import Paths.Meta
 
 \class PosetDivAbGroup \extends PosetAbGroup, TorsionFreeGroup {
   | <=_*n-div {n : Nat} (n/=0 : n /= 0) {a : E} : 0 <= n *n a -> 0 <= a
   \default noTorsion n/=0 na=0 => <=-antisymmetric (negative-to<=0 $ <=_*n-div n/=0 $ transportInv (0 <=) *n_negative $ negative>=0 $ =_<= na=0) (<=_*n-div n/=0 $ =_<= $ inv na=0)
+
+  \lemma <=_*n-cancel-left {n : Nat} (n/=0 : n /= 0) {a b : E} (na<=nb : n *n a <= n *n b) : a <= b
+    => from>=0 $ <=_*n-div n/=0 $ transportInv (0 <=) *n-ldistr_- (to>=0 na<=nb)
 }
 
-\class RieszSpace \extends QModule, AbsAbGroup, LatticeAbGroup.FromJoin, PosetDivAbGroup {
+\class PosetQModule \extends QModule, PosetDivAbGroup {
+  \lemma *q_>=0 {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a : E} (a>=0 : 0 <= a) : 0 <= q *q a
+    => <=_*n-div (ratDenom/=0 q) $ transport (0 <=) (pmap (`*i a) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q a) (inv rat*denom-left) *> *q-assoc *> *q_*n) (*n_>=0 a>=0)
+
+  \lemma *q_>=0-cancel {q : Rat} (q>0 : 0 < q) {a : E} (qa>=0 : 0 <= q *q a) : 0 <= a
+    => transport (0 <=) (inv *q-assoc *> pmap (`*q a) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (<=-less $ RatField.finv>0 q>0) qa>=0
+
+  \lemma <=_*q-left {q r : Rat} (q<=r : q RatField.<= r) {a : E} (a>=0 : 0 <= a) : q *q a <= r *q a
+    => from>=0 $ transport (0 <=) toRatModule.*c-rdistr_- $ *q_>=0 (RatField.to>=0 q<=r) a>=0
+
+  \lemma <=_*q-right {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a b : E} (a<=b : a <= b) : q *q a <= q *q b
+    => from>=0 $ transport (_ <=) toRatModule.*c-ldistr_- $ *q_>=0 q>=0 (to>=0 a<=b)
+
+  \lemma <=_*q-cancel-left {q : Rat} (q>0 : 0 < q) {a b : E} (qa<=qb : q *q a <= q *q b) : a <= b
+    => from>=0 $ *q_>=0-cancel q>0 $ transportInv (0 <=) toRatModule.*c-ldistr_- (to>=0 qa<=qb)
+
+  \lemma <=_*q-rotate-left {q : Rat} (q>0 : 0 < q) {a b : E} (a<=qb : a <= q *q b) : RatField.finv q *q a <= b
+    => <=_*q-right (<=-less $ RatField.finv>0 q>0) a<=qb <=∘ =_<= (inv *q-assoc *> pmap (`*q b) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q)
+
+  \lemma <=_*q-rotate-right {q : Rat} (q>0 : 0 < q) {a b : E} (p : RatField.finv q *q a <= b) : a <= q *q b
+    => transport (`<= _) (inv *q-assoc *> pmap (`*q a) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ <=_*q-right (<=-less q>0) p
+}
+
+\class RieszSpace \extends PosetQModule, AbsAbGroup, LatticeAbGroup.FromJoin {
   -- <=_*n-div is equivalent to conjunction of noTorsion and abs>=0.
   \default abs>=0 => <=_*n-div {_} {2} suc/=0 $ rewrite zro-left $ transportInv (0 <=) join_+-left $ transportInv (0 <=) join_+-right (=_<= (inv negative-left) <=∘ join-right) <=∘ join-left
   \default <=_*n-div n/=0 na>=0 => transport (0 <=) (noTorsion-div n/=0 (abs_*n *> abs-ofPos na>=0)) abs>=0
+
+  \lemma join_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x y : E} : q *q (x ∨ y) = (q *q x) ∨ (q *q y)
+    => noTorsion-div (ratDenom/=0 q) $ inv *q_*n *> inv *q-assoc *> pmap (`*q _) rat*denom-left *> *q_*i *> pmap (`*i _) (inv $ iabs.ofPos $ <=_ratNom.conv q>=0) *> join_*n *> pmap2 (∨) (pmap (`*i x) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q x) (inv rat*denom-left) *> *q-assoc *> *q_*n) (pmap (`*i y) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q y) (inv rat*denom-left) *> *q-assoc *> *q_*n) *> inv join_*n
+
+  \lemma abs_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x : E} : q *q abs x = abs (q *q x)
+    => join_*q q>=0 *> pmap (_ ∨) toRatModule.*c_negative-right
+
+  \lemma meet_*q {q : Rat} {x y : E} (q>=0 : RatField.zro RatField.<= q) : q *q (x ∧ y) = (q *q x) ∧ (q *q y)
+    => inv negative-isInv *> pmap negative (inv toRatModule.*c_negative-right *> pmap (q *q) meet_negative *> join_*q q>=0 *> pmap2 (∨) toRatModule.*c_negative-right toRatModule.*c_negative-right *> inv meet_negative) *> negative-isInv
 }
 
