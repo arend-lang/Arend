@@ -6,6 +6,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
 \import Algebra.Pointed
 \import Algebra.QModule
 \import Algebra.Ring
@@ -35,20 +36,17 @@
 \import Topology.NormedAbGroup
 \import Topology.NormedRing
 
-\class OrderedC*Algebra \extends QAlgebra, PosetAddGroup, CRing {
-  | c*-positive-div {n : Nat} (n/=0 : n /= 0) {a : E} : 0 <= n *n a -> 0 <= a
+\class OrderedC*Algebra \extends QAlgebra, PosetDivAbGroup, CRing {
   | c*-archimedean (a : E) : ∃ (B : Nat) (a <= natCoef B)
   | c*-square-positive {a : E} : 0 <= a * a
   | c*-<=_*-square {a : E} : a <= 1 -> negative a <= 1 -> a * a <= 1
   | c*-<=-square {a : E} : a * a <= 1 -> a <= 1
 
-  | noTorsion n/=0 na=0 => <=-antisymmetric (negative-to<=0 $ c*-positive-div n/=0 $ transportInv (0 <=) *n_negative $ negative>=0 $ =_<= na=0) (c*-positive-div n/=0 $ =_<= $ inv na=0)
-
   \lemma zro<=ide : 0 <= 1
-    => c*-positive-div {_} {2} suc/=0 $ transport2 (__ <= __ + 1) negative-left (inv zro-left) $ <=_+ (c*-<=-square (=_<= $ negative_* *> ide-left)) <=-refl
+    => <=_*n-div {_} {2} suc/=0 $ transport2 (__ <= __ + 1) negative-left (inv zro-left) $ <=_+ (c*-<=-square (=_<= $ negative_* *> ide-left)) <=-refl
 
   \lemma *q_>=0 {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a : E} (a>=0 : 0 <= a) : 0 <= q *q a
-    => c*-positive-div (ratDenom/=0 q) $ transport (0 <=) (pmap (`*i a) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q a) (inv rat*denom-left) *> *q-assoc *> *q_*n) (*n_>=0 a>=0)
+    => <=_*n-div (ratDenom/=0 q) $ transport (0 <=) (pmap (`*i a) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q a) (inv rat*denom-left) *> *q-assoc *> *q_*n) (*n_>=0 a>=0)
 
   \lemma *q_>=0-cancel {q : Rat} (q>0 : 0 < q) {a : E} (qa>=0 : 0 <= q *q a) : 0 <= a
     => transport (0 <=) (inv *q-assoc *> pmap (`*q a) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (<=-less $ RatField.finv>0 q>0) qa>=0
@@ -60,7 +58,7 @@
     => from>=0 $ transport (_ <=) toRatModule.*c-ldistr_- $ *q_>=0 q>=0 (to>=0 a<=b)
 
   \lemma <=_*n-cancel-left {n : Nat} (n/=0 : n /= 0) {a b : E} (na<=nb : n *n a <= n *n b) : a <= b
-    => from>=0 $ c*-positive-div n/=0 $ transportInv (0 <=) *n-ldistr_- (to>=0 na<=nb)
+    => from>=0 $ <=_*n-div n/=0 $ transportInv (0 <=) *n-ldistr_- (to>=0 na<=nb)
 
   \lemma <=_*q-cancel-left {q : Rat} (q>0 : 0 < q) {a b : E} (qa<=qb : q *q a <= q *q b) : a <= b
     => from>=0 $ *q_>=0-cancel q>0 $ transportInv (0 <=) toRatModule.*c-ldistr_- (to>=0 qa<=qb)
@@ -78,7 +76,7 @@
     => <=-square q>0 $ transportInv (`<= _) negative_* aa<=qq
 
   \lemma c*-<=_* {a b : E} (a<=1 : a <= 1) (-a<=1 : negative a <= 1) (b<=1 : b <= 1) (-b<=1 : negative b <= 1) : a * b <= 1
-    => from>=0 $ c*-positive-div {_} {2} suc/=0 $ c*-square-positive {_} {a - b} <=∘ transport (`<= _) equation.cRing (<=_+ (<=_+ <=-refl (<=_+ (c*-<=_*-square a<=1 -a<=1) <=-refl)) (<=_+ (c*-<=_*-square b<=1 -b<=1) <=-refl))
+    => from>=0 $ <=_*n-div {_} {2} suc/=0 $ c*-square-positive {_} {a - b} <=∘ transport (`<= _) equation.cRing (<=_+ (<=_+ <=-refl (<=_+ (c*-<=_*-square a<=1 -a<=1) <=-refl)) (<=_+ (c*-<=_*-square b<=1 -b<=1) <=-refl))
 
   \func toBanach : RealPreBanachAlgebra \cowith
     | Ring => \this
@@ -156,7 +154,7 @@
   | <=-antisymmetric (inP (a,aa=y-x)) (inP (b,bb=x-y)) => inv $ fromZero $ inv aa=y-x *> norm-ext (ExUpperRealAbMonoid.<=-antisymmetric (c*-sum ExUpperRealAbMonoid.<=∘ =_<= {ExUpperRealAbMonoid} (pmap norm (simplify in pmap (_ +) bb=x-y *> pmap (`+ _) aa=y-x) *> norm_zro)) norm>=0)
   | <=_+ p q => transport IsSquare equation.abGroup (square-sum c*-sum p q)
 
-  | c*-positive-div {n} n/=0 na>=0 => \case *n_>=0 na>=0 \with {
+  | <=_*n-div {n} n/=0 na>=0 => \case *n_>=0 na>=0 \with {
     | inP (b,bb=nna) => inP (RatField.finv n *q b, simplify $ simplify at bb=nna $ inv *q-comm-left *> pmap (_ *q) (inv *q-comm-right) *> pmap (RatField.finv n *q) (pmap (RatField.finv n *q) (bb=nna *> inv *q_*n) *> inv *q-assoc *> pmap (`*q _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*q *> inv *q_*n) *> inv *q-assoc *> pmap (`*q _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*q)
   }
   | c*-archimedean a => \case norm-bounded a \with {

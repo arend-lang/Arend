@@ -248,46 +248,18 @@
 
 \class PosetAbGroup \extends PosetAddGroup, PosetAbMonoid, AbGroup
 
-\class LatticeAbGroup \extends PosetAbGroup, MeetSemilatticeAbMonoid, JoinSemilatticeAbMonoid, Lattice
+\class LatticeAbGroup \extends PosetAbGroup, MeetSemilatticeAbMonoid, JoinSemilatticeAbMonoid, Lattice {
   | meet_+-left {a} {b} {c} => <=-antisymmetric (meet-univ (<=_+ <=-refl meet-left) (<=_+ <=-refl meet-right)) $ <=_+-cancel-left (negative a) $ meet-univ (<=_+ <=-refl meet-left <=∘ =_<= (inv +-assoc *> pmap (`+ b) negative-left *> zro-left)) (<=_+ <=-refl meet-right <=∘ =_<= (inv +-assoc *> pmap (`+ c) negative-left *> zro-left)) <=∘ =_<= (inv zro-left *> pmap (`+ _) (inv negative-left) *> +-assoc)
   | join_+-left {a} {b} {c} => <=-antisymmetric (<=_+-cancel-left (negative a) $ =_<= (inv +-assoc *> pmap (`+ _) negative-left *> zro-left) <=∘ join-univ (<=_+-cancel-left a $ join-left <=∘ =_<= (inv zro-left *> pmap (`+ _) (inv negative-right) *> +-assoc)) (<=_+-cancel-left a $ join-right <=∘ =_<= (inv zro-left *> pmap (`+ _) (inv negative-right) *> +-assoc))) $ join-univ (<=_+ <=-refl join-left) (<=_+ <=-refl join-right)
-  \where {
-    -- TODO: Make constructor classes
-    \protected \class FromMeet \extends LatticeAbGroup
-      | join a b => negative (negative a ∧ negative b)
-      | join-left => =_<= (inv negative-isInv) <=∘ negative_<= meet-left
-      | join-right => =_<= (inv negative-isInv) <=∘ negative_<= meet-right
-      | join-univ x<=z y<=z => negative_<= (meet-univ (negative_<= x<=z) (negative_<= y<=z)) <=∘ =_<= negative-isInv
-
-    \protected \class FromJoin \extends LatticeAbGroup
-      | meet a b => negative (negative a ∨ negative b)
-      | meet-left => negative_<= join-left <=∘ =_<= negative-isInv
-      | meet-right => negative_<= join-right <=∘ =_<= negative-isInv
-      | meet-univ z<=x z<=y => =_<= (inv negative-isInv) <=∘ negative_<= (join-univ (negative_<= z<=x) (negative_<= z<=y))
-  }
-
-\class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, LatticeAbGroup {
-  | <_+-comparison (x y : E) : isPos (x + y) -> isPos x || isPos y
-  | <_+-connectedness {x : E} : Not (isPos x) -> Not (isNeg x) -> x = zro
-
-  | <_+-cancel-left x {y} {z} x+y<x+z =>
-    transport2 (<)
-        (inv +-assoc *> pmap (`+ y) negative-left *> zro-left)
-        (inv +-assoc *> pmap (`+ z) negative-left *> zro-left)
-        (<_+-right (negative x) x+y<x+z)
-  | <-comparison y {x} {z} x<z => \case <_+-comparison (z - y) (y - x) (transport isPos (inv OrderedAddGroup.diff_+) x<z) \with {
-    | byLeft p => byRight p
-    | byRight p => byLeft p
-  }
-  | <-connectedness x/<y y/<x => fromZero $ <_+-connectedness (y/<x __) \lam p => x/<y (fromNeg p)
 
   \lemma meet_negative {x y : E} : negative (x ∧ y) = negative x ∨ negative y
-    => <=-antisymmetric (\lam p => <-irreflexive $ join-right <∘r (rewrite (LinearOrder.meet/=left $ <_/= $ negative_<-inv $ join-left <∘r p) in p)) $
-        join-univ (negative_<= meet-left) (negative_<= meet-right)
+    => <=-antisymmetric (negative_<= (meet-univ (negative_<= join-left <=∘ =_<= negative-isInv) (negative_<= join-right <=∘ =_<= negative-isInv)) <=∘ =_<= negative-isInv) $ join-univ (negative_<= meet-left) (negative_<= meet-right)
 
   \lemma join_negative {x y : E} : negative (x ∨ y) = negative x ∧ negative y
-    => <=-antisymmetric (meet-univ (negative_<= join-left) (negative_<= join-right)) \lam p =>
-        <-irreflexive $ (rewrite (LinearOrder.join/=left $ <_/= $ negative_<-inv $ p <∘l meet-left) in p) <∘l meet-right
+    => <=-antisymmetric (meet-univ (negative_<= join-left) (negative_<= join-right)) $ =_<= (inv negative-isInv) <=∘ negative_<= (join-univ (=_<= (inv negative-isInv) <=∘ negative_<= meet-left) (=_<= (inv negative-isInv) <=∘ negative_<= meet-right))
+
+  \lemma modularity {x y : E} : x + y = (x ∨ y) + (x ∧ y)
+    => cancel-right (negative (x ∧ y)) $ pmap (_ +) meet_negative *> join_+-left *> pmap2 (∨) (+-comm *> inv +-assoc *> pmap (`+ y) negative-left *> zro-left) (+-assoc *> pmap (x +) negative-right *> zro-right) *> join-comm *> inv (+-assoc *> pmap (_ +) negative-right *> zro-right)
 
   \func abs (x : E) => x ∨ negative x
 
@@ -296,9 +268,6 @@
 
   \lemma abs>=neg {x : E} : negative x <= abs x
     => join-right
-
-  \lemma abs>=0 {x : E} : 0 <= abs x
-    => \lam p => <-irreflexive $ negative_positive (join-left <∘r p) <∘ join-right <∘r p
 
   \lemma abs_negative {x : E} : abs (negative x) = abs x
     => <=-antisymmetric (join-univ join-right $ rewrite negative-isInv join-left) (join-univ (=_<= (inv negative-isInv) <=∘ join-right) join-left)
@@ -310,7 +279,7 @@
     => inv abs_negative *> abs-ofPos (rewrite negative_zro in negative_<= x<=0)
 
   \lemma abs_abs {x : E} : abs (abs x) = abs x
-    => abs-ofPos abs>=0
+    => <=-antisymmetric (join-univ <=-refl $ negative_<= abs>=id <=∘ abs>=neg) abs>=id
 
   \lemma abs_+ {x y : E} : abs (x + y) <= abs x + abs y
     => join-univ (<=_+ join-left join-left) $ rewrite (negative_+,+-comm) $ <=_+ join-right join-right
@@ -325,28 +294,83 @@
     => transport (_ <=) abs_- abs_-left
 
   \lemma abs_zro : abs zro = zro
-    => <=-antisymmetric (join-univ <=-refl $ rewrite negative_zro <=-refl) abs>=0
+    => <=-antisymmetric (join-univ <=-refl $ rewrite negative_zro <=-refl) abs>=id
 
   \lemma abs_zro-ext {x : E} (p : abs x = zro) : x = zro
     => <=-antisymmetric (transport (_ <=) p join-left) $ transport2 (<=) negative_zro negative-isInv $ negative_<= $ transport (_ <=) p join-right
 
   \lemma abs>=_- {x y : E} : y - x <= abs (x - y)
     => transportInv (_ <=) negative_+ (later $ rewrite negative-isInv <=-refl) <=∘ abs>=neg
+} \where {
+    -- TODO: Make constructor classes
+    \protected \class FromMeet \extends LatticeAbGroup
+      | join a b => negative (negative a ∧ negative b)
+      | join-left => =_<= (inv negative-isInv) <=∘ negative_<= meet-left
+      | join-right => =_<= (inv negative-isInv) <=∘ negative_<= meet-right
+      | join-univ x<=z y<=z => negative_<= (meet-univ (negative_<= x<=z) (negative_<= y<=z)) <=∘ =_<= negative-isInv
+
+    \protected \class FromJoin \extends LatticeAbGroup
+      | meet a b => negative (negative a ∨ negative b)
+      | meet-left => negative_<= join-left <=∘ =_<= negative-isInv
+      | meet-right => negative_<= join-right <=∘ =_<= negative-isInv
+      | meet-univ z<=x z<=y => =_<= (inv negative-isInv) <=∘ negative_<= (join-univ (negative_<= z<=x) (negative_<= z<=y))
+  }
+
+\class AbsAbGroup \extends LatticeAbGroup {
+  | abs>=0 {x : E} : 0 <= abs x
+
+  \func part+ (x : E) => x ∨ 0
+
+  \func part- (x : E) => negative x ∨ 0
+
+  \lemma parts_join {x : E} : part+ x ∨ part- x = abs x
+    => <=-antisymmetric (join-univ (join-univ abs>=id abs>=0) (join-univ abs>=neg abs>=0)) $ join-univ (join-left <=∘ join-left) (join-left <=∘ join-right)
+
+  \lemma parts_meet {x : E} : part+ x ∧ part- x = 0
+    => cancel-left (part+ x ∨ part- x) $ inv modularity *> parts_+ *> inv (zro-right *> parts_join)
+
+  \lemma parts_+ {x : E} : part+ x + part- x = abs x
+    => join_+-right *> pmap2 (∨) (join_+-left *> join-comm *> pmap2 (∨) zro-right negative-right) zro-left *> parts_join
+
+  \lemma parts_- {x : E} : part+ x - part- x = x
+    => cancel-right (part- x) $ +-assoc *> pmap (_ +) negative-left *> zro-right *> join-comm *> inv (join_+-left *> pmap2 (∨) negative-right zro-right)
+
+  \lemma join_+-double {x y : E} : x + y <= (x + x) ∨ (y + y)
+    => transport2 (x + __ <= __) zro-left (pmap (x +) join_+-right *> join_+-left *> pmap2 (x + __ ∨ __) (+-assoc *> pmap (x +) negative-left *> zro-right) (inv +-assoc *> pmap (`+ y) (pmap (x +) negative_- *> +-comm *> +-assoc *> pmap (y +) negative-left *> zro-right))) $ <=_+ <=-refl $ <=_+ abs>=0 <=-refl
+
+  \lemma join_+-comm {x y : E} : (x ∨ y) + (x ∨ y) = (x + x) ∨ (y + y)
+    => join_+-left *> pmap2 (∨) join_+-right join_+-right *> <=-antisymmetric (join-univ (join-univ join-left $ =_<= +-comm <=∘ join_+-double) (join-univ join_+-double join-right)) (join-univ (join-left <=∘ join-left) (join-right <=∘ join-right))
+
+  \lemma join_*n {n : Nat} {x y : E} : n *n (x ∨ y) = (n *n x) ∨ (n *n y)
+    => <=-antisymmetric (<=_+-cancel-right ((NatSemiring.pow 2 n -' n) *n (x ∨ y)) $ =_<= (inv *n-rdistr *> pmap (`*n _) (<=_exists $ NatSemiring.<=-less id<pow2) *> steps *> inv (pmap2 (∨) (inv *n-rdistr *> pmap (`*n _) (<=_exists $ NatSemiring.<=-less id<pow2)) (inv *n-rdistr *> pmap (`*n _) (<=_exists $ NatSemiring.<=-less id<pow2)))) <=∘ join-univ (<=_+ join-left $ *n_<= join-left) (<=_+ join-right $ *n_<= join-right)) $ join-univ (*n_<= join-left) (*n_<= join-right)
+    \where {
+      \private \lemma steps {k : Nat} {x y : E} : NatSemiring.pow 2 k *n (x ∨ y) = (NatSemiring.pow 2 k *n x) ∨ (NatSemiring.pow 2 k *n y) \elim k
+        | 0 => zro-left *> inv (pmap2 (∨) zro-left zro-left)
+        | suc k => *n-rdistr *> pmap2 (+) steps steps *> join_+-comm *> inv (pmap2 (∨) (pmap (`*n x) (NatSemiring.*-comm {_} {2}) *> *n-assoc *> +-assoc *> zro-left) (pmap (`*n y) (NatSemiring.*-comm {_} {2}) *> *n-assoc *> +-assoc *> zro-left))
+    }
+
+  \lemma abs_*n {n : Nat} {x : E} : n *n abs x = abs (n *n x)
+    => join_*n *> pmap (_ ∨) *n_negative
+}
+
+\class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, AbsAbGroup {
+  | <_+-comparison (x y : E) : isPos (x + y) -> isPos x || isPos y
+  | <_+-connectedness {x : E} : Not (isPos x) -> Not (isNeg x) -> x = zro
+
+  | <_+-cancel-left x {y} {z} x+y<x+z =>
+    transport2 (<)
+        (inv +-assoc *> pmap (`+ y) negative-left *> zro-left)
+        (inv +-assoc *> pmap (`+ z) negative-left *> zro-left)
+        (<_+-right (negative x) x+y<x+z)
+  | <-comparison y {x} {z} x<z => \case <_+-comparison (z - y) (y - x) (transport isPos (inv OrderedAddGroup.diff_+) x<z) \with {
+    | byLeft p => byRight p
+    | byRight p => byLeft p
+  }
+  | <-connectedness x/<y y/<x => fromZero $ <_+-connectedness (y/<x __) \lam p => x/<y (fromNeg p)
+  | abs>=0 => \lam p => <-irreflexive $ negative_positive (join-left <∘r p) <∘ join-right <∘r p
 
   \lemma abs_-_< {x y z : E} (p : x - y < z) (q : y - x < z) : abs (x - y) < z
     => <_join-univ p (simplify q)
-
-  \lemma abs_*n {n : Nat} {x : E} : n *n abs x = abs (n *n x)
-    => <=-antisymmetric (<=_+-cancel-right ((NatSemiring.pow 2 n -' n) *n abs x) $ =_<= (inv *n-rdistr) <=∘ =_<= (pmap (`*n _) (<=_exists $ NatSemiring.<=-less id<pow2) *> power *> pmap abs (pmap (`*n x) (inv $ <=_exists $ NatSemiring.<=-less id<pow2) *> *n-rdistr)) <=∘ abs_+ <=∘ <=_+ <=-refl abs_*n_<=) abs_*n_<=
-    \where {
-      \private \lemma power {k : Nat} {x : E} : NatSemiring.pow 2 k *n abs x = abs (NatSemiring.pow 2 k *n x) \elim k
-        | 0 => zro-left *> pmap abs (inv zro-left)
-        | suc k => *n-rdistr *> pmap2 (+) power power *> <=-antisymmetric (=_<= join_+-left <=∘ join-univ (=_<= join_+-right <=∘ join-univ abs>=id (=_<= negative-left <=∘ abs>=0)) (=_<= join_+-right <=∘ join-univ (=_<= negative-right <=∘ abs>=0) (=_<= (inv negative_+) <=∘ abs>=neg))) abs_+ *> pmap abs (inv *n-rdistr)
-
-      \private \lemma abs_*n_<= {n : Nat} {x : E} : abs (n *n x) <= n *n abs x \elim n
-        | 0 => =_<= abs_zro
-        | suc n => abs_+ <=∘ <=_+ abs_*n_<= <=-refl
-    }
 }
 
 \class OrderedSemiring \extends Semiring, OrderedAbMonoid {

@@ -28,6 +28,7 @@
 \import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.RatherBelow
+\open LatticeAbGroup
 \open LinearlyOrderedAbGroup
 \open RealNormed
 \open ProductCoverSpace

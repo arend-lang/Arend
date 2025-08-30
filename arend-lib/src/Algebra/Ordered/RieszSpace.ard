@@ -1,0 +1,20 @@
+\import Algebra.Ordered
+\import Algebra.QModule
+\import Arith.Nat
+\import Function.Meta
+\import Logic
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+
+\class PosetDivAbGroup \extends PosetAbGroup, TorsionFreeGroup {
+  | <=_*n-div {n : Nat} (n/=0 : n /= 0) {a : E} : 0 <= n *n a -> 0 <= a
+  \default noTorsion n/=0 na=0 => <=-antisymmetric (negative-to<=0 $ <=_*n-div n/=0 $ transportInv (0 <=) *n_negative $ negative>=0 $ =_<= na=0) (<=_*n-div n/=0 $ =_<= $ inv na=0)
+}
+
+\class RieszSpace \extends QModule, AbsAbGroup, LatticeAbGroup.FromJoin, PosetDivAbGroup {
+  -- <=_*n-div is equivalent to conjunction of noTorsion and abs>=0.
+  \default abs>=0 => <=_*n-div {_} {2} suc/=0 $ rewrite zro-left $ transportInv (0 <=) join_+-left $ transportInv (0 <=) join_+-right (=_<= (inv negative-left) <=∘ join-right) <=∘ join-left
+  \default <=_*n-div n/=0 na>=0 => transport (0 <=) (noTorsion-div n/=0 (abs_*n *> abs-ofPos na>=0)) abs>=0
+}
+
