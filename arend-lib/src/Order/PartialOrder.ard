@@ -53,9 +53,11 @@
       | in~ x, in~ y => path (~-equiv x y (x<=y, y<=x))
   }
 
-  \func IsMeet (x y m : E) => \Sigma (m <= x) (m <= y) (\Pi (m' : E) -> m' <= x -> m' <= y -> m' <= m)
+  \func Is-meet (x y m : E) => \Sigma (m <= x) (m <= y) (\Pi (m' : E) -> m' <= x -> m' <= y -> m' <= m)
 
   \func IsJoin {J : \Set} (f : J -> E) (a : E) => \Sigma (\Pi (j : J) -> f j <= a) (\Pi {b : E} -> (\Pi (j : J) -> f j <= b) -> a <= b)
+
+  \func IsMeet {J : \Set} (f : J -> E) (a : E) => \Sigma (\Pi (j : J) -> a <= f j) (\Pi {b : E} -> (\Pi (j : J) -> b <= f j) -> b <= a)
 }
 
 \lemma =_<= {P : Preorder} {x y : P} (p : x = y) : x <= y

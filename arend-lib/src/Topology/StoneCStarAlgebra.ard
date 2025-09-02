@@ -49,7 +49,7 @@
     => <=_*n-div {_} {2} suc/=0 $ transport2 (__ <= __ + 1) negative-left (inv zro-left) $ <=_+ (c*-<=-square (=_<= $ negative_* *> ide-left)) <=-refl
 
   \lemma <=-square {a : E} {q : Rat} (q>0 : 0 < q) (aa<=qq : a * a <= q RatField.* q *q ide) : a <= q *q ide
-    => <=_*q-rotate-right q>0 $ c*-<=-square $ =_<= (inv (pmap (`*q _) RatField.finv_* *> *q-assoc *> pmap (_ *q) *q-comm-right *> *q-comm-left)) <=∘ <=_*q-rotate-left (RatField.<_*_positive_positive q>0 q>0) aa<=qq
+    => <=_*q-rotate-right q>0 $ c*-<=-square $ =_<= (inv (pmap (`*q _) RatField.finv_* *> *q-assoc *> pmap (_ *q) *q-comm-right *> *q-comm-left)) <=∘ <=_*q-rotate_finv-left (RatField.<_*_positive_positive q>0 q>0) aa<=qq
 
   \lemma <=-square_negative {a : E} {q : Rat} (q>0 : 0 < q) (aa<=qq : a * a <= q RatField.* q *q ide) : negative a <= q *q ide
     => <=-square q>0 $ transportInv (`<= _) negative_* aa<=qq
@@ -89,7 +89,7 @@
     }
     | norm_*_<= {x} {y} {d} |x||y|<d => \case ExUpperReal.*_U.1 |x||y|<d \with {
       | inP (a, inP (a',a'<a,a'>0,x<=a',-x<=a'), a>0, b, inP (b',b'<b,b'>0,y<=b',-y<=b'), b>0, ab<d) =>
-        \have lem {x} (x<=a' : x <= a' *q 1) (-x<=a' : negative x <= a' *q 1) => transportInv (_ <=) *q-assoc $ <=_*q-rotate-right a'>0 $ transportInv (`<= _) *q-comm-left $ <=_*q-rotate-right b'>0 $ transportInv (`<= _) *q-comm-right $ c*-<=_* (<=_*q-rotate-left a'>0 x<=a') (transport (`<= _) toRatModule.*c_negative-right $ <=_*q-rotate-left a'>0 -x<=a') (<=_*q-rotate-left b'>0 y<=b') (transport (`<= _) toRatModule.*c_negative-right $ <=_*q-rotate-left b'>0 -y<=b')
+        \have lem {x} (x<=a' : x <= a' *q 1) (-x<=a' : negative x <= a' *q 1) => transportInv (_ <=) *q-assoc $ <=_*q-rotate-right a'>0 $ transportInv (`<= _) *q-comm-left $ <=_*q-rotate-right b'>0 $ transportInv (`<= _) *q-comm-right $ c*-<=_* (<=_*q-rotate_finv-left a'>0 x<=a') (transport (`<= _) toRatModule.*c_negative-right $ <=_*q-rotate_finv-left a'>0 -x<=a') (<=_*q-rotate_finv-left b'>0 y<=b') (transport (`<= _) toRatModule.*c_negative-right $ <=_*q-rotate_finv-left b'>0 -y<=b')
         \in inP (a' RatField.* b', RatField.<_* a'>0 b'>0 a'<a b'<b <∘ ab<d, RatField.<_*_positive_positive a'>0 b'>0, lem x<=a' -x<=a', transport (`<= _) negative_*-left $ lem -x<=a' $ transportInv (`<= _) negative-isInv x<=a')
     }
     | norm_ide_<= b>1 => inP (1, b>1, idp, transportInv (1 <=) ide_*q <=-refl, transportInv (_ <=) ide_*q $ negative<=0 zro<=ide <=∘ zro<=ide)
@@ -169,7 +169,7 @@
   \lemma norm-char {x : E} : norm x = toBanach.norm x
     => ExUpperRealAbMonoid.<=-antisymmetric (\lam (inP (a,a<b,a>0,x<=a,-x<=a)) =>
       \let | y => RatField.finv a *q x
-           | |y|<=1 => norm-char-aux c*-sum c*-square (<=_*q-rotate-left a>0 x<=a) $ transport (`<= 1) toRatModule.*c_negative-right (<=_*q-rotate-left a>0 -x<=a)
+           | |y|<=1 => norm-char-aux c*-sum c*-square (<=_*q-rotate_finv-left a>0 x<=a) $ transport (`<= 1) toRatModule.*c_negative-right (<=_*q-rotate_finv-left a>0 -x<=a)
            | |x|<=a => transport (norm __ ExUpperReal.<= a) (inv *q-assoc *> pmap (`*q x) (RatField.finv-right $ RatField.>_/= a>0) *> ide_*q) $ transport2 (ExUpperReal.<=) (inv $ norm_*q-ofPos $ <=-less a>0) (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 $ <=-less a>0) $ ExUpperRealSemigroup.<=_* (ExUpperRealAbMonoid.<=-refl {a}) |y|<=1
       \in |x|<=a a<b) \lam |x|<b => \case U-rounded |x|<b \with {
         | inP (a,|x|<a,a<b) => inP (a, a<b, norm>=0 |x|<a, norm_<=_*q $ ExUpperReal.<_<= |x|<a, norm_<=_*q $ transportInv (ExUpperReal.`<= _) norm_negative $ ExUpperReal.<_<= |x|<a)
@@ -194,9 +194,6 @@
              | lem => transport2 (ExUpperReal.<=) norm-dist ExUpperReal.+-rat $ dist-triang ExUpperRealAbMonoid.<=∘ ExUpperRealAbMonoid.<=_+ lem2 (dist-triang ExUpperRealAbMonoid.<=∘ transport (_ ExUpperReal.<=) ExUpperReal.+-rat (ExUpperRealAbMonoid.<=_+ (transportInv (ExUpperReal.`<= _) norm-dist lem1) (transport (ExUpperReal.`<= _) dist-symm (ExUpperReal.<_<= xa))))
         \in hiding (lem1,lem2) $ lem linarith
     }
-
-  \lemma <=-right-closed (a : E) : IsClosed (a <=)
-    => transport IsClosed (ext \lam x => ext (\lam r => r, \lam r => r)) $ cont-closed (+-cont ContMap.∘ ProductTopSpace.tuple ContMap.id (ContMap.const (negative a))) square-closed
 } \where {
   \type \infix 4 <= {R : Ring} (x y : R) => R.IsSquare (y - x)
 

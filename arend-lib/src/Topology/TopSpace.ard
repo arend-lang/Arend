@@ -51,12 +51,19 @@
   \func IsLimitPoint (x : E) (U : Set E) : \Prop
     => \Pi {V : Set E} -> isOpen V -> V x -> ∃ (y : U) (V y)
 
-  \func IsClosed (U : Set E) : \Prop
+  \type IsClosed (U : Set E) : \Prop
     => \Pi {x : E} -> IsLimitPoint x U -> U x
 
-  \lemma closed-limit {U : Set E} (Uc : IsClosed U) {I : DirectedSet} {f : I -> E} {x : E} (xl : IsLimit f x) (Uf : \Pi (n : I) -> U (f n)) : U x
+  \lemma closed-limit {U : Set E} (Uc : IsClosed U) {I : DirectedSet} {f : I -> E} {x : E} (xl : IsLimit f x) {N : I} (Uf : \Pi {n : I} -> N <= n -> U (f n)) : U x
     => Uc \lam Vo Vx => \case xl Vo Vx \with {
-      | inP (N,h) => inP (f N, Uf N, h <=-refl)
+      | inP (K,Vf) => \case isDirected N K \with {
+        | inP (n,N<=n,K<=n) => inP (f n, Uf N<=n, Vf K<=n)
+      }
+    }
+
+  \lemma closed-limit0 {U : Set E} (Uc : IsClosed U) {I : DirectedSet} {f : I -> E} {x : E} (xl : IsLimit f x) (Uf : \Pi (n : I) -> U (f n)) : U x
+    => \case I.isInhabitted \with {
+      | inP N => closed-limit Uc xl {N} \lam {n} _ => Uf n
     }
 }
 

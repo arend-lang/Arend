@@ -39,11 +39,14 @@
   \lemma <=_*q-cancel-left {q : Rat} (q>0 : 0 < q) {a b : E} (qa<=qb : q *q a <= q *q b) : a <= b
     => from>=0 $ *q_>=0-cancel q>0 $ transportInv (0 <=) toRatModule.*c-ldistr_- (to>=0 qa<=qb)
 
-  \lemma <=_*q-rotate-left {q : Rat} (q>0 : 0 < q) {a b : E} (a<=qb : a <= q *q b) : RatField.finv q *q a <= b
-    => <=_*q-right (<=-less $ RatField.finv>0 q>0) a<=qb <=∘ =_<= (inv *q-assoc *> pmap (`*q b) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q)
+  \lemma <=_*q-rotate-left {q : Rat} (q>0 : 0 < q) {a b : E} (a<=qb : a <= RatField.finv q *q b) : q *q a <= b
+    => transport (__ *q a <= b) RatField.finv_finv $ <=_*q-rotate_finv-left (RatField.finv>0 q>0) a<=qb
 
   \lemma <=_*q-rotate-right {q : Rat} (q>0 : 0 < q) {a b : E} (p : RatField.finv q *q a <= b) : a <= q *q b
     => transport (`<= _) (inv *q-assoc *> pmap (`*q a) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ <=_*q-right (<=-less q>0) p
+
+  \lemma <=_*q-rotate_finv-left {q : Rat} (q>0 : 0 < q) {a b : E} (a<=qb : a <= q *q b) : RatField.finv q *q a <= b
+    => <=_*q-right (<=-less $ RatField.finv>0 q>0) a<=qb <=∘ =_<= (inv *q-assoc *> pmap (`*q b) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q)
 }
 
 \class RieszSpace \extends PosetQModule, AbsAbGroup, LatticeAbGroup.FromJoin {

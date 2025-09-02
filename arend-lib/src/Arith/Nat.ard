@@ -299,6 +299,16 @@
   | 0 => zero<=_
   | suc n => <=-transitive (suc<=suc (monotone-diagonal f mon)) (mon n)
 
+\lemma sequence-monotone {X : Preorder} {f : Nat -> X} (fm : \Pi {n : Nat} -> f n X.<= f (suc n)) {n k : Nat} (p : n <= k) : f n X.<= f k
+  => transport (_ X.<= f __) (<=_exists p) induction
+  \where
+    \private \lemma induction {m : Nat} : f n X.<= f (n + m) \elim m
+      | 0 => <=-refl
+      | suc m => induction <=∘ fm
+
+\lemma sequence-anti-monotone {X : Preorder} {f : Nat -> X} (fm : \Pi {n : Nat} -> f (suc n) X.<= f n) {n k : Nat} (p : n <= k) : f k X.<= f n
+  => sequence-monotone {X.op} fm p
+
 \lemma suc_<_<= {n m : Nat} (p : n < m) : suc n <= m \elim n, m, p
   | 0, suc m, p => suc<=suc zero<=_
   | suc n, suc m, p => suc<=suc $ suc_<_<= {n} {m} (\case p \with { | suc<suc x => x })

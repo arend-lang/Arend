@@ -66,8 +66,8 @@
       | inP (a,a'<a,a<b) =>
         \have x<=a {x} (fx<=a' : func x <= a' *q 1) (-fx<=a' : negative (func x) <= a' *q 1)
               => <=_*q-cancel-left (RatField.finv>0 a'>0) $ transport (_ <=) *q-assoc $ c
-                  (=_<= func-*q <=∘ <=_*q-rotate-left a'>0 fx<=a')
-                  (=_<= (pmap negative func-*q *> inv (later toRatModule.*c_negative-right)) <=∘ <=_*q-rotate-left a'>0 -fx<=a')
+                  (=_<= func-*q <=∘ <=_*q-rotate_finv-left a'>0 fx<=a')
+                  (=_<= (pmap negative func-*q *> inv (later toRatModule.*c_negative-right)) <=∘ <=_*q-rotate_finv-left a'>0 -fx<=a')
                   (transport (_ <) *-comm $ RatField.<_rotate-right a'>0 $ transportInv (`< _) ide-left a'<a)
         \in inP (a, a<b, a'>0 <∘ a'<a, x<=a fx<=a' -fx<=a', x<=a (rewrite func-negative -fx<=a') $ rewrite (func-negative,AddGroup.negative-isInv) fx<=a')
     }, \lam c {x} fx<=1 -fx<=1 q>1 => \case transport (`<= _) c (toBanach_norm<=1 fx<=1 -fx<=1) q>1 \with {
@@ -84,7 +84,7 @@
     | RingHom => f
     | func-<= =>
       \have lem {a} (a>=0 : 0 <= a) : 0 <= f a => \case X.*q-upperBound a \with {
-        | inP (q,q>0,a<=q) => transport (0 <=) (pmap (q *q) func-*q *> inv *q-assoc *> pmap (`*q _) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (RatField.<=-less q>0) $ Y.norm-c*-positive $ =_<= (inv $ pmap norm (f.func-minus *> pmap (`- _) f.func-ide)) <=∘ fn <=∘ toBanach_norm<=1 (<=_+ <=-refl (PosetAddGroup.negative<=0 $ *q_>=0 (RatField.<=-less $ RatField.finv>0 q>0) a>=0) <=∘ =_<= zro-right) (PosetAddGroup.negative<=0 (PosetAddGroup.to>=0 (<=_*q-rotate-left q>0 a<=q)) <=∘ OrderedC*Algebra.zro<=ide)
+        | inP (q,q>0,a<=q) => transport (0 <=) (pmap (q *q) func-*q *> inv *q-assoc *> pmap (`*q _) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (RatField.<=-less q>0) $ Y.norm-c*-positive $ =_<= (inv $ pmap norm (f.func-minus *> pmap (`- _) f.func-ide)) <=∘ fn <=∘ toBanach_norm<=1 (<=_+ <=-refl (PosetAddGroup.negative<=0 $ *q_>=0 (RatField.<=-less $ RatField.finv>0 q>0) a>=0) <=∘ =_<= zro-right) (PosetAddGroup.negative<=0 (PosetAddGroup.to>=0 (<=_*q-rotate_finv-left q>0 a<=q)) <=∘ OrderedC*Algebra.zro<=ide)
       }
       \in \lam x<=y => Y.from>=0 $ transport (0 <=) f.func-minus $ lem (X.to>=0 x<=y)
 }
