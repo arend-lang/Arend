@@ -45,6 +45,9 @@
   \lemma *q-assoc {q r : Rat} {a : E} : q * r *q a = q *q (r *q a)
     => *q_*aq *> pmap (`*aq a) RatField.*_alt *> *aq-assoc {_} {rat_alt q} {rat_alt r} *> inv (pmap (_ *q) *q_*aq *> *q_*aq)
 
+  \lemma *q-cancel {q : Rat} (q/=0 : q /= RatField.zro) {a b : E} (p : q *q a = q *q b) : a = b
+    => inv (pmap (`*q a) (RatField.finv-left q/=0) *> ide_*q) *> *q-assoc *> pmap (RatField.finv q *q) p *> inv *q-assoc *> pmap (`*q b) (RatField.finv-left q/=0) *> ide_*q
+
   \protected \lemma ud-cond {a : E} {n : Nat} {n/=0 : n /= 0} : n *n (uniquelyDivisible a n/=0).center.1 = a
     => (uniquelyDivisible a n/=0).center.2
 

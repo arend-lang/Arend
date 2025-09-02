@@ -150,7 +150,10 @@
        }
     \where
       \func toContr (p : Problem) (t1 t2 : RingTerm C V) : Problem => (t2,LessOrEquals,t1) :: p
-} \where \open LinearlyOrderedSemiring
+} \where {
+  \open PosetSemiring
+  \open LinearlyOrderedSemiring
+}
 
 \class LinearSemiringData \extends LinearData, SemiringData
 

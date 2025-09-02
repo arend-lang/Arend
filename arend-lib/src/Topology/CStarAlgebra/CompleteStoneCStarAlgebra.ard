@@ -2,6 +2,7 @@
 \import Algebra.Module
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
 \import Algebra.Pointed
 \import Algebra.QModule
 \import Algebra.Ring.RingHom
@@ -33,6 +34,7 @@
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \open QModule
+\open PosetQModule
 
 \record OrderedC*AlgebraHom \extends RingHom, PosetHom {
   \override Dom : OrderedC*Algebra
@@ -56,7 +58,7 @@
         | inP (x,xl,xr) => inP (func x, inP (x,idp), Up $ inP (RatField.half eps, RatField.half<id eps>0, RatField.half>0 eps>0, xr, rewrite AddGroup.negative_- xl))
       }
     }, \lam d {eps} eps>0 y => \case d {y} {OBall {toBanach} eps y} (OBall-open {toBanach}) (OBall-center {toBanach} eps>0) \with {
-      | inP (_, inP (x,idp), inP (delta,delta<eps,_,y-x<=delta,x-y<=delta)) => inP (x, (rewrite AddGroup.negative_- in x-y<=delta) <=∘ <=_*q-left (RatField.<=-less delta<eps) zro<=ide, y-x<=delta <=∘ <=_*q-left (RatField.<=-less delta<eps) zro<=ide)
+      | inP (_, inP (x,idp), inP (delta,delta<eps,_,y-x<=delta,x-y<=delta)) => inP (x, (rewrite AddGroup.negative_- in x-y<=delta) <=∘ <=_*q-left (RatField.<=-less delta<eps) OrderedC*Algebra.zro<=ide, y-x<=delta <=∘ <=_*q-left (RatField.<=-less delta<eps) OrderedC*Algebra.zro<=ide)
     })
 
   \lemma isometry-toNormed : IsIsometric <-> (\Pi {x : Dom} -> toBanach.norm (func x) = toBanach.norm x)
@@ -69,7 +71,7 @@
                   (transport (_ <) *-comm $ RatField.<_rotate-right a'>0 $ transportInv (`< _) ide-left a'<a)
         \in inP (a, a<b, a'>0 <∘ a'<a, x<=a fx<=a' -fx<=a', x<=a (rewrite func-negative -fx<=a') $ rewrite (func-negative,AddGroup.negative-isInv) fx<=a')
     }, \lam c {x} fx<=1 -fx<=1 q>1 => \case transport (`<= _) c (toBanach_norm<=1 fx<=1 -fx<=1) q>1 \with {
-      | inP (r,r<q,_,x<=r,_) => x<=r <=∘ <=_*q-left (RatField.<=-less r<q) zro<=ide
+      | inP (r,r<q,_,x<=r,_) => x<=r <=∘ <=_*q-left (RatField.<=-less r<q) OrderedC*Algebra.zro<=ide
     })
 
   \lemma toIsometry (p : IsIsometric) : NormedIsometricMap toBanach toBanach func \cowith
@@ -82,7 +84,7 @@
     | RingHom => f
     | func-<= =>
       \have lem {a} (a>=0 : 0 <= a) : 0 <= f a => \case X.*q-upperBound a \with {
-        | inP (q,q>0,a<=q) => transport (0 <=) (pmap (q *q) func-*q *> inv *q-assoc *> pmap (`*q _) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (RatField.<=-less q>0) $ Y.norm-c*-positive $ =_<= (inv $ pmap norm (f.func-minus *> pmap (`- _) f.func-ide)) <=∘ fn <=∘ toBanach_norm<=1 (<=_+ <=-refl (PosetAddGroup.negative<=0 $ *q_>=0 (RatField.<=-less $ RatField.finv>0 q>0) a>=0) <=∘ =_<= zro-right) (PosetAddGroup.negative<=0 (PosetAddGroup.to>=0 (<=_*q-rotate-left q>0 a<=q)) <=∘ zro<=ide)
+        | inP (q,q>0,a<=q) => transport (0 <=) (pmap (q *q) func-*q *> inv *q-assoc *> pmap (`*q _) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (RatField.<=-less q>0) $ Y.norm-c*-positive $ =_<= (inv $ pmap norm (f.func-minus *> pmap (`- _) f.func-ide)) <=∘ fn <=∘ toBanach_norm<=1 (<=_+ <=-refl (PosetAddGroup.negative<=0 $ *q_>=0 (RatField.<=-less $ RatField.finv>0 q>0) a>=0) <=∘ =_<= zro-right) (PosetAddGroup.negative<=0 (PosetAddGroup.to>=0 (<=_*q-rotate-left q>0 a<=q)) <=∘ OrderedC*Algebra.zro<=ide)
       }
       \in \lam x<=y => Y.from>=0 $ transport (0 <=) f.func-minus $ lem (X.to>=0 x<=y)
 }

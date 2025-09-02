@@ -9,6 +9,7 @@
 \import Algebra.Pointed
 \import Algebra.QModule
 \import Algebra.Ring
+\import Analysis.FuncLimit
 \import Analysis.Limit
 \import Arith.Nat
 \import Arith.Rat
@@ -28,16 +29,19 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set.Subset
 \import Topology.BanachSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.CompletionTools
 \import Topology.CoverSpace.Product
+\import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.ExComplete
 \import Topology.NormedAbGroup.Real
 \import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedRing
 \import Topology.TopAbGroup.Complete
+\import Topology.TopAbGroup.Product
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 
@@ -73,57 +77,71 @@
 \class RealBanachAlgebra \extends RealBanachPseudoAlgebra, BanachAlgebra, RealPreBanachAlgebra {
   -- | [1] Lemma 1
   \sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) ExUpperReal.<= RatField.ide) : E
-    => limit zfunc zfunc-conv
+    => zfunc-lim (x,|1-x|<=1)
     \where \protected {
-      \sfunc yfunc (n : Nat) : E \elim n
+      \func UnitBall => ExPseudoMetricTransfer {Set.Total \lam x => norm (1 - x) ExUpperReal.<= RatField.ide} __.1
+
+      \sfunc yfunc (n : Nat) (x : E) : E \elim n
         | 0 => 0
-        | suc n => ratio 1 2 *q (1 - x + yfunc n * yfunc n)
+        | suc n => ratio 1 2 *q (1 - x + yfunc n x * yfunc n x)
 
-      \lemma yfunc<=rfunc {n : Nat} : norm (yfunc n) <= rfunc n \elim n
-        | 0 => rewrite (\peval yfunc 0, \peval rfunc 0, norm_zro) <=-refl
-        | suc n => rewrite (\peval yfunc (suc n), \peval rfunc (suc n), norm_*q, inv $ ExUpperReal.*-rat rat_<=-dec $ RatField.<=_+-positive rat_<=-dec $ RatField.<=_*_positive_positive rfunc>=0 rfunc>=0) $
-          ExUpperRealSemigroup.<=_* (ExUpperReal.<=-rat.1 rat_<=-dec) $ transport (_ <=) ExUpperReal.+-rat $ norm_+ <=∘ ExUpperRealAbMonoid.<=_+ |1-x|<=1 (transport (_ <=) (ExUpperReal.*-rat rfunc>=0 rfunc>=0) $ norm_*_<= <=∘ ExUpperRealSemigroup.<=_* yfunc<=rfunc yfunc<=rfunc)
+      \lemma yfunc<=rfunc {n : Nat} {s : UnitBall} : norm (yfunc n s.1) <= rfunc n \elim n
+        | 0 => rewrite (\peval yfunc 0 s.1, \peval rfunc 0, norm_zro) <=-refl
+        | suc n => rewrite (\peval yfunc (suc n) s.1, \peval rfunc (suc n), norm_*q, inv $ ExUpperReal.*-rat rat_<=-dec $ RatField.<=_+-positive rat_<=-dec $ RatField.<=_*-positive rfunc>=0 rfunc>=0) $
+          ExUpperRealSemigroup.<=_* (ExUpperReal.<=-rat.1 rat_<=-dec) $ transport (_ <=) ExUpperReal.+-rat $ norm_+ <=∘ ExUpperRealAbMonoid.<=_+ s.2 (transport (_ <=) (ExUpperReal.*-rat rfunc>=0 rfunc>=0) $ norm_*_<= <=∘ ExUpperRealSemigroup.<=_* yfunc<=rfunc yfunc<=rfunc)
 
-      \lemma yfunc-comm {a : E} (p : a * x = x * a) {n : Nat} : yfunc n * a = a * yfunc n \elim n
-        | 0 => pmap (`* a) (\peval yfunc 0) *> zro_*-left *> inv (pmap (a *) (\peval yfunc 0) *> zro_*-right)
-        | suc n => pmap (`* _) (\peval yfunc (suc n)) *> inv *q-comm-left *> pmap (_ *q) (rdistr *> pmap2 (+) (rdistr_- *> pmap2 (-) (ide-left *> inv ide-right) (inv p) *> inv ldistr_-) (*-assoc *> pmap (_ *) (yfunc-comm p) *> inv *-assoc *> pmap (`* _) (yfunc-comm p) *> *-assoc) *> inv ldistr) *> *q-comm-right *> inv (pmap (_ *) (\peval yfunc (suc n)))
+      \lemma yfunc-comm {a x : E} (p : a * x = x * a) {n : Nat} : yfunc n x * a = a * yfunc n x \elim n
+        | 0 => pmap (`* a) (\peval yfunc 0 x) *> zro_*-left *> inv (pmap (a *) (\peval yfunc 0 x) *> zro_*-right)
+        | suc n => pmap (`* _) (\peval yfunc (suc n) x) *> inv *q-comm-left *> pmap (_ *q) (rdistr *> pmap2 (+) (rdistr_- *> pmap2 (-) (ide-left *> inv ide-right) (inv p) *> inv ldistr_-) (*-assoc *> pmap (_ *) (yfunc-comm p) *> inv *-assoc *> pmap (`* _) (yfunc-comm p) *> *-assoc) *> inv ldistr) *> *q-comm-right *> inv (pmap (_ *) (\peval yfunc (suc n) x))
 
-      \lemma yfunc-rec {n : Nat} : yfunc (suc (suc n)) - yfunc (suc n) = ratio 1 2 *q ((yfunc (suc n) + yfunc n) * (yfunc (suc n) - yfunc n))
-        => pmap2 (-) (\peval yfunc (suc (suc n))) (\peval yfunc (suc n)) *> inv toRatModule.*c-ldistr_- *> pmap (_ *q) (simplify $ inv $ sum_diff $ yfunc-comm $ yfunc-comm idp)
+      \lemma yfunc-rec {n : Nat} {x : E} : yfunc (suc (suc n)) x - yfunc (suc n) x = ratio 1 2 *q ((yfunc (suc n) x + yfunc n x) * (yfunc (suc n) x - yfunc n x))
+        => pmap2 (-) (\peval yfunc (suc (suc n)) x) (\peval yfunc (suc n) x) *> inv toRatModule.*c-ldistr_- *> pmap (_ *q) (simplify $ inv $ *_sum_diff $ yfunc-comm $ yfunc-comm idp)
 
-      \lemma yfunc_rfunc-diff1 {n : Nat} : norm (yfunc (suc n) - yfunc n) <= rfunc (suc n) - rfunc n \elim n
-        | 0 => rewrite (\peval yfunc 0, \peval rfunc 0) (simplify yfunc<=rfunc)
-        | suc n => rewrite (yfunc-rec, rfunc-rec, norm_*q, inv $ ExUpperReal.*-rat rat_<=-dec $ RatField.<=_*_positive_positive (RatField.<=_+-positive rfunc>=0 rfunc>=0) (RatField.to>=0 rfunc-inc), inv $ ExUpperReal.*-rat (RatField.<=_+-positive rfunc>=0 rfunc>=0) (RatField.to>=0 rfunc-inc), inv ExUpperReal.+-rat) $ ExUpperRealSemigroup.<=_* <=-refl $ norm_*_<= <=∘ ExUpperRealSemigroup.<=_* (norm_+ <=∘ ExUpperRealAbMonoid.<=_+ yfunc<=rfunc yfunc<=rfunc) yfunc_rfunc-diff1
+      \lemma yfunc_rfunc-diff1 {n : Nat} {s : UnitBall} : norm (yfunc (suc n) s.1 - yfunc n s.1) <= rfunc (suc n) - rfunc n \elim n
+        | 0 => rewrite (\peval yfunc 0 s.1, \peval rfunc 0) (simplify yfunc<=rfunc)
+        | suc n => rewrite (yfunc-rec, rfunc-rec, norm_*q, inv $ ExUpperReal.*-rat rat_<=-dec $ RatField.<=_*-positive (RatField.<=_+-positive rfunc>=0 rfunc>=0) (RatField.to>=0 rfunc-inc), inv $ ExUpperReal.*-rat (RatField.<=_+-positive rfunc>=0 rfunc>=0) (RatField.to>=0 rfunc-inc), inv ExUpperReal.+-rat) $ ExUpperRealSemigroup.<=_* <=-refl $ norm_*_<= <=∘ ExUpperRealSemigroup.<=_* (norm_+ <=∘ ExUpperRealAbMonoid.<=_+ yfunc<=rfunc yfunc<=rfunc) yfunc_rfunc-diff1
 
-      \lemma yfunc_rfunc-diff {n k : Nat} : norm (yfunc (n Nat.+ k) - yfunc n) <= rfunc (n Nat.+ k) - rfunc n \elim k
+      \lemma yfunc_rfunc-diff {n k : Nat} {s : UnitBall} : norm (yfunc (n Nat.+ k) s.1 - yfunc n s.1) <= rfunc (n Nat.+ k) - rfunc n \elim k
         | 0 => simplify $ rewrite norm_zro <=-refl
-        | suc k => transport2 (norm __ <= __) {yfunc (suc (n Nat.+ k)) - yfunc (n Nat.+ k) + (yfunc (n Nat.+ k) - yfunc n)} {_} {rfunc (suc (n Nat.+ k)) - rfunc (n Nat.+ k) RatField.+ (rfunc (n Nat.+ k) - rfunc n)} simplify simplify $ norm_+ <=∘ transport (_ <=) ExUpperReal.+-rat (ExUpperRealAbMonoid.<=_+ yfunc_rfunc-diff1 yfunc_rfunc-diff)
+        | suc k => transport2 (norm __ <= __) {yfunc (suc (n Nat.+ k)) s.1 - yfunc (n Nat.+ k) s.1 + (yfunc (n Nat.+ k) s.1 - yfunc n s.1)} {_} {rfunc (suc (n Nat.+ k)) - rfunc (n Nat.+ k) RatField.+ (rfunc (n Nat.+ k) - rfunc n)} simplify simplify $ norm_+ <=∘ transport (_ <=) ExUpperReal.+-rat (ExUpperRealAbMonoid.<=_+ yfunc_rfunc-diff1 yfunc_rfunc-diff)
 
-      \func zfunc (n : Nat) => 1 - yfunc n
+      \func zfunc (n : Nat) (x : E) => 1 - yfunc n x
 
-      \lemma zfunc-comm {a : E} (p : a * x = x * a) {n : Nat} : zfunc n * a = a * zfunc n
+      \lemma zfunc-comm {a x : E} (p : a * x = x * a) {n : Nat} : zfunc n x * a = a * zfunc n x
         => rdistr_- *> pmap2 (-) (ide-left *> inv ide-right) (yfunc-comm p) *> inv ldistr_-
 
-      \lemma zfunc_rfunc-diff {n k : Nat} (n<=k : n <= k) : norm (zfunc k - zfunc n) <= rfunc k - rfunc n
+      \lemma zfunc_rfunc-diff {n k : Nat} (n<=k : n <= k) {s : UnitBall} : norm (zfunc k s.1 - zfunc n s.1) <= rfunc k - rfunc n
         => transport (ExUpperReal.`<= _) norm_negative $ simplify $ rewrite (+-comm, inv $ <=_exists n<=k) yfunc_rfunc-diff
 
-      \lemma zfunc-conv : IsConvergent zfunc
-        => convergent-metric-char.2 \lam eps>0 => \case convergent-metric-char.1 (limit-conv rfunc-limit) eps>0 \with {
-          | inP (N,g) => inP (N, \lam p => rewrite norm-dist $ zfunc_rfunc-diff p $ RatField.abs>=id <∘r g p)
+      \lemma zfunc-uni : IsUniFuncConvergent {_} {UnitBall} \lam n s => zfunc n s.1
+        => metric-uni-funcConvergent.2 \lam eps>0 => \case convergent-metric-char.1 (limit-conv rfunc-limit) eps>0 \with {
+          | inP (N,g) => inP (N, \lam s p => rewrite norm-dist $ zfunc_rfunc-diff p $ RatField.abs>=id <∘r g p)
         }
+
+      \lemma yfunc-cover (n : Nat) : CoverMap \this \this (yfunc n) \elim n
+        | 0 => transportInv (CoverMap \this \this) (ext \lam x => \peval yfunc 0 x) (CoverMap.const 0)
+        | suc n => transportInv (CoverMap \this \this) (path \lam i x => (\peval yfunc (suc n) x) i) $ *q-right-uniform ∘ +-uniform ∘ tuple (subtract-uniform ∘ tuple (const 1) id) (*-locally-uniform ∘ tuple (yfunc-cover n) (yfunc-cover n))
+
+      \lemma zfunc-cover (n : Nat) : CoverMap UnitBall \this \lam s => zfunc n s.1
+        => subtract-uniform ∘ tuple (const 1) (yfunc-cover n) ∘ CoverTransfer-map __.1
+
+      \lemma zfunc-funcConv : IsFuncConvergent {_} {UnitBall} \lam n s => zfunc n s.1
+        => funcCovergent-uni zfunc-cover zfunc-uni
+
+      \func zfunc-lim => funcLimit {_} {UnitBall} (\lam n s => zfunc n s.1) zfunc-funcConv
 
       \lemma isSquare : sqrt x |1-x|<=1 * sqrt x |1-x|<=1 = x
         => pmap2 (*) (\peval sqrt _ _) (\peval sqrt _ _) *> limit-unique (cont2-limit limit-isLimit limit-isLimit *-cont)
             (limit-metric-char.2 \lam eps>0 => \case convergent-metric-char.double (limit-conv rfunc-limit) (RatField.half>0 eps>0) \with {
-              | inP (N,h) => inP (N, \lam {n} N<=n => rewrite (dist-symm, norm-dist, dist-lem n, norm_*q) $ ExUpperRealSemigroup.<=_* <=-refl yfunc_rfunc-diff1 $ rewrite (ExUpperReal.*-rat rat_<=-dec $ RatField.to>=0 rfunc-inc) $ transport (`< _) RatField.*-comm $ RatField.<_rotate-right-conv rat_<-dec $ RatField.abs>=id <∘r h (N<=n <=∘ id<=suc) N<=n)
+              | inP (N,h) => inP (N, \lam {n} N<=n => rewrite (dist-symm, norm-dist, dist-lem n, norm_*q) $ ExUpperRealSemigroup.<=_* <=-refl (yfunc_rfunc-diff1 {_} {_} {x,|1-x|<=1}) $ rewrite (ExUpperReal.*-rat rat_<=-dec $ RatField.to>=0 rfunc-inc) $ transport (`< _) RatField.*-comm $ RatField.<_rotate-right-conv rat_<-dec $ RatField.abs>=id <∘r h (N<=n <=∘ id<=suc) N<=n)
             })
         \where {
-          \lemma dist-lem (n : Nat) : zfunc n * zfunc n - x = RatField.natCoef 2 *q (yfunc (suc n) - yfunc n)
-            => rewrite (\peval yfunc (suc n), toRatModule.*c-ldistr_-, inv *q-assoc, ide_*q, toRatModule.*c-rdistr {RatField.ide} {RatField.ide}, ide_*q) equation.ring
+          \lemma dist-lem (n : Nat) : zfunc n x * zfunc n x - x = RatField.natCoef 2 *q (yfunc (suc n) x - yfunc n x)
+            => rewrite (\peval yfunc (suc n) x, toRatModule.*c-ldistr_-, inv *q-assoc, ide_*q, toRatModule.*c-rdistr {RatField.ide} {RatField.ide}, ide_*q) equation.ring
         }
 
       \lemma comm {y : E} (yx=xy : y * x = x * y) : sqrt x |1-x|<=1 * y = y * sqrt x |1-x|<=1
-        => rewrite (\peval sqrt x _) $ limit-apply (*-locally-uniform ∘ tuple id (const y)) *> limit-ext (zfunc __ * y) (y * zfunc __) (\lam i => zfunc-comm yx=xy) *> inv (limit-apply (*-locally-uniform ∘ tuple (const y) id))
+        => rewrite (\peval sqrt x _) $ limit-apply (*-locally-uniform ∘ tuple id (const y)) *> limit-ext (zfunc __ x * y) (y * zfunc __ x) (\lam i => zfunc-comm yx=xy) *> inv (limit-apply (*-locally-uniform ∘ tuple (const y) id))
     }
 
   \lemma norm-square {x : E} (p : norm (1 - x) <= RatField.ide) : IsSquare x
@@ -131,6 +149,10 @@
 
   \lemma norm-square' {x : E} (p : norm x <= RatField.ide) : IsSquare (1 - x)
     => norm-square (simplify p)
+
+  \lemma norm_*q-square {q : Rat} (q>0 : 0 < q) {x : E} (p : norm (q *q 1 - x) <= q) : IsSquare x
+    => \let s => sqrt (RatField.finv q *q x) $ transport2 (ExUpperReal.<=) (inv (norm_*q-ofPos $ <=-less $ RatField.finv>0 q>0) *> pmap norm (toRatModule.*c-ldistr_- *> pmap (`- _) (inv *q-assoc *> pmap (`*q _) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q))) (ExUpperReal.*-rat (<=-less $ RatField.finv>0 q>0) (<=-less q>0) *> pmap ExUpperReal.fromRat (RatField.finv-left $ RatField.>_/= q>0)) (ExUpperRealSemigroup.<=_* ExUpperRealAbMonoid.<=-refl p)
+       \in inP (sqrtR q *r s, inv *r-comm-left *> pmap (_ *r) (inv *r-comm-right) *> inv toRealAlgebra.*c-assoc *> pmap2 (*r) (pow_sqrt $ rat_real_<=.1 $ <=-less q>0) sqrt.isSquare *> *r_*q *> inv *q-assoc *> pmap (`*q x) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q)
 } \where \protected {
   \open CoverMap
   \open ProductCoverSpace
@@ -141,7 +163,7 @@
 
   \lemma rfunc>=0 {n : Nat} : 0 <= rfunc n \elim n
     | 0 => rewrite (\peval rfunc 0) <=-refl
-    | suc n => rewrite (\peval rfunc (suc n)) $ RatField.<=_*_positive_positive rat_<=-dec $ RatField.<=_+-positive rat_<=-dec $ RatField.<=_*_positive_positive rfunc>=0 rfunc>=0
+    | suc n => rewrite (\peval rfunc (suc n)) $ RatField.<=_*-positive rat_<=-dec $ RatField.<=_+-positive rat_<=-dec $ RatField.<=_*-positive rfunc>=0 rfunc>=0
 
   \lemma rfunc<=1 {n : Nat} : rfunc n <= 1 \elim n
     | 0 => rewrite (\peval rfunc 0) rat_<=-dec
@@ -151,7 +173,7 @@
     | 0 => rewrite (\peval rfunc 0) rfunc>=0
     | suc n => rewrite (\peval rfunc (suc (suc n))) $ RatField.from>=0 $ transport (0 <=) {ratio 1 2 * ((1 - rfunc (suc n)) * (1 - rfunc (suc n)))}
       (later $ rewrite (RatField.ldistr_-, RatField.rdistr_-, RatField.rdistr_-) linarith) -- TODO: equation.ring should work here, but it doesn't support rational coefficients yet
-      $ RatField.<=_*_positive_positive rat_<=-dec RatField.square_>=0
+      $ RatField.<=_*-positive rat_<=-dec RatField.square_>=0
 
   \lemma rfunc-rec {n : Nat} : rfunc (suc (suc n)) - rfunc (suc n) = ratio 1 2 * ((rfunc (suc n) + rfunc n) * (rfunc (suc n) - rfunc n))
     => rewrite (\peval rfunc (suc (suc n)), \peval rfunc (suc n)) equation.cRing

@@ -65,7 +65,7 @@
         | inP (a,_,a<x,x<ac1) => inP (a * finv c, transportInv L (*-assoc *> pmap (a *) (finv-left $ RatField.>_/= c>0) *> ide-right) a<x, x<ac1)
       }
       | inr c<=0 => \case U-inh \with {
-        | inP (b,x<b) => inP (b, L_<= x>0 $ <=_*_positive_negative (<_<= $ LU-less x>0 x<b) c<=0, x<b)
+        | inP (b,x<b) => inP (b, L_<= x>0 $ PosetSemiring.<=_*_positive_negative (<_<= $ LU-less x>0 x<b) c<=0, x<b)
       }
     }
 } \where {

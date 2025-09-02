@@ -130,7 +130,7 @@
     \lemma *_>=0-char {x y : Real} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {d : Rat} : (x * y).U d <-> ∃ (a : x.U) (b : y.U) (a *' b <= d)
       => (\lam xy<d => \case y.LU-located {0} {1} idp \with {
         | byLeft y>0 => *_>0-char2 x>=0 (real_<_L.2 y>0) xy<d
-        | byRight y<1 => \case x.LU-located {0} {d} $ rat_real_<.2 $ RealField.<=_*_positive_positive x>=0 y>=0 <∘r real_<_U.2 xy<d \with {
+        | byRight y<1 => \case x.LU-located {0} {d} $ rat_real_<.2 $ RealField.<=_*-positive x>=0 y>=0 <∘r real_<_U.2 xy<d \with {
           | byLeft x>0 => \case *_>0-char2 y>=0 (real_<_L.2 x>0) (rewrite *-comm xy<d) \with {
             | inP (b,y<b,a,x<a,ba<=d) => inP (a, x<a, b, y<b, transport (`<= _) RatField.*-comm ba<=d)
           }

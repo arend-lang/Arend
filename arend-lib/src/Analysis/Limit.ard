@@ -3,9 +3,11 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
+\import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
+\import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -108,7 +110,7 @@
     \protected \lemma conv {I : DirectedSet} {X : RegularPreuniformSpace} {f : I -> X} (fc : IsConvergent f) : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))
       => \lam Cu => convergent-char.conv fc (X.makeCauchy Cu)
 
-\lemma convergent-topAbGruop-char {I : DirectedSet} {X : TopAbGroup} {f : I -> X} : TFAE (
+\lemma convergent-topAbGroup-char {I : DirectedSet} {X : TopAbGroup} {f : I -> X} : TFAE (
     IsConvergent f,
     ∀ {U : X.isOpen} (U 0) ∃ (N : I) ∀ {n m} (N <= n -> n <= m -> U (f m - f n)),
     ∀ {U : X.isOpen} (U 0) ∃ (N : I) ∀ {n} (N <= n -> U (f n - f N))
@@ -166,6 +168,18 @@
           | inP (N,g) => inP (N, \lam p => q (g p))
         }
       })
+
+\lemma nat-limit-metric {X : ExPseudoMetricSpace} {f : Nat -> X} {l : X} (fb : (dist l (f 0)).IsBounded) {d : ExUpperReal} (d>=0 : 0 <= d) (d<1 : d.U 1) (dp : \Pi (n : Nat) -> dist l (f (suc n)) <= d * dist l (f n)) : X.IsLimit f l \elim fb
+  | inP (B,lf0<B) => \case U-rounded d<1 \with {
+    | inP (q,d<q,q<1) => limit-metric-char.2 \lam {eps} eps>0 =>
+      \have N => rat_<1_pow-bound q<1 {eps * RatField.finv B} $ RatField.<_*_positive_positive eps>0 $ RatField.finv>0 $ dist>=0 lf0<B
+      \in inP (N.1, \lam {n} p => induction lf0<B {q} (<=-less $ d>=0 d<q) (\lam k => dp k <=∘ ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= d<q) <=-refl) n $ RatField.<=_*_positive-left (RatField.pow_<=-degree (<=-less $ d>=0 d<q) (<=-less q<1) p) (<=-less $ dist>=0 lf0<B) <∘r RatField.<_rotate-right-conv (dist>=0 lf0<B) N.2)
+  }
+  \where {
+    \private \lemma induction {B : Rat} (fB : (dist l (f 0)).U B) {q : Rat} (q>=0 : 0 <= q) (dq : \Pi (n : Nat) -> dist l (f (suc n)) <= ExUpperReal.fromRat q * dist l (f n)) (n : Nat) : dist l (f n) <= RatField.pow q n * B \elim n
+      | 0 => ExUpperReal.<_<= fB <=∘ =_<= (inv $ pmap ExUpperReal.fromRat ide-left)
+      | suc n => dq n <=∘ ExUpperRealSemigroup.<=_* <=-refl (induction fB q>=0 dq n) <=∘ =_<= (ExUpperReal.*-rat q>=0 (RatField.<=_*-positive (RatField.pow>=0 q>=0) $ <=-less $ dist>=0 fB) *> pmap ExUpperReal.fromRat (inv *-assoc *> pmap (`* B) RatField.pow-left))
+  }
 
 \lemma limit-metric-real {I : DirectedSet} {X : PseudoMetricSpace} {f : I -> X} {l : X}
   : X.IsLimit f l <-> ∀ {eps} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> X.dist l (f n) < eps)

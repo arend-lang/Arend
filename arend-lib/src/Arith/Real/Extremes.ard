@@ -21,7 +21,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Subset
-\open LinearlyOrderedAbGroup
+\open LatticeAbGroup
 
 \func IsSup (A : Set Real) (b : Real) : \Prop
   => \Sigma (∀ {a : A} (a <= b)) (∀ {eps} (0 < eps) ∃ (x : A) (b < x + eps))

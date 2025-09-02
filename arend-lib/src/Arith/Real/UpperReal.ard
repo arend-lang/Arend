@@ -461,11 +461,11 @@
       }
       \where \private {
         \lemma step {e : Rat} (e>=0 : 0 RatField.<= e) (x<=q+e : x <= q RatField.+ e) : x <= q RatField.+ e RatField.* ratio 1 2
-          => square_<= (RatField.<=_+ q>=0 $ RatField.<=_*_positive_positive e>=0 rat_<=-dec) $ xx<=qx <=∘ <=_* <=-refl x<=q+e <=∘ transportInv (`<= _) (*-rat q>=0 $ <=_+ q>=0 e>=0) (<=-rat.1 $ transport2 (RatField.<=) {_} {_} {q RatField.* q RatField.+ q RatField.* e RatField.* ratio 1 2 RatField.* 2 RatField.+ (e RatField.* e) RatField.* ratio 1 2 RatField.* ratio 1 2} (inv RatField.ldistr) equation.cRing $ linarith (RatField.<=_*_positive_positive e>=0 e>=0))
+          => square_<= (RatField.<=_+ q>=0 $ <=_*-positive e>=0 rat_<=-dec) $ xx<=qx <=∘ <=_* <=-refl x<=q+e <=∘ transportInv (`<= _) (*-rat q>=0 $ <=_+ q>=0 e>=0) (<=-rat.1 $ transport2 (RatField.<=) {_} {_} {q RatField.* q RatField.+ q RatField.* e RatField.* ratio 1 2 RatField.* 2 RatField.+ (e RatField.* e) RatField.* ratio 1 2 RatField.* ratio 1 2} (inv RatField.ldistr) equation.cRing $ linarith (RatField.<=_*_positive_positive e>=0 e>=0))
 
         \lemma aux {e : Rat} (e>=0 : 0 RatField.<= e) (x<=q+e : x <= q RatField.+ e) (n : Nat) : x <= q RatField.+ e RatField.* RatField.pow (ratio 1 2) n \elim n
           | 0 => transportInv (x <= q RatField.+ __) RatField.ide-right x<=q+e
-          | suc n => rewriteI RatField.*-assoc $ step (RatField.<=_*_positive_positive e>=0 $ RatField.pow>=0 rat_<=-dec) (aux e>=0 x<=q+e n)
+          | suc n => rewriteI RatField.*-assoc $ step (<=_*-positive e>=0 $ RatField.pow>=0 rat_<=-dec) (aux e>=0 x<=q+e n)
       }
   }
 

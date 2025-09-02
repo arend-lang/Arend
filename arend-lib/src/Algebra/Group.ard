@@ -367,6 +367,15 @@
 
   \lemma diff-cancel-left {x y z : E} : x - z - (x - y) = y - z
     => sum-cancel-left *> +-comm *> pmap (`- z) negative-isInv
+
+  \lemma negative_+-comm {x y : E} : negative (x + y) = negative x - y
+    => negative_+ *> +-comm
+
+  \lemma diff_sum {x y z : E} : x - (y + z) = x - y - z
+    => pmap (x +) negative_+-comm *> inv +-assoc
+
+  \lemma diff_diff {x y z : E} : x - (y - z) = x - y + z
+    => diff_sum *> pmap (x - y + __) negative-isInv
 } \where {
     \use \coerce fromCGroup (G : CGroup) => \new AbGroup G.E G.ide (G.*) G.ide-left G.ide-right G.*-assoc G.inverse G.inverse-left G.*-comm
     \use \coerce toCGroup (G : AbGroup) => \new CGroup G.E G.zro (G.+) G.+-assoc G.zro-left G.zro-right G.negative G.negative-left G.+-comm

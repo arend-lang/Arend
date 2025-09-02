@@ -53,6 +53,11 @@
 
   \func IsClosed (U : Set E) : \Prop
     => \Pi {x : E} -> IsLimitPoint x U -> U x
+
+  \lemma closed-limit {U : Set E} (Uc : IsClosed U) {I : DirectedSet} {f : I -> E} {x : E} (xl : IsLimit f x) (Uf : \Pi (n : I) -> U (f n)) : U x
+    => Uc \lam Vo Vx => \case xl Vo Vx \with {
+      | inP (N,h) => inP (f N, Uf N, h <=-refl)
+    }
 }
 
 \func DiscreteTopSpace (X : \Set) : TopSpace X \cowith
@@ -161,6 +166,14 @@
       | inP (N,g) => inP (N, \lam N<=n => q $ g N<=n)
     }
   }
+
+\lemma cont-limit-point {X Y : TopSpace} (f : ContMap X Y) {S : Set Y} {x : X} (xl : X.IsLimitPoint x (f ^-1 S)) : Y.IsLimitPoint (f x) S
+  => \lam Vo Vfx => \case xl (f.func-cont Vo) Vfx \with {
+    | inP (x,Sfx,Vfx) => inP (f x, Sfx, Vfx)
+  }
+
+\lemma cont-closed {X Y : TopSpace} (f : ContMap X Y) {S : Set Y} (Sc : Y.IsClosed S) : X.IsClosed (f ^-1 S)
+  => \lam xl => Sc (cont-limit-point f xl)
 
 \class HausdorffTopSpace \extends TopSpace {
   | isHausdorff {x y : E} : ∀ {U V : isOpen} (U x) (V y) ∃ (U ∧ V) -> x = y

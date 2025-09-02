@@ -33,8 +33,11 @@
 \import Set
 \import Topology.BanachAlgebra
 \import Topology.BanachSpace
+\import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedRing
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
 
 \class OrderedC*Algebra \extends QAlgebra, PosetQModule, CRing {
   | c*-archimedean (a : E) : ∃ (B : Nat) (a <= natCoef B)
@@ -42,7 +45,7 @@
   | c*-<=_*-square {a : E} : a <= 1 -> negative a <= 1 -> a * a <= 1
   | c*-<=-square {a : E} : a * a <= 1 -> a <= 1
 
-  \lemma zro<=ide : 0 <= 1
+  \protected \lemma zro<=ide : 0 <= 1
     => <=_*n-div {_} {2} suc/=0 $ transport2 (__ <= __ + 1) negative-left (inv zro-left) $ <=_+ (c*-<=-square (=_<= $ negative_* *> ide-left)) <=-refl
 
   \lemma <=-square {a : E} {q : Rat} (q>0 : 0 < q) (aa<=qq : a * a <= q RatField.* q *q ide) : a <= q *q ide
@@ -123,12 +126,14 @@
         \in ExUpperRealAbMonoid.<-rat.1 $ ExUpperRealSemigroup.finv_<-rotate-left a>0 (ExUpperRealAbMonoid.<-rat.2 $ norm>=0 |x|<c) $ transport (_ <) ExUpperRealSemigroup.*-comm $ c*-square <∘r |xx|<ca) a<b) $ Join-univ \lam s => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* <=-refl s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right norm>=0)
 }
 
-\class StoneC*Algebra \extends StoneC*PseudoAlgebra, RealBanachAlgebra, OrderedC*Algebra {
+\class StoneC*Algebra \extends StoneC*PseudoAlgebra, RealBanachAlgebra, OrderedC*Algebra, PosetRing {
   | <= => StoneC*Algebra.<=
   | <=-refl => inP (0, zro_*-right *> inv negative-right)
   | <=-transitive y-x-sq z-y-sq => transport IsSquare simplify (square-sum c*-sum z-y-sq y-x-sq)
   | <=-antisymmetric (inP (a,aa=y-x)) (inP (b,bb=x-y)) => inv $ fromZero $ inv aa=y-x *> norm-ext (ExUpperRealAbMonoid.<=-antisymmetric (c*-sum ExUpperRealAbMonoid.<=∘ =_<= {ExUpperRealAbMonoid} (pmap norm (simplify in pmap (_ +) bb=x-y *> pmap (`+ _) aa=y-x) *> norm_zro)) norm>=0)
   | <=_+ p q => transport IsSquare equation.abGroup (square-sum c*-sum p q)
+  | zro<=ide => OrderedC*Algebra.zro<=ide
+  | <=_*-positive (inP (a,aa=x)) (inP (b,bb=y)) => inP (a * b, equation.cMonoid {aa=x *> minus_zro, bb=y *> minus_zro} *> inv minus_zro)
 
   | <=_*n-div {n} n/=0 na>=0 => \case *n_>=0 na>=0 \with {
     | inP (b,bb=nna) => inP (RatField.finv n *q b, simplify $ simplify at bb=nna $ inv *q-comm-left *> pmap (_ *q) (inv *q-comm-right) *> pmap (RatField.finv n *q) (pmap (RatField.finv n *q) (bb=nna *> inv *q_*n) *> inv *q-assoc *> pmap (`*q _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*q *> inv *q_*n) *> inv *q-assoc *> pmap (`*q _) (RatField.finv-left $ natRat/=0 n/=0) *> ide_*q)
@@ -169,6 +174,29 @@
       \in |x|<=a a<b) \lam |x|<b => \case U-rounded |x|<b \with {
         | inP (a,|x|<a,a<b) => inP (a, a<b, norm>=0 |x|<a, norm_<=_*q $ ExUpperReal.<_<= |x|<a, norm_<=_*q $ transportInv (ExUpperReal.`<= _) norm_negative $ ExUpperReal.<_<= |x|<a)
       }
+
+  \lemma square-positive {x : E} : IsSquare x <-> 0 <= x
+    => (transportInv IsSquare minus_zro __, transport IsSquare minus_zro __)
+
+  \lemma square-lem {x : E} (x>=0 : 0 <= x) (x<=1 : x <= 1) : norm (1 - x) ExUpperReal.<= ExUpperRealPointed.ide
+    => square-lem-aux c*-sum (square-positive.2 x>=0) $ square-positive.2 $ transport (`<= _) negative-right $ <=_+ x<=1 <=-refl
+
+  \lemma square_*q-lem {q : Rat} (q>0 : RatField.zro < q) {x : E} (x>=0 : 0 <= x) (x<=q : x <= q *q 1) : norm (q *q 1 - x) ExUpperReal.<= q
+    => transport2 (ExUpperReal.<=) (inv (norm_*q-ofPos $ <=-less q>0) *> pmap norm (toRatModule.*c-ldistr_- *> pmap (_ -) (inv *q-assoc *> pmap (`*q x) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q))) (ExUpperReal.*-rat (<=-less q>0) (<=-less zro<ide) *> pmap ExUpperReal.fromRat RatField.ide-right) $ ExUpperRealSemigroup.<=_* (ExUpperRealAbMonoid.<=-refl {q}) $ square-lem (transport (`<= _) toRatModule.*c_zro-right $ <=_*q-right (<=-less $ RatField.finv>0 q>0) x>=0) $ transport (_ <=) (inv *q-assoc *> pmap (`*q _) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ <=_*q-right (<=-less $ RatField.finv>0 q>0) x<=q
+
+  \lemma square-closed : IsClosed IsSquare
+    => \lam {x} xl => \case norm-bounded x \with {
+      | inP (q,|x|<q) => norm_*q-square (norm>=0 |x|<q) \lam {r} q<r =>
+        \let | eps => r - {RatField} q
+             | (inP (a,a>=0,xa)) => xl {OBall (eps RatField.* ratio 1 4) x} OBall-open (OBall-center linarith)
+             | lem1 => square_*q-lem (linarith $ norm>=0 |x|<q) (square-positive.1 a>=0) $ norm_<=_*q $ norm_dist-right ExUpperRealAbMonoid.<=∘ transport (_ ExUpperReal.<=) ExUpperReal.+-rat (ExUpperRealAbMonoid.<=_+ (ExUpperReal.<_<= |x|<q) $ rewrite dist-symm $ ExUpperReal.<_<= xa)
+             | lem2 : dist (q *q 1) ((q RatField.+ eps RatField.* ratio 1 4) *q 1) ExUpperReal.<= eps RatField.* ratio 1 4 => transportInv (ExUpperReal.`<= _) (dist-symm *> norm-dist *> pmap norm (inv toRatModule.*c-rdistr_-)) $ =_<= (norm_*q-ofPos linarith) ExUpperRealAbMonoid.<=∘ ExUpperRealSemigroup.<=_* ExUpperRealAbMonoid.<=-refl norm_ide_<= ExUpperRealAbMonoid.<=∘ =_<= (ExUpperReal.*-rat linarith (<=-less zro<ide) *> pmap ExUpperReal.fromRat linarith)
+             | lem => transport2 (ExUpperReal.<=) norm-dist ExUpperReal.+-rat $ dist-triang ExUpperRealAbMonoid.<=∘ ExUpperRealAbMonoid.<=_+ lem2 (dist-triang ExUpperRealAbMonoid.<=∘ transport (_ ExUpperReal.<=) ExUpperReal.+-rat (ExUpperRealAbMonoid.<=_+ (transportInv (ExUpperReal.`<= _) norm-dist lem1) (transport (ExUpperReal.`<= _) dist-symm (ExUpperReal.<_<= xa))))
+        \in hiding (lem1,lem2) $ lem linarith
+    }
+
+  \lemma <=-right-closed (a : E) : IsClosed (a <=)
+    => transport IsClosed (ext \lam x => ext (\lam r => r, \lam r => r)) $ cont-closed (+-cont ContMap.∘ ProductTopSpace.tuple ContMap.id (ContMap.const (negative a))) square-closed
 } \where {
   \type \infix 4 <= {R : Ring} (x y : R) => R.IsSquare (y - x)
 
@@ -211,13 +239,13 @@
             | |1-a2|<=1 => square-lem-aux c*-sum a2-square $ rewrite a2=1-a1 (simplify a1-square)
             | s1 => X.sqrt a1 |1-a1|<=1
             | s2 => X.sqrt a2 |1-a2|<=1
-            | s-comm : s2 * s1 = s1 * s2 => RealBanachAlgebra.sqrt.comm $ RealBanachAlgebra.sqrt.comm $ inv X.*q-comm-left *> pmap (_ X.*q) (inv X.*q-comm-right *> pmap (_ X.*q) (X.sum_diff (ide-left *> inv ide-right) *> inv (X.diff_sum $ ide-left *> inv ide-right)) *> X.*q-comm-right) *> X.*q-comm-left
+            | s-comm : s2 * s1 = s1 * s2 => RealBanachAlgebra.sqrt.comm $ RealBanachAlgebra.sqrt.comm $ inv X.*q-comm-left *> pmap (_ X.*q) (inv X.*q-comm-right *> pmap (_ X.*q) (X.*_sum_diff (ide-left *> inv ide-right) *> inv (X.*_diff_sum $ ide-left *> inv ide-right)) *> X.*q-comm-right) *> X.*q-comm-left
             | xx<=1 : x * x <= 1 => inP (X.natCoef 2 * s1 * s2, equation.monoid {
               2 (X.natCoef-comm {2} {s1}), s-comm, inv $ X.natCoef-comm {2} {s2},
               RealBanachAlgebra.sqrt.isSquare, RealBanachAlgebra.sqrt.isSquare {_} {a2},
               X.natCoef_*_*q {2} {a1}, inv X.*q-assoc, X.ide_*q,
               X.natCoef_*_*q {2} {a2}, inv $ X.*q-assoc {2} {ratio 1 2} {1 + x}, X.ide_*q {1 + x}
-            } $ X.diff_sum (ide-left *> inv ide-right) *> pmap (`+ _) ide-left)
+            } $ X.*_diff_sum (ide-left *> inv ide-right) *> pmap (`+ _) ide-left)
        \in ExUpperRealSemigroup.square<=1 $ c*-square ExUpperRealAbMonoid.<=∘ (simplify in square-lem-aux c*-sum xx<=1 (inP (x, simplify idp)))
 }
 

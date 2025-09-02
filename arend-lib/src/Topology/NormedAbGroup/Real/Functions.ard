@@ -109,7 +109,7 @@
   | func-dist-uniform {eps} eps>0 => \case \elim aB \with {
     | inP (B,a<B) => inP (RatField.finv (B ∨ 1) * eps, RatField.<_*_positive_positive (RatField.finv>0 $ zro<ide <∘l join-right) eps>0, \lam (inP (b,bp,b>=0,x<=x'+b,x'<=x+b)) =>
       \have lem {x x' : ExUpperReal} (x<=x'+b : x <= x' + b) => ExUpperRealSemigroup.<=_* <=-refl x<=x'+b <=∘ ExUpperRealSemigroup.ldistr_<= <=∘ ExUpperRealAbMonoid.<=_+ <=-refl (transport (_ <=) (ExUpperReal.*-rat (<=-less zro<ide <=∘ join-right) b>=0) $ ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= $ ExUpperReal.U_<= a<B join-left) <=-refl)
-      \in inP ((B ∨ 1) * b, RatField.<_*_positive-right (zro<ide <∘l join-right) bp <∘l =_<= (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= $ zro<ide <∘l join-right) *> ide-left), RatField.<=_*_positive_positive (<=-less zro<ide <=∘ join-right) b>=0, lem x<=x'+b, lem x'<=x+b))
+      \in inP ((B ∨ 1) * b, RatField.<_*_positive-right (zro<ide <∘l join-right) bp <∘l =_<= (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= $ zro<ide <∘l join-right) *> ide-left), <=_*-positive (<=-less zro<ide <=∘ join-right) b>=0, lem x<=x'+b, lem x'<=x+b))
   }
 
 \lemma upper-*-right-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (`* a)

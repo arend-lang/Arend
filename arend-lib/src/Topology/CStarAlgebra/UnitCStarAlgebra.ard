@@ -6,10 +6,13 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
 \import Algebra.Pointed
 \import Algebra.QModule
 \import Algebra.Ring
 \import Algebra.Ring.UnitAlgebra
+\import Analysis.Limit
+\import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
@@ -27,10 +30,13 @@
 \import Set.Filter
 \import Topology.BanachAlgebra
 \import Topology.BanachSpace
+\import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.StoneCStarAlgebra
 \import Topology.NormedRing
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
 
 \instance UnitC*Algebra (A : StoneC*PseudoAlgebra) : StoneC*Algebra (\Sigma Real A)
   | Ring => UnitAlgebra RealField A.toRealAlgebra
@@ -86,3 +92,59 @@
     \private \lemma inhabitted : ∃ (y : A) (A.norm y <= 1)
       => inP (A.zro, transportInv (`<= _) norm_zro $ <=-less ExUpperRealAbMonoid.zro<ide)
   }
+
+\func StoneC*AlgebraRieszSpace (A : StoneC*Algebra) : RieszSpace A
+  => RieszSpace.fromAbs \lam a => {?}
+  \where \protected {
+    \func c*abs (a : A) (a<=1 : a <= 1) (-a<=1 : negative a <= 1) : A
+      => A.sqrt (a * a) square-norm
+      \where {
+        \open RealBanachAlgebra
+        \open RealBanachAlgebra.sqrt(yfunc,zfunc,zfunc-lim,UnitBall)
+        \open ExUpperRealSemigroup(<=_*)
+
+        \lemma yfunc>=0 (n : Nat) : 0 <= yfunc n (a * a) \elim n
+          | 0 => transportInv (0 <=) (\peval yfunc 0 _) <=-refl
+          | suc n => transportInv (0 <=) (\peval yfunc (suc n) _) $ A.*q_>=0 rat_<=-dec $ A.<=_+-positive (A.to>=0 $ c*-<=_*-square a<=1 -a<=1) c*-square-positive
+
+        \lemma square-norm : norm (1 - a * a) <= 1
+          => A.square-lem c*-square-positive (c*-<=_*-square a<=1 -a<=1)
+
+        \lemma c*abs>=id : a <= c*abs a a<=1 -a<=1
+          => transportInv (a <=) (\peval sqrt _ _) $ A.closed-limit (A.<=-right-closed a) limit-isLimit induction
+          \where {
+            \private \lemma induction (n : Nat) : a <= 1 - yfunc n (a * a) \elim n
+              | 0 => transport (a <=) (inv zro-right *> pmap (1 +) (inv $ pmap negative (\peval yfunc 0 _) *> A.negative_zro)) a<=1
+              | suc n => rewrite (\peval yfunc (suc n) _) $ A.<=_*q-cancel-left {2} idp $ later $ rewrite (A.toRatModule.*c-ldistr_-, inv A.*q-assoc, A.ide_*q, A.*q_*n, A.*q_*n) $ simplify $ A.from>=0 $ transport (0 <=) {(1 - yfunc n _ - a) * (1 - a + yfunc n _)} equation.cRing $ A.<=_*-positive (A.to>=0 $ induction n) $ A.<=_+-positive (A.to>=0 a<=1) (yfunc>=0 n)
+          }
+
+        \lemma zfunc_pow>0 {w : A} (w<=1 : w <= 1) (|1-w|<1 : (norm (1 - w)).U 1) : zfunc-lim (w * w, square-norm w<=1 $ ExUpperReal.<_<= |1-w|<1) = w
+          => \case U-rounded |1-w|<1 \with {
+            | inP (q,|1-w|<q,q<1) => A.limit-unique {_} {zfunc __ (w * w)} limit-isLimit $ nat-limit-metric (rewrite norm-dist $ norm-bounded _) {ratio 1 2 * (1 + q)} (ExUpperReal.<=-rat.1 $ linarith $ norm>=0 |1-w|<q) linarith
+              \lam n => later $ rewrite (norm-dist, norm-dist, \peval yfunc (suc n) _) $ transport (norm __ <= _) {ratio 1 2 A.*q ((yfunc n (w * w) + (1 - w)) * (w - zfunc n (w * w)))}
+                (A.*q-cancel {2} (RatField.>_/= idp) $ inv A.*q-assoc *> A.ide_*q *> inv (A.toRatModule.*c-ldistr_- *> pmap2 (-) A.*q_*n (A.toRatModule.*c-ldistr_- *> pmap2 (-) A.*q_*n (inv A.*q-assoc *> A.ide_*q)) *> equation.cRing)) $
+                =_<= (A.norm_*q-ofPos rat_<=-dec) <=∘ <=_* <=-refl (A.norm_*_<= <=∘ <=_* (transport (_ <=) ExUpperReal.+-rat $ A.norm_+ <=∘ <=_+ (sqrt.yfunc<=rfunc {_} {_} {w * w, square-norm w<=1 $ ExUpperReal.<_<= |1-w|<1} <=∘ ExUpperReal.<=-rat.1 RealBanachAlgebra.rfunc<=1) (ExUpperReal.<_<= |1-w|<q)) (=_<= $ pmap norm equation.abGroup)) <=∘ =_<= (inv *-assoc *> pmap (`* _) (ExUpperReal.*-rat rat_<=-dec $ RatField.<=_+-positive zro<=ide $ <=-less $ norm>=0 |1-w|<q))
+          }
+          \where {
+            \lemma square-norm (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) : norm (1 - w * w) <= 1
+              => A.square-lem c*-square-positive $ c*-<=_*-square w<=1 $ transport (_ <=) A.negative_zro (A.negative_<= $ A.norm-c*-positive |1-w|<=1) <=∘ zro<=ide
+          }
+
+        \lemma zfunc_pow {w : A} (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) : zfunc-lim (w * w, zfunc_pow>0.square-norm w<=1 |1-w|<=1) = w
+          => \let M => ExPseudoMetricTransfer {\Sigma (x : A) (\Sigma (x <= 1) (norm (1 - x) <= 1))} __.1
+             \in denseSet-lift-unique (\lam {s} Uo Us => \case (dist_open {M}).1 Uo Us \with {
+               | inP (eps,eps>0,p) =>
+                 \let | delta => ratio 1 2 * (eps ∧ 1)
+                      | delta>0 : 0 RatField.< delta => linarith (<_meet-univ eps>0 zro<ide)
+                      | ide-delta>=0 : 0 <= 1 - delta => linarith $ RatField.meet-right {eps} {1}
+                      | y => (1 - delta) A.*q s.1 + delta A.*q 1
+                      | |1-y|<1 => transport (\lam z => (norm z).U 1) (A.toRatModule.*c-ldistr_- *> pmap (`- _) A.toRatModule.*c-rdistr_- *> +-assoc *> pmap2 (+) A.ide_*q (inv A.negative_+)) $ =_<= (A.norm_*q-ofPos ide-delta>=0) <=∘ <=_* <=-refl s.2.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 ide-delta>=0) $ linarith
+                 \in inP ((y, (<=_+ (A.<=_*q-right ide-delta>=0 s.2.1) <=-refl <=∘ =_<= (inv A.toRatModule.*c-rdistr *> pmap (A.`*q _) linarith *> A.ide_*q), ExUpperReal.<_<= |1-y|<1)), |1-y|<1, p $ unfolds $ unfold y $ rewrite (dist-symm, norm-dist, A.toRatModule.*c-rdistr_-, A.ide_*q) $ simplify $ rewrite (+-comm, inv A.toRatModule.*c-ldistr_-) $ =_<= (A.norm_*q-ofPos $ <=-less delta>0) <=∘ <=_* <=-refl s.2.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 $ <=-less delta>0) $ linarith RatField.meet-left)
+             })
+             (zfunc-lim ContMap.∘ TopTransfer-lift (*-locally-uniform ContMap.∘ ProductTopSpace.tuple ContMap.id ContMap.id ContMap.∘ TopTransfer-map __.1) (later \lam s => zfunc_pow>0.square-norm s.2.1 s.2.2))
+             (TopTransfer-map __.1) (\lam {s} p => zfunc_pow>0 s.2.1 p) {w,(w<=1,|1-w|<=1)}
+      }
+  }
+
+\func StoneC*PseudoAlgebraRieszSpace (A : StoneC*PseudoAlgebra) : RieszSpace A
+  => {?}

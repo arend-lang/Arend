@@ -112,9 +112,9 @@
   => \lam {U} _ U0 => inP (0, \lam _ => rewrite (\peval partialSum _ _) $ transportInv U A.BigSum_replicate0 U0)
 
 \lemma series-shift-conv {A : TopAbGroup} {S : Series A} : IsConvSeries S <-> IsConvSeries \lam n => S (suc n)
-  => (\lam Sc => convergent-topAbGruop-char 2 0 \lam {U} Uo U0 => \case convergent-topAbGruop-char 0 1 Sc Uo U0 \with {
+  => (\lam Sc => convergent-topAbGroup-char 2 0 \lam {U} Uo U0 => \case convergent-topAbGroup-char 0 1 Sc Uo U0 \with {
     | inP (N,g) => inP (N, \lam p => transport U (inv (midSum-diff $ suc<=suc p) *> midSum-diff p) $ g id<=suc $ suc<=suc p)
-  }, \lam Sc => convergent-topAbGruop-char 2 0 \lam {U} Uo U0 => \case convergent-topAbGruop-char 0 1 Sc Uo U0 \with {
+  }, \lam Sc => convergent-topAbGroup-char 2 0 \lam {U} Uo U0 => \case convergent-topAbGroup-char 0 1 Sc Uo U0 \with {
     | inP (N, g) => inP (suc N, \lam {n} => \case \elim n \with {
       | 0 => \lam p => absurd $ p NatOrder.zero<suc
       | suc n => \lam p => transport U (inv (midSum-diff $ suc<=suc.conv p) *> midSum-diff p) $ g <=-refl (suc<=suc.conv p)
@@ -235,7 +235,7 @@
   }
 
 \lemma series-limit {A : TopAbGroup} {S : Series A} (Sc : IsConvSeries S) : A.IsLimit S 0
-  => \lam {U} Uo U0 => \case convergent-topAbGruop-char 0 1 Sc Uo U0 \with {
+  => \lam {U} Uo U0 => \case convergent-topAbGroup-char 0 1 Sc Uo U0 \with {
     | inP (N,g) => inP (N, \lam {n} p => transport U (inv (midSum-diff {_} {S} id<=suc) *> midSum_suc) (g p id<=suc))
   }
 
@@ -332,13 +332,8 @@
 
 \lemma MTest {X : \Set} {Y : ExPseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Series ExUpperReal)
              (Mp : \Pi (n : Nat) (x : X) -> norm (f n x) <= M n) (Mc : IsConvUpperSeries M) : IsUniFuncConvergent \lam n x => partialSum (f __ x) n
-  => \lam Du => \case dist-uniform.1 Du \with {
-    | inP (eps,eps>0,h) => \case Mc eps>0 \with {
-      | inP (N,g) => inP (N, \lam x => \case h $ partialSum (f __ x) N \with {
-        | inP (V,DV,Vg) => inP (V, DV, \lam p => Vg $ rewrite (norm-dist, norm_-, inv $ midSum-diff p) $
-             ExUpperRealAbMonoid.<-rat.1 $ midSum_norm <∘r  midSum_<= (\lam {j} _ _ => Mp j x) <∘r ExUpperRealAbMonoid.<-rat.2 (g p))
-      })
-    }
+  => metric-uni-funcConvergent.2 \lam eps>0 => \case Mc eps>0 \with {
+    | inP (N,g) => inP (N, \lam x {n} N<=n => rewrite (dist-symm, norm-dist, norm_-, inv $ midSum-diff {Y} {f __ x} N<=n) $ midSum_norm $ midSum_<= (\lam {j} _ _ => Mp j x) $ g N<=n)
   }
 
 \lemma partialSum-cover {X : CoverSpace} {Y : TopAbGroup} (f : Nat -> CoverMap X Y) (n : Nat) : CoverMap X Y \lam x => partialSum (f __ x) n

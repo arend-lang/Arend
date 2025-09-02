@@ -63,8 +63,12 @@
   | func-cont => negative-cont.func-cont
 
 \lemma +-uniform {X : TopAbGroup} : TopAbGroupMap (X ⨯ X) X \lam s => s.1 + s.2 \cowith
-  | func-+ => equation
+  | func-+ => equation.abMonoid
   | func-cont => +-cont.func-cont
+
+\lemma subtract-uniform {X : TopAbGroup} : TopAbGroupMap (X ⨯ X) X \lam s => s.1 - s.2 \cowith
+  | func-+ => equation.abGroup
+  | func-cont => X.subtract-cont.func-cont
 
 \lemma *n-uniform {X : TopAbGroup} {n : Nat} : TopAbGroupMap X X (n X.*n) \cowith
   | func-+ => X.*n-ldistr

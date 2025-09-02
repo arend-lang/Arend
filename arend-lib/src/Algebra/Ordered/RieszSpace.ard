@@ -1,3 +1,6 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.QModule
 \import Arith.Int
@@ -5,6 +8,7 @@
 \import Arith.Rat
 \import Function.Meta
 \import Logic
+\import Logic.Meta
 \import Order.Biordered
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -55,5 +59,22 @@
 
   \lemma meet_*q {q : Rat} {x y : E} (q>=0 : RatField.zro RatField.<= q) : q *q (x ∧ y) = (q *q x) ∧ (q *q y)
     => inv negative-isInv *> pmap negative (inv toRatModule.*c_negative-right *> pmap (q *q) meet_negative *> join_*q q>=0 *> pmap2 (∨) toRatModule.*c_negative-right toRatModule.*c_negative-right *> inv meet_negative) *> negative-isInv
+} \where {
+  \func fromAbs {A : PosetQModule} (abs : \Pi (a : A) -> ∃ (b : A) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)) : RieszSpace \cowith
+    | PosetQModule => A
+    | join => join
+    | join-left => transportInv (_ <=) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.*q_*n) (inv +-assoc *> inv A.ide_*q *> A.*q-assoc) $ <=_+ (=_<= zro-left) $ =_<= equation.abGroup <=∘ <=_+ <=-refl (getAbs _).2
+    | join-right => transportInv (_ <=) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.*q_*n) (inv +-assoc *> pmap (`+ _) +-comm *> inv A.ide_*q *> A.*q-assoc) $ <=_+ (=_<= zro-left) $ =_<= equation.abGroup <=∘ <=_+ <=-refl (getAbs _).3
+    | join-univ {x} {y} x<=z y<=z => transportInv (`<= _) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.ide_*q *> A.*q-assoc) (inv A.*q_*n) $ A.<=_+-cancel-left (negative (x + y)) $ transportInv (`<= _) (inv +-assoc *> pmap (`+ _) negative-left *> zro-left) $ (getAbs _).4
+      -- TODO: Use solver for PosetAbGroup
+      (A.from>=0 $ transport (A.zro <=) equation.abGroup $ A.<=_+-positive (A.to>=0 x<=z) (A.to>=0 x<=z))
+      (A.from>=0 $ transport (A.zro <=) equation.abGroup $ A.<=_+-positive (A.to>=0 y<=z) (A.to>=0 y<=z))
+    \where {
+      \private \lemma getAbs (a : A) : Given (b : A) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)
+        => TruncP.remove (\lam s s' => ext $ <=-antisymmetric (s.4 s'.2 s'.3) (s'.4 s.2 s.3)) (abs a)
+
+      \protected \sfunc join (a b : A) : A
+        => ratio 1 2 A.*q (a + b + (getAbs (a - b)).1)
+    }
 }
 

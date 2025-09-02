@@ -31,7 +31,7 @@
 \open NatOrder \hiding (<)
 
 \instance NatMetricSpace : MetricSpace Nat
-  | dist n m => abs (finv (suc n) - finv (suc m))
+  | dist n m => LatticeAbGroup.abs (finv (suc n) - finv (suc m))
   | dist-refl => RatNormed.dist-refl
   | dist-symm => RatNormed.dist-symm
   | dist-triang => RatNormed.dist-triang {_} {_} {finv (suc _)}
@@ -44,7 +44,7 @@
       => (\lam Cu => \case NatMetricSpace.dist-uniform.1 Cu \with {
         | inP (eps,eps>0,h) => \case Real.natBounded {finv (eps * ratio 1 2) : Real} \with {
           | inP (N,eps<N) => \case h N, FinSet.finiteAC {N} (\lam j => NatMetricSpace.uniform-cover Cu j) \with {
-            | inP (U,CU,g), inP c => inP (U, CU, N, \lam {n} N<=n => g $ abs_+ <∘r
+            | inP (U,CU,g), inP c => inP (U, CU, N, \lam {n} N<=n => g $ LatticeAbGroup.abs_+ <∘r
                 (\have lem {m : Nat} (p : finv (eps * ratio 1 2) < m) : finv (suc m) < eps * ratio 1 2
                     => transport (_ <) RatField.finv_finv $ RatField.finv_< (RatField.finv>0 linarith) $ p <∘ fromInt_< (pos<pos id<suc)
                  \in transport (_ <) (linarith : eps * ratio 1 2 + eps * ratio 1 2 = eps) (OrderedAddMonoid.<_+
