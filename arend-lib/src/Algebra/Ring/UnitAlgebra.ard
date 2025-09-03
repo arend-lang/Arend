@@ -1,5 +1,6 @@
 \import Algebra.Algebra
 \import Algebra.Group
+\import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Monoid
@@ -49,6 +50,10 @@
     \lemma *n-comm2 {a : R} {x : A} {n : Nat} : (n AddMonoid.*n {UnitAlgebra R A} (a,x)).2 = n A.*n x
       => pmap __.2 *n-comm
   }
+
+\func unit-algebra {R : CRing} {A : PseudoAlgebra R} : AddGroupHom A (UnitAlgebra R A) \cowith
+  | func x => (0,x)
+  | func-+ => ext (inv zro-left, idp)
 
 \instance UnitCAlgebra (R : CRing) (A : PseudoCAlgebra R) : CAlgebra R
   | AAlgebra => UnitAlgebra R A

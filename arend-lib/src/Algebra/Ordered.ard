@@ -248,9 +248,10 @@
 
 \class PosetAbGroup \extends PosetAddGroup, PosetAbMonoid, AbGroup
 
-\class LatticeAbGroup \extends PosetAbGroup, MeetSemilatticeAbMonoid, JoinSemilatticeAbMonoid, Lattice {
+\class LatticeAbGroup \extends PosetAbGroup, MeetSemilatticeAbMonoid, JoinSemilatticeAbMonoid, DistributiveLattice {
   | meet_+-left {a} {b} {c} => <=-antisymmetric (meet-univ (<=_+ <=-refl meet-left) (<=_+ <=-refl meet-right)) $ <=_+-cancel-left (negative a) $ meet-univ (<=_+ <=-refl meet-left <=∘ =_<= (inv +-assoc *> pmap (`+ b) negative-left *> zro-left)) (<=_+ <=-refl meet-right <=∘ =_<= (inv +-assoc *> pmap (`+ c) negative-left *> zro-left)) <=∘ =_<= (inv zro-left *> pmap (`+ _) (inv negative-left) *> +-assoc)
   | join_+-left {a} {b} {c} => <=-antisymmetric (<=_+-cancel-left (negative a) $ =_<= (inv +-assoc *> pmap (`+ _) negative-left *> zro-left) <=∘ join-univ (<=_+-cancel-left a $ join-left <=∘ =_<= (inv zro-left *> pmap (`+ _) (inv negative-right) *> +-assoc)) (<=_+-cancel-left a $ join-right <=∘ =_<= (inv zro-left *> pmap (`+ _) (inv negative-right) *> +-assoc))) $ join-univ (<=_+ <=-refl join-left) (<=_+ <=-refl join-right)
+  | ldistr>= {x} {y} {z} => =_<= (inv $ meet_+-right *> pmap2 (∧) (+-assoc *> pmap (x +) (negative-left {_} {y ∨ z}) *> zro-right) zro-left) <=∘ <=_+-cancel-left _ (=_<= (inv +-assoc *> pmap (`+ _) negative-left *> zro-left) <=∘ join-univ (<=_+-cancel-left _ $ =_<= meet_+-right <=∘ meet-monotone (=_<= +-assoc <=∘ <=_+ <=-refl (<=_+ <=-refl join-left <=∘ =_<= negative-left) <=∘ =_<= zro-right) (=_<= zro-left) <=∘ join-left <=∘ =_<= (inv (pmap (`+ _) negative-right *> zro-left) *> +-assoc)) (<=_+-cancel-left _ $ =_<= meet_+-right <=∘ meet-monotone (=_<= +-assoc <=∘ <=_+ <=-refl (<=_+ <=-refl join-right <=∘ =_<= negative-left) <=∘ =_<= zro-right) (=_<= zro-left) <=∘ join-right <=∘ =_<= (inv (pmap (`+ _) negative-right *> zro-left) *> +-assoc)))
 
   \lemma meet_negative {x y : E} : negative (x ∧ y) = negative x ∨ negative y
     => <=-antisymmetric (negative_<= (meet-univ (negative_<= join-left <=∘ =_<= negative-isInv) (negative_<= join-right <=∘ =_<= negative-isInv)) <=∘ =_<= negative-isInv) $ join-univ (negative_<= meet-left) (negative_<= meet-right)

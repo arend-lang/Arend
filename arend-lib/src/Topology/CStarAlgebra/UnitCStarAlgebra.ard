@@ -5,6 +5,7 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
 \import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
 \import Algebra.Pointed
@@ -95,17 +96,31 @@
   }
 
 \func StoneC*AlgebraRieszSpace (A : StoneC*Algebra) : RieszSpace A
-  => RieszSpace.fromAbs \lam a => \case norm-bounded a \with {
-    | inP (B,|a|<B) =>
-      \have | p1 => A.<=_*q-rotate_finv-left (norm>=0 |a|<B) $ A.norm_<=_*q $ ExUpperReal.<_<= |a|<B
-            | p2 => transport (`<= 1) A.toRatModule.*c_negative-right $ A.<=_*q-rotate_finv-left (norm>=0 |a|<B) $ A.norm_<=_*q $ transportInv (`<= _) norm_negative $ ExUpperReal.<_<= |a|<B
-      \in inP (B A.*q c*abs (RatField.finv B A.*q a) p1 p2, A.<=_*q-rotate-right (norm>=0 |a|<B) c*abs.c*abs>=id, A.<=_*q-rotate-right (norm>=0 |a|<B) $ transportInv (`<= _) A.toRatModule.*c_negative-right c*abs.c*abs>=neg, \lam a<=c -a<=c => A.<=_*q-rotate-left (norm>=0 |a|<B) $ c*abs.c*abs-univ (A.<=_*q-right (<=-less $ RatField.finv>0 $ norm>=0 |a|<B) a<=c) $ transport (`<= _) A.toRatModule.*c_negative-right $ A.<=_*q-right (<=-less $ RatField.finv>0 $ norm>=0 |a|<B) -a<=c)
-  }
+  => RieszSpace.fromAbs \lam a => TruncP.map (abs-aux a) \lam s => (s.1,s.3,s.4,s.5)
   \where \protected {
     \func StoneC*AlgebraTopPoset : TopPosetAbGroup \cowith
       | TopAbGroup => A
       | PosetAbGroup => A
       | positive-closed => transport A.IsClosed (ext \lam x => ext A.square-positive) A.square-closed
+
+    \lemma abs-aux (a : A) : ∃ (b : A) (b * b = a * a) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)
+      => \case norm-bounded a \with {
+        | inP (B,|a|<B) =>
+          \have | p1 => A.<=_*q-rotate_finv-left (norm>=0 |a|<B) $ A.norm_<=_*q $ ExUpperReal.<_<= |a|<B
+                | p2 => transport (`<= 1) A.toRatModule.*c_negative-right $ A.<=_*q-rotate_finv-left (norm>=0 |a|<B) $ A.norm_<=_*q $ transportInv (`<= _) norm_negative $ ExUpperReal.<_<= |a|<B
+          \in inP (B A.*q c*abs (RatField.finv B A.*q a) p1 p2,
+                   inv A.toRatAlgebra.*c-comm-left *> pmap (B A.*q) (inv A.toRatAlgebra.*c-comm-right) *> inv A.*q-assoc *> pmap (_ A.*q) RealBanachAlgebra.sqrt.isSquare *> A.*q-assoc *> pmap (B A.*q) A.toRatAlgebra.*c-comm-right *> A.toRatAlgebra.*c-comm-left *> pmap (\lam x => x * x) (inv A.*q-assoc *> pmap (A.`*q _) (RatField.finv-right $ RatField.>_/= $ norm>=0 |a|<B) *> A.ide_*q),
+                   A.<=_*q-rotate-right (norm>=0 |a|<B) c*abs.c*abs>=id,
+                   A.<=_*q-rotate-right (norm>=0 |a|<B) $ transportInv (`<= _) A.toRatModule.*c_negative-right c*abs.c*abs>=neg,
+                   \lam a<=c -a<=c => A.<=_*q-rotate-left (norm>=0 |a|<B) $ c*abs.c*abs-univ (A.<=_*q-right (<=-less $ RatField.finv>0 $ norm>=0 |a|<B) a<=c) $ transport (`<= _) A.toRatModule.*c_negative-right $ A.<=_*q-right (<=-less $ RatField.finv>0 $ norm>=0 |a|<B) -a<=c)
+      }
+
+    \lemma abs-square {a : A} : (StoneC*AlgebraRieszSpace A).abs a * (StoneC*AlgebraRieszSpace A).abs a = a * a
+      => \case abs-aux a \with {
+        | inP (b,bb=aa,a<=b,-a<=b,bu) =>
+          \let A' => StoneC*AlgebraRieszSpace A
+          \in pmap (\lam x => x * x) (<=-antisymmetric (A'.join-univ a<=b -a<=b) (bu A'.abs>=id A'.abs>=neg)) *> bb=aa
+      }
 
     \func c*abs (a : A) (a<=1 : a <= 1) (-a<=1 : negative a <= 1) : A
       => sqrt-t (a * a, square-norm)
@@ -207,4 +222,18 @@
   }
 
 \func StoneC*PseudoAlgebraRieszSpace (A : StoneC*PseudoAlgebra) : RieszSpace A
-  => {?}
+  => RieszSpace.fromAbs {StoneC*PseudoAlgebaPoset} \lam a => \case StoneC*AlgebraRieszSpace.abs-aux {UnitC*Algebra A} (0,a) \with {
+    | inP (b,bb=aa,a<=b,-a<=b,bu) =>
+      \have bc : b = (0,b.2) => ext (RealField.isReduced $ pmap __.1 bb=aa *> RealField.zro_*-left, idp)
+      \in inP (b.2, transport (_ <=) bc a<=b, transport2 (<=) (ext (RealAbGroup.negative_zro,idp)) bc -a<=b, \lam a<=c -a<=c => transport (`<= _) bc $ bu a<=c $ =_<= (ext (RealAbGroup.negative_zro,idp)) <=∘ -a<=c)
+  }
+  \where {
+    \func StoneC*PseudoAlgebaPoset : PosetQModule \cowith
+      | QModule => A
+      | <= a b => unit-algebra {_} {A.toRealAlgebra} a <= unit-algebra {_} {A.toRealAlgebra} b
+      | <=-refl => <=-refl
+      | <=-transitive => <=∘
+      | <=-antisymmetric p q => pmap __.2 (<=-antisymmetric p q)
+      | <=_+ p q => transport2 (<=) (inv func-+) (inv func-+) (<=_+ p q)
+      | <=_*n-div n/=0 p => <=_*n-div n/=0 $ transport (0 <=) AddMonoidHom.func-*n p
+  }
