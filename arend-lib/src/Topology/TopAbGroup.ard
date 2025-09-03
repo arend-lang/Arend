@@ -13,6 +13,7 @@
 \import Paths.Meta
 \import Set.Subset
 \import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \import Topology.UniformSpace
@@ -140,7 +141,7 @@
   => transport2 (<=*) (ext \lam x => simplify) (ext \lam x => simplify) $ <=<ta_<=*-shifted {X} {negative ^-1 W} {negative ^-1 V} {negative ^-1 U}
       (negative-cont.func-cont Wo) (simplify W0) (<=<ta_negative {_} {_} {V} p) (<=<ta_negative {_} {_} {U} q) {0}
 
-\class HausdorffTopAbGroup \extends TopAbGroup, HausdorffTopSpace {
+\class HausdorffTopAbGroup \extends TopAbGroup, HausdorffTopSpace, SeparatedCoverSpace {
   \lemma equals {x y : E} (p : ∀ {U : isOpen} (U 0) (U (x - y))) : x = y
     => fromZero $ isHausdorff \lam Uo Vo Ud V0 => inP (x - y, (Ud, p Vo V0))
 }

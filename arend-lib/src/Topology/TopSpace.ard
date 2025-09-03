@@ -65,6 +65,10 @@
     => \case I.isInhabitted \with {
       | inP N => closed-limit Uc xl {N} \lam {n} _ => Uf n
     }
+
+  \lemma closed-inter {U V : Set E} (Uc : IsClosed U) (Vc : IsClosed V) : IsClosed (U ∧ V)
+    => \lam xl => (Uc (\lam {W} Wo Wx => TruncP.map (xl Wo Wx) \lam s => (s.1, s.2.1, s.3)),
+                   Vc (\lam {W} Wo Wx => TruncP.map (xl Wo Wx) \lam s => (s.1, s.2.2, s.3)))
 }
 
 \func DiscreteTopSpace (X : \Set) : TopSpace X \cowith

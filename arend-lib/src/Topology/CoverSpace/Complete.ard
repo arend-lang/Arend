@@ -202,10 +202,12 @@
     | inP (V, inP (W, f, V<=<W), x<=<V) => inP (V, <=<-left V<=<W $ f (x, (idp, <=<_<= V<=<W $ <=<_<= x<=<V idp)), x<=<V)
   }
 
-\class SeparatedCoverSpace \extends CoverSpace, HausdorffTopSpace
+\class SeparatedCoverSpace \extends CoverSpace, HausdorffTopSpace {
   | isSeparatedCoverSpace {x y : E} : (\Pi {C : Set (Set E)} -> isCauchy C -> ∃ (U : C) (\Sigma (U x) (U y))) -> x = y
-  | isHausdorff p => isSeparatedCoverSpace (separated-char 6 7 p)
-  \where {
+
+  \default isHausdorff p => isSeparatedCoverSpace (separated-char 6 7 p)
+  \default isSeparatedCoverSpace p => isHausdorff (separated-char 7 6 p)
+} \where {
     \lemma separated-char {S : CoverSpace} {x y : S} : TFAE (
     {- 0 -} pointCF x ⊆ pointCF y,
     {- 1 -} pointCF x CF~ pointCF y,

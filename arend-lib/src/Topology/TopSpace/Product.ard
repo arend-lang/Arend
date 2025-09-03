@@ -106,3 +106,11 @@
 \lemma weaklyDense_<= {X Y : TopSpace} {Z : StronglyHausdorffTopSpace} {P : JoinSemilattice Z} (jc : ContMap (Z ⨯ Z) Z \lam s => s.1 ∨ s.2)
                       (f : ContMap X Y) (fd : f.IsWeaklyDense) (g h : ContMap Y Z) (p : \Pi (x : X) -> g (f x) <= h (f x)) (y : Y) : g y <= h y
   => weaklyDenseSet_<= jc fd g h \lam (inP (x,q)) => rewriteI q (p x)
+
+\lemma hausdorff-char {X : TopSpace} : (\Pi {x y : X} -> ∀ {U V : isOpen} (U x) (V y) ∃ (U ∧ V) -> x = y) <-> (ProductTopSpace X X).IsClosed (\lam s => s.1 = s.2)
+  => (\lam f {s} sl => f \lam Uo Vo Us Vs => TruncP.map (sl (Prod-open Uo Vo) (Us,Vs)) \lam (t,p,(Ut,Vt)) => (t.1, (Ut, rewrite p Vt)),
+      \lam f {x} {y} c => f {x,y} \lam {W} Wo Wxy => \case Wo Wxy \with {
+        | inP (U,Uo,Ux,V,Vo,Vy,h) => \case c Uo Vo Ux Vy \with {
+          | inP (z,(Uz,Vz)) => inP ((z,z), idp, h Uz Vz)
+        }
+      })
