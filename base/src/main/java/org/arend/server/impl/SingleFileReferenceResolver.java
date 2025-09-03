@@ -4,10 +4,11 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
+import org.arend.ext.prettyprinting.doc.DocFactory;
+import org.arend.ext.reference.Precedence;
 import org.arend.ext.util.Pair;
 import org.arend.naming.reference.*;
-import org.arend.naming.scope.EmptyScope;
-import org.arend.naming.scope.Scope;
+import org.arend.naming.scope.*;
 import org.arend.prelude.Prelude;
 import org.arend.server.ArendServer;
 import org.arend.server.RawAnchor;
@@ -27,6 +28,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
 public class SingleFileReferenceResolver {
@@ -42,7 +44,6 @@ public class SingleFileReferenceResolver {
         myServer = server;
         myErrorReporter = errorReporter;
         myCurrentFile = (currentFile != null) ? server.getRawGroup(currentFile) : null;
-
     }
 
     public SingleFileReferenceResolver(@NotNull ArendServer server,
@@ -110,9 +111,10 @@ public class SingleFileReferenceResolver {
         refMap.computeIfAbsent(module.getModulePath(), m -> new ArrayList<>()).add(targetReferable);
 
         Scope referableScope = myServer.getReferableScope(anchor.parent());
-        Scope currentScope = referableScope == null ?
-          EmptyScope.INSTANCE :
-          referableScope;
+        if (referableScope == null) referableScope = EmptyScope.INSTANCE;
+        Scope complementScope = getComplementScope(referableScope);
+        Scope currentScope = new MergeScope(referableScope, complementScope);
+
         Set<? extends Referable> currentScopeElements = new LinkedHashSet<>(currentScope.getElements());
         Set<RedirectingReferable> redirectingReferables = new LinkedHashSet<>();
         Set<Referable> targetReferables = new LinkedHashSet<>();
@@ -297,6 +299,55 @@ public class SingleFileReferenceResolver {
         }
 
         return new RawSequenceModifier(result);
+    }
+
+    private @NotNull Scope getComplementScope(Scope currentScope) {
+        List<ConcreteStatement> result = new ArrayList<>();
+
+        for (ConcreteNamespaceCommand cnc: itemsToAdd.keySet()) {
+            Set<String> names = itemsToAdd.get(cnc);
+            List<ConcreteNamespaceCommand.NameRenaming> renamings = new ArrayList<>();
+            if (names != null) for (String name : names)
+                renamings.add(new ConcreteNamespaceCommand.NameRenaming(null, Scope.ScopeContext.STATIC,
+                        new NamedUnresolvedReference(null, name), null, null));
+            ConcreteNamespaceCommand command =
+                    new ConcreteNamespaceCommand(null, cnc.isImport(), cnc.module(), false, renamings, emptyList());
+            result.add(new ConcreteStatement(null, command, null, null));
+        }
+
+        for (ModuleLocation moduleLocation : importsToAdd.keySet()) {
+            Set<String> namesToAdd = importsToAdd.get(moduleLocation);
+            boolean isUsing = false;
+            List<ConcreteNamespaceCommand.NameRenaming> renamings = new ArrayList<>();
+            if (namesToAdd != null) for (String name : namesToAdd) {
+                renamings.add(new ConcreteNamespaceCommand.NameRenaming(null, Scope.ScopeContext.STATIC,
+                        new NamedUnresolvedReference(null, name), null, null));
+            } else {
+                isUsing = true;
+            }
+
+            ConcreteNamespaceCommand command =
+                    new ConcreteNamespaceCommand(null, true,
+                            new LongUnresolvedReference(null, null, moduleLocation.getModulePath().toList()),
+                            isUsing, renamings, emptyList());
+            result.add(new ConcreteStatement(null, command, null, null));
+        }
+
+        ConcreteGroup fakeGroup = new ConcreteGroup(DocFactory.nullDoc(),
+                new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, "", Precedence.DEFAULT, null, null, GlobalReferable.Kind.OTHER),
+                null, result, emptyList(), emptyList());
+        Scope fakeImportedScope = new ImportedScope(fakeGroup, myServer.getModuleScopeProvider(null, true));
+
+        List<Scope> scopes = new ArrayList<>();
+        for (ConcreteStatement statement : result) {
+            ConcreteNamespaceCommand command = statement.command();
+            if (command != null && command.isImport())
+                scopes.add(NamespaceCommandNamespace.resolveNamespace(fakeImportedScope, command));
+        }
+
+        if (scopes.isEmpty()) return EmptyScope.INSTANCE;
+
+        return new MergeScope(scopes);
     }
 
     private @NotNull AtomicReference<ConcreteNamespaceCommand> getConcreteNamespaceCommandAtomicReference(@Nullable ConcreteGroup currentFile, LocatedReferable referable, ModuleLocation anchorModule) {
