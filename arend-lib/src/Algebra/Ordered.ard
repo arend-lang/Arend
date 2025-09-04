@@ -20,6 +20,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set.Subset
 \open Monoid(Inv)
 
 \class OrderedAddMonoid \extends StrictPoset, AddMonoid {
@@ -302,6 +303,11 @@
 
   \lemma abs>=_- {x y : E} : y - x <= abs (x - y)
     => transportInv (_ <=) negative_+ (later $ rewrite negative-isInv <=-refl) <=∘ abs>=neg
+
+  \lemma abs-univ {x y z : E} (p : x - y <= z) (q : y - x <= z) : abs (x - y) <= z
+    => join-univ p (=_<= negative_- <=∘ q)
+
+  \type IsSolid (U : Set E) => ∀ {y} {x : U} (abs y <= abs x -> U y)
 } \where {
     -- TODO: Make constructor classes
     \protected \class FromMeet \extends LatticeAbGroup

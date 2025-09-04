@@ -55,7 +55,7 @@
   | noTorsion {a} {n} n/=0 na=0 => norm-ext $ inv (ExUpperRealSemigroup.ide-left norm>=0) *> pmap (`* _) (inv (pmap A.norm (RatField.finv-left $ natRat/=0 n/=0) *> A.norm_ide) *> A.norm_*) *> *-assoc *> pmap (A.norm (RatField.finv n) *) (inv norm_*n *> pmap norm na=0 *> norm_zro) *> ExUpperRealSemigroup.zro_*-right (A.norm-bounded _)
 
   \lemma norm_*q {q : Rat} {x : E} : norm (q *q x) = A.norm q ExUpperReal.* norm x
-    => A.norm_Inv-cancel-left (RatField.nonZero-Inv $ natRat/=0 $ ratDenom/=0 q) norm>=0 ExUpperRealSemigroup.*_>=0 $
+    => A.norm_Inv-cancel-left (RatField.nonZero-Inv $ natRat/=0 ratDenom/=0) norm>=0 ExUpperRealSemigroup.*_>=0 $
         inv norm_*n *> pmap norm (inv (*q-assoc *> *q_*n) *> pmap (`*q _) rat*denom-left *> *q_*i) *> norm_*i *> pmap (`* _) (inv (pmap A.norm rat*denom-left) *> A.norm_*) *> *-assoc
 }
 

@@ -150,7 +150,7 @@
   \override Dom : TopAbGroup
   \override Cod : TopAbGroup
 
-  | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
+  \default func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
     | inP (U,Uo,U0,h) => neighborhood-uniform.2 $ inP (func ^-1 U, func-cont Uo, transportInv U func-zro U0, \lam x => \case h (func x) \with {
       | inP (V,EV,g) => inP (func ^-1 V, inP $ later (V, EV, idp), \lam u => g $ transport U func-minus u)
     })

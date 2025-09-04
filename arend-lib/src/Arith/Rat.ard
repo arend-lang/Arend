@@ -38,7 +38,7 @@
     \func AltRat : CRing => LocRing subset
       \where \func subset : SubMonoid => localization-isOrderedField.positiveSubset IntRing
 
-    \lemma eta {x : Rat} : x = rat (ratNom x) (ratDenom x) (ratDenom/=0 x) (ratReduced x) \elim x
+    \lemma eta {x : Rat} : x = rat (ratNom x) (ratDenom x) ratDenom/=0 (ratReduced x) \elim x
       | rat _ _ _ _ => idp
 
     \lemma ext {x y : Rat} (p : ratNom x = ratNom y) (q : ratDenom x = ratDenom y) : x = y \elim x, y
@@ -52,7 +52,7 @@
 \func ratDenom (x : Rat) : Nat
   | rat _ d _ _ => d
 
-\func ratDenom/=0 (x : Rat) : ratDenom x /= 0
+\lemma ratDenom/=0 {x : Rat} : ratDenom x /= 0 \elim x
   | rat _ _ p _ => p
 
 \func ratReduced (x : Rat) : gcd (iabs (ratNom x)) (ratDenom x) = 1
@@ -104,17 +104,17 @@
         }
       }
 
-    \lemma eta {x : Rat} : makeRat (ratNom x) (ratDenom x) (ratDenom/=0 x) = x
+    \lemma eta {x : Rat} : makeRat (ratNom x) (ratDenom x) ratDenom/=0 = x
       => rat_alt-inj rat_alt_makeRat.alt
   }
 
 \func rat_alt (x : Rat) : AltRat
-  => in~ (ratNom x, ratDenom x, signum.signum_pos (ratDenom/=0 x))
+  => in~ (ratNom x, ratDenom x, signum.signum_pos ratDenom/=0)
 
 \lemma rat_alt-inj {x y : Rat} (p : rat_alt x = rat_alt y) : x = y
   => \have | x0*y1=y0*x1 => loc_unequals_domain (localization-isOrderedField.positiveSubset IntRing) (\lam x c x=0 => \case rewrite x=0 c) p
            | |x0|*y1=|y0|*x1 => inv iabs_* *> pmap iabs x0*y1=y0*x1 *> iabs_*
-           | sgn[x0]=sgn[y0] => inv ide-right *> inv (pmap (_ *) (signum.signum_pos $ ratDenom/=0 y)) *> inv signum.*-comm *> pmap signum x0*y1=y0*x1 *> signum.*-comm *> pmap (_ *) (signum.signum_pos $ ratDenom/=0 x) *> ide-right
+           | sgn[x0]=sgn[y0] => inv ide-right *> inv (pmap (_ *) (signum.signum_pos ratDenom/=0)) *> inv signum.*-comm *> pmap signum x0*y1=y0*x1 *> signum.*-comm *> pmap (_ *) (signum.signum_pos ratDenom/=0) *> ide-right
      \in Rat.ext (signum_iabs_eq sgn[x0]=sgn[y0] $
         natAssociates-areEqual (nat_gcd_*_div (\new LDiv { | inv => ratDenom y | inv-right => |x0|*y1=|y0|*x1 *> *-comm }) (ratReduced x))
                                (nat_gcd_*_div (\new LDiv { | inv => ratDenom x | inv-right => inv |x0|*y1=|y0|*x1 *> *-comm }) (ratReduced y))) $
@@ -343,7 +343,7 @@
   => *-comm *> rat*denom-right
 
 \lemma rat-split {q : Rat} : q = ratNom q RatField.* RatField.finv (ratDenom q)
-  => inv (*-assoc *> pmap (q *) (RatField.finv-right $ natRat/=0 $ ratDenom/=0 q) *> ide-right) *> pmap (`* _) rat*denom-right
+  => inv (*-assoc *> pmap (q *) (RatField.finv-right $ natRat/=0 ratDenom/=0) *> ide-right) *> pmap (`* _) rat*denom-right
 
 \func ratio (nom : Int) (denom : Nat) : Rat \elim denom
   | 0 => 0

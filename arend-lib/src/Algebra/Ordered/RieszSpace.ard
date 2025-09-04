@@ -9,11 +9,13 @@
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Meta
 \import Order.Biordered
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set
 
 \class PosetDivAbGroup \extends PosetAbGroup, TorsionFreeGroup {
   | <=_*n-div {n : Nat} (n/=0 : n /= 0) {a : E} : 0 <= n *n a -> 0 <= a
@@ -25,7 +27,7 @@
 
 \class PosetQModule \extends QModule, PosetDivAbGroup {
   \lemma *q_>=0 {q : Rat} (q>=0 : RatField.zro RatField.<= q) {a : E} (a>=0 : 0 <= a) : 0 <= q *q a
-    => <=_*n-div (ratDenom/=0 q) $ transport (0 <=) (pmap (`*i a) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q a) (inv rat*denom-left) *> *q-assoc *> *q_*n) (*n_>=0 a>=0)
+    => <=_*n-div ratDenom/=0 $ transport (0 <=) (pmap (`*i a) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q a) (inv rat*denom-left) *> *q-assoc *> *q_*n) (*n_>=0 a>=0)
 
   \lemma *q_>=0-cancel {q : Rat} (q>0 : 0 < q) {a : E} (qa>=0 : 0 <= q *q a) : 0 <= a
     => transport (0 <=) (inv *q-assoc *> pmap (`*q a) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (<=-less $ RatField.finv>0 q>0) qa>=0
@@ -55,20 +57,26 @@
   \default <=_*n-div n/=0 na>=0 => transport (0 <=) (noTorsion-div n/=0 (abs_*n *> abs-ofPos na>=0)) abs>=0
 
   \lemma join_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x y : E} : q *q (x ∨ y) = (q *q x) ∨ (q *q y)
-    => noTorsion-div (ratDenom/=0 q) $ inv *q_*n *> inv *q-assoc *> pmap (`*q _) rat*denom-left *> *q_*i *> pmap (`*i _) (inv $ iabs.ofPos $ <=_ratNom.conv q>=0) *> join_*n *> pmap2 (∨) (pmap (`*i x) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q x) (inv rat*denom-left) *> *q-assoc *> *q_*n) (pmap (`*i y) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q y) (inv rat*denom-left) *> *q-assoc *> *q_*n) *> inv join_*n
+    => noTorsion-div ratDenom/=0 $ inv *q_*n *> inv *q-assoc *> pmap (`*q _) rat*denom-left *> *q_*i *> pmap (`*i _) (inv $ iabs.ofPos $ <=_ratNom.conv q>=0) *> join_*n *> pmap2 (∨) (pmap (`*i x) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q x) (inv rat*denom-left) *> *q-assoc *> *q_*n) (pmap (`*i y) (iabs.ofPos $ <=_ratNom.conv q>=0) *> inv *q_*i *> pmap (`*q y) (inv rat*denom-left) *> *q-assoc *> *q_*n) *> inv join_*n
 
-  \lemma abs_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x : E} : q *q abs x = abs (q *q x)
-    => join_*q q>=0 *> pmap (_ ∨) toRatModule.*c_negative-right
+  \lemma abs_*q {q : Rat} (q>=0 : RatField.zro RatField.<= q) {x : E} : abs (q *q x) = q *q abs x
+    => inv $ join_*q q>=0 *> pmap (_ ∨) toRatModule.*c_negative-right
 
   \lemma meet_*q {q : Rat} {x y : E} (q>=0 : RatField.zro RatField.<= q) : q *q (x ∧ y) = (q *q x) ∧ (q *q y)
     => inv negative-isInv *> pmap negative (inv toRatModule.*c_negative-right *> pmap (q *q) meet_negative *> join_*q q>=0 *> pmap2 (∨) toRatModule.*c_negative-right toRatModule.*c_negative-right *> inv meet_negative) *> negative-isInv
+
+  \lemma join_abs {x y : E} : x ∨ y = ratio 1 2 *q (x + y + abs (x - y))
+    => *q-cancel {_} {2} /=-dec $ *q_*2 *> join_+-comm *> pmap2 (∨) equation.abGroup equation.abGroup *> inv join_+-left *> inv ide_*q *> *q-assoc
+
+  \lemma meet_abs {x y : E} : x ∧ y = ratio 1 2 *q (x + y - abs (x - y))
+    => inv negative-isInv *> pmap negative (meet_negative *> join_abs) *> inv toRatModule.*c_negative-right *> pmap (_ *q) (later $ rewrite (pmap abs (pmap (_ +) negative-isInv *> +-comm) *> abs_-) equation.abGroup)
 } \where {
   \func fromAbs {A : PosetQModule} (abs : \Pi (a : A) -> ∃ (b : A) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)) : RieszSpace \cowith
     | PosetQModule => A
     | join => join
-    | join-left => transportInv (_ <=) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.*q_*n) (inv +-assoc *> inv A.ide_*q *> A.*q-assoc) $ <=_+ (=_<= zro-left) $ =_<= equation.abGroup <=∘ <=_+ <=-refl (getAbs _).2
-    | join-right => transportInv (_ <=) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.*q_*n) (inv +-assoc *> pmap (`+ _) +-comm *> inv A.ide_*q *> A.*q-assoc) $ <=_+ (=_<= zro-left) $ =_<= equation.abGroup <=∘ <=_+ <=-refl (getAbs _).3
-    | join-univ {x} {y} x<=z y<=z => transportInv (`<= _) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.ide_*q *> A.*q-assoc) (inv A.*q_*n) $ A.<=_+-cancel-left (negative (x + y)) $ transportInv (`<= _) (inv +-assoc *> pmap (`+ _) negative-left *> zro-left) $ (getAbs _).4
+    | join-left => transportInv (_ <=) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.*q_*2) (inv +-assoc *> inv A.ide_*q *> A.*q-assoc) $ <=_+ <=-refl $ =_<= equation.abGroup <=∘ <=_+ <=-refl (getAbs _).2
+    | join-right => transportInv (_ <=) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.*q_*2) (inv +-assoc *> pmap (`+ _) +-comm *> inv A.ide_*q *> A.*q-assoc) $ <=_+ <=-refl $ =_<= equation.abGroup <=∘ <=_+ <=-refl (getAbs _).3
+    | join-univ {x} {y} x<=z y<=z => transportInv (`<= _) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 (<=) (inv A.ide_*q *> A.*q-assoc) (inv A.*q_*2) $ A.<=_+-cancel-left (negative (x + y)) $ transportInv (`<= _) (inv +-assoc *> pmap (`+ _) negative-left *> zro-left) $ (getAbs _).4
       -- TODO: Use solver for PosetAbGroup
       (A.from>=0 $ transport (A.zro <=) equation.abGroup $ A.<=_+-positive (A.to>=0 x<=z) (A.to>=0 x<=z))
       (A.from>=0 $ transport (A.zro <=) equation.abGroup $ A.<=_+-positive (A.to>=0 y<=z) (A.to>=0 y<=z))

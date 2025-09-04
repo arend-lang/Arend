@@ -202,7 +202,7 @@
 
   \private \lemma square-sum1 {X : RealBanachAlgebra} (c*-sum : \Pi {a b : X} -> X.norm (a * a) ExUpperReal.<= X.norm (a * a + b * b)) {x y : X} (qx : X.norm x ExUpperReal.<= 1) (qy : X.norm y ExUpperReal.<= 1) (px : X.IsSquare x) (py : X.IsSquare y) : X.IsSquare (x + y)
     => \let | lem => transport (_ ExUpperReal.<=) (ExUpperReal.*-rat rat_<=-dec rat_<=-dec) $ ExUpperRealSemigroup.<=_* {ratio 1 2} ExUpperRealAbMonoid.<=-refl $ transport (_ ExUpperReal.<=) ExUpperReal.+-rat (X.norm_+ <=∘ ExUpperRealAbMonoid.<=_+ (square-lem-aux c*-sum px (X.norm-square' qx)) (square-lem-aux c*-sum py (X.norm-square' qy)))
-            | sqrt[x+y]/2 => X.sqrt (ratio 1 2 X.*q (x + y)) $ =_<= (pmap X.norm (inv (X.toRatModule.*c-ldistr_- *> pmap (`- _) (pmap (_ X.*q) (inv $ X.*q_*n {2}) *> inv X.*q-assoc *> X.ide_*q)) *> pmap (_ X.*q) {2 X.*n 1 - (x + y)} equation.ring) *> X.norm_*q-ofPos rat_<=-dec) <=∘ lem
+            | sqrt[x+y]/2 => X.sqrt (ratio 1 2 X.*q (x + y)) $ =_<= (pmap X.norm (inv (X.toRatModule.*c-ldistr_- *> pmap (`- _) (pmap (_ X.*q) (inv X.*q_*2) *> inv X.*q-assoc *> X.ide_*q)) *> pmap (_ X.*q) {1 + 1 - (x + y)} equation.ring) *> X.norm_*q-ofPos rat_<=-dec) <=∘ lem
        \in inP (sqrt 2 X.*r sqrt[x+y]/2, inv (X.toRealModule.*c-assoc *> pmap (_ X.*r) X.*r-comm-right *> X.*r-comm-left) *> pmap (_ X.*r) RealBanachAlgebra.sqrt.isSquare *> pmap (X.`*r _) (pow_sqrt $ rat_real_<=.1 rat_<=-dec) *> X.*r_*q *> inv X.*q-assoc *> X.ide_*q)
 
   -- | [1] Proposition 2
@@ -229,7 +229,7 @@
                                 {x : X} (x<=1 : x <= 1) (-x<=1 : negative x <= 1) : norm x ExUpperReal.<= 1
     => \let | a1 => ratio 1 2 X.*q (1 - x)
             | a2 => ratio 1 2 X.*q (1 + x)
-            | a2=1-a1 => pmap (_ X.*q) {_} {2 X.*q 1 - (1 - x)} (later $ rewrite X.*q_*n equation.abGroup) *> X.toRatModule.*c-ldistr_- *> pmap (`- a1) (inv X.*q-assoc *> X.ide_*q)
+            | a2=1-a1 => pmap (_ X.*q) {_} {2 X.*q 1 - (1 - x)} (later $ rewrite X.*q_*2 equation.abGroup) *> X.toRatModule.*c-ldistr_- *> pmap (`- a1) (inv X.*q-assoc *> X.ide_*q)
             | a1-square => X.*q_>=0-square rat_<=-dec x<=1
             | a2-square => X.*q_>=0-square rat_<=-dec (transport X.IsSquare simplify -x<=1)
             | |1-a1|<=1 => square-lem-aux c*-sum a1-square (transport X.IsSquare a2=1-a1 a2-square)

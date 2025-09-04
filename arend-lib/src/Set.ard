@@ -1,4 +1,4 @@
-\import Data.Bool(Bool, true, false, So)
+\import Data.Bool (Bool, So, false, not, true)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -168,6 +168,15 @@
   => unfold (==) at so $ mcases {decToBool} so _ \with {
     | yes p, _ => p
     | no n, ()
+  }
+
+\lemma =-dec {A : DecSet} {a a' : A} {so : So (a == a')} : a = a'
+  => ==_= so
+
+\lemma /=-dec {A : DecSet} {a a' : A} {so : So (not (a == a'))} : a /= a'
+  => unfold (==) at so $ mcases {decToBool} so _ \with {
+    | yes _, ()
+    | no p, _ => p
   }
 
 \truncated \data Trunc0 (A : \Type) : \Set
