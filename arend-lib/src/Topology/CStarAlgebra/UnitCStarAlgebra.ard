@@ -55,6 +55,9 @@
   | norm_+ => join-univ (transport (_ ExUpperReal.<=) RealAbGroup.+-upper (later $ Real.<=-upper.1 RealAbGroup.abs_+) <=∘ <=_+ join-left join-left) $
     Join-univ \lam s => =_<= (pmap A.norm $ pmap2 (+) A.toRealModule.*c-rdistr A.rdistr *> equation.abMonoid) <=∘ norm_+ <=∘ <=_+ (Join-cond s <=∘ join-right) (Join-cond s <=∘ join-right)
   | norm-double {x} => =_<= ExUpperRealLattice.+_join <=∘ ExUpperRealLattice.join-monotone RealStoneC*Algebra.norm-double (=_<= ExUpperRealLattice.+_Join <=∘ Join-univ \lam j => A.norm-double {x.1 A.*r j.1 + x.2 * j.1} <=∘ =_<= (pmap A.norm $ inv $ pmap2 (+) A.toRealModule.*c-rdistr A.rdistr *> equation.abMonoid) <=∘ Join-cond j)
+  | norm-bounded x => \case (RealAbGroup.abs x.1).U-inh, A.norm-bounded x.2 \with {
+    | inP (B1,|x1|<B1), inP (B2,|x2|<B2) => inP (B1 + B2 + 1, ExUpperRealAbMonoid.<-rat.1 $ join-univ (ExUpperReal.<_<= |x1|<B1 <=∘ ExUpperReal.<=-rat.1 (linarith $ norm>=0 |x2|<B2)) (Join-univ \lam j => norm_+ <=∘ later (ExUpperRealAbMonoid.<=_+ (=_<= A.norm_*r <=∘ <=_* (ExUpperReal.<_<= |x1|<B1) j.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 $ <=-less $ Real.<=-upper.1 RealAbGroup.abs>=0 |x1|<B1)) $ A.norm_*_<= <=∘ <=_* (ExUpperReal.<_<= |x2|<B2) j.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 $ <=-less $ norm>=0 |x2|<B2)) <=∘ =_<= ExUpperReal.+-rat) <∘r (ExUpperRealAbMonoid.<-rat {B1 + B2}).2 linarith)
+  }
   | norm_*_<= {x y : \Sigma Real A} : norm (x * {UnitAlgebra RealField A.toRealAlgebra} y) <= norm x * norm y => join-univ (transportInv (`<= _) (RealField.abs_* *> RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0) $ <=_* join-left join-left) $
     Join-univ \lam s => =_<= A.norm_*-char <=∘ Join-univ \lam s' => =_<= (pmap A.norm
     \have | lem1 : x.1 * y.1 A.*r s.1 * s'.1 = x.1 A.*r s.1 * (y.1 A.*r s'.1) => inv A.toRealAlgebra.*c-comm-left *> A.toRealAlgebra.*c-assoc *> pmap (_ A.*r) A.toRealAlgebra.*c-comm-right *> A.toRealAlgebra.*c-comm-left

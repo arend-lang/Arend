@@ -81,6 +81,9 @@
       \have | lem {y} (y+y<=a : y + y <= a *q 1) => transport2 (<=) (inv *q-assoc *> ide_*q) (inv *q-assoc) $ <=_*q-right {_} {ratio 1 2} rat_<=-dec $ transportInv (`<= _) *q_*2 y+y<=a
             | |x|<b/2 : (norm x).U (RatField.half b) => inP (ratio 1 2 RatField.* a, linarith, linarith, lem x+x<=a, lem $ transport (`<= _) negative_+ -x-x<=a)
       \in ExUpperReal.+_U_<=.2 $ inP (_, |x|<b/2, _, |x|<b/2, linarith)
+    | norm-bounded x => \case c*-archimedean x, c*-archimedean (negative x) \with {
+      | inP (A,x<=A), inP (B,-x<=B) => inP (A RatField.∨ B RatField.∨ 1 RatField.+ 1, inP (A RatField.∨ B RatField.∨ 1, linarith, zro<ide <∘l join-right, x<=A <=∘ =_<= (natCoef_*n *> inv *q_*n) <=∘ <=_*q-left (RatField.join-left {A} {B} RatField.<=∘ join-left) zro<=ide, -x<=B <=∘ =_<= (natCoef_*n *> inv *q_*n) <=∘ <=_*q-left (RatField.join-right {A} {B} RatField.<=∘ join-left) zro<=ide))
+    }
     | norm_*_<= {x} {y} {d} |x||y|<d => \case ExUpperReal.*_U.1 |x||y|<d \with {
       | inP (a, inP (a',a'<a,a'>0,x<=a',-x<=a'), a>0, b, inP (b',b'<b,b'>0,y<=b',-y<=b'), b>0, ab<d) =>
         \have lem {x} (x<=a' : x <= a' *q 1) (-x<=a' : negative x <= a' *q 1) => transportInv (_ <=) *q-assoc $ <=_*q-rotate-right a'>0 $ transportInv (`<= _) *q-comm-left $ <=_*q-rotate-right b'>0 $ transportInv (`<= _) *q-comm-right $ c*-<=_* (<=_*q-rotate_finv-left a'>0 x<=a') (transport (`<= _) toRatModule.*c_negative-right $ <=_*q-rotate_finv-left a'>0 -x<=a') (<=_*q-rotate_finv-left b'>0 y<=b') (transport (`<= _) toRatModule.*c_negative-right $ <=_*q-rotate_finv-left b'>0 -y<=b')

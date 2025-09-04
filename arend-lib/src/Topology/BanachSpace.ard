@@ -42,7 +42,8 @@
 
 \class PreBanachSpace (A : RatValue) \extends BoundedExPseudoNormedAbGroup, DivisibleGroup {
   | norm_*n {n : Nat} {x : E} : norm (n *n x) = A.norm n ExUpperReal.* norm x
-  | norm-bounded x => \case ExUpperReal.*_U.1 $ transport (ExUpperReal.U {__} 1) (inv norm_zro *> norm_*n {_} {0} {x}) zro<ide \with {
+
+  \default norm-bounded x => \case ExUpperReal.*_U.1 $ transport (ExUpperReal.U {__} 1) (inv norm_zro *> norm_*n {_} {0} {x}) zro<ide \with {
     | inP (_,_,_,b,|x|<b,_,_) => inP (b,|x|<b)
   }
 
