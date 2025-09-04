@@ -342,12 +342,13 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                 \func lol => A.foo{-caret-}
             """, """
                 \import A
+                \open Bar (foo) 
 
                 \module Bar \where {
                   \func foo => 1
                 }
 
-                \func lol => Bar.foo
+                \func lol => foo
             """, "Main", "Bar", "A", "foo")
 
     fun testCleanFromHiding2() =

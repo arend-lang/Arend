@@ -181,6 +181,7 @@ class ArendMoveRefactoringProcessor(project: Project,
             }
         }
 
+        ResolveReferenceAction.flushNamespaceCommands(multiFileReferenceResolver)
         resetServer(moduleLocationsToInvalidate, true) //needed for correct resolution of references after previous refactoring
 
         //Replace \this literals with local `this` parameters
@@ -391,8 +392,6 @@ class ArendMoveRefactoringProcessor(project: Project,
 
             for (nsId in nsIdToRemove) doRemoveRefFromStatCmd(nsId.refIdentifier)
         }
-
-        //ResolveReferenceAction.flushNamespaceCommands(multiFileReferenceResolver);
 
         resetServer(moduleLocationsToInvalidate)
 
