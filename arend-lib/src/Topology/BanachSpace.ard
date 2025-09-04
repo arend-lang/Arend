@@ -73,11 +73,18 @@
 \class BanachSpace \extends SeparatedPreBanachSpace, CompleteExNormedAbGroup
 
 \class RealPreBanachSpace \extends PreBanachSpace {
-  | norm_*n_>= {n : Nat} {x : E} : n ExUpperReal.* norm x <= norm (n *n x)
+  | norm-double {x : E} : norm x ExUpperReal.+ norm x <= norm (x + x)
   | A => RatValuedRing
 
-  \default norm_*n => <=-antisymmetric norm_*n_<= norm_*n_>= *> pmap (ExUpperReal.`* _) (inv $ RatField.abs-ofPos fromNat_>=0)
-  \default norm_*n_>= => ExUpperRealSemigroup.<=_* (ExUpperReal.<=-rat.1 RatField.abs>=id) <=-refl <=∘ =_<= (inv norm_*n)
+  \default norm_*n {n} {x} => <=-antisymmetric (norm_*n_<= <=∘ ExUpperRealSemigroup.<=_* (ExUpperReal.<=-rat.1 RatField.abs>=id) <=-refl) $
+    =_<= (pmap (ExUpperReal.fromRat __ ExUpperReal.* _) (RatField.abs-ofPos fromNat_>=0) *> inv (ExUpperRealSemigroup.*n_* norm>=0 $ norm-bounded x)) <=∘
+    ExUpperRealAbMonoid.<=_+-cancel-right {_} {_} {(NatSemiring.pow 2 n -' n) ExUpperRealAbMonoid.*n norm x} (ExUpperRealSemigroup.*n-bounded $ norm-bounded x) (ExUpperRealAbMonoid.*n_>=0 norm>=0)
+      (=_<= (inv ExUpperRealAbMonoid.*n-rdistr *> pmap (ExUpperRealAbMonoid.`*n _) (<=_exists $ NatSemiring.<=-less id<pow2) *> steps norm-double *> pmap norm (pmap (`*n x) (inv $ <=_exists $ NatSemiring.<=-less id<pow2) *> *n-rdistr)) <=∘ norm_+ <=∘ <=_+ <=-refl norm_*n_<=_*n)
+  \default norm-double {x} => =_<= $ inv (ExUpperRealAbMonoid.+-assoc *> ExUpperRealAbMonoid.zro-left) *> ExUpperRealSemigroup.*n_* norm>=0 (norm-bounded x) *> inv (norm_*n {_} {2}) *> pmap (\lam y => norm (y + x)) zro-left
+} \where {
+  \private \lemma steps {X : ExPseudoNormedAbGroup} (nd : \Pi {x : X} -> norm x + norm x <= norm (x + x)) {k : Nat} {x : X} : NatSemiring.pow 2 k ExUpperRealAbMonoid.*n (norm x) = norm (NatSemiring.pow 2 k X.*n x) \elim k
+    | 0 => zro-left *> pmap norm (inv zro-left)
+    | suc k => ExUpperRealAbMonoid.*n-rdistr *> pmap2 (+) (steps nd) (steps nd) *> <=-antisymmetric nd norm_+ *> pmap norm (inv X.*n-rdistr)
 }
 
 \class RealBanachSpace \extends RealPreBanachSpace, BanachSpace {

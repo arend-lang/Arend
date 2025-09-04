@@ -19,6 +19,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
+\import Set
 
 \record ExUpperReal (U : Rat -> \Prop) {
   | U-closed {q q' : Rat} : U q -> q < q' -> U q'
@@ -265,6 +266,9 @@
           }
       }
 
+    \lemma <=_+-cancel-right {x y z : ExUpperReal} (zb : z.IsBounded) {q : Rat} (q<=z : q <= z) (p : x + z <= y + z) : x <= y
+      => <=_+-cancel-left zb q<=z $ transport2 (<=) ExUpperRealAbMonoid.+-comm ExUpperRealAbMonoid.+-comm p
+
     \lemma *n_U {n : Nat} (n/=0 : n /= 0) {x : ExUpperReal} {q : Rat} : (n ExUpperRealAbMonoid.*n x).U q <-> ∃ (r : x.U) (n RatField.* r RatField.<= q) \elim n
       | 0 => absurd (n/=0 idp)
       | 1 => rewrite zro-left (\lam x<q => inP (q, x<q, =_<= ide-left), \lam (inP (r,x<r,r<=q)) => x.U_<= x<r $ rewrite RatField.ide-left in r<=q)
@@ -393,6 +397,10 @@
     \protected \lemma zro_*-right {x : ExUpperReal} (xb : x.IsBounded) : x * 0 = 0
       => ExUpperRealSemigroup.*-comm *> zro_*-left xb
 
+    \lemma *n_*_<= {n : Nat} {x : ExUpperReal} (x>=0 : 0 <= x) : n AddMonoid.*n x <= n * x \elim n
+      | 0 => *_>=0
+      | suc n => <=_+ (*n_*_<= x>=0) <=-refl <=∘ =_<= (pmap (_ +) (inv $ ide-left x>=0) *> inv (rdistr (<=-rat.1 fromNat_>=0) $ <=-less zro<ide) *> pmap (`* x) +-rat)
+
     \lemma *n_* {n : Nat} {x : ExUpperReal} (x>=0 : 0 <= x) (xb : x.IsBounded) : n AddMonoid.*n x = n * x \elim n
       | 0 => inv (zro_*-left xb)
       | suc n => pmap2 (+) (*n_* x>=0 xb) (inv $ ide-left x>=0) *> inv (rdistr (<=-rat.1 fromNat_>=0) $ <=-less zro<ide) *> pmap (`* x) +-rat
@@ -466,6 +474,12 @@
         \lemma aux {e : Rat} (e>=0 : 0 RatField.<= e) (x<=q+e : x <= q RatField.+ e) (n : Nat) : x <= q RatField.+ e RatField.* RatField.pow (ratio 1 2) n \elim n
           | 0 => transportInv (x <= q RatField.+ __) RatField.ide-right x<=q+e
           | suc n => rewriteI RatField.*-assoc $ step (<=_*-positive e>=0 $ RatField.pow>=0 rat_<=-dec) (aux e>=0 x<=q+e n)
+      }
+
+    \lemma *n-bounded {n : Nat} {x : ExUpperReal} (xb : x.IsBounded) : (n ExUpperRealAbMonoid.*n x).IsBounded \elim xb
+      | inP (q,x<q) => \case NatSemiring.decideEq n 0 \with {
+        | yes n=0 => inP $ (1, rewrite n=0 idp)
+        | no n/=0 => inP (n RatField.* q, (*n_U n/=0).2 $ inP (q,x<q,<=-refl))
       }
   }
 

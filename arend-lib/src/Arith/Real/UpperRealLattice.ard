@@ -45,8 +45,14 @@
       | 0, inP j => <=-antisymmetric (ExUpperRealLattice.Join-cond j {\lam _ => 0}) $ ExUpperRealLattice.Join-univ {_} {\lam _ => 0} \lam _ => ExUpperRealLattice.<=-refl
       | suc n, _ => *n_Join suc/=0
 
+    \lemma +_Join {J : \Set} {g : J -> ExUpperReal} : Join g + Join g = Join (\lam j => g j + g j)
+      => inv (+-assoc *> zro-left) *> *n_Join {2} suc/=0 *> ExUpperRealLattice.Join_= (\lam j => +-assoc *> zro-left)
+
     \lemma *n_join {n : Nat} {x y : ExUpperReal} : n AddMonoid.*n (x ∨ y) = n AddMonoid.*n x ∨ n AddMonoid.*n y
       => pmap (n AddMonoid.*n) ExUpperRealLattice.join_Join *> *n_Join' (inP true) *> CompleteLattice.Join_= (later \lam b => cases b idp) *> inv ExUpperRealLattice.join_Join
+
+    \lemma +_join {x y : ExUpperReal} : (x ∨ y) + (x ∨ y) = (x + x) ∨ (y + y)
+      => inv (+-assoc *> zro-left) *> *n_join {2} *> pmap2 (∨) (+-assoc *> zro-left) (+-assoc *> zro-left)
 
     \lemma Join-square {J : \Set} (j : ∃ J) {g : J -> ExUpperReal} : Join g * Join g = Join \lam j => g j * g j \elim j
       | inP j0 => <=-antisymmetric (\lam (inP (a,a<b,f)) => \case sqrt-rat (<=-less $ ExUpperRealSemigroup.*_>=0 $ f j0) a<b \with {

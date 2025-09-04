@@ -77,16 +77,10 @@
              <=_+ x<=a' y<=b' <=∘ =_<= (inv toRatModule.*c-rdistr),
              transport2 (<=) (+-comm *> inv negative_+) (inv toRatModule.*c-rdistr) $ <=_+ -x<=a' -y<=b')
     }
-    | norm_*n_>= {n} {x} (inP (a,a<b,a>0,nx<=a,-nx<=a)) => \case decideEq n 0 \with {
-      | yes n=0 => rewrite (n=0, ExUpperRealSemigroup.zro_*-left \case c*-archimedean x, c*-archimedean (negative x) \with {
-        | inP (B1,x<=B1), inP (B2,-x<=B2) => inP ((B1 ∨ B2) Nat.+ 2, inP $ later (suc (B1 ∨ B2), linarith, linarith, x<=B1 <=∘ transport (`<= _) (*q_*n *> inv natCoef_*n) (<=_*q-left (fromInt_<= $ pos<=pos $ join-left NatSemiring.<=∘ id<=suc) zro<=ide), -x<=B2 <=∘ transport (`<= _) (*q_*n *> inv natCoef_*n) (<=_*q-left (fromInt_<= $ pos<=pos $ join-right NatSemiring.<=∘ id<=suc) zro<=ide)))
-      }) (a>0 <∘ a<b)
-      | no n/=0 =>
-        \let | a' => RatField.finv n RatField.* a
-             | a'>0 : 0 < a' => RatField.<_*_positive_positive (RatField.finv>0 $ fromInt_< $ pos<pos $ nonZero>0 n/=0) a>0
-             | lem => pmap (`*q 1) (inv RatField.ide-left *> pmap (RatField.`* a) (inv $ RatField.finv-right $ natRat/=0 n/=0) *> RatField.*-assoc) *> *q-assoc *> *q_*n
-        \in ExUpperReal.*_U_<.2 $ inP (n, ExUpperRealAbMonoid.<=-refl, fromNat_>=0, a', \lam {d} a'<d => inP $ later (_, a'<d, a'>0, <=_*n-cancel-left n/=0 $ transport (_ <=) lem nx<=a, <=_*n-cancel-left n/=0 $ transport2 (<=) (inv *n_negative) lem -nx<=a), <=-less a'>0, =_<= (inv RatField.*-assoc *> pmap (RatField.`* a) (RatField.finv-right $ natRat/=0 n/=0) *> RatField.ide-left) <∘r a<b)
-    }
+    | norm-double {x} {b} (inP (a,a<b,a>0,x+x<=a,-x-x<=a)) =>
+      \have | lem {y} (y+y<=a : y + y <= a *q 1) => transport2 (<=) (inv *q-assoc *> ide_*q) (inv *q-assoc) $ <=_*q-right {_} {ratio 1 2} rat_<=-dec $ transportInv (`<= _) *q_*2 y+y<=a
+            | |x|<b/2 : (norm x).U (RatField.half b) => inP (ratio 1 2 RatField.* a, linarith, linarith, lem x+x<=a, lem $ transport (`<= _) negative_+ -x-x<=a)
+      \in ExUpperReal.+_U_<=.2 $ inP (_, |x|<b/2, _, |x|<b/2, linarith)
     | norm_*_<= {x} {y} {d} |x||y|<d => \case ExUpperReal.*_U.1 |x||y|<d \with {
       | inP (a, inP (a',a'<a,a'>0,x<=a',-x<=a'), a>0, b, inP (b',b'<b,b'>0,y<=b',-y<=b'), b>0, ab<d) =>
         \have lem {x} (x<=a' : x <= a' *q 1) (-x<=a' : negative x <= a' *q 1) => transportInv (_ <=) *q-assoc $ <=_*q-rotate-right a'>0 $ transportInv (`<= _) *q-comm-left $ <=_*q-rotate-right b'>0 $ transportInv (`<= _) *q-comm-right $ c*-<=_* (<=_*q-rotate_finv-left a'>0 x<=a') (transport (`<= _) toRatModule.*c_negative-right $ <=_*q-rotate_finv-left a'>0 -x<=a') (<=_*q-rotate_finv-left b'>0 y<=b') (transport (`<= _) toRatModule.*c_negative-right $ <=_*q-rotate_finv-left b'>0 -y<=b')
