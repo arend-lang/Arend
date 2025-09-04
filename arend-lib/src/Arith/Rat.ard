@@ -6,6 +6,7 @@
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Sub
 \import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Algebra.Ring
 \import Algebra.Ring.Localization
 \import Algebra.Ring.Localization.Field

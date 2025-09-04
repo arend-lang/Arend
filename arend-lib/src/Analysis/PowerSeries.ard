@@ -33,7 +33,6 @@
 \import Topology.TopSpace
 \import Topology.UniformSpace
 \open Monoid(pow)
-\open LinearlyOrderedSemiring
 
 \func powerSeries {X : ExPseudoNormedRing} (cs : Nat -> X) (n : Nat) (x : X)
   => cs n * pow x n
@@ -115,4 +114,4 @@
 
 \lemma power-ratio-test-inf {X : ExPseudoNormedRing} {cs : Series X} (b : Series Real)
                             (bp : \Pi (n : Nat) -> norm (cs (suc n)) <= norm (cs n) * b n) (bl : RealNormed.IsLimit b 0) : IsPowerSeriesConv cs
-  => \lam a>=0 => power-ratio-test bp bl a>=0 $ rewrite Ring.zro_*-left zro<ide
+  => \lam a>=0 => power-ratio-test bp bl a>=0 $ rewrite Ring.zro_*-left RealAbGroup.zro<ide

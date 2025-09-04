@@ -1,5 +1,6 @@
 \import Algebra.Monoid(Monoid)
 \import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Data.Bool
 \import Data.Or
 \import Function.Meta

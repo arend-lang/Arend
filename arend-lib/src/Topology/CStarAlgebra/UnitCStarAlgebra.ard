@@ -166,7 +166,7 @@
              \in denseSet-lift-unique (\lam {s} Uo Us => \case (dist_open {M}).1 Uo Us \with {
                | inP (eps,eps>0,p) =>
                  \let | delta => ratio 1 2 * (eps ∧ 1)
-                      | delta>0 : 0 RatField.< delta => linarith (<_meet-univ eps>0 zro<ide)
+                      | delta>0 : 0 RatField.< delta => linarith (<_meet-univ eps>0 RatField.zro<ide)
                       | ide-delta>=0 : 0 <= 1 - delta => linarith $ RatField.meet-right {eps} {1}
                       | y => (1 - delta) A.*q s.1 + delta A.*q 1
                       | |1-y|<1 => transport (\lam z => (norm z).U 1) (A.toRatModule.*c-ldistr_- *> pmap (`- _) A.toRatModule.*c-rdistr_- *> +-assoc *> pmap2 (+) A.ide_*q (inv A.negative_+)) $ =_<= (A.norm_*q-ofPos ide-delta>=0) <=∘ <=_* <=-refl s.2.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 ide-delta>=0) $ linarith

@@ -2,6 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Algebra.Pointed
 \import Arith.Rat
 \import Arith.Real
@@ -32,7 +33,6 @@
 \open LinearlyOrderedAbGroup
 \open RealNormed
 \open ProductCoverSpace
-\open OrderedAbGroup
 
 \instance RatNormed : NormedAbGroup
   | AbGroup => RatField

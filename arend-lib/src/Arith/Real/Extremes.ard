@@ -87,7 +87,7 @@
   => (makeSup Aa0 Ab As, makeSup.isSup Aa0 Ab As)
 
 \lemma makeSupTB {A : Set Real} {a0 : Real} (Aa0 : A a0) (Ac : \Pi {eps : Real} -> 0 < eps -> ∃ (l : Array Real) (∀ (a : l) (A a)) ∀ {x : A} ∃ (y : l) (abs (x - y) < eps)) : HasSup A
-  => \case Ac zro<ide \with {
+  => \case Ac RealAbGroup.zro<ide \with {
     | inP (l,_,lb) => makeSup-pair Aa0 {Big (∨) zro l + 1} (\lam Aa => \case lb Aa \with {
       | inP (j,c) => linarith (abs>=id <∘r c, RealAbGroup.Big_<=_join1)
     }) \lam {x} {y} x<y =>

@@ -36,7 +36,7 @@
   | meas_+ {x y : E} : meas (x + y) ExUpperReal.<= meas x ExUpperReal.+ meas y
   | meas_+ => transportInv (ExUpperReal.`<= _) (pmap meas +_diff *> meas-disjoint diff_*_diff) $ <=_+ (meas-mono diff_<=) (meas-mono diff_<=)
   | isOpen U => ∀ {x : U} ∃ (a : E) (eps : `> 0) ∀ {y : E} ((meas (a * (x + y))).U eps -> U y)
-  | open-top _ => inP (0, 1, zro<ide, \lam _ => ())
+  | open-top _ => inP (0, 1, idp, \lam _ => ())
   | open-inter Uo Vo (Ux,Vx) => \case Uo Ux, Vo Vx \with {
     | inP (a,eps,eps>0,g), inP (b,delta,delta>0,h) => inP (a ∨ b, eps RatField.∧ delta, RatField.<_meet-univ eps>0 delta>0, \lam c =>
       (g $ meas-mono (meet-monotone join-left <=-refl) $ ExUpperReal.U_<= c RatField.meet-left,

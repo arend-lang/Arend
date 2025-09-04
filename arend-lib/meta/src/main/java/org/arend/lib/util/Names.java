@@ -134,7 +134,7 @@ public class Names {
   }
 
   public static ModulePath getOrderedModule() {
-    return new ModulePath("Algebra", "Ordered");
+    return new ModulePath("Algebra", "StrictlyOrdered");
   }
 
   public static ModulePath getPointedModule() {

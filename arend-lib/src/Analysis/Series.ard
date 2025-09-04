@@ -39,9 +39,7 @@
 \import Topology.TopAbGroup.Complete
 \import Topology.TopAbGroup.Product
 \import Topology.TopSpace
-\open OrderedField
 \open Monoid
-\open LinearlyOrderedSemiring
 
 \func Series (A : \Set) => Nat -> A
 
@@ -271,7 +269,7 @@
   => IsBoundedUpperSeries \lam n => norm (S n)
 
 \lemma series-lim-bound {A : BoundedExPseudoNormedAbGroup} {b : Series A} {l : A} (bl : A.IsLimit b l) : IsBoundedSeries b
-  => \case limit-metric-char.1 bl zro<ide, norm-bounded l \with {
+  => \case limit-metric-char.1 bl idp, norm-bounded l \with {
     | inP (N,h), inP (B,l<B) => IsBoundedUpperSeries.shifted (\lam _ => norm-bounded _) \lam {j} N<=j =>
       \have t => transport (norm __ <= _) (+-assoc *> pmap (_ +) negative-left *> zro-right) $ A.norm_+ {b j - l} {l}
       \in t $ ExUpperReal.+_U_<=.2 $ inP (1, rewriteI (norm_-, A.norm-dist) (h N<=j), B, l<B, <=-refl)
@@ -280,7 +278,7 @@
 \lemma series_*-bounded {b c : Series ExUpperReal} (c>=0 : \Pi (j : Nat) -> 0 <= c j) (bB : IsBoundedUpperSeries b) (cc : IsConvUpperSeries c) : IsConvUpperSeries \lam n => b n * c n \elim bB
   | inP (B, bB) =>
     \let | B1 => B ∨ 1
-         | B1>0 : 0 < B1 => zro<ide <∘l join-right
+         | B1>0 : 0 < B1 => RatField.zro<ide <∘l join-right
     \in \lam {eps} eps>0 => \case cc {RatField.finv B1 * eps} $ RatField.<_*_positive_positive (RatField.finv>0 $ RatField.zro<ide <∘l join-right) eps>0 \with {
       | inP (N,h) => inP (N, \lam {n} N<=n =>
         \have t : midSum (\lam k => b k * c k) N n <= B1 ExUpperReal.* midSum c N n
@@ -303,7 +301,7 @@
 \lemma upper-ratio-test {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (S0b : ∃ (B : Rat) ((S 0).U B))
                         (b : Series Real) (bp : \Pi (n : Nat) -> S (suc n) <= S n * b n)
                         {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsConvUpperSeries S
-  => \case real_<-char.1 (<_join-univ l<1 zro<ide) \with {
+  => \case real_<-char.1 (<_join-univ l<1 RealAbGroup.zro<ide) \with {
     | inP (r,lz<r,r<1) => \case (real_<-rat-char {0} {(r : Real) - l}).1 $ linarith $ usingOnly (join-left <∘r lz<r) \with {
       | inP (q,q>0,q<r-l) => \case bl (OBall-open {_} {q} {l}) $ rewrite RealNormed.dist-refl q>0 \with {
         | inP (N,g) => (upperSeries-shifts-conv S>=0 N).2

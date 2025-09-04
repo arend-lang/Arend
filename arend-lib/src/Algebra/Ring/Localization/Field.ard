@@ -4,6 +4,7 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.Sub
 \import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Algebra.Ring.Local

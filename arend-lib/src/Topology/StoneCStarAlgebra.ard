@@ -82,7 +82,7 @@
             | |x|<b/2 : (norm x).U (RatField.half b) => inP (ratio 1 2 RatField.* a, linarith, linarith, lem x+x<=a, lem $ transport (`<= _) negative_+ -x-x<=a)
       \in ExUpperReal.+_U_<=.2 $ inP (_, |x|<b/2, _, |x|<b/2, linarith)
     | norm-bounded x => \case c*-archimedean x, c*-archimedean (negative x) \with {
-      | inP (A,x<=A), inP (B,-x<=B) => inP (A RatField.∨ B RatField.∨ 1 RatField.+ 1, inP (A RatField.∨ B RatField.∨ 1, linarith, zro<ide <∘l join-right, x<=A <=∘ =_<= (natCoef_*n *> inv *q_*n) <=∘ <=_*q-left (RatField.join-left {A} {B} RatField.<=∘ join-left) zro<=ide, -x<=B <=∘ =_<= (natCoef_*n *> inv *q_*n) <=∘ <=_*q-left (RatField.join-right {A} {B} RatField.<=∘ join-left) zro<=ide))
+      | inP (A,x<=A), inP (B,-x<=B) => inP (A RatField.∨ B RatField.∨ 1 RatField.+ 1, inP (A RatField.∨ B RatField.∨ 1, linarith, RatField.zro<ide <∘l join-right, x<=A <=∘ =_<= (natCoef_*n *> inv *q_*n) <=∘ <=_*q-left (RatField.join-left {A} {B} RatField.<=∘ join-left) zro<=ide, -x<=B <=∘ =_<= (natCoef_*n *> inv *q_*n) <=∘ <=_*q-left (RatField.join-right {A} {B} RatField.<=∘ join-left) zro<=ide))
     }
     | norm_*_<= {x} {y} {d} |x||y|<d => \case ExUpperReal.*_U.1 |x||y|<d \with {
       | inP (a, inP (a',a'<a,a'>0,x<=a',-x<=a'), a>0, b, inP (b',b'<b,b'>0,y<=b',-y<=b'), b>0, ab<d) =>
@@ -179,7 +179,7 @@
     => square-lem-aux c*-sum (square-positive.2 x>=0) $ square-positive.2 $ transport (`<= _) negative-right $ <=_+ x<=1 <=-refl
 
   \lemma square_*q-lem {q : Rat} (q>0 : RatField.zro < q) {x : E} (x>=0 : 0 <= x) (x<=q : x <= q *q 1) : norm (q *q 1 - x) ExUpperReal.<= q
-    => transport2 (ExUpperReal.<=) (inv (norm_*q-ofPos $ <=-less q>0) *> pmap norm (toRatModule.*c-ldistr_- *> pmap (_ -) (inv *q-assoc *> pmap (`*q x) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q))) (ExUpperReal.*-rat (<=-less q>0) (<=-less zro<ide) *> pmap ExUpperReal.fromRat RatField.ide-right) $ ExUpperRealSemigroup.<=_* (ExUpperRealAbMonoid.<=-refl {q}) $ square-lem (transport (`<= _) toRatModule.*c_zro-right $ <=_*q-right (<=-less $ RatField.finv>0 q>0) x>=0) $ transport (_ <=) (inv *q-assoc *> pmap (`*q _) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ <=_*q-right (<=-less $ RatField.finv>0 q>0) x<=q
+    => transport2 (ExUpperReal.<=) (inv (norm_*q-ofPos $ <=-less q>0) *> pmap norm (toRatModule.*c-ldistr_- *> pmap (_ -) (inv *q-assoc *> pmap (`*q x) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q))) (ExUpperReal.*-rat (<=-less q>0) (<=-less RatField.zro<ide) *> pmap ExUpperReal.fromRat RatField.ide-right) $ ExUpperRealSemigroup.<=_* (ExUpperRealAbMonoid.<=-refl {q}) $ square-lem (transport (`<= _) toRatModule.*c_zro-right $ <=_*q-right (<=-less $ RatField.finv>0 q>0) x>=0) $ transport (_ <=) (inv *q-assoc *> pmap (`*q _) (RatField.finv-left $ RatField.>_/= q>0) *> ide_*q) $ <=_*q-right (<=-less $ RatField.finv>0 q>0) x<=q
 
   \lemma square-closed : IsClosed IsSquare
     => \lam {x} xl => \case norm-bounded x \with {
@@ -187,7 +187,7 @@
         \let | eps => r - {RatField} q
              | (inP (a,a>=0,xa)) => xl {OBall (eps RatField.* ratio 1 4) x} OBall-open (OBall-center linarith)
              | lem1 => square_*q-lem (linarith $ norm>=0 |x|<q) (square-positive.1 a>=0) $ norm_<=_*q $ norm_dist-right ExUpperRealAbMonoid.<=∘ transport (_ ExUpperReal.<=) ExUpperReal.+-rat (ExUpperRealAbMonoid.<=_+ (ExUpperReal.<_<= |x|<q) $ rewrite dist-symm $ ExUpperReal.<_<= xa)
-             | lem2 : dist (q *q 1) ((q RatField.+ eps RatField.* ratio 1 4) *q 1) ExUpperReal.<= eps RatField.* ratio 1 4 => transportInv (ExUpperReal.`<= _) (dist-symm *> norm-dist *> pmap norm (inv toRatModule.*c-rdistr_-)) $ =_<= (norm_*q-ofPos linarith) ExUpperRealAbMonoid.<=∘ ExUpperRealSemigroup.<=_* ExUpperRealAbMonoid.<=-refl norm_ide_<= ExUpperRealAbMonoid.<=∘ =_<= (ExUpperReal.*-rat linarith (<=-less zro<ide) *> pmap ExUpperReal.fromRat linarith)
+             | lem2 : dist (q *q 1) ((q RatField.+ eps RatField.* ratio 1 4) *q 1) ExUpperReal.<= eps RatField.* ratio 1 4 => transportInv (ExUpperReal.`<= _) (dist-symm *> norm-dist *> pmap norm (inv toRatModule.*c-rdistr_-)) $ =_<= (norm_*q-ofPos linarith) ExUpperRealAbMonoid.<=∘ ExUpperRealSemigroup.<=_* ExUpperRealAbMonoid.<=-refl norm_ide_<= ExUpperRealAbMonoid.<=∘ =_<= (ExUpperReal.*-rat linarith (<=-less RatField.zro<ide) *> pmap ExUpperReal.fromRat linarith)
              | lem => transport2 (ExUpperReal.<=) norm-dist ExUpperReal.+-rat $ dist-triang ExUpperRealAbMonoid.<=∘ ExUpperRealAbMonoid.<=_+ lem2 (dist-triang ExUpperRealAbMonoid.<=∘ transport (_ ExUpperReal.<=) ExUpperReal.+-rat (ExUpperRealAbMonoid.<=_+ (transportInv (ExUpperReal.`<= _) norm-dist lem1) (transport (ExUpperReal.`<= _) dist-symm (ExUpperReal.<_<= xa))))
         \in hiding (lem1,lem2) $ lem linarith
     }
@@ -207,7 +207,7 @@
     => \case X.norm-bounded x, X.norm-bounded y \with {
       | inP (a,|x|<a), inP (b,|y|<b) =>
         \let | ab => (a ∨ b ∨ 1) * (a ∨ b ∨ 1)
-             | ab>0 => RatField.<_*_positive_positive (zro<ide <∘l join-right) (zro<ide <∘l join-right)
+             | ab>0 => RatField.<_*_positive_positive (RatField.zro<ide <∘l join-right) (RatField.zro<ide <∘l join-right)
              | ab' => RatField.finv ab
              | ab'>=0 => <=-less (RatField.finv>0 ab>0)
              | ab_<= : a ∨ b ∨ 1 RatField.<= ab => =_<= (inv ide-left) <=∘ RatField.<=_*_positive-left join-right (<=-less RatField.zro<ide <=∘ join-right)

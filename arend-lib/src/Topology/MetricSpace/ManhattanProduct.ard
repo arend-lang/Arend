@@ -12,7 +12,6 @@
 \import Paths
 \import Topology.MetricSpace
 \import Topology.UniformSpace.Product
-\open LinearlyOrderedAbMonoid
 
 \instance ManhattanProductPseudoMetricSpace (X Y : ExPseudoMetricSpace) : ExPseudoMetricSpace (\Sigma X Y)
   | UniformSpace => ProductUniformSpace X Y

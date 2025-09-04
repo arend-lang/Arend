@@ -68,7 +68,7 @@
                                  \in g {y} $ RealAbGroup.abs_-_< (linarith (real_<-rat-char.2 (later a<x) : a < y)) (linarith (real_<-rat-char.2 (later x<a+eps) : y < a + eps)))
         }
       }
-      | uniform-top => inP (1, 1, zro<ide, Bounded.top, idp, Bounded.top-univ, \lam x => inP (Bounded.top, idp, \lam _ => ()))
+      | uniform-top => inP (1, 1, RealAbGroup.zro<ide, Bounded.top, idp, Bounded.top-univ, \lam x => inP (Bounded.top, idp, \lam _ => ()))
       | uniform-refine (inP (eps,B,eps>0,V,CV,BV,h)) C<D => \case C<D CV \with {
         | inP (W,DW,V<=W) => inP (eps, B, eps>0, W, DW, BV <=∘ V<=W, \lam x => \case h x \with {
           | inP (U,CU,g) => \case C<D CU \with {
@@ -151,7 +151,7 @@
       | L-rounded (inP (a1,q<a1,U,FU,g)) => \case real_<-rat-char.1 q<a1 \with {
         | inP (r,q<r,r<a1) => inP (r, inP (a1, real_<_L.2 r<a1, U, FU, g), q<r)
       }
-      | L-inh => \case F.isCauchyFilter $ InfRealUniformSpace.uniform-cauchy.2 $ ClosurePrecoverSpace.closure $ makeUniform 1 zro<ide \with {
+      | L-inh => \case F.isCauchyFilter $ InfRealUniformSpace.uniform-cauchy.2 $ ClosurePrecoverSpace.closure $ makeUniform 1 RealAbGroup.zro<ide \with {
         | inP (_, byLeft idp, FU) => inP (0, inP (1, RealAbGroup.zro<ide, _, FU, \lam p => p))
         | inP (_, byRight (x,idp), FU) => \case L-inh {x - 1} \with {
           | inP (q,q<x-1) => inP (q, inP (x - 1, real_<_L.2 q<x-1, _, FU, \lam {_} (inP (z,idp,d)) => real_<_InfReal.1 $ linarith $ RealAbGroup.abs>=id <∘r d))

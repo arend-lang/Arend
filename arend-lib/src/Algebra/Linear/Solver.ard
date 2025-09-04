@@ -1,5 +1,6 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Solver
 \import Algebra.Semiring
