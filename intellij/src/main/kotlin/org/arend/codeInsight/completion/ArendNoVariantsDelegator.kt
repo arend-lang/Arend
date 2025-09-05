@@ -37,11 +37,9 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                 if (elementPsi != null) {
                     val elementIsWithinFileBeingEdited = elementPsi.containingFile == parameters.position.containingFile
                     if (!elementIsWithinFileBeingEdited) variants.add(elementPsi) else {
-                        val originalPosition = parameters.originalPosition
-                        if (originalPosition != null) {
-                            if (!originalPosition.ancestors.contains(elementPsi))
-                                variants.add(elementPsi)
-                        }
+                        val originalPosition = parameters.position
+                        if (!originalPosition.ancestors.contains(elementPsi))
+                            variants.add(elementPsi)
                     }
                 } else {
                     nullPsiVariants.add(str)
@@ -72,8 +70,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
         }
 
         val noVariants = tracker.variants.isEmpty() && tracker.nullPsiVariants.isEmpty() || !parameters.isAutoPopup
-
-        if (project != null && (isInsideValidExpr || isInsideValidNsCmd || isClassExtension) && noVariants) {
+       if (project != null && (isInsideValidExpr || isInsideValidNsCmd || isClassExtension) && noVariants) {
             val consumer = { name: String, refs: List<PsiLocatedReferable>? ->
                 if (bpm.prefixMatches(name)) {
                     val locatedReferables = refs?.filter { it is ArendFile || !isInsideValidNsCmd } ?: when {

@@ -23,6 +23,7 @@ import org.arend.resolving.ArendReference
 import org.arend.server.RawAnchor
 import org.arend.term.abs.AbstractReferable
 import org.arend.term.concrete.Concrete
+import org.arend.term.concrete.LocalVariablesCollector
 import java.util.*
 
 abstract class UsageEntry(val refactoringContext: ChangeSignatureRefactoringContext,
@@ -119,7 +120,12 @@ abstract class UsageEntry(val refactoringContext: ChangeSignatureRefactoringCont
         val referables = ArrayList<Variable>()
 
         if (lambdaParams.isNotEmpty()) {
-            val context = contextPsi.scope.elements.map { VariableImpl(it.textRepresentation()) } //TODO: Fixme
+            val collector = LocalVariablesCollector(contextPsi)
+            val ambientTcDefinition = contextPsi.ancestor<ReferableBase<*>>()?.tcReferable
+            val resolvedDefinition = ambientTcDefinition?.let { refactoringContext.server.getResolvedDefinition(it) }?.definition as? Concrete.Definition
+            resolvedDefinition?.accept(collector, null)
+            val context = collector.names.map { VariableImpl(it) }
+
             lambdaParams.forEach {
                 val freshName = StringRenamer().generateFreshName(VariableImpl(it.getNameOrUnderscore()), context + referables)
                 referables.add(VariableImpl(freshName))

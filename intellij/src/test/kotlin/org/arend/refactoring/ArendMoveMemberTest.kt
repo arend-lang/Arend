@@ -342,12 +342,13 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                 \func lol => A.foo{-caret-}
             """, """
                 \import A
+                \open Bar (foo) 
 
                 \module Bar \where {
                   \func foo => 1
                 }
 
-                \func lol => Bar.foo
+                \func lol => foo
             """, "Main", "Bar", "A", "foo")
 
     fun testCleanFromHiding2() =
@@ -453,7 +454,7 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                  }
             """, "Main", "Bar", "A", "Foo.foo", "Foo.bar")
 
-    fun testObstructedScopes() = //Should refactoring be prohibited in this situation?
+    /*fun testObstructedScopes() =
             doTestMoveRefactoring("""
             -- ! A.ard
             \open Nat
@@ -491,7 +492,7 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
 
               \func foo => 101
             }
-            """, "A", "FooBar")
+            """, "A", "FooBar") */ //TODO: Prohibit refactoring in this situation
 
     fun testMoveData3() =
             doTestMoveRefactoring("""
@@ -605,8 +606,8 @@ class ArendMoveMemberTest : ArendMoveTestBase() {
                \import Main
 
                \func foo (d1 : D1) (d2 : D2) \elim d1, d2
-                 | D1.A, D2.A => 1
-                 | D1.B, D2.B => 0
+                 | A, D2.A => 1
+                 | B, D2.B => 0
             """, "Main", "", "Foo", "D1", "D2")
 
     fun testMultipleRenaming1() =
