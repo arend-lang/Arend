@@ -325,7 +325,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
                 val substitution = HashMap<Referable, Concrete.Expression>()
                 if (referableToReplace != null) substitution[referableToReplace] = p.second
 
-                val numberSimpifyingVisitor = NumberSimplifyingConcreteVisitor()
+                val numberSimplifyingVisitor = NumberSimplifyingConcreteVisitor()
                 val renamerConcreteVisitor = DefinitionRenamerConcreteVisitor(serverBasedDefinitionRenamer)
                 val substVisitor = object: SubstConcreteVisitor(substitution, null) {
                     override fun visitPattern(pattern: Concrete.Pattern?): Concrete.Pattern? {
@@ -338,7 +338,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
 
                 val x1 = substVisitor.visitClause(concreteClause)
                 renamerConcreteVisitor.visitClauses(singletonList(x1), null)
-                val x3 = numberSimpifyingVisitor.visitClause(x1)
+                val x3 = numberSimplifyingVisitor.visitClause(x1)
                 if (x3.expression == null) x3.expression = Concrete.GoalExpression(null, "", null)
 
                 newClauses.add(x3)

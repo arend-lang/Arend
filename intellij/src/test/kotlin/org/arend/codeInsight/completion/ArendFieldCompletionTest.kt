@@ -43,10 +43,10 @@ class ArendFieldCompletionTest : ArendCompletionTestBase() {
             listOf("f", "g"))
 
     fun `test function with parameters`() =
-        checkNoCompletion(
+        checkCompletionVariants(
             "\\class A { | f : Nat | g : Nat }\n" +
             "\\func func (x : Nat) : A\n" +
-            "\\func test => func.{-caret-}")
+            "\\func test => func.{-caret-}", listOf("f", "g"))
 
     fun `test function with implicit parameters`() =
         checkCompletionVariants(
@@ -80,11 +80,11 @@ class ArendFieldCompletionTest : ArendCompletionTestBase() {
             listOf("f", "g"))
 
     fun `test recursive function reference`() =
-        checkNoCompletion(
+        checkCompletionVariants(
             "\\class A { | f : Nat | g : Nat }\n" +
             "\\func C => B\n" +
             "\\func B => C\n" +
-            "\\func test (a : C) => a.{-caret-}")
+            "\\func test (a : C) => a.{-caret-}", listOf("f", "g"))
 
     fun `test function with parameters reference`() =
         checkCompletionVariants(
