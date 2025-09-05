@@ -30,7 +30,6 @@ import org.arend.server.ArendServerService
 import org.arend.server.impl.MultiFileReferenceResolver
 import org.arend.term.abs.AbstractReferable
 import org.arend.term.concrete.Concrete
-import org.arend.typechecking.error.ErrorService
 import org.arend.util.ArendBundle
 import org.arend.util.appExprToConcreteOnlyTopLevel
 import org.arend.util.getBounds
@@ -62,7 +61,7 @@ class ArendChangeSignatureProcessor(project: Project,
             val usagesPreprocessor = getUsagesPreprocessor(usages, myProject, fileChangeMap, rootPsiWithArendErrors, rootPsiWithErrors, (changeInfo as ArendChangeInfo).multiResolver)
             if (!ProgressManager.getInstance().runProcessWithProgressSynchronously(usagesPreprocessor, changeSignatureName, true, myProject)) return false
 
-            if (rootPsiWithErrors.size > 0 || rootPsiWithArendErrors.size > 0) {
+            if (rootPsiWithErrors.isNotEmpty() || rootPsiWithArendErrors.isNotEmpty()) {
                 val conflictDescriptions = MultiMap<PsiElement, String>()
 
                 for (psi in rootPsiWithErrors)
@@ -110,11 +109,11 @@ class ArendChangeSignatureProcessor(project: Project,
                 val progressIndicator = ProgressManager.getInstance().progressIndicator
 
                 for (usage in usages) {
-                    val errors = (usage.psi.containingFile as? ArendFile)?.let {
-                        project.service<ErrorService>().getErrors(it)
+                    val errors = (usage.psi.containingFile as? ArendFile)?.moduleLocation?.let {
+                        project.service<ArendServerService>().server.errorMap[it]
                     }
                     if (errors?.any {
-                            val textRange = BasePass.getImprovedTextRange(it.error)
+                            val textRange = BasePass.getImprovedTextRange(it)
                             textRange?.contains(usage.psi.textRange) == true
                         } == true) usage.psiParentRoot?.let {
                         rootPsiWithArendErrors.add(it)
@@ -207,7 +206,7 @@ class ArendChangeSignatureProcessor(project: Project,
                         }?.let { result ->
                             textReplacements[callEntry.psi] = result
                         }
-                    } catch (e: IllegalArgumentException) {
+                    } catch (_: IllegalArgumentException) {
                         rootPsiWithErrors.add(callEntry.psi)
                     }
 
