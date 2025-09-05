@@ -77,7 +77,6 @@ public abstract class CommonCliRepl extends Repl {
   @NotNull
   protected String prompt = ">";
   private final SourceLibrary myReplLibrary;
-  private final Set<ModulePath> myModules;
 
   //region Tricky constructors (expand to read more...)
   // These two constructors are used for convincing javac that the
@@ -115,7 +114,6 @@ public abstract class CommonCliRepl extends Repl {
     Path configFile = pwd.resolve(FileUtils.LIBRARY_CONFIG_FILE);
     myReplLibrary = Files.exists(configFile) ? FileSourceLibrary.fromConfigFile(configFile, false, errorReporter)
       : new FileSourceLibrary("Repl", true, -1, new ArrayList<>(), null, null, modules, pwd, null, null, null);
-    myModules = modules;
 
     try {
       if (Files.exists(config)) {
@@ -293,8 +291,6 @@ public abstract class CommonCliRepl extends Repl {
         myServer.removeModule(moduleLocation);
       }
     }
-    Set<ModulePath> loadedModulePaths = myServer.getModules().stream().map(ModuleLocation::getModulePath).collect(Collectors.toSet());
-    modulePaths.stream().filter(modulePath -> !loadedModulePaths.contains(modulePath)).forEach(myModules::remove);
     if (myServer instanceof ArendServerImpl && ((ArendServerImpl) myServer).getRequester() instanceof CliServerRequester cliServerRequester) {
       cliServerRequester.getLibraryManager().removeLibrary(libraryName, myServer);
     }
@@ -315,7 +311,6 @@ public abstract class CommonCliRepl extends Repl {
       if (preludeData != null) {
         myReplScope.addPreludeScope(preludeData.getFileScope());
       }
-      myModules.add(Prelude.MODULE_PATH);
     }
     myServer.updateLibrary(myReplLibrary, errorReporter);
     if (myServer instanceof ArendServerImpl && ((ArendServerImpl) myServer).getRequester() instanceof CliServerRequester cliServerRequester) {
@@ -332,18 +327,15 @@ public abstract class CommonCliRepl extends Repl {
       Set<ModulePath> allModules = getAllModules();
       ArendChecker arendChecker = myServer.getCheckerFor(allModules.stream().map(this::getLocationsByModulePath).flatMap(List::stream).toList());
       arendChecker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
-      myModules.addAll(allModules);
       allModules.stream().map(newModulePath -> getAvailableModuleScopeProvider().forModule(newModulePath)).filter(Objects::nonNull).forEach(this::addScope);
       return EmptyScope.INSTANCE;
     }
-    myModules.add(modulePath);
     ArendChecker arendChecker = myServer.getCheckerFor(getLocationsByModulePath(modulePath));
     arendChecker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
     return getAvailableModuleScopeProvider().forModule(modulePath);
   }
 
   public final void loadModules(Collection<@NotNull ModulePath> modulePaths) {
-    myModules.addAll(modulePaths);
     ArendChecker arendChecker = myServer.getCheckerFor(modulePaths.stream().map(this::getLocationsByModulePath).flatMap(List::stream).toList());
     arendChecker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
   }
@@ -354,31 +346,25 @@ public abstract class CommonCliRepl extends Repl {
    *
    * @return true if the module is already loaded before.
    */
-  public final boolean unloadModule(@NotNull ModulePath modulePath) {
+  public final void unloadModule(@NotNull ModulePath modulePath) {
     if (Objects.equals(modulePath.toString(), ALL_MODULES)) {
       Collection<? extends ModuleLocation> moduleLocations = myServer.getModules();
       for (ModuleLocation moduleLocation : moduleLocations) {
         myServer.removeModule(moduleLocation);
       }
-      myModules.clear();
-      myModules.add(Prelude.MODULE_PATH);
-      return true;
-    }
-    boolean isLoadedBefore = myModules.remove(modulePath);
-    if (isLoadedBefore) {
+    } else {
       for (ModuleLocation moduleLocation : getLoadedLocationsByModulePath(modulePath)) {
         myServer.removeModule(moduleLocation);
       }
     }
-    return isLoadedBefore;
   }
 
   public @NotNull Set<ModulePath> getLoadedModules() {
-    return myModules;
+    return getLoadedModuleLocations().stream().map(ModuleLocation::getModulePath).collect(Collectors.toSet());
   }
 
   public @NotNull Set<ModuleLocation> getLoadedModuleLocations() {
-    return myModules.stream().map(this::getLocationsByModulePath).flatMap(List::stream).collect(Collectors.toSet());
+    return new HashSet<>(myServer.getModules());
   }
 
   public @NotNull Set<ModulePath> getAllModules() {
@@ -405,7 +391,7 @@ public abstract class CommonCliRepl extends Repl {
   private final class ChangePromptCommand implements ReplCommand {
     @Override
     public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
-      return "Change the repl prompt (current prompt: '" + prompt + "')";
+      return "Change REPL prompt (current prompt: '" + prompt + "')";
     }
 
     @Override

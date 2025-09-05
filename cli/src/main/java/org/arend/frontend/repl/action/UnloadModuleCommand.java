@@ -34,8 +34,7 @@ public final class UnloadModuleCommand implements CliReplCommand {
     }
     Scope scope = api.getAvailableModuleScopeProvider().forModule(modulePath);
     if (scope != null) api.removeScope(scope);
-    boolean isUnloaded = api.unloadModule(modulePath);
-    assert isUnloaded;
+    api.unloadModule(modulePath);
     api.checkErrors();
   }
 }

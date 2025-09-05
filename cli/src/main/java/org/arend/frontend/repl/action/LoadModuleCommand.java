@@ -24,7 +24,7 @@ public final class LoadModuleCommand implements CliReplCommand {
 
   @Override
   public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
-    return "Load an Arend module from working directory or all modules (:load all)";
+    return "Load an Arend module from loaded libraries. Use `:load all` to load all modules.";
   }
 
   @Override
@@ -41,13 +41,13 @@ public final class LoadModuleCommand implements CliReplCommand {
       }
       loadModule(api, ModulePath.fromString(line));
     } catch (InvalidPathException e) {
-      api.eprintln("[ERROR] The path `" + line + "` is not good because: " + e.getLocalizedMessage());
+      api.eprintln("[ERROR] Path `" + line + "` invalid\n" + e.getLocalizedMessage());
     }
   }
 
   private static void loadModule(@NotNull CommonCliRepl api, ModulePath modulePath) {
     if (!Objects.equals(modulePath.toString(), ALL_MODULES) && !api.getAllModules().contains(modulePath)) {
-      api.eprintln("[ERROR] Module " + modulePath + " is not exist.");
+      api.eprintln("[ERROR] Module " + modulePath + " does not exist.");
       return;
     }
     if (Objects.equals(modulePath.toString(), ALL_MODULES)) {
@@ -80,7 +80,7 @@ public final class LoadModuleCommand implements CliReplCommand {
     @Override
     public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
       return lastModulePath == null
-          ? "Reload the module loaded last time"
+          ? "Reload the last loaded module"
           : "Reload module `" + lastModulePath + "`";
     }
   }
