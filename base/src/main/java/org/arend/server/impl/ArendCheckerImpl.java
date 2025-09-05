@@ -251,6 +251,7 @@ public class ArendCheckerImpl implements ArendChecker {
                 }
               }
               groupData.updateResolvedDefinitions(definitionData);
+              myServer.getInstanceCache().addInstances(groupData, myServer.getTypingInfo());
             }
           }
         }

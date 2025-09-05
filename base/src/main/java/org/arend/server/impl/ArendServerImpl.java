@@ -48,6 +48,7 @@ public class ArendServerImpl implements ArendServer {
   private final ErrorService myErrorService = new ErrorService();
   private final DependencyCollector myDependencyCollector = new DependencyCollector(null);
   private final boolean myCacheReferences;
+  private final InstanceCacheImpl myInstanceCache = new InstanceCacheImpl();
 
   private final TypingInfo myTypingInfo = new TypingInfo() {
     @Override
@@ -275,6 +276,10 @@ public class ArendServerImpl implements ArendServer {
 
           GroupData newData = new GroupData(modificationStamp, group, prevData);
           updateReferables(newData.getRawGroup(), module);
+
+          if (prevData != null) {
+            myInstanceCache.removeInstances(prevData.getRawGroup());
+          }
 
           myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
           return newData;
@@ -605,5 +610,10 @@ public class ArendServerImpl implements ArendServer {
       longNames.add(resolver.calculateLongName(referable, anchor));
     }
     return new Pair<>(resolver.getModifier(), longNames);
+  }
+
+  @Override
+  public @NotNull InstanceCacheImpl getInstanceCache() {
+    return myInstanceCache;
   }
 }
