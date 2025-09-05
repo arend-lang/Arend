@@ -40,11 +40,11 @@ class InteractiveGoalSolverQuickFix(private val element: ArendExpr,
     private fun invokeOnConcrete(concrete: Concrete.Expression, editor: Editor) {
         runReadAction {
             if (element.isValid && !editor.isDisposed) {
-                // TODO[server2]: val definitionRenamer = PsiLocatedRenamer(element)
-                val text = concrete /* TODO[server2]: .accept(DefinitionRenamerConcreteVisitor(CachingDefinitionRenamer(definitionRenamer)), null) */ .toString()
+                val definitionRenamer = PsiLocatedRenamer(element)
+                val text = concrete.accept(DefinitionRenamerConcreteVisitor(CachingDefinitionRenamer(definitionRenamer)), null).toString()
                 ApplicationManager.getApplication().runWriteAction {
                     action(editor, concrete, text)
-                    // TODO[server2]: definitionRenamer.writeAllImportCommands()
+                    definitionRenamer.writeAllImportCommands()
                 }
             }
         }
