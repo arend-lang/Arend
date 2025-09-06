@@ -298,21 +298,182 @@ public class StdExtension implements ArendExtension {
         In the latter case, the meta will prove an equality using only structure available in the specified class.
         """), equation);
     ConcreteMetaDefinition monoidSolver = makeDef(equation.getRef(), "monoid", new DependencyMetaTypechecker(MonoidEquationMeta.class, () -> new DeferredMetaDefinition(new MonoidEquationMeta(), true)));
-    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, monoidSolver);
-    contributor.declare(hList(text("Additive version of "), refDoc(monoidSolver.getRef())), makeDef(equation.getRef(), "addMonoid", new DependencyMetaTypechecker(AdditiveMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new AdditiveMonoidEquationMeta(), true))));
+    contributor.declare(multiline("""
+        The monoid solver solves goals of the form `e1 = {M} e2` for some monoid `M`.
+        If `e1` and `e2` represent the same word in the language of monoids, then the solver proves the equality immediately without any additional arguments.
+        For example, {monoid} proves the following equality: `(x * (ide * y)) * ((ide * z) * w) = x * ((y * (z * ide)) * w)`.
+        
+        If the words represented by `e1` and `e2` are not the same, then {monoid} puts them in a canonical form and expects an argument that proves the equality of these normal forms.
+        For example, if the goal is `(x * (ide * y)) * ((ide * z) * w) = w * ((z * (y * ide)) * x)`, then the subgoal in `monoid {?}` is `x * (y * (z * w)) = w * (z * (y * x))`.
+        
+        Conversely, if we have an expression of the type `e1 = {M} e2`, then we can transform it into a proof of the equality of canonical forms.
+        For example, if `(p : (x * (ide * y)) * ((ide * z) * w) = w * ((z * (y * ide)) * x))`, then `monoid in p` has type `x * (y * (z * w)) = w * (z * (y * x))`.
+        
+        The monoid solver can also apply hypotheses to solve goals.
+        A hypothesis `h` is an expression of type `l = {M} r`.
+        Given such a hypothesis, `monoid {h}` replaces all occurrences of `l` with `r` in both `e1` and `e2`.
+        For example, if `p : x * y = ide` and the goal is `(z * x) * (y * w) = w * (x * (y * z))`, then the subgoal in `monoid {p} {?}` is `z * w = w * z`.
+        
+        Several hypotheses are applied sequentially.
+        So, for example, if `p : x * y = ide` and the goal is `(x * x) * (y * y) = ide`, then `monoid {p,p}` proves the goal.
+        
+        Finally, if we need to replace only one occurrence of the LHS of a hypothesis, then the number before the hypothesis indicates the position of the LHS that should be replaced.
+        For example, if `p : x = ide` and the goal is `x * y * x * y = x * y`, then we can eliminate only one `x` as follows:
+        * In `monoid { 1 p } {?}`, the subgoal is `y * (x * y) = x * y`.
+        * In `monoid { 2 p } {?}`, the subgoal is `x * (y * y) = x * y`.
+        * In `monoid { 3 p } {?}`, the subgoal is `x * (y * (x * y)) = y`.
+        """), monoidSolver);
+    contributor.declare(hList(text("The additive version of "), refDoc(monoidSolver.getRef())), makeDef(equation.getRef(), "addMonoid", new DependencyMetaTypechecker(AdditiveMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new AdditiveMonoidEquationMeta(), true))));
     ConcreteMetaDefinition commMonoidSolver = makeDef(equation.getRef(), "cMonoid", new DependencyMetaTypechecker(CommutativeMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new CommutativeMonoidEquationMeta(), true)));
-    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, commMonoidSolver);
-    contributor.declare(hList(text("Additive version of "), refDoc(commMonoidSolver.getRef())), makeDef(equation.getRef(), "abMonoid", new DependencyMetaTypechecker(AbelianMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new AbelianMonoidEquationMeta(), true))));
+    contributor.declare(multiline("""
+        The commutative monoid solver solves goals of the form `e1 = {M} e2` for some commutative monoid `M`.
+        If `e1` and `e2` represent the same word in the language of commutative monoids, then the solver proves the equality immediately without any additional arguments.
+        For example, {cMonoid} proves the following equality: `(w * (ide * x)) * ((ide * y) * z) = x * ((y * (z * ide)) * w)`.
+        
+        If the words represented by `e1` and `e2` are not the same, then {cMonoid} puts them in a canonical form and expects an argument that proves the equality of these normal forms.
+        For example, if the goal is `(w * (ide * x)) * ((ide * x) * z) = x * ((y * (z * ide)) * w)`, then the subgoal in `cMonoid {?}` is `w * (x * (x * z)) = w * (x * (z * y))`.
+        
+        Conversely, if we have an expression of the type `e1 = {M} e2`, then we can transform it into a proof of the equality of canonical forms.
+        For example, if `(p : (w * (ide * x)) * ((ide * x) * z) = x * ((y * (z * ide)) * w))`, then `cMonoid in p` has type `w * (x * (x * z)) = w * (x * (z * y))`.
+        
+        The commutative monoid solver can also apply hypotheses to solve goals.
+        A hypothesis `h` is an expression of type `l = {M} r`.
+        Given such a hypothesis, `cMonoid {h}` replaces a single occurrence of `l` with `r` in both `e1` and `e2`.
+        For example, if `p : x = ide` and the goal is `(y * x) * (y * x)`, then the subgoal in `cMonoid {p} {?}` is `y * (y * x) = y`.
+        
+        Several hypotheses are applied sequentially.
+        So, for example, if `p : x1 * y2 = y1 * x2`, `q : y1 * z2 = z1 * y2`, and the goal is `x1 * z2 * y2 = z1 * x2 * y2`, then `cMonoid {p,q}` proves the goal.
+        
+        If we need to replace several occurrences of the LHS of a hypothesis, then the number before the hypothesis indicates the number of occurrences of the LHS that should be replaced.
+        A positive number indicates occurrences in `e1` and a negative number in `e2`.
+        * If `p : x = y`, `q : y * y = x`, and the goal is `x * x * x * x = x`, then `cMonoid { 4 p, 2 q, 2 p, q }` proves the goal.
+        * If `p : x * x = y`, `q : x * x * y = y`, and the goal is `x * x * y = x * x`, then `cMonoid { -1 p, q }` proves the goal.
+        """), commMonoidSolver);
+    contributor.declare(hList(text("The additive version of "), refDoc(commMonoidSolver.getRef())), makeDef(equation.getRef(), "abMonoid", new DependencyMetaTypechecker(AbelianMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new AbelianMonoidEquationMeta(), true))));
     ConcreteMetaDefinition groupSolver = makeDef(equation.getRef(), "group", new DependencyMetaTypechecker(GroupEquationMeta.class, () -> new DeferredMetaDefinition(new GroupEquationMeta(), true)));
-    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, groupSolver);
-    contributor.declare(hList(text("Additive version of "), refDoc(groupSolver.getRef())), makeDef(equation.getRef(), "addGroup", new DependencyMetaTypechecker(AdditiveGroupEquationMeta.class, () -> new DeferredMetaDefinition(new AdditiveGroupEquationMeta(), true))));
+    contributor.declare(multiline("""
+        The group solver solves goals of the form `e1 = {G} e2` for some group `G`.
+        If `e1` and `e2` represent the same word in the language of groups, then the solver proves the equality immediately without any additional arguments.
+        For example, {group} proves the following equality: `(x * (z * inverse y)) * ((ide * y) * (ide * inverse z)) * w = x * ((ide * (y * ide)) * inverse y) * w`.
+        
+        If the words represented by `e1` and `e2` are not the same, then {group} puts them in a canonical form and expects an argument that proves the equality of these normal forms.
+        For example, if the goal is `(x * (z * inverse y)) * ((ide * y) * (ide * inverse z)) * x = x * ((ide * (y * ide)) * inverse y) * inverse x`, then the subgoal in `group {?}` is `x * x = ide`.
+        
+        Conversely, if we have an expression of the type `e1 = {G} e2`, then we can transform it into a proof of the equality of canonical forms.
+        For example, if `(p : (x * (z * inverse y)) * ((ide * y) * (ide * inverse z)) * x = x * ((ide * (y * ide)) * inverse y) * inverse x)`, then `group in p` has type `x * x = ide`.
+        """), groupSolver);
+    contributor.declare(hList(text("The additive version of "), refDoc(groupSolver.getRef())), makeDef(equation.getRef(), "addGroup", new DependencyMetaTypechecker(AdditiveGroupEquationMeta.class, () -> new DeferredMetaDefinition(new AdditiveGroupEquationMeta(), true))));
     ConcreteMetaDefinition commGroupSolver = makeDef(equation.getRef(), "cGroup", new DependencyMetaTypechecker(CommutativeGroupEquationMeta.class, () -> new DeferredMetaDefinition(new CommutativeGroupEquationMeta(), true)));
-    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, commGroupSolver);
-    contributor.declare(hList(text("Additive version of "), refDoc(commGroupSolver.getRef())), makeDef(equation.getRef(), "abGroup", new DependencyMetaTypechecker(AbelianGroupEquationMeta.class, () -> new DeferredMetaDefinition(new AbelianGroupEquationMeta(), true))));
-    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "semiring", new DependencyMetaTypechecker(SemiringEquationMeta.class, () -> new DeferredMetaDefinition(new SemiringEquationMeta(), true))));
-    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "cSemiring", new DependencyMetaTypechecker(CSemiringEquationMeta.class, () -> new DeferredMetaDefinition(new CSemiringEquationMeta(), true))));
-    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "ring", new DependencyMetaTypechecker(RingEquationMeta.class, () -> new DeferredMetaDefinition(new RingEquationMeta(), true))));
-    contributor.declare(nullDoc() /* TODO[server2]: Write a description */, makeDef(equation.getRef(), "cRing", new DependencyMetaTypechecker(CRingEquationMeta.class, () -> new DeferredMetaDefinition(new CRingEquationMeta(), true))));
+    contributor.declare(multiline("""
+        The commutative group solver solves goals of the form `e1 = {G} e2` for some commutative group `G`.
+        If `e1` and `e2` represent the same word in the language of commutative groups, then the solver proves the equality immediately without any additional arguments.
+        For example, {cGroup} proves the following equality: `(x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y = y * ((ide * (x * ide)) * inverse y) * w`.
+        
+        If the words represented by `e1` and `e2` are not the same, then {cGroup} puts them in a canonical form and expects an argument that proves the equality of these normal forms.
+        For example, if the goal is `(x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y * x = y * ((ide * (x * ide)) * inverse y) * inverse x`, then the subgoal in `cGroup {?}` is `x * (x * w) = ide`.
+        
+        Conversely, if we have an expression of the type `e1 = {G} e2`, then we can transform it into a proof of the equality of canonical forms.
+        For example, if `(p : (x * (z * inverse y)) * ((ide * w) * (ide * inverse z)) * y * x = y * ((ide * (x * ide)) * inverse y) * inverse x)`, then `cGroup in p` has type `x * (x * w) = ide`.
+        
+        The commutative group solver can also apply hypotheses to solve goals.
+        A hypothesis `h` is an expression of type `l = {G} r`.
+        Given such a hypothesis, `cGroup {h}` multiplies the goal by `inverse l * r`.
+        For example, if `p : y * x = ide` and the goal is `x * z = z * inverse y * w`, then {cGroup} simplifies the goal to `x * (y * inverse w) = ide` and the subgoal in `cGroup {p} {?}` is `inverse w = ide`.
+        
+        If a hypothesis begins with a (positive or negative) number, then the solver raises it to the indicated power.
+        For example, if `p : z * z = inverse z * inverse y`, `q : x * z * z = ide`, and the goal is `x * inverse y * x = y * inverse x`, then `cGroup { 3 q, -2 p }` proves the goal.
+        """), commGroupSolver);
+    contributor.declare(hList(text("The additive version of "), refDoc(commGroupSolver.getRef())), makeDef(equation.getRef(), "abGroup", new DependencyMetaTypechecker(AbelianGroupEquationMeta.class, () -> new DeferredMetaDefinition(new AbelianGroupEquationMeta(), true))));
+    contributor.declare(multiline("""
+        The semiring solver solves goals of the form `e1 = {R} e2` for some semiring `R`.
+        If `e1` and `e2` represent the same word in the language of semirings, then the solver proves the equality immediately without any additional arguments.
+        For example, {semiring} proves the following equality: `(a + b) * (a + b) = a * a + a * b + b * a + b * b`.
+        
+        If the words represented by `e1` and `e2` are not the same, then {semiring} puts them in a canonical form and expects an argument that proves the equality of these normal forms.
+        For example, if the goal is `a * (b + c) + a * b = 0`, then the subgoal in `semiring {?}` is `2 * (a * b) + a * c = 0`.
+        
+        Conversely, if we have an expression of the type `e1 = {R} e2`, then we can transform it into a proof of the equality of canonical forms.
+        For example, if `(p : a * (b + c) + a * b = 0)`, then `semiring in p` has type `2 * (a * b) + a * c = 0`.
+        
+        The semiring solver can also apply hypotheses to solve goals.
+        A hypothesis `h` is an expression of type `l = {R} r`.
+        Given such a hypothesis, `semiring {h}` replaces a single occurrence of `l` with `r` in both `e1` and `e2`.
+        Several hypotheses are applied sequentially.
+        For example, if `p : b * c = 0`, `q : a * d = 1`, and the goal is `(a + b) * (c + d) = a * c + b * d + 1`, then `semiring {p,q} {?}` proves the goal.
+        
+        A (positive or negative) number before a hypothesis indicates the multiplicative factor applied to it.
+        If the number is positive, the hypothesis is applied to `e1`; otherwise it is applied to `e2`.
+        For example, if `p : 0 = a`, and the goal is `b = 0`, then
+        * In `semiring { p } {?}`, the subgoal is `b + a = a`.
+        * In `semiring { 1 p } {?}`, the subgoal is `b + a = 0`.
+        * In `semiring { -1 p } {?}`, the subgoal is `b = a`.
+        * In `semiring { 2 p } {?}`, the subgoal is `b + 2 * a = 0`.
+        * In `semiring { -2 p } {?}`, the subgoal is `b = 2 * a`.
+        """), makeDef(equation.getRef(), "semiring", new DependencyMetaTypechecker(SemiringEquationMeta.class, () -> new DeferredMetaDefinition(new SemiringEquationMeta(), true))));
+    contributor.declare(multiline("""
+        The commutative semiring solver solves goals of the form `e1 = {R} e2` for some commutative semiring `R`.
+        If `e1` and `e2` represent the same word in the language of commutative semirings, then the solver proves the equality immediately without any additional arguments.
+        For example, {cSemiring} proves the following equality: `(a + b) * (a + b) = a * a + 2 * a * b + b * b`.
+        
+        If the words represented by `e1` and `e2` are not the same, then {cSemiring} puts them in a canonical form and expects an argument that proves the equality of these normal forms.
+        For example, if the goal is `(a + 0) * (1 + b) = b * a`, then the subgoal in `cSemiring {?}` is `a + a * b = a * b`.
+        
+        Conversely, if we have an expression of the type `e1 = {R} e2`, then we can transform it into a proof of the equality of canonical forms.
+        For example, if `(p : (a + 0) * (1 + b) = b * a)`, then `cSemiring in p` has type `a + a * b = a * b`.
+        
+        The commutative semiring solver can also apply hypotheses to solve goals.
+        A hypothesis `h` is an expression of type `l = {R} r`.
+        Given such a hypothesis, `cSemiring {h}` replaces all occurrences of `l` with `r` in both `e1` and `e2`.
+        For example, if `p : a * b = 0`, `q : a * a = b * b`, and the goal is `(a + b) * (a + b) = 0`, then the subgoal in `cSemiring {p,q} {?}` is `2 * (b * b) = 0`.
+        
+        A (positive or negative) number before a hypothesis indicates the multiplicative factor applied to it.
+        If the number is positive, the hypothesis is applied to `e1`; otherwise it is applied to `e2`.
+        For example, if `p : a = 0`, and the goal is `a + b = c + a`, then
+        * In `cSemiring { p } {?}`, the subgoal is `b = c`.
+        * In `semiring { 1 p } {?}`, the subgoal is `b = a + c`.
+        * In `semiring { -1 p } {?}`, the subgoal is `a + b = c`.
+        """), makeDef(equation.getRef(), "cSemiring", new DependencyMetaTypechecker(CSemiringEquationMeta.class, () -> new DeferredMetaDefinition(new CSemiringEquationMeta(), true))));
+    contributor.declare(multiline("""
+        The ring solver solves goals of the form `e1 = {R} e2` for some ring `R`.
+        If `e1` and `e2` represent the same word in the language of rings, then the solver proves the equality immediately without any additional arguments.
+        For example, {ring} proves the following equality: `(a + b) * (a - b) = a * a - a * b + b * a - b * b`.
+        
+        If the words represented by `e1` and `e2` are not the same, then {ring} puts them in a canonical form and expects an argument that proves the equality of these normal forms.
+        For example, if the goal is `(a + b) * (a - b) = a * a - b * b`, then the subgoal in `ring {?}` is `negative (a * b) + b * a = 0`.
+        
+        Conversely, if we have an expression of the type `e1 = {R} e2`, then we can transform it into a proof of the equality of canonical forms.
+        For example, if `(p : (a + b) * (a - b) = a * a - b * b)`, then `ring in p` has type `negative (a * b) + b * a = 0`.
+        
+        The ring solver can also apply hypotheses to solve goals.
+        A hypothesis `h` is an expression of type `l = {R} r`.
+        Given such a hypothesis, `ring {h}` adds `r - l` to the goal.
+        For example, if `p : b * a = a * b` and the goal is `(a + b) * (a - b) = a * a - b * b`, then {ring} simplifies the goal to `negative (a * b) + b * a` and `ring {p}` proves the goal.
+        
+        If a hypothesis begins with a (positive or negative) number, then the solver multiplies it by the indicated factor.
+        For example, if `p : b * a = a * b` and the goal is `(a + b) * (a - b) = a * a - b * b`, then `ring { -1 p }` proves the goal.
+        
+        Several hypotheses can be applied at the same time.
+        For example, if `p : a * a = 0`, `q : b * b = 0`, and the goal is `(a + b) * (a - b) = b * a - a * b`, then `ring { p, -1 q }` proves the goal.
+        """), makeDef(equation.getRef(), "ring", new DependencyMetaTypechecker(RingEquationMeta.class, () -> new DeferredMetaDefinition(new RingEquationMeta(), true))));
+    contributor.declare(multiline("""
+        The commutative ring solver solves goals of the form `e1 = {R} e2` for some commutative ring `R`.
+        If `e1` and `e2` represent the same word in the language of commutative rings, then the solver proves the equality immediately without any additional arguments.
+        For example, {cRing} proves the following equality: `(a + b) * (a - b) = a * a - b * b`.
+        
+        If the words represented by `e1` and `e2` are not the same, then {cRing} puts them in a canonical form and expects an argument that proves the equality of these normal forms.
+        For example, if the goal is `(a - b) * (a - b) = b * b`, then the subgoal in `cRing {?}` is `a * a - 2 * (a * b) = 0`.
+        
+        Conversely, if we have an expression of the type `e1 = {R} e2`, then we can transform it into a proof of the equality of canonical forms.
+        For example, if `(p : (a - b) * (a - b) = b * b)`, then `cRing in p` has type `a * a - 2 * (a * b) = 0`.
+        
+        The commutative ring solver can also apply hypotheses to solve goals.
+        A hypothesis `h` is an expression of type `l = {R} r`.
+        Given such a hypothesis, `cRing {h}` finds the largest word `w` such that `l * w` occurs in `e1 - e2` and replaces that subword with `r * w`.
+        For example, if `p : a * b = 0` and the goal is `(a + b) * (a + b) = a * a + b * b`, then `cRing {p}` proves the goal.
+        
+        Several hypotheses are applied sequentially.
+        For example, if `p : a = b`, `q : b * c = 0`, and the goal is `a * c = 0`, then `cRing {p,q}` proves the goal.
+        """), makeDef(equation.getRef(), "cRing", new DependencyMetaTypechecker(CRingEquationMeta.class, () -> new DeferredMetaDefinition(new CRingEquationMeta(), true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
