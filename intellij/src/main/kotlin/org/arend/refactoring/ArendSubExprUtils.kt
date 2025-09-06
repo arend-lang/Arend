@@ -47,7 +47,6 @@ import org.arend.typechecking.subexpr.CorrespondedSubDefVisitor
 import org.arend.typechecking.subexpr.FindBinding
 import org.arend.typechecking.subexpr.SubExprError
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor
-import org.arend.resolving.util.parseBinOp
 import org.arend.util.getReferableConcreteGroup
 import org.arend.util.getReferableScope
 
@@ -147,7 +146,7 @@ fun correspondedSubExpr(range: TextRange, file: PsiFile, project: Project): SubE
         concreteDef ?: throw SubExprException("selected text is not in a definition")
         val def = psiDef.tcReferable?.typechecked
             ?: throw SubExprException("underlying definition is not type checked")
-        val subDefVisitor = CorrespondedSubDefVisitor(resolver?.result ?: subExpr)
+        val subDefVisitor = CorrespondedSubDefVisitor(resolver?.result ?: subExpr, false)
         errors = subDefVisitor.exprError
         concreteDef.accept(subDefVisitor, def)
     } ?: throw SubExprException(buildString {
@@ -304,8 +303,9 @@ inline fun normalizeExpr(
 ) {
     if (checkNotGeneratePreview()) {
         val title = "Running normalization"
-        var result: Concrete.Expression? = null
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, title, true) {
+            var result: Concrete.Expression? = null
+
             override fun run(indicator: ProgressIndicator) {
                 result = ComputationRunner<Concrete.Expression>().run(ProgressCancellationIndicator(indicator)) {
                     runReadAction {
