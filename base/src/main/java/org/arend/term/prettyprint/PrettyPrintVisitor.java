@@ -1429,7 +1429,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       }
       case Concrete.ConstructorPattern conPattern -> {
         Referable constructor = conPattern.getConstructor();
-        Precedence consPrec = new Precedence(Precedence.Associativity.NON_ASSOC, Concrete.Pattern.PREC, false);
+        Precedence consPrec = new Precedence(Precedence.Associativity.NON_ASSOC, (byte) 0, false);
         if (constructor instanceof GlobalReferable globalReferable) {
           consPrec = globalReferable.getPrecedence();
         }

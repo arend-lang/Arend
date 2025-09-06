@@ -113,10 +113,10 @@ class ResolveReferenceAction(val target: PsiLocatedReferable,
             return ResolveReferenceAction(target, name.toList(), NsCmdRawModifierAction(fix.proj1, anchorFile), RenameReferenceAction(anchor, name.toList(), target))
         }
 
-        @Deprecated("Use getTargetLongName instead") fun getTargetName(target: PsiLocatedReferable, element: ArendCompositeElement): Pair<String, NsCmdRefactoringAction?>? {
+        fun getTargetName(target: PsiLocatedReferable, element: ArendCompositeElement): Pair<String, NsCmdRefactoringAction?>? {
             if (!target.isValid) return null
             val anchorFile = element.containingFile as? ArendFile ?: return null
-            val fix: org.arend.ext.util.Pair<RawModifier, List<LongName>>? = doGetProposedFix(target, element) ?: return null
+            val fix: org.arend.ext.util.Pair<RawModifier, List<LongName>> = doGetProposedFix(target, element) ?: return null
             val name = fix?.proj2?.firstOrNull()?.toString() ?: return null
             val action = fix.proj1.let { nsFix -> if (nsFix is RawSequenceModifier && nsFix.sequence.isEmpty()) null else
                 if (nsFix is RawSequenceModifier && nsFix.sequence.size == 1) NsCmdRawModifierAction(nsFix.sequence.first(), anchorFile) else

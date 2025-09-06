@@ -22,19 +22,24 @@ import org.arend.core.pattern.ExpressionPattern
 import org.arend.core.pattern.Pattern.toExpressionPatterns
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.core.ops.NormalizationMode
+import org.arend.ext.module.LongName
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
 import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
 import org.arend.naming.reference.LocalReferable
+import org.arend.naming.reference.LongUnresolvedReference
 import org.arend.naming.reference.Referable
 import org.arend.naming.renamer.ReferableRenamer
 import org.arend.prelude.Prelude
 import org.arend.psi.*
 import org.arend.psi.ext.*
+import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.refactoring.*
 import org.arend.refactoring.utils.ServerBasedDefinitionRenamer
 import org.arend.refactoring.utils.NumberSimplifyingConcreteVisitor
+import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
+import org.arend.server.RawAnchor
 import org.arend.term.abs.Abstract
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.LocalVariablesCollector
@@ -50,6 +55,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
     private var caseClauseParameters: DependentLink? = null
 
     override fun isApplicableTo(element: PsiElement, caretOffset: Int, editor: Editor): Boolean {
+        val server = element.project.service<ArendServerService>().server
         val recursiveParameterName = when (element) {
             is ArendPattern -> element.singleReferable?.refName
             else -> null
@@ -66,7 +72,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
                     singletonList(IdpPatternEntry(project, element.isExplicit))
                 } else if (canDoPatternMatchingOnIdp != PatternMatchingOnIdpResult.DO_NOT_ELIMINATE) {
                     val constructors = type.matchedConstructors ?: return false
-                    constructors.map { ConstructorSplitPatternEntry(it.definition, element.isExplicit, type.definition, recursiveParameterName) }
+                    constructors.map { ConstructorSplitPatternEntry( element, it.definition, element.isExplicit, type.definition, recursiveParameterName) }
                 } else null
             }
             is SigmaExpression -> singletonList(TupleSplitPatternEntry(type, element.isExplicit))
@@ -86,6 +92,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
 
                             result.add(
                                 ConstructorSplitPatternEntry(
+                                    element,
                                     p.second,
                                     element.isExplicit,
                                     type.definition,
@@ -231,16 +238,28 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
 
         }
 
-        class ConstructorSplitPatternEntry(val constructor: Definition,
+        class ConstructorSplitPatternEntry(val anchor: PsiElement,
+                                           val constructor: Definition,
                                            isExplicit: Boolean,
                                            recursiveDefinition: Definition?,
                                            recursiveParameterName: String?,
-                                           val parametersToRemove: Collection<DependentLink> = emptyList<DependentLink>()) : SplitPatternEntry(recursiveDefinition, recursiveParameterName, isExplicit) {
+                                           val parametersToRemove: Collection<DependentLink> = emptyList()) : SplitPatternEntry(recursiveDefinition, recursiveParameterName, isExplicit) {
             override fun patternConcrete(freeVars: Collection<Variable>): Pair<Concrete.Pattern, Concrete.Expression> {
-                val coreParameters = DependentLink.Helper.toList(constructor.parameters).minus(parametersToRemove)
+                val coreParameters = DependentLink.Helper.toList(constructor.parameters).minus(parametersToRemove.toSet())
                 val concreteParameters = generateConcreteParameters(coreParameters, freeVars)
                 val concreteParametersWithExplicitness = coreParameters.map { it.isExplicit }.toList().zip(concreteParameters)
-                val resultPattern = Concrete.ConstructorPattern(null, isExplicit, null, constructor.referable, concreteParametersWithExplicitness.map { Concrete.NamePattern(null, it.first, it.second, null) }, null)
+                val psiReferable = constructor.referable.data as? PsiLocatedReferable
+                val referable = if (psiReferable != null && anchor is ArendCompositeElement) {
+                   val p = ResolveReferenceAction.getTargetName(psiReferable, anchor)
+                   p?.second?.execute()
+                   val l = LongName.fromString(p?.first ?: "").toList()
+                   if (p?.first != null && l.size > 1)
+                     LongUnresolvedReference(psiReferable, null, l)
+                   else
+                     constructor.referable
+                } else constructor.referable
+
+                val resultPattern = Concrete.ConstructorPattern(null, isExplicit, null, referable, concreteParametersWithExplicitness.map { Concrete.NamePattern(null, it.first, it.second, null) }, null)
                 val resultExpression = Concrete.AppExpression.make(null, Concrete.ReferenceExpression(null, constructor.referable), concreteParametersWithExplicitness.map {
                     Concrete.Argument(Concrete.ReferenceExpression(null, it.second), it.first)
                 })
