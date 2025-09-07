@@ -36,10 +36,7 @@ import org.arend.lib.meta.equationNew.monoid.AbelianMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.AdditiveMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.CommutativeMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.MonoidEquationMeta;
-import org.arend.lib.meta.equationNew.ring.CRingEquationMeta;
-import org.arend.lib.meta.equationNew.ring.CSemiringEquationMeta;
-import org.arend.lib.meta.equationNew.ring.RingEquationMeta;
-import org.arend.lib.meta.equationNew.ring.SemiringEquationMeta;
+import org.arend.lib.meta.equationNew.ring.*;
 import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
 import org.arend.lib.meta.exists.ExistsResolver;
@@ -273,6 +270,8 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getNewMonoidSolverModule());
     contributor.declare(algebra, Names.getNewRingSolverModule());
     contributor.declare(algebra, Names.getNewSemiringSolverModule());
+    contributor.declare(algebra, Names.getBooleanRingModule());
+    contributor.declare(algebra, Names.getBooleanRingSolverModule());
     contributor.declare(algebra, Names.getIntModule());
     contributor.declare(algebra, Names.getNatModule());
     contributor.declare(algebra, Names.getRatModule());
@@ -474,6 +473,10 @@ public class StdExtension implements ArendExtension {
         Several hypotheses are applied sequentially.
         For example, if `p : a = b`, `q : b * c = 0`, and the goal is `a * c = 0`, then `cRing {p,q}` proves the goal.
         """), makeDef(equation.getRef(), "cRing", new DependencyMetaTypechecker(CRingEquationMeta.class, () -> new DeferredMetaDefinition(new CRingEquationMeta(), true))));
+    contributor.declare(multiline("""
+        The Boolean ring solver solves goals of the form `e1 = {B} e2` for some Boolean ring `B`.
+        If `e1` and `e2` represent the same word in the language of Boolean rings, then the solver proves the equality immediately without any additional arguments.
+        """), makeDef(equation.getRef(), "bRing", new DependencyMetaTypechecker(BooleanRingEquationMeta.class, () -> new DeferredMetaDefinition(new BooleanRingEquationMeta(), true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));

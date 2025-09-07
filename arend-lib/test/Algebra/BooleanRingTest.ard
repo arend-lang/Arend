@@ -1,0 +1,24 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring.Boolean
+\import Order.Lattice
+
+\lemma boolRingTest {B : BooleanRing} (a b : B) : B.diff a b * b = 0
+  => equation.bRing
+
+\lemma boolRingTest2 {B : BooleanRing} (a b : B) : (a + b) * (a * b) = 0
+  => equation.bRing
+
+\lemma boolRingTest3 {B : BooleanRing} (a b : B) (p : a + b = 0) : (a - b) * (a ∨ b) = a + b
+  => equation.bRing
+
+\lemma boolRingArgTest {B : BooleanRing} (a b : B) (p : b + a = 0) : (a - b) * (a ∨ b) = 0
+  => equation.bRing p
+
+\lemma boolRingArgTest2 {B : BooleanRing} (a b c : B) (p : c + (b + a) = 0) : a + b + c = 0
+  => equation.bRing p
+
+\lemma boolRingArgTest3 {B : BooleanRing} (a b c : B) (p : c + (b + a) = 0) : a + b = c
+  => equation.bRing p
