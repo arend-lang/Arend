@@ -12,6 +12,7 @@
 \import Meta
 \import Order.Lattice
 \import Order.LexicographicalArray
+\import Order.LinearOrder
 \import Order.PartialOrder
 \import Paths
 \import Paths.Meta
@@ -37,6 +38,8 @@
     \func multiply {n : Nat} (l1 l2 : NF n) : NF n \elim l2
       | lnil => lnil
       | l2 => multiply' l1 l2 lnil
+
+    \instance BoolOpPoset : LinearOrder.Dec => BoolPoset.op
 
     \func multiply' {n : Nat} (l1 l2 acc : NF n) : NF n \elim l1
       | lnil => acc

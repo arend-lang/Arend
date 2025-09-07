@@ -123,8 +123,8 @@ public class BooleanRingEquationMeta extends BaseEquationMeta<List<List<Boolean>
       int s = Math.max(l1.size(), l2.size());
       for (int i = 0; i < s; i++) {
         int c = Boolean.compare(getIndex(l1, i), getIndex(l2, i));
-        if (c < 0) return -1;
-        if (c > 0) return 1;
+        if (c < 0) return 1;
+        if (c > 0) return -1;
       }
       return 0;
     });
