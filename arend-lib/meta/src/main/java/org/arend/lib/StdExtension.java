@@ -470,12 +470,22 @@ public class StdExtension implements ArendExtension {
         Given such a hypothesis, `cRing {h}` finds the largest word `w` such that `l * w` occurs in `e1 - e2` and replaces that subword with `r * w`.
         For example, if `p : a * b = 0` and the goal is `(a + b) * (a + b) = a * a + b * b`, then `cRing {p}` proves the goal.
         
+        If a hypothesis begins with a (positive or negative) number, then the solver multiplies it by the indicated factor instead of the largest word `w`.
+        For example, if `p : a = b` and the goal is `a * c = 0`, then the subgoal in `cRing {?}` is `c * b = 0`, but the subgoal in `cRing { -1 p } {?}` is `a + (a * c - b) = 0`.
+        
         Several hypotheses are applied sequentially.
         For example, if `p : a = b`, `q : b * c = 0`, and the goal is `a * c = 0`, then `cRing {p,q}` proves the goal.
         """), makeDef(equation.getRef(), "cRing", new DependencyMetaTypechecker(CRingEquationMeta.class, () -> new DeferredMetaDefinition(new CRingEquationMeta(), true))));
     contributor.declare(multiline("""
         The Boolean ring solver solves goals of the form `e1 = {B} e2` for some Boolean ring `B`.
         If `e1` and `e2` represent the same word in the language of Boolean rings, then the solver proves the equality immediately without any additional arguments.
+        For example, {bRing} proves the following equality: `(a + b) * (a * b) = 0`.
+        
+        If the words represented by `e1` and `e2` are not the same, then {cRing} puts them in a canonical form and expects an argument that proves the equality of these normal forms.
+        For example, if the goal is `(a - b) * (a ∨ b) = 0`, then the subgoal in `bRing {?}` is `a + b = 0`.
+        
+        Conversely, if we have an expression of the type `e1 = {B} e2`, then we can transform it into a proof of the equality of canonical forms.
+        For example, if `(p : (a - b) * (a ∨ b) = 0)`, then `bRing in p` has type `a + b = 0`.
         """), makeDef(equation.getRef(), "bRing", new DependencyMetaTypechecker(BooleanRingEquationMeta.class, () -> new DeferredMetaDefinition(new BooleanRingEquationMeta(), true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
