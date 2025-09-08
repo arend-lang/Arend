@@ -26,3 +26,18 @@
 
 \lemma boolRingForwardTest {B : BooleanRing} (a b : B) (p : (a - b) * (a ∨ b) = 0) : a + b = 0
   => equation.bRing in p
+
+\lemma boolRingProofTest {B : BooleanRing} (a b c : B) (p : a = b + c) : a * b + b = b * c
+  => equation.bRing {p}
+
+\lemma boolRingProofTest2 {B : BooleanRing} (a b c : B) (p : a + b = c) : a * b + b = b * c
+  => equation.bRing {p}
+
+\lemma boolRingProofTest3 {B : BooleanRing} (a b c : B) (p : b + b * c = c) : b * c + (b + c) = 0
+  => equation.bRing {p}
+
+\lemma boolRingProofTest4 {B : BooleanRing} (a b c : B) (p : a = b + c) (q : b + b * c = c) : a * b = c
+  => equation.bRing {p,q}
+
+\lemma boolRingProofTest5 {B : BooleanRing} (a b c : B) (p : a = a * b) (q : a = 0) : a * b = 0
+  => equation.bRing {1 p} q

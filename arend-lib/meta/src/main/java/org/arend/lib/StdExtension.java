@@ -486,6 +486,18 @@ public class StdExtension implements ArendExtension {
         
         Conversely, if we have an expression of the type `e1 = {B} e2`, then we can transform it into a proof of the equality of canonical forms.
         For example, if `(p : (a - b) * (a ∨ b) = 0)`, then `bRing in p` has type `a + b = 0`.
+        
+        The Boolean ring solver can also apply hypotheses to solve goals.
+        A hypothesis `h` is an expression of type `l = {B} r`.
+        Given such a hypothesis, `bRing {h}` finds the largest word `w` such that `l * w` occurs in `e1 + e2` and replaces that subword with `r * w`.
+        For example, if `p : a + b = c` and the goal is `a * b + b = b * c`, then `bRing {p}` takes `w = b` and proves the goal.
+        
+        If a hypothesis begins with a number, then the solver takes `w = 1`.
+        In other words, it just adds `l + r` to the equation `e1 + e2 = 0`, turning it into `e1 + e2 + l + r = 0`.
+        For example, if `p : a = a * b` and the goal is `a * b = 0`, then `bRing {?}` doesn't change the goal, but the subgoal in `bRing {1 p} {?}` is `a = 0`.
+        
+        Several hypotheses are applied sequentially.
+        For example, if `p : a = b + c`, `q : b + b * c = c`, and the goal is `a * b = c`, then `bRing {p,q}` proves the goal.
         """), makeDef(equation.getRef(), "bRing", new DependencyMetaTypechecker(BooleanRingEquationMeta.class, () -> new DeferredMetaDefinition(new BooleanRingEquationMeta(), true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),

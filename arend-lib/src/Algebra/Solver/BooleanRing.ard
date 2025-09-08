@@ -35,15 +35,15 @@
 
     \func NF (n : Nat) => List (Array Bool n)
 
-    \func multiply {n : Nat} (l1 l2 : NF n) : NF n \elim l2
-      | lnil => lnil
-      | l2 => multiply' l1 l2 lnil
-
     \instance BoolOpPoset : LinearOrder.Dec => BoolPoset.op
 
     \func multiply' {n : Nat} (l1 l2 acc : NF n) : NF n \elim l1
       | lnil => acc
       | a l:: l1 => multiply' l1 l2 (map (\lam (b : Array Bool n) => \new Array Bool n \lam j => a j or b j) l2 ++ acc)
+
+    \func multiply {n : Nat} (l1 l2 : NF n) : NF n \elim l2
+      | lnil => lnil
+      | l2 => multiply' l1 l2 lnil
 
     \func normalize {n : Nat} (t : Term n) : NF n \elim t
       | var j => l:: (singleAt j true false) lnil
@@ -123,7 +123,7 @@
       | suc n, x :: env, true :: l, suc j => toArray<=env j <=∘ join-right
       | suc n, x :: env, false :: l, j => toArray<=env j <=∘ join-right
 
-    \private \func NonEmpty {n : Nat} (l : Array Bool n) => ∃ (j : Fin n) (l j = true)
+    \private \func NonEmpty (l : Array Bool) => ∃ (j : Fin l.len) (l j = true)
 
     \lemma toArray/=nil {n : Nat} {env : Array B n} {l : Array Bool n} (lp : NonEmpty l) : (toArray l env).len /= 0 \elim n, env, l, lp
       | 0, nil, nil, inP ((),_)
@@ -213,4 +213,41 @@
 
     \lemma terms-equality-conv (env : Array B) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize (t :+ s)) = B.zro
       => interpretNF=interpretNF' *> interpretNF_++ *> pmap2 (+) interpretNF'-consistent interpretNF'-consistent *> pmap (_ +) (inv B.negative=id) *> B.toZero p
+
+    \lemma interpretNF_Big_++ {n : Nat} {env : Array B n} {l : Array (NF n)} {a : NF n} : interpretNF' env (Big (++) a l) = B.BigSum (Data.Array.map (interpretNF' env) l) + interpretNF' env a \elim l
+      | nil => inv zro-left
+      | b :: l => interpretNF_++ *> pmap (_ +) interpretNF_Big_++ *> inv +-assoc
+
+    \lemma nonEmpty-dec (l : Array Bool) : Dec (NonEmpty l)
+      | nil => no \lam (inP ((),_))
+      | true :: l => yes $ inP (0,idp)
+      | false :: l => \case nonEmpty-dec l \with {
+        | yes (inP s) => yes $ inP (suc s.1, s.2)
+        | no q => no \case \elim __ \with {
+          | inP (0, ())
+          | inP (suc j, p) => q $ inP (j,p)
+        }
+      }
+
+    \lemma interpretNF_map_zro {n : Nat} {env : Array B n} {a : Array Bool n} {l : NF n} (lp : AllNonEmpty l) (p : interpretNF' env l = B.zro)
+      : interpretNF' env (map (\lam (b : Array Bool n) => \new Array Bool n \lam j => a j or b j) l) = B.zro
+      => \case nonEmpty-dec a \with {
+        | yes ap => interpretNF_map ap lp *> pmap (_ *) p *> B.zro_*-right
+        | no aq => pmap (interpretNF' env) (pmap (map __ l) (ext \lam b => exts \lam j => cases (a j arg addPath) \with {
+          | true, e => absurd $ aq $ inP (j,e)
+          | false, q => idp
+        }) *> map_id) *> p
+      }
+
+    \lemma interpretNF_multiply'_zro {n : Nat} {env : Array B n} {l l' acc : NF n} (l'p : AllNonEmpty l') (p : interpretNF' env l' = B.zro) (q : interpretNF' env acc = B.zro) : interpretNF' env (multiply' l l' acc) = B.zro \elim l
+      | lnil => q
+      | a l:: l => interpretNF_multiply'_zro l'p p $ interpretNF_++ *> pmap2 (+) (interpretNF_map_zro l'p p) q *> zro-left
+
+    \lemma interpretNF_multiply_zro {n : Nat} {env : Array B n} {l l' : NF n} (l'p : AllNonEmpty l') (p : interpretNF' env l' = B.zro) : interpretNF' env (multiply l l') = B.zro \elim l'
+      | lnil => idp
+      | a l:: l' => interpretNF_multiply'_zro l'p p idp
+
+    \lemma apply-axioms {n : Nat} (env : Array B n) (l : Array (\Sigma (NF n) (t s : Term n) (p : interpret env t = interpret env s))) (add : NF n)
+      : interpretNF env (Big (++) add (Data.Array.map (\lam s => multiply s.1 (normalize (s.2 :+ s.3))) l)) = interpretNF' env add
+      => interpretNF=interpretNF' *> interpretNF_Big_++ *> pmap (`+ _) (B.BigSum_zro \lam j => interpretNF_multiply_zro (all-++ normalize-nonEmpty normalize-nonEmpty) $ interpretNF_++ *> pmap (_ +) (inv B.negative=id) *> B.toZero (later $ interpretNF'-consistent *> (l j).4 *> inv interpretNF'-consistent)) *> zro-left
   }
