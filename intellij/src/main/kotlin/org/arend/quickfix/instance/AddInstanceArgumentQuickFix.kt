@@ -37,11 +37,11 @@ class AddInstanceArgumentQuickFix(val error: InstanceInferenceError, val cause: 
 
     override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean =
         ((cause.element as? PsiElement)?.ancestor<ArendDefinition<*>>()?.let{ it is ArendFunctionDefinition || it is ArendDefData }?: false) &&
-                (classRef?.data as? SmartPsiElementPointer<*>)?.element != null && ((classRef?.typechecked as? ClassDefinition)?.classifyingField == null || error.classifyingExpression != null)
+                classRef?.data != null && ((classRef?.typechecked as? ClassDefinition)?.classifyingField == null || error.classifyingExpression != null)
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
         val ambientDefinition = (cause.element as? PsiElement)?.ancestor<ArendDefinition<*>>()
-        val missingClassInstance = (classRef?.data as? SmartPsiElementPointer<*>)?.element
+        val missingClassInstance = classRef?.data
         val implementedClass = classRef?.typechecked
         if (ambientDefinition is PsiLocatedReferable && missingClassInstance is ArendDefClass && implementedClass is ClassDefinition) {
             val psiFactory = ArendPsiFactory(project)

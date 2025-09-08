@@ -31,7 +31,7 @@ class ReplaceWithLocalInstanceQuickFix(val error: InstanceInferenceError, val ca
         val definition = (error.definition as? TCDefReferable)?.typechecked ?: return
         var index = DependentLink.Helper.toList(definition.parameters).indexOf(classifyingExpression.binding)
         val ambientDefinition = (error.definition as? DataContainer)?.data as? ArendCompositeElement
-        val missingClassInstance = ((error.classRef as? TCDefReferable)?.data as? SmartPsiElementPointer<*>)?.element
+        val missingClassInstance = (error.classRef as? TCDefReferable)?.data
         val l  = when (ambientDefinition) {
             is ArendFunctionDefinition<*> -> ambientDefinition.parameters.map { tele -> Pair(tele, tele.identifierOrUnknownList.size) }
             is ArendDefData -> ambientDefinition.parameters.map { tele -> Pair(tele, tele.typedExpr?.identifierOrUnknownList?.size ?: 1) }
