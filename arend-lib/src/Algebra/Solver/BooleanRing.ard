@@ -1,0 +1,253 @@
+\import Algebra.Monoid
+\import Algebra.Ring.Boolean
+\import Algebra.Solver
+\import Arith.Bool
+\import Arith.Nat
+\import Data.Array (Big, singleAt)
+\import Data.Bool
+\import Data.List \using (nil \as lnil, :: \as l::)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.LexicographicalArray
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+
+\func BooleanRingSolverModel (B : BooleanRing) : SolverModel B \cowith
+  | Term => Term
+  | NF => NF
+  | normalize => normalize
+  | interpret env => interpret env
+  | interpretNF => interpretNF
+  | interpretNF-consistent => interpretNF=interpretNF' *> interpretNF'-consistent
+  \where {
+    \data Term (n : Nat)
+      | var (Fin n)
+      | :zro
+      | :negative (Term n)
+      | \infixl 6 :+ (t s : Term n)
+      | \infixl 7 :* (t s : Term n)
+
+    \func NF (n : Nat) => List (Array Bool n)
+
+    \instance BoolOpPoset : LinearOrder.Dec => BoolPoset.op
+
+    \func multiply' {n : Nat} (l1 l2 acc : NF n) : NF n \elim l1
+      | lnil => acc
+      | a l:: l1 => multiply' l1 l2 (map (\lam (b : Array Bool n) => \new Array Bool n \lam j => a j or b j) l2 ++ acc)
+
+    \func multiply {n : Nat} (l1 l2 : NF n) : NF n \elim l2
+      | lnil => lnil
+      | l2 => multiply' l1 l2 lnil
+
+    \func normalize {n : Nat} (t : Term n) : NF n \elim t
+      | var j => l:: (singleAt j true false) lnil
+      | :zro => lnil
+      | :negative t => normalize t
+      | t :+ s => normalize t ++ normalize s
+      | t :* s => multiply (normalize t) (normalize s)
+
+    \func interpret (env : Array B) (t : Term env.len) : B \elim t
+      | var j => env j
+      | :zro => B.zro
+      | :negative t => B.negative (interpret env t)
+      | t :+ s => interpret env t + interpret env s
+      | t :* s => interpret env t * interpret env s
+
+    \func toArray (cs : Array Bool) (env : Array B cs.len) : Array B \elim cs, env
+      | nil, nil => nil
+      | true :: l, b :: env => b :: toArray l env
+      | false :: l, _ :: env => toArray l env
+
+    \func sBigProd (l : Array B) : B \elim l
+      | nil => B.zro
+      | b :: nil => b
+      | b :: l => b * sBigProd l
+
+    \func interpretMonomial {n : Nat} (env : Array B n) (l : Array Bool n) : B
+      => sBigProd (toArray l env)
+
+    \func interpretNF' {n : Nat} (env : Array B n) (l : NF n) : B \elim l
+      | lnil => B.zro
+      | x l:: lnil => interpretMonomial env x
+      | x l:: l => interpretMonomial env x + interpretNF' env l
+      \where {
+        \protected \lemma cons {n : Nat} {env : Array B n} {x : Array Bool n} {l : NF n} : interpretNF' env (l:: x l) = interpretMonomial env x + interpretNF' env l \elim l
+          | lnil => inv zro-right
+          | a l:: l => idp
+      }
+
+    \func collapse {n : Nat} (l : NF n) : NF n
+      | lnil => lnil
+      | a l:: lnil => l:: a lnil
+      | a l:: b l:: l => \case decideEq a b \with {
+        | yes _ => collapse l
+        | no _ => l:: a (collapse (l:: b l))
+      }
+
+    \func interpretNF {n : Nat} (env : Fin n -> B) (l : NF n) : B => interpretNF' env (collapse (Sort.RedBlack.sort l))
+
+    \lemma toArray_replicate {n : Nat} {env : Array B n} : toArray (\new Array Bool n \lam _ => false) env = nil \elim n, env
+      | 0, nil => idp
+      | suc n, a :: env => toArray_replicate
+
+    \lemma toArray_singleAt {n : Nat} {j : Fin n} {env : Array B n} : toArray (singleAt.alt j true false) env = env j :: nil \elim n, j, env
+      | suc n, 0, a :: env => pmap (a ::) toArray_replicate
+      | suc n, suc j, a :: env => toArray_singleAt
+
+    \lemma interpretNF_++ {n : Nat} {env : Array B n} {l l' : NF n} : interpretNF' env (l ++ l') = interpretNF' env l + interpretNF' env l' \elim l
+      | lnil => inv zro-left
+      | a l:: l => interpretNF'.cons *> pmap (_ +) interpretNF_++ *> inv (pmap (`+ _) interpretNF'.cons *> +-assoc)
+
+    \lemma toArray_or {x0 : B} {n : Nat} {env : Array B n} {a b : Array Bool n}
+      : Big (∧) x0 (toArray (\new Array Bool n \lam j => a j or b j) env) = Big (∧) x0 (toArray a env) * Big (∧) x0 (toArray b env) \elim n, a, b
+      | 0, nil, nil => inv isBooleanRing
+      | suc n, true :: a, true :: b => pmap (_ *) toArray_or *> inv (*-assoc *> pmap (_ *) (inv *-assoc *> pmap (`* _) *-comm *> *-assoc) *> inv *-assoc *> pmap (`* _) isBooleanRing)
+      | suc n, true :: a, false :: b => pmap (_ *) toArray_or *> inv *-assoc
+      | suc n, false :: a, true :: b => pmap (_ *) toArray_or *> inv (*-comm *> *-assoc *> pmap (_ *) *-comm)
+      | suc n, false :: a, false :: b => toArray_or
+
+    \lemma sBigProd_Big {n : Nat} (n/=0 : n /= 0) {a : Array B n} {x0 : B} (ap : \Pi (j : Fin n) -> a j <= x0) : sBigProd a = Big (∧) x0 a \elim n, a
+      | 0, nil => absurd (n/=0 idp)
+      | 1, a => <=-antisymmetric (meet-univ <=-refl $ ap 0) meet-left
+      | suc (suc n), x :: a => pmap (_ *) $ sBigProd_Big suc/=0 (\lam j => ap (suc j))
+
+    \lemma toArray<=env {n : Nat} {env : Array B n} {l : Array Bool n} (j : Fin (toArray l env).len) : toArray l env j <= B.BigJoin env \elim n, env, l, j
+      | 0, nil, nil, ()
+      | suc n, x :: env, true :: l, 0 => join-left
+      | suc n, x :: env, true :: l, suc j => toArray<=env j <=∘ join-right
+      | suc n, x :: env, false :: l, j => toArray<=env j <=∘ join-right
+
+    \private \func NonEmpty (l : Array Bool) => ∃ (j : Fin l.len) (l j = true)
+
+    \lemma toArray/=nil {n : Nat} {env : Array B n} {l : Array Bool n} (lp : NonEmpty l) : (toArray l env).len /= 0 \elim n, env, l, lp
+      | 0, nil, nil, inP ((),_)
+      | suc n, a :: env, true :: l, _ => \case __
+      | suc n, a :: env, false :: l, inP (0, ())
+      | suc n, a :: env, false :: l, inP (suc j, lp) => toArray/=nil $ inP (j,lp)
+
+    \lemma interpretMonomial_or {n : Nat} {env : Array B n} {a b : Array Bool n} (ap : NonEmpty a) (bp : NonEmpty b)
+      : interpretMonomial env (\new Array Bool n \lam j => a j or b j) = interpretMonomial env a * interpretMonomial env b
+      => sBigProd_Big (toArray/=nil $ TruncP.map ap \lam s => (s.1, pmap (`or _) s.2)) toArray<=env *> toArray_or *> inv (pmap2 (*) (sBigProd_Big (toArray/=nil ap) toArray<=env) (sBigProd_Big (toArray/=nil bp) toArray<=env))
+
+    \func AllNonEmpty {n : Nat} (l : NF n) => \Pi (j : Fin (length l)) -> NonEmpty (l !! j)
+
+    \lemma interpretNF_map {n : Nat} {env : Array B n} {a : Array Bool n} (ap : NonEmpty a) {l : NF n} (lp : AllNonEmpty l)
+      : interpretNF' env (map (\lam (b : Array Bool n) => \new Array Bool n \lam j => a j or b j) l) = interpretMonomial env a * interpretNF' env l \elim l
+      | lnil => inv B.zro_*-right
+      | b l:: l => interpretNF'.cons *> pmap2 (+) (interpretMonomial_or ap (lp 0)) (interpretNF_map ap \lam j => lp (suc j)) *> inv (pmap (_ *) interpretNF'.cons *> B.ldistr)
+
+    \lemma interpretNF_multiply' {n : Nat} {env : Array B n} {l l' acc : NF n} (lp : AllNonEmpty l) (l'p : AllNonEmpty l') : interpretNF' env (multiply' l l' acc) = interpretNF' env l * interpretNF' env l' + interpretNF' env acc \elim l
+      | lnil => inv $ pmap (`+ _) B.zro_*-left *> zro-left
+      | a l:: l => interpretNF_multiply' (\lam j => lp (suc j)) l'p *> pmap (_ +) interpretNF_++ *> inv +-assoc *> pmap (`+ _) (pmap (_ +) (interpretNF_map (lp 0) l'p) *> +-comm *> inv (pmap (`* _) interpretNF'.cons *> B.rdistr))
+
+    \lemma interpretNF_multiply {n : Nat} {env : Array B n} {l l' : NF n} (lp : AllNonEmpty l) (l'p : AllNonEmpty l') : interpretNF' env (multiply l l') = interpretNF' env l * interpretNF' env l' \elim l'
+      | lnil => inv B.zro_*-right
+      | a l:: l' => interpretNF_multiply' lp l'p *> zro-right
+
+    \lemma all-++ {n : Nat} {l l' : NF n} (lp : AllNonEmpty l) (l'p : AllNonEmpty l') : AllNonEmpty (l ++ l') \elim l
+      | lnil => l'p
+      | a l:: l => \case \elim __ \with {
+        | 0 => lp 0
+        | suc j => all-++ (\lam j => lp (suc j)) l'p j
+      }
+
+    \lemma or-nonEmpty {n : Nat} {a : Array Bool n} {l : NF n} (ap : NonEmpty a) : AllNonEmpty (map (\lam (b : Array Bool n) => \new Array Bool n \lam j => a j or b j) l) \elim l
+      | lnil => \case __
+      | b l:: l => \case \elim __ \with {
+        | 0 => TruncP.map ap \lam s => (s.1, pmap (`or _) s.2)
+        | suc j => or-nonEmpty ap j
+      }
+
+    \lemma multiply'-nonEmpty {n : Nat} {l l' acc : NF n} (lp : AllNonEmpty l) (accp : AllNonEmpty acc) : AllNonEmpty (multiply' l l' acc) \elim l
+      | lnil => accp
+      | a l:: l => multiply'-nonEmpty (\lam j => lp (suc j)) $ all-++ (or-nonEmpty (lp 0)) accp
+
+    \lemma multiply-nonEmpty {n : Nat} {l l' : NF n} (lp : AllNonEmpty l) : AllNonEmpty (multiply l l') \elim l'
+      | lnil => \case __
+      | a l:: l' => multiply'-nonEmpty lp (later \case __)
+
+    \lemma normalize-nonEmpty {n : Nat} {t : Term n} : AllNonEmpty (normalize t) \elim t
+      | var j => \case \elim __ \with {
+        | 0 => inP (j, rewrite (decideEq=_reduce idp) idp)
+      }
+      | :zro => \case __
+      | :negative t => normalize-nonEmpty
+      | t :+ s => all-++ normalize-nonEmpty normalize-nonEmpty
+      | t :* s => multiply-nonEmpty normalize-nonEmpty
+
+    \lemma interpretNF'-consistent {n : Nat} {env : Array B n} {t : Term n} : interpretNF' env (normalize t) = interpret env t \elim t
+      | var j => pmap sBigProd (pmap {Array Bool n} (toArray __ env) singleAt.char *> toArray_singleAt)
+      | :zro => idp
+      | :negative t => interpretNF'-consistent *> inv B.negative=id
+      | t :+ s => interpretNF_++ *> pmap2 (+) interpretNF'-consistent interpretNF'-consistent
+      | t :* s => interpretNF_multiply normalize-nonEmpty normalize-nonEmpty *> pmap2 (*) interpretNF'-consistent interpretNF'-consistent
+
+    \lemma collapse-consistent {n : Nat} {env : Array B n} {l : NF n} : interpretNF' env (collapse l) = interpretNF' env l \elim l
+      | lnil => idp
+      | a l:: lnil => idp
+      | a l:: b l:: l => mcases \with {
+        | yes p => inv zro-left *> pmap2 (+) (later $ rewrite p $ inv B.double=0) collapse-consistent *> +-assoc *> pmap (_ +) (inv interpretNF'.cons)
+        | no q => interpretNF'.cons *> pmap (_ +) collapse-consistent
+      }
+
+    \lemma perm-consistent {n : Nat} {env : Array B n} {l l' : NF n} (p : Sort.Perm l l') : interpretNF' env l = interpretNF' env l' \elim l, l', p
+      | lnil, lnil, Sort.perm-nil => idp
+      | a1 l:: l1, a2 l:: l2, Sort.perm-:: idp p => interpretNF'.cons *> pmap (_ +) (perm-consistent p) *> inv interpretNF'.cons
+      | a1 l:: a1' l:: l1, a2 l:: a2' l:: l2, Sort.perm-swap idp idp idp => pmap (_ +) interpretNF'.cons *> inv +-assoc *> pmap (`+ _) +-comm *> +-assoc *> pmap (_ +) (inv interpretNF'.cons)
+      | l1, l2, Sort.perm-trans p1 p2 => perm-consistent p1 *> perm-consistent p2
+
+    \lemma sort-consistent {n : Nat} {env : Array B n} {l : NF n} : interpretNF' env (Sort.RedBlack.sort l) = interpretNF' env l
+      => rewrite (Sort.RedBlack.sort=insert l) $ inv $ perm-consistent (Sort.Insertion.sort-perm l)
+
+    \lemma interpretNF=interpretNF' {n : Nat} {env : Array B n} {l : NF n} : interpretNF env l = interpretNF' env l
+      => collapse-consistent *> sort-consistent
+
+    \lemma terms-equality (env : Array B) (t s : Term env.len) (p : interpretNF env (normalize (t :+ s)) = B.zro) : interpret env t = interpret env s
+      => B.fromZero $ pmap (_ +) B.negative=id *> inv (interpretNF=interpretNF' *> interpretNF_++ *> pmap2 (+) interpretNF'-consistent interpretNF'-consistent) *> p
+
+    \lemma terms-equality-conv (env : Array B) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize (t :+ s)) = B.zro
+      => interpretNF=interpretNF' *> interpretNF_++ *> pmap2 (+) interpretNF'-consistent interpretNF'-consistent *> pmap (_ +) (inv B.negative=id) *> B.toZero p
+
+    \lemma interpretNF_Big_++ {n : Nat} {env : Array B n} {l : Array (NF n)} {a : NF n} : interpretNF' env (Big (++) a l) = B.BigSum (Data.Array.map (interpretNF' env) l) + interpretNF' env a \elim l
+      | nil => inv zro-left
+      | b :: l => interpretNF_++ *> pmap (_ +) interpretNF_Big_++ *> inv +-assoc
+
+    \lemma nonEmpty-dec (l : Array Bool) : Dec (NonEmpty l)
+      | nil => no \lam (inP ((),_))
+      | true :: l => yes $ inP (0,idp)
+      | false :: l => \case nonEmpty-dec l \with {
+        | yes (inP s) => yes $ inP (suc s.1, s.2)
+        | no q => no \case \elim __ \with {
+          | inP (0, ())
+          | inP (suc j, p) => q $ inP (j,p)
+        }
+      }
+
+    \lemma interpretNF_map_zro {n : Nat} {env : Array B n} {a : Array Bool n} {l : NF n} (lp : AllNonEmpty l) (p : interpretNF' env l = B.zro)
+      : interpretNF' env (map (\lam (b : Array Bool n) => \new Array Bool n \lam j => a j or b j) l) = B.zro
+      => \case nonEmpty-dec a \with {
+        | yes ap => interpretNF_map ap lp *> pmap (_ *) p *> B.zro_*-right
+        | no aq => pmap (interpretNF' env) (pmap (map __ l) (ext \lam b => exts \lam j => cases (a j arg addPath) \with {
+          | true, e => absurd $ aq $ inP (j,e)
+          | false, q => idp
+        }) *> map_id) *> p
+      }
+
+    \lemma interpretNF_multiply'_zro {n : Nat} {env : Array B n} {l l' acc : NF n} (l'p : AllNonEmpty l') (p : interpretNF' env l' = B.zro) (q : interpretNF' env acc = B.zro) : interpretNF' env (multiply' l l' acc) = B.zro \elim l
+      | lnil => q
+      | a l:: l => interpretNF_multiply'_zro l'p p $ interpretNF_++ *> pmap2 (+) (interpretNF_map_zro l'p p) q *> zro-left
+
+    \lemma interpretNF_multiply_zro {n : Nat} {env : Array B n} {l l' : NF n} (l'p : AllNonEmpty l') (p : interpretNF' env l' = B.zro) : interpretNF' env (multiply l l') = B.zro \elim l'
+      | lnil => idp
+      | a l:: l' => interpretNF_multiply'_zro l'p p idp
+
+    \lemma apply-axioms {n : Nat} (env : Array B n) (l : Array (\Sigma (NF n) (t s : Term n) (p : interpret env t = interpret env s))) (add : NF n)
+      : interpretNF env (Big (++) add (Data.Array.map (\lam s => multiply s.1 (normalize (s.2 :+ s.3))) l)) = interpretNF' env add
+      => interpretNF=interpretNF' *> interpretNF_Big_++ *> pmap (`+ _) (B.BigSum_zro \lam j => interpretNF_multiply_zro (all-++ normalize-nonEmpty normalize-nonEmpty) $ interpretNF_++ *> pmap (_ +) (inv B.negative=id) *> B.toZero (later $ interpretNF'-consistent *> (l j).4 *> inv interpretNF'-consistent)) *> zro-left
+  }

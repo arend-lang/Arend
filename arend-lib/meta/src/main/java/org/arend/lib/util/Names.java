@@ -189,6 +189,14 @@ public class Names {
     return new ModulePath("Algebra", "Solver", "Semiring");
   }
 
+  public static ModulePath getBooleanRingModule() {
+    return new ModulePath("Algebra", "Ring", "Boolean");
+  }
+
+  public static ModulePath getBooleanRingSolverModule() {
+    return new ModulePath("Algebra", "Solver", "BooleanRing");
+  }
+
   public static ModulePath getIntModule() {
     return new ModulePath("Arith", "Int");
   }

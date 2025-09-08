@@ -36,10 +36,7 @@ import org.arend.lib.meta.equationNew.monoid.AbelianMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.AdditiveMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.CommutativeMonoidEquationMeta;
 import org.arend.lib.meta.equationNew.monoid.MonoidEquationMeta;
-import org.arend.lib.meta.equationNew.ring.CRingEquationMeta;
-import org.arend.lib.meta.equationNew.ring.CSemiringEquationMeta;
-import org.arend.lib.meta.equationNew.ring.RingEquationMeta;
-import org.arend.lib.meta.equationNew.ring.SemiringEquationMeta;
+import org.arend.lib.meta.equationNew.ring.*;
 import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
 import org.arend.lib.meta.exists.ExistsResolver;
@@ -273,6 +270,8 @@ public class StdExtension implements ArendExtension {
     contributor.declare(algebra, Names.getNewMonoidSolverModule());
     contributor.declare(algebra, Names.getNewRingSolverModule());
     contributor.declare(algebra, Names.getNewSemiringSolverModule());
+    contributor.declare(algebra, Names.getBooleanRingModule());
+    contributor.declare(algebra, Names.getBooleanRingSolverModule());
     contributor.declare(algebra, Names.getIntModule());
     contributor.declare(algebra, Names.getNatModule());
     contributor.declare(algebra, Names.getRatModule());
@@ -471,9 +470,35 @@ public class StdExtension implements ArendExtension {
         Given such a hypothesis, `cRing {h}` finds the largest word `w` such that `l * w` occurs in `e1 - e2` and replaces that subword with `r * w`.
         For example, if `p : a * b = 0` and the goal is `(a + b) * (a + b) = a * a + b * b`, then `cRing {p}` proves the goal.
         
+        If a hypothesis begins with a (positive or negative) number, then the solver multiplies it by the indicated factor instead of the largest word `w`.
+        For example, if `p : a = b` and the goal is `a * c = 0`, then the subgoal in `cRing {?}` is `c * b = 0`, but the subgoal in `cRing { -1 p } {?}` is `a + (a * c - b) = 0`.
+        
         Several hypotheses are applied sequentially.
         For example, if `p : a = b`, `q : b * c = 0`, and the goal is `a * c = 0`, then `cRing {p,q}` proves the goal.
         """), makeDef(equation.getRef(), "cRing", new DependencyMetaTypechecker(CRingEquationMeta.class, () -> new DeferredMetaDefinition(new CRingEquationMeta(), true))));
+    contributor.declare(multiline("""
+        The Boolean ring solver solves goals of the form `e1 = {B} e2` for some Boolean ring `B`.
+        If `e1` and `e2` represent the same word in the language of Boolean rings, then the solver proves the equality immediately without any additional arguments.
+        For example, {bRing} proves the following equality: `(a + b) * (a * b) = 0`.
+        
+        If the words represented by `e1` and `e2` are not the same, then {cRing} puts them in a canonical form and expects an argument that proves the equality of these normal forms.
+        For example, if the goal is `(a - b) * (a ∨ b) = 0`, then the subgoal in `bRing {?}` is `a + b = 0`.
+        
+        Conversely, if we have an expression of the type `e1 = {B} e2`, then we can transform it into a proof of the equality of canonical forms.
+        For example, if `(p : (a - b) * (a ∨ b) = 0)`, then `bRing in p` has type `a + b = 0`.
+        
+        The Boolean ring solver can also apply hypotheses to solve goals.
+        A hypothesis `h` is an expression of type `l = {B} r`.
+        Given such a hypothesis, `bRing {h}` finds the largest word `w` such that `l * w` occurs in `e1 + e2` and replaces that subword with `r * w`.
+        For example, if `p : a + b = c` and the goal is `a * b + b = b * c`, then `bRing {p}` takes `w = b` and proves the goal.
+        
+        If a hypothesis begins with a number, then the solver takes `w = 1`.
+        In other words, it just adds `l + r` to the equation `e1 + e2 = 0`, turning it into `e1 + e2 + l + r = 0`.
+        For example, if `p : a = a * b` and the goal is `a * b = 0`, then `bRing {?}` doesn't change the goal, but the subgoal in `bRing {1 p} {?}` is `a = 0`.
+        
+        Several hypotheses are applied sequentially.
+        For example, if `p : a = b + c`, `q : b + b * c = c`, and the goal is `a * b = c`, then `bRing {p,q}` proves the goal.
+        """), makeDef(equation.getRef(), "bRing", new DependencyMetaTypechecker(BooleanRingEquationMeta.class, () -> new DeferredMetaDefinition(new BooleanRingEquationMeta(), true))));
     contributor.declare(text("Solve systems of linear equations"), makeDef(algebra, "linarith", new DependencyMetaTypechecker(LinearSolverMeta.class, () -> new DeferredMetaDefinition(new LinearSolverMeta(), true))));
     contributor.declare(text("Proves an equality by congruence closure of equalities in the context. E.g. derives f a = g b from f = g and a = b"),
         makeDef(algebra, "cong", new DependencyMetaTypechecker(CongruenceMeta.class, () ->  new DeferredMetaDefinition(new CongruenceMeta()))));
