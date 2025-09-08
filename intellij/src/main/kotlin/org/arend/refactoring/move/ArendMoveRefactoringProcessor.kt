@@ -41,7 +41,6 @@ import org.arend.term.abs.Abstract.ParametersHolder
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.util.exprToConcrete1
-import org.jetbrains.kotlin.psi.psiUtil.parameterIndex
 import java.util.Collections.singletonList
 
 class ArendMoveRefactoringProcessor(project: Project,
@@ -129,7 +128,7 @@ class ArendMoveRefactoringProcessor(project: Project,
         val psiFactory = ArendPsiFactory(myProject)
 
         val sourceFile = mySourceContainer as? ArendFile ?: (mySourceContainer.containingFile as? ArendFile ?: return)
-        val moduleLocationsToInvalidate = HashSet<ModuleLocation>();
+        val moduleLocationsToInvalidate = HashSet<ModuleLocation>()
         sourceFile.moduleLocation?.let { moduleLocationsToInvalidate.add(it) }
 
         insertAnchor = if (myTargetContainer is ArendFile) {

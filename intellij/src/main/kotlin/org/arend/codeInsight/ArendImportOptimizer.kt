@@ -39,7 +39,6 @@ import org.arend.util.getReferableConcreteGroup
 import org.arend.util.getFileScope
 import org.arend.util.getReferableScope
 import org.arend.util.mapToSet
-import org.jetbrains.annotations.Contract
 import java.util.*
 import java.util.Collections.singletonList
 import kotlin.reflect.jvm.internal.impl.utils.SmartSet
@@ -568,7 +567,6 @@ private data class MutableFrame(
             reverseMapping
         })
 
-    @Contract(mutates = "this")
     fun contract(useTypecheckedInstances: Boolean, fileImports: Set<ImportedName>, settings: ArendCustomCodeStyleSettings): Map<ModulePath, Set<ImportedName>> {
         val submaps = subgroups.map { it.contract(useTypecheckedInstances, fileImports, settings) }
         val additionalFiles = mutableMapOf<FilePath, MutableSet<ImportedName>>()

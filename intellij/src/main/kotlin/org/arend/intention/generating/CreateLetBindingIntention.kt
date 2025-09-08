@@ -40,7 +40,6 @@ import org.arend.util.ParameterExplicitnessState
 import org.arend.util.appExprToConcrete
 import org.arend.util.forEachRange
 import org.arend.util.getReferableScope
-import org.jetbrains.annotations.NonNls
 import java.awt.Component
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JList
@@ -52,7 +51,7 @@ class CreateLetBindingIntention : AbstractGenerateFunctionIntention() {
     // wrapped expression/range/etc -- entities that refer to something that will be wrapped in a let expression
 
     companion object {
-        private const val COMMAND_GROUP_ID: @NonNls String = "__Arend__CreateLetBinding"
+        private const val COMMAND_GROUP_ID: String = "__Arend__CreateLetBinding"
 
         private object MyListCellRenderer : DefaultListCellRenderer() {
             override fun getListCellRendererComponent(list: JList<*>?, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component {

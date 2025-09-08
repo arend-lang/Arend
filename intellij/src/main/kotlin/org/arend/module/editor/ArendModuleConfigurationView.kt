@@ -12,7 +12,7 @@ import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.ui.TextComponentAccessor
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
-import com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.notificationGroup
+import com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.getPluginSuggestionNotificationGroup
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
@@ -57,18 +57,18 @@ class ArendModuleConfigurationView(
     }
 
     private val sourcesTextField = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Sources Directory", "Select the directory in which the source files${if (name == null) "" else " of module $name"} are located", module.project, FileChooserDescriptorFactory.createSingleFolderDescriptor(), textComponentAccessor)
+        addBrowseFolderListener(module.project, FileChooserDescriptorFactory.createSingleFolderDescriptor().withTitle("Sources Directory").withDescription("Select the directory in which the source files${if (name == null) "" else " of module $name"} are located"), textComponentAccessor)
     }
     private val testsTextField = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Tests Directory", "Select the directory with test files${if (name == null) "" else " for module $name"}", module.project, FileChooserDescriptorFactory.createSingleFolderDescriptor(), textComponentAccessor)
+        addBrowseFolderListener(module.project, FileChooserDescriptorFactory.createSingleFolderDescriptor().withTitle("Tests Directory").withDescription("Select the directory with test files${if (name == null) "" else " for module $name"}"), textComponentAccessor)
     }
     private val binariesSwitch = JBCheckBox("Save typechecker output to ", false)
     private val binariesTextField = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Binaries Directory", "Select the directory in which the binary files${if (name == null) "" else " of module $name"} will be put", module.project, FileChooserDescriptorFactory.createSingleFolderDescriptor(), textComponentAccessor)
+        addBrowseFolderListener(module.project, FileChooserDescriptorFactory.createSingleFolderDescriptor().withTitle("Binaries Directory").withDescription("Select the directory in which the binary files${if (name == null) "" else " of module $name"} will be put"), textComponentAccessor)
     }
     private val extensionsSwitch = JBCheckBox("Load language extensions", false)
     private val extensionsTextField = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Extensions Directory", "Select the directory in which the language extensions${if (name == null) "" else " of module $name"} are located", module.project, FileChooserDescriptorFactory.createSingleFolderDescriptor(), textComponentAccessor)
+        addBrowseFolderListener(module.project, FileChooserDescriptorFactory.createSingleFolderDescriptor().withTitle("Extensions Directory").withDescription("Select the directory in which the language extensions${if (name == null) "" else " of module $name"} are located"), textComponentAccessor)
     }
     private val extensionMainClassTextField = JTextField()
     private val langVersionField = JTextField()
@@ -110,7 +110,7 @@ class ArendModuleConfigurationView(
             }
 
         override fun notAvailableNotification(notAvailableElements: List<LibraryDependency>) {
-            val notification = notificationGroup.createNotification("If you add the selected modules `$notAvailableElements` to the module dependencies of module `${module.name}`, a cyclic dependency between the modules will appear", MessageType.WARNING)
+            val notification = getPluginSuggestionNotificationGroup().createNotification("If you add the selected modules `$notAvailableElements` to the module dependencies of module `${module.name}`, a cyclic dependency between the modules will appear", MessageType.WARNING)
             Notifications.Bus.notify(notification, module.project)
         }
 

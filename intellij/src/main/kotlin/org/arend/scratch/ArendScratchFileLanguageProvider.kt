@@ -2,6 +2,7 @@ package org.arend.scratch
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+/* TODO[2025.2.1]
 import org.jetbrains.kotlin.idea.scratch.ScratchExecutor
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
 import org.jetbrains.kotlin.idea.scratch.ScratchFileLanguageProvider
@@ -15,3 +16,4 @@ class ArendScratchFileLanguageProvider : ScratchFileLanguageProvider() {
 
     override fun createCompilingExecutor(file: ScratchFile): ScratchExecutor = ArendScratchCompilingExecutor(file)
 }
+*/

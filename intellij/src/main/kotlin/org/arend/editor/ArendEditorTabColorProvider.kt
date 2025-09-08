@@ -8,7 +8,6 @@ import com.intellij.psi.search.scope.NonProjectFilesScope
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.FileColorManager
 import org.arend.server.ArendServerService
-import org.jetbrains.annotations.Nullable
 import java.awt.Color
 
 class ArendEditorTabColorProvider : EditorTabColorProvider {
@@ -22,7 +21,7 @@ class ArendEditorTabColorProvider : EditorTabColorProvider {
         return if (colorManager.isEnabledForProjectView) getColor(project, file, colorManager) else null
     }
 
-    private fun getColor(project: Project, file: VirtualFile, colorManager: FileColorManager): @Nullable Color? {
+    private fun getColor(project: Project, file: VirtualFile, colorManager: FileColorManager): Color? {
         if (file !is LightVirtualFile) {
             return null
         }

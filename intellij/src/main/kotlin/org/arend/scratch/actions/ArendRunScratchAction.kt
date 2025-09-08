@@ -7,6 +7,7 @@ import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.DumbService
 import com.intellij.task.ProjectTaskManager
 import com.intellij.task.impl.ProjectTaskManagerImpl
+/* TODO[2025.2.1]
 import org.jetbrains.kotlin.idea.KotlinJvmBundle
 import org.jetbrains.kotlin.idea.core.script.ScriptConfigurationManager
 import org.jetbrains.kotlin.idea.core.script.configuration.CompositeScriptConfigurationManager
@@ -97,3 +98,4 @@ class ArendRunScratchAction : ArendScratchAction(
         e.presentation.isVisible = !ScratchCompilationSupport.isInProgress(scratchFile)
     }
 }
+ */

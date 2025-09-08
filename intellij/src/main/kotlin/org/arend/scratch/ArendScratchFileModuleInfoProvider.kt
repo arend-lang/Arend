@@ -8,6 +8,7 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.psi.PsiManager
 import org.arend.psi.ArendFile
 import org.arend.psi.module
+/* TODO[2025.2.1]
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
 import org.jetbrains.kotlin.idea.scratch.ScratchFileListener
 import org.jetbrains.kotlin.idea.scratch.ScratchFileModuleInfoProvider
@@ -41,3 +42,4 @@ class ArendScratchFileModuleInfoProvider : ScratchFileListener {
         file.setModule(arendFile.module)
     }
 }
+ */

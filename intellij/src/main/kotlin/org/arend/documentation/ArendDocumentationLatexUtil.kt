@@ -7,7 +7,7 @@ import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.notificationGroup
+import com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.getPluginSuggestionNotificationGroup
 import com.intellij.util.ui.ImageUtil
 import org.arend.documentation.ArendDocumentationProvider.Companion.COEFFICIENT_HTML_FONT
 import org.arend.documentation.ArendDocumentationProvider.Companion.COEFFICIENT_LATEX_FONT
@@ -56,7 +56,7 @@ internal fun getHtmlLatexCode(title: String, latexCode: String, project: Project
                 "src=\"file:///${file.absolutePath}\" title=$title width=\"${icon.iconWidth}\" height=\"${icon.iconHeight}\">"
     } catch (e: Exception) {
         if (e is ParseException) {
-            val notificationManager = SingletonNotificationManager(notificationGroup.displayId, NotificationType.WARNING)
+            val notificationManager = SingletonNotificationManager(getPluginSuggestionNotificationGroup().displayId, NotificationType.WARNING)
 
             val notificationAction = NotificationAction.createSimpleExpiring(ArendBundle.message("arend.click.to.set.cursor.latex")) {
                 val fileEditorManager = FileEditorManager.getInstance(project)

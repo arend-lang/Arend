@@ -18,8 +18,8 @@ val baseName = "intellij-arend"
 
 plugins {
     idea
-    kotlin("jvm") version "2.0.0"
-    id("org.jetbrains.intellij.platform") version "2.0.1"
+    kotlin("jvm") version "2.2.0"
+    id("org.jetbrains.intellij.platform") version "2.9.0"
     id("org.jetbrains.grammarkit") version "2022.3.2.2"
 }
 
@@ -41,10 +41,9 @@ dependencies {
     testCompileOnly("junit:junit:4.13.1")
 
     intellijPlatform {
-        create(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3")
-        instrumentationTools()
-        bundledPlugins("org.jetbrains.plugins.yaml", "com.intellij.java", "org.jetbrains.kotlin")
-        plugins("IdeaVIM:2.19.0")
+        create(IntelliJPlatformType.IntellijIdeaCommunity, "2025.2.1")
+        bundledPlugins("org.jetbrains.plugins.yaml", "com.intellij.java")
+        plugins("IdeaVIM:2.27.2")
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }
@@ -75,8 +74,8 @@ sourceSets {
 idea {
     module {
         generatedSourceDirs.addAll(generated.map(::file))
-        outputDir = file("$buildDir/classes/main")
-        testOutputDir = file("$buildDir/classes/test")
+        outputDir = file("${layout.buildDirectory}/classes/main")
+        testOutputDir = file("${layout.buildDirectory}/classes/test")
     }
 }
 
@@ -139,8 +138,8 @@ val generateArendDocLexer = tasks.register<GenerateLexerTask>("genArendDocLexer"
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
-        languageVersion.set(KotlinVersion.KOTLIN_2_0)
-        apiVersion.set(KotlinVersion.KOTLIN_1_9)
+        languageVersion.set(KotlinVersion.KOTLIN_2_2)
+        apiVersion.set(KotlinVersion.KOTLIN_2_2)
         freeCompilerArgs.set(listOf("-Xjvm-default=all"))
     }
     dependsOn(generateArendLexer, generateArendParser, generateArendDocLexer)

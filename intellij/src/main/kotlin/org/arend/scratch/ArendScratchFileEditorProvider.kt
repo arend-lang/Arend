@@ -27,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.annotations.TestOnly
+/*
 import org.jetbrains.kotlin.idea.KotlinJvmBundle
 import org.jetbrains.kotlin.idea.base.psi.getLineNumber
 import org.jetbrains.kotlin.idea.scratch.*
@@ -292,3 +293,4 @@ private fun ScratchExpression.linesInformationIsCorrect(): Boolean {
     if (!element.isValid) return false
     return element.getLineNumber(start = true) == lineStart && element.getLineNumber(start = false) == lineEnd
 }
+*/

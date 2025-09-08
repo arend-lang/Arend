@@ -45,7 +45,7 @@ abstract class TextFieldChangeListener(private val textField: JTextField) {
 }
 
 fun TextFieldWithBrowseButton.addBrowseAndChangeListener(title: String?, description: String?, project: Project?, fileChooserDescriptor: FileChooserDescriptor, textChanged: (String?) -> Unit): TextFieldChangeListener {
-    val browseListener = object : BrowseFolderActionListener<JTextField>(title, description, this, project, fileChooserDescriptor, TextComponentAccessor.TEXT_FIELD_WHOLE_TEXT) {
+    val browseListener = object : BrowseFolderActionListener<JTextField>(this, project, fileChooserDescriptor.withTitle(title).withDescription(description), TextComponentAccessor.TEXT_FIELD_WHOLE_TEXT) {
         val changeListener = object : TextFieldChangeListener(textField) {
             override fun textChanged() {
                 textChanged(previousText)

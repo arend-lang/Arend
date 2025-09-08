@@ -88,7 +88,7 @@ abstract class ArendStubbedElementImpl<StubT : StubElement<*>> : StubBasedPsiEle
 
     override fun getReference(): ArendReference? = null
 
-    override fun toString(): String = "${javaClass.simpleName}($elementType)"
+    override fun toString(): String = "${javaClass.simpleName}($elementTypeImpl)"
 
     override fun moduleTextRepresentation(): String? = runReadAction { moduleTextRepresentationImpl() }
 

@@ -143,6 +143,7 @@ class ArendTraceProcess(session: XDebugSession, private val tracingData: ArendTr
                 session.positionReached(ArendSuspendContext(entry, contextView))
             } catch (e: ProcessCanceledException) {
                 doNothing(context)
+                throw e
             }
         }
     }
@@ -158,7 +159,7 @@ class ArendTraceProcess(session: XDebugSession, private val tracingData: ArendTr
     override fun getEditorsProvider(): XDebuggerEditorsProvider = EditorsProvider
 
     private fun focusContextViewOnStartup() {
-        session.ui.defaults.initContentAttraction(
+        session.ui?.defaults?.initContentAttraction(
             CONTEXT_CONTENT,
             LayoutViewOptions.STARTUP,
             LayoutAttractionPolicy.FocusOnce(false)

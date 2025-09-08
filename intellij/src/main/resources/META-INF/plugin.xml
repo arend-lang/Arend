@@ -9,8 +9,9 @@
          on how to target different products -->
     <depends>org.jetbrains.plugins.yaml</depends>
     <depends>com.intellij.java</depends>
-    <depends>org.jetbrains.kotlin</depends>
+    <!-- TODO[2025.2.1]
     <depends optional="true" config-file="plugin-json.xml">com.intellij.modules.json</depends>
+    -->
 
     <extensions defaultExtensionNs="com.intellij">
 
@@ -401,10 +402,12 @@
 
         <!-- Scratches -->
 
+        <!-- TODO[2025.2.1]
         <fileEditorProvider id="ArendScratchFileEditorProvider" implementation="org.arend.scratch.ArendScratchFileEditorProvider"/>
 
         <scratch.creationHelper language="Arend"
                                 implementationClass="org.arend.scratch.ArendScratchFileCreationHelper"/>
+        -->
 
         <!-- Configuration Options -->
 
@@ -447,6 +450,7 @@
 
     </extensions>
 
+    <!-- TODO[2025.2.1]
     <extensions defaultExtensionNs="org.jetbrains.kotlin">
         <scratchFileLanguageProvider language="Arend" implementationClass="org.arend.scratch.ArendScratchFileLanguageProvider"/>
     </extensions>
@@ -455,6 +459,7 @@
         <listener class="org.arend.scratch.ArendScratchFileModuleInfoProvider"
                   topic="org.jetbrains.kotlin.idea.scratch.ScratchFileListener"/>
     </projectListeners>
+    -->
 
     <actions>
         <action id="Arend.NewArendFile"
@@ -589,12 +594,14 @@
             <add-to-group group-id="ToolsMenu" anchor="last" />
         </group>
 
+        <!-- TODO[2025.2.1]
         <action id="org.arend.scratch.actions.ArendRunScratchAction" class="org.arend.scratch.actions.ArendRunScratchAction"
                 text="ArendRunScratchAction"/>
         <action id="org.arend.scratch.actions.ArendClearScratchAction" class="org.arend.scratch.actions.ArendClearScratchAction"
                 text="ArendClearScratchAction"/>
         <action id="org.arend.scratch.actions.ArendStopScratchAction" class="org.arend.scratch.actions.ArendStopScratchAction"
                 text="ArendStopScratchAction"/>
+        -->
     </actions>
 
     <resource-bundle>messages.ArendBundle</resource-bundle>
