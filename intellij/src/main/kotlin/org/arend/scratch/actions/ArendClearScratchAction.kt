@@ -2,6 +2,7 @@ package org.arend.scratch.actions
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
+/* TODO[2025.2.1]
 import org.jetbrains.kotlin.idea.KotlinJvmBundle
 
 class ArendClearScratchAction : ArendScratchAction(
@@ -14,3 +15,4 @@ class ArendClearScratchAction : ArendScratchAction(
         scratchEditor.clearOutputHandlers()
     }
 }
+*/

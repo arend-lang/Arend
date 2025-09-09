@@ -4,10 +4,12 @@
 \import Algebra.Pointed
 \import Arith.Int()
 \import Data.Array
+\import Data.Fin
 \import Data.Or
 \import Equiv
 \import Function.Meta ($)
 \import Logic
+\import Logic.Meta
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -203,6 +205,9 @@
   \lemma negative_+ {x y : E} : negative (x + y) = negative y - x
     => Group.inverse_* {toGroup \this}
 
+  \lemma negative_- {x y : E} : negative (x - y) = y - x
+    => negative_+ *> pmap (`- x) negative-isInv
+
   \lemma negative_zro : negative zro = zro
     => inv zro-right *> negative-left
 
@@ -218,6 +223,24 @@
     y                    `qed
 
   \lemma toZero {x y : E} (x=y : x = y) : x - y = zro => rewriteI x=y negative-right
+
+  \lemma *n_negative {n : Nat} {a : E} : n *n negative a = negative (n *n a)
+    => *n_pow *> inv \this.inverse_pow *> inv (pmap negative *n_pow)
+
+  \func \infixl 7 *i (x : Int) (a : E) : E \elim x
+    | pos n => n *n a
+    | neg n => n *n negative a
+
+  \protected \lemma *i_ipow {x : Int} {a : E} : x *i a = \this.ipow a x \elim x
+    | pos n => *n_pow
+    | neg n => *n_pow
+
+  \lemma *i-assoc {x y : Int} {a : E} : (x * y) *i a = x *i (y *i a)
+    => pmap (`*i _) *-comm *> *i_ipow *> \this.ipow_* *> inv (pmap (_ *i) *i_ipow *> *i_ipow)
+    \where \open Arith.Int.IntRing(*,*-comm)
+
+  \lemma *i-rdistr {x y : Int} {a : E} : (x Arith.Int.IntRing.+ y) *i a = x *i a + y *i a
+    => *i_ipow *> \this.ipow_+ *> inv (pmap2 (+) *i_ipow *i_ipow)
 
   \lemma diff_+ {x y z : E} : (z - y) + (y - x) = z - x =>
     (z - y) + (y - x)          ==< +-assoc >==
@@ -257,6 +280,30 @@
 
     \lemma #0-+-right {x y : E} (y#0 : #0 y) : #0 (x + y) || #0 x
       => ||.rec' (\lam r => byRight (#0-negative-inv r)) byLeft $ #0-+ {_} {negative x} {x + y} $ transportInv #0 simplify y#0
+
+    \lemma #0-BigSum {l : Array E} (p : BigSum l `#0) : ∃ (j : Fin l.len) (l j `#0) \elim l
+      | nil => absurd (#0-zro p)
+      | a :: l => \case #0-+ p \with {
+        | byLeft a#0 => inP (0, a#0)
+        | byRight p' => \case #0-BigSum p' \with {
+          | inP (j,lj#0) => inP (suc j, lj#0)
+        }
+      }
+
+    \lemma #0-BigSum-conv {l : Array E} {i : Fin l.len} (p : l i `#0) : BigSum l `#0 || (\Sigma (j : Fin l.len) (j /= i) (l j `#0)) \elim l, i
+      | a :: l, 0 => \case #0-+-left p \with {
+        | byLeft r => byLeft r
+        | byRight l#0 => \case #0-BigSum l#0 \with {
+          | inP (j,lj#0) => byRight (suc j, \case __ \with {}, lj#0)
+        }
+      }
+      | a :: l, suc i => \case #0-BigSum-conv p \with {
+        | byLeft l#0 => \case #0-+-right {_} {a} l#0 \with {
+          | byLeft r => byLeft r
+          | byRight a#0 => byRight (0, \case __ \with {}, a#0)
+        }
+        | byRight (j,j/=i,lj#0) => byRight (suc j, fsuc/= j/=i, lj#0)
+      }
   }
 
   -- | An additive group with decidable equality.
@@ -290,6 +337,10 @@
 \class CGroup \extends Group, CancelCMonoid {
   | inverse-right => *-comm *> inverse-left
 
+  \lemma ipow_*-comm {a b : E} {x : Int} : ipow (a * b) x = ipow a x * ipow b x \elim x
+    | pos n => pow_*-comm
+    | neg n => pmap (pow __ n) (inverse_* *> *-comm) *> pow_*-comm
+
   \lemma BigProd_inverse {l : Array E} : inverse (BigProd l) = BigProd (map inverse l)
     => AbGroup.BigSum_negative {AbGroup.fromCGroup \this}
 
@@ -301,6 +352,12 @@
 \class AbGroup \extends AddGroup, AbMonoid {
   | negative-right => +-comm *> negative-left
 
+  \lemma *n-ldistr_- {n : Nat} {a b : E} : n *n (a - b) = n *n a - n *n b
+    => *n-ldistr *> pmap (_ +) *n_negative
+
+  \lemma *i-ldistr {a b : E} {x : Int} : x *i (a + b) = x *i a + x *i b
+    => *i_ipow *> \this.ipow_*-comm *> inv (pmap2 (+) *i_ipow *i_ipow)
+
   \lemma BigSum_negative {l : Array E} : negative (BigSum l) = BigSum (map negative l) \elim l
     | nil => negative_zro
     | a :: l => negative_+ *> +-comm *> pmap (_ +) BigSum_negative
@@ -310,6 +367,15 @@
 
   \lemma diff-cancel-left {x y z : E} : x - z - (x - y) = y - z
     => sum-cancel-left *> +-comm *> pmap (`- z) negative-isInv
+
+  \lemma negative_+-comm {x y : E} : negative (x + y) = negative x - y
+    => negative_+ *> +-comm
+
+  \lemma diff_sum {x y z : E} : x - (y + z) = x - y - z
+    => pmap (x +) negative_+-comm *> inv +-assoc
+
+  \lemma diff_diff {x y z : E} : x - (y - z) = x - y + z
+    => diff_sum *> pmap (x - y + __) negative-isInv
 } \where {
     \use \coerce fromCGroup (G : CGroup) => \new AbGroup G.E G.ide (G.*) G.ide-left G.ide-right G.*-assoc G.inverse G.inverse-left G.*-comm
     \use \coerce toCGroup (G : AbGroup) => \new CGroup G.E G.zro (G.+) G.+-assoc G.zro-left G.zro-right G.negative G.negative-left G.+-comm

@@ -1,0 +1,208 @@
+\import Algebra.Algebra
+\import Algebra.Domain
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Arith.Nat
+\import Data.Or
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+\open AddGroup
+
+\type FSeries (R : \Set) => Nat -> R
+
+\lemma fseries-apply {R : \Set} {x y : FSeries R} (p : x = y) {n : Nat} : x n = y n \elim p
+  | idp => idp
+
+\instance FSeriesRing (R : Ring) : Ring (FSeries R)
+  | zro _ => 0
+  | + f g n => f n + g n
+  | zro-left => ext \lam n => zro-left
+  | +-assoc => ext \lam n => +-assoc
+  | +-comm => ext \lam n => +-comm
+  | negative f n => negative (f n)
+  | negative-left => ext \lam n => negative-left
+  | ide => coef 1
+  | * f g n => R.FinSum {PairsFinSet n} \lam s => f s.1 * g s.2
+  | *-assoc {x} {y} {z} => ext \lam n => path (\lam i => R.FinSum (\lam (s : PairsFinSet n) => R.FinSum-rdistr {PairsFinSet s.1} {z s.2} {\lam t => x t.1 * y t.2} i)) *>
+      R.FinSum-double-dep (\lam (s : PairsFinSet n) => PairsFinSet s.1) *> R.FinSum_Equiv2 (later \new QEquiv {
+        | f ((i,j,i+j=n),(k,m,k+m=i)) => ((k, m + j, inv +-assoc *> pmap (`+ j) k+m=i *> i+j=n), (m, j, idp))
+        | ret ((i,j,i+j=n),(k,m,k+m=j)) => ((i + k, m, +-assoc *> pmap (i +) k+m=j *> i+j=n), (i, k, idp))
+        | ret_f s => PairsFinSet-ext1 s.2.3 idp idp idp
+        | f_sec s => PairsFinSet-ext2 idp s.2.3 idp idp
+      }) (\lam s => *-assoc) *> inv (path (\lam i => R.FinSum (\lam (s : PairsFinSet n) => R.FinSum-ldistr {PairsFinSet s.2} {x s.1} {\lam t => y t.1 * z t.2} i)) *> R.FinSum-double-dep (\lam (s : PairsFinSet n) => PairsFinSet s.2) {\lam s => x s.1.1 * (y s.2.1 * z s.2.2)})
+  | ldistr => ext \lam n => pmap R.FinSum (ext \lam s => R.ldistr) *> R.FinSum_+
+  | rdistr => ext \lam n => pmap R.FinSum (ext \lam s => R.rdistr) *> R.FinSum_+
+  | ide-left {x} => ext \lam n => R.FinSum-unique (later (0, n, idp)) (\lam s s/=0 => pmap (`* _) (coef_/=0 \lam p => s/=0 $ ext (p, pmap (`+ _) (inv p) *> s.3)) *> R.zro_*-left) *> ide-left
+  | ide-right {x} => ext \lam n => R.FinSum-unique (later (n, 0, idp)) (\lam s s/=0 => pmap (_ *) (coef_/=0 \lam p => s/=0 $ ext (pmap (_ +) (inv p) *> s.3, p)) *> R.zro_*-right) *> ide-right
+  | natCoef n => coef (R.natCoef n)
+  | natCoefZero => ext \case \elim __\with {
+    | 0 => R.natCoefZero
+    | suc j => idp
+  }
+  | natCoefSuc n => ext \case \elim __\with {
+    | 0 => R.natCoefSuc n
+    | suc j => inv zro-left
+  }
+  \where {
+    \func coef (a : R) (n : Nat) : R \elim n
+      | 0 => a
+      | suc _ => 0
+
+    \lemma coef_/=0 {a : R} {n : Nat} (n/=0 : n /= 0) : coef a n = 0 \elim n
+      | 0 => absurd (n/=0 idp)
+      | suc n => idp
+
+    \lemma PairsFinSet (n : Nat) : FinSet (\Sigma (i j : Nat) (\property i + j = n)) (suc n) \cowith
+      | finEq => inP \new QEquiv {
+        | f i => (i, n -' i, <=_exists $ <_suc_<= $ fin_< i)
+        | ret s => toFin s.1 $ <=_<_suc $ NatSemiring.<=_+ <=-refl zero<=_ <=∘ =_<= s.3
+        | ret_f i => fin_nat-inj toFin=id
+        | f_sec s => ext (toFin=id, pmap2 (`-') (inv s.3 *> +-comm) toFin=id *> -'+)
+      }
+
+    \lemma PairsFinSet-ext1 {n : Nat} {x y : \Sigma (s : PairsFinSet n) (PairsFinSet s.1)} (p1 : x.1.1 = y.1.1) (p2 : x.1.2 = y.1.2) (p3 : x.2.1 = y.2.1) (p4 : x.2.2 = y.2.2) : x = y \elim x, y, p1, p2, p3, p4
+      | ((i1,j1,p1),(k1,m1,q1)), ((i2,j2,p2),(k2,m2,q2)), idp, idp, idp, idp => idp
+
+    \lemma PairsFinSet-ext2 {n : Nat} {x y : \Sigma (s : PairsFinSet n) (PairsFinSet s.2)} (p1 : x.1.1 = y.1.1) (p2 : x.1.2 = y.1.2) (p3 : x.2.1 = y.2.1) (p4 : x.2.2 = y.2.2) : x = y \elim x, y, p1, p2, p3, p4
+      | ((i1,j1,p1),(k1,m1,q1)), ((i2,j2,p2),(k2,m2,q2)), idp, idp, idp, idp => idp
+
+    \lemma Pairs_zero {f : PairsFinSet 0 -> R} : R.FinSum f = f (0,0,idp)
+      => R.FinSum-unique (later (0,0,idp)) \lam s s/=0 => absurd $ s/=0 $ ext
+            (<=-antisymmetric (transport (_ <=) s.3 $ NatSemiring.<=_+ <=-refl zero<=_) zero<=_,
+             <=-antisymmetric (transport (_ <=) s.3 $ NatSemiring.<=_+ zero<=_ <=-refl) zero<=_)
+
+    \lemma Pairs_suc-left {n : Nat} {f : PairsFinSet (suc n) -> R}
+      : R.FinSum f = f (0, suc n, idp) + R.FinSum \lam (s : PairsFinSet n) => f (suc s.1, s.2, pmap suc s.3)
+      => R.FinSum_Equiv2 (later \new QEquiv {
+        | f => \case \elim __ \with {
+          | (0, _, _) => inl ()
+          | (suc i, j, p) => inr (i, j, pmap pred p)
+        }
+        | ret => \case \elim __ \with {
+          | inl _ => (0, suc n, idp)
+          | inr s => (suc s.1, s.2, pmap suc s.3)
+        }
+        | ret_f => \case \elim __ \with {
+          | (0, j, p) => ext (idp, inv p)
+          | (suc i, j, p) => idp
+        }
+        | f_sec => \case \elim __ \with {
+          | inl _ => idp
+          | inr s => idp
+        }
+      }) (later \case \elim __ \with {
+        | (0, j, p) => pmap f $ ext (idp,p)
+        | (suc i, j, p) => idp
+      }) *> R.FinSum_Or {UnitFin} {PairsFinSet n} {Or.rec (\lam _ => f (0, suc n, idp)) (\lam s => f (suc s.1, s.2, pmap suc s.3))} *> pmap (`+ _) (R.FinSum-unique () (\lam k c => absurd $ c idp))
+  }
+
+\instance FSeriesAlgebra (R : CRing) : CAlgebra R
+  | Ring => FSeriesRing R
+  | *c c x n => c * x n
+  | *c-assoc => ext \lam n => *-assoc
+  | *c-ldistr => ext \lam n => R.ldistr
+  | *c-rdistr => ext \lam n => R.rdistr
+  | ide_*c => ext \lam n => ide-left
+  | *c-comm-left => ext \lam n => R.FinSum-ldistr *> pmap R.FinSum (ext \lam s => inv *-assoc)
+  | coefMap a => FSeriesRing.coef a
+  | coefMap_*c => ext \case \elim __\with {
+    | 0 => inv ide-right
+    | suc j => inv R.zro_*-right
+  }
+  | *-comm => ext \lam n => R.FinSum_Equiv2 (later \new QEquiv {
+    | f s => (s.2, s.1, +-comm *> s.3)
+    | ret s => (s.2, s.1, +-comm *> s.3)
+    | ret_f => idpe
+    | f_sec => idpe
+  }) \lam s => *-comm
+
+\instance FSeriesRingWith# (R : Ring.With#) : Ring.With#
+  | Ring => FSeriesRing R
+  | #0 x => ∃ (n : Nat) (x n `#0)
+  | #0-zro (inP (_,p)) => #0-zro p
+  | #0-+ (inP (n,p)) => \case #0-+ p \with {
+    | byLeft xn#0 => byLeft $ inP (n, xn#0)
+    | byRight yn#0 => byRight $ inP (n, yn#0)
+  }
+  | #0-tight c => ext \lam n => #0-tight \lam xn#0 => c $ inP (n, xn#0)
+  | #0-*-left (inP (n,p)) => \case R.#0-FinSum p \with {
+    | inP (s,q) => inP (s.1, R.#0-*-left q)
+  }
+  | #0-*-right (inP (n,p)) => \case R.#0-FinSum p \with {
+    | inP (s,q) => inP (s.2, R.#0-*-right q)
+  }
+
+\instance FSeriesCRingWith# (R : CRing.With#) : CRing.With#
+  | Ring.With# => FSeriesRingWith# R
+  | *-comm => (FSeriesAlgebra R).*-comm
+
+\instance FSeriesDomain (R : Domain) : Domain
+  | Ring.With# => FSeriesRingWith# R
+  | zro#ide => inP (0, R.zro#ide)
+  | #0-* (inP (n,xn#0)) (inP (m,ym#0)) => aux {R} {_} {n} {m} id<suc xn#0 ym#0
+  \where {
+    \protected \lemma aux {k n m : Nat} (n+m<k : n + m < k) {x y : FSeries R} (xn#0 : x n `#0) (ym#0 : y m `#0) : ∃ (k : Nat) ((x * y) k `#0) \elim k
+      | suc k => \case R.#0-FinSum-conv {FSeriesRing.PairsFinSet (n + m)} {_} {n,m,idp} (R.#0-* xn#0 ym#0) \with {
+        | byLeft r => inP (n + m, r)
+        | byRight ((i,j,i+j=n+m),ij/=nm,p) => \case LinearOrder.dec<_<= i n \with {
+          | inl i<n => aux (NatSemiring.<_+-left m i<n <∘l <_suc_<= n+m<k) (R.#0-*-left p) ym#0
+          | inr n<=i => aux (NatSemiring.<_+-right n (\case LinearOrder.dec<_<= j m \with {
+            | inl j<m => j<m
+            | inr m<=j => absurd $ ij/=nm $ ext
+              \have j=m => <=-antisymmetric (NatBSemilattice.<=_cancel-left i $ =_<= i+j=n+m <=∘ NatSemiring.<=_+ n<=i <=-refl) m<=j
+              \in (NatSemiring.cancel-right j $ i+j=n+m *> pmap (n +) (inv j=m), j=m)
+          }) <∘l <_suc_<= n+m<k) xn#0 (R.#0-*-right p)
+        }
+      }
+  }
+
+\instance FSeriesIntegralDomain (R : IntegralDomain) : IntegralDomain
+  | Domain => FSeriesDomain R
+  | *-comm => (FSeriesAlgebra R).*-comm
+
+\func poly-FSeries {R : Ring} : RingHom (PolyRing R) (FSeriesRing R) (polyCoef __) \cowith
+  | func-+ => ext \lam n => polyCoef_+
+  | func-ide => ext \case \elim __\with {
+    | 0 => idp
+    | suc n => idp
+  }
+  | func-* => ext \lam n => *-lem
+  \where {
+    \lemma *-lem {p q : Poly R} {n : Nat} : polyCoef (p * q) n = (polyCoef p * {FSeriesRing R} polyCoef q) n \elim p, n
+      | pzero, n => inv $ fseries-apply $ (FSeriesRing R).zro_*-left {polyCoef q}
+      | padd p e, 0 => polyCoef_+ *> zro-left *> polyCoef_*c *> inv FSeriesRing.Pairs_zero
+      | padd p e, suc n => polyCoef_+ *> pmap2 (+) *-lem polyCoef_*c *> +-comm *> inv FSeriesRing.Pairs_suc-left
+  }
+
+\lemma geometric-FSeries {R : Ring} : Monoid.Inv {FSeriesRing R} (\lam _ => 1) (polyCoef (padd (padd pzero -1) 1)) \cowith
+  | inv-left => ext \case \elim __ \with {
+    | 0 => FSeriesRing.Pairs_zero *> ide-left
+    | suc n => R.FinSum-unique2 {FSeriesRing.PairsFinSet (suc n)} {0, suc n, idp} {1, n, idp} (\lam p => \case pmap __.1 p) (\case \elim __ \with {
+      | (0, j, p) => \lam q => absurd $ q $ ext (idp, p)
+      | (1, j, p) => \lam _ q => absurd $ q $ ext (idp, pmap pred p)
+      | (suc (suc i), _, _) => \lam _ _ => R.zro_*-left
+    }) *> equation.ring
+  }
+  | inv-right => ext \case \elim __ \with {
+    | 0 => FSeriesRing.Pairs_zero *> ide-left
+    | suc n => R.FinSum-unique2 {FSeriesRing.PairsFinSet (suc n)} {suc n, 0, idp} {n, 1, idp} (\lam p => \case pmap __.2 p) (\case \elim __ \with {
+      | (i, 0, p) => \lam q => absurd $ q $ ext (p, idp)
+      | (i, 1, p) => \lam _ q => absurd $ q $ ext (pmap pred p, idp)
+      | (_, suc (suc j), _) => \lam _ _ => R.zro_*-right
+    }) *> equation.ring
+  }

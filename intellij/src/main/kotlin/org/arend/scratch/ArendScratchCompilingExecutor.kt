@@ -1,5 +1,6 @@
 package org.arend.scratch
 
+/* TODO[2025.2.1]
 import org.jetbrains.kotlin.idea.scratch.ScratchExecutor
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
 
@@ -12,3 +13,4 @@ class ArendScratchCompilingExecutor(file: ScratchFile) : ScratchExecutor(file) {
 //        TODO("Not yet implemented")
     }
 }
+*/

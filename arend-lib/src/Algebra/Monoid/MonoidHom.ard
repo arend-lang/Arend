@@ -56,6 +56,10 @@
   \lemma func-BigSum {l : Array Dom} : func (AddMonoid.BigSum l) = AddMonoid.BigSum (\lam j => func (l j)) \elim l
     | nil => func-zro
     | a :: l => func-+ *> pmap (_ +) func-BigSum
+
+  \lemma func-*n {n : Nat} {x : Dom} : func (n AddMonoid.*n x) = n AddMonoid.*n func x \elim n
+    | 0 => func-zro
+    | suc n => func-+ *> pmap (`+ _) func-*n
 } \where {
   \use \coerce toMonoidHom (f : AddMonoidHom) : MonoidHom \cowith
     | Dom => f.Dom
@@ -71,6 +75,6 @@
 
   \lemma func-FinSum {A B : AbMonoid} (f : AddMonoidHom A B) {J : FinSet} {a : J -> A} : f (A.FinSum a) = B.FinSum (\lam j => f (a j))
     => \case A.FinSum_char a \with {
-         | inP (e,q) => pmap f q *> f.func-BigSum *> inv (B.FinSum_char2 _ e)
+         | inP (e,q) => pmap f q *> f.func-BigSum *> inv (B.FinSum_char2 e)
        }
 }

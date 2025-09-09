@@ -190,9 +190,9 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        \module M \where {
          \func foobar \alias fu {a b : Nat} => b Nat.+ a
   
-         \func bar => foobar {2} {1}
+         \func bar => fu {2} {1}
          
-         \func bar2 => foobar {2} {1}
+         \func bar2 => fu {2} {1}
        }
 
        \module M1 \where {
@@ -251,7 +251,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        \class C {Z : \Type} {
          \data Bar \alias Fu (X : \Type) (n m : Nat) \elim n
            | zero => nil X Z
-           | suc n => cons X (Bar {\this} X n {?})
+           | suc n => cons X (Fu {\this} X n {?})
        }
 
        \func lol (I : C {Nat}) : C.Fu _ 2 {?} => C.cons {_} {_} {_} {{?}} 1 (C.cons {_} {_} {_} {{?}} 2 (C.nil {I} {_} {{?}} 3 4)) 
@@ -269,7 +269,7 @@ class ArendChangeSignatureTest: ArendChangeSignatureTestBase() {
        \class C {Z : \Type} {
          \data Bar \alias Fu {X : \Type} (n m : Nat) \elim n
            | zero => nil X Z
-           | suc n => cons X (Bar {\this} {X} n {?})
+           | suc n => cons X (Fu {\this} {X} n {?})
        }
 
        \func lol (I : C {Nat}) : C.Fu 2 {?} => C.cons {_} {_} {_} {{?}} 1 (C.cons {_} {_} {_} {{?}} 2 (C.nil {I} {_} {{?}} 3 4)) 

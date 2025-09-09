@@ -27,7 +27,7 @@
 
   \default open-top => cauchy-open.2 \lam _ => cauchy-refine cauchy-top \lam {U} _ => inP (U, \lam _ _ => (), <=-refl)
   \default open-inter Uo Vo => cauchy-open.2 $ later \lam {x} (Ux,Vx) => cauchy-refine (cauchy-glue (cauchy-open.1 Uo Ux) (\lam _ => cauchy-open.1 Vo Vx))
-      \lam (inP (U',V',Uc,Vc,W=U'V')) => inP (U' ∧ V', \lam (U'x,V'x) {y} (U'y,V'y) => (Uc U'x U'y, Vc V'x V'y), Preorder.=_<= W=U'V')
+      \lam (inP (U',V',Uc,Vc,W=U'V')) => inP (U' ∧ V', \lam (U'x,V'x) {y} (U'y,V'y) => (Uc U'x U'y, Vc V'x V'y), =_<= W=U'V')
   \default open-Union So => cauchy-open.2 $ later \lam {x} (inP (U,SU,Ux)) => cauchy-refine (cauchy-open.1 (So SU) Ux) \lam {V} Vc => inP (V, \lam Vx => Vc Vx <=∘ Set.Union-cond SU, <=-refl)
 
   \default isOpen S : \Prop => ∀ {x : S} (isCauchy \lam U => U x -> U ⊆ S)
@@ -77,7 +77,7 @@
   \override Cod : PrecoverSpace
   | func-cover {D : Set (Set Cod)} : isCauchy D -> isCauchy \lam U => ∃ (V : D) (U = func ^-1 V)
 
-  \default func-cont Uo => cauchy-open.2 $ later \lam {x} Ufx => cauchy-refine (func-cover (cauchy-open.1 Uo Ufx)) \lam (inP (W,c,d)) => inP (func ^-1 W, \lam a {_} => c a, Preorder.=_<= d)
+  \default func-cont Uo => cauchy-open.2 $ later \lam {x} Ufx => cauchy-refine (func-cover (cauchy-open.1 Uo Ufx)) \lam (inP (W,c,d)) => inP (func ^-1 W, \lam a {_} => c a, =_<= d)
 
   \func IsEmbedding : \Prop
     => \Pi {C : Set (Set Dom)} -> isCauchy C -> isCauchy \lam V => ∃ (U : C) (func ^-1 V ⊆ U)

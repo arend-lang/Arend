@@ -1,0 +1,131 @@
+\import Algebra.Group
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Ring.RingHom
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Category
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.BanachAlgebra
+\import Topology.BanachSpace
+\import Topology.StoneCStarAlgebra
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.CompletionTools
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.ExComplete
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.NormedRing
+\import Topology.TopAbGroup.Complete
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open QModule
+\open PosetQModule
+
+\record OrderedC*AlgebraHom \extends RingHom, PosetHom {
+  \override Dom : OrderedC*Algebra
+  \override Cod : OrderedC*Algebra
+
+  \func IsDense : \Prop
+    => ∀ {eps} (0 < eps) y ∃ (x : Dom) (func x - y <= eps *q 1) (y - func x <= eps *q 1)
+
+  \func IsIsometric : \Prop
+    => \Pi {x : Dom} -> func x <= 1 -> negative (func x) <= 1 -> \Pi {q : Rat} -> 1 < q -> x <= q *q 1
+
+  \lemma toNormed : NormedAbGroupMap toBanach toBanach func \cowith
+    | func-+ => func-+
+    | func-norm (inP (a,a<b,a>0,x<=a,-x<=a)) => inP (a, a<b, a>0,
+        transport (_ <=) (func-*q *> pmap (a *q) func-ide) (func-<= x<=a),
+        transport2 (<=) func-negative (func-*q *> pmap (a *q) func-ide) (func-<= -x<=a))
+
+  \lemma dense-toNormed : IsDense <-> toNormed.IsDense
+    => (\lam d {y} Uo Uy => \case (dist_open {toBanach}).1 Uo Uy \with {
+      | inP (eps,eps>0,Up) => \case d (RatField.half>0 eps>0) y \with {
+        | inP (x,xl,xr) => inP (func x, inP (x,idp), Up $ inP (RatField.half eps, RatField.half<id eps>0, RatField.half>0 eps>0, xr, rewrite AddGroup.negative_- xl))
+      }
+    }, \lam d {eps} eps>0 y => \case d {y} {OBall {toBanach} eps y} (OBall-open {toBanach}) (OBall-center {toBanach} eps>0) \with {
+      | inP (_, inP (x,idp), inP (delta,delta<eps,_,y-x<=delta,x-y<=delta)) => inP (x, (rewrite AddGroup.negative_- in x-y<=delta) <=∘ <=_*q-left (RatField.<=-less delta<eps) OrderedC*Algebra.zro<=ide, y-x<=delta <=∘ <=_*q-left (RatField.<=-less delta<eps) OrderedC*Algebra.zro<=ide)
+    })
+
+  \lemma isometry-toNormed : IsIsometric <-> (\Pi {x : Dom} -> toBanach.norm (func x) = toBanach.norm x)
+    => (\lam c {x} => <=-antisymmetric toNormed.func-norm \lam {b} (inP (a',a'<b,a'>0,fx<=a',-fx<=a')) => \case isDense a'<b \with {
+      | inP (a,a'<a,a<b) =>
+        \have x<=a {x} (fx<=a' : func x <= a' *q 1) (-fx<=a' : negative (func x) <= a' *q 1)
+              => <=_*q-cancel-left (RatField.finv>0 a'>0) $ transport (_ <=) *q-assoc $ c
+                  (=_<= func-*q <=∘ <=_*q-rotate_finv-left a'>0 fx<=a')
+                  (=_<= (pmap negative func-*q *> inv (later toRatModule.*c_negative-right)) <=∘ <=_*q-rotate_finv-left a'>0 -fx<=a')
+                  (transport (_ <) *-comm $ RatField.<_rotate-right a'>0 $ transportInv (`< _) ide-left a'<a)
+        \in inP (a, a<b, a'>0 <∘ a'<a, x<=a fx<=a' -fx<=a', x<=a (rewrite func-negative -fx<=a') $ rewrite (func-negative,AddGroup.negative-isInv) fx<=a')
+    }, \lam c {x} fx<=1 -fx<=1 q>1 => \case transport (`<= _) c (toBanach_norm<=1 fx<=1 -fx<=1) q>1 \with {
+      | inP (r,r<q,_,x<=r,_) => x<=r <=∘ <=_*q-left (RatField.<=-less r<q) OrderedC*Algebra.zro<=ide
+    })
+
+  \lemma toIsometry (p : IsIsometric) : NormedIsometricMap toBanach toBanach func \cowith
+    | NormedAbGroupMap => toNormed
+    | func-norm-isometry => isometry-toNormed.1 p
+} \where {
+  \open OrderedC*Algebra
+
+  \lemma fromNormed {X : OrderedC*Algebra} {Y : StoneC*Algebra} (f : RingHom X Y) (fn : \Pi {x : X} -> norm (f x) <= X.toBanach.norm x) : OrderedC*AlgebraHom X Y f \cowith
+    | RingHom => f
+    | func-<= =>
+      \have lem {a} (a>=0 : 0 <= a) : 0 <= f a => \case X.*q-upperBound a \with {
+        | inP (q,q>0,a<=q) => transport (0 <=) (pmap (q *q) func-*q *> inv *q-assoc *> pmap (`*q _) (RatField.finv-right $ RatField.>_/= q>0) *> ide_*q) $ *q_>=0 (RatField.<=-less q>0) $ Y.norm-c*-positive $ =_<= (inv $ pmap norm (f.func-minus *> pmap (`- _) f.func-ide)) <=∘ fn <=∘ toBanach_norm<=1 (<=_+ <=-refl (PosetAddGroup.negative<=0 $ *q_>=0 (RatField.<=-less $ RatField.finv>0 q>0) a>=0) <=∘ =_<= zro-right) (PosetAddGroup.negative<=0 (PosetAddGroup.to>=0 (<=_*q-rotate_finv-left q>0 a<=q)) <=∘ OrderedC*Algebra.zro<=ide)
+      }
+      \in \lam x<=y => Y.from>=0 $ transport (0 <=) f.func-minus $ lem (X.to>=0 x<=y)
+}
+
+\record StoneC*AlgebraHom \extends OrderedC*AlgebraHom, BoundedLinearMap {
+  \override Dom : StoneC*Algebra
+  \override Cod : StoneC*Algebra
+
+  | func-<= (inP (a,aa=y-x)) => inP (func a, inv func-* *> pmap func aa=y-x *> func-minus)
+  | isBounded => inP (1, idp, \lam x => transportInv (_ <=) (ExUpperRealSemigroup.ide-left norm>=0) $
+      transport2 (<=) (inv StoneC*Algebra.norm-char) (inv StoneC*Algebra.norm-char) toNormed.func-norm)
+} \where {
+  \lemma fromRingHom {X Y : StoneC*Algebra} (f : RingHom X Y) : StoneC*AlgebraHom X Y f \cowith
+    | RingHom => f
+}
+
+\sfunc dense-c*-lift {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) : OrderedC*AlgebraHom Y Z
+  => \let | map => dense-normed-lift (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
+          | map-char => dense-normed-lift.char (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
+     \in OrderedC*AlgebraHom.fromNormed \new RingHom {
+       | func => map
+       | func-+ => map.func-+
+       | func-ide => pmap map (inv f.func-ide) *> map-char *> g.func-ide
+       | func-* {x} {y} => dense-lift-unique (ProductTopSpace.prod f.toNormed f.toNormed) (ProductTopSpace.prod.isDense (f.dense-toNormed.1 fd) (f.dense-toNormed.1 fd)) (map ContMap.∘ *-locally-uniform) (*-locally-uniform ContMap.∘ ProductTopSpace.prod map map) (\lam s => pmap map (inv f.func-*) *> map-char *> g.func-* *> inv (pmap2 (*) map-char map-char)) (x,y)
+     } map.func-norm
+  \where {
+    \protected \lemma char {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) {x : X} : dense-c*-lift f fd fi g (f x) = g x
+      => rewrite (\peval dense-c*-lift f fd fi g) $ dense-normed-lift.char (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
+  }
+
+\instance StoneC*AlgebraCompletion (X : OrderedC*Algebra) : StoneC*Algebra
+  | RealBanachAlgebra => BanachAlgebraCompletion X.toBanach
+  | *-comm => unique2 *-cover (*-cover ∘ tuple proj2 proj1)
+    \lam x y => lift2-char *> pmap pointCF *-comm *> inv lift2-char
+  | c*-sum => unique2_<= (norm-metric-map {BanachCompletion X.toBanach} ∘ *-cover ∘ tuple id id ∘ proj1) (norm-metric-map {BanachCompletion X.toBanach} ∘ +-cover ∘ prod (*-cover ∘ tuple id id) (*-cover ∘ tuple id id))
+      \lam x y => transport2 (<=) (inv $ pmap ExNormedAbGroupCompletion.norm lift2-char *> completion-exNormed-isometry.func-norm-isometry) (inv $ pmap ExNormedAbGroupCompletion.norm (pmap2 +-func lift2-char lift2-char *> +-char) *> completion-exNormed-isometry.func-norm-isometry) X.toBanach_c*-sum
+  | c*-square => unique1_<= (ex-upper-*-locally-uniform ∘ tuple (bnorm-metric-map {BanachCompletion X.toBanach}) bnorm-metric-map) (bnorm-metric-map ∘ *-locally-uniform ∘ tuple id id)
+      \lam x => transport2 (\lam y z => y * y <= z) (inv completion-exNormed-isometry.func-norm-isometry) (inv $ pmap ExNormedAbGroupCompletion.norm lift2-char *> completion-exNormed-isometry.func-norm-isometry) X.toBanach_c*-square
+  \where {
+    \open ProductCoverSpace
+    \open CoverMap
+    \open TopAbGroupCompletion
+    \open BanachAlgebraCompletion
+  }

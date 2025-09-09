@@ -13,7 +13,6 @@ import org.arend.library.error.LibraryError
 import org.arend.library.error.ModuleInSeveralLibrariesError
 import org.arend.module.error.ModuleNotFoundError
 import org.arend.typechecking.*
-import org.arend.typechecking.error.ErrorService
 import java.io.OutputStream
 
 
@@ -29,6 +28,7 @@ class TypeCheckProcessHandler(
     override fun startNotify() {
         super.startNotify()
 
+        /* TODO[server2]
         val eventsProcessor = eventsProcessor ?: return
         SaveAndSyncHandler.getInstance().scheduleSave(SaveAndSyncHandler.SaveTask(project))
 
@@ -45,7 +45,6 @@ class TypeCheckProcessHandler(
             return
         }
 
-        /* TODO[server2]
         val registeredLibraries = typeCheckerService.libraryManager.registeredLibraries
         val libraries = if (command.library == "" && modulePath == null) registeredLibraries.filterIsInstance<ArendRawLibrary>() else {
             val library = if (command.library != "") typeCheckerService.libraryManager.getRegisteredLibrary(command.library) else findLibrary(modulePath!!, registeredLibraries, typecheckingErrorReporter)

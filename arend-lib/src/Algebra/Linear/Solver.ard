@@ -1,5 +1,6 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Algebra.Ring.RingHom
 \import Algebra.Ring.Solver
 \import Algebra.Semiring
@@ -32,7 +33,7 @@
   \lemma interpretEq_<= (e : Equation) (h : interpretEq e) : interpret e.1 <= interpret e.3 \elim e
     | (t1, Less, t2) => LinearOrder.<_<= h
     | (t1, LessOrEquals, t2) => h
-    | (t1, Equals, t2) => Preorder.=_<= h
+    | (t1, Equals, t2) => =_<= h
 
   \func Problem => Array Equation
 
@@ -150,7 +151,10 @@
        }
     \where
       \func toContr (p : Problem) (t1 t2 : RingTerm C V) : Problem => (t2,LessOrEquals,t1) :: p
-} \where \open LinearlyOrderedSemiring
+} \where {
+  \open PosetSemiring
+  \open LinearlyOrderedSemiring
+}
 
 \class LinearSemiringData \extends LinearData, SemiringData
 

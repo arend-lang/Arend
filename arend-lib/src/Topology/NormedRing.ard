@@ -1,19 +1,17 @@
-\import Algebra.Group
-\import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Ordered
 \import Algebra.Pointed
 \import Algebra.Ring
-\import Algebra.Semiring
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
+\import Arith.Real.InfReal
+\import Arith.Real.UpperReal
+\import Data.Or
 \import Function.Meta
 \import Logic
 \import Meta
 \import Operations
 \import Order.Biordered
-\import Order.Lattice
 \import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
@@ -21,89 +19,129 @@
 \import Paths.Meta
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
-\import Topology.MetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
-\import Topology.NormedAbGroup.ValuedNormedAbGroup
 \import Topology.TopRing
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
 \open Monoid(pow)
-\open LinearlyOrderedAbMonoid
-\open LinearlyOrderedSemiring
 
-\class PseudoNormedRing \extends PseudoNormedAbGroup, TopRing
-  | norm_*_<= {x y : E} : norm (x * y) <= norm x RealField.* norm y
-  | norm_ide_<= : norm 1 <= 1
-  | *-cont => *-locally-uniform norm_*_<=
-  \where {
-    \protected \lemma *-locally-uniform {R : Ring} {X : PseudoNormedAbGroup R { | zro => R.zro | + => + | negative => negative }} (norm_*_<= : \Pi {x y : R} -> norm (x * y) <= norm x * norm y) : LocallyUniformMap (X ⨯ X) X (\lam s => s.1 * s.2)
-      => LocallyUniformMetricMap.makeLocallyUniformMap2 (*) \lam {eps} eps>0 => inP (1, RealAbGroup.zro<ide, \lam x0 y0 =>
-          \let | lem : 0 < norm x0 + norm y0 + 3 => linarith $ usingOnly (norm>=0 {_} {x0}, norm>=0 {_} {y0})
-               | gamma => (RealField.pinv lem * eps) ∧ 1
-               | gamma>0 : 0 < gamma => <_meet-univ (RealField.<_*_positive_positive (RealField.pinv>0 lem) eps>0) zro<ide
-          \in inP (gamma, gamma>0, \lam {x} {x'} {y} {y'} x0x<1 y0y<1 xx'<gamma yy'<gamma =>
-              rewrite norm-dist at xx'<gamma $ rewrite norm-dist at yy'<gamma $ rewrite norm-dist at x0x<1 $ rewrite norm-dist at y0y<1 $ rewrite norm-dist $
-              rewrite (equation : x * y - x' * y' = x * (y - y') + (x - x') * y') $ norm_+ <∘r
-                <=_+ norm_*_<= norm_*_<= <∘r later (<=_+ (<=_*_positive-right norm>=0 $ LinearOrder.<_<= yy'<gamma) (<=_*_positive-left (LinearOrder.<_<= xx'<gamma) norm>=0) <∘r
-                  rewrite {2} *-comm (transport (`< _) rdistr $ <_*_positive-left (hiding norm_*_<= $ linarith (norm_-right {_} {x0} {x}, norm_-right {_} {y0} {y}, norm_-right {_} {y} {y'}, meet-right : gamma <= 1)
-                      : norm x + norm y' < norm x0 + norm y0 + 3) gamma>0 <∘l
-                    <=_*_positive-right (LinearOrder.<_<= lem) meet-left <=∘ Preorder.=_<= (inv *-assoc *> pmap (`* _) (OrderedField.pinv-right lem) *> ide-left)))))
-  }
+\class ExPseudoNormedPseudoRing \extends BoundedExPseudoNormedAbGroup, TopSemigroup, PseudoRing
+  | norm_*_<= {x y : E} : norm (x * y) <= norm x ExUpperReal.* norm y
+  | *-cont => bilinear-locally-uniform (*) rdistr_- ldistr_- norm_*_<=
 
-\class PseudoNormedCRing \extends PseudoNormedRing, CRing
+\lemma *-locally-uniform {X : ExPseudoNormedPseudoRing} : LocallyUniformMap (X ⨯ X) X (\lam s => s.1 * s.2)
+  => bilinear-locally-uniform (*) X.rdistr_- X.ldistr_- norm_*_<=
 
-\lemma *-locally-uniform {X : PseudoNormedRing} : LocallyUniformMap (X ⨯ X) X (\lam s => s.1 * s.2)
-  => PseudoNormedRing.*-locally-uniform norm_*_<=
+\class PseudoNormedPseudoRing \extends ExPseudoNormedPseudoRing, PseudoNormedAbGroup
 
-\lemma pow-cover {X : PseudoNormedRing} (n : Nat) : CoverMap X X (pow __ n) \elim n
+\lemma lnorm_*_<= {X : PseudoNormedPseudoRing} {x y : X} : lnorm (x * y) <= lnorm x * lnorm y
+  => Real.<=-upper.2 $ transportInv (_ ExUpperReal.<=) (RealField.*-upper lnorm>=0 lnorm>=0) X.norm_*_<=
+
+\class ExPseudoNormedRing \extends ExPseudoNormedPseudoRing, TopRing
+  | norm_ide_<= : norm 1 <= ExUpperReal.fromRat 1
+
+\lemma norm_<=_pow {X : ExPseudoNormedRing} {x : X} {n : Nat} : norm (pow x n) <= ExUpperRealSemigroup.pow (norm x) n \elim n
+  | 0 => norm_ide_<=
+  | suc n => norm_*_<= <=∘ ExUpperRealSemigroup.<=_* norm_<=_pow <=-refl
+
+\lemma pow-cover {X : ExPseudoNormedRing} (n : Nat) : CoverMap X X (pow __ n) \elim n
   | 0 => CoverMap.const 1
   | suc n => *-locally-uniform CoverMap.∘ ProductCoverSpace.tuple (pow-cover n) CoverMap.id
 
-\class NormedRing \extends PseudoNormedRing, NormedAbGroup
+\class CompleteExNormedRing \extends ExPseudoNormedRing, CompleteExNormedAbGroup
 
-\class NormedCRing \extends NormedRing, PseudoNormedCRing
+\class PseudoNormedRing \extends ExPseudoNormedRing, PseudoNormedPseudoRing
 
-\class CompleteNormedRing \extends NormedRing, CompleteNormedAbGroup
+\lemma lnorm_ide_<= {X : PseudoNormedRing} : X.norm 1 <= 1
+  => Real.<=-upper.2 (later norm_ide_<=)
 
-\class CompleteNormedCRing \extends CompleteNormedRing, NormedCRing
+-- | If the norm of 1 is zero, then all bounded elements have zero norm.
+\lemma norm_ide=0 {X : ExPseudoNormedRing} (p : X.norm 1 = 0) {x : X} (xb : (norm x).IsBounded) : norm x = 0 \elim xb
+  | inP (B,x<B) => pmap norm (inv ide-right) *> <=-antisymmetric (norm_*_<= <=∘ ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= x<B) <=-refl <=∘ =_<= (pmap (B ExUpperRealSemigroup.*) p *> ExUpperReal.*-rat (<=-less $ norm>=0 x<B) <=-refl *> pmap ExUpperReal.fromRat RatField.zro_*-right)) norm>=0
 
+-- | If the norm of 1 is less than 1, then it is zero.
+\lemma norm_ide<1 {X : ExPseudoNormedRing} (|1|<1 : (X.norm 1).U 1) : X.norm 1 = 0
+  => <=-antisymmetric (\case U-rounded |1|<1 \with {
+    | inP (q,|1|<q,q<1) => \lam {eps} eps>0 =>
+      \have R => rat_<1_pow-bound q<1 {eps} eps>0
+      \in U-closed (aux (norm>=0 |1|<q) q<1 |1|<q) R.2
+  }) norm>=0
+  \where {
+    \protected \lemma aux {q : Rat} (q>0 : q > 0) (q<1 : q < 1) (p : (X.norm 1).U q) {n : Nat} : (X.norm 1).U (pow q n) \elim n
+      | 0 => U-closed p q<1
+      | suc n => transport (norm __ <= _) ide-left X.norm_*_<= $ ExUpperReal.*_U_<=.2 $ inP (pow q n, aux q>0 q<1 p, RatField.pow>0 q>0, q, p, q>0, <=-refl)
+  }
+
+-- | If the norm of 1 is non-zero, then it equals 1.
+\lemma norm_ide/=0 {X : ExPseudoNormedRing} (p : X.norm 1 /= 0) : X.norm 1 = 1
+  => <=-antisymmetric norm_ide_<= \lam {b} |1|<b => \case LinearOrder.dec<_<= (1 : Rat) b \with {
+    | inl r => r
+    | inr b<=1 => absurd $ p $ norm_ide<1 $ ExUpperReal.U_<= |1|<b b<=1
+  }
+
+\lemma norm_ide-left {X : ExPseudoNormedRing} {x : X} : X.norm 1 * norm x = norm x
+  => <=-antisymmetric (transport (_ <=) (ExUpperRealSemigroup.ide-left norm>=0) $ ExUpperRealSemigroup.<=_* norm_ide_<= <=-refl) (transport (norm __ <= _) ide-left norm_*_<=)
+
+\lemma norm_ide-right {X : ExPseudoNormedRing} {x : X} : X.norm x * X.norm 1 = norm x
+  => <=-antisymmetric (transport (_ <=) (ExUpperRealSemigroup.ide-right norm>=0) $ ExUpperRealSemigroup.<=_* <=-refl norm_ide_<=) (transport (norm __ <= _) ide-right norm_*_<=)
+
+-- | The norm of 1 is either 0 or 1.
 \lemma norm_zro_ide {X : PseudoNormedRing} : (X.norm 1 = (0 : Real)) || (X.norm 1 = (1 : Real))
-  => \have t => rewrite ide-left in X.norm_*_<= {1} {1}
-     \in \case RealField.locality_- (X.norm 1) \with {
-      | byLeft q => byRight $ <=-antisymmetric norm_ide_<= $ RealField.<=_Inv-cancel-left q norm>=0 $ transportInv (`<= _) ide-right t
-      | byRight q => byLeft $ <=-antisymmetric (RealField.<=_Inv-cancel-left q (linarith norm_ide_<=) $ transport2 (<=) (inv rdistr) (inv zro_*-right) $ later $ rewrite (ide-left,Ring.negative_*-left) linarith) norm>=0
-    }
+  => \case LU-located {X.norm 1} {0} {1} idp \with {
+    | byLeft p => byRight $ Real.=-upper.2 $ later $ norm_ide/=0 \lam q => \case rewrite ((Real.=-upper {X.norm 1} {0}).2 q) p
+    | byRight p => byLeft $ Real.=-upper.2 $ later $ norm_ide<1 p
+  }
 
-\lemma norm_ide=0 {X : PseudoNormedRing} (p : X.norm 1 = (0 : Real)) {x : X} : norm x = (0 : Real)
-  => pmap norm (inv ide-right) *> <=-antisymmetric (norm_*_<= <=∘ rewrite (p,RealField.zro_*-right) <=-refl) norm>=0
+\lemma lnorm_<=_pow {X : PseudoNormedRing} {x : X} {n : Nat} : lnorm (pow x n) <= pow (lnorm x) n \elim n
+  | 0 => lnorm_ide_<=
+  | suc n => lnorm_*_<= <=∘ RealField.<=_*_positive-left lnorm_<=_pow lnorm>=0
 
-\lemma norm_<=_pow {X : PseudoNormedRing} {x : X} {n : Nat} : norm (pow x n) <= pow (norm x) n \elim n
-  | 0 => norm_ide_<=
-  | suc n => norm_*_<= <=∘ RealField.<=_*_positive-left norm_<=_pow norm>=0
+\class ExPseudoValuedPseudoRing \extends ExPseudoNormedPseudoRing
+  | norm_* {x y : E} : norm (x * y) = norm x ExUpperReal.* norm y
+  | norm_*_<= => =_<= norm_*
 
-\class PseudoValuedRing \extends PseudoNormedRing
-  | norm_* {x y : E} : norm (x * y) = norm x RealField.* norm y
-  | norm_ide : norm 1 = (1 : Real)
-  | norm_*_<= => Preorder.=_<= norm_*
-  | norm_ide_<= => Preorder.=_<= norm_ide
+\lemma lnorm_* {X : PseudoValuedRing} {x y : X} : lnorm (x * y) = lnorm x * lnorm y
+  => Real.=-upper.2 $ later norm_* *> inv (RealField.*-upper lnorm>=0 lnorm>=0)
 
-\class PseudoValuedCRing \extends PseudoValuedRing, PseudoNormedCRing
+\class ExPseudoValuedRing \extends ExPseudoValuedPseudoRing, ExPseudoNormedRing, Ring {
+  | norm_ide : norm 1 = ExUpperReal.fromRat 1
+  | norm_ide_<= => =_<= norm_ide
 
-\class ValuedRing \extends PseudoValuedRing, NormedRing
+  \lemma norm_Inv-cancel-left {x : E} (d : Monoid.Inv x) {y z : ExUpperReal} (y>=0 : 0 <= y) (z>=0 : 0 <= z) (p : norm x ExUpperRealSemigroup.* y = norm x ExUpperRealSemigroup.* z) : y = z
+    => inv (pmap (ExUpperRealSemigroup.`* _) (inv norm_* *> pmap norm d.inv-left *> norm_ide) *> ExUpperRealSemigroup.ide-left y>=0) *> ExUpperRealSemigroup.*-assoc *> pmap (ExUpperRealSemigroup.* _) p *> inv ExUpperRealSemigroup.*-assoc *> pmap (ExUpperRealSemigroup.`* _) (inv norm_* *> pmap norm d.inv-left *> norm_ide) *> ExUpperRealSemigroup.ide-left z>=0
 
-\class ValuedCRing \extends ValuedRing, NormedCRing
+  \lemma norm_Inv-cancel-right {x y : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {z : E} (d : Monoid.Inv z) (p : x ExUpperRealSemigroup.* norm z = y ExUpperRealSemigroup.* norm z) : x = y
+    => norm_Inv-cancel-left d x>=0 y>=0 (*-comm *> p *> *-comm)
+}
 
-\class CompleteValuedRing \extends ValuedRing, CompleteNormedRing
-
-\class CompleteValuedCRing \extends CompleteValuedRing, CompleteNormedCRing
-
-\lemma norm_pow {X : PseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = pow (norm x) n \elim n
+\lemma norm_pow {X : ExPseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = ExUpperRealSemigroup.pow (norm x) n \elim n
   | 0 => norm_ide
   | suc n => norm_* *> pmap (`* _) norm_pow
+
+\class PseudoValuedRing \extends PseudoNormedRing, ExPseudoValuedRing
+
+\lemma lnorm_ide {X : PseudoValuedRing} : X.norm 1 = 1
+  => (Real.=-upper {_} {1}).2 (later norm_ide)
+
+\lemma lnorm_pow {X : PseudoValuedRing} {x : X} {n : Nat} : lnorm (pow x n) = pow (lnorm x) n \elim n
+  | 0 => lnorm_ide
+  | suc n => lnorm_* *> pmap (`* _) lnorm_pow
+
+\func RatValue => ExPseudoValuedRing { | E => Rat | * => RatField.* | ide => RatField.ide | + => RatField.+ | negative => RatField.negative }
+
+\instance RatValuedRing : PseudoValuedRing Rat
+  | PseudoNormedAbGroup => RatNormed
+  | Ring => RatField
+  | norm_* => pmap ExUpperReal.fromRat RatField.abs_* *> inv (ExUpperReal.*-rat RatField.abs>=0 RatField.abs>=0)
+  | norm_ide => idp
+
+\class CompleteValuedRing \extends PseudoValuedRing, CompleteExNormedRing, CompleteNormedAbGroup
+
+\class CompleteValuedCRing \extends CompleteValuedRing, CRing
 
 \instance RealValuedRing : CompleteValuedCRing Real
   | CompleteNormedAbGroup => RealNormed
   | CRing => RealField
-  | norm_* => RealField.abs_*
-  | norm_ide => RealField.abs-ofPos $ LinearOrder.<_<= zro<ide
+  | norm_* => Real.=-upper.1 RealField.abs_* *> RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0
+  | norm_ide => RealField.abs-ofPos $ LinearOrder.<_<= RealAbGroup.zro<ide

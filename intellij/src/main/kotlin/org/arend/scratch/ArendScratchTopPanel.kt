@@ -2,6 +2,7 @@ package org.arend.scratch
 
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.application.ApplicationManager
+/* TODO[2025.2.1]
 import org.arend.scratch.actions.ArendClearScratchAction
 import org.arend.scratch.actions.ArendRunScratchAction
 import org.arend.scratch.actions.ArendStopScratchAction
@@ -120,3 +121,4 @@ class ArendScratchTopPanel(val scratchFile: ScratchFile) {
         override fun getActionUpdateThread() = ActionUpdateThread.BGT
     }
 }
+*/

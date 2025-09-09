@@ -3,9 +3,11 @@
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
+\import Arith.Nat
 \import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
+\import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -26,7 +28,6 @@
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Directed
 \import Topology.MetricSpace
-\import Topology.MetricSpace.ValuedMetricSpace
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 \import Topology.TopAbGroup
@@ -72,16 +73,23 @@
       => completion-lift-natural EventualityFilter
   }
 
-\lemma limit-isLimit {I : DirectedSet} {X : CompleteCoverSpace} (fc : CoverMap (DirectedCoverSpace I) X) : X.IsLimit fc (limit fc fc)
-  => rewrite limit.char \lam Uo Ul => CompleteCoverSpace.filter-point-sub (X.open-char.1 Uo Ul)
+\lemma limit-isLimit {I : DirectedSet} {X : CompleteCoverSpace} {f : I -> X} {fc : IsConvergent f} : X.IsLimit f (limit f fc)
+  => rewrite (limit.char fc) \lam Uo Ul => CompleteCoverSpace.filter-point-sub (X.open-char.1 Uo Ul)
 
 \lemma limit-char {I : DirectedSet} {X : CompleteCoverSpace} {f : I -> X} {l : X} : (limit f = defined l) <-> X.IsLimit f l
-  => (\lam p => rewriteI (defined-ext.value {_} {limit f} p) $ limit-isLimit (defined-ext.isDefined {_} {limit f} p),
+  => (\lam p => rewriteI (defined-ext.value {_} {limit f} p) limit-isLimit,
       \lam fl => defined-ext {_} {limit f} (limit-conv fl) $ inv $ isSeparatedCoverSpace $ SeparatedCoverSpace.separated-char 4 7 \lam {U} l<=<U => \case <=<-inter l<=<U \with {
         | inP (U',l<=<U',U'<=<U) => \case fl X.interior l<=<U' \with {
           | inP (N,g) => transportInv U (limit.char (limit-conv fl)) $ <=<_<= (CompleteCoverSpace.filter-point-elem U'<=<U $ inP $ later (N, \lam p => <=<_<= (g p) idp)) idp
         }
       })
+
+\lemma limit-apply {I : DirectedSet} {X Y : CompleteCoverSpace} {f : I -> X} {fc : IsConvergent f} {g : X -> Y} (gc : CoverMap X Y g)
+  : g (limit f fc) = limit (\lam i => g (f i)) (gc CoverMap.∘ fc)
+  => Y.limit-unique (cont-limit limit-isLimit gc) limit-isLimit
+
+\lemma limit-ext {I : DirectedSet} {X : CompleteCoverSpace} (f g : I -> X) {fc : IsConvergent f} {gc : IsConvergent g} (p : \Pi (i : I) -> f i = g i) : limit f fc = limit g gc
+  => X.limit-unique limit-isLimit $ transportInv (X.IsLimit __ (limit g gc)) (ext p) limit-isLimit
 
 \lemma convergent-uniform-char {I : DirectedSet} {X : RegularPreuniformSpace} {f : I -> X} (p : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))) : IsConvergent f
   => convergent-char \lam Cc => \case ClosurePrecoverSpace.closure-filter (\new SetFilter X {
@@ -102,7 +110,7 @@
     \protected \lemma conv {I : DirectedSet} {X : RegularPreuniformSpace} {f : I -> X} (fc : IsConvergent f) : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))
       => \lam Cu => convergent-char.conv fc (X.makeCauchy Cu)
 
-\lemma convergent-topAbGruop-char {I : DirectedSet} {X : TopAbGroup} {f : I -> X} : TFAE (
+\lemma convergent-topAbGroup-char {I : DirectedSet} {X : TopAbGroup} {f : I -> X} : TFAE (
     IsConvergent f,
     ∀ {U : X.isOpen} (U 0) ∃ (N : I) ∀ {n m} (N <= n -> n <= m -> U (f m - f n)),
     ∀ {U : X.isOpen} (U 0) ∃ (N : I) ∀ {n} (N <= n -> U (f n - f N))
@@ -123,26 +131,37 @@
       }
     })
 
-\lemma convergent-metric-char {I : DirectedSet} {X : PseudoMetricSpace} {f : I -> X} : TFAE (
-    IsConvergent f,
-    ∀ {eps : Real} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> dist (f n) (f N) < eps),
-    ∀ {eps : Rat } (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> dist (f n) (f N) < eps)
-  ) => TFAE.cycle (
-    \lam fc eps>0 => \case convergent-uniform-char.conv fc $ X.metricUniform (RealAbGroup.half>0 eps>0) \with {
-      | inP (_, inP (x, idp), N, g) => inP (N, \lam p => X.halving (g p) (g <=-refl))
-    },
-    \lam fc eps>0 => fc $ real_<_L.2 eps>0,
-    \lam fc => convergent-uniform-char \lam Cu => \case X.dist-uniform-rat.1 Cu \with {
-      | inP (eps,eps>0,h) => \case fc eps>0 \with {
-        | inP (N,g) => \case h (f N) \with {
-          | inP (V,CV,dV) => inP (V, CV, N, \lam p => dV $ rewrite X.dist-symm $ g p)
-        }
+\lemma convergent-metric-char {I : DirectedSet} {X : ExPseudoMetricSpace} {f : I -> X}
+  : IsConvergent f <-> ∀ {eps : Rat} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> (dist (f n) (f N)).U eps)
+  => (\lam fc eps>0 => \case convergent-uniform-char.conv fc $ X.metricUniform (RatField.half>0 eps>0) \with {
+    | inP (_, inP (x, idp), N, g) => inP (N, \lam p => X.halving1/2 (g p) (g <=-refl))
+  },
+  \lam fc => convergent-uniform-char \lam Cu => \case X.dist-uniform.1 Cu \with {
+    | inP (eps,eps>0,h) => \case fc eps>0 \with {
+      | inP (N,g) => \case h (f N) \with {
+        | inP (V,CV,dV) => inP (V, CV, N, \lam p => dV $ rewrite X.dist-symm $ g p)
       }
     }
-  )
+  })
+  \where {
+    \protected \lemma double (fc : IsConvergent f) {eps : Rat} (eps>0 : 0 < eps) : ∃ (N : I) ∀ {n m} (N <= n -> N <= m -> (dist (f n) (f m)).U eps)
+      => \case convergent-metric-char.1 fc (RatField.half>0 eps>0) \with {
+        | inP (N,h) => inP (N, \lam N<=n N<=m => X.halving1/2 (rewrite dist-symm in h N<=n) (rewrite dist-symm in h N<=m))
+      }
+  }
 
-\lemma limit-metric-char {I : DirectedSet} {X : PseudoMetricSpace} {f : I -> X} {l : X}
-  : X.IsLimit f l <-> ∀ {eps} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> dist l (f n) < eps)
+\lemma convergent-metric-real {I : DirectedSet} {X : PseudoMetricSpace} {f : I -> X}
+  : IsConvergent f <-> ∀ {eps : Real} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> X.dist (f n) (f N) < eps)
+  => <->trans convergent-metric-char $ later (\lam fc eps>0 => \case real_<-rat-char.1 eps>0 \with {
+    | inP (eps',eps'>0,eps'<eps) => \case fc eps'>0 \with {
+      | inP (N,h) => inP (N, \lam p => real_<_U.2 (h p) <∘ real_<_L.2 eps'<eps)
+    }
+  }, \lam fc eps>0 => \case fc (rat_real_<.1 eps>0) \with {
+    | inP (N,h) => inP (N, \lam p => real_<_U.1 $ h p)
+  })
+
+\lemma limit-metric-char {I : DirectedSet} {X : ExPseudoMetricSpace} {f : I -> X} {l : X}
+  : X.IsLimit f l <-> ∀ {eps} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> (dist l (f n)).U eps)
   => (\lam fl eps>0 => fl OBall-open (OBall-center eps>0),
       \lam fl Uo U0 => \case dist_open.1 Uo U0 \with {
         | inP (eps,eps>0,q) => \case fl eps>0 \with {
@@ -150,24 +169,30 @@
         }
       })
 
+\lemma nat-limit-metric {X : ExPseudoMetricSpace} {f : Nat -> X} {l : X} (fb : (dist l (f 0)).IsBounded) {d : ExUpperReal} (d>=0 : 0 <= d) (d<1 : d.U 1) (dp : \Pi (n : Nat) -> dist l (f (suc n)) <= d * dist l (f n)) : X.IsLimit f l \elim fb
+  | inP (B,lf0<B) => \case U-rounded d<1 \with {
+    | inP (q,d<q,q<1) => limit-metric-char.2 \lam {eps} eps>0 =>
+      \have N => rat_<1_pow-bound q<1 {eps * RatField.finv B} $ RatField.<_*_positive_positive eps>0 $ RatField.finv>0 $ dist>=0 lf0<B
+      \in inP (N.1, \lam {n} p => induction lf0<B {q} (<=-less $ d>=0 d<q) (\lam k => dp k <=∘ ExUpperRealSemigroup.<=_* (ExUpperReal.<_<= d<q) <=-refl) n $ RatField.<=_*_positive-left (RatField.pow_<=-degree (<=-less $ d>=0 d<q) (<=-less q<1) p) (<=-less $ dist>=0 lf0<B) <∘r RatField.<_rotate-right-conv (dist>=0 lf0<B) N.2)
+  }
+  \where {
+    \private \lemma induction {B : Rat} (fB : (dist l (f 0)).U B) {q : Rat} (q>=0 : 0 <= q) (dq : \Pi (n : Nat) -> dist l (f (suc n)) <= ExUpperReal.fromRat q * dist l (f n)) (n : Nat) : dist l (f n) <= RatField.pow q n * B \elim n
+      | 0 => ExUpperReal.<_<= fB <=∘ =_<= (inv $ pmap ExUpperReal.fromRat ide-left)
+      | suc n => dq n <=∘ ExUpperRealSemigroup.<=_* <=-refl (induction fB q>=0 dq n) <=∘ =_<= (ExUpperReal.*-rat q>=0 (RatField.<=_*-positive (RatField.pow>=0 q>=0) $ <=-less $ dist>=0 fB) *> pmap ExUpperReal.fromRat (inv *-assoc *> pmap (`* B) RatField.pow-left))
+  }
+
+\lemma limit-metric-real {I : DirectedSet} {X : PseudoMetricSpace} {f : I -> X} {l : X}
+  : X.IsLimit f l <-> ∀ {eps} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> X.dist l (f n) < eps)
+  => <->trans limit-metric-char $ later (\lam fc eps>0 => \case real_<-rat-char.1 eps>0 \with {
+    | inP (eps',eps'>0,eps'<eps) => \case fc eps'>0 \with {
+      | inP (N,h) => inP (N, \lam p => real_<_U.2 (h p) <∘ real_<_L.2 eps'<eps)
+    }
+  }, \lam fc eps>0 => \case fc (rat_real_<.1 eps>0) \with {
+    | inP (N,h) => inP (N, \lam p => real_<_U.1 $ h p)
+  })
+
 \lemma convergent-compose {I : DirectedSet} {X Y : CoverSpace} {f : I -> X} (fc : IsConvergent f) (g : CoverMap X Y) : IsConvergent \lam n => g (f n)
   => g CoverMap.∘ fc
-
-\lemma limit-bound {I : DirectedSet} {f : I -> Real} {b : Real} (fb : \Pi (n : I) -> b <= f n) {l : Real} (fl : RealNormed.IsLimit f l) : b <= l
-  => \lam l<b => \case fl (OBall-open {_} {b - l} {l}) (rewrite RealNormed.dist-refl linarith) \with {
-    | inP (N,g) => linarith $ RealAbGroup.abs>=_- <∘r (rewrite RealNormed.norm-dist in g <=-refl)
-  }
-
-\func MetricDirectedSet {X : PseudoMetricSpace} (U : Set X) (a : X) (Ua : X.IsLimitPoint a U) (Ud : ∀ {x : U} (0 < dist a x)) : DirectedSet (Set.Total U) \cowith
-  | <= x y => dist a y.1 <= dist a x.1
-  | <=-refl => <=-refl
-  | <=-transitive p q => q <=∘ p
-  | isInhabitted => \case Ua OBall-open (OBall-center zro<ide) \with {
-    | inP (x,Ux,_) => inP (x,Ux)
-  }
-  | isDirected x y => \case Ua OBall-open (OBall-center {_} {dist a x.1 ∧ dist a y.1} $ <_meet-univ (Ud x.2) (Ud y.2)) \with {
-    | inP (z,Uz,d) => inP ((z,Uz), LinearOrder.<_<= d <=∘ meet-left, LinearOrder.<_<= d <=∘ meet-right)
-  }
 
 \func SubPointDirectedSet {X : TopSpace} {U : Set X} (a : X) (Ua : X.IsLimitPoint a U) : DirectedSet \cowith
   | E => Given (V : isOpen) (V a) (x : X) (V x) (U x)

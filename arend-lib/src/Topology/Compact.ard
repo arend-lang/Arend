@@ -1,5 +1,6 @@
 \import Algebra.Pointed
-\import Arith.Real
+\import Arith.Rat
+\import Arith.Real.UpperReal
 \import Data.Or
 \import Equiv
 \import Function.Meta
@@ -18,7 +19,6 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
-\import Topology.MetricSpace.ValuedMetricSpace
 \import Topology.UniformSpace
 \open IsTotallyBounded(IsCover,Cond)
 \open ClosurePrecoverSpace
@@ -148,8 +148,8 @@
         }
       })
 
-\lemma totallyBoundedSet-metric-char {X : PseudoMetricSpace} {S : Set X}
-  : IsTotallyBoundedSet S <-> ∀ {eps : Real} (0 < eps) ∃ (D : Array X) ∀ {x : S} ∃ (y : D) (dist y x < eps)
+\lemma totallyBoundedSet-metric-char {X : ExPseudoMetricSpace} {S : Set X}
+  : IsTotallyBoundedSet S <-> ∀ {eps : Rat} (0 < eps) ∃ (D : Array X) ∀ {x : S} ∃ (y : D) ((dist y x).U eps)
   => (\lam tb eps>0 => \case totallyBoundedSet-uniform-char.1 tb (X.metricUniform eps>0) \with {
     | inP (D,DS,h) => \case FinSet.finiteAC h \with {
       | inP g => inP (\lam j => (g j).1, \lam Sx => \case DS Sx \with {
@@ -185,11 +185,11 @@
 \lemma locallyTotallyBounded-locallyUniform {X : StronglyRegularUniformSpace} (Xltb : X.isUniform IsTotallyBoundedSet) (Xd : X.IsProperUniform) : IsLocallyUniformSpace X
   => inP (\lam U => \Sigma (IsTotallyBoundedSet U) (∃ U), Xd Xltb, locallyUniform-cover-char (later __.1) (later __.2))
 
-\func BallsTotallyBounded (X : PseudoMetricSpace) : \Prop
-  => \Pi (x : X) {eps : Real} -> 0 < eps -> IsTotallyBoundedSet (OBall eps x)
+\func BallsTotallyBounded (X : ExPseudoMetricSpace) : \Prop
+  => \Pi (x : X) {eps : Rat} -> 0 < eps -> IsTotallyBoundedSet (OBall eps x)
 
 \lemma metric-locallyUniform {X : PseudoMetricSpace} (Xbtb : BallsTotallyBounded X) : IsLocallyUniformSpace X
-  => locallyTotallyBounded-locallyUniform (uniform-subset (X.metricUniform RealAbGroup.zro<ide) $ later \lam {_} (inP (x,idp)) => Xbtb x RealAbGroup.zro<ide) X.metricProperUniform
+  => locallyTotallyBounded-locallyUniform (uniform-subset (X.metricUniform RatField.zro<ide) $ later \lam {_} (inP (x,idp)) => Xbtb x RatField.zro<ide) X.metricProperUniform
 
 \lemma locallyUniformMapFromCover {X Y : RegularPreuniformSpace} (Xlu : IsLocallyUniformSpace X) (f : CoverMap X Y) : LocallyUniformMap X Y f \cowith
   | func-locally-uniform Eu => \case Xlu \with {

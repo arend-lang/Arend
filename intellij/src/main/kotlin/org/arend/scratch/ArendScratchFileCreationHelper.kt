@@ -11,6 +11,7 @@ import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.util.FileUtils
 import org.arend.util.addImports
+/* TODO[2025.2.1]
 import org.jetbrains.kotlin.idea.statistics.KotlinCreateFileFUSCollector.logFileTemplate
 
 class ArendScratchFileCreationHelper : ScratchFileCreationHelper() {
@@ -46,3 +47,4 @@ class ArendScratchFileCreationHelper : ScratchFileCreationHelper() {
         return super.prepareText(project, context, dataContext)
     }
 }
+*/

@@ -1,3 +1,4 @@
+\import Data.Bool
 \import Function.Meta ($)
 \import Logic
 \import Logic.Meta
@@ -11,11 +12,11 @@
 \import Set.SetHom
 \import Set.Filter
 \import Set.Subset
-\open Bounded(top)
+\open Bounded(top,bottom)
 
 \class TopSpace \extends BaseSet {
   | isOpen : Set E -> \Prop
-  | open-top : isOpen Bounded.top
+  | open-top : isOpen top
   | open-inter {U V : Set E} : isOpen U -> isOpen V -> isOpen (U ∧ V)
   | open-Union {S : Set (Set E)} : ∀ {U : S} (isOpen U) -> isOpen (Set.Union S)
 
@@ -26,6 +27,15 @@
   \lemma open-IUnion {J : \hType} (g : J -> Given isOpen) : isOpen \lam x => ∃ (j : J) ((g j).1 x)
     => \have uo => open-Union {_} {\lam U => ∃ (j : J) ((g j).1 = U)} \lam (inP (j,p)) => transport isOpen p (g j).2
        \in transport isOpen (ext \lam x => ext (\lam (inP (U, inP (j,p), Ux)) => inP (j, rewrite p Ux), \lam (inP (j,c)) => inP ((g j).1, inP (j, idp), c))) uo
+
+  \lemma open-bottom : isOpen bottom
+    => cover-open \lam e => bottom-empty e
+
+  \lemma open-union {U V : Set E} (Uo : isOpen U) (Vo : isOpen V) : isOpen (U ∨ V)
+    => cover-open $ later \case \elim __ \with {
+      | inP (true,Ux) => inP (U, Uo, Ux, join-left)
+      | inP (false,Vx) => inP (V, Vo, Vx, join-right)
+    }
 
   \type \infix 4 <=<T (V U : Set E) : \Prop
     => \Pi (y : E) -> ∃ (W : isOpen) (W y) (Given (V ∧ W) -> W ⊆ U)
@@ -41,8 +51,24 @@
   \func IsLimitPoint (x : E) (U : Set E) : \Prop
     => \Pi {V : Set E} -> isOpen V -> V x -> ∃ (y : U) (V y)
 
-  \func IsClosed (U : Set E) : \Prop
+  \type IsClosed (U : Set E) : \Prop
     => \Pi {x : E} -> IsLimitPoint x U -> U x
+
+  \lemma closed-limit {U : Set E} (Uc : IsClosed U) {I : DirectedSet} {f : I -> E} {x : E} (xl : IsLimit f x) {N : I} (Uf : \Pi {n : I} -> N <= n -> U (f n)) : U x
+    => Uc \lam Vo Vx => \case xl Vo Vx \with {
+      | inP (K,Vf) => \case isDirected N K \with {
+        | inP (n,N<=n,K<=n) => inP (f n, Uf N<=n, Vf K<=n)
+      }
+    }
+
+  \lemma closed-limit0 {U : Set E} (Uc : IsClosed U) {I : DirectedSet} {f : I -> E} {x : E} (xl : IsLimit f x) (Uf : \Pi (n : I) -> U (f n)) : U x
+    => \case I.isInhabitted \with {
+      | inP N => closed-limit Uc xl {N} \lam {n} _ => Uf n
+    }
+
+  \lemma closed-inter {U V : Set E} (Uc : IsClosed U) (Vc : IsClosed V) : IsClosed (U ∧ V)
+    => \lam xl => (Uc (\lam {W} Wo Wx => TruncP.map (xl Wo Wx) \lam s => (s.1, s.2.1, s.3)),
+                   Vc (\lam {W} Wo Wx => TruncP.map (xl Wo Wx) \lam s => (s.1, s.2.2, s.3)))
 }
 
 \func DiscreteTopSpace (X : \Set) : TopSpace X \cowith
@@ -151,6 +177,14 @@
       | inP (N,g) => inP (N, \lam N<=n => q $ g N<=n)
     }
   }
+
+\lemma cont-limit-point {X Y : TopSpace} (f : ContMap X Y) {S : Set Y} {x : X} (xl : X.IsLimitPoint x (f ^-1 S)) : Y.IsLimitPoint (f x) S
+  => \lam Vo Vfx => \case xl (f.func-cont Vo) Vfx \with {
+    | inP (x,Sfx,Vfx) => inP (f x, Sfx, Vfx)
+  }
+
+\lemma cont-closed {X Y : TopSpace} (f : ContMap X Y) {S : Set Y} (Sc : Y.IsClosed S) : X.IsClosed (f ^-1 S)
+  => \lam xl => Sc (cont-limit-point f xl)
 
 \class HausdorffTopSpace \extends TopSpace {
   | isHausdorff {x y : E} : ∀ {U V : isOpen} (U x) (V y) ∃ (U ∧ V) -> x = y

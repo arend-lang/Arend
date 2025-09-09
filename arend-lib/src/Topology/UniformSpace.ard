@@ -177,9 +177,22 @@
   \func IsWeaklyDenseUniformEmbedding : \Prop
     => \Sigma IsWeaklyDense IsUniformEmbedding
 } \where {
+  \func id {X : RegularPreuniformSpace} : UniformMap X X \cowith
+    | func x => x
+    | func-uniform Eu => uniform-subset Eu \lam {U} EU => inP $ later (U, EU, idp)
+
   \func compose \alias \infixl 8 ∘ {X Y Z : RegularPreuniformSpace} (g : UniformMap Y Z) (f : UniformMap X Y) : UniformMap X Z \cowith
     | func x => g (f x)
     | func-uniform Du => uniform-subset (f.func-uniform $ g.func-uniform Du) \lam (inP (V, inP (W,DW,q), p)) => inP $ later (W, DW, p *> rewrite q idp)
+
+  \func const {X Y : RegularPreuniformSpace} (y : Y) : UniformMap X Y \cowith
+    | func _ => y
+    | func-uniform Eu => top-uniform \case uniform-cover Eu y \with {
+      | inP (U,EU,Uy) => inP $ later (U, EU, <=-antisymmetric (\lam _ => Uy) top-univ)
+    }
+
+  \lemma lift {X Y Z : RegularPreuniformSpace} {f : X -> Y} (g : UniformMap Y Z) (ge : g.IsUniformEmbedding) (fg : UniformMap X Z (\lam x => g (f x))) : UniformMap X Y f \cowith
+    | func-uniform Eu => uniform-refine (fg.func-uniform (ge Eu)) \lam {_} (inP (V, inP (U,EU,p), idp)) => inP (_, inP (U, EU, idp), ^-1_<= f p)
 }
 
 \func RegularPreuniformTransfer {X : \Set} {Y : RegularPreuniformSpace} (f : X -> Y) : RegularPreuniformSpace X \cowith
@@ -220,7 +233,7 @@
 \lemma s<=*_<=* {X : PreuniformSpace} {V U : Set X} (p : V s<=* U) : V <=* U
   => <=*-char.2 $ uniform-subset (unfolds in p) \lam {W} e s => \case \elim e \with {
     | byLeft q => absurd $ later $ (rewrite q in s.2.2) s.2.1
-    | byRight q => Preorder.=_<= q
+    | byRight q => =_<= q
   }
 
 \instance StronglyStarRatherBelow {X : PreuniformSpace} : RatherBelow (s<=* {X})

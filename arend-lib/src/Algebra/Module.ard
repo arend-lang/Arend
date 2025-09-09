@@ -64,6 +64,10 @@
   \lemma neg_ide_*c {a : E} : -1 *c a = negative a
     => *c_negative-left *> pmap negative ide_*c
 
+  \lemma natCoef_*c {n : Nat} {a : E} : natCoef n *c a = n *n a \elim n
+    | 0 => pmap (`*c a) natCoefZero *> *c_zro-left
+    | suc n => pmap (`*c a) (natCoefSuc n) *> *c-rdistr *> pmap2 (+) natCoef_*c ide_*c
+
   \lemma *c_BigSum-rdistr {l : Array R} {a : E} : R.BigSum l *c a = BigSum (\lam i => l i *c a) \elim l
     | nil => *c_zro-left
     | r :: l => *c-rdistr *> pmap (_ +) *c_BigSum-rdistr
@@ -74,12 +78,12 @@
 
   \lemma *c_FinSum-rdistr {J : FinSet} {f : J -> R} {a : E} : R.FinSum f *c a = FinSum (\lam j => f j *c a)
     => \case R.FinSum_char f \with {
-         | inP (e,p) => pmap (`*c a) p *> *c_BigSum-rdistr *> inv (FinSum_char2 _ e)
+         | inP (e,p) => pmap (`*c a) p *> *c_BigSum-rdistr *> inv (FinSum_char2 e)
        }
 
   \lemma *c_FinSum-ldistr {r : R} {J : FinSet} {f : J -> E} : r *c FinSum f = FinSum (\lam j => r *c f j)
     => \case FinSum_char f \with {
-         | inP (e,p) => pmap (r *c) p *> *c_BigSum-ldistr *> inv (FinSum_char2 _ e)
+         | inP (e,p) => pmap (r *c) p *> *c_BigSum-ldistr *> inv (FinSum_char2 e)
        }
 
   \func IsDependent (l : Array E) : \Prop

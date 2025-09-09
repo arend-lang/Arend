@@ -13,6 +13,7 @@
 \import Paths.Meta
 \import Set.Subset
 \import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \import Topology.UniformSpace
@@ -89,6 +90,9 @@
 
   \lemma UBall-point {U : Set E} {x : E} (Ux : U x) : UBall U x 0
     => transportInv U simplify Ux
+
+  \lemma subtract-cont : ContMap (ProductTopSpace \this \this) \this \lam s => s.1 - s.2
+    => +-cont ∘ prod id negative-cont
 } \where {
   \open ContMap
   \open ProductTopSpace
@@ -137,7 +141,7 @@
   => transport2 (<=*) (ext \lam x => simplify) (ext \lam x => simplify) $ <=<ta_<=*-shifted {X} {negative ^-1 W} {negative ^-1 V} {negative ^-1 U}
       (negative-cont.func-cont Wo) (simplify W0) (<=<ta_negative {_} {_} {V} p) (<=<ta_negative {_} {_} {U} q) {0}
 
-\class HausdorffTopAbGroup \extends TopAbGroup, HausdorffTopSpace {
+\class HausdorffTopAbGroup \extends TopAbGroup, HausdorffTopSpace, SeparatedCoverSpace {
   \lemma equals {x y : E} (p : ∀ {U : isOpen} (U 0) (U (x - y))) : x = y
     => fromZero $ isHausdorff \lam Uo Vo Ud V0 => inP (x - y, (Ud, p Vo V0))
 }
@@ -146,7 +150,7 @@
   \override Dom : TopAbGroup
   \override Cod : TopAbGroup
 
-  | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
+  \default func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
     | inP (U,Uo,U0,h) => neighborhood-uniform.2 $ inP (func ^-1 U, func-cont Uo, transportInv U func-zro U0, \lam x => \case h (func x) \with {
       | inP (V,EV,g) => inP (func ^-1 V, inP $ later (V, EV, idp), \lam u => g $ transport U func-minus u)
     })

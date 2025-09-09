@@ -60,7 +60,7 @@ class ArendMoveFileHandler: MoveFileHandler() {
         return list
     }
 
-    override fun retargetUsages(usageInfos: MutableList<UsageInfo>?, oldToNewMap: MutableMap<PsiElement, PsiElement>?) {
+    override fun retargetUsages(usageInfos: List<UsageInfo>, oldToNewMap: MutableMap<PsiElement, PsiElement>) {
         for (replaceItem in replaceMap) {
             replaceItem.key.replace(replaceItem.value)
         }

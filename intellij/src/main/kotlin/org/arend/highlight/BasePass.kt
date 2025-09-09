@@ -44,7 +44,6 @@ import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
 import org.arend.psi.ext.ReferableBase
 import org.arend.quickfix.*
-import org.arend.quickfix.implementCoClause.CoClausesKey
 import org.arend.quickfix.implementCoClause.ImplementFieldsQuickFix
 import org.arend.quickfix.instance.AddInstanceArgumentQuickFix
 import org.arend.quickfix.instance.InstanceInferenceQuickFix
@@ -69,7 +68,6 @@ import org.arend.term.group.ConcreteNamespaceCommand
 import org.arend.typechecking.error.local.inference.FunctionArgInferenceError
 import org.arend.typechecking.error.local.inference.LambdaInferenceError
 import org.arend.typechecking.error.local.inference.RecursiveInstanceInferenceError
-import org.arend.util.ArendBundle
 import java.util.*
 
 abstract class BasePass(protected open val file: IArendFile, editor: Editor, name: String, protected val textRange: TextRange)
@@ -92,12 +90,14 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                 val list = error.cause?.let { it as? Collection<*> ?: listOf(it) }?.mapSmartNotNull { getCauseElement(it)?.validOrNull() }
                 if (list.isNullOrEmpty()) {
                     val psi = ((error as? LocalError)?.definition as? DataContainer)?.data as? PsiElement
-                    if (psi != null) {
+                    if (psi != null && psi.isValid) {
                         reportToEditor(error, psi)
                     }
                 } else {
                     for (psi in list) {
-                        reportToEditor(error, psi)
+                        if (psi.isValid) {
+                            reportToEditor(error, psi)
+                        }
                     }
                 }
             }
@@ -196,11 +196,6 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                         builder.endOfLine()
                     }
                 }
-                val coClauseBase = cause.ancestor<CoClauseBase>()
-                val coClauseBaseFixData = coClauseBase?.getUserData(CoClausesKey)
-                if (coClauseBaseFixData != null) registerFix(builder, object : ImplementFieldsQuickFix(SmartPointerManager.createPointer(coClauseBase), true, coClauseBaseFixData) {
-                    override fun getText(): String = ArendBundle.getMessage("arend.coClause.replaceWithEmptyImplementation")
-                })
 
                 if (error.errors.all { it.level != GeneralError.Level.ERROR }) when {
                     error.goalSolver != null -> cause.ancestor<ArendExpr>()?.let {
@@ -304,10 +299,8 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                             val p = Pair(field as LocatedReferable, shortNameResolvesToOtherId)
                             fieldList.add(p)
                         }
-                        registerFix(builder, ImplementFieldsQuickFix(SmartPointerManager.createPointer(cause), false, fieldList))
-                    }
-                    if (cause is ArendNewExpr) {
-                        cause.putUserData(CoClausesKey, null)
+                        registerFix(builder, ImplementFieldsQuickFix(SmartPointerManager.createPointer(cause),
+                            ((error.classRef as? TCDefReferable)?.data as? ArendDefClass)?.let { SmartPointerManager.createPointer(it) }, false, fieldList))
                     }
                 }
 

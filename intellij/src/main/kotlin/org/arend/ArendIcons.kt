@@ -23,7 +23,7 @@ object ArendIcons {
     val RUN_CONFIGURATION = AllIcons.RunConfigurations.Application
     val LIBRARY_CONFIG = AllIcons.General.GearPlain
 
-    val REPL = AllIcons.Actions.Run_anything
+    val REPL = AllIcons.Actions.RunAnything
     val MESSAGES = AllIcons.Toolwindows.ToolWindowMessages
     val FILTER = AllIcons.General.Filter
     val CONSOLE = AllIcons.Nodes.Console

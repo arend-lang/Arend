@@ -9,6 +9,7 @@ import com.intellij.psi.PsiFileSystemItem
 import com.intellij.psi.PsiManager
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
+import org.arend.ext.reference.DataContainer
 import org.arend.library.LibraryDependency
 import org.arend.module.IntellijClassLoaderDelegate
 import org.arend.naming.reference.DataModuleReferable
@@ -52,8 +53,6 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
     open val localFSRoot: VirtualFile?
         get() = root?.let { if (it.isInLocalFileSystem) it else JarFileSystem.getInstance().getVirtualFileForJar(it) }
 
-    private val additionalModules = HashMap<ModulePath, ArendFile>() // TODO[server2]: Delete this
-
     private fun findDir(dir: String) = root?.findFileByRelativePath(FileUtil.toSystemIndependentName(dir).removeSuffix("/"))
 
     open val sourcesDirFile: VirtualFile?
@@ -64,9 +63,6 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
 
     val binariesDirFile: VirtualFile?
         get() = binariesDir?.let { findDir(it) }
-
-    val binariesDirList: List<String>?
-        get() = binariesDir?.let { FileUtil.toSystemIndependentName(it).removeSuffix("/").split('/') }
 
     open val isExternal: Boolean
         get() = false
@@ -115,12 +111,6 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
         return result
     }
 
-    fun containsModule(modulePath: ModulePath) =
-        modules?.any { it == modulePath } ?: (findArendFile(modulePath, withAdditional = false, withTests = false) != null)
-
-    val additionalModulesSet: Set<ModulePath>
-        get() = additionalModules.keys
-
     private fun findParentDirectory(modulePath: ModulePath, inTests: Boolean): VirtualFile? {
         var dir = (if (inTests) testsDirFile else sourcesDirFile) ?: return null
         val list = modulePath.toList()
@@ -144,11 +134,14 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
             PsiManager.getInstance(project).findFile(it) as? ArendFile
         }
 
+    fun findGeneratedArendFile(modulePath: ModulePath): ArendFile? =
+        (project.service<ArendServerService>().server.getRawGroup(ModuleLocation(libraryName, ModuleLocation.LocationKind.GENERATED, modulePath))?.referable as? DataContainer)?.data as? ArendFile
+
     fun findArendFile(modulePath: ModulePath, withAdditional: Boolean, withTests: Boolean): ArendFile? =
         if (modulePath.size() == 0) {
             null
         } else {
-            (if (withAdditional) additionalModules[modulePath] else null) ?:
+            (if (withAdditional) findGeneratedArendFile(modulePath) else null) ?:
                 findArendFile(modulePath, false) ?: if (withTests) findArendFile(modulePath, true) else null
         }
 
@@ -163,7 +156,7 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
             return findArendDirectory(modulePath)
         }
         if (withAdditional) {
-            additionalModules[modulePath]?.let {
+            findGeneratedArendFile(modulePath)?.let {
                 return it
             }
         }

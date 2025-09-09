@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.fileEditor.TextEditor
+/* TODO[2025.2.1]
 import org.arend.scratch.ArendScratchFileEditorWithPreview
 import org.arend.scratch.findArendScratchFileEditorWithPreview
 import org.jetbrains.annotations.Nls
@@ -28,3 +29,4 @@ abstract class ArendScratchAction(@Nls message: String, icon: Icon) : AnAction(m
             return textEditor?.findArendScratchFileEditorWithPreview()
         }
 }
+*/

@@ -3,7 +3,7 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Algebra.Pointed
 \import Algebra.Semiring
 \import Arith.Nat

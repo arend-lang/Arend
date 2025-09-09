@@ -1,4 +1,4 @@
-\import Data.Bool(Bool, true, false, So)
+\import Data.Bool (Bool, So, false, not, true)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -149,7 +149,7 @@
 \instance ArrayDec (A : DecSet) (n : Nat) : DecSet (Array A n)
   | decideEq => aux
   \where {
-    \private \lemma aux {n : Nat} (l l' : Array A n) : Dec (l = l') \elim n, l, l'
+    \private \func aux {n : Nat} (l l' : Array A n) : Dec (l = l') \elim n, l, l'
       | 0, nil, nil => yes idp
       | suc n, a :: l, a' :: l' => \case decideEq a a', aux l l' \with {
         | yes e, yes e' => yes $ pmap2 (::) e e'
@@ -168,6 +168,15 @@
   => unfold (==) at so $ mcases {decToBool} so _ \with {
     | yes p, _ => p
     | no n, ()
+  }
+
+\lemma =-dec {A : DecSet} {a a' : A} {so : So (a == a')} : a = a'
+  => ==_= so
+
+\lemma /=-dec {A : DecSet} {a a' : A} {so : So (not (a == a'))} : a /= a'
+  => unfold (==) at so $ mcases {decToBool} so _ \with {
+    | yes _, ()
+    | no p, _ => p
   }
 
 \truncated \data Trunc0 (A : \Type) : \Set

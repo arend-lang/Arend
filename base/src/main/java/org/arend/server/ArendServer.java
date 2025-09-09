@@ -159,4 +159,9 @@ public interface ArendServer {
    * @return the modifier and the list of long names that should be used to refer to the given referables.
    */
   @NotNull Pair<RawModifier, List<LongName>> makeReferencesAvailable(@NotNull List<LocatedReferable> referables, @Nullable ConcreteGroup group, @NotNull RawAnchor anchor, @NotNull ErrorReporter errorReporter);
+
+  /**
+   * @return the instance cache, which can be used to find available instances for a given class.
+   */
+  @NotNull InstanceCache getInstanceCache();
 }

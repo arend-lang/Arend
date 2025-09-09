@@ -23,7 +23,6 @@
 \open Locale
 \open Bounded(top,top-univ)
 \open Nucleus
-\open Preorder(=_<=)
 \open MeetSemilattice
 \open FrameHom \hiding (isClosed, functor)
 

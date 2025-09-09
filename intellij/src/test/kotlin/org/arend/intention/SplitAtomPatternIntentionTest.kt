@@ -194,7 +194,7 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
       
       \func foo (xs : List Nat) : Nat
         | List.nil => 0
-        | a List.:: xs => 0  
+        | List.:: a xs => 0  
     """)
 
     fun testLongName() = doTest("""

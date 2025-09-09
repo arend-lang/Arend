@@ -2,6 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Algebra.Pointed
 \import Arith.Bool
 \import Arith.Nat
@@ -658,7 +659,7 @@
 
   \lemma group-correct (t : GroupTerm Nat) : All (\lam p => p.2 <= countVar t p.1.1 p.1.2) $ group $ Insertion.sort $ toList t false
     => all-implies (group_count-lem (Insertion.sort-sorted (toList t false))) $ all-forall
-        \lam p c => rewrite c $ Preorder.=_<= $ inv (count_perm (Insertion.sort-perm (toList t false)) p.1) *> toList-correct t p.1 false
+        \lam p c => rewrite c $ =_<= $ inv (count_perm (Insertion.sort-perm (toList t false)) p.1) *> toList-correct t p.1 false
 
   \lemma countVars-correct (t : GroupTerm Nat) {l : List (\Sigma (\Sigma Nat Bool) Nat)} (a : All (\lam p => p.2 <= countVar t p.1.1 p.1.2) l)
                            (a' : AllC (\lam p1 p2 => p1.1.1 = p2.1.1 -> \Sigma (p1.1.2 = false) (p2.1.2 = true)) l)

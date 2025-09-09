@@ -80,6 +80,10 @@
 
   \lemma injective (p : \Pi {a : Dom} -> func a = 0 -> a = 0) : IsInj func
     => \lam q => AddGroup.fromZero $ p $ func-+ *> pmap (_ +) func-negative *> AddGroup.toZero q
+
+  \lemma func-*i {n : Int} {x : Dom} : func (n AddGroup.*i x) = n AddGroup.*i func x \elim n
+    | pos n => func-*n
+    | neg n => func-*n *> pmap (n AddMonoid.*n) func-negative
 } \where {
   \func id {G : AddGroup} : AddGroupHom G G \cowith
     | func x => x

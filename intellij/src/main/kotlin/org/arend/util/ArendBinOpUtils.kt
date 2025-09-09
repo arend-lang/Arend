@@ -5,7 +5,6 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.parentOfType
-import com.intellij.util.containers.SortedList
 import org.arend.naming.reference.AliasReferable
 import org.arend.naming.reference.GlobalReferable
 import org.arend.psi.ancestor
@@ -18,21 +17,30 @@ import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.SearchConcreteVisitor
 import org.arend.term.concrete.SubstConcreteVisitor
 
-fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
-    val definition = appExpr.ancestor<ArendDefinition<*>>()?.tcReferable ?: return null
-    val concrete = appExpr.project.service<ArendServerService>().server.getResolvedDefinition(definition)?.definition ?: return null
-    return concrete.accept(object : SearchConcreteVisitor<Any?, Concrete.SourceNode?>() {
+fun exprToConcrete1(appExpr: ArendExpr): List<Concrete.SourceNode> {
+    val result = ArrayList<Concrete.SourceNode>()
+    val definition = appExpr.ancestor<ArendDefinition<*>>()?.tcReferable ?: return result
+    val concrete = appExpr.project.service<ArendServerService>().server.getResolvedDefinition(definition)?.definition ?: return result
+    concrete.accept(object : SearchConcreteVisitor<Any?, Concrete.SourceNode?>() {
         override fun checkSourceNode(sourceNode: Concrete.SourceNode, params: Any?): Concrete.SourceNode? {
             var data: PsiElement? = sourceNode.data as? PsiElement
             val textRange = data?.textRange ?: return null
             while (data != null && data.textRange == textRange) {
-                if (data == appExpr && sourceNode is Concrete.Expression)
-                    return sourceNode
+                if (data == appExpr && sourceNode is Concrete.Expression) {
+                    result.add(sourceNode)
+                    return null
+                }
+
                 data = data.parent
             }
             return null
         }
     }, null) as? Concrete.Expression
+    return result
+}
+
+fun appExprToConcrete(appExpr: ArendExpr): Concrete.Expression? {
+    return exprToConcrete1(appExpr).firstOrNull() as? Concrete.Expression
 }
 
 /**
@@ -118,6 +126,8 @@ fun getBounds(cExpr: Concrete.SourceNode, aaeBlocks: List<ASTNode>, rangesMap: H
         }
     } else if (cExpr is Concrete.LamExpression) { //cExpr.data == null, so this is most likely a postfix or apply hole expression
         result = getBounds(cExpr.body, aaeBlocks, rangesMap)
+    } else if (cExpr is Concrete.ProjExpression) {
+        result = getBounds(cExpr.expression, aaeBlocks, rangesMap)
     } else if (cExprData is PsiElement) {
         for (psi in aaeBlocks)
             if (psi.textRange.contains(cExprData.node.textRange)) {

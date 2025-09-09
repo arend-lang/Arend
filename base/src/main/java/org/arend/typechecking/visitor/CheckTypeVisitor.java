@@ -2264,7 +2264,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (hLevel != null && hLevel == -1) {
       classCall.setSort(Sort.PROP);
     } else {
-      Sort maxSort = hLevel == null ? Sort.PROP : new Sort(new Level(0), new Level(hLevel));
+      Sort maxSort = Sort.PROP;
       for (ClassField field : classDef.getNotImplementedFields()) {
         if (classCall.isImplementedHere(field)) continue;
         Expression fieldType = classDef.getFieldType(field, classDef.castLevels(field.getParentClass(), idLevels), thisExpr).normalize(NormalizationMode.WHNF);
@@ -2274,6 +2274,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
             throw new IllegalStateException();
           }
         }
+      }
+      if (hLevel != null && (!maxSort.getHLevel().isClosed() || maxSort.getHLevel().getConstant() > hLevel)) {
+        maxSort = new Sort(maxSort.getPLevel(), new Level(hLevel));
       }
       classCall.setSort(maxSort);
     }

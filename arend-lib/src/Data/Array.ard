@@ -797,3 +797,18 @@
     | yes _ => value
     | no _ => def
   }
+  \where \protected {
+    \func alt {A : \Type} {n : Nat} (j : Fin n) (value def : A) : Array A n \elim n, j
+      | suc n, 0 => value :: replicate n def
+      | suc n, suc j => def :: alt j value def
+
+    \sfunc char {A : \Type} {n : Nat} {j : Fin n} {value def : A} : singleAt j value def = alt j value def \elim n, j
+      | suc n, 0 => idp
+      | suc n, suc j => exts (\case \elim __ \with {
+        | 0 => idp
+        | suc k => mcases {2} \with {
+          | yes p => rewrite (decideEq=_reduce $ pmap fsuc p) idp
+          | no q => rewrite (decideEq/=_reduce $ fsuc/= q) idp
+        }
+      }) *> pmap {Array A n} (def :: __) char
+  }

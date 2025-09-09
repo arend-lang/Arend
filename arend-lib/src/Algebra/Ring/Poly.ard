@@ -691,7 +691,7 @@
     | 0 => idp
     | suc m => later (rewrite dp idp)
   }) polyCoef_*c *> zro-left
-  | padd p x, suc n => polyCoef_+ *> pmap2 (+) (leadCoef-product dp dq) (polyCoef_*c *> pmap (x *) (degree<=.toCoefs q m dq $ <_+-left m NatOrder.zero<suc) *> zro_*-right) *> zro-right
+  | padd p x, suc n => polyCoef_+ *> pmap2 (+) (leadCoef-product dp dq) (polyCoef_*c *> pmap (x *) (degree<=.toCoefs q m dq $ NatSemiring.<_+-left m NatOrder.zero<suc) *> zro_*-right) *> zro-right
 
 \lemma leadCoef_BigProd {R : Ring} {l : Array (Poly R)} (d : Array Nat l.len) (ld : \Pi (j : Fin l.len) -> degree<= (l j) (d j))
   : polyCoef (BigProd l) (AddMonoid.BigSum d) = R.BigProd (\lam j => polyCoef (l j) (d j)) \elim l, d

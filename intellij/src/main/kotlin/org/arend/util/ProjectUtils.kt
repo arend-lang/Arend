@@ -109,11 +109,6 @@ fun Module.register() {
     runReadAction {
         server.updateLibrary(config, NotificationErrorReporter(project))
     }
-    for (module in server.modules) {
-        if (module.locationKind == ModuleLocation.LocationKind.GENERATED && module.libraryName == name) {
-            project.addGeneratedModule(module, server.getRawGroup(module) ?: continue)
-        }
-    }
 
     ApplicationManager.getApplication().getService(ArendExtensionChangeService::class.java).initializeModule(config)
     config.isInitialized = true

@@ -16,12 +16,11 @@ import com.intellij.psi.util.descendants
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.startOffset
 import com.intellij.util.SmartList
-import org.arend.ext.reference.ArendRef
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.LibraryConfig
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
-import org.arend.typechecking.error.ErrorService
+import org.arend.server.ArendServerService
 
 val PsiElement.theOnlyChild: PsiElement?
     get() = firstChild?.takeIf { it.nextSibling == null }
@@ -60,7 +59,7 @@ inline fun <reified T : PsiElement> PsiElement.rightSibling(): T? {
     while (element != null && element !is T) {
         element = element.nextSibling
     }
-    return element as? T
+    return element
 }
 
 inline fun <reified T : PsiElement> PsiElement.leftSibling(): T? {
@@ -68,7 +67,7 @@ inline fun <reified T : PsiElement> PsiElement.leftSibling(): T? {
     while (element != null && element !is T) {
         element = element.prevSibling
     }
-    return element as? T
+    return element
 }
 
 fun PsiElement.navigate(requestFocus: Boolean = true) {
@@ -375,8 +374,8 @@ fun Editor.getSelectionWithoutErrors(): TextRange? =
             return@takeIf true
         }
         val nnProject = project ?: return@takeIf false
-        val file = nnProject.let { PsiDocumentManager.getInstance(it).getPsiFile(document) } ?: return@takeIf false
-        val elementsWithErrors = nnProject.service<ErrorService>().errors[file]?.mapNotNull { it.cause } ?: return@takeIf true
+        val file = nnProject.let { (PsiDocumentManager.getInstance(it).getPsiFile(document) as? ArendFile)?.moduleLocation } ?: return@takeIf false
+        val elementsWithErrors = nnProject.service<ArendServerService>().server.errorMap[file]?.mapNotNull { it.cause as? PsiElement } ?: return@takeIf true
         elementsWithErrors.all { !range.intersects(it.textRange) }
     }
 

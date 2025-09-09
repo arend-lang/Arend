@@ -2,6 +2,7 @@ package org.arend.scratch.actions
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
+/* TODO[2025.2.1]
 import org.jetbrains.kotlin.idea.KotlinJvmBundle
 import org.jetbrains.kotlin.idea.scratch.actions.ScratchCompilationSupport
 
@@ -22,3 +23,4 @@ class ArendStopScratchAction : ArendScratchAction(
         e.presentation.isEnabledAndVisible = ScratchCompilationSupport.isInProgress(scratchFile)
     }
 }
+*/

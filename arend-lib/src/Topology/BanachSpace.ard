@@ -1,55 +1,171 @@
-\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Group.GroupHom
 \import Algebra.Module
-\import Algebra.Module.LinearMap
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
-\import Algebra.Ring
+\import Algebra.QModule
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Rat
 \import Arith.Real
 \import Arith.Real.Field
+\import Arith.Real.UpperReal
 \import Function.Meta
 \import Logic
 \import Logic.Meta
+\import Meta
+\import Operations
 \import Order.Biordered
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace
+\import Topology.MetricSpace.ExComplete
 \import Topology.NormedAbGroup
-\import Topology.NormedAbGroup.ValuedNormedAbGroup
-\import Topology.NormedAlgebra
-\import Topology.NormedModule
+\import Topology.NormedAbGroup.ExComplete
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
 \import Topology.NormedRing
-\open OrderedField
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Complete
+\import Topology.TopAbGroup.Product
+\import Topology.TopSpace
+\import Topology.UniformSpace
+\import Topology.UniformSpace.Complete
+\import Topology.UniformSpace.Product
 
-\class BanachSpace \extends CompleteNormedLModule {
-  \override R : NormedAAlgebra RealValuedRing
-}
+\class PreBanachSpace (A : RatValue) \extends BoundedExPseudoNormedAbGroup, DivisibleGroup {
+  | norm_*n {n : Nat} {x : E} : norm (n *n x) = A.norm n ExUpperReal.* norm x
 
-\lemma norm_*r {R : PseudoNormedCRing} {A : PseudoNormedAAlgebra R} {X : PseudoNormedLModule A} {a : R} {x : X} : norm (a *r x) = norm a * norm x
-  => \case norm_zro_ide \with {
-    | byLeft p => norm_ide=0-module p *> inv Ring.zro_*-right *> pmap (_ *) (inv $ norm_ide=0-module p)
-    | byRight p => norm_*c *> pmap (`* _) (pmap norm coefMap_*c *> norm_*c *> pmap (_ *) p *> ide-right)
+  \default norm-bounded x => \case ExUpperReal.*_U.1 $ transport (ExUpperReal.U {__} 1) (inv norm_zro *> norm_*n {_} {0} {x}) RatField.zro<ide \with {
+    | inP (_,_,_,b,|x|<b,_,_) => inP (b,|x|<b)
   }
 
-\lemma norm_*r-ofPos {A : PseudoNormedAAlgebra RealValuedRing} {X : PseudoNormedLModule A} {a : Real} (a>=0 : 0 <= a) {x : X} : norm (a *r x) = a * norm x
-  => norm_*r *> pmap (`* _) (RealField.abs-ofPos a>=0)
+  \lemma norm_*i {n : Int} {x : E} : norm (n *i x) = A.norm n ExUpperReal.* norm x \elim n
+    | pos n => norm_*n
+    | neg n => pmap norm *n_negative *> norm_negative *> norm_*n *> pmap (ExUpperReal.`* _) (inv A.norm_negative)
+}
 
-\record BoundedLinearMap \extends LinearMap, UniformNormedAbGroupMap {
-  \override R : NormedAAlgebra RealValuedRing
-  \override Dom : PseudoNormedLModule R
-  \override Cod : PseudoNormedLModule R
+\class SeparatedPreBanachSpace \extends PreBanachSpace, ExNormedAbGroup, QModule {
+  | noTorsion {a} {n} n/=0 na=0 => norm-ext $ inv (ExUpperRealSemigroup.ide-left norm>=0) *> pmap (`* _) (inv (pmap A.norm (RatField.finv-left $ natRat/=0 n/=0) *> A.norm_ide) *> A.norm_*) *> *-assoc *> pmap (A.norm (RatField.finv n) *) (inv norm_*n *> pmap norm na=0 *> norm_zro) *> ExUpperRealSemigroup.zro_*-right (A.norm-bounded _)
 
-  | isBounded : ∃ (C : Real) (0 < C) ∀ x (norm (func x) <= C * norm x)
+  \lemma norm_*q {q : Rat} {x : E} : norm (q *q x) = A.norm q ExUpperReal.* norm x
+    => A.norm_Inv-cancel-left (RatField.nonZero-Inv $ natRat/=0 ratDenom/=0) norm>=0 ExUpperRealSemigroup.*_>=0 $
+        inv norm_*n *> pmap norm (inv (*q-assoc *> *q_*n) *> pmap (`*q _) rat*denom-left *> *q_*i) *> norm_*i *> pmap (`* _) (inv (pmap A.norm rat*denom-left) *> A.norm_*) *> *-assoc
+}
+
+\lemma *q-right-uniform {X : SeparatedPreBanachSpace} {q : Rat} : UniformNormedAbGroupMap X X (q X.*q) \cowith
+  | func-+ => X.toRatModule.*c-ldistr
+  | func-norm-uniform {eps} eps>0 => \case X.A.norm-bounded q \with {
+    | inP (B,|q|<B) =>
+      \have B'eps>0 => RatField.<_*_positive_positive (RatField.finv>0 $ norm>=0 |q|<B) eps>0
+      \in inP (RatField.finv B * eps, B'eps>0, \lam p => ExUpperRealAbMonoid.<-rat.1 $ =_<= X.norm_*q <∘r ExUpperRealSemigroup.<_* norm>=0 norm>=0 (ExUpperRealAbMonoid.<-rat.2 |q|<B) (ExUpperRealAbMonoid.<-rat.2 p) <∘l =_<= (ExUpperReal.*-rat (<=-less $ norm>=0 |q|<B) (<=-less B'eps>0) *> pmap ExUpperReal.fromRat (inv *-assoc *> pmap (`* eps) (RatField.finv-right $ RatField.>_/= $ norm>=0 |q|<B) *> ide-left)))
+  }
+
+\lemma *q-uniform {X : SeparatedPreBanachSpace} : LocallyUniformMap (X.A ⨯ X) X \lam s => s.1 QModule.*q s.2
+  => bilinear-locally-uniform {X.A} (X.*q) X.toRatModule.*c-rdistr_- X.toRatModule.*c-ldistr_- \lam {q} {x} => =_<= X.norm_*q
+
+\class BanachSpace \extends SeparatedPreBanachSpace, CompleteExNormedAbGroup
+
+\class RealPreBanachSpace \extends PreBanachSpace {
+  | norm-double {x : E} : norm x ExUpperReal.+ norm x <= norm (x + x)
+  | A => RatValuedRing
+
+  \default norm_*n {n} {x} => <=-antisymmetric (norm_*n_<= <=∘ ExUpperRealSemigroup.<=_* (ExUpperReal.<=-rat.1 RatField.abs>=id) <=-refl) $
+    =_<= (pmap (ExUpperReal.fromRat __ ExUpperReal.* _) (RatField.abs-ofPos fromNat_>=0) *> inv (ExUpperRealSemigroup.*n_* norm>=0 $ norm-bounded x)) <=∘
+    ExUpperRealAbMonoid.<=_+-cancel-right {_} {_} {(NatSemiring.pow 2 n -' n) ExUpperRealAbMonoid.*n norm x} (ExUpperRealSemigroup.*n-bounded $ norm-bounded x) (ExUpperRealAbMonoid.*n_>=0 norm>=0)
+      (=_<= (inv ExUpperRealAbMonoid.*n-rdistr *> pmap (ExUpperRealAbMonoid.`*n _) (<=_exists $ NatSemiring.<=-less id<pow2) *> steps norm-double *> pmap norm (pmap (`*n x) (inv $ <=_exists $ NatSemiring.<=-less id<pow2) *> *n-rdistr)) <=∘ norm_+ <=∘ <=_+ <=-refl norm_*n_<=_*n)
+  \default norm-double {x} => =_<= $ inv (ExUpperRealAbMonoid.+-assoc *> ExUpperRealAbMonoid.zro-left) *> ExUpperRealSemigroup.*n_* norm>=0 (norm-bounded x) *> inv (norm_*n {_} {2}) *> pmap (\lam y => norm (y + x)) zro-left
+} \where {
+  \private \lemma steps {X : ExPseudoNormedAbGroup} (nd : \Pi {x : X} -> norm x + norm x <= norm (x + x)) {k : Nat} {x : X} : NatSemiring.pow 2 k ExUpperRealAbMonoid.*n (norm x) = norm (NatSemiring.pow 2 k X.*n x) \elim k
+    | 0 => zro-left *> pmap norm (inv zro-left)
+    | suc k => ExUpperRealAbMonoid.*n-rdistr *> pmap2 (+) (steps nd) (steps nd) *> <=-antisymmetric nd norm_+ *> pmap norm (inv X.*n-rdistr)
+}
+
+\class RealBanachSpace \extends RealPreBanachSpace, BanachSpace {
+  \lemma norm_*q-ofPos {q : Rat} (q>=0 : 0 <= q) {x : E} : norm (q *q x) = q ExUpperReal.* norm x
+    => norm_*q *> pmap (__ ExUpperReal.* _) (RatField.abs-ofPos q>=0)
+
+  \lemma norm_*n-comm {n : Nat} {x : E} : norm (n *n x) = n ExUpperRealAbMonoid.*n norm x
+    => norm_*n *> pmap (`* _) (pmap ExUpperReal.fromRat $ RatField.abs-ofPos fromNat_>=0) *> inv (ExUpperRealSemigroup.*n_* norm>=0 (norm-bounded x))
+
+  \sfunc \infixl 7 *r (r : Real) (a : E) : E
+    => lift (r,a)
+    \where {
+      \protected \func lift => dense-lift (ProductCoverSpace.prod rat_real UniformMap.id) (ProductCoverSpace.prod.isDenseEmbedding rat_real.dense-coverEmbedding CoverMap.id-denseEmbedding) (*q-uniform {\this})
+    }
+
+  \lemma *r-cover : CoverMap (ProductCoverSpace RealNormed \this) \this (\lam s => s.1 *r s.2)
+    => transport (CoverMap _ _) (ext \lam s => inv (\peval s.1 *r s.2)) *r.lift
+
+  \lemma *r_*q {q : Rat} {a : E} : q *r a = q *q a
+    => (\peval q *r a) *> dense-lift-char (ProductCoverSpace.prod.isDenseEmbedding _ _) (q,a)
+
+  \lemma *r_*n {n : Nat} {a : E} : n *r a = n *n a
+    => *r_*q *> *q_*n
+
+  \lemma norm_*r {r : Real} {a : E} : norm (r *r a) = RealAbGroup.abs r ExUpperReal.* norm a
+    => RealField.unique1 (norm-metric-map ∘ *r-cover ∘ tuple id (const a)) (ex-upper-*-locally-uniform ∘ tuple bnorm-metric-map (const (bnorm a)))
+        \lam q => pmap norm *r_*q *> norm_*q *> pmap (ExUpperReal.`* _) (inv RealAbGroup.abs-rat)
+
+  \func toRealModule : LModule RealField \cowith
+    | AbGroup => \this
+    | *c => *r
+    | *c-assoc {r} {r'} {a} => dense-lift-unique (prod rat_real rat_real) (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding).1 (*r-cover ∘ tuple id (const a) ∘ RealField.*-cover) (*r-cover ∘ prod id (*r-cover ∘ tuple id (const a))) (\lam rr' => pmap (`*r _) RealField.*-rat *> *r_*q *> *q-assoc *> pmap (_ *q) (inv *r_*q) *> inv *r_*q) (r,r')
+    | *c-ldistr {r} {a} {b} => dense-lift-unique rat_real rat_real.dense-coverEmbedding.1 (*r-cover ∘ tuple id (const _)) (+-uniform ∘ tuple (*r-cover ∘ tuple id (const a)) (*r-cover ∘ tuple id (const b))) (\lam q => *r_*q *> toRatModule.*c-ldistr *> inv (pmap2 (+) *r_*q *r_*q)) r
+    | *c-rdistr {r} {r'} {a} => dense-lift-unique (prod rat_real rat_real) (prod.isDenseEmbedding rat_real.dense-coverEmbedding rat_real.dense-coverEmbedding).1 (*r-cover ∘ tuple id (const a) ∘ +-uniform) (+-uniform ∘ prod (*r-cover ∘ tuple id (const a)) (*r-cover ∘ tuple id (const a))) (\lam rr' => pmap (`*r a) RealAbGroup.+-rat *> *r_*q *> toRatModule.*c-rdistr *> inv (pmap2 (+) *r_*q *r_*q)) (r,r')
+    | ide_*c => *r_*q *> ide_*q
+} \where {
+  \open CoverMap
+  \open ProductCoverSpace
+}
+
+\record BoundedLinearMap \extends UniformNormedAbGroupMap {
+  \override Dom : RealBanachSpace
+  \override Cod : RealBanachSpace
+
+  | isBounded : ∃ (C : Rat) (0 RatField.< C) ∀ x (norm (func x) <= C ExUpperReal.* norm x)
 
   \default func-norm-uniform {eps} eps>0 => \case isBounded \with {
-    | inP (C,C>0,h) => inP (pinv C>0 * eps, OrderedSemiring.<_*_positive_positive (pinv>0 C>0) eps>0, \lam {x} p => h x <∘r <_*_positive-right C>0 p <∘l Preorder.=_<= (inv *-assoc *> pmap (`* _) (pinv-right C>0) *> ide-left))
+    | inP (C,C>0,h) => \case C.U-inh \with {
+      | inP (delta,C<delta) => inP (RatField.finv delta * eps, RatField.<_*_positive_positive (RatField.finv>0 $ C>0 <∘ C<delta) eps>0, \lam {x} |x|<delta =>
+        \have delta>0 => C>0 <∘ C<delta
+        \in <-rat.1 $ h x <∘r transport (_ <) (pmap (_ *) (inv (ExUpperReal.*-rat (<=-less $ RatField.finv>0 delta>0) (<=-less eps>0))) *> inv *-assoc *> pmap (`* _) (ExUpperReal.*-rat (<=-less delta>0) (<=-less $ RatField.finv>0 delta>0) *> pmap ExUpperReal.fromRat (RatField.finv-right $ RatField.>_/= delta>0)) *> ExUpperRealSemigroup.ide-left (ExUpperReal.<=-rat.1 $ <=-less eps>0)) (ExUpperRealSemigroup.<_* (ExUpperReal.<=-rat.1 $ <=-less C>0) norm>=0 (<-rat.2 C<delta) (<-rat.2 |x|<delta)))
+    }
   }
-  \default isBounded => \case func-norm-uniform RealAbGroup.zro<ide \with {
-    | inP (delta,delta>0,h) => inP (pinv delta>0, pinv>0 delta>0, \lam x => <=_U-char.2 \lam {a} p => real_<_U.1
-        \have a>0 : 0 < Real.fromRat a => LinearlyOrderedSemiring.<=_*_positive_positive (LinearOrder.<_<= $ pinv>0 delta>0) norm>=0 <∘r real_<_U.2 p
-        \in transport2 (RealField.<) (inv (norm_*r-ofPos $ LinearOrder.<_<= a>0) *> pmap norm (pmap (_ *r) func-*c *> inv *r-assoc *> pmap (`*c _) (pmap coefMap (pinv-right a>0) *> AAlgebra.coefHom.func-ide) *> ide_*c)) ide-right $
-              RealField.<_*_positive-right a>0 $ h {pinv a>0 *r x} $ transport2 (<) (*-comm *> inv (norm_*r-ofPos $ LinearOrder.<_<= $ pinv>0 a>0)) (*-assoc *> pmap (_ *) (pinv-right a>0) *> ide-right) $
-                <_*_positive-left (transport (`< _) (inv *-assoc *> pmap (`* _) (pinv-right delta>0) *> ide-left) $ RealField.<_*_positive-right delta>0 (real_<_U.2 p)) (pinv>0 a>0))
+  \default isBounded => \case func-norm-uniform RatField.zro<ide \with {
+    | inP (delta,delta>0,h) => inP (RatField.finv delta, RatField.finv>0 delta>0, \lam x {q} p =>
+      \have q>0 => ExUpperRealSemigroup.*_>=0 p
+      \in <-rat.1 $ transport (_ <) (ExUpperReal.*-rat (<=-less q>0) (<=-less RatField.zro<ide) *> pmap ExUpperReal.fromRat ide-right) $ ExUpperRealSemigroup.finv_<-rotate-right q>0 $ transport (`< _) (pmap norm func-*q *> BanachSpace.norm_*q *> pmap (ExUpperReal.`* _) (RatField.abs-ofPos $ <=-less $ RatField.finv>0 q>0)) $ <-rat.2 $ h $ <-rat.1 $ transportInv (`< _) (BanachSpace.norm_*q *> pmap (`* _) (pmap ExUpperReal.fromRat $ RatField.abs-ofPos $ <=-less $ RatField.finv>0 q>0)) $ ExUpperRealSemigroup.finv_<-rotate-left q>0 (<-rat.2 delta>0) $ transport (_ <) *-comm $ ExUpperRealSemigroup.finv_<-rotate-right delta>0 (<-rat.2 p))
   }
+} \where {
+  \open ExUpperRealAbMonoid(<-rat)
 }
+
+\instance SeparatedBanachReflection {A : RatValue} (X : PreBanachSpace A) : SeparatedPreBanachSpace A
+  | ExNormedAbGroup => SeparatedNormedAbGroupReflection X
+  | isDivisible => \case \elim __ \with {
+    | in~ x => \lam n/=0 => \case isDivisible x n/=0 \with {
+      | inP (y,ny=x) => inP (inN y, inv inN-isometry.func-*n *> pmap inN ny=x)
+    }
+  }
+  | norm_*n {n} {x} => \case \elim x \with {
+    | in~ x => pmap norm (inv inN-isometry.func-*n) *> norm_*n
+  }
+  \where {
+    \open SeparatedNormedAbGroupReflection
+  }
+
+\instance BanachCompletion {A : RatValue} (X : PreBanachSpace A) : BanachSpace A
+   | CompleteExNormedAbGroup => ExNormedAbGroupCompletion X
+   | isDivisible F {n} n/=0 =>
+     \have *q-lift => dense-uniform-lift separated-completion (separated-completion.dense->uniformEmbedding separated-completion.isDense) (separated-completion UniformMap.∘ *q-right-uniform {SeparatedBanachReflection X} {RatField.finv n})
+     \in inP (*q-lift F, dense-lift-unique separated-completion separated-completion.isDense (*n-uniform {_} {n} UniformMap.∘ *q-lift) UniformMap.id (\lam x => pmap (n AddMonoid.*n) (dense-lift-char ((IsometricMap.dense->uniformEmbedding separated-completion.isDense).1, UniformMap.embedding->coverEmbedding _) x) *> inv separated-completion.func-*n *> pmap separated-completion (inv QModule.*q_*n *> inv QModule.*q-assoc *> pmap (QModule.`*q _) (RatField.finv-right $ natRat/=0 n/=0) *> QModule.ide_*q)) F)
+   | norm_*n {n} {F} => completion-lift-unique (norm-metric-map {ExNormedAbGroupCompletion X} UniformMap.∘ *n-uniform) (upper-*-left-uniform (A.norm-bounded _) UniformMap.∘ norm-metric-map {ExNormedAbGroupCompletion X})
+     (\lam x => pmap norm (inv completion-topAb.func-*n) *> completion-exNormed-isometry.func-norm-isometry *> norm_*n *> pmap (_ *) (inv completion-exNormed-isometry.func-norm-isometry)) F

@@ -65,6 +65,10 @@ public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
     return instance.normalize(NormalizationMode.WHNF) instanceof CoreFunCallExpression funCall && funCall.getDefinition().getRef().checkName(Names.INT_RING);
   }
 
+  protected boolean isRatInstance(CoreExpression instance) {
+    return instance.normalize(NormalizationMode.WHNF) instanceof CoreFunCallExpression funCall && funCall.getDefinition().getRef().checkName(Names.RAT_FIELD);
+  }
+
   public record HintResult<NF>(ConcreteExpression proof, NF newNF) {}
 
   protected @Nullable HintResult<NF> applyHint(@NotNull Hint<NF> hint, @NotNull NF current, int[] position, @NotNull Lazy<ArendRef> solverRef, @NotNull Lazy<ArendRef> envRef, @NotNull ConcreteFactory factory) {

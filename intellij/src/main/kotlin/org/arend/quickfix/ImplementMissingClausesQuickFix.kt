@@ -151,7 +151,7 @@ class ImplementMissingClausesQuickFix(private val missingClausesError: MissingCl
         }
 
         insertClauses(psiFactory, element, clauses)
-        NsCmdRawModifierAction(referenceResolver.modifier, anchorFile).execute()
+        referenceResolver.modifier?.let { NsCmdRawModifierAction(it, anchorFile).execute() }
     }
 
     companion object {

@@ -179,7 +179,7 @@
       | Func-o => idp
 
     \func homMap {L M : RingedLocale} {f g : RingedLocaleHom M L} (p : f = g) (a : L) : RingHom (M.R (f a)) (M.R (g a))
-      => M.R.F.Func (Preorder.=_<= (inv (path (\lam i => p i a))))
+      => M.R.F.Func (=_<= (inv (path (\lam i => p i a))))
 
     \lemma homMap-lem {L M : RingedLocale} {f g : RingedLocaleHom M L} (p : f = g) (a : L) : transport (\lam (h : RingedLocaleHom M L) => RingHom (M.R (f a)) (M.R (h a))) p RingHom.id = homMap p a \elim p
       | idp => inv M.R.F.Func-id *> pmap M.R.F.Func prop-pi

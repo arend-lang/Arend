@@ -368,7 +368,6 @@
   | ildistr => {?}
   \where {
     \open PresentedFrame
-    \open Preorder(=_<=)
     \open OrderedRing.Dec
     \open AddGroup(negative-isInv)
 

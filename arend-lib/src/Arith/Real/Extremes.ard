@@ -21,7 +21,7 @@
 \import Paths
 \import Paths.Meta
 \import Set.Subset
-\open LinearlyOrderedAbGroup
+\open LatticeAbGroup
 
 \func IsSup (A : Set Real) (b : Real) : \Prop
   => \Sigma (∀ {a : A} (a <= b)) (∀ {eps} (0 < eps) ∃ (x : A) (b < x + eps))
@@ -87,7 +87,7 @@
   => (makeSup Aa0 Ab As, makeSup.isSup Aa0 Ab As)
 
 \lemma makeSupTB {A : Set Real} {a0 : Real} (Aa0 : A a0) (Ac : \Pi {eps : Real} -> 0 < eps -> ∃ (l : Array Real) (∀ (a : l) (A a)) ∀ {x : A} ∃ (y : l) (abs (x - y) < eps)) : HasSup A
-  => \case Ac zro<ide \with {
+  => \case Ac RealAbGroup.zro<ide \with {
     | inP (l,_,lb) => makeSup-pair Aa0 {Big (∨) zro l + 1} (\lam Aa => \case lb Aa \with {
       | inP (j,c) => linarith (abs>=id <∘r c, RealAbGroup.Big_<=_join1)
     }) \lam {x} {y} x<y =>
@@ -125,7 +125,7 @@
   \where \protected \use \level levelProp (s t : HasInf A) : s = t => ext (IsInf.isUnique s.2 t.2)
 
 \func makeSupInf {A : Set Real} {b : Real} (bs : IsSup (\lam x => A (negative x)) (negative b)) : IsInf A b
-  => (\lam Aa => transport2 (<=) AddGroup.negative-isInv AddGroup.negative-isInv $ negative_<= $ bs.1 $ transportInv A AddGroup.negative-isInv Aa,
+  => (\lam Aa => transport2 (<=) AddGroup.negative-isInv AddGroup.negative-isInv $ PosetAddGroup.negative_<= $ bs.1 $ transportInv A AddGroup.negative-isInv Aa,
       \lam eps>0 => \case bs.2 eps>0 \with {
         | inP (x,A-x,-b<x+eps) => inP (negative x, A-x, linarith)
       })

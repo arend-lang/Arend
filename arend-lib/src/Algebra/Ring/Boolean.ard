@@ -11,9 +11,9 @@
 \import Paths
 \import Paths.Meta
 
-\class BooleanPseudoRing \extends PseudoCRing, DistributiveLattice, Bounded.JoinSemilattice {
+\class BooleanRing \extends PseudoCRing, DistributiveLattice, Bounded.JoinSemilattice {
   | isBooleanRing {x : E} : x * x = x
-  | <= => BooleanPseudoRing.<=
+  | <= => BooleanRing.<=
   | <=-refl => isBooleanRing
   | <=-transitive xy=x yz=y => pmap (`* _) (inv xy=x) *> *-assoc *> pmap (_ *) yz=y *> xy=x
   | <=-antisymmetric xy=x yx=y => inv xy=x *> *-comm *> yx=y
@@ -34,8 +34,11 @@
   \lemma double=0 {x : E} : x + x = 0
     => sum2 isBooleanRing
 
-  \lemma neative=id {x : E} : negative x = x
+  \lemma negative=id {x : E} : negative x = x
     => cancel-left x $ negative-right *> inv double=0
+
+  \lemma +_join {x y : E} (xy=0 : x * y = 0) : x + y = x ∨ y
+    => inv zro-right *> pmap (_ +) (inv xy=0)
 
   \func diff (x y : E) => x + x * y
 
@@ -44,6 +47,12 @@
 
   \lemma diff_* {x y : E} : diff x y * y = 0
     => rdistr *> pmap (_ +) (*-assoc *> pmap (x *) isBooleanRing) *> double=0
+
+  \lemma diff-univ {x y z : E} (p : x <= y) (q : x * z = 0) : x <= diff y z
+    => ldistr *> pmap2 (+) p (pmap (x *) *-comm *> inv *-assoc *> pmap (`* y) q *> zro_*-left) *> zro-right
+
+  \lemma diff-mono {x y x' y' : E} (p : x <= x') (q : y' <= y) : diff x y <= diff x' y'
+    => diff-univ (diff_<= <=∘ p) $ <=-antisymmetric (meet-monotone <=-refl q <=∘ =_<= diff_*) bottom-univ
 
   \lemma diff_*_diff {x y : E} : diff x y * diff y x = 0
     => <=-antisymmetric (meet-monotone <=-refl diff_<= <=∘ =_<= diff_*) bottom-univ
@@ -56,6 +65,9 @@
 
   \lemma split {x y : E} : x = diff x y ∨ x * y
     => split_<= meet-left *> pmap (`∨ _) (pmap (x +) (inv *-assoc *> pmap (`* y) isBooleanRing))
+
+  \lemma diff-trans {x y z : E} : diff x z <= diff x y ∨ diff y z
+    => =_<= split <=∘ join-monotone (diff-mono diff_<= <=-refl) (diff-univ meet-right $ *-assoc *> pmap (_ *) *-comm *> inv *-assoc *> pmap (`* y) diff_* *> zro_*-left)
 } \where {
   \private \lemma sum2 {R : PseudoRing} (br : \Pi {x : R} -> x * x = x) {x : R} : x + x = 0
     => inv $ R.cancel-left (x + x) $ zro-right *> inv br *> ldistr *> pmap2 (+) rdistr rdistr *> pmap2 (+) (pmap2 (+) br br) (pmap2 (+) br br)
@@ -63,7 +75,7 @@
   \type \infix 4 <= {R : Semigroup} (x y : R) => x * y = x
 }
 
-\class BooleanRing \extends BooleanPseudoRing, CRing, BooleanAlgebra
+\class UnitalBooleanRing \extends BooleanRing, CRing, BooleanAlgebra
   | top => 1
   | top-univ => ide-right
   | compl a => a + 1
@@ -74,7 +86,7 @@
     \open JoinSemilattice
     \open Bounded
 
-    \use \coerce fromBooleanAlgebra (R : BooleanAlgebra) : BooleanRing R \cowith
+    \use \coerce fromBooleanAlgebra (R : BooleanAlgebra) : UnitalBooleanRing R \cowith
       | zro => R.bottom
       | + a b => a ∧ compl b ∨ b ∧ compl a
       | zro-left => <=-antisymmetric (join-univ (meet-left <=∘ bottom-univ) meet-left) $ meet-univ <=-refl (top-univ <=∘ compl-join <=∘ join-univ bottom-univ <=-refl) <=∘ join-right
@@ -95,5 +107,5 @@
       | isBooleanRing => meet-idemp
   }
 
-\instance HeytingBooleanRing (R : HeytingAlebra) : BooleanRing (NegatedElem R)
-  => BooleanRing.fromBooleanAlgebra (HeytingBooleanAlgebra R)
+\instance HeytingBooleanRing (R : HeytingAlebra) : UnitalBooleanRing (NegatedElem R)
+  => UnitalBooleanRing.fromBooleanAlgebra (HeytingBooleanAlgebra R)

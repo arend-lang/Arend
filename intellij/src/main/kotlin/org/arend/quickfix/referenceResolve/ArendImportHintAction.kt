@@ -29,7 +29,6 @@ import org.arend.psi.stubs.index.ArendDefinitionIndex
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendSettings
 import org.arend.util.ArendBundle
-import org.jetbrains.kotlin.utils.addIfNotNull
 
 enum class Result { POPUP_SHOWN, CLASS_AUTO_IMPORTED, POPUP_NOT_SHOWN }
 
@@ -162,7 +161,10 @@ class ArendImportHintAction(private val referenceElement: ArendReferenceElement)
             result.addAll(StubIndex.getElements(ArendDefinitionIndex.KEY, name, project, ArendFileScope(project), PsiReferable::class.java).filterIsInstance<ReferableBase<*>>())
 
             for (library in project.service<ArendServerService>().getLibraries((file as? ArendFile)?.libraryName, withSelf = true, withPrelude = true)) {
-                result.addIfNotNull((library.generatedNames[name] as? DataContainer)?.data as? PsiLocatedReferable)
+                val ref = (library.generatedNames[name] as? DataContainer)?.data
+                if (ref is PsiLocatedReferable) {
+                    result.add(ref)
+                }
             }
 
             return result

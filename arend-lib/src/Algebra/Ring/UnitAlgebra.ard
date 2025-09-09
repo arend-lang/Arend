@@ -1,0 +1,60 @@
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Function.Meta
+\import Paths
+\import Paths.Meta
+
+\instance UnitAlgebra (R : CRing) (A : PseudoAlgebra R) : AAlgebra R (\Sigma R A)
+  | zro => (0,0)
+  | + s t => (s.1 + t.1, s.2 + t.2)
+  | zro-left => ext (zro-left, zro-left)
+  | zro-right => ext (zro-right, zro-right)
+  | +-assoc => ext (+-assoc, +-assoc)
+  | +-comm => ext (+-comm, +-comm)
+  | * (a,x) (b,y) => (a * b, a *c y + b *c x + x * y)
+  | *-assoc {x} {y} {z} => ext (*-assoc, rewrite (
+      *c-ldistr, *c-ldistr, *c-ldistr, *c-ldistr, A.ldistr, A.ldistr, A.rdistr, A.rdistr, A.*-assoc,
+      inv *c-assoc, inv *c-assoc, inv *c-assoc, inv *c-assoc,
+      inv *c-comm-left, inv *c-comm-left, inv *c-comm-right, inv *c-comm-right,
+      R.*-comm {z.1} {x.1}, R.*-comm {z.1} {y.1}) equation.abGroup)
+  | ldistr => ext (R.ldistr, rewrite (A.ldistr,*c-ldistr,*c-rdistr) equation.abGroup)
+  | rdistr => ext (R.rdistr, rewrite (A.rdistr,*c-ldistr,*c-rdistr) equation.abGroup)
+  | negative (a,x) => (negative a, negative x)
+  | negative-left => ext (negative-left, negative-left)
+  | *c a (b,x) => (a * b, a *c x)
+  | *c-assoc => ext (*-assoc, *c-assoc)
+  | *c-ldistr => ext (R.ldistr, *c-ldistr)
+  | *c-rdistr => ext (R.rdistr, *c-rdistr)
+  | ide_*c => ext (ide-left, ide_*c)
+  | *c-comm-left => ext (inv *-assoc, rewrite (*c-ldistr, *c-ldistr, *c-assoc, *c-comm-left) $ equation.abGroup $ A.toZero $ inv *c-assoc *> pmap (`*c _) *-comm *> *c-assoc)
+  | *c-comm-right => ext (inv *-assoc *> pmap (`* _) *-comm *> *-assoc, rewrite (*c-ldistr, *c-ldistr, inv *c-assoc, inv *c-assoc, inv *c-comm-right) $ equation.abGroup $ A.toZero $ pmap (`*c _) *-comm *> *c-assoc)
+  | ide => (1,0)
+  | ide-left => ext (ide-left, rewrite (A.*c_zro-right, A.zro_*-left) $ zro-right *> zro-right *> ide_*c)
+  | ide-right => ext (ide-right, rewrite (A.*c_zro-right, A.zro_*-right) $ zro-right *> zro-left *> ide_*c)
+  | coefMap a => (a,0)
+  | coefMap_*c => inv $ ext (ide-right, A.*c_zro-right)
+  \where {
+    \lemma *n-comm {a : R} {x : A} {n : Nat} : n AddMonoid.*n {UnitAlgebra R A} (a,x) = (n R.*n a, n A.*n x) \elim n
+      | 0 => idp
+      | suc n => pmap (__ + {UnitAlgebra R A} (a,x)) *n-comm
+
+    \lemma *n-comm1 {a : R} {x : A} {n : Nat} : (n AddMonoid.*n {UnitAlgebra R A} (a,x)).1 = n R.*n a
+      => pmap __.1 *n-comm
+
+    \lemma *n-comm2 {a : R} {x : A} {n : Nat} : (n AddMonoid.*n {UnitAlgebra R A} (a,x)).2 = n A.*n x
+      => pmap __.2 *n-comm
+  }
+
+\func unit-algebra {R : CRing} {A : PseudoAlgebra R} : AddGroupHom A (UnitAlgebra R A) \cowith
+  | func x => (0,x)
+  | func-+ => ext (inv zro-left, idp)
+
+\instance UnitCAlgebra (R : CRing) (A : PseudoCAlgebra R) : CAlgebra R
+  | AAlgebra => UnitAlgebra R A
+  | *-comm => ext (*-comm, equation.abGroup $ A.toZero *-comm)

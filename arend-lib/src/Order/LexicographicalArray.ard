@@ -1,0 +1,37 @@
+\import Logic
+\import Order.LinearOrder
+\import Order.StrictOrder
+\import Paths
+\open LinearOrder
+
+\instance LexicographicalArray {n : Nat} (A : Dec) : Dec (Array A n)
+  | < => <A
+  | <-irreflexive {l : Array A n} (p : l <A l) : Empty \elim n, l, p {
+    | suc n, :: b bs, <head b<b => StrictPoset.<-irreflexive b<b
+    | suc n, :: b bs, <tail _ bs<bs => <-irreflexive bs<bs
+  }
+  | <-transitive {as bs cs : Array A n} (as<bs : as <A bs) (bs<cs : bs <A cs) : as <A cs \elim n, as, bs, cs, as<bs, bs<cs {
+    | suc n, a :: as, b :: bs, c :: cs, <head a<b, <head b<c => <head (a<b <∘ b<c)
+    | suc n, a :: as, b :: bs, c :: cs, <head a<b, <tail idp _ => <head a<b
+    | suc n, a :: as, b :: bs, c :: cs, <tail idp _, <head b<c => <head b<c
+    | suc n, a :: as, b :: bs, c :: cs, <tail a=b as<bs, <tail b=c bs<cs => <tail (a=b *> b=c) (<-transitive as<bs bs<cs)
+  }
+  | trichotomy (as bs : Array A n) : Tri {\new StrictPoset (Array A n) (<A) <-irreflexive <-transitive} as bs \elim n, as, bs {
+    | 0, nil, nil => equals idp
+    | suc n, a :: as, b :: bs => \case Dec.trichotomy a b \with {
+      | less a<b => less (<head a<b)
+      | equals a=b => \case trichotomy as bs \with {
+        | less as<bs => less (<tail a=b as<bs)
+        | equals as=bs => equals (pmap2 (::) a=b as=bs)
+        | greater as>bs => greater (<tail (inv a=b) as>bs)
+      }
+      | greater a>b => greater (<head a>b)
+    }
+  }
+  \where {
+    \truncated \data \infix 4 <A {n : Nat} {A : Dec} (l1 l2 : Array A n) : \Prop \elim n, l1, l2
+      | suc n, a :: as, b :: bs => {
+        | <head (a < b)
+        | <tail (a = b) (as <A bs)
+      }
+  }

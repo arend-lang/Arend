@@ -41,7 +41,7 @@
   | <=-transitive {regSubobj f1 _} {regSubobj f2 _} {regSubobj f3 _} (inP (f,s2f=s1)) (inP (g,s3g=s2)) => inP (g ∘ f, rewriteEq s3g=s2 s2f=s1)
 
 \lemma pullback_regularSubobj-isMeet {C : CartesianPrecat} (P : Pullback {C}) (fm : isRegularMono P.f) (gm : isRegularMono P.g)
-  : Preorder.IsMeet (regSubobj P.f fm) (regSubobj P.g gm) (regSubobj (P.f ∘ pbProj1) (pullback-isRegularMono fm gm))
+  : Preorder.Is-meet (regSubobj P.f fm) (regSubobj P.g gm) (regSubobj (P.f ∘ pbProj1) (pullback-isRegularMono fm gm))
   => {?}
   \where {
     \open PrecatWithBprod
@@ -62,7 +62,7 @@
   }
 
 \func regularSubobj_meet-pullback {C : FinCompletePrecat} {x y z w : C} {f : Hom x z} (fm : isRegularMono f) {g : Hom y z} (gm : isRegularMono g) {h : Hom w z} (hm : isRegularMono h)
-                                  (m : Preorder.IsMeet (regSubobj f fm) (regSubobj g gm) (regSubobj h hm)) : Pullback f g w
+                                  (m : Preorder.Is-meet (regSubobj f fm) (regSubobj g gm) (regSubobj h hm)) : Pullback f g w
   => \have | m' => pullback_regularSubobj-isMeet (pullback f g) fm gm
            | pm => pullback-isRegularMono fm gm
      \in Pullback.fromIso (pullback f g) $ antisymmetric (regularMono_Mono hm) (regularMono_Mono pm)
@@ -72,7 +72,7 @@
     \open pullback_regularSubobj-isMeet
 
     \sfunc exact {C : FinCompletePrecat} {x y z w : C} (f : Hom x z) (fm : isRegularMono f) (g : Hom y z) (gm : isRegularMono g) {p1 : Hom w x} {p2 : Hom w y} (coh : f ∘ p1 = g ∘ p2) (hm : isRegularMono (f ∘ p1))
-                 (m : Preorder.IsMeet (regSubobj f fm) (regSubobj g gm) (regSubobj (f ∘ p1) hm)) : Pullback f g w p1 p2
+                 (m : Preorder.Is-meet (regSubobj f fm) (regSubobj g gm) (regSubobj (f ∘ p1) hm)) : Pullback f g w p1 p2
       => \let | pb : Pullback => regularSubobj_meet-pullback fm gm hm m
               | t1 : pb.pbProj1 = p1 => isMono {regularMono_Mono fm} $ inv o-assoc *> (extractMap _ _).2
               | t2 : pb.pbProj2 = p2 => isMono {regularMono_Mono gm} $ inv o-assoc *> rewriteI (pbCoh {pullback f g}) ((extractMap _ _).2 *> coh)

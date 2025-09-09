@@ -47,39 +47,39 @@ class ArendModuleBuilder : ArendStarterModuleBuilder(), ArendModuleConfiguration
     private val versionField = JTextField()
     private val sourcesTextField = TextFieldWithBrowseButton().apply {
         addBrowseFolderListener(
-            "Sources Directory",
-            "Select the directory in which the source files${if (name == null) "" else " of module $name"} are located",
             getProject(),
-            FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+            FileChooserDescriptorFactory.createSingleFolderDescriptor()
+                .withTitle("Sources Directory")
+                .withDescription("Select the directory in which the source files${if (name == null) "" else " of module $name"} are located"),
             textComponentAccessor
         )
     }
     private val testsTextField = TextFieldWithBrowseButton().apply {
         addBrowseFolderListener(
-            "Tests Directory",
-            "Select the directory with test files${if (name == null) "" else " for module $name"}",
             getProject(),
-            FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+            FileChooserDescriptorFactory.createSingleFolderDescriptor()
+                .withTitle("Tests Directory")
+                .withDescription("Select the directory with test files${if (name == null) "" else " for module $name"}"),
             textComponentAccessor
         )
     }
     private val binariesSwitch = JBCheckBox("Save typechecker output to ", false)
     private val binariesTextField = TextFieldWithBrowseButton().apply {
         addBrowseFolderListener(
-            "Binaries Directory",
-            "Select the directory in which the binary files${if (name == null) "" else " of module $name"} will be put",
             getProject(),
-            FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+            FileChooserDescriptorFactory.createSingleFolderDescriptor()
+                .withTitle("Binaries Directory")
+                .withDescription("Select the directory in which the binary files${if (name == null) "" else " of module $name"} will be put"),
             textComponentAccessor
         )
     }
     private val extensionsSwitch = JBCheckBox("Load language extensions", false)
     private val extensionsTextField = TextFieldWithBrowseButton().apply {
         addBrowseFolderListener(
-            "Extensions Directory",
-            "Select the directory in which the language extensions${if (name == null) "" else " of module $name"} are located",
             getProject(),
-            FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+            FileChooserDescriptorFactory.createSingleFolderDescriptor()
+                .withTitle("Extensions Directory")
+                .withDescription("Select the directory in which the language extensions${if (name == null) "" else " of module $name"} are located"),
             textComponentAccessor
         )
     }

@@ -202,10 +202,12 @@
     | inP (V, inP (W, f, V<=<W), x<=<V) => inP (V, <=<-left V<=<W $ f (x, (idp, <=<_<= V<=<W $ <=<_<= x<=<V idp)), x<=<V)
   }
 
-\class SeparatedCoverSpace \extends CoverSpace, HausdorffTopSpace
+\class SeparatedCoverSpace \extends CoverSpace, HausdorffTopSpace {
   | isSeparatedCoverSpace {x y : E} : (\Pi {C : Set (Set E)} -> isCauchy C -> ∃ (U : C) (\Sigma (U x) (U y))) -> x = y
-  | isHausdorff p => isSeparatedCoverSpace (separated-char 6 7 p)
-  \where {
+
+  \default isHausdorff p => isSeparatedCoverSpace (separated-char 6 7 p)
+  \default isSeparatedCoverSpace p => isHausdorff (separated-char 7 6 p)
+} \where {
     \lemma separated-char {S : CoverSpace} {x y : S} : TFAE (
     {- 0 -} pointCF x ⊆ pointCF y,
     {- 1 -} pointCF x CF~ pointCF y,
@@ -298,11 +300,15 @@
       }
   }
 
+
+\sfunc cauchy-lift {X Y : CoverSpace} {Z : CompleteCoverSpace} (f : CoverMap X Y) (\property fd : f.IsDenseEmbedding) (g : CauchyMap X Z) (y : Y) : Z
+  => Z.filter-point $ g.func-cauchy $ dense-filter-lift f fd (pointCF y)
+
 \func dense-cauchy-lift {X Y : CoverSpace} {Z : CompleteCoverSpace} (f : CoverMap X Y) (fd : f.IsDenseEmbedding) (g : CauchyMap X Z) : CauchyMap Y Z \cowith
-  | func y => Z.filter-point $ g.func-cauchy $ dense-filter-lift f fd (pointCF y)
+  | func => cauchy-lift f fd g
   | func-cauchy F => \new CauchyFilter {
     | isCauchyFilter Cc => \case isCauchyFilter {g.func-cauchy $ dense-filter-lift f fd F} (isRegular Cc) \with {
-      | inP (U', inP (U,CU,U'<=<U), inP (V',V,p,V'<=<V,FV')) => inP (U, CU, filter-mono FV' \lam {y} V'y => <=<_<= (Z.filter-point-elem U'<=<U \case <=<-inter $ <=<-right (single_<= V'y) V'<=<V \with {
+      | inP (U', inP (U,CU,U'<=<U), inP (V',V,p,V'<=<V,FV')) => inP (U, CU, filter-mono FV' \lam {y} V'y => transportInv U (\peval cauchy-lift f fd g y) $ <=<_<= (Z.filter-point-elem U'<=<U \case <=<-inter $ <=<-right (single_<= V'y) V'<=<V \with {
         | inP (V'',y<=<V'',V''<=<V) => inP $ later (V'', V, p, V''<=<V, y<=<V'')
       }) idp)
     }
@@ -311,21 +317,21 @@
 \func dense-lift {X Y : CoverSpace} {Z : CompleteCoverSpace} (f : CoverMap X Y) (fd : f.IsDenseEmbedding) (g : CoverMap X Z) : CoverMap Y Z \cowith
   | CauchyMap => dense-cauchy-lift f fd g
   | func-cover Dc => cauchy-refine (isRegular $ fd.2 $ g.func-cover $ isRegular Dc) \lam {V'} (inP (V, inP (U, inP (W', inP (W, DW, W'<=<W), p), q), V'<=<V)) =>
-                      inP (_, inP (W, DW, idp), \lam {y} V'y => <=<_<= (Z.filter-point-elem W'<=<W \case <=<-inter (<=<-right (single_<= V'y) V'<=<V) \with {
+                      inP (_, inP (W, DW, idp), \lam {y} V'y => transportInv W (\peval cauchy-lift f fd g y) $ <=<_<= (Z.filter-point-elem W'<=<W \case <=<-inter (<=<-right (single_<= V'y) V'<=<V) \with {
                         | inP (V'',y<=<V'',V''<=<V) => inP $ later (V'', V, rewrite p in q, V''<=<V, y<=<V'')
                       }) idp)
 
-\lemma dense-lift-char {X Y : CoverSpace} {Z : CompleteCoverSpace} {f : CoverMap X Y} (fd : f.IsDenseEmbedding) {g : CoverMap X Z} (x : X) : dense-lift f fd g (f x) = g x
-  => isSeparatedCoverSpace $ SeparatedCoverSpace.separated-char 4 7 $ later \case CompleteCoverSpace.filter-point-sub __ \with {
+\lemma dense-lift-char {X Y : CoverSpace} {Z : CompleteCoverSpace} {f : CoverMap X Y} (fd : f.IsDenseEmbedding) {g : CoverMap X Z} (x : X) : cauchy-lift f fd g (f x) = g x
+  => (\peval cauchy-lift f fd g (f x)) *> isSeparatedCoverSpace (SeparatedCoverSpace.separated-char 4 7 $ later \case CompleteCoverSpace.filter-point-sub __ \with {
     | inP (V',V,p,V'<=<V,fx<=<V') => p $ <=<_<= V'<=<V $ <=<_<= fx<=<V' idp
-  }
+  })
 
 \lemma dense-lift-neighborhood {X Y : CoverSpace} {Z : CompleteCoverSpace} {f : CoverMap X Y} (fd : f.IsDenseEmbedding) {g : CoverMap X Z} (y : Y) (W : Set Z)
-  : single (dense-lift f fd g y) <=< W <-> ∃ (W' : Set Z) (W' <=< W) (V : Set Y) (f ^-1 V ⊆ g ^-1 W') (single y <=< V)
-  => <->trans Z.filter-point-char $ later (\lam (inP (W', W'<=<W, inP (V',V,p,V'<=<V,y<=<V'))) => inP (W', W'<=<W, V, p, <=<-right (<=<_<= y<=<V') V'<=<V),
-                                           \lam (inP (W',W'<=<W,V,p,y<=<V)) => \case <=<-inter y<=<V \with {
-                                             | inP (V',y<=<V',V'<=<V) => inP (W', W'<=<W, inP (V', V, p, V'<=<V, y<=<V'))
-                                           })
+  : single (cauchy-lift f fd g y) <=< W <-> ∃ (W' : Set Z) (W' <=< W) (V : Set Y) (f ^-1 V ⊆ g ^-1 W') (single y <=< V)
+  => rewrite (\peval cauchy-lift f fd g y) $ <->trans Z.filter-point-char $ later (\lam (inP (W', W'<=<W, inP (V',V,p,V'<=<V,y<=<V'))) => inP (W', W'<=<W, V, p, <=<-right (<=<_<= y<=<V') V'<=<V),
+      \lam (inP (W',W'<=<W,V,p,y<=<V)) => \case <=<-inter y<=<V \with {
+        | inP (V',y<=<V',V'<=<V) => inP (W', W'<=<W, inP (V', V, p, V'<=<V, y<=<V'))
+      })
 
 \open CompleteCoverSpace
 
@@ -437,13 +443,13 @@
 
 \lemma completion-lift-neighborhood {X : CoverSpace} {Z : CompleteCoverSpace} (g : CoverMap X Z) (y : Completion X) (W : Set Z)
   : single (completion-lift g y) <=< W <-> ∃ (W' : Set Z) (W' <=< W) (V : Set X) (y V) (V ⊆ g ^-1 W')
-  => <->trans (dense-lift-neighborhood completion.isDenseEmbedding y W) $ later
+  => <->trans (dense-lift-neighborhood completion.isDenseEmbedding {g} y W) $ later
       (\lam (inP (W',W'<=<W,V,p,y<=<V)) => inP (W', W'<=<W, pointCF ^-1 V, Completion.pointCF_^-1_<=< y<=<V, p),
        \lam (inP (W',W'<=<W,V,yV,p)) => inP (W', W'<=<W, Completion.mkSet V, (\lam x<=<V => <=<_<= x<=<V idp) <=∘ p, Completion.mkSet_<=<-point.2 yV))
 
 \lemma completion-lift-natural {X : CoverSpace} {Z : CompleteCoverSpace} {g : CoverMap X Z} (F : CauchyFilter X)
   : completion-lift g (CompleteCoverSpace.filter-point $ completion.func-cauchy F) = CompleteCoverSpace.filter-point (g.func-cauchy F)
-  => dense-lift-natural completion.isDenseEmbedding F
+  => dense-lift-natural completion.isDenseEmbedding {g} F
 
 \lemma complete-char {X : CoverSpace} : TFAE (
     {- 0 -} CompleteCoverSpace { | CoverSpace => X },

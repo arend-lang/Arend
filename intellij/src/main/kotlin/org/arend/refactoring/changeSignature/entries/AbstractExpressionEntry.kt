@@ -60,7 +60,7 @@ abstract class AbstractExpressionEntry(
         var buffer: String? = null
         for (block in blocks) when (block) {
             is Int -> {
-                val correctedIndex = if (block == -1 && firstExplicit != null) firstExplicit!! else block // needed for correct operation in binary expressions
+                val correctedIndex = if (block == -1 && firstExplicit != null) firstExplicit else block // needed for correct operation in binary expressions
                 if (buffer != null) spacingMap[correctedIndex] = buffer
                 buffer = ""
             }

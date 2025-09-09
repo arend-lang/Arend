@@ -3,9 +3,9 @@
 \import Paths.Meta
 
 \class SubBooleanPseudoRing \extends SubPseudoRing {
-  \override S : BooleanPseudoRing
+  \override S : BooleanRing
 
-  \func IBooleanPseudoRing : BooleanPseudoRing \cowith
+  \func IBooleanPseudoRing : BooleanRing \cowith
     | PseudoRing => IPseudoRing
     | isBooleanRing => ext isBooleanRing
 }

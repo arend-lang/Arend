@@ -4,11 +4,13 @@
 \import Algebra.Ring.RingHom
 \import Paths
 
-\class AAlgebra \extends LModule, Ring {
+\class PseudoAlgebra \extends LModule, PseudoRing {
   \override R : CRing
   | *c-comm-left  {r : R} {a b : E} : r *c (a * b) = (r *c a) * b
   | *c-comm-right {r : R} {a b : E} : r *c (a * b) = a * (r *c b)
+}
 
+\class AAlgebra \extends PseudoAlgebra, Ring {
   | coefMap : R -> E
   | coefMap_*c {x : R} : coefMap x = x *c 1
   \default coefMap \as coefMap-impl x => x *c 1
@@ -19,18 +21,23 @@
     | func-+ => coefMap_*c *> *c-rdistr *> inv (pmap2 (+) coefMap_*c coefMap_*c)
     | func-ide => coefMap_*c *> ide_*c
     | func-* => coefMap_*c *> *c-assoc *> pmap (_ *c) (inv ide-left) *> *c-comm-left *> inv (pmap2 (*) coefMap_*c coefMap_*c)
+
+  \lemma coefMap_natCoef {n : Nat} : coefMap (R.natCoef n) = natCoef n
+    => coefHom.func-natCoef
 }
 
-\class CAlgebra \extends AAlgebra, CRing
+\class PseudoCAlgebra \extends PseudoAlgebra, CRing
   | *c-comm-right => pmap (_ *c) *-comm *> *c-comm-left *> *-comm
+
+\class CAlgebra \extends AAlgebra, PseudoCAlgebra
 
 \func homAlgebra {R E : CRing} (f : RingHom R E) : CAlgebra \cowith
   | CRing => E
   | LModule => homLModule f
   | *c-comm-left => inv *-assoc
 
-\func \infixl 7 *r {R : CRing} {A : AAlgebra R} {X : LModule A} (a : R) (x : X) : X
+\func \infixl 7 *a {R : CRing} {A : AAlgebra R} {X : LModule A} (a : R) (x : X) : X
   => coefMap a *c x
 
-\lemma *r-assoc {R : CRing} {A : AAlgebra R} {X : LModule A} {a b : R} {x : X} : a * b *r x = a *r (b *r x)
+\lemma *a-assoc {R : CRing} {A : AAlgebra R} {X : LModule A} {a b : R} {x : X} : a * b *a x = a *a (b *a x)
   => pmap (`*c x) A.coefHom.func-* *> *c-assoc

@@ -134,7 +134,7 @@ public class Names {
   }
 
   public static ModulePath getOrderedModule() {
-    return new ModulePath("Algebra", "Ordered");
+    return new ModulePath("Algebra", "StrictlyOrdered");
   }
 
   public static ModulePath getPointedModule() {
@@ -187,6 +187,14 @@ public class Names {
 
   public static ModulePath getNewSemiringSolverModule() {
     return new ModulePath("Algebra", "Solver", "Semiring");
+  }
+
+  public static ModulePath getBooleanRingModule() {
+    return new ModulePath("Algebra", "Ring", "Boolean");
+  }
+
+  public static ModulePath getBooleanRingSolverModule() {
+    return new ModulePath("Algebra", "Solver", "BooleanRing");
   }
 
   public static ModulePath getIntModule() {

@@ -46,7 +46,6 @@ import com.intellij.util.ModalityUiUtil
 import org.arend.module.starter.ArendStarterUtils.mergeDependencyConfigs
 import org.arend.module.starter.ArendStarterUtils.parseDependencyConfig
 import org.arend.module.starter.ArendStarterUtils.parseDependencyConfigVersion
-import org.jetbrains.annotations.Nullable
 import java.io.IOException
 import java.net.URL
 import javax.swing.Icon
@@ -310,5 +309,5 @@ abstract class ArendStarterModuleBuilder : ModuleBuilder() {
         return javaClass.getResource(resourcePath) ?: error("Failed to get resource: $resourcePath")
     }
 
-    protected open fun getGeneratorContextProperties(sdk: @Nullable Sdk?, dependencyConfig: DependencyConfig): Map<String, String> = emptyMap()
+    protected open fun getGeneratorContextProperties(sdk: Sdk?, dependencyConfig: DependencyConfig): Map<String, String> = emptyMap()
 }

@@ -40,7 +40,7 @@
     | in~ a => ~-cequiv (join-univ <=-refl D.bottom-univ) $ func-* *> pmap2 (Monoid.*) (inv Func-app *> poset-id) (pmap (F.Func _) func-ide *> func-ide) *> ide-right
   }
   | *-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
-    | in~ a, in~ b, in~ c => ~-cequiv (Preorder.=_<= D.join-assoc) $ func-* *> pmap2 (Monoid.*)
+    | in~ a, in~ b, in~ c => ~-cequiv (=_<= D.join-assoc) $ func-* *> pmap2 (Monoid.*)
         (inv Func-app *> func-* *> pmap2 (Monoid.*) (inv Func-app *> poset-app) (inv Func-app *> poset-app *> Func-app))
         (inv Func-app *> poset-app *> Func-app) *> *-assoc *> pmap (_ Monoid.*) (inv func-*)
   }
@@ -79,7 +79,7 @@
     | in~ a => ~-cequiv (join-univ <=-refl D.bottom-univ) $ func-+ *> pmap2 (AddMonoid.+) (inv Func-app *> poset-id) (pmap (F.Func _) func-zro *> func-zro) *> zro-right
   }
   | +-assoc {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
-    | in~ a, in~ b, in~ c => ~-cequiv (Preorder.=_<= D.join-assoc) $ func-+ *> pmap2 (AddMonoid.+)
+    | in~ a, in~ b, in~ c => ~-cequiv (=_<= D.join-assoc) $ func-+ *> pmap2 (AddMonoid.+)
         (inv Func-app *> func-+ *> pmap2 (AddMonoid.+) (inv Func-app *> poset-app) (inv Func-app *> poset-app *> Func-app))
         (inv Func-app *> poset-app *> Func-app) *> +-assoc *> pmap (_ AddMonoid.+) (inv func-+)
   }
@@ -126,7 +126,7 @@
 \instance AbGroupLatticeColimit {D : Bounded.JoinSemilattice} (F : Functor D AbGroupCat) : AbGroup (SetColimit (Comp AbGroupCat.forget F))
   | AddGroup => AddGroupLatticeColimit (Comp AbGroupCat.forgetToAddGroup F)
   | +-comm {x} {y} => \case \elim x, \elim y \with {
-    | in~ a, in~ b => ~-cequiv (Preorder.=_<= D.join-comm) $ func-+ *> +-comm *> pmap2 (+) (inv (Func-app (Comp AbGroupCat.forget F)) *> poset-app) (inv (Func-app (Comp AbGroupCat.forget F)) *> poset-app)
+    | in~ a, in~ b => ~-cequiv (=_<= D.join-comm) $ func-+ *> +-comm *> pmap2 (+) (inv (Func-app (Comp AbGroupCat.forget F)) *> poset-app) (inv (Func-app (Comp AbGroupCat.forget F)) *> poset-app)
   }
   \where {
     \func inMap {F : Functor D AbGroupCat} (d : D) : AddGroupHom (F d) (AddGroupLatticeColimit F) \cowith
@@ -174,7 +174,7 @@
 \instance CRingLatticeColimit {D : Bounded.JoinSemilattice} (F : Functor D CRingCat) : CRing (SetColimit (Comp CRingCat.forget F))
   | Ring => RingLatticeColimit (Comp CRingCat.forgetToRing F)
   | *-comm {x} {y} => \case \elim x, \elim y \with {
-    | in~ a, in~ b => ~-cequiv (Preorder.=_<= D.join-comm) $ func-* *> *-comm *> pmap2 (*) (inv (Func-app (Comp CRingCat.forget F)) *> poset-app) (inv (Func-app (Comp CRingCat.forget F)) *> poset-app)
+    | in~ a, in~ b => ~-cequiv (=_<= D.join-comm) $ func-* *> *-comm *> pmap2 (*) (inv (Func-app (Comp CRingCat.forget F)) *> poset-app) (inv (Func-app (Comp CRingCat.forget F)) *> poset-app)
   }
 
 \func DiscreteFieldLatticeColimit {D : Bounded.JoinSemilattice} (F : Functor D CRingCat) (p : \Pi (d : D) -> DiscreteField { | CRing => F d }) : DiscreteField (SetColimit (Comp CRingCat.forget F)) \cowith

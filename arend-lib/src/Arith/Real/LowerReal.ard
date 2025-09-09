@@ -2,6 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Arith.Rat
 \import Data.Or
 \import Function.Meta
@@ -38,6 +39,38 @@
     \use \coerce fromRat (x : Rat) : LowerReal \cowith
       | ExtendedLowerReal => ExtendedLowerReal.fromRat x
       | L-inh => inP (x - 1, linarith)
+
+    \func BJoin (b : LowerReal) {J : \Set} (f : J -> ExtendedLowerReal) : LowerReal \cowith
+      | L q => b.L q || Given (j : J) ((f j).L q)
+      | L-closed e q'<q => \case \elim e \with {
+        | byLeft q<b => byLeft (L-closed q<b q'<q)
+        | byRight (j,q<fj) => byRight (j, L-closed q<fj q'<q)
+      }
+      | L-rounded => \case \elim __ \with {
+        | byLeft q<b => \case L-rounded q<b \with {
+          | inP (r,r<b,q<r) => inP (r, byLeft r<b, q<r)
+        }
+        | byRight (j,q<fj) => \case L-rounded q<fj \with {
+          | inP (r,r<fj,q<r) => inP (r, byRight (j,r<fj), q<r)
+        }
+      }
+      | L-inh => \case b.L-inh \with {
+        | inP (q,q<b) => inP (q, byLeft q<b)
+      }
+
+    \open LowerRealAbMonoid(<=)
+
+    \lemma BJoin-bound {b : LowerReal} {J : \Set} {f : J -> ExtendedLowerReal} : b <= BJoin b f
+      => \lam a<b => byLeft a<b
+
+    \lemma BJoin-cond {b : LowerReal} {J : \Set} (j : J) {f : J -> ExtendedLowerReal} : f j <= BJoin b f
+      => \lam a<fj => byRight (j,a<fj)
+
+    \lemma BJoin-univ {b : LowerReal} {J : \Set} {f : J -> ExtendedLowerReal} {e : ExtendedLowerReal} (b<=e : b <= e) (c : \Pi (j : J) -> f j <= e) : BJoin b f <= e
+      => \case \elim __ \with {
+        | byLeft a<b => b<=e a<b
+        | byRight (j,a<fj) => c j a<fj
+      }
   }
 
 \instance LowerRealAbMonoid : BiorderedLatticeAbMonoid LowerReal
@@ -60,10 +93,10 @@
   }, \lam r => \case +_L.1 r \with {
     | inP (c,c<y,b,b<x,a<c+b) => +_L.2 $ inP $ later (b, b<x, c, c<y, rewrite RatField.+-comm a<c+b)
   }))
-  | < => <
+  | < x y => x < y
   | <-irreflexive (inP (a,a<y,p)) => <-irreflexive (p a<y)
   | <-transitive (inP (b,b<y,p)) (inP (c,c<z,q)) => inP (c, c<z, \lam {a} a<x => p a<x <∘ q b<y)
-  | <= => <=
+  | <= x y => x <= y
   | <=-refl a<x => a<x
   | <=-transitive p q a<x => q (p a<x)
   | <=-antisymmetric p q => exts \lam a => ext (p,q)
@@ -139,9 +172,9 @@
       => (\peval _ + _) *> exts \lam a => ext (\lam (inP (b,b<x,c,c<y,a<b+c)) => a<b+c <∘ OrderedAddMonoid.<_+ b<x c<y,
                                                \lam a<x+y => inP (x - (x RatField.+ y - a) * ratio 1 3, linarith, y - (x RatField.+ y - a) * ratio 1 3, linarith, linarith))
 
-    \type \infix 4 <= (x y : LowerReal) => ∀ {a : x.L} (y.L a)
+    \type \infix 4 <= (x y : ExtendedLowerReal) => ∀ {a : x.L} (y.L a)
 
-    \type \infix 4 < (x y : LowerReal) => ∃ (b : y.L) (x <= b)
+    \type \infix 4 < (x y : ExtendedLowerReal) => ∃ (b : y.L) (x <= b)
 
     \lemma lower_<_L {a : Rat} {x : LowerReal} : (a : LowerReal) LowerRealAbMonoid.< x <-> x.L a
       => (\lam (inP (b,b<x,p)) => \case L-rounded b<x \with {
@@ -197,3 +230,18 @@
         | inP (q',q'<a,r',r'<b,x<q'+r') => x<q'+r' <∘ RatField.<_+ (p1 q'<a) (p2 r'<b)
       })
   }
+
+\instance ExtendedLowerRealLattice : CompleteLattice ExtendedLowerReal
+  | <= => LowerRealAbMonoid.<=
+  | <=-refl a<x => a<x
+  | <=-transitive p q a<x => q (p a<x)
+  | <=-antisymmetric p q => exts \lam a => ext (p,q)
+  | Join {J : \Set} (f : J -> ExtendedLowerReal) : ExtendedLowerReal \cowith {
+    | L q => ∃ (j : J) ((f j).L q)
+    | L-closed (inP (j,q<fj)) q'<q => inP (j, L-closed q<fj q'<q)
+    | L-rounded (inP (j,q<fj)) => \case L-rounded q<fj \with {
+      | inP (r,r<fj,q<r) => inP (r, inP (j, r<fj), q<r)
+    }
+  }
+  | Join-cond j a<fj => inP (j,a<fj)
+  | Join-univ c (inP (j,a<fj)) => c j a<fj

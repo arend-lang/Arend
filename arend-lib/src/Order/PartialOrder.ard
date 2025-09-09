@@ -19,9 +19,6 @@
   | \infix 4 >= : E -> E -> \Prop
   | >= x y => y <= x
 
-  \lemma =_<= {x y : E} (p : x = y) : x <= y
-    | idp => <=-refl
-
   \protected \func op : Preorder E \cowith
     | <= x y => y <= x
     | <=-refl => <=-refl
@@ -56,10 +53,15 @@
       | in~ x, in~ y => path (~-equiv x y (x<=y, y<=x))
   }
 
-  \func IsMeet (x y m : E) => \Sigma (m <= x) (m <= y) (\Pi (m' : E) -> m' <= x -> m' <= y -> m' <= m)
+  \func Is-meet (x y m : E) => \Sigma (m <= x) (m <= y) (\Pi (m' : E) -> m' <= x -> m' <= y -> m' <= m)
 
   \func IsJoin {J : \Set} (f : J -> E) (a : E) => \Sigma (\Pi (j : J) -> f j <= a) (\Pi {b : E} -> (\Pi (j : J) -> f j <= b) -> a <= b)
+
+  \func IsMeet {J : \Set} (f : J -> E) (a : E) => \Sigma (\Pi (j : J) -> a <= f j) (\Pi {b : E} -> (\Pi (j : J) -> b <= f j) -> b <= a)
 }
+
+\lemma =_<= {P : Preorder} {x y : P} (p : x = y) : x <= y
+  | idp => <=-refl
 
 \class Poset \extends Preorder, Cat (\lp,\lp) {
   | <=-antisymmetric {x y : E} : x <= y -> y <= x -> x = y
@@ -68,9 +70,6 @@
   \protected \func op : Poset \cowith
     | Preorder => Preorder.op
     | <=-antisymmetric p q => <=-antisymmetric q p
-
-  \lemma <=_= {x y : E} (p : x = y) : x <= y
-    | idp => <=-refl
 }
 
 \instance ProductPreorder (P Q : Preorder) : Preorder (\Sigma P Q)

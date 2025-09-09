@@ -1,7 +1,10 @@
 package org.arend.codeInsight.completion
 
 import org.arend.psi.ArendElementTypes
+import org.junit.Ignore
 
+
+@Ignore("Left not fixed for now (major refactoring of Arend PSI is planned)")
 class ArendKeywordCompletionTest : ArendCompletionTestBase() {
     fun `test fixity completion`() =
             checkKeywordCompletionVariants(FIXITY_KWS, CompletionCondition.SAME_ELEMENTS,

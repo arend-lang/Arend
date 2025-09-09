@@ -5,6 +5,7 @@ import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.abs.AbstractReferable;
 import org.arend.term.abs.AbstractReference;
+import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,6 +19,8 @@ public interface ArendServerRequester {
    * @param module    module to be updated.
    */
   default void requestModuleUpdate(@NotNull ArendServer server, @NotNull ModuleLocation module) {}
+
+  default void setupGeneratedModule(@NotNull ModuleLocation module, @NotNull ConcreteGroup group) {}
 
   /**
    * Returns the list of files and directories in the given library and directory.

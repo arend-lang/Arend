@@ -10,6 +10,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import org.arend.ext.module.ModulePath
 import org.arend.library.LibraryDependency
 import org.arend.module.*
+import org.arend.server.ArendServerService
 import org.arend.settings.ArendProjectSettings
 import org.arend.util.*
 import org.arend.yaml.*
@@ -69,7 +70,6 @@ class ArendModuleConfigService(val module: Module) : LibraryConfig(module.projec
             root?.parent?.path?.let { FileUtil.toSystemDependentName(it) }
         }
 
-    /* TODO[server2]
     private fun updateDependencies(newDependencies: List<LibraryDependency>, reload: Boolean, callback: () -> Unit) {
         val oldDependencies = dependencies
         dependencies = ArrayList(newDependencies)
@@ -79,40 +79,20 @@ class ArendModuleConfigService(val module: Module) : LibraryConfig(module.projec
             return
         }
 
+        val server = project.service<ArendServerService>().server
         var reloadLib = false
         for (dependency in oldDependencies) {
-            if (!newDependencies.contains(dependency) && libraryManager.getRegisteredLibrary(dependency.name) != null) {
+            if (!newDependencies.contains(dependency) && server.getLibrary(dependency.name) != null) {
                 reloadLib = true
                 break
             }
         }
 
         if (reloadLib) {
-            refreshLibrariesDirectory(project.service<ArendProjectSettings>().librariesRoot)
-            project.service<TypeCheckingService>().reload(true)
+            project.service<ReloadLibrariesService>().doReload(true)
             callback()
-        } else ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Loading Arend libraries", false) {
-            override fun run(indicator: ProgressIndicator) {
-                refreshLibrariesDirectory(project.service<ArendProjectSettings>().librariesRoot)
-                runReadAction {
-                    val typechecking = ArendTypechecking.create(project)
-                    for (dependency in newDependencies) {
-                        if (!oldDependencies.contains(dependency)) {
-                            var depLibrary = libraryManager.getRegisteredLibrary(dependency.name)
-                            if (depLibrary == null) {
-                                depLibrary = libraryManager.loadDependency(library, dependency.name, typechecking)
-                            }
-                            if (depLibrary != null) {
-                                libraryManager.registerDependency(library, depLibrary)
-                            }
-                        }
-                    }
-                }
-                callback()
-            }
-        })
+        }
     }
-    */
 
     fun synchronizeDependencies(reload: Boolean) {
         synchronized = false
@@ -120,13 +100,12 @@ class ArendModuleConfigService(val module: Module) : LibraryConfig(module.projec
     }
 
     fun copyFromYAML(yaml: YAMLFile, update: Boolean) {
-        /* TODO[server2]
         val newDependencies = yaml.dependencies
         if (dependencies != newDependencies) {
             updateDependencies(newDependencies, update) {
                 ModuleSynchronizer.synchronizeModule(this, false)
             }
-        } */
+        }
 
         modules = yaml.modules
         flaggedBinariesDir = yaml.binariesDir
@@ -185,7 +164,7 @@ class ArendModuleConfigService(val module: Module) : LibraryConfig(module.projec
 
         val newDependencies = config.dependencies
         if (dependencies != newDependencies) {
-            // TODO[server2]: updateDependencies(newDependencies, !reload) {}
+            updateDependencies(newDependencies, !reload) {}
             updateYAML = true
         }
 

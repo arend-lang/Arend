@@ -20,7 +20,7 @@ public class LinearSolverMeta extends BaseAlgebraicMeta {
   @Dependency(name = "fromInt_<=")                    ArendRef fromIntLE;
   @Dependency(name = "fromInt_<")                     ArendRef fromIntL;
   @Dependency(name = "Rat.fromInt")                   ArendRef fromInt;
-  @Dependency(name = "Preorder.=_<=")                 ArendRef eqToLeq;
+  @Dependency(name = "=_<=")                          ArendRef eqToLeq;
   @Dependency(name = "OrderedAAlgebra.coef_<")        ArendRef coefMapL;
   @Dependency(name = "OrderedAAlgebra.coef_<=")       ArendRef coefMapLE;
   @Dependency                                         CoreClassDefinition LinearlyOrderedSemiring;

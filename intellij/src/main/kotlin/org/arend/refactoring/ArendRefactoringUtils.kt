@@ -11,7 +11,6 @@ import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.endOffset
 import com.intellij.psi.util.siblings
-import com.intellij.psi.util.startOffset
 import org.arend.core.definition.Definition
 import org.arend.ext.core.context.CoreBinding
 import org.arend.ext.core.context.CoreParameter
@@ -134,8 +133,14 @@ fun doAddIdToHiding(statCmd: ArendStatCmd, idList: List<String>) : List<ArendRef
 }
 
 fun doRemoveRefFromStatCmd(id: ArendRefIdentifier, deleteEmptyCommands: Boolean = true) {
-    val elementToRemove = id.parent as? ArendNsId ?: id
-    val parent = elementToRemove.parent
+    val (elementToRemove, anchor) = when (val element = id.parent) {
+        is ArendNsId -> Pair(element, element.parent)
+        is ArendScId -> Pair(element, element)
+        else ->
+            return
+    }
+    val statCmd = anchor?.parent as? ArendStatCmd ?:
+      return
 
     val prevSibling = elementToRemove.findPrevSibling()
     val nextSibling = elementToRemove.findNextSibling()
@@ -150,22 +155,16 @@ fun doRemoveRefFromStatCmd(id: ArendRefIdentifier, deleteEmptyCommands: Boolean 
         }
     }
 
-    if (parent is ArendStatCmd && parent.hidings.isEmpty()) { // This means that we are removing something from "hiding" list
-        parent.lparen?.delete()
-        parent.rparen?.delete()
-        parent.hidingKw?.delete()
+    if (elementToRemove is ArendScId && statCmd.hidings.isEmpty()) { // This means that we are removing something from "hiding" list
+        statCmd.lparen?.delete()
+        statCmd.rparen?.delete()
+        statCmd.hidingKw?.delete()
     }
 
-    val statCmd = if (parent is ArendStatCmd) parent else {
-        val grandParent = parent.parent
-        if (grandParent is ArendStatCmd) grandParent else null
-    }
-
-    if (statCmd?.openKw != null && deleteEmptyCommands) { //Remove open command with null effect
+    if (statCmd.openKw != null && deleteEmptyCommands) { //Remove open command with null effect
         val nsUsing = statCmd.nsUsing
         if (nsUsing != null && nsUsing.usingKw == null && nsUsing.nsIdList.isEmpty()) {
-            val statCmdStatement = statCmd.parent
-            statCmdStatement.delete()
+                statCmd.parent.delete() // delete namespace command statement
         }
     }
 }
@@ -183,55 +182,57 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
             doAddIdToOpen(factory, newName, element, target)) singletonList(newName.last()) else newName
         val needsModification = element.longName != id
 
-        when (element) {
-            is ArendIPName -> {
-                if (!needsModification) return
-                val argumentStr = buildString {
-                    if (id.size > 1) {
-                        append(LongName(id.dropLast(1)))
-                        append(".")
-                    }
-                    if (element.fixity == Fixity.INFIX || element.fixity == Fixity.POSTFIX) append("`")
-                    append(id.last())
-                    if (element.fixity == Fixity.INFIX) append("`")
+        if (!needsModification) return
 
+        var atomFieldsAcc : ArendAtomFieldsAcc? = null;
+        var longName: ArendLongName? = null
+        var pattern: ArendPattern? = null
+
+        // Analyze what is being modified
+        if (element is ArendRefIdentifier) {
+            when (parent) {
+                is ArendLiteral -> atomFieldsAcc = parent.parent.parent as ArendAtomFieldsAcc
+                is ArendFieldAcc -> atomFieldsAcc = parent.parent as ArendAtomFieldsAcc
+                is ArendLongName -> {
+                    longName = parent
+                    pattern = longName.parent as? ArendPattern
                 }
-                val parentAtomFieldsAcc = element.ancestor<ArendAtomFieldsAcc>()
-                val replacementLiteral = factory.createExpression(argumentStr).descendantOfType<ArendAtomFieldsAcc>()
-                if (replacementLiteral != null && parentAtomFieldsAcc != null)
-                  parentAtomFieldsAcc.replace(replacementLiteral)
+                else ->
+                    throw UnsupportedOperationException()
             }
-            else -> {
-                val longNameStr = LongName(id).toString()
-                val longNameStartOffset = if (parent is ArendFieldAcc) {
-                  parent.parent.textOffset
-                } else {
-                  parent.textOffset
-                }
-                val relativePosition = max(0, (editor?.caretModel?.offset ?: 0) - longNameStartOffset)
-                val offset = max(0, relativePosition + LongName(id).toString().length - LongName(element.longName).toString().length)
-
-                val longName = factory.createLongName(longNameStr)
-                if (needsModification) {
-                    when (parent) {
-                        is ArendLongName -> {
-                            parent.addRangeAfter(longName.firstChild, longName.lastChild, element)
-                            parent.deleteChildRange(parent.firstChild, element)
-                        }
-                        is ArendPattern -> element.replace(longName)
-                        else -> {
-                          val atomFieldsAcc: ArendAtomFieldsAcc? = element.ancestor<ArendAtomFieldsAcc>()
-                          val postfixFieldsAcc = atomFieldsAcc?.fieldAccList?.filter { it.startOffset > element.endOffset }
-                          val postfix = if (postfixFieldsAcc?.isNotEmpty() == true) "." + atomFieldsAcc.containingFile.text.substring(postfixFieldsAcc.first().startOffset, postfixFieldsAcc.last().endOffset) else ""
-
-                          val newAtomFieldAcc: PsiElement? = factory.createExpression(longNameStr+postfix).descendantOfType<ArendAtomFieldsAcc>()
-                          if (newAtomFieldAcc != null) atomFieldsAcc?.replace(newAtomFieldAcc)
-                        }
-                    }
-                    editor?.caretModel?.moveToOffset(longNameStartOffset + offset)
-                }
+        } else if (element is ArendIPName) {
+            atomFieldsAcc = when (parent) {
+                is ArendLiteral -> parent.parent.parent as ArendAtomFieldsAcc
+                is ArendAtomFieldsAcc -> parent
+                else -> throw UnsupportedOperationException()
             }
+        } else if (element is ArendDefIdentifier && element.parent is ArendPattern)
+            pattern = element.parent as ArendPattern
+          else
+            throw UnsupportedOperationException()
+
+        // Extract suffix from the existing long name (if any)
+        val suffixTR = if (atomFieldsAcc != null)
+            TextRange(element.endOffset, atomFieldsAcc.endOffset)
+         else if (longName != null)
+            TextRange(element.endOffset, longName.endOffset)
+         else null
+
+        val suffix = if (suffixTR != null) element.containingFile.text.substring(suffixTR.startOffset, suffixTR.endOffset) else ""
+        val prefix = id.dropLast(1).joinToString(".").let { if (it.isEmpty()) "" else "$it." }
+        val resultingName = prefix + (if (element is ArendIPName) "`" else "") + id.last() + (if (element is ArendIPName && element.infix != null) "`" else "") + suffix
+
+        val (oldPsi, newPsi) = when {
+            atomFieldsAcc != null ->
+                Pair (atomFieldsAcc, factory.createExpression(resultingName).descendantOfType<ArendAtomFieldsAcc>())
+            pattern != null ->
+                Pair( pattern,factory.createPattern(resultingName))
+            longName != null ->
+                Pair(longName, factory.createLongName(resultingName))
+            else -> throw UnsupportedOperationException()
         }
+
+        oldPsi.replace(newPsi!!)
     }
 }
 
@@ -431,25 +432,6 @@ fun getAllBindings(psi: PsiElement, stopAtWhere: Boolean = true): Set<String> {
     })
     return result
 }
-
-/* TODO[server2]
-fun getClassifyingField(classDef: ArendDefClass): ArendFieldDefIdentifier? {
-    fun doGetClassifyingField(classDef: ArendDefClass, visitedClasses: MutableSet<ArendDefClass>): ArendFieldDefIdentifier? {
-        if (!visitedClasses.add(classDef) || classDef.isRecord) return null
-
-        for (ancestor in classDef.superClassReferences)
-            if (ancestor is ArendDefClass)
-                doGetClassifyingField(ancestor, visitedClasses)?.let { return it }
-
-        classDef.fieldTeleList.firstOrNull { it.isClassifying }?.referableList?.firstOrNull()?.let { return it }
-        classDef.fieldTeleList.firstOrNull { it.isExplicit }?.referableList?.firstOrNull()?.let{ return it }
-
-        return null
-    }
-
-    return doGetClassifyingField(classDef, HashSet())
-}
-*/
 
 fun surroundWithBraces(psiFactory: ArendPsiFactory, defClass: ArendDefClass) {
     val braces = psiFactory.createPairOfBraces()

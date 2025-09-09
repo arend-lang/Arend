@@ -2,6 +2,7 @@
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
+\import Algebra.StrictlyOrdered
 \import Arith.Int
 \import Arith.Nat
 \import Arith.Rat
@@ -31,7 +32,7 @@
 \open NatOrder \hiding (<)
 
 \instance NatMetricSpace : MetricSpace Nat
-  | dist n m => abs (finv (suc n) - finv (suc m))
+  | dist n m => LatticeAbGroup.abs (finv (suc n) - finv (suc m))
   | dist-refl => RatNormed.dist-refl
   | dist-symm => RatNormed.dist-symm
   | dist-triang => RatNormed.dist-triang {_} {_} {finv (suc _)}
@@ -41,10 +42,10 @@
       => ∃ (U : C) (N : Nat) (\Pi {n : Nat} -> N <= n -> U n) (\Pi (j : Fin N) -> Given (V : C) (V j))
 
     \lemma uniform-char {C : Set (Set Nat)} : NatMetricSpace.isUniform C <-> Cover C
-      => (\lam Cu => \case NatMetricSpace.dist-uniform-rat.1 Cu \with {
+      => (\lam Cu => \case NatMetricSpace.dist-uniform.1 Cu \with {
         | inP (eps,eps>0,h) => \case Real.natBounded {finv (eps * ratio 1 2) : Real} \with {
           | inP (N,eps<N) => \case h N, FinSet.finiteAC {N} (\lam j => NatMetricSpace.uniform-cover Cu j) \with {
-            | inP (U,CU,g), inP c => inP (U, CU, N, \lam {n} N<=n => g $ real_<_L.2 $ abs_+ <∘r
+            | inP (U,CU,g), inP c => inP (U, CU, N, \lam {n} N<=n => g $ LatticeAbGroup.abs_+ <∘r
                 (\have lem {m : Nat} (p : finv (eps * ratio 1 2) < m) : finv (suc m) < eps * ratio 1 2
                     => transport (_ <) RatField.finv_finv $ RatField.finv_< (RatField.finv>0 linarith) $ p <∘ fromInt_< (pos<pos id<suc)
                  \in transport (_ <) (linarith : eps * ratio 1 2 + eps * ratio 1 2 = eps) (OrderedAddMonoid.<_+
@@ -65,17 +66,17 @@
                               <_*_positive-left {_} {_} {_} {suc m} m<N+1 zero<suc <∘
                               <_*_positive-right {_} {suc N} {suc m} {N + 2} zero<suc (suc<suc m<N+1)) <∘l
                             <=_+ (linarith (RatField.finv_<= idp $ fromInt_<= $ pos<=pos $ suc_<_<= n<m)) <=-refl) <∘l RatField.abs_-left {finv (suc n)} {finv (suc m)}
-          \in NatMetricSpace.dist-uniform-rat.2 $ inP (finv $ (N + 1) * (N + 2), RatField.finv>0 $ N1N2>0 zero<suc, \lam n => \case LinearOrder.dec<_<= n N \with {
+          \in NatMetricSpace.dist-uniform.2 $ inP (finv $ (N + 1) * (N + 2), RatField.finv>0 $ N1N2>0 zero<suc, \lam n => \case LinearOrder.dec<_<= n N \with {
             | inl n<N => \have s => c (toFin n n<N)
                          \in inP (s.1, s.2, \lam {m} d => \case LinearOrder.trichotomy n m \with {
-                           | less n<m => absurd $ <-irreflexive $ lem2 n<m (lem1 n<m n<N d) <∘ d
+                           | less n<m => absurd $ <-irreflexive $ lem2 n<m (lem1 n<m n<N $ real_<_U.2 d) <∘ real_<_U.2 d
                            | equals n=m => transport s.1 (toFin=id *> n=m) s.3
-                           | greater m<n => absurd $ <-irreflexive $ lem2 m<n (n<N <∘ id<suc) <∘ transport (`< _) NatMetricSpace.dist-symm d
+                           | greater m<n => absurd $ <-irreflexive $ lem2 m<n (n<N <∘ id<suc) <∘ transport (`< _) (ldist-symm {NatMetricSpace}) (real_<_U.2 d)
                          })
             | inr N<=n => inP (U, CU, \lam {m} d => g \case LinearOrder.dec<_<= m N, LinearOrder.dec<_<= m n \with {
               | inr N<=m, _ => N<=m
               | _, inr n<=m => N<=n <=∘ n<=m
-              | inl m<N, inl m<n => \have d' => transport (`< _) NatMetricSpace.dist-symm d
+              | inl m<N, inl m<n => \have d' => transport (`< _) (ldist-symm {NatMetricSpace}) (real_<_U.2 d)
                                     \in absurd $ <-irreflexive $ lem2 m<n (lem1 m<n m<N d') <∘ d'
             })
           }))

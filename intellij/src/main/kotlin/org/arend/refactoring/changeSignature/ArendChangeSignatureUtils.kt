@@ -205,7 +205,7 @@ fun printAppExpr(expr: Concrete.Expression, psiElement: ArendArgumentAppExpr, re
                 false,
                 underlyingReferable as? ReferableBase<*>)
         }
-    } else if (expr is Concrete.LamExpression && expr.data !is ArendLamExpr /* && (expr.data !is ArendArgumentAppExpr || expr.data is ArendLiteral)*/) {
+    } else if (expr is Concrete.LamExpression && expr.data !is ArendLamExpr) {
         val builder = StringBuilder()
         val exprBody = expr.body
         if (exprBody is Concrete.AppExpression) {
@@ -247,6 +247,10 @@ fun printAppExpr(expr: Concrete.Expression, psiElement: ArendArgumentAppExpr, re
             val text = UsageEntry.getContextName(expr.underlyingReferable, psiElement, refactoringContext)
             return IntermediatePrintResult(text, null, true, false, null)
         }
+    } else if (expr is Concrete.ProjExpression) {
+       val printResult = printAppExpr(expr.expression, psiElement, refactoringContext)
+       val text = if (printResult.isAtomic) "${printResult.text}.${expr.field+1}" else "(${printResult.text}).${expr.field+1}"
+       return IntermediatePrintResult(text, null, true, false, null)
     }
 
 
@@ -290,8 +294,7 @@ fun printPattern(pattern: Concrete.Pattern, psiElement: ArendPattern, refactorin
                 }
                 is PsiElement -> builder.append(refactoringContext.textGetter(block))
             }
-            IntermediatePrintResult(strippedText ?: builder.toString().let { if (isAtomic && constructorIsInfix) "($it)" else it}, null, isAtomic, false, constructor as? ReferableBase<*>
-            )
+            IntermediatePrintResult(strippedText ?: builder.toString().let { if (isAtomic && constructorIsInfix) "($it)" else it}, null, isAtomic, false, constructor as? ReferableBase<*>)
         }
     }
 

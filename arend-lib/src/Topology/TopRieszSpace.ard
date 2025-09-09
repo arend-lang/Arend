@@ -1,0 +1,72 @@
+\import Algebra.Group
+\import Algebra.Ordered.RieszSpace
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup.Real
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Product
+\import Topology.TopPoset
+\import Topology.UniformSpace
+\import Topology.UniformSpace.Product
+
+\class TopRieszSpace \extends TopPosetAbGroup, RieszSpace {
+  | solid-neighborhood {U : Set E} : single 0 <=< U -> ∃ (V : IsSolid) (single 0 <=< V) (V ⊆ U)
+
+  \lemma abs-uniform : UniformMap \this \this abs \cowith
+    | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
+      | inP (V,Vo,V0,h) => \case solid-neighborhood (open-char.1 Vo V0) \with {
+        | inP (U,US,U0,U<=V) => neighborhood-uniform.2 $ inP (_, interior, U0, \lam x => \case h (abs x) \with {
+          | inP (W,EW,g) => inP (_, inP $ later (W,EW,idp), \lam Uxy => g (U<=V $ US (<=<_<= Uxy idp) $ abs-univ abs_-left abs_-right))
+        })
+      }
+    }
+
+  \lemma *q-right-uniform {q : Rat} : TopAbGroupMap \this \this (q *q) \cowith
+    | func-+ => toRatModule.*c-ldistr
+    | func-uniform Eu =>
+      \have cu => *i-uniform ∘ *q_<=1-right-uniform (RatField.finv>=0 fromNat_>=0) (RatField.finv_<= idp $ fromInt_<= $ pos<=pos $ suc_<_<= $ nonZero>0 ratDenom/=0)
+      \in uniform-subset (cu.func-uniform Eu) \lam t => TruncP.map t \lam s => $ later (s.1, s.2, s.3 *> ext \lam x => pmap s.1 $ inv *q_*i *> inv *q-assoc *> pmap (`*q x) (inv rat-split))
+    \where {
+      \private \lemma *q_<=1-right-uniform {q : Rat} (q>=0 : RatField.zro RatField.<= q) (q<=1 : q RatField.<= 1) : TopAbGroupMap \this \this (q *q) \cowith
+        | func-+ => toRatModule.*c-ldistr
+        | func-uniform Eu => \case neighborhood-uniform.1 Eu \with {
+          | inP (V,Vo,V0,h) => \case solid-neighborhood (open-char.1 Vo V0) \with {
+            | inP (U,US,U0,U<=V) => neighborhood-uniform.2 $ inP (_, interior, U0, \lam x => \case h (q *q x) \with {
+              | inP (W,EW,g) => inP (_, inP $ later (W,EW,idp), \lam Uxy => g (U<=V $ transport U toRatModule.*c-ldistr_- $ US (<=<_<= Uxy idp) $ =_<= (abs_*q q>=0) <=∘ <=_*q-left q<=1 abs>=0 <=∘ =_<= ide_*q))
+            })
+          }
+        }
+    }
+
+  {- TODO: is this true?
+  \lemma *q-uniform : LocallyUniformMap (ProductTopAbGroup RatNormed \this) \this (\lam s => s.1 *q s.2) \cowith
+    | func-locally-uniform Eu => \case neighborhood-uniform.1 Eu \with {
+      | inP (W,Wo,W0,h) => \case solid-neighborhood (open-char.1 Wo W0) \with {
+        | inP (W',W'S,W'0,W'<=W) => inP (\lam V => ∃ (q : Rat) (y : E) (V = \lam s => \Sigma ((RatNormed.dist q s.1).U 1) (W' (y - s.2))), (ProductTopAbGroup RatNormed \this).neighborhood-uniform.2 $ inP (Set.Prod (OBall 1 RatField.zro) W', {?}, {?}, {?}),
+          \lam {_} (inP (q0,y0,idp)) => (ProductTopAbGroup RatNormed \this).neighborhood-uniform.2 $ inP ({?A}, {?}, {?}, \lam s => \case h (s.1 *q s.2) \with {
+            | inP (U,EU,g) => inP ({?B}, inP $ later (U, EU, {?}), {?})
+          }))
+      }
+    }
+  -}
+
+  \lemma join-uniform : UniformMap (ProductTopAbGroup \this \this) \this (\lam s => s.1 ∨ s.2)
+    => transportInv (UniformMap _ _) (later $ ext \lam s => join_abs) $ *q-right-uniform ∘ +-uniform ∘ tuple +-uniform (abs-uniform ∘ subtract-uniform)
+
+  \lemma meet-uniform : UniformMap (ProductTopAbGroup \this \this) \this (\lam s => s.1 ∧ s.2)
+    => transportInv (UniformMap _ _) (later $ ext \lam s => meet_abs) $ *q-right-uniform ∘ subtract-uniform ∘ tuple +-uniform (abs-uniform ∘ subtract-uniform)
+} \where {
+  \open UniformMap
+  \open ProductUniformSpace
+}

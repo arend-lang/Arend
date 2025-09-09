@@ -1,9 +1,12 @@
 \import Algebra.Group
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
 \import Algebra.Pointed
 \import Arith.Rat
 \import Arith.Real
+\import Arith.Real.InfReal
+\import Arith.Real.UpperReal
 \import Function
 \import Function.Meta
 \import Logic
@@ -12,7 +15,6 @@
 \import Operations
 \import Order.Biordered
 \import Order.Lattice
-\import Order.LinearOrder
 \import Order.PartialOrder
 \import Order.StrictOrder
 \import Paths
@@ -20,63 +22,213 @@
 \import Set.Filter
 \import Set.Subset
 \import Topology.CoverSpace
-\import Topology.MetricSpace.ValuedMetricSpace
+\import Topology.CoverSpace.Complete
 \import Topology.TopSpace
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Complete
 \import Topology.UniformSpace.Product
 \import Topology.UniformSpace.StronglyComplete (StronglyCompleteUniformSpace)
-\open RealAbGroup \hiding (+, join, meet, negative, zro<ide)
-\open ValuedPseudoMetricSpace (metricUniform)
-\open PseudoMetricSpace (halving)
+\open ExPseudoMetricSpace (metricUniform)
+\open RatField(half,half>0)
 
-\class PseudoMetricSpace \extends LinearlyValuedPseudoMetricSpace {
-  | V => RealMetricValueLinearOrder
+\class ExPseudoMetricSpace \extends UniformSpace {
+  | dist : E -> E -> ExUpperReal
+  | dist-refl {x : E} : dist x x = 0
+  | dist-symm {x y : E} : dist x y = dist y x
+  | dist-triang {x y z : E} : dist x z <= dist x y + dist y z
+  | dist-uniform {C : Set (Set E)} : isUniform C <-> ∃ (eps : Rat) (0 < eps) ∀ x ∃ (U : C) ∀ {y} ((dist x y).U eps -> U y)
 
-  \lemma halving {z x y : E} {eps : Real} (d1 : dist z x < half eps) (d2 : dist z y < half eps) : dist x y < eps
-    => dist-triang <∘r OrderedAddMonoid.<_+ (rewrite dist-symm in d1) d2 <∘l Preorder.=_<= half+half
-
-  \lemma dist-uniform-rat {C : Set (Set E)} : PreuniformSpace.isUniform C <-> ∃ (eps : Rat) (0 < eps) ∀ x ∃ (U : C) ∀ {y} (dist x y < eps -> U y)
-    => (\lam Cu => \case dist-uniform.1 Cu \with {
-          | inP (eps,eps>0,h) => \case real_<-rat-char.1 eps>0 \with {
-            | inP (eps',eps'>0,eps'<eps) => inP (eps', eps'>0, \lam x => \case h x \with {
-              | inP (U,CU,g) => inP (U, CU, \lam d => g $ d <∘ real_<_L.2 eps'<eps)
-            })
-          }
-    }, \lam (inP (eps,eps>0,h)) => dist-uniform.2 $ inP (eps, real_<_L.2 eps>0, h))
-} \where {
-  \instance RealMetricValueLinearOrder : MetricValueLinearOrder Real
-    | LinearlyBiorderedAbMonoid => RealAbGroup
-    | hasPositive => inP (1, RealAbGroup.zro<ide)
-    | +_<-dense {a} {b} a<b => \case isDense a<b \with {
-      | inP (c,a<c,c<b) => inP (c - a, transport (`< _) negative-right $ <_+-left _ a<c, transportInv (`< _) (+-comm *> +-assoc *> pmap (c +) negative-left *> zro-right) c<b)
+  | uniform-cover Cu x => \case dist-uniform.1 Cu \with {
+    | inP (eps,eps>0,h) => \case h x \with {
+      | inP (U,CU,g) => inP (U, CU, g $ rewrite dist-refl eps>0)
     }
+  }
+  | uniform-top => dist-uniform.2 $ inP (1, RatField.zro<ide, \lam x => inP (Bounded.top, idp, \lam _ => ()))
+  | uniform-refine Cu e => \case dist-uniform.1 Cu \with {
+    | inP (eps,eps>0,h) => dist-uniform.2 $ inP (eps, eps>0, \lam x => \case h x \with {
+      | inP (U,CU,g) => \case e CU \with {
+        | inP (V,DV,U<=V) => inP (V, DV, \lam d => U<=V $ g d)
+      }
+    })
+  }
+  | uniform-inter Cu C'u => \case dist-uniform.1 Cu, dist-uniform.1 C'u \with {
+    | inP (eps,eps>0,h), inP (eps',eps'>0,h') => dist-uniform.2 $ inP (eps ∧ eps', <_meet-univ eps>0 eps'>0, \lam x => \case h x, h' x \with {
+      | inP (U,CU,g), inP (U',DU',g') => inP (U ∧ U', inP $ later (U, CU, U', DU', idp), \lam d => (g $ ExUpperReal.U_<= d meet-left, g' $ ExUpperReal.U_<= d meet-right))
+    })
+  }
+  | uniform-star Cu => \case dist-uniform.1 Cu \with {
+    | inP (eps,eps>0,h) => inP (\lam U => ∃ (x : E) (U = \lam y => (dist x y).U (eps * ratio 1 4)), dist-uniform.2 $ inP (eps * ratio 1 4, linarith, \lam x => inP $ later (_, inP (x, idp), \lam d => d)), \lam {_} (inP (x,idp)) => \case h x \with {
+      | inP (U,CU,g) => inP (U, CU, \lam {_} (inP (y,idp)) (w,(s1,s2)) {z} d => g $ ExUpperReal.U_<= (ExUpperReal.<=_+-char dist-triang s1 $ ExUpperReal.<=_+-char dist-triang (rewrite dist-symm in s2) d) linarith)
+    })
+  }
+
+  \default isUniform C : \Prop => ∃ (eps : Rat) (0 < eps) ∀ x ∃ (U : C) ∀ {y} ((dist x y).U eps -> U y)
+  \default dist-uniform \as dist-uniform-impl {C} : isUniform C <-> _ => <->refl
+
+  \lemma metricProperUniform : IsProperUniform
+    => \lam Cu => \case dist-uniform.1 Cu \with {
+      | inP (eps,eps>0,h) => dist-uniform.2 $ inP (eps, eps>0, \lam x => \case h x \with {
+        | inP (U,CU,g) => inP (U, later (CU, inP (x, g $ rewrite dist-refl eps>0)), g)
+      })
+    }
+
+  \lemma metricUniform {eps : Rat} (eps>0 : 0 < eps) : PreuniformSpace.isUniform \lam U => ∃ (x : E) (U = \lam y => (dist x y).U eps)
+    => dist-uniform.2 $ inP $ later (eps, eps>0, \lam x => inP (_, inP (x, idp), \lam r => r))
+
+  \func NFilter (x : E) : SetFilter E \cowith
+    | F U => ∃ (eps : Rat) (0 < eps) (OBall eps x ⊆ U)
+    | filter-mono (inP (eps,eps>0,q)) p => inP (eps, eps>0, q <=∘ p)
+    | filter-top => inP (1, RatField.zro<ide, \lam _ => ())
+    | filter-meet (inP (eps,eps>0,p)) (inP (eps',eps'>0,p')) => inP (eps ∧ eps', <_meet-univ eps>0 eps'>0, \lam d => (p $ ExUpperReal.U_<= d meet-left, p' $ ExUpperReal.U_<= d meet-right))
+
+ \lemma halving {x y z : E} {a b c : Rat} (d1 : (dist x y).U a) (d2 : (dist y z).U b) (p : a + b <= c) : (dist x z).U c
+    => ExUpperReal.U_<= (ExUpperReal.<=_+-char dist-triang d1 d2) p
+
+  \lemma halving-left {x y z : E} {a b c : Rat} (d1 : (dist y x).U a) (d2 : (dist y z).U b) (p : a + b <= c) : (dist x z).U c
+    => halving (rewrite dist-symm d1) d2 p
+
+  \lemma halving-right {x y z : E} {a b c : Rat} (d1 : (dist x y).U a) (d2 : (dist z y).U b) (p : a + b <= c) : (dist x z).U c
+    => halving d1 (rewrite dist-symm d2) p
+
+  \lemma halving1/2 {x y z : E} {c : Rat} (d1 : (dist y x).U (c * ratio 1 2)) (d2 : (dist y z).U (c * ratio 1 2)) : (dist x z).U c
+    => halving-left d1 d2 linarith
 }
 
-\func OBall {X : PseudoMetricSpace} (eps : Real) (x : X) : Set X
-  => \lam y => dist x y < eps
+\lemma dist>=0 {X : ExPseudoMetricSpace} {x y : X} : 0 <= dist x y
+  => \have d+d>=0 => transport2 (__ <= _ + __) dist-refl dist-symm dist-triang
+     \in \lam {a} d<a => linarith (d+d>=0 $ ExUpperReal.+_U_<=.2 $ inP (a,d<a,a,d<a,<=-refl))
 
-\lemma OBall_s<=* {X : PseudoMetricSpace} {x : X} {eps delta : Real} (delta<eps : delta < eps) : OBall delta x s<=* OBall eps x
-  => \let | d => eps - delta
-          | d>0 : 0 < d => transport (`< _) negative-right $ <_+-left (negative delta) delta<eps
-     \in unfolds $ uniform-refine (metricUniform $ half>0 $ half>0 d>0) $ later
-          \lam {_} (inP (y,idp)) => \case real-located $ <_+-cancel-right (half (half d)) $ transport2 (<) (inv $ +-assoc *> pmap (_ +) half+half) (inv $ +-assoc *> pmap (_ +) negative-left *> zro-right) $ <_+-cancel-left (negative delta) $ transport2 (<) (inv (pmap (`+ _) negative-left *> zro-left) *> +-assoc) +-comm (half<id d>0) \with {
-            | byLeft e => inP (_, byLeft idp, \lam {z} yz<d/4 xz<delta => <-irreflexive $ e <∘ dist-triang <∘r RealAbGroup.<_+ xz<delta (transport (`< _) dist-symm yz<d/4))
-            | byRight e => inP (_, byRight idp, \lam {z} yz<d/4 => transport (_ <) (+-assoc *> pmap (_ +) negative-left *> zro-right) $ dist-triang <∘r RealAbGroup.<_+ e yz<d/4)
+\func OBall {X : ExPseudoMetricSpace} (eps : Rat) (x : X) : Set X
+  => \lam y => (dist x y).U eps
+
+\lemma OBall-center {X : ExPseudoMetricSpace} {eps : Rat} (eps>0 : 0 < eps) {x : X} : OBall eps x x
+  => unfold OBall (rewrite dist-refl eps>0)
+
+\lemma OBall-open {X : ExPseudoMetricSpace} {eps : Rat} {x : X} : isOpen (OBall eps x)
+  => cauchy-open.2 \lam {y} xy<eps => \case U-rounded xy<eps \with {
+    | inP (eps',xy<eps',eps'<eps) => X.makeCauchy $ uniform-subset (metricUniform {_} {(eps - eps') * ratio 1 2} linarith) $ later
+      \lam {_} (inP (z,idp)) zy<eps/4 {w} zw<eps/4 => X.halving xy<eps' (X.halving1/2 zy<eps/4 zw<eps/4) linarith
+  }
+
+\lemma OBall-center_<=< {X : ExPseudoMetricSpace} {eps : Rat} (eps>0 : 0 < eps) {x : X} : single x <=< OBall eps x
+  => X.open-char.1 OBall-open (OBall-center eps>0)
+
+\lemma cauchy-ball {X : ExPseudoMetricSpace} {C : Set (Set X)} (Cc : isCauchy C) (x : X) : ∃ (eps : Rat) (0 < eps) (U : C) (OBall eps x ⊆ U)
+  => \case ClosurePrecoverSpace.closure-filter (X.NFilter x) (\lam {D} Du => \case dist-uniform.1 Du \with {
+    | inP (eps,eps>0,h) => \case h x \with {
+      | inP (U,DU,p) => inP (U, DU, inP (eps, eps>0, p __))
+    }
+  }) (uniform-cauchy.1 Cc) \with {
+    | inP (U, CU, inP (eps,eps>0,p)) => inP (eps, eps>0, U, CU, p)
+  }
+
+\lemma dist_open {X : ExPseudoMetricSpace} {U : Set X} : isOpen U <-> ∀ {x : U} ∃ (eps : Rat) (0 < eps) (OBall eps x ⊆ U)
+  => (\lam Uo {x} Ux => \case cauchy-ball (cauchy-open.1 Uo Ux) x \with {
+    | inP (eps,eps>0,V,h,p) => inP (eps, eps>0, p <=∘ h (p $ OBall-center eps>0))
+  }, \lam f => X.cover-open \lam Ux => \case f Ux \with {
+    | inP (eps,eps>0,h) => inP (_, OBall-open, OBall-center eps>0, h)
+  })
+
+\lemma <=<-ball {X : ExPseudoMetricSpace} {x : X} {U : Set X} (x<=<U : single x <=< U) : ∃ (eps : Rat) (0 < eps) (OBall eps x ⊆ U)
+  => \case cauchy-ball (unfolds in x<=<U) x \with {
+    | inP (eps,eps>0,V,h,p) => inP (eps, eps>0, p <=∘ h (x, (idp, p $ OBall-center eps>0)))
+  }
+
+\lemma OBall_<=* {X : ExPseudoMetricSpace} {x : X} {eps delta : Rat} (delta<eps : delta < eps) : OBall delta x <=* OBall eps x
+  => inP (_, metricUniform {_} {(eps - delta) * ratio 1 2} linarith, \lam {w} (inP (_, (inP (y,idp), (z,(xz<delta,yz<e))), yw<e)) => X.halving xz<delta (X.halving1/2 yz<e yw<e) linarith)
+
+\func IsBoundedSet {X : ExPseudoMetricSpace} (S : Set X) : \Prop
+  => ∃ (B : Rat) (0 < B) (x : S) ∀ {y : S} ((dist x y).U B)
+
+\lemma metric-contAt-char {X Y : ExPseudoMetricSpace} {f : X -> Y} {x : X}
+  : IsContAt f x <-> ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x'} ((dist x x').U delta -> (dist (f x) (f x')).U eps)
+  => (\lam fc {eps} eps>0 => \case fc {OBall eps (f x)} OBall-open (OBall-center eps>0) \with {
+    | inP (U,Uo,Ux,p) => \case dist_open.1 Uo Ux \with {
+      | inP (delta,delta>0,q) => inP (delta, delta>0, \lam xx'<delta => p $ q xx'<delta)
+    }
+  }, \lam fc Vo Vfx => \case dist_open.1 Vo Vfx \with {
+    | inP (eps,eps>0,p) => \case fc eps>0 \with {
+      | inP (delta,delta>0,q) => inP (OBall delta x, OBall-open, OBall-center delta>0, \lam d => p $ q d)
+    }
+  })
+
+\class ExMetricSpace \extends ExPseudoMetricSpace, SeparatedCoverSpace {
+  | dist-ext {x y : E} : dist x y = 0 -> x = y
+
+  \default isSeparatedCoverSpace f => dist-ext $ <=-antisymmetric (\lam b>0 => \case f $ makeCauchy $ metricUniform (half>0 b>0) \with {
+    | inP (_, inP (z,idp), (zx<b/2,zy<b/2)) => halving1/2 zx<b/2 zy<b/2
+  }) dist>=0
+  \default dist-ext p => isSeparatedCoverSpace $ SeparatedCoverSpace.separated-char 4 7 \lam x<=<U => \case <=<-ball x<=<U \with {
+    | inP (eps,eps>0,q) => q $ transportInv (ExUpperReal.U {__} eps) p eps>0
+  }
+}
+
+\lemma metric-ext {X : ExMetricSpace} {x y : X} (p : \Pi {eps : Rat} -> 0 < eps -> (dist x y).U eps) : x = y
+  => dist-ext $ <=-antisymmetric (p __) dist>=0
+
+\class PseudoMetricSpace \extends ExPseudoMetricSpace, StronglyRegularUniformSpace {
+  \override dist : E -> E -> Real
+  | uniform-strongly-star Cu => \case dist-uniform.1 Cu \with {
+    | (inP (eps,eps>0,h)) => inP (\lam U => ∃ (x : E) (U = \lam y => (dist x y).U (eps * ratio 1 8)), dist-uniform.2 $ inP (eps * ratio 1 8, linarith, \lam x => inP $ later (_, inP (x,idp), \lam d => d)), \lam {_} (inP (x,idp)) => \case h x \with {
+      | inP (U,CU,g) => inP (U, CU, \lam {_} (inP (y,idp)) => \case RealAbGroup.<-comparison (dist x y) {eps * ratio 1 4} {eps * ratio 1 2} (rat_real_<.1 linarith) \with {
+        | byLeft xy>eps/4 => byLeft \lam (z,(xz<eps/8,yz<eps/8)) => <-irreflexive $ xy>eps/4 <∘ real_<_U.2 (halving-right xz<eps/8 yz<eps/8 linarith)
+        | byRight xy<eps/2 => byRight \lam {z} yz<eps/8 => g $ halving (real_<_U.1 xy<eps/2) yz<eps/8 linarith
+      })
+    })
+  }
+} \where {
+  \meta from-ldist-triang p => transport (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper (Real.<=-upper.1 p)
+}
+
+\func ldist {X : PseudoMetricSpace} (x y : X) : Real
+  => X.dist x y
+
+\lemma ldist>=0 {X : PseudoMetricSpace} {x y : X} : 0 <= X.dist x y
+  => Real.<=-upper.2 (later dist>=0)
+
+\lemma ldist-refl {X : PseudoMetricSpace} {x : X} : ldist x x = 0
+  => (Real.=-upper {_} {0}).2 X.dist-refl
+
+\lemma ldist-symm {X : PseudoMetricSpace} {x y : X} : ldist x y = ldist y x
+  => Real.=-upper.2 X.dist-symm
+
+\lemma ldist-triang {X : PseudoMetricSpace} {x y z : X} : ldist x z <= ldist x y + ldist y z
+  => Real.<=-upper.2 $ transportInv (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper X.dist-triang
+
+\lemma metric-contAt-real {X Y : PseudoMetricSpace} {f : X -> Y} {x : X}
+  : IsContAt f x <-> ∀ {eps : Real} (0 < eps) ∃ (delta : Real) (0 < delta) ∀ {x'} (X.dist x x' < delta -> Y.dist (f x) (f x') < eps)
+  => <->trans metric-contAt-char $ later (\lam c eps>0 => \case real_<-rat-char.1 eps>0 \with {
+    | inP (eps',eps'>0,eps'<esp) => \case c eps'>0 \with {
+      | inP (delta,delta>0,h) => inP (delta, rat_real_<.1 delta>0, \lam xx'<delta => real_<_U.2 (h $ real_<_U.1 xx'<delta) <∘ real_<_L.2 eps'<esp)
+    }
+  }, \lam c eps>0 => \case c $ rat_real_<.1 eps>0 \with {
+    | inP (delta,delta>0,h) => \case real_<-rat-char.1 delta>0 \with {
+      | inP (delta',delta'>0,delta'<delta) => inP (delta', delta'>0, \lam xx'<delta => real_<_U.1 $ h $ real_<_U.2 xx'<delta <∘ real_<_L.2 delta'<delta)
+    }
+  })
+
+\lemma OBall_s<=* {X : PseudoMetricSpace} {x : X} {eps delta : Rat} (delta<eps : delta < eps) : OBall delta x s<=* OBall eps x
+  => \let d => eps - delta
+     \in unfolds $ uniform-refine (metricUniform {_} {d * ratio 1 4} linarith)
+          \lam {_} (inP (y,idp)) => \case LU-located {X.dist x y} {delta + d * ratio 1 4} {delta + d * ratio 1 2} linarith \with {
+            | byLeft p => inP (_, byLeft idp, \lam {z} yz<d/4 xz<delta => LU-disjoint p $ X.halving-right xz<delta yz<d/4 <=-refl)
+            | byRight p => inP (_, byRight idp, \lam {z} yz<d/4 => X.halving p yz<d/4 linarith)
           }
 
-\class MetricSpace \extends PseudoMetricSpace, LinearlyValuedMetricSpace
+\class MetricSpace \extends PseudoMetricSpace, ExMetricSpace
+
+\class CompleteMetricSpace \extends MetricSpace, StronglyCompleteUniformSpace
 
 \record LocallyUniformMetricMap \extends LocallyUniformMap {
-  \override Dom : PseudoMetricSpace
-  \override Cod : PseudoMetricSpace
+  \override Dom : ExPseudoMetricSpace
+  \override Cod : ExPseudoMetricSpace
 
-  | func-dist-locally-uniform : ∀ {eps : Real} (0 < eps) ∃ (delta : Real) (0 < delta) ∀ (x0 : Dom) ∃ (gamma : Real) (0 < gamma) ∀ {x x' : Dom} (dist x0 x < delta -> dist x x' < gamma -> dist (func x) (func x') < eps)
+  | func-dist-locally-uniform : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ (x0 : Dom) ∃ (gamma : Rat) (0 < gamma) ∀ {x x' : Dom} ((dist x0 x).U delta -> (dist x x').U gamma -> (dist (func x) (func x')).U eps)
   | func-locally-uniform Eu => \case dist-uniform.1 Eu \with {
     | inP (eps,eps>0,h) => \case func-dist-locally-uniform eps>0 \with {
       | inP (delta,delta>0,g) => inP (_, metricUniform delta>0, \lam (inP (x0,p)) => \case g x0 \with {
         | inP (gamma,gamma>0,g') => dist-uniform.2 $ inP (gamma, gamma>0, \lam x => \case h (func x) \with {
-          | inP (W,EW,e) => inP (\lam x' => dist x x' < gamma, inP $ later (W, EW, \lam {x'} c =>
+          | inP (W,EW,e) => inP (\lam x' => (dist x x').U gamma, inP $ later (W, EW, \lam {x'} c =>
               e $ rewrite (dist-symm {Cod}) $ g' (rewrite p in c.1) $ rewrite (dist-symm {Dom}) c.2
           ), \lam d => d)
         })
@@ -84,26 +236,25 @@
     }
   }
 } \where {
-  \lemma fromLocallyUniformMap {X Y : PseudoMetricSpace} (f : LocallyUniformMap X Y) : LocallyUniformMetricMap X Y f \cowith
-    | func-dist-locally-uniform eps>0 => \case f.func-locally-uniform (metricUniform $ half>0 eps>0) \with {
-      | inP (C,Cu,h) => \case dist-uniform.1 Cu \with {
-        | inP (delta,delta>0,g) => inP (half delta, half>0 delta>0, \lam x0 => \case g x0 \with {
-          | inP (U,CU,e) => \case dist-uniform.1 (h CU) \with {
-            | inP (gamma,gamma>0,g') => inP (gamma ∧ half delta, <_meet-univ gamma>0 (half>0 delta>0), \lam {x} {x'} d1 d2 => \case g' x \with {
-              | inP (V, inP (W, inP (y, q), p), r) => rewrite q at p $ halving (p (e $ d1 <∘ half<id delta>0, r $ rewrite X.dist-refl gamma>0)) (p (e $ halving (rewrite X.dist-symm in d1) $ d2 <∘l meet-right, r $ d2 <∘l meet-left))
-            })
-          }
-        })
-      }
-    }
+  \lemma fromLocallyUniformMap {X Y : ExPseudoMetricSpace} (f : LocallyUniformMap X Y) : LocallyUniformMetricMap X Y f \cowith
+    | func-dist-locally-uniform eps>0 =>
+      \have | (inP (C,Cu,h)) => f.func-locally-uniform (metricUniform $ half>0 eps>0)
+            | (inP (delta,delta>0,g)) => dist-uniform.1 Cu
+      \in inP (half delta, half>0 delta>0, \lam x0 => \case g x0 \with {
+        | inP (U,CU,e) => \case dist-uniform.1 (h CU) \with {
+          | inP (gamma,gamma>0,g') => inP (gamma ∧ half delta, <_meet-univ gamma>0 $ half>0 delta>0, \lam {x} {x'} d1 d2 => \case g' x \with {
+            | inP (V, inP (_, inP (y, idp), p), r) => Y.halving1/2 (p (e $ U-closed d1 linarith, r $ rewrite dist-refl gamma>0)) (p (e $ X.halving d1 d2 $ linarith $ meet-right {_} {gamma} {delta * ratio 1 2}, r $ ExUpperReal.U_<= d2 meet-left))
+          })
+        }
+      })
 
-  \lemma makeLocallyUniformMap2 {X Y Z : PseudoMetricSpace} (f : X -> Y -> Z) (fc : ∀ {eps : Real} (0 < eps) ∃ (delta : Real) (0 < delta) ∀ x0 y0 ∃ (gamma : Real) (0 < gamma) ∀ {x x'} {y y'} (dist x0 x < delta -> dist y0 y < delta -> dist x x' < gamma -> dist y y' < gamma -> dist (f x y) (f x' y') < eps))
+  \lemma makeLocallyUniformMap2 {X Y Z : ExPseudoMetricSpace} (f : X -> Y -> Z) (fc : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ x0 y0 ∃ (gamma : Rat) (0 < gamma) ∀ {x x'} {y y'} ((dist x0 x).U delta -> (dist y0 y).U delta -> (dist x x').U gamma -> (dist y y').U gamma -> (dist (f x y) (f x' y')).U eps))
     : LocallyUniformMap (X ⨯ Y) Z (\lam s => f s.1 s.2) \cowith
     | func-locally-uniform Eu => \case dist-uniform.1 Eu \with {
       | inP (eps,eps>0,h) => \case fc eps>0 \with {
         | inP (delta,delta>0,g) => inP (_, ProductUniformSpace.prodCover (metricUniform delta>0) (metricUniform delta>0), \lam {_} (inP (_, inP (x0,idp), _, inP (y0,idp), idp)) => \case g x0 y0 \with {
           | inP (gamma,gamma>0,g') => inP (_, metricUniform gamma>0, _, metricUniform gamma>0, \lam {_} (inP (_, inP (x,idp), _, inP (y,idp), idp)) => \case h (f x y) \with {
-            | inP (W,EW,e) => inP (\lam s => \Sigma (dist x s.1 < gamma) (dist y s.2 < gamma), inP (W, EW, \lam {s} (c,d) => e $ rewrite Z.dist-symm $ g' c.1 c.2 (rewrite X.dist-symm d.1) (rewrite Y.dist-symm d.2)), \lam d => d)
+            | inP (W,EW,e) => inP (\lam s => \Sigma ((dist x s.1).U gamma) ((dist y s.2).U gamma), inP (W, EW, \lam {s} (c,d) => e $ rewrite Z.dist-symm $ g' c.1 c.2 (rewrite X.dist-symm d.1) (rewrite Y.dist-symm d.2)), \lam d => d)
           })
         })
       }
@@ -111,10 +262,10 @@
 }
 
 \record UniformMetricMap \extends LocallyUniformMetricMap, UniformMap {
-  \override Dom : PseudoMetricSpace
-  \override Cod : PseudoMetricSpace
+  \override Dom : ExPseudoMetricSpace
+  \override Cod : ExPseudoMetricSpace
 
-  | func-dist-uniform : ∀ {eps : Real} (0 < eps) ∃ (delta : Real) (0 < delta) ∀ {x x' : Dom} (dist x x' < delta -> dist (func x) (func x') < eps)
+  | func-dist-uniform : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x x' : Dom} ((dist x x').U delta -> (dist (func x) (func x')).U eps)
   | func-dist-locally-uniform eps>0 => \case func-dist-uniform eps>0 \with {
     | inP (delta,delta>0,h) => inP (delta, delta>0, \lam x0 => inP (delta, delta>0, \lam _ => h))
   }
@@ -126,37 +277,58 @@
     }
   }
 } \where {
-  \lemma fromUniformMap {X Y : PseudoMetricSpace} (f : UniformMap X Y) : UniformMetricMap X Y f \cowith
+  \lemma fromUniformMap {X Y : ExPseudoMetricSpace} (f : UniformMap X Y) : UniformMetricMap X Y f \cowith
     | func-dist-uniform eps>0 => \case dist-uniform.1 $ f.func-uniform (metricUniform $ half>0 eps>0) \with {
       | inP (delta,delta>0,h) => inP (delta, delta>0, \lam {x} d => \case h x \with {
-        | inP (U, inP (V, inP (y, q), p), g) => rewrite (p,q) at g $ halving (g $ rewrite X.dist-refl delta>0) (g d)
+        | inP (_, inP (_, inP (y, idp), idp), g) => Y.halving1/2 (g $ rewrite dist-refl delta>0) (g d)
       })
     }
 }
 
 \record MetricMap \extends UniformMetricMap
   | func-dist {x y : Dom} : dist (func x) (func y) <= dist x y
-  | func-dist-uniform {eps} eps>0 => inP (eps, eps>0, \lam d => func-dist <∘r d)
+  | func-dist-uniform {eps} eps>0 => inP (eps, eps>0, func-dist __)
   | func-cont {U} => defaultImpl PrecoverMap func-cont {_} {U}
+
+\lemma func-ldist {X Y : PseudoMetricSpace} {f : MetricMap X Y} {x x' : X} : Y.dist (f x) (f x') <= X.dist x x'
+  => Real.<=-upper.2 f.func-dist
 
 \record IsometricMap \extends MetricMap {
   | func-isometry {x y : Dom} : dist (func x) (func y) = dist x y
-  | func-dist => Preorder.=_<= func-isometry
+  | func-dist => =_<= func-isometry
 
   \lemma dense->uniformEmbedding (d : IsDense) : UniformMap.IsDenseUniformEmbedding
     => (d, \lam Cu => \case dist-uniform.1 Cu \with {
-      | inP (eps,eps>0,h) => dist-uniform.2 $ inP (half eps, half>0 eps>0, \lam y => \case d {y} OBall-open (OBall-center (half>0 eps>0)) \with {
+      | inP (eps,eps>0,h) => dist-uniform.2 $ inP (half eps, half>0 eps>0, \lam y => \case d {y} OBall-open $ OBall-center (half>0 eps>0) \with {
         | inP (_, inP (x,idp), yfx<eps/2) => \case h x \with {
-          | inP (U,CU,g) => inP (OBall (half eps) y, inP $ later (U, CU, \lam {x'} yfx'<eps/2 => g $ rewrite func-isometry in halving yfx<eps/2 yfx'<eps/2), \lam d => d)
+          | inP (U,CU,g) => inP (OBall (half eps) y, inP $ later (U, CU, \lam {x'} yfx'<eps/2 => g $ rewriteI func-isometry $ ExPseudoMetricSpace.halving1/2 yfx<eps/2 yfx'<eps/2), \lam d => d)
         }
       })
     })
 }
 
-\class CompleteMetricSpace \extends MetricSpace, StronglyCompleteUniformSpace
+\lemma func-lisometry {X Y : PseudoMetricSpace} {f : IsometricMap X Y} {x x' : X} : Y.dist (f x) (f x') = X.dist x x'
+  => Real.=-upper.2 f.func-isometry
 
-\lemma cauchyFilter-metric-char {X : PseudoMetricSpace} {F : SetFilter X} : ∀ {C : isCauchy} ∃ (U : C) (F U) <->
-  (\Pi {eps : Real} -> 0 < eps -> ∃ (x : X) (F (OBall eps x)))
+\class CompleteExMetricSpace \extends ExMetricSpace, CompleteUniformSpace {
+  | isCompleteMetric (F : ProperFilter E) : ∀ {eps} (0 < eps) ∃ (x : E) (F (OBall eps x)) -> ∃ (x : E) ∀ {eps} (0 < eps) (F (OBall eps x))
+
+  \default isComplete F => \case isCompleteMetric F (cauchyFilter-metric-char.1 F.isCauchyFilter) \with {
+    | inP (x,h) => inP (x, \lam {U} x<=<U => \case <=<-ball x<=<U \with {
+      | inP (eps,eps>0,Up) => filter-mono (h eps>0) Up
+    })
+  }
+  \default isCompleteMetric F Fc =>
+    \have F' => \new CauchyFilter \this {
+      | ProperFilter => F
+      | isCauchyFilter => cauchyFilter-metric-char.2 Fc
+    }
+    \in \case isComplete (regCF F') \with {
+      | inP (x,xF) => inP (x, \lam eps>0 => regCF_<= {_} {F'} $ xF $ OBall-center_<=< eps>0)
+    }
+}
+
+\lemma cauchyFilter-metric-char {X : ExPseudoMetricSpace} {F : SetFilter X} : IsCauchyFilter F <-> ∀ {eps} (0 < eps) ∃ (x : X) (F (OBall eps x))
   => <->trans cauchyFilter-uniform-char $ later (\lam f eps>0 => \case f $ metricUniform eps>0 \with {
     | inP (_, inP (x, idp), FB) => inP (x, FB)
   }, \lam f Cu => \case dist-uniform.1 Cu \with {
@@ -167,27 +339,27 @@
     }
   })
 
-\func PseudoMetricTransfer {X : \Set} {Y : PseudoMetricSpace} (f : X -> Y) : PseudoMetricSpace X \cowith
+\func ExPseudoMetricTransfer {X : \Set} {Y : ExPseudoMetricSpace} (f : X -> Y) : ExPseudoMetricSpace X \cowith
   | TopSpace => TopTransfer f
   | dist x x' => dist (f x) (f x')
   | dist-refl => dist-refl
   | dist-symm => dist-symm
   | dist-triang => dist-triang
   | cauchy-open {S} => later (\lam (inP (V,Vo,p)) Sx => ClosurePrecoverSpace.closure \case dist_open.1 Vo (rewrite p in Sx) \with {
-    | inP (eps,eps>0,q) => inP (half eps, half>0 eps>0, \lam x' => inP (\lam x'' => dist (f x') (f x'') < half eps, \lam d1 {x''} d2 => rewrite p $ q $ halving d1 d2, \lam e => e))
-  }, \lam c => inP (Set.Union \lam V' => \Sigma (isOpen V') (f ^-1 V' ⊆ S), open-Union __.1, <=-antisymmetric (later \lam {x} Sx => \case ClosurePrecoverSpace.closure-filter (MetricSpace.NFilter {PseudoMetricTransfer' f} x) (\lam (inP (eps,eps>0,h)) => \case h x \with {
+    | inP (eps,eps>0,q) => inP (half eps, half>0 eps>0, \lam x' => inP (_, \lam d1 {x''} d2 => rewrite p $ q (Y.halving1/2 d1 d2), \lam e => e))
+  }, \lam c => inP (Set.Union \lam V' => \Sigma (isOpen V') (f ^-1 V' ⊆ S), open-Union __.1, <=-antisymmetric (later \lam {x} Sx => \case ClosurePrecoverSpace.closure-filter (ExMetricSpace.NFilter {\new ExPseudoMetricSpace X { | dist x y => dist (f x) (f y) | dist-refl => dist-refl | dist-symm => dist-symm | dist-triang => dist-triang }} x) (\lam (inP (eps,eps>0,h)) => \case h x \with {
     | inP (U,CU,g) => inP (U, CU, inP (eps, eps>0, g __))
   }) (c Sx) \with {
-    | inP (U, q, inP (eps,eps>0,p)) => inP (OBall eps (f x), (OBall-open, \lam {x'} d => q (p $ OBall-center eps>0) (p d)), OBall-center eps>0)
+    | inP (U, q, inP (eps,eps>0,p)) => inP (OBall eps (f x), (OBall-open, \lam {x'} d => q (p $ OBall-center eps>0 {f x}) (p d)), OBall-center eps>0)
   }) (\lam (inP (U,(Uo,p),Ufx)) => p Ufx)))
-  \where {
-    \private \func PseudoMetricTransfer' {X : \Set} {Y : PseudoMetricSpace} (f : X -> Y) : PseudoMetricSpace X \cowith
-      | dist x x' => dist (f x) (f x')
-      | dist-refl => dist-refl
-      | dist-symm => dist-symm
-      | dist-triang => dist-triang
-  }
+
+\func ExMetricTransfer {X : \Set} {Y : ExMetricSpace} (f : X -> Y) (fi : IsInj f) : ExMetricSpace X \cowith
+  | ExPseudoMetricSpace => ExPseudoMetricTransfer f
+  | dist-ext p => fi (dist-ext p)
+
+\func PseudoMetricTransfer {X : \Set} {Y : PseudoMetricSpace} (f : X -> Y) : PseudoMetricSpace X \cowith
+  | ExPseudoMetricSpace => ExPseudoMetricTransfer f
 
 \func MetricTransfer {X : \Set} {Y : MetricSpace} (f : X -> Y) (fi : IsInj f) : MetricSpace X \cowith
-  | PseudoMetricSpace => PseudoMetricTransfer f
+  | ExPseudoMetricSpace => ExPseudoMetricTransfer f
   | dist-ext p => fi (dist-ext p)

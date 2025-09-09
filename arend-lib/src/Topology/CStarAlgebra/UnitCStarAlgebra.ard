@@ -1,0 +1,241 @@
+{- | The construction of {UnitC*Algebra} is taken from
+     [1] Simon Henry, Constructive Gelfand Duality for non-unital commutative C*-algebras, 2014, https://arxiv.org/abs/1412.2009
+ -}
+
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Ring
+\import Algebra.Ring.UnitAlgebra
+\import Analysis.Limit
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Arith.Real.UpperRealLattice
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Filter
+\import Topology.BanachAlgebra
+\import Topology.BanachSpace
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.StoneCStarAlgebra
+\import Topology.NormedRing
+\import Topology.TopPoset
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+
+\instance UnitC*Algebra (A : StoneC*PseudoAlgebra) : StoneC*Algebra (\Sigma Real A)
+  | Ring => UnitAlgebra RealField A.toRealAlgebra
+  | *-comm => ext (RealField.*-comm, equation.abGroup $ A.toZero A.*-comm)
+  | isDivisible x n/=0 => \case RealStoneC*Algebra.isDivisible x.1 n/=0, A.isDivisible x.2 n/=0 \with {
+    | inP (y,ny=x1), inP (b,nb=x2) => inP ((y,b), UnitAlgebra.*n-comm *> pmap2 (__,__) ny=x1 nb=x2)
+  }
+  | norm (x : \Sigma Real A) : ExUpperReal => RealAbGroup.abs x.1 ExUpperRealLattice.∨ Join \lam (s : \Sigma (y : A) (A.norm y <= 1)) => A.norm (x.1 A.*r s.1 + x.2 * s.1)
+  | norm_zro => <=-antisymmetric
+    (join-univ (Real.<=-upper.1 $ =_<= {RealAbGroup} RealAbGroup.abs_zro) $ Join-univ \lam s => =_<= $ pmap A.norm (pmap2 (+) A.toRealModule.*c_zro-left A.zro_*-left *> zro-right) *> norm_zro)
+    (Real.<=-upper.1 RealAbGroup.abs>=0 <=∘ ExUpperRealLattice.join-left)
+  | norm_negative => pmap2 (__ ∨ Join __) RealStoneC*Algebra.norm_negative $ ext \lam s => pmap A.norm (pmap2 (+) A.toRealModule.*c_negative-left A.negative_*-left *> +-comm *> inv A.negative_+) *> norm_negative
+  | norm_+ => join-univ (transport (_ ExUpperReal.<=) RealAbGroup.+-upper (later $ Real.<=-upper.1 RealAbGroup.abs_+) <=∘ <=_+ join-left join-left) $
+    Join-univ \lam s => =_<= (pmap A.norm $ pmap2 (+) A.toRealModule.*c-rdistr A.rdistr *> equation.abMonoid) <=∘ norm_+ <=∘ <=_+ (Join-cond s <=∘ join-right) (Join-cond s <=∘ join-right)
+  | norm-double {x} => =_<= ExUpperRealLattice.+_join <=∘ ExUpperRealLattice.join-monotone RealStoneC*Algebra.norm-double (=_<= ExUpperRealLattice.+_Join <=∘ Join-univ \lam j => A.norm-double {x.1 A.*r j.1 + x.2 * j.1} <=∘ =_<= (pmap A.norm $ inv $ pmap2 (+) A.toRealModule.*c-rdistr A.rdistr *> equation.abMonoid) <=∘ Join-cond j)
+  | norm-bounded x => \case (RealAbGroup.abs x.1).U-inh, A.norm-bounded x.2 \with {
+    | inP (B1,|x1|<B1), inP (B2,|x2|<B2) => inP (B1 + B2 + 1, ExUpperRealAbMonoid.<-rat.1 $ join-univ (ExUpperReal.<_<= |x1|<B1 <=∘ ExUpperReal.<=-rat.1 (linarith $ norm>=0 |x2|<B2)) (Join-univ \lam j => norm_+ <=∘ later (ExUpperRealAbMonoid.<=_+ (=_<= A.norm_*r <=∘ <=_* (ExUpperReal.<_<= |x1|<B1) j.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 $ <=-less $ Real.<=-upper.1 RealAbGroup.abs>=0 |x1|<B1)) $ A.norm_*_<= <=∘ <=_* (ExUpperReal.<_<= |x2|<B2) j.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 $ <=-less $ norm>=0 |x2|<B2)) <=∘ =_<= ExUpperReal.+-rat) <∘r (ExUpperRealAbMonoid.<-rat {B1 + B2}).2 linarith)
+  }
+  | norm_*_<= {x y : \Sigma Real A} : norm (x * {UnitAlgebra RealField A.toRealAlgebra} y) <= norm x * norm y => join-univ (transportInv (`<= _) (RealField.abs_* *> RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0) $ <=_* join-left join-left) $
+    Join-univ \lam s => =_<= A.norm_*-char <=∘ Join-univ \lam s' => =_<= (pmap A.norm
+    \have | lem1 : x.1 * y.1 A.*r s.1 * s'.1 = x.1 A.*r s.1 * (y.1 A.*r s'.1) => inv A.toRealAlgebra.*c-comm-left *> A.toRealAlgebra.*c-assoc *> pmap (_ A.*r) A.toRealAlgebra.*c-comm-right *> A.toRealAlgebra.*c-comm-left
+          | lem2 z w c d : z * (c A.*r d * w) = z * (d * (c A.*r w)) => pmap (z *) (inv A.toRealAlgebra.*c-comm-left *> A.toRealAlgebra.*c-comm-right)
+    \in equation.cRing {lem1, lem2 s'.1 s.1 x.1 y.2, lem2 s.1 s'.1 y.1 x.2}) <=∘ A.norm_*_<= <=∘ <=_* (Join-cond s <=∘ join-right) (Join-cond s' <=∘ join-right)
+  | norm_ide_<= => join-univ RealStoneC*Algebra.norm_ide_<= $ Join-univ \lam s => =_<= (pmap A.norm $ pmap2 (+) A.toRealModule.ide_*c A.zro_*-left *> zro-right) <=∘ s.2
+  | norm-ext {x} p =>
+    \have x1=0 => RealAbGroup.abs_zro-ext $ RealAbGroup.<=-antisymmetric ((Real.<=-upper {_} {0}).2 $ join-left <=∘ =_<= p) RealAbGroup.abs>=0
+    \in ext (x1=0, norm-ext $ <=-antisymmetric (=_<= A.norm_*-char <=∘ Join-univ \lam s => =_<= (pmap A.norm $ inv $ pmap (`+ _) (pmap (RealBanachSpace.`*r _) x1=0 *> A.toRealAlgebra.*c_zro-left) *> zro-left) <=∘ Join-cond s <=∘ join-right <=∘ =_<= p) norm>=0)
+  | isCompleteMetric F Fc => \case
+      RealNormed.isCompleteMetric (ProperFilter-map __.1 F) \lam eps>0 => TruncP.map (Fc eps>0) \lam (r,Fr) => (r.1, filter-mono Fr \lam d => ExUpperRealAbMonoid.join-left d),
+      A.isCompleteMetric (ProperFilter-map __.2 F) (\lam {eps} eps>0 => TruncP.map (Fc $ RatField.half>0 $ RatField.half>0 eps>0) \lam (r,Fr) => (r.2, filter-mono Fr \lam {x} d => <-rat.1 $ rewrite (A.norm-dist, A.norm_*-char) $ Join-univ (\lam s =>
+        \have | t1 => join-left <∘r <-rat.2 d
+              | t2 => Join-cond s <∘r join-right <∘r <-rat.2 d
+        \in norm_dist-left {_} {_} {negative (r.1 - x.1) A.*r s.1} <=∘ <=_+ (=_<= norm-dist) (=_<= A.norm_*r <=∘ <=_* (=_<= {ExUpperRealAbMonoid} RealAbGroup.abs_negative) s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ Real.<=-upper.1 RealAbGroup.abs>=0)) <=∘ unfold (-) (rewrite (A.toRealAlgebra.*c_negative-left,A.negative-isInv,A.+-comm) $ <=_+ (<=-less t2) (<=-less t1) <=∘ =_<= (ExUpperReal.+-rat *> pmap ExUpperReal.fromRat linarith))) <∘r (<-rat {RatField.half eps}).2 (RatField.half<id eps>0)))
+    \with {
+      | inP (a,al), inP (x,xl) => inP ((a,x), \lam {eps} eps>0 => filter-mono (filter-meet (al $ RatField.half>0 $ RatField.half>0 eps>0) (xl $ RatField.half>0 $ RatField.half>0 eps>0))
+        \lam {z} d => <-rat.1 $ join-univ (<=-less (<-rat.2 d.1) <=∘ ExUpperReal.<=-rat.1 (<=-less $ RatField.half<id $ RatField.half>0 eps>0)) (Join-univ $ later \lam s => norm_+ <=∘ <=_+ (=_<= A.norm_*r <=∘ <=_* <=-refl s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ norm>=0 {RealNormed})) (A.norm_*_<= <=∘ <=_* <=-refl s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right norm>=0 *> inv norm-dist)) <=∘ <=_+ (ExUpperReal.<_<= d.1) (ExUpperReal.<_<= d.2) <=∘ =_<= (ExUpperReal.+-rat *> pmap ExUpperReal.fromRat linarith)) <∘r (<-rat {RatField.half eps}).2 (RatField.half<id eps>0))
+    }
+  | c*-sum {a} {b} => norm_*_<= <=∘ =_<= ExUpperRealLattice.join-square <=∘ join-univ (RealStoneC*Algebra.c*-square <=∘ RealStoneC*Algebra.c*-sum <=∘ join-left)
+    (=_<= (ExUpperRealLattice.Join-square inhabitted) <=∘ Join-univ \lam s => A.c*-square <=∘ A.c*-sum {_} {b.1 A.*r s.1 + b.2 * s.1} <=∘ =_<= (pmap A.norm $ later $ rewrite A.toRealAlgebra.*c-rdistr $ equation.cRing {
+      inv (A.toRealAlgebra.*c-comm-left {a.1} {s.1} {a.1 A.*r s.1}) *> A.toRealAlgebra.*c-comm-right *> pmap (_ *) (inv A.toRealAlgebra.*c-assoc),
+      inv (A.toRealAlgebra.*c-comm-left {b.1} {s.1} {b.1 A.*r s.1}) *> A.toRealAlgebra.*c-comm-right *> pmap (_ *) (inv A.toRealAlgebra.*c-assoc),
+      inv (A.toRealAlgebra.*c-comm-left {a.1} {s.1} {a.2 * s.1}) *> A.toRealAlgebra.*c-comm-right *> pmap (_ *) A.toRealAlgebra.*c-comm-left,
+      inv (A.toRealAlgebra.*c-comm-right {b.1} {s.1} {b.2}) *> A.toRealAlgebra.*c-comm-left
+    }) <=∘ A.norm_*_<= <=∘ <=_* <=-refl s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right norm>=0) <=∘ Join-cond s <=∘ join-right)
+  | c*-square {a} => =_<= ExUpperRealLattice.join-square <=∘ join-univ (RealStoneC*Algebra.c*-square <=∘ join-left)
+    (=_<= (ExUpperRealLattice.Join-square inhabitted) <=∘ Join-univ \lam s => A.c*-square <=∘ =_<= (pmap A.norm $ equation.cRing {
+      inv (A.toRealAlgebra.*c-comm-left {a.1} {s.1} {a.1 A.*r s.1}) *> A.toRealAlgebra.*c-comm-right *> pmap (_ *) (inv A.toRealAlgebra.*c-assoc),
+      inv (A.toRealAlgebra.*c-comm-left {a.1} {s.1} {a.2 * s.1}) *> A.toRealAlgebra.*c-comm-right *> pmap (_ *) A.toRealAlgebra.*c-comm-left
+    }) <=∘ A.norm_*_<= <=∘ <=_* <=-refl s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right norm>=0) <=∘ Join-cond s <=∘ join-right)
+  \where {
+    \open ExUpperRealAbMonoid(<-rat)
+    \open ExUpperRealSemigroup(<=_*)
+
+    \private \lemma inhabitted : ∃ (y : A) (A.norm y <= 1)
+      => inP (A.zro, transportInv (`<= _) norm_zro $ <=-less ExUpperRealAbMonoid.zro<ide)
+  }
+
+\func StoneC*AlgebraRieszSpace (A : StoneC*Algebra) : RieszSpace A
+  => RieszSpace.fromAbs \lam a => TruncP.map (abs-aux a) \lam s => (s.1,s.3,s.4,s.5)
+  \where \protected {
+    \func StoneC*AlgebraTopPoset : TopPosetAbGroup \cowith
+      | TopAbGroup => A
+      | PosetAbGroup => A
+      | positive-closed => transport A.IsClosed (ext \lam x => ext A.square-positive) A.square-closed
+
+    \lemma abs-aux (a : A) : ∃ (b : A) (b * b = a * a) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)
+      => \case norm-bounded a \with {
+        | inP (B,|a|<B) =>
+          \have | p1 => A.<=_*q-rotate_finv-left (norm>=0 |a|<B) $ A.norm_<=_*q $ ExUpperReal.<_<= |a|<B
+                | p2 => transport (`<= 1) A.toRatModule.*c_negative-right $ A.<=_*q-rotate_finv-left (norm>=0 |a|<B) $ A.norm_<=_*q $ transportInv (`<= _) norm_negative $ ExUpperReal.<_<= |a|<B
+          \in inP (B A.*q c*abs (RatField.finv B A.*q a) p1 p2,
+                   inv A.toRatAlgebra.*c-comm-left *> pmap (B A.*q) (inv A.toRatAlgebra.*c-comm-right) *> inv A.*q-assoc *> pmap (_ A.*q) RealBanachAlgebra.sqrt.isSquare *> A.*q-assoc *> pmap (B A.*q) A.toRatAlgebra.*c-comm-right *> A.toRatAlgebra.*c-comm-left *> pmap (\lam x => x * x) (inv A.*q-assoc *> pmap (A.`*q _) (RatField.finv-right $ RatField.>_/= $ norm>=0 |a|<B) *> A.ide_*q),
+                   A.<=_*q-rotate-right (norm>=0 |a|<B) c*abs.c*abs>=id,
+                   A.<=_*q-rotate-right (norm>=0 |a|<B) $ transportInv (`<= _) A.toRatModule.*c_negative-right c*abs.c*abs>=neg,
+                   \lam a<=c -a<=c => A.<=_*q-rotate-left (norm>=0 |a|<B) $ c*abs.c*abs-univ (A.<=_*q-right (<=-less $ RatField.finv>0 $ norm>=0 |a|<B) a<=c) $ transport (`<= _) A.toRatModule.*c_negative-right $ A.<=_*q-right (<=-less $ RatField.finv>0 $ norm>=0 |a|<B) -a<=c)
+      }
+
+    \lemma abs-square {a : A} : (StoneC*AlgebraRieszSpace A).abs a * (StoneC*AlgebraRieszSpace A).abs a = a * a
+      => \case abs-aux a \with {
+        | inP (b,bb=aa,a<=b,-a<=b,bu) =>
+          \let A' => StoneC*AlgebraRieszSpace A
+          \in pmap (\lam x => x * x) (<=-antisymmetric (A'.join-univ a<=b -a<=b) (bu A'.abs>=id A'.abs>=neg)) *> bb=aa
+      }
+
+    \func c*abs (a : A) (a<=1 : a <= 1) (-a<=1 : negative a <= 1) : A
+      => sqrt-t (a * a, square-norm)
+      \where {
+        \open RealBanachAlgebra
+        \open RealBanachAlgebra.sqrt(yfunc,zfunc,zfunc-lim,UnitBall)
+        \open ExUpperRealSemigroup(<=_*)
+
+        \lemma yfunc>=0 {x : A} (x<=1 : x <= 1) {n : Nat} : 0 <= yfunc n x \elim n
+          | 0 => transportInv (0 <=) (\peval yfunc 0 _) <=-refl
+          | suc n => transportInv (0 <=) (\peval yfunc (suc n) x) $ A.*q_>=0 rat_<=-dec $ A.<=_+-positive (A.to>=0 x<=1) c*-square-positive
+
+        \lemma square-norm : norm (1 - a * a) <= 1
+          => A.square-lem c*-square-positive (c*-<=_*-square a<=1 -a<=1)
+
+        \lemma c*abs>=id {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} : x <= c*abs x x<=1 -x<=1
+          => transportInv (x <=) (\peval sqrt _ _) $ A.closed-limit0 StoneC*AlgebraTopPoset.<=-closed-right limit-isLimit induction
+          \where {
+            \private \lemma induction (n : Nat) : x <= 1 - yfunc n (x * x) \elim n
+              | 0 => transport (x <=) (inv zro-right *> pmap (1 +) (inv $ pmap negative (\peval yfunc 0 _) *> A.negative_zro)) x<=1
+              | suc n => rewrite (\peval yfunc (suc n) _) $ A.<=_*q-cancel-left {2} idp $ later $ rewrite (A.toRatModule.*c-ldistr_-, inv A.*q-assoc, A.ide_*q, A.*q_*2, A.*q_*2) $ A.from>=0 $ transport (0 <=) {(1 - yfunc n _ - x) * (1 - x + yfunc n _)} equation.cRing $ A.<=_*-positive (A.to>=0 $ induction n) $ A.<=_+-positive (A.to>=0 x<=1) $ yfunc>=0 (c*-<=_*-square x<=1 -x<=1)
+          }
+
+        \lemma c*abs>=neg {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} : negative x <= c*abs x x<=1 -x<=1
+          => transport (_ <=) (unfold c*abs $ pmap sqrt-t $ ext A.negative_*) (c*abs>=id {A} {_} { -x<=1} {rewrite A.negative-isInv x<=1})
+
+        \lemma zfunc_pow>0 {w : A} (w<=1 : w <= 1) (|1-w|<1 : (norm (1 - w)).U 1) : zfunc-lim (w * w, square-norm w<=1 $ ExUpperReal.<_<= |1-w|<1) = w
+          => \case U-rounded |1-w|<1 \with {
+            | inP (q,|1-w|<q,q<1) => A.limit-unique {_} {zfunc __ (w * w)} limit-isLimit $ nat-limit-metric (rewrite norm-dist $ norm-bounded _) {ratio 1 2 * (1 + q)} (ExUpperReal.<=-rat.1 $ linarith $ norm>=0 |1-w|<q) linarith
+              \lam n => later $ rewrite (norm-dist, norm-dist, \peval yfunc (suc n) _) $ transport (norm __ <= _) {ratio 1 2 A.*q ((yfunc n (w * w) + (1 - w)) * (w - zfunc n (w * w)))}
+                (A.*q-cancel {2} /=-dec $ inv A.*q-assoc *> A.ide_*q *> inv (A.toRatModule.*c-ldistr_- *> pmap2 (-) A.*q_*2 (A.toRatModule.*c-ldistr_- *> pmap2 (-) A.*q_*2 (inv A.*q-assoc *> A.ide_*q)) *> equation.cRing)) $
+                =_<= (A.norm_*q-ofPos rat_<=-dec) <=∘ <=_* <=-refl (A.norm_*_<= <=∘ <=_* (transport (_ <=) ExUpperReal.+-rat $ A.norm_+ <=∘ <=_+ (sqrt.yfunc<=rfunc {_} {_} {w * w, square-norm w<=1 $ ExUpperReal.<_<= |1-w|<1} <=∘ ExUpperReal.<=-rat.1 RealBanachAlgebra.rfunc<=1) (ExUpperReal.<_<= |1-w|<q)) (=_<= $ pmap norm equation.abGroup)) <=∘ =_<= (inv *-assoc *> pmap (`* _) (ExUpperReal.*-rat rat_<=-dec $ RatField.<=_+-positive zro<=ide $ <=-less $ norm>=0 |1-w|<q))
+          }
+          \where {
+            \lemma square-norm (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) : norm (1 - w * w) <= 1
+              => A.square-lem c*-square-positive $ c*-<=_*-square w<=1 $ transport (_ <=) A.negative_zro (A.negative_<= $ A.norm-c*-positive |1-w|<=1) <=∘ zro<=ide
+          }
+
+        \lemma zfunc_pow {w : A} (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) : zfunc-lim (w * w, zfunc_pow>0.square-norm w<=1 |1-w|<=1) = w
+          => \let M => ExPseudoMetricTransfer {\Sigma (x : A) (\Sigma (x <= 1) (norm (1 - x) <= 1))} __.1
+             \in denseSet-lift-unique (\lam {s} Uo Us => \case (dist_open {M}).1 Uo Us \with {
+               | inP (eps,eps>0,p) =>
+                 \let | delta => ratio 1 2 * (eps ∧ 1)
+                      | delta>0 : 0 RatField.< delta => linarith (<_meet-univ eps>0 RatField.zro<ide)
+                      | ide-delta>=0 : 0 <= 1 - delta => linarith $ RatField.meet-right {eps} {1}
+                      | y => (1 - delta) A.*q s.1 + delta A.*q 1
+                      | |1-y|<1 => transport (\lam z => (norm z).U 1) (A.toRatModule.*c-ldistr_- *> pmap (`- _) A.toRatModule.*c-rdistr_- *> +-assoc *> pmap2 (+) A.ide_*q (inv A.negative_+)) $ =_<= (A.norm_*q-ofPos ide-delta>=0) <=∘ <=_* <=-refl s.2.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 ide-delta>=0) $ linarith
+                 \in inP ((y, (<=_+ (A.<=_*q-right ide-delta>=0 s.2.1) <=-refl <=∘ =_<= (inv A.toRatModule.*c-rdistr *> pmap (A.`*q _) linarith *> A.ide_*q), ExUpperReal.<_<= |1-y|<1)), |1-y|<1, p $ unfolds $ unfold y $ rewrite (dist-symm, norm-dist, A.toRatModule.*c-rdistr_-, A.ide_*q) $ simplify $ rewrite (+-comm, inv A.toRatModule.*c-ldistr_-) $ =_<= (A.norm_*q-ofPos $ <=-less delta>0) <=∘ <=_* <=-refl s.2.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 $ <=-less delta>0) $ linarith RatField.meet-left)
+             })
+             (zfunc-lim ContMap.∘ TopTransfer-lift (*-locally-uniform ContMap.∘ ProductTopSpace.tuple ContMap.id ContMap.id ContMap.∘ TopTransfer-map __.1) (later \lam s => zfunc_pow>0.square-norm s.2.1 s.2.2))
+             (TopTransfer-map __.1) (\lam {s} p => zfunc_pow>0 s.2.1 p) {w,(w<=1,|1-w|<=1)}
+
+        \lemma zfunc_pow' {w : A} (w>=0 : 0 <= w) (w<=1 : w <= 1)
+          => zfunc_pow w<=1 (A.square-lem w>=0 w<=1)
+
+        \lemma yfunc-step {x : A} (x<=1 : x <= 1) {n : Nat} : yfunc n x <= yfunc (suc n) x \elim n
+          | 0 => transportInv (`<= _) (\peval yfunc 0 x) (yfunc>=0 x<=1)
+          | suc n => A.from>=0 $ transportInv (0 <=) sqrt.yfunc-rec $ A.*q_>=0 rat_<=-dec $ A.<=_*-positive (A.<=_+-positive (yfunc>=0 x<=1) (yfunc>=0 x<=1)) $ A.to>=0 (yfunc-step x<=1)
+
+        \lemma zfunc-lim-meet {s : UnitBall {A}} (s<=1 : s.1 <= 1) : A.IsMeet (zfunc __ s.1) (zfunc-lim s)
+          => StoneC*AlgebraTopPoset.limit-Meet (sequence-anti-monotone \lam {n} => <=_+ <=-refl (A.negative_<= $ yfunc-step s<=1)) limit-isLimit
+
+        \lemma yfunc-mono {x y : A} (x<=y : x <= y) (y<=1 : y <= 1) {n : Nat} : yfunc n y <= yfunc n x \elim n
+          | 0 => rewrite (\peval yfunc 0 x, \peval yfunc 0 y) <=-refl
+          | suc n => rewrite (\peval yfunc (suc n) x, \peval yfunc (suc n) y) $ A.<=_*q-right rat_<=-dec $ <=_+ (<=_+ <=-refl $ A.negative_<= x<=y) $ <=_*_positive-left (yfunc-mono x<=y y<=1) (yfunc>=0 y<=1) <=∘ <=_*_positive-right (yfunc>=0 $ x<=y <=∘ y<=1) (yfunc-mono x<=y y<=1)
+
+        \lemma c*abs-univ-bounded {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} {w : A} (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) (x<=w : x <= w) (-x<=w : negative x <= w) : c*abs x x<=1 -x<=1 <= w
+          => transport2 (<=) (inv \peval sqrt _ _) (zfunc_pow w<=1 |1-w|<=1) $ (zfunc-lim-meet $ c*-<=_*-square w<=1 $ A.negative_<= x<=w <=∘ -x<=1).2 \lam n => (zfunc-lim-meet $ c*-<=_*-square x<=1 -x<=1).1 n <=∘ <=_+ <=-refl (A.negative_<= $ yfunc-mono (A.from>=0 $ transport (0 <=) (A.*_sum_diff *-comm) $ <=_*-positive (transport (0 <= w + __) A.negative-isInv (A.to>=0 -x<=w)) (A.to>=0 x<=w)) $ c*-<=_*-square w<=1 $ A.negative_<= x<=w <=∘ -x<=1)
+
+        \func sqrt-t (s : UnitBall {A}) => sqrt s.1 s.2
+
+        \lemma square-inj {x y : A} (x>=0 : 0 <= x) (x<=1 : x <= 1) (y>=0 : 0 <= y) (y<=1 : y <= 1) (xx=yy : x * x = y * y) : x = y
+          => \have lem : sqrt-t (x * x, square-norm {A} {x} {x<=1} {A.negative_<= x>=0 <=∘ =_<= A.negative_zro <=∘ zro<=ide}) = sqrt-t (y * y, square-norm {A} {y} {y<=1} {A.negative_<= y>=0 <=∘ =_<= A.negative_zro <=∘ zro<=ide}) => pmap sqrt-t (ext xx=yy)
+             \in inv ((\peval sqrt _ _) *> zfunc_pow' x>=0 x<=1) *> lem *> (\peval sqrt _ _) *> zfunc_pow' y>=0 y<=1
+
+        \lemma elem>=0 {a x : A} (a<=x : a <= x) (-a<=x : negative a <= x) : 0 <= x
+          => A.<=_*n-cancel-left {2} suc/=0 $ =_<= zro-right <=∘ <=_+ <=-refl (=_<= (inv negative-right) <=∘ <=_+ a<=x -a<=x) <=∘ =_<= (inv +-assoc)
+
+        \lemma c*abs>=0 {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} : 0 <= c*abs x x<=1 -x<=1
+          => elem>=0 c*abs>=id c*abs>=neg
+
+        \lemma c*abs<=1 {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} : c*abs x x<=1 -x<=1 <= 1
+          => c*abs-univ-bounded <=-refl (rewrite (negative-right,norm_zro) $ ExUpperReal.<=-rat.1 zro<=ide) x<=1 -x<=1
+
+        \lemma c*abs_*q {q : Rat} (q>=0 : 0 <= q) (q<=1 : q <= 1) {x : A} {x<=1 : x <= 1} { -x<=1 : negative x <= 1} {qx<=1 : q A.*q x <= 1} { -qx<=1 : negative (q A.*q x) <= 1} : q A.*q c*abs x x<=1 -x<=1 = c*abs (q A.*q x) qx<=1 -qx<=1
+          => square-inj (A.*q_>=0 q>=0 c*abs>=0) (A.<=_*q-left q<=1 c*abs>=0 <=∘ =_<= A.ide_*q <=∘ c*abs<=1) c*abs>=0 c*abs<=1 $ inv A.toRatAlgebra.*c-comm-right *> pmap (q A.*q) (inv A.toRatAlgebra.*c-comm-left) *> inv A.*q-assoc *> pmap (_ A.*q) sqrt.isSquare *> A.*q-assoc *> pmap (q A.*q) A.toRatAlgebra.*c-comm-right *> A.toRatAlgebra.*c-comm-left *> inv sqrt.isSquare
+
+        \lemma c*abs-univ {w : A} (a<=w : a <= w) (-a<=w : negative a <= w) : c*abs a a<=1 -a<=1 <= w
+          => \case norm-bounded w \with {
+            | inP (B,|w|<B) =>
+              \let | B1 => B ∨ 1
+                   | B1>0 : 0 RatField.< B1 => norm>=0 |w|<B <∘l join-left
+                   | B1'>=0 : 0 <= RatField.finv B1 => <=-less (RatField.finv>0 B1>0)
+                   | B1*q<=1 {x} (x<=1 : x <= 1) : RatField.finv B1 A.*q x <= 1 => A.<=_*q-cancel-left B1>0 $ =_<= (inv A.*q-assoc *> pmap (A.`*q x) (RatField.finv-right $ RatField.>_/= B1>0) *> A.ide_*q) <=∘ x<=1 <=∘ =_<= (inv A.ide_*q) <=∘ A.<=_*q-left join-right zro<=ide
+                   | B1'w<=1 => A.<=_*q-rotate_finv-left B1>0 $ A.norm_<=_*q $ ExUpperReal.<_<= |w|<B <=∘ ExUpperReal.<=-rat.1 join-left
+              \in A.<=_*q-cancel-left (RatField.finv>0 B1>0) $ =_<= (c*abs_*q B1'>=0 $ RatField.finv_<= {1} idp join-right) <=∘ c*abs-univ-bounded {A} {RatField.finv B1 A.*q a} {B1*q<=1 a<=1} {=_<= (inv A.toRatModule.*c_negative-right) <=∘ B1*q<=1 -a<=1} {RatField.finv B1 A.*q w} B1'w<=1 (A.square-lem (A.*q_>=0 B1'>=0 $ elem>=0 a<=w -a<=w) B1'w<=1) (A.<=_*q-right B1'>=0 a<=w) (=_<= (inv A.toRatModule.*c_negative-right) <=∘ A.<=_*q-right B1'>=0 -a<=w)
+          }
+      }
+  }
+
+\func StoneC*PseudoAlgebraRieszSpace (A : StoneC*PseudoAlgebra) : RieszSpace A
+  => RieszSpace.fromAbs {StoneC*PseudoAlgebaPoset} \lam a => \case StoneC*AlgebraRieszSpace.abs-aux {UnitC*Algebra A} (0,a) \with {
+    | inP (b,bb=aa,a<=b,-a<=b,bu) =>
+      \have bc : b = (0,b.2) => ext (RealField.isReduced $ pmap __.1 bb=aa *> RealField.zro_*-left, idp)
+      \in inP (b.2, transport (_ <=) bc a<=b, transport2 (<=) (ext (RealAbGroup.negative_zro,idp)) bc -a<=b, \lam a<=c -a<=c => transport (`<= _) bc $ bu a<=c $ =_<= (ext (RealAbGroup.negative_zro,idp)) <=∘ -a<=c)
+  }
+  \where {
+    \func StoneC*PseudoAlgebaPoset : PosetQModule \cowith
+      | QModule => A
+      | <= a b => unit-algebra {_} {A.toRealAlgebra} a <= unit-algebra {_} {A.toRealAlgebra} b
+      | <=-refl => <=-refl
+      | <=-transitive => <=∘
+      | <=-antisymmetric p q => pmap __.2 (<=-antisymmetric p q)
+      | <=_+ p q => transport2 (<=) (inv func-+) (inv func-+) (<=_+ p q)
+      | <=_*n-div n/=0 p => <=_*n-div n/=0 $ transport (0 <=) AddMonoidHom.func-*n p
+  }

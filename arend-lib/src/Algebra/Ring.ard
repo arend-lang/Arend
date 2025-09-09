@@ -6,6 +6,7 @@
 \import Algebra.Ring.Ideal
 \import Algebra.Semiring
 \import Arith.Nat
+\import Equiv
 \import Function.Meta ($)
 \import Logic
 \import Logic.Meta
@@ -17,7 +18,7 @@
 \import Set.Fin
 
 {- | Associative ring -}
-\class PseudoRing \extends PseudoSemiring, AbGroup
+\class PseudoRing \extends PseudoSemiring, AbGroup {
   | zro_*-left {x} => AddGroup.cancel-left (zro * x) (
     zro * x + zro * x ==< inv rdistr >==
     (zro + zro) * x   ==< pmap (`* x) zro-left >==
@@ -31,26 +32,11 @@
     x * zro + zro     `qed
   )
 
-\class Ring \extends PseudoRing, Semiring {
-  \func intCoef (x : Int) : E
-    | pos n => natCoef n
-    | neg (suc _ \as n) => negative (natCoef n)
-
-  \lemma intCoef_neg (n : Nat) : intCoef (neg n) = negative (natCoef n)
-    | 0 => natCoefZero *> inv (pmap negative natCoefZero *> AddGroup.negative_zro)
-    | suc n => idp
-
   \lemma negative_*-left {x y : E} : negative x * y = negative (x * y)
     => negative-unique (x * y) (inv rdistr *> pmap (`* y) negative-left *> zro_*-left) negative-right
 
   \lemma negative_*-right {x y : E} : x * negative y = negative (x * y)
     => op.negative_*-left
-
-  \lemma negative_ide-left {x : E} : negative ide * x = negative x
-    => negative_*-left *> pmap negative ide-left
-
-  \lemma negative_ide-right {x : E} : x * negative ide = negative x
-    => negative_*-right *> pmap negative ide-right
 
   \lemma negative_* {x y : E} : negative x * negative y = x * y =>
     negative x * negative y     ==< negative_*-left >==
@@ -64,17 +50,41 @@
   \lemma rdistr_- {x y z : E} : (x - y) * z = x * z - y * z
     => rdistr *> pmap (_ +) negative_*-left
 
+  \lemma *_sum_diff {x y : E} (p : x * y = y * x) : (x + y) * (x - y) = x * x - y * y
+    => rdistr *> pmap2 (+) ldistr_- ldistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (`+ _) (pmap (_ +) (inv p) *> negative-left) *> zro-left)
+
+  \lemma *_diff_sum {x y : E} (p : x * y = y * x) : (x - y) * (x + y) = x * x - y * y
+    => ldistr *> pmap2 (+) rdistr_- rdistr_- *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (`+ _) (pmap (_ +) p *> negative-left) *> zro-left)
+
+  \protected \func op : PseudoRing \cowith
+    | AbGroup => \this
+    | PseudoSemiring => PseudoSemiring.op
+}
+
+\class Ring \extends PseudoRing, Semiring {
+  \func intCoef (x : Int) : E
+    | pos n => natCoef n
+    | neg (suc _ \as n) => negative (natCoef n)
+
+  \lemma intCoef_neg (n : Nat) : intCoef (neg n) = negative (natCoef n)
+    | 0 => natCoefZero *> inv (pmap negative natCoefZero *> AddGroup.negative_zro)
+    | suc n => idp
+
+  \lemma negative_ide-left {x : E} : negative ide * x = negative x
+    => negative_*-left *> pmap negative ide-left
+
+  \lemma negative_ide-right {x : E} : x * negative ide = negative x
+    => negative_*-right *> pmap negative ide-right
+
   \lemma negative_inv (j : Monoid.Inv {\this}) : Monoid.Inv (negative j) (negative j.inv)
     => \new Monoid.Inv {
       | inv-left => negative_* *> j.inv-left
       | inv-right => negative_* *> j.inv-right
     }
 
-  \lemma geometric-partial-sum {n : Nat} {x : E} (xi : Monoid.Inv (1 - x)) : xi.inv - BigSum (\new Array E n (\lam j => Monoid.pow x j)) = Monoid.pow x n * xi.inv
-    => inv (rdistr_- *> pmap2 (-) ide-left (*-assoc *> pmap (_ *) xi.inv-right *> ide-right)) *> pmap (`* _) (pmap (1 -) ldistr_- *> \case \elim n \with {
-      | 0 => simplify
-      | suc n => later $ rewrite (ide-right, 2 BigSum_suc, rdistr, toFin'=id id<suc, BigSum-rdistr) equation.abGroup
-    })
+  \lemma geometric-partial-sum {n : Nat} {x : E} : (1 - x) * BigSum (\new Array E n (\lam j => pow x j)) = 1 - pow x n \elim n
+    | 0 => zro_*-right *> inv negative-right
+    | suc n => pmap (_ *) (AddMonoid.BigSum_suc-nat {_} {n} {pow x}) *> ldistr *> pmap2 (+) geometric-partial-sum rdistr *> +-assoc *> pmap (_ +) (inv +-assoc *> pmap (_ +) negative_*-left *> pmap (`+ _) (pmap (_ +) ide-left *> negative-left) *> zro-left *> pmap negative pow-left)
 
   \func IsNilpotent (x : E) => ∃ (n : Nat) (pow x n = 0)
 
@@ -100,10 +110,26 @@
     | Semiring => Semiring.op
 } \where {
   -- | A ring with a tight apartness relation.
-  \class With# \extends Ring, AddGroup.With#
+  \class With# \extends Ring, AddGroup.With# {
     | #0-*-left {x y : E} : (x * y) `#0 -> x `#0
     | #0-*-right {x y : E} : (x * y) `#0 -> y `#0
     | #0-negative {x} x#0 => #0-*-left (transport #0 (inv (negative_* *> ide-right)) x#0)
+
+    \lemma #0-FinSum {J : FinSet} {x : J -> E} (p : FinSum x `#0) : ∃ (j : J) (x j `#0)
+      => \case FinSum_char x \with {
+        | inP (e,q) => \case #0-BigSum (transport #0 q p) \with {
+          | inP (j,xej#0) => inP (e j, xej#0)
+        }
+      }
+
+    \lemma #0-FinSum-conv {J : FinSet} {x : J -> E} {i : J} (xi#0 : x i `#0) : FinSum x `#0 || (\Sigma (j : J) (j /= i) (x j `#0))
+      => \case FinSum_char x \with {
+        | inP (e, p) => \case #0-BigSum-conv {_} {\new Array E J.finCard \lam j => x (e j)} $ rewrite e.f_ret xi#0 \with {
+          | byLeft r => byLeft $ transportInv #0 p r
+          | byRight (j,j/=i,xej#0) => byRight (e j, \lam ej=i => j/=i $ inv (e.ret_f j) *> pmap e.ret ej=i, xej#0)
+        }
+      }
+  }
 
   -- | A ring with decidable equality.
   \class Dec \extends AddGroup.Dec, With#

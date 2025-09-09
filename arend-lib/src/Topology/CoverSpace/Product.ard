@@ -12,7 +12,6 @@
 \import Set.Subset
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
-\import Topology.CoverSpace.StronglyComplete
 \import Topology.RatherBelow
 \import Topology.TopSpace.Product
 \open Bounded(top)
@@ -179,23 +178,3 @@
       => cauchy-subset {Prod X Y} (cauchy-inter {Prod X Y} (proj1.func-cover Cc) (proj2.func-cover Dc))
           \lam (inP (U, V, inP (U',CU',p1), inP (V',DV',p2), q)) => inP $ later (U', CU', V', DV', q *> pmap2 (∧) p1 p2)
   }
-
-\lemma completion-lift-neighborhood2 {X Y : CoverSpace} {Z : CompleteCoverSpace} (g : CoverMap (X ⨯ Y) Z) (F : Completion X) (G : Completion Y) (W : Set Z)
-  : single (dense-lift (prod completion completion) (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) g (F,G)) <=< W <->
-    ∃ (W' : Set Z) (W' <=< W) (V1 : Set X) (F V1) (V2 : Set Y) (G V2) (∀ {x : V1} {y : V2} (W' (g (x,y))))
-  => <->trans (dense-lift-neighborhood (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) (F,G) W) $ later
-      (\lam (inP (W',W'<=<W,V,p,FG<=<V)) => \case prod-neighborhood.1 FG<=<V \with {
-        | inP (V1,V2,F<=<V1,G<=<V2,g) => inP (W', W'<=<W, pointCF ^-1 V1, pointCF_^-1_<=< F<=<V1, pointCF ^-1 V2, pointCF_^-1_<=< G<=<V2, \lam V1x V2y => p $ g V1x V2y)
-      }, \lam (inP (W',W'<=<W,V1,FV1,V2,GV2,h)) => inP (W', W'<=<W, Set.Prod (mkSet V1) (mkSet V2), \lam s => h (<=<_<= s.1 idp) (<=<_<= s.2 idp), prod-neighborhood.2 $
-          inP (mkSet V1, mkSet V2, mkSet_<=<-point.2 FV1, mkSet_<=<-point.2 GV2, \lam p q => (p,q))))
-  \where \open Completion
-
-\lemma strongCompletion-lift-neighborhood2 {X Y : StronglyRegularCoverSpace} {Z : StronglyCompleteCoverSpace} (g : CoverMap (X ⨯ Y) Z) (F : StrongCompletion X) (G : StrongCompletion Y) (W : Set Z)
-  : single (weaklyDense-lift (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) g (F,G)) <=< W <->
-    ∃ (W' : Set Z) (W' s<=< W) (V1 : Set X) (F V1) (V2 : Set Y) (G V2) (∀ {x : V1} {y : V2} (W' (g (x,y))))
-  => <->trans (weaklyDense-lift-neighborhood (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) (F,G) W) $ later
-     (\lam (inP (W',W'<=<W,V,p,FG<=<V)) => \case prod-neighborhood.1 FG<=<V \with {
-       | inP (V1,V2,F<=<V1,G<=<V2,g) => inP (W', W'<=<W, pointSCF ^-1 V1, pointSCF_^-1_<=< F<=<V1, pointSCF ^-1 V2, pointSCF_^-1_<=< G<=<V2, \lam V1x V2y => p $ g V1x V2y)
-     }, \lam (inP (W',W'<=<W,V1,FV1,V2,GV2,h)) => inP (W', W'<=<W, Set.Prod (mkSet V1) (mkSet V2), \lam s => h (<=<_<= s.1 idp) (<=<_<= s.2 idp), prod-neighborhood.2 $
-        inP (mkSet V1, mkSet V2, mkSet_<=<-point.2 FV1, mkSet_<=<-point.2 GV2, \lam p q => (p,q))))
-  \where \open StrongCompletion

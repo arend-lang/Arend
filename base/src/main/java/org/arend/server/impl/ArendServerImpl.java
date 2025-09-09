@@ -48,6 +48,7 @@ public class ArendServerImpl implements ArendServer {
   private final ErrorService myErrorService = new ErrorService();
   private final DependencyCollector myDependencyCollector = new DependencyCollector(null);
   private final boolean myCacheReferences;
+  private final InstanceCacheImpl myInstanceCache = new InstanceCacheImpl();
 
   private final TypingInfo myTypingInfo = new TypingInfo() {
     @Override
@@ -276,6 +277,10 @@ public class ArendServerImpl implements ArendServer {
           GroupData newData = new GroupData(modificationStamp, group, prevData);
           updateReferables(newData.getRawGroup(), module);
 
+          if (prevData != null) {
+            myInstanceCache.removeInstances(prevData.getRawGroup());
+          }
+
           myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
           return newData;
         });
@@ -294,7 +299,7 @@ public class ArendServerImpl implements ArendServer {
   private void updateReferables(ConcreteGroup group, ModuleLocation module) {
     ArendLibraryImpl library = myLibraryService.getLibrary(module.getLibraryName());
     group.traverseGroup(subgroup -> {
-      addGeneratedName(library, subgroup.referable());
+      if (module.getLocationKind() == ModuleLocation.LocationKind.GENERATED) addGeneratedName(library, subgroup.referable());
       if (subgroup.referable() instanceof TCDefReferable tcRef && tcRef.getData() instanceof AbstractReferable referable) {
         myRequester.addReference(module, referable, tcRef);
       }
@@ -302,7 +307,7 @@ public class ArendServerImpl implements ArendServer {
         for (Concrete.ConstructorClause clause : dataDef.getConstructorClauses()) {
           for (Concrete.Constructor constructor : clause.getConstructors()) {
             if (constructor.getData().getData() instanceof AbstractReferable referable) {
-              addGeneratedName(library, constructor.getData());
+              if (module.getLocationKind() == ModuleLocation.LocationKind.GENERATED) addGeneratedName(library, constructor.getData());
               myRequester.addReference(module, referable, constructor.getData());
             }
           }
@@ -310,7 +315,7 @@ public class ArendServerImpl implements ArendServer {
       } else if (subgroup.definition() instanceof Concrete.ClassDefinition classDef) {
         for (Concrete.ClassElement element : classDef.getElements()) {
           if (element instanceof Concrete.ClassField field && field.getData().getData() instanceof AbstractReferable referable) {
-            addGeneratedName(library, field.getData());
+            if (module.getLocationKind() == ModuleLocation.LocationKind.GENERATED) addGeneratedName(library, field.getData());
             myRequester.addReference(module, referable, field.getData());
           }
         }
@@ -560,19 +565,26 @@ public class ArendServerImpl implements ArendServer {
 
     ConcreteGroup group = groupData.getRawGroup();
     Scope scope = LexicalScope.insideOf(group, getParentGroupScope(module, groupData.getRawGroup()), false);
-    loop:
-    for (LocatedReferable ancestor : ancestors) {
+    loop: for (LocatedReferable ancestor : ancestors) {
+      int nextAncestorIndex = ancestors.indexOf(ancestor) + 1;
+
       for (ConcreteStatement statement : group.statements()) {
         ConcreteGroup subgroup = statement.group();
         if (subgroup != null && subgroup.referable().equals(ancestor)) {
-          scope = LexicalScope.insideOf(subgroup, scope, false);
+          boolean isDynamicContext = nextAncestorIndex < ancestors.size() &&
+            subgroup.dynamicGroups().stream().anyMatch(it ->
+              it.referable() == ancestors.get(nextAncestorIndex));
+          scope = LexicalScope.insideOf(subgroup, scope, isDynamicContext);
           group = subgroup;
           continue loop;
         }
       }
       for (ConcreteGroup subgroup : group.dynamicGroups()) {
         if (subgroup.referable().equals(ancestor)) {
-          scope = LexicalScope.insideOf(subgroup, scope, false);
+          boolean isDynamicContext = nextAncestorIndex < ancestors.size() &&
+            subgroup.dynamicGroups().stream().anyMatch(it ->
+              it.referable() == ancestors.get(nextAncestorIndex));
+          scope = LexicalScope.insideOf(subgroup, scope, isDynamicContext);
           group = subgroup;
           continue loop;
         }
@@ -582,10 +594,12 @@ public class ArendServerImpl implements ArendServer {
 
     if (referable.getKind().isRecord()) {
       DynamicScopeProvider dynamicScopeProvider = myTypingInfo.getDynamicScopeProvider(referable);
-      return dynamicScopeProvider == null ? scope : new MergeScope(new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC), scope);
+      if (dynamicScopeProvider != null) {
+        scope = new MergeScope(new DynamicScope(dynamicScopeProvider, myTypingInfo, DynamicScope.Extent.WITH_SUPER_DYNAMIC), scope);
+      }
     }
 
-    return scope;
+    return CachingScope.make(scope);
   }
 
   @Override
@@ -596,5 +610,10 @@ public class ArendServerImpl implements ArendServer {
       longNames.add(resolver.calculateLongName(referable, anchor));
     }
     return new Pair<>(resolver.getModifier(), longNames);
+  }
+
+  @Override
+  public @NotNull InstanceCacheImpl getInstanceCache() {
+    return myInstanceCache;
   }
 }

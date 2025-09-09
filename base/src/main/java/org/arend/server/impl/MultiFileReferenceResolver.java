@@ -3,6 +3,8 @@ package org.arend.server.impl;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.server.ArendServer;
+import org.arend.server.modifier.RawModifier;
+import org.arend.server.modifier.RawSequenceModifier;
 
 import java.util.HashMap;
 

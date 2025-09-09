@@ -10,7 +10,8 @@ import com.intellij.psi.util.startOffset
 import org.arend.psi.ArendFile
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.psi.ext.traverse
-import org.arend.typechecking.error.ErrorService
+import org.arend.server.ArendServerService
+/* TODO[2025.2.1]
 import org.jetbrains.kotlin.idea.scratch.ScratchExpression
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
 
@@ -29,6 +30,7 @@ class ArendScratchFile(project: Project, file: VirtualFile) : ScratchFile(projec
     }
 
     override fun hasErrors(): Boolean {
-        return !(getPsiFile() as? ArendFile?)?.let { project.service<ErrorService>().getErrors(it) }.isNullOrEmpty()
+        return !(getPsiFile() as? ArendFile?)?.moduleLocation?.let { project.service<ArendServerService>().server.errorMap[it] }.isNullOrEmpty()
     }
 }
+*/
