@@ -34,7 +34,6 @@
 \import Topology.TopRing
 \import Topology.TopSpace
 \import Topology.UniformSpace
-\open Bounded(top)
 
 \func IsConvergent {I : DirectedSet} {X : CoverSpace} (f : I -> X) : \Prop
   => CoverMap (DirectedCoverSpace I) X f

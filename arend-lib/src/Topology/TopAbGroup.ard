@@ -17,7 +17,6 @@
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 \import Topology.UniformSpace
-\open Bounded(top)
 
 \class TopAbGroup \extends TopSpace, AbGroup, UniformSpace {
   | +-cont : ContMap (ProductTopSpace \this \this) \this \lam s => s.1 + s.2

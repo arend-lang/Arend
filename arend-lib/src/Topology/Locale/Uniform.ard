@@ -21,7 +21,6 @@
 \import Topology.Locale
 \open CompleteLattice(SJoin)
 \open Locale
-\open Bounded(top,top-univ)
 \open Nucleus
 \open MeetSemilattice
 \open FrameHom \hiding (isClosed, functor)

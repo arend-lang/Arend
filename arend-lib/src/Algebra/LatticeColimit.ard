@@ -24,7 +24,7 @@
 \import Set.SetCategory
 \open SetColimit
 
-\instance MonoidLatticeColimit {D : Bounded.JoinSemilattice} (F : Functor D MonoidCat) : Monoid (SetColimit (Comp MonoidCat.forget F))
+\instance MonoidLatticeColimit {D : BottomJoinSemilattice} (F : Functor D MonoidCat) : Monoid (SetColimit (Comp MonoidCat.forget F))
   | ide => in~ (D.bottom, ide)
   | * (x y : SetColimit (Comp MonoidCat.forget F)) : SetColimit (Comp MonoidCat.forget F) \with {
     | in~ a, in~ b => in~ (a.1 ∨ b.1, F.Func join-left a.2 Monoid.* F.Func join-right b.2)
@@ -63,7 +63,7 @@
       => exts \lam a => ~-cequiv p idp
   }
 
-\instance AddMonoidLatticeColimit {D : Bounded.JoinSemilattice} (F : Functor D AddMonoidCat) : AddMonoid (SetColimit (Comp AddMonoidCat.forget F))
+\instance AddMonoidLatticeColimit {D : BottomJoinSemilattice} (F : Functor D AddMonoidCat) : AddMonoid (SetColimit (Comp AddMonoidCat.forget F))
   | zro => in~ (D.bottom, zro)
   | + (x y : SetColimit (Comp AddMonoidCat.forget F)) : SetColimit (Comp AddMonoidCat.forget F) \with {
     | in~ a, in~ b => in~ (a.1 ∨ b.1, F.Func join-left a.2 AddMonoid.+ F.Func join-right b.2)
@@ -102,7 +102,7 @@
       => exts \lam a => ~-cequiv p idp
   }
 
-\instance AddGroupLatticeColimit {D : Bounded.JoinSemilattice} (F : Functor D AddGroupCat) : AddGroup (SetColimit (Comp AddGroupCat.forget F))
+\instance AddGroupLatticeColimit {D : BottomJoinSemilattice} (F : Functor D AddGroupCat) : AddGroup (SetColimit (Comp AddGroupCat.forget F))
   | AddMonoid => AddMonoidLatticeColimit (Comp AddGroupCat.forgetToAddMonoid F)
   | negative (x : SetColimit (Comp AddGroupCat.forget F)) : SetColimit (Comp AddGroupCat.forget F) \with {
     | in~ a => in~ (a.1, AddGroup.negative a.2)
@@ -123,7 +123,7 @@
       => exts \lam a => ~-cequiv p idp
   }
 
-\instance AbGroupLatticeColimit {D : Bounded.JoinSemilattice} (F : Functor D AbGroupCat) : AbGroup (SetColimit (Comp AbGroupCat.forget F))
+\instance AbGroupLatticeColimit {D : BottomJoinSemilattice} (F : Functor D AbGroupCat) : AbGroup (SetColimit (Comp AbGroupCat.forget F))
   | AddGroup => AddGroupLatticeColimit (Comp AbGroupCat.forgetToAddGroup F)
   | +-comm {x} {y} => \case \elim x, \elim y \with {
     | in~ a, in~ b => ~-cequiv (=_<= D.join-comm) $ func-+ *> +-comm *> pmap2 (+) (inv (Func-app (Comp AbGroupCat.forget F)) *> poset-app) (inv (Func-app (Comp AbGroupCat.forget F)) *> poset-app)
@@ -138,7 +138,7 @@
       => exts \lam a => ~-cequiv p idp
   }
 
-\instance RingLatticeColimit {D : Bounded.JoinSemilattice} (F : Functor D RingCat) : Ring (SetColimit (Comp RingCat.forget F))
+\instance RingLatticeColimit {D : BottomJoinSemilattice} (F : Functor D RingCat) : Ring (SetColimit (Comp RingCat.forget F))
   | AbGroup => AbGroupLatticeColimit (Comp RingCat.forgetToAbGroup F)
   | Monoid => MonoidLatticeColimit (Comp RingCat.forgetToMonoid F)
   | ldistr {x} {y} {z} => \case \elim x, \elim y, \elim z \with {
@@ -171,13 +171,13 @@
       => exts \lam a => ~-cequiv p idp
   }
 
-\instance CRingLatticeColimit {D : Bounded.JoinSemilattice} (F : Functor D CRingCat) : CRing (SetColimit (Comp CRingCat.forget F))
+\instance CRingLatticeColimit {D : BottomJoinSemilattice} (F : Functor D CRingCat) : CRing (SetColimit (Comp CRingCat.forget F))
   | Ring => RingLatticeColimit (Comp CRingCat.forgetToRing F)
   | *-comm {x} {y} => \case \elim x, \elim y \with {
     | in~ a, in~ b => ~-cequiv (=_<= D.join-comm) $ func-* *> *-comm *> pmap2 (*) (inv (Func-app (Comp CRingCat.forget F)) *> poset-app) (inv (Func-app (Comp CRingCat.forget F)) *> poset-app)
   }
 
-\func DiscreteFieldLatticeColimit {D : Bounded.JoinSemilattice} (F : Functor D CRingCat) (p : \Pi (d : D) -> DiscreteField { | CRing => F d }) : DiscreteField (SetColimit (Comp CRingCat.forget F)) \cowith
+\func DiscreteFieldLatticeColimit {D : BottomJoinSemilattice} (F : Functor D CRingCat) (p : \Pi (d : D) -> DiscreteField { | CRing => F d }) : DiscreteField (SetColimit (Comp CRingCat.forget F)) \cowith
   | CRing => CRingLatticeColimit F
   | zro/=ide q => \case unext-ub q \with {
     | inP s => zro/=ide {p s.1} $ inv func-zro *> s.4 *> func-ide

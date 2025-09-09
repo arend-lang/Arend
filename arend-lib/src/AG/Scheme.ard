@@ -41,7 +41,6 @@
 \import Topology.Locale
 \open Monoid
 \open CompleteLattice (SJoin)
-\open Bounded (bottom)
 \open Ideal
 
 \func SpecPres (R : CRing) : FramePres R \cowith

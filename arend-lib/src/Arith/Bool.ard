@@ -4,7 +4,7 @@
 \import Order.Lattice
 \import Order.LinearOrder
 
-\instance BoolLattice : Bounded.DistributiveLattice Bool
+\instance BoolLattice : BoundedDistributiveLattice Bool
   | <= => <=
   | <=-refl {x} => cases x constructor
   | <=-transitive {x} {y} {z} p q => cases (x,y,z,p,q) constructor

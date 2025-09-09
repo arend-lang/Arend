@@ -8,7 +8,6 @@
 \import Paths
 \import Paths.Meta
 \import Topology.Locale
-\open Bounded(top,top-univ)
 
 \func Set (X : \hType) => X -> \Prop
   \where {
@@ -65,7 +64,7 @@
   | Join-univ d (inP (j,c)) => d j c
   | Join-ldistr>= (d, inP (j,c)) => inP (j,(d,c))
 
-\lemma bottom-empty {A : \hType} {E : \Prop} {x : A} (b : Bounded.bottom {SetLattice A} x) : E \elim b
+\lemma bottom-empty {A : \hType} {E : \Prop} {x : A} (b : (SetLattice A).bottom x) : E \elim b
   | inP ((),_)
 
 \func Refines {X : \hType} (C D : Set (Set X)) : \Prop

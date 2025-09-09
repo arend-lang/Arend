@@ -11,7 +11,7 @@
 \import Paths
 \import Paths.Meta
 
-\class BooleanRing \extends PseudoCRing, DistributiveLattice, Bounded.JoinSemilattice {
+\class BooleanRing \extends PseudoCRing, DistributiveLattice, BottomJoinSemilattice {
   | isBooleanRing {x : E} : x * x = x
   | <= => BooleanRing.<=
   | <=-refl => isBooleanRing
@@ -84,7 +84,6 @@
   \where {
     \open MeetSemilattice
     \open JoinSemilattice
-    \open Bounded
 
     \use \coerce fromBooleanAlgebra (R : BooleanAlgebra) : UnitalBooleanRing R \cowith
       | zro => R.bottom

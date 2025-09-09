@@ -22,7 +22,6 @@
 \import Topology.UniformSpace
 \open IsTotallyBounded(IsCover,Cond)
 \open ClosurePrecoverSpace
-\open Bounded(top)
 
 \func IsTotallyBounded (X : CoverSpace) : \Prop
   => Cond X.isCauchy IsCover
@@ -58,10 +57,10 @@
                   | byLeft _ => no \lam q => \case q.2
                   | byRight p => yes (p,idp)
                 }) \with {
-                  | inl (j,(p,_),_) => inP (_, byRight $ inP (j,idp), rewrite (W=Ws, inv p) $ Bounded.MeetSemilattice.BigMeet-cond {_} {Ws} j)
+                  | inl (j,(p,_),_) => inP (_, byRight $ inP (j,idp), rewrite (W=Ws, inv p) $ TopMeetSemilattice.BigMeet-cond {_} {Ws} j)
                   | inr f => inP (_, byLeft idp, \lam {x} Wx => \case Vc x \with {
                     | inP (_, inP (j,idp), Vjx) => \case f j (cases (We j) \with {
-                      | byLeft q => \case (rewrite q in Bounded.MeetSemilattice.BigMeet-cond {_} {Ws} j (rewrite W=Ws in Wx)) Vjx
+                      | byLeft q => \case (rewrite q in TopMeetSemilattice.BigMeet-cond {_} {Ws} j (rewrite W=Ws in Wx)) Vjx
                       | byRight p => (p,idp)
                     })
                   })

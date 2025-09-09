@@ -15,7 +15,6 @@
 \import Topology.UniformSpace
 \open ClosurePrecoverSpace
 \open Set
-\open Bounded(top)
 \open UniformMap
 
 \instance RegularPreuniformSpaceHasProduct : HasProduct RegularPreuniformSpace

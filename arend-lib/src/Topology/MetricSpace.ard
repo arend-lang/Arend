@@ -43,7 +43,7 @@
       | inP (U,CU,g) => inP (U, CU, g $ rewrite dist-refl eps>0)
     }
   }
-  | uniform-top => dist-uniform.2 $ inP (1, RatField.zro<ide, \lam x => inP (Bounded.top, idp, \lam _ => ()))
+  | uniform-top => dist-uniform.2 $ inP (1, RatField.zro<ide, \lam x => inP (top, idp, \lam _ => ()))
   | uniform-refine Cu e => \case dist-uniform.1 Cu \with {
     | inP (eps,eps>0,h) => dist-uniform.2 $ inP (eps, eps>0, \lam x => \case h x \with {
       | inP (U,CU,g) => \case e CU \with {

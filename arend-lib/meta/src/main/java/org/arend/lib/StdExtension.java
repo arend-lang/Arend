@@ -292,7 +292,7 @@ public class StdExtension implements ArendExtension {
 
         A proof of a_i = a_{i+1} can be specified as implicit arguments between them.
         `using`, `usingOnly`, and `hiding` with a single argument can be used instead of a proof to control the context.
-        The first implicit argument can be either a universe or a subclass of either `Algebra.Monoid.Monoid`, `Algebra.Monoid.AddMonoid`, or `Order.Lattice.Bounded.MeetSemilattice`.
+        The first implicit argument can be either a universe or a subclass of either `Algebra.Monoid.Monoid`, `Algebra.Monoid.AddMonoid`, or `Order.Lattice.TopMeetSemilattice`.
         In the former case, the meta will prove an equality in a type without using any additional structure on it.
         In the latter case, the meta will prove an equality using only structure available in the specified class.
         """), equation);

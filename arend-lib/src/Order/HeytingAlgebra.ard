@@ -9,7 +9,7 @@
 \lemma \infixr 9 =<= {E : Preorder} {x y z : E}
                      (p : x = y) (q : y <= z) : x <= z => transport (__ <= z) (inv p) q
 
-\class HeytingAlebra \extends Bounded.DistributiveLattice, CartesianClosedPrecat (\lp, \lp) {
+\class HeytingAlebra \extends BoundedDistributiveLattice, CartesianClosedPrecat (\lp, \lp) {
   | implies \alias \infixr 5 --> : E -> E -> E
   | exponent-left {x a b : E} : x ∧ a <= b -> x <= a --> b
   | exponent-right {x a b : E} : x <= a --> b -> x ∧ a <= b
@@ -32,10 +32,10 @@
   \func neg (x : E) => x --> bottom
 
   \lemma neg_bottom : neg bottom = top
-    => <=-antisymmetric Bounded.MeetSemilattice.top-univ (exponent-left meet-right)
+    => <=-antisymmetric TopMeetSemilattice.top-univ (exponent-left meet-right)
 
   \lemma neg_top : neg top = bottom
-    => <=-antisymmetric (meet-univ <=-refl Bounded.MeetSemilattice.top-univ <=∘ eval) bottom-univ
+    => <=-antisymmetric (meet-univ <=-refl TopMeetSemilattice.top-univ <=∘ eval) bottom-univ
 
   \lemma id<=neg_neg {x : E} : x <= neg (neg x)
     => double-->-increasing

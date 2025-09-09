@@ -15,7 +15,6 @@
 \import Topology.CoverSpace
 \import Topology.RatherBelow
 \import Topology.TopSpace
-\open Bounded(top)
 
 \func IsCauchyFilter {S : CoverSpace} (F : SetFilter S) : \Prop
   => \Pi {C : Set (Set S)} -> isCauchy C -> ∃ (U : C) (F U)

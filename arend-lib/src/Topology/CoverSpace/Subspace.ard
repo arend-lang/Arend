@@ -12,7 +12,6 @@
 \import Topology.CoverSpace.Complete
 \import Topology.RatherBelow
 \open Set
-\open Bounded(top,top-univ)
 
 \func OpenCoverSpace (X : CoverSpace) {S : Set X} (So : X.isOpen S) : CoverSpace (Total S)
   => ClosureCoverSpace isBasicCover basicCover-cover basicCover-regular

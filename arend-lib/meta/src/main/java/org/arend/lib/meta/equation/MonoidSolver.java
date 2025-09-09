@@ -61,7 +61,7 @@ public class MonoidSolver extends BaseEqualitySolver {
 
     letClauses = new ArrayList<>();
     isCat = classCall == null;
-    isSemilattice = !isCat && classCall.getDefinition().isSubClassOf(meta.MSemilattice) && (forcedClass == null || forcedClass.isSubClassOf(meta.MSemilattice));
+    isSemilattice = !isCat && classCall.getDefinition().isSubClassOf(meta.TopMeetSemilattice) && (forcedClass == null || forcedClass.isSubClassOf(meta.TopMeetSemilattice));
     isMultiplicative = !isSemilattice && !isCat && classCall.getDefinition().isSubClassOf(meta.Monoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.Monoid));
     isCommutative = !isCat && (isSemilattice || isMultiplicative && classCall.getDefinition().isSubClassOf(meta.CMonoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.CMonoid)) || !isMultiplicative && classCall.getDefinition().isSubClassOf(meta.AbMonoid) && (forcedClass == null || forcedClass.isSubClassOf(meta.AbMonoid)));
     CoreClassField ide = isSemilattice ? meta.top : isMultiplicative ? meta.ide : meta.zro;

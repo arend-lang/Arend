@@ -12,7 +12,6 @@
 \import Set.SetHom
 \import Set.Filter
 \import Set.Subset
-\open Bounded(top,bottom)
 
 \class TopSpace \extends BaseSet {
   | isOpen : Set E -> \Prop

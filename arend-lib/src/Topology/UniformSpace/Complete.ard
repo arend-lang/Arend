@@ -13,7 +13,6 @@
 \import Topology.RatherBelow
 \import Topology.UniformSpace
 \open ClosurePrecoverSpace
-\open Bounded(top)
 \open Completion
 
 \class CompleteUniformSpace \extends UniformSpace, CompleteCoverSpace

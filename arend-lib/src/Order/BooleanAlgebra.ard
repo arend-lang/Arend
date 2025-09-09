@@ -6,7 +6,7 @@
 \import Paths.Meta
 \import Set.Subset
 
-\class BooleanAlgebra \extends Bounded.DistributiveLattice, HeytingAlebra {
+\class BooleanAlgebra \extends BoundedDistributiveLattice, HeytingAlebra {
   | compl : E -> E
   | compl-meet {a : E} : a ∧ compl a <= bottom
   | compl-join {a : E} : top <= a ∨ compl a

@@ -116,7 +116,7 @@
 \lemma tderiv-quot-cont {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {f : X -> Y}
                         (gx : ContMap R X) (gh : ContMap R R) (ga : ContMap R X) (d : HasTDeriv f)
   : ContMap R Y (\lam h => tderiv-quot f d (gx h) (gh h) (ga h))
-  => deriv-quot-cont gx gh ga d {Bounded.top} (\lam _ => ((),())) ∘ TopTransfer-lift id (\lam _ => ())
+  => deriv-quot-cont gx gh ga d {top} (\lam _ => ((),())) ∘ TopTransfer-lift id (\lam _ => ())
 
 \func tderiv {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} (f : X -> Y) (d : HasTDeriv f) (x : X) : LinearMap X Y
   => deriv open-top (\lam s => f s.1) d (x,())

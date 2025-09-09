@@ -179,126 +179,124 @@
     inv join-assoc *> pmap2 (∨) (join-comm *> join_<= meet-right) meet-comm
 }
 
-\module Bounded \where {
-  \class MeetSemilattice \extends Order.Lattice.MeetSemilattice, CartesianPrecat (\lp,\lp) {
-    | top : E
-    | top-univ {x : E} : x <= top
-    | terminal => \new Product {
-      | apex => top
-      | proj => \case __
-      | tupleMap _ => top-univ
-      | tupleBeta {_} {_} {j} => \case j
-      | tupleEq _ => prop-pi
-    }
+\class TopMeetSemilattice \extends MeetSemilattice, CartesianPrecat (\lp,\lp) {
+  | top : E
+  | top-univ {x : E} : x <= top
+  | terminal => \new Product {
+    | apex => top
+    | proj => \case __
+    | tupleMap _ => top-univ
+    | tupleBeta {_} {_} {j} => \case j
+    | tupleEq _ => prop-pi
+  }
 
-    \use \lemma top-left {x : E} : top ∧ x = x
-      => <=-antisymmetric meet-right (meet-univ top-univ <=-refl)
+  \use \lemma top-left {x : E} : top ∧ x = x
+    => <=-antisymmetric meet-right (meet-univ top-univ <=-refl)
 
-    \lemma top-right {x : E} : x ∧ top = x
-      => <=-antisymmetric meet-left (meet-univ <=-refl top-univ)
+  \lemma top-right {x : E} : x ∧ top = x
+    => <=-antisymmetric meet-left (meet-univ <=-refl top-univ)
 
-    \func BigMeet (l : Array E) : E
-      => Big (∧) top l
+  \func BigMeet (l : Array E) : E
+    => Big (∧) top l
 
-    \lemma BigMeet-cond {l : Array E} (j : Fin l.len) : BigMeet l <= l j \elim l, j
-      | a :: l, 0 => meet-left
-      | a :: l, suc j => meet-right <=∘ BigMeet-cond j
+  \lemma BigMeet-cond {l : Array E} (j : Fin l.len) : BigMeet l <= l j \elim l, j
+    | a :: l, 0 => meet-left
+    | a :: l, suc j => meet-right <=∘ BigMeet-cond j
 
-    \lemma BigMeet-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> x <= l j) : x <= BigMeet l \elim l
-      | nil => top-univ
-      | a :: l => meet-univ (p 0) $ BigMeet-univ \lam j => p (suc j)
+  \lemma BigMeet-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> x <= l j) : x <= BigMeet l \elim l
+    | nil => top-univ
+    | a :: l => meet-univ (p 0) $ BigMeet-univ \lam j => p (suc j)
 
-    \protected \func op : JoinSemilattice \cowith
-      | Order.Lattice.JoinSemilattice => Order.Lattice.MeetSemilattice.op
-      | bottom => top
-      | bottom-univ => top-univ
-  } \where {
-    \use \coerce toMonoid (L : MeetSemilattice) : CMonoid L \cowith
+  \protected \func op : BottomJoinSemilattice \cowith
+    | Order.Lattice.JoinSemilattice => Order.Lattice.MeetSemilattice.op
+    | bottom => top
+    | bottom-univ => top-univ
+} \where {
+  \use \coerce toMonoid (L : TopMeetSemilattice) : CMonoid L \cowith
+    | ide => top
+    | * => meet
+    | ide-left => L.top-left
+    | *-assoc => L.meet-assoc
+    | *-comm => L.meet-comm
+}
+
+\class BottomJoinSemilattice \extends JoinSemilattice, DirectedSet {
+  | bottom : E
+  | bottom-univ {x : E} : bottom <= x
+
+  | isInhabitted => inP bottom
+  | isDirected x y => inP (x ∨ y, join-left, join-right)
+
+  \use \lemma bottom-left {x : E} : bottom ∨ x = x
+    => <=-antisymmetric (join-univ bottom-univ <=-refl) join-right
+
+  \lemma bottom-right {x : E} : x ∨ bottom = x
+    => <=-antisymmetric (join-univ <=-refl bottom-univ) join-left
+
+  \func BigJoin (l : Array E) : E
+    => Big (∨) bottom l
+
+  \lemma BigJoin-cond {l : Array E} (j : Fin l.len) : l j <= BigJoin l \elim l, j
+    | a :: l, 0 => join-left
+    | a :: l, suc j => BigJoin-cond j <=∘ join-right
+
+  \lemma BigJoin-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> l j <= x) : BigJoin l <= x \elim l
+    | nil => bottom-univ
+    | a :: l => join-univ (p 0) $ BigJoin-univ \lam j => p (suc j)
+
+  \sfunc FinJoin {J : FinSet} (a : J -> E) : E
+    => AbMonoid.FinSum {\this} a
+
+  \lemma FinJoin-cond {J : FinSet} (j : J) {a : J -> E} : a j <= FinJoin a
+    => \case AbMonoid.FinSum.aux.2 \with {
+         | inP (e : Equiv, q) => \have t => (\peval FinJoin a) *> (\peval AbMonoid.FinSum a) *> inv q
+                                 \in transport2 (<=) (pmap a (e.f_ret j)) (inv t) (BigJoin-cond (e.ret j))
+       }
+
+  \lemma FinJoin-univ {J : FinSet} {a : J -> E} {x : E} (p : \Pi (j : J) -> a j <= x) : FinJoin a <= x
+    => \case AbMonoid.FinSum.aux.2 \with {
+         | inP (e,q) => \have t => (\peval FinJoin a) *> (\peval AbMonoid.FinSum a) *> inv q
+                        \in transportInv (`<= x) t $ BigJoin-univ \lam j => p (e j)
+       }
+
+  \protected \func op : TopMeetSemilattice \cowith
+    | Order.Lattice.MeetSemilattice => Order.Lattice.JoinSemilattice.op
+    | top => bottom
+    | top-univ => bottom-univ
+} \where {
+  \use \coerce toMonoid (L : BottomJoinSemilattice) : AbMonoid L \cowith
+    | zro => bottom
+    | + => join
+    | zro-left => L.bottom-left
+    | +-assoc => L.join-assoc
+    | +-comm => L.join-comm
+}
+
+\class BoundedLattice \extends Lattice, TopMeetSemilattice, BottomJoinSemilattice {
+  \protected \func op : BoundedLattice => \new BoundedLattice {
+    | TopMeetSemilattice => BottomJoinSemilattice.op
+    | BottomJoinSemilattice => TopMeetSemilattice.op
+  }
+}
+
+\class BoundedDistributiveLattice \extends BoundedLattice, DistributiveLattice
+  \where {
+    \use \coerce toSemiring (L : BoundedDistributiveLattice) : CSemiring L \cowith
+      | zro => bottom
+      | + => join
+      | zro-left => L.bottom-left
+      | +-assoc => L.join-assoc
+      | +-comm => L.join-comm
       | ide => top
       | * => meet
       | ide-left => L.top-left
       | *-assoc => L.meet-assoc
+      | ldistr => L.meet-ldistr
+      | zro_*-left {x} => <=-antisymmetric meet-left bottom-univ
       | *-comm => L.meet-comm
   }
 
-  \class JoinSemilattice \extends Order.Lattice.JoinSemilattice, DirectedSet {
-    | bottom : E
-    | bottom-univ {x : E} : bottom <= x
-
-    | isInhabitted => inP bottom
-    | isDirected x y => inP (x ∨ y, join-left, join-right)
-
-    \use \lemma bottom-left {x : E} : bottom ∨ x = x
-      => <=-antisymmetric (join-univ bottom-univ <=-refl) join-right
-
-    \lemma bottom-right {x : E} : x ∨ bottom = x
-      => <=-antisymmetric (join-univ <=-refl bottom-univ) join-left
-
-    \func BigJoin (l : Array E) : E
-      => Big (∨) bottom l
-
-    \lemma BigJoin-cond {l : Array E} (j : Fin l.len) : l j <= BigJoin l \elim l, j
-      | a :: l, 0 => join-left
-      | a :: l, suc j => BigJoin-cond j <=∘ join-right
-
-    \lemma BigJoin-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> l j <= x) : BigJoin l <= x \elim l
-      | nil => bottom-univ
-      | a :: l => join-univ (p 0) $ BigJoin-univ \lam j => p (suc j)
-
-    \sfunc FinJoin {J : FinSet} (a : J -> E) : E
-      => AbMonoid.FinSum {\this} a
-
-    \lemma FinJoin-cond {J : FinSet} (j : J) {a : J -> E} : a j <= FinJoin a
-      => \case AbMonoid.FinSum.aux.2 \with {
-           | inP (e : Equiv, q) => \have t => (\peval FinJoin a) *> (\peval AbMonoid.FinSum a) *> inv q
-                                   \in transport2 (<=) (pmap a (e.f_ret j)) (inv t) (BigJoin-cond (e.ret j))
-         }
-
-    \lemma FinJoin-univ {J : FinSet} {a : J -> E} {x : E} (p : \Pi (j : J) -> a j <= x) : FinJoin a <= x
-      => \case AbMonoid.FinSum.aux.2 \with {
-           | inP (e,q) => \have t => (\peval FinJoin a) *> (\peval AbMonoid.FinSum a) *> inv q
-                          \in transportInv (`<= x) t $ BigJoin-univ \lam j => p (e j)
-         }
-
-    \protected \func op : MeetSemilattice \cowith
-      | Order.Lattice.MeetSemilattice => Order.Lattice.JoinSemilattice.op
-      | top => bottom
-      | top-univ => bottom-univ
-  } \where {
-      \use \coerce toMonoid (L : JoinSemilattice) : AbMonoid L \cowith
-        | zro => bottom
-        | + => join
-        | zro-left => L.bottom-left
-        | +-assoc => L.join-assoc
-        | +-comm => L.join-comm
-    }
-
-  \class Lattice \extends Order.Lattice.Lattice, MeetSemilattice, JoinSemilattice {
-    \protected \func op : Lattice => \new Lattice {
-      | MeetSemilattice => JoinSemilattice.op
-      | JoinSemilattice => MeetSemilattice.op
-    }
-  }
-
-  \class DistributiveLattice \extends Lattice, Order.Lattice.DistributiveLattice
-    \where {
-      \use \coerce toSemiring (L : DistributiveLattice) : CSemiring L \cowith
-        | zro => bottom
-        | + => join
-        | zro-left => L.bottom-left
-        | +-assoc => L.join-assoc
-        | +-comm => L.join-comm
-        | ide => top
-        | * => meet
-        | ide-left => L.top-left
-        | *-assoc => L.meet-assoc
-        | ldistr => L.meet-ldistr
-        | zro_*-left {x} => <=-antisymmetric meet-left bottom-univ
-        | *-comm => L.meet-comm
-    }
-}
-
-\class CompleteLattice \extends Bounded.Lattice, CompleteCat (\lp,\lp) {
+\class CompleteLattice \extends BoundedLattice, CompleteCat (\lp,\lp) {
   | Join {J : \Set} : (J -> E) -> E
   | Join-cond {J : \Set} (j : J) {f : J -> E} : f j <= Join f
   | Join-univ {J : \Set} {f : J -> E} {e : E} : (\Pi (j : J) -> f j <= e) -> Join f <= e

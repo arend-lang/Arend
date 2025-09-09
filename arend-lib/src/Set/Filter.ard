@@ -6,15 +6,15 @@
 \import Paths.Meta
 \import Set.Subset
 
-\record Filter (A : Bounded.MeetSemilattice) (\coerce F : A -> \Prop)
+\record Filter (A : TopMeetSemilattice) (\coerce F : A -> \Prop)
   | filter-mono {a b : A} : F a -> a <= b -> F b
-  | filter-top : F Bounded.top
+  | filter-top : F top
   | filter-meet {a b : A} : F a -> F b -> F (a ∧ b)
   \where {
-    \func principal {A : Bounded.MeetSemilattice} (a : A) : Filter A \cowith
+    \func principal {A : TopMeetSemilattice} (a : A) : Filter A \cowith
       | F => a <=
       | filter-mono => <=∘
-      | filter-top => Bounded.top-univ
+      | filter-top => top-univ
       | filter-meet => meet-univ
   }
 
@@ -38,7 +38,7 @@
   | filter-meet => filter-meet
 
 \record WeaklyProperFilter \extends SetFilter
-  | isWeaklyProper : Not (F Bounded.bottom)
+  | isWeaklyProper : Not (F bottom)
 
 \record ProperFilter \extends WeaklyProperFilter
   | isProper {U : Set X} : F U -> ∃ U

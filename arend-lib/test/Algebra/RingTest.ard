@@ -10,10 +10,10 @@
 \import Arith.Rat
 \import Order.Lattice
 
-\lemma latticeTest1 {L : Bounded.DistributiveLattice} (a b c : L) : a ∧ (b ∨ (c ∧ a) ∨ (b ∧ a ∧ b)) = (b ∨ c) ∧ a
+\lemma latticeTest1 {L : BoundedDistributiveLattice} (a b c : L) : a ∧ (b ∨ (c ∧ a) ∨ (b ∧ a ∧ b)) = (b ∨ c) ∧ a
   => equation
 
-\lemma latticeTest2 {L : Bounded.DistributiveLattice} (a b c d : L) : (c ∧ d ∧ c) ∨ b ∨ ((b ∧ b ∨ c) ∧ a) = b ∨ (c ∧ (a ∨ d))
+\lemma latticeTest2 {L : BoundedDistributiveLattice} (a b c d : L) : (c ∧ d ∧ c) ∨ b ∨ ((b ∧ b ∨ c) ∧ a) = b ∨ (c ∧ (a ∨ d))
   => equation
 
 \lemma commRingAxTest1 {R : CRing} (q : 0 = {R} 1) : 2 = {R} 0

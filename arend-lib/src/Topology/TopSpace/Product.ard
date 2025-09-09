@@ -9,7 +9,6 @@
 \import Paths.Meta
 \import Set.Subset
 \import Topology.TopSpace
-\open Bounded(top)
 
 \instance TopSpaceHasProduct : HasProduct TopSpace
   | Product => ProductTopSpace

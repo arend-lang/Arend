@@ -301,7 +301,7 @@
           => \case isDense p, isDense q \with {
                | inP (a',a<a',a'<x), inP (b',y<b',b'<b) => closed-compact
                    (closed-isClosed _)
-                   (<<-left (<<-fromPres (RealPres.wayBelow {_} {a',b'} {a,b} (a<a',b'<b))) Bounded.top-univ)
+                   (<<-left (<<-fromPres (RealPres.wayBelow {_} {a',b'} {a,b} (a<a',b'<b))) top-univ)
                    $ closed>=open {_} {_} {PresentedFrame.embed (later (a',b'))} \lam {z} _ => cover-trans (RealPres.cover-pair a'<x) \case \elim __ \with {
                      | 0 => cover-inj (true, (z.1,x), later $ cover-inj (true, (z.1,x), cover-inj ((z.1,x,<=-refl), (z.1,x), cover-inj () idp) idp) idp) idp
                      | 1 => cover-trans (RealPres.cover-pair y<b') \case \elim __ \with {
