@@ -59,12 +59,12 @@ class TypeCheckConfiguration(
     override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState {
         if (environment.runnerSettings is DebuggingRunnerData) {
             val libraries = if (arendTypeCheckCommand.library.isEmpty()) project.service<ArendServerService>().server.libraries else listOf(arendTypeCheckCommand.library)
-            val libPaths = libraries.mapNotNull { libName -> project.findLibrary(libName)?.localFSRoot?.let { listOf(it.path) } }
+            val libPaths = libraries.mapNotNull { libName -> project.findLibrary(libName)?.localFSRoot?.let { it.path } }
             val projectPath = if (libPaths.isEmpty()) project.basePath else libPaths.joinToString(" ")
             val librariesRoot = project.service<ArendProjectSettings>().librariesRoot
             val jarConfiguration = JarApplicationConfigurationType.getInstance().createTemplateConfiguration(project) as JarApplicationConfiguration
             jarConfiguration.jarPath = arendSettings.pathToArendJar
-            jarConfiguration.programParameters = "$projectPath --recompile" +
+            jarConfiguration.programParameters = projectPath +
                     (if (arendTypeCheckCommand.modulePath.isEmpty()) ""
                     else ("=" + arendTypeCheckCommand.modulePath +
                             if (arendTypeCheckCommand.definitionFullName.isEmpty()) ""

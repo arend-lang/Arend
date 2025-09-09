@@ -5,3 +5,4 @@ testsDir: test
 binariesDir: bin
 extensionsDir: ext
 extensionMainClass: org.arend.lib.StdExtension
+dependencies: [arend-lib]
