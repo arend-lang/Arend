@@ -29,11 +29,6 @@ public final class UnloadModuleCommand implements CliReplCommand {
       api.eprintln("[ERROR] Module " + modulePath + " is not loaded.");
       return;
     }
-    if (Objects.equals(modulePath.toString(), ALL_MODULES)) {
-      api.clearScope();
-    }
-    Scope scope = api.getAvailableModuleScopeProvider().forModule(modulePath);
-    if (scope != null) api.removeScope(scope);
     api.unloadModule(modulePath);
     api.checkErrors();
   }

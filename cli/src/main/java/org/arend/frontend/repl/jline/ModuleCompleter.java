@@ -2,6 +2,7 @@ package org.arend.frontend.repl.jline;
 
 import org.arend.ext.module.ModuleLocation;
 import org.arend.frontend.repl.CommonCliRepl;
+import org.arend.prelude.Prelude;
 import org.jetbrains.annotations.NotNull;
 import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
@@ -15,21 +16,25 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static org.arend.frontend.repl.action.LoadLibraryCommand.CUR_DIR;
 import static org.arend.frontend.repl.action.LoadModuleCommand.ALL_MODULES;
+import static org.arend.repl.Repl.REPL_MODULE_LOCATION;
 
-public class ImportCompleter implements Completer {
+public class ModuleCompleter implements Completer {
   private final CommonCliRepl repl;
   private final Supplier<Stream<String>> moduleSupplier;
-  static final String IMPORT_KW = "\\import";
+  public static final String IMPORT_KW = "\\import";
+  static final String IMPORT_COMMAND = ":import";
   static final String LOAD_COMMAND = ":load";
   static final String UNLOAD_COMMAND = ":unload";
   static final String MODULES_COMMAND = ":modules";
+  static final String LIB_COMMAND = ":lib";
 
   static final int MAX_DEPTH_MODULES = 10;
   static final String MODULE_PATH_DELIMITER_REGEX = "\\.";
   static final String MODULE_PATH_DELIMITER = ".";
 
-  public ImportCompleter(CommonCliRepl repl, @NotNull Supplier<Stream<String>> moduleSupplier) {
+  public ModuleCompleter(CommonCliRepl repl, @NotNull Supplier<Stream<String>> moduleSupplier) {
     this.repl = repl;
     this.moduleSupplier = moduleSupplier;
   }
@@ -42,15 +47,20 @@ public class ImportCompleter implements Completer {
       candidates.add(new Candidate(ALL_MODULES));
       return;
     }
+    if (Objects.equals(LIB_COMMAND, firstWord)) {
+      candidates.add(new Candidate(CUR_DIR));
+      return;
+    }
 
     if (!Objects.equals(IMPORT_KW, firstWord)
       && !Objects.equals(LOAD_COMMAND, firstWord)
-      && !Objects.equals(UNLOAD_COMMAND, firstWord)) return;
+      && !Objects.equals(UNLOAD_COMMAND, firstWord)
+      && !Objects.equals(IMPORT_COMMAND, firstWord)) return;
     List<String> loadedModulePaths = repl.getLoadedModuleLocations().stream()
-      .filter(moduleLocation -> moduleLocation.getLocationKind() != ModuleLocation.LocationKind.GENERATED)
+      .filter(moduleLocation -> moduleLocation != Prelude.MODULE_LOCATION && moduleLocation != REPL_MODULE_LOCATION)
       .map(ModuleLocation::getModulePath).map(Object::toString).toList();
     if (line.wordIndex() == 1) {
-      if (Objects.equals(IMPORT_KW, firstWord) || Objects.equals(LOAD_COMMAND, firstWord)) {
+      if (Objects.equals(LOAD_COMMAND, firstWord)) {
         candidates.addAll(moduleSupplier.get().map(Candidate::new).toList());
       } else {
         candidates.addAll(loadedModulePaths.stream().map(Candidate::new).toList());
@@ -80,7 +90,8 @@ public class ImportCompleter implements Completer {
               break;
             }
           }
-          if (Objects.equals(UNLOAD_COMMAND, firstWord) && !loadedModulePaths.contains(longModule)) {
+          if ((Objects.equals(UNLOAD_COMMAND, firstWord) || Objects.equals(IMPORT_KW, firstWord) || Objects.equals(IMPORT_COMMAND, firstWord))
+              && !loadedModulePaths.contains(longModule)) {
             isCorrect = false;
           }
           if (isCorrect) {

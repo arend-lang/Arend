@@ -17,42 +17,48 @@ import org.arend.naming.reference.*;
 import org.arend.naming.resolving.typing.TypingInfo;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor;
+import org.arend.naming.scope.MergeScope;
 import org.arend.naming.scope.Scope;
 import org.arend.naming.scope.ScopeFactory;
+import org.arend.prelude.Prelude;
 import org.arend.repl.action.*;
+import org.arend.server.ArendChecker;
 import org.arend.server.ArendLibrary;
 import org.arend.server.ArendServer;
+import org.arend.server.ProgressReporter;
+import org.arend.server.impl.ArendServerImpl;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.*;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import org.arend.term.prettyprint.ToAbstractVisitor;
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator;
 import org.arend.typechecking.instance.ArendInstances;
 import org.arend.typechecking.instance.pool.GlobalInstancePool;
-import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
+import org.arend.typechecking.instance.provider.InstanceScopeProvider;
+import org.arend.typechecking.provider.SimpleConcreteProvider;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.typechecking.visitor.DesugarVisitor;
 import org.arend.typechecking.visitor.SyntacticDesugarVisitor;
+import org.arend.util.SingletonList;
 import org.jetbrains.annotations.*;
 
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public abstract class Repl {
-  public static final @NotNull ModuleLocation replModulePath = new ModuleLocation("Repl", ModuleLocation.LocationKind.SOURCE, ModulePath.fromString("Repl"));
+  public static final @NotNull String REPL_NAME = "Repl";
+  public static @NotNull ModuleLocation REPL_MODULE_LOCATION = new ModuleLocation(REPL_NAME, ModuleLocation.LocationKind.SOURCE, ModulePath.fromString(REPL_NAME));
 
-  protected final List<Scope> myMergedScopes = new LinkedList<>();
   private final List<ReplHandler> myHandlers = new ArrayList<>();
-  private final TCDefReferable myModuleReferable;
-  protected @NotNull ReplScope myReplScope = new ReplScope(null, myMergedScopes);
-  protected @NotNull Scope myScope = myReplScope;
-  protected @NotNull TypecheckingOrderingListener typechecking;
+  protected final TCDefReferable myModuleReferable;
   protected final @NotNull PrettyPrinterConfig myPpConfig = new PrettyPrinterConfig() {
     @Contract(" -> new")
     @Override
     public @NotNull DefinitionRenamer getDefinitionRenamer() {
-      return new CachingDefinitionRenamer(new ScopeDefinitionRenamer(myScope));
+      return new CachingDefinitionRenamer(new ScopeDefinitionRenamer(getServerScope(false)));
     }
 
     @Override
@@ -70,18 +76,31 @@ public abstract class Repl {
   public final List<ConcreteStatement> statements = new ArrayList<>();
 
   public Repl(@NotNull ListErrorReporter listErrorReporter,
-              @NotNull ArendServer server,
-              @NotNull TypecheckingOrderingListener typecheckingOrderingListener) {
+              @NotNull ArendServer server) {
     errorReporter = listErrorReporter;
     myServer = server;
-    typechecking = typecheckingOrderingListener;
-    myModuleReferable = new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, replModulePath.getLibraryName(), Precedence.DEFAULT, null, new FullModuleReferable(replModulePath), GlobalReferable.Kind.OTHER);
+    myModuleReferable = new LocatedReferableImpl(null, AccessModifier.PUBLIC, Precedence.DEFAULT, REPL_MODULE_LOCATION.getLibraryName(), Precedence.DEFAULT, null, new FullModuleReferable(REPL_MODULE_LOCATION), GlobalReferable.Kind.OTHER);
   }
 
   protected abstract void loadLibraries();
 
+  private Scope getServerScope(boolean onlyContext) {
+    Set<ModulePath> modules;
+    if (onlyContext) {
+      modules = statements.stream()
+        .filter(statement -> statement.command() != null && statement.command().isImport())
+        .map(statement -> new ModulePath(statement.command().module().getPath()))
+        .collect(Collectors.toSet());
+    } else {
+      modules = myServer.getModules().stream().map(ModuleLocation::getModulePath).collect(Collectors.toSet());
+    }
+    modules.add(Prelude.MODULE_PATH);
+    modules.add(REPL_MODULE_LOCATION.getModulePath());
+    return new MergeScope(modules.stream().map(modulePath -> getAvailableModuleScopeProvider().forModule(modulePath)).filter(Objects::nonNull).toList());
+  }
+
   protected final @NotNull List<Referable> getInScopeElements() {
-    return new ArrayList<>(myReplScope.getElements());
+    return new ArrayList<>(getServerScope(true).getElements());
   }
 
   public final void initialize() {
@@ -140,32 +159,41 @@ public abstract class Repl {
 
   protected abstract @Nullable Concrete.Expression parseExpr(@NotNull String text);
 
-  protected void loadPotentialUnloadedModules(Collection<? extends ConcreteStatement> statements) {
+  protected boolean checkPotentialUnloadedModules(Collection<? extends ConcreteStatement> statements) {
+    return true;
+  }
+
+  public int typecheckModules(List<ModuleLocation> moduleLocations) {
+    ArendChecker arendChecker = myServer.getCheckerFor(moduleLocations);
+    return arendChecker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
   }
 
   public final void checkStatements(@NotNull String line) {
     var group = parseStatements(line);
     if (group == null) return;
     var moduleScopeProvider = getAvailableModuleScopeProvider();
-    loadPotentialUnloadedModules(group.statements());
+    if (!checkPotentialUnloadedModules(group.statements())) {
+      println("A module or some modules are not loaded for import");
+      return;
+    }
     var scope = ScopeFactory.forGroup(group, moduleScopeProvider);
-    myReplScope.addScope(scope);
-    myReplScope.setCurrentLineScope(null);
-    new DefinitionResolveNameVisitor(typechecking.getConcreteProvider(), TypingInfo.EMPTY, errorReporter).resolveGroup(group, myScope, new ArendInstances(), null);
-    if (checkErrors()) {
-      myMergedScopes.remove(scope);
-    } else {
+    new DefinitionResolveNameVisitor(new SimpleConcreteProvider(Collections.emptyMap()), TypingInfo.EMPTY, errorReporter).resolveGroup(group, scope, new ArendInstances(), null);
+    if (!checkErrors()) {
       statements.addAll(group.statements());
       typecheckStatements(group, scope);
     }
   }
 
   protected void typecheckStatements(@NotNull ConcreteGroup group, @NotNull Scope scope) {
-    if (!typechecking.typecheckModules(Collections.singletonList(group), null)) {
-      checkErrors();
-      var isRemoved = removeScope(scope);
-      assert isRemoved;
+    ConcreteGroup myGroup = myServer.getRawGroup(REPL_MODULE_LOCATION);
+    if (myGroup != null) {
+      myGroup.statements().addAll(group.statements());
+    } else {
+      myGroup = group;
     }
+    ConcreteGroup finalMyGroup = myGroup;
+    myServer.updateModule(System.currentTimeMillis(), REPL_MODULE_LOCATION, () -> finalMyGroup);
+    typecheckModules(new SingletonList<>(REPL_MODULE_LOCATION));
   }
 
   @MustBeInvokedByOverriders
@@ -200,29 +228,6 @@ public abstract class Repl {
 
   public final void clearActions() {
     CommandHandler.INSTANCE.commandMap.clear();
-  }
-
-  /**
-   * Multiplex the scope into the current REPL scope.
-   */
-  public void addScope(@NotNull Scope scope) {
-    myReplScope.addScope(scope);
-  }
-
-  /**
-   * Remove a multiplexed scope from the current REPL scope.
-   *
-   * @return true if there is indeed a scope removed
-   */
-  public final boolean removeScope(@NotNull Scope scope) {
-    for (Referable element : scope.getElements())
-      if (element instanceof TCDefReferable)
-        ((TCDefReferable) element).setTypechecked(null);
-    return myMergedScopes.remove(scope);
-  }
-
-  public final void clearScope() {
-    myMergedScopes.clear();
   }
 
   /**
@@ -278,7 +283,7 @@ public abstract class Repl {
     expr = DesugarVisitor.desugar(expr, errorReporter);
     if (checkErrors()) return;
     var typechecker = new CheckTypeVisitor(errorReporter, null, null);
-    var instancePool = new GlobalInstancePool(typechecking.getInstanceScopeProvider().getInstancesFor(myModuleReferable).getInstancesList(), typechecker);
+    var instancePool = new GlobalInstancePool((myServer instanceof ArendServerImpl ? ((ArendServerImpl) myServer).getInstanceScopeProvider() : InstanceScopeProvider.EMPTY).getInstancesFor(myModuleReferable).getInstancesList(), typechecker);
     typechecker.setInstancePool(instancePool);
     var result = typechecker.finalCheckExpr(expr, expectedType);
     if (!checkErrors()) {
@@ -292,7 +297,7 @@ public abstract class Repl {
   public final @Nullable Concrete.Expression preprocessExpr(@NotNull String text) {
     var expr = parseExpr(text);
     if (expr == null || checkErrors()) return null;
-    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(myScope, new ArrayList<>(), TypingInfo.EMPTY, errorReporter, null, null), null), errorReporter);
+    expr = SyntacticDesugarVisitor.desugar(expr.accept(new ExpressionResolveNameVisitor(getServerScope(true), new ArrayList<>(), TypingInfo.EMPTY, errorReporter, null, null), null), errorReporter);
     if (checkErrors()) return null;
     return expr;
   }
@@ -320,10 +325,6 @@ public abstract class Repl {
   }
 
   public void resetReplContext() {
-    Scope prelude = myMergedScopes.getLast();
-    myMergedScopes.clear();
-    myMergedScopes.add(prelude);
-    myReplScope = new ReplScope(myReplScope.myCurrentLineScope, myMergedScopes);
     statements.clear();
   }
 

@@ -11,13 +11,14 @@ import java.util.function.Supplier;
 
 public final class LoadLibraryCommand implements CliReplCommand, DirectoryArgumentCommand {
   public static final @NotNull LoadLibraryCommand INSTANCE = new LoadLibraryCommand();
+  public static final @NotNull String CUR_DIR = ".";
 
   private LoadLibraryCommand() {
   }
 
   @Override
   public void invoke(@NotNull String line, @NotNull CommonCliRepl api, @NotNull Supplier<@NotNull String> scanner) {
-    if (!FileUtils.isLibraryName(line)) {
+    if (!FileUtils.isLibraryName(line) && !line.equals(CUR_DIR)) {
       api.eprintln("[ERROR] `" + line + "` is not a valid library name.");
       return;
     }

@@ -24,7 +24,7 @@ public final class LoadModuleCommand implements CliReplCommand {
 
   @Override
   public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
-    return "Load an Arend module from loaded libraries. Use `:load all` to load all modules.";
+    return "Load/update an Arend module from loaded libraries. Use `:load all` to load all modules";
   }
 
   @Override
@@ -50,14 +50,9 @@ public final class LoadModuleCommand implements CliReplCommand {
       api.eprintln("[ERROR] Module " + modulePath + " does not exist.");
       return;
     }
-    if (Objects.equals(modulePath.toString(), ALL_MODULES)) {
-      api.clearScope();
-    }
-    Scope existingScope = api.getAvailableModuleScopeProvider().forModule(modulePath);
-    if (existingScope != null) api.removeScope(existingScope);
-    Scope scope = api.loadModule(modulePath);
-    if (scope != null) api.addScope(scope);
-    else api.println("[INFO] No module loaded.");
+
+    int definitions = api.loadModule(modulePath);
+    if (definitions == 0) api.println("[INFO] No module loaded.");
     if (!api.checkErrors()) ReloadModuleCommand.lastModulePath = modulePath;
     else api.unloadModule(modulePath);
   }

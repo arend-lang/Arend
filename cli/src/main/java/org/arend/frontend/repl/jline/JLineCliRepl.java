@@ -90,7 +90,7 @@ public class JLineCliRepl extends CommonCliRepl {
         new SpecialCommandCompleter(PrettyPrintFlagCommand.class, new StringsCompleter(PrettyPrintFlagCommand.AVAILABLE_OPTIONS)),
         new SpecialCommandCompleter(CommandHandler.HelpCommand.class, new StringsCompleter(CommandHandler.INSTANCE.commandMap.keySet())),
         new ScopeCompleter(this::getInScopeElements),
-        new ImportCompleter(this, this::modulePaths),
+        new ModuleCompleter(this, this::modulePaths),
         KeywordCompleter.INSTANCE,
         CommandsCompleter.INSTANCE
       ))

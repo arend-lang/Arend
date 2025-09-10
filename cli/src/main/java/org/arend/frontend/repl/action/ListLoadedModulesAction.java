@@ -54,37 +54,31 @@ public final class ListLoadedModulesAction implements CliReplCommand {
     String folderName = node.fileExists ? "" : (node == root ? "(root)" : "(not a module)");
     StringBuilder moduleErrors = new StringBuilder();
 
+    boolean hasFailedDefs = false;
     ModulePath modulePath = new ModulePath(node.getPath(null));
     if (node.fileExists && loadedModules.contains(modulePath)) {
       Scope scope = api.getAvailableModuleScopeProvider().forModule(modulePath);
-      int successful = 0;
-      boolean hasFailedDefs = false;
 
       if (scope != null) {
         for (Referable referable : scope.getElements()) {
           if (referable instanceof TCDefReferable referable1) {
-            if (referable1.getTypechecked() == null && referable1.getKind().isTypecheckable())
+            if (referable1.getTypechecked() == null && referable1.getKind().isTypecheckable()) {
               hasFailedDefs = true;
-            else successful++;
+              break;
+            }
           }
         }
       }
 
-      if (successful == 0) {
-        moduleErrors.append(" □");
-      } else {
-        if (hasFailedDefs) {
-          moduleErrors.append(" ❌");
-        } else {
-          if (scope instanceof CachingScope cachingScope && cachingScope.getInternalScope() instanceof LexicalScope lexicalScope
-              && lexicalScope.getGroup() != null && lexicalScope.getGroup().referable() instanceof FullModuleReferable moduleReferable) {
-            List<GeneralError> errorList = api.getErrorList(moduleReferable.getLocation());
+      if (scope instanceof CachingScope cachingScope && cachingScope.getInternalScope() instanceof LexicalScope lexicalScope
+        && lexicalScope.getGroup() != null && lexicalScope.getGroup().referable() instanceof FullModuleReferable moduleReferable) {
+        List<GeneralError> errorList = api.getErrorList(moduleReferable.getLocation());
 
-            if (errorList != null && !errorList.isEmpty()) {
-              if (errorList.stream().anyMatch(generalError -> generalError instanceof GoalError)) {
-                moduleErrors.append(" ○");
-              }
-            }
+        if (errorList != null && !errorList.isEmpty()) {
+          if (errorList.stream().anyMatch(generalError -> generalError instanceof GoalError)) {
+            moduleErrors.append(" ○");
+          } else {
+            moduleErrors.append(" ❌");
           }
         }
       }
@@ -95,6 +89,8 @@ public final class ListLoadedModulesAction implements CliReplCommand {
       api.println();
     } else if (!moduleErrors.isEmpty()) {
       api.eprintln(moduleErrors.toString().trim());
+    } else if (hasFailedDefs) {
+      api.println();
     } else if (node.fileExists) {
       api.println("✅");
     } else {

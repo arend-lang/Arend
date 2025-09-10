@@ -23,7 +23,7 @@ public class ScopeCompleter implements Completer {
   public void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
     String command = CommandHandler.splitCommand(line.line()).proj1;
     List<String> words = ((ArendReplParser.ArendParsedLine) line).words();
-    if (words.size() == 1 && words.get(0).equals(ImportCompleter.IMPORT_KW)) return;
+    if (words.size() == 1 && words.getFirst().equals(ModuleCompleter.IMPORT_KW)) return;
 
     if (command != null && CommandHandler.INSTANCE
       .determineEntries(command)

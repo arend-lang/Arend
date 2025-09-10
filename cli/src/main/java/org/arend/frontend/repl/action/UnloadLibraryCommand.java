@@ -39,10 +39,6 @@ public class UnloadLibraryCommand implements CliReplCommand, DirectoryArgumentCo
       api.eprintln("[ERROR] Library " + library + " is not loaded.");
       return;
     }
-    for (ModulePath modulePath : library.findModules(false)) {
-      Scope scope = api.getLibraryModuleScopeProvider(libraryName).forModule(modulePath);
-      if (scope != null) api.removeScope(scope);
-    }
     boolean isUnloaded = api.unloadLibrary(libraryName);
     assert isUnloaded;
     api.checkErrors();
