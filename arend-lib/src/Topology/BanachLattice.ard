@@ -1,0 +1,25 @@
+\import Arith.Real.UpperReal
+\import Arith.Real.UpperRealLattice
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Lattice
+\import Paths
+\import Topology.BanachSpace
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.TopRieszSpace
+
+\class ExPseudoNormedRieszSpace \extends ExPseudoNormedAbGroup, TopRieszSpace
+  | norm_<= {x y : E} : abs x <= abs y -> norm x ExUpperReal.<= norm y
+  | solid-neighborhood U0 => \case <=<-ball U0 \with {
+    | inP (eps,eps>0,p) => inP (OBall eps 0, \lam |x|<eps |y|<=|x| => transport (ExUpperReal.U {__} eps) norm_dist $ norm_<= |y|<=|x| $ transportInv (ExUpperReal.U {__} eps) norm_dist |x|<eps, OBall-center_<=< eps>0, p)
+  }
+
+\class BanachLattice \extends ExPseudoNormedRieszSpace, RealBanachSpace
+
+\class RieszLSpace \extends BanachLattice
+  | norm_+_>= {x y : E} : norm x ExUpperReal.+ norm y ExUpperReal.<= norm (x + y)
+
+\class RieszMSpace \extends BanachLattice
+  | norm_join {x y : E} : norm (x ∨ y) ExUpperReal.<= norm x ExUpperRealLattice.∨ norm y

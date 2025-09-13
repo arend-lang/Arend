@@ -38,7 +38,10 @@
   | len => as.len
   | at i => f (as i)
 
-\func map_:: {A B : \Type} {f : A -> B} {a : A} {l : Array A} : map f (a :: l) = f a :: map f l => idp
+\func map_:: {A B : \Type} (f : A -> B) {a : A} {l : Array A} : map f (a :: l) = f a :: map f l => idp
+
+\func cong_:: {A : \Type} {a a' : A} (p : a = a') {l l' : Array A} (q : l = l') : a :: l = a' :: l'
+  => path \lam i => p i :: q i
 
 \func \infixr 5 ++' {A : \Type} (xs : Array A) {n : Nat} (ys : Array A n) : Array A (xs.len Nat.+ n) \elim xs
   | nil => ys
@@ -112,6 +115,12 @@
       | a :: l, suc i => \case split-index i \with {
         | inl r => inl (suc r.1, \lam i => suc (r.2 i))
         | inr r => inr (r.1, \lam i => suc (r.2 i))
+      }
+
+    \func ++-all {A : \Type} {P : A -> \Type} {l l' : Array A} (Pl : \Pi (i : Fin l.len) -> P (l i)) (Pl' : \Pi (i : Fin l'.len) -> P (l' i)) (j : Fin (l ++ l').len) : P ((l ++ l') j)
+      => \case ++.split-index j \with {
+        | inl (i,p) => rewrite (p,++_index-left) (Pl i)
+        | inr (i,p) => rewrite (p,++_index-right) (Pl' i)
       }
 
     \func index-big {A : \Type} {ls : Array (Array A)} (i : Fin ls.len) (j : Fin (DArray.len {ls i})) : Fin (DArray.len {Big (++) nil ls}) \elim ls, i

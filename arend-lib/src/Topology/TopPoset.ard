@@ -12,7 +12,7 @@
 \open ProductTopSpace
 \open ContMap
 
-\class TopPoset \extends HausdorffTopSpace, Poset {
+\class HausdorffTopPoset \extends HausdorffTopSpace, Poset {
   | <=-closed : (ProductTopSpace \this \this).IsClosed \lam s => s.1 <= s.2
   | isHausdorff => \have P => ProductTopSpace \this \this \in
     hausdorff-char.2 $ transport P.IsClosed (ext \lam s => ext (\lam p => <=-antisymmetric p.1 p.2, \lam p => (=_<= p, =_<= (inv p)))) $ P.closed-inter <=-closed $ cont-closed (tuple proj2 proj1) <=-closed
@@ -30,7 +30,7 @@
     => (\lam j => closed-limit <=-closed-left fl fm, \lam u => closed-limit0 <=-closed-right fl u)
 }
 
-\class TopPosetAbGroup \extends HausdorffTopAbGroup, TopPoset, PosetAbGroup {
+\class HausdorffTopPosetAbGroup \extends HausdorffTopAbGroup, HausdorffTopPoset, PosetAbGroup {
   | positive-closed : IsClosed (0 <=)
 
   \default <=-closed => transport (IsClosed {ProductTopSpace \this \this}) (ext \lam s => ext (from>=0,to>=0)) $ cont-closed (subtract-cont ContMap.∘ tuple proj2 proj1) positive-closed

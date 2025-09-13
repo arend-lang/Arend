@@ -20,6 +20,12 @@
 \lemma fsuc/= {n : Nat} {x y : Fin n} (p : x /= y) : fsuc x /= fsuc y
   => \lam q => p (unfsuc q)
 
+\lemma fsuc/=0 {n : Nat} {x : Fin n} : fsuc x /= 0
+  => \case __
+
+\lemma fsuc/=-conv {n : Nat} {x y : Fin n} (p : fsuc x /= fsuc y) : x /= y
+  => \lam q => p (pmap fsuc q)
+
 \lemma nat_fin_= {n : Nat} {x y : Fin n} (p : x = {Nat} y) : x = y \elim n, x, y
   | suc n, 0, 0 => idp
   | suc n, 0, suc y => \case p

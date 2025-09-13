@@ -2,6 +2,7 @@
 \import Algebra.Semiring
 \import Category.Limit
 \import Data.Array
+\import Data.Array.EPerm
 \import Data.Bool
 \import Equiv
 \import Function.Meta
@@ -259,6 +260,15 @@
                         \in transportInv (`<= x) t $ BigJoin-univ \lam j => p (e j)
        }
 
+  \lemma BigJoin_EPerm {l l' : Array E} (e : EPerm l l') : BigJoin l = BigJoin l'
+    => (toMonoid \this).BigSum_EPerm e
+
+  \lemma BigJoin_++ {l l' : Array E} : BigJoin (l ++ l') = BigJoin l ∨ BigJoin l'
+    => (toMonoid \this).BigSum_++
+
+  \lemma BigJoin_join {n : Nat} {l l' : Array E n} : BigJoin (\lam i => l i ∨ l' i) = BigJoin l ∨ BigJoin l'
+    => (toMonoid \this).BigSum_+
+
   \protected \func op : TopMeetSemilattice \cowith
     | Order.Lattice.MeetSemilattice => Order.Lattice.JoinSemilattice.op
     | top => bottom
@@ -279,7 +289,23 @@
   }
 }
 
-\class BoundedDistributiveLattice \extends BoundedLattice, DistributiveLattice
+\class BottomDistributiveLattice \extends DistributiveLattice, BottomJoinSemilattice {
+  \lemma bottom-ldistr {x : E} : x ∧ bottom = bottom
+    => <=-antisymmetric meet-right bottom-univ
+
+  \lemma bottom-rdistr {x : E} : bottom ∧ x = bottom
+    => <=-antisymmetric meet-left bottom-univ
+
+  \lemma BigJoin-ldistr {l : Array E} {x : E} : x ∧ BigJoin l = BigJoin \lam j => x ∧ l j \elim l
+    | nil => bottom-ldistr
+    | a :: l => meet-ldistr *> pmap (_ ∨) BigJoin-ldistr
+
+  \lemma BigJoin-rdistr {l : Array E} {x : E} : BigJoin l ∧ x = BigJoin \lam j => l j ∧ x \elim l
+    | nil => bottom-rdistr
+    | a :: l => meet-rdistr *> pmap (_ ∨) BigJoin-rdistr
+}
+
+\class BoundedDistributiveLattice \extends BottomDistributiveLattice, BoundedLattice
   \where {
     \use \coerce toSemiring (L : BoundedDistributiveLattice) : CSemiring L \cowith
       | zro => bottom
