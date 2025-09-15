@@ -246,7 +246,7 @@
     | a :: l => join-univ (p 0) $ BigJoin-univ \lam j => p (suc j)
 
   \sfunc FinJoin {J : FinSet} (a : J -> E) : E
-    => AbMonoid.FinSum {\this} a
+    => \this.FinSum a
 
   \lemma FinJoin-cond {J : FinSet} (j : J) {a : J -> E} : a j <= FinJoin a
     => \case AbMonoid.FinSum.aux.2 \with {
@@ -260,14 +260,20 @@
                         \in transportInv (`<= x) t $ BigJoin-univ \lam j => p (e j)
        }
 
+  \lemma FinJoin_Equiv {A B : FinSet} (e : Equiv {A} {B}) {x : B -> E} : FinJoin x = FinJoin (\lam a => x (e a))
+    => (\peval FinJoin x) *> \this.FinSum_Equiv e *> inv (\peval FinJoin _)
+
+  \lemma FinJoin=BigJoin {n : Nat} {x : Fin n -> E} : FinJoin x = BigJoin x
+    => (\peval FinJoin x) *> \this.FinSum=BigSum
+
   \lemma BigJoin_EPerm {l l' : Array E} (e : EPerm l l') : BigJoin l = BigJoin l'
-    => (toMonoid \this).BigSum_EPerm e
+    => \this.BigSum_EPerm e
 
   \lemma BigJoin_++ {l l' : Array E} : BigJoin (l ++ l') = BigJoin l ∨ BigJoin l'
-    => (toMonoid \this).BigSum_++
+    => \this.BigSum_++
 
   \lemma BigJoin_join {n : Nat} {l l' : Array E n} : BigJoin (\lam i => l i ∨ l' i) = BigJoin l ∨ BigJoin l'
-    => (toMonoid \this).BigSum_+
+    => \this.BigSum_+
 
   \protected \func op : TopMeetSemilattice \cowith
     | Order.Lattice.MeetSemilattice => Order.Lattice.JoinSemilattice.op

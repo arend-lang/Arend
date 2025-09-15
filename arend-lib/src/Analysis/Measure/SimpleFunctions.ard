@@ -10,7 +10,6 @@
 \import Arith.Rat
 \import Data.Array
 \import Data.Array.EPerm
-\import Data.Array.Pairs
 \import Data.Fin
 \import Data.Or
 \import Equiv
@@ -25,6 +24,7 @@
 \import Relation.Equivalence \hiding (~)
 \import Set
 \import Set.Fin
+\import Set.Fin.Instances
 
 \type SFunc (V : AddMonoid) (B : BottomDistributiveLattice) => Quotient (~ {V} {B})
   \where {
@@ -345,10 +345,29 @@
       | ~-trans l~m m~l' => \case ~-unequals l~m, ~-unequals m~l' \with {
         | inP (d1,d1r,d1<l,d1<m), inP (d2,d2r,d2<m,d2<l') => \case FinSet.finiteAC d1<m.2, FinSet.finiteAC d2<m.2 \with {
           | inP f1, inP f2 =>
-            \let | ps1 => pairs (__,__) (\new Array (Fin d1.len) d1.len \lam i => i) (\new Array (Fin d2.len) d2.len \lam j => j)
-                 | ps2 => filter (\lam s => (f1 s.1).1 == (f2 s.2).1) ps1
-                 | ps3 => map (\lam s => ((d1 s.1).1, (d1 s.1).2 * (d2 s.2).2)) ps2
-            \in inP (ps3, {?}, SFRefines-trans reduce_IsReduced {?} d1<l, SFRefines-trans reduce_IsReduced {?} d2<l')
+            \let P => SigmaFin (ProdFin (FinFin d1.len) (FinFin d2.len)) \lam s => DecFin (decideEq (f1 s.1).1 (f2 s.2).1)
+            \in \case P.finEq \with {
+              | inP Pe => inP (\new Array (\Sigma V B) P.finCard \lam j => ((d1 (Pe j).1.1).1, (d1 (Pe j).1.1).2 * (d2 (Pe j).1.2).2),
+                               \lam {i} {j} i/=j => \case decideEq (Pe i).1.1 (Pe j).1.1, decideEq (Pe i).1.2 (Pe j).1.2 \with {
+                                 | yes e, yes e' => absurd $ i/=j $ Pe.isInj $ ext $ ext (e,e')
+                                 | no q, _ => equation.bRing {d1r q}
+                                 | _, no q => equation.bRing {d2r q}
+                               },
+                               SFRefines-trans reduce_IsReduced (later (\lam i => \case d2<m.1 (f1 i).1 \with {
+                                 | byLeft q => byLeft $ (f1 i).2 *> q
+                                 | byRight q => byRight $ meet-univ <=-refl ((f1 i).3 <=∘ q) <=∘ =_<= B.BigJoin-ldistr <=∘ B.BigJoin-univ \lam j => later \case decideEq (f1 i).1 (f2 j).1 \with {
+                                   | yes e => B.FinJoin-cond {P} ((i,j),e) {\lam s => (d1 s.1.1).2 * (d2 s.1.2).2} <=∘ =_<= (B.FinJoin_Equiv {_} {P} Pe *> B.FinJoin=BigJoin)
+                                   | no c => B.meet-monotone (f1 i).3 (f2 j).3 <=∘ =_<= (reduce_IsReduced c) <=∘ bottom-univ
+                                 }
+                               }, \lam k => inP ((Pe k).1.1, idp, meet-left))) d1<l,
+                               SFRefines-trans reduce_IsReduced (later \lam j => \case d1<m.1 (f2 j).1 \with {
+                                 | byLeft q => byLeft $ (f2 j).2 *> q
+                                 | byRight q => byRight $ meet-univ ((f2 j).3 <=∘ q) <=-refl <=∘ =_<= B.BigJoin-rdistr <=∘ B.BigJoin-univ \lam i => later \case decideEq (f1 i).1 (f2 j).1 \with {
+                                   | yes e => B.FinJoin-cond {P} ((i,j),e) {\lam s => (d1 s.1.1).2 * (d2 s.1.2).2} <=∘ =_<= (B.FinJoin_Equiv {_} {P} Pe *> B.FinJoin=BigJoin)
+                                   | no c => B.meet-monotone (f1 i).3 (f2 j).3 <=∘ =_<= (reduce_IsReduced c) <=∘ bottom-univ
+                                 }
+                               }, \lam k => inP $ later ((Pe k).1.2, (f1 _).2 *> pmap (\lam x => (reduce _ x).1) (Pe k).2 *> inv (f2 _).2, meet-right)) d2<l')
+            }
         }
       }
       | ~-zro-left {b} idp => inP (split b (reduce l'), split_IsReduced reduce_IsReduced, split_add_SFRefines, split_SFRefines)
