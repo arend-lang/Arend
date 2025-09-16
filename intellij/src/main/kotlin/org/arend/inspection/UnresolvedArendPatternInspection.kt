@@ -51,7 +51,7 @@ class UnresolvedArendPatternInspection : ArendInspectionBase() {
                 val patterns = pattern.parent?.childrenOfType<ArendPattern>()
                 val firstPattern = patterns?.first()
                 val firstPatternResolve = firstPattern?.singleReferable?.reference?.resolve()
-                val index = patterns?.indexOf(pattern) ?: -1
+                val index = patterns?.indexOf(pattern) ?: return null
                 return if (firstPatternResolve is Abstract.ParametersHolder) {
                     val parameter = firstPatternResolve.parameters[index - 1]
                     parameter?.type as? PsiElement
