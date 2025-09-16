@@ -39,6 +39,14 @@
   | 0 => absurd (p idp)
   | suc x => idp
 
+\func fpredP {n : Nat} (j : Fin (suc n)) (j/=0 : j /= 0) : Fin n \elim j
+  | 0 => absurd (j/=0 idp)
+  | suc j => j
+
+\lemma fsuc_fpredP {n : Nat} {x : Fin (suc n)} (p : x /= 0) : fsuc (fpredP x p) = x \elim x
+  | 0 => absurd (p idp)
+  | suc x => idp
+
 \func finLast (n : Nat) : Fin (suc n) \elim n
   | 0 => 0
   | suc n => suc (finLast n)
