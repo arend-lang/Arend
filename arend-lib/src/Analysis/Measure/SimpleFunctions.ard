@@ -98,6 +98,11 @@
   | zro-left {x} => \case \elim x \with {
     | in~ l => idp
   }
+  \where {
+    \lemma *n-char {n : Nat} {l : Array (\Sigma V B)} : n AddMonoid.*n {SFuncAbMonoid V B} inSF l = inSF (map (\lam s => (n V.*n s.1, s.2)) l) \elim n
+      | 0 => inv $ ~-sfequiv $ ~-zros-left \lam _ => idp
+      | suc n => pmap (`+ _) *n-char *> ~-sfequiv (~_+ (n V.*n) (\lam x => x))
+  }
 
 \instance SFuncAbGroup (V : AddGroup) (B : BottomDistributiveLattice) : AbGroup (SFunc V B)
   | AbMonoid => SFuncAbMonoid V B
@@ -121,6 +126,10 @@
     \lemma ~_negative-left {l : Array (\Sigma V B)} : map (\lam s => (V.negative s.1, s.2)) l ++ l ~ nil \elim l
       | nil => ~-reflexive
       | a :: l => ~-trans (~-perm $ EPerm.EPerm_++-swap {_} {map (\lam s => (V.negative s.1, s.2)) (a :: l)}) $ ~-trans (~-+-left idp idp) $ ~-trans (~-perm $ EPerm.eperm-= $ path \lam i => (V.negative-right i, a.2) :: _) (~-trans (~-zro-left idp) ~_negative-left)
+
+    \lemma *i-char {n : Int} {l : Array (\Sigma V B)} : n AddGroup.*i {SFuncAbGroup V B} inSF l = inSF (map (\lam s => (n V.*i s.1, s.2)) l) \elim n
+      | pos n => SFuncAbMonoid.*n-char
+      | neg n => AddGroup.*n_negative *> pmap negative SFuncAbMonoid.*n-char *> pmap inSF (exts \lam j => ext (inv V.*n_negative, idp))
   }
 
 \instance SFuncQModule (V : QModule) (B : BottomDistributiveLattice) : QModule (SFunc V B)
@@ -153,6 +162,10 @@
       | ~-zro-right idp => ~-zro-right idp
       | ~-+-left idp idp => ~-trans (~-+-left idp idp) $ ~-perm $ EPerm.eperm-= $ path (\lam i => (inv V.toRatModule.*c-ldistr i, _) :: _)
       | ~-+-right idp idp => ~-+-right idp idp
+
+    \lemma *q-char {q : Rat} {l : Array (\Sigma V B)} : q QModule.*q {SFuncQModule V B} inSF l = inSF (map (\lam s => (q V.*q s.1, s.2)) l)
+      => (SFuncQModule V B).noTorsion-div (ratDenom/=0 {q}) $ inv QModule.*q_*n *> inv QModule.*q-assoc *> pmap (QModule.`*q _) rat*denom-left *> QModule.*q_*i *>
+          SFuncAbGroup.*i-char *> pmap inSF (exts \lam j => ext (inv QModule.*q_*i *> pmap (QModule.`*q _) (inv rat*denom-left) *> QModule.*q-assoc *> QModule.*q_*n, idp)) *> inv SFuncAbMonoid.*n-char
   }
 
 \instance SFuncPosetQModule (V : PosetQModule) (B : BooleanRing) : PosetQModule (SFunc V B)
@@ -161,10 +174,17 @@
   | <=-refl => inP (nil, negative-right, \case __)
   | <=-transitive (inP s) (inP s') => inP (s.1 ++ s'.1 , inv AddGroup.diff_+ *> +-comm *> pmap2 (+) s.2 s'.2, ++.++-all {_} {\lam s => 0 V.<= s.1} s.3 s'.3)
   | <=-antisymmetric (inP s) (inP s') => \case ~_=-unequals $ inv (pmap negative s.2) *> AddGroup.negative_- *> s'.2 \with {
-    | inP (m,mr,m1,m2) => AddGroup.fromZero $ s'.2 *> ~-sfequiv {?}
+    | inP (m,mr,m1,m2) => AddGroup.fromZero $ s'.2 *> ~-sfequiv (~-trans (~-sym reduce_~) $ ~-trans (~-sym $ SFRefines_~ mr reduce_IsReduced m2) $ ~-zros-left \lam i => <=-antisymmetric (SFRefines-closed (V.`<= 0) <=-refl m1 (reduce_<=0 \lam j => later $ V.negative<=0 (s.3 j)) i) $ SFRefines-closed (0 V.<=) <=-refl m2 (reduce_>=0 s'.3) i)
   }
-  | <=_+ => {?}
-  | <=_*n-div => {?}
+  | <=_+ => \case \elim __, \elim __ \with {
+    | inP (l,lp,lf), inP (l',l'p,l'f) => inP (l ++ l', equation.abGroup *> pmap2 (+) lp l'p, \lam k => \case ++.split-index k \with {
+      | inl (i,ip) => rewrite (ip,++.++_index-left) (lf i)
+      | inr (j,jp) => rewrite (jp,++.++_index-right) (l'f j)
+    })
+  }
+  | <=_*n-div {n} n/=0 => \case \elim __ \with {
+    | inP (l,lp,lf) => inP (map (\lam s => (RatField.finv n V.*q s.1, s.2)) l, AddGroup.minus_zro *> inv QModule.ide_*q *> pmap (QModule.`*q _) (inv $ RatField.finv-left $ natRat/=0 n/=0) *> QModule.*q-assoc *> pmap (_ QModule.*q) (QModule.*q_*n *> inv AddGroup.minus_zro *> lp) *> SFuncQModule.*q-char, \lam j => V.*q_>=0 (RatField.finv>=0 fromNat_>=0) (lf j))
+  }
   \where {
     \type \infix 4 <= (x y : SFunc V B) : \Prop
       => ∃ (l : Array (\Sigma V B)) (y - x = inSF l) ∀ (s : l) (0 V.<= s.1)
@@ -175,6 +195,26 @@
     \func reduce (l : Array (\Sigma V B)) : Array (\Sigma V B)
       | nil => nil
       | x :: l => add x.1 x.2 (reduce l)
+
+    \lemma reduce-closed (P : V -> \Prop) (P0 : P 0) (P+ : ∀ {a b : P} (P (a + b))) {l : Array (\Sigma V B)} (Pl : ∀ (x : l) (P x.1)) : ∀ (x : reduce l) (P x.1) \elim l
+      | nil => \case __
+      | a :: l => add-closed (Pl 0) $ reduce-closed P P0 P+ \lam j => Pl (suc j)
+      \where {
+        \lemma add-closed {v : V} {b : B} (Pv : P v) {l : Array (\Sigma V B)} (Pl : ∀ (x : l) (P x.1)) : ∀ (x : add v b l) (P x.1)
+          => rewrite (\peval add v b l) \case \elim __ \with {
+            | 0 => Pv
+            | suc k => \case ++.split-index k \with {
+              | inl (i,ip) => rewrite (ip,++.++_index-left) $ P+ Pv (Pl i)
+              | inr (j,jp) => rewrite (jp,++.++_index-right) (Pl j)
+            }
+          }
+      }
+
+    \lemma reduce_>=0 {l : Array (\Sigma V B)} (Pl : ∀ (x : l) (0 V.<= x.1)) : ∀ (x : reduce l) (0 V.<= x.1)
+      => reduce-closed (0 V.<=) <=-refl V.<=_+-positive Pl
+
+    \lemma reduce_<=0 {l : Array (\Sigma V B)} (Pl : ∀ (x : l) (x.1 V.<= 0)) : ∀ (x : reduce l) (x.1 V.<= 0)
+      => reduce-closed (V.`<= 0) <=-refl (\lam a<=0 b<=0 => V.from>=0 $ rewrite (zro-left,V.negative_+) $ V.<=_+-positive (V.negative>=0 b<=0) (V.negative>=0 a<=0)) Pl
 
     \sfunc add_EPerm {v : V} {b : B} {l l' : Array (\Sigma V B)} (e : EPerm l l') : EPerm (add v b l) (add v b l') \elim l, l', e
       | nil, nil, eperm-nil => EPerm.eperm-refl
@@ -323,6 +363,11 @@
       => rewrite (\peval add v 0 l) $ SFRefines_::-right (B.meet_<=' equation.bRing) $ SFRefines_++-right (transport (SFRefines l) (exts \lam j => ext (idp,equation.bRing)) SFRefines-refl) \lam j => byRight $ meet-left <=∘ bottom-univ
 
     \type IsReduced (l : Array (\Sigma V B)) => \Pi {i j : Fin l.len} -> i /= j -> (l i).2 * (l j).2 = 0
+
+    \lemma SFRefines-closed (P : V -> \Prop) (P0 : P 0) {l l' : Array (\Sigma V B)} (r : SFRefines l l') (Pl : ∀ (x : l') (P x.1)) : ∀ (x : l) (P x.1)
+      => \lam i => \case r.2 i \with {
+        | inP (j,p,_) => transportInv P p (Pl j)
+      }
 
     \lemma add_IsReduced {v : V} {b : B} {l : Array (\Sigma V B)} (lr : IsReduced l) : IsReduced (add v b l)
       => transportInv IsReduced (\peval add v b l) \lam {i} {j} => \case \elim i, \elim j \with {
