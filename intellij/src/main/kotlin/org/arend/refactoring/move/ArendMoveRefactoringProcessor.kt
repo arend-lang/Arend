@@ -22,12 +22,11 @@ import org.arend.codeInsight.ArendCodeInsightUtils.Companion.getExternalParamete
 import org.arend.ext.module.LongName
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.variable.VariableImpl
-import org.arend.naming.reference.LongUnresolvedReference
+import org.arend.hierarchy.clazz.ArendClassHierarchyBrowser.Companion.getSuperDefClass
 import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.StringRenamer
 import org.arend.naming.scope.DynamicScope
 import org.arend.psi.*
-import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.refactoring.*
@@ -644,10 +643,10 @@ class ArendMoveRefactoringProcessor(project: Project,
                             }
 
                             val newSuperclasses = newThisParameterClass?.superClassList?.map {
-                                it.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass?
+                                getSuperDefClass(it)
                             }?.toSet()
                             val oldSuperclasses = oldThisParameterClass.superClassList.map {
-                                it.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass?
+                                getSuperDefClass(it)
                             }
 
                             when {

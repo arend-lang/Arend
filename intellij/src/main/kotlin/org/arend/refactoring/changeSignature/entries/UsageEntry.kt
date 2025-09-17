@@ -8,6 +8,7 @@ import org.arend.ext.module.LongName
 import org.arend.ext.reference.Precedence
 import org.arend.ext.variable.Variable
 import org.arend.ext.variable.VariableImpl
+import org.arend.hierarchy.clazz.ArendClassHierarchyBrowser.Companion.getSuperDefClass
 import org.arend.naming.reference.InternalReferable
 import org.arend.naming.reference.LocalReferable
 import org.arend.naming.reference.LocatedReferable
@@ -201,7 +202,7 @@ abstract class UsageEntry(val refactoringContext: ChangeSignatureRefactoringCont
                     commentedText != null ->
                         "{?} {-${commentedText}-}"
                     contextClass != null && (contextClass == parameterClass || contextClass.superClassList.map {
-                        it.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass
+                        getSuperDefClass(it)
                     }.contains(parameterClass)) ->
                         "\\this"
                     contextClass != null -> "{?}"
