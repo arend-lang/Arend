@@ -542,27 +542,16 @@
                    | fi/=0 : (f i).1 /= 0 => rewriteI i'=i (remove.no-element D)
               \in inP (fpredP (f i).1 fi/=0, (f _).2 *> later (rewrite {1} (i'=i, inv $ fsuc_fpredP fi/=0) idp), rewrite i'=i $ (f i).3 <=∘ later (rewriteI {1} (fsuc_fpredP fi/=0) <=-refl)))
       }
+
+    \lemma makeReduced (a : SFunc V B) : ∃ (l : IsReduced) (a = inSF l)
+      | in~ l => inP (reduce l, reduce_IsReduced, inv $ ~-sfequiv reduce_~)
   }
 
 {-
-\instance SFuncRieszSpace (B : BooleanRing) : RieszSpace (SFunc RatField B)
-  | QModule => SFuncQModule RatQAlgebra B
-  | <= => {?}
-  | <=-refl => {?}
-  | <=-transitive => {?}
-  | <=-antisymmetric => {?}
-  | <=_+ => {?}
-  | join => {?}
-  | join-left => {?}
-  | join-right => {?}
-  | join-univ => {?}
-  | <=_*n-div => {?}
-  \where {
-    \func remove0 (l : Array (\Sigma Rat B)) : Array (\Sigma Rat B)
-      | nil => nil
-      | a :: l => \case RatField.decideEq a.1 0 \with {
-        | yes a=0 => remove0 l
-        | no a/=0 => a :: remove0 l
-      }
+\open SFuncPosetQModule \hiding (<=)
+
+\instance SFuncRieszSpace (V : RieszSpace) (B : BooleanRing) : RieszSpace (SFunc V B)
+  => RieszSpace.fromAbs \lam a => \case makeReduced a \with {
+    | inP (l,lr,lp) => rewrite lp $ inP (inSF $ map (\lam s => (V.abs s.1, s.2)) l, {?}, {?}, {?})
   }
 -}

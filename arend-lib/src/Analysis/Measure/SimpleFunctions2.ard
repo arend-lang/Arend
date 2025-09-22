@@ -1,0 +1,285 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring.Boolean
+\import Analysis.Measure.SimpleFunctions
+\import Data.Array
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence \hiding (~)
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.Fin.KFin
+\import Set.Partial
+\open SFunc
+
+{-
+\record PreSFunc (V : AddPointed) (B : BottomDistributiveLattice) (\coerce pfunc : B -> Partial V)
+  | pfunc-<= {a b : B} {v : V} : a <= b -> pfunc b = defined v -> (a = bottom -> v = 0) -> pfunc a = defined v
+
+\record PreSFunc0 \extends PreSFunc
+  | pfunc-bottom0 : pfunc bottom = defined 0
+  \where {
+    \func closure {V : AddPointed} {B : BottomDistributiveLattice} (f : PreSFunc V B) : PreSFunc0 V B \cowith
+      | pfunc (b : B) : Partial V => partial ((b = bottom) || (\Sigma (c : B) (b <= c) (v : V) (f c = defined v) (b = bottom -> v = 0))) {?}
+      | pfunc-bottom0 => {?}
+      | pfunc-<= => {?}
+  }
+-}
+
+\record PreSFunc (V : AddPointed) (B : BottomDistributiveLattice) (\coerce pfunc : B -> Partial V)
+  | pfunc-coh {a b : B} (ad : (pfunc a).isDefined) (bd : (pfunc b).isDefined) : a ∧ b <= bottom || (pfunc a ad = pfunc b bd)
+  --   | pfunc-bottom-coh (bd : (pfunc bottom).isDefined) : pfunc bottom bd = 0
+
+\record SFunc2 \extends PreSFunc
+  | pfunc-<= {a b : B} {v : V} : a <= b -> (pfunc b).HasValue v -> (a = bottom -> v = 0) -> (pfunc a).HasValue v
+  | pfunc-bottom : (pfunc bottom).HasValue 0
+  | pfunc-join {a b : B} {v : V} : (pfunc a).HasValue v -> (pfunc b).HasValue v -> (pfunc (a ∨ b)).HasValue v
+  --   | pfunc-bottom-coh bd => partial-value {_} {pfunc bottom} idp *> pfunc-bottom.2
+  \where {
+    \func closure {V : AddPointed} {B : BottomDistributiveLattice} (f : PreSFunc V B) : SFunc2 V B \cowith
+      | pfunc (b : B) : Partial V => Partial.make (TruncP (Witness b)) \lam tw => (wRec tw).1
+      | pfunc-coh (inP (l,v,al,ld,av)) (inP (l',v',bl',l'd,bv')) => \case FinSet.||-search {ProdFin (FinFin l.len) (FinFin l'.len)} (\lam s => \case f.pfunc-coh (ld s.1).1 (l'd s.2).1 \with {
+        | byLeft p => byRight p
+        | byRight p => byLeft $ inv (ld s.1).2 *> p *> (l'd s.2).2
+      }) \with {
+        | byLeft v=v' => byRight $ wRec_inP *> v=v' *> inv wRec_inP
+        | byRight d => byLeft $ B.meet-monotone al bl' <=∘ =_<= B.BigJoin-rdistr <=∘ B.BigJoin-univ \lam i => =_<= B.BigJoin-ldistr <=∘ B.BigJoin-univ \lam i' => later $ d (i,i')
+      }
+      | pfunc-<= {a} {b} {v} a<=b bv at => \case getWitness bv \with {
+        | inP (l,bl,ld,bt) => (inP (l, v, a<=b <=∘ bl, ld, at), wRec_inP)
+      }
+      | pfunc-bottom => (inP (nil, 0, <=-refl, \case __ \with {}, \lam _ => idp), wRec_inP)
+      | pfunc-join {a} {b} {v} av bv => \case getWitness av, getWitness bv \with {
+        | inP (l,al,ld,at), inP (l',bl',l'd,bt) => (inP (l ++ l', v, B.join-monotone al bl' <=∘ =_<= (inv B.BigJoin_++), ++.++-all {_} {\lam a => (f a).HasValue v} ld l'd, \lam ab=0 => at $ <=-antisymmetric (join-left <=∘ =_<= ab=0) bottom-univ), wRec_inP)
+      }
+      \where {
+        \func Witness (b : B) => \Sigma (l : Array B) (v : V) (b <= B.BigJoin l) (∀ (x : l) ((f x).HasValue v)) (b = bottom -> v = 0)
+
+        \lemma witness-coh {b : B} {w w' : Witness b} : w.2 = w'.2 \elim w, w'
+          | (l,v,bl,ld,bv), (l',v',bl',l'd,bv') => \case FinSet.||-search {ProdFin (FinFin l.len) (FinFin l'.len)} (\lam s => \case f.pfunc-coh (ld s.1).1 (l'd s.2).1 \with {
+            | byLeft p => byRight p
+            | byRight p => byLeft $ inv (ld s.1).2 *> p *> (l'd s.2).2
+          }) \with {
+            | byLeft r => r
+            | byRight d =>
+              \have b=0 => <=-antisymmetric (meet-univ bl bl' <=∘ =_<= B.BigJoin-rdistr <=∘ B.BigJoin-univ \lam i => =_<= B.BigJoin-ldistr <=∘ B.BigJoin-univ \lam i' => later $ d (i,i')) bottom-univ
+              \in bv b=0 *> inv (bv' b=0)
+          }
+
+        \lemma wRec {b : B} (tw : TruncP (Witness b)) : \Sigma (v : V) (∃ (w : Witness b) (w.2 = v))
+          => TruncP.rec-set tw __.2 \lam w w' => witness-coh
+
+        \lemma wRec_inP {b : B} {w : Witness b} : (wRec (inP w)).1 = w.2
+          => \case (wRec (inP w)).2 \with {
+            | inP (w',p) => inv p *> witness-coh
+          }
+
+        \lemma getWitness {b : B} {v : V} (p : (pfunc {_} {_} {f} b).HasValue v)
+          : ∃ (l : Array B) (b <= B.BigJoin l) (∀ (x : l) ((f x).HasValue v)) (b = bottom -> v = 0) \elim p
+          | (inP (l,v',bl,ld,bt), bv) =>
+            \have v=v' => inv bv *> wRec_inP
+            \in inP (l, bl, \lam j => rewrite v=v' (ld j), \lam b=0 => v=v' *> bt b=0)
+      }
+
+    \func const0 {V : AddPointed} {B : BottomDistributiveLattice} : SFunc2 V B \cowith
+      | pfunc _ => defined 0
+      | pfunc-coh _ _ => byRight idp
+      | pfunc-<= _ t _ => ((), t.2)
+      | pfunc-bottom => ((), idp)
+      | pfunc-join t _ => ((), t.2)
+  }
+
+{-
+\instance SFuncAbMonoid (V : AbMonoid) (B : BottomDistributiveLattice) : AbMonoid (SFunc2 V B)
+  | zro => SFunc2.const0
+  | + f g => SFunc2.closure \new PreSFunc {
+    | pfunc b => plift2 (+) (f b) (g b)
+    | pfunc-coh ad bd => \case f.pfunc-coh ad.1 bd.1, g.pfunc-coh ad.2 bd.2 \with {
+      | byLeft r, _ => byLeft r
+      | _, byLeft r => byLeft r
+      | byRight p, byRight q => byRight $ pmap2 (+) p q
+    }
+  }
+  | +-assoc {f} {g} {h} => {?}
+  | +-comm {f} {g} => pmap SFunc2.closure $ exts \lam b =>
+    partial-ext {_} {plift2 (+) (f b) (g b)} (\lam s => (s.2,s.1), \lam s => (s.2,s.1)) \lam p q => +-comm
+  | zro-left {f} => {?}
+
+\func sfunc-to-sfunc2 {V : AddMonoid} {B : BooleanRing} (f : SFunc V B) (b : B) : Partial V \elim f
+  | in~ l => {?}
+  | ~-equiv l l' l~l' => {?}
+-}
+
+{-
+\record PreSFunc (V : AddPointed) (B : BottomDistributiveLattice) (\coerce pfunc : B -> Partial V)
+  | pfunc-<= {a b : B} {v : V} : a <= b -> pfunc b = defined v -> a <= bottom || (pfunc a = defined v)
+
+\record PreSFunc0 \extends PreSFunc
+  | pfunc-bottom0 : pfunc bottom = defined 0
+  \where {
+    \func closure {V : AddPointed} {B : BottomDistributiveLattice} (f : PreSFunc V B) : PreSFunc0 V B \cowith
+      | pfunc (b : B) : Partial V => partial ((b = bottom) || (\Sigma (v : V) (f b = defined v) (b = bottom -> v = 0))) {?}
+      | pfunc-bottom0 => {?}
+      | pfunc-<= => {?}
+  }
+
+\record SFunc2 \extends PreSFunc
+  | pfunc-bottom : pfunc bottom = defined 0
+  | pfunc-join {a b : B} {v : V} : pfunc a = defined v -> pfunc b = defined v -> pfunc (a ∨ b) = defined v
+  \where {
+    \func closure {V : AddPointed} {B : BottomDistributiveLattice} (f : PreSFunc V B) : SFunc2 V B \cowith
+      | pfunc (b : B) : Partial V => partial (TruncP (Witness b)) \lam tw => (wRec tw).1
+      | pfunc-bottom => defined-ext {_} {pfunc bottom} (inP (nil, 0, <=-refl, \case __ \with {}, \lam _ => idp)) wRec_inP
+      | pfunc-join => {?}
+      | pfunc-<= {a} {b} {v} a<=b p => \case getWitness p \with {
+        | inP (l,bl,ld,bv) => \case FinSet.||-search-exists {_} {\lam j => \Sigma (f (a ∧ l j) = defined v) (a ∧ l j = bottom -> v = 0)} {\lam j => a ∧ l j <= bottom} (\lam j => {?}) \with {
+          | byLeft (i,t) => byRight $ defined-ext {_} {pfunc a} (inP (map (a ∧) l, v, meet-univ <=-refl (a<=b <=∘ bl) <=∘ =_<= B.BigJoin-ldistr, \lam j => {?}, \lam a=0 => {?})) wRec_inP
+          | byRight ac => byLeft {?}
+        }
+      }
+      \where {
+        \func Witness (b : B) => \Sigma (l : Array B) (v : V) (b <= B.BigJoin l) (∀ (x : l) (x <= bottom || (\Sigma (f x = defined v) (x = bottom -> v = 0)))) (b = bottom -> v = 0)
+
+        \lemma witness-coh {b : B} {w w' : Witness b} : w.2 = w'.2 \elim w, w'
+          | (l,v,bl,ld,bv), (l',v',bl',l'd,bv') => \case FinSet.||-search {ProdFin (FinFin l.len) (FinFin l'.len)} {_} {\lam s => l (s.1) ∧ (l' s.2) <= bottom} (\lam s => \case ld s.1, l'd s.2 \with {
+            | byLeft r, _ => byRight (meet-left <=∘ r)
+            | _, byLeft r => byRight (meet-right <=∘ r)
+            | byRight d1, byRight d2 => \case pfunc-<= B.meet-left d1.1, pfunc-<= B.meet-right d2.1 \with {
+              | byLeft r, _ => byRight r
+              | _, byLeft r => byRight r
+              | byRight p, byRight q => byLeft $ defined-inj (inv p *> q)
+            }
+          }) \with {
+            | byLeft r => r
+            | byRight d => \have b=0 => <=-antisymmetric (meet-univ bl bl' <=∘ =_<= B.BigJoin-rdistr <=∘ B.BigJoin-univ \lam i => =_<= B.BigJoin-ldistr <=∘ B.BigJoin-univ \lam i' => later $ d (i,i')) bottom-univ
+                           \in bv b=0 *> inv (bv' b=0)
+          }
+
+        \lemma wRec {b : B} (tw : TruncP (Witness b)) : \Sigma (v : V) (∃ (w : Witness b) (w.2 = v))
+          => TruncP.rec-set tw __.2 \lam w w' => witness-coh
+
+        \lemma wRec_inP {b : B} {w : Witness b} : (wRec (inP w)).1 = w.2
+          => \case (wRec (inP w)).2 \with {
+            | inP (w',p) => inv p *> witness-coh
+          }
+
+        \lemma getWitness {b : B} {v : V} (p : pfunc {_} {_} {f} b = defined v)
+          : ∃ (l : Array B) (b <= B.BigJoin l) (∀ (x : l) (x <= bottom || (\Sigma (f x = defined v) (x = bottom -> v = 0)))) (b = bottom -> v = 0)
+          => \case defined-ext.isDefined {_} {pfunc b} p, defined-ext.value {_} {pfunc b} p \with {
+            | inP w, q =>
+              \let v=u : v = w.2 => inv q *> wRec_inP
+              \in inP (w.1, w.3, \lam j => ||.map (\lam p => p) (\lam t => (t.1 *> pmap defined (inv v=u), \lam p => v=u *> t.2 p)) (w.4 j), \lam b=0 => v=u *> w.5 b=0)
+          }
+      }
+  }
+
+\func sfunc-to-sfunc2 {V : AddMonoid} {B : BooleanRing} (f : SFunc V B) (b : B) : Partial V \elim f
+  | in~ l => {?}
+  | ~-equiv l l' l~l' => {?}
+-}
+
+{-
+\type SFunc2 (V : \Set) (B : BooleanRing) => B -> Partial V
+
+\func sfunc-to-sfunc2 {V : AddMonoid} {B : BooleanRing} (f : SFunc V B) (b : B) : Partial V \elim f
+  | in~ l => wFunc l
+  | ~-equiv l l' l~l' => {?}
+  \where {
+    \data Witness (l : Array (\Sigma V B))
+      | witnessD (is : Array (Fin l.len)) (∀ (i j : is) ((l i).1 = (l j).1)) (b <= B.BigJoin (map (\lam i => (l i).2) is)) (b <= 0 -> ∀ (i : is) ((l i).1 = 0))
+      | witnessU (is : Array (Fin l.len)) (∀ (i : is) ((l i).1 = 0)) (b ∧ B.BigJoin (map __.2 l) <= B.BigJoin (map (\lam i => (l i).2) is))
+
+    \func wValue {l : Array (\Sigma V B)} (w : Witness l) : V \elim w
+      | witnessD nil _ _ _ => 0
+      | witnessD (i :: _) _ _ _ => (l i).1
+      | witnessU _ _ _ => 0
+
+    \lemma wRec {l : Array (\Sigma V B)} (lr : IsReduced l) (tw : TruncP (Witness l))
+      : \Sigma (v : V) (∃ (w : Witness l) (wValue w = v))
+      => TruncP.rec-set tw wValue \case \elim __, \elim __ \with {
+        | witnessD nil _ _ _, witnessD nil _ _ _ => idp
+        | witnessD nil _ p _, witnessD (i :: is') _ _ q => inv (q p 0)
+        | witnessD (i :: is) _ _ q, witnessD nil _ p _ => q p 0
+        | witnessD (i0 :: is) be bis b0, witnessD (i0' :: is') be' bis' b0' => \case lists-dec (i0 :: is) (i0' :: is') bis bis' \with {
+          | byLeft (i,i',p) => be 0 i *> pmap (l __).1 p *> inv (be' 0 i')
+          | byRight b<=0 => b0 b<=0 0 *> inv (b0' b<=0 0)
+        }
+        | witnessD nil _ _ _, witnessU _ _ _ => idp
+        | witnessD (i0 :: is) be bis b0, witnessU is' be' bis' => \case lists-dec (i0 :: is) is' bis $ meet-univ <=-refl (bis <=∘ B.BigJoin-univ {map (l __).2 (i0 :: is)} \lam i => B.BigJoin-cond {map __.2 l} _) <=∘ bis' \with {
+          | byLeft (i,i',p) => be 0 i *> pmap (l __).1 p *> be' i'
+          | byRight b<=0 => b0 b<=0 0
+        }
+        | witnessU _ _ _, witnessD nil _ _ _ => idp
+        | witnessU is be bis, witnessD (i0' :: is') be' bis' b0' => \case lists-dec is (i0' :: is') (meet-univ <=-refl (bis' <=∘ B.BigJoin-univ {map (l __).2 (i0' :: is')} \lam i' => B.BigJoin-cond {map __.2 l} _) <=∘ bis) bis' \with {
+          | byLeft (i,i',p) => inv (be i) *> pmap (l __).1 p *> be' i' 0
+          | byRight b<=0 => inv (b0' b<=0 0)
+        }
+        | witnessU _ _ _, witnessU _ _ _ => idp
+      }
+      \where {
+        \private \lemma lists-dec (is is' : Array (Fin l.len))
+          (bis : b <= B.BigJoin (map (\lam i => (l i).2) is))
+          (bis' : b <= B.BigJoin (map (\lam i => (l i).2) is'))
+          : Given (i : is) (i' : is') (i = i') || b <= 0
+          => \case FinSet.search {ProdFin (FinFin is.len) (FinFin is'.len)} _ (\lam s => decideEq (is s.1) (is' s.2)) \with {
+            | yes (inP (s,p)) => byLeft (s.1,s.2,p)
+            | no q => byRight $ meet-univ bis bis' <=∘ =_<= B.BigJoin-rdistr <=∘ B.BigJoin-univ \lam i => =_<= B.BigJoin-ldistr <=∘ B.BigJoin-univ \lam i' => =_<= $ later $ lr \lam p => q $ inP ((i,i'), p)
+          }
+      }
+
+    \func wFunc (l : Array (\Sigma V B)) => partial (TruncP (Witness (reduce l))) \lam tw => (wRec reduce_IsReduced tw).1
+
+    \lemma wFunc_~ {l l' : Array (\Sigma V B)} (l~l' : l ~ l') : wFunc l = wFunc l' \elim l~l'
+      | ~-perm e => {?}
+      | ~-sym l~l' => inv (wFunc_~ l~l')
+      | ~-trans l~m m~l' => wFunc_~ l~m *> wFunc_~ m~l'
+      | ~-zro-left idp => partial-ext {_} {wFunc l} (\case \elim __ \with {
+        | inP (witnessD is be bis b0) => {?}
+        | inP (witnessU is be bis) => inP $ witnessU {?} {?} {?}
+      }, {?}) {?}
+      | ~-zro-right p => {?}
+      | ~-+-left p q => {?}
+      | ~-+-right p q => {?}
+
+    \type IsReduced (l : Array (\Sigma V B)) => \Pi {i j : Fin l.len} -> i /= j -> (l i).2 * (l j).2 = 0
+
+    \sfunc add (v : V) (b : B) (l : Array (\Sigma V B)) : Array (\Sigma V B)
+      => (v, B.diff b $ B.BigJoin $ map __.2 l) :: map (\lam s => (v + s.1, b * s.2)) l ++ map (\lam s => (s.1, B.diff s.2 b)) l
+
+    \func reduce (l : Array (\Sigma V B)) : Array (\Sigma V B)
+      | nil => nil
+      | x :: l => add x.1 x.2 (reduce l)
+
+    \lemma add_IsReduced {v : V} {b : B} {l : Array (\Sigma V B)} (lr : IsReduced l) : IsReduced (add v b l)
+      => transportInv IsReduced (\peval add v b l) \lam {i} {j} => \case \elim i, \elim j \with {
+        | 0, 0 => \lam p => absurd (p idp)
+        | 0, suc j => \lam _ => \case ++.split-index j \with {
+          | inl (k,p) => rewrite (p,++.++_index-left) $ <=-antisymmetric (B.meet-monotone (B.diff-mono <=-refl $ B.BigJoin-cond {map __.2 l} k) <=-refl <=∘ =_<= equation.bRing) bottom-univ
+          | inr (k,p) => rewrite (p,++.++_index-right) equation.bRing
+        }
+        | suc i, 0 => \lam _ => \case ++.split-index i \with {
+          | inl (k,p) => rewrite (p,++.++_index-left) $ <=-antisymmetric (B.meet-monotone <=-refl (B.diff-mono <=-refl $ B.BigJoin-cond {map __.2 l} k) <=∘ =_<= equation.bRing) bottom-univ
+          | inr (k,p) => rewrite (p,++.++_index-right) equation.bRing
+        }
+        | suc i, suc j => \case ++.split-index i, ++.split-index j \with {
+          | inl (k1,p1), inl (k2,p2) => rewrite (p1,p2,++.++_index-left,++.++_index-left) \lam p => equation.bRing {lr {k1} {k2} \lam q => p (cong q)}
+          | inl (k1,p1), inr (k2,p2) => \lam _ => rewrite (p1,p2,++.++_index-left,++.++_index-right) equation.bRing
+          | inr (k1,p1), inl (k2,p2) => \lam _ => rewrite (p1,p2,++.++_index-left,++.++_index-right) equation.bRing
+          | inr (k1,p1), inr (k2,p2) => rewrite (p1,p2,++.++_index-right,++.++_index-right) \lam p => equation.bRing {lr {k1} {k2} \lam q => p (cong q)}
+        }
+      }
+
+    \lemma reduce_IsReduced {l : Array (\Sigma V B)} : IsReduced (reduce l) \elim l
+      | nil => \lam {i} => \case i
+      | x :: l => add_IsReduced reduce_IsReduced
+  }
+ -}

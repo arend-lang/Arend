@@ -95,6 +95,10 @@
     \lemma toOr {A B : \Type} (p : A || B) : TruncP (Or A B) \elim p
       | byLeft a => inP (inl a)
       | byRight b => inP (inr b)
+
+    \lemma flip {A B : \Type} (e : A || B) : B || A \elim e
+      | byLeft a => byRight a
+      | byRight b => byLeft b
   }
 
 \func \infix 0 <-> (P Q : \Prop) => \Sigma (P -> Q) (Q -> P)
