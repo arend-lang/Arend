@@ -38,10 +38,11 @@ dependencies {
     implementation("com.github.vlsi.mxgraph:jgraphx:4.2.2")
     implementation("com.fifesoft:rsyntaxtextarea:3.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.6.1")
-    testCompileOnly("junit:junit:4.13.1")
+    testImplementation("junit:junit:4.13.1")
 
     intellijPlatform {
         create(IntelliJPlatformType.IntellijIdeaCommunity, "2025.2.1")
+        testBundledModule("com.intellij.modules.json")
         bundledPlugins("org.jetbrains.plugins.yaml", "com.intellij.java")
         plugins("IdeaVIM:2.27.2")
         testFramework(TestFrameworkType.Platform)

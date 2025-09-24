@@ -55,7 +55,7 @@ public class FileUtils {
 
   private static final String MODULE_NAME_START_SYMBOL_REGEX = "a-zA-Z_";
   private static final Pattern MODULE_NAME_REGEX = Pattern.compile("[" + MODULE_NAME_START_SYMBOL_REGEX + "][" + MODULE_NAME_START_SYMBOL_REGEX + "0-9']*");
-  private static final Pattern LIBRARY_NAME_REGEX = Pattern.compile("[" + MODULE_NAME_START_SYMBOL_REGEX + "][" + MODULE_NAME_START_SYMBOL_REGEX + "0-9\\-.']*");
+  private static final Pattern LIBRARY_NAME_REGEX = Pattern.compile("[" + MODULE_NAME_START_SYMBOL_REGEX + "][" + MODULE_NAME_START_SYMBOL_REGEX + "0-9\\-.']*/?");
   private static final String DEFINITION_NAME_START_SYMBOL_REGEX = "a-zA-Z\\Q~!@#$%^&*-+=<>?/|:[]_\\E";
   private static final Pattern DEFINITION_NAME_REGEX = Pattern.compile("[" + DEFINITION_NAME_START_SYMBOL_REGEX + "][" + DEFINITION_NAME_START_SYMBOL_REGEX + "0-9']*");
 

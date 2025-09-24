@@ -1,5 +1,6 @@
 package org.arend.frontend.repl.jline;
 
+import org.arend.ext.module.LongName;
 import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.repl.CommandHandler;
 import org.arend.repl.action.PrettyPrintFlagCommand;
@@ -25,8 +26,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Stream;
 
 public class JLineCliRepl extends CommonCliRepl {
@@ -91,7 +90,7 @@ public class JLineCliRepl extends CommonCliRepl {
         new SpecialCommandCompleter(PrettyPrintFlagCommand.class, new StringsCompleter(PrettyPrintFlagCommand.AVAILABLE_OPTIONS)),
         new SpecialCommandCompleter(CommandHandler.HelpCommand.class, new StringsCompleter(CommandHandler.INSTANCE.commandMap.keySet())),
         new ScopeCompleter(this::getInScopeElements),
-        new ImportCompleter(this::modulePaths),
+        new ModuleCompleter(this, this::modulePaths),
         KeywordCompleter.INSTANCE,
         CommandsCompleter.INSTANCE
       ))
@@ -110,23 +109,7 @@ public class JLineCliRepl extends CommonCliRepl {
 
   @NotNull
   private Stream<String> modulePaths() {
-    return Stream.empty();
-    /* TODO[server2]
-    return myLibraryManager.getRegisteredLibraries()
-      .stream()
-      .flatMap(library -> Stream.concat(
-        library.getLoadedModules()
-          .stream()
-          .map(Objects::toString),
-        library instanceof SourceLibrary
-          ? ((SourceLibrary) library).getAdditionalModules()
-          .stream()
-          .map(Map.Entry::getKey)
-          .map(Objects::toString)
-          : Stream.empty()
-      ));
-
-    */
+    return getAllModules().stream().map(LongName::toString);
   }
 
   public static void main(String... args) {
@@ -151,7 +134,6 @@ public class JLineCliRepl extends CommonCliRepl {
       return;
     }
     var repl = new JLineCliRepl(terminal);
-    repl.addLibraryDirectories(libDirs);
     // TODO[server2]: if (recompile) repl.getReplLibrary().addFlag(SourceLibrary.Flag.RECOMPILE);
     repl.initialize();
     repl.println(ASCII_BANNER);

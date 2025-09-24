@@ -82,7 +82,7 @@ public class GroupData {
 
     Concrete.ResolvableDefinition newDef = group.definition();
     if (newDef != null) {
-      DefinitionData definitionData = myResolvedDefinitions.get(newDef.getData().getRefLongName());
+      DefinitionData definitionData = myResolvedDefinitions != null ? myResolvedDefinitions.get(newDef.getData().getRefLongName()) : null;
       boolean ok = definitionData != null && newDef.getData().isSimilar(definitionData.definition().getData());
       if (ok) {
         if (newDef instanceof Concrete.DataDefinition dataDef) {

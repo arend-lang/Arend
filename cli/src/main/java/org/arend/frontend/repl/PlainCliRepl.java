@@ -63,7 +63,6 @@ public class PlainCliRepl extends CommonCliRepl {
     repl.println(ASCII_BANNER);
     repl.println();
     repl.println("Note: you're using the plain REPL.");
-    repl.addLibraryDirectories(libDirs);
     // TODO[server2]: if (recompile) repl.getReplLibrary().addFlag(SourceLibrary.Flag.RECOMPILE);
     repl.initialize();
     repl.runRepl(System.in);

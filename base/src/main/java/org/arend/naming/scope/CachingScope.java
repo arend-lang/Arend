@@ -108,4 +108,8 @@ public class CachingScope implements Scope {
   public ImportedScope getImportedSubscope() {
     return myScope.getImportedSubscope();
   }
+
+  public Scope getInternalScope() {
+    return myScope;
+  }
 }

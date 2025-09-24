@@ -1,6 +1,7 @@
 package org.arend.documentation
 
 import com.intellij.codeInsight.documentation.DocumentationManagerProtocol.PSI_ELEMENT_PROTOCOL
+import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeEventQueue
 import com.intellij.lang.documentation.AbstractDocumentationProvider
 import com.intellij.lang.documentation.DocumentationMarkup.*
@@ -35,6 +36,7 @@ import org.arend.util.getReferableScope
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.handler.CefRequestHandlerAdapter
 import java.awt.Dimension
 import java.awt.MouseInfo
 import java.awt.Toolkit
@@ -181,6 +183,23 @@ class ArendDocumentationProvider : AbstractDocumentationProvider() {
     private fun showInCefBrowser(title: String, linkColor: String, project: Project?) {
         val browser = JBCefBrowser()
         browser.component.preferredSize = Dimension(1, 1)
+
+        browser.jbCefClient.addRequestHandler(object : CefRequestHandlerAdapter() {
+            override fun onBeforeBrowse(
+                browser: CefBrowser?,
+                frame: CefFrame?,
+                request: org.cef.network.CefRequest?,
+                userGesture: Boolean,
+                isRedirect: Boolean
+            ): Boolean {
+                val url = request?.url ?: return false
+                if (userGesture && frame?.isMain == true) {
+                    BrowserUtil.browse(url)
+                    return true
+                }
+                return false
+            }
+        }, browser.cefBrowser)
 
         val actions = mutableListOf<Pair<ActionListener, KeyStroke>>()
         actions.add(Pair(ActionListener {

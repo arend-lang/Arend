@@ -17,13 +17,14 @@ import java.util.stream.StreamSupport;
 
 public final class LoadModuleCommand implements CliReplCommand {
   public static final @NotNull LoadModuleCommand INSTANCE = new LoadModuleCommand();
+  public static final @NotNull String ALL_MODULES = "all";
 
   private LoadModuleCommand() {
   }
 
   @Override
   public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
-    return "Load an Arend module from working directory";
+    return "Load/update an Arend module from loaded libraries. Use `:load all` to load all modules";
   }
 
   @Override
@@ -35,21 +36,23 @@ public final class LoadModuleCommand implements CliReplCommand {
           .stream(Paths.get(line).normalize().spliterator(), false)
           .map(Objects::toString)
           .collect(Collectors.toList());
-        if (Objects.equals(paths.get(0), ".")) paths.remove(0);
+        if (Objects.equals(paths.getFirst(), ".")) paths.removeFirst();
         line = String.join(".", paths);
       }
       loadModule(api, ModulePath.fromString(line));
     } catch (InvalidPathException e) {
-      api.eprintln("[ERROR] The path `" + line + "` is not good because: " + e.getLocalizedMessage());
+      api.eprintln("[ERROR] Path `" + line + "` invalid\n" + e.getLocalizedMessage());
     }
   }
 
   private static void loadModule(@NotNull CommonCliRepl api, ModulePath modulePath) {
-    Scope existingScope = api.getAvailableModuleScopeProvider().forModule(modulePath);
-    if (existingScope != null) api.removeScope(existingScope);
-    Scope scope = api.loadModule(modulePath);
-    if (scope != null) api.addScope(scope);
-    else api.println("[INFO] No module loaded.");
+    if (!Objects.equals(modulePath.toString(), ALL_MODULES) && !api.getAllModules().contains(modulePath)) {
+      api.eprintln("[ERROR] Module " + modulePath + " does not exist.");
+      return;
+    }
+
+    int definitions = api.loadModule(modulePath);
+    if (definitions == 0) api.println("[INFO] No module loaded.");
     if (!api.checkErrors()) ReloadModuleCommand.lastModulePath = modulePath;
     else api.unloadModule(modulePath);
   }
@@ -72,7 +75,7 @@ public final class LoadModuleCommand implements CliReplCommand {
     @Override
     public @Nls(capitalization = Nls.Capitalization.Sentence) @NotNull String description() {
       return lastModulePath == null
-          ? "Reload the module loaded last time"
+          ? "Reload the last loaded module"
           : "Reload module `" + lastModulePath + "`";
     }
   }
