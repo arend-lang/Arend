@@ -5,6 +5,7 @@ import org.arend.lib.util.algorithms.idealmem.IdealMembership;
 import org.arend.lib.util.algorithms.polynomials.Monomial;
 import org.arend.lib.util.algorithms.polynomials.Poly;
 import org.arend.lib.util.algorithms.polynomials.Ring;
+import org.jetbrains.annotations.Nullable;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -102,7 +103,7 @@ public class ComMonoidWP {
     return null;
   }
 
-  public List<Pair<Integer, Boolean>> solve(List<Integer> word1, List<Integer> word2, List<Pair<List<Integer>, List<Integer>>> axioms) {
+  public @Nullable List<Pair<Integer, Boolean>> solve(List<Integer> word1, List<Integer> word2, List<Pair<List<Integer>, List<Integer>>> axioms) {
     var t1 = wordToMonomial(word1);
     var t2 = wordToMonomial(word2);
     var wpPoly = twoMonomialsToBinomial(t1, t2);

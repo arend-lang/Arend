@@ -66,7 +66,7 @@
 
 \lemma testOneAx {M : CMonoid} (x y z : M) (p : x = y)
   : y * z = z * x
-  => equation
+  => equation.cMonoidAuto {p}
 
 \lemma testTwoAx {M : CMonoid} (x y : M) (p : x * y = ide) (q : y * y = x)
   : x * x = y

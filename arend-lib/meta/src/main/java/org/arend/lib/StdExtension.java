@@ -32,10 +32,7 @@ import org.arend.lib.meta.equationNew.group.AbelianGroupEquationMeta;
 import org.arend.lib.meta.equationNew.group.AdditiveGroupEquationMeta;
 import org.arend.lib.meta.equationNew.group.CommutativeGroupEquationMeta;
 import org.arend.lib.meta.equationNew.group.GroupEquationMeta;
-import org.arend.lib.meta.equationNew.monoid.AbelianMonoidEquationMeta;
-import org.arend.lib.meta.equationNew.monoid.AdditiveMonoidEquationMeta;
-import org.arend.lib.meta.equationNew.monoid.CommutativeMonoidEquationMeta;
-import org.arend.lib.meta.equationNew.monoid.MonoidEquationMeta;
+import org.arend.lib.meta.equationNew.monoid.*;
 import org.arend.lib.meta.equationNew.ring.*;
 import org.arend.lib.meta.exists.ExistsMeta;
 import org.arend.lib.meta.exists.GivenMeta;
@@ -111,7 +108,7 @@ public class StdExtension implements ArendExtension {
 
   @Override
   public void declareDefinitions(@NotNull DefinitionContributor contributor) {
-    ModulePath meta = new ModulePath("Meta");
+  /*  ModulePath meta = new ModulePath("Meta");
     ModulePath logicMeta = new ModulePath("Logic", "Meta");
 
     contributor.declare(meta, logicMeta);
@@ -349,6 +346,10 @@ public class StdExtension implements ArendExtension {
         * If `p : x * x = y`, `q : x * x * y = y`, and the goal is `x * x * y = x * x`, then `cMonoid { -1 p, q }` proves the goal.
         """), commMonoidSolver);
     contributor.declare(hList(text("The additive version of "), refDoc(commMonoidSolver.getRef())), makeDef(equation.getRef(), "abMonoid", new DependencyMetaTypechecker(AbelianMonoidEquationMeta.class, () -> new DeferredMetaDefinition(new AbelianMonoidEquationMeta(), true))));
+    ConcreteMetaDefinition commMonoidAlgoSolver = makeDef(equation.getRef(), "cMonoidAuto", new DependencyMetaTypechecker(CommutativeMonoidAlgoSolverMeta.class, () -> new DeferredMetaDefinition(new CommutativeMonoidAlgoSolverMeta(), true)));
+    contributor.declare(multiline("""
+        TODO
+        """), commMonoidAlgoSolver);
     ConcreteMetaDefinition groupSolver = makeDef(equation.getRef(), "group", new DependencyMetaTypechecker(GroupEquationMeta.class, () -> new DeferredMetaDefinition(new GroupEquationMeta(), true)));
     contributor.declare(multiline("""
         The group solver solves goals of the form `e1 = {G} e2` for some group `G`.
@@ -566,7 +567,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(categoryMeta, Names.getPathsModule());
     contributor.declare(categoryMeta, pathsMeta);
     contributor.declare(categoryMeta, Names.getSetCategoryModule());
-    contributor.declare(text("Proves univalence for categories. The type of objects must extend `BaseSet` and the Hom-set must extend `SetHom` with properties only."), makeDef(categoryMeta, "sip", new DependencyMetaTypechecker(SIPMeta.class, SIPMeta::new)));
+    contributor.declare(text("Proves univalence for categories. The type of objects must extend `BaseSet` and the Hom-set must extend `SetHom` with properties only."), makeDef(categoryMeta, "sip", new DependencyMetaTypechecker(SIPMeta.class, SIPMeta::new)));/**/
   }
 
   @Override

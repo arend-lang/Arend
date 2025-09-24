@@ -35,9 +35,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public abstract class BaseEquationMeta<NF> extends BaseMetaDefinition {
-  @Dependency                                           ArendRef inv;
-  @Dependency(name = "*>")                              ArendRef concat;
-  @Dependency(name = "BaseSet.E")                       CoreClassField carrier;
+  @Dependency                                           protected ArendRef inv;
+  @Dependency(name = "*>")                              protected ArendRef concat;
+  @Dependency(name = "BaseSet.E")                       protected CoreClassField carrier;
 
   protected static final String POS_TAG = "pos";
   protected static final String MINUS_TAG = "minus";
