@@ -100,7 +100,8 @@ class ArendImportHintAction(private val referenceElement: ArendReferenceElement)
         val availability = checkAvailability()
         if (availability !in setOf(ImportHintActionAvailability.AVAILABLE, ImportHintActionAvailability.AVAILABLE_FOR_SILENT_FIX)) return Result.POPUP_NOT_SHOWN // We import fieldDefIdentifier only at the request of the user (through invoke method)
 
-        val isInModlessContext = if (Registry.`is`("ide.perProjectModality")) !LaterInvocator.isInModalContextForProject(editor.project) else !LaterInvocator.isInModalContext()
+        val isInModlessContext = !LaterInvocator.isInModalContext()
+
         val referenceResolveActions = getItemsToImport(true)
         val actionsIterator = referenceResolveActions.iterator()
 

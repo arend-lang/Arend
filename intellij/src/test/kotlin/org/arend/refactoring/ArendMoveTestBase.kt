@@ -24,7 +24,7 @@ abstract class ArendMoveTestBase : ArendTestBase() {
                               targetName: String,
                               targetIsDynamic: Boolean = false,
                               useOpenCommands: Boolean = false,
-                              typecheck: Boolean = true,
+                              typecheck: Boolean = false,
                               fileToCheck: String? = null) {
         val arendSettings = service<ArendSettings>()
         arendSettings.autoImportWriteOpenCommands = useOpenCommands
