@@ -26,6 +26,12 @@
 \lemma partial-ext {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : u.isDefined) (q : v.isDefined) -> u (\box p) = v \box q) : u = v
   => exts (<->_=.1 d, \lam p => pmap u prop-pi *> e p (transport (\lam P => P) (<->_=.1 d) p) *> pmap v prop-pi)
 
+\lemma partial-ext-left {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : u.isDefined) -> u p = v (d.1 p)) : u = v
+  => partial-ext d \lam p _ => pmap u prop-pi *> e p *> pmap v prop-pi
+
+\lemma partial-ext-right {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : v.isDefined) -> u (d.2 p) = v p) : u = v
+  => partial-ext d \lam _ q => pmap u prop-pi *> e q *> pmap v prop-pi
+
 \lemma defined-ext {X : \Set} {u : Partial X} {x : X} (d : u.isDefined) (p : u d = x) : u = defined x
   => partial-ext (\lam _ => (), \lam _ => d) \lam q q => pmap u prop-pi *> p
   \where {
