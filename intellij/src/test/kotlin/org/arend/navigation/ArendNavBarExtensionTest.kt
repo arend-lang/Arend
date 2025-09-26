@@ -2,7 +2,6 @@ package org.arend.navigation
 
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.ex.EditorEx
-/* TODO[2025.2.1]
 import com.intellij.platform.navbar.NavBarItemPresentationData
 import com.intellij.platform.navbar.backend.NavBarItem
 import com.intellij.platform.navbar.backend.impl.pathToItem
@@ -71,4 +70,3 @@ class ArendNavBarExtensionTest : ArendTestBase() {
         """.trimIndent(), listOf("src", "Main", "f", "nat"))
     }
 }
- */

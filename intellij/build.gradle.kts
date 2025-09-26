@@ -42,7 +42,7 @@ dependencies {
 
     intellijPlatform {
         create(IntelliJPlatformType.IntellijIdeaCommunity, "2025.2.1")
-        testBundledModule("com.intellij.modules.json")
+        testBundledModules("com.intellij.modules.json", "intellij.platform.navbar", "intellij.platform.navbar.backend")
         bundledPlugins("org.jetbrains.plugins.yaml", "com.intellij.java")
         plugins("IdeaVIM:2.27.2")
         testFramework(TestFrameworkType.Platform)

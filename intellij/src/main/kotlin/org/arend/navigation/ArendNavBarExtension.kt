@@ -6,7 +6,7 @@ import com.intellij.ide.structureView.StructureViewTreeElement
 import com.intellij.ide.util.treeView.smartTree.TreeElement
 import com.intellij.lang.Language
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.DataMap
 import com.intellij.openapi.util.Iconable
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiNamedElement
@@ -78,9 +78,9 @@ class ArendNavBarExtension : StructureAwareNavBarModelExtension() {
         }
     }
 
-    override fun getLeafElement(dataContext: DataContext): PsiElement? {
-        val psiFile = CommonDataKeys.PSI_FILE.getData(dataContext) ?: return null
-        val editor = CommonDataKeys.EDITOR.getData(dataContext) ?: return null
+    override fun getLeafElement(dataProvider: DataMap): PsiElement? {
+        val psiFile = dataProvider[CommonDataKeys.PSI_FILE] ?: return null
+        val editor = dataProvider[CommonDataKeys.EDITOR] ?: return null
         val element = psiFile.findElementAt(editor.caretModel.offset)
         val coClauseResult = checkCoClause(element?.ancestor<ArendLocalCoClause>())
         return if (element?.ancestor<ArendStatCmd>()?.importKw != null) {
@@ -98,7 +98,7 @@ class ArendNavBarExtension : StructureAwareNavBarModelExtension() {
                 it.internalReferables + it.statements.mapNotNull { statement -> statement.group } + it.statements.filter { statement -> statement.group == null } + it.dynamicSubgroups  }
                 ?: emptyList()
         return if (group != null && group !is ArendFile) {
-            allChildren.mapNotNull { e -> (e as? ArendCompositeElement)?.let { ArendStructureViewElement(it) } }
+            allChildren.map { e -> ArendStructureViewElement(e) }
         } else {
             super.childrenFromNodeAndProviders(parent)
         }
