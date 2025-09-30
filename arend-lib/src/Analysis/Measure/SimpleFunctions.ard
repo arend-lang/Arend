@@ -545,13 +545,167 @@
 
     \lemma makeReduced (a : SFunc V B) : ∃ (l : IsReduced) (a = inSF l)
       | in~ l => inP (reduce l, reduce_IsReduced, inv $ ~-sfequiv reduce_~)
+
+    \lemma >=0-reduced-char {l : Array (\Sigma V B)} (lr : IsReduced l) : 0 <= inSF l <-> ∀ (x : l) (0 V.<= x.1 || (x.2 = 0))
+      => (\lam (inP (d,dp,d>=0)) => \case ~_=-unequals (inv AddGroup.minus_zro *> dp) \with {
+        | inP (m,mr,m<l,m<d) => reduce_>=0-conv lr $ SFRefines_>=0-right m<l reduce_IsReduced $ SFRefines_>=0-left m<d $ reduce_>=0 d>=0
+      }, \lam r => \case FinSet.finiteAC (\lam j => ||.toOr (r j)) \with {
+        | inP f => hiding r $ inP (mkArray \lam i => Or.rec (\lam _ => l i) (\lam _ => (0,0)) (f i), AddGroup.minus_zro {_} {inSF l} *> ~-sfequiv (~_zro {_} {_} {l} \lam j => later $ cases (f j) \with {
+          | inl _ => byLeft idp
+          | inr r => byRight (r,idp)
+        }), \lam j => cases (f j) \with {
+            | inl p => p
+            | inr _ => <=-refl
+          })
+      })
+      \where {
+        \lemma reduce-values {l : Array (\Sigma V B)} (lr : IsReduced l) : ∀ (y : reduce l) (Given (x : l) (y = x) || (y.2 = 0)) \elim l
+          | nil => \case __
+          | a :: l => rewrite (\peval add _ _ _) \case \elim __ \with {
+            | 0 => byLeft (0, ext (idp, <=-antisymmetric B.diff_<= $ B.diff-univ <=-refl $ B.BigJoin-ldistr *> <=-antisymmetric (B.BigJoin-univ \lam j => later $ =_<= $ aux lr j) (later bottom-univ)))
+            | suc j => \case ++.split-index j \with {
+              | inl (k,p) => rewrite (p,++.++_index-left) $ byRight \case reduce-values (reduced-tail lr) k \with {
+                | byLeft (i,q) => rewrite q $ lr $ /=-sym fsuc/=0
+                | byRight q => rewrite q B.bottom-ldistr
+              }
+              | inr (k,p) => rewrite (p,++.++_index-right) $ \case reduce-values (reduced-tail lr) k \with {
+                | byLeft (i,q) => byLeft $ rewrite q $ (suc i, ext (idp, <=-antisymmetric B.diff_<= $ B.diff-univ <=-refl $ lr fsuc/=0))
+                | byRight q => byRight $ rewrite q equation.bRing
+              }
+            }
+          }
+          \where {
+            \protected \lemma aux {a : \Sigma V B} {l : Array (\Sigma V B)} (lr : IsReduced (a :: l)) (j : Fin (reduce l).len) : a.2 ∧ (reduce l j).2 = 0
+              => <=-antisymmetric (\case reduce-values (reduced-tail lr) j \with {
+                | byLeft (i,p) => rewrite p $ =_<= $ lr $ /=-sym fsuc/=0
+                | byRight p => rewrite p meet-right
+              }) bottom-univ
+          }
+
+        \lemma reduce-values-conv {l : Array (\Sigma V B)} (lr : IsReduced l) : ∀ (x : l) ∃ (y : reduce l) (x = y) \elim l
+          | nil => \case __
+          | a :: l => rewrite (\peval add _ _ _) \case \elim __ \with {
+            | 0 => inP (0, ext (idp, <=-antisymmetric (B.diff-univ <=-refl $ B.BigJoin-ldistr *> <=-antisymmetric (B.BigJoin-univ \lam j => later $ =_<= $ reduce-values.aux lr j) (later bottom-univ)) B.diff_<=))
+            | suc i => \case reduce-values-conv (reduced-tail lr) i \with {
+              | inP (j,p) => inP (suc $ ++.index-right (later j), p *> ext (idp, <=-antisymmetric (B.diff-univ <=-refl $ *-comm *> reduce-values.aux lr j) B.diff_<=) *> inv ++.++_index-right)
+            }
+          }
+
+        \lemma reduce_>=0-conv {l : Array (\Sigma V B)} (lr : IsReduced l) (p : ∀ (y : reduce l) (0 V.<= y.1 || (y.2 = 0))) : ∀ (x : l) (0 V.<= x.1 || (x.2 = 0))
+          => \lam i => \case reduce-values-conv lr i \with {
+            | inP (j,q) => rewrite q (p j)
+          }
+
+        \lemma SFRefines_>=0-left {l l' : Array (\Sigma V B)} (l<l' : SFRefines l l') (l'p : ∀ (y : l') (0 V.<= y.1)) : ∀ (x : l) (0 V.<= x.1)
+          => \lam i => \case l<l'.2 i \with {
+            | inP (j,p,_) => transportInv (0 V.<=) p (l'p j)
+          }
+
+        \lemma SFRefines_>=0-right {l l' : Array (\Sigma V B)} (l<l' : SFRefines l l') (l'r : IsReduced l') (lp : ∀ (x : l) (0 V.<= x.1)) : ∀ (y : l') (0 V.<= y.1 || (y.2 = 0))
+          => \lam j => \case l<l'.1 j \with {
+            | byLeft p => byLeft $ =_<= (inv p)
+            | byRight q =>
+              \have opt (i : Fin l.len) : 0 V.<= (l' j).1 || (l' j).2 ∧ (l i).2 B.<= 0 => \case l<l'.2 i \with {
+                      | inP (k,p,q) => \case decideEq j k \with {
+                        | yes e => byLeft $ rewrite (e, inv p) (lp i)
+                        | no r => byRight $ B.meet-monotone <=-refl q <=∘ =_<= (l'r r)
+                      }
+              }
+              \in \case FinSet.||-finiteAC opt \with {
+                | byLeft r => byLeft r
+                | byRight h => byRight $ <=-antisymmetric (meet-univ <=-refl q <=∘ =_<= B.BigJoin-ldistr <=∘ B.BigJoin-univ \lam i => later $ h i) bottom-univ
+              }
+          }
+
+        \lemma ~_zro {l : Array (\Sigma V B)} {l' : Array (\Sigma V B) l.len} (p : \Pi (j : Fin l.len) -> (l j = l' j) || (\Sigma ((l j).2 = 0) ((l' j).2 = 0))) : l ~ l' \elim l, l'
+          | nil, nil => ~-perm eperm-nil
+          | a :: l, a' :: l' => \case p 0 \with {
+            | byLeft q => ~_::_= q $ ~_zro \lam j => p (suc j)
+            | byRight s => transport2 (\lam x y => (a.1,x) :: l ~ (a'.1,y) :: l') (inv s.1) (inv s.2) $ ~-trans (~-zro-right idp) $ ~-trans (~_zro \lam j => p (suc j)) $ ~-sym (~-zro-right idp)
+          }
+      }
+
+    \lemma >=0-char {l : Array (\Sigma V B)} : 0 <= inSF l <-> ∀ (x : reduce l) (0 V.<= x.1 || (x.2 = 0))
+      => <->trans (later $ rewrite (~-sfequiv reduce_~) <->refl) (>=0-reduced-char reduce_IsReduced)
+
+    {- TODO: Delete this
+    \lemma ~-unequals-conv {l l' : Array (\Sigma V B)} (l~l' : ∃ (m : IsReduced) (SFRefines m (reduce l)) (SFRefines m (reduce l'))) : l ~ l' \elim l~l'
+      | inP (m,mr,m<l,m<l') => ~-trans (~-trans (~-sym $ ~-trans (SFRefines_~ mr reduce_IsReduced m<l) reduce_~) $ SFRefines_~ mr reduce_IsReduced m<l') reduce_~
+
+    \lemma <=-char2 {l l' : Array (\Sigma V B)} (lr : IsReduced l) (l'r : IsReduced l')
+      : inSF l <= inSF l' <-> Given (∀ (x : l) (Given (y : l') (x.2 B.<= y.2) (x.1 V.<= y.1) || x.1 V.<= 0 || x.2 B.<= 0)) (∀ (y : l') (Given (x : l) (x.1 V.<= y.1) || 0 V.<= y.1))
+      => {?}
+
+    \type IsReduced2 (l : Array B) => \Pi {i j : Fin l.len} -> i /= j -> l i * l j = 0
+
+    \lemma <=-char3 {l l' : Array (\Sigma V B)} (lr : IsReduced l) (l'r : IsReduced l')
+      : inSF l <= inSF l' <-> ∃ (m : IsReduced2) (vs vs' : Array V m.len) (\Pi (i : Fin m.len) -> vs i V.<= vs' i) (SFRefines (mkArray \lam i => (vs i, m i)) l) (SFRefines (mkArray \lam i => (vs' i, m i)) l')
+      => (\lam (inP t) => {?},
+          \lam (inP (m,mr,vs,vs',vp,vm,vm')) => inP (mkArray \lam i => (vs' i - vs i, m i), ~-sfequiv {?}, \lam i => V.to>=0 (vp i)))
+
+    \lemma <=-char4 {l l' : Array (\Sigma V B)} (lr : IsReduced l) (l'r : IsReduced l')
+      : inSF l <= inSF l' <-> ∀ (y : l') Given (∃ (is : Array (Fin l.len)) (∀ (i : is) ((l i).1 V.<= y.1)) (y.2 ∧ B.BigJoin (map __.2 l) B.<= B.BigJoin (map (\lam i => (l i).2) is))) (0 V.<= y.1 || y.2 B.<= B.BigJoin (map __.2 l))
+      => (\lam (inP (d,dp,d>=0)) => \case ~_=-unequals $ inv zro-right *> later (pmap (inSF l' +) (inv $ negative-left {_} {inSF l})) *> inv (+-assoc {_} {inSF l'} {negative (inSF l)} {inSF l}) *> pmap (`+ inSF l) dp \with {
+            | inP (m,mr,m<l',m<d+l) => \lam j => (inP {?}, {?})
+          }, \lam c => inP {?})
+
+    \sfunc addOp (op : V -> V -> V) (v : V) (b : B) (l : Array (\Sigma V B)) : Array (\Sigma V B)
+      => (op v 0, B.diff b $ B.BigJoin $ map __.2 l) :: map (\lam s => (op v s.1, b * s.2)) l ++ map (\lam s => (op 0 s.1, B.diff s.2 b)) l
+
+    \func merge2 (op : V -> V -> V) (l l' : Array (\Sigma V B)) : Array (\Sigma V B) \elim l
+      | nil => l'
+      | a :: l => addOp op a.1 a.2 (merge2 op l l')
+
+    \func lift2 (op : V -> V -> V) (f g : SFunc V B) : SFunc V B \elim f, g
+      | in~ l, in~ l' => inSF (merge2 op l l')
+      | in~ l, ~-equiv x y r => ~-sfequiv \case ~-unequals r \with {
+        | inP (m,mr,m<x,m<y) => ~-unequals-conv $ inP (reduce (merge2 op l m), reduce_IsReduced, {?}, {?})
+      }
+      | ~-equiv x y r, in~ l => ~-sfequiv {?}
+
+    \func lift2 (op : V -> V -> V) (f g : SFunc V B) : SFunc V B \elim f, g
+      | in~ l, in~ l' => inSF (merge l l')
+      | in~ l, ~-equiv x y r => ~-sfequiv {?}
+      | ~-equiv x y r, in~ l => ~-sfequiv {?}
+      \where {
+        \func merge (l l' : Array (\Sigma V B))
+          => \new Array (\Sigma V B) (l.len Nat.* l'.len) \lam j => (op (l (ProdFin.prod_equiv j).1).1 (l' (ProdFin.prod_equiv j).2).1, (l (ProdFin.prod_equiv j).1).2 ∧ (l' (ProdFin.prod_equiv j).2).2)
+
+        \sfunc merge_EPerm {l x y : Array (\Sigma V B)} (x~y : EPerm x y) : EPerm (merge l x) (merge l y) \elim x, y, x~y
+          | nil, nil, eperm-nil => eperm-nil
+          | x :: l1, _ :: l2, eperm-:: idp l1~l2 => {?}
+          | x :: (x' :: l1), y :: (y' :: l2), eperm-swap p p1 p2 => {?}
+          | x, y, eperm-trans x~l l~y => {?}
+
+        \lemma merge_~ {l x y : Array (\Sigma V B)} (x~y : x ~ y) : merge l x ~ merge l y \elim x~y
+          | ~-perm e => ~-perm {?}
+          | ~-sym x~y => {?}
+          | ~-trans x~m m~y => {?}
+          | ~-zro-left p => {?}
+          | ~-zro-right p => {?}
+          | ~-+-left p q => {?}
+          | ~-+-right p q => {?}
+      }
+      -}
   }
 
-{-
 \open SFuncPosetQModule \hiding (<=)
 
 \instance SFuncRieszSpace (V : RieszSpace) (B : BooleanRing) : RieszSpace (SFunc V B)
   => RieszSpace.fromAbs \lam a => \case makeReduced a \with {
-    | inP (l,lr,lp) => rewrite lp $ inP (inSF $ map (\lam s => (V.abs s.1, s.2)) l, {?}, {?}, {?})
+    | inP (l,lr,lp) => rewrite lp $ inP (inSF $ map (\lam s => (V.abs s.1, s.2)) l,
+        inP (map (\lam s => (V.abs s.1 - s.1, s.2)) l, ~-sfequiv $ ~_+ V.abs negative, \lam j => V.to>=0 V.abs>=id),
+        inP (map (\lam s => (V.abs s.1 + s.1, s.2)) l, ~-sfequiv $ ~-trans (~_+ V.abs (\lam x => negative (negative x))) $ ~-perm $ EPerm.eperm-= $ later $ exts \lam j => ext (pmap (_ +) V.negative-isInv, idp), \lam j => =_<= (inv negative-left) <=∘ V.<=_+ V.abs>=neg <=-refl),
+        \lam {c} => \case \elim c \with {
+          | in~ c => \lam (inP (l1,l1p,l1>=0)) (inP (l2,l2p,l2>=0)) => {?} -- inP (merge2 (∧) l1 l2, {?}, \lam j => {?})
+        })
   }
--}
+  {- TODO: Delete this
+  \where \private {
+    \type IsPos (l : Array (\Sigma V B)) => ∀ (x : l) (0 V.<= x.1 || (x.2 = 0))
+
+    \lemma aux {l c : Array (\Sigma V B)} (p : IsPos (reduce $ l ++ c)) (q : IsPos (reduce $ map (\lam s => (negative s.1, s.2)) l ++ c)) : IsPos (reduce $ map (\lam s => (V.abs s.1, s.2)) l ++ c) \elim l
+      | nil => p
+      | a :: l => {?}
+  }
+  -}
