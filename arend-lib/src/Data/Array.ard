@@ -69,7 +69,12 @@
 
 \func map_++' {A B : \Type} (f : A -> B) {l : Array A} {n : Nat} {l' : Array A n} : map f (l ++' l') = map f l ++' map f l' \elim l
   | nil => idp
-  | :: a l =>  path (\lam i => f a :: map_++' f i)
+  | :: a l => path (\lam i => f a :: map_++' f i)
+
+\func map2_++' {A B C : \Type} (f : A -> B -> C) {n : Nat} {l1 : Array A n} {l2 : Array B n} {m : Nat} {l1' : Array A m} {l2' : Array B m}
+  : mkArray (\lam j => f (++' l1 l1' j) (++' l2 l2' j)) = mkArray (\lam j => f (l1 j) (l2 j)) ++' mkArray (\lam j => f (l1' j) (l2' j)) \elim n, l1, l2
+  | 0, nil, nil => idp
+  | suc n, a1 :: l1, a2 :: l2 => path (\lam i => f a1 a2 :: map2_++' f i)
 
 \func \infixr 5 ++ {A : \Type} (xs ys : Array A) : Array A \elim xs
   | nil => ys

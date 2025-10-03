@@ -3,6 +3,7 @@
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Monoid
+\import Algebra.Ordered
 \import Algebra.Ordered.RieszSpace
 \import Algebra.Pointed
 \import Algebra.QModule
@@ -71,9 +72,12 @@
     \lemma ~-swap {x y : \Sigma V B} {l : Array (\Sigma V B)} : x :: y :: l ~ y :: x :: l
       => ~-perm (eperm-swap idp idp idp)
 
-    \lemma ~_+ (f g : V -> V) {l : Array (\Sigma V B)} : map (\lam s => (f s.1, s.2)) l ++ map (\lam s => (g s.1, s.2)) l ~ map (\lam s => (f s.1 + g s.1, s.2)) l \elim l
-      | nil => ~_Equivalence.~-reflexive
-      | a :: l => ~-trans (~-perm $ EPerm.EPerm_++-swap {_} {map (\lam s => (f s.1, s.2)) (a :: l)}) $ ~-trans ~-swap $ ~-trans (~-+-left idp idp) $ ~_:: (~_+ f g)
+    \lemma ~_+' (bs : Array B) (vs vs' : Array V bs.len) : mkArray (\lam j => (vs j, bs j)) ++ mkArray (\lam j => (vs' j, bs j)) ~ mkArray (\lam j => (vs j + vs' j, bs j)) \elim bs, vs, vs'
+      | nil, nil, nil => ~_Equivalence.~-reflexive
+      | b :: bs, v :: vs, v' :: vs' => ~-trans (~-perm $ EPerm.EPerm_++-swap {_} {mkArray (\lam (j : Fin (suc bs.len)) => ((v :: vs) j, (b :: bs) j))}) $ ~-trans ~-swap $ ~-trans (~-+-left idp idp) $ ~_:: (~_+' bs vs vs')
+
+    \lemma ~_+ (f g : V -> V) {l : Array (\Sigma V B)} : map (\lam s => (f s.1, s.2)) l ++ map (\lam s => (g s.1, s.2)) l ~ map (\lam s => (f s.1 + g s.1, s.2)) l
+      => ~_+' (map __.2 l) (map (\lam s => f s.1) l) (map (\lam s => g s.1) l)
 
     \lemma ~-zros-left {l : Array (\Sigma V B)} (p : \Pi (i : Fin l.len) -> (l i).1 = 0) : l ~ nil \elim l
       | nil => ~_Equivalence.~-reflexive
@@ -186,21 +190,23 @@
     | inP (l,lp,lf) => inP (map (\lam s => (RatField.finv n V.*q s.1, s.2)) l, AddGroup.minus_zro *> inv QModule.ide_*q *> pmap (QModule.`*q _) (inv $ RatField.finv-left $ natRat/=0 n/=0) *> QModule.*q-assoc *> pmap (_ QModule.*q) (QModule.*q_*n *> inv AddGroup.minus_zro *> lp) *> SFuncQModule.*q-char, \lam j => V.*q_>=0 (RatField.finv>=0 fromNat_>=0) (lf j))
   }
   \where {
-    \type \infix 4 <= (x y : SFunc V B) : \Prop
-      => ∃ (l : Array (\Sigma V B)) (y - x = inSF l) ∀ (s : l) (0 V.<= s.1)
+    \protected \func PFunc => Array (\Sigma V B)
 
-    \sfunc add (v : V) (b : B) (l : Array (\Sigma V B)) : Array (\Sigma V B)
+    \type \infix 4 <= (x y : SFunc V B) : \Prop
+      => ∃ (l : PFunc) (y - x = inSF l) ∀ (s : l) (0 V.<= s.1)
+
+    \sfunc add (v : V) (b : B) (l : PFunc) : PFunc
       => (v, B.diff b $ B.BigJoin $ map __.2 l) :: map (\lam s => (v + s.1, b * s.2)) l ++ map (\lam s => (s.1, B.diff s.2 b)) l
 
-    \func reduce (l : Array (\Sigma V B)) : Array (\Sigma V B)
+    \func reduce (l : PFunc) : PFunc
       | nil => nil
       | x :: l => add x.1 x.2 (reduce l)
 
-    \lemma reduce-closed (P : V -> \Prop) (P0 : P 0) (P+ : ∀ {a b : P} (P (a + b))) {l : Array (\Sigma V B)} (Pl : ∀ (x : l) (P x.1)) : ∀ (x : reduce l) (P x.1) \elim l
+    \lemma reduce-closed (P : V -> \Prop) (P0 : P 0) (P+ : ∀ {a b : P} (P (a + b))) {l : PFunc} (Pl : ∀ (x : l) (P x.1)) : ∀ (x : reduce l) (P x.1) \elim l
       | nil => \case __
       | a :: l => add-closed (Pl 0) $ reduce-closed P P0 P+ \lam j => Pl (suc j)
       \where {
-        \lemma add-closed {v : V} {b : B} (Pv : P v) {l : Array (\Sigma V B)} (Pl : ∀ (x : l) (P x.1)) : ∀ (x : add v b l) (P x.1)
+        \lemma add-closed {v : V} {b : B} (Pv : P v) {l : PFunc} (Pl : ∀ (x : l) (P x.1)) : ∀ (x : add v b l) (P x.1)
           => rewrite (\peval add v b l) \case \elim __ \with {
             | 0 => Pv
             | suc k => \case ++.split-index k \with {
@@ -210,23 +216,27 @@
           }
       }
 
-    \lemma reduce_>=0 {l : Array (\Sigma V B)} (Pl : ∀ (x : l) (0 V.<= x.1)) : ∀ (x : reduce l) (0 V.<= x.1)
+    \lemma reduce_>=0 {l : PFunc} (Pl : ∀ (x : l) (0 V.<= x.1)) : ∀ (x : reduce l) (0 V.<= x.1)
       => reduce-closed (0 V.<=) <=-refl V.<=_+-positive Pl
 
-    \lemma reduce_<=0 {l : Array (\Sigma V B)} (Pl : ∀ (x : l) (x.1 V.<= 0)) : ∀ (x : reduce l) (x.1 V.<= 0)
+    \lemma reduce_<=0 {l : PFunc} (Pl : ∀ (x : l) (x.1 V.<= 0)) : ∀ (x : reduce l) (x.1 V.<= 0)
       => reduce-closed (V.`<= 0) <=-refl (\lam a<=0 b<=0 => V.from>=0 $ rewrite (zro-left,V.negative_+) $ V.<=_+-positive (V.negative>=0 b<=0) (V.negative>=0 a<=0)) Pl
 
-    \sfunc add_EPerm {v : V} {b : B} {l l' : Array (\Sigma V B)} (e : EPerm l l') : EPerm (add v b l) (add v b l') \elim l, l', e
+    \sfunc add_EPerm {v : V} {b : B} {l l' : PFunc} (e : EPerm l l') : EPerm (add v b l) (add v b l') \elim l, l', e
       | nil, nil, eperm-nil => EPerm.eperm-refl
       | x :: l1, _ :: l2, eperm-:: idp e => rewrite (\peval add _ _ _, \peval add _ _ _) $ eperm-:: (pmap (\lam y => (v, B.diff b (_ ∨ y))) $ B.BigJoin_EPerm $ EPerm.EPerm_map __.2 e) $ eperm-:: idp $ EPerm.eperm-++ (EPerm.EPerm_map (\lam s => (v + s.1, b * s.2)) e) $ eperm-:: idp $ EPerm.EPerm_map (\lam s => (s.1, B.diff s.2 b)) e
       | (u,a) :: ((w,c) :: l), _ :: (_ :: l'), eperm-swap idp idp p2 => rewrite (\peval add _ _ _, \peval add _ _ _) $ eperm-:: (pmap (\lam y => (v, B.diff b y)) $ B.BigJoin_EPerm {a :: c :: map __.2 l} {c :: a :: map __.2 l'} $ eperm-swap idp idp $ pmap (map __.2) p2) $
         EPerm.eperm-swap-tail $ EPerm.eperm-++ (EPerm.EPerm_map (\lam s => (v + s.1, b * s.2)) $ EPerm.eperm-= p2) $ eperm-swap idp idp $ pmap (map \lam (s : \Sigma V B) => (s.1, B.diff s.2 b)) p2
       | l, l', eperm-trans e1 e2 => eperm-trans (add_EPerm e1) (add_EPerm e2)
 
-    \lemma add_BigJoin {v : V} {b : B} {l : Array (\Sigma V B)} : B.BigJoin (map __.2 (add v b l)) = b ∨ B.BigJoin (map __.2 l)
+    \lemma add_BigJoin {v : V} {b : B} {l : PFunc} : B.BigJoin (map __.2 (add v b l)) = b ∨ B.BigJoin (map __.2 l)
       => rewrite (\peval add v b l) $ pmap (_ ∨) (pmap B.BigJoin (map_++ __.2) *> B.BigJoin_++ *> later (inv (B.BigJoin_join {_} {map (\lam s => b * s.2) l}) *> pmap B.BigJoin (exts \lam j => equation.bRing))) *> equation.bRing
 
-    \sfunc add-double {u v : V} {a b : B} {l : Array (\Sigma V B)} : EPerm (add v b (add u a l))
+    \lemma reduce_BigJoin {l : PFunc} : B.BigJoin (map __.2 (reduce l)) = B.BigJoin (map __.2 l) \elim l
+      | nil => idp
+      | a :: l => add_BigJoin *> pmap (_ ∨) reduce_BigJoin
+
+    \sfunc add-double {u v : V} {a b : B} {l : PFunc} : EPerm (add v b (add u a l))
       ((v + u, B.diff (b * a) (B.BigJoin (map __.2 l))) ::
        (v, B.diff b (a ∨ B.BigJoin (map __.2 l))) ::
        (u, B.diff a (b ∨ B.BigJoin (map __.2 l))) ::
@@ -239,22 +249,22 @@
             (EPerm.eperm-= $ later $ rewrite (\peval add u a l) $ cong_:: (pmap (v + u, __) equation.bRing) $ pmap2 (++) (exts \lam j => ext (+-assoc, *-assoc)) (exts \lam j => ext (idp, equation.bRing)) *> inv (map_++ \lam s => (v + s.1, b * s.2)))
             (EPerm.eperm-= $ later $ rewrite (\peval add u a l) $ cong_:: (pmap (u,__) equation.bRing) $ pmap (_ ++) (exts \lam j => ext (idp, equation.bRing)) *> inv (map_++ \lam (s : \Sigma V B) => (s.1, B.diff s.2 b)))
 
-    \sfunc add-comm {u v : V} {a b : B} {l : Array (\Sigma V B)} : EPerm (add v b (add u a l)) (add u a (add v b l))
+    \sfunc add-comm {u v : V} {a b : B} {l : PFunc} : EPerm (add v b (add u a l)) (add u a (add v b l))
       => eperm-trans add-double $ eperm-trans (eperm-:: (pmap2 (\lam x y => (x, B.diff y _)) +-comm *-comm) $ EPerm.eperm-swap-tail $ transport2 EPerm (inv ++-assoc) (inv ++-assoc) $ EPerm.eperm-++ (EPerm.eperm-= $ later $ exts \lam j => ext (pmap (`+ _) +-comm, pmap (`* _) *-comm)) $ transport2 EPerm ++-assoc ++-assoc $ EPerm.eperm-++ EPerm.eperm-++-comm $ EPerm.eperm-= $ later $ exts \lam j => pmap (\lam x => ((l j).1, B.diff _ x)) B.join-comm) (EPerm.eperm-sym add-double)
 
-    \sfunc reduce_EPerm {l l' : Array (\Sigma V B)} (e : EPerm l l') : EPerm (reduce l) (reduce l') \elim l, l', e
+    \sfunc reduce_EPerm {l l' : PFunc} (e : EPerm l l') : EPerm (reduce l) (reduce l') \elim l, l', e
       | nil, nil, eperm-nil => eperm-nil
       | x :: l1, _ :: l2, eperm-:: idp e => add_EPerm (reduce_EPerm e)
       | x :: (y :: l1), _ :: (_ :: l2), eperm-swap idp idp p => eperm-trans add-comm $ add_EPerm $ add_EPerm $ EPerm.eperm-= (pmap reduce p)
       | l, l', eperm-trans e1 e2 => eperm-trans (reduce_EPerm e1) (reduce_EPerm e2)
 
-    \type SFRefines (l l' : Array (\Sigma V B))
+    \type SFRefines (l l' : PFunc)
       => \Sigma (∀ (y : l') ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) (∀ (x : l) ∃ (y : l') (x.1 = y.1) (x.2 B.<= y.2))
 
-    \lemma SFRefines-refl {l : Array (\Sigma V B)} : SFRefines l l
+    \lemma SFRefines-refl {l : PFunc} : SFRefines l l
       => (\lam j => byRight (B.BigJoin-cond {map __.2 l} j), \lam j => inP (j, idp, <=-refl))
 
-    \lemma SFRefines_++ {l l' r r' : Array (\Sigma V B)} (ll' : SFRefines l l') (rr' : SFRefines r r') : SFRefines (l ++ r) (l' ++ r')
+    \lemma SFRefines_++ {l l' r r' : PFunc} (ll' : SFRefines l l') (rr' : SFRefines r r') : SFRefines (l ++ r) (l' ++ r')
       => (\lam j => \case ++.split-index j \with {
         | inl (k,p) => rewrite (p,++.++_index-left) \case ll'.1 k \with {
           | byLeft p => byLeft p
@@ -273,10 +283,10 @@
         }
       })
 
-    \lemma SFRefines_:: {x : \Sigma V B} {l l' : Array (\Sigma V B)} (r : SFRefines l l') : SFRefines (x :: l) (x :: l')
+    \lemma SFRefines_:: {x : \Sigma V B} {l l' : PFunc} (r : SFRefines l l') : SFRefines (x :: l) (x :: l')
       => SFRefines_++ {_} {_} {x :: nil} SFRefines-refl r
 
-    \lemma SFRefines_::-merge {v : V} {a b c : B} (c=ab : c = a ∨ b) {l l' : Array (\Sigma V B)} (r : SFRefines l l') : SFRefines ((v,a) :: (v,b) :: l) ((v, c) :: l')
+    \lemma SFRefines_::-merge {v : V} {a b c : B} (c=ab : c = a ∨ b) {l l' : PFunc} (r : SFRefines l l') : SFRefines ((v,a) :: (v,b) :: l) ((v, c) :: l')
       => (\case \elim __ \with {
         | 0 => byRight $ =_<= c=ab <=∘ B.join-monotone <=-refl join-left
         | suc j => \case r.1 j \with {
@@ -291,14 +301,14 @@
         }
       })
 
-    \lemma SFRefines_++-merge (f g h : B -> B) (p : \Pi (b : B) -> h b = f b ∨ g b) {l : Array (\Sigma V B)} : SFRefines (map (\lam s => (s.1, f s.2)) l ++ map (\lam s => (s.1, g s.2)) l) (map (\lam s => (s.1, h s.2)) l)
+    \lemma SFRefines_++-merge (f g h : B -> B) (p : \Pi (b : B) -> h b = f b ∨ g b) {l : PFunc} : SFRefines (map (\lam s => (s.1, f s.2)) l ++ map (\lam s => (s.1, g s.2)) l) (map (\lam s => (s.1, h s.2)) l)
       => (\lam j => byRight $ =_<= (p _) <=∘ B.join-monotone (B.BigJoin-cond {map (\lam s => f s.2) l} j) (B.BigJoin-cond {map (\lam s => g s.2) l} j) <=∘ =_<= (inv $ later $ pmap B.BigJoin (map_++ __.2) *> B.BigJoin_++),
           \lam j => \case ++.split-index j \with {
             | inl (k,q) => rewrite (q,++.++_index-left) $ inP (k, idp, join-left <=∘ =_<= (inv (p _)))
             | inr (k,q) => rewrite (q,++.++_index-right) $ inP (k, idp, join-right <=∘ =_<= (inv (p _)))
           })
 
-    \lemma SFRefines-trans {l1 l2 l3 : Array (\Sigma V B)} (l3r : IsReduced l3) (r1 : SFRefines l1 l2) (r2 : SFRefines l2 l3) : SFRefines l1 l3
+    \lemma SFRefines-trans {l1 l2 l3 : PFunc} (l3r : IsReduced l3) (r1 : SFRefines l1 l2) (r2 : SFRefines l2 l3) : SFRefines l1 l3
       => (\lam k => \case r2.1 k \with {
         | byLeft p => byLeft p
         | byRight p =>
@@ -319,7 +329,7 @@
         }
       })
 
-    \lemma SFRefines-swap {x y : \Sigma V B} {l l' : Array (\Sigma V B)} (r : SFRefines l l') : SFRefines (x :: y :: l) (y :: x :: l')
+    \lemma SFRefines-swap {x y : \Sigma V B} {l l' : PFunc} (r : SFRefines l l') : SFRefines (x :: y :: l) (y :: x :: l')
       => (\case \elim __ \with {
         | 0 => byRight $ join-left <=∘ join-right
         | 1 => byRight join-left
@@ -335,12 +345,12 @@
         }
       })
 
-    \lemma SFRefines_EPerm {l l' : Array (\Sigma V B)} (e : EPerm l l') : SFRefines l l'
+    \lemma SFRefines_EPerm {l l' : PFunc} (e : EPerm l l') : SFRefines l l'
       => \have (f,g) => EPerm.eperm_equiv e
          \in (\lam j => byRight $ =_<= (pmap __.2 $ g j) <=∘ B.BigJoin-cond {map __.2 l} (f j),
               \lam j => inP (f.ret j, pmap __.1 $ inv $ g (f.ret j) *> pmap l (f.f_ret j), =_<= $ pmap __.2 $ inv $ g (f.ret j) *> pmap l (f.f_ret j)))
 
-    \lemma SFRefines_++-left {l r r' : Array (\Sigma V B)} (lr : SFRefines l r) (r'l : ∀ (y : r') ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) : SFRefines l (r ++ r')
+    \lemma SFRefines_++-left {l r r' : PFunc} (lr : SFRefines l r) (r'l : ∀ (y : r') ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) : SFRefines l (r ++ r')
       => (\lam j => \case ++.split-index j \with {
         | inl (k,p) => rewrite (p,++.++_index-left) (lr.1 k)
         | inr (k,p) => rewrite (p,++.++_index-right) (r'l k)
@@ -348,7 +358,7 @@
         | inP (k,p,q) => inP (++.index-left k, p *> pmap __.1 (inv $ ++.++_index-left k), q <=∘ =_<= (pmap __.2 $ inv $ ++.++_index-left k))
       })
 
-    \lemma SFRefines_++-right {l r r' : Array (\Sigma V B)} (lr' : SFRefines l r') (rl : ∀ (y : r) ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) : SFRefines l (r ++ r')
+    \lemma SFRefines_++-right {l r r' : PFunc} (lr' : SFRefines l r') (rl : ∀ (y : r) ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) : SFRefines l (r ++ r')
       => (\lam j => \case ++.split-index j \with {
         | inl (k,p) => rewrite (p,++.++_index-left) (rl k)
         | inr (k,p) => rewrite (p,++.++_index-right) (lr'.1 k)
@@ -356,28 +366,30 @@
         | inP (k,p,q) => inP (++.index-right k, p *> pmap __.1 (inv $ ++.++_index-right {_} {_} {_} {k}), q <=∘ =_<= (pmap __.2 $ inv $ ++.++_index-right {_} {_} {_} {k}))
       })
 
-    \lemma SFRefines_::-right {x : \Sigma V B} {l r : Array (\Sigma V B)} (rl : x.2 B.<= B.BigJoin (map __.2 l)) (lr : SFRefines l r) : SFRefines l (x :: r)
+    \lemma SFRefines_::-right {x : \Sigma V B} {l r : PFunc} (rl : x.2 B.<= B.BigJoin (map __.2 l)) (lr : SFRefines l r) : SFRefines l (x :: r)
       => SFRefines_++-right {_} {_} {_} {x :: nil} lr $ \lam (0) => byRight rl
 
-    \lemma SFRefines_add_0 {l : Array (\Sigma V B)} {v : V} : SFRefines l (add v 0 l)
+    \lemma SFRefines_add_0 {l : PFunc} {v : V} : SFRefines l (add v 0 l)
       => rewrite (\peval add v 0 l) $ SFRefines_::-right (B.meet_<=' equation.bRing) $ SFRefines_++-right (transport (SFRefines l) (exts \lam j => ext (idp,equation.bRing)) SFRefines-refl) \lam j => byRight $ meet-left <=∘ bottom-univ
 
-    \type IsReduced (l : Array (\Sigma V B)) => \Pi {i j : Fin l.len} -> i /= j -> (l i).2 * (l j).2 = 0
-
-    \lemma SFRefines-closed (P : V -> \Prop) (P0 : P 0) {l l' : Array (\Sigma V B)} (r : SFRefines l l') (Pl : ∀ (x : l') (P x.1)) : ∀ (x : l) (P x.1)
+    \lemma SFRefines-closed (P : V -> \Prop) (P0 : P 0) {l l' : PFunc} (r : SFRefines l l') (Pl : ∀ (x : l') (P x.1)) : ∀ (x : l) (P x.1)
       => \lam i => \case r.2 i \with {
         | inP (j,p,_) => transportInv P p (Pl j)
       }
 
-    \lemma add_IsReduced {v : V} {b : B} {l : Array (\Sigma V B)} (lr : IsReduced l) : IsReduced (add v b l)
-      => transportInv IsReduced (\peval add v b l) \lam {i} {j} => \case \elim i, \elim j \with {
+    \func IsReducedB (l : Array B) => \Pi {i j : Fin l.len} -> i /= j -> l i * l j = 0
+
+    \func IsReduced (l : PFunc) => IsReducedB (map __.2 l)
+
+    \lemma add_IsReducedB {b : B} {l : Array B} (lr : IsReducedB l) : IsReducedB (B.diff b (B.BigJoin l) :: map (b ∧) l ++ map (B.diff __ b) l)
+      => \lam {i} {j} => \case \elim i, \elim j \with {
         | 0, 0 => \lam p => absurd (p idp)
         | 0, suc j => \lam _ => \case ++.split-index j \with {
-          | inl (k,p) => rewrite (p,++.++_index-left) $ <=-antisymmetric (B.meet-monotone (B.diff-mono <=-refl $ B.BigJoin-cond {map __.2 l} k) <=-refl <=∘ =_<= equation.bRing) bottom-univ
+          | inl (k,p) => rewrite (p,++.++_index-left) $ <=-antisymmetric (B.meet-monotone (B.diff-mono <=-refl $ B.BigJoin-cond k) <=-refl <=∘ =_<= equation.bRing) bottom-univ
           | inr (k,p) => rewrite (p,++.++_index-right) equation.bRing
         }
         | suc i, 0 => \lam _ => \case ++.split-index i \with {
-          | inl (k,p) => rewrite (p,++.++_index-left) $ <=-antisymmetric (B.meet-monotone <=-refl (B.diff-mono <=-refl $ B.BigJoin-cond {map __.2 l} k) <=∘ =_<= equation.bRing) bottom-univ
+          | inl (k,p) => rewrite (p,++.++_index-left) $ <=-antisymmetric (B.meet-monotone <=-refl (B.diff-mono <=-refl $ B.BigJoin-cond k) <=∘ =_<= equation.bRing) bottom-univ
           | inr (k,p) => rewrite (p,++.++_index-right) equation.bRing
         }
         | suc i, suc j => \case ++.split-index i, ++.split-index j \with {
@@ -388,41 +400,50 @@
         }
       }
 
-    \lemma reduce_IsReduced {l : Array (\Sigma V B)} : IsReduced (reduce l) \elim l
+    \lemma add_IsReduced {v : V} {b : B} {l : PFunc} (lr : IsReduced l) : IsReduced (add v b l)
+      => transportInv IsReduced (\peval add v b l) $ transport IsReducedB (later $ pmap (B.diff b (B.BigJoin (map __.2 l)) ::) $ inv $ map_++ __.2 {map (\lam s => (v + s.1, b * s.2)) l} {map (\lam s => (s.1, B.diff s.2 b)) l}) (add_IsReducedB {_} {b} lr)
+
+    \lemma reduce_IsReduced {l : PFunc} : IsReduced (reduce l) \elim l
       | nil => \lam {i} => \case i
       | x :: l => add_IsReduced reduce_IsReduced
 
-    \lemma ~-unequals {l l' : Array (\Sigma V B)} (l~l' : l ~ l') : ∃ (m : IsReduced) (SFRefines m (reduce l)) (SFRefines m (reduce l')) \elim l~l'
+    \lemma SFRefines-common {b c d : PFunc} (br : IsReduced b) (cr : IsReduced c) (dr : IsReduced d) (b<d : SFRefines b d) (c<d : SFRefines c d) : ∃ (a : IsReduced) (SFRefines a b) (SFRefines a c)
+      => \case FinSet.finiteAC b<d.2, FinSet.finiteAC c<d.2 \with {
+        | inP f1, inP f2 =>
+          \let P => SigmaFin (ProdFin (FinFin b.len) (FinFin c.len)) \lam s => DecFin (decideEq (f1 s.1).1 (f2 s.2).1)
+          \in \case P.finEq \with {
+            | inP Pe => inP (
+              \new Array (\Sigma V B) P.finCard \lam j => ((b (Pe j).1.1).1, (b (Pe j).1.1).2 * (c (Pe j).1.2).2),
+              \lam {i} {j} i/=j => \case decideEq (Pe i).1.1 (Pe j).1.1, decideEq (Pe i).1.2 (Pe j).1.2 \with {
+                | yes e, yes e' => absurd $ i/=j $ Pe.isInj $ ext $ ext (e,e')
+                | no q, _ => equation.bRing {br q}
+                | _, no q => equation.bRing {cr q}
+              },
+              (\lam i => \case c<d.1 (f1 i).1 \with {
+                | byLeft q => byLeft $ (f1 i).2 *> q
+                | byRight q => byRight $ meet-univ <=-refl ((f1 i).3 <=∘ q) <=∘ =_<= B.BigJoin-ldistr <=∘ B.BigJoin-univ \lam j => later \case decideEq (f1 i).1 (f2 j).1 \with {
+                  | yes e => B.FinJoin-cond {P} ((i,j),e) {\lam s => (b s.1.1).2 * (c s.1.2).2} <=∘ =_<= (B.FinJoin_Equiv {_} {P} Pe *> B.FinJoin=BigJoin)
+                  | no e => B.meet-monotone (f1 i).3 (f2 j).3 <=∘ =_<= (dr e) <=∘ bottom-univ
+                }
+              }, \lam k => inP ((Pe k).1.1, idp, meet-left)),
+              (\lam j => \case b<d.1 (f2 j).1 \with {
+                | byLeft q => byLeft $ (f2 j).2 *> q
+                | byRight q => byRight $ meet-univ ((f2 j).3 <=∘ q) <=-refl <=∘ =_<= B.BigJoin-rdistr <=∘ B.BigJoin-univ \lam i => later \case decideEq (f1 i).1 (f2 j).1 \with {
+                  | yes e => B.FinJoin-cond {P} ((i,j),e) {\lam s => (b s.1.1).2 * (c s.1.2).2} <=∘ =_<= (B.FinJoin_Equiv {_} {P} Pe *> B.FinJoin=BigJoin)
+                  | no e => B.meet-monotone (f1 i).3 (f2 j).3 <=∘ =_<= (dr e) <=∘ bottom-univ
+                }
+              }, \lam k => inP $ later ((Pe k).1.2, (f1 _).2 *> pmap (\lam x => (d x).1) (Pe k).2 *> inv (f2 _).2, meet-right)))
+          }
+      }
+
+    \lemma ~-unequals {l l' : PFunc} (l~l' : l ~ l') : ∃ (m : IsReduced) (SFRefines m (reduce l)) (SFRefines m (reduce l')) \elim l~l'
       | ~-perm e => inP (reduce l, reduce_IsReduced, SFRefines-refl, SFRefines_EPerm $ reduce_EPerm e)
       | ~-sym l~l' => \case ~-unequals l~l' \with {
         | inP (m,mr,ml',ml) => inP (m,mr,ml,ml')
       }
       | ~-trans l~m m~l' => \case ~-unequals l~m, ~-unequals m~l' \with {
-        | inP (d1,d1r,d1<l,d1<m), inP (d2,d2r,d2<m,d2<l') => \case FinSet.finiteAC d1<m.2, FinSet.finiteAC d2<m.2 \with {
-          | inP f1, inP f2 =>
-            \let P => SigmaFin (ProdFin (FinFin d1.len) (FinFin d2.len)) \lam s => DecFin (decideEq (f1 s.1).1 (f2 s.2).1)
-            \in \case P.finEq \with {
-              | inP Pe => inP (\new Array (\Sigma V B) P.finCard \lam j => ((d1 (Pe j).1.1).1, (d1 (Pe j).1.1).2 * (d2 (Pe j).1.2).2),
-                               \lam {i} {j} i/=j => \case decideEq (Pe i).1.1 (Pe j).1.1, decideEq (Pe i).1.2 (Pe j).1.2 \with {
-                                 | yes e, yes e' => absurd $ i/=j $ Pe.isInj $ ext $ ext (e,e')
-                                 | no q, _ => equation.bRing {d1r q}
-                                 | _, no q => equation.bRing {d2r q}
-                               },
-                               SFRefines-trans reduce_IsReduced (later (\lam i => \case d2<m.1 (f1 i).1 \with {
-                                 | byLeft q => byLeft $ (f1 i).2 *> q
-                                 | byRight q => byRight $ meet-univ <=-refl ((f1 i).3 <=∘ q) <=∘ =_<= B.BigJoin-ldistr <=∘ B.BigJoin-univ \lam j => later \case decideEq (f1 i).1 (f2 j).1 \with {
-                                   | yes e => B.FinJoin-cond {P} ((i,j),e) {\lam s => (d1 s.1.1).2 * (d2 s.1.2).2} <=∘ =_<= (B.FinJoin_Equiv {_} {P} Pe *> B.FinJoin=BigJoin)
-                                   | no c => B.meet-monotone (f1 i).3 (f2 j).3 <=∘ =_<= (reduce_IsReduced c) <=∘ bottom-univ
-                                 }
-                               }, \lam k => inP ((Pe k).1.1, idp, meet-left))) d1<l,
-                               SFRefines-trans reduce_IsReduced (later \lam j => \case d1<m.1 (f2 j).1 \with {
-                                 | byLeft q => byLeft $ (f2 j).2 *> q
-                                 | byRight q => byRight $ meet-univ ((f2 j).3 <=∘ q) <=-refl <=∘ =_<= B.BigJoin-rdistr <=∘ B.BigJoin-univ \lam i => later \case decideEq (f1 i).1 (f2 j).1 \with {
-                                   | yes e => B.FinJoin-cond {P} ((i,j),e) {\lam s => (d1 s.1.1).2 * (d2 s.1.2).2} <=∘ =_<= (B.FinJoin_Equiv {_} {P} Pe *> B.FinJoin=BigJoin)
-                                   | no c => B.meet-monotone (f1 i).3 (f2 j).3 <=∘ =_<= (reduce_IsReduced c) <=∘ bottom-univ
-                                 }
-                               }, \lam k => inP $ later ((Pe k).1.2, (f1 _).2 *> pmap (\lam x => (reduce _ x).1) (Pe k).2 *> inv (f2 _).2, meet-right)) d2<l')
-            }
+        | inP (d1,d1r,d1<l,d1<m), inP (d2,d2r,d2<m,d2<l') => \case SFRefines-common d1r d2r reduce_IsReduced d1<m d2<m \with {
+          | inP (a,ar,a<d1,a<d2) => inP (a, ar, SFRefines-trans reduce_IsReduced a<d1 d1<l, SFRefines-trans reduce_IsReduced a<d2 d2<l')
         }
       }
       | ~-zro-left {b} idp => inP (split b (reduce l'), split_IsReduced reduce_IsReduced, split_add_SFRefines, split_SFRefines)
@@ -430,10 +451,10 @@
       | ~-+-left {l''} {u} {v} {b} idp idp => inP (add (u + v) b (reduce l''), add_IsReduced reduce_IsReduced, add_+_SFRefines reduce_IsReduced, SFRefines-refl)
       | ~-+-right {l''} {v} {a} {b} idp idp => inP (add v a $ add v b $ reduce l'', add_IsReduced $ add_IsReduced reduce_IsReduced, add-modularity_SFRefines reduce_IsReduced, SFRefines-refl)
       \where {
-        \func split (b : B) (l : Array (\Sigma V B))
+        \func split (b : B) (l : PFunc)
           => map (\lam s => (0 + s.1, b * s.2)) l ++ map (\lam s => (s.1, B.diff s.2 b)) l
 
-        \lemma split_IsReduced {b : B} {l : Array (\Sigma V B)} (lr : IsReduced l) : IsReduced (split b l)
+        \lemma split_IsReduced {b : B} {l : PFunc} (lr : IsReduced l) : IsReduced (split b l)
           => \lam {i} {j} => \case ++.split-index i, ++.split-index j \with {
             | inl (k1,p1), inl (k2,p2) => rewrite (p1,p2,++.++_index-left,++.++_index-left) \lam p => equation.bRing {lr {k1} {k2} \lam q => p (cong q)}
             | inl (k1,p1), inr (k2,p2) => \lam _ => rewrite (p1,p2,++.++_index-left,++.++_index-right) equation.bRing
@@ -441,13 +462,13 @@
             | inr (k1,p1), inr (k2,p2) => rewrite (p1,p2,++.++_index-right,++.++_index-right) \lam p => equation.bRing {lr {k1} {k2} \lam q => p (cong q)}
           }
 
-        \lemma split_SFRefines {b : B} {l : Array (\Sigma V B)} : SFRefines (split b l) l
+        \lemma split_SFRefines {b : B} {l : PFunc} : SFRefines (split b l) l
           => (\lam j => byRight $ =_<= equation.bRing <=∘ B.BigJoin-cond {\lam i => b * (l i).2 ∨ B.diff (l i).2 b} j <=∘ =_<= (inv $ pmap B.BigJoin (map_++ __.2) *> B.BigJoin_++ *> inv (later $ B.BigJoin_join {_} {map (\lam s => b * s.2) l})), \lam j => \case ++.split-index j \with {
             | inl (k,p) => rewrite (p,++.++_index-left) $ inP (k, zro-left, meet-right)
             | inr (k,p) => rewrite (p,++.++_index-right) $ inP (k, idp, B.diff_<=)
           })
 
-        \lemma split_add_SFRefines {b : B} {l : Array (\Sigma V B)} : SFRefines (split b l) (add 0 b l)
+        \lemma split_add_SFRefines {b : B} {l : PFunc} : SFRefines (split b l) (add 0 b l)
           => rewrite (\peval add 0 b l) (\case \elim __ \with {
             | 0 => byLeft idp
             | suc j => byRight \case ++.split-index j \with {
@@ -456,7 +477,10 @@
             }
           }, \lam j => inP (suc j, idp, <=-refl))
 
-        \sfunc add-double1 {u v : V} {b : B} {l : Array (\Sigma V B)} : EPerm (add v b (add u b l))
+        \lemma add0_~ {b : B} {l : PFunc} (lr : IsReduced l) : add 0 b l ~ l
+          => ~-trans (~-sym $ SFRefines_~ (split_IsReduced lr) (add_IsReduced lr) split_add_SFRefines) (SFRefines_~ (split_IsReduced lr) lr split_SFRefines)
+
+        \sfunc add-double1 {u v : V} {b : B} {l : PFunc} : EPerm (add v b (add u b l))
           ((v + u, B.diff b (B.BigJoin (map __.2 l))) :: (v, bottom) :: (u, bottom) ::
           (map (\lam s => (v + u + s.1, b * s.2)) l ++ map (\lam s => (v + s.1, bottom)) l) ++
           map (\lam s => (u + s.1, bottom)) l ++ map (\lam s => (s.1, B.diff s.2 b)) l)
@@ -467,10 +491,10 @@
             (pmap2 (++) (exts \lam j => ext (idp, pmap (`* _) isBooleanRing)) (exts \lam j => ext (idp, equation.bRing)))
             (pmap2 (++) (exts \lam j => ext (idp, equation.bRing)) (exts \lam j => ext (idp, equation.bRing)))) add-double
 
-        \lemma add_+_SFRefines {u v : V} {b : B} {l : Array (\Sigma V B)} (lr : IsReduced l) : SFRefines (add (u + v) b l) (add u b (add v b l))
+        \lemma add_+_SFRefines {u v : V} {b : B} {l : PFunc} (lr : IsReduced l) : SFRefines (add (u + v) b l) (add u b (add v b l))
           => transportInv (SFRefines __ _) (\peval add _ b l) $ SFRefines-trans (add_IsReduced $ add_IsReduced lr) (SFRefines_:: $ SFRefines_::-right bottom-univ $ SFRefines_::-right bottom-univ $ SFRefines_++ (SFRefines_++-left SFRefines-refl \lam j => byRight bottom-univ) (SFRefines_++-right SFRefines-refl \lam j => byRight bottom-univ)) (SFRefines_EPerm $ EPerm.eperm-sym add-double1)
 
-        \sfunc add-double2 {v : V} {a b : B} {l : Array (\Sigma V B)} : EPerm (add v (a ∨ b) (add v (a * b) l))
+        \sfunc add-double2 {v : V} {a b : B} {l : PFunc} : EPerm (add v (a ∨ b) (add v (a * b) l))
           ((v + v, B.diff (a * b) (B.BigJoin (map __.2 l))) :: (v, B.diff (a ∨ b) (a * b ∨ B.BigJoin (map __.2 l))) :: (v, bottom) ::
           (map (\lam s => (v + v + s.1, (a * b) * s.2)) l ++ map (\lam s => (v + s.1, B.diff ((a ∨ b) * s.2) (a * b))) l) ++
           map (\lam s => (v + s.1, bottom)) l ++ map (\lam s => (s.1, B.diff s.2 (b ∨ a))) l)
@@ -479,35 +503,35 @@
             (pmap (`++ _) (exts \lam j => pmap (_ + _, __) equation.bRing))
             (pmap2 (++) (exts \lam j => pmap (_ + _, __) equation.bRing) (exts \lam j => pmap ((l j).1, __) equation.bRing))) add-double
 
-        \lemma add-modularity_SFRefines {v : V} {a b : B} {l : Array (\Sigma V B)} (lr : IsReduced l) : SFRefines (add v a (add v b l)) (add v (a ∨ b) (add v (a * b) l))
+        \lemma add-modularity_SFRefines {v : V} {a b : B} {l : PFunc} (lr : IsReduced l) : SFRefines (add v a (add v b l)) (add v (a ∨ b) (add v (a * b) l))
           => SFRefines-trans (add_IsReduced $ add_IsReduced lr) (SFRefines_EPerm add-double) $ SFRefines-trans (add_IsReduced $ add_IsReduced lr)
               (SFRefines_:: $ SFRefines_::-merge equation.bRing $ SFRefines_::-right bottom-univ $ transport2 (SFRefines __ __) (inv ++-assoc) (inv ++-assoc) $ SFRefines_++ SFRefines-refl $ transport2 (SFRefines __ __) ++-assoc ++-assoc $ SFRefines_++ (SFRefines_++-left (later $ SFRefines_++-merge (\lam x => B.diff (a * x) b) (\lam x => B.diff (b * x) a) (\lam x => B.diff (_ * x) (a * b)) (\lam c => equation.bRing) {map (\lam s => (v + s.1, s.2)) l}) \lam j => byRight bottom-univ) SFRefines-refl)
               (SFRefines_EPerm $ EPerm.eperm-sym add-double2)
       }
 
-    \lemma ~_=-unequals {l l' : Array (\Sigma V B)} (p : inSF l = inSF l') => ~-unequals $ Quotient.equalityEquiv ~_Equivalence (path \lam i => p i)
+    \lemma ~_=-unequals {l l' : PFunc} (p : inSF l = inSF l') => ~-unequals $ Quotient.equalityEquiv ~_Equivalence (path \lam i => p i)
 
-    \lemma split1 (c : B) {v : V} {b : B} {l : Array (\Sigma V B)} : (v,b) :: l ~ (v, c * b) :: (v, B.diff b c) :: l
+    \lemma split1 (c : B) {v : V} {b : B} {l : PFunc} : (v,b) :: l ~ (v, c * b) :: (v, B.diff b c) :: l
       => ~-trans (transport2 (\lam x y => _ ~ (v,x) :: (v,y) :: l) equation.bRing equation.bRing $ ~_:: (~-sym $ ~-zro-right idp)) (~-+-right idp idp)
 
-    \lemma reduced-tail {x : \Sigma V B} {l : Array (\Sigma V B)} (lr : IsReduced (x :: l)) : IsReduced l
+    \lemma reduced-tail {x : \Sigma V B} {l : PFunc} (lr : IsReduced (x :: l)) : IsReduced l
       => \lam {i} {j} i/=j => lr \lam p => i/=j (unfsuc p)
 
-    \lemma add_~ {v : V} {b : B} {l : Array (\Sigma V B)} (lr : IsReduced l) : add v b l ~ (v,b) :: l \elim l
+    \lemma add_~ {v : V} {b : B} {l : PFunc} (lr : IsReduced l) : add v b l ~ (v,b) :: l \elim l
       | nil => transportInv (`~ _) (\peval add v b nil) $ ~-perm $ EPerm.eperm-= $ pmap (\lam x => (v,x) :: nil) equation.bRing
       | a :: l => transportInv (`~ _) (\peval add v b _) $ ~-trans (~-trans (later $ ~_:: $ ~_:: $ ~-perm EPerm.EPerm_++-swap) $
         ~-trans ~-swap $ ~-trans (~_:: ~-swap) $ ~-trans (~-sym $ ~-+-left idp idp) $ ~-trans (~_:: $ ~-sym $ split1 b) $ ~-trans ~-swap $ ~_:: $
         transportInv (_ ~) (\peval add v b l) $ ~-trans (~-perm $ EPerm.eperm-= $ cong_:: (pmap (v,__) $ <=-antisymmetric (meet-univ meet-right $ B.diff-univ meet-left $ <=-antisymmetric (B.meet-monotone meet-right <=-refl <=∘ =_<= B.BigJoin-ldistr <=∘ B.BigJoin-univ \lam j => =_<= $ lr $ /=-sym fsuc/=0) bottom-univ) $ B.meet_<=' equation.bRing) $ cong_:: (pmap (v,__) equation.bRing) idp) (~-sym $ split1 a.2)) (~-trans (~_:: $ add_~ $ reduced-tail lr) ~-swap)
 
-    \lemma reduce_~ {l : Array (\Sigma V B)} : reduce l ~ l \elim l
+    \lemma reduce_~ {l : PFunc} : reduce l ~ l \elim l
       | nil => ~-reflexive
       | a :: l => ~-trans (add_~ reduce_IsReduced) (~_:: reduce_~)
 
-    \lemma ~-+s-left {l : Array (\Sigma V B)} (lr : IsReduced l) {x : \Sigma V B} (p : \Pi (i : Fin l.len) -> (l i).1 = x.1) (q : B.BigJoin (map __.2 l) = x.2) : l ~ x :: nil \elim l
+    \lemma ~-+s-left {l : PFunc} (lr : IsReduced l) {x : \Sigma V B} (p : \Pi (i : Fin l.len) -> (l i).1 = x.1) (q : B.BigJoin (map __.2 l) = x.2) : l ~ x :: nil \elim l
       | nil => ~-sym $ transport (\lam y => (x.1,y) :: nil ~ nil) q (~-zro-right idp)
       | a :: l => ~-trans (~_::_= (ext (p 0, <=-antisymmetric (meet-univ <=-refl $ B.BigJoin-cond {map __.2 (a :: l)} 0 <=∘ =_<= q) meet-left)) $ later $ ~-+s-left (reduced-tail lr) (\lam i => p (suc i)) $ <=-antisymmetric (B.BigJoin-univ \lam j => B.diff-univ (B.BigJoin-cond {map __.2 (a :: l)} (suc j)) $ lr fsuc/=0) (B.meet_<=' equation.bRing) *> pmap (B.diff __ a.2) q) (~-sym $ split1 a.2 {_} {_} {nil})
 
-    \lemma SFRefines_~ {l l' : Array (\Sigma V B)} (lr : IsReduced l) (l'r : IsReduced l') (r : SFRefines l l') : l ~ l' \elim l'
+    \lemma SFRefines_~ {l l' : PFunc} (lr : IsReduced l) (l'r : IsReduced l') (r : SFRefines l l') : l ~ l' \elim l'
       | nil => ~-perm $ EPerm.eperm-= $ inv $ exts (cases (l arg addPath) \with {
         | nil, _ => idp
         | a :: l, q => \case r.2 (rewrite q 0) \with {
@@ -546,7 +570,7 @@
     \lemma makeReduced (a : SFunc V B) : ∃ (l : IsReduced) (a = inSF l)
       | in~ l => inP (reduce l, reduce_IsReduced, inv $ ~-sfequiv reduce_~)
 
-    \lemma >=0-reduced-char {l : Array (\Sigma V B)} (lr : IsReduced l) : 0 <= inSF l <-> ∀ (x : l) (0 V.<= x.1 || (x.2 = 0))
+    \lemma >=0-reduced-char {l : PFunc} (lr : IsReduced l) : 0 <= inSF l <-> ∀ (x : l) (0 V.<= x.1 || (x.2 = 0))
       => (\lam (inP (d,dp,d>=0)) => \case ~_=-unequals (inv AddGroup.minus_zro *> dp) \with {
         | inP (m,mr,m<l,m<d) => reduce_>=0-conv lr $ SFRefines_>=0-right m<l reduce_IsReduced $ SFRefines_>=0-left m<d $ reduce_>=0 d>=0
       }, \lam r => \case FinSet.finiteAC (\lam j => ||.toOr (r j)) \with {
@@ -559,7 +583,7 @@
           })
       })
       \where {
-        \lemma reduce-values {l : Array (\Sigma V B)} (lr : IsReduced l) : ∀ (y : reduce l) (Given (x : l) (y = x) || (y.2 = 0)) \elim l
+        \lemma reduce-values {l : PFunc} (lr : IsReduced l) : ∀ (y : reduce l) (Given (x : l) (y = x) || (y.2 = 0)) \elim l
           | nil => \case __
           | a :: l => rewrite (\peval add _ _ _) \case \elim __ \with {
             | 0 => byLeft (0, ext (idp, <=-antisymmetric B.diff_<= $ B.diff-univ <=-refl $ B.BigJoin-ldistr *> <=-antisymmetric (B.BigJoin-univ \lam j => later $ =_<= $ aux lr j) (later bottom-univ)))
@@ -575,14 +599,14 @@
             }
           }
           \where {
-            \protected \lemma aux {a : \Sigma V B} {l : Array (\Sigma V B)} (lr : IsReduced (a :: l)) (j : Fin (reduce l).len) : a.2 ∧ (reduce l j).2 = 0
+            \protected \lemma aux {a : \Sigma V B} {l : PFunc} (lr : IsReduced (a :: l)) (j : Fin (reduce l).len) : a.2 ∧ (reduce l j).2 = 0
               => <=-antisymmetric (\case reduce-values (reduced-tail lr) j \with {
                 | byLeft (i,p) => rewrite p $ =_<= $ lr $ /=-sym fsuc/=0
                 | byRight p => rewrite p meet-right
               }) bottom-univ
           }
 
-        \lemma reduce-values-conv {l : Array (\Sigma V B)} (lr : IsReduced l) : ∀ (x : l) ∃ (y : reduce l) (x = y) \elim l
+        \lemma reduce-values-conv {l : PFunc} (lr : IsReduced l) : ∀ (x : l) ∃ (y : reduce l) (x = y) \elim l
           | nil => \case __
           | a :: l => rewrite (\peval add _ _ _) \case \elim __ \with {
             | 0 => inP (0, ext (idp, <=-antisymmetric (B.diff-univ <=-refl $ B.BigJoin-ldistr *> <=-antisymmetric (B.BigJoin-univ \lam j => later $ =_<= $ reduce-values.aux lr j) (later bottom-univ)) B.diff_<=))
@@ -591,17 +615,17 @@
             }
           }
 
-        \lemma reduce_>=0-conv {l : Array (\Sigma V B)} (lr : IsReduced l) (p : ∀ (y : reduce l) (0 V.<= y.1 || (y.2 = 0))) : ∀ (x : l) (0 V.<= x.1 || (x.2 = 0))
+        \lemma reduce_>=0-conv {l : PFunc} (lr : IsReduced l) (p : ∀ (y : reduce l) (0 V.<= y.1 || (y.2 = 0))) : ∀ (x : l) (0 V.<= x.1 || (x.2 = 0))
           => \lam i => \case reduce-values-conv lr i \with {
             | inP (j,q) => rewrite q (p j)
           }
 
-        \lemma SFRefines_>=0-left {l l' : Array (\Sigma V B)} (l<l' : SFRefines l l') (l'p : ∀ (y : l') (0 V.<= y.1)) : ∀ (x : l) (0 V.<= x.1)
+        \lemma SFRefines_>=0-left {l l' : PFunc} (l<l' : SFRefines l l') (l'p : ∀ (y : l') (0 V.<= y.1)) : ∀ (x : l) (0 V.<= x.1)
           => \lam i => \case l<l'.2 i \with {
             | inP (j,p,_) => transportInv (0 V.<=) p (l'p j)
           }
 
-        \lemma SFRefines_>=0-right {l l' : Array (\Sigma V B)} (l<l' : SFRefines l l') (l'r : IsReduced l') (lp : ∀ (x : l) (0 V.<= x.1)) : ∀ (y : l') (0 V.<= y.1 || (y.2 = 0))
+        \lemma SFRefines_>=0-right {l l' : PFunc} (l<l' : SFRefines l l') (l'r : IsReduced l') (lp : ∀ (x : l) (0 V.<= x.1)) : ∀ (y : l') (0 V.<= y.1 || (y.2 = 0))
           => \lam j => \case l<l'.1 j \with {
             | byLeft p => byLeft $ =_<= (inv p)
             | byRight q =>
@@ -617,7 +641,7 @@
               }
           }
 
-        \lemma ~_zro {l : Array (\Sigma V B)} {l' : Array (\Sigma V B) l.len} (p : \Pi (j : Fin l.len) -> (l j = l' j) || (\Sigma ((l j).2 = 0) ((l' j).2 = 0))) : l ~ l' \elim l, l'
+        \lemma ~_zro {l : PFunc} {l' : Array (\Sigma V B) l.len} (p : \Pi (j : Fin l.len) -> (l j = l' j) || (\Sigma ((l j).2 = 0) ((l' j).2 = 0))) : l ~ l' \elim l, l'
           | nil, nil => ~-perm eperm-nil
           | a :: l, a' :: l' => \case p 0 \with {
             | byLeft q => ~_::_= q $ ~_zro \lam j => p (suc j)
@@ -625,68 +649,81 @@
           }
       }
 
-    \lemma >=0-char {l : Array (\Sigma V B)} : 0 <= inSF l <-> ∀ (x : reduce l) (0 V.<= x.1 || (x.2 = 0))
-      => <->trans (later $ rewrite (~-sfequiv reduce_~) <->refl) (>=0-reduced-char reduce_IsReduced)
+    \lemma ~-common (ls : Array PFunc) : ∃ (bs : IsReducedB) (vss : Array (Array V bs.len) ls.len) ∀ (j : Fin ls.len) (ls j ~ mkArray (\lam i => (vss j i, bs i))) \elim ls
+      | nil => inP (nil, \lam {i} => \case i \with {}, nil, \case __)
+      | l :: ls => \case ~-common ls \with {
+        | inP (bs,bsr,vss,e) => \case merge l bsr vss \with {
+          | inP (bs',bs'r,vs,vsp,vss',vss'p) => inP (bs', bs'r, vs :: vss', \case \elim __ \with {
+            | 0 => vsp
+            | suc j => ~-trans (e j) (vss'p j)
+          })
+        }
+      }
+      \where {
+        \private \lemma merge (l : PFunc) {bs : Array B} (bsr : IsReducedB bs) (vss : Array (Array V bs.len))
+          : ∃ (bs' : IsReducedB) (vs : Array V bs'.len) (l ~ mkArray \lam i => (vs i, bs' i)) (vss' : Array (Array V bs'.len) vss.len) ∀ (j : Fin vss.len) (mkArray (\lam i => (vss j i, bs i)) ~ mkArray (\lam i => (vss' j i, bs' i))) \elim l
+          | nil => inP (bs, bsr, replicate bs.len 0, ~-sym $ ~-zros-left \lam _ => idp, \new vss, \lam j => ~-perm EPerm.eperm-refl)
+          | a :: l => \case merge l bsr vss \with {
+            | inP (bs',bs'r,vs,vsp,vss',vss'p) => inP (B.diff a.2 (B.BigJoin bs') :: map (a.2 ∧) bs' ++' map (\lam b => B.diff b a.2) bs',
+              transport (\lam x => IsReducedB (_ :: x)) (++_++' {_} {map (a.2 ∧) bs'} {_} {map (B.diff __ a.2) bs'}) (add_IsReducedB bs'r),
+              a.1 :: map (a.1 +) vs ++' vs,
+              ~-trans (~_:: vsp) $ ~-trans (~-sym $ add_~ $ later bs'r) $ rewrite (\peval add a.1 a.2 _) $ ~_:: $ ~-perm $ EPerm.eperm-= $ ++_++' *> inv (later $ map2_++' (__,__) {_} {\lam j => a.1 + vs j} {_} {_} {vs}),
+              \lam j => 0 :: vss' j ++' vss' j,
+              \lam j => ~-trans (vss'p j) $ ~-trans (~-sym $ ~-unequals.add0_~ $ later bs'r) $ transportInv (`~ _) (\peval add 0 a.2 _) $ ~_:: $ ~-perm $ EPerm.eperm-= $ ++_++' *> pmap (`++' _) (exts \lam k => ext (zro-left, idp)) *> inv (later $ map2_++' (__,__) {_} {vss' j} {_} {_} {vss' j}))
+          }
+      }
 
-    {- TODO: Delete this
-    \lemma ~-unequals-conv {l l' : Array (\Sigma V B)} (l~l' : ∃ (m : IsReduced) (SFRefines m (reduce l)) (SFRefines m (reduce l'))) : l ~ l' \elim l~l'
+    \lemma <=-common-char {bs : Array B} (bsr : IsReducedB bs) {vs vs' : Array V bs.len}
+      : inSF (mkArray (\lam j => (vs j, bs j))) <= inSF (mkArray (\lam j => (vs' j, bs j))) <-> ∀ j (vs j V.<= vs' j || (bs j = 0))
+      => (\lam p j => ||.map V.from>=0 (\lam q => q) $ (>=0-reduced-char $ later bsr).1 (rewrite (~-sfequiv (~_+' bs vs' (map V.negative vs))) in PosetAddGroup.to>=0 {SFuncPosetQModule V B} p) j,
+          \lam p => PosetAddGroup.from>=0 {SFuncPosetQModule V B} $ later $ rewrite (~-sfequiv (~_+' bs vs' (map V.negative vs))) $ (>=0-reduced-char $ later bsr).2 $ later \lam j => ||.map V.to>=0 (\lam q => q) (p j))
+
+    \lemma <=-char {f g : SFunc V B} : f <= g <-> ∃ (bs : IsReducedB) (vs vs' : Array V bs.len) (f = inSF (mkArray (\lam i => (vs i, bs i)))) (g = inSF (mkArray (\lam i => (vs' i, bs i)))) ∀ j (vs j V.<= vs' j || (bs j = 0)) \elim f, g
+      | in~ l, in~ l' => (\lam l<=l' => \case ~-common (l :: l' :: nil) \with {
+        | inP (bs,bsr,vss,vssp) => inP (bs, bsr, vss 0, vss 1, ~-sfequiv (vssp 0), ~-sfequiv (vssp 1), (<=-common-char bsr).1 $ transport2 (<=) (~-sfequiv (vssp 0)) (~-sfequiv (vssp 1)) l<=l')
+      }, \lam (inP (bs,bsr,vs,vs',vsp,vs'p,r)) => transport2 (<=) (inv vsp) (inv vs'p) $ (<=-common-char bsr).2 r)
+
+    \lemma reduce_SFRefines {l : PFunc} (lr : IsReduced l) : SFRefines l (reduce l) \elim l
+      | nil => SFRefines-refl
+      | a :: l => rewrite (\peval add a.1 a.2 _) (\case \elim __ \with {
+        | 0 => byRight $ B.diff_<= <=∘ join-left
+        | suc j => byRight \case ++.split-index j \with {
+          | inl (k,jp) => rewrite (jp,++.++_index-left) $ meet-left <=∘ join-left
+          | inr (k,jp) => rewrite (jp,++.++_index-right) $ B.diff_<= <=∘ B.BigJoin-cond {map __.2 (reduce l)} k <=∘ =_<= reduce_BigJoin <=∘ join-right
+        }
+      }, \case \elim __ \with {
+        | 0 => inP (0, idp, B.diff-univ <=-refl $ pmap (_ *) reduce_BigJoin *> B.BigJoin-ldistr *> later (<=-antisymmetric (B.BigJoin-univ \lam j => =_<= $ lr $ /=-sym fsuc/=0) bottom-univ))
+        | suc j => \case (reduce_SFRefines (reduced-tail lr)).2 j \with {
+          | inP (k,p,q) => inP (suc (++.index-right {_} {_} {map (\lam s => (s.1, B.diff s.2 a.2)) (reduce l)} k), rewrite ++.++_index-right p, rewrite ++.++_index-right $ B.diff-univ q $ lr fsuc/=0)
+        }
+      })
+
+    \lemma ~-unequals-reduced {l l' : PFunc} (lr : IsReduced l) (l'r : IsReduced l') (l~l' : l ~ l') : ∃ (m : IsReduced) (SFRefines m l) (SFRefines m l')
+      => \case ~-unequals l~l' \with {
+        | inP (m,mr,m<l,m<l') => \case SFRefines-common lr mr reduce_IsReduced (reduce_SFRefines lr) m<l, SFRefines-common mr l'r reduce_IsReduced m<l' (reduce_SFRefines l'r) \with {
+          | inP (x,xr,x<l,x<m), inP (y,yr,y<m,y<l') => \case SFRefines-common xr yr mr x<m y<m \with {
+            | inP (z,zr,z<x,z<y) => inP (z, zr, SFRefines-trans lr z<x x<l, SFRefines-trans l'r z<y y<l')
+          }
+        }
+      }
+
+    \lemma ~_=-unequals-reduced {l l' : PFunc} (lr : IsReduced l) (l'r : IsReduced l') (p : inSF l = inSF l')
+      => ~-unequals-reduced lr l'r $ Quotient.equalityEquiv ~_Equivalence (path \lam i => p i)
+
+    \lemma ~-unequals-conv {l l' : PFunc} (l~l' : ∃ (m : IsReduced) (SFRefines m (reduce l)) (SFRefines m (reduce l'))) : l ~ l' \elim l~l'
       | inP (m,mr,m<l,m<l') => ~-trans (~-trans (~-sym $ ~-trans (SFRefines_~ mr reduce_IsReduced m<l) reduce_~) $ SFRefines_~ mr reduce_IsReduced m<l') reduce_~
 
-    \lemma <=-char2 {l l' : Array (\Sigma V B)} (lr : IsReduced l) (l'r : IsReduced l')
-      : inSF l <= inSF l' <-> Given (∀ (x : l) (Given (y : l') (x.2 B.<= y.2) (x.1 V.<= y.1) || x.1 V.<= 0 || x.2 B.<= 0)) (∀ (y : l') (Given (x : l) (x.1 V.<= y.1) || 0 V.<= y.1))
-      => {?}
+    \lemma ~-unequals-reduced-conv {l l' : Array (\Sigma V B)} (lr : IsReduced l) (l'r : IsReduced l') (l~l' : ∃ (m : IsReduced) (SFRefines m l) (SFRefines m l')) : l ~ l' \elim l~l'
+      | inP (m,mr,m<l,m<l') => ~-unequals-conv $ inP (m, mr, SFRefines-trans reduce_IsReduced m<l $ reduce_SFRefines lr, SFRefines-trans reduce_IsReduced m<l' $ reduce_SFRefines l'r)
 
-    \type IsReduced2 (l : Array B) => \Pi {i j : Fin l.len} -> i /= j -> l i * l j = 0
+    \lemma SFRefines_apply-left {l l' : PFunc} (l<l' : SFRefines l l') (f : V -> V) (f0 : f 0 = 0) : SFRefines (map (\lam s => (f s.1, s.2)) l) (map (\lam s => (f s.1, s.2)) l')
+      => (\lam j => ||.map (\lam q => pmap f q *> f0) (\lam q => q) (l<l'.1 j),
+          \lam j => TruncP.map (l<l'.2 j) \lam (k,p,q) => (k, pmap f p, q))
 
-    \lemma <=-char3 {l l' : Array (\Sigma V B)} (lr : IsReduced l) (l'r : IsReduced l')
-      : inSF l <= inSF l' <-> ∃ (m : IsReduced2) (vs vs' : Array V m.len) (\Pi (i : Fin m.len) -> vs i V.<= vs' i) (SFRefines (mkArray \lam i => (vs i, m i)) l) (SFRefines (mkArray \lam i => (vs' i, m i)) l')
-      => (\lam (inP t) => {?},
-          \lam (inP (m,mr,vs,vs',vp,vm,vm')) => inP (mkArray \lam i => (vs' i - vs i, m i), ~-sfequiv {?}, \lam i => V.to>=0 (vp i)))
-
-    \lemma <=-char4 {l l' : Array (\Sigma V B)} (lr : IsReduced l) (l'r : IsReduced l')
-      : inSF l <= inSF l' <-> ∀ (y : l') Given (∃ (is : Array (Fin l.len)) (∀ (i : is) ((l i).1 V.<= y.1)) (y.2 ∧ B.BigJoin (map __.2 l) B.<= B.BigJoin (map (\lam i => (l i).2) is))) (0 V.<= y.1 || y.2 B.<= B.BigJoin (map __.2 l))
-      => (\lam (inP (d,dp,d>=0)) => \case ~_=-unequals $ inv zro-right *> later (pmap (inSF l' +) (inv $ negative-left {_} {inSF l})) *> inv (+-assoc {_} {inSF l'} {negative (inSF l)} {inSF l}) *> pmap (`+ inSF l) dp \with {
-            | inP (m,mr,m<l',m<d+l) => \lam j => (inP {?}, {?})
-          }, \lam c => inP {?})
-
-    \sfunc addOp (op : V -> V -> V) (v : V) (b : B) (l : Array (\Sigma V B)) : Array (\Sigma V B)
-      => (op v 0, B.diff b $ B.BigJoin $ map __.2 l) :: map (\lam s => (op v s.1, b * s.2)) l ++ map (\lam s => (op 0 s.1, B.diff s.2 b)) l
-
-    \func merge2 (op : V -> V -> V) (l l' : Array (\Sigma V B)) : Array (\Sigma V B) \elim l
-      | nil => l'
-      | a :: l => addOp op a.1 a.2 (merge2 op l l')
-
-    \func lift2 (op : V -> V -> V) (f g : SFunc V B) : SFunc V B \elim f, g
-      | in~ l, in~ l' => inSF (merge2 op l l')
-      | in~ l, ~-equiv x y r => ~-sfequiv \case ~-unequals r \with {
-        | inP (m,mr,m<x,m<y) => ~-unequals-conv $ inP (reduce (merge2 op l m), reduce_IsReduced, {?}, {?})
+    \lemma apply-left {l l' : PFunc} (lr : IsReduced l) (l'r : IsReduced l') (l~l' : l ~ l') (f : V -> V) (f0 : f 0 = 0) : map (\lam s => (f s.1, s.2)) l ~ map (\lam s => (f s.1, s.2)) l'
+      => \case ~-unequals-reduced lr l'r l~l' \with {
+        | inP (m,mr,m<l,m<l') => ~-unequals-reduced-conv lr l'r $ inP (map (\lam s => (f s.1, s.2)) m, mr, SFRefines_apply-left m<l f f0, SFRefines_apply-left m<l' f f0)
       }
-      | ~-equiv x y r, in~ l => ~-sfequiv {?}
-
-    \func lift2 (op : V -> V -> V) (f g : SFunc V B) : SFunc V B \elim f, g
-      | in~ l, in~ l' => inSF (merge l l')
-      | in~ l, ~-equiv x y r => ~-sfequiv {?}
-      | ~-equiv x y r, in~ l => ~-sfequiv {?}
-      \where {
-        \func merge (l l' : Array (\Sigma V B))
-          => \new Array (\Sigma V B) (l.len Nat.* l'.len) \lam j => (op (l (ProdFin.prod_equiv j).1).1 (l' (ProdFin.prod_equiv j).2).1, (l (ProdFin.prod_equiv j).1).2 ∧ (l' (ProdFin.prod_equiv j).2).2)
-
-        \sfunc merge_EPerm {l x y : Array (\Sigma V B)} (x~y : EPerm x y) : EPerm (merge l x) (merge l y) \elim x, y, x~y
-          | nil, nil, eperm-nil => eperm-nil
-          | x :: l1, _ :: l2, eperm-:: idp l1~l2 => {?}
-          | x :: (x' :: l1), y :: (y' :: l2), eperm-swap p p1 p2 => {?}
-          | x, y, eperm-trans x~l l~y => {?}
-
-        \lemma merge_~ {l x y : Array (\Sigma V B)} (x~y : x ~ y) : merge l x ~ merge l y \elim x~y
-          | ~-perm e => ~-perm {?}
-          | ~-sym x~y => {?}
-          | ~-trans x~m m~y => {?}
-          | ~-zro-left p => {?}
-          | ~-zro-right p => {?}
-          | ~-+-left p q => {?}
-          | ~-+-right p q => {?}
-      }
-      -}
   }
 
 \open SFuncPosetQModule \hiding (<=)
@@ -696,16 +733,11 @@
     | inP (l,lr,lp) => rewrite lp $ inP (inSF $ map (\lam s => (V.abs s.1, s.2)) l,
         inP (map (\lam s => (V.abs s.1 - s.1, s.2)) l, ~-sfequiv $ ~_+ V.abs negative, \lam j => V.to>=0 V.abs>=id),
         inP (map (\lam s => (V.abs s.1 + s.1, s.2)) l, ~-sfequiv $ ~-trans (~_+ V.abs (\lam x => negative (negative x))) $ ~-perm $ EPerm.eperm-= $ later $ exts \lam j => ext (pmap (_ +) V.negative-isInv, idp), \lam j => =_<= (inv negative-left) <=∘ V.<=_+ V.abs>=neg <=-refl),
-        \lam {c} => \case \elim c \with {
-          | in~ c => \lam (inP (l1,l1p,l1>=0)) (inP (l2,l2p,l2>=0)) => {?} -- inP (merge2 (∧) l1 l2, {?}, \lam j => {?})
+        \lam p q => \case <=-char.1 p \with {
+          | inP (bs,bsr,vs,vs',vsp,vs'p,r) => <=-char.2 $ inP (bs, bsr, map V.abs vs, vs', ~-sfequiv $ apply-left {_} {_} {_} {mkArray \lam i => (vs i, bs i)} lr bsr (Quotient.equalityEquiv ~_Equivalence (path \lam i => vsp i)) V.abs V.abs_zro, vs'p, \lam j => \case r j, (<=-common-char bsr {map negative vs}).1 (transport2 (<=) (pmap negative vsp) vs'p q) j \with {
+            | byLeft r1, byLeft r2 => byLeft $ V.join-univ r1 r2
+            | byRight r, _ => byRight r
+            | _, byRight r => byRight r
+          })
         })
   }
-  {- TODO: Delete this
-  \where \private {
-    \type IsPos (l : Array (\Sigma V B)) => ∀ (x : l) (0 V.<= x.1 || (x.2 = 0))
-
-    \lemma aux {l c : Array (\Sigma V B)} (p : IsPos (reduce $ l ++ c)) (q : IsPos (reduce $ map (\lam s => (negative s.1, s.2)) l ++ c)) : IsPos (reduce $ map (\lam s => (V.abs s.1, s.2)) l ++ c) \elim l
-      | nil => p
-      | a :: l => {?}
-  }
-  -}
