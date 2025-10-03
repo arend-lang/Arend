@@ -1105,26 +1105,26 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     return arguments;
   }
 
-  private Referable visitIdOrUnknown(IdOrUnknownContext ctx) {
-    return ctx instanceof IuIdContext ? new ParsedLocalReferable(tokenPosition(ctx.start), ((IuIdContext) ctx).ID().getText()) : null;
+  private Referable visitIdOrUnknown(IdOrUnknownContext ctx, boolean allowNullRefs, NameTeleContext tele) {
+    return ctx instanceof IuIdContext ? new ParsedLocalReferable(tokenPosition(ctx.start), ((IuIdContext) ctx).ID().getText()) : allowNullRefs ? null : new ParsedLocalReferable(tokenPosition(tele.start), null);
   }
 
-  private List<Concrete.Parameter> visitNameTele(NameTeleContext tele) {
+  private List<Concrete.Parameter> visitNameTele(NameTeleContext tele, boolean allowNullRefs) {
     List<Concrete.Parameter> parameters = new ArrayList<>();
     if (tele instanceof NameIdContext) {
-      parameters.add(new Concrete.NameParameter(tokenPosition(tele.start), true, visitIdOrUnknown(((NameIdContext) tele).idOrUnknown())));
+      parameters.add(new Concrete.NameParameter(tokenPosition(tele.start), true, visitIdOrUnknown(((NameIdContext) tele).idOrUnknown(), allowNullRefs, tele)));
     } else {
       boolean explicit = tele instanceof NameExplicitContext;
       List<IdOrUnknownContext> ids = explicit ? ((NameExplicitContext) tele).idOrUnknown() : ((NameImplicitContext) tele).idOrUnknown();
       ExprContext type = explicit ? ((NameExplicitContext) tele).expr() : ((NameImplicitContext) tele).expr();
       if (type == null) {
         for (IdOrUnknownContext id : ids) {
-          parameters.add(new Concrete.NameParameter(tokenPosition(id.start), explicit, visitIdOrUnknown(id)));
+          parameters.add(new Concrete.NameParameter(tokenPosition(id.start), explicit, visitIdOrUnknown(id, allowNullRefs, tele)));
         }
       } else {
         List<Referable> vars = new ArrayList<>(ids.size());
         for (IdOrUnknownContext id : ids) {
-          vars.add(visitIdOrUnknown(id));
+          vars.add(visitIdOrUnknown(id, allowNullRefs, tele));
         }
         parameters.add(new Concrete.TelescopeParameter(tokenPosition(tele.start), explicit, vars, visitExpr(type), (tele instanceof NameExplicitContext ? ((NameExplicitContext) tele).paramAttr() : ((NameImplicitContext) tele).paramAttr()).PROPERTY() != null));
       }
@@ -1132,11 +1132,11 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     return parameters;
   }
 
-  private List<Concrete.Pattern> visitLamParams(List<LamParamContext> list, List<Concrete.Parameter> parameters) {
+  private List<Concrete.Pattern> visitLamParams(List<LamParamContext> list, List<Concrete.Parameter> parameters, boolean allowNullRefs) {
     List<Concrete.Pattern> patterns = Collections.emptyList();
     for (LamParamContext ctx : list) {
       if (ctx instanceof LamTeleContext) {
-        parameters.addAll(visitNameTele(((LamTeleContext) ctx).nameTele()));
+        parameters.addAll(visitNameTele(((LamTeleContext) ctx).nameTele(), allowNullRefs));
         if (!patterns.isEmpty()) patterns.add(null);
       } else if (ctx instanceof LamPatternContext) {
         if (patterns.isEmpty()) {
@@ -1161,13 +1161,13 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
   @Override
   public Concrete.LamExpression visitLam2(Lam2Context ctx) {
     List<Concrete.Parameter> parameters = new ArrayList<>();
-    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters), visitIncompleteExpression(ctx.expr2(), ctx));
+    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters, true), visitIncompleteExpression(ctx.expr2(), ctx));
   }
 
   @Override
   public Concrete.LamExpression visitLamExpr(LamExprContext ctx) {
     List<Concrete.Parameter> parameters = new ArrayList<>();
-    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters), visitIncompleteExpression(ctx.expr(), ctx));
+    return Concrete.PatternLamExpression.make(tokenPosition(ctx.start), parameters, visitLamParams(ctx.lamParam(), parameters, true), visitIncompleteExpression(ctx.expr(), ctx));
   }
 
   private Concrete.Expression visitAppExpr(AppExprContext ctx) {
@@ -1283,7 +1283,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       if (defBody instanceof CoClauseExprContext && precCtx == null && id == null && returnCtx == null) {
         List<LamParamContext> lamParamCtxs = ((CoClauseDefContext) body).lamParam();
         List<Concrete.Parameter> parameters = new ArrayList<>();
-        List<Concrete.Pattern> patterns = visitLamParams(lamParamCtxs, parameters);
+        List<Concrete.Pattern> patterns = visitLamParams(lamParamCtxs, parameters, false);
         term = visitExpr(((CoClauseExprContext) defBody).expr());
         if (!parameters.isEmpty() || !patterns.isEmpty()) {
           Position pos = tokenPosition(lamParamCtxs.getFirst().start);
@@ -1310,7 +1310,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
         }
         List<LamParamContext> lamParamCtxs = ((CoClauseDefContext) body).lamParam();
         List<Concrete.Parameter> parameters = new ArrayList<>();
-        List<Concrete.Pattern> patterns = visitLamParams(lamParamCtxs, parameters);
+        List<Concrete.Pattern> patterns = visitLamParams(lamParamCtxs, parameters, false);
         if (!patterns.isEmpty()) {
           myErrorReporter.report(new ParserError((Position) patterns.getFirst().getData(), "Patterns are not allowed in coclause functions"));
         }
@@ -1350,7 +1350,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     Position position = tokenPosition(ctx.start);
     List<LamParamContext> lamParamCtxs = ctx.lamParam();
     List<Concrete.Parameter> parameters = new ArrayList<>();
-    List<Concrete.Pattern> patterns = visitLamParams(lamParamCtxs, parameters);
+    List<Concrete.Pattern> patterns = visitLamParams(lamParamCtxs, parameters, true);
     Concrete.Expression term = null;
     List<Concrete.ClassFieldImpl> subClassFieldImpls = null;
     ExprContext exprCtx = ctx.expr();
