@@ -18,7 +18,6 @@
 \import Topology.Locale \hiding (<=<_<=)
 \import Topology.Locale.Points
 \import Topology.RatherBelow
-\open Bounded(top,top-univ,bottom,bottom-univ)
 \open LocalePrecoverSpace
 \open RatherBelow
 

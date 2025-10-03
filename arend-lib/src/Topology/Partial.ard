@@ -11,7 +11,6 @@
 \import Set.Subset
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
-\open Bounded(top,top-univ)
 
 \instance PartialTopSpace (Y : TopSpace) : TopSpace (Partial Y)
   | isOpen U => \Pi {y : Partial Y} -> U y -> (U = {Set (Partial Y)} top) || Given (U' : Y.isOpen) (p : y.isDefined) (U' (y p)) ∀ {y' : U'} (U (defined y'))

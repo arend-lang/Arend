@@ -221,7 +221,7 @@
 
 \open LinearOrder \hiding (Dec)
 
-\instance NatBSemilattice : Bounded.JoinSemilattice
+\instance NatBSemilattice : BottomJoinSemilattice
   | JoinSemilattice => NatSemiring
   | bottom => 0
   | bottom-univ {_} => \case __

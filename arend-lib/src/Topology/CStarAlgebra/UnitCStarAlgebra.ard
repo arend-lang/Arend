@@ -100,7 +100,7 @@
 \func StoneC*AlgebraRieszSpace (A : StoneC*Algebra) : RieszSpace A
   => RieszSpace.fromAbs \lam a => TruncP.map (abs-aux a) \lam s => (s.1,s.3,s.4,s.5)
   \where \protected {
-    \func StoneC*AlgebraTopPoset : TopPosetAbGroup \cowith
+    \func StoneC*AlgebraTopPoset : HausdorffTopPosetAbGroup \cowith
       | TopAbGroup => A
       | PosetAbGroup => A
       | positive-closed => transport A.IsClosed (ext \lam x => ext A.square-positive) A.square-closed

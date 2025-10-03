@@ -270,7 +270,7 @@
 
 \func decMdegree {J : DecSet} {R : CRing.Dec} (p : DecMonoidSet (PermSet J) R) : Nat \elim p
   | in~ s => Big (∨) 0 (map (\lam t => permSet-length t.2) s.1)
-  | ~-equiv x y r => AbMonoid.BigSum_EPerm {Bounded.JoinSemilattice.toMonoid NatBSemilattice} $ EPerm.EPerm_map (\lam t => permSet-length t.2) r
+  | ~-equiv x y r => AbMonoid.BigSum_EPerm {BottomJoinSemilattice.toMonoid NatBSemilattice} $ EPerm.EPerm_map (\lam t => permSet-length t.2) r
 
 \func mdegree {J : DecSet} {R : CRing.Dec} (p : MPoly J R) : Nat
   => decMdegree (monoidSetDec-equiv.ret p)

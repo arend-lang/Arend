@@ -28,6 +28,16 @@
       }
     }
 
+  \lemma ||-search {A : \Type} {B : E -> \Prop} (f : \Pi (x : E) -> A || B x) : A || (\Pi (x : E) -> B x)
+    => \case finSurj \with {
+      | inP (g,gs) => \case FinSet.||-finiteAC (\lam i => f (g i)) \with {
+        | byLeft a => byLeft a
+        | byRight r => byRight \lam x => \case gs x \with {
+          | inP (i,gi=x) => transport B gi=x (r i)
+        }
+      }
+    }
+
   \lemma search_yes_reduce {A : E -> \Prop} (d : \Pi (e : E) -> Dec (A e)) (e : ∃ (e : E) (A e)) : search A d = yes e
     => prop-pi
 

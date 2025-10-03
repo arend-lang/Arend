@@ -64,6 +64,12 @@
     \func eperm-++ {A : \Type} {l1 l1' l2 l2' : Array A} (e1 : EPerm l1 l1') (e2 : EPerm l2 l2') : EPerm (l1 ++ l2) (l1' ++ l2')
       => eperm-++-left e1 `eperm-trans` eperm-++-right e2
 
+    \func eperm-swap-trans {A : \Type} {x y : A}  {l l' : Array A} (e : EPerm (y :: x :: l) l') : EPerm (x :: y :: l) l'
+      => eperm-trans {_} {_} {_} {y :: x :: l} (eperm-swap idp idp idp) e
+
+    \func eperm-swap-tail {A : \Type} {x y : A} {l l' : Array A} (e : EPerm l l') : EPerm (x :: y :: l) (y :: x :: l')
+      => eperm-swap-trans $ eperm-:: idp $ eperm-:: idp e
+
     \func EPerm_map {A B : \Type} (f : A -> B) {l l' : Array A} (e : EPerm l l') : EPerm (map f l) (map f l') \elim l, l', e
       | nil, nil, eperm-nil => eperm-nil
       | x :: l, y :: l', eperm-:: p e => eperm-:: (pmap f p) (EPerm_map f e)

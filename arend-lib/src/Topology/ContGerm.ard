@@ -23,7 +23,6 @@
 \import Topology.TopSpace.Product
 \open ContMap
 \open MeetSemilattice
-\open Bounded(top-univ)
 
 \type ContGerm (X Y : TopSpace) (x : X)
   => Quotient (equivalence.~)

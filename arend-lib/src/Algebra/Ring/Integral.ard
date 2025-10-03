@@ -265,7 +265,7 @@
     | inP (d,q=pd) => rewrite (q=pd, (polyMapEvalRingHom f a).func-*) equation
   }
 
-\lemma integralExt-directColimit {J : Bounded.JoinSemilattice} (F : Functor J RingCat) (p : \Pi {j j' : J} (f : Hom j j') -> isIntegralExt (F.Func f)) (j : J) : isIntegralExt (RingLatticeColimit.inMap j)
+\lemma integralExt-directColimit {J : BottomJoinSemilattice} (F : Functor J RingCat) (p : \Pi {j j' : J} (f : Hom j j') -> isIntegralExt (F.Func f)) (j : J) : isIntegralExt (RingLatticeColimit.inMap j)
   => \lam (in~ (j',a)) =>
       \let b => F.Func (join-right {_} {j}) a
       \in rewrite (SetColimit.~-cequiv {_} {Comp RingCat.forget F} {j', a} {j ∨ j', b} join-right idp) $

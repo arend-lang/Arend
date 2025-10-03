@@ -162,7 +162,7 @@
   | <= S T => T.1 ⊆ S.1
   | <=-refl => <=-refl
   | <=-transitive p q => q <=∘ p
-  | isInhabitted => inP (Bounded.top, open-top, (), a, ())
+  | isInhabitted => inP (top, open-top, (), a, ())
   | isDirected (V,Vo,Va,_,_) (W,Wo,Wa,_,_) => inP ((V ∧ W, open-inter Vo Wo, (Va,Wa), a, (Va,Wa)), meet-left, meet-right)
 
 \func IsOpenLimit {Z : TopSpace} (c : Z) {X : CoverSpace} {Y : TopAbGroup} (S : Set (\Sigma Z X)) (f : Set.Total S -> Y) {T : Set X} (L : Set.Total T -> Y) : \Prop

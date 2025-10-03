@@ -50,7 +50,7 @@
 
 \open Pullback
 
-\instance SubobjectMeetsemilatice (C : PrecatWithPullbacks) (c : C) : Bounded.MeetSemilattice
+\instance SubobjectMeetsemilatice (C : PrecatWithPullbacks) (c : C) : TopMeetSemilattice
   | Poset => SubobjectPoset c
   | meet (a b : SubobjectPoset c) : SubobjectPoset c \elim a, b {
     | in~ (subobj _ m), in~ (subobj _ n) => in~ $ m xx n

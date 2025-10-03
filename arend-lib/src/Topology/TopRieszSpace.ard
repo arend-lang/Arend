@@ -16,11 +16,10 @@
 \import Topology.NormedAbGroup.Real
 \import Topology.TopAbGroup
 \import Topology.TopAbGroup.Product
-\import Topology.TopPoset
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
 
-\class TopRieszSpace \extends TopPosetAbGroup, RieszSpace {
+\class TopRieszSpace \extends TopAbGroup, RieszSpace {
   | solid-neighborhood {U : Set E} : single 0 <=< U -> ∃ (V : IsSolid) (single 0 <=< V) (V ⊆ U)
 
   \lemma abs-uniform : UniformMap \this \this abs \cowith

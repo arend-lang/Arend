@@ -13,8 +13,8 @@ public class BaseEquationMeta extends BaseAlgebraicMeta {
   @Dependency(name = "Precat.id")                       CoreClassField catId;
   @Dependency(name = "AddMonoid.zro-right")             ArendRef addMonZroRight;
   @Dependency(name = "PseudoSemiring.zro_*-right")      ArendRef zeroMulRight;
-  @Dependency(name = "Bounded.MeetSemilattice")         CoreClassDefinition MSemilattice;
-  @Dependency(name = "Bounded.DistributiveLattice")     CoreClassDefinition BoundedDistributiveLattice;
+  @Dependency                                           CoreClassDefinition TopMeetSemilattice;
+  @Dependency                                           CoreClassDefinition BoundedDistributiveLattice;
   @Dependency(name = "AddGroup.fromZero")               ArendRef fromZero;
   @Dependency(name = "AddGroup.toZero")                 ArendRef toZero;
   @Dependency(name = "List.nil")                        ArendRef nil;

@@ -136,7 +136,7 @@ public class EqualitySolver extends BaseEqualitySolver {
       }
     }
 
-    var possibleClasses = new HashSet<>(Arrays.asList(meta.Monoid, meta.AddMonoid, meta.MSemilattice));
+    var possibleClasses = new HashSet<>(Arrays.asList(meta.Monoid, meta.AddMonoid, meta.TopMeetSemilattice));
     Pair<TypedExpression, CoreClassCallExpression> pair = Utils.findInstanceWithClassCall(new InstanceSearchParameters() {
         @Override
         public boolean testClass(@NotNull CoreClassDefinition classDefinition) {

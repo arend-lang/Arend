@@ -268,7 +268,7 @@
                    pmap FinSum (ext \lam j => FinSum-rdistr) *> FinSum-double-dep (\lam i => FinFin (DArray.len {(d i).1})) *> FinSum-homogen p
        \in inP (suc _, \lam n => (SigmaFin (SigmaFin (FinFin l.len) (\lam i => FinFin (DArray.len {(d i).1}))) (\lam k => DecFin (decideEq (p k).1 n)), \lam k => (d k.1.1).1 k.1.2, \lam k => (k.1.2, (d k.1.1).2 k.1.2), __.1.1, \lam k => transport (isHomogen _) k.2 (p k.1).2), q)
 } \where {
-  \open Bounded.JoinSemilattice
+  \open BottomJoinSemilattice
 
   \data Similar {A : AddPointed} (l l' : Array A) \elim l, l'
     | nil, nil => nil-nil-similar

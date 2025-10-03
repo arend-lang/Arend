@@ -14,7 +14,6 @@
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Complete (CompleteUniformSpace)
 \open ClosurePrecoverSpace
-\open Bounded(top)
 \open StrongCompletion
 
 \class StronglyCompleteUniformSpace \extends StronglyRegularUniformSpace, CompleteUniformSpace, StronglyCompleteCoverSpace
