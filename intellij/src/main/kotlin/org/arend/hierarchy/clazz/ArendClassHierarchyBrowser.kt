@@ -213,9 +213,7 @@ class ArendClassHierarchyBrowser(project: Project, method: PsiElement) : TypeHie
                     "Supertypes_${root.fullNameText}"
                 },
                 usedNodes.map { GraphNode(it.fullNameText) }.toSet(),
-                edges,
-                emptySet(),
-                emptySet()
+                edges
             )
         }
     }
