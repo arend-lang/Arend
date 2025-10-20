@@ -1,7 +1,6 @@
 package org.arend.server
 
 import com.intellij.openapi.application.runReadAction
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.findDirectory
 import org.arend.error.DummyErrorReporter
@@ -22,6 +21,7 @@ import org.arend.util.addGeneratedModule
 import org.arend.util.findInternalLibrary
 import org.arend.util.findLibrary
 import org.arend.util.moduleConfigs
+import java.util.function.Supplier
 
 class ArendServerRequesterImpl(private val project: Project) : ArendServerRequester {
     override fun requestModuleUpdate(server: ArendServer, module: ModuleLocation) {
@@ -49,10 +49,8 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
         } }
     }
 
-    override fun runUnderReadLock(runnable: Runnable) {
-        runReadAction {
-            runnable.run()
-        }
+    override fun <T : Any?> runUnderReadLock(supplier: Supplier<T?>): T? = runReadAction {
+        supplier.get()
     }
 
     override fun addReference(module: ModuleLocation, reference: AbstractReference, referable: Referable) {

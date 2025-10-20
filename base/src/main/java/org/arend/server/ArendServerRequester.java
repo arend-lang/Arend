@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 public interface ArendServerRequester {
   /**
@@ -34,8 +35,8 @@ public interface ArendServerRequester {
     return null;
   }
 
-  default void runUnderReadLock(@NotNull Runnable runnable) {
-    runnable.run();
+  default <T> T runUnderReadLock(@NotNull Supplier<T> supplier) {
+    return supplier.get();
   }
 
   default void addReference(@NotNull ModuleLocation module, @NotNull AbstractReference reference, @NotNull Referable referable) {}

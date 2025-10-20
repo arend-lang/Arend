@@ -95,7 +95,16 @@ public class ArendServerImpl implements ArendServer {
   };
 
   public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging) {
-    myRequester = requester;
+    myRequester = new DelegateServerRequester(requester) {
+      @Override
+      public <T> T runUnderReadLock(@NotNull Supplier<T> supplier) {
+        return requester.runUnderReadLock(() -> {
+          synchronized (ArendServerImpl.this) {
+            return supplier.get();
+          }
+        });
+      }
+    };
     myCacheReferences = cacheReferences;
     myLogger.setLevel(withLogging ? Level.INFO : Level.OFF);
     myLibraryService = new LibraryService(this);
@@ -251,40 +260,40 @@ public class ArendServerImpl implements ArendServer {
   @Override
   public void updateModule(long modificationStamp, @NotNull ModuleLocation moduleLocation, @NotNull Supplier<ConcreteGroup> supplier) {
     myRequester.runUnderReadLock(() -> {
-      synchronized (this) {
-        myGroups.compute(moduleLocation, (module, prevData) -> {
-          if (prevData != null) {
-            if (prevData.isReadOnly()) {
-              myLogger.severe("Read-only module '" + module + "' cannot be updated");
-              return prevData;
-            } else if (prevData.getTimestamp() >= modificationStamp) {
-              myLogger.fine(() -> "Module '" + module + "' is not updated; previous timestamp " + prevData.getTimestamp() + " >= new timestamp " + modificationStamp);
-              return prevData;
-            }
-          }
-
-          ConcreteGroup group = supplier.get();
-          if (group == null) {
-            myLogger.info(() -> "Module '" + module + "' is not updated");
+      myGroups.compute(moduleLocation, (module, prevData) -> {
+        if (prevData != null) {
+          if (prevData.isReadOnly()) {
+            myLogger.severe("Read-only module '" + module + "' cannot be updated");
+            return prevData;
+          } else if (prevData.getTimestamp() >= modificationStamp) {
+            myLogger.fine(() -> "Module '" + module + "' is not updated; previous timestamp " + prevData.getTimestamp() + " >= new timestamp " + modificationStamp);
             return prevData;
           }
+        }
 
-          if (prevData != null) {
-            clearReverseDependencies(module, prevData.getRawGroup());
-          }
-          resetReverseDependencies(module.getModulePath(), new HashSet<>());
+        ConcreteGroup group = supplier.get();
+        if (group == null) {
+          myLogger.info(() -> "Module '" + module + "' is not updated");
+          return prevData;
+        }
 
-          GroupData newData = new GroupData(modificationStamp, group, prevData);
-          updateReferables(newData.getRawGroup(), module);
+        if (prevData != null) {
+          clearReverseDependencies(module, prevData.getRawGroup());
+        }
+        resetReverseDependencies(module.getModulePath(), new HashSet<>());
 
-          if (prevData != null) {
-            myInstanceCache.removeInstances(prevData.getRawGroup());
-          }
+        GroupData newData = new GroupData(modificationStamp, group, prevData);
+        updateReferables(newData.getRawGroup(), module);
 
-          myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
-          return newData;
-        });
-      }
+        if (prevData != null) {
+          myInstanceCache.removeInstances(prevData.getRawGroup());
+        }
+
+        myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
+        return newData;
+      });
+
+      return null;
     });
   }
 

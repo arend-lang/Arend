@@ -131,6 +131,8 @@ public class ArendCheckerImpl implements ArendChecker {
             }
           }
         }
+
+        return null;
       });
 
       groups.computeIfAbsent(Prelude.MODULE_LOCATION, k -> myServer.getGroupData(Prelude.MODULE_LOCATION));
@@ -193,11 +195,11 @@ public class ArendCheckerImpl implements ArendChecker {
         progressReporter.endItem(pair.proj1);
       }
 
-      synchronized (myServer) {
+      boolean ok = myServer.getRequester().runUnderReadLock(() -> {
         ModuleLocation changedModule = findChanged(dependencies);
         if (changedModule != null) {
           myLogger.info(() -> "Version of " + changedModule + " changed; didn't resolve modules " + modules);
-          return null;
+          return false;
         }
 
         for (ModuleLocation module : currentModules) {
@@ -255,8 +257,10 @@ public class ArendCheckerImpl implements ArendChecker {
             }
           }
         }
-      }
+        return true;
+      });
 
+      if (!ok) return null;
       myLogger.info(() -> "End resolving modules " + modules);
       return concreteProvider;
     } catch (ComputationInterruptedException e) {
