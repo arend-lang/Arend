@@ -1,7 +1,8 @@
-package org.arend.psi.arc
+package org.arend.arc
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileTypes.BinaryFileDecompiler
 import com.intellij.openapi.project.DefaultProjectFactory
 import com.intellij.openapi.project.Project
@@ -13,12 +14,15 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.compiled.ClassFileDecompilers
 import com.intellij.psi.impl.compiled.ClsFileImpl
 import com.intellij.ui.EditorNotifications
+import org.arend.arc.ArcUnloadedModuleService.Companion.DEFINITION_IS_NOT_LOADED
+import org.arend.arc.ArcUnloadedModuleService.Companion.NOT_FOUND_MODULE
 import org.arend.core.definition.ClassDefinition
 import org.arend.core.definition.Definition
 import org.arend.core.expr.DefCallExpression
 import org.arend.core.expr.visitor.VoidExpressionVisitor
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.prettyprinting.PrettyPrinterConfig
+import org.arend.ext.serialization.DeserializationException
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.TCDefReferable
@@ -30,6 +34,7 @@ import org.arend.psi.ext.*
 import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
+import org.arend.source.StreamBinarySource
 import org.arend.term.group.ConcreteGroup
 import org.arend.term.prettyprint.PrettyPrinterConfigWithRenamer
 import org.arend.term.prettyprint.ToAbstractVisitor
@@ -39,6 +44,8 @@ import org.arend.util.FileUtils.SERIALIZED_EXTENSION
 import org.arend.util.arendModules
 import org.arend.util.getRelativeFile
 import org.arend.util.getRelativePath
+import java.util.zip.GZIPInputStream
+import kotlin.collections.iterator
 
 class ArcFileDecompiler : BinaryFileDecompiler {
     override fun decompile(file: VirtualFile): CharSequence {
@@ -69,6 +76,8 @@ class ArcFileDecompiler : BinaryFileDecompiler {
     }
 
     companion object {
+        private val LOG = Logger.getInstance(ArcFileDecompiler::class.java)
+
         fun decompile(virtualFile: VirtualFile): String {
             val project = ProjectLocator.getInstance().guessProjectForFile(virtualFile) ?: return ""
 
@@ -173,27 +182,33 @@ class ArcFileDecompiler : BinaryFileDecompiler {
             } else {
                 null
             }
-            val path = config?.binariesDirFile?.getRelativePath(virtualFile, SERIALIZED_EXTENSION) ?: emptyList()
+            val path = config?.binariesDirFile?.getRelativePath(virtualFile, SERIALIZED_EXTENSION) ?: mutableListOf(virtualFile.name)
             val arendFile = config?.sourcesDirFile?.getRelativeFile(path, EXTENSION)?.let { psiManager.findFile(it) } as? ArendFile?
-            val moduleLocation = arendFile?.moduleLocation!!
-            server.getCheckerFor(listOf(moduleLocation)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-            val group = server.getRawGroup(moduleLocation) ?: return null
+            arendFile?.moduleLocation?.let { server.getCheckerFor(listOf(it)).typecheck(null, DummyErrorReporter.INSTANCE, UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty()) }
 
-            project.service<ArcUnloadedModuleService>().removeLoadedModule(virtualFile)
-            EditorNotifications.getInstance(project).updateNotifications(virtualFile)
-            return Triple(
-                group,
-                arendFile,
-                getModules(group).map { config.sourcesDirFile?.getRelativeFile(it.toList(), EXTENSION)
-                    ?.let { virtualFile -> psiManager.findFile(virtualFile) } }
-            )
-          }
+            try {
+                virtualFile.inputStream.use { inputStream ->
+                    val result = StreamBinarySource.getGroup(GZIPInputStream(inputStream), server, config?.libraryName)
 
-        private fun getModules(group: ConcreteGroup): List<List<String>> {
-            return group.statements.mapNotNull {
-                it.command?.module?.path
+                    val group = result.proj1
+                    val modules = result.proj2
+
+                    project.service<ArcUnloadedModuleService>().removeLoadedModule(virtualFile)
+                    EditorNotifications.getInstance(project).updateNotifications(virtualFile)
+                    return Triple(group, arendFile, modules.map { config?.sourcesDirFile?.getRelativeFile(it.toList(), EXTENSION)
+                        ?.let { virtualFile -> psiManager.findFile(virtualFile) } })
+                }
+            } catch (e : DeserializationException) {
+                val message = e.message ?: return null
+                if (DEFINITION_IS_NOT_LOADED.matches(message) || NOT_FOUND_MODULE.matches(message)) {
+                    project.service<ArcUnloadedModuleService>().addUnloadedModule(virtualFile)
+                    EditorNotifications.getInstance(project).updateNotifications(virtualFile)
+                } else {
+                    LOG.error(message)
+                }
             }
-        }
+            return null
+          }
 
         private fun getDefinitions(group: ConcreteGroup): List<Definition> {
             return group.statements.mapNotNull {

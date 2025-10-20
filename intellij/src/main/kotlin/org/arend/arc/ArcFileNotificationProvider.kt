@@ -1,4 +1,4 @@
-package org.arend.psi.arc
+package org.arend.arc
 
 import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.application.runReadAction

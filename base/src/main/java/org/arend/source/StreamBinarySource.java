@@ -1,7 +1,10 @@
 package org.arend.source;
 
+import com.google.protobuf.CodedInputStream;
+import org.arend.ext.ArendExtension;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
+import org.arend.ext.serialization.DeserializationException;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.ext.util.Pair;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
@@ -11,6 +14,7 @@ import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.module.serialization.ModuleProtos;
 import org.arend.module.serialization.ModuleSerialization;
 import org.arend.server.ArendServer;
+import org.arend.server.impl.ArendServerImpl;
 import org.arend.source.error.LocationError;
 import org.arend.source.error.PersistingError;
 import org.arend.term.group.ConcreteGroup;
@@ -64,22 +68,25 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
     return myDependencies;
   }
 
-  /* TODO[server2]:
-  public static Pair<ConcreteGroup, List<ModulePath>> getGroup(InputStream inputStream, LibraryManager libraryManager, SourceLibrary library) throws IOException, DeserializationException {
+  public static Pair<ConcreteGroup, List<ModulePath>> getGroup(InputStream inputStream, ArendServer server, String libraryName) throws IOException, DeserializationException {
     CodedInputStream codedInputStream = CodedInputStream.newInstance(inputStream);
     codedInputStream.setRecursionLimit(Integer.MAX_VALUE);
     ModuleProtos.Module moduleProto = ModuleProtos.Module.parseFrom(codedInputStream);
 
-    ModuleDeserialization moduleDeserialization = new ModuleDeserialization(moduleProto, null, libraryManager.getDefinitionListener());
+    if (!(server instanceof ArendServerImpl)) {
+      return new Pair<>(null, null);
+    }
+    ArendExtension extension = ((ArendServerImpl) server).getExtensionProvider().getArendExtension(libraryName);
+    ModuleDeserialization moduleDeserialization = new ModuleDeserialization(moduleProto, null, extension == null ? null : extension.getDefinitionListener());
 
-    ConcreteGroup group = moduleDeserialization.readGroup(new ModuleLocation(library.getName(), ModuleLocation.LocationKind.GENERATED, new ModulePath()));
+    ConcreteGroup group = moduleDeserialization.readGroup(new ModuleLocation(libraryName, ModuleLocation.LocationKind.GENERATED, new ModulePath()));
 
-    ModuleScopeProvider moduleScopeProvider = libraryManager.getAvailableModuleScopeProvider(library);
-    moduleDeserialization.readModule(moduleScopeProvider, library.getDependencyListener());
+    moduleDeserialization.readModule(server.getModuleScopeProvider(libraryName, false), new DependencyCollector(server));
 
     return new Pair<>(group, moduleProto.getModuleCallTargetsList().stream().map(target -> new ModulePath(target.getNameList())).toList());
   }
 
+  /* TODO[server2]:
   public @NotNull LoadResult load(SourceLoader sourceLoader) {
     SourceLibrary library = sourceLoader.getLibrary();
     ModulePath modulePath = getModulePath();

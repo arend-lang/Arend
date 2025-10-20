@@ -8,15 +8,14 @@ import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiFileSystemItem
 import com.intellij.psi.PsiManager
 import org.arend.ext.module.ModuleLocation
+import org.arend.ext.module.ModuleLocation.LocationKind
+import org.arend.ext.module.ModuleLocation.LocationKind.GENERATED
+import org.arend.ext.module.ModuleLocation.LocationKind.SOURCE
+import org.arend.ext.module.ModuleLocation.LocationKind.TEST
 import org.arend.ext.module.ModulePath
 import org.arend.ext.reference.DataContainer
 import org.arend.library.LibraryDependency
 import org.arend.module.IntellijClassLoaderDelegate
-import org.arend.module.ModuleLocation
-import org.arend.module.ModuleLocation.LocationKind
-import org.arend.module.ModuleLocation.LocationKind.GENERATED
-import org.arend.module.ModuleLocation.LocationKind.SOURCE
-import org.arend.module.ModuleLocation.LocationKind.TEST
 import org.arend.naming.reference.DataModuleReferable
 import org.arend.psi.ArendFile
 import org.arend.server.ArendLibrary
@@ -126,11 +125,8 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
         return result
     }
 
-  // TODO
-//    private fun findParentDirectory(modulePath: ModulePath, locationKind: LocationKind): VirtualFile? {
-//        var dir = getBaseDir(locationKind) ?: return null
-    private fun findParentDirectory(modulePath: ModulePath, inTests: Boolean): VirtualFile? {
-        var dir = (if (inTests) testsDirFile else sourcesDirFile) ?: return null
+    private fun findParentDirectory(modulePath: ModulePath, locationKind: LocationKind): VirtualFile? {
+        var dir = getBaseDir(locationKind) ?: return null
         val list = modulePath.toList()
         var i = 0
         while (i < list.size - 1) {
@@ -159,11 +155,8 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
         if (modulePath.size() == 0) {
             null
         } else {
-            (if (withAdditional) additionalModules[modulePath] else null) ?:
+            (if (withAdditional) findGeneratedArendFile(modulePath) else null) ?:
                 findArendFile(modulePath, SOURCE) ?: if (withTests) findArendFile(modulePath, TEST) else null
-          // TODO
-//            (if (withAdditional) findGeneratedArendFile(modulePath) else null) ?:
-//                findArendFile(modulePath, false) ?: if (withTests) findArendFile(modulePath, true) else null
         }
 
     fun findArendFile(moduleLocation: ModuleLocation): ArendFile? {
