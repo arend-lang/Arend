@@ -1,4 +1,4 @@
-package org.arend.psi.arc
+package org.arend.arc
 
 import com.intellij.lang.Language
 import com.intellij.openapi.vfs.VirtualFile

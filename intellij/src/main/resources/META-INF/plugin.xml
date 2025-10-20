@@ -437,7 +437,7 @@
 
         <editorNotificationProvider implementation="org.arend.notification.FileOutsideSourcesProvider"/>
 
-        <editorNotificationProvider implementation="org.arend.psi.arc.ArcFileNotificationProvider"/>
+        <editorNotificationProvider implementation="org.arend.arc.ArcFileNotificationProvider"/>
 
         <!-- Scratches -->
 
@@ -491,10 +491,10 @@
 
         <!--  Decompiler tools  -->
 
-        <filetype.stubBuilder filetype="Arc" implementationClass="org.arend.psi.arc.ArcFileStubBuilder"/>
-        <filetype.decompiler filetype="Arc" implementationClass="org.arend.psi.arc.ArcFileDecompiler"/>
-        <fileType.fileViewProviderFactory filetype="Arc" implementationClass="org.arend.psi.arc.ArcFileViewProviderFactory"/>
-        <psi.classFileDecompiler implementation="org.arend.psi.arc.ArcDecompiler" order="first"/>
+        <filetype.stubBuilder filetype="Arc" implementationClass="org.arend.arc.ArcFileStubBuilder"/>
+        <filetype.decompiler filetype="Arc" implementationClass="org.arend.arc.ArcFileDecompiler"/>
+        <fileType.fileViewProviderFactory filetype="Arc" implementationClass="org.arend.arc.ArcFileViewProviderFactory"/>
+        <psi.classFileDecompiler implementation="org.arend.arc.ArcDecompiler" order="first"/>
 
     </extensions>
 

@@ -1,7 +1,10 @@
 package org.arend.source;
 
 import com.google.protobuf.CodedInputStream;
+import org.arend.ext.ArendExtension;
 import org.arend.ext.error.ErrorReporter;
+import org.arend.ext.module.ModulePath;
+import org.arend.ext.serialization.DeserializationException;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.ext.util.Pair;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
@@ -13,6 +16,7 @@ import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.module.serialization.ModuleProtos;
 import org.arend.module.serialization.ModuleSerialization;
 import org.arend.server.ArendServer;
+import org.arend.server.impl.ArendServerImpl;
 import org.arend.source.error.LocationError;
 import org.arend.source.error.PersistingError;
 import org.arend.term.group.ConcreteGroup;

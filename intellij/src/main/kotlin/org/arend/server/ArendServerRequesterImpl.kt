@@ -1,14 +1,13 @@
 package org.arend.server
 
 import com.intellij.openapi.application.runReadAction
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.findDirectory
 import com.intellij.psi.PsiFileSystemItem
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.ModulePath
 import org.arend.ext.module.ModuleLocation
-import org.arend.module.ModuleLocation.LocationKind
+import org.arend.ext.module.ModuleLocation.LocationKind
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.naming.reference.DataModuleReferable
 import org.arend.naming.reference.FullModuleReferable

@@ -447,15 +447,10 @@ class ArendMessagesView(private val project: Project, private val toolWindow: To
         val expandedPaths = TreeUtil.collectExpandedPaths(tree)
         val selectedPath = tree.selectionPath
 
-//        val arcFiles = arendFilesWithErrors.filterIsInstance<ArcFile>()
-//          .groupBy { it.fullName }.values.map { it.maxBy { file -> file.arcTimestamp } }
-
         val map = HashMap<ArendRef, HashMap<Any?, ArendErrorTreeElement>>()
         tree.update(root) { node ->
             if (node == root) {
                 errorMap.keys
-//              TODO()
-//              arendFilesWithErrors.filter { it !is ArcFile } + arcFiles
             }
             else when (val obj = node.userObject) {
                 is ModuleLocation -> {
