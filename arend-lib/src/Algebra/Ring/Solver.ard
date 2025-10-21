@@ -255,9 +255,9 @@
 
 \class CSemiringData \extends CAlgData, SemiringData
 
-\class LatticeData (L : DistributiveLattice) \extends CAlgData {
+\class LatticeData (L : BoundedDistributiveLattice) \extends CAlgData {
   | R => L
-  | C => DistributiveLattice.toSemiring BoolLattice
+  | C => BoundedDistributiveLattice.toSemiring BoolLattice
   | S => BoolPoset
   | alg {
     | func => \case __ \with {
@@ -377,13 +377,12 @@
   \protected \lemma terms-equality (t s : RingTerm C V) (p : interpretLatticeNF (normalize t) = interpretLatticeNF (normalize s)) : interpret t = interpret s
     => normalize-consistent t *> p *> inv (normalize-consistent s)
 } \where {
-  \open Bounded \hiding (JoinSemilattice)
   \open AlgData
   \open Sort
   \open Sort.RedBlack
   \open LinearOrder
 
-  \lemma lattice-lem {L : Lattice} {a b x : L} (p : a ∨ b = b) : x ∧ a ∨ b = b
+  \lemma lattice-lem {L : BoundedLattice} {a b x : L} (p : a ∨ b = b) : x ∧ a ∨ b = b
     => JoinSemilattice.join_<= (<=-transitive meet-right (JoinSemilattice.join_<=' p))
 }
 

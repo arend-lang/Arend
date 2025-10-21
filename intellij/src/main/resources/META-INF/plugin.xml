@@ -9,9 +9,7 @@
          on how to target different products -->
     <depends>org.jetbrains.plugins.yaml</depends>
     <depends>com.intellij.java</depends>
-    <!-- TODO[2025.2.1]
     <depends optional="true" config-file="plugin-json.xml">com.intellij.modules.json</depends>
-    -->
 
     <extensions defaultExtensionNs="com.intellij">
 
@@ -160,11 +158,36 @@
 
         <codeInsight.parameterInfo language="Arend" implementationClass="org.arend.codeInsight.ArendParameterInfoHandler"/>
 
-        <!-- TODO[server2]
-        <codeInsight.inlayProvider language="Arend" implementationClass="org.arend.codeInsight.hints.ArendParametersInlayProvider"/>
-        <codeInsight.inlayProvider language="Arend" implementationClass="org.arend.codeInsight.hints.ArendAxiomsInlayProvider"/>
-        <codeInsight.inlayProvider language="Arend" implementationClass="org.arend.codeInsight.hints.ArendGoalsInlayProvider"/>
-        -->
+        <codeInsight.declarativeInlayProvider language="Arend"
+                                              implementationClass="org.arend.codeInsight.hints.ArendAxiomsInlayProvider"
+                                              isEnabledByDefault="true"
+                                              group="OTHER_GROUP"
+                                              providerId="arend.axioms"
+                                              bundle="messages.ArendBundle"
+                                              nameKey="arend.inlay.axioms.name"
+                                              descriptionKey="arend.inlay.axioms.description"/>
+
+        <codeInsight.declarativeInlayProvider language="Arend"
+                                              implementationClass="org.arend.codeInsight.hints.ArendGoalsInlayProvider"
+                                              isEnabledByDefault="true"
+                                              group="OTHER_GROUP"
+                                              providerId="arend.goals"
+                                              bundle="messages.ArendBundle"
+                                              nameKey="arend.inlay.goals.name"
+                                              descriptionKey="arend.inlay.goals.description"/>
+
+        <codeInsight.declarativeInlayProvider language="Arend"
+                                              implementationClass="org.arend.codeInsight.hints.ArendParametersInlayProvider"
+                                              isEnabledByDefault="true"
+                                              group="OTHER_GROUP"
+                                              providerId="arend.parameters"
+                                              bundle="messages.ArendBundle"
+                                              nameKey="arend.inlay.parameters.name"
+                                              descriptionKey="arend.inlay.parameters.description"/>
+
+        <codeInsight.declarativeInlayProviderCustomSettingsProvider language="Arend"
+                                                                    providerId="arend.parameters"
+                                                                    implementationClass="org.arend.codeInsight.hints.ArendParametersInlaySettingsProvider"/>
 
         <completion.contributor language="Arend" implementationClass="org.arend.codeInsight.completion.ArendCompletionContributor"/>
         <completion.contributor language="Arend" implementationClass="org.arend.codeInsight.completion.ArendNoVariantsDelegator"/>

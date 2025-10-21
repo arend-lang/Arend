@@ -12,8 +12,8 @@ public class BaseAlgebraicMeta extends BaseMetaDefinition {
 
   @Dependency                                           public CoreFunctionDefinition NatSemiring;
   @Dependency                                           public CoreFunctionDefinition IntRing;
-  @Dependency(name = "Bounded.JoinSemilattice.bottom")  public CoreClassField bottom;
-  @Dependency(name = "Bounded.MeetSemilattice.top")     public CoreClassField top;
+  @Dependency(name = "BottomJoinSemilattice.bottom")    public CoreClassField bottom;
+  @Dependency(name = "TopMeetSemilattice.top")          public CoreClassField top;
   @Dependency(name = "JoinSemilattice.join")            public CoreClassField join;
   @Dependency(name = "MeetSemilattice.meet")            public CoreClassField meet;
   @Dependency(name = "AddMonoid.+")                     public CoreClassField plus;

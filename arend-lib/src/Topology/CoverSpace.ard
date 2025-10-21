@@ -12,7 +12,6 @@
 \import Set.Subset
 \import Topology.RatherBelow
 \import Topology.TopSpace
-\open Bounded(top,top-univ,bottom)
 \open Set
 \open ClosurePrecoverSpace
 

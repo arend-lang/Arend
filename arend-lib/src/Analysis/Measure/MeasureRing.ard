@@ -135,10 +135,7 @@
     | isCompleteMetric F Fc => \case isCompleteMeasure F (\lam a eps>0 => TruncP.map (Fc eps>0) \lam (x,Fx) => (x, filter-mono Fx \lam {y} => meas-mono $ meet-right <=∘ =_<= (pmap (x +) $ inv negative=id))) \with {
       | inP (x,h) => inP (x, \lam {eps} eps>0 => \case Fc {eps RatField.* ratio 1 4} linarith \with {
         | inP (x0,F1) => filter-mono (filter-meet (filter-meet F1 $ h x0 {eps RatField.* ratio 1 4} linarith) $ h x (RatField.half>0 eps>0)) \lam {y} ((p1,p2),p3) =>
-          meas-mono
-            -- TODO: implement a solver for Boolean rings
-            (=_<= (pmap (x +) negative=id *> +-comm *> +_diff) <=∘ join-monotone (diff-trans {_} {_} {x0} <=∘ =_<= (inv (+_join $ <=-antisymmetric (meet-monotone <=-refl diff_<= <=∘ =_<= diff_*) bottom-univ) *> unfold (-) (rewrite (ldistr, *-comm {_} {x0} {y}, negative=id) equation.abMonoid))) (=_<= $ inv $ ldistr *> pmap (`+ _) isBooleanRing) <=∘ =_<= (inv $ +_join $ pmap (_ *) *-comm *> inv *-assoc *> pmap (`* x) (rdistr *> pmap2 (+) rdistr_- (*-assoc *> pmap (x0 *) isBooleanRing) *> +-comm *> inv +-assoc *> pmap (`+ _) double=0 *> zro-left *> negative=id *> ldistr) *> rdistr *> pmap2 (__ + __ * x) (*-assoc *> pmap (y *) isBooleanRing) isBooleanRing *> double=0))
-            $ transport ExUpperReal.U {_} {eps} linarith $ ExUpperReal.<=_+-char meas_+ (ExUpperReal.<=_+-char meas_+ p1 p2) p3
+          meas-mono (meet_<=' equation.bRing) $ transport ExUpperReal.U {_} {eps} linarith $ ExUpperReal.<=_+-char meas_+ (ExUpperReal.<=_+-char meas_+ p1 p2) p3
       })
     }
 }

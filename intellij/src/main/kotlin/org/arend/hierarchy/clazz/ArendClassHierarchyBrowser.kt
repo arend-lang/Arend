@@ -22,6 +22,7 @@ import org.arend.graph.GraphNode
 import org.arend.graph.GraphSimulator
 import org.arend.hierarchy.ArendHierarchyNodeDescriptor
 import org.arend.psi.ext.ArendDefClass
+import org.arend.psi.ext.ArendSuperClass
 import org.arend.psi.ext.fullNameText
 import org.arend.search.ClassDescendantsSearch
 import org.arend.settings.ArendProjectSettings
@@ -177,9 +178,8 @@ class ArendClassHierarchyBrowser(project: Project, method: PsiElement) : TypeHie
 
             val from = currentNode.fullNameText
 
-            // TODO[server2]
             val children = if (isSuperTypes) {
-                currentNode.superClassList.mapNotNull { it.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass? }
+                currentNode.superClassList.mapNotNull { getSuperDefClass(it) }
             } else {
                 myProject.service<ClassDescendantsSearch>().search(currentNode)
             }.mapNotNull { it as? ArendDefClass? }
@@ -213,10 +213,14 @@ class ArendClassHierarchyBrowser(project: Project, method: PsiElement) : TypeHie
                     "Supertypes_${root.fullNameText}"
                 },
                 usedNodes.map { GraphNode(it.fullNameText) }.toSet(),
-                edges,
-                emptySet(),
-                emptySet()
+                edges
             )
+        }
+    }
+
+    companion object {
+        fun getSuperDefClass(superClass: ArendSuperClass): ArendDefClass? {
+            return superClass.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass
         }
     }
 }

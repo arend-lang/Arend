@@ -27,7 +27,7 @@ public class VoidConcreteVisitor<P> implements ConcreteExpressionVisitor<P,Void>
 
   protected void visitEliminatedReferences(List<? extends Concrete.ReferenceExpression> eliminatedReferences, P params) {
     for (Concrete.ReferenceExpression eliminatedReference : eliminatedReferences) {
-      visitReference(eliminatedReference, params);
+      if (eliminatedReference != null) visitReference(eliminatedReference, params);
     }
   }
 

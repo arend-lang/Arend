@@ -43,14 +43,13 @@
 \import Set.Fin
 \import Set.Fin.Instances
 \import Topology.RatherBelow
-\open Bounded(top,top-univ,bottom,bottom-univ)
 \open CompleteLattice(SJoin)
 \open MeetSemilattice
 \open JoinSemilattice
 \open PresentedFrame \hiding (<=)
 \open Locale
 
-\class Locale \extends CompleteLattice, Bounded.DistributiveLattice, SiteWithBasis {
+\class Locale \extends CompleteLattice, BoundedDistributiveLattice, SiteWithBasis {
   | join x y => Join (if __ x y)
   | join-left {x} {y} => Join-cond true
   | join-right {x} {y} => Join-cond false
@@ -664,8 +663,8 @@
       | cover-comm p j q => cover-comm (pmap F p *> func-conj) j (pmap F q *> func-conj)
       | cover-ldistr p c f => cover-ldistr (pmap F p *> func-conj) (map c) (\lam j => pmap F (f j) *> func-conj)
 
-    \lemma cover_top {L : Bounded.MeetSemilattice} {P : FramePres L (∧)} {x : L} : Cover1 x L.top
-      => transport (Cover1 __ _) Bounded.MeetSemilattice.top-left $ cover-proj1 idp () idp
+    \lemma cover_top {L : TopMeetSemilattice} {P : FramePres L (∧)} {x : L} : Cover1 x L.top
+      => transport (Cover1 __ _) L.top-left $ cover-proj1 idp () idp
 
     \lemma cover_<= {L : MeetSemilattice} {P : FramePres L (∧)} {x y : L} (p : x <= y) : Cover1 x y
       => rewriteI (L.meet_<= p) $ cover-proj2 idp () idp

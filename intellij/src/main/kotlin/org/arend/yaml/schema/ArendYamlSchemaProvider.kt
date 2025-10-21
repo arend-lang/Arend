@@ -4,7 +4,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
-/* TODO[2025.2.1]
 import com.jetbrains.jsonSchema.extension.JsonSchemaFileProvider
 import com.jetbrains.jsonSchema.extension.JsonSchemaProviderFactory
 import com.jetbrains.jsonSchema.extension.SchemaType
@@ -32,4 +31,3 @@ class ArendYamlSchemaProvider(private val project: Project) : JsonSchemaFileProv
 
     override fun getSchemaFile() = schemaFileLazy
 }
-*/

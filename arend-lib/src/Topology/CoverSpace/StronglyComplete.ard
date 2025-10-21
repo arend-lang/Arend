@@ -14,7 +14,6 @@
 \import Topology.CoverSpace.Complete
 \import Topology.RatherBelow
 \import Topology.TopSpace
-\open Bounded(top)
 
 \instance WeaklyCauchyFilterPoset (S : CoverSpace) : Poset (WeaklyCauchyFilter S)
   | <= F G => F ⊆ G

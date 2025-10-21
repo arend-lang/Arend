@@ -270,7 +270,7 @@
     }
 }
 
-\instance IdealLattice {R : CRing} : Bounded.Lattice (Ideal R)
+\instance IdealLattice {R : CRing} : BoundedLattice (Ideal R)
   | <= I J => \Pi {a : R} -> I a -> J a
   | <=-refl c => c
   | <=-transitive p q c => q (p c)

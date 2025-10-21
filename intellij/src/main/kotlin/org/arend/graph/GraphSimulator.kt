@@ -1,5 +1,6 @@
 package org.arend.graph
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
@@ -11,10 +12,12 @@ import com.mxgraph.model.mxCell
 import com.mxgraph.swing.mxGraphComponent
 import com.mxgraph.util.mxConstants
 import com.mxgraph.view.mxGraph
+import org.arend.codeInsight.ArendLineMarkerProvider.Companion.DOCUMENTATION_URL
 import org.arend.core.expr.Expression
 import org.arend.graph.call.CALL_GRAPH_FONT_SIZE
 import org.arend.graph.call.addEdgeListener
 import org.arend.term.concrete.Concrete
+import org.arend.util.ArendBundle
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.awt.Image
@@ -22,6 +25,8 @@ import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
 import java.awt.datatransfer.UnsupportedFlavorException
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
@@ -106,34 +111,34 @@ class GraphSimulator(val project: Project) {
         graphName: String,
         vertices: Set<GraphNode>,
         edges: Set<GraphEdge>,
-        newVertices: Set<GraphNode>,
-        newEdges: Set<GraphEdge>,
+        newEdges: Set<GraphEdge> = emptySet(),
         coreToConcrete: Map<Expression, Concrete.Expression> = emptyMap(),
         frameType: FrameType = FrameType.SIMPLE
     ) {
       val (graphComponent, cellToInfo) = getGraphComponent(vertices, edges)
-      val (newGraphComponent, newCellToInfo) = getGraphComponent(newVertices, newEdges)
+      val (newGraphComponent, newCellToInfo) = getGraphComponent(vertices, newEdges)
 
       val matrixPanel = JPanel(BorderLayout())
       val centerPanel = when (frameType) {
         FrameType.SIMPLE -> graphComponent
         FrameType.CALL_GRAPH -> {
           matrixPanel.layout = BoxLayout(matrixPanel, BoxLayout.Y_AXIS)
+          matrixPanel.add(JLabel(ArendBundle.message("arend.termination.checker.click.message")), BorderLayout.CENTER)
 
           val wrapperPanel = JPanel(FlowLayout(FlowLayout.CENTER))
           wrapperPanel.add(matrixPanel)
 
           val leftPanel = JPanel(BorderLayout())
-          val beforeComposition = JLabel("Before Composition:").apply {
+          val beforeComposition = JLabel("Before Completion:").apply {
             setHorizontalAlignment(SwingConstants.CENTER)
           }
-          val afterComposition = JLabel("After Composition:").apply {
+          val afterComposition = JLabel("After Completion:").apply {
             setHorizontalAlignment(SwingConstants.CENTER)
           }
           leftPanel.add(beforeComposition, BorderLayout.NORTH)
           leftPanel.add(graphComponent, BorderLayout.CENTER)
 
-          val switcher = JRadioButton("Pre/Post Composition")
+          val switcher = JRadioButton("Before/After Completion")
           switcher.addActionListener {
             if (switcher.isSelected) {
               leftPanel.remove(beforeComposition)
@@ -146,10 +151,19 @@ class GraphSimulator(val project: Project) {
               leftPanel.remove(newGraphComponent)
               leftPanel.add(graphComponent, BorderLayout.CENTER)
             }
-            leftPanel.repaint()
-            leftPanel.revalidate()
+            leftPanel.updateUI()
           }
-          leftPanel.add(switcher, BorderLayout.SOUTH)
+          leftPanel.add(JPanel(BorderLayout()).apply {
+            add(switcher, BorderLayout.NORTH)
+            add(JSeparator(SwingConstants.HORIZONTAL))
+            add(JButton("Open the documentation page").apply {
+              addMouseListener(object : MouseAdapter() {
+                override fun mouseClicked(e: MouseEvent?) {
+                  BrowserUtil.browse(DOCUMENTATION_URL)
+                }
+              })
+            }, BorderLayout.SOUTH)
+          }, BorderLayout.SOUTH)
 
           val mainPanel = JPanel(BorderLayout())
           mainPanel.add(leftPanel, BorderLayout.WEST)
@@ -178,7 +192,7 @@ class GraphSimulator(val project: Project) {
             try {
               val file = File(destinationFilePath)
               ImageIO.write(getImage(graphComponent), format, file)
-            } catch (exception: IOException) {
+            } catch (_: IOException) {
               Messages.showErrorDialog("Failed to save a graph image", "Error")
             }
           }
@@ -221,11 +235,11 @@ class GraphSimulator(val project: Project) {
           frame.add(centerPanel, BorderLayout.CENTER)
           frame.add(southPanel, BorderLayout.SOUTH)
 
-          addEdgeListener(project, frame, graphComponent, matrixPanel, cellToInfo, coreToConcrete)
-          addEdgeListener(project, frame, newGraphComponent, matrixPanel, newCellToInfo, coreToConcrete)
+          addEdgeListener(project, graphComponent, matrixPanel, cellToInfo, coreToConcrete)
+          addEdgeListener(project, newGraphComponent, matrixPanel, newCellToInfo, coreToConcrete)
 
-          frame.isVisible = true
           frame.pack()
+          frame.isVisible = true
         }
       }
     }

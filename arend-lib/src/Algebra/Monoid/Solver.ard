@@ -116,7 +116,7 @@
     | :: (suc n) is, :: a l => a :: removeIndices (n :: is) l
 }
 
-\class LData {L : Bounded.MeetSemilattice} \extends CMonoidData {
+\class LData {L : TopMeetSemilattice} \extends CMonoidData {
   | M => L
 
   \func removeDuplicates (l : List V) : List V \elim l

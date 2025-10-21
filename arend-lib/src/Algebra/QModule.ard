@@ -135,3 +135,7 @@
       | QModule => QModule.fromRatModule R
       | Ring => R
   }
+
+\instance RatQAlgebra : QAlgebra Rat
+  | Ring => RatField
+  | QModule => QModule.fromRatModule ringAlgebra

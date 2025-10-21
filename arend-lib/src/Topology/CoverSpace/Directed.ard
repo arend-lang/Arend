@@ -13,7 +13,6 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Complete
 \import Topology.CoverSpace.Product
-\open Bounded(top,top-univ)
 
 \func DirectedCoverSpace (I : DirectedSet) : CoverSpace I
   => RegPrecoverSpace precover

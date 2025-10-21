@@ -43,4 +43,19 @@ class ArendReferenceSearchTest : ArendTestBase() {
         val search = ReferencesSearch.search(element, GlobalSearchScope.allScope(project))
         assertTrue(search.toImmutableList().size == 1)
     }
+    
+    fun `test dynamically resolved references`() {
+        InlineFile("""
+           \class C (X{-caret-} : \Type)
+            
+           \func foo => \lam (n : Nat) => \new C { | X => Nat }
+           
+           \func bar : C => (foo 1).X
+        """.trimIndent()).withCaret()
+
+        val element = myFixture.elementAtCaret
+        typecheck()
+        val search = ReferencesSearch.search(element, GlobalSearchScope.allScope(project))
+        assertTrue(search.toImmutableList().size == 3)
+    }
 }

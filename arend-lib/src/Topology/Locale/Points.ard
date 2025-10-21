@@ -11,7 +11,6 @@
 \import Topology.Locale
 \import Topology.TopSpace
 \import Topology.TopSpace.Category
-\open Bounded(top, top-univ, bottom)
 
 \func OpensFrame (S : TopSpace) : Locale (Given S.isOpen) \cowith
   | <= U V => U.1 ⊆ V.1

@@ -6,12 +6,14 @@
 \import Paths.Meta
 \import Set
 
-\record Partial \extends BaseSet
+\record Partial (E : \Set) {
   | isDefined : \Prop
   | \coerce value : isDefined -> E
-  \where {
-    \func make {X : \Set} (P : \Prop) (f : P -> X) => \new Partial X P f
-  }
+
+  \func HasValue (a : E) => \Sigma (P : isDefined) (value P = a)
+} \where {
+  \func make {X : \Set} (P : \Prop) (f : P -> X) => \new Partial X P f
+}
 
 \func defined {X : \Set} (x : X) : Partial X \cowith
   | isDefined => \Sigma
@@ -24,11 +26,17 @@
 \lemma partial-ext {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : u.isDefined) (q : v.isDefined) -> u (\box p) = v \box q) : u = v
   => exts (<->_=.1 d, \lam p => pmap u prop-pi *> e p (transport (\lam P => P) (<->_=.1 d) p) *> pmap v prop-pi)
 
+\lemma partial-ext-left {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : u.isDefined) -> u p = v (d.1 p)) : u = v
+  => partial-ext d \lam p _ => pmap u prop-pi *> e p *> pmap v prop-pi
+
+\lemma partial-ext-right {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : v.isDefined) -> u (d.2 p) = v p) : u = v
+  => partial-ext d \lam _ q => pmap u prop-pi *> e q *> pmap v prop-pi
+
 \lemma defined-ext {X : \Set} {u : Partial X} {x : X} (d : u.isDefined) (p : u d = x) : u = defined x
   => partial-ext (\lam _ => (), \lam _ => d) \lam q q => pmap u prop-pi *> p
   \where {
     \protected \lemma isDefined (p : u = defined x) : u.isDefined
-      => transportInv (\lam x => Partial.isDefined {x}) p ()
+      => transportInv (\lam x => x.isDefined) p ()
 
     \protected \lemma value (p : u = defined x) : u (isDefined p) = x
       => transportInv (\lam (v : Partial X) => \Pi (p : v.isDefined) -> v p = x) p (\lam _ => idp) (isDefined p)
@@ -43,6 +51,9 @@
 \lemma partial-value {X : \Set} {u v : Partial X} (p : u = v) {d : u.isDefined} {e : v.isDefined} : u d = v e
   => path \lam i => p i (prop-dpi _ d e i)
 
+\lemma defined-inj {X : \Set} {x y : X} (p : defined x = {Partial X} defined y) : x = y
+  => partial-value {X} p
+
 \func plift {X Y : \Set} (f : X -> Y) (p : Partial X) : Partial Y \cowith
   | isDefined => p.isDefined
   | value d => f (p d)
@@ -54,6 +65,6 @@
 \instance PartialAddMonoid (X : AddMonoid) : AddMonoid (Partial X)
   | zro => defined X.zro
   | + => plift2 (+)
-  | zro-left {x} => partial-ext {_} {plift2 (+) (defined X.zro) x} (__.2, ((),__)) \lam p q => zro-left
-  | zro-right {x} => partial-ext {_} {plift2 (+) x (defined X.zro)} (__.1, (__,())) \lam p q => zro-right
-  | +-assoc {x} {y} {z} => partial-ext {_} {plift2 (+) (plift2 (+) x y) z} (\lam s => (s.1.1,(s.1.2,s.2)), \lam s => ((s.1,s.2.1),s.2.2)) \lam p q => +-assoc
+  | zro-left => partial-ext (__.2, ((),__)) \lam p q => zro-left
+  | zro-right => partial-ext (__.1, (__,())) \lam p q => zro-right
+  | +-assoc => partial-ext (\lam s => (s.1.1,(s.1.2,s.2)), \lam s => ((s.1,s.2.1),s.2.2)) \lam p q => +-assoc

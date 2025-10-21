@@ -22,12 +22,11 @@ import org.arend.codeInsight.ArendCodeInsightUtils.Companion.getExternalParamete
 import org.arend.ext.module.LongName
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.variable.VariableImpl
-import org.arend.naming.reference.LongUnresolvedReference
+import org.arend.hierarchy.clazz.ArendClassHierarchyBrowser.Companion.getSuperDefClass
 import org.arend.naming.reference.TCDefReferable
 import org.arend.naming.renamer.StringRenamer
 import org.arend.naming.scope.DynamicScope
 import org.arend.psi.*
-import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
 import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.refactoring.*
@@ -159,7 +158,7 @@ class ArendMoveRefactoringProcessor(project: Project,
             val usagesPreprocessor = getUsagesPreprocessor(changeSignatureUsages, myProject, fileChangeMap,
                 HashSet(), HashSet(), multiFileReferenceResolver)
 
-            resetServer(moduleLocationsToInvalidate, true)
+            resetServer(moduleLocationsToInvalidate)
             usagesPreprocessor.run()
 
             writeFileChangeMap(myProject, fileChangeMap)
@@ -181,7 +180,7 @@ class ArendMoveRefactoringProcessor(project: Project,
         }
 
         ResolveReferenceAction.flushNamespaceCommands(multiFileReferenceResolver)
-        resetServer(moduleLocationsToInvalidate, true) //needed for correct resolution of references after previous refactoring
+        resetServer(moduleLocationsToInvalidate) //needed for correct resolution of references after previous refactoring
 
         //Replace \this literals with local `this` parameters
         for ((referable, thisVarName) in thisVarNameMap) {
@@ -196,7 +195,7 @@ class ArendMoveRefactoringProcessor(project: Project,
         }
 
         //Resolve references in the elements that are to be moved. This is needed to distinguish between long names and field accesses
-        resetServer(moduleLocationsToInvalidate, true)
+        resetServer(moduleLocationsToInvalidate)
 
         //Memorize references in myMembers being moved
         val descriptorsOfAllMembersBeingMoved = HashMap<PsiLocatedReferable, LocationDescriptor>() //This set may be strictly larger than the set of myReferableDescriptors
@@ -223,7 +222,7 @@ class ArendMoveRefactoringProcessor(project: Project,
         //Determine which moved members should be added to the "remainder" namespace command
         val remainderReferables = HashSet<LocationDescriptor>()
 
-        resetServer(moduleLocationsToInvalidate, true)
+        resetServer(moduleLocationsToInvalidate)
         val updatedUsages = findUsages()
 
         for (usage in updatedUsages) if (usage is ArendUsageLocationInfo) {
@@ -435,12 +434,10 @@ class ArendMoveRefactoringProcessor(project: Project,
         }
     }
 
-    private fun resetServer(modules: Set<ModuleLocation>, typecheck: Boolean = false) {
+    private fun resetServer(modules: Set<ModuleLocation>) {
         modules.forEach { module -> myServer.removeModule(module) }
         val checker = myServer.getCheckerFor(modules.toList().reversed())
-        if (typecheck)
-          checker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
-          else checker.resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+        checker.resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
     }
 
     private fun locateChild(element: PsiElement, childPath: List<Int>): PsiElement? {
@@ -646,10 +643,10 @@ class ArendMoveRefactoringProcessor(project: Project,
                             }
 
                             val newSuperclasses = newThisParameterClass?.superClassList?.map {
-                                it.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass?
+                                getSuperDefClass(it)
                             }?.toSet()
                             val oldSuperclasses = oldThisParameterClass.superClassList.map {
-                                it.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass?
+                                getSuperDefClass(it)
                             }
 
                             when {

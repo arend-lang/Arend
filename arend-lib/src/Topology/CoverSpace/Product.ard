@@ -14,7 +14,6 @@
 \import Topology.CoverSpace.Complete
 \import Topology.RatherBelow
 \import Topology.TopSpace.Product
-\open Bounded(top)
 \open CoverMap
 \open ClosurePrecoverSpace \hiding (closure-univ)
 \open ProductCoverSpace

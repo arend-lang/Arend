@@ -7,6 +7,7 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.naturalSorted
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.PopupStep
 import com.intellij.openapi.ui.popup.util.BaseListPopupStep
@@ -14,9 +15,10 @@ import com.intellij.openapi.util.Iconable
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
+import org.arend.core.definition.ClassDefinition
+import org.arend.naming.reference.FieldReferableImpl
 import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.Referable
-import org.arend.psi.ArendFile
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ext.*
 import org.arend.psi.findPrevSibling
@@ -42,35 +44,34 @@ open class ImplementFieldsQuickFix(
     override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean =
         instanceRef.element != null
 
-    private fun collectDefaultStatements(defClass: ArendDefClass, defaultFields: MutableSet<ArendClassStat>) {
-        defaultFields.addAll(defClass.classStatList.filter { it.isDefault })
-        for (superClass in defClass.superClassList) (superClass.longName.refIdentifierList.lastOrNull()?.resolve as? ArendDefClass)?.let { superClass ->
-            (superClass as? ArendDefClass?)?.let { collectDefaultStatements(it, defaultFields) }
-        }
-    }
-
-    private fun getMinGroup(defaultFields: Set<PsiElement>, rules: Map<PsiElement, List<PsiElement>>): Set<Set<PsiElement>> {
+    private fun getMinGroup(possibleBaseArguments: Set<PsiElement>, rules: Map<ArendClassField, List<Set<PsiElement>>>): Set<Set<PsiElement>> {
         val results = mutableSetOf<Set<PsiElement>>()
-        for (groupSize in 1..min(DEFAULT_FIELDS_LIMIT, defaultFields.size)) {
+        for (groupSize in 1..min(DEFAULT_FIELDS_LIMIT, possibleBaseArguments.size)) {
             if (results.isNotEmpty()) {
                 break
             }
-            val groups = combinations(defaultFields.toSet(), groupSize)
+            val groups = combinations(possibleBaseArguments.toSet(), groupSize)
             for (group in groups) {
                 val derivedFields = group.toMutableSet()
-                while (derivedFields.size < defaultFields.size) {
+                if (derivedFields.mapNotNull { (it as ArendClassField).defIdentifier?.name }.containsAll(setOf("norm_zro", "norm_negative", "norm_+"))) {
+                    println()
+                }
+                while (derivedFields.size < rules.size) {
                     var added = false
-                    for ((field, arguments) in rules) {
-                        if (!derivedFields.contains(field) && arguments.all { derivedFields.contains(it) }) {
-                            derivedFields.add(field)
-                            added = true
+                    for ((field, possibleArguments) in rules) {
+                        for (arguments in possibleArguments) {
+                            if (!derivedFields.contains(field) && arguments.all { derivedFields.contains(it) }) {
+                                derivedFields.add(field)
+                                added = true
+                                break
+                            }
                         }
                     }
                     if (!added) {
                         break
                     }
                 }
-                if (derivedFields.size == defaultFields.size) {
+                if (rules.size == derivedFields.size) {
                     results.add(group)
                 }
             }
@@ -79,41 +80,61 @@ open class ImplementFieldsQuickFix(
     }
 
     private fun getMinDefaultFields(): Pair<Set<Set<PsiElement>>, Set<PsiElement>> {
-        val defaultStatements = mutableSetOf<ArendClassStat>()
+        val arendClassDef = classRef?.element
+        val defaultFields = (arendClassDef?.tcReferable?.typechecked as? ClassDefinition)?.defaultImplDependencies ?: emptyMap()
 
-        classRef?.element?.let {
-            collectDefaultStatements(it, defaultStatements)
-        }
+        val psiElementsToImplement = fieldsToImplement.mapNotNull { (it.first as? FieldReferableImpl)?.data as? ArendClassField }.toSet()
+        val defaultFieldsToImplement = defaultFields.filter { psiElementsToImplement.contains(it.key.referable.data) }
 
-        val defaultFields = defaultStatements.mapNotNull { it.coClause?.longName?.resolve }.toSet()
-
-        val rules = mutableMapOf<PsiElement, MutableList<PsiElement>>()
-        for (defaultStatement in defaultStatements) {
-            val defaultField = defaultStatement.coClause?.longName?.resolve ?: continue
-            val arguments = (defaultStatement.coClause?.expr as? ArendNewExpr?)?.argumentAppExpr?.argumentList
-                ?.mapNotNull { (it as? ArendAtomArgument?)?.atomFieldsAcc }?.toMutableList() ?: mutableListOf()
-            (defaultStatement.coClause?.expr as? ArendNewExpr?)?.argumentAppExpr?.atomFieldsAcc?.let { arguments.add(it) }
+        val rules = mutableMapOf<ArendClassField, MutableList<MutableSet<PsiElement>>>()
+        for ((field, arguments) in defaultFieldsToImplement) {
+            val arendClassField = field.referable.data as? ArendClassField ?: continue
+            val necessaryArguments = mutableSetOf<PsiElement>()
             for (argument in arguments) {
-                val defaultArgument = argument.atom.literal?.refIdentifier?.resolve ?: continue
-                if (!defaultFields.contains(defaultArgument)) {
-                    continue
-                }
-                rules.getOrPut(defaultField) { mutableListOf() }.add(defaultArgument)
+                if (!defaultFieldsToImplement.keys.contains(argument)) continue
+                val arendArgumentClassField = argument.referable.data as? ArendClassField ?: continue
+                necessaryArguments.add(arendArgumentClassField)
+            }
+            necessaryArguments.remove(arendClassField)
+            if (necessaryArguments.isNotEmpty()) {
+                rules.getOrPut(arendClassField) { mutableListOf() }.add(necessaryArguments)
             }
         }
 
-        val defaultDependentFields = defaultFields.filter { rules[it] != null }.toSet()
-        val result = if (rules.isEmpty()) {
+        val defaultArendClassFields = defaultFieldsToImplement.mapNotNull { it.key.referable.data as? ArendClassField }
+        val independentDefaultFields = defaultArendClassFields.filter { !rules.containsKey(it) }.toMutableSet()
+        var isRemoved: Boolean
+        while (true) {
+            isRemoved = false
+            for ((field, argumentVariants) in rules) {
+                for (arguments in argumentVariants) {
+                    if (arguments.removeAll(independentDefaultFields)) {
+                        isRemoved = true
+                    }
+                }
+                if (argumentVariants.any { it.isEmpty() }) {
+                    independentDefaultFields.add(field)
+                }
+            }
+            if (!isRemoved) {
+                break
+            }
+            rules.keys.removeAll(independentDefaultFields)
+        }
+
+        val newRules = rules.filter { it.value.none { arguments -> arguments.isEmpty() } }.toMutableMap()
+
+        val possibleBaseArguments = defaultArendClassFields.map { newRules[it]?.flatten() ?: emptyList() }.flatten().toSet()
+        val result = if (newRules.isEmpty()) {
             emptySet()
         } else {
-            getMinGroup(defaultDependentFields, rules)
+            getMinGroup(possibleBaseArguments, newRules)
         }
-        return Pair(result, defaultFields)
+        return Pair(result, defaultArendClassFields.toSet())
     }
 
     private fun addField(field: Referable, inserter: AbstractCoClauseInserter, editor: Editor?, psiFactory: ArendPsiFactory, needQualifiedName: Boolean = false) {
         val coClauses = inserter.coClausesList
-
 
         val fieldClass = (field as? LocatedReferable)?.locatedReferableParent
         val name = if (needQualifiedName && fieldClass != null) "${fieldClass.textRepresentation()}.${field.textRepresentation()}" else field.textRepresentation()
@@ -147,12 +168,8 @@ open class ImplementFieldsQuickFix(
     }
 
     private fun getFullClassName(): String {
-        return ""
-        /* TODO[server2]
-        val classReferable = (instanceRef.element as ArendDefInstance).classReference as PsiLocatedReferable
-        val name = (classReferable.containingFile as ArendFile).moduleLocation.toString() + "." + classReferable.fullName
-        return name
-        */
+        val classReferable = instanceRef.element as? PsiLocatedReferable
+        return classReferable?.fullName?.toString() ?: "FullClassNameIsNotAvailable"
     }
 
     private fun showFields(
@@ -184,10 +201,9 @@ open class ImplementFieldsQuickFix(
         var suggestDefaultOption = true
         var matchedList: List<LocatedReferable>? = null
         if (defaultArguments != null && variants[0].size == defaultArguments.size) {
-            val sortedDefaultArguments = defaultArguments.sorted()
+            val sortedDefaultArguments = defaultArguments.naturalSorted()
             for (variant in variants) {
-                val sortedVariant = variant.map { it.textRepresentation() }.sorted()
-                if (sortedVariant == sortedDefaultArguments) {
+                if (variant == sortedDefaultArguments) {
                     matchedList = variant
                 }
             }
@@ -273,21 +289,13 @@ open class ImplementFieldsQuickFix(
         val extraFields = fieldsToImplement.filter { defaultFields.contains(it.first.abstractReferable as? PsiElement?) }
             .associateBy { (referable, _) -> defaultFields.find { referable.abstractReferable == it }!! }
 
-        var variants = mutableListOf<MutableList<LocatedReferable>>()
-        for (group in groups) {
-            val variant = mutableListOf<LocatedReferable>()
-            for (element in group) {
-                extraFields[element]?.first?.let { variant.add(it) }
-            }
-            variants.add(variant)
-        }
-
-        if (variants.size >= 1) {
+        var variants = groups.map { group -> group.mapNotNull { extraFields[it]?.first }.naturalSorted().toMutableList() }.toMutableList()
+        if (variants.isNotEmpty()) {
             val minSize = variants.minBy { it.size }.size
             variants = if (minSize == 0) {
                 mutableListOf()
             } else {
-                variants.filter { it.size == minSize }.toMutableList()
+                variants.filter { it.size == minSize }.naturalSorted().toMutableList()
             }
         }
 

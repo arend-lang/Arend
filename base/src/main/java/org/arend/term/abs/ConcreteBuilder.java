@@ -237,7 +237,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   @Override
   public Concrete.MetaDefinition visitMeta(Abstract.MetaDefinition def) {
     Abstract.Expression term = def.getTerm();
-    return new Concrete.MetaDefinition((MetaReferable) myDefinition, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), buildParameters(def.getParameters(), false), term != null ? term.accept(this, null) : null);
+    return new Concrete.MetaDefinition((MetaReferable) myDefinition, visitLevelParameters(def.getPLevelParameters(), true), visitLevelParameters(def.getHLevelParameters(), false), buildParameters(def.getParameters(), false, true), term != null ? term.accept(this, null) : null);
   }
 
   @Override
@@ -266,7 +266,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
       body = new Concrete.ElimFunctionBody(myDefinition, buildReferences(def.getEliminatedExpressions()), buildClauses(def.getClauses()));
     }
 
-    List<Concrete.Parameter> parameters = buildParameters(def.getParameters(), true);
+    List<Concrete.Parameter> parameters = buildParameters(def.getParameters(), true, false);
     Abstract.Expression resultType = def.getResultType();
     Abstract.Expression resultTypeLevel = checkResultTypeLevel(resultType, def.getResultTypeLevel());
     Concrete.Expression type = resultType == null ? null : resultType.accept(this, null);
@@ -323,7 +323,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
   public void buildClassParameters(Collection<? extends Abstract.FieldParameter> absParameters, Concrete.ClassDefinition classDef, List<Concrete.ClassElement> elements) {
     for (Abstract.FieldParameter absParameter : absParameters) {
-      Concrete.Parameter parameter = buildParameter(absParameter, false, false);
+      Concrete.Parameter parameter = buildParameter(absParameter, false, false, true);
       if (parameter.getType() != null) {
         boolean forced = absParameter.isClassifying();
         boolean explicit = parameter.isExplicit();
@@ -472,13 +472,14 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     return referable == null ? null : new DataLocalReferable(referable, referable.getRefName());
   }
 
-  public Concrete.Parameter buildParameter(Abstract.Parameter parameter, boolean isNamed, boolean isDefinition) {
+  public Concrete.Parameter buildParameter(Abstract.Parameter parameter, boolean isNamed, boolean isDefinition, boolean allowNullRefs) {
     List<? extends Abstract.AbstractReferable> referableList = parameter.getReferableList();
     Abstract.Expression type = parameter.getType();
     Concrete.Expression cType;
     if (type == null) {
       if (referableList.size() == 1) {
-        return new Concrete.NameParameter(parameter.getData(), parameter.isExplicit(), makeLocalRef(referableList.getFirst()));
+        Abstract.AbstractReferable referable = referableList.getFirst();
+        return new Concrete.NameParameter(parameter.getData(), parameter.isExplicit(), referable == null && !allowNullRefs ? new DataLocalReferable(parameter, null) : makeLocalRef(referable));
       } else {
         myErrorLevel = GeneralError.Level.ERROR;
         cType = new Concrete.ErrorHoleExpression(parameter.getData(), null);
@@ -490,8 +491,8 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     boolean isStrict = parameter.isStrict();
     boolean isProperty = parameter.isProperty();
     if (!isNamed && (referableList.isEmpty() || referableList.size() == 1 && referableList.getFirst() == null)) {
-      if (isDefinition && isStrict) {
-        return new Concrete.DefinitionTelescopeParameter(parameter.getData(), parameter.isExplicit(), true, Collections.singletonList(null), cType, isProperty);
+      if (isDefinition && isStrict || !allowNullRefs) {
+        return new Concrete.DefinitionTelescopeParameter(parameter.getData(), parameter.isExplicit(), true, Collections.singletonList(allowNullRefs ? null : new DataLocalReferable(parameter, null)), cType, isProperty);
       } else {
         if (isStrict) {
           myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "\\strict is not allowed here", parameter.getData()));
@@ -501,7 +502,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     } else {
       List<Referable> dataReferableList = new ArrayList<>(referableList.size());
       for (Abstract.AbstractReferable referable : referableList) {
-        dataReferableList.add(referable instanceof Abstract.ClassField ? convertField((Abstract.ClassField) referable, myDefinition) : makeLocalRef(referable));
+        dataReferableList.add(referable instanceof Abstract.ClassField ? convertField((Abstract.ClassField) referable, myDefinition) : referable == null && !allowNullRefs ? new DataLocalReferable(parameter, null) : makeLocalRef(referable));
       }
       if (isDefinition && isStrict) {
         return new Concrete.DefinitionTelescopeParameter(parameter.getData(), parameter.isExplicit(), true, dataReferableList, cType, isProperty);
@@ -514,10 +515,10 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     }
   }
 
-  public List<Concrete.Parameter> buildParameters(Collection<? extends Abstract.Parameter> absParameters, boolean isDefinition) {
+  public List<Concrete.Parameter> buildParameters(Collection<? extends Abstract.Parameter> absParameters, boolean isDefinition, boolean allowNullRefs) {
     List<Concrete.Parameter> parameters = new ArrayList<>(absParameters.size());
     for (Abstract.Parameter absParameter : absParameters) {
-      parameters.add(buildParameter(absParameter, true, isDefinition));
+      parameters.add(buildParameter(absParameter, true, isDefinition, allowNullRefs));
     }
     return parameters;
   }
@@ -525,7 +526,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
   public List<Concrete.TypeParameter> buildTypeParameters(Collection<? extends Abstract.Parameter> absParameters, boolean isDefinition) {
     List<Concrete.TypeParameter> parameters = new ArrayList<>(absParameters.size());
     for (Abstract.Parameter absParameter : absParameters) {
-      Concrete.Parameter parameter = buildParameter(absParameter, false, isDefinition);
+      Concrete.Parameter parameter = buildParameter(absParameter, false, isDefinition, true);
       if (parameter instanceof Concrete.TypeParameter) {
         parameters.add((Concrete.TypeParameter) parameter);
       } else {
@@ -663,7 +664,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     List<Concrete.Pattern> patterns = Collections.emptyList();
     for (Abstract.LamParameter parameter : parameters) {
       if (parameter instanceof Abstract.Parameter) {
-        cParams.add(buildParameter((Abstract.Parameter) parameter, true, false));
+        cParams.add(buildParameter((Abstract.Parameter) parameter, true, false, true));
         if (!patterns.isEmpty()) patterns.add(null);
       } else if (parameter instanceof Abstract.Pattern) {
         if (patterns.isEmpty()) {
@@ -878,7 +879,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
         List<? extends Abstract.Parameter> parameters = clause.getParameters();
         Abstract.Expression resultType = clause.getResultType();
         if (referable != null) {
-          clauses.add(new Concrete.LetClause(makeLocalRef(referable), buildParameters(parameters, false), resultType == null ? null : resultType.accept(this, null), term.accept(this, null)));
+          clauses.add(new Concrete.LetClause(makeLocalRef(referable), buildParameters(parameters, false, true), resultType == null ? null : resultType.accept(this, null), term.accept(this, null)));
         } else {
           Abstract.Pattern pattern = clause.getPattern();
           if (pattern != null) {

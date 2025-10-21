@@ -36,7 +36,7 @@
   | contains_negative _ => ()
   | contains_*c _ => ()
 
-\instance SubLModuleSemilattice (R : Ring) (M : LModule R) : Bounded.MeetSemilattice (SubLModule { | R => R | S => M })
+\instance SubLModuleSemilattice (R : Ring) (M : LModule R) : TopMeetSemilattice (SubLModule { | R => R | S => M })
   | <= U V => \Pi {a : M} -> U a -> V a
   | <=-refl c => c
   | <=-transitive f g c => g (f c)

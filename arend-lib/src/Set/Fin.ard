@@ -55,14 +55,24 @@
         | inP Xcard=A, inP Ycard=A => FinCardBij (Xcard=A `transEquiv` symQEquiv Ycard=A)
       })
 
-    \lemma finiteAC {n : Nat} {A : Fin n -> \Type} (f : \Pi (i : Fin n) -> TruncP (A i)) : TruncP (\Pi (i : Fin n) -> A i) \elim n
-      | 0 => inP (\case __)
-      | suc n => \case f 0, finiteAC (\lam i => f (suc i)) \with {
-        | inP a0, inP aS => inP \case \elim __ \with {
-          | 0 => a0
-          | suc i => aS i
-        }
+  \lemma ||-finiteAC {n : Nat} {A : \Type} {B : Fin n -> \Type} (f : \Pi (i : Fin n) -> A || B i) : A || (\Pi (i : Fin n) -> B i) \elim n
+    | 0 => byRight \case __
+    | suc n => \case f 0, ||-finiteAC (\lam i => f (suc i)) \with {
+      | byLeft a, _ => byLeft a
+      | _, byLeft a => byLeft a
+      | byRight b0, byRight bs => byRight \case \elim __ \with {
+        | 0 => b0
+        | suc j => bs j
       }
+    }
+
+  \lemma finiteAC {n : Nat} {A : Fin n -> \Type} (f : \Pi (i : Fin n) -> TruncP (A i)) : TruncP (\Pi (i : Fin n) -> A i)
+    => \case ||-finiteAC {_} {Empty} (\lam i => \case f i \with {
+      | inP a => byRight a
+    }) \with {
+      | byLeft ()
+      | byRight r => inP r
+    }
 
     \func searchFin {n : Nat} (A : Fin n -> \Prop) (d : \Pi (j : Fin n) -> Dec (A j))
       : Or (\Sigma (j0 : Fin n) (A j0) (\Pi (j : Fin n) -> A j -> (j0 : Nat) <= j)) (\Pi (j : Fin n) -> Not (A j)) \elim n

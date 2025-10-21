@@ -56,4 +56,43 @@ class ArendLineMarkerProviderTest : ArendTestBase() {
     assertNotNull(markers.find { it.icon == ArendIcons.MUTUAL_RECURSIVE && it.element == f })
     assertNotNull(markers.find { it.icon == ArendIcons.MUTUAL_RECURSIVE && it.element == g })
   }
+
+  fun testCaseFunctions() {
+    val arendFile = myFixture.configureByText("Main.ard", """
+      \func foo (n : Nat) : Nat => \case \elim n \with {
+        | zero => 101
+        | suc n => bar n
+      }
+      
+      \func bar (n : Nat) : Nat
+        | zero => 101
+        | suc n => foo n
+      """
+    ) as ArendFile
+
+    val elements = mutableListOf<PsiElement>()
+    arendFile.accept(object : PsiRecursiveElementWalkingVisitor() {
+      override fun visitElement(element: PsiElement) {
+        elements.add(element)
+        super.visitElement(element)
+      }
+    })
+    val bar = (elements.find { it is ArendDefFunction && it.name == "bar" } as? ArendDefFunction)?.defIdentifier?.id
+    val foo = (elements.find { it is ArendDefFunction && it.name == "foo" } as? ArendDefFunction)?.defIdentifier?.id
+
+    val provider = ArendLineMarkerProvider()
+    val markers = mutableListOf<LineMarkerInfo<*>>()
+    arendFile.project.service<ArendServerService>().server.getCheckerFor(listOf(arendFile.moduleLocation!!))
+      .typecheck(
+        null,
+        DummyErrorReporter.INSTANCE,
+        UnstoppableCancellationIndicator.INSTANCE,
+        ProgressReporter.empty()
+      )
+    provider.collectSlowLineMarkers(elements, markers)
+
+    assertEquals(2, markers.size)
+    assertNotNull(markers.find { it.icon == ArendIcons.MUTUAL_RECURSIVE && it.element == bar })
+    assertNotNull(markers.find { it.icon == ArendIcons.MUTUAL_RECURSIVE && it.element == foo })
+  }
 }

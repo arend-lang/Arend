@@ -6,7 +6,6 @@
 \import Set.Subset
 \import Topology.CoverSpace
 \import Topology.TopSpace
-\open Bounded(top)
 
 \func TopCover {X : TopSpace} (Xr : X.IsRegular) : CoverSpace X \cowith
   | isCauchy C => \Pi (x : X) -> ∃ (U : C) (V : X.isOpen) (V x) (V ⊆ U)

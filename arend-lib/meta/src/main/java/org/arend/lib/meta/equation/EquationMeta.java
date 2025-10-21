@@ -59,7 +59,7 @@ public class EquationMeta extends BaseEquationMeta {
       } else if (arg instanceof ConcreteReferenceExpression) {
         CoreDefinition def = typechecker.getCoreDefinition(((ConcreteReferenceExpression) arg).getReferent());
         if (def instanceof CoreClassDefinition classDef) {
-          if ((classDef.isSubClassOf(Monoid) || classDef.isSubClassOf(AddMonoid) || classDef.isSubClassOf(MSemilattice))) {
+          if ((classDef.isSubClassOf(Monoid) || classDef.isSubClassOf(AddMonoid) || classDef.isSubClassOf(TopMeetSemilattice))) {
             argIndex = 1;
             solver = new EqualitySolver(this, typechecker, factory, refExpr, classDef);
           }

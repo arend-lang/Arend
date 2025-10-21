@@ -71,7 +71,7 @@
   }
 
 \lemma dirDeriv_zro {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : Set X} (So : isOpen S) {f : Set.Total S -> Y} {x : Set.Total S} : IsDirDerivAt So f x 0 0
-  => (IsDirDerivAt.limit-char So).2 \lam Vo V0 => inP (Bounded.top, open-top, (), \lam _ _ _ => unfold dquot $ rewrite (zro-left,X.*c_zro-right,zro-right,negative-right,Y.*c_zro-right,Y.negative_zro) V0)
+  => (IsDirDerivAt.limit-char So).2 \lam Vo V0 => inP (top, open-top, (), \lam _ _ _ => unfold dquot $ rewrite (zro-left,X.*c_zro-right,zro-right,negative-right,Y.*c_zro-right,Y.negative_zro) V0)
 
 \lemma dirDeriv_+ {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) {f g : Set.Total S -> Y} {x : Set.Total S} {a : X}
                   (Df Dg : Y) (fd : IsDirDerivAt So f x a Df) (gd : IsDirDerivAt So g x a Dg) : IsDirDerivAt So (\lam x => f x + g x) x a (Df + Dg)
