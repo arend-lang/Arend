@@ -11,18 +11,27 @@ public class Poly<E> {
   public final List<Monomial<E>> monomials = new ArrayList<>();
 
   public Poly(List<Monomial<E>> monomials) {
-    var monCpy = new ArrayList<>(monomials);
-    var numVars = monomials.get(0).numVars();
-    var ring = monomials.get(0).ring;
-    monCpy.sort(new DegLexMonomialOrder<>());
+    if (monomials == null || monomials.isEmpty()) throw new IllegalArgumentException();
 
-    if (monCpy.get(0).degree() != 0) {
-      monCpy.add(0, new Monomial<>(ring.zero(), numVars, ring));
+    int numVars = monomials.stream().map(Monomial::numVars).max(Integer::compareTo).get();
+    var monUniformCpy = new ArrayList<Monomial<E>>();
+    var ring = monomials.getFirst().ring;
+
+    for (var mon : monomials) {
+      var paddedDegVec = new ArrayList<>(mon.degreeVector);
+      paddedDegVec.addAll(java.util.Collections.nCopies(numVars - mon.numVars(), 0));
+      monUniformCpy.add(new Monomial<>(mon.coefficient, paddedDegVec, ring));
+    }
+
+    monUniformCpy.sort(new DegLexMonomialOrder<>());
+
+    if (monUniformCpy.getFirst().degree() != 0) {
+      monUniformCpy.addFirst(new Monomial<>(ring.zero(), numVars, ring));
     }
 
     Monomial<E> lastMon = null;
     Monomial<E> lastAdded = null;
-    for (Monomial<E> mon : monCpy) {
+    for (Monomial<E> mon : monUniformCpy) {
       if (!mon.degVecEquals(lastMon)) {
         lastAdded = new Monomial<>(mon);
         this.monomials.add(lastAdded);

@@ -11,6 +11,8 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 public class ComMonoidWP {
   private final IdealMembership idealMembershipAlg;
@@ -21,6 +23,15 @@ public class ComMonoidWP {
 
   private static Monomial<BigInteger> wordToMonomial(List<Integer> word) {
     return new Monomial<>(BigInteger.ONE, word, Ring.Z);
+  }
+
+  private static Monomial<BigInteger> wordToMonomial(List<Integer> word, int numVars) {
+    if (word.size() == numVars) {
+      return new Monomial<>(BigInteger.ONE, word, Ring.Z);
+    }
+    var paddedWord = new ArrayList<>(word);
+    paddedWord.addAll(Collections.nCopies(numVars - word.size(), 0));
+    return new Monomial<>(BigInteger.ONE, paddedWord, Ring.Z);
   }
 
   public static List<Integer> findIndexesToRemove(List<Integer> word, List<Integer> powersToErase) {
@@ -104,12 +115,28 @@ public class ComMonoidWP {
   }
 
   public @Nullable List<Pair<Integer, Boolean>> solve(List<Integer> word1, List<Integer> word2, List<Pair<List<Integer>, List<Integer>>> axioms) {
-    var t1 = wordToMonomial(word1);
-    var t2 = wordToMonomial(word2);
-    var wpPoly = twoMonomialsToBinomial(t1, t2);
     List<Poly<BigInteger>> axiomPolys = new ArrayList<>();
+    int numVars = Stream.concat(axioms.stream()
+          .flatMap(p -> Stream.of(p.proj1.size(), p.proj2.size())),
+        Stream.of(word1.size(), word2.size()))
+      .max(Integer::compareTo)
+      .orElse(0);
+    var t1 = wordToMonomial(word1, numVars);
+    var t2 = wordToMonomial(word2, numVars);
+    var wpPoly = twoMonomialsToBinomial(t1, t2);
+
+    List<Pair<List<Integer>, List<Integer>>> paddedAxioms = new ArrayList<>();
 
     for (Pair<List<Integer>, List<Integer>> axiom : axioms) {
+      var paddedLeft = new ArrayList<>(axiom.proj1);
+      var paddedRight = new ArrayList<>(axiom.proj2);
+
+      paddedLeft.addAll(Collections.nCopies(numVars - paddedLeft.size(), 0));
+      paddedRight.addAll(Collections.nCopies(numVars - paddedRight.size(), 0));
+      paddedAxioms.add(new Pair<>(paddedLeft, paddedRight));
+    }
+
+    for (Pair<List<Integer>, List<Integer>> axiom : paddedAxioms) {
       axiomPolys.add(twoMonomialsToBinomial(wordToMonomial(axiom.proj1), wordToMonomial(axiom.proj2)));
     }
 
@@ -123,7 +150,7 @@ public class ComMonoidWP {
     var curRedex = t1;
 
     while (true) {
-      var reductionStep = applyReduction(curRedex, decompCoeffs, axioms);
+      var reductionStep = applyReduction(curRedex, decompCoeffs, paddedAxioms);
       if (reductionStep == null) return null;
 
       reductionSteps.add(new Pair<>(reductionStep.axiomInd, reductionStep.isDirectApp));

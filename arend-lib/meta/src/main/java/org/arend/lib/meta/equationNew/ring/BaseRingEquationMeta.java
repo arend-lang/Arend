@@ -83,11 +83,11 @@ public abstract class BaseRingEquationMeta extends BaseAlgebraEquationMeta {
     }
   }
 
-  protected ConcreteExpression getConcreteAxiom(List<Monomial> factor, Hint<List<Monomial>> hint, ConcreteFactory factory) {
+  protected static ConcreteExpression getConcreteAxiom(ConcreteExpression factor, Hint<List<Monomial>> hint, ArendRef varTerm, ConcreteFactory factory) {
     return factory.tuple(
-        nfToConcrete(factor, factory),
-        hint.left.generateReflectedTerm(factory, getVarTerm()),
-        hint.right.generateReflectedTerm(factory, getVarTerm()),
+        factor,
+        hint.left.generateReflectedTerm(factory, varTerm),
+        hint.right.generateReflectedTerm(factory, varTerm),
         factory.core(hint.typed));
   }
 
@@ -95,6 +95,6 @@ public abstract class BaseRingEquationMeta extends BaseAlgebraEquationMeta {
     int c = ((BaseCommutativeGroupEquationMeta.MyHint<List<Monomial>>) hint).getCoefficient();
     addNF(newNF, -c, hint.leftNF);
     addNF(newNF, c, hint.rightNF);
-    return getConcreteAxiom(Collections.singletonList(new Monomial(BigInteger.valueOf(c), Collections.emptyList())), hint, factory);
+    return getConcreteAxiom(nfToConcrete(Collections.singletonList(new Monomial(BigInteger.valueOf(c), Collections.emptyList())), factory), hint, getVarTerm(), factory);
   }
 }

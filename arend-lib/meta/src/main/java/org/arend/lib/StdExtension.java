@@ -108,7 +108,7 @@ public class StdExtension implements ArendExtension {
 
   @Override
   public void declareDefinitions(@NotNull DefinitionContributor contributor) {
-  /*  ModulePath meta = new ModulePath("Meta");
+    ModulePath meta = new ModulePath("Meta");
     ModulePath logicMeta = new ModulePath("Logic", "Meta");
 
     contributor.declare(meta, logicMeta);
@@ -477,6 +477,10 @@ public class StdExtension implements ArendExtension {
         Several hypotheses are applied sequentially.
         For example, if `p : a = b`, `q : b * c = 0`, and the goal is `a * c = 0`, then `cRing {p,q}` proves the goal.
         """), makeDef(equation.getRef(), "cRing", new DependencyMetaTypechecker(CRingEquationMeta.class, () -> new DeferredMetaDefinition(new CRingEquationMeta(), true))));
+    ConcreteMetaDefinition cRingAlgoSolver = makeDef(equation.getRef(), "cRingAuto", new DependencyMetaTypechecker(CRingAlgoSolverMeta.class, () -> new DeferredMetaDefinition(new CRingAlgoSolverMeta(), true)));
+    contributor.declare(multiline("""
+        TODO
+        """), cRingAlgoSolver);
     contributor.declare(multiline("""
         The Boolean ring solver solves goals of the form `e1 = {B} e2` for some Boolean ring `B`.
         If `e1` and `e2` represent the same word in the language of Boolean rings, then the solver proves the equality immediately without any additional arguments.
@@ -567,7 +571,7 @@ public class StdExtension implements ArendExtension {
     contributor.declare(categoryMeta, Names.getPathsModule());
     contributor.declare(categoryMeta, pathsMeta);
     contributor.declare(categoryMeta, Names.getSetCategoryModule());
-    contributor.declare(text("Proves univalence for categories. The type of objects must extend `BaseSet` and the Hom-set must extend `SetHom` with properties only."), makeDef(categoryMeta, "sip", new DependencyMetaTypechecker(SIPMeta.class, SIPMeta::new)));/**/
+    contributor.declare(text("Proves univalence for categories. The type of objects must extend `BaseSet` and the Hom-set must extend `SetHom` with properties only."), makeDef(categoryMeta, "sip", new DependencyMetaTypechecker(SIPMeta.class, SIPMeta::new)));
   }
 
   @Override

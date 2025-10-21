@@ -68,7 +68,7 @@ public class CRingEquationMeta extends BaseRingEquationMeta {
           typechecker.getErrorReporter().report(new EquationFindError<>(getNFPrettyPrinter(), newNF, Collections.emptyList(), hint.leftNF, values.getValues(), hint.originalExpression));
           return null;
         }
-        axioms.add(getConcreteAxiom(divRem.proj1, hint, factory));
+        axioms.add(getConcreteAxiom(nfToConcrete(divRem.proj1, factory), hint, getVarTerm(), factory));
         newNF = new ArrayList<>();
         Monomial.multiplyComm(hint.rightNF, divRem.proj1, newNF);
         newNF.addAll(divRem.proj2);

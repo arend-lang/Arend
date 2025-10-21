@@ -70,19 +70,19 @@
 
 \lemma testTwoAx {M : CMonoid} (x y : M) (p : x * y = ide) (q : y * y = x)
   : x * x = y
-  => equation
+  => equation.cMonoidAuto {p, q}
 
 \lemma testTwoAxRev {M : CMonoid} (x y : M) (p : y * x = 1) (q : x = y * y)
   : x * x = y
-  => equation
+  => equation.cMonoidAuto {p, q}
 
 \lemma testThreeAx {M : CMonoid} (x y z : M) (r : x * y = z) (p : x * z * x * x * z = y * z * y * y)
                    (q : x * z * x = y)
   : z * z = y * y * y * z
-  => equation
+  => equation.cMonoidAuto {p, q, r}
 
 \lemma idempTrivialTest {M : CMonoid} {a b : M} (a-idempotent : a * a = a) (a-inv : a * b = 1) : a = 1
-  => equation
+  => equation.cMonoidAuto {a-idempotent, a-inv}
 
 \open Bounded(MeetSemilattice,top)
 

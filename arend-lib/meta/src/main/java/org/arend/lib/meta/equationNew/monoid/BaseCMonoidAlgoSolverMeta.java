@@ -5,11 +5,13 @@ import org.arend.ext.concrete.expr.ConcreteExpression;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.ExpressionTypechecker;
+import org.arend.ext.typechecking.TypedExpression;
 import org.arend.ext.util.Pair;
 import org.arend.lib.error.equation.EquationFindError;
 import org.arend.lib.meta.equationNew.BaseEquationMeta;
 import org.arend.lib.meta.equationNew.term.TermOperation;
 import org.arend.lib.util.Lazy;
+import org.arend.lib.util.Utils;
 import org.arend.lib.util.Values;
 import org.arend.lib.util.algorithms.ComMonoidWP;
 import org.arend.lib.util.algorithms.groebner.Buchberger;
@@ -28,8 +30,13 @@ public abstract class BaseCMonoidAlgoSolverMeta extends BaseCommutativeMonoidEqu
     return axiom == null ? null : new MyHint<>(true, false, 1, axiom.typed, axiom.left, axiom.right, normalize(axiom.left), normalize(axiom.right), axiom.originalExpression);
   }
 
-  private MyHint<List<Integer>> invertAxiom(MyHint<List<Integer>> axiom, ConcreteFactory factory) {
-    return new MyHint<>(true, false, 1, axiom.typed, axiom.left, axiom.right, axiom.leftNF, axiom.rightNF, factory.app(factory.ref(inv), true, axiom.originalExpression));
+  private MyHint<List<Integer>> invertAxiom(MyHint<List<Integer>> axiom, ConcreteFactory factory, ExpressionTypechecker typechecker) {
+    var invAx = factory.app(factory.ref(inv), true, axiom.originalExpression);
+    TypedExpression typed = Utils.typecheckWithAdditionalArguments(invAx, typechecker, 0, false);
+    if (typed == null) {
+      return null;
+    }
+    return new MyHint<>(true, false, 1, typed, axiom.right, axiom.left, axiom.rightNF, axiom.leftNF, invAx);
   }
 
   @Override
@@ -47,11 +54,11 @@ public abstract class BaseCMonoidAlgoSolverMeta extends BaseCommutativeMonoidEqu
       var axiom = (MyHint<List<Integer>>)hints.get(axiomInd.proj1);
       var isDirectApp = axiomInd.proj2;
       if (!isDirectApp) {
-        axiom = invertAxiom(axiom, factory);
+        axiom = invertAxiom(axiom, factory, typechecker);
+        if (axiom == null) return null;
       }
       var result = applyHint(axiom, curWord, position, solverRef, envRef, factory);
       if (result == null) {
-        typechecker.getErrorReporter().report(new EquationFindError<>(getNFPrettyPrinter(), curWord, right, axiom.leftNF, values.getValues(), axiom.originalExpression));
         return null;
       }
       proofLeft = proofLeft == null ? result.proof() : factory.app(factory.ref(concat), true, proofLeft, result.proof());

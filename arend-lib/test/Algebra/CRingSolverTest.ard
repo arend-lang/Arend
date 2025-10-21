@@ -1,3 +1,4 @@
+\import Algebra.Domain.Euclidean
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -63,3 +64,22 @@
 -- TODO
 -- \lemma ratTest {x : Rat} : ratio 1 2 * x + ratio 1 2 * x = x
 --   => equation.cRing
+
+\lemma commRingAutoTest {R : CRing} (a b c : R) : a * b - b * (a + c) + c * b * a = b * c * (a - 1)
+  => equation.cRingAuto
+
+\lemma commRingAxTest1 {R : CRing} (q : 0 = {R} 1) : 2 = {R} 0
+  => equation.cRingAuto {q}
+
+\lemma commRingAxTest2 {R : CRing} (a b : R) (p : a = b) : a * a + b * b = a * b + a * b
+  => equation.cRingAuto {p}
+
+\lemma commRingAxTest3 {R : CRing} (a b : R) (p : a = b) (q : a + b = ide) : a * a + b * b = a
+  => equation.cRingAuto {p, q}
+
+\lemma commRingTelescopicTest {R : CRing} (x0 x1 x2 x3 y : R) (p : x0 * y = 1)
+                              (q1 : x1 = x0 * x0) (q2 : x2 = x1 * x1) (q3 : x3 = x2 * x2) (r : x3 = 0) : zro {R} = 1
+  => equation.cRingAuto {p, q1, q2, q3, r}
+
+\lemma intTestAuto {n m : Nat} : pos (n + m) = pos (m + n)
+  => equation.cRingAuto
