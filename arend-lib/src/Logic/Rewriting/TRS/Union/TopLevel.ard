@@ -232,10 +232,21 @@
            (rd : monochrome-reduction color t u)
            (FunctionalWitness {envs color} {rules color} rd) \elim t, B, A~>B
   | func f arguments, func (color',f') arguments', rewrite-with-parameter-f-colored inlf=inlf' p1 i tlcr eq => \case \elim color', decideEq color color', \elim f', \elim arguments', \elim inlf=inlf', \elim tlcr, \elim eq \with {
-    | _, yes idp, f', arguments', inlf=inlf', tlcr, eq =>
-      \let | f=f' => sigma-set-equalizer inlf=inlf'
-           | eq-p : inlf=inlf' = pmap (later (color,__)) f=f' => prop-pi
-      \in inductive _ _ f=f' arguments arguments' subst root-colors i (rewriteI eq-p tlcr) (rewriteI eq-p eq)
+    | _, yes idp, f', arguments', inlf=inlf', tlcr, eq => \case \elim f', \elim arguments', \elim inlf=inlf', \elim tlcr, \elim eq, sigma-set-equalizer inlf=inlf' \with {
+        | f', arguments', inlf=inlf', tlcr, eq, idp =>
+          \let | eq-p : inlf=inlf' = idp => prop-pi
+               | inductive-step => decompose-along-reduction color (arguments i) (arguments' i) subst root-colors $ rewrite trivial-sublist-contractible $ rewrite eq-p in tlcr
+          \in (func f (pointed-function arguments i inductive-step.1), Term.fext (\lam index => pointed-induction
+                  (\lam j fx => MetaSubstitution.apply (inject-term envs fx) (SubList.extend-right-single SubList.sublist-nil-free) subst = arguments' j)
+                  arguments
+                  i
+                  inductive-step.1
+                  (rewrite trivial-sublist-contractible inductive-step.2)
+                  (\lam j n => rewrite eq-p in eq j n)
+                  index),
+               rewrite-with-parameter-f idp i (rewrite pointed-function.at-index inductive-step.3) (\lam j _x => inv (pointed-function.not-at-index arguments _ _ j _x)),
+               param-rewriting (unifying-lemma _ _ _ _ _ inductive-step.4))
+      }
     | color', no n, f', arguments', inlf=inlf', tlcr, eq => absurd (n (pmap __.1 inlf=inlf'))
   }
   | func f arguments, B, rewrite-with-rule-colored hcr idx big-subst l[bs]=injt r[bs]=B =>
@@ -265,48 +276,10 @@
     \in contradiction
   | var index p, B, A~>B => \let rc => TopLevelColoredReduction.extract-root-coloring A~>B \in \case \elim rc
   \where {
-    \func inductive {tc : TheoremContext} {context : List Sort'} {s : Sort'} {inner-mc mc : MetaContext Sort'} {color : Color}
-                    (f f' : symbol {envs color} s)
-                    (eq : f = f')
-                    (arguments :
-                    \Pi (index : Index (domain {envs color} f)) ->
-                        Term (envs color) (context ++ f FSignature.!!domain {envs color} index) (f FSignature.!!sort {envs color} index) inner-mc)
-                    (arguments' :
-                    \Pi (index : Index (domain (color,f'))) ->
-                        Term env (context ++ (color,f') env.!!domain index) ((color,f') env.!!sort index) mc)
-                    (subst : MetaSubstitution env nil inner-mc mc)
-                    (root-colors : \Pi {s : Sort'} (m : inner-mc.metaname s) -> HasExcludedColoredRoot color (subst m))
-                    (i : Index (domain (color,f)))
-                    (tlcr : TopLevelColoredReduction color (MetaSubstitution.apply
-                        (inject-term envs (arguments i)) (SubList.extend-right-single SubList.sublist-nil-free)
-                        subst) (arguments-over-f (pmap (later (color,__)) eq) arguments' i))
-                    (eq' :
-                    \Pi (j : Index (domain (color,f))) -> (j = i -> Empty) -> MetaSubstitution.apply
-                        (inject-term envs (arguments j)) (SubList.extend-right-single SubList.sublist-nil-free)
-                        subst = arguments-over-f (pmap (later (color,__)) eq) arguments' j)
-      :  \Sigma (u : Term (envs color) context s inner-mc)
-                (MetaSubstitution.apply (inject-term envs u) SubList.sublist-nil-free subst = func (color,f') arguments')
-                (rd : monochrome-reduction color (func f arguments) u)
-                (FunctionalWitness {envs color} {rules color} rd)\elim eq
-      | idp => \let inductive-step => decompose-along-reduction color (arguments i) (arguments' i) subst root-colors (rewrite trivial-sublist-contractible tlcr) \in
-        (func f (pointed-function arguments i inductive-step.1),
-         Term.fext
-             (\lam index => pointed-induction
-                 (\lam j fx => MetaSubstitution.apply (inject-term envs fx) (SubList.extend-right-single SubList.sublist-nil-free) subst = arguments' j)
-                 arguments
-                 i
-                 inductive-step.1
-                 (rewrite trivial-sublist-contractible inductive-step.2)
-                 (\lam j n => eq' j n)
-                 index),
-         rewrite-with-parameter-f idp i (rewrite pointed-function.at-index inductive-step.3) (\lam j _x => inv (pointed-function.not-at-index arguments _ _ j _x)),
-         param-rewriting (unifying-lemma _ _ _ _ _ inductive-step.4))
-      \where {
-        \func unifying-lemma {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} {color : Color}
-                             (t u v : Term (envs color) context s mc) (eq : v = u) (rd : RewriteRelation {envs color} (rules color) t u)
-                             (fw : FunctionalWitness {envs color} {rules color} rd):
-          FunctionalWitness {envs color} {rules color} (transportInv (RewriteRelation {envs color} (rules color) t) eq rd) \elim eq | idp => fw
-      }
+    \func unifying-lemma {tc : TheoremContext} {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} {color : Color}
+                         (t u v : Term (envs color) context s mc) (eq : v = u) (rd : RewriteRelation {envs color} (rules color) t u)
+                         (fw : FunctionalWitness {envs color} {rules color} rd):
+      FunctionalWitness {envs color} {rules color} (transportInv (RewriteRelation {envs color} (rules color) t) eq rd) \elim eq | idp => fw
 
     \lemma eliminate-colors {tc : TheoremContext} (color : Color) {context context' : List Sort'} {s : Sort'} {msig : MetaContext Sort'}
                             {T : Term env context s msig} {subst : Substitution context context' msig}
@@ -483,9 +456,44 @@
          | colored-root-for-m : HasColoredRoot color (Substitution.apply (middle-substitution m) (extend-substitution-left SubList.sublist-nil-free
              (\lam i => MetaSubstitution.apply (inject-term envs (arguments1 i)) SubList.sublist-nil-free middle-substitution))) => rewriteI eq colored-root-for-f
     \in contradiction {decompose-along-reduction.eliminate-colors color opposite-color-for-m colored-root-for-m}
-  | l-func f arguments, func f1 arguments1 =>
-    \let f-eq : f = f1 => sigma-set-equalizer (pmap (unfunc (color,f)) eq)
-    \in inductive-step color f f1 f-eq arguments arguments1 big-substitution middle-substitution root-colors eq
+  | l-func f arguments, func f1 arguments1 => \case \elim f1, \elim arguments1, \elim big-substitution, \elim eq, sigma-set-equalizer (pmap (unfunc (color,f)) eq) \with {
+    | f1, arguments1, big-substitution, eq, idp =>
+      \have | sigmas-or => pmap unwrap-func eq
+            | z => pmap (unjust {\Sigma (f : symbol s) (\Pi (index : Index (domain f)) ->
+              Term env ((core-context ++ pattern-context) ++ f env.!!domain index) (f env.!!sort index)
+                mc)} ((color,f), \lam i => MetaSubstitution.apply
+              (inject-term envs (arguments1 i)) (SubList.extend-right-single SubList.sublist-nil-free)
+              middle-substitution)) sigmas-or
+            | res => sigma-set-equalizer z
+            | args-eq i => pmap (__ i) res
+            | inductive i => decompose-metasubstitution color
+              (arguments i)
+              (transport (Term (envs color) __ _ inner-mc) (++-assoc {_} {core-context} {pattern-context} {f1 FSignature.!!domain {envs color} i}) (arguments1 i))
+              (\lam m => big-substitution (i, m))
+              middle-substitution
+              (rewrite
+                (apply-modularity,
+                 inv (unwrap-injection.swap _ _ (Linear.convert-to-term {envs color} (arguments i))),
+                 Transports.lb-ls-to-ls.inv',
+                 Transports.rs-rs-to-rs.inv',
+                 Transports.nil-to-right-nil)
+                (ad-hoc-lemma (Linear.convert-to-term {envs color} (arguments i)) ++-assoc (args-eq i))
+              )
+              root-colors
+      \in (\lam {s1} mvar => (inductive mvar.1).1 mvar.2,
+           \lam {s1} m => (inductive m.1).2 m.2,
+           Term.fext {envs color} (\lam index =>
+             \have ind => (inductive index).3
+             \in rewrite (inv (apply-modularity {envs color}
+               (\lam i => LinearMetaContext {envs color} (arguments i))
+               (\lam i => (inductive i).1)
+               (SubList.extend-right-single (SubList.extend-right-single SubList.identity))
+               (SubList.extend-right-both (SubList.extend-left-single SubList.identity))
+               (Linear.convert-to-term {envs color} (arguments index))))
+               (rewrite Transports.lb-ls-to-ls
+                 (rewrite Transports.rs-rs-to-rs
+                   (expand-substitution-3 {envs color} _ _ _ _ _ _ ind)))))
+  }
   | l-full-metavar, t =>
     (\lam {s1} mvar => transport (\lam sort => Term (envs color) (core-context ++ pattern-context) sort inner-mc) (inv mvar) t,
      \lam {s1} m => \case \elim s, \elim t, \elim big-substitution, \elim eq, \elim m \with {
@@ -500,70 +508,6 @@
       | var index p => f
       | metavar m arguments => f
       | func f1 arguments => f1
-
-    \func inductive-step
-      {tc : TheoremContext} {pattern-context core-context : List Sort'} {s : Sort'} {inner-mc mc : MetaContext Sort'}
-      (color : Color)
-      (f : symbol {envs color} s)
-      (f1 : symbol {envs color} s)
-      (eq : f = f1)
-      (arguments : DArray {FSignature.arity {envs color} f}
-      (\lam index => LinearPattern (envs color) (pattern-context ++ f FSignature.!!domain {envs color} index) (f FSignature.!!sort {envs color} index)))
-      (arguments1 :
-      \Pi (index : Index (domain {envs color} f1)) ->
-          Term (envs color) ((core-context ++ pattern-context) ++ f1 FSignature.!!domain {envs color} index) (f1 FSignature.!!sort {envs color} index)
-              inner-mc)
-      (big-substitution : MetaSubstitution env core-context (LinearMetaContext {envs color} (l-func f arguments)) mc)
-      (middle-substitution : MetaSubstitution env nil inner-mc mc)
-      (root-colors : \Pi {s : Sort'} (m : inner-mc.metaname s) -> HasExcludedColoredRoot color (middle-substitution m))
-      (eq' : MetaSubstitution.apply
-          (weakening (inject-term envs (Linear.convert-to-term {envs color} (l-func {envs color} f arguments))) (SubList.extend-left-single SubList.identity {core-context}))
-          (SubList.extend-right-single SubList.identity) big-substitution =
-      MetaSubstitution.apply
-          (inject-term envs (func {envs color} f1 arguments1))
-          SubList.sublist-nil-free
-          middle-substitution):
-      \Sigma (inner-substitution : MetaSubstitution (envs color) core-context (LinearMetaContext {envs color} (l-func f arguments)) inner-mc)
-             (\Pi {s : Sort'} (m : metaname {LinearMetaContext {envs color} (l-func f arguments)} s) ->
-                 big-substitution m = MetaSubstitution.apply (inject-term envs (inner-substitution m)) SubList.sublist-nil-free middle-substitution)
-             (MetaSubstitution.apply {envs color} (weakening {envs color} (Linear.convert-to-term {envs color} (l-func f arguments)) (SubList.extend-left-single SubList.identity {core-context})) (SubList.extend-right-single SubList.identity) inner-substitution = func f1 arguments1)
-    \elim eq
-      | idp =>
-        \have | sigmas-or => pmap unwrap-func eq'
-              | z => pmap (unjust {\Sigma (f : symbol s) (\Pi (index : Index (domain f)) ->
-                  Term env ((core-context ++ pattern-context) ++ f env.!!domain index) (f env.!!sort index)
-                      mc)} ((color,f), \lam i => MetaSubstitution.apply
-                  (inject-term envs (arguments1 i)) (SubList.extend-right-single SubList.sublist-nil-free)
-                  middle-substitution)) sigmas-or
-              | res => sigma-set-equalizer z
-              | args-eq i => pmap (__ i) res
-              | inductive i => decompose-metasubstitution color
-                  (arguments i)
-                  (transport (Term (envs color) __ _ inner-mc) (++-assoc {_} {core-context} {pattern-context} {f1 FSignature.!!domain {envs color} i}) (arguments1 i))
-                  (\lam m => big-substitution (i, m))
-                  middle-substitution
-                  (rewrite
-                      (apply-modularity,
-                       inv (unwrap-injection.swap _ _ (Linear.convert-to-term {envs color} (arguments i))),
-                       Transports.lb-ls-to-ls.inv',
-                       Transports.rs-rs-to-rs.inv',
-                       Transports.nil-to-right-nil)
-                      (ad-hoc-lemma (Linear.convert-to-term {envs color} (arguments i)) ++-assoc (args-eq i))
-                  )
-                  root-colors
-        \in (\lam {s1} mvar => (inductive mvar.1).1 mvar.2,
-             \lam {s1} m => (inductive m.1).2 m.2,
-             Term.fext {envs color} (\lam index =>
-                 \have ind => (inductive index).3
-                 \in rewrite (inv (apply-modularity {envs color}
-                     (\lam i => LinearMetaContext {envs color} (arguments i))
-                     (\lam i => (inductive i).1)
-                     (SubList.extend-right-single (SubList.extend-right-single SubList.identity))
-                     (SubList.extend-right-both (SubList.extend-left-single SubList.identity))
-                     (Linear.convert-to-term {envs color} (arguments index))))
-                     (rewrite Transports.lb-ls-to-ls
-                         (rewrite Transports.rs-rs-to-rs
-                             (expand-substitution-3 {envs color} _ _ _ _ _ _ ind)))))
 
     \lemma ad-hoc-lemma
       {tc : TheoremContext} {subst-context context big-context big-context' : List Sort'} {s : Sort'} {ms-a ms-b : MetaContext Sort'}

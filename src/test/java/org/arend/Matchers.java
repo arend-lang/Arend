@@ -25,7 +25,7 @@ public class Matchers {
     return typecheckingError(LocalError.class);
   }
 
-  public static Matcher<? super GeneralError> typecheckingError(final Class<? extends LocalError> type) {
+  public static Matcher<? super GeneralError> typecheckingError(final Class<? extends GeneralError> type) {
     return new TypeSafeDiagnosingMatcher<>() {
       @Override
       protected boolean matchesSafely(GeneralError error, Description description) {

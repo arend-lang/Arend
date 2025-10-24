@@ -15,7 +15,9 @@
  */
 package org.arend.typechecking.termination;
 
+import org.arend.Matchers;
 import org.arend.typechecking.TypeCheckingTestCase;
+import org.arend.typechecking.error.TerminationCheckError;
 import org.junit.Test;
 
 import java.util.HashSet;
@@ -391,6 +393,28 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
         | a :: l, a' :: l' => \\let | t1 => test l (a' :: l')
                                    | t2 => test (a :: l) l'
                               \\in 0
+      """);
+  }
+
+  @Test
+  public void nonRecursiveConstructor() {
+    typeCheckModule("""
+      \\data Bad : \\Prop
+        | mkBad (\\Pi {P : \\Prop} -> P -> P)
+      \\func bad : Bad => mkBad \\lam x => x
+      \\func noBad (b : Bad) : Nat
+        | mkBad f => noBad (f bad)
+      """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(TerminationCheckError.class));
+  }
+
+  @Test
+  public void recursiveArray() {
+    typeCheckModule("""
+      \\data Term
+        | apply (Array Term)
+      \\func test (t : Term) : Nat
+        | apply l => \\let x i => test (l i) \\in 0
       """);
   }
 }

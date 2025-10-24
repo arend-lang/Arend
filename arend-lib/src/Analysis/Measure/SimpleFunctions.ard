@@ -669,7 +669,7 @@
               a.1 :: map (a.1 +) vs ++' vs,
               ~-trans (~_:: vsp) $ ~-trans (~-sym $ add_~ $ later bs'r) $ rewrite (\peval add a.1 a.2 _) $ ~_:: $ ~-perm $ EPerm.eperm-= $ ++_++' *> inv (later $ map2_++' (__,__) {_} {\lam j => a.1 + vs j} {_} {_} {vs}),
               \lam j => 0 :: vss' j ++' vss' j,
-              \lam j => ~-trans (vss'p j) $ ~-trans (~-sym $ ~-unequals.add0_~ $ later bs'r) $ transportInv (`~ _) (\peval add 0 a.2 _) $ ~_:: $ ~-perm $ EPerm.eperm-= $ ++_++' *> pmap (`++' _) (exts \lam k => ext (zro-left, idp)) *> inv (later $ map2_++' (__,__) {_} {vss' j} {_} {_} {vss' j}))
+              \lam j => ~-trans (vss'p j) $ ~-trans (~-sym $ ~-unequals.add0_~ $ later bs'r) $ transportInv (`~ _) (\peval add 0 a.2 _) $ ~_:: $ ~-perm $ EPerm.eperm-= $ ++_++' *> pmap (`++' _) (exts \lam k => ext (zro-left, idp)) *> later (inv $ map2_++' (__,__) {_} {vss' j} {_} {_} {vss' j}))
           }
       }
 

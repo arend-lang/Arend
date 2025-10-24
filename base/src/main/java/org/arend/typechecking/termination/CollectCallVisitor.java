@@ -1,14 +1,15 @@
 package org.arend.typechecking.termination;
 
 import org.arend.core.context.param.DependentLink;
-import org.arend.core.definition.Definition;
-import org.arend.core.definition.FunctionDefinition;
+import org.arend.core.definition.*;
 import org.arend.core.elimtree.Body;
 import org.arend.core.elimtree.ElimClause;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
+import org.arend.core.expr.visitor.NormalizeVisitor;
 import org.arend.core.pattern.*;
 import org.arend.ext.core.expr.CoreExpression;
+import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.prelude.Prelude;
 import org.arend.typechecking.visitor.SearchVisitor;
 import org.arend.ext.util.Pair;
@@ -76,12 +77,97 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
     return myCollectedCalls;
   }
 
+  private static Expression normalizeFieldCall(Expression expr) {
+    while (expr instanceof FieldCallExpression fieldCall) {
+      expr = NormalizeVisitor.INSTANCE.evalFieldCall(fieldCall.getDefinition(), fieldCall.getArgument());
+    }
+    return expr;
+  }
+
+  private static Expression removeArgsTyped(Expression expr, Expression type, DataDefinition dataDef) {
+    List<Eliminator> eliminators = new ArrayList<>();
+    expr = removeArgs(expr, eliminators);
+
+    for (int i = eliminators.size() - 1; i >= 0; i--) {
+      type = normalizeFieldCall(type);
+      switch (eliminators.get(i)) {
+        case PiEliminator ignored -> {
+          if (!(type instanceof PiExpression piExpr)) return null;
+          type = piExpr.getParameters().getNext().hasNext() ? new PiExpression(piExpr.getResultSort(), piExpr.getParameters().getNext(), piExpr.getCodomain()) : piExpr.getCodomain();
+        }
+        case SigmaEliminator sigmaEliminator -> {
+          if (!(type instanceof SigmaExpression sigmaExpr)) return null;
+          DependentLink param = DependentLink.Helper.get(sigmaExpr.getParameters(), sigmaEliminator.field);
+          if (!param.hasNext()) return null;
+          type = param.getTypeExpr();
+        }
+        case PathEliminator ignored -> {
+          if (type instanceof FunCallExpression funCall && funCall.getDefinition() == Prelude.PATH_INFIX) {
+            type = funCall.getDefCallArguments().getFirst();
+          } else if (type instanceof DataCallExpression dataCall && dataCall.getDefinition() == Prelude.PATH) {
+            type = dataCall.getDefCallArguments().getFirst();
+            if (!(type instanceof LamExpression lamExpr)) return null;
+            type = lamExpr.getBody();
+          } else {
+            return null;
+          }
+        }
+        case ClassEliminator classEliminator -> {
+          if (type instanceof FunCallExpression funCall && funCall.getDefinition() == Prelude.ARRAY) {
+            type = type.normalize(NormalizationMode.WHNF);
+          }
+          if (!(type instanceof ClassCallExpression classCall)) return null;
+          type = classCall.getDefinition().getFieldType(classEliminator.classField).applyExpression(new ReferenceExpression(classCall.getThisBinding()));
+        }
+      }
+    }
+
+    type = normalizeFieldCall(type);
+    return type instanceof DataCallExpression dataCall && dataCall.getDefinition() == dataDef ? expr : null;
+  }
+
+  private sealed interface Eliminator {}
+  private record PiEliminator() implements Eliminator {}
+  private record SigmaEliminator(int field) implements Eliminator {}
+  private record PathEliminator() implements Eliminator {}
+  private record ClassEliminator(ClassField classField) implements Eliminator {}
+
+  private static Expression removeArgs(Expression expr, List<Eliminator> eliminators) {
+    while (true) {
+      switch (expr) {
+        case AppExpression ignored -> {
+          expr = expr.getFunction();
+          if (eliminators != null) eliminators.add(new PiEliminator());
+        }
+        case ProjExpression projExpression -> {
+          expr = projExpression.getExpression();
+          if (eliminators != null) eliminators.add(new SigmaEliminator(projExpression.getField()));
+        }
+        case AtExpression atExpression -> {
+          expr = atExpression.getPathArgument();
+          if (eliminators != null) eliminators.add(new PathEliminator());
+        }
+        case FieldCallExpression fieldCallExpression -> {
+          expr = fieldCallExpression.getArgument();
+          if (eliminators != null) eliminators.add(new ClassEliminator(fieldCallExpression.getDefinition()));
+        }
+        default -> {
+          return expr;
+        }
+      }
+    }
+  }
+
   private static BaseCallMatrix.R isLess(Expression expr1, ExpressionPattern pattern2) {
     if (pattern2 instanceof ConstructorExpressionPattern conPattern) {
       List<? extends Expression> exprArguments = conPattern.getMatchingExpressionArguments(expr1, true);
+      DependentLink conParam = conPattern.getParameters();
       List<? extends ExpressionPattern> subPatterns = conPattern.getSubPatterns();
       for (ExpressionPattern arg : subPatterns) {
-        if (isLess(expr1, arg) != BaseCallMatrix.R.Unknown) return BaseCallMatrix.R.LessThan;
+        if (!conParam.hasNext()) break;
+        Expression newExpr1 = conPattern.getConstructor() instanceof Constructor constructor ? removeArgsTyped(expr1, conParam.getTypeExpr(), constructor.getDataType()) : conPattern.isArray() ? expr1 : null;
+        if (newExpr1 != null && isLess(newExpr1, arg) != BaseCallMatrix.R.Unknown) return BaseCallMatrix.R.LessThan;
+        conParam = conParam.getNext();
       }
 
       if (exprArguments != null) {
@@ -97,12 +183,8 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
       return BaseCallMatrix.R.Unknown;
     } else if (pattern2 instanceof BindingPattern) {
       DependentLink binding2 = ((BindingPattern) pattern2).getBinding();
-      if (expr1 instanceof ReferenceExpression) {
-        if (((ReferenceExpression) expr1).getBinding() == binding2) return BaseCallMatrix.R.Equal;
-      } else {
-        expr1 = removeArgs(expr1);
-        if (expr1 instanceof ReferenceExpression && ((ReferenceExpression) expr1).getBinding() == binding2)
-          return BaseCallMatrix.R.LessThan; // ensures that "e x < e"
+      if (expr1 instanceof ReferenceExpression refExpr && refExpr.getBinding() == binding2) {
+        return BaseCallMatrix.R.Equal;
       }
     }
     return BaseCallMatrix.R.Unknown;
@@ -136,28 +218,11 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
     callMatrix.setBlock(param2, param1, isLess(expr1, pattern2));
   }
 
-  private static Expression removeArgs(Expression expr) {
-    while (true) {
-      if (expr instanceof AppExpression) {
-        expr = expr.getFunction();
-      } else if (expr instanceof ProjExpression) {
-        expr = ((ProjExpression) expr).getExpression();
-      } else if (expr instanceof AtExpression) {
-        expr = ((AtExpression) expr).getPathArgument();
-      } else if (expr instanceof FieldCallExpression) {
-        expr = ((FieldCallExpression) expr).getArgument();
-      } else {
-        break;
-      }
-    }
-    return expr;
-  }
-
   private static void doProcessLists(CallMatrix cm, DependentLink patternIndex, List<? extends ExpressionPattern> patternList, DependentLink argumentIndex, List<? extends Expression> argumentList) {
     for (ExpressionPattern pattern : patternList) {
       DependentLink argIndex = argumentIndex;
       for (Expression argument : argumentList) {
-        initMatrixBlock(cm, removeArgs(argument), argIndex, pattern, patternIndex);
+        initMatrixBlock(cm, argument, argIndex, pattern, patternIndex);
         argIndex = argIndex.getNext();
       }
       patternIndex = patternIndex.getNext();
