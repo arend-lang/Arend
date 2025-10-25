@@ -96,6 +96,7 @@ public class UseTypechecking {
       List<Pair<Expression, FunctionDefinition>> deps = depMap.get(definition);
       if (deps != null) {
         CoerceData coerceData = definition.getCoerceData();
+        if (coerceData == null) continue;
         for (Pair<Expression, FunctionDefinition> dep : deps) {
           if (isFrom) {
             coerceData.addCoerceFrom(dep.proj1, dep.proj2);
@@ -252,7 +253,7 @@ public class UseTypechecking {
       if (parametersLevel.parameters == null) {
         Sort newSort = parametersLevel.level == -1 ? Sort.PROP : new Sort(dataDef.getSort().getPLevel(), new Level(parametersLevel.level));
         if (!dataDef.getSort().isLessOrEquals(newSort)) {
-          if (!(parametersLevel.level == -1 && dataDef.getSort().isSet())) {
+          if (!(parametersLevel.level == -1 && dataDef.getSort().isSet() && dataDef.getRecursiveDefinitions().isEmpty())) {
             dataDef.setSquashed(true);
           }
           dataDef.setSquasher(useDefinition);

@@ -1,11 +1,14 @@
 package org.arend.typechecking.definition;
 
+import org.arend.Matchers;
+import org.arend.core.definition.DataDefinition;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.ExpressionFactory;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.typechecking.TypeCheckingTestCase;
+import org.arend.typechecking.error.local.SquashedDataError;
 import org.arend.util.SingletonList;
 import org.junit.Test;
 
@@ -13,8 +16,7 @@ import java.util.Collections;
 import java.util.Objects;
 
 import static org.arend.Matchers.typeMismatchError;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
+import static org.junit.Assert.*;
 
 public class SFuncTest extends TypeCheckingTestCase {
   @Test
@@ -74,6 +76,7 @@ public class SFuncTest extends TypeCheckingTestCase {
             | con a1, con a2 => path (\\lam i => con (p a1 a2 @ i))
         \\func f {A : \\Type} (p : \\Pi (x y : A) -> x = y) (d : D A p) : A \\elim d | con a => a
         """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(SquashedDataError.class));
   }
 
   @Test
@@ -96,6 +99,24 @@ public class SFuncTest extends TypeCheckingTestCase {
             | con a1, con a2 => path (\\lam i => con (p a1 a2 @ i))
         \\func f {A : \\Type} (p : \\Pi (x y : A) -> x = y) (d : D A p) : \\level A p \\elim d | con a => a
         """, 1);
+    assertThatErrorsAre(Matchers.typecheckingError(SquashedDataError.class));
+  }
+
+  @Test
+  public void recursiveSetSquashed() {
+    typeCheckModule("""
+      \\data D (X : \\Set) (p : \\Pi (X : \\Set) (x y : X) -> x = y)
+        | con1 X
+        | con2 (D X p)
+        \\where
+          \\use \\level levelProp {X : \\Set} {p : \\Pi (X : \\Set) (x y : X) -> x = y} (d d' : D X p) : d = d'
+            => p (D X p) d d'
+      \\func test {X : \\Set} {p : \\Pi (X : \\Set) (x y : X) -> x = y} (d : D X p) : Nat \\elim d
+        | con1 _ => 0
+        | con2 _ => 0
+      """, 1);
+    assertTrue(((DataDefinition) getDefinition("D")).isSquashed());
+    assertThatErrorsAre(Matchers.typecheckingError(SquashedDataError.class));
   }
 
   @Test
