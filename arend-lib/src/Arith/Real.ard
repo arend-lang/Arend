@@ -89,7 +89,7 @@
   \lemma fromRat-inj {x y : Rat} (p : fromRat x = fromRat y) : x = y
     => <=-antisymmetric (rat_real_<=.2 $ =_<= {RealAbGroup} p) (rat_real_<=.2 $ =_<= {RealAbGroup} $ inv p)
 
-  \lemma <=-upper {x y : Real} : x RealAbGroup.<= y <-> x ExUpperRealAbMonoid.<= y
+  \lemma <=-upper {x y : Real} : x RealAbGroup.<= y <-> x ExUpperReal.<= y
     => (<=_U-char.1 __ __, \lam x<=y => <=_U-char.2 \lam p => x<=y p)
 
   \lemma =-upper {x y : Real} : (x = y) <-> (x = {ExUpperReal} y)

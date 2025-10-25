@@ -65,7 +65,7 @@
     \in equation.cRing {lem1, lem2 s'.1 s.1 x.1 y.2, lem2 s.1 s'.1 y.1 x.2}) <=∘ A.norm_*_<= <=∘ <=_* (Join-cond s <=∘ join-right) (Join-cond s' <=∘ join-right)
   | norm_ide_<= => join-univ RealStoneC*Algebra.norm_ide_<= $ Join-univ \lam s => =_<= (pmap A.norm $ pmap2 (+) A.toRealModule.ide_*c A.zro_*-left *> zro-right) <=∘ s.2
   | norm-ext {x} p =>
-    \have x1=0 => RealAbGroup.abs_zro-ext $ RealAbGroup.<=-antisymmetric ((Real.<=-upper {_} {0}).2 $ join-left <=∘ =_<= p) RealAbGroup.abs>=0
+    \have x1=0 => RealAbGroup.abs_zro-ext $ RealAbGroup.<=-antisymmetric ((Real.<=-upper {_} {0}).2 $ join-left ExUpperRealAbMonoid.<=∘ =_<= p) RealAbGroup.abs>=0
     \in ext (x1=0, norm-ext $ <=-antisymmetric (=_<= A.norm_*-char <=∘ Join-univ \lam s => =_<= (pmap A.norm $ inv $ pmap (`+ _) (pmap (RealBanachSpace.`*r _) x1=0 *> A.toRealAlgebra.*c_zro-left) *> zro-left) <=∘ Join-cond s <=∘ join-right <=∘ =_<= p) norm>=0)
   | isCompleteMetric F Fc => \case
       RealNormed.isCompleteMetric (ProperFilter-map __.1 F) \lam eps>0 => TruncP.map (Fc eps>0) \lam (r,Fr) => (r.1, filter-mono Fr \lam d => ExUpperRealAbMonoid.join-left d),
