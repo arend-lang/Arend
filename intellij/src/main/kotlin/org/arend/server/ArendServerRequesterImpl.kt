@@ -62,11 +62,14 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
 
         val result = ArrayList<Referable>()
         val path = ArrayList(last.location.modulePath.toList())
-        while (path.isNotEmpty()) {
-            val current = ModuleLocation(last.location.libraryName, last.location.locationKind, ModulePath(ArrayList(path)))
-            result.add(if (file == null) FullModuleReferable(current) else DataModuleReferable(file, current))
-            file = file?.parent
-            path.removeLast()
+        runReadAction {
+            while (path.isNotEmpty()) {
+                val current =
+                    ModuleLocation(last.location.libraryName, last.location.locationKind, ModulePath(ArrayList(path)))
+                result.add(if (file == null) FullModuleReferable(current) else DataModuleReferable(file, current))
+                file = file?.parent
+                path.removeLast()
+            }
         }
         result.reverse()
         return result
