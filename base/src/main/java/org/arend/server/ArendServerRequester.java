@@ -39,6 +39,10 @@ public interface ArendServerRequester {
     return supplier.get();
   }
 
+  default @NotNull List<Referable> fixModuleReferences(@NotNull List<Referable> referables) {
+    return referables;
+  }
+
   default void addReference(@NotNull ModuleLocation module, @NotNull AbstractReference reference, @NotNull Referable referable) {}
 
   default void addReference(@NotNull ModuleLocation module, @NotNull AbstractReferable referable, @NotNull TCDefReferable tcReferable) {}

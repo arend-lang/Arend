@@ -13,6 +13,7 @@ import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
 import org.arend.naming.scope.Scope
 import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.ArendReplLine
+import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
 import org.arend.term.abs.ConcreteBuilder
 import org.arend.term.concrete.Concrete
@@ -36,7 +37,7 @@ class PsiInjectionTextFile(provider: FileViewProvider) : PsiFileImpl(InjectionTe
     fun annotate(scope: Scope) {
         val files = InjectedLanguageManager.getInstance(project).getInjectedPsiFiles(firstChild ?: return) ?: return
         if (concreteExpressions.size >= files.size) return
-        val listener = CollectingResolverListener(true)
+        val listener = CollectingResolverListener(ArendServerRequesterImpl(project), true)
         val typingInfo = project.service<ArendServerService>().server.typingInfo
         for (pair in files.subList(concreteExpressions.size, files.size)) {
             val expr = (pair.first.firstChild as? ArendReplLine)?.expr

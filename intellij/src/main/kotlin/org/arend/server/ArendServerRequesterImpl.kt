@@ -3,10 +3,13 @@ package org.arend.server
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.findDirectory
+import com.intellij.psi.PsiFileSystemItem
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.ModulePath
 import org.arend.ext.module.ModuleLocation
 import org.arend.module.config.ArendModuleConfigService
+import org.arend.naming.reference.DataModuleReferable
+import org.arend.naming.reference.FullModuleReferable
 import org.arend.naming.reference.Referable
 import org.arend.naming.reference.TCDefReferable
 import org.arend.psi.ArendFile
@@ -51,6 +54,22 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
 
     override fun <T : Any?> runUnderReadLock(supplier: Supplier<T?>): T? = runReadAction {
         supplier.get()
+    }
+
+    override fun fixModuleReferences(referables: List<Referable>): List<Referable> {
+        val last = referables.lastOrNull() as? DataModuleReferable ?: return referables
+        var file: PsiFileSystemItem? = last.data as? ArendFile ?: return referables
+
+        val result = ArrayList<Referable>()
+        val path = ArrayList(last.location.modulePath.toList())
+        while (path.isNotEmpty()) {
+            val current = ModuleLocation(last.location.libraryName, last.location.locationKind, ModulePath(ArrayList(path)))
+            result.add(if (file == null) FullModuleReferable(current) else DataModuleReferable(file, current))
+            file = file?.parent
+            path.removeLast()
+        }
+        result.reverse()
+        return result
     }
 
     override fun addReference(module: ModuleLocation, reference: AbstractReference, referable: Referable) {

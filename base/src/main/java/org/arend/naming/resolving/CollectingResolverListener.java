@@ -4,6 +4,7 @@ import org.arend.ext.module.ModulePath;
 import org.arend.ext.reference.DataContainer;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.*;
+import org.arend.server.ArendServerRequester;
 import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteNamespaceCommand;
@@ -26,10 +27,12 @@ public class CollectingResolverListener implements ResolverListener {
   }
 
   public ModuleLocation moduleLocation;
+  private final ArendServerRequester myRequester;
   private final Map<ModuleLocation, ModuleCacheStructure> myModuleCache = new HashMap<>();
   private final boolean myCacheReferences;
 
-  public CollectingResolverListener(boolean cacheReferences) {
+  public CollectingResolverListener(ArendServerRequester requester, boolean cacheReferences) {
+    myRequester = requester;
     myCacheReferences = cacheReferences;
   }
 
@@ -116,6 +119,9 @@ public class CollectingResolverListener implements ResolverListener {
 
   @Override
   public void namespaceResolved(ConcreteNamespaceCommand namespaceCommand, List<Referable> resolvedRefs) {
+    if (resolvedRefs != null) {
+      resolvedRefs = myRequester.fixModuleReferences(resolvedRefs);
+    }
     cacheReference(namespaceCommand.module(), null, resolvedRefs);
     if (namespaceCommand.isImport() && resolvedRefs != null && !resolvedRefs.isEmpty() && resolvedRefs.getLast() instanceof ModuleReferable moduleRef) {
       myModuleCache.computeIfAbsent(moduleLocation, k -> new ModuleCacheStructure(new ArrayList<>(), new ArrayList<>()))

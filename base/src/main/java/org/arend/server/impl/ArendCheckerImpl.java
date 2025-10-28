@@ -175,7 +175,7 @@ public class ArendCheckerImpl implements ArendChecker {
         }
       }
 
-      CollectingResolverListener resolverListener = new CollectingResolverListener(myServer.doCacheReferences());
+      CollectingResolverListener resolverListener = new CollectingResolverListener(myServer.getRequester(), myServer.doCacheReferences());
       Map<ModuleLocation, ListErrorReporter> errorReporterMap = new HashMap<>();
       Map<ModuleLocation, Map<LongName, DefinitionData>> resolverResult = new HashMap<>();
       progressReporter.beginProcessing(toResolve.size());
