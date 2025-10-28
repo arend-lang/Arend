@@ -24,8 +24,7 @@ class ExternalLibraryConfig(override val name: String, yaml: YAMLFile) : Library
 
     override fun getExtensionMainClass() = extensionMainClass
 
-    override val isExternal: Boolean
-        get() = true
+    override fun isExternalLibrary() = true
 
     override var root = yaml.virtualFile?.parent
         get() =

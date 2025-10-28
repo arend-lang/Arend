@@ -27,7 +27,7 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
     override fun requestModuleUpdate(server: ArendServer, module: ModuleLocation) {
         if (module.locationKind == ModuleLocation.LocationKind.GENERATED) return
         runReadAction {
-            val file = project.findInternalLibrary(module.libraryName)?.findArendFile(module.modulePath, module.locationKind == ModuleLocation.LocationKind.TEST)
+            val file = project.findLibrary(module.libraryName)?.findArendFile(module.modulePath, module.locationKind == ModuleLocation.LocationKind.TEST)
             doUpdateModule(server, module, file ?: return@runReadAction)
         }
     }
@@ -80,7 +80,7 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
     }
 
     fun doUpdateModule(server: ArendServer, module: ModuleLocation, file: ArendFile) = server.updateModule(file.modificationStamp, module) {
-      ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE)
+      ConcreteBuilder.convertGroup(file, module, DummyErrorReporter.INSTANCE)
     }
 
     fun requestUpdate(server: ArendServer, library: String?, withTests: Boolean) {

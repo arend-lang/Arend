@@ -14,6 +14,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.util.CommonProcessors
+import org.arend.ext.module.ModuleLocation
 import org.arend.highlight.BasePass
 import org.arend.psi.ArendFile
 import org.arend.server.ArendServerService
@@ -48,9 +49,9 @@ fun selectErrorFromEditor(project: Project, editor: Editor, file: ArendFile?, al
 
     ApplicationManager.getApplication().run {
         executeOnPooledThread {
-            val module = (file ?: runReadAction<ArendFile?> {
-                PsiDocumentManager.getInstance(project).getPsiFile(document) as? ArendFile
-            })?.moduleLocation ?: return@executeOnPooledThread
+            val module = runReadAction<ModuleLocation?> {
+                (file ?: PsiDocumentManager.getInstance(project).getPsiFile(document) as? ArendFile)?.moduleLocation ?: return@runReadAction null
+            } ?: return@executeOnPooledThread
 
             val errors = project.service<ArendServerService>().server.errorMap[module]
             if (errors.isNullOrEmpty()) {

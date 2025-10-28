@@ -28,7 +28,7 @@ class ArendStartupActivity : ProjectActivity {
             override fun modulesAdded(project: Project, modules: List<Module>) {
                 for (module in modules) {
                     if (ArendModuleType.has(module)) {
-                        module.register()
+                        module.register(modules)
                     }
                 }
             }

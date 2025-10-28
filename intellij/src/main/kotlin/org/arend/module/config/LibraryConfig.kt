@@ -64,9 +64,6 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
     val binariesDirFile: VirtualFile?
         get() = binariesDir?.let { findDir(it) }
 
-    open val isExternal: Boolean
-        get() = false
-
     override fun getLibraryName() = name
 
     override fun isExternalLibrary() = false

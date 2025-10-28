@@ -35,6 +35,8 @@ import org.arend.psi.ArendFile
 import org.arend.psi.ext.ArendGroup
 import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.ReferableBase
+import org.arend.server.ArendLibrary
+import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendProjectSettings
 import org.arend.term.group.ConcreteGroup
@@ -97,7 +99,18 @@ fun Project.findExternalLibrary(root: Path, libName: String): ExternalLibraryCon
     return runReadAction { findExternalLibrary(dir, libName) }
 }
 
-fun Module.register() {
+private fun Project.addDependencies(server: ArendServer, library: ArendLibrary, loaded: HashSet<String>) {
+    for (dependency in library.libraryDependencies) {
+        if (!loaded.add(dependency) || server.getLibrary(dependency) != null) continue
+        val config = findExternalLibrary(dependency)
+        if (config != null) {
+            server.updateLibrary(config, NotificationErrorReporter(this))
+            addDependencies(server, config, loaded)
+        }
+    }
+}
+
+fun Module.register(modules: List<Module> = emptyList()) {
     val config = runReadAction {
         val config = ArendModuleConfigService.getInstance(this) ?: return@runReadAction null
         config.copyFromYAML(false)
@@ -106,8 +119,11 @@ fun Module.register() {
     refreshLibrariesDirectory(project.service<ArendProjectSettings>().librariesRoot)
 
     val server = project.service<ArendServerService>().server
+    val loaded = modules.mapNotNullTo(HashSet()) { if (ArendModuleType.has(it)) it.name else null }
     runReadAction {
+        loaded.addAll(project.arendModules.map { it.name })
         server.updateLibrary(config, NotificationErrorReporter(project))
+        project.addDependencies(server, config, loaded)
     }
 
     ApplicationManager.getApplication().getService(ArendExtensionChangeService::class.java).initializeModule(config)
