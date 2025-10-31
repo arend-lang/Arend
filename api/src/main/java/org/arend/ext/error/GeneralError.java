@@ -23,7 +23,7 @@ public class GeneralError {
     public String toString() {
       return "WARNING";
     }
-  }, GOAL, WARNING, ERROR }
+  }, WARNING, GOAL, ERROR }
 
   public enum Stage { TYPECHECKER, RESOLVER, PARSER, OTHER }
 

@@ -69,6 +69,10 @@ object ArendIcons {
     val IMPLICIT_GOAL = IconUtil.desaturate(GOAL)
     val INFO = AllIcons.General.NotificationInfo
 
+    val OK = AllIcons.Actions.Checked
+    val SERVER = AllIcons.General.Note
+    val UNKNOWN = AllIcons.General.ContextHelp
+
     fun getErrorLevelIcon(error: GeneralError) = when (error.level) {
         GeneralError.Level.INFO -> INFO
         GeneralError.Level.WARNING_UNUSED -> WARNING
