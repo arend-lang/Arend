@@ -30,6 +30,10 @@ import org.arend.util.findLibrary
 import org.arend.ext.module.ModuleLocation
 import org.arend.naming.reference.TCDefReferable
 import org.arend.typechecking.runner.RunnerService
+import javax.swing.JLabel
+import javax.swing.JPanel
+import java.awt.BorderLayout
+import org.arend.term.group.ConcreteGroup
 
 class ArendServerStateView(private val project: Project, toolWindow: ToolWindow) {
     private val root = DefaultMutableTreeNode("Arend Server")
@@ -37,6 +41,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
     private val tree = Tree(treeModel)
 
     private val panel = SimpleToolWindowPanel(false)
+    private val statusLabel = JLabel()
 
     // Helpers to extract current selection
     private fun selectedModuleLocations(): List<ModuleLocation> {
@@ -122,7 +127,12 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
     init {
         toolWindow.setIcon(ArendIcons.SERVER)
         val contentManager = toolWindow.contentManager
-        panel.setContent(ScrollPaneFactory.createScrollPane(tree, true))
+        // Build content panel with a status line on top and the tree in the center
+        val contentPanel = JPanel(BorderLayout())
+        statusLabel.text = "Modules: 0/0 • Definitions: 0/0"
+        contentPanel.add(statusLabel, BorderLayout.NORTH)
+        contentPanel.add(ScrollPaneFactory.createScrollPane(tree, true), BorderLayout.CENTER)
+        panel.setContent(contentPanel)
         tree.cellRenderer = ArendServerStateTreeCellRenderer(project)
         tree.isRootVisible = false
         // Do not expand/collapse nodes on double-click; we handle double-click for navigation only
@@ -210,15 +220,44 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         val libraries = server.libraries
         root.removeAllChildren()
 
-        val modulesByLibrary = server.modules.groupBy { it.libraryName }
+        // Stats counters
+        val allModules = server.modules.toList()
+        val totalModules = allModules.size
+        var resolvedModules = 0
+        var totalDefinitions = 0
+        var typecheckedDefinitions = 0
+
+        val modulesByLibrary = allModules.groupBy { it.libraryName }
         for (lib in libraries.sorted()) {
             val libNode = DefaultMutableTreeNode(LibraryNode(lib))
             val locations = modulesByLibrary[lib].orEmpty().sortedBy { it.modulePath.toString() }
             for (loc in locations) {
                 val moduleNode = DefaultMutableTreeNode(ModuleNode(loc))
-                // Resolve definitions and add them
+
+                // Count total definitions from raw group (available even if not resolved)
+                val rawGroup: ConcreteGroup? = server.getRawGroup(loc)
+                fun countDefs(group: ConcreteGroup?): Int {
+                    if (group == null) return 0
+                    var cnt = 0
+                    val def = group.definition
+                    if (def is org.arend.term.concrete.Concrete.ResolvableDefinition) cnt++
+                    for (st in group.statements()) {
+                        cnt += countDefs(st.group())
+                    }
+                    for (dg in group.dynamicGroups()) {
+                        cnt += countDefs(dg)
+                    }
+                    return cnt
+                }
+                totalDefinitions += countDefs(rawGroup)
+
+                // Resolved definitions for the module
                 val defs = server.getResolvedDefinitions(loc)
+                if (defs.isNotEmpty()) resolvedModules++
                 for (def in defs) {
+                    if (def.definition.data.isTypechecked()) {
+                        typecheckedDefinitions++
+                    }
                     moduleNode.add(DefaultMutableTreeNode(DefinitionNode(def.definition.data)))
                 }
                 libNode.add(moduleNode)
@@ -226,6 +265,9 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
             root.add(libNode)
         }
         treeModel.reload(root)
+
+        // Update status label
+        statusLabel.text = "Modules: $resolvedModules/$totalModules • Definitions: $typecheckedDefinitions/$totalDefinitions"
 
         // Restore expanded and selection state
         restoreTreeState(expandedIds, selectedIdPath)
