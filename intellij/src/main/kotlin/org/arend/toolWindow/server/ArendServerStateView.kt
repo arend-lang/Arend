@@ -4,6 +4,8 @@ import com.intellij.ide.CommonActionsManager
 import com.intellij.ide.DefaultTreeExpander
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -17,6 +19,7 @@ import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import com.intellij.codeInsight.hints.presentation.MouseButton
 import com.intellij.codeInsight.hints.presentation.mouseButton
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.tree.TreePath
@@ -24,6 +27,9 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.psi.PsiElement
 import org.arend.psi.navigate
 import org.arend.util.findLibrary
+import org.arend.ext.module.ModuleLocation
+import org.arend.naming.reference.TCDefReferable
+import org.arend.typechecking.runner.RunnerService
 
 class ArendServerStateView(private val project: Project, toolWindow: ToolWindow) {
     private val root = DefaultMutableTreeNode("Arend Server")
@@ -31,6 +37,23 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
     private val tree = Tree(treeModel)
 
     private val panel = SimpleToolWindowPanel(false)
+
+    // Helpers to extract current selection
+    private fun selectedModuleLocations(): List<ModuleLocation> {
+        val paths = tree.selectionPaths?.toList().orEmpty()
+        val result = ArrayList<ModuleLocation>()
+        for (p in paths) {
+            val node = (p.lastPathComponent as? DefaultMutableTreeNode)?.userObject
+            if (node is ModuleNode) result.add(node.location)
+        }
+        return result
+    }
+
+    private fun selectedDefinition(): TCDefReferable? {
+        val path = tree.selectionPath ?: return null
+        val node = (path.lastPathComponent as? DefaultMutableTreeNode)?.userObject
+        return (node as? DefinitionNode)?.definition
+    }
 
     // --- State persistence helpers (expanded nodes and selection) ---
     private fun nodeId(obj: Any?): String? = when (obj) {
@@ -87,7 +110,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
             selectedPath = idToPath[candidate]
             if (selectedPath == null) {
                 val idx = candidate.lastIndexOf('|')
-                candidate = if (idx > 0) candidate.substring(0, idx) else null
+                candidate = if (idx > 0) candidate.take(idx) else null
             }
         }
         if (selectedPath != null) {
@@ -112,6 +135,12 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         toolbarGroup.add(actions.createCollapseAllAction(treeExpander, tree))
         toolbarGroup.addSeparator()
         toolbarGroup.add(ArendServerStateRefreshAction { refresh() })
+        toolbarGroup.addSeparator()
+        // Server actions
+        val resolveModulesAction = ResolveSelectedModulesAction()
+        val typecheckAction = TypecheckSelectedAction()
+        toolbarGroup.add(resolveModulesAction)
+        toolbarGroup.add(typecheckAction)
 
         val toolbar = ActionManager.getInstance().createActionToolbar("ArendServerStateView.toolbar", toolbarGroup, false)
         toolbar.targetComponent = panel
@@ -125,7 +154,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                     MouseButton.Left -> if (e.clickCount >= 2) {
                         navigate()
                     }
-                    MouseButton.Right -> {}
+                    MouseButton.Right -> showContextMenu(e)
                     else -> {}
                 }
             }
@@ -200,5 +229,61 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
 
         // Restore expanded and selection state
         restoreTreeState(expandedIds, selectedIdPath)
+    }
+
+    // --- Actions ---
+    private inner class ResolveSelectedModulesAction : AnAction("Resolve") {
+        override fun update(e: AnActionEvent) {
+            e.presentation.icon = ArendIcons.OK
+            e.presentation.isEnabled = selectedModuleLocations().isNotEmpty()
+        }
+
+        override fun actionPerformed(e: AnActionEvent) {
+            for (module in selectedModuleLocations()) {
+                project.service<RunnerService>().runChecker(module, true)
+            }
+        }
+
+        override fun getActionUpdateThread() = ActionUpdateThread.BGT
+    }
+
+    private inner class TypecheckSelectedAction : AnAction("Typecheck") {
+        override fun update(e: AnActionEvent) {
+            e.presentation.icon = ArendIcons.TURNSTILE
+            e.presentation.isEnabled = selectedDefinition() != null || selectedModuleLocations().isNotEmpty()
+        }
+
+        override fun actionPerformed(e: AnActionEvent) {
+            val def = selectedDefinition()
+            if (def != null) {
+                val fullName = def.refFullName
+                project.service<RunnerService>().runChecker(fullName.module ?: return, fullName.longName)
+            } else {
+                for (module in selectedModuleLocations()) {
+                    project.service<RunnerService>().runChecker(module, false)
+                }
+            }
+        }
+
+        override fun getActionUpdateThread() = ActionUpdateThread.BGT
+    }
+
+    private fun showContextMenu(e: MouseEvent) {
+        val path = tree.getPathForLocation(e.x, e.y)
+        if (path != null) tree.selectionPath = path
+        val userObj = (path?.lastPathComponent as? DefaultMutableTreeNode)?.userObject
+        val group = DefaultActionGroup().apply {
+            when (userObj) {
+                is DefinitionNode -> {
+                    add(TypecheckSelectedAction())
+                }
+                is ModuleNode -> {
+                    add(ResolveSelectedModulesAction())
+                    add(TypecheckSelectedAction())
+                }
+            }
+        }
+        val popup = ActionManager.getInstance().createActionPopupMenu("ArendServerStateView.popup", group)
+        popup.component.show(e.component, e.x, e.y)
     }
 }

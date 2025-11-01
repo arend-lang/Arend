@@ -25,12 +25,12 @@ import org.arend.typechecking.visitor.ArendCheckerFactory
 
 @Service(Service.Level.PROJECT)
 class RunnerService(private val project: Project, private val coroutineScope: CoroutineScope) {
-    private fun runChecker(library: String?, isTest: Boolean, module: ModuleLocation?, definition: LongName?, checkerFactory: ArendCheckerFactory?, renamed: Map<TCDefReferable, TCDefReferable>?, bgAction: (() -> Unit)?, edtAction: (() -> Unit)?) =
+    private fun runChecker(library: String?, isTest: Boolean, module: ModuleLocation?, definition: LongName?, onlyResolve: Boolean, checkerFactory: ArendCheckerFactory?, renamed: Map<TCDefReferable, TCDefReferable>?, bgAction: (() -> Unit)?, edtAction: (() -> Unit)?) =
         coroutineScope.launch {
             val message = module?.toString() ?: (library ?: "project")
             val server = project.service<ArendServerService>().server
             withBackgroundProgress(project, "Checking $message") { reportSequentialProgress { reporter ->
-                val checker = reporter.nextStep(5, "Resolving $message") { reportRawProgress { reporter ->
+                val checker = reporter.nextStep(if (onlyResolve) 100 else 5, "Resolving $message") { reportRawProgress { reporter ->
                     if (module == null) {
                         ArendServerRequesterImpl(project).requestUpdate(server, library, isTest)
                     }
@@ -43,7 +43,7 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
                     project.service<ArendMessagesService>().update()
                 }
 
-                val updated = reporter.nextStep(100, "Typechecking $message") {
+                val updated = if (onlyResolve) false else reporter.nextStep(100, "Typechecking $message") {
                     reportRawProgress { reporter ->
                         val indicator = IntellijProgressReporter<List<Concrete.ResolvableDefinition>>(reporter) {
                             val ref = it.firstOrNull()?.data ?: return@IntellijProgressReporter null
@@ -76,12 +76,15 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
             } }
         }
 
-    fun runChecker(library: String?, isTest: Boolean, module: ModuleLocation?, definition: LongName?) =
-        runChecker(library, isTest, module, definition, null, null, null, null)
+    fun runChecker(library: String?, isTest: Boolean, module: ModuleLocation?, definition: LongName?, onlyResolve: Boolean = false) =
+        runChecker(library, isTest, module, definition, onlyResolve, null, null, null, null)
+
+    fun runChecker(module: ModuleLocation, definition: LongName?) =
+        runChecker(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, definition)
 
     fun runChecker(module: ModuleLocation, definition: LongName, checkerFactory: ArendCheckerFactory, renamed: Map<TCDefReferable, TCDefReferable>?, bgAction: (() -> Unit)?, edtAction: (() -> Unit)?) =
-        runChecker(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, definition, checkerFactory, renamed, bgAction, edtAction)
+        runChecker(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, definition, false, checkerFactory, renamed, bgAction, edtAction)
 
-    fun runChecker(module: ModuleLocation) =
-        runChecker(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, null)
+    fun runChecker(module: ModuleLocation, onlyResolve: Boolean = false) =
+        runChecker(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, null, onlyResolve)
 }
