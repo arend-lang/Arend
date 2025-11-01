@@ -29,6 +29,7 @@ import org.arend.psi.navigate
 import org.arend.util.findLibrary
 import org.arend.ext.module.ModuleLocation
 import org.arend.naming.reference.TCDefReferable
+import org.arend.term.concrete.Concrete
 import org.arend.typechecking.runner.RunnerService
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -50,6 +51,16 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         for (p in paths) {
             val node = (p.lastPathComponent as? DefaultMutableTreeNode)?.userObject
             if (node is ModuleNode) result.add(node.location)
+        }
+        return result
+    }
+
+    private fun selectedLibraryNames(): List<String> {
+        val paths = tree.selectionPaths?.toList().orEmpty()
+        val result = ArrayList<String>()
+        for (p in paths) {
+            val node = (p.lastPathComponent as? DefaultMutableTreeNode)?.userObject
+            if (node is LibraryNode) result.add(node.name)
         }
         return result
     }
@@ -240,7 +251,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                     if (group == null) return 0
                     var cnt = 0
                     val def = group.definition
-                    if (def is org.arend.term.concrete.Concrete.ResolvableDefinition) cnt++
+                    if (def is Concrete.ResolvableDefinition) cnt++
                     for (st in group.statements()) {
                         cnt += countDefs(st.group())
                     }
@@ -277,12 +288,21 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
     private inner class ResolveSelectedModulesAction : AnAction("Resolve") {
         override fun update(e: AnActionEvent) {
             e.presentation.icon = ArendIcons.OK
-            e.presentation.isEnabled = selectedModuleLocations().isNotEmpty()
+            e.presentation.isEnabled = selectedModuleLocations().isNotEmpty() || selectedLibraryNames().isNotEmpty()
         }
 
         override fun actionPerformed(e: AnActionEvent) {
-            for (module in selectedModuleLocations()) {
-                project.service<RunnerService>().runChecker(module, true)
+            val modules = selectedModuleLocations()
+            val libraries = selectedLibraryNames()
+            if (modules.isNotEmpty()) {
+                for (module in modules) {
+                    project.service<RunnerService>().runChecker(module, true)
+                }
+            } else {
+                // Resolve whole libraries (both sources and tests)
+                for (lib in libraries) {
+                    project.service<RunnerService>().runChecker(lib, true, null, null, true)
+                }
             }
         }
 
@@ -292,7 +312,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
     private inner class TypecheckSelectedAction : AnAction("Typecheck") {
         override fun update(e: AnActionEvent) {
             e.presentation.icon = ArendIcons.TURNSTILE
-            e.presentation.isEnabled = selectedDefinition() != null || selectedModuleLocations().isNotEmpty()
+            e.presentation.isEnabled = selectedDefinition() != null || selectedModuleLocations().isNotEmpty() || selectedLibraryNames().isNotEmpty()
         }
 
         override fun actionPerformed(e: AnActionEvent) {
@@ -301,8 +321,17 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                 val fullName = def.refFullName
                 project.service<RunnerService>().runChecker(fullName.module ?: return, fullName.longName)
             } else {
-                for (module in selectedModuleLocations()) {
-                    project.service<RunnerService>().runChecker(module, false)
+                val modules = selectedModuleLocations()
+                val libraries = selectedLibraryNames()
+                if (modules.isNotEmpty()) {
+                    for (module in modules) {
+                        project.service<RunnerService>().runChecker(module, false)
+                    }
+                } else {
+                    // Typecheck whole libraries (both sources and tests)
+                    for (lib in libraries) {
+                        project.service<RunnerService>().runChecker(lib, true, null, null, false)
+                    }
                 }
             }
         }
@@ -320,6 +349,10 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                     add(TypecheckSelectedAction())
                 }
                 is ModuleNode -> {
+                    add(ResolveSelectedModulesAction())
+                    add(TypecheckSelectedAction())
+                }
+                is LibraryNode -> {
                     add(ResolveSelectedModulesAction())
                     add(TypecheckSelectedAction())
                 }
