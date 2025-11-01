@@ -16,6 +16,10 @@ class ArendServerStateService(private val project: Project) : Disposable {
     var view: ArendServerStateView? = null
         private set
 
+    // UI state flags for ArendServerStateView
+    @Volatile var groupByFolders: Boolean = true
+    @Volatile var groupDefinitions: Boolean = true
+
     private var serverListener: ArendServerListener? = null
     private var toolWindow: ToolWindow? = null
     @Volatile private var pendingRefresh: Boolean = false

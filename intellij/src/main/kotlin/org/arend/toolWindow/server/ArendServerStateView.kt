@@ -37,7 +37,6 @@ import javax.swing.JPanel
 import java.awt.BorderLayout
 import org.arend.term.group.ConcreteGroup
 import org.arend.ext.error.GeneralError
-import com.intellij.ide.util.PropertiesComponent
 import com.intellij.psi.PsiManager
 import org.arend.module.config.LibraryConfig
 import org.arend.util.FileUtils
@@ -45,23 +44,15 @@ import org.arend.psi.ArendFile
 import org.arend.server.ArendServer
 
 class ArendServerStateView(private val project: Project, toolWindow: ToolWindow) {
-    private val props = PropertiesComponent.getInstance(project)
-
-    // Cache toggle states in-memory to avoid relying on PropertiesComponent during action updates
-    private var groupByFoldersFlag: Boolean = props.getBoolean("ArendServerState.groupByFolders", true)
-    private var groupDefinitionsFlag: Boolean = props.getBoolean("ArendServerState.groupDefinitions", true)
-
     private var groupByFolders: Boolean
-        get() = groupByFoldersFlag
+        get() = project.service<ArendServerStateService>().groupByFolders
         set(value) {
-            groupByFoldersFlag = value
-            props.setValue("ArendServerState.groupByFolders", value)
+            project.service<ArendServerStateService>().groupByFolders = value
         }
     private var groupDefinitions: Boolean
-        get() = groupDefinitionsFlag
+        get() = project.service<ArendServerStateService>().groupDefinitions
         set(value) {
-            groupDefinitionsFlag = value
-            props.setValue("ArendServerState.groupDefinitions", value)
+            project.service<ArendServerStateService>().groupDefinitions = value
         }
     private val root = DefaultMutableTreeNode("Arend Server")
     private val treeModel = DefaultTreeModel(root)

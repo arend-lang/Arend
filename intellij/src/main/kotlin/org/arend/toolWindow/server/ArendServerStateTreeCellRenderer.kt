@@ -84,7 +84,9 @@ class ArendServerStateTreeCellRenderer(private val project: Project) : DefaultTr
                 }
                 is DefinitionNode -> {
                     val def = obj.definition
-                    text = def.refLongName.toString()
+                    // Show only the last part of the name when definitions are grouped
+                    val grouped = project.service<ArendServerStateService>().groupDefinitions
+                    text = if (grouped) def.refName else def.refLongName.toString()
                     icon = statusToIcon(definitionStatus(def))
                 }
                 is GroupNode -> {
