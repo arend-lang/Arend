@@ -165,6 +165,10 @@ class ArendErrorTree(treeModel: DefaultTreeModel) : Tree(treeModel) {
             val child = node.getChildAt(i)
             if (child is DefaultMutableTreeNode && children.remove(child.userObject)) {
                 update(child, childrenFunc)
+                // Remove container nodes that have become empty after filtering (keep error leaves)
+                if (child.childCount == 0 && child.userObject !is ArendErrorTreeElement) {
+                    node.remove(i)
+                }
             } else {
                 node.remove(i)
             }
@@ -172,7 +176,12 @@ class ArendErrorTree(treeModel: DefaultTreeModel) : Tree(treeModel) {
         }
 
         for (child in children) {
-            update(insertNode(DefaultMutableTreeNode(child), node), childrenFunc)
+            val inserted = insertNode(DefaultMutableTreeNode(child), node)
+            update(inserted, childrenFunc)
+            // Remove container nodes that have become empty after filtering (keep error leaves)
+            if (inserted.childCount == 0 && inserted.userObject !is ArendErrorTreeElement) {
+                node.remove(inserted)
+            }
         }
     }
 
