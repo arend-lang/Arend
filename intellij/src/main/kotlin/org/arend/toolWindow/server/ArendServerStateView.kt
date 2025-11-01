@@ -14,6 +14,7 @@ import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.treeStructure.Tree
+import com.intellij.ui.TreeSpeedSearch
 import org.arend.ArendIcons
 import org.arend.server.ArendServerService
 import javax.swing.tree.DefaultMutableTreeNode
@@ -23,6 +24,9 @@ import com.intellij.codeInsight.hints.presentation.mouseButton
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.event.KeyEvent
+import javax.swing.KeyStroke
+import javax.swing.AbstractAction
 import javax.swing.tree.TreePath
 import com.intellij.openapi.application.runReadAction
 import com.intellij.psi.PsiElement
@@ -212,6 +216,32 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         panel.toolbar = toolbar.component
 
         contentManager.addContent(contentManager.factory.createContent(panel, "", false))
+
+        // Type to search by node name/path
+        TreeSpeedSearch.installOn(tree, true) { path: TreePath ->
+            val dmtn = path.lastPathComponent as? DefaultMutableTreeNode ?: return@installOn ""
+            when (val obj = dmtn.userObject) {
+                is LibraryNode -> obj.name
+                is ModuleNode -> buildString {
+                    append(obj.location.modulePath.toList().lastOrNull() ?: "")
+                    append(" ")
+                    append(obj.location.modulePath)
+                }
+                is FolderNode -> obj.dir.name
+                is FileNode -> obj.file.nameWithoutExtension
+                is GroupNode -> obj.name
+                is DefinitionNode -> obj.definition.refName
+                else -> ""
+            }
+        }
+
+        // Press Enter to navigate to the selected item
+        tree.inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "arendNavigate")
+        tree.actionMap.put("arendNavigate", object : AbstractAction() {
+            override fun actionPerformed(e: java.awt.event.ActionEvent?) {
+                navigate()
+            }
+        })
 
         tree.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
