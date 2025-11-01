@@ -262,15 +262,27 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                 }
                 totalDefinitions += countDefs(rawGroup)
 
-                // Resolved definitions for the module
-                val defs = server.getResolvedDefinitions(loc)
-                if (defs.isNotEmpty()) resolvedModules++
-                for (def in defs) {
+                // Definitions for the module:
+                // - Always list definitions from the raw group (available even if the module is not resolved)
+                // - Compute typechecked counters from resolved definitions, but do not rely on them for listing
+                val resolvedDefs = server.getResolvedDefinitions(loc)
+                if (resolvedDefs.isNotEmpty()) resolvedModules++
+                for (def in resolvedDefs) {
                     if (def.definition.data.isTypechecked()) {
                         typecheckedDefinitions++
                     }
-                    moduleNode.add(DefaultMutableTreeNode(DefinitionNode(def.definition.data)))
                 }
+
+                fun addDefs(group: ConcreteGroup?) {
+                    if (group == null) return
+                    val def = group.definition
+                    if (def is Concrete.ResolvableDefinition) {
+                        moduleNode.add(DefaultMutableTreeNode(DefinitionNode(def.data)))
+                    }
+                    for (st in group.statements()) addDefs(st.group())
+                    for (dg in group.dynamicGroups()) addDefs(dg)
+                }
+                addDefs(rawGroup)
                 libNode.add(moduleNode)
             }
             root.add(libNode)
