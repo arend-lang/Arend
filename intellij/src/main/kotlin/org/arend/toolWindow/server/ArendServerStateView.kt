@@ -15,6 +15,15 @@ import org.arend.ArendIcons
 import org.arend.server.ArendServerService
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
+import com.intellij.codeInsight.hints.presentation.MouseButton
+import com.intellij.codeInsight.hints.presentation.mouseButton
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
+import javax.swing.tree.TreePath
+import com.intellij.openapi.application.runReadAction
+import com.intellij.psi.PsiElement
+import org.arend.psi.navigate
+import org.arend.util.findLibrary
 
 class ArendServerStateView(private val project: Project, toolWindow: ToolWindow) {
     private val root = DefaultMutableTreeNode("Arend Server")
@@ -29,6 +38,8 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         panel.setContent(ScrollPaneFactory.createScrollPane(tree, true))
         tree.cellRenderer = ArendServerStateTreeCellRenderer(project)
         tree.isRootVisible = false
+        // Do not expand/collapse nodes on double-click; we handle double-click for navigation only
+        tree.toggleClickCount = 0
 
         val toolbarGroup = DefaultActionGroup()
         val actions = CommonActionsManager.getInstance()
@@ -44,6 +55,18 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
 
         contentManager.addContent(contentManager.factory.createContent(panel, "", false))
 
+        tree.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                when (e.mouseButton) {
+                    MouseButton.Left -> if (e.clickCount >= 2) {
+                        navigate()
+                    }
+                    MouseButton.Right -> {}
+                    else -> {}
+                }
+            }
+        })
+
         // Initial fill
         refresh()
     }
@@ -51,6 +74,38 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
     fun refresh() {
         ApplicationManager.getApplication().invokeLater {
             rebuildTree()
+        }
+    }
+
+    private fun navigate() {
+        val path: TreePath = tree.selectionPath ?: return
+        val node = path.lastPathComponent as? DefaultMutableTreeNode ?: return
+        when (val obj = node.userObject) {
+            is DefinitionNode -> {
+                val tcRef = obj.definition
+                val ok = runReadAction {
+                    val psi = tcRef.data as? PsiElement
+                    if (psi != null && psi.isValid) {
+                        psi.navigationElement.navigate(true)
+                        true
+                    } else {
+                        false
+                    }
+                }
+                // Fallback: open the containing file by module location
+                if (!ok) {
+                    val location = tcRef.location
+                    if (location != null) {
+                        val file = project.findLibrary(location.libraryName)?.findArendFile(location)
+                        file?.navigate(true)
+                    }
+                }
+            }
+            is ModuleNode -> {
+                val loc = obj.location
+                val file = project.findLibrary(loc.libraryName)?.findArendFile(loc)
+                file?.navigate(true)
+            }
         }
     }
 
