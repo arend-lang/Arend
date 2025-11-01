@@ -35,6 +35,7 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import java.awt.BorderLayout
 import org.arend.term.group.ConcreteGroup
+import org.arend.ext.error.GeneralError
 
 class ArendServerStateView(private val project: Project, toolWindow: ToolWindow) {
     private val root = DefaultMutableTreeNode("Arend Server")
@@ -140,7 +141,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         val contentManager = toolWindow.contentManager
         // Build content panel with a status line on top and the tree in the center
         val contentPanel = JPanel(BorderLayout())
-        statusLabel.text = "Modules: 0/0 • Definitions: 0/0"
+        statusLabel.text = "Modules: 0/0 • Definitions: 0/0 • Errors: 0 • Goals: 0"
         contentPanel.add(statusLabel, BorderLayout.NORTH)
         contentPanel.add(ScrollPaneFactory.createScrollPane(tree, true), BorderLayout.CENTER)
         panel.setContent(contentPanel)
@@ -286,8 +287,21 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         }
         treeModel.reload(root)
 
+        // Collect goals and errors from the server
+        var errorCount = 0
+        var goalCount = 0
+        for (errorList in server.errorMap.values) {
+            for (error in errorList) {
+                when (error.level) {
+                    GeneralError.Level.GOAL -> goalCount++
+                    GeneralError.Level.ERROR -> errorCount++
+                    else -> {}
+                }
+            }
+        }
+
         // Update status label
-        statusLabel.text = "Modules: $resolvedModules/$totalModules • Definitions: $typecheckedDefinitions/$totalDefinitions"
+        statusLabel.text = "Modules: $resolvedModules/$totalModules • Definitions: $typecheckedDefinitions/$totalDefinitions • Errors: $errorCount • Goals: $goalCount"
 
         // Restore expanded and selection state
         restoreTreeState(expandedIds, selectedIdPath)
