@@ -32,6 +32,70 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
 
     private val panel = SimpleToolWindowPanel(false)
 
+    // --- State persistence helpers (expanded nodes and selection) ---
+    private fun nodeId(obj: Any?): String? = when (obj) {
+        is LibraryNode -> "lib:" + obj.name
+        is ModuleNode -> "mod:" + obj.location.libraryName + ":" + obj.location.locationKind + ":" + obj.location.modulePath.toString()
+        is DefinitionNode -> "def:" + obj.definition.refLongName.toString()
+        is String -> "root"
+        else -> null
+    }
+
+    private fun pathId(path: TreePath?): String? {
+        if (path == null) return null
+        val parts = path.path.mapNotNull { (it as? DefaultMutableTreeNode)?.userObject }.map { nodeId(it) ?: return null }
+        return parts.joinToString("|")
+    }
+
+    private fun captureTreeState(): Pair<Set<String>, String?> {
+        val expanded = LinkedHashSet<String>()
+        var row = 0
+        while (row < tree.rowCount) {
+            val p = tree.getPathForRow(row)
+            if (p != null && tree.isExpanded(p)) {
+                pathId(p)?.let { expanded.add(it) }
+            }
+            row++
+        }
+        val selected = pathId(tree.selectionPath)
+        return Pair(expanded, selected)
+    }
+
+    private fun restoreTreeState(expandedIds: Set<String>, selectedId: String?) {
+        // Build a map from id to TreePath for current tree by traversing all nodes (not only visible rows)
+        val idToPath = HashMap<String, TreePath>()
+        val rootNode = treeModel.root as? DefaultMutableTreeNode
+        if (rootNode != null) {
+            val e = rootNode.depthFirstEnumeration()
+            while (e.hasMoreElements()) {
+                val n = e.nextElement() as? DefaultMutableTreeNode ?: continue
+                val p = TreePath(n.path)
+                val id = pathId(p)
+                if (id != null) idToPath[id] = p
+            }
+        }
+
+        // Expand saved paths (shortest first to ensure parents are expanded before children)
+        expandedIds.sortedBy { it.length }.forEach { id ->
+            idToPath[id]?.let { tree.expandPath(it) }
+        }
+
+        // Restore selection (use the deepest existing prefix)
+        var candidate = selectedId
+        var selectedPath: TreePath? = null
+        while (candidate != null && selectedPath == null) {
+            selectedPath = idToPath[candidate]
+            if (selectedPath == null) {
+                val idx = candidate.lastIndexOf('|')
+                candidate = if (idx > 0) candidate.substring(0, idx) else null
+            }
+        }
+        if (selectedPath != null) {
+            tree.selectionPath = selectedPath
+            tree.scrollPathToVisible(selectedPath)
+        }
+    }
+
     init {
         toolWindow.setIcon(ArendIcons.SERVER)
         val contentManager = toolWindow.contentManager
@@ -110,6 +174,9 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
     }
 
     private fun rebuildTree() {
+        // Capture expanded and selection state before rebuild
+        val (expandedIds, selectedIdPath) = captureTreeState()
+
         val server = project.service<ArendServerService>().server
         val libraries = server.libraries
         root.removeAllChildren()
@@ -130,8 +197,8 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
             root.add(libNode)
         }
         treeModel.reload(root)
-        for (i in 0 until tree.rowCount) {
-            tree.expandRow(i)
-        }
+
+        // Restore expanded and selection state
+        restoreTreeState(expandedIds, selectedIdPath)
     }
 }
