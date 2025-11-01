@@ -180,9 +180,6 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                 }
             }
         })
-
-        // Initial fill
-        refresh()
     }
 
     fun refresh() {
