@@ -36,7 +36,6 @@ class ArendServerStateService(private val project: Project) : Disposable {
             override fun onLibraryUpdated(libraryName: String) = queueRefresh()
             override fun onLibraryRemoved(libraryName: String) = queueRefresh()
             override fun onLibrariesUnloaded(onlyInternal: Boolean) = queueRefresh()
-            override fun onModuleUpdated(module: org.arend.ext.module.ModuleLocation) = queueRefresh()
             override fun onModuleRemoved(module: org.arend.ext.module.ModuleLocation) = queueRefresh()
             override fun onModuleResolved(module: org.arend.ext.module.ModuleLocation) = queueRefresh()
             override fun onTypecheckingFinished() = queueRefresh()
