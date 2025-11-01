@@ -46,12 +46,23 @@ import org.arend.server.ArendServer
 
 class ArendServerStateView(private val project: Project, toolWindow: ToolWindow) {
     private val props = PropertiesComponent.getInstance(project)
+
+    // Cache toggle states in-memory to avoid relying on PropertiesComponent during action updates
+    private var groupByFoldersFlag: Boolean = props.getBoolean("ArendServerState.groupByFolders", true)
+    private var groupDefinitionsFlag: Boolean = props.getBoolean("ArendServerState.groupDefinitions", true)
+
     private var groupByFolders: Boolean
-        get() = props.getBoolean("ArendServerState.groupByFolders", true)
-        set(value) { props.setValue("ArendServerState.groupByFolders", value) }
+        get() = groupByFoldersFlag
+        set(value) {
+            groupByFoldersFlag = value
+            props.setValue("ArendServerState.groupByFolders", value)
+        }
     private var groupDefinitions: Boolean
-        get() = props.getBoolean("ArendServerState.groupDefinitions", true)
-        set(value) { props.setValue("ArendServerState.groupDefinitions", value) }
+        get() = groupDefinitionsFlag
+        set(value) {
+            groupDefinitionsFlag = value
+            props.setValue("ArendServerState.groupDefinitions", value)
+        }
     private val root = DefaultMutableTreeNode("Arend Server")
     private val treeModel = DefaultTreeModel(root)
     private val tree = Tree(treeModel)
@@ -161,7 +172,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
             groupByFolders = state
             refresh()
         }
-        override fun getActionUpdateThread() = ActionUpdateThread.BGT
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
     private inner class GroupDefinitionsToggle : ToggleAction("Group Definitions") {
@@ -170,7 +181,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
             groupDefinitions = state
             refresh()
         }
-        override fun getActionUpdateThread() = ActionUpdateThread.BGT
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
     init {
@@ -283,6 +294,27 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         return cnt
     }
 
+    private fun addDefs(parent: DefaultMutableTreeNode, group: ConcreteGroup?, grouped: Boolean) {
+        if (group == null) return
+        if (!grouped) {
+            // Flat listing
+            val def = group.definition
+            if (def is Concrete.ResolvableDefinition) parent.add(DefaultMutableTreeNode(DefinitionNode(def.data)))
+            for (st in group.statements()) addDefs(parent, st.group(), false)
+            for (dg in group.dynamicGroups()) addDefs(parent, dg, false)
+        } else {
+            // Grouped mode: internal nodes are DefinitionNode as well; nest subgroup definitions under the current definition node
+            val def = group.definition
+            val parentForChildren = if (def is Concrete.ResolvableDefinition) {
+                val defNode = DefaultMutableTreeNode(DefinitionNode(def.data))
+                parent.add(defNode)
+                defNode
+            } else parent
+            for (st in group.statements()) addDefs(parentForChildren, st.group(), true)
+            for (dg in group.dynamicGroups()) addDefs(parentForChildren, dg, true)
+        }
+    }
+
     private fun updateStatusLabel(server: ArendServer, resolvedModules: Int, totalModules: Int, typecheckedDefinitions: Int, totalDefinitions: Int) {
         // Collect goals and errors from the server
         var errorCount = 0
@@ -339,16 +371,8 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                     }
                 }
 
-                fun addDefs(group: ConcreteGroup?) {
-                    if (group == null) return
-                    val def = group.definition
-                    if (def is Concrete.ResolvableDefinition) {
-                        moduleNode.add(DefaultMutableTreeNode(DefinitionNode(def.data)))
-                    }
-                    for (st in group.statements()) addDefs(st.group())
-                    for (dg in group.dynamicGroups()) addDefs(dg)
-                }
-                addDefs(rawGroup)
+                // Add definitions from the raw group; apply grouping according to the toggle
+                addDefs(moduleNode, rawGroup, groupDefinitions)
                 libNode.add(moduleNode)
             }
             root.add(libNode)
@@ -387,32 +411,6 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         }
         allModules.forEach { countFromModule(it) }
 
-        // Helpers to build definitions under a file
-        fun addDefs(parent: DefaultMutableTreeNode, group: ConcreteGroup?) {
-            if (group == null) return
-            if (!groupDefinitions) {
-                // Flat listing
-                val def = group.definition
-                if (def is Concrete.ResolvableDefinition) parent.add(DefaultMutableTreeNode(DefinitionNode(def.data)))
-                for (st in group.statements()) addDefs(parent, st.group())
-                for (dg in group.dynamicGroups()) addDefs(parent, dg)
-            } else {
-                // Grouped by nested groups: create nodes for group names if available
-                val def = group.definition
-                var currentParent = parent
-                if (def is Concrete.ResolvableDefinition) {
-                    // Use referable text as group name
-                    val name = def.data.refName
-                    val grpNode = DefaultMutableTreeNode(GroupNode(name))
-                    parent.add(grpNode)
-                    currentParent = grpNode
-                    // Add the definition itself under the group node
-                    currentParent.add(DefaultMutableTreeNode(DefinitionNode(def.data)))
-                }
-                for (st in group.statements()) addDefs(currentParent, st.group())
-                for (dg in group.dynamicGroups()) addDefs(currentParent, dg)
-            }
-        }
 
         // Build folder/file tree for each library and its roots
         for (lib in libraries.sorted()) {
@@ -436,8 +434,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                         val moduleLoc = arendFile?.moduleLocation
                         val fileNode = DefaultMutableTreeNode(FileNode(lib, isTest, child, moduleLoc))
                         if (moduleLoc != null) {
-                            val rawGroup = server.getRawGroup(moduleLoc)
-                            addDefs(fileNode, rawGroup)
+                            addDefs(fileNode, server.getRawGroup(moduleLoc), groupDefinitions)
                         }
                         parent.add(fileNode)
                     }

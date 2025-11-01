@@ -50,7 +50,8 @@ class ArendServerStateTreeCellRenderer(private val project: Project) : DefaultTr
                             severity == GeneralError.Level.GOAL -> " [goals]"
                             severity == GeneralError.Level.WARNING || severity == GeneralError.Level.WARNING_UNUSED -> " [warnings]"
                             resolved -> " [resolved]"
-                            else -> " [unresolved]"
+                            server.getRawGroup(module) != null -> " [unresolved]"
+                            else -> " [not loaded]"
                         }
                         text = moduleName + statusSuffix
                         icon = statusIcon
@@ -75,7 +76,8 @@ class ArendServerStateTreeCellRenderer(private val project: Project) : DefaultTr
                         severity == GeneralError.Level.GOAL -> " [goals]"
                         severity == GeneralError.Level.WARNING || severity == GeneralError.Level.WARNING_UNUSED -> " [warnings]"
                         resolved -> " [resolved]"
-                        else -> " [unresolved]"
+                        server.getRawGroup(obj.location) != null -> " [unresolved]"
+                        else -> " [not loaded]"
                     }
                     text = moduleName + statusSuffix
                     icon = statusIcon
