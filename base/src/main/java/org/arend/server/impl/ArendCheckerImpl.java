@@ -254,6 +254,8 @@ public class ArendCheckerImpl implements ArendChecker {
               }
               groupData.updateResolvedDefinitions(definitionData);
               myServer.getInstanceCache().addInstances(groupData, myServer.getTypingInfo());
+              // Notify listeners that this module has been resolved
+              myServer.notifyModuleResolved(module);
             }
           }
         }
@@ -308,125 +310,132 @@ public class ArendCheckerImpl implements ArendChecker {
     }
 
     ConcreteProvider concreteProvider = getConcreteProvider(indicator, ProgressReporter.empty());
-    if (concreteProvider == null) return 0;
+    if (concreteProvider == null) {
+      myServer.notifyTypecheckingFinished();
+      return 0;
+    }
 
-    List<Concrete.ResolvableDefinition> concreteDefinitions = definitions == null ? null : new ArrayList<>();
-    Set<TCDefReferable> concreteReferences = definitions == null || checkerFactory == null ? null : new HashSet<>();
-    if (definitions != null) {
-      for (FullName definition : definitions) {
-        if (definition.module == null) {
-          errorReporter.report(new DefinitionNotFoundError(definition));
-          continue;
-        }
-
-        GroupData groupData = myDependencies.get(definition.module);
-        if (groupData != null) {
-          Referable ref = Scope.resolveName(groupData.getFileScope(), definition.longName.toList());
-          Concrete.GeneralDefinition def = ref instanceof GlobalReferable ? myConcreteProvider.getConcrete((GlobalReferable) ref) : null;
-          if (def instanceof Concrete.ResolvableDefinition cDef) {
-            if (checkerFactory != null) {
-              cDef = copyDefinition(cDef, renamed);
-              concreteReferences.add(cDef.getData());
-            }
-            concreteDefinitions.add(cDef);
-          } else {
+    try {
+      List<Concrete.ResolvableDefinition> concreteDefinitions = definitions == null ? null : new ArrayList<>();
+      Set<TCDefReferable> concreteReferences = definitions == null || checkerFactory == null ? null : new HashSet<>();
+      if (definitions != null) {
+        for (FullName definition : definitions) {
+          if (definition.module == null) {
             errorReporter.report(new DefinitionNotFoundError(definition));
+            continue;
           }
-        } else {
-          errorReporter.report(new ModuleNotFoundError(definition.module.getModulePath()));
+
+          GroupData groupData = myDependencies.get(definition.module);
+          if (groupData != null) {
+            Referable ref = Scope.resolveName(groupData.getFileScope(), definition.longName.toList());
+            Concrete.GeneralDefinition def = ref instanceof GlobalReferable ? myConcreteProvider.getConcrete((GlobalReferable) ref) : null;
+            if (def instanceof Concrete.ResolvableDefinition cDef) {
+              if (checkerFactory != null) {
+                cDef = copyDefinition(cDef, renamed);
+                concreteReferences.add(cDef.getData());
+              }
+              concreteDefinitions.add(cDef);
+            } else {
+              errorReporter.report(new DefinitionNotFoundError(definition));
+            }
+          } else {
+            errorReporter.report(new ModuleNotFoundError(definition.module.getModulePath()));
+          }
         }
       }
-    }
 
-    if (!Prelude.isInitialized()) {
-      new Prelude.PreludeTypechecking(concreteProvider).typecheckDefinitions(myDependencies.get(Prelude.MODULE_LOCATION).getResolvedDefinitions().stream().map(DefinitionData::definition).toList(), UnstoppableCancellationIndicator.INSTANCE);
-      Prelude.initialize();
-    }
+      if (!Prelude.isInitialized()) {
+        new Prelude.PreludeTypechecking(concreteProvider).typecheckDefinitions(myDependencies.get(Prelude.MODULE_LOCATION).getResolvedDefinitions().stream().map(DefinitionData::definition).toList(), UnstoppableCancellationIndicator.INSTANCE);
+        Prelude.initialize();
+      }
 
-    DependencyCollector dependencyCollector = new DependencyCollector(myServer);
-    CollectingOrderingListener collector = new CollectingOrderingListener();
-    Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies));
+      DependencyCollector dependencyCollector = new DependencyCollector(myServer);
+      CollectingOrderingListener collector = new CollectingOrderingListener();
+      Ordering ordering = new Ordering(myServer.getInstanceScopeProvider(), concreteProvider, collector, dependencyCollector, new GroupComparator(myDependencies));
 
-    TypecheckingCancellationIndicator typecheckingIndicator = new TypecheckingCancellationIndicator(indicator);
-    new BooleanComputationRunner().run(typecheckingIndicator, () -> {
-      myLogger.info(() -> "<Lock> Typechecking of definitions " + (definitions == null ? "in " + myModules : definitions));
+      TypecheckingCancellationIndicator typecheckingIndicator = new TypecheckingCancellationIndicator(indicator);
+      new BooleanComputationRunner().run(typecheckingIndicator, () -> {
+        myLogger.info(() -> "<Lock> Typechecking of definitions " + (definitions == null ? "in " + myModules : definitions));
 
-      withTCDefLock(() -> {
-        if (concreteDefinitions == null) {
-          List<ConcreteGroup> groups = new ArrayList<>(myModules.size());
-          for (ModuleLocation module : myModules) {
-            GroupData groupData = myDependencies.get(module);
-            if (groupData != null) groups.add(groupData.getRawGroup());
+        withTCDefLock(() -> {
+          if (concreteDefinitions == null) {
+            List<ConcreteGroup> groups = new ArrayList<>(myModules.size());
+            for (ModuleLocation module : myModules) {
+              GroupData groupData = myDependencies.get(module);
+              if (groupData != null) groups.add(groupData.getRawGroup());
+            }
+            ordering.orderModules(groups);
+          } else {
+            for (Concrete.ResolvableDefinition definition : concreteDefinitions) {
+              ordering.order(definition);
+            }
           }
-          ordering.orderModules(groups);
-        } else {
-          for (Concrete.ResolvableDefinition definition : concreteDefinitions) {
-            ordering.order(definition);
+          typecheckingIndicator.setElements(collector.getElements());
+        });
+
+        if (!collector.isEmpty()) {
+          myLogger.info(() -> "Collected definitions (" + collector.getElements().size() + ") for " + (definitions == null ? myModules : definitions));
+
+          ListErrorReporter listErrorReporter = new ListErrorReporter();
+          TypecheckingOrderingListener dependencyTypechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider());
+          TypecheckingOrderingListener typechecker = checkerFactory == null ? dependencyTypechecker : new TypecheckingOrderingListener(checkerFactory, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider());
+
+          try {
+            progressReporter.beginProcessing(collector.getElements().size());
+            for (CollectingOrderingListener.Element element : collector.getElements()) {
+              typecheckingIndicator.checkCanceled();
+              progressReporter.beginItem(element.getAllDefinitions());
+
+              if (checkerFactory == null) {
+                element.feedTo(typechecker);
+              } else {
+                boolean found = false;
+                List<? extends Concrete.ResolvableDefinition> allDefinitions = element.getAllDefinitions();
+                for (Concrete.ResolvableDefinition definition : allDefinitions) {
+                  if (concreteReferences.contains(definition.getData())) {
+                    found = true;
+                    break;
+                  }
+                }
+
+                if (found) {
+                  List<Concrete.ResolvableDefinition> newDefinitions = new ArrayList<>(allDefinitions.size());
+                  for (Concrete.ResolvableDefinition definition : allDefinitions) {
+                    newDefinitions.add(concreteReferences.contains(definition.getData()) ? definition : copyDefinition(definition, renamed));
+                  }
+                  element.replace(newDefinitions).feedTo(typechecker);
+                  break;
+                } else {
+                  element.feedTo(dependencyTypechecker);
+                }
+              }
+
+              progressReporter.endItem(element.getAllDefinitions());
+            }
+
+            withTCDefLock(() -> {
+              typecheckingIndicator.checkCanceled();
+              listErrorReporter.reportTo(myServer.getErrorService());
+              dependencyCollector.copyTo(myServer.getDependencyCollector());
+            });
+
+            myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is commited");
+          } catch (Exception e) {
+            dependencyTypechecker.computationInterrupted();
+            typechecker.computationInterrupted();
+            myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is interrupted");
+            throw e;
           }
         }
-        typecheckingIndicator.setElements(collector.getElements());
+
+        return true;
       });
 
-      if (!collector.isEmpty()) {
-        myLogger.info(() -> "Collected definitions (" + collector.getElements().size() + ") for " + (definitions == null ? myModules : definitions));
-
-        ListErrorReporter listErrorReporter = new ListErrorReporter();
-        TypecheckingOrderingListener dependencyTypechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider());
-        TypecheckingOrderingListener typechecker = checkerFactory == null ? dependencyTypechecker : new TypecheckingOrderingListener(checkerFactory, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider());
-
-        try {
-          progressReporter.beginProcessing(collector.getElements().size());
-          for (CollectingOrderingListener.Element element : collector.getElements()) {
-            typecheckingIndicator.checkCanceled();
-            progressReporter.beginItem(element.getAllDefinitions());
-
-            if (checkerFactory == null) {
-              element.feedTo(typechecker);
-            } else {
-              boolean found = false;
-              List<? extends Concrete.ResolvableDefinition> allDefinitions = element.getAllDefinitions();
-              for (Concrete.ResolvableDefinition definition : allDefinitions) {
-                if (concreteReferences.contains(definition.getData())) {
-                  found = true;
-                  break;
-                }
-              }
-
-              if (found) {
-                List<Concrete.ResolvableDefinition> newDefinitions = new ArrayList<>(allDefinitions.size());
-                for (Concrete.ResolvableDefinition definition : allDefinitions) {
-                  newDefinitions.add(concreteReferences.contains(definition.getData()) ? definition : copyDefinition(definition, renamed));
-                }
-                element.replace(newDefinitions).feedTo(typechecker);
-                break;
-              } else {
-                element.feedTo(dependencyTypechecker);
-              }
-            }
-
-            progressReporter.endItem(element.getAllDefinitions());
-          }
-
-          withTCDefLock(() -> {
-            typecheckingIndicator.checkCanceled();
-            listErrorReporter.reportTo(myServer.getErrorService());
-            dependencyCollector.copyTo(myServer.getDependencyCollector());
-          });
-
-          myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is commited");
-        } catch (Exception e) {
-          dependencyTypechecker.computationInterrupted();
-          typechecker.computationInterrupted();
-          myLogger.info(() -> "<Unlock> Typechecking of definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions) + " is interrupted");
-          throw e;
-        }
-      }
-
-      return true;
-    });
-
-    myLogger.info(() -> "End typechecking definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions));
-    return collector.getElements().size();
+      myLogger.info(() -> "End typechecking definitions (" + collector.getElements().size() + ") " + (definitions == null ? "in " + myModules : definitions));
+      return collector.getElements().size();
+    } finally {
+      myServer.notifyTypecheckingFinished();
+    }
   }
 
   private ModuleLocation findChanged(Map<ModuleLocation, GroupData> modules) {

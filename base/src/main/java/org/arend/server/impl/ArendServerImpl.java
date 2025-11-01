@@ -40,6 +40,7 @@ import java.util.logging.*;
 
 public class ArendServerImpl implements ArendServer {
   private final static Logger myLogger = Logger.getLogger(ArendServerImpl.class.getName());
+  private final Set<ArendServerListener> myListeners = ConcurrentHashMap.newKeySet();
   private final ArendServerRequester myRequester;
   private final SimpleModuleScopeProvider myPreludeModuleScopeProvider = new SimpleModuleScopeProvider();
   private final Map<ModuleLocation, GroupData> myGroups = new ConcurrentHashMap<>();
@@ -157,8 +158,48 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
+  public void addListener(@NotNull ArendServerListener listener) {
+    myListeners.add(listener);
+  }
+
+  @Override
+  public void removeListener(@NotNull ArendServerListener listener) {
+    myListeners.remove(listener);
+  }
+
+  private void notifyLibraryUpdated(String name) {
+    for (ArendServerListener l : myListeners) l.onLibraryUpdated(name);
+  }
+
+  private void notifyLibraryRemoved(String name) {
+    for (ArendServerListener l : myListeners) l.onLibraryRemoved(name);
+  }
+
+  private void notifyLibrariesUnloaded(boolean onlyInternal) {
+    for (ArendServerListener l : myListeners) l.onLibrariesUnloaded(onlyInternal);
+  }
+
+  private void notifyModuleUpdated(ModuleLocation module) {
+    for (ArendServerListener l : myListeners) l.onModuleUpdated(module);
+  }
+
+  private void notifyModuleRemoved(ModuleLocation module) {
+    for (ArendServerListener l : myListeners) l.onModuleRemoved(module);
+  }
+
+  // New event notifications
+  void notifyModuleResolved(ModuleLocation module) {
+    for (ArendServerListener l : myListeners) l.onModuleResolved(module);
+  }
+
+  void notifyTypecheckingFinished() {
+    for (ArendServerListener l : myListeners) l.onTypecheckingFinished();
+  }
+
+  @Override
   public void updateLibrary(@NotNull ArendLibrary library, @NotNull ErrorReporter errorReporter) {
     myLibraryService.updateLibrary(library, errorReporter);
+    notifyLibraryUpdated(library.getLibraryName());
   }
 
   @Override
@@ -168,6 +209,7 @@ public class ArendServerImpl implements ArendServer {
       clearReverseDependencies(name);
       myLogger.info(() -> "Library '" + name + "' is removed");
     }
+    notifyLibraryRemoved(name);
   }
 
   @Override
@@ -178,6 +220,7 @@ public class ArendServerImpl implements ArendServer {
       myReverseDependencies.clear();
       myLogger.info(onlyInternal ? "Internal libraries unloaded" : "Libraries unloaded");
     }
+    notifyLibrariesUnloaded(onlyInternal);
   }
 
   @Override
@@ -196,6 +239,7 @@ public class ArendServerImpl implements ArendServer {
       }
     }
 
+    final boolean[] added = new boolean[1];
     myGroups.compute(module, (mod, prevPair) -> {
       if (prevPair != null) {
         myLogger.warning("Read-only module '" + mod + "' is already added" + (prevPair.isReadOnly() ? "" : " as a writable module"));
@@ -222,8 +266,10 @@ public class ArendServerImpl implements ArendServer {
       updateReferables(group, module);
 
       myLogger.info(() -> "Added a read-only module '" + mod + "'");
+      added[0] = true;
       return new GroupData(group, typingInfo);
     });
+    if (added[0]) notifyModuleUpdated(module);
   }
 
   void addReverseDependencies(ModulePath module, ModuleLocation dependency) {
@@ -259,6 +305,7 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public void updateModule(long modificationStamp, @NotNull ModuleLocation moduleLocation, @NotNull Supplier<ConcreteGroup> supplier) {
+    final boolean[] changed = new boolean[1];
     myRequester.runUnderReadLock(() -> {
       myGroups.compute(moduleLocation, (module, prevData) -> {
         if (prevData != null) {
@@ -290,11 +337,13 @@ public class ArendServerImpl implements ArendServer {
         }
 
         myLogger.info(() -> prevData == null ? "Module '" + module + "' is added" : "Module '" + module + "' is updated");
+        changed[0] = true;
         return newData;
       });
 
       return null;
     });
+    if (changed[0]) notifyModuleUpdated(moduleLocation);
   }
 
   private void addGeneratedName(ArendLibraryImpl library, LocatedReferable referable) {
@@ -345,13 +394,16 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public void removeModule(@NotNull ModuleLocation module) {
+    boolean removed = false;
     synchronized (this) {
       GroupData groupData = myGroups.remove(module);
       if (groupData != null) {
         clearReverseDependencies(module, groupData.getRawGroup());
         myLogger.info(() -> "Module '" + module + "' is deleted");
+        removed = true;
       }
     }
+    if (removed) notifyModuleRemoved(module);
   }
 
   @Override

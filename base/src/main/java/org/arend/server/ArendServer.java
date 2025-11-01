@@ -24,6 +24,16 @@ import java.util.function.Supplier;
 
 public interface ArendServer {
   /**
+   * Adds a listener to receive ArendServer state change events.
+   */
+  void addListener(@NotNull ArendServerListener listener);
+
+  /**
+   * Removes a previously added listener.
+   */
+  void removeListener(@NotNull ArendServerListener listener);
+
+  /**
    * Adds or updates a library.
    */
   void updateLibrary(@NotNull ArendLibrary library, @NotNull ErrorReporter errorReporter);
