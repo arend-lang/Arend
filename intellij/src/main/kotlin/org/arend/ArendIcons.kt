@@ -72,6 +72,8 @@ object ArendIcons {
     val OK = AllIcons.Actions.Checked
     val SERVER = AllIcons.General.Note
     val UNKNOWN = AllIcons.General.ContextHelp
+    val GROUP_BY_FOLDER = AllIcons.Actions.GroupByPackage
+    val GROUP_BY_DEFINITION = AllIcons.Actions.GroupByMethod
 
     fun getErrorLevelIcon(error: GeneralError) = when (error.level) {
         GeneralError.Level.INFO -> INFO

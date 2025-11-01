@@ -166,7 +166,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         }
     }
 
-    private inner class GroupByFoldersToggle : ToggleAction("Group By Folders") {
+    private inner class GroupByFoldersToggle : ToggleAction("Group By Folders", null, ArendIcons.GROUP_BY_FOLDER) {
         override fun isSelected(e: AnActionEvent): Boolean = groupByFolders
         override fun setSelected(e: AnActionEvent, state: Boolean) {
             groupByFolders = state
@@ -175,7 +175,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
-    private inner class GroupDefinitionsToggle : ToggleAction("Group Definitions") {
+    private inner class GroupDefinitionsToggle : ToggleAction("Group Definitions", null, ArendIcons.GROUP_BY_DEFINITION) {
         override fun isSelected(e: AnActionEvent): Boolean = groupDefinitions
         override fun setSelected(e: AnActionEvent, state: Boolean) {
             groupDefinitions = state
