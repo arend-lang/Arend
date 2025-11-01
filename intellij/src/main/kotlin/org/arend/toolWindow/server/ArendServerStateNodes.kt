@@ -1,5 +1,6 @@
 package org.arend.toolWindow.server
 
+import com.intellij.openapi.vfs.VirtualFile
 import org.arend.ArendIcons
 import org.arend.core.definition.Definition
 import org.arend.ext.module.ModuleLocation
@@ -8,11 +9,22 @@ import javax.swing.Icon
 
 sealed interface ServerTreeNode
 
-data class LibraryNode(val name: String) : ServerTreeNode
+// Top-level library node
+ data class LibraryNode(val name: String) : ServerTreeNode
 
-data class ModuleNode(val location: ModuleLocation) : ServerTreeNode
+// Module node known to the server
+ data class ModuleNode(val location: ModuleLocation) : ServerTreeNode
 
-data class DefinitionNode(val definition: TCDefReferable) : ServerTreeNode
+// File system nodes for folder-grouped view
+ data class FolderNode(val libraryName: String, val isTest: Boolean, val dir: VirtualFile) : ServerTreeNode
+
+ data class FileNode(val libraryName: String, val isTest: Boolean, val file: VirtualFile, val module: ModuleLocation?) : ServerTreeNode
+
+// Optional grouping node for definitions (by inner groups/namespaces)
+ data class GroupNode(val name: String) : ServerTreeNode
+
+// Definition node
+ data class DefinitionNode(val definition: TCDefReferable) : ServerTreeNode
 
 enum class NodeStatus { OK, WARN, ERROR, UNKNOWN }
 

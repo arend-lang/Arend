@@ -4,6 +4,7 @@ import com.intellij.ide.CommonActionsManager
 import com.intellij.ide.DefaultTreeExpander
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
@@ -36,8 +37,21 @@ import javax.swing.JPanel
 import java.awt.BorderLayout
 import org.arend.term.group.ConcreteGroup
 import org.arend.ext.error.GeneralError
+import com.intellij.ide.util.PropertiesComponent
+import com.intellij.psi.PsiManager
+import org.arend.module.config.LibraryConfig
+import org.arend.util.FileUtils
+import org.arend.psi.ArendFile
+import org.arend.server.ArendServer
 
 class ArendServerStateView(private val project: Project, toolWindow: ToolWindow) {
+    private val props = PropertiesComponent.getInstance(project)
+    private var groupByFolders: Boolean
+        get() = props.getBoolean("ArendServerState.groupByFolders", true)
+        set(value) { props.setValue("ArendServerState.groupByFolders", value) }
+    private var groupDefinitions: Boolean
+        get() = props.getBoolean("ArendServerState.groupDefinitions", true)
+        set(value) { props.setValue("ArendServerState.groupDefinitions", value) }
     private val root = DefaultMutableTreeNode("Arend Server")
     private val treeModel = DefaultTreeModel(root)
     private val tree = Tree(treeModel)
@@ -50,8 +64,10 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         val paths = tree.selectionPaths?.toList().orEmpty()
         val result = ArrayList<ModuleLocation>()
         for (p in paths) {
-            val node = (p.lastPathComponent as? DefaultMutableTreeNode)?.userObject
-            if (node is ModuleNode) result.add(node.location)
+            when (val node = (p.lastPathComponent as? DefaultMutableTreeNode)?.userObject) {
+                is ModuleNode -> result.add(node.location)
+                is FileNode -> node.module?.let { result.add(it) }
+            }
         }
         return result
     }
@@ -76,6 +92,9 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
     private fun nodeId(obj: Any?): String? = when (obj) {
         is LibraryNode -> "lib:" + obj.name
         is ModuleNode -> "mod:" + obj.location.libraryName + ":" + obj.location.locationKind + ":" + obj.location.modulePath.toString()
+        is FolderNode -> "dir:" + obj.libraryName + ":" + (if (obj.isTest) "test" else "src") + ":" + (obj.dir.path)
+        is FileNode -> "file:" + obj.libraryName + ":" + (if (obj.isTest) "test" else "src") + ":" + obj.file.path
+        is GroupNode -> "grp:" + obj.name
         is DefinitionNode -> "def:" + obj.definition.refLongName.toString()
         is String -> "root"
         else -> null
@@ -136,6 +155,24 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         }
     }
 
+    private inner class GroupByFoldersToggle : ToggleAction("Group By Folders") {
+        override fun isSelected(e: AnActionEvent): Boolean = groupByFolders
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            groupByFolders = state
+            refresh()
+        }
+        override fun getActionUpdateThread() = ActionUpdateThread.BGT
+    }
+
+    private inner class GroupDefinitionsToggle : ToggleAction("Group Definitions") {
+        override fun isSelected(e: AnActionEvent): Boolean = groupDefinitions
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            groupDefinitions = state
+            refresh()
+        }
+        override fun getActionUpdateThread() = ActionUpdateThread.BGT
+    }
+
     init {
         toolWindow.setIcon(ArendIcons.SERVER)
         val contentManager = toolWindow.contentManager
@@ -157,6 +194,10 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         toolbarGroup.add(actions.createCollapseAllAction(treeExpander, tree))
         toolbarGroup.addSeparator()
         toolbarGroup.add(ArendServerStateRefreshAction { refresh() })
+        toolbarGroup.addSeparator()
+        // View mode toggles
+        toolbarGroup.add(GroupByFoldersToggle())
+        toolbarGroup.add(GroupDefinitionsToggle())
         toolbarGroup.addSeparator()
         // Server actions
         val resolveModulesAction = ResolveSelectedModulesAction()
@@ -218,10 +259,50 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                 val file = project.findLibrary(loc.libraryName)?.findArendFile(loc)
                 file?.navigate(true)
             }
+            is FileNode -> {
+                PsiManager.getInstance(project).findFile(obj.file)?.navigate(true)
+            }
         }
     }
 
     private fun rebuildTree() {
+        if (groupByFolders) rebuildByFolders() else rebuildByLibraries()
+    }
+
+    private fun countDefs(group: ConcreteGroup?): Int {
+        if (group == null) return 0
+        var cnt = 0
+        val def = group.definition
+        if (def is Concrete.ResolvableDefinition) cnt++
+        for (st in group.statements()) {
+            cnt += countDefs(st.group())
+        }
+        for (dg in group.dynamicGroups()) {
+            cnt += countDefs(dg)
+        }
+        return cnt
+    }
+
+    private fun updateStatusLabel(server: ArendServer, resolvedModules: Int, totalModules: Int, typecheckedDefinitions: Int, totalDefinitions: Int) {
+        // Collect goals and errors from the server
+        var errorCount = 0
+        var goalCount = 0
+        for (errorList in server.errorMap.values) {
+            for (error in errorList) {
+                when (error.level) {
+                    GeneralError.Level.GOAL -> goalCount++
+                    GeneralError.Level.ERROR -> errorCount++
+                    else -> {}
+                }
+            }
+        }
+
+        // Update status label
+        statusLabel.text = "Modules: $resolvedModules/$totalModules • Definitions: $typecheckedDefinitions/$totalDefinitions • Errors: $errorCount • Goals: $goalCount"
+    }
+
+    private fun rebuildByLibraries() {
+        // Note: library→module→definition view (existing behavior)
         // Capture expanded and selection state before rebuild
         val (expandedIds, selectedIdPath) = captureTreeState()
 
@@ -244,20 +325,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                 val moduleNode = DefaultMutableTreeNode(ModuleNode(loc))
 
                 // Count total definitions from raw group (available even if not resolved)
-                val rawGroup: ConcreteGroup? = server.getRawGroup(loc)
-                fun countDefs(group: ConcreteGroup?): Int {
-                    if (group == null) return 0
-                    var cnt = 0
-                    val def = group.definition
-                    if (def is Concrete.ResolvableDefinition) cnt++
-                    for (st in group.statements()) {
-                        cnt += countDefs(st.group())
-                    }
-                    for (dg in group.dynamicGroups()) {
-                        cnt += countDefs(dg)
-                    }
-                    return cnt
-                }
+                val rawGroup = server.getRawGroup(loc)
                 totalDefinitions += countDefs(rawGroup)
 
                 // Definitions for the module:
@@ -287,21 +355,105 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         }
         treeModel.reload(root)
 
-        // Collect goals and errors from the server
-        var errorCount = 0
-        var goalCount = 0
-        for (errorList in server.errorMap.values) {
-            for (error in errorList) {
-                when (error.level) {
-                    GeneralError.Level.GOAL -> goalCount++
-                    GeneralError.Level.ERROR -> errorCount++
-                    else -> {}
+        // Update status label
+        updateStatusLabel(server, resolvedModules, totalModules, typecheckedDefinitions, totalDefinitions)
+
+        // Restore expanded and selection state
+        restoreTreeState(expandedIds, selectedIdPath)
+    }
+
+    private fun rebuildByFolders() {
+        // Capture expanded and selection state before rebuild
+        val (expandedIds, selectedIdPath) = captureTreeState()
+
+        val server = project.service<ArendServerService>().server
+        val libraries = server.libraries
+        root.removeAllChildren()
+
+        // Stats counters (computed from server data similarly to library view)
+        val allModules = server.modules.toList()
+        val totalModules = allModules.size
+        var resolvedModules = 0
+        var totalDefinitions = 0
+        var typecheckedDefinitions = 0
+
+        fun countFromModule(loc: ModuleLocation) {
+            totalDefinitions += countDefs(server.getRawGroup(loc))
+            val resolvedDefs = server.getResolvedDefinitions(loc)
+            if (resolvedDefs.isNotEmpty()) resolvedModules++
+            for (def in resolvedDefs) {
+                if (def.definition.data.isTypechecked()) typecheckedDefinitions++
+            }
+        }
+        allModules.forEach { countFromModule(it) }
+
+        // Helpers to build definitions under a file
+        fun addDefs(parent: DefaultMutableTreeNode, group: ConcreteGroup?) {
+            if (group == null) return
+            if (!groupDefinitions) {
+                // Flat listing
+                val def = group.definition
+                if (def is Concrete.ResolvableDefinition) parent.add(DefaultMutableTreeNode(DefinitionNode(def.data)))
+                for (st in group.statements()) addDefs(parent, st.group())
+                for (dg in group.dynamicGroups()) addDefs(parent, dg)
+            } else {
+                // Grouped by nested groups: create nodes for group names if available
+                val def = group.definition
+                var currentParent = parent
+                if (def is Concrete.ResolvableDefinition) {
+                    // Use referable text as group name
+                    val name = def.data.refName
+                    val grpNode = DefaultMutableTreeNode(GroupNode(name))
+                    parent.add(grpNode)
+                    currentParent = grpNode
+                    // Add the definition itself under the group node
+                    currentParent.add(DefaultMutableTreeNode(DefinitionNode(def.data)))
                 }
+                for (st in group.statements()) addDefs(currentParent, st.group())
+                for (dg in group.dynamicGroups()) addDefs(currentParent, dg)
             }
         }
 
+        // Build folder/file tree for each library and its roots
+        for (lib in libraries.sorted()) {
+            val libNode = DefaultMutableTreeNode(LibraryNode(lib))
+            val config: LibraryConfig? = project.findLibrary(lib)
+            fun buildDir(parent: DefaultMutableTreeNode, dir: com.intellij.openapi.vfs.VirtualFile, isTest: Boolean) {
+                // Add subdirectories first
+                val children = dir.children.orEmpty().sortedBy { it.name }
+                for (child in children) {
+                    if (child.isDirectory) {
+                        val folderNode = DefaultMutableTreeNode(FolderNode(lib, isTest, child))
+                        parent.add(folderNode)
+                        buildDir(folderNode, child, isTest)
+                    }
+                }
+                // Then add files
+                for (child in children) {
+                    if (!child.isDirectory && child.name.endsWith(FileUtils.EXTENSION)) {
+                        val psi = PsiManager.getInstance(project).findFile(child)
+                        val arendFile = psi as? ArendFile
+                        val moduleLoc = arendFile?.moduleLocation
+                        val fileNode = DefaultMutableTreeNode(FileNode(lib, isTest, child, moduleLoc))
+                        if (moduleLoc != null) {
+                            val rawGroup = server.getRawGroup(moduleLoc)
+                            addDefs(fileNode, rawGroup)
+                        }
+                        parent.add(fileNode)
+                    }
+                }
+            }
+            if (config != null) {
+                config.sourcesDirFile?.let { buildDir(libNode, it, false) }
+                config.testsDirFile?.let { buildDir(libNode, it, true) }
+            }
+            root.add(libNode)
+        }
+
+        treeModel.reload(root)
+
         // Update status label
-        statusLabel.text = "Modules: $resolvedModules/$totalModules • Definitions: $typecheckedDefinitions/$totalDefinitions • Errors: $errorCount • Goals: $goalCount"
+        updateStatusLabel(server, resolvedModules, totalModules, typecheckedDefinitions, totalDefinitions)
 
         // Restore expanded and selection state
         restoreTreeState(expandedIds, selectedIdPath)
@@ -374,6 +526,15 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                 is ModuleNode -> {
                     add(ResolveSelectedModulesAction())
                     add(TypecheckSelectedAction())
+                }
+                is FileNode -> {
+                    if (userObj.module != null) {
+                        add(ResolveSelectedModulesAction())
+                        add(TypecheckSelectedAction())
+                    }
+                }
+                is FolderNode -> {
+                    // No actions for pure folders
                 }
                 is LibraryNode -> {
                     add(ResolveSelectedModulesAction())
