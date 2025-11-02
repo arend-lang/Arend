@@ -42,6 +42,9 @@ import java.awt.BorderLayout
 import org.arend.term.group.ConcreteGroup
 import org.arend.ext.error.GeneralError
 import com.intellij.psi.PsiManager
+import com.intellij.psi.PsiDocumentManager
+import org.arend.psi.ancestor
+import org.arend.psi.ext.ReferableBase
 import org.arend.module.config.LibraryConfig
 import org.arend.util.FileUtils
 import org.arend.psi.ArendFile
@@ -197,8 +200,24 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                 val node = path.lastPathComponent as? DefaultMutableTreeNode ?: return
                 navigate(node.userObject)
             } else {
-                val file = FileEditorManager.getInstance(project).selectedFiles.firstOrNull() ?: return
-                selectByFile(file)
+                val editor = FileEditorManager.getInstance(project).selectedTextEditor
+                val file = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
+                if (editor != null && file != null) {
+                    val psiFile = PsiManager.getInstance(project).findFile(file)
+                    if (psiFile != null) {
+                        PsiDocumentManager.getInstance(project).commitAllDocuments()
+                        val def = psiFile.findElementAt(editor.caretModel.offset)?.ancestor<ReferableBase<*>>()?.tcReferable
+                        if (def != null) {
+                            val path = findPathForDefinition(def)
+                            if (path != null) {
+                                selectNode(path)
+                                return
+                            }
+                        }
+                    }
+                }
+                // Fallback: select by file/module
+                selectByFile(file ?: return)
             }
         }
         override fun getActionUpdateThread() = ActionUpdateThread.BGT
@@ -239,6 +258,16 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         val node = forEachTreeNode { n ->
             when (val o = n.userObject) {
                 is ModuleNode -> o.location == module
+                else -> false
+            }
+        } ?: return null
+        return TreePath(node.path)
+    }
+
+    private fun findPathForDefinition(def: TCDefReferable): TreePath? {
+        val node = forEachTreeNode { n ->
+            when (val o = n.userObject) {
+                is DefinitionNode -> o.definition == def
                 else -> false
             }
         } ?: return null
