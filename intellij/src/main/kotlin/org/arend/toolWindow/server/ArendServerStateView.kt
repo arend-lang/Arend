@@ -46,8 +46,12 @@ import org.arend.module.config.LibraryConfig
 import org.arend.util.FileUtils
 import org.arend.psi.ArendFile
 import org.arend.server.ArendServer
+import com.intellij.icons.AllIcons
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.fileEditor.FileEditorManager
 
 class ArendServerStateView(private val project: Project, toolWindow: ToolWindow) {
+    private var suppressSelectionEvents: Boolean = false
     private var groupByFolders: Boolean
         get() = project.service<ArendServerStateService>().groupByFolders
         set(value) {
@@ -179,6 +183,112 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
+    private inner class NavigateToFromSourceAction : AnAction("Navigate To/From Source", "Navigate depending on focus: tree → source, editor → tree", AllIcons.General.Locate) {
+        override fun update(e: AnActionEvent) {
+            val hasTreeSelection = tree.selectionPath != null
+            val hasEditorFile = FileEditorManager.getInstance(project).selectedFiles.isNotEmpty()
+            e.presentation.isEnabled = hasTreeSelection || hasEditorFile
+        }
+        override fun actionPerformed(e: AnActionEvent) {
+            val focusOwner = com.intellij.openapi.wm.IdeFocusManager.getInstance(project).focusOwner
+            val isTreeFocused = focusOwner != null && javax.swing.SwingUtilities.isDescendingFrom(focusOwner, tree)
+            if (isTreeFocused) {
+                val path: TreePath = tree.selectionPath ?: return
+                val node = path.lastPathComponent as? DefaultMutableTreeNode ?: return
+                navigate(node.userObject)
+            } else {
+                val file = FileEditorManager.getInstance(project).selectedFiles.firstOrNull() ?: return
+                selectByFile(file)
+            }
+        }
+        override fun getActionUpdateThread() = ActionUpdateThread.BGT
+    }
+
+    private fun forEachTreeNode(action: (DefaultMutableTreeNode) -> Boolean): DefaultMutableTreeNode? {
+        val rootNode = treeModel.root as? DefaultMutableTreeNode ?: return null
+        val e = rootNode.depthFirstEnumeration()
+        while (e.hasMoreElements()) {
+            val n = e.nextElement() as? DefaultMutableTreeNode ?: continue
+            if (action(n)) return n
+        }
+        return null
+    }
+
+    private fun selectNode(path: TreePath?) {
+        if (path == null) return
+        suppressSelectionEvents = true
+        try {
+            tree.selectionPath = path
+            tree.scrollPathToVisible(path)
+        } finally {
+            suppressSelectionEvents = false
+        }
+    }
+
+    private fun findPathForFile(file: VirtualFile): TreePath? {
+        val node = forEachTreeNode { n ->
+            when (val o = n.userObject) {
+                is FileNode -> o.file == file
+                else -> false
+            }
+        } ?: return null
+        return TreePath(node.path)
+    }
+
+    private fun findPathForModule(module: ModuleLocation): TreePath? {
+        val node = forEachTreeNode { n ->
+            when (val o = n.userObject) {
+                is ModuleNode -> o.location == module
+                else -> false
+            }
+        } ?: return null
+        return TreePath(node.path)
+    }
+
+    private fun selectByFile(file: VirtualFile) {
+        // Prefer FileNode in folder view
+        var path = findPathForFile(file)
+        if (path == null) {
+            val psi = PsiManager.getInstance(project).findFile(file)
+            val arend = psi as? ArendFile
+            val loc = arend?.moduleLocation
+            if (loc != null) path = findPathForModule(loc)
+        }
+        if (path != null) selectNode(path)
+    }
+
+    private fun navigate(obj: Any?) {
+        when (obj) {
+            is DefinitionNode -> {
+                val tcRef = obj.definition
+                val ok = runReadAction {
+                    val psi = tcRef.data as? PsiElement
+                    if (psi != null && psi.isValid) {
+                        psi.navigationElement.navigate(true)
+                        true
+                    } else {
+                        false
+                    }
+                }
+                if (!ok) {
+                    val location = tcRef.location
+                    if (location != null) {
+                        val file = project.findLibrary(location.libraryName)?.findArendFile(location)
+                        file?.navigate(true)
+                    }
+                }
+            }
+            is ModuleNode -> {
+                val loc = obj.location
+                val file = project.findLibrary(loc.libraryName)?.findArendFile(loc)
+                file?.navigate(true)
+            }
+            is FileNode -> {
+                PsiManager.getInstance(project).findFile(obj.file)?.navigate(true)
+            }
+        }
+    }
+
     init {
         toolWindow.setIcon(ArendIcons.SERVER)
         val contentManager = toolWindow.contentManager
@@ -204,6 +314,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         // View mode toggles
         toolbarGroup.add(GroupByFoldersToggle())
         toolbarGroup.add(GroupDefinitionsToggle())
+        toolbarGroup.add(NavigateToFromSourceAction())
         toolbarGroup.addSeparator()
         // Server actions
         val resolveModulesAction = ResolveSelectedModulesAction()
@@ -265,36 +376,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
     private fun navigate() {
         val path: TreePath = tree.selectionPath ?: return
         val node = path.lastPathComponent as? DefaultMutableTreeNode ?: return
-        when (val obj = node.userObject) {
-            is DefinitionNode -> {
-                val tcRef = obj.definition
-                val ok = runReadAction {
-                    val psi = tcRef.data as? PsiElement
-                    if (psi != null && psi.isValid) {
-                        psi.navigationElement.navigate(true)
-                        true
-                    } else {
-                        false
-                    }
-                }
-                // Fallback: open the containing file by module location
-                if (!ok) {
-                    val location = tcRef.location
-                    if (location != null) {
-                        val file = project.findLibrary(location.libraryName)?.findArendFile(location)
-                        file?.navigate(true)
-                    }
-                }
-            }
-            is ModuleNode -> {
-                val loc = obj.location
-                val file = project.findLibrary(loc.libraryName)?.findArendFile(loc)
-                file?.navigate(true)
-            }
-            is FileNode -> {
-                PsiManager.getInstance(project).findFile(obj.file)?.navigate(true)
-            }
-        }
+        navigate(node.userObject)
     }
 
     private fun rebuildTree() {
@@ -437,7 +519,7 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         for (lib in libraries.sorted()) {
             val libNode = DefaultMutableTreeNode(LibraryNode(lib))
             val config: LibraryConfig? = project.findLibrary(lib)
-            fun buildDir(parent: DefaultMutableTreeNode, dir: com.intellij.openapi.vfs.VirtualFile, isTest: Boolean) {
+            fun buildDir(parent: DefaultMutableTreeNode, dir: VirtualFile, isTest: Boolean) {
                 // Add subdirectories first
                 val children = dir.children.orEmpty().sortedBy { it.name }
                 for (child in children) {
