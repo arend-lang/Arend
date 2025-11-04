@@ -39,8 +39,8 @@ import org.arend.typechecking.order.dependency.DependencyListener;
 import org.arend.typechecking.order.dependency.DummyDependencyListener;
 import org.arend.typechecking.patternmatching.ExtElimClause;
 import org.arend.typechecking.provider.ConcreteProvider;
-import org.arend.typechecking.termination.DefinitionCallGraph;
-import org.arend.typechecking.termination.RecursiveBehavior;
+import org.arend.typechecking.termination.BaseCallGraph;
+import org.arend.typechecking.termination.CollectCallVisitor;
 import org.arend.typechecking.visitor.*;
 import org.arend.ext.util.Pair;
 
@@ -584,10 +584,11 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
   private void checkRecursiveFunctions(Map<FunctionDefinition,Concrete.Definition> definitions, Map<FunctionDefinition, ? extends List<? extends ElimClause<ExpressionPattern>>> clauses) {
     boolean ok = true;
-    DefinitionCallGraph definitionCallGraph = new DefinitionCallGraph();
+    BaseCallGraph<Definition> definitionCallGraph = new BaseCallGraph<>();
     for (Map.Entry<FunctionDefinition, Concrete.Definition> entry : definitions.entrySet()) {
       List<? extends ElimClause<ExpressionPattern>> functionClauses = clauses.get(entry.getKey());
-      definitionCallGraph.add(entry.getKey(), functionClauses == null ? Collections.emptyList() : functionClauses, definitions.keySet());
+      definitionCallGraph.add(CollectCallVisitor.collectCalls(entry.getKey(), functionClauses == null ? Collections.emptyList() : functionClauses, definitions.keySet()));
+
       for (DependentLink link = entry.getKey().getParameters(); link.hasNext(); link = link.getNext()) {
         link = link.getNextTyped(null);
         if (FindDefCallVisitor.findDefinition(link.getTypeExpr(), definitions.keySet()) != null) {
@@ -601,9 +602,9 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       }
     }
 
-    if (!((Boolean) definitionCallGraph.checkTermination().proj1)) {
-      for (Map.Entry<Definition, Set<RecursiveBehavior<Definition>>> entry : definitionCallGraph.myErrorInfo.entrySet()) {
-        myErrorReporter.report(new TerminationCheckError(entry.getKey(), definitionCallGraph.myErrorInfo.keySet(), entry.getValue(), null));
+    if (!(definitionCallGraph.checkTermination().proj1)) {
+      for (Definition entry : definitionCallGraph.myErrorInfo) {
+        myErrorReporter.report(new TerminationCheckError(entry, definitionCallGraph.myErrorInfo, null));
       }
       ok = false;
     }

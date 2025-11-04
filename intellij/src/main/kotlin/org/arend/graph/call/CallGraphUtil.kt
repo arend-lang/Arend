@@ -15,8 +15,8 @@ import com.mxgraph.swing.mxGraphComponent
 import org.arend.core.definition.Definition
 import org.arend.core.expr.Expression
 import org.arend.term.concrete.Concrete
+import org.arend.typechecking.termination.BaseCallGraph
 import org.arend.typechecking.termination.CallMatrix
-import org.arend.typechecking.termination.DefinitionCallGraph
 import org.arend.util.ArendBundle
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea
 import org.fife.ui.rsyntaxtextarea.Style
@@ -130,7 +130,7 @@ fun addEdgeListener(
   })
 }
 
-class CallGraphComponentStrongConnectivity(private val graph: DefinitionCallGraph) {
+class CallGraphComponentStrongConnectivity(private val graph: BaseCallGraph<Definition>) {
 
   private fun markVertexes(definition: Definition, counter: Int, markedVertexes: MutableMap<Definition, Int>): Int {
     var newCounter = counter + 1

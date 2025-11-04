@@ -44,8 +44,9 @@ import org.arend.term.concrete.Concrete
 import org.arend.typechecking.error.TerminationCheckError
 import org.arend.typechecking.patternmatching.ExtElimClause
 import org.arend.typechecking.subexpr.CorrespondedSubDefVisitor
+import org.arend.typechecking.termination.BaseCallGraph
 import org.arend.typechecking.termination.BaseCallMatrix
-import org.arend.typechecking.termination.DefinitionCallGraph
+import org.arend.typechecking.termination.CollectCallVisitor
 import java.awt.BorderLayout
 import java.awt.MouseInfo
 import java.awt.event.MouseAdapter
@@ -160,7 +161,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
     coreToConcrete: MutableMap<Expression, Concrete.AppExpression>,
     functionDefinitions: MutableSet<Pair<FunctionDefinition, FunctionDefinition>>,
     isFileGraph: Boolean = false
-  ): DefinitionCallGraph? {
+  ): BaseCallGraph<Definition>? {
     val project = file.project
 
     val defsClauses = mutableMapOf<FunctionDefinition, List<ElimClause<ExpressionPattern>>>()
@@ -244,7 +245,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
       ) ?: continue
       val terminationResult = componentGraph.checkTermination()
       val newGraph = terminationResult.proj2
-      updateVertexes(newGraph, functionDefinitions)
+      updateVertexes(newGraph.graph, functionDefinitions)
       for (vertex in strongComponent) {
         val element = defsToPsiElement[vertex] ?: continue
         if (element.containingFile != file) continue
@@ -258,7 +259,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
                 entryVertex.key.name,
                 strongComponent,
                 graph.graph,
-                newGraph,
+                newGraph.graph,
                 coreToConcrete
               ) },
               GutterIconRenderer.Alignment.CENTER) { "callGraph" })
@@ -366,12 +367,12 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
   private fun getCallGraph(
     functionDefinitions: Set<Pair<FunctionDefinition, FunctionDefinition>>,
     clauses: Map<FunctionDefinition, List<ElimClause<ExpressionPattern>>>
-  ): DefinitionCallGraph {
+  ): BaseCallGraph<Definition> {
     val cycle = functionDefinitions.map { it.second }.toSet()
-    val definitionCallGraph = DefinitionCallGraph()
+    val definitionCallGraph = BaseCallGraph<Definition>()
     for ((functionDefinition, _) in functionDefinitions) {
       val functionClauses = clauses[functionDefinition]
-      definitionCallGraph.add(functionDefinition, functionClauses ?: emptyList(), cycle)
+      definitionCallGraph.add(CollectCallVisitor.collectCalls(functionDefinition, functionClauses ?: emptyList(), cycle))
     }
     updateVertexes(definitionCallGraph.graph, functionDefinitions)
     return definitionCallGraph
@@ -390,8 +391,8 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
 
     private val previousDefinitions = ConcurrentHashMap<ArendFile, List<Concrete.Definition>>()
     private val previousStrongDefinitions = ConcurrentHashMap<List<Definition>, List<Concrete.Definition>>()
-    private val fileToGraph = ConcurrentHashMap<ArendFile, DefinitionCallGraph>()
+    private val fileToGraph = ConcurrentHashMap<ArendFile, BaseCallGraph<Definition>>()
     private val fileToTypechecked = ConcurrentHashMap<ArendFile, MutableList<FunctionDefinition>>()
-    private val functionDefinitionsToGraph = ConcurrentHashMap<MutableList<FunctionDefinition>, DefinitionCallGraph>()
+    private val functionDefinitionsToGraph = ConcurrentHashMap<MutableList<FunctionDefinition>, BaseCallGraph<Definition>>()
   }
 }

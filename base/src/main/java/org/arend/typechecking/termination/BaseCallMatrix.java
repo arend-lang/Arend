@@ -15,7 +15,7 @@ public abstract class BaseCallMatrix<T> {
     LessThan()
   }
 
-  private static BaseCallMatrix.R rmul(BaseCallMatrix.R a, BaseCallMatrix.R b) {
+  static BaseCallMatrix.R rmul(BaseCallMatrix.R a, BaseCallMatrix.R b) {
     return switch (a) {
       case Equal -> switch (b) {
         case Equal -> R.Equal;
@@ -30,7 +30,7 @@ public abstract class BaseCallMatrix<T> {
     };
   }
 
-  private static BaseCallMatrix.R radd(BaseCallMatrix.R a, BaseCallMatrix.R b) {
+  static BaseCallMatrix.R radd(BaseCallMatrix.R a, BaseCallMatrix.R b) {
     if (a == R.LessThan || b == R.LessThan) return R.LessThan;
     if (a == R.Equal || b == R.Equal) return R.Equal;
     return R.Unknown;

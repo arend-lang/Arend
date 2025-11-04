@@ -258,7 +258,9 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
     Set<BaseCallMatrix<TestVertex>> cms = new HashSet<>();
     cms.add(new TestCallMatrix("1", ack, ack, '<', 0, '?'));
     cms.add(new TestCallMatrix("1", ack, ack, '=', 0, '<', 1));
-    assert TestCallGraph.testTermination(cms);
+    BaseCallGraph<TestVertex> callGraph = new BaseCallGraph<>();
+    callGraph.add(cms);
+    assert callGraph.checkTermination().proj1;
   }
 
   @Test
@@ -269,7 +271,10 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
     cms.add(new TestCallMatrix("2", f, f, '=', 0, '<', 1, '?', '?'));
     cms.add(new TestCallMatrix("3", f, f, '=', 0, '=', 1, '<', 2, '?'));
     cms.add(new TestCallMatrix("4", f, f, '=', 0, '=', 1, '=', 2, '<', 3));
-    assert TestCallGraph.testTermination(cms);
+
+    BaseCallGraph<TestVertex> callGraph = new BaseCallGraph<>();
+    callGraph.add(cms);
+    assert callGraph.checkTermination().proj1;
   }
 
   @Test
@@ -280,7 +285,10 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
     cms.add(new TestCallMatrix("2", f, f, '=', 0, '<', 1, '?', '?'));
     cms.add(new TestCallMatrix("3", f, f, '=', 0, '=', 1, '<', 2, '?'));
     cms.add(new TestCallMatrix("4", f, f, '=', 0, '=', 1, '=', 2, '=', 3));
-    assert !TestCallGraph.testTermination(cms);
+
+    BaseCallGraph<TestVertex> callGraph = new BaseCallGraph<>();
+    callGraph.add(cms);
+    assert !callGraph.checkTermination().proj1;
   }
 
   @Test
@@ -291,7 +299,9 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
     cms.add(new TestCallMatrix("3", f, f, '?', '=', 1, '<', 2, '=', 3));
     cms.add(new TestCallMatrix("1", f, f, '?', '?', '?', '<', 3));
     cms.add(new TestCallMatrix("4", f, f, '<', 0, '=', 1, '=', 2, '=', 3));
-    assert TestCallGraph.testTermination(cms);
+    BaseCallGraph<TestVertex> callGraph = new BaseCallGraph<>();
+    callGraph.add(cms);
+    assert callGraph.checkTermination().proj1;
   }
 
   @Test
@@ -308,7 +318,9 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
     cms.add(new TestCallMatrix("g-f", g, f, '=', 0, '=', 1));
     cms.add(new TestCallMatrix("g-g", g, g, '<', 0, '?'));
     cms.add(new TestCallMatrix("g-h", g, h, '?', '?'));
-    assert !TestCallGraph.testTermination(cms);
+    BaseCallGraph<TestVertex> callGraph = new BaseCallGraph<>();
+    callGraph.add(cms);
+    assert !callGraph.checkTermination().proj1;
   }
 
   @Test
@@ -372,7 +384,9 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
     cms.add(new TestCallMatrix("bb13", CCut, CCut, '=', 0, '=', 1, '<', 2, '=', 3, '=', 4, '?', '=', 6, '<', 5, '-', '<', 7, '=', 8, '<', 9));
     cms.add(new TestCallMatrix("bb14", CCut, CCut, '=', 0, '=', 1, '<', 2, '=', 3, '=', 4, '?', '=', 6, '<', 6, '-', '=', 7, '=', 8, '?'));
 
-    assert TestCallGraph.testTermination(cms);
+    BaseCallGraph<TestVertex> callGraph = new BaseCallGraph<>();
+    callGraph.add(cms);
+    assert callGraph.checkTermination().proj1;
   }
 
   @Test
@@ -383,6 +397,7 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
         | suc x1 => bad_rec x2 x1 x3 x4 x5 x6 x7 x8 x9 x10 Nat.+ bad_rec x10 x1 x2 x3 x4 x5 x6 x7 x8 x9
       """, 1);
   }
+
   @Test
   public void testArray() {
     typeCheckModule("""
@@ -416,5 +431,20 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
       \\func test (t : Term) : Nat
         | apply l => \\let x i => test (l i) \\in 0
       """);
+  }
+
+  @Test
+  public void testSCC() {
+    typeCheckModule("""
+      \\data Tree
+        | leaf
+        | node Tree Tree
+            
+      \\func foo (t : Tree) : Nat
+        | leaf => 0
+        | node t t' => bar t t'
+            
+      \\func bar (t t' : Tree) : Nat => foo t Nat.+ foo t'
+    """);
   }
 }

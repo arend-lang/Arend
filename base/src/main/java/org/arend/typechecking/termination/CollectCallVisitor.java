@@ -22,7 +22,7 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
   private final Set<? extends Definition> myCycle;
   private List<? extends ExpressionPattern> myPatterns;
 
-  CollectCallVisitor(FunctionDefinition def, Set<? extends Definition> cycle) {
+  public CollectCallVisitor(FunctionDefinition def, Set<? extends Definition> cycle) {
     assert cycle != null;
     myDefinition = def;
     myCycle = cycle;
@@ -256,5 +256,13 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
     }
     processDefCall(expr.getType(), null);
     return false;
+  }
+
+  public static Set<BaseCallMatrix<Definition>> collectCalls(FunctionDefinition def, Collection<? extends ElimClause<ExpressionPattern>> clauses, Set<? extends Definition> cycle) {
+    CollectCallVisitor visitor = new CollectCallVisitor(def, cycle);
+    for (ElimClause<ExpressionPattern> clause : clauses) {
+      visitor.collect(clause);
+    }
+    return visitor.getResult();
   }
 }
