@@ -294,9 +294,6 @@ class ArendCodeInsightUtils {
 
                 externalParameter
             }
-
-
-            return emptyList()
         }
 
         fun computeParameterInfo(file: PsiFile, caretOffset: Int, parameterOwner: Any? = null): ParameterInfo? {
@@ -531,14 +528,19 @@ class ArendCodeInsightUtils {
 
         private fun correctDynamicUsage(concrete: Concrete.AppExpression, receiver: HashMap<Concrete.SourceNode, TextRange>) {
             val dynamicUsage = concrete.arguments.firstOrNull()?.let { arg -> !arg.isExplicit && arg.expression.data == concrete.function.data } == true
-
-            val classFieldTextRange = if (dynamicUsage) (concrete.function.data as? ArendLongName)?.refIdentifierList?.last()?.textRange else null
-            val dotExprTextRange = receiver[concrete.function]
-            val classInstanceTextRange = if (classFieldTextRange != null && dotExprTextRange != null && dotExprTextRange.startOffset < classFieldTextRange.startOffset)
-                TextRange(dotExprTextRange.startOffset, classFieldTextRange.startOffset) else null
-            if (dynamicUsage && classFieldTextRange != null && classInstanceTextRange != null) {
-                receiver[concrete.function] = classFieldTextRange
-                receiver[concrete.arguments.first().expression] = classInstanceTextRange
+            val atomFieldsAcc = (concrete.function.data as? ArendAtomFieldsAcc)?.fieldAccList
+            if (dynamicUsage && atomFieldsAcc != null) {
+                val index =
+                    atomFieldsAcc.indexOfFirst { it.refIdentifier?.resolve == concrete.function.underlyingReferable.abstractReferable }
+                val dotExprTextRange = receiver[concrete.function]
+                val classFieldTextRange = if (index != -1) atomFieldsAcc[index].refIdentifier?.textRange else null
+                val classInstanceTextRange =
+                    if (classFieldTextRange != null && dotExprTextRange != null && dotExprTextRange.startOffset < classFieldTextRange.startOffset)
+                        TextRange(dotExprTextRange.startOffset, classFieldTextRange.startOffset) else null
+                if (classFieldTextRange != null && classInstanceTextRange != null) {
+                    receiver[concrete.function] = classFieldTextRange
+                    receiver[concrete.arguments.first().expression] = classInstanceTextRange
+                }
             }
         }
 

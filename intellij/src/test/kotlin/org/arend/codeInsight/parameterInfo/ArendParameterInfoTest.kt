@@ -1,22 +1,26 @@
 package org.arend.codeInsight.parameterInfo
 
 import com.intellij.codeInsight.hint.ShowParameterInfoHandler
+import com.intellij.openapi.components.service
 import com.intellij.psi.PsiElement
 import com.intellij.testFramework.utils.parameterInfo.MockCreateParameterInfoContext
 import com.intellij.testFramework.utils.parameterInfo.MockUpdateParameterInfoContext
 import org.arend.ArendLanguage
 import org.arend.ArendTestBase
+import org.arend.settings.ArendSettings
 import org.junit.Assert
 
 class ArendParameterInfoTest : ArendTestBase() {
 
-    private fun checkParameterInfo(code: String, expectedHint: String, typecheck: Boolean = false) {
+    private fun checkParameterInfo(code: String, expectedHint: String, typecheck: Boolean = true) {
         InlineFile(code).withCaret()
 
         if (typecheck) {
             typecheck()
         } else {
+            service<ArendSettings>().isBackgroundTypechecking = false
             myFixture.doHighlighting()
+            service<ArendSettings>().isBackgroundTypechecking = true
         }
 
         val handler = ShowParameterInfoHandler.getHandlers(project, ArendLanguage.INSTANCE).firstOrNull() ?:
@@ -293,7 +297,7 @@ class ArendParameterInfoTest : ArendTestBase() {
           
         \func foo {X : \Type} (l : List X) \with
           | l0 :: l{-caret-}s => {?} 
-    """, "_ : X, <highlight>_ : List X</highlight>", true)
+    """, "_ : X, <highlight>_ : List X</highlight>")
 
 
     fun `test this 2`() = checkParameterInfo("""
@@ -328,7 +332,7 @@ class ArendParameterInfoTest : ArendTestBase() {
         
         \func foobar => bar {\new Test} {1} {2} {2} {1}{-caret-} idp
         
-    """, "{this : Test}, <highlight>???,</highlight> p : a + b = c + d")
+    """, "{this : Test}, <highlight>???,</highlight> p : a + b = c + d", false)
 
     fun `test smartMode hints`() = checkParameterInfo("""
         \class Test {
@@ -341,7 +345,7 @@ class ArendParameterInfoTest : ArendTestBase() {
         
         \func foobar => bar {\new Test} {1} {2} {2} {1}{-caret-} idp
         
-    """, "{this : Test}, {a : Nat}, {b : Nat}, {c : Nat}, <highlight>{d : Nat}</highlight>, p : a + b = c + d", true)
+    """, "{this : Test}, {a : Nat}, {b : Nat}, {c : Nat}, <highlight>{d : Nat}</highlight>, p : a + b = c + d")
 
     fun `test external parameters scope detection`() = checkParameterInfo("""
        \class Foo {u : Nat} {
@@ -355,7 +359,7 @@ class ArendParameterInfoTest : ArendTestBase() {
 
        \func usage2 (a b c : Nat) => foo.+++ {_} {0{-caret-}} (foo.+++ {_} {0} a b) c
        } 
-    """, "{this : Foo}, <highlight>{w : Nat}</highlight>, x : Nat, y : Nat", true)
+    """, "{this : Foo}, <highlight>{w : Nat}</highlight>, x : Nat, y : Nat")
 
     fun `test external parameters 2`() = checkParameterInfo("""
         \func foo (A : \Type) => 101 \where {
@@ -365,7 +369,7 @@ class ArendParameterInfoTest : ArendTestBase() {
             \func usage => lol {-caret-} idp
           }
        }
-    """, "{A : \\Type}, {a : A}, <highlight>p : a = a</highlight>", typecheck = true)
+    """, "{A : \\Type}, {a : A}, <highlight>p : a = a</highlight>")
 
     fun `test data type with pattern matching`() = checkParameterInfo("""
        \data MyData (X : \Type) (n : Nat) (y x : X) \elim n
@@ -373,6 +377,6 @@ class ArendParameterInfoTest : ArendTestBase() {
          | suc n' => \infixl 1 consSuc (MyData X n' y x) (MyData X n' y x)
 
        \func lol => consZero {Nat} {1} {1}{-caret-} idp  
-    """, "{X : \\Type}, {y : X}, <highlight>{x : X}</highlight>, _ : x = x", typecheck = true)
+    """, "{X : \\Type}, {y : X}, <highlight>{x : X}</highlight>, _ : x = x")
 
 }
