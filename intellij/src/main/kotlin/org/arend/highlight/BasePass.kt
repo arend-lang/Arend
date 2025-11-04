@@ -183,14 +183,15 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
         }
         val textRange = getImprovedTextRange(error, cause)
         val builder = createHighlightInfoBuilder(error, textRange)
-        if (textRange.endOffset == textRange.startOffset + 1 && document.charsSequence[textRange.startOffset] == '\n') {
+        val endOfLine = textRange.endOffset == textRange.startOffset + 1 && document.charsSequence[textRange.startOffset] == '\n'
+        if (endOfLine) {
             builder.endOfLine()
         }
 
         when (error) {
             is GoalError -> {
                 val incomplete = isIncomplete(cause)
-                if (incomplete && cause !is LeafPsiElement) {
+                if (incomplete && !endOfLine && cause !is LeafPsiElement) {
                     val next = cause.nextElement
                     if (next == null || next is PsiWhiteSpace && next.text.firstOrNull().let { it == '\n' || it == '\r' }) {
                         builder.endOfLine()
@@ -542,7 +543,7 @@ abstract class BasePass(protected open val file: IArendFile, editor: Editor, nam
                     else -> null
                 }
                 is CertainTypecheckingError -> when (error.kind) {
-                    CertainTypecheckingError.Kind.LEVEL_IGNORED -> element.ancestor<ArendReturnExpr>()?.levelKw
+                    LEVEL_IGNORED -> element.ancestor<ArendReturnExpr>()?.levelKw
                     TRUNCATED_WITHOUT_UNIVERSE -> (element as? ArendDefData)?.truncatedKw
                     CASE_RESULT_TYPE -> (element as? ArendCaseExpr)?.caseKw
                     COULD_BE_LEMMA, AXIOM_WITH_BODY -> (element as? ArendDefFunction)?.functionKw
