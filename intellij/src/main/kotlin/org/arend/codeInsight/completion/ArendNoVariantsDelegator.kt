@@ -69,7 +69,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
             }
         }
 
-        val noVariants = tracker.variants.isEmpty() && tracker.nullPsiVariants.isEmpty() || !parameters.isAutoPopup
+       val noVariants = tracker.variants.isEmpty() && tracker.nullPsiVariants.isEmpty() || !parameters.isAutoPopup
        if (project != null && (isInsideValidExpr || isInsideValidNsCmd || isClassExtension) && noVariants) {
             val consumer = { name: String, refs: List<PsiLocatedReferable>? ->
                 if (bpm.prefixMatches(name)) {
@@ -82,7 +82,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                     locatedReferables.filter { it.isValid }.forEach {
                         val isInsideTest = (it.containingFile as? ArendFile)?.moduleLocation?.locationKind == ModuleLocation.LocationKind.TEST
                         val isImportAllowed = it.accessModifier != AccessModifier.PRIVATE && isVisible(it.containingFile as ArendFile, file)
-                        if (!tracker.variants.contains(it) && (isTestFile || !isInsideTest) && isImportAllowed)
+                        if (!tracker.variants.contains(it) && !tracker.nullPsiVariants.contains(it.refName) && (isTestFile || !isInsideTest) && isImportAllowed)
                             ArendReferenceBase.createArendLookUpElement(null, it, parameters.originalFile, true, null, it !is ArendDefClass || !it.isRecord)?.let {
                                 result.addElement(
                                     run { val oldHandler = it.insertHandler
