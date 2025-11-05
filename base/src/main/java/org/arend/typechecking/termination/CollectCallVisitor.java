@@ -123,7 +123,7 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
     }
 
     type = normalizeFieldCall(type);
-    return type instanceof DataCallExpression dataCall && dataCall.getDefinition() == dataDef ? expr : null;
+    return type instanceof DataCallExpression dataCall && dataDef.getRecursiveDefinitions().contains(dataCall.getDefinition()) ? expr : null;
   }
 
   private sealed interface Eliminator {}
