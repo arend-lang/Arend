@@ -45,6 +45,7 @@ import org.arend.ext.prettifier.ExpressionPrettifier;
 import org.arend.ext.prettifier.MergingExpressionPrettifier;
 import org.arend.ext.prettyprinting.doc.DocFactory;
 import org.arend.ext.reference.ArendRef;
+import org.arend.ext.reference.DataContainer;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.util.StringUtils;
 import org.arend.ext.variable.VariableRenamerFactory;
@@ -53,6 +54,8 @@ import org.arend.extImpl.userData.UserDataHolderImpl;
 import org.arend.naming.reference.*;
 import org.arend.naming.renamer.Renamer;
 import org.arend.prelude.Prelude;
+import org.arend.server.ArendServerResolveListener;
+import org.arend.term.abs.AbstractReference;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ConcreteExpressionVisitor;
 import org.arend.term.concrete.ConcreteLevelExpressionVisitor;
@@ -102,6 +105,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   private final List<DeferredMeta> myDeferredMetasBeforeSolver = new ArrayList<>();
   private final List<DeferredMeta> myDeferredMetasAfterLevels = new ArrayList<>();
   private final ArendExtension myArendExtension;
+  private final ArendServerResolveListener myResolveListener;
   private TypecheckerState mySavedState;
   private LevelContext myLevelContext;
   private Definition myDefinition;
@@ -133,7 +137,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     errorReporter.myStatus = errorReporter.myStatus.max(status);
   }
 
-  protected CheckTypeVisitor(Map<Referable, Binding> localContext, LocalExpressionPrettifier localPrettifier, ErrorReporter errorReporter, GlobalInstancePool pool, ArendExtension arendExtension, UserDataHolderImpl holder) {
+  protected CheckTypeVisitor(Map<Referable, Binding> localContext, LocalExpressionPrettifier localPrettifier, ErrorReporter errorReporter, GlobalInstancePool pool, ArendExtension arendExtension, ArendServerResolveListener resolveListener, UserDataHolderImpl holder) {
     this.errorReporter = new MyErrorReporter(errorReporter);
     myEquations = new TwoStageEquations(this);
     myInstancePool = pool;
@@ -141,17 +145,22 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     context = localContext;
     myLocalPrettifier = localPrettifier;
     myArendExtension = arendExtension;
+    myResolveListener = resolveListener;
     if (holder != null) {
       setUserData(holder);
     }
   }
 
-  public CheckTypeVisitor(ErrorReporter errorReporter, GlobalInstancePool pool, ArendExtension arendExtension) {
-    this(new LinkedHashMap<>(), new LocalExpressionPrettifier(), errorReporter, pool, arendExtension, null);
+  public CheckTypeVisitor(ErrorReporter errorReporter, GlobalInstancePool pool, ArendExtension arendExtension, ArendServerResolveListener resolveListener) {
+    this(new LinkedHashMap<>(), new LocalExpressionPrettifier(), errorReporter, pool, arendExtension, resolveListener, null);
   }
 
-  protected CheckTypeVisitor copy(Map<Referable, Binding> localContext, LocalExpressionPrettifier localPrettifier, ErrorReporter errorReporter, GlobalInstancePool pool, ArendExtension arendExtension, UserDataHolderImpl holder) {
-    return new CheckTypeVisitor(localContext, localPrettifier, errorReporter, pool, arendExtension, holder);
+  public CheckTypeVisitor(ErrorReporter errorReporter, GlobalInstancePool pool, ArendExtension arendExtension) {
+    this(errorReporter, pool, arendExtension, ArendServerResolveListener.EMPTY);
+  }
+
+  protected CheckTypeVisitor copy(Map<Referable, Binding> localContext, LocalExpressionPrettifier localPrettifier, ErrorReporter errorReporter, GlobalInstancePool pool, ArendExtension arendExtension, ArendServerResolveListener resolveListener, UserDataHolderImpl holder) {
+    return new CheckTypeVisitor(localContext, localPrettifier, errorReporter, pool, arendExtension, resolveListener, holder);
   }
 
   public ArendExtension getExtension() {
@@ -159,7 +168,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   public TypecheckingContext saveTypecheckingContext() {
-    return new TypecheckingContext(new LinkedHashMap<>(context), new LocalExpressionPrettifier(myLocalPrettifier), myInstancePool, myArendExtension, copyUserData(), myLevelContext);
+    return new TypecheckingContext(new LinkedHashMap<>(context), new LocalExpressionPrettifier(myLocalPrettifier), myInstancePool, myArendExtension, myResolveListener, copyUserData(), myLevelContext);
   }
 
   public Definition getDefinition() {
@@ -175,9 +184,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   public static CheckTypeVisitor loadTypecheckingContext(TypecheckingContext typecheckingContext, ErrorReporter errorReporter) {
-    CheckTypeVisitor visitor = new CheckTypeVisitor(typecheckingContext.localContext, typecheckingContext.localPrettifier, errorReporter, null, typecheckingContext.arendExtension, typecheckingContext.userDataHolder);
-    visitor.setInstancePool(typecheckingContext.instancePool.copy(visitor));
-    visitor.setLevelContext(typecheckingContext.levelContext);
+    CheckTypeVisitor visitor = new CheckTypeVisitor(typecheckingContext.localContext(), typecheckingContext.localPrettifier(), errorReporter, null, typecheckingContext.arendExtension(), typecheckingContext.resolveListener(), typecheckingContext.userDataHolder());
+    visitor.setInstancePool(typecheckingContext.instancePool().copy(visitor));
+    visitor.setLevelContext(typecheckingContext.levelContext());
     return visitor;
   }
 
@@ -1040,7 +1049,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           Type bindingType = binding.getType();
           if (bindingType != null) bindingType.subst(substVisitor);
         }
-        checkTypeVisitor = copy(deferredMeta.context, deferredMeta.localPrettifier, deferredMeta.errorReporter, null, myArendExtension, this);
+        checkTypeVisitor = copy(deferredMeta.context, deferredMeta.localPrettifier, deferredMeta.errorReporter, null, myArendExtension, myResolveListener, this);
         checkTypeVisitor.setInstancePool(myInstancePool.copy(checkTypeVisitor));
         checkTypeVisitor.setLevelContext(myLevelContext);
       } else {
@@ -2055,6 +2064,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (field == null) {
       errorReporter.report(new NotInDynamicScopeError(classCall.getDefinition(), expr.getFieldName(), expr));
       return null;
+    }
+
+    if (expr.getField() instanceof DataContainer dataContainer && dataContainer.getData() instanceof AbstractReference fieldRef) {
+      myResolveListener.addReference(fieldRef, field.getReferable());
     }
 
     TResult result = myArgsInference.inferTail(new TypecheckingResult(FieldCallExpression.make(field, argResult.expression), GetTypeVisitor.INSTANCE.getFieldCallType(field, classCall, argResult.expression)), expectedType, expr);

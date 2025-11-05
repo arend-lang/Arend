@@ -75,7 +75,7 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
         return result
     }
 
-    override fun addReference(module: ModuleLocation, reference: AbstractReference, referable: Referable) {
+    override fun addReference(reference: AbstractReference, referable: Referable) {
         (reference as? ArendReferenceElement)?.putResolved(referable)
     }
 

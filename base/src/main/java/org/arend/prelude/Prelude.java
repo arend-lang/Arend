@@ -26,6 +26,7 @@ import org.arend.ext.reference.Precedence;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.*;
 import org.arend.naming.scope.Scope;
+import org.arend.server.ArendServerResolveListener;
 import org.arend.term.group.AccessModifier;
 import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
@@ -308,7 +309,7 @@ public class Prelude implements ArendPrelude {
 
   public static class PreludeTypechecking extends TypecheckingOrderingListener {
     public PreludeTypechecking(ConcreteProvider concreteProvider) {
-      super(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY, Collections.emptyMap(), concreteProvider, DummyErrorReporter.INSTANCE, DummyDependencyListener.INSTANCE, PartialComparator.getTrivial(), new ArendExtensionProvider() {}, false);
+      super(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY, Collections.emptyMap(), concreteProvider, DummyErrorReporter.INSTANCE, DummyDependencyListener.INSTANCE, PartialComparator.getTrivial(), new ArendExtensionProvider() {}, ArendServerResolveListener.EMPTY, false);
     }
 
     @Override

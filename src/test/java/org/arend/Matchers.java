@@ -396,7 +396,7 @@ public class Matchers {
         if (error instanceof GoalError) {
           description.appendText("goal with ");
           int size = 0;
-          for (Map.Entry<Referable, Binding> entry : ((GoalError) error).typecheckingContext.localContext.entrySet()) {
+          for (Map.Entry<Referable, Binding> entry : ((GoalError) error).typecheckingContext.localContext().entrySet()) {
             if (!entry.getValue().isHidden() && (!(entry.getKey() instanceof LocalReferable) || !((LocalReferable) entry.getKey()).isHidden())) {
               size++;
             }

@@ -21,6 +21,7 @@ import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.ext.concrete.definition.FunctionKind;
+import org.arend.server.ArendServerResolveListener;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.concrete.ReplaceDefCallsVisitor;
 import org.arend.term.concrete.ReplaceDataVisitor;
@@ -57,13 +58,14 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   private final PartialComparator<TCDefReferable> myComparator;
   private final ArendExtensionProvider myExtensionProvider;
   private final Map<TCDefReferable, Concrete.ResolvableDefinition> myDesugaredDefinitions = new HashMap<>();
+  private final ArendServerResolveListener myResolveListener;
   private final boolean myClearLemmas;
   private List<TCDefReferable> myCurrentDefinitions = new ArrayList<>();
   private boolean myHeadersAreOK = true;
 
   private record Suspension(CheckTypeVisitor typechecker, UniverseKind universeKind) {}
 
-  public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, Map<TCDefReferable, List<TCDefReferable>> instanceDependencies, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider, boolean clearLemmas) {
+  public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, Map<TCDefReferable, List<TCDefReferable>> instanceDependencies, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider, ArendServerResolveListener resolveListener, boolean clearLemmas) {
     myCheckerFactory = factory;
     myErrorReporter = errorReporter;
     myDependencyListener = dependencyListener;
@@ -72,6 +74,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     myConcreteProvider = concreteProvider;
     myComparator = comparator;
     myExtensionProvider = extensionProvider;
+    myResolveListener = resolveListener;
     myClearLemmas = clearLemmas;
   }
 
@@ -236,7 +239,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
 
     if (ok) {
-      CheckTypeVisitor checkTypeVisitor = myCheckerFactory.create(errorReporter, null, extension);
+      CheckTypeVisitor checkTypeVisitor = myCheckerFactory.create(errorReporter, null, extension, myResolveListener);
       checkTypeVisitor.setInstancePool(new GlobalInstancePool(getInstances(definition.getData()), checkTypeVisitor));
       definition = definition.accept(new ReplaceDataVisitor(), null);
       if (definition instanceof Concrete.FunctionDefinition funDef && funDef.getKind().isUse()) {
@@ -393,7 +396,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     myCurrentDefinitions.add(definition.getData());
 
     CountingErrorReporter countingErrorReporter = new CountingErrorReporter(myErrorReporter);
-    CheckTypeVisitor visitor = myCheckerFactory.create(new LocalErrorReporter(definition.getData(), countingErrorReporter), null, myExtensionProvider.getArendExtension(definition.getData()));
+    CheckTypeVisitor visitor = myCheckerFactory.create(new LocalErrorReporter(definition.getData(), countingErrorReporter), null, myExtensionProvider.getArendExtension(definition.getData()), myResolveListener);
     visitor.setStatus(definition.getStatus().getTypecheckingStatus());
     DesugarVisitor.desugar(definition, myConcreteProvider, visitor.getErrorReporter());
     DefinitionTypechecker typechecker = new DefinitionTypechecker(visitor, definition instanceof Concrete.Definition ? ((Concrete.Definition) definition).getRecursiveDefinitions() : Collections.emptySet());

@@ -4,7 +4,6 @@ import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.term.abs.AbstractReferable;
-import org.arend.term.abs.AbstractReference;
 import org.arend.term.group.ConcreteGroup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -12,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.function.Supplier;
 
-public interface ArendServerRequester {
+public interface ArendServerRequester extends ArendServerResolveListener {
   /**
    * Request an invocation of {@link ArendServer#updateModule}.
    *
@@ -42,8 +41,6 @@ public interface ArendServerRequester {
   default @NotNull List<Referable> fixModuleReferences(@NotNull List<Referable> referables) {
     return referables;
   }
-
-  default void addReference(@NotNull ModuleLocation module, @NotNull AbstractReference reference, @NotNull Referable referable) {}
 
   default void addReference(@NotNull ModuleLocation module, @NotNull AbstractReferable referable, @NotNull TCDefReferable tcReferable) {}
 

@@ -209,7 +209,7 @@ public class ArendCheckerImpl implements ArendChecker {
             CollectingResolverListener.ModuleCacheStructure cache = resolverListener.getCacheStructure(module);
             if (cache != null) {
               for (CollectingResolverListener.ResolvedReference resolvedReference : cache.cache()) {
-                myServer.getRequester().addReference(module, resolvedReference.reference(), resolvedReference.referable());
+                myServer.getRequester().addReference(resolvedReference.reference(), resolvedReference.referable());
               }
               for (ModulePath modulePath : cache.importedModules()) {
                 ModuleLocation dependency = myServer.findModule(modulePath, module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST, false);
@@ -377,8 +377,8 @@ public class ArendCheckerImpl implements ArendChecker {
           myLogger.info(() -> "Collected definitions (" + collector.getElements().size() + ") for " + (definitions == null ? myModules : definitions));
 
           ListErrorReporter listErrorReporter = new ListErrorReporter();
-          TypecheckingOrderingListener dependencyTypechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.doClearLemmas());
-          TypecheckingOrderingListener typechecker = checkerFactory == null ? dependencyTypechecker : new TypecheckingOrderingListener(checkerFactory, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.doClearLemmas());
+          TypecheckingOrderingListener dependencyTypechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.getRequester(), myServer.doClearLemmas());
+          TypecheckingOrderingListener typechecker = checkerFactory == null ? dependencyTypechecker : new TypecheckingOrderingListener(checkerFactory, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.getRequester(), myServer.doClearLemmas());
 
           try {
             progressReporter.beginProcessing(collector.getElements().size());

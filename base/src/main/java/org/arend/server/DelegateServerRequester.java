@@ -45,8 +45,8 @@ public class DelegateServerRequester implements ArendServerRequester {
   }
 
   @Override
-  public void addReference(@NotNull ModuleLocation module, @NotNull AbstractReference reference, @NotNull Referable referable) {
-    requester.addReference(module, reference, referable);
+  public void addReference(@NotNull AbstractReference reference, @NotNull Referable referable) {
+    requester.addReference(reference, referable);
   }
 
   @Override

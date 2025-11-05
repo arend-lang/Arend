@@ -47,7 +47,7 @@ public class GoalDataHolder extends TypecheckingError {
   private static ExprSubstitution calculateSubstitution(TypecheckingContext typecheckingContext) {
     ExprSubstitution substitution = new ExprSubstitution();
     if (typecheckingContext != null) {
-      for (Iterator<Map.Entry<Referable, Binding>> iterator = typecheckingContext.localContext.entrySet().iterator(); iterator.hasNext(); ) {
+      for (Iterator<Map.Entry<Referable, Binding>> iterator = typecheckingContext.localContext().entrySet().iterator(); iterator.hasNext(); ) {
         Map.Entry<Referable, Binding> entry = iterator.next();
         if (entry.getKey() instanceof GeneratedLocalReferable && entry.getValue() instanceof EvaluatingBinding) {
           substitution.add(entry.getValue(), ((EvaluatingBinding) entry.getValue()).getExpression());
@@ -72,7 +72,7 @@ public class GoalDataHolder extends TypecheckingError {
 
   @NotNull
   protected Doc getContextDoc(PrettyPrinterConfig ppConfig) {
-    Map<Referable, Binding> context = typecheckingContext == null ? Collections.emptyMap() : typecheckingContext.localContext;
+    Map<Referable, Binding> context = typecheckingContext == null ? Collections.emptyMap() : typecheckingContext.localContext();
     if (!context.isEmpty()) {
       List<Doc> contextDocs = new ArrayList<>(context.size());
       for (Map.Entry<Referable, Binding> entry : context.entrySet()) {
