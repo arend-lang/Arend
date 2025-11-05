@@ -123,7 +123,7 @@ public class ArendCheckerImpl implements ArendChecker {
           }
 
           for (Map.Entry<ModuleLocation, GroupData> entry : groups.entrySet()) {
-            if (entry.getValue().getTypingInfo() == null) {
+            if (!entry.getValue().isResolved() || entry.getValue().getTypingInfo() == null) {
               GlobalTypingInfo typingInfo = new GlobalTypingInfo(null);
               new TypingInfoVisitor(typingInfo).processGroup(entry.getValue().getRawGroup(), myServer.getParentGroupScope(entry.getKey(), entry.getValue().getRawGroup()));
               entry.getValue().setTypingInfo(typingInfo);

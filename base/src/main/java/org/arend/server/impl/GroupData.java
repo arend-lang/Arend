@@ -228,6 +228,5 @@ public class GroupData {
 
   public void clearResolved() {
     myResolved = false;
-    myTypingInfo = null;
   }
 }
