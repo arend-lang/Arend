@@ -1,6 +1,7 @@
 package org.arend.server
 
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
@@ -16,7 +17,7 @@ import java.nio.charset.StandardCharsets
 
 @Service(Service.Level.PROJECT)
 class ArendServerService(val project: Project) : Disposable {
-    val server: ArendServer = ArendServerImpl(ArendServerRequesterImpl(project), true, true, true)
+    val server: ArendServer = ArendServerImpl(ArendServerRequesterImpl(project), true, true, !ApplicationManager.getApplication().isUnitTestMode)
     val prelude: ArendFile?
 
     init {
