@@ -12,6 +12,7 @@ import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Sort;
 import org.arend.error.CountingErrorReporter;
 import org.arend.ext.ArendExtension;
+import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.error.ErrorReporter;
@@ -36,7 +37,6 @@ import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.Ordering;
 import org.arend.typechecking.order.PartialComparator;
 import org.arend.typechecking.order.dependency.DependencyListener;
-import org.arend.typechecking.order.dependency.DummyDependencyListener;
 import org.arend.typechecking.patternmatching.ExtElimClause;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.termination.BaseCallGraph;
@@ -57,12 +57,13 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
   private final PartialComparator<TCDefReferable> myComparator;
   private final ArendExtensionProvider myExtensionProvider;
   private final Map<TCDefReferable, Concrete.ResolvableDefinition> myDesugaredDefinitions = new HashMap<>();
+  private final boolean myClearLemmas;
   private List<TCDefReferable> myCurrentDefinitions = new ArrayList<>();
   private boolean myHeadersAreOK = true;
 
   private record Suspension(CheckTypeVisitor typechecker, UniverseKind universeKind) {}
 
-  public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, Map<TCDefReferable, List<TCDefReferable>> instanceDependencies, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
+  public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, Map<TCDefReferable, List<TCDefReferable>> instanceDependencies, ConcreteProvider concreteProvider, ErrorReporter errorReporter, DependencyListener dependencyListener, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider, boolean clearLemmas) {
     myCheckerFactory = factory;
     myErrorReporter = errorReporter;
     myDependencyListener = dependencyListener;
@@ -71,10 +72,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     myConcreteProvider = concreteProvider;
     myComparator = comparator;
     myExtensionProvider = extensionProvider;
-  }
-
-  public TypecheckingOrderingListener(ArendCheckerFactory factory, InstanceScopeProvider instanceScopeProvider, Map<TCDefReferable, List<TCDefReferable>> instanceDependencies, ConcreteProvider concreteProvider, ErrorReporter errorReporter, PartialComparator<TCDefReferable> comparator, ArendExtensionProvider extensionProvider) {
-    this(factory, instanceScopeProvider, instanceDependencies, concreteProvider, errorReporter, DummyDependencyListener.INSTANCE, comparator, extensionProvider);
+    myClearLemmas = clearLemmas;
   }
 
   public ConcreteProvider getConcreteProvider() {
@@ -209,6 +207,12 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     return result;
   }
 
+  private void clearLemma(Definition definition) {
+    if (myClearLemmas && definition instanceof FunctionDefinition function && function.getKind() == CoreFunctionDefinition.Kind.LEMMA) {
+      function.setBody(null);
+    }
+  }
+
   private void typecheckWithUse(Concrete.ResolvableDefinition definition, Set<TCDefReferable> usedDefinitions, boolean recursive, ArendExtension extension, List<Definition> typecheckedList) {
     ErrorReporter errorReporter = new LocalErrorReporter(definition.getData(), myErrorReporter);
     if (usedDefinitions != null && definition instanceof Concrete.Definition def) {
@@ -248,6 +252,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       if (typechecked == null) {
         typechecked = newDefinition(definition);
       }
+      clearLemma(typechecked);
       if (!(typechecked instanceof TopLevelDefinition || typechecked instanceof MetaTopDefinition)) {
         throw new IllegalStateException();
       }
@@ -463,6 +468,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
             clausesMap.put((FunctionDefinition) def, clauses);
           }
         }
+        clearLemma(def);
 
         ArendExtension extension = suspension.typechecker.getExtension();
         if (extension != null) {

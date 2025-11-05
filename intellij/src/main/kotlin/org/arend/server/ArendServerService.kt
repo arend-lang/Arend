@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets
 
 @Service(Service.Level.PROJECT)
 class ArendServerService(val project: Project) : Disposable {
-    val server: ArendServer = ArendServerImpl(ArendServerRequesterImpl(project), true, true)
+    val server: ArendServer = ArendServerImpl(ArendServerRequesterImpl(project), true, true, true)
     val prelude: ArendFile?
 
     init {

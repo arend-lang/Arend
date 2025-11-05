@@ -30,6 +30,7 @@ import org.arend.term.group.AccessModifier;
 import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.PartialComparator;
+import org.arend.typechecking.order.dependency.DummyDependencyListener;
 import org.arend.typechecking.order.listener.TypecheckingOrderingListener;
 import org.arend.typechecking.provider.ConcreteProvider;
 import org.arend.typechecking.visitor.ArendCheckerFactory;
@@ -307,7 +308,7 @@ public class Prelude implements ArendPrelude {
 
   public static class PreludeTypechecking extends TypecheckingOrderingListener {
     public PreludeTypechecking(ConcreteProvider concreteProvider) {
-      super(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY, Collections.emptyMap(), concreteProvider, DummyErrorReporter.INSTANCE, PartialComparator.getTrivial(), new ArendExtensionProvider() {});
+      super(ArendCheckerFactory.DEFAULT, InstanceScopeProvider.EMPTY, Collections.emptyMap(), concreteProvider, DummyErrorReporter.INSTANCE, DummyDependencyListener.INSTANCE, PartialComparator.getTrivial(), new ArendExtensionProvider() {}, false);
     }
 
     @Override

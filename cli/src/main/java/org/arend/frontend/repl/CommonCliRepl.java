@@ -79,7 +79,7 @@ public abstract class CommonCliRepl extends Repl {
       @NotNull Set<ModulePath> modules,
       @NotNull ListErrorReporter errorReporter) {
     this(
-        new ArendServerImpl(new CliServerRequester(new LibraryManager(errorReporter)), false, false),
+        new ArendServerImpl(new CliServerRequester(new LibraryManager(errorReporter)), false, false, true),
         modules,
         errorReporter
     );

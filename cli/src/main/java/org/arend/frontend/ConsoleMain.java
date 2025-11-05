@@ -271,8 +271,9 @@ public class ConsoleMain {
     CommandLine cmdLine = parseArgs(args);
     if (cmdLine == null) return false;
 
+    boolean doubleCheck = cmdLine.hasOption("c");
     LibraryManager libraryManager = new LibraryManager(mySystemErrErrorReporter);
-    ArendServer server = new ArendServerImpl(new CliServerRequester(libraryManager), false, false);
+    ArendServer server = new ArendServerImpl(new CliServerRequester(libraryManager), false, false, !doubleCheck);
     server.addReadOnlyModule(Prelude.MODULE_LOCATION, Objects.requireNonNull(new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE)));
     server.addErrorReporter(myErrorReporter);
 
@@ -394,7 +395,6 @@ public class ConsoleMain {
     TimedProgressReporter timedProgressReporter = cmdLine.hasOption(SHOW_TIMES) ? new TimedProgressReporter() : null;
     ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter = timedProgressReporter != null ? timedProgressReporter : ProgressReporter.empty();
 
-    boolean doubleCheck = cmdLine.hasOption("c");
     if (requestedModules.isEmpty()) {
       for (SourceLibrary library : requestedLibraries) {
         System.out.println();

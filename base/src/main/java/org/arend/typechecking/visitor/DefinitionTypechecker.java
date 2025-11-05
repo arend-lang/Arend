@@ -1825,10 +1825,6 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     typechecker.setStatus(def.getStatus().getTypecheckingStatus());
     typedDef.addStatus(typechecker.getStatus().max(!bodyIsOK && typedDef.getActualBody() == null && def.getKind() != FunctionKind.AXIOM ? Definition.TypeCheckingStatus.HAS_ERRORS : Definition.TypeCheckingStatus.NO_ERRORS));
 
-    if (typedDef.getKind() == CoreFunctionDefinition.Kind.LEMMA) {
-      typedDef.setBody(null);
-    }
-
     return clauses;
   }
 

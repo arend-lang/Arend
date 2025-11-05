@@ -50,6 +50,7 @@ public class ArendServerImpl implements ArendServer {
   private final DependencyCollector myDependencyCollector = new DependencyCollector(null);
   private final boolean myCacheReferences;
   private final InstanceCacheImpl myInstanceCache = new InstanceCacheImpl();
+  private final boolean myClearLemmas;
 
   private final TypingInfo myTypingInfo = new TypingInfo() {
     @Override
@@ -95,7 +96,7 @@ public class ArendServerImpl implements ArendServer {
     return defData == null ? new ArendInstances() : defData.instances();
   };
 
-  public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging) {
+  public ArendServerImpl(@NotNull ArendServerRequester requester, boolean cacheReferences, boolean withLogging, boolean clearLemmas) {
     myRequester = new DelegateServerRequester(requester) {
       @Override
       public <T> T runUnderReadLock(@NotNull Supplier<T> supplier) {
@@ -109,6 +110,7 @@ public class ArendServerImpl implements ArendServer {
     myCacheReferences = cacheReferences;
     myLogger.setLevel(withLogging ? Level.INFO : Level.OFF);
     myLibraryService = new LibraryService(this);
+    myClearLemmas = clearLemmas;
     copyLogger(ArendCheckerImpl.getLogger());
 
     myLogger.info(() -> "Server started");
@@ -124,6 +126,10 @@ public class ArendServerImpl implements ArendServer {
 
   boolean doCacheReferences() {
     return myCacheReferences;
+  }
+
+  boolean doClearLemmas() {
+    return myClearLemmas;
   }
 
   public ArendServerRequester getRequester() {
