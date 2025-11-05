@@ -30,6 +30,7 @@ import java.util.function.Function;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
+import static org.arend.prelude.Prelude.*;
 
 public class SingleFileReferenceResolver {
     ArendServer myServer;
@@ -164,7 +165,9 @@ public class SingleFileReferenceResolver {
             for (List<Pair<String, Referable>> name : possibleNames) {
                 Referable resolveResult = Scope.resolveName(currentScope, name.stream().map(p -> p.proj1).toList());
                 if (resolveResult instanceof RedirectingReferable redirecting) resolveResult = redirecting.getOriginalReferable();
-                if (resolveResult == targetReferable) accessibleNames.add(name);
+                if (resolveResult == targetReferable ||
+                        (targetReferable == FIN_ZERO.getReferable() && resolveResult == ZERO.getReferable() || targetReferable == FIN_SUC.getReferable() && resolveResult == SUC.getReferable()))
+                    accessibleNames.add(name);
             }
 
             List<List<Pair<String, Referable>>> importableNames =

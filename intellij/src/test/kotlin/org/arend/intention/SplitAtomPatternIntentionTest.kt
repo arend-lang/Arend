@@ -259,7 +259,7 @@ class SplitAtomPatternIntentionTest: QuickFixTestBase() {
     """, """
        \func foo (s : Fin 2) : Nat
          | 0 => 0
-         | 1 => Fin.zero
+         | 1 => zero
     """)
 
     fun testElim() = typedQuickFixTest("Split",
