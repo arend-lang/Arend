@@ -235,14 +235,22 @@ public class ArendServerImpl implements ArendServer {
   }
 
   @Override
-  public void addReadOnlyModule(@NotNull ModuleLocation module, @NotNull ConcreteGroup group) {
-    boolean isPrelude = module.getLibraryName().equals(Prelude.LIBRARY_NAME);
-    if (isPrelude) {
+  public void addReadOnlyModule(@NotNull ModuleLocation module, @NotNull Supplier<ConcreteGroup> supplier) {
+    ConcreteGroup preludeGroup;
+    if (module.getLibraryName().equals(Prelude.LIBRARY_NAME)) {
       if (myPreludeModuleScopeProvider.isRegistered(module.getModulePath())) {
         myLogger.warning("Read-only module '" + module + "' is already added");
-      } else {
-        myPreludeModuleScopeProvider.addModule(module.getModulePath(), CachingScope.make(LexicalScope.opened(group)));
+        return;
       }
+      ConcreteGroup group = Prelude.getPreludeGroup();
+      preludeGroup = group != null ? group : supplier.get();
+      if (preludeGroup == null) {
+        myLogger.warning("Cannot compute module '" + module);
+        return;
+      }
+      myPreludeModuleScopeProvider.addModule(module.getModulePath(), CachingScope.make(LexicalScope.opened(preludeGroup)));
+    } else {
+      preludeGroup = null;
     }
 
     final boolean[] added = new boolean[1];
@@ -252,8 +260,9 @@ public class ArendServerImpl implements ArendServer {
         return prevPair;
       }
 
+      ConcreteGroup group = preludeGroup != null ? preludeGroup : supplier.get();
       GlobalTypingInfo typingInfo;
-      if (isPrelude) {
+      if (preludeGroup != null) {
         typingInfo = new GlobalTypingInfo(null);
         new TypingInfoVisitor(typingInfo).processGroup(group, getParentGroupScope(module, group));
 

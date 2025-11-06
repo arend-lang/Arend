@@ -80,7 +80,7 @@ public class MetaResolverTest extends TypeCheckingTestCase {
       statements.add(new ConcreteStatement(null, new ConcreteNamespaceCommand(null, true, new LongUnresolvedReference(null, null, modulePath.toList()), true, Collections.emptyList(), Collections.emptyList()), null, null));
     }
     statements.add(new ConcreteStatement(new ConcreteGroup(DocFactory.nullDoc(), metaRef, body == null ? null : new Concrete.MetaDefinition(metaRef, null, null, Collections.emptyList(), body), Collections.emptyList(), Collections.emptyList(), Collections.emptyList()), null, null, null));
-    server.addReadOnlyModule(module, new ConcreteGroup(DocFactory.nullDoc(), new FullModuleReferable(module), null, statements, Collections.emptyList(), Collections.emptyList()));
+    server.addReadOnlyModule(module, () -> new ConcreteGroup(DocFactory.nullDoc(), new FullModuleReferable(module), null, statements, Collections.emptyList(), Collections.emptyList()));
   }
 
   protected void addMeta(String name, Precedence prec, MetaDefinition meta) {

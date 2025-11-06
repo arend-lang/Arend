@@ -274,7 +274,7 @@ public class ConsoleMain {
     boolean doubleCheck = cmdLine.hasOption("c");
     LibraryManager libraryManager = new LibraryManager(mySystemErrErrorReporter);
     ArendServer server = new ArendServerImpl(new CliServerRequester(libraryManager), false, false, !doubleCheck);
-    server.addReadOnlyModule(Prelude.MODULE_LOCATION, Objects.requireNonNull(new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE)));
+    server.addReadOnlyModule(Prelude.MODULE_LOCATION, () -> Objects.requireNonNull(new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE)));
     server.addErrorReporter(myErrorReporter);
 
     // Get library directories

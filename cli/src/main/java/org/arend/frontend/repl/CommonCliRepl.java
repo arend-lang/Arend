@@ -288,10 +288,7 @@ public abstract class CommonCliRepl extends Repl {
   protected final void loadLibraries() {
     if (myServer instanceof ArendServerImpl) {
       if (!Prelude.isInitialized()) {
-        ConcreteGroup preludeGroup = new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE);
-        if (preludeGroup != null) {
-          myServer.addReadOnlyModule(Prelude.MODULE_LOCATION, preludeGroup);
-        }
+        myServer.addReadOnlyModule(Prelude.MODULE_LOCATION, () -> new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE));
         typecheckModules(new SingletonList<>(Prelude.MODULE_LOCATION));
       }
     }
@@ -320,8 +317,6 @@ public abstract class CommonCliRepl extends Repl {
   /**
    * Like {@link CommonCliRepl#loadModule(ModulePath)}, this will
    * <strong>not</strong> modify the REPL scope as well.
-   *
-   * @return true if the module is already loaded before.
    */
   public final void unloadModule(@NotNull ModulePath modulePath) {
     if (Objects.equals(modulePath.toString(), ALL_MODULES)) {

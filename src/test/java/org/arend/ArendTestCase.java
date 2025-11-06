@@ -19,7 +19,6 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
-import org.junit.Assert;
 import org.junit.Before;
 
 import java.util.*;
@@ -30,16 +29,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public abstract class ArendTestCase {
   protected ArendServer server;
-  private static ConcreteGroup myPrelude;
 
   @Before
   public void initializeServer() {
     server = new ArendServerImpl(ArendServerRequester.TRIVIAL, false, false, false);
-    if (myPrelude == null) {
-      myPrelude = new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE);
-      Assert.assertNotNull(myPrelude);
-    }
-    server.addReadOnlyModule(Prelude.MODULE_LOCATION, myPrelude);
+    server.addReadOnlyModule(Prelude.MODULE_LOCATION, () -> new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE));
   }
 
   public TCDefReferable get(Scope scope, String path) {

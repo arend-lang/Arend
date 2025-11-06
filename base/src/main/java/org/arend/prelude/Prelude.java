@@ -25,9 +25,9 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.reference.Precedence;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.naming.reference.*;
-import org.arend.naming.scope.Scope;
 import org.arend.server.ArendServerResolveListener;
 import org.arend.term.group.AccessModifier;
+import org.arend.term.group.ConcreteGroup;
 import org.arend.typechecking.ArendExtensionProvider;
 import org.arend.typechecking.instance.provider.InstanceScopeProvider;
 import org.arend.typechecking.order.PartialComparator;
@@ -51,6 +51,8 @@ public class Prelude implements ArendPrelude {
   public static final String LIBRARY_NAME = "prelude";
   public static final ModulePath MODULE_PATH = new ModulePath("Prelude");
   public static final ModuleLocation MODULE_LOCATION = new ModuleLocation(LIBRARY_NAME, ModuleLocation.LocationKind.GENERATED, MODULE_PATH);
+
+  private static ConcreteGroup PRELUDE_GROUP;
 
   public static DataDefinition INTERVAL;
   public static Constructor LEFT, RIGHT;
@@ -283,27 +285,12 @@ public class Prelude implements ArendPrelude {
     consumer.accept(ARRAY_INDEX);
   }
 
-  public static void initialize(Scope scope) {
-    for (Referable ref : scope.getElements()) {
-      if (ref instanceof TCDefReferable && ((TCDefReferable) ref).getKind().isTypecheckable()) {
-        update(((TCDefReferable) ref).getTypechecked());
-      }
-    }
-
-    for (String name : new String[] { "Nat", "Int", "Fin", "Path", "I", "DArray" }) {
-      Scope childScope = scope.resolveNamespace(name);
-      assert childScope != null;
-      for (Referable ref : childScope.getElements()) {
-        if (ref instanceof TCDefReferable && ((TCDefReferable) ref).getKind().isTypecheckable()) {
-          update(((TCDefReferable) ref).getTypechecked());
-        }
-      }
-    }
-
-    initialize();
+  public static ConcreteGroup getPreludeGroup() {
+    return PRELUDE_GROUP;
   }
 
-  public static void initialize() {
+  public static void initialize(ConcreteGroup group) {
+    PRELUDE_GROUP = group;
     IS_INITIALIZED = true;
   }
 

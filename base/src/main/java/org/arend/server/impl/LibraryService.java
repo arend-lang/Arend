@@ -154,7 +154,7 @@ public class LibraryService {
       contributor.disable();
     }
     for (Map.Entry<ModuleLocation, ConcreteGroup> entry : contributor.getModules().entrySet()) {
-      myServer.addReadOnlyModule(entry.getKey(), entry.getValue());
+      myServer.addReadOnlyModule(entry.getKey(), entry::getValue);
       myServer.getRequester().setupGeneratedModule(entry.getKey(), entry.getValue());
     }
   }

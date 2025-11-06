@@ -212,7 +212,7 @@ abstract class ArendTestBase : BasePlatformTestCase(), ArendTestCase {
         filler(contributor)
         val server = project.service<ArendServerService>().server
         for ((key, value) in contributor.modules.entries) {
-            server.addReadOnlyModule(key, value)
+            server.addReadOnlyModule(key) { value }
             project.addGeneratedModule(key, value)
         }
     }

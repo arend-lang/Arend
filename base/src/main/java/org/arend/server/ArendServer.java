@@ -64,7 +64,7 @@ public interface ArendServer {
    * @param module              the module to be added.
    * @param group               the content of the module.
    */
-  void addReadOnlyModule(@NotNull ModuleLocation module, @NotNull ConcreteGroup group);
+  void addReadOnlyModule(@NotNull ModuleLocation module, @NotNull Supplier<ConcreteGroup> group);
 
   /**
    * Adds a module or updates its content if necessary.
