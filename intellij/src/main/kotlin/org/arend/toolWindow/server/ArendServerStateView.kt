@@ -52,6 +52,8 @@ import org.arend.server.ArendServer
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.application.ModalityState
 
 class ArendServerStateView(private val project: Project, toolWindow: ToolWindow) {
     private var suppressSelectionEvents: Boolean = false
@@ -519,73 +521,108 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
     }
 
     private fun rebuildByFolders() {
-        // Capture expanded and selection state before rebuild
+        // Capture expanded and selection state before rebuild (EDT)
         val (expandedIds, selectedIdPath) = captureTreeState()
 
+        data class FileVM(val libraryName: String, val isTest: Boolean, val file: VirtualFile, val moduleLoc: ModuleLocation?, val rawGroup: ConcreteGroup?)
+        data class FolderVM(val libraryName: String, val isTest: Boolean, val dir: VirtualFile, val subFolders: List<FolderVM>, val files: List<FileVM>)
+        data class LibraryVM(val name: String, val roots: List<FolderVM>)
+        data class Stats(val resolvedModules: Int, val totalModules: Int, val typecheckedDefinitions: Int, val totalDefinitions: Int)
+
         val server = project.service<ArendServerService>().server
-        val libraries = server.libraries
-        root.removeAllChildren()
 
-        // Stats counters (computed from server data similarly to library view)
-        val allModules = server.modules.toList()
-        val totalModules = allModules.size
-        var resolvedModules = 0
-        var totalDefinitions = 0
-        var typecheckedDefinitions = 0
-
-        fun countFromModule(loc: ModuleLocation) {
-            totalDefinitions += countDefs(server.getRawGroup(loc))
-            val resolvedDefs = server.getResolvedDefinitions(loc)
-            if (resolvedDefs.isNotEmpty()) resolvedModules++
-            for (def in resolvedDefs) {
-                if (def.definition.data.isTypechecked()) typecheckedDefinitions++
+        ReadAction.nonBlocking<Pair<List<LibraryVM>, Stats>> {
+            // Compute the entire model in a background read action
+            fun countStats(): Stats {
+                val allModules = server.modules.toList()
+                val totalModules = allModules.size
+                var resolvedModules = 0
+                var totalDefinitions = 0
+                var typecheckedDefinitions = 0
+                for (loc in allModules) {
+                    val raw = server.getRawGroup(loc)
+                    totalDefinitions += countDefs(raw)
+                    val resolvedDefs = server.getResolvedDefinitions(loc)
+                    if (resolvedDefs.isNotEmpty()) resolvedModules++
+                    for (def in resolvedDefs) if (def.definition.data.isTypechecked()) typecheckedDefinitions++
+                }
+                return Stats(resolvedModules, totalModules, typecheckedDefinitions, totalDefinitions)
             }
-        }
-        allModules.forEach { countFromModule(it) }
 
-
-        // Build folder/file tree for each library and its roots
-        for (lib in libraries.sorted()) {
-            val libNode = DefaultMutableTreeNode(LibraryNode(lib))
-            val config: LibraryConfig? = project.findLibrary(lib)
-            fun buildDir(parent: DefaultMutableTreeNode, dir: VirtualFile, isTest: Boolean) {
-                // Add subdirectories first
+            fun buildDirVM(libraryName: String, dir: VirtualFile, isTest: Boolean): FolderVM {
                 val children = dir.children.orEmpty().sortedBy { it.name }
+                val subFolders = ArrayList<FolderVM>()
+                val files = ArrayList<FileVM>()
                 for (child in children) {
                     if (child.isDirectory) {
-                        val folderNode = DefaultMutableTreeNode(FolderNode(lib, isTest, child))
-                        parent.add(folderNode)
-                        buildDir(folderNode, child, isTest)
+                        subFolders.add(buildDirVM(libraryName, child, isTest))
                     }
                 }
-                // Then add files
+                val psiMgr = PsiManager.getInstance(project)
                 for (child in children) {
                     if (!child.isDirectory && child.name.endsWith(FileUtils.EXTENSION)) {
-                        val psi = PsiManager.getInstance(project).findFile(child)
+                        val psi = psiMgr.findFile(child)
                         val arendFile = psi as? ArendFile
                         val moduleLoc = arendFile?.moduleLocation
-                        val fileNode = DefaultMutableTreeNode(FileNode(lib, isTest, child, moduleLoc))
-                        if (moduleLoc != null) {
-                            addDefs(fileNode, server.getRawGroup(moduleLoc), groupDefinitions)
-                        }
-                        parent.add(fileNode)
+                        val rawGroup = moduleLoc?.let { server.getRawGroup(it) }
+                        files.add(FileVM(libraryName, isTest, child, moduleLoc, rawGroup))
                     }
                 }
+                return FolderVM(libraryName, isTest, dir, subFolders, files)
             }
-            if (config != null) {
-                config.sourcesDirFile?.let { buildDir(libNode, it, false) }
-                config.testsDirFile?.let { buildDir(libNode, it, true) }
+
+            val libraries = server.libraries.sorted()
+            val libraryVMs = ArrayList<LibraryVM>()
+            for (lib in libraries) {
+                val config: LibraryConfig? = project.findLibrary(lib)
+                if (config != null) {
+                    val roots = ArrayList<FolderVM>()
+                    config.sourcesDirFile?.let { roots.add(buildDirVM(lib, it, false)) }
+                    config.testsDirFile?.let { roots.add(buildDirVM(lib, it, true)) }
+                    libraryVMs.add(LibraryVM(lib, roots))
+                } else {
+                    libraryVMs.add(LibraryVM(lib, emptyList()))
+                }
             }
-            root.add(libNode)
+            Pair(libraryVMs, countStats())
         }
+            .coalesceBy(this, "rebuildByFolders")
+            .expireWith(project)
+            .finishOnUiThread(ModalityState.any()) { (libs, stats) ->
+                if (project.isDisposed) return@finishOnUiThread
+                // Rebuild UI tree on EDT from the computed view-model
+                root.removeAllChildren()
+                for (lib in libs) {
+                    val libNode = DefaultMutableTreeNode(LibraryNode(lib.name))
+                    fun buildDir(parent: DefaultMutableTreeNode, vm: FolderVM) {
+                        // Folders first
+                        for (sf in vm.subFolders) {
+                            val folderNode = DefaultMutableTreeNode(FolderNode(vm.libraryName, vm.isTest, sf.dir))
+                            parent.add(folderNode)
+                            buildDir(folderNode, sf)
+                        }
+                        // Then files
+                        for (f in vm.files) {
+                            val fileNode = DefaultMutableTreeNode(FileNode(f.libraryName, f.isTest, f.file, f.moduleLoc))
+                            if (f.rawGroup != null) {
+                                addDefs(fileNode, f.rawGroup, groupDefinitions)
+                            }
+                            parent.add(fileNode)
+                        }
+                    }
+                    for (rootVm in lib.roots) buildDir(libNode, rootVm)
+                    root.add(libNode)
+                }
 
-        treeModel.reload(root)
+                treeModel.reload(root)
 
-        // Update status label
-        updateStatusLabel(server, resolvedModules, totalModules, typecheckedDefinitions, totalDefinitions)
+                // Update status label
+                updateStatusLabel(server, stats.resolvedModules, stats.totalModules, stats.typecheckedDefinitions, stats.totalDefinitions)
 
-        // Restore expanded and selection state
-        restoreTreeState(expandedIds, selectedIdPath)
+                // Restore expanded and selection state
+                restoreTreeState(expandedIds, selectedIdPath)
+            }
+            .submit(com.intellij.util.concurrency.AppExecutorUtil.getAppExecutorService())
     }
 
     // --- Actions ---
