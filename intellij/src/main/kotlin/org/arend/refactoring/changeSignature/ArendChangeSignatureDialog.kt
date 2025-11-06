@@ -62,7 +62,7 @@ import javax.swing.table.TableCellEditor
 import kotlin.math.roundToInt
 
 class ArendChangeSignatureDialog(project: Project,
-                                 val descriptor: ArendChangeSignatureDescriptor):
+                                 descriptor: ArendChangeSignatureDescriptor):
     ChangeSignatureDialogBase<ArendTextualParameter, PsiElement, String, ArendChangeSignatureDescriptor, ArendChangeSignatureDialogParameterTableModelItem, ArendParameterTableModel>(project, descriptor, false, descriptor.method.context),
     ArendCodeFragmentController {
     private lateinit var parametersPanel: JPanel
@@ -225,7 +225,7 @@ class ArendChangeSignatureDialog(project: Project,
 
     override fun createParametersPanel(hasTabsInDialog: Boolean): JPanel {
         commonTypeFragmentListener = ArendChangeSignatureCustomDocumentListener(this)
-        val referableLocation = (descriptor.method as? ReferableBase<*>)?.tcReferable?.location
+        val referableLocation = (myMethod.method as? ReferableBase<*>)?.tcReferable?.location
         singleFileReferenceResolver = SingleFileReferenceResolver(
             project.service<ArendServerService>().server,
             DummyErrorReporter.INSTANCE,
@@ -310,7 +310,8 @@ class ArendChangeSignatureDialog(project: Project,
         customizeParametersTable(myParametersTable)
 
         parameterToUsages = HashMap(); parameterToDependencies = HashMap()
-        for (i in 0 until myParametersTable.items.size) invokeNameResolverHighlighting(i)
+        for (i in 0 until myParametersTable.items.size)
+            invokeNameResolverHighlighting(i)
 
         val selectionModel = (this.myParametersTable.selectionModel as DefaultListSelectionModel)
         val oldSelectionListeners = selectionModel.listSelectionListeners

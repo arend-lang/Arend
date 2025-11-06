@@ -21,11 +21,8 @@ class ArendChangeSignatureHandler : ChangeSignatureHandler {
     override fun invoke(project: Project, elements: Array<out PsiElement>, dataContext: DataContext?) {
         val psi = elements.singleOrNull() as? Abstract.ParametersHolder ?: return
         if (psi !is ArendFunctionDefinition<*> && psi !is ArendClassField && psi !is ArendDefData && psi !is ArendDefClass && psi !is ArendConstructor) return
-        if (psi !is PsiLocatedReferable) return
 
-        resetThreadContext().use { token ->
-            ArendChangeSignatureDialog(project, ArendChangeSignatureDescriptor(psi)).show()
-        }
+        ArendChangeSignatureDialog(project, ArendChangeSignatureDescriptor(psi)).show()
     }
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?, dataContext: DataContext?) {
