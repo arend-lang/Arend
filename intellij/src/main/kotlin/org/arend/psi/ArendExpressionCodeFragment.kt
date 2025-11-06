@@ -10,28 +10,28 @@ import com.intellij.psi.impl.source.PsiCodeFragmentImpl
 import com.intellij.psi.impl.source.tree.ICodeFragmentElementType
 import com.intellij.psi.tree.IElementType
 import org.arend.ArendLanguage
-import org.arend.IArendFile
 import org.arend.naming.scope.Scope
 import org.arend.parser.ArendParser
+import org.arend.psi.ext.ArendExpr
 import org.arend.resolving.ArendReference
 import org.arend.server.impl.SingleFileReferenceResolver
 
 class ArendExpressionCodeFragment(project: Project, expression: String,
                                   context: PsiElement?,
                                   private val fragmentController: ArendCodeFragmentController?):
-    PsiCodeFragmentImpl(project, ArendExpressionCodeFragmentElementType, true, "fragment.ard", expression, context), IArendFile {
+    PsiCodeFragmentImpl(project, ArendExpressionCodeFragmentElementType, true, "fragment.ard", expression, context), ArendCodeFragment {
     override fun getReference(): ArendReference? = null
 
     override fun moduleTextRepresentation(): String = name
 
     override fun positionTextRepresentation(): String? = null
 
-    /*fun getExpr(): ArendExpr? {
-        val firstChild = firstChild
-        return if (firstChild is ArendExpr && firstChild.elementType != ArendElementTypes.EXPR) firstChild else null
-    }
+    override val expr: ArendExpr?
+        get() = firstChild as? ArendExpr?
 
-    fun fragmentResolved() { fragmentController?.expressionFragmentResolved(this) } */
+    override fun fragmentResolved() {
+        fragmentController?.expressionFragmentResolved(this)
+    }
 
     fun getMultiResolver(): SingleFileReferenceResolver? = fragmentController?.getMultiResolver()
 }

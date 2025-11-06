@@ -1,4 +1,4 @@
-package org.arend
+package org.arend.psi
 
 import com.intellij.psi.PsiFile
 import org.arend.psi.ext.ArendCompositeElement
