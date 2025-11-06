@@ -6,17 +6,20 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
-import com.intellij.util.application
 import org.arend.module.ReloadLibrariesAction
 import org.arend.module.config.ArendModuleConfigService
 
-@Service
+@Service(Service.Level.PROJECT)
 class ArendExtensionChangeService {
     val modificationStamps = HashMap<Module, Long>()
     val notifications = HashMap<Project, Notification>()
 
     fun initializeModule(config: ArendModuleConfigService) {
         modificationStamps[config.module] = config.extensionMainClassFile?.timeStamp ?: return
+    }
+
+    fun removeModule(module: Module) {
+        modificationStamps.remove(module)
     }
 
     fun createNotification(project: Project) =
@@ -37,7 +40,7 @@ class ArendExtensionChangeService {
         }
 
     fun notifyIfNeeded(project: Project) {
-        val service = application.service<ArendExtensionChangeService>()
+        val service = project.service<ArendExtensionChangeService>()
         if (service.notifications[project]?.isExpired != false) {
             service.notifications[project] = createNotification(project)
         }

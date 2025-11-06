@@ -126,11 +126,15 @@ fun Module.register(modules: List<Module> = emptyList()) {
         project.addDependencies(server, config, loaded)
     }
 
-    ApplicationManager.getApplication().getService(ArendExtensionChangeService::class.java).initializeModule(config)
+    project.service<ArendExtensionChangeService>().initializeModule(config)
     config.isInitialized = true
     if (!ApplicationManager.getApplication().isUnitTestMode) {
         DaemonCodeAnalyzer.getInstance(project).restart()
     }
+}
+
+fun Module.unregister() {
+    project.service<ArendExtensionChangeService>().removeModule(this)
 }
 
 private fun groupMatch(group1: ConcreteGroup, group2: ArendGroup, function: (ConcreteGroup, ArendGroup) -> Boolean): Boolean {

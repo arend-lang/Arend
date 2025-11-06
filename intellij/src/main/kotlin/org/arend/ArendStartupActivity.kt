@@ -18,6 +18,7 @@ import org.arend.server.ArendServerService
 import org.arend.util.ArendBundle
 import org.arend.util.arendModules
 import org.arend.util.register
+import org.arend.util.unregister
 import org.arend.yaml.YAMLFileListener
 
 
@@ -41,6 +42,7 @@ class ArendStartupActivity : ProjectActivity {
 
             override fun moduleRemoved(project: Project, module: Module) {
                 service.server.removeLibrary(module.name)
+                module.unregister()
             }
         })
 
