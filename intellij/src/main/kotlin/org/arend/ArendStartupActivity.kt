@@ -12,6 +12,7 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.*
 import com.intellij.openapi.startup.ProjectActivity
 import org.arend.module.ArendModuleType
+import org.arend.module.ModuleSynchronizer
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.server.ArendServerService
 import org.arend.util.ArendBundle
@@ -79,6 +80,8 @@ class ArendStartupActivity : ProjectActivity {
         val yamlFileListener = YAMLFileListener(project)
         yamlFileListener.register()
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(yamlFileListener, project)
+
+        ModuleSynchronizer(project).install()
 
         disableActions()
     }
