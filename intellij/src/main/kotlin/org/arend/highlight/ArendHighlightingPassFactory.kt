@@ -6,7 +6,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
-import org.arend.IArendFile
+import org.arend.psi.IArendFile
 
 class ArendHighlightingPassFactory : BasePassFactory<IArendFile>(IArendFile::class.java), TextEditorHighlightingPassFactoryRegistrar {
     private var myPassId = -1

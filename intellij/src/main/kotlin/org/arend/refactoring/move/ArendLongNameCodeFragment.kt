@@ -4,7 +4,7 @@ import com.intellij.lang.PsiBuilder
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.PsiCodeFragmentImpl
-import org.arend.IArendFile
+import org.arend.psi.IArendFile
 import org.arend.parser.ArendParser
 import org.arend.psi.ArendCodeFragmentElementType
 import org.arend.psi.ArendElementTypes

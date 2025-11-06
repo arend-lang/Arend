@@ -18,7 +18,7 @@ import com.intellij.psi.util.startOffset
 import com.intellij.psi.util.validOrNull
 import com.intellij.util.containers.mapSmartNotNull
 import com.intellij.xml.util.XmlStringUtil
-import org.arend.IArendFile
+import org.arend.psi.IArendFile
 import org.arend.codeInsight.ArendCodeInsightUtils.Companion.getAllParametersForReferable
 import org.arend.codeInsight.completion.STATEMENT_WT_KWS_TOKENS
 import org.arend.codeInsight.completion.withAncestors

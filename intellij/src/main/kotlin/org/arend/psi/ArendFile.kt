@@ -14,7 +14,6 @@ import com.intellij.psi.util.PsiModificationTracker
 import org.arend.ArendFileTypeInstance
 import org.arend.ArendIcons
 import org.arend.ArendLanguage
-import org.arend.IArendFile
 import org.arend.ext.prettyprinting.doc.Doc
 import org.arend.ext.prettyprinting.doc.DocFactory
 import org.arend.ext.reference.Precedence
