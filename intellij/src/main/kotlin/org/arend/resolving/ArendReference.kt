@@ -99,8 +99,14 @@ open class ArendReferenceImpl<T : ArendReferenceElement>(element: T) : ArendRefe
     override fun bindToElement(element: PsiElement) = element
 
     override fun getVariants(): Array<Any> {
-        val file = element.containingFile as? ArendFile ?: return emptyArray()
-        return file.project.service<ArendServerService>().server.getCompletionVariants(ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE), element).mapNotNull {
+        val file : ArendFile = when (val f = element.containingFile) {
+            is ArendFile -> f
+            is PsiCodeFragment -> f.context?.containingFile as? ArendFile ?: return emptyArray()
+            else -> return emptyArray()
+        }
+
+        val server = file.project.service<ArendServerService>().server
+        return server.getCompletionVariants(ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE), element).mapNotNull {
             origElement -> createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false)
         }.toTypedArray()
     }
