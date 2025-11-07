@@ -12,7 +12,6 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
-import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.TextRange
@@ -457,8 +456,6 @@ class ArendChangeSignatureDialog(project: Project,
         if (fragment is ArendExpressionCodeFragment && codeAnalyzer != null && editorTextField != null && document != null) {
             editorTextField.addNotify()
             codeAnalyzer.restart(fragment)
-            val textEditor = editorTextField.editor?.let{ TextEditorProvider.getInstance().getTextEditor(it) }
-            if (textEditor != null) codeAnalyzer.runPasses(fragment, document, textEditor, IntArray(0), true, null)
         }
     }
 
