@@ -474,12 +474,17 @@
 
     </extensions>
 
+    <projectListeners>
+    <listener class="org.arend.module.ModuleSynchronizer" topic=" com.intellij.openapi.roots.ModuleRootListener" />
+    </projectListeners>
+
     <!-- TODO[2025.2.1]
     <extensions defaultExtensionNs="org.jetbrains.kotlin">
         <scratchFileLanguageProvider language="Arend" implementationClass="org.arend.scratch.ArendScratchFileLanguageProvider"/>
     </extensions>
 
     <projectListeners>
+
         <listener class="org.arend.scratch.ArendScratchFileModuleInfoProvider"
                   topic="org.jetbrains.kotlin.idea.scratch.ScratchFileListener"/>
     </projectListeners>
