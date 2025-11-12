@@ -1,0 +1,4 @@
+
+\record AAlgebraHom \extends LinearMap, RingHom {
+
+}
