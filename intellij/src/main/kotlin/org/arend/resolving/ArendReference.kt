@@ -17,6 +17,7 @@ import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractReferable
 import org.arend.term.abs.ConcreteBuilder
+import org.arend.toolWindow.repl.ArendReplService
 import org.arend.util.FileUtils
 import org.arend.util.findLibrary
 
@@ -62,11 +63,21 @@ abstract class ArendReferenceBase<T : ArendReferenceElement>(element: T, range: 
                     builder
                 }
                 is ModuleReferable -> {
+                    val repl = containingFile?.project?.service<ArendReplService>()?.getRepl()
                     val module: Any? = when (ref) {
                         is PsiModuleReferable -> ref.modules.firstOrNull()
-                        is FullModuleReferable -> if (ref.location.locationKind == ModuleLocation.LocationKind.GENERATED) ref else
-                            containingFile?.project?.findLibrary(ref.location.libraryName)?.findArendFileOrDirectory(ref.location.modulePath, false, ref.location.locationKind == ModuleLocation.LocationKind.TEST)
-                        else -> (containingFile as? ArendFile)?.arendLibrary?.forAvailableConfigs { it.findArendFileOrDirectory(ref.path, withAdditional = true, withTests = true) }
+                        is FullModuleReferable -> if (ref.location.locationKind == ModuleLocation.LocationKind.GENERATED) ref else {
+                            (repl?.replLibraries[ref.location.libraryName] ?: containingFile?.project?.findLibrary(ref.location.libraryName))
+                                ?.findArendFileOrDirectory(ref.location.modulePath, false, ref.location.locationKind == ModuleLocation.LocationKind.TEST)
+                        }
+                        else -> ref.path?.let {
+                            (if ((containingFile as? ArendFile)?.isRepl == true) repl?.getServer()
+                            else containingFile?.project?.service<ArendServerService>()?.server)
+                                ?.findModule(it, null, true, true) }?.let {
+                            containingFile?.project?.findLibrary(it.libraryName)?.findArendFileOrDirectory(it.modulePath, false, it.locationKind == ModuleLocation.LocationKind.TEST)
+                        } ?: (repl?.replLibraries?.values?.find { it.findArendFileOrDirectory(ref.path, withAdditional = true, withTests = true) != null }
+                                ?: (containingFile as? ArendFile)?.arendLibrary)
+                            ?.forAvailableConfigs { config -> config.findArendFileOrDirectory(ref.path, withAdditional = true, withTests = true) }
                     }
                     val result = LookupElementBuilder.create(if (ref is FullModuleReferable) ModuleReferable(ref.location.modulePath) else ref, ref.path.lastName)
                     when {
@@ -99,6 +110,7 @@ open class ArendReferenceImpl<T : ArendReferenceElement>(element: T) : ArendRefe
     override fun bindToElement(element: PsiElement) = element
 
     override fun getVariants(): Array<Any> {
+//        element.ancestor<ArendReplLine>()?.replCommand?.text?.let { return getReplCompletion(it)}
         val file = element.containingFile as? ArendFile ?: return emptyArray()
         return file.project.service<ArendServerService>().server.getCompletionVariants(ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE), element).mapNotNull {
             origElement -> createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false)

@@ -16,9 +16,9 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import static org.arend.frontend.repl.action.LoadLibraryCommand.CUR_DIR;
-import static org.arend.frontend.repl.action.LoadModuleCommand.ALL_MODULES;
-import static org.arend.repl.Repl.REPL_MODULE_LOCATION;
+import static org.arend.repl.Repl.*;
+import static org.arend.repl.action.LoadLibraryCommand.CUR_DIR;
+import static org.arend.repl.action.ListModulesCommand.ALL_MODULES;
 
 public class ModuleCompleter implements Completer {
   private final CommonCliRepl repl;
@@ -57,7 +57,7 @@ public class ModuleCompleter implements Completer {
       && !Objects.equals(UNLOAD_COMMAND, firstWord)
       && !Objects.equals(IMPORT_COMMAND, firstWord)) return;
     List<String> loadedModulePaths = repl.getLoadedModuleLocations().stream()
-      .filter(moduleLocation -> moduleLocation != Prelude.MODULE_LOCATION && moduleLocation != REPL_MODULE_LOCATION)
+      .filter(moduleLocation -> moduleLocation != Prelude.MODULE_LOCATION && moduleLocation != replModuleLocation)
       .map(ModuleLocation::getModulePath).map(Object::toString).toList();
     if (line.wordIndex() == 1) {
       if (Objects.equals(LOAD_COMMAND, firstWord)) {

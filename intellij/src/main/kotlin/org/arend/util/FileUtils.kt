@@ -57,5 +57,5 @@ fun getFileGroup(project: Project, moduleLocation: ModuleLocation): ConcreteGrou
 
 fun getFileScope(project: Project, moduleLocation: ModuleLocation): Scope {
     val server = project.service<ArendServerService>().server
-    return CachingScope.make(ScopeFactory.forGroup(server.getRawGroup(moduleLocation), server.getModuleScopeProvider(null, true)))
+    return CachingScope.make(ScopeFactory.forGroup(server.getRawGroup(moduleLocation), server.getModuleScopeProvider(moduleLocation.libraryName, true)))
 }

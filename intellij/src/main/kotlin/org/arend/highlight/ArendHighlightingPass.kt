@@ -23,6 +23,7 @@ class ArendHighlightingPass(file: IArendFile, editor: Editor, textRange: TextRan
     private val module = (file as? ArendFile)?.moduleLocation
 
     public override fun collectInformationWithProgress(progress: ProgressIndicator) {
+        if ((file as? ArendFile)?.isRepl == true) return
         progress.isIndeterminate = true
         if (module == null) return
 

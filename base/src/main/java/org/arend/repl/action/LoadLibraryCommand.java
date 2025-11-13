@@ -1,15 +1,14 @@
-package org.arend.frontend.repl.action;
+package org.arend.repl.action;
 
-import org.arend.frontend.library.SourceLibrary;
-import org.arend.frontend.repl.CommonCliRepl;
-import org.arend.repl.action.DirectoryArgumentCommand;
+import org.arend.repl.Repl;
+import org.arend.server.ArendLibrary;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Supplier;
 
-public final class LoadLibraryCommand implements CliReplCommand, DirectoryArgumentCommand {
+public final class LoadLibraryCommand implements ReplCommand, DirectoryArgumentCommand {
   public static final @NotNull LoadLibraryCommand INSTANCE = new LoadLibraryCommand();
   public static final @NotNull String CUR_DIR = ".";
 
@@ -17,20 +16,20 @@ public final class LoadLibraryCommand implements CliReplCommand, DirectoryArgume
   }
 
   @Override
-  public void invoke(@NotNull String line, @NotNull CommonCliRepl api, @NotNull Supplier<@NotNull String> scanner) {
+  public void invoke(@NotNull String line, @NotNull Repl api, @NotNull Supplier<@NotNull String> scanner) {
     if (!FileUtils.isLibraryName(line) && !line.equals(CUR_DIR)) {
       api.eprintln("[ERROR] `" + line + "` is not a valid library name.");
       return;
     }
-    SourceLibrary library = api.createLibrary(line);
-    if (library == null || api.checkErrors()) {
-      api.eprintln("[ERROR] Cannot find a library at '" + line + "'.");
-      // check again in case `library == null`
-      api.checkErrors();
-      return;
-    }
-    if (!api.loadLibrary(library)) {
-      api.checkErrors();
+    ArendLibrary library = api.createLibrary(line);
+    if (library != null) {
+      api.loadLibrary(library);
+      if (api.checkErrors()) {
+        api.eprintln("[ERROR] Cannot find a library at '" + line + "'.");
+      } else {
+        api.println("[INFO] Library " + library.getLibraryName() + " has been loaded.");
+      }
+    } else {
       api.eprintln("[ERROR] No library loaded.");
     }
   }

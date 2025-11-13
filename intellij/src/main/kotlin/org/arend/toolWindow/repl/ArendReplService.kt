@@ -38,7 +38,9 @@ class ArendReplService(project: Project) : SimpleToolWindowService(project) {
         val toolWindowPanel = SimpleToolWindowPanel(false, false)
         toolWindowPanel.setContent(handler.consoleView.component)
         toolWindowPanel.toolbar = ActionManager.getInstance()
-            .createActionToolbar(TITLE, handler.createActionGroup(), true).component
+            .createActionToolbar(TITLE, handler.createActionGroup(), true).apply {
+                targetComponent = toolWindowPanel
+            }.component
         val content = ContentFactory.getInstance()
             .createContent(toolWindowPanel.component, null, false)
         toolWindow.contentManager.addContent(content)

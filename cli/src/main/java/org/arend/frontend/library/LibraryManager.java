@@ -4,6 +4,7 @@ import org.arend.ext.error.ErrorReporter;
 import org.arend.server.ArendServer;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LibraryManager {
@@ -36,5 +37,9 @@ public class LibraryManager {
 
   public ErrorReporter getErrorReporter() {
     return myErrorReporter;
+  }
+
+  public List<String> getLibraries() {
+    return myLibraries.keySet().stream().toList();
   }
 }

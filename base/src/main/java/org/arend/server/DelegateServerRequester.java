@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 public class DelegateServerRequester implements ArendServerRequester {
-  protected final ArendServerRequester requester;
+  public final ArendServerRequester requester;
 
   public DelegateServerRequester(ArendServerRequester requester) {
     this.requester = requester;

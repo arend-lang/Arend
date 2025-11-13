@@ -12,6 +12,8 @@ import org.jline.reader.ParsedLine;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static org.arend.frontend.repl.jline.ModuleCompleter.IMPORT_KW;
+
 public class ScopeCompleter implements Completer {
   private final @NotNull Supplier<@NotNull List<Referable>> scopeSupplier;
 
@@ -23,7 +25,7 @@ public class ScopeCompleter implements Completer {
   public void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
     String command = CommandHandler.splitCommand(line.line()).proj1;
     List<String> words = ((ArendReplParser.ArendParsedLine) line).words();
-    if (words.size() == 1 && words.getFirst().equals(ModuleCompleter.IMPORT_KW)) return;
+    if (words.size() == 1 && words.getFirst().equals(IMPORT_KW)) return;
 
     if (command != null && CommandHandler.INSTANCE
       .determineEntries(command)

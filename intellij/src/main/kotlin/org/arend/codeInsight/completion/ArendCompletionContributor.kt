@@ -12,6 +12,7 @@ import com.intellij.psi.TokenType.BAD_CHARACTER
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.startOffset
 import com.intellij.util.ProcessingContext
+import org.arend.codeInsight.completion.ArendNoVariantsDelegator.Companion.getReplCommand
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
@@ -754,6 +755,10 @@ class ArendCompletionContributor : CompletionContributor() {
         }
 
         override fun addCompletions(parameters: CompletionParameters, context: ProcessingContext, resultSet: CompletionResultSet) {
+            val origFile = parameters.originalFile
+            if (origFile is ArendFile && origFile.isRepl && CommandHandler.INSTANCE.commandMap
+              .contains(getReplCommand(origFile))) return
+
             if (parameters.position is PsiComment || afterLeaf(DOT).accepts(parameters.position) ||
                     disableAfter2Crlfs && ArendCompletionParameters.findPrevAnchor(parameters.offset, parameters.originalFile).first > 1) // Prevents showing kw completions in comments and after dot expression
                 return
