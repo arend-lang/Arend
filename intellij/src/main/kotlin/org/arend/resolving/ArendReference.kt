@@ -17,6 +17,7 @@ import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractReferable
 import org.arend.term.abs.ConcreteBuilder
+import org.arend.term.group.ConcreteGroup
 import org.arend.util.FileUtils
 import org.arend.util.findLibrary
 
@@ -99,14 +100,22 @@ open class ArendReferenceImpl<T : ArendReferenceElement>(element: T) : ArendRefe
     override fun bindToElement(element: PsiElement) = element
 
     override fun getVariants(): Array<Any> {
-        val file : ArendFile = when (val f = element.containingFile) {
-            is ArendFile -> f
-            is PsiCodeFragment -> f.context?.containingFile as? ArendFile ?: return emptyArray()
+      val file : ArendFile
+      val concreteGroup: ConcreteGroup
+        when (val f = element.containingFile) {
+            is ArendFile -> {
+              file = f
+              concreteGroup = ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE)
+            }
+            is PsiCodeFragment -> {
+              file = f.context?.containingFile as? ArendFile ?: return emptyArray()
+              return emptyArray()
+            }
             else -> return emptyArray()
         }
 
         val server = file.project.service<ArendServerService>().server
-        return server.getCompletionVariants(ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE), element).mapNotNull {
+        return server.getCompletionVariants(concreteGroup, element).mapNotNull {
             origElement -> createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false)
         }.toTypedArray()
     }
