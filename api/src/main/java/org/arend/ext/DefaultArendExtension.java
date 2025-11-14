@@ -32,9 +32,6 @@ public class DefaultArendExtension implements ArendExtension {
   @Override
   public @Nullable LiteralTypechecker getLiteralTypechecker() {
     for (var extension : dependencies.values()) {
-      if (extension == null) {
-        continue;
-      }
       var checker = extension.getLiteralTypechecker();
       if (checker != null) {
         return checker;

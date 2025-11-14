@@ -128,8 +128,9 @@ public class LibraryService {
     Map<String, ArendExtension> dependencies = new LinkedHashMap<>();
     for (String dependency : library.getLibraryDependencies()) {
       ArendLibraryImpl dependencyLib = myLibraries.get(dependency);
-      if (dependencyLib != null) {
-        dependencies.put(dependency, dependencyLib.getExtension());
+      ArendExtension dependencyExt = dependencyLib == null ? null : dependencyLib.getExtension();
+      if (dependencyExt != null) {
+        dependencies.put(dependency, dependencyExt);
       }
     }
 
