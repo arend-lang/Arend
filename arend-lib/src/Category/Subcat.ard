@@ -39,6 +39,17 @@
     \have (t,r) => Cat.univalenceToTransport (\new Iso j.f j.hinv j.hinv_f j.f_hinv)
     \in (sec {e.isEmb j.dom j.cod} t, pmap (transport (Hom (e j.dom)) __ (id (e j.dom))) (f_sec {e.isEmb j.dom j.cod} t) *> r)
 
+\lemma subCat-iso {C : Precat} {X : \hType obj} {f : X -> C} (e : Iso {subPrecat f}) : Iso {C} {f e.dom} {f e.cod} e \cowith
+  | hinv => e.hinv
+  | hinv_f => e.hinv_f
+  | f_hinv => e.f_hinv
+  \where {
+    \protected \lemma conv {C : Precat} {X : \hType obj} {f : X -> C} {x x' : X} (e : Iso {C} {f x} {f x'}) : Iso {subPrecat f} {x} {x'} e \cowith
+      | hinv => e.hinv
+      | hinv_f => e.hinv_f
+      | f_hinv => e.f_hinv
+  }
+
 \class ReflectiveSubPrecat \extends FullyFaithfulFunctor, RightAdjointUnit {
   | reflector : D -> C
   | reflectorMap (X : D) : Hom X (F (reflector X))

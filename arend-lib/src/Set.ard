@@ -74,15 +74,6 @@
 \class DecSubSet \extends SubSet
   | isDec (x : S) : Dec (contains x)
   \where {
-    \func fibre (S : BaseSet) (D : DecSet) (f : S -> D) (x0 : D) : DecSubSet \cowith {
-      | S => S
-      | contains x => f x = x0
-      | isDec x => \case D.decideEq (f x) x0 \with {
-        | yes e => rewrite e (yes idp)
-        | no n => no n
-      }
-    }
-
     \func max {S : BaseSet} : DecSubSet S \cowith
       | contains _ => \Sigma
       | isDec _ => yes ()

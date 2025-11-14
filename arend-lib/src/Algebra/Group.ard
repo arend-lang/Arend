@@ -252,10 +252,7 @@
     \use \coerce fromGroup (G : Group) => \new AddGroup G.E G.ide (G.*) G.ide-left G.ide-right G.*-assoc G.inverse G.inverse-left G.inverse-right
     \use \coerce toGroup (G : AddGroup) => \new Group G.E G.zro (G.+) G.+-assoc G.zro-left G.zro-right G.negative G.negative-left G.negative-right
 
-    \func fromTo {G : AddGroup} : AddGroup.fromGroup (AddGroup.toGroup G) = G => exts (idp, idp, \lam _ _ => idp, \lam _ => idp)
-    \func toFrom {G : Group} : AddGroup.toGroup (AddGroup.fromGroup G) = G => exts (idp, idp, \lam _ _ => idp, \lam _ => idp)
-
-  \lemma negative-equality {X : \Set} (A B : AddGroup X) (z : A.zro = B.zro) (m : \Pi {x y : A} -> x A.+ y = x B.+ y) (e : A) : A.negative e = B.negative e
+    \lemma negative-equality {X : \Set} (A B : AddGroup X) (z : A.zro = B.zro) (m : \Pi {x y : A} -> x A.+ y = x B.+ y) (e : A) : A.negative e = B.negative e
       => Group.inverse-equality A B z m e
 
   -- | An additive group with a tight apartness relation.

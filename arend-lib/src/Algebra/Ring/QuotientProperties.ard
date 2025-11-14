@@ -1,53 +1,39 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Monoid
-\import Algebra.Monoid.MonoidHom
-\import Algebra.Pointed.PointedHom
 \import Algebra.Ring
 \import Algebra.Ring.Factor
-\import Algebra.Ring.Ideal
 \import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
-\import Algebra.Ring.Sub
 \import Category
-\import Equiv
+\import Category.Subcat
 \import Function (IsInj, IsSurj)
+\import Function.Meta
 \import Logic
 \import Meta
 \import Paths
 \import Paths.Meta
 \import Relation.Equivalence
 
- \func univ_img {R : CRing} {S : CRing} (f : RingHom R S) : RingHom (FactorRing (RingHom.KernelC f)) (SubRing.IRing {RingHom.Image {f}}) \cowith {
-  | func => univ {R} {S} {f}
-  | func-+ => univ_+ {R} {S} {f}
-  | func-ide => ext (unfold (func-ide {f}))
-  | func-* => univ_* {R} {S} {f}
-} \where {
-  \func univ {R : CRing} {S : CRing} {f : RingHom R S} (x : FactorRing (RingHom.KernelC f)) : SubRing.IRing {RingHom.Image {f}} \elim x
+\func ringKerImageHom {R : CRing} {S : CRing} (f : RingHom R S) : RingHom (FactorRing (RingHom.KernelC f)) f.Image.IRing \cowith
+  | func (x : FactorRing (RingHom.KernelC f)) : f.Image.IRing \with {
     | in~ a => (f a, inP (a, idp))
-    | ~-equiv x1 y r => ext \let A0 => rewrite (zro-left, +-assoc, negative-left, zro-right) (pmap (\lam z => z S.+ f y) (rewrite r in AddGroupHom.func-minus {f} {x1} {y})) \in inv A0
+    | ~-equiv x y r => ext $ inv $ rewrite (zro-left, +-assoc, negative-left, zro-right) in pmap (S.`+ f y) (rewrite r in f.func-minus {x} {y})
+  }
+  | func-+ {x} {y} => \case \elim x, \elim y \with {
+    | in~ x, in~ y => ext $ rewrite f.func-+ idp
+  }
+  | func-ide => ext f.func-ide
+  | func-* {x} {y} => \case \elim x, \elim y \with {
+    | in~ x, in~ y => ext $ rewrite f.func-* idp
+  }
+  \where \protected {
+    \lemma isSurj : IsSurj (func {R} {S} {f})
+      => \lam (x, inP (r, A)) => inP (in~ r, ext A)
 
-  \func univ_+ {R : CRing} {S : CRing} {f : RingHom R S} {x y : FactorRing (RingHom.KernelC f)} : univ {R} {S} {f} (x + y) = univ {R} {S} {f} x + {SubRing.IRing {RingHom.Image {f}}} univ {R} {S} {f} y \elim x, y
-    | in~ a, in~ a1 => ext (rewrite (func-+ {f}) idp)
+    \lemma isInj : IsInj (func {R} {S} {f})
+      => \lam {in~ a} {in~ a'} p => FactorRing.fequiv (unfold (rewrite (AddGroupHom.func-minus {f}) (AddGroup.toZero (pmap (\lam x => x.1) p))))
+  }
 
-  \func univ_* {R : CRing} {S : CRing} {f : RingHom R S} {x y : FactorRing (RingHom.KernelC f)} : univ {R} {S} {f} (x * y) = univ {R} {S} {f} x * {SubRing.IRing {RingHom.Image {f}}} univ {R} {S} {f} y \elim x, y
-    | in~ a, in~ a1 => ext (rewrite (func-* {f}) idp)
-
-  \func univ_surj {R : CRing} {S : CRing} {f : RingHom R S} : IsSurj (univ {R} {S} {f}) =>
-    \lam (x, inP (r, A)) => inP (in~ r, ext A)
-
-  \func univ_inj {R : CRing} {S : CRing} {f : RingHom R S} : IsInj (univ {R} {S} {f}) =>
-    \lam {in~ a} {in~ a'} p => FactorRing.fequiv (unfold (rewrite (AddGroupHom.func-minus {f}) (AddGroup.toZero (pmap (\lam x => x.1) p))))
-}
-
-\func iso_cast {R S : CRing} {f : RingHom R S} (p : Iso {RingCat} {R} {S} f) : Iso {CRingCat} {R} {S} f \cowith
-  | hinv => p.hinv
-  | hinv_f => p.hinv_f
-  | f_hinv => p.f_hinv
-
-\func theoremA {R : CRing} {S : CRing} (f : RingHom R S) : Iso {RingCat} {FactorRing (RingHom.KernelC f)} {CSubRing.ICRing {RingHom.ImageC f}} (univ_img f)
-  => (RingCat.Iso<->Inj+Surj (univ_img f)).2 (univ_img.univ_inj, univ_img.univ_surj)
-
-\func theoremA_C {R S : CRing} (f : RingHom R S) : Iso {CRingCat} {FactorRing (RingHom.KernelC f)} {CSubRing.ICRing {RingHom.ImageC f}} (univ_img f)
-  => iso_cast (theoremA f)
+\lemma ringKerImageHom-iso {R S : CRing} (f : RingHom R S) : Iso {CRingCat} {FactorRing (RingHom.KernelC f)} {(RingHom.ImageC f).ICRing} (ringKerImageHom f)
+  => subCat-iso.conv $ (RingCat.Iso<->Inj+Surj (ringKerImageHom f)).2 (ringKerImageHom.isInj, ringKerImageHom.isSurj)

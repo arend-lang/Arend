@@ -3,11 +3,10 @@
 \import Algebra.Group.GroupHom
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidCategory
-\import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
-\import Algebra.Pointed.PointedHom
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
+\import Algebra.Ring.Sub
 \import Algebra.Semiring
 \import Category
 \import Category.Adjoint
@@ -16,7 +15,8 @@
 \import Category.Meta
 \import Category.Subcat
 \import Equiv
-\import Function
+\import Function (IsInj, IsSurj)
+\import Function.Meta
 \import Logic
 \import Logic.FirstOrder.Algebraic
 \import Logic.FirstOrder.Algebraic.Category
@@ -26,7 +26,6 @@
 \import Set.SetCategory
 \import Set.Fin
 \import Set.Fin.Instances
-\import Set.SetHom
 
 \instance RingCat : Cat Ring
   | Hom M N => RingHom M N
@@ -61,29 +60,36 @@
 
     {- | A function that lifts an isomorphism between the additive groups of two rings
          to an isomorphism between the rings themselves**. `Group-Iso->Ring-Iso` -}
-    \func Group-Iso->Ring-Iso {G H : Ring} {f : RingHom G H} (f_iso : Iso {GroupCat} (AddGroupHom.toGroupHom f)) : Iso {RingCat} f \cowith {
+    \lemma Group-Iso->Ring-Iso {G H : Ring} {f : RingHom G H} (f_iso : Iso {GroupCat} (AddGroupHom.toGroupHom f)) : Iso {RingCat} f \cowith {
       | hinv => \new RingHom {
         | AddGroupHom => AddGroupHom.fromGroupHom f_iso.hinv
-        | func-ide => rewriteI (func-ide {f}) (rewrite (pmap (\lam (f : GroupHom _ _) => f ide) f_iso.hinv_f) idp)
-        | func-* {x} {y} => \let | x' => func {f_iso.hinv} x
-                                 | y' => func {f_iso.hinv} y \in
-          rewriteI (pmap (\lam (f : GroupHom _ _) => f x) f_iso.f_hinv,
-                    pmap (\lam (f : GroupHom _ _) => f y) f_iso.f_hinv,
-                    MonoidHom.func-* {f} {x'} {y'}) (rewrite (
-                                                               pmap (\lam (f : GroupHom _ _) => f y') f_iso.hinv_f,
-                                                               pmap (\lam (f : GroupHom _ _) => f x') f_iso.hinv_f)
-              (pmap (\lam (f : GroupHom _ _) => f (x' G.* y')) f_iso.hinv_f))
+        | func-ide => rewrite (inv f.func-ide, path \lam i => f_iso.hinv_f i ide) idp
+        | func-* {x} {y} =>
+          \let | x' => f_iso.hinv x
+               | y' => f_iso.hinv y
+          \in rewrite (inv $ path \lam i => f_iso.f_hinv i x,
+                       inv $ path \lam i => f_iso.f_hinv i y,
+                       inv f.func-*,
+                       path \lam i => f_iso.hinv_f i y',
+                       path \lam i => f_iso.hinv_f i x') $
+              path \lam i => f_iso.hinv_f i _
       }
-      | hinv_f => ext (ext (\lam e => pmap (\lam (f : GroupHom _ _) => f e) f_iso.hinv_f))
-      | f_hinv => ext (ext (\lam e => pmap (\lam (f : GroupHom _ _) => f e) f_iso.f_hinv))
+      | hinv_f => exts \lam e i => f_iso.hinv_f i e
+      | f_hinv => exts \lam e i => f_iso.f_hinv i e
     }
 
     \lemma Iso<->Inj+Surj {G H : Ring} (f : RingHom G H) : Iso {RingCat} f <-> (\Sigma (IsInj f) (IsSurj f)) =>
-      (\lam p => (GroupCat.Iso<->Inj+Surj (AddGroupHom.toGroupHom f)).1 (\new Category.Iso {
-        | hinv => AddGroupHom.toGroupHom (hinv {p})
-        | hinv_f => ext (ext (\lam e => pmap (\lam (f : RingHom _ _) => f e) (hinv_f {p})))
-        | f_hinv => ext (ext (\lam e => pmap (\lam (f : RingHom _ _) => f e) (f_hinv {p})))
-      }), \lam p => Group-Iso->Ring-Iso ((GroupCat.Iso<->Inj+Surj (AddGroupHom.toGroupHom f)).2 p))
+      (\lam p => (GroupCat.Iso<->Inj+Surj (AddGroupHom.toGroupHom f)).1 \new Iso {
+        | hinv => AddGroupHom.toGroupHom hinv
+        | hinv_f => exts \lam e i => p.hinv_f i e
+        | f_hinv => exts \lam e i => p.f_hinv i e
+      }, \lam p => Group-Iso->Ring-Iso ((GroupCat.Iso<->Inj+Surj (AddGroupHom.toGroupHom f)).2 p))
+
+    \func image-iso {f : RingHom} (p : IsSurj f) : Iso {RingCat} {f.Image.IRing} {f.Cod}
+      => (RingCat.Iso<->Inj+Surj f.image).2 (RingHom.image.isInj, RingHom.image.isSurj p)
+
+    \func Image=Cod {R S : Ring} (f : RingHom R S) (p : IsSurj f) : (ringHomImage f).IRing = {Ring} S
+      => RingCat.isotoid (image-iso p)
   }
 
 \instance CRingCat : Cat CRing
@@ -116,6 +122,9 @@
         \func preservesLimit {J : SmallPrecat} (H : Functor J CRingCat) : PreservesLimit forget H
           => (CRingBicat.createsLimits H (SetBicat.limit (Comp CRingCat.forget H))).2
       }
+
+    \func Image=Cod {R : Ring} {S : CRing} (f : RingHom R S) (p : IsSurj f) : (RingHom.ImageC f).ICRing = {CRing} S
+      => ext CRing { | Ring => RingCat.Image=Cod f p }
   }
 
 \instance CRingBicat : BicompleteCat

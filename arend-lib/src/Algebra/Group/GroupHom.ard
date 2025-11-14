@@ -3,7 +3,6 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
-\import Equiv
 \import Function
 \import Function.Meta
 \import Logic
@@ -104,15 +103,11 @@
 } \where {
   \func toGroupHom {G H : AddGroup} (f : AddGroupHom G H) : GroupHom (AddGroup.toGroup G) (AddGroup.toGroup H) \cowith
     | func x => f x
-    | func-* {x} {y} => AddMonoidHom.func-+ {f} {x} {y}
+    | func-* => f.func-+
 
   \func fromGroupHom {G H : Group} (f : GroupHom G H) : AddGroupHom (AddGroup.fromGroup G) (AddGroup.fromGroup H) \cowith
     | func x => f x
-    | func-+ {x} {y} => MonoidHom.func-* {f} {x} {y}
-
-  \func toFromHom {G H : Group} (f : GroupHom G H) : toGroupHom (fromGroupHom f) = f => exts ((idp, idp, \lam _ _ => idp, \lam _ => idp), idp, \lam e => idp)
-
-  \func fromToHom {G H : AddGroup} (f : AddGroupHom G H) : fromGroupHom (toGroupHom f) = f => exts ((idp, idp, \lam _ _ => idp, \lam _ => idp), idp, \lam e => idp)
+    | func-+ => f.func-*
 
   \func id {G : AddGroup} : AddGroupHom G G \cowith
     | func x => x

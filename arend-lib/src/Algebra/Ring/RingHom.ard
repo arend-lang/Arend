@@ -1,17 +1,14 @@
 \import Algebra.Field
 \import Algebra.Group
-\import Algebra.Group.GroupCategory
 \import Algebra.Group.GroupHom
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
-\import Algebra.Pointed.PointedHom
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.Poly()
-\import Algebra.Ring.RingCategory
 \import Algebra.Ring.Sub
 \import Algebra.Semiring
 \import Arith.Int
@@ -22,7 +19,6 @@
 \import Logic.Unique
 \import Logic
 \import Logic.Meta
-\import Meta
 \import Paths
 \import Paths.Meta
 
@@ -61,23 +57,21 @@
   \protected \func Image : SubRing Cod \cowith
     | SubRing => ringHomImage _
 
-  \func im : RingHom (SubRing.IRing {Image}) Cod \cowith
+  \func image : RingHom (SubRing.IRing {Image}) Cod \cowith
     | func x => x.1
     | func-+ => idp
     | func-ide => idp
-    | func-* => idp \where {
-    \func inj : IsInj im => \lam p => ext p
+    | func-* => idp
+    \where {
+      \lemma isInj : IsInj image => \lam p => ext p
 
-    \func surj (s : IsSurj func) : IsSurj im => \lam y => \let A0 => s y \in \case \elim A0 \with {
-      | inP (x, p) => inP ((func x, inP (x, idp)), p)
+      \lemma isSurj (s : IsSurj func) : IsSurj image
+        => \lam y => \case s y \with {
+        | inP (x, p) => inP ((func x, inP (x, idp)), p)
+      }
     }
-
-    \func iso (p : IsSurj func) : Iso {RingCat} {SubRing.IRing {Image}} {Cod} =>
-      (RingCat.Iso<->Inj+Surj im).2 (inj, surj p)
-  }
-
 } \where {
-  \func equals {R S : Ring} {f g : RingHom R S} (p : \Pi (x : R) -> f x = g x) : f = g
+    \func equals {R S : Ring} {f g : RingHom R S} (p : \Pi (x : R) -> f x = g x) : f = g
       => exts p
 
     \func id {R : Ring} : RingHom R R \cowith
@@ -129,12 +123,6 @@
 
   \func ImageC {R : Ring} {S : CRing} (f : RingHom R S) : CSubRing S \cowith
     | SubRing => ringHomImage f
-
-    \func Im=Cod {R S : Ring} (f : RingHom R S) (p : IsSurj f) : SubRing.IRing {ringHomImage f} = {Ring} S =>
-      Cat.isotoid {RingCat} {SubRing.IRing} {S} (RingHom.im.iso p)
-
-    \func Im=CodC {R : Ring} {S : CRing} (f : RingHom R S) (p : IsSurj f) : CSubRing.ICRing {ImageC f} = {CRing} S =>
-        ext CRing { | Ring => Im=Cod f p}
 }
 
 \func natMap {R : Semiring} : SemiringHom NatSemiring R \cowith
