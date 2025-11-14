@@ -3,9 +3,13 @@
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
+\import Equiv
 \import Function
 \import Function.Meta
+\import Logic
+\import Logic.Meta
 \import Paths
+\import Paths.Meta
 
 \record GroupHom \extends MonoidHom {
   \override Dom : Group
@@ -84,7 +88,32 @@
   \lemma func-*i {n : Int} {x : Dom} : func (n AddGroup.*i x) = n AddGroup.*i func x \elim n
     | pos n => func-*n
     | neg n => func-*n *> pmap (n AddMonoid.*n) func-negative
+
+  \protected \func Kernel : SubAddGroup Dom \cowith
+    | contains x => func x = zro
+    | contains_zro => func-zro
+    | contains_+ p q => rewrite (func-+, p, q, zro-left) idp
+    | contains_negative p => rewrite (func-negative, p, AddGroup.negative_zro) idp
+
+  \protected \func Image : SubAddGroup Cod \cowith
+    | contains x => ∃ (y : Dom) (func y = x)
+    | contains_zro => inP (zro, func-zro)
+    | contains_+ (inP (a, p)) (inP (b, q)) => inP (a + b, rewrite (func-+,p, q) idp)
+    | contains_negative (inP (a, p)) => inP (negative a, rewrite (AddGroupHom.func-negative, p) idp)
+
 } \where {
+  \func toGroupHom {G H : AddGroup} (f : AddGroupHom G H) : GroupHom (AddGroup.toGroup G) (AddGroup.toGroup H) \cowith
+    | func x => f x
+    | func-* {x} {y} => AddMonoidHom.func-+ {f} {x} {y}
+
+  \func fromGroupHom {G H : Group} (f : GroupHom G H) : AddGroupHom (AddGroup.fromGroup G) (AddGroup.fromGroup H) \cowith
+    | func x => f x
+    | func-+ {x} {y} => MonoidHom.func-* {f} {x} {y}
+
+  \func toFromHom {G H : Group} (f : GroupHom G H) : toGroupHom (fromGroupHom f) = f => exts ((idp, idp, \lam _ _ => idp, \lam _ => idp), idp, \lam e => idp)
+
+  \func fromToHom {G H : AddGroup} (f : AddGroupHom G H) : fromGroupHom (toGroupHom f) = f => exts ((idp, idp, \lam _ _ => idp, \lam _ => idp), idp, \lam e => idp)
+
   \func id {G : AddGroup} : AddGroupHom G G \cowith
     | func x => x
     | func-+ => idp

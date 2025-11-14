@@ -1,5 +1,6 @@
-\import Algebra.Monoid(Monoid)
+\import Algebra.Monoid (AddMonoid, Monoid, Semigroup)
 \import Algebra.Ordered
+\import Algebra.Semiring
 \import Algebra.StrictlyOrdered
 \import Data.Bool
 \import Data.Or

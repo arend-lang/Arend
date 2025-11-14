@@ -59,6 +59,14 @@
     | contraction x => ext (c.contraction _)
 }
 
+\class CSubRing \extends SubRing {
+  \override S : CRing
+
+  \func ICRing : CRing \cowith
+    | Ring => SubRing.IRing
+    | *-comm => ext *-comm
+}
+
 \func ringHomImage (f : RingHom) : SubRing f.Cod \cowith
   | contains y => ∃ (x : f.Dom) (f x = y)
   | contains_zro => inP (0, f.func-zro)
