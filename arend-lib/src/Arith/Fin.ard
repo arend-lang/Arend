@@ -1,5 +1,7 @@
 \import Algebra.Domain.Euclidean
 \import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Monoid.GCD
 \import Algebra.Monoid.Prime
@@ -8,8 +10,10 @@
 \import Arith.Int
 \import Arith.Nat
 \import Data.Or
+\import Function
 \import Function.Meta
 \import Logic
+\import Logic.Meta
 \import Meta
 \import Order.Biordered
 \import Order.LinearOrder
@@ -99,7 +103,7 @@
   | negative x => iabs (suc n Nat.- x)
   | negative-left {x} =>
     \let t => pmap (`+ pos x) (pos_iabs (<=-less (fin_< x))) *> IntRing.+-assoc {pos (suc n)} {neg x} *> pmap (_ +) (IntRing.negative-left {pos x})
-    \in mod_+-left *> transport (__ mod suc n = 0) (inv (pmap iabs t)) (fin_nat-inj (n*_+_mod_n {_} {1} NatOrder.zero<suc))
+    \in mod_+-left *> transport (__ Nat.mod suc n = 0) (inv (pmap iabs t)) (fin_nat-inj (n*_+_mod_n {_} {1} NatOrder.zero<suc))
   | decideEq x y => \case NatSemiring.decideEq x y \with {
     | yes x=y => yes (fin_nat-inj x=y)
     | no x/=y => no (\lam p => x/=y p)
@@ -108,6 +112,53 @@
   | natCoef => Fin.fromNat
   | natCoefZero => idp
   | natCoefSuc m => inv (mod_+-left *> mod_+-right)
+  \where {
+    \open IntEuclidean
+
+    \lemma mod-mod (a : Int) (n : Nat) : a mod pos (suc n) Nat.mod suc n = {Nat} a mod pos (suc n)
+      => mod_< {a mod pos (suc n)} {suc n} (natMod<right _ _)
+
+    \lemma ldiv-modEq (x y : Int) (n : Nat) (p : ∃ (Monoid.LDiv {IntEuclidean} (suc n) (x - y))) : x mod suc n = y mod suc n \elim p
+      | inP (e, p) => rewrite (rewrite (+-assoc, negative-left, zro-right) in inv (pmap (`+` y) p)) $
+      rewrite (ldistr, +-assoc, natDivModProp y n) in int_n*_+_mod_n {n} {y mod suc n} {e + y div pos (suc n)} (natMod<right y n)
+
+    \sfunc modEq-ldiv (x y : Int) (n : Nat) (p : x mod suc n = y mod suc n) : Monoid.LDiv {IntEuclidean} (suc n) (x - y)
+      => \have A x => divModProp x (suc n) \case __
+         \in rewriteI (A x, A y, p) \new Monoid.LDiv {
+          | inv => x div pos (suc n) - y div pos (suc n)
+          | inv-right => rewrite AbGroup.sum-cancel-right Ring.ldistr_-
+        }
+
+    \lemma finEq-modeq {x y n : Nat} (p : x = {Fin (suc n)} y) : x Nat.mod suc n = {Nat} y Nat.mod suc n
+      => cong
+
+    \lemma ldiv-finEq {x y n : Nat} (p : ∃ (Monoid.LDiv {IntEuclidean} (suc n) (x Nat.- y))) : x = {Fin (suc n)} y
+      => fin_nat-inj (repeat {2} (rewrite natMod=mod) in ldiv-modEq (pos x) (pos y) n p)
+
+    \lemma intCoef-char (n : Nat) (k : Int) : (FinRing {n}).intCoef k = k mod suc n \elim k {
+      | pos zero => idp
+      | pos (suc m) => rewrite (natCoefSuc, fin_mod_id {n} (_ Nat.mod suc n)) idp
+      | neg (suc m) => ldiv-finEq $ inP \case suc m Nat.mod suc n \as r, idp : suc m Nat.mod suc n = {Nat} r \with {
+        | zero, P => \new Monoid.LDiv {
+          | inv => 1
+          | inv-right => unfold (rewrite P idp)
+        }
+        | suc r, P => \new Monoid.LDiv {
+          | inv => 0
+          | inv-right => unfold (rewrite (P, IntRing.minus__) idp)
+        }
+      }
+    }
+
+    \lemma intCoef_pos-char {n : Nat} (k : Nat) : (FinRing {n}).intCoef (pos k) = k
+      => rewrite (natMod=mod k (suc n), fin_mod_id k) in intCoef-char n (pos k)
+
+    \lemma intCoef-surj {n : Nat} : IsSurj (FinRing {n}).intCoef => \lam y => inP (y, aux y)
+      \where
+        \private \lemma aux {n : Nat} (k : Fin (suc n)) : (FinRing {n}).natCoef k = k \elim n, k
+          | n, 0 => natCoefZero
+          | n, suc k => rewrite (natCoefSuc k, aux k, mod_+-right) (fin_mod_id (suc k))
+  }
 
 \instance FinEuclidean {n : Nat} : EuclideanRingData (Fin (suc n))
   | CRing => FinRing {n}

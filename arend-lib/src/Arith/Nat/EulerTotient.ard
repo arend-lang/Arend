@@ -35,30 +35,8 @@
 \import Set.Fin.Pigeonhole
 \import Set.SetHom
 \open IntEuclidean \hiding (isDivMod,mod-unique)
-\open IntDivModProperties
+\open FinRing
 \open Monoid
-
-\module IntDivModProperties \where {
-  \lemma mod-mod (a : Int) (n : Nat) : a mod pos (suc n) Nat.mod suc n = {Nat} a mod pos (suc n)
-    => mod_< {a mod pos (suc n)} {suc n} (natMod<right _ _)
-
-  \lemma ldiv-modEq (x y : Int) (n : Nat) (p : ∃ (LDiv {IntEuclidean} (suc n) (x - y))) : x mod suc n = y mod suc n \elim p
-    | inP (e, p) => rewrite (rewrite (+-assoc, negative-left, zro-right) in inv (pmap (`+` y) p)) $
-      rewrite (ldistr, +-assoc, natDivModProp y n) in int_n*_+_mod_n {n} {y mod suc n} {e + y div pos (suc n)} (natMod<right y n)
-
-  \sfunc modEq-ldiv (x y : Int) (n : Nat) (p : x mod suc n = y mod suc n) : LDiv {IntEuclidean} (suc n) (x - y)
-    => \have A x => divModProp x (suc n) \case __
-       \in rewriteI (A x, A y, p) \new LDiv {
-         | inv => x div pos (suc n) - y div pos (suc n)
-         | inv-right => rewrite AbGroup.sum-cancel-right Ring.ldistr_-
-       }
-
-  \lemma finEq-modeq {x y n : Nat} (p : x = {Fin (suc n)} y) : x Nat.mod suc n = {Nat} y Nat.mod suc n
-    => cong
-
-  \lemma ldiv-finEq {x y n : Nat} (p : ∃ (LDiv {IntEuclidean} (suc n) (x Nat.- y))) : x = {Fin (suc n)} y
-    => fin_nat-inj (repeat {2} (rewrite natMod=mod) in ldiv-modEq (pos x) (pos y) n p)
-}
 
 \func coPrimes (n : Nat) : FinSet
   => SigmaFin (FinFin (suc n)) \lam k => DecFin $ decideEq (NatEuclidean.gcd k (suc n)) 1
@@ -79,22 +57,25 @@
 
 \func coPrimes-eq (n : Nat) (n>0 : 0 NatOrder.< n) : QEquiv {coPrimes n} {InvGroup (FinRing {n})} \cowith
   | f (k, p) =>
-    \let
-      | gcd-inv => gcd-inv {n} {k} (rewrite nat_gcd-comm p)
-                \in (k, \new Inv {
+    \let gcd-inv => gcd-inv {n} {k} (rewrite nat_gcd-comm p)
+    \in (k, \new Inv {
       | inv => finv-formula k
       | inv-left => rewrite *-comm gcd-inv
       | inv-right => gcd-inv })
   | ret (k, k2) => (k,
-    \let
-      | l => k Nat.* Inv.inv {k2}
-      | k_n+1_coprime => BezoutRing.bezout_coprime {IntRing} {Inv.inv {k2}} {negative {IntRing} (l Nat.div suc n)} {k} {suc n}
-          (unfold (rewrite (*-comm {NatSemiring}) (AddGroup.cancel-right {IntRing} ((suc n) Nat.* (l Nat.div suc n))
-              (rewrite (*-comm {IntRing} {_} {pos (suc n)}, rewrite IntRing.minus__ in IntRing.minus+pos l (suc n Nat.* l Nat.div suc n) (suc n Nat.* l Nat.div suc n))
-                  (rewriteI {1} (rewrite (finEq-modeq (Inv.inv-right {k2})) in Nat.divModProp l (suc n))
-                      (rewrite (mod_< {1} {suc n} (NatOrder.suc<suc n>0)) (unfold (pmap pos idp))))))))
-    \in unfold (rewrite int_gcd_pos in unfold (int_gcd-isUnique (EuclideanSemiringData.gcd-isGCD {IntEuclidean} (pos k) (pos (suc n)))
-        (IsCoprime.=>gcd k_n+1_coprime))))
+    \let | l => k Nat.* k2.inv
+         | m => suc n Nat.* (l Nat.div suc n)
+         | k_n+1_coprime => run {
+           BezoutRing.bezout_coprime {IntRing} {k2.inv} {neg (l Nat.div suc n)} {k},
+           unfold,
+           rewrite NatSemiring.*-comm,
+           IntRing.cancel-right m,
+           rewrite (IntRing.*-comm {_} {pos (suc n)}, rewrite IntRing.minus__ in IntRing.minus+pos l m _),
+           rewriteI {1} (rewrite (finEq-modeq k2.inv-right) in Nat.divModProp l (suc n)),
+           rewrite (mod_< (NatOrder.suc<suc n>0)),
+           pmap pos idp
+         }
+    \in rewrite int_gcd_pos in unfold (int_gcd-isUnique (IntEuclidean.gcd-isGCD (pos k) (pos (suc n))) (IsCoprime.=>gcd k_n+1_coprime)))
   | ret_f _ => exts idp
   | f_sec _ => exts idp
   \where {
@@ -102,8 +83,8 @@
 
     \func finv-formula (x : Fin (suc n)) => (IntEuclidean.natDivMod (bezout (pos (suc n)) (pos x)).2 (suc n)).2 Nat.mod suc n
 
-    \func gcd-inv {x : Fin (suc n)} (x-coprime : NatEuclidean.gcd (suc n) x = {Nat} 1)
-      : x NatSemiring.* finv-formula {n} x = {Fin (suc n)} 1 Nat.mod suc n
+    \lemma gcd-inv {x : Fin (suc n)} (x-coprime : NatEuclidean.gcd (suc n) x = {Nat} 1)
+      : x NatSemiring.* finv-formula x = {Fin (suc n)} 1 Nat.mod suc n
       => \let | (u,v) => bezout (pos (suc n)) (pos x)
               | (q,r) => IntEuclidean.natDivMod v (suc n)
               | int_gcd=1 : EuclideanSemiringData.gcd (pos (suc n)) (pos x) = 1 => int_gcd_pos *> pmap pos x-coprime
@@ -115,81 +96,56 @@
 
   }
 
-\func coPrimes-Inv (n : Nat) : SubSet (FinRing {suc n}) \cowith
-  | contains x => ∃ (Inv x)
-
-\func intMap-FinRing (n : Nat) (k : Int) : intMap {FinRing {n}} k = k mod suc n \elim k {
-  | pos zero => idp
-  | pos (suc n1) => unfold func (rewrite natCoefSuc (unfold Fin.fromNat (rewrite (fin_mod_id {n} (_ Nat.mod suc n)) idp)))
-  | neg (suc n1) => unfold (unfold (ldiv-finEq (inP (\case (suc n1 Nat.mod suc n : Nat) \as r, idp : suc n1 Nat.mod suc n = {Nat} r \with {
-    | zero, P => \new LDiv {
-      | inv => 1
-      | inv-right => unfold (rewrite P idp)
-    }
-    | suc r, P => \new LDiv {
-      | inv => 0
-      | inv-right => unfold (rewrite (P, IntRing.minus__) idp)
-    }
-  }))))
-}
-
-\func intMap-FinRing-nat {n : Nat} (k : Nat) : intMap {FinRing {n}} (pos k) = k =>
-  rewrite (natMod=mod k (suc n), fin_mod_id k) in intMap-FinRing n (pos k)
-
-\func intMap-surj (n : Nat) : IsSurj (intMap {FinRing {n}}) => \lam y => inP (y, unfold (helper y)) \where
-  \func helper {n : Nat} (k : FinRing {n}) : natCoef {FinRing {n}} k = k \elim n, k
-    | n, 0 => natCoefZero
-    | n, suc k => rewrite (natCoefSuc {FinRing {n}} k, helper k, mod_+-right) (unfold (fin_mod_id {n} (suc k)))
-
 \func ker-int-Coef (n : Nat) : RingHom.KernelC (intMap {FinRing {n}}) = {Ideal IntEuclidean} Ideal.closure1 {IntEuclidean} (suc n)
-  => ext $ ext \lam i => ext
-  (\lam (c : intMap i = zro) => \case modEq-ldiv i 0 n $ rewriteI mod-mod $ finEq-modeq {i IntEuclidean.mod pos (suc n)} {0} {n} (rewrite intMap-FinRing in c) \with {
-    | (a, p) => inP ((a, ()) :: nil, simplify (rewrite (*-comm {IntRing}, p) linarith))
-  }, \lam c => unfold $ rewrite (intMap-FinRing, (rewrite AddGroup.minus_zro in ldiv-modEq i 0 n) $ Ideal.closure1_LDiv.1 c) idp)
+  => exts \lam i => ext
+      (\lam (c : intMap i = zro) => \case modEq-ldiv i 0 n $ rewriteI mod-mod $ finEq-modeq {i IntEuclidean.mod pos (suc n)} {0} (rewrite intCoef-char in c) \with {
+        | (a, p) => inP ((a, ()) :: nil, simplify (rewrite (IntRing.*-comm, p) linarith))
+      }, \lam c => unfold $ rewrite (intCoef-char, (rewrite AddGroup.minus_zro in ldiv-modEq i 0 n) $ Ideal.closure1_LDiv.1 c) idp)
 
-\func Z/nZ=FinRing (n : Nat) : Iso {_} {FactorRing (Ideal.closure1 {IntEuclidean} (suc n))} {FinRing {n}} =>
-  transport (\lam X => Iso {_} {FactorRing X} {FinRing {n}}) (ker-int-Coef n)
-    (transport (\lam X => Iso {_} {_} {X}) (CRingCat.Image=Cod (intMap {FinRing {n}})
-      (intMap-surj n)) (ringKerImageHom-iso (intMap {FinRing {n}})))
+\func Z/nZ=FinRing (n : Nat) : Iso {_} {FactorRing (Ideal.closure1 {IntRing} (suc n))} {FinRing {n}}
+  => transport (\lam X => Iso {_} {FactorRing X} {FinRing {n}}) (ker-int-Coef n) $
+      transport (\lam X => Iso {_} {_} {X}) (CRingCat.Image=Cod (intMap {FinRing {n}}) intCoef-surj) $
+        ringKerImageHom-iso (intMap {FinRing {n}})
 
 \func EulerTotient (n : Nat) : Nat => (coPrimes n).finCard
 
-\func chinese-map {n m : Nat} (x : FinRing {suc n * m + n}) : \Sigma (FinRing {n}) (FinRing {m}) =>
-  (Fin.fromNat {n} x, Fin.fromNat {m} x)
+\func chinese-map {n m : Nat} (x : FinRing {suc n * m + n}) : \Sigma (FinRing {n}) (FinRing {m})
+  => (Fin.fromNat {n} x, Fin.fromNat {m} x)
 
-\func natSemiring-unit {n : Nat} (p : Inv {NatSemiring} n) : n = 1 => \case p \with { | (e, p1, p2) => natUnit p1 }
+\lemma natSemiring-unit {n : Nat} (p : Inv {NatSemiring} n) : n = 1
+  => natUnit p.inv-left
 
-\func chinese-map-surj (n m : Nat) (p : IsCoprime (suc n) (suc m)) : IsSurj (chinese-map {n} {m}) => \lam p0 => \case \elim p0 \with {
-  | (r1, r2) => \case BezoutRing.chinese2 {IntDomain} (pos r1) (pos r2) (suc n) (suc m) (\lam z l l1 =>
+\lemma chinese-map-surj (n m : Nat) (p : IsCoprime (suc n) (suc m)) : IsSurj (chinese-map {n} {m})
+  => \case \elim __ \with {
+  | (r1, r2) => \case IntDomain.chinese2 r1 r2 (suc n) (suc m) (\lam z l l1 =>
     \let A0 => natSemiring-unit (p (iabs z) (ldiv_iabs l) (ldiv_iabs l1)) \in \new Inv {
       | inv => signum z
       | inv-left => rewrite (*-comm, inv iabs.signum_*, A0) idp
       | inv-right => rewrite (inv iabs.signum_*, A0) idp
     }) \with {
-    | inP (r, (p1, A1), (p2, A2)) => inP (intMap r, unfold chinese-map (ext (
+    | inP (r, (p1, A1), (p2, A2)) => inP (intMap r, ext (
       \let
         | B1 => rewrite (fin_mod_id {n} r1) in unfold Fin.fromNat in ldiv-finEq {r mod (suc n * suc m)} {r1} {n} (inP (\new LDiv {
-          | inv => p1 - suc m IntDomain.* (r div pos (suc n * suc m))
+          | inv => p1 - suc m IntRing.* (r div pos (suc n * suc m))
           | inv-right => rewrite (Ring.ldistr_-, A1, inv (pmap (\lam x => x - r1) (divModProp r (suc n * suc m) (\lam p => \case p)))) equation
         }))
         | B2 => rewrite fin_mod_id in pmap (Fin.fromNat {n}) (mod-inv {suc n} {suc m} (\lam p => \case p) (r mod (suc n * suc m)))
-      \in rewrite intMap-FinRing (B2 *> rewrite fin_mod_id B1),
+      \in rewrite intCoef-char (B2 *> rewrite fin_mod_id B1),
       \let
         | B1 => rewrite (fin_mod_id {m} r2) in unfold Fin.fromNat in ldiv-finEq {r mod (suc n * suc m)} {r2} {m} (inP (\new LDiv {
-          | inv => p2 - suc n IntDomain.* (r div pos (suc n * suc m))
+          | inv => p2 - suc n IntRing.* (r div pos (suc n * suc m))
           | inv-right => rewrite (Ring.ldistr_-, A2, inv (pmap (\lam x => x - r2) (divModProp r (suc n * suc m) (\lam p => \case p)))) equation
         }))
         | B2 => rewrite (fin_mod_id, *-comm {_} {suc m} {suc n}) in
         pmap (Fin.fromNat {m}) (mod-inv {suc m} {suc n} (\lam p => \case p) (r mod (suc n * suc m)))
-
-      \in rewrite intMap-FinRing (B2 *> rewrite fin_mod_id B1))))
+      \in rewrite intCoef-char (B2 *> rewrite fin_mod_id B1)))
   }} \where {
-  \func mod-inv {n m : Nat} (p : n /= 0) (x : Nat) : x Nat.mod (n Semigroup.* m) Nat.mod n = x Nat.mod n =>
-    \let | A0 => rewriteI NatSemiring.ldistr (rewrite NatSemiring.*-assoc
-        (rewriteI (AddMonoid.+-assoc {_} {n Nat.* m Nat.* x Nat.div (n Nat.* m)})
-            (rewriteI (rewrite IntEuclidean.natMod=mod in Nat.divModProp (x IntEuclidean.mod (n NatSemiring.* m)) n) in
-            (Nat.divModProp x (n Semigroup.* m) *> inv (Nat.divModProp x n)))))
-    \in mod-unique {n} {m Nat.* x Nat.div (n Nat.* m) NatSemiring.+ x Nat.mod (n Nat.* m) Nat.div n}
+  \lemma mod-inv {n m : Nat} (p : n /= 0) (x : Nat) : x Nat.mod (n Semigroup.* m) Nat.mod n = x Nat.mod n =>
+    \let A0 => rewriteI NatSemiring.ldistr $ rewrite NatSemiring.*-assoc $
+        rewriteI (AddMonoid.+-assoc {_} {n Nat.* m Nat.* x Nat.div (n Nat.* m)}) $
+            rewriteI (rewrite IntEuclidean.natMod=mod in Nat.divModProp (x IntEuclidean.mod (n Nat.* m)) n) in
+            (Nat.divModProp x (n Semigroup.* m) *> inv (Nat.divModProp x n))
+    \in mod-unique {n} {m Nat.* x Nat.div (n Nat.* m) Nat.+ x Nat.mod (n Nat.* m) Nat.div n}
         {x Nat.mod (n Nat.* m) Nat.mod n} {x Nat.div n} {x Nat.mod n}
         (mod<right {x Nat.mod (n Nat.* m)} {n} p) (mod<right {x} {n} p) A0
 }
