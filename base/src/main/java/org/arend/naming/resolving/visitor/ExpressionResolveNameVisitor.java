@@ -483,10 +483,9 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
 
     if (resolvedReference.refExpr.getReferent() instanceof UnresolvedReference) {
       resolve(resolvedReference.refExpr, myScope, false, null, myResolverListener);
-    }
-
-    if (resolvedReference.refExpr.getReferent() instanceof ErrorReference) {
-      myErrorReporter.report(((ErrorReference) resolvedReference.refExpr.getReferent()).getError());
+      if (resolvedReference.refExpr.getReferent() instanceof ErrorReference) {
+        myErrorReporter.report(((ErrorReference) resolvedReference.refExpr.getReferent()).getError());
+      }
     }
 
     if (resolvedReference.resolvedList != null && myResolverListener != null) {

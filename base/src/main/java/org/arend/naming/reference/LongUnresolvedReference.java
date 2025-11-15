@@ -253,7 +253,7 @@ public class LongUnresolvedReference implements UnresolvedReference {
       if (provider != null) withArg = false;
     }
     if (provider == null && i + 1 < myPath.size() && RedirectingReferable.getOriginalReferable(resolved) instanceof GlobalReferable globalRef && globalRef.getKind() == GlobalReferable.Kind.OTHER) {
-      resolved = new ErrorReference(myData, resolved, i + 1, myPath.get(i + 1));
+      resolved = onlyTry ? null : new ErrorReference(myData, resolved, i + 1, myPath.get(i + 1));
       return null;
     }
 
