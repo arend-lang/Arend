@@ -919,7 +919,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       throw new IllegalArgumentException();
     }
     for (CoreParameter parameter : parameters) {
-      if (!(parameter instanceof DependentLink)) throw new IllegalArgumentException();
+      if (!(parameter instanceof DependentLink link) || link.getType().getSortOfType().isCat()) {
+        throw new IllegalArgumentException();
+      }
     }
     //noinspection unchecked
     checkSubstExpr((Expression) body, (Collection<? extends CoreBinding>) parameters, true);
@@ -2336,9 +2338,18 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
   }
 
+  public boolean checkNotCat(Type type, Concrete.SourceNode sourceNode) {
+    if (type != null && type.getSortOfType().isCat()) {
+      errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.CAT_SORT_NOT_ALLOWED, sourceNode));
+      return false;
+    } else {
+      return true;
+    }
+  }
+
   private boolean visitParameter(Concrete.Parameter arg, Expression expectedType, List<Sort> resultSorts, LinkList list) {
     Type result = checkType(arg.getType(), expectedType == null ? Type.OMEGA : expectedType);
-    if (result == null) return false;
+    if (result == null || !checkNotCat(result, arg)) return false;
 
     if (arg instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = arg.getReferableList();
@@ -2550,6 +2561,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         if (link == null) {
           return new Pair<>(null, true);
         }
+        checkNotCat(link.getType(), param);
 
         int namesCount = param.getNumberOfParameters();
         SingleDependentLink actualLink = link;
@@ -2684,11 +2696,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         if (link == null) {
           return null;
         }
+        checkNotCat(link.getType(), arg);
         list.add(link);
       }
 
       Type result = checkType(expr.getCodomain(), Type.OMEGA);
       if (result == null) return null;
+      checkNotCat(result, expr.getCodomain());
       Sort codSort = result.getSortOfType();
 
       Expression piExpr = result.getExpr();
@@ -2939,6 +2953,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         if (type == null) {
           return null;
         }
+        checkNotCat(type, letResult);
 
         TypecheckingResult result = checkExpr(letClause.getTerm(), type.getExpr());
         if (result == null) {
@@ -2962,6 +2977,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       return bodyToLam(visitNameParameter((Concrete.NameParameter) param, letClause), typecheckLetClause(parameters.subList(1, parameters.size()), letClause, false), letClause);
     } else if (param instanceof Concrete.TypeParameter) {
       SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, null);
+      if (link != null) {
+        checkNotCat(link.getType(), param);
+      }
       return link == null ? null : bodyToLam(link, typecheckLetClause(parameters.subList(1, parameters.size()), letClause, false), letClause);
     } else {
       throw new IllegalStateException();

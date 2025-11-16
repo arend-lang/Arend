@@ -112,6 +112,9 @@ public class Sort implements CoreSort {
   }
 
   public static boolean compare(Sort sort1, Sort sort2, CMP cmp, Equations equations, Concrete.SourceNode sourceNode) {
+    if (sort2.isOmega() && cmp == CMP.LE || sort1.isOmega() && cmp == CMP.GE) {
+      return true;
+    }
     if (sort1.isCat() != sort2.isCat()) {
       return false;
     }
