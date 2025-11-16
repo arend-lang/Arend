@@ -1252,11 +1252,13 @@ public final class Concrete {
     public static final byte PREC = 12;
     private final LevelExpression myPLevel;
     private final LevelExpression myHLevel;
+    private final boolean myCatUniverse;
 
-    public UniverseExpression(Object data, LevelExpression pLevel, LevelExpression hLevel) {
+    public UniverseExpression(Object data, LevelExpression pLevel, LevelExpression hLevel, boolean isCat) {
       super(data);
       myPLevel = pLevel;
       myHLevel = hLevel;
+      myCatUniverse = isCat;
     }
 
     @Override
@@ -1269,6 +1271,10 @@ public final class Concrete {
     @Nullable
     public LevelExpression getHLevel() {
       return myHLevel;
+    }
+
+    public boolean isCat() {
+      return myCatUniverse;
     }
 
     @Override

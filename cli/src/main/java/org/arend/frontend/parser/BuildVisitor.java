@@ -1408,7 +1408,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
       lh = null;
     }
 
-    return new Concrete.UniverseExpression(position, lp, lh);
+    return new Concrete.UniverseExpression(position, lp, lh, false);
   }
 
   @Override
@@ -1416,13 +1416,19 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     Position position = tokenPosition(ctx.start);
     String text = ctx.TRUNCATED_UNIVERSE().getText();
     text = text.substring(text.indexOf('T') + "Type".length());
-    return new Concrete.UniverseExpression(position, getLevelExpression(position, text, ctx.maybeLevelAtom()), parseTruncatedUniverse(ctx.TRUNCATED_UNIVERSE()));
+    return new Concrete.UniverseExpression(position, getLevelExpression(position, text, ctx.maybeLevelAtom()), parseTruncatedUniverse(ctx.TRUNCATED_UNIVERSE()), false);
   }
 
   @Override
   public Concrete.UniverseExpression visitSetUniverse(SetUniverseContext ctx) {
     Position position = tokenPosition(ctx.start);
-    return new Concrete.UniverseExpression(position, getLevelExpression(position, ctx.SET().getText().substring("\\Set".length()), ctx.maybeLevelAtom()), new Concrete.NumberLevelExpression(position, 0));
+    return new Concrete.UniverseExpression(position, getLevelExpression(position, ctx.SET().getText().substring("\\Set".length()), ctx.maybeLevelAtom()), new Concrete.NumberLevelExpression(position, 0), false);
+  }
+
+  @Override
+  public Concrete.UniverseExpression visitCatUniverse(CatUniverseContext ctx) {
+    Position position = tokenPosition(ctx.start);
+    return new Concrete.UniverseExpression(position, getLevelExpression(position, ctx.CAT_UNIVERSE().getText().substring("\\Cat".length()), ctx.maybeLevelAtom()), null, true);
   }
 
   private Concrete.LevelExpression getLevelExpression(Position position, String text, MaybeLevelAtomContext maybeLevelAtomCtx) {
@@ -1442,7 +1448,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     String text = ctx.TRUNCATED_UNIVERSE().getText();
     text = text.substring(text.indexOf('-') + "-Type".length());
     Concrete.LevelExpression pLevel = text.isEmpty() ? null : new Concrete.NumberLevelExpression(position, Integer.parseInt(text));
-    return new Concrete.UniverseExpression(position, pLevel, parseTruncatedUniverse(ctx.TRUNCATED_UNIVERSE()));
+    return new Concrete.UniverseExpression(position, pLevel, parseTruncatedUniverse(ctx.TRUNCATED_UNIVERSE()), false);
   }
 
   @Override
@@ -1450,7 +1456,7 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     Position position = tokenPosition(ctx.start);
     String text = ctx.UNIVERSE().getText().substring("\\Type".length());
     Concrete.LevelExpression lp = text.isEmpty() ? null : new Concrete.NumberLevelExpression(position, Integer.parseInt(text));
-    return new Concrete.UniverseExpression(position, lp, null);
+    return new Concrete.UniverseExpression(position, lp, null, false);
   }
 
   @Override
@@ -1458,13 +1464,21 @@ public class BuildVisitor extends ArendBaseVisitor<Object> {
     Position position = tokenPosition(ctx.start);
     String text = ctx.SET().getText().substring("\\Set".length());
     Concrete.LevelExpression pLevel = text.isEmpty() ? null : new Concrete.NumberLevelExpression(position, Integer.parseInt(text));
-    return new Concrete.UniverseExpression(position, pLevel, new Concrete.NumberLevelExpression(position, 0));
+    return new Concrete.UniverseExpression(position, pLevel, new Concrete.NumberLevelExpression(position, 0), false);
+  }
+
+  @Override
+  public Concrete.UniverseExpression visitUniCatUniverse(UniCatUniverseContext ctx) {
+    Position position = tokenPosition(ctx.start);
+    String text = ctx.CAT_UNIVERSE().getText().substring("\\Cat".length());
+    Concrete.LevelExpression pLevel = text.isEmpty() ? null : new Concrete.NumberLevelExpression(position, Integer.parseInt(text));
+    return new Concrete.UniverseExpression(position, pLevel, null, true);
   }
 
   @Override
   public Concrete.UniverseExpression visitProp(PropContext ctx) {
     Position pos = tokenPosition(ctx.start);
-    return new Concrete.UniverseExpression(pos, new Concrete.NumberLevelExpression(pos, 0), new Concrete.NumberLevelExpression(pos, -1));
+    return new Concrete.UniverseExpression(pos, new Concrete.NumberLevelExpression(pos, 0), new Concrete.NumberLevelExpression(pos, -1), false);
   }
 
   private Concrete.LevelExpression visitLevel(LevelAtomContext ctx) {

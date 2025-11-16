@@ -7,7 +7,6 @@ import org.arend.core.context.binding.PersistentEvaluatingBinding;
 import org.arend.core.context.binding.inference.InferenceLevelVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
-import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.elimtree.Body;
 import org.arend.core.elimtree.ElimBody;
@@ -749,7 +748,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   }
 
   private Concrete.UniverseExpression visitSort(Sort sort) {
-    return cUniverse(sort.isOmega() ? new Concrete.PLevelExpression(null) : visitLevelNull(sort.getPLevel(), false), visitLevelNull(sort.getHLevel(), false));
+    return cUniverse(sort.isOmega() ? new Concrete.PLevelExpression(null) : visitLevelNull(sort.getPLevel(), false), visitLevelNull(sort.getHLevel(), false), sort.isCat());
   }
 
   private Concrete.LevelExpression visitLevel(Level level) {

@@ -129,6 +129,7 @@ class ArendParserDefinition : ParserDefinition {
         REPL_LINE -> ArendReplLine(node)
         RETURN_EXPR -> ArendReturnExpr(node)
         SET_UNIVERSE_APP_EXPR -> ArendSetUniverseAppExpr(node)
+        CAT_UNIVERSE_APP_EXPR -> ArendCatUniverseAppExpr(node)
         SIGMA_EXPR -> ArendSigmaExpr(node)
         STAT -> ArendStat(node)
         STAT_CMD -> ArendStatCmd(node)

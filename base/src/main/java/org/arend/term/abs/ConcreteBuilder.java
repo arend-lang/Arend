@@ -703,7 +703,15 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
     return new Concrete.UniverseExpression(data,
             pLevelNum != null ? new Concrete.NumberLevelExpression(data, pLevelNum) : pLevel != null ? pLevel.accept(this, LevelVariable.PVAR) : null,
-            hLevelNum != null ? (hLevelNum == Abstract.INFINITY_LEVEL ? new Concrete.InfLevelExpression(data) : new Concrete.NumberLevelExpression(data, hLevelNum)) : hLevel != null ? hLevel.accept(this, LevelVariable.HVAR) : null);
+            hLevelNum != null ? (hLevelNum == Abstract.INFINITY_LEVEL ? new Concrete.InfLevelExpression(data) : new Concrete.NumberLevelExpression(data, hLevelNum)) : hLevel != null ? hLevel.accept(this, LevelVariable.HVAR) : null, false);
+  }
+
+  @Override
+  public Concrete.Expression visitCatUniverse(@Nullable Object data, @Nullable Integer pLevelNum, Abstract.@Nullable LevelExpression pLevel, Void params) {
+    if (pLevelNum != null && pLevel != null) {
+      myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "p-level is already specified", pLevel.getData()));
+    }
+    return new Concrete.UniverseExpression(data, pLevelNum != null ? new Concrete.NumberLevelExpression(data, pLevelNum) : pLevel != null ? pLevel.accept(this, LevelVariable.PVAR) : null, null, true);
   }
 
   @Override

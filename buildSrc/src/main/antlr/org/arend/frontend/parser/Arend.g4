@@ -188,6 +188,7 @@ appExpr : argumentAppExpr                             # appArgument
         | TRUNCATED_UNIVERSE maybeLevelAtom?          # truncatedUniverse
         | UNIVERSE (maybeLevelAtom maybeLevelAtom?)?  # universe
         | SET maybeLevelAtom?                         # setUniverse
+        | CAT_UNIVERSE maybeLevelAtom?                # catUniverse
         ;
 
 argumentAppExpr : atomFieldsAcc onlyLevelAtom* argument*;
@@ -294,6 +295,7 @@ literal : ID                                # name
 universeAtom : TRUNCATED_UNIVERSE       # uniTruncatedUniverse
              | UNIVERSE                 # uniUniverse
              | SET                      # uniSetUniverse
+             | CAT_UNIVERSE             # uniCatUniverse
              ;
 
 tele : '(' typedExpr ')'                # explicit
@@ -343,6 +345,7 @@ NUMBER : [0-9]+;
 NEGATIVE_NUMBER : '-' [0-9]+;
 UNIVERSE : '\\Type' [0-9]*;
 TRUNCATED_UNIVERSE : '\\' (NUMBER '-' | 'oo-' | 'h') 'Type' [0-9]*;
+CAT_UNIVERSE : '\\Cat' [0-9]*;
 SET : '\\Set' [0-9]*;
 STRING : INCOMPLETE_STRING '"';
 INCOMPLETE_STRING : '"' (~["\\\r\n] | ESCAPE_SEQ)* EOF?;

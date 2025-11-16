@@ -213,19 +213,19 @@ public class ConcreteExpressionFactory {
   }
 
   public static Concrete.UniverseExpression cUniverseInf(int level) {
-    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), new Concrete.InfLevelExpression(null));
+    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), new Concrete.InfLevelExpression(null), false);
   }
 
   public static Concrete.UniverseExpression cUniverseStd(int level) {
-    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), new Concrete.HLevelExpression(null));
+    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), new Concrete.HLevelExpression(null), false);
   }
 
-  public static Concrete.UniverseExpression cUniverse(Concrete.LevelExpression pLevel, Concrete.LevelExpression hLevel) {
-    return new Concrete.UniverseExpression(null, pLevel, hLevel);
+  public static Concrete.UniverseExpression cUniverse(Concrete.LevelExpression pLevel, Concrete.LevelExpression hLevel, boolean isCat) {
+    return new Concrete.UniverseExpression(null, pLevel, hLevel, isCat);
   }
 
   public static Concrete.UniverseExpression cUniverse(int level) {
-    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), null);
+    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), null, false);
   }
 
   public static Concrete.ConstructorPattern cConPattern(boolean isExplicit, Referable referable, List<Concrete.Pattern> patternArgs) {

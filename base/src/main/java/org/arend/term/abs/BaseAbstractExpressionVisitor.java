@@ -47,6 +47,11 @@ public class BaseAbstractExpressionVisitor<P, R> implements AbstractExpressionVi
   }
 
   @Override
+  public R visitCatUniverse(@Nullable Object data, @Nullable Integer pLevelNum, Abstract.@Nullable LevelExpression pLevel, P params) {
+    return defaultValue;
+  }
+
+  @Override
   public R visitInferHole(@Nullable Object data, P params) {
     return defaultValue;
   }

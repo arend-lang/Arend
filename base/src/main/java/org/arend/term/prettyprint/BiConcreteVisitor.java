@@ -51,9 +51,8 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
   }
 
   protected Concrete.Parameter visitParameter(Concrete.Parameter parameter, Concrete.Parameter wideParameter) {
-    //noinspection DuplicatedCode
     if (parameter.getType() == null) {
-      return myFactory.param(parameter.isExplicit(), parameter.getRefList().get(0));
+      return myFactory.param(parameter.isExplicit(), parameter.getRefList().getFirst());
     } else {
       Concrete.Expression processedType = ((Concrete.TypeParameter) parameter).type.accept(this, ((Concrete.TypeParameter) wideParameter).type);
       if (wideParameter.getRefList().stream().anyMatch(Objects::nonNull)) {
@@ -113,7 +112,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
 
   @Override
   public Concrete.Expression visitUniverse(Concrete.UniverseExpression expr, Concrete.SourceNode params) {
-    return myFactory.universe(expr.getPLevel(), expr.getHLevel());
+    return myFactory.universe(expr.getPLevel(), expr.getHLevel(), expr.isCat());
   }
 
   @Override
@@ -161,7 +160,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
   public Concrete.Expression visitBinOpSequence(Concrete.BinOpSequenceExpression expr, Concrete.SourceNode params) {
     var wideExpr = (Concrete.BinOpSequenceExpression) params;
     if (expr.getSequence().size() == 1 && expr.getClauses() == null) {
-      return expr.getSequence().get(0).getComponent().accept(this, wideExpr.getSequence().get(0).getComponent());
+      return expr.getSequence().getFirst().getComponent().accept(this, wideExpr.getSequence().getFirst().getComponent());
     }
 
     var newExpressions = new ArrayList<Concrete.BinOpSequenceElem<Concrete.Expression>>();

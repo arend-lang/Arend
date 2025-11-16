@@ -3516,6 +3516,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       pLevel = new Level(pl);
     }
 
+    if (expr.isCat()) {
+      if (hLevel != null) {
+        errorReporter.report(new TypecheckingError("\\Cat cannot have an h-level", expr.getHLevel()));
+      }
+      UniverseExpression universe = new UniverseExpression(new Sort(pLevel, true));
+      return checkResult(expectedType, new TypecheckingResult(universe, new UniverseExpression(universe.getSort().succ())), expr);
+    }
+
     if (hLevel == null) {
       InferenceLevelVariable hl = new InferenceLevelVariable(LevelVariable.LvlType.HLVL, true, expr);
       getEquations().addVariable(hl);

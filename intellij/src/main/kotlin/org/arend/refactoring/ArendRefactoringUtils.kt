@@ -40,7 +40,6 @@ import org.arend.term.concrete.SearchConcreteVisitor
 import org.arend.util.getBounds
 import java.math.BigInteger
 import java.util.Collections.singletonList
-import kotlin.math.max
 
 private fun addId(id: String, newName: String?, factory: ArendPsiFactory, using: ArendNsUsing): ArendNsId? {
     val nsIds = using.nsIdList
@@ -184,7 +183,7 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
 
         if (!needsModification) return
 
-        var atomFieldsAcc : ArendAtomFieldsAcc? = null;
+        var atomFieldsAcc : ArendAtomFieldsAcc? = null
         var longName: ArendLongName? = null
         var pattern: ArendPattern? = null
 
@@ -623,7 +622,7 @@ fun transformPostfixToPrefix1(argumentOrFieldsAcc: PsiElement,
                               ipName: ArendIPName,
                               operatorConcrete: Concrete.Expression,
                               psiElements: List<PsiElement>,
-                              textGetter: (PsiElement) -> String = { it -> it.text }): Pair<String, Boolean> {
+                              textGetter: (PsiElement) -> String = { it.text }): Pair<String, Boolean> {
     var resultingExpr = "${LongName(ipName.longName)} "
     val leadingElements = java.util.ArrayList<PsiElement>()
     val trailingElements = java.util.ArrayList<PsiElement>()
@@ -813,6 +812,9 @@ private object PrecVisitor : AbstractExpressionVisitor<Void?, Int> {
 
     override fun visitUniverse(data: Any?, pLevelNum: Int?, hLevelNum: Int?, pLevel: Abstract.LevelExpression?, hLevel: Abstract.LevelExpression?, params: Void?) =
         if (pLevel != null || hLevel != null) APP_PREC else MAX_PREC
+
+    override fun visitCatUniverse(data: Any?, pLevelNum: Int?, pLevel: Abstract.LevelExpression?, params: Void?): Int? =
+        if (pLevel != null) APP_PREC else MAX_PREC
 
     override fun visitReference(data: Any?, referent: Referable, lp: Int, lh: Int, params: Void?) = APP_PREC
     override fun visitThis(data: Any?, params: Void?) = MAX_PREC

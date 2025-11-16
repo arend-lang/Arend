@@ -629,14 +629,15 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       return null;
     }
 
-    boolean hParens = !(expr.getHLevel() instanceof Concrete.InfLevelExpression || expr.getHLevel() instanceof Concrete.NumberLevelExpression || expr.getHLevel() == null);
+    boolean hParens = !(expr.isCat() || expr.getHLevel() instanceof Concrete.InfLevelExpression || expr.getHLevel() instanceof Concrete.NumberLevelExpression || expr.getHLevel() == null);
     boolean parens = prec.priority > Concrete.AppExpression.PREC && (hParens || !(expr.getPLevel() instanceof Concrete.NumberLevelExpression || expr.getPLevel() == null));
     if (parens) myBuilder.append('(');
 
-    if (expr.getHLevel() instanceof Concrete.InfLevelExpression) {
+    if (expr.isCat()) {
+      myBuilder.append("\\Cat");
+    } else if (expr.getHLevel() instanceof Concrete.InfLevelExpression) {
       myBuilder.append("\\hType");
-    } else
-    if (expr.getHLevel() instanceof Concrete.NumberLevelExpression) {
+    } else if (expr.getHLevel() instanceof Concrete.NumberLevelExpression) {
       int hLevel = ((Concrete.NumberLevelExpression) expr.getHLevel()).getNumber();
       if (hLevel == 0) {
         myBuilder.append("\\Set");

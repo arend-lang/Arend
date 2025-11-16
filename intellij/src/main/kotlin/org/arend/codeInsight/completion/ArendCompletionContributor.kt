@@ -192,7 +192,7 @@ class ArendCompletionContributor : CompletionContributor() {
 
         basic(LPH_CONTEXT, LPH_KW_LIST) { parameters ->
             when (val pp = parameters.position.parent.parent) {
-                is ArendSetUniverseAppExpr, is ArendTruncatedUniverseAppExpr ->
+                is ArendSetUniverseAppExpr, is ArendCatUniverseAppExpr, is ArendTruncatedUniverseAppExpr ->
                     pp.children.filterIsInstance<ArendMaybeAtomLevelExpr>().isEmpty()
                 else -> pp.children.filterIsInstance<ArendMaybeAtomLevelExpr>().size <= 1
             }
@@ -576,7 +576,7 @@ class ArendCompletionContributor : CompletionContributor() {
                   withAncestors(*(ATOM_LEVEL_PREFIX + arrayOf(ArendMaybeAtomLevelExpr::class.java, ArendMaybeAtomLevelExprs::class.java, ArendLevelsExpr::class.java))),
                   withAncestors(*(ATOM_LEVEL_PREFIX + arrayOf(ArendMaybeAtomLevelExprs::class.java, ArendLevelsExpr::class.java))))
 
-        private val LPH_CONTEXT = and(withParent(PsiErrorElement::class.java), withGrandParents(ArendSetUniverseAppExpr::class.java, ArendUniverseAppExpr::class.java, ArendTruncatedUniverseAppExpr::class.java))
+        private val LPH_CONTEXT = and(withParent(PsiErrorElement::class.java), withGrandParents(ArendSetUniverseAppExpr::class.java, ArendCatUniverseAppExpr::class.java, ArendUniverseAppExpr::class.java, ArendTruncatedUniverseAppExpr::class.java))
 
         private val LPH_LEVEL_CONTEXT = and(withAncestors(PsiErrorElement::class.java, ArendAtomLevelExpr::class.java))
 
@@ -663,7 +663,7 @@ class ArendCompletionContributor : CompletionContributor() {
                 and(or(withAncestors(*RETURN_EXPR_PREFIX), withAncestors(*(NEW_EXPR_PREFIX + arrayOf(ArendReturnExpr::class.java)))), not(allowedInReturnPattern)),
                 after(and(ofType(RBRACE), withParent(ArendWithBody::class.java))), //No keyword completion after \with or } in case expr
                 after(ofType(LAM_KW, HAVE_KW, LET_KW, HAVES_KW, LETS_KW, WITH_KW)), //No keyword completion after \lam or \let
-                after(ofType(SET, PROP_KW, UNIVERSE, TRUNCATED_UNIVERSE, NEW_KW, EVAL_KW, PEVAL_KW)), //No expression keyword completion after universe literals or \new keyword
+                after(ofType(SET, CAT_UNIVERSE, PROP_KW, UNIVERSE, TRUNCATED_UNIVERSE, NEW_KW, EVAL_KW, PEVAL_KW)), //No expression keyword completion after universe literals or \new keyword
                 or(LPH_CONTEXT, LPH_LEVEL_CONTEXT), //No expression keywords when completing levels in universes
                 after(and(ofType(ID), withAncestors(ArendRefIdentifier::class.java, ArendElim::class.java))), //No expression keywords in \elim expression
                 if (allowInBareSigmaOrPiExpressions) PlatformPatterns.alwaysFalse() else after(bareSigmaOrPiPattern), //Only universe expressions allowed inside Sigma or Pi expressions

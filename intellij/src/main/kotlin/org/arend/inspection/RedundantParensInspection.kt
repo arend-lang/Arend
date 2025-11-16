@@ -74,7 +74,8 @@ private fun neverNeedsParens(expression: ArendExpr): Boolean {
 private fun typeTeleDoesntNeedParens(expression: ArendExpr): Boolean {
     return expression.descendantOfType<ArendLiteral>()?.textRange == expression.textRange ||
            expression.descendantOfType<ArendUniverseAppExpr>()?.let { it.childOfType(UNIVERSE)?.textRange == expression.textRange } == true ||
-           expression.descendantOfType<ArendSetUniverseAppExpr>()?.let { it.childOfType(SET)?.textRange == expression.textRange } == true
+           expression.descendantOfType<ArendSetUniverseAppExpr>()?.let { it.childOfType(SET)?.textRange == expression.textRange } == true ||
+           expression.descendantOfType<ArendCatUniverseAppExpr>()?.let { it.childOfType(CAT_UNIVERSE)?.textRange == expression.textRange } == true
 }
 
 fun isAtomic(expression: ArendNewExpr) =

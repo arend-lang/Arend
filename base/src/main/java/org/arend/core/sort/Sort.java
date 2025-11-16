@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 public class Sort implements CoreSort {
   private final Level myPLevel;
   private final Level myHLevel;
+  private final boolean myCat;
 
   public static final Sort PROP = new Sort(new Level(0), new Level(-1));
   public static final Sort SET0 = new Sort(new Level(0), new Level(0));
@@ -31,16 +32,24 @@ public class Sort implements CoreSort {
     return new Sort(new Level(pLevel), Level.INFINITY);
   }
 
-  public Sort(int pLevel, int hLevel) {
-    assert pLevel >= 0;
-    assert hLevel >= 0;
-    myPLevel = new Level(pLevel);
-    myHLevel = new Level(hLevel);
+  private Sort(Level pLevel, Level hLevel, boolean isCat) {
+    myPLevel = pLevel;
+    myHLevel = hLevel;
+    myCat = isCat;
   }
 
   public Sort(Level pLevel, Level hLevel) {
-    myPLevel = pLevel;
-    myHLevel = hLevel;
+    this(pLevel, hLevel, false);
+  }
+
+  public Sort(int pLevel, int hLevel) {
+    this(new Level(pLevel), new Level(hLevel));
+    assert pLevel >= 0;
+    assert hLevel >= 0;
+  }
+
+  public Sort(Level pLevel, boolean isCat) {
+    this(pLevel, Level.INFINITY, isCat);
   }
 
   @NotNull
@@ -57,6 +66,10 @@ public class Sort implements CoreSort {
 
   public boolean isOmega() {
     return myPLevel.isInfinity();
+  }
+
+  public boolean isCat() {
+    return myCat;
   }
 
   public Sort succ() {
@@ -99,6 +112,9 @@ public class Sort implements CoreSort {
   }
 
   public static boolean compare(Sort sort1, Sort sort2, CMP cmp, Equations equations, Concrete.SourceNode sourceNode) {
+    if (sort1.isCat() != sort2.isCat()) {
+      return false;
+    }
     if (sort1.isProp()) {
       if (cmp == CMP.LE || sort2.isProp()) {
         return true;
@@ -119,7 +135,7 @@ public class Sort implements CoreSort {
   }
 
   public Sort subst(LevelSubstitution subst) {
-    return subst.isEmpty() || myPLevel.isClosed() && myHLevel.isClosed() ? this : new Sort(myPLevel.subst(subst), myHLevel.subst(subst));
+    return subst.isEmpty() || myPLevel.isClosed() && myHLevel.isClosed() ? this : new Sort(myPLevel.subst(subst), myHLevel.subst(subst), myCat);
   }
 
   public static Sort generateInferVars(Equations equations, boolean isUniverseLike, Concrete.SourceNode sourceNode) {

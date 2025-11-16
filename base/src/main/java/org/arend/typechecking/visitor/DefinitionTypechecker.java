@@ -1065,7 +1065,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     }
 
     if (def.getKind() == FunctionKind.TYPE && def.getBody() instanceof Concrete.ElimFunctionBody && def.getResultType() == null) {
-      def.setResultType(new Concrete.UniverseExpression(def.getData(), null, null));
+      def.setResultType(new Concrete.UniverseExpression(def.getData(), null, null, false));
     }
 
     Expression expectedType = null;

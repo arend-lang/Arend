@@ -15,6 +15,9 @@ private fun <P : Any?, R : Any?> acceptSet(data: ArendCompositeElement, setElem:
 private fun <P : Any?, R : Any?> acceptUniverse(data: ArendCompositeElement, universeElem: PsiElement, pLevel: Abstract.LevelExpression?, hLevel: Abstract.LevelExpression?, visitor: AbstractExpressionVisitor<in P, out R>, params: P?): R =
     visitor.visitUniverse(data, universeElem.text.substring("\\Type".length).toIntOrNull(), null, pLevel, hLevel, params)
 
+private fun <P : Any?, R : Any?> acceptCatUniverse(data: ArendCompositeElement, catElem: PsiElement, pLevel: Abstract.LevelExpression?, visitor: AbstractExpressionVisitor<in P, out R>, params: P?): R =
+    visitor.visitCatUniverse(data, catElem.text.substring("\\Set".length).toIntOrNull(), pLevel, params)
+
 private fun <P : Any?, R : Any?> acceptTruncated(data: ArendCompositeElement, truncatedElem: PsiElement, pLevel: Abstract.LevelExpression?, visitor: AbstractExpressionVisitor<in P, out R>, params: P?): R {
     val uniText = truncatedElem.text
     val index = uniText.indexOf('T')
@@ -34,6 +37,14 @@ class ArendSetUniverseAppExpr(node: ASTNode) : ArendAppExpr(node) {
 
     override fun <P : Any?, R : Any?> accept(visitor: AbstractExpressionVisitor<in P, out R>, params: P?): R =
         acceptSet(this, notNullChild(firstRelevantChild), maybeAtomLevelExpr?.atomLevelExpr, visitor, params)
+}
+
+class ArendCatUniverseAppExpr(node: ASTNode) : ArendAppExpr(node) {
+    val maybeAtomLevelExpr: ArendMaybeAtomLevelExpr?
+        get() = childOfType()
+
+    override fun <P : Any?, R : Any?> accept(visitor: AbstractExpressionVisitor<in P, out R>, params: P?): R =
+        acceptCatUniverse(this, notNullChild(firstRelevantChild), maybeAtomLevelExpr?.atomLevelExpr, visitor, params)
 }
 
 class ArendTruncatedUniverseAppExpr(node: ASTNode) : ArendAppExpr(node) {
@@ -62,6 +73,7 @@ class ArendUniverseAtom(node: ASTNode) : ArendExpr(node), ArendArgument {
         val child = firstRelevantChild
         return when (child.elementType) {
             SET -> acceptSet(this, child!!, null, visitor, params)
+            CAT_UNIVERSE -> acceptCatUniverse(this, child!!, null, visitor, params)
             UNIVERSE -> acceptUniverse(this, child!!, null, null, visitor, params)
             TRUNCATED_UNIVERSE -> acceptTruncated(this, child!!, null, visitor, params)
             else -> error("Incorrect expression: universe")

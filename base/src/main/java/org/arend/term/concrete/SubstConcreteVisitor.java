@@ -145,7 +145,7 @@ public class SubstConcreteVisitor extends BaseConcreteExpressionVisitor<Void> im
   @Override
   public Concrete.Expression visitUniverse(Concrete.UniverseExpression expr, Void ignored) {
     if (myData == null && myLevelSubstitution.isEmpty()) return expr;
-    return new Concrete.UniverseExpression(myData == null ? expr.getData() : myData, expr.getPLevel() == null ? null : expr.getPLevel().accept(this, null), expr.getHLevel() == null ? null : expr.getHLevel().accept(this, null));
+    return new Concrete.UniverseExpression(myData == null ? expr.getData() : myData, expr.getPLevel() == null ? null : expr.getPLevel().accept(this, null), expr.getHLevel() == null ? null : expr.getHLevel().accept(this, null), expr.isCat());
   }
 
   @Override

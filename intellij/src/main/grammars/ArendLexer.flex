@@ -56,6 +56,7 @@ INFIX               = `{ID}`
 SET                 = \\Set[0-9]*
 UNIVERSE            = \\Type[0-9]*
 TRUNCATED_UNIVERSE  = \\([0-9]+-|oo-|h)Type[0-9]*
+CAT_UNIVERSE        = \\Cat[0-9]*
 
 STRING              = \"{STRING_CONTENT}*\"
 STRING_CONTENT      = [^\"\\\r\n] | \\[btnfr\"\'\\] | {OCT_ESCAPE} | {UNICODE_ESCAPE}
@@ -178,6 +179,7 @@ OCT_DIGIT           = [0-8]
     {SET}                   { return SET; }
     {UNIVERSE}              { return UNIVERSE; }
     {TRUNCATED_UNIVERSE}    { return TRUNCATED_UNIVERSE; }
+    {CAT_UNIVERSE}          { return CAT_UNIVERSE; }
 
     {KEYWORD}               { return INVALID_KW; }
 

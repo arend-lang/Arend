@@ -168,11 +168,11 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
 
   @NotNull
   @Override
-  public Concrete.UniverseExpression universe(@Nullable ConcreteLevel pLevel, @Nullable ConcreteLevel hLevel) {
+  public Concrete.UniverseExpression universe(@Nullable ConcreteLevel pLevel, @Nullable ConcreteLevel hLevel, boolean isCat) {
     if (!((pLevel == null || pLevel instanceof Concrete.LevelExpression) && (hLevel == null || hLevel instanceof Concrete.LevelExpression))) {
       throw new IllegalArgumentException();
     }
-    return new Concrete.UniverseExpression(myData, (Concrete.LevelExpression) pLevel, (Concrete.LevelExpression) hLevel);
+    return new Concrete.UniverseExpression(myData, (Concrete.LevelExpression) pLevel, (Concrete.LevelExpression) hLevel, isCat);
   }
 
   @NotNull
@@ -564,7 +564,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     }
 
     cRef.setKind(GlobalReferable.Kind.DATA);
-    return new Concrete.DataDefinition(cRef, null, null, typeParameters(parameters), null, isTruncated, pLevel == null && hLevel == null ? null : universe(pLevel, hLevel), constructorClauses);
+    return new Concrete.DataDefinition(cRef, null, null, typeParameters(parameters), null, isTruncated, pLevel == null && hLevel == null ? null : universe(pLevel, hLevel, false), constructorClauses);
   }
 
   @Override
