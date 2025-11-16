@@ -1,4 +1,7 @@
 
 \record AAlgebraHom \extends LinearMap, RingHom {
+  \override Dom : AAlgebra R
+  \override Cod : AAlgebra R
+
 
 }
