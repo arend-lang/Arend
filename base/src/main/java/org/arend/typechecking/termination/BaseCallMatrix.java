@@ -186,6 +186,7 @@ public abstract class BaseCallMatrix<T> {
     }
     max++;
 
+    result.append('\n');
     result.append(" ".repeat(Math.max(0, max)));
 
     for (int j = 0; j < myWidth; j++) {
