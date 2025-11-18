@@ -3,6 +3,7 @@ package org.arend.refactoring.rename
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -76,7 +77,7 @@ class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
             val startedRename = renamer.performInplaceRename()
             if (!startedRename) {
                 if (checkNotGeneratePreview()) {
-                    invokeLater {
+                    WriteIntentReadAction.run {
                         Util.customPerformDialogRename(elementToRename, editor)
                     }
                 }
@@ -125,7 +126,7 @@ class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
                         ArendNameKind.NSID_NAME -> elementAtCaret?.text
                     } ?: "???"
 
-                    invokeLater {
+                    WriteIntentReadAction.run<RuntimeException> {
                         val dialog = object: RenameDialog(project, elementToRename, elementToRename, editor) {
                             override fun getSuggestedNames(): Array<String> = arrayOf(nameInDialog)
 
