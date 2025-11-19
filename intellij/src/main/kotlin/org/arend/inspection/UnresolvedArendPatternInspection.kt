@@ -4,15 +4,14 @@ import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.stubs.StubIndex
-import com.intellij.psi.util.childrenOfType
+import org.arend.core.expr.DefCallExpression
+import org.arend.core.expr.TypeConstructorExpression
+import org.arend.intention.SplitAtomPatternIntention
 import org.arend.psi.ArendFile
 import org.arend.psi.ArendFileScope
-import org.arend.psi.ancestor
-import org.arend.psi.descendantOfType
 import org.arend.psi.ext.*
 import org.arend.psi.stubs.index.ArendDefinitionIndex
 import org.arend.refactoring.isPrelude
-import org.arend.term.abs.Abstract
 import org.arend.util.ArendBundle
 
 class UnresolvedArendPatternInspection : ArendInspectionBase() {
@@ -38,33 +37,13 @@ class UnresolvedArendPatternInspection : ArendInspectionBase() {
 
                 if (constructors.isNotEmpty() && (!constructors.contains(resolve) &&
                     (resolve.containingFile as? ArendFile?)?.let { isPrelude(it) } == false)) {
-                    val type = getTypeOfPattern(element)
-                    val defData = ((type as? ArendLiteral?) ?: type?.descendantOfType<ArendLiteral>())?.refIdentifier?.resolve as? ArendDefData
-                    val groupConstructors = defData?.internalReferables ?: emptyList()
+                    val arendDefinition = ((SplitAtomPatternIntention.getElementType(element, element.project)?.first)
+                        ?.let { TypeConstructorExpression.unfoldType(it) } as? DefCallExpression)
+                        ?.definition?.referable?.data as? ArendDefinition<*>
+                    val groupConstructors = arendDefinition?.internalReferables ?: emptyList()
                     if (groupConstructors.any { constructors.contains(it) }) {
                         registerProblem(element)
                     }
-                }
-            }
-
-            private fun getTypeOfPattern(pattern: ArendPattern): PsiElement? {
-                val patterns = pattern.parent?.childrenOfType<ArendPattern>()
-                val firstPattern = patterns?.first()
-                val firstPatternResolve = firstPattern?.singleReferable?.reference?.resolve()
-                val index = patterns?.indexOf(pattern) ?: return null
-                return if (firstPatternResolve is Abstract.ParametersHolder) {
-                    val parameter = firstPatternResolve.parameters[index - 1]
-                    parameter?.type as? PsiElement
-                } else if (pattern.parent is ArendPattern) {
-                    val parentGroup = getTypeOfPattern(pattern.parent as ArendPattern) as? Abstract.ParametersHolder?
-                    parentGroup?.parameters?.get(index)?.type as? PsiElement?
-                } else if (pattern.ancestor<ArendCaseExpr>() != null) {
-                    val caseArg = pattern.ancestor<ArendCaseExpr>()?.caseArguments?.get(index)
-                    val resolve = (caseArg?.expression as? ArendNewExpr?)?.argumentAppExpr?.atomFieldsAcc?.atom?.literal?.refIdentifier?.resolve
-                        ?: caseArg?.eliminatedReference?.resolve
-                    (resolve?.ancestor<ArendNameTele>()?.type as? ArendNewExpr?)?.argumentAppExpr?.atomFieldsAcc?.atom?.literal
-                } else {
-                    null
                 }
             }
         }
