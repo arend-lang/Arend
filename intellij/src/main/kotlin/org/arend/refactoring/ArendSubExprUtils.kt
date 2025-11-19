@@ -31,6 +31,7 @@ import org.arend.psi.*
 import org.arend.psi.ext.*
 import org.arend.resolving.util.parseBinOp
 import org.arend.server.ArendServerService
+import org.arend.server.ProgressReporter
 import org.arend.server.impl.ArendLibraryImpl
 import org.arend.server.impl.ArendServerImpl
 import org.arend.settings.ArendProjectSettings
@@ -41,6 +42,7 @@ import org.arend.term.concrete.Concrete
 import org.arend.term.prettyprint.ToAbstractVisitor
 import org.arend.typechecking.ProgressCancellationIndicator
 import org.arend.typechecking.computation.ComputationRunner
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
 import org.arend.typechecking.instance.ArendInstances
 import org.arend.typechecking.provider.SimpleConcreteProvider
 import org.arend.typechecking.subexpr.CorrespondedSubDefVisitor
@@ -132,6 +134,9 @@ fun correspondedSubExpr(range: TextRange, file: PsiFile, project: Project): SubE
     val psiDef = exprAncestor.topmostAncestor<ReferableBase<*>>()
         ?: throw SubExprException("selected text is not in a definition")
     val arendServer = project.service<ArendServerService>().server
+    if (ApplicationManager.getApplication().isUnitTestMode) {
+        arendServer.getCheckerFor(arendServer.modules.toList()).typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+    }
     val concreteDef = psiDef.tcReferable?.let { arendServer.getResolvedDefinition(it) }?.definition as? Concrete.Definition
 
     val extension = concreteDef?.data?.getLocation()?.libraryName?.let { arendServer.getLibrary(it) as? ArendLibraryImpl }?.extension
@@ -172,13 +177,13 @@ inline fun selectedExpr(file: PsiFile, range: TextRange, errorHandling: (String)
 
 fun selectedExpr(file: PsiFile, range: TextRange): ArendExpr? = selectedExpr(file, range) { return null }
 
-fun tryCorrespondedSubExpr(range: TextRange, file: PsiFile, project: Project, editor: Editor, showError : Boolean = true): SubExprResult? =
+fun tryCorrespondedSubExpr(range: TextRange, file: PsiFile, project: Project, editor: Editor?, showError : Boolean = true): SubExprResult? =
     try {
         correspondedSubExpr(range, file, project)
     } catch (e: SubExprException) {
         if (checkNotGeneratePreview() && showError) {
             ApplicationManager.getApplication().invokeLater {
-                HintManager.getInstance().showErrorHint(editor, "Failed because ${e.message}")
+              editor?.let { HintManager.getInstance().showErrorHint(it, "Failed because ${e.message}") }
             }
         }
         null

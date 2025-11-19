@@ -37,9 +37,7 @@ import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.refactoring.*
 import org.arend.refactoring.utils.ServerBasedDefinitionRenamer
 import org.arend.refactoring.utils.NumberSimplifyingConcreteVisitor
-import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
-import org.arend.server.RawAnchor
 import org.arend.term.abs.Abstract
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.LocalVariablesCollector
@@ -55,7 +53,6 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
     private var caseClauseParameters: DependentLink? = null
 
     override fun isApplicableTo(element: PsiElement, caretOffset: Int, editor: Editor): Boolean {
-        val server = element.project.service<ArendServerService>().server
         val recursiveParameterName = when (element) {
             is ArendPattern -> element.singleReferable?.refName
             else -> null
@@ -64,7 +61,10 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
         this.splitPatternEntries = null
 
         if (!(element is ArendPattern && element.sequence.isEmpty())) return this.splitPatternEntries != null
-        val type = getElementType(element, editor)?.let{ TypeConstructorExpression.unfoldType(it) }
+        val type = getElementType(element, element.project, editor)?.let {
+            caseClauseParameters = it.second
+            TypeConstructorExpression.unfoldType(it.first)
+        }
         this.splitPatternEntries = when (type) {
             is DataCallExpression -> {
                 val canDoPatternMatchingOnIdp = admitsPatternMatchingOnIdp(type, caseClauseParameters)
@@ -115,106 +115,101 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
         splitPatternEntries?.let { doSplitPattern(element, project, it) }
     }
 
-    private fun getElementType(element: PsiElement, editor: Editor): Expression? {
-        val project = editor.project
-        caseClauseParameters = null
-        if (project == null) return null
-        val server = project.service<ArendServerService>().server
+    companion object {
+        fun getElementType(element: PsiElement, project: Project, editor: Editor? = null): Pair<Expression?, DependentLink?>? {
+            val server = project.service<ArendServerService>().server
 
-        var definition: PsiLocatedReferable? = null
-        val (patternOwner, indexList) = locatePattern(element) ?: return null
-        val ownerParent = (patternOwner as PsiElement).parent
-        var coClauseName: String? = null
+            var definition: PsiLocatedReferable? = null
+            val (patternOwner, indexList) = locatePattern(element) ?: return null
+            val ownerParent = (patternOwner as PsiElement).parent
+            var coClauseName: String? = null
 
-        var clauseIndex = -1
-        if (patternOwner is ArendClause) {
-            val body = ownerParent.ancestor<ArendFunctionBody>()?.let {
-                if (it.kind == ArendFunctionBody.Kind.COCLAUSE) it.parent.ancestor() else it
-            }
-            val func = body?.parent
+            var clauseIndex = -1
+            if (patternOwner is ArendClause) {
+                val body = ownerParent.ancestor<ArendFunctionBody>()?.let {
+                    if (it.kind == ArendFunctionBody.Kind.COCLAUSE) it.parent.ancestor() else it
+                }
+                val func = body?.parent
 
-            if (ownerParent is ArendFunctionClauses)
-                clauseIndex = ownerParent.clauseList.indexOf(patternOwner)
-            else if (ownerParent is ArendFunctionBody && ownerParent.kind == ArendFunctionBody.Kind.COCLAUSE) {
-                coClauseName = ownerParent.ancestor<ArendCoClause>()?.longName?.referenceName
-                clauseIndex = ownerParent.clauseList.indexOf(patternOwner)
-            }
-
-            if (body is ArendFunctionBody && func is ArendFunctionDefinition<*>) {
-                definition = func
-            }
-        }
-        if (patternOwner is ArendConstructorClause && ownerParent is ArendDataBody) {
-            /* val data = ownerParent.parent
-            abstractPatterns = patternOwner.patterns
-            if (data is ArendDefData) definition = data */
-            return null // TODO: Implement some behavior for constructor clauses as well
-        }
-
-        if (definition != null && clauseIndex != -1) {
-            val tcReferable = (definition as? ReferableBase<*>)?.tcReferable
-            var typeCheckedDefinition: Definition = tcReferable?.typechecked ?: return null
-            var concreteClauseOwner = server.getResolvedDefinition(tcReferable)?.definition as? Concrete.GeneralDefinition ?: return null
-
-            if (typeCheckedDefinition is FunctionDefinition && concreteClauseOwner is Concrete.FunctionDefinition && definition is Abstract.ParametersHolder && definition is Abstract.EliminatedExpressionsHolder) {
-                if (coClauseName != null) {
-                  val classCallExpression = typeCheckedDefinition.resultType as? ClassCallExpression
-                  val expr = classCallExpression?.implementations?.firstOrNull { it.key.name == coClauseName }?.value
-                  typeCheckedDefinition = ((expr as? LamExpression)?.body as? FunCallExpression)?.definition ?: typeCheckedDefinition
-                  concreteClauseOwner = server.getResolvedDefinition(typeCheckedDefinition.referable)?.definition as? Concrete.FunctionDefinition ?: concreteClauseOwner
+                if (ownerParent is ArendFunctionClauses)
+                    clauseIndex = ownerParent.clauseList.indexOf(patternOwner)
+                else if (ownerParent is ArendFunctionBody && ownerParent.kind == ArendFunctionBody.Kind.COCLAUSE) {
+                    coClauseName = ownerParent.ancestor<ArendCoClause>()?.longName?.referenceName
+                    clauseIndex = ownerParent.clauseList.indexOf(patternOwner)
                 }
 
-                val elimBody = (((typeCheckedDefinition as? FunctionDefinition)?.actualBody as? IntervalElim)?.otherwise
+                if (body is ArendFunctionBody && func is ArendFunctionDefinition<*>) {
+                    definition = func
+                }
+            }
+            if (patternOwner is ArendConstructorClause && ownerParent is ArendDataBody) {
+                /* val data = ownerParent.parent
+                abstractPatterns = patternOwner.patterns
+                if (data is ArendDefData) definition = data */
+                return null // TODO: Implement some behavior for constructor clauses as well
+            }
+
+            if (definition != null && clauseIndex != -1) {
+                val tcReferable = (definition as? ReferableBase<*>)?.tcReferable
+                var typeCheckedDefinition: Definition = tcReferable?.typechecked ?: return null
+                var concreteClauseOwner = server.getResolvedDefinition(tcReferable)?.definition as? Concrete.GeneralDefinition ?: return null
+
+                if (typeCheckedDefinition is FunctionDefinition && concreteClauseOwner is Concrete.FunctionDefinition && definition is Abstract.ParametersHolder && definition is Abstract.EliminatedExpressionsHolder) {
+                    if (coClauseName != null) {
+                        val classCallExpression = typeCheckedDefinition.resultType as? ClassCallExpression
+                        val expr = classCallExpression?.implementations?.firstOrNull { it.key.name == coClauseName }?.value
+                        typeCheckedDefinition = ((expr as? LamExpression)?.body as? FunCallExpression)?.definition ?: typeCheckedDefinition
+                        concreteClauseOwner = server.getResolvedDefinition(typeCheckedDefinition.referable)?.definition as? Concrete.FunctionDefinition ?: concreteClauseOwner
+                    }
+
+                    val elimBody = (((typeCheckedDefinition as? FunctionDefinition)?.actualBody as? IntervalElim)?.otherwise
                         ?: ((typeCheckedDefinition as? FunctionDefinition)?.actualBody as? ElimBody) ?: return null)
 
-                val corePatterns = elimBody.clauses.getOrNull(clauseIndex)?.patterns?.let { toExpressionPatterns(it, typeCheckedDefinition.parameters) }
+                    val corePatterns = elimBody.clauses.getOrNull(clauseIndex)?.patterns?.let { toExpressionPatterns(it, typeCheckedDefinition.parameters) }
                         ?: return null
 
-                val parameters = ArrayList<Abstract.AbstractReferable>(); for (pp in definition.parameters) parameters.addAll(pp.referableList)
-                val elimVars = definition.eliminatedExpressions ?: emptyList()
-                val isElim = elimVars.isNotEmpty()
-                val elimVarPatterns: List<ExpressionPattern> = if (isElim) elimVars.map { reference ->
-                    if (reference is ArendRefIdentifier) {
-                        val parameterIndex = (reference.reference?.resolve() as? Abstract.AbstractReferable)?.let { parameters.indexOf(it) }
+                    val parameters = ArrayList<Abstract.AbstractReferable>(); for (pp in definition.parameters) parameters.addAll(pp.referableList)
+                    val elimVars = definition.eliminatedExpressions ?: emptyList()
+                    val isElim = elimVars.isNotEmpty()
+                    val elimVarPatterns: List<ExpressionPattern> = if (isElim) elimVars.map { reference ->
+                        if (reference is ArendRefIdentifier) {
+                            val parameterIndex = (reference.reference?.resolve() as? Abstract.AbstractReferable)?.let { parameters.indexOf(it) }
                                 ?: -1
-                        if (parameterIndex < corePatterns.size && parameterIndex != -1) corePatterns[parameterIndex] else throw IllegalStateException()
-                    } else throw IllegalStateException()
-                } else corePatterns
+                            if (parameterIndex < corePatterns.size && parameterIndex != -1) corePatterns[parameterIndex] else throw IllegalStateException()
+                        } else throw IllegalStateException()
+                    } else corePatterns
 
-                if (indexList.isNotEmpty()) {
-                    val concreteClause = (concreteClauseOwner as Concrete.FunctionDefinition).body.clauses[clauseIndex]
-                    val index = patternOwner
+                    if (indexList.isNotEmpty()) {
+                        val concreteClause = (concreteClauseOwner as Concrete.FunctionDefinition).body.clauses[clauseIndex]
+                        val index = patternOwner
                             .patterns
                             .filterIsInstance<ArendPattern>()
                             .indexOfFirst {
                                 it.skipSingleTuples() == indexList[0]
                             }
-                    val (typecheckedPattern, concrete) = (if (isElim) elimVarPatterns.getOrNull(index)?.let { it to  concreteClause.patterns.find { it.data == indexList[0] } }
-                    else findMatchingPattern(concreteClause.patterns, typeCheckedDefinition.parameters, corePatterns, indexList[0])) ?: return null
-                    if (concrete == null) return null
-                    val patternPart = findPattern(indexList.drop(1), typecheckedPattern, concrete) as? BindingPattern
+                        val (typecheckedPattern, concrete) = (if (isElim) elimVarPatterns.getOrNull(index)?.let { it to  concreteClause.patterns.find { it.data == indexList[0] } }
+                        else findMatchingPattern(concreteClause.patterns, typeCheckedDefinition.parameters, corePatterns, indexList[0])) ?: return null
+                        if (concrete == null) return null
+                        val patternPart = findPattern(indexList.drop(1), typecheckedPattern, concrete) as? BindingPattern
                             ?: return null
-                    return patternPart.binding.typeExpr
+                        return Pair(patternPart.binding.typeExpr, null)
+                    }
                 }
             }
-        }
 
-        if (ownerParent is ArendWithBody && patternOwner is ArendClause) {
-            val clauseIndex2 = ownerParent.clauseList.indexOf(patternOwner)
-            val caseExprData = tryCorrespondedSubExpr(ownerParent.textRange, patternOwner.containingFile, project, editor, false)
-            val coreCaseExpr = caseExprData?.subCore
-            if (coreCaseExpr is CaseExpression) {
-                val coreClause = coreCaseExpr.elimBody.clauses.getOrNull(clauseIndex2)
-                caseClauseParameters = coreClause?.parameters
-                val bindingData = caseExprData.findBinding(element.textRange)
-                return bindingData?.second
+            if (ownerParent is ArendWithBody && patternOwner is ArendClause) {
+                val clauseIndex2 = ownerParent.clauseList.indexOf(patternOwner)
+                val caseExprData = tryCorrespondedSubExpr(ownerParent.textRange, patternOwner.containingFile, project, editor, false)
+                val coreCaseExpr = caseExprData?.subCore
+                if (coreCaseExpr is CaseExpression) {
+                    val coreClause = coreCaseExpr.elimBody.clauses.getOrNull(clauseIndex2)
+                    val bindingData = caseExprData.findBinding(element.textRange)
+                    return Pair(bindingData?.second, coreClause?.parameters)
+                }
             }
+            return null
         }
 
-        return null
-    }
-
-    companion object {
         abstract class SplitPatternEntry(recursiveDefinition: Definition?,
                                          recursiveParameterName: String?,
                                          val isExplicit: Boolean) {
