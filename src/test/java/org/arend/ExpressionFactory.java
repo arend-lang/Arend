@@ -116,7 +116,7 @@ public class ExpressionFactory {
   private static Sort getMaxSort(Expression type1, Expression type2) {
     Sort sort1 = type1 == null ? null : type1.getSortOfType();
     Sort sort2 = type2 == null ? null : type2.getSortOfType();
-    return sort1 == null || sort2 == null ? Sort.SET0 : new Sort(sort1.getPLevel().max(sort2.getPLevel()), sort2.getHLevel());
+    return sort1 == null || sort2 == null ? Sort.SET0 : Sort.make(sort1.getPLevel().max(sort2.getPLevel()), sort2.getHLevel(), sort1.isCat() || sort2.isCat());
   }
 
   public static PiExpression Pi(SingleDependentLink domain, Expression codomain) {

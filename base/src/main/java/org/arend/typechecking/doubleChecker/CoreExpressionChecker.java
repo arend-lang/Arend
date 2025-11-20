@@ -130,14 +130,14 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
     if (expr.getDefinition() == Prelude.SUC) {
       int sucs = 1;
-      Expression expression = expr.getDefCallArguments().get(0);
+      Expression expression = expr.getDefCallArguments().getFirst();
       while (expression instanceof ConCallExpression && ((ConCallExpression) expression).getDefinition() == Prelude.SUC) {
         sucs++;
-        expression = ((ConCallExpression) expression).getDefCallArguments().get(0);
+        expression = ((ConCallExpression) expression).getDefCallArguments().getFirst();
       }
       DataCallExpression dataCall = expression.accept(this, null).normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
       if (dataCall != null && dataCall.getDefinition() == Prelude.FIN) {
-        Expression arg = dataCall.getDefCallArguments().get(0);
+        Expression arg = dataCall.getDefCallArguments().getFirst();
         for (int i = 0; i < sucs; i++) {
           arg = Suc(arg);
         }
@@ -393,13 +393,22 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot infer sort", mySourceNode), expr));
     }
     freeDependentLink(expr.getParameters());
-    Level pLevel = sort.isProp() ? new Level(0) : expr.getParameters().getType().getSortOfType().getPLevel().max(sort.getPLevel());
-    if (pLevel == null) {
-      checkSort(expr.getResultSort(), expr);
-      compareSort(expr.getResultSort(), new Sort(expr.getParameters().getType().getSortOfType().getPLevel(), expr.getResultSort().getHLevel()), expr);
-      compareSort(expr.getResultSort(), sort, expr);
+    boolean domCat;
+    Level pLevel;
+    if (sort.isProp()) {
+      pLevel = new Level(0);
+      domCat = false;
+    } else {
+      Sort domSort = expr.getParameters().getType().getSortOfType();
+      pLevel = domSort.getPLevel().max(sort.getPLevel());
+      domCat = domSort.isCat();
+      if (pLevel == null) {
+        checkSort(expr.getResultSort(), expr);
+        compareSort(expr.getResultSort(), new Sort(expr.getParameters().getType().getSortOfType().getPLevel(), expr.getResultSort().getHLevel()), expr);
+        compareSort(expr.getResultSort(), sort, expr);
+      }
     }
-    return check(expectedType, new PiExpression(pLevel == null ? expr.getResultSort() : new Sort(pLevel, sort.getHLevel()), expr.getParameters(), type), expr);
+    return check(expectedType, new PiExpression(pLevel == null ? expr.getResultSort() : Sort.make(pLevel, sort.getHLevel(), domCat || sort.isCat()), expr.getParameters(), type), expr);
   }
 
   @Override
@@ -420,7 +429,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       actualType = new UniverseExpression(sort2);
     } else {
       Level maxPLevel = sort1 == null || sort2 == null ? null : sort1.getPLevel().max(sort2.getPLevel());
-      actualType = maxPLevel == null ? type : new UniverseExpression(new Sort(maxPLevel, sort2.getHLevel()));
+      actualType = maxPLevel == null ? type : new UniverseExpression(Sort.make(maxPLevel, sort2.getHLevel(), sort1.isCat() || sort2.isCat()));
     }
     return check(expectedType, actualType, expr);
   }
@@ -724,7 +733,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       throw new CoreException(CoreErrorWrapper.make(new DataTypeNotEmptyError(dataCall, DataTypeNotEmptyError.getConstructors(conCalls), mySourceNode), errorExpr));
     }
 
-    ConCallExpression conCall = conCalls.get(0);
+    ConCallExpression conCall = conCalls.getFirst();
     return checkElimPatterns(DependentLink.Helper.subst(conCall.getDefinition().getParameters(), new ExprSubstitution().add(conCall.getDefinition().getDataTypeParameters(), conCall.getDataTypeArguments())), pattern.getSubPatterns(), new ExprSubstitution(), newBindings, idpSubst, patternSubst, reversePatternSubst, errorExpr, null);
   }
 
@@ -974,6 +983,6 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.refDoc(Prelude.PATH.getRef()), type, mySourceNode), expr.getPathArgument()));
     }
     expr.getIntervalArgument().accept(this, Interval());
-    return check(expectedType, AppExpression.make(((DataCallExpression) type).getDefCallArguments().get(0), expr.getIntervalArgument(), true), expr);
+    return check(expectedType, AppExpression.make(((DataCallExpression) type).getDefCallArguments().getFirst(), expr.getIntervalArgument(), true), expr);
   }
 }

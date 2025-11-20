@@ -45,7 +45,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   }
 
   private Level getMaxLevel(Level level1, Level level2) {
-    return level2 == null ? level1 : level2.max(level1);
+    return level2 == null ? level1 : level2.max(level1) /* TODO[sorts] */;
   }
 
   private boolean matchLevels(Levels paramLevels, Levels argLevels, Map<LevelVariable, Level> levelMap) {
@@ -180,7 +180,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
           list.add(level == null ? new Level(var.getMinValue()) : level);
         }
         for (int i = 0; i < list.size() - 1; i++) {
-          Level maxLevel = list.get(i).max(list.get(i + 1));
+          Level maxLevel = list.get(i).max(list.get(i + 1)) /* TODO[sorts] */;
           if (maxLevel == null) {
             ok = false;
             break;
@@ -327,7 +327,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     Sort sort1 = expr.getParameters().getTypeExpr().accept(this, null).toSort();
     Sort sort2 = sort1 == null ? null : expr.getCodomain().accept(this, null).toSort();
     Level maxPLevel = sort2 == null ? null : sort1.getPLevel().max(sort2.getPLevel());
-    return new UniverseExpression(maxPLevel == null ? expr.getResultSort() : new Sort(maxPLevel, sort2.getHLevel()));
+    return new UniverseExpression(maxPLevel == null ? expr.getResultSort() : Sort.make(maxPLevel, sort2.getHLevel(), sort1.isCat() || sort2.isCat()));
   }
 
   @Override

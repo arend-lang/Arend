@@ -52,6 +52,10 @@ public class Sort implements CoreSort {
     this(pLevel, Level.INFINITY, isCat);
   }
 
+  public static Sort make(Level pLevel, Level hLevel, boolean isCat) {
+    return isCat ? new Sort(pLevel, true) : new Sort(pLevel, hLevel);
+  }
+
   @NotNull
   @Override
   public Level getPLevel() {
@@ -65,7 +69,7 @@ public class Sort implements CoreSort {
   }
 
   public boolean isOmega() {
-    return myPLevel.isInfinity();
+    return myCat && myPLevel.isInfinity();
   }
 
   public boolean isCat() {
@@ -81,7 +85,7 @@ public class Sort implements CoreSort {
     if (sort.isProp()) return this;
     Level pLevel = myPLevel.max(sort.myPLevel);
     Level hLevel = myHLevel.max(sort.myHLevel);
-    return pLevel == null || hLevel == null ? null : new Sort(pLevel, hLevel);
+    return pLevel == null || hLevel == null ? null : new Sort(pLevel, hLevel, myCat || sort.myCat);
   }
 
   @Override
@@ -115,9 +119,6 @@ public class Sort implements CoreSort {
     if (sort2.isOmega() && cmp == CMP.LE || sort1.isOmega() && cmp == CMP.GE) {
       return true;
     }
-    if (sort1.isCat() != sort2.isCat()) {
-      return false;
-    }
     if (sort1.isProp()) {
       if (cmp == CMP.LE || sort2.isProp()) {
         return true;
@@ -129,6 +130,9 @@ public class Sort implements CoreSort {
         return true;
       }
       return compareProp(sort1, equations, sourceNode);
+    }
+    if (sort1.myCat != sort2.myCat && (cmp == CMP.EQ || cmp == CMP.LE && sort1.myCat || cmp == CMP.GE && sort2.myCat)) {
+      return false;
     }
     return Level.compare(sort1.getPLevel(), sort2.getPLevel(), cmp, equations, sourceNode) && Level.compare(sort1.getHLevel(), sort2.getHLevel(), cmp, equations, sourceNode);
   }

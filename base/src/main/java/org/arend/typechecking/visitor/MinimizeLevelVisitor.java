@@ -56,7 +56,9 @@ public class MinimizeLevelVisitor extends BaseExpressionVisitor<Void, Type> {
     if (dom == null) return null;
     Type cod = visit(expr.getCodomain());
     if (cod == null) return null;
-    Sort sort = new Sort(dom.getSortOfType().getPLevel().max(cod.getSortOfType().getPLevel()), cod.getSortOfType().getHLevel());
+    Sort domSort = dom.getSortOfType();
+    Sort codSort = cod.getSortOfType();
+    Sort sort = Sort.make(domSort.getPLevel().max(codSort.getPLevel()), codSort.getHLevel(), domSort.isCat() || codSort.isCat());
     if (sort.equals(expr.getResultSort()) || !sort.isLessOrEquals(expr.getResultSort())) {
       return expr;
     }

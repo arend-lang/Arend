@@ -823,7 +823,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
       if (classCall != null) {
         LevelPair levelPair = classCall.getLevels().toLevelPair();
         TypedSingleDependentLink lamParam = new TypedSingleDependentLink(true, "j", Fin(FieldCallExpression.make(Prelude.ARRAY_LENGTH, expr.getArgument())));
-        return new LamExpression(new Sort(levelPair.get(LevelVariable.PVAR), levelPair.get(LevelVariable.HVAR).max(new Level(0))), lamParam, FunCallExpression.make(Prelude.ARRAY_INDEX, levelPair, Arrays.asList(expr.getArgument(), new ReferenceExpression(lamParam))));
+        return new LamExpression(new Sort(levelPair.get(LevelVariable.PVAR), levelPair.get(LevelVariable.HVAR).max(new Level(0))) /* TODO[sorts] */, lamParam, FunCallExpression.make(Prelude.ARRAY_INDEX, levelPair, Arrays.asList(expr.getArgument(), new ReferenceExpression(lamParam))));
       }
     }
 

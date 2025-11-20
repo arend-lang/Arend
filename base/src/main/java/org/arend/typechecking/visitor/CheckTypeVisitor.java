@@ -919,9 +919,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       throw new IllegalArgumentException();
     }
     for (CoreParameter parameter : parameters) {
-      if (!(parameter instanceof DependentLink link) || link.getType().getSortOfType().isCat()) {
-        throw new IllegalArgumentException();
-      }
+      if (!(parameter instanceof DependentLink)) throw new IllegalArgumentException();
     }
     //noinspection unchecked
     checkSubstExpr((Expression) body, (Collection<? extends CoreBinding>) parameters, true);
