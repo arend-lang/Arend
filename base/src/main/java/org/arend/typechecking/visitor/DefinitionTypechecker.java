@@ -481,9 +481,6 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         if (typedParameters != null) {
           typedParameters.add(true);
         }
-        if (!(def instanceof Concrete.FunctionDefinition)) {
-          typechecker.checkNotCat(paramResult, parameter);
-        }
       } else if (skip == 0) {
         if (resultType instanceof PiExpression && typedDef != null) {
           SingleDependentLink param = ((PiExpression) resultType).getParameters();
@@ -1852,7 +1849,6 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         if (userSort == null) {
           errorReporter.report(new TypecheckingError("Expected a universe", def.getUniverse()));
         }
-        typechecker.checkNotCat(userTypeResult, def.getUniverse());
       }
     }
 
@@ -3091,7 +3087,6 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       ClassFieldKind kind = def instanceof Concrete.ClassField ? ((Concrete.ClassField) def).getKind() : typedDef == null ? ClassFieldKind.ANY : typedDef.isProperty() ? ClassFieldKind.PROPERTY : ClassFieldKind.FIELD;
       Type typeResult = typechecker.finalCheckType(codomain, Type.OMEGA, kind == ClassFieldKind.PROPERTY && def.getResultTypeLevel() == null);
       ok = typeResult != null;
-      if (ok) typechecker.checkNotCat(typeResult, codomain);
       Expression typeExpr = ok ? typeResult.getExpr() : new ErrorExpression();
       piType = new PiExpression(ok ? Sort.STD.max(typeResult.getSortOfType()) : Sort.STD, thisParam, typeExpr);
 
