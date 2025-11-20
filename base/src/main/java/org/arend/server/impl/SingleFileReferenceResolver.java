@@ -166,7 +166,8 @@ public class SingleFileReferenceResolver {
                 Referable resolveResult = Scope.resolveName(currentScope, name.stream().map(p -> p.proj1).toList());
                 if (resolveResult instanceof RedirectingReferable redirecting) resolveResult = redirecting.getOriginalReferable();
                 if (resolveResult == targetReferable ||
-                        (targetReferable == FIN_ZERO.getReferable() && resolveResult == ZERO.getReferable() || targetReferable == FIN_SUC.getReferable() && resolveResult == SUC.getReferable()))
+                        (FIN_ZERO != null && targetReferable == FIN_ZERO.getReferable() && ZERO != null && resolveResult == ZERO.getReferable() ||
+                                FIN_SUC != null && targetReferable == FIN_SUC.getReferable() && SUC != null && resolveResult == SUC.getReferable()))
                     accessibleNames.add(name);
             }
 

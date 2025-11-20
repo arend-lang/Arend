@@ -20,7 +20,11 @@ import org.arend.psi.ArendFile
 import org.arend.psi.ArendFileScope
 import org.arend.psi.ext.*
 import org.arend.refactoring.rename.ArendGlobalReferableRenameHandler.Util.isDefIdentifierFromNsId
+import org.arend.resolving.ArendReferenceBase
 import org.arend.server.ArendServerService
+import org.arend.server.ProgressReporter
+import org.arend.typechecking.computation.UnstoppableCancellationIndicator
+import java.util.Collections.singletonList
 
 class ArendCustomSearcher : QueryExecutorBase<PsiReference, ReferencesSearch.SearchParameters>() {
     override fun processQuery(parameters: ReferencesSearch.SearchParameters, consumer: Processor<in PsiReference>) {
@@ -74,6 +78,16 @@ class ArendCustomSearcher : QueryExecutorBase<PsiReference, ReferencesSearch.Sea
                         }, dI.useScope, dI.name, searchContext, true)
                     }
                     for (ref in PsiReferenceService.getService().getReferences(element, PsiReferenceService.Hints(elementToSearch, offsetInElement))) { // Copypasted from SingleTargetRequestResultProcessor
+                        if (ref is ArendReferenceBase<*> && ref.element.resolve() == null) {
+                            val module = ref.element.referenceModule
+                            if (module != null) {
+                                val checker = project.service<ArendServerService>().server.getCheckerFor(singletonList(module))
+                                if (elementToSearch is ArendClassField)
+                                    checker.typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+                                else checker.resolveModules(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty())
+                            }
+                        }
+
                         ProgressManager.checkCanceled()
                         if (ReferenceRange.containsOffsetInElement(ref, offsetInElement) && ref.isReferenceTo(elementToSearch)) {
                             if (!consumer.process(ref))

@@ -566,6 +566,38 @@ fun testInlineRename2() = doTest("lol3", """
        }
     """, true)
 
+    fun testDynamicResolve() = doTest("bart", """
+       \func fubar => \new M.FooBar true
+
+       \func foo2 : Bool => fubar.bar
+
+       \module M \where {
+         \class FooBar {
+           | bar{-caret-} : Bool
+         }
+
+         \class Foo {
+           | bar : Nat
+         }
+
+       }
+    """, """
+       \func fubar => \new M.FooBar true
+
+       \func foo2 : Bool => fubar.bart
+
+       \module M \where {
+         \class FooBar {
+           | bart : Bool
+         }
+
+         \class Foo {
+           | bar : Nat
+         }
+
+       }
+    """, true)
+
     private fun doTest(
             newName: String,
             @Language("Arend") before: String,
