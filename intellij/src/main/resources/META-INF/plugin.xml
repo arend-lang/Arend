@@ -47,6 +47,7 @@
         <!-- File Type -->
 
         <fileType language="Arend" implementationClass="org.arend.ArendFileType" name="Arend" extensions="ard;ars" />
+        <internalFileTemplate name="Arend File"/>
 
         <!-- Parser -->
 
