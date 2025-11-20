@@ -300,10 +300,10 @@ public class ConsoleMain {
       String replKind = cmdLine.getOptionValue("i", "jline");
       switch (replKind.toLowerCase()) {
         case "plain":
-          PlainCliRepl.launch(false, libDirs);
+          PlainCliRepl.launch(false, libDirs, server);
           break;
         case "jline":
-          JLineCliRepl.launch(false, libDirs);
+          JLineCliRepl.launch(false, libDirs, server);
           break;
         default:
           System.err.println("[ERROR] Unrecognized repl type: " + replKind);

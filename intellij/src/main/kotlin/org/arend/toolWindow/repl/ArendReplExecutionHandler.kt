@@ -17,6 +17,8 @@ import org.arend.ArendIcons
 import org.arend.ArendLanguage
 import org.arend.psi.ArendFile
 import org.arend.repl.CommandHandler
+import org.arend.server.ArendServerRequesterImpl
+import org.arend.server.impl.ArendServerImpl
 import org.arend.toolWindow.errors.ArendPrintOptionsActionGroup
 import org.arend.toolWindow.errors.PrintOptionKind
 import java.awt.event.InputEvent
@@ -24,10 +26,10 @@ import java.awt.event.KeyEvent
 import javax.swing.KeyStroke
 
 class ArendReplExecutionHandler(
-    project: Project,
+    val project: Project,
     private val toolWindow: ToolWindow
 ) : BaseConsoleExecuteActionHandler(true) {
-    val repl = object : IntellijRepl(this, project) {
+    val repl = object : IntellijRepl(this, project, ArendServerImpl(ArendServerRequesterImpl(project), true, true, true)) {
         override fun print(anything: Any?) {
             if (anything == null) return
             val s = runReadAction { anything.toString() }
@@ -70,7 +72,6 @@ class ArendReplExecutionHandler(
 
     private fun closeRepl() {
         toolWindow.hide()
-        repl.resetCurrentLineScope()
         resetRepl()
     }
 

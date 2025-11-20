@@ -23,7 +23,7 @@ public class ShowContextCommand implements ReplCommand {
   @Override
   public void invoke(@NotNull String line, @NotNull Repl api, @NotNull Supplier<@NotNull String> scanner) throws QuitReplException {
     StringBuilder builder = new StringBuilder();
-    for (ConcreteStatement statement: api.statements) {
+    for (ConcreteStatement statement: api.getStatements()) {
       ConcreteNamespaceCommand command = statement.command();
       ConcreteGroup group = statement.group();
       Concrete.ResolvableDefinition definition = group == null ? null : group.definition();
