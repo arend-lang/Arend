@@ -39,8 +39,8 @@ import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.search.ClassDescendantsSearch
 import org.arend.server.ArendServerService
-import org.arend.term.concrete.BaseConcreteExpressionVisitor
 import org.arend.term.concrete.Concrete
+import org.arend.term.concrete.SearchConcreteVisitor
 import org.arend.typechecking.error.TerminationCheckError
 import org.arend.typechecking.patternmatching.ExtElimClause
 import org.arend.typechecking.subexpr.CorrespondedSubDefVisitor
@@ -102,8 +102,8 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
       is Concrete.CaseExpression -> term.clauses
       else -> functionDefinition?.body?.clauses
     } ?: emptyList()).forEach {
-      it.expression?.accept(object : BaseConcreteExpressionVisitor<Void>() {
-        override fun visitApp(expr: Concrete.AppExpression?, params: Void?): Concrete.Expression? {
+      it.expression?.accept(object : SearchConcreteVisitor<Void, Void>() {
+        override fun visitApp(expr: Concrete.AppExpression?, params: Void?): Void? {
           expr?.let { app -> subConcreteExpressions.add(app) }
           return super.visitApp(expr, params)
         }

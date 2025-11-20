@@ -11,6 +11,7 @@ import org.arend.core.definition.Definition.TypeCheckingStatus
 import org.arend.core.definition.Definition.TypeCheckingStatus.*
 import org.arend.naming.reference.MetaReferable
 import org.arend.psi.ArendElementTypes
+import org.arend.psi.ArendFile
 import org.arend.psi.ext.*
 import org.arend.scratch.SCRATCH_SUFFIX
 
@@ -20,7 +21,8 @@ class TypeCheckRunLineMarkerContributor : RunLineMarkerContributor() {
 
     override fun getInfo(element: PsiElement): Info? {
         if (!(element is LeafPsiElement && element.node.elementType == ArendElementTypes.ID) ||
-                element.containingFile.virtualFile.extension == SCRATCH_SUFFIX) {
+                element.containingFile.virtualFile.extension == SCRATCH_SUFFIX ||
+                (element.containingFile as ArendFile?)?.isRepl == true) {
             return null
         }
 

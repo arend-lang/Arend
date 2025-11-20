@@ -1,12 +1,17 @@
 package org.arend.frontend.repl.jline;
 
+import org.arend.error.DummyErrorReporter;
 import org.arend.ext.module.LongName;
+import org.arend.frontend.library.CliServerRequester;
+import org.arend.frontend.library.LibraryManager;
 import org.arend.frontend.repl.CommonCliRepl;
 import org.arend.repl.CommandHandler;
 import org.arend.repl.action.PrettyPrintFlagCommand;
 import org.arend.repl.action.DirectoryArgumentCommand;
 import org.arend.repl.action.FileArgumentCommand;
 import org.arend.repl.action.NormalizeCommand;
+import org.arend.server.ArendServer;
+import org.arend.server.impl.ArendServerImpl;
 import org.arend.util.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jline.reader.EndOfFileException;
@@ -31,7 +36,8 @@ import java.util.stream.Stream;
 public class JLineCliRepl extends CommonCliRepl {
   private final Terminal myTerminal;
 
-  public JLineCliRepl(@NotNull Terminal terminal) {
+  public JLineCliRepl(@NotNull Terminal terminal, @NotNull ArendServer server) {
+    super(server);
     myTerminal = terminal;
   }
 
@@ -89,7 +95,7 @@ public class JLineCliRepl extends CommonCliRepl {
         new SpecialCommandCompleter(NormalizeCommand.class, new StringsCompleter(NormalizeCommand.AVAILABLE_OPTIONS)),
         new SpecialCommandCompleter(PrettyPrintFlagCommand.class, new StringsCompleter(PrettyPrintFlagCommand.AVAILABLE_OPTIONS)),
         new SpecialCommandCompleter(CommandHandler.HelpCommand.class, new StringsCompleter(CommandHandler.INSTANCE.commandMap.keySet())),
-        new ScopeCompleter(this::getInScopeElements),
+        new ScopeCompleter(() -> getInScopeElements(myServer, getStatements())),
         new ModuleCompleter(this, this::modulePaths),
         KeywordCompleter.INSTANCE,
         CommandsCompleter.INSTANCE
@@ -113,12 +119,13 @@ public class JLineCliRepl extends CommonCliRepl {
   }
 
   public static void main(String... args) {
-    launch(false, Collections.emptyList());
+    launch(false, Collections.emptyList(), new ArendServerImpl(new CliServerRequester(new LibraryManager(DummyErrorReporter.INSTANCE)), false, false, true));
   }
 
   public static void launch(
     boolean recompile,
-    @NotNull Collection<? extends Path> libDirs
+    @NotNull Collection<? extends Path> libDirs,
+    @NotNull ArendServer server
   ) {
     Terminal terminal;
     try {
@@ -133,7 +140,7 @@ public class JLineCliRepl extends CommonCliRepl {
       System.exit(1);
       return;
     }
-    var repl = new JLineCliRepl(terminal);
+    var repl = new JLineCliRepl(terminal, server);
     // TODO[server2]: if (recompile) repl.getReplLibrary().addFlag(SourceLibrary.Flag.RECOMPILE);
     repl.initialize();
     repl.println(ASCII_BANNER);

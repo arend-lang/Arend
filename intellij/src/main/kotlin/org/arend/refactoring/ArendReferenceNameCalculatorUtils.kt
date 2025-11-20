@@ -52,7 +52,7 @@ class NsCmdRawModifierAction(val rawModifier: RawModifier, val currentFile: Aren
             val modulePath = LongName(modifier.command.module.path)
             val stat = statCmd.ancestor<ArendStat>()
 
-            if (stat != null)
+            if (stat != null && !currentFile.isRepl)
               addStatCmd(factory, stat, findPlaceForNsCmd(currentFile, modulePath))
           }
         }

@@ -30,9 +30,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public abstract class ArendTestCase {
   protected ArendServer server;
 
+  protected ArendServerRequester getRequester() {
+    return ArendServerRequester.TRIVIAL;
+  }
+
   @Before
   public void initializeServer() {
-    server = new ArendServerImpl(ArendServerRequester.TRIVIAL, false, false, false);
+    server = new ArendServerImpl(getRequester(), false, false, false);
     server.addReadOnlyModule(Prelude.MODULE_LOCATION, () -> new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE));
   }
 

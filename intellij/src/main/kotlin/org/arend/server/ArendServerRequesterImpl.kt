@@ -1,6 +1,7 @@
 package org.arend.server
 
 import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.findDirectory
 import com.intellij.psi.PsiFileSystemItem
@@ -19,6 +20,7 @@ import org.arend.term.abs.AbstractReferable
 import org.arend.term.abs.AbstractReference
 import org.arend.term.abs.ConcreteBuilder
 import org.arend.term.group.ConcreteGroup
+import org.arend.toolWindow.repl.ArendReplService
 import org.arend.util.FileUtils
 import org.arend.util.addGeneratedModule
 import org.arend.util.findInternalLibrary
@@ -29,8 +31,13 @@ import java.util.function.Supplier
 class ArendServerRequesterImpl(private val project: Project) : ArendServerRequester {
     override fun requestModuleUpdate(server: ArendServer, module: ModuleLocation) {
         if (module.locationKind == ModuleLocation.LocationKind.GENERATED) return
+        val repl = project.service<ArendReplService>().getRepl()
         runReadAction {
-            val file = project.findLibrary(module.libraryName)?.findArendFile(module.modulePath, module.locationKind == ModuleLocation.LocationKind.TEST)
+            val file = if (server == repl?.getServer()) {
+                repl.replLibraries[module.libraryName]?.findArendFile(module.modulePath, module.locationKind == ModuleLocation.LocationKind.TEST)
+            } else {
+                project.findLibrary(module.libraryName)?.findArendFile(module.modulePath, module.locationKind == ModuleLocation.LocationKind.TEST)
+            }
             doUpdateModule(server, module, file ?: return@runReadAction)
         }
     }
@@ -40,7 +47,7 @@ class ArendServerRequesterImpl(private val project: Project) : ArendServerReques
     }
 
     override fun getFiles(libraryName: String, inTests: Boolean, prefix: List<String>): List<String>? {
-        val library = project.findLibrary(libraryName) ?: return null
+        val library = project.findLibrary(libraryName) ?: project.service<ArendReplService>().getRepl()?.replLibraries[libraryName] ?: return null
         var dir = (if (inTests) library.testsDirFile else library.sourcesDirFile) ?: return null
         for (name in prefix) {
             dir = dir.findDirectory(name) ?: return null

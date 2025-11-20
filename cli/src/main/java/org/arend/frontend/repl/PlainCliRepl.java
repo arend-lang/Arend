@@ -1,5 +1,10 @@
 package org.arend.frontend.repl;
 
+import org.arend.error.DummyErrorReporter;
+import org.arend.frontend.library.CliServerRequester;
+import org.arend.frontend.library.LibraryManager;
+import org.arend.server.ArendServer;
+import org.arend.server.impl.ArendServerImpl;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
@@ -9,8 +14,8 @@ import java.util.Collections;
 import java.util.Scanner;
 
 public class PlainCliRepl extends CommonCliRepl {
-  public PlainCliRepl() {
-    super();
+  public PlainCliRepl(ArendServer server) {
+    super(server);
     prompt = "λ ";
   }
 
@@ -52,14 +57,15 @@ public class PlainCliRepl extends CommonCliRepl {
   }
 
   public static void main(String... args) {
-    launch(false, Collections.emptyList());
+    launch(false, Collections.emptyList(), new ArendServerImpl(new CliServerRequester(new LibraryManager(DummyErrorReporter.INSTANCE)), false, false, true));
   }
 
   public static void launch(
     boolean recompile,
-    @NotNull Collection<? extends Path> libDirs
+    @NotNull Collection<? extends Path> libDirs,
+    @NotNull ArendServer server
   ) {
-    var repl = new PlainCliRepl();
+    var repl = new PlainCliRepl(server);
     repl.println(ASCII_BANNER);
     repl.println();
     repl.println("Note: you're using the plain REPL.");

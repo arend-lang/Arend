@@ -69,8 +69,9 @@ class ArendNoVariantsDelegator : CompletionContributor() {
             }
         }
 
-       val noVariants = tracker.variants.isEmpty() && tracker.nullPsiVariants.isEmpty() || !parameters.isAutoPopup
-       if (project != null && (isInsideValidExpr || isInsideValidNsCmd || isClassExtension) && noVariants) {
+        val noVariants = tracker.variants.isEmpty() && tracker.nullPsiVariants.isEmpty() || !parameters.isAutoPopup
+        val isReplFile = file.isRepl
+        if (!isReplFile && project != null && (isInsideValidExpr || isInsideValidNsCmd || isClassExtension) && noVariants) {
             val consumer = { name: String, refs: List<PsiLocatedReferable>? ->
                 if (bpm.prefixMatches(name)) {
                     val locatedReferables = refs?.filter { it is ArendFile || !isInsideValidNsCmd } ?: when {
@@ -109,7 +110,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                                         }
                                     }
                                 )
-                        }
+                            }
                     }
                 }
             }
@@ -128,9 +129,9 @@ class ArendNoVariantsDelegator : CompletionContributor() {
             }
 
             StubIndex.getInstance().processAllKeys(if (isInsideValidNsCmd) ArendFileIndex.KEY else ArendDefinitionIndex.KEY, project) { name ->
-              val withoutSuffix = name.removeSuffix(".ard")
-              consumer.invoke(withoutSuffix, null)
-              true // If only a limited number (say N) of variants is needed, return false after N added lookUpElements
+                val withoutSuffix = name.removeSuffix(".ard")
+                consumer.invoke(withoutSuffix, null)
+                true // If only a limited number (say N) of variants is needed, return false after N added lookUpElements
             }
         } else {
             result.restartCompletionOnAnyPrefixChange()
