@@ -3519,7 +3519,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       if (hLevel != null) {
         errorReporter.report(new TypecheckingError("\\Cat cannot have an h-level", expr.getHLevel()));
       }
-      UniverseExpression universe = new UniverseExpression(new Sort(pLevel, true));
+      UniverseExpression universe = new UniverseExpression(new Sort(pLevel, Level.CAT_LEVEL));
       return checkResult(expectedType, new TypecheckingResult(universe, new UniverseExpression(universe.getSort().succ())), expr);
     }
 
@@ -4158,7 +4158,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     Level actualLevel;
     {
       Sort sort = resultType == null ? null : resultType.getSortOfType();
-      actualLevel = sort != null ? sort.getHLevel() : Level.INFINITY;
+      actualLevel = sort != null ? sort.getHLevel() : Level.CAT_LEVEL;
     }
 
     List<ExtElimClause> clauses;

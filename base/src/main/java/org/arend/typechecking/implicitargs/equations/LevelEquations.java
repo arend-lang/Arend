@@ -8,7 +8,8 @@ import java.util.Map;
 public class LevelEquations<Var> {
   private final List<Var> myVariables = new ArrayList<>();
   private final List<LevelEquation<Var>> myEquations = new ArrayList<>();
-  static final int INFINITY = Integer.MAX_VALUE;
+  static final int INFINITY = Integer.MAX_VALUE - 1;
+  static final int CAT_LEVEL = Integer.MAX_VALUE;
 
   public List<LevelEquation<Var>> getEquations() {
     return myEquations;
@@ -53,7 +54,12 @@ public class LevelEquations<Var> {
     for (int i = myVariables.size(); i >= 0; i--) {
       boolean updated = false;
       for (LevelEquation<Var> equation : myEquations) {
-        if (equation.isInfinity()) {
+        if (equation.isCat()) {
+          Integer prev = solution.put(equation.getVariable(), CAT_LEVEL);
+          if (prev == null || prev != CAT_LEVEL) {
+            updated = true;
+          }
+        } else if (equation.isInfinity()) {
           Integer prev = solution.put(equation.getVariable(), INFINITY);
           if (prev == null || prev != INFINITY) {
             updated = true;
@@ -62,18 +68,18 @@ public class LevelEquations<Var> {
           int a = solution.get(equation.getVariable1());
           int b = solution.get(equation.getVariable2());
           Integer m = equation.getMaxConstant();
-          if (b != INFINITY && (a == INFINITY || (m == null || a + m < 0) && b > a + equation.getConstant())) {
+          if (b != INFINITY && b != CAT_LEVEL && (a == INFINITY || a == CAT_LEVEL || (m == null || a + m < 0) && b > a + equation.getConstant())) {
             if (a != INFINITY) {
               List<LevelEquation<Var>> newPath = new ArrayList<>(paths.get(equation.getVariable1()));
               newPath.add(equation);
               paths.put(equation.getVariable2(), newPath);
             }
-            if (i == 0 || equation.getVariable2() == null && a != INFINITY) {
+            if (i == 0 || equation.getVariable2() == null && a != INFINITY && a != CAT_LEVEL) {
               solution.remove(null);
               return paths.get(equation.getVariable2());
             }
 
-            solution.put(equation.getVariable2(), a == INFINITY ? INFINITY : a + equation.getConstant());
+            solution.put(equation.getVariable2(), a == CAT_LEVEL || a == INFINITY ? a : a + equation.getConstant());
             updated = true;
           }
         }

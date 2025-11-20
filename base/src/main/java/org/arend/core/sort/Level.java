@@ -18,11 +18,12 @@ public class Level implements CoreLevel {
   private final LevelVariable myVar;
   private final int myMaxConstant;
 
-  public static final Level INFINITY = new Level();
+  public static final Level INFINITY = new Level(false);
+  public static final Level CAT_LEVEL = new Level(true);
 
-  private Level() {
+  private Level(boolean isCat) {
     myVar = null;
-    myConstant = Integer.MAX_VALUE;
+    myConstant = isCat ? Integer.MAX_VALUE : Integer.MAX_VALUE - 1;
     myMaxConstant = 0;
   }
 
@@ -69,6 +70,11 @@ public class Level implements CoreLevel {
   }
 
   @Override
+  public boolean isCat() {
+    return this == CAT_LEVEL;
+  }
+
+  @Override
   public boolean isClosed() {
     return myVar == null;
   }
@@ -92,10 +98,14 @@ public class Level implements CoreLevel {
 
   public Level add(int constant) {
     assert constant >= 0;
-    return constant == 0 || isInfinity() ? this : new Level(myVar, myConstant + constant, myMaxConstant + constant);
+    return constant == 0 || isCat() || isInfinity() ? this : new Level(myVar, myConstant + constant, myMaxConstant + constant);
   }
 
   public Level max(Level level) {
+    if (isCat() || level.isCat()) {
+      return CAT_LEVEL;
+    }
+
     if (isInfinity() || level.isInfinity()) {
       return INFINITY;
     }
@@ -119,14 +129,14 @@ public class Level implements CoreLevel {
   }
 
   public Level subst(LevelSubstitution subst) {
-    if (myVar == null || this == INFINITY) {
+    if (myVar == null || this == INFINITY || this == CAT_LEVEL) {
       return this;
     }
     Level level = (Level) subst.get(myVar);
     if (level == null) {
       return this;
     }
-    if (level == INFINITY || isVarOnly()) {
+    if (level == INFINITY || level == CAT_LEVEL || isVarOnly()) {
       return level;
     }
 
@@ -155,6 +165,12 @@ public class Level implements CoreLevel {
       return compare(level2, level1, CMP.LE, equations, sourceNode);
     }
 
+    if (level1.isCat()) {
+      return level2.isCat() || !level2.isClosed() && (equations == null || equations.addEquation(CAT_LEVEL, level2, CMP.LE, sourceNode));
+    }
+    if (level2.isCat()) {
+      return cmp == CMP.LE || !level1.isClosed() && (equations == null || equations.addEquation(CAT_LEVEL, level1, CMP.LE, sourceNode));
+    }
     if (level1.isInfinity()) {
       return level2.isInfinity() || !level2.isClosed() && (equations == null || equations.addEquation(INFINITY, level2, CMP.LE, sourceNode));
     }

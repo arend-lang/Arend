@@ -420,7 +420,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   public Expression visitPi(PiExpression expr, Expression expectedType) {
     checkSort(expr.getResultSort(), expr);
     UniverseExpression type = new UniverseExpression(expr.getResultSort());
-    Sort sort1 = checkDependentLinkWithResult(expr.getParameters(), expr.getResultSort().isProp() ? null : new UniverseExpression(new Sort(expr.getResultSort().getPLevel(), Level.INFINITY)), expr);
+    Sort sort1 = checkDependentLinkWithResult(expr.getParameters(), expr.getResultSort().isProp() ? null : new UniverseExpression(new Sort(expr.getResultSort().getPLevel(), Level.CAT_LEVEL)), expr);
     Sort sort2 = expr.getCodomain().accept(this, type).toSort();
     freeDependentLink(expr.getParameters());
 
@@ -850,7 +850,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
     Sort sort = type.getSortOfType();
     ErrorReporter errorReporter = new MyErrorReporter(errorExpr);
-    ElimBody newBody = new ElimTypechecking(errorReporter, myEquations, type, mode, level, sort != null ? sort.getHLevel() : Level.INFINITY, isSFunc, null, 0, mySourceNode).typecheckElim(exprClauses, parameters);
+    ElimBody newBody = new ElimTypechecking(errorReporter, myEquations, type, mode, level, sort != null ? sort.getHLevel() : Level.CAT_LEVEL, isSFunc, null, 0, mySourceNode).typecheckElim(exprClauses, parameters);
     if (newBody == null) {
       throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot check the body", mySourceNode), errorExpr));
     }

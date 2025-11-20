@@ -31,7 +31,7 @@ public class LevelMismatchError extends TypecheckingError {
   public LevelMismatchError(TargetKind kind, Sort sort, @Nullable ConcreteSourceNode cause) {
     super("The type of " + kind.representation + " must be a proposition", cause);
     this.kind = kind;
-    actualSort = sort != null ? sort : new Sort(new org.arend.core.sort.Level(LevelVariable.PVAR), org.arend.core.sort.Level.INFINITY);
+    actualSort = sort != null ? sort : new Sort(new org.arend.core.sort.Level(LevelVariable.PVAR), org.arend.core.sort.Level.CAT_LEVEL);
   }
 
   @Override

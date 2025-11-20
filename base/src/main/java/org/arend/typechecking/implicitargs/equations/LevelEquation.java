@@ -7,26 +7,26 @@ public class LevelEquation<Var> {
   private final Var myVar2;
   private final Integer myConstant;
   private final Integer myMaxConstant;
+  private final boolean myCat;
 
   public LevelEquation(Var var1, Var var2, int constant, Integer maxConstant) {
     myVar1 = var1;
     myVar2 = var2;
     myConstant = constant;
     myMaxConstant = maxConstant;
+    myCat = false;
   }
 
   public LevelEquation(Var var1, Var var2, int constant) {
-    myVar1 = var1;
-    myVar2 = var2;
-    myConstant = constant;
-    myMaxConstant = null;
+    this(var1, var2, constant, null);
   }
 
-  public LevelEquation(Var var) {
+  public LevelEquation(Var var, boolean isCat) {
     myVar1 = null;
     myVar2 = var;
     myConstant = null;
     myMaxConstant = null;
+    myCat = isCat;
   }
 
   public LevelEquation(LevelEquation<? extends Var> equation) {
@@ -34,10 +34,15 @@ public class LevelEquation<Var> {
     myVar2 = equation.myVar2;
     myConstant = equation.myConstant;
     myMaxConstant = equation.myMaxConstant;
+    myCat = equation.myCat;
   }
 
   public boolean isInfinity() {
-    return myConstant == null;
+    return myConstant == null && !myCat;
+  }
+
+  public boolean isCat() {
+    return myCat;
   }
 
   public Var getVariable1() {
@@ -77,23 +82,13 @@ public class LevelEquation<Var> {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-
     LevelEquation<?> that = (LevelEquation<?>) o;
-
-    if (!Objects.equals(myVar1, that.myVar1)) return false;
-    if (!Objects.equals(myVar2, that.myVar2)) return false;
-    if (!Objects.equals(myConstant, that.myConstant)) return false;
-    return Objects.equals(myMaxConstant, that.myMaxConstant);
+    return myCat == that.myCat && Objects.equals(myVar1, that.myVar1) && Objects.equals(myVar2, that.myVar2) && Objects.equals(myConstant, that.myConstant) && Objects.equals(myMaxConstant, that.myMaxConstant);
   }
 
   @Override
   public int hashCode() {
-    int result = myVar1 != null ? myVar1.hashCode() : 0;
-    result = 31 * result + (myVar2 != null ? myVar2.hashCode() : 0);
-    result = 31 * result + (myConstant != null ? myConstant.hashCode() : 0);
-    result = 31 * result + (myMaxConstant != null ? myMaxConstant.hashCode() : 0);
-    return result;
+    return Objects.hash(myVar1, myVar2, myConstant, myMaxConstant, myCat);
   }
 }

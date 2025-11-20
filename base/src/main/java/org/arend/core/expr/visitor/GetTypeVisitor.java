@@ -45,7 +45,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   }
 
   private Level getMaxLevel(Level level1, Level level2) {
-    return level2 == null ? level1 : level2.max(level1) /* TODO[sorts] */;
+    return level2 == null ? level1 : level2.max(level1);
   }
 
   private boolean matchLevels(Levels paramLevels, Levels argLevels, Map<LevelVariable, Level> levelMap) {

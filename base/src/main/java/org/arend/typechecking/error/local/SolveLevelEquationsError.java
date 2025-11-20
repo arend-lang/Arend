@@ -38,13 +38,13 @@ public class SolveLevelEquationsError extends TypecheckingError {
     Set<InferenceLevelVariable> variables = new HashSet<>();
     for (LevelEquation<? extends LevelVariable> equation : equations) {
       builder.setLength(0);
-      if (equation.isInfinity()) {
+      if (equation.isInfinity() || equation.isCat()) {
         if (equation.getVariable() instanceof InferenceLevelVariable) {
           variables.add((InferenceLevelVariable) equation.getVariable());
         }
 
         printEqExpr(builder, ppv, equation.getVariable(), null, null, refMap);
-        builder.append(" = \\oo");
+        builder.append(equation.isCat() ? " = \\Cat" : " = \\oo");
       } else {
         if (equation.getVariable1() instanceof InferenceLevelVariable) {
           variables.add((InferenceLevelVariable) equation.getVariable1());

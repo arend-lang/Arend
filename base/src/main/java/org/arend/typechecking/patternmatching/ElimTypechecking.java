@@ -56,7 +56,7 @@ public class ElimTypechecking {
   private final int myNumberOfExternalParameters;
 
   private static Integer getMinPlus1(Integer level1, Level l2, int sub) {
-    Integer level2 = !l2.isInfinity() && l2.isClosed() ? l2.getConstant() : null;
+    Integer level2 = !l2.isCat() && !l2.isInfinity() && l2.isClosed() ? l2.getConstant() : null;
     Integer result = level1 != null && level2 != null ? Integer.valueOf(Math.min(level1, level2 - sub)) : level2 != null ? Integer.valueOf(level2 - sub) : level1;
     return result == null ? null : result + 1;
   }
@@ -89,9 +89,9 @@ public class ElimTypechecking {
       }
 
       Sort pathSort = pathType.getSortOfType();
-      if (pathSort != null && !pathSort.getHLevel().isInfinity()) {
+      if (pathSort != null && !pathSort.getHLevel().isCat() && !pathSort.getHLevel().isInfinity()) {
         actualLevel = pathSort.getHLevel();
-        if (!actualLevel.isInfinity() && actualLevel.isClosed() && actualLevel.getConstant() - actualLevelSub < -1) {
+        if (!actualLevel.isCat() && !actualLevel.isInfinity() && actualLevel.isClosed() && actualLevel.getConstant() - actualLevelSub < -1) {
           actualLevelSub = actualLevel.getConstant() + 1;
         }
       } else {
@@ -110,7 +110,7 @@ public class ElimTypechecking {
     myExpectedType = expectedType;
     myMode = mode;
     myLevel = null;
-    myActualLevel = Level.INFINITY;
+    myActualLevel = Level.CAT_LEVEL;
     myActualLevelSub = 0;
     myClauses = clauses;
     myNumberOfExternalParameters = 0;

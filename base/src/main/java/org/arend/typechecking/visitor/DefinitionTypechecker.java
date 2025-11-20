@@ -99,7 +99,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         DataDefinition dataDef = new DataDefinition(definition.getData());
         dataDef.setStatus(Definition.TypeCheckingStatus.TYPE_CHECKING);
         typecheckDataHeader(dataDef, dataDefinition, localInstancePool);
-        if (dataDef.getSort() == null || dataDef.getSort().getPLevel().isInfinity()) {
+        if (dataDef.getSort() == null || dataDef.getSort().getPLevel().isInfinity() || dataDef.getSort().getPLevel().isCat()) {
           errorReporter.report(new TypecheckingError("Cannot infer the sort of a recursive data type", definition));
           dataDef.addStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
           dataDef.setSort(Sort.SET0);
@@ -1446,7 +1446,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         clauses = typechecker.withErrorReporter(countingErrorReporter, tc -> new PatternTypechecking(PatternTypechecking.Mode.FUNCTION, typechecker, true, null, elimParams).typecheckClauses(elimBody.getClauses(), def.getParameters(), typedDef.getParameters(), expectedType, typedDef));
       }
       Sort sort = expectedType.getSortOfType();
-      Body typedBody = clauses == null || def.getKind() == FunctionKind.AXIOM ? null : new ElimTypechecking(errorReporter, typechecker.getEquations(), expectedType, PatternTypechecking.Mode.FUNCTION, typeLevel, sort != null ? sort.getHLevel() : Level.INFINITY, kind.isSFunc() && kind != FunctionKind.TYPE, elimBody.getClauses(), typedDef.getParametersOriginalDefinitions().size(), def).typecheckElim(clauses, typedDef.getParameters(), elimParams);
+      Body typedBody = clauses == null || def.getKind() == FunctionKind.AXIOM ? null : new ElimTypechecking(errorReporter, typechecker.getEquations(), expectedType, PatternTypechecking.Mode.FUNCTION, typeLevel, sort != null ? sort.getHLevel() : Level.CAT_LEVEL, kind.isSFunc() && kind != FunctionKind.TYPE, elimBody.getClauses(), typedDef.getParametersOriginalDefinitions().size(), def).typecheckElim(clauses, typedDef.getParameters(), elimParams);
       if (typedBody != null) {
         typedDef.setBody(typedBody);
         typedDef.addStatus(Definition.TypeCheckingStatus.NO_ERRORS);
@@ -2024,7 +2024,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
       // Check if constructors pattern match on the interval
       for (Constructor constructor : dataDefinition.getConstructors()) {
-        if (constructor.getBody() instanceof IntervalElim && !inferredSort.getHLevel().isInfinity()) {
+        if (constructor.getBody() instanceof IntervalElim && !inferredSort.getHLevel().isInfinity() && !inferredSort.getHLevel().isCat()) {
           Sort.compare(new Sort(inferredSort.getPLevel(), Level.INFINITY), inferredSort, CMP.LE, typechecker.getEquations(), def);
           break;
         }

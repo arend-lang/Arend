@@ -25,7 +25,7 @@ public class SquashedDataError extends TypecheckingError {
     if (myLevelSub == 0) {
       return myLevel;
     }
-    if (myLevel.isInfinity()) {
+    if (myLevel.isInfinity() || myLevel.isCat()) {
       myLevelSub = 0;
       return myLevel;
     }

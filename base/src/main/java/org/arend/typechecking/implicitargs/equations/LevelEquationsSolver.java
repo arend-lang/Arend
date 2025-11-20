@@ -47,7 +47,7 @@ public class LevelEquationsSolver {
     variables.clear();
 
     for (LevelEquation<LevelVariable> levelEquation : levelEquations) {
-      if (levelEquation.isInfinity()) {
+      if (levelEquation.isInfinity() || levelEquation.isCat()) {
         //noinspection unchecked
         addEquation((LevelEquation<InferenceLevelVariable>) (LevelEquation<?>) levelEquation, false);
       } else {
@@ -117,8 +117,8 @@ public class LevelEquationsSolver {
   }
 
   private void addEquation(LevelEquation<InferenceLevelVariable> equation, boolean based) {
-    InferenceLevelVariable var1 = equation.isInfinity() ? equation.getVariable() : equation.getVariable1();
-    InferenceLevelVariable var2 = equation.isInfinity() ? equation.getVariable() : equation.getVariable2();
+    InferenceLevelVariable var1 = equation.isInfinity() || equation.isCat() ? equation.getVariable() : equation.getVariable1();
+    InferenceLevelVariable var2 = equation.isInfinity() || equation.isCat() ? equation.getVariable() : equation.getVariable2();
     assert var1 == null || var2 == null || var1.getType() == var2.getType();
 
     if (var1 != null && var1.getType() == LevelVariable.LvlType.PLVL || var2 != null && var2.getType() == LevelVariable.LvlType.PLVL) {
@@ -228,7 +228,7 @@ public class LevelEquationsSolver {
     Map<InferenceLevelVariable, Integer> solution = new HashMap<>();
     cycle = myHLevelEquations.solve(solution);
     for (Map.Entry<InferenceLevelVariable, Integer> entry : solution.entrySet()) {
-      if (entry.getValue() != LevelEquations.INFINITY) {
+      if (entry.getValue() != LevelEquations.INFINITY && entry.getValue() != LevelEquations.CAT_LEVEL) {
         entry.setValue(entry.getValue() + 1);
       }
     }
@@ -241,8 +241,8 @@ public class LevelEquationsSolver {
         if (!myHBased || unBased.contains(vars.proj2)) {
           Integer sol = solution.get(vars.proj2);
           if (sol == 0 || sol == 1) {
-            myPLevelEquations.getEquations().removeIf(equation -> !equation.isInfinity() && (equation.getVariable1() == vars.proj1 || equation.getVariable2() == vars.proj1));
-            myBasedPLevelEquations.getEquations().removeIf(equation -> !equation.isInfinity() && (equation.getVariable1() == vars.proj1 || equation.getVariable2() == vars.proj1));
+            myPLevelEquations.getEquations().removeIf(equation -> !equation.isInfinity() && !equation.isCat() && (equation.getVariable1() == vars.proj1 || equation.getVariable2() == vars.proj1));
+            myBasedPLevelEquations.getEquations().removeIf(equation -> !equation.isInfinity() && !equation.isCat() && (equation.getVariable1() == vars.proj1 || equation.getVariable2() == vars.proj1));
             myConstantUpperBounds.remove(vars.proj1);
           }
         }
@@ -267,8 +267,8 @@ public class LevelEquationsSolver {
     SimpleLevelSubstitution result = new SimpleLevelSubstitution();
     for (InferenceLevelVariable var : unBased) {
       int sol = solution.get(var);
-      assert sol != LevelEquations.INFINITY || var.getType() == LevelVariable.LvlType.HLVL;
-      result.add(var, sol == LevelEquations.INFINITY ? Level.INFINITY : new Level(-sol));
+      assert sol != LevelEquations.INFINITY && sol != LevelEquations.CAT_LEVEL || var.getType() == LevelVariable.LvlType.HLVL;
+      result.add(var, sol == LevelEquations.CAT_LEVEL ? Level.CAT_LEVEL : sol == LevelEquations.INFINITY ? Level.INFINITY : new Level(-sol));
     }
 
     boolean useStd = true;
@@ -283,11 +283,11 @@ public class LevelEquationsSolver {
     }
 
     for (Map.Entry<InferenceLevelVariable, Integer> entry : basedSolution.entrySet()) {
-      assert entry.getValue() != LevelEquations.INFINITY || entry.getKey().getType() == LevelVariable.LvlType.HLVL;
+      assert entry.getValue() != LevelEquations.INFINITY && entry.getValue() != LevelEquations.CAT_LEVEL || entry.getKey().getType() == LevelVariable.LvlType.HLVL;
       if (!unBased.contains(entry.getKey())) {
         int sol = solution.get(entry.getKey());
-        assert sol != LevelEquations.INFINITY || entry.getKey().getType() == LevelVariable.LvlType.HLVL;
-        result.add(entry.getKey(), sol == LevelEquations.INFINITY || entry.getValue() == LevelEquations.INFINITY ? Level.INFINITY : new Level(useStd ? entry.getKey().getStd() : getLowerBound(entry.getKey()), -entry.getValue(), -sol));
+        assert sol != LevelEquations.INFINITY && sol != LevelEquations.CAT_LEVEL || entry.getKey().getType() == LevelVariable.LvlType.HLVL;
+        result.add(entry.getKey(), sol == LevelEquations.CAT_LEVEL || entry.getValue() == LevelEquations.CAT_LEVEL ? Level.CAT_LEVEL : sol == LevelEquations.INFINITY || entry.getValue() == LevelEquations.INFINITY ? Level.INFINITY : new Level(useStd ? entry.getKey().getStd() : getLowerBound(entry.getKey()), -entry.getValue(), -sol));
       }
     }
 
@@ -297,7 +297,7 @@ public class LevelEquationsSolver {
         int maxConstant = entry.getValue().getMaxConstant();
         List<LevelEquation<LevelVariable>> equations = new ArrayList<>(2);
         if (!Level.compare(level.withMaxConstant() ? new Level(level.getVar(), level.getConstant()) : level, entry.getValue(), CMP.LE, DummyEquations.getInstance(), null)) {
-          equations.add(level.isInfinity() ? new LevelEquation<>(entry.getKey()) : new LevelEquation<>(level.getVar(), entry.getKey(), -level.getConstant()));
+          equations.add(level.isInfinity() || level.isCat() ? new LevelEquation<>(entry.getKey(), level.isCat()) : new LevelEquation<>(level.getVar(), entry.getKey(), -level.getConstant()));
         }
         if (level.withMaxConstant() && !Level.compare(new Level(level.getMaxConstant()), entry.getValue(), CMP.LE, DummyEquations.getInstance(), null)) {
           equations.add(new LevelEquation<>(null, entry.getKey(), -level.getMaxConstant()));
@@ -320,7 +320,7 @@ public class LevelEquationsSolver {
             unBasedSet.add(var);
           } else {
             int sol = basedSolution.get(var);
-            if (sol == LevelEquations.INFINITY || ub.getConstant() < sol) {
+            if (sol == LevelEquations.INFINITY || sol == LevelEquations.CAT_LEVEL || ub.getConstant() < sol) {
               unBasedSet.add(var);
             }
           }
@@ -375,13 +375,13 @@ public class LevelEquationsSolver {
   private void reportCycle(List<LevelEquation<InferenceLevelVariable>> cycle, Set<InferenceLevelVariable> unBased) {
     Set<LevelEquation<? extends LevelVariable>> basedCycle = new LinkedHashSet<>();
     for (LevelEquation<InferenceLevelVariable> equation : cycle) {
-      if (equation.isInfinity() || equation.getVariable1() != null) {
+      if (equation.isInfinity() || equation.isCat() || equation.getVariable1() != null) {
         basedCycle.add(new LevelEquation<>(equation));
       } else {
         basedCycle.add(new LevelEquation<>(equation.getVariable2() == null || unBased.contains(equation.getVariable2()) ? null : equation.getVariable2().getStd(), equation.getVariable2(), equation.getConstant()));
       }
     }
-    LevelEquation<InferenceLevelVariable> lastEquation = cycle.get(cycle.size() - 1);
+    LevelEquation<InferenceLevelVariable> lastEquation = cycle.getLast();
     InferenceLevelVariable var = lastEquation.getVariable1() != null ? lastEquation.getVariable1() : lastEquation.getVariable2();
     myErrorReporter.report(new SolveLevelEquationsError(basedCycle, var.getSourceNode()));
   }

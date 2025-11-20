@@ -228,10 +228,10 @@ public class TwoStageEquations implements Equations {
         if (cmp == CMP.LE) {
           Sort.compare(sort, genSort, CMP.LE, this, sourceNode);
         } else {
-          if (!sort.getPLevel().isInfinity()) {
+          if (!sort.getPLevel().isInfinity() && !sort.getPLevel().isCat()) {
             addLevelEquation(genSort.getPLevel().getVar(), sort.getPLevel().getVar(), sort.getPLevel().getConstant(), sort.getPLevel().getMaxConstant(), sourceNode);
           }
-          if (!sort.getHLevel().isInfinity()) {
+          if (!sort.getHLevel().isInfinity() && !sort.getPLevel().isCat()) {
             addLevelEquation(genSort.getHLevel().getVar(), sort.getHLevel().getVar(), sort.getHLevel().getConstant(), sort.getHLevel().getMaxConstant(), sourceNode);
           }
         }
@@ -298,11 +298,11 @@ public class TwoStageEquations implements Equations {
     myLevelEquations.add(new LevelEquation<>(var1, var2, constant, maxConstant));
   }
 
-  private void addLevelEquation(LevelVariable var, Concrete.SourceNode sourceNode) {
+  private void addLevelEquation(LevelVariable var, boolean isCat, Concrete.SourceNode sourceNode) {
     if (var instanceof InferenceLevelVariable) {
-      myLevelEquations.add(new LevelEquation<>(var));
+      myLevelEquations.add(new LevelEquation<>(var, isCat));
     } else {
-      myVisitor.getErrorReporter().report(new SolveLevelEquationsError(Collections.singletonList(new LevelEquation<>(var)), sourceNode));
+      myVisitor.getErrorReporter().report(new SolveLevelEquationsError(Collections.singletonList(new LevelEquation<>(var, isCat)), sourceNode));
     }
   }
 
@@ -318,15 +318,27 @@ public class TwoStageEquations implements Equations {
 
   @Override
   public boolean addEquation(Level level1, Level level2, CMP cmp, Concrete.SourceNode sourceNode) {
+    if (level1.isCat() && level2.isCat() || level1.isCat() && cmp == CMP.GE || level2.isCat() && cmp == CMP.LE) {
+      return true;
+    }
+    if (level1.isCat()) {
+      addLevelEquation(level2.getVar(), true, sourceNode);
+      return true;
+    }
+    if (level2.isCat()) {
+      addLevelEquation(level1.getVar(), true, sourceNode);
+      return true;
+    }
+
     if (level1.isInfinity() && level2.isInfinity() || level1.isInfinity() && cmp == CMP.GE || level2.isInfinity() && cmp == CMP.LE) {
       return true;
     }
     if (level1.isInfinity()) {
-      addLevelEquation(level2.getVar(), sourceNode);
+      addLevelEquation(level2.getVar(), false, sourceNode);
       return true;
     }
     if (level2.isInfinity()) {
-      addLevelEquation(level1.getVar(), sourceNode);
+      addLevelEquation(level1.getVar(), false, sourceNode);
       return true;
     }
 

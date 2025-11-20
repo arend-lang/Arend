@@ -14,7 +14,6 @@ import org.jetbrains.annotations.NotNull;
 public class Sort implements CoreSort {
   private final Level myPLevel;
   private final Level myHLevel;
-  private final boolean myCat;
 
   public static final Sort PROP = new Sort(new Level(0), new Level(-1));
   public static final Sort SET0 = new Sort(new Level(0), new Level(0));
@@ -32,14 +31,9 @@ public class Sort implements CoreSort {
     return new Sort(new Level(pLevel), Level.INFINITY);
   }
 
-  private Sort(Level pLevel, Level hLevel, boolean isCat) {
+  public Sort(Level pLevel, Level hLevel) {
     myPLevel = pLevel;
     myHLevel = hLevel;
-    myCat = isCat;
-  }
-
-  public Sort(Level pLevel, Level hLevel) {
-    this(pLevel, hLevel, false);
   }
 
   public Sort(int pLevel, int hLevel) {
@@ -48,12 +42,8 @@ public class Sort implements CoreSort {
     assert hLevel >= 0;
   }
 
-  public Sort(Level pLevel, boolean isCat) {
-    this(pLevel, Level.INFINITY, isCat);
-  }
-
   public static Sort make(Level pLevel, Level hLevel, boolean isCat) {
-    return isCat ? new Sort(pLevel, true) : new Sort(pLevel, hLevel);
+    return new Sort(pLevel, isCat ? Level.CAT_LEVEL : hLevel);
   }
 
   @NotNull
@@ -69,11 +59,11 @@ public class Sort implements CoreSort {
   }
 
   public boolean isOmega() {
-    return myCat && myPLevel.isInfinity();
+    return myPLevel.isInfinity() && myHLevel.isCat();
   }
 
   public boolean isCat() {
-    return myCat;
+    return myHLevel.isCat();
   }
 
   public Sort succ() {
@@ -85,7 +75,7 @@ public class Sort implements CoreSort {
     if (sort.isProp()) return this;
     Level pLevel = myPLevel.max(sort.myPLevel);
     Level hLevel = myHLevel.max(sort.myHLevel);
-    return pLevel == null || hLevel == null ? null : new Sort(pLevel, hLevel, myCat || sort.myCat);
+    return pLevel == null || hLevel == null ? null : new Sort(pLevel, hLevel);
   }
 
   @Override
@@ -131,9 +121,6 @@ public class Sort implements CoreSort {
       }
       return compareProp(sort1, equations, sourceNode);
     }
-    if (sort1.myCat != sort2.myCat && (cmp == CMP.EQ || cmp == CMP.LE && sort1.myCat || cmp == CMP.GE && sort2.myCat)) {
-      return false;
-    }
     return Level.compare(sort1.getPLevel(), sort2.getPLevel(), cmp, equations, sourceNode) && Level.compare(sort1.getHLevel(), sort2.getHLevel(), cmp, equations, sourceNode);
   }
 
@@ -142,7 +129,7 @@ public class Sort implements CoreSort {
   }
 
   public Sort subst(LevelSubstitution subst) {
-    return subst.isEmpty() || myPLevel.isClosed() && myHLevel.isClosed() ? this : new Sort(myPLevel.subst(subst), myHLevel.subst(subst), myCat);
+    return subst.isEmpty() || myPLevel.isClosed() && myHLevel.isClosed() ? this : new Sort(myPLevel.subst(subst), myHLevel.subst(subst));
   }
 
   public static Sort generateInferVars(Equations equations, boolean isUniverseLike, Concrete.SourceNode sourceNode) {

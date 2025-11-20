@@ -752,6 +752,9 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   }
 
   private Concrete.LevelExpression visitLevel(Level level) {
+    if (level.isCat()) {
+      return new Concrete.InfLevelExpression(null); // TODO[sorts]: Add a representation of \Cat-levels.
+    }
     if (level.isInfinity()) {
       return new Concrete.InfLevelExpression(null);
     }
