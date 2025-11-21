@@ -57,7 +57,7 @@
   \protected \func Image : SubRing Cod \cowith
     | SubRing => ringHomImage _
 
-  \func image : RingHom (SubRing.IRing {Image}) Cod \cowith
+  \protected \func image : RingHom (SubRing.IRing {Image}) Cod \cowith
     | func x => x.1
     | func-+ => idp
     | func-ide => idp
