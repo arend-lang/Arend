@@ -2,6 +2,7 @@ package org.arend.intention
 
 import com.intellij.codeInsight.intention.impl.BaseIntentionAction
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.editor.Editor
@@ -275,7 +276,9 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
             ?.findElementAt(functionOffset)
             ?.parentOfType<PsiNameIdentifierOwner>() ?: return
         newFunctionDefinition.nameIdentifier?.startOffset?.let { editor.caretModel.moveToOffset(it) }
-        ArendGlobalReferableRenameHandler().doRename(newFunctionDefinition, editor, null)
+        invokeLater {
+            ArendGlobalReferableRenameHandler().doRename(newFunctionDefinition, editor, null)
+        }
     }
 
     private fun contractFields(expandedConcrete: Concrete.Expression): Concrete.Expression = when (expandedConcrete) {
