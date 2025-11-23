@@ -36,7 +36,7 @@ public interface ConcreteFactory {
   @NotNull ConcreteExpression lam(@NotNull Collection<? extends ConcreteParameter> parameters, @NotNull ConcreteExpression body);
   @NotNull ConcreteExpression pi(@NotNull Collection<? extends ConcreteParameter> parameters, @NotNull ConcreteExpression codomain);
   @NotNull ConcreteExpression arr(@NotNull ConcreteExpression domain, @NotNull ConcreteExpression codomain);
-  @NotNull ConcreteExpression universe(@Nullable ConcreteLevel pLevel, @Nullable ConcreteLevel hLevel, boolean isCat);
+  @NotNull ConcreteExpression universe(@Nullable ConcreteLevel pLevel, @Nullable ConcreteLevel hLevel, ConcreteUniverseExpression.Kind kind);
   @NotNull ConcreteExpression hole();
   @NotNull ConcreteExpression error(@Nullable GeneralError error);
   @NotNull ConcreteExpression goal();

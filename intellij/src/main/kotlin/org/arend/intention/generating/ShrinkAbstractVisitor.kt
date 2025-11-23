@@ -38,6 +38,8 @@ class ShrinkAbstractVisitor(val textRange: TextRange) : AbstractExpressionVisito
     override fun visitCatUniverse(data: Any?, pLevelNum: Int?, pLevel: Abstract.LevelExpression?, params: Unit?): String =
             """\Cat"""
 
+    override fun visitSortUniverse(data: Any?, params: Unit?): String = """\Sort"""
+
     override fun visitApplyHole(data: Any?, params: Unit?): String = "_"
 
     override fun visitInferHole(data: Any?, params: Unit?): String = "_"

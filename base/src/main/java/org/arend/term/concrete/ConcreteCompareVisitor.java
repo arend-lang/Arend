@@ -189,7 +189,7 @@ public class ConcreteCompareVisitor implements ConcreteExpressionVisitor<Concret
 
   @Override
   public Boolean visitUniverse(Concrete.UniverseExpression expr1, Concrete.Expression expr2) {
-    return expr2 instanceof Concrete.UniverseExpression uni2 && compareLevel(expr1.getPLevel(), uni2.getPLevel()) && compareLevel(expr1.getHLevel(), uni2.getHLevel()) && expr1.isCat() == uni2.isCat();
+    return expr2 instanceof Concrete.UniverseExpression uni2 && compareLevel(expr1.getPLevel(), uni2.getPLevel()) && compareLevel(expr1.getHLevel(), uni2.getHLevel()) && expr1.getKind() == uni2.getKind();
   }
 
   private boolean compareLevel(Concrete.LevelExpression level1, Concrete.LevelExpression level2) {

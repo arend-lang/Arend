@@ -816,6 +816,7 @@ private object PrecVisitor : AbstractExpressionVisitor<Void?, Int> {
     override fun visitCatUniverse(data: Any?, pLevelNum: Int?, pLevel: Abstract.LevelExpression?, params: Void?): Int? =
         if (pLevel != null) APP_PREC else MAX_PREC
 
+    override fun visitSortUniverse(data: Any?, params: Void?) = MAX_PREC
     override fun visitReference(data: Any?, referent: Referable, lp: Int, lh: Int, params: Void?) = APP_PREC
     override fun visitThis(data: Any?, params: Void?) = MAX_PREC
     override fun visitLam(data: Any?, parameters: Collection<Abstract.LamParameter>, body: Abstract.Expression?, params: Void?) = MIN_PREC

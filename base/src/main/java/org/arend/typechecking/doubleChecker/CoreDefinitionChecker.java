@@ -47,7 +47,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     myChecker.clear();
     myChecker.setDefinition(definition);
     try {
-      myChecker.checkDependentLink(definition.getParameters(), Type.OMEGA, null);
+      myChecker.checkDependentLink(definition.getParameters(), Type.OMEGA, null, definition instanceof FunctionDefinition);
 
       // TODO[double_check]: Check (mutual) recursion
       // TODO[double_check]: Check definition.hasUniverses()

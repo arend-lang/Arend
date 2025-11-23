@@ -4,6 +4,7 @@ import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.Constructor;
+import org.arend.ext.concrete.expr.ConcreteUniverseExpression;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.DocStringBuilder;
 import org.arend.ext.prettyprinting.doc.LineDoc;
@@ -629,11 +630,13 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       return null;
     }
 
-    boolean hParens = !(expr.isCat() || expr.getHLevel() instanceof Concrete.InfLevelExpression || expr.getHLevel() instanceof Concrete.NumberLevelExpression || expr.getHLevel() == null);
+    boolean hParens = expr.getKind() == ConcreteUniverseExpression.Kind.TYPE && !(expr.getHLevel() instanceof Concrete.InfLevelExpression || expr.getHLevel() instanceof Concrete.NumberLevelExpression || expr.getHLevel() == null);
     boolean parens = prec.priority > Concrete.AppExpression.PREC && (hParens || !(expr.getPLevel() instanceof Concrete.NumberLevelExpression || expr.getPLevel() == null));
     if (parens) myBuilder.append('(');
 
-    if (expr.isCat()) {
+    if (expr.getKind() == ConcreteUniverseExpression.Kind.SORT) {
+      myBuilder.append("\\Sort");
+    } else if (expr.getKind() == ConcreteUniverseExpression.Kind.CAT) {
       myBuilder.append("\\Cat");
     } else if (expr.getHLevel() instanceof Concrete.InfLevelExpression) {
       myBuilder.append("\\hType");

@@ -5,6 +5,7 @@ import org.arend.error.CountingErrorReporter;
 import org.arend.error.DummyErrorReporter;
 import org.arend.error.ParsingError;
 import org.arend.ext.concrete.definition.FunctionKind;
+import org.arend.ext.concrete.expr.ConcreteUniverseExpression;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.extImpl.DefaultMetaTypechecker;
@@ -703,7 +704,7 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
 
     return new Concrete.UniverseExpression(data,
             pLevelNum != null ? new Concrete.NumberLevelExpression(data, pLevelNum) : pLevel != null ? pLevel.accept(this, LevelVariable.PVAR) : null,
-            hLevelNum != null ? (hLevelNum == Abstract.INFINITY_LEVEL ? new Concrete.InfLevelExpression(data) : new Concrete.NumberLevelExpression(data, hLevelNum)) : hLevel != null ? hLevel.accept(this, LevelVariable.HVAR) : null, false);
+            hLevelNum != null ? (hLevelNum == Abstract.INFINITY_LEVEL ? new Concrete.InfLevelExpression(data) : new Concrete.NumberLevelExpression(data, hLevelNum)) : hLevel != null ? hLevel.accept(this, LevelVariable.HVAR) : null, ConcreteUniverseExpression.Kind.TYPE);
   }
 
   @Override
@@ -711,7 +712,12 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     if (pLevelNum != null && pLevel != null) {
       myErrorReporter.report(new AbstractExpressionError(GeneralError.Level.ERROR, "p-level is already specified", pLevel.getData()));
     }
-    return new Concrete.UniverseExpression(data, pLevelNum != null ? new Concrete.NumberLevelExpression(data, pLevelNum) : pLevel != null ? pLevel.accept(this, LevelVariable.PVAR) : null, null, true);
+    return new Concrete.UniverseExpression(data, pLevelNum != null ? new Concrete.NumberLevelExpression(data, pLevelNum) : pLevel != null ? pLevel.accept(this, LevelVariable.PVAR) : null, null, ConcreteUniverseExpression.Kind.CAT);
+  }
+
+  @Override
+  public Concrete.Expression visitSortUniverse(@Nullable Object data, Void params) {
+    return new Concrete.UniverseExpression(data, null, null, ConcreteUniverseExpression.Kind.SORT);
   }
 
   @Override

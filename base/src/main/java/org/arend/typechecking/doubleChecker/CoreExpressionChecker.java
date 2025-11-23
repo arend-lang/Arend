@@ -335,11 +335,22 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     return result;
   }
 
-  void checkDependentLink(DependentLink link, Expression type, Expression expr) {
+  private Expression checkInf(Expression expr, Expression expectedType, boolean allowInf) {
+    if (allowInf) {
+      if (expr instanceof UniverseExpression universe) {
+        return checkUniverse(universe, expectedType);
+      } else if (expr instanceof PiExpression piExpr) {
+        return checkPi(piExpr, expectedType, true);
+      }
+    }
+    return expr.accept(this, expectedType);
+  }
+
+  void checkDependentLink(DependentLink link, Expression type, Expression expr, boolean allowInf) {
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
-        link.getTypeExpr().accept(this, type);
+        checkInf(link.getTypeExpr(), type, allowInf);
       }
     }
   }
@@ -379,7 +390,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   private Expression checkLam(LamExpression expr, Expression expectedType, Integer level) {
-    checkDependentLink(expr.getParameters(), Type.OMEGA, expr);
+    checkDependentLink(expr.getParameters(), Type.OMEGA, expr, false);
     Expression type;
     if (expr.getBody() instanceof LamExpression) {
       type = checkLam((LamExpression) expr.getBody(), null, level);
@@ -416,12 +427,11 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     return checkLam(expr, expectedType, null);
   }
 
-  @Override
-  public Expression visitPi(PiExpression expr, Expression expectedType) {
+  private Expression checkPi(PiExpression expr, Expression expectedType, boolean allowInf) {
     checkSort(expr.getResultSort(), expr);
     UniverseExpression type = new UniverseExpression(expr.getResultSort());
     Sort sort1 = checkDependentLinkWithResult(expr.getParameters(), expr.getResultSort().isProp() ? null : new UniverseExpression(new Sort(expr.getResultSort().getPLevel(), Level.CAT_LEVEL)), expr);
-    Sort sort2 = expr.getCodomain().accept(this, type).toSort();
+    Sort sort2 = checkInf(expr.getCodomain(), type, allowInf).toSort();
     freeDependentLink(expr.getParameters());
 
     Expression actualType;
@@ -432,6 +442,11 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       actualType = maxPLevel == null ? type : new UniverseExpression(Sort.make(maxPLevel, sort2.getHLevel(), sort1.isCat() || sort2.isCat()));
     }
     return check(expectedType, actualType, expr);
+  }
+
+  @Override
+  public Expression visitPi(PiExpression expr, Expression expectedType) {
+    return checkPi(expr, expectedType, false);
   }
 
   @Override
@@ -468,17 +483,21 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     checkLevel(sort.getHLevel(), LevelVariable.LvlType.HLVL, expr);
   }
 
-  @Override
-  public Expression visitUniverse(UniverseExpression expr, Expression expectedType) {
-    if (expr.isOmega()) {
-      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Universes of the infinity level are not allowed", mySourceNode), expr));
-    }
+  private Expression checkUniverse(UniverseExpression expr, Expression expectedType) {
     Sort sort = expr.getSort();
     if (sort.getHLevel().isProp() && !(sort.getPLevel().isClosed() && sort.getPLevel().getConstant() == 0)) {
       throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("p-level of \\Prop is not 0", mySourceNode), expr));
     }
     checkSort(sort, expr);
     return check(expectedType, new UniverseExpression(sort.succ()), expr);
+  }
+
+  @Override
+  public Expression visitUniverse(UniverseExpression expr, Expression expectedType) {
+    if (expr.isOmega()) {
+      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Universes of the infinity level are not allowed", mySourceNode), expr));
+    }
+    return checkUniverse(expr, expectedType);
   }
 
   @Override
@@ -881,7 +900,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   Expression checkCase(CaseExpression expr, Expression expectedType, Integer level) {
     ExprSubstitution substitution = new ExprSubstitution();
     checkList(expr.getArguments(), expr.getParameters(), substitution, LevelSubstitution.EMPTY);
-    checkDependentLink(expr.getParameters(), Type.OMEGA, expr);
+    checkDependentLink(expr.getParameters(), Type.OMEGA, expr, false);
     expr.getResultType().accept(this, Type.OMEGA);
 
     Integer level2 = expr.getResultTypeLevel() == null ? null : checkLevelProof(expr.getResultTypeLevel(), expr.getResultType());

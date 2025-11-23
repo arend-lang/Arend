@@ -132,6 +132,7 @@ OCT_DIGIT           = [0-8]
     "\\fixl"                { return LEFT_ASSOC_KW; }
     "\\fixr"                { return RIGHT_ASSOC_KW; }
     "\\Prop"                { return PROP_KW; }
+    "\\Sort"                { return SORT_KW; }
     "\\this"                { return THIS_KW; }
     "\\where"               { return WHERE_KW; }
     "\\with"                { return WITH_KW; }
