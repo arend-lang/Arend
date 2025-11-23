@@ -664,7 +664,7 @@ class ArendCompletionContributor : CompletionContributor() {
                 and(or(withAncestors(*RETURN_EXPR_PREFIX), withAncestors(*(NEW_EXPR_PREFIX + arrayOf(ArendReturnExpr::class.java)))), not(allowedInReturnPattern)),
                 after(and(ofType(RBRACE), withParent(ArendWithBody::class.java))), //No keyword completion after \with or } in case expr
                 after(ofType(LAM_KW, HAVE_KW, LET_KW, HAVES_KW, LETS_KW, WITH_KW)), //No keyword completion after \lam or \let
-                after(ofType(SET, CAT_UNIVERSE, PROP_KW, UNIVERSE, TRUNCATED_UNIVERSE, NEW_KW, EVAL_KW, PEVAL_KW)), //No expression keyword completion after universe literals or \new keyword
+                after(ofType(SET, CAT_UNIVERSE, PROP_KW, SORT_KW, UNIVERSE, TRUNCATED_UNIVERSE, NEW_KW, EVAL_KW, PEVAL_KW)), //No expression keyword completion after universe literals or \new keyword
                 or(LPH_CONTEXT, LPH_LEVEL_CONTEXT), //No expression keywords when completing levels in universes
                 after(and(ofType(ID), withAncestors(ArendRefIdentifier::class.java, ArendElim::class.java))), //No expression keywords in \elim expression
                 if (allowInBareSigmaOrPiExpressions) PlatformPatterns.alwaysFalse() else after(bareSigmaOrPiPattern), //Only universe expressions allowed inside Sigma or Pi expressions

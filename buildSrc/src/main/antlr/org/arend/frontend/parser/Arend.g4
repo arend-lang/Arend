@@ -286,6 +286,7 @@ longName : ID (DOT ID)*;
 
 literal : ID                                # name
         | '\\Prop'                          # prop
+        | '\\Sort'                          # sort
         | '_'                               # unknown
         | INFIX                             # infix
         | POSTFIX                           # postfix
@@ -344,7 +345,7 @@ COERCE : '\\coerce';
 NUMBER : [0-9]+;
 NEGATIVE_NUMBER : '-' [0-9]+;
 UNIVERSE : '\\Type' [0-9]*;
-TRUNCATED_UNIVERSE : '\\' (NUMBER '-' | 'oo-' | 'h') 'Type' [0-9]*;
+TRUNCATED_UNIVERSE : '\\' (NUMBER '-' | 'oo-' | 'h') 'Type' [0-9]*; // TODO[sorts]: Delete \oo-Type and \hType
 CAT_UNIVERSE : '\\Cat' [0-9]*;
 SET : '\\Set' [0-9]*;
 STRING : INCOMPLETE_STRING '"';

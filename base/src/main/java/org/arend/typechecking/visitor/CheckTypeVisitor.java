@@ -20,6 +20,7 @@ import org.arend.ext.ArendExtension;
 import org.arend.ext.ArendPrelude;
 import org.arend.ext.FreeBindingsModifier;
 import org.arend.ext.concrete.ConcreteFactory;
+import org.arend.ext.concrete.expr.ConcreteUniverseExpression;
 import org.arend.ext.concrete.pattern.ConcreteNumberPattern;
 import org.arend.ext.concrete.ConcreteParameter;
 import org.arend.ext.concrete.pattern.ConcretePattern;
@@ -2843,6 +2844,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       if (result == null) return null;
       fields.add(result.expression);
       Sort sort = getSortOfType(result.type, expr);
+      if (sort.getPLevel().isInfinity()) {
+        errorReporter.report(new TypecheckingError("Types of the infinity level are not allowed", expr.getFields().get(i)));
+        return null;
+      }
       sorts.add(sort);
       list.append(ExpressionFactory.parameter(null, result.type instanceof Type ? (Type) result.type : new TypeExpression(result.type, sort)));
     }
@@ -3501,6 +3506,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   @Override
   public TypecheckingResult visitUniverse(Concrete.UniverseExpression expr, Expression expectedType) {
+    if (expr.getKind() == ConcreteUniverseExpression.Kind.SORT && !expr.allowInf) {
+      errorReporter.report(new TypecheckingError("\\Sort is not allowed here", expr.getHLevel()));
+      return null;
+    }
+
     if (!isHBased() && expr.getHLevel() == null) {
       errorReporter.report(new TypecheckingError(GeneralError.Level.WARNING, "Universe can be replaced with \\Prop", expr));
       return new TypecheckingResult(new UniverseExpression(Sort.PROP), new UniverseExpression(Sort.SET0));
@@ -3510,12 +3520,16 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     Level hLevel = expr.getHLevel() != null ? expr.getHLevel().accept(this, LevelVariable.HVAR) : null;
 
     if (pLevel == null) {
-      InferenceLevelVariable pl = new InferenceLevelVariable(LevelVariable.LvlType.PLVL, true, expr);
-      getEquations().addVariable(pl);
-      pLevel = new Level(pl);
+      if (expr.allowInf) {
+        pLevel = Level.INFINITY;
+      }  else {
+        InferenceLevelVariable pl = new InferenceLevelVariable(LevelVariable.LvlType.PLVL, true, expr);
+        getEquations().addVariable(pl);
+        pLevel = new Level(pl);
+      }
     }
 
-    if (expr.isCat()) {
+    if (expr.getKind() != ConcreteUniverseExpression.Kind.TYPE) {
       if (hLevel != null) {
         errorReporter.report(new TypecheckingError("\\Cat cannot have an h-level", expr.getHLevel()));
       }

@@ -1,5 +1,6 @@
 package org.arend.term.concrete;
 
+import org.arend.ext.concrete.expr.ConcreteUniverseExpression;
 import org.arend.ext.module.LongName;
 import org.arend.naming.reference.LocalReferable;
 import org.arend.naming.reference.Referable;
@@ -213,19 +214,19 @@ public class ConcreteExpressionFactory {
   }
 
   public static Concrete.UniverseExpression cUniverseInf(int level) {
-    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), new Concrete.InfLevelExpression(null), false);
+    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), new Concrete.InfLevelExpression(null), ConcreteUniverseExpression.Kind.TYPE);
   }
 
   public static Concrete.UniverseExpression cUniverseStd(int level) {
-    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), new Concrete.HLevelExpression(null), false);
+    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), new Concrete.HLevelExpression(null), ConcreteUniverseExpression.Kind.TYPE);
   }
 
-  public static Concrete.UniverseExpression cUniverse(Concrete.LevelExpression pLevel, Concrete.LevelExpression hLevel, boolean isCat) {
-    return new Concrete.UniverseExpression(null, pLevel, hLevel, isCat);
+  public static Concrete.UniverseExpression cUniverse(Concrete.LevelExpression pLevel, Concrete.LevelExpression hLevel, Concrete.UniverseExpression.Kind kind) {
+    return new Concrete.UniverseExpression(null, pLevel, hLevel, kind);
   }
 
   public static Concrete.UniverseExpression cUniverse(int level) {
-    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), null, false);
+    return new Concrete.UniverseExpression(null, new Concrete.NumberLevelExpression(null, level), null, ConcreteUniverseExpression.Kind.TYPE);
   }
 
   public static Concrete.ConstructorPattern cConPattern(boolean isExplicit, Referable referable, List<Concrete.Pattern> patternArgs) {

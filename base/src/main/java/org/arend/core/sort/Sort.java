@@ -35,7 +35,7 @@ public class Sort implements CoreSort {
   private Sort(Level pLevel, Level hLevel, boolean isCat) {
     myPLevel = pLevel;
     myHLevel = hLevel;
-    myCat = isCat;
+    myCat = false; // TODO[sorts]: Temporarily disable \Cat sorts.
   }
 
   public Sort(Level pLevel, Level hLevel) {

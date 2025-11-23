@@ -20,6 +20,7 @@ import org.arend.core.pattern.Pattern;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.*;
+import org.arend.ext.concrete.expr.ConcreteUniverseExpression;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.error.CountingErrorReporter;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
@@ -477,6 +478,16 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
       Type paramResult = null;
       if (parameter.getType() != null) {
+        if (def instanceof Concrete.FunctionDefinition) {
+          Concrete.Expression type = parameter.getType();
+          while (type instanceof Concrete.PiExpression piExpr) {
+            type = piExpr.getCodomain();
+          }
+          if (type instanceof Concrete.UniverseExpression universe && universe.getKind() == ConcreteUniverseExpression.Kind.SORT) {
+            universe.allowInf = true;
+          }
+        }
+
         paramResult = def instanceof Concrete.Constructor ? typechecker.checkType(parameter.getType(), expectedType) : typechecker.finalCheckType(parameter.getType(), expectedType, false);
         if (typedParameters != null) {
           typedParameters.add(true);
@@ -1065,7 +1076,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     }
 
     if (def.getKind() == FunctionKind.TYPE && def.getBody() instanceof Concrete.ElimFunctionBody && def.getResultType() == null) {
-      def.setResultType(new Concrete.UniverseExpression(def.getData(), null, null, false));
+      def.setResultType(new Concrete.UniverseExpression(def.getData(), null, null, ConcreteUniverseExpression.Kind.TYPE));
     }
 
     Expression expectedType = null;

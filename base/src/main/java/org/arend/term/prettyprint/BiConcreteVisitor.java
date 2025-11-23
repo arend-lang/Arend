@@ -112,7 +112,7 @@ public abstract class BiConcreteVisitor extends BaseConcreteExpressionVisitor<Co
 
   @Override
   public Concrete.Expression visitUniverse(Concrete.UniverseExpression expr, Concrete.SourceNode params) {
-    return myFactory.universe(expr.getPLevel(), expr.getHLevel(), expr.isCat());
+    return myFactory.universe(expr.getPLevel(), expr.getHLevel(), expr.getKind());
   }
 
   @Override

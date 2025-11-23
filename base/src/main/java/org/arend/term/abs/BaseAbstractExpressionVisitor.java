@@ -52,6 +52,11 @@ public class BaseAbstractExpressionVisitor<P, R> implements AbstractExpressionVi
   }
 
   @Override
+  public R visitSortUniverse(@Nullable Object data, P params) {
+    return defaultValue;
+  }
+
+  @Override
   public R visitInferHole(@Nullable Object data, P params) {
     return defaultValue;
   }

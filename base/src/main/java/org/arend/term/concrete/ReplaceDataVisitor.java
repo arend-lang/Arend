@@ -134,7 +134,7 @@ public class ReplaceDataVisitor implements ConcreteExpressionVisitor<Void,Concre
 
   @Override
   public Concrete.UniverseExpression visitUniverse(Concrete.UniverseExpression expr, Void params) {
-    return new Concrete.UniverseExpression(getData(expr), expr.getPLevel() == null ? null : expr.getPLevel().accept(this, null), expr.getHLevel() == null ? null : expr.getHLevel().accept(this, null), expr.isCat());
+    return new Concrete.UniverseExpression(getData(expr), expr.getPLevel() == null ? null : expr.getPLevel().accept(this, null), expr.getHLevel() == null ? null : expr.getHLevel().accept(this, null), expr.getKind());
   }
 
   @Override

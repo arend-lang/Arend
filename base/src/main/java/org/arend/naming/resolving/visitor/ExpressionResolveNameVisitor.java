@@ -1007,7 +1007,7 @@ public class ExpressionResolveNameVisitor extends BaseConcreteExpressionVisitor<
     if (hLevel != null) {
       hLevel = hLevel.accept(this, LevelVariable.HVAR);
     }
-    return new Concrete.UniverseExpression(expr.getData(), pLevel, hLevel, expr.isCat());
+    return new Concrete.UniverseExpression(expr.getData(), pLevel, hLevel, expr.getKind());
   }
 
   @Override

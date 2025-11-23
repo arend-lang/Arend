@@ -27,6 +27,7 @@ import org.arend.core.subst.Levels;
 import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.ext.concrete.definition.FunctionKind;
 import org.arend.ext.concrete.expr.ConcreteExpression;
+import org.arend.ext.concrete.expr.ConcreteUniverseExpression;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -748,7 +749,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
   }
 
   private Concrete.UniverseExpression visitSort(Sort sort) {
-    return cUniverse(sort.isOmega() ? new Concrete.PLevelExpression(null) : visitLevelNull(sort.getPLevel(), false), visitLevelNull(sort.getHLevel(), false), sort.isCat());
+    return cUniverse(sort.isOmega() ? new Concrete.PLevelExpression(null) : visitLevelNull(sort.getPLevel(), false), visitLevelNull(sort.getHLevel(), false), sort.isCat() ? ConcreteUniverseExpression.Kind.CAT : ConcreteUniverseExpression.Kind.TYPE);
   }
 
   private Concrete.LevelExpression visitLevel(Level level) {

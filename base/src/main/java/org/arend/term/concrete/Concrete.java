@@ -1251,14 +1251,15 @@ public final class Concrete {
   public static class UniverseExpression extends Expression implements ConcreteUniverseExpression {
     public static final byte PREC = 12;
     private final LevelExpression myPLevel;
-    private final LevelExpression myHLevel;
-    private final boolean myCatUniverse;
+    private final LevelExpression myHLevel; // TODO[sorts]: Delete this
+    private final Kind myKind;
+    public boolean allowInf;
 
-    public UniverseExpression(Object data, LevelExpression pLevel, LevelExpression hLevel, boolean isCat) {
+    public UniverseExpression(Object data, LevelExpression pLevel, LevelExpression hLevel, Kind kind) {
       super(data);
       myPLevel = pLevel;
       myHLevel = hLevel;
-      myCatUniverse = isCat;
+      myKind = kind;
     }
 
     @Override
@@ -1273,8 +1274,10 @@ public final class Concrete {
       return myHLevel;
     }
 
-    public boolean isCat() {
-      return myCatUniverse;
+    @Override
+    @NotNull
+    public Kind getKind() {
+      return myKind;
     }
 
     @Override
