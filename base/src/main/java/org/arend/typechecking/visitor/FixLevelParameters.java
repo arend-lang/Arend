@@ -15,6 +15,7 @@ import org.arend.typechecking.implicitargs.equations.DummyEquations;
 
 import java.util.*;
 
+// TODO[sorts]: Delete this
 public class FixLevelParameters extends VoidExpressionVisitor<Void> {
   private final Set<? extends Definition> myDefinitions;
   private final boolean myRemovePLevels;

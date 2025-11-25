@@ -263,7 +263,7 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
 
   }
 
-  public abstract UniverseKind getUniverseKind();
+  public abstract UniverseKind getUniverseKind(); // TODO[sorts]: Delete this
 
   public List<? extends ParametersLevel> getParametersLevels() {
     return Collections.emptyList();

@@ -17,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class SigmaExpression extends Expression implements Type, CoreSigmaExpression {
   private final DependentLink myLink;
-  private Sort mySort;
+  private Sort mySort; // TODO[sorts]: Delete this
 
   public SigmaExpression(Sort sort, DependentLink link) {
     assert link != null;

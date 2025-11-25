@@ -2742,7 +2742,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     boolean isProperty = arg.isProperty();
     boolean isProp = isProperty && Sort.compare(sort, Sort.PROP, CMP.LE, myEquations, arg);
     if (!isProp && isProperty) {
-      errorReporter.report(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, result.getSortOfType(), arg));
+      errorReporter.report(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, sort, arg));
     }
     if (arg instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = arg.getReferableList();

@@ -4,6 +4,7 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.CallableDefinition;
+import org.arend.core.definition.DataDefinition;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.CompareVisitor;
@@ -13,6 +14,8 @@ import org.arend.core.subst.Levels;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.core.subst.SubstVisitor;
 import org.arend.ext.core.ops.CMP;
+import org.arend.ext.error.TypecheckingError;
+import org.arend.ext.util.StringUtils;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.error.local.PathEndpointMismatchError;
@@ -68,7 +71,18 @@ public class DefCallResult implements TResult {
   @Override
   public TypecheckingResult toResult(CheckTypeVisitor typechecker) {
     if (myParameters.isEmpty()) {
-      return new TypecheckingResult(getCoreDefCall(), myResultType);
+      return new TypecheckingResult(getCoreDefCall(), getType());
+    }
+
+    {
+      int i = myArguments.size();
+      for (DependentLink parameter : myParameters) {
+        if (parameter.getTypeExpr().isInfinityLevel()) {
+          typechecker.getErrorReporter().report(new TypecheckingError((parameter.getName() == null ? StringUtils.ordinal(i) + " parameter" : "Parameter '" + parameter.getName() + "'") + " must be specified explicitly", myDefCall));
+          return null;
+        }
+        i++;
+      }
     }
 
     List<SingleDependentLink> parameters = new ArrayList<>();
@@ -96,7 +110,7 @@ public class DefCallResult implements TResult {
     }
 
     Expression expression = getCoreDefCall();
-    Expression type = myResultType.subst(substitution, LevelSubstitution.EMPTY);
+    Expression type = getType().subst(substitution, LevelSubstitution.EMPTY);
     Sort codSort = typechecker.getSortOfType(type, myDefCall);
     for (int i = parameters.size() - 1; i >= 0; i--) {
       codSort = PiExpression.generateUpperBound(parameters.get(i).getType().getSortOfType(), codSort, typechecker.getEquations(), myDefCall);
@@ -108,7 +122,7 @@ public class DefCallResult implements TResult {
 
   @Override
   public DependentLink getParameter() {
-    return myParameters.get(0);
+    return myParameters.getFirst();
   }
 
   @Override
@@ -116,10 +130,10 @@ public class DefCallResult implements TResult {
     int size = myParameters.size();
     myArguments.add(expression);
     ExprSubstitution subst = new ExprSubstitution();
-    subst.add(myParameters.get(0), expression);
+    subst.add(myParameters.getFirst(), expression);
     myParameters = DependentLink.Helper.subst(myParameters.subList(1, size), subst, LevelSubstitution.EMPTY);
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
-    return size > 1 ? this : new TypecheckingResult(getCoreDefCall(), myResultType);
+    return size > 1 ? this : new TypecheckingResult(getCoreDefCall(), getType());
   }
 
   public TResult applyExpressions(List<? extends Expression> expressions) {
@@ -134,7 +148,7 @@ public class DefCallResult implements TResult {
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
 
     assert expressions.size() <= size;
-    return expressions.size() < size ? this : new TypecheckingResult(getCoreDefCall(), myResultType);
+    return expressions.size() < size ? this : new TypecheckingResult(getCoreDefCall(), getType());
   }
 
   public TResult applyPathArgument(Expression argument, CheckTypeVisitor visitor, Concrete.SourceNode sourceNode) {
@@ -147,7 +161,7 @@ public class DefCallResult implements TResult {
         visitor.getErrorReporter().report(new PathEndpointMismatchError(visitor.getExpressionPrettifier(), true, myArguments.get(1), leftExpr, sourceNode));
       }
     } else {
-      subst.add(myParameters.get(0), leftExpr);
+      subst.add(myParameters.getFirst(), leftExpr);
     }
     if (myArguments.size() >= 3) {
       if (!CompareVisitor.compare(visitor.getEquations(), CMP.EQ, rightExpr, myArguments.get(2), AppExpression.make(myArguments.get(0), ExpressionFactory.Right(), true), sourceNode)) {
@@ -163,7 +177,7 @@ public class DefCallResult implements TResult {
 
     myParameters = Collections.emptyList();
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
-    return new TypecheckingResult(getCoreDefCall(), myResultType);
+    return new TypecheckingResult(getCoreDefCall(), getType());
   }
 
   @Override
@@ -181,6 +195,10 @@ public class DefCallResult implements TResult {
 
   @Override
   public Expression getType() {
+    if (myDefinition instanceof DataDefinition dataDef) {
+      Sort sort = dataDef.applySortExpression(myArguments);
+      if (sort != null) return new UniverseExpression(sort);
+    }
     return myResultType;
   }
 

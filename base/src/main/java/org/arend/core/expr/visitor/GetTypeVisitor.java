@@ -222,7 +222,8 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
   @Override
   public UniverseExpression visitDataCall(DataCallExpression expr, Void params) {
-    return new UniverseExpression(expr.getDefinition().getSort().subst((myMinimal ? minimizeLevels(expr) : expr.getLevels()).makeSubstitution(expr.getDefinition())));
+    Sort sort = expr.getDefinition().applySortExpression(expr.getDefCallArguments());
+    return new UniverseExpression(sort != null ? sort : expr.getDefinition().getSort().subst((myMinimal ? minimizeLevels(expr) : expr.getLevels()).makeSubstitution(expr.getDefinition())));
   }
 
   private Levels minimizeLevelsToSuperClass(ClassCallExpression classCall, ClassDefinition superClass) {
@@ -277,16 +278,16 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   public DataCallExpression visitConCall(ConCallExpression expr, Void params) {
     if (expr.getDefinition() == Prelude.SUC) {
       int sucs = 1;
-      Expression expression = expr.getDefCallArguments().get(0);
+      Expression expression = expr.getDefCallArguments().getFirst();
       while (expression instanceof ConCallExpression && ((ConCallExpression) expression).getDefinition() == Prelude.SUC) {
         sucs++;
-        expression = ((ConCallExpression) expression).getDefCallArguments().get(0);
+        expression = ((ConCallExpression) expression).getDefCallArguments().getFirst();
       }
       Expression argType = expression.accept(this, null);
       if (myNormalizing) argType = argType.normalize(NormalizationMode.WHNF);
       DataCallExpression dataCall = argType.cast(DataCallExpression.class);
       if (dataCall != null && dataCall.getDefinition() == Prelude.FIN) {
-        Expression arg = dataCall.getDefCallArguments().get(0);
+        Expression arg = dataCall.getDefCallArguments().getFirst();
         for (int i = 0; i < sucs; i++) {
           arg = Suc(arg);
         }
@@ -483,7 +484,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     if (!(type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH)) {
       return type instanceof ErrorExpression ? type : new ErrorExpression();
     }
-    return AppExpression.make(((DataCallExpression) type).getDefCallArguments().get(0), expr.getIntervalArgument(), true);
+    return AppExpression.make(((DataCallExpression) type).getDefCallArguments().getFirst(), expr.getIntervalArgument(), true);
   }
 
   @Override

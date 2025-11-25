@@ -13,7 +13,7 @@ import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
 public class LamExpression extends Expression implements CoreLamExpression {
-  private Sort myResultSort;
+  private Sort myResultSort; // TODO[sorts]: Delete this
   private final SingleDependentLink myLink;
   private final Expression myBody;
 

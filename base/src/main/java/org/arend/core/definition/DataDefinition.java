@@ -5,6 +5,7 @@ import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.definition.CoreConstructor;
@@ -19,7 +20,8 @@ import java.util.*;
 public class DataDefinition extends TopLevelDefinition implements CoreDataDefinition {
   private final List<Constructor> myConstructors;
   private DependentLink myParameters;
-  private Sort mySort = Sort.SET0;
+  private Sort mySort = Sort.SET0; // TODO[sorts]: Replace with Sort.INFINITY
+  private SortExpression mySortExpression;
   private int myTruncatedLevel = -2;
   private boolean mySquashed;
   private FunctionDefinition mySquasher;
@@ -46,6 +48,14 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
 
   public void setSort(Sort sort) {
     mySort = sort;
+  }
+
+  public SortExpression getSortExpression() {
+    return mySortExpression;
+  }
+
+  public void setSortExpression(SortExpression sortExpression) {
+    mySortExpression = sortExpression;
   }
 
   @Override
@@ -241,5 +251,9 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
   @Override
   public DataCallExpression getDefCall(Levels levels, List<Expression> arguments) {
     return DataCallExpression.make(this, levels, arguments);
+  }
+
+  public Sort applySortExpression(List<? extends Expression> arguments) {
+    return mySortExpression == null ? null : mySortExpression.computeSort(arguments);
   }
 }

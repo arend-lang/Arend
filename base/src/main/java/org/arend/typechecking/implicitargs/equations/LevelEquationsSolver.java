@@ -267,7 +267,6 @@ public class LevelEquationsSolver {
     SimpleLevelSubstitution result = new SimpleLevelSubstitution();
     for (InferenceLevelVariable var : unBased) {
       int sol = solution.get(var);
-      assert sol != LevelEquations.INFINITY && sol != LevelEquations.CAT_LEVEL || var.getType() == LevelVariable.LvlType.HLVL;
       result.add(var, sol == LevelEquations.CAT_LEVEL ? Level.CAT_LEVEL : sol == LevelEquations.INFINITY ? Level.INFINITY : new Level(-sol));
     }
 

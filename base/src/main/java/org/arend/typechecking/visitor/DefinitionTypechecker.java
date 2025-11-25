@@ -478,7 +478,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
       Type paramResult = null;
       if (parameter.getType() != null) {
-        if (def instanceof Concrete.FunctionDefinition) {
+        if (def instanceof Concrete.FunctionDefinition || def instanceof Concrete.DataDefinition) {
           Concrete.Expression type = parameter.getType();
           while (type instanceof Concrete.PiExpression piExpr) {
             type = piExpr.getCodomain();
@@ -1820,7 +1820,8 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         TypedSingleDependentLink thisBinding = new TypedSingleDependentLink(false, "this", thisType, true);
         thisType.setSort(classDef.computeSort(defaultImpl, thisBinding));
         thisType.updateHasUniverses();
-        Expression result = DefCallResult.makeTResult(new Concrete.ReferenceExpression(def.getData().getData(), def.getData()), typedDef, classDef.makeIdLevels()).applyExpression(new ReferenceExpression(thisBinding), false, typechecker, def).toResult(typechecker).expression;
+        TypecheckingResult tcResult = DefCallResult.makeTResult(new Concrete.ReferenceExpression(def.getData().getData(), def.getData()), typedDef, classDef.makeIdLevels()).applyExpression(new ReferenceExpression(thisBinding), false, typechecker, def).toResult(typechecker);
+        Expression result = tcResult == null ? new ErrorExpression() : tcResult.expression;
         Expression actualType = result.getType();
         Expression fieldType = ((ClassField) fieldDef).getType().applyExpression(new ReferenceExpression(thisBinding));
         CompareVisitor visitor = new CompareVisitor(DummyEquations.getInstance(), CMP.LE, def);
@@ -1859,11 +1860,15 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         userSort = userTypeResult.getExpr().toSort();
         if (userSort == null) {
           errorReporter.report(new TypecheckingError("Expected a universe", def.getUniverse()));
+        } else if (userSort.isOmega()) {
+          errorReporter.report(new TypecheckingError(GeneralError.Level.WARNING_UNUSED, "The universe is redundant", def.getUniverse()));
+        } else {
+          dataDefinition.setSort(userSort);
         }
       }
     }
 
-    dataDefinition.setSort(userSort);
+    dataDefinition.setSort(userSort); // TODO[sorts]: Delete this. Set only when actually specified.
     calculateTypeClassParameters(dataDefinition);
     calculateParametersTypecheckingOrder(dataDefinition);
 
@@ -2092,6 +2097,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
     // Check truncatedness
     if (def.isTruncated()) {
+      // TODO[sorts]: Move this to typecheckDataHeader
       if (userSort == null) {
         originalErrorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.TRUNCATED_WITHOUT_UNIVERSE, def));
       } else {

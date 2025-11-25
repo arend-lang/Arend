@@ -247,8 +247,9 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
           if (sort.isProp()) {
             continue;
           }
-          if (!(Level.compare(sort.getPLevel(), expr.getSortOfType().getPLevel(), CMP.LE, myEquations, mySourceNode) && (level != null && sort.getHLevel().isClosed() && sort.getHLevel().getConstant() <= level || Level.compare(sort.getHLevel(), expr.getSortOfType().getHLevel(), CMP.LE, myEquations, mySourceNode)))) {
-            throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("The sort " + sort + " of field '" + field.getName() + "' does not fit into the expected sort " + expr.getSortOfType(), mySourceNode), expr));
+          Sort exprSort = expr.getSortOfType();
+          if (!(Level.compare(sort.getPLevel(), exprSort.getPLevel(), CMP.LE, myEquations, mySourceNode) && (level != null && sort.getHLevel().isClosed() && sort.getHLevel().getConstant() <= level || Level.compare(sort.getHLevel(), exprSort.getHLevel(), CMP.LE, myEquations, mySourceNode)))) {
+            throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("The sort " + sort + " of field '" + field.getName() + "' does not fit into the expected sort " + exprSort, mySourceNode), expr));
           }
         }
       }
@@ -415,7 +416,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       domCat = domSort.isCat();
       if (pLevel == null) {
         checkSort(expr.getResultSort(), expr);
-        compareSort(expr.getResultSort(), new Sort(expr.getParameters().getType().getSortOfType().getPLevel(), expr.getResultSort().getHLevel()), expr);
+        compareSort(expr.getResultSort(), new Sort(domSort.getPLevel(), expr.getResultSort().getHLevel()), expr);
         compareSort(expr.getResultSort(), sort, expr);
       }
     }
@@ -457,8 +458,11 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     freeDependentLink(expr.getParameters());
 
     for (DependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
-      if (param.isProperty() && !param.getType().getSortOfType().isProp()) {
-        throw new CoreException(CoreErrorWrapper.make(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, param.getType().getSortOfType(), mySourceNode), expr));
+      if (param.isProperty()) {
+        Sort paramSort = param.getType().getSortOfType();
+        if (!paramSort.isProp()) {
+          throw new CoreException(CoreErrorWrapper.make(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, paramSort, mySourceNode), expr));
+        }
       }
     }
 

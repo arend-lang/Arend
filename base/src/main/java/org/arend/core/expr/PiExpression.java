@@ -27,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class PiExpression extends Expression implements Type, CorePiExpression, CoreAbsExpression {
-  private Sort myResultSort;
+  private Sort myResultSort; // TODO[sorts]: Delete this
   private final SingleDependentLink myLink;
   private final Expression myCodomain;
 

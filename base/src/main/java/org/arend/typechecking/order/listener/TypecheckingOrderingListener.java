@@ -1,16 +1,20 @@
 package org.arend.typechecking.order.listener;
 
+import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.PersistentEvaluatingBinding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.TypedSingleDependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.elimtree.ElimClause;
+import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.VoidExpressionVisitor;
 import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.error.CountingErrorReporter;
+import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendExtension;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.expr.CoreExpression;
@@ -216,6 +220,63 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     }
   }
 
+  private void computeSorts(Collection<? extends Definition> definitions) {
+    List<DataDefinition> dataDefinitions = new ArrayList<>(definitions.size());
+    for (Definition definition : definitions) {
+      if (definition instanceof DataDefinition dataDefinition) {
+        dataDefinitions.add(dataDefinition);
+      }
+    }
+
+    if (dataDefinitions.size() != 1) {
+      // TODO[sorts]: Support inductive-inductive definitions
+      return;
+    }
+
+    DataDefinition definition = dataDefinitions.getFirst();
+    if (!definition.getSort().getPLevel().isInfinity()) return;
+
+    Sort baseSort = Sort.PROP;
+    for (Constructor constructor : definition.getConstructors()) {
+      if (constructor.getBody() instanceof IntervalElim) {
+        baseSort = Sort.TypeOfLevel(0);
+        break;
+      }
+    }
+    if (baseSort.isProp()) {
+      loop:
+      for (int i = 0; i < definition.getConstructors().size(); i++) {
+        List<ExpressionPattern> patterns1 = definition.getConstructors().get(i).getPatterns();
+        for (int j = i + 1; j < definition.getConstructors().size(); j++) {
+          List<ExpressionPattern> patterns2 = definition.getConstructors().get(j).getPatterns();
+          if (patterns1 == null || patterns2 == null || ExpressionPattern.unify(patterns1, patterns2, null, null, null, DummyErrorReporter.INSTANCE, null)) {
+            baseSort = Sort.SET0;
+            break loop;
+          }
+        }
+      }
+    }
+
+    Map<Binding, Integer> variables = new HashMap<>();
+    int index = 0;
+    for (DependentLink param = definition.getParameters(); param.hasNext(); param = param.getNext(), index++) {
+      if (param.getTypeExpr().isInfinityLevel()) {
+        variables.put(param, index);
+      }
+    }
+
+    SortExpression sortExpr = new SortExpression.Const(baseSort);
+    for (Constructor constructor : definition.getConstructors()) {
+      for (DependentLink param = constructor.getParameters(); param.hasNext(); param = param.getNext()) {
+        param = param.getNextTyped(null);
+        SortExpression constructorSortExpr = SortExpression.getSortExpression(param.getTypeExpr(), variables);
+        if (constructorSortExpr == null) return;
+        sortExpr = new SortExpression.Max(sortExpr, constructorSortExpr);
+      }
+    }
+    definition.setSortExpression(sortExpr);
+  }
+
   private void typecheckWithUse(Concrete.ResolvableDefinition definition, Set<TCDefReferable> usedDefinitions, boolean recursive, ArendExtension extension, List<Definition> typecheckedList) {
     ErrorReporter errorReporter = new LocalErrorReporter(definition.getData(), myErrorReporter);
     if (usedDefinitions != null && definition instanceof Concrete.Definition def) {
@@ -264,6 +325,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       if (!(definition instanceof Concrete.FunctionDefinition && ((Concrete.FunctionDefinition) definition).getKind().isCoclause()) && typechecked instanceof TopLevelDefinition) {
         FixLevelParameters.fix(Collections.singleton((TopLevelDefinition) typechecked), Collections.singleton(typechecked));
       }
+      computeSorts(Collections.singletonList(typechecked));
       if (recursive && typechecked instanceof FunctionDefinition) {
         ((FunctionDefinition) typechecked).setRecursiveDefinitions(Collections.singleton((FunctionDefinition) typechecked));
       }
@@ -504,6 +566,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     if (fixLevels) {
       FixLevelParameters.fix(allDefinitions, newDefs);
     }
+    computeSorts(allDefinitions);
 
     if (!functionDefinitions.isEmpty()) {
       FindDefCallVisitor<DataDefinition> visitor = new FindDefCallVisitor<>(dataDefinitions, false);

@@ -108,13 +108,13 @@ public class DataPolyTest extends TypeCheckingTestCase {
 
   @Test
   public void recursiveData() {
-    Constructor constructor = ((DataDefinition) typeCheckDef("\\data D | con D")).getConstructors().get(0);
+    Constructor constructor = ((DataDefinition) typeCheckDef("\\data D | con D")).getConstructors().getFirst();
     assertEquals(Levels.EMPTY, ((DataCallExpression) constructor.getParameters().getTypeExpr()).getLevels());
   }
 
   @Test
   public void recursiveData2() {
-    Constructor constructor = ((DataDefinition) typeCheckDef("\\data D (A : \\Type) | con (D A)")).getConstructors().get(0);
+    Constructor constructor = ((DataDefinition) typeCheckDef("\\data D (A : \\Type) | con (D A)")).getConstructors().getFirst();
     assertEquals(LevelPair.STD, ((DataCallExpression) constructor.getParameters().getTypeExpr()).getLevels());
   }
 
@@ -146,17 +146,43 @@ public class DataPolyTest extends TypeCheckingTestCase {
 
   @Test
   public void recursiveDataWithConstructor() {
-    typeCheckModule(
-      "\\data Data | cons \\Type \\Type\n" +
-      "\\record R (A : Data)\n" +
-      "\\data D | con1 (R (cons (\\Sigma) D)) | con2 (R (cons D (\\Sigma)))");
+    typeCheckModule("""
+      \\data Data | cons \\Type \\Type
+      \\record R (A : Data)
+      \\data D | con1 (R (cons (\\Sigma) D)) | con2 (R (cons D (\\Sigma)))
+      """);
   }
 
   @Test
   public void recursiveDataWithNew() {
-    typeCheckModule(
-      "\\record C (X Y : \\Type)\n" +
-      "\\record R (A : C)\n" +
-      "\\data D | con1 (R (\\new C (\\Sigma) D)) | con2 (R (\\new C D (\\Sigma)))");
+    typeCheckModule("""
+      \\record C (X Y : \\Type)
+      \\record R (A : C)
+      \\data D | con1 (R (\\new C (\\Sigma) D)) | con2 (R (\\new C D (\\Sigma)))
+      """);
+  }
+
+  @Test
+  public void levelTest() {
+    DataDefinition definition = (DataDefinition) typeCheckDef("\\data D (A1 : \\Set1) (A2 : \\Set2) | con (A2 -> D A1 A2) A1");
+    assertEquals(Sort.SetOfLevel(2), definition.getSort());
+  }
+
+  @Test
+  public void propTest() {
+    DataDefinition definition = (DataDefinition) typeCheckDef("\\data D (A1 : \\Prop) (A2 : \\Set2) | con (A2 -> D A1 A2) A1");
+    assertEquals(Sort.PROP, definition.getSort());
+  }
+
+  @Test
+  public void setTest() {
+    DataDefinition definition = (DataDefinition) typeCheckDef("\\data D (A1 : \\Prop) (A2 : \\Set2) | con1 (A2 -> D A1 A2) A1 | con2");
+    assertEquals(Sort.SetOfLevel(2), definition.getSort());
+  }
+
+  @Test
+  public void setTest2() {
+    DataDefinition definition = (DataDefinition) typeCheckDef("\\data D (A1 : \\Prop) (A2 : \\Set2) | con1 {d1 d2 : D A1 A2} (A2 -> d1 = d2) A1 | con2");
+    assertEquals(Sort.SET0, definition.getSort());
   }
 }

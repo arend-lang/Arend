@@ -80,7 +80,8 @@ public class DataCallExpression extends LeveledDefCallExpression implements Type
 
   @Override
   public Sort getSortOfType() {
-    return getDefinition().getSort().subst(getLevelSubstitution());
+    Sort sort = getDefinition().applySortExpression(getDefCallArguments());
+    return sort != null ? sort : getDefinition().getSort().subst(getLevelSubstitution());
   }
 
   @Override
