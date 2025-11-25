@@ -4,6 +4,7 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.elimtree.Body;
 import org.arend.core.expr.*;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
@@ -19,6 +20,7 @@ public class FunctionDefinition extends TopLevelDefinition implements Function, 
   private DependentLink myParameters;
   private Expression myResultType;
   private Expression myResultTypeLevel;
+  private SortExpression mySortExpression;
   private Body myBody;
   private List<Integer> myParametersTypecheckingOrder;
   private Kind myKind = Kind.FUNC;
@@ -45,6 +47,7 @@ public class FunctionDefinition extends TopLevelDefinition implements Function, 
     this.myParameters = other.myParameters;
     this.myResultType = other.myResultType;
     this.myResultTypeLevel = other.myResultTypeLevel;
+    this.mySortExpression = other.mySortExpression;
     this.myBody = other.myBody;
     this.myParametersTypecheckingOrder = other.myParametersTypecheckingOrder;
     this.myKind = other.myKind;
@@ -175,6 +178,15 @@ public class FunctionDefinition extends TopLevelDefinition implements Function, 
 
   public void setResultTypeLevel(Expression resultTypeLevel) {
     myResultTypeLevel = resultTypeLevel;
+  }
+
+  @Override
+  public SortExpression getSortExpression() {
+    return mySortExpression;
+  }
+
+  public void setSortExpression(SortExpression sortExpression) {
+    mySortExpression = sortExpression;
   }
 
   @Override

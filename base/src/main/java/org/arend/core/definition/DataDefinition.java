@@ -50,6 +50,7 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
     mySort = sort;
   }
 
+  @Override
   public SortExpression getSortExpression() {
     return mySortExpression;
   }
@@ -251,9 +252,5 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
   @Override
   public DataCallExpression getDefCall(Levels levels, List<Expression> arguments) {
     return DataCallExpression.make(this, levels, arguments);
-  }
-
-  public Sort applySortExpression(List<? extends Expression> arguments) {
-    return mySortExpression == null ? null : mySortExpression.computeSort(arguments);
   }
 }

@@ -4,7 +4,6 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.CallableDefinition;
-import org.arend.core.definition.DataDefinition;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.CompareVisitor;
@@ -195,11 +194,8 @@ public class DefCallResult implements TResult {
 
   @Override
   public Expression getType() {
-    if (myDefinition instanceof DataDefinition dataDef) {
-      Sort sort = dataDef.applySortExpression(myArguments);
-      if (sort != null) return new UniverseExpression(sort);
-    }
-    return myResultType;
+    Sort sort = myDefinition.applySortExpression(myArguments);
+    return sort != null ? new UniverseExpression(sort) : myResultType;
   }
 
   public Concrete.ReferenceExpression getDefCall() {

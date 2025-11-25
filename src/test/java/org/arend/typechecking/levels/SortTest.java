@@ -6,6 +6,7 @@ import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.ExpressionFactory;
 import org.arend.core.expr.PiExpression;
 import org.arend.core.expr.UniverseExpression;
+import org.arend.core.expr.type.Type;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.typechecking.TypeCheckingTestCase;
@@ -68,6 +69,32 @@ public class SortTest extends TypeCheckingTestCase {
     typeCheckModule("""
       \\data D (A : \\Sort) (a : A)
       \\func test => D
+      """, 1);
+  }
+
+  @Test
+  public void functionTest() {
+    typeCheckModule("""
+      \\data D (A : \\Sort) (a a' : A) | con A
+      \\func fun (A : \\Sort) (a : A) => D A a a
+      \\func test => fun Nat 7
+      """);
+    checkLevelParameters("D", "fun", "test");
+    assertEquals(Type.OMEGA, ((FunctionDefinition) getDefinition("fun")).getResultType());
+    assertEquals(new UniverseExpression(Sort.SET0), ((FunctionDefinition) getDefinition("test")).getResultType());
+  }
+
+  @Test
+  public void functionTest2() {
+    typeCheckModule("\\func test (A : \\Sort) (n : Nat) : \\Sort => A");
+  }
+
+  @Test
+  public void functionTest3() {
+    typeCheckModule("""
+      \\func test (A : \\Sort) (n : Nat) : \\Sort \\elim n
+        | 0 => A
+        | suc _ => A
       """, 1);
   }
 }

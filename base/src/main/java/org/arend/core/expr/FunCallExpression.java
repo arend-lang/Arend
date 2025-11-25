@@ -5,6 +5,7 @@ import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.core.expr.visitor.NormalizeVisitor;
+import org.arend.core.sort.Sort;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
@@ -45,7 +46,7 @@ public class FunCallExpression extends LeveledDefCallExpression implements CoreF
         : expr1.divMod(expr2);
     }
     if (definition == Prelude.EMPTY_ARRAY && arguments.size() == 1) {
-      return ArrayExpression.make(levels.toLevelPair(), arguments.get(0), Collections.emptyList(), null);
+      return ArrayExpression.make(levels.toLevelPair(), arguments.getFirst(), Collections.emptyList(), null);
     }
     if (definition == Prelude.ARRAY_CONS && arguments.size() == 4) {
       return ArrayExpression.make(levels.toLevelPair(), arguments.get(1), new SingletonList<>(arguments.get(2)), arguments.get(3));
@@ -98,6 +99,12 @@ public class FunCallExpression extends LeveledDefCallExpression implements CoreF
   @Override
   public @NotNull Expression minimizeLevels() {
     return new FunCallExpression(getDefinition(), getMinimizedLevels(), myArguments);
+  }
+
+  @Override
+  public Sort getSortOfType() {
+    Sort sort = getDefinition().applySortExpression(getDefCallArguments());
+    return sort != null ? sort : super.getSortOfType();
   }
 
   @Override

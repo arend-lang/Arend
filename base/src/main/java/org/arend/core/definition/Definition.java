@@ -7,6 +7,8 @@ import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.expr.ClassCallExpression;
 import org.arend.core.expr.Expression;
 import org.arend.core.sort.Level;
+import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.core.subst.ListLevels;
@@ -72,6 +74,15 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
 
   public List<? extends LevelVariable> getLevelParameters() {
     return getTopLevelDefinition().getLevelParameters();
+  }
+
+  public SortExpression getSortExpression() {
+    return null;
+  }
+
+  public Sort applySortExpression(List<? extends Expression> arguments) {
+    SortExpression sortExpr = getSortExpression();
+    return sortExpr == null ? null : sortExpr.computeSort(arguments);
   }
 
   public Set<? extends FunctionDefinition> getAxioms() {

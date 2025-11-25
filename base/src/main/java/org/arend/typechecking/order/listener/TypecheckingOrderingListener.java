@@ -228,53 +228,54 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
       }
     }
 
-    if (dataDefinitions.size() != 1) {
-      // TODO[sorts]: Support inductive-inductive definitions
-      return;
-    }
-
-    DataDefinition definition = dataDefinitions.getFirst();
-    if (!definition.getSort().getPLevel().isInfinity()) return;
-
-    Sort baseSort = Sort.PROP;
-    for (Constructor constructor : definition.getConstructors()) {
-      if (constructor.getBody() instanceof IntervalElim) {
-        baseSort = Sort.TypeOfLevel(0);
-        break;
-      }
-    }
-    if (baseSort.isProp()) {
-      loop:
-      for (int i = 0; i < definition.getConstructors().size(); i++) {
-        List<ExpressionPattern> patterns1 = definition.getConstructors().get(i).getPatterns();
-        for (int j = i + 1; j < definition.getConstructors().size(); j++) {
-          List<ExpressionPattern> patterns2 = definition.getConstructors().get(j).getPatterns();
-          if (patterns1 == null || patterns2 == null || ExpressionPattern.unify(patterns1, patterns2, null, null, null, DummyErrorReporter.INSTANCE, null)) {
-            baseSort = Sort.SET0;
-            break loop;
+    // TODO[sorts]: Support inductive-inductive definitions, also check that ordinary recursive data types work
+    if (dataDefinitions.size() == 1) {
+      DataDefinition dataDef = dataDefinitions.getFirst();
+      if (dataDef.getSort().getPLevel().isInfinity()) {
+        Sort baseSort = Sort.PROP;
+        for (Constructor constructor : dataDef.getConstructors()) {
+          if (constructor.getBody() instanceof IntervalElim) {
+            baseSort = Sort.TypeOfLevel(0);
+            break;
           }
         }
+        if (baseSort.isProp()) {
+          loop:
+          for (int i = 0; i < dataDef.getConstructors().size(); i++) {
+            List<ExpressionPattern> patterns1 = dataDef.getConstructors().get(i).getPatterns();
+            for (int j = i + 1; j < dataDef.getConstructors().size(); j++) {
+              List<ExpressionPattern> patterns2 = dataDef.getConstructors().get(j).getPatterns();
+              if (patterns1 == null || patterns2 == null || ExpressionPattern.unify(patterns1, patterns2, null, null, null, DummyErrorReporter.INSTANCE, null)) {
+                baseSort = Sort.SET0;
+                break loop;
+              }
+            }
+          }
+        }
+
+        Map<Binding, Integer> variables = SortExpression.getVariables(dataDef.getParameters());
+        SortExpression sortExpr = new SortExpression.Const(baseSort);
+        loop:
+        for (Constructor constructor : dataDef.getConstructors()) {
+          for (DependentLink param = constructor.getParameters(); param.hasNext(); param = param.getNext()) {
+            param = param.getNextTyped(null);
+            SortExpression constructorSortExpr = SortExpression.getSortExpression(param.getTypeExpr(), variables);
+            if (constructorSortExpr == null) {
+              sortExpr = null;
+              break loop;
+            }
+            sortExpr = new SortExpression.Max(sortExpr, constructorSortExpr);
+          }
+        }
+        dataDef.setSortExpression(sortExpr);
       }
     }
 
-    Map<Binding, Integer> variables = new HashMap<>();
-    int index = 0;
-    for (DependentLink param = definition.getParameters(); param.hasNext(); param = param.getNext(), index++) {
-      if (param.getTypeExpr().isInfinityLevel()) {
-        variables.put(param, index);
+    for (Definition definition : definitions) {
+      if (definition instanceof FunctionDefinition functionDef && functionDef.getBody() instanceof Expression body && functionDef.getResultType() instanceof UniverseExpression universe && universe.getSort().getPLevel().isInfinity()) {
+        functionDef.setSortExpression(SortExpression.getSortExpression(body, functionDef.getParameters()));
       }
     }
-
-    SortExpression sortExpr = new SortExpression.Const(baseSort);
-    for (Constructor constructor : definition.getConstructors()) {
-      for (DependentLink param = constructor.getParameters(); param.hasNext(); param = param.getNext()) {
-        param = param.getNextTyped(null);
-        SortExpression constructorSortExpr = SortExpression.getSortExpression(param.getTypeExpr(), variables);
-        if (constructorSortExpr == null) return;
-        sortExpr = new SortExpression.Max(sortExpr, constructorSortExpr);
-      }
-    }
-    definition.setSortExpression(sortExpr);
   }
 
   private void typecheckWithUse(Concrete.ResolvableDefinition definition, Set<TCDefReferable> usedDefinitions, boolean recursive, ArendExtension extension, List<Definition> typecheckedList) {

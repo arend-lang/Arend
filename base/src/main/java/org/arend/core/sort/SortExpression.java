@@ -6,6 +6,7 @@ import org.arend.core.expr.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -13,6 +14,20 @@ import java.util.function.Function;
 public sealed interface SortExpression permits SortExpression.Const, SortExpression.Equality, SortExpression.Max, SortExpression.Pi, SortExpression.Var {
   @Nullable Sort computeSort(@NotNull List<? extends Expression> arguments);
   @Nullable SortExpression subst(@NotNull Function<Integer, SortExpression> substitution);
+
+  static Map<Binding, Integer> getVariables(DependentLink parameters) {
+    Map<Binding, Integer> variables = new HashMap<>();
+    for (int index = 0; parameters.hasNext(); parameters = parameters.getNext(), index++) {
+      if (parameters.getTypeExpr().isInfinityLevel()) {
+        variables.put(parameters, index);
+      }
+    }
+    return variables;
+  }
+
+  static SortExpression getSortExpression(Expression expression, DependentLink parameters) {
+    return getSortExpression(expression, getVariables(parameters));
+  }
 
   static SortExpression getSortExpression(Expression expression, Map<Binding, Integer> variables) {
     return switch (expression) {
@@ -31,15 +46,15 @@ public sealed interface SortExpression permits SortExpression.Const, SortExpress
         }
         yield result;
       }
-      case DataCallExpression dataCall -> {
-        SortExpression result = dataCall.getDefinition().getSortExpression();
+      case DefCallExpression defCall -> {
+        SortExpression result = defCall.getDefinition().getSortExpression();
         if (result == null) {
-          Sort sort = dataCall.getSortOfType();
+          Sort sort = defCall.getSortOfType();
           yield sort == null || sort.getPLevel().isInfinity() ? null : new Const(sort);
         }
         yield result.subst(index -> {
-          if (index >= dataCall.getDefCallArguments().size()) return null;
-          Expression arg = dataCall.getDefCallArguments().get(index);
+          if (index >= defCall.getDefCallArguments().size()) return null;
+          Expression arg = defCall.getDefCallArguments().get(index);
           while (arg instanceof LamExpression lamExpr) {
             arg = lamExpr.getBody();
           }

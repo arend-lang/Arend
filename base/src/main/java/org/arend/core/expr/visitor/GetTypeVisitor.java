@@ -214,6 +214,9 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       }
     }
 
+    Sort sort = definition.applySortExpression(arguments);
+    if (sort != null) return new UniverseExpression(sort);
+
     List<DependentLink> defParams = new ArrayList<>();
     Expression type = definition.getTypeWithParams(defParams, myMinimal ? minimizeLevels(expr) : expr.getLevels());
     assert arguments.size() == defParams.size();

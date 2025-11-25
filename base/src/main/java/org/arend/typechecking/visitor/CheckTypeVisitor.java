@@ -3503,7 +3503,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   @Override
   public TypecheckingResult visitUniverse(Concrete.UniverseExpression expr, Expression expectedType) {
     if (expr.getKind() == ConcreteUniverseExpression.Kind.SORT && !expr.allowInf) {
-      errorReporter.report(new TypecheckingError("\\Sort is not allowed here", expr.getHLevel()));
+      errorReporter.report(new TypecheckingError("\\Sort is not allowed here", expr));
       return null;
     }
 

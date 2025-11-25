@@ -108,6 +108,10 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     ExprSubstitution substitution = new ExprSubstitution();
     List<? extends Expression> args = expr.getDefCallArguments();
     checkList(args, expr.getDefinition().getParameters(), substitution, expr.getLevelSubstitution());
+
+    Sort sort = expr.getDefinition().applySortExpression(expr.getDefCallArguments());
+    if (sort != null) return new UniverseExpression(sort);
+
     var resultType = expr.getDefinition().getResultType().subst(substitution, expr.getMinimizedLevels().makeSubstitution(expr.getDefinition()));
     if (expr.getDefinition() == Prelude.MOD || expr.getDefinition() == Prelude.DIV_MOD) {
       Expression arg2 = args.get(1);
@@ -117,6 +121,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
         resultType = expr.getDefinition() == Prelude.MOD ? ExpressionFactory.Fin(arg2) : ExpressionFactory.finDivModType(arg2);
       }
     }
+
     return check(expectedType, resultType, expr);
   }
 

@@ -17,7 +17,7 @@ public interface Type {
   Type strip(StripVisitor visitor);
   Type normalize(NormalizationMode mode);
 
-  Expression OMEGA = new UniverseExpression(Sort.INFINITY);
+  UniverseExpression OMEGA = new UniverseExpression(Sort.INFINITY);
 
   default boolean isOmega() {
     return false;
