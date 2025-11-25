@@ -96,6 +96,27 @@ class ImportQuickFixTest : QuickFixTestBase() {
        \open M2(baz \as foo1) 
     """)
 
+    fun testRenameImport() = simpleQuickFixTest(rename, """
+        -- ! M1.ard
+
+        \class C1 {
+          \func foo => ...
+        }
+
+        -- ! M2.ard
+
+        \class C2 {
+          \func foo => ...
+        }
+        
+        -- ! Main.ard
+        \import M1
+        \import M2{-caret-}
+    """, """
+        \import M1
+        \import M2 \using (.foo \as foo1)
+    """)
+
     fun testExistingOpenedName1() = simpleQuickFixTest(rename, """
        \module M \where {
          \func foo => 0
@@ -210,5 +231,26 @@ class ImportQuickFixTest : QuickFixTestBase() {
 
        \open M
        \open N ()
+    """)
+
+    fun testHideImport03() = simpleQuickFixTest(hide , """
+        -- ! M1.ard
+
+        \class C1 {
+          \func foo => ...
+        }
+
+        -- ! M2.ard
+
+        \class C2 {
+          \func foo => ...
+        }
+        
+        -- ! Main.ard
+        \import M1
+        \import M2{-caret-}
+    """, """
+        \import M1
+        \import M2 \hiding (.foo)
     """)
 }

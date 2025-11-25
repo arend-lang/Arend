@@ -36,7 +36,7 @@ class HideImportQuickFix(private val cause: Any,
             is ConcreteNamespaceCommand -> {
                 val statCmd = cause.data() as? ArendStatCmd
                 if (referable != null && statCmd != null)
-                    doAddIdToHiding(statCmd, singletonList(referable.textRepresentation()))
+                    doAddIdToHiding(statCmd, singletonList(referable))
             }
         }
     }
