@@ -25,7 +25,7 @@ val buildPrelude = tasks.register<org.arend.gradle.BuildPreludeTask>("buildPrelu
 }
 
 val copyPrelude = tasks.register<Copy>("copyPrelude") {
-    dependsOn(buildPrelude)
+    // dependsOn(buildPrelude)
     from(rootProject.file("lib"))
     into(buildDir.resolve("classes/java/main/lib"))
 }
