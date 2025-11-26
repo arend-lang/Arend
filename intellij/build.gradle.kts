@@ -159,7 +159,7 @@ tasks.withType<Test>().configureEach {
 tasks.register<Copy>("prelude") {
     from(projectDir.resolve("lib/Prelude.ard"))
     into("src/main/resources/lib")
-    dependsOn(task(":cli:buildPrelude"))
+    // dependsOn(task(":cli:buildPrelude"))
 }
 
 tasks.withType<Wrapper> {
