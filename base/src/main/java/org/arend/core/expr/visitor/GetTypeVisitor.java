@@ -477,7 +477,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   public Expression visitPath(PathExpression expr, Void params) {
     Expression left = AppExpression.make(expr.getArgument(), ExpressionFactory.Left(), true);
     Expression right = AppExpression.make(expr.getArgument(), ExpressionFactory.Right(), true);
-    return DataCallExpression.make(Prelude.PATH, expr.getLevels(), Arrays.asList(expr.getArgumentType(), left, right));
+    return DataCallExpression.make(Prelude.PATH, Levels.EMPTY, Arrays.asList(expr.getArgumentType(), left, right));
   }
 
   @Override
@@ -497,17 +497,11 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       return new ErrorExpression();
     }
 
-    Expression type = expr.getExpression().accept(this, null);
-    Sort sort = type.getSortOfType();
-    if (sort == null) {
-      return new ErrorExpression();
-    }
-
     List<Expression> args = new ArrayList<>(3);
-    args.add(type);
+    args.add(expr.getExpression().accept(this, null));
     args.add(expr.getExpression());
     args.add(normExpr);
-    return FunCallExpression.make(Prelude.PATH_INFIX, new LevelPair(sort.getPLevel(), sort.getHLevel()), args);
+    return FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, args);
   }
 
   @Override

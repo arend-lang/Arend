@@ -163,7 +163,7 @@ public class SFuncTest extends TypeCheckingTestCase {
           \\where \\use \\level levelProp {A : \\Type} {p : \\Pi (x y : A) -> x = y} (d1 d2 : D A p) : d1 = d2 \\elim d1, d2
             | con a1, con a2 => path (\\lam i => con (p a1 a2 @ i))
         \\sfunc f {A : \\Type} (p : \\Pi (x y : A) -> x = y) (d : D A p) : \\level A p \\elim d | con a => a
-        \\func test {A : \\Type} (p : \\Pi (x y : A) -> x = y) (a1 a2 : A) : (\\peval f p (con a1)) = (\\peval f p (con a2)) => idp
+        \\func test {A : \\Type} (p : \\Pi (x y : A) -> x = y) (a1 a2 : A) => (\\peval f p (con a1)) = (\\peval f p (con a2))
         """, 1);
     assertThatErrorsAre(typeMismatchError());
   }
@@ -184,7 +184,7 @@ public class SFuncTest extends TypeCheckingTestCase {
       """
         \\data Bool | true | false
         \\sfunc f (b : Bool) : Nat | true => 0 | false => 0
-        \\func test : (\\peval f true) = (\\peval f false) => idp
+        \\func test => (\\peval f true) = (\\peval f false)
         """, 1);
     assertThatErrorsAre(typeMismatchError());
   }
@@ -305,7 +305,7 @@ public class SFuncTest extends TypeCheckingTestCase {
         \\data D (A : \\Type) (p : \\Pi (x y : A) -> x = y) | con A
           \\where \\use \\level levelProp {A : \\Type} {p : \\Pi (x y : A) -> x = y} (d1 d2 : D A p) : d1 = d2 \\elim d1, d2
             | con a1, con a2 => path (\\lam i => con (p a1 a2 @ i))
-        \\func test {A : \\Type} (p : \\Pi (x y : A) -> x = y) (a1 a2 : A) : (\\peval \\scase con a1 \\return \\level A p \\with { | con a => a }) = (\\peval \\scase con a2 \\return \\level A p \\with { | con a => a }) => idp
+        \\func test {A : \\Type} (p : \\Pi (x y : A) -> x = y) (a1 a2 : A) => (\\peval \\scase con a1 \\return \\level A p \\with { | con a => a }) = (\\peval \\scase con a2 \\return \\level A p \\with { | con a => a })
         """, 1);
     assertThatErrorsAre(typeMismatchError());
   }
@@ -324,7 +324,7 @@ public class SFuncTest extends TypeCheckingTestCase {
   public void pevalCmpCaseError() {
     typeCheckModule(
       "\\data Bool | true | false\n" +
-      "\\func test : (\\peval \\scase true \\return Nat \\with { | true => 0 | false => 0 }) = (\\peval \\scase false \\return Nat \\with { | true => 0 | false => 0 }) => idp", 1);
+      "\\func test => (\\peval \\scase true \\return Nat \\with { | true => 0 | false => 0 }) = (\\peval \\scase false \\return Nat \\with { | true => 0 | false => 0 })", 1);
     assertThatErrorsAre(typeMismatchError());
   }
 

@@ -1097,7 +1097,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
   @Override
   public Expression visitPath(PathExpression expr, NormalizationMode mode) {
     if (mode == NormalizationMode.WHNF) return expr;
-    return new PathExpression(expr.getLevels(), expr.getArgumentType().accept(this, mode), expr.getArgument().accept(this, mode));
+    return new PathExpression(expr.getArgumentType().accept(this, mode), expr.getArgument().accept(this, mode));
   }
 
   @Override

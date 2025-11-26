@@ -12,6 +12,7 @@ import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.error.DummyErrorReporter;
@@ -160,7 +161,7 @@ public class Prelude implements ArendPrelude {
       }
       case "Path" -> {
         PATH = (DataDefinition) definition;
-        PATH.setSort(new Sort(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR, -1)));
+        PATH.setSortExpression(new SortExpression.Equality(new SortExpression.Var(0)));
         PATH.setCovariant(1, false);
         PATH.setCovariant(2, false);
         PATH_CON = PATH.getConstructor("path");
@@ -177,13 +178,13 @@ public class Prelude implements ArendPrelude {
         List<Expression> args = new ArrayList<>(2);
         args.add(new ReferenceExpression(IDP.getParameters()));
         args.add(new ReferenceExpression(IDP.getParameters().getNext()));
-        IDP.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(IDP, LevelPair.STD, args), Collections.emptyList()));
+        IDP.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(IDP, Levels.EMPTY, args), Collections.emptyList()));
         IDP.setNumberOfParameters(2);
         IDP.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
         PathExpression pathExpr = (PathExpression) IDP.getBody();
         assert pathExpr != null;
         Sort sort = new Sort(new Level(LevelVariable.PVAR), Level.INFINITY);
-        IDP.setBody(new PathExpression(pathExpr.getLevels(), new LamExpression(sort, UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(sort, UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody())));
+        IDP.setBody(new PathExpression(new LamExpression(sort, UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(sort, UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody())));
       }
       case "@" -> {
         AT = (FunctionDefinition) definition;

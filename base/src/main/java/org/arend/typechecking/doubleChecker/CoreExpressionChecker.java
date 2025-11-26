@@ -574,14 +574,8 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitPEval(PEvalExpression expr, Expression expectedType) {
-    Expression type = expr.getExpression().accept(this, null);
-    Sort sort = type.getSortOfType();
-    if (sort == null) {
-      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot infer the sort of the type of the expression", mySourceNode), expr.getExpression()));
-    }
-
     List<Expression> args = new ArrayList<>(3);
-    args.add(type);
+    args.add(expr.getExpression().accept(this, null));
     args.add(expr.getExpression());
     Expression evaluated = expr.eval();
     if (evaluated == null) {
@@ -589,7 +583,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     }
 
     args.add(evaluated);
-    return check(expectedType, FunCallExpression.make(Prelude.PATH_INFIX, new LevelPair(sort.getPLevel(), sort.getHLevel()), args), expr);
+    return check(expectedType, FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, args), expr);
   }
 
   @Override
@@ -631,7 +625,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       args.add(type);
       args.add(new ReferenceExpression(params.get(i)));
       args.add(new ReferenceExpression(params.get(i + 1)));
-      type = FunCallExpression.make(Prelude.PATH_INFIX, LevelPair.PROP, args);
+      type = FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, args);
     }
 
     return params.size() / 2 - 2;
@@ -997,10 +991,9 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitPath(PathExpression expr, Expression expectedType) {
-    Sort sort = new Sort(expr.getLevels().get(LevelVariable.PVAR).add(1), Level.INFINITY);
-    expr.getArgumentType().accept(this, new PiExpression(sort, UnusedIntervalDependentLink.INSTANCE, new UniverseExpression(expr.getLevels().toSort())));
+    expr.getArgumentType().accept(this, new PiExpression(Sort.INFINITY, UnusedIntervalDependentLink.INSTANCE, Type.OMEGA));
     TypedSingleDependentLink param = new TypedSingleDependentLink(true, "i", ExpressionFactory.Interval());
-    expr.getArgument().accept(this, new PiExpression(sort, param, AppExpression.make(expr.getArgumentType(), new ReferenceExpression(param), true)));
+    expr.getArgument().accept(this, new PiExpression(Sort.INFINITY, param, AppExpression.make(expr.getArgumentType(), new ReferenceExpression(param), true)));
     return check(expectedType, expr.getType(), expr);
   }
 

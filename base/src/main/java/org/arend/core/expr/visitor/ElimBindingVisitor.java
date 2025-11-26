@@ -514,7 +514,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     Expression argumentType = acceptSelf(expr.getArgumentType(), true);
     if (argumentType == null) return null;
     Expression argument = acceptSelf(expr.getArgument(), true);
-    return argument == null ? null : new PathExpression(expr.getLevels(), argumentType, argument);
+    return argument == null ? null : new PathExpression(argumentType, argument);
   }
 
   @Override

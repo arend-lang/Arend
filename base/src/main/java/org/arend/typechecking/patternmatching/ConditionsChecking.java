@@ -1,6 +1,5 @@
 package org.arend.typechecking.patternmatching;
 
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.SingleDependentLink;
@@ -13,7 +12,6 @@ import org.arend.core.expr.let.LetClause;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.expr.visitor.NormalizeVisitor;
 import org.arend.core.pattern.*;
-import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
@@ -200,7 +198,7 @@ public class ConditionsChecking {
         elimTree.addChild(Prelude.LEFT, new LeafElimTree(0, Collections.emptyList(), 0));
         elimTree.addChild(Prelude.RIGHT, new LeafElimTree(0, Collections.emptyList(), 1));
         elimTree.addChild(null, new LeafElimTree(0, null, 1));
-        substitution.add(((BindingPattern) conPattern.getSubPatterns().getFirst()).getBinding(), new LamExpression(new Sort(conPattern.getLevels().toLevelPair().get(LevelVariable.PVAR), Level.INFINITY), lamParam, new CaseExpression(false, lamParam, AppExpression.make(conPattern.getDataTypeArguments().getFirst(), lamRef, true), null, new ElimBody(clauses, elimTree), Collections.singletonList(lamRef))));
+        substitution.add(((BindingPattern) conPattern.getSubPatterns().getFirst()).getBinding(), new LamExpression(Sort.INFINITY, lamParam, new CaseExpression(false, lamParam, AppExpression.make(conPattern.getDataTypeArguments().getFirst(), lamRef, true), null, new ElimBody(clauses, elimTree), Collections.singletonList(lamRef))));
       }
     }
   }

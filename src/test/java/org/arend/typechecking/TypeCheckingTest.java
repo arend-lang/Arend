@@ -7,7 +7,7 @@ import org.arend.core.elimtree.ElimBody;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
-import org.arend.core.subst.LevelPair;
+import org.arend.core.subst.Levels;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
@@ -138,7 +138,7 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
   @Test
   public void parameters() {
     FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func f (x : Nat Nat) (p : x = {Nat} x) => p", 1);
-    assertEquals(FunCall(Prelude.PATH_INFIX, LevelPair.SET0, Nat(), Ref(def.getParameters()), Ref(def.getParameters())), def.getResultType());
+    assertEquals(FunCall(Prelude.PATH_INFIX, Levels.EMPTY, Nat(), Ref(def.getParameters()), Ref(def.getParameters())), def.getResultType());
   }
 
   @Test

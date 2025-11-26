@@ -111,12 +111,11 @@ public class FixLevelParameters extends VoidExpressionVisitor<Void> {
   }
 
   private void processDefCall(DefCallExpression defCall) {
-    if (!(defCall instanceof LeveledDefCallExpression)) return;
-    LeveledDefCallExpression leveled = (LeveledDefCallExpression) defCall;
+    if (!(defCall instanceof LeveledDefCallExpression leveled)) return;
     if (myDefinitions == null) {
       List<? extends LevelVariable> params = leveled.getDefinition().getLevelParameters();
       if (params != null && (leveled.getLevels() instanceof LevelPair || leveled.getLevels().toList().size() != params.size())) {
-        removeLevels(leveled, params.isEmpty() || params.get(0).getType() == LevelVariable.LvlType.HLVL, params.isEmpty() || params.get(0).getType() == LevelVariable.LvlType.PLVL);
+        removeLevels(leveled, params.isEmpty() || params.getFirst().getType() == LevelVariable.LvlType.HLVL, params.isEmpty() || params.getFirst().getType() == LevelVariable.LvlType.PLVL);
       }
     } else if (myDefinitions.contains(leveled.getDefinition())) {
       removeLevels(leveled, myRemovePLevels, myRemoveHLevels);
@@ -168,12 +167,6 @@ public class FixLevelParameters extends VoidExpressionVisitor<Void> {
   public Void visitArray(ArrayExpression expr, Void params) {
     expr.setLevels(removeVars(expr.getLevels()));
     return super.visitArray(expr, params);
-  }
-
-  @Override
-  public Void visitPath(PathExpression expr, Void params) {
-    expr.setLevels(removeVars(expr.getLevels()));
-    return super.visitPath(expr, params);
   }
 
   @Override

@@ -19,7 +19,6 @@ import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.level.LevelSubstitution;
@@ -220,7 +219,6 @@ public class PatternTypechecking {
             intervalSubst.add(binding, new ReferenceExpression(link));
           }
 
-          LevelPair levels = new LevelPair(sort.getPLevel(), sort.getHLevel());
           Sort hSort = new Sort(sort.getPLevel(), Level.INFINITY);
           exprType = expectedType.subst(intervalSubst);
           List<Expression> exprTypes = new ArrayList<>(intervalBindings.size());
@@ -252,12 +250,12 @@ public class PatternTypechecking {
             }
 
             for (int j = intervalBindings.size() - 1, k = 0; j > i; j--, k++) {
-              leftArg = new PathExpression(levels, new LamExpression(hSort, lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left())), new LamExpression(hSort, lamBindings.get(j), leftArg));
-              rightArg = new PathExpression(levels, new LamExpression(hSort, lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right())), new LamExpression(hSort, lamBindings.get(j), rightArg));
+              leftArg = new PathExpression(new LamExpression(hSort, lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left())), new LamExpression(hSort, lamBindings.get(j), leftArg));
+              rightArg = new PathExpression(new LamExpression(hSort, lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right())), new LamExpression(hSort, lamBindings.get(j), rightArg));
             }
 
             intervalSubst.add(intervalBinding, new ReferenceExpression(lamBindings.get(i)));
-            exprType = DataCallExpression.make(Prelude.PATH, levels, Arrays.asList(new LamExpression(hSort, lamBindings.get(i), exprType), leftArg, rightArg));
+            exprType = DataCallExpression.make(Prelude.PATH, Levels.EMPTY, Arrays.asList(new LamExpression(hSort, lamBindings.get(i), exprType), leftArg, rightArg));
           }
         } else {
           intervalBindings = null;
@@ -643,20 +641,13 @@ public class PatternTypechecking {
               return null;
             }
 
+            levels = Levels.EMPTY;
             DataCallExpression dataCall = expr.cast(DataCallExpression.class);
-            LamExpression typeLam = dataCall == null || dataCall.getDefinition() != Prelude.PATH ? null : dataCall.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF).cast(LamExpression.class);
+            LamExpression typeLam = dataCall == null || dataCall.getDefinition() != Prelude.PATH ? null : dataCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF).cast(LamExpression.class);
             Expression type = ElimBindingVisitor.elimLamBinding(typeLam);
             if (type == null) {
               myErrorReporter.report(new TypeMismatchError(expr, constructor.getResultType().subst(substitution), conPattern));
               return null;
-            }
-
-            Sort actualSort = type.getSortOfType();
-            if (actualSort == null) {
-              Sort dataSort = dataCall.getSortOfType();
-              levels = new LevelPair(dataSort.getPLevel(), dataSort.getHLevel().add(1));
-            } else {
-              levels = new LevelPair(actualSort.getPLevel(), actualSort.getHLevel());
             }
 
             Expression expr1 = dataCall.getDefCallArguments().get(2).normalize(NormalizationMode.WHNF);
@@ -943,7 +934,7 @@ public class PatternTypechecking {
         }
         return null;
       }
-      ConCallExpression conCall = dataCall != null ? conCalls.get(0) : null;
+      ConCallExpression conCall = dataCall != null ? conCalls.getFirst() : null;
       DependentLink newParameters;
       if (dataCall != null) {
         newParameters = DependentLink.Helper.subst(constructor.getParameters(), new ExprSubstitution().add(((Constructor) constructor).getDataTypeParameters(), conCall.getDataTypeArguments()), dataCall.getLevelSubstitution());
@@ -980,7 +971,7 @@ public class PatternTypechecking {
           }
         }
         if (n > 0 || isNil) {
-          Object data = patterns.get(0).getData();
+          Object data = patterns.getFirst().getData();
           Concrete.Pattern newPattern;
           if (isNil) {
             newPattern = new Concrete.NumberPattern(data, n, null);
@@ -991,7 +982,7 @@ public class PatternTypechecking {
             }
           }
           newPattern.setExplicit(false);
-          conPattern.getPatterns().add(0, newPattern);
+          conPattern.getPatterns().addFirst(newPattern);
         }
       }
 
@@ -1053,7 +1044,7 @@ public class PatternTypechecking {
           List<Expression> funCallArgs;
           Expression elementsType = classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE);
           if (elementsType != null) {
-            elementsType = elementsType.subst(classCall.getThisBinding(), new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), Collections.singletonMap(Prelude.ARRAY_LENGTH, constructor == Prelude.EMPTY_ARRAY ? Zero() : length != null ? length : Suc(conResult.exprs.get(0))), Sort.STD.succ(), UniverseKind.NO_UNIVERSES)));
+            elementsType = elementsType.subst(classCall.getThisBinding(), new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), Collections.singletonMap(Prelude.ARRAY_LENGTH, constructor == Prelude.EMPTY_ARRAY ? Zero() : length != null ? length : Suc(conResult.exprs.getFirst())), Sort.STD.succ(), UniverseKind.NO_UNIVERSES)));
           }
           if (elementsType != null || length1 != null && constructor == Prelude.ARRAY_CONS) {
             funCallArgs = new ArrayList<>();
@@ -1062,7 +1053,7 @@ public class PatternTypechecking {
               if (elementsType != null) funCallArgs.add(elementsType);
               funCallArgs.addAll(conResult.exprs);
             } else {
-              if (!conResult.exprs.isEmpty()) funCallArgs.add(conResult.exprs.get(0));
+              if (!conResult.exprs.isEmpty()) funCallArgs.add(conResult.exprs.getFirst());
               funCallArgs.add(elementsType);
               if (!conResult.exprs.isEmpty()) funCallArgs.addAll(conResult.exprs.subList(1, conResult.exprs.size()));
             }

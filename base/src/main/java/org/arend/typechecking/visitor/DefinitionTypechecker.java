@@ -384,7 +384,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       if (type != null) {
         TypedSingleDependentLink y = new TypedSingleDependentLink(true, "y", type);
         UntypedSingleDependentLink x = new UntypedSingleDependentLink("x", y);
-        TypecheckingResult result = typechecker.finalCheckExpr(resultTypeLevel, new PiExpression(sort, x, FunCallExpression.make(Prelude.PATH_INFIX, new LevelPair(sort.getPLevel(), sort.getHLevel()), Arrays.asList(resultType, new ReferenceExpression(x), new ReferenceExpression(y)))));
+        TypecheckingResult result = typechecker.finalCheckExpr(resultTypeLevel, new PiExpression(sort, x, FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, Arrays.asList(resultType, new ReferenceExpression(x), new ReferenceExpression(y)))));
         if (result == null) return null;
         if (funDef != null) {
           funDef.setResultTypeLevel(result.expression);

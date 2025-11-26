@@ -170,15 +170,13 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     if (isExplicit) {
       if (result instanceof DefCallResult defCallResult && defCallResult.getDefinition() == Prelude.PATH_CON) {
         SingleDependentLink lamParam = new TypedSingleDependentLink(true, "i", Interval());
-        Sort sort0 = Sort.STD.subst(defCallResult.getLevels().toLevelPair());
-        Sort sort = sort0.succ();
         TypecheckingResult argResult;
         if (defCallResult.getArguments().isEmpty()) {
-          Expression binding = InferenceReferenceExpression.make(new FunctionInferenceVariable(Prelude.PATH_CON, Prelude.PATH_CON.getDataTypeParameters(), 1, new UniverseExpression(sort0), fun, myVisitor.getAllBindings()), myVisitor.getEquations());
-          result = result.applyExpression(new LamExpression(sort, lamParam, binding), true, myVisitor, fun);
-          argResult = myVisitor.checkArgument(arg, new PiExpression(sort, lamParam, binding), result, null);
+          Expression binding = InferenceReferenceExpression.make(new FunctionInferenceVariable(Prelude.PATH_CON, Prelude.PATH_CON.getDataTypeParameters(), 1, Type.OMEGA, fun, myVisitor.getAllBindings()), myVisitor.getEquations());
+          result = result.applyExpression(new LamExpression(Sort.INFINITY, lamParam, binding), true, myVisitor, fun);
+          argResult = myVisitor.checkArgument(arg, new PiExpression(Sort.INFINITY, lamParam, binding), result, null);
         } else {
-          argResult = myVisitor.checkArgument(arg, new PiExpression(sort, lamParam, AppExpression.make(defCallResult.getArguments().getFirst(), new ReferenceExpression(lamParam), true)), result, null);
+          argResult = myVisitor.checkArgument(arg, new PiExpression(Sort.INFINITY, lamParam, AppExpression.make(defCallResult.getArguments().getFirst(), new ReferenceExpression(lamParam), true)), result, null);
         }
         return argResult == null ? null : ((DefCallResult) result).applyPathArgument(argResult.expression, myVisitor, arg);
       }

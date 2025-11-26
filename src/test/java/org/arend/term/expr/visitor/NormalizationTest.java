@@ -262,12 +262,12 @@ public class NormalizationTest extends TypeCheckingTestCase {
     DependentLink g = param("g", Pi(Ref(B), Ref(A)));
     SingleDependentLink a = singleParam("a", Ref(A));
     SingleDependentLink b = singleParam("b", Ref(B));
-    Expression linvType = FunCall(Prelude.PATH_INFIX, LevelPair.SET0,
+    Expression linvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(A),
         Apps(Ref(g), Apps(Ref(f), Ref(a))),
         Ref(a));
     DependentLink linv = param("linv", Pi(a, linvType));
-    Expression rinvType = FunCall(Prelude.PATH_INFIX, LevelPair.SET0,
+    Expression rinvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(B),
         Apps(Ref(f), Apps(Ref(g), Ref(b))),
         Ref(b));
@@ -288,12 +288,12 @@ public class NormalizationTest extends TypeCheckingTestCase {
     DependentLink g = param("g", Pi(Ref(B), Ref(A)));
     SingleDependentLink a = singleParam("a", Ref(A));
     SingleDependentLink b = singleParam("b", Ref(B));
-    Expression linvType = FunCall(Prelude.PATH_INFIX, LevelPair.STD,
+    Expression linvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(A),
         Apps(Ref(g), Apps(Ref(f), Ref(a))),
         Ref(a));
     DependentLink linv = param("linv", Pi(a, linvType));
-    Expression rinvType = FunCall(Prelude.PATH_INFIX, LevelPair.STD,
+    Expression rinvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(B),
         Apps(Ref(f), Apps(Ref(g), Ref(b))),
         Ref(b));
@@ -315,12 +315,12 @@ public class NormalizationTest extends TypeCheckingTestCase {
     SingleDependentLink a = singleParam("a", Ref(A));
     SingleDependentLink b = singleParam("b", Ref(B));
     SingleDependentLink k = singleParam("k", Interval());
-    Expression linvType = FunCall(Prelude.PATH_INFIX, LevelPair.SET0,
+    Expression linvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(A),
         Apps(Ref(g), Apps(Ref(f), Ref(a))),
         Ref(a));
     DependentLink linv = param("linv", Pi(a, linvType));
-    Expression rinvType = FunCall(Prelude.PATH_INFIX, LevelPair.SET0,
+    Expression rinvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(B),
         Apps(Ref(f), Apps(Ref(g), Ref(b))),
         Ref(b));
@@ -343,18 +343,18 @@ public class NormalizationTest extends TypeCheckingTestCase {
     SingleDependentLink k = singleParam("k", Interval());
     SingleDependentLink i = singleParam("i", Interval());
     LevelPair levels = new LevelPair(new Level(0), Level.INFINITY);
-    DataCallExpression A = DataCall(Prelude.PATH, levels, Lam(i, Interval()), Ref(k), Ref(k));
+    DataCallExpression A = DataCall(Prelude.PATH, Levels.EMPTY, Lam(i, Interval()), Ref(k), Ref(k));
     DependentLink B = param("B", Universe(Sort.SET0));
     DependentLink f = param("f", Pi(A, Ref(B)));
     DependentLink g = param("g", Pi(Ref(B), A));
     SingleDependentLink a = singleParam("a", A);
     SingleDependentLink b = singleParam("b", Ref(B));
-    Expression linvType = FunCall(Prelude.PATH_INFIX, levels,
+    Expression linvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         A,
         Apps(Ref(g), Apps(Ref(f), Ref(a))),
         Ref(a));
     DependentLink linv = param("linv", Pi(a, linvType));
-    Expression rinvType = FunCall(Prelude.PATH_INFIX, levels,
+    Expression rinvType = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Ref(B),
         Apps(Ref(f), Apps(Ref(g), Ref(b))),
         Ref(b));
@@ -362,7 +362,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
     DependentLink aleft = paramExpr("aleft", A.subst(k, Right()));
     Expression expr = FunCall(Prelude.COERCE, levels,
         Lam(k, FunCall(Prelude.ISO, levels,
-            DataCall(Prelude.PATH, levels,
+            DataCall(Prelude.PATH, Levels.EMPTY,
                 Lam(i, Interval()),
                 Ref(k),
                 Ref(k)),

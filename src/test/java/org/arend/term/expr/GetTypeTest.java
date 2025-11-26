@@ -71,7 +71,7 @@ public class GetTypeTest extends TypeCheckingTestCase {
   public void fieldAccTest() {
     typeCheckModule("\\class C { | x : Nat \\func f (p : 0 = x) => p } \\func test (p : Nat -> C) => C.f {p 0}");
     SingleDependentLink p = singleParam("p", Pi(Nat(), new ClassCallExpression((ClassDefinition) getDefinition("C"), Levels.EMPTY)));
-    Expression type = FunCall(Prelude.PATH_INFIX, LevelPair.SET0,
+    Expression type = FunCall(Prelude.PATH_INFIX, Levels.EMPTY,
         Nat(),
         Zero(),
         FieldCall((ClassField) getDefinition("C.x"), Apps(Ref(p), Zero())));
@@ -84,7 +84,7 @@ public class GetTypeTest extends TypeCheckingTestCase {
   public void tupleTest() {
     typeCheckModule("\\func test : \\Sigma (x y : Nat) (x = y) => (0, 0, idp)");
     DependentLink xy = parameter(true, vars("x", "y"), Nat());
-    testType(new SigmaExpression(Sort.PROP, params(xy, paramExpr(FunCall(Prelude.PATH_INFIX, LevelPair.SET0, Nat(), Ref(xy), Ref(xy.getNext()))))));
+    testType(new SigmaExpression(Sort.PROP, params(xy, paramExpr(FunCall(Prelude.PATH_INFIX, Levels.EMPTY, Nat(), Ref(xy), Ref(xy.getNext()))))));
   }
 
   @Test

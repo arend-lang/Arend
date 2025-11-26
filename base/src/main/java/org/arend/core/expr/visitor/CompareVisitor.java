@@ -3,7 +3,6 @@ package org.arend.core.expr.visitor;
 import org.arend.core.constructor.SingleConstructor;
 import org.arend.core.context.LinkList;
 import org.arend.core.context.binding.Binding;
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.inference.InferenceVariable;
 import org.arend.core.context.binding.inference.MetaInferenceVariable;
 import org.arend.core.context.binding.inference.TypeClassInferenceVariable;
@@ -15,7 +14,6 @@ import org.arend.core.expr.type.Type;
 import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.Pattern;
-import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.*;
 import org.arend.ext.core.level.LevelSubstitution;
@@ -360,7 +358,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       return true;
     }
     if (expr2 instanceof PathExpression && !(expr1 instanceof PathExpression)) {
-      ok = comparePathEta((PathExpression) expr2, expr1, type, false);
+      ok = comparePathEta((PathExpression) expr2, expr1, false);
     } else if (expr2 instanceof LamExpression) {
       ok = visitLam((LamExpression) expr2, expr1, type, false);
     } else if (expr2 instanceof TupleExpression) {
@@ -564,13 +562,11 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     return true;
   }
 
-  private Boolean comparePathEta(PathExpression pathExpr1, Expression expr2, Expression type, boolean correctOrder) {
+  private Boolean comparePathEta(PathExpression pathExpr1, Expression expr2, boolean correctOrder) {
     SingleDependentLink param = new TypedSingleDependentLink(true, "i", ExpressionFactory.Interval());
     ReferenceExpression paramRef = new ReferenceExpression(param);
-    Expression argumentType = pathExpr1.getArgumentType();
-    Sort sort = new Sort(pathExpr1.getLevels().toLevelPair().get(LevelVariable.PVAR), Level.INFINITY);
-    LamExpression lamExpr = new LamExpression(sort, param, AtExpression.make(expr2, paramRef, false));
-    Expression argType = new PiExpression(sort, param, AppExpression.make(argumentType, paramRef, true));
+    LamExpression lamExpr = new LamExpression(Sort.INFINITY, param, AtExpression.make(expr2, paramRef, false));
+    Expression argType = new PiExpression(Sort.INFINITY, param, AppExpression.make(pathExpr1.getArgumentType(), paramRef, true));
     if (!(correctOrder ? compare(pathExpr1.getArgument(), lamExpr, argType, true) : compare(lamExpr, pathExpr1.getArgument(), argType, true))) {
       initResult(pathExpr1, expr2, correctOrder);
       return false;
@@ -666,7 +662,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     if (otherExpr.getStuckInferenceVariable() != null) {
       ok = false;
     } else {
-      Expression arg = atExpr.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF);
+      Expression arg = atExpr.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
       if (!(arg instanceof ArrayExpression arrayExpr)) {
         ok = correctOrder ? visitDefCall(atExpr, otherExpr) : otherExpr instanceof FunCallExpression && ((FunCallExpression) otherExpr).getDefinition() == Prelude.ARRAY_INDEX ? visitDefCall((FunCallExpression) otherExpr, atExpr) : otherExpr.accept(this, atExpr, type);
       } else {
@@ -905,12 +901,12 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         if (myNormalCompare) {
           if (dataCall2 != null && dataCall2.getDefinition() == Prelude.FIN && expr1.getDefinition() == Prelude.FIN) {
             int sucs = 0;
-            Expression arg1 = expr1.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF);
-            Expression arg2 = dataCall2.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF);
+            Expression arg1 = expr1.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
+            Expression arg2 = dataCall2.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
             while (arg1 instanceof ConCallExpression conCall1 && conCall1.getDefinition() == Prelude.SUC && arg2 instanceof ConCallExpression conCall2 && conCall2.getDefinition() == Prelude.SUC) {
               sucs++;
-              arg1 = conCall1.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF);
-              arg2 = conCall2.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF);
+              arg1 = conCall1.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
+              arg2 = conCall2.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
             }
             Expression wholeExpr1 = arg1;
             Expression wholeExpr2 = arg2;
@@ -966,7 +962,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (!(expr instanceof ConCallExpression && ((ConCallExpression) expr).getDefinition() == Prelude.SUC)) {
         return expr instanceof IntegerExpression ? new Pair<>(new SmallIntegerExpression(0), ((IntegerExpression) expr).plus(sucs).getBigInteger()) : new Pair<>(expr, BigInteger.valueOf(sucs));
       }
-      expr = ((ConCallExpression) expr).getDefCallArguments().get(0);
+      expr = ((ConCallExpression) expr).getDefCallArguments().getFirst();
       expr = myNormalize ? expr.normalize(NormalizationMode.WHNF) : expr.getUnderlyingExpression();
       sucs++;
     }
@@ -980,8 +976,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       return myCMP != CMP.EQ;
     }
 
-    Expression arg1 = expr1.getDefCallArguments().get(0);
-    Expression arg2 = expr2.getDefCallArguments().get(0);
+    Expression arg1 = expr1.getDefCallArguments().getFirst();
+    Expression arg2 = expr2.getDefCallArguments().getFirst();
     if (myCMP == CMP.EQ) {
       return compare(correctOrder ? arg1 : arg2, correctOrder ? arg2 : arg1, ExpressionFactory.Nat(), false);
     }
@@ -2026,7 +2022,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
           Expression type2 = list2.get(i).getType().normalize(NormalizationMode.WHNF);
           boolean isGE;
           if (type1 instanceof ClassCallExpression classCall1 && type2 instanceof ClassCallExpression classCall2) {
-            isGE = classCall1.getDefinition() == classCall2.getDefinition() ? classCall2.getImplementedHere().size() > classCall1.getImplementedHere().size() : ((ClassCallExpression) type2).getDefinition().isSubClassOf(((ClassCallExpression) type1).getDefinition());
+            isGE = classCall1.getDefinition() == classCall2.getDefinition() ? classCall2.getImplementedHere().size() > classCall1.getImplementedHere().size() : classCall2.getDefinition().isSubClassOf(classCall1.getDefinition());
           } else {
             isGE = type2 instanceof DataCallExpression && ((DataCallExpression) type2).getDefinition() == Prelude.FIN || type1 instanceof DataCallExpression && ((DataCallExpression) type1).getDefinition() == Prelude.NAT;
           }
@@ -2157,7 +2153,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       } else if (constructor2 == Prelude.ZERO) {
         return true;
       } else {
-        ok = compare(expr1.pred(), conCall2.getDefCallArguments().get(0), ExpressionFactory.Nat(), false);
+        ok = compare(expr1.pred(), conCall2.getDefCallArguments().getFirst(), ExpressionFactory.Nat(), false);
       }
     }
     if (!ok) {
@@ -2313,14 +2309,14 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
   public Boolean visitPath(PathExpression expr, Expression expr2, Expression type) {
     PathExpression pathExpr2 = expr2.cast(PathExpression.class);
     if (pathExpr2 == null) {
-      return comparePathEta(expr, expr2, type, true);
+      return comparePathEta(expr, expr2, true);
     }
     if (!compare(expr.getArgument(), pathExpr2.getArgument(), null, false)) {
       if (myResult == null) {
         initResult(expr, expr2);
       } else {
-        myResult.wholeExpr1 = new PathExpression(expr.getLevels(), expr.getArgumentType(), myResult.wholeExpr1);
-        myResult.wholeExpr2 = new PathExpression(pathExpr2.getLevels(), pathExpr2.getArgumentType(), myResult.wholeExpr2);
+        myResult.wholeExpr1 = new PathExpression(expr.getArgumentType(), myResult.wholeExpr1);
+        myResult.wholeExpr2 = new PathExpression(pathExpr2.getArgumentType(), myResult.wholeExpr2);
       }
       return false;
     }
