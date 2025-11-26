@@ -3,6 +3,7 @@ package org.arend.core.sort;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.expr.*;
+import org.arend.ext.core.ops.NormalizationMode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -93,7 +94,7 @@ public sealed interface SortExpression permits SortExpression.Const, SortExpress
       Sort result = sort.computeSort(arguments);
       if (result == null) return null;
       Level hLevel = result.getHLevel();
-      if (hLevel.isInfinity()) return result;
+      if (hLevel.isInfinity() || hLevel.isCat()) return result;
       if (hLevel.isClosed() && hLevel.getConstant() == 0) return Sort.PROP;
       return new Sort(result.getPLevel(), new Level(hLevel.getVar(), hLevel.getConstant() > 0 ? hLevel.getConstant() - 1 : hLevel.getConstant(), hLevel.getMaxConstant() > 0 ? hLevel.getMaxConstant() - 1 : hLevel.getMaxConstant()));
     }
@@ -140,7 +141,14 @@ public sealed interface SortExpression permits SortExpression.Const, SortExpress
   record Var(int index) implements SortExpression {
     @Override
     public @Nullable Sort computeSort(@NotNull List<? extends Expression> arguments) {
-      return index >= arguments.size() ? null : arguments.get(index).getSortOfType();
+      if (index >= arguments.size()) return null;
+      Expression type = arguments.get(index).getType();
+      if (type == null) return null;
+      type = type.normalize(NormalizationMode.WHNF);
+      while (type instanceof PiExpression piExpression) {
+        type = piExpression.getCodomain().normalize(NormalizationMode.WHNF);
+      }
+      return type instanceof UniverseExpression universe ? universe.getSort() : null;
     }
 
     @Override
