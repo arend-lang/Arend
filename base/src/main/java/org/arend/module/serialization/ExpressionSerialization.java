@@ -677,9 +677,6 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
   @Override
   public ExpressionProtos.Expression visitArray(ArrayExpression expr, Void params) {
     ExpressionProtos.Expression.Array.Builder builder = ExpressionProtos.Expression.Array.newBuilder();
-    LevelPair levelPair = expr.getLevels().toLevelPair();
-    builder.setPLevel(writeLevel(levelPair.get(LevelVariable.PVAR)));
-    builder.setHLevel(writeLevel(levelPair.get(LevelVariable.HVAR)));
     builder.setElementsType(writeExpr(expr.getElementsType()));
     for (Expression element : expr.getElements()) {
       builder.addElement(writeExpr(element));

@@ -15,7 +15,7 @@ import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.LevelPair;
+import org.arend.core.subst.Levels;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
@@ -76,7 +76,7 @@ public class ElimTypechecking {
       for (DataCallExpression dataCall = pathType.cast(DataCallExpression.class); dataCall != null; dataCall = pathType.cast(DataCallExpression.class)) {
         if (dataCall.getDefinition() == Prelude.PATH) {
           actualLevelSub++;
-          pathType = dataCall.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF);
+          pathType = dataCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
           LamExpression lam = pathType.cast(LamExpression.class);
           if (lam == null) {
             pathType = AppExpression.make(pathType, new ReferenceExpression(new TypedBinding("i", ExpressionFactory.Interval())), true);
@@ -252,7 +252,7 @@ public class ElimTypechecking {
           clauses.remove(i--);
         }
       }
-      if (errorClause != null) {
+      if (errorClause != null && myErrorReporter != null) {
         myErrorReporter.report(new TypecheckingError("Non-interval clauses must be placed before the interval ones", errorClause));
       }
     } else {
@@ -413,12 +413,12 @@ public class ElimTypechecking {
       Boolean isEmpty = ConstructorExpressionPattern.isArrayEmpty(type);
       conPatterns = new ArrayList<>(2);
       if (isEmpty == null || isEmpty.equals(true)) {
-        conPatterns.add(new ConstructorExpressionPattern(new FunCallExpression(Prelude.EMPTY_ARRAY, LevelPair.STD, null, elementsType), null, isEmpty, Collections.emptyList()));
+        conPatterns.add(new ConstructorExpressionPattern(new FunCallExpression(Prelude.EMPTY_ARRAY, Levels.EMPTY, null, elementsType), null, isEmpty, Collections.emptyList()));
       }
       if (isEmpty == null || isEmpty.equals(false)) {
         Expression length = ((ClassCallExpression) type).getAbsImplementationHere(Prelude.ARRAY_LENGTH);
         ClassCallExpression.ClassCallBinding thisBinding = ((ClassCallExpression) type).getThisBinding();
-        conPatterns.add(new ConstructorExpressionPattern(new FunCallExpression(Prelude.ARRAY_CONS, LevelPair.STD, length == null ? FieldCallExpression.make(Prelude.ARRAY_LENGTH, new ReferenceExpression(thisBinding)) : length, elementsType), thisBinding, isEmpty, Collections.emptyList()));
+        conPatterns.add(new ConstructorExpressionPattern(new FunCallExpression(Prelude.ARRAY_CONS, Levels.EMPTY, length == null ? FieldCallExpression.make(Prelude.ARRAY_LENGTH, new ReferenceExpression(thisBinding)) : length, elementsType), thisBinding, isEmpty, Collections.emptyList()));
       }
     } else {
       conPatterns = null;
@@ -448,7 +448,7 @@ public class ElimTypechecking {
           boolean hasEmpty = false;
           if (result.size() == 1) {
             boolean onlyVars = true;
-            for (ExpressionPattern pattern : result.get(0)) {
+            for (ExpressionPattern pattern : result.getFirst()) {
               if (!(pattern instanceof BindingPattern || pattern instanceof EmptyPattern)) {
                 onlyVars = false;
                 break;
@@ -476,7 +476,7 @@ public class ElimTypechecking {
         substitution.remove(link);
 
         if (firstHasEmpty && totalResult.size() > 1) {
-          totalResult.remove(0);
+          totalResult.removeFirst();
         }
       }
       return totalResult;
@@ -714,7 +714,7 @@ public class ElimTypechecking {
 
   private List<IntervalElim.CasePair> clausesToIntervalElim(List<? extends ElimClause<? extends Pattern>> clauses, int prefix, DependentLink parameters) {
     List<IntervalElim.CasePair> result = new ArrayList<>();
-    for (int i = 0; i < clauses.get(0).getPatterns().size(); i++) {
+    for (int i = 0; i < clauses.getFirst().getPatterns().size(); i++) {
       Expression left = null;
       Expression right = null;
 
@@ -793,10 +793,10 @@ public class ElimTypechecking {
     try (Utils.ContextSaver ignored = new Utils.ContextSaver(myContext)) {
       int index = 0;
       loop:
-      for (; index < clauses.get(0).getPatterns().size(); index++) {
+      for (; index < clauses.getFirst().getPatterns().size(); index++) {
         for (ExtElimClause clause : clauses) {
           if (!(clause.getPatterns().get(index) instanceof BindingPattern)) {
-            if (clauses.get(0).getPatterns().get(index) instanceof BindingPattern && clause.getPatterns().get(index) instanceof ConstructorPattern) {
+            if (clauses.getFirst().getPatterns().get(index) instanceof BindingPattern && clause.getPatterns().get(index) instanceof ConstructorPattern) {
               Definition definition = clause.getPatterns().get(index).getDefinition();
               if (definition == Prelude.LEFT || definition == Prelude.RIGHT) {
                 final int finalIndex = index;
@@ -810,8 +810,8 @@ public class ElimTypechecking {
       }
 
       // If all patterns are variables
-      if (index == clauses.get(0).getPatterns().size()) {
-        ExtElimClause clause = clauses.get(0);
+      if (index == clauses.getFirst().getPatterns().size()) {
+        ExtElimClause clause = clauses.getFirst();
         myUnusedClauses.remove(clause.index);
         List<Integer> indices = clause.argIndices;
         if (index > clause.numberOfFakeVars) {
@@ -824,7 +824,7 @@ public class ElimTypechecking {
       }
 
       for (int i = 0; i < index; i++) {
-        myContext.push(new Util.PatternClauseElem(clauses.get(0).getPatterns().get(i)));
+        myContext.push(new Util.PatternClauseElem(clauses.getFirst().getPatterns().get(i)));
       }
 
       ExtElimClause conClause = null;
@@ -851,7 +851,7 @@ public class ElimTypechecking {
         if (dataType.hasIndexedConstructors() || dataType == Prelude.PATH) {
           DataCallExpression dataCall;
           if (constructor == Prelude.FIN_ZERO || constructor == Prelude.FIN_SUC) {
-            dataCall = Fin(Suc(((ConCallExpression) someConPattern.getDataExpression()).getDataTypeArguments().get(0).subst(conClause.substitution)));
+            dataCall = Fin(Suc(((ConCallExpression) someConPattern.getDataExpression()).getDataTypeArguments().getFirst().subst(conClause.substitution)));
           } else {
             dataCall = (DataCallExpression) someConPattern.getDataExpression().subst(conClause.substitution).getType();
           }
@@ -930,7 +930,7 @@ public class ElimTypechecking {
         }
       }
 
-      if (myLevel != null && !branchKeys.isEmpty() && !(branchKeys.get(0) instanceof SingleConstructor)) {
+      if (myLevel != null && !branchKeys.isEmpty() && !(branchKeys.getFirst() instanceof SingleConstructor)) {
         //noinspection ConstantConditions
         branchKeys.removeIf(key -> numberOfIntervals + (key.getBody() instanceof IntervalElim ? ((IntervalElim) key.getBody()).getNumberOfTotalElim() : 0) > myLevel);
       }
@@ -946,8 +946,8 @@ public class ElimTypechecking {
         } else {
           Definition def = clause.getPatterns().get(index).getDefinition();
           BranchKey key = def instanceof Constructor ? (Constructor) def : def == Prelude.EMPTY_ARRAY || def == Prelude.ARRAY_CONS ? new ArrayConstructor((DConstructor) def, arrayElementsType != null, arrayLength != null) : null;
-          if (key == null && !branchKeys.isEmpty() && branchKeys.get(0) instanceof SingleConstructor) {
-            key = branchKeys.get(0);
+          if (key == null && !branchKeys.isEmpty() && branchKeys.getFirst() instanceof SingleConstructor) {
+            key = branchKeys.getFirst();
           }
           if (key != null) {
             branchKeyMap.computeIfAbsent(key, k -> new ArrayList<>()).add(clause);
@@ -1009,23 +1009,24 @@ public class ElimTypechecking {
             } else if (branchKey instanceof SingleConstructor) {
               conParameters = someConPattern.getParameters();
               Expression someExpr = someConPattern.getDataExpression();
-              if (someExpr instanceof ClassCallExpression classCall) {
-                Map<ClassField, Expression> implementations = new LinkedHashMap<>();
-                DependentLink link = conParameters;
-                for (ClassField field : classCall.getDefinition().getNotImplementedFields()) {
-                  if (!classCall.isImplemented(field)) {
-                    implementations.put(field, new ReferenceExpression(link));
-                    link = link.getNext();
+              switch (someExpr) {
+                case ClassCallExpression classCall -> {
+                  Map<ClassField, Expression> implementations = new LinkedHashMap<>();
+                  DependentLink link = conParameters;
+                  for (ClassField field : classCall.getDefinition().getNotImplementedFields()) {
+                    if (!classCall.isImplemented(field)) {
+                      implementations.put(field, new ReferenceExpression(link));
+                      link = link.getNext();
+                    }
                   }
+                  substExpr = new NewExpression(null, new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations, Sort.PROP, null, UniverseKind.NO_UNIVERSES));
                 }
-                substExpr = new NewExpression(null, new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations, Sort.PROP, null, UniverseKind.NO_UNIVERSES));
-              } else if (someExpr instanceof SigmaExpression) {
-                substExpr = new TupleExpression(arguments, (SigmaExpression) someExpr);
-                conParameters = DependentLink.Helper.copy(conParameters);
-              } else if (someExpr instanceof FunCallExpression) {
-                substExpr = someExpr;
-              } else {
-                throw new IllegalStateException();
+                case SigmaExpression sigmaExpression -> {
+                  substExpr = new TupleExpression(arguments, sigmaExpression);
+                  conParameters = DependentLink.Helper.copy(conParameters);
+                }
+                case FunCallExpression ignored1 -> substExpr = someExpr;
+                case null, default -> throw new IllegalStateException();
               }
             } else if (branchKey instanceof Constructor constructor) {
               List<Expression> dataTypesArgs = new ArrayList<>();
@@ -1166,28 +1167,28 @@ public class ElimTypechecking {
   }
 
   private void collectConstructors(DataDefinition dataDef, Body body, Set<Constructor> result) {
-    if (body == null) {
-      return;
-    }
-
-    if (body instanceof Expression) {
-      if (body instanceof ConCallExpression) {
-        result.add(((ConCallExpression) body).getDefinition());
-      } else {
-        result.addAll(dataDef.getConstructors());
+    switch (body) {
+      case null -> {}
+      case Expression ignored -> {
+        if (body instanceof ConCallExpression) {
+          result.add(((ConCallExpression) body).getDefinition());
+        } else {
+          result.addAll(dataDef.getConstructors());
+        }
       }
-    } else if (body instanceof ElimBody) {
-      for (ElimClause<Pattern> clause : ((ElimBody) body).getClauses()) {
-        collectConstructors(dataDef, clause.getExpression(), result);
+      case ElimBody elimBody -> {
+        for (ElimClause<Pattern> clause : elimBody.getClauses()) {
+          collectConstructors(dataDef, clause.getExpression(), result);
+        }
       }
-    } else if (body instanceof IntervalElim) {
-      for (IntervalElim.CasePair pair : ((IntervalElim) body).getCases()) {
-        collectConstructors(dataDef, pair.proj1, result);
-        collectConstructors(dataDef, pair.proj2, result);
+      case IntervalElim intervalElim -> {
+        for (IntervalElim.CasePair pair : intervalElim.getCases()) {
+          collectConstructors(dataDef, pair.proj1, result);
+          collectConstructors(dataDef, pair.proj2, result);
+        }
+        collectConstructors(dataDef, intervalElim.getOtherwise(), result);
       }
-      collectConstructors(dataDef, ((IntervalElim) body).getOtherwise(), result);
-    } else {
-      throw new IllegalStateException();
+      default -> throw new IllegalStateException();
     }
   }
 }

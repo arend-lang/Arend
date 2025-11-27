@@ -10,8 +10,8 @@ import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
+import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
@@ -48,13 +48,13 @@ public class DConstructor extends FunctionDefinition {
     myPattern = pattern;
   }
 
-  public DependentLink getArrayParameters(LevelPair levels, Expression length, Binding thisBinding, Expression elementsType) {
+  public DependentLink getArrayParameters(Expression length, Binding thisBinding, Expression elementsType) {
     if (this == Prelude.EMPTY_ARRAY) {
-      return elementsType != null ? EmptyDependentLink.getInstance() : DependentLink.Helper.subst(getParameters(), new ExprSubstitution(thisBinding, new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, levels, Collections.singletonMap(Prelude.ARRAY_LENGTH, Zero()), Sort.STD.succ(), Prelude.DEP_ARRAY.getSortExpression(), UniverseKind.NO_UNIVERSES))), levels);
+      return elementsType != null ? EmptyDependentLink.getInstance() : DependentLink.Helper.subst(getParameters(), new ExprSubstitution(thisBinding, new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, Levels.EMPTY, Collections.singletonMap(Prelude.ARRAY_LENGTH, Zero()), Sort.STD.succ(), Prelude.DEP_ARRAY.getSortExpression(), UniverseKind.NO_UNIVERSES))), LevelSubstitution.EMPTY);
     }
 
     if ((elementsType == null || thisBinding == null) && length == null) {
-      return levels.isEmpty() ? getParameters() : DependentLink.Helper.subst(getParameters(), new ExprSubstitution(), levels);
+      return getParameters();
     }
 
     if (length != null) {
@@ -62,7 +62,7 @@ public class DConstructor extends FunctionDefinition {
       if (elementsType != null) {
         substitution.add(getParameters().getNext(), elementsType);
       }
-      return DependentLink.Helper.subst(elementsType == null ? getParameters().getNext() : getParameters().getNext().getNext(), substitution, levels);
+      return DependentLink.Helper.subst(elementsType == null ? getParameters().getNext() : getParameters().getNext().getNext(), substitution, LevelSubstitution.EMPTY);
     }
 
     TypedDependentLink nat = new TypedDependentLink(false, "n", DataCallExpression.make(Prelude.NAT, Levels.EMPTY, Collections.emptyList()), EmptyDependentLink.getInstance());
@@ -70,17 +70,17 @@ public class DConstructor extends FunctionDefinition {
     Map<ClassField, Expression> impls = new LinkedHashMap<>();
     impls.put(Prelude.ARRAY_LENGTH, natRef);
     impls.put(Prelude.ARRAY_ELEMENTS_TYPE, elementsType);
-    Expression newElementsType = elementsType.subst(thisBinding, new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, levels, impls, Sort.STD.succ(), Prelude.DEP_ARRAY.getSortExpression(), UniverseKind.ONLY_COVARIANT)));
+    Expression newElementsType = elementsType.subst(thisBinding, new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, Levels.EMPTY, impls, Sort.STD.succ(), Prelude.DEP_ARRAY.getSortExpression(), UniverseKind.ONLY_COVARIANT)));
     TypedSingleDependentLink lamParam = new TypedSingleDependentLink(true, "j", DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(natRef)));
-    Sort sort = levels.toSort();
-    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(sort.max(Sort.SET0), lamParam, AppExpression.make(newElementsType, Suc(new ReferenceExpression(lamParam)), true)));
-    nat.setNext(new TypedDependentLink(true, "a", new TypeExpression(AppExpression.make(newElementsType, Zero(), true), sort), new TypedDependentLink(true, "l", new ClassCallExpression(Prelude.DEP_ARRAY, levels, impls, Sort.STD, Prelude.DEP_ARRAY.getSortExpression(), UniverseKind.NO_UNIVERSES), EmptyDependentLink.getInstance())));
+    Sort sort = ArrayExpression.getSort(elementsType);
+    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(sort, lamParam, AppExpression.make(newElementsType, Suc(new ReferenceExpression(lamParam)), true)));
+    nat.setNext(new TypedDependentLink(true, "a", new TypeExpression(AppExpression.make(newElementsType, Zero(), true), sort), new TypedDependentLink(true, "l", new ClassCallExpression(Prelude.DEP_ARRAY, Levels.EMPTY, impls, Sort.STD, Prelude.DEP_ARRAY.getSortExpression(), UniverseKind.NO_UNIVERSES), EmptyDependentLink.getInstance())));
     return nat;
   }
 
   public DependentLink getArrayParameters(ClassCallExpression type) {
     Expression length = type.getAbsImplementationHere(Prelude.ARRAY_LENGTH);
     length = length == null || this == Prelude.EMPTY_ARRAY ? null : length.normalize(NormalizationMode.WHNF).pred();
-    return getArrayParameters(type.getLevels().toLevelPair(), length, type.getThisBinding(), type.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE));
+    return getArrayParameters(length, type.getThisBinding(), type.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE));
   }
 }

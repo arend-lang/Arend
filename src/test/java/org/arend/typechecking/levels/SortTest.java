@@ -16,6 +16,7 @@ import org.junit.Test;
 import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class SortTest extends TypeCheckingTestCase {
   private void checkLevelParameters(String... defNames) {
@@ -81,7 +82,9 @@ public class SortTest extends TypeCheckingTestCase {
       \\func test => fun Nat 7
       """);
     checkLevelParameters("D", "fun", "test");
-    assertEquals(Type.OMEGA, ((FunctionDefinition) getDefinition("fun")).getResultType());
+    FunctionDefinition function = (FunctionDefinition) getDefinition("fun");
+    assertEquals(Type.OMEGA, function.getResultType());
+    assertNotNull(function.getSortExpression());
     assertEquals(new UniverseExpression(Sort.SET0), ((FunctionDefinition) getDefinition("test")).getResultType());
   }
 
@@ -133,5 +136,17 @@ public class SortTest extends TypeCheckingTestCase {
       \\record R (A : \\Sort) (a a' : A)
       \\func test => R
       """);
+  }
+
+  @Test
+  public void functionTest4() {
+    typeCheckModule("""
+      \\record R (A : \\Sort) (a a' : A)
+      \\func test (A : \\Sort) (a : A) => R A a
+      """);
+    checkLevelParameters("R", "test");
+    FunctionDefinition function = (FunctionDefinition) getDefinition("test");
+    assertEquals(Type.OMEGA, function.getResultType());
+    assertNotNull(function.getSortExpression());
   }
 }

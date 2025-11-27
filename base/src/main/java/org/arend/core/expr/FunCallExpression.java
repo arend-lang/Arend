@@ -46,10 +46,10 @@ public class FunCallExpression extends LeveledDefCallExpression implements CoreF
         : expr1.divMod(expr2);
     }
     if (definition == Prelude.EMPTY_ARRAY && arguments.size() == 1) {
-      return ArrayExpression.make(levels.toLevelPair(), arguments.getFirst(), Collections.emptyList(), null);
+      return ArrayExpression.make(arguments.getFirst(), Collections.emptyList(), null);
     }
     if (definition == Prelude.ARRAY_CONS && arguments.size() == 4) {
-      return ArrayExpression.make(levels.toLevelPair(), arguments.get(1), new SingletonList<>(arguments.get(2)), arguments.get(3));
+      return ArrayExpression.make(arguments.get(1), new SingletonList<>(arguments.get(2)), arguments.get(3));
     }
     FunCallExpression result = new FunCallExpression(definition, levels, arguments);
     result.fixBoxes();

@@ -471,7 +471,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       implementations.put(Prelude.ARRAY_LENGTH, length);
     }
     implementations.put(Prelude.ARRAY_ELEMENTS_TYPE, expr.getElementsType());
-    return new ClassCallExpression(Prelude.DEP_ARRAY, expr.getLevels(), implementations, Sort.STD, Prelude.DEP_ARRAY.getSortExpression(), UniverseKind.NO_UNIVERSES);
+    return new ClassCallExpression(Prelude.DEP_ARRAY, Levels.EMPTY, implementations, Sort.STD, Prelude.DEP_ARRAY.getSortExpression(), UniverseKind.NO_UNIVERSES);
   }
 
   @Override

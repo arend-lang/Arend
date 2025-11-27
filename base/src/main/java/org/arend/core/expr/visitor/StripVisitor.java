@@ -347,7 +347,7 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
   public Expression visitArray(ArrayExpression expr, Void params) {
     List<Expression> elements = new ArrayList<>(expr.getElements());
     elements.replaceAll(expression -> expression.accept(this, null));
-    return ArrayExpression.make(expr.getLevels(), expr.getElementsType().accept(this, null), elements, expr.getTail() == null ? null : expr.getTail().accept(this, null));
+    return ArrayExpression.make(expr.getElementsType().accept(this, null), elements, expr.getTail() == null ? null : expr.getTail().accept(this, null));
   }
 
   @Override

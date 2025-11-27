@@ -11,7 +11,6 @@ import org.arend.core.expr.*;
 import org.arend.core.pattern.BindingPattern;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.ExpressionPattern;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.prelude.Prelude;
 
@@ -21,13 +20,7 @@ public class Util {
   public interface ClauseElem {
   }
 
-  public static class PatternClauseElem implements ClauseElem {
-    public final ExpressionPattern pattern;
-
-    public PatternClauseElem(ExpressionPattern pattern) {
-      this.pattern = pattern;
-    }
-  }
+  public record PatternClauseElem(ExpressionPattern pattern) implements ClauseElem {}
 
   public interface DataClauseElem extends ClauseElem {
     DependentLink getParameters();
@@ -35,24 +28,15 @@ public class Util {
   }
 
   public static DataClauseElem makeDataClauseElem(BranchKey branchKey, ConstructorExpressionPattern pattern) {
-    if (branchKey instanceof SingleConstructor) {
-      return new TupleClauseElem(pattern);
-    } else if (branchKey instanceof Constructor) {
-      return new ConstructorClauseElem((Constructor) branchKey, pattern.getLevels(), pattern.getDataTypeArguments());
-    } else if (branchKey instanceof ArrayConstructor) {
-      return new ArrayClauseElem(((ArrayConstructor) branchKey).getConstructor(), pattern.getLevels().toLevelPair(), pattern.getArrayLength(), pattern.getArrayThisBinding(), pattern.getArrayElementsType(), pattern.isArrayEmpty());
-    } else {
-      throw new IllegalStateException();
-    }
+    return switch (branchKey) {
+      case SingleConstructor ignored -> new TupleClauseElem(pattern);
+      case Constructor constructor -> new ConstructorClauseElem(constructor, pattern.getLevels(), pattern.getDataTypeArguments());
+      case ArrayConstructor arrayConstructor -> new ArrayClauseElem(arrayConstructor.getConstructor(), pattern.getArrayLength(), pattern.getArrayThisBinding(), pattern.getArrayElementsType(), pattern.isArrayEmpty());
+      case null, default -> throw new IllegalStateException();
+    };
   }
 
-  public static class TupleClauseElem implements DataClauseElem {
-    public final ConstructorExpressionPattern pattern;
-
-    TupleClauseElem(ConstructorExpressionPattern pattern) {
-      this.pattern = pattern;
-    }
-
+  public record TupleClauseElem(ConstructorExpressionPattern pattern) implements DataClauseElem {
     @Override
     public DependentLink getParameters() {
       return pattern.getParameters();
@@ -65,9 +49,9 @@ public class Util {
   }
 
   public static class ConstructorClauseElem implements DataClauseElem {
-    final List<Expression> dataArguments;
-    final Constructor constructor;
-    final Levels levels;
+    public final List<Expression> dataArguments;
+    public final Constructor constructor;
+    public final Levels levels;
 
     public ConstructorClauseElem(Constructor constructor, Levels levels, List<? extends Expression> dataArguments) {
       this.dataArguments = new ArrayList<>(dataArguments);
@@ -88,15 +72,13 @@ public class Util {
 
   public static class ArrayClauseElem implements DataClauseElem {
     private final DConstructor myConstructor;
-    private final LevelPair myLevels;
     private final Expression myLength;
     private final Binding myThisBinding;
     private final Expression myElementsType;
     private final Boolean myEmpty;
 
-    public ArrayClauseElem(DConstructor constructor, LevelPair levels, Expression length, Binding thisBinding, Expression elementsType, Boolean isEmpty) {
+    public ArrayClauseElem(DConstructor constructor, Expression length, Binding thisBinding, Expression elementsType, Boolean isEmpty) {
       myConstructor = constructor;
-      myLevels = levels;
       myLength = length;
       myThisBinding = thisBinding;
       myElementsType = elementsType;
@@ -105,7 +87,7 @@ public class Util {
 
     @Override
     public DependentLink getParameters() {
-      return myConstructor.getArrayParameters(myLevels, myLength, myThisBinding, myElementsType);
+      return myConstructor.getArrayParameters(myLength, myThisBinding, myElementsType);
     }
 
     @Override
@@ -128,8 +110,8 @@ public class Util {
             patterns.add(new BindingPattern(link));
           }
         }
-        if (dataClauseElem instanceof ArrayClauseElem arrayClauseElem && !patterns.isEmpty() && patterns.get(0) instanceof ConstructorExpressionPattern && patterns.get(0).getDefinition() == Prelude.ZERO && patterns.get(patterns.size() - 1) instanceof BindingPattern) {
-          patterns.set(patterns.size() - 1, new ConstructorExpressionPattern(new FunCallExpression(Prelude.EMPTY_ARRAY, arrayClauseElem.myLevels, null, arrayClauseElem.myElementsType != null ? arrayClauseElem.myElementsType : FieldCallExpression.make(Prelude.ARRAY_ELEMENTS_TYPE, new ReferenceExpression(arrayClauseElem.myThisBinding))), arrayClauseElem.myThisBinding, (Boolean) null, Collections.emptyList()));
+        if (dataClauseElem instanceof ArrayClauseElem arrayClauseElem && !patterns.isEmpty() && patterns.getFirst() instanceof ConstructorExpressionPattern && patterns.getFirst().getDefinition() == Prelude.ZERO && patterns.getLast() instanceof BindingPattern) {
+          patterns.set(patterns.size() - 1, new ConstructorExpressionPattern(new FunCallExpression(Prelude.EMPTY_ARRAY, Levels.EMPTY, null, arrayClauseElem.myElementsType != null ? arrayClauseElem.myElementsType : FieldCallExpression.make(Prelude.ARRAY_ELEMENTS_TYPE, new ReferenceExpression(arrayClauseElem.myThisBinding))), arrayClauseElem.myThisBinding, (Boolean) null, Collections.emptyList()));
         }
         clauseElems.subList(i, Math.min(i + size + 1, clauseElems.size())).clear();
         clauseElems.add(i, new PatternClauseElem(dataClauseElem.getPattern(patterns)));

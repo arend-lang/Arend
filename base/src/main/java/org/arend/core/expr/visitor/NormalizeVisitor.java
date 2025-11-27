@@ -5,7 +5,6 @@ import org.arend.core.constructor.IdpConstructor;
 import org.arend.core.constructor.SingleConstructor;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.EvaluatingBinding;
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.binding.inference.TypeClassInferenceVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
@@ -16,10 +15,8 @@ import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
 import org.arend.core.expr.let.LetClause;
 import org.arend.core.pattern.Pattern;
-import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -718,13 +715,12 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
           if (length instanceof IntegerExpression || length instanceof ConCallExpression && ((ConCallExpression) length).getDefinition() == Prelude.SUC) {
             Expression elementsType = classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE);
             if (elementsType == null) elementsType = FieldCallExpression.make(Prelude.ARRAY_ELEMENTS_TYPE, argument);
-            LevelPair levelPair = classCall.getLevels().toLevelPair();
             if (length instanceof IntegerExpression && ((IntegerExpression) length).isZero()) {
-              array = ArrayExpression.makeArray(levelPair, elementsType, Collections.emptyList(), null);
+              array = ArrayExpression.makeArray(elementsType, Collections.emptyList(), null);
               key = new ArrayConstructor(true, true, true);
             } else {
               Expression at = classCall.getImplementationHere(Prelude.ARRAY_AT, argument);
-              array = ArrayExpression.makeArray(levelPair, elementsType, new SingletonList<>(at != null ? AppExpression.make(at, new SmallIntegerExpression(0), true) : FunCallExpression.make(Prelude.ARRAY_INDEX, classCall.getLevels(), Arrays.asList(argument, new SmallIntegerExpression(0)))), ArrayExpression.makeTail(length, elementsType, classCall, argument));
+              array = ArrayExpression.makeArray(elementsType, new SingletonList<>(at != null ? AppExpression.make(at, new SmallIntegerExpression(0), true) : FunCallExpression.make(Prelude.ARRAY_INDEX, classCall.getLevels(), Arrays.asList(argument, new SmallIntegerExpression(0)))), ArrayExpression.makeTail(length, elementsType, classCall, argument));
               key = new ArrayConstructor(false, true, true);
             }
             elimTree = branchElimTree.getChild(key);
@@ -821,9 +817,9 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     if (expr.getDefinition() == Prelude.ARRAY_AT) {
       ClassCallExpression classCall = expr.getArgument().getType().normalize(NormalizationMode.WHNF).cast(ClassCallExpression.class);
       if (classCall != null) {
-        LevelPair levelPair = classCall.getLevels().toLevelPair();
+        Expression elementsType = classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE);
         TypedSingleDependentLink lamParam = new TypedSingleDependentLink(true, "j", Fin(FieldCallExpression.make(Prelude.ARRAY_LENGTH, expr.getArgument())));
-        return new LamExpression(new Sort(levelPair.get(LevelVariable.PVAR), levelPair.get(LevelVariable.HVAR).max(new Level(0))), lamParam, FunCallExpression.make(Prelude.ARRAY_INDEX, levelPair, Arrays.asList(expr.getArgument(), new ReferenceExpression(lamParam))));
+        return new LamExpression(elementsType == null ? Sort.INFINITY : ArrayExpression.getSort(elementsType), lamParam, FunCallExpression.make(Prelude.ARRAY_INDEX, Levels.EMPTY, Arrays.asList(expr.getArgument(), new ReferenceExpression(lamParam))));
       }
     }
 
@@ -1089,9 +1085,9 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     if (tail instanceof ArrayExpression) {
       if (mode == NormalizationMode.WHNF) elements = new ArrayList<>(elements);
       elements.addAll(((ArrayExpression) tail).getElements());
-      return ArrayExpression.make(expr.getLevels(), mode == NormalizationMode.NF ? expr.getElementsType().accept(this, NormalizationMode.NF) : expr.getElementsType(), elements, ((ArrayExpression) tail).getTail());
+      return ArrayExpression.make(mode == NormalizationMode.NF ? expr.getElementsType().accept(this, NormalizationMode.NF) : expr.getElementsType(), elements, ((ArrayExpression) tail).getTail());
     }
-    return ArrayExpression.make(expr.getLevels(), mode == NormalizationMode.NF || mode == NormalizationMode.RNF ? expr.getElementsType().accept(this, NormalizationMode.NF) : expr.getElementsType(), elements, tail);
+    return ArrayExpression.make(mode == NormalizationMode.NF || mode == NormalizationMode.RNF ? expr.getElementsType().accept(this, NormalizationMode.NF) : expr.getElementsType(), elements, tail);
   }
 
   @Override

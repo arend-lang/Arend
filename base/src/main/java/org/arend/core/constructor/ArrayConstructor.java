@@ -41,7 +41,7 @@ public class ArrayConstructor implements BranchKey {
 
   @Override
   public DependentLink getParameters(ConstructorExpressionPattern pattern) {
-    return myConstructor.getArrayParameters(pattern.getLevels().toLevelPair(), pattern.getArrayLength(), pattern.getArrayThisBinding(), pattern.getArrayElementsType());
+    return myConstructor.getArrayParameters(pattern.getArrayLength(), pattern.getArrayThisBinding(), pattern.getArrayElementsType());
   }
 
   @Override

@@ -145,8 +145,6 @@ message Expression {
         Expression argument = 6;
     }
     message Array {
-      Level pLevel = 5;
-      Level hLevel = 6;
       Expression elementsType = 2;
       repeated Expression element = 3;
       Expression tail = 4;

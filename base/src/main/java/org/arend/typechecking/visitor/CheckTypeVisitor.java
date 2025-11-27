@@ -2807,11 +2807,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           Map<ClassField, Expression> impls = new LinkedHashMap<>();
           impls.put(Prelude.ARRAY_LENGTH, new SmallIntegerExpression(expr.getFields().size()));
           impls.putAll(classCall.getImplementedHere());
-          elementsType = elementsType.subst(classCall.getThisBinding(), new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), impls, classCall.getSort(), classCall.getSortExpression(), classCall.getUniverseKind())));
+          elementsType = elementsType.subst(classCall.getThisBinding(), new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, Levels.EMPTY, impls, classCall.getSort(), classCall.getSortExpression(), classCall.getUniverseKind())));
         } else {
           Expression actualLength = new SmallIntegerExpression(expr.getFields().size());
           if (!CompareVisitor.compare(myEquations, CMP.EQ, length, actualLength, Nat(), expr)) {
-            errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.PROP, Collections.singletonMap(Prelude.ARRAY_LENGTH, actualLength), Sort.SET0, null, UniverseKind.ONLY_COVARIANT), new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.PROP, Collections.singletonMap(Prelude.ARRAY_LENGTH, length), Sort.SET0, null, UniverseKind.ONLY_COVARIANT), actualLength, length), expr));
+            errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(new ClassCallExpression(Prelude.DEP_ARRAY, Levels.EMPTY, Collections.singletonMap(Prelude.ARRAY_LENGTH, actualLength), Sort.SET0, null, UniverseKind.ONLY_COVARIANT), new ClassCallExpression(Prelude.DEP_ARRAY, Levels.EMPTY, Collections.singletonMap(Prelude.ARRAY_LENGTH, length), Sort.SET0, null, UniverseKind.ONLY_COVARIANT), actualLength, length), expr));
             return null;
           }
         }
@@ -2827,7 +2827,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
               elements.add(field.expression);
             }
           }
-          return ok ? new TypecheckingResult(ArrayExpression.make(classCall.getLevels().toLevelPair(), elementsType, elements, null), classCall) : null;
+          return ok ? new TypecheckingResult(ArrayExpression.make(elementsType, elements, null), classCall) : null;
         }
       }
     }

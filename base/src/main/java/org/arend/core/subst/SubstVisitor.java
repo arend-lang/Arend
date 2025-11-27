@@ -336,7 +336,7 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
     for (Expression arg : expr.getElements()) {
       elements.add(arg.accept(this, null));
     }
-    return ArrayExpression.make(expr.getLevels().subst(myLevelSubstitution), expr.getElementsType().accept(this, null), elements, expr.getTail() == null ? null : expr.getTail().accept(this, null));
+    return ArrayExpression.make(expr.getElementsType().accept(this, null), elements, expr.getTail() == null ? null : expr.getTail().accept(this, null));
   }
 
   @Override

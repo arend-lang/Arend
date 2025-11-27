@@ -549,15 +549,13 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
 
   private static class ConstructorWithDataArgumentsImpl implements ConstructorWithDataArguments {
     private final DConstructor myConstructor;
-    private final LevelPair myLevels;
     private final Expression myLength;
     private final Binding myThisBinding;
     private final Expression myElementsType;
     private DependentLink myParameters;
 
-    private ConstructorWithDataArgumentsImpl(DConstructor constructor, LevelPair levels, Expression length, Binding thisBinding, Expression elementsType) {
+    private ConstructorWithDataArgumentsImpl(DConstructor constructor, Expression length, Binding thisBinding, Expression elementsType) {
       myConstructor = constructor;
-      myLevels = levels;
       myLength = length;
       myThisBinding = thisBinding;
       myElementsType = elementsType;
@@ -576,7 +574,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     @Override
     public @NotNull DependentLink getParameters() {
       if (myParameters == null) {
-        myParameters = myConstructor.getArrayParameters(myLevels, myLength, myThisBinding, myElementsType);
+        myParameters = myConstructor.getArrayParameters(myLength, myThisBinding, myElementsType);
       }
       return myParameters;
     }
@@ -595,14 +593,13 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     if (getDefinition() != Prelude.DEP_ARRAY) return null;
     List<ConstructorWithDataArguments> result = new ArrayList<>(2);
     Boolean isEmpty = ConstructorExpressionPattern.isArrayEmpty(this);
-    LevelPair levels = getLevels().toLevelPair();
     Expression length = getAbsImplementationHere(Prelude.ARRAY_LENGTH);
     Expression elementsType = getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE);
     if (isEmpty == null || isEmpty.equals(true)) {
-      result.add(new ConstructorWithDataArgumentsImpl(Prelude.EMPTY_ARRAY, levels, length, myThisBinding, elementsType));
+      result.add(new ConstructorWithDataArgumentsImpl(Prelude.EMPTY_ARRAY, length, myThisBinding, elementsType));
     }
     if (isEmpty == null || isEmpty.equals(false)) {
-      result.add(new ConstructorWithDataArgumentsImpl(Prelude.ARRAY_CONS, levels, length, myThisBinding, elementsType));
+      result.add(new ConstructorWithDataArgumentsImpl(Prelude.ARRAY_CONS, length, myThisBinding, elementsType));
     }
     return result;
   }

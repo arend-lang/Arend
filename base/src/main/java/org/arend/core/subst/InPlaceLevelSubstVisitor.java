@@ -121,10 +121,4 @@ public class InPlaceLevelSubstVisitor extends VoidExpressionVisitor<Void> {
     expr.substSort(mySubstitution);
     return super.visitTypeConstructor(expr, params);
   }
-
-  @Override
-  public Void visitArray(ArrayExpression expr, Void params) {
-    expr.substLevels(mySubstitution);
-    return super.visitArray(expr, params);
-  }
 }

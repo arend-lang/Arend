@@ -8,12 +8,10 @@ import org.arend.ext.core.ops.NormalizationMode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
+// TODO[sorts]: Optimize representation
 public sealed interface SortExpression permits SortExpression.Const, SortExpression.Equality, SortExpression.Max, SortExpression.Pi, SortExpression.Var {
   @Nullable Sort computeSort(@NotNull List<? extends Expression> arguments);
   @Nullable SortExpression subst(@NotNull Function<Integer, SortExpression> substitution);
@@ -55,9 +53,19 @@ public sealed interface SortExpression permits SortExpression.Const, SortExpress
           Sort sort = defCall.getSortOfType();
           yield sort == null || sort.getPLevel().isInfinity() ? null : new Const(sort);
         }
+        List<Expression> arguments;
+        if (defCall instanceof ClassCallExpression classCall) {
+          arguments = new ArrayList<>();
+          for (ClassField field : classCall.getDefinition().getSortFields()) {
+            AbsExpression impl = classCall.getAbsImplementation(field);
+            arguments.add(impl == null ? null : impl.getExpression());
+          }
+        } else {
+          arguments = defCall.getDefCallArguments();
+        }
         yield result.subst(index -> {
-          if (index >= defCall.getDefCallArguments().size()) return null;
-          Expression arg = defCall.getDefCallArguments().get(index);
+          if (index >= arguments.size()) return null;
+          Expression arg = arguments.get(index);
           while (arg instanceof LamExpression lamExpr) {
             arg = lamExpr.getBody();
           }

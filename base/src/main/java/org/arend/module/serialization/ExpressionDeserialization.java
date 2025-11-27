@@ -495,7 +495,7 @@ class ExpressionDeserialization {
   }
 
   private Expression readArray(ExpressionProtos.Expression.Array proto) throws DeserializationException {
-    return ArrayExpression.make(new LevelPair(readLevel(proto.getPLevel(), LevelVariable.PVAR), readLevel(proto.getHLevel(), LevelVariable.HVAR)), readExpr(proto.getElementsType()), readExprList(proto.getElementList()), proto.hasTail() ? readExpr(proto.getTail()) : null);
+    return ArrayExpression.make(readExpr(proto.getElementsType()), readExprList(proto.getElementList()), proto.hasTail() ? readExpr(proto.getTail()) : null);
   }
 
   private Expression readPath(ExpressionProtos.Expression.Path proto) throws DeserializationException {

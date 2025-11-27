@@ -2250,8 +2250,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (myResult == null) {
         initResult(expr, other);
       } else {
-        myResult.wholeExpr1 = ArrayExpression.make(expr.getLevels(), myResult.wholeExpr1, expr.getElements(), expr.getTail());
-        myResult.wholeExpr2 = ArrayExpression.make(array2.getLevels(), myResult.wholeExpr2, array2.getElements(), array2.getTail());
+        myResult.wholeExpr1 = ArrayExpression.make(myResult.wholeExpr1, expr.getElements(), expr.getTail());
+        myResult.wholeExpr2 = ArrayExpression.make(myResult.wholeExpr2, array2.getElements(), array2.getTail());
       }
       return false;
     }
@@ -2265,8 +2265,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
           List<Expression> args2 = new ArrayList<>(array2.getElements());
           args1.set(i, myResult.wholeExpr1);
           args2.set(i, myResult.wholeExpr2);
-          myResult.wholeExpr1 = ArrayExpression.make(expr.getLevels(), expr.getElementsType(), args1, expr.getTail());
-          myResult.wholeExpr2 = ArrayExpression.make(array2.getLevels(), array2.getElementsType(), args2, array2.getTail());
+          myResult.wholeExpr1 = ArrayExpression.make(expr.getElementsType(), args1, expr.getTail());
+          myResult.wholeExpr2 = ArrayExpression.make(array2.getElementsType(), args2, array2.getTail());
         }
         return false;
       }
@@ -2296,8 +2296,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (myResult == null) {
         initResult(expr, other);
       } else {
-        myResult.wholeExpr1 = ArrayExpression.make(expr.getLevels(), expr.getElementsType(), expr.getElements(), myResult.wholeExpr1);
-        myResult.wholeExpr2 = ArrayExpression.make(array2.getLevels(), array2.getElementsType(), array2.getElements(), myResult.wholeExpr2);
+        myResult.wholeExpr1 = ArrayExpression.make(expr.getElementsType(), expr.getElements(), myResult.wholeExpr1);
+        myResult.wholeExpr2 = ArrayExpression.make(array2.getElementsType(), array2.getElements(), myResult.wholeExpr2);
       }
       return false;
     }

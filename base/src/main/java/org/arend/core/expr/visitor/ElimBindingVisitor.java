@@ -507,7 +507,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     } else {
       tail = null;
     }
-    return ArrayExpression.make(expr.getLevels(), elementsType, elements, tail);
+    return ArrayExpression.make(elementsType, elements, tail);
   }
 
   @Override

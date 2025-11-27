@@ -8,7 +8,6 @@ import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.definition.UniverseKind;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Sort;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.prelude.Prelude;
 import org.arend.typechecking.TypeCheckingTestCase;
@@ -41,9 +40,7 @@ public class ArrayTest extends TypeCheckingTestCase {
     assertTrue(((ClassCallExpression) ((FunctionDefinition) getDefinition("test2")).getResultType()).isImplemented(Prelude.ARRAY_AT));
     assertEquals(Sort.PROP, ((FunctionDefinition) getDefinition("test2")).getResultType().getSortOfType());
     assertFalse(((ClassCallExpression) Prelude.EMPTY_ARRAY.getResultType()).isImplemented(Prelude.ARRAY_AT));
-    assertEquals(Sort.STD, Prelude.EMPTY_ARRAY.getResultType().getSortOfType());
     assertFalse(((ClassCallExpression) Prelude.ARRAY_CONS.getResultType()).isImplemented(Prelude.ARRAY_AT));
-    assertEquals(Sort.STD, Prelude.ARRAY_CONS.getResultType().getSortOfType());
   }
 
   @Test
@@ -508,7 +505,7 @@ public class ArrayTest extends TypeCheckingTestCase {
     Expression length = new ReferenceExpression(def.getParameters());
     impls.put(Prelude.ARRAY_LENGTH, length);
     impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(Sort.SET0, new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(length))), Nat()));
-    assertThatErrorsAre(Matchers.goal(1), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.SET0, impls, Sort.STD, null, UniverseKind.NO_UNIVERSES)));
+    assertThatErrorsAre(Matchers.goal(1), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, Levels.EMPTY, impls, Sort.STD, null, UniverseKind.NO_UNIVERSES)));
   }
 
   @Test
@@ -518,7 +515,7 @@ public class ArrayTest extends TypeCheckingTestCase {
     Expression length = new SmallIntegerExpression(5);
     impls.put(Prelude.ARRAY_LENGTH, length);
     impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(Sort.SET0, new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(length))), Nat()));
-    assertThatErrorsAre(Matchers.goal(0), Matchers.goal(0), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.SET0, impls, Sort.STD, null, UniverseKind.NO_UNIVERSES)));
+    assertThatErrorsAre(Matchers.goal(0), Matchers.goal(0), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, Levels.EMPTY, impls, Sort.STD, null, UniverseKind.NO_UNIVERSES)));
   }
 
   @Test

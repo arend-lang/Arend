@@ -13,7 +13,6 @@ import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendPrelude;
@@ -231,12 +230,12 @@ public class Prelude implements ArendPrelude {
       case "Array" -> ARRAY = (FunctionDefinition) definition;
       case "nil" -> {
         EMPTY_ARRAY = (DConstructor) definition;
-        EMPTY_ARRAY.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(EMPTY_ARRAY, LevelPair.STD, Collections.emptyList()), Collections.singletonList(new BindingPattern(EMPTY_ARRAY.getParameters()))));
+        EMPTY_ARRAY.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(EMPTY_ARRAY, Levels.EMPTY, Collections.emptyList()), Collections.singletonList(new BindingPattern(EMPTY_ARRAY.getParameters()))));
         EMPTY_ARRAY.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
       case "::" -> {
         ARRAY_CONS = (DConstructor) definition;
-        ARRAY_CONS.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(ARRAY_CONS, LevelPair.STD, Collections.emptyList()), Arrays.asList(new BindingPattern(ARRAY_CONS.getParameters()), new BindingPattern(ARRAY_CONS.getParameters().getNext()), new BindingPattern(ARRAY_CONS.getParameters().getNext().getNext()), new BindingPattern(ARRAY_CONS.getParameters().getNext().getNext().getNext()))));
+        ARRAY_CONS.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(ARRAY_CONS, Levels.EMPTY, Collections.emptyList()), Arrays.asList(new BindingPattern(ARRAY_CONS.getParameters()), new BindingPattern(ARRAY_CONS.getParameters().getNext()), new BindingPattern(ARRAY_CONS.getParameters().getNext().getNext()), new BindingPattern(ARRAY_CONS.getParameters().getNext().getNext().getNext()))));
         ARRAY_CONS.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
       }
       case "!!" -> {
