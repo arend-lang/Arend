@@ -65,7 +65,7 @@ public class LetExpression extends Expression implements CoreLetExpression {
     if (newExpr != null && pattern.getFields() != null && pattern.getFields().size() == pattern.getPatterns().size()) {
       ClassCallExpression classCall = newExpr.getClassCall();
       Map<ClassField, Expression> implementations = new LinkedHashMap<>();
-      ClassCallExpression resultClassCall = new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations, Sort.PROP, UniverseKind.NO_UNIVERSES);
+      ClassCallExpression resultClassCall = new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations, Sort.PROP, null, UniverseKind.NO_UNIVERSES);
 
       boolean someNotImplemented = false;
       for (int i = 0; i < pattern.getPatterns().size(); i++) {

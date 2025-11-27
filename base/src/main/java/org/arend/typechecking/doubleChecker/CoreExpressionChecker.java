@@ -341,7 +341,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     return result;
   }
 
-  private Expression checkInf(Expression expr, Expression expectedType, boolean allowInf) {
+  Expression checkInf(Expression expr, Expression expectedType, boolean allowInf) {
     if (allowInf) {
       if (expr instanceof UniverseExpression universe) {
         return checkUniverse(universe, expectedType);
@@ -984,7 +984,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     }
     if (expr.getTail() != null) {
       TypedSingleDependentLink lamParam = new TypedSingleDependentLink(true, "j", DataCallExpression.make(Prelude.FIN, Levels.EMPTY, Collections.singletonList(tailLength)));
-      expr.getTail().accept(this, new ClassCallExpression(Prelude.DEP_ARRAY, expr.getLevels(), Collections.singletonMap(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(sort.succ(), lamParam, AppExpression.make(expr.getElementsType(), Suc(new ReferenceExpression(lamParam)), true))), Sort.STD, UniverseKind.NO_UNIVERSES));
+      expr.getTail().accept(this, new ClassCallExpression(Prelude.DEP_ARRAY, expr.getLevels(), Collections.singletonMap(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(sort.succ(), lamParam, AppExpression.make(expr.getElementsType(), Suc(new ReferenceExpression(lamParam)), true))), Sort.STD, Prelude.DEP_ARRAY.getSortExpression(), UniverseKind.NO_UNIVERSES));
     }
     return check(expectedType, expr.getType(), expr);
   }

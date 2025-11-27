@@ -62,7 +62,7 @@ public class RecreateExpressionVisitor extends SubstVisitor {
     }
 
     Map<ClassField, Expression> fieldSet = new LinkedHashMap<>();
-    ClassCallExpression classCall = new ClassCallExpression(expr.getDefinition(), expr.getLevels().subst(getLevelSubstitution()), fieldSet, expr.getSort().subst(getLevelSubstitution()), expr.getUniverseKind());
+    ClassCallExpression classCall = new ClassCallExpression(expr.getDefinition(), expr.getLevels().subst(getLevelSubstitution()), fieldSet, expr.getSort().subst(getLevelSubstitution()), expr.getSortExpression(), expr.getUniverseKind());
     if (expr.getImplementedHere().isEmpty()) {
       return classCall;
     }

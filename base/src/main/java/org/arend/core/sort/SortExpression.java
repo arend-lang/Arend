@@ -2,11 +2,13 @@ package org.arend.core.sort;
 
 import org.arend.core.context.binding.Binding;
 import org.arend.core.context.param.DependentLink;
+import org.arend.core.definition.ClassField;
 import org.arend.core.expr.*;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,27 +29,27 @@ public sealed interface SortExpression permits SortExpression.Const, SortExpress
   }
 
   static SortExpression getSortExpression(Expression expression, DependentLink parameters) {
-    return getSortExpression(expression, getVariables(parameters));
+    return getSortExpression(expression, getVariables(parameters), Collections.emptyMap(), null);
   }
 
-  static SortExpression getSortExpression(Expression expression, Map<Binding, Integer> variables) {
+  static SortExpression getSortExpression(Expression expression, Map<Binding, Integer> variables, Map<ClassField, Integer> fields, Binding thisBinding) {
     return switch (expression) {
       case PiExpression piExpr -> {
-        SortExpression expr1 = getSortExpression(piExpr.getParameters().getTypeExpr(), variables);
-        SortExpression expr2 = getSortExpression(piExpr.getCodomain(), variables);
-        yield expr1 == null || expr2 == null ? null : new SortExpression.Pi(expr1, expr2);
+        SortExpression expr1 = getSortExpression(piExpr.getParameters().getTypeExpr(), variables, fields, thisBinding);
+        SortExpression expr2 = getSortExpression(piExpr.getCodomain(), variables, fields, thisBinding);
+        yield expr1 == null || expr2 == null ? null : new Pi(expr1, expr2);
       }
       case SigmaExpression sigmaExpr -> {
-        SortExpression result = new SortExpression.Const(Sort.PROP);
+        SortExpression result = new Const(Sort.PROP);
         for (DependentLink param = sigmaExpr.getParameters(); param.hasNext(); param = param.getNext()) {
           param = param.getNextTyped(null);
-          SortExpression sortExpr = getSortExpression(param.getTypeExpr(), variables);
+          SortExpression sortExpr = getSortExpression(param.getTypeExpr(), variables, fields, thisBinding);
           if (sortExpr == null) yield null;
-          result = new SortExpression.Max(result, sortExpr);
+          result = new Max(result, sortExpr);
         }
         yield result;
       }
-      case DefCallExpression defCall -> {
+      case DefCallExpression defCall when !(expression instanceof FieldCallExpression) -> {
         SortExpression result = defCall.getDefinition().getSortExpression();
         if (result == null) {
           Sort sort = defCall.getSortOfType();
@@ -59,19 +61,25 @@ public sealed interface SortExpression permits SortExpression.Const, SortExpress
           while (arg instanceof LamExpression lamExpr) {
             arg = lamExpr.getBody();
           }
-          return getSortExpression(arg, variables);
+          return getSortExpression(arg, variables, fields, thisBinding);
         });
       }
       default -> {
         Expression fun = expression instanceof AppExpression appExpr ? appExpr.getFunction() : expression;
+        Integer index;
         if (fun instanceof ReferenceExpression refExpr) {
-          Integer index = variables.get(refExpr.getBinding());
-          if (index != null) {
-            yield new SortExpression.Var(index);
-          }
+          index = variables.get(refExpr.getBinding());
+        } else if (fun instanceof FieldCallExpression fieldCall && fieldCall.getArgument() instanceof ReferenceExpression refExpr && refExpr.getBinding().equals(thisBinding)) {
+          index = fields.get(fieldCall.getDefinition());
+        } else {
+          index = null;
         }
+        if (index != null) {
+          yield new Var(index);
+        }
+
         Sort sort = expression.getSortOfType();
-        yield sort == null || sort.getPLevel().isInfinity() ? null : new SortExpression.Const(sort);
+        yield sort == null || sort.getPLevel().isInfinity() ? null : new Const(sort);
       }
     };
   }
@@ -142,7 +150,9 @@ public sealed interface SortExpression permits SortExpression.Const, SortExpress
     @Override
     public @Nullable Sort computeSort(@NotNull List<? extends Expression> arguments) {
       if (index >= arguments.size()) return null;
-      Expression type = arguments.get(index).getType();
+      Expression arg = arguments.get(index);
+      if (arg == null) return null;
+      Expression type = arg.getType();
       if (type == null) return null;
       type = type.normalize(NormalizationMode.WHNF);
       while (type instanceof PiExpression piExpression) {

@@ -237,7 +237,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     Levels argLevels = classCall.getLevels(superClass);
     if (argLevels != classCall.getLevels() && classCall.getUniverseKind() == UniverseKind.NO_UNIVERSES) {
       Map<ClassField, Expression> impls = new LinkedHashMap<>();
-      ClassCallExpression newClassCall = new ClassCallExpression(superClass, argLevels, impls, classCall.getSort(), UniverseKind.NO_UNIVERSES);
+      ClassCallExpression newClassCall = new ClassCallExpression(superClass, argLevels, impls, classCall.getSort(), classCall.getSortExpression(), UniverseKind.NO_UNIVERSES);
       for (Map.Entry<ClassField, AbsExpression> entry : classCall.getDefinition().getImplemented()) {
         if (entry.getKey().getUniverseKind() != UniverseKind.NO_UNIVERSES && superClass.isSubClassOf(entry.getKey().getParentClass())) {
           impls.put(entry.getKey(), entry.getValue().apply(new ReferenceExpression(classCall.getThisBinding()), LevelSubstitution.EMPTY).accept(new FieldCallSubstVisitor(classCall, new ReferenceExpression(newClassCall.getThisBinding())), null));
@@ -303,7 +303,8 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
   @Override
   public Expression visitClassCall(ClassCallExpression expr, Void params) {
-    return new UniverseExpression(expr.getSort().subst((myMinimal ? minimizeLevels(expr) : expr.getLevels()).makeSubstitution(expr.getDefinition())));
+    Sort sort = expr.getSortFromSortExpression();
+    return new UniverseExpression(sort != null ? sort : expr.getSort().subst((myMinimal ? minimizeLevels(expr) : expr.getLevels()).makeSubstitution(expr.getDefinition())));
   }
 
   @Override
@@ -470,7 +471,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       implementations.put(Prelude.ARRAY_LENGTH, length);
     }
     implementations.put(Prelude.ARRAY_ELEMENTS_TYPE, expr.getElementsType());
-    return new ClassCallExpression(Prelude.DEP_ARRAY, expr.getLevels(), implementations, Sort.STD, UniverseKind.NO_UNIVERSES);
+    return new ClassCallExpression(Prelude.DEP_ARRAY, expr.getLevels(), implementations, Sort.STD, Prelude.DEP_ARRAY.getSortExpression(), UniverseKind.NO_UNIVERSES);
   }
 
   @Override

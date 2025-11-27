@@ -76,7 +76,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     if (body instanceof NewExpression && ((NewExpression) body).getRenewExpression() == null && definition.getResultType() instanceof ClassCallExpression typeClassCall && definition.getResultTypeLevel() == null) {
       Map<ClassField, Expression> newImpls = new LinkedHashMap<>();
       ClassCallExpression bodyClassCall = ((NewExpression) body).getClassCall();
-      ClassCallExpression newClassCall = new ClassCallExpression(bodyClassCall.getDefinition(), typeClassCall.getLevels(), newImpls, Sort.PROP, UniverseKind.NO_UNIVERSES);
+      ClassCallExpression newClassCall = new ClassCallExpression(bodyClassCall.getDefinition(), typeClassCall.getLevels(), newImpls, Sort.PROP, null, UniverseKind.NO_UNIVERSES);
       Expression newThisBinding = new ReferenceExpression(newClassCall.getThisBinding());
       boolean ok = true;
       for (ClassField field : typeClassCall.getDefinition().getNotImplementedFields()) {
@@ -333,7 +333,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
 
       PiExpression fieldType = definition.getFieldType(field);
       myChecker.addBinding(fieldType.getParameters(), fieldType.getCodomain());
-      Expression typeType = fieldType.getCodomain().accept(myChecker, Type.OMEGA);
+      Expression typeType = myChecker.checkInf(fieldType.getCodomain(), Type.OMEGA, true);
       myChecker.removeBinding(fieldType.getParameters());
 
       Integer level;

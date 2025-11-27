@@ -6,6 +6,7 @@ import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.FindBindingVisitor;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.core.subst.SubstVisitor;
@@ -34,7 +35,9 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
   private final Map<ClassField, Pair<PiExpression,ClassDefinition>> myOverridden = new HashMap<>();
   private final Set<ClassField> myCovariantFields = new HashSet<>();
   private ClassField myCoercingField;
-  private Sort mySort = Sort.PROP;
+  private Sort mySort = Sort.PROP; // TODO[sorts]: Replace with Sort.INFINITY
+  private SortExpression mySortExpression;
+  private List<ClassField> mySortFields = Collections.emptyList();
   private boolean myRecord = false;
   private final CoerceData myCoerce = new CoerceData(this);
   private Set<ClassField> myGoodThisFields = Collections.emptySet();
@@ -43,7 +46,7 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
   private FunctionDefinition mySquasher;
   private Map<ClassDefinition, Levels> mySuperLevels = Collections.emptyMap();
   private final Set<ClassField> myOmegaFields = new HashSet<>();
-  private UniverseKind myBaseUniverseKind = UniverseKind.NO_UNIVERSES;
+  private UniverseKind myBaseUniverseKind = UniverseKind.NO_UNIVERSES; // TODO[sorts]: Delete this
 
   public ClassDefinition(TCDefReferable referable) {
     super(referable, TypeCheckingStatus.NEEDS_TYPE_CHECKING);
@@ -181,7 +184,7 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
     }
 
     Levels levels = makeIdLevels();
-    ReferenceExpression thisExpr = new ReferenceExpression(ExpressionFactory.parameter("this", new ClassCallExpression(this, levels, Collections.emptyMap(), mySort, getUniverseKind())));
+    ReferenceExpression thisExpr = new ReferenceExpression(ExpressionFactory.parameter("this", new ClassCallExpression(this, levels, Collections.emptyMap(), mySort, mySortExpression, getUniverseKind())));
     Sort sort = Sort.PROP;
 
     for (ClassField field : myNotImplementedFields) {
@@ -204,6 +207,23 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
     return hLevel == null ? sort : new Sort(sort.getPLevel(), new Level(hLevel));
   }
 
+  public SortExpression computeSortExpression(Set<ClassField> implemented) {
+    if (mySortFields.isEmpty()) return null;
+    Map<ClassField, Integer> fieldIndices = new HashMap<>();
+    for (int i = 0; i < mySortFields.size(); i++) {
+      fieldIndices.put(mySortFields.get(i), i);
+    }
+    SortExpression sortExpr = new SortExpression.Const(Sort.PROP);
+    for (ClassField field : myPersonalFields) {
+      if (!field.getType().isInfinityLevel() && !field.isProperty() && !implemented.contains(field)) {
+        SortExpression fieldSortExpr = SortExpression.getSortExpression(field.getType().getCodomain(), Collections.emptyMap(), fieldIndices, field.getThisParameter());
+        if (fieldSortExpr == null) return null;
+        sortExpr = new SortExpression.Max(sortExpr, fieldSortExpr);
+      }
+    }
+    return sortExpr;
+  }
+
   public void updateSort() {
     mySort = computeSort(Collections.emptyMap(), null);
   }
@@ -216,6 +236,23 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
 
   public void setSort(Sort sort) {
     mySort = sort;
+  }
+
+  @Override
+  public SortExpression getSortExpression() {
+    return mySortExpression;
+  }
+
+  public void setSortExpression(SortExpression sortExpression) {
+    mySortExpression = sortExpression;
+  }
+
+  public List<ClassField> getSortFields() {
+    return mySortFields;
+  }
+
+  public void setSortFields(List<ClassField> sortFields) {
+    mySortFields = sortFields;
   }
 
   @Override
@@ -537,7 +574,7 @@ public class ClassDefinition extends TopLevelDefinition implements CoreClassDefi
 
   @Override
   public ClassCallExpression getDefCall(Levels levels, List<Expression> args) {
-    return new ClassCallExpression(this, levels, Collections.emptyMap(), mySort, getUniverseKind());
+    return new ClassCallExpression(this, levels, Collections.emptyMap(), mySort, mySortExpression, getUniverseKind());
   }
 
   public void clear() {

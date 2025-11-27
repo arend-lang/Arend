@@ -56,7 +56,7 @@ public class ExpressionMatcher {
     }
 
     ClassCallExpression classCall = newExpr.getClassCall();
-    return new NewExpression(null, new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), newImpls, classCall.getSort(), classCall.getUniverseKind()));
+    return new NewExpression(null, new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), newImpls, classCall.getSort(), classCall.getSortExpression(), classCall.getUniverseKind()));
   }
 
   /**

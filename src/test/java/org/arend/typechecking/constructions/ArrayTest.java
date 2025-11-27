@@ -508,7 +508,7 @@ public class ArrayTest extends TypeCheckingTestCase {
     Expression length = new ReferenceExpression(def.getParameters());
     impls.put(Prelude.ARRAY_LENGTH, length);
     impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(Sort.SET0, new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(length))), Nat()));
-    assertThatErrorsAre(Matchers.goal(1), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.SET0, impls, Sort.STD, UniverseKind.NO_UNIVERSES)));
+    assertThatErrorsAre(Matchers.goal(1), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.SET0, impls, Sort.STD, null, UniverseKind.NO_UNIVERSES)));
   }
 
   @Test
@@ -518,7 +518,7 @@ public class ArrayTest extends TypeCheckingTestCase {
     Expression length = new SmallIntegerExpression(5);
     impls.put(Prelude.ARRAY_LENGTH, length);
     impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(Sort.SET0, new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(length))), Nat()));
-    assertThatErrorsAre(Matchers.goal(0), Matchers.goal(0), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.SET0, impls, Sort.STD, UniverseKind.NO_UNIVERSES)));
+    assertThatErrorsAre(Matchers.goal(0), Matchers.goal(0), Matchers.goal(new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.SET0, impls, Sort.STD, null, UniverseKind.NO_UNIVERSES)));
   }
 
   @Test

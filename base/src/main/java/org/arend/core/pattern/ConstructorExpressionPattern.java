@@ -228,7 +228,7 @@ public class ConstructorExpressionPattern extends ConstructorPattern<Object> imp
 
     ClassCallExpression classCall = (ClassCallExpression) dataExpr;
     Map<ClassField, Expression> implementations = new LinkedHashMap<>();
-    ClassCallExpression resultClassCall = new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations, Sort.PROP, UniverseKind.NO_UNIVERSES);
+    ClassCallExpression resultClassCall = new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations, Sort.PROP, null, UniverseKind.NO_UNIVERSES);
     resultClassCall.copyImplementationsFrom(classCall);
     int i = 0;
     for (ClassField field : classCall.getDefinition().getNotImplementedFields()) {

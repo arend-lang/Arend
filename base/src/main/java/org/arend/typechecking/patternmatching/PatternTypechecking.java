@@ -1044,7 +1044,7 @@ public class PatternTypechecking {
           List<Expression> funCallArgs;
           Expression elementsType = classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE);
           if (elementsType != null) {
-            elementsType = elementsType.subst(classCall.getThisBinding(), new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), Collections.singletonMap(Prelude.ARRAY_LENGTH, constructor == Prelude.EMPTY_ARRAY ? Zero() : length != null ? length : Suc(conResult.exprs.getFirst())), Sort.STD.succ(), UniverseKind.NO_UNIVERSES)));
+            elementsType = elementsType.subst(classCall.getThisBinding(), new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), Collections.singletonMap(Prelude.ARRAY_LENGTH, constructor == Prelude.EMPTY_ARRAY ? Zero() : length != null ? length : Suc(conResult.exprs.getFirst())), Sort.STD.succ(), Prelude.DEP_ARRAY.getSortExpression(), UniverseKind.NO_UNIVERSES)));
           }
           if (elementsType != null || length1 != null && constructor == Prelude.ARRAY_CONS) {
             funCallArgs = new ArrayList<>();

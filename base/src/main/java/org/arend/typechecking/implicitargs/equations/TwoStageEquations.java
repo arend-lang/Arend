@@ -735,7 +735,7 @@ public class TwoStageEquations implements Equations {
         Equations wrapper = useWrapper ? new LevelEquationsWrapper(this) : this;
         Levels levels = classDef.generateInferVars(this, pair.proj1.getSourceNode());
         Map<ClassField, Expression> implementations = new LinkedHashMap<>();
-        solution = new ClassCallExpression(classDef, levels, implementations, classDef.getSort(), universeKind);
+        solution = new ClassCallExpression(classDef, levels, implementations, classDef.getSort(), classDef.getSortExpression(), universeKind);
         ReferenceExpression thisExpr = new ReferenceExpression(solution.getThisBinding());
 
         int minIndex = 0;
@@ -805,6 +805,7 @@ public class TwoStageEquations implements Equations {
           solution.removeDependencies(minClassCall.getImplementedHere().keySet());
         }
         solution.setSort(classDef.computeSort(implementations, solution.getThisBinding()));
+        solution.setSortExpression(classDef.computeSortExpression(implementations.keySet()));
         solution.updateHasUniverses();
 
         for (ClassCallExpression lowerBound : pair.proj2) {

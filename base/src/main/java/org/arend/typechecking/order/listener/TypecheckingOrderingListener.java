@@ -259,7 +259,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
         for (Constructor constructor : dataDef.getConstructors()) {
           for (DependentLink param = constructor.getParameters(); param.hasNext(); param = param.getNext()) {
             param = param.getNextTyped(null);
-            SortExpression constructorSortExpr = SortExpression.getSortExpression(param.getTypeExpr(), variables);
+            SortExpression constructorSortExpr = SortExpression.getSortExpression(param.getTypeExpr(), variables, Collections.emptyMap(), null);
             if (constructorSortExpr == null) {
               sortExpr = null;
               break loop;
@@ -274,6 +274,20 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
     for (Definition definition : definitions) {
       if (definition instanceof FunctionDefinition functionDef && functionDef.getBody() instanceof Expression body && functionDef.getResultType() instanceof UniverseExpression universe && universe.getSort().getPLevel().isInfinity()) {
         functionDef.setSortExpression(SortExpression.getSortExpression(body, functionDef.getParameters()));
+      }
+
+      if (definition instanceof ClassDefinition classDef && classDef.getSort().getPLevel().isInfinity()) {
+        List<ClassField> sortFields = new ArrayList<>();
+        for (ClassDefinition superClass : classDef.getSuperClasses()) {
+          sortFields.addAll(superClass.getSortFields());
+        }
+        for (ClassField field : classDef.getPersonalFields()) {
+          if (field.getType().isInfinityLevel()) {
+            sortFields.add(field);
+          }
+        }
+        classDef.setSortFields(sortFields);
+        classDef.setSortExpression(classDef.computeSortExpression(Collections.emptySet()));
       }
     }
   }

@@ -39,7 +39,7 @@ public class NewExpression extends Expression implements CoreNewExpression {
           }
           implementations.put(field, impl);
         }
-        myClassCall = new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations, Sort.PROP, UniverseKind.NO_UNIVERSES);
+        myClassCall = new ClassCallExpression(classCall.getDefinition(), classCall.getLevels(), implementations, Sort.PROP, null, UniverseKind.NO_UNIVERSES);
       } else {
         myRenewExpression = renewExpression;
         myClassCall = classCall;
@@ -120,7 +120,7 @@ public class NewExpression extends Expression implements CoreNewExpression {
       }
       implementations.put(field, impl);
     }
-    return new ClassCallExpression(myClassCall.getDefinition(), myClassCall.getLevels(), implementations, Sort.PROP, UniverseKind.NO_UNIVERSES);
+    return new ClassCallExpression(myClassCall.getDefinition(), myClassCall.getLevels(), implementations, Sort.PROP, null, UniverseKind.NO_UNIVERSES);
   }
 
   @Override

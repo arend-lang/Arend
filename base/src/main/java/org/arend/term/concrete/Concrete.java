@@ -315,6 +315,16 @@ public final class Concrete {
       return accept(new SubstConcreteVisitor(map, null), null);
     }
 
+    public void setAllowInf() {
+      Concrete.Expression type = this;
+      while (type instanceof Concrete.PiExpression piExpr) {
+        type = piExpr.getCodomain();
+      }
+      if (type instanceof Concrete.UniverseExpression universe && universe.getKind() == ConcreteUniverseExpression.Kind.SORT) {
+        universe.allowInf = true;
+      }
+    }
+
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();

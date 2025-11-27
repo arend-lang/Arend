@@ -14,6 +14,7 @@ import org.arend.core.expr.visitor.NormalizeVisitor;
 import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.CoreClassCallExpression;
@@ -36,6 +37,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
   private final ClassCallBinding myThisBinding = new ClassCallBinding();
   private final Map<ClassField, Expression> myImplementations;
   private Sort mySort;
+  private SortExpression mySortExpression;
   private UniverseKind myUniverseKind;
 
   public class ClassCallBinding implements Binding {
@@ -75,14 +77,16 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     super(definition, levels);
     myImplementations = Collections.emptyMap();
     mySort = definition.getSort().subst(levels.makeSubstitution(definition));
+    mySortExpression = definition.getSortExpression();
     myUniverseKind = definition.getUniverseKind();
   }
 
-  public ClassCallExpression(ClassDefinition definition, Levels levels, Map<ClassField, Expression> implementations, Sort sort, UniverseKind universeKind) {
+  public ClassCallExpression(ClassDefinition definition, Levels levels, Map<ClassField, Expression> implementations, Sort sort, SortExpression sortExpression, UniverseKind universeKind) {
     super(definition, levels);
     assert implementations instanceof LinkedHashMap || implementations.size() <= 1;
     myImplementations = implementations;
     mySort = sort;
+    mySortExpression = sortExpression;
     myUniverseKind = universeKind.max(definition.getBaseUniverseKind());
   }
 
@@ -306,7 +310,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
   @Override
   public @NotNull DependentLink getClassFieldParameters() {
     Map<ClassField, Expression> implementations = new LinkedHashMap<>();
-    NewExpression newExpr = new NewExpression(null, new ClassCallExpression(getDefinition(), getLevels(), implementations, Sort.PROP, UniverseKind.NO_UNIVERSES));
+    NewExpression newExpr = new NewExpression(null, new ClassCallExpression(getDefinition(), getLevels(), implementations, Sort.PROP, null, UniverseKind.NO_UNIVERSES));
     newExpr.getClassCall().copyImplementationsFrom(this);
 
     Set<? extends ClassField> fields = getDefinition().getNotImplementedFields();
@@ -336,7 +340,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
             type = type.normalize(NormalizationMode.WHNF);
             if (type instanceof ClassCallExpression classCall && getDefinition().isSubClassOf(classCall.getDefinition())) {
               Map<ClassField, Expression> subImplementations = new LinkedHashMap<>(classCall.getImplementedHere());
-              ClassCallExpression resultClassCall = new ClassCallExpression(classCall.getDefinition(), getLevels(((ClassCallExpression) type).getDefinition()), subImplementations, Sort.PROP, UniverseKind.NO_UNIVERSES);
+              ClassCallExpression resultClassCall = new ClassCallExpression(classCall.getDefinition(), getLevels(classCall.getDefinition()), subImplementations, Sort.PROP, null, UniverseKind.NO_UNIVERSES);
               Expression resultRef = new ReferenceExpression(resultClassCall.myThisBinding);
               for (ClassField field : classCall.getDefinition().getNotImplementedFields()) {
                 Expression impl = getImplementation(field, resultRef);
@@ -436,7 +440,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
         @Override
         public Expression visitClassCall(ClassCallExpression expr, Void params) {
           Map<ClassField, Expression> fieldSet = new LinkedHashMap<>();
-          ClassCallExpression result = new ClassCallExpression(expr.getDefinition(), expr.getLevels().subst(getLevelSubstitution()), fieldSet, expr.getSort(), expr.getUniverseKind());
+          ClassCallExpression result = new ClassCallExpression(expr.getDefinition(), expr.getLevels().subst(getLevelSubstitution()), fieldSet, expr.getSort(), expr.getSortExpression(), expr.getUniverseKind());
           getExprSubstitution().add(expr.getThisBinding(), new ReferenceExpression(result.getThisBinding()));
           for (Map.Entry<ClassField, Expression> entry : expr.getImplementedHere().entrySet()) {
             Expression newArg = makeNewExpression(entry.getValue(), entry.getKey().getType().getCodomain());
@@ -471,9 +475,19 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     return this;
   }
 
+  public @Nullable Sort getSortFromSortExpression() {
+    if (mySortExpression == null) return null;
+    List<Expression> arguments = new ArrayList<>();
+    for (ClassField field : getDefinition().getSortFields()) {
+      arguments.add(myImplementations.get(field));
+    }
+    return mySortExpression.computeSort(arguments);
+  }
+
   @Override
   public Sort getSortOfType() {
-    return mySort.subst(getLevelSubstitution());
+    Sort sort = getSortFromSortExpression();
+    return sort != null ? sort : mySort.subst(getLevelSubstitution());
   }
 
   @Override
@@ -500,6 +514,14 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     mySort = sort;
   }
 
+  public SortExpression getSortExpression() {
+    return mySortExpression;
+  }
+
+  public void setSortExpression(SortExpression sortExpression) {
+    mySortExpression = sortExpression;
+  }
+
   @Override
   public UniverseKind getUniverseKind() {
     return myUniverseKind;
@@ -507,7 +529,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
 
   @Override
   public @NotNull Expression minimizeLevels() {
-    return new ClassCallExpression(getDefinition(), getMinimizedLevels(), myImplementations, mySort, myUniverseKind);
+    return new ClassCallExpression(getDefinition(), getMinimizedLevels(), myImplementations, mySort, mySortExpression, myUniverseKind);
   }
 
   @Override
