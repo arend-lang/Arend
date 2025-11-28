@@ -14,6 +14,7 @@ import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
 import org.arend.naming.scope.EmptyScope
 import org.arend.psi.*
 import org.arend.psi.ext.ArendReferenceElement
+import org.arend.psi.fragments.ArendCodeFragment
 import org.arend.server.ArendServerRequesterImpl
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter

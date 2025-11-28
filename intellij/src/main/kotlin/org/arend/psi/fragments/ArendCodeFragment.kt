@@ -1,5 +1,6 @@
-package org.arend.psi
+package org.arend.psi.fragments
 
+import org.arend.psi.IArendFile
 import org.arend.psi.ext.ArendExpr
 
 interface ArendCodeFragment : IArendFile {

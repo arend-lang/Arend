@@ -16,6 +16,7 @@ import org.arend.codeInsight.completion.ArendReplCompletionContributor.Companion
 import org.arend.psi.*
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
+import org.arend.psi.fragments.ArendExpressionCodeFragment
 import org.arend.repl.CommandHandler
 import org.arend.search.ArendWordScanner
 import org.arend.term.abs.Abstract

@@ -1,4 +1,4 @@
-package org.arend.psi
+package org.arend.psi.fragments
 
 import com.intellij.lang.ASTNode
 import com.intellij.lang.PsiBuilder
@@ -12,6 +12,7 @@ import com.intellij.psi.tree.IElementType
 import org.arend.ArendLanguage
 import org.arend.naming.scope.Scope
 import org.arend.parser.ArendParser
+import org.arend.psi.ArendElementTypes
 import org.arend.psi.ext.ArendExpr
 import org.arend.resolving.ArendReference
 import org.arend.server.impl.SingleFileReferenceResolver
@@ -19,7 +20,8 @@ import org.arend.server.impl.SingleFileReferenceResolver
 class ArendExpressionCodeFragment(project: Project, expression: String,
                                   context: PsiElement?,
                                   private val fragmentController: ArendCodeFragmentController?):
-    PsiCodeFragmentImpl(project, ArendExpressionCodeFragmentElementType, true, "fragment.ard", expression, context), ArendCodeFragment {
+    PsiCodeFragmentImpl(project, ArendExpressionCodeFragmentElementType, true, "fragment.ard", expression, context),
+    ArendCodeFragment {
     override fun getReference(): ArendReference? = null
 
     override fun moduleTextRepresentation(): String = name

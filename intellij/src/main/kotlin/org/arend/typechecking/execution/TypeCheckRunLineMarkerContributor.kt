@@ -22,7 +22,7 @@ class TypeCheckRunLineMarkerContributor : RunLineMarkerContributor() {
     override fun getInfo(element: PsiElement): Info? {
         if (!(element is LeafPsiElement && element.node.elementType == ArendElementTypes.ID) ||
                 element.containingFile.virtualFile.extension == SCRATCH_SUFFIX ||
-                (element.containingFile as ArendFile?)?.isRepl == true) {
+                (element.containingFile as? ArendFile?)?.isRepl == true) {
             return null
         }
 

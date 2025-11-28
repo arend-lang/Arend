@@ -29,6 +29,8 @@ import org.arend.naming.reference.Referable
 import org.arend.naming.scope.Scope
 import org.arend.psi.*
 import org.arend.psi.ext.*
+import org.arend.psi.fragments.ArendFileChooserFragment
+import org.arend.psi.fragments.ArendReferableChooserFragment
 import org.arend.refactoring.move.ArendMoveRefactoringProcessor.Companion.getUsagesToPreprocess
 import org.arend.server.ArendServerService
 import org.arend.server.impl.MultiFileReferenceResolver
@@ -72,9 +74,19 @@ class ArendMoveMembersDialog(project: Project,
         } else {
             null
         }
+        val fileChooserFragment = object: ArendFileChooserFragment(project, fullName?.module?.toString() ?: "") {
+            override fun getContextModule(): Module? = container.module
 
-        targetFileField = EditorTextField(PsiDocumentManager.getInstance(project).getDocument(ArendLongNameCodeFragment(project, fullName?.module?.toString() ?: "", null)), project, ArendFileTypeInstance)
-        targetModuleField = EditorTextField(PsiDocumentManager.getInstance(project).getDocument(ArendLongNameCodeFragment(project, fullName?.longName?.toString() ?: "", null)), project, ArendFileTypeInstance)
+            override fun isInTests(): Boolean = false
+        }
+        targetFileField = EditorTextField(PsiDocumentManager.getInstance(project).getDocument(fileChooserFragment), project, ArendFileTypeInstance)
+        val groupFragment = object: ArendReferableChooserFragment(project, fullName?.longName?.toString() ?: "") {
+            override fun getReferable(): PsiElement? {
+                val (lr, result) = simpleLocate(fileChooserFragment.text, "", enclosingModule)
+                return if (result == LocateResult.LOCATE_OK) lr else null
+            }
+        }
+        targetModuleField = EditorTextField(PsiDocumentManager.getInstance(project).getDocument(groupFragment), project, ArendFileTypeInstance)
 
         memberSelectionPanel = ArendMemberSelectionPanel("Members to move", memberInfos)
         staticGroup = JRadioButton("Static")

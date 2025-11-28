@@ -29,7 +29,11 @@ abstract class ArendIdentifierBase(node: ASTNode) : PsiReferableImpl(node), Aren
     override fun getReferenceText(): String = referenceName
 
     override fun getReferenceModule() = runReadAction {
-        (containingFile as? ArendFile)?.moduleLocation
+        when (val f = containingFile) {
+            is ArendFile -> f.moduleLocation
+            is PsiCodeFragment -> (f.context?.containingFile as? ArendFile)?.moduleLocation
+            else -> null
+        }
     }
 
     private fun getTopmostExpression(element: PsiElement): ArendCompositeElement? {

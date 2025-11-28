@@ -61,7 +61,7 @@ import org.arend.typechecking.error.local.CertainTypecheckingError.Kind.*
 import org.arend.ext.error.InstanceInferenceError
 import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.reference.TCDefReferable
-import org.arend.psi.ArendExpressionCodeFragment
+import org.arend.psi.fragments.ArendExpressionCodeFragment
 import org.arend.quickfix.instance.AddRecursiveInstanceArgumentQuickFix
 import org.arend.server.ArendServerService
 import org.arend.term.group.ConcreteNamespaceCommand

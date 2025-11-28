@@ -38,9 +38,9 @@ import org.arend.ext.module.LongName
 import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.scope.Scope
 import org.arend.naming.scope.local.ListScope
-import org.arend.psi.ArendCodeFragmentController
+import org.arend.psi.fragments.ArendCodeFragmentController
 import org.arend.psi.ArendElementTypes
-import org.arend.psi.ArendExpressionCodeFragment
+import org.arend.psi.fragments.ArendExpressionCodeFragment
 import org.arend.psi.ext.ArendFunctionDefinition
 import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.ReferableBase
