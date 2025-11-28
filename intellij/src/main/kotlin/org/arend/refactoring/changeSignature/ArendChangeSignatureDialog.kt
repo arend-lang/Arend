@@ -36,6 +36,7 @@ import org.arend.ArendFileTypeInstance
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.LongName
 import org.arend.naming.reference.LocatedReferable
+import org.arend.naming.scope.MergeScope
 import org.arend.naming.scope.Scope
 import org.arend.naming.scope.local.ListScope
 import org.arend.psi.fragments.ArendCodeFragmentController
@@ -107,12 +108,15 @@ class ArendChangeSignatureDialog(project: Project,
 
     override fun getMultiResolver(): SingleFileReferenceResolver = singleFileReferenceResolver
 
-    override fun getFragmentScope(codeFragment: ArendExpressionCodeFragment): Scope {
+    override fun getAdditionalScope(codeFragment: ArendExpressionCodeFragment): Scope {
         val items = this.myParametersTableModel.items
-        val limit = items.indexOfFirst { it.typeCodeFragment == codeFragment }.let { if (it == -1) items.size else it }
+        val limit = items.indexOfFirst {
+            it.typeCodeFragment == codeFragment
+        }.let { if (it == -1) items.size else it }
         val params = items.take(limit).map { it.associatedReferable }
         val localScope = ListScope(params)
-        return localScope //TODO: if (deferredNsCmds.isEmpty()) localScope else MergeScope(singletonList(localScope) + deferredNsCmds.map { it.getAmendedScope() })
+        val amendedScope = singleFileReferenceResolver.complementScope
+        return MergeScope(listOf(localScope, amendedScope))
     }
 
     override fun updatePropagateButtons() {

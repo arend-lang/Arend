@@ -13,6 +13,7 @@ import org.arend.ArendLanguage
 import org.arend.naming.scope.Scope
 import org.arend.parser.ArendParser
 import org.arend.psi.ArendElementTypes
+import org.arend.psi.IArendFile
 import org.arend.psi.ext.ArendExpr
 import org.arend.resolving.ArendReference
 import org.arend.server.impl.SingleFileReferenceResolver
@@ -21,19 +22,20 @@ class ArendExpressionCodeFragment(project: Project, expression: String,
                                   context: PsiElement?,
                                   private val fragmentController: ArendCodeFragmentController?):
     PsiCodeFragmentImpl(project, ArendExpressionCodeFragmentElementType, true, "fragment.ard", expression, context),
-    ArendCodeFragment {
+    IArendFile {
     override fun getReference(): ArendReference? = null
 
     override fun moduleTextRepresentation(): String = name
 
     override fun positionTextRepresentation(): String? = null
 
-    override val expr: ArendExpr?
-        get() = firstChild as? ArendExpr?
+    val expr: ArendExpr? get() = firstChild as? ArendExpr?
 
-    override fun fragmentResolved() {
+    fun fragmentResolved() {
         fragmentController?.expressionFragmentResolved(this)
     }
+
+    fun getAdditionalScope(): Scope? = fragmentController?.getAdditionalScope(this)
 
     fun getMultiResolver(): SingleFileReferenceResolver? = fragmentController?.getMultiResolver()
 }
@@ -62,5 +64,5 @@ interface ArendCodeFragmentController {
 
     fun getMultiResolver(): SingleFileReferenceResolver
 
-    fun getFragmentScope(codeFragment: ArendExpressionCodeFragment): Scope
+    fun getAdditionalScope(codeFragment: ArendExpressionCodeFragment): Scope?
 }

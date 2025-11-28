@@ -113,7 +113,7 @@ public class SingleFileReferenceResolver {
 
         Scope referableScope = myServer.getReferableScope(anchor.parent());
         if (referableScope == null) referableScope = EmptyScope.INSTANCE;
-        Scope complementScope = getComplementScope(referableScope);
+        Scope complementScope = getComplementScope();
         Scope currentScope = new MergeScope(referableScope, complementScope);
 
         Set<? extends Referable> currentScopeElements = new LinkedHashSet<>(currentScope.getElements());
@@ -305,7 +305,7 @@ public class SingleFileReferenceResolver {
         return new RawSequenceModifier(result);
     }
 
-    private @NotNull Scope getComplementScope(Scope currentScope) {
+    public @NotNull Scope getComplementScope() {
         List<ConcreteStatement> result = new ArrayList<>();
 
         for (ConcreteNamespaceCommand cnc: itemsToAdd.keySet()) {

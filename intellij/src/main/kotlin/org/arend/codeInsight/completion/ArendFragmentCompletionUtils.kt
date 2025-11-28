@@ -24,6 +24,7 @@ import org.arend.psi.childOfType
 import org.arend.psi.ext.ArendExpr
 import org.arend.psi.ext.ArendLongName
 import org.arend.psi.ext.ArendReferenceElement
+import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.psi.ext.PsiModuleReferable
 import org.arend.psi.ext.ReferableBase
 import org.arend.psi.fragments.ArendExpressionCodeFragment
@@ -158,7 +159,9 @@ class ArendFragmentCompletionUtils {
                     )
 
                     val sampleGroup = mapGroup(contextFileConcreteGroup, parentLocatedReferable, dummyGroup)
-                    result.addAll(server.getCompletionVariants(sampleGroup, element))
+                    result.addAll(ambientFragment.getAdditionalScope()?.elements ?: emptyList())
+                    val variants = server.getCompletionVariants(sampleGroup, element)
+                    result.addAll(variants.filter { (it as? LocatedReferableImpl)?.let { it.locatedReferableParent == parentLocatedReferable } != true  })
                 }
 
                 else -> return null
