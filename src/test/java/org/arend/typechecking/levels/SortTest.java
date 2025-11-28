@@ -149,4 +149,12 @@ public class SortTest extends TypeCheckingTestCase {
     assertEquals(Type.OMEGA, function.getResultType());
     assertNotNull(function.getSortExpression());
   }
+
+  @Test
+  public void implicitArgumentTest() {
+    typeCheckModule("""
+      \\data D {A : \\Sort} (a : A) | con A
+      \\func test (l : Array Nat) : \\Set0 => D l
+      """);
+  }
 }

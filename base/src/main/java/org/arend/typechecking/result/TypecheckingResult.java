@@ -17,6 +17,7 @@ import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.typechecking.TypedExpression;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.implicitargs.equations.DummyEquations;
+import org.arend.typechecking.implicitargs.equations.Equations;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -68,6 +69,11 @@ public class TypecheckingResult implements TResult, TypedExpression {
     List<SingleDependentLink> params = new ArrayList<>();
     type.getPiParameters(params, true);
     return params;
+  }
+
+  @Override
+  public Expression getType(@Nullable Equations equations) {
+    return type;
   }
 
   @NotNull

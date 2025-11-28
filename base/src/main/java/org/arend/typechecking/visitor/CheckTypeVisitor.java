@@ -3329,7 +3329,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     TypecheckingResult result = invokeMeta(meta, contextData);
     fixCheckedExpression(result, refExpr.getReferent(), refExpr);
     if (result != null) {
-      return result.getType() == expectedType ? result : checkResult(expectedType, result, refExpr);
+      return result.type == expectedType ? result : checkResult(expectedType, result, refExpr);
     }
     if (getNumberOfErrors() == numberOfErrors) {
       errorReporter.report(new TypecheckingError("Meta '" + refExpr.getReferent().getRefName() + "' failed", refExpr));
