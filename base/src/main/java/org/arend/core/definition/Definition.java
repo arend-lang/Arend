@@ -117,7 +117,7 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
       }
       Level pLevel = ((LevelPair) levels).getPLevel();
       Level hLevel = ((LevelPair) levels).getHLevel();
-      return pLevel != null && pLevel.isVarOnly() && pLevel.getVar().equals(LevelVariable.PVAR) && hLevel != null && hLevel.isVarOnly() && hLevel.getVar().equals(LevelVariable.HVAR);
+      return pLevel != null && LevelVariable.PVAR.equals(pLevel.getSingleVar()) && hLevel != null && LevelVariable.HVAR.equals(hLevel.getSingleVar());
     } else {
       List<? extends Level> list = levels.toList();
       if (list.size() != vars.size()) {
@@ -125,7 +125,7 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
       }
       for (int i = 0; i < vars.size(); i++) {
         Level level = list.get(i);
-        if (!(level.isVarOnly() && level.getVar().equals(vars.get(i)))) {
+        if (!vars.get(i).equals(level.getSingleVar())) {
           return false;
         }
       }

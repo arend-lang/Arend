@@ -644,7 +644,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
   private boolean checkLevel(LevelMismatchError.TargetKind kind, Integer level, Sort actualSort, Concrete.SourceNode sourceNode) {
     if (kind != null && (level == null || level != -1)) {
-      Sort sort = level != null ? new Sort(new Level(LevelVariable.PVAR), new Level(actualSort == null || !actualSort.getHLevel().isClosed() ? level : Math.min(level, actualSort.getHLevel().getConstant()))) : actualSort;
+      Sort sort = level != null ? new Sort(new Level(LevelVariable.PVAR), new Level(actualSort != null && actualSort.getHLevel().isClosed() ? Math.min(level, actualSort.getHLevel().getConstant()) : level)) : actualSort;
       errorReporter.report(new LevelMismatchError(kind, sort, sourceNode));
       return false;
     } else {
@@ -2013,7 +2013,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       }
       typechecker.getInstancePool().setInstancePool(instancePool);
 
-      if (inferredSort.isProp() || inferredSort.getHLevel().isVarOnly()) {
+      if (inferredSort.isProp() || inferredSort.getHLevel().getSingleVar() != null) {
         boolean ok = true;
         for (int i = 0; i < dataDefinition.getConstructors().size(); i++) {
           List<ExpressionPattern> patterns1 = dataDefinition.getConstructors().get(i).getPatterns();

@@ -85,6 +85,7 @@ import org.arend.typechecking.result.TResult;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.ext.util.Pair;
 import org.arend.util.SingletonList;
+import org.arend.util.SingletonMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -927,14 +928,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     Sort sort = getSortOfType(((Expression) body).computeType(), (Concrete.SourceNode) marker);
     if (parameters.size() == 1 && parameters.getFirst() instanceof SingleDependentLink param) {
-      return new LamExpression(PiExpression.generateUpperBound(param.getType().getSortOfType(), sort, myEquations, (Concrete.SourceNode) marker), param, (Expression) body);
+      return new LamExpression(PiExpression.piSort(param.getType().getSortOfType(), sort), param, (Expression) body);
     }
 
     List<Pair<SingleDependentLink,Sort>> params = new ArrayList<>();
     ExprSubstitution substitution = new ExprSubstitution();
     for (CoreParameter parameter : parameters) {
       DependentLink param = (DependentLink) parameter;
-      sort = PiExpression.generateUpperBound(param.getType().getSortOfType(), sort, myEquations, (Concrete.SourceNode) marker);
+      sort = PiExpression.piSort(param.getType().getSortOfType(), sort);
       params.add(new Pair<>(new TypedSingleDependentLink(param.isExplicit(), param.getName(), param.getType()), sort));
     }
 
@@ -1975,9 +1976,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         LevelPair levelPair = (LevelPair) levels;
         InferenceLevelVariable pl = new InferenceLevelVariable(LevelVariable.LvlType.PLVL, definition.getUniverseKind() != UniverseKind.NO_UNIVERSES, expr);
         myEquations.addVariable(pl);
-        myEquations.addEquation(new Level(levelPair.get(LevelVariable.PVAR).getVar()), new Level(pl), CMP.LE, expr);
-        getEquations().bindVariables(pl, (InferenceLevelVariable) levelPair.get(LevelVariable.HVAR).getVar());
-        return DefCallResult.makePathType(expr, definition == Prelude.PATH_INFIX, levels, new Sort(new Level(pl), new Level(levelPair.get(LevelVariable.HVAR).getVar(), -1, -1)));
+        myEquations.addEquation(new Level(levelPair.get(LevelVariable.PVAR).getSingleVar()), new Level(pl), CMP.LE, expr);
+        InferenceLevelVariable hVar = (InferenceLevelVariable) levelPair.get(LevelVariable.HVAR).getSingleVar();
+        getEquations().bindVariables(pl, hVar);
+        return DefCallResult.makePathType(expr, definition == Prelude.PATH_INFIX, levels, new Sort(new Level(pl), new Level(hVar, -1, -1)));
       }
     } else {
       levels = typecheckLevels(definition, expr, null, isMin);
@@ -2223,53 +2225,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
   }
 
-  private static Sort generateUniqueUpperBound(List<Sort> sorts) {
-    LevelVariable pVar = null;
-    LevelVariable hVar = null;
-    for (Sort sort : sorts) {
-      if (sort.getPLevel().getVar() != null) {
-        if (pVar == null) {
-          pVar = sort.getPLevel().getVar();
-        } else {
-          pVar = pVar.max(sort.getPLevel().getVar());
-          if (pVar == null) return null;
-        }
-      }
-      if (sort.getHLevel().getVar() != null) {
-        if (hVar == null) {
-          hVar = sort.getHLevel().getVar();
-        } else {
-          hVar = hVar.max(sort.getHLevel().getVar());
-          if (hVar == null) return null;
-        }
-      }
-    }
-
-    if (sorts.isEmpty()) {
-      return Sort.PROP;
-    } else {
-      Sort resultSort = sorts.getFirst();
-      for (int i = 1; i < sorts.size(); i++) {
-        resultSort = resultSort.max(sorts.get(i));
-      }
-      return resultSort;
-    }
-  }
-
-  private Sort generateUpperBound(List<Sort> sorts, Concrete.SourceNode sourceNode) {
-    Sort resultSort = generateUniqueUpperBound(sorts);
-    if (resultSort != null) {
-      return resultSort;
-    }
-
-    Sort sortResult = Sort.generateInferVars(getEquations(), false, sourceNode);
-    for (Sort sort : sorts) {
-      getEquations().addEquation(sort.getPLevel(), sortResult.getPLevel(), CMP.LE, sourceNode);
-      getEquations().addEquation(sort.getHLevel(), sortResult.getHLevel(), CMP.LE, sourceNode);
-    }
-    return sortResult;
-  }
-
   public void fixClassExtSort(ClassCallExpression classCall, Concrete.SourceNode sourceNode) {
     ClassDefinition classDef = classCall.getDefinition();
     Levels idLevels = classDef.makeIdLevels();
@@ -2383,7 +2338,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (bodyResult == null) {
       return null;
     }
-    Sort sort = PiExpression.generateUpperBound(params.getType().getSortOfType(), getSortOfType(bodyResult.type, sourceNode), myEquations, sourceNode);
+    Sort sort = PiExpression.piSort(params.getType().getSortOfType(), getSortOfType(bodyResult.type, sourceNode));
     return new TypecheckingResult(new LamExpression(sort, params, bodyResult.expression), new PiExpression(sort, params, bodyResult.type));
   }
 
@@ -2489,7 +2444,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           TypedSingleDependentLink link = visitNameParameter((Concrete.NameParameter) param, expr);
           TypecheckingResult bodyResult = visitLam(parameters.subList(1, parameters.size()), expr, new ExpressionParametersProvider(new InferenceReferenceExpression(new ExpressionInferenceVariable(new UniverseExpression(Sort.generateInferVars(myEquations, false, expr)), expr, getAllBindings(), true, true))));
           if (bodyResult == null) return new Pair<>(null, true);
-          Sort sort = PiExpression.generateUpperBound(link.getType().getSortOfType(), getSortOfType(bodyResult.type, expr), myEquations, expr);
+          Sort sort = PiExpression.piSort(link.getType().getSortOfType(), getSortOfType(bodyResult.type, expr));
           TypecheckingResult result = new TypecheckingResult(new LamExpression(sort, link, bodyResult.expression), new PiExpression(sort, link, bodyResult.type));
           Expression expectedType = newProvider.getType();
           return new Pair<>(expectedType == null ? result : checkResult(expectedType, result, expr), true);
@@ -2584,7 +2539,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
         TypecheckingResult bodyResult = visitLam(parameters.subList(1, parameters.size()), expr, actualLink.hasNext() ? NULL_PARAMETERS_PROVIDER : newProvider);
         if (bodyResult == null) return new Pair<>(null, true);
-        Sort sort = PiExpression.generateUpperBound(link.getType().getSortOfType(), getSortOfType(bodyResult.type, expr), myEquations, expr);
+        Sort sort = PiExpression.piSort(link.getType().getSortOfType(), getSortOfType(bodyResult.type, expr));
         if (actualLink.hasNext()) {
           Expression expectedType = newProvider.getType();
           if (expectedType != null) {
@@ -2693,7 +2648,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
       Expression piExpr = result.getExpr();
       for (int i = list.size() - 1; i >= 0; i--) {
-        codSort = PiExpression.generateUpperBound(sorts.get(i), codSort, myEquations, expr);
+        codSort = PiExpression.piSort(sorts.get(i), codSort);
         piExpr = new PiExpression(codSort, list.get(i), piExpr);
       }
 
@@ -2716,7 +2671,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     List<Sort> sorts = new ArrayList<>(expr.getParameters().size());
     DependentLink args = visitSigmaParameters(expr.getParameters(), expectedType, sorts);
     if (args == null || !args.hasNext()) return null;
-    Sort sort = generateUpperBound(sorts, expr);
+    Sort sort = Sort.max(sorts);
     return checkResult(expectedType, new TypecheckingResult(new SigmaExpression(sort, args), new UniverseExpression(sort)), expr);
   }
 
@@ -2779,7 +2734,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         } else {
           Expression actualLength = new SmallIntegerExpression(expr.getFields().size());
           if (!CompareVisitor.compare(myEquations, CMP.EQ, length, actualLength, Nat(), expr)) {
-            errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.PROP, Collections.singletonMap(Prelude.ARRAY_LENGTH, actualLength), Sort.SET0, UniverseKind.ONLY_COVARIANT), new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.PROP, Collections.singletonMap(Prelude.ARRAY_LENGTH, length), Sort.SET0, UniverseKind.ONLY_COVARIANT), actualLength, length), expr));
+            errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.PROP, new SingletonMap<>(Prelude.ARRAY_LENGTH, actualLength), Sort.SET0, UniverseKind.ONLY_COVARIANT), new ClassCallExpression(Prelude.DEP_ARRAY, LevelPair.PROP, new SingletonMap<>(Prelude.ARRAY_LENGTH, length), Sort.SET0, UniverseKind.ONLY_COVARIANT), actualLength, length), expr));
             return null;
           }
         }
@@ -2852,7 +2807,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       list.append(ExpressionFactory.parameter(null, result.type instanceof Type ? (Type) result.type : new TypeExpression(result.type, sort)));
     }
 
-    SigmaExpression type = new SigmaExpression(generateUpperBound(sorts, expr), list.getFirst());
+    SigmaExpression type = new SigmaExpression(Sort.max(sorts), list.getFirst());
     return checkResult(expectedTypeNorm, new TypecheckingResult(new TupleExpression(fields, type), type), expr);
   }
 

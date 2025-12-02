@@ -47,6 +47,7 @@ import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.typechecking.visitor.CheckTypeVisitor;
 import org.arend.typechecking.visitor.DesugarVisitor;
 import org.arend.ext.util.Pair;
+import org.arend.util.SingletonMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.TestOnly;
@@ -644,7 +645,7 @@ public class PatternTypechecking {
             }
 
             DataCallExpression dataCall = expr.cast(DataCallExpression.class);
-            LamExpression typeLam = dataCall == null || dataCall.getDefinition() != Prelude.PATH ? null : dataCall.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF).cast(LamExpression.class);
+            LamExpression typeLam = dataCall == null || dataCall.getDefinition() != Prelude.PATH ? null : dataCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF).cast(LamExpression.class);
             Expression type = ElimBindingVisitor.elimLamBinding(typeLam);
             if (type == null) {
               myErrorReporter.report(new TypeMismatchError(expr, constructor.getResultType().subst(substitution), conPattern));
@@ -943,7 +944,7 @@ public class PatternTypechecking {
         }
         return null;
       }
-      ConCallExpression conCall = dataCall != null ? conCalls.get(0) : null;
+      ConCallExpression conCall = dataCall != null ? conCalls.getFirst() : null;
       DependentLink newParameters;
       if (dataCall != null) {
         newParameters = DependentLink.Helper.subst(constructor.getParameters(), new ExprSubstitution().add(((Constructor) constructor).getDataTypeParameters(), conCall.getDataTypeArguments()), dataCall.getLevelSubstitution());
@@ -980,7 +981,7 @@ public class PatternTypechecking {
           }
         }
         if (n > 0 || isNil) {
-          Object data = patterns.get(0).getData();
+          Object data = patterns.getFirst().getData();
           Concrete.Pattern newPattern;
           if (isNil) {
             newPattern = new Concrete.NumberPattern(data, n, null);
@@ -991,7 +992,7 @@ public class PatternTypechecking {
             }
           }
           newPattern.setExplicit(false);
-          conPattern.getPatterns().add(0, newPattern);
+          conPattern.getPatterns().addFirst(newPattern);
         }
       }
 
@@ -1053,7 +1054,7 @@ public class PatternTypechecking {
           List<Expression> funCallArgs;
           Expression elementsType = classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE);
           if (elementsType != null) {
-            elementsType = elementsType.subst(classCall.getThisBinding(), new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), Collections.singletonMap(Prelude.ARRAY_LENGTH, constructor == Prelude.EMPTY_ARRAY ? Zero() : length != null ? length : Suc(conResult.exprs.get(0))), Sort.STD.succ(), UniverseKind.NO_UNIVERSES)));
+            elementsType = elementsType.subst(classCall.getThisBinding(), new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), new SingletonMap<>(Prelude.ARRAY_LENGTH, constructor == Prelude.EMPTY_ARRAY ? Zero() : length != null ? length : Suc(conResult.exprs.getFirst())), Sort.STD.succ(), UniverseKind.NO_UNIVERSES)));
           }
           if (elementsType != null || length1 != null && constructor == Prelude.ARRAY_CONS) {
             funCallArgs = new ArrayList<>();
@@ -1062,7 +1063,7 @@ public class PatternTypechecking {
               if (elementsType != null) funCallArgs.add(elementsType);
               funCallArgs.addAll(conResult.exprs);
             } else {
-              if (!conResult.exprs.isEmpty()) funCallArgs.add(conResult.exprs.get(0));
+              if (!conResult.exprs.isEmpty()) funCallArgs.add(conResult.exprs.getFirst());
               funCallArgs.add(elementsType);
               if (!conResult.exprs.isEmpty()) funCallArgs.addAll(conResult.exprs.subList(1, conResult.exprs.size()));
             }

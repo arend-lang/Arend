@@ -1,25 +1,19 @@
 package org.arend.core.expr;
 
-import org.arend.core.context.binding.LevelVariable;
-import org.arend.core.context.binding.inference.InferenceLevelVariable;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.core.expr.visitor.NormalizeVisitor;
 import org.arend.core.expr.visitor.StripVisitor;
-import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.InPlaceLevelSubstVisitor;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.expr.*;
-import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.extImpl.AbstractedExpressionImpl;
-import org.arend.term.concrete.Concrete;
-import org.arend.typechecking.implicitargs.equations.Equations;
 import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -42,17 +36,8 @@ public class PiExpression extends Expression implements Type, CorePiExpression, 
     myResultSort = myResultSort.subst(substitution);
   }
 
-  public static Sort generateUpperBound(Sort domSort, Sort codSort, Equations equations, Concrete.SourceNode sourceNode) {
-    if (domSort.getPLevel().getVar() == null || codSort.getPLevel().getVar() == null || domSort.getPLevel().getVar().max(codSort.getPLevel().getVar()) != null) {
-      return Sort.make(domSort.getPLevel().max(codSort.getPLevel()), codSort.getHLevel(), domSort.isCat() || codSort.isCat());
-    }
-
-    InferenceLevelVariable pl = new InferenceLevelVariable(LevelVariable.LvlType.PLVL, false, sourceNode);
-    equations.addVariable(pl);
-    Level pLevel = new Level(pl);
-    equations.addEquation(domSort.getPLevel(), pLevel, CMP.LE, sourceNode);
-    equations.addEquation(codSort.getPLevel(), pLevel, CMP.LE, sourceNode);
-    return Sort.make(pLevel, codSort.getHLevel(), domSort.isCat() || codSort.isCat());
+  public static Sort piSort(Sort domSort, Sort codSort) {
+    return Sort.make(domSort.getPLevel().max(codSort.getPLevel()), codSort.getHLevel(), domSort.isCat() || codSort.isCat());
   }
 
   public Sort getResultSort() {

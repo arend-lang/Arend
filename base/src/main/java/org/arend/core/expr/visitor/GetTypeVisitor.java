@@ -45,7 +45,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   }
 
   private Level getMaxLevel(Level level1, Level level2) {
-    return level2 == null ? level1 : level2.max(level1) /* TODO[sorts] */;
+    return level2 == null ? level1 : level2.max(level1);
   }
 
   private boolean matchLevels(Levels paramLevels, Levels argLevels, Map<LevelVariable, Level> levelMap) {
@@ -55,12 +55,8 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       return false;
     }
     for (int i = 0; i < paramList.size(); i++) {
-      if (paramList.get(i).getVar() != null) {
-        Level level = getMaxLevel(argList.get(i), levelMap.get(paramList.get(i).getVar()));
-        if (level == null) {
-          return false;
-        }
-        levelMap.put(paramList.get(i).getVar(), level);
+      for (LevelVariable var : paramList.get(i).getVars()) {
+        levelMap.put(var, getMaxLevel(argList.get(i), levelMap.get(var)));
       }
     }
     return true;
@@ -277,16 +273,16 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   public DataCallExpression visitConCall(ConCallExpression expr, Void params) {
     if (expr.getDefinition() == Prelude.SUC) {
       int sucs = 1;
-      Expression expression = expr.getDefCallArguments().get(0);
+      Expression expression = expr.getDefCallArguments().getFirst();
       while (expression instanceof ConCallExpression && ((ConCallExpression) expression).getDefinition() == Prelude.SUC) {
         sucs++;
-        expression = ((ConCallExpression) expression).getDefCallArguments().get(0);
+        expression = ((ConCallExpression) expression).getDefCallArguments().getFirst();
       }
       Expression argType = expression.accept(this, null);
       if (myNormalizing) argType = argType.normalize(NormalizationMode.WHNF);
       DataCallExpression dataCall = argType.cast(DataCallExpression.class);
       if (dataCall != null && dataCall.getDefinition() == Prelude.FIN) {
-        Expression arg = dataCall.getDefCallArguments().get(0);
+        Expression arg = dataCall.getDefCallArguments().getFirst();
         for (int i = 0; i < sucs; i++) {
           arg = Suc(arg);
         }
@@ -483,7 +479,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     if (!(type instanceof DataCallExpression && ((DataCallExpression) type).getDefinition() == Prelude.PATH)) {
       return type instanceof ErrorExpression ? type : new ErrorExpression();
     }
-    return AppExpression.make(((DataCallExpression) type).getDefCallArguments().get(0), expr.getIntervalArgument(), true);
+    return AppExpression.make(((DataCallExpression) type).getDefCallArguments().getFirst(), expr.getIntervalArgument(), true);
   }
 
   @Override

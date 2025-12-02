@@ -22,10 +22,11 @@ public class FindLevelParameters extends SearchVisitor<Void> {
   }
 
   private void checkLevel(Level level) {
-    if (level.getVar() != null && level.getVar().getType() == LevelVariable.LvlType.PLVL) {
+    LevelVariable.LvlType type = level.getType();
+    if (type == LevelVariable.LvlType.PLVL) {
       hasPLevels = true;
     }
-    if (level.getVar() != null && level.getVar().getType() == LevelVariable.LvlType.HLVL) {
+    if (type == LevelVariable.LvlType.HLVL) {
       hasHLevels = true;
     }
   }

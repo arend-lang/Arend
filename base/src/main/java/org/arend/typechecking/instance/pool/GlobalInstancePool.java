@@ -106,7 +106,7 @@ public class GlobalInstancePool implements InstancePool {
   }
 
   private boolean compareLevel(Level instanceLevel, Level inferredLevel) {
-    return !(instanceLevel.isClosed() && (inferredLevel.isClosed() && instanceLevel.getConstant() != inferredLevel.getConstant() || !inferredLevel.isClosed() && !(inferredLevel.getVar() instanceof InferenceLevelVariable) || inferredLevel.getConstant() > instanceLevel.getConstant() || inferredLevel.getMaxConstant() > instanceLevel.getConstant()));
+    return !(instanceLevel.isClosed() && (inferredLevel.isClosed() && instanceLevel.getConstant() != inferredLevel.getConstant() || inferredLevel.getVarPairs().stream().anyMatch(entry -> !(entry.getKey() instanceof InferenceLevelVariable) || entry.getValue() > instanceLevel.getConstant()) || inferredLevel.getConstant() > instanceLevel.getConstant()));
   }
 
   private boolean compareClassifying(Expression instanceExpr, Expression inferredExpr, boolean topLevel) {

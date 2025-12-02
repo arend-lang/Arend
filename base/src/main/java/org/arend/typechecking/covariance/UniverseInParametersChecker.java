@@ -1,5 +1,6 @@
 package org.arend.typechecking.covariance;
 
+import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.definition.UniverseKind;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Level;
@@ -7,6 +8,7 @@ import org.arend.core.subst.Levels;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.typechecking.visitor.CheckForUniversesVisitor;
 
+import java.util.Map;
 import java.util.Set;
 
 public class UniverseInParametersChecker extends CovarianceChecker {
@@ -50,10 +52,13 @@ public class UniverseInParametersChecker extends CovarianceChecker {
 
     if ((defCall == null || defCall.getUniverseKind() == UniverseKind.ONLY_COVARIANT) && myResult == UniverseKind.NO_UNIVERSES) {
       boolean ok = true;
+      loop:
       for (Level level : levels.toList()) {
-        if (level.getVar() != null && level.getConstant() > 0) {
-          ok = false;
-          break;
+        for (Map.Entry<LevelVariable, Integer> entry : level.getVarPairs()) {
+          if (entry.getValue() > 0) {
+            ok = false;
+            break loop;
+          }
         }
       }
       if (ok) {

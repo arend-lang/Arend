@@ -31,7 +31,7 @@ public class LevelPair implements LevelSubstitution, Levels {
 
   @Override
   public boolean isEmpty() {
-    return myPLevel.isVarOnly() && myPLevel.getVar() == LevelVariable.PVAR && myHLevel.isVarOnly() && myHLevel.getVar() == LevelVariable.HVAR;
+    return LevelVariable.PVAR.equals(myPLevel.getSingleVar()) && LevelVariable.HVAR.equals(myHLevel.getSingleVar());
   }
 
   @Override
@@ -42,10 +42,6 @@ public class LevelPair implements LevelSubstitution, Levels {
   @Override
   public boolean isClosed() {
     return myPLevel.isClosed() && myHLevel.isClosed();
-  }
-
-  public boolean isSTD() {
-    return myPLevel.isVarOnly() && myPLevel.getVar().equals(LevelVariable.PVAR) && myHLevel.isVarOnly() && myHLevel.getVar().equals(LevelVariable.HVAR);
   }
 
   public Level getPLevel() {

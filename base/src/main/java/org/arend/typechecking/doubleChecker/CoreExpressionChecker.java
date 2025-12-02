@@ -31,6 +31,7 @@ import org.arend.typechecking.patternmatching.ElimTypechecking;
 import org.arend.typechecking.patternmatching.ExtElimClause;
 import org.arend.typechecking.patternmatching.PatternTypechecking;
 import org.arend.util.SingletonList;
+import org.arend.util.SingletonMap;
 
 import java.util.*;
 
@@ -452,8 +453,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   @Override
   public Expression visitSigma(SigmaExpression expr, Expression expectedType) {
     checkSort(expr.getSort(), expr);
-    UniverseExpression type = new UniverseExpression(expr.getSort());
-    Sort sort = checkDependentLinkWithResult(expr.getParameters(), type, expr);
+    Sort sort = checkDependentLinkWithResult(expr.getParameters(), expectedType, expr);
     freeDependentLink(expr.getParameters());
 
     for (DependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
@@ -462,19 +462,22 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       }
     }
 
-    return check(expectedType, sort == null ? type : new UniverseExpression(sort), expr);
+    if (sort == null) {
+      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot compute the sort of the \\Sigma-type", mySourceNode), expr));
+    }
+    return check(expectedType, new UniverseExpression(sort), expr);
   }
 
   private void checkLevel(Level level, LevelVariable.LvlType type, Expression expr) {
-    LevelVariable var = level.getVar();
-    if (var == null) return;
-    if (var.getType() != type) {
-      throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.text(type.toString()), DocFactory.text(var.getType().toString()), mySourceNode), expr));
-    }
-    if (!myCheckLevelVariables) return;
-    List<? extends LevelVariable> params = type == LevelVariable.LvlType.HLVL ? myHParameters : myPParameters;
-    if (params != null && params.isEmpty() || var instanceof ParamLevelVariable && (params == null || !params.contains(var))) {
-      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Variable '" + var + "' is not defined", mySourceNode), expr));
+    for (LevelVariable var : level.getVars()) {
+      if (var.getType() != type) {
+        throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(DocFactory.text(type.toString()), DocFactory.text(var.getType().toString()), mySourceNode), expr));
+      }
+      if (!myCheckLevelVariables) continue;
+      List<? extends LevelVariable> params = type == LevelVariable.LvlType.HLVL ? myHParameters : myPParameters;
+      if (params != null && params.isEmpty() || var instanceof ParamLevelVariable && (params == null || !params.contains(var))) {
+        throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Variable '" + var + "' is not defined", mySourceNode), expr));
+      }
     }
   }
 
@@ -981,7 +984,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     }
     if (expr.getTail() != null) {
       TypedSingleDependentLink lamParam = new TypedSingleDependentLink(true, "j", DataCallExpression.make(Prelude.FIN, Levels.EMPTY, Collections.singletonList(tailLength)));
-      expr.getTail().accept(this, new ClassCallExpression(Prelude.DEP_ARRAY, expr.getLevels(), Collections.singletonMap(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(sort.succ(), lamParam, AppExpression.make(expr.getElementsType(), Suc(new ReferenceExpression(lamParam)), true))), Sort.STD, UniverseKind.NO_UNIVERSES));
+      expr.getTail().accept(this, new ClassCallExpression(Prelude.DEP_ARRAY, expr.getLevels(), new SingletonMap<>(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(sort.succ(), lamParam, AppExpression.make(expr.getElementsType(), Suc(new ReferenceExpression(lamParam)), true))), Sort.STD, UniverseKind.NO_UNIVERSES));
     }
     return check(expectedType, expr.getType(), expr);
   }

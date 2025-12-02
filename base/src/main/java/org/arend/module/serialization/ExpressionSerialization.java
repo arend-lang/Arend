@@ -4,7 +4,6 @@ import com.google.protobuf.ByteString;
 import org.arend.core.constructor.*;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.LevelVariable;
-import org.arend.core.context.binding.ParamLevelVariable;
 import org.arend.core.context.binding.PersistentEvaluatingBinding;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.TypedDependentLink;
@@ -76,18 +75,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
   private LevelProtos.Level writeLevel(Level level) {
     // Level.INFINITY should be read with great care
     LevelProtos.Level.Builder builder = LevelProtos.Level.newBuilder();
-    LevelVariable var = level.getVar();
-    if (var == null) {
-      builder.setVariable(-2);
-    } else if (var == LevelVariable.PVAR || var == LevelVariable.HVAR) {
-      builder.setVariable(-1);
-    } else if (var instanceof ParamLevelVariable) {
-      builder.setVariable(((ParamLevelVariable) var).getIndex());
-    } else {
-      throw new IllegalStateException();
-    }
-    builder.setConstant(level.getConstant());
-    builder.setMaxConstant(level.getMaxConstant());
+    builder.setMaxConstant(level.getConstant());
     return builder.build();
   }
 

@@ -76,7 +76,7 @@ public class ElimTypechecking {
       for (DataCallExpression dataCall = pathType.cast(DataCallExpression.class); dataCall != null; dataCall = pathType.cast(DataCallExpression.class)) {
         if (dataCall.getDefinition() == Prelude.PATH) {
           actualLevelSub++;
-          pathType = dataCall.getDefCallArguments().get(0).normalize(NormalizationMode.WHNF);
+          pathType = dataCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
           LamExpression lam = pathType.cast(LamExpression.class);
           if (lam == null) {
             pathType = AppExpression.make(pathType, new ReferenceExpression(new TypedBinding("i", ExpressionFactory.Interval())), true);
@@ -252,7 +252,7 @@ public class ElimTypechecking {
           clauses.remove(i--);
         }
       }
-      if (errorClause != null) {
+      if (errorClause != null && myErrorReporter != null) {
         myErrorReporter.report(new TypecheckingError("Non-interval clauses must be placed before the interval ones", errorClause));
       }
     } else {
@@ -448,7 +448,7 @@ public class ElimTypechecking {
           boolean hasEmpty = false;
           if (result.size() == 1) {
             boolean onlyVars = true;
-            for (ExpressionPattern pattern : result.get(0)) {
+            for (ExpressionPattern pattern : result.getFirst()) {
               if (!(pattern instanceof BindingPattern || pattern instanceof EmptyPattern)) {
                 onlyVars = false;
                 break;
@@ -476,7 +476,7 @@ public class ElimTypechecking {
         substitution.remove(link);
 
         if (firstHasEmpty && totalResult.size() > 1) {
-          totalResult.remove(0);
+          totalResult.removeFirst();
         }
       }
       return totalResult;
@@ -714,7 +714,7 @@ public class ElimTypechecking {
 
   private List<IntervalElim.CasePair> clausesToIntervalElim(List<? extends ElimClause<? extends Pattern>> clauses, int prefix, DependentLink parameters) {
     List<IntervalElim.CasePair> result = new ArrayList<>();
-    for (int i = 0; i < clauses.get(0).getPatterns().size(); i++) {
+    for (int i = 0; i < clauses.getFirst().getPatterns().size(); i++) {
       Expression left = null;
       Expression right = null;
 
@@ -793,10 +793,10 @@ public class ElimTypechecking {
     try (Utils.ContextSaver ignored = new Utils.ContextSaver(myContext)) {
       int index = 0;
       loop:
-      for (; index < clauses.get(0).getPatterns().size(); index++) {
+      for (; index < clauses.getFirst().getPatterns().size(); index++) {
         for (ExtElimClause clause : clauses) {
           if (!(clause.getPatterns().get(index) instanceof BindingPattern)) {
-            if (clauses.get(0).getPatterns().get(index) instanceof BindingPattern && clause.getPatterns().get(index) instanceof ConstructorPattern) {
+            if (clauses.getFirst().getPatterns().get(index) instanceof BindingPattern && clause.getPatterns().get(index) instanceof ConstructorPattern) {
               Definition definition = clause.getPatterns().get(index).getDefinition();
               if (definition == Prelude.LEFT || definition == Prelude.RIGHT) {
                 final int finalIndex = index;
@@ -810,8 +810,8 @@ public class ElimTypechecking {
       }
 
       // If all patterns are variables
-      if (index == clauses.get(0).getPatterns().size()) {
-        ExtElimClause clause = clauses.get(0);
+      if (index == clauses.getFirst().getPatterns().size()) {
+        ExtElimClause clause = clauses.getFirst();
         myUnusedClauses.remove(clause.index);
         List<Integer> indices = clause.argIndices;
         if (index > clause.numberOfFakeVars) {
@@ -824,7 +824,7 @@ public class ElimTypechecking {
       }
 
       for (int i = 0; i < index; i++) {
-        myContext.push(new Util.PatternClauseElem(clauses.get(0).getPatterns().get(i)));
+        myContext.push(new Util.PatternClauseElem(clauses.getFirst().getPatterns().get(i)));
       }
 
       ExtElimClause conClause = null;
@@ -851,7 +851,7 @@ public class ElimTypechecking {
         if (dataType.hasIndexedConstructors() || dataType == Prelude.PATH) {
           DataCallExpression dataCall;
           if (constructor == Prelude.FIN_ZERO || constructor == Prelude.FIN_SUC) {
-            dataCall = Fin(Suc(((ConCallExpression) someConPattern.getDataExpression()).getDataTypeArguments().get(0).subst(conClause.substitution)));
+            dataCall = Fin(Suc(((ConCallExpression) someConPattern.getDataExpression()).getDataTypeArguments().getFirst().subst(conClause.substitution)));
           } else {
             dataCall = (DataCallExpression) someConPattern.getDataExpression().subst(conClause.substitution).getType();
           }
@@ -906,7 +906,7 @@ public class ElimTypechecking {
 
       if (dataType != null && dataType.isSquashed() && myErrorReporter != null) {
         if (myActualLevel != null && !Level.compare(myActualLevel, dataType.getSort().getHLevel().add(myActualLevelSub), CMP.LE, myEquations, getClause(conClause.index, someConPattern))) {
-          myErrorReporter.report(new SquashedDataError(dataType, myActualLevel, myActualLevelSub, getClause(conClause.index, someConPattern)));
+          myErrorReporter.report(new SquashedDataError(dataType, getClause(conClause.index, someConPattern)));
         }
 
         boolean ok = !dataType.isTruncated() || myLevel != null && myLevel <= dataType.getTruncatedLevel() + 1;
@@ -930,7 +930,7 @@ public class ElimTypechecking {
         }
       }
 
-      if (myLevel != null && !branchKeys.isEmpty() && !(branchKeys.get(0) instanceof SingleConstructor)) {
+      if (myLevel != null && !branchKeys.isEmpty() && !(branchKeys.getFirst() instanceof SingleConstructor)) {
         //noinspection ConstantConditions
         branchKeys.removeIf(key -> numberOfIntervals + (key.getBody() instanceof IntervalElim ? ((IntervalElim) key.getBody()).getNumberOfTotalElim() : 0) > myLevel);
       }
@@ -946,8 +946,8 @@ public class ElimTypechecking {
         } else {
           Definition def = clause.getPatterns().get(index).getDefinition();
           BranchKey key = def instanceof Constructor ? (Constructor) def : def == Prelude.EMPTY_ARRAY || def == Prelude.ARRAY_CONS ? new ArrayConstructor((DConstructor) def, arrayElementsType != null, arrayLength != null) : null;
-          if (key == null && !branchKeys.isEmpty() && branchKeys.get(0) instanceof SingleConstructor) {
-            key = branchKeys.get(0);
+          if (key == null && !branchKeys.isEmpty() && branchKeys.getFirst() instanceof SingleConstructor) {
+            key = branchKeys.getFirst();
           }
           if (key != null) {
             branchKeyMap.computeIfAbsent(key, k -> new ArrayList<>()).add(clause);

@@ -11,6 +11,9 @@ import org.arend.typechecking.implicitargs.equations.DummyEquations;
 import org.arend.typechecking.implicitargs.equations.Equations;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
+import java.util.Map;
+
 public class Sort implements CoreSort {
   private final Level myPLevel;
   private final Level myHLevel;
@@ -88,6 +91,14 @@ public class Sort implements CoreSort {
     return pLevel == null || hLevel == null ? null : new Sort(pLevel, hLevel, myCat || sort.myCat);
   }
 
+  public static Sort max(List<Sort> sorts) {
+    Sort result = Sort.PROP;
+    for (Sort sort : sorts) {
+      result = result.max(sort);
+    }
+    return result;
+  }
+
   @Override
   public boolean isProp() {
     return myHLevel.isProp();
@@ -99,20 +110,24 @@ public class Sort implements CoreSort {
   }
 
   public boolean isStd() {
-    return myPLevel.isVarOnly() && myPLevel.getVar().equals(LevelVariable.PVAR) && myHLevel.isVarOnly() && myHLevel.getVar().equals(LevelVariable.HVAR);
+    return LevelVariable.PVAR.equals(myPLevel.getSingleVar()) && LevelVariable.HVAR.equals(myHLevel.getSingleVar());
   }
 
   private static boolean compareProp(Sort sort, Equations equations, Concrete.SourceNode sourceNode) {
     if (sort.isProp()) {
       return true;
     }
-    if (!(sort.getHLevel().getVar() instanceof InferenceLevelVariable) || sort.getHLevel().getMaxConstant() > -1 || sort.getHLevel().getConstant() > 0) {
-      return false;
+    if (sort.getHLevel().getConstant() > -1) return false;
+    for (Map.Entry<LevelVariable, Integer> entry : sort.getHLevel().getVarPairs()) {
+      if (!(entry.getKey() instanceof InferenceLevelVariable) || entry.getValue() > 0) return false;
     }
     if (equations == null) {
       return true;
     }
-    return equations.addEquation(new Level(sort.getHLevel().getVar()), new Level(sort.getHLevel().getConstant() == 0 ? -1 : 0), CMP.LE, sourceNode);
+    for (Map.Entry<LevelVariable, Integer> entry : sort.getHLevel().getVarPairs()) {
+      if (!equations.addEquation(new Level(entry.getKey()), new Level(entry.getValue() == 0 ? -1 : 0), CMP.LE, sourceNode)) return false;
+    }
+    return true;
   }
 
   public static boolean compare(Sort sort1, Sort sort2, CMP cmp, Equations equations, Concrete.SourceNode sourceNode) {

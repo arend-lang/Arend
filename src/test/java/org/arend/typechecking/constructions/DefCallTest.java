@@ -12,6 +12,7 @@ import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.result.TypecheckingResult;
 import org.arend.util.SingletonList;
+import org.arend.util.SingletonMap;
 import org.junit.Test;
 
 import java.util.*;
@@ -56,7 +57,7 @@ public class DefCallTest extends TypeCheckingTestCase {
 
   private ClassCallExpression makeClassCall(Definition definition, Expression impl) {
     ClassDefinition classDef = (ClassDefinition) definition;
-    ClassCallExpression classCall = new ClassCallExpression(classDef, Levels.EMPTY, Collections.singletonMap(classDef.getNotImplementedFields().iterator().next(), impl), classDef.getSort(), classDef.getUniverseKind());
+    ClassCallExpression classCall = new ClassCallExpression(classDef, Levels.EMPTY, new SingletonMap<>(classDef.getNotImplementedFields().iterator().next(), impl), classDef.getSort(), classDef.getUniverseKind());
     classCall.updateHasUniverses();
     return classCall;
   }

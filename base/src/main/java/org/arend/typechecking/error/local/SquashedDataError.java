@@ -11,31 +11,10 @@ import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class SquashedDataError extends TypecheckingError {
   public final DataDefinition dataDef;
-  private org.arend.core.sort.Level myLevel;
-  private int myLevelSub;
 
-  public SquashedDataError(DataDefinition dataDef, org.arend.core.sort.Level level, int levelSub, @NotNull Concrete.SourceNode cause) {
+  public SquashedDataError(DataDefinition dataDef, @NotNull Concrete.SourceNode cause) {
     super("", cause);
     this.dataDef = dataDef;
-    myLevel = level;
-    myLevelSub = levelSub;
-  }
-
-  public org.arend.core.sort.Level getLevel() {
-    if (myLevelSub == 0) {
-      return myLevel;
-    }
-    if (myLevel.isInfinity()) {
-      myLevelSub = 0;
-      return myLevel;
-    }
-
-    if (myLevel.getConstant() >= myLevelSub) {
-      myLevel = new org.arend.core.sort.Level(myLevel.getVar(), myLevel.getConstant() - myLevelSub, myLevel.getMaxConstant() - myLevelSub);
-      myLevelSub = 0;
-    }
-
-    return myLevel;
   }
 
   @Override

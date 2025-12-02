@@ -110,12 +110,11 @@ public class FixLevelParameters extends VoidExpressionVisitor<Void> {
   }
 
   private void processDefCall(DefCallExpression defCall) {
-    if (!(defCall instanceof LeveledDefCallExpression)) return;
-    LeveledDefCallExpression leveled = (LeveledDefCallExpression) defCall;
+    if (!(defCall instanceof LeveledDefCallExpression leveled)) return;
     if (myDefinitions == null) {
       List<? extends LevelVariable> params = leveled.getDefinition().getLevelParameters();
       if (params != null && (leveled.getLevels() instanceof LevelPair || leveled.getLevels().toList().size() != params.size())) {
-        removeLevels(leveled, params.isEmpty() || params.get(0).getType() == LevelVariable.LvlType.HLVL, params.isEmpty() || params.get(0).getType() == LevelVariable.LvlType.PLVL);
+        removeLevels(leveled, params.isEmpty() || params.getFirst().getType() == LevelVariable.LvlType.HLVL, params.isEmpty() || params.getFirst().getType() == LevelVariable.LvlType.PLVL);
       }
     } else if (myDefinitions.contains(leveled.getDefinition())) {
       removeLevels(leveled, myRemovePLevels, myRemoveHLevels);
@@ -134,7 +133,12 @@ public class FixLevelParameters extends VoidExpressionVisitor<Void> {
   }
 
   private Level removeVars(Level level) {
-    return level.isClosed() ? level : new Level(Math.max(level.getConstant(), level.getMaxConstant()));
+    if (level.isClosed()) return level;
+    int result = level.getConstant();
+    for (Map.Entry<LevelVariable, Integer> entry : level.getVarPairs()) {
+      if (entry.getValue() > result) result = entry.getValue();
+    }
+    return new Level(result);
   }
 
   private Sort removeVars(Sort sort) {

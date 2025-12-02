@@ -16,6 +16,7 @@ import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.prelude.Prelude;
 import org.arend.util.SingletonList;
+import org.arend.util.SingletonMap;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -50,7 +51,7 @@ public class DConstructor extends FunctionDefinition {
 
   public DependentLink getArrayParameters(LevelPair levels, Expression length, Binding thisBinding, Expression elementsType) {
     if (this == Prelude.EMPTY_ARRAY) {
-      return elementsType != null ? EmptyDependentLink.getInstance() : DependentLink.Helper.subst(getParameters(), new ExprSubstitution(thisBinding, new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, levels, Collections.singletonMap(Prelude.ARRAY_LENGTH, Zero()), Sort.STD.succ(), UniverseKind.NO_UNIVERSES))), levels);
+      return elementsType != null ? EmptyDependentLink.getInstance() : DependentLink.Helper.subst(getParameters(), new ExprSubstitution(thisBinding, new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, levels, new SingletonMap<>(Prelude.ARRAY_LENGTH, Zero()), Sort.STD.succ(), UniverseKind.NO_UNIVERSES))), levels);
     }
 
     if ((elementsType == null || thisBinding == null) && length == null) {

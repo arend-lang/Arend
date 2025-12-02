@@ -99,7 +99,7 @@ public class DefCallResult implements TResult {
     Expression type = myResultType.subst(substitution, LevelSubstitution.EMPTY);
     Sort codSort = typechecker.getSortOfType(type, myDefCall);
     for (int i = parameters.size() - 1; i >= 0; i--) {
-      codSort = PiExpression.generateUpperBound(parameters.get(i).getType().getSortOfType(), codSort, typechecker.getEquations(), myDefCall);
+      codSort = PiExpression.piSort(parameters.get(i).getType().getSortOfType(), codSort);
       expression = new LamExpression(codSort, parameters.get(i), expression);
       type = new PiExpression(codSort, parameters.get(i), type);
     }
@@ -108,7 +108,7 @@ public class DefCallResult implements TResult {
 
   @Override
   public DependentLink getParameter() {
-    return myParameters.get(0);
+    return myParameters.getFirst();
   }
 
   @Override
@@ -116,7 +116,7 @@ public class DefCallResult implements TResult {
     int size = myParameters.size();
     myArguments.add(expression);
     ExprSubstitution subst = new ExprSubstitution();
-    subst.add(myParameters.get(0), expression);
+    subst.add(myParameters.getFirst(), expression);
     myParameters = DependentLink.Helper.subst(myParameters.subList(1, size), subst, LevelSubstitution.EMPTY);
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
     return size > 1 ? this : new TypecheckingResult(getCoreDefCall(), myResultType);
@@ -147,7 +147,7 @@ public class DefCallResult implements TResult {
         visitor.getErrorReporter().report(new PathEndpointMismatchError(visitor.getExpressionPrettifier(), true, myArguments.get(1), leftExpr, sourceNode));
       }
     } else {
-      subst.add(myParameters.get(0), leftExpr);
+      subst.add(myParameters.getFirst(), leftExpr);
     }
     if (myArguments.size() >= 3) {
       if (!CompareVisitor.compare(visitor.getEquations(), CMP.EQ, rightExpr, myArguments.get(2), AppExpression.make(myArguments.get(0), ExpressionFactory.Right(), true), sourceNode)) {

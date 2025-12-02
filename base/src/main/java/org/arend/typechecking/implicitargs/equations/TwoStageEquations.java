@@ -26,6 +26,7 @@ import org.arend.core.subst.SubstVisitor;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.LocalError;
+import org.arend.ext.error.TypecheckingError;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.TypecheckerState;
@@ -212,7 +213,7 @@ public class TwoStageEquations implements Equations {
           Expression solution = newRef;
           Sort piSort = codSort;
           for (int i = pis.size() - 1; i >= 0; i--) {
-            piSort = PiExpression.generateUpperBound(pis.get(i).getParameters().getType().getSortOfType(), piSort, this, sourceNode);
+            piSort = PiExpression.piSort(pis.get(i).getParameters().getType().getSortOfType(), piSort);
             solution = new PiExpression(piSort, pis.get(i).getParameters(), solution);
           }
           solve(cInf, solution, false);
@@ -224,17 +225,7 @@ public class TwoStageEquations implements Equations {
       if (cType instanceof UniverseExpression) {
         Sort genSort = Sort.generateInferVars(this, true, cInf.getSourceNode());
         solve(cInf, new UniverseExpression(genSort), false);
-        Sort sort = ((UniverseExpression) cType).getSort();
-        if (cmp == CMP.LE) {
-          Sort.compare(sort, genSort, CMP.LE, this, sourceNode);
-        } else {
-          if (!sort.getPLevel().isInfinity()) {
-            addLevelEquation(genSort.getPLevel().getVar(), sort.getPLevel().getVar(), sort.getPLevel().getConstant(), sort.getPLevel().getMaxConstant(), sourceNode);
-          }
-          if (!sort.getHLevel().isInfinity()) {
-            addLevelEquation(genSort.getHLevel().getVar(), sort.getHLevel().getVar(), sort.getHLevel().getConstant(), sort.getHLevel().getMaxConstant(), sourceNode);
-          }
-        }
+        Sort.compare(((UniverseExpression) cType).getSort(), genSort, cmp, this, sourceNode);
         return true;
       }
     }
@@ -298,9 +289,16 @@ public class TwoStageEquations implements Equations {
     myLevelEquations.add(new LevelEquation<>(var1, var2, constant, maxConstant));
   }
 
-  private void addLevelEquation(LevelVariable var, Concrete.SourceNode sourceNode) {
+  private void addLevelEquation(Set<? extends LevelVariable> vars, Concrete.SourceNode sourceNode) {
+    LevelVariable var = vars.size() == 1 ? vars.iterator().next() : null;
     if (var instanceof InferenceLevelVariable) {
       myLevelEquations.add(new LevelEquation<>(var));
+      return;
+    }
+
+    if (vars.size() > 1) {
+      // TODO[sorts]: Store the equation for later, or at least generate a more useful error message.
+      myVisitor.getErrorReporter().report(new TypecheckingError("Cannot solve equation: \\inf = \\max" + vars, sourceNode));
     } else {
       myVisitor.getErrorReporter().report(new SolveLevelEquationsError(Collections.singletonList(new LevelEquation<>(var)), sourceNode));
     }
@@ -316,31 +314,43 @@ public class TwoStageEquations implements Equations {
     }
   }
 
+  private void addEquationLE(Level level1, Level level2, Concrete.SourceNode sourceNode) {
+    if (level2.getVarPairs().size() > 1) {
+      // TODO[sorts]: Store the equation for later, or at least generate a more useful error message.
+      myVisitor.getErrorReporter().report(new TypecheckingError("Cannot solve equation: " + level1 + " <= " + level2, sourceNode));
+      return;
+    }
+
+    Map.Entry<LevelVariable,Integer> entry2 = level2.getVarPairs().isEmpty() ? null : level2.getVarPairs().iterator().next();
+    for (Map.Entry<LevelVariable, Integer> entry1 : level1.getVarPairs()) {
+      addLevelEquation(entry1.getKey(), entry2 == null ? null : entry2.getKey(), (entry2 == null ? level2.getConstant() : entry2.getValue()) - entry1.getValue(), level2.getConstant() - entry1.getValue(), sourceNode);
+    }
+
+    LevelVariable.LvlType type = level2.getType();
+    if (level1.getConstant() > level2.getConstant() + (type == null ? 0 : type.getMinValue())) {
+      addLevelEquation(null, entry2 == null ? null : entry2.getKey(), (entry2 == null ? level2.getConstant() : entry2.getValue()) - level1.getConstant(), -1, sourceNode);
+    }
+  }
+
   @Override
   public boolean addEquation(Level level1, Level level2, CMP cmp, Concrete.SourceNode sourceNode) {
     if (level1.isInfinity() && level2.isInfinity() || level1.isInfinity() && cmp == CMP.GE || level2.isInfinity() && cmp == CMP.LE) {
       return true;
     }
     if (level1.isInfinity()) {
-      addLevelEquation(level2.getVar(), sourceNode);
+      addLevelEquation(level2.getVars(), sourceNode);
       return true;
     }
     if (level2.isInfinity()) {
-      addLevelEquation(level1.getVar(), sourceNode);
+      addLevelEquation(level1.getVars(), sourceNode);
       return true;
     }
 
     if (cmp == CMP.LE || cmp == CMP.EQ) {
-      addLevelEquation(level1.getVar(), level2.getVar(), level2.getConstant() - level1.getConstant(), level2.getMaxConstant() - level1.getConstant(), sourceNode);
-      if (level1.withMaxConstant() && level1.getMaxConstant() > level2.getMaxConstant()) {
-        addLevelEquation(null, level2.getVar(), level2.getConstant() - level1.getMaxConstant(), -1, sourceNode);
-      }
+      addEquationLE(level1, level2, sourceNode);
     }
     if (cmp == CMP.GE || cmp == CMP.EQ) {
-      addLevelEquation(level2.getVar(), level1.getVar(), level1.getConstant() - level2.getConstant(), level1.getMaxConstant() - level2.getConstant(), sourceNode);
-      if (level2.withMaxConstant() && level2.getMaxConstant() > level1.getMaxConstant()) {
-        addLevelEquation(null, level1.getVar(), level1.getConstant() - level2.getMaxConstant(), -1, sourceNode);
-      }
+      addEquationLE(level2, level1, sourceNode);
     }
     return true;
   }

@@ -21,6 +21,7 @@ import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
 import org.arend.ext.typechecking.meta.Dependency;
 import org.arend.ext.ui.ArendUI;
+import org.arend.ext.variable.Variable;
 import org.arend.lib.error.IgnoredArgumentError;
 import org.arend.lib.error.SubclassError;
 import org.arend.lib.error.TypeError;
@@ -705,7 +706,12 @@ public class ExtMeta extends BaseMetaDefinition {
   private static boolean atLeastSet(CoreExpression type) {
     type = type.normalize(NormalizationMode.WHNF);
     CoreLevel level = type instanceof CoreUniverseExpression ? ((CoreUniverseExpression) type).getSort().getHLevel() : null;
-    return level != null && (level.isClosed() && level.getConstant() >= 0 || level.getMaxConstant() >= 0 || level.getConstant() >= 1);
+    if (level == null) return false;
+    if (level.getConstant() >= 0) return true;
+    for (Map.Entry<? extends Variable, Integer> entry : level.getVarPairs()) {
+      if (entry.getValue() >= 1) return true;
+    }
+    return false;
   }
 
   private static DefermentChecker.Result checkStuckExpression(CoreExpression expr) {
