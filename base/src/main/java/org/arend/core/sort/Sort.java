@@ -69,7 +69,7 @@ public class Sort implements CoreSort {
   }
 
   public boolean isOmega() {
-    return myCat && myPLevel.isInfinity();
+    return /* TODO[sorts]: myCat && */ myPLevel.isInfinity();
   }
 
   public boolean isCat() {
