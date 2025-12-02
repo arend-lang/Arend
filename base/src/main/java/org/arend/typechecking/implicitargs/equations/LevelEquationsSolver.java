@@ -16,6 +16,7 @@ import org.arend.ext.util.Pair;
 import java.util.*;
 
 public class LevelEquationsSolver {
+  private final List<DeferredLevelEquation> myDeferredMaxEquations;
   private final LevelEquations<InferenceLevelVariable> myPLevelEquations = new LevelEquations<>();      // equations of the forms      c <= ?y and ?x <= max(?y + c', d)
   private final LevelEquations<InferenceLevelVariable> myBasedPLevelEquations = new LevelEquations<>(); // equations of the forms lp + c <= ?y and ?x <= max(?y + c', d)
   private final LevelEquations<InferenceLevelVariable> myHLevelEquations = new LevelEquations<>();
@@ -28,7 +29,8 @@ public class LevelEquationsSolver {
   private final boolean myPBased;
   private final boolean myHBased;
 
-  public LevelEquationsSolver(List<LevelEquation<LevelVariable>> levelEquations, List<InferenceLevelVariable> variables, List<Pair<InferenceLevelVariable, InferenceLevelVariable>> boundVariables, ErrorReporter errorReporter, boolean pBased, boolean hBased) {
+  public LevelEquationsSolver(List<LevelEquation<LevelVariable>> levelEquations, List<? extends DeferredLevelEquation> deferredMaxEquations, List<InferenceLevelVariable> variables, List<Pair<InferenceLevelVariable, InferenceLevelVariable>> boundVariables, ErrorReporter errorReporter, boolean pBased, boolean hBased) {
+    myDeferredMaxEquations = new ArrayList<>(deferredMaxEquations);
     myPBased = pBased;
     myHBased = hBased;
     for (InferenceLevelVariable var : variables) {
@@ -54,7 +56,6 @@ public class LevelEquationsSolver {
         addLevelEquation(levelEquation.getVariable1(), levelEquation.getVariable2(), levelEquation.getConstant(), levelEquation.getMaxConstant());
       }
     }
-    levelEquations.clear();
 
     myBoundVariables = boundVariables;
     myErrorReporter = errorReporter;
@@ -313,6 +314,12 @@ public class LevelEquationsSolver {
         Map.Entry<LevelVariable,Integer> entryEntry = entry.getValue().getVarPairs().isEmpty() ? null : entry.getValue().getVarPairs().iterator().next();
         equations.add(new LevelEquation<>(entry.getKey(), entryEntry == null ? null : entryEntry.getKey(), entryEntry == null ? entry.getValue().getConstant() : entryEntry.getValue(), maxConstant));
         myErrorReporter.report(new SolveLevelEquationsError(equations, entry.getKey().getSourceNode()));
+      }
+    }
+
+    for (DeferredLevelEquation equation : myDeferredMaxEquations) {
+      if (!Level.compare(equation.level1().subst(result), equation.level2().subst(result), CMP.LE, DummyEquations.getInstance(), equation.sourceNode())) {
+        myErrorReporter.report(new SolveLevelEquationsError(Collections.singletonList(new Pair<>(equation.level1(), equation.level2())), equation.sourceNode()));
       }
     }
 

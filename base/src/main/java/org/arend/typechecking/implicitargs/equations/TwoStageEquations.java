@@ -26,7 +26,6 @@ import org.arend.core.subst.SubstVisitor;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.LocalError;
-import org.arend.ext.error.TypecheckingError;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.TypecheckerState;
@@ -43,6 +42,7 @@ import static org.arend.core.expr.ExpressionFactory.Nat;
 public class TwoStageEquations implements Equations {
   private List<Equation> myEquations = new ArrayList<>();
   private final List<LevelEquation<LevelVariable>> myLevelEquations = new ArrayList<>();
+  private final List<DeferredLevelEquation> myDeferredMaxLevelEquations = new ArrayList<>();
   private final List<InferenceLevelVariable> myLevelVariables = new ArrayList<>();
   private final CheckTypeVisitor myVisitor;
   private Set<InferenceVariable> myProps = new LinkedHashSet<>();
@@ -292,19 +292,29 @@ public class TwoStageEquations implements Equations {
   }
 
   private boolean addLevelEquation(Set<? extends LevelVariable> vars, Concrete.SourceNode sourceNode) {
-    LevelVariable var = vars.size() == 1 ? vars.iterator().next() : null;
-    if (var instanceof InferenceLevelVariable) {
-      myLevelEquations.add(new LevelEquation<>(var));
+    List<InferenceLevelVariable> infVars = new ArrayList<>(vars.size());
+    for (LevelVariable var : vars) {
+      if (var instanceof InferenceLevelVariable infVar) {
+        infVars.add(infVar);
+      }
+    }
+
+    if (infVars.size() == 1) {
+      myLevelEquations.add(new LevelEquation<>(infVars.getFirst()));
       return true;
     }
 
-    if (vars.size() > 1) {
-      // TODO[sorts]: Store the equation for later, or at least generate a more useful error message.
-      myVisitor.getErrorReporter().report(new TypecheckingError("Cannot solve equation: \\inf = \\max" + vars, sourceNode));
+    if (infVars.size() > 1) {
+      Map<LevelVariable, Integer> varMap = new HashMap<>();
+      for (InferenceLevelVariable var : infVars) {
+        varMap.put(var, 0);
+      }
+      myDeferredMaxLevelEquations.add(new DeferredLevelEquation(Level.INFINITY, new Level(varMap, infVars.getFirst().getMinValue()), sourceNode));
+      return true;
     } else {
-      myVisitor.getErrorReporter().report(new SolveLevelEquationsError(Collections.singletonList(new LevelEquation<>(var)), sourceNode));
+      myVisitor.getErrorReporter().report(new SolveLevelEquationsError(Collections.singletonList(new LevelEquation<>(vars.isEmpty() ? null : vars.iterator().next())), sourceNode));
+      return false;
     }
-    return false;
   }
 
   @Override
@@ -319,9 +329,8 @@ public class TwoStageEquations implements Equations {
 
   private boolean addEquationLE(Level level1, Level level2, Concrete.SourceNode sourceNode) {
     if (level2.getVarPairs().size() > 1) {
-      // TODO[sorts]: Store the equation for later, or at least generate a more useful error message.
-      myVisitor.getErrorReporter().report(new TypecheckingError("Cannot solve equation: " + level1 + " <= " + level2, sourceNode));
-      return false;
+      myDeferredMaxLevelEquations.add(new DeferredLevelEquation(level1, level2, sourceNode));
+      return true;
     }
 
     Map.Entry<LevelVariable,Integer> entry2 = level2.getVarPairs().isEmpty() ? null : level2.getVarPairs().iterator().next();
@@ -329,8 +338,7 @@ public class TwoStageEquations implements Equations {
       if (!addLevelEquation(entry1.getKey(), entry2 == null ? null : entry2.getKey(), (entry2 == null ? level2.getConstant() : entry2.getValue()) - entry1.getValue(), level2.getConstant() - entry1.getValue(), sourceNode)) return false;
     }
 
-    LevelVariable.LvlType type = level2.getType();
-    if (level1.getConstant() > level2.getConstant() + (type == null ? 0 : type.getMinValue())) {
+    if (level1.getConstant() > level2.getConstant()) {
       if (!addLevelEquation(null, entry2 == null ? null : entry2.getKey(), (entry2 == null ? level2.getConstant() : entry2.getValue()) - level1.getConstant(), -1, sourceNode)) return false;
     }
 
@@ -361,7 +369,10 @@ public class TwoStageEquations implements Equations {
 
   @Override
   public LevelEquationsSolver makeLevelEquationsSolver() {
-    return new LevelEquationsSolver(myLevelEquations, myLevelVariables, myBoundVariables, myVisitor.getErrorReporter(), myVisitor.isPBased(), myVisitor.isHBased());
+    LevelEquationsSolver solver = new LevelEquationsSolver(myLevelEquations, myDeferredMaxLevelEquations, myLevelVariables, myBoundVariables, myVisitor.getErrorReporter(), myVisitor.isPBased(), myVisitor.isHBased());
+    myLevelEquations.clear();
+    myDeferredMaxLevelEquations.clear();
+    return solver;
   }
 
   @Override
@@ -463,6 +474,7 @@ public class TwoStageEquations implements Equations {
     state.equations = new ArrayList<>(myEquations);
     state.numberOfLevelVariables = myLevelVariables.size();
     state.numberOfLevelEquations = myLevelEquations.size();
+    state.numberOfDeferredMaxLevelEquations = myDeferredMaxLevelEquations.size();
     state.propVars = new LinkedHashSet<>(myProps);
     state.numberOfBoundVars = myBoundVariables.size();
     state.notSolvableFromEquationsVars = new HashSet<>(myNotSolvableFromEquationsVars.keySet());
@@ -476,6 +488,9 @@ public class TwoStageEquations implements Equations {
     }
     if (myLevelEquations.size() > state.numberOfLevelEquations) {
       myLevelEquations.subList(state.numberOfLevelEquations, myLevelEquations.size()).clear();
+    }
+    if (myDeferredMaxLevelEquations.size() > state.numberOfDeferredMaxLevelEquations) {
+      myDeferredMaxLevelEquations.subList(state.numberOfDeferredMaxLevelEquations, myDeferredMaxLevelEquations.size()).clear();
     }
     if (myProps.size() > state.propVars.size()) {
       myProps = new LinkedHashSet<>(state.propVars);

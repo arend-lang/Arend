@@ -22,7 +22,7 @@ public class Level implements CoreLevel {
 
   public static final Level INFINITY = new Level();
 
-  private Level(Map<LevelVariable,Integer> vars, int maxConstant) {
+  public Level(Map<LevelVariable,Integer> vars, int maxConstant) {
     myVars = vars;
     myConstant = maxConstant;
   }
