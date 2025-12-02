@@ -266,34 +266,36 @@ public class TwoStageEquations implements Equations {
     myBoundVariables.add(new Pair<>(pVar, hVar));
   }
 
-  private void addLevelEquation(final LevelVariable var1, LevelVariable var2, int constant, int maxConstant, Concrete.SourceNode sourceNode) {
+  private boolean addLevelEquation(final LevelVariable var1, LevelVariable var2, int constant, int maxConstant, Concrete.SourceNode sourceNode) {
     // 0 <= max(_ + c, +-d) // 6
     if (var1 == null && (constant >= 1 || constant == 0 && (var2 == null || var2.getType() == LevelVariable.LvlType.PLVL))) {
-      return;
+      return true;
     }
 
     // _ <= max(-c, -d), _ <= max(l - c, -d) // 6
     if (!(var2 instanceof InferenceLevelVariable) && maxConstant < 0 && (constant < 0 || constant == 0 && var2 != null && var2.getType() == LevelVariable.LvlType.HLVL && var1 == null) && !(var2 == null && var1 instanceof InferenceLevelVariable && var1.getType() == LevelVariable.LvlType.HLVL && constant >= -1 && maxConstant >= -1)) {
       myVisitor.getErrorReporter().report(new SolveLevelEquationsError(Collections.singletonList(new LevelEquation<>(var1, var2, constant)), sourceNode));
-      return;
+      return false;
     }
 
     // l <= max(l' +- c, +d), l <= max(+-c, +-d) // 6
     if (var1 != null && !(var1 instanceof InferenceLevelVariable) && !(var2 instanceof InferenceLevelVariable)) {
       if (!(var2 != null && constant >= 0 && var1.compare(var2, CMP.LE))) {
         myVisitor.getErrorReporter().report(new SolveLevelEquationsError(Collections.singletonList(new LevelEquation<>(var1, var2, constant, maxConstant)), sourceNode));
+        return false;
       }
-      return;
+      return true;
     }
 
     myLevelEquations.add(new LevelEquation<>(var1, var2, constant, maxConstant));
+    return true;
   }
 
-  private void addLevelEquation(Set<? extends LevelVariable> vars, Concrete.SourceNode sourceNode) {
+  private boolean addLevelEquation(Set<? extends LevelVariable> vars, Concrete.SourceNode sourceNode) {
     LevelVariable var = vars.size() == 1 ? vars.iterator().next() : null;
     if (var instanceof InferenceLevelVariable) {
       myLevelEquations.add(new LevelEquation<>(var));
-      return;
+      return true;
     }
 
     if (vars.size() > 1) {
@@ -302,6 +304,7 @@ public class TwoStageEquations implements Equations {
     } else {
       myVisitor.getErrorReporter().report(new SolveLevelEquationsError(Collections.singletonList(new LevelEquation<>(var)), sourceNode));
     }
+    return false;
   }
 
   @Override
@@ -314,22 +317,24 @@ public class TwoStageEquations implements Equations {
     }
   }
 
-  private void addEquationLE(Level level1, Level level2, Concrete.SourceNode sourceNode) {
+  private boolean addEquationLE(Level level1, Level level2, Concrete.SourceNode sourceNode) {
     if (level2.getVarPairs().size() > 1) {
       // TODO[sorts]: Store the equation for later, or at least generate a more useful error message.
       myVisitor.getErrorReporter().report(new TypecheckingError("Cannot solve equation: " + level1 + " <= " + level2, sourceNode));
-      return;
+      return false;
     }
 
     Map.Entry<LevelVariable,Integer> entry2 = level2.getVarPairs().isEmpty() ? null : level2.getVarPairs().iterator().next();
     for (Map.Entry<LevelVariable, Integer> entry1 : level1.getVarPairs()) {
-      addLevelEquation(entry1.getKey(), entry2 == null ? null : entry2.getKey(), (entry2 == null ? level2.getConstant() : entry2.getValue()) - entry1.getValue(), level2.getConstant() - entry1.getValue(), sourceNode);
+      if (!addLevelEquation(entry1.getKey(), entry2 == null ? null : entry2.getKey(), (entry2 == null ? level2.getConstant() : entry2.getValue()) - entry1.getValue(), level2.getConstant() - entry1.getValue(), sourceNode)) return false;
     }
 
     LevelVariable.LvlType type = level2.getType();
     if (level1.getConstant() > level2.getConstant() + (type == null ? 0 : type.getMinValue())) {
-      addLevelEquation(null, entry2 == null ? null : entry2.getKey(), (entry2 == null ? level2.getConstant() : entry2.getValue()) - level1.getConstant(), -1, sourceNode);
+      if (!addLevelEquation(null, entry2 == null ? null : entry2.getKey(), (entry2 == null ? level2.getConstant() : entry2.getValue()) - level1.getConstant(), -1, sourceNode)) return false;
     }
+
+    return true;
   }
 
   @Override
@@ -338,20 +343,19 @@ public class TwoStageEquations implements Equations {
       return true;
     }
     if (level1.isInfinity()) {
-      addLevelEquation(level2.getVars(), sourceNode);
-      return true;
+      return addLevelEquation(level2.getVars(), sourceNode);
     }
     if (level2.isInfinity()) {
-      addLevelEquation(level1.getVars(), sourceNode);
-      return true;
+      return addLevelEquation(level1.getVars(), sourceNode);
     }
 
     if (cmp == CMP.LE || cmp == CMP.EQ) {
-      addEquationLE(level1, level2, sourceNode);
+      if (!addEquationLE(level1, level2, sourceNode)) return false;
     }
     if (cmp == CMP.GE || cmp == CMP.EQ) {
-      addEquationLE(level2, level1, sourceNode);
+      if (!addEquationLE(level2, level1, sourceNode)) return false;
     }
+
     return true;
   }
 
