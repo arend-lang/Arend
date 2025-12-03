@@ -1,5 +1,6 @@
-package org.arend.codeInsight.completion
+package org.arend.util
 
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiCodeFragment
 import com.intellij.psi.PsiFileSystemItem
@@ -10,6 +11,7 @@ import org.arend.ext.concrete.definition.FunctionKind
 import org.arend.ext.module.ModulePath
 import org.arend.ext.prettyprinting.doc.DocFactory
 import org.arend.ext.reference.Precedence
+import org.arend.highlight.HighlightingVisitor
 import org.arend.module.config.ArendModuleConfigService
 import org.arend.naming.reference.DataModuleReferable
 import org.arend.naming.reference.GlobalReferable
@@ -18,13 +20,15 @@ import org.arend.naming.reference.LocatedReferableImpl
 import org.arend.naming.reference.LongUnresolvedReference
 import org.arend.naming.reference.NamedUnresolvedReference
 import org.arend.naming.reference.Referable
+import org.arend.naming.resolving.CollectingResolverListener
 import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor
+import org.arend.naming.scope.EmptyScope
+import org.arend.naming.scope.MergeScope
 import org.arend.psi.ArendFile
 import org.arend.psi.childOfType
 import org.arend.psi.ext.ArendExpr
 import org.arend.psi.ext.ArendLongName
 import org.arend.psi.ext.ArendReferenceElement
-import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.psi.ext.PsiModuleReferable
 import org.arend.psi.ext.ReferableBase
 import org.arend.psi.fragments.ArendExpressionCodeFragment
@@ -40,7 +44,7 @@ import org.arend.term.group.AccessModifier
 import org.arend.term.group.ConcreteGroup
 import org.arend.term.group.ConcreteStatement
 
-class ArendFragmentCompletionUtils {
+class ArendFragmentUtils {
 
     companion object {
         fun getCompletionItems(
@@ -159,14 +163,38 @@ class ArendFragmentCompletionUtils {
                     )
 
                     val sampleGroup = mapGroup(contextFileConcreteGroup, parentLocatedReferable, dummyGroup)
-                    result.addAll(ambientFragment.getAdditionalScope()?.elements ?: emptyList())
-                    val variants = server.getCompletionVariants(sampleGroup, element)
+                    val additionalScope = ambientFragment.getAdditionalScope()
+                    result.addAll(additionalScope?.elements ?: emptyList())
+                    val variants = server.getCompletionVariants(sampleGroup, element).filter { additionalScope == null || additionalScope.resolveName(it.refName) == null }
                     result.addAll(variants.filter { (it as? LocatedReferableImpl)?.let { it.locatedReferableParent == parentLocatedReferable } != true  })
                 }
 
                 else -> return null
             }
             return result
+        }
+
+        fun resolveFragment(file: ArendExpressionCodeFragment, visitor: HighlightingVisitor, server: ArendServer) {
+            val context = file.context ?: return
+            val project = file.project
+
+            val concrete = ConcreteBuilder.convertExpression(file.expr)
+            val contextFile = context.containingFile as? ArendFile
+            val moduleLocation = contextFile?.moduleLocation?.let { DataModuleReferable(contextFile, it) }
+
+            val resolverListener = CollectingResolverListener(ArendServerRequesterImpl(project), true)
+            val parentLocatedReferable: LocatedReferable? = (((context as? ReferableBase<*>) ?: (context.parentOfType<ReferableBase<*>>()))?.tcReferable) ?: moduleLocation
+
+            val scope = MergeScope(listOf(file.getAdditionalScope() ?: EmptyScope.INSTANCE, parentLocatedReferable?.let { server.getReferableScope(it) } ?: EmptyScope.INSTANCE))
+
+            ExpressionResolveNameVisitor(scope, ArrayList(), server.typingInfo, DummyErrorReporter.INSTANCE,
+                null, resolverListener).resolve(concrete)
+
+            concrete.accept(visitor, null)
+            for (resolvedReference in resolverListener.getCacheStructure(null)?.cache ?: emptyList()) {
+                (resolvedReference.reference as? ArendReferenceElement)?.putResolved(resolvedReference.referable)
+            }
+            file.fragmentResolved()
         }
 
         private fun mapGroup(
@@ -206,11 +234,11 @@ class ArendFragmentCompletionUtils {
         }
 
         private fun getModuleRoots(
-            module: com.intellij.openapi.module.Module,
+            module: Module,
             pathPrefix: List<String>,
             inTests: Boolean
         ): List<PsiFileSystemItem> {
-            val config = ArendModuleConfigService.getInstance(module) ?: return emptyList()
+            val config = ArendModuleConfigService.Companion.getInstance(module) ?: return emptyList()
             val root = config.root ?: return emptyList()
             val psiManager = PsiManager.getInstance(module.project)
             val result = mutableListOf<PsiFileSystemItem>()

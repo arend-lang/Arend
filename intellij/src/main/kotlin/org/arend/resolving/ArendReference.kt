@@ -6,7 +6,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.PsiCodeFragmentImpl
 import org.arend.ArendIcons
-import org.arend.codeInsight.completion.ArendFragmentCompletionUtils
+import org.arend.util.ArendFragmentUtils
 import org.arend.codeInsight.completion.ReplaceInsertHandler
 import org.arend.ext.module.ModuleLocation
 import org.arend.naming.reference.*
@@ -117,7 +117,7 @@ open class ArendReferenceImpl<T : ArendReferenceElement>(element: T) : ArendRefe
         val server = element.project.service<ArendServerService>().server
 
         val result = if (fragment is PsiCodeFragmentImpl) {
-            ArendFragmentCompletionUtils.getCompletionItems(element, fragment, server) ?: return emptyArray()
+            ArendFragmentUtils.getCompletionItems(element, fragment, server) ?: return emptyArray()
         } else return emptyArray()
 
         return result.mapNotNull { origElement -> createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false) }.toTypedArray()

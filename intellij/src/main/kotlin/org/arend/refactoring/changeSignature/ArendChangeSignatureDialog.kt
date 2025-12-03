@@ -35,6 +35,9 @@ import com.intellij.util.Consumer
 import org.arend.ArendFileTypeInstance
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.LongName
+import org.arend.highlight.ArendHighlightingColors
+import org.arend.highlight.HighlightingCollector
+import org.arend.highlight.HighlightingVisitor
 import org.arend.naming.reference.LocatedReferable
 import org.arend.naming.scope.MergeScope
 import org.arend.naming.scope.Scope
@@ -49,6 +52,7 @@ import org.arend.psi.oneLineText
 import org.arend.server.ArendServerService
 import org.arend.server.impl.MultiFileReferenceResolver
 import org.arend.server.impl.SingleFileReferenceResolver
+import org.arend.util.ArendFragmentUtils
 import org.arend.util.FileUtils.isCorrectDefinitionName
 import java.awt.Component
 import java.util.Collections.singletonList
@@ -87,6 +91,7 @@ class ArendChangeSignatureDialog(project: Project,
         for (item in myParametersTable.items) referableToItem[item.associatedReferable] = item
 
         deleteFragmentDependencyData(codeFragment)
+        println("expressionFragmentResolved: ${codeFragment.text}")
 
         val newDependencies = HashSet<ArendChangeSignatureDialogParameterTableModelItem>()
         parameterToDependencies[codeFragment] = newDependencies
@@ -111,7 +116,7 @@ class ArendChangeSignatureDialog(project: Project,
     override fun getAdditionalScope(codeFragment: ArendExpressionCodeFragment): Scope {
         val items = this.myParametersTableModel.items
         val limit = items.indexOfFirst {
-            it.typeCodeFragment == codeFragment
+            it.typeCodeFragment == codeFragment.originalFile
         }.let { if (it == -1) items.size else it }
         val params = items.take(limit).map { it.associatedReferable }
         val localScope = ListScope(params)
@@ -180,6 +185,7 @@ class ArendChangeSignatureDialog(project: Project,
         var hasErrors = false
         fun checkFragment(fragment: ArendExpressionCodeFragment, locationDescription: String) {
             val document = documentManager.getDocument(fragment)!!
+            println("processHighlights in validateAndCommitData::checkFragment ${fragment.text}")
             DaemonCodeAnalyzerEx.processHighlights(document, myProject, HighlightSeverity.ERROR, 0, document.textLength) {
                 hasErrors = true
                 builder.append("${it.description} $locationDescription at ${TextRange.create(it)}\n")
@@ -266,10 +272,10 @@ class ArendChangeSignatureDialog(project: Project,
                     is CodeFragmentTableCellEditorBase -> {
                         val fragment = (src.cellEditorValue as? ArendExpressionCodeFragment)
                         val item = myParametersTable.items.firstOrNull { it.typeCodeFragment == fragment }
-
                         val codeAnalyzer = DaemonCodeAnalyzer.getInstance(project) as? DaemonCodeAnalyzerImpl
                         if (codeAnalyzer != null && fragment != null && item != null)
                             invokeLater {
+                                println("invalidateIndices in TableView.editingStopped ${item.typeCodeFragment.text}")
                                 invalidateIndices(calculateUsagesOf(singletonList(item)))
                             }
                     }
@@ -313,8 +319,20 @@ class ArendChangeSignatureDialog(project: Project,
         customizeParametersTable(myParametersTable)
 
         parameterToUsages = HashMap(); parameterToDependencies = HashMap()
-        for (i in 0 until myParametersTable.items.size)
-            invokeNameResolverHighlighting(i)
+
+        //restartCodeAnalysisOnTableItems(IntArray(myParametersTable.items.size) { it }.toList()) // Really needed?
+
+        // Invoke
+        val server = myProject.service<ArendServerService>().server
+        val dummyHighlighter = HighlightingVisitor(object: HighlightingCollector {
+            override fun addHighlightInfo(range: TextRange, colors: ArendHighlightingColors) { }
+        }, server.typingInfo)
+
+        for (item in myParametersTableModel.items) {
+            val fragment = item.typeCodeFragment
+            if (fragment is ArendExpressionCodeFragment) ArendFragmentUtils.resolveFragment(fragment, dummyHighlighter, server)
+        }
+
 
         val selectionModel = (this.myParametersTable.selectionModel as DefaultListSelectionModel)
         val oldSelectionListeners = selectionModel.listSelectionListeners
@@ -332,7 +350,7 @@ class ArendChangeSignatureDialog(project: Project,
             resetThreadContext().use {
                 for (l in oldModelListeners) l.tableChanged(ev)
                 if (ev.type == TableModelEvent.UPDATE && ev.lastRow - ev.firstRow == 1) { //Row swap
-                    invokeNameResolverHighlighting(ev.lastRow)
+                    restartCodeAnalysisOnTableItems(singletonList(ev.lastRow))
                 } else if (ev.type == TableModelEvent.DELETE) { //Row deletion
                     val obsoleteTableItems = parameterToUsages.filter { !myParametersTableModel.items.contains(it.key) }
                     invokeLater { invalidateIndices(calculateUsagesOf(obsoleteTableItems.map { it.key })) }
@@ -356,10 +374,9 @@ class ArendChangeSignatureDialog(project: Project,
         }
         return result
     }
+
     fun invalidateIndices(depIndices: Set<Int>) {
-        for (i in depIndices.toSortedSet().reversed()) {
-            invokeNameResolverHighlighting(i)
-        }
+        restartCodeAnalysisOnTableItems(depIndices.toSortedSet().reversed().toList())
     }
 
     fun validateUsages(item: ArendChangeSignatureDialogParameterTableModelItem, oldName: String): Boolean {
@@ -450,17 +467,44 @@ class ArendChangeSignatureDialog(project: Project,
 
     fun getParameterTableItems(): MutableList<ArendChangeSignatureDialogParameterTableModelItem> = myParametersTable.items
 
-    private fun getTypeTextField(index: Int) = (this.myParametersTable.getCellEditor(index, 1) as? CodeFragmentTableCellEditorBase?)?.getTableCellEditorComponent(myParametersTable, myParametersTableModel.items[index].typeCodeFragment, false, 0, 0) as? EditorTextField
+    private fun getTypeTextField(index: Int): EditorTextField? {
+      val tableCellEditor = (this.myParametersTable.getCellEditor(index, 1) as? CodeFragmentTableCellEditorBase?)
+      return tableCellEditor?.getTableCellEditorComponent(myParametersTable, myParametersTableModel.items[index].typeCodeFragment, false, index, 1) as? EditorTextField
+    }
 
-    private fun invokeNameResolverHighlighting(index: Int) {
-        val fragment = if (index == -1) this.myReturnTypeCodeFragment else if (index >= myParametersTableModel.items.size) return else myParametersTableModel.items[index].typeCodeFragment
-        val editorTextField = if (index == -1) this.myReturnTypeField else getTypeTextField(index)
+    private fun restartCodeAnalysisOnTableItems(indices: List<Int>) {
         val codeAnalyzer = DaemonCodeAnalyzer.getInstance(project) as? DaemonCodeAnalyzerImpl
-        val document = fragment?.let{ PsiDocumentManager.getInstance(project).getDocument(it) }
-        if (fragment is ArendExpressionCodeFragment && codeAnalyzer != null && editorTextField != null && document != null) {
-            editorTextField.addNotify()
-            codeAnalyzer.restart(fragment)
+
+        for (index in indices) {
+            val fragment = if (index == -1) this.myReturnTypeCodeFragment else if (index >= myParametersTableModel.items.size) return else myParametersTableModel.items[index].typeCodeFragment
+            val editorTextField = if (index == -1) this.myReturnTypeField else getTypeTextField(index)
+            editorTextField?.addNotify()
+
+
+            val document = fragment?.let{ PsiDocumentManager.getInstance(project).getDocument(it) }
+            if (document != null) PsiDocumentManager.getInstance(project).commitDocument(document)
+
+            if (codeAnalyzer != null && editorTextField != null && document != null) {
+                println("Code analysis restarted: $index ${fragment.text}")
+                codeAnalyzer.restart(fragment)
+                /*codeAnalyzer.fileStatusMap.setErrorFoundFlag(project, document, false)
+
+                val progressIndicator = DaemonProgressIndicator()
+                ApplicationManager.getApplication().invokeLater({
+                    ProgressManager.getInstance().runProcess({
+                        DumbService.getInstance(project).runReadActionInSmartMode {
+                            val textEditor = editorTextField.editor?.let { TextEditorProvider.getInstance().getTextEditor(it) }
+                            if (textEditor != null) {
+                                println("runPasses($index): ${fragment.text}")
+                                codeAnalyzer.runPasses(fragment, document, textEditor, IntArray(0), true, null)
+                            }
+                        }
+                    }, progressIndicator)
+                }, ModalityState.any()) */
+
+            }
         }
+
     }
 
     private fun updateToolbarButtons() {
@@ -502,6 +546,7 @@ class ArendChangeSignatureDialog(project: Project,
             val rowIndex = dialog.myParametersTableModel.items.indexOfFirst { it.typeCodeFragment == eventFragment }
             if (rowIndex == -1) return
             dialog.myParametersTableModel.setValueAtWithoutUpdate(eventFragment, rowIndex, 1)
+            println("DaemonCodeAnalyzer.restart in ArendChangeSignatureCustomDocumentListener.documentChanged ${eventFragment?.text}")
 
             if (eventFragment != null) (DaemonCodeAnalyzer.getInstance(dialog.project) as? DaemonCodeAnalyzerImpl)?.restart(eventFragment)
             dialog.updateSignature()
