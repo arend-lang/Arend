@@ -4,19 +4,18 @@ import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.openapi.components.service
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
+import com.intellij.psi.impl.source.PsiCodeFragmentImpl
 import org.arend.ArendIcons
+import org.arend.util.ArendFragmentUtils
 import org.arend.codeInsight.completion.ReplaceInsertHandler
-import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.ModuleLocation
 import org.arend.naming.reference.*
 import org.arend.psi.*
 import org.arend.psi.ext.*
-import org.arend.psi.ext.ReferableBase
 import org.arend.refactoring.ArendNamesValidator
 import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractReferable
-import org.arend.term.abs.ConcreteBuilder
 import org.arend.toolWindow.repl.ArendReplService
 import org.arend.util.FileUtils
 import org.arend.util.findLibrary
@@ -110,11 +109,18 @@ open class ArendReferenceImpl<T : ArendReferenceElement>(element: T) : ArendRefe
     override fun bindToElement(element: PsiElement) = element
 
     override fun getVariants(): Array<Any> {
-//        element.ancestor<ArendReplLine>()?.replCommand?.text?.let { return getReplCompletion(it)}
-        val file = element.containingFile as? ArendFile ?: return emptyArray()
-        return file.project.service<ArendServerService>().server.getCompletionVariants(ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE), element).mapNotNull {
-            origElement -> createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false)
-        }.toTypedArray()
+        val (fragment, file) = when (val f = element.containingFile) {
+            is PsiCodeFragmentImpl -> Pair(f, f.context?.containingFile as? ArendFile)
+            is ArendFile -> Pair(null, f)
+            else -> return emptyArray()
+        }
+        val server = element.project.service<ArendServerService>().server
+
+        val result = if (fragment is PsiCodeFragmentImpl) {
+            ArendFragmentUtils.getCompletionItems(element, fragment, server) ?: return emptyArray()
+        } else return emptyArray()
+
+        return result.mapNotNull { origElement -> createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false) }.toTypedArray()
     }
 }
 

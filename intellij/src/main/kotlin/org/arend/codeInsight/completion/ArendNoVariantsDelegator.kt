@@ -13,6 +13,7 @@ import org.arend.ext.reference.DataContainer
 import org.arend.ext.module.ModuleLocation
 import org.arend.psi.*
 import org.arend.psi.ext.*
+import org.arend.psi.fragments.ArendExpressionCodeFragment
 import org.arend.psi.stubs.index.ArendDefinitionIndex
 import org.arend.psi.stubs.index.ArendFileIndex
 import org.arend.psi.stubs.index.ArendGotoClassIndex

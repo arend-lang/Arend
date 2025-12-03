@@ -10,12 +10,14 @@ import com.intellij.openapi.util.TextRange
 import org.arend.IArendFile
 import org.arend.ext.module.ModuleLocation
 import org.arend.psi.*
+import org.arend.psi.fragments.ArendExpressionCodeFragment
 import org.arend.server.ArendServerService
 import org.arend.server.ProgressReporter
 import org.arend.settings.ArendSettings
 import org.arend.toolWindow.errors.ArendMessagesService
 import org.arend.typechecking.*
 import org.arend.typechecking.runner.RunnerService
+import org.arend.util.ArendFragmentUtils
 
 class ArendHighlightingPass(file: IArendFile, editor: Editor, textRange: TextRange)
     : BasePass(file, editor, "Arend resolver annotator", textRange) {
@@ -25,13 +27,16 @@ class ArendHighlightingPass(file: IArendFile, editor: Editor, textRange: TextRan
     public override fun collectInformationWithProgress(progress: ProgressIndicator) {
         if ((file as? ArendFile)?.isRepl == true) return
         progress.isIndeterminate = true
-        if (module == null) return
-
         val server = myProject.service<ArendServerService>().server
-        server.getCheckerFor(listOf(module)).resolveModules(ProgressCancellationIndicator(progress), ProgressReporter.empty())
         val visitor = HighlightingVisitor(this, server.typingInfo)
-        for (definitionData in server.getResolvedDefinitions(module)) {
-            definitionData.definition.accept(visitor, null)
+
+        if (module == null && file is ArendExpressionCodeFragment) {
+            ArendFragmentUtils.resolveFragment(file, visitor, server)
+        } else if (module != null) {
+            server.getCheckerFor(listOf(module)).resolveModules(ProgressCancellationIndicator(progress), ProgressReporter.empty())
+            for (definitionData in server.getResolvedDefinitions(module)) {
+                definitionData.definition.accept(visitor, null)
+            }
         }
     }
 

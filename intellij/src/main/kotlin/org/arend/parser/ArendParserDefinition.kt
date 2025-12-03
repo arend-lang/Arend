@@ -19,10 +19,10 @@ import org.arend.psi.doc.ArendDocReference
 import org.arend.psi.doc.ArendDocReferenceText
 import org.arend.psi.ext.*
 import org.arend.psi.stubs.ArendFileStub
-import org.arend.psi.ArendExpressionCodeFragmentElementType
+import org.arend.psi.fragments.ArendExpressionCodeFragmentElementType
 import org.arend.psi.doc.ArendDocLink
 import org.arend.psi.doc.ArendDocLinkText
-import org.arend.refactoring.move.ArendLongNameCodeFragmentElementType
+import org.arend.psi.fragments.ArendLongNameCodeFragmentElementType
 
 class ArendParserDefinition : ParserDefinition {
 
