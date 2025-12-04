@@ -1,7 +1,7 @@
 package org.arend.core.context.param;
 
+import org.arend.core.expr.Expression;
 import org.arend.core.expr.ReferenceExpression;
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.subst.InPlaceLevelSubstVisitor;
 import org.arend.core.subst.SubstVisitor;
@@ -30,8 +30,8 @@ public class UntypedDependentLink implements DependentLink {
   }
 
   @Override
-  public Type getType() {
-    return myNext.getType();
+  public @NotNull Expression getTypeExpr() {
+    return myNext.getTypeExpr();
   }
 
   @Override
@@ -45,7 +45,7 @@ public class UntypedDependentLink implements DependentLink {
   }
 
   @Override
-  public void setType(Type type) {
+  public void setType(Expression type) {
 
   }
 
@@ -92,7 +92,7 @@ public class UntypedDependentLink implements DependentLink {
   @Override
   public DependentLink subst(SubstVisitor substVisitor, int size, boolean updateSubst) {
     if (size == 1) {
-      TypedDependentLink result = new TypedDependentLink(isExplicit(), myName, getType().subst(substVisitor), EmptyDependentLink.getInstance());
+      TypedDependentLink result = new TypedDependentLink(isExplicit(), myName, getTypeExpr().accept(substVisitor, null), EmptyDependentLink.getInstance());
       if (updateSubst) {
         substVisitor.getExprSubstitution().addSubst(this, new ReferenceExpression(result));
       } else {

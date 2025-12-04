@@ -12,8 +12,6 @@ import org.arend.core.definition.ClassField;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.ElimClause;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -334,7 +332,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
         }
         return false;
       }
-      link1.setType(type instanceof Type ? (Type) type : new TypeExpression(type, link1.getType().getSortOfType()));
+      link1.setType(type);
 
       if (myKeepVisitor != null) {
         for (; link != link1; link = link.getNext()) {

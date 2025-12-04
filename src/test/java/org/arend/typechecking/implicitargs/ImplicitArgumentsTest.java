@@ -266,7 +266,7 @@ public class ImplicitArgumentsTest extends TypeCheckingTestCase {
 
     TypecheckingResult result = typeCheckExpr(context, "\\lam x1 x2 x3 => f x1 x2 x3", null);
     A.setType(Universe(new Level(0), new Level(LevelVariable.HVAR)));
-    B.setType(PiType(Ref(A), Universe(new Level(0), new Level(LevelVariable.HVAR))));
+    B.setType(Pi(Ref(A), Universe(new Level(0), new Level(LevelVariable.HVAR))));
     assertEquals(type, result.type);
   }
 

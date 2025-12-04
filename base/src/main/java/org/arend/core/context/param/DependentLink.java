@@ -4,8 +4,6 @@ import org.arend.core.context.LinkList;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.ReferenceExpression;
-import org.arend.core.expr.UniverseExpression;
-import org.arend.core.expr.type.Type;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.core.subst.SubstVisitor;
@@ -13,7 +11,6 @@ import org.arend.ext.core.context.CoreBinding;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.extImpl.AbstractedDependentLinkType;
-import org.arend.typechecking.result.TypecheckingResult;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -22,7 +19,7 @@ import java.util.Map;
 
 public interface DependentLink extends Binding, CoreParameter {
   void setExplicit(boolean isExplicit);
-  void setType(Type type);
+  void setType(Expression type);
   @NotNull @Override DependentLink getNext();
   void setNext(DependentLink next);
   void setName(String name);
@@ -37,21 +34,8 @@ public interface DependentLink extends Binding, CoreParameter {
 
   @NotNull
   @Override
-  default TypecheckingResult getTypedType() {
-    Type type = getType();
-    return new TypecheckingResult(type.getExpr(), new UniverseExpression(type.getSortOfType()));
-  }
-
-  @NotNull
-  @Override
   default CoreBinding getBinding() {
     return this;
-  }
-
-  @NotNull
-  @Override
-  default Expression getTypeExpr() {
-    return getType().getExpr();
   }
 
   @Override

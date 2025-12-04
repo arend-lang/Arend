@@ -11,7 +11,6 @@ import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.level.LevelSubstitution;
-import org.arend.core.subst.SubstVisitor;
 import org.arend.ext.core.ops.CMP;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
@@ -82,7 +81,7 @@ public class DefCallResult implements TResult {
 
       names.add(link.getName());
       if (link instanceof TypedDependentLink) {
-        SingleDependentLink parameter = ExpressionFactory.singleParams(link.isExplicit(), names, link.getType().subst(new SubstVisitor(substitution, LevelSubstitution.EMPTY)));
+        SingleDependentLink parameter = ExpressionFactory.singleParams(link.isExplicit(), names, link.getTypeExpr().subst(substitution));
         parameters.add(parameter);
         names.clear();
 

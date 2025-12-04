@@ -1,6 +1,6 @@
 package org.arend.core.context.param;
 
-import org.arend.core.expr.type.Type;
+import org.arend.core.expr.Expression;
 import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.subst.InPlaceLevelSubstVisitor;
 import org.arend.core.subst.SubstVisitor;
@@ -28,7 +28,7 @@ public class EmptyDependentLink implements SingleDependentLink {
   }
 
   @Override
-  public void setType(Type type) {
+  public void setType(Expression type) {
     throw new IllegalStateException();
   }
 
@@ -74,7 +74,7 @@ public class EmptyDependentLink implements SingleDependentLink {
   }
 
   @Override
-  public Type getType() {
+  public @NotNull Expression getTypeExpr() {
     throw new IllegalStateException();
   }
 

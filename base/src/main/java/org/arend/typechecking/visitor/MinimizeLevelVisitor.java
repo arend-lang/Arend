@@ -8,8 +8,6 @@ import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.BaseExpressionVisitor;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.ext.core.level.LevelSubstitution;
-import org.arend.core.subst.SubstVisitor;
 
 public class MinimizeLevelVisitor extends BaseExpressionVisitor<Void, Type> {
   @Override
@@ -59,7 +57,7 @@ public class MinimizeLevelVisitor extends BaseExpressionVisitor<Void, Type> {
     ExprSubstitution substitution = new ExprSubstitution();
     LinkList list = new LinkList();
     for (SingleDependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
-      SingleDependentLink newParam = param instanceof TypedSingleDependentLink ? new TypedSingleDependentLink(param.isExplicit(), param.getName(), dom, param.isHidden()) : new UntypedSingleDependentLink(param.getName());
+      SingleDependentLink newParam = param instanceof TypedSingleDependentLink ? new TypedSingleDependentLink(param.isExplicit(), param.getName(), dom.getExpr(), param.isHidden()) : new UntypedSingleDependentLink(param.getName());
       list.append(newParam);
       substitution.add(param, new ReferenceExpression(newParam));
     }
@@ -81,7 +79,7 @@ public class MinimizeLevelVisitor extends BaseExpressionVisitor<Void, Type> {
         if (sort.equals(expr.getSort()) || !sort.isLessOrEquals(expr.getSort())) {
           return expr;
         }
-        newParam = new TypedDependentLink(param.isExplicit(), param.getName(), type.subst(new SubstVisitor(substitution, LevelSubstitution.EMPTY)), param.isHidden(), EmptyDependentLink.getInstance());
+        newParam = new TypedDependentLink(param.isExplicit(), param.getName(), type.getExpr().subst(substitution), param.isHidden(), EmptyDependentLink.getInstance());
       } else {
         newParam = new UntypedDependentLink(param.getName());
       }

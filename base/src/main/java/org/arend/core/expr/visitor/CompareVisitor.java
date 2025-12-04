@@ -11,7 +11,6 @@ import org.arend.core.definition.*;
 import org.arend.core.elimtree.*;
 import org.arend.core.expr.*;
 import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.sort.Sort;
@@ -1088,15 +1087,14 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     Set<Binding> allowedBindings = new HashSet<>();
     for (int i = bindings.size() - 1; i >= 0; i--) {
       Pair<Binding, Boolean> pair = bindings.get(i);
-      Type type = pair.proj1.getType();
+      Expression type = pair.proj1.getTypeExpr();
       if (type == null) return null;
       if (!substVisitor.isEmpty()) {
-        type = type.subst(substVisitor);
+        type = type.accept(substVisitor, null);
       }
       if (!paramSubst.isEmpty()) {
-        Expression typeExpr = checkedSubst(type.getExpr(), paramSubst, allowedBindings, null);
-        if (typeExpr == null) return null;
-        type = typeExpr instanceof Type ? (Type) typeExpr : new TypeExpression(typeExpr, type.getSortOfType());
+        type = checkedSubst(type, paramSubst, allowedBindings, null);
+        if (type == null) return null;
       }
       TypedSingleDependentLink param = new TypedSingleDependentLink(pair.proj2, pair.proj1.getName(), type);
       params.add(param);
@@ -1201,7 +1199,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         for (; dataParams.hasNext(); dataParams = dataParams.getNext()) {
           SingleDependentLink link;
           if (dataParams instanceof TypedDependentLink) {
-            link = new TypedSingleDependentLink(dataParams.isExplicit(), dataParams.getName(), dataParams.getType());
+            link = new TypedSingleDependentLink(dataParams.isExplicit(), dataParams.getName(), dataParams.getTypeExpr());
           } else {
             link = new UntypedSingleDependentLink(dataParams.getName());
           }
@@ -1232,7 +1230,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
           } else {
             PiExpression piType = classCall1.getDefinition().getFieldType(field, classCall1.getLevels(field.getParentClass()));
             Expression type = piType.getCodomain();
-            TypedSingleDependentLink link = new TypedSingleDependentLink(field.getReferable().isExplicitField(), field.getName(), type instanceof Type ? (Type) type : new TypeExpression(type, piType.getSortOfType()));
+            TypedSingleDependentLink link = new TypedSingleDependentLink(field.getReferable().isExplicitField(), field.getName(), type);
             params.add(link);
             implementations.put(field, new ReferenceExpression(link));
           }
@@ -1501,7 +1499,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       list.append(newParam);
       subst.add(param, new ReferenceExpression(newParam));
     }
-    DependentLink.Helper.get(list.getFirst(), myResult.index).getNextTyped(null).setType(makeType(type));
+    DependentLink.Helper.get(list.getFirst(), myResult.index).getNextTyped(null).setType(type);
     return list.getFirst();
   }
 
@@ -1521,7 +1519,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         typedParam = typedParam.getNext();
       }
       i += names.size();
-      SingleDependentLink newParam = new TypedSingleDependentLink(typedParam.isExplicit(), typedParam.getName(), typedParam.getType().subst(new SubstVisitor(subst, LevelSubstitution.EMPTY)));
+      SingleDependentLink newParam = new TypedSingleDependentLink(typedParam.isExplicit(), typedParam.getName(), typedParam.getTypeExpr().subst(subst));
       subst.add(typedParam, new ReferenceExpression(newParam));
       for (int j = names.size() - 1; j >= 0; j--) {
         newParam = new UntypedSingleDependentLink(names.get(j).getName(), newParam);
@@ -1588,14 +1586,10 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     return visitLam(expr1, expr2, type, true);
   }
 
-  private Type makeType(Expression expr) {
-    return expr instanceof Type ? (Type) expr : new TypeExpression(expr, Sort.TypeOfLevel(Integer.MAX_VALUE));
-  }
-
   private Expression replaceDomain(PiExpression oldPi, Expression newType) {
     ExprSubstitution subst = new ExprSubstitution();
     SingleDependentLink newParams = DependentLink.Helper.subst(oldPi.getParameters(), subst);
-    newParams.getNextTyped(null).setType(makeType(newType));
+    newParams.getNextTyped(null).setType(newType);
     return new PiExpression(newParams, oldPi.getCodomain().subst(subst));
   }
 

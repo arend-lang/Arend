@@ -112,7 +112,7 @@ public class GivenMeta implements MetaDefinition {
           for (i = j; i < sigmaRefs.size(); i += piParams.size()) {
             curRef.add(sigmaRefs.get(i));
           }
-          ConcreteParameter varParam = produceParam(param.isExplicit(), curRef, factory.withData(cType.getData()).core(piParam.getTypedType()), null);
+          ConcreteParameter varParam = produceParam(param.isExplicit(), curRef, factory.withData(cType.getData()).core(piParam.getTypeExpr().computeTyped()), null);
           sigmaParams.add(varParam);
           varParams.add(varParam);
           j++;

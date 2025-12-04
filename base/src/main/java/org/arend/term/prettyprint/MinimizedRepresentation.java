@@ -411,7 +411,7 @@ class ErrorFixingConcreteExpressionVisitor extends BiConcreteVisitor {
             var fullResult = fullIterator.next();
             var incompleteArg = incompleteIterator.next().proj2;
             var param = fullResult.proj1;
-            if (param instanceof DependentLink && ((DependentLink) param).getType() instanceof DefCallExpression && targetError.classRef instanceof TCDefReferable && ((DefCallExpression) ((DependentLink) param).getType()).getDefinition() == ((TCDefReferable) targetError.classRef).getTypechecked()) {
+            if (param instanceof DependentLink link && link.getTypeExpr() instanceof DefCallExpression defCall && targetError.classRef instanceof TCDefReferable tcRef && defCall.getDefinition() == tcRef.getTypechecked()) {
                 args.add((Concrete.Argument) fullResult.proj2);
                 inserted = true;
             } else if (incompleteArg != null) {

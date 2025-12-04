@@ -91,7 +91,7 @@ class ImpossibleEliminationQuickFix(val error: ImpossibleEliminationError, val c
 
         if (error.caseExpressions != null) { // case
             val stuckParameter = error.myParameters
-            val stuckParameterType = stuckParameter.type
+            val stuckParameterType = stuckParameter.typeExpr
 
             val caseExprPsi = cause.element?.ancestor<ArendCaseExpr>()
             val clausesListPsi = caseExprPsi?.withBody?.clauseList

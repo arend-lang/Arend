@@ -1,15 +1,15 @@
 package org.arend.core.context.param;
 
+import org.arend.core.expr.Expression;
 import org.arend.core.expr.ReferenceExpression;
-import org.arend.core.expr.type.Type;
 import org.arend.core.subst.SubstVisitor;
 
 public class PropertyTypedDependentLink extends TypedDependentLink {
-  public PropertyTypedDependentLink(boolean isExplicit, String name, Type type, boolean isHidden, DependentLink next) {
+  public PropertyTypedDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden, DependentLink next) {
     super(isExplicit, name, type, isHidden, next);
   }
 
-  public PropertyTypedDependentLink(boolean isExplicit, String name, Type type, DependentLink next) {
+  public PropertyTypedDependentLink(boolean isExplicit, String name, Expression type, DependentLink next) {
     super(isExplicit, name, type, false, next);
   }
 
@@ -21,7 +21,7 @@ public class PropertyTypedDependentLink extends TypedDependentLink {
   @Override
   public DependentLink subst(SubstVisitor substVisitor, int size, boolean updateSubst) {
     if (size > 0) {
-      TypedDependentLink result = new PropertyTypedDependentLink(isExplicit(), getName(), getType().subst(substVisitor), EmptyDependentLink.getInstance());
+      TypedDependentLink result = new PropertyTypedDependentLink(isExplicit(), getName(), getTypeExpr().accept(substVisitor, null), EmptyDependentLink.getInstance());
       if (updateSubst) {
         substVisitor.getExprSubstitution().addSubst(this, new ReferenceExpression(result));
       } else {

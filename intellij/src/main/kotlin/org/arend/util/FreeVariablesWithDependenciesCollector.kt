@@ -43,7 +43,7 @@ class FreeVariablesWithDependenciesCollector private constructor() : VoidExpress
             classReferences.add(currentBinding)
             return null
         }
-        currentBinding.type.normalize(NormalizationMode.RNF).expr.accept(this, ParameterExplicitnessState.IMPLICIT)
+        currentBinding.typeExpr.normalize(NormalizationMode.RNF).accept(this, ParameterExplicitnessState.IMPLICIT)
         val weakenedState = weakenState(state, currentBinding.typeExpr)
         freeBindings.add(currentBinding to weakenedState)
         return null

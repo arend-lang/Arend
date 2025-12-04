@@ -7,7 +7,6 @@ import org.arend.core.definition.Constructor;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.PiExpression;
-import org.arend.core.expr.type.Type;
 import org.arend.ext.concrete.expr.ConcreteArgument;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.term.concrete.Concrete;
@@ -76,8 +75,8 @@ public class ArgumentMappingIterator implements Iterator<Pair<CoreParameter, Con
             var datatype = ((Constructor) definition).getDataType();
             return Stream.concat(linkToList(datatype.getParameters()).stream().map(link -> new UntypedDependentLink(link.getName()) {
                 @Override
-                public Type getType() {
-                    return link.getType();
+                public @NotNull Expression getTypeExpr() {
+                    return link.getTypeExpr();
                 }
 
                 @Override

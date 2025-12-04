@@ -216,7 +216,7 @@ public class PatternTypechecking {
           List<TypedSingleDependentLink> lamBindings = new ArrayList<>(intervalBindings.size());
           ExprSubstitution intervalSubst = new ExprSubstitution();
           for (Binding binding : intervalBindings) {
-            TypedSingleDependentLink link = new TypedSingleDependentLink(true, binding.getName(), binding.getType());
+            TypedSingleDependentLink link = new TypedSingleDependentLink(true, binding.getName(), binding.getTypeExpr());
             lamBindings.add(link);
             intervalSubst.add(binding, new ReferenceExpression(link));
           }
@@ -752,7 +752,7 @@ public class PatternTypechecking {
                 return null;
               }
               assert paramLink != null;
-              paramLink.setType(paramLink.getType().subst(new SubstVisitor(varSubst, LevelSubstitution.EMPTY)));
+              paramLink.setType(paramLink.getTypeExpr().subst(varSubst));
             }
             listSubst(result, exprs, varSubst);
           } else {

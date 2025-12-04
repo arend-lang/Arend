@@ -7,7 +7,6 @@ import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.ReferenceExpression;
 import org.arend.core.expr.SmallIntegerExpression;
-import org.arend.core.expr.type.Type;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.error.RedundantClauseError;
@@ -117,33 +116,36 @@ public class FinTest extends TypeCheckingTestCase {
 
   @Test
   public void matchTwo() {
-    typeCheckModule(
-      "\\func sdl (_ : Fin 2) : Nat\n" +
-      "  | zero => 123\n" +
-      "  | suc n => 666\n" +
-      "\\func test1 : sdl 0 = 123 => idp\n" +
-      "\\func test2 : sdl 1 = 666 => idp");
+    typeCheckModule("""
+      \\func sdl (_ : Fin 2) : Nat
+        | zero => 123
+        | suc n => 666
+      \\func test1 : sdl 0 = 123 => idp
+      \\func test2 : sdl 1 = 666 => idp
+      """);
   }
 
   @Test
   public void matchThree() {
-    typeCheckModule(
-      "\\func test (x : Fin 3) : Nat\n" +
-      "  | 0 => 7\n" +
-      "  | 1 => 13\n" +
-      "  | 2 => 25\n" +
-      "\\func test1 : test 0 = 7 => idp\n" +
-      "\\func test2 : test 1 = 13 => idp\n" +
-      "\\func test3 : test 2 = 25 => idp");
+    typeCheckModule("""
+      \\func test (x : Fin 3) : Nat
+        | 0 => 7
+        | 1 => 13
+        | 2 => 25
+      \\func test1 : test 0 = 7 => idp
+      \\func test2 : test 1 = 13 => idp
+      \\func test3 : test 2 = 25 => idp
+      """);
   }
 
   @Test
   public void matchTwoError() {
-    typeCheckDef(
-      "\\func test (x : Fin 2) : Nat\n" +
-      "  | 0 => 0\n" +
-      "  | 1 => 1\n" +
-      "  | 2 => 2", 1);
+    typeCheckDef("""
+      \\func test (x : Fin 2) : Nat
+        | 0 => 0
+        | 1 => 1
+        | 2 => 2
+      """, 1);
   }
 
   @Test
@@ -169,7 +171,7 @@ public class FinTest extends TypeCheckingTestCase {
   @Test
   public void modType4() {
     TypedBinding binding = new TypedBinding("n", Nat());
-    Type type = Fin(Suc(new ReferenceExpression(binding)));
+    Expression type = Fin(Suc(new ReferenceExpression(binding)));
     assertEquals(type, typeCheckExpr(Collections.singletonList(binding), "Nat.mod n (suc n)", null).type);
     assertEquals(divModType(type), typeCheckExpr(Collections.singletonList(binding), "Nat.divMod n (suc n)", null).type);
   }
@@ -251,37 +253,40 @@ public class FinTest extends TypeCheckingTestCase {
 
   @Test
   public void sucImplicitTest2() {
-    typeCheckModule(
-      "\\func f1 (n : Nat) (x : Fin n) : Fin (suc n) => suc x\n" +
-      "\\func f2 (n : Nat) => suc {n}\n" +
-      "\\func test (n : Nat) : f1 n = {Fin n -> Fin (suc n)} f2 n => idp");
+    typeCheckModule("""
+      \\func f1 (n : Nat) (x : Fin n) : Fin (suc n) => suc x
+      \\func f2 (n : Nat) => suc {n}
+      \\func test (n : Nat) : f1 n = {Fin n -> Fin (suc n)} f2 n => idp
+      """);
   }
 
   @Test
   public void listTest() {
-    typeCheckModule(
-      "\\data List (A : \\Type) | nil | \\infixr 5 :: A (List A)\n" +
-      "\\func length {A : \\Type} (list : List A) : Nat \\elim list\n" +
-      "  | nil => 0\n" +
-      "  | :: a list => suc (length list)\n" +
-      "\\func \\infix 7 !! {A : \\Set} (v : List A) (index : Fin (length v)) : A \\elim v, index\n" +
-      "  | :: a v, suc index => v !! index\n" +
-      "  | :: a v, 0 => a\n" +
-      "\\data Term (A : \\Set) (context : List A) (termSort : A) : \\Set | term (index : Fin (length context)) (termSort = context !! index) | foo\n" +
-      "\\func enlarge-substitution {A : \\Set} (list : List A) (index : Fin (length list)) : Term A list (list !! index) \\elim list, index\n" +
-      "  | :: a list, 0 => term 0 idp\n" +
-      "  | _, _ => foo");
+    typeCheckModule("""
+      \\data List (A : \\Type) | nil | \\infixr 5 :: A (List A)
+      \\func length {A : \\Type} (list : List A) : Nat \\elim list
+        | nil => 0
+        | :: a list => suc (length list)
+      \\func \\infix 7 !! {A : \\Set} (v : List A) (index : Fin (length v)) : A \\elim v, index
+        | :: a v, suc index => v !! index
+        | :: a v, 0 => a
+      \\data Term (A : \\Set) (context : List A) (termSort : A) : \\Set | term (index : Fin (length context)) (termSort = context !! index) | foo
+      \\func enlarge-substitution {A : \\Set} (list : List A) (index : Fin (length list)) : Term A list (list !! index) \\elim list, index
+        | :: a list, 0 => term 0 idp
+        | _, _ => foo
+      """);
   }
 
   @Test
   public void sucMatchTest() {
-    typeCheckModule(
-      "\\data \\infix 4 <= (n m : Nat) \\with\n" +
-      "  | 0, _ => zero<=_\n" +
-      "  | suc n, suc m => suc<=suc (n <= m)\n" +
-      "\\lemma test {n : Nat} (x : Fin n) : suc x <= n \\elim n, x\n" +
-      "  | suc n, zero => suc<=suc zero<=_\n" +
-      "  | suc n, suc x => suc<=suc (test x)");
+    typeCheckModule("""
+      \\data \\infix 4 <= (n m : Nat) \\with
+        | 0, _ => zero<=_
+        | suc n, suc m => suc<=suc (n <= m)
+      \\lemma test {n : Nat} (x : Fin n) : suc x <= n \\elim n, x
+        | suc n, zero => suc<=suc zero<=_
+        | suc n, suc x => suc<=suc (test x)
+      """);
   }
 
   @Test
@@ -316,28 +321,31 @@ public class FinTest extends TypeCheckingTestCase {
 
   @Test
   public void finMatchTest2() {
-    typeCheckDef(
-      "\\func test (x : Fin 2) (j : Fin 2) (p : j = x) : Nat\n" +
-      "  | x, 0, idp => 0\n" +
-      "  | x, 1, idp => 1");
+    typeCheckDef("""
+      \\func test (x : Fin 2) (j : Fin 2) (p : j = x) : Nat
+        | x, 0, idp => 0
+        | x, 1, idp => 1
+      """);
   }
 
   @Test
   public void finMatchTest3() {
-    typeCheckDef(
-      "\\func test (x : Fin 2) (j : Fin 2) (p : j = x) : Nat\n" +
-      "  | x, 0, idp => 0\n" +
-      "  | x, 1, idp => 1\n" +
-      "  | x, suc _, idp => 2", 1);
+    typeCheckDef("""
+      \\func test (x : Fin 2) (j : Fin 2) (p : j = x) : Nat
+        | x, 0, idp => 0
+        | x, 1, idp => 1
+        | x, suc _, idp => 2
+      """, 1);
     assertThatErrorsAre(Matchers.typecheckingError(RedundantClauseError.class));
   }
 
   @Test
   public void finMatchTest4() {
-    typeCheckDef(
-      "\\func test (x : Fin 3) (j : Fin 3) (p : j = x) : Nat\n" +
-      "  | x, 0, idp => 0\n" +
-      "  | x, 1, idp => 1\n" +
-      "  | x, suc _, idp => 2");
+    typeCheckDef("""
+      \\func test (x : Fin 3) (j : Fin 3) (p : j = x) : Nat
+        | x, 0, idp => 0
+        | x, 1, idp => 1
+        | x, suc _, idp => 2
+      """);
   }
 }

@@ -14,8 +14,6 @@ import org.arend.core.definition.*;
 import org.arend.core.elimtree.*;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.*;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
@@ -46,11 +44,6 @@ class ExpressionDeserialization {
 
   private void registerBinding(Binding binding) {
     myBindings.add(binding);
-  }
-
-  private Type readType(ExpressionProtos.Type proto) throws DeserializationException {
-    Expression expr = readExpr(proto.getExpr());
-    return expr instanceof Type ? (Type) expr : new TypeExpression(expr, readSort(proto.getSort()));
   }
 
   Binding readBindingRef(int index) throws DeserializationException {
@@ -113,7 +106,7 @@ class ExpressionDeserialization {
       for (String name : proto.getNameList()) {
         unfixedNames.add(name.isEmpty() ? null : name);
       }
-      Type type = readType(proto.getType());
+      Expression type = readExpr(proto.getType());
       DependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
         ? new TypedDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true, EmptyDependentLink.getInstance())
         : ExpressionFactory.parameter(!proto.getIsNotExplicit(), proto.getIsProperty(), unfixedNames, type);
@@ -130,7 +123,7 @@ class ExpressionDeserialization {
     for (String name : proto.getNameList()) {
       unfixedNames.add(name.isEmpty() ? null : name);
     }
-    Type type = readType(proto.getType());
+    Expression type = readExpr(proto.getType());
     SingleDependentLink tele = proto.getIsHidden() && unfixedNames.size() == 1
       ? new TypedSingleDependentLink(!proto.getIsNotExplicit(), unfixedNames.getFirst(), type, true)
       : ExpressionFactory.singleParams(!proto.getIsNotExplicit(), unfixedNames, type);
@@ -143,7 +136,7 @@ class ExpressionDeserialization {
   DependentLink readParameter(ExpressionProtos.SingleParameter proto) throws DeserializationException {
     DependentLink link;
     if (proto.hasType()) {
-      link = new TypedDependentLink(!proto.getIsNotExplicit(), proto.getName(), readType(proto.getType()), proto.getIsHidden(), EmptyDependentLink.getInstance());
+      link = new TypedDependentLink(!proto.getIsNotExplicit(), proto.getName(), readExpr(proto.getType()), proto.getIsHidden(), EmptyDependentLink.getInstance());
     } else {
       link = new UntypedDependentLink(proto.getName());
     }

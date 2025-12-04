@@ -11,7 +11,6 @@ import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
 import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.pattern.BindingPattern;
 import org.arend.core.pattern.ConstructorExpressionPattern;
@@ -372,17 +371,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   private Integer typecheckResultTypeLevel(Concrete.Expression resultTypeLevel, LevelMismatchError.TargetKind kind, Expression resultType, FunctionDefinition funDef, ClassField classField, boolean isOverridden) {
     if (resultTypeLevel == null) return null;
     if (kind != null) {
-      Sort sort;
-      Type type;
-      if (resultType instanceof Type) {
-        type = (Type) resultType;
-        sort = type.getSortOfType();
-      } else {
-        sort = resultType.getSortOfType();
-        type = sort == null ? null : new TypeExpression(resultType, sort);
-      }
-      if (type != null) {
-        TypedSingleDependentLink y = new TypedSingleDependentLink(true, "y", type);
+      Sort sort = resultType.getSortOfType();
+      if (sort != null) {
+        TypedSingleDependentLink y = new TypedSingleDependentLink(true, "y", resultType);
         UntypedSingleDependentLink x = new UntypedSingleDependentLink("x", y);
         TypecheckingResult result = typechecker.finalCheckExpr(resultTypeLevel, new PiExpression(x, FunCallExpression.make(Prelude.PATH_INFIX, new LevelPair(sort.getPLevel(), sort.getHLevel()), Arrays.asList(resultType, new ReferenceExpression(x), new ReferenceExpression(y)))));
         if (result == null) return null;
@@ -476,7 +467,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         resultType = resultType.normalize(NormalizationMode.WHNF).getUnderlyingExpression();
       }
 
-      Type paramResult = null;
+      Expression paramResult = null;
       if (parameter.getType() != null) {
         if (def instanceof Concrete.FunctionDefinition) {
           Concrete.Expression type = parameter.getType();
@@ -488,7 +479,8 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           }
         }
 
-        paramResult = def instanceof Concrete.Constructor ? typechecker.checkType(parameter.getType(), expectedType) : typechecker.finalCheckType(parameter.getType(), expectedType, false);
+        Type paramType = def instanceof Concrete.Constructor ? typechecker.checkType(parameter.getType(), expectedType) : typechecker.finalCheckType(parameter.getType(), expectedType, false);
+        paramResult = paramType == null ? null : paramType.getExpr();
         if (typedParameters != null) {
           typedParameters.add(true);
         }
@@ -499,11 +491,11 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
             errorReporter.report(new ArgumentExplicitnessError(param.isExplicit(), parameter));
             break;
           }
-          Type paramType = param.getType();
-          if (thisRef != null && paramType.getExpr().findBinding(thisRef)) {
-            errorReporter.report(new TypeFromFieldError(typechecker.getExpressionPrettifier(), TypeFromFieldError.parameter(), paramType.getExpr(), parameter));
+          Expression paramType = param.getTypeExpr();
+          if (thisRef != null && paramType.findBinding(thisRef)) {
+            errorReporter.report(new TypeFromFieldError(typechecker.getExpressionPrettifier(), TypeFromFieldError.parameter(), paramType, parameter));
           } else {
-            paramResult = paramType.subst(new SubstVisitor(substitution, typedDef.makeIdLevels().makeSubstitution(implementedField.getParentClass())));
+            paramResult = paramType.subst(substitution, typedDef.makeIdLevels().makeSubstitution(implementedField.getParentClass()));
           }
         } else if (resultType == null || typedDef == null || !resultType.reportIfError(errorReporter, parameter)) {
           if (resultType == null || typedDef == null) {
@@ -521,11 +513,14 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       boolean isProperty = parameter.isProperty();
       if (paramResult == null) {
         if (typedParameters == null) {
-          paramResult = new TypeExpression(new ErrorExpression(), Sort.SET0);
+          paramResult = new ErrorExpression();
         }
-      } else if (isProperty && !Sort.compare(paramResult.getSortOfType(), Sort.PROP, CMP.LE, typechecker.getEquations(), parameter)) {
-        errorReporter.report(new TypecheckingError("The type of the parameter should live in \\Prop, but lives in " + paramResult.getSortOfType(), parameter));
-        isProperty = false;
+      } else if (isProperty && !(paramResult instanceof ErrorExpression)) {
+        Sort paramSort = paramResult.getSortOfType();
+        if (paramSort == null || !Sort.compare(paramSort, Sort.PROP, CMP.LE, typechecker.getEquations(), parameter)) {
+          errorReporter.report(new TypecheckingError("The type of the parameter should live in \\Prop, but lives in " + paramSort, parameter));
+          isProperty = false;
+        }
       }
       if (!(def instanceof Concrete.Constructor) && paramResult != null) {
         sort = sort.max(paramResult.getSortOfType());

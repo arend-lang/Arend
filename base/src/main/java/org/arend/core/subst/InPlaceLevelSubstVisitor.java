@@ -3,7 +3,6 @@ package org.arend.core.subst;
 import org.arend.core.constructor.ClassConstructor;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.context.binding.EvaluatingBinding;
-import org.arend.core.context.param.DependentLink;
 import org.arend.core.elimtree.BranchElimTree;
 import org.arend.core.elimtree.BranchKey;
 import org.arend.core.elimtree.ElimTree;
@@ -26,14 +25,6 @@ public class InPlaceLevelSubstVisitor extends VoidExpressionVisitor<Void> {
 
   public boolean isEmpty() {
     return mySubstitution.isEmpty();
-  }
-
-  @Override
-  public void visitParameters(DependentLink link, Void params) {
-    for (; link.hasNext(); link = link.getNext()) {
-      link = link.getNextTyped(null);
-      link.getType().subst(this);
-    }
   }
 
   @Override

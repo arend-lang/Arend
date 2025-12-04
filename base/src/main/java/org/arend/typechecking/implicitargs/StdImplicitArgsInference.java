@@ -10,7 +10,6 @@ import org.arend.core.context.param.TypedSingleDependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.expr.*;
 import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.expr.visitor.FreeVariablesCollector;
 import org.arend.core.sort.Sort;
@@ -465,9 +464,9 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         return null;
       }
 
-      Type type;
+      Expression type;
       if (length == null) {
-        type = new TypeExpression(FunCallExpression.make(Prelude.ARRAY, defCallResult.getLevels(), new SingletonList<>(result1.type)), sort);
+        type = FunCallExpression.make(Prelude.ARRAY, defCallResult.getLevels(), new SingletonList<>(result1.type));
       } else {
         Map<ClassField, Expression> impls = new LinkedHashMap<>();
         impls.put(Prelude.ARRAY_LENGTH, length);
@@ -764,9 +763,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     } else {
       actualCodomain = generatePiExpressionByArguments(codomain, argumentResults.subList(1, argumentResults.size()), arguments.subList(1, arguments.size()));
     }
-    var domain = argumentResults.getFirst().type;
-    Type type = domain instanceof Type ? (Type) domain : new TypeExpression(domain, domain.getSortOfType());
-    return new PiExpression(new TypedSingleDependentLink(arguments.getFirst().isExplicit(), null, type), actualCodomain);
+    return new PiExpression(new TypedSingleDependentLink(arguments.getFirst().isExplicit(), null, argumentResults.getFirst().type), actualCodomain);
   }
 
   /** Normalizes {@param type}

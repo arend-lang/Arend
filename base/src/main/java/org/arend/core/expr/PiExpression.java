@@ -92,12 +92,6 @@ public class PiExpression extends Expression implements CorePiExpression, CoreAb
   }
 
   @Override
-  public Sort getSortOfType() {
-    Sort codSort = myCodomain.getSortOfType();
-    return codSort == null ? null : piSort(myLink.getType().getSortOfType(), codSort);
-  }
-
-  @Override
   public @NotNull CoreExpression getPiParameters(@Nullable List<? super CoreParameter> parameters) {
     return getPiParameters(parameters, false);
   }

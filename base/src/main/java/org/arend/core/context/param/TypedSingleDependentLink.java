@@ -1,18 +1,18 @@
 package org.arend.core.context.param;
 
+import org.arend.core.expr.Expression;
 import org.arend.core.expr.ReferenceExpression;
-import org.arend.core.expr.type.Type;
 import org.arend.core.subst.SubstVisitor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 public class TypedSingleDependentLink extends TypedDependentLink implements SingleDependentLink {
-  public TypedSingleDependentLink(boolean isExplicit, String name, Type type, boolean isHidden) {
+  public TypedSingleDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden) {
     super(isExplicit, name, type, isHidden, EmptyDependentLink.getInstance());
   }
 
-  public TypedSingleDependentLink(boolean isExplicit, String name, Type type) {
+  public TypedSingleDependentLink(boolean isExplicit, String name, Expression type) {
     super(isExplicit, name, type, EmptyDependentLink.getInstance());
   }
 
@@ -27,7 +27,7 @@ public class TypedSingleDependentLink extends TypedDependentLink implements Sing
   @Override
   public SingleDependentLink subst(SubstVisitor substVisitor, int size, boolean updateSubst) {
     if (size > 0) {
-      TypedSingleDependentLink result = new TypedSingleDependentLink(isExplicit(), getName(), getType().subst(substVisitor), isHidden());
+      TypedSingleDependentLink result = new TypedSingleDependentLink(isExplicit(), getName(), getTypeExpr().accept(substVisitor, null), isHidden());
       if (updateSubst) {
         substVisitor.getExprSubstitution().addSubst(this, new ReferenceExpression(result));
       } else {

@@ -757,7 +757,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         List<String> names = new ArrayList<>();
         DependentLink link1 = parameter;
         parameter = parameter.getNextTyped(names);
-        single = ExpressionFactory.singleParams(parameter.isExplicit(), names, parameter.getType().subst(new SubstVisitor(substitution, LevelSubstitution.EMPTY)));
+        single = ExpressionFactory.singleParams(parameter.isExplicit(), names, parameter.getTypeExpr().subst(substitution));
         for (DependentLink link2 = single; link2.hasNext(); link1 = link1.getNext(), link2 = link2.getNext()) {
           substitution.add(link1, new ReferenceExpression(link2));
         }
@@ -798,7 +798,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   @Override
   public @NotNull CoreParameterBuilder newCoreParameterBuilder() {
-    return new CoreParameterBuilderImpl(this);
+    return new CoreParameterBuilderImpl();
   }
 
   private boolean checkSubstExpr(Expression expr, Collection<? extends CoreBinding> bindings, boolean alwaysCheckBindings) {
@@ -940,7 +940,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     ExprSubstitution substitution = new ExprSubstitution();
     for (CoreParameter parameter : parameters) {
       DependentLink param = (DependentLink) parameter;
-      params.add(new TypedSingleDependentLink(param.isExplicit(), param.getName(), param.getType()));
+      params.add(new TypedSingleDependentLink(param.isExplicit(), param.getName(), param.getTypeExpr()));
     }
 
     Expression result = ((Expression) body).subst(substitution);
@@ -987,14 +987,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         }
       }
 
-      Type type = links.get(typedIndex).getType().subst(substVisitor);
+      Expression type = links.get(typedIndex).getTypeExpr().accept(substVisitor, null);
       for (; i <= typedIndex; i++) {
         if (i >= arguments.size() || arguments.get(i) == null) {
           DependentLink link = i < last ? new UntypedDependentLink(links.get(i).getName()) : new TypedDependentLink(links.get(typedIndex).isExplicit(), links.get(i).getName(), type, links.get(typedIndex).isHidden(), EmptyDependentLink.getInstance());
           substitution.add(links.get(i), new ReferenceExpression(link));
           list.append(link);
         } else {
-          TypecheckingResult result = typecheck(arguments.get(i), type.getExpr());
+          TypecheckingResult result = typecheck(arguments.get(i), type);
           if (result == null) {
             return null;
           }
@@ -1052,8 +1052,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       LocalExpressionPrettifier originalLocalPrettifier = myLocalPrettifier;
       if (afterLevels) {
         for (Binding binding : deferredMeta.context.values()) {
-          Type bindingType = binding.getType();
-          if (bindingType != null) bindingType.subst(substVisitor);
+          Expression bindingType = binding.getTypeExpr();
+          if (bindingType != null) bindingType.accept(substVisitor, null);
         }
         checkTypeVisitor = copy(deferredMeta.context, deferredMeta.localPrettifier, deferredMeta.errorReporter, null, myArendExtension, myResolveListener, this);
         checkTypeVisitor.setInstancePool(myInstancePool.copy(checkTypeVisitor));
@@ -2263,20 +2263,19 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     Sort sort = Sort.generateInferVars(myEquations, false, sourceNode);
     InferenceVariable inferenceVariable = new LambdaInferenceVariable(name == null ? "_" : "type-of-" + name, new UniverseExpression(sort), param.getReferable(), false, sourceNode, getAllBindings());
     Expression argType = InferenceReferenceExpression.make(inferenceVariable, myEquations);
-
-    TypedSingleDependentLink link = new TypedSingleDependentLink(param.isExplicit(), name, new TypeExpression(argType, sort));
+    TypedSingleDependentLink link = new TypedSingleDependentLink(param.isExplicit(), name, argType);
     addBinding(referable, link);
     return link;
   }
 
-  private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<Sort> sorts, Type expectedType) {
+  private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<Sort> sorts, Expression expectedType) {
     Type argResult = checkType(param.getType(), Type.OMEGA);
     if (argResult == null) return null;
     if (expectedType != null) {
-      Expression expected = expectedType.getExpr().normalize(NormalizationMode.WHNF).getUnderlyingExpression();
+      Expression expected = expectedType.normalize(NormalizationMode.WHNF).getUnderlyingExpression();
       if ((expected instanceof ClassCallExpression || expected instanceof PiExpression || expected instanceof SigmaExpression || expected instanceof UniverseExpression)
           && expected.isLessOrEquals(argResult.getExpr(), myEquations, param)) {
-        argResult = expectedType;
+        argResult = expectedType instanceof Type ? (Type) expectedType : new TypeExpression(expectedType, argResult.getSortOfType());
       }
     }
     if (sorts != null) {
@@ -2285,30 +2284,31 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     if (param instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = param.getReferableList();
-      SingleDependentLink link = ExpressionFactory.singleParams(param.isExplicit(), param.getNames(), argResult);
+      SingleDependentLink link = ExpressionFactory.singleParams(param.isExplicit(), param.getNames(), argResult.getExpr());
       int i = 0;
       for (SingleDependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i) , link1);
       }
       return link;
     } else {
-      return new TypedSingleDependentLink(param.isExplicit(), null, argResult);
+      return new TypedSingleDependentLink(param.isExplicit(), null, argResult.getExpr());
     }
   }
 
   private boolean visitParameter(Concrete.Parameter arg, Expression expectedType, List<Sort> resultSorts, LinkList list) {
     Type result = checkType(arg.getType(), expectedType == null ? Type.OMEGA : expectedType);
+    if (result == null) return false;
 
     if (arg instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = arg.getReferableList();
-      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), arg.getNames(), result);
+      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), arg.getNames(), result.getExpr());
       list.append(link);
       int i = 0;
       for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i), link1);
       }
     } else {
-      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), Collections.singletonList(null), result);
+      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), Collections.singletonList(null), result.getExpr());
       list.append(link);
       addBinding(null, link);
     }
@@ -2451,8 +2451,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
             errorReporter.report(new ImplicitLambdaError(referable, -1, param));
           }
 
-          Type paramType = piParam.getType();
-          DefCallExpression defCallParamType = paramType.getExpr().cast(DefCallExpression.class);
+          Expression paramType = piParam.getTypeExpr();
+          DefCallExpression defCallParamType = paramType.cast(DefCallExpression.class);
           if (defCallParamType != null && defCallParamType.getDefinition().getUniverseKind() == UniverseKind.NO_UNIVERSES) { // fixes test pLevelTest
             Definition definition = defCallParamType.getDefinition();
             Levels levels = definition instanceof DataDefinition || definition instanceof FunctionDefinition || definition instanceof ClassDefinition ? definition.generateInferVars(myEquations, false, param) : null;
@@ -2484,7 +2484,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
               if (definition instanceof DataDefinition) {
                 paramType = DataCallExpression.make((DataDefinition) definition, levels, new ArrayList<>(defCallParamType.getDefCallArguments()));
               } else if (definition instanceof FunctionDefinition) {
-                paramType = new TypeExpression(FunCallExpression.make((FunctionDefinition) definition, levels, new ArrayList<>(defCallParamType.getDefCallArguments())), paramType.getSortOfType());
+                paramType = FunCallExpression.make((FunctionDefinition) definition, levels, new ArrayList<>(defCallParamType.getDefCallArguments()));
               } else {
                 ClassCallExpression classCall = (ClassCallExpression) defCallParamType;
                 paramType = new ClassCallExpression((ClassDefinition) definition, levels, classCall.getImplementedHere(), classCall.getDefinition().computeSort(classCall.getImplementedHere(), classCall.getThisBinding()), classCall.getUniverseKind());
@@ -2498,7 +2498,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           return new Pair<>(bodyToLam(link, visitLam(parameters.subList(1, parameters.size()), expr, newProvider)), true);
         }
       } else if (param instanceof Concrete.TypeParameter) {
-        SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, piParam == null || piParam.isExplicit() != param.isExplicit() ? null : piParam.getType());
+        SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, piParam == null || piParam.isExplicit() != param.isExplicit() ? null : piParam.getTypeExpr());
         if (link == null) {
           return new Pair<>(null, true);
         }
@@ -2552,7 +2552,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
                 prevLink = prevLink.getNext();
               }
               if (prevLink instanceof UntypedDependentLink) {
-                TypedSingleDependentLink lastLink = new TypedSingleDependentLink(prevLink.isExplicit(), prevLink.getName(), actualLink.getType(), prevLink.isHidden());
+                TypedSingleDependentLink lastLink = new TypedSingleDependentLink(prevLink.isExplicit(), prevLink.getName(), actualLink.getTypeExpr(), prevLink.isHidden());
                 if (prevLink == link) {
                   link = lastLink;
                 } else {
@@ -2697,14 +2697,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
     if (arg instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = arg.getReferableList();
-      DependentLink link = ExpressionFactory.parameter(true, isProp, arg.getNames(), result);
+      DependentLink link = ExpressionFactory.parameter(true, isProp, arg.getNames(), result.getExpr());
       list.append(link);
       int i = 0;
       for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i), link1);
       }
     } else {
-      DependentLink link = ExpressionFactory.parameter(true, isProp, Collections.singletonList(null), result);
+      DependentLink link = ExpressionFactory.parameter(true, isProp, Collections.singletonList(null), result.getExpr());
       list.append(link);
       addBinding(null, link);
     }
@@ -2800,7 +2800,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         return null;
       }
       sorts.add(sort);
-      list.append(ExpressionFactory.parameter(null, result.type instanceof Type ? (Type) result.type : new TypeExpression(result.type, sort)));
+      list.append(ExpressionFactory.parameter(null, result.type));
     }
 
     SigmaExpression type = new SigmaExpression(Sort.max(sorts), list.getFirst());
@@ -3397,7 +3397,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         return null;
       }
 
-      Type type;
+      Expression type;
       IntegerExpression intExpr = arg2.expression.cast(IntegerExpression.class);
       ConCallExpression conCall = arg2.expression.cast(ConCallExpression.class);
       if (intExpr != null && !intExpr.isZero() || conCall != null && conCall.getDefinition() == Prelude.SUC) {
@@ -3410,7 +3410,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       if (!isMod) {
         type = ExpressionFactory.divModType(type);
       }
-      return checkResult(expectedType, new TypecheckingResult(FunCallExpression.make(isMod ? Prelude.MOD : Prelude.DIV_MOD, Levels.EMPTY, Arrays.asList(arg1.expression, arg2.expression)), type.getExpr()), expr);
+      return checkResult(expectedType, new TypecheckingResult(FunCallExpression.make(isMod ? Prelude.MOD : Prelude.DIV_MOD, Levels.EMPTY, Arrays.asList(arg1.expression, arg2.expression)), type), expr);
     }
 
     if (expectedType != null && (definition == Prelude.ARRAY_AT && expr.getNumberOfExplicitArguments() == 0 || definition == Prelude.ARRAY_INDEX && expr.getNumberOfExplicitArguments() == 1 || definition == Prelude.ARRAY_CONS && expr.getNumberOfExplicitArguments() == 2)) {
@@ -4040,7 +4040,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           exprResult.type = checkedSubst(exprResult.type, elimSubst, allowedBindings, caseArg.expression);
         }
         Referable asRef = caseArg.isElim ? ((Concrete.ReferenceExpression) caseArg.expression).getReferent() : caseArg.referable;
-        DependentLink link = ExpressionFactory.parameter(asRef == null ? null : asRef.textRepresentation(), argType != null ? argType : exprResult.type instanceof Type ? (Type) exprResult.type : new TypeExpression(exprResult.type, getSortOfType(exprResult.type, expr)));
+        DependentLink link = ExpressionFactory.parameter(asRef == null ? null : asRef.textRepresentation(), argType != null ? argType.getExpr() : exprResult.type);
         list.append(link);
         if (caseArg.isElim) {
           if (argTypeExpr != null) {

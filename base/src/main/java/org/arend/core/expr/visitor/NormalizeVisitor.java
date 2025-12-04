@@ -950,7 +950,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     DependentLink link = DependentLink.Helper.subst(parameters, substitution);
     for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext()) {
       link1 = link1.getNextTyped(null);
-      link1.setType(link1.getType().normalize(mode));
+      link1.setType(link1.getTypeExpr().normalize(mode));
     }
     return link;
   }
@@ -959,7 +959,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     SingleDependentLink link = DependentLink.Helper.subst(parameters, substitution);
     for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext()) {
       link1 = link1.getNextTyped(null);
-      link1.setType(link1.getType().normalize(mode));
+      link1.setType(link1.getTypeExpr().normalize(mode));
     }
     return link;
   }

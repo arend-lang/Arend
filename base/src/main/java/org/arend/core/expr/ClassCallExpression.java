@@ -7,7 +7,6 @@ import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.core.expr.visitor.NormalizeVisitor;
@@ -47,11 +46,6 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
     @NotNull
     @Override
     public ClassCallExpression getTypeExpr() {
-      return ClassCallExpression.this;
-    }
-
-    @Override
-    public Type getType() {
       return ClassCallExpression.this;
     }
 
@@ -447,7 +441,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
         }
       }, null);
 
-      DependentLink link = new TypedDependentLink(true, Renamer.getNameFromType(type, field.getName()), type instanceof Type ? (Type) type : new TypeExpression(type, piExpr.getSortOfType()), EmptyDependentLink.getInstance());
+      DependentLink link = new TypedDependentLink(true, Renamer.getNameFromType(type, field.getName()), type, EmptyDependentLink.getInstance());
       implementations.put(field, new ReferenceExpression(link));
       list.append(link);
     }

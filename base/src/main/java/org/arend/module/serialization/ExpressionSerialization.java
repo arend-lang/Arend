@@ -134,7 +134,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     tBuilder.addAllName(fixedNames);
     tBuilder.setIsNotExplicit(!typed.isExplicit());
     tBuilder.setIsHidden(typed.isHidden());
-    tBuilder.setType(writeType(typed.getType()));
+    tBuilder.setType(writeExpr(typed.getTypeExpr()));
     tBuilder.setIsProperty(typed.isProperty());
     for (; link != typed; link = link.getNext()) {
       registerBinding(link);
@@ -150,7 +150,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     }
     builder.setIsNotExplicit(!link.isExplicit());
     if (link instanceof TypedDependentLink) {
-      builder.setType(writeType(link.getType()));
+      builder.setType(writeExpr(link.getTypeExpr()));
     }
     builder.setIsHidden(link.isHidden());
     registerBinding(link);

@@ -233,7 +233,7 @@ abstract class AbstractGenerateFunctionIntention : BaseIntentionAction() {
                 collector.add(SmartList(binding) to explicitness)
             } else {
                 val lastEntry = collector.last()
-                if (lastEntry.first.first().type == binding.type) {
+                if (lastEntry.first.first().typeExpr == binding.typeExpr) {
                     lastEntry.first.add(binding)
                 } else {
                     collector.add(SmartList(binding) to explicitness)

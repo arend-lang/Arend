@@ -10,8 +10,6 @@ import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
 import org.arend.core.expr.let.LetClause;
 import org.arend.core.expr.let.NameLetClausePattern;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
@@ -90,19 +88,19 @@ public class ExpressionFactory {
   }
 
   public static DependentLink param(String var, Expression type) {
-    return new TypedDependentLink(true, var, new TypeExpression(type, Sort.SET0), EmptyDependentLink.getInstance());
+    return new TypedDependentLink(true, var, type, EmptyDependentLink.getInstance());
   }
 
   public static DependentLink paramExpr(@SuppressWarnings("SameParameterValue") String var, Expression type) {
-    return new TypedDependentLink(true, var, new TypeExpression(type, Sort.SET0), EmptyDependentLink.getInstance());
+    return new TypedDependentLink(true, var, type, EmptyDependentLink.getInstance());
   }
 
   public static DependentLink paramExpr(Expression type) {
-    return new TypedDependentLink(true, null, new TypeExpression(type, Sort.SET0), EmptyDependentLink.getInstance());
+    return new TypedDependentLink(true, null, type, EmptyDependentLink.getInstance());
   }
 
   public static TypedSingleDependentLink singleParam(boolean explicit, String name, Expression type) {
-    return new TypedSingleDependentLink(explicit, name, type instanceof Type ? (Type) type : new TypeExpression(type, Sort.SET0));
+    return new TypedSingleDependentLink(explicit, name, type);
   }
 
   public static TypedSingleDependentLink singleParam(String name, Expression type) {
@@ -110,7 +108,7 @@ public class ExpressionFactory {
   }
 
   public static SingleDependentLink singleParam(boolean explicit, List<String> names, Expression type) {
-    return org.arend.core.expr.ExpressionFactory.singleParams(explicit, names, type instanceof Type ? (Type) type : new TypeExpression(type, Sort.SET0));
+    return org.arend.core.expr.ExpressionFactory.singleParams(explicit, names, type);
   }
 
   public static PiExpression Pi(SingleDependentLink domain, Expression codomain) {
@@ -124,10 +122,6 @@ public class ExpressionFactory {
 
   public static PiExpression Pi(boolean isExplicit, Expression domain, Expression codomain) {
     return new PiExpression(singleParam(isExplicit, (String) null, domain), codomain);
-  }
-
-  public static TypeExpression PiType(Expression domain, Expression codomain) {
-    return new TypeExpression(new PiExpression(singleParam(null, domain), codomain), PiExpression.piSort(domain.getSortOfType(), codomain.getSortOfType()));
   }
 
   public static UniverseExpression Universe(int pLevel) {

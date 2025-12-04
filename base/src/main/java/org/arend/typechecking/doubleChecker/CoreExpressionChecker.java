@@ -434,8 +434,11 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     freeDependentLink(expr.getParameters());
 
     for (DependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
-      if (param.isProperty() && !param.getType().getSortOfType().isProp()) {
-        throw new CoreException(CoreErrorWrapper.make(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, param.getType().getSortOfType(), mySourceNode), expr));
+      if (param.isProperty()) {
+        Sort paramSort = param.getTypeExpr().getSortOfType();
+        if (!paramSort.isProp()) {
+          throw new CoreException(CoreErrorWrapper.make(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, paramSort, mySourceNode), expr));
+        }
       }
     }
 

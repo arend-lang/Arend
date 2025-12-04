@@ -322,7 +322,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
   public Expression visitPi(PiExpression expr, Void params) {
     Sort sort1 = expr.getParameters().getTypeExpr().accept(this, null).toSort();
     Sort sort2 = expr.getCodomain().accept(this, null).toSort();
-    return sort2 == null ? new ErrorExpression() : new UniverseExpression(PiExpression.piSort(sort1 == null ? expr.getParameters().getType().getSortOfType() : sort1, sort2));
+    return sort1 == null || sort2 == null ? new ErrorExpression() : new UniverseExpression(PiExpression.piSort(sort1, sort2));
   }
 
   @Override

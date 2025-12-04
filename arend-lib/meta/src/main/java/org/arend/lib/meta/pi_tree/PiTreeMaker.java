@@ -137,7 +137,7 @@ public class PiTreeMaker {
     for (int i = 0; i < parameters.size(); i++) {
       CoreParameter parameter = parameters.get(i);
       ArendRef ref = factory.local("x" + (i + 1));
-      lamParams.add(factory.param(true, Collections.singletonList(ref), factory.core(parameter.getTypedType())));
+      lamParams.add(factory.param(true, Collections.singletonList(ref), factory.core(parameter.getTypeExpr().computeTyped())));
       substitution.add(new SubstitutionPair(parameter.getBinding(), factory.ref(ref)));
       substBindings.add(parameter.getBinding());
     }

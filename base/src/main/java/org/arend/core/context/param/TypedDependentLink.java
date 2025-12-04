@@ -1,7 +1,7 @@
 package org.arend.core.context.param;
 
+import org.arend.core.expr.Expression;
 import org.arend.core.expr.ReferenceExpression;
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.subst.InPlaceLevelSubstVisitor;
 import org.arend.core.subst.SubstVisitor;
@@ -12,11 +12,11 @@ import java.util.List;
 public class TypedDependentLink implements DependentLink {
   private boolean myExplicit;
   private String myName;
-  private Type myType;
+  private Expression myType;
   private DependentLink myNext;
   private final boolean myHidden;
 
-  public TypedDependentLink(boolean isExplicit, String name, Type type, boolean isHidden, DependentLink next) {
+  public TypedDependentLink(boolean isExplicit, String name, Expression type, boolean isHidden, DependentLink next) {
     assert next != null;
     myExplicit = isExplicit;
     myName = name;
@@ -25,13 +25,8 @@ public class TypedDependentLink implements DependentLink {
     myHidden = isHidden;
   }
 
-  public TypedDependentLink(boolean isExplicit, String name, Type type, DependentLink next) {
-    assert next != null;
-    myExplicit = isExplicit;
-    myName = name;
-    myType = type;
-    myNext = next;
-    myHidden = false;
+  public TypedDependentLink(boolean isExplicit, String name, Expression type, DependentLink next) {
+    this(isExplicit, name, type, false, next);
   }
 
   @Override
@@ -50,7 +45,7 @@ public class TypedDependentLink implements DependentLink {
   }
 
   @Override
-  public void setType(Type type) {
+  public void setType(Expression type) {
     myType = type;
   }
 
@@ -76,14 +71,14 @@ public class TypedDependentLink implements DependentLink {
   }
 
   @Override
-  public Type getType() {
+  public @NotNull Expression getTypeExpr() {
     return myType;
   }
 
   @Override
   public DependentLink subst(SubstVisitor substVisitor, int size, boolean updateSubst) {
     if (size > 0) {
-      TypedDependentLink result = new TypedDependentLink(myExplicit, myName, myType.subst(substVisitor), myHidden, EmptyDependentLink.getInstance());
+      TypedDependentLink result = new TypedDependentLink(myExplicit, myName, myType.accept(substVisitor, null), myHidden, EmptyDependentLink.getInstance());
       if (updateSubst) {
         substVisitor.getExprSubstitution().addSubst(this, new ReferenceExpression(result));
       } else {
@@ -111,12 +106,12 @@ public class TypedDependentLink implements DependentLink {
 
   @Override
   public void strip(StripVisitor stripVisitor) {
-    myType = myType.strip(stripVisitor);
+    myType = myType.accept(stripVisitor, null);
   }
 
   @Override
   public void subst(InPlaceLevelSubstVisitor substVisitor) {
-    myType.subst(substVisitor);
+    myType.accept(substVisitor, null);
   }
 
   @Override
