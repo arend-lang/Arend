@@ -813,7 +813,7 @@ public class TwoStageEquations implements Equations {
                 }
               }
               if (ok) {
-                implementations.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(solution.getThisBinding())))), expr, minClassCall.getSort()));
+                implementations.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(solution.getThisBinding())))), expr, minClassCall.getLevels().toLevelPair().toSort().succ()));
               }
             }
           }

@@ -74,7 +74,7 @@ public class DConstructor extends FunctionDefinition {
     Expression newElementsType = elementsType.subst(thisBinding, new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, levels, impls, Sort.STD.succ(), UniverseKind.ONLY_COVARIANT)));
     TypedSingleDependentLink lamParam = new TypedSingleDependentLink(true, "j", DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(natRef)));
     Sort sort = levels.toSort();
-    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(lamParam, AppExpression.make(newElementsType, Suc(new ReferenceExpression(lamParam)), true), sort));
+    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(lamParam, AppExpression.make(newElementsType, Suc(new ReferenceExpression(lamParam)), true), sort.succ()));
     nat.setNext(new TypedDependentLink(true, "a", new TypeExpression(AppExpression.make(newElementsType, Zero(), true), sort), new TypedDependentLink(true, "l", new ClassCallExpression(Prelude.DEP_ARRAY, levels, impls, Sort.STD, UniverseKind.NO_UNIVERSES), EmptyDependentLink.getInstance())));
     return nat;
   }

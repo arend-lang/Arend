@@ -103,10 +103,9 @@ public class DefCallResult implements TResult {
       return new TypecheckingResult(expression, resultType);
     }
 
-    Sort codSort = typechecker.getSortOfType(resultType, myDefCall);
-    Type type = resultType instanceof Type ? (Type) resultType : new TypeExpression(resultType, codSort);
+    Type type = resultType instanceof Type ? (Type) resultType : new TypeExpression(resultType, typechecker.getSortOfType(resultType, myDefCall));
     for (int i = parameters.size() - 1; i >= 0; i--) {
-      expression = new LamExpression(parameters.get(i), expression, codSort);
+      expression = new LamExpression(parameters.get(i), expression, type.getSortOfType());
       type = new PiExpression(parameters.get(i), type);
     }
     return new TypecheckingResult(expression, type.getExpr());

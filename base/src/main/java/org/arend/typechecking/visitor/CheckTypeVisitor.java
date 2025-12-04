@@ -487,7 +487,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         if (length != null) {
           Map<ClassField, Expression> impls = new LinkedHashMap<>();
           ClassCallExpression resultClassCall = new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), impls, Sort.PROP, UniverseKind.NO_UNIVERSES);
-          Expression elementsType = piExpr.getParameters().getNext().hasNext() ? new LamExpression(DependentLink.Helper.take(piExpr.getParameters(), 1), new PiExpression(piExpr.getParameters().getNext(), piExpr.getCodomainType()), piExpr.getCodomainType().getSortOfType()) : new LamExpression(piExpr.getParameters(), piExpr.getCodomain(), piExpr.getCodomainType().getSortOfType());
+          Expression elementsType;
+          if (piExpr.getParameters().getNext().hasNext()) {
+            PiExpression newPi = new PiExpression(piExpr.getParameters().getNext(), piExpr.getCodomainType());
+            elementsType = new LamExpression(DependentLink.Helper.take(piExpr.getParameters(), 1), newPi, newPi.getSortOfType().succ());
+          } else {
+            elementsType = new LamExpression(piExpr.getParameters(), piExpr.getCodomain(), piExpr.getCodomainType().getSortOfType().succ());
+          }
           impls.put(Prelude.ARRAY_LENGTH, length);
           impls.put(Prelude.ARRAY_ELEMENTS_TYPE, elementsType);
           impls.put(Prelude.ARRAY_AT, result.expression);

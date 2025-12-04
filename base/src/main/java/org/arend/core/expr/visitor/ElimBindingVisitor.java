@@ -137,7 +137,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
             Expression type = entry.getValue().removeConstLam();
             Expression newType = type == null ? null : acceptSelf(type, true);
             if (newType != null) {
-              newFieldSet.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(result.getThisBinding())))), newType, expr.getSort()));
+              newFieldSet.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(result.getThisBinding())))), newType, expr.getLevels().toLevelPair().toSort().succ()));
             }
           }
           continue;

@@ -401,11 +401,12 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     } else {
       type = expr.getBody().accept(this, null);
     }
-    Sort sort = type.normalize(NormalizationMode.WHNF).getSortOfType();
+    Sort sort = type.normalize(NormalizationMode.WHNF).getType().toSort();
     if (sort == null) {
       throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot infer sort", mySourceNode), expr));
     }
     freeDependentLink(expr.getParameters());
+    compareSort(expr.getCodomainSort(), sort, expr.getBody());
     return check(expectedType, new PiExpression(expr.getParameters(), type instanceof Type ? (Type) type : new TypeExpression(type, sort)), expr);
   }
 
@@ -968,7 +969,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     }
     if (expr.getTail() != null) {
       TypedSingleDependentLink lamParam = new TypedSingleDependentLink(true, "j", DataCallExpression.make(Prelude.FIN, Levels.EMPTY, Collections.singletonList(tailLength)));
-      expr.getTail().accept(this, new ClassCallExpression(Prelude.DEP_ARRAY, expr.getLevels(), new SingletonMap<>(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(lamParam, AppExpression.make(expr.getElementsType(), Suc(new ReferenceExpression(lamParam)), true), sort)), Sort.STD, UniverseKind.NO_UNIVERSES));
+      expr.getTail().accept(this, new ClassCallExpression(Prelude.DEP_ARRAY, expr.getLevels(), new SingletonMap<>(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(lamParam, AppExpression.make(expr.getElementsType(), Suc(new ReferenceExpression(lamParam)), true), sort.succ())), Sort.STD, UniverseKind.NO_UNIVERSES));
     }
     return check(expectedType, expr.getType(), expr);
   }

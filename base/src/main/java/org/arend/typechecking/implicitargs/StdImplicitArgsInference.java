@@ -302,6 +302,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     }
 
     Sort sort = defCallResult.getLevels().toLevelPair().toSort();
+    Sort sort0 = sort.succ();
     Expression elementsType = null;
     if (index < arguments.size() && !arguments.get(index).isExplicit()) {
       TypecheckingResult result = myVisitor.checkExpr(arguments.get(index).expression, definition == Prelude.EMPTY_ARRAY ? new PiExpression(new TypedSingleDependentLink(true, null, Fin(Zero())), new UniverseExpression(sort)) : length == null ? null : new PiExpression(new TypedSingleDependentLink(true, null, Fin(Suc(length))), new UniverseExpression(sort)));
@@ -366,7 +367,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
           if (constType != null) {
             Map<ClassField, Expression> impls = new HashMap<>();
             argClassCall = new ClassCallExpression(Prelude.DEP_ARRAY, defCallResult.getLevels(), impls, Sort.STD, UniverseKind.NO_UNIVERSES);
-            impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, Fin(FieldCallExpression.make(Prelude.ARRAY_LENGTH, new ReferenceExpression(argClassCall.getThisBinding())))), constType, sort));
+            impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, Fin(FieldCallExpression.make(Prelude.ARRAY_LENGTH, new ReferenceExpression(argClassCall.getThisBinding())))), constType, sort0));
           }
         }
       }
@@ -401,7 +402,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
           if (length == null) length = FieldCallExpression.make(Prelude.ARRAY_LENGTH, result2.expression);
           result = result
             .applyExpression(length, false, myVisitor, fun)
-            .applyExpression(new LamExpression(new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(Suc(length)))), constType, sort), false, myVisitor, fun);
+            .applyExpression(new LamExpression(new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(Suc(length)))), constType, sort0), false, myVisitor, fun);
         }
       }
 
@@ -412,12 +413,12 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         if (var != null) {
           if (length == null) length = classCall == null ? null : classCall.getAbsImplementationHere(Prelude.ARRAY_LENGTH);
           if (length == null) length = FieldCallExpression.make(Prelude.ARRAY_LENGTH, result2.expression);
-          Expression actualElementsType = new LamExpression(new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(length))), result1.type, sort);
+          Expression actualElementsType = new LamExpression(new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(length))), result1.type, sort0);
           if (new CompareVisitor(myVisitor.getEquations(), CMP.LE, fun).normalizedCompare(actualElementsType, elementsType, null, false)) {
             checked = true;
             result = result
               .applyExpression(length, false, myVisitor, fun)
-              .applyExpression(new LamExpression(new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(Suc(length)))), result1.type, sort), false, myVisitor, fun);
+              .applyExpression(new LamExpression(new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(Suc(length)))), result1.type, sort0), false, myVisitor, fun);
           }
         }
 
@@ -432,7 +433,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
           Map<ClassField, Expression> impls = new LinkedHashMap<>();
           impls.put(Prelude.ARRAY_LENGTH, args.get(0));
           TypedSingleDependentLink lamParam = new TypedSingleDependentLink(true, "j", DataCallExpression.make(Prelude.FIN, Levels.EMPTY, new SingletonList<>(args.get(0))));
-          impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(lamParam, AppExpression.make(args.get(1), Suc(new ReferenceExpression(lamParam)), true), sort));
+          impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(lamParam, AppExpression.make(args.get(1), Suc(new ReferenceExpression(lamParam)), true), sort0));
           Expression expected2 = new ClassCallExpression(Prelude.DEP_ARRAY, defCallResult.getLevels(), impls, Sort.STD, UniverseKind.NO_UNIVERSES);
           if (!new CompareVisitor(myVisitor.getEquations(), CMP.LE, fun).normalizedCompare(result2.type, expected2, null, false)) {
             myVisitor.getErrorReporter().report(new TypeMismatchError(expected2, result2.type, arguments.get(index2).expression));
@@ -452,7 +453,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
           resultElementsType = resultElementsType.removeConstLam();
           if (resultElementsType != null) {
             resultClassCall.getImplementedHere().remove(Prelude.ARRAY_LENGTH);
-            resultClassCall.getImplementedHere().put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(resultClassCall.getThisBinding())))), resultElementsType, result2ClassCall.getSort()));
+            resultClassCall.getImplementedHere().put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(resultClassCall.getThisBinding())))), resultElementsType, result2ClassCall.getLevels().toLevelPair().toSort().succ()));
           }
         } else {
           resultClassCall.getImplementedHere().remove(Prelude.ARRAY_LENGTH);
@@ -473,14 +474,14 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
       } else {
         Map<ClassField, Expression> impls = new LinkedHashMap<>();
         impls.put(Prelude.ARRAY_LENGTH, length);
-        impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, Fin(length)), result1.type, sort));
+        impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, Fin(length)), result1.type, sort0));
         type = new ClassCallExpression(Prelude.DEP_ARRAY, defCallResult.getLevels(), impls, Sort.STD, UniverseKind.NO_UNIVERSES);
       }
 
       TypedSingleDependentLink lamParam = new TypedSingleDependentLink(true, "l", type);
       if (length == null) length = FieldCallExpression.make(Prelude.ARRAY_LENGTH, new ReferenceExpression(lamParam));
-      elementsType = new LamExpression(new TypedSingleDependentLink(true, null, Fin(Suc(length))), result1.type, sort);
-      Expression resultExpr = new LamExpression(lamParam, ArrayExpression.make(defCallResult.getLevels().toLevelPair(), elementsType, new SingletonList<>(result1.expression), new ReferenceExpression(lamParam)), sort);
+      elementsType = new LamExpression(new TypedSingleDependentLink(true, null, Fin(Suc(length))), result1.type, sort0);
+      Expression resultExpr = new LamExpression(lamParam, ArrayExpression.make(defCallResult.getLevels().toLevelPair(), elementsType, new SingletonList<>(result1.expression), new ReferenceExpression(lamParam)), sort0);
       return new TypecheckingResult(resultExpr, resultExpr.getType());
     } else if (index + 1 < index2) {
       arguments.subList(index + 1, index2).clear();

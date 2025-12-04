@@ -182,7 +182,7 @@ public class Prelude implements ArendPrelude {
         IDP.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
         PathExpression pathExpr = (PathExpression) IDP.getBody();
         assert pathExpr != null;
-        IDP.setBody(new PathExpression(pathExpr.getLevels(), new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst(), Sort.STD), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody(), Sort.STD)));
+        IDP.setBody(new PathExpression(pathExpr.getLevels(), new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst(), Sort.STD.succ()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody(), Sort.STD)));
       }
       case "@" -> {
         AT = (FunctionDefinition) definition;
