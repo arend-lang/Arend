@@ -123,7 +123,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     tBuilder.addAllName(fixedNames);
     tBuilder.setIsNotExplicit(!typed.isExplicit());
     tBuilder.setIsHidden(typed.isHidden());
-    tBuilder.setType(writeExpr(typed.getTypeExpr()));
+    tBuilder.setType(writeExpr(typed.getType()));
     tBuilder.setIsProperty(typed.isProperty());
     for (; link != typed; link = link.getNext()) {
       registerBinding(link);
@@ -139,7 +139,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     }
     builder.setIsNotExplicit(!link.isExplicit());
     if (link instanceof TypedDependentLink) {
-      builder.setType(writeExpr(link.getTypeExpr()));
+      builder.setType(writeExpr(link.getType()));
     }
     builder.setIsHidden(link.isHidden());
     registerBinding(link);
@@ -149,7 +149,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
   private ExpressionProtos.TypedBinding writeBinding(Binding binding) {
     ExpressionProtos.TypedBinding.Builder builder = ExpressionProtos.TypedBinding.newBuilder();
     builder.setName(binding.getName());
-    builder.setType(writeExpr(binding.getTypeExpr()));
+    builder.setType(writeExpr(binding.getType()));
     registerBinding(binding);
     return builder.build();
   }
@@ -185,7 +185,7 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
         ExpressionProtos.Pattern.ExpressionConstructor.ArrayData.Builder arrayDataBuilder = ExpressionProtos.Pattern.ExpressionConstructor.ArrayData.newBuilder();
         Boolean isEmpty = conPattern.isArrayEmpty();
         if (thisBinding instanceof ClassCallExpression.ClassCallBinding) {
-          arrayDataBuilder.setClassCall(writeClassCall(((ClassCallExpression.ClassCallBinding) thisBinding).getTypeExpr()));
+          arrayDataBuilder.setClassCall(writeClassCall(((ClassCallExpression.ClassCallBinding) thisBinding).getType()));
         } else {
           arrayDataBuilder.setThisBinding(registerBinding(thisBinding));
         }

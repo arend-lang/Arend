@@ -87,7 +87,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       DependentLink paramParam = ((SigmaExpression) paramType).getParameters();
       DependentLink argParam = ((SigmaExpression) argType).getParameters();
       while (paramParam.hasNext() && argParam.hasNext()) {
-        if (!matchArguments(paramParam.getTypeExpr(), argParam.getTypeExpr(), levelMap)) {
+        if (!matchArguments(paramParam.getType(), argParam.getType(), levelMap)) {
           return false;
         }
         paramParam = paramParam.getNext();
@@ -156,7 +156,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       DependentLink param = defCall.getDefinition().getParameters();
       List<? extends Expression> defCallArguments = defCall.getDefCallArguments();
       for (int i = 0; i < defCallArguments.size(); i++) {
-        ok = !defCall.getDefinition().isOmegaParameter(i) || matchArguments(param.getTypeExpr(), defCallArguments.get(i).accept(this, null), levelMap);
+        ok = !defCall.getDefinition().isOmegaParameter(i) || matchArguments(param.getType(), defCallArguments.get(i).accept(this, null), levelMap);
         if (!ok) break;
         param = param.getNext();
       }
@@ -300,7 +300,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
   @Override
   public Expression visitReference(ReferenceExpression expr, Void params) {
-    return expr.getBinding().getTypeExpr();
+    return expr.getBinding().getType();
   }
 
   @Override
@@ -320,7 +320,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
   @Override
   public Expression visitPi(PiExpression expr, Void params) {
-    Sort sort1 = expr.getParameters().getTypeExpr().accept(this, null).toSort();
+    Sort sort1 = expr.getParameters().getType().accept(this, null).toSort();
     Sort sort2 = expr.getCodomain().accept(this, null).toSort();
     return sort1 == null || sort2 == null ? new ErrorExpression() : new UniverseExpression(PiExpression.piSort(sort1, sort2));
   }
@@ -330,7 +330,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     Sort maxSort = Sort.PROP;
     for (DependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
       param = param.getNextTyped(null);
-      Sort sort = param.getTypeExpr().accept(this, null).toSort();
+      Sort sort = param.getType().accept(this, null).toSort();
       maxSort = sort == null ? null : maxSort.max(sort);
       if (maxSort == null) {
         break;
@@ -368,7 +368,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
     DependentLink params = ((SigmaExpression) type).getParameters();
     if (expr.getField() == 0) {
-      return params.getTypeExpr();
+      return params.getType();
     }
 
     ExprSubstitution subst = new ExprSubstitution();
@@ -376,7 +376,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       subst.add(params, ProjExpression.make(expr.getExpression(), i, params.isProperty()));
       params = params.getNext();
     }
-    return params.getTypeExpr().subst(subst);
+    return params.getType().subst(subst);
   }
 
   @Override

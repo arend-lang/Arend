@@ -193,12 +193,12 @@ public class FixLevelParameters extends VoidExpressionVisitor<Void> {
     def.getSuperLevels().entrySet().removeIf(entry -> entry.getValue().compare(idLevels, CMP.EQ, DummyEquations.getInstance(), null));
     for (Map.Entry<ClassField, AbsExpression> entry : def.getImplemented()) {
       if (entry.getValue().getBinding() != null) {
-        entry.getValue().getBinding().getTypeExpr().accept(this, null);
+        entry.getValue().getBinding().getType().accept(this, null);
       }
     }
     for (Map.Entry<ClassField, Pair<AbsExpression, Boolean>> entry : def.getDefaults()) {
       if (entry.getValue().proj1.getBinding() != null) {
-        entry.getValue().proj1.getBinding().getTypeExpr().accept(this, null);
+        entry.getValue().proj1.getBinding().getType().accept(this, null);
       }
     }
     return super.visitClass(def, params);

@@ -234,7 +234,7 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
     LetExpression body = (LetExpression) Objects.requireNonNull(((FunctionDefinition) getDefinition("test")).getBody());
     var let = body.getExpression();
     var concrete = ToAbstractVisitor.convert(let, PrettyPrinterConfig.DEFAULT);
-    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().getFirst().getTypeExpr())), concrete, let.getType(), 0);
+    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().getFirst().getType())), concrete, let.getType(), 0);
   }
 
   @Test
@@ -244,7 +244,7 @@ public class TypeCheckingTest extends TypeCheckingTestCase {
     LetExpression body = (LetExpression) Objects.requireNonNull(((FunctionDefinition) getDefinition("test")).getBody());
     var let = body.getExpression();
     var concrete = ToAbstractVisitor.convert(let, PrettyPrinterConfig.DEFAULT);
-    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().getFirst().getTypeExpr())), concrete, let.getType(), 0);
+    typeCheckExpr(Map.of(Objects.requireNonNull(((Concrete.LongReferenceExpression) concrete).getQualifier()).getReferent(), new TypedBinding("ccl", body.getClauses().getFirst().getType())), concrete, let.getType(), 0);
   }
 
   @Test

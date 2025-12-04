@@ -121,14 +121,14 @@ public class GlobalInstancePool implements InstancePool {
       DependentLink inferredParams = ((SigmaExpression) inferredExpr).getParameters();
       if (DependentLink.Helper.size(instanceParams) != DependentLink.Helper.size(inferredParams)) return false;
       for (; instanceParams.hasNext(); instanceParams = instanceParams.getNext(), inferredParams = inferredParams.getNext()) {
-        if (!compareClassifying(instanceParams.getTypeExpr(), inferredParams.getTypeExpr(), false)) return false;
+        if (!compareClassifying(instanceParams.getType(), inferredParams.getType(), false)) return false;
       }
       return true;
     } else if (instanceExpr instanceof PiExpression instancePi) {
       if (!(inferredExpr instanceof PiExpression inferredPi)) return false;
       if (DependentLink.Helper.size(instancePi.getParameters()) != DependentLink.Helper.size(inferredPi.getParameters())) return false;
       for (DependentLink instanceParams = instancePi.getParameters(), inferredParams = inferredPi.getParameters(); instanceParams.hasNext(); instanceParams = instanceParams.getNext(), inferredParams = inferredParams.getNext()) {
-        if (!compareClassifying(instanceParams.getTypeExpr(), inferredParams.getTypeExpr(), false)) return false;
+        if (!compareClassifying(instanceParams.getType(), inferredParams.getType(), false)) return false;
       }
       return compareClassifying(instancePi.getCodomain(), inferredPi.getCodomain(), false);
     } else if (instanceExpr instanceof IntegerExpression instanceIntExpr) {

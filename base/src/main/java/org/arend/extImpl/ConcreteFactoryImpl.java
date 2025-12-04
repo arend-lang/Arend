@@ -78,7 +78,7 @@ public class ConcreteFactoryImpl implements ConcreteFactory {
     if (!(ref instanceof Binding)) {
       throw new IllegalArgumentException();
     }
-    return new Concrete.ReferenceExpression(myData, new CoreReferable(ref.getName(), new TypecheckingResult(new ReferenceExpression((Binding) ref), ((Binding) ref).getTypeExpr())));
+    return new Concrete.ReferenceExpression(myData, new CoreReferable(ref.getName(), new TypecheckingResult(new ReferenceExpression((Binding) ref), ((Binding) ref).getType())));
   }
 
   @NotNull

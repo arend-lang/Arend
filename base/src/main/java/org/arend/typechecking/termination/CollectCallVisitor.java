@@ -99,7 +99,7 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
           if (!(type instanceof SigmaExpression sigmaExpr)) return null;
           DependentLink param = DependentLink.Helper.get(sigmaExpr.getParameters(), sigmaEliminator.field);
           if (!param.hasNext()) return null;
-          type = param.getTypeExpr();
+          type = param.getType();
         }
         case PathEliminator ignored -> {
           if (type instanceof FunCallExpression funCall && funCall.getDefinition() == Prelude.PATH_INFIX) {
@@ -165,7 +165,7 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
       List<? extends ExpressionPattern> subPatterns = conPattern.getSubPatterns();
       for (ExpressionPattern arg : subPatterns) {
         if (!conParam.hasNext()) break;
-        Expression newExpr1 = conPattern.getConstructor() instanceof Constructor constructor ? removeArgsTyped(expr1, conParam.getTypeExpr(), constructor.getDataType()) : conPattern.isArray() ? expr1 : null;
+        Expression newExpr1 = conPattern.getConstructor() instanceof Constructor constructor ? removeArgsTyped(expr1, conParam.getType(), constructor.getDataType()) : conPattern.isArray() ? expr1 : null;
         if (newExpr1 != null && isLess(newExpr1, arg) != BaseCallMatrix.R.Unknown) return BaseCallMatrix.R.LessThan;
         conParam = conParam.getNext();
       }

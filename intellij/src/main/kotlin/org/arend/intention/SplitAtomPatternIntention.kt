@@ -37,9 +37,7 @@ import org.arend.quickfix.referenceResolve.ResolveReferenceAction
 import org.arend.refactoring.*
 import org.arend.refactoring.utils.ServerBasedDefinitionRenamer
 import org.arend.refactoring.utils.NumberSimplifyingConcreteVisitor
-import org.arend.server.ArendServer
 import org.arend.server.ArendServerService
-import org.arend.server.RawAnchor
 import org.arend.term.abs.Abstract
 import org.arend.term.concrete.Concrete
 import org.arend.term.concrete.LocalVariablesCollector
@@ -194,7 +192,7 @@ class SplitAtomPatternIntention : SelfTargetingIntention<PsiElement>(PsiElement:
                     if (concrete == null) return null
                     val patternPart = findPattern(indexList.drop(1), typecheckedPattern, concrete) as? BindingPattern
                             ?: return null
-                    return patternPart.binding.typeExpr
+                    return patternPart.binding.type
                 }
             }
         }

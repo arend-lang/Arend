@@ -81,7 +81,7 @@ public class DefCallResult implements TResult {
 
       names.add(link.getName());
       if (link instanceof TypedDependentLink) {
-        SingleDependentLink parameter = ExpressionFactory.singleParams(link.isExplicit(), names, link.getTypeExpr().subst(substitution));
+        SingleDependentLink parameter = ExpressionFactory.singleParams(link.isExplicit(), names, link.getType().subst(substitution));
         parameters.add(parameter);
         names.clear();
 

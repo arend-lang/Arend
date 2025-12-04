@@ -32,7 +32,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
         c(xyx), c(typeCheckExpr(xyx, pi).expression)
     );
     assertNotNull(link);
-    assertEquals("\\Type", link.getTypeExpr().toString());
+    assertEquals("\\Type", link.getType().toString());
   }
 
   @Test
@@ -44,7 +44,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
         c(xx), c(typeCheckExpr(xx, pi).expression)
     );
     assertNotNull(link);
-    assertEquals("\\Type", link.getTypeExpr().toString());
+    assertEquals("\\Type", link.getType().toString());
   }
 
   @Test
@@ -55,7 +55,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
         xyx, c(typeCheckExpr(xyx, null).expression)
     );
     assertNotNull(link);
-    assertEquals("A", link.getTypeExpr().toString());
+    assertEquals("A", link.getType().toString());
   }
 
   @Test
@@ -75,7 +75,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
         xyx.getClauses().getFirst().getParameters().getFirst().getReferableList().getFirst(),
         xyx, c(typeCheckExpr(xyx, null).expression));
     assertNotNull(let);
-    assertEquals("Nat", let.getTypeExpr().toString());
+    assertEquals("Nat", let.getType().toString());
   }
 
   @Test
@@ -88,7 +88,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
           xyx, c(sig)
       );
       assertNotNull(link);
-      assertEquals("\\Type", link.getTypeExpr().toString());
+      assertEquals("\\Type", link.getType().toString());
     }
     {
       DependentLink link = FindBinding.visitSigma(
@@ -96,7 +96,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
           xyx, c(sig)
       );
       assertNotNull(link);
-      assertEquals("A", link.getTypeExpr().toString());
+      assertEquals("A", link.getType().toString());
     }
   }
 
@@ -116,7 +116,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
           case_, c(core)
       );
       assertNotNull(link);
-      assertEquals("Nat", link.getTypeExpr().toString());
+      assertEquals("Nat", link.getType().toString());
       assertEquals("x", link.getName());
     }
     {
@@ -125,7 +125,7 @@ public class FindBindingTest extends TypeCheckingTestCase {
           case_, c(core)
       );
       assertNotNull(link);
-      assertEquals("Nat", link.getTypeExpr().toString());
+      assertEquals("Nat", link.getType().toString());
       assertEquals("a", link.getName());
     }
   }

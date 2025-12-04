@@ -19,10 +19,6 @@ public class ParametersLevel {
     this.level = level;
   }
 
-  public boolean isAlwaysApplicable() {
-    return parameters == null;
-  }
-
   public boolean checkExpressionsTypes(List<? extends Expression> exprList) {
     if (parameters == null) {
       return true;
@@ -32,7 +28,7 @@ public class ParametersLevel {
     ExprSubstitution substitution = new ExprSubstitution();
     for (Expression expr : exprList) {
       Expression type = expr.getType();
-      if (type == null || !CompareVisitor.compare(DummyEquations.getInstance(), CMP.LE, type, link.getTypeExpr().subst(substitution), Type.OMEGA, null)) {
+      if (type == null || !CompareVisitor.compare(DummyEquations.getInstance(), CMP.LE, type, link.getType().subst(substitution), Type.OMEGA, null)) {
         return false;
       }
       substitution.add(link, expr);

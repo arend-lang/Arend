@@ -15,7 +15,6 @@ import org.arend.core.expr.DefCallExpression
 import org.arend.core.expr.Expression
 import org.arend.core.expr.PiExpression
 import org.arend.core.expr.ReferenceExpression
-import org.arend.core.expr.type.TypeExpression
 import org.arend.ext.core.ops.NormalizationMode
 import org.arend.extImpl.UncheckedExpressionImpl
 import org.arend.psi.ArendFile
@@ -81,14 +80,14 @@ class GenerateFunctionFromGoalIntention : AbstractGenerateFunctionIntention() {
         val reverseSubstitution: MutableMap<Expression, Binding> = LinkedHashMap()
         for ((arg, isExplicit) in computeGoalArguments(goal, goalApplication)) {
             currentGoalType as PiExpression
-            val expectedType = currentGoalType.parameters.typeExpr
+            val expectedType = currentGoalType.parameters.type
             val typechecked = typechecker(arg.textRange)
             if (typechecked == null) {
-                customArguments.add(TypedSingleDependentLink(isExplicit, "_", TypeExpression(expectedType, null)))
+                customArguments.add(TypedSingleDependentLink(isExplicit, "_", expectedType))
             } else {
                 val contextElement = goal.parentOfType<ArendFunctionDefinition<*>>() ?: goal
                 val newBinding = TypedBinding(suggestParameterName(forbiddenNames, contextElement, expectedType), expectedType)
-                customArguments.add(TypedSingleDependentLink(isExplicit, newBinding.name, TypeExpression(expectedType, null)))
+                customArguments.add(TypedSingleDependentLink(isExplicit, newBinding.name, expectedType))
                 reverseSubstitution[typechecked] = newBinding
             }
             currentGoalType = currentGoalType.codomain

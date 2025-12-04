@@ -26,7 +26,7 @@ class FreeVariablesWithDependenciesCollector private constructor() : VoidExpress
                 .apply { expressions.forEach { it.accept(this, ParameterExplicitnessState.EXPLICIT) } }
                 .run {
                     val allImplicitBindings = freeBindings.mapNotNull { if (it.second == ParameterExplicitnessState.IMPLICIT) it.first else null }
-                    val classRefs = classReferences.filter { it.typeExpr !in recognizedClasses }.map { it to ParameterExplicitnessState.EXPLICIT }
+                    val classRefs = classReferences.filter { it.type !in recognizedClasses }.map { it to ParameterExplicitnessState.EXPLICIT }
                     freeBindings.removeIf { it.first in toRemove || (it.second == ParameterExplicitnessState.EXPLICIT && it.first in allImplicitBindings) }
                     classRefs + freeBindings.toList()
                 }
@@ -43,8 +43,8 @@ class FreeVariablesWithDependenciesCollector private constructor() : VoidExpress
             classReferences.add(currentBinding)
             return null
         }
-        currentBinding.typeExpr.normalize(NormalizationMode.RNF).accept(this, ParameterExplicitnessState.IMPLICIT)
-        val weakenedState = weakenState(state, currentBinding.typeExpr)
+        currentBinding.type.normalize(NormalizationMode.RNF).accept(this, ParameterExplicitnessState.IMPLICIT)
+        val weakenedState = weakenState(state, currentBinding.type)
         freeBindings.add(currentBinding to weakenedState)
         return null
     }

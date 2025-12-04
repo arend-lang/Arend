@@ -127,7 +127,7 @@ public class CongruenceMeta extends BaseMetaDefinition {
     CongruenceClosure<CoreExpression> congruenceClosure = new CongruenceClosure<>(typechecker, refExpr, eqProofs -> applyCongruence(typechecker, eqProofs, factory),
         new CongruenceClosure.EqualityIsEquivProof(factory.ref(typechecker.getPrelude().getIdpRef()), factory.ref(inv), factory.ref(concat)), factory);
     for (CoreBinding binding : contextHelper.getAllBindings(typechecker)) {
-      CoreFunCallExpression equality = binding.getTypeExpr().toEquality();
+      CoreFunCallExpression equality = binding.getType().toEquality();
       if (equality != null) {
         congruenceClosure.addRelation(equality.getDefCallArguments().get(1), equality.getDefCallArguments().get(2), factory.ref(binding));
       }

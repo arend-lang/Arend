@@ -14,7 +14,7 @@ public class PersistentEvaluatingBinding extends NamedBinding implements Evaluat
   }
 
   @Override
-  public Expression getTypeExpr() {
+  public Expression getType() {
     return myExpression.getType();
   }
 

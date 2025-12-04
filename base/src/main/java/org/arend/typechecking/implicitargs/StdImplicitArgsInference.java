@@ -78,7 +78,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
       return null;
     }
 
-    ClassCallExpression type = link.getTypeExpr().cast(ClassCallExpression.class);
+    ClassCallExpression type = link.getType().cast(ClassCallExpression.class);
     return type != null ? type.getDefinition() : null;
   }
 
@@ -86,7 +86,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     ExprSubstitution substitution = new ExprSubstitution();
     int i = result instanceof DefCallResult ? ((DefCallResult) result).getArguments().size() : 0;
     for (DependentLink parameter : implicitParameters) {
-      Expression type = parameter.getTypeExpr().subst(substitution, LevelSubstitution.EMPTY);
+      Expression type = parameter.getType().subst(substitution, LevelSubstitution.EMPTY);
       InferenceVariable infVar = null;
 
       // If result is defCall, then try to infer class instances.
@@ -102,7 +102,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
               if (expr instanceof Concrete.LongReferenceExpression && i == 0 && ((Concrete.LongReferenceExpression) expr).getQualifier() != null) {
                 instanceResult = myVisitor.checkExpr(Objects.requireNonNull(((Concrete.LongReferenceExpression) expr).getQualifier()), type);
               } else {
-                instanceResult = instancePool.findInstance(null, defCallResult.getParameter().getTypeExpr(), new SubclassSearchParameters(classDef), expr, holeExpr, myVisitor.getDefinition());
+                instanceResult = instancePool.findInstance(null, defCallResult.getParameter().getType(), new SubclassSearchParameters(classDef), expr, holeExpr, myVisitor.getDefinition());
               }
               Expression instance;
               if (instanceResult == null) {
@@ -223,7 +223,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
       return fixImplicitArgs(result, Collections.singletonList(param), fun, false, arg instanceof RecursiveInstanceHoleExpression ? (RecursiveInstanceHoleExpression) arg : null);
     }
 
-    TypecheckingResult argResult = myVisitor.checkArgument(arg, param.hasNext() ? param.getTypeExpr() : null, result, null);
+    TypecheckingResult argResult = myVisitor.checkArgument(arg, param.hasNext() ? param.getType() : null, result, null);
     if (argResult == null) {
       return null;
     }
@@ -657,7 +657,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
             myVisitor.getErrorReporter().report(new ArgumentExplicitnessError(parameter.isExplicit(), argument.getExpression()));
             return null;
           }
-          InferenceVariable var = new ExpressionInferenceVariable(parameter.getTypeExpr(), argument.getExpression(), myVisitor.getAllBindings(), false);
+          InferenceVariable var = new ExpressionInferenceVariable(parameter.getType(), argument.getExpression(), myVisitor.getAllBindings(), false);
           deferredArguments.put(current + numberOfImplicitArguments, new Pair<>(var, argument.getExpression()));
           result = result.applyExpression(new InferenceReferenceExpression(var), parameter.isExplicit(), myVisitor, fun);
           current++;

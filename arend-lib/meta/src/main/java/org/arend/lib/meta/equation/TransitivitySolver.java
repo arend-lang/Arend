@@ -217,7 +217,7 @@ public class TransitivitySolver implements EquationSolver {
     ValuesRelationClosure closure = new ValuesRelationClosure(values, new EquivalenceClosure<>(reflExpr, null, trans, factory));
     ContextHelper helper = new ContextHelper(hint);
     for (CoreBinding binding : helper.getAllBindings(typechecker)) {
-      RelationData relationData = RelationData.getRelationData(binding.getTypeExpr().normalize(NormalizationMode.WHNF));
+      RelationData relationData = RelationData.getRelationData(binding.getType().normalize(NormalizationMode.WHNF));
       if (relationData != null && (instanceDefinition == null || relationData.defCall.getDefinition() == instanceDefinition)) {
         closure.addRelation(relationData.leftExpr, relationData.rightExpr, factory.ref(binding));
       }

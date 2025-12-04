@@ -43,6 +43,6 @@ public interface FunctionMatcher {
         }
       }
     }
-    return new ExpressionFunctionMatcher(typechecker, factory, marker, expr.computeTyped(), ((CoreLamExpression) expr).getParameters().getTypeExpr(), numberOfArguments);
+    return new ExpressionFunctionMatcher(typechecker, factory, marker, expr.computeTyped(), ((CoreLamExpression) expr).getParameters().getType(), numberOfArguments);
   }
 }

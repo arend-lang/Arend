@@ -205,7 +205,7 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
       if (!parameters.hasNext()) {
         return null;
       }
-      Expression type = parameters.getTypeExpr();
+      Expression type = parameters.getType();
       return type instanceof ClassCallExpression ? ((ClassCallExpression) type).getDefinition() : null;
     } else {
       return null;

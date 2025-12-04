@@ -137,13 +137,13 @@ public class ContradictionMeta extends BaseMetaDefinition {
   private void makeNegationData(Deque<CoreParameter> parameters, CoreExpression codomain, NegationData negationData, List<NegationData> result) {
     while (!parameters.isEmpty()) {
       CoreParameter parameter = parameters.removeFirst();
-      CoreExpression type = Utils.unfoldType(parameter.getTypeExpr().normalize(NormalizationMode.WHNF));
+      CoreExpression type = Utils.unfoldType(parameter.getType().normalize(NormalizationMode.WHNF));
       List<CoreDataCallExpression.ConstructorWithDataArguments> constructors = isAppropriateDataCall(type) ? type.computeMatchedConstructorsWithDataArguments() : null;
       if (constructors != null) {
         boolean ok = codomain == null || !codomain.findFreeBinding(parameter.getBinding());
         if (ok) {
           for (CoreParameter param : parameters) {
-            if (param.getTypeExpr().findFreeBinding(parameter.getBinding())) {
+            if (param.getType().findFreeBinding(parameter.getBinding())) {
               ok = false;
               break;
             }
@@ -199,7 +199,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
 
     if (isEmpty(type)) {
       if (parameters.size() == 1) {
-        Triple triple = Triple.make(Utils.unfoldType(parameters.getFirst().getTypeExpr().normalize(NormalizationMode.WHNF)));
+        Triple triple = Triple.make(Utils.unfoldType(parameters.getFirst().getType().normalize(NormalizationMode.WHNF)));
         if (triple != null) {
           if (triple.fun.getDefinition().getRef().checkName(Names.LESS)) {
             CoreExpression argType = triple.fun.getArgument().computeType().normalize(NormalizationMode.WHNF);
@@ -398,7 +398,7 @@ public class ContradictionMeta extends BaseMetaDefinition {
       boolean searchForContradiction = negations.isEmpty() && transGraphs.isEmpty();
       List<Integer> conIndices = new ArrayList<>();
       for (CoreBinding binding : contextHelper.getAllBindings(typechecker)) {
-        type = Utils.unfoldType(binding.getTypeExpr().normalize(NormalizationMode.WHNF));
+        type = Utils.unfoldType(binding.getType().normalize(NormalizationMode.WHNF));
         List<CoreDataCallExpression.ConstructorWithDataArguments> constructors = isAppropriateDataCall(type) ? type.computeMatchedConstructorsWithDataArguments() : null;
         if (constructors != null && constructors.isEmpty()) {
           contr = factory.ref(binding);

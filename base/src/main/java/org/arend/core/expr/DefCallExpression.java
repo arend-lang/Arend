@@ -79,7 +79,7 @@ public abstract class DefCallExpression extends Expression implements CoreDefCal
       if (!param.hasNext()) break;
       Expression arg = args.get(i);
       if (param.isProperty()) {
-        args.set(i, BoxExpression.make(args.get(i), param.getTypeExpr().subst(substitution, levelSubst)));
+        args.set(i, BoxExpression.make(args.get(i), param.getType().subst(substitution, levelSubst)));
       }
       substitution.add(param, arg);
       param = param.getNext();

@@ -97,7 +97,7 @@ public class GivenMeta implements MetaDefinition {
         }
         int i = 0;
         for (ArendRef ref : paramRefList) {
-          sigmaRefs.add(ref != null ? ref : factory.local(typechecker.getVariableRenameFactory().getNameFromType(piParams.get(i % piParams.size()).getTypeExpr(), null)));
+          sigmaRefs.add(ref != null ? ref : factory.local(typechecker.getVariableRenameFactory().getNameFromType(piParams.get(i % piParams.size()).getType(), null)));
           i++;
         }
         if (sigmaRefs.size() % piParams.size() != 0) {
@@ -112,7 +112,7 @@ public class GivenMeta implements MetaDefinition {
           for (i = j; i < sigmaRefs.size(); i += piParams.size()) {
             curRef.add(sigmaRefs.get(i));
           }
-          ConcreteParameter varParam = produceParam(param.isExplicit(), curRef, factory.withData(cType.getData()).core(piParam.getTypeExpr().computeTyped()), null);
+          ConcreteParameter varParam = produceParam(param.isExplicit(), curRef, factory.withData(cType.getData()).core(piParam.getType().computeTyped()), null);
           sigmaParams.add(varParam);
           varParams.add(varParam);
           j++;

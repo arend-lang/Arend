@@ -167,7 +167,7 @@ public class LinearSolver {
   }
 
   private Hypothesis<CoreExpression> bindingToHypothesis(CoreBinding binding, boolean reportError) {
-    return binding == null ? null : typeToEquation(binding.getTypeExpr().normalize(NormalizationMode.WHNF), binding, reportError);
+    return binding == null ? null : typeToEquation(binding.getType().normalize(NormalizationMode.WHNF), binding, reportError);
   }
 
   private List<BigInteger> solveEquations(List<? extends Equation<CompiledTerm>> equations, int var) {

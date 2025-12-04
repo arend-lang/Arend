@@ -12,7 +12,7 @@ public class TypedHaveClause extends HaveClause {
   }
 
   @Override
-  public Expression getTypeExpr() {
-    return type == null || type instanceof ClassCallExpression ? super.getTypeExpr() : type;
+  public Expression getType() {
+    return type == null || type instanceof ClassCallExpression ? super.getType() : type;
   }
 }

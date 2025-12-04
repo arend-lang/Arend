@@ -211,7 +211,7 @@ public class CoerceData implements CoreCoerceData {
         if (def instanceof Constructor) {
           dataArgs = new ArrayList<>();
           for (DependentLink dataParams = ((Constructor) def).getDataTypeParameters(); dataParams.hasNext(); dataParams = dataParams.getNext(), index++) {
-            Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(def, link, index + 1, link.getTypeExpr(), sourceNode, visitor.getAllBindings()), visitor.getEquations());
+            Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(def, link, index + 1, link.getType(), sourceNode, visitor.getAllBindings()), visitor.getEquations());
             substitution.add(dataParams, arg);
             dataArgs.add(arg);
             index++;
@@ -221,7 +221,7 @@ public class CoerceData implements CoreCoerceData {
         while (true) {
           DependentLink next = link.getNext();
           if (next.hasNext()) {
-            Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(def, link, index + 1, link.getTypeExpr(), sourceNode, visitor.getAllBindings()), visitor.getEquations());
+            Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(def, link, index + 1, link.getType(), sourceNode, visitor.getAllBindings()), visitor.getEquations());
             substitution.add(link, arg);
             arguments.add(arg);
             link = next;
@@ -233,7 +233,7 @@ public class CoerceData implements CoreCoerceData {
         }
 
         Levels levels = def.generateInferVars(visitor.getEquations(), sourceNode);
-        if (!visitor.checkCoerceResult(link.getTypeExpr().subst(substitution, levels.makeSubstitution(def)), result, sourceNode, argStrict)) {
+        if (!visitor.checkCoerceResult(link.getType().subst(substitution, levels.makeSubstitution(def)), result, sourceNode, argStrict)) {
           if (argStrict) {
             return null;
           }
@@ -363,7 +363,7 @@ public class CoerceData implements CoreCoerceData {
       return;
     }
 
-    Key key = getKey(param.getTypeExpr());
+    Key key = getKey(param.getType());
     if (myMapFrom.putIfAbsent(key, Collections.singletonList(constructor)) == null) {
       addTransitiveClosureFrom(key, constructor);
     } else if (errorReporter != null) {

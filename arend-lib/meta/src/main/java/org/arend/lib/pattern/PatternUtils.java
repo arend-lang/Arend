@@ -309,7 +309,7 @@ public class PatternUtils {
       }
 
       @Override
-      public CoreExpression getTypeExpr() {
+      public CoreExpression getType() {
         return type;
       }
 
@@ -355,7 +355,7 @@ public class PatternUtils {
       }
 
       List<Pair<CoreDefinition, CoreParameter>> consWithParams;
-      CoreExpression type = pattern.getBinding().getTypeExpr();
+      CoreExpression type = pattern.getBinding().getType();
       if (type != null) type = type.unfoldType();
       if (type instanceof CoreSigmaExpression sigmaExpr) {
         consWithParams = Collections.singletonList(new Pair<>(null, sigmaExpr.getParameters()));
@@ -387,7 +387,7 @@ public class PatternUtils {
       for (Pair<CoreDefinition, CoreParameter> pair : consWithParams) {
         List<CorePattern> newRow = new ArrayList<>();
         for (CoreParameter param = pair.proj2; param.hasNext(); param = param.getNext()) {
-          newRow.add(new ArendPattern(new MyBinding(param.getTypeExpr()), null, Collections.emptyList(), null, null));
+          newRow.add(new ArendPattern(new MyBinding(param.getType()), null, Collections.emptyList(), null, null));
         }
         newRow.addAll(rowTail);
 

@@ -744,7 +744,7 @@ public class DynamicTest extends TypeCheckingTestCase {
     assertEquals(Ref(testFun.getParameters()), arg1.getDataTypeArguments().getFirst());
     assertEquals(foo, arg1.getDefinition());
 
-    Expression domFunction = arguments.getFirst().cast(LamExpression.class).getBody().cast(PiExpression.class).getParameters().getTypeExpr().normalize(NormalizationMode.WHNF);
+    Expression domFunction = arguments.getFirst().cast(LamExpression.class).getBody().cast(PiExpression.class).getParameters().getType().normalize(NormalizationMode.WHNF);
     assertEquals(Prelude.PATH, domFunction.cast(DataCallExpression.class).getDefinition());
     List<? extends Expression> domArguments = domFunction.cast(DataCallExpression.class).getDefCallArguments();
     assertEquals(3, domArguments.size());
@@ -765,7 +765,7 @@ public class DynamicTest extends TypeCheckingTestCase {
       """);
     FunctionDefinition testFun = (FunctionDefinition) getDefinition("test");
     Expression xCall = FieldCall((ClassField) getDefinition("A.x"), Ref(testFun.getParameters()));
-    Expression function = testFun.getResultType().cast(PiExpression.class).getParameters().getTypeExpr().normalize(NormalizationMode.NF);
+    Expression function = testFun.getResultType().cast(PiExpression.class).getParameters().getType().normalize(NormalizationMode.NF);
     assertEquals(Prelude.PATH, function.cast(DataCallExpression.class).getDefinition());
     List<? extends Expression> arguments = function.cast(DataCallExpression.class).getDefCallArguments();
     assertEquals(3, arguments.size());

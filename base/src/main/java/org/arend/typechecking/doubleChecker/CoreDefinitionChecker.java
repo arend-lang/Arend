@@ -159,9 +159,9 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
           return false;
         }
 
-        DataCallExpression dataCall = link.getTypeExpr().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
+        DataCallExpression dataCall = link.getType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
         if (!(dataCall != null && dataCall.getDefinition() == Prelude.INTERVAL)) {
-          errorReporter.report(new TypeMismatchError(DataCallExpression.make(Prelude.INTERVAL, Levels.EMPTY, Collections.emptyList()), link.getTypeExpr(), null));
+          errorReporter.report(new TypeMismatchError(DataCallExpression.make(Prelude.INTERVAL, Levels.EMPTY, Collections.emptyList()), link.getType(), null));
           return false;
         }
 

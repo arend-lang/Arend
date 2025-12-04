@@ -198,7 +198,7 @@ public abstract class SearchVisitor<P> extends BaseExpressionVisitor<P, Boolean>
   protected boolean visitDependentLink(DependentLink link, P param) {
     for (; link.hasNext(); link = link.getNext()) {
       link = link.getNextTyped(null);
-      if (link.getTypeExpr().accept(this, param)) {
+      if (link.getType().accept(this, param)) {
         return true;
       }
     }

@@ -21,7 +21,7 @@ public class PropertyTypedDependentLink extends TypedDependentLink {
   @Override
   public DependentLink subst(SubstVisitor substVisitor, int size, boolean updateSubst) {
     if (size > 0) {
-      TypedDependentLink result = new PropertyTypedDependentLink(isExplicit(), getName(), getTypeExpr().accept(substVisitor, null), EmptyDependentLink.getInstance());
+      TypedDependentLink result = new PropertyTypedDependentLink(isExplicit(), getName(), getType().accept(substVisitor, null), EmptyDependentLink.getInstance());
       if (updateSubst) {
         substVisitor.getExprSubstitution().addSubst(this, new ReferenceExpression(result));
       } else {

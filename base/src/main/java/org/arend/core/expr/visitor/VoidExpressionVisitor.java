@@ -94,7 +94,7 @@ public class VoidExpressionVisitor<P> extends BaseExpressionVisitor<P,Void> impl
   public void visitParameters(DependentLink link, P params) {
     for (; link.hasNext(); link = link.getNext()) {
       link = link.getNextTyped(null);
-      link.getTypeExpr().accept(this, params);
+      link.getType().accept(this, params);
     }
   }
 

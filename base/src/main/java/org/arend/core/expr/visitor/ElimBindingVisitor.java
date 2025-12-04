@@ -323,7 +323,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
   private boolean visitDependentLink(DependentLink parameters) {
     for (DependentLink link = parameters; link.hasNext(); link = link.getNext()) {
       DependentLink link1 = link.getNextTyped(null);
-      Expression type = acceptSelf(link1.getTypeExpr(), true);
+      Expression type = acceptSelf(link1.getType(), true);
       if (type == null) {
         if (myKeepVisitor != null) {
           for (; parameters != link; parameters = parameters.getNext()) {

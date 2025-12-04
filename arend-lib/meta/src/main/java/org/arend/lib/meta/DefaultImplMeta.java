@@ -73,7 +73,7 @@ public class DefaultImplMeta extends BaseMetaDefinition {
     ConcreteFactory factory = contextData.getFactory();
     if (arg == null) {
       CoreBinding binding = typechecker.getThisBinding();
-      arg = binding != null && binding.getTypeExpr() instanceof CoreClassCallExpression classCall && classCall.getDefinition().isSubClassOf(classDef) ? factory.ref(binding) : factory.hole();
+      arg = binding != null && binding.getType() instanceof CoreClassCallExpression classCall && classCall.getDefinition().isSubClassOf(classDef) ? factory.ref(binding) : factory.hole();
     }
     CoreExpression result = typechecker.substitute(expr.getExpression(), LevelSubstitution.EMPTY, Collections.singletonList(new SubstitutionPair(expr.getBinding(), arg)));
     return result == null ? null : args.size() <= 3 ? result.computeTyped() : typechecker.typecheck(factory.app(factory.core(result.computeTyped()), args.subList(3, args.size())), contextData.getExpectedType());

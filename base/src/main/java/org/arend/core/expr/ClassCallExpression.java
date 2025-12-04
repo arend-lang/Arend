@@ -45,7 +45,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
 
     @NotNull
     @Override
-    public ClassCallExpression getTypeExpr() {
+    public ClassCallExpression getType() {
       return ClassCallExpression.this;
     }
 
@@ -352,7 +352,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
         private List<Expression> visitArgs(List<? extends Expression> args, DependentLink params) {
           List<Expression> newArgs = new ArrayList<>(args.size());
           for (Expression arg : args) {
-            Expression newArg = makeNewExpression(arg, params.getTypeExpr());
+            Expression newArg = makeNewExpression(arg, params.getType());
             newArgs.add(newArg != null ? newArg : arg.accept(this, null));
             params = params.getNext();
           }
@@ -397,7 +397,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
           constructorArgMap = Collections.emptyMap();
           DependentLink param = expr.getDefinition().getParameters();
           for (Expression arg : expr.getDefCallArguments()) {
-            Expression newExpr = makeNewExpression(arg, param.getTypeExpr());
+            Expression newExpr = makeNewExpression(arg, param.getType());
             if (newExpr != null) {
               if (constructorArgMap.isEmpty()) constructorArgMap = new HashMap<>();
               constructorArgMap.put(new Wrapper<>(arg), newExpr);

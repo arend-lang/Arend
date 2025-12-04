@@ -234,7 +234,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
               for (CoreElimClause clause : body.getClauses()) {
                 if (clause.getPatterns().get(i).getBinding() == null) {
                   matched.add(param.getBinding());
-                  CoreFunCallExpression funCall = param.getTypeExpr().toEquality(); // try to take the type immediately
+                  CoreFunCallExpression funCall = param.getType().toEquality(); // try to take the type immediately
                   if (funCall == null) { // if it's not an equality, then this may be because we need to substitute patterns
                     CoreExpression type = (CoreExpression) typechecker.substituteAbstractedExpression(parameters.abstractType(i), levelSubst, PatternUtils.toExpression(clause.getPatterns().subList(0, i), constructor, factory, null), null);
                     funCall = type == null ? null : type.toEquality();
@@ -271,7 +271,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
           }
           if (parameters.hasNext()) {
             for (CoreParameter param = parameters.getNext(); param.hasNext(); param = param.getNext()) {
-              if (param.getTypeExpr().findFreeBindings(matched) != null) {
+              if (param.getType().findFreeBindings(matched) != null) {
                 matched.add(param.getBinding());
               }
             }
@@ -544,7 +544,7 @@ public class MatchingCasesMeta extends BaseMetaDefinition {
           if (removedArgs.get(j) != null) {
             subst = factory.core(removedArgs.get(j));
           } else {
-            CoreBinding binding = parameter.getTypeExpr().findFreeBindings(matchedParams);
+            CoreBinding binding = parameter.getType().findFreeBindings(matchedParams);
             if (binding != null) {
               errorPair = new Pair<>(parameter, binding);
               if (needSubst) break;

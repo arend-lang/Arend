@@ -44,7 +44,7 @@ public class MinimizeLevelVisitor extends BaseExpressionVisitor<Void, Expression
 
   @Override
   public Expression visitPi(PiExpression expr, Void params) {
-    Expression dom = visit(expr.getParameters().getTypeExpr());
+    Expression dom = visit(expr.getParameters().getType());
     Expression cod = visit(expr.getCodomain());
 
     ExprSubstitution substitution = new ExprSubstitution();
@@ -64,7 +64,7 @@ public class MinimizeLevelVisitor extends BaseExpressionVisitor<Void, Expression
     for (DependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
       DependentLink newParam;
       if (param instanceof TypedDependentLink) {
-        Expression type = visit(param.getTypeExpr());
+        Expression type = visit(param.getType());
         newParam = new TypedDependentLink(param.isExplicit(), param.getName(), type.subst(substitution), param.isHidden(), EmptyDependentLink.getInstance());
       } else {
         newParam = new UntypedDependentLink(param.getName());

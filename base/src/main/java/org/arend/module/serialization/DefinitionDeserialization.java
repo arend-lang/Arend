@@ -98,7 +98,7 @@ public class DefinitionDeserialization implements ArendDeserializer {
 
   private PiExpression checkFieldType(PiExpression expr, ClassDefinition classDef) throws DeserializationException {
     if (!expr.getParameters().getNext().hasNext()) {
-      Expression type = expr.getParameters().getTypeExpr();
+      Expression type = expr.getParameters().getType();
       if (type instanceof ClassCallExpression && ((ClassCallExpression) type).getDefinition().equals(classDef)) {
         return expr;
       }

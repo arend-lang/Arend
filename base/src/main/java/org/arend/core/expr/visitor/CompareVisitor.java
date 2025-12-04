@@ -541,7 +541,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     }
 
     for (int i = 0; i < args1.size(); i++) {
-      if (!compare(args1.get(i), args2.get(i), i < params.size() ? params.get(i).getTypeExpr() : null, true)) {
+      if (!compare(args1.get(i), args2.get(i), i < params.size() ? params.get(i).getType() : null, true)) {
         if (initResult(args1.get(i), args2.get(i))) {
           List<Pair<Expression, Boolean>> argsExp1 = getArguments(expr1);
           for (int j = 0; j < argsExp1.size(); j++) {
@@ -1048,7 +1048,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       @Override
       public Boolean visitReference(ReferenceExpression expr, Void params) {
         Binding binding = expr.getBinding();
-        if (!allowedBindings.contains(binding) && binding.getTypeExpr().findBinding(substitution.getKeys()) != null) {
+        if (!allowedBindings.contains(binding) && binding.getType().findBinding(substitution.getKeys()) != null) {
           found[0] = true;
           if (foundVars == null) return true;
           foundVars.add(binding);
@@ -1087,7 +1087,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     Set<Binding> allowedBindings = new HashSet<>();
     for (int i = bindings.size() - 1; i >= 0; i--) {
       Pair<Binding, Boolean> pair = bindings.get(i);
-      Expression type = pair.proj1.getTypeExpr();
+      Expression type = pair.proj1.getType();
       if (type == null) return null;
       if (!substVisitor.isEmpty()) {
         type = type.accept(substVisitor, null);
@@ -1199,7 +1199,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         for (; dataParams.hasNext(); dataParams = dataParams.getNext()) {
           SingleDependentLink link;
           if (dataParams instanceof TypedDependentLink) {
-            link = new TypedSingleDependentLink(dataParams.isExplicit(), dataParams.getName(), dataParams.getTypeExpr());
+            link = new TypedSingleDependentLink(dataParams.isExplicit(), dataParams.getName(), dataParams.getType());
           } else {
             link = new UntypedSingleDependentLink(dataParams.getName());
           }
@@ -1519,7 +1519,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         typedParam = typedParam.getNext();
       }
       i += names.size();
-      SingleDependentLink newParam = new TypedSingleDependentLink(typedParam.isExplicit(), typedParam.getName(), typedParam.getTypeExpr().subst(subst));
+      SingleDependentLink newParam = new TypedSingleDependentLink(typedParam.isExplicit(), typedParam.getName(), typedParam.getType().subst(subst));
       subst.add(typedParam, new ReferenceExpression(newParam));
       for (int j = names.size() - 1; j >= 0; j--) {
         newParam = new UntypedSingleDependentLink(names.get(j).getName(), newParam);
@@ -1603,7 +1603,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
 
     CMP origCMP = myCMP;
     myCMP = CMP.EQ;
-    if (!compare(expr1.getParameters().getTypeExpr(), piExpr2.getParameters().getTypeExpr(), Type.OMEGA, false)) {
+    if (!compare(expr1.getParameters().getType(), piExpr2.getParameters().getType(), Type.OMEGA, false)) {
       if (myResult == null) {
         initResult(expr1, expr2);
       } else {
@@ -1664,7 +1664,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     for (int i = 0; i < list1.size() && i < list2.size(); ++i) {
       DependentLink param1 = list1.get(i);
       DependentLink param2 = list2.get(i);
-      if (param1.isProperty() != param2.isProperty() || !compare(param1.getTypeExpr(), param2.getTypeExpr(), Type.OMEGA, false)) {
+      if (param1.isProperty() != param2.isProperty() || !compare(param1.getType(), param2.getType(), Type.OMEGA, false)) {
         for (int j = 0; j < i; j++) {
           mySubstitution.remove(list2.get(j));
         }
@@ -1673,7 +1673,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         }
         myCMP = origCMP;
         if (param1.isProperty() == param2.isProperty()) {
-          if (initResult(param1.getTypeExpr(), param2.getTypeExpr())) {
+          if (initResult(param1.getType(), param2.getType())) {
             myResult.index = i;
           }
         }
@@ -2029,7 +2029,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
             myEquations.loadState(state);
           }
         } else {
-          ok = compare(list1.get(i), list2.get(i), substitution != null && link.hasNext() ? link.getTypeExpr().subst(substitution) : null, true);
+          ok = compare(list1.get(i), list2.get(i), substitution != null && link.hasNext() ? link.getType().subst(substitution) : null, true);
         }
         if (!ok) {
           myCMP = origCMP;

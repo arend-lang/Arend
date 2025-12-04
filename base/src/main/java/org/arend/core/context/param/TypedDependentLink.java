@@ -71,7 +71,7 @@ public class TypedDependentLink implements DependentLink {
   }
 
   @Override
-  public @NotNull Expression getTypeExpr() {
+  public @NotNull Expression getType() {
     return myType;
   }
 

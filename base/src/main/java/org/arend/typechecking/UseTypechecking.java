@@ -112,7 +112,7 @@ public class UseTypechecking {
     Definition useParent = def.getUseParent().getTypechecked();
     if ((useParent instanceof DataDefinition || useParent instanceof ClassDefinition) && !def.getParameters().isEmpty()) {
       DependentLink lastParam = DependentLink.Helper.getLast(typedDef.getParameters());
-      Expression paramType = lastParam.hasNext() ? lastParam.getTypeExpr() : null;
+      Expression paramType = lastParam.hasNext() ? lastParam.getType() : null;
       DefCallExpression paramDefCall = paramType == null ? null : paramType.cast(DefCallExpression.class);
       Definition paramDef = paramDefCall == null ? null : paramDefCall.getDefinition();
       DefCallExpression resultDefCall = typedDef.getResultType() == null ? null : typedDef.getResultType().cast(DefCallExpression.class);
@@ -153,7 +153,7 @@ public class UseTypechecking {
           ok = false;
           break;
         }
-        if (!Expression.compare(link.getTypeExpr(), defLink.getTypeExpr().subst(substitution), Type.OMEGA, CMP.EQ)) {
+        if (!Expression.compare(link.getType(), defLink.getType().subst(substitution), Type.OMEGA, CMP.EQ)) {
           if (parameters == null) {
             parameters = DependentLink.Helper.take(typedDef.getParameters(), DependentLink.Helper.size(defLink));
           }
@@ -177,7 +177,7 @@ public class UseTypechecking {
       DependentLink classCallLink = link;
       for (; classCallLink.hasNext(); classCallLink = classCallLink.getNext()) {
         classCallLink = classCallLink.getNextTyped(null);
-        classCall = classCallLink.getTypeExpr().cast(ClassCallExpression.class);
+        classCall = classCallLink.getType().cast(ClassCallExpression.class);
         if (classCall != null && classCall.getDefinition() == useParent && (classCall.getUniverseKind() == UniverseKind.NO_UNIVERSES || typedDef.isIdLevels(classCall.getLevels()))) {
           break;
         }
@@ -185,7 +185,7 @@ public class UseTypechecking {
       if (!classCallLink.hasNext() && resultType != null) {
         PiExpression piType = resultType.normalize(NormalizationMode.WHNF).cast(PiExpression.class);
         if (piType != null) {
-          classCall = piType.getParameters().getTypeExpr().normalize(NormalizationMode.WHNF).cast(ClassCallExpression.class);
+          classCall = piType.getParameters().getType().normalize(NormalizationMode.WHNF).cast(ClassCallExpression.class);
           if (classCall != null && classCall.getDefinition() == useParent && (classCall.getUniverseKind() == UniverseKind.NO_UNIVERSES || typedDef.isIdLevels(classCall.getLevels()))) {
             classCallLink = piType.getParameters();
           }
@@ -210,7 +210,7 @@ public class UseTypechecking {
             }
             levelFields.add(classField);
             Expression fieldType = classCall.getDefinition().getFieldType(classField, classCall.getLevels(classField.getParentClass()), thisExpr);
-            Expression paramType = link.getTypeExpr();
+            Expression paramType = link.getType();
             if (!Expression.compare(fieldType, paramType, Type.OMEGA, CMP.EQ)) {
               if (parameters == null) {
                 int numberOfClassParameters = 0;

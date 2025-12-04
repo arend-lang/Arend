@@ -21,7 +21,7 @@ public interface CoreParameter {
    * Returns the type of the parameter.
    * Equivalent to {@code getBinding().getTypeExpr()}
    */
-  @NotNull CoreExpression getTypeExpr();
+  @NotNull CoreExpression getType();
 
   /**
    * Checks if this parameter is the last one.

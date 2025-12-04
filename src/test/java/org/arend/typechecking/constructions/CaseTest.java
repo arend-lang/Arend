@@ -275,7 +275,7 @@ public class CaseTest extends TypeCheckingTestCase {
   @Test
   public void typeTest() {
     Definition def = typeCheckDef("\\func test (n : Nat) (x : \\case n \\with { | 0 => Nat | suc _ => Nat }) : Nat => 0");
-    assertEquals(Sort.SET0, def.getParameters().getNext().getTypeExpr().getSortOfType());
+    assertEquals(Sort.SET0, def.getParameters().getNext().getType().getSortOfType());
   }
 
   @Test

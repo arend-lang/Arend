@@ -271,7 +271,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                         val sampleIsExplicit = if (elimMode) eliminatedParameters.contains(sample) else sample.isExplicit
                         val substitutedPattern = substitutions?.let{ it[sample] }
                         if (sampleIsExplicit == currentConcretePattern?.isExplicit) {
-                            val (data, name) = if (sample.name != null && sample.typeExpr is DataCallExpression) Pair((sample.typeExpr as? DataCallExpression)?.definition, sample.name) else Pair(sampleData, sampleName)
+                            val (data, name) = if (sample.name != null && sample.type is DataCallExpression) Pair((sample.type as? DataCallExpression)?.definition, sample.name) else Pair(sampleData, sampleName)
                             val reconstructedPattern = reconstructPattern(scope, occupiedLocalNames, substitutedPattern, currentConcretePattern, substitutions, sink, clauseLinkListIterator, data, name)
                             result.add(reconstructedPattern)
                             currentConcretePattern = if (concreteIterator.hasNext()) concreteIterator.next() else null
@@ -280,7 +280,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                         } else if (!sampleIsExplicit) {
                             val pattern = reconstructPattern(scope, occupiedLocalNames, substitutedPattern,
                                 Concrete.NamePattern(null, elimMode, concreteParameter, null), substitutions, sink, clauseLinkListIterator,
-                                (sample.typeExpr as? DataCallExpression)?.definition, sample.name)
+                                (sample.type as? DataCallExpression)?.definition, sample.name)
                             if (pattern !is Concrete.NamePattern) {
                                 while (skippedPatterns > 0) {
                                     result.add(Concrete.NamePattern(null, false, null, null))
@@ -402,7 +402,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
             override fun getTextRange(): TextRange = caseExprPsi.textRange
 
             override fun computeMatchingPatterns(ecEntry: CaseClauseEntry, definitionParameters: List<DependentLink>, elimParams: List<DependentLink>) {
-                val parameterType = ecEntry.error.parameter?.typeExpr
+                val parameterType = ecEntry.error.parameter?.type
                 val currentClause = ecEntry.clause.data as Abstract.Clause
 
                 // STEP 1C: Compute matching expressions
@@ -549,7 +549,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                         } else {
                             val localReferable = (newCaseArg.expression as? Concrete.ReferenceExpression)?.referent as? LocalReferable
                             newPatterns[newCaseArg] = reconstructPattern(scope, occupiedLocalNames, substEntry.value, Concrete.NamePattern(null, true, localReferable ?: newCaseArg.referable, null),
-                                correctedSubstsNew, sink, emptyList<DependentLink>().iterator(), ((substEntry.key as? TypedBinding)?.typeExpr as? DataCallExpression)?.definition, newCaseArg.referable?.refName)
+                                correctedSubstsNew, sink, emptyList<DependentLink>().iterator(), ((substEntry.key as? TypedBinding)?.type as? DataCallExpression)?.definition, newCaseArg.referable?.refName)
                         }
                     }
 
@@ -590,7 +590,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 val renamer = StringRenamer()
                 val occupiedVars = caseOccupiedLocalNames.map { VariableImpl(it) }
                 val freshName = if (expression is ReferenceExpression) expression.binding.name else
-                    renamer.generateFreshName(TypedBinding(null, binding.typeExpr), occupiedVars)
+                    renamer.generateFreshName(TypedBinding(null, binding.type), occupiedVars)
                 var replaceKey: Concrete.CaseArgument? = null
                 var replaceValue: Concrete.CaseArgument? = null
                 var foundExpression = false
@@ -648,7 +648,7 @@ class ExpectedConstructorQuickFix(val error: ExpectedConstructorError, val cause
                 (concreteDefinition.data.data as PsiElement).textRange
 
             override fun computeMatchingPatterns(ecEntry: ElimClauseEntry, definitionParameters: List<DependentLink>, elimParams: List<DependentLink>) {
-                val parameterType = ecEntry.error.parameter?.typeExpr
+                val parameterType = ecEntry.error.parameter?.type
                 val currentClause = ecEntry.clause.data as Abstract.Clause
                 val concreteCurrentClause = ecEntry.clause
 

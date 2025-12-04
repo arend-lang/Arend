@@ -175,7 +175,7 @@ public class PatternTypechecking {
         Binding newBinding = expr instanceof ReferenceExpression
           ? ((ReferenceExpression) expr).getBinding()
           : expr != null
-            ? new TypedEvaluatingBinding(binding.getName(), expr, binding.getTypeExpr())
+            ? new TypedEvaluatingBinding(binding.getName(), expr, binding.getType())
             : null;
         if (newBinding != null) {
           entry.setValue(newBinding);
@@ -216,7 +216,7 @@ public class PatternTypechecking {
           List<TypedSingleDependentLink> lamBindings = new ArrayList<>(intervalBindings.size());
           ExprSubstitution intervalSubst = new ExprSubstitution();
           for (Binding binding : intervalBindings) {
-            TypedSingleDependentLink link = new TypedSingleDependentLink(true, binding.getName(), binding.getTypeExpr());
+            TypedSingleDependentLink link = new TypedSingleDependentLink(true, binding.getName(), binding.getType());
             lamBindings.add(link);
             intervalSubst.add(binding, new ReferenceExpression(link));
           }
@@ -306,7 +306,7 @@ public class PatternTypechecking {
     ExprSubstitution paramSubst = new ExprSubstitution();
     DependentLink param = definition.getParameters();
     for (Expression arg : newArgs) {
-      Expression paramType = param.getTypeExpr().subst(paramSubst, levelSubst);
+      Expression paramType = param.getType().subst(paramSubst, levelSubst);
       if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.LE, arg.getType(), paramType, Type.OMEGA, sourceNode)) {
         return null;
       }
@@ -551,7 +551,7 @@ public class PatternTypechecking {
           if (name != null) {
             newParam.setName(name);
           }
-          typecheckType(namePattern.type, newParam.getTypeExpr());
+          typecheckType(namePattern.type, newParam.getType());
         }
         result.add(new BindingPattern(newParam));
         if (exprs != null) {
@@ -562,7 +562,7 @@ public class PatternTypechecking {
         continue;
       }
 
-      Expression expr = parameters.getTypeExpr().subst(paramsSubst).normalize(NormalizationMode.WHNF);
+      Expression expr = parameters.getType().subst(paramsSubst).normalize(NormalizationMode.WHNF);
 
       if (pattern instanceof Concrete.NumberPattern) {
         var newPattern = translateNumberPatterns((Concrete.NumberPattern) pattern, expr);
@@ -747,12 +747,12 @@ public class PatternTypechecking {
               if (paramLink instanceof UntypedDependentLink) {
                 continue;
               }
-              if (banVar != null && paramLink.getTypeExpr().findBinding(substVar)) {
+              if (banVar != null && paramLink.getType().findBinding(substVar)) {
                 myErrorReporter.report(new IdpPatternError(myVisitor == null ? null : myVisitor.getExpressionPrettifier(), IdpPatternError.subst(substVar.getName(), paramLink.getName(), banVar.getName()), null, conPattern));
                 return null;
               }
               assert paramLink != null;
-              paramLink.setType(paramLink.getTypeExpr().subst(varSubst));
+              paramLink.setType(paramLink.getType().subst(varSubst));
             }
             listSubst(result, exprs, varSubst);
           } else {
@@ -765,7 +765,7 @@ public class PatternTypechecking {
               Set<Binding> bindings = myVisitor.getAllBindings();
               int i = 0;
               for (; i < constructor.getNumberOfParameters(); i++) {
-                Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link, i + 1, link.getTypeExpr().subst(substitution, levelSubst), conPattern, bindings), myVisitor.getEquations());
+                Expression arg = InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link, i + 1, link.getType().subst(substitution, levelSubst), conPattern, bindings), myVisitor.getEquations());
                 args.add(arg);
                 substitution.add(link, arg);
                 collector.getResult().remove(link);
@@ -773,7 +773,7 @@ public class PatternTypechecking {
               }
               if (!collector.getResult().isEmpty()) {
                 for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
-                  substitution.add(link1, InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link1, i + 1, link1.getTypeExpr().subst(substitution, levelSubst), conPattern, bindings), myVisitor.getEquations()));
+                  substitution.add(link1, InferenceReferenceExpression.make(new FunctionInferenceVariable(constructor, link1, i + 1, link1.getType().subst(substitution, levelSubst), conPattern, bindings), myVisitor.getEquations()));
                 }
               }
             }
@@ -1035,7 +1035,7 @@ public class PatternTypechecking {
         myPathPatterns.add(new Pair<>(resultPattern, conResult.addedIntervalVars));
         for (DependentLink param = parameters.getNext(); param.hasNext(); param = param.getNext()) {
           param = param.getNextTyped(null);
-          if (param.getTypeExpr().findBinding(parameters)) {
+          if (param.getType().findBinding(parameters)) {
             myErrorReporter.report(new TypecheckingError("Partially applied constructor is not allowed because parameter '" + param.getName() + "' depends on '" + parameters.getName() + "'", conPattern));
             return null;
           }
@@ -1100,7 +1100,7 @@ public class PatternTypechecking {
       int size = DependentLink.Helper.size(parameters);
       if (ok) {
         for (; parameters.hasNext() && addedIntervalVars < addIntervalVars; parameters = parameters.getNext()) {
-          Expression paramType = parameters.getTypeExpr().normalize(NormalizationMode.WHNF);
+          Expression paramType = parameters.getType().normalize(NormalizationMode.WHNF);
           if (paramType instanceof DataCallExpression && ((DataCallExpression) paramType).getDefinition() == Prelude.INTERVAL) {
             DependentLink newParam = parameters.subst(new SubstVisitor(paramsSubst, LevelSubstitution.EMPTY), 1, false);
             myLinkList.append(newParam);

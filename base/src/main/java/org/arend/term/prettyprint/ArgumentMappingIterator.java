@@ -75,8 +75,8 @@ public class ArgumentMappingIterator implements Iterator<Pair<CoreParameter, Con
             var datatype = ((Constructor) definition).getDataType();
             return Stream.concat(linkToList(datatype.getParameters()).stream().map(link -> new UntypedDependentLink(link.getName()) {
                 @Override
-                public @NotNull Expression getTypeExpr() {
-                    return link.getTypeExpr();
+                public @NotNull Expression getType() {
+                    return link.getType();
                 }
 
                 @Override

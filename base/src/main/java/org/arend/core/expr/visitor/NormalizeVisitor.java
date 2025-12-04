@@ -832,7 +832,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     }
 
     if ((mode == NormalizationMode.RNF) && thisExpr instanceof ReferenceExpression && ((ReferenceExpression) thisExpr).getBinding() instanceof ClassCallExpression.ClassCallBinding) {
-      Expression impl = ((ClassCallExpression.ClassCallBinding) ((ReferenceExpression) thisExpr).getBinding()).getTypeExpr().getImplementation(expr.getDefinition(), thisExpr);
+      Expression impl = ((ClassCallExpression.ClassCallBinding) ((ReferenceExpression) thisExpr).getBinding()).getType().getImplementation(expr.getDefinition(), thisExpr);
       if (impl != null) {
         return impl.accept(this, mode);
       }
@@ -950,7 +950,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     DependentLink link = DependentLink.Helper.subst(parameters, substitution);
     for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext()) {
       link1 = link1.getNextTyped(null);
-      link1.setType(link1.getTypeExpr().normalize(mode));
+      link1.setType(link1.getType().normalize(mode));
     }
     return link;
   }
@@ -959,7 +959,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     SingleDependentLink link = DependentLink.Helper.subst(parameters, substitution);
     for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext()) {
       link1 = link1.getNextTyped(null);
-      link1.setType(link1.getTypeExpr().normalize(mode));
+      link1.setType(link1.getType().normalize(mode));
     }
     return link;
   }

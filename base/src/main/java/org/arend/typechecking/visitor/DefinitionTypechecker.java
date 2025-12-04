@@ -186,7 +186,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   private void getFreeVariablesClosure(Expression expression, Set<Binding> freeVars) {
     for (Binding var : FreeVariablesCollector.getFreeVariables(expression)) {
       if (freeVars.add(var)) {
-        getFreeVariablesClosure(var.getTypeExpr(), freeVars);
+        getFreeVariablesClosure(var.getType(), freeVars);
       }
     }
   }
@@ -244,7 +244,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
               found = true;
               processed.add(link);
               Set<Binding> freeVars = new HashSet<>();
-              getFreeVariablesClosure(checkResultType ? ((FunctionDefinition) definition).getResultType() : link1.getTypeExpr(), freeVars);
+              getFreeVariablesClosure(checkResultType ? ((FunctionDefinition) definition).getResultType() : link1.getType(), freeVars);
               for (DependentLink link2 : parametersList) {
                 for (; link2.hasNext() && link2 != actualLink; link2 = link2.getNext()) {
                   if (freeVars.contains(link2)) {
@@ -322,7 +322,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         link = link.getNext();
         index++;
       }
-      universeKind = universeKind.max(checker.getUniverseKind(link.getTypeExpr()));
+      universeKind = universeKind.max(checker.getUniverseKind(link.getType()));
       if (universeKind == UniverseKind.WITH_UNIVERSES) {
         return UniverseKind.WITH_UNIVERSES;
       }
@@ -433,7 +433,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     }
 
     for (DependentLink param = def.getParameters(); param.hasNext(); param = param.getNext()) {
-      typeClassParameters.add(isTypeClassRef(param.getTypeExpr()) ? Definition.TypeClassParameterKind.YES : Definition.TypeClassParameterKind.NO);
+      typeClassParameters.add(isTypeClassRef(param.getType()) ? Definition.TypeClassParameterKind.YES : Definition.TypeClassParameterKind.NO);
     }
 
     for (Definition.TypeClassParameterKind kind : typeClassParameters) {
@@ -491,7 +491,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
             errorReporter.report(new ArgumentExplicitnessError(param.isExplicit(), parameter));
             break;
           }
-          Expression paramType = param.getTypeExpr();
+          Expression paramType = param.getType();
           if (thisRef != null && paramType.findBinding(thisRef)) {
             errorReporter.report(new TypeFromFieldError(typechecker.getExpressionPrettifier(), TypeFromFieldError.parameter(), paramType, parameter));
           } else {
@@ -1763,7 +1763,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         int index = 0;
         for (DependentLink link = typedDef.getParameters(); link.hasNext(); link = link.getNext()) {
           if (link instanceof TypedDependentLink && typedDef.getTypeClassParameterKind(index) == Definition.TypeClassParameterKind.YES) {
-            Expression type = link.getTypeExpr();
+            Expression type = link.getType();
             if (type instanceof ClassCallExpression classCall && !classCall.getDefinition().isRecord()) {
               ClassField paramClassifyingField = classCall.getDefinition().getClassifyingField();
               ReferenceExpression refExpr = new ReferenceExpression(link);
@@ -2118,7 +2118,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       for (Constructor constructor : dataDefinition.getConstructors()) {
         for (DependentLink link = constructor.getParameters(); link.hasNext(); link = link.getNext()) {
           link = link.getNextTyped(null);
-          universeKind = universeKind.max(new UniverseKindChecker(def.getRecursiveDefinitions()).getUniverseKind(link.getTypeExpr()));
+          universeKind = universeKind.max(new UniverseKindChecker(def.getRecursiveDefinitions()).getUniverseKind(link.getType()));
           if (universeKind == UniverseKind.WITH_UNIVERSES) {
             break loop;
           }
@@ -2195,7 +2195,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       }
       return true;
     } else if (expr instanceof LamExpression) {
-      return checkNoConstructors(((LamExpression) expr).getParameters().getTypeExpr(), dataDefinition) && checkConstructorsOnlyOnTop(((LamExpression) expr).getBody(), dataDefinition);
+      return checkNoConstructors(((LamExpression) expr).getParameters().getType(), dataDefinition) && checkConstructorsOnlyOnTop(((LamExpression) expr).getBody(), dataDefinition);
     } else if (expr instanceof TupleExpression) {
       if (!checkNoConstructors(((TupleExpression) expr).getSigmaType(), dataDefinition)) return false;
       for (Expression field : ((TupleExpression) expr).getFields()) {
@@ -2238,7 +2238,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       int i = 0;
       for (DependentLink link = list.getFirst(); link.hasNext(); link = link.getNext(), i++) {
         link = link.getNextTyped(null);
-        if (new RecursiveDataChecker(dataDefinitions, errorReporter, def, def.getParameters().get(i)).check(link.getTypeExpr())) {
+        if (new RecursiveDataChecker(dataDefinitions, errorReporter, def, def.getParameters().get(i)).check(link.getType())) {
           constructor.setParameters(EmptyDependentLink.getInstance());
           return false;
         }
@@ -2369,10 +2369,10 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     int i = 0;
     loop:
     for (DependentLink link = constructor.getParameters(); link.hasNext(); link = link.getNext(), i++) {
-      if (link.getTypeExpr() instanceof DataCallExpression && dataDefinitions.contains(((DataCallExpression) link.getTypeExpr()).getDefinition())) {
+      if (link.getType() instanceof DataCallExpression && dataDefinitions.contains(((DataCallExpression) link.getType()).getDefinition())) {
         for (DependentLink link2 = link.getNext(); link2.hasNext(); link2 = link2.getNext()) {
           link2 = link2.getNextTyped(null);
-          if (link2.getTypeExpr().findFreeBinding(link)) {
+          if (link2.getType().findFreeBinding(link)) {
             continue loop;
           }
         }
@@ -3327,7 +3327,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         List<? extends Expression> args1 = ((DefCallExpression) expr1).getDefCallArguments();
         List<? extends Expression> args2 = ((DefCallExpression) expr2).getDefCallArguments();
         for (int i = 0; i < args1.size(); i++) {
-          int argCmp = compareExpressions(args1.get(i), args2.get(i), link.getTypeExpr().subst(substitution));
+          int argCmp = compareExpressions(args1.get(i), args2.get(i), link.getType().subst(substitution));
           if (argCmp == 1) {
             cmp = 1;
             break;
@@ -3360,7 +3360,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         DependentLink param2 = getExprParameters(expr2);
         if (DependentLink.Helper.size(param1) == DependentLink.Helper.size(param2)) {
           for (; param1.hasNext(); param1 = param1.getNext(), param2 = param2.getNext()) {
-            int argCmp = compareExpressions(param1.getTypeExpr(), param2.getTypeExpr(), Type.OMEGA);
+            int argCmp = compareExpressions(param1.getType(), param2.getType(), Type.OMEGA);
             if (argCmp == 1) {
               cmp = 1;
               break;
@@ -3381,7 +3381,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
       for (DependentLink param = getExprParameters(expr2); param.hasNext(); param = param.getNext()) {
         param = param.getNextTyped(null);
-        if (compareExpressions(expr1, param.getTypeExpr(), Type.OMEGA) != 1) {
+        if (compareExpressions(expr1, param.getType(), Type.OMEGA) != 1) {
           return -1;
         }
       }

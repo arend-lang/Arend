@@ -78,7 +78,7 @@ public class GoalDataHolder extends TypecheckingError {
       for (Map.Entry<Referable, Binding> entry : context.entrySet()) {
         if (!entry.getValue().isHidden() && (!(entry.getKey() instanceof LocalReferable) || !((LocalReferable) entry.getKey()).isHidden())) {
           Expression type = bindingTypes.get(entry.getValue());
-          if (type == null) type = entry.getValue().getTypeExpr();
+          if (type == null) type = entry.getValue().getType();
           if (type != null) type = type.subst(substitution);
           contextDocs.add(hang(hList(entry.getKey() == null ? text("_") : refDoc(entry.getKey()), text(" :")), type == null ? text("{?}") : termDoc(type, myPrettifier, ppConfig)));
         }

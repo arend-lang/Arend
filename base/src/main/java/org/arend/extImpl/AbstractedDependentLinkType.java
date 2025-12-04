@@ -19,7 +19,7 @@ public class AbstractedDependentLinkType implements AbstractedExpression {
   }
 
   public static AbstractedExpression make(DependentLink parameters, int size) {
-    return size == 0 ? parameters.getTypeExpr() : new AbstractedDependentLinkType(parameters, size);
+    return size == 0 ? parameters.getType() : new AbstractedDependentLinkType(parameters, size);
   }
 
   public DependentLink getParameters() {
@@ -45,9 +45,9 @@ public class AbstractedDependentLinkType implements AbstractedExpression {
         i++;
       }
       if (i >= mySize) break;
-      CoreBinding binding = link.getTypeExpr().findFreeBinding(bindings);
+      CoreBinding binding = link.getType().findFreeBinding(bindings);
       if (binding != null) return binding;
     }
-    return link.getTypeExpr().findFreeBinding(bindings);
+    return link.getType().findFreeBinding(bindings);
   }
 }

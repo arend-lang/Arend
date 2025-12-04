@@ -29,7 +29,7 @@ public class FreeVariablesClassifier implements ExpressionVisitor<Boolean, FreeV
   }
 
   public Result checkBinding(Binding binding) {
-    Result result = binding.getTypeExpr().accept(this, true);
+    Result result = binding.getType().accept(this, true);
     if (result == Result.GOOD) {
       myGoodBindings.add(binding);
     }
@@ -135,7 +135,7 @@ public class FreeVariablesClassifier implements ExpressionVisitor<Boolean, FreeV
   private Result visitParameters(DependentLink link) {
     for (; link.hasNext(); link = link.getNext()) {
       link = link.getNextTyped(null);
-      Result result = link.getTypeExpr().accept(this, false);
+      Result result = link.getType().accept(this, false);
       if (result != Result.NONE) {
         return result;
       }

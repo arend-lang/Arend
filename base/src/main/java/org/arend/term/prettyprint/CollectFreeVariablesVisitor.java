@@ -63,7 +63,7 @@ public class CollectFreeVariablesVisitor extends VoidExpressionVisitor<Set<Varia
     }
     newSet.remove(link1);
     variables.addAll(newSet);
-    link1.getTypeExpr().accept(this, variables);
+    link1.getType().accept(this, variables);
   }
 
   @Override

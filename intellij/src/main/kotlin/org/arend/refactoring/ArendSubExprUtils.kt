@@ -73,7 +73,7 @@ data class SubExprResult(
             && subConcrete is Concrete.LetExpression
             && subCore is LetExpression) binding(subPsi, selected)?.let {
         it to FindBinding.visitLet(it, subConcrete, subCore)
-    } else findTeleBinding(selected)?.let { (id, link) -> id to link?.typeExpr }
+    } else findTeleBinding(selected)?.let { (id, link) -> id to link?.type }
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun findTeleBinding(selected: TextRange) = if (subPsi is ArendLamExpr

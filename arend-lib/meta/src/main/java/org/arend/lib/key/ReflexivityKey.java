@@ -23,11 +23,11 @@ public class ReflexivityKey extends FieldKey {
   protected boolean checkField(CoreClassField field) {
     List<CoreParameter> parameters = new ArrayList<>();
     CoreExpression codomain = field.getResultType().getPiParameters(parameters);
-    if (!(parameters.size() == 1 && isBaseSetCall(parameters.get(0).getTypeExpr(), field))) {
+    if (!(parameters.size() == 1 && isBaseSetCall(parameters.getFirst().getType(), field))) {
       return false;
     }
 
-    CoreClassField relation = getFieldApplied(codomain, parameters.get(0).getBinding(), parameters.get(0).getBinding(), field);
+    CoreClassField relation = getFieldApplied(codomain, parameters.getFirst().getBinding(), parameters.getFirst().getBinding(), field);
     if (relation == null) {
       return false;
     }

@@ -170,7 +170,7 @@ public class LevelParametersTest extends TypeCheckingTestCase {
     Definition def = getDefinition("D.test");
     List<? extends LevelVariable> params = def.getLevelParameters();
     assertEquals(2, params.size());
-    assertEquals(new ListLevels(Arrays.asList(new Level(params.get(0)), new Level(params.get(1)))), ((ClassCallExpression) def.getParameters().getTypeExpr()).getLevels());
+    assertEquals(new ListLevels(Arrays.asList(new Level(params.get(0)), new Level(params.get(1)))), ((ClassCallExpression) def.getParameters().getType()).getLevels());
   }
 
   @Test
@@ -207,7 +207,7 @@ public class LevelParametersTest extends TypeCheckingTestCase {
     assertEquals(3, getDefinition("S").getLevelParameters().size());
     assertEquals(3, getDefinition("S.f").getLevelParameters().size());
     ClassDefinition classDef = (ClassDefinition) getDefinition("S");
-    Expression impl = classDef.getDefault((ClassField) getDefinition("R.f")).getExpression();
+    Expression impl = Objects.requireNonNull(classDef.getDefault((ClassField) getDefinition("R.f"))).getExpression();
     List<? extends Level> levels = ((FunCallExpression) impl).getLevels().toList();
     List<? extends LevelVariable> params = classDef.getLevelParameters();
     assertEquals(Arrays.asList(new Level(params.get(0)), new Level(params.get(1)), new Level(params.get(2))), levels);
@@ -226,7 +226,7 @@ public class LevelParametersTest extends TypeCheckingTestCase {
         """);
     assertEquals(3, getDefinition("S.f").getLevelParameters().size());
     ClassDefinition classDef = (ClassDefinition) getDefinition("S");
-    Expression impl = classDef.getDefault((ClassField) getDefinition("R.f")).getExpression();
+    Expression impl = Objects.requireNonNull(classDef.getDefault((ClassField) getDefinition("R.f"))).getExpression();
     List<? extends Level> levels = ((FunCallExpression) impl).getLevels().toList();
     List<? extends LevelVariable> params = classDef.getLevelParameters();
     assertEquals(Arrays.asList(new Level(params.get(0)), new Level(params.get(1)), new Level(params.get(2))), levels);
@@ -264,8 +264,8 @@ public class LevelParametersTest extends TypeCheckingTestCase {
       "\\meta m \\plevels p1 <= p2 => \\Sigma (\\Type p1) (\\Type p2)\n" +
       "\\func f => m \\levels (1,2) _");
     DependentLink params = ((SigmaExpression) Objects.requireNonNull(((FunctionDefinition) getDefinition("f")).getBody())).getParameters();
-    assertEquals(new UniverseExpression(new Sort(new Level(1), new Level(LevelVariable.HVAR))), params.getTypeExpr());
-    assertEquals(new UniverseExpression(new Sort(new Level(2), new Level(LevelVariable.HVAR))), params.getNext().getTypeExpr());
+    assertEquals(new UniverseExpression(new Sort(new Level(1), new Level(LevelVariable.HVAR))), params.getType());
+    assertEquals(new UniverseExpression(new Sort(new Level(2), new Level(LevelVariable.HVAR))), params.getNext().getType());
   }
 
   @Test
@@ -279,7 +279,7 @@ public class LevelParametersTest extends TypeCheckingTestCase {
     FunctionDefinition def = (FunctionDefinition) getDefinition("R.f");
     List<? extends LevelVariable> levels = def.getLevelParameters();
     assertEquals(3, levels.size());
-    assertEquals(List.of(new Level(levels.get(0)), new Level(levels.get(1)), new Level(levels.get(2))), ((ClassCallExpression) def.getParameters().getTypeExpr()).getLevels().toList());
+    assertEquals(List.of(new Level(levels.get(0)), new Level(levels.get(1)), new Level(levels.get(2))), ((ClassCallExpression) def.getParameters().getType()).getLevels().toList());
   }
 
   @Test
@@ -294,7 +294,7 @@ public class LevelParametersTest extends TypeCheckingTestCase {
     FunctionDefinition def = (FunctionDefinition) getDefinition("R.f");
     List<? extends LevelVariable> levels = def.getLevelParameters();
     assertEquals(3, levels.size());
-    assertEquals(List.of(new Level(levels.get(0)), new Level(levels.get(1)), new Level(levels.get(2))), ((ClassCallExpression) def.getParameters().getTypeExpr()).getLevels().toList());
+    assertEquals(List.of(new Level(levels.get(0)), new Level(levels.get(1)), new Level(levels.get(2))), ((ClassCallExpression) def.getParameters().getType()).getLevels().toList());
   }
 
   @Test

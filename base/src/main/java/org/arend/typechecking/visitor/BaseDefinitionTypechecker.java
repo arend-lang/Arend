@@ -51,7 +51,7 @@ public class BaseDefinitionTypechecker {
       }
       for (DependentLink link1 = constructor.getParameters(); link1.hasNext(); link1 = link1.getNext()) {
         link1 = link1.getNextTyped(null);
-        checker.check(link1.getTypeExpr());
+        checker.check(link1.getType());
         if (parameters.isEmpty()) {
           return;
         }

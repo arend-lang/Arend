@@ -163,7 +163,7 @@ public class ExtMeta extends BaseMetaDefinition {
               substitution.add(new SubstitutionPair(param.getBinding(), sigmaRefs.get(param.getBinding()).applyAt(coeRef, factory, typechecker.getPrelude())));
             }
           }
-          CoreExpression result = typechecker.substitute((paramType == null ? paramBinding.getTypeExpr() : paramType).normalize(NormalizationMode.WHNF), LevelSubstitution.EMPTY, substitution);
+          CoreExpression result = typechecker.substitute((paramType == null ? paramBinding.getType() : paramType).normalize(NormalizationMode.WHNF), LevelSubstitution.EMPTY, substitution);
           return result == null ? null : result.computeTyped(true);
         }
       }));
@@ -185,7 +185,7 @@ public class ExtMeta extends BaseMetaDefinition {
         for (int i = 0; i < piParams.size(); i++) {
           CoreParameter piParam = piParams.get(i);
           ArendRef ref = factory.local(typechecker.getVariableRenameFactory().getNameFromBinding(piParam.getBinding(), null));
-          concretePiParams.add(factory.param(piParam.isExplicit(), Collections.singletonList(ref), factory.meta("ext_param", new SubstitutionMeta(piParam.getTypeExpr(), substitution.subList(0, i)))));
+          concretePiParams.add(factory.param(piParam.isExplicit(), Collections.singletonList(ref), factory.meta("ext_param", new SubstitutionMeta(piParam.getType(), substitution.subList(0, i)))));
           concreteLamParams.add(factory.param(piParam.isExplicit(), ref));
           ConcreteExpression refExpr = factory.ref(ref);
           args.add(factory.arg(refExpr, piParam.isExplicit()));
@@ -235,9 +235,9 @@ public class ExtMeta extends BaseMetaDefinition {
         Map<CoreBinding, CoreExpression> propBindings = new HashMap<>();
         int i = 0;
         for (CoreParameter param = typeParams; param.hasNext(); param = param.getNext(), i++) {
-          CoreExpression propType = classFields != null && classFields.get(i).isProperty() ? param.getTypeExpr() : null;
+          CoreExpression propType = classFields != null && classFields.get(i).isProperty() ? param.getType() : null;
           if (propType == null) {
-            propType = Utils.minimizeToProp(param.getTypeExpr());
+            propType = Utils.minimizeToProp(param.getType());
           }
           if (propType != null) {
             propBindings.put(param.getBinding(), propType);
@@ -351,7 +351,7 @@ public class ExtMeta extends BaseMetaDefinition {
           CoreBinding paramBinding = param.getBinding();
           boolean isProp = propBindings.containsKey(paramBinding);
           if (!bindings.isEmpty()) {
-            if (param.getTypeExpr().processSubexpression(e -> {
+            if (param.getType().processSubexpression(e -> {
               if (!(e instanceof CoreReferenceExpression)) {
                 return CoreExpression.FindAction.CONTINUE;
               }
@@ -391,7 +391,7 @@ public class ExtMeta extends BaseMetaDefinition {
           if (!isProp) {
             boolean isPi = false;
             ConcreteExpression leftExpr = makeProj(factory, left, i, classFields);
-            CoreExpression paramType = param.getTypeExpr().normalize(NormalizationMode.WHNF);
+            CoreExpression paramType = param.getType().normalize(NormalizationMode.WHNF);
             if (paramType instanceof CorePiExpression && withSimpCoe) {
               List<CoreParameter> sigmaParameters = new ArrayList<>();
               List<ConcreteExpression> leftProjs = new ArrayList<>();
@@ -427,7 +427,7 @@ public class ExtMeta extends BaseMetaDefinition {
                 List<CoreClassField> fields = paramType instanceof CoreClassCallExpression ? Utils.getNotImplementedField((CoreClassCallExpression) paramType) : null;
                 Set<CoreBinding> bindings1 = new HashSet<>();
                 for (CoreParameter parameter = parameters; parameter.hasNext(); parameter = parameter.getNext()) {
-                  CoreExpression parameterType = parameter.getTypeExpr();
+                  CoreExpression parameterType = parameter.getType();
                   if (!(fields != null && fields.get(i).isProperty() || Utils.isProp(parameterType))) {
                     if (parameterType.findFreeBindings(isSimpCoe ? bindings1 : depBindings) != null) {
                       ok = null;
@@ -451,7 +451,7 @@ public class ExtMeta extends BaseMetaDefinition {
               if (pathExpr == null || !pathExpr.getClass().equals(PathExpression.class)) {
                 leftExpr = factory.app(factory.ref(typechecker.getPrelude().getCoerceRef()), true, Arrays.asList(makeCoeLambda(typeParams, paramBinding, propBindings.get(paramBinding), used, sigmaRefs, factory), leftExpr, factory.ref(typechecker.getPrelude().getRightRef())));
               } else {
-                leftExpr = factory.app(factory.ref(transport), true, Arrays.asList(SubstitutionMeta.makeLambda(paramBinding.getTypeExpr(), binding, factory), pathExpr.pathExpression, leftExpr));
+                leftExpr = factory.app(factory.ref(transport), true, Arrays.asList(SubstitutionMeta.makeLambda(paramBinding.getType(), binding, factory), pathExpr.pathExpression, leftExpr));
               }
             }
 
@@ -669,7 +669,7 @@ public class ExtMeta extends BaseMetaDefinition {
             letClauses.add(factory.letClause(argLetRef, Collections.emptyList(), null, field));
             field = factory.ref(argLetRef);
           }
-          fields.add(addImplicitLambda(fieldWithAt == null ? applyAt(field) : fieldWithAt, paramBinding.getTypeExpr(), factory));
+          fields.add(addImplicitLambda(fieldWithAt == null ? applyAt(field) : fieldWithAt, paramBinding.getType(), factory));
           fieldsMap.put(paramBinding, pathExpr != null ? pathExpr : new PathExpression(field));
           fieldsList.add(field);
         }

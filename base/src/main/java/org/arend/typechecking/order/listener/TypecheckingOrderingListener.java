@@ -599,7 +599,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
 
       for (DependentLink link = entry.getKey().getParameters(); link.hasNext(); link = link.getNext()) {
         link = link.getNextTyped(null);
-        if (FindDefCallVisitor.findDefinition(link.getTypeExpr(), definitions.keySet()) != null) {
+        if (FindDefCallVisitor.findDefinition(link.getType(), definitions.keySet()) != null) {
           myErrorReporter.report(new TypecheckingError("Mutually recursive functions are not allowed in parameters", entry.getValue()).withDefinition(entry.getKey().getReferable()));
           ok = false;
         }

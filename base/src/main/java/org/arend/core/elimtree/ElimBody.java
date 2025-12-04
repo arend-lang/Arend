@@ -56,7 +56,7 @@ public class ElimBody implements Body, CoreElimBody {
   }
 
   private static DependentLink copyDependentLink(DependentLink link, ExprSubstitution substitution, LinkList linkList) {
-    TypedDependentLink result = new TypedDependentLink(link.isExplicit(), link.getName(), link.getTypeExpr().subst(substitution), link.isHidden(), EmptyDependentLink.getInstance());
+    TypedDependentLink result = new TypedDependentLink(link.isExplicit(), link.getName(), link.getType().subst(substitution), link.isHidden(), EmptyDependentLink.getInstance());
     linkList.append(result);
     substitution.add(link, new ReferenceExpression(result));
     return result;
@@ -84,7 +84,7 @@ public class ElimBody implements Body, CoreElimBody {
       int originalSize1 = clauseElems.size();
       BranchElimTree branchElimTree = (BranchElimTree) elimTree;
       for (BranchKey key : branchElimTree.getKeys()) {
-        Expression type = TypeConstructorExpression.unfoldType(param.getTypeExpr().subst(substitution));
+        Expression type = TypeConstructorExpression.unfoldType(param.getType().subst(substitution));
         List<DependentLink> newParams = new ArrayList<>();
 
         ConstructorExpressionPattern conPattern;

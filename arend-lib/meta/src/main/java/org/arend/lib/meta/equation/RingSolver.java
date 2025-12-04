@@ -54,7 +54,7 @@ public class RingSolver extends BaseEqualitySolver {
 
   private void typeToRule(CoreBinding binding, List<Equality> rules) {
     if (binding == null) return;
-    CoreFunCallExpression eq = Utils.toEquality(binding.getTypeExpr(), null, null);
+    CoreFunCallExpression eq = Utils.toEquality(binding.getType(), null, null);
     if (eq == null || !typechecker.compare(eq.getDefCallArguments().get(0), getValuesType(), CMP.EQ, refExpr, false, true, false)) return;
     TermCompiler.CompiledTerm lhsTerm = termCompiler.compileTerm(eq.getDefCallArguments().get(1));
     TermCompiler.CompiledTerm rhsTerm = termCompiler.compileTerm(eq.getDefCallArguments().get(2));

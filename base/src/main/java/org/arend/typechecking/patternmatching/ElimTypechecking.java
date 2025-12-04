@@ -288,7 +288,7 @@ public class ElimTypechecking {
       if (elimParams.isEmpty()) {
         for (DependentLink link = parameters; link.hasNext(); link = link.getNext()) {
           link = link.getNextTyped(null);
-          List<ConCallExpression> conCalls = getMatchedConstructors(TypeConstructorExpression.unfoldType(link.getTypeExpr()));
+          List<ConCallExpression> conCalls = getMatchedConstructors(TypeConstructorExpression.unfoldType(link.getType()));
           if (conCalls != null && conCalls.isEmpty()) {
             emptyLink = link;
             break;
@@ -296,7 +296,7 @@ public class ElimTypechecking {
         }
       } else {
         for (DependentLink link : elimParams) {
-          List<ConCallExpression> conCalls = getMatchedConstructors(TypeConstructorExpression.unfoldType(link.getTypeExpr()));
+          List<ConCallExpression> conCalls = getMatchedConstructors(TypeConstructorExpression.unfoldType(link.getType()));
           if (conCalls != null && conCalls.isEmpty()) {
             emptyLink = link;
             break;
@@ -398,7 +398,7 @@ public class ElimTypechecking {
     List<ConCallExpression> conCalls = paramSpec2.get(link);
     Expression type = null;
     if (conCalls == null) {
-      type = TypeConstructorExpression.unfoldType(link.getTypeExpr().subst(substitution));
+      type = TypeConstructorExpression.unfoldType(link.getType().subst(substitution));
       conCalls = type instanceof DataCallExpression ? ((DataCallExpression) type).getMatchedConstructors() : null;
     }
 
@@ -549,7 +549,7 @@ public class ElimTypechecking {
     }
 
     if (parameters.hasNext() && !parameters.getNext().hasNext()) {
-      DataCallExpression dataCall = parameters.getTypeExpr().cast(DataCallExpression.class);
+      DataCallExpression dataCall = parameters.getType().cast(DataCallExpression.class);
       if (dataCall != null && dataCall.getDefinition() == Prelude.INTERVAL) {
         myErrorReporter.report(new TypecheckingError("Pattern matching on the interval is not allowed here", mySourceNode));
         return null;
@@ -567,7 +567,7 @@ public class ElimTypechecking {
       if (!elimParams.isEmpty() && !elimParams.contains(param)) {
         continue;
       }
-      DataCallExpression dataCall = param.getTypeExpr().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
+      DataCallExpression dataCall = param.getType().normalize(NormalizationMode.WHNF).cast(DataCallExpression.class);
       if (dataCall != null) {
         Map<DependentLink, List<Pair<ExpressionPattern, Map<DependentLink, Constructor>>>> newParamSpec = computeParamSpec(param, dataCall, elimParams, paramSpec2, parameters);
         if (newParamSpec == null) {
@@ -630,7 +630,7 @@ public class ElimTypechecking {
         if (patterns.get(i) instanceof BindingPattern && !paramSpec.containsKey(param)) {
           ConstructorExpressionPattern newPattern;
           List<ExpressionPattern> subPatterns;
-          Expression type = ((BindingPattern) patterns.get(i)).getBinding().getTypeExpr().getUnderlyingExpression();
+          Expression type = ((BindingPattern) patterns.get(i)).getBinding().getType().getUnderlyingExpression();
           if (type instanceof SigmaExpression) {
             subPatterns = new ArrayList<>();
             newPattern = new ConstructorExpressionPattern((SigmaExpression) type, subPatterns);
@@ -691,7 +691,7 @@ public class ElimTypechecking {
         }
         for (; link.hasNext(); link = link.getNext()) {
           link = link.getNextTyped(null);
-          List<ConCallExpression> conCalls = getMatchedConstructors(link.getTypeExpr().subst(substitution));
+          List<ConCallExpression> conCalls = getMatchedConstructors(link.getType().subst(substitution));
           if (conCalls != null && conCalls.isEmpty()) {
             continue loop;
           }
@@ -1065,7 +1065,7 @@ public class ElimTypechecking {
               ExpressionPattern pattern = oldPatterns.get(index + 2);
               if (pattern instanceof BindingPattern) {
                 Binding binding = pattern.getBinding();
-                Expression type = binding.getTypeExpr().normalize(NormalizationMode.WHNF);
+                Expression type = binding.getType().normalize(NormalizationMode.WHNF);
                 if (type instanceof ClassCallExpression classCall && classCall.getDefinition() == Prelude.DEP_ARRAY) {
                   Expression length = classCall.getImplementationHere(Prelude.ARRAY_LENGTH, new ReferenceExpression(binding));
                   if (length != null) {

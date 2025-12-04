@@ -188,7 +188,7 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
   public void visitParameters(DependentLink link) {
     for (; link.hasNext(); link = link.getNext()) {
       DependentLink link1 = link.getNextTyped(null);
-      link1.setType(link1.getTypeExpr().accept(this, null));
+      link1.setType(link1.getType().accept(this, null));
     }
   }
 

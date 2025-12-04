@@ -156,7 +156,7 @@ public class ExpressionFactory {
 
       names.add(link.getName());
       if (link instanceof TypedDependentLink) {
-        SingleDependentLink parameter = singleParam(link.isExplicit(), names, link.getTypeExpr().subst(substitution, LevelSubstitution.EMPTY));
+        SingleDependentLink parameter = singleParam(link.isExplicit(), names, link.getType().subst(substitution, LevelSubstitution.EMPTY));
         parameters.add(parameter);
         names.clear();
 

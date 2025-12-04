@@ -23,16 +23,16 @@ public class TransitivityKey extends FieldKey {
   protected boolean checkField(CoreClassField field) {
     List<CoreParameter> parameters = new ArrayList<>();
     CoreExpression codomain = field.getResultType().getPiParameters(parameters);
-    if (!(parameters.size() == 5 && isBaseSetCall(parameters.get(0).getTypeExpr(), field) && isBaseSetCall(parameters.get(1).getTypeExpr(), field) && isBaseSetCall(parameters.get(2).getTypeExpr(), field))) {
+    if (!(parameters.size() == 5 && isBaseSetCall(parameters.get(0).getType(), field) && isBaseSetCall(parameters.get(1).getType(), field) && isBaseSetCall(parameters.get(2).getType(), field))) {
       return false;
     }
 
-    CoreClassField relation = getFieldApplied(parameters.get(3).getTypeExpr(), parameters.get(0).getBinding(), parameters.get(1).getBinding(), field);
+    CoreClassField relation = getFieldApplied(parameters.get(3).getType(), parameters.get(0).getBinding(), parameters.get(1).getBinding(), field);
     if (relation == null) {
       return false;
     }
 
-    if (relation != getFieldApplied(parameters.get(4).getTypeExpr(), parameters.get(1).getBinding(), parameters.get(2).getBinding(), field) || relation != getFieldApplied(codomain, parameters.get(0).getBinding(), parameters.get(2).getBinding(), field)) {
+    if (relation != getFieldApplied(parameters.get(4).getType(), parameters.get(1).getBinding(), parameters.get(2).getBinding(), field) || relation != getFieldApplied(codomain, parameters.get(0).getBinding(), parameters.get(2).getBinding(), field)) {
       return false;
     }
 

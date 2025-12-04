@@ -91,7 +91,7 @@ public class CongVisitor extends BaseCoreExpressionVisitor<CongVisitor.ParamType
 
   private boolean findFreeVar(CoreParameter parameter, CoreBinding binding) {
     for (; parameter.hasNext(); parameter = parameter.getNext()) {
-      if (parameter.getTypeExpr().findFreeBinding(binding)) {
+      if (parameter.getType().findFreeBinding(binding)) {
         typechecker.getErrorReporter().report(new TypecheckingError("'cong' does not support dependent functions", marker));
         return true;
       }
@@ -139,7 +139,7 @@ public class CongVisitor extends BaseCoreExpressionVisitor<CongVisitor.ParamType
     BigInteger n = expr2.getBigInteger();
     while (expr1 instanceof CoreConCallExpression && ((CoreConCallExpression) expr1).getDefinition() == prelude.getSuc() && !n.equals(BigInteger.ZERO)) {
       s++;
-      expr1 = ((CoreConCallExpression) expr1).getDefCallArguments().get(0);
+      expr1 = ((CoreConCallExpression) expr1).getDefCallArguments().getFirst();
       n = n.subtract(BigInteger.ONE);
     }
 

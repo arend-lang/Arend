@@ -74,7 +74,7 @@ public class EmptyDependentLink implements SingleDependentLink {
   }
 
   @Override
-  public @NotNull Expression getTypeExpr() {
+  public @NotNull Expression getType() {
     throw new IllegalStateException();
   }
 

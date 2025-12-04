@@ -543,7 +543,7 @@ public class MonoidSolver extends BaseEqualitySolver {
     if (binding == null && typed == null) {
       return false;
     }
-    CoreExpression type = binding != null ? binding.getTypeExpr() : typed.getType();
+    CoreExpression type = binding != null ? binding.getType() : typed.getType();
     CoreFunCallExpression eq = Utils.toEquality(type, null, null);
     if (eq == null) {
       CoreExpression typeNorm = type.normalize(NormalizationMode.WHNF);
