@@ -63,7 +63,7 @@ public class ExpressionFactory {
   }
 
   public static LamExpression Lam(SingleDependentLink link, Expression body) {
-    return new LamExpression(getMaxSort(link.getTypeExpr(), body.getType()), link, body);
+    return new LamExpression(link, body, body.getType().getSortOfType());
   }
 
   public static List<HaveClause> lets(HaveClause... letClauses) {
@@ -113,23 +113,23 @@ public class ExpressionFactory {
     return org.arend.core.expr.ExpressionFactory.singleParams(explicit, names, type instanceof Type ? (Type) type : new TypeExpression(type, Sort.SET0));
   }
 
-  private static Sort getMaxSort(Expression type1, Expression type2) {
-    Sort sort1 = type1 == null ? null : type1.getSortOfType();
-    Sort sort2 = type2 == null ? null : type2.getSortOfType();
-    return sort1 == null || sort2 == null ? Sort.SET0 : Sort.make(sort1.getPLevel().max(sort2.getPLevel()), sort2.getHLevel(), sort1.isCat() || sort2.isCat());
+  private static Type exprToType(Expression expr) {
+    if (expr instanceof Type) return (Type) expr;
+    Sort sort = expr.getSortOfType();
+    return new TypeExpression(expr, sort == null ? Sort.SET0 : sort);
   }
 
   public static PiExpression Pi(SingleDependentLink domain, Expression codomain) {
     assert domain.hasNext();
-    return new PiExpression(getMaxSort(domain.getTypeExpr(), codomain), domain, codomain);
+    return new PiExpression(domain, exprToType(codomain));
   }
 
   public static PiExpression Pi(Expression domain, Expression codomain) {
-    return new PiExpression(getMaxSort(domain, codomain), singleParam(null, domain), codomain);
+    return new PiExpression(singleParam(null, domain), exprToType(codomain));
   }
 
   public static PiExpression Pi(boolean isExplicit, Expression domain, Expression codomain) {
-    return new PiExpression(getMaxSort(domain, codomain), singleParam(isExplicit, (String) null, domain), codomain);
+    return new PiExpression(singleParam(isExplicit, (String) null, domain), exprToType(codomain));
   }
 
   public static UniverseExpression Universe(int pLevel) {

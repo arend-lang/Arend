@@ -443,11 +443,12 @@ class ExpressionDeserialization {
   }
 
   private LamExpression readLam(ExpressionProtos.Expression.Lam proto) throws DeserializationException {
-    return new LamExpression(readSort(proto.getResultSort()), readSingleParameter(proto.getParam()), readExpr(proto.getBody()));
+    return new LamExpression(readSingleParameter(proto.getParam()), readExpr(proto.getBody()), readSort(proto.getResultSort()));
   }
 
   PiExpression readPi(ExpressionProtos.Expression.Pi proto) throws DeserializationException {
-    return new PiExpression(readSort(proto.getResultSort()), readSingleParameter(proto.getParam()), readExpr(proto.getCodomain()));
+    Expression codomain = readExpr(proto.getCodomain());
+    return new PiExpression(readSingleParameter(proto.getParam()), codomain instanceof Type ? (Type) codomain : new TypeExpression(codomain, readSort(proto.getResultSort())));
   }
 
   private UniverseExpression readUniverse(ExpressionProtos.Expression.Universe proto) {

@@ -350,9 +350,9 @@ public abstract class Expression implements Body, CoreExpression {
   @Override
   public @Nullable Expression lambdaToPi() {
     Expression expr = getUnderlyingExpression();
-    if (expr instanceof LamExpression) {
-      Expression cod = ((LamExpression) expr).getBody().lambdaToPi();
-      return cod == null ? null : new PiExpression(((LamExpression) expr).getResultSort(), ((LamExpression) expr).getParameters(), cod);
+    if (expr instanceof LamExpression lamExpr) {
+      Expression cod = lamExpr.getBody().lambdaToPi();
+      return cod == null ? null : new PiExpression(lamExpr.getParameters(), cod instanceof Type ? (Type) cod : new TypeExpression(cod, lamExpr.getCodomainSort()));
     } else {
       return expr.getSortOfType() == null ? null : expr;
     }
@@ -572,7 +572,7 @@ public abstract class Expression implements Body, CoreExpression {
         n--;
       }
       if (n == 0) {
-        return link.hasNext() ? new PiExpression(piCod.getResultSort(), link, piCod.getCodomain()) : piCod.getCodomain();
+        return link.hasNext() ? new PiExpression(link, piCod.getCodomainType()) : piCod.getCodomain();
       }
       cod = piCod.getCodomain().normalize(NormalizationMode.WHNF);
     }
@@ -596,21 +596,22 @@ public abstract class Expression implements Body, CoreExpression {
       return expr;
     }
 
+    Type type = (PiExpression) expr;
     List<PiExpression> piExprs = new ArrayList<>();
-    while (expr instanceof PiExpression piExpr) {
+    while (type.getExpr() instanceof PiExpression piExpr) {
       piExprs.add(piExpr);
       if (parameters != null) {
         for (SingleDependentLink link = piExpr.getParameters(); link.hasNext(); link = link.getNext()) {
           parameters.add(link);
         }
       }
-      expr = piExpr.getCodomain();
+      type = piExpr.getCodomainType();
     }
 
     for (int i = piExprs.size() - 1; i >= 0; i--) {
-      expr = new PiExpression(piExprs.get(i).getResultSort(), piExprs.get(i).getParameters(), expr);
+      type = new PiExpression(piExprs.get(i).getParameters(), type);
     }
-    return expr;
+    return type.getExpr();
   }
 
   public Expression getLamParameters(List<DependentLink> params) {

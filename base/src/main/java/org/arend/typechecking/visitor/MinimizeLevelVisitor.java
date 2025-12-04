@@ -51,17 +51,11 @@ public class MinimizeLevelVisitor extends BaseExpressionVisitor<Void, Type> {
 
   @Override
   public Type visitPi(PiExpression expr, Void params) {
-    if (expr.getResultSort().isProp()) return expr;
+    if (expr.getCodomainType().getSortOfType().isProp()) return expr;
     Type dom = visit(expr.getParameters().getTypeExpr());
     if (dom == null) return null;
     Type cod = visit(expr.getCodomain());
     if (cod == null) return null;
-    Sort domSort = dom.getSortOfType();
-    Sort codSort = cod.getSortOfType();
-    Sort sort = Sort.make(domSort.getPLevel().max(codSort.getPLevel()), codSort.getHLevel(), domSort.isCat() || codSort.isCat());
-    if (sort.equals(expr.getResultSort()) || !sort.isLessOrEquals(expr.getResultSort())) {
-      return expr;
-    }
 
     ExprSubstitution substitution = new ExprSubstitution();
     LinkList list = new LinkList();
@@ -70,7 +64,7 @@ public class MinimizeLevelVisitor extends BaseExpressionVisitor<Void, Type> {
       list.append(newParam);
       substitution.add(param, new ReferenceExpression(newParam));
     }
-    return new PiExpression(sort, (SingleDependentLink) list.getFirst(), cod.getExpr().subst(substitution));
+    return new PiExpression((SingleDependentLink) list.getFirst(), cod.subst(new SubstVisitor(substitution, LevelSubstitution.EMPTY)));
   }
 
   @Override

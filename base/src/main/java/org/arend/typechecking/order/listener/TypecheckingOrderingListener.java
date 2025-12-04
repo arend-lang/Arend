@@ -9,7 +9,6 @@ import org.arend.core.elimtree.ElimClause;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.VoidExpressionVisitor;
 import org.arend.core.pattern.ExpressionPattern;
-import org.arend.core.sort.Sort;
 import org.arend.error.CountingErrorReporter;
 import org.arend.ext.ArendExtension;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
@@ -169,7 +168,7 @@ public class TypecheckingOrderingListener extends BooleanComputationRunner imple
         }
         for (Concrete.ClassElement element : def.getElements()) {
           if (element instanceof Concrete.ClassField) {
-            ClassField classField = new ClassField(((Concrete.ClassField) element).getData(), (ClassDefinition) typechecked, new PiExpression(Sort.PROP, new TypedSingleDependentLink(false, "this", new ClassCallExpression((ClassDefinition) typechecked, typechecked.makeIdLevels()), true), new ErrorExpression()), null);
+            ClassField classField = new ClassField(((Concrete.ClassField) element).getData(), (ClassDefinition) typechecked, new PiExpression(new TypedSingleDependentLink(false, "this", new ClassCallExpression((ClassDefinition) typechecked, typechecked.makeIdLevels()), true), new ErrorExpression()), null);
             classField.setStatus(Definition.TypeCheckingStatus.HAS_ERRORS);
             ((ClassDefinition) typechecked).addPersonalField(classField);
             ((ClassDefinition) typechecked).addField(classField);

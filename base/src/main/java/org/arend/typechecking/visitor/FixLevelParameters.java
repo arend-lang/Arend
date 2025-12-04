@@ -150,18 +150,6 @@ public class FixLevelParameters extends VoidExpressionVisitor<Void> {
   }
 
   @Override
-  public Void visitLam(LamExpression expr, Void param) {
-    expr.setResultSort(removeVars(expr.getResultSort()));
-    return super.visitLam(expr, param);
-  }
-
-  @Override
-  public Void visitPi(PiExpression expr, Void param) {
-    expr.setResultSort(removeVars(expr.getResultSort()));
-    return super.visitPi(expr, param);
-  }
-
-  @Override
   public Void visitSigma(SigmaExpression expr, Void param) {
     expr.setSort(removeVars(expr.getSort()));
     return super.visitSigma(expr, param);

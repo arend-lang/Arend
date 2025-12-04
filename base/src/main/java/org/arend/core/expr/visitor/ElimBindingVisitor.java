@@ -39,7 +39,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     if (expr == null) {
       return null;
     }
-    Expression result = expr.getParameters().getNext().hasNext() ? new LamExpression(expr.getResultSort(), expr.getParameters().getNext(), expr.getBody()) : expr.getBody();
+    Expression result = expr.getParameters().getNext().hasNext() ? new LamExpression(expr.getParameters().getNext(), expr.getBody(), expr.getCodomainSort()) : expr.getBody();
     return expr.getParameters() == UnusedIntervalDependentLink.INSTANCE ? result : elimBinding(result, expr.getParameters());
   }
 
@@ -137,7 +137,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
             Expression type = entry.getValue().removeConstLam();
             Expression newType = type == null ? null : acceptSelf(type, true);
             if (newType != null) {
-              newFieldSet.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(expr.getSort(), new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(result.getThisBinding())))), newType));
+              newFieldSet.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(result.getThisBinding())))), newType, expr.getSort()));
             }
           }
           continue;
@@ -245,14 +245,14 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
       if (body == null) {
         return null;
       }
-      body = new LamExpression(expr.getResultSort(), parameters, body);
+      body = new LamExpression(parameters, body, expr.getCodomainSort());
     } else {
       body = acceptSelf(expr.getBody(), true);
       if (body == null) {
         return null;
       }
     }
-    return isUnused ? new LamExpression(expr.getResultSort(), UnusedIntervalDependentLink.INSTANCE, body) : (LamExpression) body;
+    return isUnused ? new LamExpression(UnusedIntervalDependentLink.INSTANCE, body, expr.getCodomainSort()) : (LamExpression) body;
   }
 
   @Override
@@ -266,10 +266,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
     if (myKeepVisitor != null) {
       myKeepVisitor.freeParameters(parameters);
     }
-    if (codomain == null) {
-      return null;
-    }
-    return new PiExpression(expr.getResultSort(), parameters, codomain);
+    return codomain == null ? null : new PiExpression(parameters, codomain instanceof Type type ? type : new TypeExpression(codomain, expr.getCodomainType().getSortOfType()));
   }
 
   @Override

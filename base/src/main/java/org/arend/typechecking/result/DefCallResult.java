@@ -6,6 +6,8 @@ import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.CallableDefinition;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.*;
+import org.arend.core.expr.type.Type;
+import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
@@ -96,14 +98,18 @@ public class DefCallResult implements TResult {
     }
 
     Expression expression = getCoreDefCall();
-    Expression type = myResultType.subst(substitution, LevelSubstitution.EMPTY);
-    Sort codSort = typechecker.getSortOfType(type, myDefCall);
-    for (int i = parameters.size() - 1; i >= 0; i--) {
-      codSort = PiExpression.piSort(parameters.get(i).getType().getSortOfType(), codSort);
-      expression = new LamExpression(codSort, parameters.get(i), expression);
-      type = new PiExpression(codSort, parameters.get(i), type);
+    Expression resultType = myResultType.subst(substitution, LevelSubstitution.EMPTY);
+    if (parameters.isEmpty()) {
+      return new TypecheckingResult(expression, resultType);
     }
-    return new TypecheckingResult(expression, type);
+
+    Sort codSort = typechecker.getSortOfType(resultType, myDefCall);
+    Type type = resultType instanceof Type ? (Type) resultType : new TypeExpression(resultType, codSort);
+    for (int i = parameters.size() - 1; i >= 0; i--) {
+      expression = new LamExpression(parameters.get(i), expression, codSort);
+      type = new PiExpression(parameters.get(i), type);
+    }
+    return new TypecheckingResult(expression, type.getExpr());
   }
 
   @Override

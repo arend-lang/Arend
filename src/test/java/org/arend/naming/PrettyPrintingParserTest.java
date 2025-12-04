@@ -189,7 +189,7 @@ public class PrettyPrintingParserTest extends TypeCheckingTestCase {
     List<ElimClause<Pattern>> clauses = new ArrayList<>();
     clauses.add(new ElimClause<>(Collections.singletonList(ConstructorPattern.make(Prelude.ZERO, Collections.emptyList())), Zero()));
     clauses.add(new ElimClause<>(Collections.singletonList(ConstructorPattern.make(Prelude.SUC, Collections.singletonList(new BindingPattern(y)))), Ref(y)));
-    Expression cExpr = new LamExpression(Sort.SET0, x, new CaseExpression(false, x, Nat(), null, new ElimBody(clauses, null), Collections.singletonList(Ref(x))));
+    Expression cExpr = new LamExpression(x, new CaseExpression(false, x, Nat(), null, new ElimBody(clauses, null), Collections.singletonList(Ref(x))), Sort.SET0);
 
     LocalReferable cx = ref("x");
     LocalReferable cy = ref("y");

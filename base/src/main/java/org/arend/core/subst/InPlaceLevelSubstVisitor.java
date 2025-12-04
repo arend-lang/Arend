@@ -81,8 +81,8 @@ public class InPlaceLevelSubstVisitor extends VoidExpressionVisitor<Void> {
 
   @Override
   public Void visitPi(PiExpression expr, Void params) {
-    expr.substSort(mySubstitution);
-    super.visitPi(expr, null);
+    visitParameters(expr.getParameters(), params);
+    expr.getCodomainType().subst(this);
     return null;
   }
 

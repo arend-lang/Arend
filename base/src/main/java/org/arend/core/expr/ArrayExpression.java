@@ -61,12 +61,12 @@ public class ArrayExpression extends Expression implements CoreArrayExpression {
     Expression length_1 = length.pred();
     TypedSingleDependentLink param = new TypedSingleDependentLink(true, "j", Fin(length_1));
     LevelPair levelPair = classCall.getLevels().toLevelPair();
-    Sort sort = levelPair.toSort().max(Sort.SET0);
+    Sort sort = levelPair.toSort();
     Expression at = classCall.getImplementationHere(Prelude.ARRAY_AT, expr);
     Map<ClassField, Expression> impls = new LinkedHashMap<>();
     impls.put(Prelude.ARRAY_LENGTH, length_1);
-    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(sort, param, AppExpression.make(elementsType, Suc(new ReferenceExpression(param)), true)));
-    impls.put(Prelude.ARRAY_AT, new LamExpression(sort, param, at != null ? AppExpression.make(at, Suc(new ReferenceExpression(param)), true) : FunCallExpression.make(Prelude.ARRAY_INDEX, classCall.getLevels(), Arrays.asList(expr, Suc(new ReferenceExpression(param))))));
+    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(param, AppExpression.make(elementsType, Suc(new ReferenceExpression(param)), true), sort));
+    impls.put(Prelude.ARRAY_AT, new LamExpression(param, at != null ? AppExpression.make(at, Suc(new ReferenceExpression(param)), true) : FunCallExpression.make(Prelude.ARRAY_INDEX, classCall.getLevels(), Arrays.asList(expr, Suc(new ReferenceExpression(param)))), sort));
     return new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), impls, Sort.PROP, UniverseKind.NO_UNIVERSES));
   }
 
@@ -91,7 +91,7 @@ public class ArrayExpression extends Expression implements CoreArrayExpression {
     for (int i = 0; i < n; i++) {
       index = Suc(index);
     }
-    return new ArrayExpression(myLevels, new LamExpression(myLevels.toSort().max(Sort.SET0), param, AppExpression.make(myElementsType, index, true)), myElements.subList(n, myElements.size()), myTail);
+    return new ArrayExpression(myLevels, new LamExpression(param, AppExpression.make(myElementsType, index, true), myLevels.toSort()), myElements.subList(n, myElements.size()), myTail);
   }
 
   public Expression getLength() {
@@ -126,7 +126,7 @@ public class ArrayExpression extends Expression implements CoreArrayExpression {
     List<Expression> result = new ArrayList<>(4);
     if (withLength) result.add(getLengthMinus1());
     if (withElementsType) result.add(myElementsType);
-    result.add(myElements.get(0));
+    result.add(myElements.getFirst());
     Expression tail = drop(1);
     boolean useTail = tail instanceof ArrayExpression;
     if (!useTail) {

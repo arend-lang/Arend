@@ -336,7 +336,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
             type = type.normalize(NormalizationMode.WHNF);
             if (type instanceof ClassCallExpression classCall && getDefinition().isSubClassOf(classCall.getDefinition())) {
               Map<ClassField, Expression> subImplementations = new LinkedHashMap<>(classCall.getImplementedHere());
-              ClassCallExpression resultClassCall = new ClassCallExpression(classCall.getDefinition(), getLevels(((ClassCallExpression) type).getDefinition()), subImplementations, Sort.PROP, UniverseKind.NO_UNIVERSES);
+              ClassCallExpression resultClassCall = new ClassCallExpression(classCall.getDefinition(), getLevels(classCall.getDefinition()), subImplementations, Sort.PROP, UniverseKind.NO_UNIVERSES);
               Expression resultRef = new ReferenceExpression(resultClassCall.myThisBinding);
               for (ClassField field : classCall.getDefinition().getNotImplementedFields()) {
                 Expression impl = getImplementation(field, resultRef);
@@ -447,7 +447,7 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
         }
       }, null);
 
-      DependentLink link = new TypedDependentLink(true, Renamer.getNameFromType(type, field.getName()), type instanceof Type ? (Type) type : new TypeExpression(type, piExpr.getResultSort()), EmptyDependentLink.getInstance());
+      DependentLink link = new TypedDependentLink(true, Renamer.getNameFromType(type, field.getName()), type instanceof Type ? (Type) type : new TypeExpression(type, piExpr.getSortOfType()), EmptyDependentLink.getInstance());
       implementations.put(field, new ReferenceExpression(link));
       list.append(link);
     }

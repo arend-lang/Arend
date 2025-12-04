@@ -1185,7 +1185,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     if (field.isProperty()) {
       kind = ClassFieldKind.ANY;
     } else {
-      Sort sort = field.getType().getCodomain().getSortOfType();
+      Sort sort = field.getType().getCodomainType().getSortOfType();
       kind = sort == null || sort.isProp() ? ClassFieldKind.FIELD : ClassFieldKind.ANY;
     }
 
