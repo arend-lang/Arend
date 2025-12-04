@@ -195,7 +195,7 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
 
   @Override
   public Expression visitSigma(SigmaExpression expr, Void params) {
-    SigmaExpression result = new SigmaExpression(expr.getSort().subst(myLevelSubstitution), DependentLink.Helper.subst(expr.getParameters(), this));
+    SigmaExpression result = new SigmaExpression(DependentLink.Helper.subst(expr.getParameters(), this));
     DependentLink.Helper.freeSubsts(expr.getParameters(), myExprSubstitution);
     return result;
   }

@@ -380,7 +380,7 @@ public class NormalizationTest extends TypeCheckingTestCase {
   @Test
   public void testAppProj() {
     SingleDependentLink x = singleParam("x", Nat());
-    Expression expr = Apps(ProjExpression.make(Tuple(new SigmaExpression(Sort.SET0, param("_", Pi(Nat(), Nat()))), Lam(x, Ref(x))), 0, false), Zero());
+    Expression expr = Apps(ProjExpression.make(Tuple(new SigmaExpression(param("_", Pi(Nat(), Nat()))), Lam(x, Ref(x))), 0, false), Zero());
     assertEquals(Zero(), expr.normalize(NormalizationMode.NF));
   }
 

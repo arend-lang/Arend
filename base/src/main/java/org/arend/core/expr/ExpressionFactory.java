@@ -2,7 +2,6 @@ package org.arend.core.expr;
 
 import org.arend.core.context.param.*;
 import org.arend.core.definition.ClassField;
-import org.arend.core.sort.Sort;
 import org.arend.core.subst.Levels;
 import org.arend.prelude.Prelude;
 import org.arend.util.SingletonList;
@@ -76,7 +75,7 @@ public class ExpressionFactory {
   }
 
   public static SigmaExpression divModType(Expression type) {
-    return new SigmaExpression(Sort.SET0, new TypedDependentLink(true, null, Nat(), new TypedDependentLink(true, null, type, EmptyDependentLink.getInstance())));
+    return new SigmaExpression(new TypedDependentLink(true, null, Nat(), new TypedDependentLink(true, null, type, EmptyDependentLink.getInstance())));
   }
 
   public static SigmaExpression finDivModType(Expression expr) {

@@ -16,8 +16,6 @@ import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
 import org.arend.core.expr.let.LetClause;
 import org.arend.core.expr.let.LetClausePattern;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
@@ -47,15 +45,6 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
     int index = myIndex++;
     myBindingsMap.put(binding, index);
     return index;
-  }
-
-  private ExpressionProtos.Type writeType(Type type) {
-    ExpressionProtos.Type.Builder builder = ExpressionProtos.Type.newBuilder();
-    builder.setExpr(writeExpr(type.getExpr()));
-    if (type instanceof TypeExpression) {
-      builder.setSort(writeSort(type.getSortOfType()));
-    }
-    return builder.build();
   }
 
   int writeBindingRef(Binding binding) {
@@ -512,8 +501,6 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
 
   private ExpressionProtos.Expression.Sigma writeSigma(SigmaExpression sigma) {
     ExpressionProtos.Expression.Sigma.Builder builder = ExpressionProtos.Expression.Sigma.newBuilder();
-    builder.setPLevel(LevelProtos.Level.newBuilder(writeLevel(sigma.getSort().getPLevel())).build());
-    builder.setHLevel(LevelProtos.Level.newBuilder(writeLevel(sigma.getSort().getHLevel())).build());
     builder.addAllParam(writeParameters(sigma.getParameters()));
     return builder.build();
   }

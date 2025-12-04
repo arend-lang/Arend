@@ -3,174 +3,160 @@ package org.arend.typechecking.visitor;
 import org.arend.core.context.LinkList;
 import org.arend.core.context.param.*;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.BaseExpressionVisitor;
-import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
 
-public class MinimizeLevelVisitor extends BaseExpressionVisitor<Void, Type> {
+public class MinimizeLevelVisitor extends BaseExpressionVisitor<Void, Expression> {
   @Override
-  public Type visitApp(AppExpression expr, Void params) {
+  public Expression visitApp(AppExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitDefCall(DefCallExpression expr, Void params) {
+  public Expression visitDefCall(DefCallExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitReference(ReferenceExpression expr, Void params) {
+  public Expression visitReference(ReferenceExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitInferenceReference(InferenceReferenceExpression expr, Void params) {
+  public Expression visitInferenceReference(InferenceReferenceExpression expr, Void params) {
     return expr.getSubstExpression() == null ? null : expr.getSubstExpression().accept(this, null);
   }
 
   @Override
-  public Type visitSubst(SubstExpression expr, Void params) {
+  public Expression visitSubst(SubstExpression expr, Void params) {
     return expr.getSubstExpression().accept(this, null);
   }
 
   @Override
-  public Type visitLam(LamExpression expr, Void params) {
+  public Expression visitLam(LamExpression expr, Void params) {
     return null;
   }
 
-  private Type visit(Expression expr) {
-    Type type = expr.accept(this, null);
-    if (type != null) return type;
-    Sort sort = expr.getSortOfType();
-    return sort == null ? null : new TypeExpression(expr, sort);
+  private Expression visit(Expression expr) {
+    Expression type = expr.accept(this, null);
+    return type != null ? type : expr;
   }
 
   @Override
-  public Type visitPi(PiExpression expr, Void params) {
-    Type dom = visit(expr.getParameters().getTypeExpr());
-    if (dom == null) return null;
-    Type cod = visit(expr.getCodomain());
-    if (cod == null) return null;
+  public Expression visitPi(PiExpression expr, Void params) {
+    Expression dom = visit(expr.getParameters().getTypeExpr());
+    Expression cod = visit(expr.getCodomain());
 
     ExprSubstitution substitution = new ExprSubstitution();
     LinkList list = new LinkList();
     for (SingleDependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
-      SingleDependentLink newParam = param instanceof TypedSingleDependentLink ? new TypedSingleDependentLink(param.isExplicit(), param.getName(), dom.getExpr(), param.isHidden()) : new UntypedSingleDependentLink(param.getName());
+      SingleDependentLink newParam = param instanceof TypedSingleDependentLink ? new TypedSingleDependentLink(param.isExplicit(), param.getName(), dom, param.isHidden()) : new UntypedSingleDependentLink(param.getName());
       list.append(newParam);
       substitution.add(param, new ReferenceExpression(newParam));
     }
-    return new TypeExpression(new PiExpression((SingleDependentLink) list.getFirst(), cod.getExpr().subst(substitution)), PiExpression.piSort(dom.getSortOfType(), cod.getSortOfType()));
+    return new PiExpression((SingleDependentLink) list.getFirst(), cod.subst(substitution));
   }
 
   @Override
-  public Type visitSigma(SigmaExpression expr, Void params) {
-    if (expr.getSort().isProp()) return expr;
-    Sort sort = Sort.PROP;
+  public Expression visitSigma(SigmaExpression expr, Void params) {
     LinkList list = new LinkList();
     ExprSubstitution substitution = new ExprSubstitution();
     for (DependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
       DependentLink newParam;
       if (param instanceof TypedDependentLink) {
-        Type type = visit(param.getTypeExpr());
-        if (type == null) return null;
-        sort = sort.max(type.getSortOfType());
-        if (sort.equals(expr.getSort()) || !sort.isLessOrEquals(expr.getSort())) {
-          return expr;
-        }
-        newParam = new TypedDependentLink(param.isExplicit(), param.getName(), type.getExpr().subst(substitution), param.isHidden(), EmptyDependentLink.getInstance());
+        Expression type = visit(param.getTypeExpr());
+        newParam = new TypedDependentLink(param.isExplicit(), param.getName(), type.subst(substitution), param.isHidden(), EmptyDependentLink.getInstance());
       } else {
         newParam = new UntypedDependentLink(param.getName());
       }
       list.append(newParam);
       substitution.add(param, new ReferenceExpression(newParam));
     }
-    return new SigmaExpression(sort, list.getFirst());
+    return new SigmaExpression(list.getFirst());
   }
 
   @Override
-  public Type visitUniverse(UniverseExpression expr, Void params) {
+  public Expression visitUniverse(UniverseExpression expr, Void params) {
     return expr;
   }
 
   @Override
-  public Type visitError(ErrorExpression expr, Void params) {
+  public Expression visitError(ErrorExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitTuple(TupleExpression expr, Void params) {
+  public Expression visitTuple(TupleExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitProj(ProjExpression expr, Void params) {
+  public Expression visitProj(ProjExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitNew(NewExpression expr, Void params) {
+  public Expression visitNew(NewExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitPEval(PEvalExpression expr, Void params) {
+  public Expression visitPEval(PEvalExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitBox(BoxExpression expr, Void params) {
+  public Expression visitBox(BoxExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitLet(LetExpression expr, Void params) {
+  public Expression visitLet(LetExpression expr, Void params) {
     return expr.getResult().accept(this, null);
   }
 
   @Override
-  public Type visitCase(CaseExpression expr, Void params) {
+  public Expression visitCase(CaseExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitOfType(OfTypeExpression expr, Void params) {
+  public Expression visitOfType(OfTypeExpression expr, Void params) {
     return expr.getExpression().accept(this, null);
   }
 
   @Override
-  public Type visitInteger(IntegerExpression expr, Void params) {
+  public Expression visitInteger(IntegerExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitString(StringExpression expr, Void params) {
+  public Expression visitString(StringExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitTypeConstructor(TypeConstructorExpression expr, Void params) {
+  public Expression visitTypeConstructor(TypeConstructorExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitTypeDestructor(TypeDestructorExpression expr, Void params) {
+  public Expression visitTypeDestructor(TypeDestructorExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitArray(ArrayExpression expr, Void params) {
+  public Expression visitArray(ArrayExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitPath(PathExpression expr, Void params) {
+  public Expression visitPath(PathExpression expr, Void params) {
     return null;
   }
 
   @Override
-  public Type visitAt(AtExpression expr, Void params) {
+  public Expression visitAt(AtExpression expr, Void params) {
     return null;
   }
 }

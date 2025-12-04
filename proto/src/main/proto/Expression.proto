@@ -181,8 +181,6 @@ message Expression {
         Expression expression = 2;
     }
     message Sigma {
-        Level pLevel = 1;
-        Level hLevel = 2;
         repeated Telescope param = 3;
     }
     message Tuple {

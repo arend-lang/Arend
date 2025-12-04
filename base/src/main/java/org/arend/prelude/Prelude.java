@@ -109,7 +109,7 @@ public class Prelude implements ArendPrelude {
         NAT = (DataDefinition) definition;
         ZERO = NAT.getConstructor("zero");
         SUC = NAT.getConstructor("suc");
-        DIV_MOD_TYPE = new SigmaExpression(Sort.SET0, parameter(true, Arrays.asList(null, null), Nat()));
+        DIV_MOD_TYPE = new SigmaExpression(parameter(true, Arrays.asList(null, null), Nat()));
       }
       case "Fin" -> {
         FIN = (DataDefinition) definition;

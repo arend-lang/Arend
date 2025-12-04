@@ -259,7 +259,7 @@ public class ConstructorExpressionPattern extends ConstructorPattern<Object> imp
       }
       arguments.add(argument);
     }
-    return (dataExpr instanceof ClassCallExpression ? new ConstructorExpressionPattern(new SigmaExpression(Sort.PROP, getParameters()), getSubPatterns()) : this).toExpression(arguments);
+    return (dataExpr instanceof ClassCallExpression ? new ConstructorExpressionPattern(new SigmaExpression(getParameters()), getSubPatterns()) : this).toExpression(arguments);
   }
 
   @Override

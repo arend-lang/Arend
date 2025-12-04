@@ -1769,8 +1769,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         List<DependentLink> list1 = DependentLink.Helper.toList(expr1.getParameters());
         List<DependentLink> list2 = DependentLink.Helper.toList(sigma2.getParameters());
         if (myResult.index < list1.size() && myResult.index < list2.size()) {
-          myResult.wholeExpr1 = new SigmaExpression(expr1.getSort(), replaceParameter(list1, myResult.wholeExpr1, new ExprSubstitution()));
-          myResult.wholeExpr2 = new SigmaExpression(sigma2.getSort(), replaceParameter(list2, myResult.wholeExpr2, new ExprSubstitution()));
+          myResult.wholeExpr1 = new SigmaExpression(replaceParameter(list1, myResult.wholeExpr1, new ExprSubstitution()));
+          myResult.wholeExpr2 = new SigmaExpression(replaceParameter(list2, myResult.wholeExpr2, new ExprSubstitution()));
         }
         myResult.index = -1;
       }

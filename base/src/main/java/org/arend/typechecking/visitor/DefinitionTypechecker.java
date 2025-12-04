@@ -2936,9 +2936,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         }
         TypedSingleDependentLink thisParam = new TypedSingleDependentLink(false, "this", new ClassCallExpression(typedDef, idLevels), true);
         Expression type = field.getResultTypeFor(typedDef).subst(field.getThisParameter(), new ReferenceExpression(thisParam));
-        Type newType = type.accept(new MinimizeLevelVisitor(), null);
+        Expression newType = type.accept(new MinimizeLevelVisitor(), null);
         if (newType != null && newType != type) {
-          typedDef.overrideField(field, new PiExpression(thisParam, newType.getExpr()), typedDef);
+          typedDef.overrideField(field, new PiExpression(thisParam, newType), typedDef);
         }
       }
     }

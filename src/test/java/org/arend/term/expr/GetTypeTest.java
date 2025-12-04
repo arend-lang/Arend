@@ -84,7 +84,7 @@ public class GetTypeTest extends TypeCheckingTestCase {
   public void tupleTest() {
     typeCheckModule("\\func test : \\Sigma (x y : Nat) (x = y) => (0, 0, idp)");
     DependentLink xy = parameter(true, vars("x", "y"), Nat());
-    testType(new SigmaExpression(Sort.PROP, params(xy, paramExpr(FunCall(Prelude.PATH_INFIX, LevelPair.SET0, Nat(), Ref(xy), Ref(xy.getNext()))))));
+    testType(new SigmaExpression(params(xy, paramExpr(FunCall(Prelude.PATH_INFIX, LevelPair.SET0, Nat(), Ref(xy), Ref(xy.getNext()))))));
   }
 
   @Test

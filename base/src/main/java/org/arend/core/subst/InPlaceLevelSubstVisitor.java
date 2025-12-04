@@ -64,13 +64,6 @@ public class InPlaceLevelSubstVisitor extends VoidExpressionVisitor<Void> {
   }
 
   @Override
-  public Void visitSigma(SigmaExpression expr, Void params) {
-    expr.substSort(mySubstitution);
-    super.visitSigma(expr, null);
-    return null;
-  }
-
-  @Override
   public Void visitUniverse(UniverseExpression expr, Void params) {
     expr.substSort(mySubstitution);
     super.visitUniverse(expr, null);

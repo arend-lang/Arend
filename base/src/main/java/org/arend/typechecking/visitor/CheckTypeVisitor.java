@@ -2657,7 +2657,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   @Override
   public TypecheckingResult visitSigma(Concrete.SigmaExpression expr, Expression expectedType) {
     if (expr.getParameters().isEmpty()) {
-      return checkResult(expectedType, new TypecheckingResult(new SigmaExpression(Sort.PROP, EmptyDependentLink.getInstance()), new UniverseExpression(Sort.PROP)), expr);
+      return checkResult(expectedType, new TypecheckingResult(new SigmaExpression(EmptyDependentLink.getInstance()), new UniverseExpression(Sort.PROP)), expr);
     }
     if (expr.getParameters().size() == 1 && expr.getParameters().getFirst().getReferableList().size() == 1) {
       errorReporter.report(new TypecheckingError("\\Sigma type cannot have exactly one parameter", expr));
@@ -2666,9 +2666,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     List<Sort> sorts = new ArrayList<>(expr.getParameters().size());
     DependentLink args = visitSigmaParameters(expr.getParameters(), expectedType, sorts);
-    if (args == null || !args.hasNext()) return null;
-    Sort sort = Sort.max(sorts);
-    return checkResult(expectedType, new TypecheckingResult(new SigmaExpression(sort, args), new UniverseExpression(sort)), expr);
+    return args == null || !args.hasNext() ? null : checkResult(expectedType, new TypecheckingResult(new SigmaExpression(args), new UniverseExpression(Sort.max(sorts))), expr);
   }
 
   private DependentLink visitSigmaParameters(Collection<? extends Concrete.TypeParameter> parameters, Expression expectedType, List<Sort> resultSorts) {
@@ -2787,7 +2785,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       return pair.proj1 == null ? null : new TypecheckingResult(pair.proj1, expectedType);
     }
 
-    List<Sort> sorts = new ArrayList<>(expr.getFields().size());
     List<Expression> fields = new ArrayList<>(expr.getFields().size());
     LinkList list = new LinkList();
     for (int i = 0; i < expr.getFields().size(); i++) {
@@ -2799,11 +2796,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         errorReporter.report(new TypecheckingError("Types of the infinity level are not allowed", expr.getFields().get(i)));
         return null;
       }
-      sorts.add(sort);
       list.append(ExpressionFactory.parameter(null, result.type));
     }
 
-    SigmaExpression type = new SigmaExpression(Sort.max(sorts), list.getFirst());
+    SigmaExpression type = new SigmaExpression(list.getFirst());
     return checkResult(expectedTypeNorm, new TypecheckingResult(new TupleExpression(fields, type), type), expr);
   }
 

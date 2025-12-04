@@ -429,7 +429,6 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitSigma(SigmaExpression expr, Expression expectedType) {
-    checkSort(expr.getSort(), expr);
     Sort sort = checkDependentLinkWithResult(expr.getParameters(), expectedType, expr);
     freeDependentLink(expr.getParameters());
 

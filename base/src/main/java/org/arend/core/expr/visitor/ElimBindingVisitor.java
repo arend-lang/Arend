@@ -308,7 +308,7 @@ public class ElimBindingVisitor extends ExpressionTransformer<Void> {
       if (myKeepVisitor != null) {
         myKeepVisitor.freeParameters(parameters);
       }
-      return new SigmaExpression(expr.getSort(), parameters);
+      return new SigmaExpression(parameters);
     } else {
       return null;
     }

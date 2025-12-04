@@ -456,7 +456,7 @@ class ExpressionDeserialization {
   }
 
   private SigmaExpression readSigma(ExpressionProtos.Expression.Sigma proto) throws DeserializationException {
-    return new SigmaExpression(new Sort(readLevel(proto.getPLevel(), LevelVariable.PVAR), readLevel(proto.getHLevel(), LevelVariable.HVAR)), readParameters(proto.getParamList()));
+    return new SigmaExpression(readParameters(proto.getParamList()));
   }
 
   private Expression readProj(ExpressionProtos.Expression.Proj proto) throws DeserializationException {

@@ -943,7 +943,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
 
   @Override
   public SigmaExpression visitSigma(SigmaExpression expr, NormalizationMode mode) {
-    return mode == NormalizationMode.WHNF ? expr : new SigmaExpression(expr.getSort(), normalizeParameters(expr.getParameters(), mode, new ExprSubstitution()));
+    return mode == NormalizationMode.WHNF ? expr : new SigmaExpression(normalizeParameters(expr.getParameters(), mode, new ExprSubstitution()));
   }
 
   private DependentLink normalizeParameters(DependentLink parameters, NormalizationMode mode, ExprSubstitution substitution) {

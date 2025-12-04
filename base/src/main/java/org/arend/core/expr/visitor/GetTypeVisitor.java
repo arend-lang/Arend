@@ -336,7 +336,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
         break;
       }
     }
-    return new UniverseExpression(maxSort == null ? expr.getSort() : maxSort);
+    return maxSort == null ? new ErrorExpression() : new UniverseExpression(maxSort);
   }
 
   @Override
