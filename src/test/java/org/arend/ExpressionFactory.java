@@ -63,7 +63,7 @@ public class ExpressionFactory {
   }
 
   public static LamExpression Lam(SingleDependentLink link, Expression body) {
-    return new LamExpression(link, body, body.getType().getSortOfType());
+    return new LamExpression(link, body);
   }
 
   public static List<HaveClause> lets(HaveClause... letClauses) {
@@ -113,23 +113,21 @@ public class ExpressionFactory {
     return org.arend.core.expr.ExpressionFactory.singleParams(explicit, names, type instanceof Type ? (Type) type : new TypeExpression(type, Sort.SET0));
   }
 
-  private static Type exprToType(Expression expr) {
-    if (expr instanceof Type) return (Type) expr;
-    Sort sort = expr.getSortOfType();
-    return new TypeExpression(expr, sort == null ? Sort.SET0 : sort);
-  }
-
   public static PiExpression Pi(SingleDependentLink domain, Expression codomain) {
     assert domain.hasNext();
-    return new PiExpression(domain, exprToType(codomain));
+    return new PiExpression(domain, codomain);
   }
 
   public static PiExpression Pi(Expression domain, Expression codomain) {
-    return new PiExpression(singleParam(null, domain), exprToType(codomain));
+    return new PiExpression(singleParam(null, domain), codomain);
   }
 
   public static PiExpression Pi(boolean isExplicit, Expression domain, Expression codomain) {
-    return new PiExpression(singleParam(isExplicit, (String) null, domain), exprToType(codomain));
+    return new PiExpression(singleParam(isExplicit, (String) null, domain), codomain);
+  }
+
+  public static TypeExpression PiType(Expression domain, Expression codomain) {
+    return new TypeExpression(new PiExpression(singleParam(null, domain), codomain), PiExpression.piSort(domain.getSortOfType(), codomain.getSortOfType()));
   }
 
   public static UniverseExpression Universe(int pLevel) {

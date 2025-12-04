@@ -384,7 +384,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       if (type != null) {
         TypedSingleDependentLink y = new TypedSingleDependentLink(true, "y", type);
         UntypedSingleDependentLink x = new UntypedSingleDependentLink("x", y);
-        TypecheckingResult result = typechecker.finalCheckExpr(resultTypeLevel, new PiExpression(x, new TypeExpression(FunCallExpression.make(Prelude.PATH_INFIX, new LevelPair(sort.getPLevel(), sort.getHLevel()), Arrays.asList(resultType, new ReferenceExpression(x), new ReferenceExpression(y))), sort)));
+        TypecheckingResult result = typechecker.finalCheckExpr(resultTypeLevel, new PiExpression(x, FunCallExpression.make(Prelude.PATH_INFIX, new LevelPair(sort.getPLevel(), sort.getHLevel()), Arrays.asList(resultType, new ReferenceExpression(x), new ReferenceExpression(y)))));
         if (result == null) return null;
         if (funDef != null) {
           funDef.setResultTypeLevel(result.expression);
@@ -579,7 +579,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
           substitution.add(piExpr.getParameters(), new ReferenceExpression(param));
           if (piExpr.getParameters().getNext().hasNext()) {
-            resultType = new PiExpression(piExpr.getParameters().getNext(), piExpr.getCodomainType());
+            resultType = new PiExpression(piExpr.getParameters().getNext(), piExpr.getCodomain());
           } else {
             resultType = piExpr.getCodomain().normalize(NormalizationMode.WHNF).getUnderlyingExpression();
           }
@@ -2153,7 +2153,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           return null;
         } else {
           List<Expression> args = new ArrayList<>(3);
-          args.add(new LamExpression(lam.getParameters(), newType, lam.getCodomainSort()));
+          args.add(new LamExpression(lam.getParameters(), newType));
           args.add(pathArgs.get(1));
           args.add(pathArgs.get(2));
           return DataCallExpression.make(Prelude.PATH, ((DataCallExpression) type).getLevels(), args);
@@ -2679,7 +2679,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
               originalSuperClass = superClass;
               TypedSingleDependentLink thisParam = new TypedSingleDependentLink(false, "this", new ClassCallExpression(typedDef, idLevels), true);
               Expression codomain = superType.applyExpression(new ReferenceExpression(thisParam));
-              type = new PiExpression(thisParam, codomain instanceof Type ? (Type) codomain : new TypeExpression(codomain, superType.getCodomainType().getSortOfType()));
+              type = new PiExpression(thisParam, codomain);
             } else if (!overriddenHere.contains(field)) {
               if (!CompareVisitor.compare(DummyEquations.getInstance(), CMP.EQ, type.getCodomain(), superType.applyExpression(new ReferenceExpression(type.getParameters())), Type.OMEGA, def)) {
                 if (!type.getCodomain().reportIfError(errorReporter, def) && !superType.getCodomain().reportIfError(errorReporter, def)) {
@@ -2943,7 +2943,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         Expression type = field.getResultTypeFor(typedDef).subst(field.getThisParameter(), new ReferenceExpression(thisParam));
         Type newType = type.accept(new MinimizeLevelVisitor(), null);
         if (newType != null && newType != type) {
-          typedDef.overrideField(field, new PiExpression(thisParam, newType), typedDef);
+          typedDef.overrideField(field, new PiExpression(thisParam, newType.getExpr()), typedDef);
         }
       }
     }
@@ -3099,7 +3099,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       ClassFieldKind kind = def instanceof Concrete.ClassField ? ((Concrete.ClassField) def).getKind() : typedDef == null ? ClassFieldKind.ANY : typedDef.isProperty() ? ClassFieldKind.PROPERTY : ClassFieldKind.FIELD;
       Type typeResult = typechecker.finalCheckType(codomain, Type.OMEGA, kind == ClassFieldKind.PROPERTY && def.getResultTypeLevel() == null);
       ok = typeResult != null;
-      piType = new PiExpression(thisParam, ok ? typeResult : new ErrorExpression());
+      piType = new PiExpression(thisParam, ok ? typeResult.getExpr() : new ErrorExpression());
 
       if (def instanceof Concrete.ClassField) {
         typedDef = addField(((Concrete.ClassField) def).getData(), parentClass, piType, null);

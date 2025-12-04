@@ -93,7 +93,7 @@ public class CollectCallVisitor extends SearchVisitor<Void> {
       switch (eliminators.get(i)) {
         case PiEliminator ignored -> {
           if (!(type instanceof PiExpression piExpr)) return null;
-          type = piExpr.getParameters().getNext().hasNext() ? new PiExpression(piExpr.getParameters().getNext(), piExpr.getCodomainType()) : piExpr.getCodomain();
+          type = piExpr.getParameters().getNext().hasNext() ? new PiExpression(piExpr.getParameters().getNext(), piExpr.getCodomain()) : piExpr.getCodomain();
         }
         case SigmaEliminator sigmaEliminator -> {
           if (!(type instanceof SigmaExpression sigmaExpr)) return null;

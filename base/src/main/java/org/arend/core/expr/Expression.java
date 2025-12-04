@@ -352,7 +352,7 @@ public abstract class Expression implements Body, CoreExpression {
     Expression expr = getUnderlyingExpression();
     if (expr instanceof LamExpression lamExpr) {
       Expression cod = lamExpr.getBody().lambdaToPi();
-      return cod == null ? null : new PiExpression(lamExpr.getParameters(), cod instanceof Type ? (Type) cod : new TypeExpression(cod, lamExpr.getCodomainSort()));
+      return cod == null ? null : new PiExpression(lamExpr.getParameters(), cod);
     } else {
       return expr.getSortOfType() == null ? null : expr;
     }
@@ -572,7 +572,7 @@ public abstract class Expression implements Body, CoreExpression {
         n--;
       }
       if (n == 0) {
-        return link.hasNext() ? new PiExpression(link, piCod.getCodomainType()) : piCod.getCodomain();
+        return link.hasNext() ? new PiExpression(link, piCod.getCodomain()) : piCod.getCodomain();
       }
       cod = piCod.getCodomain().normalize(NormalizationMode.WHNF);
     }
@@ -596,22 +596,21 @@ public abstract class Expression implements Body, CoreExpression {
       return expr;
     }
 
-    Type type = (PiExpression) expr;
     List<PiExpression> piExprs = new ArrayList<>();
-    while (type.getExpr() instanceof PiExpression piExpr) {
+    while (expr instanceof PiExpression piExpr) {
       piExprs.add(piExpr);
       if (parameters != null) {
         for (SingleDependentLink link = piExpr.getParameters(); link.hasNext(); link = link.getNext()) {
           parameters.add(link);
         }
       }
-      type = piExpr.getCodomainType();
+      expr = piExpr.getCodomain();
     }
 
     for (int i = piExprs.size() - 1; i >= 0; i--) {
-      type = new PiExpression(piExprs.get(i).getParameters(), type);
+      expr = new PiExpression(piExprs.get(i).getParameters(), expr);
     }
-    return type.getExpr();
+    return expr;
   }
 
   public Expression getLamParameters(List<DependentLink> params) {

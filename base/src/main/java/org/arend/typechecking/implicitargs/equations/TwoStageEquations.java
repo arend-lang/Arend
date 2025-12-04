@@ -14,7 +14,6 @@ import org.arend.core.definition.ClassField;
 import org.arend.core.definition.UniverseKind;
 import org.arend.core.expr.*;
 import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.expr.visitor.ElimBindingVisitor;
 import org.arend.core.sort.Level;
@@ -211,11 +210,11 @@ public class TwoStageEquations implements Equations {
           }
           InferenceVariable infVar = new DerivedInferenceVariable(cInf.getName() + "-cod", cInf, new UniverseExpression(codSort), myVisitor.getAllBindings());
           Expression newRef = InferenceReferenceExpression.make(infVar, this);
-          Type solution = new TypeExpression(newRef, codSort.succ());
+          Expression solution = newRef;
           for (int i = pis.size() - 1; i >= 0; i--) {
             solution = new PiExpression(pis.get(i).getParameters(), solution);
           }
-          solve(cInf, solution.getExpr(), false);
+          solve(cInf, solution, false);
           return addEquation(cod, newRef, Type.OMEGA, cmp, sourceNode, cod.getStuckInferenceVariable(), infVar);
         }
       }
@@ -813,7 +812,7 @@ public class TwoStageEquations implements Equations {
                 }
               }
               if (ok) {
-                implementations.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(solution.getThisBinding())))), expr, minClassCall.getLevels().toLevelPair().toSort().succ()));
+                implementations.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(ExpressionFactory.FieldCall(Prelude.ARRAY_LENGTH, new ReferenceExpression(solution.getThisBinding())))), expr));
               }
             }
           }

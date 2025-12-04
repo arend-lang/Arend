@@ -194,15 +194,14 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
 
   @Override
   public LamExpression visitLam(LamExpression expr, Void params) {
-    expr.setCodomainSort(visitSort(expr.getCodomainSort()));
     visitParameters(expr.getParameters());
-    return new LamExpression(expr.getParameters(), expr.getBody().accept(this, null), expr.getCodomainSort());
+    return new LamExpression(expr.getParameters(), expr.getBody().accept(this, null));
   }
 
   @Override
   public PiExpression visitPi(PiExpression expr, Void params) {
     visitParameters(expr.getParameters());
-    return new PiExpression(expr.getParameters(), expr.getCodomainType().strip(this));
+    return new PiExpression(expr.getParameters(), expr.getCodomain().accept(this, null));
   }
 
   @Override

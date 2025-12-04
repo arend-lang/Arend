@@ -60,13 +60,11 @@ public class ArrayExpression extends Expression implements CoreArrayExpression {
   public static Expression makeTail(Expression length, Expression elementsType, ClassCallExpression classCall, Expression expr) {
     Expression length_1 = length.pred();
     TypedSingleDependentLink param = new TypedSingleDependentLink(true, "j", Fin(length_1));
-    LevelPair levelPair = classCall.getLevels().toLevelPair();
-    Sort sort = levelPair.toSort();
     Expression at = classCall.getImplementationHere(Prelude.ARRAY_AT, expr);
     Map<ClassField, Expression> impls = new LinkedHashMap<>();
     impls.put(Prelude.ARRAY_LENGTH, length_1);
-    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(param, AppExpression.make(elementsType, Suc(new ReferenceExpression(param)), true), sort.succ()));
-    impls.put(Prelude.ARRAY_AT, new LamExpression(param, at != null ? AppExpression.make(at, Suc(new ReferenceExpression(param)), true) : FunCallExpression.make(Prelude.ARRAY_INDEX, classCall.getLevels(), Arrays.asList(expr, Suc(new ReferenceExpression(param)))), sort));
+    impls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(param, AppExpression.make(elementsType, Suc(new ReferenceExpression(param)), true)));
+    impls.put(Prelude.ARRAY_AT, new LamExpression(param, at != null ? AppExpression.make(at, Suc(new ReferenceExpression(param)), true) : FunCallExpression.make(Prelude.ARRAY_INDEX, classCall.getLevels(), Arrays.asList(expr, Suc(new ReferenceExpression(param))))));
     return new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), impls, Sort.PROP, UniverseKind.NO_UNIVERSES));
   }
 
@@ -91,7 +89,7 @@ public class ArrayExpression extends Expression implements CoreArrayExpression {
     for (int i = 0; i < n; i++) {
       index = Suc(index);
     }
-    return new ArrayExpression(myLevels, new LamExpression(param, AppExpression.make(myElementsType, index, true), myLevels.toSort().succ()), myElements.subList(n, myElements.size()), myTail);
+    return new ArrayExpression(myLevels, new LamExpression(param, AppExpression.make(myElementsType, index, true)), myElements.subList(n, myElements.size()), myTail);
   }
 
   public Expression getLength() {

@@ -336,7 +336,7 @@ public class ConstructorExpressionPattern extends ConstructorPattern<Object> imp
       if (lamExpr == null) {
         return null;
       }
-      Expression body = lamExpr.getParameters().getNext().hasNext() ? new LamExpression(lamExpr.getParameters().getNext(), lamExpr.getBody(), lamExpr.getCodomainSort()) : lamExpr.getBody();
+      Expression body = lamExpr.getParameters().getNext().hasNext() ? new LamExpression(lamExpr.getParameters().getNext(), lamExpr.getBody()) : lamExpr.getBody();
       return NormalizingFindBindingVisitor.findBinding(body, lamExpr.getParameters()) ? null : Collections.emptyList();
     }
 

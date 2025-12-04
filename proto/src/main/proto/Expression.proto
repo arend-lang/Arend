@@ -89,7 +89,6 @@ message Expression {
         repeated Expression argument = 4;
     }
     message Lam {
-        Sort resultSort = 1;
         Telescope param = 2;
         Expression body = 3;
     }
@@ -166,7 +165,6 @@ message Expression {
         Expression renew = 2;
     }
     message Pi {
-        Sort resultSort = 1;
         Telescope param = 2;
         Expression codomain = 3;
     }

@@ -27,7 +27,7 @@ public class AppExpression extends Expression implements CoreAppExpression {
     if (function instanceof LamExpression lamExpr) {
       SingleDependentLink var = lamExpr.getParameters();
       SingleDependentLink next = var.getNext();
-      return (next.hasNext() ? new LamExpression(next, lamExpr.getBody(), lamExpr.getCodomainSort()) : lamExpr.getBody()).subst(var, argument);
+      return (next.hasNext() ? new LamExpression(next, lamExpr.getBody()) : lamExpr.getBody()).subst(var, argument);
     } else {
       return new AppExpression(function, argument, isExplicit);
     }

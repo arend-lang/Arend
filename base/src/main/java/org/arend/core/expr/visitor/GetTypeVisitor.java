@@ -9,8 +9,6 @@ import org.arend.core.definition.UniverseKind;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
 import org.arend.core.expr.let.LetClause;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
@@ -317,15 +315,14 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
   @Override
   public Expression visitLam(LamExpression expr, Void ignored) {
-    Expression codomain = expr.getBody().accept(this, null);
-    return new PiExpression(expr.getParameters(), codomain instanceof Type ? (Type) codomain : new TypeExpression(codomain, expr.getCodomainSort()));
+    return new PiExpression(expr.getParameters(), expr.getBody().accept(this, null));
   }
 
   @Override
   public Expression visitPi(PiExpression expr, Void params) {
     Sort sort1 = expr.getParameters().getTypeExpr().accept(this, null).toSort();
     Sort sort2 = expr.getCodomain().accept(this, null).toSort();
-    return new UniverseExpression(PiExpression.piSort(sort1 == null ? expr.getParameters().getType().getSortOfType() : sort1, sort2 == null ? expr.getCodomainType().getSortOfType() : sort2));
+    return sort2 == null ? new ErrorExpression() : new UniverseExpression(PiExpression.piSort(sort1 == null ? expr.getParameters().getType().getSortOfType() : sort1, sort2));
   }
 
   @Override

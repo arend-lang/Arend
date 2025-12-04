@@ -339,7 +339,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       Integer level;
       if (field.getTypeLevel() != null) {
         List<DependentLink> parameters = new ArrayList<>();
-        Type type = fieldType;
+        Expression type = fieldType;
         int sum = field.getNumberOfParameters();
         for (int i = 0; i < sum; ) {
           if (!(type instanceof PiExpression piType)) {
@@ -350,7 +350,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
           for (; link.hasNext() && i < sum; link = link.getNext(), i++) {
             parameters.add(link);
           }
-          type = piType.getCodomainType();
+          type = piType.getCodomain();
           if (link.hasNext()) {
             type = new PiExpression(link, type);
           }
@@ -359,7 +359,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
         for (DependentLink parameter : parameters) {
           myChecker.addBinding(parameter, null);
         }
-        level = myChecker.checkLevelProof(field.getTypeLevel(), type.getExpr());
+        level = myChecker.checkLevelProof(field.getTypeLevel(), type);
         for (DependentLink parameter : parameters) {
           myChecker.removeBinding(parameter);
         }

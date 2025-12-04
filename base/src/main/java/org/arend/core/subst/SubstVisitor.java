@@ -177,18 +177,18 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
     Expression result;
     if (oldParameters.hasNext()) {
       SingleDependentLink parameters = DependentLink.Helper.subst(oldParameters, this);
-      result = new LamExpression(parameters, expr.getBody().accept(this, null), expr.getCodomainSort().subst(myLevelSubstitution));
+      result = new LamExpression(parameters, expr.getBody().accept(this, null));
       DependentLink.Helper.freeSubsts(oldParameters, myExprSubstitution);
     } else {
       result = expr.getBody().accept(this, null);
     }
-    return isUnused ? new LamExpression(UnusedIntervalDependentLink.INSTANCE, result, expr.getCodomainSort().subst(myLevelSubstitution)) : result;
+    return isUnused ? new LamExpression(UnusedIntervalDependentLink.INSTANCE, result) : result;
   }
 
   @Override
   public Expression visitPi(PiExpression expr, Void params) {
     SingleDependentLink parameters = DependentLink.Helper.subst(expr.getParameters(), this);
-    PiExpression result = new PiExpression(parameters, expr.getCodomainType().subst(this));
+    PiExpression result = new PiExpression(parameters, expr.getCodomain().accept(this, null));
     DependentLink.Helper.freeSubsts(expr.getParameters(), myExprSubstitution);
     return result;
   }

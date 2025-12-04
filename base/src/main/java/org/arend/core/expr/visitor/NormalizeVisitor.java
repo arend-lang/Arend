@@ -14,8 +14,6 @@ import org.arend.core.elimtree.*;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
 import org.arend.core.expr.let.LetClause;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.LevelPair;
@@ -212,7 +210,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
       LamExpression lamExpr = expr.getDefCallArguments().get(0).accept(this, NormalizationMode.WHNF).cast(LamExpression.class);
       if (lamExpr != null) {
         SingleDependentLink param = lamExpr.getParameters();
-        Expression body = param.getNext().hasNext() ? new LamExpression(param.getNext(), lamExpr.getBody(), lamExpr.getCodomainSort()) : lamExpr.getBody();
+        Expression body = param.getNext().hasNext() ? new LamExpression(param.getNext(), lamExpr.getBody()) : lamExpr.getBody();
         body = body.accept(this, NormalizationMode.WHNF);
         FunCallExpression funCall = body.cast(FunCallExpression.class);
         boolean checkSigma = true;
@@ -820,9 +818,8 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     if (expr.getDefinition() == Prelude.ARRAY_AT) {
       ClassCallExpression classCall = expr.getArgument().getType().normalize(NormalizationMode.WHNF).cast(ClassCallExpression.class);
       if (classCall != null) {
-        LevelPair levelPair = classCall.getLevels().toLevelPair();
         TypedSingleDependentLink lamParam = new TypedSingleDependentLink(true, "j", Fin(FieldCallExpression.make(Prelude.ARRAY_LENGTH, expr.getArgument())));
-        return new LamExpression(lamParam, FunCallExpression.make(Prelude.ARRAY_INDEX, levelPair, Arrays.asList(expr.getArgument(), new ReferenceExpression(lamParam))), levelPair.toSort());
+        return new LamExpression(lamParam, FunCallExpression.make(Prelude.ARRAY_INDEX, classCall.getLevels().toLevelPair(), Arrays.asList(expr.getArgument(), new ReferenceExpression(lamParam))));
       }
     }
 
@@ -910,7 +907,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
 
     ExprSubstitution substitution = new ExprSubstitution();
     SingleDependentLink link = normalizeSingleParameters(expr.getParameters(), mode, substitution);
-    return new LamExpression(link, expr.getBody().subst(substitution).accept(this, mode), expr.getCodomainSort());
+    return new LamExpression(link, expr.getBody().subst(substitution).accept(this, mode));
   }
 
   @Override
@@ -918,8 +915,7 @@ public class NormalizeVisitor extends ExpressionTransformer<NormalizationMode>  
     if (mode != NormalizationMode.WHNF) {
       ExprSubstitution substitution = new ExprSubstitution();
       SingleDependentLink link = normalizeSingleParameters(expr.getParameters(), mode, substitution);
-      Expression codomain = expr.getCodomain().subst(substitution).accept(this, mode);
-      return new PiExpression(link, codomain instanceof Type type ? type : new TypeExpression(codomain, expr.getCodomainType().getSortOfType()));
+      return new PiExpression(link, expr.getCodomain().subst(substitution).accept(this, mode));
     } else {
       return expr;
     }

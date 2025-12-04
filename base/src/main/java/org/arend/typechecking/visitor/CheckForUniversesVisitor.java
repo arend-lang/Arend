@@ -44,7 +44,7 @@ public class CheckForUniversesVisitor extends SearchVisitor<Void> {
           for (; param.hasNext() && apps > 0; param = param.getNext()) {
             apps--;
           }
-          result = param.hasNext() ? new LamExpression(param, lam.getBody(), lam.getCodomainSort()) : lam.getBody();
+          result = param.hasNext() ? new LamExpression(param, lam.getBody()) : lam.getBody();
         }
         return result.accept(this, null);
       }

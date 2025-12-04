@@ -252,12 +252,12 @@ public class PatternTypechecking {
             }
 
             for (int j = intervalBindings.size() - 1, k = 0; j > i; j--, k++) {
-              leftArg = new PathExpression(levels, new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left()), sort), new LamExpression(lamBindings.get(j), leftArg, sort));
-              rightArg = new PathExpression(levels, new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right()), sort), new LamExpression(lamBindings.get(j), rightArg, sort));
+              leftArg = new PathExpression(levels, new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left())), new LamExpression(lamBindings.get(j), leftArg));
+              rightArg = new PathExpression(levels, new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right())), new LamExpression(lamBindings.get(j), rightArg));
             }
 
             intervalSubst.add(intervalBinding, new ReferenceExpression(lamBindings.get(i)));
-            exprType = DataCallExpression.make(Prelude.PATH, levels, Arrays.asList(new LamExpression(lamBindings.get(i), exprType, sort.succ()), leftArg, rightArg));
+            exprType = DataCallExpression.make(Prelude.PATH, levels, Arrays.asList(new LamExpression(lamBindings.get(i), exprType), leftArg, rightArg));
           }
         } else {
           intervalBindings = null;

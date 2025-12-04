@@ -1,14 +1,11 @@
 package org.arend.core.expr;
 
 import org.arend.core.context.param.SingleDependentLink;
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.core.expr.visitor.NormalizeVisitor;
-import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.InPlaceLevelSubstVisitor;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.expr.*;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -19,11 +16,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class PiExpression extends Expression implements Type, CorePiExpression, CoreAbsExpression {
+public class PiExpression extends Expression implements CorePiExpression, CoreAbsExpression {
   private final SingleDependentLink myLink;
-  private final Type myCodomain;
+  private final Expression myCodomain;
 
-  public PiExpression(SingleDependentLink link, Type codomain) {
+  public PiExpression(SingleDependentLink link, Expression codomain) {
     assert link.hasNext();
     myLink = link;
     myCodomain = codomain;
@@ -42,17 +39,12 @@ public class PiExpression extends Expression implements Type, CorePiExpression, 
   @NotNull
   @Override
   public Expression getCodomain() {
-    return myCodomain.getExpr();
-  }
-
-  @NotNull
-  public Type getCodomainType() {
     return myCodomain;
   }
 
   @Override
   public @NotNull AbstractedExpression getAbstractedCodomain() {
-    return AbstractedExpressionImpl.make(myLink, myCodomain.getExpr());
+    return AbstractedExpressionImpl.make(myLink, myCodomain);
   }
 
   @Override
@@ -72,11 +64,11 @@ public class PiExpression extends Expression implements Type, CorePiExpression, 
     SingleDependentLink link = myLink;
     ExprSubstitution subst = new ExprSubstitution(link, expression);
     link = link.getNext();
-    Type result = myCodomain;
+    Expression result = myCodomain;
     if (link.hasNext()) {
       result = new PiExpression(link, result);
     }
-    return result.getExpr().subst(subst);
+    return result.subst(subst);
   }
 
   @Override
@@ -100,13 +92,9 @@ public class PiExpression extends Expression implements Type, CorePiExpression, 
   }
 
   @Override
-  public PiExpression getExpr() {
-    return this;
-  }
-
-  @Override
   public Sort getSortOfType() {
-    return piSort(myLink.getType().getSortOfType(), myCodomain.getSortOfType());
+    Sort codSort = myCodomain.getSortOfType();
+    return codSort == null ? null : piSort(myLink.getType().getSortOfType(), codSort);
   }
 
   @Override
@@ -139,16 +127,6 @@ public class PiExpression extends Expression implements Type, CorePiExpression, 
     return cod;
   }
 
-  @Override
-  public void subst(InPlaceLevelSubstVisitor substVisitor) {
-    substVisitor.visitPi(this, null);
-  }
-
-  @Override
-  public PiExpression strip(StripVisitor visitor) {
-    return visitor.visitPi(this, null);
-  }
-
   @NotNull
   @Override
   public PiExpression normalize(@NotNull NormalizationMode mode) {
@@ -174,6 +152,6 @@ public class PiExpression extends Expression implements Type, CorePiExpression, 
   @NotNull
   @Override
   public Expression getExpression() {
-    return myCodomain.getExpr();
+    return myCodomain;
   }
 }

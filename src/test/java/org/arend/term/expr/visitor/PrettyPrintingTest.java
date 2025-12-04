@@ -6,7 +6,6 @@ import org.arend.core.definition.ClassDefinition;
 import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.LetClause;
-import org.arend.core.sort.Sort;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -202,7 +201,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
   public void boundRenamedTest() {
     FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func f (x y : Nat) => x");
     SingleDependentLink lamParam = singleParam("f", Nat());
-    Expression expr = new LamExpression(lamParam, FunCallExpression.make(def, Levels.EMPTY, Arrays.asList(new ReferenceExpression(lamParam), new ReferenceExpression(lamParam))), Sort.SET0);
+    Expression expr = new LamExpression(lamParam, FunCallExpression.make(def, Levels.EMPTY, Arrays.asList(new ReferenceExpression(lamParam), new ReferenceExpression(lamParam))));
     assertEquals("\\lam (f1 : Nat) => f f1 f1", expr.toString());
   }
 
@@ -239,7 +238,7 @@ public class PrettyPrintingTest extends TypeCheckingTestCase {
       "\\module M \\where { \\func foo (x y : Nat) => x }\n" +
       "\\module N \\where { \\func foo => 1 }");
     SingleDependentLink lamParam = singleParam("foo", Nat());
-    Expression expr = new LamExpression(lamParam, FunCallExpression.make((FunctionDefinition) getDefinition("M.foo"), Levels.EMPTY, Arrays.asList(new ReferenceExpression(lamParam), FunCallExpression.make((FunctionDefinition) getDefinition("N.foo"), Levels.EMPTY, Collections.emptyList()))), Sort.SET0);
+    Expression expr = new LamExpression(lamParam, FunCallExpression.make((FunctionDefinition) getDefinition("M.foo"), Levels.EMPTY, Arrays.asList(new ReferenceExpression(lamParam), FunCallExpression.make((FunctionDefinition) getDefinition("N.foo"), Levels.EMPTY, Collections.emptyList()))));
     assertEquals("\\lam (foo : Nat) => M.foo foo N.foo", expr.toString());
   }
 

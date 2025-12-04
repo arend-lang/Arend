@@ -489,10 +489,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           ClassCallExpression resultClassCall = new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), impls, Sort.PROP, UniverseKind.NO_UNIVERSES);
           Expression elementsType;
           if (piExpr.getParameters().getNext().hasNext()) {
-            PiExpression newPi = new PiExpression(piExpr.getParameters().getNext(), piExpr.getCodomainType());
-            elementsType = new LamExpression(DependentLink.Helper.take(piExpr.getParameters(), 1), newPi, newPi.getSortOfType().succ());
+            PiExpression newPi = new PiExpression(piExpr.getParameters().getNext(), piExpr.getCodomain());
+            elementsType = new LamExpression(DependentLink.Helper.take(piExpr.getParameters(), 1), newPi);
           } else {
-            elementsType = new LamExpression(piExpr.getParameters(), piExpr.getCodomain(), piExpr.getCodomainType().getSortOfType().succ());
+            elementsType = new LamExpression(piExpr.getParameters(), piExpr.getCodomain());
           }
           impls.put(Prelude.ARRAY_LENGTH, length);
           impls.put(Prelude.ARRAY_ELEMENTS_TYPE, elementsType);
@@ -932,9 +932,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     //noinspection unchecked
     checkSubstExpr((Expression) body, (Collection<? extends CoreBinding>) parameters, true);
 
-    Sort sort = getSortOfType(((Expression) body).computeType(), (Concrete.SourceNode) marker);
     if (parameters.size() == 1 && parameters.getFirst() instanceof SingleDependentLink param) {
-      return new LamExpression(param, (Expression) body, sort);
+      return new LamExpression(param, (Expression) body);
     }
 
     List<SingleDependentLink> params = new ArrayList<>();
@@ -946,7 +945,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     Expression result = ((Expression) body).subst(substitution);
     for (int i = params.size() - 1; i >= 0; i--) {
-      result = new LamExpression(params.get(i), result, sort);
+      result = new LamExpression(params.get(i), result);
     }
     return result;
   }
@@ -2339,12 +2338,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   // Pi
 
-  private TypecheckingResult bodyToLam(SingleDependentLink params, TypecheckingResult bodyResult, Concrete.SourceNode sourceNode) {
-    if (bodyResult == null) {
-      return null;
-    }
-    Sort codomainSort = getSortOfType(bodyResult.type, sourceNode);
-    return new TypecheckingResult(new LamExpression(params, bodyResult.expression, codomainSort), new PiExpression(params, bodyResult.type instanceof Type type ? type : new TypeExpression(bodyResult.type, codomainSort)));
+  private TypecheckingResult bodyToLam(SingleDependentLink params, TypecheckingResult bodyResult) {
+    return bodyResult == null ? null : new TypecheckingResult(new LamExpression(params, bodyResult.expression), new PiExpression(params, bodyResult.type));
   }
 
   private interface ParametersProvider {
@@ -2378,24 +2373,24 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   private static class ExpressionParametersProvider implements ParametersProvider {
     private SingleDependentLink parameter = EmptyDependentLink.getInstance();
-    private Type expression;
+    private Expression expression;
     private final ExprSubstitution substitution = new ExprSubstitution();
 
     public ExpressionParametersProvider(Expression expression) {
-      this.expression = expression instanceof Type ? (Type) expression : new TypeExpression(expression, Sort.STD);
+      this.expression = expression;
     }
 
     @Override
     public @Nullable SingleDependentLink nextParameter() {
       if (!parameter.hasNext()) {
-        expression = expression.subst(new SubstVisitor(substitution, LevelSubstitution.EMPTY)).normalize(NormalizationMode.WHNF);
+        expression = expression.subst(substitution).normalize(NormalizationMode.WHNF);
         substitution.clear();
         if (!(expression instanceof PiExpression piExpr)) {
           return null;
         }
 
         parameter = piExpr.getParameters();
-        expression = piExpr.getCodomainType();
+        expression = piExpr.getCodomain();
       }
 
       SingleDependentLink result = parameter;
@@ -2405,13 +2400,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     @Override
     public <T> @Nullable Pair<TypecheckingResult,T> coerce(Function<ParametersProvider, Pair<Expression,T>> checker) {
-      return expression.getExpr() instanceof FunCallExpression funCall && funCall.getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE
+      return expression instanceof FunCallExpression funCall && funCall.getDefinition().getKind() == CoreFunctionDefinition.Kind.TYPE
         ? coerceToType(funCall, t -> checker.apply(new ExpressionParametersProvider(t))) : null;
     }
 
     @Override
     public @Nullable Expression getType() {
-      return (parameter.hasNext() ? new PiExpression(parameter, expression) : expression.getExpr()).subst(substitution);
+      return (parameter.hasNext() ? new PiExpression(parameter, expression) : expression).subst(substitution);
     }
 
     @Override
@@ -2439,7 +2434,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
             newProvider.nextParameter();
           }
         }
-        return new Pair<>(bodyToLam(piParam, visitLam(parameters, expr, newProvider), expr), true);
+        return new Pair<>(bodyToLam(piParam, visitLam(parameters, expr, newProvider)), true);
       }
 
       if (param instanceof Concrete.NameParameter) {
@@ -2447,8 +2442,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           TypedSingleDependentLink link = visitNameParameter((Concrete.NameParameter) param, expr);
           TypecheckingResult bodyResult = visitLam(parameters.subList(1, parameters.size()), expr, new ExpressionParametersProvider(new InferenceReferenceExpression(new ExpressionInferenceVariable(new UniverseExpression(Sort.generateInferVars(myEquations, false, expr)), expr, getAllBindings(), true, true))));
           if (bodyResult == null) return new Pair<>(null, true);
-          Sort codSort = getSortOfType(bodyResult.type, expr);
-          TypecheckingResult result = new TypecheckingResult(new LamExpression(link, bodyResult.expression, codSort), new PiExpression(link, bodyResult.type instanceof Type type ? type : new TypeExpression(bodyResult.type, codSort)));
+          TypecheckingResult result = new TypecheckingResult(new LamExpression(link, bodyResult.expression), new PiExpression(link, bodyResult.type));
           Expression expectedType = newProvider.getType();
           return new Pair<>(expectedType == null ? result : checkResult(expectedType, result, expr), true);
         } else {
@@ -2501,7 +2495,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           SingleDependentLink link = new TypedSingleDependentLink(piParam.isExplicit(), referable == null ? null : referable.textRepresentation(), paramType);
           addBinding(referable, link);
           newProvider.subst(piParam, new ReferenceExpression(link));
-          return new Pair<>(bodyToLam(link, visitLam(parameters.subList(1, parameters.size()), expr, newProvider), expr), true);
+          return new Pair<>(bodyToLam(link, visitLam(parameters.subList(1, parameters.size()), expr, newProvider)), true);
         }
       } else if (param instanceof Concrete.TypeParameter) {
         SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, piParam == null || piParam.isExplicit() != param.isExplicit() ? null : piParam.getType());
@@ -2542,11 +2536,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
         TypecheckingResult bodyResult = visitLam(parameters.subList(1, parameters.size()), expr, actualLink.hasNext() ? NULL_PARAMETERS_PROVIDER : newProvider);
         if (bodyResult == null) return new Pair<>(null, true);
-        Sort codSort = getSortOfType(bodyResult.type, expr);
         if (actualLink.hasNext()) {
           Expression expectedType = newProvider.getType();
           if (expectedType != null) {
-            TypecheckingResult result = checkResult(expectedType, new TypecheckingResult(new LamExpression(actualLink, bodyResult.expression, codSort), new PiExpression(actualLink, bodyResult.type instanceof Type type ? type : new TypeExpression(bodyResult.type, codSort))), expr);
+            TypecheckingResult result = checkResult(expectedType, new TypecheckingResult(new LamExpression(actualLink, bodyResult.expression), new PiExpression(actualLink, bodyResult.type)), expr);
             if (result == null || link == actualLink) return new Pair<>(result, true);
             if (!(result.expression instanceof LamExpression)) {
               DependentLink prevLink = link;
@@ -2570,12 +2563,12 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
                   prevPrevLink.setNext(lastLink);
                 }
               }
-              return new Pair<>(new TypecheckingResult(new LamExpression(link, result.expression, codSort), new PiExpression(link, result.type instanceof Type type ? type : new TypeExpression(result.type, codSort))), true);
+              return new Pair<>(new TypecheckingResult(new LamExpression(link, result.expression), new PiExpression(link, result.type)), true);
             }
           }
         }
 
-        return new Pair<>(new TypecheckingResult(new LamExpression(link, bodyResult.expression, codSort), new PiExpression(link, bodyResult.type instanceof Type type ? type : new TypeExpression(bodyResult.type, codSort))), true);
+        return new Pair<>(new TypecheckingResult(new LamExpression(link, bodyResult.expression), new PiExpression(link, bodyResult.type)), true);
       } else {
         throw new IllegalStateException();
       }
@@ -2612,7 +2605,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           Expression elementsType = classCall.getImplementation(Prelude.ARRAY_ELEMENTS_TYPE, new NewExpression(null, classCall));
           if (elementsType != null) {
             TypedSingleDependentLink param = new TypedSingleDependentLink(true, "j", ExpressionFactory.Fin(length));
-            type = new PiExpression(param, new TypeExpression(AppExpression.make(elementsType, new ReferenceExpression(param), true), classCall.getSortOfType()));
+            type = new PiExpression(param, AppExpression.make(elementsType, new ReferenceExpression(param), true));
           }
         }
       }
@@ -2649,12 +2642,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       if (result == null) return null;
       Sort codSort = result.getSortOfType();
 
+      Expression piExpr = result.getExpr();
       for (int i = list.size() - 1; i >= 0; i--) {
         codSort = PiExpression.piSort(sorts.get(i), codSort);
-        result = new PiExpression(list.get(i), result);
+        piExpr = new PiExpression(list.get(i), piExpr);
       }
 
-      return checkResult(expectedType, new TypecheckingResult(result.getExpr(), new UniverseExpression(codSort)), expr);
+      return checkResult(expectedType, new TypecheckingResult(piExpr, new UniverseExpression(codSort)), expr);
     }
   }
 
@@ -2920,10 +2914,10 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.PROPERTY_IGNORED, param));
     }
     if (param instanceof Concrete.NameParameter) {
-      return bodyToLam(visitNameParameter((Concrete.NameParameter) param, letClause), typecheckLetClause(parameters.subList(1, parameters.size()), letClause, false), letClause);
+      return bodyToLam(visitNameParameter((Concrete.NameParameter) param, letClause), typecheckLetClause(parameters.subList(1, parameters.size()), letClause, false));
     } else if (param instanceof Concrete.TypeParameter) {
       SingleDependentLink link = visitTypeParameter((Concrete.TypeParameter) param, null, null);
-      return link == null ? null : bodyToLam(link, typecheckLetClause(parameters.subList(1, parameters.size()), letClause, false), letClause);
+      return link == null ? null : bodyToLam(link, typecheckLetClause(parameters.subList(1, parameters.size()), letClause, false));
     } else {
       throw new IllegalStateException();
     }
@@ -4020,7 +4014,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
             Expression normType = exprResult.type.normalize(NormalizationMode.WHNF);
             if (normType instanceof ClassCallExpression classCall && classCall.getDefinition() == Prelude.DEP_ARRAY && classCall.isImplementedHere(Prelude.ARRAY_LENGTH)) {
               boolean ok = true;
-              Sort lamSort = null;
               Expression type = null;
               Expression elementsType = classCall.getAbsImplementationHere(Prelude.ARRAY_ELEMENTS_TYPE);
               if (elementsType != null) {
@@ -4029,8 +4022,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
                   type = elementsType.removeConstLam();
                   if (type == null) {
                     ok = false;
-                  } else {
-                    lamSort = ((LamExpression) elementsType).getCodomainSort();
                   }
                 }
               }
@@ -4038,7 +4029,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
                 Map<ClassField, Expression> newImpls = new LinkedHashMap<>(classCall.getImplementedHere());
                 newImpls.remove(Prelude.ARRAY_LENGTH);
                 ClassCallExpression newClassCall = new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), newImpls, classCall.getSort(), classCall.getUniverseKind());
-                if (type != null) newImpls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(FieldCallExpression.make(Prelude.ARRAY_LENGTH, new ReferenceExpression(newClassCall.getThisBinding())))), type, lamSort));
+                if (type != null) newImpls.put(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(new TypedSingleDependentLink(true, null, ExpressionFactory.Fin(FieldCallExpression.make(Prelude.ARRAY_LENGTH, new ReferenceExpression(newClassCall.getThisBinding())))), type));
                 newClassCall.setSort(Prelude.DEP_ARRAY.computeSort(newImpls, newClassCall.getThisBinding()));
                 exprResult.type = newClassCall;
               }

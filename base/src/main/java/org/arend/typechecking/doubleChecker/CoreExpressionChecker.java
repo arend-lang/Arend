@@ -9,7 +9,6 @@ import org.arend.core.elimtree.ElimClause;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
 import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
@@ -385,12 +384,6 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     }
   }
 
-  private void compareSort(Sort expected, Sort actual, Expression expr) {
-    if (!Sort.compare(actual, expected, CMP.LE, myEquations, mySourceNode)) {
-      throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError("Sort mismatch", new UniverseExpression(expected), new UniverseExpression(actual), mySourceNode), expr));
-    }
-  }
-
   private Expression checkLam(LamExpression expr, Expression expectedType, Integer level) {
     checkDependentLink(expr.getParameters(), Type.OMEGA, expr, false);
     Expression type;
@@ -406,8 +399,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot infer sort", mySourceNode), expr));
     }
     freeDependentLink(expr.getParameters());
-    compareSort(expr.getCodomainSort(), sort, expr.getBody());
-    return check(expectedType, new PiExpression(expr.getParameters(), type instanceof Type ? (Type) type : new TypeExpression(type, sort)), expr);
+    return check(expectedType, new PiExpression(expr.getParameters(), type), expr);
   }
 
   @Override
@@ -961,15 +953,14 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       }
       length = Suc(tailLength);
     }
-    Sort sort = expr.getLevels().toSort();
-    expr.getElementsType().accept(this, new PiExpression(new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, Collections.singletonList(length))), new UniverseExpression(sort)));
+    expr.getElementsType().accept(this, new PiExpression(new TypedSingleDependentLink(true, null, DataCallExpression.make(Prelude.FIN, Levels.EMPTY, Collections.singletonList(length))), new UniverseExpression(expr.getLevels().toSort())));
     List<Expression> elements = expr.getElements();
     for (int i = 0; i < elements.size(); i++) {
       elements.get(i).accept(this, AppExpression.make(expr.getElementsType(), new SmallIntegerExpression(i), true));
     }
     if (expr.getTail() != null) {
       TypedSingleDependentLink lamParam = new TypedSingleDependentLink(true, "j", DataCallExpression.make(Prelude.FIN, Levels.EMPTY, Collections.singletonList(tailLength)));
-      expr.getTail().accept(this, new ClassCallExpression(Prelude.DEP_ARRAY, expr.getLevels(), new SingletonMap<>(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(lamParam, AppExpression.make(expr.getElementsType(), Suc(new ReferenceExpression(lamParam)), true), sort.succ())), Sort.STD, UniverseKind.NO_UNIVERSES));
+      expr.getTail().accept(this, new ClassCallExpression(Prelude.DEP_ARRAY, expr.getLevels(), new SingletonMap<>(Prelude.ARRAY_ELEMENTS_TYPE, new LamExpression(lamParam, AppExpression.make(expr.getElementsType(), Suc(new ReferenceExpression(lamParam)), true))), Sort.STD, UniverseKind.NO_UNIVERSES));
     }
     return check(expectedType, expr.getType(), expr);
   }
@@ -978,7 +969,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   public Expression visitPath(PathExpression expr, Expression expectedType) {
     expr.getArgumentType().accept(this, new PiExpression(UnusedIntervalDependentLink.INSTANCE, new UniverseExpression(expr.getLevels().toSort())));
     TypedSingleDependentLink param = new TypedSingleDependentLink(true, "i", ExpressionFactory.Interval());
-    expr.getArgument().accept(this, new PiExpression(param, new TypeExpression(AppExpression.make(expr.getArgumentType(), new ReferenceExpression(param), true), expr.getLevels().toSort())));
+    expr.getArgument().accept(this, new PiExpression(param, AppExpression.make(expr.getArgumentType(), new ReferenceExpression(param), true)));
     return check(expectedType, expr.getType(), expr);
   }
 

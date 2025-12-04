@@ -566,8 +566,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     SingleDependentLink param = new TypedSingleDependentLink(true, "i", ExpressionFactory.Interval());
     ReferenceExpression paramRef = new ReferenceExpression(param);
     Expression argumentType = pathExpr1.getArgumentType();
-    LamExpression lamExpr = new LamExpression(param, AtExpression.make(expr2, paramRef, false), pathExpr1.getLevels().toSort());
-    Expression argType = new PiExpression(param, new TypeExpression(AppExpression.make(argumentType, paramRef, true), pathExpr1.getLevels().toSort()));
+    LamExpression lamExpr = new LamExpression(param, AtExpression.make(expr2, paramRef, false));
+    Expression argType = new PiExpression(param, AppExpression.make(argumentType, paramRef, true));
     if (!(correctOrder ? compare(pathExpr1.getArgument(), lamExpr, argType, true) : compare(lamExpr, pathExpr1.getArgument(), argType, true))) {
       initResult(pathExpr1, expr2, correctOrder);
       return false;
@@ -1105,14 +1105,13 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     }
 
     Expression result = checkedSubst(expr2, paramSubst, allowedBindings, null);
-    Expression bodyType = result == null ? null : result.getType();
-    Sort bodySort = bodyType == null ? null : bodyType.getSortOfType();
-    if (bodySort == null) return null;
+    if (result == null) return null;
+
     if (!correctOrder) {
       infExpr.getVariable().getBounds().removeAll(mySubstitution.keySet());
     }
     for (int i = params.size() - 1; i >= 0; i--) {
-      result = new LamExpression(params.get(i), result, bodySort);
+      result = new LamExpression(params.get(i), result);
     }
     return myEquations.addEquation(correctOrder ? infExpr : result, correctOrder ? result : infExpr, null, myCMP, infExpr.getVariable().getSourceNode(), correctOrder ? infExpr.getVariable() : null, correctOrder ? null : infExpr.getVariable());
   }
@@ -1194,7 +1193,6 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       }
 
       Expression lam;
-      Sort codSort;
       List<SingleDependentLink> params = new ArrayList<>();
       if (classCall1 == null) {
         List<Expression> newDataArgs = new ArrayList<>(oldDataArgs.subList(0, numberOfOldArgs));
@@ -1223,10 +1221,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
           }
         }
         lam = defCall1.getDefinition().getDefCall(defCall1.getLevels(), newDataArgs);
-        codSort = defCall1 instanceof DataCallExpression ? ((DataCallExpression) defCall1).getDefinition().getSort() : ((UniverseExpression) ((FunCallExpression) defCall1).getDefinition().getResultType()).getSort();
       } else {
         Map<ClassField, Expression> implementations = new LinkedHashMap<>();
-        codSort = classCall1.getSortOfType();
         ClassCallExpression classCall = new ClassCallExpression(classCall1.getDefinition(), classCall1.getLevels(), implementations, classCall1.getSort(), classCall1.getUniverseKind());
         int i = 0;
         for (ClassField field : classCall1.getDefinition().getNotImplementedFields()) {
@@ -1235,7 +1231,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
             i++;
           } else {
             PiExpression piType = classCall1.getDefinition().getFieldType(field, classCall1.getLevels(field.getParentClass()));
-            TypedSingleDependentLink link = new TypedSingleDependentLink(field.getReferable().isExplicitField(), field.getName(), piType.getCodomainType());
+            Expression type = piType.getCodomain();
+            TypedSingleDependentLink link = new TypedSingleDependentLink(field.getReferable().isExplicitField(), field.getName(), type instanceof Type ? (Type) type : new TypeExpression(type, piType.getSortOfType()));
             params.add(link);
             implementations.put(field, new ReferenceExpression(link));
           }
@@ -1251,7 +1248,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         if (!myNormalCompare || !myEquations.supportsLevels()) {
           return false;
         }
-        lam = new LamExpression(params.get(i), lam, codSort);
+        lam = new LamExpression(params.get(i), lam);
       }
 
       Expression finalExpr1 = correctOrder ? lam : substitute(fun);
@@ -1508,7 +1505,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     return list.getFirst();
   }
 
-  private Expression addLamParameters(LamExpression lamExpr1, List<DependentLink> params1, Expression body1, List<DependentLink> params2) {
+  private Expression addLamParameters(List<DependentLink> params1, Expression body1, List<DependentLink> params2) {
     if (params2.size() > params1.size()) {
       params1 = new ArrayList<>(params1);
       params1.addAll(params2);
@@ -1533,7 +1530,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     }
     Expression result = body1.subst(subst);
     for (int i = newParams.size() - 1; i >= 0; i--) {
-      result = new LamExpression(newParams.get(i), result, lamExpr1.getCodomainSort());
+      result = new LamExpression(newParams.get(i), result);
     }
     return result;
   }
@@ -1578,8 +1575,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (myResult == null || lamExpr2 == null) {
         initResult(expr1, expr2, correctOrder);
       } else {
-        myResult.wholeExpr1 = addLamParameters(correctOrder ? expr1 : lamExpr2, correctOrder ? params1 : params2, myResult.wholeExpr1, correctOrder ? params2 : params1);
-        myResult.wholeExpr2 = addLamParameters(correctOrder ? lamExpr2 : expr1, correctOrder ? params2 : params1, myResult.wholeExpr2, correctOrder ? params1 : params2);
+        myResult.wholeExpr1 = addLamParameters(correctOrder ? params1 : params2, myResult.wholeExpr1, correctOrder ? params2 : params1);
+        myResult.wholeExpr2 = addLamParameters(correctOrder ? params2 : params1, myResult.wholeExpr2, correctOrder ? params1 : params2);
       }
       return false;
     }
@@ -1599,7 +1596,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     ExprSubstitution subst = new ExprSubstitution();
     SingleDependentLink newParams = DependentLink.Helper.subst(oldPi.getParameters(), subst);
     newParams.getNextTyped(null).setType(makeType(newType));
-    return new PiExpression(newParams, oldPi.getCodomainType().subst(new SubstVisitor(subst, LevelSubstitution.EMPTY)));
+    return new PiExpression(newParams, oldPi.getCodomain().subst(subst));
   }
 
   @Override
@@ -1637,12 +1634,12 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     }
 
     myCMP = origCMP;
-    if (!compare(link1.hasNext() ? new PiExpression(link1, expr1.getCodomainType()) : expr1.getCodomain(), link2.hasNext() ? new PiExpression(link2, piExpr2.getCodomainType()) : piExpr2.getCodomain(), Type.OMEGA, false)) {
+    if (!compare(link1.hasNext() ? new PiExpression(link1, expr1.getCodomain()) : expr1.getCodomain(), link2.hasNext() ? new PiExpression(link2, piExpr2.getCodomain()) : piExpr2.getCodomain(), Type.OMEGA, false)) {
       if (link1.hasNext() || link2.hasNext() || myResult == null) {
         initResult(expr1, expr2);
       } else {
-        myResult.wholeExpr1 = new PiExpression(expr1.getParameters(), myResult.wholeExpr1 instanceof Type type1 ? type1 : new TypeExpression(myResult.wholeExpr1, expr1.getCodomainType().getSortOfType()));
-        myResult.wholeExpr2 = new PiExpression(piExpr2.getParameters(), myResult.wholeExpr2 instanceof Type type2 ? type2 : new TypeExpression(myResult.wholeExpr2, piExpr2.getCodomainType().getSortOfType()));
+        myResult.wholeExpr1 = new PiExpression(expr1.getParameters(), myResult.wholeExpr1);
+        myResult.wholeExpr2 = new PiExpression(piExpr2.getParameters(), myResult.wholeExpr2);
       }
       return false;
     }
@@ -1831,17 +1828,17 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     if (oldElementsType != null) {
       Expression constType = oldElementsType.removeConstLam();
       if (constType != null) {
-        elementsType = new LamExpression(new TypedSingleDependentLink(true, null, Fin(length)), constType, classCall.getSort());
+        elementsType = new LamExpression(new TypedSingleDependentLink(true, null, Fin(length)), constType);
       }
     }
     if (elementsType == null) {
       TypedSingleDependentLink param = new TypedSingleDependentLink(true, "j", Fin(length));
-      elementsType = new LamExpression(param, AppExpression.make(FieldCall(Prelude.ARRAY_ELEMENTS_TYPE, expr), addSucs(new ReferenceExpression(param), n), true), classCall.getSort());
+      elementsType = new LamExpression(param, AppExpression.make(FieldCall(Prelude.ARRAY_ELEMENTS_TYPE, expr), addSucs(new ReferenceExpression(param), n), true));
     }
     implementations.put(Prelude.ARRAY_ELEMENTS_TYPE, elementsType);
     implementations.put(Prelude.ARRAY_LENGTH, length);
     TypedSingleDependentLink param = new TypedSingleDependentLink(true, "j", Fin(length));
-    implementations.put(Prelude.ARRAY_AT, new LamExpression(param, AppExpression.make(FieldCall(Prelude.ARRAY_AT, expr), addSucs(new ReferenceExpression(param), n), true), classCall.getSort()));
+    implementations.put(Prelude.ARRAY_AT, new LamExpression(param, AppExpression.make(FieldCall(Prelude.ARRAY_AT, expr), addSucs(new ReferenceExpression(param), n), true)));
     return new NewExpression(null, new ClassCallExpression(Prelude.DEP_ARRAY, classCall.getLevels(), implementations, Sort.PROP, UniverseKind.NO_UNIVERSES));
   }
 

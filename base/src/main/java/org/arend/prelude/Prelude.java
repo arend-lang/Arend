@@ -170,7 +170,7 @@ public class Prelude implements ArendPrelude {
         PATH_INFIX.setResultType(new UniverseExpression(new Sort(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR, -1))));
         DataCallExpression dataCall = (DataCallExpression) PATH_INFIX.getBody();
         assert dataCall != null;
-        PATH_INFIX.setBody(DataCallExpression.make(dataCall.getDefinition(), dataCall.getLevels(), Arrays.asList(new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) dataCall.getDefCallArguments().get(0)).getBody(), new Sort(new Level(LevelVariable.PVAR, 1), new Level(LevelVariable.HVAR, 1))), dataCall.getDefCallArguments().get(1), dataCall.getDefCallArguments().get(2))));
+        PATH_INFIX.setBody(DataCallExpression.make(dataCall.getDefinition(), dataCall.getLevels(), Arrays.asList(new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) dataCall.getDefCallArguments().get(0)).getBody()), dataCall.getDefCallArguments().get(1), dataCall.getDefCallArguments().get(2))));
       }
       case "idp" -> {
         IDP = (DConstructor) definition;
@@ -182,7 +182,7 @@ public class Prelude implements ArendPrelude {
         IDP.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
         PathExpression pathExpr = (PathExpression) IDP.getBody();
         assert pathExpr != null;
-        IDP.setBody(new PathExpression(pathExpr.getLevels(), new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst(), Sort.STD.succ()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody(), Sort.STD)));
+        IDP.setBody(new PathExpression(pathExpr.getLevels(), new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody())));
       }
       case "@" -> {
         AT = (FunctionDefinition) definition;

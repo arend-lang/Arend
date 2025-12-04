@@ -6,8 +6,6 @@ import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.CallableDefinition;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
@@ -103,12 +101,11 @@ public class DefCallResult implements TResult {
       return new TypecheckingResult(expression, resultType);
     }
 
-    Type type = resultType instanceof Type ? (Type) resultType : new TypeExpression(resultType, typechecker.getSortOfType(resultType, myDefCall));
     for (int i = parameters.size() - 1; i >= 0; i--) {
-      expression = new LamExpression(parameters.get(i), expression, type.getSortOfType());
-      type = new PiExpression(parameters.get(i), type);
+      expression = new LamExpression(parameters.get(i), expression);
+      resultType = new PiExpression(parameters.get(i), resultType);
     }
-    return new TypecheckingResult(expression, type.getExpr());
+    return new TypecheckingResult(expression, resultType);
   }
 
   @Override

@@ -197,7 +197,7 @@ public class ConditionsChecking {
         elimTree.addChild(Prelude.LEFT, new LeafElimTree(0, Collections.emptyList(), 0));
         elimTree.addChild(Prelude.RIGHT, new LeafElimTree(0, Collections.emptyList(), 1));
         elimTree.addChild(null, new LeafElimTree(0, null, 1));
-        substitution.add(((BindingPattern) conPattern.getSubPatterns().getFirst()).getBinding(), new LamExpression(lamParam, new CaseExpression(false, lamParam, AppExpression.make(conPattern.getDataTypeArguments().getFirst(), lamRef, true), null, new ElimBody(clauses, elimTree), Collections.singletonList(lamRef)), conPattern.getLevels().toLevelPair().toSort()));
+        substitution.add(((BindingPattern) conPattern.getSubPatterns().getFirst()).getBinding(), new LamExpression(lamParam, new CaseExpression(false, lamParam, AppExpression.make(conPattern.getDataTypeArguments().getFirst(), lamRef, true), null, new ElimBody(clauses, elimTree), Collections.singletonList(lamRef))));
       }
     }
   }

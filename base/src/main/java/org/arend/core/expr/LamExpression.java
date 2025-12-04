@@ -3,8 +3,6 @@ package org.arend.core.expr;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
-import org.arend.core.sort.Sort;
-import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.expr.AbstractedExpression;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
 import org.arend.ext.core.expr.CoreLamExpression;
@@ -15,24 +13,10 @@ import org.jetbrains.annotations.NotNull;
 public class LamExpression extends Expression implements CoreLamExpression {
   private final SingleDependentLink myLink;
   private final Expression myBody;
-  private Sort myCodomainSort;
 
-  public LamExpression(SingleDependentLink link, Expression body, Sort codomainSort) {
+  public LamExpression(SingleDependentLink link, Expression body) {
     myLink = link;
     myBody = body;
-    myCodomainSort = codomainSort;
-  }
-
-  public Sort getCodomainSort() {
-    return myCodomainSort;
-  }
-
-  public void setCodomainSort(Sort sort) {
-    myCodomainSort = sort;
-  }
-
-  public void substSort(LevelSubstitution substitution) {
-    myCodomainSort = myCodomainSort.subst(substitution);
   }
 
   @NotNull
@@ -61,7 +45,7 @@ public class LamExpression extends Expression implements CoreLamExpression {
         throw new IllegalArgumentException();
       }
     }
-    return new LamExpression(link, myBody, myCodomainSort);
+    return new LamExpression(link, myBody);
   }
 
   @Override
