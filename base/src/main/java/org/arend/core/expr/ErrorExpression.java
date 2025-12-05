@@ -9,7 +9,6 @@ import org.arend.core.subst.InPlaceLevelSubstVisitor;
 import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.core.expr.CoreErrorExpression;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
-import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.LocalError;
@@ -135,10 +134,5 @@ public class ErrorExpression extends Expression implements CoreErrorExpression, 
   @Override
   public Type strip(StripVisitor visitor) {
     return myExpression == null ? this : new ErrorExpression(myExpression.accept(visitor, null), myGoalName);
-  }
-
-  @Override
-  public @NotNull ErrorExpression normalize(@NotNull NormalizationMode mode) {
-    return this;
   }
 }

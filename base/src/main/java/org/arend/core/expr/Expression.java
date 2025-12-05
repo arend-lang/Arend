@@ -18,7 +18,6 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.elimtree.Body;
 import org.arend.core.expr.type.Type;
-import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
@@ -265,19 +264,6 @@ public abstract class Expression implements Body, CoreExpression {
 
   public Expression subst(ExprSubstitution exprSubst, LevelSubstitution levelSubst) {
     return exprSubst.isEmpty() && levelSubst.isEmpty() ? this : accept(new SubstVisitor(exprSubst, levelSubst), null);
-  }
-
-  public Type subst(SubstVisitor substVisitor) {
-    Expression result = substVisitor.isEmpty() ? this : accept(substVisitor, null);
-    if (result instanceof Type) {
-      return (Type) result;
-    }
-
-    Sort sort = result.getSortOfType();
-    if (sort == null) {
-      throw new SubstVisitor.SubstException();
-    }
-    return new TypeExpression(result, sort);
   }
 
   @NotNull

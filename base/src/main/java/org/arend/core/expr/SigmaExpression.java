@@ -3,10 +3,8 @@ package org.arend.core.expr;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
-import org.arend.core.expr.visitor.NormalizeVisitor;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
 import org.arend.ext.core.expr.CoreSigmaExpression;
-import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
@@ -37,12 +35,6 @@ public class SigmaExpression extends Expression implements CoreSigmaExpression {
   @Override
   public <P, R> R accept(@NotNull CoreExpressionVisitor<? super P, ? extends R> visitor, P params) {
     return visitor.visitSigma(this, params);
-  }
-
-  @NotNull
-  @Override
-  public SigmaExpression normalize(@NotNull NormalizationMode mode) {
-    return NormalizeVisitor.INSTANCE.visitSigma(this, mode);
   }
 
   @Override

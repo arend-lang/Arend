@@ -7,10 +7,8 @@ import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.InPlaceLevelSubstVisitor;
 import org.arend.ext.core.level.LevelSubstitution;
-import org.arend.core.subst.SubstVisitor;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
 import org.arend.ext.core.expr.CoreUniverseExpression;
-import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
@@ -62,23 +60,12 @@ public class UniverseExpression extends Expression implements Type, CoreUniverse
   }
 
   @Override
-  public UniverseExpression subst(SubstVisitor substVisitor) {
-    return substVisitor.getLevelSubstitution().isEmpty() || mySort.isOmega() ? this : new UniverseExpression(mySort.subst(substVisitor.getLevelSubstitution()));
-  }
-
-  @Override
   public void subst(InPlaceLevelSubstVisitor substVisitor) {
     substVisitor.visitUniverse(this, null);
   }
 
   @Override
   public UniverseExpression strip(StripVisitor visitor) {
-    return this;
-  }
-
-  @NotNull
-  @Override
-  public UniverseExpression normalize(@NotNull NormalizationMode mode) {
     return this;
   }
 

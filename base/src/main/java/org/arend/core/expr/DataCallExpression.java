@@ -6,7 +6,6 @@ import org.arend.core.definition.DataDefinition;
 import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
-import org.arend.core.expr.visitor.NormalizeVisitor;
 import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Sort;
@@ -91,12 +90,6 @@ public class DataCallExpression extends LeveledDefCallExpression implements Type
   @Override
   public DataCallExpression strip(StripVisitor visitor) {
     return visitor.visitDataCall(this, null);
-  }
-
-  @NotNull
-  @Override
-  public DataCallExpression normalize(@NotNull NormalizationMode mode) {
-    return NormalizeVisitor.INSTANCE.visitDataCall(this, mode);
   }
 
   @Override
@@ -188,12 +181,12 @@ public class DataCallExpression extends LeveledDefCallExpression implements Type
     if (constructor.getPatterns() != null) {
       List<Expression> arguments = myArguments;
       if (constructor == Prelude.FIN_SUC) {
-        Expression arg = arguments.get(0).normalize(NormalizationMode.WHNF);
+        Expression arg = arguments.getFirst().normalize(NormalizationMode.WHNF);
         if (arg instanceof IntegerExpression && ((IntegerExpression) arg).isOne()) {
           return true;
         }
         if (arg instanceof ConCallExpression && ((ConCallExpression) arg).getDefinition() == Prelude.SUC) {
-          Expression argArg = ((ConCallExpression) arg).getDefCallArguments().get(0).normalize(NormalizationMode.WHNF);
+          Expression argArg = ((ConCallExpression) arg).getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF);
           if (argArg instanceof IntegerExpression && ((IntegerExpression) argArg).isZero()) {
             return true;
           }

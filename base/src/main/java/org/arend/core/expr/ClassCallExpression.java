@@ -9,7 +9,6 @@ import org.arend.core.definition.*;
 import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
-import org.arend.core.expr.visitor.NormalizeVisitor;
 import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.sort.Sort;
@@ -478,12 +477,6 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
   @Override
   public ClassCallExpression strip(StripVisitor visitor) {
     return visitor.visitClassCall(this, null);
-  }
-
-  @NotNull
-  @Override
-  public ClassCallExpression normalize(@NotNull NormalizationMode mode) {
-    return NormalizeVisitor.INSTANCE.visitClassCall(this, mode);
   }
 
   public Sort getSort() {
