@@ -14,8 +14,4 @@ public interface Type {
   Type strip(StripVisitor visitor);
 
   Expression OMEGA = new UniverseExpression(new Sort(Level.INFINITY, true));
-
-  default boolean isOmega() {
-    return false;
-  }
 }

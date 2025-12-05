@@ -121,6 +121,10 @@ public abstract class Expression implements Body, CoreExpression {
     return null;
   }
 
+  public boolean isOmega() {
+    return false;
+  }
+
   public Sort toSort() {
     UniverseExpression universe = normalize(NormalizationMode.WHNF).cast(UniverseExpression.class);
     return universe == null ? null : universe.getSort();

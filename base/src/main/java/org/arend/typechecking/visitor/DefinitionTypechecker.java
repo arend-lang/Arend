@@ -1508,7 +1508,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       Concrete.Expression bodyTerm = ((Concrete.TermFunctionBody) body).getTerm();
       boolean useExpectedType = !expectedType.isError();
       TypecheckingResult nonFinalResult = typechecker.checkExpr(bodyTerm, useExpectedType ? expectedType : null);
-      if (useExpectedType && !(expectedType instanceof Type && ((Type) expectedType).isOmega())) {
+      if (useExpectedType && !expectedType.isOmega()) {
         if (kind == FunctionKind.LEMMA || def.getData().getKind() == GlobalReferable.Kind.DEFINED_CONSTRUCTOR || nonFinalResult == null || !nonFinalResult.type.isInstance(ClassCallExpression.class)) {
           if (nonFinalResult == null) {
             nonFinalResult = new TypecheckingResult(null, expectedType);

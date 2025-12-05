@@ -549,7 +549,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
       } else {
         appExpr = goalCheckingResult.expression;
       }
-      return new TypecheckingResult(appExpr, expectedType != null && !(expectedType instanceof Type && ((Type) expectedType).isOmega()) ? expectedType : goalCheckingResult.expression);
+      return new TypecheckingResult(appExpr, expectedType != null && !expectedType.isOmega() ? expectedType : goalCheckingResult.expression);
     } else {
       result = myVisitor.checkExpr(fun, null);
     }
@@ -941,7 +941,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
     }
 
     if (expectedParamsNumber != actualParams.size()) {
-      result = fixImplicitArgs(result, actualParams.subList(0, actualParams.size() - expectedParamsNumber), expr, expectedType == null || expectedType instanceof Type && ((Type) expectedType).isOmega(), null);
+      result = fixImplicitArgs(result, actualParams.subList(0, actualParams.size() - expectedParamsNumber), expr, expectedType == null || expectedType.isOmega(), null);
     }
 
     return result;

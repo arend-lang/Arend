@@ -370,7 +370,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   public TypecheckingResult checkResult(Expression expectedType, TypecheckingResult result, Concrete.Expression expr) {
-    boolean isOmega = expectedType instanceof Type && ((Type) expectedType).isOmega();
+    boolean isOmega = expectedType != null && expectedType.isOmega();
     if (result == null || expectedType == null || isOmega && result.type instanceof UniverseExpression) {
       return result;
     }
@@ -569,7 +569,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   public boolean checkCoerceResult(Expression expectedType, TypecheckingResult result, Concrete.SourceNode marker, boolean strict) {
-    boolean isOmega = expectedType instanceof Type && ((Type) expectedType).isOmega();
+    boolean isOmega = expectedType != null && expectedType.isOmega();
     boolean ok = isOmega && result.type.isInstance(UniverseExpression.class);
     CompareVisitor.Result compareResult = null;
     if (!ok && expectedType != null && !isOmega) {
@@ -1131,7 +1131,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return result;
   }
 
-  public Type checkType(Concrete.Expression expr, Expression expectedType) {
+  public Type checkType(Concrete.Expression expr, @NotNull Expression expectedType) {
     if (expr == null) {
       assert false;
       errorReporter.report(new LocalError(GeneralError.Level.ERROR, "Incomplete expression"));
@@ -1140,8 +1140,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     TypecheckingResult result;
     Expression expectedType1 = expectedType;
-    boolean isOmega = expectedType instanceof Type && ((Type) expectedType).isOmega();
-    if (!isOmega) {
+    if (!expectedType.isOmega()) {
       expectedType = expectedType.normalize(NormalizationMode.WHNF);
       if (expectedType.getStuckInferenceVariable() != null) {
         expectedType1 = Type.OMEGA;
@@ -2120,7 +2119,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   @Override
   public TypecheckingResult visitHole(Concrete.HoleExpression expr, Expression expectedType) {
-    boolean isOmega = expectedType instanceof Type && ((Type) expectedType).isOmega();
+    boolean isOmega = expectedType != null && expectedType.isOmega();
     if (expr.isErrorHole()) {
       return expectedType != null && !isOmega ? new TypecheckingResult(new ErrorExpression(expr.getError()), expectedType) : null;
     }
@@ -3827,7 +3826,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     GoalError error = new GoalError(getExpressionPrettifier(), saveTypecheckingContext(), getBindingTypes(), expectedType, goalResult == null ? null : (Concrete.Expression) goalResult.concreteExpression, errors, solver, expr);
     errorReporter.report(error);
     Expression result = new GoalErrorExpression(goalResult == null || goalResult.typedExpression == null ? null : (Expression) goalResult.typedExpression.getExpression(), error);
-    return new TypecheckingResult(result, expectedType != null && !(expectedType instanceof Type && ((Type) expectedType).isOmega()) ? expectedType : result);
+    return new TypecheckingResult(result, expectedType != null && !expectedType.isOmega() ? expectedType : result);
   }
 
   protected Map<Binding, Expression> getBindingTypes() {
@@ -4072,7 +4071,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       if (resultType == null && expectedType == null) {
         return null;
       }
-      resultExpr = resultType != null ? resultType.getExpr() : !(expectedType instanceof Type && ((Type) expectedType).isOmega()) ? checkedSubst(expectedType, elimSubst, allowedBindings, expr.getResultType() != null ? expr.getResultType() : expr) : new UniverseExpression(Sort.generateInferVars(myEquations, false, expr));
+      resultExpr = resultType != null ? resultType.getExpr() : !expectedType.isOmega() ? checkedSubst(expectedType, elimSubst, allowedBindings, expr.getResultType() != null ? expr.getResultType() : expr) : new UniverseExpression(Sort.generateInferVars(myEquations, false, expr));
 
       if (expr.getResultTypeLevel() != null) {
         TypecheckingResult levelResult = checkExpr(expr.getResultTypeLevel(), null);
@@ -4139,7 +4138,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (!(expr.isSCase() && actualLevel.isProp())) {
       new ConditionsChecking(myEquations, errorReporter, expr).check(clauses, expr.getClauses(), elimBody);
     }
-    TypecheckingResult result = new TypecheckingResult(new CaseExpression(expr.isSCase(), list.getFirst(), resultExpr, resultTypeLevel, elimBody, expressions), resultType != null ? resultExpr.subst(substitution) : expectedType instanceof Type && ((Type) expectedType).isOmega() ? resultExpr : expectedType);
+    TypecheckingResult result = new TypecheckingResult(new CaseExpression(expr.isSCase(), list.getFirst(), resultExpr, resultTypeLevel, elimBody, expressions), resultType != null ? resultExpr.subst(substitution) : expectedType.isOmega() ? resultExpr : expectedType);
     return resultType == null ? result : checkResult(expectedType, result, expr);
   }
 
