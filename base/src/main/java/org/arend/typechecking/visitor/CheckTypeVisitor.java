@@ -9,7 +9,6 @@ import org.arend.core.definition.*;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.*;
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.sort.Level;
@@ -1131,7 +1130,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return result;
   }
 
-  public Type checkType(Concrete.Expression expr, @NotNull Expression expectedType) {
+  public TypeExpression checkType(Concrete.Expression expr, @NotNull Expression expectedType) {
     if (expr == null) {
       assert false;
       errorReporter.report(new LocalError(GeneralError.Level.ERROR, "Incomplete expression"));
@@ -1155,9 +1154,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (result == null) {
       return null;
     }
-    if (result.expression instanceof Type) {
-      return (Type) result.expression;
-    }
 
     Expression type = result.type.normalize(NormalizationMode.WHNF);
     UniverseExpression universe = type.cast(UniverseExpression.class);
@@ -1180,27 +1176,24 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return new TypeExpression(result.expression, universe.getSort());
   }
 
-  public Type finalCheckType(Concrete.Expression expr, Expression expectedType, boolean propIfPossible) {
-    Type result = checkType(expr, expectedType);
+  public TypeExpression finalCheckType(Concrete.Expression expr, Expression expectedType, boolean propIfPossible) {
+    TypeExpression result = checkType(expr, expectedType);
     if (result == null) return null;
     invokeDeferredMetas(null, null, false);
     LevelEquationsSolver levelSolver = myEquations.makeLevelEquationsSolver();
     if (propIfPossible) {
-      Sort sort = result.getSortOfType();
-      if (sort != null) {
-        levelSolver.addPropEquationIfPossible(sort.getHLevel());
-      }
+      levelSolver.addPropEquationIfPossible(result.sort().getHLevel());
     }
     LevelSubstitution levelSubstitution = levelSolver.solveLevels();
     myEquations.finalizeEquations(levelSubstitution, expr);
     InPlaceLevelSubstVisitor substVisitor = new InPlaceLevelSubstVisitor(levelSubstitution);
     if (!substVisitor.isEmpty()) {
-      result.subst(substVisitor);
+      result.expression().accept(substVisitor, null);
     }
-    result.getExpr().accept(new InferenceVariableSolveVisitor(this), null);
+    result.expression().accept(new InferenceVariableSolveVisitor(this), null);
     StripVisitor stripVisitor = new StripVisitor(errorReporter);
     invokeDeferredMetas(substVisitor, stripVisitor, true);
-    return result.strip(stripVisitor);
+    return new TypeExpression(result.expression().accept(stripVisitor, null), result.sort().subst(substVisitor.getLevelSubstitution()));
   }
 
   public TypecheckingResult checkArgument(Concrete.Expression expr, Expression expectedType, TResult result, InferenceVariable infVar) {
@@ -2268,29 +2261,29 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<Sort> sorts, Expression expectedType) {
-    Type argResult = checkType(param.getType(), UniverseExpression.OMEGA);
+    TypeExpression argResult = checkType(param.getType(), UniverseExpression.OMEGA);
     if (argResult == null) return null;
     if (expectedType != null) {
       Expression expected = expectedType.normalize(NormalizationMode.WHNF).getUnderlyingExpression();
       if ((expected instanceof ClassCallExpression || expected instanceof PiExpression || expected instanceof SigmaExpression || expected instanceof UniverseExpression)
-          && expected.isLessOrEquals(argResult.getExpr(), myEquations, param)) {
-        argResult = expectedType instanceof Type ? (Type) expectedType : new TypeExpression(expectedType, argResult.getSortOfType());
+          && expected.isLessOrEquals(argResult.expression(), myEquations, param)) {
+        argResult = new TypeExpression(expectedType, argResult.sort());
       }
     }
     if (sorts != null) {
-      sorts.add(argResult.getSortOfType());
+      sorts.add(argResult.sort());
     }
 
     if (param instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = param.getReferableList();
-      SingleDependentLink link = ExpressionFactory.singleParams(param.isExplicit(), param.getNames(), argResult.getExpr());
+      SingleDependentLink link = ExpressionFactory.singleParams(param.isExplicit(), param.getNames(), argResult.expression());
       int i = 0;
       for (SingleDependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i) , link1);
       }
       return link;
     } else {
-      return new TypedSingleDependentLink(param.isExplicit(), null, argResult.getExpr());
+      return new TypedSingleDependentLink(param.isExplicit(), null, argResult.expression());
     }
   }
 
@@ -2638,11 +2631,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         list.add(link);
       }
 
-      Type result = checkType(expr.getCodomain(), UniverseExpression.OMEGA);
+      TypeExpression result = checkType(expr.getCodomain(), UniverseExpression.OMEGA);
       if (result == null) return null;
-      Sort codSort = result.getSortOfType();
+      Sort codSort = result.sort();
 
-      Expression piExpr = result.getExpr();
+      Expression piExpr = result.expression();
       for (int i = list.size() - 1; i >= 0; i--) {
         codSort = PiExpression.piSort(sorts.get(i), codSort);
         piExpr = new PiExpression(list.get(i), piExpr);
@@ -2684,25 +2677,25 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   }
 
   private boolean visitSigmaParameter(Concrete.TypeParameter arg, Expression expectedType, List<Sort> resultSorts, LinkList list) {
-    Type result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
+    TypeExpression result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
     if (result == null) return false;
 
-    Sort sort = result.getSortOfType();
+    Sort sort = result.sort();
     boolean isProperty = arg.isProperty();
     boolean isProp = isProperty && Sort.compare(sort, Sort.PROP, CMP.LE, myEquations, arg);
     if (!isProp && isProperty) {
-      errorReporter.report(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, result.getSortOfType(), arg));
+      errorReporter.report(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, result.sort(), arg));
     }
     if (arg instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = arg.getReferableList();
-      DependentLink link = ExpressionFactory.parameter(true, isProp, arg.getNames(), result.getExpr());
+      DependentLink link = ExpressionFactory.parameter(true, isProp, arg.getNames(), result.expression());
       list.append(link);
       int i = 0;
       for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i), link1);
       }
     } else {
-      DependentLink link = ExpressionFactory.parameter(true, isProp, Collections.singletonList(null), result.getExpr());
+      DependentLink link = ExpressionFactory.parameter(true, isProp, Collections.singletonList(null), result.expression());
       list.append(link);
       addBinding(null, link);
     }
@@ -3974,7 +3967,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     List<Expression> expressions = new ArrayList<>(caseArgs.size());
 
     ExprSubstitution substitution = new ExprSubstitution();
-    Type resultType = null;
+    TypeExpression resultType = null;
     Expression resultExpr;
     Integer level = expr.level >= -1 ? expr.level : null;
     Expression resultTypeLevel = null;
@@ -4071,7 +4064,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       if (resultType == null && expectedType == null) {
         return null;
       }
-      resultExpr = resultType != null ? resultType.getExpr() : !expectedType.isOmega() ? checkedSubst(expectedType, elimSubst, allowedBindings, expr.getResultType() != null ? expr.getResultType() : expr) : new UniverseExpression(Sort.generateInferVars(myEquations, false, expr));
+      resultExpr = resultType != null ? resultType.expression() : !expectedType.isOmega() ? checkedSubst(expectedType, elimSubst, allowedBindings, expr.getResultType() != null ? expr.getResultType() : expr) : new UniverseExpression(Sort.generateInferVars(myEquations, false, expr));
 
       if (expr.getResultTypeLevel() != null) {
         TypecheckingResult levelResult = checkExpr(expr.getResultTypeLevel(), null);
@@ -4113,7 +4106,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     Level actualLevel;
     {
-      Sort sort = resultType == null ? null : resultType.getSortOfType();
+      Sort sort = resultType == null ? null : resultType.sort();
       actualLevel = sort != null ? sort.getHLevel() : Level.INFINITY;
     }
 

@@ -10,7 +10,7 @@ import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
-import org.arend.core.expr.type.Type;
+import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.pattern.BindingPattern;
 import org.arend.core.pattern.ConstructorExpressionPattern;
@@ -1077,15 +1077,15 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     Expression expectedType = null;
     Concrete.Expression cResultType = def.getResultType();
     if (cResultType != null) {
-      Type expectedTypeResult = pair == null
-        ? new ErrorExpression()
+      TypeExpression expectedTypeResult = pair == null
+        ? new TypeExpression(new ErrorExpression(), Sort.PROP)
         : def.getBody() instanceof Concrete.CoelimFunctionBody && !def.isRecursive()
           ? null // The result type will be typechecked together with all field implementations during body typechecking.
           : checkResultTypeLater(def)
             ? typechecker.checkType(cResultType, UniverseExpression.OMEGA)
             : typechecker.finalCheckType(cResultType, UniverseExpression.OMEGA, kind == FunctionKind.LEMMA && def.getResultTypeLevel() == null);
       if (expectedTypeResult != null) {
-        expectedType = expectedTypeResult.getExpr();
+        expectedType = expectedTypeResult.expression();
       }
     }
 
@@ -3074,9 +3074,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       instancePool.setInstancePool(localInstancePool);
       typechecker.setInstancePool(instancePool);
       ClassFieldKind kind = def instanceof Concrete.ClassField ? ((Concrete.ClassField) def).getKind() : typedDef == null ? ClassFieldKind.ANY : typedDef.isProperty() ? ClassFieldKind.PROPERTY : ClassFieldKind.FIELD;
-      Type typeResult = typechecker.finalCheckType(codomain, UniverseExpression.OMEGA, kind == ClassFieldKind.PROPERTY && def.getResultTypeLevel() == null);
+      TypeExpression typeResult = typechecker.finalCheckType(codomain, UniverseExpression.OMEGA, kind == ClassFieldKind.PROPERTY && def.getResultTypeLevel() == null);
       ok = typeResult != null;
-      piType = new PiExpression(thisParam, ok ? typeResult.getExpr() : new ErrorExpression());
+      piType = new PiExpression(thisParam, ok ? typeResult.expression() : new ErrorExpression());
 
       if (def instanceof Concrete.ClassField) {
         typedDef = addField(((Concrete.ClassField) def).getData(), parentClass, piType, null);
@@ -3092,11 +3092,11 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           typechecker.getExpressionLevel(pair.proj1, null, null, DummyEquations.getInstance(), def.getResultTypeLevel());
         }
       } else if (ok && kind != ClassFieldKind.FIELD) {
-        Sort sort = typeResult.getSortOfType();
+        Sort sort = typeResult.sort();
         if (sort.isProp()) {
           isProperty = true;
         } else {
-          DefCallExpression defCall = typeResult.getExpr().cast(DefCallExpression.class);
+          DefCallExpression defCall = typeResult.expression().cast(DefCallExpression.class);
           Integer level = defCall == null ? null : defCall.getUseLevel();
           if (kind == ClassFieldKind.PROPERTY) {
             if (checkLevel(LevelMismatchError.TargetKind.PROPERTY, level, sort, def)) {

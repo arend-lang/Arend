@@ -3,14 +3,11 @@ package org.arend.core.expr;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.Constructor;
 import org.arend.core.definition.DataDefinition;
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
-import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.InPlaceLevelSubstVisitor;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.context.CoreParameter;
 import org.arend.ext.core.definition.CoreConstructor;
@@ -26,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class DataCallExpression extends LeveledDefCallExpression implements Type, CoreDataCallExpression {
+public class DataCallExpression extends LeveledDefCallExpression implements CoreDataCallExpression {
   private final List<Expression> myArguments;
 
   private DataCallExpression(DataDefinition definition, Levels levels, List<Expression> arguments) {
@@ -73,23 +70,8 @@ public class DataCallExpression extends LeveledDefCallExpression implements Type
   }
 
   @Override
-  public Expression getExpr() {
-    return this;
-  }
-
-  @Override
   public Sort getSortOfType() {
     return getDefinition().getSort().subst(getLevelSubstitution());
-  }
-
-  @Override
-  public void subst(InPlaceLevelSubstVisitor substVisitor) {
-    substVisitor.visitDataCall(this, null);
-  }
-
-  @Override
-  public DataCallExpression strip(StripVisitor visitor) {
-    return visitor.visitDataCall(this, null);
   }
 
   @Override

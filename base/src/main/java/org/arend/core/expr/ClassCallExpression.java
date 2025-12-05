@@ -6,7 +6,6 @@ import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
 import org.arend.core.definition.*;
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.core.expr.visitor.StripVisitor;
@@ -30,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public class ClassCallExpression extends LeveledDefCallExpression implements Type, CoreClassCallExpression {
+public class ClassCallExpression extends LeveledDefCallExpression implements CoreClassCallExpression {
   private final ClassCallBinding myThisBinding = new ClassCallBinding();
   private final Map<ClassField, Expression> myImplementations;
   private Sort mySort;
@@ -460,23 +459,8 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Typ
   }
 
   @Override
-  public Expression getExpr() {
-    return this;
-  }
-
-  @Override
   public Sort getSortOfType() {
     return mySort.subst(getLevelSubstitution());
-  }
-
-  @Override
-  public void subst(InPlaceLevelSubstVisitor substVisitor) {
-    substVisitor.visitClassCall(this, null);
-  }
-
-  @Override
-  public ClassCallExpression strip(StripVisitor visitor) {
-    return visitor.visitClassCall(this, null);
   }
 
   public Sort getSort() {

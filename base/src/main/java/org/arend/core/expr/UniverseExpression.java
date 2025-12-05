@@ -1,19 +1,16 @@
 package org.arend.core.expr;
 
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
-import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
-import org.arend.core.subst.InPlaceLevelSubstVisitor;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
 import org.arend.ext.core.expr.CoreUniverseExpression;
 import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
-public class UniverseExpression extends Expression implements Type, CoreUniverseExpression {
+public class UniverseExpression extends Expression implements CoreUniverseExpression {
   public static final UniverseExpression OMEGA = new UniverseExpression(new Sort(Level.INFINITY, true));
 
   private Sort mySort;
@@ -53,23 +50,8 @@ public class UniverseExpression extends Expression implements Type, CoreUniverse
   }
 
   @Override
-  public Expression getExpr() {
-    return this;
-  }
-
-  @Override
   public Sort getSortOfType() {
     return mySort.succ();
-  }
-
-  @Override
-  public void subst(InPlaceLevelSubstVisitor substVisitor) {
-    substVisitor.visitUniverse(this, null);
-  }
-
-  @Override
-  public UniverseExpression strip(StripVisitor visitor) {
-    return this;
   }
 
   @Override
