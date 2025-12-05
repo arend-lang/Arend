@@ -134,6 +134,11 @@ public abstract class Expression implements Body, CoreExpression {
     return type == null ? null : type.toSort();
   }
 
+  public boolean isTypeProp() {
+    Sort sort = getSortOfType();
+    return sort != null && sort.isProp();
+  }
+
   public Expression getType(boolean minimal) {
     return accept(minimal ? GetTypeVisitor.MIN_INSTANCE : GetTypeVisitor.INSTANCE, null);
   }
@@ -343,7 +348,7 @@ public abstract class Expression implements Body, CoreExpression {
       Expression cod = lamExpr.getBody().lambdaToPi();
       return cod == null ? null : new PiExpression(lamExpr.getParameters(), cod);
     } else {
-      return expr.getSortOfType() == null ? null : expr;
+      return expr;
     }
   }
 

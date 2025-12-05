@@ -272,7 +272,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       boolean allowProp = normType instanceof DataCallExpression && ((DataCallExpression) normType).getDefinition().getConstructors().isEmpty() || !expr1.canBeConstructor() && !expr2.canBeConstructor();
       if (normType instanceof SigmaExpression && !((SigmaExpression) normType).getParameters().hasNext() ||
           normType instanceof ClassCallExpression && (((ClassCallExpression) normType).getNumberOfNotImplementedFields() == 0 || Boolean.TRUE.equals(ConstructorExpressionPattern.isArrayEmpty(normType)) && ((ClassCallExpression) normType).isImplemented(Prelude.ARRAY_ELEMENTS_TYPE)) ||
-          allowProp && normType != null && Sort.PROP.equals(normType.getSortOfType())) {
+          allowProp && normType != null && normType.isTypeProp()) {
         myOnlySolveVars = true;
       }
 
@@ -284,8 +284,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         if (type1 != null) {
           type1 = myNormalize ? type1.normalize(NormalizationMode.WHNF) : type1;
           if (allowProp) {
-            Sort sort1 = type1.getSortOfType();
-            if (sort1 != null && sort1.isProp() && !type1.isInstance(ClassCallExpression.class)) {
+            if (!type1.isInstance(ClassCallExpression.class) && type1.isTypeProp()) {
               myOnlySolveVars = true;
             }
           }
@@ -299,8 +298,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
           if (type2 != null) {
             type2 = myNormalize ? type2.normalize(NormalizationMode.WHNF) : type2;
             if (allowProp) {
-              Sort sort2 = type2.getSortOfType();
-              if (sort2 != null && sort2.isProp() && !type2.isInstance(ClassCallExpression.class)) {
+              if (!type2.isInstance(ClassCallExpression.class) && type2.isTypeProp()) {
                 myOnlySolveVars = true;
               }
             }

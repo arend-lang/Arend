@@ -247,8 +247,9 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
           if (sort.isProp()) {
             continue;
           }
-          if (!(Level.compare(sort.getPLevel(), expr.getSortOfType().getPLevel(), CMP.LE, myEquations, mySourceNode) && (level != null && sort.getHLevel().isClosed() && sort.getHLevel().getConstant() <= level || Level.compare(sort.getHLevel(), expr.getSortOfType().getHLevel(), CMP.LE, myEquations, mySourceNode)))) {
-            throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("The sort " + sort + " of field '" + field.getName() + "' does not fit into the expected sort " + expr.getSortOfType(), mySourceNode), expr));
+          Sort exprSort = expr.getSortOfType();
+          if (!(Level.compare(sort.getPLevel(), exprSort.getPLevel(), CMP.LE, myEquations, mySourceNode) && (level != null && sort.getHLevel().isClosed() && sort.getHLevel().getConstant() <= level || Level.compare(sort.getHLevel(), exprSort.getHLevel(), CMP.LE, myEquations, mySourceNode)))) {
+            throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("The sort " + sort + " of field '" + field.getName() + "' does not fit into the expected sort " + exprSort, mySourceNode), expr));
           }
         }
       }
@@ -320,15 +321,26 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     if (myContext != null) myContext.remove(binding);
   }
 
-  Sort checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr) {
+  private Sort toSort(Expression type) {
+    Sort sort = type.toSort();
+    if (sort == null) {
+      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot infer the sort of the type", mySourceNode), type));
+    }
+    return sort;
+  }
+
+  private Sort checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr) {
     Sort result = Sort.PROP;
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
         Expression paramType = link.getType().accept(this, type);
-        if (result != null) {
-          Sort sort = paramType.toSort();
-          result = sort == null ? null : result.max(sort);
+        Sort sort = toSort(paramType);
+        result = result.max(sort);
+        if (link.isProperty()) {
+          if (!sort.isProp()) {
+            throw new CoreException(CoreErrorWrapper.make(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, sort, mySourceNode), expr));
+          }
         }
       }
     }
@@ -408,15 +420,15 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   private Expression checkPi(PiExpression expr, Expression expectedType, boolean allowInf) {
     Sort sort1 = checkDependentLinkWithResult(expr.getParameters(), null, expr);
-    Sort sort2 = checkInf(expr.getCodomain(), null, allowInf).toSort();
+    Sort sort2 = toSort(checkInf(expr.getCodomain(), null, allowInf));
     freeDependentLink(expr.getParameters());
 
     Expression actualType;
-    if (sort1 != null && sort1.isProp() || sort2 != null && sort2.isProp()) {
+    if (sort1.isProp() || sort2.isProp()) {
       actualType = new UniverseExpression(sort2);
     } else {
-      Level maxPLevel = sort1 == null || sort2 == null ? null : sort1.getPLevel().max(sort2.getPLevel());
-      actualType = maxPLevel == null ? new UniverseExpression(expr.getSortOfType()): new UniverseExpression(Sort.make(maxPLevel, sort2.getHLevel(), sort1.isCat() || sort2.isCat()));
+      Level maxPLevel = sort1.getPLevel().max(sort2.getPLevel());
+      actualType = new UniverseExpression(Sort.make(maxPLevel, sort2.getHLevel(), sort1.isCat() || sort2.isCat()));
     }
     return check(expectedType, actualType, expr);
   }
@@ -430,19 +442,6 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   public Expression visitSigma(SigmaExpression expr, Expression expectedType) {
     Sort sort = checkDependentLinkWithResult(expr.getParameters(), expectedType, expr);
     freeDependentLink(expr.getParameters());
-
-    for (DependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
-      if (param.isProperty()) {
-        Sort paramSort = param.getType().getSortOfType();
-        if (!paramSort.isProp()) {
-          throw new CoreException(CoreErrorWrapper.make(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, paramSort, mySourceNode), expr));
-        }
-      }
-    }
-
-    if (sort == null) {
-      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot compute the sort of the \\Sigma-type", mySourceNode), expr));
-    }
     return check(expectedType, new UniverseExpression(sort), expr);
   }
 

@@ -1321,12 +1321,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     Expression type = def.getResultType();
     if (type != null && !type.isError() && (expr == null || expr.isBoxed() && !expr.isError())) {
       type = type.normalize(NormalizationMode.WHNF);
-      if (expr != null) {
-        return !(type instanceof ClassCallExpression) || type.getSortOfType().isProp();
-      } else {
-        Sort sort = type.getSortOfType();
-        return sort != null && sort.isProp();
-      }
+      return expr != null ? !(type instanceof ClassCallExpression) || type.getSortOfType().isProp() : type.isTypeProp();
     } else {
       return false;
     }
