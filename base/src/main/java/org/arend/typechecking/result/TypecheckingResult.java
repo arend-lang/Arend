@@ -7,7 +7,7 @@ import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.expr.AppExpression;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.PiExpression;
-import org.arend.core.expr.type.Type;
+import org.arend.core.expr.UniverseExpression;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.ext.core.context.CoreEvaluatingBinding;
 import org.arend.ext.core.expr.CoreExpression;
@@ -92,7 +92,7 @@ public class TypecheckingResult implements TResult, TypedExpression {
     if (!(type instanceof Expression)) {
       throw new IllegalArgumentException();
     }
-    return this.type.isError() ? this : CompareVisitor.compare(DummyEquations.getInstance(), CMP.LE, this.type, (Expression) type, Type.OMEGA, null) ? new TypecheckingResult(expression, (Expression) type) : null;
+    return this.type.isError() ? this : CompareVisitor.compare(DummyEquations.getInstance(), CMP.LE, this.type, (Expression) type, UniverseExpression.OMEGA, null) ? new TypecheckingResult(expression, (Expression) type) : null;
   }
 
   @Override

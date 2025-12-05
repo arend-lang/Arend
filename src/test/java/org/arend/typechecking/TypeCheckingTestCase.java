@@ -3,7 +3,7 @@ package org.arend.typechecking;
 import org.arend.core.context.binding.Binding;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.Expression;
-import org.arend.core.expr.type.Type;
+import org.arend.core.expr.UniverseExpression;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.naming.reference.*;
@@ -46,7 +46,7 @@ public class TypeCheckingTestCase extends NameResolverTestCase {
     if (result != null && errors == 0) {
       CoreExpressionChecker checker = new CoreExpressionChecker(new HashSet<>(context.values()), DummyEquations.getInstance(), expression);
       try {
-        result.type.accept(checker, Type.OMEGA);
+        result.type.accept(checker, UniverseExpression.OMEGA);
         checker.check(expectedType, result.expression.accept(checker, result.type), result.expression);
       } catch (CoreException e) {
         errorReporter.report(e.error);

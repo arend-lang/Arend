@@ -13,7 +13,6 @@ import org.arend.core.elimtree.Body;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
@@ -307,7 +306,7 @@ public class PatternTypechecking {
     DependentLink param = definition.getParameters();
     for (Expression arg : newArgs) {
       Expression paramType = param.getType().subst(paramSubst, levelSubst);
-      if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.LE, arg.getType(), paramType, Type.OMEGA, sourceNode)) {
+      if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.LE, arg.getType(), paramType, UniverseExpression.OMEGA, sourceNode)) {
         return null;
       }
       paramSubst.add(param, arg);
@@ -385,7 +384,7 @@ public class PatternTypechecking {
       return null;
     }
 
-    TypecheckingResult result = myVisitor.checkExpr(cType, Type.OMEGA);
+    TypecheckingResult result = myVisitor.checkExpr(cType, UniverseExpression.OMEGA);
     if (result == null) return null;
     if (!expectedType.isLessOrEquals(result.expression, myVisitor.getEquations(), cType)) {
       myErrorReporter.report(new TypeMismatchError(result.expression, expectedType, cType));
@@ -698,11 +697,11 @@ public class PatternTypechecking {
 
             Expression normType = type.normalize(NormalizationMode.WHNF);
             if (!(normType instanceof DataCallExpression)) {
-              if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.EQ, normType, (num == 1 ? refExpr1 : refExpr2).getType(), Type.OMEGA, conPattern)) {
+              if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.EQ, normType, (num == 1 ? refExpr1 : refExpr2).getType(), UniverseExpression.OMEGA, conPattern)) {
                 boolean ok = false;
                 if (both) {
                   num = 3 - num;
-                  ok = CompareVisitor.compare(myVisitor.getEquations(), CMP.EQ, normType, (num == 1 ? refExpr1 : refExpr2).getType(), Type.OMEGA, conPattern);
+                  ok = CompareVisitor.compare(myVisitor.getEquations(), CMP.EQ, normType, (num == 1 ? refExpr1 : refExpr2).getType(), UniverseExpression.OMEGA, conPattern);
                 }
                 if (!ok) {
                   myErrorReporter.report(new IdpPatternError(myVisitor == null ? null : myVisitor.getExpressionPrettifier(), IdpPatternError.typeMismatch(), dataCall, conPattern));
@@ -780,7 +779,7 @@ public class PatternTypechecking {
             }
 
             Expression actualType = constructor.getResultType().subst(substitution, levelSubst).normalize(NormalizationMode.WHNF);
-            if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.EQ, actualType, expr, Type.OMEGA, conPattern)) {
+            if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.EQ, actualType, expr, UniverseExpression.OMEGA, conPattern)) {
               myErrorReporter.report(new TypeMismatchError(expr, actualType, conPattern));
               return null;
             }

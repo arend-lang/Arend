@@ -13,7 +13,6 @@ import org.arend.core.definition.ClassDefinition;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.UniverseKind;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.expr.visitor.ElimBindingVisitor;
 import org.arend.core.sort.Level;
@@ -215,7 +214,7 @@ public class TwoStageEquations implements Equations {
             solution = new PiExpression(pis.get(i).getParameters(), solution);
           }
           solve(cInf, solution, false);
-          return addEquation(cod, newRef, Type.OMEGA, cmp, sourceNode, cod.getStuckInferenceVariable(), infVar);
+          return addEquation(cod, newRef, UniverseExpression.OMEGA, cmp, sourceNode, cod.getStuckInferenceVariable(), infVar);
         }
       }
 
@@ -541,7 +540,7 @@ public class TwoStageEquations implements Equations {
       ClassCallExpression lowerClassCall = lower.cast(ClassCallExpression.class);
       ClassCallExpression upperClassCall = upper.cast(ClassCallExpression.class);
       if (lowerClassCall != null && upperClassCall != null) {
-        classCallEquations.add(new Equation(lowerClassCall, upperClassCall, Type.OMEGA, equation.cmp == CMP.EQ ? CMP.EQ : CMP.LE, equation.sourceNode));
+        classCallEquations.add(new Equation(lowerClassCall, upperClassCall, UniverseExpression.OMEGA, equation.cmp == CMP.EQ ? CMP.EQ : CMP.LE, equation.sourceNode));
         iterator.remove();
         solved = true;
         continue;
@@ -614,7 +613,7 @@ public class TwoStageEquations implements Equations {
     List<Equation> equations = new ArrayList<>();
     Expression infRefExpr = new InferenceReferenceExpression(var, null);
     for (ClassCallExpression bound : bounds) {
-      equations.add(cmp == CMP.GE ? new Equation(infRefExpr, bound, Type.OMEGA, CMP.LE, var.getSourceNode()) : new Equation(bound, infRefExpr, Type.OMEGA, CMP.LE, var.getSourceNode()));
+      equations.add(cmp == CMP.GE ? new Equation(infRefExpr, bound, UniverseExpression.OMEGA, CMP.LE, var.getSourceNode()) : new Equation(bound, infRefExpr, UniverseExpression.OMEGA, CMP.LE, var.getSourceNode()));
     }
     myVisitor.getErrorReporter().report(new SolveEquationsError(myVisitor.getExpressionPrettifier(), equations, var.getSourceNode()));
   }
@@ -780,7 +779,7 @@ public class TwoStageEquations implements Equations {
                 other = other.normalize(NormalizationMode.WHNF);
                 Expression type = expr.getType();
                 CompareVisitor cmpVisitor = new CompareVisitor(wrapper, CMP.EQ, pair.proj1.getSourceNode());
-                remove = !cmpVisitor.compare(type, other.getType(), Type.OMEGA, false) || !cmpVisitor.normalizedCompare(expr, other, type, true);
+                remove = !cmpVisitor.compare(type, other.getType(), UniverseExpression.OMEGA, false) || !cmpVisitor.normalizedCompare(expr, other, type, true);
               }
             }
             if (remove) {
@@ -805,7 +804,7 @@ public class TwoStageEquations implements Equations {
                 if (other != null) {
                   Expression type = expr.getType();
                   CompareVisitor cmpVisitor = new CompareVisitor(wrapper, CMP.EQ, pair.proj1.getSourceNode());
-                  if (!(cmpVisitor.compare(type, other.getType(), Type.OMEGA, false) && cmpVisitor.normalizedCompare(expr, other, type, true))) {
+                  if (!(cmpVisitor.compare(type, other.getType(), UniverseExpression.OMEGA, false) && cmpVisitor.normalizedCompare(expr, other, type, true))) {
                     ok = false;
                     break;
                   }
@@ -935,7 +934,7 @@ public class TwoStageEquations implements Equations {
       return trySolve2 ? SolveResult.NOT_SOLVED : inferenceError(var, expr);
     }
 
-    if (/* ok && */ new CompareVisitor(this, CMP.LE, var.getSourceNode()).normalizedCompare(actualType, expectedType, Type.OMEGA, false)) {
+    if (/* ok && */ new CompareVisitor(this, CMP.LE, var.getSourceNode()).normalizedCompare(actualType, expectedType, UniverseExpression.OMEGA, false)) {
       if (var.isSolved()) {
         if (!new CompareVisitor(this, CMP.EQ, var.getSourceNode()).compare(var.getSolution(), result, expectedType, true)) {
           myVisitor.getErrorReporter().report(new SolveEquationError(myVisitor.getExpressionPrettifier(), var.getSolution(), result, var.getSourceNode()));

@@ -10,7 +10,6 @@ import org.arend.core.context.param.*;
 import org.arend.core.definition.*;
 import org.arend.core.elimtree.*;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.sort.Sort;
@@ -265,7 +264,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     }
 
     boolean onlySolveVars = myOnlySolveVars;
-    if (myNormalCompare && !myOnlySolveVars && expr1.isBoxed() && expr2.isBoxed() && (type != null || compare(expr1.getType(), expr2.getType(), Type.OMEGA, true))) {
+    if (myNormalCompare && !myOnlySolveVars && expr1.isBoxed() && expr2.isBoxed() && (type != null || compare(expr1.getType(), expr2.getType(), UniverseExpression.OMEGA, true))) {
       myOnlySolveVars = true;
     }
     if (useType && myNormalCompare && !myOnlySolveVars) {
@@ -1036,7 +1035,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
         expr1 = ExpressionFactory.Fin(pair1.proj1 instanceof IntegerExpression ? new BigIntegerExpression(pair1.proj2) : ExpressionFactory.add(pair1.proj1, pair1.proj2.intValueExact()));
         expr2 = ExpressionFactory.Fin(pair2.proj1 instanceof IntegerExpression ? new BigIntegerExpression(pair2.proj2) : ExpressionFactory.add(pair2.proj1, pair2.proj2.intValueExact()));
       }
-      return myEquations.addEquation((correctOrder ? expr1 : expr2), substitute(correctOrder ? expr2 : expr1), Type.OMEGA, myCMP, (stuckVar1 != null ? stuckVar1 : stuckVar2).getSourceNode(), stuckVar1, stuckVar2);
+      return myEquations.addEquation((correctOrder ? expr1 : expr2), substitute(correctOrder ? expr2 : expr1), UniverseExpression.OMEGA, myCMP, (stuckVar1 != null ? stuckVar1 : stuckVar2).getSourceNode(), stuckVar1, stuckVar2);
     } else {
       return normalizedCompare((correctOrder ? pair1 : pair2).proj1, (correctOrder ? pair2 : pair1).proj1, ExpressionFactory.Nat(), false);
     }
@@ -1342,7 +1341,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     }
     CMP origCmp = myCMP;
     myCMP = CMP.LE;
-    boolean ok = compare(type, classCall1.getDefinition().getFieldType(field, classCall2.getLevels(field.getParentClass()), new ReferenceExpression(classCall1.getThisBinding())), Type.OMEGA, false);
+    boolean ok = compare(type, classCall1.getDefinition().getFieldType(field, classCall2.getLevels(field.getParentClass()), new ReferenceExpression(classCall1.getThisBinding())), UniverseExpression.OMEGA, false);
     myCMP = origCmp;
     return ok;
   }
@@ -1603,7 +1602,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
 
     CMP origCMP = myCMP;
     myCMP = CMP.EQ;
-    if (!compare(expr1.getParameters().getType(), piExpr2.getParameters().getType(), Type.OMEGA, false)) {
+    if (!compare(expr1.getParameters().getType(), piExpr2.getParameters().getType(), UniverseExpression.OMEGA, false)) {
       if (myResult == null) {
         initResult(expr1, expr2);
       } else {
@@ -1628,7 +1627,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     }
 
     myCMP = origCMP;
-    if (!compare(link1.hasNext() ? new PiExpression(link1, expr1.getCodomain()) : expr1.getCodomain(), link2.hasNext() ? new PiExpression(link2, piExpr2.getCodomain()) : piExpr2.getCodomain(), Type.OMEGA, false)) {
+    if (!compare(link1.hasNext() ? new PiExpression(link1, expr1.getCodomain()) : expr1.getCodomain(), link2.hasNext() ? new PiExpression(link2, piExpr2.getCodomain()) : piExpr2.getCodomain(), UniverseExpression.OMEGA, false)) {
       if (link1.hasNext() || link2.hasNext() || myResult == null) {
         initResult(expr1, expr2);
       } else {
@@ -1664,7 +1663,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
     for (int i = 0; i < list1.size() && i < list2.size(); ++i) {
       DependentLink param1 = list1.get(i);
       DependentLink param2 = list2.get(i);
-      if (param1.isProperty() != param2.isProperty() || !compare(param1.getType(), param2.getType(), Type.OMEGA, false)) {
+      if (param1.isProperty() != param2.isProperty() || !compare(param1.getType(), param2.getType(), UniverseExpression.OMEGA, false)) {
         for (int j = 0; j < i; j++) {
           mySubstitution.remove(list2.get(j));
         }
@@ -2019,7 +2018,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
           myCMP = isGE ? CMP.GE : CMP.LE;
           TypecheckerState state = new TypecheckerState(null, 0, 0, null, null, null, true);
           myEquations.saveState(state);
-          ok = normalizedCompare(type1, type2, Type.OMEGA, false);
+          ok = normalizedCompare(type1, type2, UniverseExpression.OMEGA, false);
           myCMP = origCMP;
           if (ok) {
             ok = compare(list1.get(i), list2.get(i), isGE ? type1 : type2, true);
@@ -2082,7 +2081,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       return false;
     }
 
-    if (!compare(case1.getResultType(), case2.getResultType(), Type.OMEGA, false)) {
+    if (!compare(case1.getResultType(), case2.getResultType(), UniverseExpression.OMEGA, false)) {
       if (myResult == null) {
         initResult(case1, case2);
       } else {
@@ -2329,7 +2328,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       return false;
     }
 
-    if (type == null && !compare(expr.getType(), other.getType(), Type.OMEGA, false)) {
+    if (type == null && !compare(expr.getType(), other.getType(), UniverseExpression.OMEGA, false)) {
       return false;
     }
 

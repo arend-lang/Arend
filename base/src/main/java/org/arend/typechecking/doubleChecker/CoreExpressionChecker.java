@@ -8,7 +8,6 @@ import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.ElimClause;
 import org.arend.core.expr.*;
 import org.arend.core.expr.let.HaveClause;
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
@@ -67,7 +66,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   public Expression check(Expression expectedType, Expression actualType, Expression expression) {
-    if (expectedType != null && !CompareVisitor.compare(myEquations, CMP.LE, actualType, expectedType, Type.OMEGA, mySourceNode)) {
+    if (expectedType != null && !CompareVisitor.compare(myEquations, CMP.LE, actualType, expectedType, UniverseExpression.OMEGA, mySourceNode)) {
       throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(expectedType, actualType, mySourceNode), expression));
     }
     return actualType;
@@ -361,7 +360,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     for (; link.hasNext(); link = link.getNext()) {
       addBinding(link, expr);
       if (link instanceof TypedDependentLink) {
-        Sort sort = link.getType().accept(this, Type.OMEGA).toSort();
+        Sort sort = link.getType().accept(this, UniverseExpression.OMEGA).toSort();
         result = sort == null ? null : result.max(sort);
         if (result == null) {
           throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot infer the sort of type", null), link.getType()));
@@ -385,7 +384,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   private Expression checkLam(LamExpression expr, Expression expectedType, Integer level) {
-    checkDependentLink(expr.getParameters(), Type.OMEGA, expr, false);
+    checkDependentLink(expr.getParameters(), UniverseExpression.OMEGA, expr, false);
     Expression type;
     if (expr.getBody() instanceof LamExpression) {
       type = checkLam((LamExpression) expr.getBody(), null, level);
@@ -567,7 +566,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitBox(BoxExpression expr, Expression expectedType) {
-    Expression type = expr.getType().accept(this, Type.OMEGA);
+    Expression type = expr.getType().accept(this, UniverseExpression.OMEGA);
     Sort sort = type.toSort();
     if (sort == null || !sort.isProp()) {
       throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError("The type of a boxed expression doe not live in \\Prop", new UniverseExpression(Sort.PROP), type.getType(), mySourceNode), expr));
@@ -596,7 +595,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     }
 
     for (int i = 0; i < params.size(); i += 2) {
-      if (!CompareVisitor.compare(myEquations, CMP.EQ, type, params.get(i).getType(), Type.OMEGA, mySourceNode) || !CompareVisitor.compare(myEquations, CMP.EQ, type, params.get(i + 1).getType(), Type.OMEGA, mySourceNode)) {
+      if (!CompareVisitor.compare(myEquations, CMP.EQ, type, params.get(i).getType(), UniverseExpression.OMEGA, mySourceNode) || !CompareVisitor.compare(myEquations, CMP.EQ, type, params.get(i + 1).getType(), UniverseExpression.OMEGA, mySourceNode)) {
         throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("\\level has wrong format", mySourceNode), proof));
       }
 
@@ -614,7 +613,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     if (pattern instanceof BindingPattern) {
       Expression actualType = pattern.getFirstBinding().getType();
       if (pattern.getFirstBinding() instanceof TypedDependentLink) {
-        actualType.accept(this, Type.OMEGA);
+        actualType.accept(this, UniverseExpression.OMEGA);
       }
       Binding newBinding = new TypedBinding(pattern.getFirstBinding().getName(), type);
       newBindings.add(newBinding);
@@ -817,7 +816,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       for (Map.Entry<Binding, Expression> entry : patternSubst.getEntries()) {
         Expression actualType = entry.getKey().getType();
         Expression expectedType = entry.getValue().getType().subst(idpSubst);
-        if (!new CompareVisitor(myEquations, CMP.LE, mySourceNode).normalizedCompare(actualType.normalize(NormalizationMode.WHNF), expectedType, Type.OMEGA, false)) {
+        if (!new CompareVisitor(myEquations, CMP.LE, mySourceNode).normalizedCompare(actualType.normalize(NormalizationMode.WHNF), expectedType, UniverseExpression.OMEGA, false)) {
           throw new CoreException(CoreErrorWrapper.make(new TypeMismatchError(expectedType, actualType, mySourceNode), errorExpr));
         }
       }
@@ -882,8 +881,8 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   Expression checkCase(CaseExpression expr, Expression expectedType, Integer level) {
     ExprSubstitution substitution = new ExprSubstitution();
     checkList(expr.getArguments(), expr.getParameters(), substitution, LevelSubstitution.EMPTY);
-    checkDependentLink(expr.getParameters(), Type.OMEGA, expr, false);
-    expr.getResultType().accept(this, Type.OMEGA);
+    checkDependentLink(expr.getParameters(), UniverseExpression.OMEGA, expr, false);
+    expr.getResultType().accept(this, UniverseExpression.OMEGA);
 
     Integer level2 = expr.getResultTypeLevel() == null ? null : checkLevelProof(expr.getResultTypeLevel(), expr.getResultType());
 
@@ -899,7 +898,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   @Override
   public Expression visitOfType(OfTypeExpression expr, Expression expectedType) {
-    expr.getTypeOf().accept(this, Type.OMEGA);
+    expr.getTypeOf().accept(this, UniverseExpression.OMEGA);
     return check(expectedType, expr.getExpression().accept(this, expr.getTypeOf()), expr);
   }
 

@@ -17,7 +17,6 @@ import org.arend.core.context.binding.inference.InferenceVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.elimtree.Body;
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
@@ -109,7 +108,7 @@ public abstract class Expression implements Body, CoreExpression {
   }
 
   public boolean isLessOrEquals(Expression type, Equations equations, Concrete.SourceNode sourceNode) {
-    return CompareVisitor.compare(equations, CMP.LE, this, type, Type.OMEGA, sourceNode);
+    return CompareVisitor.compare(equations, CMP.LE, this, type, UniverseExpression.OMEGA, sourceNode);
   }
 
   @Override

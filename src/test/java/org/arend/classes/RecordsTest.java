@@ -7,7 +7,7 @@ import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.DataCallExpression;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.NewExpression;
-import org.arend.core.expr.type.Type;
+import org.arend.core.expr.UniverseExpression;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
@@ -426,8 +426,8 @@ public class RecordsTest extends TypeCheckingTestCase {
       """);
     Expression expr1 = (Expression) ((FunctionDefinition) getDefinition("test1")).getBody();
     Expression expr2 = (Expression) ((FunctionDefinition) getDefinition("test2")).getBody();
-    assertFalse(CompareVisitor.compare(DummyEquations.getInstance(), CMP.EQ, expr1, expr2, Type.OMEGA, null));
-    assertFalse(CompareVisitor.compare(DummyEquations.getInstance(), CMP.EQ, expr2, expr1, Type.OMEGA, null));
+    assertFalse(CompareVisitor.compare(DummyEquations.getInstance(), CMP.EQ, expr1, expr2, UniverseExpression.OMEGA, null));
+    assertFalse(CompareVisitor.compare(DummyEquations.getInstance(), CMP.EQ, expr2, expr1, UniverseExpression.OMEGA, null));
   }
 
   @Test

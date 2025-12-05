@@ -211,8 +211,8 @@ public class GlobalInstancePool implements InstancePool {
     Concrete.Expression instanceExpr = new Concrete.ReferenceExpression(data, instance.getRef());
     DependentLink link = instance.getParameters();
     ClassDefinition enclosingClass = currentDef != null ? currentDef.getEnclosingClass() : null;
-    if (myInstancePool != null && !myInstancePool.getLocalInstances().isEmpty() && myInstancePool.getLocalInstances().getFirst().classDef == enclosingClass && instance.getEnclosingClass() == enclosingClass) {
-      instanceExpr = Concrete.AppExpression.make(data, instanceExpr, new Concrete.ReferenceExpression(data, new CoreReferable(null, myInstancePool.getLocalInstances().getFirst().value.computeTyped())), link.isExplicit());
+    if (myInstancePool != null && !myInstancePool.getLocalInstances().isEmpty() && myInstancePool.getLocalInstances().getFirst().classDef() == enclosingClass && instance.getEnclosingClass() == enclosingClass) {
+      instanceExpr = Concrete.AppExpression.make(data, instanceExpr, new Concrete.ReferenceExpression(data, new CoreReferable(null, myInstancePool.getLocalInstances().getFirst().value().computeTyped())), link.isExplicit());
       link = link.getNext();
     }
     for (; link.hasNext(); link = link.getNext()) {

@@ -3,7 +3,6 @@ package org.arend.typechecking;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
@@ -153,7 +152,7 @@ public class UseTypechecking {
           ok = false;
           break;
         }
-        if (!Expression.compare(link.getType(), defLink.getType().subst(substitution), Type.OMEGA, CMP.EQ)) {
+        if (!Expression.compare(link.getType(), defLink.getType().subst(substitution), UniverseExpression.OMEGA, CMP.EQ)) {
           if (parameters == null) {
             parameters = DependentLink.Helper.take(typedDef.getParameters(), DependentLink.Helper.size(defLink));
           }
@@ -211,7 +210,7 @@ public class UseTypechecking {
             levelFields.add(classField);
             Expression fieldType = classCall.getDefinition().getFieldType(classField, classCall.getLevels(classField.getParentClass()), thisExpr);
             Expression paramType = link.getType();
-            if (!Expression.compare(fieldType, paramType, Type.OMEGA, CMP.EQ)) {
+            if (!Expression.compare(fieldType, paramType, UniverseExpression.OMEGA, CMP.EQ)) {
               if (parameters == null) {
                 int numberOfClassParameters = 0;
                 for (DependentLink link1 = link; link1 != classCallLink && link1.hasNext(); link1 = link1.getNext()) {

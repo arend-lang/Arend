@@ -8,7 +8,6 @@ import org.arend.core.elimtree.Body;
 import org.arend.core.elimtree.ElimBody;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.Levels;
@@ -47,7 +46,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     myChecker.clear();
     myChecker.setDefinition(definition);
     try {
-      myChecker.checkDependentLink(definition.getParameters(), Type.OMEGA, null, definition instanceof FunctionDefinition);
+      myChecker.checkDependentLink(definition.getParameters(), UniverseExpression.OMEGA, null, definition instanceof FunctionDefinition);
 
       // TODO[double_check]: Check (mutual) recursion
       // TODO[double_check]: Check definition.hasUniverses()
@@ -102,7 +101,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       }
     }
 
-    Expression typeType = checkType ? definition.getResultType().accept(myChecker, Type.OMEGA) : null;
+    Expression typeType = checkType ? definition.getResultType().accept(myChecker, UniverseExpression.OMEGA) : null;
     Integer level = definition.getResultTypeLevel() == null ? null : myChecker.checkLevelProof(definition.getResultTypeLevel(), definition.getResultType());
 
     if (definition.getKind() == CoreFunctionDefinition.Kind.LEMMA && (level == null || level != -1)) {
@@ -333,7 +332,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
 
       PiExpression fieldType = definition.getFieldType(field);
       myChecker.addBinding(fieldType.getParameters(), fieldType.getCodomain());
-      Expression typeType = fieldType.getCodomain().accept(myChecker, Type.OMEGA);
+      Expression typeType = fieldType.getCodomain().accept(myChecker, UniverseExpression.OMEGA);
       myChecker.removeBinding(fieldType.getParameters());
 
       Integer level;

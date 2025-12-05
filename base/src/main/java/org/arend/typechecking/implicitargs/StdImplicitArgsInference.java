@@ -9,7 +9,6 @@ import org.arend.core.context.param.SingleDependentLink;
 import org.arend.core.context.param.TypedSingleDependentLink;
 import org.arend.core.definition.*;
 import org.arend.core.expr.*;
-import org.arend.core.expr.type.Type;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.expr.visitor.FreeVariablesCollector;
 import org.arend.core.sort.Sort;
@@ -248,7 +247,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         piType = classCall.getDefinition().getOverriddenType(field, classCall.getLevels());
         if (piType != null) {
           ClassCallExpression expectedClassCall = new ClassCallExpression(field.getParentClass(), defCallResult.getLevels());
-          if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.LE, classCall, expectedClassCall, Type.OMEGA, arg)) {
+          if (!CompareVisitor.compare(myVisitor.getEquations(), CMP.LE, classCall, expectedClassCall, UniverseExpression.OMEGA, arg)) {
             myVisitor.getErrorReporter().report(new TypeMismatchError(expectedClassCall, classCall, arg));
             return null;
           }
@@ -631,7 +630,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         if (i == -1) {
           Expression expectedType1 = dropPiParameters(definition, arguments, expectedType);
           if (expectedType1 != null) {
-            new CompareVisitor(myVisitor.getEquations(), CMP.LE, expr).compare(result.getType(), expectedType1, Type.OMEGA, false);
+            new CompareVisitor(myVisitor.getEquations(), CMP.LE, expr).compare(result.getType(), expectedType1, UniverseExpression.OMEGA, false);
           }
           continue;
         }
@@ -731,7 +730,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
           result = fixImplicitArgs(result, result.getImplicitParameters(), fun, false, null);
           Expression actualType = dropPiParameters(result.getType(), arguments, i);
           if (actualType != null) {
-            new CompareVisitor(myVisitor.getEquations(), CMP.LE, fun).compare(actualType, expectedType, Type.OMEGA, false);
+            new CompareVisitor(myVisitor.getEquations(), CMP.LE, fun).compare(actualType, expectedType, UniverseExpression.OMEGA, false);
           }
         }
       }
