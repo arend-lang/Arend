@@ -58,6 +58,7 @@ class ArendGlobalReferableRenameHandler : MemberInplaceRenameHandler() {
         return e is ReferableBase<*> || e is ArendAliasIdentifier || (e != null && Util.isDefIdentifierFromNsId(e))
     }
 
+    // Don't call this method on EDT
     override fun doRename(elementToRename: PsiElement, editor: Editor, dataContext: DataContext?): InplaceRefactoring? {
         if (ApplicationManager.getApplication().isUnitTestMode && dataContext != null) { //Invoked only in tests
             val newName = PsiElementRenameHandler.DEFAULT_NAME.getData(dataContext)

@@ -44,20 +44,20 @@ class RenameDuplicateNameQuickFix(private val cause: Any,
                     val oldName = nsId.oldReference.textRepresentation()
                     val newName = nsId.newName
                     doRemoveRefFromStatCmd(nsId.refIdentifier, false)
-                    doRenameDuplicateName(currentNsCmd, oldName, newName)
+                    doRenameDuplicateName(currentNsCmd, referable, oldName, newName)
                 }
             }
             is ConcreteNamespaceCommand -> {
                 if (referable != null) {
                     val statCmd = cause.data() as? ArendStatCmd
-                    if (statCmd != null) doRenameDuplicateName(cause, referable.textRepresentation(), null)
+                    if (statCmd != null) doRenameDuplicateName(cause, referable, referable.textRepresentation(), null)
                 }
             }
         }
     }
 
     companion object {
-        fun doRenameDuplicateName(cnc: ConcreteNamespaceCommand, oldName: String, newName: String?) {
+        fun doRenameDuplicateName(cnc: ConcreteNamespaceCommand, ref: Referable?, oldName: String, newName: String?) {
             val statCmd = cnc.data() as? ArendStatCmd ?: return
             val arendServer = statCmd.project.service<ArendServerService>().server
             val containingGroup = statCmd.ancestor<ReferableBase<*>>()
@@ -68,9 +68,7 @@ class RenameDuplicateNameQuickFix(private val cause: Any,
             val variable = Variable { newName ?: oldName }
             val freshName = StringRenamer().generateFreshName(variable, referablesInScope)
             val renamings = ArrayList<Pair<String, String?>>(); renamings.add(Pair(oldName, freshName))
-            doAddIdToUsing(statCmd, renamings)
+            doAddIdToUsing(statCmd, ref, renamings)
         }
-
-
     }
 }

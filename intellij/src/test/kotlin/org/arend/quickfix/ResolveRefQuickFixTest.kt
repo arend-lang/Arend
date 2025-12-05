@@ -690,7 +690,7 @@ class ResolveRefQuickFixTest : QuickFixTestBase() {
             "\\import A \\using (b \\as b')") { file ->
         val cmd = file.statements.first().statCmd!!
         WriteCommandAction.runWriteCommandAction(project, "", null, {
-            doAddIdToUsing(cmd, listOf(Pair("b", "b'")))
+            doAddIdToUsing(cmd, null, listOf(Pair("b", "b'")))
         }, file) }
 
     /* fun `test RemoveFromHidingAction on namespace command with comments`() = simpleActionTest(
