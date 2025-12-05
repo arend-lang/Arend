@@ -20,13 +20,13 @@ const val EXPRESSION_CHAPTER = "expressions/"
 const val AREND_CSS = "Arend.css"
 const val AREND_JS = "highlight-hover.js"
 const val AREND_DIR_HTML = "arend-html-files/"
-const val AREND_BASE_FILE = "Base.ard"
+const val AREND_BASE_FILE = "Base"
 
 internal val REGEX_SPAN = "<span class=\"(o|k|n|g|kt|u)\">([^\"<]+)</span>".toRegex()
 internal val REGEX_SPAN_HIGHLIGHT = "<span class=\"inl-highlight\">([^\"]+)</span>".toRegex()
 internal val REGEX_CODE = "<code class=\"language-plaintext highlighter-rouge\">([^\"]+)</code>".toRegex()
 internal val REGEX_HREF = "<a href=\"([^\"]+)\">([^\"]+)</a>".toRegex()
-internal val REGEX_AREND_LIB_VERSION = "\\* \\[(.+)]".toRegex()
+internal val REGEX_AREND_LIB_VERSION = "\\* (.+):".toRegex()
 internal val REGEX_AREND_DOC_NEW_LINE = "\n \t*(- )?".toRegex()
 
 const val AREND_DOC_COMMENT_TABS_SIZE = 2

@@ -8,6 +8,8 @@ import org.jetbrains.intellij.platform.gradle.tasks.BuildPluginTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.intellij.platform.gradle.tasks.PatchPluginXmlTask
 import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
+import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware
+import org.jetbrains.intellij.platform.gradle.utils.asPath
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
@@ -166,13 +168,21 @@ tasks.withType<Wrapper> {
     gradleVersion = "8.5"
 }
 
-tasks.register<RunIdeTask>("generateArendLibHTML") {
+tasks.register<RunIdeTask>("generateArendLibHtml") {
     systemProperty("java.awt.headless", true)
+    dependsOn(tasks.prepareSandbox)
+
+    val sandbox = tasks.runIde.get().sandboxDirectory.get()
+    systemProperty("idea.plugins.path", sandbox.dir("plugins").asFile.absolutePath)
+
+    splitMode.set(false)
+    splitModeTarget.set(SplitModeAware.SplitModeTarget.BOTH)
     args = listOf("generateArendLibHtml") +
-            (project.findProperty("pathToArendLib") as String? ?: "") +
-            (project.findProperty("pathToArendLibInArendSite") as String? ?: "") +
-            (project.findProperty("versionArendLib") as String? ?: "") +
-            (project.findProperty("updateColorScheme") as String? ?: "")
+            (project.findProperty("pathToArendLib") as? String ?: "") +
+            (project.findProperty("pathToArendLibInArendSite") as? String ?: "") +
+            (project.findProperty("versionArendLib") as? String ?: "null") +
+            (project.findProperty("updateColorScheme") as? String ?: "") +
+            layout.projectDirectory.asPath.toString()
 }
 
 // Utils
