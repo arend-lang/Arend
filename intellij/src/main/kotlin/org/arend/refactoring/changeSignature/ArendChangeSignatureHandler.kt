@@ -1,6 +1,5 @@
 package org.arend.refactoring.changeSignature
 
-import com.intellij.concurrency.resetThreadContext
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
@@ -21,11 +20,8 @@ class ArendChangeSignatureHandler : ChangeSignatureHandler {
     override fun invoke(project: Project, elements: Array<out PsiElement>, dataContext: DataContext?) {
         val psi = elements.singleOrNull() as? Abstract.ParametersHolder ?: return
         if (psi !is ArendFunctionDefinition<*> && psi !is ArendClassField && psi !is ArendDefData && psi !is ArendDefClass && psi !is ArendConstructor) return
-        if (psi !is PsiLocatedReferable) return
 
-        resetThreadContext().use { token ->
-            ArendChangeSignatureDialog(project, ArendChangeSignatureDescriptor(psi)).show()
-        }
+        ArendChangeSignatureDialog(project, ArendChangeSignatureDescriptor(psi)).show()
     }
 
     override fun invoke(project: Project, editor: Editor?, file: PsiFile?, dataContext: DataContext?) {

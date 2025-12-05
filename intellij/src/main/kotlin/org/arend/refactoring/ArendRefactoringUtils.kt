@@ -192,7 +192,6 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
     override fun toString(): String = "Rename " + element.text + " to " + LongName(newName).toString()
 
     fun execute(editor: Editor?) {
-        val parent = element.parent
         val factory = ArendPsiFactory(element.project)
         val id = if (newName.size > 1 && target != null && useOpen &&
             doAddIdToOpen(factory, newName, element, target)) singletonList(newName.last()) else newName
@@ -200,38 +199,13 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
 
         if (!needsModification) return
 
-        var atomFieldsAcc : ArendAtomFieldsAcc? = null;
-        var longName: ArendLongName? = null
-        var pattern: ArendPattern? = null
-
-        // Analyze what is being modified
-        if (element is ArendRefIdentifier) {
-            when (parent) {
-                is ArendLiteral -> atomFieldsAcc = parent.parent.parent as ArendAtomFieldsAcc
-                is ArendFieldAcc -> atomFieldsAcc = parent.parent as ArendAtomFieldsAcc
-                is ArendLongName -> {
-                    longName = parent
-                    pattern = longName.parent as? ArendPattern
-                }
-                else ->
-                    throw UnsupportedOperationException()
-            }
-        } else if (element is ArendIPName) {
-            atomFieldsAcc = when (parent) {
-                is ArendLiteral -> parent.parent.parent as ArendAtomFieldsAcc
-                is ArendAtomFieldsAcc -> parent
-                else -> throw UnsupportedOperationException()
-            }
-        } else if (element is ArendDefIdentifier && element.parent is ArendPattern)
-            pattern = element.parent as ArendPattern
-          else
-            throw UnsupportedOperationException()
+        val data = getLongNameData(element) ?: throw java.lang.UnsupportedOperationException()
 
         // Extract suffix from the existing long name (if any)
-        val suffixTR = if (atomFieldsAcc != null)
-            TextRange(element.endOffset, atomFieldsAcc.endOffset)
-         else if (longName != null)
-            TextRange(element.endOffset, longName.endOffset)
+        val suffixTR = if (data.atomFieldsAcc != null)
+            TextRange(element.endOffset, data.atomFieldsAcc.endOffset)
+         else if (data.longName != null)
+            TextRange(element.endOffset, data.longName.endOffset)
          else null
 
         val suffix = if (suffixTR != null) element.containingFile.text.substring(suffixTR.startOffset, suffixTR.endOffset) else ""
@@ -239,16 +213,52 @@ class RenameReferenceAction (private val element: ArendReferenceElement,
         val resultingName = prefix + (if (element is ArendIPName) "`" else "") + id.last() + (if (element is ArendIPName && element.infix != null) "`" else "") + suffix
 
         val (oldPsi, newPsi) = when {
-            atomFieldsAcc != null ->
-                Pair (atomFieldsAcc, factory.createExpression(resultingName).descendantOfType<ArendAtomFieldsAcc>())
-            pattern != null ->
-                Pair( pattern,factory.createPattern(resultingName))
-            longName != null ->
-                Pair(longName, factory.createLongName(resultingName))
+            data.atomFieldsAcc != null ->
+                Pair (data.atomFieldsAcc, factory.createExpression(resultingName).descendantOfType<ArendAtomFieldsAcc>())
+            data.pattern != null ->
+                Pair( data.pattern,factory.createPattern(resultingName))
+            data.longName != null ->
+                Pair(data.longName, factory.createLongName(resultingName))
             else -> throw UnsupportedOperationException()
         }
 
         oldPsi.replace(newPsi!!)
+    }
+
+    companion object {
+        private data class LongNameData(val atomFieldsAcc : ArendAtomFieldsAcc?, val longName: ArendLongName?, val pattern: ArendPattern?)
+
+        private fun getLongNameData(element: ArendReferenceElement): LongNameData? {
+            val parent = element.parent
+            var atomFieldsAcc : ArendAtomFieldsAcc? = null;
+            var longName: ArendLongName? = null
+            var pattern: ArendPattern? = null
+
+            // Analyze what is being modified
+            if (element is ArendRefIdentifier) {
+                when (parent) {
+                    is ArendLiteral -> atomFieldsAcc = parent.parent.parent as ArendAtomFieldsAcc
+                    is ArendFieldAcc -> atomFieldsAcc = parent.parent as ArendAtomFieldsAcc
+                    is ArendLongName -> {
+                        longName = parent
+                        pattern = longName.parent as? ArendPattern
+                    }
+                    else -> return null
+                }
+            } else if (element is ArendIPName) {
+                atomFieldsAcc = when (parent) {
+                    is ArendLiteral -> parent.parent.parent as ArendAtomFieldsAcc
+                    is ArendAtomFieldsAcc -> parent
+                    else -> return null
+                }
+            } else if (element is ArendDefIdentifier && element.parent is ArendPattern)
+                pattern = element.parent as ArendPattern
+            else
+                return null
+            return LongNameData(atomFieldsAcc, longName, pattern)
+        }
+
+        fun isRenameSupported(element: ArendReferenceElement): Boolean = getLongNameData(element) != null
     }
 }
 

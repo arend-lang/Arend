@@ -107,6 +107,11 @@ public class ConcreteBuilder implements AbstractDefinitionVisitor<Concrete.Resol
     return (new ConcreteBuilder(errorReporter, definition)).buildPattern(clause);
   }
 
+  public static @NotNull Concrete.ReferenceExpression convertReference(Abstract.Reference reference, ErrorReporter errorReporter, TCDefReferable definition) {
+    ConcreteBuilder concreteBuilder = new ConcreteBuilder(errorReporter, definition);
+    return concreteBuilder.buildReference(reference);
+  }
+
   // Group
 
   // TODO[server2]: Do not report actual errors in ConcreteBuilder

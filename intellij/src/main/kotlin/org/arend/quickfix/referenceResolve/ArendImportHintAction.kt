@@ -13,7 +13,6 @@ import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.registry.Registry
 import com.intellij.psi.PsiFile
 import com.intellij.psi.stubs.StubIndex
 import com.intellij.psi.util.CachedValueProvider
@@ -21,11 +20,12 @@ import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.util.ThreeState
 import org.arend.ext.reference.DataContainer
-import org.arend.naming.scope.ScopeFactory
+import org.arend.naming.reference.DataLocalReferable
 import org.arend.psi.ArendFile
 import org.arend.psi.ArendFileScope
 import org.arend.psi.ext.*
 import org.arend.psi.stubs.index.ArendDefinitionIndex
+import org.arend.refactoring.RenameReferenceAction
 import org.arend.server.ArendServerService
 import org.arend.settings.ArendSettings
 import org.arend.util.ArendBundle
@@ -173,13 +173,14 @@ class ArendImportHintAction(private val referenceElement: ArendReferenceElement)
 
         fun importQuickFixAllowed(referenceElement: ArendReferenceElement) = when (referenceElement) {
             is ArendDefIdentifier -> referenceElement.parent is ArendPattern
-            is ArendRefIdentifier -> (referenceUnresolved(referenceElement) && ScopeFactory.isGlobalScopeVisible(referenceElement.topmostEquivalentSourceNode))
-            is ArendSourceNode -> referenceUnresolved(referenceElement) && ScopeFactory.isGlobalScopeVisible(referenceElement.topmostEquivalentSourceNode)
+            is ArendRefIdentifier -> (referenceUnresolved(referenceElement) && RenameReferenceAction.isRenameSupported(referenceElement))
+            is ArendSourceNode -> referenceUnresolved(referenceElement) && RenameReferenceAction.isRenameSupported(referenceElement)
             is ArendIPName -> referenceUnresolved(referenceElement)
             else -> false
         }
 
         fun referenceUnresolved(referenceElement: ArendReferenceElement) =
-            referenceElement.isCachedErrorReference
+            referenceElement.isCachedErrorReference ||
+                    referenceElement is ArendDefIdentifier && referenceElement.cachedReferable is DataLocalReferable
     }
 }

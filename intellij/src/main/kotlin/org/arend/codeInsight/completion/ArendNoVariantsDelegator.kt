@@ -11,9 +11,9 @@ import com.intellij.psi.stubs.StubIndex
 import com.intellij.util.Consumer
 import org.arend.ext.reference.DataContainer
 import org.arend.ext.module.ModuleLocation
-import org.arend.naming.scope.ScopeFactory.isGlobalScopeVisible
 import org.arend.psi.*
 import org.arend.psi.ext.*
+import org.arend.psi.fragments.ArendExpressionCodeFragment
 import org.arend.psi.stubs.index.ArendDefinitionIndex
 import org.arend.psi.stubs.index.ArendFileIndex
 import org.arend.psi.stubs.index.ArendGotoClassIndex
@@ -54,7 +54,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
         val anchorReferable = refElementAtCaret?.ancestor<ReferableBase<*>>()?.tcReferable
 
         val isInsideValidExpr = refElementAtCaret is ArendRefIdentifier && parentPsi is ArendLiteral &&
-                refElementAtCaret.prevSibling == null && isGlobalScopeVisible(refElementAtCaret.topmostEquivalentSourceNode)
+                refElementAtCaret.prevSibling == null && RenameReferenceAction.isRenameSupported(refElementAtCaret)
         val isInsideValidNsCmd = refElementAtCaret is ArendRefIdentifier && parentPsi is ArendLongName &&
                 refElementAtCaret.prevSibling == null && refElementAtCaret.topmostEquivalentSourceNode.parent is Abstract.NamespaceCommand
         val isClassExtension = parentPsi is ArendLongName && parentPsi.parent is ArendSuperClass

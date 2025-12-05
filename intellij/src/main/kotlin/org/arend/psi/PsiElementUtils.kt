@@ -20,6 +20,7 @@ import org.arend.module.config.ArendModuleConfigService
 import org.arend.module.config.LibraryConfig
 import org.arend.psi.ArendElementTypes.*
 import org.arend.psi.ext.*
+import org.arend.psi.fragments.ArendExpressionCodeFragment
 import org.arend.server.ArendServerService
 
 val PsiElement.theOnlyChild: PsiElement?
