@@ -60,7 +60,7 @@ class ArendFragmentUtils {
             val concreteExpression = when (ambientFragment) {
                 is ArendLongNameCodeFragment -> {
                     val longNameRef = ambientFragment.childOfType<ArendLongName>() ?: return null
-                    ConcreteBuilder.convertReference(longNameRef, dummyErrorReporter, null)
+                    Concrete.ReferenceExpression(longNameRef.data, longNameRef.referent)
                 }
 
                 is ArendExpressionCodeFragment -> {
@@ -238,7 +238,7 @@ class ArendFragmentUtils {
             pathPrefix: List<String>,
             inTests: Boolean
         ): List<PsiFileSystemItem> {
-            val config = ArendModuleConfigService.Companion.getInstance(module) ?: return emptyList()
+            val config = ArendModuleConfigService.getInstance(module) ?: return emptyList()
             val root = config.root ?: return emptyList()
             val psiManager = PsiManager.getInstance(module.project)
             val result = mutableListOf<PsiFileSystemItem>()
