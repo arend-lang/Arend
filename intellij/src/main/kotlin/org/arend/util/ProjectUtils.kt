@@ -154,7 +154,7 @@ fun Project.addGeneratedModule(module: ModuleLocation, group: ConcreteGroup) {
     val builder = StringBuilder()
     PrettyPrintVisitor(builder, 0).printStatements(group.statements())
     runReadAction {
-        val file = PsiFileFactory.getInstance(this).createFileFromText(module.modulePath.toList().last() + FileUtils.EXTENSION, ArendLanguage.INSTANCE, builder.toString()) as? ArendFile ?: return@runReadAction
+        val file = PsiFileFactory.getInstance(this).createFileFromText(module.modulePath.toList().joinToString("/") + FileUtils.EXTENSION, ArendLanguage.INSTANCE, builder.toString()) as? ArendFile ?: return@runReadAction
         file.virtualFile.isWritable = false
         file.generatedModuleLocation = module
         (group.referable as? DataModuleReferable)?.data = file
