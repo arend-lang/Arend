@@ -708,7 +708,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   @Override
   public @Nullable DependentLink typecheckParameters(@NotNull Collection<? extends ConcreteParameter> parameters) {
-    return visitParameters(parameters, null, null);
+    return visitParameters(parameters);
   }
 
   @Override
@@ -2295,31 +2295,32 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
   }
 
-  private boolean visitParameter(Concrete.Parameter arg, Expression expectedType, List<Sort> resultSorts, LinkList list) {
-    Type result = checkType(arg.getType(), expectedType == null ? Type.OMEGA : expectedType);
+  private boolean visitParameter(Concrete.Parameter arg, LinkList list) {
+    if (arg.getType() == null) {
+      errorReporter.report(new TypecheckingError("Incomplete expression", arg));
+      return false;
+    }
+    TypecheckingResult result = checkExpr(arg.getType(), Type.OMEGA);
     if (result == null) return false;
 
     if (arg instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = arg.getReferableList();
-      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), arg.getNames(), result.getExpr());
+      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), arg.getNames(), result.expression);
       list.append(link);
       int i = 0;
       for (DependentLink link1 = link; link1.hasNext(); link1 = link1.getNext(), i++) {
         addBinding(referableList.get(i), link1);
       }
     } else {
-      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), Collections.singletonList(null), result.getExpr());
+      DependentLink link = ExpressionFactory.parameter(arg.isExplicit(), Collections.singletonList(null), result.expression);
       list.append(link);
       addBinding(null, link);
     }
 
-    if (resultSorts != null) {
-      resultSorts.add(result.getSortOfType());
-    }
     return true;
   }
 
-  private DependentLink visitParameters(Collection<? extends ConcreteParameter> parameters, Expression expectedType, List<Sort> resultSorts) {
+  private DependentLink visitParameters(Collection<? extends ConcreteParameter> parameters) {
     LinkList list = new LinkList();
 
     try (var ignored = new Utils.RefContextSaver(context, myLocalPrettifier)) {
@@ -2327,7 +2328,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         if (!(parameter instanceof Concrete.TypeParameter)) {
           throw new IllegalArgumentException();
         }
-        if (!visitParameter((Concrete.TypeParameter) parameter, expectedType, resultSorts, list)) {
+        if (!visitParameter((Concrete.TypeParameter) parameter, list)) {
           return null;
         }
       }
@@ -2886,20 +2887,18 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (parameters.isEmpty()) {
       Concrete.Expression letResult = letClause.getResultType();
       if (letResult != null) {
-        Type type = checkType(letResult, Type.OMEGA);
-        if (type == null) {
-          return null;
-        }
+        TypecheckingResult type = checkExpr(letResult, Type.OMEGA);
+        if (type == null) return null;
 
-        TypecheckingResult result = checkExpr(letClause.getTerm(), type.getExpr());
+        TypecheckingResult result = checkExpr(letClause.getTerm(), type.expression);
         if (result == null) {
-          return new TypecheckingResult(new ErrorExpression(), type.getExpr());
+          return new TypecheckingResult(new ErrorExpression(), type.expression);
         }
         ErrorExpression errorExpr = result.expression.cast(ErrorExpression.class);
         if (errorExpr != null && errorExpr.getExpression() == null) {
-          result.expression = errorExpr.replaceExpression(type.getExpr());
+          result.expression = errorExpr.replaceExpression(type.expression);
         }
-        return useSpecifiedType ? new TypecheckingResult(result.expression, type.getExpr()) : result;
+        return useSpecifiedType ? new TypecheckingResult(result.expression, type.expression) : result;
       } else {
         return checkExpr(letClause.getTerm(), null);
       }
@@ -2969,9 +2968,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       Referable referable = ((Concrete.NamePattern) pattern).getRef();
       Concrete.Expression patternType = ((Concrete.NamePattern) pattern).type;
       if (patternType != null) {
-        Type typeResult = checkType(((Concrete.NamePattern) pattern).type, Type.OMEGA);
-        if (typeResult != null && !tcResult.type.isLessOrEquals(typeResult.getExpr(), myEquations, patternType)) {
-          errorReporter.report(new TypeMismatchError(typeResult.getExpr(), tcResult.type, patternType));
+        TypecheckingResult typeResult = checkExpr(((Concrete.NamePattern) pattern).type, Type.OMEGA);
+        if (typeResult != null && !tcResult.type.isLessOrEquals(typeResult.expression, myEquations, patternType)) {
+          errorReporter.report(new TypeMismatchError(typeResult.expression, tcResult.type, patternType));
         }
       }
 
@@ -3496,11 +3495,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   @Override
   public TypecheckingResult visitTyped(Concrete.TypedExpression expr, Expression expectedType) {
-    Type type = checkType(expr.type, Type.OMEGA);
+    TypecheckingResult type = checkExpr(expr.type, Type.OMEGA);
     if (type == null) {
       return checkExpr(expr.expression, expectedType);
     } else {
-      Expression typeExpr = type.getExpr();
+      Expression typeExpr = type.expression;
       TypecheckingResult result = checkExpr(expr.expression, typeExpr);
       if (result != null) {
         result.type = typeExpr;
@@ -3638,7 +3637,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
               if (!(param instanceof Concrete.Parameter)) {
                 throw new IllegalArgumentException();
               }
-              if (!visitParameter((Concrete.Parameter) param, null, null, list)) {
+              if (!visitParameter((Concrete.Parameter) param, list)) {
                 return null;
               }
             }
@@ -3986,12 +3985,12 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     try (var ignored = new Utils.RefContextSaver(context, myLocalPrettifier)) {
       for (int i = 0; i < caseArgs.size(); i++) {
         Concrete.CaseArgument caseArg = caseArgs.get(i);
-        Type argType = null;
+        TypecheckingResult argType = null;
         if (caseArg.type != null) {
-          argType = checkType(caseArg.type, Type.OMEGA);
+          argType = checkExpr(caseArg.type, Type.OMEGA);
         }
 
-        Expression argTypeExpr = argType == null ? null : argType.getExpr().subst(substitution);
+        Expression argTypeExpr = argType == null ? null : argType.expression.subst(substitution);
         TypecheckingResult exprResult = checkExpr(caseArg.expression, argTypeExpr);
         if (exprResult == null) return null;
         if (caseArg.isElim && !(exprResult.expression instanceof ReferenceExpression)) {
@@ -4036,7 +4035,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
           exprResult.type = checkedSubst(exprResult.type, elimSubst, allowedBindings, caseArg.expression);
         }
         Referable asRef = caseArg.isElim ? ((Concrete.ReferenceExpression) caseArg.expression).getReferent() : caseArg.referable;
-        DependentLink link = ExpressionFactory.parameter(asRef == null ? null : asRef.textRepresentation(), argType != null ? argType.getExpr() : exprResult.type);
+        DependentLink link = ExpressionFactory.parameter(asRef == null ? null : asRef.textRepresentation(), argType != null ? argType.expression : exprResult.type);
         list.append(link);
         if (caseArg.isElim) {
           if (argTypeExpr != null) {

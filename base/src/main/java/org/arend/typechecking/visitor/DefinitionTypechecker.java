@@ -479,8 +479,8 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           }
         }
 
-        Type paramType = def instanceof Concrete.Constructor ? typechecker.checkType(parameter.getType(), expectedType) : typechecker.finalCheckType(parameter.getType(), expectedType, false);
-        paramResult = paramType == null ? null : paramType.getExpr();
+        TypecheckingResult paramType = def instanceof Concrete.Constructor ? typechecker.checkExpr(parameter.getType(), expectedType) : typechecker.finalCheckExpr(parameter.getType(), expectedType);
+        paramResult = paramType == null ? null : paramType.expression;
         if (typedParameters != null) {
           typedParameters.add(true);
         }
@@ -1849,9 +1849,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     checkNoStrictParameters(def.getParameters());
 
     if (def.getUniverse() != null) {
-      Type userTypeResult = typechecker.finalCheckType(def.getUniverse(), Type.OMEGA, false);
+      TypecheckingResult userTypeResult = typechecker.finalCheckExpr(def.getUniverse(), Type.OMEGA);
       if (userTypeResult != null) {
-        userSort = userTypeResult.getExpr().toSort();
+        userSort = userTypeResult.expression.toSort();
         if (userSort == null) {
           errorReporter.report(new TypecheckingError("Expected a universe", def.getUniverse()));
         }
@@ -2245,9 +2245,9 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       }
 
       if (def.getResultType() != null) {
-        Type resultType = typechecker.checkType(def.getResultType(), Type.OMEGA);
+        TypecheckingResult resultType = typechecker.checkExpr(def.getResultType(), Type.OMEGA);
         if (resultType != null) {
-          constructorType = normalizePathExpression(resultType.getExpr(), constructor, def.getResultType());
+          constructorType = normalizePathExpression(resultType.expression, constructor, def.getResultType());
         }
         def.setResultType(null);
       }

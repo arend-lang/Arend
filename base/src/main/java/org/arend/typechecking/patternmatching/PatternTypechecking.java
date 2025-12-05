@@ -380,17 +380,18 @@ public class PatternTypechecking {
     return result == null ? null : new Pair<>(result.patterns, result.exprs == null ? null : myContext);
   }
 
-  private Type typecheckType(Concrete.Expression cType, Expression expectedType) {
+  private Expression typecheckType(Concrete.Expression cType, Expression expectedType) {
     if (cType == null || myVisitor == null) {
       return null;
     }
 
-    Type type = myVisitor.checkType(cType, Type.OMEGA);
-    if (type != null && !expectedType.isLessOrEquals(type.getExpr(), myVisitor.getEquations(), cType)) {
-      myErrorReporter.report(new TypeMismatchError(type.getExpr(), expectedType, cType));
+    TypecheckingResult result = myVisitor.checkExpr(cType, Type.OMEGA);
+    if (result == null) return null;
+    if (!expectedType.isLessOrEquals(result.expression, myVisitor.getEquations(), cType)) {
+      myErrorReporter.report(new TypeMismatchError(result.expression, expectedType, cType));
       return null;
     }
-    return type;
+    return result.expression;
   }
 
   private void typecheckAsPattern(Concrete.TypedReferable asPattern, Expression expression, Expression expectedType) {
@@ -406,9 +407,9 @@ public class PatternTypechecking {
     }
 
     expectedType = expectedType.copy();
-    Type type = typecheckType(asPattern.type, expectedType);
+    Expression type = typecheckType(asPattern.type, expectedType);
     if (asPattern.referable != null) {
-      addBinding(asPattern.referable, new TypedEvaluatingBinding(asPattern.referable.textRepresentation(), expression, type == null ? expectedType : type.getExpr()));
+      addBinding(asPattern.referable, new TypedEvaluatingBinding(asPattern.referable.textRepresentation(), expression, type == null ? expectedType : type));
     }
   }
 
