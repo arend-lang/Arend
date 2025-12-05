@@ -22,17 +22,18 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 
+const val AREND_REPO = "arend-lang/Arend"
 const val AREND_LIB = "arend-lib"
 
 @Throws(IOException::class)
 internal fun getVersion(): String? {
-    val versionsConn = URL("https://raw.githubusercontent.com/JetBrains/$AREND_LIB/master/versions").openConnection()
+    val versionsConn = URL("https://raw.githubusercontent.com/$AREND_REPO/master/versions").openConnection()
     BufferedReader(InputStreamReader(versionsConn.getInputStream())).use { reader ->
         while (true) {
             val str = reader.readLine() ?: break
             val index = str.indexOf("->")
             if (index < 0) continue
-            val range = VersionRange.parseVersionRange(str.substring(0, index)) ?: continue
+            val range = VersionRange.parseVersionRange(str.take(index)) ?: continue
             if (!range.inRange(Prelude.VERSION)) continue
             val result = str.substring(index + 2, str.length).trim()
             if (result.isNotEmpty()) return result
@@ -49,7 +50,7 @@ private fun downloadArendLib(project: Project, indicator: ProgressIndicator, pat
             return false
         }
 
-        val conn = URL("https://github.com/JetBrains/$AREND_LIB/releases/download/v${version}/$AREND_LIB.zip").openConnection()
+        val conn = URL("https://github.com/$AREND_REPO/releases/download/v${version}/$AREND_LIB.zip").openConnection()
         BufferedInputStream(conn.getInputStream()).use { input ->
             val size = conn.contentLengthLong
             if (size < 0) {
