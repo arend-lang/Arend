@@ -2925,24 +2925,6 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       errorReporter.report(new FieldsImplementationError(true, def.getData(), alreadyImplementFields, alreadyImplementFields.size() > 1 ? def : alreadyImplementedSourceNode));
     }
 
-    if (!typedDef.getOverriddenFields().isEmpty()) {
-      Set<ClassField> superFields = new LinkedHashSet<>();
-      for (ClassDefinition superClass : typedDef.getSuperClasses()) {
-        superFields.addAll(superClass.getNotImplementedFields());
-      }
-      for (ClassField field : superFields) {
-        if (field.isProperty() || typedDef.isImplemented(field) || typedDef.isOverridden(field)) {
-          continue;
-        }
-        TypedSingleDependentLink thisParam = new TypedSingleDependentLink(false, "this", new ClassCallExpression(typedDef, idLevels), true);
-        Expression type = field.getResultTypeFor(typedDef).subst(field.getThisParameter(), new ReferenceExpression(thisParam));
-        Expression newType = type.accept(new MinimizeLevelVisitor(), null);
-        if (newType != null && newType != type) {
-          typedDef.overrideField(field, new PiExpression(thisParam, newType), typedDef);
-        }
-      }
-    }
-
     typedDef.setStatus(!classOk ? Definition.TypeCheckingStatus.HAS_ERRORS : typechecker.getStatus());
     typedDef.updateSort();
 
