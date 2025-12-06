@@ -202,7 +202,7 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
 
   @Override
   public Expression visitUniverse(UniverseExpression expr, Void params) {
-    return myLevelSubstitution.isEmpty() ? expr : new UniverseExpression(expr.getSort().subst(myLevelSubstitution));
+    return myLevelSubstitution.isEmpty() ? expr : new UniverseExpression(expr.getSortExpression().subst(myLevelSubstitution));
   }
 
   @Override

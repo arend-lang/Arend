@@ -23,6 +23,7 @@ import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
 import org.arend.ext.concrete.definition.ClassFieldKind;
 import org.arend.ext.concrete.definition.FunctionKind;
@@ -728,7 +729,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
 
   @Override
   public Concrete.Expression visitUniverse(UniverseExpression expr, Void params) {
-    return visitSort(expr.getSort());
+    return expr.getSortExpression() instanceof SortExpression.Const(Sort sort) ? visitSort(sort) : new Concrete.UniverseExpression(null, null, null, ConcreteUniverseExpression.Kind.SORT);
   }
 
   private Concrete.LevelExpression visitLevelNull(Level level, boolean showStdVar) {

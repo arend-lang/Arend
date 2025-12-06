@@ -5,6 +5,8 @@ import org.arend.core.definition.ClassField;
 import org.arend.core.definition.UniverseKind;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.NormalizeVisitor;
+import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.ext.core.expr.CoreExpression;
 import org.arend.naming.reference.TCDefReferable;
 
@@ -28,7 +30,7 @@ public class CheckForUniversesVisitor extends SearchVisitor<Void> {
 
   @Override
   public Boolean visitUniverse(UniverseExpression expression, Void param) {
-    return !expression.getSort().getPLevel().isClosed() || !expression.getSort().getHLevel().isClosed();
+    return expression.getSortExpression() instanceof SortExpression.Const(Sort sort) && (!sort.getPLevel().isClosed() || !sort.getHLevel().isClosed());
   }
 
   private boolean visitFieldCall(FieldCallExpression expr, int apps) {

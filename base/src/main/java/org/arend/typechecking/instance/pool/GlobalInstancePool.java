@@ -9,6 +9,7 @@ import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.instance.InstanceSearchParameters;
@@ -112,9 +113,9 @@ public class GlobalInstancePool implements InstancePool {
   private boolean compareClassifying(Expression instanceExpr, Expression inferredExpr, boolean topLevel) {
     if (instanceExpr instanceof UniverseExpression) {
       if (!(inferredExpr instanceof UniverseExpression)) return false;
-      Sort instanceSort = ((UniverseExpression) instanceExpr).getSort();
-      Sort inferredSort = ((UniverseExpression) inferredExpr).getSort();
-      return compareLevel(instanceSort.getPLevel(), inferredSort.getPLevel()) && compareLevel(instanceSort.getHLevel(), inferredSort.getHLevel());
+      SortExpression instanceSortExpr = ((UniverseExpression) instanceExpr).getSortExpression();
+      SortExpression inferredSortExpr = ((UniverseExpression) inferredExpr).getSortExpression();
+      return !(instanceSortExpr instanceof SortExpression.Const(Sort instanceSort)) || !(inferredSortExpr instanceof SortExpression.Const(Sort inferredSort)) || compareLevel(instanceSort.getPLevel(), inferredSort.getPLevel()) && compareLevel(instanceSort.getHLevel(), inferredSort.getHLevel());
     } else if (instanceExpr instanceof SigmaExpression) {
       if (!(inferredExpr instanceof SigmaExpression)) return false;
       DependentLink instanceParams = ((SigmaExpression) instanceExpr).getParameters();

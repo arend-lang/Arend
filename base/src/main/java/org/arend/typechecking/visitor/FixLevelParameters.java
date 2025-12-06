@@ -6,6 +6,7 @@ import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.VoidExpressionVisitor;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.core.subst.ListLevels;
@@ -143,6 +144,28 @@ public class FixLevelParameters extends VoidExpressionVisitor<Void> {
 
   private Sort removeVars(Sort sort) {
     return new Sort(myRemovePLevels ? removeVars(sort.getPLevel()) : sort.getPLevel(), myRemoveHLevels ? removeVars(sort.getHLevel()) : sort.getHLevel());
+  }
+
+  private SortExpression removeVars(SortExpression sort) {
+    return switch (sort) {
+      case SortExpression.Const(Sort aSort) -> new SortExpression.Const(removeVars(aSort));
+      case SortExpression.Max max -> {
+        List<SortExpression> sorts = new ArrayList<>(max.getSorts().size());
+        for (SortExpression aSort : max.getSorts()) {
+          sorts.add(removeVars(aSort));
+        }
+        yield SortExpression.makeMax(sorts);
+      }
+      case SortExpression.Next next -> SortExpression.makeNext(removeVars(next.getSort()));
+      case SortExpression.Pi pi -> {
+        List<SortExpression> domain = new ArrayList<>(pi.getDomain().size());
+        for (SortExpression aSort : pi.getDomain()) {
+          domain.add(removeVars(aSort));
+        }
+        yield SortExpression.makePi(domain, removeVars(pi.getCodomain()));
+      }
+      case SortExpression.Prev prev -> SortExpression.makeNext(removeVars(prev.getSort()));
+    };
   }
 
   private LevelPair removeVars(LevelPair levels) {

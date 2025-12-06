@@ -6,6 +6,7 @@ import org.arend.core.context.binding.inference.TypeClassInferenceVariable;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.FieldCallExpression;
 import org.arend.core.sort.Level;
+import org.arend.core.sort.SortExpression;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
 import org.arend.term.concrete.Concrete;
@@ -41,6 +42,11 @@ public class LevelEquationsWrapper implements Equations {
   @Override
   public boolean addEquation(Level level1, Level level2, CMP cmp, Concrete.SourceNode sourceNode) {
     return myEquations.addEquation(level1, level2, cmp, sourceNode);
+  }
+
+  @Override
+  public void addEquation(SortExpression sort1, SortExpression sort2, CMP cmp, Concrete.SourceNode sourceNode) {
+    myEquations.addEquation(sort1, sort2, cmp, sourceNode);
   }
 
   @Override

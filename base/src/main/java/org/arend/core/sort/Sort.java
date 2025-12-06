@@ -36,7 +36,7 @@ public class Sort implements CoreSort {
   }
 
   private Sort(Level pLevel, Level hLevel, boolean isCat) {
-    myPLevel = pLevel;
+    myPLevel = hLevel.isProp() && !(pLevel.isClosed() && pLevel.getConstant() == 0) ? new Level(0) : pLevel;
     myHLevel = hLevel;
     myCat = false; // TODO[sorts]: Temporarily disable \Cat sorts.
   }

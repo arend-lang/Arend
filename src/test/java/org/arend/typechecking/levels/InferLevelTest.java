@@ -9,6 +9,7 @@ import org.arend.core.expr.PathExpression;
 import org.arend.core.expr.UniverseExpression;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.ops.CMP;
@@ -391,7 +392,7 @@ public class InferLevelTest extends TypeCheckingTestCase {
   @Test
   public void propTest() {
     FunctionDefinition def = (FunctionDefinition) typeCheckDef("\\func test => \\Pi (A : \\Set) (a : A) -> a = a");
-    assertTrue(Level.compare(new Level(0), ((UniverseExpression) def.getResultType()).getSort().getPLevel(), CMP.EQ, DummyEquations.getInstance(), null));
+    assertTrue(Level.compare(new Level(0), ((SortExpression.Const) ((UniverseExpression) def.getResultType()).getSortExpression()).getSort().getPLevel(), CMP.EQ, DummyEquations.getInstance(), null));
   }
 
   @Test

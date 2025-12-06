@@ -12,6 +12,7 @@ import org.arend.core.expr.visitor.*;
 import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
@@ -458,18 +459,8 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     }
   }
 
-  private void checkSort(Sort sort, Expression expr) {
-    checkLevel(sort.getPLevel(), LevelVariable.LvlType.PLVL, expr);
-    checkLevel(sort.getHLevel(), LevelVariable.LvlType.HLVL, expr);
-  }
-
   private Expression checkUniverse(UniverseExpression expr, Expression expectedType) {
-    Sort sort = expr.getSort();
-    if (sort.getHLevel().isProp() && !(sort.getPLevel().isClosed() && sort.getPLevel().getConstant() == 0)) {
-      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("p-level of \\Prop is not 0", mySourceNode), expr));
-    }
-    checkSort(sort, expr);
-    return check(expectedType, new UniverseExpression(sort.succ()), expr);
+    return check(expectedType, new UniverseExpression(SortExpression.makeNext(expr.getSortExpression())), expr);
   }
 
   @Override

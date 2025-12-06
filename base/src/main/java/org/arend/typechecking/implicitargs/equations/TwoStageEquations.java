@@ -17,6 +17,7 @@ import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.expr.visitor.ElimBindingVisitor;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.core.subst.UnfoldVisitor;
@@ -41,7 +42,8 @@ import static org.arend.core.expr.ExpressionFactory.Nat;
 public class TwoStageEquations implements Equations {
   private List<Equation> myEquations = new ArrayList<>();
   private final List<LevelEquation<LevelVariable>> myLevelEquations = new ArrayList<>();
-  private final List<DeferredLevelEquation> myDeferredMaxLevelEquations = new ArrayList<>();
+  private final List<AbstractEquation<Level>> myDeferredMaxLevelEquations = new ArrayList<>();
+  private final List<AbstractEquation<SortExpression>> mySortExpressionEquations = new ArrayList<>();
   private final List<InferenceLevelVariable> myLevelVariables = new ArrayList<>();
   private final CheckTypeVisitor myVisitor;
   private Set<InferenceVariable> myProps = new LinkedHashSet<>();
@@ -155,7 +157,7 @@ public class TwoStageEquations implements Equations {
         cmp = CMP.EQ;
       }
 
-      if (cType instanceof UniverseExpression && ((UniverseExpression) cType).getSort().isProp()) {
+      if (cType instanceof UniverseExpression && ((UniverseExpression) cType).getSortExpression().isProp()) {
         if (cmp == CMP.LE) {
           myProps.add(cInf);
           return true;
@@ -219,11 +221,16 @@ public class TwoStageEquations implements Equations {
       }
 
       // ?x <> Type
-      if (cType instanceof UniverseExpression) {
+      if (cType instanceof UniverseExpression universe) {
         Sort genSort = Sort.generateInferVars(this, true, cInf.getSourceNode());
         solve(cInf, new UniverseExpression(genSort), false);
-        Sort.compare(((UniverseExpression) cType).getSort(), genSort, cmp, this, sourceNode);
-        return true;
+        SortExpression sortExpr = universe.getSortExpression().simplify();
+        if (sortExpr instanceof SortExpression.Const(Sort sort)) {
+          return Sort.compare(sort, genSort, cmp, this, sourceNode);
+        } else {
+          addEquation(sortExpr, new SortExpression.Const(genSort), cmp, sourceNode);
+          return true;
+        }
       }
     }
 
@@ -306,7 +313,7 @@ public class TwoStageEquations implements Equations {
       for (InferenceLevelVariable var : infVars) {
         varMap.put(var, 0);
       }
-      myDeferredMaxLevelEquations.add(new DeferredLevelEquation(Level.INFINITY, new Level(varMap, infVars.getFirst().getMinValue()), sourceNode));
+      myDeferredMaxLevelEquations.add(new AbstractEquation<>(Level.INFINITY, new Level(varMap, infVars.getFirst().getMinValue()), CMP.LE, sourceNode));
       return true;
     } else {
       myVisitor.getErrorReporter().report(new SolveLevelEquationsError(Collections.singletonList(new LevelEquation<>(vars.isEmpty() ? null : vars.iterator().next())), sourceNode));
@@ -326,7 +333,7 @@ public class TwoStageEquations implements Equations {
 
   private boolean addEquationLE(Level level1, Level level2, Concrete.SourceNode sourceNode) {
     if (level2.getVarPairs().size() > 1) {
-      myDeferredMaxLevelEquations.add(new DeferredLevelEquation(level1, level2, sourceNode));
+      myDeferredMaxLevelEquations.add(new AbstractEquation<>(level1, level2, CMP.LE, sourceNode));
       return true;
     }
 
@@ -365,7 +372,19 @@ public class TwoStageEquations implements Equations {
   }
 
   @Override
+  public void addEquation(SortExpression sort1, SortExpression sort2, CMP cmp, Concrete.SourceNode sourceNode) {
+    mySortExpressionEquations.add(new AbstractEquation<>(sort1, sort2, cmp, sourceNode));
+  }
+
+  @Override
   public LevelEquationsSolver makeLevelEquationsSolver() {
+    for (AbstractEquation<SortExpression> equation : mySortExpressionEquations) {
+      if (equation.left().simplify() instanceof SortExpression.Const(Sort sort1) && equation.right().simplify() instanceof SortExpression.Const(Sort sort2)) {
+        Sort.compare(sort1, sort2, equation.cmp(), this, equation.sourceNode());
+      }
+    }
+    mySortExpressionEquations.clear();
+
     LevelEquationsSolver solver = new LevelEquationsSolver(myLevelEquations, myDeferredMaxLevelEquations, myLevelVariables, myBoundVariables, myVisitor.getErrorReporter(), myVisitor.isPBased(), myVisitor.isHBased());
     myLevelEquations.clear();
     myDeferredMaxLevelEquations.clear();
@@ -472,6 +491,7 @@ public class TwoStageEquations implements Equations {
     state.numberOfLevelVariables = myLevelVariables.size();
     state.numberOfLevelEquations = myLevelEquations.size();
     state.numberOfDeferredMaxLevelEquations = myDeferredMaxLevelEquations.size();
+    state.numberOfSortExpressionEquations = mySortExpressionEquations.size();
     state.propVars = new LinkedHashSet<>(myProps);
     state.numberOfBoundVars = myBoundVariables.size();
     state.notSolvableFromEquationsVars = new HashSet<>(myNotSolvableFromEquationsVars.keySet());
@@ -488,6 +508,9 @@ public class TwoStageEquations implements Equations {
     }
     if (myDeferredMaxLevelEquations.size() > state.numberOfDeferredMaxLevelEquations) {
       myDeferredMaxLevelEquations.subList(state.numberOfDeferredMaxLevelEquations, myDeferredMaxLevelEquations.size()).clear();
+    }
+    if (mySortExpressionEquations.size() > state.numberOfSortExpressionEquations) {
+      mySortExpressionEquations.subList(state.numberOfSortExpressionEquations, mySortExpressionEquations.size()).clear();
     }
     if (myProps.size() > state.propVars.size()) {
       myProps = new LinkedHashSet<>(state.propVars);

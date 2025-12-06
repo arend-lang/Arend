@@ -16,7 +16,7 @@ import org.arend.core.expr.let.LetClause;
 import org.arend.core.expr.let.TypedHaveClause;
 import org.arend.core.expr.let.TypedLetClause;
 import org.arend.core.pattern.Pattern;
-import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.error.LocalError;
@@ -210,13 +210,13 @@ public class StripVisitor implements ExpressionVisitor<Void, Expression> {
     return expr;
   }
 
-  private Sort visitSort(Sort sort) {
-    return sort.getHLevel().isProp() ? Sort.PROP : sort;
+  private SortExpression visitSort(SortExpression sort) {
+    return sort; // TODO[sorts]: Delete inference variables
   }
 
   @Override
   public UniverseExpression visitUniverse(UniverseExpression expr, Void params) {
-    return new UniverseExpression(visitSort(expr.getSort()));
+    return new UniverseExpression(visitSort(expr.getSortExpression()));
   }
 
   @Override

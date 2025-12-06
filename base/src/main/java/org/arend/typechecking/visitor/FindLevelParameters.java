@@ -7,6 +7,7 @@ import org.arend.core.definition.Definition;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.expr.CoreExpression;
 
@@ -41,7 +42,8 @@ public class FindLevelParameters extends SearchVisitor<Void> {
     return false;
   }
 
-  private boolean checkSort(Sort sort) {
+  private boolean checkSort(SortExpression sortExpr) {
+    if (!(sortExpr instanceof SortExpression.Const(Sort sort))) return false;
     checkLevel(sort.getPLevel());
     checkLevel(sort.getHLevel());
     return hasPLevels && hasHLevels;
@@ -54,7 +56,7 @@ public class FindLevelParameters extends SearchVisitor<Void> {
 
   @Override
   public Boolean visitUniverse(UniverseExpression expr, Void param) {
-    return checkSort(expr.getSort());
+    return checkSort(expr.getSortExpression());
   }
 
   /*
@@ -136,7 +138,7 @@ public class FindLevelParameters extends SearchVisitor<Void> {
 
   @Override
   public Boolean visitData(DataDefinition def, Void params) {
-    return checkSort(def.getSort()) || super.visitData(def, params);
+    return checkSort(new SortExpression.Const(def.getSort())) || super.visitData(def, params);
   }
 
   @Override

@@ -16,6 +16,7 @@ import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.core.ops.SubstitutionPair;
+import org.arend.ext.core.sort.*;
 import org.arend.ext.error.*;
 import org.arend.ext.reference.ArendRef;
 import org.arend.ext.typechecking.*;
@@ -32,6 +33,7 @@ import org.arend.lib.util.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -703,15 +705,30 @@ public class ExtMeta extends BaseMetaDefinition {
 
   private enum Kind { PROP, NOT_PROP }
 
-  private static boolean atLeastSet(CoreExpression type) {
-    type = type.normalize(NormalizationMode.WHNF);
-    CoreLevel level = type instanceof CoreUniverseExpression ? ((CoreUniverseExpression) type).getSort().getHLevel() : null;
-    if (level == null) return false;
-    if (level.getConstant() >= 0) return true;
-    for (Map.Entry<? extends Variable, Integer> entry : level.getVarPairs()) {
-      if (entry.getValue() >= 1) return true;
+  private static boolean sortAtLeast(CoreSortExpression sort, BigInteger level) {
+    if (sort instanceof ConstSortExpression constSort) {
+      CoreLevel hLevel = constSort.getSort().getHLevel();
+      if (hLevel == null) return false;
+      if (BigInteger.valueOf(hLevel.getConstant()).compareTo(level) >= 0) return true;
+      for (Map.Entry<? extends Variable, Integer> entry : hLevel.getVarPairs()) {
+        if (BigInteger.valueOf(entry.getValue()).compareTo(level.add(BigInteger.ONE)) >= 0) return true;
+      }
+      return false;
+    } else if (sort instanceof PreviousSortExpression equalitySort) {
+      return sortAtLeast(equalitySort.getSort(), level.add(BigInteger.ONE));
+    } else if (sort instanceof MaxSortExpression maxSort) {
+      for (CoreSortExpression aSort : maxSort.getSorts()) {
+        if (sortAtLeast(aSort, level)) return true;
+      }
+    } else if (sort instanceof PiSortExpression piSort) {
+      return sortAtLeast(piSort.getCodomain(), level);
     }
     return false;
+  }
+
+  private static boolean atLeastSet(CoreExpression type) {
+    type = type.normalize(NormalizationMode.WHNF);
+    return type instanceof CoreUniverseExpression universe && sortAtLeast(universe.getSortExpression(), BigInteger.ZERO);
   }
 
   private static DefermentChecker.Result checkStuckExpression(CoreExpression expr) {
@@ -737,8 +754,7 @@ public class ExtMeta extends BaseMetaDefinition {
     if (result != null) return result;
 
     if (type instanceof CoreUniverseExpression) {
-      CoreLevel level = ((CoreUniverseExpression) type).getSort().getHLevel();
-      if (level != null && level.isClosed()) return DefermentChecker.Result.DO_NOT_DEFER;
+      if (((CoreUniverseExpression) type).getSortExpression().getSortHLevel() != null) return DefermentChecker.Result.DO_NOT_DEFER;
       if (atLeastSet(equality.getDefCallArguments().get(1).computeType()) || atLeastSet(equality.getDefCallArguments().get(2).computeType())) {
         data.setUserData(Kind.NOT_PROP);
         return DefermentChecker.Result.DO_NOT_DEFER;
@@ -776,7 +792,7 @@ public class ExtMeta extends BaseMetaDefinition {
     if (normType instanceof CoreUniverseExpression) {
       ConcreteExpression left = factory.core(equality.getDefCallArguments().get(1).computeTyped());
       ConcreteExpression right = factory.core(equality.getDefCallArguments().get(2).computeTyped());
-      if (((CoreUniverseExpression) normType).getSort().isProp()) {
+      if (((CoreUniverseExpression) normType).getSortExpression().isProp()) {
         TypedExpression expectedType = typechecker.typecheck(factory.sigma(Arrays.asList(factory.param(true, factory.arr(left, right)), factory.param(true, factory.arr(right, left)))), null);
         if (expectedType == null) return null;
         TypedExpression typedArg = typechecker.typecheck(arg, expectedType.getExpression());

@@ -20,6 +20,7 @@ import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.prelude.Prelude;
@@ -472,7 +473,9 @@ class ExpressionSerialization implements ExpressionVisitor<Void, ExpressionProto
   @Override
   public ExpressionProtos.Expression visitUniverse(UniverseExpression expr, Void params) {
     ExpressionProtos.Expression.Universe.Builder builder = ExpressionProtos.Expression.Universe.newBuilder();
-    builder.setSort(writeSort(expr.getSort()));
+    if (expr.getSortExpression() instanceof SortExpression.Const(Sort sort)) {
+      builder.setSort(writeSort(sort));
+    }
     return ExpressionProtos.Expression.newBuilder().setUniverse(builder).build();
   }
 

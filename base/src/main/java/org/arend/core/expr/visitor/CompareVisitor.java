@@ -13,6 +13,7 @@ import org.arend.core.expr.*;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
@@ -1694,10 +1695,18 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       initResult(expr1, expr2);
       return false;
     }
-    if (!Sort.compare(expr1.getSort(), universe2.getSort(), myCMP, myNormalCompare ? myEquations : DummyEquations.getInstance(), mySourceNode)) {
-      initResult(expr1, expr2);
-      return false;
+
+    SortExpression sortExpr1 = expr1.getSortExpression().simplify();
+    SortExpression sortExpr2 = universe2.getSortExpression().simplify();
+    if (sortExpr1 instanceof SortExpression.Const(Sort sort1) && sortExpr2 instanceof SortExpression.Const(Sort sort2)) {
+      if (!Sort.compare(sort1, sort2, myCMP, myNormalCompare ? myEquations : DummyEquations.getInstance(), mySourceNode)) {
+        initResult(expr1, expr2);
+        return false;
+      }
+    } else {
+      myEquations.addEquation(sortExpr1, sortExpr2, myCMP, mySourceNode);
     }
+
     return true;
   }
 

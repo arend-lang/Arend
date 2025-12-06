@@ -7,6 +7,7 @@ import org.arend.core.elimtree.ElimClause;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.Pattern;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.UnfoldVisitor;
 import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.core.expr.*;
@@ -124,9 +125,14 @@ public abstract class Expression implements Body, CoreExpression {
     return false;
   }
 
-  public Sort toSort() {
+  public SortExpression toSortExpression() {
     UniverseExpression universe = normalize(NormalizationMode.WHNF).cast(UniverseExpression.class);
-    return universe == null ? null : universe.getSort();
+    return universe == null ? null : universe.getSortExpression();
+  }
+
+  public Sort toSort() {
+    SortExpression sortExpr = toSortExpression();
+    return sortExpr == null ? null : sortExpr.simplify() instanceof SortExpression.Const(Sort sort) ? sort : null;
   }
 
   public Sort getSortOfType() {
@@ -135,7 +141,9 @@ public abstract class Expression implements Body, CoreExpression {
   }
 
   public boolean isTypeProp() {
-    Sort sort = getSortOfType();
+    Expression type = getType();
+    if (type == null) return false;
+    SortExpression sort = type.toSortExpression();
     return sort != null && sort.isProp();
   }
 
@@ -232,7 +240,7 @@ public abstract class Expression implements Body, CoreExpression {
       @Override
       public Expression visitUniverse(UniverseExpression expr, Void params) {
         Expression result = super.visitUniverse(expr, params);
-        return result == expr ? new UniverseExpression(expr.getSort()) : result;
+        return result == expr ? new UniverseExpression(expr.getSortExpression()) : result;
       }
 
       @Override

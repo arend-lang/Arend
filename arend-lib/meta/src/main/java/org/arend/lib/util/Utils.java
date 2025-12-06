@@ -13,6 +13,7 @@ import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.expr.*;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
+import org.arend.ext.core.sort.*;
 import org.arend.ext.error.*;
 import org.arend.ext.instance.InstanceSearchParameters;
 import org.arend.ext.prettyprinting.doc.DocFactory;
@@ -326,13 +327,13 @@ public class Utils {
 
   public static boolean isProp(CoreExpression type) {
     CoreExpression typeType = type.normalize(NormalizationMode.WHNF).computeType().normalize(NormalizationMode.WHNF);
-    return typeType instanceof CoreUniverseExpression && ((CoreUniverseExpression) typeType).getSort().isProp();
+    return typeType instanceof CoreUniverseExpression && ((CoreUniverseExpression) typeType).getSortExpression().isProp();
   }
 
   public static CoreExpression minimizeToProp(CoreExpression type) {
     type = type.normalize(NormalizationMode.WHNF).minimizeLevels();
     CoreExpression typeType = type.computeType().normalize(NormalizationMode.WHNF);
-    return typeType instanceof CoreUniverseExpression && ((CoreUniverseExpression) typeType).getSort().isProp() ? type : null;
+    return typeType instanceof CoreUniverseExpression && ((CoreUniverseExpression) typeType).getSortExpression().isProp() ? type : null;
   }
 
   public static List<CoreClassField> getNotImplementedField(CoreClassCallExpression classCall) {

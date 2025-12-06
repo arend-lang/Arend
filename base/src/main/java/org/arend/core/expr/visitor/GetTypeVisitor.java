@@ -11,6 +11,7 @@ import org.arend.core.expr.let.HaveClause;
 import org.arend.core.expr.let.LetClause;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
@@ -75,9 +76,9 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
       if (!(argType instanceof UniverseExpression)) {
         return false;
       }
-      Sort paramSort = ((UniverseExpression) paramType).getSort();
-      Sort argSort = ((UniverseExpression) argType).getSort();
-      return matchLevels(new LevelPair(paramSort.getPLevel(), paramSort.getHLevel()), new LevelPair(argSort.getPLevel(), argSort.getHLevel()), levelMap);
+      SortExpression paramSortExpr = ((UniverseExpression) paramType).getSortExpression();
+      SortExpression argSortExpr = ((UniverseExpression) argType).getSortExpression();
+      return paramSortExpr instanceof SortExpression.Const(Sort paramSort) && argSortExpr instanceof SortExpression.Const(Sort argSort) && matchLevels(new LevelPair(paramSort.getPLevel(), paramSort.getHLevel()), new LevelPair(argSort.getPLevel(), argSort.getHLevel()), levelMap);
     } else if (paramType instanceof SigmaExpression) {
       argType = argType.dropPiParameter(skip);
       argType = argType == null ? null : argType.normalize(NormalizationMode.WHNF);
@@ -320,28 +321,28 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
   @Override
   public Expression visitPi(PiExpression expr, Void params) {
-    Sort sort1 = expr.getParameters().getType().accept(this, null).toSort();
-    Sort sort2 = expr.getCodomain().accept(this, null).toSort();
-    return sort1 == null || sort2 == null ? new ErrorExpression() : new UniverseExpression(PiExpression.piSort(sort1, sort2));
+    SortExpression sort1 = expr.getParameters().getType().accept(this, null).toSortExpression();
+    SortExpression sort2 = expr.getCodomain().accept(this, null).toSortExpression();
+    return sort1 == null || sort2 == null ? new ErrorExpression() : new UniverseExpression(SortExpression.makePi(Collections.singletonList(sort1), sort2));
   }
 
   @Override
   public Expression visitSigma(SigmaExpression expr, Void params) {
-    Sort maxSort = Sort.PROP;
+    List<SortExpression> sorts = new ArrayList<>();
     for (DependentLink param = expr.getParameters(); param.hasNext(); param = param.getNext()) {
       param = param.getNextTyped(null);
-      Sort sort = param.getType().accept(this, null).toSort();
-      maxSort = sort == null ? null : maxSort.max(sort);
-      if (maxSort == null) {
-        break;
+      SortExpression sort = param.getType().accept(this, null).toSortExpression();
+      if (sort == null) {
+        return new ErrorExpression();
       }
+      sorts.add(sort);
     }
-    return maxSort == null ? new ErrorExpression() : new UniverseExpression(maxSort);
+    return new UniverseExpression(SortExpression.makeMax(sorts));
   }
 
   @Override
   public Expression visitUniverse(UniverseExpression expr, Void params) {
-    return new UniverseExpression(expr.getSort().succ());
+    return new UniverseExpression(SortExpression.makeNext(expr.getSortExpression()));
   }
 
   @Override

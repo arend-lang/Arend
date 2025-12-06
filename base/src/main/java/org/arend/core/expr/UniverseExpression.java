@@ -4,6 +4,7 @@ import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
 import org.arend.ext.core.expr.CoreUniverseExpression;
@@ -13,25 +14,29 @@ import org.jetbrains.annotations.NotNull;
 public class UniverseExpression extends Expression implements CoreUniverseExpression {
   public static final UniverseExpression OMEGA = new UniverseExpression(new Sort(Level.INFINITY, true));
 
-  private Sort mySort;
+  private SortExpression mySortExpression;
+
+  public UniverseExpression(SortExpression sort) {
+    mySortExpression = sort;
+  }
 
   public UniverseExpression(Sort sort) {
-    mySort = sort;
+    this(new SortExpression.Const(sort));
   }
 
   @Override
   public boolean isOmega() {
-    return mySort.isOmega();
+    return mySortExpression instanceof SortExpression.Const(Sort sort) && sort.isOmega();
   }
 
   public void substSort(LevelSubstitution substitution) {
-    mySort = mySort.subst(substitution);
+    if (!substitution.isEmpty()) mySortExpression = mySortExpression.subst(substitution);
   }
 
   @NotNull
   @Override
-  public Sort getSort() {
-    return mySort;
+  public SortExpression getSortExpression() {
+    return mySortExpression;
   }
 
   @Override
@@ -47,11 +52,6 @@ public class UniverseExpression extends Expression implements CoreUniverseExpres
   @Override
   public <P, R> R accept(@NotNull CoreExpressionVisitor<? super P, ? extends R> visitor, P params) {
     return visitor.visitUniverse(this, params);
-  }
-
-  @Override
-  public Sort getSortOfType() {
-    return mySort.succ();
   }
 
   @Override

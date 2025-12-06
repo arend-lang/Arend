@@ -20,6 +20,7 @@ public class TypecheckerState {
   public int numberOfLevelVariables;
   public int numberOfLevelEquations;
   public int numberOfDeferredMaxLevelEquations;
+  public int numberOfSortExpressionEquations;
   public Set<InferenceVariable> propVars;
   public int numberOfBoundVars;
   public final ListErrorReporter listErrorReporter;

@@ -13,6 +13,7 @@ import org.arend.core.expr.type.TypeExpression;
 import org.arend.core.expr.visitor.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
 import org.arend.error.*;
 import org.arend.ext.ArendExtension;
@@ -1156,24 +1157,30 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     }
 
     Expression type = result.type.normalize(NormalizationMode.WHNF);
-    UniverseExpression universe = type.cast(UniverseExpression.class);
-    if (universe == null) {
-      Expression stuck = type.getStuckExpression();
-      if (stuck == null || !stuck.isInstance(InferenceReferenceExpression.class) && !stuck.reportIfError(errorReporter, expr)) {
-        if (stuck == null || !stuck.isError()) {
-          errorReporter.report(new TypeMismatchError(DocFactory.text("\\Type"), type, expr));
+    SortExpression sortExpr = type instanceof UniverseExpression universe ? universe.getSortExpression().simplify() : null;
+    Sort sort = sortExpr instanceof SortExpression.Const(Sort aSort) ? aSort : null;
+    if (sort == null) {
+      if (sortExpr != null) {
+        sort = Sort.generateInferVars(myEquations, false, expr);
+        myEquations.addEquation(sortExpr, new SortExpression.Const(sort), CMP.LE, expr);
+      } else {
+        Expression stuck = type.getStuckExpression();
+        if (stuck == null || !stuck.isInstance(InferenceReferenceExpression.class) && !stuck.reportIfError(errorReporter, expr)) {
+          if (stuck == null || !stuck.isError()) {
+            errorReporter.report(new TypeMismatchError(DocFactory.text("\\Type"), type, expr));
+          }
+          return null;
         }
-        return null;
-      }
 
-      universe = new UniverseExpression(Sort.generateInferVars(myEquations, false, expr));
-      InferenceVariable infVar = stuck.getInferenceVariable();
-      if (infVar != null) {
-        myEquations.addEquation(type, universe, UniverseExpression.OMEGA, CMP.LE, expr, infVar, null);
+        sort = Sort.generateInferVars(myEquations, false, expr);
+        InferenceVariable infVar = stuck.getInferenceVariable();
+        if (infVar != null) {
+          myEquations.addEquation(type, new UniverseExpression(sort), UniverseExpression.OMEGA, CMP.LE, expr, infVar, null);
+        }
       }
     }
 
-    return new TypeExpression(result.expression, universe.getSort());
+    return new TypeExpression(result.expression, sort);
   }
 
   public TypeExpression finalCheckType(Concrete.Expression expr, Expression expectedType, boolean propIfPossible) {
@@ -2784,8 +2791,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       TypecheckingResult result = checkExpr(expr.getFields().get(i), null);
       if (result == null) return null;
       fields.add(result.expression);
-      Sort sort = getSortOfType(result.type, expr);
-      if (sort.getPLevel().isInfinity()) {
+      Sort sort = result.type.getSortOfType();
+      if (sort != null && sort.getPLevel().isInfinity()) {
         errorReporter.report(new TypecheckingError("Types of the infinity level are not allowed", expr.getFields().get(i)));
         return null;
       }
@@ -3467,22 +3474,22 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     }
 
+    Sort sort;
     if (expr.getKind() != ConcreteUniverseExpression.Kind.TYPE) {
       if (hLevel != null) {
         errorReporter.report(new TypecheckingError("\\Cat cannot have an h-level", expr.getHLevel()));
       }
-      UniverseExpression universe = new UniverseExpression(new Sort(pLevel, true));
-      return checkResult(expectedType, new TypecheckingResult(universe, new UniverseExpression(universe.getSort().succ())), expr);
+      sort = new Sort(pLevel, true);
+    } else {
+      if (hLevel == null) {
+        InferenceLevelVariable hl = new InferenceLevelVariable(LevelVariable.LvlType.HLVL, true, expr);
+        getEquations().addVariable(hl);
+        hLevel = new Level(hl);
+      }
+      sort = new Sort(pLevel, hLevel);
     }
 
-    if (hLevel == null) {
-      InferenceLevelVariable hl = new InferenceLevelVariable(LevelVariable.LvlType.HLVL, true, expr);
-      getEquations().addVariable(hl);
-      hLevel = new Level(hl);
-    }
-
-    UniverseExpression universe = new UniverseExpression(new Sort(pLevel, hLevel));
-    return checkResult(expectedType, new TypecheckingResult(universe, new UniverseExpression(universe.getSort().succ())), expr);
+    return checkResult(expectedType, new TypecheckingResult(new UniverseExpression(sort), new UniverseExpression(sort.succ())), expr);
   }
 
   @Override
@@ -4175,9 +4182,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     Sort sort;
     typeType = typeType.normalize(NormalizationMode.WHNF);
-    UniverseExpression universe = typeType.cast(UniverseExpression.class);
-    if (universe != null) {
-      sort = universe.getSort();
+    if (typeType instanceof UniverseExpression universe && universe.getSortExpression() instanceof SortExpression.Const(Sort aSort)) {
+      sort = aSort;
     } else {
       sort = Sort.generateInferVars(myEquations, false, expr.getExpression());
       myEquations.addEquation(typeType, new UniverseExpression(sort), UniverseExpression.OMEGA, CMP.LE, expr.getExpression(), typeType.getStuckInferenceVariable(), null);

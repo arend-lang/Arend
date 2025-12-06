@@ -16,7 +16,7 @@ import org.arend.ext.util.Pair;
 import java.util.*;
 
 public class LevelEquationsSolver {
-  private final List<DeferredLevelEquation> myDeferredMaxEquations;
+  private final List<AbstractEquation<Level>> myDeferredMaxEquations;
   private final LevelEquations<InferenceLevelVariable> myPLevelEquations = new LevelEquations<>();      // equations of the forms      c <= ?y and ?x <= max(?y + c', d)
   private final LevelEquations<InferenceLevelVariable> myBasedPLevelEquations = new LevelEquations<>(); // equations of the forms lp + c <= ?y and ?x <= max(?y + c', d)
   private final LevelEquations<InferenceLevelVariable> myHLevelEquations = new LevelEquations<>();
@@ -29,7 +29,7 @@ public class LevelEquationsSolver {
   private final boolean myPBased;
   private final boolean myHBased;
 
-  public LevelEquationsSolver(List<LevelEquation<LevelVariable>> levelEquations, List<? extends DeferredLevelEquation> deferredMaxEquations, List<InferenceLevelVariable> variables, List<Pair<InferenceLevelVariable, InferenceLevelVariable>> boundVariables, ErrorReporter errorReporter, boolean pBased, boolean hBased) {
+  public LevelEquationsSolver(List<LevelEquation<LevelVariable>> levelEquations, List<? extends AbstractEquation<Level>> deferredMaxEquations, List<InferenceLevelVariable> variables, List<Pair<InferenceLevelVariable, InferenceLevelVariable>> boundVariables, ErrorReporter errorReporter, boolean pBased, boolean hBased) {
     myDeferredMaxEquations = new ArrayList<>(deferredMaxEquations);
     myPBased = pBased;
     myHBased = hBased;
@@ -317,9 +317,9 @@ public class LevelEquationsSolver {
       }
     }
 
-    for (DeferredLevelEquation equation : myDeferredMaxEquations) {
-      if (!Level.compare(equation.level1().subst(result), equation.level2().subst(result), CMP.LE, DummyEquations.getInstance(), equation.sourceNode())) {
-        myErrorReporter.report(new SolveLevelEquationsError(Collections.singletonList(new Pair<>(equation.level1(), equation.level2())), equation.sourceNode()));
+    for (AbstractEquation<Level> equation : myDeferredMaxEquations) {
+      if (!Level.compare(equation.left().subst(result), equation.right().subst(result), equation.cmp(), DummyEquations.getInstance(), equation.sourceNode())) {
+        myErrorReporter.report(new SolveLevelEquationsError(Collections.singletonList(new Pair<>(equation.left(), equation.right())), equation.sourceNode()));
       }
     }
 

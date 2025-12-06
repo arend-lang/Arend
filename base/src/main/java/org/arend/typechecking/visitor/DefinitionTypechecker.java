@@ -18,6 +18,7 @@ import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.pattern.Pattern;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
 import org.arend.ext.concrete.expr.ConcreteUniverseExpression;
 import org.arend.ext.core.level.LevelSubstitution;
@@ -3289,7 +3290,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     }
 
     if (expr2 instanceof UniverseExpression) {
-      return expr1 instanceof UniverseExpression && ((UniverseExpression) expr1).getSort().equals(((UniverseExpression) expr2).getSort()) ? 0 : 1;
+      return expr1 instanceof UniverseExpression && ((UniverseExpression) expr1).getSortExpression() instanceof SortExpression.Const(Sort sort1) && ((UniverseExpression) expr2).getSortExpression() instanceof SortExpression.Const(Sort sort2) && sort1.equals(sort2) ? 0 : 1;
     }
 
     if (expr2 instanceof IntegerExpression) {

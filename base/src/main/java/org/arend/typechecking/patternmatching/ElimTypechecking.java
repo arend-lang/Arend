@@ -14,6 +14,7 @@ import org.arend.core.expr.visitor.NormalizeVisitor;
 import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.LevelPair;
 import org.arend.ext.core.ops.CMP;
@@ -914,9 +915,8 @@ public class ElimTypechecking {
           Expression type = myExpectedType.getType();
           if (type != null) {
             type = type.normalize(NormalizationMode.WHNF);
-            UniverseExpression universe = type.cast(UniverseExpression.class);
-            if (universe != null) {
-              ok = Level.compare(universe.getSort().getHLevel(), dataType.getSort().getHLevel(), CMP.LE, myEquations, getClause(conClause.index, someConPattern));
+            if (type instanceof UniverseExpression universe && universe.getSortExpression() instanceof SortExpression.Const(Sort typeSort)) {
+              ok = Level.compare(typeSort.getHLevel(), dataType.getSort().getHLevel(), CMP.LE, myEquations, getClause(conClause.index, someConPattern));
             } else {
               InferenceLevelVariable pl = new InferenceLevelVariable(LevelVariable.LvlType.PLVL, false, getClause(conClause.index, someConPattern));
               myEquations.addVariable(pl);
