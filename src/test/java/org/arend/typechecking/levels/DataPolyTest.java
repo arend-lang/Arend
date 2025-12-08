@@ -161,4 +161,28 @@ public class DataPolyTest extends TypeCheckingTestCase {
       \\data D | con1 (R (\\new C (\\Sigma) D)) | con2 (R (\\new C D (\\Sigma)))
       """);
   }
+
+  @Test
+  public void levelTest() {
+    DataDefinition definition = (DataDefinition) typeCheckDef("\\data D (A1 : \\Set1) (A2 : \\Set2) | con (A2 -> D A1 A2) A1");
+    assertEquals(Sort.SetOfLevel(2), definition.getSort());
+  }
+
+  @Test
+  public void propTest() {
+    DataDefinition definition = (DataDefinition) typeCheckDef("\\data D (A1 : \\Prop) (A2 : \\Set2) | con (A2 -> D A1 A2) A1");
+    assertEquals(Sort.PROP, definition.getSort());
+  }
+
+  @Test
+  public void setTest() {
+    DataDefinition definition = (DataDefinition) typeCheckDef("\\data D (A1 : \\Prop) (A2 : \\Set2) | con1 (A2 -> D A1 A2) A1 | con2");
+    assertEquals(Sort.SetOfLevel(2), definition.getSort());
+  }
+
+  @Test
+  public void setTest2() {
+    DataDefinition definition = (DataDefinition) typeCheckDef("\\data D (A1 : \\Prop) (A2 : \\Set2) | con1 {d1 d2 : D A1 A2} (A2 -> d1 = d2) A1 | con2");
+    assertEquals(Sort.SET0, definition.getSort());
+  }
 }

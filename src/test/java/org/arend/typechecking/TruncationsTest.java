@@ -3,6 +3,8 @@ package org.arend.typechecking;
 import org.arend.core.definition.DataDefinition;
 import org.junit.Test;
 
+import java.util.Objects;
+
 import static org.junit.Assert.assertTrue;
 
 public class TruncationsTest extends TypeCheckingTestCase {
@@ -78,7 +80,7 @@ public class TruncationsTest extends TypeCheckingTestCase {
           | right => base
         }
       """);
-    assertTrue(definition.getSort().getPLevel().isClosed() && definition.getSort().getPLevel().getConstant() == 0);
+    assertTrue(Objects.requireNonNull(definition.getSort()).getPLevel().isClosed() && definition.getSort().getPLevel().getConstant() == 0);
     assertTrue(definition.getSort().getHLevel().isInfinity());
   }
 

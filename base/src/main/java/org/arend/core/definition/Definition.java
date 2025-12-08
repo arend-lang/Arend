@@ -187,6 +187,7 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
     return false;
   }
 
+  // TODO[sorts]: Delete this
   public boolean isOmegaParameter(int index) {
     return false;
   }
@@ -263,6 +264,7 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
 
   }
 
+  // TODO[sorts]: Delete this
   public abstract UniverseKind getUniverseKind();
 
   public List<? extends ParametersLevel> getParametersLevels() {

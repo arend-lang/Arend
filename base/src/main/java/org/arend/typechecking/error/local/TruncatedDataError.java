@@ -2,6 +2,7 @@ package org.arend.typechecking.error.local;
 
 import org.arend.core.definition.DataDefinition;
 import org.arend.core.expr.Expression;
+import org.arend.core.sort.Sort;
 import org.arend.ext.error.TypecheckingError;
 import org.arend.ext.prettyprinting.PrettyPrinterConfig;
 import org.arend.ext.prettyprinting.doc.Doc;
@@ -12,11 +13,13 @@ import static org.arend.ext.prettyprinting.doc.DocFactory.*;
 
 public class TruncatedDataError extends TypecheckingError {
   public final DataDefinition dataDef;
+  public final Sort dataSort;
   public final Expression expectedType;
 
-  public TruncatedDataError(DataDefinition dataDef, Expression expectedType, Concrete.SourceNode cause) {
+  public TruncatedDataError(DataDefinition dataDef, Sort dataSort, Expression expectedType, Concrete.SourceNode cause) {
     super("", cause);
     this.dataDef = dataDef;
+    this.dataSort = dataSort;
     this.expectedType = expectedType;
   }
 
@@ -25,7 +28,7 @@ public class TruncatedDataError extends TypecheckingError {
     return hList(
       text(" Data type '"),
       refDoc(dataDef.getReferable()),
-      text("' is truncated to the universe " + dataDef.getSort()));
+      text("' is truncated to the universe " + dataSort));
   }
 
   @Override

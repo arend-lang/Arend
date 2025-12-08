@@ -265,9 +265,6 @@ public class DefinitionSerialization implements ArendSerializer {
     for (Definition recursiveDefinition : definition.getRecursiveDefinitions()) {
       builder.addRecursiveDefinition(myCallTargetIndexProvider.getDefIndex(recursiveDefinition));
     }
-    if (definition.getSort() != null) {
-      builder.setSort(defSerializer.writeSort(definition.getSort()));
-    }
 
     for (Constructor constructor : definition.getConstructors()) {
       DefinitionProtos.Definition.DataData.Constructor.Builder cBuilder = DefinitionProtos.Definition.DataData.Constructor.newBuilder();

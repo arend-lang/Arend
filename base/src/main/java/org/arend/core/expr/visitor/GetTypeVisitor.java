@@ -136,6 +136,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
     return true;
   }
 
+  // TODO[sorts]: Delete this
   public Levels minimizeLevels(LeveledDefCallExpression defCall) {
     if (!(defCall.getUniverseKind() == UniverseKind.NO_UNIVERSES && defCall.getDefinition() != Prelude.DIV_MOD && defCall.getDefinition() != Prelude.MOD && !(defCall instanceof ConCallExpression)) || isMinimalLevels(defCall)) {
       return defCall.getLevels();
@@ -219,7 +220,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
   @Override
   public UniverseExpression visitDataCall(DataCallExpression expr, Void params) {
-    return new UniverseExpression(expr.getDefinition().getSort().subst((myMinimal ? minimizeLevels(expr) : expr.getLevels()).makeSubstitution(expr.getDefinition())));
+    return new UniverseExpression(expr.getDefinition().getSortExpression().subst(false, expr.getDefCallArguments(), (myMinimal ? minimizeLevels(expr) : expr.getLevels()).makeSubstitution(expr.getDefinition())));
   }
 
   private Levels minimizeLevelsToSuperClass(ClassCallExpression classCall, ClassDefinition superClass) {
@@ -342,7 +343,7 @@ public class GetTypeVisitor implements ExpressionVisitor<Void, Expression> {
 
   @Override
   public Expression visitUniverse(UniverseExpression expr, Void params) {
-    return new UniverseExpression(SortExpression.makeNext(expr.getSortExpression()));
+    return new UniverseExpression(SortExpression.makeSucc(expr.getSortExpression()));
   }
 
   @Override

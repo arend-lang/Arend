@@ -379,9 +379,7 @@ public class TwoStageEquations implements Equations {
   @Override
   public LevelEquationsSolver makeLevelEquationsSolver() {
     for (AbstractEquation<SortExpression> equation : mySortExpressionEquations) {
-      if (equation.left().simplify() instanceof SortExpression.Const(Sort sort1) && equation.right().simplify() instanceof SortExpression.Const(Sort sort2)) {
-        Sort.compare(sort1, sort2, equation.cmp(), this, equation.sourceNode());
-      }
+      Sort.compare(equation.left().withInfLevel(), equation.right().withInfLevel(), equation.cmp(), this, equation.sourceNode());
     }
     mySortExpressionEquations.clear();
 

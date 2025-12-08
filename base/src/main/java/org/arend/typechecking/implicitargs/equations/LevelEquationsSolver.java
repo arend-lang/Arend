@@ -274,7 +274,6 @@ public class LevelEquationsSolver {
     SimpleLevelSubstitution result = new SimpleLevelSubstitution();
     for (InferenceLevelVariable var : unBased) {
       int sol = solution.get(var);
-      assert sol != LevelEquations.INFINITY || var.getType() == LevelVariable.LvlType.HLVL;
       result.add(var, sol == LevelEquations.INFINITY ? Level.INFINITY : new Level(-sol));
     }
 
@@ -293,7 +292,6 @@ public class LevelEquationsSolver {
       assert entry.getValue() != LevelEquations.INFINITY || entry.getKey().getType() == LevelVariable.LvlType.HLVL;
       if (!unBased.contains(entry.getKey())) {
         int sol = solution.get(entry.getKey());
-        assert sol != LevelEquations.INFINITY || entry.getKey().getType() == LevelVariable.LvlType.HLVL;
         result.add(entry.getKey(), sol == LevelEquations.INFINITY || entry.getValue() == LevelEquations.INFINITY ? Level.INFINITY : new Level(useStd ? entry.getKey().getStd() : getLowerBound(entry.getKey()), -entry.getValue(), -sol));
       }
     }

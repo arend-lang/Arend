@@ -135,6 +135,11 @@ public abstract class Expression implements Body, CoreExpression {
     return sortExpr == null ? null : sortExpr.simplify() instanceof SortExpression.Const(Sort sort) ? sort : null;
   }
 
+  public SortExpression getSortExpressionOfType() {
+    Expression type = getType();
+    return type == null ? null : type.toSortExpression();
+  }
+
   public Sort getSortOfType() {
     Expression type = getType();
     return type == null ? null : type.toSort();

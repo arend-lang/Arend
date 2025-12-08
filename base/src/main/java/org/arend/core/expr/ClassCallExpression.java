@@ -11,6 +11,7 @@ import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.core.expr.visitor.StripVisitor;
 import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.*;
 import org.arend.ext.core.definition.CoreClassField;
 import org.arend.ext.core.expr.CoreClassCallExpression;
@@ -456,6 +457,11 @@ public class ClassCallExpression extends LeveledDefCallExpression implements Cor
   @Override
   public ClassDefinition getDefinition() {
     return (ClassDefinition) super.getDefinition();
+  }
+
+  @Override
+  public SortExpression getSortExpressionOfType() {
+    return new SortExpression.Const(getSortOfType());
   }
 
   @Override

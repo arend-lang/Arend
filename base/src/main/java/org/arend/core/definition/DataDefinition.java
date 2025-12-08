@@ -5,6 +5,7 @@ import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.definition.CoreConstructor;
@@ -13,13 +14,14 @@ import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.naming.reference.GlobalReferable;
 import org.arend.naming.reference.TCDefReferable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
 public class DataDefinition extends TopLevelDefinition implements CoreDataDefinition {
   private final List<Constructor> myConstructors;
   private DependentLink myParameters;
-  private Sort mySort = Sort.SET0;
+  private SortExpression mySort = new SortExpression.Const(Sort.SET0); // TODO[sorts]: Replace with Sort.INFINITY
   private int myTruncatedLevel = -2;
   private boolean mySquashed;
   private FunctionDefinition mySquasher;
@@ -40,12 +42,21 @@ public class DataDefinition extends TopLevelDefinition implements CoreDataDefini
   }
 
   @Override
-  public Sort getSort() {
+  public @NotNull SortExpression getSortExpression() {
     return mySort;
   }
 
-  public void setSort(Sort sort) {
+  @Override
+  public @Nullable Sort getSort() {
+    return mySort instanceof SortExpression.Const(Sort sort) ? sort : null;
+  }
+
+  public void setSortExpression(SortExpression sort) {
     mySort = sort;
+  }
+
+  public void setSort(Sort sort) {
+    setSortExpression(new SortExpression.Const(sort));
   }
 
   @Override

@@ -3,6 +3,7 @@ package org.arend.core.expr;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.ext.concrete.ConcreteSourceNode;
 import org.arend.ext.core.expr.CoreErrorExpression;
 import org.arend.ext.core.expr.CoreExpressionVisitor;
@@ -109,6 +110,11 @@ public class ErrorExpression extends Expression implements CoreErrorExpression {
   @Override
   public Expression getStuckExpression() {
     return this;
+  }
+
+  @Override
+  public SortExpression getSortExpressionOfType() {
+    return new SortExpression.Const(getSortOfType());
   }
 
   @Override

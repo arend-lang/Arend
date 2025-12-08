@@ -6,7 +6,7 @@ import org.arend.core.definition.DataDefinition;
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
 import org.arend.core.pattern.ExpressionPattern;
-import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.context.CoreParameter;
@@ -54,6 +54,10 @@ public class DataCallExpression extends LeveledDefCallExpression implements Core
     return new DataCallExpression(getDefinition(), getMinimizedLevels(), myArguments);
   }
 
+  public SortExpression getSortExpression() {
+    return getDefinition().getSortExpression().subst(false, getDefCallArguments(), getLevelSubstitution());
+  }
+
   @Override
   public <P, R> R accept(ExpressionVisitor<? super P, ? extends R> visitor, P params) {
     return visitor.visitDataCall(this, params);
@@ -67,11 +71,6 @@ public class DataCallExpression extends LeveledDefCallExpression implements Core
   @Override
   public <P, R> R accept(@NotNull CoreExpressionVisitor<? super P, ? extends R> visitor, P params) {
     return visitor.visitDataCall(this, params);
-  }
-
-  @Override
-  public Sort getSortOfType() {
-    return getDefinition().getSort().subst(getLevelSubstitution());
   }
 
   @Override

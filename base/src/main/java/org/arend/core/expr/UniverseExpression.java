@@ -2,7 +2,6 @@ package org.arend.core.expr;
 
 import org.arend.core.expr.visitor.ExpressionVisitor;
 import org.arend.core.expr.visitor.ExpressionVisitor2;
-import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.ext.core.level.LevelSubstitution;
@@ -12,7 +11,7 @@ import org.arend.util.Decision;
 import org.jetbrains.annotations.NotNull;
 
 public class UniverseExpression extends Expression implements CoreUniverseExpression {
-  public static final UniverseExpression OMEGA = new UniverseExpression(new Sort(Level.INFINITY, true));
+  public static final UniverseExpression OMEGA = new UniverseExpression(Sort.INFINITY);
 
   private SortExpression mySortExpression;
 

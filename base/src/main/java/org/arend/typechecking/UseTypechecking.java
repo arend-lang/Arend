@@ -5,6 +5,7 @@ import org.arend.core.definition.*;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
@@ -240,7 +241,7 @@ public class UseTypechecking {
     if (level == null) {
       return null;
     }
-    if (def != null && useParent instanceof DataDefinition && parameters == null && Level.compare(((DataDefinition) useParent).getSort().getHLevel(), new Level(level), CMP.LE, DummyEquations.getInstance(), def)) {
+    if (def != null && useParent instanceof DataDefinition && parameters == null && ((DataDefinition) useParent).getSortExpression() instanceof SortExpression.Const(Sort sort) && Level.compare(sort.getHLevel(), new Level(level), CMP.LE, DummyEquations.getInstance(), def)) {
       errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.USELESS_LEVEL, def));
     }
 
@@ -250,9 +251,10 @@ public class UseTypechecking {
   private static void registerParametersLevel(FunctionDefinition useDefinition, Definition useParent, ParametersLevel parametersLevel) {
     if (useParent instanceof DataDefinition dataDef) {
       if (parametersLevel.parameters == null) {
-        Sort newSort = parametersLevel.level == -1 ? Sort.PROP : new Sort(dataDef.getSort().getPLevel(), new Level(parametersLevel.level));
-        if (!dataDef.getSort().isLessOrEquals(newSort)) {
-          if (!(parametersLevel.level == -1 && dataDef.getSort().isSet() && dataDef.getRecursiveDefinitions().isEmpty())) {
+        Sort dataSort = dataDef.getSortExpression().withInfLevel();
+        Sort newSort = parametersLevel.level == -1 ? Sort.PROP : new Sort(dataSort.getPLevel(), new Level(parametersLevel.level));
+        if (!dataSort.isLessOrEquals(newSort)) {
+          if (!(parametersLevel.level == -1 && dataSort.isSet() && dataDef.getRecursiveDefinitions().isEmpty())) {
             dataDef.setSquashed(true);
           }
           dataDef.setSquasher(useDefinition);

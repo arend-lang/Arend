@@ -727,9 +727,13 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     return result;
   }
 
+  private Concrete.UniverseExpression visitSortExpression(SortExpression sortExpr) {
+    return sortExpr instanceof SortExpression.Const(Sort sort) ? visitSort(sort) : new Concrete.UniverseExpression(null, null, null, ConcreteUniverseExpression.Kind.SORT);
+  }
+
   @Override
   public Concrete.Expression visitUniverse(UniverseExpression expr, Void params) {
-    return expr.getSortExpression() instanceof SortExpression.Const(Sort sort) ? visitSort(sort) : new Concrete.UniverseExpression(null, null, null, ConcreteUniverseExpression.Kind.SORT);
+    return visitSortExpression(expr.getSortExpression());
   }
 
   private Concrete.LevelExpression visitLevelNull(Level level, boolean showStdVar) {
@@ -1138,7 +1142,7 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     visitDependentLink(def.getParameters(), parameters, false);
     boolean hasPatterns = !def.getConstructors().isEmpty() && def.getConstructors().getFirst().getPatterns() != null;
     List<Concrete.ConstructorClause> constructors = new ArrayList<>();
-    Concrete.DataDefinition result = new Concrete.DataDefinition(def.getRef(), pair.proj1, pair.proj2, parameters, hasPatterns ? Collections.emptyList() : null, def.isTruncated(), def.isTruncated() ? visitSort(def.getSort()) : null, constructors);
+    Concrete.DataDefinition result = new Concrete.DataDefinition(def.getRef(), pair.proj1, pair.proj2, parameters, hasPatterns ? Collections.emptyList() : null, def.isTruncated(), def.isTruncated() ? visitSortExpression(def.getSortExpression()) : null, constructors);
     for (Constructor constructor : def.getConstructors()) {
       constructors.add(new Concrete.ConstructorClause(null, visitPatterns(def.getParameters(), constructor.getPatterns()), Collections.singletonList(visitConstructor(constructor, null))));
     }

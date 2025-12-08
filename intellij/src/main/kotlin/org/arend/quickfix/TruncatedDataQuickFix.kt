@@ -6,7 +6,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
-import org.arend.core.sort.Sort
 import org.arend.psi.ArendPsiFactory
 import org.arend.psi.ext.ArendDefFunction
 import org.arend.typechecking.error.local.TruncatedDataError
@@ -37,7 +36,7 @@ class TruncatedDataQuickFix(
         val lemmaKeyword = psiFactory.createFunctionKeyword("\\lemma")
         val sfuncKeyword = psiFactory.createFunctionKeyword("\\sfunc")
 
-        if (error.dataDef.sort == Sort.PROP) {
+        if (error.dataDef.sortExpression.isProp) {
             element.functionKw.replace(lemmaKeyword)
         } else {
             element.functionKw.replace(sfuncKeyword)

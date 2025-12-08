@@ -1,6 +1,8 @@
 package org.arend.core.sort;
 
+import org.arend.core.expr.Expression;
 import org.arend.core.expr.PiExpression;
+import org.arend.core.expr.UniverseExpression;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.sort.*;
 import org.jetbrains.annotations.NotNull;
@@ -11,8 +13,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public sealed interface SortExpression extends CoreSortExpression permits SortExpression.Const, SortExpression.Max, SortExpression.Pi, SortExpression.Prev, SortExpression.Next {
-  @NotNull SortExpression subst(@NotNull LevelSubstitution substitution);
+public sealed interface SortExpression extends CoreSortExpression permits SortExpression.Const, SortExpression.Max, SortExpression.Succ, SortExpression.Pi, SortExpression.Prev, SortExpression.Var {
+  @NotNull SortExpression subst(boolean isType, @NotNull List<? extends Expression> arguments, @NotNull LevelSubstitution substitution);
+  @NotNull Sort withInfLevel();
+
+  default @NotNull SortExpression subst(@NotNull LevelSubstitution substitution) {
+    return subst(false, Collections.emptyList(), substitution);
+  }
 
   default @NotNull SortExpression simplify() {
     return subst(LevelSubstitution.EMPTY);
@@ -39,13 +46,32 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
-    public @NotNull SortExpression subst(@NotNull LevelSubstitution substitution) {
+    public @NotNull SortExpression subst(boolean isType, @NotNull List<? extends Expression> arguments, @NotNull LevelSubstitution substitution) {
       return new Const(sort.subst(substitution));
+    }
+
+    @Override
+    public @NotNull Sort withInfLevel() {
+      return sort;
     }
 
     @Override
     public @NotNull SortExpression simplify() {
       return this;
+    }
+  }
+
+  record Var(int index) implements SortExpression {
+    @Override
+    public @NotNull SortExpression subst(boolean isType, @NotNull List<? extends Expression> arguments, @NotNull LevelSubstitution substitution) {
+      if (index >= arguments.size()) return this;
+      SortExpression result = isType ? (arguments.get(index) instanceof UniverseExpression universe ? universe.getSortExpression() : null) : arguments.get(index) != null ? arguments.get(index).getSortExpressionOfType() : null;
+      return result == null ? this : result;
+    }
+
+    @Override
+    public @NotNull Sort withInfLevel() {
+      return Sort.INFINITY;
     }
   }
 
@@ -65,11 +91,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
           if (newResult2 != null) {
             result = newResult2;
           } else {
-            newSorts.add(bSort);
+            if (newSorts.isEmpty() || !newSorts.getLast().equals(bSort)) newSorts.add(bSort);
           }
         }
       } else {
-        newSorts.add(aSort);
+        if (newSorts.isEmpty() || !newSorts.getLast().equals(aSort)) newSorts.add(aSort);
       }
     }
 
@@ -81,10 +107,15 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
 
   static @NotNull SortExpression makePi(@NotNull List<SortExpression> domainSorts, @NotNull SortExpression codomain) {
     SortExpression domain = makeMax(domainSorts);
-    if (domain instanceof Const(Sort sort1) && codomain instanceof Const (Sort sort2)) {
-      return new Const(PiExpression.piSort(sort1, sort2));
+    if (domain instanceof Const(Sort sort1)) {
+      if (sort1.getPLevel().isClosed() && sort1.getPLevel().getConstant() == 0) {
+        return codomain;
+      }
+      if (codomain instanceof Const (Sort sort2)) {
+        return new Const(PiExpression.piSort(sort1, sort2));
+      }
     }
-    return domain instanceof Max maxSort ? new Pi(maxSort.mySorts, codomain) : new Pi(Collections.singletonList(domain), codomain);
+    return domain.equals(codomain) ? codomain : domain instanceof Max maxSort ? new Pi(maxSort.mySorts, codomain) : new Pi(Collections.singletonList(domain), codomain);
   }
 
   final class Max implements SortExpression, MaxSortExpression {
@@ -100,12 +131,21 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
-    public @NotNull SortExpression subst(@NotNull LevelSubstitution substitution) {
+    public @NotNull SortExpression subst(boolean isType, @NotNull List<? extends Expression> arguments, @NotNull LevelSubstitution substitution) {
       List<SortExpression> sorts = new ArrayList<>(mySorts.size());
       for (SortExpression sort : mySorts) {
-        sorts.add(sort.subst(substitution));
+        sorts.add(sort.subst(isType, arguments, substitution));
       }
       return makeMax(sorts);
+    }
+
+    @Override
+    public @NotNull Sort withInfLevel() {
+      Sort result = Sort.PROP;
+      for (SortExpression sort : mySorts) {
+        result = result.max(sort.withInfLevel());
+      }
+      return result;
     }
   }
 
@@ -117,8 +157,8 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     return new Prev(sort);
   }
 
-  static @NotNull SortExpression makeNext(@NotNull SortExpression sort) {
-    return sort instanceof Const(Sort aSort) ? new Const(aSort.succ()) : new Next(sort);
+  static @NotNull SortExpression makeSucc(@NotNull SortExpression sort) {
+    return sort instanceof Const(Sort aSort) ? new Const(aSort.succ()) : new Succ(sort);
   }
 
   final class Pi implements SortExpression, PiSortExpression {
@@ -141,12 +181,19 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
-    public @NotNull SortExpression subst(@NotNull LevelSubstitution substitution) {
+    public @NotNull SortExpression subst(boolean isType, @NotNull List<? extends Expression> arguments, @NotNull LevelSubstitution substitution) {
       List<SortExpression> domain = new ArrayList<>(myDomain.size());
       for (SortExpression sort : myDomain) {
-        domain.add(sort.subst(substitution));
+        domain.add(sort.subst(isType, arguments, substitution));
       }
-      return makePi(domain, myCodomain.subst(substitution));
+      return makePi(domain, myCodomain.subst(isType, arguments, substitution));
+    }
+
+    @Override
+    public @NotNull Sort withInfLevel() {
+      Sort domain = new Max(myDomain).withInfLevel();
+      Sort codomain = myCodomain.withInfLevel();
+      return PiExpression.piSort(domain, codomain);
     }
   }
 
@@ -163,15 +210,21 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
-    public @NotNull SortExpression subst(@NotNull LevelSubstitution substitution) {
-      return makePrev(mySort.subst(substitution));
+    public @NotNull SortExpression subst(boolean isType, @NotNull List<? extends Expression> arguments, @NotNull LevelSubstitution substitution) {
+      return makePrev(mySort.subst(isType, arguments, substitution));
+    }
+
+    @Override
+    public @NotNull Sort withInfLevel() {
+      Sort result = mySort.withInfLevel();
+      return result.isSet() || result.isProp() ? Sort.PROP : result.getHLevel().isInfinity() || !result.getHLevel().isClosed() ? result : new Sort(result.getPLevel(), new Level(result.getHLevel().getConstant() - 1));
     }
   }
 
-  final class Next implements SortExpression, NextSortExpression {
+  final class Succ implements SortExpression, NextSortExpression {
     private final SortExpression mySort;
 
-    public Next(SortExpression sort) {
+    public Succ(SortExpression sort) {
       mySort = sort;
     }
 
@@ -181,8 +234,13 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     }
 
     @Override
-    public @NotNull SortExpression subst(@NotNull LevelSubstitution substitution) {
-      return makeNext(mySort.subst(substitution));
+    public @NotNull SortExpression subst(boolean isType, @NotNull List<? extends Expression> arguments, @NotNull LevelSubstitution substitution) {
+      return makeSucc(mySort.subst(isType, arguments, substitution));
+    }
+
+    @Override
+    public @NotNull Sort withInfLevel() {
+      return mySort.withInfLevel().succ();
     }
   }
 }

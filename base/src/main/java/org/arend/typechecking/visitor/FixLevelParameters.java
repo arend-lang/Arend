@@ -16,6 +16,7 @@ import org.arend.typechecking.implicitargs.equations.DummyEquations;
 
 import java.util.*;
 
+// TODO[sorts]: Delete this
 public class FixLevelParameters extends VoidExpressionVisitor<Void> {
   private final Set<? extends Definition> myDefinitions;
   private final boolean myRemovePLevels;
@@ -156,7 +157,7 @@ public class FixLevelParameters extends VoidExpressionVisitor<Void> {
         }
         yield SortExpression.makeMax(sorts);
       }
-      case SortExpression.Next next -> SortExpression.makeNext(removeVars(next.getSort()));
+      case SortExpression.Succ succ -> SortExpression.makeSucc(removeVars(succ.getSort()));
       case SortExpression.Pi pi -> {
         List<SortExpression> domain = new ArrayList<>(pi.getDomain().size());
         for (SortExpression aSort : pi.getDomain()) {
@@ -164,7 +165,8 @@ public class FixLevelParameters extends VoidExpressionVisitor<Void> {
         }
         yield SortExpression.makePi(domain, removeVars(pi.getCodomain()));
       }
-      case SortExpression.Prev prev -> SortExpression.makeNext(removeVars(prev.getSort()));
+      case SortExpression.Prev prev -> SortExpression.makeSucc(removeVars(prev.getSort()));
+      case SortExpression.Var var -> var;
     };
   }
 
@@ -206,7 +208,7 @@ public class FixLevelParameters extends VoidExpressionVisitor<Void> {
 
   @Override
   public Void visitData(DataDefinition def, Void params) {
-    def.setSort(removeVars(def.getSort()));
+    def.setSortExpression(removeVars(def.getSortExpression()));
     return super.visitData(def, params);
   }
 

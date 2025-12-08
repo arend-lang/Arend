@@ -22,6 +22,7 @@ public class Sort implements CoreSort {
   public static final Sort PROP = new Sort(new Level(0), new Level(-1));
   public static final Sort SET0 = new Sort(new Level(0), new Level(0));
   public static final Sort STD = new Sort(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR));
+  public static final Sort INFINITY = new Sort(Level.INFINITY, Level.INFINITY, true);
 
   public static Sort SetOfLevel(int pLevel) {
     return new Sort(pLevel, 0);

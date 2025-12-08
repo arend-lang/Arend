@@ -10,6 +10,7 @@ import org.arend.core.elimtree.IntervalElim;
 import org.arend.core.expr.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.ops.CMP;
@@ -46,7 +47,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     myChecker.clear();
     myChecker.setDefinition(definition);
     try {
-      myChecker.checkDependentLink(definition.getParameters(), UniverseExpression.OMEGA, null, definition instanceof FunctionDefinition);
+      myChecker.checkDependentLink(definition.getParameters(), UniverseExpression.OMEGA, null, definition instanceof FunctionDefinition || definition instanceof DataDefinition);
 
       // TODO[double_check]: Check (mutual) recursion
       // TODO[double_check]: Check definition.hasUniverses()
@@ -101,7 +102,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       }
     }
 
-    Expression typeType = checkType ? definition.getResultType().accept(myChecker, UniverseExpression.OMEGA) : null;
+    Expression typeType = checkType ? (definition.getResultType() instanceof UniverseExpression && body instanceof Expression ? definition.getResultType() : definition.getResultType().accept(myChecker, UniverseExpression.OMEGA)) : null;
     Integer level = definition.getResultTypeLevel() == null ? null : myChecker.checkLevelProof(definition.getResultTypeLevel(), definition.getResultType());
 
     if (definition.getKind() == CoreFunctionDefinition.Kind.LEMMA && (level == null || level != -1)) {
@@ -214,7 +215,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
 
     if (!definition.isTruncated() && definition.getSquasher() == null) {
       for (Constructor constructor : definition.getConstructors()) {
-        if (constructor.getBody() instanceof IntervalElim && !definition.getSort().getHLevel().isInfinity()) {
+        if (constructor.getBody() instanceof IntervalElim && !(definition.getSortExpression() instanceof SortExpression.Const(Sort sort) && sort.getHLevel().isInfinity())) {
           errorReporter.report(new TypecheckingError("A higher inductive type must have sort " + new Sort(new Level(LevelVariable.PVAR), Level.INFINITY), null));
           return false;
         }
@@ -230,13 +231,15 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       // TODO[double_check]: Check patterns
 
       myChecker.addDependentLink(constructor.getDataTypeParameters());
-      Sort sort = myChecker.checkDependentLink(constructor.getParameters(), null);
+      SortExpression sort = myChecker.checkDependentLink(constructor.getParameters(), null);
       myChecker.freeDependentLink(constructor.getParameters());
       myChecker.freeDependentLink(constructor.getDataTypeParameters());
 
-      if (!checkDefinitionSort(definition.isTruncated() || definition.getSquasher() != null, constructor, sort, definition.getSort())) {
+      /* TODO[double_check]: Check sort
+      if (!checkDefinitionSort(definition.isTruncated() || definition.getSquasher() != null, constructor, sort, definition.getSortExpression())) {
         return false;
       }
+      */
 
       // TODO[double_check]: Check clauses/body
     }
@@ -259,6 +262,11 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     }
     if (parametersLevel.parameters != null) {
       errorReporter.report(new TypecheckingError("\\use \\level " + squasher.getName() + " applies only to specific parameters", null));
+      return false;
+    }
+
+    if (sort == null) {
+      errorReporter.report(new TypecheckingError("Squashed definition does not have a fixed sort", null));
       return false;
     }
 

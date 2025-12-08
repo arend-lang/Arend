@@ -138,7 +138,7 @@ public class FindLevelParameters extends SearchVisitor<Void> {
 
   @Override
   public Boolean visitData(DataDefinition def, Void params) {
-    return checkSort(new SortExpression.Const(def.getSort())) || super.visitData(def, params);
+    return checkSort(def.getSortExpression()) || super.visitData(def, params);
   }
 
   @Override

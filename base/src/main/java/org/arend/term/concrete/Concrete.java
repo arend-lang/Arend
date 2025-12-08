@@ -1253,7 +1253,7 @@ public final class Concrete {
     private final LevelExpression myPLevel;
     private final LevelExpression myHLevel; // TODO[sorts]: Delete this
     private final Kind myKind;
-    public boolean allowInf;
+    public Integer infIndex;
 
     public UniverseExpression(Object data, LevelExpression pLevel, LevelExpression hLevel, Kind kind) {
       super(data);

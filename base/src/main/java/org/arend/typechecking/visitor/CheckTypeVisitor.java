@@ -1158,29 +1158,24 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     Expression type = result.type.normalize(NormalizationMode.WHNF);
     SortExpression sortExpr = type instanceof UniverseExpression universe ? universe.getSortExpression().simplify() : null;
-    Sort sort = sortExpr instanceof SortExpression.Const(Sort aSort) ? aSort : null;
-    if (sort == null) {
-      if (sortExpr != null) {
-        sort = Sort.generateInferVars(myEquations, false, expr);
-        myEquations.addEquation(sortExpr, new SortExpression.Const(sort), CMP.LE, expr);
-      } else {
-        Expression stuck = type.getStuckExpression();
-        if (stuck == null || !stuck.isInstance(InferenceReferenceExpression.class) && !stuck.reportIfError(errorReporter, expr)) {
-          if (stuck == null || !stuck.isError()) {
-            errorReporter.report(new TypeMismatchError(DocFactory.text("\\Type"), type, expr));
-          }
-          return null;
+    if (sortExpr == null) {
+      Expression stuck = type.getStuckExpression();
+      if (stuck == null || !stuck.isInstance(InferenceReferenceExpression.class) && !stuck.reportIfError(errorReporter, expr)) {
+        if (stuck == null || !stuck.isError()) {
+          errorReporter.report(new TypeMismatchError(DocFactory.text("\\Type"), type, expr));
         }
-
-        sort = Sort.generateInferVars(myEquations, false, expr);
-        InferenceVariable infVar = stuck.getInferenceVariable();
-        if (infVar != null) {
-          myEquations.addEquation(type, new UniverseExpression(sort), UniverseExpression.OMEGA, CMP.LE, expr, infVar, null);
-        }
+        return null;
       }
+
+      Sort sort = Sort.generateInferVars(myEquations, false, expr);
+      InferenceVariable infVar = stuck.getInferenceVariable();
+      if (infVar != null) {
+        myEquations.addEquation(type, new UniverseExpression(sort), UniverseExpression.OMEGA, CMP.LE, expr, infVar, null);
+      }
+      sortExpr = new SortExpression.Const(sort);
     }
 
-    return new TypeExpression(result.expression, sort);
+    return new TypeExpression(result.expression, sortExpr);
   }
 
   public TypeExpression finalCheckType(Concrete.Expression expr, Expression expectedType, boolean propIfPossible) {
@@ -1188,8 +1183,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     if (result == null) return null;
     invokeDeferredMetas(null, null, false);
     LevelEquationsSolver levelSolver = myEquations.makeLevelEquationsSolver();
-    if (propIfPossible) {
-      levelSolver.addPropEquationIfPossible(result.sort().getHLevel());
+    if (propIfPossible && result.sort() instanceof SortExpression.Const(Sort sort)) {
+      levelSolver.addPropEquationIfPossible(sort.getHLevel());
     }
     LevelSubstitution levelSubstitution = levelSolver.solveLevels();
     myEquations.finalizeEquations(levelSubstitution, expr);
@@ -2267,7 +2262,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return link;
   }
 
-  private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<Sort> sorts, Expression expectedType) {
+  private SingleDependentLink visitTypeParameter(Concrete.TypeParameter param, List<SortExpression> sorts, Expression expectedType) {
     TypeExpression argResult = checkType(param.getType(), UniverseExpression.OMEGA);
     if (argResult == null) return null;
     if (expectedType != null) {
@@ -2624,14 +2619,14 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
   @Override
   public TypecheckingResult visitPi(Concrete.PiExpression expr, Expression expectedType) {
     List<SingleDependentLink> list = new ArrayList<>();
-    List<Sort> sorts = new ArrayList<>(expr.getParameters().size());
+    List<SortExpression> paramSorts = new ArrayList<>(expr.getParameters().size());
 
     try (var ignored = new Utils.RefContextSaver(context, myLocalPrettifier)) {
       for (Concrete.TypeParameter arg : expr.getParameters()) {
         if (arg.isProperty()) {
           errorReporter.report(new CertainTypecheckingError(CertainTypecheckingError.Kind.PROPERTY_IGNORED, arg));
         }
-        SingleDependentLink link = visitTypeParameter(arg, sorts, null);
+        SingleDependentLink link = visitTypeParameter(arg, paramSorts, null);
         if (link == null) {
           return null;
         }
@@ -2640,15 +2635,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
       TypeExpression result = checkType(expr.getCodomain(), UniverseExpression.OMEGA);
       if (result == null) return null;
-      Sort codSort = result.sort();
 
       Expression piExpr = result.expression();
       for (int i = list.size() - 1; i >= 0; i--) {
-        codSort = PiExpression.piSort(sorts.get(i), codSort);
         piExpr = new PiExpression(list.get(i), piExpr);
       }
 
-      return checkResult(expectedType, new TypecheckingResult(piExpr, new UniverseExpression(codSort)), expr);
+      return checkResult(expectedType, new TypecheckingResult(piExpr, new UniverseExpression(SortExpression.makePi(paramSorts, result.sort()))), expr);
     }
   }
 
@@ -2664,12 +2657,12 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       return expr.getParameters().getFirst().getType().accept(this, expectedType);
     }
 
-    List<Sort> sorts = new ArrayList<>(expr.getParameters().size());
+    List<SortExpression> sorts = new ArrayList<>(expr.getParameters().size());
     DependentLink args = visitSigmaParameters(expr.getParameters(), expectedType, sorts);
-    return args == null || !args.hasNext() ? null : checkResult(expectedType, new TypecheckingResult(new SigmaExpression(args), new UniverseExpression(Sort.max(sorts))), expr);
+    return args == null || !args.hasNext() ? null : checkResult(expectedType, new TypecheckingResult(new SigmaExpression(args), new UniverseExpression(SortExpression.makeMax(sorts))), expr);
   }
 
-  private DependentLink visitSigmaParameters(Collection<? extends Concrete.TypeParameter> parameters, Expression expectedType, List<Sort> resultSorts) {
+  private DependentLink visitSigmaParameters(Collection<? extends Concrete.TypeParameter> parameters, Expression expectedType, List<SortExpression> resultSorts) {
     LinkList list = new LinkList();
 
     try (var ignored = new Utils.RefContextSaver(context, myLocalPrettifier)) {
@@ -2683,15 +2676,15 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     return list.getFirst();
   }
 
-  private boolean visitSigmaParameter(Concrete.TypeParameter arg, Expression expectedType, List<Sort> resultSorts, LinkList list) {
+  private boolean visitSigmaParameter(Concrete.TypeParameter arg, Expression expectedType, List<SortExpression> resultSorts, LinkList list) {
     TypeExpression result = checkType(arg.getType(), expectedType == null ? UniverseExpression.OMEGA : expectedType);
     if (result == null) return false;
 
-    Sort sort = result.sort();
+    SortExpression sort = result.sort();
     boolean isProperty = arg.isProperty();
-    boolean isProp = isProperty && Sort.compare(sort, Sort.PROP, CMP.LE, myEquations, arg);
+    boolean isProp = isProperty && sort.isProp();
     if (!isProp && isProperty) {
-      errorReporter.report(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, result.sort(), arg));
+      errorReporter.report(new LevelMismatchError(LevelMismatchError.TargetKind.SIGMA_FIELD, sort.withInfLevel(), arg));
     }
     if (arg instanceof Concrete.TelescopeParameter) {
       List<? extends Referable> referableList = arg.getReferableList();
@@ -2791,8 +2784,8 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       TypecheckingResult result = checkExpr(expr.getFields().get(i), null);
       if (result == null) return null;
       fields.add(result.expression);
-      Sort sort = result.type.getSortOfType();
-      if (sort != null && sort.getPLevel().isInfinity()) {
+      Sort sort = result.type.getSortExpressionOfType().withInfLevel();
+      if (sort.getPLevel().isInfinity()) {
         errorReporter.report(new TypecheckingError("Types of the infinity level are not allowed", expr.getFields().get(i)));
         return null;
       }
@@ -3451,8 +3444,13 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
   @Override
   public TypecheckingResult visitUniverse(Concrete.UniverseExpression expr, Expression expectedType) {
-    if (expr.getKind() == ConcreteUniverseExpression.Kind.SORT && !expr.allowInf) {
-      errorReporter.report(new TypecheckingError("\\Sort is not allowed here", expr.getHLevel()));
+    if (expr.infIndex != null) {
+      SortExpression sort = new SortExpression.Var(expr.infIndex);
+      return checkResult(expectedType, new TypecheckingResult(new UniverseExpression(sort), new UniverseExpression(SortExpression.makeSucc(sort))), expr);
+    }
+
+    if (expr.getKind() == ConcreteUniverseExpression.Kind.SORT) {
+      errorReporter.report(new TypecheckingError("\\Sort is not allowed here", expr));
       return null;
     }
 
@@ -3465,13 +3463,9 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
     Level hLevel = expr.getHLevel() != null ? expr.getHLevel().accept(this, LevelVariable.HVAR) : null;
 
     if (pLevel == null) {
-      if (expr.allowInf) {
-        pLevel = Level.INFINITY;
-      }  else {
-        InferenceLevelVariable pl = new InferenceLevelVariable(LevelVariable.LvlType.PLVL, true, expr);
-        getEquations().addVariable(pl);
-        pLevel = new Level(pl);
-      }
+      InferenceLevelVariable pl = new InferenceLevelVariable(LevelVariable.LvlType.PLVL, true, expr);
+      getEquations().addVariable(pl);
+      pLevel = new Level(pl);
     }
 
     Sort sort;
@@ -4113,7 +4107,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
 
     Level actualLevel;
     {
-      Sort sort = resultType == null ? null : resultType.sort();
+      Sort sort = resultType == null ? null : resultType.sort().withInfLevel();
       actualLevel = sort != null ? sort.getHLevel() : Level.INFINITY;
     }
 

@@ -906,7 +906,8 @@ public class ElimTypechecking {
       }
 
       if (dataType != null && dataType.isSquashed() && myErrorReporter != null) {
-        if (myActualLevel != null && !Level.compare(myActualLevel, dataType.getSort().getHLevel().add(myActualLevelSub), CMP.LE, myEquations, getClause(conClause.index, someConPattern))) {
+        Sort dataSort = dataType.getSortExpression().withInfLevel();
+        if (myActualLevel != null && !Level.compare(myActualLevel, dataSort.getHLevel().add(myActualLevelSub), CMP.LE, myEquations, getClause(conClause.index, someConPattern))) {
           myErrorReporter.report(new SquashedDataError(dataType, getClause(conClause.index, someConPattern)));
         }
 
@@ -916,16 +917,16 @@ public class ElimTypechecking {
           if (type != null) {
             type = type.normalize(NormalizationMode.WHNF);
             if (type instanceof UniverseExpression universe && universe.getSortExpression() instanceof SortExpression.Const(Sort typeSort)) {
-              ok = Level.compare(typeSort.getHLevel(), dataType.getSort().getHLevel(), CMP.LE, myEquations, getClause(conClause.index, someConPattern));
+              ok = Level.compare(typeSort.getHLevel(), dataSort.getHLevel(), CMP.LE, myEquations, getClause(conClause.index, someConPattern));
             } else {
               InferenceLevelVariable pl = new InferenceLevelVariable(LevelVariable.LvlType.PLVL, false, getClause(conClause.index, someConPattern));
               myEquations.addVariable(pl);
-              ok = type.isLessOrEquals(new UniverseExpression(new Sort(new Level(pl), dataType.getSort().getHLevel())), myEquations, getClause(conClause.index, someConPattern));
+              ok = type.isLessOrEquals(new UniverseExpression(new Sort(new Level(pl), dataSort.getHLevel())), myEquations, getClause(conClause.index, someConPattern));
             }
           }
         }
         if (!ok) {
-          myErrorReporter.report(new TruncatedDataError(dataType, myExpectedType, getClause(conClause.index, someConPattern)));
+          myErrorReporter.report(new TruncatedDataError(dataType, dataSort, myExpectedType, getClause(conClause.index, someConPattern)));
           myOK = false;
         }
       }
