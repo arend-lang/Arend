@@ -8,7 +8,7 @@ import org.arend.util.StringFormat;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class BaseCallMatrix<T> {
+public class BaseCallMatrix<T> {
   enum R {
     Unknown(),
     Equal(),
@@ -48,10 +48,14 @@ public abstract class BaseCallMatrix<T> {
 
   private final int myWidth;
   private final int myHeight;
+  protected final T myDomain;
+  protected final T myCodomain;
 
-  BaseCallMatrix(int width, int height) {
+  BaseCallMatrix(int width, int height, T domain, T codomain) {
     myWidth = width;
     myHeight = height;
+    myDomain = domain;
+    myCodomain = codomain;
   }
 
   BaseCallMatrix(BaseCallMatrix<T> m1, BaseCallMatrix<T> m2) {
@@ -61,6 +65,8 @@ public abstract class BaseCallMatrix<T> {
     }
     myHeight = m1.myHeight;
     myWidth = m2.myWidth;
+    myDomain = m1.myDomain;
+    myCodomain = m2.myCodomain;
 
     for (Integer i : m1.matrixMap.keySet()) {
       HashMap<Integer, BaseCallMatrix.R> m1map = m1.matrixMap.get(i);
@@ -87,11 +93,17 @@ public abstract class BaseCallMatrix<T> {
     return myWidth;
   }
 
-  public abstract T getCodomain();
+  public T getCodomain() {
+    return myCodomain;
+  }
 
-  public abstract T getDomain();
+  public T getDomain() {
+    return myDomain;
+  }
 
-  public abstract int getCompositeLength();
+  public int getCompositeLength() {
+    return 1;
+  }
 
   void set(int i, int j, BaseCallMatrix.R v) {
     if (v != R.Unknown) {
@@ -231,4 +243,31 @@ public abstract class BaseCallMatrix<T> {
     }
     return result.toString();
   }
+
+  public boolean hasLessThanSomewhere() {
+    for (HashMap<Integer, BaseCallMatrix.R> map : matrixMap.values()) {
+      for (BaseCallMatrix.R r : map.values()) {
+        if (r == R.LessThan) return true;
+      }
+    }
+    return false;
+  }
+
+  public boolean hasLessThanOnDiagonal() {
+    for (int i = 0; i < myHeight; i++) {
+      if (getValue(i, i) == R.LessThan) return true;
+    }
+
+    return false;
+  }
+
+  public boolean isIdempotent() {
+    if (getDomain() != getCodomain()) return false;
+
+    BaseCallMatrix<T> square = new BaseCallMatrix<T>(this, this);
+
+    return square.compare(this) == R.Equal;
+  }
+
+
 }

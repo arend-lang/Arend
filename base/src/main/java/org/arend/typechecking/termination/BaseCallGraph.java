@@ -4,9 +4,10 @@ import org.arend.ext.util.Pair;
 
 import java.util.*;
 
-public class BaseCallGraph<T extends Object> {
+public class BaseCallGraph<T> {
   private final HashMap<T, HashMap<T, HashSet<BaseCallMatrix<T>>>> myGraph = new HashMap<>();
   public final Set<T> myErrorInfo = new HashSet<>();
+  public final int CUTOFF_COUNT = 100;
 
   public BaseCallGraph() {
   }
@@ -176,6 +177,14 @@ public class BaseCallGraph<T extends Object> {
   }
 
   public Pair<Boolean, BaseCallGraph<T>> checkTermination() {
+    if (myGraph.size() == 1) {
+      // attempt less computationally involving criterion of recursive behavior (no need for graph completion)
+      T v = myGraph.keySet().iterator().next();
+      RecursiveBehaviors<T> rbs = new RecursiveBehaviors<>(myGraph, v);
+      List<String> order = rbs.findTerminationOrderAnnotated();
+      if (order != null) return new Pair<>(true, this);
+    }
+
     BaseCallGraph<T> completedGraph = getCompletedGraph();
     Set<T> failingVertices = completedGraph.getFailingVertices();
 
@@ -186,25 +195,34 @@ public class BaseCallGraph<T extends Object> {
   }
 
   public Set<T> getFailingVertices() {
-    Set<T> result = new HashSet<>();
+    Set<T> result = new HashSet<>(verticesWithTooManyLoops());
+    if (!result.isEmpty()) return result;
 
     for (T v : myGraph.keySet()) {
-      HashSet<BaseCallMatrix<T>> self = myGraph.get(v).get(v);
-      if (self != null) {
-        for (BaseCallMatrix<T> m : self) {
-          boolean containsStrict = false;
-          for (int i = 0; i < Math.min(m.getHeight(), m.getWidth()); i++) {
-            if (m.getValue(i, i) == BaseCallMatrix.R.LessThan) {
-              containsStrict = true;
-              break;
-            }
-          }
-
-          if (!containsStrict) result.add(v);
-        }
+      HashMap<T, HashSet<BaseCallMatrix<T>>> map = myGraph.get(v);
+      if (map == null) continue;
+      HashSet<BaseCallMatrix<T>> loops = map.get(v);
+      if (loops == null) continue;
+      for (BaseCallMatrix<T> loop : loops)
+        if (!loop.hasLessThanSomewhere() || (loop.isIdempotent()) && !loop.hasLessThanOnDiagonal()) {
+        result.add(v);
+        break;
       }
     }
 
+    return result;
+  }
+
+  public Set<T> verticesWithTooManyLoops() {
+    Set<T> result = new HashSet<>();
+    for (T v : myGraph.keySet()) {
+      HashMap<T, HashSet<BaseCallMatrix<T>>> map = myGraph.get(v);
+      if (map != null) {
+        HashSet<BaseCallMatrix<T>> loops = map.get(v);
+        if (loops != null && loops.size() > CUTOFF_COUNT)
+          result.add(v);
+      }
+    }
     return result;
   }
 

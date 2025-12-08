@@ -5,14 +5,10 @@ import org.arend.ext.prettyprinting.doc.Doc;
 import org.arend.ext.prettyprinting.doc.DocFactory;
 
 class TestCallMatrix extends BaseCallMatrix<TestVertex> {
-  private final TestVertex myDomain;
-  private final TestVertex myCodomain;
   private final String myLabel;
 
   TestCallMatrix(String label, TestVertex dom, TestVertex codom, Object... data) {
-    super(codom.myArguments.length, dom.myArguments.length);
-    myCodomain = codom;
-    myDomain = dom;
+    super(codom.myArguments.length, dom.myArguments.length, dom, codom);
     myLabel = label;
     int pos = 0;
     int i = 0;
@@ -42,21 +38,6 @@ class TestCallMatrix extends BaseCallMatrix<TestVertex> {
         throw new IllegalArgumentException("There is a problem with argument #" + pos);
       }
     }
-  }
-
-  @Override
-  public TestVertex getCodomain() {
-    return myCodomain;
-  }
-
-  @Override
-  public TestVertex getDomain() {
-    return myDomain;
-  }
-
-  @Override
-  public int getCompositeLength() {
-    return 1;
   }
 
   @Override

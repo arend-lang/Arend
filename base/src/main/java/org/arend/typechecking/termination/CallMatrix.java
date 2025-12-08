@@ -24,7 +24,7 @@ public class CallMatrix extends BaseCallMatrix<Definition> {
   private final IndexData myDomainIndexData;
 
   CallMatrix(Definition enclosingDefinition, DefCallExpression call, IndexData callIndexData, IndexData enclosingDefinitionIndexData) {
-    super(callIndexData.getDimension(), enclosingDefinitionIndexData.getDimension());
+    super(callIndexData.getDimension(), enclosingDefinitionIndexData.getDimension(), enclosingDefinition, call.getDefinition());
     myCallExpression = call;
     myEnclosingDefinition = enclosingDefinition;
     myCodomainIndexData = callIndexData;
@@ -40,22 +40,7 @@ public class CallMatrix extends BaseCallMatrix<Definition> {
   }
 
   @Override
-  public Definition getCodomain() {
-    return myCallExpression.getDefinition();
-  }
-
-  @Override
-  public Definition getDomain() {
-    return myEnclosingDefinition;
-  }
-
-  @Override
-  public int getCompositeLength() {
-    return 1;
-  }
-
-  @Override
-  public Doc getMatrixLabel(PrettyPrinterConfig ppConfig) { //Caution: printing matrix label of a call of a nonterminating function may lead to stack overflow
+  public Doc getMatrixLabel(PrettyPrinterConfig ppConfig) { //Caution: printing matrix label for a call of nonterminating function may lead to stack overflow
     return hang(hList(refDoc(myEnclosingDefinition.getReferable()), text(" ->")), termDoc(myCallExpression, ppConfig));
   }
 

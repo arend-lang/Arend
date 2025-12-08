@@ -94,7 +94,7 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
   public void test38_2() {
     typeCheckModule(list + "\\func zip-bad {A : \\Type0} (l1 l2 : List A) : List A \\elim l1\n" +
       "| nil => l2\n" +
-      "| :-: x xs => x :-: zip-bad l2 xs", 1);
+      "| :-: x xs => x :-: zip-bad l2 xs", 0);
   }
 
   @Test
@@ -396,6 +396,15 @@ public class TerminationCheckTest extends TypeCheckingTestCase {
         | zero => zero
         | suc x1 => bad_rec x2 x1 x3 x4 x5 x6 x7 x8 x9 x10 Nat.+ bad_rec x10 x1 x2 x3 x4 x5 x6 x7 x8 x9
       """, 1);
+  }
+
+  @Test
+  public void factorialTest2() {
+    typeCheckModule("""
+      \\func bad_rec (x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 : Nat) : Nat \\elim x1
+        | zero => zero
+        | suc x1 => bad_rec x1 x3 x2 x4 x5 x6 x7 x8 x9 x10 Nat.+ bad_rec x1 x10 x2 x3 x4 x5 x6 x7 x8 x9
+      """, 0);
   }
 
   @Test
