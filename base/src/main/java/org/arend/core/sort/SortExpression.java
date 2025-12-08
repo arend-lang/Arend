@@ -4,6 +4,7 @@ import org.arend.core.expr.Expression;
 import org.arend.core.expr.PiExpression;
 import org.arend.core.expr.UniverseExpression;
 import org.arend.ext.core.level.LevelSubstitution;
+import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.core.sort.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -65,7 +66,20 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
     @Override
     public @NotNull SortExpression subst(boolean isType, @NotNull List<? extends Expression> arguments, @NotNull LevelSubstitution substitution) {
       if (index >= arguments.size()) return this;
-      SortExpression result = isType ? (arguments.get(index) instanceof UniverseExpression universe ? universe.getSortExpression() : null) : arguments.get(index) != null ? arguments.get(index).getSortExpressionOfType() : null;
+
+      SortExpression result;
+      if (isType) {
+        result = arguments.get(index) instanceof UniverseExpression universe ? universe.getSortExpression() : null;
+      } else {
+        Expression type = arguments.get(index);
+        if (type == null) return this;
+        type = type.normalize(NormalizationMode.WHNF);
+        while (type instanceof PiExpression piExpr) {
+          type = piExpr.getCodomain().normalize(NormalizationMode.WHNF);
+        }
+        result = type.getSortExpressionOfType();
+      }
+
       return result == null ? this : result;
     }
 
