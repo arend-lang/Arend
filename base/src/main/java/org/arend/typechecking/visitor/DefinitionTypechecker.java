@@ -1086,9 +1086,11 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         ? new TypeExpression(new ErrorExpression(), new SortExpression.Const(Sort.PROP))
         : def.getBody() instanceof Concrete.CoelimFunctionBody && !def.isRecursive()
           ? null // The result type will be typechecked together with all field implementations during body typechecking.
-          : checkResultTypeLater(def)
-            ? typechecker.checkType(cResultType, UniverseExpression.OMEGA)
-            : typechecker.finalCheckType(cResultType, UniverseExpression.OMEGA, kind == FunctionKind.LEMMA && def.getResultTypeLevel() == null);
+          : def.getBody() instanceof Concrete.TermFunctionBody && cResultType instanceof Concrete.UniverseExpression universe && universe.getKind() == ConcreteUniverseExpression.Kind.SORT
+            ? new TypeExpression(UniverseExpression.OMEGA, new SortExpression.Const(Sort.INFINITY))
+            : checkResultTypeLater(def)
+              ? typechecker.checkType(cResultType, UniverseExpression.OMEGA)
+              : typechecker.finalCheckType(cResultType, UniverseExpression.OMEGA, kind == FunctionKind.LEMMA && def.getResultTypeLevel() == null);
       if (expectedTypeResult != null) {
         expectedType = expectedTypeResult.expression();
       }

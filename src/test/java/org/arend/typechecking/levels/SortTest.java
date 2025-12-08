@@ -74,4 +74,30 @@ public class SortTest extends TypeCheckingTestCase {
       \\func test => D
       """, 1);
   }
+
+  @Test
+  public void functionTest() {
+    typeCheckModule("""
+      \\data D (A : \\Sort) (a a' : A) | con A
+      \\func fun (A : \\Sort) (a : A) => D A a a
+      \\func test => fun Nat 7
+      """);
+    checkLevelParameters("D", "fun", "test");
+    assertEquals(UniverseExpression.OMEGA, ((FunctionDefinition) getDefinition("fun")).getResultType());
+    assertEquals(new UniverseExpression(Sort.SET0), ((FunctionDefinition) getDefinition("test")).getResultType());
+  }
+
+  @Test
+  public void functionTest2() {
+    typeCheckModule("\\func test (A : \\Sort) (n : Nat) : \\Sort => A");
+  }
+
+  @Test
+  public void functionTest3() {
+    typeCheckModule("""
+      \\func test (A : \\Sort) (n : Nat) : \\Sort \\elim n
+        | 0 => A
+        | suc _ => A
+      """, 1);
+  }
 }
