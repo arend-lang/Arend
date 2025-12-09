@@ -1691,28 +1691,10 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
   @Override
   public Boolean visitUniverse(UniverseExpression expr1, Expression expr2, Expression type) {
     UniverseExpression universe2 = expr2.cast(UniverseExpression.class);
-    if (universe2 == null) {
+    if (universe2 == null || !SortExpression.compare(expr1.getSortExpression().simplify(), universe2.getSortExpression().simplify(), myCMP, myNormalCompare ? myEquations : DummyEquations.getInstance(), mySourceNode)) {
       initResult(expr1, expr2);
       return false;
     }
-
-    SortExpression sortExpr1 = expr1.getSortExpression().simplify();
-    SortExpression sortExpr2 = universe2.getSortExpression().simplify();
-    if (sortExpr1 instanceof SortExpression.Const(Sort sort1) && (myCMP == CMP.LE && sort1.isProp() || myCMP == CMP.GE && sort1.isOmega()) || sortExpr2 instanceof SortExpression.Const(Sort sort2) && (myCMP == CMP.LE && sort2.isOmega() || myCMP == CMP.GE && sort2.isProp())) {
-      return true;
-    }
-
-    boolean ok;
-    if (sortExpr1 instanceof SortExpression.Const(Sort sort1) && sortExpr2 instanceof SortExpression.Const(Sort sort2)) {
-      ok = Sort.compare(sort1, sort2, myCMP, myNormalCompare ? myEquations : DummyEquations.getInstance(), mySourceNode);
-    } else {
-      ok = myEquations.addEquation(sortExpr1, sortExpr2, myCMP, mySourceNode);
-    }
-    if (!ok) {
-      initResult(expr1, expr2);
-      return false;
-    }
-
     return true;
   }
 

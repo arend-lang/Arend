@@ -503,7 +503,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         if (refExpr.getReferent() == Prelude.ZERO.getRef()) {
           result = new TypecheckingResult(new SmallIntegerExpression(0), Fin(Suc(argResult.expression)));
           if (expr.getArguments().size() > 1) {
-            myVisitor.getErrorReporter().report(new NotPiType(myVisitor.getExpressionPrettifier(), argResult.expression, result.getType(), fun));
+            myVisitor.getErrorReporter().report(new NotPiType(myVisitor.getExpressionPrettifier(), argResult.expression, result.getType(myVisitor.getEquations()), fun));
             return null;
           }
           return result;
@@ -521,7 +521,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
 
         result = new TypecheckingResult(Suc(arg2Result.expression), Fin(Suc(argResult.expression)));
         if (expr.getArguments().size() > 2) {
-          myVisitor.getErrorReporter().report(new NotPiType(myVisitor.getExpressionPrettifier(), arg2Result.expression, result.getType(), fun));
+          myVisitor.getErrorReporter().report(new NotPiType(myVisitor.getExpressionPrettifier(), arg2Result.expression, result.getType(myVisitor.getEquations()), fun));
           return null;
         }
         return result;
@@ -586,7 +586,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
           }
 
           if (!args1.isEmpty()) {
-            result = defCallResult.applyExpressions(args1);
+            result = defCallResult.applyExpressions(args1, myVisitor.getEquations());
           }
         }
       }
@@ -630,7 +630,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         if (i == -1) {
           Expression expectedType1 = dropPiParameters(definition, arguments, expectedType);
           if (expectedType1 != null) {
-            new CompareVisitor(myVisitor.getEquations(), CMP.LE, expr).compare(result.getType(), expectedType1, UniverseExpression.OMEGA, false);
+            new CompareVisitor(myVisitor.getEquations(), CMP.LE, expr).compare(result.getType(myVisitor.getEquations()), expectedType1, UniverseExpression.OMEGA, false);
           }
           continue;
         }
@@ -715,7 +715,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
           return result;
         }
 
-        Pair<Expression, Integer> pair = normalizePi(arguments, i, result.getType());
+        Pair<Expression, Integer> pair = normalizePi(arguments, i, result.getType(myVisitor.getEquations()));
         ((TypecheckingResult) result).type = pair.proj1;
 
         for (; i < pair.proj2; i++) {
@@ -728,7 +728,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         }
         if (i < arguments.size()) {
           result = fixImplicitArgs(result, result.getImplicitParameters(), fun, false, null);
-          Expression actualType = dropPiParameters(result.getType(), arguments, i);
+          Expression actualType = dropPiParameters(result.getType(myVisitor.getEquations()), arguments, i);
           if (actualType != null) {
             new CompareVisitor(myVisitor.getEquations(), CMP.LE, fun).compare(actualType, expectedType, UniverseExpression.OMEGA, false);
           }

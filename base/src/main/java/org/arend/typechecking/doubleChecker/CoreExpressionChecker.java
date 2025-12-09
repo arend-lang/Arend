@@ -239,17 +239,20 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
     Integer level = expr.getDefinition().getUseLevel(expr.getImplementedHere(), expr.getThisBinding(), true);
     if (level == null || level != -1) {
+      SortExpression exprSort = expr.getSortExpressionOfType();
+      if (level != null) {
+        exprSort = new SortExpression.Const(new Sort(exprSort.withInfLevel().getPLevel(), new Level(level)));
+      }
       for (ClassField field : expr.getDefinition().getNotImplementedFields()) {
         if (!expr.isImplementedHere(field)) {
-          Sort sort = expr.getDefinition().getFieldType(field, expr.getLevels(field.getParentClass()), thisExpr).normalize(NormalizationMode.WHNF).getSortOfType();
+          SortExpression sort = expr.getDefinition().getFieldType(field, expr.getLevels(field.getParentClass()), thisExpr).normalize(NormalizationMode.WHNF).getSortExpressionOfType();
           if (sort == null) {
             throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot infer the type of field '" + field.getName() + "'", mySourceNode), expr));
           }
           if (sort.isProp()) {
             continue;
           }
-          Sort exprSort = expr.getSortOfType();
-          if (!(Level.compare(sort.getPLevel(), exprSort.getPLevel(), CMP.LE, myEquations, mySourceNode) && (level != null && sort.getHLevel().isClosed() && sort.getHLevel().getConstant() <= level || Level.compare(sort.getHLevel(), exprSort.getHLevel(), CMP.LE, myEquations, mySourceNode)))) {
+          if (!SortExpression.compare(sort, exprSort, CMP.LE, myEquations, mySourceNode)) {
             throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("The sort " + sort + " of field '" + field.getName() + "' does not fit into the expected sort " + exprSort, mySourceNode), expr));
           }
         }

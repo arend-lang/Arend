@@ -6,8 +6,11 @@ import org.arend.core.expr.Expression;
 import org.arend.core.expr.PiExpression;
 import org.arend.core.expr.UniverseExpression;
 import org.arend.ext.core.level.LevelSubstitution;
+import org.arend.ext.core.ops.CMP;
 import org.arend.ext.core.ops.NormalizationMode;
 import org.arend.ext.core.sort.*;
+import org.arend.term.concrete.Concrete;
+import org.arend.typechecking.implicitargs.equations.Equations;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,6 +41,18 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
   default boolean isProp() {
     BigInteger level = getSortHLevel();
     return level != null && level.compareTo(BigInteger.ZERO) < 0;
+  }
+
+  static boolean compare(SortExpression sortExpr1, SortExpression sortExpr2, CMP cmp, Equations equations, Concrete.SourceNode sourceNode) {
+    if (sortExpr1 instanceof SortExpression.Const(Sort sort1) && (cmp == CMP.LE && sort1.isProp() || cmp == CMP.GE && sort1.isOmega()) || sortExpr2 instanceof SortExpression.Const(Sort sort2) && (cmp == CMP.LE && sort2.isOmega() || cmp == CMP.GE && sort2.isProp())) {
+      return true;
+    }
+
+    if (sortExpr1 instanceof SortExpression.Const(Sort sort1) && sortExpr2 instanceof SortExpression.Const(Sort sort2)) {
+      return Sort.compare(sort1, sort2, cmp, equations, sourceNode);
+    } else {
+      return equations.addEquation(sortExpr1, sortExpr2, cmp, sourceNode);
+    }
   }
 
   record Const(@NotNull Sort sort) implements SortExpression, ConstSortExpression {
