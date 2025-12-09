@@ -372,8 +372,9 @@ public class TwoStageEquations implements Equations {
   }
 
   @Override
-  public void addEquation(SortExpression sort1, SortExpression sort2, CMP cmp, Concrete.SourceNode sourceNode) {
+  public boolean addEquation(SortExpression sort1, SortExpression sort2, CMP cmp, Concrete.SourceNode sourceNode) {
     mySortExpressionEquations.add(new AbstractEquation<>(sort1, sort2, cmp, sourceNode));
+    return true;
   }
 
   @Override

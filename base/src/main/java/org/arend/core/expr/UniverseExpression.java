@@ -32,6 +32,12 @@ public class UniverseExpression extends Expression implements CoreUniverseExpres
     if (!substitution.isEmpty()) mySortExpression = mySortExpression.subst(substitution);
   }
 
+  public void fixVarSort() {
+    if (mySortExpression instanceof SortExpression.Var) {
+      mySortExpression = new SortExpression.Const(Sort.INFINITY);
+    }
+  }
+
   @NotNull
   @Override
   public SortExpression getSortExpression() {

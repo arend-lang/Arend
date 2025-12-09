@@ -1698,13 +1698,19 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
 
     SortExpression sortExpr1 = expr1.getSortExpression().simplify();
     SortExpression sortExpr2 = universe2.getSortExpression().simplify();
+    if (sortExpr1 instanceof SortExpression.Const(Sort sort1) && sort1.isProp() || sortExpr2 instanceof SortExpression.Const(Sort sort2) && sort2.isOmega()) {
+      return true;
+    }
+
+    boolean ok;
     if (sortExpr1 instanceof SortExpression.Const(Sort sort1) && sortExpr2 instanceof SortExpression.Const(Sort sort2)) {
-      if (!Sort.compare(sort1, sort2, myCMP, myNormalCompare ? myEquations : DummyEquations.getInstance(), mySourceNode)) {
-        initResult(expr1, expr2);
-        return false;
-      }
+      ok = Sort.compare(sort1, sort2, myCMP, myNormalCompare ? myEquations : DummyEquations.getInstance(), mySourceNode);
     } else {
-      myEquations.addEquation(sortExpr1, sortExpr2, myCMP, mySourceNode);
+      ok = myEquations.addEquation(sortExpr1, sortExpr2, myCMP, mySourceNode);
+    }
+    if (!ok) {
+      initResult(expr1, expr2);
+      return false;
     }
 
     return true;

@@ -21,7 +21,7 @@ public interface Equations {
   boolean solve(InferenceVariable var, Expression expr);
   void solveLowerBounds(InferenceVariable var);
   boolean addEquation(Level level1, Level level2, CMP cmp, Concrete.SourceNode sourceNode);
-  void addEquation(SortExpression sort1, SortExpression sort2, CMP cmp, Concrete.SourceNode sourceNode);
+  boolean addEquation(SortExpression sort1, SortExpression sort2, CMP cmp, Concrete.SourceNode sourceNode);
   boolean addVariable(InferenceLevelVariable var);
   void bindVariables(InferenceLevelVariable pVar, InferenceLevelVariable hVar);
   boolean remove(Equation equation);

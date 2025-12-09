@@ -8,10 +8,13 @@ import org.arend.core.definition.Definition;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.CompareVisitor;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.level.LevelSubstitution;
 import org.arend.ext.core.ops.CMP;
+import org.arend.ext.error.TypecheckingError;
+import org.arend.ext.util.StringUtils;
 import org.arend.prelude.Prelude;
 import org.arend.term.concrete.Concrete;
 import org.arend.typechecking.error.local.PathEndpointMismatchError;
@@ -67,7 +70,18 @@ public class DefCallResult implements TResult {
   @Override
   public TypecheckingResult toResult(CheckTypeVisitor typechecker) {
     if (myParameters.isEmpty()) {
-      return new TypecheckingResult(getCoreDefCall(), myResultType);
+      return new TypecheckingResult(getCoreDefCall(), getType());
+    }
+
+    {
+      int i = myArguments.size();
+      for (DependentLink parameter : myParameters) {
+        if (parameter.getType().isInfinityLevel()) {
+          typechecker.getErrorReporter().report(new TypecheckingError((parameter.getName() == null ? StringUtils.ordinal(i) + " parameter" : "Parameter '" + parameter.getName() + "'") + " must be specified explicitly", myDefCall));
+          return null;
+        }
+        i++;
+      }
     }
 
     List<SingleDependentLink> parameters = new ArrayList<>();
@@ -95,7 +109,7 @@ public class DefCallResult implements TResult {
     }
 
     Expression expression = getCoreDefCall();
-    Expression resultType = myResultType.subst(substitution, LevelSubstitution.EMPTY);
+    Expression resultType = myResultType instanceof UniverseExpression ? getType() : myResultType.subst(substitution, LevelSubstitution.EMPTY);
     if (parameters.isEmpty()) {
       return new TypecheckingResult(expression, resultType);
     }
@@ -120,7 +134,7 @@ public class DefCallResult implements TResult {
     subst.add(myParameters.getFirst(), expression);
     myParameters = DependentLink.Helper.subst(myParameters.subList(1, size), subst, LevelSubstitution.EMPTY);
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
-    return size > 1 ? this : new TypecheckingResult(getCoreDefCall(), myResultType);
+    return size > 1 ? this : new TypecheckingResult(getCoreDefCall(), getType());
   }
 
   public TResult applyExpressions(List<? extends Expression> expressions) {
@@ -135,7 +149,7 @@ public class DefCallResult implements TResult {
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
 
     assert expressions.size() <= size;
-    return expressions.size() < size ? this : new TypecheckingResult(getCoreDefCall(), myResultType);
+    return expressions.size() < size ? this : new TypecheckingResult(getCoreDefCall(), getType());
   }
 
   public TResult applyPathArgument(Expression argument, CheckTypeVisitor visitor, Concrete.SourceNode sourceNode) {
@@ -164,7 +178,7 @@ public class DefCallResult implements TResult {
 
     myParameters = Collections.emptyList();
     myResultType = myResultType.subst(subst, LevelSubstitution.EMPTY);
-    return new TypecheckingResult(getCoreDefCall(), myResultType);
+    return new TypecheckingResult(getCoreDefCall(), getType());
   }
 
   @Override
@@ -182,6 +196,9 @@ public class DefCallResult implements TResult {
 
   @Override
   public Expression getType() {
+    if (myResultType instanceof UniverseExpression universe && !(universe.getSortExpression() instanceof SortExpression.Const) && !myArguments.isEmpty()) {
+      return new UniverseExpression(universe.getSortExpression().subst(false, myArguments, LevelSubstitution.EMPTY));
+    }
     return myResultType;
   }
 

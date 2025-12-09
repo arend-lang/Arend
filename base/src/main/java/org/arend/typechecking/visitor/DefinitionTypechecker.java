@@ -620,6 +620,19 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     return new Pair<>(SortExpression.makeMax(sorts), resultType == null ? null : resultType.subst(substitution));
   }
 
+  private void fixParametersSorts(DependentLink param) {
+    for (; param.hasNext(); param = param.getNext()) {
+      param = param.getNextTyped(null);
+      Expression type = param.getType();
+      while (type instanceof PiExpression piExpr) {
+        type = piExpr.getCodomain();
+      }
+      if (type instanceof UniverseExpression universe) {
+        universe.fixVarSort();
+      }
+    }
+  }
+
   private List<Boolean> getStrictParameters(List<? extends Concrete.Parameter> parameters) {
     boolean hasStrict = false;
     for (Concrete.Parameter parameter : parameters) {
@@ -1095,6 +1108,8 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
         expectedType = expectedTypeResult.expression();
       }
     }
+
+    fixParametersSorts(typedDef.getParameters());
 
     if (pair != null && pair.proj2 != null && cResultType == null && implementedField != null) {
       expectedType = pair.proj2;
@@ -2099,6 +2114,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       arguments.set(arguments.size() - 1, new UniverseExpression(inferredSort.subst(true, arguments, LevelSubstitution.EMPTY)));
       inferredSort = inferredSort.subst(true, arguments, LevelSubstitution.EMPTY);
     }
+    fixParametersSorts(dataDefinition.getParameters());
 
     // Check truncatedness
     if (def.isTruncated()) {

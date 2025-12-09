@@ -45,8 +45,8 @@ public class LevelEquationsWrapper implements Equations {
   }
 
   @Override
-  public void addEquation(SortExpression sort1, SortExpression sort2, CMP cmp, Concrete.SourceNode sourceNode) {
-    myEquations.addEquation(sort1, sort2, cmp, sourceNode);
+  public boolean addEquation(SortExpression sort1, SortExpression sort2, CMP cmp, Concrete.SourceNode sourceNode) {
+    return myEquations.addEquation(sort1, sort2, cmp, sourceNode);
   }
 
   @Override
