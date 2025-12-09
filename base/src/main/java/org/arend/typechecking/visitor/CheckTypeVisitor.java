@@ -388,12 +388,12 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       if (equality != null) {
         CompareVisitor visitor = new CompareVisitor(myEquations, CMP.LE, expr);
         if (!idp.getLevels().compare(equality.getLevels(), CMP.LE, myEquations, expr)) {
-          Expression resultType = FunCallExpression.make(Prelude.PATH_INFIX, idp.getLevels(), Arrays.asList(idp.getDefCallArguments().get(0), idp.getDefCallArguments().get(1), idp.getDefCallArguments().get(1)));
+          Expression resultType = FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, Arrays.asList(idp.getDefCallArguments().get(0), idp.getDefCallArguments().get(1), idp.getDefCallArguments().get(1)));
           errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(resultType, equality, resultType, equality, idp.getLevels(), equality.getLevels()), expr));
           return null;
         }
         if (!visitor.compare(idp.getDefCallArguments().get(0), equality.getDefCallArguments().getFirst(), UniverseExpression.OMEGA, false)) {
-          Expression resultType = FunCallExpression.make(Prelude.PATH_INFIX, idp.getLevels(), Arrays.asList(idp.getDefCallArguments().get(0), idp.getDefCallArguments().get(1), idp.getDefCallArguments().get(1)));
+          Expression resultType = FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, Arrays.asList(idp.getDefCallArguments().get(0), idp.getDefCallArguments().get(1), idp.getDefCallArguments().get(1)));
           errorReporter.report(new TypeMismatchWithSubexprError(new CompareVisitor.Result(resultType, equality, idp.getDefCallArguments().get(0), equality.getDefCallArguments().getFirst(), null, null), expr));
           return null;
         }
@@ -1970,15 +1970,6 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       }
     } else if (expr.getPLevels() == null && expr.getHLevels() == null) {
       levels = isMin ? definition.makeMinLevels() : definition.generateInferVars(getEquations(), !withoutUniverses && (definition == myDefinition || definition.getUniverseKind() != UniverseKind.NO_UNIVERSES), expr);
-      if (definition == Prelude.PATH || definition == Prelude.PATH_INFIX) {
-        LevelPair levelPair = (LevelPair) levels;
-        InferenceLevelVariable pl = new InferenceLevelVariable(LevelVariable.LvlType.PLVL, definition.getUniverseKind() != UniverseKind.NO_UNIVERSES, expr);
-        myEquations.addVariable(pl);
-        myEquations.addEquation(new Level(levelPair.get(LevelVariable.PVAR).getSingleVar()), new Level(pl), CMP.LE, expr);
-        InferenceLevelVariable hVar = (InferenceLevelVariable) levelPair.get(LevelVariable.HVAR).getSingleVar();
-        getEquations().bindVariables(pl, hVar);
-        return DefCallResult.makePathType(expr, definition == Prelude.PATH_INFIX, levels, new Sort(new Level(pl), new Level(hVar, -1, -1)));
-      }
     } else {
       levels = typecheckLevels(definition, expr, null, isMin);
     }
@@ -3886,7 +3877,7 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
         }
 
         pathArgs.add(new ReferenceExpression(link));
-        expr = FunCallExpression.make(Prelude.PATH_INFIX, LevelPair.STD, pathArgs);
+        expr = FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, pathArgs);
         level++;
       }
 
@@ -4168,26 +4159,11 @@ public class CheckTypeVisitor extends UserDataHolderImpl implements ConcreteExpr
       return new TypecheckingResult(normExpr, result.type);
     }
 
-    Expression typeType = result.type.getType();
-    if (typeType == null) {
-      errorReporter.report(new TypecheckingError("Cannot infer the universe of the type of the expression", expr.getExpression()));
-      return null;
-    }
-
-    Sort sort;
-    typeType = typeType.normalize(NormalizationMode.WHNF);
-    if (typeType instanceof UniverseExpression universe && universe.getSortExpression() instanceof SortExpression.Const(Sort aSort)) {
-      sort = aSort;
-    } else {
-      sort = Sort.generateInferVars(myEquations, false, expr.getExpression());
-      myEquations.addEquation(typeType, new UniverseExpression(sort), UniverseExpression.OMEGA, CMP.LE, expr.getExpression(), typeType.getStuckInferenceVariable(), null);
-    }
-
     List<Expression> args = new ArrayList<>(3);
     args.add(result.type);
     args.add(result.expression);
     args.add(normExpr);
-    return checkResult(expectedType, new TypecheckingResult(pEvalResult, FunCallExpression.make(Prelude.PATH_INFIX, new LevelPair(sort.getPLevel(), sort.getHLevel()), args)), expr);
+    return checkResult(expectedType, new TypecheckingResult(pEvalResult, FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, args)), expr);
   }
 
   @Override

@@ -18,7 +18,6 @@ import org.arend.core.pattern.*;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.subst.ExprSubstitution;
-import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.ext.core.definition.CoreFunctionDefinition;
 import org.arend.ext.core.level.LevelSubstitution;
@@ -220,7 +219,6 @@ public class PatternTypechecking {
             intervalSubst.add(binding, new ReferenceExpression(link));
           }
 
-          LevelPair levels = new LevelPair(sort.getPLevel(), sort.getHLevel());
           exprType = expectedType.subst(intervalSubst);
           List<Expression> exprTypes = new ArrayList<>(intervalBindings.size());
           List<Expression> args = ExpressionPattern.toExpressions(result.patterns);
@@ -251,12 +249,12 @@ public class PatternTypechecking {
             }
 
             for (int j = intervalBindings.size() - 1, k = 0; j > i; j--, k++) {
-              leftArg = new PathExpression(levels, new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left())), new LamExpression(lamBindings.get(j), leftArg));
-              rightArg = new PathExpression(levels, new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right())), new LamExpression(lamBindings.get(j), rightArg));
+              leftArg = new PathExpression(new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Left())), new LamExpression(lamBindings.get(j), leftArg));
+              rightArg = new PathExpression(new LamExpression(lamBindings.get(j), exprTypes.get(k).subst(lamBindings.get(i), Right())), new LamExpression(lamBindings.get(j), rightArg));
             }
 
             intervalSubst.add(intervalBinding, new ReferenceExpression(lamBindings.get(i)));
-            exprType = DataCallExpression.make(Prelude.PATH, levels, Arrays.asList(new LamExpression(lamBindings.get(i), exprType), leftArg, rightArg));
+            exprType = DataCallExpression.make(Prelude.PATH, Levels.EMPTY, Arrays.asList(new LamExpression(lamBindings.get(i), exprType), leftArg, rightArg));
           }
         } else {
           intervalBindings = null;
@@ -643,20 +641,13 @@ public class PatternTypechecking {
               return null;
             }
 
+            levels = Levels.EMPTY;
             DataCallExpression dataCall = expr.cast(DataCallExpression.class);
             LamExpression typeLam = dataCall == null || dataCall.getDefinition() != Prelude.PATH ? null : dataCall.getDefCallArguments().getFirst().normalize(NormalizationMode.WHNF).cast(LamExpression.class);
             Expression type = ElimBindingVisitor.elimLamBinding(typeLam);
             if (type == null) {
               myErrorReporter.report(new TypeMismatchError(expr, constructor.getResultType().subst(substitution), conPattern));
               return null;
-            }
-
-            Sort actualSort = type.getSortOfType();
-            if (actualSort == null) {
-              Sort dataSort = dataCall.getSortOfType();
-              levels = new LevelPair(dataSort.getPLevel(), dataSort.getHLevel().add(1));
-            } else {
-              levels = new LevelPair(actualSort.getPLevel(), actualSort.getHLevel());
             }
 
             Expression expr1 = dataCall.getDefCallArguments().get(2).normalize(NormalizationMode.WHNF);

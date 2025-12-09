@@ -15,14 +15,14 @@
       | i, right => right
   }
 
-\data Path (A : I -> \Type) (a : A left) (a' : A right)
+\data Path (A : I -> \Sort) (a : A left) (a' : A right)
   | path (\Pi (i : I) -> A i)
 
-\func \infix 1 = {A : \Type} (a a' : A) => Path (\lam _ => A) a a'
+\func \infix 1 = {A : \Sort} (a a' : A) => Path (\lam _ => A) a a'
 
-\cons idp {A : \Type} {a : A} => path (\lam _ => a)
+\cons idp {A : \Sort} {a : A} => path (\lam _ => a)
 
-\func \infixl 9 @ {A : I -> \Type} {a : A left} {a' : A right} (p : Path A a a') (i : I) : A i \elim p, i
+\func \infixl 9 @ {A : I -> \Sort} {a : A left} {a' : A right} (p : Path A a a') (i : I) : A i \elim p, i
   | path f, i => f i
   | _, left => a
   | _, right => a'

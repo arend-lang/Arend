@@ -83,7 +83,6 @@ public class SortTest extends TypeCheckingTestCase {
       \\func test => fun Nat 7
       """);
     checkLevelParameters("D", "fun", "test");
-    assertEquals(UniverseExpression.OMEGA, ((FunctionDefinition) getDefinition("fun")).getResultType());
     assertEquals(new UniverseExpression(Sort.SET0), ((FunctionDefinition) getDefinition("test")).getResultType());
   }
 

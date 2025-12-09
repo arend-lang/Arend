@@ -5,13 +5,11 @@ import org.arend.core.definition.FunctionDefinition;
 import org.arend.core.definition.UniverseKind;
 import org.arend.core.expr.DataCallExpression;
 import org.arend.core.expr.ExpressionFactory;
-import org.arend.core.expr.PathExpression;
 import org.arend.core.expr.UniverseExpression;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.LevelPair;
-import org.arend.core.subst.Levels;
 import org.arend.ext.core.ops.CMP;
 import org.arend.typechecking.TypeCheckingTestCase;
 import org.arend.typechecking.doubleChecker.CoreExpressionChecker;
@@ -21,7 +19,6 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Objects;
 
 import static org.arend.Matchers.typeMismatchError;
 import static org.junit.Assert.assertEquals;
@@ -315,12 +312,6 @@ public class InferLevelTest extends TypeCheckingTestCase {
     typeCheckModule(
       "\\func F => \\Type\n" +
       "\\func f (d : F \\levels 1 0) : F \\levels 0 0 => d", 1);
-  }
-
-  @Test
-  public void funTest() {
-    Levels levels = ((PathExpression) Objects.requireNonNull(((FunctionDefinition) typeCheckDef("\\func pmap {A B : \\Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' => path (\\lam i => f (p @ i))")).getBody())).getLevels();
-    assertEquals(LevelPair.STD, levels);
   }
 
   @Test

@@ -166,7 +166,7 @@ public abstract class Definition extends UserDataHolderImpl implements CoreDefin
   }
 
   public Levels generateInferVars(Equations equations, Concrete.SourceNode sourceNode) {
-    return generateInferVars(equations, getUniverseKind() != UniverseKind.NO_UNIVERSES, sourceNode);
+    return generateInferVars(equations, getUniverseKind() == UniverseKind.WITH_UNIVERSES, sourceNode);
   }
 
   @NotNull

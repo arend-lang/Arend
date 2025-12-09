@@ -492,7 +492,7 @@ class ExpressionDeserialization {
   }
 
   private Expression readPath(ExpressionProtos.Expression.Path proto) throws DeserializationException {
-    return new PathExpression(new LevelPair(readLevel(proto.getPLevel(), LevelVariable.PVAR), readLevel(proto.getHLevel(), LevelVariable.HVAR)), proto.hasArgumentType() ? readExpr(proto.getArgumentType()) : null, readExpr(proto.getArgument()));
+    return new PathExpression(proto.hasArgumentType() ? readExpr(proto.getArgumentType()) : null, readExpr(proto.getArgument()));
   }
 
   private Expression readAt(ExpressionProtos.Expression.At proto) throws DeserializationException {

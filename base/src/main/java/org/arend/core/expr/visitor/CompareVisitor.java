@@ -1698,7 +1698,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
 
     SortExpression sortExpr1 = expr1.getSortExpression().simplify();
     SortExpression sortExpr2 = universe2.getSortExpression().simplify();
-    if (sortExpr1 instanceof SortExpression.Const(Sort sort1) && sort1.isProp() || sortExpr2 instanceof SortExpression.Const(Sort sort2) && sort2.isOmega()) {
+    if (sortExpr1 instanceof SortExpression.Const(Sort sort1) && (myCMP == CMP.LE && sort1.isProp() || myCMP == CMP.GE && sort1.isOmega()) || sortExpr2 instanceof SortExpression.Const(Sort sort2) && (myCMP == CMP.LE && sort2.isOmega() || myCMP == CMP.GE && sort2.isProp())) {
       return true;
     }
 
@@ -2317,8 +2317,8 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
       if (myResult == null) {
         initResult(expr, expr2);
       } else {
-        myResult.wholeExpr1 = new PathExpression(expr.getLevels(), expr.getArgumentType(), myResult.wholeExpr1);
-        myResult.wholeExpr2 = new PathExpression(pathExpr2.getLevels(), pathExpr2.getArgumentType(), myResult.wholeExpr2);
+        myResult.wholeExpr1 = new PathExpression(expr.getArgumentType(), myResult.wholeExpr1);
+        myResult.wholeExpr2 = new PathExpression(pathExpr2.getArgumentType(), myResult.wholeExpr2);
       }
       return false;
     }

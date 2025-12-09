@@ -1,6 +1,5 @@
 package org.arend.prelude;
 
-import org.arend.core.context.binding.LevelVariable;
 import org.arend.core.context.param.DependentLink;
 import org.arend.core.context.param.EmptyDependentLink;
 import org.arend.core.context.param.TypedDependentLink;
@@ -12,6 +11,7 @@ import org.arend.core.pattern.ConstructorExpressionPattern;
 import org.arend.core.pattern.ExpressionPattern;
 import org.arend.core.sort.Level;
 import org.arend.core.sort.Sort;
+import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.LevelPair;
 import org.arend.core.subst.Levels;
 import org.arend.error.DummyErrorReporter;
@@ -160,14 +160,13 @@ public class Prelude implements ArendPrelude {
       }
       case "Path" -> {
         PATH = (DataDefinition) definition;
-        PATH.setSort(new Sort(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR, -1)));
+        PATH.setSortExpression(new SortExpression.Prev(new SortExpression.Var(0)));
         PATH.setCovariant(1, false);
         PATH.setCovariant(2, false);
         PATH_CON = PATH.getConstructor("path");
       }
       case "=" -> {
         PATH_INFIX = (FunctionDefinition) definition;
-        PATH_INFIX.setResultType(new UniverseExpression(new Sort(new Level(LevelVariable.PVAR), new Level(LevelVariable.HVAR, -1))));
         DataCallExpression dataCall = (DataCallExpression) PATH_INFIX.getBody();
         assert dataCall != null;
         PATH_INFIX.setBody(DataCallExpression.make(dataCall.getDefinition(), dataCall.getLevels(), Arrays.asList(new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) dataCall.getDefCallArguments().get(0)).getBody()), dataCall.getDefCallArguments().get(1), dataCall.getDefCallArguments().get(2))));
@@ -177,12 +176,12 @@ public class Prelude implements ArendPrelude {
         List<Expression> args = new ArrayList<>(2);
         args.add(new ReferenceExpression(IDP.getParameters()));
         args.add(new ReferenceExpression(IDP.getParameters().getNext()));
-        IDP.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(IDP, LevelPair.STD, args), Collections.emptyList()));
+        IDP.setPattern(new ConstructorExpressionPattern(FunCallExpression.makeFunCall(IDP, Levels.EMPTY, args), Collections.emptyList()));
         IDP.setNumberOfParameters(2);
         IDP.setStatus(Definition.TypeCheckingStatus.NO_ERRORS);
         PathExpression pathExpr = (PathExpression) IDP.getBody();
         assert pathExpr != null;
-        IDP.setBody(new PathExpression(pathExpr.getLevels(), new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody())));
+        IDP.setBody(new PathExpression(new LamExpression(UnusedIntervalDependentLink.INSTANCE, args.getFirst()), new LamExpression(UnusedIntervalDependentLink.INSTANCE, ((LamExpression) pathExpr.getArgument()).getBody())));
       }
       case "@" -> {
         AT = (FunctionDefinition) definition;

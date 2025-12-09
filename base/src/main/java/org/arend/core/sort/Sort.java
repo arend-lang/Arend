@@ -107,7 +107,7 @@ public class Sort implements CoreSort {
 
   @Override
   public boolean isSet() {
-    return myHLevel.isClosed() && myHLevel.getConstant() == 0;
+    return myHLevel.isClosed() && !myHLevel.isInfinity() && myHLevel.getConstant() == 0;
   }
 
   public boolean isStd() {

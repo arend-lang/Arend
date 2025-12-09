@@ -170,7 +170,7 @@ public class StdImplicitArgsInference implements ImplicitArgsInference {
         SingleDependentLink lamParam = new TypedSingleDependentLink(true, "i", Interval());
         TypecheckingResult argResult;
         if (defCallResult.getArguments().isEmpty()) {
-          Expression binding = InferenceReferenceExpression.make(new FunctionInferenceVariable(Prelude.PATH_CON, Prelude.PATH_CON.getDataTypeParameters(), 1, new UniverseExpression(defCallResult.getLevels().toLevelPair().toSort()), fun, myVisitor.getAllBindings()), myVisitor.getEquations());
+          Expression binding = InferenceReferenceExpression.make(new FunctionInferenceVariable(Prelude.PATH_CON, Prelude.PATH_CON.getDataTypeParameters(), 1, UniverseExpression.OMEGA, fun, myVisitor.getAllBindings()), myVisitor.getEquations());
           result = result.applyExpression(new LamExpression(lamParam, binding), true, myVisitor, fun);
           argResult = myVisitor.checkArgument(arg, new PiExpression(lamParam, binding), result, null);
         } else {

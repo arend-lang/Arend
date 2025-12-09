@@ -1,5 +1,7 @@
 package org.arend.core.sort;
 
+import org.arend.core.context.binding.LevelVariable;
+import org.arend.core.context.binding.inference.InferenceLevelVariable;
 import org.arend.core.expr.Expression;
 import org.arend.core.expr.PiExpression;
 import org.arend.core.expr.UniverseExpression;
@@ -10,9 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public sealed interface SortExpression extends CoreSortExpression permits SortExpression.Const, SortExpression.Max, SortExpression.Succ, SortExpression.Pi, SortExpression.Prev, SortExpression.Var {
   @NotNull SortExpression subst(boolean isType, @NotNull List<? extends Expression> arguments, @NotNull LevelSubstitution substitution);
@@ -73,11 +73,11 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
       } else {
         Expression type = arguments.get(index);
         if (type == null) return this;
-        type = type.normalize(NormalizationMode.WHNF);
+        type = type.getType().normalize(NormalizationMode.WHNF);
         while (type instanceof PiExpression piExpr) {
           type = piExpr.getCodomain().normalize(NormalizationMode.WHNF);
         }
-        result = type.getSortExpressionOfType();
+        result = type.toSortExpression();
       }
 
       return result == null ? this : result;
@@ -166,7 +166,22 @@ public sealed interface SortExpression extends CoreSortExpression permits SortEx
   static @NotNull SortExpression makePrev(@NotNull SortExpression sort) {
     if (sort instanceof Const(Sort aSort)) {
       if (aSort.isProp() || aSort.isSet()) return new Const(Sort.PROP);
-      if (aSort.getHLevel().isClosed()) return new Const(new Sort(aSort.getPLevel(), new Level(aSort.getHLevel().getConstant() - 1)));
+      Level hLevel = aSort.getHLevel();
+      if (hLevel.isInfinity()) return sort;
+      if (hLevel.isClosed()) return new Const(new Sort(aSort.getPLevel(), new Level(hLevel.getConstant() - 1)));
+
+      Map<LevelVariable, Integer> newVars = new HashMap<>();
+      for (Map.Entry<LevelVariable, Integer> entry : hLevel.getVarPairs()) {
+        if (entry.getValue() > 0) {
+          newVars.put(entry.getKey(), entry.getValue() - 1);
+        } else if (!(entry.getKey() instanceof InferenceLevelVariable)) {
+          newVars.put(entry.getKey(), entry.getValue());
+        } else {
+          return new Prev(sort);
+        }
+      }
+
+      return new Const(new Sort(aSort.getPLevel(), new Level(newVars, hLevel.getConstant() >= 0 ? hLevel.getConstant() - 1 : -1)));
     }
     return new Prev(sort);
   }

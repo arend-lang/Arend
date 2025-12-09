@@ -7,7 +7,6 @@ import org.arend.core.definition.CallableDefinition;
 import org.arend.core.definition.Definition;
 import org.arend.core.expr.*;
 import org.arend.core.expr.visitor.CompareVisitor;
-import org.arend.core.sort.Sort;
 import org.arend.core.sort.SortExpression;
 import org.arend.core.subst.ExprSubstitution;
 import org.arend.core.subst.Levels;
@@ -52,16 +51,9 @@ public class DefCallResult implements TResult {
     }
   }
 
-  public static TResult makePathType(Concrete.ReferenceExpression defCall, boolean isInfix, Levels levels, Sort resultSort) {
-    CallableDefinition definition = isInfix ? Prelude.PATH_INFIX : Prelude.PATH;
-    List<DependentLink> parameters = new ArrayList<>();
-    definition.getTypeWithParams(parameters, levels);
-    return new DefCallResult(defCall, definition, levels, new ArrayList<>(), parameters, new UniverseExpression(resultSort));
-  }
-
   private Expression getCoreDefCall() {
     return myDefinition == Prelude.PATH_CON
-      ? new PathExpression(myLevels.toLevelPair(), myArguments.get(0), myArguments.get(1))
+      ? new PathExpression(myArguments.get(0), myArguments.get(1))
       : myDefinition == Prelude.AT
         ? AtExpression.make(myArguments.get(3), myArguments.get(4), true)
         : myDefinition.getDefCall(myLevels, myArguments);

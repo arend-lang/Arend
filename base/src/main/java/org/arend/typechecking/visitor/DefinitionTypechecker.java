@@ -372,20 +372,17 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
   private Integer typecheckResultTypeLevel(Concrete.Expression resultTypeLevel, LevelMismatchError.TargetKind kind, Expression resultType, FunctionDefinition funDef, ClassField classField, boolean isOverridden) {
     if (resultTypeLevel == null) return null;
     if (kind != null) {
-      Sort sort = resultType.getSortOfType();
-      if (sort != null) {
-        TypedSingleDependentLink y = new TypedSingleDependentLink(true, "y", resultType);
-        UntypedSingleDependentLink x = new UntypedSingleDependentLink("x", y);
-        TypecheckingResult result = typechecker.finalCheckExpr(resultTypeLevel, new PiExpression(x, FunCallExpression.make(Prelude.PATH_INFIX, new LevelPair(sort.getPLevel(), sort.getHLevel()), Arrays.asList(resultType, new ReferenceExpression(x), new ReferenceExpression(y)))));
-        if (result == null) return null;
-        if (funDef != null) {
-          funDef.setResultTypeLevel(result.expression);
-        }
-        if (!isOverridden && classField != null) {
-          classField.setTypeLevel(result.expression, -1);
-        }
-        return -1;
+      TypedSingleDependentLink y = new TypedSingleDependentLink(true, "y", resultType);
+      UntypedSingleDependentLink x = new UntypedSingleDependentLink("x", y);
+      TypecheckingResult result = typechecker.finalCheckExpr(resultTypeLevel, new PiExpression(x, FunCallExpression.make(Prelude.PATH_INFIX, Levels.EMPTY, Arrays.asList(resultType, new ReferenceExpression(x), new ReferenceExpression(y)))));
+      if (result == null) return null;
+      if (funDef != null) {
+        funDef.setResultTypeLevel(result.expression);
       }
+      if (!isOverridden && classField != null) {
+        classField.setTypeLevel(result.expression, -1);
+      }
+      return -1;
     }
     return checkResultTypeLevel(typechecker.finalCheckExpr(resultTypeLevel, null), kind, resultType, funDef, classField, isOverridden, resultTypeLevel);
   }
@@ -1109,8 +1106,6 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
       }
     }
 
-    fixParametersSorts(typedDef.getParameters());
-
     if (pair != null && pair.proj2 != null && cResultType == null && implementedField != null) {
       expectedType = pair.proj2;
       if (expectedType.findBinding(implementedField.getType().getParameters())) {
@@ -1369,10 +1364,10 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
 
     if ((def.getKind() == FunctionKind.LEMMA || def.getKind() == FunctionKind.AXIOM) && resultTypeLevel == null && !type.isError()) {
       LevelMismatchError.TargetKind targetKind = def.getKind() == FunctionKind.LEMMA ? LevelMismatchError.TargetKind.LEMMA : LevelMismatchError.TargetKind.AXIOM;
-      Sort sort = type.getSortOfType();
+      SortExpression sort = type.getSortExpressionOfType();
       if (sort == null || !sort.isProp()) {
         DefCallExpression defCall = type.cast(DefCallExpression.class);
-        if (!checkLevel(targetKind, defCall == null ? null : defCall.getUseLevel(), sort, def)) {
+        if (!checkLevel(targetKind, defCall == null ? null : defCall.getUseLevel(), sort == null ? null : sort.withInfLevel(), def)) {
           typedDef.setKind(CoreFunctionDefinition.Kind.SFUNC);
         }
       }
@@ -1594,6 +1589,8 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
     } else {
       throw new IllegalStateException();
     }
+
+    fixParametersSorts(typedDef.getParameters());
 
     if (typedDef.getKind() == CoreFunctionDefinition.Kind.SFUNC && typedDef.getActualBody() instanceof IntervalElim) {
       errorReporter.report(new TypecheckingError("\\sfunc cannot be defined by pattern matching on the interval", def));
@@ -2186,7 +2183,7 @@ public class DefinitionTypechecker extends BaseDefinitionTypechecker implements 
           args.add(new LamExpression(lam.getParameters(), newType));
           args.add(pathArgs.get(1));
           args.add(pathArgs.get(2));
-          return DataCallExpression.make(Prelude.PATH, ((DataCallExpression) type).getLevels(), args);
+          return DataCallExpression.make(Prelude.PATH, Levels.EMPTY, args);
         }
       } else {
         type = null;

@@ -109,7 +109,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
       if (!DefinitionTypechecker.isBoxed(definition)) {
         DefCallExpression resultDefCall = definition.getResultType().cast(DefCallExpression.class);
         if (resultDefCall == null || !Objects.equals(resultDefCall.getUseLevel(), -1)) {
-          Sort sort = typeType == null ? definition.getResultType().getSortOfType() : typeType.toSort();
+          SortExpression sort = typeType == null ? definition.getResultType().getSortExpressionOfType() : typeType.toSortExpression();
           if (sort == null) {
             errorReporter.report(CoreErrorWrapper.make(new TypecheckingError("Cannot infer the sort of the type", null), definition.getResultType()));
             return false;
@@ -132,10 +132,20 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     }
 
     if (body instanceof Expression) {
+      Expression resultType = definition.getResultType();
+      if (resultType instanceof UniverseExpression universe && !(universe.getSortExpression() instanceof SortExpression.Const)) {
+        for (DependentLink param = definition.getParameters(); param.hasNext(); param = param.getNext()) {
+          param = param.getNextTyped(null);
+          if (param.getType().isInfinityLevel()) {
+            resultType = UniverseExpression.OMEGA;
+            break;
+          }
+        }
+      }
       if (body instanceof CaseExpression) {
-        myChecker.checkCase((CaseExpression) body, definition.getResultType(), level);
+        myChecker.checkCase((CaseExpression) body, resultType, level);
       } else {
-        ((Expression) body).accept(myChecker, checkType ? definition.getResultType() : null);
+        ((Expression) body).accept(myChecker, checkType ? resultType : null);
       }
       return true;
     }
