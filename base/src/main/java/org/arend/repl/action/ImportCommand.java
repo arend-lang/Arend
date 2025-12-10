@@ -23,7 +23,7 @@ public class ImportCommand implements ReplCommand {
   public void invoke(@NotNull String line, @NotNull Repl api, @NotNull Supplier<@NotNull String> scanner) throws QuitReplException {
     ModulePath modulePath = ModulePath.fromString(line);
     if (!api.getLoadedModules().contains(modulePath)) {
-      api.println("[INFO] The module `" + modulePath + "` is not loaded.");
+      api.eprintln("[ERROR] The module " + modulePath + " is not loaded.");
       return;
     }
     api.checkStatements("\\import " + modulePath);
