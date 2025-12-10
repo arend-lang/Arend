@@ -34,12 +34,10 @@ class ArendErrorTreeAutoScrollFromSource(private val project: Project, private v
     private var actionMap = HashMap<MessageType, MyAction>()
 
     fun setEnabled(types: EnumSet<MessageType>, enabled: Boolean) {
+        // Do not mutate template presentations directly (IDEA platform restriction).
+        // The enabled state is computed dynamically in MyAction.update() from settings.
+        // Trigger selection update when enabling relevant types to keep UI in sync.
         val filterSet = project.service<ArendProjectSettings>().autoScrollFromSource
-        for (type in types) {
-            if (!enabled || (!(type == MessageType.RESOLVING || type == MessageType.PARSING) || filterSet.contains(MessageType.SHORT))) {
-                actionMap[type]?.templatePresentation?.isEnabled = enabled
-            }
-        }
         if (enabled && filterSet.intersect(types).isNotEmpty()) {
             updateCurrentSelection()
         }
@@ -90,6 +88,15 @@ class ArendErrorTreeAutoScrollFromSource(private val project: Project, private v
 
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
+        override fun update(e: AnActionEvent) {
+            super.update(e)
+            val settings = project.service<ArendProjectSettings>()
+            val enabledByFilters = settings.messagesFilterSet.contains(type) &&
+                (!(type == MessageType.RESOLVING || type == MessageType.PARSING) ||
+                        (settings.autoScrollFromSource.contains(MessageType.SHORT) && settings.messagesFilterSet.contains(MessageType.SHORT)))
+            e.presentation.isEnabled = enabledByFilters
+        }
+
         override fun isSelected(e: AnActionEvent): Boolean {
             val settings = project.service<ArendProjectSettings>()
             return settings.autoScrollFromSource.contains(type) && settings.messagesFilterSet.contains(type) &&
@@ -105,11 +112,7 @@ class ArendErrorTreeAutoScrollFromSource(private val project: Project, private v
                 settings.autoScrollFromSource.remove(type)
             }
 
-            for (type in EnumSet.of(MessageType.RESOLVING, MessageType.PARSING)) {
-                if (!state || settings.messagesFilterSet.contains(type)) {
-                    actionMap[type]?.templatePresentation?.isEnabled = state
-                }
-            }
+            // Do not touch template presentations here; MyAction.update() handles enablement.
         }
     }
 
@@ -121,14 +124,6 @@ class ArendErrorTreeAutoScrollFromSource(private val project: Project, private v
             actionMap[type] = action
         }
 
-        val settings = project.service<ArendProjectSettings>()
-        for (type in MessageType.entries) {
-            val enabled = settings.messagesFilterSet.contains(type) &&
-                (!(type == MessageType.RESOLVING || type == MessageType.PARSING) ||
-                    settings.autoScrollFromSource.contains(MessageType.SHORT) && settings.messagesFilterSet.contains(MessageType.SHORT))
-            if (!enabled) {
-                actionMap[type]?.templatePresentation?.isEnabled = false
-            }
-        }
+        // Initial enablement will be handled dynamically in MyAction.update().
     }
 }
