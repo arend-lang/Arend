@@ -11,6 +11,7 @@ import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.*
@@ -38,38 +39,32 @@ import org.arend.util.allModules
 import org.arend.util.register
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.system.exitProcess
 
 const val HTML_EXTENSION = ".html"
 const val HTML_DIR_EXTENSION = "HTML"
 
 internal fun generateHtmlForArendLib(
-    pathToArendLib: String,
+    psiProject: Project,
     pathToArendLibInArendSite: String,
     versionArendLib: String?,
     updateColorScheme: Boolean,
     projectDir: String?
-) {
-    val projectManager = ProjectManager.getInstance()
-    val psiProject = projectManager.loadAndOpenProject(pathToArendLib) ?: run {
-        LOG.warn("Can't open arend-lib on this path=$pathToArendLib")
-        return
-    }
+): String? {
     try {
         val module = psiProject.allModules.getOrNull(0) ?: run {
             LOG.warn("Can't find the arend-lib module")
-            return
+            return null
         }
         module.register()
 
         val configService = ArendModuleConfigService.getInstance(module) ?: run {
             LOG.warn("Can't load information from the YAML file about arend-lib. You need to initialize arend-lib as an Arend module before starting html file generation")
-            return
+            return null
         }
 
         val version = versionArendLib ?: ("v" + (configService.version?.longString ?: run {
                 LOG.warn("The YAML file in arend-lib doesn't contain information about the library version. You need to pass the library version as an argument or write the library version to the yaml file")
-                return
+                return null
             }))
         val srcDir = configService.sourcesDir
 
@@ -90,9 +85,11 @@ internal fun generateHtmlForArendLib(
             writeText("")
         }
 
-        val indexFile = File(pathToArendLibInArendSite+ File.separator + "index.md")
-        indexFile.readLines().find { REGEX_AREND_LIB_VERSION.find(it)?.groupValues?.getOrNull(1) == version }
-            ?: indexFile.appendText("\n * $version: [Full index]($version/${AREND_DIR_HTML}Base.html)")
+        val indexFile = File(pathToArendLibInArendSite + File.separator + "index.md")
+        val lines = indexFile.readLines().toMutableList()
+        lines.removeIf { REGEX_AREND_LIB_VERSION.find(it)?.groupValues?.getOrNull(1) == version }
+        lines.add(" * $version: [Full index]($version/${AREND_DIR_HTML}Base.html), ")
+        indexFile.writeText(lines.joinToString("\n"))
 
         val psiManager = PsiManager.getInstance(psiProject)
 
@@ -157,12 +154,12 @@ internal fun generateHtmlForArendLib(
             }
         }
         arendBaseFile.delete()
+        return version
     } catch (e : Exception) {
         LOG.warn(e)
-    } finally {
-        projectManager.closeAndDispose(psiProject)
+        ProjectManager.getInstance().closeAndDispose(psiProject)
     }
-    exitProcess(0)
+    return null
 }
 
 private fun generateHtmlForArend(

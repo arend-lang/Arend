@@ -41,6 +41,8 @@ dependencies {
     implementation("com.fifesoft:rsyntaxtextarea:3.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.6.1")
     testImplementation("junit:junit:4.13.1")
+    implementation("org.apache.xmlgraphics:batik-svggen:1.19")
+    implementation("org.apache.xmlgraphics:batik-dom:1.19")
 
     intellijPlatform {
         create(IntelliJPlatformType.IntellijIdeaCommunity, "2025.2.1")
@@ -168,7 +170,7 @@ tasks.withType<Wrapper> {
     gradleVersion = "8.5"
 }
 
-tasks.register<RunIdeTask>("generateArendLibHtml") {
+tasks.register<RunIdeTask>("generateArendLib") {
     systemProperty("java.awt.headless", true)
     dependsOn(tasks.prepareSandbox)
 
@@ -177,12 +179,13 @@ tasks.register<RunIdeTask>("generateArendLibHtml") {
 
     splitMode.set(false)
     splitModeTarget.set(SplitModeAware.SplitModeTarget.BOTH)
-    args = listOf("generateArendLibHtml") +
+    args = listOf("generateArendLib") +
             (project.findProperty("pathToArendLib") as? String ?: "") +
             (project.findProperty("pathToArendLibInArendSite") as? String ?: "") +
             (project.findProperty("versionArendLib") as? String ?: "null") +
             (project.findProperty("updateColorScheme") as? String ?: "") +
-            layout.projectDirectory.asPath.toString()
+            layout.projectDirectory.asPath.toString() +
+            (project.findProperty("classes") as? String ?: "")
 }
 
 // Utils

@@ -295,7 +295,7 @@ class ArendLineMarkerProvider : LineMarkerProviderDescriptor() {
   }
 
   private fun getVertices(component: Set<Definition>): Set<GraphNode> {
-    return component.mapNotNull { (it.referable.data as? ArendDefFunction?)?.fullNameText }.map { GraphNode(it) }.toSet()
+    return component.mapNotNull { it.referable.data as? ArendDefFunction }.map { GraphNode(it.fullName.toString(), it.fullNameText) }.toSet()
   }
 
   private fun getNameDefinition(vertex: Definition): String? {

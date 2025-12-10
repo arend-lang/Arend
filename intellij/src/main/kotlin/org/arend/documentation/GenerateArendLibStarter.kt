@@ -2,11 +2,12 @@ package org.arend.documentation
 
 import com.intellij.openapi.application.ModernApplicationStarter
 import com.intellij.openapi.application.invokeLater
-import kotlin.system.exitProcess
+import com.intellij.openapi.project.ProjectManager
+import org.arend.graph.generateArendLibClassGraph
 
-class GenerateArendLibHtmlStarter : ModernApplicationStarter() {
+class GenerateArendLibStarter : ModernApplicationStarter() {
     override val commandName: String
-        get() = "generateArendLibHtml"
+        get() = "generateArendLib"
 
     override suspend fun start(args: List<String>) {
         val arguments = args.map { it.ifEmpty { null } }
@@ -24,9 +25,16 @@ class GenerateArendLibHtmlStarter : ModernApplicationStarter() {
         val updateColorScheme = arguments.getOrNull(4).toBoolean()
         val projectDir = arguments.getOrNull(5)
 
+        val projectManager = ProjectManager.getInstance()
+        val psiProject = projectManager.loadAndOpenProject(pathToArendLib) ?: run {
+            LOG.warn("Can't open arend-lib on this path=$pathToArendLib")
+            return
+        }
+        val classes = arguments.getOrNull(6)?.split(",") ?: emptyList()
+
         invokeLater {
-            generateHtmlForArendLib(pathToArendLib, pathToArendLibInArendSite, versionArendLib, updateColorScheme, projectDir)
-            exitProcess(0)
+            val version = generateHtmlForArendLib(psiProject, pathToArendLibInArendSite, versionArendLib, updateColorScheme, projectDir)
+            version?.let { generateArendLibClassGraph(psiProject, pathToArendLibInArendSite, classes, it) }
         }
     }
 }

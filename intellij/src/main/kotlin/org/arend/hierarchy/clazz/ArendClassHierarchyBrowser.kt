@@ -23,6 +23,7 @@ import org.arend.graph.GraphSimulator
 import org.arend.hierarchy.ArendHierarchyNodeDescriptor
 import org.arend.psi.ext.ArendDefClass
 import org.arend.psi.ext.ArendSuperClass
+import org.arend.psi.ext.fullName
 import org.arend.psi.ext.fullNameText
 import org.arend.search.ClassDescendantsSearch
 import org.arend.settings.ArendProjectSettings
@@ -170,49 +171,22 @@ class ArendClassHierarchyBrowser(project: Project, method: PsiElement) : TypeHie
     }
 
     inner class ArendHierarchyGraphAction : AnAction("Visualize as Orthogonal Diagram", "A hierarchical class graph", ArendIcons.ORTHOGONAL_GRAPH) {
-        private val usedNodes = mutableSetOf<ArendDefClass>()
-        private val edges = mutableSetOf<GraphEdge>()
-
-        private fun findEdges(currentNode: ArendDefClass, isSuperTypes: Boolean) {
-            usedNodes.add(currentNode)
-
-            val from = currentNode.fullNameText
-
-            val children = if (isSuperTypes) {
-                currentNode.superClassList.mapNotNull { getSuperDefClass(it) }
-            } else {
-                myProject.service<ClassDescendantsSearch>().search(currentNode)
-            }.mapNotNull { it as? ArendDefClass? }
-            for (child in children) {
-                val to = child.fullNameText
-                if (isSuperTypes) {
-                    edges.add(GraphEdge(to, from))
-                } else {
-                    edges.add(GraphEdge(from, to))
-                }
-
-                if (!usedNodes.contains(child)) {
-                    findEdges(child, isSuperTypes)
-                }
-            }
-        }
-
         override fun actionPerformed(e: AnActionEvent) {
-            usedNodes.clear()
-            edges.clear()
+            val usedNodes = mutableSetOf<ArendDefClass>()
+            val edges = mutableSetOf<GraphEdge>()
 
             val tree = getJTree(currentViewType) ?: return
             val root = ((tree.model.root as DefaultMutableTreeNode).userObject as ArendHierarchyNodeDescriptor).psiElement as ArendDefClass
 
-            findEdges(root, myProject.service<ArendProjectSettings>().data.hierarchyViewType == getSupertypesHierarchyType())
+            findClassNodesAndEdges(myProject, root, myProject.service<ArendProjectSettings>().data.hierarchyViewType == getSupertypesHierarchyType(), usedNodes, edges)
 
             myProject.service<GraphSimulator>().displayOrthogonal(
                 if (currentViewType == getSubtypesHierarchyType()) {
-                    "Subtypes_${root.fullNameText}"
+                    "Subtypes_${root.fullName}"
                 } else {
-                    "Supertypes_${root.fullNameText}"
+                    "Supertypes_${root.fullName}"
                 },
-                usedNodes.map { GraphNode(it.fullNameText) }.toSet(),
+                usedNodes.map { GraphNode(it.fullName.toString(), it.fullNameText) }.toSet(),
                 edges
             )
         }
@@ -221,6 +195,30 @@ class ArendClassHierarchyBrowser(project: Project, method: PsiElement) : TypeHie
     companion object {
         fun getSuperDefClass(superClass: ArendSuperClass): ArendDefClass? {
             return superClass.longName.refIdentifierList.lastOrNull()?.reference?.resolve() as? ArendDefClass
+        }
+
+        fun findClassNodesAndEdges(project: Project, currentNode: ArendDefClass, isSuperTypes: Boolean, usedNodes: MutableSet<ArendDefClass>, edges: MutableSet<GraphEdge>) {
+            usedNodes.add(currentNode)
+
+            val from = currentNode.fullName.toString()
+
+            val children = if (isSuperTypes) {
+                currentNode.superClassList.mapNotNull { getSuperDefClass(it) }
+            } else {
+                project.service<ClassDescendantsSearch>().search(currentNode)
+            }.mapNotNull { it as? ArendDefClass? }
+            for (child in children) {
+                val to = child.fullName.toString()
+                if (isSuperTypes) {
+                    edges.add(GraphEdge(to, from))
+                } else {
+                    edges.add(GraphEdge(from, to))
+                }
+
+                if (!usedNodes.contains(child)) {
+                    findClassNodesAndEdges(project, child, isSuperTypes, usedNodes, edges)
+                }
+            }
         }
     }
 }
