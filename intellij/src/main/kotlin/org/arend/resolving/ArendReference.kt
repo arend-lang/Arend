@@ -8,6 +8,7 @@ import com.intellij.psi.impl.source.PsiCodeFragmentImpl
 import org.arend.ArendIcons
 import org.arend.util.ArendFragmentUtils
 import org.arend.codeInsight.completion.ReplaceInsertHandler
+import org.arend.error.DummyErrorReporter
 import org.arend.ext.module.ModuleLocation
 import org.arend.naming.reference.*
 import org.arend.psi.*
@@ -16,6 +17,7 @@ import org.arend.refactoring.ArendNamesValidator
 import org.arend.server.ArendServerService
 import org.arend.term.abs.Abstract
 import org.arend.term.abs.AbstractReferable
+import org.arend.term.abs.ConcreteBuilder
 import org.arend.toolWindow.repl.ArendReplService
 import org.arend.util.FileUtils
 import org.arend.util.findLibrary
@@ -116,9 +118,11 @@ open class ArendReferenceImpl<T : ArendReferenceElement>(element: T) : ArendRefe
         }
         val server = element.project.service<ArendServerService>().server
 
-        val result = if (fragment is PsiCodeFragmentImpl) {
+        val result: List<Referable>? = if (fragment is PsiCodeFragmentImpl) {
             ArendFragmentUtils.getCompletionItems(element, fragment, server) ?: return emptyArray()
-        } else return emptyArray()
+        } else file?.project?.service<ArendServerService>()?.server?.getCompletionVariants(ConcreteBuilder.convertGroup(file, file.moduleLocation, DummyErrorReporter.INSTANCE), element)
+
+        if (result == null) return emptyArray()
 
         return result.mapNotNull { origElement -> createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false) }.toTypedArray()
     }
