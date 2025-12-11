@@ -1,0 +1,12 @@
+\import Algebra.Group
+\import Paths.Meta
+
+\instance PowerAbGroup (J : \Set)(A : AbGroup) : AbGroup (J -> A)
+  | zro _ => A.zro
+  | + f g j => f j A.+ g j
+  | zro-left => ext (\lam j => A.zro-left)
+  | zro-right => ext (\lam j => A.zro-right)
+  | +-assoc => ext (\lam j => A.+-assoc)
+  | negative f j => A.negative (f j)
+  | negative-left => ext (\lam j => A.negative-left)
+  | +-comm => ext (\lam j => A.+-comm)

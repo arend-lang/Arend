@@ -35,9 +35,9 @@
     | func-* => Func-o
   }
 
-\func Action<->Functor {C : Precat} {M : Monoid} : Equiv {MonoidCatAction M} {Functor (DeloopM M) C} \cowith
+\func action<->functor {C : Precat} {M : Monoid} : Equiv {MonoidCatAction M} {Functor (DeloopM M) C} \cowith
   | f (c : MonoidCatAction) => c.functor
   | ret => functor->action
-  | ret_f c => ext (idp, idp)
+  | ret_f _ => ext (idp, idp)
   | sec => functor->action
-  | f_sec f => idp
+  | f_sec _ => idp

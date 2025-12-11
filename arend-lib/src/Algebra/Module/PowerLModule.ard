@@ -9,17 +9,17 @@
 \instance PowerLModule {R : Ring} (J : \Set) (M : LModule R) : LModule R (J -> M)
   | zro _ => M.zro
   | + f g j => f j M.+ g j
-  | zro-left => ext (\lam j => M.zro-left)
-  | zro-right => ext (\lam j => M.zro-right)
-  | +-assoc => ext (\lam j => M.+-assoc)
+  | zro-left => ext (\lam _ => M.zro-left)
+  | zro-right => ext (\lam _ => M.zro-right)
+  | +-assoc => ext (\lam _ => M.+-assoc)
   | negative f j => M.negative (f j)
-  | negative-left => ext (\lam j => M.negative-left)
-  | +-comm => ext (\lam j => M.+-comm)
+  | negative-left => ext (\lam _ => M.negative-left)
+  | +-comm => ext (\lam _ => M.+-comm)
   | *c r f j => r *c f j
-  | *c-assoc => ext (\lam j => *c-assoc)
-  | *c-ldistr => ext (\lam j => *c-ldistr)
-  | *c-rdistr => ext (\lam j => *c-rdistr)
-  | ide_*c => ext (\lam j => ide_*c)
+  | *c-assoc => ext (\lam _ => *c-assoc)
+  | *c-ldistr => ext (\lam _ => *c-ldistr)
+  | *c-rdistr => ext (\lam _ => *c-rdistr)
+  | ide_*c => ext (\lam _ => ide_*c)
 
 \func FunctorPowerLMod {R : Ring} : Functor SetCat.op (LModuleCat R) \cowith
   | F I => PowerLModule I (RingLModule R)

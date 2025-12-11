@@ -17,7 +17,7 @@
 
 \func id-equivar {G : Group} (X : GroupAction G) : EquivariantMap G X X \cowith
   | func (x : X) => x
-  | func-** {x : X} {g : G} => idp
+  | func-** => idp
 
 \instance GSet (G : Group) : Cat (GroupAction G)
   | Hom A B => EquivariantMap G A B
@@ -32,5 +32,5 @@
   | id-left => idp
   | id-right => idp
   | o-assoc => idp
-  | univalence => sip \lam e _ => exts \lam g x => func-** {e}
+  | univalence => sip \lam e _ => exts \lam _ _ => func-** {e}
 

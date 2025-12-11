@@ -2,6 +2,8 @@
 \import Algebra.Group.GSet
 \import Algebra.Group.Representation.Category
 \import Algebra.Group.Representation
+\import Algebra.Group.Representation.Characters
+\import Algebra.Group.Representation.Irreducible
 \import Algebra.Group.Representation.Sub
 \import Algebra.Module
 \import Algebra.Module.ModuleCategory
@@ -28,26 +30,26 @@
 
   \func retracts (p : SplitMono {LModuleCat R} S.in) : SplitMono {RepresentationCat R G} {S} {E} S.in \cowith
     | hinv => mean_func p.hinv
-    | hinv_f => exts \lam e => rewrite (mean-func-preserve p-hinv-decypher e) idp
-    \where {
+    | hinv_f => exts \lam e => rewrite (meanFuncPreserve p-hinv-decypher e) idp
+    \where \protected{
       \lemma p-hinv-decypher (s : S) : p.hinv (S.in s) = s
         => path (\lam i => (p.hinv_f i) s)
     }
 
-  \lemma mean-func-preserve {f : LinearMap E S} (p : \Pi(s : S) -> f (S.in s) = s) (t : S)
+  \lemma meanFuncPreserve {f : LinearMap E S} (p : \Pi(s : S) -> f (S.in s) = s) (t : S)
     : mean_func f (S.in t) = t
-    => unfold (rewrite (SumOverGroup-multiply, inv $ LModule.*c-assoc {S.S}, R.*-comm, q, ide_*c) idp)
-    \where {
-      \func SumOverGroup-multiply : SumOverGroup f (S.in t) = R.natCoef G.finCard *c t
-              => rewrite (SumOverGroup_same-elements, SumOverGroup.FinSumEqual-multiply t) idp
+    => unfold (rewrite (SumOverGroupMultiply, inv $ LModule.*c-assoc {S.S}, R.*-comm, q, ide_*c) idp)
+    \where \protected{
+      \func SumOverGroupMultiply : SumOverGroup f (S.in t) = R.natCoef G.finCard *c t
+              => rewrite (SumOverGroupSameElements, SumOverGroup.FinSumEqual-multiply t) idp
       \where {
-        \lemma SumOverGroup_Sub : SumOverGroup f (S.in t) = AbMonoid.FinSum {S} (\lam (g : G) => g S.**'in f (inverse {G} g E.** S.in t))
+        \lemma SumOverGroupSub : SumOverGroup f (S.in t) = AbMonoid.FinSum {S} (\lam (g : G) => g S.**'in f (inverse {G} g E.** S.in t))
           => SumOverGroup.FinSumRewrite (\lam g => SumOverGroup.adjust g f) (in {S} t)
 
-        \lemma SumOverGroup_same-elements : SumOverGroup f (S.in t) = AbMonoid.FinSum {S} (\lam (_ : G) => t)
-          => rewrite (SumOverGroup_Sub, SumOverGroup.FinSumEquality (\lam (g : G) => SumOverGroup_subrepr-property g t)) idp
+        \lemma SumOverGroupSameElements : SumOverGroup f (S.in t) = AbMonoid.FinSum {S} (\lam (_ : G) => t)
+          => rewrite (SumOverGroupSub, SumOverGroup.FinSumEquality (\lam (g : G) => SumOverGroupSubReprProperty g t)) idp
 
-        \lemma SumOverGroup_subrepr-property (g : G) (t : S) : g S.**'in f (inverse g E.** S.in t) = t
+        \lemma SumOverGroupSubReprProperty (g : G) (t : S) : g S.**'in f (inverse g E.** S.in t) = t
           => rewrite (inv $ S.in.func-**, p (inverse g S.**'in t), **-assoc, G.inverse-right, id-action) idp
       }
     }
@@ -77,7 +79,7 @@ produces an interwining linear map $f'$ via the following formula
     \func group_prop (g h : G)(a : A) : adjust g f (h A.** a) = h B.** adjust (inverse h * g) f a
       => unfold (inv (rewrite (B.**-assoc, inv G.*-assoc, G.inverse-right, G.ide-left, G.inverse_*, G.inverse-isInv, A.**-assoc) idp))
 
-    \func FinSum-equivariance (h : G) {x : G -> B} : h B.** B.FinSum x = B.FinSum (\lam z => h B.** x z)
+    \func FinSumEquivariance (h : G) {x : G -> B} : h B.** B.FinSum x = B.FinSum (\lam z => h B.** x z)
       => \case B.FinSum_char x  \with {
         | inP p => rewrite (p.2, B.FinSum_char2 p.1, BigSum-equivariance) idp
       }
@@ -105,7 +107,7 @@ produces an interwining linear map $f'$ via the following formula
       : (Ab.FinSum x) a = B.FinSum (\lam e => (x e) a) => \case Ab.FinSum_char x \with {
       | inP a1 => rewrite (a1.2, B.FinSum_char2 a1.1, BigSumRewrite) idp
     }
-      \where {
+      \where \protected{
         \func Ab_Helper {f g : Ab}{x : A} : (f + g) x = f x + g x => idp
 
         \func ap_BigSum_el_wise (e : Array Ab)(a : A) : Array B => \lam i => (e i) a
@@ -128,7 +130,7 @@ produces an interwining linear map $f'$ via the following formula
 
     \func bring_h_out (h : G) (a : A)
       : int (h A.** a) = h B.** (Ab.FinSum (\lam g => adjust (inverse h * g) f)) a
-      => inv $ rewrite (zero-2-step h a, FinSum-equivariance, step-4 h a, inv $ FinSumRewrite (adjust __ f) (h A.** a)) idp
+      => inv $ rewrite (zero-2-step h a, FinSumEquivariance, step-4 h a, inv $ FinSumRewrite (adjust __ f) (h A.** a)) idp
       \where {
         \lemma zero-2-step (h : G)(a : A)
           : Ab.FinSum (\lam g => adjust (G.inverse h G.* g) f) a = B.FinSum (\lam g => adjust (G.inverse h G.* g) f a)
@@ -154,3 +156,13 @@ produces an interwining linear map $f'$ via the following formula
           | suc n => rewrite (R.natCoefSuc n, E.*c-rdistr, inv $ BigSumEqual n, E.ide_*c, E.+-comm) idp
       }
   }
+
+{- | A, B are non-isomorphic irreducible G-representations for finite G and commutative R. Then averaging over elements of G is zero (by Schur's -}
+\func SumOverGroupSchur {R : CRing} {G : FinGroup} {A B  : LRepres R G}
+                        (A-ir : Irreducible A) (B-ir : Irreducible B)
+                        (not-eq : Not (Iso {_} {A}{B}))
+                        (f : LinearMap A B) : isZeroMap (SumOverGroup f) => \case  Hom-between-Irreducible.Schur's-Lemma {IrredInstance} (SumOverGroup f) \with {
+  | byLeft a => a
+  | byRight b => absurd (not-eq b)
+}
+  \where \private \func IrredInstance : Hom-between-Irreducible => \new Hom-between-Irreducible A-ir B-ir

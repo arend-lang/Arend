@@ -13,6 +13,11 @@
 \import Paths
 \import Paths.Meta
 
+\func isZeroMod {R : Ring} (M : LModule R) => \Pi(m : M) -> m = M.zro
+
+\func isZeroMap{R : Ring}{M N : LModule R}(f : LinearMap M N) => \Pi(m : M) -> f m = N.zro
+
+
 \record InterwiningMap  {G : Group}  \extends LinearMap {
   \override Dom : LinRepres LinearMap.R G
   \override Cod : LinRepres LinearMap.R G

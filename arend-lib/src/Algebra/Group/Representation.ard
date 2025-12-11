@@ -35,3 +35,6 @@
   | GroupAction => trivialAction G E
   | **-*c => idp
   | **-ldistr => idp
+
+
+\func LRepres (R : Ring)(G : Group) : \Type => LinRepres {| R => R | G => G}
