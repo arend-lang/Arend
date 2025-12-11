@@ -33,7 +33,6 @@ import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.server.ArendServerService
 import org.arend.term.abs.ConcreteBuilder
-import org.arend.util.FileUtils
 import org.arend.util.FileUtils.EXTENSION
 import org.arend.util.allModules
 import org.arend.util.register
@@ -190,7 +189,7 @@ private fun generateHtmlForArend(
     var highlightingPass: ArendHighlightingPass? = null
     val indicator = DaemonProgressIndicator()
     val range = TextRange(0, editor.document.textLength)
-    HighlightingSessionImpl.createHighlightingSession(arendFile, anyContext(), editor, scheme, indicator, AtomicInteger(), range)
+    HighlightingSessionImpl.createHighlightingSession(arendFile, anyContext(), editor, scheme, indicator, AtomicInteger())
     ApplicationManager.getApplication().executeOnPooledThread {
         ProgressManager.getInstance().runProcess({
             highlightingPass = ArendHighlightingPass(arendFile, editor, range)
@@ -208,7 +207,7 @@ private fun generateHtmlForArend(
     if (arendDir.isNotEmpty()) {
         arendDir += "."
     }
-    val title = arendFile.name.removeSuffix(FileUtils.EXTENSION)
+    val title = arendFile.name.removeSuffix(EXTENSION)
     val arendPackage = "$arendDir$title"
 
     println("Generate an html file for $arendPackage")
@@ -357,7 +356,7 @@ private fun getIdCounterAndRelativePath(
 ): Triple<Int, Int, String> {
     val relativePathToRefFile =
         relativePath ?: File(element.containingFile.virtualFile.path).toRelativeString(File(element.project.basePath!!))
-            .removeSuffix(FileUtils.EXTENSION)
+            .removeSuffix(EXTENSION)
     val key = relativePathToRefFile + ':' + element.textOffset.toString()
     val id = psiIds[key] ?: run {
         psiIds[key] = counter

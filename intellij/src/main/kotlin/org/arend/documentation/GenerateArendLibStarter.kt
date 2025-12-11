@@ -6,9 +6,6 @@ import com.intellij.openapi.project.ProjectManager
 import org.arend.graph.generateArendLibClassGraph
 
 class GenerateArendLibStarter : ModernApplicationStarter() {
-    override val commandName: String
-        get() = "generateArendLib"
-
     override suspend fun start(args: List<String>) {
         val arguments = args.map { it.ifEmpty { null } }
 

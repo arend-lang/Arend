@@ -25,9 +25,9 @@ class ArendProjectOpenProcessor : ProjectOpenProcessor() {
     override fun canOpenProject(file: VirtualFile): Boolean =
         if (file.isDirectory) file.children.any(::isArendConfig) else isArendConfig(file)
 
-    override fun doOpenProject(virtualFile: VirtualFile, projectToClose: Project?, forceOpenInNewFrame: Boolean): Project? {
+    override suspend fun openProjectAsync(virtualFile: VirtualFile, projectToClose: Project?, forceOpenInNewFrame: Boolean): Project? {
         val basedir = if (virtualFile.isDirectory) virtualFile else virtualFile.parent
-        return PlatformProjectOpenProcessor.getInstance().doOpenProject(basedir, projectToClose, forceOpenInNewFrame)?.also {
+        return PlatformProjectOpenProcessor.getInstance().openProjectAsync(basedir, projectToClose, forceOpenInNewFrame)?.also {
             StartupManager.getInstance(it).runAfterOpened { runInEdt { importProjectAfterwards(it, virtualFile) } }
         }
     }

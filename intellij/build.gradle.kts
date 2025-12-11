@@ -14,15 +14,15 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 group = "org.arend.lang"
-version = "1.11.0"
+version = "1.11.0.1"
 
 val baseName = "intellij-arend"
 
 plugins {
     idea
     kotlin("jvm") version "2.2.0"
-    id("org.jetbrains.intellij.platform") version "2.9.0"
-    id("org.jetbrains.grammarkit") version "2022.3.2.2"
+    id("org.jetbrains.intellij.platform") version "2.10.5"
+    id("org.jetbrains.grammarkit") version "2023.3"
 }
 
 repositories {
@@ -45,10 +45,10 @@ dependencies {
     implementation("org.apache.xmlgraphics:batik-dom:1.19")
 
     intellijPlatform {
-        create(IntelliJPlatformType.IntellijIdeaCommunity, "2025.2.1")
+        create(IntelliJPlatformType.IntellijIdea, "2025.3")
         bundledPlugins("com.intellij.modules.json", "org.jetbrains.plugins.yaml", "com.intellij.java")
         testBundledModules("intellij.platform.navbar", "intellij.platform.navbar.backend")
-        plugins("IdeaVIM:2.27.2")
+        plugins("IdeaVIM:2.28.0")
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }
@@ -167,7 +167,7 @@ tasks.register<Copy>("prelude") {
 }
 
 tasks.withType<Wrapper> {
-    gradleVersion = "8.5"
+    gradleVersion = "8.13"
 }
 
 tasks.register<RunIdeTask>("generateArendLib") {

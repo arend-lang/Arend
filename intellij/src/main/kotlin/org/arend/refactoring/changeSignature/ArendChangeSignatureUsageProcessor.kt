@@ -1,6 +1,5 @@
 package org.arend.refactoring.changeSignature
 
-import ai.grazie.utils.WeakHashMap
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Ref
 import com.intellij.psi.PsiDocumentManager
@@ -18,6 +17,7 @@ import org.arend.psi.ext.*
 import org.arend.refactoring.rename.ArendRenameProcessor
 import org.arend.refactoring.rename.ArendRenameRefactoringContext
 import org.arend.term.abs.Abstract.ParametersHolder
+import java.util.WeakHashMap
 import kotlin.collections.ArrayList
 
 class ArendChangeSignatureUsageProcessor : ChangeSignatureUsageProcessor {
