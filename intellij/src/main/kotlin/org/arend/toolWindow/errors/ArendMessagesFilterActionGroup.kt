@@ -20,18 +20,13 @@ class ArendMessagesFilterActionGroup(project: Project, private val autoScrollFro
             add(action)
             actionMap[type] = action
         }
-
-        if (!project.service<ArendProjectSettings>().messagesFilterSet.contains(MessageType.SHORT)) {
-            actionMap[MessageType.RESOLVING]?.templatePresentation?.isEnabled = false
-            actionMap[MessageType.PARSING]?.templatePresentation?.isEnabled = false
-        }
+        // Do not mutate template presentations directly; enablement is computed in ArendMessagesFilterAction.update().
     }
 
     fun setSelected(type: MessageType, enabled: Boolean) {
         val types = EnumSet.of(type)
         if (type == MessageType.SHORT) {
-            actionMap[MessageType.RESOLVING]?.templatePresentation?.isEnabled = enabled
-            actionMap[MessageType.PARSING]?.templatePresentation?.isEnabled = enabled
+            // No direct templatePresentation changes here; actions will enable/disable themselves in update().
 
             if (!enabled || actionMap[MessageType.RESOLVING]?.isSelected == true) {
                 types.add(MessageType.RESOLVING)

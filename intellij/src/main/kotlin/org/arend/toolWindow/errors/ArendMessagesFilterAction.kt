@@ -13,6 +13,14 @@ class ArendMessagesFilterAction(private val project: Project, private val type: 
 
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
+    override fun update(e: AnActionEvent) {
+        super.update(e)
+        val filterSet = project.service<ArendProjectSettings>().messagesFilterSet
+        val enabled = filterSet.contains(type) &&
+            (!(type == MessageType.RESOLVING || type == MessageType.PARSING) || filterSet.contains(MessageType.SHORT))
+        e.presentation.isEnabled = enabled
+    }
+
     val isSelected: Boolean
         get() {
             val filterSet = project.service<ArendProjectSettings>().messagesFilterSet
