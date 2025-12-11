@@ -106,7 +106,7 @@ public abstract class Repl {
       if (myServer.findModule(modulePath, null, false, false) != null) {
         println("[INFO] The module " + modulePath + " is loaded.");
       } else {
-        println("[INFO] The module " + modulePath + " is not loaded.");
+        eprintln("[ERROR] The module " + modulePath + " is not loaded.");
       }
     }
   }

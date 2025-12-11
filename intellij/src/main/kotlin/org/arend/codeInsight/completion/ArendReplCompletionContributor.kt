@@ -73,17 +73,18 @@ class ArendReplCompletionContributor : CompletionContributor() {
 
       val isImportOrUnload = isImportOrUnloadReplCommand(file)
       ref?.let { server?.getCompletionVariants(replLineGroup, it) }?.forEach {
-          origElement -> run {
-        if (origElement.modulePath == Prelude.MODULE_PATH || origElement.modulePath == replModuleLocation.modulePath) {
-          return@run
+          origElement ->
+        run {
+          if (origElement.modulePath == Prelude.MODULE_PATH || origElement.modulePath == replModuleLocation.modulePath) {
+            return@run
+          }
+          if (isImportOrUnload && !modules.contains(origElement.modulePath)) {
+            return@run
+          }
+          createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false)?.let {
+            result.addElement(it)
+          }
         }
-        if (isImportOrUnload && !modules.contains(origElement.modulePath)) {
-          return@run
-        }
-        createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false)?.let {
-          result.addElement(it)
-        }
-      }
       }
     } else if (isModuleCommand(file)) {
       val lookupElement = LookupElementBuilder.create(ALL_MODULES)
