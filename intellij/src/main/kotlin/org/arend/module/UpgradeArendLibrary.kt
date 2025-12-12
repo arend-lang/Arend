@@ -27,7 +27,7 @@ const val AREND_LIB = "arend-lib"
 
 @Throws(IOException::class)
 internal fun getVersion(): String? {
-    val versionsConn = URL("https://raw.githubusercontent.com/$AREND_REPO/master/versions").openConnection()
+    val versionsConn = URL("https://raw.githubusercontent.com/$AREND_REPO/master/$AREND_LIB/versions").openConnection()
     BufferedReader(InputStreamReader(versionsConn.getInputStream())).use { reader ->
         while (true) {
             val str = reader.readLine() ?: break

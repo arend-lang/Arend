@@ -28,6 +28,8 @@ import java.util.Collections.singletonList
 
 class ArendCustomSearcher : QueryExecutorBase<PsiReference, ReferencesSearch.SearchParameters>() {
     override fun processQuery(parameters: ReferencesSearch.SearchParameters, consumer: Processor<in PsiReference>) {
+        if (parameters.elementToSearch !is ArendCompositeElement) return
+
         var elementToSearch_var : PsiLocatedReferable? = null
         runReadAction {
             elementToSearch_var = when (val e = parameters.elementToSearch) {
@@ -115,7 +117,7 @@ fun collectSearchScopes(namesToSearch: List<String>, isSearchInLibraries: Boolea
             ArendFileScope(project)
         )
         if (isSearchInLibraries) {
-            project.service<ArendServerService>().prelude?.let {
+            project.service<ArendServerService>().preludeIfInitialized?.let {
                 fileSet.add(it.virtualFile)
             }
         }

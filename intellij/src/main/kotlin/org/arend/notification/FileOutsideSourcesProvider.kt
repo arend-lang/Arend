@@ -21,7 +21,7 @@ class FileOutsideSourcesProvider : EditorNotificationProvider {
     override fun collectNotificationData(project: Project, virtualFile: VirtualFile): Function<in FileEditor, out JComponent?>? {
         val file = PsiManager.getInstance(project).findFile(virtualFile)
         if (file !is ArendFile || ProjectFileIndex.getInstance(project).isInSource(virtualFile) ||
-                project.service<ArendServerService>().prelude == file || virtualFile is LightVirtualFile ||
+                project.service<ArendServerService>().isPrelude(file) || virtualFile is LightVirtualFile ||
             ScratchFileService.getInstance().getRootType(virtualFile) != null) {
             return null
         }

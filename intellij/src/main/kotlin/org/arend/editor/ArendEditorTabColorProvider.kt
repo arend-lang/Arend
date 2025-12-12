@@ -21,13 +21,8 @@ class ArendEditorTabColorProvider : EditorTabColorProvider {
         return if (colorManager.isEnabledForProjectView) getColor(project, file, colorManager) else null
     }
 
-    private fun getColor(project: Project, file: VirtualFile, colorManager: FileColorManager): Color? {
-        if (file !is LightVirtualFile) {
-            return null
-        }
-        val preludeFile = project.service<ArendServerService>().prelude?.virtualFile
-        return if (preludeFile == file) getNonProjectFileColor(colorManager) else null
-    }
+    private fun getColor(project: Project, file: VirtualFile, colorManager: FileColorManager): Color? =
+        if (file is LightVirtualFile && project.service<ArendServerService>().isPrelude(file)) getNonProjectFileColor(colorManager) else null
 
     private fun getNonProjectFileColor(colorManager: FileColorManager) =
             colorManager.getScopeColor(NonProjectFilesScope.NAME)

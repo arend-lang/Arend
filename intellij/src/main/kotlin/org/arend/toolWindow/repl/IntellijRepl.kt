@@ -86,7 +86,8 @@ abstract class IntellijRepl private constructor(
     }
 
     override fun loadLibraries() {
-        myServer.addReadOnlyModule(Prelude.MODULE_LOCATION) { ConcreteBuilder.convertGroup(project.service<ArendServerService>().prelude, Prelude.MODULE_LOCATION, errorReporter) }
+        val prelude = project.service<ArendServerService>().initializeAndGetPrelude ?: return
+        myServer.addReadOnlyModule(Prelude.MODULE_LOCATION) { ConcreteBuilder.convertGroup(prelude, Prelude.MODULE_LOCATION, errorReporter) }
         typecheckModules(SingletonList(Prelude.MODULE_LOCATION))
         project.arendModules.forEach {
           ArendModuleConfigService.getInstance(it)?.let { library -> loadLibrary(library) }

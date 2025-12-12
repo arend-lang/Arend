@@ -17,8 +17,8 @@ fun StringBuilder.addImports(project: Project, referables: Set<PsiLocatedReferab
     val filesToDefinitions = mutableMapOf<ArendFile, MutableList<String>>()
     val definitionsToFiles = mutableSetOf<String>()
     for (referable in referables) {
-        val file = referable.containingFile as ArendFile
-        if (file == project.service<ArendServerService>().prelude) {
+        val file = referable.containingFile
+        if (file !is ArendFile || project.service<ArendServerService>().isPrelude(file)) {
             continue
         }
         filesToDefinitions.getOrPut(file) { mutableListOf() }.add(referable.fullNameText)

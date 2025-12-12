@@ -12,7 +12,7 @@ import javax.swing.Icon
 
 class ArendPreludeLibraryRootProvider: AdditionalLibraryRootsProvider() {
     override fun getAdditionalProjectLibraries(project: Project): MutableCollection<SyntheticLibrary> {
-        return project.service<ArendServerService>().prelude?.virtualFile
+        return project.service<ArendServerService>().preludeIfInitialized?.virtualFile
             ?.let { PreludeLibrary(it) }
             ?.let { mutableListOf(it) }
             ?: mutableListOf()
