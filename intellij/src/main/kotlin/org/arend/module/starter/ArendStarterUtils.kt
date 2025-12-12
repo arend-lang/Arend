@@ -3,6 +3,7 @@ package org.arend.module.starter
 import com.intellij.ide.starters.local.Dependency
 import com.intellij.ide.starters.local.DependencyConfig
 import com.intellij.openapi.module.Module
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Version
 import com.intellij.openapi.vfs.VfsUtil
 import org.arend.library.LibraryDependency
@@ -142,15 +143,21 @@ object ArendStarterUtils {
         val list = mutableListOf<LibraryDependency>()
         val arendLib = LibraryDependency(AREND_LIB)
 
-        VfsUtil.findFile(Paths.get(librariesRoot), true)?.let { libRoot ->
-            libRoot.children.mapNotNull { file ->
-                if (file.name != LIBRARY_CONFIG_FILE && file.configFile != null) {
-                    file.libraryName?.let { LibraryDependency(it) }
-                } else null
-            }.forEach {
-                list.add(it)
+        // Access VFS off the EDT to avoid slow operations assertion
+        val depsFromLibRoot = ApplicationManager.getApplication().executeOnPooledThread<List<LibraryDependency>> {
+            ApplicationManager.getApplication().runReadAction<List<LibraryDependency>> {
+                val deps = mutableListOf<LibraryDependency>()
+                VfsUtil.findFile(Paths.get(librariesRoot), true)?.let { libRoot ->
+                    libRoot.children.mapNotNull { file ->
+                        if (file.name != LIBRARY_CONFIG_FILE && file.configFile != null) {
+                            file.libraryName?.let { LibraryDependency(it) }
+                        } else null
+                    }.forEach { deps.add(it) }
+                }
+                deps
             }
-        }
+        }.get()
+        list.addAll(depsFromLibRoot)
 
         val modules = module?.project?.allModules
             ?: return if (list.contains(arendLib)) list else listOf(arendLib) + list
