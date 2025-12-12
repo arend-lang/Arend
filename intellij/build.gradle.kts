@@ -14,7 +14,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 group = "org.arend.lang"
-version = "1.11.0.1"
+version = "1.11.0.2"
 
 val baseName = "intellij-arend"
 
