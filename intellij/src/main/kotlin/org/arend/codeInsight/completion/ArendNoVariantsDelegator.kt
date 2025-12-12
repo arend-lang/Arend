@@ -27,6 +27,10 @@ import org.arend.term.group.AccessModifier
 
 class ArendNoVariantsDelegator : CompletionContributor() {
     override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
+        val originalProject = parameters.originalFile.project
+        if (originalProject.isDisposed) {
+            return
+        }
         val tracker = object : Consumer<CompletionResult> {
             val variants = HashSet<PsiElement>()
             val nullPsiVariants = HashSet<String>()
@@ -35,6 +39,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                 val elementPsi: PsiElement? = plainResult.lookupElement.psiElement
                 val str = plainResult.lookupElement.lookupString
                 if (elementPsi != null) {
+                    if (!elementPsi.isValid || elementPsi.project.isDisposed) return
                     val elementIsWithinFileBeingEdited = elementPsi.containingFile == parameters.position.containingFile
                     if (!elementIsWithinFileBeingEdited) variants.add(elementPsi) else {
                         val originalPosition = parameters.position
@@ -61,7 +66,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
 
         val editor = parameters.editor
         val project = editor.project
-
+        
         val bpm = object: BetterPrefixMatcher(result.prefixMatcher, Int.MIN_VALUE) {
             override fun prefixMatchesEx(name: String?): MatchingOutcome {
                 if (name?.startsWith(myPrefix) == true) return MatchingOutcome.BETTER_MATCH
@@ -71,7 +76,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
 
         val noVariants = tracker.variants.isEmpty() && tracker.nullPsiVariants.isEmpty() || !parameters.isAutoPopup
         val isReplFile = file.isRepl
-        if (!isReplFile && project != null && (isInsideValidExpr || isInsideValidNsCmd || isClassExtension) && noVariants) {
+        if (!isReplFile && project != null && !project.isDisposed && (isInsideValidExpr || isInsideValidNsCmd || isClassExtension) && noVariants) {
             val consumer = { name: String, refs: List<PsiLocatedReferable>? ->
                 if (bpm.prefixMatches(name)) {
                     val locatedReferables = refs?.filter { it is ArendFile || !isInsideValidNsCmd } ?: when {
@@ -80,7 +85,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                         else ->
                             StubIndex.getElements(ArendFileIndex.KEY, "$name.ard", project, ArendFileScope(project), ArendFile::class.java)
                     }
-                    locatedReferables.filter { it.isValid }.forEach {
+                    locatedReferables.filter { it.isValid && !it.project.isDisposed }.forEach {
                         val isInsideTest = (it.containingFile as? ArendFile)?.moduleLocation?.locationKind == ModuleLocation.LocationKind.TEST
                         val isImportAllowed = it.accessModifier != AccessModifier.PRIVATE && isVisible(it.containingFile as ArendFile, file)
                         if (!tracker.variants.contains(it) && !tracker.nullPsiVariants.contains(it.refName) && (isTestFile || !isInsideTest) && isImportAllowed)
@@ -88,10 +93,12 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                                 result.addElement(
                                     run { val oldHandler = it.insertHandler
                                         it.withInsertHandler { context, item ->
+                                            if (context.project.isDisposed) return@withInsertHandler
                                             oldHandler?.handleInsert(context, item)
                                             val refIdentifier = context.file.findElementAt(context.tailOffset - 1)?.parent
                                             val locatedReferable = item.`object`
                                             if (refIdentifier is ArendReferenceElement && locatedReferable is PsiLocatedReferable && locatedReferable !is ArendFile) {
+                                                if (!refIdentifier.isValid || refIdentifier.project.isDisposed || !locatedReferable.isValid || locatedReferable.project.isDisposed) return@withInsertHandler
                                                 val file = refIdentifier.containingFile
                                                 if (file is ArendExpressionCodeFragment) {
                                                     val targetReferable = (locatedReferable as? ReferableBase<*>)?.tcReferable
@@ -104,6 +111,7 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                                                     fix?.execute(editor)
                                                 }
                                             } else if (locatedReferable is ArendFile) {
+                                                if (context.project.isDisposed) return@withInsertHandler
                                                 context.document.replaceString(context.startOffset, context.selectionEndOffset, locatedReferable.fullName)
                                                 context.commitDocument()
                                             }
@@ -128,10 +136,17 @@ class ArendNoVariantsDelegator : CompletionContributor() {
                 consumer.invoke(entry.key, entry.value)
             }
 
-            StubIndex.getInstance().processAllKeys(if (isInsideValidNsCmd) ArendFileIndex.KEY else ArendDefinitionIndex.KEY, project) { name ->
+            // Collect keys first to avoid nested stub index operations which can lead to deadlocks
+            val indexKey = if (isInsideValidNsCmd) ArendFileIndex.KEY else ArendDefinitionIndex.KEY
+            val allKeys = ArrayList<String>()
+            if (project.isDisposed) return
+            StubIndex.getInstance().processAllKeys(indexKey, project) { name ->
+                allKeys.add(name)
+                true // If only a limited number (say N) of variants is needed, return false after N added lookUpElements
+            }
+            for (name in allKeys) {
                 val withoutSuffix = name.removeSuffix(".ard")
                 consumer.invoke(withoutSuffix, null)
-                true // If only a limited number (say N) of variants is needed, return false after N added lookUpElements
             }
         } else {
             result.restartCompletionOnAnyPrefixChange()

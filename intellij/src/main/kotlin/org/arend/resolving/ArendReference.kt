@@ -43,25 +43,36 @@ abstract class ArendReferenceBase<T : ArendReferenceElement>(element: T, range: 
             if (ref !is ModuleReferable && (clazz != null && !clazz.isInstance(ref) || notARecord && (ref as? ArendDefClass)?.isRecord == true)) {
                 null
             } else when (ref) {
-                is ArendFile -> LookupElementBuilder.create(ref, (origElement as? ModuleReferable)?.path?.lastName ?: ref.name.removeSuffix(FileUtils.EXTENSION)).withIcon(ArendIcons.AREND_FILE)
+                is ArendFile -> {
+                    if (!ref.isValid || ref.project.isDisposed) null else
+                        LookupElementBuilder
+                            .create((origElement as? ModuleReferable)?.path?.lastName ?: ref.name.removeSuffix(FileUtils.EXTENSION))
+                            .withIcon(ArendIcons.AREND_FILE)
+                }
                 is PsiNamedElement -> {
-                    val alias = (ref as? ReferableBase<*>)?.alias?.aliasIdentifier?.id?.text
-                    val aliasString = if (alias == null) "" else " $alias"
-                    val elementName = origElement?.refName ?: ref.name ?: ""
-                    val lookupString = lookup ?: (elementName + aliasString)
-                    var builder = LookupElementBuilder.create(ref, lookupString).withIcon(ref.getIcon(0))
-                    if (fullName) {
-                        builder = builder.withPresentableText(((ref as? PsiLocatedReferable)?.fullNameText ?: elementName) + aliasString)
+                    // Guard against invalid/disposed PSI when building lookup elements
+                    if (!ref.isValid || ref.project.isDisposed) {
+                        null
+                    } else {
+                        val alias = (ref as? ReferableBase<*>)?.alias?.aliasIdentifier?.id?.text
+                        val aliasString = if (alias == null) "" else " $alias"
+                        val elementName = origElement?.refName ?: ref.name ?: ""
+                        val lookupString = lookup ?: (elementName + aliasString)
+                        // Prefer creating by string, then attach metadata to avoid ensureValid() on disposed project
+                        var builder = LookupElementBuilder.create(lookupString).withIcon(ref.getIcon(0))
+                        if (fullName) {
+                            builder = builder.withPresentableText(((ref as? PsiLocatedReferable)?.fullNameText ?: elementName) + aliasString)
+                        }
+                        if (alias != null) {
+                            builder = builder.withInsertHandler(ReplaceInsertHandler(alias))
+                        }
+                        (ref as? Abstract.ParametersHolder)?.parametersText?.let {
+                            builder = builder.withTailText(it, true)
+                        }
+                        (ref as? PsiReferable)?.psiElementType?.let { builder = builder.withTypeText(it.oneLineText) } ?:
+                        ((ref as? PsiReferable)?.containingFile as? ArendFile)?.fullName?.let { builder = builder.withTypeText("from $it") }
+                        builder
                     }
-                    if (alias != null) {
-                        builder = builder.withInsertHandler(ReplaceInsertHandler(alias))
-                    }
-                    (ref as? Abstract.ParametersHolder)?.parametersText?.let {
-                        builder = builder.withTailText(it, true)
-                    }
-                    (ref as? PsiReferable)?.psiElementType?.let { builder = builder.withTypeText(it.oneLineText) } ?:
-                    ((ref as? PsiReferable)?.containingFile as? ArendFile)?.fullName?.let { builder = builder.withTypeText("from $it") }
-                    builder
                 }
                 is ModuleReferable -> {
                     val repl = containingFile?.project?.service<ArendReplService>()?.getRepl()
@@ -125,7 +136,9 @@ open class ArendReferenceImpl<T : ArendReferenceElement>(element: T) : ArendRefe
             is ArendFile -> Pair(null, f)
             else -> return emptyArray()
         }
-        val server = element.project.service<ArendServerService>().server
+        val project = element.project
+        if (project.isDisposed) return emptyArray()
+        val server = project.service<ArendServerService>().server
 
         val result: List<Referable>? = if (fragment is PsiCodeFragmentImpl) {
             ArendFragmentUtils.getCompletionItems(element, fragment, server) ?: return emptyArray()
@@ -133,7 +146,10 @@ open class ArendReferenceImpl<T : ArendReferenceElement>(element: T) : ArendRefe
 
         if (result == null) return emptyArray()
 
-        return result.mapNotNull { origElement -> createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false) }.toTypedArray()
+        return result.mapNotNull { origElement ->
+            if (project.isDisposed) return@mapNotNull null
+            createArendLookUpElement(origElement, origElement.abstractReferable, file, false, null, false)
+        }.toTypedArray()
     }
 }
 
