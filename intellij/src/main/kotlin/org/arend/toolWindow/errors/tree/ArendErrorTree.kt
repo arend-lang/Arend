@@ -2,7 +2,6 @@ package org.arend.toolWindow.errors.tree
 
 import com.intellij.codeInsight.hints.presentation.MouseButton
 import com.intellij.codeInsight.hints.presentation.mouseButton
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.psi.PsiElement
 import com.intellij.ui.treeStructure.Tree
@@ -97,24 +96,21 @@ class ArendErrorTree(treeModel: DefaultTreeModel) : Tree(treeModel) {
     }
 
     override fun convertValueToText(value: Any?, selected: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean): String {
-        var result: String? = null
-        ApplicationManager.getApplication().executeOnPooledThread {
-            result = runReadAction {
-                when (val obj = ((value as? DefaultMutableTreeNode)?.userObject)) {
-                    is ModuleLocation -> obj.toString()
-                    is ArendErrorTreeElement -> {
-                        val messages = LinkedHashSet<String>()
-                        for (error in obj.errors) {
-                            messages.add(DocStringBuilder.build(error.getShortHeaderDoc(PrettyPrinterConfig.DEFAULT)))
-                        }
-                        messages.joinToString("; ")
+        // Do not block the EDT. Compute synchronously and quickly; fall back to simple toString when needed.
+        return runReadAction {
+            when (val obj = ((value as? DefaultMutableTreeNode)?.userObject)) {
+                is ModuleLocation -> obj.toString()
+                is ArendErrorTreeElement -> {
+                    val messages = LinkedHashSet<String>()
+                    for (error in obj.errors) {
+                        messages.add(DocStringBuilder.build(error.getShortHeaderDoc(PrettyPrinterConfig.DEFAULT)))
                     }
-                    is Referable -> if ((obj as? PsiElement)?.isValid == false) "" else obj.textRepresentation()
-                    else -> obj?.toString() ?: ""
+                    messages.joinToString("; ")
                 }
+                is Referable -> if ((obj as? PsiElement)?.isValid == false) "" else obj.textRepresentation()
+                else -> obj?.toString() ?: ""
             }
-        }.get()
-        return result!!
+        }
     }
 
     fun containsNode(definition: PsiLocatedReferable): Boolean {
