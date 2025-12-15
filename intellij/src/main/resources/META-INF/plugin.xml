@@ -472,7 +472,9 @@
         <liveTemplateContext contextId="AREND_EXPRESSION" baseContextId="AREND" implementation="org.arend.liveTemplates.ArendTemplateContextType$Expression"/>
 
         <!-- Starters -->
-        <appStarter id="generateArendLib" implementation="org.arend.documentation.GenerateArendLibStarter"/>
+        <appStarter id="generateArendLib" implementation="org.arend.starters.GenerateArendLibStarter"/>
+        <appStarter id="generateArendLibHtml" implementation="org.arend.starters.GenerateArendLibHtmlStarter"/>
+        <appStarter id="generateArendLibGraph" implementation="org.arend.starters.GenerateGraphStarter"/>
 
     </extensions>
 

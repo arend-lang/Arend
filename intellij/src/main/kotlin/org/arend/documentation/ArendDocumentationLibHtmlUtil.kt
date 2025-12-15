@@ -32,13 +32,13 @@ import org.arend.psi.ArendFile
 import org.arend.psi.ext.ArendReferenceElement
 import org.arend.psi.ext.PsiLocatedReferable
 import org.arend.server.ArendServerService
+import org.arend.starters.getConfigService
 import org.arend.term.abs.ConcreteBuilder
 import org.arend.util.FileUtils
 import org.arend.util.FileUtils.EXTENSION
-import org.arend.util.allModules
-import org.arend.util.register
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.system.exitProcess
 
 const val HTML_EXTENSION = ".html"
 const val HTML_DIR_EXTENSION = "HTML"
@@ -48,23 +48,15 @@ internal fun generateHtmlForArendLib(
     pathToArendLibInArendSite: String,
     versionArendLib: String?,
     updateColorScheme: Boolean,
-    projectDir: String?
+    projectDir: String?,
+    onlyFullIndex: Boolean
 ): String? {
     try {
-        val module = psiProject.allModules.getOrNull(0) ?: run {
-            LOG.warn("Can't find the arend-lib module")
-            return null
-        }
-        module.register()
-
-        val configService = ArendModuleConfigService.getInstance(module) ?: run {
-            LOG.warn("Can't load information from the YAML file about arend-lib. You need to initialize arend-lib as an Arend module before starting html file generation")
-            return null
-        }
+        val configService = getConfigService(psiProject)
 
         val version = versionArendLib ?: ("v" + (configService.version?.longString ?: run {
                 LOG.warn("The YAML file in arend-lib doesn't contain information about the library version. You need to pass the library version as an argument or write the library version to the yaml file")
-                return null
+                exitProcess(0)
             }))
         val srcDir = configService.sourcesDir
 
@@ -88,7 +80,7 @@ internal fun generateHtmlForArendLib(
         val indexFile = File(pathToArendLibInArendSite + File.separator + "index.md")
         val lines = indexFile.readLines().toMutableList()
         lines.removeIf { REGEX_AREND_LIB_VERSION.find(it)?.groupValues?.getOrNull(1) == version }
-        lines.add(" * $version: [Full index]($version/${AREND_DIR_HTML}Base.html), ")
+        lines.add(" * $version: [Full index]($version/${AREND_DIR_HTML}Base.html)${if (onlyFullIndex) "" else ", "}")
         indexFile.writeText(lines.joinToString("\n"))
 
         val psiManager = PsiManager.getInstance(psiProject)
@@ -159,7 +151,7 @@ internal fun generateHtmlForArendLib(
         LOG.warn(e)
         ProjectManager.getInstance().closeAndDispose(psiProject)
     }
-    return null
+    exitProcess(0)
 }
 
 private fun generateHtmlForArend(

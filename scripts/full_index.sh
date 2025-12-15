@@ -20,26 +20,8 @@ else
 fi
 
 if [ -z "$4" ]; then
-    read -p "Enter the (new) arend-lib version, or leave it empty to use the version from the YAML file: " arg4
+  read -p "Enter the (new) arend-lib version, or leave it empty to use the version from the YAML file: " arg4
+  ./gradlew generateArendLibHtml -PpathToArendLib=$arg1 -PpathToArendLibInArendSite=$arg2 -PupdateColorScheme=$arg3 -PversionArendLib=$arg4
 else
-    arg4="$4"
+  ./gradlew generateArendLibHtml -PpathToArendLib=$arg1 -PpathToArendLibInArendSite=$arg2 -PupdateColorScheme=$arg3
 fi
-
-read -p "Enter the names of Arend classes to include in the graph, or leave blank to generate a graph of all classes: " -a extra_args
-
-gradleCmd=(./gradlew generateArendLib
-    -PpathToArendLib="$arg1"
-    -PpathToArendLibInArendSite="$arg2"
-    -PupdateColorScheme="$arg3"
-)
-
-if [ -n "$arg4" ]; then
-    gradleCmd+=("-PversionArendLib=$arg4")
-fi
-
-if [ "${#extra_args[@]}" -gt 0 ]; then
-    classes_arg=$(IFS=','; echo "${extra_args[*]}")
-    gradleCmd+=("-Pclasses=$classes_arg")
-fi
-
-"${gradleCmd[@]}"

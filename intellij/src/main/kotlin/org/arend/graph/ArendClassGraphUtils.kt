@@ -6,6 +6,7 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.stubs.StubIndex
+import org.arend.documentation.REGEX_AREND_LIB_VERSION
 import org.arend.ext.module.ModuleLocation
 import org.arend.hierarchy.clazz.ArendClassHierarchyBrowser.Companion.findClassNodesAndEdges
 import org.arend.psi.ArendFile
@@ -20,7 +21,8 @@ fun generateArendLibClassGraph(
   psiProject: Project,
   pathToArendLibInArendSite: String,
   classes: List<String>,
-  versionArendLib: String
+  versionArendLib: String,
+  onlyGraph: Boolean
 ) {
   DumbService.getInstance(psiProject).runWhenSmart {
     runReadAction {
@@ -65,7 +67,14 @@ fun generateArendLibClassGraph(
         "Classes-${baseClasses.joinToString("-") { it.fullNameText }}-$versionArendLib.svg"
       }
       val indexFile = File(pathToArendLibInArendSite + File.separator + "index.md")
-      indexFile.appendText("[Class graph](/assets/images/$path)\n")
+      if (onlyGraph) {
+        val lines = indexFile.readLines().toMutableList()
+        lines.removeIf { REGEX_AREND_LIB_VERSION.find(it)?.groupValues?.getOrNull(1) == versionArendLib }
+        lines.add(" * $versionArendLib: [Class graph](/assets/images/$path)")
+        indexFile.writeText(lines.joinToString("\n"))
+      } else {
+        indexFile.appendText("[Class graph](/assets/images/$path)")
+      }
 
       val usedNodes = mutableSetOf<ArendDefClass>()
       val edges = mutableSetOf<GraphEdge>()

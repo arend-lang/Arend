@@ -188,6 +188,40 @@ tasks.register<RunIdeTask>("generateArendLib") {
             (project.findProperty("classes") as? String ?: "")
 }
 
+tasks.register<RunIdeTask>("generateArendLibHtml") {
+    systemProperty("java.awt.headless", true)
+    dependsOn(tasks.prepareSandbox)
+
+    val sandbox = tasks.runIde.get().sandboxDirectory.get()
+    systemProperty("idea.plugins.path", sandbox.dir("plugins").asFile.absolutePath)
+
+    splitMode.set(false)
+    splitModeTarget.set(SplitModeAware.SplitModeTarget.BOTH)
+    args = listOf("generateArendLibHtml") +
+            (project.findProperty("pathToArendLib") as? String ?: "") +
+            (project.findProperty("pathToArendLibInArendSite") as? String ?: "") +
+            (project.findProperty("versionArendLib") as? String ?: "null") +
+            (project.findProperty("updateColorScheme") as? String ?: "") +
+            layout.projectDirectory.asPath.toString()
+}
+
+tasks.register<RunIdeTask>("generateArendLibGraph") {
+    systemProperty("java.awt.headless", true)
+    dependsOn(tasks.prepareSandbox)
+
+    val sandbox = tasks.runIde.get().sandboxDirectory.get()
+    systemProperty("idea.plugins.path", sandbox.dir("plugins").asFile.absolutePath)
+
+    splitMode.set(false)
+    splitModeTarget.set(SplitModeAware.SplitModeTarget.BOTH)
+    args = listOf("generateArendLibGraph") +
+            (project.findProperty("pathToArendLib") as? String ?: "") +
+            (project.findProperty("pathToArendLibInArendSite") as? String ?: "") +
+            (project.findProperty("versionArendLib") as? String ?: "null") +
+            layout.projectDirectory.asPath.toString() +
+            (project.findProperty("classes") as? String ?: "")
+}
+
 // Utils
 
 fun prop(name: String): Any? = extra.properties[name]
