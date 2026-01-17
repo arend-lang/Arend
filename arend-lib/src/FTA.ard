@@ -1,0 +1,199 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Group.Symmetric
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Arith.Complex
+\import Arith.Fin
+\import Arith.Nat
+\import Arith.Int
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Root
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Data.Array
+\import Data.Fin
+\import Data.Or
+\import Function
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Set
+\import Set.Fin
+\import Order.StrictOrder
+\import Order.LinearOrder
+\import Order.Lattice
+\import Algebra.StrictlyOrdered
+\import Paths
+\import Paths.Meta
+\import Function.Meta
+\open Monoid (pow)
+\open LinearlyOrderedAbGroup
+
+-- 1. Fundamental Definitions
+
+\func degree_le {R : AddPointed} (n : Nat) (p : Poly R) : \Prop =>
+  \Pi (m : Nat) -> n NatOrder.< m -> polyCoef p m = 0
+
+\func degree {R : Ring.With#} (n : Nat) (p : Poly R) : \Prop =>
+  \Sigma (polyCoef p n # 0) (degree_le n p)
+
+\func monic {R : Ring} (n : Nat) (p : Poly R) : \Prop =>
+  \Sigma (polyCoef p n = 1) (degree_le n p)
+
+\func nonConst {R : Ring.With#} (p : Poly R) =>
+  \Sigma (n : Nat) (0 NatOrder.< n) (polyCoef p n # 0)
+
+-- Helper for Absolute Value of Complex Numbers
+-- In CoRN it's AbsCC, here we can define it or assume it exists.
+-- Since it's not found in arend-lib, we define it as a square root of re^2 + im^2 or just a norm.
+-- Constructively, we need the square root for the actual value.
+
+\func absCC (z : Complex) : Real => sqrt (z.re * z.re + z.im * z.im)
+
+-- 2. Core Lemmata
+
+\func Lemma1 {n : Nat} (n>0 : n > 0) (eps : Real) (eps>0 : eps > 0) (c : Array Real n) :
+  ∃ (k : Fin n) (\Pi (i : Fin n) -> c i < c k + eps) \elim n, c
+  | 0, _ => \case n>0
+  | 1, c => inP (0, \lam i => \let i0 : i = 0 => \case \elim i \with {
+  0 => idp
+  } \in rewrite i0 (
+    \let A0 => transportInv (\lam x => x < c 0 + eps) (LinearlyOrderedAbGroup.zro-right {RealAbGroup}) (LinearlyOrderedAbGroup.<_+-right {RealAbGroup} (c 0) eps>0)
+    \in rewriteI {1} (zro-right {_} {c 0}) (rewriteI {1} (zro-right {_} {c 0}) A0)))
+  | suc (suc n), c0 :: cs =>
+    \let | half => Real.fromRat (rat 1 2 (\case __) idp)
+         | eps/2 => eps * half
+         | eps2>0 : eps/2 > 0 => OrderedSemiring.<_*_positive_positive eps>0 (rat_real_<.1 idp)
+    \in \case Lemma1 {suc n} NatOrder.zero<suc eps/2 eps2>0 cs \with {
+    inP (k, Pk) => \case real-located {c0} {cs k - eps/2} {cs k + eps} linarith \with {
+      | byLeft a => inP (0, \lam i => \case \elim i \with {
+        | 0 => linarith
+        | suc i => \let A0 => Pk i \in linarith
+      })
+      | byRight b => inP (suc k, \lam i => \case \elim i \with {
+        | 0 => b
+        | suc i => \let A0 => Pk i \in linarith
+      })
+    }
+    }
+
+\func one_third : Real => Real.fromRat (rat 1 3 (\case __) idp)
+
+\func Lemma2 {n : Nat} (eps : Real)
+             (eps>0 : eps > 0)
+             (a : Array Real (suc (suc n)))
+             (a0>eps : a 0 > eps)
+             (ai>=0 : \Pi (i : Fin (suc n)) -> a (suc i) >= 0)
+             (an=1 : a (suc n) = 1) :
+  ∃ (r0 : Real) (k : Nat -> Fin (suc n))
+  (k_monotone : \Pi (j : Nat) -> k j <= {NatSemiring} k (suc j))
+  (C1 : a (suc (k 0)) * pow r0 (suc (k 0)) = a 0 - eps)
+  (C2 : \Pi (j : Nat) (i : Fin (suc n)) ->
+    a (suc (k j)) * pow (r0 * pow one_third j) (suc (k j)) >
+    a (suc i) * pow (r0 * pow one_third j) (suc i) - eps) => {?} \where {
+  \func invariant (m : Fin (suc n)) =>
+    ∃ (k0 : Fin (suc n)) (r0 : Real) (r0>0 : r0 > 0)
+    (a (suc k0) * pow r0 (suc k0) = a 0 - eps)
+    (\Pi (l : Fin (suc n)) (l NatSemiring.+ m >= n) ->
+      a (suc k0) * pow r0 (suc k0) > a (suc l) * pow r0 (suc l) - eps)
+
+  \lemma L1 {n : Nat} : suc (Fin.fromNat {n} n) = {Fin (suc (suc n))} suc n =>
+    nat_fin_= (rewrite (L2 n, mod_< id<suc) idp)
+
+  \lemma L2 (n : Nat) : Fin.fromNat {n} n = {Nat} n =>
+    unfold Fin.fromNat (mod_< id<suc)
+
+  \lemma L3 {n : Nat} {m : Fin (suc n)} {l : Fin (suc n)} (l+m=n : l NatSemiring.+ m = {NatSemiring} n) : n - {FinRing} m = {Fin (suc n)} l =>
+    AddGroup.cancel-right {FinRing} m (rewrite (nat_fin_= {suc n} {n} {l + m} (inv (rewrite l+m=n idp)))
+    ((rewrite (negative-left {FinRing} {m}) in +-assoc {FinRing} {l Nat.+ m} {negative m} {m}) *> zro-right))
+
+  \func invariant-exists (m : Fin (suc n)) : invariant m \elim m
+    | 0 => \let | A0 => pow_root {suc n} suc/=0 {a 0 - eps} (\let A1 => a0>eps \in linarith)
+           \in inP (n, root (suc n) (a 0 - eps), root>0 (\lam _ => linarith) linarith, rewrite L1 (rewrite {3} L2 (rewrite (A0, an=1, ide-left) idp)),
+                    \lam l A2 =>
+                      \let
+                        | A3 : \Pi {x : Real} -> x - eps < x => \let eps>0 => eps>0 \in \lam {_} => linarith
+                        | A4 => rewrite (AddGroup.minus_zro, zro-left) in L3 {n} {0} {l}
+                        | A5 : l < suc n => rewriteI (fin_mod_id l) (mod<right (\lam x => linarith))
+                        | A6 : l = {Fin (suc n)} n => inv (A4 (<=-antisymmetric (suc<=suc.conv (suc_<_<= A5)) (rewrite zro-right in A2)))
+                      \in rewrite (A6, L1) A3)
+    | suc m => \case invariant-exists m \with {
+      | inP (k0, r0, r0>0, A0, A1) =>
+        \let
+          | i => n - {FinRing} suc m
+          | eps>0 => eps>0
+          | a0-eps>0 : a 0 - eps > 0 => \let A2 => a0>eps \in linarith \in
+          \case real-located {a (suc i) * pow r0 (suc i)} {a 0 - eps} {a 0} linarith \with {
+            | ||.byLeft A2 =>
+              \let
+                | r0^i+1>0 => OrderedSemiring.pow>0 r0>0 {suc i}
+                | r0^-i-1 => OrderedField.pinv (pow {RealField} r0 (suc i)) r0^i+1>0
+                | ai+1>0 => rewrite (*-assoc, OrderedField.pinv-right, ide-right) in OrderedSemiring.<_*_positive_positive {RealField} {_} {r0^-i-1} (<∘ a0-eps>0 A2) (OrderedField.pinv>0 r0^i+1>0)
+                | A3 => OrderedSemiring.<_*_positive_positive a0-eps>0 (OrderedField.pinv>0 ai+1>0)
+                | i+1/=0 : suc i /= {Nat} 0 => \case __
+                | r0new => root (suc i) ((a 0 - eps) * OrderedField.pinv (a (suc i)) ai+1>0)
+                | r0new<r0 => rewrite (root_pow i+1/=0 (<=-less r0>0)) in
+                root-monotone i+1/=0 (<=-less A3)
+                (rewriteI (RealField.ide-right {pow {RealField} r0 (suc i)}, OrderedField.pinv-right {_} {a (suc i)} ai+1>0, *-assoc)
+                (<_*_positive-left (rewrite *-comm A2) (OrderedField.pinv>0 ai+1>0)))
+                | A4 : a (suc i) RealField.* (pow {RealField} r0new i RealField.* r0new) = {Real} a 0 - {RealField} eps =>
+                  rewrite (pow_root {suc i} i+1/=0 (<=-less A3)) (rewrite {1} *-comm (rewriteI (*-assoc {RealField}) (rewrite OrderedField.pinv-right ide-left)))
+              \in inP (i, r0new, root>0 i+1/=0 A3, A4, \lam l _ =>
+                \case LinearOrder.Dec.trichotomy (l + {NatSemiring} suc m) n \with {
+                  | less _ => absurd linarith
+                  | equals A5 => rewrite (L3 {n} {suc m} A5) linarith
+                  | greater A5 =>
+                    \let
+                      | A6 => A1 l (<_suc_<= linarith)
+                      | l+1/=0 : suc l /= {Nat} 0 => \case __
+                    \in rewrite A4 (rewriteI A0 (<-transitive-right (<=_+ (<=_*_positive-right (ai>=0 l)
+                    (<=-less (LinearlyOrderedSemiring.pow_<-monotone l+1/=0 (<=-less (root>0 i+1/=0 A3)) r0new<r0))) (<=-refl {RealField} {negative eps})) A6)) })
+            | ||.byRight A2 => inP (k0, r0, r0>0, A0, \lam l _ =>
+              \case LinearOrder.Dec.trichotomy (l + {NatSemiring} suc m) n \with {
+                | less A4 => absurd linarith
+                | equals A4 => rewrite A0 (<_+-left (negative eps) (rewrite (L3 {n} {suc m} A4) in A2))
+                | greater A4 => A1 l (<_suc_<= linarith)
+              } )
+          }
+    }
+}
+
+-- Kneser's Lemma
+-- {q : IR | [0] [<=] q | q [<] [1] and ...}
+
+\func Kneser (n : Nat) (n>0 : n > 0) :
+  \Sigma (q : Real) (0 <= q) (q < 1)
+         (\Pi (p : Poly ComplexField) (monic n p) (c : Real) (absCC (polyEval p 0) < c) ->
+           \Sigma (z : Complex) (Monoid.pow (absCC z) n <= c) (absCC (polyEval p z) < q * c)) => {?} \where {
+}
+
+-- FTA for Monic Polynomials (fta/FTAreg.v): Uses the iterative application of Kneser's Lemma to build a Cauchy sequence that converges to a root.
+
+\func FTA_monic (p : Poly ComplexField) (n : Nat) (n>0 : 0 NatOrder.< n) (m : monic n p) :
+  \Sigma (z : Complex) (polyEval p z = 0) => {?}
+
+-- FTA for Regular (Fixed Degree) Polynomials (fta/FTAreg.v): Extends the result to polynomials with a known constructive degree by normalizing them.
+
+\func FTA_reg (p : Poly ComplexField) (n : Nat) (n>0 : 0 NatOrder.< n) (d : degree n p) :
+  \Sigma (z : Complex) (polyEval p z = 0) => {?}
+
+-- 3. Final Theorem formulations
+-- The results in fta/FTA.v generalize the proof to any non-constant polynomial.
+
+-- Inductive Step on Degree:
+
+\func FTA' (n : Nat) (f : Poly ComplexField) (dl : degree_le n f) (nc : nonConst f) :
+  \Sigma (z : Complex) (polyEval f z = 0) => {?}
+
+-- The Main Theorem:
+
+\func FTA (f : Poly ComplexField) (nc : nonConst f) :
+  \Sigma (z : Complex) (polyEval f z = 0) => {?}
