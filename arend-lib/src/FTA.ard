@@ -9,6 +9,7 @@
 \import Algebra.Ring.Poly
 \import Arith.Complex
 \import Arith.Fin
+\import Arith.Fin.Order
 \import Arith.Nat
 \import Arith.Int
 \import Arith.Rat
@@ -36,27 +37,6 @@
 \import Function.Meta
 \open Monoid (pow)
 \open LinearlyOrderedAbGroup
-
--- 1. Fundamental Definitions
-
-\func degree_le {R : AddPointed} (n : Nat) (p : Poly R) : \Prop =>
-  \Pi (m : Nat) -> n NatOrder.< m -> polyCoef p m = 0
-
-\func degree {R : Ring.With#} (n : Nat) (p : Poly R) : \Prop =>
-  \Sigma (polyCoef p n # 0) (degree_le n p)
-
-\func monic {R : Ring} (n : Nat) (p : Poly R) : \Prop =>
-  \Sigma (polyCoef p n = 1) (degree_le n p)
-
-\func nonConst {R : Ring.With#} (p : Poly R) =>
-  \Sigma (n : Nat) (0 NatOrder.< n) (polyCoef p n # 0)
-
--- Helper for Absolute Value of Complex Numbers
--- In CoRN it's AbsCC, here we can define it or assume it exists.
--- Since it's not found in arend-lib, we define it as a square root of re^2 + im^2 or just a norm.
--- Constructively, we need the square root for the actual value.
-
-\func absCC (z : Complex) : Real => sqrt (z.re * z.re + z.im * z.im)
 
 -- 2. Core Lemmata
 
@@ -94,7 +74,7 @@
              (ai>=0 : \Pi (i : Fin (suc n)) -> a (suc i) >= 0)
              (an=1 : a (suc n) = 1) :
   ∃ (r0 : Real) (k : Nat -> Fin (suc n))
-  (k_monotone : \Pi (j : Nat) -> k j <= {NatSemiring} k (suc j))
+  (k_monotone : \Pi (j : Nat) -> k (suc j) <= {NatSemiring} k j)
   (C1 : a (suc (k 0)) * pow r0 (suc (k 0)) = a 0 - eps)
   (C2 : \Pi (j : Nat) (i : Fin (suc n)) ->
     a (suc (k j)) * pow (r0 * pow one_third j) (suc (k j)) >
@@ -102,22 +82,23 @@
   \let | m : Fin (suc n) => n
        | inv => invariant-exists {n} {eps} {eps>0} {a} {a0>eps} {ai>=0} {an=1} m
   \in \case inv \with {
-    | inP (k0, r0, r0>0, invC1, invC2) => 
-      \let 
+    | inP (k0, r0, r0>0, invC1, invC2) =>
+      \let
         -- invC2 gives us: for all l, l + n >= n -> inequality holds
         -- Since m = n and l >= 0, we have l + m = l + n >= n
         -- Fin.fromNat {n} n = n as Nat (by L2)
-        | l+n>=n : \Pi (l : Fin (suc n)) -> n <= l NatSemiring.+ (Fin.fromNat {n} n) => 
+        | l+n>=n : \Pi (l : Fin (suc n)) -> n <= l NatSemiring.+ (Fin.fromNat {n} n) =>
             \lam l => rewrite (L2 n) (transport (n <=) (+-comm {NatSemiring} {n} {l}) (<=_+ {NatSemiring} <=-refl zero<=_))
         | invC2' : \Pi (l : Fin (suc n)) -> a (suc k0) * pow r0 (suc k0) > a (suc l) * pow r0 (suc l) - eps =>
             \lam l => invC2 l (l+n>=n l)
-        -- Phase B: Use kRec from \where block
-        | kRecResult => kRec r0 r0>0 k0 invC2'
-        | k : Nat -> Fin (suc n) => \lam j => (kRecResult j).1
+        | rec => kRec r0 r0>0 k0 invC2'
+        | k : Nat -> Fin (suc n) => \lam j => (rec j).1
+        | k_monotone : \Pi (j : Nat) -> k (suc j) <= {NatSemiring} k j =>
+            \lam j => (rec (suc j)).2.1
         | C2proof : \Pi (j : Nat) (i : Fin (suc n)) ->
             a (suc (k j)) * pow (r0 * pow one_third j) (suc (k j)) > a (suc i) * pow (r0 * pow one_third j) (suc i) - eps =>
-            \lam j i => (kRecResult j).2 i
-      \in inP (r0, k, \lam _ => <=-refl {NatSemiring}, invC1, C2proof)
+            \lam j i => (rec j).2.2 i
+      \in inP (r0, k, k_monotone, invC1, C2proof)
   } \where {
   
   -- Phase B recursive function: defines k_j and proves C2 for each j
@@ -125,26 +106,59 @@
   -- The key insight: the inequality a(suc k0) * r^(suc k0) > a(suc i) * r^(suc i) - eps
   -- is preserved when we scale r down, because both sides scale proportionally
   -- and the gap (eps) remains constant while the terms decrease
-  \func kRec (r0 : Real) (r0>0 : r0 > 0) (k0 : Fin (suc n)) 
+  \func kRec (r0 : Real) (r0>0 : r0 > 0) (k0 : Fin (suc n))
              (invC2' : \Pi (l : Fin (suc n)) -> a (suc k0) * pow r0 (suc k0) > a (suc l) * pow r0 (suc l) - eps)
-             (j : Nat) : \Sigma (kj : Fin (suc n)) 
-                (\Pi (i : Fin (suc n)) -> a (suc kj) * pow (r0 * pow one_third j) (suc kj) > a (suc i) * pow (r0 * pow one_third j) (suc i) - eps) \elim j
-    | 0 => (k0, \lam i => rewrite (ide-right {RealField} {r0}) (invC2' i))
-    | suc j' => 
-      \let 
+             (j : Nat) : \Sigma (kj : Fin (suc n))
+               (\Sigma (k_next<= : (\Sigma (kjNext : Fin (suc n)) (kjNext <= {NatSemiring} kj)))
+                 (\Pi (i : Fin (suc n)) -> a (suc kj) * pow (r0 * pow one_third j) (suc kj) > a (suc i) * pow (r0 * pow one_third j) (suc i) - eps)) \elim j
+    | 0 => (k0, ((k0, <=-refl {NatSemiring}), \lam i => rewrite (ide-right {RealField} {r0}) (invC2' i)))
+    | suc j' =>
+      \let
+        | half : Real => Real.fromRat (rat 1 2 (\case __) idp)
+        | eps/2 : Real => eps * half
+        | eps2>0 : eps/2 > 0 => OrderedSemiring.<_*_positive_positive eps>0 (rat_real_<.1 idp)
         | prev => kRec r0 r0>0 k0 invC2' j'
         | kj' => prev.1
-        | Cj' => prev.2
-        | one_third>0 : one_third > 0 => rat_real_<.1 idp
-        | one_third<1 : one_third < 1 => rat_real_<.1 idp
-      \in (kj', \lam i => 
-        -- The inductive step requires showing:
-        -- a(suc kj') * pow (r0 * pow one_third (suc j')) (suc kj') > a(suc i) * pow (r0 * pow one_third (suc j')) (suc i) - eps
-        -- Given Cj' i: a(suc kj') * pow (r0 * pow one_third j') (suc kj') > a(suc i) * pow (r0 * pow one_third j') (suc i) - eps
-        -- 
-        -- The full proof requires the recursive definition of k using Lemma1 as described in the blueprint.
-        -- For now, we leave this as a goal to be completed.
-        {?})
+        | Cj' => prev.2.2
+        | r : Real => r0 * pow one_third j'
+        | rNext : Real => r0 * pow one_third (suc j')
+        | kLen : Nat => suc (kj' : Nat)
+        | kLen>0 : kLen > 0 => NatOrder.zero<suc
+        | kLen<= : kLen <= suc n => suc_<_<= (fin_< kj')
+        | c : Array Real kLen => mkArray (\lam t => a (suc (fin-inc_<= kLen<= t)) * pow rNext (suc (fin-inc_<= kLen<= t)))
+        | choose => Lemma1 {kLen} kLen>0 eps/2 eps2>0 c
+      \in \case choose \with {
+        | inP (k', Pk') =>
+          \let
+            | kjNext : Fin (suc n) => fin-inc_<= kLen<= k'
+            | kjNext<= : kjNext <= {NatSemiring} kj' =>
+                LinearOrder.<_<= (rewrite toFin=id (fin_< k'))
+            | max-eps/2 : \Pi (t : Fin kLen) ->
+                a (suc (fin-inc_<= kLen<= k')) * pow rNext (suc (fin-inc_<= kLen<= k')) >
+                a (suc (fin-inc_<= kLen<= t)) * pow rNext (suc (fin-inc_<= kLen<= t)) - eps/2 =>
+                \lam t =>
+                  \let A0 => Pk' t \in
+                  -- As suggested: add (negative eps/2) to both sides.
+                  linarith
+          \in (kjNext, ((kjNext, kjNext<=), \lam i =>
+            \case LinearOrder.Dec.trichotomy i kj' \with {
+              | less i<kj' =>
+                \let
+                  -- i < suc kj' = kLen, so we can use it as an index in the prefix.
+                  | i<kLen : (i : Nat) < kLen => linarith
+                  | t : Fin kLen => toFin i i<kLen
+                  | inc_t=i : fin-inc_<= kLen<= t = {Fin (suc n)} i =>
+                      -- fin-inc_<= p t is defined as toFin (t : Nat) (fin_< t <∘l p),
+                      -- so its Nat value is (t : Nat) by toFin=id.
+                      fin_nat-inj (toFin=id *> inv toFin=id)
+                \in rewrite inc_t (max-eps/2 t)
+              | equals i=kj' =>
+                rewrite i=kj' (max-eps/2 k')
+              | greater kj'<i =>
+                -- The i > kj' case uses the blueprint scaling argument.
+                {?}
+            }))
+      }
 
   \lemma L1 {n : Nat} : suc (Fin.fromNat {n} n) = {Fin (suc (suc n))} suc n =>
     nat_fin_= (rewrite (L2 n, mod_< id<suc) idp)
@@ -212,35 +226,3 @@
           }
     }
 }
-
--- Kneser's Lemma
--- {q : IR | [0] [<=] q | q [<] [1] and ...}
-
-\func Kneser (n : Nat) (n>0 : n > 0) :
-  \Sigma (q : Real) (0 <= q) (q < 1)
-         (\Pi (p : Poly ComplexField) (monic n p) (c : Real) (absCC (polyEval p 0) < c) ->
-           \Sigma (z : Complex) (Monoid.pow (absCC z) n <= c) (absCC (polyEval p z) < q * c)) => {?} \where {
-}
-
--- FTA for Monic Polynomials (fta/FTAreg.v): Uses the iterative application of Kneser's Lemma to build a Cauchy sequence that converges to a root.
-
-\func FTA_monic (p : Poly ComplexField) (n : Nat) (n>0 : 0 NatOrder.< n) (m : monic n p) :
-  \Sigma (z : Complex) (polyEval p z = 0) => {?}
-
--- FTA for Regular (Fixed Degree) Polynomials (fta/FTAreg.v): Extends the result to polynomials with a known constructive degree by normalizing them.
-
-\func FTA_reg (p : Poly ComplexField) (n : Nat) (n>0 : 0 NatOrder.< n) (d : degree n p) :
-  \Sigma (z : Complex) (polyEval p z = 0) => {?}
-
--- 3. Final Theorem formulations
--- The results in fta/FTA.v generalize the proof to any non-constant polynomial.
-
--- Inductive Step on Degree:
-
-\func FTA' (n : Nat) (f : Poly ComplexField) (dl : degree_le n f) (nc : nonConst f) :
-  \Sigma (z : Complex) (polyEval f z = 0) => {?}
-
--- The Main Theorem:
-
-\func FTA (f : Poly ComplexField) (nc : nonConst f) :
-  \Sigma (z : Complex) (polyEval f z = 0) => {?}
