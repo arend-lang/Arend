@@ -99,9 +99,9 @@
     | suc x => plus1 x *> pmap suc (sucPreserving-isId f plus1 f0 x)
 
   \func step (r0 : Real) (r0>0 : r0 > 0) :
-    \Pi (IH : \Sigma (j : Nat) (kj : Fin (suc n)) (ineq {n} {eps} {a} r0 j kj)) ->
-      ∃ (b : \Sigma (j : Nat) (kj : Fin (suc n)) (ineq {n} {eps} {a} r0 j kj))
-      (\Sigma (b.2 <= {NatSemiring} IH.2) (b.1 = {NatSemiring} suc IH.1)) =>
+    \Pi (tuple_j : \Sigma (j : Nat) (kj : Fin (suc n)) (ineq r0 j kj)) ->
+      ∃ (tuple_j+1 : \Sigma (j+1 : Nat) (kj+1 : Fin (suc n)) (ineq r0 j+1 kj+1))
+      (\Sigma (tuple_j+1.2 <= {NatSemiring} tuple_j.2) (tuple_j+1.1 = {NatSemiring} suc tuple_j.1)) =>
     \lam (j, kj, IH) =>
       \let
         | half : Real => Real.fromRat (rat 1 2 (\case __) idp)
@@ -191,7 +191,7 @@
                  \let
                    | A3 : \Pi {x : Real} -> x - eps < x => \let eps>0 => eps>0 \in \lam {_} => linarith
                    | A4 => rewrite (AddGroup.minus_zro, zro-left) in L3 {n} {0} {l}
-                   | A5 : l < {NatSemiring} Nat.suc n => rewriteI (fin_mod_id l) (mod<right (\lam x => linarith))
+                   | A5 : l < {NatSemiring} Nat.suc n => rewriteI (fin_mod_id l) (mod<right (\lam _ => linarith))
                    | A6 : l = {Fin (suc n)} n => inv (A4 (<=-antisymmetric (suc<=suc.conv (suc_<_<= A5)) (rewrite zro-right in A2)))
                  \in rewrite (A6, L1) A3)
     | suc m => \case base m \with {
@@ -236,10 +236,9 @@
     }
 }
 
--- Stabilization Lemma (Pigeonhole Principle)
--- A non-increasing sequence in a finite set of cardinality n+1 must have three consecutive equal values
--- if the sequence is at least 2n+3 elements long.
-
+{- | Stabilization Lemma (Pigeonhole Principle)
+A non-increasing sequence in a finite set of cardinality $n+1$ must have three consecutive equal values
+if the sequence is at least $2n+3$ elements long. -}
 \lemma three-consecutive-equals {n N : Nat} (N>2n : N > 2 * n)
                                 (k : Fin (suc (suc N)) -> Fin (suc n))
                                 (monotone : \Pi (j : Fin (suc N)) -> k (suc j) <= {NatSemiring} k j) :
@@ -286,3 +285,31 @@
           }
       }
 }
+
+\lemma geom_sum_upper {n k : Nat} (k>0 : 0 < k) (k<n : k < n) :
+  AddMonoid.BigSum {RealAbGroup} (\lam (i : Fin (n -' k)) => pow {RealField} (ratio 1 3) (suc i)) <
+  Real.fromRat (ratio 1 2) * (Real.fromRat 1 - pow {RealField} (ratio 1 3) n) =>
+  \let
+    | m : Nat => n -' k
+    | x : Real => ratio 1 3
+    | half : Real => Real.fromRat (ratio 1 2)
+    | sum0 : Real => AddMonoid.BigSum {RealAbGroup} (\lam (j : Fin m) => pow {RealField} x j)
+    | sum1 : Real => AddMonoid.BigSum {RealAbGroup} (\lam (i : Fin m) => pow {RealField} x (suc i))
+    | m<n : m < n => transport (m <) (<=_exists (<=-transitive (id<=suc {k}) (suc_<_<= k<n))) (NatSemiring.<_+-left m {0} {k} k>0)
+    | pow-n<pow-m : pow {RealField} x n < pow {RealField} x m => KeyLemma.L6 {n} {m} m<n
+    | sum1=x*sum0 : sum1 = x * sum0 =>
+      \let
+        | arr0 : Array Real m => \new Array Real m (\lam (i : Fin m) => pow {RealField} x i)
+        | arr1 : Array Real m => map (x *) arr0
+      \in AddMonoid.BigSum-ext {RealAbGroup}
+        (\lam i => idp *> inv (Monoid.pow-left {RealField} {x} {i})) *>
+      AddMonoid.BigSum-ext {RealAbGroup} (\lam _ => idp) *> inv (RealField.BigSum-ldistr {x} {arr0})
+    | x=half*oneMinusX : x = half * (Real.fromRat 1 - x) => linarith
+    | sum1=half =>
+      sum1                                        ==< sum1=x*sum0 >==
+      x * sum0                                    ==< pmap (__ * sum0) x=half*oneMinusX             >==
+      (half * (Real.fromRat 1 - x)) * sum0        ==< *-assoc                                       >==
+      half * ((Real.fromRat 1 - x) * sum0)        ==< pmap (half *) RealField.geometric-partial-sum >==
+      half * (Real.fromRat 1 - pow {RealField} x m) `qed
+  \in rewrite sum1=half linarith
+

@@ -146,7 +146,7 @@ public class GroupData {
         TCDefReferable ref = definitionData.definition().getData();
         replaced.put(newDef.getData(), ref);
         ref.setData(newDef.getData().getData());
-        newDef.setReferable(ref);
+        //newDef.setReferable(ref);
       }
     }
 
