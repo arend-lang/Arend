@@ -35,7 +35,7 @@
 \open Monoid (pow)
 \open LinearlyOrderedAbGroup
 
-\func Lemma1 {n : Nat} (n>0 : n > 0) (eps : Real) (eps>0 : eps > 0) (c : Array Real n) :
+\func array-eps-max {n : Nat} (n>0 : n > 0) (eps : Real) (eps>0 : eps > 0) (c : Array Real n) :
   ∃ (k : Fin n) (\Pi (i : Fin n) -> c i < c k + eps) \elim n, c
   | 0, _ => \case n>0
   | 1, c => inP (0, \lam i => \let i0 : i = 0 => \case \elim i \with {
@@ -47,7 +47,7 @@
     \let | half => Real.fromRat (rat 1 2 (\case __) idp)
          | eps/2 => eps * half
          | eps2>0 : eps/2 > 0 => OrderedSemiring.<_*_positive_positive eps>0 (rat_real_<.1 idp)
-    \in \case Lemma1 {suc n} NatOrder.zero<suc eps/2 eps2>0 cs \with {
+    \in \case array-eps-max {suc n} NatOrder.zero<suc eps/2 eps2>0 cs \with {
     inP (k, Pk) => \case real-located {c0} {cs k - eps/2} {cs k + eps} linarith \with {
       | byLeft a => inP (0, \lam i => \case \elim i \with {
         | 0 => linarith
@@ -75,33 +75,33 @@
     (C2 : \Pi (j : Fin (suc N)) (i : Fin (suc n)) ->
       a (suc (k j)) * pow (r0 * pow one_third j) (suc (k j)) >
       a (suc i) * pow (r0 * pow one_third j) (suc i) - eps) =>
-  \case invariant-exists {n} {eps} {eps>0} {a} {a0>eps} {ai>=0} {an=1} n \with {
+  \case base {n} {eps} {eps>0} {a} {a0>eps} {ai>=0} {an=1} n \with {
     | inP (k0, r0, r0>0, invC1, invC2) =>
       \let
         | l+n>=n : \Pi (l : Fin (suc n)) -> n <= l NatSemiring.+ (Fin.fromNat {n} n) =>
           \lam l => rewrite (L2 n) (transport (n <=) (+-comm {NatSemiring} {n} {l}) (<=_+ {NatSemiring} <=-refl zero<=_))
         | N => 2 * n + 3
       \in \case finiteDependentChoice {\Sigma (j : Nat) (kj : Fin (suc n)) (P : ineq r0 j kj)}
-                (\lam (j, kj, Pj) (j+1,kj+1,Pj+1) => \Sigma (kj+1 <= {NatSemiring} kj) (j+1 = {NatSemiring} suc j))
-                (0, k0, \lam l => rewrite ide-right (invC2 l (l+n>=n l))) (step r0 r0>0) N \with {
+                  (\lam (j, kj, Pj) (j+1,kj+1,Pj+1) => \Sigma (kj+1 <= {NatSemiring} kj) (j+1 = {NatSemiring} suc j))
+                  (0, k0, \lam l => rewrite ide-right (invC2 l (l+n>=n l))) (step r0 r0>0) N \with {
         | inP (f, p, mon) =>
           inP (r0,
                \lam j => (f j).2,
                \lam j => rewrite (fin_mod_id (suc j)) (mon j).1,
                rewrite p invC1,
-               \lam j => rewrite (increase {N} (\lam k => (f k).1) (\lam k => (mon k).2) (pmap __.1 p) j) in (f j).3)
+               \lam j => rewrite (sucPreserving-isId {N} (\lam k => (f k).1) (\lam k => (mon k).2) (pmap __.1 p) j) in (f j).3)
       }
   } \where {
-  \func increase {n : Nat} (f : Fin (suc n) -> Nat)
-                 (plus1 : \Pi (x : Fin n) -> f (suc x) = suc (f x))
-                 (f0 : f 0 = 0) (x : Fin (suc n)) : f x = {NatSemiring} x \elim x
+  \func sucPreserving-isId {n : Nat} (f : Fin (suc n) -> Nat)
+                           (plus1 : \Pi (x : Fin n) -> f (suc x) = suc (f x))
+                           (f0 : f 0 = 0) (x : Fin (suc n)) : f x = {NatSemiring} x \elim x
     | 0 => f0
-    | suc x => plus1 x *> pmap suc (increase f plus1 f0 x)
+    | suc x => plus1 x *> pmap suc (sucPreserving-isId f plus1 f0 x)
 
   \func step (r0 : Real) (r0>0 : r0 > 0) :
     \Pi (IH : \Sigma (j : Nat) (kj : Fin (suc n)) (ineq {n} {eps} {a} r0 j kj)) ->
-      TruncP (\Sigma (b : \Sigma (j : Nat) (kj : Fin (suc n)) (ineq {n} {eps} {a} r0 j kj))
-                     (\Sigma (b.2 <= {NatSemiring} IH.2) (b.1 = {NatSemiring} suc IH.1))) =>
+      ∃ (b : \Sigma (j : Nat) (kj : Fin (suc n)) (ineq {n} {eps} {a} r0 j kj))
+      (\Sigma (b.2 <= {NatSemiring} IH.2) (b.1 = {NatSemiring} suc IH.1)) =>
     \lam (j, kj, IH) =>
       \let
         | half : Real => Real.fromRat (rat 1 2 (\case __) idp)
@@ -118,7 +118,7 @@
         | kLen : Nat => suc kj
         | kLen<= : kLen <= suc n => suc_<_<= (fin_< kj)
         | c : Array Real kLen => mkArray (\lam t => a (suc (fin-inc_<= kLen<= t)) * pow rNext (suc (fin-inc_<= kLen<= t)))
-      \in \case Lemma1 {kLen} NatOrder.zero<suc eps/2 eps2>0 c \with {
+      \in \case array-eps-max {kLen} NatOrder.zero<suc eps/2 eps2>0 c \with {
         | inP (k', Pk') =>
           \let
             | k'<kj : k' <= {NatSemiring} kj => suc<=suc.conv (suc_<_<= (fin_< k'))
@@ -132,26 +132,26 @@
           \in inP ((suc j, kj+1, \lam i =>
             \let
               | LE (i<kLen : (i : Nat) < kLen) =>
-              \let
-                | t : Fin kLen => toFin i i<kLen
-                | inc_t=i : fin-inc_<= kLen<= t = {Fin (suc n)} i => fin_nat-inj (toFin=id *> inv (rewrite toFin=id idp))
-              \in <_+-left (negative eps) (rewrite inc_t=i in Pk' t)
+                \let
+                  | t : Fin kLen => toFin i i<kLen
+                  | inc_t=i : fin-inc_<= kLen<= t = {Fin (suc n)} i => fin_nat-inj (toFin=id *> inv (rewrite toFin=id idp))
+                \in <_+-left (negative eps) (rewrite inc_t=i in Pk' t)
             \in \case LinearOrder.Dec.trichotomy i kj \with {
-                | Tri.less i<kj =>  <∘ (LE linarith) (rewrite (+-assoc, eps-eps/2) linarith) -- <∘ (LE linarith) (rewrite (+-assoc, eps-eps/2) linarith)
-                | Tri.equals i=kj => <∘ (LE (rewrite i=kj id<suc)) (rewrite (+-assoc, eps-eps/2) linarith)
-                | Tri.greater kj<i =>
-                  \let
-                    | eps*1/3^kj<eps/2 : eps * pow one_third (suc kj) < eps/2 => <_*_positive-right eps>0 (L4 kj)
-                    | A3 : a (suc i) * pow rNext (suc i) - eps RealField.< a (suc kj) * pow rNext (suc kj) - eps/2 =>
-                      rewrite (rNext=r/3, CMonoid.pow_*-comm {_} {r} {one_third} {suc i}, CMonoid.pow_*-comm {_} {r} {one_third} {suc kj})
-                        (rewriteI (*-assoc {_} {a (suc i)}, *-assoc {_} {a (suc kj)}) (rewrite (+-assoc, -eps2-eps2=-eps) in
-                        <_+-left {_} (negative eps/2) ( <-transitive (LinearlyOrderedAbMonoid.<=_+-left (<=_*_positive-right (PosetSemiring.<=_*_positive_positive (ai>=0 i)
-                          (PosetSemiring.pow>=0 {RealField} {r} {suc i} (<=-less r>0))) (<=-less (L6 (NatOrder.<.suc<suc kj<i))))
-                          (OrderedAddGroup.negative_< eps*1/3^kj<eps/2))
-                          (rewrite PseudoRing.rdistr_- in <_*_positive-left (IH i) one/3^kj>0))))
-                    | fin-inc_kj : fin-inc_<= kLen<= (toFin kj id<suc) = kj => fin_nat-inj (rewrite toFin=id toFin=id) \in
-                    <∘ A3 (rewrite (+-assoc, AddGroup.toZero idp, zro-right, fin-inc_kj) in <_+-left (negative eps/2) (Pk' (toFin kj id<suc)))
-              }), (kj+1<=kj, idp))
+              | Tri.less i<kj => <∘ (LE linarith) (rewrite (+-assoc, eps-eps/2) linarith) -- <∘ (LE linarith) (rewrite (+-assoc, eps-eps/2) linarith)
+              | Tri.equals i=kj => <∘ (LE (rewrite i=kj id<suc)) (rewrite (+-assoc, eps-eps/2) linarith)
+              | Tri.greater kj<i =>
+                \let
+                  | eps*1/3^kj<eps/2 : eps * pow one_third (suc kj) < eps/2 => <_*_positive-right eps>0 (L4 kj)
+                  | A3 : a (suc i) * pow rNext (suc i) - eps RealField.< a (suc kj) * pow rNext (suc kj) - eps/2 =>
+                    rewrite (rNext=r/3, CMonoid.pow_*-comm {_} {r} {one_third} {suc i}, CMonoid.pow_*-comm {_} {r} {one_third} {suc kj})
+                      (rewriteI (*-assoc {_} {a (suc i)}, *-assoc {_} {a (suc kj)}) (rewrite (+-assoc, -eps2-eps2=-eps) in
+                      <_+-left {_} (negative eps/2) ( <-transitive (LinearlyOrderedAbMonoid.<=_+-left (<=_*_positive-right (PosetSemiring.<=_*_positive_positive (ai>=0 i)
+                        (PosetSemiring.pow>=0 {RealField} {r} {suc i} (<=-less r>0))) (<=-less (L6 (NatOrder.<.suc<suc kj<i))))
+                        (OrderedAddGroup.negative_< eps*1/3^kj<eps/2))
+                        (rewrite PseudoRing.rdistr_- in <_*_positive-left (IH i) one/3^kj>0))))
+                  | fin-inc_kj : fin-inc_<= kLen<= (toFin kj id<suc) = kj => fin_nat-inj (rewrite toFin=id toFin=id) \in
+                  <∘ A3 (rewrite (+-assoc, AddGroup.toZero idp, zro-right, fin-inc_kj) in <_+-left (negative eps/2) (Pk' (toFin kj id<suc)))
+            }), (kj+1<=kj, idp))
       }
 
   \func ineq(r0 : Real) (j : Nat) (kj : Fin (suc n)) =>
@@ -179,7 +179,7 @@
     \let | A0 : i /= 0 => \lam q => \case rewrite q in p \in
       rewriteI (suc_pred A0) (rewrite (<=_exists (<_suc_<= (rewriteI (suc_pred A0) in p))) in L5 {k} {pred i -' k})
 
-  \func invariant-exists (m : Fin (suc n)) :
+  \func base (m : Fin (suc n)) :
     ∃ (k0 : Fin (suc n)) (r0 : Real) (r0>0 : r0 > 0)
     (a (suc k0) * pow r0 (suc k0) = a 0 - eps)
     (\Pi (l : Fin (suc n)) (l NatSemiring.+ m >= n) ->
@@ -194,7 +194,7 @@
                    | A5 : l < {NatSemiring} Nat.suc n => rewriteI (fin_mod_id l) (mod<right (\lam x => linarith))
                    | A6 : l = {Fin (suc n)} n => inv (A4 (<=-antisymmetric (suc<=suc.conv (suc_<_<= A5)) (rewrite zro-right in A2)))
                  \in rewrite (A6, L1) A3)
-    | suc m => \case invariant-exists m \with {
+    | suc m => \case base m \with {
       | inP (k0, r0, r0>0, A0, A1) =>
         \let
           | i => n - {FinRing} suc m
@@ -234,4 +234,55 @@
               } )
           }
     }
+}
+
+-- Stabilization Lemma (Pigeonhole Principle)
+-- A non-increasing sequence in a finite set of cardinality n+1 must have three consecutive equal values
+-- if the sequence is at least 2n+3 elements long.
+
+\lemma three-consecutive-equals {n N : Nat} (N>2n : N > 2 * n)
+                                (k : Fin (suc (suc N)) -> Fin (suc n))
+                                (monotone : \Pi (j : Fin (suc N)) -> k (suc j) <= {NatSemiring} k j) :
+  ∃ (j : Fin N) (k j = k (suc j)) (k (suc j) = k (suc (suc j))) =>
+  helper n N N>2n k (<_suc_<= (fin_< (k 0))) monotone \where {
+  \lemma helper {n : Nat} (b N : Nat) (N>2b : N > 2 * b)
+                (k : Fin (suc (suc N)) -> Fin (suc n))
+                (k0<=b : (k 0 : Nat) <= b)
+                (monotone : \Pi (j : Fin (suc N)) -> k (suc j) <= {NatSemiring} k j) :
+    TruncP (\Sigma (j : Fin N) (k j = k (suc j)) (k (suc j) = k (suc (suc j)))) \elim b, N, N>2b
+    | _, 0, ()
+    | 0, suc N', _ =>
+      \let | k0=0 : (k 0 : Nat) = 0 => <=-antisymmetric k0<=b zero<=_
+           | k1<=0 : (k 1 : Nat) <= 0 => <=-transitive (monotone 0) k0<=b
+           | k1=0 : (k 1 : Nat) = 0 => <=-antisymmetric k1<=0 zero<=_
+           | k2<=0 : (k 2 : Nat) <= 0 => <=-transitive (monotone 1) k1<=0
+           | k2=0 : (k 2 : Nat) = 0 => <=-antisymmetric k2<=0 zero<=_
+      \in inP (0, fin_nat-inj (k0=0 *> inv k1=0), fin_nat-inj (k1=0 *> inv k2=0))
+    | suc b', 1, NatOrder.suc<suc p => \case p
+    | suc b', suc (suc N'), N>2b =>
+      \case LinearOrder.Dec.trichotomy {FinOrder (suc n)} (k 0) (k 1) \with {
+        | Tri.less k0<k1 => absurd (monotone 0 k0<k1)
+        | Tri.equals k0=k1 =>
+          \case LinearOrder.Dec.trichotomy {FinOrder (suc n)} (k 1) (k 2) \with {
+            | Tri.less k1<k2 => absurd (monotone 1 k1<k2)
+            | Tri.equals k1=k2 => inP (0, k0=k1, k1=k2)
+            | Tri.greater k1>k2 =>
+              \let | k1<=suc-b' : (k 1 : Nat) <= suc b' => transport (\lam x => (x : Nat) <= suc b') k0=k1 k0<=b
+                   | k2<k1 : (k 2 : Nat) < (k 1 : Nat) => k1>k2
+                   | k2<=b' : (k 2 : Nat) <= b' => <_suc_<= (k2<k1 <∘l k1<=suc-b')
+                   | k'' : Fin (suc (suc N')) -> Fin (suc n) => \lam j => k (suc (suc j))
+                   | N'>2b' : N' > 2 * b' => NatOrder.unsuc< (NatOrder.unsuc< N>2b)
+              \in \case helper {n} b' N' N'>2b' k'' k2<=b' (\lam j => monotone (suc (suc j))) \with {
+                | inP (j, eq1, eq2) => inP (suc (suc j), eq1, eq2)
+              }
+          }
+        | Tri.greater k0>k1 =>
+          \let | k1<k0 : (k 1 : Nat) < (k 0 : Nat) => k0>k1
+               | k1<=b' : (k 1 : Nat) <= b' => <_suc_<= (k1<k0 <∘l k0<=b)
+               | k' : Fin (suc (suc (suc N'))) -> Fin (suc n) => \lam j => k (suc j)
+               | N'>2b' : suc N' > 2 * b' => <-transitive id<suc (NatOrder.unsuc< N>2b)
+          \in \case helper {n} b' (suc N') N'>2b' k' k1<=b' (\lam j => monotone (suc j)) \with {
+            | inP (j, eq1, eq2) => inP (suc j, eq1, eq2)
+          }
+      }
 }
