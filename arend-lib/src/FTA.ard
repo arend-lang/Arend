@@ -41,7 +41,7 @@
   | 1, c => inP (0, \lam i => \let i0 : i = 0 => \case \elim i \with {
   0 => idp
   } \in rewrite i0 (
-    \let A0 => transportInv (\lam x => x < c 0 + eps) (LinearlyOrderedAbGroup.zro-right {RealAbGroup}) (LinearlyOrderedAbGroup.<_+-right {RealAbGroup} (c 0) eps>0)
+    \let A0 => transportInv (\lam x => x < c 0 + eps) (zro-right {RealAbGroup}) (<_+-right {RealAbGroup} (c 0) eps>0)
     \in rewriteI {1} (zro-right {_} {c 0}) (rewriteI {1} (zro-right {_} {c 0}) A0)))
   | suc (suc n), c0 :: cs =>
     \let | half => Real.fromRat (rat 1 2 (\case __) idp)
@@ -68,11 +68,10 @@
                (a0>eps : a 0 > eps)
                (ai>=0 : \Pi (i : Fin (suc n)) -> a (suc i) >= 0)
                (an=1 : a (suc n) = {RealField} 1) :
-  \let | N => 2 * n + 3 \in
-    ∃ (r0 : Real) (k : Fin (suc N) -> Fin (suc n))
-    (k_monotone : \Pi (j : Fin N) -> k (Fin.fromNat {N} (suc j)) <= {NatSemiring} k j)
+    ∃ (r0 : Real) (r0>0 : r0 > 0) (k : Fin (2 * n + 4) -> Fin (suc n))
+    (k_monotone : \Pi (j : Fin (2 * n + 3)) -> k (Fin.fromNat {2 * n + 3} (suc j)) <= {NatSemiring} k j)
     (C1 : a (suc (k 0)) * pow r0 (suc (k 0)) = a 0 - eps)
-    (C2 : \Pi (j : Fin (suc N)) (i : Fin (suc n)) ->
+    (C2 : \Pi (j : Fin (2 * n + 4)) (i : Fin (suc n)) ->
       a (suc (k j)) * pow (r0 * pow one_third j) (suc (k j)) >
       a (suc i) * pow (r0 * pow one_third j) (suc i) - eps) =>
   \case base {n} {eps} {eps>0} {a} {a0>eps} {ai>=0} {an=1} n \with {
@@ -86,6 +85,7 @@
                   (0, k0, \lam l => rewrite ide-right (invC2 l (l+n>=n l))) (step r0 r0>0) N \with {
         | inP (f, p, mon) =>
           inP (r0,
+               r0>0,
                \lam j => (f j).2,
                \lam j => rewrite (fin_mod_id (suc j)) (mon j).1,
                rewrite p invC1,
@@ -136,10 +136,10 @@
                   | t : Fin kLen => toFin i i<kLen
                   | inc_t=i : fin-inc_<= kLen<= t = {Fin (suc n)} i => fin_nat-inj (toFin=id *> inv (rewrite toFin=id idp))
                 \in <_+-left (negative eps) (rewrite inc_t=i in Pk' t)
-            \in \case LinearOrder.Dec.trichotomy i kj \with {
-              | Tri.less i<kj => <∘ (LE linarith) (rewrite (+-assoc, eps-eps/2) linarith) -- <∘ (LE linarith) (rewrite (+-assoc, eps-eps/2) linarith)
-              | Tri.equals i=kj => <∘ (LE (rewrite i=kj id<suc)) (rewrite (+-assoc, eps-eps/2) linarith)
-              | Tri.greater kj<i =>
+            \in \case LinearOrder.trichotomy i kj \with {
+              | less i<kj => <∘ (LE linarith) (rewrite (+-assoc, eps-eps/2) linarith) -- <∘ (LE linarith) (rewrite (+-assoc, eps-eps/2) linarith)
+              | equals i=kj => <∘ (LE (rewrite i=kj id<suc)) (rewrite (+-assoc, eps-eps/2) linarith)
+              | greater kj<i =>
                 \let
                   | eps*1/3^kj<eps/2 : eps * pow one_third (suc kj) < eps/2 => <_*_positive-right eps>0 (L4 kj)
                   | A3 : a (suc i) * pow rNext (suc i) - eps RealField.< a (suc kj) * pow rNext (suc kj) - eps/2 =>
@@ -229,8 +229,8 @@
             | ||.byRight A2 => inP (k0, r0, r0>0, A0, \lam l _ =>
               \case LinearOrder.Dec.trichotomy (l + {NatSemiring} suc m) n \with {
                 | less A4 => absurd linarith
-                | equals A4 => rewrite A0 (<_+-left (negative eps) (rewrite (L3 {n} {suc m} A4) in A2))
                 | greater A4 => A1 l (<_suc_<= linarith)
+                | equals A4 => rewrite A0 (<_+-left (negative eps) (rewrite (L3 {n} {suc m} A4) in A2))
               } )
           }
     }
@@ -240,7 +240,7 @@
 A non-increasing sequence in a finite set of cardinality $n+1$ must have three consecutive equal values
 if the sequence is at least $2n+3$ elements long. -}
 \lemma three-consecutive-equals {n N : Nat} (N>2n : N > 2 * n)
-                                (k : Fin (suc (suc N)) -> Fin (suc n))
+                                (k : Fin (N + 2) -> Fin (suc n))
                                 (monotone : \Pi (j : Fin (suc N)) -> k (suc j) <= {NatSemiring} k j) :
   ∃ (j : Fin N) (k j = k (suc j)) (k (suc j) = k (suc (suc j))) =>
   helper n N N>2n k (<_suc_<= (fin_< (k 0))) monotone \where {
@@ -313,3 +313,28 @@ if the sequence is at least $2n+3$ elements long. -}
       half * (Real.fromRat 1 - pow {RealField} x m) `qed
   \in rewrite sum1=half linarith
 
+\lemma MainLemma {n : Nat} (n>0 : n > 0) (eps : Real) (eps>0 : eps > 0)
+                 (a : Array Real (suc (suc n)))
+                 (a0>eps : a 0 > eps)
+                 (ai>=0 : \Pi (i : Fin (suc n)) -> a (suc i) >= 0)
+                 (an=1 : a (suc n) = {RealField} 1) :
+  ∃ (r : Real) (r>0 : r > 0) (k : Fin (suc n))
+    (pow {RealField} r (suc n) < a 0)
+    (pow {RealField} (ratio 1 3) (2 * n * n) * a 0 - 2 * eps < a (suc k) * pow {RealField} r (suc k))
+    (a (suc k) * pow {RealField} r (suc k) < a 0)
+    (AddMonoid.BigSum (\new Array Real k        (\lam j => a (j Nat.+ 1) * pow r (suc j) )) +
+     AddMonoid.BigSum (\new Array Real (n -' k) (\lam j => a (j Nat.+ k + 2) * pow r (j Nat.+ k + 2) ))
+    < (Real.fromRat 1 - pow one_third (suc n)) * a k * pow r (suc k) + pow 3 (suc n) * eps) =>
+  \case KeyLemma {n} eps eps>0 a a0>eps ai>=0 an=1 \with {
+    | inP (r0, r0>0, kSeq, k_mono, C1, C2) =>
+      \case three-consecutive-equals {n} {2 * n + 2} linarith kSeq
+                  (\lam j => rewrite (nat_fin_= (mod_< (NatOrder.suc<suc (fin_< j)))) in k_mono j) \with {
+        | inP (j, eq1, eq2) =>
+          \let
+            | k : Fin (suc n) => kSeq j
+            | r : Real => r0 * pow one_third j
+            | one/3>0 : ratio 1 3 > {RealField} 0 => linarith
+            | r>0 : r > 0 => LinearlyOrderedSemiring.<_*_positive_positive r0>0 (LinearlyOrderedSemiring.pow>0 one/3>0)
+          \in inP (r, r>0, k, {?}, {?}, {?}, {?})
+      }
+  }
