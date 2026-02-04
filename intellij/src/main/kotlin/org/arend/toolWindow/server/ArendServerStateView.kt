@@ -666,7 +666,8 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                 val libraries = selectedLibraryNames()
                 if (modules.isNotEmpty()) {
                     for (module in modules) {
-                        project.service<RunnerService>().runChecker(module, false)
+                        println("Typechecking $module from ArendServerStateView.TypecheckSelectedAction")
+                        project.service<RunnerService>().runCheckerWithFile(module)
                     }
                 } else {
                     // Typecheck whole libraries (both sources and tests)

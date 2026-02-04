@@ -13,6 +13,8 @@
 
     <extensions defaultExtensionNs="com.intellij">
 
+        <httpRequestHandler implementation="org.arend.aifeatures.DetachedTypecheckerService"/>
+
         <!-- Project -->
 
         <projectStructureDetector implementation="org.arend.project.ArendProjectStructureDetector"/>
