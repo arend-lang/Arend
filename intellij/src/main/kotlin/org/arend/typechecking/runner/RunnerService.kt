@@ -11,6 +11,7 @@ import com.intellij.platform.util.progress.reportRawProgress
 import com.intellij.platform.util.progress.reportSequentialProgress
 import kotlinx.coroutines.*
 import org.arend.error.DummyErrorReporter
+import org.arend.ext.error.FileListErrorReporter
 import org.arend.ext.module.LongName
 import org.arend.ext.module.ModuleLocation
 import org.arend.server.ArendServerRequesterImpl
@@ -76,6 +77,58 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
             } }
         }
 
+    private fun runCheckerWithFile(library: String?, isTest: Boolean, module: ModuleLocation?, definition: LongName?, onlyResolve: Boolean, checkerFactory: ArendCheckerFactory?, renamed: Map<TCDefReferable, TCDefReferable>?, bgAction: (() -> Unit)?, edtAction: (() -> Unit)?)
+    = coroutineScope.launch {
+    val message = module?.toString() ?: (library ?: "project")
+    val server = project.service<ArendServerService>().server
+    server.addErrorReporter(FileListErrorReporter(project.basePath!!))
+    withBackgroundProgress(project, "Checking $message") { reportSequentialProgress { reporter ->
+      val checker = reporter.nextStep(if (onlyResolve) 100 else 5, "Resolving $message") { reportRawProgress { reporter ->
+        if (module == null) {
+          ArendServerRequesterImpl(project).requestUpdate(server, library, isTest)
+        }
+        val checker = server.getCheckerFor(if (module == null) server.modules.filter { (library == null || it.libraryName == library) && (it.locationKind == ModuleLocation.LocationKind.SOURCE || isTest && it.locationKind == ModuleLocation.LocationKind.TEST) } else listOf(module))
+        checker.resolveAll(CoroutineCancellationIndicator(this), IntellijProgressReporter(reporter) { it.toString() })
+        checker
+      } }
+
+      if (checkerFactory == null) withContext(Dispatchers.EDT) {
+        project.service<ArendMessagesService>().update()
+      }
+
+      val updated = if (onlyResolve) false else reporter.nextStep(100, "Typechecking $message") {
+        reportRawProgress { reporter ->
+          val indicator = IntellijProgressReporter<List<Concrete.ResolvableDefinition>>(reporter) {
+            val ref = it.firstOrNull()?.data ?: return@IntellijProgressReporter null
+            val location = if (module == null) ref.location else null
+            (if (location == null) "" else "$location ") + ref.refLongName.toString()
+          }
+          val result = if (checkerFactory == null) {
+            checker.typecheck(if (definition == null || module == null) null else listOf(FullName(module, definition)), NotificationErrorReporter(project), CoroutineCancellationIndicator(this), indicator)
+          } else {
+            checker.typecheck(FullName(module, definition!!), checkerFactory, renamed, DummyErrorReporter.INSTANCE, CoroutineCancellationIndicator(this), indicator)
+          }
+          if (bgAction != null) bgAction()
+          result
+        } > 0
+      }
+
+      if (updated && checkerFactory == null) {
+        if (!ApplicationManager.getApplication().isUnitTestMode) {
+          DaemonCodeAnalyzer.getInstance(project).restart()
+        }
+        withContext(Dispatchers.EDT) {
+          project.service<ArendMessagesService>().update()
+          if (edtAction != null) edtAction()
+        }
+      } else if (edtAction != null) {
+        withContext(Dispatchers.EDT) {
+          edtAction()
+        }
+      }
+    } }
+  }
+
     fun runChecker(library: String?, isTest: Boolean, module: ModuleLocation?, definition: LongName?, onlyResolve: Boolean = false) =
         runChecker(library, isTest, module, definition, onlyResolve, null, null, null, null)
 
@@ -87,4 +140,7 @@ class RunnerService(private val project: Project, private val coroutineScope: Co
 
     fun runChecker(module: ModuleLocation, onlyResolve: Boolean = false) =
         runChecker(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, null, onlyResolve)
+
+  fun runCheckerWithFile(module : ModuleLocation) =
+    runCheckerWithFile(module.libraryName, module.locationKind == ModuleLocation.LocationKind.TEST, module, null, false, null, null, null, null)
 }

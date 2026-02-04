@@ -1,4 +1,4 @@
-package org.arend
+package org.arend.aifeatures
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
@@ -32,54 +32,31 @@ class DetachedTypecheckerService() : RestService() {
     request: FullHttpRequest,
     context: ChannelHandlerContext
   ): String? {
-    System.err.println(request.uri())
     val encodedPayload = urlDecoder.parameters()["action"]?.firstOrNull() ?: ""
     val parsedUserRequest : DecodedRequestData = parseServerData(encodedPayload)
     val modules : List<ModuleLocation> = parsedUserRequest.modulePaths.map{
       ModuleLocation(parsedUserRequest.libraryName, LocationKind.SOURCE, ModulePath.fromString(it.split("/").last()))
     }
+
     println("modules $modules , ${parsedUserRequest.libraryName}")
     val project = getLastFocusedOrOpenedProject()
-    val errorFilePath = ensureCommunicationFile(project?.basePath)
-
-    ApplicationManager.getApplication().invokeLater {
-      if (project == null) return@invokeLater
-      val runnerService = project.service<RunnerService>()
-      val remaining = if (errorFilePath != null) AtomicInteger(modules.size) else null
-
-      if (modules.isEmpty() && errorFilePath != null) {
-        try {
-          Files.write(
-            errorFilePath,
-            (doneMarker + "\n").toByteArray(StandardCharsets.UTF_8),
-            StandardOpenOption.CREATE,
-            StandardOpenOption.APPEND
-          )
-        } catch (_: Exception) {
-        }
-      }
-
-      for (module in modules){
-        val job = runnerService.runCheckerWithFile(module)
+    project?.let{
+      ApplicationManager.getApplication().invokeLater {
+        FileTypecheckAction(it).typeCheckModules(modules)
+        val errorFilePath = ensureCommunicationFile(project.basePath)
         if (errorFilePath != null) {
-          job.invokeOnCompletion {
-            val shouldSignal = remaining?.decrementAndGet() == 0
-            if (shouldSignal) {
-              try {
-                Files.write(
-                  errorFilePath,
-                  (doneMarker + "\n").toByteArray(StandardCharsets.UTF_8),
-                  StandardOpenOption.CREATE,
-                  StandardOpenOption.APPEND
-                )
-              } catch (_: Exception) {
-              }
-            }
+          try {
+            Files.write(
+              errorFilePath,
+              (doneMarker + "\n").toByteArray(StandardCharsets.UTF_8),
+              StandardOpenOption.CREATE,
+              StandardOpenOption.APPEND
+            )
+          } catch (_: Exception) {
           }
         }
       }
     }
-
     sendOk(request, context)
     return null
   }
