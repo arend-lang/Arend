@@ -24,6 +24,7 @@ public class ListErrorReporter implements ErrorReporter {
   }
 
   public void reportTo(ErrorReporter errorReporter) {
+    System.out.println("list from reportTo" + myErrorList.toString());
     for (GeneralError error : myErrorList) {
       errorReporter.report(error);
     }

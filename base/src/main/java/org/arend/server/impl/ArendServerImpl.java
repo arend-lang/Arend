@@ -542,7 +542,7 @@ public class ArendServerImpl implements ArendServer {
 
   @Override
   public void addErrorReporter(@NotNull ErrorReporter errorReporter) {
-    myErrorService.addErrorReporter(errorReporter);
+    myErrorService.addErrorReporterIfNotExists(errorReporter);
   }
 
   @Override

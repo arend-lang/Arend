@@ -13,6 +13,12 @@ public class ErrorService implements ErrorReporter {
   private final Map<LocatedReferable, List<GeneralError>> myTypecheckingErrors = new ConcurrentHashMap<>();
   private final List<ErrorReporter> myErrorReporters = new ArrayList<>();
 
+  public void addErrorReporterIfNotExists(ErrorReporter errorReporter) {
+    if (!myErrorReporters.contains(errorReporter)) {
+      myErrorReporters.add(errorReporter);
+    }
+  }
+
   public void addErrorReporter(ErrorReporter errorReporter) {
     myErrorReporters.add(errorReporter);
   }
@@ -80,6 +86,7 @@ public class ErrorService implements ErrorReporter {
         myTypecheckingErrors.computeIfAbsent(located, k -> new ArrayList<>()).add(newError);
       }
     });
+    System.out.println(myErrorReporters);
     for (ErrorReporter errorReporter : myErrorReporters) {
       errorReporter.report(error);
     }

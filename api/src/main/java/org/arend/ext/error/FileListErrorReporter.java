@@ -11,6 +11,7 @@ import java.util.List;
 
 public class FileListErrorReporter extends ListErrorReporter implements ErrorReporter{
   final private List<GeneralError> myErrorList;
+//  private List<GeneralError> myCurrentErrorList;
   private final Path filePath;
 
   public FileListErrorReporter(String dir) {

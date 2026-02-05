@@ -321,7 +321,9 @@ public class ArendCheckerImpl implements ArendChecker {
       if (definitions != null) {
         for (FullName definition : definitions) {
           if (definition.module == null) {
+            System.out.println("Module is null for definition: " + definition + " reporting");
             errorReporter.report(new DefinitionNotFoundError(definition));
+            System.out.println("Module is null for definition: " + definition + " end reporting");
             continue;
           }
 
@@ -336,10 +338,14 @@ public class ArendCheckerImpl implements ArendChecker {
               }
               concreteDefinitions.add(cDef);
             } else {
+              System.out.println("check2: " + definition + " reporting");
               errorReporter.report(new DefinitionNotFoundError(definition));
+              System.out.println("check2: " + definition + " end reporting");
             }
           } else {
+            System.out.println("check3: " + definition + " reporting");
             errorReporter.report(new ModuleNotFoundError(definition.module.getModulePath()));
+            System.out.println("check3: " + definition + " end reporting");
           }
         }
       }
@@ -380,6 +386,8 @@ public class ArendCheckerImpl implements ArendChecker {
           ListErrorReporter listErrorReporter = new ListErrorReporter();
           TypecheckingOrderingListener dependencyTypechecker = new TypecheckingOrderingListener(ArendCheckerFactory.DEFAULT, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.getRequester(), myServer.doClearLemmas());
           TypecheckingOrderingListener typechecker = checkerFactory == null ? dependencyTypechecker : new TypecheckingOrderingListener(checkerFactory, myServer.getInstanceScopeProvider(), ordering.getInstanceDependencies(), concreteProvider, listErrorReporter, dependencyCollector, new GroupComparator(myDependencies), myServer.getExtensionProvider(), myServer.getRequester(), myServer.doClearLemmas());
+//          listErrorReporter[]
+
 
           try {
             progressReporter.beginProcessing(collector.getElements().size());
