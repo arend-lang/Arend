@@ -8,7 +8,7 @@ tasks.register<JavaExec>("cliCheck") {
     group = "verification"
     dependsOn(task(":cli:jarDep"), tasks.named("classes"))
     mainClass.set("-jar")
-    val jarDepPath = projectDir.resolve("cli/build/libs/cli-1.10.0-full.jar").absolutePath
+    val jarDepPath = projectDir.resolve("cli/build/libs/cli-1.11.0-full.jar").absolutePath
     args(jarDepPath, "-tcr")
     workingDir(baseName)
 }
@@ -33,7 +33,7 @@ java {
 }
 
 tasks.withType<Wrapper>().configureEach {
-    gradleVersion = "8.5"
+    gradleVersion = "8.13"
 }
 
 tasks.compileJava {
