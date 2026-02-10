@@ -21,25 +21,3 @@ class FileTypecheckAction(val project : Project) {
   }
 
 }
-
-//override fun actionPerformed(e: AnActionEvent) {
-//            val def = selectedDefinition()
-//            if (def != null) {
-//                val fullName = def.refFullName
-//                project.service<RunnerService>().runChecker(fullName.module ?: return, fullName.longName)
-//            } else {
-//                val modules = selectedModuleLocations()
-//                val libraries = selectedLibraryNames()
-//                if (modules.isNotEmpty()) {
-//                    for (module in modules) {
-//                        println("Typechecking module $module")
-//                        project.service<RunnerService>().runCheckerWithFile(module)
-//                    }
-//                } else {
-//                    // Typecheck whole libraries (both sources and tests)
-//                    for (lib in libraries) {
-//                        project.service<RunnerService>().runChecker(lib, true, null, null, false)
-//                    }
-//                }
-//            }
-//        }
