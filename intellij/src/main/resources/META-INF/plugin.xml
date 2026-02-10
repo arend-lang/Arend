@@ -13,8 +13,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
 
-        <httpRequestHandler implementation="org.arend.aifeatures.DetachedTypecheckerService"/>
-        <httpRequestHandler implementation="org.arend.aifeatures.DetachedHTTPProofSearch"/>
+        <httpRequestHandler implementation="org.arend.aifeatures.DetachedHTTPService"/>
 
         <!-- Project -->
 
