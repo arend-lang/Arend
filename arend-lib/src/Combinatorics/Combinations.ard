@@ -26,11 +26,17 @@
 \import Set.Fin.KFin
 \open AddMonoid
 
+\func array-equiv {A : \Type} {n : Nat} : QEquiv {Array A n} {\Pi (j : Fin n) -> A} \cowith
+  | f l => l
+  | ret f => \new Array A n f
+  | ret_f l => arrayExt \lam j => idp
+  | f_sec f => idp
+
 \instance ArrayFin (A : FinSet) (n : Nat) : FinSet (Array A n) (Monoid.pow A.finCard n) \cowith
   | finEq => \let | P : FinSet => PiFin (FinFin n) (\lam _ => A)
              \in transport (\lam x => TruncP (Equiv {Fin x} {Array A n})) (FinProd_replicate {NatSemiring} {FinFin n} {A.finCard})
                   (TruncP.map P.finEq (\lam (e : Equiv {Fin P.finCard} {\Pi (j : Fin n) -> A}) =>
-                      e `transEquiv` symQEquiv {Array A n} {\Pi (j : Fin n) -> A} (array-equiv {A} {n})))
+                      e `transEquiv` symQEquiv (array-equiv {A} {n})))
 
 \func Combinations (n k : Nat) => StrictPosetHom (FinOrder k) (FinOrder n)
 
