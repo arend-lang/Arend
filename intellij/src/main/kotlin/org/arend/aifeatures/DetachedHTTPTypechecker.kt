@@ -16,7 +16,6 @@ import org.jetbrains.ide.RestService
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 
 class DetachedTypecheckerService() : RestService() {
   val delimiter = "%%"
