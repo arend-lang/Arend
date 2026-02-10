@@ -2,7 +2,9 @@ package org.arend.library;
 
 import org.arend.ext.ui.ArendUI;
 import org.arend.library.classLoader.ClassLoaderDelegate;
+import org.arend.naming.reference.LocatedReferable;
 import org.arend.server.ArendLibrary;
+import org.arend.util.Version;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,6 +47,11 @@ public class MemoryLibrary implements ArendLibrary {
 
   @Override
   public @Nullable ArendUI getArendUI() {
+    return null;
+  }
+
+  @Override
+  public @Nullable Version getLibraryVersion() {
     return null;
   }
 }

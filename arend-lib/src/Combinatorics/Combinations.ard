@@ -1,0 +1,82 @@
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Combinatorics.Binom
+\import Combinatorics.Factorial
+\import Data.Array
+\import Data.Bool
+\import Equiv
+\import Equiv.Sigma
+\import Equiv.HalfAdjoint
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Category
+\import Order.LinearOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Algebra.Monoid
+\import Algebra.Semiring
+\import Set.Fin.Instances
+\import Set.Fin.KFin
+\open AddMonoid
+
+\instance ArrayFin (A : FinSet) (n : Nat) : FinSet (Array A n) (Monoid.pow A.finCard n) \cowith
+  | finEq => \let | P : FinSet => PiFin (FinFin n) (\lam _ => A)
+             \in transport (\lam x => TruncP (Equiv {Fin x} {Array A n})) (FinProd_replicate {NatSemiring} {FinFin n} {A.finCard})
+                  (TruncP.map P.finEq (\lam (e : Equiv {Fin P.finCard} {\Pi (j : Fin n) -> A}) =>
+                      e `transEquiv` symQEquiv {Array A n} {\Pi (j : Fin n) -> A} (array-equiv {A} {n})))
+
+\func Combinations (n k : Nat) => StrictPosetHom (FinOrder k) (FinOrder n)
+
+\func IsStrictlySorted {n k : Nat} (arr : Array (Fin n) k) : \Prop
+  => \Pi (i j : Fin k) -> i < j -> arr i < arr j
+
+\instance IsStrictlySorted-dec {n k : Nat} (arr : Array (Fin n) k) : Decide (IsStrictlySorted arr)
+  => \have | dec-prop (i j : Fin k) : Dec (arr i < arr j)
+             => (LinearOrder.<-dec {FinOrder n} (arr i) (arr j)).decide
+           | dec-j (i j : Fin k) : Dec (i < j -> arr i < arr j)
+             => \case (FinOrder k).trichotomy i j \with {
+                  | less i<j => \case dec-prop i j \with {
+                    | yes arr_i<arr_j => yes \lam _ => arr_i<arr_j
+                    | no n_arr_i<arr_j => no \lam h => n_arr_i<arr_j (h i<j)
+                  }
+                  | equals i=j => yes \lam i<j => absurd ((FinOrder k).<-irreflexive (transport (`< j) i=j i<j))
+                  | greater i>j => yes \lam i<j => absurd ((FinOrder k).<-irreflexive (i<j <∘ i>j))
+                }
+           | dec-i (i : Fin k) : Dec (\Pi (j : Fin k) -> i < j -> arr i < arr j)
+             => FinDec.fin-dec (\lam j => \new Decide { | E => i < j -> arr i < arr j | decide => dec-j i j })
+     \in \new Decide {
+       | E => IsStrictlySorted arr
+       | decide => FinDec.fin-dec (\lam i => \new Decide { | E => \Pi (j : Fin k) -> i < j -> arr i < arr j | decide => dec-i i })
+     }
+
+\instance CombinationsFin (n k : Nat) : FinSet (Combinations n k)
+  => \let | S : FinSet => ArrayFin (FinFin n) k
+          | D : DecSubSet S => \new DecSubSet {
+              | contains arr => IsStrictlySorted arr
+              | isDec arr => decide {IsStrictlySorted-dec arr}
+            }
+          | F : FinSet D.ISet => SigmaFin.DecSubSet-isFin S D
+     \in \new FinSet {
+       | finCard => F.finCard
+       | finEq => TruncP.map F.finEq (\lam e => e `transEquiv` equiv-arr-hom)
+     }
+  \where {
+    \func equiv-arr-hom {n k : Nat} : Equiv {\Sigma (arr : Array (Fin n) k) (IsStrictlySorted arr)} {Combinations n k} \cowith
+      | f (arr, s) => \new StrictPosetHom {
+          | Dom => FinOrder k
+          | Cod => FinOrder n
+          | func i => arr i
+          | func-< {i} {j} i<j => s i j i<j
+        }
+      | ret (h : StrictPosetHom) => (\lam i => h i, \lam i j i<j => h.func-< i<j)
+      | ret_f p => ext (arrayExt (\lam i => idp))
+      | sec (h : StrictPosetHom) => (\lam i => h i, \lam i j i<j => h.func-< i<j)
+      | f_sec h => ext (ext (\lam i => idp))
+  }
