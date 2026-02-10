@@ -86,7 +86,6 @@ public class ErrorService implements ErrorReporter {
         myTypecheckingErrors.computeIfAbsent(located, k -> new ArrayList<>()).add(newError);
       }
     });
-    System.out.println(myErrorReporters);
     for (ErrorReporter errorReporter : myErrorReporters) {
       errorReporter.report(error);
     }

@@ -650,19 +650,6 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
         override fun getActionUpdateThread() = ActionUpdateThread.BGT
     }
 
-  fun executeTypecheckModules(modules : List<ModuleLocation>){
-    for (module in modules){
-      println("removing module $module")
-      project.service<ArendServerService>().server.removeModule(module)
-    }
-
-    println("calling external executeTypecheckModule")
-    for (module in modules) {
-      println("Typechecking $module from ArendServerStateView.TypecheckSelectedAction")
-      project.service<RunnerService>().runCheckerWithFile(module)
-    }
-  }
-
     private inner class TypecheckSelectedAction : AnAction("Typecheck") {
         override fun update(e: AnActionEvent) {
             e.presentation.icon = ArendIcons.TURNSTILE
@@ -678,11 +665,9 @@ class ArendServerStateView(private val project: Project, toolWindow: ToolWindow)
                 val modules = selectedModuleLocations()
                 val libraries = selectedLibraryNames()
                 if (modules.isNotEmpty()) {
-                  executeTypecheckModules(modules)
-//                    for (module in modules) {
-//                        println("Typechecking $module from ArendServerStateView.TypecheckSelectedAction")
-//                        project.service<RunnerService>().runCheckerWithFile(module)
-//                    }
+                    for (module in modules) {
+                        project.service<RunnerService>().runChecker(module, false)
+                    }
                 } else {
                     // Typecheck whole libraries (both sources and tests)
                     for (lib in libraries) {

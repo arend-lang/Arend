@@ -33,7 +33,6 @@ class DetachedTypecheckerService() : RestService() {
   fun executeTypecheckModules(project : Project, modules : List<ModuleLocation>){
     File(project.basePath!! + "/.junieCommunication/errorFile.txt").writeText("")
     for (module in modules){
-      println("removing module $module")
       project.service<ArendServerService>().server.removeModule(module)
     }
     project.service<RunnerService>().coroutineScope.launch {
@@ -55,26 +54,9 @@ class DetachedTypecheckerService() : RestService() {
       ModuleLocation(parsedUserRequest.libraryName, LocationKind.SOURCE, ModulePath.fromString(it.split("/").last()))
     }
 
-    println("modules $modules , ${parsedUserRequest.libraryName}")
     val project = getLastFocusedOrOpenedProject()
     project?.let{
       executeTypecheckModules(project, modules)
-
-//      ApplicationManager.getApplication().invokeLater {
-//        FileTypecheckAction(it).typeCheckModules(modules)
-//        val errorFilePath = ensureCommunicationFile(project.basePath)
-//        if (errorFilePath != null) {
-//          try {
-//            Files.write(
-//              errorFilePath,
-//              (doneMarker + "\n").toByteArray(StandardCharsets.UTF_8),
-//              StandardOpenOption.CREATE,
-//              StandardOpenOption.APPEND
-//            )
-//          } catch (_: Exception) {
-//          }
-//        }
-//      }
     }
     sendOk(request, context)
     return null
