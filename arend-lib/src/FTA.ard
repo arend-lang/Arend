@@ -20,6 +20,7 @@
 \import Arith.Real.UpperReal
 \import Data.Array
 \import Data.Fin
+\import Function.Meta
 \import Logic
 \import Logic.Classical
 \import Logic.Meta
@@ -313,18 +314,6 @@ if the sequence is at least $2n+3$ elements long. -}
       half * (Real.fromRat 1 - pow {RealField} x m) `qed
   \in rewrite sum1=half linarith
 
-\lemma j_suc_k0_bound {n : Nat}
-                      (n>0 : n > 0)
-                      (j : Fin (2 * n + 2))
-                      (k0 : Fin (suc n)) :
-  (j : Nat) * suc (k0 : Nat) <= 2 * (suc n) * (suc n) =>
-  \let
-    | j_bound : (j : Nat) < 2 * n + 2 => fin_< j
-    | j_le : (j : Nat) <= 2 * n + 1 => <_suc_<= j_bound
-    | k0_bound : (k0 : Nat) < suc n => fin_< k0
-    | suc_k0_le : suc (k0 : Nat) <= suc n => suc<=suc (<_suc_<= k0_bound)
-    | two_n_plus_1_le : 2 * n + 1 <= 2 * suc n => id<=suc
-  \in <=_* (j_le <=∘ two_n_plus_1_le) suc_k0_le
 
 \lemma MainLemma {n : Nat} (n>0 : n > 0) (eps : Real) (eps>0 : eps > 0)
                  (a : Array Real (suc (suc n)))
@@ -333,10 +322,10 @@ if the sequence is at least $2n+3$ elements long. -}
                  (an=1 : a (suc n) = {RealField} 1) :
   ∃ (r : Real) (r>0 : r > 0) (k : Fin (suc n))
   (pow {RealField} r (suc n) < a 0)
-  (pow {RealField} (ratio 1 3) (2 * (suc n) * (suc n)) * a 0 - 2 * eps < a (suc k) * pow {RealField} r (suc k))
+  (pow {RealField} (ratio 1 3) (2 * suc n * suc n) * a 0 - 2 * eps < a (suc k) * pow {RealField} r (suc k))
   (a (suc k) * pow {RealField} r (suc k) < a 0)
   (AddMonoid.BigSum (\new Array Real k (\lam j => a (j Nat.+ 1) * pow r (suc j) )) +
-  AddMonoid.BigSum (\new Array Real (n -' k) (\lam j => a (j Nat.+ k + 2) * pow r (j Nat.+ k + 2) ))
+   AddMonoid.BigSum (\new Array Real (n -' k) (\lam j => a (j Nat.+ k + 2) * pow r (j Nat.+ k + 2) ))
     < (Real.fromRat 1 - pow one_third (suc n)) * a k * pow r (suc k) + pow 3 (suc n) * eps) =>
   \case KeyLemma {n} eps eps>0 a a0>eps ai>=0 an=1 \with {
     | inP (r0, r0>0, kSeq, k_mono, C1, C2) =>
@@ -354,77 +343,47 @@ if the sequence is at least $2n+3$ elements long. -}
             | r0>=0 : r0 >= 0 => <=-less r0>0
             | pow_one_third_<=1 : pow {RealField} one_third j <= 1 => PosetSemiring.pow<=1 one/3>=0 one/3<=1
             | r<=r0 : r <= r0 => transport (r0 * pow one_third j <=) (ide-right {RealField})
-            (PosetSemiring.<=_*_positive-right (<=-less r0>0) pow_one_third_<=1)
+              (PosetSemiring.<=_*_positive-right (<=-less r0>0) pow_one_third_<=1)
             | k0 : Fin (suc n) => kSeq 0
-            | C2_at_0 : \Pi (i : Fin (suc n)) -> a (suc k0) * pow r0 (suc k0) > a (suc i) * pow r0 (suc i) - eps =>
-              \lam i => transport2 (\lam x y => a (suc k0) * pow x (suc k0) > a (suc i) * pow y (suc i) - eps)
-              (ide-right {RealField}) (ide-right {RealField}) (C2 0 i)
-            | ai_ri_<=_ai_r0i : \Pi (i : Fin (suc n)) -> a (suc i) * pow r (suc i) <= a (suc i) * pow r0 (suc i) =>
-              \lam i => PosetSemiring.<=_*_positive-right (ai>=0 i)
-              (PosetSemiring.pow_<=-monotone {RealField} {r} {r0} {suc i} r>=0 r<=r0)
-            | ai_r0i_<_a0 : \Pi (i : Fin (suc n)) -> a (suc i) * pow r0 (suc i) < a 0 =>
-              \lam i => \let
-                | C2i : a (suc k0) * pow r0 (suc k0) > a (suc i) * pow r0 (suc i) - eps => C2_at_0 i
-                | step1 : a (suc i) * pow r0 (suc i) < a (suc k0) * pow r0 (suc k0) + eps => linarith
-                | step2 : a (suc k0) * pow r0 (suc k0) + eps = a 0 =>
-                  pmap (__ + eps) C1 *> +-assoc *> pmap (a 0 +) (negative-left {RealField}) *> zro-right
-                        \in transport (a (suc i) * pow r0 (suc i) <) step2 step1
-            | ai_ri_<_a0 : \Pi (i : Fin (suc n)) -> a (suc i) * pow r (suc i) < a 0 =>
-              \lam i => <-transitive-right (ai_ri_<=_ai_r0i i) (ai_r0i_<_a0 i)
-            | goal3 : a (suc k) * pow {RealField} r (suc k) < a 0 => ai_ri_<_a0 k
             | n_fin : Fin (suc n) => Fin.fromNat {n} n
-            | an_fin_ri_<_a0 : a (suc n_fin) * pow r (suc n_fin) < a 0 => ai_ri_<_a0 n_fin
-            | pow_suc_n_fin_eq : pow {RealField} r (suc n_fin) = pow {RealField} r (suc n) => pmap (pow r) (pmap suc (mod_< id<suc))
-            | a_suc_n_fin_eq_1 : a (suc n_fin) = Real.fromRat 1 =>
-              pmap a (fin_nat-inj {suc (suc n)} {suc n_fin} {Fin.fromNat {suc n} (suc n)}
-              (unfold Fin.fromNat (rewrite (mod_< id<suc, mod_< id<suc) idp))) *> an=1
-            | goal1 : pow {RealField} r (suc n) < a 0 =>
-              transport (\lam x => x < a 0) (pmap (a (suc n_fin) *) pow_suc_n_fin_eq *> pmap (`* pow r (suc n)) a_suc_n_fin_eq_1 *> ide-left) an_fin_ri_<_a0
-            -- Goal 2: lower bound 3^{-2n²} * a0 - 2*eps < a_k * r^k
-            | C2_at_j_k0 : a (suc k) * pow r (suc k) > a (suc k0) * pow r (suc k0) - eps => C2 j k0
-            | k0_nat : Nat => k0
-            | pow_r_k0_eq : pow {RealField} r (suc k0_nat) = pow r0 (suc k0_nat) * pow one_third ((j : Nat) * suc k0_nat) =>
-              CMonoid.pow_*-comm {RealField} {r0} {pow one_third j} {suc k0_nat} *>
-              pmap (pow r0 (suc k0_nat) *) (inv (Monoid.pow_* {RealField} {one_third} {j} {suc k0_nat}))
-            | ak0_rk0_eq : a (suc k0) * pow {RealField} r (suc k0_nat) = (a 0 - eps) * pow one_third ((j : Nat) * suc k0_nat) =>
-              pmap (a (suc k0) *) pow_r_k0_eq *>
-              inv (*-assoc {RealField}) *>
-              pmap (`* pow one_third ((j : Nat) * suc k0_nat)) C1
-            | j_suc_k0_<=_2nn : (j : Nat) * suc k0_nat <= 2 * (suc n) * (suc n) => j_suc_k0_bound n>0 j k0
-            | pow_one_third_bound : pow {RealField} one_third (2 * (suc n) * (suc n)) <= pow one_third ((j : Nat) * suc k0_nat) =>
-              PosetSemiring.pow_<=-degree one/3>=0 one/3<=1 j_suc_k0_<=_2nn
             | a0_minus_eps_>0 : a 0 - eps > 0 => linarith
-            | ak0_rk0_lower : (a 0 - eps) * pow one_third ((j : Nat) * suc k0_nat) >=
-            (a 0 - eps) * pow one_third (2 * (suc n) * (suc n)) =>
-              PosetSemiring.<=_*_positive-right (<=-less a0_minus_eps_>0) pow_one_third_bound
-            | pow_2nn_<=1 : pow {RealField} one_third (2 * (suc n) * (suc n)) <= 1 => PosetSemiring.pow<=1 one/3>=0 one/3<=1 {2 * (suc n) * (suc n)}
-            | pow_2nn_>=0 : pow {RealField} one_third (2 * (suc n) * (suc n)) >= 0 => PosetSemiring.pow>=0 {_} {_} {2 * (suc n) * (suc n)} one/3>=0
-            | eps_pow_<=_eps : eps * pow {RealField} one_third (2 * (suc n) * (suc n)) <= eps =>
-              transport (eps * pow one_third (2 * (suc n) * (suc n)) <=) (ide-right {RealField})
-              (PosetSemiring.<=_*_positive-right (<=-less eps>0) pow_2nn_<=1)
-            | distrib_eq : (a 0 - eps) * pow {RealField} one_third (2 * (suc n) * (suc n)) =
-            a 0 * pow one_third (2 * (suc n) * (suc n)) - eps * pow one_third (2 * (suc n) * (suc n)) =>
-              RealField.rdistr_-
-            | neg_eps_pow_>=_neg_eps : negative (eps * pow {RealField} one_third (2 * (suc n) * (suc n))) >= negative eps =>
-              PosetAddGroup.negative_<= eps_pow_<=_eps
-            | h2_ineq : a 0 * pow {RealField} one_third (2 * (suc n) * (suc n)) - eps * pow one_third (2 * (suc n) * (suc n)) >=
-            a 0 * pow one_third (2 * (suc n) * (suc n)) - eps =>
-              <=_+ <=-refl neg_eps_pow_>=_neg_eps
-            | h2 : (a 0 - eps) * pow {RealField} one_third (2 * (suc n) * (suc n)) >= a 0 * pow one_third (2 * (suc n) * (suc n)) - eps =>
-              transport (`>= a 0 * pow one_third (2 * (suc n) * (suc n)) - eps) (inv distrib_eq) h2_ineq
-            | comm_eq : a 0 * pow {RealField} one_third (2 * (suc n) * (suc n)) = pow one_third (2 * (suc n) * (suc n)) * a 0 =>
-              *-comm {RealField}
-            | h2' : (a 0 - eps) * pow {RealField} one_third (2 * (suc n) * (suc n)) >= pow one_third (2 * (suc n) * (suc n)) * a 0 - eps =>
-              transport ((a 0 - eps) * pow one_third (2 * (suc n) * (suc n)) >=) (pmap (`- eps) comm_eq) h2
-            | h1 : a (suc k0) * pow r (suc k0_nat) - eps >= (a 0 - eps) * pow one_third (2 * suc n * suc n) - eps =>
-              rewrite ak0_rk0_eq (<=_+ ak0_rk0_lower <=-refl)
-            | h3 : (a 0 - eps) * pow {RealField} one_third (2 * (suc n) * (suc n)) - eps >= pow one_third (2 * (suc n) * (suc n)) * a 0 - 2 * eps =>
-              linarith
-            | goal2 : pow {RealField} (ratio 1 3) (2 * (suc n) * (suc n)) * a 0 - 2 * eps < a (suc k) * pow {RealField} r (suc k) =>
-              <-transitive-right (h3 <=∘ h1) C2_at_j_k0
+            | -2eps=-eps-eps : negative (natCoef 2 * eps) = negative eps + negative eps => linarith
+
+            | ai_ri_<_a0 : \Pi (i : Fin (suc n)) -> a (suc i) * pow r (suc i) < a 0 =>
+              \lam i => <-transitive-right (PosetSemiring.<=_*_positive-right (ai>=0 i)
+                (PosetSemiring.pow_<=-monotone {RealField} {r} {r0} {suc i} r>=0 r<=r0))
+                (rewrite (pmap (__ + eps) C1 *> +-assoc *> pmap (a 0 +) (negative-left {RealField}) *> zro-right) in
+                  (rewrite (+-assoc, negative-left {RealField}, zro-right) in
+                    <_+-left eps (rewrite ide-right in C2 0 i)))
+
+            | h1 : a (suc k0) * pow r (suc k0) - eps >= (a 0 - eps) * pow one_third (2 * suc n * suc n) - eps =>
+              rewrite (pmap (a (suc k0) *) (CMonoid.pow_*-comm {RealField} {r0} {pow one_third j} {suc k0} *>
+                pmap (pow r0 (suc k0) *) (inv (Monoid.pow_* {RealField} {one_third} {j} {suc k0}))) *>
+                inv (*-assoc {RealField}) *> pmap (`* pow one_third ((j : Nat) * suc k0)) C1)
+              (<=_+ (PosetSemiring.<=_*_positive-right (<=-less a0_minus_eps_>0)
+                (PosetSemiring.pow_<=-degree one/3>=0 one/3<=1
+                  (<=_* ((<_suc_<= (fin_< j)) <=∘ id<=suc) (suc<=suc (<_suc_<= (fin_< k0)))))) <=-refl)
+
             | goal4 : AddMonoid.BigSum (\new Array Real k (\lam j => a (j Nat.+ 1) * pow r (suc j))) +
             AddMonoid.BigSum (\new Array Real (n -' k) (\lam j => a (j Nat.+ k + 2) * pow r (j Nat.+ k + 2)))
-            < (Real.fromRat 1 - pow one_third (suc n)) * a k * pow r (suc k) + pow 3 (suc n) * eps => {?}
-          \in inP (r, r>0, k, goal1, goal2, goal3, goal4)
+              < (Real.fromRat 1 - pow one_third (suc n)) * a k * pow r (suc k) + pow 3 (suc n) * eps => {?}
+          \in inP (r, r>0, k,
+                   rewrite (pmap (a (suc n_fin) *) (pmap (pow r) (pmap suc (mod_< id<suc))) *>
+                    pmap (`* pow r (suc n)) (pmap a (fin_nat-inj {suc (suc n)} {suc n_fin} {Fin.fromNat {suc n} (suc n)}
+                      (unfold Fin.fromNat (rewrite (mod_< id<suc, mod_< id<suc) idp))) *> an=1) *> ide-left) in
+                   ai_ri_<_a0 n_fin,
+                   <-transitive-right (unfold (-) (rewrite (-2eps=-eps-eps, inv +-assoc)
+                     (<=_+ (rewrite (*-comm {RealField} {_} {a 0})
+                       (<=∘ (transport
+                         (`>= a 0 * pow one_third (2 * suc n * suc n) - eps)
+                         (inv RealField.rdistr_-)
+                         (<=_+ <=-refl (PosetAddGroup.negative_<= (rewrite (ide-right {RealField}) in
+                         PosetSemiring.<=_*_positive-right (<=-less eps>0)
+                           (PosetSemiring.pow<=1 one/3>=0 one/3<=1 {2 * suc n * suc n})))))
+                         (repeat {2} (rewrite (+-assoc, negative-left, zro-right {RealField})) in
+                          <=_+ h1 (<=-refl {RealField} {eps}))
+                       )) (<=-refl {RealField} {negative eps})))) (C2 j k0),
+                   ai_ri_<_a0 k,
+                   goal4)
       }
   }
