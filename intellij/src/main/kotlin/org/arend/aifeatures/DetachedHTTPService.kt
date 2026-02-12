@@ -29,6 +29,7 @@ class DetachedHTTPService : RestService() {
     private const val SERVICE_NAME = "detachedService"
     private const val TYPECHECK_ACTION = "typecheck"
     private const val PROOF_SEARCH_ACTION = "proofSearch"
+    private const val JUNIE_COMMUNICATION_FOLDER = ".junieCommunication"
   }
 
   override fun getServiceName(): String = SERVICE_NAME
@@ -73,14 +74,15 @@ class DetachedHTTPService : RestService() {
   }
 
   private fun executeTypecheckModules(project: Project, modules: List<ModuleLocation>) {
-    File(project.basePath!! + "/.junieCommunication/errorFile.txt").writeText("")
+    ensureJunieCommunicationFolder(project.basePath!!)
+    File(project.basePath!! + "/$JUNIE_COMMUNICATION_FOLDER/errorFile.txt").writeText("")
     for (module in modules) {
       project.service<ArendServerService>().server.removeModule(module)
     }
     project.service<RunnerService>().coroutineScope.launch {
       for (module in modules) {
         project.service<RunnerService>().runCheckerWithFile(module).join()
-        File(project.basePath!! + "/.junieCommunication/errorFile.txt").appendText("\n$doneMarker")
+        File(project.basePath!! + "/$JUNIE_COMMUNICATION_FOLDER/errorFile.txt").appendText("\n$doneMarker")
       }
     }
   }
@@ -96,8 +98,9 @@ class DetachedHTTPService : RestService() {
   // ==================== Proof Search functionality ====================
 
   private fun executeProofSearchAction(project: Project, query: String) {
+    ensureJunieCommunicationFolder(project.basePath!!)
     val resultsOfProofSearch = executeProofSearch(project, query)
-    val outputFile = File(project.basePath!! + "/.junieCommunication/proofSearchResults.txt")
+    val outputFile = File(project.basePath!! + "/$JUNIE_COMMUNICATION_FOLDER/proofSearchResults.txt")
     outputFile.writeText(resultsOfProofSearch)
     outputFile.appendText("\n$proofSearchDoneMarker")
   }
@@ -117,4 +120,30 @@ class DetachedHTTPService : RestService() {
     val modulePaths: List<String>,
     val libraryName: String
   )
+
+  // ==================== Helper functions ====================
+
+  private fun ensureJunieCommunicationFolder(basePath: String) {
+    val dirPath = Path.of(basePath, JUNIE_COMMUNICATION_FOLDER)
+    Files.createDirectories(dirPath)
+    ensureGitignore(basePath)
+  }
+
+  private fun ensureGitignore(basePath: String) {
+    val gitignorePath = Path.of(basePath, ".gitignore")
+    val entry = JUNIE_COMMUNICATION_FOLDER
+    try {
+      if (Files.exists(gitignorePath)) {
+        val content = Files.readString(gitignorePath)
+        if (!content.contains(entry)) {
+          val newContent = if (content.endsWith("\n")) content + entry + "\n" else content + "\n" + entry + "\n"
+          Files.writeString(gitignorePath, newContent)
+        }
+      } else {
+        Files.writeString(gitignorePath, entry + "\n")
+      }
+    } catch (e: Exception) {
+      e.printStackTrace()
+    }
+  }
 }
