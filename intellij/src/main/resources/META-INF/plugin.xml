@@ -13,8 +13,6 @@
 
     <extensions defaultExtensionNs="com.intellij">
 
-        <httpRequestHandler implementation="org.arend.aifeatures.DetachedHTTPService"/>
-
         <!-- Project -->
 
         <projectStructureDetector implementation="org.arend.project.ArendProjectStructureDetector"/>
@@ -102,6 +100,14 @@
 
         <callHierarchyProvider language="Arend" implementationClass="org.arend.hierarchy.call.ArendCallHierarchyProvider"/>
         <typeHierarchyProvider language="Arend" implementationClass="org.arend.hierarchy.clazz.ArendClassHierarchyProvider"/>
+
+        <!-- AI features -->
+
+        <extensions defaultExtensionNs="com.intellij">
+          <applicationService serviceImplementation="org.arend.aifeatures.McpToolRegistryService"/>
+        </extensions>
+
+        <httpRequestHandler implementation="org.arend.aifeatures.DetachedHTTPService"/>
 
         <!-- Usages Provider -->
 
