@@ -314,7 +314,6 @@ if the sequence is at least $2n+3$ elements long. -}
       half * (Real.fromRat 1 - pow {RealField} x m) `qed
   \in rewrite sum1=half linarith
 
-
 \lemma MainLemma {n : Nat} (n>0 : n > 0) (eps : Real) (eps>0 : eps > 0)
                  (a : Array Real (suc (suc n)))
                  (a0>eps : a 0 > eps)
@@ -326,7 +325,7 @@ if the sequence is at least $2n+3$ elements long. -}
   (a (suc k) * pow {RealField} r (suc k) < a 0)
   (AddMonoid.BigSum (\new Array Real k (\lam j => a (j Nat.+ 1) * pow r (suc j) )) +
    AddMonoid.BigSum (\new Array Real (n -' k) (\lam j => a (j Nat.+ k + 2) * pow r (j Nat.+ k + 2) ))
-    < (Real.fromRat 1 - pow one_third (suc n)) * a k * pow r (suc k) + pow 3 (suc n) * eps) =>
+    < (Real.fromRat 1 - pow one_third (suc n)) * a (suc k) * pow r (suc k) + pow 3 (suc n) * eps) =>
   \case KeyLemma {n} eps eps>0 a a0>eps ai>=0 an=1 \with {
     | inP (r0, r0>0, kSeq, k_mono, C1, C2) =>
       \case three-consecutive-equals {n} {2 * n + 2} linarith kSeq
@@ -364,9 +363,93 @@ if the sequence is at least $2n+3$ elements long. -}
                 (PosetSemiring.pow_<=-degree one/3>=0 one/3<=1
                   (<=_* ((<_suc_<= (fin_< j)) <=∘ id<=suc) (suc<=suc (<_suc_<= (fin_< k0)))))) <=-refl)
 
+            -- Step 1: For all i in {1,...,n}: a_k (r/3)^k > a_i (r/3)^i - eps (from C2 with k = k_{j+1})
+            -- Note: r = r0 * (1/3)^j, so r/3 = r0 * (1/3)^{j+1}
+            -- We use C2 (suc j) which gives inequality for kSeq (suc j), and eq1 says k = kSeq j = kSeq (suc j)
+            | r/3 : Real => r * ratio 1 3
+            -- r/3 = r0 * (1/3)^j * (1/3) = r0 * ((1/3)^j * (1/3)) = r0 * (1/3)^{j+1}
+            -- C2 uses r0 * pow one_third (suc j), we need to show this equals r/3 = r * one_third = r0 * pow one_third j * one_third
+            | r/3_eq : r0 * pow one_third (suc j) = r/3 => inv *-assoc
+            | step1 : \Pi (i : Fin (suc n)) -> a (suc k) * pow r/3 (suc k) > a (suc i) * pow r/3 (suc i) - eps =>
+                \lam i => rewrite (inv eq1) in (rewrite r/3_eq in C2 (suc j) i)
+            -- Step 2: Add eps to both sides: a_k (r/3)^k + eps > a_i (r/3)^i
+            | step2 : \Pi (i : Fin (suc n)) -> a (suc k) * pow r/3 (suc k) + eps > a (suc i) * pow r/3 (suc i) =>
+              \lam i => rewrite (+-assoc, negative-left {RealField}, zro-right) in <_+-left eps (step1 i)
+
+            -- Step 3-4: Multiply by 3^i > 0 and rewrite: a_i r^i < 3^{i-k} a_k r^k + 3^i eps
+            -- For i < k: a_i r^i < 3^{i-k} a_k r^k + 3^i eps (where 3^{i-k} = (1/3)^{k-i})
+            | step4_lower : \Pi (i : Fin k) ->
+              a (Fin.fromNat {suc n} (suc i)) * pow r (suc i) <
+              pow one_third (k -' suc i) * a (suc k) * pow r (suc k) + pow 3 (suc i) * eps =>
+              \lam i => 
+                \let
+                  -- Convert i : Fin k to Fin (suc n) for use with step2
+                  -- k : Fin (suc n) means k < suc n, so k <= suc n by <=-less
+                  | k<=sucn : (k : Nat) <= suc n => <=-less (fin_< k)
+                  | i' : Fin (suc n) => fin-inc_<= {k} {suc n} k<=sucn i
+                  -- 3^{suc i} > 0
+                  | pow3>0 : pow {RealField} 3 (suc i) > 0 => LinearlyOrderedSemiring.pow>0 {RealField} {3} linarith {suc i}
+                  -- step2 gives: a (suc k) * pow r/3 (suc k) + eps > a (suc i') * pow r/3 (suc i')
+                  -- which is the same as: a (suc i') * pow r/3 (suc i') < a (suc k) * pow r/3 (suc k) + eps
+                  | step2_i : a (suc i') * pow r/3 (suc i') < a (suc k) * pow r/3 (suc k) + eps => step2 i'
+                  -- Multiply both sides by pow 3 (suc i) > 0 on the left
+                  -- <_*_positive-right : x > 0 -> y < z -> x * y < x * z
+                  | multiplied : pow 3 (suc i) * (a (suc i') * pow r/3 (suc i')) < pow 3 (suc i) * (a (suc k) * pow r/3 (suc k) + eps) =>
+                      <_*_positive-right pow3>0 step2_i
+                  -- Key facts:
+                  -- 1. r/3 = r * one_third, so pow r/3 m = pow r m * pow one_third m
+                  -- 2. pow 3 m * pow one_third m = 1
+                  -- 3. i' = i as Nat (fin-inc_<= preserves value)
+                  | i'=i : (i' : Nat) = (i : Nat) => toFin=id
+                  -- pow r/3 (suc i') = pow (r * one_third) (suc i') = pow r (suc i') * pow one_third (suc i')
+                  | pow_r/3_eq : \Pi (m : Nat) -> pow r/3 m = pow r m * pow one_third m =>
+                      \lam m => CMonoid.pow_*-comm {RealField} {r} {one_third} {m}
+                  -- 3 * one_third = 1 
+                  | three_times_one_third : (3 : Real) * ratio 1 3 = {RealField} 1 => linarith
+                  -- pow 3 m * pow one_third m = 1
+                  | pow3_times_pow_one_third : \Pi (m : Nat) -> pow {RealField} 3 m * pow one_third m = {Real} 1 =>
+                      \lam m => inv (CMonoid.pow_*-comm {RealField} {3} {one_third} {m}) *>
+                                pmap (\lam x => pow {RealField} x m) three_times_one_third *>
+                                Monoid.pow_ide {RealField} {m}
+                \in {?}
+
+            -- Step 5-6: Sum over i=1,...,k-1 and split
+            | sum_lower : Array Real k => \new Array Real k (\lam j => a (j Nat.+ 1) * pow r (suc j))
+            | sum_lower_bound : Array Real k => \new Array Real k (\lam j => pow one_third (k -' suc j) * a (suc k) * pow r (suc k) + pow 3 (suc j) * eps)
+            | step5 : AddMonoid.BigSum sum_lower < AddMonoid.BigSum sum_lower_bound =>
+              {?} -- Uses step4_lower and BigSum_<=
+
+            -- Step 7: Evaluate geometric sums
+            -- sum_{i=1}^{k-1} 3^{i-k} = (1/2)(1 - 3^{1-k})
+            -- sum_{i=1}^{k-1} 3^i = (1/2)(3^k - 3)
+            | geom_sum_3_pow : AddMonoid.BigSum (\new Array Real k (\lam j => pow {RealField} 3 (suc j))) <= Real.fromRat (ratio 1 2) * (pow {RealField} 3 (suc k) + negative (3 : Real)) =>
+              {?} -- Geometric sum formula
+            | geom_sum_one_third : AddMonoid.BigSum (\new Array Real k (\lam j => pow one_third (k -' suc j))) <= Real.fromRat (ratio 1 2) * (Real.fromRat 1 + negative (pow one_third k)) =>
+              {?} -- Geometric sum formula
+
+            -- Step 8-10: Combine to get sum_{i=1}^{k-1} a_i r^i < (1/2)(1 - 3^{-n}) a_k r^k + (1/2) 3^n eps
+            | step10 : AddMonoid.BigSum sum_lower < Real.fromRat (ratio 1 2) * (Real.fromRat 1 + negative (pow one_third (suc n))) * a (suc k) * pow r (suc k) + Real.fromRat (ratio 1 2) * pow {RealField} 3 (suc n) * eps =>
+              {?} -- Uses step5, geom sums, and k <= n bounds
+
+            -- Step 11: From k = k_{j-1}: a_k (r/3)^k > a_i (r/3)^i - eps for all i
+            -- (same as step1 but using eq1 to show k = kSeq (suc j))
+            | step11 : \Pi (i : Fin (suc n)) -> a (suc k) * pow r/3 (suc k) > a (suc i) * pow r/3 (suc i) + negative eps =>
+              step1 -- Same inequality
+
+            -- Step 12: For i > k: a_i r^i < 3^{k-i} a_k r^k + 3^{-i} eps
+            | step12_upper : \Pi (i : Fin (n -' k)) -> a (i Nat.+ k + 2) * pow r (i Nat.+ k + 2) < pow one_third (suc i) * a (suc k) * pow r (suc k) + pow one_third (i Nat.+ k + 2) * eps =>
+                \lam i => {?} -- Uses step11, multiply by 3^{k-i}
+            
+            -- Step 13-15: Sum over i=k+1,...,n and get sum < (1/2)(1 - 3^{-n}) a_k r^k + (1/2) 3^n eps
+            | sum_upper : Array Real (n -' k) => \new Array Real (n -' k) (\lam j => a (j Nat.+ k + 2) * pow r (j Nat.+ k + 2))
+            | step15 : AddMonoid.BigSum sum_upper < Real.fromRat (ratio 1 2) * (Real.fromRat 1 + negative (pow one_third (suc n))) * a (suc k) * pow r (suc k) + Real.fromRat (ratio 1 2) * pow {RealField} 3 (suc n) * eps =>
+                {?} -- Uses step12_upper, geom sums, and bounds
+            
+            -- Step 16: Add inequalities from steps 10 and 15
             | goal4 : AddMonoid.BigSum (\new Array Real k (\lam j => a (j Nat.+ 1) * pow r (suc j))) +
-            AddMonoid.BigSum (\new Array Real (n -' k) (\lam j => a (j Nat.+ k + 2) * pow r (j Nat.+ k + 2)))
-              < (Real.fromRat 1 - pow one_third (suc n)) * a k * pow r (suc k) + pow 3 (suc n) * eps => {?}
+                      AddMonoid.BigSum (\new Array Real (n -' k) (\lam j => a (j Nat.+ k + 2) * pow r (j Nat.+ k + 2)))
+                        < (Real.fromRat 1 + negative (pow one_third (suc n))) * a (suc k) * pow r (suc k) + pow {RealField} 3 (suc n) * eps =>
+                {?} -- Uses step10, step15: add the two inequalities
           \in inP (r, r>0, k,
                    rewrite (pmap (a (suc n_fin) *) (pmap (pow r) (pmap suc (mod_< id<suc))) *>
                     pmap (`* pow r (suc n)) (pmap a (fin_nat-inj {suc (suc n)} {suc n_fin} {Fin.fromNat {suc n} (suc n)}
@@ -384,6 +467,6 @@ if the sequence is at least $2n+3$ elements long. -}
                           <=_+ h1 (<=-refl {RealField} {eps}))
                        )) (<=-refl {RealField} {negative eps})))) (C2 j k0),
                    ai_ri_<_a0 k,
-                   goal4)
+                   {?}) -- to be filled later
       }
   }
