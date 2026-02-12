@@ -13,13 +13,15 @@ public class FileListErrorReporter extends ListErrorReporter implements ErrorRep
   final private List<GeneralError> myErrorList;
 //  private List<GeneralError> myCurrentErrorList;
   private final Path filePath;
+  private static final String JUNIE_COMMUNICATION_FOLDER = ".junieCommunication";
 
   public FileListErrorReporter(String dir) {
     myErrorList = new ArrayList<>();
-    Path dirPath = Paths.get(dir, ".junieCommunication");
+    Path dirPath = Paths.get(dir, JUNIE_COMMUNICATION_FOLDER);
 
     try {
       Files.createDirectories(dirPath);
+      ensureGitignore(dir);
       Path filePath = dirPath.resolve("errorFile.txt");
       if (!Files.exists(filePath)) {
         Files.createFile(filePath);
@@ -70,5 +72,23 @@ public class FileListErrorReporter extends ListErrorReporter implements ErrorRep
     for (GeneralError error : myErrorList) {
     errorReporter.report(error);
   }
+  }
+
+  private static void ensureGitignore(String dir) {
+    Path gitignorePath = Paths.get(dir, ".gitignore");
+    String entry = JUNIE_COMMUNICATION_FOLDER;
+    try {
+      if (Files.exists(gitignorePath)) {
+        String content = Files.readString(gitignorePath);
+        if (!content.contains(entry)) {
+          String newContent = content.endsWith("\n") ? content + entry + "\n" : content + "\n" + entry + "\n";
+          Files.writeString(gitignorePath, newContent);
+        }
+      } else {
+        Files.writeString(gitignorePath, entry + "\n");
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 }
