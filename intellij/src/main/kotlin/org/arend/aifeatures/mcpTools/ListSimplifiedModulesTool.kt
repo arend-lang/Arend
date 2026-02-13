@@ -11,7 +11,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import org.arend.aifeatures.McpTool
-import org.arend.aifeatures.parseTypecheckData
+import org.arend.aifeatures.parseDataWithModules
 import org.arend.ext.concrete.definition.FunctionKind
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModuleLocation.LocationKind
@@ -38,18 +38,18 @@ class ListSimplifiedModulesTool : McpTool {
   }
 
   override fun execute(project: Project, arguments: String): String {
-    val parsedUserRequest = parseTypecheckData(arguments)
+    val parsedUserRequest = parseDataWithModules(arguments)
+    println("parsedUserRequest from ListSimplifiedModules tool: $parsedUserRequest")
     
     // Try both SOURCE and GENERATED location kinds since modules like Paths.Meta can be GENERATED
     val modules: List<ModuleLocation> = parsedUserRequest.modulePaths.flatMap { modulePath ->
       val path = ModulePath.fromString(modulePath.split("/").last())
-      val sourceLocation = ModuleLocation(parsedUserRequest.libraryName, LocationKind.SOURCE, path)
-      val generatedLocation = ModuleLocation(parsedUserRequest.libraryName, LocationKind.GENERATED, path)
+      val sourceLocation = ModuleLocation(parsedUserRequest.libPath, LocationKind.SOURCE, path)
+      val generatedLocation = ModuleLocation(parsedUserRequest.libPath, LocationKind.GENERATED, path)
       listOf(sourceLocation, generatedLocation)
     }
     
     val result = listSimplifiedModules(project, modules)
-    println("[DEBUG_LOG] ListSimplifiedModulesTool.execute() $result")
     return result.toString()
   }
 

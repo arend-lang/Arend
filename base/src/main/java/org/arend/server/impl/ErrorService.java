@@ -18,29 +18,18 @@ public class ErrorService implements ErrorReporter {
       myErrorReporters.add(errorReporter);
     }
   }
-  public void removeErrorReporter(ErrorReporter errorReporter) {
-    if (myErrorReporters.contains(errorReporter)) {
-      myErrorReporters.remove(errorReporter);
-    }
-  }
 
   public void addErrorReporter(ErrorReporter errorReporter) {
     myErrorReporters.add(errorReporter);
   }
 
   public void setResolverErrors(ModuleLocation module, List<GeneralError> errors) {
-    System.out.println("[DEBUG_LOG] ErrorService.setResolverErrors called for module: " + module + " with " + errors.size() + " errors");
     if (errors.isEmpty()) {
-      System.out.println("[DEBUG_LOG] No resolver errors, removing module from myResolverErrors");
       myResolverErrors.remove(module);
     } else {
-      System.out.println("[DEBUG_LOG] Storing " + errors.size() + " resolver errors for module: " + module);
       myResolverErrors.put(module, errors);
-      System.out.println("[DEBUG_LOG] Number of error reporters to notify: " + myErrorReporters.size());
       for (ErrorReporter errorReporter : myErrorReporters) {
-        System.out.println("[DEBUG_LOG] Reporting to error reporter: " + errorReporter.getClass().getName());
         for (GeneralError error : errors) {
-          System.out.println("[DEBUG_LOG] Reporting resolver error: " + error);
           errorReporter.report(error);
         }
       }

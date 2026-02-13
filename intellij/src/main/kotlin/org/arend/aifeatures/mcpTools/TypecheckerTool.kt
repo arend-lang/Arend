@@ -5,7 +5,7 @@ import com.intellij.openapi.project.Project
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.*
 import org.arend.aifeatures.McpTool
-import org.arend.aifeatures.TypecheckRequestData.*
+import org.arend.aifeatures.parseDataWithModules
 import org.arend.ext.error.GeneralError
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModuleLocation.LocationKind
@@ -37,9 +37,11 @@ class TypecheckerTool : McpTool {
 
 
   override fun execute(project : Project, arguments: String): String {
-    val parsedUserRequest = parseTypecheckData(arguments)
+    println("enter execute with arguments: $arguments")
+    val parsedUserRequest = parseDataWithModules(arguments)
+    println("parsedUserRequest: $parsedUserRequest")
     val modules: List<ModuleLocation> = parsedUserRequest.modulePaths.map {
-      ModuleLocation(parsedUserRequest.libraryName, LocationKind.SOURCE, ModulePath.fromString(it.split("/").last()))
+      ModuleLocation(parsedUserRequest.libPath, LocationKind.SOURCE, ModulePath.fromString(it.split("/").last()))
     }
     return executeTypecheckModules(project, modules)
   }
@@ -48,7 +50,7 @@ class TypecheckerTool : McpTool {
     val runnerService = project.service<RunnerService>()
     val server = project.service<ArendServerService>().server
 
-    val previousErrorCount = runnerService.myFileListErrorReporter.getErrorList().size
+//    val previousErrorCount = runnerService.myFileListErrorReporter.getErrorList().size
     runnerService.myFileListErrorReporter.getErrorList().clear()
 
     // Remove modules from server cache to force re-typechecking

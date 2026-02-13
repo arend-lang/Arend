@@ -34,17 +34,23 @@ class ProofSearcherTool : McpTool {
   }
 
   override fun execute(project : Project, arguments: String): String {
-    val query = arguments
+    val query = arguments.split("|||").dropLast(1).first()
+    println("query: $query")
+
     val resultsOfProofSearch = executeProofSearch(project, query)
     return resultsOfProofSearch
   }
 
   private fun executeProofSearch(project: Project, query: String): String {
     val results: Sequence<ProofSearchEntry?> = generateProofSearchResults(project, query)
+    // Materialize the lazy sequence to a list to ensure all results are collected
+    val resultsList = results.filterNotNull().toList()
+    val resultString = resultsList.joinToString("\n") { entry ->
+      "${entry.def.refName} at ${entry.def.containingFile.virtualFile?.path}"
+    }
+    println("results from execute: $resultString")
     return runReadAction {
-      results.filterNotNull().joinToString("\n") { entry ->
-        "${entry.def.refName} at ${entry.def.containingFile.virtualFile?.path}"
-      }
+      resultString
     }
   }
 }

@@ -23,7 +23,6 @@ import org.arend.typechecking.CoroutineCancellationIndicator
 import org.arend.typechecking.error.NotificationErrorReporter
 import org.arend.ext.module.FullName
 import org.arend.naming.reference.TCDefReferable
-import org.arend.server.impl.ErrorService
 import org.arend.term.concrete.Concrete
 import org.arend.typechecking.visitor.ArendCheckerFactory
 
@@ -136,32 +135,23 @@ class RunnerService(private val project: Project, val coroutineScope: CoroutineS
   }
 
   private fun runCheckerForList(library: String?, isTest: Boolean, module: ModuleLocation?, definition: LongName?, onlyResolve: Boolean, checkerFactory: ArendCheckerFactory?, renamed: Map<TCDefReferable, TCDefReferable>?, bgAction: (() -> Unit)?, edtAction: (() -> Unit)?) : List<GeneralError> {
-    println("[DEBUG_LOG] runCheckerForList started - library: $library, module: $module, onlyResolve: $onlyResolve")
     val newErrorList = mutableListOf<GeneralError>()
     val myNewListErrorReporter = ListErrorReporter(newErrorList)
     val server = project.service<ArendServerService>().server
-    println("[DEBUG_LOG] Server obtained, adding error reporter")
     // Use runBlocking to wait for the coroutine to complete before returning the error list
     runBlocking<Unit> {
-      println("[DEBUG_LOG] Inside runBlocking")
       val message = module?.toString() ?: (library ?: "project")
       server.addErrorReporter(myNewListErrorReporter)
-      println("[DEBUG_LOG] Error reporter added to server")
       withBackgroundProgress(project, "Checking $message") {
         reportSequentialProgress { reporter ->
-          println("[DEBUG_LOG] Starting resolution step for: $message")
           val checker = reporter.nextStep(if (onlyResolve) 100 else 5, "Resolving $message") {
             reportRawProgress { reporter ->
               if (module == null) {
-                println("[DEBUG_LOG] Module is null, requesting update")
                 ArendServerRequesterImpl(project).requestUpdate(server, library, isTest)
               }
               val modulesToCheck = if (module == null) server.modules.filter { (library == null || it.libraryName == library) && (it.locationKind == ModuleLocation.LocationKind.SOURCE || isTest && it.locationKind == ModuleLocation.LocationKind.TEST) } else listOf(module)
-              println("[DEBUG_LOG] Modules to check: $modulesToCheck")
               val checker = server.getCheckerFor(modulesToCheck)
-              println("[DEBUG_LOG] Got checker, starting resolveAll")
               checker.resolveAll(CoroutineCancellationIndicator(this), IntellijProgressReporter(reporter) { it.toString() })
-              println("[DEBUG_LOG] resolveAll completed, errors so far: ${newErrorList.size}")
               checker
             }
           }
@@ -169,8 +159,6 @@ class RunnerService(private val project: Project, val coroutineScope: CoroutineS
           if (checkerFactory == null) withContext(Dispatchers.EDT) {
             project.service<ArendMessagesService>().update()
           }
-
-          println("[DEBUG_LOG] Starting typechecking step, onlyResolve: $onlyResolve")
           val updated = if (onlyResolve) false else reporter.nextStep(100, "Typechecking $message") {
             reportRawProgress { reporter ->
               val indicator = IntellijProgressReporter<List<Concrete.ResolvableDefinition>>(reporter) {

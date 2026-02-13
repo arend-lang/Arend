@@ -1,8 +1,6 @@
 package org.arend.aifeatures
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.service
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.FullHttpRequest
@@ -45,6 +43,7 @@ class DetachedHTTPService : RestService() {
     val actionType = urlDecoder.parameters()["type"]?.firstOrNull()
     val actionPayload = urlDecoder.parameters()["action"]?.firstOrNull() ?: ""
     val input = initialParseInput(actionPayload)
+    System.err.println("execute MCP called with arguments: actionType: $actionType, actionPayload: $actionPayload, input: $input")
     if (input == null){
       sendContent(request, context, "Error: input cannot be parsed", "text/plain")
       return null
@@ -57,6 +56,7 @@ class DetachedHTTPService : RestService() {
     }
     scope.launch {
       try {
+        println("calling execute with arguments: actionType: $actionType, actionPayload: $actionPayload, project: $project")
         val resultString = registry.execute(actionType ?: "", actionPayload, project)
 
         // --- SEND CONTENT BACK ON SAME PORT ---
