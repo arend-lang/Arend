@@ -10,6 +10,7 @@ import org.arend.aifeatures.mcpTools.ListSimplifiedModulesTool
 @Service
 class McpToolRegistryService {
   private val tools = mutableMapOf<String, McpTool>()
+  private val delimiter = "|||"
 
   init {
     // Register your extracted tools here
@@ -19,6 +20,8 @@ class McpToolRegistryService {
     register(ListSimplifiedModulesTool())
     println(tools.keys.toList())
   }
+
+  fun getDelimiter() = delimiter
 
   fun getTools() = tools.keys.toList()
 

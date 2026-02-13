@@ -35,8 +35,7 @@ class ListModulesTool : McpTool {
             val jsonObject = jsonElement.jsonObject
             jsonObject["libraryPath"]?.jsonPrimitive?.contentOrNull ?: ""
         } catch (e: Exception) {
-            // If not valid JSON, treat the whole argument as library path
-            arguments.trim()
+            arguments.trim() // If not valid JSON, treat the whole argument as library path
         }
     }
 

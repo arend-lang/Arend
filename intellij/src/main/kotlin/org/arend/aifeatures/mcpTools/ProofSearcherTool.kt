@@ -10,10 +10,21 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import kotlinx.serialization.json.buildJsonObject
 
-class ProofSearcherTool() : McpTool {
-  override val name: String = "mcp_arend_Proof_search"
-  override val description: String = ""
-  private val proofSearchDoneMarker = "PROOF_SEARCH_DONE"
+class ProofSearcherTool : McpTool {
+  override val name = "mcp_arend_Proof_search"
+  override val description = "Triggers Arend proof search for the query you send." +
+    " You need to send it the full library path as a string and the query as a string." +
+    "The grammar of Proof Search queries is defined as follows:\n" +
+    "\n" +
+    "  query ::= (and_pattern '->')* and_pattern\n" +
+    "  and_pattern ::= (app_pattern '\\and')*\n" +
+    "  app_pattern app_pattern ::= atom_pattern+\n" +
+    "  atom_pattern ::= '_' | (IDENTIFIER '.')* IDENTIFIER | '(' app_pattern ')'" +
+    "For example, the query Foo -> Bar will produce the following results:\n" +
+    "\n" +
+    "\\func foo (f : Foo) : Bar -- matched\n" +
+    "\\func bar :    Foo -> Bar -- matched\n" +
+    "\\func baz :           Bar -- not matched"
 
 
   override fun getInputSchema(): JsonObject  = buildJsonObject {
@@ -25,9 +36,6 @@ class ProofSearcherTool() : McpTool {
   override fun execute(project : Project, arguments: String): String {
     val query = arguments
     val resultsOfProofSearch = executeProofSearch(project, query)
-//    val outputFile = File(project.basePath!! + "/.junieCommunication/proofSearchResults.txt")
-//    outputFile.writeText(resultsOfProofSearch)
-//    outputFile.appendText("\n$proofSearchDoneMarker")
     return resultsOfProofSearch
   }
 
