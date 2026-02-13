@@ -81,12 +81,18 @@ public class ErrorService implements ErrorReporter {
 
   @Override
   public void report(GeneralError error) {
+    System.out.println("[DEBUG_LOG] ErrorService.report called with error: " + error);
+    System.out.println("[DEBUG_LOG] Error level: " + error.level + ", Error class: " + error.getClass().getName());
     error.forAffectedDefinitions((ref, newError) -> {
+      System.out.println("[DEBUG_LOG] Processing affected definition: " + ref);
       if (ref instanceof LocatedReferable located) {
+        System.out.println("[DEBUG_LOG] Adding typechecking error for located referable: " + located);
         myTypecheckingErrors.computeIfAbsent(located, k -> new ArrayList<>()).add(newError);
       }
     });
+    System.out.println("[DEBUG_LOG] Forwarding error to " + myErrorReporters.size() + " error reporters");
     for (ErrorReporter errorReporter : myErrorReporters) {
+      System.out.println("[DEBUG_LOG] Forwarding to: " + errorReporter.getClass().getName());
       errorReporter.report(error);
     }
   }
