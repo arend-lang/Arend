@@ -3,11 +3,13 @@ package org.arend.aifeatures
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.FullHttpRequest
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.QueryStringDecoder
 import kotlinx.coroutines.launch
+import okio.Path.Companion.toPath
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModuleLocation.LocationKind
 import org.arend.ext.module.ModulePath
@@ -49,12 +51,11 @@ class DetachedHTTPService : RestService() {
   ): String? {
     val actionType = urlDecoder.parameters()["type"]?.firstOrNull() ?: ""
     val actionPayload = urlDecoder.parameters()["action"]?.firstOrNull() ?: ""
+    val directory = urlDecoder.parameters()[""]?.firstOrNull() ?: ""
 
-    val project = getLastFocusedOrOpenedProject()
-    if (project == null) {
-      return "IntelliJ is not running with an Arend project open"
-    }
-    
+
+    val project = getLastFocusedOrOpenedProject() ?: return "IntelliJ is not running with an Arend project open"
+
     when (actionType) {
       TYPECHECK_ACTION -> executeTypecheckAction(project, actionPayload)
       PROOF_SEARCH_ACTION -> executeProofSearchAction(project, actionPayload)
