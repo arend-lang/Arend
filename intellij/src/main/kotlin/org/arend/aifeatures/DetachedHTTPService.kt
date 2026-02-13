@@ -3,6 +3,7 @@ package org.arend.aifeatures
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.FullHttpRequest
 import io.netty.handler.codec.http.HttpMethod
@@ -22,10 +23,10 @@ class DetachedHTTPService : RestService() {
   companion object {
     private const val SERVICE_NAME = "detachedService"
   }
+  val registry = ApplicationManager.getApplication().getService(McpToolRegistryService::class.java)
 
   override fun getServiceName(): String = SERVICE_NAME
 
-  // We use a custom scope or the plugin's scope for background work
   private val scope = CoroutineScope(Dispatchers.Default)
 
   override fun isSupported(request: FullHttpRequest): Boolean {
@@ -43,22 +44,19 @@ class DetachedHTTPService : RestService() {
   ): String? {
     val actionType = urlDecoder.parameters()["type"]?.firstOrNull()
     val actionPayload = urlDecoder.parameters()["action"]?.firstOrNull() ?: ""
+    val input = initialParseInput(actionPayload)
+    if (input == null){
+      sendContent(request, context, "Error: input cannot be parsed", "text/plain")
+      return null
+    }
 
-    val project = getLastFocusedOrOpenedProject()
+    val project = ProjectManager.getInstance().openProjects.firstOrNull { it.basePath == input.libPath }
     if (project == null) {
       sendContent(request, context, "Error: No project open", "text/plain")
       return null
     }
-
-    // --- ASYNC HANDLING START ---
-    // We launch a coroutine to do the work without blocking the Netty thread
     scope.launch {
       try {
-        // Get the Registry Service (from our previous step)
-        val registry = ApplicationManager.getApplication().getService(McpToolRegistryService::class.java)
-
-        // This blocks this coroutine until the tool finishes (Typecheck/ProofSearch)
-        // The tool simply returns a String now, it does NOT write to a file.
         val resultString = registry.execute(actionType ?: "", actionPayload, project)
 
         // --- SEND CONTENT BACK ON SAME PORT ---
@@ -70,8 +68,6 @@ class DetachedHTTPService : RestService() {
         sendContent(request, context, errorMessage, "text/plain")
       }
     }
-
-    // Return null to tell IntelliJ "Don't close the connection yet, I'm working on it"
     return null
   }
 
@@ -81,10 +77,8 @@ class DetachedHTTPService : RestService() {
     content: String,
     contentType: String = "application/json"
   ) {
-    // 1. Convert the string content to bytes (UTF-8)
     val responseBytes = content.toByteArray(StandardCharsets.UTF_8)
 
-    // 2. Create the Netty Response object
     val response = DefaultFullHttpResponse(
       HttpVersion.HTTP_1_1,
       HttpResponseStatus.OK,
@@ -107,4 +101,13 @@ class DetachedHTTPService : RestService() {
       context.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE)
     }
   }
+  fun initialParseInput(actionPayload : String) : MCPInput?{
+    if (actionPayload.isBlank()) return null
+    val libPath = actionPayload.split(registry.getDelimiter()).last()
+    val unparsedArguments = actionPayload.replace(libPath, "").substringBeforeLast(registry.getDelimiter())
+    return MCPInput(libPath, unparsedArguments)
+  }
+
+  data class MCPInput(val libPath : String, val unparsedArguments : String)
+
 }

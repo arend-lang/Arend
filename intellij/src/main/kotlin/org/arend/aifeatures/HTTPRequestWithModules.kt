@@ -21,8 +21,6 @@ fun parseTypecheckData(encodedPayload: String): TypecheckRequestData {
   }
 
   return try {
-    // Parse as JSON
-    // println("[DEBUG_LOG] Attempting JSON parsing...")
     val jsonElement = Json.parseToJsonElement(encodedPayload)
     val jsonObject = jsonElement.jsonObject
 
@@ -69,9 +67,7 @@ fun parseTypecheckData(encodedPayload: String): TypecheckRequestData {
       } else {
         ""
       }
-      // println("[DEBUG_LOG] Extracted libraryName from first module: '$extractedLibraryName'")
-      
-      // println("[DEBUG_LOG] Fallback parsing result: libraryName=$extractedLibraryName, modulePaths=$modulePaths")
+
       TypecheckRequestData(modulePaths, extractedLibraryName)
     } else {
       // println("[DEBUG_LOG] No delimiter found, returning empty TypecheckRequestData")

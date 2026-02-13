@@ -6,7 +6,6 @@ interface McpTool {
   val name: String
   val description: String
 
-
   fun getInputSchema(): JsonObject
 
   fun execute(project : Project, arguments: String): String

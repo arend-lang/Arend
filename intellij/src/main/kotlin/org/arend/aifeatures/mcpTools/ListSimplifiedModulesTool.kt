@@ -38,32 +38,18 @@ class ListSimplifiedModulesTool : McpTool {
   }
 
   override fun execute(project: Project, arguments: String): String {
-    // println("[DEBUG_LOG] ListSimplifiedModulesTool.execute() called with arguments: '$arguments'")
     val parsedUserRequest = parseTypecheckData(arguments)
-    // println("[DEBUG_LOG] Parsed request: libraryName='${parsedUserRequest.libraryName}', modulePaths=${parsedUserRequest.modulePaths}")
     
     // Try both SOURCE and GENERATED location kinds since modules like Paths.Meta can be GENERATED
     val modules: List<ModuleLocation> = parsedUserRequest.modulePaths.flatMap { modulePath ->
-      // println("[DEBUG_LOG] Processing modulePath: '$modulePath'")
       val path = ModulePath.fromString(modulePath.split("/").last())
-      // println("[DEBUG_LOG] Created ModulePath: $path")
       val sourceLocation = ModuleLocation(parsedUserRequest.libraryName, LocationKind.SOURCE, path)
       val generatedLocation = ModuleLocation(parsedUserRequest.libraryName, LocationKind.GENERATED, path)
-      // println("[DEBUG_LOG] Created ModuleLocations: SOURCE=$sourceLocation, GENERATED=$generatedLocation")
       listOf(sourceLocation, generatedLocation)
     }
     
-    // println("[DEBUG_LOG] Total modules to look up: ${modules.size}")
-    // modules.forEachIndexed { index, module ->
-    //   println("[DEBUG_LOG] Module[$index]: libraryName='${module.libraryName}', locationKind=${module.locationKind}, modulePath=${module.modulePath}")
-    // }
-    
     val result = listSimplifiedModules(project, modules)
-    // println("[DEBUG_LOG] listSimplifiedModules returned ${result.size} entries")
-    // result.forEach { (location, content) ->
-    //   println("[DEBUG_LOG] Result for $location: ${content.length} chars, isEmpty=${content.isEmpty()}")
-    // }
-    
+    println("[DEBUG_LOG] ListSimplifiedModulesTool.execute() $result")
     return result.toString()
   }
 
@@ -84,7 +70,6 @@ class ListSimplifiedModulesTool : McpTool {
             }
           }
         }
-        
         // Add a blank line after imports if there were any
         if (simplifiedModules[module]?.isNotEmpty() == true) {
           simplifiedModules[module] += "\n"
@@ -106,12 +91,12 @@ class ListSimplifiedModulesTool : McpTool {
               } else {
                 // For other functions, print only the signature without body (preserving comments before =>)
                 val signature = getSignatureFromSource(def)
-                simplifiedModules[module] += ((signature ?: buildFunctionSignature(def)) + " [LIBRARY STATEMENT]\n\n")
+                simplifiedModules[module] += ((signature ?: buildFunctionSignature(def)) + " {?LIBRARY_STATEMENT}\n\n")
               }
             } else if (def is Concrete.MetaDefinition) {
               // For meta definitions, preserve comments and output signature with [LIBRARY STATEMENT]
               val signature = getMetaSignatureFromSource(def)
-              simplifiedModules[module] += ((signature ?: buildMetaSignature(def)) + " [LIBRARY STATEMENT]\n\n")
+              simplifiedModules[module] += ((signature ?: buildMetaSignature(def)) + " {?LIBRARY_STATEMENT}\n\n")
             }
           }
         }
