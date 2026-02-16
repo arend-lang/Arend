@@ -411,45 +411,194 @@ if the sequence is at least $2n+3$ elements long. -}
                       \lam m => inv (CMonoid.pow_*-comm {RealField} {3} {one_third} {m}) *>
                                 pmap (\lam x => pow {RealField} x m) three_times_one_third *>
                                 Monoid.pow_ide {RealField} {m}
-                \in {?}
 
-            -- Step 5-6: Sum over i=1,...,k-1 and split
-            | sum_lower : Array Real k => \new Array Real k (\lam j => a (j Nat.+ 1) * pow r (suc j))
-            | sum_lower_bound : Array Real k => \new Array Real k (\lam j => pow one_third (k -' suc j) * a (suc k) * pow r (suc k) + pow 3 (suc j) * eps)
-            | step5 : AddMonoid.BigSum sum_lower < AddMonoid.BigSum sum_lower_bound =>
-              {?} -- Uses step4_lower and BigSum_<=
-
-            -- Step 7: Evaluate geometric sums
-            -- sum_{i=1}^{k-1} 3^{i-k} = (1/2)(1 - 3^{1-k})
-            -- sum_{i=1}^{k-1} 3^i = (1/2)(3^k - 3)
-            | geom_sum_3_pow : AddMonoid.BigSum (\new Array Real k (\lam j => pow {RealField} 3 (suc j))) <= Real.fromRat (ratio 1 2) * (pow {RealField} 3 (suc k) + negative (3 : Real)) =>
-              {?} -- Geometric sum formula
-            | geom_sum_one_third : AddMonoid.BigSum (\new Array Real k (\lam j => pow one_third (k -' suc j))) <= Real.fromRat (ratio 1 2) * (Real.fromRat 1 + negative (pow one_third k)) =>
-              {?} -- Geometric sum formula
-
-            -- Step 8-10: Combine to get sum_{i=1}^{k-1} a_i r^i < (1/2)(1 - 3^{-n}) a_k r^k + (1/2) 3^n eps
-            | step10 : AddMonoid.BigSum sum_lower < Real.fromRat (ratio 1 2) * (Real.fromRat 1 + negative (pow one_third (suc n))) * a (suc k) * pow r (suc k) + Real.fromRat (ratio 1 2) * pow {RealField} 3 (suc n) * eps =>
-              {?} -- Uses step5, geom sums, and k <= n bounds
-
-            -- Step 11: From k = k_{j-1}: a_k (r/3)^k > a_i (r/3)^i - eps for all i
-            -- (same as step1 but using eq1 to show k = kSeq (suc j))
-            | step11 : \Pi (i : Fin (suc n)) -> a (suc k) * pow r/3 (suc k) > a (suc i) * pow r/3 (suc i) + negative eps =>
-              step1 -- Same inequality
-
-            -- Step 12: For i > k: a_i r^i < 3^{k-i} a_k r^k + 3^{-i} eps
-            | step12_upper : \Pi (i : Fin (n -' k)) -> a (i Nat.+ k + 2) * pow r (i Nat.+ k + 2) < pow one_third (suc i) * a (suc k) * pow r (suc k) + pow one_third (i Nat.+ k + 2) * eps =>
-                \lam i => {?} -- Uses step11, multiply by 3^{k-i}
-            
-            -- Step 13-15: Sum over i=k+1,...,n and get sum < (1/2)(1 - 3^{-n}) a_k r^k + (1/2) 3^n eps
-            | sum_upper : Array Real (n -' k) => \new Array Real (n -' k) (\lam j => a (j Nat.+ k + 2) * pow r (j Nat.+ k + 2))
-            | step15 : AddMonoid.BigSum sum_upper < Real.fromRat (ratio 1 2) * (Real.fromRat 1 + negative (pow one_third (suc n))) * a (suc k) * pow r (suc k) + Real.fromRat (ratio 1 2) * pow {RealField} 3 (suc n) * eps =>
-                {?} -- Uses step12_upper, geom sums, and bounds
-            
-            -- Step 16: Add inequalities from steps 10 and 15
-            | goal4 : AddMonoid.BigSum (\new Array Real k (\lam j => a (j Nat.+ 1) * pow r (suc j))) +
-                      AddMonoid.BigSum (\new Array Real (n -' k) (\lam j => a (j Nat.+ k + 2) * pow r (j Nat.+ k + 2)))
-                        < (Real.fromRat 1 + negative (pow one_third (suc n))) * a (suc k) * pow r (suc k) + pow {RealField} 3 (suc n) * eps =>
-                {?} -- Uses step10, step15: add the two inequalities
+                  | i_nat : Nat => i  -- i as Nat
+                  | k_nat : Nat => k  -- k as Nat  
+                  | i<k_nat : i_nat < k_nat => fin_< i
+                  | suci<=k : suc i_nat <= k_nat => suc_<_<= i<k_nat
+                  
+                  | k<sucn : k_nat < suc n => fin_< k
+                  | i<sucn : i_nat < suc n => NatSemiring.<-transitive i<k_nat k<sucn
+                  | suci<sucsucn : suc i_nat < suc (suc n) => NatOrder.suc<suc i<sucn
+                  | fromNat_nat_eq : Fin.fromNat {suc n} (suc i_nat) = {Nat} suc i_nat => 
+                      unfold Fin.fromNat (mod_< suci<sucsucn)
+                  | i'_nat_eq : (i' : Nat) = i_nat => i'=i
+                  | suci'_nat_eq : suc (i' : Nat) = suc i_nat => pmap suc i'_nat_eq
+                  | fromNat_eq : Fin.fromNat {suc n} (suc i_nat) = {Fin (suc (suc n))} suc i' =>
+                      fin_nat-inj (fromNat_nat_eq *> inv suci'_nat_eq)
+                  
+                  | pow_r/3_i' : pow r/3 (suc i') = pow r (suc i') * pow one_third (suc i') => pow_r/3_eq (suc i')
+                  | pow_r/3_i : pow r/3 (suc i_nat) = pow r (suc i_nat) * pow one_third (suc i_nat) => pow_r/3_eq (suc i_nat)
+                  | pow3_one_third_i : pow {RealField} 3 (suc i_nat) * pow one_third (suc i_nat) = Real.fromRat 1 => pow3_times_pow_one_third (suc i_nat)
+                  
+                  -- LHS = pow 3 (suc i) * (a (suc i') * pow r/3 (suc i'))
+                  --     = pow 3 (suc i) * a (suc i') * pow r/3 (suc i')                    [assoc]
+                  --     = pow 3 (suc i) * a (suc i') * pow r (suc i') * pow one_third (suc i')  [pow_r/3]
+                  --     = pow 3 (suc i) * a (suc i') * pow r (suc i) * pow one_third (suc i)    [i'=i]
+                  --     = a (suc i') * pow r (suc i) * (pow 3 (suc i) * pow one_third (suc i))  [comm]
+                  --     = a (suc i') * pow r (suc i) * 1                                        [pow3_one_third]
+                  --     = a (suc i') * pow r (suc i)
+                  | lhs_eq : pow 3 (suc i_nat) * (a (suc i') * pow r/3 (suc i')) = a (suc i') * pow r (suc i_nat) =>
+                      pmap (pow 3 (suc i_nat) * (a (suc i') *)) (pmap (pow r/3) i'_nat_eq *> pow_r/3_i) *>
+                      pmap (pow 3 (suc i_nat) *) (inv *-assoc) *>
+                      inv *-assoc *>
+                      pmap (`* pow one_third (suc i_nat)) (inv *-assoc *> pmap (`* pow r (suc i_nat)) *-comm *> *-assoc) *>
+                      *-assoc *>
+                      pmap (a (suc i') * pow r (suc i_nat) *) pow3_one_third_i *>
+                      ide-right
+                  
+                  -- For RHS, we need: pow 3 (suc i) * (a (suc k) * pow r/3 (suc k) + eps)
+                  --                 = pow one_third (k -' suc i) * a (suc k) * pow r (suc k) + pow 3 (suc i) * eps
+                  -- 
+                  -- First: pow 3 (suc i) * (a (suc k) * pow r/3 (suc k) + eps)
+                  --      = pow 3 (suc i) * (a (suc k) * pow r/3 (suc k)) + pow 3 (suc i) * eps  [ldistr]
+                  --
+                  -- For the first term:
+                  -- pow 3 (suc i) * (a (suc k) * pow r/3 (suc k))
+                  -- = pow 3 (suc i) * a (suc k) * pow r (suc k) * pow one_third (suc k)
+                  -- 
+                  -- Now suc k = suc i + (k - i) since i < k
+                  -- So pow one_third (suc k) = pow one_third (suc i + (k - i)) = pow one_third (suc i) * pow one_third (k - i)
+                  -- And pow 3 (suc i) * pow one_third (suc k) = pow 3 (suc i) * pow one_third (suc i) * pow one_third (k - i)
+                  --                                           = 1 * pow one_third (k - i) = pow one_third (k - i)
+                  --
+                  -- Since i < k, we have k - i = suc (k - suc i), so pow one_third (k - i) = one_third * pow one_third (k - suc i)
+                  -- But wait, the goal has pow one_third (k -' suc i), not one_third * pow one_third (k -' suc i)
+                  -- 
+                  -- Let me reconsider. The goal RHS first term is: pow one_third (k -' suc i) * a (suc k) * pow r (suc k)
+                  -- 
+                  -- Actually, looking more carefully at the algebra:
+                  -- pow 3 (suc i) * a (suc k) * pow r (suc k) * pow one_third (suc k)
+                  -- = a (suc k) * pow r (suc k) * (pow 3 (suc i) * pow one_third (suc k))
+                  -- 
+                  -- suc k = suc i + (suc k - suc i) = suc i + (k - i)
+                  -- But k - i when i < k equals suc (k - suc i) = suc (k -' suc i) since suc i <= k
+                  -- So suc k = suc i + suc (k -' suc i)
+                  -- 
+                  -- pow one_third (suc k) = pow one_third (suc i + suc (k -' suc i))
+                  --                       = pow one_third (suc i) * pow one_third (suc (k -' suc i))
+                  --                       = pow one_third (suc i) * one_third * pow one_third (k -' suc i)
+                  --
+                  -- pow 3 (suc i) * pow one_third (suc k) = pow 3 (suc i) * pow one_third (suc i) * one_third * pow one_third (k -' suc i)
+                  --                                       = 1 * one_third * pow one_third (k -' suc i)
+                  --                                       = one_third * pow one_third (k -' suc i)
+                  --
+                  -- So the first term becomes: a (suc k) * pow r (suc k) * one_third * pow one_third (k -' suc i)
+                  -- But the goal has: pow one_third (k -' suc i) * a (suc k) * pow r (suc k)
+                  -- These are NOT equal unless one_third = 1, which it isn't.
+                  --
+                  -- Wait, let me re-read the goal more carefully...
+                  -- Goal: pow one_third (k -' suc i) * a (suc k) * pow r (suc k) + pow 3 (suc i) * eps
+                  -- 
+                  -- Hmm, there seems to be a mismatch. Let me check if the goal is actually achievable.
+                  -- Actually, I think I made an error. Let me recalculate:
+                  -- 
+                  -- suc k - suc i = k - i (when suc i <= suc k, i.e., i < k)
+                  -- So if i < k, then suc i <= k, and k -' suc i is well-defined.
+                  -- Also, i + (k - i) = k, so k - i = k -' i (since i <= k when i < k)
+                  -- And suc (k -' suc i) = k -' i (since suc i + (k -' suc i) = k means k -' suc i + 1 = k - suc i + 1 = k - i = k -' i)
+                  -- 
+                  -- So: suc k = suc i + (k -' i) = suc i + suc (k -' suc i)
+                  -- pow one_third (suc k) = pow one_third (suc i) * pow one_third (suc (k -' suc i))
+                  --
+                  -- pow 3 (suc i) * pow one_third (suc k) 
+                  -- = pow 3 (suc i) * pow one_third (suc i) * pow one_third (suc (k -' suc i))
+                  -- = 1 * pow one_third (suc (k -' suc i))
+                  -- = one_third * pow one_third (k -' suc i)
+                  --
+                  -- So the first term of RHS becomes:
+                  -- a (suc k) * pow r (suc k) * one_third * pow one_third (k -' suc i)
+                  -- = one_third * pow one_third (k -' suc i) * a (suc k) * pow r (suc k)  [by commutativity]
+                  -- = pow one_third (suc (k -' suc i)) * a (suc k) * pow r (suc k)
+                  --
+                  -- But the goal has pow one_third (k -' suc i), not pow one_third (suc (k -' suc i))!
+                  -- 
+                  -- This suggests the goal might have an error, or I'm misunderstanding something.
+                  -- Let me just try to prove what we can and see if it typechecks.
+                  
+                  | k_minus_i_eq : i_nat + (k_nat -' i_nat) = k_nat => <=_exists (<=-less i<k_nat)
+                  | suci_plus_eq : suc i_nat + (k_nat -' suc i_nat) = k_nat => <=_exists suci<=k
+                  | k_minus_split : k_nat -' i_nat = suc (k_nat -' suc i_nat) =>
+                      NatSemiring.cancel-left (suc i_nat) (
+                        suci_plus_eq *> 
+                        pmap suc (inv k_minus_i_eq) *> 
+                        inv (pmap suc (+-comm {NatSemiring} {i_nat} {k_nat -' i_nat}) *> +-assoc)
+                      )
+                  | suck_split : suc k_nat = suc i_nat + (k_nat -' i_nat) => pmap suc (inv k_minus_i_eq)
+                  | suck_split2 : suc k_nat = suc i_nat + suc (k_nat -' suc i_nat) => 
+                      pmap (\lam x => suc i_nat + x) (inv k_minus_split) *> suck_split
+                  
+                  | pow_one_third_suck : pow {RealField} one_third (suc k_nat) = pow one_third (suc i_nat) * pow one_third (suc (k_nat -' suc i_nat)) =>
+                      pmap (pow one_third) suck_split2 *> Monoid.pow_+ {RealField} {one_third} {suc i_nat} {suc (k_nat -' suc i_nat)}
+                  
+                  | pow_r/3_k : pow r/3 (suc k) = pow r (suc k) * pow one_third (suc k) => pow_r/3_eq (suc k)
+                  
+                  -- pow 3 (suc i) * pow one_third (suc k) = pow one_third (suc (k -' suc i))
+                  | pow3_pow13_suck : pow {RealField} 3 (suc i_nat) * pow one_third (suc k_nat) = pow one_third (suc (k_nat -' suc i_nat)) =>
+                      pmap (pow 3 (suc i_nat) *) pow_one_third_suck *>
+                      *-assoc *>
+                      pmap (`* pow one_third (suc (k_nat -' suc i_nat))) pow3_one_third_i *>
+                      ide-left
+                  
+                  -- First term of RHS after transformation
+                  | rhs_first : pow 3 (suc i_nat) * (a (suc k) * pow r/3 (suc k)) = 
+                                pow one_third (suc (k_nat -' suc i_nat)) * a (suc k) * pow r (suc k) =>
+                      pmap (pow 3 (suc i_nat) * (a (suc k) *)) pow_r/3_k *>
+                      pmap (pow 3 (suc i_nat) *) (inv *-assoc) *>
+                      inv *-assoc *>
+                      pmap (`* pow one_third (suc k_nat)) (inv *-assoc *> pmap (`* pow r (suc k)) *-comm *> *-assoc) *>
+                      *-assoc *>
+                      pmap (a (suc k) * pow r (suc k) *) pow3_pow13_suck *>
+                      pmap (`* pow r (suc k)) *-comm *>
+                      *-assoc
+                  
+                  -- Full RHS transformation
+                  | rhs_eq : pow 3 (suc i_nat) * (a (suc k) * pow r/3 (suc k) + eps) = 
+                             pow one_third (suc (k_nat -' suc i_nat)) * a (suc k) * pow r (suc k) + pow 3 (suc i_nat) * eps =>
+                      ldistr *> pmap (`+ pow 3 (suc i_nat) * eps) rhs_first
+                  
+                  -- Now we have:
+                  -- multiplied : pow 3 (suc i) * (a (suc i') * pow r/3 (suc i')) < pow 3 (suc i) * (a (suc k) * pow r/3 (suc k) + eps)
+                  -- lhs_eq : pow 3 (suc i) * (a (suc i') * pow r/3 (suc i')) = a (suc i') * pow r (suc i)
+                  -- rhs_eq : pow 3 (suc i) * (a (suc k) * pow r/3 (suc k) + eps) = pow one_third (suc (k -' suc i)) * a (suc k) * pow r (suc k) + pow 3 (suc i) * eps
+                  --
+                  -- So: a (suc i') * pow r (suc i) < pow one_third (suc (k -' suc i)) * a (suc k) * pow r (suc k) + pow 3 (suc i) * eps
+                  --
+                  -- But the goal has pow one_third (k -' suc i), not pow one_third (suc (k -' suc i))
+                  -- Since pow one_third (suc m) = one_third * pow one_third m < pow one_third m (when one_third < 1)
+                  -- We have: pow one_third (suc (k -' suc i)) < pow one_third (k -' suc i)
+                  -- So: pow one_third (suc (k -' suc i)) * a (suc k) * pow r (suc k) < pow one_third (k -' suc i) * a (suc k) * pow r (suc k)
+                  -- (assuming a (suc k) * pow r (suc k) > 0)
+                  --
+                  -- Therefore: a (suc i') * pow r (suc i) < pow one_third (k -' suc i) * a (suc k) * pow r (suc k) + pow 3 (suc i) * eps
+                  -- by transitivity
+                  
+                  | transformed : a (suc i') * pow r (suc i_nat) < pow one_third (suc (k_nat -' suc i_nat)) * a (suc k) * pow r (suc k) + pow 3 (suc i_nat) * eps =>
+                      rewrite (inv lhs_eq, rhs_eq) multiplied
+                  
+                  -- Now we need to weaken: pow one_third (suc (k -' suc i)) to pow one_third (k -' suc i)
+                  -- pow one_third (suc m) = one_third * pow one_third m <= pow one_third m (since one_third <= 1)
+                  | pow_one_third_suc_<= : \Pi (m : Nat) -> pow {RealField} one_third (suc m) <= pow one_third m =>
+                      \lam m => transport (`<= pow one_third m) (ide-left {RealField}) 
+                                (PosetSemiring.<=_*_positive-right (PosetSemiring.pow>=0 one/3>=0) one/3<=1)
+                  
+                  | ak_rk_>=0 : a (suc k) * pow r (suc k) >= 0 => {?}
+                      -- PosetSemiring.>=0_* (ai>=0 k) (PosetSemiring.pow>=0 r>=0)
+                  
+                  | first_term_<= : pow one_third (suc (k_nat -' suc i_nat)) * a (suc k) * pow r (suc k) <= 
+                                    pow one_third (k_nat -' suc i_nat) * a (suc k) * pow r (suc k) =>
+                      PosetSemiring.<=_*_positive-right 
+                        (PosetSemiring.<=_*_positive-right (pow_one_third_suc_<= (k_nat -' suc i_nat)) (ai>=0 k))
+                        (PosetSemiring.pow>=0 r>=0)
+                  
+                  | rhs_<= : pow one_third (suc (k_nat -' suc i_nat)) * a (suc k) * pow r (suc k) + pow 3 (suc i_nat) * eps <=
+                             pow one_third (k_nat -' suc i_nat) * a (suc k) * pow r (suc k) + pow 3 (suc i_nat) * eps =>
+                      <=_+ first_term_<= <=-refl
+                  
+                  | final : a (suc i') * pow r (suc i_nat) < pow one_third (k_nat -' suc i_nat) * a (suc k) * pow r (suc k) + pow 3 (suc i_nat) * eps =>
+                      <-transitive-right rhs_<= transformed
+                  
+                \in rewrite (pmap a fromNat_eq) final
           \in inP (r, r>0, k,
                    rewrite (pmap (a (suc n_fin) *) (pmap (pow r) (pmap suc (mod_< id<suc))) *>
                     pmap (`* pow r (suc n)) (pmap a (fin_nat-inj {suc (suc n)} {suc n_fin} {Fin.fromNat {suc n} (suc n)}
