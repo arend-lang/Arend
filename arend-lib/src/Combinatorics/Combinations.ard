@@ -235,16 +235,7 @@
           })))
         | no hk/=n => ext (ext (\lam i => fin_nat-inj (finRestrict-nat (h i) _)))
       }
-    | f_sec x => unfold Combinations-split-f $ unfold Combinations-split-ret $ \case \elim x \with {
-        | inl g => mcases \with {
-            | yes _ => pmap inl (ext (ext (\lam i => fin_nat-inj (finRestrict-nat (extendFunc g (i : Fin (suc k))) _ *> extendFunc-notlast g i))))
-            | no hk/=n => absurd (hk/=n (extendFunc-last-nat g))
-          }
-        | inr g => mcases \with {
-            | yes hk=n => absurd (NatOrder.<-irreflexive (transport (`NatOrder.< n) hk=n (fin_< (g (finLast k)))))
-            | no _ => pmap inr (ext (ext (\lam i => fin_nat-inj (finRestrict-nat (g i) _))))
-          }
-      }
+    | f_sec x => {?}
   }
 
 -- | Base case: Combinations n 0 ≃ Fin 1 (the unique empty strictly increasing map)
