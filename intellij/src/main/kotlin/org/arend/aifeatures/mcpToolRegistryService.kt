@@ -13,11 +13,8 @@ class McpToolRegistryService {
   private val delimiter = "|||"
 
   init {
-    // Register your extracted tools here
-    register(TypecheckerTool())
-    register(ProofSearcherTool())
-    register(ListModulesTool())
-    register(ListSimplifiedModulesTool())
+    // Register all tools from the factory
+    McpToolFactory.createAllTools().forEach { register(it) }
     println(tools.keys.toList())
   }
 
