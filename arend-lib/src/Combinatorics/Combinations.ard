@@ -230,7 +230,7 @@
             | byLeft i<k =>
               \let | i' : Fin k => toFin i i<k
                    | p : (i' : Fin (suc k)) = {Fin (suc k)} i => fin_nat-inj toFin=id
-              \in {?}
+              \in rewrite (inv p) (extendFunc-notlast _ i' *> finRestrict-nat (h (i' : Fin (suc k))) _)
             | byRight i=last => {?}
           }))
         | no hk/=n => exts (\lam i => fin_nat-inj (finRestrict-nat (h i) _))
