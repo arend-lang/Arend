@@ -227,7 +227,10 @@
     | ret => Combinations-split-ret
     | ret_f h => unfold Combinations-split-f $ unfold Combinations-split-ret $ mcases {2} \with {
         | yes hk=n => exts (\lam (i : Fin (suc k)) => fin_nat-inj (\case fin-last-or i \with {
-            | byLeft i<k => {?}
+            | byLeft i<k =>
+              \let | i' : Fin k => toFin i i<k
+                   | p : (i' : Fin (suc k)) = {Fin (suc k)} i => fin_nat-inj toFin=id
+              \in {?}
             | byRight i=last => {?}
           }))
         | no hk/=n => exts (\lam i => fin_nat-inj (finRestrict-nat (h i) _))
