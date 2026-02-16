@@ -36,6 +36,7 @@ dependencies {
     implementation(project(":base"))
     implementation(kotlin("reflect"))
     implementation(kotlin("stdlib-jdk8"))
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.scilab.forge:jlatexmath:1.0.7")
     implementation("com.github.vlsi.mxgraph:jgraphx:4.2.2")
     implementation("com.fifesoft:rsyntaxtextarea:3.1.3")
@@ -82,6 +83,35 @@ idea {
         outputDir = file("${layout.buildDirectory}/classes/main")
         testOutputDir = file("${layout.buildDirectory}/classes/test")
     }
+}
+
+
+tasks {
+  val generateMcpToolsJson by registering(JavaExec::class) {
+    group = "build"
+    description = "Generates MCP tools JSON manifest"
+
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("org.arend.aifeatures.build.McpToolsJsonGenerator")
+
+    val outputFile = layout.buildDirectory.file("generated/mcp/mcp-tools.json")
+    args(outputFile.get().asFile.absolutePath)
+
+    outputs.file(outputFile)
+  }
+
+  // Ensure this runs after compileKotlin
+  compileKotlin {
+    finalizedBy(generateMcpToolsJson)
+  }
+
+  // Make sure it runs before building the JAR and include its output
+  jar {
+    dependsOn(generateMcpToolsJson)
+    from(generateMcpToolsJson.map { it.outputs.files }) {
+        into("resources")
+    }
+  }
 }
 
 tasks {
