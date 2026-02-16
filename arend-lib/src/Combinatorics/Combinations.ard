@@ -1,9 +1,15 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Semiring
+\import Arith.Fin
 \import Arith.Fin.Order
 \import Arith.Nat
 \import Combinatorics.Binom
 \import Combinatorics.Factorial
 \import Data.Array
 \import Data.Bool
+\import Data.Fin
+\import Data.Or
 \import Equiv
 \import Equiv.Sigma
 \import Equiv.HalfAdjoint
@@ -20,8 +26,6 @@
 \import Relation.Equivalence
 \import Set
 \import Set.Fin
-\import Algebra.Monoid
-\import Algebra.Semiring
 \import Set.Fin.Instances
 \import Set.Fin.KFin
 \open AddMonoid
@@ -86,3 +90,179 @@
       | sec (h : StrictPosetHom) => (\lam i => h i, \lam i j i<j => h.func-< i<j)
       | f_sec h => ext (ext (\lam i => idp))
   }
+
+-- | Restrict a Fin (suc n) value to Fin n given a proof it's less than n
+\func finRestrict {n : Nat} (a : Fin (suc n)) (p : a NatOrder.< n) : Fin n \elim n, a, p
+  | suc n, 0, _ => 0
+  | suc n, suc a, NatOrder.suc<suc p => suc (finRestrict a p)
+
+\lemma finRestrict-nat {n : Nat} (a : Fin (suc n)) (p : a NatOrder.< n) : (finRestrict a p : Nat) = a \elim n, a, p
+  | suc n, 0, _ => idp
+  | suc n, suc a, NatOrder.suc<suc p => pmap suc (finRestrict-nat a p)
+
+\lemma finRestrict-< {n : Nat} {a b : Fin (suc n)} {pa : a NatOrder.< n} {pb : b NatOrder.< n}
+  (ab : a NatOrder.< b) : (finRestrict a pa) NatOrder.< (finRestrict b pb)
+  => rewrite (finRestrict-nat a pa, finRestrict-nat b pb) ab
+
+\lemma finLast-nat (k : Nat) : (finLast k : Nat) = k \elim k
+  | 0 => idp
+  | suc k => pmap suc (finLast-nat k)
+  
+\lemma binom0 {n : Nat} : binom n 0 = 1 \elim n | 0 => idp | suc n => idp  
+
+\func gTail {n k : Nat} (g : Combinations n (suc k)) : Combinations n k
+  => \new StrictPosetHom {
+    | Dom => FinOrder k
+    | Cod => FinOrder n
+    | func j => g (suc j)
+    | func-< j<j' => g.func-< (NatOrder.suc<suc j<j')
+  }
+
+-- | Extend g : Combinations n k to Combinations (suc n) (suc k) by appending n at position finLast k
+\func extendFunc {n k : Nat} (g : Combinations n k) : Fin (suc k) -> Fin (suc n) \elim k
+  | 0 => \lam _ => finLast n
+  | suc k => \lam i => \case \elim i \with {
+    | 0 => g 0
+    | suc i => extendFunc (gTail g) i
+  }
+
+\lemma extendFunc-gt-head {n k : Nat} (g : Combinations n (suc k)) (j : Fin (suc k))
+  : (g 0 : Nat) NatOrder.< extendFunc (gTail g) j
+  \elim k, j
+  | 0, 0 => \have | p1 : (g 0 : Nat) < n => fin_< (g 0)
+                   | p2 : (finLast n : Nat) = n => finLast-nat n
+            \in linarith
+  | suc k, 0 => g.func-< NatOrder.zero<suc
+  | suc k, suc j =>
+    \have | step1 : (g 0 : Nat) NatOrder.< (gTail g) 0 => g.func-< NatOrder.zero<suc
+          | step2 => extendFunc-gt-head (gTail g) j
+    \in linarith
+
+\lemma extendFunc-mono {n k : Nat} (g : Combinations n k) {i j : Fin (suc k)} (i<j : i NatOrder.< j)
+  : (extendFunc g i : Nat) NatOrder.< extendFunc g j
+  \elim k, i, j, i<j
+  | 0, 0, 0, i<j => absurd (StrictPoset.<-irreflexive {NatSemiring} i<j)
+  | suc k, suc i, suc j, NatOrder.suc<suc i<j => extendFunc-mono (gTail g) i<j
+  | suc k, 0, suc j, _ => extendFunc-gt-head g j
+
+\lemma extendFunc-last {n k : Nat} (g : Combinations n k) : extendFunc g (finLast k) = finLast n \elim k
+  | 0 => idp
+  | suc k => extendFunc-last (gTail g)
+
+\lemma extendFunc-notlast {n k : Nat} (g : Combinations n k) (i : Fin k)
+  : (extendFunc g (i : Fin (suc k)) : Nat) = g i \elim k, i
+  | suc k, 0 => idp
+  | suc k, suc i => extendFunc-notlast (gTail g) i
+
+\lemma extendFunc-last-nat {n k : Nat} (g : Combinations n k) : (extendFunc g (finLast k) : Nat) = n
+  => pmap (\lam (x : Fin (suc n)) => (x : Nat)) (extendFunc-last g) *> finLast-nat n
+
+\lemma fin-last-or {k : Nat} (i : Fin (suc k)) : (i NatOrder.< k) || (i = finLast k)
+  \elim k, i
+  | 0, 0 => byRight idp
+  | suc k, 0 => byLeft NatOrder.zero<suc
+  | suc k, suc i => \case fin-last-or i \with {
+    | byLeft i<k => byLeft (NatOrder.suc<suc i<k)
+    | byRight i=last => byRight (pmap fsuc i=last)
+  }
+
+\lemma lt-suc-neq {a b : Nat} (lt : a NatOrder.< suc b) (neq : a = b -> Empty) : a NatOrder.< b
+  \elim a, b, lt
+  | 0, 0, _ => absurd (neq idp)
+  | 0, suc b, _ => NatOrder.zero<suc
+  | suc a, 0, NatOrder.suc<suc lt => \case lt \with {}
+  | suc a, suc b, NatOrder.suc<suc lt => NatOrder.suc<suc (lt-suc-neq lt (\lam p => neq (pmap suc p)))
+
+-- | Helper: the forward map for Combinations-split, defined with dependent case for easier proofs
+\func Combinations-split-f {n k : Nat} (h : Combinations (suc n) (suc k))
+  : Or (Combinations n k) (Combinations n (suc k))
+  => \case decideEq (h (finLast k) : Nat) n \with {
+    | yes hk=n => inl (\new StrictPosetHom {
+      | Dom => FinOrder k
+      | Cod => FinOrder n
+      | func (i : Fin k) =>
+        \let hi<hk : (h i : Nat) NatOrder.< (h (finLast k) : Nat)
+               => h.func-< (transport (i NatOrder.<) (inv (finLast-nat k)) (fin_< i))
+        \in finRestrict (h i) (linarith)
+      | func-< i<j => finRestrict-< (h.func-< i<j)
+    })
+    | no hk/=n =>
+      \let hk<n : (h (finLast k) : Nat) NatOrder.< n => lt-suc-neq (fin_< (h (finLast k))) hk/=n
+      \in inr (\new StrictPosetHom {
+        | Dom => FinOrder (suc k)
+        | Cod => FinOrder n
+        | func (i : Fin (suc k)) =>
+          \let hi<n : (h i : Nat) NatOrder.< n => \case fin-last-or i \with {
+            | byLeft i<k => linarith (h.func-< (transport (i NatOrder.<) (inv (finLast-nat k)) i<k) : (h i : Nat) NatOrder.< (h (finLast k) : Nat))
+            | byRight i=last => transport (\lam x => (h x : Nat) NatOrder.< n) (inv i=last) hk<n
+          }
+          \in finRestrict (h i) hi<n
+        | func-< i<j => finRestrict-< (h.func-< i<j)
+      })
+  }
+
+-- | Helper: the backward map for Combinations-split
+\func Combinations-split-ret {n k : Nat} (x : Or (Combinations n k) (Combinations n (suc k)))
+  : Combinations (suc n) (suc k)
+  => \case x \with {
+    | inl g => \new StrictPosetHom {
+      | Dom => FinOrder (suc k)
+      | Cod => FinOrder (suc n)
+      | func i => extendFunc g i
+      | func-< i<j => extendFunc-mono g i<j
+    }
+    | inr g => \new StrictPosetHom {
+      | Dom => FinOrder (suc k)
+      | Cod => FinOrder (suc n)
+      | func i => g i
+      | func-< i<j => g.func-< i<j
+    }
+  }
+
+-- | Decomposition: Combinations (suc n) (suc k) ≃ Combinations n k ⊔ Combinations n (suc k)
+-- Split by whether h(finLast k) = n (the largest value) or h(finLast k) < n
+\func Combinations-split {n k : Nat} : QEquiv {Combinations (suc n) (suc k)} {Or (Combinations n k) (Combinations n (suc k))}
+  => \new QEquiv {
+    | f => Combinations-split-f
+    | ret => Combinations-split-ret
+    | ret_f h => unfold Combinations-split-f $ unfold Combinations-split-ret $ mcases {2} \with {
+        | yes hk=n => ext (ext (\lam i => fin_nat-inj (\case fin-last-or i \with {
+            | byLeft i<k =>
+              \let i' : Fin k => (i, i<k)
+              \in extendFunc-notlast _ i' *> finRestrict-nat (h (i' : Fin (suc k))) _
+            | byRight i=last =>
+              extendFunc-last-nat _ *> inv hk=n *> pmap (\lam (x : Fin (suc k)) => (h x : Nat)) (inv i=last)
+          })))
+        | no hk/=n => {?}
+      }
+    | f_sec x => {?}
+  }
+
+-- | Base case: Combinations n 0 ≃ Fin 1 (the unique empty strictly increasing map)
+\func Combinations-base0 {n : Nat} : QEquiv {Fin 1} {Combinations n 0}
+  => \new QEquiv {
+    | f _ => \new StrictPosetHom {
+      | Dom => FinOrder 0
+      | Cod => FinOrder n
+      | func (i : Fin 0) => \case i \with {}
+      | func-< {i} => \case i \with {}
+    }
+    | ret _ => 0
+    | f_sec (h : StrictPosetHom) => ext (ext (\lam (i : Fin 0) => \case i \with {}))
+    | ret_f (x : Fin 1) => \case \elim x \with { | 0 => idp }
+  }
+
+-- | Base case: Combinations 0 (suc k) is empty
+\func Combinations-base-empty {k : Nat} : QEquiv {Fin 0} {Combinations 0 (suc k)}
+  => \new QEquiv {
+    | f (i : Fin 0) => \case i \with {}
+    | ret (h : StrictPosetHom) => \case h.func (0 : Fin (suc k)) \with {}
+    | ret_f (i : Fin 0) => \case i \with {}
+    | f_sec (h : StrictPosetHom) => \case h.func (0 : Fin (suc k)) \with {}
+  }
+
+-- | Main theorem: |Combinations n k| = binom n k
+\func Combinations-binom (n k : Nat) : Equiv {Fin (binom n k)} {Combinations n k} \elim n, k
+  | m, 0 => rewrite (binom0 {m}) $ Combinations-base0 {m}
+  | 0, suc k => Combinations-base-empty
+  | suc n, suc k => {?} -- use Combinations-split, induction, and Fin (a + b) ≃ Or (Fin a) (Fin b)
