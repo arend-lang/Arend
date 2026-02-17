@@ -15,7 +15,7 @@ import org.arend.typechecking.runner.RunnerService
 
 
 class TypecheckerTool : McpTool {
-  override val name = "mcp_arend_Typecheck_definition"
+  override val name = "mcp_arend_Typecheck_module"
   override val description = "Typechecks what you wrote in Arend, returns error messages separated by comma." +
   "You need to send it the full library path as a string and a list of paths of modules that you want to typecheck." +
   "For example if in project myProject you want to typecheck module myFile.ard you send the json {\"libraryName\":\"/Users/username/Dev/myProject\",\"modulePaths\":[\"myFile\"]}"

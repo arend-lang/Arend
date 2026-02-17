@@ -28,6 +28,9 @@ class ProofSearcherTool : McpTool {
 
 
   override fun getInputSchema(): JsonObject  = buildJsonObject {
+    putJsonObject("libraryPath") {
+      put("type", "string")
+    }
     putJsonObject("query") {
       put("type", "string")
     }
