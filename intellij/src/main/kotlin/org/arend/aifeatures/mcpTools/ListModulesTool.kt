@@ -40,7 +40,8 @@ class ListModulesTool : McpTool {
     }
 
     private fun listAllModules(project: Project): String {
-        val server = project.service<ArendServerService>().server
+        val serverService = project.service<ArendServerService>()
+        val server = serverService.server
         
         val result = StringBuilder()
         
@@ -58,23 +59,57 @@ class ListModulesTool : McpTool {
         
         // Get all registered modules
         val modules = server.modules
+        println("modules = $modules")
         result.appendLine("=== All Modules (${modules.size} total) ===")
         
         if (modules.isEmpty()) {
             result.appendLine("No modules registered.")
         } else {
+            val arendLibJsonSummaries = object {}.javaClass.getResource("/org/arend/aifeatures/storedinfo/arendLibSummaries.json")?.readText()
+            val descriptionMap = if (arendLibJsonSummaries != null) {
+                parseSummaries(arendLibJsonSummaries).second
+            } else {
+                result.appendLine("Note: arendLibSummaries.json not found, module descriptions will not be available.")
+                emptyMap()
+            }
+//            println("descriptionMap = $descriptionMap")
+
             // Group modules by library for better readability
             val modulesByLibrary = modules.groupBy { it.libraryName }
             
             for ((libName, libModules) in modulesByLibrary.toSortedMap()) {
                 result.appendLine("\n[$libName]")
                 for (module in libModules.sortedBy { it.toString() }) {
-                    // Full identifier format: libraryName:locationKind:modulePath
-                    result.appendLine("  ${module.modulePath} (${module.locationKind})")
+                    val modulePathString = module.modulePath.toString()
+                    println(modulePathString)
+                    // Try to find description by full path, path without leading dot, or partial path
+                    val moduleDescription : String? = descriptionMap[modulePathString] 
+                        ?: descriptionMap[modulePathString.removePrefix(".")]
+                        ?: descriptionMap.entries.find { (name, _) -> modulePathString.endsWith(name) }?.value
+                    
+                    if (moduleDescription != null){
+                      result.appendLine("  ${module.modulePath} (description : ${moduleDescription}) (${module.locationKind})")
+                    } else {
+                      result.appendLine("  ${module.modulePath} (${module.locationKind})")
+                    }
                 }
             }
         }
-        
+//        println(result)
         return result.toString()
     }
+  fun parseSummaries(jsonString: String): Pair<String, Map<String, String>> {
+    val jsonObject = Json.parseToJsonElement(jsonString).jsonObject
+    val version = jsonObject["version"]?.jsonPrimitive?.content ?: "unknown"
+    val modulesArray = jsonObject["modules"]?.jsonArray ?: JsonArray(emptyList())
+
+    val modulesMap = modulesArray.associate {
+      val moduleObj = it.jsonObject
+      val name = moduleObj["name"]?.jsonPrimitive?.content ?: ""
+      val summary = moduleObj["summary"]?.jsonPrimitive?.content ?: ""
+      name to summary
+    }
+
+    return version to modulesMap
+  }
 }
