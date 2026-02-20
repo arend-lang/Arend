@@ -166,7 +166,7 @@
     | byRight i=last => byRight (pmap fsuc i=last)
   }
 
-\lemma lt-suc-neq {a b : Nat} (lt : a NatOrder.< suc b) (neq : a = b -> Empty) : a NatOrder.< b
+\lemma lt-suc-neq {a b : Nat} (lt : a < suc b) (neq : a = b -> Empty) : a < b
   \elim a, b, lt
   | 0, 0, _ => absurd (neq idp)
   | 0, suc b, _ => NatOrder.zero<suc
@@ -181,20 +181,20 @@
       | Dom => FinOrder k
       | Cod => FinOrder n
       | func (i : Fin k) =>
-        \let hi<hk : (h i : Nat) NatOrder.< (h (finLast k) : Nat)
+        \let hi<hk : h i < h (finLast k)
                => h.func-< (transport (i NatOrder.<) (inv (finLast-nat k)) (fin_< i))
-        \in finRestrict (h i) (linarith)
+        \in finRestrict (h i) linarith
       | func-< i<j => finRestrict-< (h.func-< i<j)
     })
     | no hk/=n =>
-      \let hk<n : (h (finLast k) : Nat) NatOrder.< n => lt-suc-neq (fin_< (h (finLast k))) hk/=n
+      \let hk<n : (h (finLast k) : Nat) < n => lt-suc-neq (fin_< (h (finLast k))) hk/=n
       \in inr (\new StrictPosetHom {
         | Dom => FinOrder (suc k)
         | Cod => FinOrder n
         | func (i : Fin (suc k)) =>
-          \let hi<n : (h i : Nat) NatOrder.< n => \case fin-last-or i \with {
-            | byLeft i<k => linarith (h.func-< (transport (i NatOrder.<) (inv (finLast-nat k)) i<k) : (h i : Nat) NatOrder.< (h (finLast k) : Nat))
-            | byRight i=last => transport (\lam x => (h x : Nat) NatOrder.< n) (inv i=last) hk<n
+          \let hi<n : (h i : Nat) < n => \case fin-last-or i \with {
+            | byLeft i<k => linarith (h.func-< (transport (i NatOrder.<) (inv (finLast-nat k)) i<k) : (h i : Nat) < (h (finLast k) : Nat))
+            | byRight i=last => transport (\lam x => (h x : Nat) < n) (inv i=last) hk<n
           }
           \in finRestrict (h i) hi<n
         | func-< i<j => finRestrict-< (h.func-< i<j)
@@ -231,11 +231,22 @@
               \let | i' : Fin k => toFin i i<k
                    | p : (i' : Fin (suc k)) = {Fin (suc k)} i => fin_nat-inj toFin=id
               \in rewrite (inv p) (extendFunc-notlast _ i' *> finRestrict-nat (h (i' : Fin (suc k))) _)
-            | byRight i=last => {?}
+            | byRight i=last => rewrite i=last (extendFunc-last-nat _ *> inv hk=n)
           }))
         | no hk/=n => exts (\lam i => fin_nat-inj (finRestrict-nat (h i) _))
       }
-    | f_sec x => {?}
+    | f_sec x => unfold Combinations-split-f $ unfold Combinations-split-ret $ \case \elim x \with {
+        | inl g => mcases {1} \with {
+            | yes hk=n => pmap inl (ext (ext (\lam (i : Fin k) =>
+                fin_nat-inj (finRestrict-nat (extendFunc g (i : Fin (suc k))) _ *> extendFunc-notlast g i))))
+            | no hk/=n => absurd (hk/=n (extendFunc-last-nat g))
+          }
+        | inr g => mcases {1} \with {
+            | yes hk=n => absurd (\let gi<n : (g (finLast k) : Nat) < n => fin_< (g (finLast k)) \in linarith)
+            | no hk/=n => pmap inr (ext (ext (\lam (i : Fin (suc k)) =>
+                fin_nat-inj (finRestrict-nat (g i) _))))
+          }
+      }
   }
 
 -- | Base case: Combinations n 0 ≃ Fin 1 (the unique empty strictly increasing map)
@@ -265,4 +276,21 @@
 \func Combinations-binom (n k : Nat) : Equiv {Fin (binom n k)} {Combinations n k} \elim n, k
   | m, 0 => rewrite (binom0 {m}) $ Combinations-base0 {m}
   | 0, suc k => Combinations-base-empty
-  | suc n, suc k => {?} -- use Combinations-split, induction, and Fin (a + b) ≃ Or (Fin a) (Fin b)
+  | suc n, suc k =>
+    \let | e2 : Equiv {Fin (binom n k)} {Combinations n k} => Combinations-binom n k
+         | e3 : Equiv {Fin (binom n (suc k))} {Combinations n (suc k)} => Combinations-binom n (suc k)
+         | e4 : QEquiv {Or (Fin (binom n k)) (Fin (binom n (suc k)))} {Or (Combinations n k) (Combinations n (suc k))}
+              => \new QEquiv {
+                   | f x => \case x \with { | inl a => inl (e2 a) | inr b => inr (e3 b) }
+                   | ret x => \case x \with { | inl a => inl (e2.ret a) | inr b => inr (e3.ret b) }
+                   | ret_f x => \case \elim x \with {
+                     | inl a => pmap inl (e2.ret_f a)
+                     | inr b => pmap inr (e3.ret_f b)
+                   }
+                   | f_sec x => \case \elim x \with {
+                     | inl a => pmap inl (e2.f_ret a)
+                     | inr b => pmap inr (e3.f_ret b)
+                   }
+                 }
+         | e5 : QEquiv {Combinations (suc n) (suc k)} {Or (Combinations n k) (Combinations n (suc k))} => Combinations-split
+    \in OrFin.aux `transEquiv` e4 `transEquiv` symQEquiv e5

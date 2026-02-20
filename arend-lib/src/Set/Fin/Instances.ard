@@ -98,16 +98,12 @@
          }
     \in E1 `transEquiv` E2 `transEquiv` E3
 
--- | The product of elements over a finite set.
-\sfunc FinProd {M : CMonoid} {A : FinSet} (x : A -> M) : M
-  => AbMonoid.FinSum {AbMonoid.fromCMonoid M} x
-
 -- | Characterizes `FinProd` as `Monoid.BigProd` over some equivalence with `Fin n`.
-\lemma FinProd_char {M : CMonoid} {A : FinSet} (x : A -> M) : ∃ (e : Equiv {Fin A.finCard} {A}) (FinProd {_} {A} x = Monoid.BigProd (\lam j => x (e j)))
-  => AbMonoid.FinSum_char {AbMonoid.fromCMonoid M} x
+\lemma FinProd_char {M : CMonoid} {A : FinSet} (x : A -> M) : ∃ (e : Equiv {Fin A.finCard} {A}) (CMonoid.FinProd {_} {A} x = Monoid.BigProd (\lam j => x (e j)))
+  => CMonoid.FinProd_char {M} {A} x
 
 -- | If the function is constant, `FinProd` is just the power in the monoid.
-\lemma FinProd_replicate {M : CMonoid} {A : FinSet} {x : M} : FinProd {M} {A} (\lam _ => x) = M.pow x A.finCard
+\lemma FinProd_replicate {M : CMonoid} {A : FinSet} {x : M} : CMonoid.FinProd {M} {A} (\lam _ => x) = M.pow x A.finCard
   => \case FinProd_char (\lam _ => x) \with {
     | inP p => p.2 *> Monoid.BigProd_replicate {M} {x} {A.finCard}
   }
@@ -115,7 +111,7 @@
 -- | If the domain `S` is a finite set and the codomain `Q i` is a finite set for each `i : S`,
 -- then the type of functions `\Pi (i : S) -> Q i` is also a finite set.
 -- The cardinality is given by the product of the cardinalities of the codomains over the domain.
-\instance PiFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Pi (i : S) -> Q i) (FinProd {NatSemiring} (\lam x => (Q x).finCard))
+\instance PiFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Pi (i : S) -> Q i) (CMonoid.FinProd {NatSemiring} (\lam x => (Q x).finCard))
   | finEq => \case FinProd_char {NatSemiring} (\lam x => (Q x).finCard) \with {
     | inP (e, p) => rewrite p \case FinSet.finiteAC (\lam j => (Q (e j)).finEq) \with {
         | inP d => inP $
@@ -159,7 +155,7 @@
 
     -- | Characterization of the cardinality of a finite Pi type.
     -- The cardinality of `PiFin S Q` is exactly the product of cardinalities of `Q i`.
-    \lemma pi-card {S : FinSet} {Q : S -> FinSet} : (PiFin S Q).finCard = FinProd {NatSemiring} (\lam i => (Q i).finCard)
+    \lemma pi-card {S : FinSet} {Q : S -> FinSet} : (PiFin S Q).finCard = CMonoid.FinProd {NatSemiring} (\lam i => (Q i).finCard)
       => idp
   }
 
