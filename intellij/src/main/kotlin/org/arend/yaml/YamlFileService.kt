@@ -85,6 +85,7 @@ class YamlFileService(private val project: Project) {
         val newYamlFile = createFromText(text, project)
         val arendModuleConfigService = ArendModuleConfigService.getInstance(ModuleUtil.findModuleForFile(file, project))
         val updateFlag = arendModuleConfigService?.sourcesDir != newYamlFile?.sourcesDir.orEmpty().trim('/').replace("\r", "") ||
+                arendModuleConfigService.extSourcesDir != newYamlFile?.extSourcesDir.orEmpty().trim('/').replace("\r", "") ||
                 arendModuleConfigService.testsDir != newYamlFile?.testsDir.orEmpty().trim('/').replace("\r", "") ||
                 arendModuleConfigService.binariesDirectory != newYamlFile?.binariesDir.orEmpty().trim('/').replace("\r", "") ||
                 arendModuleConfigService.extensionsDirectory != newYamlFile?.extensionsDir.orEmpty().trim('/').replace("\r", "") ||
@@ -110,6 +111,9 @@ class YamlFileService(private val project: Project) {
         val model = ModuleRootManager.getInstance(arendModuleConfigService.module).modifiableModel
         val yamlSrc = runReadAction {
             yaml.sourcesDir
+        }
+        val yamlExtSrc = runReadAction {
+            yaml.extSourcesDir
         }
         val yamlBin = runReadAction {
             val bin = yaml.binariesDir
@@ -140,10 +144,12 @@ class YamlFileService(private val project: Project) {
         }
 
         removeDirectory(model, arendModuleConfigService, yamlSrc, arendModuleConfigService.sourcesDir, file, SRC)
+        removeDirectory(model, arendModuleConfigService, yamlExtSrc, arendModuleConfigService.extSourcesDir, file, EXT_SRC)
         removeDirectory(model, arendModuleConfigService, yamlTest, arendModuleConfigService.testsDir, file, TEST_SRC)
         removeDirectory(model, arendModuleConfigService, yamlBin, arendModuleConfigService.binariesDirectory, file, BIN)
 
         addDirectory(model, arendModuleConfigService, yamlSrc, arendModuleConfigService.sourcesDir, SRC)
+        addDirectory(model, arendModuleConfigService, yamlExtSrc, arendModuleConfigService.extSourcesDir, EXT_SRC)
         addDirectory(model, arendModuleConfigService, yamlTest, arendModuleConfigService.testsDir, TEST_SRC)
         addDirectory(model, arendModuleConfigService, yamlBin, arendModuleConfigService.binariesDirectory, BIN)
 

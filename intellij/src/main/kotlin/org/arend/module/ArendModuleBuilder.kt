@@ -107,6 +107,8 @@ class ArendModuleBuilder : ArendStarterModuleBuilder(), ArendModuleConfiguration
             sourcesTextField.text = value
         }
 
+    override var extSourcesDir: String = ""
+
     override var withBinaries: Boolean
         get() = binariesSwitch.isSelected
         set(value) {

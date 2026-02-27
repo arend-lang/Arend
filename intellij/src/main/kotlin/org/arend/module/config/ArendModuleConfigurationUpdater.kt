@@ -18,6 +18,7 @@ import org.jetbrains.yaml.psi.YAMLFile
 class ArendModuleConfigurationUpdater(private val isNewModule: Boolean) : ModuleBuilder.ModuleConfigurationUpdater(), ArendModuleConfiguration {
     override var librariesRoot = ""
     override var sourcesDir = ""
+    override var extSourcesDir = ""
     override var testsDir = ""
     override var withBinaries = false
     override var binariesDirectory = ""

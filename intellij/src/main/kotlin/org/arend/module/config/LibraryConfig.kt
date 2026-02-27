@@ -29,6 +29,8 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
         get() = null
     open val testsDir: String
         get() = ""
+    open val extSourcesDir: String
+        get() = ""
     open val extensionsDir: String?
         get() = null
     open val modules: List<ModulePath>?
@@ -60,6 +62,9 @@ abstract class LibraryConfig(val project: Project) : ArendLibrary {
 
     open val testsDirFile: VirtualFile?
         get() = testsDir.let { if (it.isEmpty()) null else findDir(it) }
+
+    open val extSourcesDirFile: VirtualFile?
+        get() = extSourcesDir.let { if (it.isEmpty()) null else findDir(it) }
 
     val binariesDirFile: VirtualFile?
         get() = binariesDir?.let { findDir(it) }

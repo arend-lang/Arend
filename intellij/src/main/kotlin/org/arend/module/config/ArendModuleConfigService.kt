@@ -34,6 +34,7 @@ class ArendModuleConfigService(val module: Module) : LibraryConfig(module.projec
         }
 
     override var sourcesDir = ""
+    override var extSourcesDir = ""
     override var withBinaries = false
     override var binariesDirectory = ""
     override var testsDir = ""
@@ -123,6 +124,7 @@ class ArendModuleConfigService(val module: Module) : LibraryConfig(module.projec
             extensionMainClassData = extMain
         }
         sourcesDir = yaml.sourcesDir ?: ""
+        extSourcesDir = yaml.extSourcesDir ?: ""
         versionString = yaml.version
         langVersionString = yaml.langVersion
 
@@ -177,6 +179,12 @@ class ArendModuleConfigService(val module: Module) : LibraryConfig(module.projec
             updateYAML = true
         }
 
+        val newExtSourcesDir = config.extSourcesDir
+        if (extSourcesDir != newExtSourcesDir) {
+            extSourcesDir = newExtSourcesDir
+            updateYAML = true
+        }
+
         val newBinariesDir = config.flaggedBinariesDir
         if (flaggedBinariesDir != newBinariesDir) {
             updateYAML = true
@@ -219,6 +227,7 @@ class ArendModuleConfigService(val module: Module) : LibraryConfig(module.projec
             langVersion = newLangVersion
             version = newVersion
             sourcesDir = newSourcesDir
+            extSourcesDir = newExtSourcesDir
             binariesDir = newBinariesDir
             testsDir = newTestsDir
             extensionsDir = newExtensionsDir
@@ -238,6 +247,15 @@ class ArendModuleConfigService(val module: Module) : LibraryConfig(module.projec
             sourcesDir = newSourcesDir
             yamlFile?.write {
                 sourcesDir = newSourcesDir
+            }
+        }
+    }
+
+    fun updateExtSourceDirFromIDEA(newExtSourcesDir: String) {
+        if (extSourcesDir != newExtSourcesDir) {
+            extSourcesDir = newExtSourcesDir
+            yamlFile?.write {
+                extSourcesDir = newExtSourcesDir
             }
         }
     }

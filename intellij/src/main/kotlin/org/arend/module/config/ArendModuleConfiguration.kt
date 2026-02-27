@@ -8,6 +8,7 @@ import java.nio.file.Paths
 interface ArendModuleConfiguration {
     var librariesRoot: String
     var sourcesDir: String
+    var extSourcesDir: String
     var withBinaries: Boolean
     var binariesDirectory: String
     var testsDir: String
@@ -36,6 +37,7 @@ interface ArendModuleConfiguration {
     fun copyFrom(another: ArendModuleConfiguration) {
         librariesRoot = another.librariesRoot
         sourcesDir = another.sourcesDir
+        extSourcesDir = another.extSourcesDir
         withBinaries = another.withBinaries
         binariesDirectory = another.binariesDirectory
         testsDir = another.testsDir
@@ -50,6 +52,7 @@ interface ArendModuleConfiguration {
     fun compare(another: ArendModuleConfiguration) =
         librariesRoot == another.librariesRoot &&
         sourcesDir == another.sourcesDir &&
+        extSourcesDir == another.extSourcesDir &&
         withBinaries == another.withBinaries &&
         binariesDirectory == another.binariesDirectory &&
         testsDir == another.testsDir &&

@@ -23,6 +23,7 @@ import org.jetbrains.yaml.psi.YAMLSequence
 const val SOURCES = "sourcesDir"
 const val BINARIES = "binariesDir"
 const val TESTS = "testsDir"
+const val EXT_SOURCES = "extSourcesDir"
 const val EXTENSIONS = "extensionsDir"
 const val EXTENSION_MAIN = "extensionMainClass"
 const val MODULES = "modules"
@@ -30,7 +31,7 @@ const val DEPENDENCIES = "dependencies"
 const val VERSION = "version"
 const val LANG_VERSION = "langVersion"
 
-val KEYS = setOf(SOURCES, BINARIES, TESTS, EXTENSIONS, EXTENSION_MAIN, MODULES, DEPENDENCIES, LANG_VERSION, VERSION)
+val KEYS = setOf(SOURCES, BINARIES, TESTS, EXT_SOURCES, EXTENSIONS, EXTENSION_MAIN, MODULES, DEPENDENCIES, LANG_VERSION, VERSION)
 
 private fun YAMLFile.getProp(name: String) = (documents?.firstOrNull()?.topLevelValue as? YAMLMapping)?.getKeyValueByKey(name)?.value
 
@@ -77,6 +78,12 @@ var YAMLFile.testsDir
     get() = (getProp(TESTS) as? YAMLScalar)?.textValue ?: ""
     set(value) {
         setPropIfNonEmpty(TESTS, value)
+    }
+
+var YAMLFile.extSourcesDir
+    get() = (getProp(EXT_SOURCES) as? YAMLScalar)?.textValue
+    set(value) {
+        setPropIfNonEmpty(EXT_SOURCES, value.orEmpty())
     }
 
 var YAMLFile.extensionsDir

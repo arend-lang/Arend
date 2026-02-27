@@ -17,6 +17,7 @@ import java.io.File
 
 enum class DirectoryType {
     SRC,
+    EXT_SRC,
     TEST_SRC,
     BIN
 }
@@ -28,7 +29,7 @@ private fun getRelativePath(arendModuleConfigService: ArendModuleConfigService?,
 
 private fun getContentFolder(directoryType: DirectoryType, oldDir: String?, entry: ContentEntry?, arendModuleConfigService: ArendModuleConfigService?): ContentFolder? {
     return when (directoryType) {
-        SRC, TEST_SRC -> entry?.sourceFolders
+        SRC, EXT_SRC, TEST_SRC -> entry?.sourceFolders
         BIN -> entry?.excludeFolders
     }?.find {
         getRelativePath(arendModuleConfigService, it.file) == oldDir
@@ -38,6 +39,7 @@ private fun getContentFolder(directoryType: DirectoryType, oldDir: String?, entr
 private fun getDirByType(directoryType: DirectoryType, arendModuleConfigService: ArendModuleConfigService?): String? {
     return when (directoryType) {
         SRC -> arendModuleConfigService?.sourcesDir
+        EXT_SRC -> arendModuleConfigService?.extSourcesDir
         TEST_SRC -> arendModuleConfigService?.testsDir
         BIN -> arendModuleConfigService?.binariesDirectory
     }
@@ -55,7 +57,7 @@ internal fun removeOldFolder(virtualFile: VirtualFile?, model: ModifiableRootMod
     val oldDir = getDirByType(directoryType, arendModuleConfigService)
     getContentFolder(directoryType, oldDir, entry, arendModuleConfigService)?.let {
         when (directoryType) {
-            SRC, TEST_SRC -> entry?.removeSourceFolder(it as SourceFolder)
+            SRC, EXT_SRC, TEST_SRC -> entry?.removeSourceFolder(it as SourceFolder)
             BIN -> entry?.removeExcludeFolder(it as ExcludeFolder)
         }
     }
@@ -64,7 +66,7 @@ internal fun removeOldFolder(virtualFile: VirtualFile?, model: ModifiableRootMod
 internal fun addNewFolder(virtualFile: VirtualFile, model: ModifiableRootModel?, directoryType: DirectoryType) {
     val entry = model?.let { MarkRootActionBase.findContentEntry(it, virtualFile) }
     when (directoryType) {
-        SRC -> entry?.addSourceFolder(virtualFile, JavaSourceRootType.SOURCE)
+        SRC, EXT_SRC -> entry?.addSourceFolder(virtualFile, JavaSourceRootType.SOURCE)
         TEST_SRC -> entry?.addSourceFolder(virtualFile, JavaSourceRootType.TEST_SOURCE)
         BIN -> entry?.addExcludeFolder(virtualFile)
     }
@@ -149,6 +151,7 @@ internal fun unmarkOldDirectory(e: AnActionEvent, model: ModifiableRootModel?, a
     if (relativePath != null) {
         when (directoryType) {
             SRC -> arendModuleConfigService?.updateSourceDirFromIDEA(relativePath)
+            EXT_SRC -> arendModuleConfigService?.updateExtSourceDirFromIDEA(relativePath)
             TEST_SRC -> arendModuleConfigService?.updateTestDirFromIDEA(relativePath)
             BIN -> arendModuleConfigService?.updateBinDirFromIDEA(relativePath)
         }

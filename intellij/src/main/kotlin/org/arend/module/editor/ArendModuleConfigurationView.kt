@@ -150,6 +150,8 @@ class ArendModuleConfigurationView(
             sourcesTextField.text = value
         }
 
+    override var extSourcesDir: String = ""
+
     override var testsDir: String
         get() = testsTextField.text
         set(value) {
