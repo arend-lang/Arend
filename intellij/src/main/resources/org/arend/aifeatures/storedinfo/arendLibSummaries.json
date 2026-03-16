@@ -1,0 +1,1337 @@
+{
+    "version": "1.11",
+    "modules": [
+        {
+            "name": "Operations",
+            "summary": "Defines `HasProduct` and `HasCoproduct` classes with operators `⨯` and `⨿`. Instances for `\\Type` use `\\Sigma` and `Or`."
+        },
+        {
+            "name": "Order.LinearOrder",
+            "summary": "The file defines order classes such as `TotalOrder`, `LinearOrder`, `DenseLinearOrder`, and `UnboundedDenseLinearOrder`. It includes lemmas and functions for meet/join operations. Key functions are `findMin`, `findMax`, and `trichotomy`, aiding order properties and decision procedures."
+        },
+        {
+            "name": "Order.HeytingAlgebra",
+            "summary": "The file defines the `HeytingAlebra` class, extending `BoundedDistributiveLattice` and `CartesianClosedPrecat`. It introduces logical operations (`implies`, `neg`, `curry`, `continuation`) and proofs (`modus-ponens`, `composition-law`, `neg_bottom`, `neg_top`)."
+        },
+        {
+            "name": "Order.Directed",
+            "summary": "Defines `DirectedSet` extending `Preorder`, requiring inhabitation and directedness. Provides `ProductDirectedSet` and `DirectedSetHasProduct` for handling product instances."
+        },
+        {
+            "name": "Order.Elem",
+            "summary": "The file defines instances of `Elem U` for order types: `StrictPoset`, `Poset`, `BiorderedSet`, and `LinearOrder`, maintaining order properties like transitivity and antisymmetry."
+        },
+        {
+            "name": "Order.Biordered",
+            "summary": "The file defines `BiorderedSet` and `BiorderedLattice` classes, extending order structures with transitive properties, monotonicity lemmas, and universal lattice properties."
+        },
+        {
+            "name": "Order.LexicographicalArray",
+            "summary": "Defines `LexicographicalArray` for arrays with lexicographical order using `<A`. Includes irreflexivity, transitivity, trichotomy, and internal definition of `<A`."
+        },
+        {
+            "name": "Order.Category",
+            "summary": "Defines categories for posets, strict posets, and decidable linear orders with records for morphisms: PosetHom, StrictPosetHom, and instances: PosetCat, StrictPosetCat, DecLinearOrderCat."
+        },
+        {
+            "name": "Order.StrictOrder",
+            "summary": "This file defines a `StrictPoset` class representing strict partial orders with irreflexivity and transitivity. It includes operations for reversing orders, lemmas for inequality reasoning, and checks if a function is strictly monotone between `StrictPoset` instances."
+        },
+        {
+            "name": "Order.Lattice",
+            "summary": "The file defines various algebraic structures such as `MeetSemilattice`, `JoinSemilattice`, `Lattice`, `DistributiveLattice`, `TopMeetSemilattice`, `BottomJoinSemilattice`, `BoundedLattice`, `BottomDistributiveLattice`, `BoundedDistributiveLattice`, and `CompleteLattice`. Each class includes operations like `meet` (∧) and `join` (∨) with associated properties and lemmas for lattice operations, focusing on idempotence, commutativity, associativity, and distributivity."
+        },
+        {
+            "name": "Order.PartialOrder",
+            "summary": "Defines `Preorder` and `Poset` classes with order properties, equivalence relations, and product instances. Includes functions for meets, joins, and sub-posets."
+        },
+        {
+            "name": "Order.Lexicographical",
+            "summary": "Defines instances `LexicographicalProduct` and `LexicographicalList` for lexicographical order on products and lists, implementing decision procedures for `<`, `<-irreflexive`, `<-transitive`, and `trichotomy`."
+        },
+        {
+            "name": "Order.BooleanAlgebra",
+            "summary": "Defines a `BooleanAlgebra` class with operations like `compl`, `implies`, and lemmas about complements. Introduces `symm-diff` function. Implements `HeytingBooleanAlgebra` instance using negation."
+        },
+        {
+            "name": "Topology.TopPoset",
+            "summary": "The file defines classes `HausdorffTopPoset` and `HausdorffTopPosetAbGroup`, extending topological and order structures. Key functions include `<=-closed`, `<=-closed-left`, `<=-closed-right`, `limit-Join`, and `limit-Meet`, which deal with closed sets and limits in directed sets."
+        },
+        {
+            "name": "Topology.BanachSpace",
+            "summary": "This file defines structures and operations for Banach spaces, Real Banach spaces, and related classes, including PreBanachSpace, SeparatedPreBanachSpace, and RealPreBanachSpace. It covers norm operations, uniformity properties, and bounded linear maps. It also provides instances for completing Banach spaces and reflections for separated spaces."
+        },
+        {
+            "name": "Topology.TopAbGroup.Product",
+            "summary": "This file defines instances and lemmas for topological abelian groups, including `ProductTopAbGroup`, which defines product topology for abelian groups, and lemmas like `negative-uniform` and `+-uniform` that ensure continuity and group operations. It also defines mappings for multiplication by integers and natural numbers."
+        },
+        {
+            "name": "Topology.TopAbGroup.Complete",
+            "summary": "The file defines a class `CompleteTopAbGroup` extending `TopAbGroup` and `CompleteUniformSpace`. It includes functions for lifting dense topological abelian group maps (`dense-topAb-lift`) and constructs an instance `TopAbGroupCompletion` of `CompleteTopAbGroup`. It also defines operations like `+-cover`, `+-func`, `negative-cover`, and related lemmas."
+        },
+        {
+            "name": "Topology.CStarAlgebra.UnitCStarAlgebra",
+            "summary": "This Arend file constructs a `UnitC*Algebra` instance from a `StoneC*PseudoAlgebra`, defining several key concepts such as norms, completeness, and algebraic operations. It also defines `StoneC*AlgebraRieszSpace` and `StoneC*PseudoAlgebraRieszSpace`, focusing on norms and algebraic properties in a Riesz space context."
+        },
+        {
+            "name": "Topology.CStarAlgebra.CompleteStoneCStarAlgebra",
+            "summary": "This file defines `OrderedC*AlgebraHom` and `StoneC*AlgebraHom` for algebra homomorphisms, focusing on properties like `IsDense` and `IsIsometric`. It introduces `dense-c*-lift` for lifting homomorphisms and includes the `StoneC*AlgebraCompletion` instance."
+        },
+        {
+            "name": "Topology.TopRing.Real",
+            "summary": "The file defines a `RealNearField` instance for `Real`, leveraging modules like `RealField`, `RealNormed`, and others. It uses imports from algebra, real arithmetic, function logic, and topology to establish properties like continuity and density in the real numbers."
+        },
+        {
+            "name": "Topology.MetricSpace",
+            "summary": "This file defines `ExPseudoMetricSpace`, extending `UniformSpace` with a distance function and properties like symmetry and triangle inequality. It includes lemmas for metric continuity and features classes like `ExMetricSpace`, `PseudoMetricSpace`, and `MetricSpace`, each with additional properties, such as identity of indiscernibles or real-valued distances. Definitions for `LocallyUniformMetricMap` and `UniformMetricMap` describe maps with uniform continuity properties. Transfer functions like `ExPseudoMetricTransfer` and `MetricTransfer` are provided for creating metric spaces from existing ones."
+        },
+        {
+            "name": "Topology.Locale.Points",
+            "summary": "Defines `OpensFrame` for locales as frames of open sets. Introduces `PointsSpace` as topologies from locales, with `PointsSpaceFunctor` as a functor from locales to topological spaces. Includes lemmas on properties of points and filters, such as `points_*`, `points^*`, and their relationships. Defines `HasDensePoints` and `HasStronglyDensePoints` properties for locales and provides lemmas for dense points conditions."
+        },
+        {
+            "name": "Topology.Locale.Uniform",
+            "summary": "The file follows Graham Manuell's paper on uniform locales. It defines various functions and classes, including `star`, `nucleus-star`, `PreuniformLocale`, `UniformHom`, `UniformEmbedding`, and `UniformLocale`. It provides lemmas such as `star_<=`, `star-refl`, and `<=u-trans-left`, and implements categories `PreuniformCat` and `UniformCat`, along with functions like `completion`, `completion-functor`, and `completion-factor`."
+        },
+        {
+            "name": "Topology.Locale.Real",
+            "summary": "This file defines several instances and lemmas for intervals in posets, biordered sets, and lattices. It introduces `RealLocale` as a locale and demonstrates its compactness and regularity. Functions like `rat_real` embed rational numbers into this locale. The file also contains lemmas for constructing covers and proving properties like local compactness and strong density of points in `RealLocale`."
+        },
+        {
+            "name": "Topology.StoneCStarAlgebra",
+            "summary": "The file defines algebraic structures related to C*-algebras, including `OrderedC*Algebra`, `StoneC*PseudoAlgebra`, and `StoneC*Algebra`. It also includes lemmas for norm properties, algebraic operations, and constructive proofs on square positivity and ordering within these algebraic contexts."
+        },
+        {
+            "name": "Topology.Locale",
+            "summary": "The file defines concepts related to locales, frames, and categorical structures, including:"
+        },
+        {
+            "name": "Topology.CoverSpace",
+            "summary": "The file defines `PrecoverSpace` and `CoverSpace` classes, extending topological spaces with notions of Cauchy covers. It introduces functions like `HasDensePoints`, `HasWeaklyDensePoints`, and `PrecoverMap` for mappings between `PrecoverSpace` instances. It includes lemmas for properties of Cauchy sets, embeddings, and relationships between different types of spaces. The file also defines various instances and transfer functions for constructing spaces with specific regularity and completeness properties."
+        },
+        {
+            "name": "Topology.TopAbGroup",
+            "summary": "This file defines a `TopAbGroup` class, extending `TopSpace`, `AbGroup`, and `UniformSpace`, with continuous addition and negation, and uniform neighborhood properties. It provides lemmas for uniform continuity, open balls, and topological properties. It also defines a `TopAbGroupMap` for continuous group homomorphisms and uniform maps, and a `HausdorffTopAbGroup` for Hausdorff spaces."
+        },
+        {
+            "name": "Topology.NormedAbGroup.Real.Functions",
+            "summary": "The file defines several lemmas concerning Uniform and Metric Maps in various topological and metric spaces, specifically focusing on properties of distance and uniformity. Key lemmas include `lnorm-metric`, `dist-uniform-map`, `norm-metric-map`, and `upper-meet-uniform`."
+        },
+        {
+            "name": "Topology.NormedAbGroup.Real.Compact",
+            "summary": "The file contains functions and lemmas for real number interval splitting and boundedness: `real-split` divides `[a, b]` into `n` parts, and `real-approx` ensures a point's proximity within divided segments. `real-bounded-tb` demonstrates the total boundedness of balls in a real normed space."
+        },
+        {
+            "name": "Topology.NormedAbGroup.ExComplete",
+            "summary": "Defines dense-normed-lift, ExNormedAbGroupCompletion, SeparatedNormedAbGroupReflection, and separated-completion to work with normed groups and their completions. Includes instances for complete and separated normed groups."
+        },
+        {
+            "name": "Topology.NormedAbGroup.Real",
+            "summary": "The file imports various algebraic and topological modules and defines instances for `RatNormed` and `RealNormed`, focusing on normed abelian groups and their properties. It introduces functions like `rat_real` and `real-lift2`, and lemmas such as `dense`, `dense-coverEmbedding`, and `real_dist>0`, dealing with dense embeddings, open intervals, and distance properties in real numbers."
+        },
+        {
+            "name": "Topology.RatherBelow",
+            "summary": "Defines `RatherBelow` class over a semilattice with properties and lemmas for relations. Introduces `Omega` and `Interpolative` as instances. Provides lemmas for constructing, transforming, and relating these structures."
+        },
+        {
+            "name": "Topology.Elem",
+            "summary": "The file defines instances for `Elem` subsets in various topological contexts: `ElemTopSpace`, `ElemCoverSpace`, `ElemUniformSpace`, and `ElemMetricSpace`. It also includes the lemma `elemCont` for continuous mapping."
+        },
+        {
+            "name": "Topology.NormedRing",
+            "summary": "The file defines classes like `ExPseudoNormedPseudoRing`, `PseudoNormedPseudoRing`, and `ExPseudoValuedRing`, with emphasis on properties of norms in rings. It includes lemmas on norm inequalities and equalities, such as `norm_*_<=`, `norm_ide_<=`, and `norm_pow`. Instances for specific rings like `RatValuedRing` and `RealValuedRing` are also provided."
+        },
+        {
+            "name": "Topology.BanachAlgebra",
+            "summary": "The file defines classes for various algebraic structures, including `BanachAlgebra`, `RealPreBanachAlgebra`, and `RealBanachPseudoAlgebra`. It provides functions and lemmas for operations like multiplication, square roots, and properties of norms, including commutativity and associativity. The file also includes instances for completing these structures, particularly for `RealBanachAlgebra` using `BanachAlgebraCompletion`."
+        },
+        {
+            "name": "Topology.BanachLattice",
+            "summary": "The file defines classes for spaces with norm properties: `ExPseudoNormedRieszSpace`, `BanachLattice`, `RieszLSpace`, and `RieszMSpace`, extending various abstract algebraic and topological structures."
+        },
+        {
+            "name": "Topology.TopSpace",
+            "summary": "This file defines a topological space and related concepts like dense sets, continuity, limit, and Hausdorff properties. It includes lemmas for open sets, closure, continuity characterizations, and lifting properties for continuous maps. It also defines special types of spaces and maps, such as discrete spaces, Hausdorff spaces, and continuous maps with properties like density and embeddings."
+        },
+        {
+            "name": "Topology.MetricSpace.UpperReal",
+            "summary": "The file defines instances `ExUpperRealMetric` and `UpperRealMetric` for `CompleteExMetricSpace`, providing distance functions and properties like reflexivity, symmetry, and triangle inequality. It also includes lemmas `dist-left`, `dist-right`, and a function `cfPoint`. Additionally, it defines `upper-ex-isometry` as an isometric map between `UpperRealMetric` and `ExUpperRealMetric`."
+        },
+        {
+            "name": "Topology.MetricSpace.ExComplete",
+            "summary": "This file defines dense-metric-lift and ExMetricCompletion. The dense-metric-lift function constructs a MetricMap from an IsometricMap and a MetricMap. ExMetricCompletion defines a CompleteExMetricSpace from ExPseudoMetricSpace with properties like dist-refl, dist-symm, and dist-triang."
+        },
+        {
+            "name": "Topology.MetricSpace.Nat",
+            "summary": "The file defines `NatMetricSpace` as a `MetricSpace` on natural numbers and provides lemmas for uniformity, total boundedness, and Cauchy filters, including `uniform-char`, `totallyBounded`, `cauchy-char`, `makeUniform`, `makeCover`, and the `atTop` Cauchy filter."
+        },
+        {
+            "name": "Topology.MetricSpace.Complete",
+            "summary": "This file defines functions for lifting metric maps to complete metric spaces and proving properties in such environments, including dense-metric-lift and MetricCompletion. It involves operations on isometric and metric maps and provides lemmas like dist-refl-lem and filter-dist-triang for handling distances in StrongCompletion."
+        },
+        {
+            "name": "Topology.MetricSpace.ManhattanProduct",
+            "summary": "The file defines an instance `ManhattanProductPseudoMetricSpace` for combining two metric spaces X and Y into a product space using the Manhattan distance. It includes properties like reflexivity, symmetry, and the triangle inequality, and handles uniform structures and continuity conditions."
+        },
+        {
+            "name": "Topology.MetricSpace.Compact",
+            "summary": "The file imports various modules related to algebra, arithmetic, logic, orders, paths, and topology. It defines a lemma `product-balls-tb` which shows that the Manhattan product of two totally bounded pseudo-metric spaces is also totally bounded."
+        },
+        {
+            "name": "Topology.NormedAbGroup",
+            "summary": "This file defines structures and lemmas for pseudo-normed, normed, and complete abelian groups, providing properties like norm inequalities and continuity. It includes classes like `ExPseudoNormedAbGroup`, `NormedAbGroup`, and `CompleteNormedAbGroup` and records for group maps."
+        },
+        {
+            "name": "Topology.UniformSpace",
+            "summary": "This file defines classes and functions related to uniform spaces in Arend. It introduces `PreuniformSpace`, `RegularPreuniformSpace`, `UniformSpace`, and `StronglyRegularUniformSpace`, each extending previous structures with more properties. Key functions include `makeCauchy`, `IsProperUniform`, and `IsWeaklyProperUniform`. Lemmas such as `proper_weaklyProper` and `uniform-separated` provide proofs about uniform and cauchy covers. The file also defines mappings like `UniformMap` and transfer functions like `UniformTransfer` for transforming spaces while preserving uniform properties."
+        },
+        {
+            "name": "Topology.UniformSpace.StronglyComplete",
+            "summary": "The file defines `StronglyCompleteUniformSpace`, `UniformStrongCompletion`, and `uniform-strongCompletion` for dealing with uniform spaces, mapping functions, and completion of spaces. It includes lemmas like `properUniform`, `makeUniform`, `cauchyFilter-uniform-char`, and `regularFilter-uniform-char` for properties and characterizations of filters and embeddings."
+        },
+        {
+            "name": "Topology.UniformSpace.Product",
+            "summary": "This file defines instances and functions for product spaces in the context of uniform spaces and regular preuniform spaces, including `ProductRegularPreuniformSpace`, `ProductUniformSpace`, projections `proj1`, `proj2`, and product map `prod`. It also involves uniformity properties like `uniform-star` and `properUniform`."
+        },
+        {
+            "name": "Topology.UniformSpace.Complete",
+            "summary": "The file defines a `CompleteUniformSpace` class extending `UniformSpace` and `CompleteCoverSpace`. It implements functions like `dense-uniform-lift` and `uniform-completion` that handle uniform maps, cauchy filters, and embeddings. It includes various lemmas related to uniformity, such as `mkSet_<=*`, `cauchyFilter-uniform-char`, and `regularFilter-uniform-char`."
+        },
+        {
+            "name": "Topology.UniformSpace.InfReal",
+            "summary": "The file defines and instances a `StronglyCompleteUniformSpace` structure for `InfReal`, with properties like `isSeparatedCoverSpace`, `isStronglyComplete`, and `uniform-refine`. It introduces functions such as `makeUniform`, `NFilter`, and `fromCF`, and proves lemmas like `cauchy-ball`, `infReal-ball-open`, and `infReal-half-open`."
+        },
+        {
+            "name": "Topology.ContGerm",
+            "summary": "This file defines continuous germs, their equivalence relation, and operations in topological spaces. Key components include `ContGerm`, the equivalence `~-equiv`, and functions like `comp-right`, `tuple`, and `evalCG`. It also provides instances for algebraic structures: `ContGermAbGroup`, `ContGermRing`, and `ContGermLModule`, and lemmas for morphisms and linearity."
+        },
+        {
+            "name": "Topology.TopRing",
+            "summary": "The file introduces topological algebraic structures: `TopSemigroup`, `TopMonoid`, `TopRing`, `NearSkewField`, and `NearField`. Key lemmas include `pow-cont` ensuring continuity of power functions and `nearField-map-unique` for uniqueness of continuous maps on near fields."
+        },
+        {
+            "name": "Topology.TopSpace.Product",
+            "summary": "Defines product topology for topological spaces, including instances, continuous maps, and properties like density and embedding. Contains lemmas on open sets, limits, and order relations in topological structures."
+        },
+        {
+            "name": "Topology.TopSpace.Category",
+            "summary": "Defines an instance `TopCat` of category `Cat` for `TopSpace` with continuous maps as morphisms, identity, composition, and equational properties."
+        },
+        {
+            "name": "Topology.CoverSpace.StronglyComplete",
+            "summary": "The file defines types and operations related to weakly and strongly Cauchy filters in the context of cover spaces. It includes instances for `WeaklyCauchyFilterPoset` and `WeaklyCauchyFilterEquivalence`, defines operations like `WCF~_meet`, and establishes connections between filters and points in strongly complete cover spaces. It also introduces the `StrongCompletion` and operations for lifting maps through weakly dense embeddings. The file establishes properties and lemmas like `sregCF_<=`, `pointSCF`, and `weaklyDense-lift`."
+        },
+        {
+            "name": "Topology.CoverSpace.RelativelyComplete",
+            "summary": "This file focuses on the relative completion and lifting of cover spaces. Key functions and lemmas include `IsRelativelyComplete`, `relativelyCompleteAndSeparated`, and `dense-cauchy-relative-lift`, which handle properties of relative completeness and separation in topological spaces. Definitions related to `RelativeCompletion`, `relativeCompletion`, and `CompletionOFS` are also present, dealing with the structure and properties of cover maps and embeddings."
+        },
+        {
+            "name": "Topology.CoverSpace.Directed",
+            "summary": "The file defines functions related to directed cover spaces and their topology, including `DirectedCoverSpace`, `EventualityFilter`, `DirectProdCover`, and `directedProdCover-char`, focusing on cauchy and cover properties in directed sets and product spaces."
+        },
+        {
+            "name": "Topology.CoverSpace.Locale",
+            "summary": "The file defines several functions and lemmas related to CoverSpaces and Locales in topology, including `CoverSpaceLocale`, `LocalePrecoverSpace`, and `LocaleCoverSpaceFunctor`. It explores properties like regularity, cauchy covers, and dense points. The file also provides constructions for strongly regular and complete cover spaces and establishes functorial relationships between locales and precover spaces."
+        },
+        {
+            "name": "Topology.CoverSpace.TopSpace",
+            "summary": "This file defines a `TopCover` for a `TopSpace` with regularity properties, detailing conditions for Cauchy sequences, topological refinement, and glueing. It also includes the lemma `top-cover-unit`, establishing a continuous map from `TopSpace` to `TopCover`."
+        },
+        {
+            "name": "Topology.CoverSpace.Product",
+            "summary": "This Arend file defines product structures for various CoverSpace types, including `CoverSpace`, `StronglyRegularCoverSpace`, `SeparatedCoverSpace`, `CompleteCoverSpace`, and `PrecoverSpace`. It provides instances for `HasProduct` and related functions like `proj1`, `proj2`, and `prodCover`, which deal with projections and product covers. Definitions such as `prodCF` define Cauchy filters on product spaces."
+        },
+        {
+            "name": "Topology.CoverSpace.Category",
+            "summary": "The file defines categories for PrecoverSpace and CoverSpace with associated homomorphisms, identities, and composition operations. It also specifies univalence conditions for these categories using cauchy-subset and transportInv."
+        },
+        {
+            "name": "Topology.CoverSpace.Complete",
+            "summary": "This file defines concepts related to Cauchy filters and maps in the context of cover spaces, including `IsCauchyFilter`, `CauchyFilter`, `CauchyMap`, `CoverMap`, and their properties. It includes instances for poset and equivalence relations on Cauchy filters, and provides lemmas about embeddings, completeness, and separability of cover spaces."
+        },
+        {
+            "name": "Topology.CoverSpace.Subspace",
+            "summary": "This file defines functions and lemmas for constructing and working with cover spaces. Key definitions include `OpenCoverSpace` and `ClosedCompleteCoverSpace`, which handle open and closed cover spaces respectively. It also includes lemmas like `basicCover-cover` and `basicCover-regular` for cover properties. Functions like `filter-extend` and `cauchy-filter-extend` are provided for filter operations."
+        },
+        {
+            "name": "Topology.CoverSpace.CompletionTools",
+            "summary": "The file defines the `lift2` function for lifting cover maps to completions, and several lemmas (`lift2-char`, `unique1`, `unique2`, `unique3`, `unique1_<=`, `unique2_<=`) for proving uniqueness and inequalities in completion spaces. It also includes `completion-lift-neighborhood2` and `strongCompletion-lift-neighborhood2` for neighborhood properties in these spaces."
+        },
+        {
+            "name": "Topology.Partial",
+            "summary": "The file defines a `PartialTopSpace` instance for `TopSpace` and provides lemmas and functions related to continuous maps involving partial spaces. It includes `PartialTopSpace-char`, `plift-cont`, and `plift2-cont` for characterizing and lifting continuous maps."
+        },
+        {
+            "name": "Topology.TopModule",
+            "summary": "The file defines topological linear modules (`TopLModule`) and extends them to special cases like Hausdorff and complete modules. It includes functions to construct modules from topological rings (`RingTopLModule`) and products of modules (`ProductTopLModule`)."
+        },
+        {
+            "name": "Topology.TopRieszSpace",
+            "summary": "Defines `TopRieszSpace`, extending `TopAbGroup` and `RieszSpace`, with lemmas `abs-uniform`, `*q-right-uniform`, `join-uniform`, and `meet-uniform` for uniformity in operations."
+        },
+        {
+            "name": "Topology.Compact",
+            "summary": "The file defines and proves properties related to totally bounded and locally uniform spaces. Key functions include `IsTotallyBounded`, `IsCompact`, and `IsLocallyUniformSpace`. Lemmas address conditions and characterizations for total boundedness and uniformity in various contexts, like `totallyBounded-uniform`, `makeUniformMapTB`, and `locallyUniform-cauchy`. The file also handles totally bounded subsets and locally totally bounded spaces."
+        },
+        {
+            "name": "Relation.Truncated",
+            "summary": "Defines relation `Rel` and closures: `transitive-closure`, `transitive-refl-closure`, `symmetric-closure`, `reflexive-closure`. Provides constructors and lemmas for each."
+        },
+        {
+            "name": "Relation.Equivalence",
+            "summary": "The file defines `Transitive` and `Equivalence` classes, handling properties like transitivity, reflexivity, and symmetry. It introduces `Closure` data for transitive relations and `Quotient` for equivalence classes, with lemmas for mapping and equality. Functions for lifting arrays and handling choices are also included."
+        },
+        {
+            "name": "Set",
+            "summary": "This file defines decision procedures for propositions and sets, including `Dec`, `Decide`, and `DecSet`, with functions like `decToBool` and instances for products, arrays, and booleans. It also defines classes for subsets and separation, such as `BaseSet`, `SubSet`, and `Set#`."
+        },
+        {
+            "name": "Analysis.Derivative",
+            "summary": "The file defines functions and lemmas for calculating and manipulating derivatives in a topological module context. Main components include `dquot` for the directed quotient, `IsDirDerivAt` for directed derivatives, and `IsDerivAt` for derivatives at a point. Lemmas like `dquot_*c`, `dquot_+`, and `dquot_bilinear` handle properties of `dquot`. Other lemmas address derivative properties such as linearity, continuity, and bilinearity."
+        },
+        {
+            "name": "Analysis.FuncLimit",
+            "summary": "The file defines and proves properties of function convergence in various topological and metric spaces. It includes concepts such as `IsFuncConvergent`, `IsUniFuncConvergent`, `funcLimit`, and `funcConvergent-char`, exploring convergence in uniform, metric, and topological abelian group contexts."
+        },
+        {
+            "name": "Analysis.StrongDerivative",
+            "summary": "This file defines the concept of derivatives in a topological module context, focusing on `IsDerivQuot`, `HasDeriv`, and `deriv` functions. It explores properties like continuity, uniqueness, and linearity of derivatives, including specific lemmas for linear maps, constants, and bilinear maps."
+        },
+        {
+            "name": "Analysis.Measure.MeasureRing",
+            "summary": "This file defines algebraic structures such as `PremeasureRing`, `MeasureRing`, and `CompleteMeasureRing`, extending Boolean rings and topological abelian groups with measure properties. Functions involve operations on measures, open sets, and Cauchy filters, including lemmas for measure inequalities and modularity."
+        },
+        {
+            "name": "Analysis.Measure.SimpleFunctions",
+            "summary": "The file defines a type `SFunc` for a quotient of arrays of pairs of additive monoid and bottom distributive lattice elements, with an equivalence relation `~`. It provides instances for `SFunc` as an abelian monoid, abelian group, Q-module, and poset Q-module. Additionally, it includes various lemmas to handle equivalency, addition, and order properties within `SFunc`, and shows how to construct reduced forms and common refinements. There is also an instance of `SFunc` as a Riesz space with an absolute value construction."
+        },
+        {
+            "name": "Analysis.Measure.OuterMeasureRing",
+            "summary": "The file defines `LowerPseudoNormedAbGroup` and `PseudoOuterPremeasureRing` classes, including properties like `norm-outer-measure` and `norm-outer-mono`. It defines an `ExtendedMeasure` class with functions `IsMeasurable` and `measure-pair`, and has lemmas like `measurable-cauchy`. Some definitions are marked for potential rewriting."
+        },
+        {
+            "name": "Analysis.Series",
+            "summary": "The file defines functions and lemmas for series manipulation and convergence in various algebraic structures, such as `partialSum`, `IsConvSeries`, and `IsSeriesSum`. It includes properties like `seriesSum` and tests like `upper-ratio-test` and `MTest` for convergence in different contexts."
+        },
+        {
+            "name": "Analysis.Limit",
+            "summary": "The file defines convergence and limits in various spaces. Key functions include `IsConvergent`, `limit`, and lemmas like `convergent-char`, `limit-conv`, and `limit-isLimit`. It also provides characterizations for convergence in metric, topological, and uniform spaces, and constructs like `SubPointDirectedSet` and `InvDirectedSet`."
+        },
+        {
+            "name": "Analysis.Calculus.SyntheticDerivative",
+            "summary": "This file defines differentiability in the context of DRings and linear modules. Key functions and lemmas include `isDiff`, which characterizes differentiable maps, `deriv` for computing derivatives, and `o_diff` for differentiability under composition. There are also specific derivatives for linear, constant, and sum functions, as well as bilinear maps."
+        },
+        {
+            "name": "Analysis.PowerSeries",
+            "summary": "The file defines and proves properties about power series in the context of PseudoNormedRings. Key functions include `powerSeries`, `convRadius`, and `IsPowerSeriesConv`, with lemmas like `powerSeries_0`, `convRadius-absConv`, and `power-ratio-test` proving series convergence under various conditions."
+        },
+        {
+            "name": "Category.CartesianClosed",
+            "summary": "The file defines concepts and functions related to Cartesian closed categories, including `isExponential`, `isExponentiable`, and `CartesianClosedPrecat`. It also provides implementations for `transpose`, `antitranspose`, `eval-map`, `internal-comp`, and `internal-homFunctor`. An instance `SetCartesianClosed` is created for the set category."
+        },
+        {
+            "name": "Category.Topos",
+            "summary": "The file defines a `ToposPrecat` class extending `FinCompletePrecat` and `CartesianClosedPrecat`, introducing concepts like subobject classifiers (`omega`), characteristic maps, exponentiability of `omega`, and functions for power objects. It includes lemmas on transposition and uniqueness, and constructs related to functional relations (`image`, `is-image-single`, `graphs`). There's a `SetTopos` instance for sets."
+        },
+        {
+            "name": "Category.Slice",
+            "summary": "The file defines `ObOver` as a sigma type for objects over a fixed object in a precategory. It introduces `SlicePrecat` as a precategory of such objects, with a definition for morphisms and composition. `SliceCat` is an instance of a category with univalence properties. Additionally, it defines a forgetful functor proving faithfulness."
+        },
+        {
+            "name": "Category.SubobjectPoset",
+            "summary": "The file defines structures for handling subobjects in categories. Key definitions include `SubobjectPoset`, a poset of subobjects, and `widePullback`, a record for wide pullbacks. It introduces `SubobjectMeetsemilatice`, a meet semilattice for subobjects, and functions like `subobj-product` for operations on subobjects."
+        },
+        {
+            "name": "Category.Subcat",
+            "summary": "The file defines subcategories and reflective subcategories, detailing `subPrecat`, `subCat`, and their properties. It introduces `ReflectiveSubPrecat` with structure and functions like `reflector`, `reflectorMap`, and `isReflective`. It also discusses creating reflective subcategories from right adjoints and constructing colimits in reflective subprecategories."
+        },
+        {
+            "name": "Category.KanExtension",
+            "summary": "The file defines `LeftKanExt` and `RightKanExt` for functors between categories, using limits and cones. It introduces `DoubleLimit` for expressing double limits as single limits over a comma category, and provides supporting functions and lemmas for handling these constructions."
+        },
+        {
+            "name": "Category.Simplex",
+            "summary": "The file defines lemmas and functions like `monotone-inj`, `monotone-diagonal-fin`, and `fin_monotone_iso_unique` for working with order homomorphisms and monotonicity. It also introduces instances `SimplexPrecat` and `SimplexCat` for precategories and categories, and functions like `Simplex_iso`, `iso_iso`, and `iso_isProp` related to isomorphisms in these structures."
+        },
+        {
+            "name": "Category.Topos.Sheaf",
+            "summary": "This file defines and describes structures for presheaves and sheaves, particularly in the context of category theory and topology. Key definitions include `VPresheaf`, `Presheaf`, `VSheaf`, and `Sheaf`. Instances like `VPresheafCat`, `PresheafCat`, `VSheafCat`, and `SheafCat` are provided for categorical contexts. The file also contains lemmas and functions related to sheaf properties, such as `direct_image`, `sheaf-preserve`, `sheaf-reflect`, and more specialized constructs like `vsheafOnSiteWithBasis`. These help in managing the behavior of sheaves over sites and locales, including operations like direct image and extension."
+        },
+        {
+            "name": "Category.Topos.Sheaf.Site",
+            "summary": "The file defines `Presieve`, `Sieve`, and `Site` structures in category theory, including operations like `pullback`, `map`, and `isSieve`. It introduces `SiteWithBasis` and related homomorphisms, focusing on properties like `isCover` and `basicCover-stable`."
+        },
+        {
+            "name": "Category.Topos.Sheaf.Sub",
+            "summary": "The file defines lemmas `subSheaf` and `subSheafWithBasis` for constructing sheaves using natural transformations and embeddings in a category. It imports various modules related to categories, functors, limits, sheaves, and logical equivalences."
+        },
+        {
+            "name": "Category.Topos.Presheaf",
+            "summary": "The file defines instances for completeness and cocompleteness of VPresheaf categories, such as `VPresheafComplete`, `VPresheafCocomplete`, and `VPresheafCatBicomplete`. It includes `limit` and `colimit` functions for limits and colimits in these categories. There are also functions for constructing cones and natural transformations related to these limits."
+        },
+        {
+            "name": "Category.Yoneda",
+            "summary": "The file defines the Yoneda embedding as a fully faithful functor, constructs a precategory of elements, and defines a presheaf colimit. It also explores embedding universality in cocomplete categories, providing constructions and properties related to functors, limits, and natural transformations."
+        },
+        {
+            "name": "Category.Subobj",
+            "summary": "This file defines `Subobj` and `RegularSubobj` as data types representing subobjects in a category, introduces preorder structures for them, and proves properties like antisymmetry. It also explores pullbacks and conditions for regular monomorphisms within these structures."
+        },
+        {
+            "name": "Category.Solver",
+            "summary": "The file defines two main data structures, `CatTerm` and `CatNF`, to represent categorical terms and their normal forms. It provides functions to convert `CatTerm` to `CatNF` using `normalize`, and interprets both forms in a category with `interpret` and `interpretNF`. The `HData` class offers additional lemmas for consistency and equality of these interpretations."
+        },
+        {
+            "name": "Category.Product",
+            "summary": "This file defines `ProductPrecat` and `ProductCat` as instances of `Precat` and `Cat` for product categories, and functions `iso-first` and `iso-second` to derive isomorphisms in component categories."
+        },
+        {
+            "name": "Category.Comma",
+            "summary": "The file defines a `commaPrecat` for functors `F` and `G`, including objects, morphisms, identities, and composition. It introduces lemmas `leftForget` and `rightForget` as functors projecting to `C` and `D`. The `functor` definition allows transformation between comma categories. `commaCat` extends `commaPrecat` to categories with univalence."
+        },
+        {
+            "name": "Category.Functor",
+            "summary": "The file defines the `Functor` class for precategories and associated lemmas for homomorphisms transport. It includes the identity functor, composition of functors, and constant functors. It introduces `NatTrans` for natural transformations and their operations. Instances for `FunctorPrecat`, `FunctorCat`, and families of precategories are provided. Classes for faithful, full, and fully faithful functors extend `Functor`, with methods for proving faithfulness, fullness, and equivalences."
+        },
+        {
+            "name": "Category.Factorization",
+            "summary": "The file defines `WFS` and `OFS` classes for weak and orthogonal factorization systems in a precategory. Key features include `factors`, `lift`, `unique-lift`, and lemmas like `left-epi` and `liftFromMono` for handling homomorphisms."
+        },
+        {
+            "name": "Category.PreAdditive",
+            "summary": "This file defines the `PreAdditivePrecat` class extending `Precat` with properties for additive categories, establishes an equivalence `Ring=OneObjectPreAdd` between rings and one-object preadditive categories, and introduces `AdditivePrecat` extending both `PreAdditivePrecat` and `CartesianPrecat`."
+        },
+        {
+            "name": "Category.Algebra",
+            "summary": "The file defines three classes: `BaseObject`, `CMonoidObject`, and `AbGroupObject`, each extending from `BaseObject` with specific operations and axioms. `CRingObject` combines `AbGroupObject` and `CMonoidObject` with a distributive law."
+        },
+        {
+            "name": "Category.Limit",
+            "summary": "This file defines several key concepts and structures in category theory using Arend:"
+        },
+        {
+            "name": "Category.Adjoint",
+            "summary": "The file defines classes for RightAdjoint, RightAdjointUnit, RightAdjointCounit, and CatEquiv, extending Functor with properties like `eta`, `epsilon`, and natural transformations. It includes lemmas like `eta_epsilon-equiv` and functions like `rightFactor`, `op`, and `reverse`."
+        },
+        {
+            "name": "Category.Coreflection",
+            "summary": "This file defines `comma-precat`, `comma-cat`, `Coreflection`, and `RightAdjointCoreflection`. It explores coreflection properties, terminal objects in a comma category, and adjunction equivalences between functors."
+        },
+        {
+            "name": "Category.Displayed",
+            "summary": "This file defines `DPrecat` as a decorated precategory with custom homomorphisms (`DHom`) and identity/composition laws. It introduces `DIso` for isomorphisms in `DPrecat`, and constructs a `totalPrecat` from it. The `DCat` class extends `DPrecat` with univalence, and defines `totalCat` and `total-iso` to handle total categories and isomorphisms within them."
+        },
+        {
+            "name": "Homotopy.HLevel",
+            "summary": "The file defines functions and lemmas for handling h-levels in type theory, including operations like retracts, pi-types, and sigma-types. It distinguishes between prop-based and contr-based h-levels, proving their equivalence and properties."
+        },
+        {
+            "name": "Homotopy.Pushout",
+            "summary": "Defines a `Pushout` class with `pushout-univ` and `map` functions. Introduces `PushoutData` type for constructing pushouts, with `rec`, `equiv`, and `flattening` functions. Implements `EmbeddingPushout` class for embedding pushouts and associated encoding/decoding functions."
+        },
+        {
+            "name": "Homotopy.Square",
+            "summary": "The file defines `Square` for commutative squares with `pull` and `push` transformations, and introduces `Pullback` as a class. It includes functions like `sigmaPullback`, `productPullback`, and `pathPullback`, each constructing specific pullbacks with associated universal properties."
+        },
+        {
+            "name": "Homotopy.Hopf",
+            "summary": "This file defines `HSpace` and `HSpaceConn` classes, proving equivalences for connected H-spaces. It includes lemmas `HSpaceConn-left` and `HSpaceConn-right`, instances like `Circle_HSpace`, and functions such as `hopf` for constructing mappings between spaces."
+        },
+        {
+            "name": "Homotopy.Image",
+            "summary": "The file defines the construction of the image of a map using pushouts and colimits, based on Egbert Rijke's paper. Key functions include `MJoin`, `MImageAppr`, `MImage`, `dom-map`, and `cod-map`, with lemmas `dom-map-surj` and `cod-map-emb`. It also defines `YImage` using `MData` with instances and surjection and embedding properties."
+        },
+        {
+            "name": "Homotopy.Sphere.Circle",
+            "summary": "This file defines `Sphere1`, a 1-dimensional sphere, with its base point and loop. It provides equivalences between `Sphere1` and `Sphere 1`, using functions like `CircleSusp` and `SuspCircle`. Functions `encode`, `decode`, and `wind` relate paths and integers, with proofs `encode_decode` and `decode_encode` ensuring correctness. The `Loop_S1` function establishes an isomorphism between paths in `Sphere1` and integers."
+        },
+        {
+            "name": "Homotopy.Fibration",
+            "summary": "This file defines `Total`, `Fib`, and related functions for dependent types. `Total` is a dependent sum type, and `Fib` constructs a fiber over a function. It includes helper functions `proj`, `make`, `ext`, and `equiv` for manipulating and equating fibers."
+        },
+        {
+            "name": "Homotopy.Loop",
+            "summary": "The file defines loop space operations and equivalences, including `Loop`, `Loop-Func`, `loop-level`, `loop-level-iter`, and `loop-level-iter-inv`. It introduces `SuspLoopEquiv` and `SphereLoopEquiv` for relating suspensions and spheres to loops. `Omega^` and `Omega^-Func` define higher iterated loop spaces and their mappings."
+        },
+        {
+            "name": "Homotopy.EckmannHilton",
+            "summary": "Defines `Algebraic-Eckmann-Hilton` class with operations `o` and `#`, identities, and `rel`. Proves monoid commutativity. Defines `Omega^2-Commutative` class for composition structure, proving commutativity using horizontal whiskering."
+        },
+        {
+            "name": "Homotopy.Space",
+            "summary": "Defines `BaseSpace` class with a type parameter `E`. `InhSpace` extends `BaseSpace`, adding `isInh : TruncP E`."
+        },
+        {
+            "name": "Homotopy.Connected",
+            "summary": "Defines `Connected0` class for spaces with all paths truncated, instances for unit and pushout spaces."
+        },
+        {
+            "name": "Homotopy.Sphere",
+            "summary": "The file defines a function `Sphere`, constructing spheres via suspension, and a `pointed` function creating pointed types for spheres."
+        },
+        {
+            "name": "Homotopy.Cube",
+            "summary": "The file defines `Cube2` for squares with specified boundaries and `Cube3` for 3-dimensional cubes with specified face conditions. It includes `equality` and `map` functions to transform and manipulate paths in these structures."
+        },
+        {
+            "name": "Homotopy.Join",
+            "summary": "The file defines operations and properties of the `Join` type, a pushout of two types. Key elements include: `Join`, `jinl`, `jinr`, `jglue`, `Join_Contr`, `Join_Sphere0`, `Join-sym`, `Join-assoc`, `Join_Susp`, and `Join_Sphere`. These functions involve homotopy theory concepts such as spheres, suspensions, and equivalences."
+        },
+        {
+            "name": "Homotopy.Pointed",
+            "summary": "The file defines a `Pointed` class with a `base` element and a method `make` to construct it. An instance `UnitPointed` for unit type is provided. The infix operator `->*` denotes pointed maps between pointed types. The file also defines `PointedTrunc0` for truncating pointed types to pointed sets and `PointedTrunc0-Func` for mapping between such truncated types."
+        },
+        {
+            "name": "Homotopy.Suspension",
+            "summary": "This file defines the suspension `Susp` of a type `A` using `PushoutData`, with constructors `north` and `south`, and a path `pmerid` between them. It includes a `rec` function for recursion on `Susp A` and a `pointed` instance."
+        },
+        {
+            "name": "Homotopy.Truncation",
+            "summary": "Defines `Truncated_-1+` class for higher homotopy levels with functions `ext`, `equiv`, `up`. Introduces `Trunc_-1+` data type for truncations, with `elim`, `elim2`, `equality` functions for eliminations and equivalences. Instances include `truncatedEquiv`, `truncatedTypesLevel`, and `level` for homotopy types and equivalences."
+        },
+        {
+            "name": "Homotopy.Torus",
+            "summary": "Defines a `Torus` type and constructs an equivalence `TorusSphere-equiv` between `Torus` and `Σ Sphere1 Sphere1`. Provides functions `SphereTorus`, `TorusSphere`, `coordinate`, `OmegaTorus`, and `Loop_S1^2`."
+        },
+        {
+            "name": "Homotopy.K1",
+            "summary": "This file defines homotopy types for a group `G` using `K1`, provides path manipulation functions, and constructs equivalences using `rightMulEquiv` and `leftMulEquiv`. It includes encoding and decoding functions for these types and demonstrates their interaction with group operations through lemmas like `loop-comp` and `equivPathComposition`."
+        },
+        {
+            "name": "Homotopy.Localization.Separated",
+            "summary": "This file defines `Separated` and `ReflSeparated` universes using localization and image concepts, with functions `S`, `F`, and `pathEquiv` for homotopy equivalences, and proves a lemma `separatedLocalization`."
+        },
+        {
+            "name": "Homotopy.Localization.Modality",
+            "summary": "This file defines a `Modality` class extending `ReflUniverse` with `isModality` for local types and presents a lemma `modality-elim` as an elimination principle for localization in a modality."
+        },
+        {
+            "name": "Homotopy.Localization.BlakersMassey",
+            "summary": "This file provides a proof of the generalized Blakers-Massey theorem using homotopy type theory. It defines classes like `EquivData`, `POData`, `Data`, and `DataExt`, and functions such as `genBlakersMassey`, `surjective`, and `code`. The proof involves concepts like pushouts, fibrations, and connectedness, utilizing path types and equivalences."
+        },
+        {
+            "name": "Homotopy.Localization.Accessible",
+            "summary": "The file defines `famUniverse` and `nullFamUniverse` as modalities with localization properties, utilizing `LData`, `dataExt`, and `dataExt-unique` for data extension and uniqueness. It also introduces `alpha-equiv` and `pushout_pullback-equiv` lemmas for equivalences, and constructs `nullTypeUniverse` from `nullFamUniverse`."
+        },
+        {
+            "name": "Homotopy.Localization.Equiv",
+            "summary": "The file defines and investigates properties of local equivalences, including `isLocalEquiv`, extension types, and related equivalences. Key lemmas include `connected_isLocalEquiv`, `localTypesEquiv`, and `localEquivMap`, focusing on equivalence conditions and the relationship between local types and local equivalences."
+        },
+        {
+            "name": "Homotopy.Localization.Connected",
+            "summary": "This file defines connected types and maps, focusing on the equivalence of types with local types and contractibility. Key definitions include `isConnectedType`, lemmas `isConnected=>contr`, `contr=>isConnected`, and `connected_join`, which relate connectedness and localization. The file imports various modules related to homotopy and logic."
+        },
+        {
+            "name": "Homotopy.Localization.Universe",
+            "summary": "This file defines local types and localizations in Arend, exploring their properties in a reflective universe. Key components include the `Universe`, `Local`, and `Localization` classes, the `LType` functor, and various lemmas such as `sectionIsEquiv`, `localizationOfLocalType`, and `pullbackLocal`. The file also discusses elimination principles and localization factor properties."
+        },
+        {
+            "name": "Logic",
+            "summary": "This file defines logical constructs: `Empty`, `Not`, and `/=` (inequality). It includes `TruncP` and `ToProp` for handling propositions and their properties, such as `isProp`. It defines `||` (or) and its mappings, and `<->` (logical equivalence) with related lemmas. It also contains `OneOf` and `ElemOf` for types in arrays and proves `propExt` for proposition equality. A `NegatedProp` class is defined with an `Empty` instance."
+        },
+        {
+            "name": "Equiv.Fiber",
+            "summary": "This file defines concepts related to fibrations and equivalences. It includes:"
+        },
+        {
+            "name": "Equiv.Path",
+            "summary": "The file defines functions for path equivalences and mappings: `pathEquiv` establishes equivalence between paths and retractions, `pathConcatEquiv` handles path concatenation equivalences, `pmapEquiv` ensures mappings preserve equivalences, `pmapEmbedding` guarantees embeddings map to embeddings, and `pmapSection` ensures sections map to sections."
+        },
+        {
+            "name": "Equiv.Sigma",
+            "summary": "The file defines various equivalences and contractibility properties, including `lsigma`, `rsigma`, `equiv=`, `contr-left`, `contr-right`, `pi-contr-left`, `pi-contr-right`, `sigma-left`, `sigma-right`, `sigma-equiv`, and `unit-func`, as well as the `totalEquiv` lemma based on HoTT Theorem 4.7.7."
+        },
+        {
+            "name": "Equiv.HalfAdjoint",
+            "summary": "The file defines an `HAEquiv` record extending `QEquiv`, with properties and coherence functions like `coh_f_sec` and `coh_f_ret_f=f_sec_f`. It includes a lemma `levelProp` proving `HAEquiv` as a proposition, using concepts such as `Retraction`, `T1`, and `T2`."
+        },
+        {
+            "name": "Equiv.Univalence",
+            "summary": "The file defines functions and conversions between types and equivalences, including `=-to-Equiv` and `=-to-QEquiv` for converting paths to equivalences and quasi-equivalences, and `Equiv-to-=` and `QEquiv-to-=` for the reverse. It also defines `univalence`, linking type paths to equivalences."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.Substitutions",
+            "summary": "The file defines functions and lemmas related to term weakening, substitution, and context manipulation in a formal rewriting system. Key functions include `plain-identity`, `weakening`, `append-context-right`, and `extend-substitution-left`, each with associated lemmas ensuring correctness and commutativity of operations like substitution and context extension."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.Linearity",
+            "summary": "The file defines a `GenericLinearTerm` data type for linear terms, conversion functions like `convert-to-term`, and a `LinearMetaContext` function. It includes `LinearTerm` and `LinearPattern` types, a `modular-commutation` lemma, an `invariant-through-empty-subst` lemma, and `LinearRewriteRule` and `LinearRegistry` records for handling rewrite rules."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.Utils",
+            "summary": "The file imports various modules related to logic and rewriting systems. It defines `unwrap-func`, which extracts a function symbol and its arguments from a term, and `sigma-set-equalizer`, which equates elements in a dependent pair."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.Utils.FinFunctions",
+            "summary": "This file defines functions for manipulating indices and modular functions over finite sets and lists, including `expand-fin-left`, `expand-fin-right`, `partial-fin-induction`, `modular-function`, `modular-induction`, `pointed-function`, `pointed-induction`, `modular-to-pointed`, and `modular-to-pointed-forward`, with associated correctness proofs and utilities."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.Utils.Shifts",
+            "summary": "The file defines `shift-index` for mapping indices between sublists and multiple lemmas in the `Shifts` module, such as `over-identity`, `over-skip`, and `over-right-single`, which establish properties and transformations of indices across list operations."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.Union",
+            "summary": "This file defines functions and lemmas for handling sum signatures in term rewriting systems. Key functions include `SumFSignature` for combining function signatures, `inject-term` for injecting terms into a sum signature, and `inject-rule-container` for handling rewrite rules. Lemmas like `over-transport-sort` and `over-transport-ctx` handle transport within these injections. The file also defines `SumRegistry` to combine rule registries."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.MetaContexts",
+            "summary": "This file defines various meta-context constructions and utilities for handling terms in a rewriting system. Key functions include `ModularMetaContext`, `PointedModularMetaContext`, and `SingularMetaContext`, each providing different ways to manage metavariables. `EmptyMetaContext` represents a context with no metavariables. The file also includes the `PureTerm` type and a lemma `apply-modularity` for applying modular substitutions."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.Examples.LambdaCalculus",
+            "summary": "The file defines an untyped lambda calculus in Arend, featuring key components like `LC-FSignature`, `BetaRedexContext`, and rewrite rules `beta-reduction`. It includes lambda terms `K`, `I`, and `I_I`, and demonstrates a rewrite relation `I_I~>I`."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.Union.Embedding",
+            "summary": "The file defines functions related to confluence and rewriting systems. Key functions include `fill-confluence`, which constructs a `StraightJoin` using rewrite relations, and `unify-reduction`, which unifies reductions through closures. The `Internal` module includes `embed-rewrite-relation` and `unembed-rewrite-relation`, handling parallel reductions and embedding/unembedding rewrite relations."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.Union.Colors",
+            "summary": "The file defines a `TheoremContext` class for term rewriting with color-based function environments and linear rules. Key functions include `monochrome-reduction` for rewriting relations, `get-rule-pattern` for linear patterns, and `convert-to-injected-term` for transforming terms. The file also contains lemmas for handling term injections and color properties."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.Union.TopLevel",
+            "summary": "This file defines functions and lemmas for manipulating terms and substitutions in the context of colored term rewriting systems. Key functions include `join-tlcrs`, which joins colored reductions, and `lift-relation`, which lifts relations via meta-substitutions. It also provides various lemmas for handling term decompositions, color exclusions, and substitution commutations, focusing on maintaining confluence and correctness in term rewriting."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.Union.Confluence",
+            "summary": "This file defines functions and data types for handling term rewriting systems (TRS) with colored reductions. It includes definitions for `TopLevelColoredReduction`, `OppositeColored`, `BorderedParallelReduction`, and `SwitchingReduction`. Functions such as `bpr-confluence`, `unify-top`, and `iterate-decomposition` facilitate the management of parallel reductions and transformation of terms. The file also includes utility functions for substitution and commutation within these colored reduction systems."
+        },
+        {
+            "name": "Logic.Rewriting.TRS.HRS",
+            "summary": "The file defines a higher-order term rewriting system using classes and records. Key components include `FSignature` for functional symbols, `MetaContext` for metavariable contexts, `Term` data for terms, `Substitution` for variable substitution, `MetaSubstitution` for metavariable substitution, `RewriteRule` and `RuleRegistry` for managing rewrite rules. It also defines `RewriteRelation` for rewriting relations and extends `HigherOrderTermRewritingSystem` and `SimpleHigherOrderTermRewritingSystem` for term rewriting systems."
+        },
+        {
+            "name": "Logic.Rewriting.ARS.AbstractReductionSystem",
+            "summary": "This file defines reduction systems, including abstract and simple systems, with various closure and reversal functions like `~>`, `~>_+`, `~>_*`, and `<~>`. It also includes lemmas for composing, reversing, and concatenating reductions, and introduces notions like `Join` and `Join~` for joinability in these systems."
+        },
+        {
+            "name": "Logic.Rewriting.ARS.Relation",
+            "summary": "Defines a type `Rel` for relations and a `StraightJoin` record for common reducts. Introduces `Closure` data for relational closure with functions: `compose` to chain closures, `lift` to map closures, `flatten` to reduce nested closures, and `extract` to analyze closures."
+        },
+        {
+            "name": "Logic.Rewriting.ARS.Termination",
+            "summary": "This file defines properties and functions related to reduction systems: `isNormalForm`, `HasNormalForm`, and `isNormalizing` for checking normal forms, `Acc` and `Acc-Trans` for accessibility, `isTerminating` for termination, `well-founded-induction` and `well-founded-induction-transitive` for induction, and `ReductionPath` for reduction paths."
+        },
+        {
+            "name": "Logic.Rewriting.ARS.Confluence",
+            "summary": "This file defines properties and relations for Abstract Reduction Systems (ARS), including StrongJoin, confluence, and Church-Rosser properties. It provides lemmas for deriving confluence from Church-Rosser, strong confluence, and normalization properties, as well as equivalences between local and global confluence under termination conditions."
+        },
+        {
+            "name": "Logic.TFAE",
+            "summary": "The file defines a type `TFAE` for proving equivalence in logic statements and includes functions for path construction in graphs (`Graph`, `Path`). It contains lemmas for checking connectivity (`checkConnected`, `checkConnected-correct`) and related auxiliary functions for list and graph operations (`step1`, `makeStep`, `collect`). Additionally, it defines lemmas for path correctness and monotonicity in graph traversal."
+        },
+        {
+            "name": "Logic.Classical",
+            "summary": "The file defines an axiom `alem` for decidability of propositions and a `Choice` class extending `BaseSet` with a `choice` function for lifting surjections. It includes lemmas `liftDepSurj` and `liftSurj` for lifting dependent and non-dependent surjections, respectively. Additionally, it defines an axiom `achoice` with an auxiliary lemma `lemFromChoice` for deciding propositions using a choice principle."
+        },
+        {
+            "name": "Logic.Unique",
+            "summary": "The file defines functions and classes for propositional types and contractible types. Key definitions include `isProp` and `isSet` for characterizing propositions and sets, `Contr` for contractible types, and lemmas like `contr-equiv` and `pi-Contr` for handling equivalences and pi-types with these structures."
+        },
+        {
+            "name": "Logic.PropFin",
+            "summary": "The file defines a class `InjData` with a function `f` and an injectivity condition `inj`. It includes lemmas `PropFin`, `aux`, `true=>equals`, and `equals=>true` concerning properties and transformations of propositions using `f`."
+        },
+        {
+            "name": "Logic.FirstOrder.Algebraic.Category",
+            "summary": "The file defines the concept of a `ModelHom` for theories, and constructs a `BicompleteCat` for models, featuring limit and colimit constructions. It introduces `ColimitData` and `Colimit` structures, providing mechanisms for interpreting terms and formulas within colimit models, and includes lemmas for handling colimit properties and consistency. The file also details a `limitStructure` for models and proves related lemmas about interpretation and truth preservation."
+        },
+        {
+            "name": "Logic.FirstOrder.Algebraic",
+            "summary": "This file defines logical structures for a formal theory with main components including `Signature`, `Formula`, `substF`, `Sequent`, `Theory`, `Structure`, and `Model`. Key functions are `substF` for formula substitution, `interpret` for term evaluation, and `isFormulaTrue` for formula validity. Lemmas like `congruence`, `symmetry`, and `transitivity` establish properties of theorem proofs."
+        },
+        {
+            "name": "Logic.FirstOrder.Term",
+            "summary": "This file defines a class `TermSig` for term signatures and a data type `Term` for terms with variables and applications. It includes a function `subst` for substitution in terms and lemmas `subst-assoc` and `subst_var` for properties of substitution."
+        },
+        {
+            "name": "Function.Iterate",
+            "summary": "The file defines functions `iterl`, `iterr`, and corresponding induction principles `iterr-ind`, `iterr-index-ind` for iterating a function `f` over natural numbers. It also includes a lemma `iterr_inj` about injectivity of `iterr`."
+        },
+        {
+            "name": "Arith.Int",
+            "summary": "The file defines integer operations and properties: `isuc`, `ipred` for successor/predecessor, lemmas `ipred_isuc`, `isuc_ipred` for inverses, `signum` function and its properties. It includes `IntRing` instance for ordered commutative ring, with operations `+`, `*`, and comparisons `<`, `<=`. Functions `iabs` for absolute value, integer division with `ldiv_iabs`, and integer comparisons like `pos<pos`, `neg<neg`. The file also discusses integer units and decision procedures for integer comparisons."
+        },
+        {
+            "name": "Arith.Fin",
+            "summary": "The file defines lemmas and instances involving modular arithmetic and Euclidean structures for natural numbers and finite rings. Key lemmas include `int_n*_+_mod_n`, `int_mod_*-left`, and `div_suc-lem`. It also provides instances `FinRing`, `FinEuclidean`, and `FinField` with properties like associativity, commutativity, and gcd calculations."
+        },
+        {
+            "name": "Arith.Fin.Order",
+            "summary": "Defines a `LinearOrder.Dec` instance for `Fin n` using `NatSemiring` functions for comparison and trichotomy."
+        },
+        {
+            "name": "Arith.Exp",
+            "summary": "This file defines the exponential function `exp` for a real Banach algebra as a cover map, using power series and function limits. It includes lemmas `exp-series-conv` and `inv-limit` to prove convergence criteria for the power series and establish limit properties."
+        },
+        {
+            "name": "Arith.Real.Approximate",
+            "summary": "The file defines lemmas for approximating real numbers by rationals, integers, and natural numbers: `real-rat-approx`, `real-int-approx`, and `real-nat-approx`. It uses imports from algebra, arithmetic, logic, and topology modules."
+        },
+        {
+            "name": "Arith.Real.UpperReal",
+            "summary": "This file defines `ExUpperReal` and `UpperReal` as records, providing properties and operations for them, including addition, multiplication, meet, and join. It establishes various algebraic structures like semigroups, ordered lattices, and boundedness conditions. Key lemmas handle arithmetic operations, order relations, and ensure properties like associativity and commutativity."
+        },
+        {
+            "name": "Arith.Real.Root",
+            "summary": "This file defines functions and lemmas related to the nth root and square root of real numbers. Key definitions include `root` and `sqrt`. Lemmas ensure properties like monotonicity, positivity, and equivalence of powers for roots and square roots."
+        },
+        {
+            "name": "Arith.Real.IVT",
+            "summary": "The file defines `IntervalSubset`, representing closed intervals of the real numbers, and proves the Intermediate Value Theorem for strictly monotone functions (`IVT-monotone`). It includes lemmas about the properties of these intervals and functions, such as `point>=left`, `point<=right`, and `point<-char`. It also defines the `monotone-inverse` lemma for monotone functions and includes `real-cont_<-inv` for continuous functions."
+        },
+        {
+            "name": "Arith.Real.Extremes",
+            "summary": "The file defines functions and lemmas for supremum and infimum operations on sets of real numbers, including `IsSup`, `HasSup`, `makeSup`, `IsInf`, `HasInf`, and `makeInf`. It also includes proofs of properties like uniqueness and existence of supremums and infimums for given sets."
+        },
+        {
+            "name": "Arith.Real.UpperRealLattice",
+            "summary": "Defines a `CompleteLattice` instance for `ExUpperReal`, with operations `Meet` and `Join`. Includes lemmas for manipulating these operations, such as `*n_Join`, `+_Join`, `*n_join`, `+_join`, `Join-square`, and `join-square`."
+        },
+        {
+            "name": "Arith.Real.LowerReal",
+            "summary": "The file defines `ExtendedLowerReal` and `LowerReal` structures, with properties like closure (`L-closed`) and roundedness (`L-rounded`). It implements operations like `BJoin`, `meet`, and `join` on `LowerReal`. Instances for `LowerReal` as a `BiorderedLatticeAbMonoid` and `ExtendedLowerReal` as a `CompleteLattice` are provided, defining arithmetic and order operations."
+        },
+        {
+            "name": "Arith.Real.InfReal",
+            "summary": "This file defines `InfReal`, an extension of `LowerReal` and `ExUpperReal`, with properties like `LU-disjoint`, `LU-located`, and `LU-focus-bound`. It provides lemmas for real number properties and operations such as addition, meet, and join. The file includes instances like `InfRealAbMonoid`, offering algebraic structure and order relations for `InfReal`."
+        },
+        {
+            "name": "Arith.Real.Field",
+            "summary": "This file defines an instance `RealField` of `OrderedFieldAlgebra` and includes various operations and properties for real numbers, such as multiplication, distribution, and positivity. It also defines lemmas for algebraic operations and properties of real numbers and rational numbers."
+        },
+        {
+            "name": "Arith.Nat.EulerTotient",
+            "summary": "The file defines functions and instances for working with algebraic structures, including `coPrimes`, `InvGroup`, and `EulerTotient`. It also includes theorems like `coPrimes-eq`, `ker-int-Coef`, and `Z/nZ=FinRing`, along with lemmas for modular arithmetic and Chinese Remainder Theorem applications."
+        },
+        {
+            "name": "Arith.Nat.Sequence",
+            "summary": "This file deals with logical and order-related concepts. It defines two main lemmas: `search`, which involves constructing a proof of contractibility using search functions on natural numbers, and `NatFinSubset`, which constructs a finite set from a subset of natural numbers using a quotient equivalence."
+        },
+        {
+            "name": "Arith.Nat",
+            "summary": "This file defines natural number operations and their properties, including subtraction (`-'`), predecessor (`pred`), and ordering relations like `<` and `<=`. It provides lemmas on arithmetic properties (e.g., associativity, commutativity) and instances for semirings and semilattices. It also includes functions and lemmas for modular arithmetic and finite natural numbers (`Fin`)."
+        },
+        {
+            "name": "Arith.Bool",
+            "summary": "This file defines `BoolLattice` as a `BoundedDistributiveLattice` for `Bool`, implementing operations like `meet`, `join`, `top`, and `bottom`. It also defines `BoolPoset` as a `Dec` instance, providing order relations `<` and `<=` for `Bool`."
+        },
+        {
+            "name": "Arith.Rat",
+            "summary": "This file defines and implements rational numbers (`Rat`) as a quotient of integers, providing essential functions like `ratNom`, `ratDenom`, and `makeRat`. It includes operations: addition, multiplication, negation, and inversion, ensuring properties like `RatField` and `RatDenseOrder`. It also defines rounding functions: `rat_floor` and `rat_ceiling`, and provides lemmas for order and arithmetic operations."
+        },
+        {
+            "name": "Arith.Complex",
+            "summary": "This file defines a `Complex` record with real parts and instances it as a `Field`. It includes operations for addition, negation, and multiplication, and specifies properties like associativity and commutativity. It also defines `ComplexMonoid` and a lemma `inv-char` for inversion characterization."
+        },
+        {
+            "name": "Arith.Real",
+            "summary": "The file defines operations and properties for real numbers, focusing on their order and algebraic structure. It includes definitions for operations such as addition, multiplication, meet, and join, along with lemmas establishing their properties, like transitivity and focus. It also provides instances for real numbers as a dense linear order and a linearly ordered abelian group."
+        },
+        {
+            "name": "Arith.Prime",
+            "summary": "The file defines primality and related properties for natural numbers, including lemmas `nat_irr-isPrime`, `prime-div`, `prime-less`, and a primality test `isPrime`. It proves equivalence between `isPrime` and `Prime` with `isPrime=>prime` and `prime=>isPrime`, and provides a decision procedure `prime-isDec`."
+        },
+        {
+            "name": "Equiv",
+            "summary": "This file defines concepts of equivalences, embeddings, and surjections in type theory. Key structures include `Map`, `Section`, `Retraction`, `Equiv`, `QEquiv`, `Embedding`, `Surjection`, and `ESEquiv`. It also explores properties like injectivity, surjectivity, and provides functions for constructing and verifying equivalences and embeddings, including `transEquiv`, `transEmbedding`, and `two-out-of-three` properties."
+        },
+        {
+            "name": "AG.Scheme",
+            "summary": "The file defines a framework for handling locally ringed locales and schemes, including definitions like `SpecPres`, `RingedLocale`, `RingedLocaleHom`, `LocallyRingedLocale`, and `Scheme`. It provides functions for constructing affine schemes, such as `affineRingedPres`, `affineRingedLocale`, and `affineScheme`, and explores properties like local triviality and local ringedness."
+        },
+        {
+            "name": "AG.Projective",
+            "summary": "The file defines various functions and lemmas for working with graded rings and schemes in the Arend proof assistant. Key functions include `ProjPres`, `toSpec`, and `projRingedPres`, which deal with graded ring presentations and their associated schemes. The lemmas provide properties of covers, such as `cover_spec`, `cover_factor`, and `cover_zro`, as well as the construction of homomorphisms in `functorial`. The file also defines `Proj` as a presented frame and includes auxiliary functions and proofs related to covers and ring homomorphisms."
+        },
+        {
+            "name": "Category",
+            "summary": "This file defines a categorical framework in Arend. Key definitions include:"
+        },
+        {
+            "name": "Combinatorics.Factorial",
+            "summary": "Imports modules related to algebra and order. Defines factorial function `fac` for natural numbers and proves lemma `fac>0` that factorial is always positive."
+        },
+        {
+            "name": "Combinatorics.Binom",
+            "summary": "The file defines a function `binom` for computing binomial coefficients and includes lemmas `binom_0` and `binom_<` for special cases. It also defines `expansion` for binomial expansion in a commutative ring."
+        },
+        {
+            "name": "Paths",
+            "summary": "The file defines functions and lemmas for working with paths in type theory, including identity, path mapping (`pmap`), transport, inverses (`inv`), and composition (`*>`, `<*`). It also covers homotopy properties and commutativity of path operations."
+        },
+        {
+            "name": "Set.Filter",
+            "summary": "The file defines filters over lattices, including `Filter`, `CompleteFilter`, `SetFilter`, and their `map` functions. It also introduces `WeaklyProperFilter` and `ProperFilter` with associated semilattice instances."
+        },
+        {
+            "name": "Set.Hedberg",
+            "summary": "The file defines lemmas related to proving `isSet` for a type `A`. It includes `Set-lemma'` and `Set-lemma`, which use relations and propositional properties, and `Hedberg`, which applies Hedberg's theorem using a decidable equality."
+        },
+        {
+            "name": "Set.Fin",
+            "summary": "- **FinSet Class**: Defines a finite set with properties `finEq`, `finSurj`, and methods for choice and equality decision."
+        },
+        {
+            "name": "Set.Fin.DFin",
+            "summary": "The file defines `isDFin`, a property for a set `A` indicating that any injective function `f: A -> A` is also surjective. It includes lemmas `isEquiv` and `fromPigeonhole`, and a function `isSplit`, leveraging the pigeonhole principle for proofs."
+        },
+        {
+            "name": "Set.Fin.KFin",
+            "summary": "This file defines the `KFinSet` class extending `BoundedPigeonholeSet`, with key functions including `search`, `||-search`, and `dec`, leveraging finite surjections. Lemmas like `fromArray`, `toArray`, and `QuotientKFin` manage conversions and operations on finite sets."
+        },
+        {
+            "name": "Set.Fin.Pigeonhole",
+            "summary": "Defines classes `PigeonholeSet` and `BoundedPigeonholeSet` with pigeonhole principles. Lemmas include `pigeonhole<`, `isEquiv`, `boundedPigeonhole<`, and `pigeonhole-surj`. Implements `pigeonhole-fin` lemma with auxiliary functions."
+        },
+        {
+            "name": "Set.Fin.Instances",
+            "summary": "This file defines `SigmaFin` and `DecSubSet-isFin` lemmas for finite sets, and `ProdFin` instance for product of finite sets utilizing `SigmaFin`. It includes auxiliary functions for equivalences, particularly `aux` for sum and sigma types."
+        },
+        {
+            "name": "Set.SetHom",
+            "summary": "Defines a `SetHom` record for homomorphisms between sets `Dom` and `Cod` with a coercion function `func`."
+        },
+        {
+            "name": "Set.Subset",
+            "summary": "This file defines operations and properties on sets, including union, intersection, complements, and covers. It introduces a `SetLattice` instance for locales, defines refinement relations, and provides lemmas for set operations and properties."
+        },
+        {
+            "name": "Set.Countable",
+            "summary": "This file defines various functions to establish countability of types using Quasi-Equivalence (QEquiv) for natural numbers, pairs, tuples, sums, Maybes, arrays, and functions. It includes implementations for counting elements in finite sets, constructing countable functions, and extends to countable structures like quotient types and factor rings by leveraging surjectivity and equivalences."
+        },
+        {
+            "name": "Set.Partial",
+            "summary": "The file defines a `Partial` record for partial elements of a set, with functions `defined` and `undefined`. It includes lemmas like `partial-ext`, `defined-ext`, and `undefined-ext` for extending these partial elements, and functions `plift` and `plift2` for lifting operations. An instance `PartialAddMonoid` is provided for partial addition on monoids."
+        },
+        {
+            "name": "Set.SetCategory",
+            "summary": "This file defines instances and functions for categories and functors in the context of sets, including `SetCat`, `SIP_Set`, `SetCoproduct`, `SetCoequalizer`, and `SetBicat`. It introduces a `SetColimit` type, a `NatFunctor` for natural numbers, and various related lemmas and helper functions."
+        },
+        {
+            "name": "Debug",
+            "summary": "Defines a `runTimed` meta that measures execution time of a computation `m`, normalizes it, prints the elapsed time, and returns the result."
+        },
+        {
+            "name": "Data.Fin",
+            "summary": "Defines `Fin` operations: `fzero`, `fsuc`, `fpred`, and `fcase`. Lemmas include `unfsuc`, `fsuc/=`, `fsuc/=0`, `fsuc/=-conv`, `nat_fin_=`, `fin_nat_/=`, `fsuc_fpred`, `fsuc_fpredP`. Function `finLast` returns the last element."
+        },
+        {
+            "name": "Data.SeqColimit",
+            "summary": "This Arend file defines a sequential colimit structure (`SeqColimit`) for sequences, provides equivalences for total spaces of fibrations over these colimits, and includes lemmas proving properties like surjectivity (`seqColimit-surj`) and contractibility (`constantMaps`) for specific sequences."
+        },
+        {
+            "name": "Data.Array.Sort",
+            "summary": "The file defines a sorting function `sort` for arrays with elements of a linearly ordered type. It includes lemmas for sorting correctness, proofs of sortedness, and permutation relationships between pre- and post-sorted arrays. Key lemmas include `IsSorted`, `sorted_transport`, and `sort-sorted`."
+        },
+        {
+            "name": "Data.Array.Split",
+            "summary": "The file defines a function `nub-split` which rearranges elements of an array using `EPerm` and `aux` to split elements based on unique properties. It leverages imports for array, permutation, and logic functionalities."
+        },
+        {
+            "name": "Data.Array.Pairs",
+            "summary": "This file defines functions and lemmas for working with pairs of arrays, including `pairs`, which creates an array of paired elements, and various properties like `pairs-flip`, `pairs_++-left`, `pairs_map`, and `pairs-assoc`. It also includes `pairs-index` and `pairs-index-inj` for indexing and injectivity, and `pairs-index-surj` and `pairs-index-equiv` for surjectivity and equivalence. Lastly, `pairs-distr` demonstrates distributive properties in the context of semirings."
+        },
+        {
+            "name": "Data.Array.Perm",
+            "summary": "The file defines permutations of arrays with operations like `perm-refl`, `perm-sym`, and `perm-trans`. It includes functions for calculating inversions and sign of permutations, mapping permutations, and removing elements while preserving permutation order. It also provides proofs like `inversions_perm-refl` and utilities like `equiv_perm` for equivalences."
+        },
+        {
+            "name": "Data.Array.EPerm",
+            "summary": "The file defines `EPerm`, a type representing permutations of arrays, and provides functions and lemmas for reasoning about permutations. Key functions include `keep_remove-split`, `EPerm_map`, `EPerm_keep`, `EPerm_remove`, and `EPerm_nub`. Lemmas like `EPerm_len` and `EPerm_count` support proofs involving array lengths and element counts."
+        },
+        {
+            "name": "Data.SubList",
+            "summary": "The file defines `SubList`, a data type representing sublists, and functions for manipulating these sublists. Key functions include `identity`, `extend-left-both`, `extend-right-both`, and `compose`, which manage sublist extensions and compositions. The file also includes transport-related utilities within the `Transports` module."
+        },
+        {
+            "name": "Data.Or",
+            "summary": "The file defines the `Or` type with constructors `inl` and `inr`, and includes functions `levelProp`, `map`, `rec`, and `Or_Equiv` to manipulate `Or` types and establish equivalences."
+        },
+        {
+            "name": "Data.Maybe",
+            "summary": "Defines `Maybe` type with `nothing` and `just`, includes `map`, `maybe`, `unjust`, and `just-injective` functions for handling `Maybe`."
+        },
+        {
+            "name": "Data.Bool",
+            "summary": "This file defines `Bool` with constructors `true` and `false`, logical operations `not`, `and`, `or`, `xor`, and the `if` function. It includes propositions `So` and related lemmas, such as `fromSo`, `toSo`, `not-isInv`, and proofs for `and`/`or` correctness."
+        },
+        {
+            "name": "Data.List",
+            "summary": "This file defines a `List` data type and various list functions such as `length`, `!!`, `++`, `replicate`, and `map`. It provides lemmas for properties like associativity of `++` and length equality for `map`. It introduces `All` and `All2` for propositional lists and `Perm` for permutations. It includes sorting algorithms like insertion and red-black tree sorts, verifying properties like sortedness and permutation. Additionally, it defines `contains`, `union`, and `InList` for membership and union related properties."
+        },
+        {
+            "name": "Data.Sigma",
+            "summary": "The file defines functions for mapping over tuples, including `tupleMap` and its projections. It also defines `tupleMapLeft` and `tupleMapRight` for partial mappings, alongside their respective projection properties. Lastly, it introduces `unit-isContr` to establish a contractible type."
+        },
+        {
+            "name": "Data.Array",
+            "summary": "This file defines functions and lemmas for working with arrays in Arend. It includes array construction (`mkArray`), transformations (`map`, `filter`, `insert`), concatenation (`++`, `++'`), and indexing operations. It also handles set operations like `remove`, `nub`, and provides properties like `count` and `forall`. Additionally, it contains proofs for properties of these operations, such as associativity and injectivity."
+        },
+        {
+            "name": "Algebra.Ordered",
+            "summary": "The file defines classes for algebraic structures with ordered properties, extending various algebraic classes like Monoid, Group, Lattice, and Ring with Poset properties. Key classes include:"
+        },
+        {
+            "name": "Algebra.QModule",
+            "summary": "The file defines algebraic structures like `DivisibleGroup`, `TorsionFreeGroup`, `QModule`, `QPseudoAlgebra`, and `QAlgebra`. It includes operations such as `*q` for scalar multiplication by rational numbers and conversion functions like `toRatModule` and `toRatAlgebra`. It also provides lemmas for properties of these operations, such as associativity and commutativity."
+        },
+        {
+            "name": "Algebra.Monoid.MonoidLocalization",
+            "summary": "The file defines `LocType` and `LocAbType`, types of localized monoids, along with their equivalence relations. It provides instances `LocMonoid` and `LocAbMonoid` for these types, implementing monoid operations (`*`, `+`) and identities (`ide`, `zro`). It also defines `MaxLocAbType` and `GrothendieckAbGroup` for maximal localization."
+        },
+        {
+            "name": "Algebra.Monoid.Sub",
+            "summary": "This file defines structures for submonoids, subsemigroups, and subadditive monoids. It includes functions for embedding monoids, closure operations, powers, and big sums, as well as lemmas for properties like associativity and identity."
+        },
+        {
+            "name": "Algebra.Monoid.Solver",
+            "summary": "The file defines `MonoidTerm` for constructing terms over a monoid and provides functions for normalization and interpretation within `MonoidData` and `CMonoidData` classes. It includes lemmas for term equality and consistency checks such as `normalize-consistent` and `terms-equality`. `LData` extends `CMonoidData` with `removeDuplicates` for handling duplicates in a lattice context."
+        },
+        {
+            "name": "Algebra.Monoid.Product",
+            "summary": "This file defines instances of product structures for monoids, additive monoids, commutative monoids, and abelian monoids, using paired operations and identities."
+        },
+        {
+            "name": "Algebra.Monoid.MonoidHom",
+            "summary": "The file defines `MonoidHom` and `AddMonoidHom`, extending `PointedHom` and `AddPointedHom` respectively, focusing on homomorphisms between monoids and add-monoids. It includes lemmas like `func-pow`, `func-BigProd`, `func-Inv`, and `func-*n` to demonstrate how these homomorphisms preserve operations. Functions such as `equals`, `id`, `presInv`, and `func-FinSum` provide additional structure and proofs related to these homomorphisms."
+        },
+        {
+            "name": "Algebra.Monoid.FreeMonoid",
+            "summary": "The file defines `universalFreeMonoidMap`, a monoid homomorphism from a list monoid to a monoid `M`, and `isMonoidGenerated`, which checks if a monoid is generated by a set."
+        },
+        {
+            "name": "Algebra.Monoid.PermSet",
+            "summary": "This file defines `PermSet`, a quotient of arrays by permutation equivalence (`EPerm`). Key functions include `inPS`, `permSet-map`, `permSet-sum`, and `permSet-length`. It provides instances like `PermSetMonoid` and `PermSetDec`, allowing operations and equality decisions. It also includes lemmas for properties like associativity, commutativity, and naturality."
+        },
+        {
+            "name": "Algebra.Monoid.GCD",
+            "summary": "This file defines the `GCD` record and related lemmas within various monoid structures, including `GCDMonoid`, `UnitlessMonoid`, and `DivQuotient`. It introduces functions for GCD operations, coprimeness, and distributive properties in algebraic structures. It also discusses quotienting monoids by divisibility and presents instances for these structures, such as `UnitlessGCDMonoid`."
+        },
+        {
+            "name": "Algebra.Monoid.Prime",
+            "summary": "This file defines the `Irr` class for irreducible elements in a commutative monoid, including properties like `isIrr` and `isCancelable-left`. It extends to define `Prime` elements and proves properties for `GCDMonoid`, including a lemma `nat_irr` for natural numbers."
+        },
+        {
+            "name": "Algebra.Monoid.MonoidCategory",
+            "summary": "Defines categories for monoids and additive monoids, including homomorphisms, kernels, and images. Establishes bicompleteness and equivalences between monoid categories and models."
+        },
+        {
+            "name": "Algebra.LatticeColimit",
+            "summary": "This file defines instances for lattice colimits of algebraic structures like Monoid, AddMonoid, AddGroup, AbGroup, Ring, and CRing over a BottomJoinSemilattice. Functions include `inMap`, `Func-app`, and lemmas for coherence conditions. Instances ensure operations like addition and multiplication are well-defined within these colimits."
+        },
+        {
+            "name": "Algebra.Module",
+            "summary": "This file defines linear modules (LModule) over rings, including operations, distribution properties, and linear maps. It covers concepts like independence, basis, and generating sets, along with related lemmas. Instances for product and array modules are provided, and there's support for handling ring homomorphisms with pullbacks and finite generation."
+        },
+        {
+            "name": "Algebra.Ring",
+            "summary": "The file defines various algebraic structures, including `PseudoRing`, `Ring`, and `CRing`, with associated lemmas and properties like distributive laws (`ldistr`, `rdistr`), the concept of nilpotency (`IsNilpotent`), and Bezout properties. It also includes extensions for handling zero and non-zero elements, apartness relations, and decidable equality."
+        },
+        {
+            "name": "Algebra.Group.Lagrange",
+            "summary": "This file defines `lagrange-gen`, a lemma establishing an equivalence for subgroups, and `lagrange`, a function leveraging `lagrange-gen` to prove Lagrange's theorem for finite subgroups using finite cardinality. It includes auxiliary lemmas like `Cosets-fin` for handling cosets in finite settings."
+        },
+        {
+            "name": "Algebra.Group.Aut",
+            "summary": "The file defines a group instance `Aut` for the truncated loop space `Trunc0 (a = a)` and a monoid structure `End` for endomorphisms in a precategory."
+        },
+        {
+            "name": "Algebra.Group.Representation",
+            "summary": "This file defines the class `LinRepres` for linear representations, extending `LModule` and `GroupAction`, with lemmas like `g**-zro` and `g**-negative`, and functions such as `toLinearMap`. It also defines `TrivialAction` as an instance of `LinRepres`."
+        },
+        {
+            "name": "Algebra.Group.Symmetric",
+            "summary": "The file defines functions and lemmas related to symmetric groups and permutations. It introduces the `Sym` type representing permutations as equivalences on finite sets and provides instances for group operations. Key functions include `reduce`, `cycle`, and `transposition`, with lemmas like `Support`, `independent_*`, and `cycle-decomp` ensuring properties like cycle decompositions and support independence. `sign` calculates the sign of a permutation based on inversions, and `lift` extends permutations to larger sets."
+        },
+        {
+            "name": "Algebra.Group.Fin",
+            "summary": "The file defines functions and lemmas for determining the finite order of an element in a Group. Key components include: `hasFiniteOrder` lemma, `order` function, and supporting lemmas `order>0`, `order_pow`, and `order-min`."
+        },
+        {
+            "name": "Algebra.Group.GSet.CategoricalDefinition",
+            "summary": "The file defines a class `MonoidCatAction`, an instance `DeloopM` for monoids as categories, a function `functor->action` mapping functors to monoid actions, and an equivalence `Action<->Functor` between monoid actions and functors."
+        },
+        {
+            "name": "Algebra.Group.GSet.ExampleActions",
+            "summary": "The file defines various group actions: `TranslationAction` and `TranslationActionOnSubsets` for a group `G`, `conjAction` for conjugation, and `trivialAction` for any set. It also defines `conjugate-subset` for a subset under conjugation. These utilize group operations and properties."
+        },
+        {
+            "name": "Algebra.Group.GSet.Category",
+            "summary": "The file defines `EquivariantMap`, an extension of `SetHom` for group actions, ensuring equivariance. It introduces `IsIso` to characterize isomorphisms. The `GSet` instance for `GroupAction G` implements a category with `EquivariantMap` as morphisms, providing identity and composition operations."
+        },
+        {
+            "name": "Algebra.Group.GroupHom",
+            "summary": "This file defines `GroupHom` and `AddGroupHom` for homomorphisms of groups and additive groups, respectively. It includes definitions for kernels, isomorphisms, and injectivity tests. Functions for composition and identity of homomorphisms are also provided."
+        },
+        {
+            "name": "Algebra.Group.Free",
+            "summary": "The file defines a `FreeGroup` instance, operations (e.g., `inverse`, `*`), and properties (e.g., `equivMulLeft`, `equiv_inv`). It includes functions like `reduce`, `univ_map`, and `reduceHom`, along with lemmas for equality and irreducibility. It also provides universal properties and a `DecWordMonoid` instance for word-based decision procedures."
+        },
+        {
+            "name": "Algebra.Group.GroupCategory",
+            "summary": "This file defines categorical structures for groups, add groups, and abelian groups, including instances for morphisms and quotient maps. It establishes isomorphism criteria and constructs image and kernel groups."
+        },
+        {
+            "name": "Algebra.Group.QuotientProperties",
+            "summary": "This file contains functions and lemmas related to group homomorphisms and quotient groups, including the First Isomorphism Theorem. Key definitions include `GroupTriangle`, `UniversalGroupQuotient`, and `FirstIsomorphismTheorem`. Functions like `universalQuotientMorphismSetwise`, `universalQuotientMorph`, and lemmas like `universalQuotientProperty`, `univKer-mono`, and `univKer-epi` are used to establish group homomorphism properties and isomorphisms. The file concludes with corollaries applying the First Isomorphism Theorem."
+        },
+        {
+            "name": "Algebra.Group.Sub",
+            "summary": "This file defines algebraic structures, focusing on subgroups and related properties. Key definitions include `SubGroup`, `DecSubGroup`, `NormalSubGroup`, and `SubAddGroup`. Functions like `IGroup`, `equivalence`, and `Cosets` relate to group operations and equivalence relations. The file also establishes instances like `SubGroupPreorder` and subgroups in finite groups with `FinSubGroup`."
+        },
+        {
+            "name": "Algebra.Group.Representation.Irreducible",
+            "summary": "The file defines an `Irreducible` representation for groups and a class `Hom-between-Irreducible` that includes a function `Schur's-Lemma`, which determines when a map between irreducible representations is zero or an isomorphism."
+        },
+        {
+            "name": "Algebra.Group.Representation.MaschkeLemma",
+            "summary": "The file defines \"Maschke'sLemma\" for group representations, emphasizing functions like \"mean_func\" and \"SumOverGroup\" for linear maps, and includes lemmas for properties of these functions in the context of group actions and modules."
+        },
+        {
+            "name": "Algebra.Group.Representation.PermutationRepresentation",
+            "summary": "The file defines `PermRepr`, a permutation representation of a group action on a linear module, and `PermutationRepresReducible`, proving reducibility under specific conditions. It includes functions for module actions, invariant submodules, and checks for irreducibility."
+        },
+        {
+            "name": "Algebra.Group.Representation.Sub",
+            "summary": "The file defines `SubLRepres`, `KernelSubLRepres`, and `ImageSubLRepres` for linear representations, with properties like `in-mono` ensuring injectivity. Functions `isTrivial`, `**'in`, and morphisms are included."
+        },
+        {
+            "name": "Algebra.Group.Representation.Product",
+            "summary": "Defines `ProductLRepres` for linear representations, including `in_1`, `in_2`, `proj_1`, `proj_2`, and `coprod-map` as intertwining maps for module operations and group actions."
+        },
+        {
+            "name": "Algebra.Group.Representation.Category",
+            "summary": "The file defines `InterwiningMap` as a linear map with equivariance, `RepresentationCat` as a category of linear representations, and functions like `repr+module-iso=>repr-iso`, `KerLRepres`, `ImageLRepres`, along with instances and properties for interwining maps."
+        },
+        {
+            "name": "Algebra.Group.Representation.Characters",
+            "summary": "The file defines the `Character` function for a linear representation of a group, calculates its trace, and provides auxiliary functions `chi`, `of-1`, and `Matrix-of-1` for working with group identities and matrix representations."
+        },
+        {
+            "name": "Algebra.Group.Solver",
+            "summary": "The file defines a framework for manipulating group expressions, focusing on a datatype `GroupTerm` with operations like identity, inverse, and multiplication. It introduces classes `GroupData` and `NatData` to interpret these terms in a group setting, providing functions for simplifying expressions, checking normal form (`isInNF`), and removing variable pairs (`removeVar`). Correctness lemmas ensure that simplifications preserve meaning."
+        },
+        {
+            "name": "Algebra.Group.Product",
+            "summary": "The file defines instances for product groups: ProductGroup, ProductAddGroup, ProductCGroup, and ProductAbGroup, using respective monoids and operations."
+        },
+        {
+            "name": "Algebra.Group.GSet",
+            "summary": "This file defines a `GroupAction` class with operators, including the `Stabilizer` subgroup and `choosePoint` function. It extends to `TransitiveGroupAction`, ensuring transitivity. The `ActionBySubgroup` function creates group actions by subgroups, and `TransitiveActionBySubgroup` provides transitive group actions through subgroup cosets."
+        },
+        {
+            "name": "Algebra.MulOrdered",
+            "summary": "The file defines `OrderedMonoid`, extending `Poset` and `Monoid`, with order-preserving multiplication. It also defines `OrderedCMonoid`, extending `OrderedMonoid` and `CMonoid`, with commutative property."
+        },
+        {
+            "name": "Algebra.Module.Trace",
+            "summary": "This file defines the `Trace` function for square matrices in a ring, with properties like `Trace-transpose`, `Trace-prod`, `Trace-conjugation`, and `Trace-diagonal`. It also includes lemmas for these properties and their proofs."
+        },
+        {
+            "name": "Algebra.Module.ModuleCategory",
+            "summary": "This file defines instances and functions related to linear modules and linear maps in Arend. It introduces LModuleCat as a category of linear modules, and instances like LModulePreAdditive, LinearMapLModule, KerLModule, and ImageLModule. Functions like IsZeroMod and IsZeroMap check zero properties, while lemmas like iso<->inj+surj and zeroKer-FullIm<->inj+surj establish equivalences between isomorphisms, injectivity, and surjectivity."
+        },
+        {
+            "name": "Algebra.Module.Sub",
+            "summary": "The file defines `SubLModule`, a subclass of `SubAddGroup` for left modules over a ring, and `IModule`, a left module with specific properties. It introduces `topSubLModule` for constructing top submodules, and `SubLModuleSemilattice`, forming a meet-semilattice of submodules. Functions like `*m` and `OneDimSubmod` define operations on submodules and one-dimensional submodules, respectively."
+        },
+        {
+            "name": "Algebra.Module.FinModule",
+            "summary": "This file defines a `FinModule` class extending `LModule` with a finite basis, and includes lemmas for surjective maps, dimension properties, and isomorphisms. There's an instance `ArrayFinModule` for arrays with a basis."
+        },
+        {
+            "name": "Algebra.Module.LinearMap",
+            "summary": "The file defines linear and bilinear maps, operations on them, and properties like independence and basis transformations. It includes lemmas for extending linear maps, matrix representation, and multilinear functions, with an emphasis on concepts like alternation and independence in linear algebra contexts."
+        },
+        {
+            "name": "Algebra.Module.PowerLModule",
+            "summary": "The file defines a `PowerLModule` instance, which constructs an `LModule` over a function space `J -> M` from a given `LModule` `M`. It also defines `FunctorPowerLMod`, a functor mapping from `SetCat.op` to `LModuleCat R`, utilizing the `PowerLModule` to create linear maps."
+        },
+        {
+            "name": "Algebra.Pointed.PointedCategory",
+            "summary": "Defines categories `PointedCat` and `AddPointedCat` with homomorphisms, identities, and compositions. Introduces `Kernel`, `KerPointedHom`, `ImageAddPointed`, and `ImagePointed` with associated homomorphisms and lemmas on injectivity and surjectivity."
+        },
+        {
+            "name": "Algebra.Pointed.Sub",
+            "summary": "Defines `SubPointed` and `SubAddPointed` classes extending `SubSet`, with `contains_ide` and `contains_zro`, respectively. Also defines internal `max` functions."
+        },
+        {
+            "name": "Algebra.Pointed.PointedHom",
+            "summary": "This file defines `PointedHom` and `AddPointedHom` records, extending `SetHom`. It implements identity and composition functions for each, ensuring homomorphisms respect pointed and add-pointed structures."
+        },
+        {
+            "name": "Algebra.Linear.Solver",
+            "summary": "The file defines linear algebraic structures and operations, including `Operation`, `LinearData`, `Equation`, `Problem`, and `CorrectCert`. It provides functions like `interpretEq`, `certSum`, `isLess`, and lemmas for solving algebraic problems (`solveContrProblem`, `solve<=Problem`, `solve=Problem`, `solve<Problem`). It extends classes like `LinearSemiringData`, `LinearRingData`, and `LinearRatData`."
+        },
+        {
+            "name": "Algebra.Linear.Matrix",
+            "summary": "The file defines a matrix type, various matrix operations, and properties in Arend. Key functions include `mkMatrix`, `addColumn`, and `blockMatrix`. It establishes properties such as `matrixExt`, `MatrixAbGroup`, and `MatrixRing`. Lemmas cover matrix determinants, transpose, adjugate, and their interactions, including `determinant_*`, `determinant_transpose`, and `adjugate-left`."
+        },
+        {
+            "name": "Algebra.Linear.VectorSpace",
+            "summary": "This file defines and works with vector spaces, particularly focusing on matrix rank and Smith normal form. Key functions include `rank`, which calculates the rank of a matrix, and lemmas related to properties of rank such as `rank_transpose`, `rank_<=`, and `rank_smith_<=`. Classes like `VectorSpace` and `FinVectorSpace` extend the `LModule` class. The file also defines instances and lemmas for finite modules and linear maps, including `image-fin` and `kernel-fin` instances for finite modules."
+        },
+        {
+            "name": "Algebra.Linear.Matrix.Smith",
+            "summary": "This file provides formal definitions and proofs related to matrices over rings, focusing on Smith normal form and related concepts. Key components include the definition of matrix equivalence `M~`, the `IsSmith` property for matrices, and the `SmithRing` class, which extends `StrictBezoutRing`. The file includes lemmas for working with transposed matrices, block matrices, and functions for row and column elimination. It also proves uniqueness of Smith normal forms in certain domains and defines operations such as embedding 2x2 matrices into larger ones."
+        },
+        {
+            "name": "Algebra.Linear.Matrix.CharPoly",
+            "summary": "The file defines functions and lemmas related to the characteristic polynomial of a matrix, including `charPoly`, `charPoly-degree`, `charPoly-monic`, and `charPoly_map`. It also defines the type `isEigenvalue` and proves that an eigenvalue is a root of the characteristic polynomial with `eigen-root`."
+        },
+        {
+            "name": "Algebra.Linear.Matrix.CayleyHamilton",
+            "summary": "This file defines the Cayley-Hamilton theorem for matrices over a commutative ring, involving `polyMapEval` and `charPoly`. It includes helper functions like `toLinearMap` and `poly_func_matrix` for matrix operations."
+        },
+        {
+            "name": "Algebra.FinSuppFunc",
+            "summary": "The file defines `FinSuppFunc`, a finitely supported function extending `SetHom` with additional instances for algebraic structures such as `AddPointed`, `AddMonoid`, `AbMonoid`, `AddGroup`, and `AbGroup`. It provides equality and arithmetic operations for these functions."
+        },
+        {
+            "name": "Algebra.Solver.CSemiring",
+            "summary": "The file defines a `CSemiringSolverModel` for a given `CSemiring`, which includes functions and lemmas for normalization and interpretation of terms and normal forms (`NF`). It also includes a `sortMonomials` helper function and several lemmas like `interpretNF_sort` and `apply-axiom` for correctness and consistency of interpretations."
+        },
+        {
+            "name": "Algebra.Solver.Ring",
+            "summary": "The file defines `RingSolverModel`, a solver for rings with operations like `normalize` and `interpret`, along with consistency lemmas. It includes data structures for terms and normal forms and various lemmas for correctness and equality of terms."
+        },
+        {
+            "name": "Algebra.Solver.BooleanRing",
+            "summary": "The file defines a `BooleanRingSolverModel` for solving equations in a Boolean ring using a `SolverModel`. It introduces `Term` and `NF` as representations, and provides functions like `normalize`, `interpret`, `multiply`, and their lemmas to ensure consistency and correctness of interpretation. Key lemmas include `interpretNF'-consistent`, `collapse-consistent`, and `terms-equality`, which establish equivalence between different representations and interpretations."
+        },
+        {
+            "name": "Algebra.Solver.Group",
+            "summary": "This file defines `GroupSolverModel` for groups, providing term normalization and interpretation functions, and establishes consistency lemmas. It also includes `AddGroupSolverModel` for additive groups and imports various algebraic and logical components."
+        },
+        {
+            "name": "Algebra.Solver.Semiring",
+            "summary": "The file defines `SemiringSolverModel` for solving semiring expressions, including functions like `normalize`, `multiply`, and `interpret`. It provides proofs for consistency and correctness of operations, such as `normalize-consistent` and `interpretNF-consistent`. The `Data` class structures interpretation within a semiring, using axioms and lemmas for algebraic properties."
+        },
+        {
+            "name": "Algebra.Solver.Monoid",
+            "summary": "This file defines `MonoidSolverModel`, a substitution solver model for monoids, with key functions like `normalize`, `interpret`, and `interpretNF`. It also includes lemmas for consistency and a similar model, `AddMonoidSolverModel`, for additive monoids."
+        },
+        {
+            "name": "Algebra.Solver.CRing",
+            "summary": "The file defines a `CRingSolverModel` for a commutative ring `R` with functions for normalizing terms and interpreting them within a solver model. It includes lemmas for term equality, conversion, and applying axioms."
+        },
+        {
+            "name": "Algebra.Solver.CGroup",
+            "summary": "Defines `CGroupSolverModel` and `AbGroupSolverModel` for solving group equations, with functions for normalization, interpretation, and applying axioms. Includes lemmas for term equality and consistency."
+        },
+        {
+            "name": "Algebra.Solver.CMonoid",
+            "summary": "Defines `CMonoidSolverModel` and `AbMonoidSolverModel` for solving monoid equations using normalization and interpretation functions. Includes lemmas for consistency, permutation, and iteration-based interpretations."
+        },
+        {
+            "name": "Algebra.Field.Splitting",
+            "summary": "The file defines and proves properties of splitting fields in algebra, focusing on discrete fields and polynomials. It includes `IsSplittingField`, lemmas `splitting-integral` and `splitting-monic`, as well as `countableSplittingField` for constructing countable splitting fields. It also defines `RootFieldData` and `SplittingFieldData` structures, and provides `CountableSplittingFieldData` with associated operations and lemmas."
+        },
+        {
+            "name": "Algebra.Field.Algebraic",
+            "summary": "The file defines algebraic structures and proves properties about integral extensions and zero-dimensional rings. Key functions include `integralExt-zeroDim`, `polyImage_field`, and `mPoly_integral`, which address relationships between fields, rings, and polynomial mappings. Additionally, it explores integrality and zero-dimensionality, using lemmas like `integral_dom-zeroDim` and `finGenExt-char`. These establish criteria for when a ring homomorphism is integral and how it relates to the dimension of the target ring."
+        },
+        {
+            "name": "Algebra.Field.AlgebraicClosure",
+            "summary": "The file defines algebraic closure in rings and fields, including `IsAlgebraicallyClosed`, `algebraicallyClosed<->split`, and `algebraicallyClosed-integrallyClosed`. It provides `algebraicClosure-split` and constructs `countableAlgebraicClosure` for countable discrete fields."
+        },
+        {
+            "name": "Algebra.Semiring.Sub",
+            "summary": "This file defines `SubPseudoSemiring` and `SubSemiring` classes extending algebraic structures like monoids and semirings, providing functions for constructing semirings and pseudo-semirings with additional properties."
+        },
+        {
+            "name": "Algebra.Group",
+            "summary": "The file defines algebraic structures, including `Group`, `AddGroup`, `CGroup`, and `AbGroup`. Key functions include `ipow` for integer exponentiation, `conjugate` for group elements, and operations like `*i` and `-`. Lemmas establish properties of these operations, such as distributivity, cancellation, and inverses."
+        },
+        {
+            "name": "Algebra.Semiring",
+            "summary": "This file defines algebraic structures like `PseudoSemiring`, `Semiring`, and `CSemiring`, extending them with relevant properties and lemmas. Key functions include `natCoef` for natural coefficients, and `LDiv` for left division operations, with various distributive and commutative properties."
+        },
+        {
+            "name": "Algebra.Monoid",
+            "summary": "This file defines algebraic structures such as `Semigroup`, `Monoid`, and their properties including power functions, commutativity, and divisors. It includes lemmas for operations like `pow`, `BigProd`, and `BigSum`, and defines classes like `CSemigroup`, `CMonoid`, `AbMonoid`, and `CancelMonoid`. It also handles concepts like inverses and associativity within these structures."
+        },
+        {
+            "name": "Algebra.StrictlyOrdered",
+            "summary": "This file defines various algebraic structures, such as `OrderedAddMonoid`, `OrderedAbMonoid`, `OrderedAddGroup`, `OrderedRing`, and `OrderedField`, each extending foundational algebraic classes like `Monoid`, `Group`, `Ring`, and `Field`. Additionally, it defines lemmas about order properties, such as `<_+-invert-right`, `<_*_positive_positive`, and `pinv_<`, providing proofs and properties related to ordered algebraic operations and structures."
+        },
+        {
+            "name": "Algebra.Solver",
+            "summary": "The file defines the `SolverModel` class with protected types and functions for terms, normal forms, normalization, and interpretation. It includes lemmas for term equality. The `SubstSolverModel` extends `SolverModel`, adding substitution operations and a lemma for applying axioms."
+        },
+        {
+            "name": "Algebra.Domain",
+            "summary": "This file defines algebraic structures like `Domain` and `IntegralDomain`, extending ring and monoid properties. It includes lemmas for non-zero elements, gcd operations, and cancellation laws. It also introduces `StrictDomain` and `StrictIntegralDomain`, emphasizing non-zero product properties and divisibility."
+        },
+        {
+            "name": "Algebra.Algebra",
+            "summary": "The file defines algebraic structures extending modules and rings, including `PseudoAlgebra`, `AAlgebra`, `PseudoCAlgebra`, and `CAlgebra`. Key functions include `coefMap` and `coefHom`, with lemmas like `coefMap_natCoef` and `*a-assoc`. It also introduces operations like `*a`."
+        },
+        {
+            "name": "Algebra.Field",
+            "summary": "The file defines `Field` and `DiscreteField` classes, extends algebraic structures, and includes lemmas for invertibility and field properties like `finv`, `eitherZeroOrInv`, and various `finv` transformations."
+        },
+        {
+            "name": "Algebra.Pointed",
+            "summary": "Defines `Pointed` and `AddPointed` classes extending `BaseSet`, with coercions between them and equality for `Pointed`."
+        },
+        {
+            "name": "Algebra.Ring.Ideal",
+            "summary": "The file defines various types of ideals in rings, including left, right, two-sided, and commutative ring ideals. It implements operations on these ideals like closure, radical, and properties such as being finitely generated or maximal. It also establishes a bounded lattice and commutative monoid structure on ideals."
+        },
+        {
+            "name": "Algebra.Ring.MonoidRing",
+            "summary": "The file defines and imports algebraic structures like MonoidSet, MonoidAbMonoid, and MonoidRing, along with homomorphisms and lemmas for manipulating these constructs. Key functions include `msMonomial`, `monoidSet-coefs`, and `monoidSet-map`. It also includes proofs and instances for algebraic identities, such as distributivity and associativity, and conversions between polynomials and monoid sets."
+        },
+        {
+            "name": "Algebra.Ring.Local",
+            "summary": "The file defines a `LocalRing` class extending `Ring` and `NonZeroRing` with lemmas about invertibility and connectedness. It also defines `LocalCRing` extending `LocalRing` and `NonZeroCRing`."
+        },
+        {
+            "name": "Algebra.Ring.Poly",
+            "summary": "This file defines a polynomial `Poly` over an additive pointed set and provides various operations and properties for polynomials. It includes functions for converting a polynomial to/from an array, mapping polynomials via a homomorphism, evaluating polynomials, and proving properties such as injectivity and degree. Additionally, it defines operations for a `Ring` and `LModule` on polynomials, and provides instances for various algebraic structures including `Ring`, `Domain`, `IntegralDomain`, and `LModule`."
+        },
+        {
+            "name": "Algebra.Ring.Localization",
+            "summary": "The file defines a `Localization` class for creating localizations of commutative rings, including functions like `lift`, `liftHom`, and `locMap`. It defines instances like `SubsetPoset` and `LocRing`, which provides a localization of a commutative ring over a submonoid. The file also contains lemmas like `locMap-inj`, `loc_change-of-base1-loc`, and `FieldOfQuotients` for integral domains, establishing properties and relations of these localizations."
+        },
+        {
+            "name": "Algebra.Ring.MPoly",
+            "summary": "This file defines operations and properties on multivariate polynomials over a commutative ring, including definitions for `MPoly`, `mPolyHom`, `mPoly-map`, and `mPolyEval`. It also includes lemmas for polynomial mappings, evaluation, and surjectivity, as well as degree computations and transformations for polynomials, particularly focusing on finite sets and extensions."
+        },
+        {
+            "name": "Algebra.Ring.Integral",
+            "summary": "The file defines `polyImage`, `mPolyImage`, and associated lemmas and functions for evaluating polynomial images under ring homomorphisms. It includes notions of integrality, such as `isIntegral`, and constructs like `integralClosure`, `integral_factor`, and their associated properties, e.g., `integralClosure-closed`. It explores relationships between integrality and algebraic structures, including colimits and homomorphic images."
+        },
+        {
+            "name": "Algebra.Ring.QPoly",
+            "summary": "The file defines `QPoly`, a quotient type for arrays over an additive pointed set, using an equivalence relation that equates arrays differing by trailing zeroes. It includes lemmas for proving properties about this relation, such as `lists-lem1` and `lists-lem2`, and operations like `qadd` for polynomial addition."
+        },
+        {
+            "name": "Algebra.Ring.Nakayama",
+            "summary": "This file defines lemmas related to Nakayama's lemma and linear maps. It contains three main lemmas: `nakayama`, `nakayama'`, and `nakayama-ideal`, which explore conditions on finitely generated modules and ideals. Another lemma, `linear-surj-equiv`, addresses the equivalence of linear maps under certain conditions."
+        },
+        {
+            "name": "Algebra.Ring.GrothendieckRing",
+            "summary": "Defines `GrothendieckRing` and `GrothendieckCRing` instances for a `Semiring` and `CSemiring`, using localization techniques, with operations and properties like associativity, distributivity, and commutativity."
+        },
+        {
+            "name": "Algebra.Ring.UnitAlgebra",
+            "summary": "The file defines `UnitAlgebra` as an instance of `AAlgebra` for a given `CRing` and `PseudoAlgebra`. It includes operations like addition, multiplication, and their properties. Lemmas `*n-comm`, `*n-comm1`, and `*n-comm2` describe commutativity with natural numbers. The `unit-algebra` function establishes a homomorphism. `UnitCAlgebra` is defined as a `CAlgebra` instance."
+        },
+        {
+            "name": "Algebra.Ring.FormalSeries",
+            "summary": "Defines `FSeries` as a type of formal series over a ring `R`. Introduces instances for `FSeries` as a `Ring`, `CAlgebra`, `Ring.With#`, `Domain`, and `IntegralDomain`. Provides `poly-FSeries` as a ring homomorphism from polynomials to `FSeries`. Includes lemmas for series application and properties of finite sums, pairs, and geometric series."
+        },
+        {
+            "name": "Algebra.Ring.QuotientProperties",
+            "summary": "The file defines `ringKerImageHom`, a homomorphism from the factor ring of a kernel to an image in ring homomorphisms, and proves its surjectivity and injectivity (`isSurj`, `isInj`). It also establishes an isomorphism (`ringKerImageHom-iso`) in the category of commutative rings."
+        },
+        {
+            "name": "Algebra.Ring.Graded.Ideal",
+            "summary": "The file defines a `HomogenIdeal`, extending `Ideal`, with functions `hasHomogenGen`, `toGen`, and `fromGen` for handling homogeneous generators, and `irrelevantIdeal` for constructing an irrelevant ideal in a `GradedCRing`."
+        },
+        {
+            "name": "Algebra.Ring.Graded.Localization",
+            "summary": "The file defines `HomogenLocRing`, constructing a commutative ring from a graded ring `R` and a submonoid `S`. It includes a `subRing` with operations and properties like `contains`, `contains_zro`, `contains_+`, `contains_*`, and `contains_negative`, ensuring homogeneity. The helper `fromSType` associates elements of `LocRing.SType S` to `HomogenLocRing`."
+        },
+        {
+            "name": "Algebra.Ring.Sub",
+            "summary": "The file defines `SubPseudoRing`, `SubRing`, and `CSubRing` classes, extending structures like `SubPseudoSemiring` and `SubAddGroup`. It includes functions for constructing ring homomorphisms and checking properties like `Contr`. The `ringHomImage` function builds a subring from a ring homomorphism."
+        },
+        {
+            "name": "Algebra.Ring.RingCategory",
+            "summary": "Defines categories for rings and commutative rings, including forgetful functors to sets, abelian groups, and monoids. Establishes isomorphisms and limits preservation within these categories."
+        },
+        {
+            "name": "Algebra.Ring.Graded",
+            "summary": "This file defines a `GradedCRing` class with properties and operations on homogeneous elements, such as `homogen-*`, `homogen-+`, and `homogen-decomp`. It includes lemmas for combining and decomposing homogeneous sums and products, like `homogen-sum`, `homogen-factor`, and `FinSum-homogen`. The `Similar` data type and related functions manage array comparisons, ensuring homogeneous properties are preserved."
+        },
+        {
+            "name": "Algebra.Ring.Solver",
+            "summary": "The file defines algebraic structures and operations on ring terms, including `RingTerm`, `BaseData`, `AlgData`, and `CAlgData`. Main functions include `interpret`, `normalize`, and `interpretRingNF`, which evaluate terms and convert them to normal forms. Lemmas like `normalize-consistent` ensure correctness in transformations."
+        },
+        {
+            "name": "Algebra.Ring.Boolean",
+            "summary": "This file defines `BooleanRing` and `UnitalBooleanRing` classes with algebraic properties and lemmas, including `isBooleanRing`, `double=0`, `negative=id`, `diff`, and `split`. It also provides an instance `HeytingBooleanRing` and imports various algebraic structures."
+        },
+        {
+            "name": "Algebra.Ring.Boolean.Sub",
+            "summary": "The file defines `SubBooleanPseudoRing`, extending `SubPseudoRing`, with `S` as a `BooleanRing`, and introduces `IBooleanPseudoRing` as a `BooleanRing` with specific properties."
+        },
+        {
+            "name": "Algebra.Ring.RingHom",
+            "summary": "The file defines homomorphisms and properties for semirings, rings, and fields, including `SemiringHom`, `RingHom`, and functions like `natMap` and `intMap`. It includes lemmas for commutativity, injectivity, and surjectivity, and defines algebra generation and composition operations."
+        },
+        {
+            "name": "Algebra.Ring.Factor",
+            "summary": "This file defines instances and functions for factor rings and fields using ideals, including CRing and DiscreteField instances for FactorRing and FactorField. It imports algebraic structures for rings, monoids, and fields."
+        },
+        {
+            "name": "Algebra.Ring.Reduced",
+            "summary": "The file defines algebraic structures: `ReducedRing`, `ReducedCRing`, `PPRing`, `ImpotentRing`, and `ImpotentCRing`, extending various algebraic properties and providing lemmas for handling division and nilpotent elements."
+        },
+        {
+            "name": "Algebra.Ring.Noetherian",
+            "summary": "The file defines a class `NoetherianCRing` extending `CRing`, with a key property `isNoetherian` for ideals, ensuring they satisfy the Chain Condition via finite generation."
+        },
+        {
+            "name": "Algebra.Ring.ZeroDimensional",
+            "summary": "The file defines lemmas characterizing zero-dimensional and von Neumann regular rings, including `zeroDimensional-char`, `zeroDimensional_local-char`, `vonNeumann_idempotent`, `vonNeumann-char`, and `zeroDim->inv`. It also introduces `zeroDim->field` as a function constructing a discrete field from an impotent zero-dimensional ring."
+        },
+        {
+            "name": "Algebra.Ring.Integral.MinPoly",
+            "summary": "The file is focused on algebraic structures and properties of polynomials in the context of ring homomorphisms. Key definitions include `isMinPoly`, which describes a minimal polynomial, and `isMonicMinPoly`, which extends this to monic polynomials. Lemmas like `integral_factor-equiv`, `minPoly_degree-char`, and `irr_minPoly` explore relationships and characteristics of minimal polynomials, especially in fields and rings. Functions such as `finDim_minPoly` and `minPoly-exists` address the existence and computation of minimal polynomials in finite-dimensional settings."
+        },
+        {
+            "name": "Algebra.Ring.Localization.Field",
+            "summary": "This file focuses on localizations in commutative rings and fields. It defines lemmas for inverses and zero elements in localizations, constructs local and discrete fields from submonoids, and describes ordered fields from ordered rings."
+        },
+        {
+            "name": "Algebra.Ring.Localization.Properties",
+            "summary": "The file defines `localization-unique` for uniqueness of localizations and includes `lift-iso` for isomorphisms between localizations. It also provides `localization-closure-equiv` to establish an isomorphism between localizations and `locMap-epi` to prove epimorphisms."
+        },
+        {
+            "name": "Algebra.Ring.Poly.Euclidean",
+            "summary": "This file defines instances and lemmas for polynomials over discrete fields as Euclidean domains, including `PolyEuclideanRingData` and `PolyEuclideanDomain`. It also provides properties and operations like `divMod`, `divMod_fuel`, and `poly-dec-unit`."
+        },
+        {
+            "name": "Algebra.Domain.Euclidean",
+            "summary": "This file defines Euclidean structures for semirings and rings, including operations like `gcd`, `reduce`, and `bezout`. It provides instances for `Nat` and `Int`, proving properties like GCD uniqueness and commutativity."
+        },
+        {
+            "name": "Algebra.Domain.PID",
+            "summary": "This file defines and proves properties of adequate rings, particularly their satisfaction of the Kaplansky condition, using concepts like `IsAdequate`, `IsAdequate'`, and `SmithRing.IsKaplansky`. It imports various algebraic structures and establishes lemmas related to GCD, PID, and domain adequacy."
+        },
+        {
+            "name": "Algebra.Domain.Bezout",
+            "summary": "This file defines the `BezoutRing`, `StrictBezoutRing`, `BezoutDomain`, and `StrictBezoutDomain` classes, extending algebraic structures like `CRing` and `GCDMonoid`. It includes lemmas for properties like Bezout's identity, gcd, coprimeness, and the Chinese Remainder Theorem."
+        },
+        {
+            "name": "Algebra.Domain.IntegrallyClosed",
+            "summary": "The file defines `IntegrallyClosedDomain`, extending `IntegralDomain`, with a property `isIntegrallyClosedDomain` using `isIntegrallyClosed` and localization mapping."
+        },
+        {
+            "name": "Algebra.Domain.Valuation",
+            "summary": "The file defines a `ValuationRing` class extending `StrictBezoutDomain` and `LocalCRing`, providing methods like `isValuationRing` and leveraging `LDiv` for divisibility. It includes default implementations for local properties and describes a `ValuationMonoid` and `ValuationTotalOrder` with totality defined via `isValuationRing`."
+        },
+        {
+            "name": "Algebra.Domain.GCD",
+            "summary": "This file defines `GCDDomain` as an extension of `IntegralDomain` with functions like `gcd_0` and `gcd_sum` for GCD operations. It includes lemmas such as `coprime-repr`, `oneDimensional_Bezout`, and `split_*`. It establishes properties for integral domains and gcd domains, incorporating localization and polynomial evaluations."
+        },
+        {
+            "name": "Algebra.Ordered.OrderedLocalization",
+            "summary": "This file defines instances for localized algebraic structures, including `LocPosetAbMonoid`, `GrothendieckOrderedAbGroup`, `LocPosetMeetSemilattice`, and `GrothendieckMeetLattice`. It establishes properties like order relations, transitivity, antisymmetry, and meet-semilattice operations for these structures."
+        },
+        {
+            "name": "Algebra.Ordered.RieszSpace",
+            "summary": "This file defines classes related to algebraic structures: `PosetDivAbGroup` and `PosetQModule` with lemmas for properties of divisibility and cancellation. It also defines `RieszSpace`, extending these with operations like join, meet, and absolute value manipulation, along with related lemmas."
+        },
+        {
+            "name": "Function",
+            "summary": "The file defines identity, composition, and injection/surjection properties for functions. It includes `id`, function composition operators `-o`, `o-`, and `o`, as well as predicates `IsInj` and `IsSurj` with a lemma for surjective composition. It also provides `Image` type and `flip` meta function."
+        }
+    ]
+}
