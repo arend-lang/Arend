@@ -38,6 +38,8 @@ class MainPassesRunner(private val project: Project) {
      * @return List of HighlightInfo results from all passes
      */
     fun runPasses(file: PsiFile, editor: Editor, progress: ProgressIndicator): List<HighlightInfo> {
+        println("MainPassesRunner.runPasses called for file: ${file.name}")
+        Thread.dumpStack()
         val results = mutableListOf<HighlightInfo>()
 
         for (factory in passFactories) {
@@ -88,6 +90,8 @@ class MainPassesRunner(private val project: Project) {
      * @return List of HighlightInfo results from the pass
      */
     fun runSinglePass(pass: TextEditorHighlightingPass, progress: ProgressIndicator): List<HighlightInfo> {
+        println("MainPassesRunner.runSinglePass called for pass: $pass")
+        Thread.dumpStack()
         progress.checkCanceled()
 
         // Collect information

@@ -102,6 +102,15 @@
         <callHierarchyProvider language="Arend" implementationClass="org.arend.hierarchy.call.ArendCallHierarchyProvider"/>
         <typeHierarchyProvider language="Arend" implementationClass="org.arend.hierarchy.clazz.ArendClassHierarchyProvider"/>
 
+
+      <!-- AI features -->
+      <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="org.arend.aifeatures.McpToolRegistryService"/>
+      </extensions>
+
+      <httpRequestHandler implementation="org.arend.aifeatures.DetachedHTTPService"/>
+
+
         <!-- Usages Provider -->
 
         <referencesSearch implementation="org.arend.search.ArendCustomSearcher"/>
