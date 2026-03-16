@@ -103,12 +103,12 @@
         <typeHierarchyProvider language="Arend" implementationClass="org.arend.hierarchy.clazz.ArendClassHierarchyProvider"/>
 
 
-      <!-- AI features -->
-      <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="org.arend.aifeatures.McpToolRegistryService"/>
-      </extensions>
+<!--      &lt;!&ndash; AI features &ndash;&gt;-->
+<!--      <extensions defaultExtensionNs="com.intellij">-->
+<!--        <applicationService serviceImplementation="org.arend.aifeatures.McpToolRegistryService"/>-->
+<!--      </extensions>-->
 
-      <httpRequestHandler implementation="org.arend.aifeatures.DetachedHTTPService"/>
+<!--      <httpRequestHandler implementation="org.arend.aifeatures.DetachedHTTPService"/>-->
 
 
         <!-- Usages Provider -->
@@ -417,6 +417,7 @@
         <OrderRootTypeUI key="AREND_CONFIG" implementationClass="org.arend.module.orderRoot.ArendConfigOrderRootTypeUIFactory"/>
 
         <!-- Services -->
+        <projectService serviceImplementation="org.arend.highlight.MainPassesRunner"/>
 
         <moduleService serviceImplementation="org.arend.module.config.ArendModuleConfigService"/>
 

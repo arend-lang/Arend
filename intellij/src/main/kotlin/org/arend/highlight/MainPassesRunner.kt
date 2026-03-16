@@ -2,7 +2,10 @@ package org.arend.highlight
 
 import com.intellij.codeHighlighting.TextEditorHighlightingPass
 import com.intellij.codeHighlighting.TextEditorHighlightingPassFactory
+import com.intellij.codeHighlighting.TextEditorHighlightingPassFactoryRegistrar
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
@@ -17,6 +20,7 @@ import com.intellij.psi.PsiFile
  * Unlike the daemon-based approach where passes are run automatically,
  * this runner allows programmatic control over when passes are executed.
  */
+@Service(Service.Level.PROJECT)
 class MainPassesRunner(private val project: Project) {
 
     private val passFactories = mutableListOf<TextEditorHighlightingPassFactory>()
@@ -132,9 +136,12 @@ class MainPassesRunner(private val project: Project) {
          * Creates a MainPassesRunner with all standard Arend highlighting pass factories registered.
          */
         fun createWithDefaultFactories(project: Project): MainPassesRunner {
-            val runner = MainPassesRunner(project)
-            // Factories are typically registered via plugin.xml and the daemon,
-            // but you can manually add them here if needed for programmatic use
+            val runner = project.service<MainPassesRunner>()
+            if (runner.passFactories.isEmpty()) {
+                runner.registerPassFactory(ArendHighlightingPassFactory())
+                runner.registerPassFactory(ErrorHighlightingPassFactory())
+                // Add other factories as needed
+            }
             return runner
         }
     }
