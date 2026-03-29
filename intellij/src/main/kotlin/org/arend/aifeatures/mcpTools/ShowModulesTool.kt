@@ -41,11 +41,14 @@ class ShowModulesTool : McpTool {
     val parsedUserRequest = parseDataWithModules(arguments)
     val module = parsedUserRequest.modulePaths.first()
     val libPath = parsedUserRequest.libPath
+    val libraryName = java.io.File(libPath).name
     val path = ModulePath.fromString(module.split("/").last())
-    val sourceLocation = ModuleLocation(libPath, ModuleLocation.LocationKind.SOURCE, path)
+    val sourceLocation = ModuleLocation(libraryName, ModuleLocation.LocationKind.SOURCE, path)
+    println("parsedUserRequest: $parsedUserRequest")
 
 
     val outputFile : String = outputFile(project, sourceLocation)
+    println("outputFile: $outputFile")
     if (outputFile.split("\n").size <= 500){
       return "Showing the whole file:\n \"$outputFile"
     }

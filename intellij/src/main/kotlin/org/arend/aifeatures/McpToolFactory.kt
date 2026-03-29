@@ -3,6 +3,8 @@ package org.arend.aifeatures
 
 import org.arend.aifeatures.mcpTools.ListModulesTool
 import org.arend.aifeatures.mcpTools.ProofSearcherTool
+import org.arend.aifeatures.mcpTools.ShowModulesFromLineTool
+import org.arend.aifeatures.mcpTools.ShowModulesTool
 
 object McpToolFactory {
   /**
@@ -13,6 +15,8 @@ object McpToolFactory {
     return listOf(
       ProofSearcherTool(),
       ListModulesTool(),
+      ShowModulesTool(),
+      ShowModulesFromLineTool(),
     )
   }
 }

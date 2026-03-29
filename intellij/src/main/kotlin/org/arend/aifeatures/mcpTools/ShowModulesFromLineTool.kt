@@ -14,7 +14,7 @@ import org.arend.ext.module.ModulePath
 import kotlin.math.max
 import kotlin.math.min
 
-class ShowModulesFromLine : McpTool {
+class ShowModulesFromLineTool : McpTool {
     override val name: String = "ShowModulesFromLine"
     override val description: String = "Shows the content of a given file from line1 to line2. " +
       "You must send it the full name of the file (module) as a string and the line numbers as integers. " +
@@ -40,6 +40,7 @@ class ShowModulesFromLine : McpTool {
       val libPath = parsedUserRequest.libPath
       val lineStart = parsedUserRequest.lineStart
       val lineEnd = parsedUserRequest.lineEnd
+      println("parsedUserRequest: $parsedUserRequest")
 
       val path = ModulePath.fromString(module.split("/").last())
       val sourceLocation = ModuleLocation(libPath, ModuleLocation.LocationKind.SOURCE, path)
@@ -48,7 +49,7 @@ class ShowModulesFromLine : McpTool {
       val endRange : Int = min(outputFileLines.size, lineEnd)
 
       val slicedOutput = outputFileLines.slice(startRange until endRange).joinToString("\n")
-
+      println(slicedOutput)
       return "Showing the lines ${startRange} - ${endRange} lines out of 0 - ${outputFileLines.size} of the file:\n \"$slicedOutput"
     }
   }

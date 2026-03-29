@@ -38,8 +38,17 @@ class ArendMainHighlightingPass(
     private val highlights = ArrayList<HighlightInfo>()
 
     override fun doCollectInformation(progress: ProgressIndicator) {
-        val module = file.moduleLocation ?: return
-        val errors = myProject.service<ArendServerService>().server.errorMap[module] ?: return
+        println("[DEBUG_LOG] ArendMainHighlightingPass.doCollectInformation called for file: ${file.name}")
+        val module = file.moduleLocation ?: run {
+            println("[DEBUG_LOG] ArendMainHighlightingPass.doCollectInformation: module is null")
+            return
+        }
+        println("[DEBUG_LOG] ArendMainHighlightingPass.doCollectInformation: module=$module")
+        val errors = myProject.service<ArendServerService>().server.errorMap[module] ?: run {
+            println("[DEBUG_LOG] ArendMainHighlightingPass.doCollectInformation: no errors for module")
+            return
+        }
+        println("[DEBUG_LOG] ArendMainHighlightingPass.doCollectInformation: found ${errors.size} errors")
         
         runReadAction {
             for (error in errors) {
@@ -106,16 +115,21 @@ class ArendMainHighlightingPass(
     }
 
     override fun doApplyInformationToEditor() {
-        if (highlights.isNotEmpty()) {
-            UpdateHighlightersUtil.setHighlightersToEditor(
-                myProject,
-                myDocument,
-                0,
-                myDocument.textLength,
-                highlights,
-                colorsScheme,
-                id
-            )
+        println("[DEBUG_LOG] ArendMainHighlightingPass.doApplyInformationToEditor called with ${highlights.size} highlights")
+        // Print stack trace to see who's calling this
+        println("[DEBUG_LOG] Stack trace:")
+        Thread.currentThread().stackTrace.take(15).forEach { element ->
+            println("[DEBUG_LOG]   at $element")
         }
+        // Always call setHighlightersToEditor, even with empty list, to clear old highlights
+        UpdateHighlightersUtil.setHighlightersToEditor(
+            myProject,
+            myDocument,
+            0,
+            myDocument.textLength,
+            highlights,
+            colorsScheme,
+            id
+        )
     }
 }

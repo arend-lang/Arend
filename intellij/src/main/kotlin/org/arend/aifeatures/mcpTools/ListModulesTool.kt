@@ -1,10 +1,12 @@
 package org.arend.aifeatures.mcpTools
 
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import kotlinx.serialization.json.*
 import org.arend.aifeatures.McpTool
-import org.arend.server.ArendServerService
+import org.arend.ext.module.ModulePath
+import org.arend.module.config.LibraryConfig
+import org.arend.util.findExternalLibrary
+import org.arend.util.moduleConfigs
 
 /**
  * MCP Tool that lists all supported modules from the current project and its dependencies.
@@ -40,30 +42,60 @@ class ListModulesTool : McpTool {
     }
 
     private fun listAllModules(project: Project): String {
-        val serverService = project.service<ArendServerService>()
-        val server = serverService.server
-        
         val result = StringBuilder()
         
-        // Get all registered libraries
-        val libraries = server.libraries
-        result.appendLine("=== Registered Libraries ===")
-        if (libraries.isEmpty()) {
-            result.appendLine("No libraries registered.")
+        // Collect all library configs (internal modules from project)
+        val internalConfigs = project.moduleConfigs
+        
+        // Collect external library configs from dependencies
+        val allLibraryConfigs = mutableListOf<LibraryConfig>()
+        allLibraryConfigs.addAll(internalConfigs)
+        
+        // Get external libraries from dependencies
+        for (config in internalConfigs) {
+            for (depName in config.libraryDependencies) {
+                val externalConfig = project.findExternalLibrary(depName)
+                if (externalConfig != null && allLibraryConfigs.none { it.name == externalConfig.name }) {
+                    allLibraryConfigs.add(externalConfig)
+                }
+            }
+        }
+
+        result.appendLine("=== Libraries ===")
+        if (allLibraryConfigs.isEmpty()) {
+            result.appendLine("No libraries found.")
         } else {
-            for (lib in libraries.sorted()) {
-                result.appendLine("- $lib")
+            for (config in allLibraryConfigs.sortedBy { it.name }) {
+                result.appendLine("- ${config.name}")
             }
         }
         result.appendLine()
         
-        // Get all registered modules
-        val modules = server.modules
-        println("modules = $modules")
-        result.appendLine("=== All Modules (${modules.size} total) ===")
+        // Get all modules from file system (not depending on typechecking)
+        val modulesByLibrary = mutableMapOf<String, MutableList<Pair<ModulePath, String>>>()
         
-        if (modules.isEmpty()) {
-            result.appendLine("No modules registered.")
+        for (config in allLibraryConfigs) {
+            val libName = config.name
+            val libModules = modulesByLibrary.getOrPut(libName) { mutableListOf() }
+            
+            // Get source modules
+            val sourceModules = config.findModules(false)
+            for (modulePath in sourceModules) {
+                libModules.add(modulePath to "SOURCE")
+            }
+            
+            // Get test modules
+            val testModules = config.findModules(true)
+            for (modulePath in testModules) {
+                libModules.add(modulePath to "TEST")
+            }
+        }
+        
+        val totalModules = modulesByLibrary.values.sumOf { it.size }
+        result.appendLine("=== All Modules ($totalModules total) ===")
+        
+        if (totalModules == 0) {
+            result.appendLine("No modules found.")
         } else {
             val arendLibJsonSummaries = object {}.javaClass.getResource("/org/arend/aifeatures/storedinfo/arendLibSummaries.json")?.readText()
             val descriptionMap = if (arendLibJsonSummaries != null) {
@@ -72,30 +104,24 @@ class ListModulesTool : McpTool {
                 result.appendLine("Note: arendLibSummaries.json not found, module descriptions will not be available.")
                 emptyMap()
             }
-//            println("descriptionMap = $descriptionMap")
 
-            // Group modules by library for better readability
-            val modulesByLibrary = modules.groupBy { it.libraryName }
-            
             for ((libName, libModules) in modulesByLibrary.toSortedMap()) {
                 result.appendLine("\n[$libName]")
-                for (module in libModules.sortedBy { it.toString() }) {
-                    val modulePathString = module.modulePath.toString()
-                    println(modulePathString)
+                for ((modulePath, locationKind) in libModules.sortedBy { it.first.toString() }) {
+                    val modulePathString = modulePath.toString()
                     // Try to find description by full path, path without leading dot, or partial path
-                    val moduleDescription : String? = descriptionMap[modulePathString] 
+                    val moduleDescription: String? = descriptionMap[modulePathString]
                         ?: descriptionMap[modulePathString.removePrefix(".")]
                         ?: descriptionMap.entries.find { (name, _) -> modulePathString.endsWith(name) }?.value
-                    
-                    if (moduleDescription != null){
-                      result.appendLine("  ${module.modulePath} (description : ${moduleDescription}) (${module.locationKind})")
+
+                    if (moduleDescription != null) {
+                        result.appendLine("  $modulePath (description: $moduleDescription) ($locationKind)")
                     } else {
-                      result.appendLine("  ${module.modulePath} (${module.locationKind})")
+                        result.appendLine("  $modulePath ($locationKind)")
                     }
                 }
             }
         }
-//        println(result)
         return result.toString()
     }
   fun parseSummaries(jsonString: String): Pair<String, Map<String, String>> {
