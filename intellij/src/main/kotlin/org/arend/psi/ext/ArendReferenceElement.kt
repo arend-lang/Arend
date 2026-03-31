@@ -44,9 +44,9 @@ interface ArendReferenceElement : ArendReferenceContainer, AbstractReference {
 
     fun resolvePsi(): PsiElement? =
         when (val ref = resolve()?.abstractReferable) {
-            is PsiElement -> ref
-            is PsiModuleReferable -> ref.modules.firstOrNull()
-            is DataModuleReferable -> ref.data as? PsiElement
+            is PsiElement -> ref.takeIf { it.isValid }
+            is PsiModuleReferable -> ref.modules.firstOrNull()?.takeIf { it.isValid }
+            is DataModuleReferable -> (ref.data as? PsiElement)?.takeIf { it.isValid }
             else -> null
         }
 

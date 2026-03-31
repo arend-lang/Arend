@@ -69,5 +69,10 @@ class ArendExternalAnnotator : ExternalAnnotator<ArendFile, List<ArendExternalAn
     override fun apply(file: PsiFile, errors: List<ErrorInfo>, holder: AnnotationHolder) {
         // Don't create annotations in normal mode - ErrorHighlightingPass handles this.
         // This annotator is only used to provide error info for external tools via getErrorsForFile().
+      for (error in errors) {
+        holder.newAnnotation(error.severity, error.message)
+          .range(error.textRange)
+          .create()
+      }
     }
 }
