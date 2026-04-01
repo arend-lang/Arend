@@ -92,7 +92,7 @@ tasks {
     description = "Generates MCP tools JSON manifest"
 
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("org.arend.aifeatures.build.McpToolsJsonGenerator")
+    mainClass.set("org.arend.aifeatures.mcpgen.McpToolsJsonGenerator")
 
     val outputFile = layout.buildDirectory.file("generated/mcp/mcp-tools.json")
     args(outputFile.get().asFile.absolutePath)
