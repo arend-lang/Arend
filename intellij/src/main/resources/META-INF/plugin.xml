@@ -105,7 +105,15 @@
         <callHierarchyProvider language="Arend" implementationClass="org.arend.hierarchy.call.ArendCallHierarchyProvider"/>
         <typeHierarchyProvider language="Arend" implementationClass="org.arend.hierarchy.clazz.ArendClassHierarchyProvider"/>
 
-        <!-- Usages Provider -->
+      <!-- AI features -->
+
+      <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="org.arend.aifeatures.McpToolRegistryService"/>
+      </extensions>
+
+      <httpRequestHandler implementation="org.arend.aifeatures.DetachedHTTPService"/>
+
+      <!-- Usages Provider -->
 
         <referencesSearch implementation="org.arend.search.ArendCustomSearcher"/>
 
@@ -450,6 +458,7 @@
         <!-- Highlighting Pass Factories -->
 
         <highlightingPassFactory implementation="org.arend.highlight.ArendHighlightingPassFactory"/>
+        <highlightingPassFactory implementation="org.arend.highlight.ArendMainHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.ErrorHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.injection.InjectionHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.PartiallyInfixOperatorPrefixFormPassFactory"/>
@@ -459,6 +468,9 @@
         <highlightingPassFactory implementation="org.arend.highlight.ArendUnusedImportHighlightingPassFactory"/>
         -->
         <highlightingPassFactory implementation="org.arend.highlight.RedundantParensPassFactory"/>
+
+        <!-- External Annotator for headless mode (MainPassesRunner) -->
+        <externalAnnotator language="Arend" implementationClass="org.arend.highlight.ArendExternalAnnotator"/>
 
         <!-- Tool Windows -->
 
