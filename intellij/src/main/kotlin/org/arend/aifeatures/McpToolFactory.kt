@@ -4,6 +4,7 @@ package org.arend.aifeatures
 import org.arend.aifeatures.mcpTools.GetHighlightingTool
 import org.arend.aifeatures.mcpTools.ListModulesTool
 import org.arend.aifeatures.mcpTools.ProofSearcherTool
+import org.arend.aifeatures.mcpTools.SearchSymbolsTool
 import org.arend.aifeatures.mcpTools.ShowModulesFromLineTool
 import org.arend.aifeatures.mcpTools.ShowModulesTool
 
@@ -19,6 +20,7 @@ object McpToolFactory {
       ShowModulesTool(),
       ShowModulesFromLineTool(),
       GetHighlightingTool(),
+      SearchSymbolsTool(),
     )
   }
 }
