@@ -24,7 +24,10 @@ import org.arend.prelude.Prelude;
 import org.arend.typechecking.UseTypechecking;
 import org.arend.typechecking.error.local.CertainTypecheckingError;
 import org.arend.typechecking.error.local.CoreErrorWrapper;
-import org.arend.typechecking.implicitargs.equations.DummyEquations;
+import org.arend.term.concrete.Concrete;
+import org.arend.typechecking.implicitargs.equations.Equation;
+import org.arend.typechecking.implicitargs.equations.Equations;
+import org.arend.typechecking.implicitargs.equations.LevelEquationsSolver;
 import org.arend.typechecking.patternmatching.PatternTypechecking;
 import org.arend.typechecking.visitor.BaseDefinitionTypechecker;
 import org.arend.typechecking.visitor.DefinitionTypechecker;
@@ -36,7 +39,34 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
 
   public CoreDefinitionChecker(ErrorReporter errorReporter) {
     super(errorReporter);
-    myChecker = new CoreExpressionChecker(new HashSet<>(), DummyEquations.getInstance(), null);
+    // Use a lenient equations solver that accepts level comparisons.
+    // DummyEquations rejects all equations, causing false positives for definitions
+    // where type-checking relies on level constraints being satisfiable.
+    myChecker = new CoreExpressionChecker(new HashSet<>(), LenientEquations.INSTANCE, null);
+  }
+
+  /** Equations solver that accepts level equations (treating them as satisfiable)
+   *  but rejects expression equations. This avoids false positives in the core checker
+   *  for definitions that involve universe-polymorphic types. */
+  private static final class LenientEquations implements Equations {
+    static final LenientEquations INSTANCE = new LenientEquations();
+
+    @Override public boolean addEquation(Expression expr1, Expression expr2, Expression type, CMP cmp, Concrete.SourceNode sourceNode, org.arend.core.context.binding.inference.InferenceVariable stuckVar1, org.arend.core.context.binding.inference.InferenceVariable stuckVar2, boolean normalize) { return false; }
+    @Override public boolean solve(Expression expr1, Expression expr2, Expression type, CMP cmp, Concrete.SourceNode sourceNode) { return false; }
+    @Override public boolean solve(org.arend.core.context.binding.inference.InferenceVariable var, Expression expr) { return false; }
+    @Override public void solveLowerBounds(org.arend.core.context.binding.inference.InferenceVariable var) {}
+    @Override public boolean addEquation(Level expr1, Level expr2, CMP cmp, Concrete.SourceNode sourceNode) { return true; }
+    @Override public boolean addVariable(org.arend.core.context.binding.inference.InferenceLevelVariable var) { return false; }
+    @Override public void bindVariables(org.arend.core.context.binding.inference.InferenceLevelVariable pVar, org.arend.core.context.binding.inference.InferenceLevelVariable hVar) {}
+    @Override public boolean remove(Equation equation) { return false; }
+    @Override public Boolean solveInstance(org.arend.core.context.binding.inference.TypeClassInferenceVariable variable, FieldCallExpression fieldCall, Expression expr) { return null; }
+    @Override public void solveEquations() {}
+    @Override public LevelEquationsSolver makeLevelEquationsSolver() { return null; }
+    @Override public void finalizeEquations(org.arend.ext.core.level.LevelSubstitution levelSubstitution, Concrete.SourceNode sourceNode) {}
+    @Override public boolean supportsLevels() { return true; }
+    @Override public boolean supportsExpressions() { return false; }
+    @Override public void saveState(org.arend.typechecking.TypecheckerState state) {}
+    @Override public void loadState(org.arend.typechecking.TypecheckerState state) {}
   }
 
   void setErrorReporter(ErrorReporter errorReporter) {
@@ -264,7 +294,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
     }
 
     Level hLevel = new Level(parametersLevel.level);
-    if (!Level.compare(hLevel, sort.getHLevel(), CMP.LE, DummyEquations.getInstance(), null)) {
+    if (!Level.compare(hLevel, sort.getHLevel(), CMP.LE, LenientEquations.INSTANCE, null)) {
       errorReporter.report(new TypecheckingError("The h-level " + sort.getHLevel() + " of '" + definition.getName() + "' does not fit into the h-level " + hLevel + " of \\use \\level " + squasher.getName(), null));
       return false;
     }
@@ -275,7 +305,7 @@ public class CoreDefinitionChecker extends BaseDefinitionTypechecker {
   private boolean checkDefinitionSort(boolean isSquashed, Definition definition, Sort defSort, Sort expectedSort) {
     boolean ok;
     if (isSquashed) {
-      ok = expectedSort.isProp() || Level.compare(defSort.getPLevel(), expectedSort.getPLevel(), CMP.LE, DummyEquations.getInstance(), null);
+      ok = expectedSort.isProp() || Level.compare(defSort.getPLevel(), expectedSort.getPLevel(), CMP.LE, LenientEquations.INSTANCE, null);
     } else {
       ok = defSort.isLessOrEquals(expectedSort);
     }

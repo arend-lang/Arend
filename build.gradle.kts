@@ -93,3 +93,25 @@ dependencies {
     testImplementation("junit:junit:4.13.1")
     testImplementation("org.hamcrest:hamcrest-library:1.3")
 }
+
+// Normal test suite: exclude the expensive round-trip test.
+tasks.test {
+    maxHeapSize = "4g"
+    exclude("**/ArendLibRoundTripTest.class")
+}
+
+// Separate task for the arend-lib round-trip serialization test.
+// Typechecks the entire standard library, so it needs more heap and is
+// excluded from the default suite.  Run with:
+//   ./gradlew roundTripTest [-Darend.roundtrip.modules=Algebra.Ring,Paths]
+tasks.register<Test>("roundTripTest") {
+    description = "Runs the arend-lib serialization round-trip test"
+    group = "verification"
+    maxHeapSize = "6g"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    include("**/ArendLibRoundTripTest.class")
+    System.getProperty("arend.roundtrip.modules")?.let {
+        systemProperty("arend.roundtrip.modules", it)
+    }
+}

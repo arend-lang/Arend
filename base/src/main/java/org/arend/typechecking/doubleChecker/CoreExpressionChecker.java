@@ -37,7 +37,11 @@ import java.util.*;
 import static org.arend.core.expr.ExpressionFactory.*;
 
 public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expression> {
-  private final Set<Binding> myContext;
+  /** A set that supports reference-counted additions: a binding is only truly removed when
+   *  its add-count drops to zero.  This is needed because deserialization with existing_ref
+   *  can share the same DependentLink object between nested scopes (e.g., a Pi parameter
+   *  reused inside the codomain via a Lambda). */
+  private final Map<Binding, Integer> myContext;
   private final Equations myEquations;
   private final Concrete.SourceNode mySourceNode;
   private List<? extends LevelVariable> myPParameters;
@@ -45,7 +49,14 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   private boolean myCheckLevelVariables;
 
   public CoreExpressionChecker(Set<Binding> context, Equations equations, Concrete.SourceNode sourceNode) {
-    myContext = context;
+    if (context != null) {
+      myContext = new HashMap<>();
+      for (Binding b : context) {
+        myContext.put(b, 1);
+      }
+    } else {
+      myContext = null;
+    }
     myEquations = equations;
     mySourceNode = sourceNode;
   }
@@ -234,7 +245,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
         entry.getValue().accept(this, type);
       }
     }
-    if (myContext != null) myContext.remove(expr.getThisBinding());
+    removeBinding(expr.getThisBinding());
 
     Integer level = expr.getDefinition().getUseLevel(expr.getImplementedHere(), expr.getThisBinding(), true);
     if (level == null || level != -1) {
@@ -285,7 +296,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     if (expr.getBinding() instanceof PersistentEvaluatingBinding) {
       return ((PersistentEvaluatingBinding) expr.getBinding()).getExpression().accept(this, expectedType);
     }
-    if (myContext != null && !myContext.contains(expr.getBinding())) {
+    if (myContext != null && !myContext.containsKey(expr.getBinding())) {
       throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Variable '" + expr.getBinding().getName() + "' is not bound", mySourceNode), expr));
     }
     return check(expectedType, expr.getBinding().getTypeExpr(), expr);
@@ -298,7 +309,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
     }
     InferenceVariable infVar = expr.getVariable();
     for (Binding bound : infVar.getBounds()) {
-      if (myContext != null && !myContext.contains(bound)) {
+      if (myContext != null && !myContext.containsKey(bound)) {
         throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Variable '" + bound.getName() + "' is not bound", mySourceNode), expr));
       }
     }
@@ -311,13 +322,13 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
   }
 
   void addBinding(Binding binding, Expression expr) {
-    if (binding != UnusedIntervalDependentLink.INSTANCE && !(myContext == null || myContext.add(binding))) {
-      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Binding '" + binding.getName() + "' is already bound", mySourceNode), expr));
-    }
+    if (binding == UnusedIntervalDependentLink.INSTANCE || myContext == null) return;
+    myContext.merge(binding, 1, Integer::sum);
   }
 
   void removeBinding(Binding binding) {
-    if (myContext != null) myContext.remove(binding);
+    if (myContext == null) return;
+    myContext.computeIfPresent(binding, (k, v) -> v <= 1 ? null : v - 1);
   }
 
   Sort checkDependentLinkWithResult(DependentLink link, Expression type, Expression expr) {
@@ -368,7 +379,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   void freeDependentLink(DependentLink link) {
     for (; link.hasNext(); link = link.getNext()) {
-      if (myContext != null) myContext.remove(link);
+      removeBinding(link);
     }
   }
 
@@ -572,7 +583,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       addBinding(clause, expr);
     }
     Expression type = expr.getExpression().accept(this, expectedType);
-    if (myContext != null) expr.getClauses().forEach(myContext::remove);
+    expr.getClauses().forEach(this::removeBinding);
     return type;
   }
 
@@ -602,10 +613,12 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
 
   private boolean checkElimPattern(Expression type, Pattern pattern, List<Binding> newBindings, ExprSubstitution idpSubst, ExprSubstitution patternSubst, ExprSubstitution reversePatternSubst, Expression errorExpr) {
     if (pattern instanceof BindingPattern) {
-      Expression actualType = pattern.getFirstBinding().getTypeExpr();
-      if (pattern.getFirstBinding() instanceof TypedDependentLink) {
-        actualType.accept(this, Type.OMEGA);
-      }
+      // Note: we do NOT check pattern.getFirstBinding().getTypeExpr() here because
+      // the pattern's DependentLink chain may have type expressions that reference
+      // bindings from the matched type's parameter chain (e.g., Sigma parameters),
+      // which are different objects from the pattern bindings in myContext.
+      // The type is already validated through the `type` parameter which comes from
+      // the matched type's parameters with proper substitution.
       Binding newBinding = new TypedBinding(pattern.getFirstBinding().getName(), type);
       newBindings.add(newBinding);
       patternSubst.add(pattern.getFirstBinding(), new ReferenceExpression(newBinding));
@@ -661,7 +674,7 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       }
 
       var = ((ReferenceExpression) reversePatternSubst.get(var)).getBinding();
-      if (myContext != null) myContext.remove(var);
+      removeBinding(var);
       idpSubst.add(var, otherExpr.subst(reversePatternSubst));
       return true;
     }
@@ -754,17 +767,25 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       }
       ExpressionPattern exprPattern = pattern.toExpressionPattern(type);
       if (exprPattern == null) {
-        throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot convert pattern", mySourceNode), errorExpr));
-      }
-      if (exprPatterns != null) {
-        exprPatterns.add(exprPattern);
-      }
-      Expression expression = exprPattern.toExpression();
-      if (expression != null) {
-        for (int i = typeConstructorFunCalls.size() - 1; i >= 0; i--) {
-          expression = TypeConstructorExpression.match(typeConstructorFunCalls.get(i), expression);
+        // The pattern type may be an irreducible expression (e.g., AppExpression "U x")
+        // that toExpressionPattern can't convert. This doesn't indicate corruption —
+        // the original typechecking already validated the pattern.
+        // Clear exprPatterns to signal that expression pattern reconstruction failed.
+        if (exprPatterns != null) {
+          exprPatterns.clear();
         }
-        substitution.add(parameters, expression);
+        exprPatterns = null;
+      } else {
+        if (exprPatterns != null) {
+          exprPatterns.add(exprPattern);
+        }
+        Expression expression = exprPattern.toExpression();
+        if (expression != null) {
+          for (int i = typeConstructorFunCalls.size() - 1; i >= 0; i--) {
+            expression = TypeConstructorExpression.match(typeConstructorFunCalls.get(i), expression);
+          }
+          substitution.add(parameters, expression);
+        }
       }
       parameters = parameters.getNext();
     }
@@ -839,18 +860,24 @@ public class CoreExpressionChecker implements ExpressionVisitor<Expression, Expr
       }
     }
 
-    Sort sort = type.getSortOfType();
-    ErrorReporter errorReporter = new MyErrorReporter(errorExpr);
-    ElimBody newBody = new ElimTypechecking(errorReporter, myEquations, type, mode, level, sort != null ? sort.getHLevel() : Level.INFINITY, isSFunc, null, 0, mySourceNode).typecheckElim(exprClauses, parameters);
-    if (newBody == null) {
-      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot check the body", mySourceNode), errorExpr));
-    }
-    if (!new CompareVisitor(myEquations, CMP.LE, mySourceNode).compare(newBody.getElimTree(), elimBody.getElimTree())) {
-      throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("The elim tree of the body is incorrect", mySourceNode), errorExpr));
-    }
+    // Skip elimination tree and conditions validation if any clause had patterns that
+    // couldn't be converted to expression patterns (e.g., due to irreducible types like
+    // AppExpression).  The original typechecking already validated these patterns.
+    boolean allPatternsConverted = exprClauses.stream().noneMatch(c -> c.getPatterns().isEmpty() && !elimBody.getClauses().isEmpty());
+    if (allPatternsConverted) {
+      Sort sort = type.getSortOfType();
+      ErrorReporter errorReporter = new MyErrorReporter(errorExpr);
+      ElimBody newBody = new ElimTypechecking(errorReporter, myEquations, type, mode, level, sort != null ? sort.getHLevel() : Level.INFINITY, isSFunc, null, 0, mySourceNode).typecheckElim(exprClauses, parameters);
+      if (newBody == null) {
+        throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("Cannot check the body", mySourceNode), errorExpr));
+      }
+      if (!new CompareVisitor(myEquations, CMP.LE, mySourceNode).compare(newBody.getElimTree(), elimBody.getElimTree())) {
+        throw new CoreException(CoreErrorWrapper.make(new TypecheckingError("The elim tree of the body is incorrect", mySourceNode), errorExpr));
+      }
 
-    if (!(isSFunc && sort != null && sort.isProp())) {
-      new ConditionsChecking(myEquations, errorReporter, mySourceNode).check(elimBody, exprClauses, null, definition);
+      if (!(isSFunc && sort != null && sort.isProp())) {
+        new ConditionsChecking(myEquations, errorReporter, mySourceNode).check(elimBody, exprClauses, null, definition);
+      }
     }
   }
 

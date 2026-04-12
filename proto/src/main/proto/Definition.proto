@@ -28,6 +28,7 @@ message Definition {
     repeated ParameterOriginalDef parameter_original_def = 15;
     repeated int32 axiom = 16;
     bool no_errors = 17;
+    bool has_errors = 18;
 
     message RefList {
         repeated int32 ref = 1;
@@ -222,6 +223,8 @@ message Referable {
     string name = 1;
     Precedence precedence = 2;
     int32 index = 3;
+    string alias_name = 4;
+    Precedence alias_precedence = 5;
 }
 
 message Precedence {

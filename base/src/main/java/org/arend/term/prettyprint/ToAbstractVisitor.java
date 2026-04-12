@@ -1156,17 +1156,14 @@ public class ToAbstractVisitor extends BaseExpressionVisitor<Void, Concrete.Expr
     for (ClassField field : def.getPersonalFields()) {
       elements.add(visitField(field, null));
     }
-    for (Map.Entry<ClassField, AbsExpression> entry : def.getImplemented()) {
-      boolean implementedHere = true;
+    def.forFields(field -> {
+      AbsExpression impl = def.getImplementation(field);
+      if (impl == null) return;
       for (ClassDefinition superClass : def.getSuperClasses()) {
-        if (superClass.isImplemented(entry.getKey())) {
-          implementedHere = false;
-          break;
-        }
+        if (superClass.isImplemented(field)) return;
       }
-      if (!implementedHere) continue;
-      elements.add(new Concrete.ClassFieldImpl(null, entry.getKey().getRef(), convertExpr(entry.getValue().getExpression()), null));
-    }
+      elements.add(new Concrete.ClassFieldImpl(null, field.getRef(), convertExpr(impl.getExpression()), null));
+    });
     // TODO: Add other elements of the class
     return new Concrete.ClassDefinition(def.getReferable(), pair.proj1, pair.proj2, def.isRecord(), false, superClasses, elements);
   }

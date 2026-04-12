@@ -25,10 +25,17 @@ message CallTargetTree {
     repeated CallTargetTree subtree = 3;
 }
 
+message LevelsDeclaration {
+    repeated string name = 1;
+    bool increasing = 2;
+}
+
 message Group {
     Referable referable = 1;
     Definition definition = 2;
     repeated Group subgroup = 3;
     repeated Group dynamic_subgroup = 4;
     repeated int32 invisible_internal_referable = 5;
+    repeated LevelsDeclaration plevels_declaration = 6;
+    repeated LevelsDeclaration hlevels_declaration = 7;
 }

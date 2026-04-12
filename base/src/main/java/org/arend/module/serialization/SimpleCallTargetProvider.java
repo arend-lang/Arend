@@ -57,6 +57,10 @@ public class SimpleCallTargetProvider implements CallTargetProvider {
     return (MetaReferable) ref;
   }
 
+  public void putCallTarget(int index, LocatedReferable callTarget) {
+    myMap.putIfAbsent(index, callTarget);
+  }
+
   public void putCallTarget(int index, TCDefReferable callTarget) {
     myMap.putIfAbsent(index, callTarget);
   }
