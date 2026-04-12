@@ -1,11 +1,13 @@
 package org.arend.source;
 
+import com.google.protobuf.CodedInputStream;
 import org.arend.ext.error.ErrorReporter;
-import org.arend.ext.module.ModulePath;
 import org.arend.ext.typechecking.DefinitionListener;
 import org.arend.extImpl.SerializableKeyRegistryImpl;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.module.error.ExceptionError;
+import org.arend.module.scopeprovider.ModuleScopeProvider;
+import org.arend.ext.serialization.DeserializationException;
 import org.arend.module.serialization.ModuleDeserialization;
 import org.arend.module.serialization.ModuleProtos;
 import org.arend.module.serialization.ModuleSerialization;
@@ -20,18 +22,13 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Represents a source that loads a binary module from an {@link InputStream} and persists it to an {@link OutputStream}.
  */
 public abstract class StreamBinarySource implements PersistableBinarySource {
-  private ModuleDeserialization myModuleDeserialization;
   private SerializableKeyRegistryImpl myKeyRegistry;
   private DefinitionListener myDefinitionListener;
-  private int myPass = 0;
-  private final List<ModulePath> myDependencies = new ArrayList<>();
 
   @Override
   public void setKeyRegistry(SerializableKeyRegistryImpl keyRegistry) {
@@ -59,80 +56,30 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
   @Nullable
   protected abstract OutputStream getOutputStream() throws IOException;
 
-  public @NotNull List<? extends ModulePath> getDependencies() {
-    return myDependencies;
-  }
+  @Override
+  public @Nullable ConcreteGroup load(@NotNull ArendServer server, @NotNull ErrorReporter errorReporter) {
+    ModuleLocation module = getModule();
+    try (InputStream inputStream = getInputStream()) {
+      if (inputStream == null) return null;
 
-  /* TODO[server2]:
-  public static ConcreteGroup getGroup(InputStream inputStream, OldLibraryManager libraryManager, SourceLibrary library) throws IOException, DeserializationException {
-    CodedInputStream codedInputStream = CodedInputStream.newInstance(inputStream);
-    codedInputStream.setRecursionLimit(Integer.MAX_VALUE);
-    ModuleProtos.Module moduleProto = ModuleProtos.Module.parseFrom(codedInputStream);
+      CodedInputStream codedInputStream = CodedInputStream.newInstance(inputStream);
+      codedInputStream.setRecursionLimit(Integer.MAX_VALUE);
+      ModuleProtos.Module moduleProto = ModuleProtos.Module.parseFrom(codedInputStream);
 
-    ModuleDeserialization moduleDeserialization = new ModuleDeserialization(moduleProto, null, libraryManager.getDefinitionListener());
+      ModuleDeserialization moduleDeserialization =
+          new ModuleDeserialization(moduleProto, myKeyRegistry, myDefinitionListener);
+      ConcreteGroup group = moduleDeserialization.readGroup(module);
+      server.updateModule(getTimeStamp(), module, () -> group);
 
-    ConcreteGroup group = moduleDeserialization.readGroup(new ModuleLocation(library.getName(), ModuleLocation.LocationKind.GENERATED, new ModulePath()));
-
-    ModuleScopeProvider moduleScopeProvider = libraryManager.getAvailableModuleScopeProvider(library);
-    moduleDeserialization.readModule(moduleScopeProvider, library.getDependencyListener());
-
-    return group;
-  }
-
-  public @NotNull LoadResult load(SourceLoader sourceLoader) {
-    SourceLibrary library = sourceLoader.getLibrary();
-    ModulePath modulePath = getModulePath();
-
-    if (myPass == 0) {
-      try (InputStream inputStream = getInputStream()) {
-        if (inputStream == null) {
-          sourceLoader.getLibraryErrorReporter().report(LibraryError.moduleLoading(modulePath, library.getName()));
-          return LoadResult.FAIL;
-        }
-
-        CodedInputStream codedInputStream = CodedInputStream.newInstance(inputStream);
-        codedInputStream.setRecursionLimit(Integer.MAX_VALUE);
-        ModuleProtos.Module moduleProto = ModuleProtos.Module.parseFrom(codedInputStream);
-
-        for (ModuleProtos.ModuleCallTargets moduleCallTargets : moduleProto.getModuleCallTargetsList()) {
-          myDependencies.add(new ModulePath(moduleCallTargets.getNameList()));
-        }
-
-        boolean isComplete = moduleProto.getComplete();
-        if (!isComplete && !library.hasRawSources()) {
-          sourceLoader.getLibraryErrorReporter().report(new PartialModuleError(modulePath));
-          return LoadResult.FAIL;
-        }
-
-        myModuleDeserialization = new ModuleDeserialization(moduleProto, myKeyRegistry, myDefinitionListener);
-
-        ConcreteGroup group = library.getModuleGroup(modulePath, false);
-        if (group == null) {
-          sourceLoader.getLibraryErrorReporter().report(LibraryError.moduleNotFound(modulePath, library.getName()));
-          library.groupLoaded(modulePath, null, false, false);
-          return LoadResult.FAIL;
-        }
-        myModuleDeserialization.readDefinitions(group);
-
-        myPass = 1;
-        return LoadResult.CONTINUE;
-      } catch (IOException | DeserializationException e) {
-        loadingFailed(sourceLoader, modulePath, e);
-        return LoadResult.FAIL;
-      }
-    }
-
-    try {
-      myModuleDeserialization.readModule(sourceLoader.getModuleScopeProvider(false), library.getDependencyListener());
-      library.binaryLoaded(modulePath, myModuleDeserialization.getModuleProto().getComplete());
-      myModuleDeserialization = null;
-      return LoadResult.SUCCESS;
-    } catch (DeserializationException e) {
-      loadingFailed(sourceLoader, modulePath, e);
-      return LoadResult.FAIL;
+      ModuleScopeProvider scopeProvider =
+          server.getModuleScopeProvider(module.getLibraryName(), false);
+      moduleDeserialization.readModule(scopeProvider, new DependencyCollector(null));
+      return group;
+    } catch (IOException | DeserializationException e) {
+      errorReporter.report(new ExceptionError(e, "loading", module.getModulePath()));
+      return null;
     }
   }
-  */
 
   @Override
   public boolean persist(ArendServer server, ErrorReporter errorReporter) {
