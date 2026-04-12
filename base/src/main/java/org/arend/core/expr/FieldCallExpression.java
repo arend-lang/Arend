@@ -27,6 +27,12 @@ public class FieldCallExpression extends DefCallExpression implements CoreFieldC
     return make(definition, thisExpr, true);
   }
 
+  /** Creates a FieldCallExpression without unfolding NewExpression arguments.
+   *  Used by deserialization to preserve the original expression structure. */
+  public static FieldCallExpression makeExact(ClassField definition, Expression thisExpr) {
+    return new FieldCallExpression(definition, thisExpr);
+  }
+
   public static Expression make(ClassField definition, Expression thisExpr, boolean unfoldRefs) {
     if (definition.isProperty()) {
       return new FieldCallExpression(definition, thisExpr);
