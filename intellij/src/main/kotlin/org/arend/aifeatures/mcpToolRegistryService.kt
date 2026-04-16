@@ -1,21 +1,18 @@
 package org.arend.aifeatures
 
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
-import org.arend.aifeatures.mcpTools.ProofSearcherTool
-import org.arend.aifeatures.mcpTools.ListModulesTool
+import org.arend.mcp.McpTool
+import org.arend.server.ArendServerService
 
-@Service
-class McpToolRegistryService {
+@Service(Service.Level.PROJECT)
+class McpToolRegistryService(val project: Project) {
   private val tools = mutableMapOf<String, McpTool>()
-  private val delimiter = "|||"
 
   init {
-    McpToolFactory.createAllTools().forEach { register(it) }
-    println(tools.keys.toList())
+    McpToolFactory.createAllTools(project).forEach { register(it) }
   }
-
-  fun getDelimiter() = delimiter
 
   fun getTools() = tools.keys.toList()
 
@@ -23,13 +20,10 @@ class McpToolRegistryService {
     tools[tool.name] = tool
   }
 
-  fun execute(toolName: String, args: String, project: Project): String {
-    println("tools : $tools")
-    println("toolName : $toolName")
+  fun execute(toolName: String, args: String): String {
     val tool = tools[toolName] ?: throw IllegalArgumentException("Unknown tool: $toolName")
-    return tool.execute(project, args)
+    return tool.execute(args)
   }
 
-  // Helper to list tools for MCP discovery later
   fun getAllTools(): List<McpTool> = tools.values.toList()
 }

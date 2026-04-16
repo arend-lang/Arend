@@ -34,6 +34,7 @@ repositories {
 
 dependencies {
     implementation(project(":base"))
+    implementation(project(":mcp"))
     implementation(kotlin("reflect"))
     implementation(kotlin("stdlib-jdk8"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")

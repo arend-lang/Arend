@@ -1,12 +1,11 @@
-package org.arend.aifeatures
-import com.intellij.openapi.project.Project
+package org.arend.mcp
+
 import kotlinx.serialization.json.JsonObject
+import org.arend.server.ArendServer
 
 interface McpTool {
   val name: String
   val description: String
-
   fun getInputSchema(): JsonObject
-
-  fun execute(project : Project, arguments: String): String
+  fun execute(arguments: String): String
 }

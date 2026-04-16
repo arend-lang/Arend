@@ -1,7 +1,13 @@
 package org.arend.aifeatures.mcpgen
 
 import kotlinx.serialization.json.*
-import org.arend.aifeatures.McpToolFactory
+import org.arend.aifeatures.mcpTools.FixImportsTool
+import org.arend.aifeatures.mcpTools.ProofSearcherTool
+import org.arend.mcp.tools.ListModulesTool
+import org.arend.mcp.tools.SearchSymbolsTool
+import org.arend.mcp.tools.ShowModulesFromLineTool
+import org.arend.mcp.tools.ShowModulesTool
+import org.arend.mcp.tools.TypecheckerTool
 import java.io.File
 
 object McpToolsJsonGenerator {
@@ -13,8 +19,15 @@ object McpToolsJsonGenerator {
   }
 
   private fun generateToolsJson(outputPath: String) {
-    // Get all tools from the factory
-    val tools = McpToolFactory.createAllTools()
+    val tools = listOf(
+      ListModulesTool(),
+      ShowModulesTool(),
+      ShowModulesFromLineTool(),
+      SearchSymbolsTool(),
+      TypecheckerTool(),
+      ProofSearcherTool(),
+      FixImportsTool()
+    )
 
     val toolsArray = tools.map { tool ->
       buildJsonObject {

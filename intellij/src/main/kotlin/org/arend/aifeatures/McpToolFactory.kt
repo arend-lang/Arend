@@ -1,26 +1,30 @@
 // src/main/kotlin/org/arend/aifeatures/McpToolFactory.kt
 package org.arend.aifeatures
 
+import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
+import org.arend.aifeatures.mcpTools.FixImportsTool
 import org.arend.aifeatures.mcpTools.GetHighlightingTool
-import org.arend.aifeatures.mcpTools.ListModulesTool
 import org.arend.aifeatures.mcpTools.ProofSearcherTool
-import org.arend.aifeatures.mcpTools.SearchSymbolsTool
-import org.arend.aifeatures.mcpTools.ShowModulesFromLineTool
-import org.arend.aifeatures.mcpTools.ShowModulesTool
+import org.arend.mcp.McpTool
+import org.arend.mcp.tools.ListModulesTool
+import org.arend.mcp.tools.SearchSymbolsTool
+import org.arend.mcp.tools.ShowModulesFromLineTool
+import org.arend.mcp.tools.TypecheckerTool
+import org.arend.server.ArendServerService
 
 object McpToolFactory {
-  /**
-   * Returns all tool instances.
-   * This can be called at build time since tools don't need Project for metadata.
-   */
-  fun createAllTools(): List<McpTool> {
+  fun createAllTools(project: Project): List<McpTool> {
+    val server = project.service<ArendServerService>().server
     return listOf(
-      ProofSearcherTool(),
-      ListModulesTool(),
-      ShowModulesTool(),
-      ShowModulesFromLineTool(),
-      GetHighlightingTool(),
-      SearchSymbolsTool(),
+      ProofSearcherTool(project),
+      GetHighlightingTool(project),
+      ListModulesTool(server),
+      org.arend.aifeatures.mcpTools.ShowModulesTool(project),
+      ShowModulesFromLineTool(server),
+      SearchSymbolsTool(server),
+      TypecheckerTool(server),
+      FixImportsTool(project),
     )
   }
 }

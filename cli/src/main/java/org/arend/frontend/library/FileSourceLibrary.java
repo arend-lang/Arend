@@ -68,6 +68,14 @@ public class FileSourceLibrary extends SourceLibrary {
     }
   }
 
+  public @Nullable Path getSourceBasePath() {
+    return sourceBasePath;
+  }
+
+  public @Nullable Path getTestBasePath() {
+    return testBasePath;
+  }
+
   @Override
   public @Nullable Source getSource(@NotNull ModulePath modulePath, boolean inTests) {
     if (myModules != null && !myModules.contains(modulePath) || inTests && testBasePath == null) return null;

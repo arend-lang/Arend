@@ -155,7 +155,7 @@ class ArendImportHintAction(private val referenceElement: ArendReferenceElement)
         private fun kindMatches(target: PsiLocatedReferable, element: ArendReferenceElement) : Boolean =
             element.parent !is ArendPattern || (target as? ReferableBase<*>)?.tcReferable?.kind?.isConstructor == true
 
-        private fun getStubElementSet(project: Project, refElement: ArendReferenceElement, file: PsiFile?): Set<PsiLocatedReferable> {
+        fun getStubElementSet(project: Project, refElement: ArendReferenceElement, file: PsiFile?): Set<PsiLocatedReferable> {
             val name = refElement.referenceName
 
             val result = LinkedHashSet<PsiLocatedReferable>()

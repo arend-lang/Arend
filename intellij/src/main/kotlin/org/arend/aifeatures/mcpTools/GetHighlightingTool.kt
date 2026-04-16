@@ -1,18 +1,21 @@
 package org.arend.aifeatures.mcpTools
 
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.project.Project
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
-import org.arend.aifeatures.McpTool
-import org.arend.aifeatures.parseDataWithModules
 import org.arend.ext.module.ModuleLocation
 import org.arend.ext.module.ModulePath
 import org.arend.highlight.ArendExternalAnnotator
+import org.arend.mcp.McpTool
+import org.arend.server.ArendServer
 import org.arend.util.findLibrary
 
-class GetHighlightingTool : McpTool {
+class GetHighlightingTool(private val project: Project) : McpTool {
     override val name: String = "GetHighlighting"
 
     override val description: String = "Returns the highlighting information (errors, warnings, etc.) for a given Arend file. " +
@@ -29,22 +32,30 @@ class GetHighlightingTool : McpTool {
             }
         }
 
-    override fun execute(project: Project, arguments: String): String {
-        val parsedUserRequest = parseDataWithModules(arguments)
-        val module = parsedUserRequest.modulePaths.firstOrNull()
-            ?: return "Error: No module path provided"
-        val libPath = parsedUserRequest.libPath
+    @Serializable
+    private data class GetHighlightingInput(val modulePath: String, val libraryPath: String)
+
+    override fun execute(arguments: String): String {
+        val input = Json.decodeFromString<GetHighlightingInput>(arguments)
+        val module = input.modulePath
+        val libPath = input.libraryPath
         val libraryName = java.io.File(libPath).name
         val path = ModulePath.fromString(module.split("/").last())
         val sourceLocation = ModuleLocation(libraryName, ModuleLocation.LocationKind.SOURCE, path)
 
-        val libraryConfig = project.findLibrary(sourceLocation.libraryName)
-            ?: return "Error: Library '${sourceLocation.libraryName}' not found"
+        val errors = runReadAction {
+            val libraryConfig = project.findLibrary(sourceLocation.libraryName)
+                ?: return@runReadAction null
 
-        val arendFile = libraryConfig.findArendFile(sourceLocation)
-            ?: return "Error: File for module '${sourceLocation.modulePath}' not found in library '${sourceLocation.libraryName}'"
+            val arendFile = libraryConfig.findArendFile(sourceLocation)
+                ?: return@runReadAction null
 
-        val errors = ArendExternalAnnotator.getErrorsForFile(arendFile)
+            ArendExternalAnnotator.getErrorsForFile(arendFile)
+        }
+
+        if (errors == null) {
+            return "Error: Module '$module' not found in library '$libraryName'"
+        }
 
         if (errors.isEmpty()) {
             return "No highlighting information found for module '$module'"

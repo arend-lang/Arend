@@ -108,7 +108,7 @@
       <!-- AI features -->
 
       <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="org.arend.aifeatures.McpToolRegistryService"/>
+        <projectService serviceImplementation="org.arend.aifeatures.McpToolRegistryService"/>
       </extensions>
 
       <httpRequestHandler implementation="org.arend.aifeatures.DetachedHTTPService"/>
