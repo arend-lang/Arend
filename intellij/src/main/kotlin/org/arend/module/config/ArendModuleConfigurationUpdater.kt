@@ -62,15 +62,6 @@ class ArendModuleConfigurationUpdater(private val isNewModule: Boolean) : Module
 
         val rootPath = FileUtil.toSystemDependentName(moduleRoot.path)
 
-        if (isNewModule) {
-            val junieDir = VfsUtil.createDirectoryIfMissing(moduleRoot, ".junie")
-            if (junieDir != null) {
-                val guidelinesFile = junieDir.findOrCreateChildData(junieDir, "guidelines.md")
-                val content = ArendModuleConfigurationUpdater::class.java.getResource("/junie-guidelines.md")?.readText() ?: ""
-                VfsUtil.saveText(guidelinesFile, content)
-            }
-        }
-
         val srcDir = toAbsolute(rootPath, sourcesDir)
         if (isNewModule) {
             VfsUtil.createDirectories(srcDir)
