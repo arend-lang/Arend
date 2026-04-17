@@ -4,7 +4,6 @@ package org.arend.aifeatures
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import org.arend.aifeatures.mcpTools.FixImportsTool
-import org.arend.aifeatures.mcpTools.GetHighlightingTool
 import org.arend.aifeatures.mcpTools.ProofSearcherTool
 import org.arend.mcp.McpTool
 import org.arend.mcp.tools.ListModulesTool
@@ -18,7 +17,6 @@ object McpToolFactory {
     val server = project.service<ArendServerService>().server
     return listOf(
       ProofSearcherTool(project),
-      GetHighlightingTool(project),
       ListModulesTool(server),
       org.arend.aifeatures.mcpTools.ShowModulesTool(project),
       ShowModulesFromLineTool(server),
