@@ -458,7 +458,6 @@
         <!-- Highlighting Pass Factories -->
 
         <highlightingPassFactory implementation="org.arend.highlight.ArendHighlightingPassFactory"/>
-        <highlightingPassFactory implementation="org.arend.highlight.ArendMainHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.ErrorHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.injection.InjectionHighlightingPassFactory"/>
         <highlightingPassFactory implementation="org.arend.highlight.PartiallyInfixOperatorPrefixFormPassFactory"/>
@@ -468,9 +467,6 @@
         <highlightingPassFactory implementation="org.arend.highlight.ArendUnusedImportHighlightingPassFactory"/>
         -->
         <highlightingPassFactory implementation="org.arend.highlight.RedundantParensPassFactory"/>
-
-        <!-- External Annotator for headless mode (MainPassesRunner) -->
-        <externalAnnotator language="Arend" implementationClass="org.arend.highlight.ArendExternalAnnotator"/>
 
         <!-- Tool Windows -->
 
