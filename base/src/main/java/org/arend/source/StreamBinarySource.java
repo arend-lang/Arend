@@ -81,6 +81,28 @@ public abstract class StreamBinarySource implements PersistableBinarySource {
     }
   }
 
+  /**
+   * Phase 1 of two-phase binary loading: parses the protobuf only.
+   * Returns the {@link ModuleDeserialization} to be used in phase 2, or null on failure.
+   * Does NOT set any typechecked definitions on the group referables —
+   * that happens in phase 2 so that failures leave no half-initialized shells.
+   */
+  public @Nullable ModuleDeserialization parseProtobuf(@NotNull ErrorReporter errorReporter) {
+    try (InputStream inputStream = getInputStream()) {
+      if (inputStream == null) return null;
+
+      CodedInputStream codedInputStream = CodedInputStream.newInstance(inputStream);
+      codedInputStream.setRecursionLimit(Integer.MAX_VALUE);
+      ModuleProtos.Module moduleProto = ModuleProtos.Module.parseFrom(codedInputStream);
+
+      return new ModuleDeserialization(moduleProto, myKeyRegistry, myDefinitionListener);
+    } catch (IOException e) {
+      errorReporter.report(new ExceptionError(e, "loading", getModule().getModulePath()));
+      return null;
+    }
+  }
+
+
   @Override
   public boolean persist(ArendServer server, ErrorReporter errorReporter) {
     ModuleLocation currentModule = getModule();
