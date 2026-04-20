@@ -18,6 +18,7 @@ The Arend console app uses Apache Commons CLI for argument parsing. Below is the
 | `-i`     | `--interactive`                 | Optional (`type`) | Start an interactive REPL; `type` can be `plain` or `jline` (default is `jline`)     |
 | `-p`     | `--print`                       | Yes (`target`) | Print a definition or a module; format: `Module.Path` or `Module.Path:DefinitionName` |
 | `-ps`    | `--proof-search`                | Yes (`pattern`) | Run proof searcher                                                                   |
+| `-r`     | `--recompile`                   | No | Recompile all modules from source, ignoring binary caches (`.arc` files)             |
 | `-t`     | `--test`                        | No | Run tests                                                                            |
 | *(none)* | `--show-times`                  | No | Show typechecking times per definition                                               |
 | *(none)* | `--show-sizes`                  | No | Show sizes (expression node counts) of typechecked definitions, sorted descending    |
@@ -45,5 +46,6 @@ Each positional argument is interpreted as one of the following:
 - If no files/modules are specified and no `-s` is given, the tool looks for `arend.yaml` in the current directory.
 - `-i` (`--interactive`) launches a REPL and skips typechecking entirely.
 - `-h` and `-v` cause the program to exit immediately after printing output.
-- The `-b` / `--binary` option for a binary output directory is referenced in the code (`cmdLine.getOptionValue("b")`), but **is not registered** as a CLI option — so it is effectively unused/dead code.
+- After typechecking, compiled definitions are persisted to `.arc` files in the library's binary directory (configured via `binariesDir` in `arend.yaml`). On subsequent runs, these caches are loaded automatically unless `-r` is specified.
+- `-r` (`--recompile`) forces all modules to be re-typechecked from source, ignoring any existing `.arc` files. The resulting definitions are still persisted at the end.
 

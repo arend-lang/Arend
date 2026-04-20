@@ -4,6 +4,7 @@ import org.arend.ext.module.ModulePath;
 import org.arend.ext.ui.ArendUI;
 import org.arend.frontend.ui.ArendCliUI;
 import org.arend.server.ArendLibrary;
+import org.arend.source.PersistableBinarySource;
 import org.arend.source.Source;
 import org.arend.util.Range;
 import org.arend.util.Version;
@@ -74,4 +75,21 @@ public abstract class SourceLibrary implements ArendLibrary {
   public abstract @Nullable Source getSource(@NotNull ModulePath modulePath, boolean inTests);
 
   public abstract @NotNull List<ModulePath> findModules(boolean inTests);
+
+  /**
+   * Gets a binary source for the given module path.
+   *
+   * @param modulePath  the module path.
+   * @return a persistable binary source, or null if binary caching is not supported.
+   */
+  public @Nullable PersistableBinarySource getBinarySource(@NotNull ModulePath modulePath) {
+    return null;
+  }
+
+  /**
+   * Checks whether this library supports persisting binary caches.
+   */
+  public boolean supportsPersisting() {
+    return !isExternalLibrary();
+  }
 }

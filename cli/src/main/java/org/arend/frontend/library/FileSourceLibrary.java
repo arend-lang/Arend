@@ -10,6 +10,9 @@ import org.arend.library.classLoader.ClassLoaderDelegate;
 import org.arend.library.classLoader.FileClassLoaderDelegate;
 import org.arend.library.error.LibraryIOError;
 import org.arend.ext.module.ModuleLocation;
+import org.arend.source.FileBinarySource;
+import org.arend.source.GZIPStreamBinarySource;
+import org.arend.source.PersistableBinarySource;
 import org.arend.source.Source;
 import org.arend.util.FileUtils;
 import org.arend.util.Range;
@@ -81,6 +84,16 @@ public class FileSourceLibrary extends SourceLibrary {
     List<ModulePath> result = new ArrayList<>();
     FileUtils.getModules(inTests ? testBasePath : sourceBasePath, FileUtils.EXTENSION, result, DummyErrorReporter.INSTANCE);
     return result;
+  }
+
+  @Override
+  public @Nullable PersistableBinarySource getBinarySource(@NotNull ModulePath modulePath) {
+    if (binaryBasePath == null) return null;
+    return new GZIPStreamBinarySource(new FileBinarySource(binaryBasePath, new ModuleLocation(getLibraryName(), ModuleLocation.LocationKind.SOURCE, modulePath)));
+  }
+
+  public @Nullable Path getBinaryBasePath() {
+    return binaryBasePath;
   }
 
   @Override

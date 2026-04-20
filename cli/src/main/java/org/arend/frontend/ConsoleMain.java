@@ -45,7 +45,10 @@ import org.arend.typechecking.error.local.GoalError;
 import org.arend.typechecking.order.MapTarjanSCC;
 import org.arend.util.FileUtils;
 
+import org.arend.core.definition.Definition;
 import org.arend.ext.reference.Precedence;
+import org.arend.naming.reference.TCDefReferable;
+import org.arend.source.PersistableBinarySource;
 import org.arend.term.prettyprint.PrettyPrintVisitor;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -131,6 +134,7 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("i").longOpt("interactive").hasArg().optionalArg(true).argName("type").desc("start an interactive REPL, type can be plain or jline (default)").build());
       cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("target").desc("print a definition or a module").build());
       cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("pattern").desc("search for definitions matching the pattern").build());
+      cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
       cmdOptions.addOption(Option.builder().longOpt(SHOW_TIMES).build());
@@ -329,8 +333,13 @@ public class ConsoleMain {
     if (cmdLine == null) return false;
 
     boolean doubleCheck = cmdLine.hasOption("c");
+    boolean recompile = cmdLine.hasOption("r");
     LibraryManager libraryManager = new LibraryManager(mySystemErrErrorReporter);
-    ArendServer server = new ArendServerImpl(new CliServerRequester(libraryManager), false, false, !doubleCheck);
+    CliServerRequester requester = new CliServerRequester(libraryManager);
+    if (recompile) {
+      requester.setRecompile(true);
+    }
+    ArendServer server = new ArendServerImpl(requester, false, false, !doubleCheck);
     server.addReadOnlyModule(Prelude.MODULE_LOCATION, () -> Objects.requireNonNull(new PreludeResourceSource().loadGroup(DummyErrorReporter.INSTANCE)));
     server.addErrorReporter(myErrorReporter);
 
@@ -484,6 +493,26 @@ public class ConsoleMain {
     TimedProgressReporter timedProgressReporter = cmdLine.hasOption(SHOW_TIMES) ? new TimedProgressReporter() : null;
     ProgressReporter<List<? extends Concrete.ResolvableDefinition>> progressReporter = timedProgressReporter != null ? timedProgressReporter : ProgressReporter.empty();
 
+    // Pre-load binary caches (unless --recompile is set)
+    if (!recompile) {
+      // Typecheck Prelude first — binary cache loading needs Prelude definitions to be available
+      server.getCheckerFor(Collections.singletonList(Prelude.MODULE_LOCATION))
+          .typecheck(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+      for (SourceLibrary library : requestedLibraries) {
+        List<ModuleLocation> allModules = library.findModules(false).stream()
+            .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
+            .toList();
+        if (!allModules.isEmpty()) {
+          // resolveAll forces raw loading of all modules and their transitive dependencies
+          server.getCheckerFor(allModules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+          // Now load typechecked definitions from binary caches
+          requester.loadBinaryCache(library, server);
+        }
+      }
+      // Report goals from definitions loaded from binary cache
+      reportCachedGoals(server, requester.getBinaryCacheLoaded());
+    }
+
     if (requestedModules.isEmpty()) {
       for (SourceLibrary library : requestedLibraries) {
         System.out.println();
@@ -553,6 +582,8 @@ public class ConsoleMain {
             System.out.println("--- Done (" + TimedProgressReporter.timeToString(time) + ") ---");
           }
         }
+
+        persistLibrary(library, server, requester.getBinaryCacheLoaded());
       }
     } else {
       for (Pair<ModulePath, LongName> requested : requestedModules) {
@@ -596,6 +627,10 @@ public class ConsoleMain {
             }
           }
         }
+      }
+      // Persist all libraries that had modules typechecked
+      for (SourceLibrary library : requestedLibraries) {
+        persistLibrary(library, server, requester.getBinaryCacheLoaded());
       }
     }
 
@@ -662,6 +697,69 @@ public class ConsoleMain {
     }
 
     return true;
+  }
+
+  /**
+   * Scans definitions loaded from binary cache for goals ({@code {?}}) and reports them.
+   * The goal flag ({@code isGoal}) is preserved in .arc files, so we can detect goals
+   * without re-typechecking.
+   */
+  private void reportCachedGoals(ArendServer server, Set<ModuleLocation> cachedModules) {
+    for (ModuleLocation module : cachedModules) {
+      ConcreteGroup group = server.getRawGroup(module);
+      if (group == null) continue;
+      reportGoalsInGroup(group, module);
+    }
+  }
+
+  private void reportGoalsInGroup(ConcreteGroup group, ModuleLocation module) {
+    LocatedReferable ref = group.referable();
+    if (ref instanceof TCDefReferable tcRef) {
+      Definition def = tcRef.getTypechecked();
+      if (def != null && def.getGoals().contains(def)) {
+        GeneralError goalError = new GeneralError(GeneralError.Level.GOAL, "Goal") {
+          @Override
+          public Object getCause() {
+            return ref;
+          }
+        };
+        myErrorReporter.report(goalError);
+      }
+    }
+    for (ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null) {
+        reportGoalsInGroup(statement.group(), module);
+      }
+    }
+    for (ConcreteGroup dynGroup : group.dynamicGroups()) {
+      reportGoalsInGroup(dynGroup, module);
+    }
+  }
+
+  private void persistLibrary(SourceLibrary library, ArendServer server, Set<ModuleLocation> skipModules) {
+    if (!library.supportsPersisting()) return;
+    int persisted = 0;
+    int skipped = 0;
+    int failed = 0;
+    for (ModuleLocation module : server.getModules()) {
+      if (module.getLocationKind() == ModuleLocation.LocationKind.SOURCE && module.getLibraryName().equals(library.getLibraryName())) {
+        if (skipModules.contains(module)) {
+          skipped++;
+          continue;
+        }
+        PersistableBinarySource binarySource = library.getBinarySource(module.getModulePath());
+        if (binarySource != null) {
+          if (binarySource.persist(server, mySystemErrErrorReporter)) {
+            persisted++;
+          } else {
+            failed++;
+          }
+        }
+      }
+    }
+    if (persisted > 0 || failed > 0) {
+      System.out.println("[INFO] Persisted " + persisted + " module(s)" + (failed > 0 ? ", " + failed + " failed" : "") + (skipped > 0 ? " (" + skipped + " up-to-date)" : ""));
+    }
   }
 
   private void loadLibrary(LibraryManager libraryManager, SourceLibrary library, ArendServer server) {

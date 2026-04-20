@@ -70,6 +70,9 @@ public class DefinitionDeserialization implements ArendDeserializer {
       topDef.setPLevelsDerived(defProto.getPLevelsDerived());
       topDef.setHLevelsDerived(defProto.getHLevelsDerived());
       topDef.setAxioms(readDefinitions(defProto.getAxiomList(), FunctionDefinition.class));
+      if (defProto.getHasGoals()) {
+        topDef.setGoals(Collections.singleton(def));
+      }
 
       topDef.setParametersOriginalDefinitions(parametersOriginalDefinitions);
     }
