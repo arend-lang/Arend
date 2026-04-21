@@ -46,6 +46,7 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
   private boolean myAllowEquations = true;
   private boolean myNormalize = true;
   private Result myResult;
+  private Set<Long> myClassInstancePairs;
 
   public CompareVisitor(Equations equations, CMP cmp, Concrete.SourceNode sourceNode) {
     mySubstitution = new HashMap<>();
@@ -1857,6 +1858,23 @@ public class CompareVisitor implements ExpressionVisitor2<Expression, Expression
   }
 
   private boolean compareClassInstances(Expression expr1, ClassCallExpression classCall1, Expression expr2, ClassCallExpression classCall2, Expression type) {
+    // Cycle detection: if we're already comparing this (expr1, expr2) pair,
+    // assume they're equal (co-inductive reasoning for recursive class structures).
+    long pairKey = ((long) System.identityHashCode(expr1) << 32) | (System.identityHashCode(expr2) & 0xFFFFFFFFL);
+    if (myClassInstancePairs == null) {
+      myClassInstancePairs = new HashSet<>();
+    }
+    if (!myClassInstancePairs.add(pairKey)) {
+      return true; // cycle detected — co-inductively equal
+    }
+    try {
+      return compareClassInstancesImpl(expr1, classCall1, expr2, classCall2, type);
+    } finally {
+      myClassInstancePairs.remove(pairKey);
+    }
+  }
+
+  private boolean compareClassInstancesImpl(Expression expr1, ClassCallExpression classCall1, Expression expr2, ClassCallExpression classCall2, Expression type) {
     if (expr1 instanceof ArrayExpression array1 && expr2 instanceof ArrayExpression array2 && array1.getElements().size() == array2.getElements().size()) return false;
     if (classCall1.getDefinition() == Prelude.DEP_ARRAY && classCall2.getDefinition() == Prelude.DEP_ARRAY) {
       Expression length1 = classCall1.getImplementationHere(Prelude.ARRAY_LENGTH, expr1);
