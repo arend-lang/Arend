@@ -26,6 +26,53 @@ public class GlobalInstancePool implements InstancePool {
   private final CheckTypeVisitor myCheckTypeVisitor;
   private LocalInstancePool myInstancePool;
 
+  // Diagnostic: optional runaway-depth guard for instance resolution. Activated by
+  // system property `-Darend.instance.maxDepth=N`. When > 0, findInstance increments
+  // a thread-local counter; exceeding the limit throws InstanceDepthExceeded with the
+  // offending class so callers can pinpoint the cycling instance search.
+  private static final int MAX_INSTANCE_DEPTH;
+  static {
+    int d = 0;
+    try { d = Integer.parseInt(System.getProperty("arend.instance.maxDepth", "0")); }
+    catch (NumberFormatException ignored) {}
+    MAX_INSTANCE_DEPTH = d;
+  }
+  private static final ThreadLocal<int[]> INSTANCE_DEPTH = ThreadLocal.withInitial(() -> new int[1]);
+
+  // Match-failure diagnostic: when `-Darend.instance.debugMatchClass=ClassName` is set,
+  // log which predicate check fails when searching for an instance of that class.
+  private static final String DEBUG_MATCH_CLASS = System.getProperty("arend.instance.debugMatchClass");
+  public static final java.util.List<String> MATCH_DEBUG_LOG = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+
+  private static void dumpSuperChain(ClassDefinition cls, StringBuilder sb, java.util.Set<ClassDefinition> seen, int depth) {
+    if (depth > 10 || !seen.add(cls)) return;
+    for (ClassDefinition sc : cls.getSuperClasses()) {
+      for (int i = 0; i < depth; i++) sb.append(' ');
+      sb.append(sc.getName()).append(".cf=").append(sc.getClassifyingField() == null ? "<null>" : sc.getClassifyingField().getName())
+          .append(" status=").append(sc.status());
+      ClassField own = sc.getClassifyingField();
+      // show if this class's classifying field is one of its own personal fields or inherited
+      if (own != null && !sc.getPersonalFields().contains(own)) sb.append(" [inherited]");
+      sb.append('\n');
+      dumpSuperChain(sc, sb, seen, depth + 1);
+    }
+  }
+
+  public static class InstanceDepthExceeded extends RuntimeException {
+    public final ClassDefinition searchClass;
+    public final Expression classifyingExpression;
+    public final int depth;
+    public String chainInfo = "";
+    public InstanceDepthExceeded(ClassDefinition cls, Expression classifying, int depth) {
+      super("Instance search depth exceeded (" + depth + ") for class "
+          + (cls == null ? "<null>" : cls.getName())
+          + " classifying=" + (classifying == null ? "<null>" : classifying.getClass().getSimpleName()));
+      this.searchClass = cls;
+      this.classifyingExpression = classifying;
+      this.depth = depth;
+    }
+  }
+
   public GlobalInstancePool(List<FunctionDefinition> instances, CheckTypeVisitor checkTypeVisitor) {
     myInstances = instances;
     myCheckTypeVisitor = checkTypeVisitor;
@@ -63,6 +110,36 @@ public class GlobalInstancePool implements InstancePool {
 
   @Override
   public TypecheckingResult findInstance(Expression classifyingExpression, Expression expectedType, InstanceSearchParameters parameters, Concrete.SourceNode sourceNode, RecursiveInstanceHoleExpression recursiveHoleExpression, Definition currentDef) {
+    if (MAX_INSTANCE_DEPTH > 0) {
+      int[] d = INSTANCE_DEPTH.get();
+      if (++d[0] > MAX_INSTANCE_DEPTH) {
+        int depth = d[0];
+        d[0]--;
+        ClassDefinition cls = parameters instanceof org.arend.ext.instance.SubclassSearchParameters sp
+            ? (ClassDefinition) sp.classDefinition : null;
+        // Dump the full super-chain classifying info so we can pinpoint where the chain breaks.
+        StringBuilder chainInfo = new StringBuilder();
+        if (cls != null) {
+          chainInfo.append(" classifyingField=")
+              .append(cls.getClassifyingField() == null ? "<null>" : cls.getClassifyingField().getName());
+          chainInfo.append(" superChain=[");
+          dumpSuperChain(cls, chainInfo, new java.util.HashSet<>(), 0);
+          chainInfo.append("]");
+        }
+        InstanceDepthExceeded ex = new InstanceDepthExceeded(cls, classifyingExpression, depth);
+        ex.chainInfo = chainInfo.toString();
+        throw ex;
+      }
+      try {
+        return findInstanceImpl(classifyingExpression, expectedType, parameters, sourceNode, recursiveHoleExpression, currentDef);
+      } finally {
+        d[0]--;
+      }
+    }
+    return findInstanceImpl(classifyingExpression, expectedType, parameters, sourceNode, recursiveHoleExpression, currentDef);
+  }
+
+  private TypecheckingResult findInstanceImpl(Expression classifyingExpression, Expression expectedType, InstanceSearchParameters parameters, Concrete.SourceNode sourceNode, RecursiveInstanceHoleExpression recursiveHoleExpression, Definition currentDef) {
     if (myInstancePool != null) {
       TypecheckingResult result = myInstancePool.findInstance(classifyingExpression, expectedType, parameters, sourceNode, currentDef, currentDef instanceof ClassDefinition ? LocalInstancePool.FieldSearchParameters.ALL : LocalInstancePool.FieldSearchParameters.NOT_FIELDS);
       if (result != null) {
@@ -172,14 +249,24 @@ public class GlobalInstancePool implements InstancePool {
     }
 
     Expression finalClassifyingExpression = normClassifyingExpression;
+    // Diagnostic: when DEBUG_MATCH_CLASS is set (via system property) and the search is for
+    // that class, track per-instance match-failure reasons.
+    final boolean debugMatch = DEBUG_MATCH_CLASS != null
+        && parameters instanceof org.arend.ext.instance.SubclassSearchParameters ssp2
+        && DEBUG_MATCH_CLASS.equals(((ClassDefinition) ssp2.classDefinition).getName());
+    final int[] failStatus = {0}, failNotClassCall = {0}, failTestClass = {0},
+                failTestGlobal = {0}, failCompare = {0}, passed = {0};
+
     class MyPredicate implements Predicate<FunctionDefinition> {
       @Override
       public boolean test(FunctionDefinition instance) {
-        if (!(instance != null && instance.status().headerIsOK() && instance.getResultType() instanceof ClassCallExpression classCall && parameters.testClass(classCall.getDefinition()) && parameters.testGlobalInstance(instance))) {
-          return false;
-        }
+        if (!(instance != null && instance.status().headerIsOK())) { if (debugMatch) failStatus[0]++; return false; }
+        if (!(instance.getResultType() instanceof ClassCallExpression classCall)) { if (debugMatch) failNotClassCall[0]++; return false; }
+        if (!parameters.testClass(classCall.getDefinition())) { if (debugMatch) failTestClass[0]++; return false; }
+        if (!parameters.testGlobalInstance(instance)) { if (debugMatch) failTestGlobal[0]++; return false; }
 
         if (finalClassifyingExpression == null || classCall.getDefinition().getClassifyingField() == null) {
+          if (debugMatch) passed[0]++;
           return true;
         }
 
@@ -190,7 +277,9 @@ public class GlobalInstancePool implements InstancePool {
         while (instanceClassifyingExpr instanceof LamExpression) {
           instanceClassifyingExpr = ((LamExpression) instanceClassifyingExpr).getBody();
         }
-        return compareClassifying(instanceClassifyingExpr, finalClassifyingExpression, true);
+        boolean r = compareClassifying(instanceClassifyingExpr, finalClassifyingExpression, true);
+        if (debugMatch) { if (r) passed[0]++; else failCompare[0]++; }
+        return r;
       }
     }
 
@@ -201,6 +290,14 @@ public class GlobalInstancePool implements InstancePool {
         instance = function;
         break;
       }
+    }
+    if (debugMatch && instance == null) {
+      MATCH_DEBUG_LOG.add("findInstance failed for " + DEBUG_MATCH_CLASS
+          + " classifying=" + (finalClassifyingExpression == null ? "<null>" : finalClassifyingExpression.getClass().getSimpleName())
+          + " total=" + myInstances.size()
+          + " failStatus=" + failStatus[0] + " failNotClassCall=" + failNotClassCall[0]
+          + " failTestClass=" + failTestClass[0] + " failTestGlobal=" + failTestGlobal[0]
+          + " failCompare=" + failCompare[0] + " passed=" + passed[0]);
     }
     if (instance == null) {
       return null;

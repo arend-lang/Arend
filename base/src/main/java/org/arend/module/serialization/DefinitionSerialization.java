@@ -494,7 +494,16 @@ public class DefinitionSerialization implements ArendSerializer {
       builder.setAliasName(aliasName);
       builder.setAliasPrecedence(writePrecedence(referable.getAliasPrecedence()));
     }
+    builder.setAccessModifier(writeAccessModifier(referable.getAccessModifier()));
     return builder.build();
+  }
+
+  static DefinitionProtos.AccessModifier writeAccessModifier(org.arend.term.group.AccessModifier mod) {
+    return switch (mod) {
+      case PUBLIC -> DefinitionProtos.AccessModifier.PUBLIC_ACCESS;
+      case PROTECTED -> DefinitionProtos.AccessModifier.PROTECTED_ACCESS;
+      case PRIVATE -> DefinitionProtos.AccessModifier.PRIVATE_ACCESS;
+    };
   }
 
   static DefinitionProtos.Precedence writePrecedence(Precedence precedence) {

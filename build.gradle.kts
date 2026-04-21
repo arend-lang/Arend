@@ -94,10 +94,11 @@ dependencies {
     testImplementation("org.hamcrest:hamcrest-library:1.3")
 }
 
-// Normal test suite: exclude the expensive round-trip test.
+// Normal test suite: exclude the expensive round-trip tests.
 tasks.test {
     maxHeapSize = "4g"
     exclude("**/ArendLibRoundTripTest.class")
+    exclude("**/ArendLibPartialRoundTripTest.class")
 }
 
 // Separate task for the arend-lib round-trip serialization test.
@@ -113,5 +114,35 @@ tasks.register<Test>("roundTripTest") {
     include("**/ArendLibRoundTripTest.class")
     System.getProperty("arend.roundtrip.modules")?.let {
         systemProperty("arend.roundtrip.modules", it)
+    }
+}
+
+// Separate task for the arend-lib partial round-trip serialization test.
+// Typechecks a target module + its prerequisites, serializes the cone, then
+// attempts to typecheck the rest of arend-lib on a fresh server with the
+// deserialized cone as prerequisites.  Reports only secondary typechecking
+// errors (errors that are not present in a from-scratch baseline run).  Run:
+//   ./gradlew partialRoundTripTest [-Darend.partial_roundtrip.targets=AG.Projective,Algebra.Ring.RingHom]
+tasks.register<Test>("partialRoundTripTest") {
+    description = "Runs the arend-lib partial serialization round-trip test"
+    group = "verification"
+    maxHeapSize = "6g"
+    // A larger per-thread stack helps substitution of deep cross-module types
+    // surface as test errors instead of raw StackOverflowError kill-switches.
+    jvmArgs("-Xss16m")
+    // The subst-depth guard makes the SubstVisitor throw a diagnostic
+    // SubstDepthExceeded exception instead of blowing the stack, so the test can
+    // log which PiExpression was cycling.
+    systemProperty("arend.subst.maxDepth", "2000")
+    // The instance-depth guard makes GlobalInstancePool throw a diagnostic
+    // InstanceDepthExceeded when instance resolution runs away (cycle caused by
+    // deserialized instances matching each other transitively).
+    systemProperty("arend.instance.maxDepth", "200")
+    systemProperty("arend.instance.debugMatchClass", "Preorder")
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    include("**/ArendLibPartialRoundTripTest.class")
+    System.getProperty("arend.partial_roundtrip.targets")?.let {
+        systemProperty("arend.partial_roundtrip.targets", it)
     }
 }

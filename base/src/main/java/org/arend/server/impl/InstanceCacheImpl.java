@@ -28,9 +28,14 @@ public class InstanceCacheImpl implements InstanceCache {
     myCache.computeIfAbsent(classRef, k -> new HashSet<>()).add(instanceRef);
   }
 
+  // Diagnostic counters for debugging the deserialized-instance fallback.
+  public static int debugAddedSource = 0;
+  public static int debugAddedDeserialized = 0;
+
   public synchronized void addInstances(GroupData groupData, TypingInfo typingInfo) {
     groupData.getRawGroup().traverseGroup(subgroup -> {
       if (subgroup.definition() instanceof Concrete.FunctionDefinition function && function.getKind() == FunctionKind.INSTANCE) {
+        debugAddedSource++;
         DefinitionData definitionData = groupData.getDefinitionData(subgroup.referable().getRefLongName());
         if (definitionData != null && definitionData.definition() instanceof Concrete.FunctionDefinition funDef) {
           DynamicScopeProvider provider = funDef.getResultType() == null ? null : typingInfo.getBodyDynamicScopeProvider(funDef.getResultType());
@@ -43,6 +48,34 @@ public class InstanceCacheImpl implements InstanceCache {
                 addInstance(classRef, funDef.getRef());
               }
             }
+          }
+        }
+        return;
+      }
+
+      // Fallback for deserialized groups where `subgroup.definition()` is null but the
+      // referable carries a typechecked FunctionDefinition with kind INSTANCE. Without
+      // this, `\instance` declarations in deserialized modules are silently skipped here
+      // and downstream fresh typechecking fails with "Cannot infer an instance of class X".
+      if (subgroup.definition() == null
+          && subgroup.referable() instanceof TCDefReferable tcRef
+          && tcRef.getTypechecked() instanceof FunctionDefinition fnDef
+          && fnDef.getKind() == org.arend.ext.core.definition.CoreFunctionDefinition.Kind.INSTANCE) {
+        debugAddedDeserialized++;
+        Expression resultType = fnDef.getResultType();
+        if (resultType instanceof org.arend.core.expr.ClassCallExpression classCall) {
+          ClassDefinition directClass = classCall.getDefinition();
+          addInstance(directClass.getReferable(), fnDef.getReferable());
+          // Also register for every transitive super-class, so that queries for a
+          // base class (e.g. Preorder) find instances that were declared for subclasses
+          // (e.g. Poset). Mirrors the DynamicScope.Extent.WITH_SUPER walk above.
+          Set<ClassDefinition> visited = new HashSet<>();
+          Deque<ClassDefinition> todo = new ArrayDeque<>(directClass.getSuperClasses());
+          while (!todo.isEmpty()) {
+            ClassDefinition sc = todo.pop();
+            if (!visited.add(sc)) continue;
+            addInstance(sc.getReferable(), fnDef.getReferable());
+            todo.addAll(sc.getSuperClasses());
           }
         }
       }
