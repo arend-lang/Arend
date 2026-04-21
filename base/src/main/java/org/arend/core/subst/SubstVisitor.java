@@ -185,8 +185,48 @@ public class SubstVisitor extends ExpressionTransformer<Void> {
     return isUnused ? new LamExpression(expr.getResultSort().subst(myLevelSubstitution), UnusedIntervalDependentLink.INSTANCE, result) : result;
   }
 
+  // Diagnostic: optional runaway-depth guard for substitution.  Activated by system
+  // property `-Darend.subst.maxDepth=N`.  When > 0, visitPi/visitSigma/visitLam
+  // increment a thread-local counter; exceeding the limit throws SubstDepthExceeded
+  // with the cycling Pi's identity so callers can pinpoint the offending type.
+  // Disabled (0) by default so the guard has no cost in normal runs.
+  private static final int MAX_SUBST_DEPTH;
+  static {
+    int d = 0;
+    try { d = Integer.parseInt(System.getProperty("arend.subst.maxDepth", "0")); }
+    catch (NumberFormatException ignored) {}
+    MAX_SUBST_DEPTH = d;
+  }
+  private static final ThreadLocal<int[]> SUBST_DEPTH = ThreadLocal.withInitial(() -> new int[1]);
+
+  public static class SubstDepthExceeded extends RuntimeException {
+    public final PiExpression cyclingPi;
+    public final int depth;
+    public SubstDepthExceeded(PiExpression pi, int depth) {
+      super("Subst depth exceeded (" + depth + ") at PiExpression@" + System.identityHashCode(pi));
+      this.cyclingPi = pi;
+      this.depth = depth;
+    }
+  }
+
   @Override
   public Expression visitPi(PiExpression expr, Void params) {
+    if (MAX_SUBST_DEPTH > 0) {
+      int[] d = SUBST_DEPTH.get();
+      if (++d[0] > MAX_SUBST_DEPTH) {
+        int depth = d[0];
+        d[0]--;
+        throw new SubstDepthExceeded(expr, depth);
+      }
+      try {
+        SingleDependentLink parameters = DependentLink.Helper.subst(expr.getParameters(), this);
+        PiExpression result = new PiExpression(expr.getResultSort().subst(myLevelSubstitution), parameters, expr.getCodomain().accept(this, null));
+        DependentLink.Helper.freeSubsts(expr.getParameters(), myExprSubstitution);
+        return result;
+      } finally {
+        d[0]--;
+      }
+    }
     SingleDependentLink parameters = DependentLink.Helper.subst(expr.getParameters(), this);
     PiExpression result = new PiExpression(expr.getResultSort().subst(myLevelSubstitution), parameters, expr.getCodomain().accept(this, null));
     DependentLink.Helper.freeSubsts(expr.getParameters(), myExprSubstitution);

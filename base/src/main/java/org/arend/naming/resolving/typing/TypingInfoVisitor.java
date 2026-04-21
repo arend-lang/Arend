@@ -49,6 +49,49 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
       }
 
       myTypingInfo.addDynamicScopeProvider(classDef.getData(), new DynamicScopeProviderImpl(classDef.getData(), superRefs, dynamicRefs));
+    } else if (group.definition() == null
+               && group.referable() instanceof TCDefReferable tcRef
+               && tcRef.getTypechecked() instanceof org.arend.core.definition.ClassDefinition cd) {
+      // Fallback for deserialized class groups (no Concrete.ClassDefinition): register
+      // DynamicScopeProvider from the typechecked ClassDefinition so downstream fresh
+      // classes that extend this one can resolve its inherited fields. Without this,
+      // a class like `\class TopSpace \extends BaseSet { ... }` whose BaseSet is
+      // deserialized will fail to resolve `E` (BaseSet's classifying field), leaving
+      // TopSpace with HAS_ERRORS status and null classifying → downstream instance
+      // search cycles on classes without a classifying field.
+      List<GlobalReferable> superRefs = new ArrayList<>(cd.getSuperClasses().size());
+      for (org.arend.core.definition.ClassDefinition sc : cd.getSuperClasses()) {
+        superRefs.add(sc.getReferable());
+      }
+      List<GlobalReferable> dynamicRefs = new ArrayList<>();
+      for (org.arend.core.definition.ClassField field : cd.getPersonalFields()) {
+        if (field.getReferable() instanceof GlobalReferable gr) dynamicRefs.add(gr);
+      }
+      for (ConcreteGroup subgroup : group.dynamicGroups()) {
+        dynamicRefs.add(subgroup.referable());
+      }
+      myTypingInfo.addDynamicScopeProvider(tcRef, new DynamicScopeProviderImpl(tcRef, superRefs, dynamicRefs));
+      // Each field has type `\Pi (this : ThisClass) → ...target` — register the
+      // field's referable → AbstractBody pointing at the target class so callers
+      // of `getTypeDynamicScopeProvider(fieldRef)` find the right scope.
+      for (org.arend.core.definition.ClassField field : cd.getPersonalFields()) {
+        if (field.getType() != null && field.getType().getCodomain() != null) {
+          registerCoreType(field.getReferable(), field.getType().getCodomain(),
+              /*priorParams=*/ 1 /*this*/);
+        }
+      }
+    } else if (group.definition() == null
+               && group.referable() instanceof TCDefReferable tcRef
+               && tcRef.getTypechecked() instanceof org.arend.core.definition.FunctionDefinition fnDef) {
+      // Fallback for deserialized function/instance groups: add referableType so that
+      // `typingInfo.getTypeDynamicScopeProvider(fnRef)` can find the class whose instance
+      // this function produces. Without this, `Instance.fieldName` resolution through
+      // a deserialized instance returns null and the resolver falls back to
+      // FieldCallExpression, which then fails in CheckTypeVisitor#visitFieldCall.
+      if (fnDef.getResultType() != null) {
+        int params = org.arend.core.context.param.DependentLink.Helper.size(fnDef.getParameters());
+        registerCoreType(tcRef, fnDef.getResultType(), params);
+      }
     }
 
     for (ConcreteStatement statement : group.statements()) {
@@ -61,6 +104,32 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
       for (ConcreteGroup subgroup : group.dynamicGroups()) {
         processGroup(subgroup, dynamicScope);
       }
+    }
+  }
+
+  /** Register `AbstractBody` for {@code ref} whose type is (possibly applied) {@code coreType}. */
+  private void registerCoreType(org.arend.naming.reference.TCDefReferable ref,
+                                org.arend.core.expr.Expression coreType,
+                                int priorParams) {
+    // Count Pi parameters in the type: `\Pi (x : T1) → \Pi (y : T2) → ... → TargetDefCall`
+    int piParams = 0;
+    org.arend.core.expr.Expression cur = coreType;
+    while (cur instanceof org.arend.core.expr.PiExpression piExpr) {
+      piParams += org.arend.core.context.param.DependentLink.Helper.size(piExpr.getParameters());
+      cur = piExpr.getCodomain();
+    }
+    // Unwrap arg applications
+    int arguments = 0;
+    while (cur instanceof org.arend.core.expr.AppExpression appExpr) {
+      arguments++;
+      cur = appExpr.getFunction();
+    }
+    if (cur instanceof org.arend.core.expr.DefCallExpression defCall) {
+      myTypingInfo.addReferableType(ref,
+          new AbstractBody(priorParams + piParams, defCall.getDefinition().getReferable(), arguments));
+    } else if (cur instanceof org.arend.core.expr.ClassCallExpression classCall) {
+      myTypingInfo.addReferableType(ref,
+          new AbstractBody(priorParams + piParams, classCall.getDefinition().getReferable(), 0));
     }
   }
 

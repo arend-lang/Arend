@@ -135,6 +135,12 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
               toVisit.add(superClass);
             }
           }
+        } else if (last.getTypechecked() instanceof org.arend.core.definition.ClassDefinition deserClass) {
+          // Fallback for deserialized classes: myConcreteProvider has no Concrete for them,
+          // so walk super-classes via the typechecked ClassDefinition instead.
+          for (org.arend.core.definition.ClassDefinition superClass : deserClass.getSuperClasses()) {
+            toVisit.add(superClass.getReferable());
+          }
         }
       }
     }
@@ -144,11 +150,18 @@ public class CollectDefCallsVisitor extends VoidConcreteVisitor<Void> {
     myVisitedClasses = new HashSet<>();
     myInstanceMap = new HashMap<>();
     for (TCDefReferable instance : myInstances.getInstances()) {
+      TCDefReferable classRef = null;
       if (myConcreteProvider.getConcrete(instance) instanceof Concrete.FunctionDefinition function) {
-        TCDefReferable classRef = ArendInstances.getClassRef(function.getResultType(), myConcreteProvider);
-        if (classRef != null) {
-          fillInstanceMap(classRef, instance);
-        }
+        classRef = ArendInstances.getClassRef(function.getResultType(), myConcreteProvider);
+      } else if (instance.getTypechecked() instanceof org.arend.core.definition.FunctionDefinition fnDef
+                 && fnDef.getResultType() instanceof org.arend.core.expr.ClassCallExpression classCall) {
+        // Fallback for deserialized instances: myConcreteProvider doesn't know them
+        // (their Concrete was never rebuilt), so read the class from the typechecked
+        // FunctionDefinition's core result type.
+        classRef = classCall.getDefinition().getReferable();
+      }
+      if (classRef != null) {
+        fillInstanceMap(classRef, instance);
       }
     }
 
