@@ -166,6 +166,10 @@ public class ArendCheckerImpl implements ArendChecker {
                 defMap.put(group.referable(), definition.accept(new ReplaceDataVisitor(true), null));
               }
             });
+            // For deserialized modules, recover inline meta definitions from the source file.
+            // Metas are not core entities and are not serialized; their Concrete bodies must
+            // come from the source. Ask the server to supply them.
+            myServer.recoverMetaDefinitions(module, groupData.getRawGroup(), defMap);
             toResolve.add(new Pair<>(module, groupData.getRawGroup()));
           } else {
             for (DefinitionData data : definitionData) {

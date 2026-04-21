@@ -229,6 +229,10 @@ message Referable {
     // Access modifier (PUBLIC=0, PROTECTED=1, PRIVATE=2). Default 0 = PUBLIC
     // preserves backward compatibility with .arc files that don't encode this.
     AccessModifier access_modifier = 6;
+    // Kind override for subgroups whose Definition is not serialized (e.g. \meta).
+    // 0 = not set (derive kind from Definition as before). Non-zero values:
+    //   1 = META
+    int32 kind_override = 7;
 }
 
 enum AccessModifier {

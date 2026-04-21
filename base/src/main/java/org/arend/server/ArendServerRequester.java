@@ -34,6 +34,17 @@ public interface ArendServerRequester extends ArendServerResolveListener {
     return null;
   }
 
+  /**
+   * Parses the source file for the given module and returns the raw ConcreteGroup,
+   * WITHOUT updating the server. Used to recover inline meta definitions from source
+   * for modules loaded from binary cache.
+   *
+   * @return the source-parsed group, or null if the source is unavailable.
+   */
+  default @Nullable ConcreteGroup getSourceGroup(@NotNull ModuleLocation module) {
+    return null;
+  }
+
   default <T> T runUnderReadLock(@NotNull Supplier<T> supplier) {
     return supplier.get();
   }

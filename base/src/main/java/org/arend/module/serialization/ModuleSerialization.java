@@ -3,6 +3,7 @@ package org.arend.module.serialization;
 import org.arend.core.definition.ClassField;
 import org.arend.core.definition.Constructor;
 import org.arend.core.definition.Definition;
+import org.arend.core.definition.MetaTopDefinition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.module.ModuleLocation;
@@ -95,7 +96,12 @@ public class ModuleSerialization {
     }
 
     Definition typechecked = referable instanceof TCDefReferable ? ((TCDefReferable) referable).getTypechecked() : null;
-    if (typechecked != null && !(typechecked instanceof Constructor || typechecked instanceof ClassField)) {
+    // Don't serialize MetaTopDefinition — metas are not core entities.
+    // Their bodies live in the Concrete layer and will be recovered from the source
+    // file during the resolve phase after deserialization.
+    if (typechecked instanceof MetaTopDefinition) {
+      refBuilder.setKindOverride(1); // 1 = META
+    } else if (typechecked != null && !(typechecked instanceof Constructor || typechecked instanceof ClassField)) {
       builder.setDefinition(myDefinitionSerialization.writeDefinition(typechecked));
       int index = myCallTargetIndexProvider.getDefIndex(typechecked);
       refBuilder.setIndex(index);

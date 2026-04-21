@@ -525,6 +525,48 @@ public class ArendServerImpl implements ArendServer {
     return myGroups.get(module);
   }
 
+  /**
+   * For deserialized modules, recovers inline meta definitions from the source file.
+   * Metas are not core entities and are not serialized; their Concrete bodies must
+   * come from the source. This method parses the source file, finds meta definitions,
+   * and adds them to the defMap for the resolver to process.
+   */
+  public void recoverMetaDefinitions(ModuleLocation module, ConcreteGroup arcGroup,
+                                     Map<GlobalReferable, Concrete.GeneralDefinition> defMap) {
+    // Check if the ARC group has any meta subgroups that need recovery
+    boolean hasMetas = false;
+    for (ConcreteStatement stmt : arcGroup.statements()) {
+      ConcreteGroup sub = stmt.group();
+      if (sub != null && sub.referable() instanceof MetaReferable metaRef && metaRef.getDefinition() == null) {
+        hasMetas = true;
+        break;
+      }
+    }
+    if (!hasMetas) return;
+
+    // Parse the source file to get the full ConcreteGroup with meta definitions
+    ConcreteGroup sourceGroup = myRequester.getSourceGroup(module);
+    if (sourceGroup == null) return;
+
+    // Extract meta definitions from the source group and add to defMap
+    sourceGroup.traverseGroup(group -> {
+      Concrete.ResolvableDefinition definition = group.definition();
+      if (definition instanceof Concrete.MetaDefinition metaDef) {
+        // Find the matching MetaReferable in the ARC group and bind the concrete definition
+        arcGroup.traverseGroup(arcSub -> {
+          if (arcSub.referable() instanceof MetaReferable arcMetaRef
+              && arcMetaRef.getRefName().equals(group.referable().getRefName())
+              && arcMetaRef.getDefinition() == null) {
+            // Replace the referable in the concrete definition with the ARC one,
+            // so that scope lookups use the ARC group's referables
+            metaDef.setReferable(arcMetaRef);
+            defMap.put(arcMetaRef, metaDef);
+          }
+        });
+      }
+    });
+  }
+
   @Override
   public @NotNull Collection<? extends DefinitionData> getResolvedDefinitions(@NotNull ModuleLocation module) {
     GroupData groupData = myGroups.get(module);

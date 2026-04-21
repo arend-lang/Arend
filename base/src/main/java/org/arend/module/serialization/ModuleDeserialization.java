@@ -264,10 +264,17 @@ public class ModuleDeserialization {
   private ConcreteGroup readGroup(ModuleProtos.Group groupProto, ConcreteGroup parent, ModuleLocation modulePath) throws DeserializationException {
     DefinitionProtos.Referable referableProto = groupProto.getReferable();
     LocatedReferable referable;
-    GlobalReferable.Kind kind = getDefinitionKind(groupProto.getDefinition());
+    // Determine kind: prefer kind_override (for groups without Definition, e.g. metas),
+    // fall back to deriving from the Definition proto.
+    GlobalReferable.Kind kind = referableProto.getKindOverride() == 1
+        ? GlobalReferable.Kind.META
+        : getDefinitionKind(groupProto.getDefinition());
     if (parent == null) {
       referable = new FullModuleReferable(modulePath);
     } else if (kind == GlobalReferable.Kind.META) {
+      // Metas are not core entities — their Definition is not serialized.
+      // The MetaReferable is created for scope visibility; the actual MetaDefinition
+      // (with the Concrete body) will be recovered from the source file during resolution.
       referable = new MetaReferable(null, readAccessModifier(referableProto.getAccessModifier()), readPrecedence(referableProto.getPrecedence()), referableProto.getName(), readAliasPrecedence(referableProto), referableProto.getAliasName().isEmpty() ? null : referableProto.getAliasName(), new MetaTypechecker() {}, null, parent.referable());
     } else {
       referable = new LocatedReferableImpl(null, readAccessModifier(referableProto.getAccessModifier()), readPrecedence(referableProto.getPrecedence()), referableProto.getName(), readAliasPrecedence(referableProto), referableProto.getAliasName().isEmpty() ? null : referableProto.getAliasName(), parent.referable(), kind);
