@@ -57,6 +57,17 @@ public class CliServerRequester implements ArendServerRequester {
     rawSource.load(server, myLibraryManager.getErrorReporter());
   }
 
+  @Override
+  public @Nullable ConcreteGroup loadSourceGroup(@NotNull ModuleLocation module, @NotNull ErrorReporter errorReporter) {
+    if (module.getLocationKind() == ModuleLocation.LocationKind.GENERATED) return null;
+    SourceLibrary library = myLibraryManager.getLibrary(module.getLibraryName());
+    if (library == null) return null;
+    boolean inTests = module.getLocationKind() == ModuleLocation.LocationKind.TEST;
+    Source rawSource = library.getSource(module.getModulePath(), inTests);
+    if (rawSource == null) return null;
+    return rawSource.loadGroup(errorReporter);
+  }
+
   public void setRecompile(boolean recompile) {
     myRecompile = recompile;
   }
