@@ -1,6 +1,7 @@
 package org.arend.library;
 
 import org.arend.error.DummyErrorReporter;
+import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
 import org.arend.ext.error.ListErrorReporter;
 import org.arend.ext.module.ModuleLocation;
@@ -466,6 +467,15 @@ public class ArendLibPartialRoundTripTest {
           deserErrors.add(m);
           logError(m);
         }
+      }
+
+      @Override
+      public org.arend.term.group.ConcreteGroup loadSourceGroup(
+          @org.jetbrains.annotations.NotNull ModuleLocation module,
+          @org.jetbrains.annotations.NotNull ErrorReporter errorReporter) {
+        // Inline-meta recovery needs the original .ard regardless of whether the module
+        // is in the cone: meta bodies aren't serialized into .arc.
+        return sourceRequester.loadSourceGroup(module, errorReporter);
       }
     };
 

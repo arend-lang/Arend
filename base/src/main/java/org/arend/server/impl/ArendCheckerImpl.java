@@ -1,5 +1,6 @@
 package org.arend.server.impl;
 
+import org.arend.error.DummyErrorReporter;
 import org.arend.ext.ArendExtension;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.error.GeneralError;
@@ -8,16 +9,22 @@ import org.arend.ext.module.LongName;
 import org.arend.ext.module.ModulePath;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.util.Pair;
+import org.arend.extImpl.DefaultMetaDefinition;
 import org.arend.module.error.DefinitionNotFoundError;
 import org.arend.module.error.ModuleNotFoundError;
 import org.arend.naming.reference.GlobalReferable;
+import org.arend.naming.reference.MetaReferable;
 import org.arend.naming.reference.Referable;
 import org.arend.naming.reference.TCDefReferable;
 import org.arend.naming.resolving.CollectingResolverListener;
 import org.arend.naming.resolving.typing.GlobalTypingInfo;
 import org.arend.naming.resolving.typing.TypingInfoVisitor;
 import org.arend.naming.resolving.visitor.DefinitionResolveNameVisitor;
+import org.arend.naming.resolving.visitor.ExpressionResolveNameVisitor;
+import org.arend.naming.scope.LexicalScope;
+import org.arend.naming.scope.PrivateFilteredScope;
 import org.arend.naming.scope.Scope;
+import org.arend.naming.scope.ScopeFactory;
 import org.arend.prelude.Prelude;
 import org.arend.server.ArendChecker;
 import org.arend.server.ProgressReporter;
@@ -155,6 +162,7 @@ public class ArendCheckerImpl implements ArendChecker {
       ConcreteProvider concreteProvider = new SimpleConcreteProvider(defMap);
       Collection<? extends ModuleLocation> currentModules = resolveDependencies ? dependencies.keySet() : modules;
       List<Pair<ModuleLocation,ConcreteGroup>> toResolve = new ArrayList<>();
+      List<Pair<MetaReferable, Concrete.MetaDefinition>> recoveredMetas = new ArrayList<>();
       for (ModuleLocation module : currentModules) {
         GroupData groupData = dependencies.get(module);
         if (groupData != null) {
@@ -166,6 +174,7 @@ public class ArendCheckerImpl implements ArendChecker {
                 defMap.put(group.referable(), definition.accept(new ReplaceDataVisitor(true), null));
               }
             });
+            recoverInlineMetaDefinitions(module, groupData.getRawGroup(), defMap, recoveredMetas);
             toResolve.add(new Pair<>(module, groupData.getRawGroup()));
           } else {
             for (DefinitionData data : definitionData) {
@@ -193,6 +202,12 @@ public class ArendCheckerImpl implements ArendChecker {
 
         myLogger.info(() -> "Module '" + module + "' is resolved");
         progressReporter.endItem(pair.proj1);
+      }
+
+      // Attach the resolved concrete bodies to the deserialized MetaReferables so subsequent
+      // typechecking sees a non-null MetaDefinition (avoids the "Meta 'X' is empty" error).
+      for (Pair<MetaReferable, Concrete.MetaDefinition> recovered : recoveredMetas) {
+        recovered.proj1.setDefinition(new DefaultMetaDefinition(recovered.proj2));
       }
 
       boolean ok = myServer.getRequester().runUnderReadLock(() -> {
@@ -289,6 +304,94 @@ public class ArendCheckerImpl implements ArendChecker {
     } catch (ComputationInterruptedException e) {
       myLogger.info(() -> "Resolving of modules " + modules + " is interrupted");
       return null;
+    }
+  }
+
+  /**
+   * Inline-meta bodies live in the concrete universe, which is not serialized into .arc files.
+   * After a module is deserialized, each inline {@link MetaReferable} has {@code getDefinition() == null},
+   * causing {@code CheckTypeVisitor.checkMeta} to report {@code Meta 'X' is empty}. This method
+   * consults the {@link org.arend.server.ArendServerRequester} for a freshly parsed source group
+   * (without touching server state), matches each deserialized meta by long name, transplants the
+   * fresh {@link Concrete.MetaDefinition} onto the deserialized {@link MetaReferable} via
+   * {@link Concrete.MetaDefinition#setReferable}, and registers it in {@code defMap}. The subsequent
+   * {@code resolveGroup} pass discovers the concrete via {@code getConcrete} and resolves the body
+   * in-place; the deserialized core {@code MetaTopDefinition} is left untouched.
+   */
+  private void recoverInlineMetaDefinitions(
+      ModuleLocation module,
+      ConcreteGroup deserializedGroup,
+      Map<GlobalReferable, Concrete.GeneralDefinition> defMap,
+      List<Pair<MetaReferable, Concrete.MetaDefinition>> recoveredMetas) {
+    // Cheap early exit: no deserialized metas in this group.
+    boolean[] hasDeserializedMeta = {false};
+    deserializedGroup.traverseGroup(g -> {
+      if (!hasDeserializedMeta[0] && g.definition() == null && g.referable() instanceof MetaReferable) {
+        hasDeserializedMeta[0] = true;
+      }
+    });
+    if (!hasDeserializedMeta[0]) return;
+
+    ListErrorReporter parseErrors = new ListErrorReporter();
+    ConcreteGroup freshGroup;
+    try {
+      freshGroup = myServer.getRequester().loadSourceGroup(module, parseErrors);
+    } catch (RuntimeException e) {
+      myLogger.info(() -> "Inline-meta recovery: loadSourceGroup threw for " + module + ": " + e);
+      return;
+    }
+    if (freshGroup == null) {
+      myLogger.info(() -> "Inline-meta recovery: source unavailable for " + module);
+      return;
+    }
+
+    Map<LongName, Concrete.MetaDefinition> freshMetas = new HashMap<>();
+    freshGroup.traverseGroup(g -> {
+      if (g.definition() instanceof Concrete.MetaDefinition freshMeta) {
+        freshMetas.put(freshMeta.getData().getRefLongName(), freshMeta);
+      }
+    });
+
+    // Hybrid scope: imports are taken from the FRESH group (deserialization strips
+    // namespace commands), but inner (same-module) lookups go through the DESERIALIZED
+    // group so that references in the body resolve to the already-typechecked referables.
+    Scope freshImports = ScopeFactory.parentScopeForGroup(
+        freshGroup,
+        myServer.getModuleScopeProvider(module.getLibraryName(), module.getLocationKind() == ModuleLocation.LocationKind.TEST),
+        true);
+    Scope resolveScope = LexicalScope.insideOf(deserializedGroup, freshImports, false);
+
+    deserializedGroup.traverseGroup(g -> {
+      if (g.definition() != null) return;
+      if (!(g.referable() instanceof MetaReferable deserMetaRef)) return;
+      Concrete.MetaDefinition freshMeta = freshMetas.get(deserMetaRef.getRefLongName());
+      if (freshMeta == null) {
+        myLogger.info(() -> "Inline-meta recovery: no source match for " + deserMetaRef.getRefLongName() + " in " + module);
+        return;
+      }
+      // Transplant identity: the concrete body now belongs to the deserialized referable.
+      freshMeta.setReferable(deserMetaRef);
+      defMap.put(deserMetaRef, freshMeta);
+      // Pre-resolve the body against the hybrid scope. The subsequent resolveGroup pass
+      // would otherwise use the deserialized group's scope (no imports), producing
+      // unresolvable references for anything imported from another module.
+      resolveMetaBody(freshMeta, resolveScope);
+      recoveredMetas.add(new Pair<>(deserMetaRef, freshMeta));
+    });
+  }
+
+  private void resolveMetaBody(Concrete.MetaDefinition freshMeta, Scope outerScope) {
+    Scope scope = new PrivateFilteredScope(outerScope);
+    List<? extends Referable> pLevels = freshMeta.getPLevelParameters() == null ? Collections.emptyList() : freshMeta.getPLevelParameters().referables;
+    List<? extends Referable> hLevels = freshMeta.getHLevelParameters() == null ? Collections.emptyList() : freshMeta.getHLevelParameters().referables;
+    List<org.arend.naming.resolving.typing.TypedReferable> context = new ArrayList<>();
+    ExpressionResolveNameVisitor exprVisitor = new ExpressionResolveNameVisitor(
+        scope, context, myServer.getTypingInfo(),
+        DummyErrorReporter.INSTANCE, null, null,
+        pLevels, hLevels);
+    exprVisitor.visitParameters(freshMeta.getParameters(), null);
+    if (freshMeta.body != null) {
+      freshMeta.body = freshMeta.body.accept(exprVisitor, null);
     }
   }
 
