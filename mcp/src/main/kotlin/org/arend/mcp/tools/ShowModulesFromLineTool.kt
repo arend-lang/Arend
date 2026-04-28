@@ -1,5 +1,6 @@
 package org.arend.mcp.tools
 
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -19,6 +20,7 @@ class ShowModulesFromLineTool(private val server: ArendServer? = null) : McpTool
         "Then, the tool will return the content of this file from line1 to max(line2, line1 + 500). " +
         "Provide the line numbers as a string in the format \"line1-line2\" or \"line1\". In the latter case the tool takes line2 = line1 + 500."
 
+    @Serializable
     private data class ShowModulesFromLineInput(
         val libraryPath: String = "",
         val modulePath: String = "",

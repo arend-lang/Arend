@@ -39,7 +39,7 @@ class ProofSearcherTool(private val project : Project? = null) : McpTool {
   }
 
   @Serializable
-  private data class ProofSearchInput(val query: String)
+  private data class ProofSearchInput(val libraryPath: String = "", val query: String)
 
   override fun execute(arguments: String): String {
     val input = Json.decodeFromString<ProofSearchInput>(arguments)

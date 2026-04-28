@@ -38,6 +38,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
   protected int myIndent;
   private final boolean noIndent;
   private final int myLineLength;
+  private final Deque<Map<String, ConcreteGroup>> myCoclauseGroupsStack = new ArrayDeque<>();
 
   public PrettyPrintVisitor(StringBuilder builder, int indent, boolean doIndent, int lineLength) {
     myBuilder = builder;
@@ -116,6 +117,24 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       }
     }
 
+    // Collect coclause function groups (FUNC_COCLAUSE) — these should be printed inline in the body,
+    // not in a \where block. Build a map from referable name to group for lookup during body printing.
+    Map<String, ConcreteGroup> coclauseGroups = new LinkedHashMap<>();
+    List<ConcreteStatement> nonCoclauseStatements = new ArrayList<>();
+    for (ConcreteStatement stmt : group.statements()) {
+      ConcreteGroup stmtGroup = stmt.group();
+      if (stmtGroup != null && stmtGroup.definition() instanceof Concrete.BaseFunctionDefinition funcDef
+          && funcDef.getKind() == FunctionKind.FUNC_COCLAUSE) {
+        coclauseGroups.put(stmtGroup.referable().getRefName(), stmtGroup);
+      } else {
+        nonCoclauseStatements.add(stmt);
+      }
+    }
+
+    if (!coclauseGroups.isEmpty()) {
+      myCoclauseGroupsStack.push(coclauseGroups);
+    }
+
     if (group.definition() != null) {
       group.definition().accept(this, null);
     } else {
@@ -123,7 +142,11 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
       myBuilder.append("\\module ").append(group.referable().getRefName());
     }
 
-    if (group.statements().isEmpty()) return;
+    if (!coclauseGroups.isEmpty()) {
+      myCoclauseGroupsStack.pop();
+    }
+
+    if (nonCoclauseStatements.isEmpty()) return;
 
     myBuilder.append("\n");
     myIndent += INDENT;
@@ -131,7 +154,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     myBuilder.append("\\where {\n");
     myIndent += INDENT;
 
-    printStatements(group.statements());
+    printStatements(nonCoclauseStatements);
 
     myBuilder.append("\n");
     myIndent -= INDENT;
@@ -1512,6 +1535,13 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
 
         if (needsParens && pattern.isExplicit())
           myBuilder.append(')');
+      }
+      case Concrete.UnparsedConstructorPattern unparsedPattern -> {
+        List<BinOpSequenceElem<Concrete.Pattern>> elems = unparsedPattern.getUnparsedPatterns();
+        for (int i = 0; i < elems.size(); i++) {
+          if (i > 0) myBuilder.append(' ');
+          prettyPrintPattern(elems.get(i).getComponent(), parentPrec, false, i == 0 ? ArgumentPosition.LEFT : ArgumentPosition.RIGHT);
+        }
       }
       default -> {}
     }
