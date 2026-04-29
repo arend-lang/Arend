@@ -49,6 +49,67 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
       }
 
       myTypingInfo.addDynamicScopeProvider(classDef.getData(), new DynamicScopeProviderImpl(classDef.getData(), superRefs, dynamicRefs));
+    } else if (group.definition() == null
+               && group.referable() instanceof TCDefReferable tcRef
+               && tcRef.getTypechecked() instanceof org.arend.core.definition.ClassDefinition cd) {
+      // Fallback for deserialized class groups (no Concrete.ClassDefinition): register
+      // DynamicScopeProvider from the typechecked ClassDefinition so downstream fresh
+      // classes that extend this one can resolve its inherited fields. Without this,
+      // a class like `\class TopSpace \extends BaseSet { ... }` whose BaseSet is
+      // deserialized will fail to resolve `E` (BaseSet's classifying field), leaving
+      // TopSpace with HAS_ERRORS status and null classifying → downstream instance
+      // search cycles on classes without a classifying field.
+      List<GlobalReferable> superRefs = new ArrayList<>(cd.getSuperClasses().size());
+      for (org.arend.core.definition.ClassDefinition sc : cd.getSuperClasses()) {
+        superRefs.add(sc.getReferable());
+      }
+      List<GlobalReferable> dynamicRefs = new ArrayList<>();
+      for (org.arend.core.definition.ClassField field : cd.getPersonalFields()) {
+        if (field.getReferable() instanceof GlobalReferable gr) dynamicRefs.add(gr);
+      }
+      for (ConcreteGroup subgroup : group.dynamicGroups()) {
+        dynamicRefs.add(subgroup.referable());
+      }
+      myTypingInfo.addDynamicScopeProvider(tcRef, new DynamicScopeProviderImpl(tcRef, superRefs, dynamicRefs));
+      // Each field has type `\Pi (this : ThisClass) → ...target` — register the
+      // field's referable → AbstractBody pointing at the target class so callers
+      // of `getTypeDynamicScopeProvider(fieldRef)` find the right scope. Note we
+      // pass priorParams=0: getCodomain() strips the implicit `this` Pi, and the
+      // source-side `resolveAbstractBody` does NOT count `this` either (it only
+      // counts explicit concrete parameters).
+      for (org.arend.core.definition.ClassField field : cd.getPersonalFields()) {
+        if (field.getType() != null && field.getType().getCodomain() != null) {
+          registerCoreType(field.getReferable(), field.getType().getCodomain(),
+              /*priorParams=*/ 0);
+        }
+      }
+    } else if (group.definition() == null
+               && group.referable() instanceof TCDefReferable tcRef
+               && tcRef.getTypechecked() instanceof org.arend.core.definition.FunctionDefinition fnDef) {
+      // Fallback for deserialized function/instance groups: add referableType so that
+      // `typingInfo.getTypeDynamicScopeProvider(fnRef)` can find the class whose instance
+      // this function produces. Without this, `Instance.fieldName` resolution through
+      // a deserialized instance returns null and the resolver falls back to
+      // FieldCallExpression, which then fails in CheckTypeVisitor#visitFieldCall.
+      if (fnDef.getResultType() != null) {
+        // The source-side `resolveAbstractBody` counts only EXPLICIT parameters, and does
+        // NOT count the implicit `this` binding for class-internal functions (it doesn't
+        // appear in the concrete AST at all). Match that convention — otherwise the
+        // cached `typeBody.params` mismatches the caller's argument count during
+        // `getTypeDynamicScopeProvider`, the lookup returns null, and the resolver
+        // falls back to FieldCallExpression, which then reports "Cannot find 'X' in
+        // class 'Y'" for non-field dynamic members.
+        int params = 0;
+        org.arend.core.context.param.DependentLink link = fnDef.getParameters();
+        if (fnDef.hasEnclosingClass() && link.hasNext()) {
+          link = link.getNext();  // skip the implicit `this`
+        }
+        while (link.hasNext()) {
+          if (link.isExplicit()) params++;
+          link = link.getNext();
+        }
+        registerCoreType(tcRef, fnDef.getResultType(), params);
+      }
     }
 
     for (ConcreteStatement statement : group.statements()) {
@@ -61,6 +122,46 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
       for (ConcreteGroup subgroup : group.dynamicGroups()) {
         processGroup(subgroup, dynamicScope);
       }
+    }
+  }
+
+  /** Register `AbstractBody` for {@code ref} whose type is (possibly applied) {@code coreType}. */
+  private void registerCoreType(org.arend.naming.reference.TCDefReferable ref,
+                                org.arend.core.expr.Expression coreType,
+                                int priorParams) {
+    // Count EXPLICIT Pi parameters in the type: `\Pi (x : T1) → \Pi (y : T2) → ... → TargetDefCall`.
+    // Implicit parameters are not counted (matches source's `resolveAbstractBody` for isType=true).
+    int piParams = 0;
+    org.arend.core.expr.Expression cur = coreType;
+    while (cur instanceof org.arend.core.expr.PiExpression piExpr) {
+      org.arend.core.context.param.DependentLink link = piExpr.getParameters();
+      while (link.hasNext()) {
+        if (link.isExplicit()) piParams++;
+        link = link.getNext();
+      }
+      cur = piExpr.getCodomain();
+    }
+    // Unwrap arg applications. Source counts only explicit arguments; mirror that.
+    int arguments = 0;
+    while (cur instanceof org.arend.core.expr.AppExpression appExpr) {
+      if (appExpr.isExplicit()) arguments++;
+      cur = appExpr.getFunction();
+    }
+    if (cur instanceof org.arend.core.expr.DefCallExpression defCall) {
+      myTypingInfo.addReferableType(ref,
+          new AbstractBody(priorParams + piParams, defCall.getDefinition().getReferable(), arguments));
+    } else if (cur instanceof org.arend.core.expr.ClassCallExpression classCall) {
+      // Count parameter-field implementations — these correspond to the positional
+      // arguments the source-side `resolveAbstractBody` would count from a
+      // `Concrete.AppExpression` chain. Source's ClassExt branch resets arguments
+      // to 0 and then walks the base; parameter-field implementations (e.g. `S=Cod`
+      // in `SubRing Cod`) mirror that count in core.
+      int classArgs = 0;
+      for (org.arend.core.definition.ClassField field : classCall.getImplementedHere().keySet()) {
+        if (field.getReferable().isParameterField()) classArgs++;
+      }
+      myTypingInfo.addReferableType(ref,
+          new AbstractBody(priorParams + piParams, classCall.getDefinition().getReferable(), classArgs));
     }
   }
 
