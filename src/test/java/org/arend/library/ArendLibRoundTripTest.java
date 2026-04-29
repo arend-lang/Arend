@@ -22,6 +22,8 @@ import org.arend.server.ArendServerRequester;
 import org.arend.server.ProgressReporter;
 import org.arend.server.impl.ArendServerImpl;
 import org.arend.source.FileBinarySource;
+import org.arend.source.GZIPStreamBinarySource;
+import org.arend.source.StreamBinarySource;
 import org.arend.term.concrete.Concrete;
 import org.arend.term.group.ConcreteGroup;
 import org.arend.term.group.ConcreteStatement;
@@ -169,6 +171,18 @@ public class ArendLibRoundTripTest {
     );
   }
 
+  /**
+   * Returns the same gzipped binary source the production CLI / IDE use
+   * ({@link FileSourceLibrary#getBinarySource}). Tests that bypass this and
+   * use a raw {@link FileBinarySource} produce uncompressed .arc files
+   * which the production tools fail to read with "Not in GZIP format".
+   * This matters especially for this test, which writes to {@code arend-lib/bin}
+   * directly — leaving uncompressed .arc files there would break subsequent CLI runs.
+   */
+  private static StreamBinarySource makeBinarySource(Path basePath, ModuleLocation loc) {
+    return new GZIPStreamBinarySource(new FileBinarySource(basePath, loc));
+  }
+
   // ---------------------------------------------------------------------------
   // Main test  (timeout = 20 minutes)
   // ---------------------------------------------------------------------------
@@ -271,7 +285,7 @@ public class ArendLibRoundTripTest {
 
     for (int i = 0; i < moduleLocations.size(); i++) {
       ModuleLocation moduleLoc = moduleLocations.get(i);
-      FileBinarySource source = new FileBinarySource(binaryBasePath, moduleLoc);
+      StreamBinarySource source = makeBinarySource(binaryBasePath, moduleLoc);
       ListErrorReporter moduleErr = new ListErrorReporter();
       boolean ok = source.persist(server1, moduleErr);
       if (!ok) {
@@ -316,7 +330,7 @@ public class ArendLibRoundTripTest {
         if (server.getRawGroup(module) != null) return;
         Path arcFile = FileUtils.binaryFile(binPath, module.getModulePath());
         if (!Files.isRegularFile(arcFile)) return;
-        FileBinarySource binarySource = new FileBinarySource(binPath, module);
+        StreamBinarySource binarySource = makeBinarySource(binPath, module);
         ListErrorReporter reqErr = new ListErrorReporter();
         ConcreteGroup reqLoaded = binarySource.load(server, reqErr);
         if (reqLoaded == null || !reqErr.getErrorList().isEmpty()) {
@@ -364,7 +378,7 @@ public class ArendLibRoundTripTest {
       }
 
       log("Phase 3: loading module " + moduleLoc.getModulePath() + " (i=" + i + ", elapsed: " + elapsed() + ")");
-      FileBinarySource source = new FileBinarySource(binaryBasePath, moduleLoc);
+      StreamBinarySource source = makeBinarySource(binaryBasePath, moduleLoc);
       ListErrorReporter moduleErr = new ListErrorReporter();
       ConcreteGroup loaded = source.load(server2, moduleErr);
       log("Phase 3: loaded module " + moduleLoc.getModulePath() + " result=" + (loaded == null ? "null" : "ok") + " errors=" + moduleErr.getErrorList().size() + " (elapsed: " + elapsed() + ")");
