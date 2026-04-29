@@ -45,6 +45,46 @@ public class InstanceCacheImpl implements InstanceCache {
             }
           }
         }
+        return;
+      }
+
+      // Fallback for deserialized groups where `subgroup.definition()` is null but the
+      // referable carries a typechecked FunctionDefinition with kind INSTANCE. Without
+      // this, `\instance` declarations in deserialized modules are silently skipped here
+      // and downstream fresh typechecking fails with "Cannot infer an instance of class X".
+      if (subgroup.definition() == null
+          && subgroup.referable() instanceof TCDefReferable tcRef
+          && tcRef.getTypechecked() instanceof FunctionDefinition fnDef
+          && fnDef.getKind() == org.arend.ext.core.definition.CoreFunctionDefinition.Kind.INSTANCE) {
+        Expression resultType = fnDef.getResultType();
+        // Unwrap AppExpression wrappers so an `\instance LModuleCat (R : Ring) : Cat (LModule R)`
+        // whose deserialized core result is `AppExpression(ClassCallExpression(Cat), LModule R)`
+        // still resolves to the Cat class. Same unwrap CollectDefCallsVisitor.initializeInstances
+        // applies for the typechecker-side instance pool.
+        while (resultType instanceof org.arend.core.expr.AppExpression app) {
+          resultType = app.getFunction();
+        }
+        ClassDefinition directClass = null;
+        if (resultType instanceof org.arend.core.expr.ClassCallExpression classCall) {
+          directClass = classCall.getDefinition();
+        } else if (resultType instanceof org.arend.core.expr.DefCallExpression defCall
+                   && defCall.getDefinition() instanceof ClassDefinition cd) {
+          directClass = cd;
+        }
+        if (directClass != null) {
+          addInstance(directClass.getReferable(), fnDef.getReferable());
+          // Also register for every transitive super-class, so that queries for a
+          // base class (e.g. Preorder) find instances that were declared for subclasses
+          // (e.g. Poset). Mirrors the DynamicScope.Extent.WITH_SUPER walk above.
+          Set<ClassDefinition> visited = new HashSet<>();
+          Deque<ClassDefinition> todo = new ArrayDeque<>(directClass.getSuperClasses());
+          while (!todo.isEmpty()) {
+            ClassDefinition sc = todo.pop();
+            if (!visited.add(sc)) continue;
+            addInstance(sc.getReferable(), fnDef.getReferable());
+            todo.addAll(sc.getSuperClasses());
+          }
+        }
       }
     });
   }
