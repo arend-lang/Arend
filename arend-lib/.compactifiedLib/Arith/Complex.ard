@@ -1,0 +1,51 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Local
+\import Algebra.Semiring
+\import Arith.Real
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Arith.Real.Field
+
+\class Complex {
+  | re : Real
+  | im : Real
+}
+
+\instance ComplexField : Field Complex 
+  | zro => \new (Complex 0 0)
+  | + => \lam (x y : Complex) => \new (Complex (x.re + y.re) (x.im + y.im))
+  | zro-left => ext (zro-left, zro-left)
+  | +-assoc => ext (+-assoc, +-assoc)
+  | +-comm => ext (+-comm, +-comm)
+  | CMonoid => ComplexMonoid
+  | ldistr => ext (equation, equation)
+  | negative => \lam (x : Complex) => \new (Complex (negative x.re) (negative x.im))
+  | negative-left => ext (negative-left, negative-left)
+  | zro/=ide => \lam p => zro/=ide $ pmap (\lam (x : Complex) => x.re) p
+  | locality => \lam (x : Complex) => (\case locality x.re \with {
+    | byLeft r => byLeft $ inv-char.2 $ byLeft r
+    | byRight r => byRight $ inv-char.2 $ byLeft r
+  })
+  | #0-tight => \lam c => ext (AddGroup.#0-tight (\lam p => c $ inv-char.2 $ byLeft p), AddGroup.#0-tight (\lam p => c $ inv-char.2 $ byRight p))
+  \where {
+    \open Monoid(Inv)
+
+    \instance ComplexMonoid : CMonoid Complex 
+      | ide => \new (Complex 1 0)
+      | * => \lam (x y : Complex) => \new (Complex (x.re * y.re - x.im * y.im) (x.re * y.im + x.im * y.re))
+      | ide-left => ext (equation, equation)
+      | *-assoc => ext (equation, equation)
+      | *-comm => ext (pmap2 (__ - __) *-comm *-comm, +-comm *> pmap2 + *-comm *-comm)
+
+    \lemma inv-char {x : Complex} : Inv x <-> Inv x.re || Inv x.im => {?hidden_proof}
+  }

@@ -477,6 +477,29 @@
   \lemma BigProd_Perm {n : Nat} {l l' : Array E n} (p : Perm l l') : BigProd l = BigProd l'
     => AbMonoid.BigSum_Perm {AbMonoid.fromCMonoid \this} p
 
+  \sfunc FinProd {A : FinSet} (x : A -> E) : E
+    => aux.1
+    \where {
+      \lemma aux : \Sigma (r : E) (∃ (e : Equiv {Fin A.finCard} {A}) (BigProd (\lam j => x (e j)) = r))
+        => TruncP.rec-set A.finEq _ aux
+        \where
+          \lemma aux (e e' : Equiv {Fin A.finCard} {A}) : BigProd (\lam j => x (e j)) = BigProd (\lam j => x (e' j))
+            => BigProd_Perm $ transport (Perm _) (arrayExt \lam j => pmap x $ e.f_ret _) $ Perm.equiv_perm $ transEquiv e' (symQEquiv e)
+    }
+
+  \lemma FinProd_char {A : FinSet} (x : A -> E) : ∃ (e : Equiv {Fin A.finCard} {A}) (FinProd {_} {A} x = BigProd (\lam j => x (e j)))
+    => TruncP.map FinProd.aux.2 \lam t => (t.1, (\peval FinProd {_} {A} x) *> inv t.2)
+
+  \lemma FinProd_char2 {A : FinSet} {x : A -> E} (e : Equiv {Fin A.finCard} {A}) : FinProd x = BigProd (\lam j => x (e j))
+    => \case FinProd_char x \with {
+      | inP p => p.2 *> FinProd.aux.aux {_} {_} {x} p.1 e
+    }
+
+  \lemma FinProd-const {A : FinSet} {x : E} : FinProd {_} {A} (\lam _ => x) = BigProd (\new Array E A.finCard (\lam j => x))
+    => \case FinProd_char {_} {A} (\lam _ => x) \with {
+      | inP p => p.2
+    }
+
   \func LDiv_BigProd {l : Array E} (j : Fin l.len) : LDiv (l j) (BigProd l) \elim l, j
     | a :: l, 0 => LDiv.factor-left LDiv.id-div
     | a :: l, suc j => LDiv.trans (LDiv_BigProd j) (LDiv.factor-right LDiv.id-div)

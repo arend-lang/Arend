@@ -1,0 +1,210 @@
+\import AG.Scheme
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Sub
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring.RingCategory
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.Graded
+\import Algebra.Ring.Graded.Localization
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Localization
+\import Algebra.Ring.Sub
+\import Algebra.Semiring
+\import Arith.Int
+\import Arith.Nat
+\import Category
+\import Category.Functor
+\import Category.Slice
+\import Category.Topos.Sheaf
+\import Category.Topos.Sheaf.Site
+\import Category.Topos.Sheaf.Sub
+\import Data.Array
+\import Data.Bool
+\import Data.Maybe
+\import Data.Or
+\import Equiv
+\import Function.Meta
+\import Logic.Unique
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set.Fin
+\import Topology.Locale
+\open Ideal
+\open AddMonoid
+\open Monoid(pow)
+
+\func ProjPres (R : GradedCRing) : FramePres (Carrier R) \cowith
+  | conj => h*
+  | BasicCover => FramePres.Indexing {Or (\Sigma (n : Nat) (a b : R) (isHomogen a (suc n)) (isHomogen b (suc n))) Nat} $ later
+    (\case __ \with {  | inl (n, a, b, ah, bh) => (Bool, (a + b, n, homogen-+ ah bh), if {Carrier R} __ (a, n, ah) (b, n, bh))
+    | inr n => (Empty, (0, n, homogen-zro), absurd)})
+  \where {
+    \func Carrier (R : GradedCRing) => \Sigma (a : R) (n : Nat) (isHomogen a (suc n))
+      \where {
+        \func ext {R : GradedCRing} (x y : Carrier R) (p : x.1 = y.1) : Or (x = y) (x.1 = 0) 
+        => \case y.1 \as a, p : x.1 = a, y.3 \as y3 : isHomogen a (suc y.2) \return Or (x = (a, y.2, y3)) (x.1 = 0) \with {
+          | _, idp, y3 => \case R.degree-unique x.3 y3 \with {
+            | inl x=0 => inr x=0
+            | inr q => inl $ Paths.Meta.ext (idp, pmap pred q)
+          }
+        }
+      }
+
+
+    \func h* {R : GradedCRing} (x y : Carrier R) : Carrier R => (x.1 * y.1, suc (x.2 Nat.+ y.2), homogen-* x.3 y.3)
+
+    \lemma cover_spec {R : GradedCRing} {x : Carrier R} {J : \Set} {g : J -> Carrier R} (c : Cover {ProjPres R} x g) : Cover {SpecPres R} x.1 (\lam j => (g j).1) => {?hidden_proof}
+
+    \lemma cover_factor {R : GradedCRing} {x y : Carrier R} (c : Cover1 {ProjPres R} x y) : ∃ (n : Nat) (c : R) (pow x.1 n = y.1 * c) => {?hidden_proof}
+
+    \lemma cover_zro {R : GradedCRing} {x : Carrier R} (p : x.1 = 0) {J : \Set} {g : J -> Carrier R} : Cover {ProjPres R} x g => {?hidden_proof}
+
+    \lemma cover-eq {R : GradedCRing} {x y : Carrier R} (p : x.1 = y.1) {J : \Set} {g : J -> Carrier R} (c : Cover {ProjPres R} x g) : Cover {ProjPres R} y g => {?hidden_proof}
+
+    \lemma cover-proj1 {R : GradedCRing} {x : Carrier R} {J : \Set} {g : J -> Carrier R} {a : Carrier R} {b : R} {n : Nat} (bh : isHomogen b n) (p : x.1 = a.1 * b) (j : J) 
+    (q : g j = a) : Cover {ProjPres R} x g => {?hidden_proof}
+
+    \lemma cover-proj2 {R : GradedCRing} {x : Carrier R} {J : \Set} {g : J -> Carrier R} {a : R} {n : Nat} (ah : isHomogen a n) {b : Carrier R} (p : x.1 = a * b.1) (j : J) 
+    (q : g j = b) : Cover {ProjPres R} x g => {?hidden_proof}
+
+    \func toSpec (R : GradedCRing) : FramePresPrehom (ProjPres R) (SpecPres R) \cowith
+      | func => \lam a => a.1
+      | func-conj => idp
+      | func-basicCover => FramePres.indexing-transport _ $ later (\case \elim __ \with {  | inl t => inP (just (t.2, t.3), idEquiv, idp, cases __ idp)
+        | inr n => inP (nothing, idEquiv, idp, \case __ \with {})})
+
+    \lemma cover_BigSum {R : GradedCRing} {l : Array R} {n : Nat} (p : \Pi (j : Fin l.len) -> isHomogen (l j) (suc n)) :
+      Cover {ProjPres R} (BigSum l, n, R.homogen-BigSum p) (mkArray $ later (\lam j => (l j, n, p j))) => {?hidden_proof}
+
+    \lemma cover_FinSum {R : GradedCRing} {J : FinSet} {a : J -> R} {n : Nat} (p : \Pi (j : J) -> isHomogen (a j) (suc n)) :
+      Cover {ProjPres R} (R.FinSum a, n, R.homogen-FinSum p) (\lam j => (a j, n, p j)) => {?hidden_proof}
+
+    \lemma ideal_cover {R : GradedCRing} {x : Carrier R} {J : \Set} {g : J -> Carrier R} (c : Ideal.radical {closure (\lam j => (g j).1)} x.1) : Cover {ProjPres R} x g => {?hidden_proof}
+      \where {
+        \func hpow {R : GradedCRing} (x : Carrier R) (n : Nat) : Carrier R \elim n
+          | 0 => x
+          | suc n => h* (hpow x n) x
+
+        \lemma hpow_pow {R : GradedCRing} {x : Carrier R} {n : Nat} : (hpow x n).1 = Monoid.pow x.1 (suc n) => {?hidden_proof}
+
+        \lemma cover_hpow {R : GradedCRing} {x : Carrier R} (n : Nat) : Cover1 {ProjPres R} x (hpow x n) => {?hidden_proof}
+      }
+
+  }
+
+
+\func Proj (R : GradedCRing) => PresentedFrame (ProjPres R)
+
+\func projRingedPres (R : GradedCRing) : Scheme (Proj R) \cowith
+  | R => sheafOnPresentedFrame {_} {CRingBicat} $ sheaf-reflect CRingCat.forget CRingCat.forget.reflectsLimit functor $ subSheafWithBasis {_} 
+    {\new (Presheaf _ (Comp CRingCat.forget functor))}
+      {\new Sheaf {
+      | VSheaf => VSheaf.direct_image_framePres (ProjPres.toSpec R) (sheaf-preserve CRingCat.forget CRingCat.forget.preservesLimit affineRingedPres.R)}} 
+    natTrans natTrans-isEmb subSheaf-lem
+  | isScheme => {?}
+  \where {
+    \open SubMonoid
+    \open Monoid
+    \open HomogenLocRing
+    \open CMonoid
+    \open functorial
+
+    \func functor  => \new (Functor (Precat.op {framePresSite (ProjPres R)}) CRingBicat) {
+      | F => \lam a => HomogenLocRing (powers a.1)
+      | Func => \lam {a} {b} c => (functorial a.3 b.3 suc/=0 (ProjPres.cover_spec c)).1
+      | Func-id => \lam {a} => (\case (functorial a.3 a.3 suc/=0 (ProjPres.cover_spec (cover-inj () idp))).2 \with {
+        | inP (t, p) => inv p *> exts
+          (\lam e => (\case (smap a.3 a.3 t.1 t.2 t.3 t.4 t.5 t.6 e).2 \with {
+          | inP (s, q) => inv q *> ext (~-pequiv (rewrite (pow_*, t.5, pow_*-comm) equation) *> inv (pmap __.1 s.4))}))
+      })
+      | Func-o => \lam {a} {b} {c} {g} {f} => (\case (functorial a.3 c.3 suc/=0 (ProjPres.cover_spec (g ∘ {Precat.op {framePresSite (ProjPres R)}} f))).2, 
+        (functorial b.3 c.3 suc/=0 (ProjPres.cover_spec g)).2, (functorial a.3 b.3 suc/=0 (ProjPres.cover_spec f)).2
+         \with {
+          | inP (t1, p1), inP (t2, p2), inP (t3, p3) => inv p1 *> exts
+            (\lam e => (\case (smap a.3 c.3 t1.1 t1.2 t1.3 t1.4 t1.5 t1.6 e).2, 
+            (smap b.3 c.3 t2.1 t2.2 t2.3 t2.4 t2.5 t2.6 (smap a.3 b.3 t3.1 t3.2 t3.3 t3.4 t3.5 t3.6 e).1).2, (smap a.3 b.3 t3.1 t3.2 t3.3 t3.4 t3.5 t3.6 e).2
+             \with {    | inP (s1, q1), inP (s2, q2), inP (s3, q3) => inv q1 *> ext
+                (\case LocRing.unequals $ pmap __.1 $ inv s1.4 *> s3.4, LocRing.unequals $ pmap __.1 $ q3 *> s2.4 \with {
+                | inP (_, inP (m1, idp), d1), inP (_, inP (m2, idp), d2) =>
+                LocRing.equals-lem {_} {powers c.1} (pow c.1 (t1.1 * (s3.2 + m1) + t2.1 * (t3.1 * s3.2 + m2))) (inP (_, idp)) $ later $ repeat 
+                  (rewrite pow_* <|> rewrite pow_*-comm <|> rewrite pow_+ <|> rewrite t1.5 <|> rewrite t2.5 <|> rewrite t3.5) $ rewrite (pow_*, t3.5, pow_*-comm) at d2 
+                  $ equation}) *> q2  })) *> pmap2 ∘ p2 p3
+        })
+    }
+
+    \func natTrans : NatTrans (Comp CRingCat.forget functor) (Comp (Comp CRingCat.forget affineRingedPres.R) (Functor.op {FramePresPrehom.functor {ProjPres.toSpec R}})) \cowith
+      | trans => \lam _ t => t.1
+      | natural => \lam {a} {b} => unfold (\lam c => ext (\case \elim __ \with {  | (x, inP u) \as e =>     \have | inP (t, p) => (functorial a.3 b.3 suc/=0 (ProjPres.cover_spec c)).2
+                | inP (s, q) => (smap a.3 b.3 t.1 t.2 t.3 t.4 t.5 t.6 e).2          | inP (n, a^n=u12) => u.1.3
+                | inP (_, inP (m, idp), d) => LocRing.unequals $ inv u.2 *> pmap __.1 s.4
+          \in rewriteI (p, q, inv u.2) $ LocRing.equals-lem {_} {powers b.1} (pow b.1 (t.1 * m)) (inP (_, idp)) 
+                (later $ rewrite (pow_*, pow_*, pow_*, t.5, pow_*-comm, pow_*-comm, pow_*-comm) equation) *> inv 
+                (affineRingedPres.functorial-lem {R} {a.1} {b.1} {inP (t.1, closure1-lem.2 $ inP (t.2, t.5))} n a^n=u12 t.5)}))
+
+    \lemma natTrans-isEmb (a : ProjPres R) {x y : HomogenLocRing (powers a.1)} (p : x.1 = y.1) : x = y => {?hidden_proof}
+
+    \lemma subSheaf-lem {a : framePresSite (ProjPres R)} {J : \Set} {g : J -> SlicePrecat {framePresSite (ProjPres R)} a} (c : isBasicCover a g) (x : LocRing (powers a.1))
+      (h : \Pi (j : J) -> \Sigma (y : HomogenLocRing (powers (g j).1.1)) 
+      (y.1 = (affineRingedPres.functorial (SpecPres.cover_ideal (Cover.map {ProjPres.toSpec R} (g j).2))).1 x)) :
+      ∃ (y : HomogenLocRing (powers a.1)) (y.1 = x) => {?hidden_proof}
+
+    \lemma functorial {R : GradedCRing} {a b : R} {ad bd : Nat} (ah : isHomogen a ad) (bh : isHomogen b bd) (bd/=0 : bd /= 0) (r : Cover1 {SpecPres R} b a) :
+      \level (\Sigma (f : RingHom (HomogenLocRing (powers a)) (HomogenLocRing (powers b))) 
+      (∃ (t : (\Sigma (n : Nat) (c : R) (cd : Nat) (ch : isHomogen c cd) (pow b n = a * c) (bd * n = ad + cd))) (shom t.1 t.2 t.3 t.4 t.5 t.6 = f))
+      ) (TruncP.rec-set.level shom-coh) => {?hidden_proof}
+      \where {
+        \func sfunc (bh : isHomogen b bd) (n : Nat) (c : R) (cd : Nat) (ch : isHomogen c cd) (bd*n=ad+cd : bd * n = ad + cd) (k : Nat) {y : R} (yh : isHomogen y (ad * k)) : HomogenLocRing (powers b) 
+        => fromSType (y * pow c k, pow b (n * k), later $ inP (n * k, idp)) {bd * (n * k)} (rewrite (inv *-assoc, bd*n=ad+cd, rdistr) $ homogen-* yh (R.homogen-pow ch)) 
+          (R.homogen-pow bh)
+
+        \lemma shom-coh (t s : \Sigma (n : Nat) (c : R) (cd : Nat) (ch : isHomogen c cd) (pow b n = a * c) (bd * n = ad + cd)) :
+          shom t.1 t.2 t.3 t.4 t.5 t.6 = {RingHom (HomogenLocRing (powers a)) (HomogenLocRing (powers b))} shom s.1 s.2 s.3 s.4 s.5 s.6 => {?hidden_proof}
+
+        \lemma smap (ah : isHomogen a ad) (bh : isHomogen b bd) (n : Nat) (c : R) (cd : Nat) (ch : isHomogen c cd) (p : pow b n = a * c) (bd*n=ad+cd : bd * n = ad + cd) 
+        (x : HomogenLocRing (powers a)) : \Sigma (z : HomogenLocRing (powers b))
+          (∃ (t : (\Sigma (y : R) (k : Nat) (yh : isHomogen y (ad * k)) (x = fromSType (y, pow a k, later $ inP (k, idp)) yh (R.homogen-pow ah)))) 
+          (sfunc bh n c cd ch bd*n=ad+cd t.2 t.3 = z)) => {?hidden_proof}
+
+        \func shom (n : Nat) (c : R) (cd : Nat) (ch : isHomogen c cd) (p : pow b n = a * c) (bd*n=ad+cd : bd * n = ad + cd) :
+          RingHom (HomogenLocRing (powers a)) (HomogenLocRing (powers b)) \cowith
+          | func => \lam x => (smap ah bh n c cd ch p bd*n=ad+cd x).1
+          | func-+ => \lam {x} {y} => (\case (smap ah bh n c cd ch p bd*n=ad+cd x).2, (smap ah bh n c cd ch p bd*n=ad+cd y).2, (smap ah bh n c cd ch p bd*n=ad+cd (x + y)).2 \with {
+            | inP (t1, q1), inP (t2, q2), inP (t3, q3) => inv q3 *> ext
+              (\case LocRing.unequals $ pmap __.1 $ inv t3.4 *> pmap2 + t1.4 t2.4 \with {  | inP (_, inP (s, idp), e) =>
+              LocRing.equals-lem {_} {powers b} (pow b (n * s)) (inP (n * s, idp)) $ later $ rewrite (pow_*, pow_*, pow_*, pow_*, p, pow_*-comm, pow_*-comm, pow_*-comm, pow_*-comm) 
+                  equation}) *> pmap2 + q1 q2
+          })
+          | func-ide => \case (smap ah bh n c cd ch p bd*n=ad+cd ide).2 \with {
+            | inP (t, q) => inv q *> ext
+              (\case LocRing.unequals $ pmap __.1 $ t.4 \with {
+              | inP (_, inP (s, idp), e) => LocRing.equals-lem {_} {powers b} (pow b (n * s)) (inP (n * s, idp)) $ later $ rewrite (pow_*, pow_*, p, pow_*-comm, pow_*-comm) equation
+              })
+          }
+        | func-* => \lam {x} {y} => (\case (smap ah bh n c cd ch p bd*n=ad+cd x).2, (smap ah bh n c cd ch p bd*n=ad+cd y).2, (smap ah bh n c cd ch p bd*n=ad+cd (x * y)).2 \with {
+          | inP (t1, q1), inP (t2, q2), inP (t3, q3) => inv q3 *> ext
+            (\case LocRing.unequals $ pmap __.1 $ inv t3.4 *> pmap2 * t1.4 t2.4 \with {  | inP (_, inP (s, idp), e) =>
+            LocRing.equals-lem {_} {powers b} (pow b (n * s)) (inP (n * s, idp)) $ later $ rewrite (pow_*, pow_*, pow_*, pow_*, p, pow_*-comm, pow_*-comm, pow_*-comm, pow_*-comm) 
+                equation}) *> pmap2 * q1 q2
+        })
+      }
+
+
+    \lemma fromSubRing {a : R} (d : LocRing.SType (powers a)) (s : subRing (inl~ d)) : ∃ (\Sigma (y : \Sigma (x : LocRing (powers a)) (subRing x)) (y.1 = inl~ d)) => {?hidden_proof}
+
+    \lemma toSubRing {a : R} (d : LocRing.SType (powers a)) (s : \Sigma (y : \Sigma (x : LocRing (powers a)) (subRing x)) (y.1 = inl~ d)) : subRing (inl~ d) => {?hidden_proof}
+
+    \lemma sheaf-lem {a g0 g1 : ProjPres.Carrier R} {b0 b1 c0 c1 : R} {k0 k1 u : Nat} (p0 : pow g0.1 k0 = a.1 * b0) (p1 : pow g1.1 k1 = a.1 * b1) 
+    (q : pow a.1 u = g0.1 * c0 + g1.1 * c1) (d : R) (n : Nat) 
+    (s0 : subRing {_} {powers g0.1} (inl~ (d R.* pow b0 n, pow g0.1 (k0 * n), later $ inP (k0 * n, idp)))) 
+    (s1 : subRing {_} {powers g1.1} (inl~ (d R.* pow b1 n, pow g1.1 (k1 * n), later $ inP (k1 * n, idp)))) :
+      subRing {_} {powers a.1} (inl~ (d, pow a.1 n, later $ inP (n, idp))) => {?hidden_proof}
+
+    \lemma radical2-lem {a b c : R} (s : radical {Ideal.closure (if __ b c)} a) (n k : Nat) : radical a => {?hidden_proof}
+  }

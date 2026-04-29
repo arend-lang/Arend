@@ -1,0 +1,261 @@
+\import Algebra.Monoid(Monoid)
+\import Algebra.Ordered
+\import Algebra.StrictlyOrdered
+\import Data.Bool
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder \hiding (<=)
+\import Paths
+\import Paths.Meta
+\import Set(==, ==_=)
+\open Nat
+\open LinearlyOrderedAbMonoid
+\open NatOrder
+
+\func \infixl 6 -' (n m : Nat) : Nat 
+  | 0, _ => 0
+  | suc n, 0 => suc n
+  | suc n, suc m => n -' m
+
+\func pred (x : Nat) : Nat 
+  | zero => 0
+  | suc x' => x'
+
+\lemma suc_pred {n : Nat} (n/=0 : n /= 0) : suc (pred n) = n => {?hidden_proof}
+
+\lemma -'0 {n : Nat} : n -' 0 = n => {?hidden_proof}
+
+\lemma -'+ {n m : Nat} : n + m -' m = n => {?hidden_proof}
+
+\lemma -'id {n : Nat} : n -' n = 0 => {?hidden_proof}
+
+\lemma -'-' {a b c : Nat} : a -' b -' c = a -' (b + c) => {?hidden_proof}
+
+\func suc/=0 {n : Nat} (p : suc n = 0) : Empty 
+
+\module NatOrder
+  \where {
+\data \infix 4 < (n m : Nat) \with
+      | 0, suc _ => zero<suc
+      | suc n, suc m => suc<suc (n < m)
+
+    \lemma unsuc< {n m : Nat} (p : suc n < suc m) : n < m => {?hidden_proof}
+  }
+
+
+\open NatOrder
+
+\lemma -'_< {n m : Nat} (p : 0 < n -' m) : m < n => {?hidden_proof}
+
+\lemma <_-' {n m : Nat} (p : m < n) : 0 < n -' m => {?hidden_proof}
+
+\lemma id<suc {n : Nat} : n < suc n => {?hidden_proof}
+
+\lemma id/=suc {n : Nat} : n /= suc n => {?hidden_proof}
+
+\lemma nonZero>0 {n : Nat} (n/=0 : n /= 0) : 0 < n => {?hidden_proof}
+
+\lemma fin_< {n : Nat} (x : Fin n) : x < n => {?hidden_proof}
+
+\func toFin (k : Nat) {n : Nat} (\property p : k < n) : Fin n \elim k, n
+  | 0, suc n => 0
+  | suc k, suc n => suc (toFin _ (unsuc< p))
+
+\lemma toFin=id {k n : Nat} {p : k < n} : toFin k p = {Nat} k => {?hidden_proof}
+
+\lemma toFin=fin {n : Nat} {k : Fin n} : toFin k (fin_< k) = k => {?hidden_proof}
+
+\func toFin' {k n : Nat} (p : k < n) : Fin n \elim n
+  | suc n => k mod suc n
+
+\func mod_Fin (k : Nat) {n : Nat} (p : 0 < n) : Fin n \elim n
+  | suc n => k mod suc n
+
+\lemma mod_Fin=mod {k n : Nat} {p : 0 < n} : mod_Fin k p = {Nat} k mod n => {?hidden_proof}
+
+\lemma fin_nat-inj {n : Nat} {x y : Fin n} (p : x = {Nat} y) : x = y => {?hidden_proof}
+
+\lemma fin_nat-ineq {n : Nat} {x y : Fin n} (p : Not (x = y)) : Not (x = {Nat} y) => {?hidden_proof}
+
+\instance NatSemiring : LinearlyOrderedCSemiring.Dec Nat 
+  | zro => 0
+  | + => +
+  | zro-left => idp
+  | +-assoc => +-assoc
+  | +-comm => +-comm
+  | ide => 1
+  | * => *
+  | ide-left => ide-left
+  | *-assoc => *-assoc
+  | ldistr => ldistr
+  | *-comm => *-comm
+  | zro_*-left => *-comm
+  | < => <
+  | <-irreflexive => <-irreflexive
+  | <-transitive => <-transitive
+  | trichotomy => \lam n m => (\case n - m \as d, idp : n - m = d \with {
+    | pos 0, p => equals (triEquals p)
+    | pos suc d, p => greater (triGreater p)
+    | neg suc d, p => less (triLess p)
+  })
+  | <_+-left => <_+-left
+  | zro<ide => zero<suc
+  | <_*_positive-left => <_*_positive-left
+  | <_*_negative-left => \lam x<y z<0 => (\case z<0 \with {})
+  | natCoef => \lam n => n
+  | natCoefZero => idp
+  | natCoefSuc => \lam n => idp
+  \where {
+    \open LinearOrder
+
+    \lemma triEquals {n m : Nat} (p : n - m = 0) : n = m => {?hidden_proof}
+
+    \lemma triGreater {n m d : Nat} (p : n - m = suc d) : m < n => {?hidden_proof}
+
+    \lemma triLess {n m d : Nat} (p : n - m = neg (suc d)) : n < m => {?hidden_proof}
+
+    \lemma cancel-right {n m : Nat} (k : Nat) (p : n + k = m + k) : n = m => {?hidden_proof}
+
+    \lemma cancel-left (n : Nat) {m k : Nat} (p : n + m = n + k) : m = k => {?hidden_proof}
+
+    \lemma cancel_*-left {k : Nat} (k/=0 : k /= 0) {n m : Nat} (p : k * n = k * m) : n = m => {?hidden_proof}
+
+    \lemma cancel_*-right {n m k : Nat} (k/=0 : k /= 0) (p : n * k = m * k) : n = m => {?hidden_proof}
+  }
+
+
+\open LinearOrder \hiding (Dec)
+
+\instance NatBSemilattice : BottomJoinSemilattice 
+  | JoinSemilattice => NatSemiring
+  | bottom => 0
+  | bottom-univ => \lam {_} => (\case __ \with {})
+  \where {
+    \lemma <=_cancel-left (n : Nat) {m k : Nat} (p : n + m <= n + k) : m <= k => {?hidden_proof}
+
+    \lemma <=_cancel-right (n : Nat) {m k : Nat} (p : m + n <= k + n) : m <= k => {?hidden_proof}
+
+    \lemma ldistr0 {x : Nat} : x ∧ 0 = 0 => {?hidden_proof}
+
+    \lemma rdistr0 {x : Nat} : 0 ∧ x = 0 => {?hidden_proof}
+  }
+
+
+\lemma zero<=_ {x : Nat} : 0 <= x => {?hidden_proof}
+
+\lemma suc<=suc {x y : Nat} (p : x <= y) : suc x <= suc y => {?hidden_proof}
+  \where {
+    \lemma conv {x y : Nat} (p : suc x <= suc y) : x <= y => {?hidden_proof}
+  }
+
+
+\lemma <=_exists {n m : Nat} (p : n <= m) : n + (m -' n) = m => {?hidden_proof}
+
+\lemma -'<=id {n m : Nat} : n -' m <= n => {?hidden_proof}
+
+\lemma -'+-comm {n m k : Nat} (p : m <= n) : n + k -' m = n -' m + k => {?hidden_proof}
+
+\lemma -'-monotone-left {n m k : Nat} (p : n <= m) : n -' k <= m -' k => {?hidden_proof}
+
+\lemma -'-monotone-right {n m k : Nat} (p : m <= n) : k -' n <= k -' m => {?hidden_proof}
+
+\lemma -'_<= {n m : Nat} (p : n -' m = 0) : n <= m => {?hidden_proof}
+
+\open LinearlyOrderedSemiring \hiding (Dec)
+
+\lemma <=_* {n m k l : Nat} (n<=m : n <= m) (k<=l : k <= l) : n * k <= m * l => {?hidden_proof}
+
+\lemma monotone-diagonal (f : Nat -> Nat) (mon : \Pi (n : Nat) -> suc (f n) <= f (suc n)) {n : Nat} : n <= f n => {?hidden_proof}
+
+\lemma sequence-monotone {X : Preorder} {f : Nat -> X} (fm : \Pi {n : Nat} -> f n X.<= f (suc n)) {n k : Nat} (p : n <= k) : f n X.<= f k => {?hidden_proof}
+  \where {
+    \lemma induction {m : Nat} : f n X.<= f (n + m) => {?hidden_proof}
+  }
+
+
+\lemma sequence-anti-monotone {X : Preorder} {f : Nat -> X} (fm : \Pi {n : Nat} -> f (suc n) X.<= f n) {n k : Nat} (p : n <= k) : f k X.<= f n => {?hidden_proof}
+
+\lemma suc_<_<= {n m : Nat} (p : n < m) : suc n <= m => {?hidden_proof}
+
+\lemma <_suc_<= {n m : Nat} (p : n < suc m) : n <= m => {?hidden_proof}
+
+\lemma suc_<=_< {n m : Nat} (p : suc n <= m) : n < m => {?hidden_proof}
+
+\lemma <=_<_suc {n m : Nat} (p : n <= m) : n < suc m => {?hidden_proof}
+
+\lemma id<=suc {n : Nat} : n <= suc n => {?hidden_proof}
+
+\lemma n*_+_<n {n q r : Nat} (p : n * q + r < n) : q = 0 => {?hidden_proof}
+
+\open NatSemiring \hiding (<_*_positive-left, <_+-left)
+
+\lemma mod-unique {n q r q' r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : n * q + r = n * q' + r') : r = r' => {?hidden_proof}
+
+\lemma div-unique {n q r q' r' : Nat} (r<n : r < n) (r'<n : r' < n) (n/=0 : n /= 0) (p : n * q + r = n * q' + r') : q = q' => {?hidden_proof}
+
+\lemma mod<=left {n m : Nat} : n mod m <= n => {?hidden_proof}
+
+\lemma mod<right {n m : Nat} (m/=0 : m /= 0) : n mod m < m => {?hidden_proof}
+
+\lemma div_< {n m : Nat} (n<m : n < m) : n div m = 0 => {?hidden_proof}
+
+\lemma mod_< {n m : Nat} (n<m : n < m) : n mod m = n => {?hidden_proof}
+
+\lemma toFin'=id {k n : Nat} (p : k < n) : toFin' p = {Nat} k => {?hidden_proof}
+
+\lemma mod_Fin_< {n k : Nat} {p : 0 < n} (q : k < n) : mod_Fin k p = {Nat} k => {?hidden_proof}
+
+\lemma mod_Fin=id {n : Nat} {k : Fin n} {p : 0 < n} : mod_Fin k p = k => {?hidden_proof}
+
+\lemma fin_mod_id {n : Nat} (x : Fin (suc n)) : x mod suc n = x => {?hidden_proof}
+
+\lemma natUnit {n m : Nat} (p : n * m = 1) : m = 1 => {?hidden_proof}
+
+\open Monoid(LDiv)
+
+\lemma natAssociates-areEqual {n m : Nat} (n|m : LDiv n m) (m|n : LDiv m n) : n = m => {?hidden_proof}
+
+\lemma ldiv_<= {n m : Nat} (m/=0 : m /= 0) (n|m : LDiv n m) : n <= m => {?hidden_proof}
+
+\func mod_div {n m : Nat} (p : n mod m = 0) : LDiv m n => rewriteI (divModProp n m) (rewrite p (\new LDiv {  | inv => n div m  | inv-right => idp}))
+
+\lemma div_mod {n m : Nat} (m|n : LDiv m n) : n mod m = 0 => {?hidden_proof}
+
+\lemma id_mod {n : Nat} : n mod n = 0 => {?hidden_proof}
+
+\lemma div_*<=id {n m : Nat} : n div m * m <= n => {?hidden_proof}
+
+\lemma nat_<=-dec {n m : Nat} {so : So (nat_<=_Bool n m)} : n <= m => {?hidden_proof}
+  \where {
+    \func nat_<=_Bool (n m : Nat) : Bool => n -' m == 0
+  }
+
+
+\lemma nat_<-dec {n m : Nat} {so : So (nat_<=-dec.nat_<=_Bool (suc n) m)} : n < m => {?hidden_proof}
+
+\lemma id<pow2 {n : Nat} : n < Monoid.pow 2 n => {?hidden_proof}
+
+\lemma n*_+_mod_n {n q r : Nat} (r<n : r < n) : (n * q + r) mod n = {Nat} r => {?hidden_proof}
+
+\lemma n*_+_mod_n=mod {n q r : Nat} : (suc n * q + r) mod suc n = r mod suc n => {?hidden_proof}
+  \where {
+    \lemma nat {n q r : Nat} : (n * q + r) mod n = r mod n => {?hidden_proof}
+  }
+
+
+\lemma mod_+-left {n a b : Nat} : (a mod suc n + b) mod suc n = (a + b) mod suc n => {?hidden_proof}
+
+\lemma mod_+-right {n a b : Nat} : (a + b mod suc n) mod suc n = (a + b) mod suc n => {?hidden_proof}
+
+\lemma mod_*-left {n a b : Nat} : (a mod suc n * b) mod suc n = (a * b) mod suc n => {?hidden_proof}
+
+\lemma mod_*-right {n a b : Nat} : (a * b mod suc n) mod suc n = (a * b) mod suc n => {?hidden_proof}
+
+\lemma mod_+-cong-left {n c a b : Nat} (p : a mod suc n = b mod suc n) : (c + a) mod suc n = (c + b) mod suc n => {?hidden_proof}
+
+\lemma mod_+-cong-right {n c a b : Nat} (p : a mod suc n = b mod suc n) : (a + c) mod suc n = (b + c) mod suc n => {?hidden_proof}

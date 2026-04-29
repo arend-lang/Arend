@@ -1,0 +1,20 @@
+\import Data.Fin
+\import Logic
+\import Paths
+\import Paths.Meta
+
+\class SolverModel {
+  | M : \Set
+  | Term : Nat -> \Set
+  | NF : Nat -> \Set
+  | normalize {n : Nat} : Term n -> NF n
+  | interpret {n : Nat} (env : Fin n -> M) : Term n -> M
+  | interpretNF {n : Nat} (env : Fin n -> M) : NF n -> M
+  | interpretNF-consistent {n : Nat} {env : Fin n -> M} {t : Term n} : interpretNF env (normalize t) = interpret env t
+}
+
+\class SubstSolverModel \extends SolverModel {
+  | nfVar {n : Nat} : Fin n -> NF n
+  | \infixl 2 >>= {m n : Nat} : NF m -> (Fin m -> NF n) -> NF n
+  | >>=-consistent {m n : Nat} {env : Fin n -> M} {nf : NF m} {k : Fin m -> NF n} : interpretNF env (nf >>= k) = interpretNF (\lam v => interpretNF env (k v)) nf
+}

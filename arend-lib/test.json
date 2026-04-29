@@ -1,0 +1,35 @@
+{
+  "Context": [
+    "A : BaseSet",
+    "B : AddMonoid",
+    "f : FinSuppFunc A B",
+    "g : FinSuppFunc A B",
+    "s : Array Set.SetHom.SetHom.Dom",
+    "s' : Array Set.SetHom.SetHom.Dom",
+    "c : \\Pi (i : Set.SetHom.SetHom.Dom) -> (\\Pi (j : Fin DArray.len) -> s j /= i) -> f i = zro",
+    "c' : \\Pi (i : Set.SetHom.SetHom.Dom) -> (\\Pi (j : Fin DArray.len) -> s' j /= i) -> g i = zro"
+  ],
+  "Expected type": "TruncP (\\Sigma (s : Array A) (\\Pi (i : A) -> (\\Pi (j : Fin s.len) -> s j /= i) -> f i B.+ g i = B.zro))",
+  "Expression": "inP (s ++ s', {?})",
+  "Premises": [
+    "\\data TruncP (A : \\Type)\n  | inP A\n  | truncP (a a' : TruncP A) : a = a'",
+    "\\func \\infixr 5 ++ {A : \\Type} (xs ys : Array A) : Array A \\elim xs\n  | nil => ys\n  | :: a xs => a :: xs ++ ys"
+  ]
+}
+{
+  "Context": [
+    "A : BaseSet",
+    "B : AddMonoid",
+    "f : FinSuppFunc A B",
+    "g : FinSuppFunc A B",
+    "s : Array Set.SetHom.SetHom.Dom",
+    "s' : Array Set.SetHom.SetHom.Dom",
+    "c : \\Pi (i : Set.SetHom.SetHom.Dom) -> (\\Pi (j : Fin DArray.len) -> s j /= i) -> f i = zro",
+    "c' : \\Pi (i : Set.SetHom.SetHom.Dom) -> (\\Pi (j : Fin DArray.len) -> s' j /= i) -> g i = zro"
+  ],
+  "Expected type": "\\Sigma (s : Array A) (\\Pi (i : A) -> (\\Pi (j : Fin DArray.len) -> s j /= i) -> f i + g i = zro)",
+  "Expression": "(s ++ s', {?})",
+  "Premises": [
+    "\\func \\infixr 5 ++ {A : \\Type} (xs ys : Array A) : Array A \\elim xs\n  | nil => ys\n  | :: a xs => a :: xs ++ ys"
+  ]
+}

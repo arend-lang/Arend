@@ -1,0 +1,212 @@
+\import Algebra.Meta
+\import Category
+\import Category.Functor
+\import Category.Limit
+\import Category.Slice
+\import Category.Subcat
+\import Category.Topos.Sheaf.Site
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.SetCategory
+\import Topology.Locale
+
+\class VPresheaf {
+  | D : Cat \levels (\suc \lp) _
+  | C : SmallPrecat
+  | F : Functor C.op D
+}
+
+\class Presheaf \extends VPresheaf {
+  | D => SetCat
+}
+
+\instance VPresheafCat (D : Cat \levels (\suc \lp) _) (C : Precat) : Cat 
+=> subCat {FunctorCat {C.op} {D}} {VPresheaf D C} (\new Embedding {  | f => \lam P => P  | isEmb => \lam _ _ => \new Retraction {    | sec => \lam p => ext p
+    | f_sec => idpe  }})
+
+\instance PresheafCat (C : Precat) : Cat => VPresheafCat SetCat C
+
+\class VSheaf \extends VPresheaf {
+  \override C : Site
+  | isSheaf {x : C} {s : Sieve x} : isCover x s -> Limit {
+    | Cone => Cone.map F s.cone
+  }
+}
+  \where {
+    \func restrict {L : Locale} (a : L) (S : VSheaf {  | C => L}) : VSheaf S.D (L.restrict a) \cowith
+      | F => Comp S Locale.restrict.functor.op
+      | isSheaf => \lam {x} {s : Sieve} x<=s => (
+        \let | lim : Limit => S.isSheaf {x.1}
+               {\new Sieve {  | S => \lam {y} y<=x => s {(y, y<=x <=∘ x.2)} y<=x
+               | isSieve => \lam {z} {y} z<=y {y<=x} => s.isSieve {(z, z<=y <=∘ y<=x <=∘ x.2)} {(y, y<=x <=∘ x.2)} z<=y}} $ TruncP.map x<=s
+               (\lam (J, g, x<=g, sg) => (J, \lam j => ((g j).1.1, (g j).2), x<=g, \lam j => transport {ObOver {L.restrict a} x} (\lam p => s {p.1} p.2) {g j} {(_, _)} (ext (ext idp)) (sg j)))
+             | imap (j : \Sigma (y : ObOver {L.restrict a} x) (s y.2)) : \Sigma (y : ObOver x.1) (s {(y.1, y.2 <=∘ x.2)} y.2) => ((j.1.1.1, j.1.2), transport (\lam x => s {(j.1.1.1, x)} j.1.2) prop-pi j.2)
+             | jmap (j : \Sigma (y : ObOver x.1) (s {(y.1, y.2 <=∘ x.2)} y.2)) : \Sigma (y : ObOver {L.restrict a} x) (s y.2) => (((j.1.1, j.1.2 <=∘ x.2), j.1.2), j.2)
+        \in \new Limit {
+              | isLimit => \lam z => transEquiv (lim.isLimit z) $ later
+                (\new QEquiv {  | f => \lam (c : Cone) => \new Cone {    | coneMap => \lam j => c.coneMap (imap j)
+                  | coneCoh => \lam {j} {j'} => c.coneCoh {imap j} {imap j'}  }  | ret => \lam (c : Cone) => \new Cone {
+                  | coneMap => \lam j => c.coneMap (jmap j)    | coneCoh => \lam {j} {j'} => c.coneCoh {jmap j} {jmap j'}  }
+                | ret_f => \lam c => exts (\lam j => cong (ext idp))  | f_sec => \lam c => exts (\lam j => cong $ ext $ ext (ext idp))})
+            })
+
+    \lemma direct_image {C C' : SiteWithBasis} (f : SiteWithBasisPrehom C C') (S : VSheaf {  | C => C'}) : VSheaf S.D C (Comp S f.op) => {?hidden_proof}
+
+    \lemma direct_image_framePres {P P' : FramePres} (f : FramePresPrehom P P') (S : VSheaf {  | C => framePresSite P'}) : VSheaf S.D (framePresSite P) (Comp S f.functor.op) => {?hidden_proof}
+
+    \lemma direct_image_locale {L L' : Locale} (f : FrameHom L' L) (S : VSheaf {  | C => L}) : VSheaf S.D L' (Comp S f.functor.op) => {?hidden_proof}
+      \where {
+        \func map {L L' : Locale} {D : Cat \levels (\suc \lp) _} (f : FrameHom L' L) {S S' : VSheaf D L} (a : NatTrans \levels (\suc \lp) _ S S') :
+          NatTrans (direct_image_locale f S) (direct_image_locale f S') \cowith
+          | trans => \lam x => a (f x)
+          | natural => \lam g => a.natural (f.functor.Func g)
+      }
+
+
+    \func direct_image_id {L : Locale} (S : VSheaf {  | C => L}) : direct_image_locale (id L) S = {VSheaf S.D L} S => ext $ ext (idp, ext (\lam {X} {Y} h => pmap Func prop-pi))
+
+    \func transport_direct_image {L L' : Locale} (p : L = L') (S : VSheaf {  | C => L}) : transport (VSheaf S.D) p S = direct_image_locale (Iso.f {Precat.idtoiso p}) S \elim p
+      | idp => inv (direct_image_id S)
+
+    \func transport_direct_image-iso {L L' : Locale} (e : Iso {LocaleCat} {L} {L'}) (S : VSheaf {  | C => L}) : transport (VSheaf S.D) (Cat.isotoid e) S = direct_image_locale e.f S 
+      => transport_direct_image (Cat.isotoid e) S *> path (\lam i => direct_image_locale (Iso.f {univalence.f_ret e i}) S)
+  }
+
+
+\class Sheaf \extends Presheaf, VSheaf
+
+\instance VSheafCat (D : Cat \levels (\suc \lp) _) (C : Site) : Cat 
+=> subCat {VPresheafCat D C} {VSheaf D C} (\new Embedding {  | f => \lam P => P  | isEmb => \lam _ _ => \new Retraction {    | sec => \lam p => (ext VSheaf) {
+      | VPresheaf => p    }    | f_sec => idpe  }})
+
+\instance SheafCat (C : Site) : Cat => VSheafCat SetCat C
+
+\lemma sheaf-preserve {C : Site} {D E : Cat \levels (\suc \lp) _} (G : Functor D E) (G-lim : \Pi {J : Precat} (H : Functor J D) -> PreservesLimit G H) (F : VSheaf D C) : VSheaf E C (Comp G F) 
+  => {?hidden_proof}
+
+\lemma sheaf-reflect {C : Site} {D E : Cat \levels (\suc \lp) _} (G : Functor D E) (G-lim : \Pi {J : Precat} (H : Functor J D) -> ReflectsLimit G H) (F : Functor C.op D) 
+(S : VSheaf E C (Comp G F)) : VSheaf D C F => {?hidden_proof}
+
+\lemma vsheafOnSiteWithBasis {C : SiteWithBasis} {D : Cat \levels (\suc \lp) _} (F : Functor C.op D) 
+(p : \Pi (x : C) {J : \Set} (g : J -> SlicePrecat x) (c : isBasicCover x g) (z : D) -> Equiv (matchingFamily x g z)) : VSheaf D C F => {?hidden_proof}
+  \where {
+\class MatchingFamily {
+      | x : C
+      | J : \Set
+      | g : J -> SlicePrecat x
+      | z : D
+      | family (j : J) : Hom z (F (g j).1)
+      | isMatching (j j' : J) : F.Func (pbProj1 {pullback (g j).2 (g j').2}) ∘ family j = Func pbProj2 ∘ family j'
+    }
+
+    \func matchingFamily (x : C) {J : \Set} (g : J -> SlicePrecat x) (z : D) (h : Hom z (F x)) : MatchingFamily x g z \cowith
+      | family => \lam j => Func (g j).2 ∘ h
+      | isMatching => \lam j j' => inv o-assoc *> pmap (∘ h) (inv Func-o *> pmap Func pbCoh *> Func-o) *> o-assoc
+
+    \lemma cone-isMatching {x : C} (z : D) {s : Sieve x} {c : Cone (Comp F s.diagram.op) z} (q q' : \Sigma (y : SlicePrecat x) (s y.2)) :
+      F.Func pbProj1 ∘ c.coneMap q = Func pbProj2 ∘ c.coneMap q' => {?hidden_proof}
+  }
+
+
+\open vsheafOnSiteWithBasis
+
+\lemma vsheafMatchingFamily {C : SiteWithBasis} {D : Cat \levels (\suc \lp) _} (F : VSheaf D C) (x : C) {J : \Set} (g : J -> SlicePrecat x) (c : isBasicCover x g) (z : D) : Equiv (matchingFamily x g z) 
+  => {?hidden_proof}
+
+\lemma vsheafOnSiteWithBasis-equalizer {C : SiteWithBasis} {D : CompleteCat \levels (\suc \lp) _} (F : Functor C.op D) 
+(p : \Pi (x : C) {J : \Set} (g : J -> SlicePrecat x) (c : isBasicCover x g) -> Equalizer (leftMap x g) (rightMap x g) (F x) (eqMap x g)) : VSheaf D C F 
+  => {?hidden_proof}
+  \where {
+    \open vsheafOnSiteWithBasis
+
+    \func product1 (x : C) {J : \Set} (g : J -> SlicePrecat x) => D.product (\lam j => F (g j).1)
+
+    \func product2 (x : C) {J : \Set} (g : J -> SlicePrecat x) => D.product (\lam (j : \Sigma J J) => F (pullback (g j.1).2 (g j.2).2))
+
+    \func leftMap (x : C) {J : \Set} (g : J -> SlicePrecat x) => tupleMap {product2 x g} (\lam j => F.Func pbProj1 ∘ proj {product1 x g} j.1)
+
+    \func rightMap (x : C) {J : \Set} (g : J -> SlicePrecat x) => tupleMap {product2 x g} (\lam j => F.Func pbProj2 ∘ proj {product1 x g} j.2)
+
+    \func eqMap (x : C) {J : \Set} (g : J -> SlicePrecat x) => tupleMap {product1 x g} (\lam j => F.Func (g j).2)
+  }
+
+
+\lemma sheafOnSiteWithBasis {C : SiteWithBasis} (F : Functor C.op SetCat) 
+(p : \Pi (x : C) {J : \Set} (g : J -> SlicePrecat x) (c : isBasicCover x g) -> Equiv (matchingFamily x g)) : Sheaf C F => {?hidden_proof}
+  \where {
+\class MatchingFamily {
+      | x : C
+      | J : \Set
+      | g : J -> SlicePrecat x
+      | family (j : J) : F (g j).1
+      | isMatching (j j' : J) : F.Func (pbProj1 {pullback (g j).2 (g j').2}) (family j) = F.Func pbProj2 (family j')
+    }
+
+    \func matchingFamily (x : C) {J : \Set} (g : J -> SlicePrecat x) (e : F x) : MatchingFamily x g \cowith
+      | family => \lam j => F.Func (g j).2 e
+      | isMatching => \lam j j' => pmap (__ e) $ inv Func-o *> pmap F.Func (pbCoh {pullback (g j).2 (g j').2}) *> Func-o
+
+    \func piEquiv (e : Equiv) (Z : \Type) : Equiv {Z -> e.A} {Z -> e.B} \cowith
+      | f => \lam g z => e (g z)
+      | ret => \lam h z => e.ret (h z)
+      | ret_f => \lam g => ext (\lam z => e.ret_f (g z))
+      | sec => \lam h z => e.sec (h z)
+      | f_sec => \lam h => ext (\lam z => e.f_sec (h z))
+  }
+
+
+\lemma sheafOnPresentedFrame {P : FramePres} {D : CompleteCat \levels (\suc \lp) _} (F : VSheaf D (framePresSite P)) : VSheaf D (PresentedFrame P) extend => {?hidden_proof}
+  \where {
+    \open PresentedFrame(embed)
+    \open Limit
+    \open Cover
+
+    \lemma genSieve {P : FramePres} (a : P) {J : \Set} (g : J -> P) : Sieve {framePresPreorder P} a (\lam {b} _ => ∃ (j : J) (Cover1 b (g j))) => {?hidden_proof}
+
+    \lemma cover1-lem {a : P} {J : \Set} {g : J -> P} (j : J) (p : Cover1 a (g j)) : Limit {
+      | Cone => Cone.map F (Presieve.cone {genSieve a g})
+    } => {?hidden_proof}
+
+    \lemma cover-lem {a : P} {J : \Set} {g : J -> P} (c : Cover a g) => {?hidden_proof}
+
+    \lemma cover'-lem {a b : P} (b<=a : Cover1 b a) {J : \Set} {g : J -> P} (c : Cover' a g) : Limit {
+      | Cone => Cone.map F (Presieve.cone {genSieve b g})
+    } => {?hidden_proof}
+
+    \func extend : Functor (Precat.op {PresentedFrame P}) D \cowith
+      | F => \lam b => lim b
+      | Func => \lam {a} {b} b<=a => limMap {lim b} (cone b<=a)
+      | Func-id => \lam {b} => limUniqueBeta {lim b} {lim b} (\lam j => unfold $ inv $ id-right *> cong (ext idp))
+      | Func-o => \lam {a} {b} {c} {b<=c} {a<=b} =>
+        limUniqueBeta {lim c} {lim a} (\lam j => inv (pmap (∘ _) (limBeta {lim c} (cone b<=c) j) *> limBeta {lim b} (cone a<=b) (j.1, <=-transitive j.2 b<=c)) *> o-assoc)
+      \where {
+        \func limFunctor (b : PresentedFrame P) => Comp F (Functor.op {subPrecat.embedding (\lam (t : \Sigma (x : P) (PresentedFrame.embed x <= b)) => t.1)})
+
+        \func lim (b : PresentedFrame P) => D.limit (limFunctor b)
+
+        \func cone {a b : PresentedFrame P} (b<=a : b <= a) : Cone (limFunctor b) (lim a) \cowith
+          | coneMap => \lam (x, x<=b) => coneMap (later (x, <=-transitive (\lam {_} => x<=b) b<=a))
+          | coneCoh => \lam {j} {j'} => (\case \elim j, \elim j' \with {
+            | (_, _), (_, _) => \lam h => coneCoh $ later h
+          })
+      }
+
+
+    \func extend-proj (y : P) : Hom (extend (embed y)) (F y) => coneMap $ later (y, \lam d => d)
+
+    \lemma extend-proj-nat'' {U V : PresentedFrame P} (U<=V : U <= V) {x : P} (x<=U : embed x <= U) :
+      coneMap (later (x, x<=U)) ∘ extend.Func U<=V = coneMap (later (x, <=-transitive x<=U U<=V)) => {?hidden_proof}
+
+    \lemma coneMap-nat {U V : PresentedFrame P} (h' : U <= V) {a : \Sigma (x : P) (embed x <= U)} {b : \Sigma (y : P) (embed y <= V)} (h : Cover1 a.1 b.1) :
+      coneMap {extend.lim U} a ∘ extend.Func h' = F.F.Func h ∘ coneMap {extend.lim V} b => {?hidden_proof}
+
+    \lemma extend-proj-nat' {y : P} {V : PresentedFrame P} (h' : embed y <= V) : extend-proj y ∘ extend.Func h' = coneMap (later (y, h')) => {?hidden_proof}
+
+    \lemma extend-proj-nat {y z : P} (h : Cover1 y z) (h' : embed y <= embed z) : extend-proj y ∘ extend.Func h' = F.F.Func h ∘ extend-proj z => {?hidden_proof}
+  }

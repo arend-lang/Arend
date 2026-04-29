@@ -1,0 +1,190 @@
+\import Algebra.FinSuppFunc
+\import Algebra.Group
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.CharPoly
+\import Algebra.Linear.Solver (LinearData)
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Boolean
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.Solver
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Analysis.Measure.SimpleFunctions
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Combinatorics.Binom
+\import Data.Array
+\import Data.Fin
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Category
+\import Order.Lattice
+\open NatOrder
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Algebra.Group.Symmetric
+\open SFuncPosetQModule(PFunc, add, SFRefines, SFRefines_::-right, SFRefines_++-right)
+\import Algebra.Domain.Euclidean
+
+
+-- \func lol (n : Nat) (p : \Pi (f : Fin n) -> f < n) (k : Fin (suc n)) : n < suc n => linarit
+
+\lemma test1 {E : TotalOrder} (a x : E) (l : Array E)
+  : (a ∧ Big (∧) x l = a) || (a ∧ Big (∧) x l = Big (∧) x l)
+  => {?}
+
+-- \lemma divComp : rat 1 2 contradiction linarith RatField.> rat 1 3 contradiction linarith => linarith
+  -- rat 1 2 linarith _ RatField.> rat 1 3 _ _ => {?}
+
+\lemma test2 (V : PosetQModule) (B : BooleanRing) (r r' l  : SFuncPosetQModule.PFunc {V} {B})
+ (k : Fin r.len) (j : Fin l.len) (p : (l j).1 = (r k).1) (q : (l j).2 B.<= (r k).2)
+  : TruncP (\Sigma (j' : Fin (r ++ r').len) ((l j).1 = ((r ++ r') j').1) ((l j).2 B.<= ((r ++ r') j').2))
+  => inP (++.index-left k, {?}, q <=∘ =_<= {?})
+
+ -- p *> pmap (\lam p0 => p0.1) (inv $ ++.++_index-left k)
+ -- (pmap __.2 $ inv $ ++.++_index-left k)
+
+\lemma test3 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l)
+  => rewrite (\peval add v BooleanRing.zro l) $ SFRefines_::-right (B.meet_<=' equation.bRing) $ SFRefines_++-right (transport (SFRefines l) (exts \lam j => ext (idp, equation.bRing)) SFuncPosetQModule.SFRefines-refl) \lam j => byRight $ meet-left <=∘ bottom-univ
+  \where {
+    \func step1 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l)
+      => rewrite (\peval add v BooleanRing.zro l) $ {?}
+    -- goal: SFRefines l
+    --       ((v, diff zro (BigJoin (map (\lam p0 => p0.2) l))) :: map (\lam s => (v + s.1, zro * s.2)) l ++ map (\lam s => (s.1, diff s.2 zro)) l)
+
+    \func step2 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l)
+      => rewrite (\peval add v BooleanRing.zro l)
+                 $ SFRefines_::-right {?} {?}
+    -- goal1: diff B.zro (BigJoin (map (\lam p0 => p0.2) l)) B.<= BigJoin (map (\lam p0 => p0.2) l)
+    -- goal2: SFRefines l (map (\lam s => (v + s.1, zro * s.2)) l ++ map (\lam s => (s.1, diff s.2 zro)) l)
+
+    \func step3 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l)
+      => rewrite (\peval add v BooleanRing.zro l)
+                 $ SFRefines_::-right (B.meet_<=' equation.bRing) {?}
+    -- goal: SFRefines l (map (\lam s => (v + s.1, zro * s.2)) l ++ map (\lam s => (s.1, diff s.2 zro)) l)
+
+    \func step4 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l)
+      => rewrite (\peval add v BooleanRing.zro l)
+                 $ SFRefines_::-right (B.meet_<=' equation.bRing)
+                                      $ SFRefines_++-right {?} {?}
+    -- goal1: SFRefines l (map (\lam s => (s.1, diff s.2 B.zro)) l)
+    -- goal2: \Pi (j : Fin (len {map (\lam s => (v V.+ s.1, B.zro B.* s.2)) l})) ->
+    --       (v V.+ (l j).1 = V.zro) || B.zro B.* (l j).2 B.<= BigJoin (map (\lam p0 => p0.2) l)
+
+    \func step5 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l)
+      => rewrite (\peval add v BooleanRing.zro l)
+                 $ SFRefines_::-right (B.meet_<=' equation.bRing)
+                                      $ SFRefines_++-right (transport (SFRefines l) {?} SFuncPosetQModule.SFRefines-refl) {?}
+    -- goal1: l = map (\lam s => (s.1, diff s.2 B.zro)) l
+    -- goal2: \Pi (j : Fin (len {map (\lam s => (v V.+ s.1, B.zro B.* s.2)) l})) ->
+    --       (v V.+ (l j).1 = V.zro) || B.zro B.* (l j).2 B.<= BigJoin (map (\lam p0 => p0.2) l)
+
+    \func step6 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l)
+      => rewrite (\peval add v BooleanRing.zro l)
+                 $ SFRefines_::-right (B.meet_<=' equation.bRing)
+                                      $ SFRefines_++-right (transport (SFRefines l) (exts {?}) SFuncPosetQModule.SFRefines-refl) {?}
+    -- goal1: \Pi (j : Fin l.len) -> l j = ((l j).1, diff (l j).2 B.zro)
+    -- goal2: \Pi (j : Fin (len {map (\lam s => (v V.+ s.1, B.zro B.* s.2)) l})) ->
+    --       (v V.+ (l j).1 = V.zro) || B.zro B.* (l j).2 B.<= BigJoin (map (\lam p0 => p0.2) l)
+
+    \func step7 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l)
+      => rewrite (\peval add v BooleanRing.zro l)
+                  $ SFRefines_::-right (B.meet_<=' equation.bRing)
+                                       $ SFRefines_++-right (transport (SFRefines l) (exts \lam j => exts (idp, equation.bRing)) SFuncPosetQModule.SFRefines-refl)
+                                                            {?}
+    -- goal: \Pi (j : Fin (len {map (\lam s => (v V.+ s.1, B.zro B.* s.2)) l})) ->
+    --       (v V.+ (l j).1 = V.zro) || B.zro B.* (l j).2 B.<= BigJoin (map (\lam p0 => p0.2) l)
+
+    \func step8 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l)
+      => rewrite (\peval add v BooleanRing.zro l)
+                  $ SFRefines_::-right (B.meet_<=' equation.bRing)
+                                       $ SFRefines_++-right (transport (SFRefines l) (exts \lam j => exts (idp, equation.bRing)) SFuncPosetQModule.SFRefines-refl)
+                                                             \lam j => byRight $ meet-left <=∘ bottom-univ
+    -- goal: \Pi (j : Fin (len {map (\lam s => (v V.+ s.1, B.zro B.* s.2)) l})) ->
+    --       (v V.+ (l j).1 = V.zro) || B.zro B.* (l j).2 B.<= BigJoin (map (\lam p0 => p0.2) l)
+  }
+    -- SFRefines_++-right (transport (SFRefines l) (exts \lam j => ext (idp,equation.bRing)) SFuncPosetQModule.SFRefines-refl) \lam j => byRight $ meet-left <=∘ bottom-univ
+
+
+
+\lemma test4 (A : BaseSet) (B : AddMonoid) (f g : FinSuppFunc A B) (s : Array f.Dom) (s' : Array g.Dom)
+  (c : \Pi (i : f.Dom) -> (\Pi (j : Fin s.len) -> s j /= i) -> f i = zro {f.Cod})
+  (c' : \Pi (i : g.Dom) -> (\Pi (j : Fin s'.len) -> s' j /= i) -> g i = zro {g.Cod})
+  : TruncP (\Sigma (s : Array A) (\Pi (i : A) -> (\Pi (j : Fin s.len) -> s j /= i) -> f i B.+ g i = B.zro))
+  => inP {?}
+
+-- TruncP (\Sigma (s : Array A) (\Pi (i : A) -> (\Pi (j : Fin s.len) -> s j /= i) -> f i B.+ g i = B.zro))
+-- inP (s ++ s', \lam a d => pmap2 (+) (c a \lam j => rewrite ++.++_index-left in d (++.index-left j)) (c' a \lam j => rewrite ++.++_index-right in d (++.index-right j)) *> zro-left)
+
+\lemma test5 {R : CRing} {n : Nat} (M : Matrix R n n) : degree<= (charPoly M) n
+  => degree<=_FinSum \lam j => degree<=_* (transport (degree<= __ 0) (sign.sign_hom polyHom) idp) $ later $ degree<=_BigProd1 \lam _ => idp
+
+\lemma test6 {n m : Nat} (n/=0 : Not (n = 0)) (m/=0 : Not (m = 0)) : Not (n Nat.* m = 0)
+  => \lam p => IntDomain.#0-* {pos n} {pos m} (\lam q => n/=0 (pmap iabs q)) (\lam q => m/=0 (pmap iabs q)) (pmap pos p)
+  -- IntDomain.#0-* (\lam q => n/=0 (pmap iabs q)) (\lam q => m/=0 (pmap iabs q))
+-- {pos n} {pos m}
+
+-- \lemma test7 {A : LatticeAbGroup} (a b c : A) : negative a + (a + b) ∧ (a + c) <= b
+--   => rewrite (+-assoc, negative-left, zro-left) (<=_+ <=-refl meet-left)
+
+\lemma test8 (k n : Nat) (A0 : k < suc n) : suc k <= suc n => linarith -- linarith fails here
+
+\func one_n : Real => Real.fromRat (ratio 1 7)
+
+\func test_one_n : one_n * one_n > 0 => linarith
+
+\lemma test9 : (7 : Real) * Real.fromRat (ratio 1 7) = 1 => linarith
+
+\lemma BigSum_sum {E : CRing} {n : Nat} {l l' : Array E n} : AddMonoid.BigSum (\new Array E n (\lam i => l i + l' i)) = AddMonoid.BigSum l + AddMonoid.BigSum l' \elim n, l, l'
+  | 0, nil, nil => inv zro-left
+  | suc n, a :: l, a1 :: l' => unfold AddMonoid.BigSum (rewrite (BigSum_sum {E} {n} {l} {l'})
+  (unfold AddMonoid.BigSum linarith))
+
+\lemma BigSum_ldistr {E : CRing} {n : Nat} (l : Array E n) (a : E) : AddMonoid.BigSum (\new Array E n (\lam i => a * l i)) = a * AddMonoid.BigSum (\new Array E n l) \elim n, l
+  | 0, nil => rewrite zro_*-right idp
+  | suc n, a1 :: l => unfold AddMonoid.BigSum (rewrite (BigSum_ldistr l a) (unfold AddMonoid.BigSum equation.ring))
+
+
+{-
+ A : BaseSet
+    B : AddMonoid
+    f : FinSuppFunc A B
+    g : FinSuppFunc A B
+    s : Array f.Dom
+    c : \Pi (i : f.Dom) -> (\Pi (j : Fin s.len) -> s j /= i) -> f i = zro {f.Cod}
+    s' : Array g.Dom
+    c' : \Pi (i : g.Dom) -> (\Pi (j : Fin s'.len) -> s' j /= i) -> g i = zro {g.Cod}
+-}
+
+{-
+{
+    "Context": [
+        "c : E",
+        "a : E",
+        "this : LatticeAbGroup",
+        "b : E"
+    ],
+    "Expected type": "negative a + (a + b) ∧ (a + c) <= b",
+    "Expression": "{?} <=∘  {?}",
+    "Premises": [
+        "| \\infixl 6 + E E : E",
+        "| negative E : E",
+        "| \\infix 4 <= E E : \\Prop"
+    ]
+}
+- -}

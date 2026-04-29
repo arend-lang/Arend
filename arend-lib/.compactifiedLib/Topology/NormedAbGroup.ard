@@ -1,0 +1,168 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Operations
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.MetricSpace
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Complete
+\import Topology.UniformSpace
+\import Topology.UniformSpace.Product
+\open RatField(half, half>0)
+
+\class ExPseudoNormedAbGroup \extends ExPseudoMetricSpace, TopAbGroup {
+  | norm : E -> ExUpperReal
+  | norm_zro : norm zro = 0
+  | norm_negative {x : E} : norm (negative x) = norm x
+  | norm_+ {x y : E} : norm (x + y) <= norm x ExUpperReal.+ norm y
+  | norm-dist {x y : E} : dist x y = norm (x - y)
+  | +-cont => \new (UniformMap (ProductUniformSpace \this \this) \this) {
+    | func => \lam s => s.1 + s.2
+    | func-uniform => \lam Eu => (\case dist-uniform.1 Eu \with {
+      | inP (eps, eps>0, h) => inP (_, metricUniform $ half>0 eps>0, _, metricUniform $ half>0 eps>0,
+        \lam inP (_, inP (x, idp), _, inP (y, idp), p) => (\case h (x + y) \with {  | inP (V, EV, g) => inP (_, inP (V, EV, idp),  rewrite p
+          (\lam {(x', y')} (xx'<eps/2, yy'<eps/2) => g $ rewrite (norm-dist, equation.abGroup : x + y - (x' + y') = x - x' + (y - y')) $ ExUpperReal.U_<= 
+          (ExUpperReal.<=_+-char norm_+ (rewrite norm-dist in xx'<eps/2) (rewrite norm-dist in yy'<eps/2)) linarith))}))
+    })
+  }
+  | negative-cont => \new UniformMap {
+    | func-uniform => \lam Eu => (\case dist-uniform.1 Eu \with {
+      | inP (eps, eps>0, h) => dist-uniform.2 $ inP
+        (eps, eps>0,  \lam x => (\case h (negative x) \with {  | inP (U, EU, g) => inP (_, inP $ later (U, EU, idp), 
+          \lam {y} d => g {negative y} $ transportInv (ExUpperReal.U {__} eps) (norm-dist *> simplify (pmap norm +-comm) *> norm_negative *> inv norm-dist) d)
+      }))
+    })
+  }
+  | neighborhood-uniform => 
+    \have lem {x} {y} : dist 0 (x - y) = dist x y => norm-dist *> inv norm_negative *> pmap norm simplify *> inv norm-dist
+    \in (\lam Cu => (\case dist-uniform.1 Cu \with {
+  | inP (eps, eps>0, h) => inP (OBall eps 0, OBall-open, OBall-center eps>0, \lam x => (\case h x \with {
+    | inP (U, CU, g) => inP (U, CU, \lam d => g $ transport (ExUpperReal.U {__} eps) lem d)}))}),
+          \lam inP (U, Uo, U0, h) => (\case dist_open.1 Uo U0 \with {  | inP (eps, eps>0, p) =>
+    dist-uniform.2 $ inP (eps, eps>0, \lam x => (\case h x \with {  | inP (U, CU, g) => inP (U, CU, \lam d => g $ p $ transportInv (ExUpperReal.U {__} eps) lem d)}))
+          })
+)
+    | open-top => defaultImpl PrecoverSpace open-top
+    | open-inter => \lam {U} {V} => defaultImpl PrecoverSpace open-inter {_} {U} {V}
+    | open-Union => \lam {S} => defaultImpl PrecoverSpace open-Union {_} {S}
+    | dist => dist
+    | norm-dist => norm-dist-impl
+    | norm_zro => inv (norm-dist *> pmap norm (pmap (zro +) negative_zro *> zro-right)) *> dist-refl
+    | norm_negative => pmap norm (inv zro-left) *> inv norm-dist *> dist-symm *> norm-dist *> pmap norm (pmap (_ +) negative_zro *> zro-right)
+    | norm_+ => transport (\lam z => norm (_ + z) <= _) negative-isInv $ =_<= (inv norm-dist) <=∘ dist-triang {_} {_} {0} <=∘ =_<= 
+      (pmap2 ExUpperReal.+ (norm-dist *> pmap norm (pmap (_ +) negative_zro *> zro-right)) (norm-dist *> pmap norm (pmap (0 +) negative-isInv *> zro-left)))
+    | dist-refl => norm-dist *> pmap norm negative-right *> norm_zro
+    | dist-symm => norm-dist *> simplify *> norm_negative *> inv norm-dist
+    | dist-triang => repeat {3} (rewrite norm-dist) $ transport (norm __ <= _) simplify norm_+
+  }
+
+  \lemma norm>=0 {X : ExPseudoNormedAbGroup} {x : X} : 0 <= norm x => {?hidden_proof}
+
+  \lemma norm_dist {X : ExPseudoNormedAbGroup} {x : X} : norm x = dist 0 x => {?hidden_proof}
+
+  \lemma norm_- {X : ExPseudoNormedAbGroup} {x y : X} : norm (x - y) = norm (y - x) => {?hidden_proof}
+
+  \lemma norm_dist-left {X : ExPseudoNormedAbGroup} {x y : X} : norm x <= dist x y + norm y => {?hidden_proof}
+
+  \lemma norm_dist-right {X : ExPseudoNormedAbGroup} {x y : X} : norm x <= norm y + dist x y => {?hidden_proof}
+
+\class ExNormedAbGroup \extends ExPseudoNormedAbGroup, ExMetricSpace {
+    | norm-ext {x : E} : norm x = ExUpperRealAbMonoid.zro -> x = 0
+    | dist-ext => \lam p => fromZero $ norm-ext $ inv norm-dist *> p
+    | norm-ext => \lam p => dist-ext $ norm-dist *> pmap norm (pmap (_ +) negative_zro *> zro-right) *> p
+  }
+
+\class BoundedExPseudoNormedAbGroup \extends ExPseudoNormedAbGroup {
+    | norm-bounded (x : E) : (norm x).IsBounded
+  }
+
+  \func bnorm {X : BoundedExPseudoNormedAbGroup} (x : X) : UpperReal \cowith
+    | ExUpperReal => norm x
+    | U-inh => norm-bounded x
+
+\class PseudoNormedAbGroup \extends BoundedExPseudoNormedAbGroup, PseudoMetricSpace {
+    \override norm : E -> Real
+    | dist => dist
+    | norm-dist => norm-dist-impl
+    | norm-bounded => \lam x => U-inh
+  }
+
+  \func lnorm {X : PseudoNormedAbGroup} (x : X) : Real => X.norm x
+
+  \lemma lnorm>=0 {X : PseudoNormedAbGroup} {x : X} : 0 <= X.norm x => {?hidden_proof}
+
+  \lemma lnorm_zro {X : PseudoNormedAbGroup} : lnorm X.zro = RealAbGroup.zro => {?hidden_proof}
+
+  \lemma lnorm_+ {X : PseudoNormedAbGroup} {x y : X} : lnorm (x + y) <= lnorm x + lnorm y => {?hidden_proof}
+
+  \lemma lnorm-ldist {X : PseudoNormedAbGroup} {x y : X} : ldist x y = lnorm (x - y) => {?hidden_proof}
+
+  \lemma lnorm_BigSum {X : PseudoNormedAbGroup} {l : Array X} : lnorm (X.BigSum l) <= RealAbGroup.BigSum (\lam j => lnorm (l j)) => {?hidden_proof}
+
+  \lemma lnorm_- {X : PseudoNormedAbGroup} {x y : X} : lnorm (x - y) = lnorm (y - x) => {?hidden_proof}
+
+  \lemma lnorm_-left {X : PseudoNormedAbGroup} {x y : X} : lnorm x - lnorm y <= lnorm (x - y) => {?hidden_proof}
+
+  \lemma lnorm_-right {X : PseudoNormedAbGroup} {x y : X} : lnorm y - lnorm x <= lnorm (x - y) => {?hidden_proof}
+
+  \lemma lnorm_-_abs {X : PseudoNormedAbGroup} {x y : X} : RealAbGroup.abs (lnorm x - lnorm y) <= lnorm (x - y) => {?hidden_proof}
+
+\class NormedAbGroup \extends PseudoNormedAbGroup, ExNormedAbGroup
+
+\class UniformNormedAbGroupMap \extends UniformMetricMap, TopAbGroupMap {
+    \override Dom : ExPseudoNormedAbGroup
+    \override Cod : ExPseudoNormedAbGroup
+    | func-norm-uniform : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x : Dom} ((norm x).U delta -> (norm (func x)).U eps)
+    | func-dist-uniform => \lam eps>0 => (\case func-norm-uniform eps>0 \with {
+      | inP (delta, delta>0, h) => inP (delta, delta>0, unfold (\lam d => rewrite (norm-dist {Cod}, inv AddGroupHom.func-minus) $ h $ rewriteI (norm-dist {Dom}) d))
+    })
+    | func-norm-uniform => \lam eps>0 => (\case dist_open.1 (func-cont OBall-open) $ rewrite func-zro $ OBall-center eps>0 \with {
+      | inP (delta, delta>0, h) => inP (delta, delta>0, \lam d => rewrite (norm_dist {Cod}, inv func-zro) $ h $ rewrite (norm_dist {Dom}) in d)
+    })
+  }
+
+\class NormedAbGroupMap \extends UniformNormedAbGroupMap, MetricMap {
+    \override Dom : ExPseudoNormedAbGroup
+    \override Cod : ExPseudoNormedAbGroup
+    | func-norm {x : Dom} : norm (func x) <= norm x
+    | func-norm-uniform => \lam {eps} eps>0 => inP (eps, eps>0, func-norm __)
+    | func-dist => unfold $ rewrite (norm-dist {Dom}, norm-dist {Cod}, inv AddGroupHom.func-minus) func-norm
+  }
+
+\class NormedIsometricMap \extends NormedAbGroupMap, IsometricMap {
+    \override Dom : ExPseudoNormedAbGroup
+    \override Cod : ExPseudoNormedAbGroup
+    | func-norm-isometry {x : Dom} : norm (func x) = norm x
+    | func-norm => =_<= func-norm-isometry
+    | func-isometry => norm-dist *> pmap norm (inv func-minus) *> func-norm-isometry *> inv norm-dist
+    | func-norm-isometry => norm_dist *> pmap (dist __ _) (inv func-zro) *> func-isometry *> inv norm_dist
+  }
+
+\class CompleteExNormedAbGroup \extends ExNormedAbGroup, CompleteExMetricSpace, CompleteTopAbGroup
+
+\class CompleteNormedAbGroup \extends CompleteExNormedAbGroup, NormedAbGroup, CompleteMetricSpace
+
+  \lemma bilinear-locally-uniform {A B : BoundedExPseudoNormedAbGroup} {C : ExPseudoNormedAbGroup} (f : A -> B -> C) (fl : \Pi {a a' : A} {b : B} -> f (a - a') b = f a b - f a' b) 
+  (fr : \Pi {a : A} {b b' : B} -> f a (b - b') = f a b - f a b') (norm_*_<= : \Pi {x : A} {y : B} -> norm (f x y) <= norm x * norm y) :
+    LocallyUniformMap (A ⨯ B) C (\lam s => f s.1 s.2) => {?hidden_proof}
+    \where {
+      \open ExUpperReal(<=-rat, +-rat, U_<=)
+      \open ExUpperRealAbMonoid(<-rat, <_+, <_+-left)
+    }

@@ -1,0 +1,45 @@
+\import Function.Meta
+\import Order.HeytingAlgebra
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Subset
+
+\class BooleanAlgebra \extends BoundedDistributiveLattice, HeytingAlebra {
+  | compl : E -> E
+  | compl-meet {a : E} : a ∧ compl a <= bottom
+  | compl-join {a : E} : top <= a ∨ compl a
+  | implies => \lam a b => compl a ∨ b
+  | exponent-left => \lam xa<=b => meet-univ <=-refl top-univ <=∘ meet-monotone <=-refl compl-join <=∘ ldistr>= <=∘ join-comm =<= join-monotone meet-right xa<=b
+  | exponent-right => \lam x<=a-->b => meet-monotone x<=a-->b <=-refl <=∘ rdistr>= <=∘ join-univ (meet-comm =<= compl-meet <=∘ bottom-univ) meet-left
+}
+
+\type NegatedElem (R : HeytingAlebra) => Set.Total R.IsNegated
+
+\instance HeytingBooleanAlgebra (R : HeytingAlebra) : BooleanAlgebra (NegatedElem R) 
+  | <= => \lam a b => a.1 <= b.1
+  | <=-refl => <=-refl
+  | <=-transitive => <=∘
+  | <=-antisymmetric => \lam p q => ext (<=-antisymmetric p q)
+  | meet => \lam a b => (a.1 ∧ b.1, meet-negated a.2 b.2)
+  | meet-left => meet-left
+  | meet-right => meet-right
+  | meet-univ => meet-univ
+  | join => \lam a b => (neg $ neg $ a.1 ∨ b.1, neg-negated)
+  | join-left => join-left <=∘ id<=neg_neg
+  | join-right => join-right <=∘ id<=neg_neg
+  | join-univ => \lam {x} {y} {z} p q => double-->-monotone (join-univ p q) <=∘ z.2
+  | top => (R.top, R.top-univ)
+  | top-univ => R.top-univ
+  | bottom => (R.bottom, R.bottom-negated)
+  | bottom-univ => R.bottom-univ
+  | ldistr>= => rewrite (neg_join, neg_join) $ exponent-left $ (R.meet-comm *> inv R.meet-assoc) =<= R.meet-monotone
+    (meet-univ (exponent-left $ R.meet-assoc =<= R.meet-monotone meet-left <=-refl <=∘ eval) 
+    (exponent-left $ R.meet-assoc =<= R.meet-monotone meet-right <=-refl <=∘ eval)) <=-refl <=∘ modus-ponens
+  | compl => \lam a => (neg a.1, neg-negated)
+  | compl-meet => modus-ponens
+  | compl-join => exponent-left $ meet-right <=∘ neg_join =<= modus-ponens
+  \where {
+    \open HeytingAlebra
+  }

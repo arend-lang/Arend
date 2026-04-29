@@ -1,0 +1,7 @@
+\import Algebra.Ring.Boolean
+\import Algebra.Ring.Sub
+\import Paths.Meta
+
+\class SubBooleanPseudoRing \extends SubPseudoRing {
+  \override S : BooleanRing
+}

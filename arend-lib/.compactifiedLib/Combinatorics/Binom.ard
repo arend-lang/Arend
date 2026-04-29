@@ -1,0 +1,24 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Int
+\import Arith.Nat
+\import Data.Array
+\import Order.StrictOrder
+\import Paths
+\open Monoid(pow)
+\open AddMonoid(BigSum)
+
+\func binom (n i : Nat) : Nat 
+  | _, 0 => 1
+  | 0, _ => 0
+  | suc n, suc i => binom n i + binom n (suc i)
+  \where {
+    \lemma binom_0 {n : Nat} : binom n 0 = 1 => {?hidden_proof}
+
+    \lemma binom_< {n m : Nat} (p : n < m) : binom n m = 0 => {?hidden_proof}
+
+    \lemma expansion {R : CRing} (x y : R) (n : Nat) :
+      pow (x + y) n = BigSum (\new (Array R (suc n) (\lam i => natCoef (binom n i) * (pow x i * pow y (iabs (n Nat.- i)))))) => {?hidden_proof}
+  }

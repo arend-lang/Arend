@@ -1,0 +1,19 @@
+\import Category.Adjoint
+\import Category.CartesianClosed
+\import Category.Functor
+\import Function.Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+
+\lemma \infixr 9 =<= {E : Preorder} {x y z : E} (p : x = y) (q : y <= z) : x <= z => {?hidden_proof}
+
+\class HeytingAlebra \extends BoundedDistributiveLattice, CartesianClosedPrecat (\lp, \lp) {
+  | implies \alias \infixr 5 --> : E -> E -> E
+  | exponent-left {x a b : E} : x ∧ a <= b -> x <= a --> b
+  | exponent-right {x a b : E} : x <= a --> b -> x ∧ a <= b
+  | top => top-impl
+  | top-univ => top-univ
+  | ldistr>= => ldistr>=
+  | exp => exp
+}

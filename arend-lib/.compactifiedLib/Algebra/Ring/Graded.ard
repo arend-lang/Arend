@@ -1,0 +1,55 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Arith.Nat
+\import Data.Array
+\import Data.Fin(fsuc/=, nat_fin_=)
+\import Data.Or
+\import Equiv
+\import Function.Meta($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+
+\class GradedCRing \extends CRing {
+  | isHomogen : E -> Nat -> \Prop
+  | homogen-zro {n : Nat} : isHomogen 0 n
+  | homogen-negative_ide : isHomogen -1 0
+  | homogen-+ {n : Nat} {a b : E} : isHomogen a n -> isHomogen b n -> isHomogen (a + b) n
+  | homogen-* {n m : Nat} {a b : E} : isHomogen a n -> isHomogen b m -> isHomogen (a * b) (n Nat.+ m)
+  | homogen-decomp (x : E) : ∃ (l : Array E) (\Pi (n : Fin l.len) -> isHomogen (l n) n) (BigSum l = x)
+  | homogen-unique (l : Array E) : (\Pi (n : Fin l.len) -> isHomogen (l n) n) -> BigSum l = 0 -> ∀ (x : l) (x = 0)
+}
+  \where {
+    \open BottomJoinSemilattice
+
+\data Similar {A : AddPointed} (l l' : Array A) \elim l, l'
+      | nil, nil => nil-nil-similar
+      | nil, a :: l' => nil-::-similar (a = 0) (Similar nil l')
+      | a :: l, nil => ::-nil-similar (a = 0) (Similar l nil)
+      | a :: l, a' :: l' => ::-::-similar (a = a') (Similar l l')
+
+    \lemma similar-nil {A : AddPointed} {l : Array A} (s : Similar l nil) (j : Fin l.len) : l j = 0 => {?hidden_proof}
+
+    \func similar-eq {A : AddPointed} {l l' : Array A} (s : Similar l l') (j : Fin l.len) : Or (\Sigma (i : Fin l'.len) (l j = l' i) (i = {Nat} j)) (l j = 0) \elim l, l', s, j
+      | a :: l, nil, ::-nil-similar p s, 0 => inr p
+      | a :: l, nil, ::-nil-similar p s, suc j => \case similar-eq s j \with {
+        | inl r => \case r.1 \with {}
+        | inr r => inr r
+      }
+      | a :: l, a' :: l', ::-::-similar p s, 0 => inl (0, p, idp)
+      | a :: l, a' :: l', ::-::-similar p s, suc j => \case similar-eq s j \with {
+        | inl r => inl (suc r.1, r.2, pmap suc r.3)
+        | inr r => inr r
+      }
+  }

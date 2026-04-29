@@ -1,0 +1,21 @@
+\import Algebra.Group
+\import Algebra.Group.GSet.ExampleActions
+\import Algebra.Group.GSet
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\class LinRepres \extends LModule, GroupAction {
+  | **-ldistr {g : G} {e e' : E} : g ** (e + e') = g ** e + g ** e'
+  | **-*c {g : G} {e : E} {c : R} : g ** (c *c e) = c *c (g ** e)
+}
+
+\func TrivialAction {R : Ring} (E : LModule R) (G : Group) : LinRepres R G \cowith
+  | LModule => E
+  | GroupAction => trivialAction G E
+  | **-*c => idp
+  | **-ldistr => idp

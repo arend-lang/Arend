@@ -1,0 +1,100 @@
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.Locale
+
+\func Set (X : \hType) => X -> \Prop
+  \where {
+    \func Union {X : \hType} (S : Set X -> \hType) : Set X => \lam a => ∃ (U : S) (U a)
+
+    \lemma Union-cond {X : \hType} {S : Set X -> \hType} {U : Set X} (SU : S U) : U ⊆ Union S => {?hidden_proof}
+
+    \func Total {X : \Type} (U : Set X) => \Sigma (x : X) (\property (U x))
+
+    \func restrict {X : \Type} {U : Set X} (V : Set X) : Set (Total U) => \lam s => V s.1
+
+    \func Prod {X Y : \hType} (U : Set X) (V : Set Y) : Set (\Sigma X Y) => \lam s => \Sigma (U s.1) (V s.2)
+
+    \func CoverInter {X : \hType} (C : Set (Set X)) (D : Set (Set X)) : Set (Set X) => \lam W => ∃ (U : C) (V : D) (W = U ∧ {SetLattice X} V)
+
+    \func CoverInterBig {X : \hType} (Cs : Array (Set (Set X))) : Set (Set X) => Big CoverInter (single (top {SetLattice X})) Cs
+  }
+
+
+\type Elem {X : \Type} (U : Set X) => \Sigma (x : X) (\property (U x))
+
+\func single {X : \Set} (a : X) : Set X => a =
+
+\lemma single_<= {X : \Set} {a : X} {U : Set X} (Ua : U a) : single a ⊆ U => {?hidden_proof}
+
+\func \infix 8 ^-1 {X Y : \hType} (f : X -> Y) (S : Set Y) : Set X => \lam a => S (f a)
+
+\type Subset \alias \infix 4 ⊆ {X : \hType} (U V : Set X) => \Pi {x : X} -> U x -> V x
+
+\func Compl {X : \hType} (U : Set X) : Set X => \lam x => Not (U x)
+
+\instance SetLattice (A : \hType) : Locale (Set A) 
+  | <= => ⊆
+  | <=-refl => \lam p => p
+  | <=-transitive => \lam p q u => q (p u)
+  | <=-antisymmetric => \lam p q => ext (\lam x => ext (p, q))
+  | meet => \lam U V a => \Sigma (U a) (V a)
+  | meet-left => __.1
+  | meet-right => __.2
+  | meet-univ => \lam p q c => (p c, q c)
+  | top => \lam _ => \Sigma
+  | top-univ => \lam _ => ()
+  | Join => \lam {J} f a => ∃ (j : J) (f j a)
+  | Join-cond => \lam j c => inP (j, c)
+  | Join-univ => \lam d inP (j, c) => d j c
+  | Join-ldistr>= => \lam (d, inP (j, c)) => inP (j, (d, c))
+
+\lemma bottom-empty {A : \hType} {E : \Prop} {x : A} (b : (SetLattice A).bottom x) : E => {?hidden_proof}
+
+\func Refines {X : \hType} (C D : Set (Set X)) : \Prop => ∀ {U : C} ∃ (V : D) (U ⊆ V)
+
+\lemma Refines-cover {X : \hType} {C D : Set (Set X)} (r : Refines C D) {x : X} (p : ∃ (U : C) (U x)) : ∃ (V : D) (V x) => {?hidden_proof}
+
+\lemma Refines-single_top {X : \hType} {C : Set (Set X)} : Refines C (single top) => {?hidden_proof}
+
+\lemma Refines-refl {X : \hType} {C : Set (Set X)} : Refines C C => {?hidden_proof}
+
+\lemma Refines-trans {X : \hType} {C D E : Set (Set X)} (r1 : Refines C D) (r2 : Refines D E) : Refines C E => {?hidden_proof}
+
+\lemma Refines-inter-left {X : \hType} {C D : Set (Set X)} : Refines (Set.CoverInter C D) C => {?hidden_proof}
+
+\lemma Refines-inter-right {X : \hType} {C D : Set (Set X)} : Refines (Set.CoverInter C D) D => {?hidden_proof}
+
+\lemma Refines-inter-big {X : \hType} (Cs : Array (Set (Set X))) (j : Fin Cs.len) : Refines (Set.CoverInterBig Cs) (Cs j) => {?hidden_proof}
+
+\lemma Refines-inter {X : \hType} {C D C' D' : Set (Set X)} (r : Refines C D) (r' : Refines C' D') : Refines (Set.CoverInter C C') (Set.CoverInter D D') => {?hidden_proof}
+
+\lemma CoverInterBig-char {X : \hType} {Cs : Array (Set (Set X))} :
+  Set.CoverInterBig Cs = (\lam W => ∃ (Us : Array (Set X) Cs.len) (\Pi (j : Fin Cs.len) -> Cs j (Us j)) (W = Big {Set X} ∧ top Us)) => {?hidden_proof}
+
+\func extend {X : \Type} {U : Set X} (V : Set (Set.Total U)) : Set X => \lam x => \Sigma (Ux : U x) (V (x, Ux))
+
+\lemma extend-sub {X : \Type} {U : Set X} {V : Set (Set.Total U)} : extend V ⊆ U => {?hidden_proof}
+
+\lemma extend-mono {X : \Type} {U : Set X} {V W : Set (Set.Total U)} (p : V ⊆ W) : extend V ⊆ extend W => {?hidden_proof}
+
+\lemma extend_meet {X : \Type} {U : Set X} {V W : Set (Set.Total U)} : extend (V ∧ W) = extend V ∧ extend W => {?hidden_proof}
+
+\lemma restrict_extend {X : \Type} {U : Set X} {V : Set (Set.Total U)} : Set.restrict (extend V) = V => {?hidden_proof}
+
+\lemma extend_restrict {X : \Type} {U : Set X} {V : Set X} : extend (Set.restrict {X} {U} V) ⊆ V => {?hidden_proof}
+
+\lemma ^-1_<= {A B : \hType} (f : A -> B) {U V : Set B} (p : U ⊆ V) : f ^-1 U ⊆ f ^-1 V => {?hidden_proof}
+
+\func ^-1_FrameHom {A B : \hType} (f : A -> B) : FrameHom (SetLattice B) (SetLattice A) \cowith
+  | func => ^-1 f
+  | func-<= => \lam p {_} => p
+  | func-top>= => \lam {_} _ => ()
+  | func-meet>= => \lam c => c
+  | func-Join>= => \lam c => c

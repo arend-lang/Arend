@@ -1,0 +1,116 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Analysis.Limit
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Operations
+\import Order.Lattice
+\import Paths
+\import Paths.Meta
+\import Set.Subset
+\import Topology.TopAbGroup
+\import Topology.TopModule
+\import Topology.TopRing
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open ContMap
+\open ProductTopSpace
+\open Monoid(Inv)
+
+\func dquot {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (f : Set.Total S -> Y) {x : Set.Total S} (h : Inv {R}) (a : X) 
+(\property s : S (x.1 + h.val *c a)) => h.inv *c (f (_, s) - f x)
+  \where {
+    \lemma dquot_*c (S : Set X) {f : Set.Total S -> Y} {x : Set.Total S} {h : Inv {R}} (c : Inv {R}) (Sh : S (x.1 + h.val *c (c.val *c a))) :
+      dquot f h _ Sh = c.val *c dquot f (Inv.prod h c) a (transportInv S (pmap (_ +) *c-assoc) Sh) => {?hidden_proof}
+
+    \lemma dquot_+ (S : Set X) {f g : Set.Total S -> Y} {x : Set.Total S} {h : Inv {R}} (Sh : S (x.1 + h.val *c a)) :
+      dquot (\lam x => f x + g x) h a Sh = dquot f h a Sh + dquot g h a Sh => {?hidden_proof}
+
+    \lemma dquot_bilinear {R : NearSkewField} {X X1 X2 Y : TopLModule R} (S : Set X) {f : Set.Total S -> X1} {g : Set.Total S -> X2} {x : Set.Total S} {a : X} 
+    (b : BilinearMap X1 X2 Y) (h : Inv {R}) (Sh : S (x.1 + h.val *c a)) :
+      dquot (\lam x => b (f x) (g x)) h a Sh = b (dquot f h a Sh) (g (x.1 + h.val *c a, Sh)) + b (f x) (dquot g h a Sh) => {?hidden_proof}
+
+    \lemma dquot-comp {R : NearSkewField} {X Y Z : TopLModule R} (S : Set X) {f : Set.Total S -> Y} (T : Set Y) {g : Set.Total T -> Z} 
+    (Tf : \Pi (x : Set.Total S) -> T (f x)) {x : Set.Total S} {a : X} (h : Inv {R}) (Sh : S (x.1 + h.val *c a)) :
+    dquot (\lam x => g (f x, Tf x)) h a Sh = dquot g {(f x, Tf x)} h (dquot f h a Sh) 
+      (transportInv T (pmap (_ +) (inv *c-assoc *> pmap (*c _) h.inv-right *> ide_*c)) $ simplify $ Tf (_, Sh)) => {?hidden_proof}
+  }
+
+
+\func IsDirDerivAt {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) (a : X) (d : Y) : \Prop 
+  => Y.IsLimit {DirSet So} (\lam h => dquot f h.6.1 _ h.6.2) d
+  \where {
+    \lemma aux1 (So : isOpen S) => {?hidden_proof}
+
+    \lemma aux2  => {?hidden_proof}
+
+    \func DirSet (So : isOpen S) => InvDirectedSet (aux1 So) aux2
+
+    \lemma limit-id (So : isOpen S) => {?hidden_proof}
+
+    \lemma limit-char (So : isOpen S) : IsDirDerivAt So f x a d <-> ∀ {V : Y.isOpen} (V 0) ∃ (W : R.isOpen) (W 0) ∀ {h : W} (hi : Inv h) (s : S (x.1 + h *c a)) (V (d - dquot f hi a s)) 
+      => {?hidden_proof}
+
+    \lemma unique {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : Set X} (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) (a : X) 
+    {d d' : Y} (dd : IsDirDerivAt So f x a d) (d'd : IsDirDerivAt So f x a d') : d = d' => {?hidden_proof}
+  }
+
+
+\lemma dirDeriv_zro {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : Set X} (So : isOpen S) {f : Set.Total S -> Y} {x : Set.Total S} : IsDirDerivAt So f x 0 0 
+  => {?hidden_proof}
+
+\lemma dirDeriv_+ {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) {f g : Set.Total S -> Y} {x : Set.Total S} {a : X} (Df Dg : Y) 
+(fd : IsDirDerivAt So f x a Df) (gd : IsDirDerivAt So g x a Dg) : IsDirDerivAt So (\lam x => f x + g x) x a (Df + Dg) => {?hidden_proof}
+
+\lemma dirDeriv_bilinear {R : NearSkewField} {X X1 X2 Y : TopLModule R} {S : Set X} (So : isOpen S) {f : Set.Total S -> X1} {g : Set.Total S -> X2} {x : Set.Total S} 
+(gc : IsContAt {TopSub S} g x) {a : X} (b : BilinearMap X1 X2 Y) (bc : ContMap (X1 ⨯ X2) Y (\lam s => b s.1 s.2)) (Df : X1) (Dg : X2) 
+(fd : IsDirDerivAt So f x a Df) (gd : IsDirDerivAt So g x a Dg) : IsDirDerivAt So (\lam x => b (f x) (g x)) x a (b Df (g x) + b (f x) Dg) => {?hidden_proof}
+
+\func IsDerivAt {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) (Df : X -> Y) : \Prop 
+  => \Pi (a0 : X) -> Y.IsLimit {DirSet So a0} (\lam h => dquot f h.6.1 _ h.6.2) (Df a0)
+  \where {
+    \lemma isLimitPoint (So : isOpen S) {a : X} : TopSpace.IsLimitPoint {ProductTopSpace R X} (0, a) (\lam s => \Sigma (Inv s.1) (S (x.1 + s.1 *c s.2))) => {?hidden_proof}
+
+    \func DirSet (So : isOpen S) (a : X) => SubPointDirectedSet {ProductTopSpace R X} {\lam s => \Sigma (Monoid.Inv s.1) (S (x.1 + s.1 *c s.2))} (0, a) (isLimitPoint So)
+
+    \lemma limit-char (So : isOpen S) :
+    IsDerivAt So f x Df <-> ∀ a0 {V : Y.isOpen} (V 0) ∃ (W : R.isOpen) (W 0) (U : X.isOpen) (U 0) ∀ {h : W} {a} (U (a0 - a)) (hi : Inv h) (s : S (x.1 + h *c a)) 
+      (V (Df a0 - dquot f hi a s)) => {?hidden_proof}
+
+    \lemma limit-id (So : isOpen S) {a0 : X} => {?hidden_proof}
+  }
+
+
+\lemma deriv-isDirDeriv {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) {f : Set.Total S -> Y} {x : Set.Total S} {Df : X -> Y} 
+(Dfd : IsDerivAt So f x Df) (a : X) : IsDirDerivAt So f x a (Df a) => {?hidden_proof}
+
+\lemma deriv-isCont {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) {f : Set.Total S -> Y} {x : Set.Total S} {Df : X -> Y} 
+(Dfd : IsDerivAt So f x Df) : IsContAt {TopSub S} f x => {?hidden_proof}
+  \where {
+    \lemma deriv_zro {V : Set Y} (Vo : isOpen V) (V0 : V 0) : V (Df 0) => {?hidden_proof}
+  }
+
+
+\lemma deriv-linear {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} (S : Set X) (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) 
+(Df : TopAbGroupMap X Y) (Dfd : IsDerivAt So f x Df) : LinearMap X Y Df => {?hidden_proof}
+  \where {
+    \lemma dirDeriv-*c (So : isOpen S) {a : X} {d : Y} (p : IsDirDerivAt So f x a d) (c : Inv {R}) : IsDirDerivAt So f x (c.val *c a) (c.val *c d) => {?hidden_proof}
+  }
+
+
+\lemma deriv_+ {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) {f g : Set.Total S -> Y} {x : Set.Total S} (Df Dg : X -> Y) 
+(fd : IsDerivAt So f x Df) (gd : IsDerivAt So g x Dg) : IsDerivAt So (\lam x => f x + g x) x (\lam a => Df a + Dg a) => {?hidden_proof}
+
+\lemma deriv_bilinear {R : NearSkewField} {X X1 X2 Y : TopLModule R} {S : Set X} (So : isOpen S) {x : Set.Total S} {f : Set.Total S -> X1} {g : Set.Total S -> X2} 
+(b : BilinearMap X1 X2 Y) (bc : ContMap (ProductTopSpace X1 X2) Y (\lam s => b s.1 s.2)) (Df : X -> X1) (Dg : X -> X2) (fd : IsDerivAt So f x Df) 
+(gd : IsDerivAt So g x Dg) : IsDerivAt So (\lam x => b (f x) (g x)) x (\lam a => b (Df a) (g x) + b (f x) (Dg a)) => {?hidden_proof}
+
+\lemma deriv-comp {R : NearSkewField} {X Y Z : TopLModule R} {S : Set X} (So : isOpen S) {T : Set Y} (To : isOpen T) {f : Set.Total S -> Y} 
+(Tf : \Pi (x : Set.Total S) -> T (f x)) {g : Set.Total T -> Z} {x : Set.Total S} (Df : X -> Y) (fd : IsDerivAt So f x Df) (Dg : Y -> Z) 
+(gd : IsDerivAt To g (f x, Tf x) Dg) : IsDerivAt So (\lam x => g (f x, Tf x)) x (\lam a => Dg (Df a)) => {?hidden_proof}

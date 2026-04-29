@@ -1,0 +1,47 @@
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Algebra.Group.Representation.Category
+\import Algebra.Group.Representation.Irreducible
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.Sub
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Module.PowerLModule
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Category.Functor
+\import Function.Meta($)
+\import Logic
+\import Meta(cases, unfold)
+\import Paths
+\import Paths.Meta
+\import Set
+
+\func PermRepr {R : Ring} {G : Group} (X : GroupAction G) : LinRepres R G \cowith
+  | LModule => Module
+  | ** => \lam g f j => f (inverse g X.** j)
+  | **-assoc => ext (\lam _ => rewrite (X.**-assoc, inverse_prod) idp)
+  | **-ldistr => idp
+  | **-*c => ext (\lam _ => idp)
+  | id-action => ext (\lam _ => rewrite (G.inverse_ide, X.id-action) idp)
+  \where {
+    \func inverse_prod {m n : G} : inverse (m * n) = inverse n * inverse m 
+      => inv (G.check-for-inv (rewrite (G.*-assoc, pmap (* m) (inv G.*-assoc), G.inverse-right, G.ide-left, G.inverse-right) idp))
+
+    \func R_m : LModule R => RingLModule R
+
+    \func Module : LModule R => PowerLModule X R_m
+  }
+
+
+\class PermutationRepresReducible {
+  | R : Ring
+  | G : Group
+  | X : GroupAction G
+  | somepoint : X
+  | somepoint' : X
+  | different-points : somepoint' /= somepoint
+  | not-trivial-ring : R.zro /= R.ide
+  | decideEq-somepoint (x : X) : Dec (x = somepoint)
+}

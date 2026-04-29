@@ -1,0 +1,29 @@
+\import Algebra.Group
+\import Algebra.Group.Sub
+\import Algebra.Monoid
+\import Arith.Nat
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Classical
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.Fin.KFin
+\import Set.Fin.Pigeonhole
+\open Group
+\open Monoid(LDiv)
+
+\lemma lagrange-gen (H : SubGroup) (c : Choice H.Cosets) : TruncP (QEquiv {H.S} {\Sigma H.Cosets H.IGroup}) => {?hidden_proof}
+
+\func lagrange (H : FinSubGroup) : LDiv (finCard {H.IFinGroup}) (finCard {H.S}) \cowith
+  | inv => finCard {Cosets-fin H H.S}
+  | inv-right => \case lagrange-gen H (Cosets-fin H H.S) \with {
+    | inP p => inv $ finCard_Equiv {H.S} {ProdFin (Cosets-fin H H.S) H.IFinGroup} p *> *-comm
+  }
+  \where {
+    \lemma Cosets-fin (H : DecSubGroup) (_ : KFinSet H.S) : FinSet H.Cosets => {?hidden_proof}
+  }

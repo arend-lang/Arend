@@ -1,0 +1,957 @@
+\import Algebra.Group.Symmetric(cyclePerm)
+\import Algebra.Meta
+\import Algebra.Ordered
+\import Arith.Nat
+\import Category
+\import Category.Factorization
+\import Category.Functor
+\import Category.Limit
+\import Category.Meta
+\import Category.Subcat
+\import Category.Subobj
+\import Category.Topos.Sheaf.Site
+\import Data.Array
+\import Data.Bool
+\import Data.Maybe
+\import Data.Or
+\import Equiv
+\import Equiv.Univalence(Equiv-to-=)
+\import Function(IsSurj)
+\import Function.Meta($, repeat)
+\import Homotopy.Fibration
+\import Logic
+\import Logic.Classical
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder \hiding (isDense)
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.SetHom
+\import Set.SetCategory
+\import Set.Fin
+\import Set.Fin.Instances
+\import Topology.RatherBelow
+\open CompleteLattice(SJoin)
+\open MeetSemilattice
+\open JoinSemilattice
+\open PresentedFrame \hiding (<=)
+\open Locale
+
+\class Locale \extends CompleteLattice, BoundedDistributiveLattice, SiteWithBasis {
+  | join => \lam x y => Join (if __ x y)
+  | join-left => \lam {x} {y} => Join-cond true
+  | join-right => \lam {x} {y} => Join-cond false
+  | join-univ => \lam x<=z y<=z => Join-univ (\case \elim __ \with {  | true => x<=z  | false => y<=z})
+  | Join-ldistr>= {J : \Set} {f : J -> E} {e : E} : e ∧ Join f <= Join (\lam (j : J) => e ∧ f j)
+  | ldistr>= => \lam {x} {y} {z} => (
+    \have t : (\lam b => if b (x ∧ y) (x ∧ z)) = (\lam b => x ∧ if b y z) => ext (\lam b => cases b idp)
+    \in unfold (rewrite t Join-ldistr>=))
+  | isBasicCover => \lam x g => x <= Join (\lam j => (g j).1)
+  | basicCover-stable => \lam {x} {y} x<=y c => meet-univ <=-refl (x<=y <=∘ c) <=∘ Join-ldistr>=
+  | Meet => \lam {J} g => Join (\lam (t : Total (\Pi (j : J) -> __ <= g j)) => t.1)
+  | Meet-cond => \lam {J} j {f} => Join-univ (__.2 j)
+  | Meet-univ => \lam {J} {f} {e} p => Join-cond (later (e, p))
+}
+
+\class FrameHom \extends SetHom {
+  \override Dom : Locale
+  \override Cod : Locale
+  | func-<= {x y : Dom} : x <= y -> func x <= func y
+  | func-top : func top = top
+  | func-top>= : top <= func top
+  | func-meet {x y : Dom} : func (x ∧ y) = func x ∧ func y
+  | func-meet>= {x y : Dom} : func x ∧ func y <= func (x ∧ y)
+  | func-Join {J : \Set} {f : J -> Dom} : func (Join f) = Join (\lam j => func (f j))
+  | func-Join>= {J : \Set} {f : J -> Dom} : func (Join f) <= Join (\lam j => func (f j))
+  | func-Join>= => \lam {J} {f} => transport (_ <=) func-Join <=-refl
+  | func-Join => func-Join-impl
+  | func-top>= => transportInv (_ <=) func-top <=-refl
+  | func-top => <=-antisymmetric top-univ func-top>=
+  | func-<= => \lam x<=y => rewrite (inv (pmap func (meet_<= x<=y)) *> func-meet) meet-right
+  | func-meet>= => =_<= (inv func-meet)
+  | func-meet => <=-antisymmetric (meet-univ (func-<= meet-left) (func-<= meet-right)) func-meet>=
+}
+  \where {
+    \lemma direct_o {L M K : Locale} (f : FrameHom L M) (g : FrameHom M K) {x : K} : direct {g FrameCat.∘ f} x = f.direct (g.direct x) => {?hidden_proof}
+  }
+
+
+\class Nucleus {
+  | L : Locale
+  | nucleus : L -> L
+  | nucleus-meet {x y : L} : nucleus (x ∧ y) = nucleus x ∧ nucleus y
+  | nucleus-meet>= {x y : L} : nucleus x ∧ nucleus y <= nucleus (x ∧ y)
+  | nucleus-<= {x y : L} : x <= y -> nucleus x <= nucleus y
+  | nucleus-unit {x : L} : x <= nucleus x
+  | nucleus-join>= {x : L} : nucleus (nucleus x) <= nucleus x
+  | nucleus-join {x : L} : nucleus (nucleus x) = nucleus x
+  | nucleus-<= => \lam p => rewrite (inv (pmap nucleus (meet_<= p)) *> nucleus-meet) meet-right
+  | nucleus-meet => <=-antisymmetric (meet-univ (nucleus-<= meet-left) (nucleus-<= meet-right)) nucleus-meet>=
+  | nucleus-meet>= => =_<= (inv nucleus-meet)
+  | nucleus-join => <=-antisymmetric nucleus-join>= nucleus-unit
+  | nucleus-join>= => =_<= nucleus-join
+}
+  \where {
+    \func exp {L : Locale} (j j' : Nucleus {L}) : Nucleus \cowith
+      | nucleus => \lam x => Meet (\lam (p : \Sigma (y : L) (x <= y)) => j p.1 --> j' p.1)
+      | nucleus-meet>= => \lam {a} {b} => (
+        \have lem {x y z : L} : (x ∧ y) ∧ z = (x ∧ z) ∧ (y ∧ z) => equation
+        \in Meet-univ (\lam p => meet-monotone (Meet-cond $ later (a ∨ p.1, join-left)) (Meet-cond $ later (b ∨ p.1, join-left)) <=∘ exponent.1
+              (=_<= lem <=∘ meet-monotone (meet-monotone <=-refl (nucleus-<= join-right) <=∘ eval) (meet-monotone <=-refl (nucleus-<= join-right) <=∘ eval) <=∘ 
+              nucleus-meet>= <=∘ nucleus-<= (ldistr>= <=∘ join-univ (L.rdistr>= <=∘ join-univ p.2 meet-left) meet-right))))
+      | nucleus-<= => \lam x<=y => Meet-univ (\lam p => Meet-cond (later (p.1, x<=y <=∘ p.2)) <=∘ exponent.1 eval)
+      | nucleus-unit => Meet-univ (\lam p => exponent.1 $ meet-left <=∘ p.2 <=∘ nucleus-unit)
+      | nucleus-join>= => Meet-univ
+      (\lam p => Meet-cond (later (j p.1 --> j' p.1, Meet-cond p)) <=∘ exponent_monotone <=-refl (Nucleus.nucleus_exponent nucleus-join>=) <=∘ =_<= exponent-double <=∘ 
+        exponent_monotone (meet-univ (nucleus-<= $ exponent.1 $ meet-left <=∘ nucleus-unit) <=-refl) <=-refl)
+
+    \lemma exp-univ1 {L : Locale} {j k n : Nucleus {L}} (p : \Pi {x : L} -> NucleusFrame.meet j k x <= n x) {x : L} : j x <= exp k n x => {?hidden_proof}
+
+    \lemma exp-univ2 {L : Locale} {k n : Nucleus {L}} {x y : L} (p : y <= exp k n x) : y ∧ k x <= n x => {?hidden_proof}
+  }
+
+
+\instance NucleusFrame (L : Locale) : Locale (Nucleus {L}) 
+  | <= => \lam j j' => \Pi {x : L} -> j x <= j' x
+  | <=-refl => <=-refl
+  | <=-transitive => \lam p q {x} => <=-transitive p q
+  | <=-antisymmetric => \lam p q => exts (\lam x => <=-antisymmetric p q)
+  | meet => meet
+  | meet-left => meet-left
+  | meet-right => meet-right
+  | meet-univ => \lam p q {x} => meet-univ p q
+  | top => \new Nucleus {
+    | nucleus => \lam _ => top
+    | nucleus-meet>= => top-univ
+    | nucleus-<= => \lam _ => <=-refl
+    | nucleus-unit => top-univ
+    | nucleus-join>= => <=-refl
+  }
+  | top-univ => top-univ
+  | Join => \lam {J} g => \new Nucleus {
+    | nucleus => \lam x => Meet (\lam (p : \Sigma (n : Nucleus) (\Pi (j : J) {x : L} -> g j x <= n x)) => p.1 x)
+    | nucleus-meet>= => Meet-univ (\lam p => meet-univ (meet-left <=∘ Meet-cond p) (meet-right <=∘ Meet-cond p) <=∘ nucleus-meet>=)
+    | nucleus-<= => \lam x<=y => Meet-univ (\lam p => Meet-cond p <=∘ nucleus-<= x<=y)
+    | nucleus-unit => Meet-univ (\lam p => nucleus-unit)
+    | nucleus-join>= => Meet-univ (\lam p => Meet-cond p <=∘ Nucleus.nucleus-univ (Meet-cond p))
+  }
+  | Join-cond => \lam j {g} {x} => Join-cond $ later (g j x, \lam p => p.2 j)
+  | Join-univ => \lam c {x} => Join-univ (\lam p => p.2 (_, c))
+  | Join-ldistr>= => \lam {J} {g} {k} {x} => Join-ldistr>= <=∘ Join-univ
+    (\lam p =>
+    Meet-univ (\lam q => =_<= meet-comm <=∘ Nucleus.exp-univ2 (p.2 (Nucleus.exp k q.1, \lam j => Nucleus.exp-univ1 (\lam {y} => =_<= meet-comm <=∘ q.2 j)))))
+  \where {
+    \open Topology.Locale(NucleusFrame)
+
+    \func <=-map {L : Locale} (j j' : Nucleus {L}) (j<=j' : j <= j') : FrameHom j.locale j'.locale \cowith
+      | func => \lam x => (j' x.1, nucleus-join>=)
+      | func-<= => nucleus-<=
+      | func-top>= => nucleus-unit
+      | func-meet>= => nucleus-meet>=
+      | func-Join>= => unfold $ nucleus-<= j<=j' <=∘ nucleus-join>= <=∘ nucleus-<= (Join-univ (\lam j => nucleus-unit <=∘ Join-cond j))
+      \where {
+        \lemma surjective {L : Locale} {j j' : Nucleus {L}} (j<=j' : j <= j') : IsSurj (<=-map j j' j<=j') => {?hidden_proof}
+      }
+
+
+    \lemma double-nucleus-left {L : Locale} {j k : Nucleus {L}} (j<=k : j <= k) (x : L) : k (j x) = k x => {?hidden_proof}
+
+    \lemma double-nucleus-right {L : Locale} {j k : Nucleus {L}} (j<=k : j <= k) (x : L) : j (k x) = k x => {?hidden_proof}
+
+    \lemma wclosure_<= {j : Nucleus {}} : j.map.wclosed-image <= {NucleusFrame _} j => {?hidden_proof}
+
+    \lemma wclosure-sdense {j : Nucleus {}} : isStronglyDense {<=-map j.map.wclosed-image j wclosure_<=} => {?hidden_proof}
+
+    \lemma wclosure-inclusion {j : Nucleus {}} (x : j.L) : <=-map j.map.wclosed-image j wclosure_<= (j.map.wclosed-image.map x) = j.map x => {?hidden_proof}
+
+    \lemma nucleus>=open {L : Locale} {a : L} {j : Nucleus {L}} (c : top <= j a) : open a <= j => {?hidden_proof}
+      \where {
+        \lemma conv {L : Locale} {a : L} {j : Nucleus {L}} (c : open a <= j) : top <= j a => {?hidden_proof}
+      }
+
+
+    \lemma open_<= {L : Locale} {a b : L} (p : a <= b) : open b <= open a => {?hidden_proof}
+      \where {
+        \lemma conv {L : Locale} {a b : L} (p : open b <= open a) : a <= b => {?hidden_proof}
+      }
+
+
+    intersection-pullback {L : Locale} (j k : Nucleus {L}) :
+      Pullback {LocaleCat} j.map k.map (Nucleus.locale {j ∨ k}) (<=-map j (j ∨ k) (join-left {NucleusFrame L})) (<=-map k (j ∨ k) (join-right {NucleusFrame L})) 
+    => 
+      \have coh : j.map ∘ {LocaleCat} <=-map j (j ∨ k) (join-left {_} {j}) = k.map ∘ {LocaleCat} <=-map k (j ∨ k) (join-right {_} {j}) => exts
+              (\lam x => ext $ double-nucleus-left {_} {j} {j ∨ k} (join-left {_} {j} {k}) x *> inv (double-nucleus-left {_} {k} {j ∨ k} (join-right {_} {j} {k}) x))
+      \in regularSubobj_meet-pullback.exact {LocaleCat} j.map (surj_regular $ Nucleus.map.surjective {j}) k.map (surj_regular $ Nucleus.map.surjective {k}) 
+            {<=-map j (j ∨ k) (join-left {NucleusFrame L})} coh
+              (surj_regular {_} {_} {j.map ∘ {LocaleCat} <=-map j (j ∨ k) (join-left {_} {j})} (IsSurj.comp Nucleus.map.surjective (<=-map.surjective (join-left {_} {j}))))
+              (inP (_, idp), inP (_, inv coh),  \case \elim __ \with {  | regSubobj {sub} f : FrameHom fm => \lam inP (h1, jh1=f) inP (h2, kh2=f) => (
+                \have jk<=f : j ∨ k <= f.image => join-univ (\lam {x} => direct-adjoint.1 $ transport (\lam (f : FrameHom L sub) => f (j x) <= f x) jh1=f $ func-<= nucleus-join>=) 
+                            (\lam {x} => direct-adjoint.1 $ transport (\lam (f : FrameHom L sub) => f (k x) <= f x) kh2=f $ func-<= nucleus-join>=)
+                \in inP (<=-map (j ∨ k) f.image jk<=f ∘ f.factor,  exts (\lam x =>
+                      func_direct_func *> pmap f (double-nucleus-left {_} {j} {j ∨ k} (join-left {_} {j}) x) *> <=-antisymmetric (direct-adjoint.2 jk<=f) (func-<= $ nucleus-unit {j ∨ k}))
+                        ))})
+  }
+
+
+\lemma closed>=open {L : Locale} {c a : L} (p : top <= c ∨ a) : closed c >= open a => {?hidden_proof}
+  \where {
+    \lemma conv {L : Locale} {c a : L} (p : closed c >= open a) : top <= c ∨ a => {?hidden_proof}
+  }
+
+
+\lemma open<=closed {L : Locale} {c a : L} (p : c ∧ a <= bottom) : open a >= closed c => {?hidden_proof}
+  \where {
+    \lemma conv {L : Locale} {c a : L} (p : open a >= closed c) : c ∧ a <= bottom => {?hidden_proof}
+  }
+
+
+\lemma closed-compact {L : Locale} {N : Nucleus {L}} (c : N.isClosed) {a : L} (w : a << top) (b : N >= open a) : N.locale.isCompact => {?hidden_proof}
+
+\func FrameCat : Cat Locale \cowith
+  | Hom => FrameHom
+  | id => \lam L => \new FrameHom {
+    | func => \lam x => x
+    | func-top => idp
+    | func-meet => idp
+    | func-Join => idp
+  }
+  | o => o
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip (\lam {X} {S1} {S2} (h1 : FrameHom) (h2 : FrameHom) => (exts Locale) {  | <= => \lam x y => ext (h1.func-<=, h2.func-<=)
+    | meet => \lam x y => h1.func-meet  | top => h1.func-top  | Join => \lam f => h1.func-Join})
+  \where {
+    \func equiv_iso {f : FrameHom} (e : Equiv f) : Iso {FrameCat} f \cowith
+      | hinv => \new FrameHom {
+        | func => e.ret
+        | func-top => pmap e.ret (inv func-top) *> e.ret_f top
+        | func-meet => \lam {x} {y} => pmap e.ret (inv (func-meet *> pmap2 ∧ (e.f_ret x) (e.f_ret y))) *> e.ret_f _
+        | func-Join => \lam {J} {g} => pmap e.ret (inv (func-Join *> path (\lam i => Join (\lam j => e.f_ret (g j) i)))) *> e.ret_f _
+      }
+      | hinv_f => exts e.ret_f
+      | f_hinv => exts e.f_ret
+  }
+
+
+\class FramePres \extends BaseSet {
+  | conj : E -> E -> E
+  | BasicCover {J : \Set} : E -> (J -> E) -> \Prop
+}
+  \where {
+    \type Indexing {I X : \Set} (h : I -> \Sigma (J : \Set) X (J -> X)) {J : \Set} (e : X) (g : J -> X) 
+      => ∃ (i : I) (p : Equiv {(h i).1} {J}) ((h i).2 = e) (\Pi (j : (h i).1) -> (h i).3 j = g (p j))
+
+    \lemma indexing-make {I X : \Set} {h : I -> \Sigma (J : \Set) X (J -> X)} (i : I) : Indexing h (h i).2 (h i).3 => {?hidden_proof}
+
+    \lemma indexing-transport {I X : \Set} {g : I -> \Sigma (J : \Set) X (J -> X)} (P : \Pi {J : \Set} (e : X) (f : J -> X) -> \Prop) (p : \Pi (i : I) -> P (g i).2 (g i).3) 
+    {J : \Set} {e : X} {f : J -> X} (b : Indexing g e f) : P e f => {?hidden_proof}
+  }
+
+
+\data Cover {P : FramePres} (x : P) {J : \Set} (g : J -> P) : \Prop 
+  | cover-basic (BasicCover x g)
+  | cover-inj (j : J) (g j = x)
+  | cover-trans {I : \Set} {f : I -> P} (Cover x f) (\Pi (i : I) -> Cover (f i) g)
+  | cover-proj1 {a b : P} (x = conj a b) (j : J) (g j = a)
+  | cover-idemp (j : J) (g j = conj x x)
+  | cover-comm {a b : P} (x = conj a b) (j : J) (g j = conj b a)
+  | cover-ldistr {a b : P} (x = conj a b) {f : J -> P} (Cover b f) (\Pi (j : J) -> g j = conj a (f j))
+  \where {
+    \lemma cover-trans1 {P : FramePres} {x : P} {J : \Set} {g : J -> P} {y : P} (c : Cover1 x y) (d : Cover y g) : Cover x g => {?hidden_proof}
+
+    \lemma cover-proj2 {P : FramePres} {x : P} {J : \Set} {g : J -> P} {a b : P} (p : x = conj a b) (j : J) (q : g j = b) : Cover x g => {?hidden_proof}
+
+    \lemma cover-index {P : FramePres} {x : P} {l : Array P} (i : Index x l) : Cover x l => {?hidden_proof}
+
+    \lemma cover-ldistr' {P : FramePres} {x : P} {J : \Set} {g : J -> P} {a b : P} (x=ab : x = conj a b) {I : \Set} {h : I -> P} (ah : Cover b h) 
+    (f : \Pi (i : I) -> ∃ (j : J) (g j = conj a (h i))) : Cover x g => {?hidden_proof}
+
+    \lemma cover-rdistr' {P : FramePres} {x : P} {J : \Set} {g : J -> P} {a b : P} (x=ab : x = conj a b) {I : \Set} {h : I -> P} (ah : Cover a h) 
+    (f : \Pi (i : I) -> ∃ (j : J) (g j = conj (h i) b)) : Cover x g => {?hidden_proof}
+
+    \lemma cover-rdistr {P : FramePres} {x : P} {J : \Set} {g : J -> P} {a b : P} (x=ab : x = conj a b) {h : J -> P} (ah : Cover a h) (f : \Pi (j : J) -> g j = conj (h j) b) : Cover x g 
+      => {?hidden_proof}
+
+    \lemma cover-conj {P : FramePres} {J : \Set} {g : J -> P} {a b : P} {I1 : \Set} {h1 : I1 -> P} (aV : Cover a h1) {I2 : \Set} {h2 : I2 -> P} (bW : Cover b h2) 
+    (f : \Pi {i1 : I1} {i2 : I2} -> ∃ (j : J) (g j = conj (h1 i1) (h2 i2))) : Cover (conj a b) g => {?hidden_proof}
+
+    \lemma cover-conj1 {P : FramePres} {a a' b b' : P} (c : Cover1 a a') (d : Cover1 b b') : Cover1 (conj a b) (conj a' b') => {?hidden_proof}
+
+    \lemma cover-prod {P : FramePres} {x y z : P} (c : Cover1 x y) (d : Cover1 x z) : Cover1 x (conj y z) => {?hidden_proof}
+
+    \lemma map {F : FramePresPrehom} {x : F.Dom} {J : \Set} {g : J -> F.Dom} (c : Cover x g) : Cover (F x) (\lam j => F (g j)) => {?hidden_proof}
+
+    \lemma cover_top {L : TopMeetSemilattice} {P : FramePres L ∧} {x : L} : Cover1 x L.top => {?hidden_proof}
+
+    \lemma cover_<= {L : MeetSemilattice} {P : FramePres L ∧} {x y : L} (p : x <= y) : Cover1 x y => {?hidden_proof}
+
+    \lemma cover-inj_<= {L : MeetSemilattice} {P : FramePres L ∧} {x : L} {J : \Set} {g : J -> P} (j : J) (p : x <= g j) : Cover x g => {?hidden_proof}
+  }
+
+
+\func Cover1 {P : FramePres} (x y : P) => Cover x {\Sigma} (\lam _ => y)
+
+\data Cover' {P : FramePres} (x : P) {J : \Set} (g : J -> P) : \Prop 
+  | cover-basic' {a b : P} (x = conj a b) {f : J -> P} (BasicCover b f) (\Pi (j : J) -> g j = conj a (f j))
+  | cover-inj' (j : J) (g j = x)
+  | cover-trans' {I : \Set} {f : I -> P} (Cover' x f) (\Pi (i : I) -> Cover' (f i) g)
+  | cover-proj1-inj' {a b : P} (x = conj a b) (j : J) (g j = a)
+  | cover-proj2-inj' {a b : P} (x = conj a b) (j : J) (g j = b)
+  | cover-prod-inj' {a b : P} (Cover' x {\Sigma} (\lam _ => a)) (Cover' x {\Sigma} (\lam _ => b)) (j : J) (g j = conj a b)
+  \where {
+    \func Cover1' {P : FramePres} (x y : P) => Cover' x {\Sigma} (\lam _ => y)
+
+    \lemma cover-prod' {P : FramePres} {x y z : P} (c : Cover1' x y) (d : Cover1' x z) : Cover1' x (conj y z) => {?hidden_proof}
+
+    \lemma cover-proj1' {P : FramePres} {x y : P} : Cover1' (conj x y) x => {?hidden_proof}
+
+    \lemma cover-proj2' {P : FramePres} {x y : P} : Cover1' (conj x y) y => {?hidden_proof}
+
+    \lemma cover-ldistr' {P : FramePres} {J : \Set} {g : J -> P} {a b : P} {f : J -> P} (c : Cover b f) (q : \Pi (j : J) -> g j = conj a (f j)) : Cover' (conj a b) g => {?hidden_proof}
+
+    \lemma cover-cover' {P : FramePres} {x : P} {J : \Set} {g : J -> P} (c : Cover x g) : Cover' x g => {?hidden_proof}
+
+    \lemma cover'-cover {P : FramePres} {x : P} {J : \Set} {g : J -> P} (c : Cover' x g) : Cover x g => {?hidden_proof}
+  }
+
+
+\func framePresPreorder (P : FramePres) : Preorder P \cowith
+  | <= => Cover1
+  | <=-refl => cover-inj () idp
+  | <=-transitive => \lam p q => cover-trans p (\lam _ => q)
+
+\func framePresSite (P : FramePres) : SiteWithBasis \cowith
+  | Precat => framePresPreorder P
+  | pullback => \lam {x y z : P} (f : Cover1 x z) (g : Cover1 y z) => \new (Pullback {framePresPreorder P} f g) {
+    | apex => conj x y
+    | pbProj1 => cover-proj1 idp () idp
+    | pbProj2 => cover-proj2 idp () idp
+    | pbCoh => prop-pi
+    | pbMap => \lam p1 p2 _ => cover-prod p1 p2
+    | pbBeta1 => prop-pi
+    | pbBeta2 => prop-pi
+    | pbEta => \lam _ _ => prop-pi
+  }
+  | isBasicCover => \lam x {J} g => ∃ (y : P) (Cover1 x y) (g' : (J -> P)) (BasicCover y g') (\Pi (j : J) -> \Sigma (Cover1 (g j).1 (g' j)) (Cover1 (conj x (g' j)) (g j).1))
+  | basicCover-stable => \lam {x} {y} x<=y {J} {g} inP (z, y<=z, g', c, d) => inP (z, cover-trans x<=y (\lam _ => y<=z), g', c,
+    \lam j => (cover-trans (cover-proj2 idp () idp) (\lam _ => (d j).1),  cover-prod (cover-proj1 idp () idp) 
+    (cover-trans (cover-prod (cover-trans (cover-proj1 idp () idp) (\lam _ => x<=y)) (cover-proj2 idp () idp)) (\lam _ => (d j).2))))
+  \where {
+    \open Cover
+  }
+
+
+\class FramePresPrehom \extends SetHom {
+  \override Dom : FramePres
+  \override Cod : FramePres
+  | func-conj {x y : Dom} : func (conj x y) = conj (func x) (func y)
+  | func-basicCover {J : \Set} {x : Dom} {f : J -> Dom} : BasicCover x f -> BasicCover (func x) (\lam j => func (f j))
+}
+
+\class FramePresHom \extends FramePresPrehom {
+  | func-image {y : Cod} : Cover y func
+}
+
+\instance FramePresCat : Cat FramePres 
+  | Hom => FramePresHom
+  | id => \lam X => \new FramePresHom {
+    | func => \lam x => x
+    | func-conj => idp
+    | func-basicCover => \lam c => c
+    | func-image => \lam {x} => cover-inj x idp
+  }
+  | o => \lam g f => \new FramePresHom {
+    | func => \lam x => g (f x)
+    | func-conj => pmap g func-conj *> func-conj
+    | func-basicCover => \lam c => func-basicCover (func-basicCover c)
+    | func-image => cover-trans func-image (\lam y => Cover.map func-image)
+  }
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip (\lam {X} {S1} {S2} (h1 : FramePresHom) (h2 : FramePresHom) => (exts FramePres) {  | conj => \lam x y => h1.func-conj
+    | BasicCover => \lam x f => ext (h1.func-basicCover, h2.func-basicCover)})
+
+\instance PresentedFrame (P : FramePres) : Locale 
+  | E => Opens P
+  | <= => <=
+  | <=-refl => \lam u => u
+  | <=-transitive => \lam U<=V V<=W xU => V<=W (U<=V xU)
+  | <=-antisymmetric => \lam U<=V V<=U => exts (\lam x => ext (U<=V, V<=U))
+  | meet => \lam U V => closure (\lam (t : \Sigma (a b : P) (U.1 a) (V.1 b)) => conj t.1 t.2)
+  | meet-left => \lam {U} {V} => closure<= (\lam t => cover-proj1 idp (t.1, t.3) idp)
+  | meet-right => \lam {U} {V} => closure<= (\lam t => Cover.cover-proj2 idp (t.2, t.4) idp)
+  | meet-univ => \lam {U} {V} {W} W<=U W<=V {x} xW => cover-trans (cover-idemp {P} {x} {\Sigma} {\lam _ => conj x x} () idp) (\lam _ => cover-inj (x, x, W<=U xW, W<=V xW) idp)
+  | top => (\lam _ => \Sigma, \lam _ _ => ())
+  | top-univ => \lam _ => ()
+  | Join => \lam {J} f => closure {_} {\Sigma (j : J) (x : P) ((f j).1 x)} __.2
+  | Join-cond => \lam j {_} {x} c => cover-inj (j, x, c) idp
+  | Join-univ => \lam {J} {f} {U} d => closure<= (\lam t => cover-inj (t.2, d t.1 t.3) idp)
+  | Join-ldistr>= => cover-trans __ (\lam t => Cover.cover-ldistr' idp t.4 (\lam s => inP ((s.1, conj t.1 s.2, cover-inj (t.1, s.2, t.3, s.3) idp), idp)))
+  \where {
+    \open FramePres(SCover)
+    \open Topology.Locale(PresentedFrame)
+
+    \type Opens (P : FramePres) => \Sigma (U : P -> \Prop) (\Pi (x : P) -> SCover x U -> U x)
+
+    \func closure {P : FramePres} {J : \Set} (g : J -> P) : Opens P => (Cover __ g, \lam x c => cover-trans c __.2)
+
+    \type \infix 4 <= {P : FramePres} (U V : Opens P) => \Pi {x : P} -> U.1 x -> V.1 x
+
+    \lemma closure<= {P : FramePres} {J : \Set} {g : J -> P} {U : Opens P} (p : \Pi (j : J) -> SCover (g j) U.1) : closure g <= U => {?hidden_proof}
+
+    \func embed {P : FramePres} (x : P) : PresentedFrame P => closure {_} {\Sigma} (\lam _ => x)
+
+    \lemma embed<= {P : FramePres} {x : P} {U : Opens P} (p : SCover x U.1) : embed x <= U => {?hidden_proof}
+
+    \lemma element_join {P : FramePres} {U : Opens P} : U = Join (\lam (q : \Sigma (x : P) (U.1 x)) => embed q.1) => {?hidden_proof}
+
+    \func surj-map {L : Locale} {P : FramePres} (f : FrameHom L (PresentedFrame P)) (p : \Pi (y : P) -> ∃ (x : L) (f x = embed y)) (U : PresentedFrame P) : \Sigma (x : L) (f x = U) 
+    => (SJoin (\lam x => f x <= U),
+      func-Join *> exts  (\lam y => ext (\lam c => U.2 y (cover-trans c (\lam i => cover-inj (i.2, i.1.2 i.3) idp)),  \lam yU => (\case p y \with {
+      | inP (x, q) => cover-inj ((x, \lam {z} t => U.2 z $ rewrite q at t $ cover-trans t (\lam _ => cover-inj (y, yU) idp)), y, rewrite q (cover-inj () idp)) idp
+          })))
+    )
+
+    \lemma Cover_embed {P : FramePres} {a b : P} (a<=b : Cover1 a b) : embed a <= embed b => {?hidden_proof}
+
+    \lemma embed_Cover {P : FramePres} {a b : P} (p : embed a <= embed b) : Cover1 a b => {?hidden_proof}
+
+    \lemma embed_meet {P : FramePres} {a b : P} : embed a ∧ embed b = embed (conj a b) => {?hidden_proof}
+
+    \lemma func-equality {P : FramePres} {L : Locale} (f g : FrameHom (PresentedFrame P) L) (p : \Pi (x : P) -> f (embed x) = g (embed x)) (U : PresentedFrame P) : f U = g U => {?hidden_proof}
+
+    \lemma func-equality_ext {P : FramePres} {L : Locale} {f g : FrameHom (PresentedFrame P) L} (p : \Pi (x : P) -> f (embed x) = g (embed x)) : f = g => {?hidden_proof}
+  }
+
+
+\class FrameUPres \extends FramePres {
+  | unit : E
+  | isUnit {x : E} : BasicCover x (\lam (_ : \Sigma) => unit)
+}
+
+\class FrameUPresHom \extends FramePresHom {
+  \override Dom : FrameUPres
+  \override Cod : FrameUPres
+  | func-unit : func unit = unit
+  | func-image => cover-trans (cover-basic isUnit) (\lam _ => cover-inj unit func-unit)
+}
+
+\instance FrameUPresCat : Cat FrameUPres 
+  | Hom => FrameUPresHom
+  | id => \lam X => \new FrameUPresHom {
+    | FramePresHom => FramePresCat.id X
+    | func-unit => idp
+  }
+  | o => \lam g f => \new FrameUPresHom {
+    | FramePresHom => FramePresCat.o g f
+    | func-unit => pmap g func-unit *> func-unit
+  }
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip (\lam {X} {S1} {S2} (h1 : FrameUPresHom) (h2 : FrameUPresHom) => (exts FrameUPres) {  | conj => \lam x y => h1.func-conj
+    | BasicCover => \lam x f => ext (h1.func-basicCover, h2.func-basicCover)  | unit => h1.func-unit})
+
+\instance FrameUPresCocompleteCat : CocompleteCat FrameUPres 
+  | Cat => FrameUPresCat
+  | colimit => \lam {J} G => \new Limit {
+    | Cone => colimit-cone G
+    | limMap => colimit-univ G
+    | limBeta => \lam c j => idp
+    | limUnique => \lam p => exts (colimit-univ-eq G (\lam {j} x => path (\lam i => p j i x)))
+  }
+  \where {
+    \open FramePres
+
+\data FTerm {J : SmallPrecat} (G : Functor J FrameUPresCat) : \Set 
+      | finj {j : J} (G j)
+      | fconj (FTerm G) (FTerm G)
+      | funit
+      | finj-eq {j j' : J} (h : Hom j j') (x : G j) : finj (G.Func h x) = finj x
+      | fconj-eq {j : J} (x y : G j) : finj (conj x y) = fconj (finj x) (finj y)
+      | funit-eq {j : J} : finj (unit {G j}) = funit
+
+    \instance colimit-obj {J : SmallPrecat} (G : Functor J FrameUPresCat) : FrameUPres 
+      | E => FTerm G
+      | conj => fconj
+      | BasicCover => \lam {K} x f => (\Sigma (j : J) (y : G j) (g : K -> G j) (BasicCover y g) (x = finj y) (\Pi (k : K) -> f k = finj (g k)))
+        || ((K, f) = {\Sigma (K : \Set) (K -> FTerm G)} (\Sigma, \lam _ => funit))
+      | unit => funit
+      | isUnit => byRight idp
+
+    \func fpair {L M : Locale} (a : L) (b : M) :
+      FTerm (Comp FrameUnitalReflectiveSubcat (Functor.op {Product.functor {Fin 2} {LocaleCat} ((L :: M :: nil) DArray.!!)})) 
+      => fconj (mkcon finj {0 : Fin 2} a) (mkcon finj {1 : Fin 2} b)
+
+    \open Cover
+
+    \lemma term-product {L M : Locale} (x : FTerm (Comp FrameUnitalReflectiveSubcat (Functor.op {Product.functor {Fin 2} {LocaleCat} ((L :: M :: nil) DArray.!!)}))) :
+      ∃ (a : L) (b : M) (Cover1 x (fpair a b)) (Cover1 (fpair a b) x) => {?hidden_proof}
+
+    \func colimitMap {J : SmallPrecat} (G : Functor J FrameUPresCat) (j : J) : FrameUPresHom (G j) (colimit-obj G) \cowith
+      | func => finj
+      | func-conj => path (fconj-eq _ _)
+      | func-basicCover => \lam b => byLeft (_, _, _, b, idp, \lam k => idp)
+      | func-unit => path funit-eq
+
+    \func colimit-func {J : SmallPrecat} (G : Functor J FrameUPresCat) {Z : FrameUPres} (c : Cone G.op Z) (t : FTerm G) : Z \elim t
+      | finj x => c.coneMap _ x
+      | fconj t1 t2 => conj (colimit-func G c t1) (colimit-func G c t2)
+      | funit => unit
+      | finj-eq h x i => (c.coneCoh h @ i) x
+      | fconj-eq {j} x y => func-conj {c.coneMap j} {x} {y}
+      | funit-eq {j} => func-unit {c.coneMap j}
+
+    \func colimit-univ {J : SmallPrecat} (G : Functor J FrameUPresCat) {Z : FrameUPres} (c : Cone G.op Z) : FrameUPresHom (colimit-obj G) Z \cowith
+      | func => colimit-func G c
+      | func-conj => idp
+      | func-basicCover => \case __ \with {
+        | byLeft (j, y, g, b, p, q) => rewrite p $ coe (\lam i => BasicCover _ (\lam k => colimit-func G c (inv (q k) @ i))) (func-basicCover {c.coneMap j} b) right
+        | byRight p => transportInv (\lam q => BasicCover _ (\lam k => colimit-func G c (q.2 k))) p isUnit
+      }
+    | func-unit => idp
+
+    \func colimit-cone {J : SmallPrecat} (G : Functor J FrameUPresCat) : Cone G.op \cowith
+      | apex => colimit-obj G
+      | coneMap => colimitMap G
+      | coneCoh => \lam h => exts (\lam x => path (finj-eq h x))
+
+    \lemma colimit-univ-eq {J : SmallPrecat} (G : Functor J FrameUPresCat) {Z : FrameUPres} {f g : FrameUPresHom (colimit-obj G) Z} 
+    (p : \Pi {j : J} (x : G j) -> f (finj x) = g (finj x)) (t : FTerm G) : f t = g t => {?hidden_proof}
+  }
+
+
+\func FrameUnitalSubcat : FullyFaithfulFunctor FrameCat FrameUPresCat \cowith
+  | F => F
+  | Func => Func
+  | Func-id => idp
+  | Func-o => idp
+  | isFullyFaithful => \new QEquiv {
+    | ret => \lam h => \new FrameHom {
+      | func => h
+      | func-top => func-unit
+      | func-meet => func-conj
+      | func-Join>= => func-basicCover {h} <=-refl
+    }
+    | ret_f => \lam h => idp
+    | f_sec => \lam h => idp
+  }
+  \where {
+    \lemma Func-inverse {L M : Locale} (f : FrameUPresHom (F L) (F M)) (x : L) : FrameUnitalSubcat.inverse f x = f x => {?hidden_proof}
+  }
+
+
+\func FrameReflectiveSubcat : ReflectiveSubPrecat FrameCat FramePresCat \cowith
+  | F => F
+  | Func => Func
+  | Func-id => idp
+  | Func-o => idp
+  | isFullyFaithful => \lam {X} {Y} => \new QEquiv {
+    | ret => \lam h => \new FrameHom {
+      | func => h
+      | func-top>= => locale_cover (func-image {h}) <=∘ Join-univ (\lam x => rewrite (inv (pmap (func {h}) (meet_<= top-univ)) *> func-conj) meet-right)
+      | func-meet => func-conj
+      | func-Join>= => func-basicCover {h} <=-refl
+    }
+    | ret_f => \lam h => idp
+    | f_sec => \lam h => idp
+  }
+  | reflector => PresentedFrame
+  | reflectorMap => reflectorMap
+  | isReflective => \lam {X : FramePres} {Y : Locale} => \new QEquiv {
+    | ret => adjointMap
+    | ret_f => \lam f => exts (\lam U => (  \let | g (q : \Sigma (x : X) (U.1 x)) => reflectorMap X q.1
+           | t : U = Join g => exts (\lam x => ext (\lam u => cover-inj ((x, u), x, cover-inj () idp) idp, closure<= (\lam t => cover-trans t.3 (\lam _ => cover-inj t.1 idp))))
+      \in rewrite t $ func-Join {_} {_} {g} *> inv (pmap Join (ext (\lam j => pmap f PresentedFrame.element_join *> func-Join))) *> inv (func-Join {f} {_} {g})))
+    | f_sec => \lam f => exts (adjointMap_embed f)
+  }
+  \where {
+    \open PresentedFrame \hiding (<=)
+    \open FrameUnitalSubcat
+
+    \lemma locale_cover {L : Locale} {x : L} {J : \Set} {g : J -> L} (c : Cover {F L} x g) : x <= L.Join g => {?hidden_proof}
+
+    \func adjointMap {X : FramePres} {Y : Locale} (f : FramePresHom X (F Y)) : FrameHom (PresentedFrame X) Y \cowith
+      | func => \lam U => Y.Join {\Sigma (x : X) (U.1 x)} (\lam j => f j.1)
+      | func-top>= => locale_cover f.func-image <=∘ Join-univ (\lam x => Join-cond (x, ()))
+      | func-meet => \lam {U} {V} => <=-antisymmetric
+        (Join-univ $ later (\lam p => locale_cover (Cover.map p.2) <=∘ Join-univ (\lam t => rewrite f.func-conj $ Join-cond $ later ((t.1, t.3), (t.2, t.4))))) 
+        (Join-univ (\lam p => transport (<= _) f.func-conj (Y.Join-cond $ later (conj p.1.1 p.2.1, cover-inj (later (p.1.1, p.2.1, p.1.2, p.2.2)) idp)))) *> 
+        inv Locale.Join-distr
+      | func-Join>= => Join-univ (\lam p => locale_cover (Cover.map p.2) <=∘ Join-univ (\lam t => Join-cond (later (t.2, t.3)) <=∘ Join-cond t.1))
+
+    \lemma adjointMap_embed {X : FramePres} {Y : Locale} (f : FramePresHom X (F Y)) (x : X) : adjointMap f (embed x) = f x => {?hidden_proof}
+  }
+
+
+\func FrameUnitalReflectiveSubcat : ReflectiveSubPrecat FrameCat FrameUPresCat \cowith
+  | FullyFaithfulFunctor => FrameUnitalSubcat
+  | reflector => \lam X => FrameReflectiveSubcat.reflector X
+  | reflectorMap => \lam X => \new FrameUPresHom {
+    | FramePresHom => FrameReflectiveSubcat.reflectorMap X
+    | func-unit => exts (\lam e => ext (\lam _ => (), \lam _ => cover-basic isUnit))
+  }
+  | isReflective => \lam {X} {Y} => \new QEquiv {
+    | ret => \lam h => FrameReflectiveSubcat.isReflective.ret h
+    | ret_f => \lam h => FrameReflectiveSubcat.isReflective.ret_f h
+    | f_sec => \lam h => ext (path (\lam i => func {FrameReflectiveSubcat.isReflective.f_ret h @ i}))
+  }
+
+\func FrameBicat : BicompleteCat \cowith
+  | Cat => FrameCat
+  | limit => \lam G => \new Limit {
+    | apex => limit-obj G
+    | coneMap => \lam j => \new FrameHom {
+      | func => \lam P => P.1 j
+      | func-top => idp
+      | func-meet => idp
+      | func-Join => idp
+    }
+    | coneCoh => \lam h => exts (\lam P => P.2 h)
+    | isLimit => \lam Z => \new QEquiv {
+      | ret => \lam (c : Cone) => \new FrameHom {
+        | func => \lam z => (\lam j => c.coneMap j z, \lam h => path (\lam i => func {c.coneCoh h @ i} z))
+        | func-top => exts (\lam j => func-top)
+        | func-meet => exts (\lam j => func-meet)
+        | func-Join => exts (\lam j => func-Join)
+      }
+      | ret_f => \lam f => exts (\lam z => exts (\lam j => idp))
+      | f_sec => \lam c => idp
+    }
+  }
+  | pullback => \lam {X} {Y} {Z} f g => \new Pullback {
+    | apex => pullback-obj f g
+    | pbProj1 => proj1
+    | pbProj2 => proj2
+    | pbCoh => exts __.3
+    | pbMap => \lam p1 p2 c => \new FrameHom {
+      | func => \lam x => (p1 x, p2 x, path (\lam i => c i x))
+      | func-top => ext (func-top, func-top)
+      | func-meet => ext (func-meet, func-meet)
+      | func-Join => ext (func-Join, func-Join)
+    }
+    | pbBeta1 => idp
+    | pbBeta2 => idp
+    | pbEta => \lam p q => exts (\lam x => ext (path (\lam i => p i x), path (\lam i => q i x)))
+  }
+  | colimit => \lam G => reflectiveSubPrecatColimit FrameUnitalReflectiveSubcat G (FrameUPresCocompleteCat.colimit (Comp FrameUnitalReflectiveSubcat G))
+  \where {
+    \func limit-obj {J : SmallPrecat} (G : Functor J FrameCat) : Locale \cowith
+      | E => \Sigma (P : \Pi (j : J) -> G j) (\Pi {j j' : J} (h : Hom j j') -> G.Func h (P j) = P j')
+      | <= => \lam (P, _) (Q, _) => \Pi (j : J) -> P j <= Q j
+      | <=-refl => \lam j => <=-refl
+      | <=-transitive => \lam p q j => <=-transitive (p j) (q j)
+      | <=-antisymmetric => \lam p q => exts (\lam j => <=-antisymmetric (p j) (q j))
+      | meet => \lam (P, Pc) (Q, Qc) => (\lam j => P j ∧ Q j, \lam h => func-meet *> pmap2 ∧ (Pc h) (Qc h))
+      | meet-left => \lam j => meet-left
+      | meet-right => \lam j => meet-right
+      | meet-univ => \lam p q j => meet-univ (p j) (q j)
+      | top => (\lam j => top, \lam h => func-top)
+      | top-univ => \lam j => top-univ
+      | Join => \lam F => (\lam j => Join (\lam k => (F k).1 j), \lam {j} {j'} h => func-Join *> path (\lam i => Join (\lam k => (F k).2 h @ i)))
+      | Join-cond => \lam k j => Join-cond k
+      | Join-univ => \lam p j => Join-univ (\lam k => p k j)
+      | Join-ldistr>= => \lam j => Join-ldistr>=
+
+    \func pullback-obj {L M K : Locale} (f : FrameHom L K) (g : FrameHom M K) : Locale \cowith
+      | E => \Sigma (x : L) (y : M) (f x = g y)
+      | <= => \lam P Q => \Sigma (P.1 <= Q.1) (P.2 <= Q.2)
+      | <=-refl => (<=-refl, <=-refl)
+      | <=-transitive => \lam p q => (p.1 <=∘ q.1, p.2 <=∘ q.2)
+      | <=-antisymmetric => \lam p q => ext (<=-antisymmetric p.1 q.1, <=-antisymmetric p.2 q.2)
+      | meet => \lam P Q => (P.1 ∧ Q.1, P.2 ∧ Q.2, func-meet *> pmap2 ∧ P.3 Q.3 *> inv func-meet)
+      | meet-left => (meet-left, meet-left)
+      | meet-right => (meet-right, meet-right)
+      | meet-univ => \lam p q => (meet-univ p.1 q.1, meet-univ p.2 q.2)
+      | top => (top, top, func-top *> inv func-top)
+      | top-univ => (top-univ, top-univ)
+      | Join => \lam F => (Join (\lam j => (F j).1), Join (\lam j => (F j).2), func-Join *> pmap Join (ext (\lam j => (F j).3)) *> inv func-Join)
+      | Join-cond => \lam j {f} => (Join-cond j, Join-cond j)
+      | Join-univ => \lam p => (Join-univ (\lam j => (p j).1), Join-univ (\lam j => (p j).2))
+      | Join-ldistr>= => (Join-ldistr>=, Join-ldistr>=)
+
+    \func proj1 {L M K : Locale} {f : FrameHom L K} {g : FrameHom M K} : FrameHom (pullback-obj f g) L \cowith
+      | func => \lam P => P.1
+      | func-top => idp
+      | func-meet => idp
+      | func-Join>= => <=-refl
+
+    \func proj2 {L M K : Locale} {f : FrameHom L K} {g : FrameHom M K} : FrameHom (pullback-obj f g) M \cowith
+      | func => \lam P => P.2
+      | func-top => idp
+      | func-meet => idp
+      | func-Join>= => <=-refl
+
+    \lemma coneMap_finj {J : SmallPrecat} {G : Functor J FrameCat} (j : J) (x : G j) :
+      coneMap {FrameBicat.colimit G} j x = embed (FrameUPresCocompleteCat.finj {J} {Comp FrameUnitalReflectiveSubcat G} x) => {?hidden_proof}
+  }
+
+
+\func discrete (X : \Set) : Locale (X -> \Prop) \cowith
+  | <= => \lam U V => \Pi {x : X} -> U x -> V x
+  | <=-refl => \lam u => u
+  | <=-transitive => \lam p q u => q (p u)
+  | <=-antisymmetric => \lam p q => ext (\lam e => ext (p, q))
+  | meet => \lam U V x => \Sigma (U x) (V x)
+  | meet-left => __.1
+  | meet-right => __.2
+  | meet-univ => \lam p q e => (p e, q e)
+  | top => \lam _ => \Sigma
+  | top-univ => \lam _ => ()
+  | Join => \lam {J} F x => ∃ (j : J) (F j x)
+  | Join-cond => \lam j u => inP (j, u)
+  | Join-univ => \lam c => (\case __ \with {
+    | inP (j, u) => c j u
+  })
+  | Join-ldistr>= => \case __ \with {
+    | (u, inP (j, v)) => inP (j, (u, v))
+  }
+  \where {
+    \func functor : Functor SetCat LocaleCat \cowith
+      | F => discrete
+      | Func => \lam {X} {Y} f => \new FrameHom {
+        | func => \lam U x => U (f x)
+        | func-top>= => \lam _ => ()
+        | func-meet => idp
+        | func-Join => idp
+      }
+      | Func-id => idp
+      | Func-o => idp
+
+    \lemma exponent {X : \Set} (P Q : X -> \Prop) : P --> {discrete X} Q = (\lam x => P x -> Q x) => {?hidden_proof}
+  }
+
+
+\instance LocaleCat : BicompleteCat 
+  | Cat => Cat.op {FrameBicat}
+  | limit => \lam (G : Functor) => FrameBicat.colimit G.op
+  | colimit => \lam (G : Functor) => FrameBicat.limit G.op
+  | terminal {
+    | apex => discrete (\Sigma)
+    | proj => \case __ \with {}
+  | tupleMap => \lam _ => \new FrameHom {
+    | func => \lam P => pHat (P ())
+    | func-<= => \lam x<=y => Join-univ (\lam xu => Join-cond (x<=y xu))
+    | func-top>= => Join-cond ()
+    | func-meet>= => rewrite Join-distr $ Join-univ (\lam p => meet-left <=∘ Join-cond p)
+    | func-Join>= => Join-univ (\lam inP (j, x) => Join-cond x <=∘ Join-cond j)
+  }
+  | tupleBeta => \lam {_} {_} {j} => (\case j \with {})
+  | tupleEq => \lam _ => exts (\lam P => (  \have t : P = pHat {discrete (\Sigma)} (P ()) => ext (\lam _ => ext (\lam x => inP (x, ()), \lam inP (x, _) => x))
+    \in rewrite t $ func-Join *> path (\lam i => Join (\lam _ => (func-top *> inv func-top) i)) *> inv func-Join))
+}
+  \where {
+    \lemma terminal-direct {L : Locale} (x : L) : direct {LocaleCat.terminalMap {L}} x = (\lam _ => top <= x) => {?hidden_proof}
+  }
+
+
+\open FrameHom
+
+\lemma pullback_open (P : Pullback {LocaleCat}) (o : IsOpen {P.g}) : IsOpen {P.pbProj1} => {?hidden_proof}
+
+\lemma pullback_sdense (P : Pullback {LocaleCat}) (o : IsOpen {P.f}) (d : isStronglyDense {P.g}) : isStronglyDense {P.pbProj1} => {?hidden_proof}
+
+\lemma overt=open {L : Locale} : L.IsOvert <-> IsOpen {LocaleCat.terminalMap {L}} => {?hidden_proof}
+
+\lemma open-comp {L M K : Locale} (f : Hom L M) (fo : IsOpen {f}) (g : Hom M K) (go : IsOpen {g}) : IsOpen {g LocaleCat.∘ f} => {?hidden_proof}
+
+\lemma regular_surj {L M : Locale} {f : Hom L M} (reg : isRegularMono {LocaleCat} f) : IsSurj f => {?hidden_proof}
+  \where {
+    \open FrameUPresCocompleteCat
+
+    \func regular_surj-lemma {L M : Locale} {f g : LocaleCat.Hom L M} (y : FTerm (Comp FrameUnitalReflectiveSubcat (Functor.op {Equalizer.functor {LocaleCat} f g}))) :
+      ∃ (x : L) (Equalizer.eql {LocaleCat.equalizer f g} x = embed y) \elim y
+      | finj {j} x => \case \elim j, \elim x \with {
+        | false, x => inP (x, FrameBicat.coneMap_finj false x)
+        | true, x => inP (f x, FrameBicat.coneMap_finj false (f x) *> pmap embed (path (finj-eq {Equalizer.Shape.op} Equalizer.arrow1 x)))
+      }
+      | fconj t1 t2 => \case regular_surj-lemma t1, regular_surj-lemma t2 \with {
+        | inP (x1, p1), inP (x2, p2) => inP (x1 ∧ x2,  func-meet *> pmap2 ∧ p1 p2 *> exts
+          (\lam e => ext (cover-trans __ (\lam i => Cover.cover-conj1 i.3 i.4), cover-trans __ (\lam _ => cover-inj (t1, t2, cover-inj () idp, cover-inj () idp) idp)))
+        )
+      }
+      | funit => inP (top, func-top *> exts (\lam e => ext (\lam _ => cover-basic (byRight idp), \lam _ => ())))
+  }
+
+
+\lemma surj_regular {L M : Locale} {f : FrameHom M L} (sur : IsSurj f) : isRegularMono {LocaleCat} f => {?hidden_proof}
+
+\func surj_equiv {f : FrameHom} (sur : IsSurj f) : Iso {FrameCat} {f.image.locale} {f.Cod} 
+=> FrameCat.equiv_iso {\new (FrameHom f.image.locale f.Cod) {  | func => \lam x => f x.1  | func-top => func-top  | func-meet => func-meet
+  | func-Join>= => f.direct-counit <=∘ func-Join>=}}
+  (\new QEquiv {  | ret => \lam x => (f.direct x, f.direct-<= $ =_<= $ f.surjective-split sur x)
+  | ret_f => \lam x => ext (<=-antisymmetric x.2 f.direct-unit)  | f_sec => \lam x => f.surjective-split sur x})
+  \where {
+    \lemma map-comm {f : FrameHom} (sur : IsSurj f) (x : f.Dom) : Iso.f {surj_equiv sur} (f.image.map x) = f x => {?hidden_proof}
+  }
+
+
+\type isHausdorffLocale (L : Locale) => generalized L (LocaleCat.Bprod L L) LocaleCat.proj1 LocaleCat.proj2
+  \where {
+    \open PrecatWithBprod
+    \open CartesianPrecat
+    \open FrameUPresCocompleteCat
+    \open Cover
+    \open FrameReflectiveSubcat(locale_cover)
+    \open FrameBicat(coneMap_finj)
+
+    \func generalized (L M : Locale) (p1 p2 : Hom M L) => \Pi (a b : L) (y : M) -> a ∧ b <= SJoin (\lam x => p1 x ∧ p2 x <= y) -> p1 a ∧ p2 b <= extend p1 p2 y
+
+    \func extend {L M : Locale} (p1 p2 : Hom M L) (y : M) => SJoin (\lam x => x <= y || (\Sigma (a b : L) (a ∧ b <= bottom) (x = p1 a ∧ p2 b)))
+
+    \lemma diagonal_func {L : Locale} (U : LocaleCat.Bprod L L) : diagonal L U = SJoin (\lam x => U.1 (fpair x x)) => {?hidden_proof}
+
+    \lemma diagonal_direct {L : Locale} (a : L) : FrameHom.direct {diagonal L} a = PresentedFrame.closure (\lam (j : \Sigma (b c : L) (b ∧ c <= a)) => fpair j.1 j.2) => {?hidden_proof}
+
+    \lemma diagonal-isClosed {L : Locale} (h : isHausdorffLocale L) : Nucleus.isClosed {FrameHom.image {diagonal L}} => {?hidden_proof}
+  }
+
+
+\lemma regular_Hausdorff {L : Locale} (reg : L.IsRegularLocale) : isHausdorffLocale L => {?hidden_proof}
+  \where {
+    \open isHausdorffLocale(extend)
+    \open FrameHom
+
+    \lemma generalized {L : Locale} (reg : L.IsRegularLocale) (M : Locale) (p1 p2 : LocaleCat.Hom M L) : isHausdorffLocale.generalized L M p1 p2 => {?hidden_proof}
+  }
+
+
+\func dense_closed_ofs : OFS {LocaleCat} \cowith
+  | L => \lam f => FrameHom.IsDense {f}
+  | R => \lam (f : FrameHom) => \Sigma f.image.isClosed (IsSurj f)
+  | factors => \lam {L} {M} (h : FrameHom) => (
+    \have n : Nucleus => closed (h.direct bottom)
+    \in (n.locale,
+          \new FrameHom {  | func => \lam x => h.func x.1  | func-top => func-top  | func-meet => func-meet
+    | func-Join>= => func-join>= <=∘ join-univ (direct-counit <=∘ bottom-univ) func-Join>=}, n.map, 
+  exts (\lam x => func-join *> <=-antisymmetric (join-univ (direct-counit <=∘ bottom-univ) <=-refl) join-right), 
+  \lam {x} p => unfold $ direct-unit <=∘ direct-<= p <=∘ join-left,
+          (\lam {x} => =_<= (n.map_direct (n.map x)) <=∘ join-univ (join-left <=∘ =_<= (inv (n.map_direct (n.map bottom))) <=∘ join-left) join-right, 
+  Nucleus.map.surjective {n})
+  ))
+  | unique-lift => \lam f (g : FrameHom) Lf Rg => OFS.liftFromMono {LocaleCat} f g (regularMono_Mono (surj_regular Rg.2))
+    (\lam t s p => (  \have lem x : s (g.direct (g x)) = s x => <=-antisymmetric (func-<= (Rg.1 {x}) <=∘ func-join>= <=∘ join-univ 
+            (Lf (=_<= (inv (path (\lam i => p i (g.direct (inv g.func-bottom i)))) *> pmap t (surjective-split Rg.2 bottom) *> func-bottom)) <=∘ bottom-univ) 
+            <=-refl) (func-<= direct-unit)  \in (\new FrameHom {  | func => \lam x => s (g.direct x)  | func-top => pmap s g.direct-top *> func-top
+    | func-meet => pmap s g.direct-meet *> func-meet  | func-Join => \lam {J} {F} =>
+      inv (pmap (\lam x => s (g.direct x)) func-Join *> path (\lam i => s (g.direct (Join (\lam j => g.surjective-split Rg.2 (F j) i))))) *> lem _ *> func-Join
+          }, exts lem)))
+  \where {
+    \open FrameHom
+  }
+
+
+\func sdense_wclosed_ofs : OFS {LocaleCat} \cowith
+  | L => \lam f => isStronglyDense {f}
+  | R => \lam f => isWeaklyClosed {f}
+  | factors => \lam {L} {M} (h : FrameHom) => (
+    \have left+right=h x : h.wclosed-factor (h.wclosed-image.map x) = h x =>
+          unfold $ <=-antisymmetric (direct-adjoint.2 (Meet-cond $ later (h.image, \lam {P} {y} hy<=P => direct-adjoint.1 (hy<=P <=∘ func-pHat<=)))) 
+            (func-<= h.wclosed-image.nucleus-unit)
+    \in (h.wclosed-image.locale, h.wclosed-factor, h.wclosed-image.map, exts left+right=h, h.wclosed-factor-sdense,
+          (Nucleus.map.surjective,  \lam j p {x} => Join-univ (\lam k => nucleus-unit {h.wclosed-image} <=∘ k.2 <=∘ Meet-cond 
+    (later (j, \lam {P} {y} t => p $ h.wclosed-factor-sdense {P} {h.wclosed-image.map y} $ rewrite left+right=h t))))
+  ))
+  | unique-lift => \lam f (g : FrameHom) Lf Rg => OFS.liftFromMono {LocaleCat} f g (regularMono_Mono (surj_regular Rg.1))
+    (\lam t (s : FrameHom) gt=sf => (
+    \have g<=s : g.image <= s.image => Rg.2 s.image (\lam {P} {x} gx<=P => direct-adjoint.1 $ Lf (rewriteI (path (gt=sf __ x)) $ func-<= gx<=P <=∘ func-pHat>=) <=∘ func-pHat<=)
+      \in (hinv {surj_equiv Rg.1} ∘ NucleusFrame.<=-map g.image s.image g<=s ∘ s.factor, 
+  exts (\lam x => func_direct_func *> <=-antisymmetric (direct-adjoint.2 g<=s) (func-<= direct-unit)))))
+  \where {
+    \open FrameHom
+  }
+
+
+\type isWeaklyHausdorff (L : Locale) => isWeaklyClosed {LocaleCat.diagonal L}
+
+\lemma wregular_wHausdorff {L : Locale} (reg : L.IsWeaklyRegularLocale) : isWeaklyHausdorff L => {?hidden_proof}
+
+\lemma overt-fromPres {P : FramePres} (o : P.isOvert) : IsOvert {PresentedFrame P} => {?hidden_proof}
+
+\lemma sdense_positive {f : FrameHom} (d : f.isStronglyDense) {x : f.Dom} (p : IsPositive x) : IsPositive (f x) => {?hidden_proof}
+
+\lemma func_positive {f : FrameHom} {x : f.Dom} (p : IsPositive (f x)) : IsPositive x => {?hidden_proof}
+
+\lemma sdense_overt {f : FrameHom} (d : f.isStronglyDense) (o : IsOvert {f.Cod}) : IsOvert {f.Dom} => {?hidden_proof}
+
+\lemma sdense-fromPres {P : FramePres} {L : Locale} {f : FramePresHom P (FrameUnitalSubcat.F L)} 
+(s : \Pi {Q : \Prop} {x : P} -> f x <= Join (\lam (_ : Q) => f x) -> Cover x (\lam (_ : Q) => x)) :
+  FrameHom.isStronglyDense {FrameReflectiveSubcat.adjointMap f} => {?hidden_proof}
+
+\lemma sdense-comp {L M K : Locale} (f : Hom L M) (fd : isStronglyDense {f}) (g : Hom M K) (gd : isStronglyDense {g}) : isStronglyDense {g LocaleCat.∘ f} => {?hidden_proof}
+
+\lemma <<-fromPres {P : FramePres} {x y : P} (x<<y : x FramePres.<< y) : embed x << {PresentedFrame P} embed y => {?hidden_proof}
+
+\lemma <<_<= {L : Locale} {x y : L} (x<<y : x << y) : x <= y => {?hidden_proof}
+
+\lemma <<-left {L : Locale} {x y z : L} (x<<y : x << y) (y<=z : y <= z) : x << z => {?hidden_proof}
+
+\lemma <<-right {L : Locale} {x y z : L} (x<=y : x <= y) (y<<z : y << z) : x << z => {?hidden_proof}
+
+\lemma locallyCompact-fromPres {P : FramePres} (lc : P.isLocallyCompact) : isLocallyCompact {PresentedFrame P} => {?hidden_proof}
+
+\lemma <=<_<= {L : Locale} {x y : L} (x<=<y : x <=< y) : x <= y => {?hidden_proof}
+
+\instance LocaleRatherBelow {L : Locale} : RatherBelow L.<=< 
+  | <=<_top => unfolds join-right
+  | <=<-left => \lam p q => unfolds $ p <=∘ join-univ join-left (q <=∘ join-right)
+  | <=<-right => \lam p q => unfolds $ q <=∘ join-univ (neg-inverse p <=∘ join-left) join-right
+  | <=<_meet => \lam p q => unfolds $ meet-univ <=-refl <=-refl <=∘ MeetSemilattice.meet-monotone (unfolds in p) q <=∘ ldistr>= <=∘ join-univ 
+    (meet-right <=∘ L.neg-inverse meet-right <=∘ join-left) (L.rdistr>= <=∘ join-univ (meet-left <=∘ L.neg-inverse meet-left <=∘ join-left) join-right)
+
+\lemma regular-fromPres {P : FramePres} (reg : \Pi (x : P) -> FramePres.SCover x (embed __ <=< embed x)) : IsRegularLocale {PresentedFrame P} => {?hidden_proof}
+
+\lemma wayBelowPredicate {P : FramePres} (R : P -> P -> \Prop) {x y : P} (Rxy : R x y) {J : \Set} {g : J -> P} (c : Cover y g) 
+(basic : \Pi {x y : P} -> R x y -> \Pi {J : \Set} {g : J -> P} -> BasicCover y g -> ∃ (l : Array J) (Cover x (\lam i => g (l i)))) 
+(leq : \Pi {x y : P} -> R x y -> Cover1 x y) (dense : \Pi {x z : P} -> R x z -> ∃ (y : P) (R x y) (R y z))
+  (comm : \Pi {x y : P} -> R x y -> \Pi (z : P) (l : Array P) -> Cover y (z :: l) -> ∃ (l' : Array P) (\Pi (j : Fin l'.len) -> R (l' j) z) (Cover x (l' ++ l))) :
+  ∃ (l : Array J) (Cover x (\lam i => g (l i))) => {?hidden_proof}
+  \where {
+    \lemma comm-lem {P : FramePres} (R : P -> P -> \Prop) (leq : \Pi {x y : P} -> R x y -> Cover1 x y) (dense : \Pi {x z : P} -> R x z -> ∃ (y : P) (R x y) (R y z))
+      (comm : \Pi {x y : P} -> R x y -> \Pi (z : P) (l : Array P) -> Cover y (z :: l) -> ∃ (l' : Array P) (\Pi (j : Fin l'.len) -> R (l' j) z) (Cover x (l' ++ l))) 
+    (k : Nat) {x y : P} (Rxy : R x y) {n : Nat} {g : Fin n -> P} (k<=n : k <= n) (c : Cover y g) :
+    ∃ (g' : (Fin n -> Array P)) (Cover x (Big ++ nil g')) (\Pi (j : Fin n) -> (j : Nat) < k -> \Pi (i : Fin (DArray.len {g' j})) -> R (g' j i) (g j)) 
+      (\Pi (j : Fin n) -> k <= j -> g' j = g j :: nil) => {?hidden_proof}
+
+    \func ++_singleton {A : \Type} (l : Array A) : Big ++ nil (map (:: nil) l) = l \elim l
+      | nil => idp
+      | :: a l => pmap (a ::) (++_singleton l)
+
+    \func split_++ {A : \Type} {l1 l2 : Array A} (k : Fin (DArray.len {l1 ++ l2})) :
+      Or (\Sigma (i : Fin l1.len) ((l1 ++ l2) k = l1 i)) (\Sigma (i : Fin l2.len) ((l1 ++ l2) k = l2 i)) \elim l1, k
+      | nil, k => inr (k, idp)
+      | :: a l1, 0 => inl (0, idp)
+      | :: a l1, suc k => \case split_++ k \with {
+        | inl (i, p) => inl (suc i, p)
+        | inr (i, p) => inr (i, p)
+      }
+
+    \func split {A : \Type} {n : Nat} (g : Fin n -> Array A) (k : Fin (DArray.len {Big ++ nil (mkArray g)})) :
+      \Sigma (i : Fin n) (j : Fin (DArray.len {g i})) (Big ++ nil g k = g i j) \elim n
+      | suc n => \case split_++ k \with {
+        | inl (j, p) => (0, j, p)
+        | inr (m, p) => 
+          \have (i, j, q) => split (\lam i => g (suc i)) m
+          \in (suc i, j, p *> q)
+      }
+
+    \func unsplit {A : \Type} {n : Nat} (S : Fin n -> Array A) (i : Fin n) (j : Fin (DArray.len {S i})) : Index (S i j) (Big ++ nil S) \elim n, i
+      | suc n, 0 => index-left (j, idp)
+      | suc n, suc i => index-right (unsplit (\lam k => S (suc k)) i j)
+
+    \func unsplit2 {A : \Type} {n : Nat} (Q : Fin n -> Nat) (S : \Sigma (i : Fin n) (Fin (Q i)) -> Array A) (i : Fin n) (j : Fin (Q i)) (k : Fin (DArray.len {S (i, j)})) :
+      Index (S (i, j) k) (Big ++ nil (\lam i => Big ++ nil (mkArray (\lam j => S (i, j))))) \elim n, i
+      | suc n, 0 => index-left (unsplit (\lam j => S (0, j)) j k)
+      | suc n, suc i => index-right (unsplit2 (\lam i => Q (suc i)) (\lam p => S (suc p.1, p.2)) i j k)
+
+    \lemma indexing-basic {P : FramePres} {I : \Set} {h : I -> \Sigma (J : \Set) P (J -> P)} {x : P} (R : P -> P -> \Prop) 
+    (p : \Pi (i : I) -> R x (h i).2 -> ∃ (l : Array (h i).1) (Cover x (\lam j => (h i).3 (l j)))) {y : P} (Rxy : R x y) {J : \Set} {g : J -> P} 
+    (ind : FramePres.Indexing h y g) : ∃ (l : Array J) (Cover x (\lam i => g (l i))) => {?hidden_proof}
+  }

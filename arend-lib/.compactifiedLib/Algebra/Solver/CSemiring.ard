@@ -1,0 +1,41 @@
+\import Algebra.Monoid
+\import Algebra.Semiring
+\import Algebra.Solver
+\import Algebra.Solver.CMonoid
+\import Algebra.Solver.Semiring
+\import Arith.Nat
+\import Arith.Fin.Order
+\import Data.List
+\import Function.Meta
+\import Paths
+\open SemiringSolverModel \hiding (natCoef)
+
+\func CSemiringSolverModel (R : CSemiring) : SolverModel R \cowith
+  | Term => Term Nat
+  | NF => NF Nat
+  | normalize => normalize
+  | interpret => \lam env => (SemiringData env).interpret
+  | interpretNF => \lam env nf => (SemiringData env).interpretNF (sortMonomials nf)
+  | interpretNF-consistent => \lam {_} {env} {_} => (
+    \have d => SemiringData env
+    \in d.interpretNF-correct *> interpretNF_sort *> d.normalize-consistent)
+  \where {
+    \func sortMonomials {n : Nat} {C : \Set} (l : NF C n) => map (\lam s => (Sort.RedBlack.sort s.1, s.2)) l
+
+    \lemma interpretNF_sort {R : CSemiring} {d : Data R} {l : NF} : interpretNF' (sortMonomials l) = interpretNF' l => {?hidden_proof}
+      \where {
+        \open SemiringSolverModel.Data
+      }
+
+
+    \lemma apply-axiom (env : Array R) (t s : Term Nat env.len) (p : (SemiringData env).interpret t = (SemiringData env).interpret s) (mul add : NF Nat env.len) => {?hidden_proof}
+      \where {
+        \lemma apply-axiom' {R : CSemiring} {d : Data R} (t s : Term C env.len) (p : interpret t = interpret s) (mul add : NF) :
+          interpretNF (sortMonomials (multiply mul (normalize t)) ++ add) = interpretNF (sortMonomials (multiply mul (normalize s)) ++ add) => {?hidden_proof}
+          \where {
+            \open SemiringSolverModel.Data
+          }
+
+      }
+
+  }

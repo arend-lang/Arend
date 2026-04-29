@@ -1,0 +1,61 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.StrictlyOrdered
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Meta
+\import Operations
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.MetricSpace.ManhattanProduct
+\import Topology.MetricSpace.UpperReal
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.UniformSpace
+\import Topology.UniformSpace.Product
+
+\lemma lnorm-metric {X : PseudoNormedAbGroup} : MetricMap X RealNormed X.norm => {?hidden_proof}
+
+\lemma dist-uniform-map {X : ExPseudoMetricSpace} : UniformMap (X ⨯ X) ExUpperRealMetric (\lam s => dist s.1 s.2) => {?hidden_proof}
+
+\lemma norm-metric-map {X : ExPseudoNormedAbGroup} : MetricMap X ExUpperRealMetric norm => {?hidden_proof}
+
+\lemma bnorm-metric-map {X : BoundedExPseudoNormedAbGroup} : MetricMap X UpperRealMetric bnorm => {?hidden_proof}
+
+\lemma ldist-uniform-map {X : PseudoMetricSpace} : UniformMap (X ⨯ X) RealNormed (\lam s => X.dist s.1 s.2) => {?hidden_proof}
+
+\lemma upper-meet-uniform : UniformMap (ExUpperRealMetric ⨯ ExUpperRealMetric) ExUpperRealMetric (\lam s => s.1 ∧ s.2) => {?hidden_proof}
+
+\lemma real-meet-uniform : UniformMap (RealNormed ⨯ RealNormed) RealNormed (\lam s => s.1 ∧ s.2) => {?hidden_proof}
+
+\lemma upper-join-uniform : UniformMap (ExUpperRealMetric ⨯ ExUpperRealMetric) ExUpperRealMetric (\lam s => s.1 ∨ s.2) => {?hidden_proof}
+
+\lemma real-join-uniform : UniformMap (RealNormed ⨯ RealNormed) RealNormed (\lam s => s.1 ∨ s.2) => {?hidden_proof}
+
+\lemma upper-+-uniform : MetricMap (ManhattanProductPseudoMetricSpace ExUpperRealMetric ExUpperRealMetric) ExUpperRealMetric (\lam s => s.1 + s.2) => {?hidden_proof}
+
+\lemma upper-*-left-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (a *) => {?hidden_proof}
+
+\lemma upper-*-right-uniform {a : ExUpperReal} (aB : a.IsBounded) : UniformMetricMap ExUpperRealMetric ExUpperRealMetric (* a) => {?hidden_proof}
+
+\lemma upper-*-locally-uniform : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) UpperRealMetric (\lam s => s.1 * s.2) => {?hidden_proof}
+  \where {
+    \open ExUpperReal(<=-rat, +-rat, U_<=, <_<=)
+    \open ExUpperRealAbMonoid(<-rat, <_+, <_+-left)
+    \open ExUpperRealSemigroup(<=_*, ldistr_<=, rdistr_<=)
+  }
+
+
+\lemma ex-upper-*-locally-uniform : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) ExUpperRealMetric (\lam s => s.1 ExUpperReal.* s.2) => {?hidden_proof}

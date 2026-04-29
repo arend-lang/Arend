@@ -1,0 +1,195 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Ring
+\import Algebra.Ring.UnitAlgebra
+\import Analysis.Limit
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Arith.Real.UpperRealLattice
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Filter
+\import Topology.BanachAlgebra
+\import Topology.BanachSpace
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.StoneCStarAlgebra
+\import Topology.NormedRing
+\import Topology.TopPoset
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+
+\instance UnitC*Algebra (A : StoneC*PseudoAlgebra) : StoneC*Algebra (\Sigma Real A) 
+  | Ring => UnitAlgebra RealField A.toRealAlgebra
+  | *-comm => ext (RealField.*-comm, equation.abGroup $ A.toZero A.*-comm)
+  | isDivisible => \lam x n/=0 => (\case RealStoneC*Algebra.isDivisible x.1 n/=0, A.isDivisible x.2 n/=0 \with {
+    | inP (y, ny=x1), inP (b, nb=x2) => inP ((y, b), UnitAlgebra.*n-comm *> pmap2 (__, __) ny=x1 nb=x2)
+  })
+  | norm => norm
+  | norm_zro => <=-antisymmetric (join-univ (Real.<=-upper.1 $ =_<= {RealAbGroup} RealAbGroup.abs_zro) $ Join-univ 
+    (\lam s => =_<= $ pmap A.norm (pmap2 + A.toRealModule.*c_zro-left A.zro_*-left *> zro-right) *> norm_zro)) 
+  (Real.<=-upper.1 RealAbGroup.abs>=0 <=∘ ExUpperRealLattice.join-left)
+  | norm_negative => pmap2 (__ ∨ Join __) RealStoneC*Algebra.norm_negative $ ext 
+    (\lam s => pmap A.norm (pmap2 + A.toRealModule.*c_negative-left A.negative_*-left *> +-comm *> inv A.negative_+) *> norm_negative)
+  | norm_+ => join-univ (transport (_ ExUpperReal.<=) RealAbGroup.+-upper (later $ Real.<=-upper.1 RealAbGroup.abs_+) <=∘ <=_+ join-left join-left) $ Join-univ
+    (\lam s => =_<= (pmap A.norm $ pmap2 + A.toRealModule.*c-rdistr A.rdistr *> equation.abMonoid) <=∘ norm_+ <=∘ <=_+ (Join-cond s <=∘ join-right) 
+    (Join-cond s <=∘ join-right))
+  | norm-double => \lam {x} => =_<= ExUpperRealLattice.+_join <=∘ ExUpperRealLattice.join-monotone RealStoneC*Algebra.norm-double
+    (=_<= ExUpperRealLattice.+_Join <=∘ Join-univ
+    (\lam j => A.norm-double {x.1 A.*r j.1 + x.2 * j.1} <=∘ =_<= (pmap A.norm $ inv $ pmap2 + A.toRealModule.*c-rdistr A.rdistr *> equation.abMonoid) <=∘ Join-cond j))
+  | norm-bounded => \lam x => (\case (RealAbGroup.abs x.1).U-inh, A.norm-bounded x.2 \with {
+    | inP (B1, |x1|<B1), inP (B2, |x2|<B2) =>
+    inP (B1 + B2 + 1,  ExUpperRealAbMonoid.<-rat.1 $ join-univ (ExUpperReal.<_<= |x1|<B1 <=∘ ExUpperReal.<=-rat.1 (linarith $ norm>=0 |x2|<B2))
+      (Join-univ (\lam j => norm_+ <=∘ later  (ExUpperRealAbMonoid.<=_+ (=_<= A.norm_*r <=∘ <=_* (ExUpperReal.<_<= |x1|<B1) j.2 <=∘ =_<= 
+      (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 $ <=-less $ Real.<=-upper.1 RealAbGroup.abs>=0 |x1|<B1)) $ A.norm_*_<= <=∘ <=_* 
+    (ExUpperReal.<_<= |x2|<B2) j.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ ExUpperReal.<=-rat.1 $ <=-less $ norm>=0 |x2|<B2)) <=∘ =_<= 
+    ExUpperReal.+-rat)) <∘r (ExUpperRealAbMonoid.<-rat {B1 + B2}).2 linarith)
+  })
+  | norm_*_<= => norm_*_<=
+  | norm_ide_<= => join-univ RealStoneC*Algebra.norm_ide_<= $ Join-univ (\lam s => =_<= (pmap A.norm $ pmap2 + A.toRealModule.ide_*c A.zro_*-left *> zro-right) <=∘ s.2)
+  | norm-ext => \lam {x} p => (
+    \have x1=0 => RealAbGroup.abs_zro-ext $ RealAbGroup.<=-antisymmetric ((Real.<=-upper {_} {0}).2 $ join-left ExUpperRealAbMonoid.<=∘ =_<= p) RealAbGroup.abs>=0
+    \in ext (x1=0,  norm-ext $ <=-antisymmetric  (=_<= A.norm_*-char <=∘ Join-univ  (\lam s =>
+          =_<= (pmap A.norm $ inv $ pmap (+ _) (pmap (RealBanachSpace.*r _) x1=0 *> A.toRealAlgebra.*c_zro-left) *> zro-left) <=∘ Join-cond s <=∘ join-right <=∘ =_<= 
+                  p)) norm>=0))
+  | isCompleteMetric => \lam F Fc => (\case 
+    RealNormed.isCompleteMetric (ProperFilter-map __.1 F) (\lam eps>0 => TruncP.map (Fc eps>0) (\lam (r, Fr) => (r.1, filter-mono Fr (\lam d => ExUpperRealAbMonoid.join-left d)))),
+      A.isCompleteMetric (ProperFilter-map __.2 F)  (\lam {eps} eps>0 => TruncP.map (Fc $ RatField.half>0 $ RatField.half>0 eps>0)
+      (\lam (r, Fr) => (r.2,  filter-mono Fr  (\lam {x} d => <-rat.1 $ rewrite (A.norm-dist, A.norm_*-char) $ Join-univ
+      (\lam s => (  \have | t1 => join-left <∘r <-rat.2 d        | t2 => Join-cond s <∘r join-right <∘r <-rat.2 d
+      \in norm_dist-left {_} {_} {negative (r.1 - x.1) A.*r s.1} <=∘ <=_+ (=_<= norm-dist)
+            (=_<= A.norm_*r <=∘ <=_* (=_<= {ExUpperRealAbMonoid} RealAbGroup.abs_negative) s.2 <=∘ =_<= 
+            (ExUpperRealSemigroup.ide-right $ Real.<=-upper.1 RealAbGroup.abs>=0)) <=∘ unfold -
+            (rewrite (A.toRealAlgebra.*c_negative-left, A.negative-isInv, A.+-comm) $ <=_+ (<=-less t2) (<=-less t1) <=∘ =_<= 
+            (ExUpperReal.+-rat *> pmap ExUpperReal.fromRat linarith)))) <∘r (<-rat {RatField.half eps}).2 (RatField.half<id eps>0)))))
+     \with {
+        | inP (a, al), inP (x, xl) =>
+        inP ((a, x),  \lam {eps} eps>0 => filter-mono (filter-meet (al $ RatField.half>0 $ RatField.half>0 eps>0) (xl $ RatField.half>0 $ RatField.half>0 eps>0))
+          (\lam {z} d => <-rat.1 $ join-univ (<=-less (<-rat.2 d.1) <=∘ ExUpperReal.<=-rat.1 (<=-less $ RatField.half<id $ RatField.half>0 eps>0))
+          (Join-univ $ later
+          (\lam s => norm_+ <=∘ <=_+ (=_<= A.norm_*r <=∘ <=_* <=-refl s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right $ norm>=0 {RealNormed})) 
+          (A.norm_*_<= <=∘ <=_* <=-refl s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right norm>=0 *> inv norm-dist)) <=∘ <=_+ (ExUpperReal.<_<= d.1) 
+          (ExUpperReal.<_<= d.2) <=∘ =_<= (ExUpperReal.+-rat *> pmap ExUpperReal.fromRat linarith))) <∘r (<-rat {RatField.half eps}).2 
+        (RatField.half<id eps>0)))
+      })
+  | c*-sum => \lam {a} {b} => norm_*_<= <=∘ =_<= ExUpperRealLattice.join-square <=∘ join-univ (RealStoneC*Algebra.c*-square <=∘ RealStoneC*Algebra.c*-sum <=∘ join-left)
+    (=_<= (ExUpperRealLattice.Join-square inhabitted) <=∘ Join-univ  (\lam s => A.c*-square <=∘ A.c*-sum {_} {b.1 A.*r s.1 + b.2 * s.1} <=∘ =_<=
+    (pmap A.norm $ later $ rewrite A.toRealAlgebra.*c-rdistr $ equation.cRing
+    {(inv (A.toRealAlgebra.*c-comm-left {a.1} {s.1} {a.1 A.*r s.1}) *> A.toRealAlgebra.*c-comm-right *> pmap (_ *) (inv A.toRealAlgebra.*c-assoc), 
+  inv (A.toRealAlgebra.*c-comm-left {b.1} {s.1} {b.1 A.*r s.1}) *> A.toRealAlgebra.*c-comm-right *> pmap (_ *) (inv A.toRealAlgebra.*c-assoc), 
+  inv (A.toRealAlgebra.*c-comm-left {a.1} {s.1} {a.2 * s.1}) *> A.toRealAlgebra.*c-comm-right *> pmap (_ *) A.toRealAlgebra.*c-comm-left, 
+  inv (A.toRealAlgebra.*c-comm-right {b.1} {s.1} {b.2}) *> A.toRealAlgebra.*c-comm-left)}) <=∘ A.norm_*_<= <=∘ <=_* <=-refl s.2 <=∘ =_<= 
+  (ExUpperRealSemigroup.ide-right norm>=0) <=∘ Join-cond s <=∘ join-right))
+  | c*-square => \lam {a} => =_<= ExUpperRealLattice.join-square <=∘ join-univ (RealStoneC*Algebra.c*-square <=∘ join-left)
+    (=_<= (ExUpperRealLattice.Join-square inhabitted) <=∘ Join-univ  (\lam s => A.c*-square <=∘ =_<=  (pmap A.norm $ equation.cRing
+    {(inv (A.toRealAlgebra.*c-comm-left {a.1} {s.1} {a.1 A.*r s.1}) *> A.toRealAlgebra.*c-comm-right *> pmap (_ *) (inv A.toRealAlgebra.*c-assoc), 
+  inv (A.toRealAlgebra.*c-comm-left {a.1} {s.1} {a.2 * s.1}) *> A.toRealAlgebra.*c-comm-right *> pmap (_ *) A.toRealAlgebra.*c-comm-left)}) <=∘ 
+  A.norm_*_<= <=∘ <=_* <=-refl s.2 <=∘ =_<= (ExUpperRealSemigroup.ide-right norm>=0) <=∘ Join-cond s <=∘ join-right))
+  \where {
+    \open ExUpperRealAbMonoid(<-rat)
+    \open ExUpperRealSemigroup(<=_*)
+
+    \lemma inhabitted : ∃ (y : A) (A.norm y <= 1) => {?hidden_proof}
+  }
+
+
+\func StoneC*AlgebraRieszSpace (A : StoneC*Algebra) : RieszSpace A => RieszSpace.fromAbs (\lam a => TruncP.map (abs-aux a) (\lam s => (s.1, s.3, s.4, s.5)))
+  \where {
+    \func StoneC*AlgebraTopPoset : HausdorffTopPosetAbGroup \cowith
+      | TopAbGroup => A
+      | PosetAbGroup => A
+      | positive-closed => transport A.IsClosed (ext (\lam x => ext A.square-positive)) A.square-closed
+
+    \lemma abs-aux (a : A) : ∃ (b : A) (b * b = a * a) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c) => {?hidden_proof}
+
+    \lemma abs-square {a : A} : (StoneC*AlgebraRieszSpace A).abs a * (StoneC*AlgebraRieszSpace A).abs a = a * a => {?hidden_proof}
+
+    \func c*abs (a : A) (a<=1 : a <= 1) (-a<=1 : negative a <= 1) : A => sqrt-t (a * a, square-norm)
+      \where {
+        \open RealBanachAlgebra
+        \open RealBanachAlgebra.sqrt(yfunc, zfunc, zfunc-lim, UnitBall)
+        \open ExUpperRealSemigroup(<=_*)
+
+        \lemma yfunc>=0 {x : A} (x<=1 : x <= 1) {n : Nat} : 0 <= yfunc n x => {?hidden_proof}
+
+        \lemma square-norm : norm (1 - a * a) <= 1 => {?hidden_proof}
+
+        \lemma c*abs>=id {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} : x <= c*abs x x<=1 -x<=1 => {?hidden_proof}
+          \where {
+            \lemma induction (n : Nat) : x <= 1 - yfunc n (x * x) => {?hidden_proof}
+          }
+
+
+        \lemma c*abs>=neg {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} : negative x <= c*abs x x<=1 -x<=1 => {?hidden_proof}
+
+        \lemma zfunc_pow>0 {w : A} (w<=1 : w <= 1) (|1-w|<1 : (norm (1 - w)).U 1) : zfunc-lim (w * w, square-norm w<=1 $ ExUpperReal.<_<= |1-w|<1) = w => {?hidden_proof}
+          \where {
+            \lemma square-norm (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) : norm (1 - w * w) <= 1 => {?hidden_proof}
+          }
+
+
+        \lemma zfunc_pow {w : A} (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) : zfunc-lim (w * w, zfunc_pow>0.square-norm w<=1 |1-w|<=1) = w => {?hidden_proof}
+
+        \lemma zfunc_pow' {w : A} (w>=0 : 0 <= w) (w<=1 : w <= 1) => {?hidden_proof}
+
+        \lemma yfunc-step {x : A} (x<=1 : x <= 1) {n : Nat} : yfunc n x <= yfunc (suc n) x => {?hidden_proof}
+
+        \lemma zfunc-lim-meet {s : UnitBall {A}} (s<=1 : s.1 <= 1) : A.IsMeet (zfunc __ s.1) (zfunc-lim s) => {?hidden_proof}
+
+        \lemma yfunc-mono {x y : A} (x<=y : x <= y) (y<=1 : y <= 1) {n : Nat} : yfunc n y <= yfunc n x => {?hidden_proof}
+
+        \lemma c*abs-univ-bounded {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} {w : A} (w<=1 : w <= 1) (|1-w|<=1 : norm (1 - w) <= 1) (x<=w : x <= w) (-x<=w : negative x <= w) : c*abs x x<=1 -x<=1 <= w 
+          => {?hidden_proof}
+
+        \func sqrt-t (s : UnitBall {A}) => sqrt s.1 s.2
+
+        \lemma square-inj {x y : A} (x>=0 : 0 <= x) (x<=1 : x <= 1) (y>=0 : 0 <= y) (y<=1 : y <= 1) (xx=yy : x * x = y * y) : x = y => {?hidden_proof}
+
+        \lemma elem>=0 {a x : A} (a<=x : a <= x) (-a<=x : negative a <= x) : 0 <= x => {?hidden_proof}
+
+        \lemma c*abs>=0 {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} : 0 <= c*abs x x<=1 -x<=1 => {?hidden_proof}
+
+        \lemma c*abs<=1 {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} : c*abs x x<=1 -x<=1 <= 1 => {?hidden_proof}
+
+        \lemma c*abs_*q {q : Rat} (q>=0 : 0 <= q) (q<=1 : q <= 1) {x : A} {x<=1 : x <= 1} {-x<=1 : negative x <= 1} {qx<=1 : q A.*q x <= 1} 
+        {-qx<=1 : negative (q A.*q x) <= 1} : q A.*q c*abs x x<=1 -x<=1 = c*abs (q A.*q x) qx<=1 -qx<=1 => {?hidden_proof}
+
+        \lemma c*abs-univ {w : A} (a<=w : a <= w) (-a<=w : negative a <= w) : c*abs a a<=1 -a<=1 <= w => {?hidden_proof}
+      }
+
+  }
+
+
+\func StoneC*PseudoAlgebraRieszSpace (A : StoneC*PseudoAlgebra) : RieszSpace A => RieszSpace.fromAbs {StoneC*PseudoAlgebaPoset}
+  (\lam a => (\case StoneC*AlgebraRieszSpace.abs-aux {UnitC*Algebra A} (0, a) \with {  | inP (b, bb=aa, a<=b, -a<=b, bu) => 
+    \have bc : b = (0, b.2) => ext (RealField.isReduced $ pmap __.1 bb=aa *> RealField.zro_*-left, idp)
+    \in inP (b.2, transport (_ <=) bc a<=b, transport2 <= (ext (RealAbGroup.negative_zro, idp)) bc -a<=b, 
+          \lam a<=c -a<=c => transport (<= _) bc $ bu a<=c $ =_<= (ext (RealAbGroup.negative_zro, idp)) <=∘ -a<=c)}))
+  \where {
+    \func StoneC*PseudoAlgebaPoset : PosetQModule \cowith
+      | QModule => A
+      | <= => \lam a b => unit-algebra {_} {A.toRealAlgebra} a <= unit-algebra {_} {A.toRealAlgebra} b
+      | <=-refl => <=-refl
+      | <=-transitive => <=∘
+      | <=-antisymmetric => \lam p q => pmap __.2 (<=-antisymmetric p q)
+      | <=_+ => \lam p q => transport2 <= (inv func-+) (inv func-+) (<=_+ p q)
+      | <=_*n-div => \lam n/=0 p => <=_*n-div n/=0 $ transport (0 <=) AddMonoidHom.func-*n p
+  }

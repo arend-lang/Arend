@@ -1,0 +1,92 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Function()
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Operations
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.CompletionTools
+\import Topology.CoverSpace.Product
+\import Topology.CoverSpace.StronglyComplete
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopAbGroup.Product
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\import Topology.UniformSpace
+\import Topology.UniformSpace.StronglyComplete
+
+\func dense-metric-lift {X Y : PseudoMetricSpace} {Z : CompleteMetricSpace} (f : IsometricMap X Y) (fd : f.IsWeaklyDenseUniformEmbedding) (g : MetricMap X Z) : MetricMap Y Z \cowith
+  | UniformMap => weaklyDense-uniform-lift f fd g
+  | func-dist => \lam {y} {y'} => (
+    \have | g~ => weaklyDense-uniform-lift f fd g
+          | g-char {x} : g~ (f x) = g x => weaklyDense-lift-char (fd.1, f.embedding->coverEmbedding fd.2) x
+    \in Real.<=-upper.1 $ weaklyDense_<= real-join-uniform (prod f f) (prod.isWeaklyDense fd.1 fd.1) (ldist-uniform-map ∘ prod g~ g~) ldist-uniform-map 
+          (\lam s => unfold $ unfold $ rewrite (g-char, g-char) $ func-ldist <=∘ =_<= (inv func-lisometry)) (y, y'))
+  \where {
+    \open ProductTopSpace
+    \open ContMap
+  }
+
+
+\instance MetricCompletion (X : PseudoMetricSpace) : CompleteMetricSpace 
+  | StronglyCompleteUniformSpace => UniformStrongCompletion X
+  | dist => \lam x y => dist-cover (x, y)
+  | dist-refl => dist-refl-lem
+  | dist-symm => \lam {y} {y'} =>
+  weaklyDense-lift-unique (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding).1 
+    dist-cover (dist-cover ∘ tuple proj2 proj1) (\lam x => dist-char *> ldist-symm *> inv dist-char) (y, y')
+  | dist-triang => PseudoMetricSpace.from-ldist-triang $ filter-dist-triang _ _ _
+  | dist-uniform => (\lam inP (D, Du, g) => (\case dist-uniform.1 Du \with {
+  | inP (eps, eps>0, h) => inP (RatField.half $ RatField.half eps, RatField.half>0 $ RatField.half>0 eps>0,
+    \lam F => (\case isCauchyFilter {F} (X.makeCauchy $ X.metricUniform (RatField.half>0 $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 eps>0)) \with {
+        | inP (_, inP (x, idp), Fx) => \case h x \with {    | inP (V, DV, Vd) => \case g DV \with {      | inP (U, CU, VU) => inP (U, CU,
+          \lam {G} d => (\case isCauchyFilter {G} (X.makeCauchy $ X.metricUniform (RatField.half>0 $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 eps>0)) \with {
+                | inP (_, inP (y, idp), Gy) => VU $ filter-mono Gy
+            (\lam {z} d' => Vd (  \have | t => real_<_U.2 $ dist-neighborhood (pointSCF x) F (RatField.half>0 $ RatField.half>0 eps>0) 
+                    (OBall-center_<=< $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 eps>0) Fx
+                  | s => real_<_U.2 $ dist-neighborhood G (pointSCF y) (RatField.half>0 $ RatField.half>0 eps>0) Gy 
+                    (OBall-center_<=< $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 $ RatField.half>0 eps>0)
+            \in rewriteI dist-char $ rewriteI dist-char at d' $ real_<_U.1 $ filter-dist-triang (pointSCF x) F (pointSCF z) <∘r RealAbGroup.<=_+ (<=-less t)
+                  (filter-dist-triang F G (pointSCF z) <=∘ RealAbGroup.<=_+ (<=-less $ real_<_U.2 d) 
+                  (filter-dist-triang G (pointSCF y) (pointSCF z) <=∘ <=-less (RealAbGroup.<_+ s (real_<_U.2 d')))) <∘r rewrite 
+                (RealAbGroup.+-rat, RealAbGroup.+-rat, RealAbGroup.+-rat) (rat_real_<.1 linarith)))}))    }  }}))}),
+    \lam inP (eps, eps>0, h) => inP (_, X.metricUniform {RatField.half (RatField.half eps)} $ RatField.half>0 $ RatField.half>0 eps>0,
+  \lam {_} inP (x, idp) => (\case h (pointSCF x) \with {
+  | inP (U, CU, g) => inP (U, CU, \lam {F} Fx => g $ dist-neighborhood _ _ eps>0 {x} (OBall-center_<=< $ RatField.half>0 $ RatField.half>0 eps>0) Fx)
+}))
+)
+  \where {
+    \open ProductCoverSpace
+    \open CoverMap
+
+    dist-cover : CoverMap (StrongCompletion X ⨯ StrongCompletion X) RealNormed 
+    => weaklyDense-lift {_} {ProductStronglyRegularCoverSpace (StrongCompletion X) (StrongCompletion X)} (prod strongCompletion strongCompletion) 
+      (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) ldist-uniform-map
+
+    \lemma dist-char {x y : X} : dist-cover (pointSCF x, pointSCF y) = ldist x y => {?hidden_proof}
+
+    \lemma dist-refl-lem {F : StronglyRegularCauchyFilter X} : dist-cover (F, F) = 0 => {?hidden_proof}
+
+    \lemma filter-dist-triang (x y z : StronglyRegularCauchyFilter X) : dist-cover (x, z) <= dist-cover (x, y) + dist-cover (y, z) => {?hidden_proof}
+
+    \lemma dist-neighborhood (F G : StronglyRegularCauchyFilter X) {eps : Rat} (eps>0 : 0 < eps) {x : X} (Fx : F (OBall (RatField.half (RatField.half eps)) x)) 
+    (Gx : G (OBall (RatField.half (RatField.half eps)) x)) : (dist-cover (F, G)).U eps => {?hidden_proof}
+  }

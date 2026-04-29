@@ -1,0 +1,44 @@
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set.Fin
+
+\class PseudoSemiring \extends AbMonoid, Semigroup {
+  | ldistr {x y z : E} : x * (y + z) = x * y + x * z
+  | rdistr {x y z : E} : (x + y) * z = x * z + y * z
+  | zro_*-left {x : E} : zro * x = zro
+  | zro_*-right {x : E} : x * zro = zro
+}
+
+\class Semiring \extends PseudoSemiring, Monoid {
+  | natCoef : Nat -> E
+  | natCoef => natCoefImpl
+  | natCoefZero : natCoef 0 = zro
+  | natCoefZero => natCoefZeroImpl
+  | natCoefSuc (n : Nat) : natCoef (suc n) = natCoef n + ide
+  | natCoefSuc => natCoefSucImpl
+}
+  \where {
+    \open Monoid(LDiv)
+  }
+
+
+\class NonZeroSemiring \extends Semiring {
+  | zro/=ide : zro /= ide
+}
+
+\class PseudoCSemiring \extends PseudoSemiring, CSemigroup {
+  | ldistr => *-comm *> rdistr *> pmap2 + *-comm *-comm
+  | rdistr => *-comm *> ldistr *> pmap2 + *-comm *-comm
+  | zro_*-left => *-comm *> zro_*-right
+  | zro_*-right => *-comm *> zro_*-left
+}
+
+\class CSemiring \extends Semiring, PseudoCSemiring, CMonoid

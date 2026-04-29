@@ -1,0 +1,51 @@
+\import Algebra.Monoid
+\import Algebra.Pointed.PointedHom
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+
+\class MonoidHom \extends PointedHom {
+  \override Dom : Monoid
+  \override Cod : Monoid
+  | func-* {x y : Dom} : func (x * y) = func x * func y
+}
+  \where {
+    \func equals {M N : Monoid} {f g : MonoidHom M N} (p : \Pi (x : M) -> f x = g x) : f = g => exts p
+
+    \func id {M : Monoid} : MonoidHom M M \cowith
+      | func => \lam x => x
+      | func-ide => idp
+      | func-* => idp
+
+    \open Monoid(Inv)
+
+    \func presInv (h : MonoidHom) (e : Inv {h.Dom}) : Inv (h e) \cowith
+      | inv => h e.inv
+      | inv-left => inv h.func-* *> pmap h e.inv-left *> h.func-ide
+      | inv-right => inv h.func-* *> pmap h e.inv-right *> h.func-ide
+
+    \lemma presInvElem (h : MonoidHom) (e : Inv {h.Dom}) (e' : Inv (h e)) : h e.inv = e'.inv => {?hidden_proof}
+  }
+
+
+\class AddMonoidHom \extends AddPointedHom {
+  \override Dom : AddMonoid
+  \override Cod : AddMonoid
+  | func-+ {x y : Dom} : func (x + y) = func x + func y
+}
+  \where {
+    \use \coerce toMonoidHom (f : AddMonoidHom) : MonoidHom \cowith
+      | Dom => f.Dom
+      | Cod => f.Cod
+      | func => f
+      | func-* => func-+
+      | func-ide => func-zro
+
+    \func id {M : AddMonoid} : AddMonoidHom M M \cowith
+      | func => \lam x => x
+      | func-zro => idp
+      | func-+ => idp
+
+    \lemma func-FinSum {A B : AbMonoid} (f : AddMonoidHom A B) {J : FinSet} {a : J -> A} : f (A.FinSum a) = B.FinSum (\lam j => f (a j)) => {?hidden_proof}
+  }

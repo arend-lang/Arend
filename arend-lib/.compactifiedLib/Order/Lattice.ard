@@ -1,0 +1,163 @@
+\import Algebra.Monoid
+\import Algebra.Semiring
+\import Category.Limit
+\import Data.Array
+\import Data.Array.EPerm
+\import Data.Bool
+\import Equiv
+\import Function.Meta
+\import Logic.Unique
+\import Homotopy.Fibration
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Directed
+\import Paths
+\import Order.PartialOrder
+\import Paths.Meta
+\import Set.Fin
+
+\class MeetSemilattice \extends Poset, PrecatWithBprod (\lp, \lp) {
+  | meet \alias \infixl 7 ∧ : E -> E -> E
+  | meet-left {x y : E} : x ∧ y <= x
+  | meet-right {x y : E} : x ∧ y <= y
+  | meet-univ {x y z : E} : z <= x -> z <= y -> z <= x ∧ y
+  | Bprod => \lam x y => \new Product {
+    | apex => x ∧ y
+    | proj => \case \elim __ \with {
+      | 0 => meet-left
+      | 1 => meet-right
+    }
+  | tupleMap => \lam f => meet-univ (f 0) (f 1)
+  | tupleBeta => prop-pi
+  | tupleEq => \lam _ => prop-pi
+  }
+}
+  \where {
+    \func Meets {E : Poset} (x y : E) => \Sigma (j : E) (j <= x) (j <= y) (\Pi (z : E) -> z <= x -> z <= y -> z <= j)
+
+    \lemma Meets-isProp {E : Poset} {x y : E} : isProp (Meets x y) => {?hidden_proof}
+  }
+
+
+\class JoinSemilattice \extends Poset {
+  | join \alias \infixl 6 ∨ : E -> E -> E
+  | join-left {x y : E} : x <= x ∨ y
+  | join-right {x y : E} : y <= x ∨ y
+  | join-univ {x y z : E} : x <= z -> y <= z -> x ∨ y <= z
+}
+  \where {
+    \func Joins {E : Poset} (x y : E) => \Sigma (m : E) (x <= m) (y <= m) (\Pi (z : E) -> x <= z -> y <= z -> m <= z)
+
+    \lemma Joins-isProp {E : Poset} {x y : E} : isProp (Joins x y) => {?hidden_proof}
+  }
+
+
+\class Lattice \extends MeetSemilattice, JoinSemilattice
+
+\class DistributiveLattice \extends Lattice {
+  | ldistr>= {x y z : E} : x ∧ (y ∨ z) <= (x ∧ y) ∨ (x ∧ z)
+}
+
+\class TopMeetSemilattice \extends MeetSemilattice, CartesianPrecat (\lp, \lp) {
+  | top : E
+  | top-univ {x : E} : x <= top
+  | terminal => \new Product {
+    | apex => top
+    | proj => \case __ \with {}
+  | tupleMap => \lam _ => top-univ
+  | tupleBeta => \lam {_} {_} {j} => (\case j \with {})
+  | tupleEq => \lam _ => prop-pi
+}
+}
+\where {
+  \use \coerce toMonoid (L : TopMeetSemilattice) : CMonoid L \cowith
+    | ide => top
+    | * => meet
+    | ide-left => L.top-left
+    | *-assoc => L.meet-assoc
+    | *-comm => L.meet-comm
+}
+
+
+\class BottomJoinSemilattice \extends JoinSemilattice, DirectedSet {
+| bottom : E
+| bottom-univ {x : E} : bottom <= x
+| isInhabitted => inP bottom
+| isDirected => \lam x y => inP (x ∨ y, join-left, join-right)
+}
+\where {
+  \use \coerce toMonoid (L : BottomJoinSemilattice) : AbMonoid L \cowith
+    | zro => bottom
+    | + => join
+    | zro-left => L.bottom-left
+    | +-assoc => L.join-assoc
+    | +-comm => L.join-comm
+}
+
+
+\class BoundedLattice \extends Lattice, TopMeetSemilattice, BottomJoinSemilattice
+
+\class BottomDistributiveLattice \extends DistributiveLattice, BottomJoinSemilattice
+
+\class BoundedDistributiveLattice \extends BottomDistributiveLattice, BoundedLattice
+\where {
+  \use \coerce toSemiring (L : BoundedDistributiveLattice) : CSemiring L \cowith
+    | zro => bottom
+    | + => join
+    | zro-left => L.bottom-left
+    | +-assoc => L.join-assoc
+    | +-comm => L.join-comm
+    | ide => top
+    | * => meet
+    | ide-left => L.top-left
+    | *-assoc => L.meet-assoc
+    | ldistr => L.meet-ldistr
+    | zro_*-left => \lam {x} => <=-antisymmetric meet-left bottom-univ
+    | *-comm => L.meet-comm
+}
+
+
+\class CompleteLattice \extends BoundedLattice, CompleteCat (\lp, \lp) {
+| Join {J : \Set} : (J -> E) -> E
+| Join-cond {J : \Set} (j : J) {f : J -> E} : f j <= Join f
+| Join-univ {J : \Set} {f : J -> E} {e : E} : (\Pi (j : J) -> f j <= e) -> Join f <= e
+| bottom => Join absurd
+| bottom-univ => \lam {x} => Join-univ (\case __ \with {})
+| Meet {J : \Set} : (J -> E) -> E
+| Meet-cond {J : \Set} (j : J) {f : J -> E} : Meet f <= f j
+| Meet-univ {J : \Set} {f : J -> E} {e : E} : (\Pi (j : J) -> e <= f j) -> e <= Meet f
+| join => join-impl
+| join-left => join-left-impl
+| join-right => join-right-impl
+| join-univ => join-univ-impl
+| Meet => Meet-impl
+| Meet-cond => Meet-cond-impl
+| Meet-univ => Meet-univ-impl
+| meet => meet-impl
+| meet-left => meet-left-impl
+| meet-right => meet-right-impl
+| meet-univ => meet-univ-impl
+| top => top-impl
+| top-univ => top-univ-impl
+| limit => \lam {J} G => \new Limit {
+  | apex => Meet (Total.proj (\lam x => ∃ (j : J) (G j = x)))
+  | coneMap => \lam j => Meet-cond (later (G j, inP (j, idp)))
+  | coneCoh => \lam _ => prop-pi
+  | isLimit => \lam x => \new QEquiv {
+    | ret => \lam (c : Cone) => Meet-univ (\lam (y, inP (j, p)) => transport (x <=) p (c.coneMap j))
+    | ret_f => \lam h => prop-pi
+    | f_sec => \lam c => exts (\lam j => prop-pi)
+  }
+}
+| pullback => \lam {x} {y} f g => \new Pullback {
+  | apex => x ∧ y
+  | pbProj1 => meet-left
+  | pbProj2 => meet-right
+  | pbCoh => prop-pi
+  | pbMap => \lam p1 p2 _ => meet-univ p1 p2
+  | pbBeta1 => prop-pi
+  | pbBeta2 => prop-pi
+  | pbEta => \lam _ _ => prop-pi
+}
+}

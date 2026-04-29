@@ -1,0 +1,21 @@
+\func Rel (A : \Set) : \Set => A -> A -> \Prop
+
+\data transitive-closure {A : \Set} (R : Rel A) (a b : A) : \Prop 
+  | tc-direct (a `R` b)
+  | tc-connect (c : A) (a `R` c) (transitive-closure R c b)
+
+\data transitive-refl-closure {A : \Set} (R : Rel A) (a b : A) : \Prop 
+  | trc-direct (a = b)
+  | trc-connect (c : A) (a `R` c) (transitive-refl-closure R c b)
+
+trc-unary {A : \Set} {R : Rel A} {a b : A} (p : a `R` b) : transitive-refl-closure R a b => trc-connect b p (trc-direct idp)
+
+trc-direct' {A : \Set} {R : Rel A} {a : A} : transitive-refl-closure R a a => trc-direct idp
+
+\data symmetric-closure {A : \Set} (R : Rel A) (a b : A) : \Prop 
+  | sc-left (a `R` b)
+  | sc-right (b `R` a)
+
+\data reflexive-closure {A : \Set} (R : Rel A) (a b : A) : \Prop 
+  | rc-id (a = b)
+  | rc-rel (a `R` b)

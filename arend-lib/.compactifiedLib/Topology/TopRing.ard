@@ -1,0 +1,32 @@
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Set.Subset
+\import Topology.TopAbGroup
+\import Topology.TopModule
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open ContMap
+\open ProductTopSpace
+
+\class TopSemigroup \extends TopSpace, Semigroup {
+  | *-cont : ContMap (ProductTopSpace \this \this) \this (\lam s => s.1 * s.2)
+}
+
+\class TopMonoid \extends TopSemigroup, Monoid
+
+\class TopRing \extends TopAbGroup, TopMonoid, Ring
+
+\class NearSkewField \extends TopRing {
+  | inv-dense : IsDenseSet (\lam (x : E) => Monoid.Inv x)
+}
+
+\class NearField \extends NearSkewField, CRing
+
+\lemma nearField-map-unique {R : NearSkewField} {Y : HausdorffTopLModule R} {U : Set R} (Uo : isOpen U) (f g : ContMap (TopSub U) Y) 
+(p : \Pi {h : R} (Uh : U h) -> h *c f (h, Uh) = h *c g (h, Uh)) {h : R} (Uh : U h) : f (h, Uh) = g (h, Uh) => {?hidden_proof}
+
+\lemma nearField-tmap-unique {R : NearSkewField} {Y : HausdorffTopLModule R} (f g : ContMap R Y) (p : \Pi {h : R} -> h *c f h = h *c g h) {h : R} : f h = g h => {?hidden_proof}

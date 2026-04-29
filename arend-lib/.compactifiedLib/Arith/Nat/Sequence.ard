@@ -1,0 +1,22 @@
+\import Arith.Nat
+\import Data.Or
+\import Equiv(QEquiv)
+\import Equiv.Univalence
+\import Function.Meta
+\import Logic.Unique
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+
+\lemma search (A : Nat -> \Prop) (d : \Pi (n : Nat) -> Dec (A n)) (c : ∃ (n : Nat) (A n)) : Contr (\Sigma (n0 : Nat) (A n0) (\Pi (n : Nat) -> A n -> n0 <= n)) => {?hidden_proof}
+
+\lemma NatFinSubset (A : Nat -> \Prop) (d : \Pi (n : Nat) -> Dec (A n)) (M : Nat) (c : \Pi (n : Nat) -> A n -> n < M) : FinSet (\Sigma (n : Nat) (A n)) => {?hidden_proof}

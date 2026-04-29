@@ -1,0 +1,364 @@
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Ring.Boolean
+\import Arith.Rat
+\import Data.Array
+\import Data.Array.EPerm
+\import Data.Fin
+\import Data.Or
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence \hiding (~)
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+
+\type SFunc (V : AddMonoid) (B : BottomDistributiveLattice) => Quotient (~ {V} {B})
+  \where {
+\data \infix 4 ~ (l l' : Array (\Sigma V B)) : \Prop 
+      | ~-perm (EPerm l l')
+      | ~-sym (l' ~ l)
+      | ~-trans {m : Array (\Sigma V B)} (l ~ m) (m ~ l')
+      | ~-zro-left {b : B} (l = (0, b) :: l')
+      | ~-zro-right {v : V} (l = (v, bottom) :: l')
+      | ~-+-left {l'' : Array (\Sigma V B)} {u v : V} {b : B} (l = (u, b) :: (v, b) :: l'') (l' = (u + v, b) :: l'')
+      | ~-+-right {l'' : Array (\Sigma V B)} {v : V} {a b : B} (l = (v, a ∨ b) :: (v, a ∧ b) :: l'') (l' = (v, a) :: (v, b) :: l'')
+
+    \func inSF (l : Array (\Sigma V B)) : SFunc V B => in~ l
+
+    \instance ~_Equivalence : Equivalence (Array (\Sigma V B)) ~ 
+      | ~-reflexive => ~-perm EPerm.eperm-refl
+      | ~-symmetric => ~-sym
+      | ~-transitive => ~-trans
+
+    \lemma ~-sfequiv {l l' : Array (\Sigma V B)} (p : l ~ l') : inSF l = inSF l' => {?hidden_proof}
+
+    \lemma ~_++-left {l l' t : Array (\Sigma V B)} (l~l' : l ~ l') : l ++ t ~ l' ++ t => {?hidden_proof}
+
+    \lemma ~_++-right {t l l' : Array (\Sigma V B)} (l~l' : l ~ l') : t ++ l ~ t ++ l' => {?hidden_proof}
+
+    \lemma ~_++ {l l' r r' : Array (\Sigma V B)} (l~l' : l ~ l') (r~r' : r ~ r') : l ++ r ~ l' ++ r' => {?hidden_proof}
+
+    \lemma ~_:: {x : \Sigma V B} {l l' : Array (\Sigma V B)} (l~l' : l ~ l') : x :: l ~ x :: l' => {?hidden_proof}
+
+    \lemma ~_::_= {x y : \Sigma V B} (p : x = y) {l l' : Array (\Sigma V B)} (l~l' : l ~ l') : x :: l ~ y :: l' => {?hidden_proof}
+
+    \lemma ~-swap {x y : \Sigma V B} {l : Array (\Sigma V B)} : x :: y :: l ~ y :: x :: l => {?hidden_proof}
+
+    \lemma ~_+' (bs : Array B) (vs vs' : Array V bs.len) :
+      mkArray (\lam j => (vs j, bs j)) ++ mkArray (\lam j => (vs' j, bs j)) ~ mkArray (\lam j => (vs j + vs' j, bs j)) => {?hidden_proof}
+
+    \lemma ~_+ (f g : V -> V) {l : Array (\Sigma V B)} : map (\lam s => (f s.1, s.2)) l ++ map (\lam s => (g s.1, s.2)) l ~ map (\lam s => (f s.1 + g s.1, s.2)) l => {?hidden_proof}
+
+    \lemma ~-zros-left {l : Array (\Sigma V B)} (p : \Pi (i : Fin l.len) -> (l i).1 = 0) : l ~ nil => {?hidden_proof}
+  }
+
+
+\open SFunc
+
+\instance SFuncAbMonoid (V : AddMonoid) (B : BottomDistributiveLattice) : AbMonoid (SFunc V B) 
+  | zro => inSF nil
+  | + => +
+  | +-assoc => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
+    | in~ l1, in~ l2, in~ l3 => pmap inSF ++-assoc
+  })
+  | +-comm => \lam {x} {y} => (\case \elim x, \elim y \with {
+    | in~ l, in~ l' => ~-sfequiv (~-perm EPerm.eperm-++-comm)
+  })
+  | zro-left => \lam {x} => (\case \elim x \with {
+    | in~ l => idp
+  })
+  \where {
+    \lemma *n-char {n : Nat} {l : Array (\Sigma V B)} : n AddMonoid.*n {SFuncAbMonoid V B} inSF l = inSF (map (\lam s => (n V.*n s.1, s.2)) l) => {?hidden_proof}
+  }
+
+
+\instance SFuncAbGroup (V : AddGroup) (B : BottomDistributiveLattice) : AbGroup (SFunc V B) 
+  | AbMonoid => SFuncAbMonoid V B
+  | negative => negative
+  | negative-left => \lam {x} => (\case \elim x \with {
+    | in~ l => ~-sfequiv ~_negative-left
+  })
+  \where {
+    \lemma ~_negative {l l' : Array (\Sigma V B)} (l~l' : l ~ l') : map (\lam s => (V.negative s.1, s.2)) l ~ map (\lam s => (V.negative s.1, s.2)) l' => {?hidden_proof}
+
+    \lemma ~_negative-left {l : Array (\Sigma V B)} : map (\lam s => (V.negative s.1, s.2)) l ++ l ~ nil => {?hidden_proof}
+
+    \lemma *i-char {n : Int} {l : Array (\Sigma V B)} : n AddGroup.*i {SFuncAbGroup V B} inSF l = inSF (map (\lam s => (n V.*i s.1, s.2)) l) => {?hidden_proof}
+  }
+
+
+\instance SFuncQModule (V : QModule) (B : BottomDistributiveLattice) : QModule (SFunc V B) => QModule.fromRatModule module
+  \where {
+    \func module : LModule RatField \cowith
+      | AbGroup => SFuncAbGroup V B
+      | *c => *c
+      | *c-assoc => \lam {q} {r} {x} => (\case \elim x \with {
+        | in~ l => path (\lam i => inSF (map (\lam s => (V.*q-assoc {q} {r} {s.1} i, s.2)) l))
+      })
+      | *c-ldistr => \lam {q} {x} {y} => (\case \elim x, \elim y \with {
+        | in~ l, in~ l' => pmap inSF $ map_++ (\lam (s : \Sigma V B) => (q V.*q s.1, s.2))
+      })
+      | *c-rdistr => \lam {q} {r} {x} => (\case \elim x \with {
+        | in~ l =>
+          ~-sfequiv $ ~-trans (~-perm $ EPerm.eperm-= $ path (\lam i => map (\lam s => (V.toRatModule.*c-rdistr {q} {r} {s.1} i, s.2)) l)) $ ~-sym (~_+ (q V.*q) (r V.*q))
+      })
+      | ide_*c => \lam {x} => (\case \elim x \with {
+        | in~ l => path (\lam i => inSF (map (\lam s => (V.ide_*q {s.1} i, s.2)) l))
+      })
+
+    \lemma ~_*q {q : Rat} {l l' : Array (\Sigma V B)} (l~l' : l ~ l') : map (\lam s => (q V.*q s.1, s.2)) l ~ map (\lam s => (q V.*q s.1, s.2)) l' => {?hidden_proof}
+
+    \lemma *q-char {q : Rat} {l : Array (\Sigma V B)} : q QModule.*q {SFuncQModule V B} inSF l = inSF (map (\lam s => (q V.*q s.1, s.2)) l) => {?hidden_proof}
+  }
+
+
+\instance SFuncPosetQModule (V : PosetQModule) (B : BooleanRing) : PosetQModule (SFunc V B) 
+  | QModule => SFuncQModule V B
+  | <= => <=
+  | <=-refl => inP (nil, negative-right, \case __ \with {})
+  | <=-transitive => \lam inP s inP s' => inP (s.1 ++ s'.1, inv AddGroup.diff_+ *> +-comm *> pmap2 + s.2 s'.2, ++.++-all {_} {\lam s => 0 V.<= s.1} s.3 s'.3)
+  | <=-antisymmetric => \lam inP s inP s' => (\case ~_=-unequals $ inv (pmap negative s.2) *> AddGroup.negative_- *> s'.2 \with {
+    | inP (m, mr, m1, m2) => AddGroup.fromZero $ s'.2 *> ~-sfequiv
+      (~-trans (~-sym reduce_~) $ ~-trans (~-sym $ SFRefines_~ mr reduce_IsReduced m2) $ ~-zros-left  (\lam i =>
+    <=-antisymmetric (SFRefines-closed (V.<= 0) <=-refl m1 (reduce_<=0 (\lam j => later $ V.negative<=0 (s.3 j))) i) $ SFRefines-closed (0 V.<=) <=-refl m2 
+          (reduce_>=0 s'.3) i))
+  })
+  | <=_+ => \case \elim __, \elim __ \with {
+    | inP (l, lp, lf), inP (l', l'p, l'f) => inP (l ++ l', equation.abGroup *> pmap2 + lp l'p,  \lam k => (\case ++.split-index k \with {  | inl (i, ip) => rewrite (ip, ++.++_index-left) (lf i)
+      | inr (j, jp) => rewrite (jp, ++.++_index-right) (l'f j)}))
+  }
+| <=_*n-div => \lam {n} n/=0 => (\case \elim __ \with {
+  | inP (l, lp, lf) => inP (map (\lam s => (RatField.finv n V.*q s.1, s.2)) l,
+    AddGroup.minus_zro *> inv QModule.ide_*q *> pmap (QModule.*q _) (inv $ RatField.finv-left $ natRat/=0 n/=0) *> QModule.*q-assoc *> pmap (_ QModule.*q) 
+    (QModule.*q_*n *> inv AddGroup.minus_zro *> lp) *> SFuncQModule.*q-char, \lam j => V.*q_>=0 (RatField.finv>=0 fromNat_>=0) (lf j))
+})
+  \where {
+    \func PFunc  => Array (\Sigma V B)
+
+    \type \infix 4 <= (x y : SFunc V B) : \Prop => ∃ (l : PFunc) (y - x = inSF l) ∀ (s : l) (0 V.<= s.1)
+
+    add (v : V) (b : B) (l : PFunc) : PFunc 
+      => (v, B.diff b $ B.BigJoin $ map __.2 l) :: map (\lam s => (v + s.1, b * s.2)) l ++ map (\lam s => (s.1, B.diff s.2 b)) l
+
+    \func reduce (l : PFunc) : PFunc 
+      | nil => nil
+      | x :: l => add x.1 x.2 (reduce l)
+
+    \lemma reduce-closed (P : V -> \Prop) (P0 : P 0) (P+ : ∀ {a b : P} (P (a + b))) {l : PFunc} (Pl : ∀ (x : l) (P x.1)) : ∀ (x : reduce l) (P x.1) => {?hidden_proof}
+      \where {
+        \lemma add-closed {v : V} {b : B} (Pv : P v) {l : PFunc} (Pl : ∀ (x : l) (P x.1)) : ∀ (x : add v b l) (P x.1) => {?hidden_proof}
+      }
+
+
+    \lemma reduce_>=0 {l : PFunc} (Pl : ∀ (x : l) (0 V.<= x.1)) : ∀ (x : reduce l) (0 V.<= x.1) => {?hidden_proof}
+
+    \lemma reduce_<=0 {l : PFunc} (Pl : ∀ (x : l) (x.1 V.<= 0)) : ∀ (x : reduce l) (x.1 V.<= 0) => {?hidden_proof}
+
+    add_EPerm {v : V} {b : B} {l l' : PFunc} (e : EPerm l l') : EPerm (add v b l) (add v b l') \elim l, l', e
+      | nil, nil, eperm-nil => EPerm.eperm-refl
+      | x :: l1, _ :: l2, eperm-:: idp e =>
+      rewrite (\peval add _ _ _, \peval add _ _ _) $ eperm-:: (pmap (\lam y => (v, B.diff b (_ ∨ y))) $ B.BigJoin_EPerm $ EPerm.EPerm_map __.2 e) $ eperm-:: idp $ 
+        EPerm.eperm-++ (EPerm.EPerm_map (\lam s => (v + s.1, b * s.2)) e) $ eperm-:: idp $ EPerm.EPerm_map (\lam s => (s.1, B.diff s.2 b)) e
+      | (u, a) :: (w, c) :: l, _ :: _ :: l', eperm-swap idp idp p2 => rewrite (\peval add _ _ _, \peval add _ _ _) $ eperm-:: 
+        (pmap (\lam y => (v, B.diff b y)) $ B.BigJoin_EPerm {a :: c :: map __.2 l} {c :: a :: map __.2 l'} $ eperm-swap idp idp $ pmap (map __.2) p2) $ 
+        EPerm.eperm-swap-tail $ EPerm.eperm-++ (EPerm.EPerm_map (\lam s => (v + s.1, b * s.2)) $ EPerm.eperm-= p2) $ eperm-swap idp idp $ pmap 
+        (map (\lam (s : \Sigma V B) => (s.1, B.diff s.2 b))) p2
+      | l, l', eperm-trans e1 e2 => eperm-trans (add_EPerm e1) (add_EPerm e2)
+
+    \lemma add_BigJoin {v : V} {b : B} {l : PFunc} : B.BigJoin (map __.2 (add v b l)) = b ∨ B.BigJoin (map __.2 l) => {?hidden_proof}
+
+    \lemma reduce_BigJoin {l : PFunc} : B.BigJoin (map __.2 (reduce l)) = B.BigJoin (map __.2 l) => {?hidden_proof}
+
+    add-double {u v : V} {a b : B} {l : PFunc} : EPerm (add v b (add u a l))
+      ((v + u, B.diff (b * a) (B.BigJoin (map __.2 l))) :: (v, B.diff b (a ∨ B.BigJoin (map __.2 l))) :: (u, B.diff a (b ∨ B.BigJoin (map __.2 l))) :: 
+      (map (\lam s => (v + u + s.1, (b * a) * s.2)) l ++ map (\lam s => (v + s.1, B.diff (b * s.2) a)) l) ++ map (\lam s => (u + s.1, B.diff (a * s.2) b)) l 
+      ++ map (\lam s => (s.1, B.diff s.2 (a ∨ b))) l) 
+    => transportInv (EPerm __ _) (\peval add v b _) $ EPerm.eperm-sym $ EPerm.eperm-swap-trans $ eperm-:: (pmap (\lam x => (v, B.diff b x)) $ inv add_BigJoin) $ mkcon 
+      eperm-trans {(v + u, B.diff _ _) :: _} (eperm-:: idp $ EPerm.eperm-sym $ EPerm.EPerm_++-swap) $ EPerm.eperm-++ {_} {(v + u, B.diff _ _) :: _}
+        (EPerm.eperm-= $ later $ rewrite (\peval add u a l) $ cong_:: (pmap (v + u, __) equation.bRing) $ pmap2 ++ (exts (\lam j => ext (+-assoc, *-assoc))) 
+        (exts (\lam j => ext (idp, equation.bRing))) *> inv (map_++ (\lam s => (v + s.1, b * s.2))))
+        (EPerm.eperm-= $ later $ rewrite (\peval add u a l) $ cong_:: (pmap (u, __) equation.bRing) $ pmap (_ ++) (exts (\lam j => ext (idp, equation.bRing))) *> inv 
+          (map_++ (\lam (s : \Sigma V B) => (s.1, B.diff s.2 b))))
+
+    add-comm {u v : V} {a b : B} {l : PFunc} : EPerm (add v b (add u a l)) (add u a (add v b l)) => eperm-trans add-double $ eperm-trans
+      (eperm-:: (pmap2 (\lam x y => (x, B.diff y _)) +-comm *-comm) $ EPerm.eperm-swap-tail $ transport2 EPerm (inv ++-assoc) (inv ++-assoc) $ EPerm.eperm-++ 
+        (EPerm.eperm-= $ later $ exts (\lam j => ext (pmap (+ _) +-comm, pmap (* _) *-comm))) $ transport2 EPerm ++-assoc ++-assoc $ EPerm.eperm-++ 
+      EPerm.eperm-++-comm $ EPerm.eperm-= $ later $ exts (\lam j => pmap (\lam x => ((l j).1, B.diff _ x)) B.join-comm)) (EPerm.eperm-sym add-double)
+
+    reduce_EPerm {l l' : PFunc} (e : EPerm l l') : EPerm (reduce l) (reduce l') \elim l, l', e
+      | nil, nil, eperm-nil => eperm-nil
+      | x :: l1, _ :: l2, eperm-:: idp e => add_EPerm (reduce_EPerm e)
+      | x :: y :: l1, _ :: _ :: l2, eperm-swap idp idp p => eperm-trans add-comm $ add_EPerm $ add_EPerm $ EPerm.eperm-= (pmap reduce p)
+      | l, l', eperm-trans e1 e2 => eperm-trans (reduce_EPerm e1) (reduce_EPerm e2)
+
+    \type SFRefines (l l' : PFunc) => \Sigma (∀ (y : l') ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) (∀ (x : l) ∃ (y : l') (x.1 = y.1) (x.2 B.<= y.2))
+
+    \lemma SFRefines-refl {l : PFunc} : SFRefines l l => {?hidden_proof}
+
+    \lemma SFRefines_++ {l l' r r' : PFunc} (ll' : SFRefines l l') (rr' : SFRefines r r') : SFRefines (l ++ r) (l' ++ r') => {?hidden_proof}
+
+    \lemma SFRefines_:: {x : \Sigma V B} {l l' : PFunc} (r : SFRefines l l') : SFRefines (x :: l) (x :: l') => {?hidden_proof}
+
+    \lemma SFRefines_::-merge {v : V} {a b c : B} (c=ab : c = a ∨ b) {l l' : PFunc} (r : SFRefines l l') : SFRefines ((v, a) :: (v, b) :: l) ((v, c) :: l') => {?hidden_proof}
+
+    \lemma SFRefines_++-merge (f g h : B -> B) (p : \Pi (b : B) -> h b = f b ∨ g b) {l : PFunc} :
+      SFRefines (map (\lam s => (s.1, f s.2)) l ++ map (\lam s => (s.1, g s.2)) l) (map (\lam s => (s.1, h s.2)) l) => {?hidden_proof}
+
+    \lemma SFRefines-trans {l1 l2 l3 : PFunc} (l3r : IsReduced l3) (r1 : SFRefines l1 l2) (r2 : SFRefines l2 l3) : SFRefines l1 l3 => {?hidden_proof}
+
+    \lemma SFRefines-swap {x y : \Sigma V B} {l l' : PFunc} (r : SFRefines l l') : SFRefines (x :: y :: l) (y :: x :: l') => {?hidden_proof}
+
+    \lemma SFRefines_EPerm {l l' : PFunc} (e : EPerm l l') : SFRefines l l' => {?hidden_proof}
+
+    \lemma SFRefines_++-left {l r r' : PFunc} (lr : SFRefines l r) (r'l : ∀ (y : r') ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) : SFRefines l (r ++ r') => {?hidden_proof}
+
+    \lemma SFRefines_++-right {l r r' : PFunc} (lr' : SFRefines l r') (rl : ∀ (y : r) ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) : SFRefines l (r ++ r') => {?hidden_proof}
+
+    \lemma SFRefines_::-right {x : \Sigma V B} {l r : PFunc} (rl : x.2 B.<= B.BigJoin (map __.2 l)) (lr : SFRefines l r) : SFRefines l (x :: r) => {?hidden_proof}
+
+    \lemma SFRefines_add_0 {l : PFunc} {v : V} : SFRefines l (add v 0 l) => {?hidden_proof}
+
+    \lemma SFRefines-closed (P : V -> \Prop) (P0 : P 0) {l l' : PFunc} (r : SFRefines l l') (Pl : ∀ (x : l') (P x.1)) : ∀ (x : l) (P x.1) => {?hidden_proof}
+
+    \func IsReducedB (l : Array B) => \Pi {i j : Fin l.len} -> i /= j -> l i * l j = 0
+
+    \func IsReduced (l : PFunc) => IsReducedB (map __.2 l)
+
+    \lemma add_IsReducedB {b : B} {l : Array B} (lr : IsReducedB l) : IsReducedB (B.diff b (B.BigJoin l) :: map (b ∧) l ++ map (B.diff __ b) l) => {?hidden_proof}
+
+    \lemma add_IsReduced {v : V} {b : B} {l : PFunc} (lr : IsReduced l) : IsReduced (add v b l) => {?hidden_proof}
+
+    \lemma reduce_IsReduced {l : PFunc} : IsReduced (reduce l) => {?hidden_proof}
+
+    \lemma SFRefines-common {b c d : PFunc} (br : IsReduced b) (cr : IsReduced c) (dr : IsReduced d) (b<d : SFRefines b d) (c<d : SFRefines c d) :
+      ∃ (a : IsReduced) (SFRefines a b) (SFRefines a c) => {?hidden_proof}
+
+    \lemma ~-unequals {l l' : PFunc} (l~l' : l ~ l') : ∃ (m : IsReduced) (SFRefines m (reduce l)) (SFRefines m (reduce l')) => {?hidden_proof}
+      \where {
+        \func split (b : B) (l : PFunc) => map (\lam s => (0 + s.1, b * s.2)) l ++ map (\lam s => (s.1, B.diff s.2 b)) l
+
+        \lemma split_IsReduced {b : B} {l : PFunc} (lr : IsReduced l) : IsReduced (split b l) => {?hidden_proof}
+
+        \lemma split_SFRefines {b : B} {l : PFunc} : SFRefines (split b l) l => {?hidden_proof}
+
+        \lemma split_add_SFRefines {b : B} {l : PFunc} : SFRefines (split b l) (add 0 b l) => {?hidden_proof}
+
+        \lemma add0_~ {b : B} {l : PFunc} (lr : IsReduced l) : add 0 b l ~ l => {?hidden_proof}
+
+        add-double1 {u v : V} {b : B} {l : PFunc} : EPerm (add v b (add u b l))
+          ((v + u, B.diff b (B.BigJoin (map __.2 l)))
+          :: (v, bottom) :: (u, bottom) :: (map (\lam s => (v + u + s.1, b * s.2)) l ++ map (\lam s => (v + s.1, bottom)) l) ++ map 
+          (\lam s => (u + s.1, bottom)) l ++ map (\lam s => (s.1, B.diff s.2 b)) l) => transport (EPerm _)
+          (cong_:: (pmap (\lam x => (v + u, B.diff x _)) isBooleanRing) $ cong_:: (pmap (v, __) equation.bRing) $ cong_:: (pmap (u, __) equation.bRing) $ pmap2 ++ 
+            (pmap2 ++ (exts (\lam j => ext (idp, pmap (* _) isBooleanRing))) (exts (\lam j => ext (idp, equation.bRing)))) 
+          (pmap2 ++ (exts (\lam j => ext (idp, equation.bRing))) (exts (\lam j => ext (idp, equation.bRing))))) add-double
+
+        \lemma add_+_SFRefines {u v : V} {b : B} {l : PFunc} (lr : IsReduced l) : SFRefines (add (u + v) b l) (add u b (add v b l)) => {?hidden_proof}
+
+        add-double2 {v : V} {a b : B} {l : PFunc} : EPerm (add v (a ∨ b) (add v (a * b) l))
+          ((v + v, B.diff (a * b) (B.BigJoin (map __.2 l))) :: (v, B.diff (a ∨ b) (a * b ∨ B.BigJoin (map __.2 l))) :: (v, bottom) :: 
+          (map (\lam s => (v + v + s.1, (a * b) * s.2)) l ++ map (\lam s => (v + s.1, B.diff ((a ∨ b) * s.2) (a * b))) l) ++ map (\lam s => (v + s.1, bottom)) l 
+          ++ map (\lam s => (s.1, B.diff s.2 (b ∨ a))) l) => transport (EPerm _)
+          (cong_:: (pmap (v + v, __) equation.bRing) $ cong_:: idp $ cong_:: (pmap (v, __) equation.bRing) $ pmap2 ++ 
+          (pmap (++ _) (exts (\lam j => pmap (_ + _, __) equation.bRing))) 
+          (pmap2 ++ (exts (\lam j => pmap (_ + _, __) equation.bRing)) (exts (\lam j => pmap ((l j).1, __) equation.bRing)))) add-double
+
+        \lemma add-modularity_SFRefines {v : V} {a b : B} {l : PFunc} (lr : IsReduced l) : SFRefines (add v a (add v b l)) (add v (a ∨ b) (add v (a * b) l)) => {?hidden_proof}
+      }
+
+
+    \lemma ~_=-unequals {l l' : PFunc} (p : inSF l = inSF l') => {?hidden_proof}
+
+    \lemma split1 (c : B) {v : V} {b : B} {l : PFunc} : (v, b) :: l ~ (v, c * b) :: (v, B.diff b c) :: l => {?hidden_proof}
+
+    \lemma reduced-tail {x : \Sigma V B} {l : PFunc} (lr : IsReduced (x :: l)) : IsReduced l => {?hidden_proof}
+
+    \lemma add_~ {v : V} {b : B} {l : PFunc} (lr : IsReduced l) : add v b l ~ (v, b) :: l => {?hidden_proof}
+
+    \lemma reduce_~ {l : PFunc} : reduce l ~ l => {?hidden_proof}
+
+    \lemma ~-+s-left {l : PFunc} (lr : IsReduced l) {x : \Sigma V B} (p : \Pi (i : Fin l.len) -> (l i).1 = x.1) (q : B.BigJoin (map __.2 l) = x.2) : l ~ x :: nil => {?hidden_proof}
+
+    \lemma SFRefines_~ {l l' : PFunc} (lr : IsReduced l) (l'r : IsReduced l') (r : SFRefines l l') : l ~ l' => {?hidden_proof}
+
+    \lemma makeReduced (a : SFunc V B) : ∃ (l : IsReduced) (a = inSF l) => {?hidden_proof}
+
+    \lemma >=0-reduced-char {l : PFunc} (lr : IsReduced l) : 0 <= inSF l <-> ∀ (x : l) (0 V.<= x.1 || (x.2 = 0)) => {?hidden_proof}
+      \where {
+        \lemma reduce-values {l : PFunc} (lr : IsReduced l) : ∀ (y : reduce l) (Given (x : l) (y = x) || (y.2 = 0)) => {?hidden_proof}
+          \where {
+            \lemma aux {a : \Sigma V B} {l : PFunc} (lr : IsReduced (a :: l)) (j : Fin (reduce l).len) : a.2 ∧ (reduce l j).2 = 0 => {?hidden_proof}
+          }
+
+
+        \lemma reduce-values-conv {l : PFunc} (lr : IsReduced l) : ∀ (x : l) ∃ (y : reduce l) (x = y) => {?hidden_proof}
+
+        \lemma reduce_>=0-conv {l : PFunc} (lr : IsReduced l) (p : ∀ (y : reduce l) (0 V.<= y.1 || (y.2 = 0))) : ∀ (x : l) (0 V.<= x.1 || (x.2 = 0)) => {?hidden_proof}
+
+        \lemma SFRefines_>=0-left {l l' : PFunc} (l<l' : SFRefines l l') (l'p : ∀ (y : l') (0 V.<= y.1)) : ∀ (x : l) (0 V.<= x.1) => {?hidden_proof}
+
+        \lemma SFRefines_>=0-right {l l' : PFunc} (l<l' : SFRefines l l') (l'r : IsReduced l') (lp : ∀ (x : l) (0 V.<= x.1)) : ∀ (y : l') (0 V.<= y.1 || (y.2 = 0)) => {?hidden_proof}
+
+        \lemma ~_zro {l : PFunc} {l' : Array (\Sigma V B) l.len} (p : \Pi (j : Fin l.len) -> (l j = l' j) || (\Sigma ((l j).2 = 0) ((l' j).2 = 0))) : l ~ l' => {?hidden_proof}
+      }
+
+
+    \lemma ~-common (ls : Array PFunc) : ∃ (bs : IsReducedB) (vss : Array (Array V bs.len) ls.len) ∀ (j : Fin ls.len) (ls j ~ mkArray (\lam i => (vss j i, bs i))) => {?hidden_proof}
+      \where {
+        \lemma merge (l : PFunc) {bs : Array B} (bsr : IsReducedB bs) (vss : Array (Array V bs.len)) :
+        ∃ (bs' : IsReducedB) (vs : Array V bs'.len) (l ~ mkArray (\lam i => (vs i, bs' i))) (vss' : Array (Array V bs'.len) vss.len) ∀ (j : Fin vss.len) 
+          (mkArray (\lam i => (vss j i, bs i)) ~ mkArray (\lam i => (vss' j i, bs' i))) => {?hidden_proof}
+      }
+
+
+    \lemma <=-common-char {bs : Array B} (bsr : IsReducedB bs) {vs vs' : Array V bs.len} :
+      inSF (mkArray (\lam j => (vs j, bs j))) <= inSF (mkArray (\lam j => (vs' j, bs j))) <-> ∀ j (vs j V.<= vs' j || (bs j = 0)) => {?hidden_proof}
+
+    \lemma <=-char {f g : SFunc V B} :
+    f <= g <-> ∃ (bs : IsReducedB) (vs vs' : Array V bs.len) (f = inSF (mkArray (\lam i => (vs i, bs i)))) (g = inSF (mkArray (\lam i => (vs' i, bs i)))) ∀ 
+      j (vs j V.<= vs' j || (bs j = 0)) => {?hidden_proof}
+
+    \lemma reduce_SFRefines {l : PFunc} (lr : IsReduced l) : SFRefines l (reduce l) => {?hidden_proof}
+
+    \lemma ~-unequals-reduced {l l' : PFunc} (lr : IsReduced l) (l'r : IsReduced l') (l~l' : l ~ l') : ∃ (m : IsReduced) (SFRefines m l) (SFRefines m l') => {?hidden_proof}
+
+    \lemma ~_=-unequals-reduced {l l' : PFunc} (lr : IsReduced l) (l'r : IsReduced l') (p : inSF l = inSF l') => {?hidden_proof}
+
+    \lemma ~-unequals-conv {l l' : PFunc} (l~l' : ∃ (m : IsReduced) (SFRefines m (reduce l)) (SFRefines m (reduce l'))) : l ~ l' => {?hidden_proof}
+
+    \lemma ~-unequals-reduced-conv {l l' : Array (\Sigma V B)} (lr : IsReduced l) (l'r : IsReduced l') (l~l' : ∃ (m : IsReduced) (SFRefines m l) (SFRefines m l')) : l ~ l' => {?hidden_proof}
+
+    \lemma SFRefines_apply-left {l l' : PFunc} (l<l' : SFRefines l l') (f : V -> V) (f0 : f 0 = 0) : SFRefines (map (\lam s => (f s.1, s.2)) l) (map (\lam s => (f s.1, s.2)) l') => {?hidden_proof}
+
+    \lemma apply-left {l l' : PFunc} (lr : IsReduced l) (l'r : IsReduced l') (l~l' : l ~ l') (f : V -> V) (f0 : f 0 = 0) :
+      map (\lam s => (f s.1, s.2)) l ~ map (\lam s => (f s.1, s.2)) l' => {?hidden_proof}
+  }
+
+
+\open SFuncPosetQModule \hiding (<=)
+
+\instance SFuncRieszSpace (V : RieszSpace) (B : BooleanRing) : RieszSpace (SFunc V B) 
+=> RieszSpace.fromAbs (\lam a => (\case makeReduced a \with {  | inP (l, lr, lp) => rewrite lp $ inP    (inSF $ map (\lam s => (V.abs s.1, s.2)) l, 
+  inP (map (\lam s => (V.abs s.1 - s.1, s.2)) l, ~-sfequiv $ ~_+ V.abs negative, \lam j => V.to>=0 V.abs>=id),
+    inP (map (\lam s => (V.abs s.1 + s.1, s.2)) l,
+    ~-sfequiv $ ~-trans (~_+ V.abs (\lam x => negative (negative x))) $ ~-perm $ EPerm.eperm-= $ later $ exts (\lam j => ext (pmap (_ +) V.negative-isInv, idp)), 
+      \lam j => =_<= (inv negative-left) <=∘ V.<=_+ V.abs>=neg <=-refl),
+    \lam p q => (\case <=-char.1 p \with {  | inP (bs, bsr, vs, vs', vsp, vs'p, r) => <=-char.2 $ inP    (bs, bsr, map V.abs vs, vs',
+      ~-sfequiv $ apply-left {_} {_} {_} {mkArray (\lam i => (vs i, bs i))} lr bsr (Quotient.equalityEquiv ~_Equivalence (path (\lam i => vsp i))) V.abs V.abs_zro, 
+          vs'p,  \lam j => (\case r j, (<=-common-char bsr {map negative vs}).1 (transport2 <= (pmap negative vsp) vs'p q) j \with {
+      | byLeft r1, byLeft r2 => byLeft $ V.join-univ r1 r2  | byRight r, _ => byRight r  | _, byRight r => byRight r}))}))}))

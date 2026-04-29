@@ -1,0 +1,32 @@
+\import Algebra.Module
+\import Algebra.Module.ModuleCategory
+\import Algebra.Module.LinearMap
+\import Algebra.Ring
+\import Category.Functor
+\import Paths.Meta
+\import Set.SetCategory
+
+\instance PowerLModule {R : Ring} (J : \Set) (M : LModule R) : LModule R (J -> M) 
+  | zro => \lam _ => M.zro
+  | + => \lam f g j => f j M.+ g j
+  | zro-left => ext (\lam j => M.zro-left)
+  | zro-right => ext (\lam j => M.zro-right)
+  | +-assoc => ext (\lam j => M.+-assoc)
+  | negative => \lam f j => M.negative (f j)
+  | negative-left => ext (\lam j => M.negative-left)
+  | +-comm => ext (\lam j => M.+-comm)
+  | *c => \lam r f j => r *c f j
+  | *c-assoc => ext (\lam j => *c-assoc)
+  | *c-ldistr => ext (\lam j => *c-ldistr)
+  | *c-rdistr => ext (\lam j => *c-rdistr)
+  | ide_*c => ext (\lam j => ide_*c)
+
+\func FunctorPowerLMod {R : Ring} : Functor SetCat.op (LModuleCat R) \cowith
+  | F => \lam I => PowerLModule I (RingLModule R)
+  | Func => \lam f => \new LinearMap {
+    | func => \lam r j => r (f j)
+    | func-+ => idp
+    | func-*c => idp
+  }
+  | Func-id => idp
+  | Func-o => idp

@@ -1,0 +1,16 @@
+\import Data.Or
+\import Equiv
+\import Equiv.Path
+\import Equiv.Univalence
+\import Logic.Unique
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\lemma Set-lemma' {A : \Type} (R : A -> A -> \Type) (c : \Pi {a a' : A} -> isProp (R a a')) (p : \Pi {a : A} -> R a a) (q : \Pi {a a' : A} -> R a a' -> a = a') : isSet A 
+  => {?hidden_proof}
+
+\lemma Set-lemma {A : \Type} (R : A -> A -> \Prop) (p : \Pi {a : A} -> R a a) (q : \Pi {a a' : A} -> R a a' -> a = a') : isSet A => {?hidden_proof}
+
+\lemma Hedberg {A : \Type} (d : \Pi (a a' : A) -> (a = a') `Or` (a /= a')) : isSet A => {?hidden_proof}

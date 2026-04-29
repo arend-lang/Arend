@@ -1,0 +1,100 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed.PointedHom
+\import Algebra.Ring
+\import Algebra.Pointed
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Algebra.Solver
+\import Algebra.Solver.Monoid
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Data.Array(Big, map \as arrayMap)
+\import Data.List
+\import Function.Meta
+\import Meta
+\import Order.Lexicographical
+\import Order.LinearOrder
+\import Paths
+\import Paths.Meta
+\import Prelude \hiding (nil, ::)
+\import Set
+\open Sort
+
+\func SemiringSolverModel (R : Semiring) : SolverModel R \cowith
+  | Term => Term Nat
+  | NF => NF Nat
+  | normalize => normalize
+  | interpret => \lam env => (SemiringData env).interpret
+  | interpretNF => \lam env => (SemiringData env).interpretNF
+  | interpretNF-consistent => \lam {_} {env} => (SemiringData env).interpretNF-consistent
+  \where {
+\data Term (C : \Set) (n : Nat) 
+      | var (Fin n)
+      | coef C
+      | :zro
+      | :ide
+      | \infixl 6 :+ (t s : Term C n)
+      | \infixl 7 :* (t s : Term C n)
+
+    \func NF (C : \Set) (n : Nat) => List (\Sigma (List (Fin n)) C)
+
+    \func normalize {n : Nat} {C : Semiring} {D : DecSet C} (t : Term C n) : NF C n \elim t
+      | var v => (v :: nil, 1) :: nil
+      | coef c => (nil, c) :: nil
+      | :zro => nil
+      | :ide => (nil, 1) :: nil
+      | t :+ s => normalize t ++ normalize s
+      | t :* s => remove0 (collapse (multiply (normalize t) (normalize s)))
+
+    \func multiply {n : Nat} {C : Monoid} (l1 l2 : NF C n) : NF C n \elim l2
+      | nil => nil
+      | l2 => multiply' l1 l2 nil
+
+    \func multiply' {n : Nat} {C : Monoid} (l1 l2 acc : NF C n) : NF C n \elim l1
+      | nil => acc
+      | :: a l1 => multiply' l1 l2 (map (\lam b => (a.1 ++ b.1, a.2 * b.2)) l2 ++ acc)
+
+    \func collapse1 {n : Nat} {C : AddMonoid} (c : C) (m : List (Fin n)) (l : NF C n) : NF C n \elim l
+      | nil => (m, c) :: nil
+      | :: a' l => \case decideEq m a'.1 \with {
+        | yes _ => collapse1 (c + a'.2) a'.1 l
+        | no _ => (m, c) :: collapse1 a'.2 a'.1 l
+      }
+
+    \func collapse {n : Nat} {C : AddMonoid} (l : NF C n) : NF C n 
+      | nil => nil
+      | :: a l => collapse1 a.2 a.1 l
+
+    \func remove0 {n : Nat} {C : AddPointed} {D : DecSet C} (l : NF C n) : NF C n \elim l
+      | nil => nil
+      | :: a l => \case decideEq a.2 0 \with {
+        | yes e => remove0 l
+        | no n => a :: remove0 l
+      }
+
+\class Data {
+      | R : Semiring
+      | C : Semiring
+      | D : LinearOrder.Dec C
+      | alg : SemiringHom C R
+      | env : Array R
+      | alg-comm (x : C) (y : R) : alg x R.* y = y R.* alg x
+    }
+
+    \func natCoef (x : Nat) : R 
+      | 0 => 0
+      | 1 => 1
+      | n => R.natCoef n
+
+    \lemma natCoef-correct {n : Nat} : R.natCoef n = natCoef n => {?hidden_proof}
+
+    \lemma natMap' : SemiringHom NatSemiring R natCoef => {?hidden_proof}
+
+    \func SemiringData (env : Array R) : Data R NatSemiring NatSemiring natMap' env \cowith
+      | alg-comm => \lam n a => inv (pmap (* a) natCoef-correct) *> natComm n a *> pmap (a *) natCoef-correct
+
+    \lemma apply-axiom (env : Array R) (t s : Term Nat env.len) (p : (SemiringData env).interpret t = (SemiringData env).interpret s) (left right add : NF Nat env.len) => {?hidden_proof}
+  }

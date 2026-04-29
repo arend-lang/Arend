@@ -1,0 +1,150 @@
+\import Algebra.Domain
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Group.GroupCategory
+\import Algebra.Group.GroupHom
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Smith
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.ModuleCategory
+\import Algebra.Module.FinModule
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Nat
+\import Category
+\import Data.Array
+\import Data.Or
+\import Equiv
+\import Function(Image)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\open LModule \hiding (count)
+
+\class VectorSpace \extends LModule {
+  \override R : DiscreteField
+}
+
+\class FinVectorSpace \extends VectorSpace, FinModule
+
+\func rank {R : SmithDomain} {n m : Nat} (A : Matrix R n m) : Nat => firstNonZero (rank-array A).1
+  \where {
+    \func firstNonZero {R : CRing.Dec} (l : Array (DivQuotient R)) : Nat => \case find (\lam a => dec_decide (R.divQuotient_dec0 a)) l \with {
+      | inl s => s.1
+      | inr _ => l.len
+    }
+
+    \lemma firstNonZero_<= {R : CRing.Dec} {l : Array (DivQuotient R)} (c : \Pi {i j : Fin l.len} -> i NatSemiring.<= j -> l i = in~ 0 -> l j = in~ 0) {k : Fin l.len} :
+      firstNonZero l <= k <-> l k = in~ 0 => {?hidden_proof}
+
+    \lemma firstNonZero<=len {R : CRing.Dec} {l : Array (DivQuotient R)} : firstNonZero l <= l.len => {?hidden_proof}
+
+    \lemma rank-array {R : SmithDomain} {n m : Nat} (A : Matrix R n m) : \level (\Sigma (d : Array (DivQuotient R) (n ∧ m)) 
+      (∃ (B : Matrix R n m) (A M~ B) (IsSmith B) ∀ j (d j = in~ (B (fin-inc_<= meet-left j) (fin-inc_<= meet-right j))))) (\lam (d, inP (B, A~B, Bs, q)) (d', inP (B', A~B', B's, q')) =>
+        ext $ exts (\lam j => q j *> ~-pequiv (smith-unique.smith-div-equiv B's Bs (~-transitive (~-symmetric A~B') A~B) _ _) *> inv (q' j))) => {?hidden_proof}
+
+    \lemma rank-array_M~ {R : SmithDomain} {n m : Nat} {A B : Matrix R n m} (A~B : A M~ B) : (rank-array A).1 = (rank-array B).1 => {?hidden_proof}
+
+    \lemma rank_M~ {R : SmithDomain} {n m : Nat} {A B : Matrix R n m} (A~B : A M~ B) : rank A = rank B => {?hidden_proof}
+
+    \lemma rank-array_smith {R : SmithDomain} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) :
+      (rank-array A).1 = mkArray (\lam (j : Fin (n ∧ m)) => DivQuotient.inD (A (fin-inc_<= meet-left j) (fin-inc_<= meet-right j))) => {?hidden_proof}
+
+    \lemma rank_smith {R : SmithDomain} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) :
+      rank A = firstNonZero (\lam (j : Fin (n ∧ m)) => DivQuotient.inD (A (fin-inc_<= meet-left j) (fin-inc_<= meet-right j))) => {?hidden_proof}
+
+    \lemma rank_transpose {R : SmithDomain} {n m : Nat} {A : Matrix R n m} : rank (transpose A) = rank A => {?hidden_proof}
+
+    \lemma rank_<= {R : SmithDomain} {n m : Nat} {A : Matrix R n m} {k : Nat} (p : k < n) (q : k < m) :
+      rank A <= k <-> ((rank-array A).1 (toFin k $ <_meet-univ p q) = in~ 0) => {?hidden_proof}
+
+    \lemma rank_smith_<= {R : SmithDomain} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) {k : Nat} (p : k < n) (q : k < m) : rank A <= k <-> (A (toFin k p) (toFin k q) = 0) => {?hidden_proof}
+  }
+
+
+\lemma rank<=rows {R : SmithDomain} {n m : Nat} {A : Matrix R n m} : rank A <= n => {?hidden_proof}
+
+\lemma rank<=columns {R : SmithDomain} {n m : Nat} {A : Matrix R n m} : rank A <= m => {?hidden_proof}
+
+\lemma smith-bases {R : SmithDomain} {U V : LModule R} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) (f : LinearMap U V) :
+∃ (lu' : Array U lu.len) (U.IsBasis lu') (lv' : Array V lv.len) (bv' : V.IsBasis lv') (d : Array R lu.len) 
+  (\Pi (j : Fin lu.len) -> f (lu' j) = d j *c fit V.zro lv' j) (\Pi (j : Fin lu.len) -> (d j = 0) <-> rank (toMatrix lu' bv' f) <= j) => {?hidden_proof}
+  \where {
+    \open LinearMap
+    \open Monoid
+
+    \lemma M~_toLinearMap {R : Ring} {U V : LModule R} {lu : Array U} {lv : Array V} (bu : U.IsBasis lu) (bv : V.IsBasis lv) {A B : Matrix R lu.len lv.len} (A~B : A M~ B) :
+      ∃ (lu' : Array U lu.len) (lv' : Array V lv.len) (bu' : U.IsBasis lu') (bv' : V.IsBasis lv') (toLinearMap bu lv A = toLinearMap bu' lv' B) => {?hidden_proof}
+  }
+
+
+\instance image-fin {R : SmithDomain} {U V : FinModule R} (f : LinearMap U V) : FinModule 
+  | LModule => ImageLModule f
+  | isFinModule => \case U.isFinModule, V.isFinModule \with {
+    | inP (lu, bu), inP (lv, bv) => TruncP.map (basis f bu bv) (\lam s => (s.1, s.2))
+  }
+  \where {
+    \lemma basis {U V : LModule R} (f : LinearMap U V) {lu' : Array U} (bu' : U.IsBasis lu') {lv' : Array V} (bv' : V.IsBasis lv') :
+      ∃ (l : Array (Image f)) (IsBasis {ImageLModule f} l) (l.len = rank (LinearMap.toMatrix lu' bv' f)) => {?hidden_proof}
+
+    \lemma dimension_rank {f : LinearMap U V} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) :
+      FinModule.dimension (image-fin f) = rank (LinearMap.toMatrix lu bv f) => {?hidden_proof}
+  }
+
+
+\instance kernel-fin {R : SmithDomain} {U V : FinModule R} (f : LinearMap U V) : FinModule 
+  | LModule => KerLModule f
+  | isFinModule => \case U.isFinModule, V.isFinModule \with {
+    | inP (_, bu'), inP (_, bv') => \case smith-bases bu' bv' f \with {
+      | inP (lu : Array, bu, lv : Array, bv, d, g, d0) => 
+        \have | KerFin : FinSet (\Sigma (j : Fin lu.len) (d j = 0)) => SigmaFin (FinFin lu.len) (\lam j => DecFin (decideEq (d j) 0))
+              | kb : LModule.IsBasisSet {KerLModule f} (\lam s => (lu s.1, g s.1 *> pmap (*c _) s.2 *> V.*c_zro-left)) => (LinearMap.IsIndependentSet_func
+                {KerLModuleHom f} $ LModule.IsIndependentSet-right-inj (\lam p => ext p) ((U.IsIndependent<->IsIndependentSet {lu}).1 bu.1),
+                \lam x => inP (map (\lam s => (U.basis-split bu x.1 s.1, s)) (filter0 d),
+                ext $ U.basis-split-char {_} {bu} *> filter0_BigSum d (\lam j => basis-split bu x.1 j *c lu j)
+                (\lam j dj/=0 => pmap (*c _)  (\case LinearOrder.dec<_<= j lv.len \with {
+                | inl j<lv => Domain.nonZero-right dj/=0 $ inv (fit_<' (\lam j => basis-split bu x.1 j R.* d j) j<lv) *> bv.1 (fit zro (\lam j => U.basis-split bu x.1 j * d j))
+                          (path (\lam i => V.BigSum (\lam j => fit_map (*c lv j) {zro} V.*c_zro-left {_} {\lam j => basis-split bu x.1 j R.* d j} i j)) *> V.fit-transpose 
+                  (\lam j k => basis-split bu x.1 k * d k *c lv j) *> pmap V.BigSum    (exts (\lam k => later (\case LinearOrder.dec<_<= k lv.len \with {
+                    | inl k<lv => fit_< (\lam i => basis-split bu x.1 k * d k *c lv i) k<lv *> pmap (_ *c) (inv (fit_< lv k<lv))
+                    | inr lv<=k => fit_>= (\lam i => basis-split bu x.1 k * d k *c lv i) lv<=k *> inv 
+                      (pmap (*c _) (pmap (_ *) ((d0 k).2 $ rank<=columns <=∘ lv<=k) *> R.zro_*-right) *> V.*c_zro-left)}) *> *c-assoc *> inv 
+                  (func-*c *> pmap (_ *c) (g k)))) *> inv (pmap f (U.basis-split-char {_} {bu}) *> f.func-BigSum) *> x.2) (toFin j j<lv)
+                | inr lv<=j => absurd $ dj/=0 ((d0 j).2 $ rank<=columns <=∘ lv<=j)}) *> *c_zro-left) *> inv (KerLModuleHom f).func-BigSum)
+              )
+        \in basisSet_basis KerFin kb
+    }
+  }
+  \where {
+    \func filter0 {R : AddGroup.Dec} (ds : Array R) : Array (\Sigma (j : Fin ds.len) (ds j = 0)) \elim ds
+      | nil => nil
+      | d :: ds => \case decideEq d 0 \with {
+        | yes d=0 => (0, d=0) :: map (later (\lam s => (suc s.1, s.2))) (filter0 ds)
+        | no d/=0 => map (later (\lam s => (suc s.1, s.2))) (filter0 ds)
+      }
+
+    \lemma filter0_BigSum {R : AddGroup.Dec} {A : AddMonoid} (ds : Array R) (f : Fin ds.len -> A) (p : \Pi (j : Fin ds.len) -> ds j /= 0 -> f j = 0) :
+      A.BigSum f = A.BigSum (\lam j => f (filter0 ds j).1) => {?hidden_proof}
+  }
+
+
+\func dependency-dec {R : SmithDomain} {U : FinModule R} (l : Array U) : Or (U.IsDependent l) (U.IsIndependent l) => 
+  \let K => kernel-fin {R} {ArrayFinModule l.len} (arrayLinearMap l)
+  \in cases (FinModule.dimension {R} K arg addPath)

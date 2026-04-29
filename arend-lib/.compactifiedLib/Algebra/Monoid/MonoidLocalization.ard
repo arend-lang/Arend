@@ -1,0 +1,69 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Sub
+\import Algebra.Pointed
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.PartialOrder
+\import Paths
+\import Relation.Equivalence
+\import Set
+
+\type LocType {M : CMonoid} (S : SubMonoid M) => Quotient ~
+  \where {
+    \func SType {M : CMonoid} (S : SubMonoid M) => \Sigma (x y : M) (S y)
+
+    \func \infix 4 ~ (a b : SType S) => a.1 * b.2 = b.1 * a.2
+
+    \func inl~ (a : SType S) : LocType S => in~ a
+
+    \lemma ~-lequiv {a b : SType S} (p : a ~ b) : inl~ a = inl~ b => {?hidden_proof}
+
+    \lemma ~-lequiv-right {a b : SType S} {c : M} (Sc : S c) (p : a.1 * b.2 * c = b.1 * a.2 * c) : inl~ a = inl~ b => {?hidden_proof}
+  }
+
+
+\instance LocMonoid {M : CMonoid} (S : SubMonoid M) : CMonoid (LocType S) 
+  | ide => in~ (1, 1, S.contains_ide)
+  | * => *
+  | ide-left => \lam {in~ a} => ~-lequiv equation.cMonoid
+  | *-assoc => \lam {in~ a} {in~ b} {in~ c} => ~-lequiv equation.cMonoid
+  | *-comm => \lam {in~ a} {in~ b} => ~-lequiv equation.cMonoid
+  \where {
+    \open LocType
+  }
+
+
+\type LocAbType {M : AbMonoid} (S : SubAddMonoid M) => Quotient ~
+  \where {
+    \func SType {M : AbMonoid} (S : SubAddMonoid M) => \Sigma (x y : M) (S y)
+
+    \func \infix 4 ~ (a b : SType S) => a.1 + b.2 = b.1 + a.2
+
+    \func inl~ (a : SType S) : LocAbType S => in~ a
+
+    \lemma ~-lequiv {a b : SType S} (p : a ~ b) : inl~ a = inl~ b => {?hidden_proof}
+
+    \lemma ~-lequiv-right {a b : SType S} {c : M} (Sc : S c) (p : a.1 + b.2 + c = b.1 + a.2 + c) : inl~ a = inl~ b => {?hidden_proof}
+  }
+
+
+\instance LocAbMonoid {M : AbMonoid} (S : SubAddMonoid M) : AbMonoid (LocAbType S) 
+  | zro => in~ (0, 0, S.contains_zro)
+  | + => +
+  | zro-left => \lam {in~ a} => ~-lequiv equation.abMonoid
+  | +-assoc => \lam {in~ a} {in~ b} {in~ c} => ~-lequiv equation.abMonoid
+  | +-comm => \lam {in~ a} {in~ b} => ~-lequiv equation.abMonoid
+  \where {
+    \open LocAbType
+  }
+
+
+\func MaxLocAbType (M : AbMonoid) => LocAbType {M} SubAddMonoid.max
+
+\instance GrothendieckAbGroup (M : AbMonoid) : AbGroup (MaxLocAbType M) 
+  | AbMonoid => LocAbMonoid SubAddMonoid.max
+  | negative => negative
+  | negative-left => \lam {in~ a} => LocAbType.~-lequiv equation.abMonoid

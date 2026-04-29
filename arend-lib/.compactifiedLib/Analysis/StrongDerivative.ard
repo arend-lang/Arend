@@ -1,0 +1,154 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Operations
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Subset
+\import Topology.TopAbGroup
+\import Topology.TopModule
+\import Topology.TopRing
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open IsDerivQuot
+\open ContMap
+\open ProductTopSpace
+
+\func IsDerivQuot {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} (f : Set.Total U -> Y) (f' : DerivDom U -> Y) : \Prop 
+  => ∀ {x : X} (Ux : U x) {h : R} {a : X} (Ua : U (x + h *c a)) (h *c f' ((x, (h, a)), (Ux, Ua)) = f (x + h *c a, Ua) - f (x, Ux))
+  \where {
+    \func DerivDom (U : Set X) => TopSub {X ⨯ (RingTopLModule R ⨯ X)} (\lam s => \Sigma (U s.1) (U (s.1 + s.2.1 *c s.2.2)))
+
+    \lemma unique (f : Set.Total U -> Y) (Uo : isOpen U) (f'1 f'2 : ContMap (DerivDom U) Y) (d1 : IsDerivQuot f f'1) (d2 : IsDerivQuot f f'2) {s : DerivDom U} : f'1 s = f'2 s 
+      => {?hidden_proof}
+
+    \lemma isDeriv (f : Set.Total U -> Y) (f' : ContMap (DerivDom U) Y) (Uo : isOpen U) (d : HasDeriv Uo f) (c : IsDerivQuot f f') {x : X} (Ux : U x) (a : X) :
+      deriv Uo f d (x, Ux) a = f' ((x, (0, a)), deriv.atZero {R} {X} {U} {(x, Ux)}) => {?hidden_proof}
+  }
+
+
+\func HasDeriv {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} (Uo : isOpen U) (f : Set.Total U -> Y) 
+  => ∃ (f' : ContMap (DerivDom U) Y) (IsDerivQuot f f')
+
+\lemma HasDeriv-cont {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} {Uo : isOpen U} {f : Set.Total U -> Y} (d : HasDeriv Uo f) : ContMap (TopSub U) Y f 
+  => {?hidden_proof}
+
+\func deriv-quot {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} (Uo : isOpen U) (f : Set.Total U -> Y) (d : HasDeriv Uo f) 
+(x : DerivDom U) : Y => (deriv-tuple Uo f d).1 x
+  \where {
+    \lemma deriv-tuple {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} (Uo : isOpen U) (f : Set.Total U -> Y) (d : HasDeriv Uo f) :
+      \level (\Sigma (f' : ContMap (DerivDom U) Y) (IsDerivQuot f f')) (\lam u v => ext $ exts (\lam s => IsDerivQuot.unique f Uo u.1 v.1 u.2 v.2)) => {?hidden_proof}
+  }
+
+
+\lemma deriv-isQuot {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} {Uo : isOpen U} {f : Set.Total U -> Y} (d : HasDeriv Uo f) : IsDerivQuot f (deriv-quot Uo f d) 
+  => {?hidden_proof}
+
+\lemma deriv-quot-cont {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} {Uo : isOpen U} {f : Set.Total U -> Y} (gx : ContMap R X) 
+(gh : ContMap R R) (ga : ContMap R X) (d : HasDeriv Uo f) {V : Set R} (Vc : ∀ {h : V} Given (U (gx h)) (U (gx h + gh h *c ga h))) :
+  ContMap (TopSub V) Y (\lam h => deriv-quot Uo f d ((gx h.1, (gh h.1, ga h.1)), Vc h.2)) => {?hidden_proof}
+
+\func deriv {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} (Uo : isOpen U) (f : Set.Total U -> Y) (d : HasDeriv Uo f) 
+(x : Set.Total U) : LinearMap X Y \cowith
+  | func => \lam a => deriv-quot Uo f d ((x.1, (0, a)), atZero)
+  | func-+ => \lam {a} {b} => (
+    \have u3 {h} u => transport U (pmap (_ +) (X.*c-ldistr {h}) *> inv +-assoc) u
+    \in nearField-map-unique (open-inter (func-cont {+-cont ∘ tuple (const x.1) (*c-cont ∘ tuple id (const (a + b)))} Uo) 
+          (func-cont {+-cont ∘ tuple (const x.1) (*c-cont ∘ tuple id (const a))} Uo)) 
+        (deriv-quot-cont (const x.1) id (const (a + b)) d (\lam u => later (x.2, u.1)))
+          (+-cont ∘ tuple (deriv-quot-cont (const x.1) id (const a) d (\lam u => later (x.2, u.2))) 
+          (deriv-quot-cont (+-cont ∘ tuple (const x.1) (*c-cont ∘ tuple id (const a))) id (const b) d (\lam u => later (u.2, u3 u.1))))
+          (\lam {h} u => deriv-isQuot d x.2 u.1 *> simplify (+-comm *> pmap (_ + f __) (ext $ pmap (_ +) *c-ldistr *> inv +-assoc)) *> inv 
+          (*c-ldistr *> pmap2 + (deriv-isQuot d x.2 u.2) (deriv-isQuot d u.2 (u3 u.1)))) {0} 
+        (transportInv U (pmap (_ +) X.*c_zro-left *> zro-right) x.2, transportInv U (pmap (_ +) X.*c_zro-left *> zro-right) x.2) *> pmap 
+        (_ + deriv-quot Uo f d __) (ext $ ext (pmap (_ +) X.*c_zro-left *> zro-right, idp)))
+  | func-*c => \lam {r} {a} => (unfold, unfold, unfold, rewrite R.zro_*-left)
+    in nearField-map-unique (func-cont {+-cont ∘ tuple (const x.1) (*c-cont ∘ tuple id (const (r *c a)))} Uo) 
+    (deriv-quot-cont (const x.1) id (const (r *c a)) d (\lam u => (x.2, u)))
+      (*c-cont ∘ tuple (const r) 
+      (deriv-quot-cont (const x.1) (*-cont ∘ tuple id (const r)) (const a) d (\lam u => (\box (x.2, transportInv (\lam y => U (x.1 + y)) *c-assoc u)))))
+      (\lam u =>
+      deriv-isQuot d x.2 u *> pmap (f __ - _) (ext $ pmap (_ +) (inv *c-assoc)) *> inv (deriv-isQuot d x.2 $ transportInv (\lam y => U (x.1 + y)) *c-assoc u) *> *c-assoc) 
+    {0} (transportInv U (pmap (_ +) X.*c_zro-left *> zro-right) x.2)
+  \where {
+    \lemma atZero {x : Set.Total U} {a : X} => {?hidden_proof}
+  }
+
+
+\func HasTDeriv {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} (f : X -> Y) => HasDeriv open-top (\lam s => f s.1)
+  \where {
+    \lemma make (f' : ContMap (ProductTopSpace X (ProductTopSpace R X)) Y) (d : IsTDerivQuot f f') : HasTDeriv f => {?hidden_proof}
+  }
+
+
+\func tderiv-quot {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} (f : X -> Y) (d : HasTDeriv f) (x : X) (h : R) (a : X) : Y 
+  => deriv-quot open-top (\lam s => f s.1) d ((x, (h, a)), ((), ()))
+
+\func IsTDerivQuot {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} (f : X -> Y) (f' : \Sigma X (\Sigma R X) -> Y) : \Prop 
+  => ∀ {x : X} {h : R} {a : X} (h *c f' (x, (h, a)) = f (x + h *c a) - f x)
+  \where {
+    \lemma isTDeriv (f' : ContMap (ProductTopSpace X (ProductTopSpace R X)) Y) (d : HasTDeriv f) (c : IsTDerivQuot f f') (x a : X) : tderiv f d x a = f' (x, (0, a)) => {?hidden_proof}
+  }
+
+
+\lemma tderiv-isQuot {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {f : X -> Y} (d : HasTDeriv f) {x : X} {h : R} {a : X} :
+  h *c tderiv-quot f d x h a = f (x + h *c a) - f x => {?hidden_proof}
+
+\lemma tderiv-quot-cont {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {f : X -> Y} (gx : ContMap R X) (gh : ContMap R R) (ga : ContMap R X) 
+(d : HasTDeriv f) : ContMap R Y (\lam h => tderiv-quot f d (gx h) (gh h) (ga h)) => {?hidden_proof}
+
+\func tderiv {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} (f : X -> Y) (d : HasTDeriv f) (x : X) : LinearMap X Y 
+  => deriv open-top (\lam s => f s.1) d (x, ())
+
+\lemma deriv_linear {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} (f : LinearMap X Y) (fc : ContMap X Y f) (x a : X) : tderiv f has_deriv x a = f a => {?hidden_proof}
+  \where {
+    \lemma deriv-quot_linear : IsTDerivQuot f (\lam s => f s.2.2) => {?hidden_proof}
+
+    \lemma has_deriv : HasTDeriv f => {?hidden_proof}
+  }
+
+
+\lemma deriv_const {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} (y : Y) (x a : X) : tderiv (\lam _ => y) has_deriv x a = 0 => {?hidden_proof}
+  \where {
+    \lemma deriv-quot_const : IsTDerivQuot {R} {X} (\lam _ => y) (\lam _ => 0) => {?hidden_proof}
+
+    \lemma has_deriv : HasTDeriv {R} {X} (\lam _ => y) => {?hidden_proof}
+  }
+
+
+\lemma deriv_+ {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} (Uo : isOpen U) (f g : Set.Total U -> Y) (d1 : HasDeriv Uo f) 
+(d2 : HasDeriv Uo g) {x : X} (Ux : U x) (a : X) :
+  deriv Uo (\lam x => f x + g x) has_deriv (x, Ux) a = deriv Uo f d1 (x, Ux) a + deriv Uo g d2 (x, Ux) a => {?hidden_proof}
+  \where {
+    \lemma deriv-quot_+ : IsDerivQuot (\lam x => f x + g x) (\lam s => deriv-quot Uo f d1 s + deriv-quot Uo g d2 s) => {?hidden_proof}
+
+    \lemma isCont  => {?hidden_proof}
+
+    \lemma has_deriv : HasDeriv Uo (\lam x => f x + g x) => {?hidden_proof}
+  }
+
+
+\lemma deriv_*c {R : NearField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} (Uo : isOpen U) (f : Set.Total U -> Y) (d : HasDeriv Uo f) (c : R) {x : X} 
+(Ux : U x) (a : X) : deriv Uo (\lam x => c *c f x) has_deriv (x, Ux) a = c *c deriv Uo f d (x, Ux) a => {?hidden_proof}
+  \where {
+    \lemma deriv-quot_*c : IsDerivQuot (\lam x => c *c f x) (\lam s => c *c deriv-quot Uo f d s) => {?hidden_proof}
+
+    \lemma isCont  => {?hidden_proof}
+
+    \lemma has_deriv : HasDeriv Uo (\lam x => c *c f x) => {?hidden_proof}
+  }
+
+
+\lemma deriv-quot_bilinear {R : NearSkewField} {X : TopLModule R} {X1 X2 Y : HausdorffTopLModule R} {U : Set X} (Uo : isOpen U) (b : BilinearMap X1 X2 Y) (f : Set.Total U -> X1) 
+(g : Set.Total U -> X2) (d1 : HasDeriv Uo f) (d2 : HasDeriv Uo g) :
+  IsDerivQuot (\lam x => b (f x) (g x)) (\lam s => b (deriv-quot Uo f d1 s) (g (s.1.1 + s.1.2.1 *c s.1.2.2, s.2.2)) + b (f (s.1.1, s.2.1)) (deriv-quot Uo g d2 s)) 
+  => {?hidden_proof}

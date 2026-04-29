@@ -1,0 +1,29 @@
+\import Function.Meta
+\import Homotopy.Loop
+\import Homotopy.Pointed \using ( Pointed \as HPointed )
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\class Algebraic-Eckmann-Hilton {
+  | X : \Type
+  | \infix 7 o : X -> X -> X
+  | \infix 7 # : X -> X -> X
+  | id_o : X
+  | id_o-left {x : X} : id_o o x = x
+  | id_o-right {x : X} : x o id_o = x
+  | id_# : X
+  | id_#-left {x : X} : id_# # x = x
+  | id_#-right {x : X} : x # id_# = x
+  | rel {a b c d : X} : (a # b) o (c # d) = (a o c) # (b o d)
+}
+
+\func RightHorizontalWhiskering {X : \Type} {a b c : X} {p q : a = b} (alp : p = q) (r : b = c) : p *> r = q *> r => path (\lam i => (alp @ i) *> r)
+
+\func RightHorizontalWhiskering-relation {X : \Type} {a b : X} {p q : a = b} (alp : p = q) : RightHorizontalWhiskering alp (idp {X} {b}) = alp => idp
+
+\func LeftHorizontalWhiskering {X : \Type} {a b c : X} (q : a = b) {r s : b = c} (bet : r = s) : q *> r = q *> s => path (\lam i => q *> (bet @ i))
+
+\class Omega^2-Commutative {
+  | X : HPointed
+}

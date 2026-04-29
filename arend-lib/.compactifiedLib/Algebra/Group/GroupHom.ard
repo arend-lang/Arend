@@ -1,0 +1,46 @@
+\import Algebra.Group
+\import Algebra.Group.Sub
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+
+\class GroupHom \extends MonoidHom {
+  \override Dom : Group
+  \override Cod : Group
+  | func-ide => cancel_*-left (func ide) $ inv func-* *> pmap func ide-left *> inv ide-right
+}
+  \where {
+    \func id {G : Group} : GroupHom G G \cowith
+      | func => \lam x => x
+      | func-* => idp
+
+    \func \infixl 8 compose \alias \infixl 8 ∘ {G H K : Group} (g : GroupHom H K) (f : GroupHom G H) : GroupHom G K \cowith
+      | func => \lam x => g (f x)
+      | func-* => pmap g f.func-* *> g.func-*
+  }
+
+
+\class AddGroupHom \extends AddMonoidHom {
+  \override Dom : AddGroup
+  \override Cod : AddGroup
+  | func-zro => AddGroup.cancel-left (func 0) (inv func-+ *> pmap func zro-right *> inv zro-right)
+}
+  \where {
+    \func toGroupHom {G H : AddGroup} (f : AddGroupHom G H) : GroupHom (AddGroup.toGroup G) (AddGroup.toGroup H) \cowith
+      | func => \lam x => f x
+      | func-* => f.func-+
+
+    \func fromGroupHom {G H : Group} (f : GroupHom G H) : AddGroupHom (AddGroup.fromGroup G) (AddGroup.fromGroup H) \cowith
+      | func => \lam x => f x
+      | func-+ => f.func-*
+
+    \func id {G : AddGroup} : AddGroupHom G G \cowith
+      | func => \lam x => x
+      | func-+ => idp
+  }

@@ -1,0 +1,197 @@
+\import Algebra.Domain
+\import Algebra.Domain.Bezout
+\import Algebra.Domain.GCD
+\import Algebra.Domain.PID
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Int
+\import Arith.Nat
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Classical
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set \hiding (#)
+\import Set.Fin
+\open Monoid(LDiv, Inv)
+
+\class EuclideanSemiringData \extends CSemiring, DecSet {
+  | euclideanMap : E -> Nat
+  | divMod : E -> E -> \Sigma E E
+  | isDivMod (x y : E) : y * (divMod x y).1 + (divMod x y).2 = x
+  | isEuclideanMap (x y : E) : y /= 0 -> (divMod x y).2 /= 0 -> euclideanMap (divMod x y).2 < euclideanMap y
+  | summandDiv {x y z d : E} (d/=0 : d /= 0) (p : d * x + y = d * z) : LDiv d y
+}
+  \where {
+    \func suc' (n : Nat) : Nat 
+      | 0 => 1
+      | suc n => suc (suc n)
+
+    \lemma suc'=suc (n : Nat) : suc' n = suc n => {?hidden_proof}
+  }
+
+
+\open EuclideanSemiringData
+
+\class EuclideanRingData \extends EuclideanSemiringData, CRing {
+  | summandDiv => \lam {x} {y} {z} {d} _ p => \new LDiv {
+    | inv => z - x
+    | inv-right => ldistr *> +-comm *> pmap (+ _) (inv p) *> simplify
+  }
+}
+
+\class EuclideanDomain \extends PID {
+  | isEuclidean : TruncP (EuclideanRingData {  | CRing => \this  | decideEq => decideEq})
+  | isBezout => \lam a b => TruncP.map isEuclidean
+    (\lam (d : EuclideanRingData {  | CRing => \this}) => ((d.bezout a b).1, (d.bezout a b).2, rewrite d.bezoutIdentity (GCD.res|val1 {d.gcd-isGCD a b}), 
+    rewrite d.bezoutIdentity (GCD.res|val2 {d.gcd-isGCD a b})))
+  | divChain => \lam a c => (\case isEuclidean \with {
+    | inP d => cases (a 0 arg addPath)
+  })
+}
+  \where {
+    \open DivQuotient
+
+    \lemma aux {R : EuclideanRingData} (n : Nat) (a : Fin (suc n) -> \Sigma (x : R) (x /= 0)) (c : \Pi (i : Fin n) -> TruncP (LDiv (a (suc i)).1 (a i).1)) (b : R) 
+    (a0|b : LDiv (a 0).1 b) (b|a0 : LDiv b (a 0).1) (p : euclideanMap b < n) : ∃ (i : Fin n) (LDiv (a i).1 (a (suc i)).1) => {?hidden_proof}
+  }
+
+
+\instance NatEuclidean : EuclideanSemiringData 
+  | CSemiring => NatSemiring
+  | euclideanMap => \lam n => n
+  | divMod => divMod
+  | isDivMod => divModProp
+  | isEuclideanMap => \lam n m m/=0 _ => (\case \elim m, m/=0 \with {
+    | 0, c => absurd (c idp)
+    | suc m, _ => fin_< (n mod suc m)
+  })
+  | decideEq => NatSemiring.decideEq
+  | summandDiv => summandDiv
+  \where {
+    \open Nat
+
+    \lemma gcd0_ {x : Nat} : NatEuclidean.gcd 0 x = x => {?hidden_proof}
+  }
+
+
+\instance IntEuclidean : EuclideanRingData 
+  | CRing => IntRing
+  | decideEq => IntRing.decideEq
+  | euclideanMap => iabs
+  | divMod => \lam x y => (
+    \let! (d, m) => Nat.divMod (iabs x) (iabs y)
+    \in (pos d * signum y * signum x, pos m * signum x))
+  | isDivMod => isDivMod
+  | isEuclideanMap => \lam x y y/=0 r/=0 => (
+    \have |y|/=0 : iabs y /= 0 => \case \elim y, y/=0 \with {
+            | 0, c => \lam _ => c idp
+            | pos suc _, c => \lam y=0 => c (pmap pos y=0)
+            | neg suc _, c => \lam y=0 => c (pmap neg y=0)
+          }
+    \in \case decideEq (signum x) 0 \with {
+          | yes x=0 => rewrite x=0 (nonZero>0 |y|/=0)
+          | no x/=0 => 
+            \have t : iabs (pos (iabs x Nat.mod iabs y) * signum x) = iabs x Nat.mod iabs y => iabs_* *> pmap (_ *) (iabs.signum_/=0 (x/=0 $ pmap signum __))
+            \in transport (< iabs y) (inv t) $ isEuclideanMap (iabs x) (iabs y) |y|/=0 (\lam e => r/=0 $ pmap (pos __ * _) e *> zro_*-left)
+        })
+  \where {
+    \func modToNat (m : Int) (p : \Sigma Int Int) : \Sigma Int Nat \elim p
+      | (q, pos n) => (q, n)
+      | (q, neg suc n) => (q - signum m, iabs (iabs m Nat.- suc n))
+
+    \func natDivMod (x y : Int) : \Sigma Int Nat => modToNat y (IntEuclidean.divMod x y)
+
+    \func \infixl 8 div (x y : Int) : Int => (natDivMod x y).1
+
+    \func \infixl 8 mod (x y : Int) : Nat => (natDivMod x y).2
+
+    \lemma intMod<right (x : Int) (n : Nat) : iabs (IntEuclidean.divMod x (suc n)).2 < suc n => {?hidden_proof}
+
+    \lemma natMod<right (x : Int) (n : Nat) : x mod suc n < suc n => {?hidden_proof}
+
+    \lemma divModProp (x y : Int) (y/=0 : y /= 0) : y * x div y + x mod y = x => {?hidden_proof}
+
+    \lemma natDivModProp (x : Int) (n : Nat) : pos (suc n) * x div suc n + x mod suc n = x => {?hidden_proof}
+
+    \lemma mod-unique {q q' : Int} {n r r' : Nat} (r<n : r < n) (r'<n : r' < n) (p : pos n * q + r = pos n * q' + r') : r = r' => {?hidden_proof}
+      \where {
+        \lemma aux (x y x' y' : Int) (p : x + y = negative x' + y') : (x' + x) + y = y' => {?hidden_proof}
+      }
+
+
+    \lemma natMod=mod' (x n : Nat) : (IntEuclidean.divMod x n).2 = x Nat.mod n => {?hidden_proof}
+
+    \lemma natMod=mod (x n : Nat) : x mod n = x Nat.mod n => {?hidden_proof}
+  }
+
+
+\instance IntDomain : EuclideanDomain 
+  | CRing => IntRing
+  | zro#ide => \case __ \with {}
+| #0-* => #0-*
+| decideEq => IntRing.decideEq
+| isEuclidean => inP IntEuclidean
+
+\lemma ldiv_nat_int (d : LDiv {NatSemiring}) : LDiv (pos d.val) (pos d.elem) (pos d.inv) => {?hidden_proof}
+
+\lemma ldiv_int_nat (d : LDiv {IntRing}) : LDiv (iabs d.val) (iabs d.elem) (iabs d.inv) => {?hidden_proof}
+
+\lemma inv_nat_int (d : Inv {NatSemiring}) : Inv (pos d.val) (pos d.inv) => {?hidden_proof}
+
+\lemma inv_int_nat (d : Inv {IntRing}) : Inv (iabs d.val) (iabs d.inv) => {?hidden_proof}
+
+\lemma inv_abs {x : Int} (d : Inv (iabs x)) : Inv x => {?hidden_proof}
+
+\func gcd_nat_int (g : GCD {NatSemiring}) : GCD (pos g.val1) (pos g.val2) (pos g) \cowith
+  | res|val1 => ldiv_nat_int g.res|val1
+  | res|val2 => ldiv_nat_int g.res|val2
+  | res-univ => \lam g' g'|a g'|b => (
+    \have abs_g'|g : LDiv (iabs g') g => g.res-univ (iabs g') (ldiv_int_nat g'|a) (ldiv_int_nat g'|b)
+    \in \new LDiv {
+          | inv => signum g' * abs_g'|g.inv
+          | inv-right => inv *-assoc *> pmap (* _) (inv iabs.signum_*) *> pmap pos abs_g'|g.inv-right
+        })
+
+\func gcd_int_nat (g : GCD {IntRing}) : GCD (iabs g.val1) (iabs g.val2) (iabs g) \cowith
+  | res|val1 => ldiv_int_nat g.res|val1
+  | res|val2 => ldiv_int_nat g.res|val2
+  | res-univ => \lam g' (g'|a : LDiv) (g'|b : LDiv) => (
+    \have pos_g'|g : LDiv (pos g') g =>
+          g.res-univ (pos g') (\new LDiv {  | inv => pos g'|a.inv * signum g.val1  | inv-right => inv *-assoc *> pmap (pos __ * _) g'|a.inv-right *> iabs.*_signum})
+            (\new LDiv {  | inv => pos g'|b.inv * signum g.val2  | inv-right => inv *-assoc *> pmap (pos __ * _) g'|b.inv-right *> iabs.*_signum})
+    \in \new LDiv {
+          | inv => iabs pos_g'|g.inv
+          | inv-right => inv iabs_* *> pmap iabs pos_g'|g.inv-right
+        })
+
+\lemma nat_gcd-isUnique {n m : Nat} (g g' : GCD n m) : g.res = g'.res => {?hidden_proof}
+
+\lemma int_gcd-isUnique {x y : Int} (g g' : GCD x y) : iabs g = iabs g' => {?hidden_proof}
+
+\lemma int_gcd_pos {n m : Nat} : gcd (pos n) (pos m) = pos (gcd n m) => {?hidden_proof}
+  \where {
+    \lemma aux (s : Nat) {n m : Nat} : gcd-fueled s (pos n) (pos m) = iabs (gcd-fueled s (pos n) (pos m)) => {?hidden_proof}
+  }
+
+
+\lemma nat_gcd_sum (a b d : Nat) : gcd (a + b * d) b = gcd a b => {?hidden_proof}
+
+\func nat_gcd_*_div {a b c : Nat} (a|bc : LDiv a (b * c)) (a_b : gcd a b = 1) : LDiv a c 
+=> ldiv_int_nat $ Domain.Dec.LDiv_TruncP $ IntDomain.coprime_*_div {pos a} {pos b} {pos c} (ldiv_nat_int a|bc) $ IsCoprime.<=gcd $ gcd_nat_int $ transport 
+  (GCD a b __) a_b (gcd-isGCD a b)
+
+\lemma nat_gcd-comm {a b : Nat} : gcd a b = gcd b a => {?hidden_proof}

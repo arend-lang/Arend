@@ -1,0 +1,15 @@
+\import Logic
+\import Order.LinearOrder
+\import Order.StrictOrder
+\import Paths
+\open LinearOrder
+
+\instance LexicographicalArray {n : Nat} (A : Dec) : Dec (Array A n) 
+  | < => <A
+  | <-irreflexive => <-irreflexive
+  | <-transitive => <-transitive
+  | trichotomy => trichotomy
+  \where {
+\data \infix 4 <A {n : Nat} {A : Dec} (l1 l2 : Array A n) : \Prop \elim n, l1, l2
+      | suc n, a :: as, b :: bs => <head (a < b) <tail (a = b) (as <A bs)
+  }

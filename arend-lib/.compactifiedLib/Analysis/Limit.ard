@@ -1,0 +1,138 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Logic.TFAE
+\import Meta
+\import Order.Biordered
+\import Order.Directed
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Set.Partial
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Directed
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.TopAbGroup
+\import Topology.TopRing
+\import Topology.TopSpace
+\import Topology.UniformSpace
+
+\func IsConvergent {I : DirectedSet} {X : CoverSpace} (f : I -> X) : \Prop => CoverMap (DirectedCoverSpace I) X f
+
+\lemma convergent-char {I : DirectedSet} {X : CoverSpace} {f : I -> X} (p : ∀ {C : X.isCauchy} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))) : IsConvergent f => {?hidden_proof}
+  \where {
+    \lemma conv {I : DirectedSet} {X : CoverSpace} {f : I -> X} (fc : IsConvergent f) : ∀ {C : X.isCauchy} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n)) => {?hidden_proof}
+  }
+
+
+\lemma limit-conv {I : DirectedSet} {X : CoverSpace} {f : I -> X} {l : X} (fl : X.IsLimit f l) : IsConvergent f => {?hidden_proof}
+
+\func limit {I : DirectedSet} {X : CompleteCoverSpace} (f : I -> X) : Partial X \cowith
+  | isDefined => IsConvergent f
+  | value => \lam fc => completion-lift fc infPoint
+  \where {
+    \func infPoint {I : DirectedSet} : Completion (DirectedCoverSpace I) => CompleteCoverSpace.filter-point $ completion.func-cauchy EventualityFilter
+
+    \lemma char (fc : CoverMap (DirectedCoverSpace I) X) : limit fc fc = CompleteCoverSpace.filter-point (fc.func-cauchy EventualityFilter) => {?hidden_proof}
+  }
+
+
+\lemma limit-isLimit {I : DirectedSet} {X : CompleteCoverSpace} {f : I -> X} {fc : IsConvergent f} : X.IsLimit f (limit f fc) => {?hidden_proof}
+
+\lemma limit-char {I : DirectedSet} {X : CompleteCoverSpace} {f : I -> X} {l : X} : (limit f = defined l) <-> X.IsLimit f l => {?hidden_proof}
+
+\lemma limit-apply {I : DirectedSet} {X Y : CompleteCoverSpace} {f : I -> X} {fc : IsConvergent f} {g : X -> Y} (gc : CoverMap X Y g) :
+  g (limit f fc) = limit (\lam i => g (f i)) (gc CoverMap.∘ fc) => {?hidden_proof}
+
+\lemma limit-ext {I : DirectedSet} {X : CompleteCoverSpace} (f g : I -> X) {fc : IsConvergent f} {gc : IsConvergent g} (p : \Pi (i : I) -> f i = g i) : limit f fc = limit g gc 
+  => {?hidden_proof}
+
+\lemma convergent-uniform-char {I : DirectedSet} {X : RegularPreuniformSpace} {f : I -> X} (p : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n))) : IsConvergent f => {?hidden_proof}
+  \where {
+    \lemma conv {I : DirectedSet} {X : RegularPreuniformSpace} {f : I -> X} (fc : IsConvergent f) : ∀ {C : X.isUniform} ∃ (U : C) (N : I) ∀ {n} (N <= n -> U (f n)) => {?hidden_proof}
+  }
+
+
+\lemma convergent-topAbGroup-char {I : DirectedSet} {X : TopAbGroup} {f : I -> X} : TFAE (IsConvergent f, ∀ {U : X.isOpen} (U 0) ∃ (N : I) ∀ {n m} (N <= n -> n <= m -> U (f m - f n)), 
+  ∀ {U : X.isOpen} (U 0) ∃ (N : I) ∀ {n} (N <= n -> U (f n - f N))) => {?hidden_proof}
+
+\lemma convergent-metric-char {I : DirectedSet} {X : ExPseudoMetricSpace} {f : I -> X} :
+  IsConvergent f <-> ∀ {eps : Rat} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> (dist (f n) (f N)).U eps) => {?hidden_proof}
+  \where {
+    \lemma double (fc : IsConvergent f) {eps : Rat} (eps>0 : 0 < eps) : ∃ (N : I) ∀ {n m} (N <= n -> N <= m -> (dist (f n) (f m)).U eps) => {?hidden_proof}
+  }
+
+
+\lemma convergent-metric-real {I : DirectedSet} {X : PseudoMetricSpace} {f : I -> X} :
+  IsConvergent f <-> ∀ {eps : Real} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> X.dist (f n) (f N) < eps) => {?hidden_proof}
+
+\lemma limit-metric-char {I : DirectedSet} {X : ExPseudoMetricSpace} {f : I -> X} {l : X} : X.IsLimit f l <-> ∀ {eps} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> (dist l (f n)).U eps) 
+  => {?hidden_proof}
+
+\lemma nat-limit-metric {X : ExPseudoMetricSpace} {f : Nat -> X} {l : X} (fb : (dist l (f 0)).IsBounded) {d : ExUpperReal} (d>=0 : 0 <= d) (d<1 : d.U 1) 
+(dp : \Pi (n : Nat) -> dist l (f (suc n)) <= d * dist l (f n)) : X.IsLimit f l => {?hidden_proof}
+  \where {
+    \lemma induction {B : Rat} (fB : (dist l (f 0)).U B) {q : Rat} (q>=0 : 0 <= q) (dq : \Pi (n : Nat) -> dist l (f (suc n)) <= ExUpperReal.fromRat q * dist l (f n)) 
+    (n : Nat) : dist l (f n) <= RatField.pow q n * B => {?hidden_proof}
+  }
+
+
+\lemma limit-metric-real {I : DirectedSet} {X : PseudoMetricSpace} {f : I -> X} {l : X} : X.IsLimit f l <-> ∀ {eps} (0 < eps) ∃ (N : I) ∀ {n} (N <= n -> X.dist l (f n) < eps) => {?hidden_proof}
+
+\lemma convergent-compose {I : DirectedSet} {X Y : CoverSpace} {f : I -> X} (fc : IsConvergent f) (g : CoverMap X Y) : IsConvergent (\lam n => g (f n)) => {?hidden_proof}
+
+\func SubPointDirectedSet {X : TopSpace} {U : Set X} (a : X) (Ua : X.IsLimitPoint a U) : DirectedSet \cowith
+  | E => Given (V : isOpen) (V a) (x : X) (V x) (U x)
+  | <= => \lam S T => T.1 ⊆ S.1
+  | <=-refl => <=-refl
+  | <=-transitive => \lam p q => q <=∘ p
+  | isInhabitted => \case Ua open-top () \with {
+    | inP (x, Ux, _) => inP (top, open-top, (), x, (), Ux)
+  }
+| isDirected => \lam (V, Vo, Va, _, _, _) (W, Wo, Wa, _, _, _) => (\case Ua (open-inter Vo Wo) (Va, Wa) \with {
+  | inP (z, Uz, (Vz, Wz)) => inP ((V ∧ W, open-inter Vo Wo, (Va, Wa), z, (Vz, Wz), Uz), meet-left, meet-right)
+})
+  \where {
+    \lemma limit-comp {I : DirectedSet} {X Y : TopSpace} {S : Set X} {lx : X} (Sa : X.IsLimitPoint lx S) {f : I -> X} (Sf : \Pi (n : I) -> S (f n)) (fl : X.IsLimit f lx) 
+    {g : Set.Total S -> Y} {ly : Y} (gl : Y.IsLimit {SubPointDirectedSet lx Sa} (\lam h => g (h.4, h.6)) ly) : Y.IsLimit (\lam n => g (f n, Sf n)) ly => {?hidden_proof}
+
+    \func map {X Y : TopSpace} (f : ContMap X Y) (g : Y -> X) (h : \Pi (y : Y) -> f (g y) = y) (a : Y) {U : Set Y} (Ua : Y.IsLimitPoint a U) {b : X} (p : g a = b) 
+    {V : Set X} (Vb : X.IsLimitPoint b V) (UV : \Pi {y : Y} -> U y -> V (g y)) (d : SubPointDirectedSet a Ua) : SubPointDirectedSet b Vb 
+      => (f ^-1 d.1, f.func-cont d.2, transportInv d.1 (pmap f (inv p) *> h a) d.3, g d.4, transportInv d.1 (h d.4) d.5, UV d.6)
+
+    \lemma limit-id {X : TopSpace} {U : Set X} {a : X} (Ua : X.IsLimitPoint a U) : X.IsLimit {SubPointDirectedSet a Ua} (\lam h => h.4) a => {?hidden_proof}
+
+    \lemma limit-char {X Y : TopSpace} {S : Set X} {a : X} (Sa : X.IsLimitPoint a S) (f : \Sigma (x : X) (S x) -> Y) {y : Y} :
+      Y.IsLimit {SubPointDirectedSet a Sa} (\lam h => f (h.4, h.6)) y <-> ∀ {V : Y.isOpen} (V y) ∃ (U : X.isOpen) (Ua : U a) ∀ {h : U} (Sh : S h) (V (f (h, Sh))) 
+      => {?hidden_proof}
+  }
+
+
+\func InvDirectedSet {R : NearSkewField} {S : Set R} (So : isOpen S) (S0 : S 0) : DirectedSet => SubPointDirectedSet {R} {(\lam h => Monoid.Inv h) ∧ S} 0 (aux So S0)
+  \where {
+    \lemma aux (So : isOpen S) (S0 : S 0) : R.IsLimitPoint 0 ((\lam h => Monoid.Inv h) ∧ S) => {?hidden_proof}
+
+    \lemma limit-id (So : isOpen S) (S0 : S 0) : R.IsLimit {InvDirectedSet So S0} (\lam h => h.4) 0 => {?hidden_proof}
+
+    \lemma limit-char {Y : TopSpace} (So : isOpen S) (S0 : S 0) {f : \Pi (h : Monoid.Inv {R}) -> S h -> Y} {y : Y} :
+    Y.IsLimit {InvDirectedSet So S0} (\lam h => f h.6.1 h.6.2) y <-> ∀ {V : Y.isOpen} (V y) ∃ (U : R.isOpen) (Ua : U 0) ∀ {h : U} 
+      (s : (\Sigma (Monoid.Inv h) (S h))) (V (f s.1 s.2)) => {?hidden_proof}
+  }

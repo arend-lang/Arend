@@ -1,0 +1,149 @@
+\import Algebra.Meta
+\import Algebra.Monoid (+, AddMonoid, zro-right)
+\import Arith.Fin
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Combinatorics.Binom
+\import Combinatorics.Combinations
+\import Combinatorics.Factorial
+\import Data.Array
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Category
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Algebra.Semiring
+\import Order.StrictOrder
+\import Set.Fin.Pigeonhole
+\open NatOrder
+\open NatSemiring
+
+\func Compositions (n k : Nat) => \Sigma (arr : Array (Fin n) k) (IsPositive arr) (AddMonoid.BigSum arr = n)
+
+\func WeakCompositions (n k : Nat) => \Sigma (arr : Array (Fin n) k) (AddMonoid.BigSum arr = n)
+
+\func IsPositive {k : Nat} (arr : Array Nat k) : \Prop
+  => \Pi (i : Fin k) -> 0 < arr i
+
+\instance IsPositive-dec {k : Nat} (arr : Array Nat k) : Decide (IsPositive arr)
+  | decide => FinDec.fin-dec (\lam i => LinearOrder.<-dec 0 (arr i))
+
+\func IsSum {k : Nat} (n : Nat) (arr : Array Nat k) : \Prop
+  => AddMonoid.BigSum arr = n
+
+\func IsSum-dec {k : Nat} (n : Nat) (arr : Array Nat k) : Dec (IsSum n arr)
+  => NatSemiring.decideEq (AddMonoid.BigSum arr) n
+
+\lemma BigSum_elem {k : Nat} {arr : Array Nat (suc k)} (i : Fin (suc k)) : arr i + AddMonoid.BigSum (skip arr i) = AddMonoid.BigSum arr \elim k, arr, i
+  | 0, a :: nil, 0 => zro-right
+  | suc k, a :: arr, 0 => idp
+  | suc k, a :: arr, suc i => equation.abMonoid {pmap (a +) (BigSum_elem {k} {arr} i)}
+
+\lemma <=_exists {a b n : Nat} (p : a + b = n) : a < suc n
+  => linarith
+
+\instance WeakCompositionsFin (n k : Nat) : FinSet (WeakCompositions n k)
+  => \let | S : FinSet => ArrayFin (FinFin n) k
+          | D : DecSubSet S => \new DecSubSet {
+              | contains arr => IsSum n arr
+              | isDec arr => IsSum-dec n arr
+            }
+          | F : FinSet D.ISet => SigmaFin.DecSubSet-isFin S D
+          | e : Equiv {D.ISet} {WeakCompositions n k} => \new QEquiv {
+              | f p => p
+              | ret p => p
+              | ret_f p => idp
+              | f_sec p => idp
+            }
+     \in \new FinSet {
+       | finCard => F.finCard
+       | finEq => TruncP.map F.finEq (`transEquiv` e)
+     }
+
+\instance CompositionsFin (n k : Nat) : FinSet (Compositions n k)
+  => \let | S : FinSet => WeakCompositionsFin n k
+          | D : DecSubSet S => \new DecSubSet {
+              | contains arr => IsPositive arr.1
+              | isDec arr => (IsPositive-dec arr.1).decide
+            }
+          | F : FinSet D.ISet => SigmaFin.DecSubSet-isFin S D
+          | e : Equiv {D.ISet} {Compositions n k} => \new QEquiv {
+              | f p => (p.1.1, p.2, p.1.2)
+              | ret p => ((p.1, p.3), p.2)
+              | ret_f p => idp
+              | f_sec p => idp
+            }
+     \in \new FinSet {
+       | finCard => F.finCard
+       | finEq => TruncP.map F.finEq (`transEquiv` e)
+     }
+
+-- | The partial sums map: given a weak composition (a_0, ..., a_{k-1}) of n into k parts,
+-- | produce a strictly increasing sequence (a_0, a_0+a_1+1, a_0+a_1+a_2+2, ...) in Fin (n+k-1).
+-- | This establishes: WeakCompositions n k ≃ Combinations (pred (n + k)) (pred k)
+-- | i.e., the number of weak compositions of n into k parts = C(n + k - 1, k - 1).
+
+\func partialSums {k : Nat} (arr : Array Nat k) : Array Nat k \elim k, arr
+  | 0, nil => nil
+  | suc k, a :: rest => a :: map (\lam x => suc (a + x)) (partialSums rest)
+
+\lemma partialSums-strictlyIncreasing {k : Nat} {arr : Array Nat k}
+  (i j : Fin k) (i<j : i < j) : partialSums arr i < partialSums arr j
+  \elim k, arr, i, j, i<j
+  | suc k, a :: rest, 0, suc j, _ => linarith
+  | suc k, a :: rest, suc i, suc j, suc<suc p =>
+    \have ih => partialSums-strictlyIncreasing {k} {rest} i j p
+    \in suc<suc (transport2 (\lam x y => x < y) (+-comm {partialSums rest i} {a}) (+-comm {partialSums rest j} {a}) (<_+-left a ih))
+
+\lemma partialSums-leq-sum {k : Nat} {arr : Array Nat k}
+  (i : Fin k) : partialSums arr i <= AddMonoid.BigSum arr + i
+  \elim k, arr, i
+  | suc k, a :: rest, 0 => linarith
+  | suc k, a :: rest, suc i =>
+    \have ih => partialSums-leq-sum {k} {rest} i
+    \in linarith
+
+\lemma partialSums-bound {n k : Nat} {arr : Array (Fin n) k} {_ : AddMonoid.BigSum arr = n}
+  (i : Fin k) : partialSums arr i < n + k
+  \elim k, arr, i
+  | suc k, a :: rest, i =>
+    \have | leq => partialSums-leq-sum {suc k} {a :: rest} i
+           | i<sk => fin_< i
+     \in linarith
+
+\lemma partialSums-strict-bound {n k : Nat} {arr : Array (Fin n) (suc k)} {sum_eq : AddMonoid.BigSum arr = n}
+  (i : Fin k) : partialSums arr i < n + k
+  => \have | leq => partialSums-leq-sum {suc k} {arr} i
+           | i<k => fin_< i
+     \in linarith
+
+\func weakComp-to-comb {n k : Nat} (w : WeakCompositions n (suc k)) : Combinations (n + k) k
+  => \new StrictPosetHom {
+    | Dom => FinOrder k
+    | Cod => FinOrder (n + k)
+    | func i => toFin (partialSums w.1 i) (partialSums-strict-bound {n} {k} {w.1} {w.2} i)
+    | func-< {i} {j} i<j =>
+      \have | mono => partialSums-strictlyIncreasing {suc k} {w.1} i j i<j
+            | ti=i => toFin=id {partialSums w.1 i} {n + k}
+            | tj=j => toFin=id {partialSums w.1 j} {n + k}
+      \in transport2 (<) (inv ti=i) (inv tj=j) mono
+  }
+
+\func comb-to-weakComp {n k : Nat} (c : Combinations (n + k) k) : WeakCompositions n (suc k)
+  => {?} -- recover the differences: a_0 = c(0), a_i = c(i) - c(i-1) - 1 for i > 0
+
+\func weakComp-comb-equiv {n k : Nat} : Equiv {WeakCompositions n (suc k)} {Combinations (n + k) k}
+  => {?}
+
+-- | Corollary: |WeakCompositions n (suc k)| = binom (n + k) k = C(n+k, k)
+-- | Equivalently, |WeakCompositions n k| = C(n + k - 1, k - 1) (the stars and bars theorem).
+\lemma weakCompositions-binom {n k : Nat}
+  : finCard {WeakCompositionsFin n (suc k)} = binom (n + k) k
+  => {?} -- follows from weakComp-comb-equiv and Combinations-binom

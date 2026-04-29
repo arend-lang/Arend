@@ -1,0 +1,69 @@
+\import Algebra.Group
+\import Algebra.Group.Sub
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Monoid.Sub
+\import Algebra.Pointed
+\import Algebra.Pointed.Sub
+\import Algebra.Ring
+\import Algebra.Ring.Ideal
+\import Data.Array
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Paths
+\import Paths.Meta
+
+\class SubLModule \extends SubAddGroup {
+  | R : Ring
+  \override S : LModule R
+  | contains_*c {a : R} {b : S} : contains b -> contains (a *c b)
+}
+
+\func topSubLModule {R : Ring} (M : LModule R) : SubLModule {
+  | R => R
+  | S => M
+} \cowith
+  | contains => \lam _ => \Sigma
+  | contains_zro => ()
+  | contains_+ => \lam _ _ => ()
+  | contains_negative => \lam _ => ()
+  | contains_*c => \lam _ => ()
+
+\instance SubLModuleSemilattice (R : Ring) (M : LModule R) : TopMeetSemilattice (SubLModule {  | R => R  | S => M}) 
+  | <= => \lam U V => \Pi {a : M} -> U a -> V a
+  | <=-refl => \lam c => c
+  | <=-transitive => \lam f g c => g (f c)
+  | <=-antisymmetric => \lam f g => exts (\lam _ => ext (f, g))
+  | meet => meet
+  | meet-left => __.1
+  | meet-right => __.2
+  | meet-univ => \lam f g c => (f c, g c)
+  | top => topSubLModule M
+  | top-univ => \lam _ => ()
+
+\func \infixl 7 *m {R : Ring} (I : LIdeal R) {M : LModule R} (S : SubLModule {  | R => R  | S => M}) : SubLModule {
+  | R => R
+  | S => M
+} \cowith
+  | contains => \lam a => ∃ (l : Array (\Sigma (x : R) (I x) M)) (a = M.BigSum (map (\lam s => s.1 *c s.3) l))
+  | contains_zro => inP (nil, idp)
+  | contains_+ => \lam inP s inP t => inP (s.1 ++ t.1, pmap2 + s.2 t.2 *> inv M.BigSum_++ *> pmap M.BigSum (inv (map_++ (\lam s => s.1 *c s.3))))
+  | contains_negative => \lam inP s => inP (map (later (\lam t => (negative t.1, contains_negative t.2, t.3))) s.1, 
+    pmap negative s.2 *> M.BigSum_negative *> pmap M.BigSum (exts (\lam _ => inv M.*c_negative-left)))
+  | contains_*c => \lam {a} {_} inP s =>
+    inP (map (later (\lam t => (a * t.1, ideal-left t.2, t.3))) s.1, pmap (a *c) s.2 *> M.*c_BigSum-ldistr *> pmap M.BigSum (exts (\lam _ => inv M.*c-assoc)))
+
+\func OneDimSubmod {R : Ring} {L : LModule R} (v : L) : SubLModule R L \cowith
+  | contains => \lam u => ∃ (r : R) (r *c v = u)
+  | contains_zro => inP (0, L.*c_zro-left)
+  | contains_+ => \lam p q => (\case \elim p, \elim q \with {
+    | inP r1, inP r2 => inP (r1.1 + r2.1, rewrite (*c-rdistr, r1.2, r2.2) idp)
+  })
+  | contains_negative => \lam p => (\case \elim p \with {
+    | inP r => inP (negative r.1, rewrite (L.*c_negative-left, pmap negative r.2) idp)
+  })
+  | contains_*c => \lam {a} p => (\case \elim p \with {
+    | inP r => inP (a * r.1, rewrite (*c-assoc, r.2) idp)
+  })

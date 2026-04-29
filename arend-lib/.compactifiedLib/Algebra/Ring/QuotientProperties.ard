@@ -1,0 +1,34 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.Factor
+\import Algebra.Ring.RingCategory
+\import Algebra.Ring.RingHom
+\import Category
+\import Category.Subcat
+\import Function(IsInj, IsSurj)
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+
+\func ringKerImageHom {R : CRing} {S : CRing} (f : RingHom R S) : RingHom (FactorRing (RingHom.KernelC f)) f.Image.IRing \cowith
+  | func => func
+  | func-+ => \lam {x} {y} => (\case \elim x, \elim y \with {
+    | in~ x, in~ y => ext $ rewrite f.func-+ idp
+  })
+  | func-ide => ext f.func-ide
+  | func-* => \lam {x} {y} => (\case \elim x, \elim y \with {
+    | in~ x, in~ y => ext $ rewrite f.func-* idp
+  })
+  \where {
+    \lemma isSurj : IsSurj (func {R} {S} {f}) => {?hidden_proof}
+
+    \lemma isInj : IsInj (func {R} {S} {f}) => {?hidden_proof}
+  }
+
+
+\lemma ringKerImageHom-iso {R S : CRing} (f : RingHom R S) : Iso {CRingCat} {FactorRing (RingHom.KernelC f)} {(RingHom.ImageC f).ICRing} (ringKerImageHom f) => {?hidden_proof}

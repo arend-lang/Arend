@@ -4,15 +4,20 @@
 \import Data.Or
 \import Equiv
 \import Equiv.Sigma
+\import Equiv.HalfAdjoint
 \import Function
 \import Function.Meta
 \import Logic
+\import Logic.Meta
+\import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta
 \import Set
 \import Set.Fin
 
+-- | If `S` and `Q i` are finite for each `i : S`, then `\Sigma (i : S) (Q i)` is also finite.
+-- The cardinality is given by the sum of cardinalities of `Q i`.
 \lemma SigmaFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Sigma (i : S) (Q i)) (AbMonoid.FinSum (\lam i => (Q i).finCard))
   => \case AbMonoid.FinSum_char (\lam i => (Q i).finCard) \with {
     | inP p => rewrite p.2 \new FinSet {
@@ -24,6 +29,7 @@
   \where {
     \open AddMonoid
 
+    -- | Helper equivalence: `Fin (\sum Q i) ~= \Sigma (i : Fin n) (Fin (Q i))`.
     \func aux {n : Nat} {Q : Fin n -> Nat} : QEquiv {Fin (BigSum Q)} {\Sigma (i : Fin n) (Fin (Q i))} \cowith
       | f (k : Fin (BigSum Q)) : \Sigma (i : Fin n) (Fin (Q i)) \elim n {
         | suc n => \case OrFin.aux.f k \with {
@@ -33,13 +39,13 @@
       }
       | ret (p : \Sigma (i : Fin n) (Fin (Q i))) : Fin (BigSum Q) \elim n, p {
         | 0, ((),_)
-        | suc n, (0, j) => fin-inc j
-        | suc n, (suc i, j) => fin-raise (ret (i,j))
+        | suc n, (0, j) => OrFin.aux.ret (inl j)
+        | suc n, (suc i, j) => OrFin.aux.ret (inr (ret (i,j)))
       }
       | ret_f (k : Fin (BigSum Q)) : ret (f k) = k \elim n {
         | suc n => mcases {_} {arg addPath} \with {
           | inl s, p => inv (pmap OrFin.aux.ret p) *> OrFin.aux.ret_f k
-          | inr t, p => pmap fin-raise (ret_f t) *> inv (pmap OrFin.aux.ret p) *> OrFin.aux.ret_f k
+          | inr t, p => pmap (\lam x => OrFin.aux.ret (inr x)) (ret_f t) *> inv (pmap OrFin.aux.ret p) *> OrFin.aux.ret_f k
         }
       }
       | f_sec (p : \Sigma (i : Fin n) (Fin (Q i))) : f (ret p) = p \elim n, p {
@@ -48,13 +54,108 @@
         | suc n, (suc i, j) => rewrite OrFin.ret_inr-lem (rewrite (f_sec {n} {\lam i => Q (suc i)} (i,j)) idp)
       }
 
+    -- | Any decidable subset of a finite set is finite.
     \lemma DecSubSet-isFin (S : FinSet) (D : DecSubSet S) : FinSet D.ISet
       => SigmaFin S (\lam x => DecFin (D.isDec x))
   }
 
+-- | The product of two finite sets is finite.
 \instance ProdFin (A B : FinSet) : FinSet (\Sigma A B) (A.finCard Nat.* B.finCard)
   => transport (FinSet _) Semiring.FinSum_replicate $ SigmaFin A (\lam _ => B)
   \where {
+    -- | Equivalence: `Fin (n * m) ~= Fin n \times Fin m`.
     \func prod_equiv {n m : Nat} : Equiv {Fin (n Nat.* m)} {\Sigma (Fin n) (Fin m)}
       => transport (\lam x => Equiv {Fin x} {_}) Semiring.BigSum_replicate $ SigmaFin.aux {n} {\lam _ => m}
   }
+
+-- | Equivalence between the finite type of functions and the `Fin` of the product of codomain sizes.
+-- This establishes that `\Pi (j : Fin n) -> Fin (Q j)` is finite.
+\func pi_equiv {n : Nat} {Q : Fin n -> Nat} : Equiv {Fin (Monoid.BigProd (\new Array Nat n Q))} {\Pi (j : Fin n) -> Fin (Q j)} \elim n
+  | 0 => \new QEquiv {
+    | f _ => \case __
+    | ret _ => 0
+    | ret_f (0) => idp
+    | f_sec f => ext \case __
+  }
+  | suc n =>
+    -- We use the isomorphism: `Fin (Q 0) \times (\Pi (j : Fin n) -> Fin (Q (suc j))) ~= \Pi (j : Fin (suc n)) -> Fin (Q j)`
+    -- This is `E1 o E2 o E3`
+    \let | E1 : Equiv {Fin (Q 0 Nat.* Monoid.BigProd (\new Array Nat n (\lam j => Q (suc j))))} {\Sigma (Fin (Q 0)) (Fin (Monoid.BigProd (\new Array Nat n (\lam j => Q (suc j)))))}
+              => ProdFin.prod_equiv
+         | E2 : Equiv {\Sigma (Fin (Q 0)) (Fin (Monoid.BigProd (\new Array Nat n (\lam j => Q (suc j)))))} {\Sigma (Fin (Q 0)) (\Pi (j : Fin n) -> Fin (Q (suc j)))}
+              => sigma-right (\lam _ => pi_equiv {n} {\lam j => Q (suc j)})
+         | E3 : QEquiv {\Sigma (Fin (Q 0)) (\Pi (j : Fin n) -> Fin (Q (suc j)))} {\Pi (j : Fin (suc n)) -> Fin (Q j)} => \new QEquiv {
+           | f p j => \case \elim j \with {
+             | 0 => p.1
+             | suc j => p.2 j
+           }
+           | ret f => (f 0, \lam j => f (suc j))
+           | ret_f p => idp
+           | f_sec f => ext \case \elim __ \with {
+             | 0 => idp
+             | suc j => idp
+           }
+         }
+    \in E1 `transEquiv` E2 `transEquiv` E3
+
+-- | Characterizes `FinProd` as `Monoid.BigProd` over some equivalence with `Fin n`.
+\lemma FinProd_char {M : CMonoid} {A : FinSet} (x : A -> M) : ∃ (e : Equiv {Fin A.finCard} {A}) (CMonoid.FinProd {_} {A} x = Monoid.BigProd (\lam j => x (e j)))
+  => CMonoid.FinProd_char {M} {A} x
+
+-- | If the function is constant, `FinProd` is just the power in the monoid.
+\lemma FinProd_replicate {M : CMonoid} {A : FinSet} {x : M} : CMonoid.FinProd {M} {A} (\lam _ => x) = M.pow x A.finCard
+  => \case FinProd_char (\lam _ => x) \with {
+    | inP p => p.2 *> Monoid.BigProd_replicate {M} {x} {A.finCard}
+  }
+
+-- | If the domain `S` is a finite set and the codomain `Q i` is a finite set for each `i : S`,
+-- then the type of functions `\Pi (i : S) -> Q i` is also a finite set.
+-- The cardinality is given by the product of the cardinalities of the codomains over the domain.
+\instance PiFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Pi (i : S) -> Q i) (CMonoid.FinProd {NatSemiring} (\lam x => (Q x).finCard))
+  | finEq => \case FinProd_char {NatSemiring} (\lam x => (Q x).finCard) \with {
+    | inP (e, p) => rewrite p \case FinSet.finiteAC (\lam j => (Q (e j)).finEq) \with {
+        | inP d => inP $
+            (pi_equiv {S.finCard} {\lam j => (Q (e j)).finCard}
+              `transEquiv`
+            pi-equiv-ext d)
+              `transEquiv`
+            pi-left (HAEquiv.fromQEquiv (QEquiv.fromEquiv e))
+        }
+  }
+  \where {
+    -- | Extends an equivalence between components to an equivalence between Pi types.
+    -- If `B j` is equivalent to `B' j` for all `j`, then `\Pi j -> B j` is equivalent to `\Pi j -> B' j`.
+    \func pi-equiv-ext {n : Nat} {B B' : Fin n -> \Type} (q : \Pi (j : Fin n) -> Equiv {B j} {B' j}) : Equiv {\Pi (j : Fin n) -> B j} {\Pi (j : Fin n) -> B' j} \cowith
+      | f h j => q j (h j)
+      | ret h' j => (q j).ret (h' j)
+      | sec h' j => (q j).sec (h' j)
+      | ret_f h => ext \lam j => (q j).ret_f (h j)
+      | f_sec h' => ext \lam j => (q j).f_sec (h' j)
+
+    -- | Given an equivalence `e : A ~= A'`, constructs an equivalence `(\Pi (a : A) -> B (e a)) ~= (\Pi (a' : A') -> B a')`.
+    -- This allows changing the domain of a Pi type along an equivalence.
+    \func pi-left {A A' : \Set} {B : A' -> \Type} (e : HAEquiv {A} {A'}) : Equiv {\Pi (a : A) -> B (e a)} {\Pi (a' : A') -> B a'} \cowith
+      | f h a' => transport B (e.f_sec a') (h (e.ret a'))
+      | ret h' a => h' (e a)
+      | sec h' a => h' (e a)
+      | ret_f h => ext \lam a =>
+          transport B (e.f_sec (e a)) (h (e.ret (e a))) ==< inv (pmap (transport B __ (h (e.ret (e a)))) (e.f_ret_f=f_sec_f a)) >==
+          transport B (pmap e (e.ret_f a)) (h (e.ret (e a))) ==< transport_pmap B e (e.ret_f a) (h (e.ret (e a))) >==
+          transport (\lam x => B (e x)) (e.ret_f a) (h (e.ret (e a))) ==< transport_idp (e.ret_f a) h >==
+          h a `qed
+      | f_sec h' => ext \lam a' => pmapd h' (e.f_sec a')
+
+    -- | A helper function showing that transporting a section along a path is equivalent to applying the section to the end of the path.
+    \func transport_idp {A : \Type} {B : A -> \Type} {a a' : A} (p : a = a') (h : \Pi (x : A) -> B x)
+      : transport B p (h a) = h a' \elim p | idp => idp
+
+    -- | A helper function relating transport along a `pmap` to transport along a composed predicate.
+    \func transport_pmap {A B : \Type} (C : B -> \Type) (f : A -> B) {a a' : A} (p : a = a') (c : C (f a))
+      : transport C (pmap f p) c = transport (\lam x => C (f x)) p c \elim p | idp => idp
+
+    -- | Characterization of the cardinality of a finite Pi type.
+    -- The cardinality of `PiFin S Q` is exactly the product of cardinalities of `Q i`.
+    \lemma pi-card {S : FinSet} {Q : S -> FinSet} : (PiFin S Q).finCard = CMonoid.FinProd {NatSemiring} (\lam i => (Q i).finCard)
+      => idp
+  }
+

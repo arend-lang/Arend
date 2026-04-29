@@ -1,0 +1,279 @@
+\import Algebra.Meta
+\import Category
+\import Category.Factorization
+\import Category.Meta
+\import Category.Subcat
+\import Equiv
+\import Function(IsSurj)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.SetHom
+\import Topology.Locale
+\open CompleteLattice(SJoin)
+\open Locale
+\open Nucleus
+\open MeetSemilattice
+\open FrameHom \hiding (isClosed, functor)
+
+\func star {L : Locale} (x : L) (U : L -> \Prop) => SJoin (\lam y => \Sigma (U y) (IsPositive (x ∧ y)))
+  \where {
+    \lemma star_<= {L : Locale} {x y : L} (x<=y : x <= y) (U : L -> \Prop) : star x U <= star y U => {?hidden_proof}
+
+    \lemma star-refl {L : PreuniformLocale} {x : L} {U : L -> \Prop} (uU : isUniform U) : x <= star x U => {?hidden_proof}
+  }
+
+
+\func nucleus-star {L : Locale} (j : Nucleus {L}) (U : L -> \Prop) => SJoin (\lam y => \Sigma (U y) (j.locale.IsPositive (j y, nucleus-join>=)))
+  \where {
+    \lemma star_open {L : Locale} (a : L) (U : L -> \Prop) : nucleus-star (open a) U = star a U => {?hidden_proof}
+  }
+
+
+\class PreuniformLocale \extends Locale {
+  | uniform-overt : IsOvert
+  | isUniform : (E -> \Prop) -> \Prop
+  | isCovering {U : E -> \Prop} : isUniform U -> top <= SJoin U
+  | isDownset {U : E -> \Prop} {x y : E} : isUniform U -> U y -> x <= y -> U x
+  | top-uniform : isUniform (\lam _ => \Sigma)
+  | meet-uniform {U V : E -> \Prop} : isUniform U -> isUniform V -> isUniform (\lam x => \Sigma (U x) (V x))
+  | <=-uniform {U V : E -> \Prop} : isUniform U -> (\Pi {x : E} -> U x -> V x) -> (\Pi {x y : E} -> V y -> x <= y -> V x) -> isUniform V
+  | star-uniform {U : E -> \Prop} : isUniform U -> ∃ (V : isUniform) ∀ x (V x -> U (star x V))
+}
+  \where {
+    \lemma dClosure {L M : Preorder} {f : L -> M} {U : L -> \Prop} {x y : M} (p : ∃ (z : L) (U z) (y <= f z)) (x<=y : x <= y) : ∃ (z : L) (U z) (x <= f z) => {?hidden_proof}
+  }
+
+
+\open PreuniformLocale(dClosure)
+
+\class UniformHom \extends FrameHom {
+  \override Dom : PreuniformLocale
+  \override Cod : PreuniformLocale
+  | func-uniform {U : Dom -> \Prop} : isUniform U -> isUniform (\lam y => ∃ (x : Dom) (U x) (y <= func x))
+}
+
+\class UniformEmbedding \extends UniformHom {
+  | isEmbedding : IsSurj func
+  | isUniformEmbedding {U : Cod -> \Prop} : isUniform U -> ∃ (V : isUniform) ∀ {x} (V x -> U (func x))
+}
+  \where {
+    \func comp {L M K : PreuniformLocale} (g : UniformEmbedding M K) (f : UniformEmbedding L M) : UniformEmbedding L K \cowith
+      | UniformHom => g PreuniformCat.∘ f
+      | isEmbedding => IsSurj.comp f.isEmbedding g.isEmbedding
+      | isUniformEmbedding => \lam uU => (
+        \have | inP (V, uV, cV) => g.isUniformEmbedding uU
+              | inP (W, uW, cW) => f.isUniformEmbedding uV
+        \in inP (W, uW, \lam Wx => cV (cW Wx)))
+  }
+
+
+\func \infix 4 <=u {L : PreuniformLocale} (a b : L) => ∃ (U : (L -> \Prop)) (isUniform U) (star a U <= b)
+  \where {
+    \lemma func-<=u (f : UniformHom) {a b : f.Dom} (p : a <=u b) : f a <=u f b => {?hidden_proof}
+
+    \lemma adjoint (f : UniformHom) {a : f.Dom} {b : f.Cod} (p : a <=u f.direct b) : f a <=u b => {?hidden_proof}
+
+    \lemma dense {L : PreuniformLocale} {a c : L} (p : a <=u c) : ∃ (b : L) (a <=u b) (b <=u c) => {?hidden_proof}
+      \where {
+        \lemma meet_star-comm {L : Locale} (o : L.IsOvert) {a b : L} {U : L -> \Prop} (p : IsPositive (a ∧ star b U)) : IsPositive (b ∧ star a U) => {?hidden_proof}
+      }
+
+
+    \lemma uniform-refine {L : PreuniformLocale} {U : L -> \Prop} (uU : isUniform U) : isUniform (\lam b => ∃ (a : L) (U a) (b <=u a)) => {?hidden_proof}
+  }
+
+
+\lemma <=u-trans-left {L : PreuniformLocale} (a : L) {b c : L} (p : a <=u b) (b<=c : b <= c) : a <=u c => {?hidden_proof}
+
+\lemma <=u-trans-right {L : PreuniformLocale} {a b c : L} (a<=b : a <= b) (p : b <=u c) : a <=u c => {?hidden_proof}
+
+\lemma <=u_meet {L : PreuniformLocale} {a a' b b' : L} (p : a <=u a') (q : b <=u b') : a ∧ b <=u a' ∧ b' => {?hidden_proof}
+
+\lemma <=u_<= {L : PreuniformLocale} {a b : L} (p : a <=u b) : a <= b => {?hidden_proof}
+
+\class UniformLocale \extends PreuniformLocale {
+  | isAdmissible (b : E) : b <= SJoin (<=u b)
+}
+  \where {
+    \open NucleusFrame
+
+    \lemma star_wclosure {L : PreuniformLocale} {j : Nucleus {L}} {U : L -> \Prop} (uU : isUniform U) : nucleus-star j.map.wclosed-image U = nucleus-star j U => {?hidden_proof}
+
+    \lemma top>=star {L : PreuniformLocale} {j : Nucleus {L}} (o : j.locale.IsOvert) {U : L -> \Prop} (uU : isUniform U) : open (nucleus-star j U) <= j => {?hidden_proof}
+
+    \lemma wclosure>=nucleus-star {L : PreuniformLocale} {j : Nucleus {L}} (o : j.locale.IsOvert) {U : L -> \Prop} (uU : isUniform U) : open (nucleus-star j U) <= j.map.wclosed-image => {?hidden_proof}
+
+    \lemma wclosure>=star {L : PreuniformLocale} {a : L} {U : L -> \Prop} (uU : isUniform U) : open (star a U) <= wclosed-image {Nucleus.map {open a}} => {?hidden_proof}
+  }
+
+
+\lemma uniform=>wregular {L : UniformLocale} : L.IsWeaklyRegularLocale => {?hidden_proof}
+
+\func PreuniformCat : Cat PreuniformLocale \cowith
+  | Hom => UniformHom
+  | id => \lam L => \new UniformHom {
+    | FrameHom => FrameCat.id L
+    | func-uniform => <=-uniform __ (\lam {x} Ux => inP (x, Ux, <=-refl)) dClosure
+  }
+  | o => \lam g f => \new UniformHom {
+    | FrameHom => g FrameCat.∘ f
+    | func-uniform => \lam uU => <=-uniform (func-uniform {g} (func-uniform {f} uU)) (\lam {x} inP (y, inP (z, Uz, y<=fz), x<=gy) => inP (z, Uz, x<=gy <=∘ func-<= y<=fz)) dClosure
+  }
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip (\lam {X} {S1} {S2} (h1 : UniformHom) (h2 : UniformHom) => (exts UniformLocale) {  | <= => \lam x y => ext (h1.func-<=, h2.func-<=)
+    | meet => \lam x y => h1.func-meet  | top => h1.func-top  | Join => \lam f => h1.func-Join
+    | isUniform => \lam U => ext (\lam uU => uniform-lem (h1.func-uniform uU) (\lam Uy x<=y => isDownset uU Uy (h2.func-<= x<=y)), 
+      \lam uU => uniform-lem (h2.func-uniform uU) (\lam Uy x<=y => isDownset uU Uy (h1.func-<= x<=y)))})
+  \where {
+    \lemma uniform-lem {L : PreuniformLocale} {U : L -> \Prop} (u : isUniform (\lam y => ∃ (x : L) (U x) (y <= x))) (d : \Pi {x y : L} -> U y -> x <= y -> U x) : isUniform U => {?hidden_proof}
+  }
+
+
+\func UniformCat : Cat UniformLocale => subCat {PreuniformCat}
+  (\new Embedding {  | f => \lam L => L  | isEmb => \lam (L M : UniformLocale) => \new Retraction {
+    | sec => \lam p => path (\lam i => \new UniformLocale {  | PreuniformLocale => p i
+      | isAdmissible => prop-dpi (\Pi (b : p __) -> b <= SJoin (<=u b)) L.isAdmissible M.isAdmissible i})    | f_sec => idpe  }})
+
+\func CompletionPres (L : UniformLocale) : FramePres L \cowith
+  | conj => meet
+  | BasicCover => FramePres.Indexing {\Sigma (j : Fin 4) ((L :: L :: (\Sigma (U : L -> \Prop) (isUniform U)) :: L.E :: nil) j)}
+    (\case __ \with {  | (0, a) => (\Sigma, a, \lam _ => top)  | (1, a) => (IsPositive a, a, \lam _ => a)
+    | (2, U) => (\Sigma (x : L) (U.1 x), top, __.1)  | (3, a) => (\Sigma (b : L) (b <=u a), a, __.1)})
+  \where {
+    \lemma <=_cover {L : UniformLocale} {a b : L} (a<=b : a <= b) : Cover1 {CompletionPres L} a b => {?hidden_proof}
+  }
+
+
+\open CompletionPres
+\open PresentedFrame \hiding (<=)
+
+\func CompletionLocale (L : UniformLocale) => PresentedFrame (CompletionPres L)
+
+\func completionLocale {L : UniformLocale} : LocaleCat.Hom L (CompletionLocale L) => FrameReflectiveSubcat.adjointMap completionLocale.presentation
+  \where {
+    \func presentation {L : UniformLocale} : FramePresHom (CompletionPres L) (FrameUnitalSubcat.F L) \cowith
+      | func => \lam x => x
+      | func-conj => idp
+      | func-basicCover => FramePres.indexing-transport _ $ later
+        (\case \elim __ \with {  | (0, a) => top-univ <=∘ Join-cond ()  | (1, a) => overt_cover uniform-overt  | (2, (U, uU)) => isCovering uU
+        | (3, a) => isAdmissible a})
+      | func-image => \lam {x} => cover-inj x idp
+
+    \lemma sdense {L : UniformLocale} : isStronglyDense {completionLocale {L}} => {?hidden_proof}
+
+    \lemma completion_embed {L : UniformLocale} {a : L} : completionLocale (embed a) = a => {?hidden_proof}
+  }
+
+
+\func Completion (L : UniformLocale) : UniformLocale \cowith
+  | Locale => CompletionLocale L
+  | uniform-overt => sdense_overt {completionLocale} completionLocale.sdense uniform-overt
+  | isUniform => isUniform
+  | isCovering => \lam inP (U, uU, U<=V, dV) {x} _ => Cover.cover-trans1 (cover-basic $ indexing-make $ later (0, x)) $ cover-trans (cover-basic $ indexing-make $ later (2, (U, uU))) 
+    (\lam i => later $ cover-inj ((embed i.1, U<=V i.2), i.1, cover-inj () idp) idp)
+  | isDownset => \lam inP (U, uU, U<=V, dV) Vy x<=y => dV Vy x<=y
+  | top-uniform => inP (\lam _ => \Sigma, top-uniform, \lam _ => (), \lam _ _ => ())
+  | meet-uniform => \lam inP (U, uU, lU, dU) inP (V, uV, lV, dV) =>
+    inP (\lam x => \Sigma (U x) (V x), meet-uniform uU uV, \lam p => (lU p.1, lV p.2), \lam p x<=y => (dU p.1 x<=y, dV p.2 x<=y))
+  | <=-uniform => \lam inP (U, uU, lU, dU) U<=V dV => inP (U, uU, \lam Ua => U<=V (lU Ua), dV)
+  | star-uniform => \lam {U} inP (U', uU, lU, dU) => TruncP.map (star-uniform uU)
+    (\lam (V', uV', sr) => (  \let (V, uV, q) => make-covering V' uV'
+    \in (V, uV, \lam s inP (x, V'x, s<=x) => dU (lU (sr x V'x)) (star.star_<= s<=x V <=∘ q x))))
+  | isAdmissible => 
+    \have | embed_<=u {a b : L} (a<=b : a <=u b) : embed a <=u {\this} embed b => TruncP.map a<=b (\lam (U, uU, a*U<=b) => (  \have (V, uV, q) => make-covering U uU  \in (V, uV, q a <=∘ Cover_embed (<=_cover a*U<=b))))
+          | h x : FramePres.SCover x (embed __ <=u {\this} embed x) =>
+            cover-trans (cover-basic $ indexing-make $ later (3, x)) $ later (\lam (y, y<=x) => cover-inj (y, embed_<=u y<=x) idp)
+    \in \lam U {x} Ux =>
+          cover-trans (h x) (\lam (y, y<=x) => cover-inj ((embed y, <=u-trans-left {\this} (embed y) y<=x $ embed<= $ cover-inj (x, Ux) idp), y, cover-inj () idp) idp)
+  \where {
+    \open FramePres(indexing-make)
+
+    \func make-covering {L : UniformLocale} (U : L -> \Prop) (uU : L.isUniform U) :
+      \Sigma (V : CompletionLocale L -> \Prop) (isUniform V) (\Pi (a : L) -> star (embed a) V <= embed (star a U)) 
+    => (\lam s => ∃ (x : L) (U x) (s <= embed x), inP (U, uU, \lam {a} Ua => inP (a, Ua, <=-refl), dClosure),
+      \lam a => Join-univ (\lam (t, (inP (y, V'y, t<=y), xt>0)) => t<=y <=∘ Cover_embed  (<=_cover $ Join-cond $ later  (y,  (V'y,
+      transport IsPositive completionLocale.completion_embed $ sdense_positive {completionLocale} completionLocale.sdense $ transport IsPositive embed_meet $ 
+                positive_<= xt>0 $ MeetSemilattice.meet-monotone (<=-refl {_} {embed a}) t<=y))))
+    )
+  }
+
+
+\func completion {L : UniformLocale} : UniformEmbedding (Completion L) L \cowith
+  | FrameHom => completionLocale
+  | func-uniform => \lam inP (V, uV, V<=U, dV) => <=-uniform uV (\lam {x} Vx => inP (embed x, V<=U Vx, Join-cond $ later (x, cover-inj () idp))) dClosure
+  | isEmbedding => \lam a => inP (embed a, completionLocale.completion_embed)
+  | isUniformEmbedding => \lam {U} uU => inP
+    (\lam x => ∃ (a : L) (U a) (x <= embed a), inP (U, uU, \lam {a} Ua => inP (a, Ua, <=-refl), \lam inP (a, Ua, y<=a) x<=y => inP (a, Ua, x<=y <=∘ y<=a)), 
+    \lam {x} inP (a, Ua, x<=a) => isDownset uU (transportInv U completionLocale.completion_embed Ua) (func-<= {completionLocale} x<=a))
+  \where {
+    \lemma isMono {L M : UniformLocale} {f g : UniformHom M (Completion L)} (p : completion PreuniformCat.∘ f = completion PreuniformCat.∘ g) : f = g => {?hidden_proof}
+  }
+
+
+completion-factor {L M : UniformLocale} (f : UniformEmbedding M L) (sd : f.isStronglyDense) : \Sigma (g : UniformHom (Completion L) M) (f UniformCat.∘ g = completion) => 
+  \have g => \new (UniformHom (Completion L) M) {
+          | FrameHom => FrameReflectiveSubcat.adjointMap (presentation f sd)
+          | func-uniform => \lam inP (V, uV, V<=U, Ud) => <=-uniform (f.direct-uniform uV) (\lam inP (y, Vy, x<=f_y) => inP (embed y, V<=U Vy, x<=f_y <=∘ Join-cond (later (y, cover-inj () idp)))) 
+            (\lam inP (z, Uz, p) x<=y => inP (z, Uz, x<=y <=∘ p))
+        }
+  \in (g,
+        exts $ func-equality (g LocaleCat.∘ f) completionLocale (\lam x => func-Join *> path (\lam i => Join (\lam p => surjective-split f.isEmbedding p.1 i)))
+)
+  \where {
+    \func presentation {L M : UniformLocale} (f : UniformEmbedding M L) (sd : f.isStronglyDense) : FramePresHom (CompletionPres L) (FrameUnitalSubcat.F M) \cowith
+      | func => direct
+      | func-conj => direct-meet
+      | func-basicCover => FramePres.indexing-transport _ $ later
+        (\case \elim __ \with {  | (0, a) => direct-<= top-univ <=∘ Join-cond ()
+        | (1, a) => overt_cover M.uniform-overt <=∘ Join-univ (\lam f_a>0 => Join-cond (\lam P c => f_a>0 P $ Join-univ (\lam p => sd $ p.2 <=∘ c)))
+        | (2, (U, uU)) =>     \have inP (V, uV, V<=Uf) => f.isUniformEmbedding uU
+          \in =_<= direct-top <=∘ isCovering uV <=∘ Join-univ (\lam p => f.direct-unit <=∘ Join-cond (later (f p.1, V<=Uf p.2)))
+        | (3, a) => isAdmissible (direct a) <=∘ Join-univ (\lam p => f.direct-unit <=∘ Join-cond (later (f p.1, <=u.adjoint f p.2)))})
+      | func-image => \lam {y} => cover-basic $ f.direct-unit <=∘ Join-cond (f y)
+  }
+
+
+\lemma completion-isComplete (L : UniformLocale) : UniformLocale.isComplete {Completion L} => {?hidden_proof}
+
+\func completion-functor {L M : UniformLocale} (f : UniformHom M L) : UniformHom (Completion M) (Completion L) \cowith
+  | FrameHom => FrameReflectiveSubcat.adjointMap (presentation f)
+  | func-uniform => \case __ \with {
+    | inP (V, uV, V<=U, Ud) => inP (_, f.func-uniform $ <=u.uniform-refine uV,  \lam {a} inP (x, inP (z, Vz, x<=uz), a<=fx) => inP (embed z, V<=U Vz, 
+      embed<= $ cover-inj (a, later $ cover-inj ((z, cover-inj () idp), a, cover-trans1 (<=_cover a<=fx) $ cover-inj (x, x<=uz) idp) idp) idp), 
+    \lam {x} {y} inP (z, Uz, y<=fz) x<=y => inP (z, Uz, x<=y <=∘ y<=fz))
+  }
+  \where {
+    \open Cover
+
+    \func presentation {L M : UniformLocale} (f : UniformHom M L) : FramePresHom (CompletionPres M) (FrameUnitalSubcat.F (Completion L)) \cowith
+      | func => \lam a => closure (\lam (t : \Sigma (b : M) (b <=u a)) => f t.1)
+      | func-conj => <=-antisymmetric (closure<= $ later  (\lam p =>
+        cover-inj (f p.1, cover-idemp (f p.1, f p.1, cover-inj (p.1, <=u-trans-left _ p.2 meet-left) idp, cover-inj (p.1, <=u-trans-left _ p.2 meet-right) idp) idp) idp))
+        (closure<= $ later  (\lam p => cover-inj (_,  cover-trans (cover-ldistr idp p.4 (\lam _ => idp)) 
+        (\lam q => cover-trans (cover-rdistr idp p.3 (\lam _ => idp)) (\lam s => cover-inj (s.1 ∧ q.1, <=u_meet s.2 q.2) func-meet))) idp))
+      | func-basicCover => FramePres.indexing-transport _ $ later
+        (\case \elim __ \with {  | (0, a) => cover-trans __ (\lam p => cover-inj ((), f p.1, cover-inj (p.1, <=u-trans-left _ p.2 top-univ) idp) idp)
+        | (1, a) => cover-trans __    (\lam p => cover-trans (cover-basic $ FramePres.indexing-make $ later (1, f p.1)) 
+          (\lam fp1>0 => cover-inj (func_positive $ positive_<= fp1>0 $ func-<= $ <=u_<= p.2, f p.1, cover-inj p idp) idp))
+        | (2, (U, uU)) => cover-trans __    (\lam p =>
+        cover-trans1 (<=_cover top-univ) $ cover-trans (cover-basic $ FramePres.indexing-make $ later (2, (_, f.func-uniform $ <=u.uniform-refine uU))) $ later 
+              (\lam (x, inP (z, inP (y, Uy, z<=uy), x<=fz)) => cover-inj ((y, Uy), x, cover-trans1 (<=_cover x<=fz) $ cover-inj (z, z<=uy) idp) idp))
+        | (3, a) =>
+          cover-trans __ (\lam (b, b<=ua) => (\case <=u.dense b<=ua \with {  | inP (c, b<=uc, c<=ua) => cover-inj ((c, c<=ua), f b, cover-inj (b, b<=uc) idp) idp}))
+        })
+      | func-image => cover-basic
+        (\lam {x} _ => cover-inj (top, x, cover-trans1 (<=_cover $ top-univ <=∘ func-top>=) $ cover-inj (top, inP (\lam _ => \Sigma, top-uniform, top-univ)) idp) idp)
+  }
+
+
+\lemma completion-natural {L M : UniformLocale} (f : UniformHom M L) : completion UniformCat.∘ completion-functor f = f UniformCat.∘ completion => {?hidden_proof}
+
+\lemma completion-isReflector {L M : UniformLocale} (Mc : M.isComplete) : Equiv {UniformHom M (Completion L)} {UniformHom M L} (\lam g => completion UniformCat.∘ g) => {?hidden_proof}

@@ -1,0 +1,34 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Approximate
+\import Arith.Real.Field
+\import Data.Fin
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.Compact
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup.Real
+
+\func real-split (a b : Real) (n : Nat) : Array Real (suc n) \cowith
+  | at => \lam j => a + Real.fromRat (j : Nat) * ((b - a) * RatField.finv n)
+  \where {
+    \lemma real-approx (a<b : a < b) (n/=0 : n /= 0) {x : Real} (x>=a : a <= x) (x<=b : x <= b) :
+      ∃ (i : Fin (suc n)) (ldist (real-split a b n i) x < (b - a) * RatField.finv n) => {?hidden_proof}
+  }
+
+
+\lemma real-bounded-tb : BallsTotallyBounded RealNormed => {?hidden_proof}

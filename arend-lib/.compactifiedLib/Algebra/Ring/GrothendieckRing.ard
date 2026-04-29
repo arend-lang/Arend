@@ -1,0 +1,28 @@
+\import Algebra.Meta
+\import Algebra.Monoid.MonoidLocalization
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Function.Meta
+\import Paths
+\import Relation.Equivalence
+
+\instance GrothendieckRing (R : Semiring) : Ring 
+  | AbGroup => GrothendieckAbGroup R
+  | * => *
+  | ide => inl~ (1, 0, ())
+  | *-assoc => \lam {in~ a} {in~ b} {in~ c} => ~-lequiv equation.semiring
+  | ldistr => \lam {in~ a} {in~ b} {in~ c} => ~-lequiv equation.semiring
+  | rdistr => \lam {in~ a} {in~ b} {in~ c} => ~-lequiv equation.semiring
+  | zro_*-left => \lam {in~ a} => ~-lequiv equation.semiring
+  | zro_*-right => \lam {in~ a} => ~-lequiv equation.semiring
+  | ide-left => \lam {in~ a} => ~-lequiv equation.semiring
+  | ide-right => \lam {in~ a} => ~-lequiv equation.semiring
+  \where {
+    \open LocAbType
+  }
+
+
+\instance GrothendieckCRing (R : CSemiring) : CRing 
+  | Ring => GrothendieckRing R
+  | *-comm => \lam {in~ a} {in~ b} => LocAbType.~-lequiv equation.cSemiring

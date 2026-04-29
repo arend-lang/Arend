@@ -1,0 +1,50 @@
+\import Algebra.Field
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Local
+\import Algebra.Ring.Nakayama
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Reduced
+\import Arith.Nat
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Logic.TFAE
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\open Monoid
+
+\lemma zeroDimensional-char {R : CRing} : TFAE (R.IsZeroDimensional, R.Dim<= 0, \Pi (a : R) -> ∃ (b : R) (k : Nat) (k /= 0) (b * b = b) (LDiv (pow a k) b) (LDiv b (pow a k))) => {?hidden_proof}
+  \where {
+    \lemma aux {x c : R} (n : Nat) (p : x = x * c) : x = x * pow c n => {?hidden_proof}
+  }
+
+
+\lemma zeroDimensional_local-char {R : CRing} : TFAE (\Sigma R.IsZeroDimensional (\Pi (a : R) -> Inv a || Inv (a + 1)), \Sigma R.IsZeroDimensional R.IsConnected, 
+  \Pi (a : R) -> Inv a || (\Sigma (n : Nat) (pow a n = 0))) => {?hidden_proof}
+
+\lemma vonNeumann_idempotent {R : CRing} (vn : R.IsVonNeumannRegular) (a : R) : ∃ (u : R) (u * u = u) (LDiv a u) (a = u * a) => {?hidden_proof}
+
+\lemma vonNeumann-char {R : CRing} : TFAE (R.IsVonNeumannRegular, \Sigma R.IsZeroDimensional (ReducedRing {  | Ring => R}), 
+  \Pi (I : Ideal R) -> I.IsFinitelyGenerated -> ∃ (u : R) (u * u = u) (I.IsGeneratedBy1 u), \Pi (I : Ideal R) -> I IdealMonoid.* I = I, 
+  \Pi (I J : Ideal R) -> I ∧ J = I IdealMonoid.* J) => {?hidden_proof}
+  \where {
+    \open Ideal
+  }
+
+
+\lemma vonNeumann_Bezout {R : CRing} (vn : R.IsVonNeumannRegular) : R.IsBezout => {?hidden_proof}
+
+\lemma zeroDim->inv {R : ImpotentCRing} (zd : R.IsZeroDimensional) (x : R) : (x = 0) || Inv x => {?hidden_proof}
+
+\func zeroDim->field {R : ImpotentCRing} (zd : R.IsZeroDimensional) : DiscreteField {
+  | CRing => R
+} \cowith
+  | zro/=ide => R.zro/=ide
+  | eitherZeroOrInv => zeroDim->inv zd

@@ -1,0 +1,186 @@
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.LatticeColimit
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.CharPoly
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Monoid.PermSet
+\import Algebra.Monoid.Sub
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Pointed.Sub
+\import Algebra.Ring
+\import Algebra.Ring.MonoidRing(evalMS, evalMS_map2, monoidSet-ringHom, msMonomial)
+\import Algebra.Ring.RingCategory
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.Factor(FactorRing, factorHom, factor-lift)
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.MPoly
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Sub
+\import Algebra.Semiring
+\import Arith.Nat
+\import Category
+\import Category.Functor
+\import Data.Array
+\import Equiv
+\import Function(IsInj, IsSurj)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Logic.TFAE
+\import Meta
+\import Order.Lattice
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set.SetCategory
+\import Set.Fin
+\open Monoid
+
+\func polyImage {R : Ring} {E : CRing} (f : RingHom R E) (a : E) : SubRing E => ringHomImage (polyMapEvalRingHom f a)
+
+\lemma polyImage-closed {R : Ring} {E : CRing} (f : RingHom R E) (a : E) (x : SubRing.cStruct (polyImage f a)) : polyImage f a (a * x.1) => {?hidden_proof}
+
+\lemma polyImage-ext {R : Ring} {E : CRing} (f : RingHom R E) (a : E) (b : R) : polyImage f a (f b) => {?hidden_proof}
+
+\lemma polyImage-element {R : Ring} {E : CRing} {f : RingHom R E} {a : E} : polyImage f a a => {?hidden_proof}
+
+\lemma polyImage-pow {R : Ring} {E : CRing} (f : RingHom R E) (a : E) {n : Nat} : polyImage f a (pow a n) => {?hidden_proof}
+
+\func polyImageHom {R : Ring} {E : CRing} (f : RingHom R E) (a : E) : RingHom R (SubRing.cStruct (polyImage f a)) \cowith
+  | func => \lam x => (f x, polyImage-ext f a x)
+  | func-+ => ext f.func-+
+  | func-ide => ext f.func-ide
+  | func-* => ext f.func-*
+
+\func polyImageHomPoly {R : Ring} {E : CRing} (f : RingHom R E) (a : E) : RingHom (PolyRing R) (SubRing.cStruct (polyImage f a)) \cowith
+  | func => \lam p => (polyEval (polyMap f p) a, inP (p, idp))
+  | func-+ => ext (polyMapEvalRingHom f a).func-+
+  | func-ide => ext $ simplify f.func-ide
+  | func-* => ext (polyMapEvalRingHom f a).func-*
+
+\func mPolyImage {R E : CRing} (f : RingHom R E) (l : Array E) : SubRing E => ringHomImage (mPolyEval l ∘ mPoly-mapHom f)
+
+\lemma mPolyImage-ext {R E : CRing} (f : RingHom R E) (l : Array E) (b : R) : mPolyImage f l (f b) => {?hidden_proof}
+
+\func mPolyImage-element {R E : CRing} (f : RingHom R E) (l : Array E) (j : Fin l.len) : mPolyImage f l (l j) => inP (mVar j, unfold $ unfold $ rewrite f.func-ide simplify)
+
+\func mPolyImageHom {R E : CRing} (f : RingHom R E) (l : Array E) : RingHom R (SubRing.cStruct (mPolyImage f l)) \cowith
+  | func => \lam x => (f x, mPolyImage-ext f l x)
+  | func-+ => ext f.func-+
+  | func-ide => ext f.func-ide
+  | func-* => ext f.func-*
+
+mPolyImage-finGen {R E : CRing} (f : RingHom R E) (l : Array E) :
+  \Sigma (l' : Array (SubRing.cStruct (mPolyImage f l)) l.len) (RingHom.isAlgebraGenerated (mPolyImageHom f l) l') => 
+  \let l' => \lam j => (l j, mPolyImage-element f l j) : SubRing.cStruct (mPolyImage f l)
+  \in (l',
+        \lam (x, inP (p, q)) => inP (p,  ext (inv q *> pmap2 evalMS (later (\case \elim p \with {  | in~ pl => idp}))
+  (ext (\lam c => inv $ permSet-sum-natural {AbMonoid.fromCMonoid (SubRing.cStruct (mPolyImage f l))} {AbMonoid.fromCMonoid E} SubRing.embed *> pmap 
+  (permSet-sum {AbMonoid.fromCMonoid E}) permSet-map-comp)) *> evalMS_map2 SubRing.embed))
+)
+
+\lemma monic-generated {R E : CRing} (f : RingHom R E) (a : E) (p : Poly R) (n : Nat) (dp : degree<= p n) (dm : polyCoef p n = 1) (e : polyEval (polyMap f p) a = 0) :
+  LModule.IsGenerated {homLModule (polyImageHom f a)} (\new (Array _ n (\lam i => pow {SubRing.cStruct (polyImage f a)} (a, polyImage-element) i))) => {?hidden_proof}
+
+\func isIntegral (f : RingHom) (x : f.Cod) : \Prop => ∃ (p : Poly f.Dom) (isMonic p) (polyEval (polyMap f p) x = 0)
+  \where {
+    \lemma fromInv {K R : CRing} {f : RingHom K R} {a : R} {p : Poly K} {n : Nat} (d : degree<= p n) (pi : Inv (polyCoef p n)) (pe : polyEval (polyMap f p) a = 0) : isIntegral f a 
+      => {?hidden_proof}
+
+    \lemma fromPoly {K : DiscreteField} {R : CRing} {f : RingHom K R} {a : R} {p : Poly K} (p/=0 : p /= 0) (pe : polyEval (polyMap f p) a = 0) : isIntegral f a => {?hidden_proof}
+  }
+
+
+\lemma module-integral {R E : CRing} (f : RingHom R E) (a : E) (S : SubRing E) (SR : \Pi (x : R) -> S (f x)) 
+(Sg : LModule.IsFinitelyGenerated {homLModule (S.corestrict f SR)}) (Sa : S a) : isIntegral f a => {?hidden_proof}
+  \where {
+    \lemma module-monic (l : Array S.IRing) (Sg : LModule.IsGenerated {homLModule (S.corestrict f SR)} l) :
+      ∃ (p : Poly R) (degree<= p l.len) (polyCoef p l.len = 1) (polyEval (polyMap f p) a = 0) => {?hidden_proof}
+  }
+
+
+\func isIntegralExt (f : RingHom) : \Prop => \Pi (a : f.Cod) -> isIntegral f a
+
+\lemma finite-integralExt {R E : CRing} {f : RingHom R E} (gen : LModule.IsFinitelyGenerated {homLModule f}) : isIntegralExt f => {?hidden_proof}
+
+\lemma integral-generated {R E : CRing} (f : RingHom R E) (a : E) (ai : isIntegral f a) : LModule.IsFinitelyGenerated {homLModule (polyImageHom f a)} => {?hidden_proof}
+
+\lemma poly_integral {R E : CRing} (f : RingHom R E) (a : E) (ai : isIntegral f a) (q : Poly R) : isIntegral f (polyEval (polyMap f q) a) => {?hidden_proof}
+  \where {
+    \lemma aux {R E : CRing} (f : RingHom R E) (a : E) (p : Poly R) (n : Nat) (d : degree<= p n) (c : polyCoef p n = 1) (pa : polyEval (polyMap f p) a = 0) 
+    (q : Poly R) {b : E} (qb : polyEval (polyMap f q) a = b) : ∃ (p' : Poly R) (degree<= p' n) (polyCoef p' n = 1) (polyEval (polyMap f p') b = 0) => {?hidden_proof}
+  }
+
+
+\lemma polyImage_integral {R E : CRing} (f : RingHom R E) (a : E) (ai : isIntegral f a) {x : E} (xi : polyImage f a x) : isIntegral f x => {?hidden_proof}
+
+\lemma polyImage_integralExt {R E : CRing} {f : RingHom R E} (a : E) (ai : isIntegral f a) : isIntegralExt (polyImageHom f a) => {?hidden_proof}
+
+\lemma integral_image-comp {R S E : Ring} {f : RingHom R S} (g : RingHom S E) {a : S} (ai : isIntegral f a) : isIntegral (g ∘ f) (g a) => {?hidden_proof}
+
+\lemma integralExt-surj (f : RingHom) (s : IsSurj f) : isIntegralExt f => {?hidden_proof}
+
+\lemma integralExt_id {R : Ring} : isIntegralExt (id R) => {?hidden_proof}
+
+\lemma integral_image (f : RingHom) (a : f.Dom) : isIntegral f (f a) => {?hidden_proof}
+
+\lemma poly-integralExt {R : CRing} {I : Ideal (PolyAlgebra R)} {p : Poly R} (pm : isMonic p) (Ip : I p) : isIntegralExt (factorHom {I} ∘ polyHom) => {?hidden_proof}
+
+\lemma integralExt_polyDiv {R E : CRing} {f : RingHom R E} (fi : isIntegralExt f) {p : Poly E} (pm : isMonic p) : ∃ (q : Poly R) (isMonic q) (LDiv p (polyMap f q)) => {?hidden_proof}
+
+\lemma integralExt-left {R S E : Ring} (f : RingHom R S) (g : RingHom S E) (inj : IsInj g) (int : isIntegralExt (g ∘ f)) : isIntegralExt f => {?hidden_proof}
+
+\lemma integral-right {R S E : Ring} (f : RingHom R S) (g : RingHom S E) (x : E) (int : isIntegral (g ∘ f) x) : isIntegral g x => {?hidden_proof}
+
+\lemma integralExt-right {R S E : Ring} (f : RingHom R S) (g : RingHom S E) (int : isIntegralExt (g ∘ f)) : isIntegralExt g => {?hidden_proof}
+
+\lemma integralExt-generated {R S : CRing} (f : RingHom R S) {l : Array S} (fi : ∀ (x : l) (isIntegral f x)) (gen : RingHom.isAlgebraGenerated f l) :
+  LModule.IsFinitelyGenerated {homLModule f} => {?hidden_proof}
+
+\lemma integralExt-finite-char {R E : CRing} {f : RingHom R E} (l : Array E) (gen : RingHom.isAlgebraGenerated f l) :
+  TFAE (isIntegralExt f, ∀ (x : l) (isIntegral f x), LModule.IsFinitelyGenerated {homLModule f}) => {?hidden_proof}
+
+\lemma integral-comp {R S T : CRing} {f : RingHom R S} {g : RingHom S T} (fi : isIntegralExt f) {a : T} (ai : isIntegral g a) : isIntegral (g ∘ f) a => {?hidden_proof}
+
+\lemma integralExt-comp {R S E : CRing} (f : RingHom R S) (g : RingHom S E) (fi : isIntegralExt f) (gi : isIntegralExt g) : isIntegralExt (g ∘ f) => {?hidden_proof}
+
+\func integralClosure-subring {R E : CRing} (f : RingHom R E) : SubRing E \cowith
+  | contains => isIntegral f
+  | contains_zro => inP (monomial 1 1, monomial-isMonic 1, rewrite f.func-zro $ zro-right *> E.zro_*-right)
+  | contains_+ => \lam {a} {b} ai bi => integral_image-comp (SubRing.embed {polyImage SubRing.embed b}) $ integral-combined f ai bi 
+    (a + b, inP $ (padd 1 $ repeat {4} unfold (a, inP (padd 1 0, rewrite (f.func-ide, f.func-zro) simplify)), repeat {3} unfold equation))
+  | contains_ide => inP (padd (padd pzero 1) -1, inP (1, idp, idp), rewrite (f.func-negative, f.func-ide) simplify)
+  | contains_* => \lam {a} {b} ai bi => integral_image-comp (SubRing.embed {polyImage SubRing.embed b}) $ integral-combined f ai bi
+    (a * b,
+    inP (padd (padd pzero (a, inP (padd 1 0, unfold $ unfold $ rewrite (f.func-ide, f.func-zro) simplify))) (zro {SubRing.cStruct (polyImage f a)}), 
+    repeat {3} unfold simplify))
+  | contains_negative => \lam {a} ai => transport (isIntegral f) (later $ rewrite (f.func-negative, f.func-zro, f.func-ide) equation) $ poly_integral f a ai (padd (padd pzero -1) 0)
+  \where {
+    \lemma integral-combined {R E : CRing} (f : RingHom R E) {a b : E} (ai : isIntegral f a) (bi : isIntegral f b) :
+      isIntegralExt (polyImageHom (SubRing.embed {polyImage f a}) b ∘ polyImageHom f a) => {?hidden_proof}
+  }
+
+
+\func integralClosure {R E : CRing} (f : RingHom R E) : CRing => SubRing.cStruct (integralClosure-subring f)
+
+\func integralClosure-left {R E : CRing} (f : RingHom R E) : RingHom R (integralClosure f) => SubRing.corestrict f (\lam a => later (integral_image f a))
+
+\func integralClosure-right {R E : CRing} (f : RingHom R E) : RingHom (integralClosure f) E => SubRing.embed {integralClosure-subring f}
+
+\func isIntegrallyClosed (f : RingHom) => \Pi (a : f.Cod) -> isIntegral f a -> ∃ (b : f.Dom) (f b = a)
+
+\lemma integralClosure-integral {R E : CRing} (f : RingHom R E) : isIntegralExt (integralClosure-left f) => {?hidden_proof}
+
+\lemma integralClosure-closed {R E : CRing} (f : RingHom R E) : isIntegrallyClosed (integralClosure-right f) => {?hidden_proof}
+
+\func integral_factor {R E : CRing} (f : RingHom R E) (a : E) (p : Poly R) (e : polyEval (polyMap f p) a = 0) :
+  RingHom (FactorRing (Ideal.closure1 p)) (SubRing.cStruct (polyImage f a)) => factor-lift (polyImageHomPoly f a) 
+  (\lam {q} c => ext $ unfold (\case Ideal.closure1-lem.1 c \with {  | inP (d, q=pd) => rewrite (q=pd, (polyMapEvalRingHom f a).func-*) equation}))
+
+\lemma integralExt-directColimit {J : BottomJoinSemilattice} (F : Functor J RingCat) (p : \Pi {j j' : J} (f : Hom j j') -> isIntegralExt (F.Func f)) (j : J) :
+  isIntegralExt (RingLatticeColimit.inMap j) => {?hidden_proof}

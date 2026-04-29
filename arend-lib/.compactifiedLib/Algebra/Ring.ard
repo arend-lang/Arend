@@ -1,0 +1,64 @@
+\import Algebra.Domain.Bezout
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Ring.Ideal
+\import Algebra.Semiring
+\import Arith.Nat
+\import Equiv
+\import Function.Meta($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+
+\class PseudoRing \extends PseudoSemiring, AbGroup {
+  | zro_*-left => \lam {x} =>
+    AddGroup.cancel-left (zro * x) (qed (zro * x + zro * x ==< inv rdistr >== (zro + zro) * x ==< pmap (* x) zro-left >== zro * x ==< inv zro-right >== zro * x + zro))
+  | zro_*-right => \lam {x} =>
+    AddGroup.cancel-left (x * zro) (qed (x * zro + x * zro ==< inv ldistr >== x * (zro + zro) ==< pmap (x *) zro-left >== x * zro ==< inv zro-right >== x * zro + zro))
+}
+
+\class Ring \extends PseudoRing, Semiring
+  \where {
+\class With# \extends Ring, AddGroup.With# {
+      | #0-*-left {x y : E} : #0 (x * y) -> #0 x
+      | #0-*-right {x y : E} : #0 (x * y) -> #0 y
+      | #0-negative => \lam {x} x#0 => #0-*-left (transport #0 (inv (negative_* *> ide-right)) x#0)
+    }
+
+\class Dec \extends AddGroup.Dec, With# {
+      | #0-*-left => \lam {x} {y} x*y#0 => (\case decideEq x zro \with {
+        | yes x=0 => absurd (#0-zro (transport #0 (pmap (* y) x=0 *> zro_*-left) x*y#0))
+        | no x/=0 => nonZeroApart x/=0
+      })
+      | #0-*-right => \lam {x} {y} x*y#0 => (\case decideEq y zro \with {
+        | yes y=0 => absurd (#0-zro (transport #0 (pmap (x *) y=0 *> zro_*-right) x*y#0))
+        | no y/=0 => nonZeroApart y/=0
+      })
+    }
+  }
+
+
+\class NonZeroRing \extends Ring, NonZeroSemiring
+
+\class PseudoCRing \extends PseudoRing, PseudoCSemiring
+
+\class CRing \extends Ring, PseudoCRing, CSemiring
+  \where {
+    \open Monoid(LDiv, Inv)
+
+\class With# \extends CRing, Ring.With# {
+      | #0-*-right => \lam x*y#0 => #0-*-left (transport #0 *-comm x*y#0)
+    }
+
+\class Dec \extends Ring.Dec, With#
+  }
+
+
+\class NonZeroCRing \extends CRing, NonZeroRing

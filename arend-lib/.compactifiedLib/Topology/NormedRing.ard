@@ -1,0 +1,114 @@
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.InfReal
+\import Arith.Real.UpperReal
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Meta
+\import Operations
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.TopRing
+\import Topology.UniformSpace
+\import Topology.UniformSpace.Product
+\open Monoid(pow)
+
+\class ExPseudoNormedPseudoRing \extends BoundedExPseudoNormedAbGroup, TopSemigroup, PseudoRing {
+  | norm_*_<= {x y : E} : norm (x * y) <= norm x ExUpperReal.* norm y
+  | *-cont => bilinear-locally-uniform * rdistr_- ldistr_- norm_*_<=
+}
+
+\lemma *-locally-uniform {X : ExPseudoNormedPseudoRing} : LocallyUniformMap (X ⨯ X) X (\lam s => s.1 * s.2) => {?hidden_proof}
+
+\class PseudoNormedPseudoRing \extends ExPseudoNormedPseudoRing, PseudoNormedAbGroup
+
+\lemma lnorm_*_<= {X : PseudoNormedPseudoRing} {x y : X} : lnorm (x * y) <= lnorm x * lnorm y => {?hidden_proof}
+
+\class ExPseudoNormedRing \extends ExPseudoNormedPseudoRing, TopRing {
+  | norm_ide_<= : norm 1 <= ExUpperReal.fromRat 1
+}
+
+\lemma norm_<=_pow {X : ExPseudoNormedRing} {x : X} {n : Nat} : norm (pow x n) <= ExUpperRealSemigroup.pow (norm x) n => {?hidden_proof}
+
+\lemma pow-cover {X : ExPseudoNormedRing} (n : Nat) : CoverMap X X (pow __ n) => {?hidden_proof}
+
+\class CompleteExNormedRing \extends ExPseudoNormedRing, CompleteExNormedAbGroup
+
+\class PseudoNormedRing \extends ExPseudoNormedRing, PseudoNormedPseudoRing
+
+\lemma lnorm_ide_<= {X : PseudoNormedRing} : X.norm 1 <= 1 => {?hidden_proof}
+
+\lemma norm_ide=0 {X : ExPseudoNormedRing} (p : X.norm 1 = 0) {x : X} (xb : (norm x).IsBounded) : norm x = 0 => {?hidden_proof}
+
+\lemma norm_ide<1 {X : ExPseudoNormedRing} (|1|<1 : (X.norm 1).U 1) : X.norm 1 = 0 => {?hidden_proof}
+  \where {
+    \lemma aux {q : Rat} (q>0 : q > 0) (q<1 : q < 1) (p : (X.norm 1).U q) {n : Nat} : (X.norm 1).U (pow q n) => {?hidden_proof}
+  }
+
+
+\lemma norm_ide/=0 {X : ExPseudoNormedRing} (p : X.norm 1 /= 0) : X.norm 1 = 1 => {?hidden_proof}
+
+\lemma norm_ide-left {X : ExPseudoNormedRing} {x : X} : X.norm 1 * norm x = norm x => {?hidden_proof}
+
+\lemma norm_ide-right {X : ExPseudoNormedRing} {x : X} : X.norm x * X.norm 1 = norm x => {?hidden_proof}
+
+\lemma norm_zro_ide {X : PseudoNormedRing} : (X.norm 1 = (0 : Real)) || (X.norm 1 = (1 : Real)) => {?hidden_proof}
+
+\lemma lnorm_<=_pow {X : PseudoNormedRing} {x : X} {n : Nat} : lnorm (pow x n) <= pow (lnorm x) n => {?hidden_proof}
+
+\class ExPseudoValuedPseudoRing \extends ExPseudoNormedPseudoRing {
+  | norm_* {x y : E} : norm (x * y) = norm x ExUpperReal.* norm y
+  | norm_*_<= => =_<= norm_*
+}
+
+\lemma lnorm_* {X : PseudoValuedRing} {x y : X} : lnorm (x * y) = lnorm x * lnorm y => {?hidden_proof}
+
+\class ExPseudoValuedRing \extends ExPseudoValuedPseudoRing, ExPseudoNormedRing, Ring {
+  | norm_ide : norm 1 = ExUpperReal.fromRat 1
+  | norm_ide_<= => =_<= norm_ide
+}
+
+\lemma norm_pow {X : ExPseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = ExUpperRealSemigroup.pow (norm x) n => {?hidden_proof}
+
+\class PseudoValuedRing \extends PseudoNormedRing, ExPseudoValuedRing
+
+\lemma lnorm_ide {X : PseudoValuedRing} : X.norm 1 = 1 => {?hidden_proof}
+
+\lemma lnorm_pow {X : PseudoValuedRing} {x : X} {n : Nat} : lnorm (pow x n) = pow (lnorm x) n => {?hidden_proof}
+
+\func RatValue  => ExPseudoValuedRing {
+  | E => Rat
+  | * => RatField.*
+  | ide => RatField.ide
+  | + => RatField.+
+  | negative => RatField.negative
+}
+
+\instance RatValuedRing : PseudoValuedRing Rat 
+  | PseudoNormedAbGroup => RatNormed
+  | Ring => RatField
+  | norm_* => pmap ExUpperReal.fromRat RatField.abs_* *> inv (ExUpperReal.*-rat RatField.abs>=0 RatField.abs>=0)
+  | norm_ide => idp
+
+\class CompleteValuedRing \extends PseudoValuedRing, CompleteExNormedRing, CompleteNormedAbGroup
+
+\class CompleteValuedCRing \extends CompleteValuedRing, CRing
+
+\instance RealValuedRing : CompleteValuedCRing Real 
+  | CompleteNormedAbGroup => RealNormed
+  | CRing => RealField
+  | norm_* => Real.=-upper.1 RealField.abs_* *> RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0
+  | norm_ide => RealField.abs-ofPos $ LinearOrder.<_<= RealAbGroup.zro<ide

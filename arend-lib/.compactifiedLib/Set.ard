@@ -1,0 +1,159 @@
+\import Data.Bool(Bool, So, false, not, true)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Logic.Unique
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\data Dec (E : \Prop) 
+  | yes E
+  | no (Not E)
+  \where {
+    \use \level levelProp {E : \Prop} : isProp (Dec E) => isProp-prover
+
+    \func rec {R : \Type} {E : \Prop} (y : E -> R) (n : Not E -> R) (d : Dec E) : R \elim d
+      | yes e => y e
+      | no q => n q
+  }
+
+
+\lemma negated-dec (E : \Prop) {P : NegatedProp} (f : Dec E -> P) : P => {?hidden_proof}
+
+\func decToBool {E : \Prop} (d : Dec E) : Bool 
+  | yes _ => true
+  | no _ => false
+
+\class Decide {
+  | E : \Prop
+  | decide : Dec E
+}
+
+\lemma dec_decide {E : \Prop} (d : Dec E) : Decide E => {?hidden_proof}
+
+\lemma dec_yes_reduce {E : \Prop} {d : Dec E} (e : E) : d = yes e => {?hidden_proof}
+
+\lemma dec_no_reduce {E : \Prop} {d : Dec E} (q : Not E) : d = no q => {?hidden_proof}
+
+\lemma Dec_|| {A B : \Prop} (d : Dec A) (e : Dec B) : Dec (A || B) => {?hidden_proof}
+
+\func SigmaDecide {A : Decide} (B : A -> Decide) : Decide (\Sigma (a : A) (B a)) \cowith
+  | decide => \case A.decide \with {
+    | yes a => \case decide {B a} \with {
+      | yes b => yes (a, b)
+      | no q => no (\lam p => q $ transport (B __) prop-pi p.2)
+    }
+    | no q => no (\lam p => q p.1)
+  }
+
+\instance ProductDecide (A B : Decide) : Decide => SigmaDecide {A} (\lam _ => B)
+
+\lemma NotDec {P : \Prop} (d : Dec P) : Dec (Not P) => {?hidden_proof}
+
+\instance NotDecide (A : Decide) : Decide (Not A) 
+  | decide => NotDec A.decide
+
+\class BaseSet {
+  | E : \Set
+}
+
+\class SubSet {
+  | S : BaseSet
+  | contains : S -> \Prop
+}
+
+\class DecSubSet \extends SubSet {
+  | isDec (x : S) : Dec (contains x)
+}
+  \where {
+    \func max {S : BaseSet} : DecSubSet S \cowith
+      | contains => \lam _ => \Sigma
+      | isDec => \lam _ => yes ()
+  }
+
+
+\class SeparatedSet \extends BaseSet {
+  | separatedEq {x y : E} : Not (Not (x = y)) -> x = y
+}
+
+\class Set# \extends SeparatedSet {
+  | \infix 4 # : E -> E -> \Prop
+  | #-irreflexive {x : E} : Not (x # x)
+  | #-symmetric {x y : E} : x # y -> y # x
+  | #-comparison (x y z : E) : x # z -> x # y || y # z
+  | tightness {x y : E} : Not (x # y) -> x = y
+  | separatedEq => \lam {x} ~~x=y => tightness (\lam x#y => ~~x=y (\lam x=y => #-irreflexive (transport (x #) (inv x=y) x#y)))
+}
+
+\class DecSet \extends BaseSet, Set# {
+  \field decideEq (x y : E) : Dec (x = y)
+  | nonEqualApart {x y : E} : x /= y -> x # y
+  | \infix 4 == : E -> E -> Bool
+  | == => \lam x y => decToBool (decideEq x y)
+  | # => (#)
+  | nonEqualApart => nonEqualApartImpl
+  | #-irreflexive => #-irreflexive
+  | #-symmetric => #-symmetric
+  | #-comparison => #-comparison
+  | tightness => tightness
+}
+
+\func SigmaDecSet {A : DecSet} (B : A -> DecSet) : DecSet (\Sigma (a : A) (B a)) \cowith
+  | decideEq => \lam p q => (\case decideEq p.1 q.1 \with {
+    | yes e => \case decideEq (transport (\lam a => B a) e p.2) q.2 \with {
+      | yes e' => yes (ext (e, e'))
+      | no n => no (\lam e' => n (rewrite (prop-isProp e (pmap __.1 e')) (pmapd __.2 e')))
+    }
+    | no n => no (\lam e => n (pmap __.1 e))
+  })
+
+\func SubDecSet {A : DecSet} {B : A -> \Prop} : DecSet (\Sigma (a : A) (B a)) 
+  => SigmaDecSet (\lam a => \new (DecSet (B a)) {  | decideEq => \lam b b' => yes prop-pi})
+
+\instance DecBool : DecSet 
+  | E => Bool
+  | decideEq => \lam x y => compare x y
+  \where {
+    \func compare (a b : Bool) : Dec (a = b) 
+      | false, false => yes idp
+      | false, true => no contradiction
+      | true, false => no contradiction
+      | true, true => yes idp
+  }
+
+
+\instance ProductDecSet (A B : DecSet) : DecSet (\Sigma A B) => SigmaDecSet (\lam _ => B)
+
+\instance EqualityDecide (A : DecSet) (a a' : A) : Decide (a = a') 
+  | decide => decideEq a a'
+
+\instance ArrayDec (A : DecSet) (n : Nat) : DecSet (Array A n) 
+  | decideEq => aux
+  \where {
+    \func aux {n : Nat} (l l' : Array A n) : Dec (l = l') \elim n, l, l'
+      | 0, nil, nil => yes idp
+      | suc n, a :: l, a' :: l' => \case decideEq a a', aux l l' \with {
+        | yes e, yes e' => yes $ pmap2 :: e e'
+        | _, no q => no (\lam p => q (\lam i => \new (Array A n (\lam j => p i (suc j)))))
+        | no q, _ => no (\lam p => q (\lam i => p i 0))
+      }
+  }
+
+
+\lemma decideEq=_reduce {A : DecSet} {x y : A} (p : x = y) : decideEq x y = yes p => {?hidden_proof}
+
+\lemma decideEq/=_reduce {A : DecSet} {x y : A} (p : x /= y) : decideEq x y = no p => {?hidden_proof}
+
+\lemma ==_= {A : DecSet} {a a' : A} (so : So (a == a')) : a = a' => {?hidden_proof}
+
+\lemma =-dec {A : DecSet} {a a' : A} {so : So (a == a')} : a = a' => {?hidden_proof}
+
+\lemma /=-dec {A : DecSet} {a a' : A} {so : So (not (a == a'))} : a /= a' => {?hidden_proof}
+
+\data Trunc0 (A : \Type) : \Set 
+  | in0 A
+  \where {
+    \func map {A B : \Type} (t : Trunc0 A) (f : A -> B) : Trunc0 B \elim t
+      | in0 a => in0 (f a)
+  }

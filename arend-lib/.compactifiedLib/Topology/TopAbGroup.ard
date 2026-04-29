@@ -1,0 +1,104 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\import Topology.UniformSpace
+
+\class TopAbGroup \extends TopSpace, AbGroup, UniformSpace {
+  | +-cont : ContMap (ProductTopSpace \this \this) \this (\lam s => s.1 + s.2)
+  | negative-cont : ContMap \this \this negative
+  | neighborhood-uniform {C : Set (Set E)} : isUniform C <-> ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (x - y) -> V y)
+  | uniform-cover => \lam Cu x => (\case neighborhood-uniform.1 Cu \with {
+    | inP (U, Uo, U0, h) => \case h x \with {
+      | inP (V, CV, g) => inP (V, CV, g $ transportInv U negative-right U0)
+    }
+  })
+  | uniform-top => neighborhood-uniform.2 $ inP (top, open-top, (), \lam x => inP (top, idp, \lam _ => ()))
+  | uniform-refine => \lam Cu e => (\case neighborhood-uniform.1 Cu \with {
+    | inP (U, Uo, U0, h) => neighborhood-uniform.2 $ inP 
+      (U, Uo, U0, \lam x => (\case h x \with {  | inP (V, CV, g) => \case e CV \with {    | inP (W, DW, V<=W) => inP (W, DW, \lam u => V<=W $ g u)  }}))
+  })
+  | uniform-inter => \lam Cu Du => (\case neighborhood-uniform.1 Cu, neighborhood-uniform.1 Du \with {
+    | inP (U, Uo, U0, g), inP (V, Vo, V0, h) => neighborhood-uniform.2 $ inP
+      (U ∧ V, open-inter Uo Vo, (U0, V0),  \lam x => (\case g x, h x \with {
+      | inP (W, CW, f), inP (W', DW', f') => inP (W ∧ W', inP $ later (W, CW, W', DW', idp), \lam (u, u') => (f u, f' u'))}))
+  })
+  | uniform-star => \lam Cu => (\case neighborhood-uniform.1 Cu \with {
+    | inP (U, Uo, U0, g) => \case shrink' +-cont negative-cont Uo U0 \with {
+      | inP (V', V'o, V'0, h') => \case shrink' +-cont negative-cont V'o V'0 \with {
+        | inP (V, Vo, V0, h) => inP (\lam W => ∃ (x : E) (W = (\lam y => V (x - y))), 
+          neighborhood-uniform.2 $ inP (V, Vo, V0, \lam x => inP (\lam y => V (x - y), inP $ later (x, idp), \lam v => v)),
+            \lam {_} inP (x, idp) => (\case g x \with {
+            | inP (U', CU', g') => inP (U', CU', \lam {_} inP (x', idp) (y, (Wy, W'y)) {z} W'z => g' $ simplify in h' (h Wy W'y) (h V0 W'z))}))
+      }
+    }
+  })
+  | cauchy-open => \lam {S} => (\lam So {x} Sx => uniform-cauchy.2 $ ClosurePrecoverSpace.closure $ neighborhood-uniform.2
+    (\case shrink' +-cont negative-cont ((+-cont ∘ tuple id (const x)).func-cont So) (transportInv S zro-left Sx) \with {
+    | inP (U', U'o, U'0, h') => \case shrink' +-cont negative-cont U'o U'0 \with {
+      | inP (U, Uo, U0, h) => inP (U, Uo, U0, \lam y => inP (\lam z => U (y - z), later (\lam Uyx {z} Uyz => simplify in h' (h U0 Uyz) (h U0 Uyx)), \lam u => u))
+      }}),
+    \lam f => cover-open (\lam {x} Sx => (\case ClosurePrecoverSpace.closure-filter (NFilter x)
+    (\lam Cu => (\case neighborhood-uniform.1 Cu \with {  | inP (U, Uo, U0, h) => \case h x \with {
+      | inP (V, CV, g) => inP (V, CV, inP (\lam y => U (x - y), (+-cont ∘ prod (const x) negative-cont ∘ tuple id id).func-cont Uo, transportInv U negative-right U0, g __))
+        }})) $ uniform-cauchy.1 $ f Sx \with {  | inP (U, e, inP (V, Vo, Vx, V<=U)) => inP (V, Vo, Vx, V<=U <=∘ e (V<=U Vx))}))
+  )
+  | isUniform => isUniform
+  | neighborhood-uniform => neighborhood-uniform-impl
+}
+  \where {
+    \open ContMap
+    \open ProductTopSpace
+
+    \lemma shrink' {X : TopSpace} {A : AddGroup X} (+-cont : ContMap (ProductTopSpace X X) X (\lam s => s.1 + s.2)) (negative-cont : ContMap X X negative) {U : Set X} 
+    (Uo : isOpen U) (U0 : U 0) : ∃ (V : isOpen) (V 0) ∀ {x y : V} (U (x - y)) => {?hidden_proof}
+  }
+
+
+\func \infix 4 <=<ta {X : TopAbGroup} (V U : Set X) : \Prop => ∀ {x y : V} (U (x - y))
+
+\lemma <=<ta-left {X : TopAbGroup} {V U : Set X} (V<=<U : V <=<ta U) {x y z : X} (p : V (x - z)) (q : V (y - z)) : U (x - y) => {?hidden_proof}
+
+\lemma <=<ta-right {X : TopAbGroup} {V U : Set X} (V<=<U : V <=<ta U) {x y z : X} (p : V (x - y)) (q : V (x - z)) : U (y - z) => {?hidden_proof}
+
+\lemma topAb-sub-contAt {X Y : TopAbGroup} {S : Set X} {f : Set.Total S -> Y} {x : Set.Total S} :
+  IsContAt {TopSub S} f x <-> ∀ {V : Y.isOpen} (V 0) ∃ (U : X.isOpen) (U 0) ∀ {x' : Set.Total S} (U (x.1 - x'.1)) (V (f x - f x')) => {?hidden_proof}
+
+\lemma topAb-contAt {X Y : TopAbGroup} {f : X -> Y} {x : X} : IsContAt f x <-> ∀ {V : Y.isOpen} (V 0) ∃ (U : X.isOpen) (U 0) ∀ {x'} (U (x - x')) (V (f x - f x')) => {?hidden_proof}
+
+\lemma <=<ta_<= {X : TopAbGroup} {V U : Set X} (V0 : V 0) (p : V <=<ta U) : V ⊆ U => {?hidden_proof}
+
+\lemma <=<ta_negative {X : TopAbGroup} {V U : Set X} (p : V <=<ta U) : negative ^-1 V <=<ta negative ^-1 U => {?hidden_proof}
+
+\lemma <=<ta_<=*-shifted {X : TopAbGroup} {W V U : Set X} (Wo : isOpen W) (W0 : W 0) (p : W <=<ta V) (q : V <=<ta U) {x : X} : X.UBall W x <=* X.UBall U x => {?hidden_proof}
+
+\lemma <=<ta_<=* {X : TopAbGroup} {W V U : Set X} (Wo : isOpen W) (W0 : W 0) (p : W <=<ta V) (q : V <=<ta U) : W <=* U => {?hidden_proof}
+
+\class HausdorffTopAbGroup \extends TopAbGroup, HausdorffTopSpace, SeparatedCoverSpace
+
+\class TopAbGroupMap \extends ContMap, AddGroupHom, UniformMap {
+  \override Dom : TopAbGroup
+  \override Cod : TopAbGroup
+  | func-uniform => \lam Eu => (\case neighborhood-uniform.1 Eu \with {
+    | inP (U, Uo, U0, h) => neighborhood-uniform.2 $ inP
+      (func ^-1 U, func-cont Uo, transportInv U func-zro U0, \lam x => (\case h (func x) \with {
+      | inP (V, EV, g) => inP (func ^-1 V, inP $ later (V, EV, idp), \lam u => g $ transport U func-minus u)}))
+  })
+}
+  \where {
+    \open TopAbGroup
+  }

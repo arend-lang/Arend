@@ -1,0 +1,55 @@
+\import Logic
+\import Meta
+\import Paths
+
+\data Bool 
+  | false
+  | true
+
+\func So (b : Bool) : \Prop 
+  | true => \Sigma
+  | false => Empty
+  \where {
+    \lemma fromSo {b : Bool} (s : So b) : b = true => {?hidden_proof}
+
+    \lemma toSo {b : Bool} (p : b = true) : So b => {?hidden_proof}
+  }
+
+
+\func not (b : Bool) : Bool 
+  | true => false
+  | false => true
+
+\lemma not-isInv {b : Bool} : not (not b) = b => {?hidden_proof}
+
+\func if {A : \Type} (b : Bool) (then else : A) : A \elim b
+  | true => then
+  | false => else
+
+\func \infixl 3 and (x y : Bool) : Bool \elim x
+  | true => y
+  | false => false
+  \where {
+    \lemma toSigma {x y : Bool} (p : x and y = true) : \Sigma (x = true) (y = true) => {?hidden_proof}
+
+    \lemma fromSigma {x y : Bool} (p : \Sigma (x = true) (y = true)) : x and y = true => {?hidden_proof}
+  }
+
+
+\func \infixl 2 or (x y : Bool) : Bool \elim x
+  | true => true
+  | false => y
+  \where {
+    \lemma toOr {x y : Bool} (p : x or y = true) : (x = true) || (y = true) => {?hidden_proof}
+
+    \lemma fromOr {x y : Bool} (p : (x = true) || (y = true)) : x or y = true => {?hidden_proof}
+  }
+
+
+\func \infixl 2 xor (a b : Bool) : Bool 
+  | false, false => false
+  | false, true => true
+  | true, false => true
+  | true, true => false
+
+\lemma true/=false (p : true = false) : Empty => {?hidden_proof}

@@ -1,0 +1,57 @@
+\import Algebra.Domain
+\import Algebra.Domain.IntegrallyClosed
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Monoid.Sub
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Localization \hiding (FieldOfQuotients)
+\import Algebra.Ring.Poly
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Or
+\import Function.Meta($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.LinearOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\open Monoid
+
+\class GCDDomain \extends IntegralDomain {
+  | isGCDDomain (x y : E) : #0 x -> #0 y -> TruncP (GCD x y)
+}
+  \where {
+\class Dec \extends GCDDomain, GCDMonoid, IntegralDomain.Dec, IntegrallyClosedDomain {
+      | isGCD => gcd nonZeroApart
+      | gcd-ldistr => \lam c {x} {y} g => (\case decideEq c 0 \with {
+        | yes c=0 => rewrite c=0 $ simplify $ inP (\new GCD {  | res|val1 => LDiv.id-div  | res|val2 => LDiv.id-div  | res-univ => \lam g g|0 _ => g|0})
+        | no c/=0 => TruncP.map (gcd nonZeroApart (c * x) (c * y)) $ GCDMonoid.gcd-ldistr_cancel (\lam {a} {b} => nonZero-cancel-left c/=0) g
+      })
+      | isIntegrallyClosedDomain => \lam x xi => (\case Dec.coprime-repr-aux x, \elim xi \with {
+        | inP c, inP d => \case loc_poly (\lam s p => nonZero-cancel-right (apartNonZero s) p) d.1 d.2 (rewrite c.5 in d.3) \with {
+          | inP e => rewrite c.5
+            (\case decide#0 c.1 \with {  | inl q => inP (0, LocRing.equals1 $ simplify $ inv q)
+            | inr c1#0 => inP (_,  inv $ div_loc $ nonZero_ldiv $ CancelGCDMonoid.gcd_pow_div {nonZeroGCDMonoid} {(c.2, c.3)} {(c.1, c1#0)} {e.1} 
+              (transport (LDiv _) (ext $ inv subMonoid.embedMonoid.func-pow) $ ldiv_nonZero {_} {_} {(_, pow_#0 c1#0)} e.2) $ IsCoprime.<=gcd $ later
+                (\new GCD {  | res|val1 => LDiv.ide-div  | res|val2 => LDiv.ide-div
+                | res-univ => \lam g g|c2 g|c1 => ldiv_nonZero $ GCD.res-univ {c.4} g.1 (nonZero_ldiv g|c1) (nonZero_ldiv g|c2)}))})
+        }
+      })
+    }
+      \where {
+        \lemma gcd {M : GCDDomain} {D : DecSet M} (d : \Pi {x : M} -> x /= 0 -> M.#0 x) (a b : M) : TruncP (GCD a b) => {?hidden_proof}
+
+        \lemma coprime-repr-aux {D : GCDDomain} {dec : IntegralDomain.Dec {  | IntegralDomain => D}} (x : LocRing D.subMonoid) :
+          ∃ (a b : D) (b#0 : D.#0 b) (GCD a b 1) (x = inl~ (a, b, b#0)) => {?hidden_proof}
+
+        \lemma loc_poly {R : CRing} {S : SubMonoid R} (nt : \Pi {a : R} -> S a -> \Pi {x y : R} -> x * a = y * a -> x = y) (p : Poly R) (m : isMonic p) {a b : R} {Sb : S b} 
+        (e : polyEval (polyMap locMap p) (inl~ (a, b, Sb)) = 0) : ∃ (n : Nat) (LDiv b (pow a n)) => {?hidden_proof}
+      }
+
+  }

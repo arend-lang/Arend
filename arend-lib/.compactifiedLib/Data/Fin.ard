@@ -1,0 +1,39 @@
+\import Arith.Nat(pred)
+\import Logic
+\import Paths
+
+fzero {n : Nat} : Fin (suc n) => 0
+
+fsuc {n : Nat} (x : Fin n) : Fin (suc n) => suc x
+
+\func fpred {n : Nat} (def : Fin n) (x : Fin (suc n)) : Fin n \elim x
+  | 0 => def
+  | suc x => x
+
+\func fcase {A : \Type} {n : Nat} (a : A) (f : Fin n -> A) (j : Fin (suc n)) : A \elim j
+  | 0 => a
+  | suc j => f j
+
+\lemma unfsuc {n : Nat} {x y : Fin n} (p : suc x = suc y) : x = y => {?hidden_proof}
+
+\lemma fsuc/= {n : Nat} {x y : Fin n} (p : x /= y) : fsuc x /= fsuc y => {?hidden_proof}
+
+\lemma fsuc/=0 {n : Nat} {x : Fin n} : fsuc x /= 0 => {?hidden_proof}
+
+\lemma fsuc/=-conv {n : Nat} {x y : Fin n} (p : fsuc x /= fsuc y) : x /= y => {?hidden_proof}
+
+\lemma nat_fin_= {n : Nat} {x y : Fin n} (p : x = {Nat} y) : x = y => {?hidden_proof}
+
+\lemma fin_nat_/= {n : Nat} {x y : Fin n} (p : x /= y) : (x : Nat) /= y => {?hidden_proof}
+
+\lemma fsuc_fpred {n : Nat} {x : Fin (suc n)} {d : Fin n} (p : x /= 0) : fsuc (fpred d x) = x => {?hidden_proof}
+
+\func fpredP {n : Nat} (j : Fin (suc n)) (j/=0 : j /= 0) : Fin n \elim j
+  | 0 => absurd (j/=0 idp)
+  | suc j => j
+
+\lemma fsuc_fpredP {n : Nat} {x : Fin (suc n)} (p : x /= 0) : fsuc (fpredP x p) = x => {?hidden_proof}
+
+\func finLast (n : Nat) : Fin (suc n) \elim n
+  | 0 => 0
+  | suc n => suc (finLast n)

@@ -1,0 +1,24 @@
+\import Homotopy.Fibration
+\import Paths
+\import Logic.Unique
+\import Equiv
+\import Equiv.HalfAdjoint
+
+\func hasContrFibers {A B : \Type} (f : A -> B) => \Pi (b : B) -> Contr (\Sigma (a : A) (f a = b))
+  \where {
+    \lemma levelProp : isProp (hasContrFibers f) => {?hidden_proof}
+  }
+
+
+\func contrFibers=>Equiv {A B : \Type} {f : A -> B} (p : hasContrFibers f) : QEquiv f => 
+  \let sec y => Contr.center {p y}
+  \in \new QEquiv {
+        | ret => \lam y => (sec y).1
+        | ret_f => \lam x => pmap (\lam (r : Fib f (f x)) => r.1) (Contr.contraction {p (f x)} (x, idp))
+        | f_sec => \lam y => (sec y).2
+      }
+
+\lemma Equiv=>contrFibers (e : Equiv) : hasContrFibers e => {?hidden_proof}
+  \where {
+    \lemma fromSection (s : Section) (r : Retraction s) : hasContrFibers s => {?hidden_proof}
+  }

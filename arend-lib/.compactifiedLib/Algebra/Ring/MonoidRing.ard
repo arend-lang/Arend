@@ -1,0 +1,362 @@
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.Poly
+\import Algebra.Semiring
+\import Category
+\import Data.Array
+\import Data.Array.EPerm
+\import Data.Array.Pairs
+\import Data.Array.Split
+\import Data.Or
+\import Equiv(Equiv)
+\import Function(IsInj)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence \hiding (~)
+\import Set
+\import Set.Fin
+\import Set.Fin.KFin
+\open EPerm
+\open Transitive(Closure, cin, ctrans)
+\open AddMonoid
+
+\type MonoidSet (M : \Set) (R : AddMonoid) => Quotient {Array (\Sigma R M)} ~
+  \where {
+\data \infix 5 ~ {M : \Set} {R : AddMonoid} (l l' : Array (\Sigma R M)) 
+      | ~-perm (EPerm l l')
+      | ~-sym (l' ~ l)
+      | ~-zro {m : M} (l = (0, m) :: l')
+      | ~-+ {l'' : Array (\Sigma R M)} (m : M) {a b : R} (l = (a + b, m) :: l'') (l' = (a, m) :: (b, m) :: l'')
+
+    \func inMS~ {M : \Set} {R : AddMonoid} (l : Array (\Sigma R M)) : Quotient ~ => in~ l
+
+    \func inMS {M : \Set} {R : AddMonoid} (l : Array (\Sigma R M)) : MonoidSet M R => in~ l
+
+    \lemma ~-msequiv {M : \Set} {R : AddMonoid} {l l' : Array (\Sigma R M)} (p : l ~ l') : inMS l = inMS l' => {?hidden_proof}
+
+    \func ~_++-left {M : \Set} {R : AddMonoid} {l1 l2 l : Array (\Sigma R M)} (e : l1 ~ l2) : (l1 ++ l) ~ (l2 ++ l) \elim e
+      | ~-perm e => ~-perm (eperm-++-left e)
+      | ~-sym e => ~-sym (~_++-left e)
+      | ~-zro p => ~-zro (pmap (++ l) p)
+      | ~-+ m p q => ~-+ m (pmap (++ l) p) (pmap (++ l) q)
+
+    \lemma ~_++-right {M : \Set} {R : AddMonoid} {l l1 l2 : Array (\Sigma R M)} (e : Closure ~ l1 l2) : Closure ~ (l ++ l1) (l ++ l2) => {?hidden_proof}
+
+    \lemma ~_++ {M : \Set} {R : AddMonoid} {l1 l2 l1' l2' : Array (\Sigma R M)} (e1 : Closure ~ l1 l1') (e2 : Closure ~ l2 l2') : Closure ~ (l1 ++ l2) (l1' ++ l2') => {?hidden_proof}
+
+    \lemma ~_Big++ {M : \Set} {R : AddMonoid} {n : Nat} {ls ls' : Array (Array (\Sigma R M)) n} (es : \Pi (j : Fin n) -> Closure ~ (ls j) (ls' j)) :
+      Closure ~ (Big ++ nil ls) (Big ++ nil ls') => {?hidden_proof}
+
+    \func ~_map {M M' : \Set} (f : AddMonoidHom) (g : M -> M') {l l' : Array (\Sigma f.Dom M)} (e : l ~ l') :
+      map (\lam s => (f s.1, g s.2)) l ~ map (\lam s => (f s.1, g s.2)) l' \elim e
+      | ~-perm e => ~-perm (EPerm_map (\lam s => (f s.1, g s.2)) e)
+      | ~-sym e => ~-sym (~_map f g e)
+      | ~-zro {m} idp => ~-zro $ pmap (\lam x => (x, g m) :: map (\lam s => (f s.1, g s.2)) l') f.func-zro
+      | ~-+ {l''} m idp idp => ~-+ (g m) (pmap (\lam x => (x, g m) :: map (\lam s => (f s.1, g s.2)) l'') f.func-+) idp
+
+    \lemma toClosure {M : \Set} {R : AddMonoid} {l l' : Array (\Sigma R M)} (c : inMS l = inMS l') : Closure ~ l l' => {?hidden_proof}
+
+    \lemma fromClosure {M : \Set} {R : AddMonoid} {l l' : Array (\Sigma R M)} (c : Closure ~ l l') : inMS l = inMS l' => {?hidden_proof}
+
+    \lemma unique-sum {M : \Set} {R : AddMonoid} (m : M) {l : Array (\Sigma R M)} (c : \Pi (j : Fin l.len) -> (l j).2 = m) : Closure ~ l ((R.BigSum (map __.1 l), m) :: nil) => {?hidden_proof}
+  }
+
+
+\open MonoidSet
+
+\func msMonomial {M : \Set} {R : AddMonoid} (r : R) (m : M) : MonoidSet M R => inMS ((r, m) :: nil)
+
+\lemma monoidSet-ext {M : \Set} {R : AddMonoid} {x y : Quotient {Array (\Sigma R M)} ~} (p : x = y) : x = {MonoidSet M R} y => {?hidden_proof}
+
+\func monoidSet-coefs {M : \Set} {R : AbMonoid} {P : M -> \Prop} (d : \Pi (m : M) -> Dec (P m)) (x : MonoidSet M R) : R \elim x
+  | in~ l => R.BigSum $ map __.1 $ keep (\lam s => d s.2) l
+  | ~-equiv l l' r => monoidSet-coefs-coh r
+  \where {
+    \lemma monoidSet-coefs-coh {l l' : Array (\Sigma R M)} (e : l ~ l') : R.BigSum (map __.1 $ keep (\lam s => d s.2) l) = R.BigSum (map __.1 $ keep (\lam s => d s.2) l') => {?hidden_proof}
+  }
+
+
+\func msCoef {M : DecSet} {R : AbMonoid} (p : MonoidSet M R) (m : M) : R => monoidSet-coefs (decideEq m) p
+
+\lemma msCoef_monomial {M : DecSet} {R : AbMonoid} {r : R} {m : M} : msCoef (msMonomial r m) m = r => {?hidden_proof}
+
+\lemma msCoef_map {M N : DecSet} {f : M -> N} (inj : IsInj f) {R E : AbMonoid} {g : AddMonoidHom R E} {p : MonoidSet M R} {m : M} :
+  msCoef (monoidSet-map f g p) (f m) = g (msCoef p m) => {?hidden_proof}
+  \where {
+    \lemma keep-lem {A D : \Set} {B C : DecSet} {f : B -> C} (inj : IsInj f) (g : A -> D) {l : Array (\Sigma A B)} {b : B} :
+      map __.1 (keep (\lam s => decideEq (f b) s.2) (map (\lam s => (g s.1, f s.2)) l)) = {Array D} (\lam j => g (keep (\lam s => decideEq b s.2) l j).1) => {?hidden_proof}
+  }
+
+
+\instance MonoidAbMonoid (M : \Set) (R : AddMonoid) : AbMonoid (MonoidSet M R) 
+  | zro => in~ nil
+  | + => +
+  | zro-left => zro-left
+  | +-assoc => +-assoc
+  | +-comm => +-comm
+  \where {
+    \open MonoidSet
+  }
+
+
+\instance MonoidAbGroup (M : \Set) (R : AddGroup) : AbGroup 
+  | AbMonoid => MonoidAbMonoid M R
+  | negative => negative
+  | negative-left => negative-left
+  \where {
+    \open Transitive(Closure, cin, ctrans)
+
+    \func func {M : \Set} {R : AddGroup} (s : \Sigma R M) => (R.negative s.1, s.2)
+
+    \func ~_negative {M : \Set} {R : AddGroup} {l l' : Array (\Sigma R M)} (p : Closure ~ l l') : Closure ~ (map func l) (map func l') \elim p
+      | cin ~-perm e => cin $ ~-perm (EPerm_map func e)
+      | cin ~-sym p => Closure.isSymmetric (\lam r => ~-sym r) $ ~_negative (cin p)
+      | cin ~-zro {m} idp => cin $ ~-zro $ pmap (\lam x => (x, m) :: map func l') R.negative_zro
+      | cin ~-+ {l''} m idp idp => ctrans (cin (~-+ m (pmap (\lam x => (x, m) :: map func l'') R.negative_+) idp)) $ cin $ ~-perm (eperm-swap idp idp idp)
+      | ctrans r1 r2 => ctrans (~_negative r1) (~_negative r2)
+
+    \func ~_negative-left {M : \Set} {R : AddGroup} (l : Array (\Sigma R M)) : inMS~ (map func l ++ l) = inMS~ nil \elim l
+      | nil => idp
+      | a :: l => ~-pequiv (~-perm $ EPerm_++-swap {_} {map func (a :: l)}) *> ~-pequiv (~-sym $ ~-+ a.2 (cong $ inv negative-right) idp) *> ~-pequiv (~-zro idp) *> 
+        ~_negative-left l
+  }
+
+
+\instance MonoidSemiring (M : Monoid) (R : Semiring) : Semiring 
+  | AbMonoid => MonoidAbMonoid M R
+  | ide => in~ ((1, 1) :: nil)
+  | * => *
+  | ide-left => \lam {x} => (\case \elim x \with {
+    | in~ l => monoidSet-ext ide-left-aux
+  })
+  | ide-right => \lam {x} => (\case \elim x \with {
+    | in~ l => monoidSet-ext $ ~-pequiv (~-perm pairs-flip) *> ide-left-aux {M.op} {R.op}
+  })
+  | *-assoc => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
+    | in~ l1, in~ l2, in~ l3 => monoidSet-ext $ ~-pequiv $ ~-perm $ eperm-= $ pairs-assoc (\lam {a} {b} {c} => ext (R.*-assoc, *-assoc))
+  })
+  | ldistr => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
+    | in~ l1, in~ l2, in~ l3 => monoidSet-ext $ ~-pequiv (~-perm pairs_++-right)
+  })
+  | rdistr => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
+    | in~ l1, in~ l2, in~ l3 => monoidSet-ext (pmap inMS~ pairs_++-left)
+  })
+  | zro_*-left => \lam {x} => (\case \elim x \with {
+    | in~ l => idp
+  })
+  | zro_*-right => \lam {x} => (\case \elim x \with {
+    | in~ l => monoidSet-ext (pmap inMS~ pairs_nil)
+  })
+  \where {
+    \open pairs
+
+    \func func {M : Monoid} {R : Semiring} (s t : \Sigma R M) => (s.1 R.* t.1, s.2 M.* t.2)
+
+    \lemma ide-left-aux {M : Monoid} {R : Semiring} {l : Array (\Sigma R M)} : inMS~ (map (func (1, 1)) l ++ nil) = inMS~ l => {?hidden_proof}
+
+    \func *-coh-right {M : Monoid} {R : Semiring} {l l1 l2 : Array (\Sigma R M)} (r : l1 ~ l2) : Closure ~ (pairs func l l1) (pairs func l l2) \elim l
+      | nil => cin (~-perm eperm-refl)
+      | a :: l => ~_++ (cin $ ~_map (\new (AddMonoidHom R R (a.1 R.*) zro_*-right ldistr)) (a.2 M.*) r) (*-coh-right r)
+  }
+
+
+\instance MonoidRing (M : Monoid) (R : Ring) : Ring 
+  | Semiring => MonoidSemiring M R
+  | AbGroup => MonoidAbGroup M R
+
+\instance MonoidCSemiring (M : CMonoid) (R : CSemiring) : CSemiring 
+  | Semiring => MonoidSemiring M R
+  | *-comm => \lam {x} {y} => (\case \elim x, \elim y \with {
+    | in~ l, in~ l' => monoidSet-ext $ ~-pequiv (~-perm pairs.pairs-flip) *> cong (ext (\lam t s => ext (*-comm, *-comm)))
+  })
+
+\func monoidRingHom {M : Monoid} {R : Ring} : RingHom R (MonoidRing M R) \cowith
+  | func => \lam a => inMS~ ((a, M.ide) :: nil)
+  | func-+ => monoidSet-ext $ ~-pequiv $ mkcon ~-+ {nil} M.ide idp idp
+  | func-ide => idp
+  | func-* => rewriteI {1} M.ide-left idp
+
+\instance MonoidAlgebra (M : CMonoid) (R : CRing) : CAlgebra R => homAlgebra {R} {\new CRing {  | Ring => MonoidRing M R  | *-comm => *-comm}} monoidRingHom
+
+\func monoidSet-map {M N : \Set} (f : M -> N) (g : AddMonoidHom) (x : MonoidSet M g.Dom) : MonoidSet N g.Cod \elim x
+  | in~ l => inMS~ $ map (\lam s => (g s.1, f s.2)) l
+  | ~-equiv l l' r => monoidSet-ext $ ~-pequiv (~_map g f r)
+
+\func monoidSet-hom {M N : \Set} (f : M -> N) (g : AddMonoidHom) : AddMonoidHom (MonoidAbMonoid M g.Dom) (MonoidAbMonoid N g.Cod) (monoidSet-map f g) \cowith
+  | func-zro => idp
+  | func-+ => \lam {x} {y} => (\case \elim x, \elim y \with {
+    | in~ l, in~ l' => pmap inMS $ map_++ (\lam s => (g s.1, f s.2))
+  })
+
+\func monoidSet-semiringHom (f : MonoidHom) (g : SemiringHom) : SemiringHom (MonoidSemiring f.Dom g.Dom) (MonoidSemiring f.Cod g.Cod) \cowith
+  | AddMonoidHom => monoidSet-hom f g
+  | func-ide => pmap2 (\lam x y => inMS ((x, y) :: nil)) g.func-ide f.func-ide
+  | func-* => \lam {x} {y} => (\case \elim x, \elim y \with {
+    | in~ l, in~ l' => pmap inMS $ pairs.pairs_map (\lam s => (g s.1, f s.2)) (\lam {a} {b} => ext (g.func-*, f.func-*))
+  })
+
+\func monoidSet-ringHom (f : MonoidHom) (g : RingHom) : RingHom (MonoidRing f.Dom g.Dom) (MonoidRing f.Cod g.Cod) \cowith
+  | SemiringHom => monoidSet-semiringHom f g
+
+\lemma msMonomial_+ {M : \Set} {R : AddMonoid} {a b : R} {m : M} : msMonomial (a + b) m = msMonomial a m + msMonomial b m => {?hidden_proof}
+
+\lemma msMonomial_BigSum {M : \Set} {R : AddMonoid} {l : Array R} {m : M} : msMonomial (R.BigSum l) m = BigSum (map (msMonomial __ m) l) => {?hidden_proof}
+
+\lemma msMonomial_0 {M : \Set} {R : AddMonoid} {m : M} : msMonomial R.zro m = 0 => {?hidden_proof}
+
+\lemma msMonomial_* {M : Monoid} {R : Semiring} {a b : R} : msMonomial (a * b) M.ide = msMonomial a M.ide * msMonomial b M.ide => {?hidden_proof}
+
+\lemma msMonomial_pow {M : Monoid} {R : Semiring} {r : R} {m : M} {n : Nat} : Monoid.pow (msMonomial r m) n = msMonomial (Monoid.pow r n) (Monoid.pow m n) => {?hidden_proof}
+
+\lemma msMonomial-split {M : Monoid} {R : Semiring} {a : R} {m : M} : msMonomial a M.ide * msMonomial R.ide m = msMonomial a m => {?hidden_proof}
+
+\lemma msMonomial_BigSum-split {M : \Set} {R : AddMonoid} {l : Array (\Sigma R M)} : BigSum (map (\lam s => msMonomial s.1 s.2) l) = inMS l => {?hidden_proof}
+
+\lemma msMonomial_BigProd {M : Monoid} {R : Semiring} (l : Array (\Sigma R M)) :
+  Monoid.BigProd (map (\lam s => msMonomial s.1 s.2) l) = msMonomial (Monoid.BigProd $ map __.1 l) (Monoid.BigProd $ map __.2 l) => {?hidden_proof}
+
+\lemma msMonomial_BigProd_ide {M : Monoid} {R : Semiring} {l : Array M} : Monoid.BigProd (map (\lam m => msMonomial R.ide m) l) = msMonomial R.ide (Monoid.BigProd l) => {?hidden_proof}
+
+\lemma monoidSet-coefs_+ {M : \Set} {R : AbMonoid} {P : M -> \Prop} {d : \Pi (m : M) -> Dec (P m)} {x y : MonoidSet M R} :
+  monoidSet-coefs d (x + y) = monoidSet-coefs d x + monoidSet-coefs d y => {?hidden_proof}
+
+\lemma monoidSet-coefs_BigSum {M : \Set} {R : AbMonoid} {P : M -> \Prop} {d : \Pi (m : M) -> Dec (P m)} {l : Array (MonoidSet M R)} :
+  monoidSet-coefs d (BigSum l) = BigSum (map (monoidSet-coefs d) l) => {?hidden_proof}
+
+\lemma msCoef-split {M : DecSet} {R : AbMonoid} (p : MonoidSet M R) :
+  ∃ (l : Array M) (\Pi {i j : Fin l.len} -> l i = l j -> i = j) (p = BigSum (map (\lam m => msMonomial (msCoef p m) m) l)) => {?hidden_proof}
+
+\lemma msCoefs-fin {M : DecSet} {R : AbMonoid} {Rd : DecSet R} (p : MonoidSet M R) : FinSet (\Sigma (m : M) (msCoef p m /= 0)) => {?hidden_proof}
+
+\lemma msCoef/=0 {M : DecSet} {R : AbMonoid} {Rd : DecSet R} {p : MonoidSet M R} (p/=0 : p /= 0) : ∃ (m : M) (msCoef p m /= 0) => {?hidden_proof}
+
+\func msCoef/=0_Index {M : DecSet} {R : AbMonoid} {l : Array (\Sigma R M)} {m : M} (p : msCoef (inMS l) m /= 0) : Index m (map __.2 l) 
+=> \case index-dec (map __.2 l) m \with {
+  | inl r => r
+  | inr q => absurd $ p $ pmap (\lam (l : Array (\Sigma R M)) => BigSum $ map __.1 l) $ keep-none (\lam j p => q (j, inv p))
+}
+
+\type DecMonoidSet (M : \Set) (R : AddPointed) => Quotient {Type M R} (\lam s t => EPerm s.1 t.1)
+  \where {
+    \func Type (M : \Set) (R : AddPointed) => \Sigma (l : Array (\Sigma R M)) (\Pi {i j : Fin l.len} -> (l i).2 = (l j).2 -> i = j) (\Pi (j : Fin l.len) -> (l j).1 /= 0)
+
+    \func inDMS {M : \Set} {R : AddPointed} (s : Type M R) : DecMonoidSet M R => in~ s
+
+    \lemma ~-dmsequiv {M : \Set} {R : AddPointed} {s t : Type M R} (p : EPerm s.1 t.1) : inDMS s = inDMS t => {?hidden_proof}
+
+    \lemma unext {M : \Set} {R : AddPointed} {s t : Type M R} (p : inDMS s = inDMS t) : TruncP (EPerm s.1 t.1) => {?hidden_proof}
+  }
+
+
+\func decToMonoidSet {M : \Set} {R : AddMonoid} (p : DecMonoidSet M R) : MonoidSet M R \elim p
+  | in~ s => in~ s.1
+  | ~-equiv x y r => ~-msequiv (~-perm r)
+
+\lemma monoidSetDec-equiv {M : DecSet} {R : AbMonoid} {Rd : DecSet R} : Equiv (decToMonoidSet {M} {R}) => {?hidden_proof}
+  \where {
+    \func msNormVars {Rd : DecSet R} (p : MonoidSet M R) (l : Array (\Sigma R M)) => remove (\lam m => decideEq (msCoef p m) 0) $ nub (map __.2 l)
+
+    \func msNorm {Rd : DecSet R} (l : Array (\Sigma R M)) => map (\lam m => (msCoef (inMS l) m, m)) (msNormVars (inMS l) l)
+
+    \func msNorm' {Rd : DecSet R} (l : Array (\Sigma R M)) => remove (\lam s => decideEq s.1 0) $ map (\lam m => (msCoef (inMS l) m, m)) $ nub (map __.2 l)
+
+    \lemma +_~ {Rd : DecSet R} {lm : Array M} {lp : Array (\Sigma R M)} :
+      Closure ~ (Big ++ nil (map (\lam m => keep (\lam s => decideEq m s.2) lp) lm)) (map (\lam m => (msCoef (inMS lp) m, m)) lm) => {?hidden_proof}
+
+    \func remove_~ {Rd : DecSet R} {l : Array (\Sigma R M)} : Closure ~ l (remove (\lam s => decideEq s.1 0) l) \elim l
+      | nil => cin (~-perm eperm-refl)
+      | a :: l => mcases
+
+    \lemma msNorm=msNorm' {Rd : DecSet R} {l : Array (\Sigma R M)} : msNorm l = msNorm' l => {?hidden_proof}
+
+    \lemma msNorm'-norm {Rd : DecSet R} {s : DecMonoidSet.Type M R} : msNorm' s.1 = s.1 => {?hidden_proof}
+
+    \lemma msNormVars-norm {Rd : DecSet R} {p : MonoidSet M R} {l : Array M} (inj : IsInj l) (s : \Pi (j : Fin l.len) -> msCoef p (l j) /= 0) :
+      msNormVars p (map (\lam m => (msCoef p m, m)) l) = l => {?hidden_proof}
+
+    \func msNorm_~ {Rd : DecSet R} {l l' : Array (\Sigma R M)} (e : l ~ l') : EPerm (msNorm l) (msNorm l') 
+    => transport (\lam x => EPerm _ (map x _)) {\lam m => (msCoef (inMS l) m, m)} (ext (\lam m => pmap (\lam x => (msCoef x m, m)) (~-msequiv e))) 
+      (EPerm.EPerm_map (\lam m => (msCoef (inMS l) m, m)) (msNormVars_~' e))
+
+    \func msNormVars_~' {Rd : DecSet R} {l l' : Array (\Sigma R M)} (e : l ~ l') : EPerm (msNormVars (inMS l) l) (msNormVars (inMS l') l') 
+      => transport (EPerm _) (pmap (msNormVars __ l') (~-msequiv e)) (msNormVars_~ e idp)
+
+    \func msNormVars_~ {Rd : DecSet R} {p : MonoidSet M R} {l l' : Array (\Sigma R M)} (e : l ~ l') (pp : p = inMS l) : EPerm (msNormVars p l) (msNormVars p l') \elim e
+      | ~-perm e => EPerm_remove $ EPerm_nub $ EPerm_map __.2 e
+      | ~-sym e => eperm-sym $ msNormVars_~ e $ pp *> ~-msequiv (~-sym e)
+      | ~-zro {m} idp => unfold msNormVars $ mcases {1}
+      | ~-+ m q1 q2 => EPerm_remove $ later $ rewrite (q1, q2) $ eperm-= $ pmap (m ::) $ later $ rewrite (decideEq=_reduce idp) $ remove.equals (\lam {a} => byLeft) 
+        (\lam {a} => ||.rec' (\lam x => x) (\lam x => x)) *> inv remove_remove
+  }
+
+
+\func evalMS {M : \Set} {R : Semiring} (x : MonoidSet M R) (f : M -> R) : R \elim x
+  | in~ l => R.BigSum $ map (\lam s => s.1 * f s.2) l
+  | ~-equiv l l' r => evalMS-coh f r
+  \where {
+    \lemma evalMS-coh {M : \Set} {R : Semiring} (f : M -> R) {l l' : Array (\Sigma R M)} (r : l ~ l') :
+      R.BigSum (map (\lam s => s.1 * f s.2) l) = R.BigSum (map (\lam s => s.1 * f s.2) l') => {?hidden_proof}
+  }
+
+
+\func evalMSMonoidHom {M : \Set} {R : Semiring} (f : M -> R) : AddMonoidHom (MonoidAbMonoid M R) R \cowith
+  | func => evalMS __ f
+  | func-zro => idp
+  | func-+ => \lam {x} {y} => (\case \elim x, \elim y \with {
+    | in~ l, in~ l' => pmap R.BigSum (map_++ (\lam s => s.1 * f s.2)) *> R.BigSum_++
+  })
+
+\func evalMSSemiringHom {M : Monoid} {R : CSemiring} (f : MonoidHom M R) : SemiringHom (MonoidSemiring M R) R \cowith
+  | AddMonoidHom => evalMSMonoidHom f
+  | func-ide => simplify f.func-ide
+  | func-* => \lam {x} {y} => (\case \elim x, \elim y \with {
+    | in~ l, in~ l' => pairs.pairs-distr (\lam s => s.1 * f s.2) (\lam {a} {b} => unfold MonoidSemiring.func (rewrite f.func-* equation))
+  })
+
+\func evalMSRingHom {M : Monoid} {R : CRing} (f : MonoidHom M R) : RingHom (MonoidRing M R) R \cowith
+  | SemiringHom => evalMSSemiringHom f
+
+\lemma evalMS_monomial {M : AddPointed} {R : Semiring} {f : PointedHom M R} {a : R} : evalMS (msMonomial a M.zro) f = a => {?hidden_proof}
+
+\lemma evalMS_map {M N : Monoid} {R : CRing} {f : M -> N} {x : MonoidSet M R} {g : N -> R} : evalMS (monoidSet-map f RingHom.id x) g = evalMS x (\lam m => g (f m)) => {?hidden_proof}
+
+\lemma evalMS_map2 {M : \Set} {R S : Semiring} {x : MonoidSet M R} {f : M -> R} (g : SemiringHom R S) :
+  evalMS (monoidSet-map (\lam y => y) g x) (\lam m => g (f m)) = g (evalMS x f) => {?hidden_proof}
+
+\func polyToMonoidSet {M : Monoid} {R : Semiring} (m : M) (p : Poly R) : MonoidSet M R \elim p
+  | pzero => 0
+  | padd p a => polyToMonoidSet m p * msMonomial 1 m + msMonomial a ide
+  | peq i => ~-pequiv {_} {_} {(R.zro, M.ide) :: nil} {nil} (MonoidSet.~-zro idp) i
+
+\func polyToMonoidSetHom {M : Monoid} {R : Ring} (m : M) : AddMonoidHom (PolyRing R) (MonoidRing M R) \cowith
+  | func => polyToMonoidSet m
+  | func-zro => idp
+  | func-+ => func-+
+
+\func polyToMonoidSetRingHom {M : CMonoid} {R : CRing} (m : M) : RingHom (PolyRing R) (MonoidRing M R) \cowith
+  | AddMonoidHom => polyToMonoidSetHom m
+  | func-ide => idp
+  | func-* => func-*
+  \where {
+    \lemma func-*c {m : M} {a : R} {p : Poly R} : polyToMonoidSet m (a PolyRing.*c p) = msMonomial a ide * polyToMonoidSet m p => {?hidden_proof}
+  }
+
+
+\lemma polyToMonoidSet-eval {R : CRing} {M : Monoid} {p : Poly R} {f : MonoidHom M R} {m : M} : evalMS (polyToMonoidSet m p) f = polyEval p (f m) => {?hidden_proof}
+
+\lemma monoidRingHom-unique {M : Monoid} {R S : CRing} {f g : RingHom (MonoidRing M R) S} (p : \Pi (r : R) -> f (msMonomial r ide) = g (msMonomial r ide)) 
+(q : \Pi (m : M) -> f (msMonomial 1 m) = g (msMonomial 1 m)) (x : MonoidSet M R) : f x = g x => {?hidden_proof}
+  \where {
+    \lemma monoidSet-list {M : \Set} {R : AddMonoid} {l : Array (\Sigma R M)} : inMS l = BigSum (\lam j => msMonomial (l j).1 (l j).2) => {?hidden_proof}
+  }

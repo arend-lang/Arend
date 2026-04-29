@@ -1,0 +1,42 @@
+\import Category
+\import Logic
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+
+\class Preorder \extends BaseSet, Precat (\lp, \lp) {
+  | \infix 4 <= : E -> E -> \Prop
+  | <=-refl {x : E} : x <= x
+  | <=-transitive \alias \infixr 9 <=∘ {x y z : E} : x <= y -> y <= z -> x <= z
+  | Ob => E
+  | Hom => <=
+  | id => \lam _ => <=-refl
+  | o => \lam f g => g <=∘ f
+  | id-left => prop-pi
+  | id-right => prop-pi
+  | o-assoc => prop-pi
+  | \infix 4 >= : E -> E -> \Prop
+  | >= => \lam x y => y <= x
+}
+
+\lemma =_<= {P : Preorder} {x y : P} (p : x = y) : x <= y => {?hidden_proof}
+
+\class Poset \extends Preorder, Cat (\lp, \lp) {
+  | <=-antisymmetric {x y : E} : x <= y -> y <= x -> x = y
+  | univalence => Cat.makeUnivalence (\lam (e : Iso) => (<=-antisymmetric e.f e.hinv, prop-pi))
+}
+
+\instance ProductPreorder (P Q : Preorder) : Preorder (\Sigma P Q) 
+  | <= => \lam (x, y) (x', y') => \Sigma (x <= x') (y <= y')
+  | <=-refl => (<=-refl, <=-refl)
+  | <=-transitive => \lam (p, q) (p', q') => (<=-transitive p p', <=-transitive q q')
+
+\instance ProductPoset (P Q : Poset) : Poset (\Sigma P Q) 
+  | Preorder => ProductPreorder P Q
+  | <=-antisymmetric => \lam (p, q) (p', q') => ext (<=-antisymmetric p p', <=-antisymmetric q q')
+
+\func subPoset {P : Poset} (S : P -> \Prop) : Poset (\Sigma (x : P) (S x)) \cowith
+  | <= => \lam x y => x.1 <= y.1
+  | <=-refl => <=-refl
+  | <=-transitive => <=-transitive
+  | <=-antisymmetric => \lam p q => ext (<=-antisymmetric p q)

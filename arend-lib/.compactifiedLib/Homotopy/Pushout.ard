@@ -1,0 +1,153 @@
+\import Algebra.Meta
+\import Equiv
+\import Equiv.Sigma
+\import Equiv.Univalence
+\import Function
+\import Homotopy.Pointed
+\import Homotopy.Square
+\import Paths
+
+\class Pushout {
+  | square : Square
+  | pushout-univ {Z : \Type} : Equiv {square.Y -> Z} {Square {  | Y => Z  | U => square.U  | V => square.V  | X => square.X  | uv => square.uv  | ux => square.ux}} (Square.push square)
+}
+  \where {
+    \func map (p : Pushout) (s : Square) (f : p.square.U -> s.U) (g : p.square.V -> s.V) (h : p.square.X -> s.X) 
+    (e1 : \Pi (u : p.square.U) -> s.uv (f u) = g (p.square.uv u)) (e2 : \Pi (u : p.square.U) -> s.ux (f u) = h (p.square.ux u)) : p.square.Y -> s.Y 
+    => p.pushout-univ.ret (\new Square {  | vy => \lam v => s.vy (g v)  | xy => \lam x => s.xy (h x)
+      | sqcomm => \lam u => pmap s.vy (inv (e1 u)) <* s.sqcomm (f u) *> pmap s.xy (e2 u)})
+
+    \func map_id (p : Pushout) (y : p.square.Y) : map p p.square id id id (\lam _ => idp) (\lam _ => idp) = id => p.pushout-univ.ret_f (\lam x => x)
+  }
+
+
+\data PushoutData {A B C : \Type} (f : A -> B) (g : A -> C) 
+  | pinl B
+  | pinr C
+  | pglue (a : A) : pinl (f a) = pinr (g a)
+  \where {
+    \func ppglue {A B C : \Type} {f : A -> B} {g : A -> C} (a : A) : pinl (f a) = {PushoutData f g} pinr (g a) => path (pglue a)
+
+    \func rec {A B C : \Type} {f : A -> B} {g : A -> C} {Z : \Type} (lm : B -> Z) (rm : C -> Z) (gm : \Pi (a : A) -> lm (f a) = rm (g a)) (x : PushoutData f g) : Z \elim x
+      | pinl b => lm b
+      | pinr c => rm c
+      | pglue a => gm a
+      \where {
+        \func map {A B C : \Type} {f : A -> B} {g : A -> C} {Y Z : \Type} (h : Y -> Z) (lm : B -> Y) (rm : C -> Y) (gm : \Pi (a : A) -> lm (f a) = rm (g a)) 
+        (x : PushoutData f g) : h (rec lm rm gm x) = rec (h `o` lm) (h `o` rm) (\lam a => pmap h (gm a)) x \elim x
+          | pinl b => idp
+          | pinr c => idp
+          | pglue a i => idp
+
+        \func equiv {A B C : \Type} {f : A -> B} {g : A -> C} (Z : \Type) :
+          Equiv {PushoutData f g -> Z} {\Sigma (lm : B -> Z) (rm : C -> Z) (gm : \Pi (a : A) -> lm (f a) = rm (g a))} => \new QEquiv {
+          | f => \lam h => (\lam b => h (pinl b), \lam c => h (pinr c), \lam a => path (\lam i => h (pglue a i)))
+          | ret => \lam p => rec p.1 p.2 p.3
+          | ret_f => \lam h => path (\lam i x => (\case \elim x \return rec (\lam b => h (pinl b)) (\lam c => h (pinr c)) (\lam a => path (\lam i => h (pglue a i))) x = h x \with {
+            | pinl b => idp  | pinr c => idp  | pglue a i => idp}) @ i)
+          | f_sec => idpe
+        }
+      }
+
+
+    \func flattening {A B C : \Type} {f : A -> B} {g : A -> C} (F : PushoutData f g -> \Type) : total = (\Sigma (w : PushoutData f g) (F w)) 
+      => QEquiv-to-= totalPushoutLeft *> path TotalPushout *> QEquiv-to-= totalPushoutRight
+      \where {
+        \func total  => PushoutData {\Sigma (x : A) (F (pinl (f x)))} {\Sigma (y : B) (F (pinl y))} {\Sigma (z : C) (F (pinr z))} (\lam p => (f p.1, p.2)) 
+          (\lam p => (g p.1, transport F (ppglue p.1) p.2))
+
+\data TotalPushout (j : I) 
+          | tinl (y : B) (F (pinl y))
+          | tinr (z : C) (F (pinr z))
+          | tglue (x : A) (i : I) (w : F (pglue x (I.squeeze i j))) \elim i {
+            | left => tinl (f x) w
+            | right => tinr (g x) (coe2 (\lam i => F (pglue x i)) j w right)
+          }
+
+        \func totalPushoutLeft : QEquiv {total} {TotalPushout left} \cowith
+          | f => LR
+          | ret => RL
+          | ret_f => \lam t => (\case \elim t \with {
+            | pinl (y, t) => idp
+            | pinr (z, t) => idp
+            | pglue (x, t) i => idp
+          })
+          | f_sec => \lam t => (\case \elim t \with {
+            | tinl y t => idp
+            | tinr y t => idp
+            | tglue x i t => idp
+          })
+          \where {
+            \func LR (t : total) : TotalPushout left \elim t
+              | pinl (y, t) => tinl y t
+              | pinr (z, t) => tinr z t
+              | pglue (x, t) i => tglue x i t
+
+            \func RL (t : TotalPushout left) : total \elim t
+              | tinl y t => pinl (y, t)
+              | tinr z t => pinr (z, t)
+              | tglue x i t => pglue (x, t) i
+          }
+
+
+        \func totalPushoutRight : QEquiv {TotalPushout right} {\Sigma (w : PushoutData f g) (F w)} \cowith
+          | f => LR
+          | ret => RL
+          | ret_f => \lam t => (\case \elim t \with {
+            | tinl y t => idp
+            | tinr z t => idp
+            | tglue x i t => idp
+          })
+          | f_sec => \lam t => (\case \elim t \with {
+            | (pinl y, t) => idp
+            | (pinr z, t) => idp
+            | (pglue x i, t) => idp
+          })
+          \where {
+            \func LR (t : TotalPushout right) : \Sigma (w : PushoutData f g) (F w) \elim t
+              | tinl y t => (pinl y, t)
+              | tinr z t => (pinr z, t)
+              | tglue x i t => (pglue x i, t)
+
+            \func RL (t : \Sigma (w : PushoutData f g) (F w)) : TotalPushout right \elim t
+              | (pinl y, t) => tinl y t
+              | (pinr z, t) => tinr z t
+              | (pglue x i, t) => tglue x i t
+          }
+
+      }
+
+  }
+
+
+\open PushoutData
+
+\instance PushoutPointed {A B C : \Type} {P : Pointed B} {f : A -> B} {g : A -> C} : Pointed (PushoutData f g) 
+  | base => pinl base
+
+\func pushoutData {A B C : \Type} (f : A -> B) (g : A -> C) : Pushout \cowith
+  | square {
+    | U => A
+    | V => B
+    | X => C
+    | Y => PushoutData f g
+    | ux => g
+    | vy => pinl
+    | uv => f
+    | xy => pinr
+    | sqcomm => \lam a => path (pglue a)
+  }
+  | pushout-univ => \lam {Z} => \new QEquiv {
+    | ret => \lam (s : Square) => rec s.vy s.xy s.sqcomm
+    | ret_f => \lam h => path (\lam i p => (\case \elim p \return rec (h `o` pinl) (h `o` pinr) (\lam a => path (\lam j => h (pglue a j))) p = h p \with {  | pinl _ => idp
+      | pinr _ => idp  | pglue _ _ => idp}) @ i)
+    | f_sec => \lam _ => idp
+  }
+
+\class EmbeddingPushout {
+  | A : \Type
+  | B : \Type
+  | C : \Type
+  | f : A -> B
+  | g : Embedding {A} {C}
+}

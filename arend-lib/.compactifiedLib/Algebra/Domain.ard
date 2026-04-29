@@ -1,0 +1,74 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Monoid.GCD
+\import Algebra.Monoid.Sub
+\import Algebra.Ring
+\import Algebra.Ring.Reduced
+\import Algebra.Semiring
+\import Arith.Nat
+\import Function
+\import Function.Meta($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\open Monoid
+
+\class Domain \extends Ring.With#, ImpotentRing, NonZeroRing {
+  | zro#ide : #0 ide
+  | #0-* {x y : E} : #0 x -> #0 y -> #0 (x * y)
+  | isReduced => \lam p => #0-tight (\lam a#0 => #0-zro $ transport #0 p (#0-* a#0 a#0))
+  | isImpotent => \lam {a} p => (
+    \have q : a * (1 - a) = 0 => ldistr_- *> toZero (ide-right *> inv p)
+    \in \case #0-+ (transportInv #0 (+-comm *> +-assoc *> pmap (1 +) negative-left *> zro-right) zro#ide) \with {
+          | byLeft a#0 => byRight $ inv $ fromZero $ #0-tight (\lam zro-a#0 => apartNonZero (#0-* a#0 zro-a#0) q)
+          | byRight zro-a#0 => byLeft $ #0-tight (\lam a#0 => apartNonZero (#0-* a#0 zro-a#0) q)
+        })
+  | zro/=ide => \lam zro=ide => #0-zro (transportInv #0 zro=ide zro#ide)
+}
+  \where {
+\class Dec \extends Domain, Ring.Dec, StrictDomain {
+      | zeroProduct => \lam {x} {y} xy=0 => (\case decideEq x zro, decideEq y zro \with {
+        | yes x=0, _ => byLeft x=0
+        | _, yes y=0 => byRight y=0
+        | no x/=0, no y/=0 => absurd $ #0-zro $ transport #0 xy=0 $ #0-* (nonZeroApart x/=0) (nonZeroApart y/=0)
+      })
+      | zro#ide => nonZeroApart (\lam x => zro/=ide (inv x))
+      | #0-* => \lam x#0 y#0 => nonZeroApart (\lam xy=0 => ||.rec' (apartNonZero x#0) (apartNonZero y#0) (zeroProduct xy=0))
+    }
+  }
+
+
+\class IntegralDomain \extends Domain, CRing.With#, ImpotentCRing, NonZeroCRing
+  \where {
+    \open DivQuotient
+
+\class Dec \extends IntegralDomain, Domain.Dec, CRing.Dec, StrictIntegralDomain, PPRing {
+      | isPPRing => \lam a => inP (\case decideEq a 0 \with {  | yes a=0 => (0, rewrite a=0 (inv zro_*-left), \lam _ => zro_*-left)
+        | no a/=0 => (1, inv ide-left, \lam p => ide-left *> nonZero-left a/=0 p)})
+    }
+  }
+
+
+\class StrictDomain \extends Ring, NonZeroSemiring, ImpotentRing {
+  | zeroProduct {x y : E} : x * y = zro -> (x = zro) || (y = zro)
+  | isReduced => \case zeroProduct __ \with {
+    | byLeft r => r
+    | byRight r => r
+  }
+| isImpotent => \lam {a} p => (
+  \have q : a * (a - 1) = 0 => ldistr_- *> toZero (p *> inv ide-right)
+  \in \case zeroProduct q \with {
+        | byLeft r => byLeft r
+        | byRight r => byRight (fromZero r)
+      })
+}
+
+\class StrictIntegralDomain \extends StrictDomain, ImpotentCRing

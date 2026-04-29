@@ -1,0 +1,38 @@
+\import Data.SeqColimit
+\import Equiv
+\import Equiv.Univalence
+\import Logic.Unique
+\import Homotopy.Fibration
+\import Homotopy.Pushout
+\import Logic
+\import Paths
+\import Paths.Meta
+
+\func MJoin {A B : \Type} (R : A -> B -> \Type) => PushoutData {\Sigma (x : A) (y : B) (R x y)} __.1 __.2
+  \where {
+\class MData {
+      | A : \Type
+      | B : \Type (\suc \lp)
+      | f : A -> B
+      | R : B -> B -> \Type
+      | ret : \Pi (b b' : B) -> R b b' -> b = b'
+    }
+  }
+
+
+\func YImage {A B : \Type} (S : A -> B -> \Type) => data.MImage
+  \where {
+    \open MJoin
+
+    \instance data : MData S 
+      | R => \lam F G => \Pi (b : B) -> Equiv {F b} {G b}
+      | ret => \lam F G r => path (\lam i b => Equiv-to-= (r b) @ i)
+
+    \func dom-map (a : A) : YImage S => MData.dom-map a
+
+    \lemma dom-map-surj : Surjection dom-map => {?hidden_proof}
+
+    \func cod-map (y : YImage S) (b : B) : \Type => MData.cod-map y b
+
+    \lemma cod-map-emb : Embedding cod-map => {?hidden_proof}
+  }

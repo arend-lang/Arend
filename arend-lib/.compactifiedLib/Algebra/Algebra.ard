@@ -1,0 +1,35 @@
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Paths
+
+\class PseudoAlgebra \extends LModule, PseudoRing {
+  \override R : CRing
+  | *c-comm-left {r : R} {a b : E} : r *c (a * b) = (r *c a) * b
+  | *c-comm-right {r : R} {a b : E} : r *c (a * b) = a * (r *c b)
+}
+
+\class AAlgebra \extends PseudoAlgebra, Ring {
+  | coefMap : R -> E
+  | coefMap_*c {x : R} : coefMap x = x *c 1
+  | coefMap => coefMap-impl
+  | coefMap_*c => coefMap_*c-impl
+}
+
+\class PseudoCAlgebra \extends PseudoAlgebra, CRing {
+  | *c-comm-right => pmap (_ *c) *-comm *> *c-comm-left *> *-comm
+}
+
+\class CAlgebra \extends AAlgebra, PseudoCAlgebra
+
+\func homAlgebra {R E : CRing} (f : RingHom R E) : CAlgebra \cowith
+  | CRing => E
+  | LModule => homLModule f
+  | *c-comm-left => inv *-assoc
+
+\func ringAlgebra {R : CRing} : CAlgebra R => homAlgebra RingHom.id
+
+\func \infixl 7 *a {R : CRing} {A : AAlgebra R} {X : LModule A} (a : R) (x : X) : X => coefMap a *c x
+
+\lemma *a-assoc {R : CRing} {A : AAlgebra R} {X : LModule A} {a b : R} {x : X} : a * b *a x = a *a (b *a x) => {?hidden_proof}

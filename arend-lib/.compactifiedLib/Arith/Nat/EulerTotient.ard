@@ -1,0 +1,93 @@
+\import Algebra.Domain.Bezout
+\import Algebra.Domain.Euclidean
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Group.Sub
+\import Algebra.Group.Symmetric
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Monoid.Sub
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Factor
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.QuotientProperties
+\import Algebra.Ring.RingCategory
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Fin
+\import Arith.Int
+\import Arith.Nat
+\import Category
+\import Equiv
+\import Function(IsSurj)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.Fin.Pigeonhole
+\import Set.SetHom
+\open IntEuclidean \hiding (isDivMod, mod-unique)
+\open FinRing
+\open Monoid
+
+\func coPrimes (n : Nat) : FinSet => SigmaFin (FinFin (suc n)) (\lam k => DecFin $ decideEq (NatEuclidean.gcd k (suc n)) 1)
+
+\instance InvSubMonoid (M : Monoid) : SubMonoid M 
+  | contains => \lam x => Inv x
+  | contains_ide => Inv.ide-isInv
+  | contains_* => \lam xi yi => Inv.product xi yi
+
+\instance InvGroup (M : Monoid) : Group 
+  | Monoid => (InvSubMonoid M).IMonoid
+  | inverse => \lam (x, xi) => (xi.inv, \new Inv {  | inv => x  | inv-left => Inv.inv-right  | inv-right => Inv.inv-left})
+  | inverse-left => \lam {x} => ext x.2.inv-left
+
+\func coPrimes-eq (n : Nat) (n>0 : 0 NatOrder.< n) : QEquiv {coPrimes n} {InvGroup (FinRing {n})} \cowith
+  | f => \lam (k, p) => (
+    \let gcd-inv => gcd-inv {n} {k} (rewrite nat_gcd-comm p)
+    \in (k, \new Inv {  | inv => finv-formula k  | inv-left => rewrite *-comm gcd-inv  | inv-right => gcd-inv}))
+  | ret => \lam (k, k2) => (k,
+        \let | l => k Nat.* k2.inv       | m => suc n Nat.* (l Nat.div suc n)
+         | k_n+1_coprime => run {(BezoutRing.bezout_coprime {IntRing} {k2.inv} {neg (l Nat.div suc n)} {k}, unfold, rewrite NatSemiring.*-comm, IntRing.cancel-right m, 
+             rewrite (IntRing.*-comm {_} {pos (suc n)}, rewrite IntRing.minus__ in IntRing.minus+pos l m _), 
+           rewriteI {1} (rewrite (finEq-modeq k2.inv-right) in Nat.divModProp l (suc n)), rewrite (mod_< (NatOrder.suc<suc n>0)), pmap pos idp)}
+    \in rewrite int_gcd_pos in unfold (int_gcd-isUnique (IntEuclidean.gcd-isGCD (pos k) (pos (suc n))) (IsCoprime.=>gcd k_n+1_coprime))
+  )
+  | ret_f => \lam _ => exts idp
+  | f_sec => \lam _ => exts idp
+  \where {
+    \open EuclideanRingData
+
+    \func finv-formula (x : Fin (suc n)) => (IntEuclidean.natDivMod (bezout (pos (suc n)) (pos x)).2 (suc n)).2 Nat.mod suc n
+
+    \lemma gcd-inv {x : Fin (suc n)} (x-coprime : NatEuclidean.gcd (suc n) x = {Nat} 1) : x NatSemiring.* finv-formula x = {Fin (suc n)} 1 Nat.mod suc n => {?hidden_proof}
+  }
+
+
+\func ker-int-Coef (n : Nat) : RingHom.KernelC (intMap {FinRing {n}}) = {Ideal IntEuclidean} Ideal.closure1 {IntEuclidean} (suc n) => exts (\lam i => ext (
+  \lam (c : intMap i = zro) => (\case modEq-ldiv i 0 n $ rewriteI mod-mod $ finEq-modeq {i IntEuclidean.mod pos (suc n)} {0} (rewrite intCoef-char in c) \with {
+    | (a, p) => inP ((a, ()) :: nil, simplify (rewrite (IntRing.*-comm, p) linarith))}), 
+  \lam c => unfold $ rewrite (intCoef-char, (rewrite AddGroup.minus_zro in ldiv-modEq i 0 n) $ Ideal.closure1_LDiv.1 c) idp))
+
+\func Z/nZ=FinRing (n : Nat) : Iso {_} {FactorRing (Ideal.closure1 {IntRing} (suc n))} {FinRing {n}} 
+=> transport (\lam X => Iso {_} {FactorRing X} {FinRing {n}}) (ker-int-Coef n) $ transport (\lam X => Iso {_} {_} {X}) 
+  (CRingCat.Image=Cod (intMap {FinRing {n}}) intCoef-surj) $ ringKerImageHom-iso (intMap {FinRing {n}})
+
+\func EulerTotient (n : Nat) : Nat => (coPrimes n).finCard
+
+\func chinese-map {n m : Nat} (x : FinRing {suc n * m + n}) : \Sigma (FinRing {n}) (FinRing {m}) => (Fin.fromNat {n} x, Fin.fromNat {m} x)
+
+\lemma natSemiring-unit {n : Nat} (p : Inv {NatSemiring} n) : n = 1 => {?hidden_proof}
+
+\lemma chinese-map-surj (n m : Nat) (p : IsCoprime (suc n) (suc m)) : IsSurj (chinese-map {n} {m}) => {?hidden_proof}
+  \where {
+    \lemma mod-inv {n m : Nat} (p : n /= 0) (x : Nat) : x Nat.mod (n Semigroup.* m) Nat.mod n = x Nat.mod n => {?hidden_proof}
+  }

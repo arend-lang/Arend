@@ -1,0 +1,58 @@
+\import Algebra.Group
+\import Algebra.Group.GroupCategory
+\import Algebra.Group.GroupHom
+\import Algebra.Group.Sub
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Category
+\import Function \hiding (id, o)
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\open Group
+
+\func \infix 7 // (G : Group) (H : NormalSubGroup G) : Group => H.quotient
+
+\class GroupTriangle {
+  | X : Group
+  | Y : Group
+  | Z : Group
+  | f : GroupHom X Y
+  | g : GroupHom Y Z
+  | h : GroupHom X Z
+  | comm : h = g GroupHom.∘ f
+}
+
+\class UniversalGroupQuotient {
+  | G : Group
+  | H : Group
+  | f : GroupHom G H
+  | N : NormalSubGroup G
+  | p : N SubGroupPreorder.<= f.Kernel
+}
+
+\class FirstIsomorphismTheorem {
+  | G : Group
+  | H : Group
+  | f : GroupHom G H
+}
+
+\func GroupFirstIsoCorollary-setwise {G H : Group} {N : NormalSubGroup G} (f : GroupHom G H) (p : N = f.Kernel) (q : IsSurj f) : \Sigma (h : GroupHom (G // N) H) h.IsIsomorphism 
+  => transport {NormalSubGroup G} (\lam X => \Sigma (f : GroupHom (G // X) H) f.IsIsomorphism) (inv p) (GroupFirstIsoCorollary-24 f q)
+  \where {
+    \func GroupFirstIsoCorollary-2 {G H : Group} (f : GroupHom G H) : GroupHom (G // f.Kernel) H 
+      => FirstIsomorphismTheorem.univ {\new FirstIsomorphismTheorem {  | G => G  | H => H  | f => f}}
+
+    \func GroupFirstIsoCorollary-24 {G H : Group} (f : GroupHom G H) (q : IsSurj f) : \Sigma (a : GroupHom (G // f.Kernel) H) a.IsIsomorphism 
+      => (GroupFirstIsoCorollary-2 f, FirstIsomorphismTheorem.FirstIsoTheorem {\new FirstIsomorphismTheorem {  | G => G  | H => H  | f => f}} q)
+
+    \func GroupFirstIsoCorollary-3 {G H : Group} {N : NormalSubGroup G} (f : GroupHom G H) (p : N = f.Kernel) : GroupHom (G // N) H 
+      => transport {NormalSubGroup G} (\lam X => GroupHom (G // X) H) (inv p) (GroupFirstIsoCorollary-2 f)
+  }
+
+
+\func GroupFirstIsoCorollary {G H : Group} {N : NormalSubGroup G} (f : GroupHom G H) (p : N = f.Kernel) (q : IsSurj f) :
+  \Sigma (f : GroupHom (G // N) H) (Iso {GroupCat} {G // N} {H} f) => ((GroupFirstIsoCorollary-setwise f p q).1, 
+  (GroupCat.Iso<->Inj+Surj (GroupFirstIsoCorollary-setwise f p q).1).2 (GroupFirstIsoCorollary-setwise f p q).2)

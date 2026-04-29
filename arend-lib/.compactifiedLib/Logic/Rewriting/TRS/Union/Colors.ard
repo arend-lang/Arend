@@ -1,0 +1,35 @@
+\import Data.List \hiding (Sort)
+\import Logic
+\import Logic.Rewriting.TRS.Utils.FinFunctions
+\import Paths
+\import Paths.Meta
+\import Set
+\import Logic.Rewriting.TRS.HRS
+\import Logic.Rewriting.TRS.Linearity
+\import Logic.Rewriting.TRS.MetaContexts
+\import Logic.Rewriting.TRS.Union
+
+\class TheoremContext {
+  | Color : DecSet
+  | Sort' : \Set
+  | envs : Color -> FSignature Sort'
+  | rules : \Pi (c : Color) -> LinearRegistry (envs c)
+}
+
+\open TheoremContext
+
+\func convert-to-injected-term {tc : TheoremContext} {allow-variables : \Prop} (color : Color) {context : List Sort'} {s : Sort'} 
+(term : GenericLinearTerm (envs color) context s allow-variables) : Term env context s (LinearMetaContext {envs color} term) \elim term
+  | l-func f arguments => func (color, f)
+    (\lam i => ModularMetaContext.upgrade-metavariables (\lam i => LinearMetaContext {envs color} (arguments i)) (convert-to-injected-term color (arguments i)))
+  | l-full-metavar => metavar idp (\lam i => var i idp)
+  | l-var index p _ => var index p
+
+\lemma unwrap-injection {tc : TheoremContext} {color : Color} {context : List Sort'} {s : Sort'} {allow-variables : \Prop} 
+(t : GenericLinearTerm (envs color) context s allow-variables) :
+  inject-term envs (Linear.convert-to-term {envs color} t) = convert-to-injected-term color {context} {s} t => {?hidden_proof}
+  \where {
+    \lemma swap {tc : TheoremContext} (color : Color) {context : List Sort'} {s : Sort'} {n : Nat} {j : Fin n} (msigs : Fin n -> MetaContext Sort') 
+    (t : Term (envs color) context s (msigs j)) :
+      inject-term envs (ModularMetaContext.upgrade-metavariables {envs color} msigs t) = ModularMetaContext.upgrade-metavariables msigs (inject-term envs t) => {?hidden_proof}
+  }

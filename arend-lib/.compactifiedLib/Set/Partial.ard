@@ -1,0 +1,62 @@
+\import Algebra.Monoid
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+
+\class Partial {
+  | E : \Set
+  | isDefined : \Prop
+  | value : isDefined -> E
+}
+  \where {
+    \func make {X : \Set} (P : \Prop) (f : P -> X) => \new (Partial X P f)
+  }
+
+
+\func defined {X : \Set} (x : X) : Partial X \cowith
+  | isDefined => \Sigma
+  | value => \lam _ => x
+
+\func undefined {X : \Set} : Partial X \cowith
+  | isDefined => Empty
+  | value => \case __ \with {}
+
+\lemma partial-ext {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : u.isDefined) (q : v.isDefined) -> u (\box p) = v (\box q)) : u = v => {?hidden_proof}
+
+\lemma partial-ext-left {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : u.isDefined) -> u p = v (d.1 p)) : u = v => {?hidden_proof}
+
+\lemma partial-ext-right {X : \Set} {u v : Partial X} (d : u.isDefined <-> v.isDefined) (e : \Pi (p : v.isDefined) -> u (d.2 p) = v p) : u = v => {?hidden_proof}
+
+\lemma defined-ext {X : \Set} {u : Partial X} {x : X} (d : u.isDefined) (p : u d = x) : u = defined x => {?hidden_proof}
+  \where {
+    \lemma isDefined (p : u = defined x) : u.isDefined => {?hidden_proof}
+
+    \lemma value (p : u = defined x) : u (isDefined p) = x => {?hidden_proof}
+  }
+
+
+\lemma undefined-ext {X : \Set} {u : Partial X} (d : Not u.isDefined) : u = undefined => {?hidden_proof}
+
+\lemma partial-defined {X : \Set} {u v : Partial X} (p : u = v) : u.isDefined <-> v.isDefined => {?hidden_proof}
+
+\lemma partial-value {X : \Set} {u v : Partial X} (p : u = v) {d : u.isDefined} {e : v.isDefined} : u d = v e => {?hidden_proof}
+
+\lemma defined-inj {X : \Set} {x y : X} (p : defined x = {Partial X} defined y) : x = y => {?hidden_proof}
+
+\func plift {X Y : \Set} (f : X -> Y) (p : Partial X) : Partial Y \cowith
+  | isDefined => p.isDefined
+  | value => \lam d => f (p d)
+
+\func plift2 {X Y Z : \Set} (f : X -> Y -> Z) (p : Partial X) (q : Partial Y) : Partial Z \cowith
+  | isDefined => \Sigma p.isDefined q.isDefined
+  | value => \lam d => f (p d.1) (q d.2)
+
+\instance PartialAddMonoid (X : AddMonoid) : AddMonoid (Partial X) 
+  | zro => defined X.zro
+  | + => plift2 +
+  | zro-left => partial-ext (__.2, ((), __)) (\lam p q => zro-left)
+  | zro-right => partial-ext (__.1, (__, ())) (\lam p q => zro-right)
+  | +-assoc => partial-ext (\lam s => (s.1.1, (s.1.2, s.2)), \lam s => ((s.1, s.2.1), s.2.2)) (\lam p q => +-assoc)

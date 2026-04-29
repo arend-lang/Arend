@@ -1,0 +1,164 @@
+\import Algebra.Monoid
+\import Algebra.Ring.Boolean
+\import Algebra.Solver
+\import Arith.Bool
+\import Arith.Nat
+\import Data.Array(Big, singleAt)
+\import Data.Bool
+\import Data.List \using ( nil \as lnil, :: \as l:: )
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.LexicographicalArray
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+
+\func BooleanRingSolverModel (B : BooleanRing) : SolverModel B \cowith
+  | Term => Term
+  | NF => NF
+  | normalize => normalize
+  | interpret => \lam env => interpret env
+  | interpretNF => interpretNF
+  | interpretNF-consistent => interpretNF=interpretNF' *> interpretNF'-consistent
+  \where {
+\data Term (n : Nat) 
+      | var (Fin n)
+      | :zro
+      | :negative (Term n)
+      | \infixl 6 :+ (t s : Term n)
+      | \infixl 7 :* (t s : Term n)
+
+    \func NF (n : Nat) => List (Array Bool n)
+
+    \instance BoolOpPoset : LinearOrder.Dec => BoolPoset.op
+
+    \func multiply' {n : Nat} (l1 l2 acc : NF n) : NF n \elim l1
+      | lnil => acc
+      | a l:: l1 => multiply' l1 l2 (map (\lam (b : Array Bool n) => \new (Array Bool n (\lam j => a j or b j))) l2 ++ acc)
+
+    \func multiply {n : Nat} (l1 l2 : NF n) : NF n \elim l2
+      | lnil => lnil
+      | l2 => multiply' l1 l2 lnil
+
+    \func normalize {n : Nat} (t : Term n) : NF n \elim t
+      | var j => l:: (singleAt j true false) lnil
+      | :zro => lnil
+      | :negative t => normalize t
+      | t :+ s => normalize t ++ normalize s
+      | t :* s => multiply (normalize t) (normalize s)
+
+    \func interpret (env : Array B) (t : Term env.len) : B \elim t
+      | var j => env j
+      | :zro => B.zro
+      | :negative t => B.negative (interpret env t)
+      | t :+ s => interpret env t + interpret env s
+      | t :* s => interpret env t * interpret env s
+
+    \func toArray (cs : Array Bool) (env : Array B cs.len) : Array B \elim cs, env
+      | nil, nil => nil
+      | true :: l, b :: env => b :: toArray l env
+      | false :: l, _ :: env => toArray l env
+
+    \func sBigProd (l : Array B) : B \elim l
+      | nil => B.zro
+      | b :: nil => b
+      | b :: l => b * sBigProd l
+
+    \func interpretMonomial {n : Nat} (env : Array B n) (l : Array Bool n) : B => sBigProd (toArray l env)
+
+    \func interpretNF' {n : Nat} (env : Array B n) (l : NF n) : B \elim l
+      | lnil => B.zro
+      | x l:: lnil => interpretMonomial env x
+      | x l:: l => interpretMonomial env x + interpretNF' env l
+      \where {
+        \lemma cons {n : Nat} {env : Array B n} {x : Array Bool n} {l : NF n} : interpretNF' env (l:: x l) = interpretMonomial env x + interpretNF' env l => {?hidden_proof}
+      }
+
+
+    \func collapse {n : Nat} (l : NF n) : NF n 
+      | lnil => lnil
+      | a l:: lnil => l:: a lnil
+      | a l:: b l:: l => \case decideEq a b \with {
+        | yes _ => collapse l
+        | no _ => l:: a (collapse (l:: b l))
+      }
+
+    \func interpretNF {n : Nat} (env : Fin n -> B) (l : NF n) : B => interpretNF' env (collapse (Sort.RedBlack.sort l))
+
+    \lemma toArray_replicate {n : Nat} {env : Array B n} : toArray (\new (Array Bool n (\lam _ => false))) env = nil => {?hidden_proof}
+
+    \lemma toArray_singleAt {n : Nat} {j : Fin n} {env : Array B n} : toArray (singleAt.alt j true false) env = env j :: nil => {?hidden_proof}
+
+    \lemma interpretNF_++ {n : Nat} {env : Array B n} {l l' : NF n} : interpretNF' env (l ++ l') = interpretNF' env l + interpretNF' env l' => {?hidden_proof}
+
+    \lemma toArray_or {x0 : B} {n : Nat} {env : Array B n} {a b : Array Bool n} :
+      Big ∧ x0 (toArray (\new (Array Bool n (\lam j => a j or b j))) env) = Big ∧ x0 (toArray a env) * Big ∧ x0 (toArray b env) => {?hidden_proof}
+
+    \lemma sBigProd_Big {n : Nat} (n/=0 : n /= 0) {a : Array B n} {x0 : B} (ap : \Pi (j : Fin n) -> a j <= x0) : sBigProd a = Big ∧ x0 a => {?hidden_proof}
+
+    \lemma toArray<=env {n : Nat} {env : Array B n} {l : Array Bool n} (j : Fin (toArray l env).len) : toArray l env j <= B.BigJoin env => {?hidden_proof}
+
+    \func NonEmpty (l : Array Bool) => ∃ (j : Fin l.len) (l j = true)
+
+    \lemma toArray/=nil {n : Nat} {env : Array B n} {l : Array Bool n} (lp : NonEmpty l) : (toArray l env).len /= 0 => {?hidden_proof}
+
+    \lemma interpretMonomial_or {n : Nat} {env : Array B n} {a b : Array Bool n} (ap : NonEmpty a) (bp : NonEmpty b) :
+      interpretMonomial env (\new (Array Bool n (\lam j => a j or b j))) = interpretMonomial env a * interpretMonomial env b => {?hidden_proof}
+
+    \func AllNonEmpty {n : Nat} (l : NF n) => \Pi (j : Fin (length l)) -> NonEmpty (l !! j)
+
+    \lemma interpretNF_map {n : Nat} {env : Array B n} {a : Array Bool n} (ap : NonEmpty a) {l : NF n} (lp : AllNonEmpty l) :
+      interpretNF' env (map (\lam (b : Array Bool n) => \new (Array Bool n (\lam j => a j or b j))) l) = interpretMonomial env a * interpretNF' env l => {?hidden_proof}
+
+    \lemma interpretNF_multiply' {n : Nat} {env : Array B n} {l l' acc : NF n} (lp : AllNonEmpty l) (l'p : AllNonEmpty l') :
+      interpretNF' env (multiply' l l' acc) = interpretNF' env l * interpretNF' env l' + interpretNF' env acc => {?hidden_proof}
+
+    \lemma interpretNF_multiply {n : Nat} {env : Array B n} {l l' : NF n} (lp : AllNonEmpty l) (l'p : AllNonEmpty l') :
+      interpretNF' env (multiply l l') = interpretNF' env l * interpretNF' env l' => {?hidden_proof}
+
+    \lemma all-++ {n : Nat} {l l' : NF n} (lp : AllNonEmpty l) (l'p : AllNonEmpty l') : AllNonEmpty (l ++ l') => {?hidden_proof}
+
+    \lemma or-nonEmpty {n : Nat} {a : Array Bool n} {l : NF n} (ap : NonEmpty a) : AllNonEmpty (map (\lam (b : Array Bool n) => \new (Array Bool n (\lam j => a j or b j))) l) 
+      => {?hidden_proof}
+
+    \lemma multiply'-nonEmpty {n : Nat} {l l' acc : NF n} (lp : AllNonEmpty l) (accp : AllNonEmpty acc) : AllNonEmpty (multiply' l l' acc) => {?hidden_proof}
+
+    \lemma multiply-nonEmpty {n : Nat} {l l' : NF n} (lp : AllNonEmpty l) : AllNonEmpty (multiply l l') => {?hidden_proof}
+
+    \lemma normalize-nonEmpty {n : Nat} {t : Term n} : AllNonEmpty (normalize t) => {?hidden_proof}
+
+    \lemma interpretNF'-consistent {n : Nat} {env : Array B n} {t : Term n} : interpretNF' env (normalize t) = interpret env t => {?hidden_proof}
+
+    \lemma collapse-consistent {n : Nat} {env : Array B n} {l : NF n} : interpretNF' env (collapse l) = interpretNF' env l => {?hidden_proof}
+
+    \lemma perm-consistent {n : Nat} {env : Array B n} {l l' : NF n} (p : Sort.Perm l l') : interpretNF' env l = interpretNF' env l' => {?hidden_proof}
+
+    \lemma sort-consistent {n : Nat} {env : Array B n} {l : NF n} : interpretNF' env (Sort.RedBlack.sort l) = interpretNF' env l => {?hidden_proof}
+
+    \lemma interpretNF=interpretNF' {n : Nat} {env : Array B n} {l : NF n} : interpretNF env l = interpretNF' env l => {?hidden_proof}
+
+    \lemma terms-equality (env : Array B) (t s : Term env.len) (p : interpretNF env (normalize (t :+ s)) = B.zro) : interpret env t = interpret env s => {?hidden_proof}
+
+    \lemma terms-equality-conv (env : Array B) (t s : Term env.len) (p : interpret env t = interpret env s) : interpretNF env (normalize (t :+ s)) = B.zro => {?hidden_proof}
+
+    \lemma interpretNF_Big_++ {n : Nat} {env : Array B n} {l : Array (NF n)} {a : NF n} :
+      interpretNF' env (Big ++ a l) = B.BigSum (Data.Array.map (interpretNF' env) l) + interpretNF' env a => {?hidden_proof}
+
+    \lemma nonEmpty-dec (l : Array Bool) : Dec (NonEmpty l) => {?hidden_proof}
+
+    \lemma interpretNF_map_zro {n : Nat} {env : Array B n} {a : Array Bool n} {l : NF n} (lp : AllNonEmpty l) (p : interpretNF' env l = B.zro) :
+      interpretNF' env (map (\lam (b : Array Bool n) => \new (Array Bool n (\lam j => a j or b j))) l) = B.zro => {?hidden_proof}
+
+    \lemma interpretNF_multiply'_zro {n : Nat} {env : Array B n} {l l' acc : NF n} (l'p : AllNonEmpty l') (p : interpretNF' env l' = B.zro) (q : interpretNF' env acc = B.zro) :
+      interpretNF' env (multiply' l l' acc) = B.zro => {?hidden_proof}
+
+    \lemma interpretNF_multiply_zro {n : Nat} {env : Array B n} {l l' : NF n} (l'p : AllNonEmpty l') (p : interpretNF' env l' = B.zro) : interpretNF' env (multiply l l') = B.zro => {?hidden_proof}
+
+    \lemma apply-axioms {n : Nat} (env : Array B n) (l : Array (\Sigma (NF n) (t s : Term n) (p : interpret env t = interpret env s))) (add : NF n) :
+      interpretNF env (Big ++ add (Data.Array.map (\lam s => multiply s.1 (normalize (s.2 :+ s.3))) l)) = interpretNF' env add => {?hidden_proof}
+  }

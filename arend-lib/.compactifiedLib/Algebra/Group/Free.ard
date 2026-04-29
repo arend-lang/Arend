@@ -1,0 +1,181 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Data.Bool
+\import Data.List
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\open Equivalence \hiding (map)
+
+\instance FreeGroup (S : \Set) : Group 
+  | E => Quotient ~
+  | ide => in~ nil
+  | * => \lam a b => (\case a, b \with {
+    | in~ a, in~ b => in~ (a * b)
+    | in~ a, ~-equiv x y r => ~-equiv {_} {~} (a * x) (a * y) (equivMulLeft r)
+    | ~-equiv x y r, in~ a => ~-equiv {_} {~} (x * a) (y * a) (equivMulRight r)
+  })
+  | ide-left => \lam {x} => (\case \elim x \with {
+    | in~ a => idp
+  })
+  | inverse => \lam x => (\case \elim x \with {
+    | in~ a => in~ (inv a)
+    | ~-equiv x y r => ~-equiv {_} (inv x) (inv y) (equiv_inv r)
+  })
+  | inverse-left => \lam {x} => (\case \elim x \with {
+    | in~ a => ~-equiv {_} _ _ (inv_mul {_} {a})
+  })
+  | *-assoc => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
+    | in~ a, in~ a1, in~ a2 => ~-equiv {_} _ _ (crefl (unfold * (rewrite ++-assoc idp)))
+  })
+  \where {
+    \func can {S : \Set} (s : S) : FreeGroup S => in~ ((s, true) :: nil)
+
+    \func W : Monoid => ListMonoid {\Sigma S Bool}
+
+    \func inv (w : W) : W \elim w
+      | nil => nil
+      | (x, deg) :: l => inv l ++ ((x, not deg) :: nil)
+
+    \lemma inv_* (x y : W) : inv (x * y) = inv y * inv x => {?hidden_proof}
+
+    \func AreAdjacent (w_1 w_2 : W) => ∃ (u_1 u_2 : W) (x : S) (p : Bool) (\Sigma (w_1 = u_1 * u_2) (w_2 = u_1 * ((x, p) :: nil) * ((x, not p) :: nil) * u_2))
+
+    \instance equivWords : Equivalence W => Closure.isEquivalence AreAdjacent
+
+    \lemma adjacent_cons {w1 w2 : W} (gen : \Sigma S Bool) (w1~w2 : w1 ~ w2) : gen :: w1 ~ gen :: w2 => {?hidden_proof}
+
+    \lemma adjacent_snoc {w1 w2 : W} {gen : \Sigma S Bool} (w1~w2 : w1 ~ w2) : w1 ++ (gen :: nil) ~ w2 ++ (gen :: nil) => {?hidden_proof}
+
+    \lemma equivMulRight {a b c : W} (equiv : a ~ b) : a * c ~ b * c => {?hidden_proof}
+
+    \lemma equivMulLeft {a b c : W} (equiv : a ~ b) : c * a ~ c * b => {?hidden_proof}
+
+    \lemma equiv_inv {a b : W} (equiv : a ~ b) : inv a ~ inv b => {?hidden_proof}
+
+    \lemma inv_mul {a : W} : inv a * a ~ nil => {?hidden_proof}
+
+    \func univ_map {G : Group} (i : S -> G) (l : List (\Sigma S Bool)) : G \elim l
+      | nil => ide
+      | (s, b) :: l => (\case b \with {
+        | true => i s
+        | false => inverse (i s)
+      }) G.* univ_map i l
+
+    \lemma univ_map_++ {G : Group} (i : S -> G) (l1 l2 : List (\Sigma S Bool)) : univ_map i (l1 ++ l2) = univ_map i l1 G.* univ_map i l2 => {?hidden_proof}
+
+    \lemma univ_equiv {G : Group} (i : S -> G) (w1 w2 : W) (equiv : w1 ~ w2) : univ_map i w1 = univ_map i w2 => {?hidden_proof}
+
+    \func univ_map' {G : Group} (i : S -> G) (w : FreeGroup S) : G \elim w
+      | in~ a => univ_map i a
+      | ~-equiv x y p => univ_equiv {S} {G} i x y p
+  }
+
+
+\func FreeGroupUniversalProperty (S : \Set) (G : Group) (i : S -> G) : \Sigma (f : GroupHom (FreeGroup S) G) (f o FreeGroup.can = i) 
+=> (\new GroupHom {  | func => FreeGroup.univ_map' i  | func-ide => idp  | func-* => \lam {x} {y} => (\case \elim x, \elim y \with {
+    | in~ x, in~ y => FreeGroup.univ_map_++ i x y  })}, ext (\lam _ => unfold o (rewrite ide-right idp))
+)
+
+\func reduce {S : DecSet} (x : List (\Sigma S Bool)) : List (\Sigma S Bool) \elim x
+  | nil => nil
+  | (xa, xb) :: xs => \case reduce xs \with {
+    | nil => (xa, xb) :: nil
+    | (ya, yb) :: ys => \case decideEq xa ya, xor xb yb \with {
+      | yes e, true => ys
+      | _, _ => (xa, xb) :: (ya, yb) :: ys
+    }
+  }
+
+\func reduce_equiv {S : DecSet} (x : List (\Sigma S Bool)) : x ~ reduce x \elim x
+  | nil => crefl idp
+  | a :: nil => crefl idp
+  | a :: a1 :: x => cases ((reduce x) arg addPath)
+  \where {
+    \open FreeGroup
+
+    \func helper1 {a2 b2 : Bool} (_ : xor a2 b2 = true) : not a2 = b2 
+      | {false}, {true}, p => idp
+      | {true}, {false}, p => idp
+  }
+
+
+\func isIrreducible {S : DecSet} (x : List (\Sigma S Bool)) : Bool \elim x
+  | nil => true
+  | a :: nil => true
+  | (xa, xb) :: (ya, yb) :: xs => \case decideEq xa ya, xor xb yb \with {
+    | yes e, true => false
+    | _, _ => isIrreducible ((ya, yb) :: xs)
+  }
+
+\func isIrreducibleCons {S : DecSet} {a : \Sigma S Bool} {x : List (\Sigma S Bool)} : isIrreducible (a :: x) = true -> isIrreducible x = true \elim x
+  | nil => \lam _ => idp
+  | a1 :: x => cases ((S.decideEq a.1 a1.1) arg addPath)
+
+\func reduceIsIrreducible {S : DecSet} (x : List (\Sigma S Bool)) : isIrreducible (reduce x) = true \elim x
+  | nil => idp
+  | a :: nil => idp
+  | a :: a1 :: x => 
+    \have IH => reduceIsIrreducible (a1 :: x)
+    \in cases ((reduce x) arg addPath)
+
+\func reduce_inP {S : DecSet} (x y : List (\Sigma S Bool)) (s : S) (b : Bool) : reduce (x ++ ((s, b) :: (s, not b) :: y)) = reduce (x ++ y) \elim x
+  | nil => cases ((reduce y) arg addPath)
+  | a :: x => rewrite (reduce_inP x y s b) idp
+  \where {
+    \func helper1 {x : S} : decideEq x x = yes idp => cases (decideEq x x arg addPath)
+
+    \func helper2 (p : Bool) : xor p (not p) = true => cases p
+
+    \func helper3 {a b : Bool} (_ : xor (not a) b = true) : a = b \elim a, b
+      | false, false => idp
+      | false, true => contradiction
+      | true, false => contradiction
+      | true, true => idp
+  }
+
+
+\func reduce_equivWords {S : DecSet} {l1 l2 : List (\Sigma S Bool)} (eq : l1 FreeGroup.equivWords.~ l2) : reduce l1 = reduce l2 \elim eq
+  | cin r => \case r \with {
+    | inP (u_1, u_2, x, p, (p1, p2)) => rewrite (p1, p2) (inv (unfold * (repeat {2} (rewrite ++-assoc) (reduce_inP u_1 u_2 x p))))
+  }
+  | crefl p => rewrite p idp
+  | csym c => inv (reduce_equivWords c)
+  | ctrans c c1 => reduce_equivWords c *> reduce_equivWords c1
+
+\func reduceHom {S : DecSet} (x : FreeGroup S) : List (\Sigma S Bool) \elim x
+  | in~ a => reduce a
+  | ~-equiv x y r => reduce_equivWords r
+
+\instance DecWordMonoid (S : DecSet) : DecSet 
+  | E => List (\Sigma S Bool)
+  | decideEq => \lam x y => word-dec x y
+  \where {
+    \func first {X : \Type} (x : List X) (x0 : X) : X \elim x
+      | nil => x0
+      | a :: x => a
+
+    \func word-dec (x y : List (\Sigma S Bool)) : Dec (x = y) 
+      | nil, nil => yes idp
+      | nil, a :: y => no contradiction
+      | a :: x, nil => no contradiction
+      | (x, xb) :: xs, (y, yb) :: ys => cases ((decideEq x y) arg addPath)
+  }
+
+
+\instance FreeDecGroup (S : DecSet) : Group.Dec 
+  | Group => FreeGroup S
+  | decideEq => \lam in~ x in~ y => (
+    \have A0 => decideEq (reduceHom (in~ x)) (reduceHom (in~ y))
+    \in \case A0 \with {
+          | yes e => yes (~-equiv {_} {_} x y (ctrans (reduce_equiv x) (ctrans (crefl e) (csym (reduce_equiv y)))))
+          | no n => no (\lam Q => n (pmap reduceHom Q))
+        })

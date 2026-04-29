@@ -1,0 +1,28 @@
+\import Algebra.Group
+\import Algebra.Ordered
+\import Function.Meta
+\import Meta
+\import Order.Directed
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.TopAbGroup
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open ProductTopSpace
+\open ContMap
+
+\class HausdorffTopPoset \extends HausdorffTopSpace, Poset {
+  | <=-closed : (ProductTopSpace \this \this).IsClosed (\lam s => s.1 <= s.2)
+  | isHausdorff => 
+    \have P => ProductTopSpace \this \this
+    \in hausdorff-char.2 $ transport P.IsClosed (ext (\lam s => ext (\lam p => <=-antisymmetric p.1 p.2, \lam p => (=_<= p, =_<= (inv p))))) $ P.closed-inter <=-closed $ 
+          cont-closed (tuple proj2 proj1) <=-closed
+}
+
+\class HausdorffTopPosetAbGroup \extends HausdorffTopAbGroup, HausdorffTopPoset, PosetAbGroup {
+  | positive-closed : IsClosed (0 <=)
+  | <=-closed => transport (IsClosed {ProductTopSpace \this \this}) (ext (\lam s => ext (from>=0, to>=0))) $ cont-closed (subtract-cont ContMap.∘ tuple proj2 proj1) 
+    positive-closed
+  | positive-closed => <=-closed-right
+}

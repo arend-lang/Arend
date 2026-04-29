@@ -1,0 +1,62 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.StrictlyOrdered
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Set.Fin
+\import Set.Subset
+\import Topology.Compact
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup.Real
+\import Topology.UniformSpace
+\import Topology.UniformSpace.Complete
+\open LinearlyOrderedAbGroup
+\open RatField(finv)
+\open NatOrder \hiding (<)
+
+\instance NatMetricSpace : MetricSpace Nat 
+  | dist => \lam n m => LatticeAbGroup.abs (finv (suc n) - finv (suc m))
+  | dist-refl => RatNormed.dist-refl
+  | dist-symm => RatNormed.dist-symm
+  | dist-triang => RatNormed.dist-triang {_} {_} {finv (suc _)}
+  | dist-ext => \lam p => pmap pred $ pmap ratDenom $ RatNormed.dist-ext {_} {finv (suc _)} p
+  \where {
+    \func Cover (C : Set (Set Nat)) : \Prop => ∃ (U : C) (N : Nat) (\Pi {n : Nat} -> N <= n -> U n) (\Pi (j : Fin N) -> Given (V : C) (V j))
+
+    \lemma uniform-char {C : Set (Set Nat)} : NatMetricSpace.isUniform C <-> Cover C => {?hidden_proof}
+
+    \lemma totallyBounded : IsTotallyBounded NatMetricSpace => {?hidden_proof}
+
+    \lemma cauchy-char {C : Set (Set Nat)} : NatMetricSpace.isCauchy C <-> Cover C => {?hidden_proof}
+
+    \lemma makeUniform (N : Nat) : NatMetricSpace.isUniform (\lam U => (U = (N <=)) || (\Sigma (n : Nat) (n < N) (U = single n))) => {?hidden_proof}
+
+    \lemma makeCover (N : Nat) : NatMetricSpace.isCauchy (\lam U => (U = (N <=)) || (\Sigma (n : Nat) (n < N) (U = single n))) => {?hidden_proof}
+  }
+
+
+\func atTop : CauchyFilter NatMetricSpace \cowith
+  | F => \lam U => ∃ (N : Nat) ∀ {n} (N <= n -> U n)
+  | filter-mono => \lam inP (N, f) p => inP (N, \lam q => p $ f q)
+  | filter-top => inP (0, \lam _ => ())
+  | filter-meet => \lam inP (N, f) inP (M, g) => inP (N ∨ M, \lam p => (f $ join-left <=∘ p, g $ join-right <=∘ p))
+  | isProper => \lam inP (N, f) => inP (N, f <=-refl)
+  | isCauchyFilter => (cauchyFilter-uniform-char {_} {\this}).2
+    (\lam Cu => (\case NatMetricSpace.uniform-char.1 Cu \with {  | inP (U, CU, N, g, _) => inP (U, CU, inP (N, g))}))

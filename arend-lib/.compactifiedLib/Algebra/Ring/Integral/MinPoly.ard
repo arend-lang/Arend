@@ -1,0 +1,102 @@
+\import Algebra.Algebra
+\import Algebra.Domain
+\import Algebra.Domain.Euclidean
+\import Algebra.Field
+\import Algebra.Field.Algebraic
+\import Algebra.Group.GroupHom
+\import Algebra.Linear.Matrix.Smith
+\import Algebra.Linear.VectorSpace
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.Factor
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Integral
+\import Algebra.Ring.Poly
+\import Algebra.Ring.Poly.Euclidean()
+\import Algebra.Ring.Reduced
+\import Algebra.Ring.Sub
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Array
+\import Data.Or
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Logic.TFAE
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+
+\func isMinPoly (f : RingHom) (a : f.Cod) (p : Poly f.Dom) : \Prop 
+  => \Sigma (polyMapEval f p a = 0) (\Pi {q : Poly f.Dom} -> polyEval (polyMap f q) a = 0 -> TruncP (Monoid.LDiv p q))
+
+\lemma integral_factor-equiv {R E : CRing} (f : RingHom R E) (a : E) (p : Poly R) (pm : isMinPoly f a p) : Equiv (integral_factor f a p pm.1) => {?hidden_proof}
+
+\func isMonicMinPoly (f : RingHom) (a : f.Cod) (p : Poly f.Dom) : \Prop => \Sigma (isMonic p) (isMinPoly f a p)
+  \where {
+    \lemma unique {R : StrictDomain} {f : RingHom R} {a : f.Cod} {p q : Poly R} (pm : isMonicMinPoly f a p) (qm : isMonicMinPoly f a q) : p = q => {?hidden_proof}
+
+    \lemma fromMinPoly {K : DiscreteField} {R : CRing} {f : RingHom K R} {a : R} {p : Poly K} (p/=0 : p /= 0) (pm : isMinPoly f a p) :
+      isMonicMinPoly f a (finv (leadCoef p) *c p) => {?hidden_proof}
+  }
+
+
+\lemma minPoly_degree-char {K : DiscreteField} {E : CRing} (f : RingHom K E) (a : E) (p : Poly K) (pe : polyMapEval f p a = 0) (p/=0 : p /= 0) :
+(\Pi {q : Poly K} -> q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q)
+  <-> (\Pi {q : Poly K} (qe : polyEval (polyMap f q) a = 0) -> TruncP (Monoid.LDiv p q)) => {?hidden_proof}
+  \where {
+    \lemma minPoly_degree {K : Domain.Dec} (f : RingHom K) (a : f.Cod) (p : Poly K) (pe : polyMapEval f p a = 0) (p/=0 : p /= 0) 
+    (c : \Pi {q : Poly K} (qe : polyEval (polyMap f q) a = 0) -> TruncP (Monoid.LDiv p q)) {q : Poly K} (q/=0 : q /= 0) 
+    (qe : polyEval (polyMap f q) a = 0) : degree p <= degree q => {?hidden_proof}
+  }
+
+
+\lemma irr_minPoly {K : DiscreteField} {E : NonZeroCRing} (f : RingHom K E) (a : E) (p : Irr {PolyAlgebra K}) (pe : polyMapEval f p a = 0) : isMinPoly f a p => {?hidden_proof}
+  \where {
+    \lemma aux {K : DiscreteField} {E : NonZeroCRing} (f : RingHom K E) (a : E) (p : Irr {PolyAlgebra K}) (pe : polyMapEval f p a = 0) {n : Nat} {q : Poly K} 
+    (qd : degree q < n) (q/=0 : q /= 0) (qe : polyEval (polyMap f q) a = 0) : degree p <= degree q => {?hidden_proof}
+  }
+
+
+\lemma minPoly_prime {K : DiscreteField} {E : ImpotentCRing} (f : RingHom K E) (a : E) (p : Poly K) (p/=0 : p /= 0) (pm : isMinPoly f a p) : Prime p => {?hidden_proof}
+
+\lemma minPoly-char {K : DiscreteField} {E : ImpotentCRing} (f : RingHom K E) (a : E) (p : Poly K) (pe : polyMapEval f p a = 0) (p/=0 : p /= 0) :
+TFAE (\Pi {q : Poly f.Dom} -> polyEval (polyMap f q) a = 0 -> TruncP (Monoid.LDiv p q), Prime p, Irr p, 
+  \Pi {q : Poly K} -> q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q) => {?hidden_proof}
+
+\lemma finDim_minPoly {K : DiscreteField} {E : CRing} (f : RingHom K E) (S : SubRing E) (SR : \Pi (x : K) -> S (f x)) {l : Array S.IRing} 
+(lb : LModule.IsBasis {homLModule (S.corestrict f SR)} l) {a : E} (Sa : S a) :
+  \level (\Sigma (p : Poly K) (isMonicMinPoly f a p)) (\lam s t => ext (isMonicMinPoly.unique s.2 t.2)) => {?hidden_proof}
+  \where {
+    \lemma finDim_minDegree {R : SmithDomain} {E : CRing} (f : RingHom R E) (S : SubRing E) (SR : \Pi (x : R) -> S (f x)) {l : Array S.IRing} 
+    (lb : LModule.IsBasis {homLModule (S.corestrict f SR)} l) {a : E} (Sa : S a) :
+      ∃ (p : Poly R) (p /= 0) (polyMapEval f p a = 0) ∀ {q : Poly R} (q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q) => {?hidden_proof}
+      \where {
+        \lemma poly-dec (n : Nat) : Dec (∃ (p : Poly R) (p /= 0) (degree< p n) (polyMapEval f p a = 0)) => {?hidden_proof}
+
+        \lemma minimize (p : Poly R) (p/=0 : p /= 0) (pe : polyMapEval f p a = 0) (n : Nat) (d : degree< p n) :
+          ∃ (p : Poly R) (p /= 0) (polyMapEval f p a = 0) ∀ {q : Poly R} (q /= 0 -> polyEval (polyMap f q) a = 0 -> degree p <= degree q) => {?hidden_proof}
+      }
+
+  }
+
+
+\lemma finExt_minPoly {K : DiscreteField} {E : CRing} (f : RingHom K E) {l : Array E} (lb : LModule.IsBasis {homLModule f} l) {a : E} :
+  \Sigma (p : Poly K) (isMonicMinPoly f a p) => {?hidden_proof}
+
+\lemma minPoly-exists {K : DiscreteField} {E : CRing} (f : RingHom K E) {a : E} :
+  ∃ (p : Poly K) (isMonicMinPoly f a p) <-> ∃ (l : Array (SubRing.IRing {polyImage f a})) (LModule.IsBasis {homLModule (polyImageHom f a)} l) => {?hidden_proof}

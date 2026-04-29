@@ -1,0 +1,176 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Analysis.FuncLimit
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.UpperReal
+\import Data.Array
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Analysis.Limit
+\import Set.Fin
+\import Set.Partial
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedRing
+\import Topology.TopAbGroup
+\import Topology.TopAbGroup.Complete
+\import Topology.TopAbGroup.Product
+\import Topology.TopSpace
+\open Monoid
+
+\func Series (A : \Set) => Nat -> A
+
+partialSum {A : AddMonoid} (S : Series A) (n : Nat) : A => A.BigSum (\new (Array A n (\lam j => S j)))
+
+\lemma partialSum-empty {A : AddMonoid} {S : Series A} : partialSum S 0 = 0 => {?hidden_proof}
+
+\lemma partialSum_<= {A : PosetAddMonoid} {S T : Series A} {n : Nat} (p : \Pi (k : Nat) -> S k <= T k) : partialSum S n <= partialSum T n => {?hidden_proof}
+
+\lemma partialSum_hom {A B : AddMonoid} (f : AddMonoidHom A B) {S : Series A} {n : Nat} : f (partialSum S n) = partialSum (\lam i => f (S i)) n => {?hidden_proof}
+
+\func IsConvSeries {A : TopAbGroup} (S : Series A) : \Prop => IsConvergent (partialSum S)
+
+\func IsSeriesSum {A : AddMonoid} {T : TopSpace A} (S : Series A) (l : A) : \Prop => T.IsLimit (partialSum S) l
+
+\lemma seriesSum-fin {A : AddMonoid} {T : TopSpace A} {S : Series A} (n : Nat) (p : \Pi {j : Nat} -> n <= j -> S j = 0) :
+  IsSeriesSum S (A.BigSum (\new (Array A n (\lam j => S j)))) => {?hidden_proof}
+
+\lemma seriesSum-conv {A : TopAbGroup} {S : Series A} {l : A} (Sl : IsSeriesSum S l) : IsConvSeries S => {?hidden_proof}
+
+\func seriesSum {A : CompleteTopAbGroup} (S : Series A) : Partial A => limit (partialSum S)
+
+\lemma seriesConv-sum {A : CompleteTopAbGroup} {S : Series A} (Sc : IsConvSeries S) : IsSeriesSum S (seriesSum S Sc) => {?hidden_proof}
+
+\lemma seriesSum-char {A : CompleteTopAbGroup} {S : Series A} {l : A} : (seriesSum S = defined l) <-> IsSeriesSum S l => {?hidden_proof}
+
+\func midSum {A : AddMonoid} (S : Series A) (n m : Nat) : A \elim n, m
+  | 0, m => partialSum S m
+  | suc n, 0 => 0
+  | suc n, suc m => midSum (\lam j => S (suc j)) n m
+
+\lemma midSum_hom {A B : AddMonoid} (f : AddMonoidHom A B) {S : Series A} {n m : Nat} : f (midSum S n m) = midSum (\lam i => f (S i)) n m => {?hidden_proof}
+
+\func IsConvUpperSeries (S : Series ExUpperReal) : \Prop => ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (midSum S N n).U eps)
+
+\func IsAbsConvSeries {A : ExPseudoNormedAbGroup} (S : Series A) : \Prop => IsConvUpperSeries (\lam j => norm (S j))
+
+\func midSum' {A : AddMonoid} (S : Series A) (n m : Nat) : A => partialSum (\lam k => S (n + k)) m
+
+\lemma midSum'_midSum {A : AddMonoid} {S : Series A} {n m : Nat} : midSum' S n m = midSum S n (n + m) => {?hidden_proof}
+
+\lemma midSum_midSum' {A : AddMonoid} {S : Series A} {n m : Nat} : midSum S n m = midSum' S n (m -' n) => {?hidden_proof}
+
+\lemma zeroSeries-sum {A : TopAbGroup} : IsSeriesSum (\lam _ => A.zro) 0 => {?hidden_proof}
+
+\lemma series-shift-conv {A : TopAbGroup} {S : Series A} : IsConvSeries S <-> IsConvSeries (\lam n => S (suc n)) => {?hidden_proof}
+
+\lemma upperSeries-shift-conv {S : Series ExUpperReal} (S>=0 : \Pi (j : Nat) -> 0 <= S j) : IsConvUpperSeries S <-> IsConvUpperSeries (\lam n => S (suc n)) => {?hidden_proof}
+
+\lemma upperSeries-shifts-conv {S : Series ExUpperReal} (S>=0 : \Pi (j : Nat) -> 0 <= S j) (N : Nat) : IsConvUpperSeries S <-> IsConvUpperSeries (\lam n => S (n + N)) => {?hidden_proof}
+
+\lemma series-shift-absConv {A : ExPseudoNormedAbGroup} {S : Series A} : IsAbsConvSeries S <-> IsAbsConvSeries (\lam n => S (suc n)) => {?hidden_proof}
+
+\lemma series-shifts-absConv {A : ExPseudoNormedAbGroup} {S : Series A} (N : Nat) : IsAbsConvSeries S <-> IsAbsConvSeries (\lam n => S (n + N)) => {?hidden_proof}
+
+\lemma midSum_suc {A : AddMonoid} {S : Series A} {n : Nat} : midSum S n (suc n) = S n => {?hidden_proof}
+
+\lemma midSum-diff {A : AbGroup} {S : Series A} {n m : Nat} (p : n <= m) : midSum S n m = partialSum S m - partialSum S n => {?hidden_proof}
+
+\lemma midSum_norm {A : ExPseudoNormedAbGroup} {S : Series A} {n m : Nat} : norm (midSum S n m) <= midSum (\lam j => norm (S j)) n m => {?hidden_proof}
+
+\lemma midSum_<=-ldistr {x : ExUpperReal} {b : Series ExUpperReal} (b>=0 : \Pi (j : Nat) -> 0 <= b j) {n m : Nat} : midSum (\lam j => x * b j) n m <= x * midSum b n m => {?hidden_proof}
+  \where {
+    \lemma BigSum_<=-ldistr {x : ExUpperReal} {l : Array ExUpperReal} (l>=0 : \Pi (j : Fin l.len) -> 0 <= l j) : AddMonoid.BigSum (\lam j => x * l j) <= x * AddMonoid.BigSum l => {?hidden_proof}
+  }
+
+
+\lemma midSum-split {A : AddMonoid} {b : Series A} {n m k : Nat} (p : n <= m) (q : m <= k) : midSum b n k = midSum b n m + midSum b m k => {?hidden_proof}
+
+\lemma midSum-degenerate {A : AddMonoid} {b : Series A} {n m : Nat} (m<n : m < n) : midSum b n m = 0 => {?hidden_proof}
+
+\lemma midSum_<=-left {A : PosetAddMonoid} {b : Series A} {n m k : Nat} (p : n <= m) (s : \Pi (j : Nat) -> 0 <= b j) : midSum b m k <= midSum b n k => {?hidden_proof}
+
+\lemma midSum_<= {A : PosetAddMonoid} {b c : Series A} {n m : Nat} (s : \Pi {j : Nat} -> n <= j -> j < m -> b j <= c j) : midSum b n m <= midSum c n m => {?hidden_proof}
+
+\lemma midSum_0 {A : AddMonoid} {n m : Nat} : midSum (\lam _ => A.zro) n m = 0 => {?hidden_proof}
+
+\lemma midSum>=0 {A : PosetAddMonoid} {b : Series A} {n m : Nat} (s : \Pi (j : Nat) -> 0 <= b j) : 0 <= midSum b n m => {?hidden_proof}
+
+\lemma series-conv {A : ExPseudoNormedAbGroup} {S : Series A} : IsConvSeries S <-> ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (midSum S N n)).U eps) => {?hidden_proof}
+
+\lemma series-conv-real {A : PseudoNormedAbGroup} {S : Series A} : IsConvSeries S <-> ∀ {eps : Real} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> A.norm (midSum S N n) < eps) => {?hidden_proof}
+
+\lemma seriesSum_defined {A : CompleteExNormedAbGroup} {S : Series A} {a : A} (p : ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (a - partialSum S n)).U eps)) : seriesSum S = defined a 
+  => {?hidden_proof}
+  \where {
+    \lemma conv (p : seriesSum S = defined a) : ∀ {eps : Rat} (0 < eps) ∃ (N : Nat) ∀ {n} (N <= n -> (norm (a - partialSum S n)).U eps) => {?hidden_proof}
+  }
+
+
+\lemma absConv-isConv {A : ExPseudoNormedAbGroup} {S : Series A} (Sc : IsAbsConvSeries S) : IsConvSeries S => {?hidden_proof}
+
+\lemma series-limit {A : TopAbGroup} {S : Series A} (Sc : IsConvSeries S) : A.IsLimit S 0 => {?hidden_proof}
+
+\lemma real-series_<= {b c : Series Real} (b>=0 : \Pi (j : Nat) -> 0 <= b j) (s : \Pi (j : Nat) -> b j <= c j) (cc : IsConvSeries c) : IsConvSeries b => {?hidden_proof}
+
+\lemma series_<= {b c : Series ExUpperReal} (s : \Pi (j : Nat) -> b j <= c j) (cc : IsConvUpperSeries c) : IsConvUpperSeries b => {?hidden_proof}
+
+\func IsBoundedUpperSeries (S : Series ExUpperReal) : \Prop => ∃ (B : Rat) ∀ n ((S n).U B)
+  \where {
+    \lemma shifted {N : Nat} (SN : \Pi {n : Nat} -> n < N -> ∃ (S n).U) {B : Rat} (SB : \Pi {n : Nat} -> N <= n -> (S n).U B) : IsBoundedUpperSeries S => {?hidden_proof}
+  }
+
+
+\lemma upperSeries-bounded_<= {a b : Series ExUpperReal} (a<=b : \Pi (n : Nat) -> a n <= b n) (bB : IsBoundedUpperSeries b) : IsBoundedUpperSeries a => {?hidden_proof}
+
+\func IsBoundedSeries {A : ExPseudoNormedAbGroup} (S : Series A) : \Prop => IsBoundedUpperSeries (\lam n => norm (S n))
+
+\lemma series-lim-bound {A : BoundedExPseudoNormedAbGroup} {b : Series A} {l : A} (bl : A.IsLimit b l) : IsBoundedSeries b => {?hidden_proof}
+
+\lemma series_*-bounded {b c : Series ExUpperReal} (c>=0 : \Pi (j : Nat) -> 0 <= c j) (bB : IsBoundedUpperSeries b) (cc : IsConvUpperSeries c) :
+  IsConvUpperSeries (\lam n => b n * c n) => {?hidden_proof}
+
+\lemma geometric-upper-series-conv {r : ExUpperReal} (r>=0 : 0 <= r) (r<1 : r.U 1) : IsConvUpperSeries (ExUpperRealSemigroup.pow r) => {?hidden_proof}
+
+\lemma geometric-series-absConv {X : ExPseudoNormedRing} {x : X} (|x|<1 : (norm x).U 1) : IsAbsConvSeries (pow x) => {?hidden_proof}
+
+\lemma upper-ratio-test {S : Series ExUpperReal} (S>=0 : \Pi (n : Nat) -> 0 <= S n) (S0b : ∃ (B : Rat) ((S 0).U B)) (b : Series Real) 
+(bp : \Pi (n : Nat) -> S (suc n) <= S n * b n) {l : Real} (l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsConvUpperSeries S => {?hidden_proof}
+  \where {
+    \lemma iter-bound {f : Nat -> ExUpperReal} {b : Nat -> Real} (f>=0 : \Pi (j : Nat) -> 0 <= f j) {r : Real} (r>=0 : 0 <= r) 
+    (bp : \Pi (n : Nat) -> f (suc n) <= f n * b n) (bb : \Pi (n : Nat) -> b n <= r) (j : Nat) : f j <= f 0 * pow r j => {?hidden_proof}
+
+    \lemma S-bounded (n : Nat) : ∃ (B : Rat) ((S n).U B) => {?hidden_proof}
+  }
+
+
+\lemma ratio-test {X : BoundedExPseudoNormedAbGroup} {S : Series X} (b : Series Real) (bp : \Pi (n : Nat) -> norm (S (suc n)) <= norm (S n) * b n) {l : Real} 
+(l<1 : l < 1) (bl : RealNormed.IsLimit b l) : IsAbsConvSeries S => {?hidden_proof}
+
+\lemma MTest {X : \Set} {Y : ExPseudoNormedAbGroup} (f : Nat -> X -> Y) (M : Series ExUpperReal) (Mp : \Pi (n : Nat) (x : X) -> norm (f n x) <= M n) 
+(Mc : IsConvUpperSeries M) : IsUniFuncConvergent (\lam n x => partialSum (f __ x) n) => {?hidden_proof}
+
+\lemma partialSum-cover {X : CoverSpace} {Y : TopAbGroup} (f : Nat -> CoverMap X Y) (n : Nat) : CoverMap X Y (\lam x => partialSum (f __ x) n) => {?hidden_proof}

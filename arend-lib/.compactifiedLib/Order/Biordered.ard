@@ -1,0 +1,15 @@
+\import Data.Array
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+
+\class BiorderedSet \extends StrictPoset, Poset {
+  | <-transitive-right \alias \infixr 9 <∘r {a1 a2 a3 : E} : a1 <= a2 -> a2 < a3 -> a1 < a3
+  | <-transitive-left \alias \infixl 8 <∘l {a1 a2 a3 : E} : a1 < a2 -> a2 <= a3 -> a1 < a3
+  | <=-less {a1 a2 : E} : a1 < a2 -> a1 <= a2
+}
+
+\class BiorderedLattice \extends BiorderedSet, Lattice {
+  | <_meet-univ {x y z : E} : x < y -> x < z -> x < y ∧ z
+  | <_join-univ {x y z : E} : x < z -> y < z -> x ∨ y < z
+}

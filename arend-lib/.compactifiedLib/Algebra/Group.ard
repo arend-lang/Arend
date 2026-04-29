@@ -1,0 +1,131 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Arith.Int()
+\import Data.Array
+\import Data.Fin
+\import Data.Or
+\import Equiv
+\import Function.Meta($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+\class Group \extends CancelMonoid {
+  | inverse : E -> E
+  | inverse-left {x : E} : inverse x * x = ide
+  | inverse-right {x : E} : x * inverse x = ide
+  | inverse-left => make-inverse-left ide-right inverse inverse-right
+  | inverse-right => make-inverse-left {Semigroup.op} ide-left inverse inverse-left
+  | ide-left => make-ide-left ide-right inverse inverse-right inverse-left
+  | ide-right => make-ide-left {Semigroup.op} ide-left inverse inverse-left inverse-right
+  | cancel_*-left => \lam x {y} {z} p =>
+  qed (y ==< inv ide-left >== ide * y ==< pmap (* y) (inv inverse-left) >== (inverse x * x) * y ==< *-assoc >== inverse x * (x * y) ==< pmap (inverse x *) p 
+    >== inverse x * (x * z) ==< inv *-assoc >== (inverse x * x) * z ==< pmap (* z) inverse-left >== ide * z ==< ide-left >== z)
+  | cancel_*-right => \lam z {x} {y} p => qed (x ==< inv ide-right >== x * ide ==< pmap (x *) (inv inverse-right) >== x * (z * inverse z) ==< inv *-assoc >== (x * z) * inverse z ==< pmap 
+    (* inverse z) p >== (y * z) * inverse z ==< *-assoc >== y * (z * inverse z) ==< pmap (y *) inverse-right >== y * ide ==< ide-right >== y)
+}
+  \where {
+    \open Monoid(Inv)
+
+    \lemma inverse-equality {X : \Set} (G H : Group X) (z : G.ide = H.ide) (m : \Pi {x y : G} -> x G.* y = x H.* y) (e : G) : G.inverse e = H.inverse e => {?hidden_proof}
+
+    \func equals (G H : Group) (p : G = {Monoid} H) : G = H => (exts Group) {
+      | Monoid => p
+      | inverse => inverse-equality
+    }
+      \where {
+        \lemma inverse-equality (e : G) : coe (p @ __) (inverse e) right = inverse (coe (p @ __) e right) => {?hidden_proof}
+      }
+
+
+    \lemma make-inverse-left {M : Semigroup} {ide : M} (ide-right : \Pi {x : M} -> x * ide = x) (inverse : M -> M) (inverse-right : \Pi {x : M} -> x * inverse x = ide) {x : M} : inverse x * x = ide 
+      => {?hidden_proof}
+
+    \lemma make-ide-left {M : Semigroup} {ide : M} (ide-right : \Pi {x : M} -> * x ide = x) (inverse : M -> M) (inverse-right : \Pi {x : M} -> x * inverse x = ide) 
+    (inverse-left : \Pi {x : M} -> inverse x * x = ide) {x : M} : * ide x = x => {?hidden_proof}
+
+    \func translate-is-Equiv {G : Group} (h : G) : QEquiv (h *) \cowith
+      | ret => inverse h *
+      | ret_f => \lam _ => rewrite (inv G.*-assoc, G.inverse-left, G.ide-left) idp
+      | f_sec => \lam _ => rewrite (inv G.*-assoc, G.inverse-right, G.ide-left) idp
+
+\class Dec \extends Group, DecSet
+  }
+
+
+\func \infixl 7 / {G : Group} (x y : G) => x * inverse y
+
+\func conjugate {E : Group} (g h : E) => g * h * inverse g
+
+\lemma conjugate-via-id {G : Group} {g : G} : conjugate ide g = g => {?hidden_proof}
+
+\class AddGroup \extends AddMonoid {
+  | negative : E -> E
+  | negative-left {x : E} : negative x + x = zro
+  | negative-right {x : E} : x + negative x = zro
+}
+  \where {
+    \use \coerce fromGroup (G : Group) => \new (AddGroup G.E G.ide G.* G.ide-left G.ide-right G.*-assoc G.inverse G.inverse-left G.inverse-right)
+
+    \use \coerce toGroup (G : AddGroup) => \new (Group G.E G.zro G.+ G.+-assoc G.zro-left G.zro-right G.negative G.negative-left G.negative-right)
+
+    \lemma negative-equality {X : \Set} (A B : AddGroup X) (z : A.zro = B.zro) (m : \Pi {x y : A} -> x A.+ y = x B.+ y) (e : A) : A.negative e = B.negative e => {?hidden_proof}
+
+\class With# \extends AddGroup, Set# {
+      | \infix 8 #0 : E -> \Prop
+      | #0-zro : Not (#0 zro)
+      | #0-negative {x : E} : #0 x -> #0 (negative x)
+      | #0-+ {x y : E} : #0 (x + y) -> #0 (#0 x || y)
+      | #0-tight {x : E} : Not (#0 x) -> x = zro
+      | # => \lam x y => #0 (x - y)
+      | #-irreflexive => \lam x-x#0 => #0-zro (transport #0 negative-right x-x#0)
+      | #-symmetric => \lam x-y#0 => transport #0 (negative_+ *> pmap (+ negative _) negative-isInv) (#0-negative x-y#0)
+      | #-comparison => \lam x y z x-z#0 => #0-+ (transport #0 (inv diff_+) x-z#0)
+      | tightness => \lam x-y/#0 => fromZero (#0-tight x-y/#0)
+    }
+
+\class Dec \extends With#, DecSet {
+      | nonZeroApart {x : E} (x/=0 : x /= zro) : #0 x
+      | #0-negative => \lam x#0 => nonZeroApart (\lam -x=0 => #0-zro (transport #0 (inv negative-isInv *> pmap negative -x=0 *> negative_zro) x#0))
+      | #0-+ => \lam {x} {y} x+y#0 => (\case decideEq y zro \with {
+        | yes y=0 => byLeft (transport #0 (pmap (x +) y=0 *> zro-right) x+y#0)
+        | no y/=0 => byRight (nonZeroApart y/=0)
+      })
+      | #0-tight => \lam {x} x/#0 => (\case decideEq x zro \with {
+        | yes x=0 => x=0
+        | no x/=0 => absurd (x/#0 (nonZeroApart x/=0))
+      })
+      | nonEqualApart => \lam p => nonZeroApart (\lam x-y=0 => p (fromZero x-y=0))
+      | #0 => #0
+      | #0-zro => #0-zro
+      | nonZeroApart => notEqualApartImpl
+    }
+  }
+
+
+\func \infixl 6 - {G : AddGroup} (x y : G) => x + negative y
+
+\class CGroup \extends Group, CancelCMonoid {
+  | inverse-right => *-comm *> inverse-left
+}
+
+\class AbGroup \extends AddGroup, AbMonoid {
+  | negative-right => +-comm *> negative-left
+}
+  \where {
+    \use \coerce fromCGroup (G : CGroup) => \new (AbGroup G.E G.ide G.* G.ide-left G.ide-right G.*-assoc G.inverse G.inverse-left G.*-comm)
+
+    \use \coerce toCGroup (G : AbGroup) => \new (CGroup G.E G.zro G.+ G.+-assoc G.zro-left G.zro-right G.negative G.negative-left G.+-comm)
+
+    \func equals (A B : AbGroup) (p : A = {AddGroup} B) : A = B 
+      => path (\lam i => \new AbGroup {  | AddGroup => p @ i  | +-comm => prop-dpi (\Pi {x y : p @ __} -> x + y = y + x) A.+-comm B.+-comm @ i})
+  }
+
+
+\class FinGroup \extends Group, Group.Dec, FinSet

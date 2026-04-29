@@ -1,0 +1,77 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.StrictlyOrdered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.IVT
+\import Arith.Real.LowerReal
+\import Data.Or
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Subset
+\import Topology.Elem
+\import Topology.NormedAbGroup.Real
+\import Topology.TopRing
+\import Topology.TopRing.Real
+\import Topology.TopSpace
+\open Monoid(pow)
+\open ContMap
+
+root (n : Nat) (x : Real) : Real \elim n
+  | 0 => 0
+  | suc n => ((rootEquiv {suc n} suc/=0).ret (x ∨ 0, join-right)).1
+  \where {
+    \func rootEquiv {n : Nat} (n/=0 : n /= 0) : Equiv {Elem {Real} (0 <=)} {Elem {Real} (0 <=)} 
+    => monotone-inverse (\lam s => pow s.1 n) (\lam {x} {y} p => RealField.pow_<-monotone n/=0 x.2 p) (TopMonoid.pow-cont ∘ elemCont) (\lam x => RealField.pow>=0 {x.1} x.2)
+      (\lam {v} v>=0 => inP (0, v ∨ 1, zro<ide <∘l join-right, \lam p _ => p, transportInv (<= v) (Semiring.pow_0 n/=0) v>=0, join-left <=∘ RealField.pow>=id join-right n/=0))
+  }
+
+
+\lemma root>=0 {n : Nat} {x : Real} : 0 <= root n x => {?hidden_proof}
+
+\lemma root_pow {n : Nat} (n/=0 : n /= 0) {x : Real} (x>=0 : 0 <= x) : root n (pow x n) = x => {?hidden_proof}
+
+\lemma pow_root {n : Nat} (n/=0 : n /= 0) {x : Real} (x>=0 : 0 <= x) : pow (root n x) n = x => {?hidden_proof}
+
+\lemma root_zro {n : Nat} : root n 0 = 0 => {?hidden_proof}
+
+\lemma root_ide {n : Nat} (n/=0 : n /= 0) : root n 1 = 1 => {?hidden_proof}
+
+\lemma root-monotone {n : Nat} (n/=0 : n /= 0) {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : root n x < root n y => {?hidden_proof}
+
+\lemma root>0 {n : Nat} (n/=0 : n /= 0) {x : Real} (x>0 : 0 < x) : 0 < root n x => {?hidden_proof}
+
+\lemma root-rat {n : Nat} (n/=0 : n /= 0) {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < pow q n) (pow r n < b) => {?hidden_proof}
+
+sqrt (x : Real) => root 2 x
+
+\lemma sqrt>=0 {x : Real} : 0 <= sqrt x => {?hidden_proof}
+
+\lemma sqrt_pow {x : Real} (x>=0 : 0 <= x) : sqrt (x * x) = x => {?hidden_proof}
+
+\lemma pow_sqrt {x : Real} (x>=0 : 0 <= x) : sqrt x * sqrt x = x => {?hidden_proof}
+
+\lemma sqrt_zro : sqrt 0 = 0 => {?hidden_proof}
+
+\lemma sqrt_ide : sqrt 1 = 1 => {?hidden_proof}
+
+\lemma sqrt-monotone {x y : Real} (x>=0 : 0 <= x) (x<y : x < y) : sqrt x < sqrt y => {?hidden_proof}
+
+\lemma sqrt>0 {x : Real} (x>0 : 0 < x) : 0 < sqrt x => {?hidden_proof}
+
+\lemma sqrt-rat {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < q * q) (r * r < b) => {?hidden_proof}

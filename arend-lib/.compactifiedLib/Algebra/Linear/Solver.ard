@@ -1,0 +1,47 @@
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.StrictlyOrdered
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.Solver
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Rat
+\import Data.Array
+\import Data.Bool
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\open LinearlyOrderedAbMonoid
+
+\data Operation 
+  | Less
+  | LessOrEquals
+  | Equals
+
+\class LinearData \extends AlgData {
+  \override R : LinearlyOrderedSemiring
+}
+  \where {
+    \open PosetSemiring
+    \open LinearlyOrderedSemiring
+  }
+
+
+\class LinearSemiringData \extends LinearData, SemiringData
+
+\class LinearRingData \extends LinearData, RingData {
+  \override R : OrderedRing
+}
+
+\class LinearRatData \extends LinearData, RatData {
+  \override R : OrderedRing
+}
+
+\class LinearRatAlgebraData \extends RatAlgebraData, LinearData {
+  \override R : OrderedAAlgebra RatField
+}

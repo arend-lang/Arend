@@ -1,0 +1,48 @@
+\import Equiv
+\import Equiv.Sigma
+\import Equiv.Univalence
+\import Logic.Unique
+\import Homotopy.Fibration
+\import Homotopy.Join
+\import Homotopy.Localization.Connected
+\import Homotopy.Localization.Universe
+\import Homotopy.Pushout
+\import Logic
+\import Paths
+\import Paths.Meta
+
+\lemma genBlakersMassey {d : Data} (x0 : X) (y0 : Y) : isConnectedMap (pbMap {d} {x0} {y0}) => {?hidden_proof}
+  \where {
+    \open Localization
+
+    \lemma surjective {d : Data} {x0 : X} {y0 : Y} (q : TruncP (\Sigma (y : Y) (Q x0 y))) : isConnectedMap (pbMap {d} {x0} {y0}) => {?hidden_proof}
+
+\class EquivData \extends ReflUniverse {
+      | A : \hType
+      | B : \hType
+      | M : A -> Connected
+      | N : B -> Connected
+      | f : \Sigma (a : A) (M a) -> \Sigma (b : B) (N b)
+      | g : \Sigma (b : B) (N b) -> \Sigma (a : A) (M a)
+      | p : \Pi (a : A) (m : M a) -> (g (f (a, m))).1 = a
+      | q : \Pi (b : B) (n : N b) -> (f (g (b, n))).1 = b
+    }
+
+\class POData {
+      | X : \hType
+      | Y : \hType
+      | Q : X -> Y -> \hType
+    }
+
+    \open POData
+
+\class Data \extends ReflUniverse, POData {
+      | ch {x x' : X} {y y' : Y} (q0 : Q x y) (q1 : Q x y') (q2 : Q x' y) : isConnectedType (Join (\Sigma (p : y = y') (transport (Q x) p q0 = q1)) (\Sigma (p : x = x') (transport (Q y) p q0 = q2)))
+    }
+
+\class DataExt \extends Data {
+      | x0 : X
+      | y0 : Y
+      | q0 : Q x0 y0
+    }
+  }

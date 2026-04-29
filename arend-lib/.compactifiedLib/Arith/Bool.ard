@@ -1,0 +1,47 @@
+\import Data.Bool
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.LinearOrder
+
+\instance BoolLattice : BoundedDistributiveLattice Bool 
+  | <= => <=
+  | <=-refl => \lam {x} => cases x constructor
+  | <=-transitive => \lam {x} {y} {z} p q => cases (x, y, z, p, q) constructor
+  | <=-antisymmetric => \lam {x} {y} p q => cases (x, y, p, q) idp
+  | meet => and
+  | meet-left => \lam {x} {y} => cases (x, y) constructor
+  | meet-right => \lam {x} {y} => cases (x, y) constructor
+  | meet-univ => \lam {x} {y} {z} p q => cases (x, y, z, p, q) constructor
+  | join => or
+  | join-left => \lam {x} {y} => cases x constructor
+  | join-right => \lam {x} {y} => cases (x, y) constructor
+  | join-univ => \lam {x} {y} {z} p q => cases (x, y, z, p, q) constructor
+  | top => true
+  | top-univ => \lam {x} => cases x constructor
+  | bottom => false
+  | bottom-univ => false<=_
+  | ldistr>= => \lam {x} {y} {z} => cases (x, y, z) constructor
+  \where {
+\data \infix 4 <= (x y : Bool) \with
+      | false, _ => false<=_
+      | true, true => true<=true
+  }
+
+
+\instance BoolPoset : Dec Bool 
+  | < => <
+  | <-irreflexive => \lam {true} () => {?}
+  | <-transitive => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z, __, __ \with {})
+  | trichotomy => \case \elim __, \elim __ \with {
+    | true, true => equals idp
+    | true, false => greater false<true
+    | false, true => less false<true
+    | false, false => equals idp
+  }
+  \where {
+    \open LinearOrder
+
+\data \infix 4 < (x y : Bool) \with
+      | false, true => false<true
+  }

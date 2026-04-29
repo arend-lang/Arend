@@ -1,0 +1,61 @@
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Arith.Fin.Order
+\import Data.List
+\import Function.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set \hiding (#)
+
+\data MonoidTerm (V : \Type) 
+  | var V
+  | :ide
+  | \infixl 7 :* (t s : MonoidTerm V)
+
+\func normalize {V : \Type} (t : MonoidTerm V) => aux t nil
+  \where {
+    \func aux {V : \Type} (t : MonoidTerm V) (acc : List V) : List V \elim t
+      | var v => v :: acc
+      | :ide => acc
+      | :* t s => aux t (aux s acc)
+  }
+
+
+\class MonoidData {
+  | M : Monoid
+  | vars : Array M
+}
+
+\class CMonoidData \extends MonoidData {
+  \override M : CMonoid
+}
+  \where {
+    \open MonoidData
+    \open Sort
+    \open Sort.RedBlack
+
+    \func indices {A : \Type} (is : List Nat) (l : List A) : List A \elim is, l
+      | nil, _ => nil
+      | :: _ _, nil => nil
+      | :: 0 is, :: a l => a :: indices is l
+      | :: suc n is, :: _ l => indices (n :: is) l
+
+    \func removeIndices {A : \Type} (is : List Nat) (l : List A) : List A \elim is, l
+      | nil, l => l
+      | :: _ _, nil => nil
+      | :: 0 is, :: a l => removeIndices is l
+      | :: suc n is, :: a l => a :: removeIndices (n :: is) l
+  }
+
+
+\class LData \extends CMonoidData {
+  | L : TopMeetSemilattice
+  | M => L
+}
+  \where {
+    \open MonoidData
+    \open Sort
+  }

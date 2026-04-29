@@ -1,0 +1,31 @@
+\import Algebra.Group
+\import Algebra.Group.GSet
+\import Category
+\import Category.Meta
+\import Function(IsInj, IsSurj)
+\import Paths
+\import Paths.Meta
+\import Set.SetHom
+
+\class EquivariantMap \extends SetHom {
+  | G : Group
+  \override Dom : GroupAction G
+  \override Cod : GroupAction G
+  | func-** {e : Dom} {g : G} : func (g ** e) = g ** func e
+}
+
+\func id-equivar {G : Group} (X : GroupAction G) : EquivariantMap G X X \cowith
+  | func => \lam (x : X) => x
+  | func-** => \lam {x : X} {g : G} => idp
+
+\instance GSet (G : Group) : Cat (GroupAction G) 
+  | Hom => \lam A B => EquivariantMap G A B
+  | id => \lam X => id-equivar X
+  | o => \lam {x y z : GroupAction G} (g : EquivariantMap G y z) (f : EquivariantMap G x y) => \new (EquivariantMap G) {
+    | func => \lam (a : x) => g (f a)
+    | func-** => \lam {a : x} {h : G} => qed (g (f (h ** a)) ==< pmap g func-** >== g (h ** f a) ==< func-** >== h ** g (f a))
+  }
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  | univalence => sip (\lam e _ => exts (\lam g x => func-** {e}))

@@ -1,0 +1,108 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Pointed
+\import Analysis.Limit
+\import Arith.Rat
+\import Arith.Real
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Operations
+\import Order.Directed
+\import Order.Lattice
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Directed
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace
+\import Topology.TopAbGroup
+\import Topology.TopSpace
+\import Topology.UniformSpace
+\open ProductCoverSpace
+\open CoverMap
+
+\func IsFuncConvergent {I : DirectedSet} {X Y : CoverSpace} (f : I -> X -> Y) : \Prop => CoverMap (DirectedCoverSpace I ⨯ X) Y (\lam s => f s.1 s.2)
+
+\lemma funcConv-pointwise {I : DirectedSet} {X Y : CoverSpace} (f : I -> X -> Y) (fc : IsFuncConvergent f) {x : X} : IsConvergent (f __ x) => {?hidden_proof}
+
+\lemma funcLimit {I : DirectedSet} {X : CoverSpace} {Y : CompleteCoverSpace} (f : I -> X -> Y) (fc : IsFuncConvergent f) :
+  CoverMap X Y (\lam x => limit (f __ x) (funcConv-pointwise f fc)) => {?hidden_proof}
+
+\lemma funcConvergent-char {I : DirectedSet} {X Y : CoverSpace} (f : I -> CoverMap X Y) 
+(fc : ∀ {D : Y.isCauchy} (X.isCauchy (\lam U => ∃ (N : I) (V : D) ∀ {n} {x} (N <= n -> U x -> V (f n x))))) : IsFuncConvergent (\lam n => f n) => {?hidden_proof}
+  \where {
+    \lemma conv {I : DirectedSet} {X Y : CoverSpace} (f : I -> CoverMap X Y) (fc : IsFuncConvergent (\lam n => f n)) :
+      ∀ {D : Y.isCauchy} (X.isCauchy (\lam U => ∃ (N : I) (V : D) ∀ {n} {x} (N <= n -> U x -> V (f n x)))) => {?hidden_proof}
+  }
+
+
+\lemma funcConvergent-uniform-char {I : DirectedSet} {X : CoverSpace} {Y : UniformSpace} (f : I -> CoverMap X Y) 
+(fc : ∀ {E : Y.isUniform} (X.isCauchy (\lam U => ∃ (N : I) ∀ {x : U} ∃ (W : E) ∀ {n} (N <= n -> W (f n x))))) : IsFuncConvergent (\lam n => f n) => {?hidden_proof}
+  \where {
+    \lemma split {I : DirectedSet} {X : CoverSpace} {Y : RegularPreuniformSpace} (f : I -> CoverMap X Y) 
+    (fc : ∀ {E : Y.isUniform} ∃ (C : X.isCauchy) ∀ {U : C} ∃ (N : I) (D : X.isCauchy) ∀ {V : D} ∃ (W : E) ∀ {n} (N <= n) ∀ {x} (U x -> V x -> W (f n x))) : IsFuncConvergent (\lam n => f n) 
+      => {?hidden_proof}
+
+    \lemma conv {I : DirectedSet} {X : CoverSpace} {Y : RegularPreuniformSpace} (f : I -> CoverMap X Y) (fc : IsFuncConvergent (\lam n => f n)) :
+      ∀ {E : Y.isUniform} (X.isCauchy (\lam U => ∃ (N : I) ∀ {x : U} ∃ (W : E) ∀ {n} (N <= n -> W (f n x)))) => {?hidden_proof}
+  }
+
+
+\lemma funcCovergent-metric-char {I : DirectedSet} {X : CoverSpace} {Y : ExPseudoMetricSpace} (f : I -> CoverMap X Y) 
+(fc : \Pi {eps : Rat} -> 0 < eps -> X.isCauchy (\lam U => ∃ (N : I) ∀ {x : U} ∀ {n} (N <= n -> (dist (f n x) (f N x)).U eps))) :
+  IsFuncConvergent (\lam n => f n) => {?hidden_proof}
+  \where {
+    \lemma conv {I : DirectedSet} {X : CoverSpace} {Y : ExPseudoMetricSpace} (f : I -> CoverMap X Y) (fc : IsFuncConvergent (\lam n => f n)) :
+      \Pi {eps : Rat} -> 0 < eps -> X.isCauchy (\lam U => ∃ (N : I) ∀ {x : U} ∀ {n} (N <= n -> (dist (f n x) (f N x)).U eps)) => {?hidden_proof}
+  }
+
+
+\lemma funcCovergent-topAb-char {I : DirectedSet} {X : CoverSpace} {Y : TopAbGroup} (f : I -> CoverMap X Y) 
+(fc : ∀ {U : Y.isOpen} (U 0) (X.isCauchy (\lam V => ∃ (N : I) ∀ {x : V} ∀ {n} (N <= n -> U (f n x - f N x))))) : IsFuncConvergent (\lam n => f n) => {?hidden_proof}
+  \where {
+    \lemma conv {I : DirectedSet} {X : CoverSpace} {Y : TopAbGroup} (f : I -> CoverMap X Y) (fc : IsFuncConvergent (\lam n => f n)) :
+      ∀ {U : Y.isOpen} (U 0) (X.isCauchy (\lam V => ∃ (N : I) ∀ {x : V} ∀ {n} (N <= n -> U (f n x - f N x)))) => {?hidden_proof}
+  }
+
+
+\func IsUniFuncConvergent {I : DirectedSet} {X : \Set} {Y : PreuniformSpace} (f : I -> X -> Y) : \Prop 
+  => ∀ {D : Y.isUniform} ∃ (N : I) ∀ x ∃ (V : D) ∀ {n} (N <= n -> V (f n x))
+
+\lemma funcCovergent-uni {I : DirectedSet} {X : CoverSpace} {Y : UniformSpace} (f : I -> CoverMap X Y) (fc : IsUniFuncConvergent (\lam n => f n)) :
+  IsFuncConvergent (\lam n => f n) => {?hidden_proof}
+
+\lemma metric-uni-funcConvergent {I : DirectedSet} {X : \Set} {Y : ExPseudoMetricSpace} {f : I -> X -> Y} :
+  IsUniFuncConvergent f <-> ∀ {eps : > 0} ∃ (N : I) ∀ x {n} (N <= n -> (dist (f n x) (f N x)).U eps) => {?hidden_proof}
+
+\type IsCoverLimit {I : DirectedSet} {X : CoverSpace} {Y : TopAbGroup} (S : Set (\Sigma I X)) (f : Set.Total S -> Y) {T : Set X} (L : Set.Total T -> Y) : \Prop 
+  => ∀ {V : Y.isOpen} (V 0) (X.isCauchy (\lam U => ∃ (N : I) ∀ {x : U} (Tx : T x) {n} (N <= n) (Sh : S (n, x)) (V (L (x, Tx) - f ((n, x), Sh)))))
+  \where {
+    \lemma unique {Y : HausdorffTopAbGroup} {f : Set.Total S -> Y} {T : Set X} {L L' : Set.Total T -> Y} (Ll : IsCoverLimit S f L) (L'l : IsCoverLimit S f L') 
+    {x : Set.Total T} (Sh : ∀ N ∃ (n : I) (N <= n) (S (n, x.1))) : L x = L' x => {?hidden_proof}
+  }
+
+
+\func PointDirectedSet {X : TopSpace} (a : X) : DirectedSet \cowith
+  | E => Given (V : isOpen) (V a) (b : X) (V b)
+  | <= => \lam S T => T.1 ⊆ S.1
+  | <=-refl => <=-refl
+  | <=-transitive => \lam p q => q <=∘ p
+  | isInhabitted => inP (top, open-top, (), a, ())
+  | isDirected => \lam (V, Vo, Va, _, _) (W, Wo, Wa, _, _) => inP ((V ∧ W, open-inter Vo Wo, (Va, Wa), a, (Va, Wa)), meet-left, meet-right)
+
+\func IsOpenLimit {Z : TopSpace} (c : Z) {X : CoverSpace} {Y : TopAbGroup} (S : Set (\Sigma Z X)) (f : Set.Total S -> Y) {T : Set X} (L : Set.Total T -> Y) : \Prop 
+  => IsCoverLimit {PointDirectedSet c} (\lam h => S (h.1.4, h.2)) (\lam x => f (_, x.2)) L
+
+\lemma openLimit-char {Z : TopSpace} {c : Z} {X : CoverSpace} {Y : TopAbGroup} {S : Set (\Sigma Z X)} {f : Set.Total S -> Y} {T : Set X} {L : Set.Total T -> Y} :
+IsOpenLimit c S f L <-> ∀ {V : Y.isOpen} (V 0) 
+  (X.isCauchy (\lam U => ∃ (W : Z.isOpen) (W c) ∀ {x : U} (Tx : T x) {z : W} (Sh : S (z, x)) (V (L (x, Tx) - f ((z, x), Sh))))) => {?hidden_proof}
+  \where {
+    \lemma unique {Y : HausdorffTopAbGroup} {f : Set.Total S -> Y} {L L' : Set.Total T -> Y} (Ll : IsOpenLimit c S f L) (L'l : IsOpenLimit c S f L') {x : Set.Total T} 
+    (Sh : ∀ {W : Z.isOpen} ∃ (z : W) (S (z, x.1))) : L x = L' x => {?hidden_proof}
+  }

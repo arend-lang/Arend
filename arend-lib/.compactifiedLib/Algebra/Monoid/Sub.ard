@@ -1,0 +1,85 @@
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Pointed.Sub
+\import Algebra.Ring.Localization()
+\import Arith.Nat
+\import Data.Array
+\import Function.Iterate
+\import Logic
+\import Logic.Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+
+\class SubSemigroup \extends SubSet {
+  \override S : Semigroup
+  | contains_* {x y : S} : contains x -> contains y -> contains (x * y)
+}
+  \where {
+    \func cStruct {A : CSemigroup} (S : SubSemigroup A) : CSemigroup \cowith
+      | Semigroup => S.ISemigroup
+      | *-comm => ext *-comm
+  }
+
+
+\class SubMonoid \extends SubPointed, SubSemigroup {
+  \override S : Monoid
+}
+  \where {
+    \func cStruct {A : CMonoid} (S : SubMonoid A) : CMonoid \cowith
+      | Monoid => S.IMonoid
+      | CSemigroup => SubSemigroup.cStruct S
+
+    \func max {A : Monoid} : SubMonoid \cowith
+      | SubPointed => SubPointed.max {A}
+      | contains_* => \lam _ _ => ()
+
+    \func closure {M : Monoid} (S : SubSet M) : SubMonoid M \cowith
+      | contains => \lam x => ∃ (n : Nat) (iterr apl n S x)
+      | contains_ide => inP (1, byRight (byLeft idp))
+      | contains_* => \lam {x} {y} inP (n, xr) inP (m, yr) => inP (suc (n ∨ m), byRight (byRight (x, y, apl-inc join-left x xr, apl-inc join-right y yr, idp)))
+      \where {
+        \open Algebra.Ring.Localization
+
+        \lemma ext {M : Monoid} (S : SubSet M) : S <= closure S => {?hidden_proof}
+
+        \lemma univ (S' : SubMonoid M) (p : S <= S') (x : M) (q : closure S x) : S' x => {?hidden_proof}
+
+        \func apl {M : Monoid} (S : SubSet M) : SubSet M \cowith
+          | contains => \lam x => S x || (x = 1) || (\Sigma (y z : M) (S y) (S z) (x = y * z))
+
+        \lemma apl-inc {n m : Nat} (q : n <= m) (x : M) (p : iterr apl n S x) : iterr apl m S x => {?hidden_proof}
+          \where {
+            \lemma alt (n m : Nat) (x : M) (p : iterr apl n S x) : iterr apl (n + m) S x => {?hidden_proof}
+          }
+
+      }
+
+
+    \func powers {M : Monoid} (a : M) : SubMonoid M \cowith
+      | contains => \lam x => ∃ (n : Nat) (M.pow a n = x)
+      | contains_ide => inP (0, idp)
+      | contains_* => \lam inP (n, a^n=x) inP (m, a^m=y) => inP (n Nat.+ m, M.pow_+ *> pmap2 * a^n=x a^m=y)
+  }
+
+
+\class DecSubMonoid \extends SubMonoid, DecSubPointed {
+  \override S : Monoid
+}
+
+\class SubAddMonoid \extends SubAddPointed {
+  \override S : AddMonoid
+  | contains_+ {x y : S} : contains x -> contains y -> contains (x + y)
+}
+  \where {
+    \func abStruct {A : AbMonoid} (S : SubAddMonoid A) : AbMonoid \cowith
+      | AddMonoid => S.IAddMonoid
+      | +-comm => ext +-comm
+
+    \func max {A : AddMonoid} : SubAddMonoid \cowith
+      | SubAddPointed => SubAddPointed.max {A}
+      | contains_+ => \lam _ _ => ()
+  }

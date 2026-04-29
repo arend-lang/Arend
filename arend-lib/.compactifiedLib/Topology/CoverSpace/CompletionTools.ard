@@ -1,0 +1,55 @@
+\import Arith.Real.UpperReal
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Operations
+\import Order.PartialOrder
+\import Paths.Meta
+\import Set.Subset
+\import Topology.CoverSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.Product
+\import Topology.CoverSpace.StronglyComplete
+\import Topology.MetricSpace.UpperReal
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+\open ProductCoverSpace
+
+lift2 {X : CoverSpace} (f : CoverMap (X ⨯ X) X) : CoverMap (Completion X ⨯ Completion X) (Completion X) 
+  => dense-lift (prod completion completion) (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) (completion CoverMap.∘ f)
+
+\lemma lift2-char {X : CoverSpace} {f : CoverMap (X ⨯ X) X} {x y : X} : lift2 f (pointCF x, pointCF y) = pointCF (f (x, y)) => {?hidden_proof}
+
+\lemma unique1 {X : CoverSpace} (f g : ContMap (Completion X) (Completion X)) (p : \Pi (x : X) -> f (pointCF x) = g (pointCF x)) {x : RegularCauchyFilter X} : f x = g x 
+  => {?hidden_proof}
+
+\lemma unique2 {X : CoverSpace} (f g : ContMap (Completion X ⨯ Completion X) (Completion X)) 
+(p : \Pi (x y : X) -> f (pointCF x, pointCF y) = g (pointCF x, pointCF y)) {x y : RegularCauchyFilter X} : f (x, y) = g (x, y) => {?hidden_proof}
+
+\lemma unique3 {X : CoverSpace} (f g : ContMap (Completion X ⨯ Completion X ⨯ Completion X) (Completion X)) 
+(p : \Pi (x y z : X) -> f ((pointCF x, pointCF y), pointCF z) = g ((pointCF x, pointCF y), pointCF z)) {x y z : RegularCauchyFilter X} : f ((x, y), z) = g ((x, y), z) 
+  => {?hidden_proof}
+
+\lemma unique1_<= {X : CoverSpace} (f g : ContMap (Completion X) ExUpperRealMetric) (p : \Pi (x : X) -> f (pointCF x) <= g (pointCF x)) {x : RegularCauchyFilter X} : f x <= g x 
+  => {?hidden_proof}
+
+\lemma unique2_<= {X : CoverSpace} (f g : ContMap (Completion X ⨯ Completion X) ExUpperRealMetric) 
+(p : \Pi (x y : X) -> f (pointCF x, pointCF y) <= g (pointCF x, pointCF y)) {x y : RegularCauchyFilter X} : f (x, y) <= g (x, y) => {?hidden_proof}
+
+\lemma completion-lift-neighborhood2 {X Y : CoverSpace} {Z : CompleteCoverSpace} (g : CoverMap (X ⨯ Y) Z) (F : Completion X) (G : Completion Y) (W : Set Z) :
+single (cauchy-lift (prod completion completion) (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) g (F, G)) <=< W <-> ∃ 
+  (W' : Set Z) (W' <=< W) (V1 : Set X) (F V1) (V2 : Set Y) (G V2) (∀ {x : V1} {y : V2} (W' (g (x, y)))) => {?hidden_proof}
+  \where {
+    \open Completion
+  }
+
+
+\lemma strongCompletion-lift-neighborhood2 {X Y : StronglyRegularCoverSpace} {Z : StronglyCompleteCoverSpace} (g : CoverMap (X ⨯ Y) Z) (F : StrongCompletion X) (G : StrongCompletion Y) 
+(W : Set Z) : single
+  (weaklyDense-lift (prod strongCompletion strongCompletion) (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) g (F, G)) 
+  <=< W <-> ∃ (W' : Set Z) (W' s<=< W) (V1 : Set X) (F V1) (V2 : Set Y) (G V2) (∀ {x : V1} {y : V2} (W' (g (x, y)))) => {?hidden_proof}
+  \where {
+    \open StrongCompletion
+  }

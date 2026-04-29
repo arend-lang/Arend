@@ -1,0 +1,25 @@
+\import Logic
+\import Logic.Meta
+\import Paths
+
+\func id {A : \Type} => \lam (x : A) => x
+
+\func -o {A B C : \Type} (f : A -> B) => \lam (g : B -> C) x => g (f x)
+
+\func o- {A B C : \Type} (g : B -> C) => \lam (f : A -> B) x => g (f x)
+
+\func \infixr 8 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam x => g (f x)
+
+\func IsInj {A B : \Set} (f : A -> B) => \Pi {a a' : A} -> f a = f a' -> a = a'
+
+\func IsSurj {A B : \Type} (f : A -> B) => \Pi (y : B) -> ∃ (x : A) (f x = y)
+  \where {
+    \lemma comp {A B C : \Type} {f : A -> B} (fs : IsSurj f) {g : B -> C} (gs : IsSurj g) : IsSurj (g o f) => {?hidden_proof}
+  }
+
+
+\func assuming {A B : \Type} (f : (A -> B) -> B) (g : A -> B) => f g
+
+\type Image {A B : \Type} (f : A -> B) => \Sigma (b : B) (∃ (a : A) (f a = b))
+
+\meta flip f a b=>f a b f b a

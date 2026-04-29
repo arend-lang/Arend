@@ -1,0 +1,18 @@
+\import Data.Bool
+\import Homotopy.Fibration
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Relation.Equivalence
+\import Set
+
+alem (P : \Prop) : Dec P 
+
+\class Choice \extends BaseSet {
+  | choice {B : E -> \Set} : (\Pi (x : E) -> TruncP (B x)) -> TruncP (\Pi (x : E) -> B x)
+}
+
+achoice {A : \Set} (B : A -> \Set) : (\Pi (x : A) -> TruncP (B x)) -> TruncP (\Pi (x : A) -> B x) 
+  \where {
+    \lemma lemFromChoice (P : \Prop) : Dec P => {?hidden_proof}
+  }

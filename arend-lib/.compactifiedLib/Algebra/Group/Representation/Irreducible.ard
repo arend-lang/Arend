@@ -1,0 +1,20 @@
+\import Algebra.Group
+\import Algebra.Group.Representation.Category
+\import Algebra.Group.Representation
+\import Algebra.Group.Representation.Sub
+\import Algebra.Module.ModuleCategory
+\import Algebra.Module.LinearMap
+\import Algebra.Ring
+\import Category
+\import Logic
+
+\func Irreducible {R : Ring} {G : Group} (E : LinRepres R G) => \Pi (A : SubLRepres E) -> A.isTrivial
+
+\class Hom-between-Irreducible {
+  | R : Ring
+  | G : Group
+  | A : LinRepres R G
+  | B : LinRepres R G
+  | p : Irreducible A
+  | q : Irreducible B
+}

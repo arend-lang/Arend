@@ -1,0 +1,429 @@
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Group.Symmetric
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Semiring
+\import Arith.Fin.Order
+\import Arith.Int
+\import Arith.Nat
+\import Data.Array
+\import Data.Array.Perm
+\import Data.Fin(fsuc, fsuc/=)
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+\type Matrix (R : \Type) (n m : Nat) => Array (Array R m) n
+
+\func mkMatrix {R : \Type} {n m : Nat} (f : Fin n -> Fin m -> R) : Matrix R n m => \new (Array (Array R m) n (\lam i => \new (Array R m (f i))))
+
+\func makeMatrix {R : \Type} {n m : Nat} (M : Array (Array R m) n) : Matrix R n m => M
+
+\func mkColumn {R : \Type} (l : Array R) : Matrix R l.len 1 => mkMatrix (\lam i _ => l i)
+
+\func mkRow {R : \Type} (l : Array R) : Matrix R 1 l.len => mkMatrix (\lam _ => l)
+
+\func addColumn {R : \Type} {n m : Nat} (l : Array R n) (M : Matrix R n m) : Matrix R n (suc m) => makeMatrix (\lam j => l j :: M j)
+
+\func addRow {R : \Type} {n m : Nat} (l : Array R m) (M : Matrix R n m) : Matrix R (suc n) m => l :: M
+
+\func blockMatrix {R : AddPointed} {n m n' m' : Nat} (A : Matrix R n m) (B : Matrix R n' m') : Matrix R (n + n') (m + m') 
+  => makeMatrix $ map {Array R m} (++' replicate m' zro) A ++' map (replicate m zro ++') B
+  \where {
+    \lemma elem00 {A : Matrix R n m} {B : Matrix R n' m'} (i : Fin n) (j : Fin m) : blockMatrix A B (fin-inc i) (fin-inc j) = A i j => {?hidden_proof}
+
+    \lemma elem10 {A : Matrix R n m} {B : Matrix R n' m'} (i : Fin n') (j : Fin m) : blockMatrix A B (fin-raise i) (fin-inc j) = 0 => {?hidden_proof}
+
+    \lemma elem01 {A : Matrix R n m} {B : Matrix R n' m'} (i : Fin n) (j : Fin m') : blockMatrix A B (fin-inc i) (fin-raise j) = 0 => {?hidden_proof}
+
+    \lemma elem11 {A : Matrix R n m} {B : Matrix R n' m'} (i : Fin n') (j : Fin m') : blockMatrix A B (fin-raise i) (fin-raise j) = B i j => {?hidden_proof}
+  }
+
+
+\lemma blockMatrix_minor {R : AddPointed} {n m n' m' : Nat} {A : Matrix R (suc n) (suc m)} {B : Matrix R n' m'} (i : Fin (suc n)) (j : Fin (suc m)) :
+  minor (blockMatrix A B) (fin-inc i) (fin-inc j) = blockMatrix (minor A i j) B => {?hidden_proof}
+
+\lemma blockMatrix_* {R : Ring} {n m n' m' k k' : Nat} (A : Matrix R n m) (B : Matrix R n' m') (C : Matrix R m k) (D : Matrix R m' k') :
+  blockMatrix A B MatrixRing.product blockMatrix C D = blockMatrix (A MatrixRing.product C) (B MatrixRing.product D) => {?hidden_proof}
+
+\func block21Matrix {R : AddPointed} {n m k : Nat} (A : Matrix R n k) (B : Matrix R m k) : Matrix R (n + m) k => makeMatrix (A ++' B)
+
+\lemma blockMatrix_*-left {R : Ring} {n m n' m' k : Nat} {A : Matrix R n m} {B : Matrix R n' m'} {C : Matrix R m k} {D : Matrix R m' k} :
+  blockMatrix A B MatrixRing.product block21Matrix C D = block21Matrix (A MatrixRing.product C) (B MatrixRing.product D) => {?hidden_proof}
+
+\func block12Matrix {R : AddPointed} {n m k : Nat} (A : Matrix R k n) (B : Matrix R k m) : Matrix R k (n + m) => makeMatrix (\lam j => A j ++' B j)
+
+\lemma blockMatrix_*-right {R : Ring} {n m n' m' k : Nat} {A : Matrix R n m} {B : Matrix R n' m'} {C : Matrix R k n} {D : Matrix R k n'} :
+  block12Matrix C D MatrixRing.product blockMatrix A B = block12Matrix (C MatrixRing.product A) (D MatrixRing.product B) => {?hidden_proof}
+
+\func matrixExt {R : \Type} {n m : Nat} {M N : Matrix R n m} (p : \Pi (i : Fin n) (j : Fin m) -> M i j = N i j) : M = N 
+  => path (\lam i => mkMatrix (\lam j k => p j k i))
+
+\func matrixExt' {R : \Type} {n m : Nat} {M N : Matrix R n m} (p : M = {Array (Array R m) n} N) : M = N => path (\lam i => p i)
+
+\func matrix-map {A B : \Type} (f : A -> B) {n m : Nat} (M : Matrix A n m) : Matrix B n m => mkMatrix (\lam i j => f (M i j))
+
+\instance MatrixAbGroup (A : AbGroup) (n m : Nat) : AbGroup (Matrix A n m) 
+  | zro => mkMatrix (\lam _ _ => zro)
+  | + => \lam M N => mkMatrix (\lam i j => M i j + N i j)
+  | zro-left => matrixExt (\lam i j => zro-left)
+  | +-assoc => matrixExt (\lam i j => +-assoc)
+  | +-comm => matrixExt (\lam i j => +-comm)
+  | negative => \lam M => mkMatrix (\lam i j => negative (M i j))
+  | negative-left => matrixExt (\lam i j => negative-left)
+
+\instance MatrixModule (R : Ring) (n m : Nat) : LModule R 
+  | AbGroup => MatrixAbGroup R n m
+  | *c => \lam a M => mkMatrix (\lam i j => a * M i j)
+  | *c-assoc => matrixExt (\lam i j => *-assoc)
+  | *c-ldistr => matrixExt (\lam i j => ldistr)
+  | *c-rdistr => matrixExt (\lam i j => rdistr)
+  | ide_*c => matrixExt (\lam i j => ide-left)
+  \where {
+    \func *c-gen {R : Ring} {M : LModule R} (a : R) {n m : Nat} (A : Matrix M n m) : Matrix M n m => mkMatrix (\lam i j => a *c A i j)
+  }
+
+
+\lemma block12_21_* {R : Ring} {n m k k' : Nat} (A : Matrix R k n) (B : Matrix R k m) (C : Matrix R n k') (D : Matrix R m k') :
+  block12Matrix A B MatrixRing.product block21Matrix C D = A MatrixRing.product C + B MatrixRing.product D => {?hidden_proof}
+
+\func diagonal {R : AddPointed} (l : Array R) : Matrix R l.len l.len => mkMatrix (\lam i j => (\case decideEq i j \with {  | yes _ => l i  | no _ => zro}))
+
+\instance MatrixRing (R : Ring) (n : Nat) : Ring (Matrix R n n) 
+  | AbGroup => MatrixModule R n n
+  | ide => ide
+  | * => product
+  | ide-left => product_ide-left
+  | ide-right => product_ide-right
+  | *-assoc => product-assoc _ _ _
+  | ldistr => product-ldistr
+  | rdistr => product-rdistr _ _
+  \where {
+    \open AddMonoid
+
+    \func product-gen {R : Ring} {L : LModule R} {n m k : Nat} (M : Matrix R n m) (N : Matrix L m k) : Matrix L n k 
+      => mkMatrix (\lam i k => BigSum (\lam j => M i j *c N j k))
+
+    \func \infixl 7 product {R : Ring} {n m k : Nat} (M : Matrix R n m) (N : Matrix R m k) : Matrix R n k => mkMatrix (\lam i k => BigSum (\lam j => M i j * N j k))
+
+    \lemma product-gen_ide-left {R : Ring} {M : LModule R} {n m : Nat} (A : Matrix M n m) : product-gen ide A = A => {?hidden_proof}
+
+    \lemma product_ide-left {R : Ring} {n m : Nat} {A : Matrix R n m} : ide product A = A => {?hidden_proof}
+
+    \lemma product_ide-right {R : Ring} {n m : Nat} {M : Matrix R n m} : M product ide = M => {?hidden_proof}
+
+    \lemma product_zro-left {R : Ring} {n m k : Nat} (A : Matrix R m k) : zro product A = {Matrix R n k} zro => {?hidden_proof}
+
+    \lemma product_zro-right {R : Ring} {n m k : Nat} (A : Matrix R n m) : A product zro = {Matrix R n k} zro => {?hidden_proof}
+
+    \lemma product-gen-assoc {R : Ring} {M : LModule R} {n m k l : Nat} {A : Matrix R n m} {B : Matrix R m k} {C : Matrix M k l} :
+      product-gen (A product B) C = product-gen A (product-gen B C) => {?hidden_proof}
+
+    \lemma product-assoc {R : Ring} {n m k l : Nat} (A : Matrix R n m) (B : Matrix R m k) (C : Matrix R k l) : A product B product C = A product (B product C) => {?hidden_proof}
+
+    \lemma product-gen-ldistr {R : Ring} {M : LModule R} {n m k : Nat} {A : Matrix R n m} {B C : Matrix M m k} : product-gen A (B + C) = product-gen A B + product-gen A C => {?hidden_proof}
+
+    \lemma product-ldistr {R : Ring} {n m k : Nat} {A : Matrix R n m} {B C : Matrix R m k} : A product (B + C) = A product B + A product C => {?hidden_proof}
+
+    \lemma product-gen-rdistr {R : Ring} {M : LModule R} {n m k : Nat} (A B : Matrix R n m) {C : Matrix M m k} : product-gen (A + B) C = product-gen A C + product-gen B C => {?hidden_proof}
+
+    \lemma product-rdistr {R : Ring} {n m k : Nat} (A B : Matrix R n m) {C : Matrix R m k} : (A + B) product C = A product C + B product C => {?hidden_proof}
+
+    \lemma product-gen_negative-left {R : Ring} {L : LModule R} {n m k : Nat} (M : Matrix R n m) (N : Matrix L m k) : product-gen (negative M) N = negative (product-gen M N) => {?hidden_proof}
+
+    \lemma product_negative-left {R : Ring} {n m k : Nat} {M : Matrix R n m} {N : Matrix R m k} : negative M product N = negative (M product N) => {?hidden_proof}
+
+    \lemma product-gen_negative-right {R : Ring} {L : LModule R} {n m k : Nat} (M : Matrix R n m) (N : Matrix L m k) : product-gen M (negative N) = negative (product-gen M N) => {?hidden_proof}
+
+    \lemma product_negative-right {R : Ring} {n m k : Nat} {M : Matrix R n m} {N : Matrix R m k} : M product negative N = negative (M product N) => {?hidden_proof}
+
+    \lemma product-gen_negative-rdistr {R : Ring} {M : LModule R} {n m k : Nat} (A B : Matrix R n m) {C : Matrix M m k} : product-gen (A - B) C = product-gen A C - product-gen B C => {?hidden_proof}
+
+    \lemma ide_generates {R : Ring} {n : Nat} : LModule.IsGenerated {ArrayLModule n (RingLModule R)} ide => {?hidden_proof}
+
+    \func ide' {R : Ring} {n : Nat} : Array (Array R n) n \elim n
+      | 0 => nil
+      | suc n => (1 :: replicate n zro) :: map (\lam l => R.zro :: l) ide'
+
+    \lemma ide=ide' {R : Ring} {n : Nat} : ide {R} {n} = ide' => {?hidden_proof}
+  }
+
+
+\instance MatrixAlgebra (R : CRing) (n : Nat) : AAlgebra {
+  | R => R
+} 
+  | Ring => MatrixRing R n
+  | LModule => MatrixModule R n n
+  | *c-comm-left => product_*c-comm-left _
+  | *c-comm-right => product_*c-comm-right
+  \where {
+    \lemma product_*c-comm-left {R : Ring} {n m k : Nat} {a : R} (A : Matrix R n m) {B : Matrix R m k} : a *c (A MatrixRing.product B) = (a *c A) MatrixRing.product B => {?hidden_proof}
+
+    \lemma product_*c-comm-right {R : CRing} {n m k : Nat} {a : R} {A : Matrix R n m} {B : Matrix R m k} : a *c (A MatrixRing.product B) = A MatrixRing.product (a *c B) => {?hidden_proof}
+  }
+
+
+\func determinant {R : CRing} {n : Nat} (M : Matrix R n n) => R.FinSum (\lam (e : Sym n) => sign e * R.BigProd (\lam j => M (e j) j))
+  \where {
+    \func minor {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) (i0 : Fin (suc n)) (j0 : Fin (suc m)) : Matrix R n m => map (skip __ j0) (skip M i0)
+
+    \func minorExt {R : \Type} {n m : Nat} {M M' : Array (Array R (suc m)) (suc n)} {i : Fin (suc n)} {j : Fin (suc m)} 
+    (p : \Pi {i' : Fin (suc n)} {j' : Fin (suc m)} -> i' /= i -> j' /= j -> M i' j' = M' i' j') : minor M i j = minor M' i j \elim n, M, M', i
+      | 0, l :: nil, l' :: nil, 0 => idp
+      | suc n, l :: M, l' :: M', 0 => matrixExt (\lam i' j' => path (\lam ii => skipExt (\lam k => p {suc i'} (\case __ \with {})) ii j'))
+      | suc n, l :: M, l' :: M', suc i => path (\lam ii => skipExt (\lam k => p {0} (\case __ \with {})) ii :: minorExt (\lam q => p (fsuc/= q)) ii)
+
+    \func minor' {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) (i0 : Fin (suc n)) (j0 : Fin (suc m)) : Matrix R n m => skip (map (skip __ j0) M) i0
+
+    \func minor=minor' {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) (i0 : Fin (suc n)) (j0 : Fin (suc m)) : minor M i0 j0 = minor' M i0 j0 => matrixExt (aux M i0 j0)
+      \where {
+        \func aux {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) (i0 : Fin (suc n)) (j0 : Fin (suc m)) (i : Fin n) (j : Fin m) :
+          skip (skip M i0 i) j0 j = skip {Array R m} (map (skip __ j0) M) i0 i j \elim n, M, i0, i
+          | suc n, l :: M, 0, i => idp
+          | suc n, l :: M, suc i0, 0 => idp
+          | suc n, l :: M, suc i0, suc i => aux M i0 j0 i j
+      }
+
+
+    \func skip_transpose {R : \Type} {n m : Nat} {M : Array (Array R m) (suc n)} {i : Fin (suc n)} : transpose (skip M i) = map (skip __ i) (transpose M) \elim n, M, i
+      | 0, l :: nil, 0 => idp
+      | suc n, l :: M, 0 => idp
+      | suc n, l :: M, suc i => matrixExt (\lam i' => (\case \elim __ \with {  | 0 => idp  | suc j' => aux}))
+      \where {
+        \func aux {R : \Type} {n m : Nat} {M : Array (Array R m) (suc n)} {i : Fin (suc n)} {i' : Fin m} {j' : Fin n} : skip {Array R m} M i j' i' = skip (M __ i') i j' \elim n, M, i, j'
+          | suc n, l :: M, 0, j' => idp
+          | suc n, l :: M, suc i, 0 => idp
+          | suc n, l :: M, suc i, suc j' => aux
+      }
+
+
+    \func minor_transpose {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) {i : Fin (suc m)} {j : Fin (suc n)} : minor (transpose M) i j = transpose (minor M j i) 
+      => path (\lam i' => map (skip __ j) (pmap transpose skip_transpose i')) *> inv skip_transpose *> inv (pmap transpose (minor=minor' M j i))
+
+    \lemma multilinear {R : CRing} {n : Nat} : isMultiLinear {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinant M) => {?hidden_proof}
+
+    \lemma alternating {R : CRing} {n : Nat} : isAlternating {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinant M) => {?hidden_proof}
+
+    \lemma alternatingT {R : CRing} {n : Nat} : isAlternating {R} {n} (\lam M => determinant (transpose M)) => {?hidden_proof}
+
+    \func minor00 {R : \Type} {n m : Nat} (M : Matrix R (suc n) (suc m)) : minor M 0 0 = mkMatrix (\lam i j => M (suc i) (suc j)) 
+      => matrixExt (\lam i j => skip_0 *> rewrite skip_0 idp)
+  }
+
+
+\func determinantN {R : CRing} {n : Nat} (k : Fin n) (M : Matrix R n n) : R \elim n
+  | 0 => 1
+  | suc n => R.BigSum (\lam i => M i k * R.pow -1 (i Nat.+ k) * determinant (minor M i k))
+  \where {
+    \open determinant
+    \open skip
+    \open ArrayLModule
+
+    \lemma minor_insert {R : CRing} {n m : Nat} {i : Fin (suc n)} {x : Array R (suc m)} {l : Array (Array R (suc m)) n} {j : Fin (suc m)} :
+      minor (insert x l i) i j = (\new (Array (Array R m) n (\lam i => skip (l i) j))) => {?hidden_proof}
+
+    \lemma aux/= {R : CRing} {n m : Nat} {j i : Fin (suc n)} (p : j /= i) {k : Fin (suc m)} {x : Array R (suc m)} {M : Array (Array R (suc m)) n} :
+      insert {Array R (suc m)} x M j i k = M (newIndex (\lam q => p (inv q))) k => {?hidden_proof}
+
+    \lemma minor_replace {R : CRing} {n : Nat} {i k : Fin (suc n)} {M : Array (Array R (suc n)) (suc n)} {j : Fin (suc n)} {x : Array R (suc n)} (p : j /= i) :
+      minor (replace M j x) i k = replace (minor M i k) (newIndex p) (skip x k) => {?hidden_proof}
+
+    \lemma multilinear {R : CRing} {n : Nat} (k : Fin n) : isMultiLinear {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinantN k M) => {?hidden_proof}
+
+    \lemma alternating {R : CRing} {n : Nat} (k : Fin n) : isAlternating {R} {n} {ArrayLModule n (RingLModule R)} {RingLModule R} (\lam M => determinantN k M) => {?hidden_proof}
+      \where {
+        \open NatOrder
+
+        \func permutation1 {R : \Type} {n : Nat} (j : Fin (suc n)) (l : Array R (suc n)) : Perm l (l j :: skip l j) \elim n, j, l
+          | 0, 0, l => Perm.perm-refl
+          | suc n, 0, l => Perm.perm-refl
+          | suc n, suc j, a :: l => perm-trans (perm-:: idp (permutation1 j l)) (perm-swap idp idp idp)
+
+        \func permutation {R : \Type} {n : Nat} {i j : Fin (suc n)} (p : i < j) (l : Array R (suc n)) (q : l i = l j) : Perm (skip l i) (skip l j) \elim n, i, j, p, l, q
+          | 0, 0, 0, (), _, _
+          | suc n, 0, suc j, _, a :: l, idp => permutation1 j l
+          | suc n, suc i, suc j, suc<suc p, a :: l, q => perm-:: idp (permutation p l q)
+
+        \lemma permutation1_inversions {R : \Type} {n : Nat} {j : Fin (suc n)} {l : Array R (suc n)} : Perm.inversions (permutation1 j l) = j => {?hidden_proof}
+
+        \lemma permutation_inversions {R : \Type} {n : Nat} {i j : Fin (suc n)} {p : i < j} {l : Array R (suc n)} {q : l i = l j} : Perm.inversions (permutation p l q) = j -' suc i => {?hidden_proof}
+
+        \lemma minor-lem {R : CRing} {n : Nat} {i j k : Fin (suc n)} {M : Matrix R (suc n) (suc n)} (i/=j : i /= j) (p : M i = M j) :
+          pow -1 (i Nat.+ k) * determinant (minor M i k) + pow -1 (j Nat.+ k) * determinant (minor M j k) = 0 => {?hidden_proof}
+          \where {
+            \lemma aux {R : CRing} {n : Nat} {i j k : Fin (suc n)} {M : Matrix R (suc n) (suc n)} (i<j : i < j) (p : M i = M j) :
+              pow -1 (i Nat.+ k) * determinant (minor M i k) + pow -1 (j Nat.+ k) * determinant (minor M j k) = 0 => {?hidden_proof}
+          }
+
+
+        \lemma minor-lem' {R : CRing} {n : Nat} {i j k : Fin (suc n)} {M : Matrix R (suc n) (suc n)} (i/=j : i /= j) (p : \Pi (k : Fin (suc n)) -> M k i = M k j) :
+          pow -1 (k Nat.+ i) * determinant (minor M k i) + pow -1 (k Nat.+ j) * determinant (minor M k j) = 0 => {?hidden_proof}
+
+        \lemma aux {R : CRing} {n : Nat} (k : Fin n) (M : Matrix R n n) (t : \Sigma (i j : Fin n) (i < j) (M i = M j)) : determinantN k M = 0 => {?hidden_proof}
+      }
+
+
+    \lemma determinantN_ide {R : CRing} {n : Nat} (k : Fin n) : determinantN k (MatrixRing.ide {R} {n}) = 1 => {?hidden_proof}
+      \where {
+        \func double-skip {R : \Set} {n m : Nat} {M : Array (Array R n) (suc m)} {k : Fin (suc m)} {i : Fin m} {j : Fin n} :
+          skip {Array R _} M k i j = skip (map {Array R n} (__ j) M) k i \elim m, M, k, i
+          | suc m, l :: M, 0, i => idp
+          | suc m, l :: M, suc k, 0 => idp
+          | suc m, l :: M, suc k, suc i => double-skip
+
+        \lemma ide'_minor {R : Ring} {n : Nat} (k : Fin (suc n)) : minor (MatrixRing.ide' {R}) k k = MatrixRing.ide' => {?hidden_proof}
+      }
+
+
+    \lemma =determinant {R : CRing} {n : Nat} {k : Fin n} {M : Matrix R n n} : determinantN k M = determinant M => {?hidden_proof}
+
+    \open AbMonoid
+    \open Monoid
+
+    \lemma determinant=determinant0 {R : CRing} {n : Nat} {M : Matrix R (suc n) (suc n)} : determinant M = determinantN {R} {suc n} 0 M => {?hidden_proof}
+      \where {
+        \func skip_skip {A : \Type} {n : Nat} {l : Array A (suc n)} {k j : Fin (suc n)} {d : k /= j} : skip l k (FinSet.skip k j d) = l j \elim n, l, k, j
+          | n, l, 0, 0 => absurd (d idp)
+          | suc n, a :: l, 0, suc j => idp
+          | suc n, a :: l, suc k, 0 => idp
+          | suc n, a :: l, suc k, suc j => skip_skip
+
+        \func minor_Sym {A : \Type} {n : Nat} {M : Matrix A (suc n) (suc n)} {e : Sym (suc n)} {j : Fin n} : minor M (e 0) 0 (Sym.reduce e j) j = M (e (suc j)) (suc j) 
+          => skip_0 *> pmap {Array A (suc n)} (__ (suc j)) (skip_skip {Array A (suc n)})
+      }
+
+  }
+
+
+\lemma determinant00 {R : CRing} (A : Matrix R 0 0) : determinant A = 1 => {?hidden_proof}
+
+\lemma determinant11 {R : CRing} (A : Matrix R 1 1) : determinant A = A 0 0 => {?hidden_proof}
+
+\lemma determinant22 {R : CRing} {A : Matrix R 2 2} : determinant A = A 0 0 * A 1 1 - A 1 0 * A 0 1 => {?hidden_proof}
+
+\open determinant(minor)
+
+\lemma determinant_ide {R : CRing} {n : Nat} : determinant (MatrixRing.ide {R} {n}) = 1 => {?hidden_proof}
+  \where {
+    \lemma ide_minor {R : Ring} {n : Nat} : minor (MatrixRing.ide {R} {suc n}) 0 0 = ide => {?hidden_proof}
+  }
+
+
+\lemma determinant_* {R : CRing} {n : Nat} {M N : Matrix R n n} : determinant (M * N) = determinant M * determinant N => {?hidden_proof}
+
+\func transpose {R : \Type} {n m : Nat} (M : Matrix R n m) : Matrix R m n => mkMatrix (\lam i j => M j i)
+  \where {
+    \lemma isInv {R : CRing} {n : Nat} (A : Monoid.Inv {MatrixRing R n}) : Monoid.Inv (transpose A.val) => {?hidden_proof}
+  }
+
+
+\lemma determinant_transpose {R : CRing} {n : Nat} (M : Matrix R n n) : determinant (transpose M) = determinant M => {?hidden_proof}
+
+\func adjugate {R : CRing} {n : Nat} (M : Matrix R n n) : Matrix R n n \elim n
+  | 0 => M
+  | suc n => mkMatrix (\lam i j => Monoid.pow -1 (j + i) * determinant (minor M j i))
+
+\lemma adjugate_transpose {R : CRing} {n : Nat} (M : Matrix R n n) : adjugate (transpose M) = transpose (adjugate M) => {?hidden_proof}
+
+\lemma adjugate-left {R : CRing} {n : Nat} {M : Matrix R n n} : adjugate M * M = determinant M *c 1 => {?hidden_proof}
+  \where {
+    \lemma determinant_adjugate_= {R : CRing} {n : Nat} {M : Matrix R n n} {k : Fin n} : R.BigSum (\lam j => adjugate M k j * M j k) = determinant M => {?hidden_proof}
+
+    \lemma adjugate-lem {R : CRing} {n : Nat} {M : Matrix R n n} {i i' j : Fin n} (i/=i' : i /= i') (p : \Pi (k : Fin n) -> M k i = M k i') :
+      negative (adjugate M i j) = adjugate M i' j => {?hidden_proof}
+
+    \lemma adjugateExt {R : CRing} {n : Nat} {M M' : Matrix R n n} {i j : Fin n} (p : \Pi {i' j' : Fin n} -> i' /= i -> j' /= j -> M i' j' = M' i' j') :
+      adjugate M j i = adjugate M' j i => {?hidden_proof}
+
+    \lemma determinant_adjugate_/= {R : CRing} {n : Nat} {M : Matrix R n n} {i k : Fin n} (i/=k : i /= k) : R.BigSum (\lam j => adjugate M i j * M j k) = 0 => {?hidden_proof}
+  }
+
+
+\lemma transpose_* {R : CRing} {n : Nat} {M M' : Matrix R n n} : transpose (M * M') = transpose M' * transpose M => {?hidden_proof}
+  \where {
+    \lemma product {R : CRing} {n m k : Nat} {M : Matrix R n m} {M' : Matrix R m k} : transpose (M MatrixRing.product M') = transpose M' MatrixRing.product transpose M => {?hidden_proof}
+  }
+
+
+\lemma adjugate-right {R : CRing} {n : Nat} {M : Matrix R n n} : M * adjugate M = determinant M *c 1 => {?hidden_proof}
+
+\lemma determinant-inv {R : CRing} {n : Nat} {M : Matrix R n n} : Inv M <-> Inv (determinant M) => {?hidden_proof}
+  \where {
+    \open Monoid
+  }
+
+
+\lemma matirx-inv {R : CRing} {n : Nat} {A : Matrix R n n} {B : Matrix R n n} (p : A * B = 1) : Monoid.Inv B => {?hidden_proof}
+
+\lemma determinant1_Inv {R : CRing} {n : Nat} (A : Matrix R n n) (p : determinant A = 1) : Monoid.Inv A => {?hidden_proof}
+
+\lemma blockMatrix_Inv {R : CRing} {n m : Nat} {A : Matrix R n n} {B : Matrix R m m} : Inv (blockMatrix A B) <-> (\Sigma (Inv A) (Inv B)) => {?hidden_proof}
+  \where {
+    \open Monoid
+  }
+
+
+\lemma determinant_map {R S : CRing} (f : RingHom R S) {n : Nat} (A : Matrix R n n) : f (determinant A) = determinant (matrix-map f A) => {?hidden_proof}
+
+\lemma determinant_block {R : CRing} {n m : Nat} (A : Matrix R n n) (B : Matrix R m m) : determinant (blockMatrix A B) = determinant A * determinant B => {?hidden_proof}
+
+\lemma equations-determinant {R : CRing} {M : LModule R} {n k : Nat} (A : Matrix R n n) {U : Matrix M n k} (p : product-gen A U = zro) : MatrixModule.*c-gen (determinant A) U = zro 
+  => {?hidden_proof}
+  \where {
+    \open MatrixRing
+  }
+
+
+\type IsDiagonal {R : AddPointed} {n m : Nat} (A : Matrix R n m) : \Prop => \Pi {i : Fin n} {j : Fin m} -> i /= {Nat} j -> A i j = 0
+  \where {
+    \lemma transposed {R : AddPointed} {n m : Nat} {A : Matrix R n m} (d : IsDiagonal A) : IsDiagonal (transpose A) => {?hidden_proof}
+
+    \lemma =>upperTriangular {R : AddPointed} {n m : Nat} {A : Matrix R n m} (d : IsDiagonal A) : IsUpperTriangular A => {?hidden_proof}
+
+    \lemma =>lowerTriangular {R : AddPointed} {n m : Nat} {A : Matrix R n m} (d : IsDiagonal A) : IsLowerTriangular A => {?hidden_proof}
+  }
+
+
+\lemma *c_IsDiagonal {R : Ring} {n m : Nat} {A : Matrix R n m} {a : R} (Ad : IsDiagonal A) : IsDiagonal (a *c A) => {?hidden_proof}
+
+\type IsUpperTriangular {R : AddPointed} {n m : Nat} (A : Matrix R n m) : \Prop => \Pi (i : Fin n) (j : Fin m) -> (j : Nat) < i -> A i j = 0
+
+\type IsLowerTriangular {R : AddPointed} {n m : Nat} (A : Matrix R n m) : \Prop => \Pi (i : Fin n) (j : Fin m) -> (i : Nat) < j -> A i j = 0
+
+\lemma diagonal-isDiagonal {R : AddPointed} {l : Array R} : IsDiagonal (diagonal l) => {?hidden_proof}
+
+\lemma determinant_IsUpperTriangular {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsUpperTriangular A) : determinant A = R.BigProd (\lam j => A j j) => {?hidden_proof}
+
+\lemma determinant_IsLowerTriangular {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsLowerTriangular A) : determinant A = R.BigProd (\lam j => A j j) => {?hidden_proof}
+
+\lemma determinant_IsDiagonal {R : CRing} {n : Nat} {A : Matrix R n n} (d : IsDiagonal A) : determinant A = R.BigProd (\lam j => A j j) => {?hidden_proof}
+
+\lemma determinant_diagonal {R : CRing} {l : Array R} : determinant (diagonal l) = R.BigProd l => {?hidden_proof}
+
+\lemma determinant-nonSquare {R : CRing} {n m : Nat} (m<n : m < n) {A : Matrix R n m} {B : Matrix R m n} : determinant (A MatrixRing.product B) = 0 => {?hidden_proof}
+  \where {
+    \lemma determinant-nonSquare_+ {R : CRing} {n k : Nat} (k/=0 : k /= 0) {A : Matrix R (k + n) n} {B : Matrix R n (k + n)} : determinant (A MatrixRing.product B) = 0 => {?hidden_proof}
+
+    \lemma determinant_block12 {R : CRing} {n k : Nat} (k/=0 : k /= 0) (A : Matrix R (k + n) n) : determinant (block12Matrix 0 A) = 0 => {?hidden_proof}
+  }
+
+
+\lemma matrix-split-trivial {R : CRing} {n m : Nat} (m<n : m < n) {A : Matrix R n m} {B : Matrix R m n} (p : A MatrixRing.product B = ide) : 0 = {R} 1 => {?hidden_proof}
+
+\lemma matrix-split_<= {R : NonZeroCRing} {n m : Nat} {A : Matrix R n m} {B : Matrix R m n} (p : A MatrixRing.product B = ide) : n <= m => {?hidden_proof}

@@ -1,0 +1,103 @@
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.QModule
+\import Algebra.Ring
+\import Analysis.FuncLimit
+\import Analysis.Limit
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Arith.Real.Root \using ( sqrt \as sqrtR )
+\import Arith.Real.UpperReal
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Operations
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Subset
+\import Topology.BanachSpace
+\import Topology.CoverSpace.Complete
+\import Topology.CoverSpace.CompletionTools
+\import Topology.CoverSpace.Product
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.ExComplete
+\import Topology.NormedAbGroup.Real
+\import Topology.NormedAbGroup.Real.Functions
+\import Topology.NormedRing
+\import Topology.TopAbGroup.Complete
+\import Topology.TopAbGroup.Product
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+
+\class BanachAlgebra \extends BanachSpace, QAlgebra, CompleteExNormedRing
+
+\class RealPreBanachAlgebra \extends RealPreBanachSpace, ExPseudoNormedRing
+
+\class RealBanachPseudoAlgebra \extends RealBanachSpace, QPseudoAlgebra, ExPseudoNormedPseudoRing, CompleteExNormedAbGroup
+  \where {
+    \open CoverMap
+    \open ProductCoverSpace
+  }
+
+
+\class RealBanachAlgebra \extends RealBanachPseudoAlgebra, BanachAlgebra, RealPreBanachAlgebra
+  \where {
+    \open CoverMap
+    \open ProductCoverSpace
+
+    rfunc (n : Nat) : Rat \elim n
+      | 0 => 0
+      | suc n => ratio 1 2 * (1 + rfunc n * rfunc n)
+
+    \lemma rfunc>=0 {n : Nat} : 0 <= rfunc n => {?hidden_proof}
+
+    \lemma rfunc<=1 {n : Nat} : rfunc n <= 1 => {?hidden_proof}
+
+    \lemma rfunc-inc {n : Nat} : rfunc n <= rfunc (suc n) => {?hidden_proof}
+
+    \lemma rfunc-rec {n : Nat} : rfunc (suc (suc n)) - rfunc (suc n) = ratio 1 2 * ((rfunc (suc n) + rfunc n) * (rfunc (suc n) - rfunc n)) => {?hidden_proof}
+
+    \lemma rfunc-bound {eps : Rat} (eps>0 : 0 < eps) {n : Nat} (p : rfunc n <= 1 - eps) : 1 - rfunc n <= RatField.pow (1 - ratio 1 2 * eps) n => {?hidden_proof}
+
+    \lemma rfunc-limit : TopSpace.IsLimit rfunc 1 => {?hidden_proof}
+  }
+
+
+\instance BanachAlgebraCompletion (X : RealPreBanachAlgebra) : RealBanachAlgebra 
+  | BanachSpace => BanachCompletion X
+  | * => *-func
+  | *-assoc => unique3 (*-cover ∘ prod *-cover id) (*-cover ∘ tuple (proj1 ∘ proj1) (*-cover ∘ prod proj2 id)) 
+    (\lam x y z => pmap (*-func __ _) lift2-char *> lift2-char *> pmap pointCF *-assoc *> inv (pmap (*-func _) lift2-char *> lift2-char))
+  | ldistr => unique3 (*-cover ∘ tuple (proj1 ∘ proj1) (+-cover ∘ prod proj2 id)) (+-cover ∘ tuple (*-cover ∘ proj1) (*-cover ∘ tuple (proj1 ∘ proj1) proj2)) 
+    (\lam x y z => pmap (*-func _) +-char *> lift2-char *> pmap pointCF X.ldistr *> inv (pmap2 +-func lift2-char lift2-char *> +-char))
+  | rdistr => unique3 (*-cover ∘ prod +-cover id) (+-cover ∘ tuple (*-cover ∘ tuple (proj1 ∘ proj1) proj2) (*-cover ∘ tuple (proj2 ∘ proj1) proj2)) 
+    (\lam x y z => pmap (*-func __ _) +-char *> lift2-char *> pmap pointCF X.rdistr *> inv (pmap2 +-func lift2-char lift2-char *> +-char))
+  | ide => pointCF 1
+  | ide-left => unique1 (*-cover ∘ tuple (const _) id) id (\lam x => lift2-char *> pmap pointCF ide-left)
+  | ide-right => unique1 (*-cover ∘ tuple id (const _)) id (\lam x => lift2-char *> pmap pointCF ide-right)
+  | norm_*_<= => unique2_<= (norm-metric-map {BanachCompletion X} ∘ *-cover) 
+    (ex-upper-*-locally-uniform ∘ prod (bnorm-metric-map {BanachCompletion X}) (bnorm-metric-map {BanachCompletion X}))
+      (\lam x y => transport2 <= (inv $ pmap ExNormedAbGroupCompletion.norm lift2-char *> completion-exNormed-isometry.func-norm-isometry) 
+      (inv $ pmap2 * completion-exNormed-isometry.func-norm-isometry completion-exNormed-isometry.func-norm-isometry) X.norm_*_<=)
+  | norm_ide_<= => completion-exNormed-isometry.func-norm <=∘ norm_ide_<=
+  \where {
+    \open ProductCoverSpace
+    \open CoverMap
+    \open TopAbGroupCompletion
+
+    \func *-cover : CoverMap (Completion X ⨯ Completion X) (Completion X) => lift2 *-locally-uniform
+
+    \func *-func (x y : RegularCauchyFilter X) => *-cover (x, y)
+  }

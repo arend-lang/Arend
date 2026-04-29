@@ -1,0 +1,141 @@
+\import Algebra.Meta
+\import Category
+\import Equiv
+\import Function.Meta
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\class Functor {
+  | C : Precat
+  | D : Precat
+  | F : C -> D
+  | Func {X Y : C} : Hom X Y -> Hom (F X) (F Y)
+  | Func-id {X : C} : Func (id X) = id (F X)
+  | Func-o {X Y Z : C} {g : Hom Y Z} {f : Hom X Y} : Func (g ∘ f) = Func g ∘ Func f
+}
+  \where {
+    \lemma transport_Hom {C D E : Precat} {x1 y1 : C} (p1 : x1 = y1) {x2 y2 : D} (p2 : x2 = y2) (F : Functor C E) (G : Functor D E) {g : Hom (F x1) (G x2)} 
+    {f : Hom (F y1) (G y2)} (h : transport (Hom (G x2)) (pmap G p2) (id (G x2)) ∘ g = f ∘ transport (Hom (F x1)) (pmap F p1) (id (F x1))) :
+      coe (\lam i => Hom (F (p1 @ i)) (G (p2 @ i))) g right = f => {?hidden_proof}
+
+    \lemma transport_Hom-right {C D : Precat} {x y : C} (p : x = y) {z : D} (F : Functor C D) {g : Hom z (F x)} :
+      transport (Hom z) (pmap F p) g = F.Func (transport (Hom x) p (id x)) ∘ g => {?hidden_proof}
+
+    \lemma transport_Hom_iso-right {C : Cat} {D : Precat} (e : Iso {C}) {z : D} (F : Functor C D) {g : Hom z (F e.dom)} : transport (Hom z) (pmap F (C.isotoid e)) g = F.Func e.f ∘ g => {?hidden_proof}
+
+    \lemma transport_Hom_iso {C D : Cat} {E : Precat} (e1 : Iso {C}) (e2 : Iso {D}) (F : Functor C E) (G : Functor D E) {g : Hom (F e1.dom) (G e2.dom)} 
+    {f : Hom (F e1.cod) (G e2.cod)} (h : G.Func e2.f ∘ g = f ∘ F.Func e1.f) : coe (\lam i => Hom (F (C.isotoid e1 @ i)) (G (D.isotoid e2 @ i))) g right = f 
+      => {?hidden_proof}
+  }
+
+
+\func Id {C : Precat} : Functor C C \cowith
+  | F => \lam X => X
+  | Func => \lam h => h
+  | Func-id => idp
+  | Func-o => idp
+
+\func Comp {C D E : Precat} (G : Functor D E) (F : Functor C D) : Functor C E \cowith
+  | F => \lam X => G (F X)
+  | Func => \lam f => G.Func (F.Func f)
+  | Func-id => pmap G.Func F.Func-id *> G.Func-id
+  | Func-o => pmap G.Func F.Func-o *> G.Func-o
+
+\func Const {C D : Precat} (d : D) : Functor C D \cowith
+  | F => \lam _ => d
+  | Func => \lam _ => id d
+  | Func-id => idp
+  | Func-o => inv id-left
+  \where {
+    \func natTrans {C D : Precat} {d d' : D} (f : Hom d d') : NatTrans {C} (Const d) (Const d') \cowith
+      | trans => \lam _ => f
+      | natural => \lam g => id-right *> inv id-left
+  }
+
+
+\class NatTrans \plevels obj >= hom >= iobj >= ihom {
+  | C : Precat \levels (iobj, ihom) _
+  | D : Precat \levels (obj, hom) _
+  | F : Functor C D
+  | G : Functor C D
+  | trans (X : C) : Hom (F X) (G X)
+  | natural {X Y : C} (f : Hom X Y) : trans Y ∘ F.Func f = G.Func f ∘ trans X
+}
+  \where {
+    \func Comp-left {C D E : Precat} (a : NatTrans {D} {E}) (H : Functor C D) : NatTrans (Comp a.F H) (Comp a.G H) \cowith
+      | trans => \lam x => a (H x)
+      | natural => \lam f => a.natural (H.Func f)
+
+    \func Comp-right {C D E : Precat} (H : Functor D E) (a : NatTrans {C} {D}) : NatTrans (Comp H a.F) (Comp H a.G) \cowith
+      | trans => \lam x => H.Func (a x)
+      | natural => \lam f => inv H.Func-o *> pmap H.Func (a.natural f) *> H.Func-o
+  }
+
+
+\instance FunctorPrecat {C D : SmallPrecat} : Precat (Functor C D) 
+  | Hom => NatTrans
+  | id => \lam F => \new NatTrans {
+    | trans => \lam X => id (F X)
+    | natural => \lam f => id-left *> inv id-right
+  }
+  | o => \lam b a => \new NatTrans {
+    | trans => \lam X => b X ∘ a X
+    | natural => \lam f => run {(rewrite (o-assoc, natural {a} f), rewriteI o-assoc, rewrite (natural {b} f), o-assoc)}
+  }
+  | id-left => exts (\lam X => id-left)
+  | id-right => exts (\lam X => id-right)
+  | o-assoc => exts (\lam X => o-assoc)
+
+\instance FunctorCat {C : SmallPrecat} {D : SmallCat} : Cat (Functor C D) 
+  | Precat => FunctorPrecat
+  | univalence => Cat.makeUnivalence $ later
+    (\lam e => (exts (\lam X => D.isotoid (mapIso e X), \lam {X} {Y} h => Cat.transport_Hom_iso (mapIso e X) (mapIso e Y) (natural h)), 
+    simp_coe $ simp_coe (\lam X => Cat.transport_iso (mapIso e X))  ))
+  \where {
+    \func mapIso {C D : SmallPrecat} (e : Iso {FunctorPrecat {C} {D}}) (X : C) : Iso {D} \cowith
+      | dom => e.dom X
+      | cod => e.cod X
+      | f => e.f X
+      | hinv => e.hinv X
+      | hinv_f => path (\lam i => trans {e.hinv_f @ i} X)
+      | f_hinv => path (\lam i => trans {e.f_hinv @ i} X)
+  }
+
+
+\instance FamPrecat {J : \Type} (D : Precat) : Precat (J -> D) 
+  | Hom => \lam F G => \Pi {j : J} -> Hom (F j) (G j)
+  | id => \lam F {j} => id (F j)
+  | o => \lam g f {j} => g ∘ f
+  | id-left => ext (\lam {j} => id-left)
+  | id-right => ext (\lam {j} => id-right)
+  | o-assoc => ext (\lam {j} => o-assoc)
+
+\instance FamCat {J : \Type} (D : Cat) : Cat (J -> D) 
+  | Precat => FamPrecat D
+  | univalence => Cat.makeUnivalence $ later (\lam e => (ext (\lam j => D.isotoid (mapIso e j)), simp_coe (\lam {j} => Cat.transport_iso (mapIso e j))))
+  \where {
+    \func mapIso {J : \Type} {D : Precat} (e : Iso {FamPrecat {J} D}) (j : J) : Iso {D} \cowith
+      | dom => e.dom j
+      | cod => e.cod j
+      | f => e.f
+      | hinv => e.hinv
+      | hinv_f => path (e.hinv_f @ __)
+      | f_hinv => path (e.f_hinv @ __)
+  }
+
+
+\class FaithfulFunctor \extends Functor {
+  | isFaithful {X Y : C} {f g : Hom X Y} : Func f = Func g -> f = g
+}
+
+\class FullFunctor \extends Functor {
+  | isFull {X Y : C} (f : Hom (F X) (F Y)) : ∃ (g : Hom X Y) (Func g = f)
+}
+
+\class FullyFaithfulFunctor \extends FullFunctor, FaithfulFunctor {
+  | isFullyFaithful {X Y : C} : Equiv (Func {_} {X} {Y})
+  | isFull => \lam f => isSurjMap {ESEquiv.fromEquiv isFullyFaithful} f
+  | isFaithful => \lam p => isFullyFaithful.isInj p
+}

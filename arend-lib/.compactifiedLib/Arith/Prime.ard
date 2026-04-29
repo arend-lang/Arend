@@ -1,0 +1,108 @@
+\import Algebra.Domain
+\import Algebra.Domain.Euclidean
+\import Algebra.Monoid
+\import Algebra.Monoid.Prime
+\import Algebra.Ordered
+\import Arith.Int
+\import Arith.Nat
+\import Data.Bool
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open Nat(mod, -)
+\open Monoid
+\open NatOrder \hiding (<)
+
+\lemma nat_irr-isPrime (p : Irr {NatSemiring}) : Prime p p.notInv => {?hidden_proof}
+
+\lemma prime-div {n : Nat} : Prime n = (\Sigma (n /= 1) (\Pi {k : Nat} -> LDiv k n -> (k = n) || (k = 1))) => {?hidden_proof}
+  \where {
+    \lemma dir {n : Nat} (p : Irr n) {k : Nat} (k|n : LDiv k n) : (k = n) || (k = 1) => {?hidden_proof}
+
+    \lemma conv {n : Nat} (n/=1 : n /= 1) (f : \Pi {k : Nat} -> LDiv k n -> (k = n) || (k = 1)) : Prime n => {?hidden_proof}
+  }
+
+
+\lemma prime-less {n : Nat} : Prime n = (\Sigma (n > 1) (\Pi {k : Nat} -> k < n -> LDiv k n -> k = 1)) => {?hidden_proof}
+  \where {
+    \lemma dir {n : Nat} (p : Irr n) {k : Nat} (k<n : k < n) (k|n : LDiv k n) : k = 1 => {?hidden_proof}
+
+    \lemma conv {n : Nat} (n>1 : n > 1) (f : \Pi {k : Nat} -> k < n -> LDiv k n -> k = 1) : Prime n => {?hidden_proof}
+  }
+
+
+\func isPrime (n : Nat) : Bool 
+  | 0 => false
+  | 1 => false
+  | 2 => true
+  | n => isPositive (n mod 2) and rec n n 3
+  \where {
+    \func isPositive (n : Nat) : Bool 
+      | 0 => false
+      | _ => true
+
+    \func \infix 4 < (n m : Nat) : Bool => \case n - m \with {
+      | pos _ => false
+      | neg suc _ => true
+    }
+
+    \func rec (n c j : Nat) : Bool \elim c
+      | 0 => true
+      | suc c => n < j * j or isPositive (n mod j) and rec n c (suc (suc j))
+  }
+
+
+\open isPrime \hiding (<)
+
+\lemma isPrime=>prime {n : Nat} (p : isPrime n = true) : Prime n => {?hidden_proof}
+  \where {
+    \open NatSemiring
+
+    \lemma mod_div-lem {k n : Nat} (p : isPositive (n mod k) = true) : Not (LDiv k n) => {?hidden_proof}
+
+    \func isOdd (n : Nat) : \Prop \elim n
+      | 0 => Empty
+      | 1 => \Sigma
+      | suc suc n => isOdd n
+
+    \lemma square_<=-lem {k : Nat} : k <= k * k => {?hidden_proof}
+
+    \lemma odd_suc-lem {j : Nat} (j-odd : isOdd j) (sj-odd : isOdd (suc j)) : Empty => {?hidden_proof}
+
+    \lemma odd-lem {j k : Nat} (j-odd : isOdd j) (k-odd : isOdd k) (j<=k : j <= k) (j/=k : j /= k) : suc (suc j) <= k => {?hidden_proof}
+
+    \lemma rec-lem {n c j : Nat} (p : rec n c j = true) (j-odd : isOdd j) (s : n < c + j) {k : Nat} (k-odd : isOdd k) (j<=k : j <= k) (k*k<=n : k * k <= n) 
+    (k|n : LDiv k n) : Empty => {?hidden_proof}
+
+    \lemma oddOrEven (n : Nat) : isOdd n || LDiv 2 n => {?hidden_proof}
+
+    \lemma prime-lem {n : Nat} (n>1 : n > 1) (div2 : Not (LDiv 2 n)) (divOdd : \Pi {k : Nat} -> isOdd k -> 3 <= k -> k * k <= n -> Not (LDiv k n)) : Prime n => {?hidden_proof}
+
+    \lemma prime-lem2 {n : Nat} (n>1 : n > 1) (f : \Pi {j : Nat} -> j * j <= n -> LDiv j n -> j = 1) : Prime n => {?hidden_proof}
+  }
+
+
+\lemma prime=>isPrime {n : Nat} (p : Prime n) : isPrime n = true => {?hidden_proof}
+  \where {
+    \open NatSemiring
+
+    \lemma mod-lem {k n : Nat} (p : Prime n) (k<n : k < n) (k/=1 : k /= 1) : isPositive (n mod k) = true => {?hidden_proof}
+
+    \lemma <-lem {n m : Nat} (n<m : n < m) : n isPrime.< m = true => {?hidden_proof}
+
+    \lemma square_<-lem {j : Nat} (j>1 : j > 1) : suc j < j * j => {?hidden_proof}
+
+    \lemma rec-lem {n c j : Nat} (p : Prime n) (j>1 : j > 1) : rec n c j = true => {?hidden_proof}
+  }
+
+
+\func prime-isDec {n : Nat} : Dec (Prime n) => \case isPrime n \as b, idp : isPrime n = b \with {
+  | true, p => yes (isPrime=>prime p)
+  | false, p => no (\lam c => (\case inv (prime=>isPrime c) *> p \with {}))
+}

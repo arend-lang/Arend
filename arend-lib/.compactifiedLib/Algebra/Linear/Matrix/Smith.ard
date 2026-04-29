@@ -1,0 +1,257 @@
+\import Algebra.Domain
+\import Algebra.Domain.Bezout
+\import Algebra.Group
+\import Algebra.Group.Symmetric
+\import Algebra.Linear.Matrix
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Reduced
+\import Algebra.Semiring
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Data.Array
+\import Data.Array.Perm
+\import Data.Array.Sort
+\import Data.Fin(fsuc, fsuc/=, nat_fin_=)
+\import Data.Or
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Classical
+\import Logic.Meta
+\import Logic.TFAE
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\open Monoid
+\open AddMonoid
+
+\type \infix 4 M~ {R : Ring} {n m : Nat} (A B : Matrix R n m) : \Prop 
+  => ∃ (C : Inv {MatrixRing R n}) (D : Inv {MatrixRing R m}) (B = C.val MatrixRing.product A MatrixRing.product D.val)
+  \where {
+    \lemma transposed {R : CRing} {n m : Nat} {A B : Matrix R n m} (p : A M~ B) : transpose A M~ transpose B => {?hidden_proof}
+  }
+
+
+\lemma *c_M~ {R : CRing} {n m : Nat} {a : R} {A B : Matrix R n m} (A~B : A M~ B) : a *c A M~ a *c B => {?hidden_proof}
+
+\lemma blockMatrix_M~ {R : CRing} {n m n' m' : Nat} {A B : Matrix R n m} {C D : Matrix R n' m'} (A~B : A M~ B) (C~D : C M~ D) : blockMatrix A C M~ blockMatrix B D => {?hidden_proof}
+
+\instance M~-equiv {R : Ring} {n m : Nat} : Equivalence (Matrix R n m) M~ 
+  | ~-reflexive => \lam {A} => inP (Inv.ide-isInv, Inv.ide-isInv, inv $ product_ide-right *> product_ide-left)
+  | ~-symmetric => \lam {A} {B} => TruncP.map __ $ later
+    (\lam s => (Inv.reverse {s.1}, Inv.reverse {s.2},
+    inv $ pmap (\lam z => Inv.inv {s.1} product z product Inv.inv {s.2}) (s.3 *> product-assoc _ _ _) *>  (  \let A' => A product Inv.val {s.2}
+    \in pmap (product _) (inv (product-assoc _ _ A') *> pmap (product A') (Inv.inv-left {s.1}) *> product_ide-left {_} {_} {_} {A'}) *> product-assoc _ _ _ *> pmap 
+                (A product) (Inv.inv-right {s.2}) *> product_ide-right)))
+  | ~-transitive => \lam {P} {Q} {S} inP s inP t => inP (Inv.product t.1 s.1, Inv.product s.2 t.2,
+    t.3 *> pmap (_ product __ product _) s.3 *> pmap (product _) {_ product (_ product P product _)} {_ * _ product P product _} 
+    (pmap (_ product) (product-assoc _ _ _) *> inv (product-assoc _ _ (P product _)) *> inv (product-assoc (_ * _) _ _)) *> product-assoc 
+    (_ * _ product P) _ _)
+  \where {
+    \open MatrixRing
+  }
+
+
+\type IsSmith {R : Semiring} {n m : Nat} (A : Matrix R n m) : \Prop => \Sigma (IsDiagonal A)
+  (\Pi (i : Nat) (p : suc i < n) (q : suc i < m) ->
+  TruncP (LDiv (A ((\lam {k} => toFin k) $ id<suc <∘ p) ((\lam {k} => toFin k) $ id<suc <∘ q)) (A (toFin _ p) (toFin _ q))))
+  \where {
+    \lemma transposed {R : Semiring} {n m : Nat} {A : Matrix R n m} (s : IsSmith A) : IsSmith (transpose A) => {?hidden_proof}
+
+    \lemma smith-diag {R : CRing} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) {i i' : Fin n} {j j' : Fin m} (p : i = {Nat} j) (q : (i : Nat) <= i') : TruncP (LDiv (A i j) (A i' j')) 
+      => {?hidden_proof}
+      \where {
+        \lemma aux {R : CRing} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) {i : Fin n} {j : Fin m} (i=j : i = {Nat} j) {k : Nat} (p : i + k < n) (q : j + k < m) :
+          TruncP (LDiv (A i j) (A (toFin _ p) (toFin _ q))) => {?hidden_proof}
+      }
+
+
+    \lemma smith-diag-func {R : CRing} {n m : Nat} {A : Matrix R n m} (As : IsSmith A) :
+      TruncP (\Pi {i i' : Fin n} {j j' : Fin m} (p : i = {Nat} j) (q : i NatSemiring.<= i') -> LDiv (A i j) (A i' j')) => {?hidden_proof}
+
+    \lemma div00 {R : Semiring} {n m : Nat} {A : Matrix R (suc n) (suc m)} (As : IsSmith A) (i : Fin (suc n)) (j : Fin (suc m)) : TruncP (LDiv (A 0 0) (A i j)) => {?hidden_proof}
+      \where {
+        \lemma aux {i : Nat} (p : i < suc n) (q : i < suc m) : TruncP (LDiv (A 0 0) (A (toFin i p) (toFin i q))) => {?hidden_proof}
+      }
+
+  }
+
+
+\class SmithRing \extends StrictBezoutRing {
+  | isKaplansky : IsKaplansky \this
+}
+  \where {
+    \type IsKaplansky (R : CRing) => \Pi (a b c : R) -> IsCoprimeArray (a, b, c) -> ∃ (t s : R) (IsCoprime (t * a) (t * b + s * c))
+
+    \lemma Smith-char {R : CRing} : TFAE (\Sigma R.IsStrictBezout (IsKaplansky R), 
+      \Sigma R.IsStrictBezout (\Pi (A : Matrix R 2 2) -> A 1 0 = 0 -> IsCoprimeArray (A 0 0, A 0 1, A 1 1) -> ∃ (B : Matrix R 2 2) (IsDiagonal B) (A M~ B)), 
+      \Pi {n m : Nat} -> n <= m -> m <= 2 -> \Pi (A : Matrix R n m) -> ∃ (B : Matrix R n m) (IsDiagonal B) (A M~ B), 
+      \Pi {n m : Nat} (A : Matrix R n m) -> ∃ (B : Matrix R n m) (IsSmith B) (A M~ B)) => {?hidden_proof}
+      \where {
+        \lemma transposed {R : CRing} {n m : Nat} {A : Matrix R n m} (p : ∃ (B : Matrix R m n) (IsSmith B) (transpose A M~ B)) : ∃ (B : Matrix R n m) (IsSmith B) (A M~ B) => {?hidden_proof}
+
+        \lemma smith-isBezout {R : CRing} (S : \Pi (A : Matrix R 1 2) -> ∃ (B : Matrix R 1 2) (IsDiagonal B) (A M~ B)) : R.IsStrictBezout => {?hidden_proof}
+
+        \lemma diagonalize_normed {R : CRing} (bez : R.IsStrictBezout) 
+        (diag : \Pi (A : Matrix R 2 2) -> A 1 0 = 0 -> IsCoprimeArray (A 0 0, A 0 1, A 1 1) -> ∃ (B : Matrix R 2 2) (IsDiagonal B) (A M~ B)) 
+        (A : Matrix R 2 2) (A10=0 : A 1 0 = 0) : ∃ (B : Matrix R 2 2) (IsDiagonal B) (A M~ B) => {?hidden_proof}
+
+        \lemma aux {R : CRing} {k m n : Nat} (S : \Pi {n m : Nat} -> n <= m -> m <= 2 -> \Pi (A : Matrix R n m) -> ∃ (B : Matrix R n m) (IsDiagonal B) (A M~ B)) 
+        (p : 2 Nat.* n Nat.+ m < k) (A : Matrix R n m) : ∃ (B : Matrix R n m) (IsSmith B) (A M~ B) => {?hidden_proof}
+      }
+
+
+    elimRow {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (d : \Pi (i : Fin n) -> LDiv (A 0 0) (A (suc i) 0)) :
+      \Sigma (B : Matrix R (suc n) (suc m)) (A M~ B) (\Pi (i : Fin n) -> B (suc i) 0 = 0) (\Pi (j : Fin (suc m)) -> B 0 j = A 0 j) => 
+      \let C => addColumn (ide :: (\lam i => negative (LDiv.inv {d i}))) (addRow {R} (replicate n zro) ide)
+      \in (C MatrixRing.product A,
+            inP (determinant1_Inv C
+      (determinant_IsLowerTriangular {_} {_} {C}  (\case \elim __, \elim __, __ \with {  | 0, suc j, _ => idp  | suc i, suc j, NatOrder.suc<suc i<j =>
+        rewrite (decideEq/=_reduce (\lam (p : i = j) => NatSemiring.<-irreflexive $ transportInv {Nat} (i NatOrder.<) p i<j)) idp}) *> cong 
+    (exts (\case \elim __ \with {  | 0 => idp  | suc j => rewrite (decideEq=_reduce idp) idp})) *> BigProd_ide {_} {replicate (suc n) ide} (\lam _ => idp)), 
+            Inv.ide-isInv, inv MatrixRing.product_ide-right),
+            \lam i => BigSum-unique2 {_} {\lam j => :: (negative (LDiv.inv {d i})) (MatrixRing.ide i) j * A j 0} {0} {suc i} NatOrder.zero<suc
+      (\case \elim __ \with {  | 0 => \lam p => absurd (p idp)
+      | suc k => \lam _ k/=i => rewrite (decideEq/=_reduce (\lam p => k/=i (inv (pmap fsuc p)))) zro_*-left}) *> rewrite (decideEq=_reduce idp) 
+    (pmap2 + (R.negative_*-left *> pmap negative (*-comm *> LDiv.inv-right {d i})) ide-left *> negative-left),
+            \lam j =>
+    BigSum-unique {_} {\lam k => :: ide (replicate n zro) k * A k j} 0 (\case \elim __ \with {  | 0 => \lam p => absurd (p idp)  | suc k => \lam _ => zro_*-left}) *> 
+              ide-left
+    )
+
+    elimColumn {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (d : \Pi (j : Fin m) -> LDiv (A 0 0) (A 0 (suc j))) :
+      \Sigma (B : Matrix R (suc n) (suc m)) (A M~ B) (\Pi (j : Fin m) -> B 0 (suc j) = 0) (\Pi (i : Fin (suc n)) -> B i 0 = A i 0) => 
+      \have (B, At~B, c, d) => elimRow (transpose A) d
+      \in (transpose B, M~.transposed {_} {_} {_} {transpose A} At~B, c, d)
+
+    elimRowColumn {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (d1 : \Pi (i : Fin n) -> LDiv (A 0 0) (A (suc i) 0)) 
+    (d2 : \Pi (j : Fin m) -> LDiv (A 0 0) (A 0 (suc j))) :
+      \Sigma (B : Matrix R (suc n) (suc m)) (A M~ B) (B 0 0 = A 0 0) (\Pi (i : Fin n) -> B (suc i) 0 = 0) (\Pi (j : Fin m) -> B 0 (suc j) = 0) => 
+      \have | (B, A~B, c, d) => elimRow A d1
+            | (C, B~C, c', d') => elimColumn B (\lam j => transport2 LDiv (inv (d 0)) (inv (d (suc j))) (d2 j))
+      \in (C, ~-transitive A~B B~C, d' 0 *> d 0, \lam i => d' (suc i) *> c i, c')
+
+    \lemma M~_LDiv {R : CRing} {a : R} {n m : Nat} {A B : Matrix R n m} (A~B : A M~ B) (d : \Pi (i : Fin n) (j : Fin m) -> TruncP (LDiv a (A i j))) (i : Fin n) 
+    (j : Fin m) : TruncP (LDiv a (B i j)) => {?hidden_proof}
+
+    \lemma ind-step {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (IH : \Pi (B : Matrix R n m) -> ∃ (C : Matrix R n m) (IsSmith C) (B M~ C)) 
+    (d00 : \Pi (i : Fin (suc n)) (j : Fin (suc m)) -> TruncP (LDiv (A 0 0) (A i j))) : ∃ (B : Matrix R (suc n) (suc m)) (IsSmith B) (A M~ B) => {?hidden_proof}
+  }
+
+
+\func embed22 {R : Ring} (A : Matrix R 2 2) {n : Nat} (k : Fin (suc n)) : Matrix R (suc n) (suc n) 
+=> makeMatrix $ replace2 (MatrixRing.ide {R} {suc n}) 0 k (replace2 (replicate (suc n) zro) 0 k (A 0 0) (A 1 0)) 
+  (replace2 (replicate (suc n) zro) 0 k (A 0 1) (A 1 1))
+  \where {
+    \func replace2 {A : \Type} (l : Array A) (i j : Fin l.len) (a b : A) : Array A l.len => replace (replace l i a) j b
+
+    \func replace2-first {A : \Type} {l : Array A} {i j : Fin l.len} {a b : A} (i/=j : i /= {Nat} j) : replace2 l i j a b i = a 
+      => replace-notIndex {A} {replace l i a} (/=-sym i/=j) *> replace-index
+
+    \func replace2-second {A : \Type} {l : Array A} {i j : Fin l.len} {a b : A} : replace2 l i j a b j = b => replace-index
+  }
+
+
+\lemma embed22_determinant {R : CRing} {A : Matrix R 2 2} {n : Nat} {k : Fin (suc n)} (k/=0 : k /= {Nat} 0) : determinant (embed22 A k) = determinant A => {?hidden_proof}
+  \where {
+    \open embed22
+    \open determinant
+
+    \lemma embed22_00 {R : Ring} {A : Matrix R 2 2} {n : Nat} {k : Fin (suc n)} (k/=0 : k /= {Nat} 0) : embed22 A k 0 0 = A 0 0 => {?hidden_proof}
+
+    \lemma embed22_minor00 {R : Ring} {A : Matrix R 2 2} {n : Nat} {k : Fin n} : minor (embed22 A (suc k)) 0 0 = diagonal1 k (A 1 1) => {?hidden_proof}
+
+    \func diagonal1 {R : Ring} {n : Nat} (k : Fin n) (a : R) : Matrix R n n => diagonal (replace (replicate n ide) k a)
+
+    \lemma determinant_diagonal1 {R : CRing} {n : Nat} {k : Fin n} {a : R} : determinant (diagonal1 k a) = a => {?hidden_proof}
+
+    \lemma embed22_minor_k0 {R : Ring} {A : Matrix R 2 2} {n : Nat} {k : Fin (suc n)} :
+      minor (embed22 A (suc k)) (suc k) 0 = diagonal1 k (A 1 0) k :: skip {Array R (suc n)} (diagonal1 k (A 1 0)) k => {?hidden_proof}
+
+    embed22_minor_k0_perm {R : Ring} {A : Matrix R 2 2} {n : Nat} {k : Fin (suc n)} :
+      \Sigma (p : Perm (diagonal1 k (A 1 0)) (minor (embed22 A (suc k)) (suc k) 0)) (Perm.inversions p = k) 
+      => rewrite embed22_minor_k0 (determinantN.alternating.permutation1 k (diagonal1 k (A 1 0)), determinantN.alternating.permutation1_inversions)
+  }
+
+
+\class SmithDomain \extends BezoutDomain.Dec, SmithRing
+
+\lemma smith-unique {R : StrictIntegralDomain} {n m : Nat} {A B : Matrix R n m} (As : IsSmith A) (Bs : IsSmith B) (A~B : A M~ B) (i : Fin n) (j : Fin m) :
+  TruncP (associates (A i j) (B i j)) => {?hidden_proof}
+  \where {
+    \func subMatrix {R : \Type} {n m : Nat} (A : Matrix R n m) (li : Array (Fin n)) (lj : Array (Fin m)) : Matrix R li.len lj.len 
+      => mkMatrix (\lam i j => A (li i) (lj j))
+
+    \func subMatrix_perm {R : \Type} {n m : Nat} {A : Matrix R n m} {k : Nat} {li li' : Array (Fin n) k} {lj : Array (Fin m)} (p : Perm li li') :
+      Perm (subMatrix A li lj) (subMatrix A li' lj) \elim k, li, li', p
+      | 0, nil, nil, perm-nil => perm-nil
+      | suc k, x :: li, _ :: li', perm-:: idp q => perm-:: idp (subMatrix_perm q)
+      | suc suc k, x :: x' :: li, _ :: _ :: _, perm-swap idp idp idp => perm-swap idp idp idp
+      | k, li, li', perm-trans p1 p2 => perm-trans (subMatrix_perm p1) (subMatrix_perm p2)
+
+    \open isMultiLinear
+
+    \lemma subMatrix-div {R : CRing} {n m k s : Nat} {B : Matrix R n m} {A : Matrix R m k} {C : Matrix R k s} {d : R} {l : Nat} 
+    (p : \Pi (li : Array (Fin m) l) (lj : Array (Fin k) l) -> TruncP (LDiv d (determinant (subMatrix A li lj)))) (li : Array (Fin n) l) 
+    (lj : Array (Fin s) l) : TruncP (LDiv d (determinant (subMatrix (B MatrixRing.product A MatrixRing.product C) li lj))) => {?hidden_proof}
+      \where {
+        \lemma subMatrix-div-left {R : CRing} {n m k : Nat} (B : Matrix R n m) (A : Matrix R m k) {d : R} {l : Nat} (li : Array (Fin n) l) (lj : Array (Fin k) l) 
+        (p : \Pi (li : Array (Fin m) l) -> TruncP (LDiv d (determinant (subMatrix A li lj)))) :
+          TruncP (LDiv d (determinant (subMatrix (B MatrixRing.product A) li lj))) => {?hidden_proof}
+      }
+
+
+    \func index {n k : Nat} (p : k <= n) (i : Fin k) => toFin i (fin_< i NatSemiring.<∘l p)
+
+    \func diagProd {M : Monoid} {n m k : Nat} (A : Matrix M n m) (p : k <= n) (q : k <= m) : M => BigProd (\lam (j : Fin k) => A (index p j) (index q j))
+
+    \lemma diagProd_suc {M : Monoid} {n m k : Nat} {A : Matrix M n m} {p : suc k <= n} {q : suc k <= m} :
+      diagProd A p q = diagProd A (id<=suc <=∘ p) (id<=suc <=∘ q) * A (toFin k $ id<suc <∘l p) (toFin k $ id<suc <∘l q) => {?hidden_proof}
+
+    \lemma diag-sub {R : CRing} {n m k : Nat} {A : Matrix R n m} (Ad : IsDiagonal A) (p : k <= n) (q : k <= m) :
+      diagProd A p q = determinant (subMatrix A (index p) (index q)) => {?hidden_proof}
+
+    \func determinant_subMatrix {R : CRing} {n m k : Nat} {A : Matrix R n m} (Ad : IsDiagonal A) {li : Array (Fin n) k} {lj : Array (Fin m) k} (lis : sort.IsSorted li) 
+    (ljs : sort.IsSorted lj) (inj : IsInj li) : determinant (subMatrix A li lj) = BigProd (\lam j => A (li j) (lj j)) => AbMonoid.FinSum-unique 1
+      (later (\lam e e/=1 => pmap (_ *)  (\case decideEq {ArrayDec NatSemiring k} (\lam j => li (e j)) (\lam j => lj j) \with {  | yes p => 
+        \have | t => sort.perm_= {NatSemiring} {k} {\lam i => li i} (transport (Perm {Nat} li) p (Perm.equiv_perm {Nat} {_} {li} e)) (\lam p q => lis p q) (\lam p q => ljs p q)
+                  | (j, ej/=j) => array/= {_} {_} {\lam j => e j} {\lam j => j} (\lam p => e/=1 $ Sym.equals (\lam j i => p i j))
+        \in R.BigProd_zro j $ later $ Ad (\lam p => ej/=j $ inj $ nat_fin_= $ p *> inv (pmap {Array Nat k} (__ j) t))  | no q =>     \have s => array/= q
+        \in R.BigProd_zro s.1 $ later (Ad s.2)}) *> R.zro_*-right)) *> pmap (* _) sign_ide *> ide-left
+
+    \lemma diag-div {R : CRing} {n m k : Nat} {A : Matrix R n m} (As : IsSmith A) (p : k <= n) (q : k <= m) (li : Array (Fin n) k) (lj : Array (Fin m) k) :
+      TruncP (LDiv (diagProd A p q) (determinant (subMatrix A li lj))) => {?hidden_proof}
+      \where {
+        \lemma sorted-monotone {n : Nat} {l : Array (Fin n)} (s : sort.IsSorted l) (inj : IsInj l) {j : Fin l.len} : j NatSemiring.<= l j => {?hidden_proof}
+          \where {
+            \lemma aux {n k : Nat} {l : Array (Fin n)} (p : \Pi (j : Fin l.len) -> k <= l j) (q : \Pi {i j : Fin l.len} -> i < j -> l i < l j) {j : Fin l.len} : k + j NatSemiring.<= l j 
+              => {?hidden_proof}
+          }
+
+      }
+
+
+    \lemma prod-div {R : CRing} {n m k : Nat} {A B : Matrix R n m} (As : IsSmith A) (Bs : IsSmith B) (A~B : A M~ B) (p : k <= n) (q : k <= m) :
+      TruncP (LDiv (diagProd A p q) (diagProd B p q)) => {?hidden_proof}
+
+    \lemma smith-div {R : ReducedCRing} {n m : Nat} {A B : Matrix R n m} (As : IsSmith A) (Bs : IsSmith B) (A~B : A M~ B) (i : Fin n) (j : Fin m) : TruncP (LDiv (A i j) (B i j)) 
+      => {?hidden_proof}
+
+    \lemma smith-div-equiv {R : ReducedCRing} {n m : Nat} {A B : Matrix R n m} (As : IsSmith A) (Bs : IsSmith B) (A~B : A M~ B) (i : Fin n) (j : Fin m) :
+      \Sigma (TruncP (LDiv (A i j) (B i j))) (TruncP (LDiv (B i j) (A i j))) => {?hidden_proof}
+  }

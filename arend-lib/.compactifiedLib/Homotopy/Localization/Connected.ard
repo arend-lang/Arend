@@ -1,0 +1,41 @@
+\import Equiv
+\import Equiv.Sigma
+\import Equiv.Univalence
+\import Logic.Unique
+\import Homotopy.Fibration
+\import Homotopy.Join
+\import Homotopy.Localization.Accessible
+\import Homotopy.Localization.Universe
+\import Homotopy.Pushout
+\import Logic
+\import Paths
+\import Paths.Meta
+\open Localization
+
+\func isConnectedType {U : Universe} (X : \hType) => \Pi (Z : Local) -> isLocal {nullTypeUniverse X} Z
+
+\lemma isConnected=>contr {U : ReflUniverse} (X : \hType) (c : isConnectedType X) : Contr (LType X) => {?hidden_proof}
+
+\lemma contr=>isConnected {U : ReflUniverse} (X : \hType) (c : Contr (LType X)) : isConnectedType X => {?hidden_proof}
+
+\class Connected {
+  | U : Universe
+  | X : \hType
+  | connected : isConnectedType X
+}
+
+\lemma connected_join (X Y M N : \hType) (X-conn : isConnectedType {nullTypeUniverse M} X) (Y-conn : isConnectedType {nullTypeUniverse N} Y) :
+  isConnectedType {nullTypeUniverse (Join M N)} (Join X Y) => {?hidden_proof}
+  \where {
+    \lemma local_join (A A' B : \hType) : (\Pi (f : A' -> B) -> isLocal {nullTypeUniverse A} (\Sigma (b : B) (\Pi (a : A') -> f a = b))) = isLocal {nullTypeUniverse (Join A A')} B 
+      => {?hidden_proof}
+
+    \lemma connected_local_join-left (X Y M N : \hType) (X-conn : isConnectedType {nullTypeUniverse M} X) (Y-local : isLocal {nullTypeUniverse (Join M N)} Y) :
+      isLocal {nullTypeUniverse (Join X N)} Y => {?hidden_proof}
+
+    \lemma connected_local_join-right (X Y M N : \hType) (Y-conn : isConnectedType {nullTypeUniverse N} Y) (X-local : isLocal {nullTypeUniverse (Join M N)} X) :
+      isLocal {nullTypeUniverse (Join M Y)} X => {?hidden_proof}
+  }
+
+
+\func isConnectedMap {U : Universe} {A B : \hType} (f : A -> B) => \Pi (b : B) -> isConnectedType (Fib f b)

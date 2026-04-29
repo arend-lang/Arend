@@ -1,0 +1,36 @@
+\import Algebra.Group
+\import Algebra.Group.Sub
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Relation.Equivalence
+\import Set
+
+\class GroupAction \extends BaseSet {
+  | G : Group
+  | \infixl 8 ** : G -> E -> E
+  | **-assoc {m n : G} {e : E} : m ** (n ** e) = (m * n) ** e
+  | id-action {e : E} : ide ** e = e
+}
+
+\class TransitiveGroupAction \extends GroupAction {
+  | isTransAction : \Pi (v v' : E) -> ∃ (g : G) (g ** v = v')
+}
+
+\func ActionBySubgroup {G : Group} (H : SubGroup G) : GroupAction G \cowith
+  | E => H.Cosets
+  | ** => **
+  | **-assoc => **-assoc
+  | id-action => id-action
+  \where {
+    \func trivialRelation (g x y : G) : g * x * (inverse x * y) = g * y 
+    => qed (g * x * (inverse x * y) ==< *-assoc >== g * (x * (inverse x * y)) ==< pmap (g *) (inv *-assoc) >== g * ((x * inverse x) * y) ==< pmap 
+      (\lam z => g * (z * y)) inverse-right >== g * (ide * y) ==< pmap (g *) ide-left >== g * y)
+  }
+
+
+\instance TransitiveActionBySubgroup {G : Group} (H : SubGroup G) : TransitiveGroupAction G 
+  | GroupAction => ActionBySubgroup H
+  | isTransAction => isTransAction

@@ -1,0 +1,30 @@
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+
+\private \func one/3 : Real => ratio 1 3
+
+{-
+\lemma wrongCode {n : Nat} (a : Array Real (n + 1)) (kSeq : Fin (natCoef 2 * n + 3) -> Fin (n + 1))
+                 (r r0 eps : Real) (r>=0 : r >= zro) (r<=r0 : r <= r0)
+                 (ai>=0 : \Pi (i : Fin (n + 1)) -> a i >= 0)
+                 (C1 : a DArray.!! kSeq 0 * Monoid.pow {RealField} r0 (kSeq 0) = a DArray.!! 0 - eps)
+                 (C2 : \Pi (j : Fin (natCoef 2 * n + 2)) -> \Pi (i : Fin (n + 1)) ->
+                   i > 0 -> a DArray.!! kSeq j * Monoid.pow {RealField} (r0 * Monoid.pow {RealField} one/3 j) (kSeq j) > a DArray.!! i * Monoid.pow {RealField} (r0 * Monoid.pow {RealField} one/3 j) i - eps)
+  => \lam i => <=_*_positive-right (ai>=0 i) (PosetSemiring.pow_<=-monotone {RealField} {r} {r0} {i} r>=0 r<=r0) <∘r
+  {?} (rewrite (pmap (\lam p0 => p0 + eps) C1 *> +-assoc *> pmap ((+) (a 0)) (negative-left {RealField}) *> zro-right) in
+  rewrite (+-assoc, negative-left {RealField}, zro-right) in NatSemiring.<_+-left eps (rewrite ide-right in C2 0 i))
+
+ -}

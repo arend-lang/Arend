@@ -1,0 +1,251 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.Smith(M~)
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Pointed.PointedHom
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Category
+\import Data.Array
+\import Data.Array.Perm
+\import Data.Fin(nat_fin_=)
+\import Data.Or
+\import Equiv
+\import Function \hiding (id, o)
+\import Function.Meta
+\import Logic.Unique
+\import Logic
+\import Meta
+\import Order.LinearOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\open AddMonoid
+\open AddMonoidHom \hiding (id)
+
+\class LinearMap \extends AddGroupHom {
+  | R : Ring
+  \override Dom : LModule R
+  \override Cod : LModule R
+  | func-*c {r : R} {x : Dom} : func (r *c x) = r *c func x
+}
+  \where {
+    \func id {R : Ring} {M : LModule R} : LinearMap M M \cowith
+      | func => \lam a => a
+      | func-+ => idp
+      | func-*c => idp
+
+    \func \infixl 8 compose \alias \infixl 8 ∘ {R : Ring} {U V W : LModule R} (g : LinearMap V W) (f : LinearMap U V) : LinearMap U W \cowith
+      | func => \lam a => g (f a)
+      | func-+ => pmap g func-+ *> func-+
+      | func-*c => pmap g func-*c *> func-*c
+
+    \lemma extend-unique {R : Ring} {U V : LModule R} {l : Array U} (lb : U.IsBasis l) (lv : Array V l.len) :
+      isProp (\Sigma (f : LinearMap U V) (\Pi (j : Fin l.len) -> f (l j) = lv j)) => {?hidden_proof}
+
+    \func extend {R : Ring} {U V : LModule R} {l : Array U} (lb : U.IsBasis l) (lv : Array V l.len) : LinearMap U V \cowith
+      | func => \lam x => BigSum (\lam j => U.basis-split lb x j *c lv j)
+      | func-+ => \lam {x} {y} => pmap BigSum
+        (exts (\lam j => pmap (*c _)  (U.basis-split-unique lb (\lam j => U.basis-split lb x j + U.basis-split lb y j)
+        (pmap2 + U.basis-split-char (U.basis-split-char {_} {lb}) *> inv (U.BigSum_+ {_} {\lam j => U.basis-split lb x j *c l j}) *> pmap BigSum 
+        (exts (\lam j => inv U.*c-rdistr))) j) *> *c-rdistr)) *> V.BigSum_+ {_} {\lam j => U.basis-split lb x j *c lv j}
+      | func-*c => \lam {r} {x} => pmap BigSum
+        (exts (\lam j => pmap (*c _)  (U.basis-split-unique lb (\lam j => r * U.basis-split lb x j) 
+        (pmap (r *c) (U.basis-split-char {_} {lb}) *> U.*c_BigSum-ldistr *> pmap BigSum (exts (\lam j => inv *c-assoc))) j) *> *c-assoc)) *> inv 
+      V.*c_BigSum-ldistr
+
+    \lemma extend-char {R : Ring} {U V : LModule R} {l : Array U} (lb : U.IsBasis l) (lv : Array V l.len) (j : Fin l.len) : extend lb lv (l j) = lv j => {?hidden_proof}
+
+    \lemma basis-ext {R : Ring} {U V : LModule R} (f g : LinearMap U V) {l : Array U} (lb : U.IsGenerated l) (p : \Pi (j : Fin l.len) -> f (l j) = g (l j)) (u : U) : f u = g u 
+      => {?hidden_proof}
+
+    \open LModule.IsIndependentSet
+
+    \func extendSet {R : Ring} {U V : LModule R} {J : \Set} {u : J -> U} (ub : U.IsBasisSet u) (v : J -> V) : LinearMap U V \cowith
+      | func => \lam x => (LModule.basisSet-split ub v x).1
+      | func-+ => \lam {x} {y} => (\case (LModule.basisSet-split ub v (x + y)).2, (LModule.basisSet-split ub v x).2, (LModule.basisSet-split ub v y).2 \with {
+        | inP c1, inP c2, inP c3 => c1.3 *> ~_= v (=_~ ub.1 $ inv c1.2 *> pmap2 + c2.2 c3.2 *> inv (sum_++ u)) *> sum_++ v *> inv (pmap2 + c2.3 c3.3)
+      })
+      | func-*c => \lam {r} {x} => (\case (LModule.basisSet-split ub v (r *c x)).2, (LModule.basisSet-split ub v x).2 \with {
+        | inP c1, inP c2 => c1.3 *> ~_= v (=_~ ub.1 (later $ inv c1.2 *> pmap (r *c) c2.2 *> sum-ldistr u)) *> inv (sum-ldistr v) *> pmap (r *c) (inv c2.3)
+      })
+
+    \lemma extendSet-char {R : Ring} {U V : LModule R} {J : \Set} {u : J -> U} {ub : U.IsBasisSet u} {v : J -> V} {j : J} : extendSet ub v (u j) = v j => {?hidden_proof}
+
+    \lemma extendSet-unique {R : Ring} {U V : LModule R} (f g : LinearMap U V) {J : \Set} {u : J -> U} {ub : U.IsGeneratingSet u} (p : \Pi (j : J) -> f (u j) = g (u j)) (x : U) : f x = g x 
+      => {?hidden_proof}
+
+    \func toMatrix {R : Ring} {U V : LModule R} {lv : Array V} (lu : Array U) (bv : V.IsBasis lv) (f : LinearMap U V) : Matrix R lu.len lv.len 
+      => mkMatrix (\lam i => V.basis-split bv $ f (lu i))
+
+    \lemma toMatrix_ide {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) : toMatrix l lb id = 1 => {?hidden_proof}
+
+    \lemma toMatrix_* {R : Ring} {U V W : LModule R} (f : LinearMap U V) (g : LinearMap V W) {lv : Array V} {lw : Array W} (lu : Array U) (bv : V.IsBasis lv) 
+    (bw : W.IsBasis lw) : toMatrix lu bw (g ∘ f) = toMatrix lu bv f MatrixRing.product toMatrix lv bw g => {?hidden_proof}
+
+    \func toLinearMap {R : Ring} {U V : LModule R} {lu : Array U} (bu : U.IsBasis lu) (lv : Array V) (A : Matrix R lu.len lv.len) : LinearMap U V 
+      => extend bu (\lam j => MatrixRing.product-gen A (mkColumn lv) j 0)
+
+    \lemma toLinearMap-basis {R : Ring} {U V : LModule R} {lu : Array U} (bu : U.IsBasis lu) (lv : Array V) {A : Matrix R lu.len lv.len} {i : Fin lu.len} :
+      toLinearMap bu lv A (lu i) = BigSum (\lam j => A i j *c lv j) => {?hidden_proof}
+
+    \lemma toLinearMap_toMatrix-left {R : Ring} {U V : LModule R} {n : Nat} {lu lu' : Array U n} (bu : U.IsBasis lu) (bu' : U.IsBasis lu') {lv : Array V} {bv : V.IsBasis lv} 
+    {f : LinearMap U V} {u : U} : toLinearMap bu' lv (toMatrix lu bv f) u = f (extend bu' lu u) => {?hidden_proof}
+
+    \lemma toLinearMap_toMatrix-right {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U} (bu : U.IsBasis lu) {lv lv' : Array V n} (bv : V.IsBasis lv) (bv' : V.IsBasis lv') 
+    {f : LinearMap U V} {u : U} : toLinearMap bu lv' (toMatrix lu bv f) u = extend bv lv' (f u) => {?hidden_proof}
+
+    \func matrix-equiv {R : Ring} {U V : LModule R} {lu : Array U} {lv : Array V} (bu : U.IsBasis lu) (bv : V.IsBasis lv) : Equiv {LinearMap U V} {Matrix R lu.len lv.len} => \new QEquiv {
+      | f => toMatrix lu bv __
+      | ret => toLinearMap bu lv
+      | ret_f => \lam f => exts (\lam u => toLinearMap_toMatrix-left bu bu *> pmap f (basis-ext (extend bu (\new lu)) id bu.2 (\lam j => inv U.basis-split-char) u))
+      | f_sec => \lam A => matrixExt (\lam i j => pmap (V.basis-split bv __ j)
+        (V.BigSum-unique {\lam j => U.basis-split bu (lu i) j *c BigSum (\lam k => A j k *c lv k)} i (\lam k i/=k => pmap (*c _) (U.basis_split_/= i/=k) *> V.*c_zro-left) *> 
+          pmap (*c _) U.basis_split_= *> ide_*c) *> V.basis-split-unique bv (A i) idp j)
+    }
+
+    \lemma toLinearMap_ide {R : Ring} {U : LModule R} {l : Array U} (lb : U.IsBasis l) : toLinearMap lb l MatrixRing.ide = id {R} {U} => {?hidden_proof}
+
+    \lemma toLinearMap_* {R : Ring} {U V W : LModule R} {lu : Array U} {lv : Array V} {lw : Array W} (A : Matrix R lu.len lv.len) (B : Matrix R lv.len lw.len) 
+    (bu : U.IsBasis lu) (bv : V.IsBasis lv) (bw : W.IsBasis lw) : toLinearMap bu lw (A MatrixRing.product B) = toLinearMap bv lw B ∘ toLinearMap bu lv A => {?hidden_proof}
+
+    \lemma change-basis-left {R : Ring} {U V W : LModule R} (f : LinearMap V W) {lu : Array U} {lv : Array V} (bu : U.IsBasis lu) (bv : V.IsBasis lv) (A : Matrix R lu.len lv.len) :
+      f ∘ toLinearMap bu lv A = toLinearMap bu (map f lv) A => {?hidden_proof}
+  }
+
+
+\lemma linearMap_zro {R : Ring} {A B : LModule R} : LinearMap A B (\lam _ => 0) => {?hidden_proof}
+
+\lemma linearMap_+ {R : Ring} {A B : LModule R} (f g : LinearMap A B) : LinearMap A B (\lam a => f a + g a) => {?hidden_proof}
+
+\lemma linearMap_negative {R : Ring} {A B : LModule R} (f : LinearMap A B) : LinearMap A B (\lam a => negative (f a)) => {?hidden_proof}
+
+\lemma linearMap_BigSum {R : Ring} {A B : LModule R} {m : Nat} (f : Fin m -> LinearMap A B) : LinearMap A B (\lam a => BigSum (\lam i => f i a)) => {?hidden_proof}
+
+\func arrayLinearMap {R : Ring} {V : LModule R} (v : Array V) : LinearMap (ArrayLModule v.len (RingLModule R)) V \cowith
+  | func => \lam c => BigSum (\lam j => c j *c v j)
+  | func-+ => \lam {x} {y} => pmap BigSum (exts (\lam j => *c-rdistr)) *> V.BigSum_+ {_} {\lam j => x j *c v j}
+  | func-*c => pmap BigSum (exts (\lam j => *c-assoc)) *> inv V.*c_BigSum-ldistr
+  \where {
+    \lemma surj-char {v : Array V} : IsSurj (arrayLinearMap v) <-> V.IsGenerated v => {?hidden_proof}
+
+    \lemma inj-char {v : Array V} : IsInj (arrayLinearMap v) <-> V.IsIndependent v => {?hidden_proof}
+
+    \lemma equiv-char {v : Array V} : Equiv (arrayLinearMap v) <-> V.IsBasis v => {?hidden_proof}
+  }
+
+
+\class BilinearMap {
+  | R : Ring
+  | A : LModule R
+  | B : LModule R
+  | C : LModule R
+  | func : A -> B -> C
+  | linear-left {b : B} : LinearMap A C (func __ b)
+  | linear-right {a : A} : LinearMap B C (func a)
+}
+
+\func isMultiLinear {R : Ring} {n : Nat} {A B : LModule R} (f : Array A n -> B) : \Prop \elim n
+  | 0 => \Sigma
+  | suc n => \Pi (l : Array A n) (j : Fin (suc n)) -> LinearMap A B (\lam x => f (insert x l j))
+  \where {
+    \lemma reduce {n : Nat} (f : Array A (suc n) -> B) (fl : isMultiLinear f) {a : A} : isMultiLinear (\lam l => f (a :: l)) => {?hidden_proof}
+
+    \lemma reduce0 {n : Nat} (f : Array A (suc n) -> B) (fm : isMultiLinear f) {as : Array A n} : LinearMap A B (\lam a => f (a :: as)) => {?hidden_proof}
+
+    \lemma fromReplace {n : Nat} {f : Array A n -> B} (p : \Pi (l : Array A n) (j : Fin n) -> LinearMap A B (\lam x => f (replace l j x))) : isMultiLinear f => {?hidden_proof}
+
+    \lemma toReplace {n : Nat} {f : Array A n -> B} (fl : isMultiLinear f) (l : Array A n) (j : Fin n) : LinearMap A B (\lam x => f (replace l j x)) => {?hidden_proof}
+
+    \type IsLinearComb {R : Ring} {U : LModule R} (x : U) {J : \Set} (g : J -> U) => \Sigma (c : Array (\Sigma R J)) (x = U.BigSum (\lam j => (c j).1 *c g (c j).2))
+
+    \func makeLinearComb {R : Ring} {U : LModule R} {J : \Set} (g : J -> U) (c : Array (\Sigma R J)) : \Sigma (x : U) (J : \Set) (g : J -> U) (IsLinearComb x g) => (_, J, g, (c, idp))
+
+    \func linearComb-map (f : LinearMap A B) {x : A} {J : \Set} {g : J -> A} (xg : IsLinearComb x g) : IsLinearComb (f x) (\lam j => f (g j)) 
+      => (xg.1, pmap f xg.2 *> f.func-BigSum *> pmap BigSum (exts (\lam j => func-*c)))
+
+    \func linearComb-trans {R : Ring} {U : LModule R} {x : U} {n : Nat} {K : Fin (suc n) -> \Set} {H : (\Pi (i : Fin (suc n)) -> K i) -> U} {g : K 0 -> U} 
+    (xc : IsLinearComb x g) (k : \Pi (j : K 0) -> IsLinearComb (g j) (\lam (f : \Pi (i : Fin n) -> K (suc i)) => H (j :: f))) : IsLinearComb x H => 
+      \let | y j l => ((k (xc.1 j).2).1 l).1
+           | z j l => (xc.1 j).2 :: ((k (xc.1 j).2).1 l).2
+           | t => xc.2 *> path (\lam i => BigSum (\lam j => (xc.1 j).1 *c (k (xc.1 j).2).2 i)) *> path 
+             (\lam i => BigSum (\lam j => U.*c_BigSum-ldistr {(xc.1 j).1} {\lam l => y j l *c H (z j l)} i)) *> U.BigSum-double-dep _ 
+             (\lam s => (xc.1 s.1).1 *c (y s.1 s.2 *c H (z s.1 s.2)))
+      \in (mkArray (\lam s => (  \let (j, l) => SigmaFin.aux.f s  \in later ((xc.1 j).1 R.* y j l, z j l))), 
+    t *> path (\lam i => BigSum (\lam s => (  \let (j, l) => SigmaFin.aux.f s  \in inv (U.*c-assoc {(xc.1 j).1} {y j l} {H (z j l)}) i)))
+    )
+
+    \func linearComb-div {R : CRing} {x : R} {J : \Set} {g : J -> R} (c : IsLinearComb {R} {RingLModule R} x g) {d : R} (p : \Pi (j : J) -> TruncP (Monoid.LDiv d (g j))) : TruncP (Monoid.LDiv d x) 
+    => \case FinSet.finiteAC (\lam j => p (c.1 j).2) \with {
+      | inP f => inP $ rewrite c.2 $ Semiring.LDiv_BigSum (\lam j => later $ Monoid.LDiv.factor-right (f j))
+    }
+
+    \func multiLinear-comb (args : Array (\Sigma (x : A) (J : \Set) (g : J -> A) (IsLinearComb x g))) (f : Array A args.len -> B) (fm : isMultiLinear f) :
+      IsLinearComb (f (map __.1 args)) {\Pi (i : Fin args.len) -> (args i).2} (\lam g => f (\lam i => (args i).3 (g i))) \elim args
+      | nil => ((1, \case __ \with {}) :: nil, inv $ zro-right *> ide_*c)
+      | (x, J, g, xg) :: args => 
+        \let | t a => multiLinear-comb args (\lam l => f (a :: l)) (reduce f fm)
+             | s : IsLinearComb (f (x :: map __.1 args)) (\lam j => f (g j :: map __.1 args)) => linearComb-map (reduce0 f fm {map __.1 args}) xg
+        \in linearComb-trans s (\lam j => t (g j))
+  }
+
+
+\lemma isMultilinear_zro {R : Ring} {n : Nat} {A B : LModule R} : isMultiLinear {R} {n} {A} {B} (\lam x => 0) => {?hidden_proof}
+
+\lemma isMultilinear_+ {R : Ring} {n : Nat} {A B : LModule R} {f g : Array A n -> B} (fl : isMultiLinear f) (gl : isMultiLinear g) : isMultiLinear (\lam x => f x + g x) => {?hidden_proof}
+
+\lemma isMultilinear_negative {R : Ring} {n : Nat} {A B : LModule R} {f : Array A n -> B} (fl : isMultiLinear f) : isMultiLinear (\lam x => negative (f x)) => {?hidden_proof}
+
+\lemma isMultilinear_BigSum {R : Ring} {n : Nat} {A B : LModule R} {m : Nat} (f : Fin m -> Array A n -> B) (fl : \Pi (j : Fin m) -> isMultiLinear (f j)) :
+  isMultiLinear (\lam x => B.BigSum (\lam i => f i x)) => {?hidden_proof}
+
+\lemma isMultilinear_linear-left {R : Ring} {n : Nat} {A B C : LModule R} (f : LinearMap A B) {g : Array B n -> C} (gl : isMultiLinear g) : isMultiLinear (\lam l => g (map f l)) => {?hidden_proof}
+
+\lemma isMultilinear_linear-right {R : Ring} {n : Nat} {A B C : LModule R} {f : Array A n -> B} (fl : isMultiLinear f) (g : LinearMap B C) : isMultiLinear (\lam l => g (f l)) => {?hidden_proof}
+
+\func isAlternating {R : Ring} {n : Nat} {A B : LModule R} (f : Array A n -> B) : \Prop 
+  => \Sigma (isMultiLinear f) (\Pi (l : Array A n) -> \Sigma (i j : Fin n) (i < j) (l i = l j) -> f l = 0)
+  \where {
+    \open NatOrder
+
+    \lemma to/= {f : Array A n -> B} (fa : isAlternating f) (l : Array A n) (t : \Sigma (i j : Fin n) (i /= j) (l i = l j)) : f l = 0 => {?hidden_proof}
+
+    \lemma reduce {n : Nat} (f : Array A (suc n) -> B) (fa : isAlternating f) {a : A} : isAlternating (\lam l => f (a :: l)) => {?hidden_proof}
+
+    \lemma substract1from0 {n : Nat} {f : Array A (suc (suc n)) -> B} (fa : isAlternating f) {a a' : A} {l : Array A n} : f (a :: a' :: l) = f (a - a' :: a' :: l) => {?hidden_proof}
+
+    \lemma add0to1 {n : Nat} {f : Array A (suc (suc n)) -> B} (fa : isAlternating f) {a a' : A} {l : Array A n} : f (a :: a' :: l) = f (a :: a + a' :: l) => {?hidden_proof}
+
+    \lemma alternating_perm {n : Nat} {f : Array A n -> B} (fa : isAlternating f) {l l' : Array A n} (p : Perm l l') : f l = Perm.sign p *c f l' => {?hidden_proof}
+  }
+
+
+\lemma isAlternating_zro {R : Ring} {n : Nat} {A B : LModule R} : isAlternating {R} {n} {A} {B} (\lam x => 0) => {?hidden_proof}
+
+\lemma isAlternating_+ {R : Ring} {n : Nat} {A B : LModule R} {f g : Array A n -> B} (fa : isAlternating f) (ga : isAlternating g) : isAlternating (\lam x => f x + g x) => {?hidden_proof}
+
+\lemma isAlternating_negative {R : Ring} {n : Nat} {A B : LModule R} {f : Array A n -> B} (fa : isAlternating f) : isAlternating (\lam x => negative (f x)) => {?hidden_proof}
+
+\lemma isAlternating_linear-left {R : Ring} {n : Nat} {A B C : LModule R} (f : LinearMap A B) {g : Array B n -> C} (ga : isAlternating g) : isAlternating (\lam l => g (map f l)) => {?hidden_proof}
+
+\lemma isAlternating_linear-right {R : Ring} {n : Nat} {A B C : LModule R} {f : Array A n -> B} (fa : isAlternating f) (g : LinearMap B C) : isAlternating (\lam l => g (f l)) => {?hidden_proof}
+
+\lemma alternating-unique {R : Ring} {n : Nat} {A B : LModule R} {f g : Array A n -> B} (fa : isAlternating f) (ga : isAlternating g) {l : Array A n} (Ag : A.IsGenerated l) 
+(fl=gl : f l = g l) (a : Array A n) : f a = g a => {?hidden_proof}
+  \where {
+    \open Perm
+
+    \lemma alternating-unique_zro (f : Array A n -> B) (fa : isAlternating f) (l : Array A n) (Ag : A.IsGenerated l) (fl=0 : f l = 0) (a : Array A n) : f a = 0 => {?hidden_proof}
+
+    \lemma aux {n : Nat} (f : Array A n -> B) (fl : isMultiLinear f) (l : Array A) (Ag : A.IsGenerated l) (a : Array A n) 
+    (p : \Pi (c : Array (Fin l.len) n) -> f (map l c) = 0) : f a = 0 => {?hidden_proof}
+  }

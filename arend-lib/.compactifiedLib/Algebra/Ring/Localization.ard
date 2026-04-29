@@ -1,0 +1,205 @@
+\import Algebra.Domain
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Monoid.Sub
+\import Algebra.Pointed
+\import Algebra.Pointed.Sub
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Function(IsInj, IsSurj)
+\import Function.Meta
+\import Logic.Meta
+\import Logic.Unique
+\import Logic
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set \hiding (#)
+\open Monoid(Inv)
+\open RingHom
+
+\instance SubsetPoset {M : Monoid} : Poset (SubSet M) 
+  | <= => \lam (S S' : SubSet M) => \Pi (x : M) -> S x -> S' x
+  | <=-refl => \lam x p => p
+  | <=-transitive => \lam S1<=S2 S2<=S3 x p => S2<=S3 x (S1<=S2 x p)
+  | <=-antisymmetric => \lam S1<=S2 S2<=S1 => path (\lam i => \new (SubSet M (\lam x => propExt (S1<=S2 x) (S2<=S1 x) @ i)))
+
+\class Localization {
+  | R : CRing
+  | S : SubSet R
+  | R' : CRing
+  | inL : RingHom R R'
+  | local (x : R) : S x -> Inv (inL x)
+  | local-univ {R'' : CRing} (f : RingHom R R'') (l : \Pi (x : R) -> S x -> Inv (f x)) : Contr (\Sigma (g : RingHom R' R'') (\Pi (x : R) -> g (inL x) = f x))
+}
+
+\instance LocRing {R : CRing} (S : SubMonoid R) : CRing 
+  | E => Type
+  | zro => in~ (zro, ide, contains_ide)
+  | + => ++
+  | zro-left => \lam {in~ _} => ~-pequiv simplify
+  | +-assoc => \lam {in~ _} {in~ _} {in~ _} => ~-pequiv equation.cRing
+  | +-comm => \lam {in~ _} {in~ _} => ~-pequiv equation.cRing
+  | ide => in~ (ide, ide, contains_ide)
+  | * => **
+  | ide-left => \lam {in~ _} => ~-pequiv simplify
+  | *-assoc => \lam {in~ _} {in~ _} {in~ _} => ~-pequiv equation.monoid
+  | ldistr => \lam {in~ _} {in~ _} {in~ _} => ~-pequiv equation.cRing
+  | negative => neg
+  | negative-left => \lam {in~ _} => ~-pequiv simplify
+  | *-comm => \lam {in~ _} {in~ _} => path (~-equiv _ _ (pmap2 * *-comm *-comm))
+  | natCoef => \lam n => in~ (R.natCoef n, 1, contains_ide)
+  | natCoefZero => path (\lam i => in~ (R.natCoefZero i, 1, contains_ide))
+  | natCoefSuc => \lam n => ~-pequiv $ simplify (R.natCoefSuc n)
+  \where {
+    \func SType (S : SubMonoid R) => \Sigma (x y : R) (S y)
+
+    \func Type  => Quotient {SType S} (\lam a b => a.1 * b.2 = b.1 * a.2)
+
+    \lemma inl-surj : IsSurj (inl~ {R} {S}) => {?hidden_proof}
+
+    \lemma equals-lem {a b : SType S} (c : R) (s : S c) (p : a.1 * b.2 * c = b.1 * a.2 * c) : inl~ a = inl~ b => {?hidden_proof}
+
+    \lemma equals1 {a b : SType S} (p : a.1 * b.2 = b.1 * a.2) : inl~ a = inl~ b => {?hidden_proof}
+
+    \lemma unequals {a b : SType S} (p : inl~ a = inl~ b) : ∃ (c : R) (S c) (a.1 * b.2 * c = b.1 * a.2 * c) => {?hidden_proof}
+
+    \lemma equality {a b : SType S} : (inl~ a = inl~ b) = ∃ (c : R) (S c) (a.1 * b.2 * c = b.1 * a.2 * c) => {?hidden_proof}
+
+    \lemma swap {R : CMonoid} {r1 r2 s1 s2 : R} : (r1 * r2) * (s1 * s2) = (r1 * s1) * (r2 * s2) => {?hidden_proof}
+
+    \func neg (a : Type) : Type \elim a
+      | in~ (r, s, p) => in~ (negative r, s, p)
+      | ~-equiv x y p => ~-pequiv (equation.cRing {p})
+
+    \func ++ (a b : Type) : Type \elim a, b
+      | in~ (r1, s1, p1), in~ (r2, s2, p2) => in~ (r1 * s2 + r2 * s1, s1 * s2, contains_* p1 p2)
+      | ~-equiv x y p, in~ z => ~-pequiv (equation.cRing {p})
+      | in~ x, ~-equiv y z p => ~-pequiv (equation.cRing {p})
+
+    \func ** (a b : Type) : Type \elim a, b
+      | in~ (r1, s1, p1), in~ (r2, s2, p2) => in~ (r1 * r2, s1 * s2, contains_* p1 p2)
+      | ~-equiv x y p, in~ z => ~-pequiv (equation.cMonoid {p})
+      | in~ x, ~-equiv y z p => ~-pequiv (equation.cMonoid {p})
+
+    \lemma trivial {x : R} (n : R.IsNilpotent x) (s : S x) : Contr (LocRing S) => {?hidden_proof}
+  }
+
+
+\func inl~ {R : CRing} {S : SubMonoid R} (x : LocRing.SType S) : LocRing.Type => in~ x
+
+\lemma loc_unequals_domain {D : IntegralDomain} (S : SubMonoid D) (nz : \Pi (x : D) -> S x -> x /= 0) {a b : LocRing.SType S} (p : inl~ a = inl~ b) : a.1 * b.2 = b.1 * a.2 => {?hidden_proof}
+
+\func locMap {R : CRing} {S : SubMonoid R} : RingHom R (LocRing S) \cowith
+  | func => \lam x => in~ (x, ide, contains_ide)
+  | func-ide => idp
+  | func-+ => path (~-equiv _ _ (path (\lam i => ((inv ide-right @ i) + (inv ide-right @ i)) * (ide-right @ i))))
+  | func-* => path (~-equiv _ _ simplify)
+
+\lemma locMap-inj {R : CRing} {S : SubMonoid R} (p : \Pi {a : R} -> S a -> \Pi {x y : R} -> x * a = y * a -> x = y) : IsInj (locMap {R} {S}) => {?hidden_proof}
+
+\func localization {R : CRing} (S : SubMonoid R) : Localization R S \cowith
+  | R' => LocRing S
+  | inL => locMap
+  | local => elem-inv
+  | local-univ => \lam {R''} (f : RingHom R R'') l => Contr.make (later (liftHom f l, liftHom-loc f l)) (\lam q => ext $ exts $ locMap-epiMap (liftHom f l) _ (\lam x => liftHom-loc f l x *> inv (q.2 x)))
+  \where {
+    \open LocRing
+
+    \func elem-inv (s : R) (p : S s) => \new (Inv {LocRing S}) {
+      | val => in~ (s, ide, contains_ide)
+      | inv => in~ (ide, s, p)
+      | inv-left => equals1 (*-comm *> pmap (ide *) *-comm)
+      | inv-right => equals1 (*-comm *> pmap (ide *) *-comm)
+    }
+
+    \lemma locMap-epiMap {Q : CRing} (g h : RingHom (LocRing S) Q) (d : \Pi (a : R) -> g (locMap a) = h (locMap a)) (x : LocRing S) : g x = h x => {?hidden_proof}
+
+    \func lift {R' : CRing} (f : RingHom R R') (l : \Pi (x : R) -> S x -> Inv (f x)) (a : Type {R} {S}) : R' \elim a
+      | in~ (r, s, p) => f r * Inv.inv {l s p}
+      | ~-equiv (r, s, p) (r', s', p') rs~rs' =>
+        equation.cMonoid {(1 inv (l s' p').inv-right, inv (f.func-* {r} {s'}), pmap f rs~rs', f.func-* {r'} {s}, (l s p).inv-right)}
+
+    \func liftHom {R' : CRing} (f : RingHom R R') (l : \Pi (x : R) -> S x -> Inv (f x)) : RingHom (LocRing S) R' \cowith
+      | func => lift f l
+      | func-ide => Inv.inv-right
+      | func-+ => \lam {in~ (r1, s1, p1)} {in~ (r2, s2, p2)} => equation.cRing {(f.func-+ *> pmap2 + f.func-* f.func-*, func-inv, (l s1 p1).inv-right, (l s2 p2).inv-right)}
+      | func-* => \lam {in~ (r1, s1, p1)} {in~ (r2, s2, p2)} => equation.cMonoid {(f.func-*, func-inv)}
+      \where {
+        \lemma func-inv {s1 s2 : R} {p1 : S s1} {p2 : S s2} : Inv.inv {l (s1 * s2) (contains_* p1 p2)} = Inv.inv {l s2 p2} * Inv.inv {l s1 p1} => {?hidden_proof}
+      }
+
+
+    \lemma liftHom-loc {R' : CRing} (f : RingHom R R') (l : \Pi (x : R) -> S x -> Inv (f x)) (x : R) : liftHom f l (locMap x) = f x => {?hidden_proof}
+
+    \open SubMonoid(powers)
+    \open Monoid
+
+    \func pow-map (b : R) (n : Nat) : RingHom (LocRing (powers (pow b n))) (LocRing (powers b)) \cowith
+      | func => \case __ \with {
+        | in~ (x, y, c) => in~ (x, y, TruncP.map c (\lam p => (n Nat.* p.1, rewrite pow_* p.2)))
+        | ~-equiv x y r => ~-pequiv r
+      }
+    | func-+ => \lam {in~ x} {in~ y} => ~-pequiv idp
+    | func-ide => ~-pequiv idp
+    | func-* => \lam {in~ x} {in~ y} => ~-pequiv idp
+
+    \lemma pow-map_loc (b : R) (n : Nat) : pow-map b n ∘ locMap = locMap => {?hidden_proof}
+
+    \lemma div-map_loc {a b : R} (a|b : LDiv a b) : div-map a|b ∘ locMap = locMap => {?hidden_proof}
+
+    \func div-map {a b : R} (a|b : LDiv a b) : RingHom (LocRing (powers a)) (LocRing (powers b)) \cowith
+      | func => aux-func a|b
+      | func-+ => \lam {in~ x} {in~ y} => (\case (aux a|b x).2, (aux a|b y).2, (aux a|b _).2 \with {
+        | inP ((n, a^n=x2), p1), inP ((m, a^m=y2), p2), inP ((k, a^k=x2y2), p3) => inv p3 *> ~-pequiv equation *> pmap2 + p1 p2
+      })
+      | func-ide => \case (aux a|b _).2 \with {
+        | inP ((n, a^n=1), p) => inv p *> ~-pequiv equation
+      }
+    | func-* => \lam {in~ x} {in~ y} => (\case (aux a|b x).2, (aux a|b y).2, (aux a|b _).2 \with {
+      | inP ((n, a^n=x2), p1), inP ((m, a^m=y2), p2), inP ((k, a^k=x2y2), p3) => inv p3 *> ~-pequiv equation *> pmap2 * p1 p2
+    })
+      \where {
+        \lemma aux {a b : R} (a|b : LDiv a b) (x : SType (powers a)) => {?hidden_proof}
+
+        \func aux-func {a b : R} (a|b : LDiv a b) (x : LocRing (powers a)) : LocRing (powers b) => \case \elim x \with {
+          | in~ x => (aux a|b x).1
+          | ~-equiv x y r => \case (aux a|b x).2, (aux a|b y).2 \with {
+            | inP ((n, a^n=x2), p), inP ((m, a^m=y2), q) => inv p *> ~-pequiv equation *> q
+          }
+        }
+      }
+
+
+    \lemma map-lemma {R S : CRing} {M : SubMonoid R} (f : RingHom (LocRing M) S) {x : LocRing.SType M} (i : Inv (f (inl~ (x.2, 1, contains_ide)))) :
+      f (inl~ x) = f (inl~ (x.1, 1, contains_ide)) * i.inv => {?hidden_proof}
+
+    \lemma powers-inv {R S : CRing} (f : RingHom R S) {a : R} (p : Inv (f a)) (x : R) (c : powers a x) : Inv (f x) => {?hidden_proof}
+  }
+
+
+\lemma div_loc {R : CRing} {S : SubMonoid R} {a b : R} {Sb : S b} (a|b : Monoid.LDiv b a) : inl~ (a, b, Sb) = locMap a|b.inv => {?hidden_proof}
+
+\open localization
+
+\func loc_change-of-base1 {R S : CRing} (f : RingHom R S) {a : R} : RingHom (LocRing (SubMonoid.powers a)) (LocRing (SubMonoid.powers (f a))) 
+  => liftHom (locMap ∘ f) $ powers-inv (locMap ∘ f) $ elem-inv {_} {SubMonoid.powers (f a)} (f a) (inP (1, ide-left))
+
+\lemma loc_change-of-base1-loc {R S : CRing} (f : RingHom R S) {a : R} : loc_change-of-base1 f {a} ∘ locMap = locMap ∘ f => {?hidden_proof}
+
+\instance FieldOfQuotients (D : IntegralDomain.Dec) : DiscreteField 
+  | CRing => LocRing D.subMonoid
+  | zro/=ide => \lam p => (\case LocRing.unequals p \with {
+    | inP (c, c#0, q) => D.#0-zro $ transportInv D.#0 (simplify in q) c#0
+  })
+  | eitherZeroOrInv => \case \elim __ \with {
+    | in~ x => \case decideEq x.1 0 \with {
+      | yes e => byLeft $ LocRing.equals1 $ ide-right *> e *> inv D.zro_*-left
+      | no q => byRight $ Inv.lmake (inl~ (x.2, x.1, AddGroup.nonZeroApart q)) $ LocRing.equals1 $ simplify *-comm
+    }
+  }

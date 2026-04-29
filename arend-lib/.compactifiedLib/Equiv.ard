@@ -1,0 +1,234 @@
+\import Equiv.Fiber
+\import Equiv.Path
+\import Function
+\import Function.Meta
+\import Logic.Unique
+\import Homotopy.Fibration
+\import Logic
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+
+\class Map {
+  | A : \Type
+  | B : \Type
+  | f : A -> B
+}
+
+\class Section \extends Map {
+  | ret : B -> A
+  | ret_f : \Pi (x : A) -> ret (f x) = x
+}
+  \where {
+    \func =Fiber {A B : \Type} (f : A -> B) : Section f = Fib (-o f) id => path
+      (iso (\lam (s : Section f) => Fib.make s.ret (path (\lam i x => s.ret_f x @ i))) (\lam z => \new (Section f z.1 (\lam x => path ((z.2 @ __) x)))) idpe idpe)
+
+    \lemma levelProp (r : Retraction) : isProp (Section r) => {?hidden_proof}
+  }
+
+
+\class Retraction \extends Map {
+  | sec : B -> A
+  | f_sec : \Pi (y : B) -> f (sec y) = y
+}
+  \where {
+    \func =Fiber {A B : \Type} (f : A -> B) : Retraction f = Fib (o- f) id => path
+      (iso (\lam (s : Retraction f) => Fib.make s.sec (path (\lam i x => s.f_sec x @ i))) (\lam z => \new (Retraction f z.1 (\lam x => path ((z.2 @ __) x)))) 
+        idpe idpe)
+
+    \lemma levelProp (s : Section) : isProp (Retraction s) => {?hidden_proof}
+
+    \lemma isContr (e : Equiv) : Contr (Retraction e) => {?hidden_proof}
+  }
+
+
+\class Equiv \extends Section, Retraction
+  \where {
+    \use \level levelProp {A B : \Type} {f : A -> B} (e e' : Equiv f) : e = e' 
+      => path (\lam i => \new Equiv {  | Section => Section.levelProp e e e' i  | Retraction => Retraction.levelProp e e e' i})
+
+    \func equals {A B : \Type} {e e' : Equiv {A} {B}} (p : e.f = e'.f) : e = e' => path (\lam i => \new Equiv {
+      | Section => pathOver (Section.levelProp e' (rewriteI p (\new (Section e.f e.ret e.ret_f))) (\new (Section e'.f e'.ret e'.ret_f))) @ i
+      | Retraction => pathOver (Retraction.levelProp e' (rewriteI p (\new (Retraction e.f e.sec e.f_sec))) (\new (Retraction e'.f e'.sec e'.f_sec))) @ i})
+
+    \lemma fromInjSurj {A B : \Set} (f : A -> B) (inj : Function.IsInj f) (surj : Function.IsSurj f) : Equiv f => {?hidden_proof}
+  }
+
+
+\class QEquiv \extends Equiv {
+  | sec => ret
+}
+  \where {
+    \use \coerce fromEquiv (e : Equiv) : QEquiv \cowith
+      | Section => e
+      | f_sec => e.f_ret
+
+    \func fromEquiv' (e : Equiv) : QEquiv \cowith
+      | Map => e
+      | ret => e.sec
+      | ret_f => \lam a => inv (e.ret_f (e.sec (e a))) *> pmap e.ret (e.f_sec (e a)) *> e.ret_f a
+      | f_sec => e.f_sec
+  }
+
+
+\func idEquiv {A : \Type} : QEquiv \cowith
+  | A => A
+  | B => A
+  | f => \lam x => x
+  | ret => \lam x => x
+  | ret_f => \lam _ => idp
+  | f_sec => \lam _ => idp
+
+\func symQEquiv {A B : \Type} (e : QEquiv {A} {B}) : QEquiv {B} {A} \cowith
+  | f => e.ret
+  | ret => e.f
+  | ret_f => e.f_sec
+  | f_sec => e.ret_f
+
+\func \infixr 3 transQEquiv {A B C : \Type} (e1 : QEquiv {A} {B}) (e2 : QEquiv {B} {C}) : QEquiv {A} {C} \cowith
+  | f => \lam x => e2 (e1 x)
+  | ret => \lam y => e1.ret (e2.ret y)
+  | ret_f => \lam x => pmap e1.ret (e2.ret_f (e1 x)) *> e1.ret_f x
+  | f_sec => \lam y => pmap e2 (e1.f_sec (e2.sec y)) *> e2.f_sec y
+
+\module TwoOutOfThree
+  \where {
+    \func leftFactor {A B C : \Type} (e1 : Retraction {A} {B}) (g : B -> C) (e3 : QEquiv (g `o` e1)) : QEquiv g \cowith
+      | ret => \lam c => e1 (e3.ret c)
+      | ret_f => \lam b => qed (e1 (e3.ret (g b)) ==< pmap (e1 `o` e3.ret `o` g) (inv (e1.f_sec b)) >== e1 (e3.ret (g (e1 (e1.sec b)))) ==< pmap e1 (e3.ret_f (e1.sec b)) >== e1 
+        (e1.sec b) ==< e1.f_sec b >== b)
+      | f_sec => e3.f_sec
+
+    \func leftFactorPath {A B C : \Type} (e1 : Retraction {A} {B}) {g : B -> C} (e3 : QEquiv {A} {C}) (p : g `o` e1 = e3) : QEquiv g 
+      => leftFactor e1 g (transportInv (QEquiv __) p e3)
+
+    \func rightFactor {A B C : \Type} (f : A -> B) (e2 : Section {B} {C}) (e3 : QEquiv (\lam a => e2 (f a))) : QEquiv f \cowith
+      | ret => \lam b => e3.ret (e2 b)
+      | ret_f => e3.ret_f
+      | f_sec => \lam b =>
+      qed (f (e3.ret (e2 b)) ==< inv (e2.ret_f (f (e3.ret (e2 b)))) >== e2.ret (e2 (f (e3.ret (e2 b)))) ==< pmap e2.ret (e3.f_sec (e2 b)) >== e2.ret (e2 b) ==< 
+        e2.ret_f b >== b)
+
+    \func rightFactorPath {A B C : \Type} {f : A -> B} (e2 : Section {B} {C}) (e3 : QEquiv {A} {C}) (p : e2 `o` f = e3) : QEquiv f 
+      => rightFactor f e2 (transportInv (QEquiv __) p e3)
+
+    \lemma rightEmbedding {A B C : \Type} (f : A -> B) (e2 : B >-> C) (e3 : QEquiv (e2 `o` f)) : Equiv f => {?hidden_proof}
+
+    \lemma parallelEquiv {A B C D : \Type} (ab : A -> B) (cd : C -> D) (ac : Equiv {A} {C}) (bd : Equiv {B} {D}) (h : \Pi (a : A) -> bd (ab a) = cd (ac a)) : Equiv ab = Equiv cd 
+      => {?hidden_proof}
+
+    \lemma leftEquiv {A B C : \Type} (e : Equiv {A} {B}) (g : B -> C) : Equiv g = Equiv (g `o` e) => {?hidden_proof}
+
+    \lemma rightEquiv {A B C : \Type} (f : A -> B) (e : Equiv {B} {C}) : Equiv f = Equiv (e `o` f) => {?hidden_proof}
+
+    \lemma compositeEquiv {A B C : \Type} (f : A -> B) (g : B -> C) (e : Equiv (g `o` f)) : Equiv f = Equiv g => {?hidden_proof}
+  }
+
+
+\func \infixr 3 transEquiv {A B C : \Type} (e1 : Equiv {A} {B}) (e2 : Equiv {B} {C}) : Equiv {A} {C} \cowith
+  | f => \lam x => e2 (e1 x)
+  | ret => \lam y => e1.ret (e2.ret y)
+  | ret_f => \lam x => pmap e1.ret (e2.ret_f (e1 x)) *> e1.ret_f x
+  | sec => \lam y => e1.sec (e2.sec y)
+  | f_sec => \lam y => pmap e2 (e1.f_sec (e2.sec y)) *> e2.f_sec y
+
+\func -o_Equiv {C : \Type} (e : Equiv) : Equiv {e.B -> C} {e.A -> C} (-o e) \cowith
+  | ret => -o e.sec
+  | ret_f => \lam g => path (\lam i x => g (e.f_sec x @ i))
+  | sec => -o e.ret
+  | f_sec => \lam g => path (\lam i x => g (e.ret_f x @ i))
+
+\func o-_Equiv {C : \Type} (e : Equiv) : Equiv {C -> e.A} (o- e) \cowith
+  | ret => o- e.ret
+  | ret_f => \lam g => path (\lam i x => e.ret_f (g x) @ i)
+  | sec => o- e.sec
+  | f_sec => \lam g => path (\lam i x => e.f_sec (g x) @ i)
+
+\func piEquiv {A : \Type} (B : A -> \Type) (f f' : \Pi (a : A) -> B a) : QEquiv \cowith
+  | A => f = f'
+  | B => \Pi (a : A) -> f a = f' a
+  | f => \lam p a => path ((p @ __) a)
+  | ret => \lam g => path (\lam i a => g a @ i)
+  | ret_f => \lam _ => idp
+  | f_sec => \lam _ => idp
+
+\func sigmaEquiv {A : \Type} (B : A -> \Type) (p p' : \Sigma (a : A) (B a)) : QEquiv \cowith
+  | A => p = p'
+  | B => \Sigma (s : p.1 = p'.1) (transport B s p.2 = p'.2)
+  | f => \lam q => (pmap __.1 q, pmapd __.2 q)
+  | ret => \lam q => ext q
+  | ret_f => \lam q => Jl (\lam p'' q' => ext (pmap __.1 q', pmapd __.2 q') = q') idp q
+  | f_sec => \lam q => ext (idp,
+    \case p'.1 \as p'1, q.1 \as q1 : p.1 = p'1, p'.2 \as p'2 : B p'1, q.2 \as q2 : transport B q1 p.2 = p'2 \return pmapd __.2 {p} {(p'1, p'2)} (ext (q1, q2)) = q2 \with {
+      | p'1, idp, p'2, idp => idp})
+
+\func piSigmaEquiv {A A' : \Type} (h : A -> A') (B : A' -> \Type) : QEquiv {\Pi (a : A) -> B (h a)} {\Sigma (g : A -> \Sigma (a' : A') (B a')) ((\lam a => (g a).1) = h)} \cowith
+  | f => \lam g => (\lam a => (h a, g a), idp)
+  | ret => \lam p => \lam a => transport B (path ((p.2 @ __) a)) (p.1 a).2
+  | ret_f => \lam g => idp
+  | f_sec => \lam p => Jl
+    (\lam (h' : A -> A') q => (\lam a => (h' a, transport B (path ((q @ __) a)) (p.1 a).2), idp) = {\Sigma (g : A -> \Sigma (a' : A') (B a')) ((\lam a => (g a).1) = h')} (p.1, q)) 
+    idp p.2
+
+\func piSigmaIdEquiv {A : \Type} (B : A -> \Type) : QEquiv {\Pi (a : A) -> B a} {\Sigma (g : A -> \Sigma (a : A) (B a)) ((\lam a => (g a).1) = id)} => piSigmaEquiv id B
+
+\func emptyEquiv {A B : \Type} (Ae : A -> Empty) (Be : B -> Empty) : QEquiv {A} {B} \cowith
+  | f => \lam a => absurd (Ae a)
+  | ret => \lam b => absurd (Be b)
+  | ret_f => \lam a => absurd (Ae a)
+  | f_sec => \lam b => absurd (Be b)
+
+\class Embedding \extends Map {
+  | isEmb : \Pi (a a' : A) -> Retraction (pmap f {a} {a'})
+}
+  \where {
+    \use \level levelProp {A B : \Type} {f : A -> B} (e e' : Embedding f) : e = e' => path
+      (\lam i => \new (Embedding f (\lam a a' => Retraction.levelProp (pathEquiv (e __ = e __) (\lam {a} {a'} => e.isEmb a a')) (e.isEmb a a') (e'.isEmb a a') @ i)))
+
+    \func fromInjection {A : \Type} {B : \Set} {f : A -> B} (inj : \Pi {a a' : A} -> f a = f a' -> a = a') : Embedding f \cowith
+      | isEmb => \lam a a' => \new Retraction {
+        | sec => inj
+        | f_sec => \lam p => prop-pi {f a = f a'}
+      }
+
+    \lemma diag-equiv (e : Embedding) : Equiv {e.A} {\Sigma (a1 a2 : e.A) (e a1 = e a2)} (\lam a => (a, a, idp)) => {?hidden_proof}
+
+    \lemma projection {A : \Type} (B : A -> \Prop) : Embedding {\Sigma (a : A) (B a)} __.1 => {?hidden_proof}
+
+    \lemma fibers {A B : \Type} (f : A -> B) (p : \Pi (b : B) -> isProp (Fib f b)) : Embedding f => {?hidden_proof}
+
+    \lemma embeddingFiber-isProp (e : Embedding) (b : e.B) : isProp (Fib e b) => {?hidden_proof}
+  }
+
+
+\func transEmbedding {A B C : \Type} (e1 : Embedding {A} {B}) (e2 : Embedding {B} {C}) : Embedding {A} {C} \cowith
+  | f => \lam a => e2 (e1 a)
+  | isEmb => \lam a a' => \new Retraction {
+    | sec => \lam p => sec {e1.isEmb a a'} (sec {e2.isEmb (e1 a) (e1 a')} p)
+    | f_sec => \lam p => pmap (pmap e2) (f_sec {e1.isEmb a a'} (sec {e2.isEmb (e1 a) (e1 a')} p)) *> f_sec {e2.isEmb (e1 a) (e1 a')} p
+  }
+
+\func \infixr 1 >-> (A B : \Type) => Embedding {A} {B}
+
+\class Surjection \extends Map {
+  | isSurjMap (y : B) : ∃ (x : A) (f x = y)
+}
+
+\func \infixr 1 ->> (A B : \Type) => Surjection {A} {B}
+
+\class ESEquiv \extends Embedding, Surjection, Equiv {
+  | ret => \lam y => (aux \this isSurjMap y).1
+  | sec => \lam y => (aux \this isSurjMap y).1
+  | ret_f => \lam x => sec {isEmb _ _} (aux \this isSurjMap (f x)).2
+  | f_sec => \lam y => (aux \this isSurjMap y).2
+}
+  \where {
+    \use \level levelProp {A B : \Type} {f : A -> B} (e e' : ESEquiv f) : e = e' 
+      => path (\lam i => \new ESEquiv {  | Embedding => Embedding.levelProp e e' @ i  | Surjection => prop-isProp {Surjection f} e e' @ i})
+
+    \use \coerce fromEquiv (e : Equiv) : ESEquiv e.f \cowith
+      | isEmb => \lam a a' => pmapEquiv e {a} {a'}
+      | isSurjMap => \lam y => inP (e.sec y, e.f_sec y)
+
+    \lemma aux (e : Embedding) (s : \Pi (y : e.B) -> ∃ (x : e.A) (e x = y)) (y : e.B) => {?hidden_proof}
+  }

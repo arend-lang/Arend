@@ -1,0 +1,17 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Arith.Rat
+\import Arith.Real.UpperReal
+\import Data.Array.Pairs
+\import Function.Meta
+\import Logic
+\import Order.Biordered
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Topology.Compact
+\import Topology.MetricSpace
+\import Topology.MetricSpace.ManhattanProduct
+
+\lemma product-balls-tb {X Y : ExPseudoMetricSpace} (Xb : BallsTotallyBounded X) (Yb : BallsTotallyBounded Y) : BallsTotallyBounded (ManhattanProductPseudoMetricSpace X Y) => {?hidden_proof}

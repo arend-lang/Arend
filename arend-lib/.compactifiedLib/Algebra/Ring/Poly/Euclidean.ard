@@ -1,0 +1,71 @@
+\import Algebra.Domain
+\import Algebra.Domain.Bezout
+\import Algebra.Domain.Euclidean
+\import Algebra.Domain.GCD
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Poly
+\import Algebra.Pointed
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Countable
+\open Monoid
+
+\instance PolyEuclideanRingData (R : DiscreteField) : EuclideanRingData (Poly R) 
+  | CRing => PolyAlgebra R
+  | decideEq => PolyDecRing.decideEq
+  | euclideanMap => degree
+  | divMod => \lam p q => (\case decideEq (degree q) 0 \with {
+    | yes _ => \case decideEq q 0 \with {
+      | yes _ => (0, p)
+      | no _ => (finv (leadCoef q) PolyRing.*c p, 0)
+    }
+    | no _ => divMod_fuel p q (EuclideanSemiringData.suc' (degree p))
+  })
+  | isDivMod => \lam p q => cases (decideEq (degree q) 0)
+  | isEuclideanMap => \lam p q q/=0 => cases (decideEq (degree q) 0)
+  \where {
+    \func divMod_fuel {R : DiscreteField} (p q : Poly R) (n : Nat) : \Sigma (Poly R) (Poly R) \elim n
+      | 0 => (0, 0)
+      | suc n => \case LinearOrder.dec<_<= (degree p) (degree q) \with {
+        | inl _ => (0, p)
+        | inr _ => 
+          \let | m => monomial (leadCoef p * finv (leadCoef q)) (degree p -' degree q)
+               | (d, r) => divMod_fuel (p - m * q) q n
+          \in (d + m, r)
+      }
+
+    \lemma divMod_fuel-correct {R : DiscreteField} (p q : Poly R) (dq/=0 : degree q /= 0) {n : Nat} (s : degree p < n) : q * (divMod_fuel p q n).1 + (divMod_fuel p q n).2 = p => {?hidden_proof}
+
+    \lemma divMod_fuel-rem-lem {R : DiscreteField} (p q : Poly R) (dq/=0 : degree q /= 0) {n : Nat} : degree (divMod_fuel p q n).2 < degree q => {?hidden_proof}
+
+    \lemma diff-lem {R : Ring.Dec} {p q : Poly R} (s : degree p = degree q) (t : leadCoef p = leadCoef q) (dq/=0 : degree q /= 0) : degree (p - q) < degree p => {?hidden_proof}
+  }
+
+
+\instance PolyEuclideanDomain (R : DiscreteField) : EuclideanDomain (Poly R) 
+  | IntegralDomain.Dec => PolyDecIntegralDomain R
+  | isEuclidean => inP (PolyEuclideanRingData R)
+
+\lemma poly-dec-unit {R : DiscreteField} (p : Poly R) : Dec (Inv p) => {?hidden_proof}
+
+\lemma poly-dec-div {R : DiscreteField} (a b : Poly R) : Dec (TruncP (LDiv a b)) => {?hidden_proof}
+
+\func poly-maximal-ideal {K : DiscreteField} (c : Countable K) (p : Poly K) (pc : Not (Monoid.Inv p)) : \Sigma (M : Ideal (PolyAlgebra K)) M.IsMaximal (M p) => 
+  \let (M, Mm, g) => BezoutRing.maximal-ideal (Poly.poly-countable c) poly-dec-div (p :: nil) (\lam c => pc $ c p (\lam 0 => LDiv.id-div))
+  \in (M, Mm, g 0)

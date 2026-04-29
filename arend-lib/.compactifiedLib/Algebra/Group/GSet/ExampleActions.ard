@@ -1,0 +1,38 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Group.GSet
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Set
+
+\func TranslationAction (G : Group) : TransitiveGroupAction G \cowith
+  | E => G
+  | ** => G.*
+  | **-assoc => inv G.*-assoc
+  | id-action => G.ide-left
+  | isTransAction => \lam (v v' : G) => inP (v' G.* inverse v, rewrite (G.*-assoc, G.inverse-left) G.ide-right)
+
+\func TranslationActionOnSubsets (G : Group) : GroupAction G \cowith
+  | E => SubSet G
+  | ** => \lam (g : G) (p : SubSet G) => \new (SubSet G) {
+    | contains => \lam h => p.contains (inverse g G.* h)
+  }
+  | **-assoc => \lam {_ : G} {_ : G} {_ : SubSet G} => ext (ext (\lam (_ : G) => rewrite (inv G.*-assoc, inv G.inverse_*) idp))
+  | id-action => exts (\lam (e1 : G) => rewrite (G.inverse_ide, G.ide-left) idp)
+
+\func conjAction (G : Group) : GroupAction G \cowith
+  | E => G
+  | ** => \lam (g : G) => conjugate g
+  | **-assoc => **-assoc
+  | id-action => id-action
+
+\func trivialAction (G : Group) (E : BaseSet) : GroupAction G E \cowith
+  | ** => \lam _ e => e
+  | **-assoc => idp
+  | id-action => idp
+
+\func conjugate-subset {G : Group} (g : G) (S : SubSet G) : SubSet G \cowith
+  | contains => \lam h => S.contains (conjugate (inverse g) h)

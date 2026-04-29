@@ -1,0 +1,114 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.StrictlyOrdered
+\import Algebra.Pointed
+\import Arith.Bool
+\import Arith.Nat
+\import Data.Bool
+\import Data.List
+\import Data.Maybe
+\import Data.Or
+\import Function
+\import Function.Meta($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.Lexicographical
+\import Order.LinearOrder
+\import Order.PartialOrder \hiding (ProductPreorder, ProductPoset)
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\open Sort
+\open OrderedAddMonoid
+\open LinearlyOrderedAbMonoid
+
+\data GroupTerm (V : \Type) 
+  | var V
+  | :ide
+  | :inv (GroupTerm V)
+  | \infixl 6 :* (t s : GroupTerm V)
+
+\class GroupData {
+  | G : Group
+  | V : \Set
+  | f : V -> G
+}
+
+\class NatData \extends GroupData {
+  | V => Nat
+}
+
+\class CGroupData \extends NatData {
+  \override G : CGroup
+}
+  \where {
+    \func removeVar (n : Nat) (t : GroupTerm Nat) (v : Nat) (withInv : Bool) : \Sigma (GroupTerm Nat) Nat \elim n, t
+      | 0, t => (t, 0)
+      | suc n, :ide => (:ide, suc n)
+      | suc n, var x => \case decideEq (x, false) (v, withInv) \with {
+        | yes _ => (:ide, n)
+        | no _ => (var x, suc n)
+      }
+      | suc n, :inv t => 
+        \have (t', n') => removeVar (suc n) t v (not withInv)
+        \in (:inv t', n')
+      | suc n, :* t1 t2 => 
+        \have | (t1', n1) => removeVar (suc n) t1 v withInv
+              | (t2', n2) => removeVar n1 t2 v withInv
+        \in (t1' :* t2', n2)
+
+    \func countVars (l : List (\Sigma (\Sigma Nat Bool) Nat)) : List (\Sigma Nat Nat) \elim l
+      | nil => nil
+      | :: _ nil => nil
+      | :: ((x, b), n) :: ((y, c), m) l => \case decideEq x y \with {
+        | yes _ => (x, n ∧ m) :: countVars l
+        | no _ => countVars (((y, c), m) :: l)
+      }
+
+    \func removeVars (t : GroupTerm Nat) (l : List (\Sigma Nat Nat)) : GroupTerm Nat \elim l
+      | nil => t
+      | :: (v, n) l => (removeVar n (removeVar n (removeVars t l) v true).1 v false).1
+
+    \func toList (t : GroupTerm Nat) (withInv : Bool) : List (\Sigma Nat Bool) \elim t
+      | var v => (v, withInv) :: nil
+      | :ide => nil
+      | :inv t => toList t (not withInv)
+      | :* t1 t2 => toList t1 withInv ++ toList t2 withInv
+
+    \func simplify (t : GroupTerm Nat) => removeVars t $ countVars $ group $ RedBlack.sort $ toList t false
+
+    \func countVar (t : GroupTerm Nat) (v : Nat) (withInv : Bool) : Nat \elim t
+      | var x => \case decideEq (x, false) (v, withInv) \with {
+        | yes _ => 1
+        | no _ => 0
+      }
+      | :ide => 0
+      | :inv t => countVar t v (not withInv)
+      | :* t1 t2 => countVar t1 v withInv + countVar t2 v withInv
+
+    \lemma count-remove-lem {t : GroupTerm Nat} {v v' : Nat} (withInv : Bool) {n : Nat} : countVar (removeVar n t v' (not withInv)).1 v withInv = countVar t v withInv => {?hidden_proof}
+
+    \lemma toList-correct (t : GroupTerm Nat) (p : \Sigma Nat Bool) (b : Bool) : count (toList t b) p = countVar t p.1 (if b (not p.2) p.2) => {?hidden_proof}
+
+    \lemma group-correct (t : GroupTerm Nat) : All (\lam p => p.2 <= countVar t p.1.1 p.1.2) $ group $ Insertion.sort $ toList t false => {?hidden_proof}
+
+    \lemma countVars-correct (t : GroupTerm Nat) {l : List (\Sigma (\Sigma Nat Bool) Nat)} (a : All (\lam p => p.2 <= countVar t p.1.1 p.1.2) l) 
+    (a' : AllC (\lam p1 p2 => p1.1.1 = p2.1.1 -> \Sigma (p1.1.2 = false) (p2.1.2 = true)) l) :
+      All (\lam p => \Sigma (p.2 <= countVar t p.1 false) (p.2 <= countVar t p.1 true)) (countVars l) => {?hidden_proof}
+
+    \lemma countVars-ineq {l : List (\Sigma (\Sigma Nat Bool) Nat)} {x : Nat} (a : All (x /= __.1.1) l) : All (x /= __.1) (countVars l) => {?hidden_proof}
+
+    \lemma countVars-diff {l : List (\Sigma (\Sigma Nat Bool) Nat)} (a' : AllC (\lam p1 p2 => p1.1.1 = p2.1.1 -> \Sigma (p1.1.2 = false) (p2.1.2 = true)) l) 
+    (a : All2 (__.1 /= __.1) l) : All2 (__.1 /= __.1) (countVars l) => {?hidden_proof}
+
+    \lemma sort-correct-lem {l : List (\Sigma (\Sigma Nat Bool) Nat)} (s : Sorted (map __.1 l)) (a : All2 (__.1 /= __.1) l) :
+      AllC (\lam p1 p2 => p1.1.1 = p2.1.1 -> \Sigma (p1.1.2 = false) (p2.1.2 = true)) l => {?hidden_proof}
+
+    \lemma sort-correct {l : List (\Sigma Nat Bool)} : AllC (\lam p1 p2 => p1.1.1 = p2.1.1 -> \Sigma (p1.1.2 = false) (p2.1.2 = true)) $ group $ Insertion.sort l => {?hidden_proof}
+  }

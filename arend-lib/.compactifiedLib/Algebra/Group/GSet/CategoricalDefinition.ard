@@ -1,0 +1,38 @@
+\import Algebra.Group.Aut
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Category
+\import Category.Functor
+\import Equiv(Equiv)
+\import Paths.Meta
+
+\class MonoidCatAction {
+  | C : Precat
+  | M : Monoid
+  | c : C
+  | act : MonoidHom M (End c)
+}
+
+\instance DeloopM (M : Monoid) : Precat 
+  | Ob => \Sigma
+  | Hom => \lam _ _ => M
+  | id => \lam _ => M.ide
+  | o => *
+  | id-left => ide-left
+  | id-right => ide-right
+  | o-assoc => *-assoc
+
+\func functor->action {C : Precat} {M : Monoid} (f : Functor (DeloopM M) C) : MonoidCatAction M \cowith
+  | c => f ()
+  | act => \new MonoidHom {
+    | func => Func
+    | func-ide => Func-id
+    | func-* => Func-o
+  }
+
+\func Action<->Functor {C : Precat} {M : Monoid} : Equiv {MonoidCatAction M} {Functor (DeloopM M) C} \cowith
+  | f => \lam (c : MonoidCatAction) => c.functor
+  | ret => functor->action
+  | ret_f => \lam c => ext (idp, idp)
+  | sec => functor->action
+  | f_sec => \lam f => idp

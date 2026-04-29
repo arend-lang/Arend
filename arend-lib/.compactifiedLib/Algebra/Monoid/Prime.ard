@@ -1,0 +1,36 @@
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Pointed
+\import Arith.Nat
+\import Data.Or
+\import Logic
+\import Paths
+\open Monoid(Inv, LDiv)
+
+\class Irr {
+  | M : CMonoid
+  | e : M
+  | notInv : Not (Inv e)
+  | isIrr {x y : M} : e = x * y -> Inv x || Inv y
+  | isCancelable-left {x y : M} : e * x = e * y -> x = y
+}
+  \where {
+    \lemma cancelative {M : CancelCMonoid} (p : M) (notInv : Not (Inv p)) (irr : \Pi {x y : M} -> p = x * y -> Inv x || Inv y) : Irr p notInv => {?hidden_proof}
+  }
+
+
+\class Prime \extends Irr {
+  | isPrime {x y : M} : LDiv e (x * y) -> LDiv e x || LDiv e y
+  | isIrr => \lam {x} {y} e=x*y => (\case isPrime (\new (LDiv e (x * y) ide (ide-right *> e=x*y))) \with {
+    | byLeft e|x : LDiv e x => byRight (Inv.lmake e|x.inv (isCancelable-left (inv (ide-right *> e=x*y *> pmap (* y) (inv e|x.inv-right) *> *-assoc))))
+    | byRight e|y : LDiv e y => byLeft (Inv.lmake e|y.inv (isCancelable-left (inv (ide-right *> e=x*y *> *-comm *> pmap (* x) (inv e|y.inv-right) *> *-assoc))))
+  })
+}
+
+\lemma irr-isPrime {M : GCDMonoid} (p : Irr {M}) : Prime p p.notInv => {?hidden_proof}
+  \where {
+    \lemma irr-cmp (a : M) : LDiv p a || IsCoprime p a => {?hidden_proof}
+  }
+
+
+\lemma nat_irr {n : Nat} (p : Irr {NatSemiring}) (n|p : LDiv n p) : (n = 1) || (n = p) => {?hidden_proof}

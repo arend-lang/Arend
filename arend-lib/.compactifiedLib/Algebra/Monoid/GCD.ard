@@ -1,0 +1,192 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.MulOrdered
+\import Algebra.Pointed
+\import Data.Fin
+\import Function.Meta
+\import Logic.Unique
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\open Monoid(LDiv, Inv)
+\open Preorder(PreorderC, EquivRel)
+
+\class GCD {
+  | M : CMonoid
+  | val1 : M
+  | val2 : M
+  | res : M
+  | res|val1 : LDiv res val1
+  | res|val2 : LDiv res val2
+  | res-univ : \Pi (g : M) -> LDiv g val1 -> LDiv g val2 -> LDiv g res
+}
+  \where {
+    \func ~-stable {M : CMonoid} {x y z z' : M} (z|z' : LDiv z z') (z'|z : LDiv z' z) (g : GCD x y z) : GCD x y z' \cowith
+      | res|val1 => LDiv.trans z'|z g.res|val1
+      | res|val2 => LDiv.trans z'|z g.res|val2
+      | res-univ => \lam d d|x d|y => LDiv.trans (g.res-univ d d|x d|y) z|z'
+  }
+
+
+\class GCDMonoid \extends CMonoid {
+  | isGCD (x y : E) : TruncP (GCD x y)
+  | gcd-ldistr (c : E) {x y z : E} : GCD x y z -> TruncP (GCD (c * x) (c * y) (c * z))
+}
+  \where {
+    \func gcd-ldistr_cancel {M : CMonoid} {c x y z : M} (cancel : M.IsRegularElem c) (gcd : GCD x y z) (gcd' : GCD (c * x) (c * y)) : GCD (c * x) (c * y) (c * z) => 
+      \let | cz|gcd' : LDiv (c * z) gcd' => gcd'.res-univ (c * z) (LDiv.product-left c gcd.res|val1) (LDiv.product-left c gcd.res|val2)
+           | s => cz|gcd'.inv
+           | cancel-c {x} {y} (d : LDiv (c * x) (c * y)) => LDiv.make d.inv (cancel (inv *-assoc *> d.inv-right))
+           | zs|z : LDiv (z * s) z => gcd.res-univ (z * s) (cancel-c $ transport (LDiv __ _) (inv cz|gcd'.inv-right *> *-assoc) gcd'.res|val1) 
+             (cancel-c $ transport (LDiv __ _) (inv cz|gcd'.inv-right *> *-assoc) gcd'.res|val2)
+      \in GCD.~-stable (LDiv.make zs|z.inv $ pmap (* _) (inv cz|gcd'.inv-right) *> *-assoc *> *-assoc *> pmap (c *) (inv *-assoc) *> pmap (c *) zs|z.inv-right) cz|gcd' gcd'
+  }
+
+
+\class CancelGCDMonoid \extends GCDMonoid, CancelCMonoid {
+  | gcd-ldistr => \lam c {x} {y} {z} (gcd : GCD x y z) => TruncP.map (isGCD (c * x) (c * y)) (GCDMonoid.gcd-ldistr_cancel (cancel_*-left c) gcd)
+}
+
+\class UnitlessMonoid \extends CancelCMonoid {
+  | uniqueUnit (j : Inv) : j.val = ide
+}
+
+\class UnitlessGCDMonoid \extends UnitlessMonoid, CancelGCDMonoid
+
+\func DivQuotient (M : CMonoid) => PreorderC {DivPreoder M}
+  \where {
+    \func DivPreoder (M : CMonoid) : Preorder M \cowith
+      | <= => \lam x y => TruncP (LDiv y x)
+      | <=-refl => \lam {x} => inP (\new (LDiv x x ide ide-right))
+      | <=-transitive => \lam {x} {y} {z} inP y|x inP z|y => inP (LDiv.trans z|y y|x)
+
+    \func \infix 4 ~ {M : CMonoid} => Equivalence.~ {EquivRel {DivPreoder M}}
+
+    inD {M : CMonoid} (x : M) : DivQuotient M => in~ x
+
+    \lemma make~ {M : CMonoid} {x y : M} (p : inD x = inD y) : x ~ y => {?hidden_proof}
+
+    \func regular_equivalent-associates {M : CMonoid} (x y : M) (xr : M.IsRegularElem x) (x|y : LDiv x y) (y|x : LDiv y x) : associates x y 
+      => (Inv.lmake x|y.inv $ xr $ inv *-assoc *> pmap (* _) x|y.inv-right *> y|x.inv-right *> inv ide-right, inv y|x.inv-right *> *-comm)
+
+    \lemma equivalent-associates {M : CancelCMonoid} (x y : M) (p : x ~ y) : associates x y => {?hidden_proof}
+
+    \instance DivQuotientMonoid (M : CMonoid) : OrderedCMonoid (DivQuotient M) 
+      | Poset => Preorder.PosetC {DivPreoder M}
+      | ide => inD ide
+      | * => *'
+      | ide-left => \lam {inD x} => pmap inD ide-left
+      | *-assoc => \lam {inD x} {inD y} {inD z} => pmap inD *-assoc
+      | *-comm => \lam {inD x} {inD y} => pmap inD *-comm
+      | <=_*-left => \lam inD z {inD x} {inD y} inP y|x : LDiv =>
+        inP (\new LDiv {  | inv => y|x.inv  | inv-right => pmap (* _) *-comm *> *-assoc *> pmap (z *) y|x.inv-right *> *-comm})
+      \where {
+        \func \infixl 7 *' {M : CMonoid} (x y : DivQuotient M) : DivQuotient M 
+          | inD x, inD y => inD (x * y)
+          | inD x, ~-equiv y y' y~y' i => ~-equiv (x * y) (x * y') (\case y~y' \with {  | (inP y'|y, inP y|y') => (inP (LDiv.product-left x y'|y), inP (LDiv.product-left x y|y'))}) i
+          | ~-equiv x x' x~x' i, inD y => ~-equiv (x * y) (x' * y) (\case x~x' \with {  | (inP x'|x, inP x|x') => (inP (LDiv.product-right y x'|x), inP (LDiv.product-right y x|x'))}) i
+      }
+
+
+    \func inDHom (M : CMonoid) : MonoidHom M (DivQuotientMonoid M) \cowith
+      | func => inD
+      | func-ide => idp
+      | func-* => idp
+
+    \lemma inv~ide {M : CMonoid} (i : Inv {M}) : i ~ ide => {?hidden_proof}
+
+    \func div-to~ {M : CMonoid} {x y : M} (x|y : LDiv x y) : LDiv (inD x) (inD y) \cowith
+      | inv => inD x|y.inv
+      | inv-right => pmap inD x|y.inv-right
+
+    \lemma div-from~' {M : CMonoid} {x y : M} (d : LDiv (inD x) (inD y)) : TruncP (LDiv x y) => {?hidden_proof}
+
+    \lemma div-from~ {M : CancelCMonoid} {x y : M} (d : LDiv (inD x) (inD y)) : LDiv x y => {?hidden_proof}
+
+    \instance DivQuotientCancelMonoid (M : CancelCMonoid) : UnitlessMonoid 
+      | CMonoid => DivQuotientMonoid M
+      | cancel_*-left => \lam inD x {inD y} {inD z} x*y=x*z => path
+        (~-equiv y z (\case make~ x*y=x*z \return y ~ z \with {  | (inP x*z|x*y, inP x*y|x*z) => (inP (LDiv.cancel-left x x*z|x*y), inP (LDiv.cancel-left x x*y|x*z))}))
+      | uniqueUnit => \lam (j : Inv) => (\case j.val \as [x], j.inv \as [y], j.inv-right : [x] * [y] = inD ide \return [x] = inD ide \with {
+        | inD x, inD y, p => path (~-equiv x ide (inv~ide (  \have d : LDiv x ide => div-from~ (\new LDiv {  | inv => inD y  | inv-right => p})  \in Inv.rmake d.inv d.inv-right)))
+      })
+
+    \func map {M N : CMonoid} (f : MonoidHom M N) : MonoidHom (DivQuotientMonoid M) (DivQuotientMonoid N) \cowith
+      | func => Quotient.map f (\lam p => later (TruncP.map p.1 f.func-LDiv, TruncP.map p.2 f.func-LDiv))
+      | func-ide => pmap in~ f.func-ide
+      | func-* => \lam {x} {y} => (\case \elim x, \elim y \with {
+        | in~ a, in~ a' => pmap in~ f.func-*
+      })
+
+    \instance DivQuotientGCDMonoid (M : CancelGCDMonoid) : UnitlessGCDMonoid 
+      | UnitlessMonoid => DivQuotientCancelMonoid M
+      | isGCD => \lam inD x inD y => TruncP.map (isGCD x y)
+        (\lam (g : GCD x y) => \new (GCD (inD x) (inD y) (inD g)) {  | res|val1 => div-to~ g.res|val1  | res|val2 => div-to~ g.res|val2
+        | res-univ => \lam [g'] [g']|x [g']|y => (\case \elim [g'], [g']|x, [g']|y \return \level (LDiv [g'] (inD g)) (LDiv.levelProp [g'] (inD g)) \with {
+          | inD g', (inD x', ~x'*g'=x), (inD y', ~y'*g'=y) => div-to~
+            (g.res-univ g' (div-from~ (\new LDiv {  | inv => inD x'  | inv-right => ~x'*g'=x})) (div-from~ (\new LDiv {  | inv => inD y'  | inv-right => ~y'*g'=y})))
+          })})
+
+    \func gcd-to~ {M : CancelCMonoid} {x y z : M} (g : GCD x y z) : GCD (inD x) (inD y) (inD z) \cowith
+      | res|val1 => div-to~ g.res|val1
+      | res|val2 => div-to~ g.res|val2
+      | res-univ => \lam [g] [g]|[x] [g]|[y] => (\case \elim [g], [g]|[x], [g]|[y] \return \level (LDiv [g] (inD z)) (LDiv.levelProp [g] (inD z)) \with {
+        | inD g', ~g'|x, ~g'|y => div-to~ (g.res-univ g' (div-from~ ~g'|x) (div-from~ ~g'|y))
+      })
+
+    \func gcd-from~ {M : CancelCMonoid} {x y z : M} (g : GCD (inD x) (inD y) (inD z)) : GCD x y z \cowith
+      | res|val1 => div-from~ g.res|val1
+      | res|val2 => div-from~ g.res|val2
+      | res-univ => \lam d d|x d|y => div-from~ (g.res-univ (inD d) (div-to~ d|x) (div-to~ d|y))
+
+    \lemma elemDivChain {M : CMonoid} (c : CMonoid.DivChain {DivQuotientMonoid M}) : M.DivChain => {?hidden_proof}
+  }
+
+
+\func div_gcd {M : CMonoid} {a b : M} (a|b : LDiv a b) : GCD a b a \cowith
+  | res|val1 => LDiv.make 1 ide-right
+  | res|val2 => a|b
+  | res-univ => \lam g g|a g|b => g|a
+
+\func gcd_reduced=1 {M : CancelCMonoid} (gcd : GCD {M}) : GCD gcd.res|val1.inv gcd.res|val2.inv 1 => gcd.reduce (cancel_*-left gcd)
+
+\lemma gcd-isUnique {M : CancelCMonoid} {a b : M} (g1 g2 : GCD a b) : associates g1 g2 => {?hidden_proof}
+  \where {
+    \open DivQuotient
+    \open UnitlessMonoid
+  }
+
+
+\type IsCoprime {M : CMonoid} (x y : M) => \Pi (z : M) -> LDiv z x -> LDiv z y -> Inv z
+  \where {
+    \func =>gcd {x y : M} (c : IsCoprime x y) : GCD x y ide \cowith
+      | res|val1 => \new (LDiv ide x x ide-left)
+      | res|val2 => \new (LDiv ide y y ide-left)
+      | res-univ => \lam g g|x g|y => (
+        \have i : Inv g => c g g|x g|y
+        \in \new (LDiv g ide i.inv i.inv-right))
+
+    \lemma <=gcdInv {x y : M} (g : GCD x y) (gi : Inv g) : IsCoprime x y => {?hidden_proof}
+
+    \lemma <=gcd {x y : M} (g : GCD x y ide) : IsCoprime x y => {?hidden_proof}
+
+    \lemma factor-left {M : CMonoid} {x y z : M} (d : LDiv x y) (p : IsCoprime y z) : IsCoprime x z => {?hidden_proof}
+
+    \lemma factor-right {M : CMonoid} {x y z : M} (d : LDiv y z) (p : IsCoprime x z) : IsCoprime x y => {?hidden_proof}
+
+    \lemma swap {M : CMonoid} {x y : M} (c : IsCoprime x y) : IsCoprime y x => {?hidden_proof}
+
+    \lemma IsCoprime_ide-left {a : M} : IsCoprime 1 a => {?hidden_proof}
+
+    \lemma IsCoprime_ide-right {a : M} : IsCoprime a 1 => {?hidden_proof}
+  }
+
+
+\type IsCoprimeArray {M : CMonoid} (l : Array M) => \Pi (z : M) -> DArray (\lam j => LDiv z (l j)) -> Inv z

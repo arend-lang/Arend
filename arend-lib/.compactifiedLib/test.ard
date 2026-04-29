@@ -1,0 +1,101 @@
+\import Algebra.FinSuppFunc
+\import Algebra.Group
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.CharPoly
+\import Algebra.Linear.Solver(LinearData)
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ordered
+\import Algebra.Ordered.RieszSpace
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Boolean
+\import Algebra.Ring.Poly
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.Solver
+\import Algebra.Semiring
+\import Algebra.StrictlyOrdered
+\import Analysis.Measure.SimpleFunctions
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.Field
+\import Combinatorics.Binom
+\import Data.Array
+\import Data.Fin
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Category
+\import Order.Lattice
+\open NatOrder
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Algebra.Group.Symmetric
+\open SFuncPosetQModule(PFunc, add, SFRefines, SFRefines_::-right, SFRefines_++-right)
+\import Algebra.Domain.Euclidean
+
+\lemma test1 {E : TotalOrder} (a x : E) (l : Array E) : (a ∧ Big ∧ x l = a) || (a ∧ Big ∧ x l = Big ∧ x l) => {?hidden_proof}
+
+\lemma test2 (V : PosetQModule) (B : BooleanRing) (r r' l : SFuncPosetQModule.PFunc {V} {B}) (k : Fin r.len) (j : Fin l.len) (p : (l j).1 = (r k).1) 
+(q : (l j).2 B.<= (r k).2) : TruncP (\Sigma (j' : Fin (r ++ r').len) ((l j).1 = ((r ++ r') j').1) ((l j).2 B.<= ((r ++ r') j').2)) => {?hidden_proof}
+
+\lemma test3 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l) => {?hidden_proof}
+  \where {
+    \func step1 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l) 
+      => rewrite (\peval add v BooleanRing.zro l) $ {?}
+
+    \func step2 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l) 
+      => rewrite (\peval add v BooleanRing.zro l) $ SFRefines_::-right {?} {?}
+
+    \func step3 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l) 
+      => rewrite (\peval add v BooleanRing.zro l) $ SFRefines_::-right (B.meet_<=' equation.bRing) {?}
+
+    \func step4 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l) 
+      => rewrite (\peval add v BooleanRing.zro l) $ SFRefines_::-right (B.meet_<=' equation.bRing) $ SFRefines_++-right {?} {?}
+
+    \func step5 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l) 
+    => rewrite (\peval add v BooleanRing.zro l) $ SFRefines_::-right (B.meet_<=' equation.bRing) $ SFRefines_++-right 
+      (transport (SFRefines l) {?} SFuncPosetQModule.SFRefines-refl) {?}
+
+    \func step6 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l) 
+    => rewrite (\peval add v BooleanRing.zro l) $ SFRefines_::-right (B.meet_<=' equation.bRing) $ SFRefines_++-right 
+      (transport (SFRefines l) (exts {?}) SFuncPosetQModule.SFRefines-refl) {?}
+
+    \func step7 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l) 
+    => rewrite (\peval add v BooleanRing.zro l) $ SFRefines_::-right (B.meet_<=' equation.bRing) $ SFRefines_++-right 
+      (transport (SFRefines l) (exts (\lam j => exts (idp, equation.bRing))) SFuncPosetQModule.SFRefines-refl) {?}
+
+    \func step8 (V : PosetQModule) (B : BooleanRing) {l : PFunc {V} {B}} {v : V} : SFRefines l (add v BooleanRing.zro l) 
+    => rewrite (\peval add v BooleanRing.zro l) $ SFRefines_::-right (B.meet_<=' equation.bRing) $ SFRefines_++-right 
+      (transport (SFRefines l) (exts (\lam j => exts (idp, equation.bRing))) SFuncPosetQModule.SFRefines-refl) 
+      (\lam j => byRight $ meet-left <=∘ bottom-univ)
+  }
+
+
+\lemma test4 (A : BaseSet) (B : AddMonoid) (f g : FinSuppFunc A B) (s : Array f.Dom) (s' : Array g.Dom) 
+(c : \Pi (i : f.Dom) -> (\Pi (j : Fin s.len) -> s j /= i) -> f i = zro {f.Cod}) 
+(c' : \Pi (i : g.Dom) -> (\Pi (j : Fin s'.len) -> s' j /= i) -> g i = zro {g.Cod}) :
+  TruncP (\Sigma (s : Array A) (\Pi (i : A) -> (\Pi (j : Fin s.len) -> s j /= i) -> f i B.+ g i = B.zro)) => {?hidden_proof}
+
+\lemma test5 {R : CRing} {n : Nat} (M : Matrix R n n) : degree<= (charPoly M) n => {?hidden_proof}
+
+\lemma test6 {n m : Nat} (n/=0 : Not (n = 0)) (m/=0 : Not (m = 0)) : Not (n Nat.* m = 0) => {?hidden_proof}
+
+\lemma test8 (k n : Nat) (A0 : k < suc n) : suc k <= suc n => {?hidden_proof}
+
+\func one_n : Real => Real.fromRat (ratio 1 7)
+
+\func test_one_n : one_n * one_n > 0 => linarith
+
+\lemma test9 : (7 : Real) * Real.fromRat (ratio 1 7) = 1 => {?hidden_proof}
+
+\lemma BigSum_sum {E : CRing} {n : Nat} {l l' : Array E n} : AddMonoid.BigSum (\new (Array E n (\lam i => l i + l' i))) = AddMonoid.BigSum l + AddMonoid.BigSum l' => {?hidden_proof}
+
+\lemma BigSum_ldistr {E : CRing} {n : Nat} (l : Array E n) (a : E) : AddMonoid.BigSum (\new (Array E n (\lam i => a * l i))) = a * AddMonoid.BigSum (\new (Array E n l)) => {?hidden_proof}

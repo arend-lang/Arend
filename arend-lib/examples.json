@@ -1,0 +1,74 @@
+
+{
+  "Context": [
+    "V : PosetQModule",
+    "B : BooleanRing",
+    "l : PFunc {V} {B}",
+    "v : V"
+  ],
+  "Expected type": "SFRefines l ((v, BooleanRing.diff zro (BottomJoinSemilattice.BigJoin (map (\\lam p0 => p0.2) l))) :: map (\\lam s => (v + s.1, zro * s.2)) l ++ map (\\lam s => (s.1, BooleanRing.diff s.2 zro)) l)",
+  "Expression": "SFRefines_::-right {?} {?}",
+  "Premises": [
+    "\\lemma SFRefines_::-right {x : \\Sigma V B} {l r : PFunc} (rl : x.2 B.<= B.BigJoin (map __.2 l)) (lr : SFRefines l r) : SFRefines l (x :: r)",
+    "\\protected \\func PFunc => Array (\\Sigma V B)",
+    "\\type SFRefines (l l' : PFunc) => \\Sigma (∀ (y : l') ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) (∀ (x : l) ∃ (y : l') (x.1 = y.1) (x.2 B.<= y.2))"
+  ]
+}
+{
+  "Context": [
+    "V : PosetQModule",
+    "B : BooleanRing",
+    "l : PFunc {V} {B}",
+    "v : V"
+  ],
+  "Expected type": "BooleanRing.diff zro (BottomJoinSemilattice.BigJoin (map (\\lam p0 => p0.2) l)) <= BottomJoinSemilattice.BigJoin (map (\\lam p0 => p0.2) l)",
+  "Expression": "B.meet_<=' equation.bRing",
+  "Premises": [
+    "\\lemma meet_<=' {x y : E} (p : x ∧ y = x) : x <= y",
+    "\\protected \\func PFunc => Array (\\Sigma V B)",
+    "\\type SFRefines (l l' : PFunc) => \\Sigma (∀ (y : l') ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) (∀ (x : l) ∃ (y : l') (x.1 = y.1) (x.2 B.<= y.2))"
+  ]
+}
+{
+  "Context": [
+    "V : PosetQModule",
+    "B : BooleanRing",
+    "l : PFunc {V} {B}",
+    "v : V"
+  ],
+  "Expected type": "SFRefines l (map (\\lam s => (v + s.1, zro * s.2)) l ++ map (\\lam s => (s.1, BooleanRing.diff s.2 zro)) l)",
+  "Expression": "SFRefines_++-right {?} {?}",
+  "Premises": [
+    "\\lemma SFRefines_++-right {l r r' : PFunc} (lr' : SFRefines l r') (rl : ∀ (y : r) ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) : SFRefines l (r ++ r')",
+    "\\protected \\func PFunc => Array (\\Sigma V B)",
+    "\\type SFRefines (l l' : PFunc) => \\Sigma (∀ (y : l') ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) (∀ (x : l) ∃ (y : l') (x.1 = y.1) (x.2 B.<= y.2))"
+  ]
+}
+{
+  "Context": [
+    "V : PosetQModule",
+    "B : BooleanRing",
+    "l : PFunc {V} {B}",
+    "v : V"
+  ],
+  "Expected type": "SFRefines l (map (\\lam s => (s.1, BooleanRing.diff s.2 zro)) l)",
+  "Expression": "(transport (SFRefines l) {?} SFuncPosetQModule.SFRefines-refl)",
+  "Premises": [
+    "\\lemma SFRefines-refl {l : PFunc} : SFRefines l l",
+    "\\protected \\func PFunc => Array (\\Sigma V B)",
+    "\\type SFRefines (l l' : PFunc) => \\Sigma (∀ (y : l') ((y.1 = 0) || y.2 B.<= B.BigJoin (map __.2 l))) (∀ (x : l) ∃ (y : l') (x.1 = y.1) (x.2 B.<= y.2))"
+  ]
+}
+{
+  "Context": [
+    "V : PosetQModule",
+    "B : BooleanRing",
+    "l : PFunc {V} {B}",
+    "v : V"
+  ],
+  "Expected type": "l = map (\\lam s => (s.1, BooleanRing.diff s.2 zro)) l",
+  "Expression": "exts {?}",
+  "Premises": [
+
+  ]
+}

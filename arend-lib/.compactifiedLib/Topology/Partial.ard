@@ -1,0 +1,43 @@
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Operations
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Partial \using ( defined-ext )
+\import Set.Subset
+\import Topology.TopSpace
+\import Topology.TopSpace.Product
+
+\instance PartialTopSpace (Y : TopSpace) : TopSpace (Partial Y) 
+  | isOpen => \lam U => \Pi {y : Partial Y} -> U y -> (U = {Set (Partial Y)} top) || Given (U' : Y.isOpen) (p : y.isDefined) (U' (y p)) ∀ {y' : U'} (U (defined y'))
+  | open-top => \lam Uy => byLeft idp
+  | open-inter => \lam g h (Uy, Vy) => (\case g Uy, h Vy \with {
+    | byLeft p, byLeft q => byLeft $ pmap2 ∧ p q *> <=-antisymmetric top-univ (meet-univ <=-refl <=-refl)
+    | byLeft p, byRight (U', U'o, yd, U'y, g) => byRight (U', U'o, yd, U'y, \lam U'y' => (rewrite p (), g U'y'))
+    | byRight (U', U'o, yd, U'y, g), byLeft p => byRight (U', U'o, yd, U'y, \lam U'y' => (g U'y', rewrite p ()))
+    | byRight (U', U'o, yd, U'y, g), byRight (V', V'o, yd', V'y, h) =>
+      byRight (U' ∧ V', open-inter U'o V'o, yd, (U'y, rewrite (prop-isProp yd yd') V'y), \lam (U'y', V'y') => (g U'y', h V'y'))
+  })
+  | open-Union => \lam h inP (U, SU, Uy) => (\case h SU Uy \with {
+    | byLeft p => byLeft $ <=-antisymmetric top-univ (\lam _ => inP (U, SU, rewrite p ()))
+    | byRight (U', U'o, yd, U'y, g) => byRight (U', U'o, yd, U'y, \lam U'y' => inP (U, SU, g U'y'))
+  })
+  \where {
+    \func totalOpen {Y : TopSpace} : isOpen {PartialTopSpace Y} (\lam s => isDefined {s}) => \lam yd => byRight (top, open-top, yd, (), \lam _ => ())
+
+    \func makeOpen {Y : TopSpace} {U : Set Y} (Uo : isOpen U) : isOpen {PartialTopSpace Y} (\lam s => \Sigma (p : isDefined {s}) (U (s p))) 
+      => \lam yd => byRight (U, Uo, yd.1, yd.2, \lam Uy' => ((), Uy'))
+  }
+
+
+\lemma PartialTopSpace-char {X Y : TopSpace} {f : X -> Partial Y} : ContMap X (PartialTopSpace Y) f <-> 
+  (\Sigma (X.isOpen (\lam x => isDefined {f x})) (ContMap (TopTransfer {Set.Total (\lam x => isDefined {f x})} __.1) Y (\lam x => f x.1 x.2))) => {?hidden_proof}
+
+\lemma plift-cont {X Y : TopSpace} (f : ContMap X Y) : ContMap (PartialTopSpace X) (PartialTopSpace Y) (plift f) => {?hidden_proof}
+
+\lemma plift2-cont {X Y Z : TopSpace} (f : ContMap (X ⨯ Y) Z) :
+  ContMap (PartialTopSpace X ⨯ PartialTopSpace Y) (PartialTopSpace Z) (\lam s => plift2 (\lam x y => f (x, y)) s.1 s.2) => {?hidden_proof}

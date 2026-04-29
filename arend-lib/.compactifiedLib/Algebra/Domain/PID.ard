@@ -1,0 +1,52 @@
+\import Algebra.Domain
+\import Algebra.Domain.Bezout
+\import Algebra.Domain.GCD
+\import Algebra.Group
+\import Algebra.Linear.Matrix.Smith
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Monoid.Sub
+\import Algebra.Pointed
+\import Algebra.Ring.Ideal
+\import Algebra.Ring.Noetherian
+\import Algebra.Semiring
+\import Function.Iterate
+\import Function.Meta($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\open DivQuotient \hiding (~)
+\open Monoid
+\open equation(cRing)
+
+\class PID \extends SmithDomain, NoetherianCRing {
+  | divChain : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}
+  | isNoetherian => \lam I Ifg => Ideal.fromMonoidChainCondition (IntegralDomain.Dec.fromNonZeroDivChain divChain) I (\lam n => bezout_finitelyGenerated_principal.1 isBezout (Ifg n))
+  | isKaplansky => adequate_kaplansky (\lam a/=0 => adequate'_adequate (domain_adequate' divChain a/=0))
+}
+  \where {
+    \type IsAdequate {M : CMonoid} (a : M) => \Pi (b : M) -> ∃ (c : M) (LDiv c a) (IsCoprime c b) ∀ d (LDiv d a -> IsCoprime d b -> TruncP (LDiv d c))
+
+    \type IsAdequate' {M : CMonoid} (a : M) => \Pi (b : M) -> ∃ (a1 a2 : M) (n : Nat) (a = a1 * a2) (LDiv a1 (pow b n)) (IsCoprime a2 b)
+
+    \lemma adequate'_adequate {M : GCDMonoid} {a : M} (adeq : IsAdequate' a) : IsAdequate a => {?hidden_proof}
+
+    \open UnitlessGCDMonoid \using ( gcd )
+
+    \lemma unitless_adequate' {M : UnitlessGCDMonoid} (dc : M.DivChain) (a : M) : IsAdequate' a => {?hidden_proof}
+
+    \lemma monoid_adequate' {M : CancelGCDMonoid} (dc : CMonoid.DivChain {DivQuotientMonoid M}) (a : M) : IsAdequate' a => {?hidden_proof}
+
+    \lemma domain_adequate' {M : GCDDomain.Dec} (dc : CMonoid.DivChain {DivQuotientMonoid M.nonZeroGCDMonoid}) {a : M} (a/=0 : a /= 0) : IsAdequate' a => {?hidden_proof}
+
+    \lemma oneDim_adequate' {R : GCDDomain.Dec} (d : R.Dim<= 1) {a : R} (a/=0 : a /= 0) : IsAdequate' a => {?hidden_proof}
+
+    \lemma bezout_1Dim<->adequate' {R : BezoutDomain.Dec} : R.Dim<= 1 <-> (\Pi {a : R} -> a /= 0 -> IsAdequate' a) => {?hidden_proof}
+
+    \lemma adequate_kaplansky {R : BezoutDomain.Dec} (adeq : \Pi {a : R} -> a /= 0 -> IsAdequate a) : SmithRing.IsKaplansky R => {?hidden_proof}
+  }

@@ -1,0 +1,12 @@
+\import Algebra.Monoid
+\import Order.PartialOrder
+\import Paths
+
+\class OrderedMonoid \extends Poset, Monoid {
+  | <=_*-left (z : E) {x y : E} : x <= y -> x * z <= y * z
+  | <=_*-right (z : E) {x y : E} : x <= y -> z * x <= z * y
+}
+
+\class OrderedCMonoid \extends OrderedMonoid, CMonoid {
+  | <=_*-right => \lam z x<y => transport2 <= *-comm *-comm (<=_*-left z x<y)
+}

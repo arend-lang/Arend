@@ -1,0 +1,158 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Arith.Rat
+\import Category \hiding (Map)
+\import Data.Array
+\import Data.Bool
+\import Data.Or
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.Lattice
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.Filter
+\import Topology.Locale
+\import Topology.Locale.Points
+\open PresentedFrame(embed)
+\open Locale
+
+\type Interval (Q : Poset) => \Sigma Q Q
+
+\instance IntervalPoset (Q : Poset) : Poset (Interval Q) 
+  | <= => <=
+  | <=-refl => (<=-refl, <=-refl)
+  | <=-transitive => \lam t s => (<=-transitive s.1 t.1, <=-transitive t.2 s.2)
+  | <=-antisymmetric => \lam t s => ext (<=-antisymmetric s.1 t.1, <=-antisymmetric t.2 s.2)
+  \where {
+    \type \infix 4 <= {Q : Poset} (x y : Interval Q) => \Sigma (y.1 Q.<= x.1) (x.2 Q.<= y.2)
+  }
+
+
+\instance IntervalBiordered (Q : BiorderedSet) : BiorderedSet (Interval Q) 
+  | Poset => IntervalPoset Q
+  | < => <
+  | <-irreflexive => \lam p => <-irreflexive p.1
+  | <-transitive => \lam a<b b<c => (b<c.1 <∘ a<b.1, a<b.2 <∘ b<c.2)
+  | <-transitive-right => \lam a<=b b<c => (b<c.1 <∘l a<=b.1, a<=b.2 <∘r b<c.2)
+  | <-transitive-left => \lam a<b b<=c => (b<=c.1 <∘r a<b.1, a<b.2 <∘l b<=c.2)
+  | <=-less => \lam a<b => (<=-less a<b.1, <=-less a<b.2)
+  \where {
+    \type \infix 4 < {Q : BiorderedSet} (x y : Interval Q) => \Sigma (y.1 Q.< x.1) (x.2 Q.< y.2)
+  }
+
+
+\instance IntervalSemilattice (Q : Lattice) : MeetSemilattice (Interval Q) 
+  | Poset => IntervalPoset Q
+  | meet => \lam a b => (a.1 ∨ b.1, a.2 ∧ b.2)
+  | meet-left => (join-left, meet-left)
+  | meet-right => (join-right, meet-right)
+  | meet-univ => \lam t s => (join-univ t.1 s.1, meet-univ t.2 s.2)
+
+\instance RealPres (Q : LinearOrder.Dec) : FramePres (Interval Q) 
+  | conj => meet
+  | BasicCover => FramePres.Indexing {\Sigma (x : Bool) (if x (\Sigma (p r q s : Q) (p < r) (r < q) (q < s)) (\Sigma Q Q))} {Interval Q}
+    (\case __ \with {  | (true, (p, r, q, s, _, _, _)) => (Fin 2, (p, s), \case __ \with {  | 0 => (p, q)  | 1 => (r, s)})
+    | (false, (p, q)) => (\Sigma (r s : Q) (p < r) (r < s) (s < q), (p, q), \lam t => (t.1, t.2))})
+  \where {
+    \open JoinSemilattice
+    \open MeetSemilattice
+    \open Topology.Locale.Real(RealPres)
+
+    \lemma <=-cover {Q : LinearOrder.Dec} {x y : Interval Q} (p : x <= y) : Cover1 x y => {?hidden_proof}
+
+    \lemma cover-empty {Q : LinearOrder.Dec} {x : Interval Q} (p : x.2 <= x.1) {J : \Set} {g : J -> Interval Q} : Cover x g => {?hidden_proof}
+
+    \lemma cover-pair {Q : LinearOrder.Dec} {x : Interval Q} {z1 z2 : Q} (s : z1 < z2) : Cover x {Fin 2} (\case __ \with {  | 0 => (x.1, z2)  | 1 => (z1, x.2)}) => {?hidden_proof}
+
+    \func point {Q : Poset} (x : Q) : Interval Q => (x, x)
+
+    \lemma toPointwiseCover {Q : DenseLinearOrder.Dec} {a : Interval Q} {J : \Set} {g : J -> Interval Q} (c : Cover a g) {x : Q} (b : point x < a) : ∃ (j : J) (point x < g j) => {?hidden_proof}
+
+    \open LinearOrder(dec<_<=)
+
+    cover-factor-left {Q : LinearOrder.Dec} {a : Interval Q} (z : Interval Q) (a1<z1 : a.1 < z.1) (z1<a2 : z.1 < a.2) (l : Array (Interval Q)) 
+    (pc : \Pi {x : Q} -> point x < a -> ∃ (j : Fin (suc l.len)) (point x < (z :: l) j)) :
+      \Sigma (b : Q) (z.1 < b) (\Pi {x : Q} -> point x < (a.1, b) -> ∃ (j : Fin l.len) (point x < l j)) => 
+      \let fun => \case LinearOrder.trichotomy z.1 __ \return Bool \with {
+             | less _ => true
+             | _ => false
+           }
+    \in (Big ∧ a.2 (filter fun (map __.2 l)),
+          BiorderedLattice.Big_<_meet-univ z1<a2
+      (\lam i => run {(  \have t => filter-sat fun (map __.2 l) i  \in {?}, unfold fun at t, cases (LinearOrder.trichotomy z.1 (filter fun (map __.2 l) i), t))}),
+          \lam x<a1b => (\case pc (a1<z1, unfold point z1<a2), pc (x<a1b.1, x<a1b.2 <∘l Big_<=_meet0) \with {
+      | inP (0, z1<z), _ => absurd (<-irreflexive z1<z.1)  | inP (suc j, z1<gj+1), inP (0, x<z) => 
+        \have (k, q) => filter-index fun (map __.2 l) j (unfold fun (rewrite (LinearOrder.trichotomy<_reduce z1<gj+1.2) idp))
+        \in inP (j, (z1<gj+1.1 <∘ x<z.1, x<a1b.2 <∘l transport (_ <=) q (Big_<=_meet1 k)))  | _, inP (suc i, p) => inP (i, p)})
+    )
+
+    cover-factor-right {Q : LinearOrder.Dec} {a : Interval Q} (z : Interval Q) (a1<z2 : a.1 < z.2) (z2<a2 : z.2 < a.2) (l : Array (Interval Q)) 
+    (pc : \Pi {x : Q} -> point x < a -> ∃ (j : Fin (suc l.len)) (point x < (z :: l) j)) :
+      \Sigma (c : Q) (c < z.2) (\Pi {x : Q} -> point x < (c, a.2) -> ∃ (j : Fin l.len) (point x < l j)) => 
+      \have (b, p, q) => cover-factor-left {Q.op} {(a.2, a.1)} (z.2, z.1) z2<a2 a1<z2 (mkArray {Interval Q.op} (\lam i => ((l i).2, (l i).1))) (\lam s => (\case pc (s.2, s.1) \with {
+              | inP (0, t) => inP (0, (t.2, t.1))  | inP (suc j, t) => inP (suc j, (t.2, t.1))}))
+      \in (b, p, \lam s => TruncP.map (q (s.2, s.1)) (\lam t => (t.1, (t.2.2, t.2.1))))
+
+    \lemma fromPointwiseCover {Q : DenseLinearOrder.Dec} {a : Interval Q} {l : Array (Interval Q)} (c : \Pi {x : Q} -> point x < a -> ∃ (j : Fin l.len) (point x < l j)) : Cover a l => {?hidden_proof}
+
+    \lemma wayBelow {Q : DenseLinearOrder.Dec} {x y : Interval Q} (r : x < y) : x FramePres.<< y => {?hidden_proof}
+
+    \lemma locallyCompact {Q : DenseLinearOrder.Dec} : FramePres.isLocallyCompact {RealPres Q} => {?hidden_proof}
+  }
+
+
+\func RealLocale : Locale => PresentedFrame (RealPres RatField)
+  \where {
+    \lemma locallyCompact : RealLocale.isLocallyCompact => {?hidden_proof}
+
+    \lemma wellInside {x y : Interval RatField} (r : x < y) : embed x <=< embed y => {?hidden_proof}
+
+    \lemma regular : RealLocale.IsRegularLocale => {?hidden_proof}
+
+    \func ratPoint (x : Rat) : CompleteFilter RealLocale 
+    => framePres-point {RealPres RatField} (\lam (a, b) => \Sigma (a < x) (x < b)) (inP ((x - 1, x + 1), (linarith, linarith)))
+      (\lam {a} {b} => (\lam (c, d) => ((join-left <∘r c, d <∘l meet-left), (join-right <∘r c, d <∘l meet-right)), 
+      \lam ((c1, c2), (d1, d2)) => (<_join-univ c1 d1, <_meet-univ c2 d2)  )) $ FramePres.indexing-transport _ $ unfold_let
+      (\case \elim __ \with {  | (true, (p, r, q, s, p<r, r<q, q<s)) => \lam (p<x, x<s) => (\case LinearOrder.dec<_<= r x \with {
+        | inl r<x => inP (1, (r<x, x<s))    | inr x<=r => inP (0, (p<x, x<=r <∘r r<q))  })
+      | (false, (p, q)) => \lam (p<x, x<q) => (\case isDense p<x, isDense x<q \with {
+        | inP (r, p<r, r<x), inP (s, x<s, s<q) => inP ((r, s, p<r, r<x <∘ x<s, s<q), (r<x, x<s))  })})
+
+    \lemma hasStronglyDensePoints : HasStronglyDensePoints RealLocale => {?hidden_proof}
+  }
+
+
+\func lowerHalf (x : Rat) : RealLocale => Join {_} {\Sigma (a b : Rat) (b <= x)} (\lam (a, b, _) => embed (later (a, b)))
+
+\func upperHalf (x : Rat) : RealLocale => Join {_} {\Sigma (a b : Rat) (x <= a)} (\lam (a, b, _) => embed (later (a, b)))
+
+\func closedInterval (x y : Rat) => Nucleus.locale {nucleus x y}
+  \where {
+    \func nucleus (x y : Rat) : Nucleus => closed (lowerHalf x ∨ upperHalf y)
+
+    \lemma compact (x y : Rat) : isCompact {closedInterval x y} => {?hidden_proof}
+      \where {
+        \lemma generalized {x y a b : Rat} (p : a < x) (q : y < b) : isCompact {Nucleus.locale {nucleus x y}} => {?hidden_proof}
+      }
+
+  }
+
+
+\func rat_real : Hom (discrete Rat) RealLocale => FrameReflectiveSubcat.adjointMap $ later
+  (\new FramePresHom {  | func => \lam p x => \Sigma (p.1 < x) (x < p.2)
+  | func-conj => \lam {x} {y} => ext (\lam e => ext (\lam p => ((join-left <∘r p.1, p.2 <∘l meet-left), (join-right <∘r p.1, p.2 <∘l meet-right)), 
+    \lam c => (TotalOrder.join-prop (< e) c.1.1 c.2.1, TotalOrder.meet-prop (e <) c.1.2 c.2.2)))
+  | func-basicCover => FramePres.indexing-transport _ $ later    (\case \elim __ \with {  | (true, (p, r, q, s, p<r, r<q, q<s)) =>
+      \lam {e} t => inP (\case LinearOrder.dec<_<= e q \with {  | inl e<q => (0, (t.1, e<q))  | inr q<=e => (1, (r<q <∘l q<=e, t.2))})
+    | (false, (p, q)) => \lam {e} t => (\case isDense t.1, isDense t.2 \with {
+      | inP (r, p<r, r<e), inP (s, e<s, s<q) => inP ((r, s, p<r, r<e <∘ e<s, s<q), (r<e, e<s))  })})
+  | func-image => \lam {U} => cover-basic (\lam {x} _ => (\case withoutLowerBound x, withoutUpperBound x \with {  | inP (l, l<x), inP (u, x<u) => inP ((l, u), (l<x, x<u))}))
+  })

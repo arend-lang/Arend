@@ -1,0 +1,45 @@
+\import Algebra.Meta
+\import Data.Bool
+\import Data.Or
+\import Homotopy.Fibration
+\import Logic
+\import Logic.Classical
+\import Logic.FirstOrder.Term
+\import Logic.Meta
+\import Paths
+\import Paths.Meta
+\import Set.Fin
+
+\class Signature \extends TermSig {
+  | PredSymb : \Set
+  | predDomain : PredSymb -> Array Sort
+}
+
+\data Formula {S : Signature} (V : S -> \Set) 
+  | equality {s : S} (Term V s) (Term V s)
+  | predicate (P : PredSymb) (DArray (\lam j => Term V (predDomain P j)))
+
+\func substF {S : Signature} {U V : S -> \Set} (phi : Formula U) (rho : \Pi {s : S} -> U s -> Term V s) : Formula V \elim phi
+  | equality t1 t2 => equality (subst t1 rho) (subst t2 rho)
+  | predicate P ts => predicate P (\lam j => subst (ts j) rho)
+
+\func Sequent {S : Signature} => \Sigma (V : S -> \Set) (FinSet (\Sigma (s : S) (V s))) (Array (Formula V)) (Formula V)
+
+\class Theory \extends Signature {
+  | axioms : Sequent -> \Prop
+}
+
+\class Structure {
+  | T : Signature
+  | E : Sort -> \Set
+  | operation {r : Sort} (h : Symb r) : DArray (\lam j => E (domain h j)) -> E r
+  | relation (P : PredSymb) : DArray (\lam j => E (predDomain P j)) -> \Prop
+}
+
+\class Model \extends Structure {
+  \override T : Theory
+  | isModel (S : Sequent) : axioms {T} S -> Structure.isSequentTrue S
+}
+  \where {
+    \open Theory
+  }

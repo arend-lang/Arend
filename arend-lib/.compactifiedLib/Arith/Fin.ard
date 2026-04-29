@@ -1,0 +1,153 @@
+\import Algebra.Domain.Euclidean
+\import Algebra.Field
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Monoid.Prime
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Int
+\import Arith.Nat
+\import Data.Or
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set \hiding (#)
+\open Nat(div, mod, divModProp)
+\open AddMonoid
+
+\lemma int_n*_+_mod_n {n r : Nat} {q : Int} (r<=n : r < suc n) : (pos (suc n) * q + r) mod suc n = r => {?hidden_proof}
+  \where {
+    \open IntEuclidean
+  }
+
+
+\lemma int_n*_+_mod_n=mod {n : Nat} {q r : Int} : (pos (suc n) * q + r) mod suc n = r mod suc n => {?hidden_proof}
+  \where {
+    \open IntEuclidean
+  }
+
+
+\lemma int_mod_*-left {n : Nat} {a b : Int} : (pos (a mod suc n) * b) mod suc n = (a * b) mod suc n => {?hidden_proof}
+  \where {
+    \open IntEuclidean
+  }
+
+
+\lemma int_mod_*-right {n : Nat} {a b : Int} : (a * b mod suc n) mod suc n = (a * b) mod suc n => {?hidden_proof}
+  \where {
+    \open IntEuclidean
+  }
+
+
+\lemma div_suc-lem {n m : Nat} (m/=0 : m /= 0) : (n + m) div m = suc (n div m) => {?hidden_proof}
+
+\lemma n*_+_div_n=div {m q r : Nat} (m/=0 : m /= 0) : (m * q + r) div m = q + r div m => {?hidden_proof}
+
+\lemma *_div=id {m q : Nat} (m/=0 : m /= 0) : (q * m) div m = q => {?hidden_proof}
+
+\lemma div-monotone {n k m : Nat} (p : n <= k) : n div m <= k div m => {?hidden_proof}
+  \where {
+    \lemma aux (c : Nat) {n k m : Nat} (q : n <= c) (p : n <= k) : n div m <= k div m => {?hidden_proof}
+  }
+
+
+\func base-digit (n b j : Nat) : Nat \elim j
+  | 0 => n mod b
+  | suc j => base-digit (n div b) b j
+
+\lemma base-digit-sum {l : Array Nat} {b : Nat} (p : \Pi (j : Fin l.len) -> l j < b) {j : Fin l.len} : l j = base-digit (BigSum (\lam j => l j * Monoid.pow b j)) b j => {?hidden_proof}
+
+\instance FinRing {n : Nat} : CRing.Dec (Fin (suc n)) 
+  | zro => 0
+  | + => \lam x y => x + y : Nat
+  | zro-left => \lam {x} => pmap Fin.fromNat zro-left *> fin_mod_id x
+  | +-assoc => mod_+-left *> pmap Fin.fromNat +-assoc *> inv mod_+-right
+  | +-comm => pmap Fin.fromNat +-comm
+  | ide => Fin.fromNat 1
+  | * => \lam x y => x * y : Nat
+  | ide-left => \lam {x} => mod_*-left *> pmap Fin.fromNat ide-left *> fin_mod_id x
+  | *-assoc => mod_*-left *> pmap Fin.fromNat *-assoc *> inv mod_*-right
+  | ldistr => \lam {x} {y} {z} => mod_*-right *> pmap Fin.fromNat ldistr *> inv (mod_+-left *> mod_+-right)
+  | negative => \lam x => iabs (suc n Nat.- x)
+  | negative-left => \lam {x} => (
+    \let t => pmap (+ pos x) (pos_iabs (<=-less (fin_< x))) *> IntRing.+-assoc {pos (suc n)} {neg x} *> pmap (_ +) (IntRing.negative-left {pos x})
+    \in mod_+-left *> transport (__ Nat.mod suc n = 0) (inv (pmap iabs t)) (fin_nat-inj (n*_+_mod_n {_} {1} NatOrder.zero<suc)))
+  | decideEq => \lam x y => (\case NatSemiring.decideEq x y \with {
+    | yes x=y => yes (fin_nat-inj x=y)
+    | no x/=y => no (\lam p => x/=y p)
+  })
+  | *-comm => pmap Fin.fromNat *-comm
+  | natCoef => Fin.fromNat
+  | natCoefZero => idp
+  | natCoefSuc => \lam m => inv (mod_+-left *> mod_+-right)
+  \where {
+    \open IntEuclidean
+
+    \lemma mod-mod (a : Int) (n : Nat) : a mod pos (suc n) Nat.mod suc n = {Nat} a mod pos (suc n) => {?hidden_proof}
+
+    \lemma ldiv-modEq (x y : Int) (n : Nat) (p : ∃ (Monoid.LDiv {IntEuclidean} (suc n) (x - y))) : x mod suc n = y mod suc n => {?hidden_proof}
+
+    modEq-ldiv (x y : Int) (n : Nat) (p : x mod suc n = y mod suc n) : Monoid.LDiv {IntEuclidean} (suc n) (x - y) => 
+      \have A x => divModProp x (suc n) (\case __ \with {})
+      \in rewriteI (A x, A y, p) (\new Monoid.LDiv {  | inv => x div pos (suc n) - y div pos (suc n)  | inv-right => rewrite AbGroup.sum-cancel-right Ring.ldistr_-})
+
+    \lemma finEq-modeq {x y n : Nat} (p : x = {Fin (suc n)} y) : x Nat.mod suc n = {Nat} y Nat.mod suc n => {?hidden_proof}
+
+    \lemma ldiv-finEq {x y n : Nat} (p : ∃ (Monoid.LDiv {IntEuclidean} (suc n) (x Nat.- y))) : x = {Fin (suc n)} y => {?hidden_proof}
+
+    \lemma intCoef-char (n : Nat) (k : Int) : (FinRing {n}).intCoef k = k mod suc n => {?hidden_proof}
+
+    \lemma intCoef_pos-char {n : Nat} (k : Nat) : (FinRing {n}).intCoef (pos k) = k => {?hidden_proof}
+
+    \lemma intCoef-surj {n : Nat} : IsSurj (FinRing {n}).intCoef => {?hidden_proof}
+      \where {
+        \lemma aux {n : Nat} (k : Fin (suc n)) : (FinRing {n}).natCoef k = k => {?hidden_proof}
+      }
+
+  }
+
+
+\instance FinEuclidean {n : Nat} : EuclideanRingData (Fin (suc n)) 
+  | CRing => FinRing {n}
+  | decideEq => decideEq
+  | euclideanMap => \lam x => x
+  | divMod => \lam x y => (
+    \let! (d, m) => Nat.divMod x y
+    \in (d `mod` suc n, m `mod` suc n))
+  | isDivMod => \lam x y => run {(unfold_let, rewrite mod_*-right, mod_+-left *> mod_+-right *> pmap Fin.fromNat (Nat.divModProp x y) *> fin_mod_id x)}
+  | isEuclideanMap => \lam x y y/=0 _ => mod<=left <∘r mod<right (fin_nat-ineq y/=0)
+
+\instance FinField {n : Nat} {p : Prime (suc n)} : DiscreteField (Fin (suc n)) 
+  | CRing => FinRing {n}
+  | zro/=ide => \case __ *> {Nat} mod_< (NatOrder.suc<suc (nonZero>0 (\lam n=0 => p.notInv (transportInv (\lam x => Inv (suc x)) n=0 Inv.ide-isInv)))) \with {}
+| finv => \lam x => (IntEuclidean.natDivMod (bezout (pos (suc n)) (pos x)).2 (suc n)).2 mod suc n
+| finv_zro => idp
+| finv-right => \lam {x} x/=0 => (
+  \let | (u, v) => bezout (pos (suc n)) (pos x)
+       | (q, r) => IntEuclidean.natDivMod v (suc n)
+       | int_gcd=1 : gcd (pos (suc n)) (pos x) = 1 => int_gcd_pos *> pmap pos (gcd=1 p (fin_nat-ineq x/=0) (fin_< x))
+  \in *-comm *> pmap ((__ * x) mod suc n) 
+        (inv (int_n*_+_mod_n=mod *> IntEuclidean.natMod=mod r (suc n)) *> pmap (__ IntEuclidean.mod suc n) (IntEuclidean.natDivModProp v n)) *> fin_nat-inj
+          (inv (IntEuclidean.natMod=mod _ _) *> int_mod_*-left *> inv int_n*_+_mod_n=mod *> pmap (__ IntEuclidean.mod suc n) 
+          (pmap (__ + v * pos x) *-comm *> bezoutIdentity (pos (suc n)) (pos x) *> int_gcd=1) *> IntEuclidean.natMod=mod 1 (suc n)))
+| decideEq => \lam x y => (\case NatSemiring.decideEq x y \with {
+  | yes x=y => yes (fin_nat-inj x=y)
+  | no x/=y => no (\lam x=y => x/=y x=y)
+})
+  \where {
+    \open EuclideanSemiringData
+    \open EuclideanRingData
+    \open Monoid(Inv)
+
+    \lemma gcd=1 (p : Prime {NatSemiring}) {x : Nat} (x/=0 : Not (x = 0)) (x<p : x < p) : gcd p x = 1 => {?hidden_proof}
+  }

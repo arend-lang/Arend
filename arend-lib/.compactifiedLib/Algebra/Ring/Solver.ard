@@ -1,0 +1,181 @@
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Module
+\import Arith.Fin.Order
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Solver
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Arith.Bool
+\import Arith.Int
+\import Arith.Nat
+\import Algebra.Semiring
+\import Arith.Rat
+\import Data.Bool
+\import Data.List
+\import Function.Meta
+\import Order.Lattice
+\import Order.Lexicographical
+\import Meta
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set \hiding (#)
+
+\data RingTerm (C V : \Type) 
+  | coef C
+  | var V
+  | :zro
+  | :ide
+  | :negative (RingTerm C V)
+  | \infixl 6 :+ (t s : RingTerm C V)
+  | \infixl 7 :* (t s : RingTerm C V)
+
+\class BaseData \extends CMonoidData {
+  | C : Semiring
+  | S : LinearOrder.Dec C
+  | R : Semiring
+  | alg : SemiringHom C R
+  | M => AbMonoid.toCMonoid R
+  | alg-comm (x : C) (y : R) : alg x R.* y = y R.* alg x
+  \field mData : MonoidData {R} vars
+}
+
+\class AlgData \extends BaseData {
+  | pnegative : R -> R
+  | negate : List (\Sigma (List V) C) -> List (\Sigma (List V) C)
+  | interpretNF_negate (l : List (\Sigma (List V) C)) : pnegative (interpretRingNF l) = interpretRingNF (negate l)
+}
+  \where {
+    \open Sort
+    \open Sort.RedBlack
+
+    \func multiply' {V : \Type} {C : Monoid} (l1 l2 : List (\Sigma (List V) C)) : List (\Sigma (List V) C) \elim l2
+      | nil => nil
+      | l2 => multiply l1 l2 nil
+
+    \func multiply {V : \Type} {C : Monoid} (l1 l2 acc : List (\Sigma (List V) C)) : List (\Sigma (List V) C) \elim l1
+      | nil => acc
+      | :: a l1 => multiply l1 l2 (map (\lam b => (a.1 ++ b.1, a.2 * b.2)) l2 ++ acc)
+  }
+
+
+\class CAlgData \extends AlgData {
+  \override R : CSemiring
+  \override mData : CMonoidData vars
+  | mData => \new CMonoidData
+  | alg-comm => \lam x y => *-comm
+}
+  \where {
+    \open Sort.RedBlack
+    \open AlgData
+  }
+
+
+\class SemiringData \extends AlgData {
+  | C => NatSemiring
+  | S => NatSemiring
+  | alg => natMap
+  | alg-comm => natComm
+  | mData {}
+  | pnegative => \lam x => x
+  | negate => \lam x => x
+  | interpretNF_negate => \lam l => idp
+}
+
+\class CSemiringData \extends CAlgData, SemiringData
+
+\class LatticeData \extends CAlgData {
+  | L : BoundedDistributiveLattice
+  | R => L
+  | C => BoundedDistributiveLattice.toSemiring BoolLattice
+  | S => BoolPoset
+  | alg {
+    | func => \case __ \with {
+      | false => bottom
+      | true => top
+    }
+  | func-+ => \lam {x} {y} => inv (\case \elim x, \elim y \with {  | true, true => <=-antisymmetric top-univ join-left  | true, false => R.zro-right  | false, true => R.zro-left
+    | false, false => R.zro-left})
+  | func-zro => idp
+  | func-ide => idp
+  | func-* => \lam {x} {y} =>
+  inv (\case \elim x, \elim y \with {  | true, true => R.ide-left  | true, false => R.ide-left  | false, true => R.ide-right  | false, false => R.zro_*-left
+    })
+}
+| pnegative => \lam x => x
+| negate => \lam x => x
+| interpretNF_negate => \lam l => idp
+}
+\where {
+  \open AlgData
+  \open Sort
+  \open Sort.RedBlack
+  \open LinearOrder
+
+  \lemma lattice-lem {L : BoundedLattice} {a b x : L} (p : a ∨ b = b) : x ∧ a ∨ b = b => {?hidden_proof}
+}
+
+
+\class BaseRingData \extends AlgData {
+\override C : Ring
+\override R : Ring
+\override alg : RingHom C R
+| mData => \new MonoidData
+| pnegative => negative
+| negate => BaseRingData.negate
+| interpretNF_negate => interpretNF_negate
+}
+\where {
+  \func negate {C : Ring} {V : \Type} (l : List (\Sigma (List V) C)) : List (\Sigma (List V) C) \elim l
+    | nil => nil
+    | :: (m, c) l => (m, negative c) :: negate l
+}
+
+
+\class RingData \extends BaseRingData {
+| C => IntRing
+| S => IntRing
+| alg => intMap
+| alg-comm => intComm
+}
+
+\class RatData \extends BaseRingData {
+| C => RatField
+| S => RatField
+| R => RatField
+| alg => RingHom.id
+| alg-comm => \lam x y => RatField.*-comm
+}
+
+\class RatAlgebraData \extends BaseRingData {
+| C => RatField
+| S => RatField
+\override R : AAlgebra RatField
+| alg => AAlgebra.coefHom {R}
+| alg-comm => \lam x y => pmap (* _) coefMap_*c *> inv *c-comm-left *> pmap (x *c) (ide-left *> inv ide-right) *> *c-comm-right *> inv (pmap (y *) coefMap_*c)
+}
+
+\class CRingData \extends CAlgData, RingData {
+\override R : CRing
+}
+\where {
+  \open AlgData
+  \open Sort.RedBlack
+}
+
+
+\func idealElem {R : CRing} (gensCoeffs : List (\Sigma (c : R) (gen : R))) : R 
+  | nil => 0
+  | :: (c, gen) xs => c * gen + idealElem xs
+
+\lemma gensZeroToIdealZero {R : CRing} (gensCoeffs : List (\Sigma (c : R) (gen : R) (gen = 0))) : idealElem (map (\lam x => (x.1, x.2)) gensCoeffs) = 0 => {?hidden_proof}
+\where {
+  \lemma argZeroToProdZero {R : CRing} (a : R) {b : R} (p : zro = b) : a * b = 0 => {?hidden_proof}
+
+  \lemma argsZeroToSumZero {R : CRing} {a b : R} (p : zro = a) (q : zro = b) : a + b = 0 => {?hidden_proof}
+}

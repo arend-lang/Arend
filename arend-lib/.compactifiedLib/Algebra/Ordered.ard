@@ -1,0 +1,93 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set.Subset
+
+\class PosetAddMonoid \extends AddMonoid, Poset {
+  | <=_+ {a b c d : E} : a <= b -> c <= d -> a + c <= b + d
+}
+
+\class PosetAbMonoid \extends PosetAddMonoid, AbMonoid
+
+\class JoinSemilatticeAddMonoid \extends PosetAddMonoid, JoinSemilattice {
+  | join_+-left {a b c : E} : a + (b ∨ c) = (a + b) ∨ (a + c)
+  | join_+-right {a b c : E} : (a ∨ b) + c = (a + c) ∨ (b + c)
+}
+
+\class MeetSemilatticeAddMonoid \extends PosetAddMonoid, MeetSemilattice {
+  | meet_+-left {a b c : E} : a + b ∧ c = (a + b) ∧ (a + c)
+  | meet_+-right {a b c : E} : a ∧ b + c = (a + c) ∧ (b + c)
+}
+
+\class JoinSemilatticeAbMonoid \extends JoinSemilatticeAddMonoid, PosetAbMonoid {
+  | join_+-right => +-comm *> join_+-left *> pmap2 ∨ +-comm +-comm
+}
+
+\class MeetSemilatticeAbMonoid \extends MeetSemilatticeAddMonoid, PosetAbMonoid {
+  | meet_+-right => +-comm *> meet_+-left *> pmap2 ∧ +-comm +-comm
+}
+
+\class PosetAddGroup \extends PosetAddMonoid, AddGroup
+
+\class PosetAbGroup \extends PosetAddGroup, PosetAbMonoid, AbGroup
+
+\class LatticeAbGroup \extends PosetAbGroup, MeetSemilatticeAbMonoid, JoinSemilatticeAbMonoid, DistributiveLattice {
+  | meet_+-left => \lam {a} {b} {c} => <=-antisymmetric (meet-univ (<=_+ <=-refl meet-left) (<=_+ <=-refl meet-right)) $ <=_+-cancel-left (negative a) $ meet-univ 
+    (<=_+ <=-refl meet-left <=∘ =_<= (inv +-assoc *> pmap (+ b) negative-left *> zro-left)) 
+    (<=_+ <=-refl meet-right <=∘ =_<= (inv +-assoc *> pmap (+ c) negative-left *> zro-left)) <=∘ =_<= 
+    (inv zro-left *> pmap (+ _) (inv negative-left) *> +-assoc)
+  | join_+-left => \lam {a} {b} {c} => <=-antisymmetric (<=_+-cancel-left (negative a) $ =_<= (inv +-assoc *> pmap (+ _) negative-left *> zro-left) <=∘ join-univ 
+    (<=_+-cancel-left a $ join-left <=∘ =_<= (inv zro-left *> pmap (+ _) (inv negative-right) *> +-assoc)) 
+    (<=_+-cancel-left a $ join-right <=∘ =_<= (inv zro-left *> pmap (+ _) (inv negative-right) *> +-assoc))) $ join-univ (<=_+ <=-refl join-left) 
+  (<=_+ <=-refl join-right)
+  | ldistr>= => \lam {x} {y} {z} => =_<= (inv $ meet_+-right *> pmap2 ∧ (+-assoc *> pmap (x +) (negative-left {_} {y ∨ z}) *> zro-right) zro-left) <=∘ <=_+-cancel-left _
+    (=_<= (inv +-assoc *> pmap (+ _) negative-left *> zro-left) <=∘ join-univ
+    (<=_+-cancel-left _ $ =_<= meet_+-right <=∘ meet-monotone (=_<= +-assoc <=∘ <=_+ <=-refl (<=_+ <=-refl join-left <=∘ =_<= negative-left) <=∘ =_<= zro-right) 
+        (=_<= zro-left) <=∘ join-left <=∘ =_<= (inv (pmap (+ _) negative-right *> zro-left) *> +-assoc))
+    (<=_+-cancel-left _ $ =_<= meet_+-right <=∘ meet-monotone (=_<= +-assoc <=∘ <=_+ <=-refl (<=_+ <=-refl join-right <=∘ =_<= negative-left) <=∘ =_<= zro-right) 
+        (=_<= zro-left) <=∘ join-right <=∘ =_<= (inv (pmap (+ _) negative-right *> zro-left) *> +-assoc)))
+}
+  \where {
+\class FromMeet \extends LatticeAbGroup {
+      | join => \lam a b => negative (negative a ∧ negative b)
+      | join-left => =_<= (inv negative-isInv) <=∘ negative_<= meet-left
+      | join-right => =_<= (inv negative-isInv) <=∘ negative_<= meet-right
+      | join-univ => \lam x<=z y<=z => negative_<= (meet-univ (negative_<= x<=z) (negative_<= y<=z)) <=∘ =_<= negative-isInv
+    }
+
+\class FromJoin \extends LatticeAbGroup {
+      | meet => \lam a b => negative (negative a ∨ negative b)
+      | meet-left => negative_<= join-left <=∘ =_<= negative-isInv
+      | meet-right => negative_<= join-right <=∘ =_<= negative-isInv
+      | meet-univ => \lam z<=x z<=y => =_<= (inv negative-isInv) <=∘ negative_<= (join-univ (negative_<= z<=x) (negative_<= z<=y))
+    }
+  }
+
+
+\class AbsAbGroup \extends LatticeAbGroup {
+  | abs>=0 {x : E} : 0 <= abs x
+}
+
+\class PosetSemiring \extends Semiring, PosetAbMonoid {
+  | zro<=ide : 0 <= 1
+  | <=_*_positive-left {x y z : E} (x<=y : x <= y) (z>=0 : 0 <= z) : x * z <= y * z
+  | <=_*_positive-right {x y z : E} (x>=0 : 0 <= x) (y<=z : y <= z) : x * y <= x * z
+}
+
+\class PosetRing \extends PosetSemiring, Ring, PosetAbGroup {
+  | <=_*-positive {x y : E} (x>=0 : 0 <= x) (y>=0 : 0 <= y) : 0 <= x * y
+  | <=_*_positive-left => \lam x<=y z>=0 => from>=0 $ transport (0 <=) rdistr_- $ <=_*-positive (to>=0 x<=y) z>=0
+  | <=_*_positive-right => \lam x>=0 y<=z => from>=0 $ transport (0 <=) ldistr_- $ <=_*-positive x>=0 (to>=0 y<=z)
+}

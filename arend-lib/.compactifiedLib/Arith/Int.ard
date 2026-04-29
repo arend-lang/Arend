@@ -1,0 +1,250 @@
+\import Algebra.Group
+\import Algebra.Monoid
+\import Algebra.StrictlyOrdered
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Bool
+\import Data.Or
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\open LinearOrder(trichotomy)
+
+\func isuc (x : Int) : Int 
+  | pos n => pos (suc n)
+  | neg suc n => neg n
+
+\func ipred (x : Int) : Int 
+  | pos 0 => neg 1
+  | pos suc n => pos n
+  | neg n => neg (suc n)
+
+\lemma ipred_isuc (x : Int) : ipred (isuc x) = x => {?hidden_proof}
+
+\lemma isuc_ipred (x : Int) : isuc (ipred x) = x => {?hidden_proof}
+
+\func signum (x : Int) : Int 
+  | pos 0 => 0
+  | pos suc _ => 1
+  | neg suc _ => -1
+  \where {
+    \lemma *-comm {x y : Int} : signum (x IntRing.* y) = signum x IntRing.* signum y => {?hidden_proof}
+
+    \lemma signum_pos {n : Nat} (n/=0 : Not (n = 0)) : signum n = 1 => {?hidden_proof}
+
+    \lemma signum_neg {n : Nat} (n/=0 : Not (n = 0)) : signum (neg n) = -1 => {?hidden_proof}
+
+    \lemma signum_neg/=1 {n : Nat} (p : signum (neg n) = 1) : Empty => {?hidden_proof}
+
+    \lemma signum_- {x y : Int} : signum (x - y) = negative (signum (y - x)) => {?hidden_proof}
+      \where {
+        \open Arith.Int(IntRing)
+      }
+
+  }
+
+
+\instance IntRing : OrderedCRing.Dec Int 
+  | zro => pos 0
+  | + => +
+  | zro-left => zro-left
+  | +-assoc => +-assoc
+  | +-comm => +-comm
+  | ide => pos 1
+  | * => *
+  | ide-left => ide-left
+  | *-assoc => *-assoc
+  | ldistr => ldistr
+  | negative => negative
+  | negative-left => negative-left
+  | isPos => \lam x => signum x = 1
+  | zro/>0 => \case __ \with {}
+| positive_+ => positive_+
+| ide>zro => idp
+| +_trichotomy => \lam x => (\case \elim x \with {
+  | pos 0 => equals idp
+  | pos suc n => greater idp
+  | neg suc n => less idp
+})
+| positive_* => \lam {x} {y} x>0 y>0 => signum.*-comm *> pmap2 * x>0 y>0
+| *-comm => *-comm
+| natCoef => pos
+| natCoefZero => idp
+| natCoefSuc => \lam _ => idp
+  \where {
+    \open Nat(-)
+    \open OrderedRing
+
+    \lemma lldistr (n m k : Nat) : (n Nat.+ m) - k = pos n + (m - k) => {?hidden_proof}
+
+    \lemma lrdistr (n m k : Nat) : (n Nat.+ m) - k = (n - k) + pos m => {?hidden_proof}
+
+    \lemma rldistr (n m k : Nat) : n - (m Nat.+ k) = neg m + (n - k) => {?hidden_proof}
+
+    \lemma rrdistr (n m k : Nat) : n - (m Nat.+ k) = (n - m) + neg k => {?hidden_proof}
+
+    \lemma minus+pos (n m k : Nat) : (n - m) + pos k = pos n + (k - m) => {?hidden_proof}
+
+    \lemma minus+neg (n m k : Nat) : (n - m) + neg k = neg m + (n - k) => {?hidden_proof}
+
+    \lemma minus__ {n : Nat} : n - n = 0 => {?hidden_proof}
+
+    \lemma suc-left {x : Int} {n : Nat} : pos (suc n) + x = isuc (pos n + x) => {?hidden_proof}
+
+    \lemma suc-right {x : Int} {n : Nat} : x + pos (suc n) = isuc (x + pos n) => {?hidden_proof}
+
+    \lemma pred-left {x : Int} {n : Nat} : neg (suc n) + x = ipred (neg n + x) => {?hidden_proof}
+
+    \lemma pred-right {x : Int} {n : Nat} : x + neg (suc n) = ipred (x + neg n) => {?hidden_proof}
+
+    \lemma neg*pos {n m : Nat} : neg n * pos m = neg (n Nat.* m) => {?hidden_proof}
+
+    \lemma neg*neg {n m : Nat} : neg n * neg m = pos (n Nat.* m) => {?hidden_proof}
+
+    \lemma pos_neg_+ {n m k : Nat} : pos (n Nat.+ k) + neg (m Nat.+ k) = pos n + neg m => {?hidden_proof}
+
+    \lemma pos_minus-ldistr {n m k : Nat} : pos n * (m - k) = pos (n Nat.* m) + neg (n Nat.* k) => {?hidden_proof}
+
+    \lemma neg_minus-ldistr {n m k : Nat} : neg n * (m - k) = neg (n Nat.* m) + pos (n Nat.* k) => {?hidden_proof}
+
+    \lemma neg<=0 {n : Nat} : neg n IntRing.<= 0 => {?hidden_proof}
+
+    \lemma pos>=0 {n : Nat} : 0 IntRing.<= pos n => {?hidden_proof}
+  }
+
+
+\func iabs (x : Int) : Nat 
+  | pos n => n
+  | neg n => n
+  \where {
+    \lemma signum_/=0 {x : Int} (x/=0 : Not (x = 0)) : iabs (signum x) = 1 => {?hidden_proof}
+
+    \lemma signum_* {x : Int} : pos (iabs x) = x * signum x => {?hidden_proof}
+
+    \lemma *_signum {x : Int} : pos (iabs x) * signum x = x => {?hidden_proof}
+
+    \lemma negative-comm {x : Int} : iabs (IntRing.negative x) = iabs x => {?hidden_proof}
+
+    \lemma equals0 {x : Int} (|x|=0 : iabs x = 0) : x = 0 => {?hidden_proof}
+
+    \lemma ofPos {x : Int} (x>=0 : 0 <= x) : pos (iabs x) = x => {?hidden_proof}
+
+    \lemma ofNeg {x : Int} (x<=0 : x <= 0) : pos (iabs x) = negative x => {?hidden_proof}
+  }
+
+
+\lemma iabs=abs {x : Int} : pos (iabs x) = IntRing.abs x => {?hidden_proof}
+
+\lemma iabs_* {x y : Int} : iabs (x * y) = iabs x * iabs y => {?hidden_proof}
+
+\lemma <_+1_<= {x y : Int} (p : x < y + 1) : x <= y => {?hidden_proof}
+
+\open Monoid(LDiv)
+
+\lemma ldiv_iabs {x y : Int} (d : LDiv x y) : LDiv (iabs x) (iabs y) (iabs d.inv) => {?hidden_proof}
+
+\func iabs_ldiv {x y : Int} (d : LDiv (iabs x) (iabs y)) : LDiv x y \elim x, y
+  | 0, 0 => \new LDiv {
+    | inv => 0
+    | inv-right => idp
+  }
+  | 0, pos suc m => \new LDiv {
+    | inv => d.inv
+    | inv-right => pmap pos d.inv-right
+  }
+  | 0, neg suc m => absurd $ suc/=0 $ inv d.inv-right *> zro_*-left
+  | pos suc n, 0 => \new LDiv {
+    | inv => 0
+    | inv-right => idp
+  }
+  | pos suc n, pos suc m => \new LDiv {
+    | inv => d.inv
+    | inv-right => pmap pos d.inv-right
+  }
+  | pos suc n, neg suc m => \new LDiv {
+    | inv => neg d.inv
+    | inv-right => pmap neg d.inv-right
+  }
+  | neg suc n, 0 => \new LDiv {
+    | inv => 0
+    | inv-right => idp
+  }
+  | neg suc n, pos suc m => \new LDiv {
+    | inv => neg d.inv
+    | inv-right => pmap pos d.inv-right
+  }
+  | neg suc n, neg suc m => \new LDiv {
+    | inv => d.inv
+    | inv-right => pmap neg d.inv-right
+  }
+
+\lemma id<isuc {x : Int} : x < isuc x => {?hidden_proof}
+
+\lemma pos_iabs {x y : Nat} (y<=x : y <= x) : pos (iabs (x Nat.- y)) = x Nat.- y => {?hidden_proof}
+
+\lemma neg_iabs {x y : Nat} (x<=y : x <= y) : neg (iabs (x Nat.- y)) = x Nat.- y => {?hidden_proof}
+
+\lemma iabs_-_suc {n i : Nat} (p : i <= n) : iabs (suc n Nat.- i) = suc (iabs (n Nat.- i)) => {?hidden_proof}
+
+\lemma zro-id=neg {n : Nat} : 0 Nat.- n = neg n => {?hidden_proof}
+
+\lemma -'=- {n m : Nat} (p : m <= n) : pos (n -' m) = n Nat.- m => {?hidden_proof}
+
+\lemma unpos {n m : Nat} (p : pos n = pos m) : n = m => {?hidden_proof}
+
+\lemma pos<pos {n m : Nat} (p : n < m) : pos n < pos m => {?hidden_proof}
+  \where {
+    \lemma conv {n m : Nat} (p : pos n < pos m) : n < m => {?hidden_proof}
+  }
+
+
+\lemma neg<neg {n m : Nat} (p : n < m) : neg m < neg n => {?hidden_proof}
+  \where {
+    \lemma conv {n m : Nat} (p : neg m < neg n) : n < m => {?hidden_proof}
+  }
+
+
+\lemma pos<=pos {n m : Nat} (p : n <= m) : pos n <= pos m => {?hidden_proof}
+  \where {
+    \lemma conv {n m : Nat} (p : pos n <= pos m) : n <= m => {?hidden_proof}
+  }
+
+
+\lemma neg<=pos {n m : Nat} : neg n <= pos m => {?hidden_proof}
+
+\lemma pos/<=neg {n m : Nat} (p : pos n <= neg m) : m = 0 => {?hidden_proof}
+
+\lemma neg<=neg {n m : Nat} (p : n <= m) : neg m <= neg n => {?hidden_proof}
+  \where {
+    \lemma conv {n m : Nat} (p : neg n <= neg m) : m <= n => {?hidden_proof}
+  }
+
+
+\lemma signum_iabs_eq {x y : Int} (p : signum x = signum y) (q : iabs x = iabs y) : x = y => {?hidden_proof}
+
+\func intUnits {x y : Int} (p : x * y = 1) : Or (y = 1) (y = -1) => 
+  \have t : iabs y = 1 => natUnit (inv iabs_* *> pmap iabs p)
+  \in \case \elim y, t \with {
+        | pos n, p1 => inl (pmap pos p1)
+        | neg suc n, p1 => inr (pmap neg p1)
+      }
+
+\lemma int_<=-dec {x y : Int} {so : So (int_<=_Bool x y)} : x <= y => {?hidden_proof}
+  \where {
+    \func int_<=_Bool (x y : Int) : Bool 
+      | pos n, pos m => nat_<=-dec.nat_<=_Bool n m
+      | pos n, neg suc m => false
+      | neg n, pos m => true
+      | neg n, neg suc m => nat_<=-dec.nat_<=_Bool (suc m) n
+  }
+
+
+\lemma int_<-dec {x y : Int} {so : So (int_<=-dec.int_<=_Bool (isuc x) y)} : x < y => {?hidden_proof}

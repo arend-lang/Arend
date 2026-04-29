@@ -1,0 +1,34 @@
+\import Algebra.Monoid
+\import Algebra.Semiring
+\import Arith.Nat
+\import Data.Or
+\import Equiv
+\import Equiv.Sigma
+\import Function
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+\lemma SigmaFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Sigma (i : S) (Q i)) (AbMonoid.FinSum (\lam i => (Q i).finCard)) => {?hidden_proof}
+  \where {
+    \open AddMonoid
+
+    \func aux {n : Nat} {Q : Fin n -> Nat} : QEquiv {Fin (BigSum Q)} {\Sigma (i : Fin n) (Fin (Q i))} \cowith
+      | f => f
+      | ret => ret
+      | ret_f => ret_f
+      | f_sec => f_sec
+
+    \lemma DecSubSet-isFin (S : FinSet) (D : DecSubSet S) : FinSet D.ISet => {?hidden_proof}
+  }
+
+
+\instance ProdFin (A B : FinSet) : FinSet (\Sigma A B) (A.finCard Nat.* B.finCard) => transport (FinSet _) Semiring.FinSum_replicate $ SigmaFin A (\lam _ => B)
+  \where {
+    \func prod_equiv {n m : Nat} : Equiv {Fin (n Nat.* m)} {\Sigma (Fin n) (Fin m)} 
+      => transport (\lam x => Equiv {Fin x} {_}) Semiring.BigSum_replicate $ SigmaFin.aux {n} {\lam _ => m}
+  }

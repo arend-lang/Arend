@@ -1,0 +1,188 @@
+\import Algebra.Group
+\import Algebra.Group.Sub
+\import Algebra.Module
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Monoid.Sub
+\import Algebra.Pointed
+\import Algebra.Pointed.Sub
+\import Algebra.Ring
+\import Algebra.Semiring
+\import Arith.Int
+\import Arith.Nat
+\import Combinatorics.Binom
+\import Data.Array
+\import Data.Bool
+\import Data.Or
+\import Equiv
+\import Function.Meta($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Lattice
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Countable
+\import Set.Fin
+\open AddMonoid
+\open AbMonoid
+
+\class LIdeal \extends SubAddGroup {
+  \override S : Ring
+  | ideal-left {r a : S} : contains a -> contains (r * a)
+  | contains_negative => \lam c => transport contains (Ring.negative_*-left *> pmap negative ide-left) (ideal-left c)
+}
+
+\class RIdeal \extends SubAddGroup {
+  \override S : Ring
+  | ideal-right {r a : S} : contains a -> contains (a * r)
+  | contains_negative => \lam c => transport contains (Ring.negative_*-right *> pmap negative ide-right) (ideal-right c)
+}
+
+\class TIdeal \extends LIdeal, RIdeal
+
+\class Ideal \extends TIdeal {
+  \override S : CRing
+  | ideal-right => \lam s => transport contains *-comm (ideal-left s)
+}
+  \where {
+    \open Ideal
+
+    \func closure {R : CRing} {J : \Set} (g : J -> R) : Ideal R \cowith
+      | contains => \lam e => ∃ (l : Array (\Sigma R J)) (e = BigSum (map (\lam p => p.1 * g p.2) l))
+      | contains_zro => inP (nil, idp)
+      | contains_+ => \lam inP (l, p) inP (l', p') => inP (l ++ l', pmap2 + p p' *> inv (pmap BigSum (map_++ (later (\lam (c, j) => c * g j))) *> BigSum_++))
+      | ideal-left => \lam {r} inP (l, p) => inP (map (\lam (c, j) => (r * c, j)) l, 
+        pmap (r *) p *> R.BigSum-ldistr *> path (\lam i => BigSum (map (\lam (c, j) => inv (R.*-assoc {r} {c} {g j}) @ i) l)))
+
+    \func sclosure {R : CRing} (U : R -> \Prop) => closure (\lam (p : \Sigma (x : R) (U x)) => p.1)
+
+    \lemma closure-superset {R : CRing} {J : \Set} {g : J -> R} (j : J) : closure g (g j) => {?hidden_proof}
+
+    \lemma sclosure-superset {R : CRing} {U : R -> \Prop} {x : R} (Ux : U x) : sclosure U x => {?hidden_proof}
+
+    \lemma closure-univ {R : CRing} {J : \Set} {g : J -> R} {I : Ideal R} (c : \Pi (j : J) -> I (g j)) {x : R} (d : closure g x) : I x => {?hidden_proof}
+
+    \lemma sclosure-univ {R : CRing} {U : R -> \Prop} {I : Ideal R} (c : \Pi (x : R) -> U x -> I x) {x : R} (d : sclosure U x) : I x => {?hidden_proof}
+
+    \func closure1 {R : CRing} (a : R) : Ideal R => closure (\lam (_ : \Sigma) => a)
+
+    \lemma closure1-lem {R : CRing} {a b : R} : closure1 a b <-> ∃ (c : R) (b = a * c) => {?hidden_proof}
+
+    \lemma closure1_LDiv {R : CRing} {a b : R} : closure1 a b <-> TruncP (Monoid.LDiv a b) => {?hidden_proof}
+
+    \lemma closure1-principal {R : CRing} {a : R} : IsPrincipal {closure1 a} => {?hidden_proof}
+      \where {
+        \lemma generated {R : CRing} {a : R} : IsGeneratedBy1 {closure1 a} a => {?hidden_proof}
+      }
+
+
+    \lemma closure2-lem {R : CRing} {a : R} (f : Bool -> R) : closure f a <-> ∃ (c d : R) (a = f true * c + f false * d) => {?hidden_proof}
+
+    \lemma fin-closure-lem {D : FinSet} {R : CRing} {a : R} (f : D -> R) : closure f a <-> ∃ (c : (D -> R)) (a = FinSum (\lam i => c i * f i)) => {?hidden_proof}
+
+    \lemma closureN-lem {R : CRing} {a : R} {B : Array R} : closure B a <-> ∃ (c : Array R B.len) (a = BigSum (\lam i => c i * B i)) => {?hidden_proof}
+      \where {
+        \lemma singleton-lem {R : Semiring} (a : R) (n : Nat) (i : Fin n) : BigSum (\lam (j : Fin n) => if (i NatSemiring.== j) a 0) = a => {?hidden_proof}
+
+        \lemma suc-eq {a b : Nat} : suc a == suc b = a == b => {?hidden_proof}
+      }
+
+
+    \lemma closure-generated {R : CRing} {l : Array R} : IsGeneratedBy {closure l} l => {?hidden_proof}
+
+    \lemma closure-finGenerated {R : CRing} {l : Array R} : Ideal.IsFinitelyGenerated {closure l} => {?hidden_proof}
+
+    \func ChainCondition {R : CRing} (I : Nat -> Ideal R) => (\Pi (n : Nat) {a : R} -> I n a -> I (suc n) a) -> ∃ (n : Nat) ∀ {a} (I (suc n) a -> I n a)
+
+    \lemma fromMonoidChainCondition {R : CRing} (cc : CMonoid.DivChain {DivQuotient.DivQuotientMonoid R}) (I : Nat -> Ideal R) (p : \Pi (n : Nat) -> Ideal.IsPrincipal {I n}) : ChainCondition I 
+      => {?hidden_proof}
+
+    \func union {R : CRing} (I : Nat -> Ideal R) (\property inc : \Pi {n : Nat} {a : R} -> I n a -> I (suc n) a) : Ideal R \cowith
+      | contains => \lam a => ∃ (n : Nat) (I n a)
+      | contains_zro => inP (0, contains_zro)
+      | contains_+ => \lam inP (n, c) inP (m, d) => inP (n + m, contains_+ (include c) $ rewrite +-comm (include d))
+      | ideal-left => \lam inP (n, c) => inP (n, ideal-left c)
+      \where {
+        \lemma include {n m : Nat} {a : R} (Ia : I n a) : I (n + m) a => {?hidden_proof}
+      }
+
+
+    \func countable-maximal {R : CRing} (c : Countable R) (Id : \Pi (I : Ideal R) -> I.IsFinitelyGenerated -> \Pi (x : R) -> Dec (I x)) {I : Ideal R} (Ig : I.IsFinitelyGenerated) 
+    (Ip : Not (I 1)) : \Sigma (M : Ideal R) M.IsMaximal (\Pi {a : R} -> I a -> M a) => (union (\lam n => (ideal n).1) (\lam {_} {a} c => mcases),
+      (\lam inP c => ideal-proper c.1 c.2,
+      \lam a => (\case pointed-countable-surj R.zro c a \with {  | inP (n, fn=a) => \case Id (next n (ideal n)) (next-fg n (ideal n)) 1 \with {
+        | yes inP (x, y, Ix, p) => byRight (y, inP (n, transport (ideal n).1 equation Ix))
+        | no r => byLeft $ inP (suc n, rewrite (dec_no_reduce r) $ inP (0, 1, contains_zro, equation))  }})), \lam c => inP (0, c)
+    )
+      \where {
+        \func next (n : Nat) (I : \Sigma (I : Ideal R) I.IsFinitelyGenerated) : Ideal R \cowith
+          | contains => \lam z => ∃ (x y : R) (I.1 x) (z = x + y * pointed-countable R.zro c n)
+          | contains_zro => inP (0, 0, contains_zro, simplify)
+          | contains_+ => \lam inP (x1, y1, Ix1, p1) inP (x2, y2, Ix2, p2) => inP (x1 + x2, y1 + y2, contains_+ Ix1 Ix2, equation)
+          | ideal-left => \lam {r} inP (x, y, Ix, p) => inP (r * x, r * y, ideal-left Ix, equation)
+
+        \lemma next-fg (n : Nat) (I : \Sigma (I : Ideal R) I.IsFinitelyGenerated) : Ideal.IsFinitelyGenerated {next n I} => {?hidden_proof}
+
+        \func ideal (n : Nat) : \Sigma (I : Ideal R) I.IsFinitelyGenerated \elim n
+          | 0 => (I, Ig)
+          | suc n => \case Id (next n (ideal n)) (next-fg n (ideal n)) 1 \with {
+            | yes r => ideal n
+            | no r => (next n (ideal n), next-fg n (ideal n))
+          }
+
+        \lemma ideal-proper (n : Nat) (c : (ideal n).1 1) : Empty => {?hidden_proof}
+      }
+
+  }
+
+
+\instance IdealLattice {R : CRing} : BoundedLattice (Ideal R) 
+  | <= => \lam I J => \Pi {a : R} -> I a -> J a
+  | <=-refl => \lam c => c
+  | <=-transitive => \lam p q c => q (p c)
+  | <=-antisymmetric => \lam p q => exts (\lam a => ext (p, q))
+  | meet => meet
+  | meet-left => __.1
+  | meet-right => __.2
+  | meet-univ => \lam f g c => (f c, g c)
+  | top => top
+  | top-univ => \lam _ => ()
+  | join => \lam I J => Ideal.closure {R} {Or (\Sigma (a : R) (I a)) (\Sigma (a : R) (J a))} (Or.rec __.1 __.1)
+  | join-left => \lam {I} {J} {a} c => Ideal.closure-superset {R} {Or (\Sigma (a : R) (I a)) (\Sigma (a : R) (J a))} {Or.rec __.1 __.1} $ inl (a, c)
+  | join-right => \lam {I} {J} {a} c => Ideal.closure-superset {R} {Or (\Sigma (a : R) (I a)) (\Sigma (a : R) (J a))} {Or.rec __.1 __.1} $ inr (a, c)
+  | join-univ => \lam {I} {J} f g => Ideal.closure-univ {R} {Or (\Sigma (a : R) (I a)) (\Sigma (a : R) (J a))} {Or.rec __.1 __.1} (\lam e => cases e)
+  | bottom => bottom
+  | bottom-univ => \lam p => rewrite p contains_zro
+
+\instance IdealMonoid {R : CRing} : CMonoid (Ideal R) 
+  | ide => IdealLattice.top
+  | * => product
+  | ide-left => <=-antisymmetric (product-right {R} {IdealLattice.top}) (\lam {a} c => inP ((1, (1, a, (), c)) :: nil, simplify))
+  | *-assoc => \lam {I} {J} {K} => <=-antisymmetric (Ideal.closure-univ {R} {_} {func (product I J) K} {product I (product J K)}
+    (\lam (a, b, inP (l, p), Kb) => unfold func $ rewrite (p, R.BigSum-rdistr) $ Ideal.bigSum {product I (product J K)} _
+    (\lam j => unfold func $ rewrite *-assoc $ ideal-left {product I (product J K)} $ rewrite *-assoc $ Ideal.closure-superset {R} {_} {func I (product J K)} $ later 
+        ((l j).2.1, (l j).2.2 * b, (l j).2.3, inP ((1, ((l j).2.2, b, (l j).2.4, Kb)) :: nil, simplify)))))
+    (Ideal.closure-univ {R} {_} {func I (product J K)} {product (product I J) K}
+    (\lam (a, b, Ia, inP (l, p)) => unfold func $ rewrite (p, R.BigSum-ldistr) $ Ideal.bigSum {product (product I J) K} _
+    (\lam j => unfold func $ rewrite (*-comm, *-assoc) $ ideal-left {product (product I J) K} $ rewrite (*-comm, inv *-assoc) $ Ideal.closure-superset {R} {_} 
+          {func (product I J) K} $ later (a * (l j).2.1, (l j).2.2, inP ((1, (a, (l j).2.1, Ia, (l j).2.3)) :: nil, simplify), (l j).2.4))))
+  | *-comm => 
+    \have lem {I J : Ideal R} : product I J <= product J I => Ideal.closure-univ {R} {_} {func I J} 
+            (\lam s => transport (product J I) *-comm $ Ideal.closure-superset {R} {\Sigma (a b : R) (J a) (I b)} {func J I} (s.2, s.1, s.4, s.3))
+    \in <=-antisymmetric lem lem
+  \where {
+    \func func {R : CRing} (I J : Ideal R) => \lam (s : \Sigma (a b : R) (I a) (J b)) => s.1 * s.2
+
+    \func product {R : CRing} (I J : Ideal R) => Ideal.closure (func I J)
+
+    \lemma product-left {R : CRing} {I J : Ideal R} : product I J <= I => {?hidden_proof}
+
+    \lemma product-right {R : CRing} {I J : Ideal R} : product I J <= J => {?hidden_proof}
+
+    \lemma product_meet {R : CRing} {I J : Ideal R} : product I J <= I ∧ J => {?hidden_proof}
+  }

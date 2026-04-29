@@ -1,0 +1,80 @@
+\import Algebra.Domain.Euclidean
+\import Algebra.Domain.GCD
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.GCD
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.Local
+\import Data.Or
+\import Equiv
+\import Function.Meta($)
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\open Monoid(Inv)
+
+\class Field \extends LocalCRing, GCDDomain {
+  | #0 => \lam x => Inv x
+  | #0-+ => LocalRing.sumInv=>eitherInv
+  | #0-zro => \lam (j : Inv zro) => zro/=ide (inv zro_*-right *> j.inv-left)
+  | #0-*-left => Inv.cfactor-left
+  | zro#ide => Inv.lmake ide ide-left
+  | #0-* => \lam xj yj => Inv.product xj yj
+  | isGCDDomain => \lam x y x#0 y#0 =>
+  inP (\new GCD {  | res => 1  | res|val1 => \new Monoid.LDiv {    | inv => x    | inv-right => ide-left  }  | res|val2 => \new Monoid.LDiv {    | inv => y
+      | inv-right => ide-left  }  | res-univ => \lam g g|x g|y => \new Monoid.LDiv {    | inv => Monoid.LDiv.inv {g|x} * Inv.inv {x#0}
+      | inv-right => inv *-assoc *> pmap (* _) Monoid.LDiv.inv-right *> Inv.inv-right  }})
+}
+
+\class DiscreteField \extends Field, EuclideanDomain {
+  | finv : E -> E
+  | finv_zro : finv 0 = 0
+  | finv-right {x : E} (x/=0 : x /= 0) : x * finv x = 1
+  \field eitherZeroOrInv (x : E) : (x = 0) || Inv x
+  | isEuclidean => inP (\new EuclideanRingData {  | euclideanMap => \lam x => 0  | divMod => \lam x y => (\case decideEq y 0 \with {    | yes _ => (0, x)
+      | no _ => (finv y * x, 0)  })  | isDivMod => \lam x y => mcases  | isEuclideanMap => \lam x y y/=0 => mcases {1}})
+  | finv => finv-impl
+  | finv_zro => finv_zroImpl
+  | finv-right => id_finvImpl
+  | eitherZeroOrInv => \lam x => (\case decideEq x 0 \with {
+    | yes x=0 => byLeft x=0
+    | no x/=0 => byRight (Inv.rmake (finv x) (finv-right x/=0))
+  })
+  | locality => \lam x => (\case eitherZeroOrInv x \with {
+    | byLeft x=0 => byRight $ Inv.lmake ide (equation.semiring {x=0})
+    | byRight xInv => byLeft xInv
+  })
+  | decideEq => \lam x y => (\case eitherZeroOrInv (x - y) \with {
+    | byLeft x-y=0 => yes (fromZero x-y=0)
+    | byRight x-y-isInv => no (\lam x=y => #-irreflexive (rewrite x=y in x-y-isInv))
+  })
+  | nonZeroApart => \lam {x} x/=0 => (\case eitherZeroOrInv x \with {
+    | byLeft x=0 => absurd (x/=0 x=0)
+    | byRight x#0 => x#0
+  })
+}
+  \where {
+    \lemma aux {R : CRing} (p : R.zro /= R.ide) (x : R) (q : (x = 0) || Inv x) :
+      \level ((x = 0) `Or` Inv x) (Or.levelProp (\lam x=0 (j : Inv x) => p $ inv R.zro_*-left *> pmap (* _) (inv x=0) *> j.inv-right)) => {?hidden_proof}
+
+    \func backwards (f : RingHom) (e : Equiv f) (D : DiscreteField {  | Ring => f.Cod}) : DiscreteField {
+      | Ring => f.Dom
+    } \cowith
+      | *-comm => e.isInj $ f.func-* *> *-comm *> inv f.func-*
+      | zro/=ide => \lam q => D.zro/=ide $ inv f.func-zro *> pmap f q *> f.func-ide
+      | eitherZeroOrInv => \lam a => ||.map (\lam q => e.isInj $ q *> inv f.func-zro)
+        (\lam (fai : Inv (f a)) => \new (Inv a) {  | inv => e.ret fai.inv
+        | inv-left => e.isInj $ f.func-* *> pmap (* _) (e.f_ret _) *> fai.inv-left *> inv f.func-ide
+        | inv-right => e.isInj $ f.func-* *> pmap (_ *) (e.f_ret _) *> fai.inv-right *> inv f.func-ide}) (D.eitherZeroOrInv (f a))
+
+    \func forward {f : RingHom} (e : Equiv f) (D : DiscreteField {  | Ring => f.Dom}) : DiscreteField {
+      | Ring => f.Cod
+    } => backwards (\new (RingHom f.Cod f.Dom e.ret) {  | func-+ => e.isInj $ e.f_ret _ *> inv (f.func-+ *> pmap2 + (e.f_ret _) (e.f_ret _))
+      | func-ide => e.isInj $ e.f_ret _ *> inv f.func-ide  | func-* => e.isInj $ e.f_ret _ *> inv (f.func-* *> pmap2 * (e.f_ret _) (e.f_ret _))}) 
+    (symQEquiv e) D
+  }

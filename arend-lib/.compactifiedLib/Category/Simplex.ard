@@ -1,0 +1,71 @@
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Category
+\import Equiv(Equiv, QEquiv)
+\import Function(IsInj)
+\import Logic.Unique
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.Category
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Set.SetHom
+\import Set.Fin
+
+\lemma monotone-inj {P1 : BiorderedSet} {P2 : LinearOrder.Dec} (f : PosetHom P1 P2) (f-inj : IsInj f) : StrictPosetHom P1 P2 (func {f}) => {?hidden_proof}
+
+\lemma monotone-diagonal-fin {n : Nat} (f : Fin (suc n) -> Fin (suc n)) (mon : \Pi (k : Fin n) -> f k < f (suc k)) {k : Fin (suc n)} : k <= f k => {?hidden_proof}
+
+\func fin_monotone_iso_unique {n : Nat} (f : PosetHom (FinOrder (suc n)) (FinOrder (suc n))) (g : PosetHom (FinOrder (suc n)) (FinOrder (suc n))) 
+(fg-comp : f Function.o g = Function.id {Fin (suc n)}) (gf-comp : g Function.o f = Function.id {Fin (suc n)}) :
+  \Sigma (Function.id {Fin (suc n)} = func {f}) (Function.id {Fin (suc n)} = func {g}) => 
+  \let | isInj-g : IsInj g => \lam {a} {b} leq => run {(  \have A0 => pmap f leq  \in {?}, rewrite (pmap (\lam f => f a) fg-comp, pmap (\lam k => k b) fg-comp) at A0, A0)}
+       | isInj-f : IsInj f => \lam {a} {b} leq => run {(  \have A0 => pmap g leq  \in {?}, rewrite (pmap (\lam f => f a) gf-comp, pmap (\lam k => k b) gf-comp) at A0, A0)}
+       | k<=fk => monotone-diagonal-fin {n} f (\lam _ => func-< {monotone-inj f isInj-f} id<suc)
+       | k<=gk => monotone-diagonal-fin {n} g (\lam _ => func-< {monotone-inj g isInj-g} id<suc)
+  \in (ext (\lam k => inv (<-connectedness k<=fk (rewrite (pmap (\lam f => f k) gf-comp) in k<=gk {f k}))), 
+ext (\lam k => inv (<-connectedness k<=gk (rewrite (pmap (\lam f => f k) fg-comp) in k<=fk {g k})))
+)
+
+\instance SimplexPrecat : Precat 
+  | Ob => Nat
+  | Hom => \lam n m => hom n m
+  | id => \lam _ => \new PosetHom {
+    | func => \lam x => x
+    | func-<= => \lam eq => eq
+  }
+  | o => \lam (f, f-monotone) (g, g-monotone) => \new PosetHom {
+    | func => f Function.o g
+    | func-<= => \lam eq => f-monotone (g-monotone eq)
+  }
+  | id-left => idp
+  | id-right => idp
+  | o-assoc => idp
+  \where {
+    \func hom (n m : Nat) => PosetHom (FinOrder n) (FinOrder m)
+  }
+
+
+\lemma Simplex_iso {n m : Nat} (iso : Iso {SimplexPrecat} {n} {m}) : n = m => {?hidden_proof}
+
+\func iso_iso {n : Nat} (f : Iso {SimplexPrecat} {suc n} {suc n}) 
+=> fin_monotone_iso_unique {n} (Iso.f {f}) f.hinv (ext (\lam y => pmap {SimplexPrecat.hom (suc n) (suc n)} {Fin (suc n)} (\lam h => func {h} y) f.f_hinv)) 
+  (ext (\lam y => pmap {SimplexPrecat.hom (suc n) (suc n)} {Fin (suc n)} (\lam h => func {h} y) f.hinv_f))
+
+\func iso_isProp {n : Nat} : isProp (Iso {SimplexPrecat} {n} {n}) \elim n
+  | 0 => \lam _ _ => ext (ext (ext (\lam k => (\case k \with {}))), ext (ext (\lam k => (\case k \with {}))))
+  | suc n => isContr=>isProp (\new Contr {  | center => \new (Iso {SimplexPrecat} {suc n} {suc n}) {    | f => PosetCat.id (FinOrder (suc n))
+      | hinv => PosetCat.id (FinOrder (suc n))    | hinv_f => idp    | f_hinv => idp  }
+    | contraction => \lam f => ext (  \let (p, q) => iso_iso {n} f  \in (ext p, ext q))})
+
+\instance SimplexCat : Cat 
+  | Precat => SimplexPrecat
+  | univalence => \lam {n} {_} => \new QEquiv {
+    | ret => \lam iso => Simplex_iso iso
+    | ret_f => \lam _ => set-pi
+    | f_sec => \lam iso => transport (\lam k => isProp (Iso {SimplexPrecat} {n} {k})) (Simplex_iso iso) (iso_isProp {n}) _ _
+  }

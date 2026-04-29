@@ -1,0 +1,30 @@
+\import Arith.Nat(id<suc)
+\import Data.Array
+\import Data.Or
+\import Function
+\import Function.Meta($)
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Set.Fin.Pigeonhole
+
+\class KFinSet \extends BoundedPigeonholeSet {
+  | finSurj : ∃ (f : (Fin finCard -> E)) (IsSurj f)
+  | boundedPigeonhole => \case finSurj \with {
+    | inP (f, s) => boundedPigeonhole {pigeonhole-surj (\new (BoundedPigeonholeSet (Fin finCard) finCard (pigeonhole-fin __ id<suc))) f s}
+  }
+}
+\where {
+  \lemma fromArray {A : \Set} (l : Array A) (p : \Pi (a : A) -> ∃ (i : Fin l.len) (l i = a)) : KFinSet A l.len => {?hidden_proof}
+
+  \lemma toArray (A : KFinSet) : ∃ (l : Array A) ∀ a ∃ (i : Fin l.len) (l i = a) => {?hidden_proof}
+
+  \lemma KFin+Dec=>Fin {A : \Set} (k : KFinSet A) {d : DecSet A} : FinSet A => {?hidden_proof}
+}
+
+
+\lemma QuotientKFin {A : KFinSet} {R : A -> A -> \Type} : KFinSet (Quotient R) A.finCard => {?hidden_proof}

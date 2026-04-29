@@ -1,0 +1,29 @@
+\import Algebra.Algebra
+\import Algebra.Group
+\import Algebra.Linear.Matrix
+\import Algebra.Linear.Matrix.CharPoly
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.FinModule
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.Poly
+\import Function.Meta
+\import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+
+\lemma cayley-hamilton {R : CRing} {n : Nat} (A : Matrix R n n) : polyMapEval (CAlgebra.coefHom {MatrixAlgebra R n}) (charPoly A) A = 0 => {?hidden_proof}
+  \where {
+    \func toLinearMap {R : CRing} {n m : Nat} (A : Matrix R n m) : LinearMap (ArrayFinModule n) (ArrayFinModule m) \cowith
+      | func => \lam u => \lam j => R.BigSum (\lam i => A i j * u i)
+      | func-+ => exts (\lam j => pmap R.BigSum (exts (\lam i => R.ldistr)) *> R.BigSum_+)
+      | func-*c => exts (\lam j => pmap R.BigSum (exts (\lam i => equation)) *> inv R.BigSum-ldistr)
+
+    \lemma poly_func_matrix {R : CRing} {n : Nat} (p : Poly R) (A : Matrix R n n) (i j : Fin n) :
+      polyMapEval (CAlgebra.coefHom {MatrixAlgebra R n}) p A i j = polyModule.poly_func p (toLinearMap A) (MatrixRing.ide i) j => {?hidden_proof}
+  }

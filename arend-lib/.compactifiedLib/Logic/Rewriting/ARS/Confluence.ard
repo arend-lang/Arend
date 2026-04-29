@@ -1,0 +1,59 @@
+\import Logic.Rewriting.ARS.AbstractReductionSystem
+\import Logic
+\import Paths
+\import Paths.Meta
+\import Relation.Truncated
+\import Logic.Rewriting.ARS.Termination
+
+\data StrongJoin {A : SimpleARS} (b c : A) : \Prop 
+  | strong-join (d : A) (b ~>_= d) (c ~>_* d)
+
+\func isStronglyConfluent (A : SimpleARS) : \Prop => \Pi {a b c : A} (p : a ~> b) (q : a ~> c) -> StrongJoin b c
+
+\func isChurchRosser (A : SimpleARS) : \Prop => \Pi {a b : A} (a <~>* b) -> Join a b
+
+\func isConfluent (A : SimpleARS) : \Prop => \Pi {a b c : A} (a ~>_* b) (a ~>_* c) -> Join b c
+
+\func isLocallyConfluent (A : SimpleARS) : \Prop => \Pi {a b c : A} (a ~> b) (a ~> c) -> Join b c
+
+\func hasUniqueNormalFormsWrtReduction (A : SimpleARS) : \Prop => \Pi {a b c : A} (a ~>_* b) (a ~>_* c) (isNormalForm b) (isNormalForm c) -> b = c
+
+\func hasUniqueNormalForms (A : SimpleARS) : \Prop => \Pi {a b : A} (a <~>* b) (isNormalForm a) (isNormalForm b) -> a = b
+
+\func hasNormalFormProperty (A : SimpleARS) : \Prop => \Pi {a b : A} (a <~>* b) (isNormalForm b) -> a ~>_* b
+
+\lemma ChurchRosser=>Confluence {A : SimpleARS} (cr : isChurchRosser A) : isConfluent A => {?hidden_proof}
+
+\lemma Confluence=>ChurchRosser {A : SimpleARS} (conf : isConfluent A) : isChurchRosser A => {?hidden_proof}
+  \where {
+    \lemma conf=>rc-helper (a b : A) (a<~>*b : a <~>* b) : Join a b => {?hidden_proof}
+  }
+
+
+\lemma ChurchRosser=Confluence {A : SimpleARS} : isChurchRosser A = isConfluent A => {?hidden_proof}
+
+\lemma StrongConfluence=>Confluence {A : SimpleARS} (sconf : isStronglyConfluent A) : isConfluent A => {?hidden_proof}
+  \where {
+    \lemma SCR=>strong-join {a b c : A} (a~>*b : a ~>_* b) (a~>c : a ~> c) : StrongJoin b c => {?hidden_proof}
+
+    \lemma strong-join=>Confluence {x y z : A} (x~>*y : x ~>_* y) (x~>*z : x ~>_* z) : Join y z => {?hidden_proof}
+  }
+
+
+\lemma Confluence=>LocalConfluence {A : SimpleARS} (conf : isConfluent A) : isLocallyConfluent A => {?hidden_proof}
+
+\lemma Confluence=>NormalFormProperty {A : SimpleARS} (conf : isConfluent A) : hasNormalFormProperty A => {?hidden_proof}
+  \where {
+    \lemma conf=>nfp-helper (a b : A) (a<~>*b : a <~>* b) (bnf : isNormalForm b) : a ~>_* b => {?hidden_proof}
+  }
+
+
+\lemma NormalFormProperty=>UniqueNormalForms {A : SimpleARS} (nfp : hasNormalFormProperty A) : hasUniqueNormalForms A => {?hidden_proof}
+
+\lemma UniqueNormalForms=>UniqueNormalFormsWrtReduction {A : SimpleARS} (unf : hasUniqueNormalForms A) : hasUniqueNormalFormsWrtReduction A => {?hidden_proof}
+
+\lemma Normalization+UniqueNormalForms=>Confluence {A : SimpleARS} (norm : isNormalizing A) (unf : hasUniqueNormalForms A) : isConfluent A => {?hidden_proof}
+
+\lemma Termination+LocalConfluence=>Confluence {A : SimpleARS} (term : isTerminating A) (lconf : isLocallyConfluent A) : isConfluent A => {?hidden_proof}
+
+\lemma Termination=>[LocalConfluence=Confluence] \alias Newman {A : SimpleARS} (term : isTerminating A) : isLocallyConfluent A = isConfluent A => {?hidden_proof}

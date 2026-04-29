@@ -1,0 +1,33 @@
+\import Algebra.Meta
+\import Category
+\import Category.Limit
+\import Equiv
+\import Logic
+\import Paths
+\import Paths.Meta
+
+\class WFS {
+  | C : Precat
+  | L : \Pi {x y : C} -> Hom x y -> \Prop
+  | R : \Pi {x y : C} -> Hom x y -> \Prop
+  | factors {x z : C} (h : Hom x z) : \Sigma (y : C) (f : Hom x y) (g : Hom y z) (g ∘ f = h) (L f) (R g)
+  | lift {a b c d : C} (t : Hom a c) (s : Hom b d) (f : Hom a b) (g : Hom c d) : g ∘ t = s ∘ f -> L f -> R g -> \Sigma (l : Hom b c) (l ∘ f = t) (g ∘ l = s)
+}
+  \where {
+    \open PrecatWithBprod
+
+    \lemma left-epi {C : CartesianPrecat} (w : WFS {C}) {x y : C} (f : Hom x y) (Lf : L f) {z : C} (Rd : R (diagonal z)) {g h : Hom y z} (p : g ∘ f = h ∘ f) : g = h => {?hidden_proof}
+  }
+
+
+\class OFS \extends WFS {
+  | unique-lift {a b c d : C} (f : Hom a b) (g : Hom c d) : L f -> R g -> Equiv {Hom b c} {\Sigma (t : Hom a c) (s : Hom b d) (g ∘ t = s ∘ f)} (\lam l => (l ∘ f, g ∘ l, inv o-assoc))
+  | lift => \lam t s f g p Lf Rg => (
+    \have q => Equiv.f_ret {unique-lift f g Lf Rg} (t, s, p)
+    \in (ret {unique-lift f g Lf Rg} (t, s, p), pmap __.1 q, pmap __.2 q))
+}
+  \where {
+    \lemma liftFromMono {C : Precat} {a b c d : C} (f : Hom a b) (g : Hom c d) (m : Mono g) 
+    (l : \Pi (t : Hom a c) (s : Hom b d) -> g ∘ t = s ∘ f -> \Sigma (l : Hom b c) (g ∘ l = s)) :
+      Equiv {Hom b c} {\Sigma (t : Hom a c) (s : Hom b d) (g ∘ t = s ∘ f)} (\lam l => (l ∘ f, g ∘ l, inv o-assoc)) => {?hidden_proof}
+  }

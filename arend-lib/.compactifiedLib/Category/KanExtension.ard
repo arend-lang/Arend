@@ -1,0 +1,36 @@
+\import Category
+\import Category.Comma
+\import Category.Functor
+\import Category.Limit
+\import Function.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+
+\func LeftKanExt {C C' : SmallPrecat} {D : CocompletePrecat} (p : Functor C C') (F : Functor C D) : Functor C' D => Functor.op {RightKanExt D.op p.op F.op}
+
+\func RightKanExt {C C' : SmallPrecat} (D : CompletePrecat) (p : Functor C C') (F : Functor C D) : Functor C' D \cowith
+  | F => \lam c' => lim F c'
+  | Func => \lam {x} {y} f => limMap {lim F y} (Cone.premap (commaFunctor f) (lim F x))
+  | Func-id => \lam {x} => limUniqueBeta {lim F x} {lim F x} (\lam j => path (\lam i => coneMap {lim F x} (j.1, j.2, (id-right *> id-left) @ i)) *> inv id-right)
+  | Func-o => \lam {x} {y} {z} {g} {f} => limUniqueBeta {lim F z} {lim F x}
+    (\lam j => inv (pmap (∘ _) (limBeta {lim F z} (Cone.premap (commaFunctor g) (lim F y)) j) *> limBeta {lim F y} (Cone.premap (commaFunctor f) (lim F x)) 
+      (j.1, j.2, id (p j.2) ∘ j.3 ∘ g) *> path (\lam i => coneMap {lim F x} (j.1, j.2, (pmap (∘ _) id-left *> o-assoc) @ i))) *> o-assoc)
+  \where {
+    \open Limit
+
+    \func lim {C C' : SmallPrecat} {D : CompletePrecat} {p : Functor C C'} (F : Functor C D) (b : C') 
+      => D.limit (Comp F (commaPrecat.rightForget (Const {TrivialCat} b) p))
+
+    \func commaFunctor {C C' : SmallPrecat} {p : Functor C C'} {x y : C'} (f : Hom y x) => commaPrecat.functor (Const {TrivialCat} x) (Const y) p p (Const.natTrans f) (id p)
+
+\class DoubleLimit {
+      | J : SmallPrecat
+      | C : SmallPrecat
+      | C' : SmallPrecat
+      | D : CompletePrecat
+      | p : Functor C C'
+      | F : Functor C D
+      | G : Functor J C'
+    }
+  }

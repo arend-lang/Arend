@@ -1,0 +1,27 @@
+\import Logic
+\import Paths
+\import Set
+
+\class StrictPoset \extends BaseSet {
+  | \infix 4 < : E -> E -> \Prop
+  | <-irreflexive {x : E} : Not (x < x)
+  | <-transitive \alias \infixr 9 <∘ {x y z : E} : x < y -> y < z -> x < z
+  | \infix 4 > : E -> E -> \Prop
+  | > => \lam x y => y < x
+}
+  \where {
+    \module Reasoning
+      \where {
+        \lemma \infixr 1 >>> {P : StrictPoset} {x y z : P} => {?hidden_proof}
+
+        \lemma \infixr 1 >>= {P : StrictPoset} {x y z : P} (x<y : x < y) (y=z : y = z) => {?hidden_proof}
+
+        \lemma \infixr 1 >=> {P : StrictPoset} {x y z : P} (x=y : x = y) (y<z : y < z) => {?hidden_proof}
+
+        \func \infix 2 <<< {P : StrictPoset} (x : P) {y : P} (p : x < y) => p
+      }
+
+  }
+
+
+\func IsStrictlyMonotone {X Y : StrictPoset} (f : X -> Y) => \Pi {x x' : X} -> x < x' -> f x < f x'

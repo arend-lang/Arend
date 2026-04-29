@@ -1,0 +1,33 @@
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Analysis.FuncLimit
+\import Analysis.PowerSeries
+\import Analysis.Series
+\import Arith.Int
+\import Arith.Nat
+\import Arith.Rat
+\import Arith.Real
+\import Arith.Real.UpperReal
+\import Combinatorics.Factorial
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Biordered
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Topology.BanachAlgebra
+\import Topology.CoverSpace.Complete
+\import Topology.MetricSpace
+\import Topology.NormedAbGroup
+\import Topology.NormedAbGroup.Real
+
+exp {A : RealBanachAlgebra} : CoverMap A A 
+  => funcLimit (\lam n x => partialSum (powerSeries (\lam n => A.fromRat (RatField.finv (fac n))) __ x) n) (powerSeriesConv-funcConv exp-series-conv)
+  \where {
+    \open ExUpperRealSemigroup(<=_*, ide-right)
+
+    \lemma exp-series-conv : IsPowerSeriesConv (\lam n => A.fromRat (RatField.finv (fac n))) => {?hidden_proof}
+
+    \lemma inv-limit : RealNormed.IsLimit (\lam n => RatField.finv (suc n)) 0 => {?hidden_proof}
+  }

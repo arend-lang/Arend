@@ -1,0 +1,156 @@
+\import Data.Sigma
+\import Equiv
+\import Equiv.Path
+\import Equiv.Sigma
+\import Equiv.Univalence
+\import Function
+\import Logic.Unique
+\import Homotopy.Square
+\import Logic
+\import Paths
+\import Paths.Meta
+
+\class Universe {
+  | isLocal : \hType -> \Prop
+}
+
+\class Local {
+  | U : Universe
+  | S : \hType
+  | local : isLocal S
+}
+
+\class Localization {
+  | U : Universe
+  | S : \hType
+  | S' : Local
+  | inL : S -> S'
+  | local-univ (Z : Local) : Equiv {S' -> Z} {S -> Z} (-o inL)
+}
+  \where {
+    levelProp {U : Universe} (X : \hType) (l1 l2 : Localization X) : l1 = l2 => 
+      \let p : l1.S' = {\hType} l2.S' => path (iso (l1.lift l2.inL) (l2.lift l1.inL)  (remove_inL (l2.lift l1.inL `o` l1.lift l2.inL) id  (\lam x => qed
+             (l2.lift l1.inL (l1.lift l2.inL (l1.inL x)) ==< pmap (l2.lift l1.inL) (l1.lift-prop l2.inL x) >== l2.lift l1.inL (l2.inL x) ==< l2.lift-prop l1.inL x >== 
+                   l1.inL x)))  (remove_inL (l1.lift l2.inL `o` l2.lift l1.inL) id  (\lam x => qed
+             (l1.lift l2.inL (l2.lift l1.inL (l2.inL x)) ==< pmap (l1.lift l2.inL) (l2.lift-prop l1.inL x) >== l1.lift l2.inL (l1.inL x) ==< l1.lift-prop l2.inL x >== 
+                   l2.inL x))))
+      \in (exts Localization) {
+            | S' => p
+            | inL => l1.lift-prop l2.inL
+          }
+  }
+
+
+\open Localization(lift, lift-prop, remove_inL, remove_inL-coh)
+
+\class ReflUniverse \extends Universe {
+  | localization (A : \hType) : Localization A
+}
+
+\func LType {U : ReflUniverse} (A : \hType) => Localization.S' {localization A}
+
+\func lEta {U : ReflUniverse} {A : \hType} (a : A) => Localization.inL {localization A} a
+
+\func lmap {U : ReflUniverse} {A B : \hType} (f : A -> B) (la : LType A) : LType B => lift (inL `o` f) la
+  \where {
+    \func id-prop {U : ReflUniverse} {A : \hType} (la : LType A) : lmap id la = la => remove_inL (lmap id) id (lift-prop inL) la
+  }
+
+
+\lemma sectionIsEquiv {U : ReflUniverse} (X : \hType) (s : Section (inL {localization X})) : Equiv (inL {localization X}) => {?hidden_proof}
+  \where {
+    \lemma lem {U : Universe} (L : Localization) (s : Section {L.S} {L.S'} inL) : Equiv {L.S} {L.S'} inL => {?hidden_proof}
+  }
+
+
+\lemma localizationOfLocalType {U : ReflUniverse} (X : Local) : Equiv (inL {localization X}) => {?hidden_proof}
+  \where {
+    \lemma lem {U : Universe} (X : Local) (L : Localization X) : Equiv {X} {L.S'} inL => {?hidden_proof}
+  }
+
+
+\lemma localizationWithRetraction {U : ReflUniverse} (X : \hType) (s : Section (inL {localization X})) : Local X => {?hidden_proof}
+  \where {
+    \lemma lem {U : Universe} (L : Localization) (s : Section {L.S} {L.S'} inL) : Local L.S => {?hidden_proof}
+  }
+
+
+\func localizationFactor {U : ReflUniverse} {X : \hType} (Y : Local) (f : X -> Y) (g : Y -> LType X) (p : \Pi (x : X) -> g (f x) = inL {localization X} x) : Retraction g => lem (localization X) Y f g p
+  \where {
+    \func lem {U : Universe} (L : Localization) (Y : Local) (f : L.S -> Y) (g : Y -> L.S') (p : \Pi (x : L.S) -> g (f x) = inL x) : Retraction g \cowith
+      | sec => lift f
+      | f_sec => remove_inL (g `o` lift f) id (\lam x => pmap g (lift-prop f x) *> p x)
+  }
+
+
+\lemma localizationFactorSection {U : ReflUniverse} {X : \hType} (Y : Local) (f : X -> Y) (g : Section {Y} {LType X}) (p : \Pi (x : X) -> g (f x) = inL {localization X} x) : Equiv g => {?hidden_proof}
+  \where {
+    \func lem {U : Universe} (L : Localization) (Y : Local) (f : L.S -> Y) (g : Section {Y} {L.S'}) (p : \Pi (x : L.S) -> g (f x) = inL x) : Equiv g \cowith
+      | Section => g
+      | Retraction => localizationFactor.lem L Y f g p
+  }
+
+
+\lemma localizationFactorEmbedding {U : ReflUniverse} {X : \hType} (Y : Local) (f : X -> Y) (g : Y >-> LType X) (p : \Pi (x : X) -> g (f x) = inL {localization X} x) : Equiv g => {?hidden_proof}
+  \where {
+    \lemma lem {U : ReflUniverse} (L : Localization) (Y : Local) (f : L.S -> Y) (g : Y >-> L.S') (p : \Pi (x : L.S) -> g (f x) = inL x) : Equiv g => {?hidden_proof}
+  }
+
+
+\lemma contrLocal {U : ReflUniverse} (C : Contr) : Local C => {?hidden_proof}
+  \where {
+    \lemma lem {U : Universe} (C : Contr) (L : Localization C) : Local C => {?hidden_proof}
+  }
+
+
+\lemma unitLocal {U : ReflUniverse} : Local (\Sigma) => {?hidden_proof}
+  \where {
+    \lemma lem {U : Universe} (L : Localization (\Sigma)) : Local (\Sigma) => {?hidden_proof}
+  }
+
+
+\lemma pullbackLocal {U : ReflUniverse} (P : Pullback \levels \lp \oo) (VL : Local P.square.V) (XL : Local P.square.X) (YL : Local P.square.Y) : Local P.square.U => {?hidden_proof}
+  \where {
+    \open Square(pull)
+
+    \lemma lem {U : Universe} (P : Pullback \levels \lp \oo) (L : Localization P.square.U) (VL : Local P.square.V) (XL : Local P.square.X) (YL : Local P.square.Y) : Local P.square.U 
+      => {?hidden_proof}
+  }
+
+
+\lemma productLocal {U : ReflUniverse} (A B : Local) : Local (\Sigma A B) => {?hidden_proof}
+
+\lemma pathLocal {U : ReflUniverse} {A : Local} (x y : A) : Local (x = y) => {?hidden_proof}
+
+\lemma piLocal {U : ReflUniverse} {A : \hType} (B : A -> Local) : Local (\Pi (x : A) -> B x) => {?hidden_proof}
+  \where {
+    \lemma lem {U : Universe} {A : \hType} (B : A -> Local) (L : Localization (\Pi (x : A) -> B x)) : Local (\Pi (x : A) -> B x) => {?hidden_proof}
+  }
+
+
+\lemma equivLocal {U : ReflUniverse} (A B : Local) : Local (Equiv {A} {B}) => {?hidden_proof}
+
+\lemma universe-elim {U : ReflUniverse} {A : \hType} (B : LType A -> \hType) (totalIsLocal : Local (\Sigma (x : LType A) (B x))) :
+  Equiv {\Pi (x : LType A) -> B x} {\Pi (a : A) -> B (lEta a)} (\lam f a => f (lEta a)) => {?hidden_proof}
+  \where {
+    \lemma lem1 {U : ReflUniverse} {A : \hType} (B : LType A -> \hType) : Equiv {\Sigma (g : LType A -> \Sigma (x : LType A) (B x)) ((\lam x => (g x).1) = id)} 
+      {\Sigma (g : LType A -> \Sigma (x : LType A) (B x)) ((\lam a => (g (lEta a)).1) = lEta)} (\lam p => (p.1, pmap (-o lEta) p.2)) => {?hidden_proof}
+
+    \lemma lem2 {U : ReflUniverse} {A : \hType} (B : LType A -> \hType) (totalIsLocal : Local (\Sigma (x : LType A) (B x))) :
+    Equiv {\Sigma (g : LType A -> \Sigma (x : LType A) (B x)) ((\lam a => (g (lEta a)).1) = lEta)} 
+      {\Sigma (g : A -> \Sigma (x : LType A) (B x)) ((\lam a => (g a).1) = lEta)} (\lam p => (\lam a => p.1 (lEta a), p.2)) => {?hidden_proof}
+  }
+
+
+\func localYoneda {U : ReflUniverse} {A : \hType} (a : A) (P : A -> Local) : Equiv {\Pi (a' : A) -> LType (a = a') -> P a'} {P a} => 
+  \let e a' => local-univ {localization (a = a')} (P a')
+  \in transEquiv (\new Equiv {  | A => \Pi (a' : A) -> LType (a = a') -> P a'  | B => \Pi (a' : A) -> a = a' -> P a'  | f => \lam h a' => e a' (h a')
+        | ret => \lam h a' => ret {e a'} (h a')  | ret_f => \lam h => path (\lam i a' => ret_f {e a'} (h a') @ i)  | sec => \lam h a' => sec {e a'} (h a')
+        | f_sec => \lam h => path (\lam i a' => f_sec {e a'} (h a') @ i)}) (pi-contr-left a (\lam a' _ => P a'))
+
+\func localization-equiv {U : ReflUniverse} {A B : \hType} (f : A -> LType B) (g : B -> LType A) (p : \Pi (a : A) -> lift g (f a) = lEta a) 
+(q : \Pi (b : B) -> lift f (g b) = lEta b) : QEquiv {LType A} {LType B} \cowith
+  | f => lift f
+  | ret => lift g
+  | ret_f => remove_inL (\lam x => lift g (lift f x)) (\lam x => x) (\lam a => pmap (lift g) (lift-prop f a) *> p a)
+  | f_sec => remove_inL (\lam y => lift f (lift g y)) (\lam y => y) (\lam b => pmap (lift f) (lift-prop g b) *> q b)

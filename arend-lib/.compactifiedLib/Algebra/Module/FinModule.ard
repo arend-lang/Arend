@@ -1,0 +1,62 @@
+\import Algebra.Linear.Matrix
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Module.ModuleCategory
+\import Algebra.Module.LinearMap
+\import Algebra.Monoid
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Arith.Nat
+\import Category
+\import Data.Array
+\import Equiv
+\import Function \hiding (id, o)
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+\class FinModule \extends LModule {
+  | isFinModule : ∃ (l : Array E) (IsBasis l)
+}
+  \where {
+    \open LinearMap
+
+    \lemma surj-lift {R : Ring} {F : FinModule R} {U V : LModule R} (f : LinearMap F V) (g : LinearMap U V) (gs : IsSurj g) : ∃ (h : LinearMap F U) ∀ x (g (h x) = f x) => {?hidden_proof}
+
+    \lemma surj-split {R : Ring} {U : LModule R} {V : FinModule R} (g : LinearMap U V) (gs : IsSurj g) : ∃ (h : LinearMap V U) ∀ x (g (h x) = x) => {?hidden_proof}
+
+    \lemma basis<=generating {R : NonZeroCRing} {U : LModule R} (l l' : Array U) (lb : U.IsBasis l) (l'g : U.IsGenerated l') : l.len <= l'.len => {?hidden_proof}
+
+    \lemma dimension-pair {R : NonZeroCRing} (U : FinModule R) :
+      \level (\Sigma (d : Nat) (∃ (l : Array U d) (U.IsBasis l))) (\lam s t => ext (\case s.2, t.2 \with {  | inP (l, lb), inP (l', l'b) => <=-antisymmetric (basis<=generating l l' lb l'b.2) (basis<=generating l' l l'b lb.2)})) 
+      => {?hidden_proof}
+
+    \func dimension {R : NonZeroCRing} (U : FinModule R) => (dimension-pair U).1
+
+    \lemma dimension-char {R : NonZeroCRing} {U : FinModule R} : ∃ (l : Array U (dimension U)) (U.IsBasis l) => {?hidden_proof}
+
+    \lemma dimension-unique {R : NonZeroCRing} {U : FinModule R} {l : Array U} (b : U.IsBasis l) : dimension U = l.len => {?hidden_proof}
+
+    \lemma dimension=0 {R : NonZeroCRing} {U : FinModule R} : (dimension U = 0) <-> (\Pi (a : U) -> a = 0) => {?hidden_proof}
+
+    \lemma surj-iso {R : NonZeroCRing} {U V : FinModule R} (p : dimension U = dimension V) (g : LinearMap U V) (gs : IsSurj g) : Iso {LModuleCat R} g => {?hidden_proof}
+      \where {
+        \lemma basis-surj-iso {R : CRing} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (g : LinearMap U V) (gs : IsSurj g) : Iso g 
+          => {?hidden_proof}
+      }
+
+  }
+
+
+\instance ArrayFinModule {R : Ring} (n : Nat) : FinModule R (Array R n) 
+  | LModule => ArrayLModule n (RingLModule R)
+  | isFinModule => inP (_, basis)
+  \where {
+    \lemma basis {R : Ring} {n : Nat} : LModule.IsBasis {ArrayLModule n (RingLModule R)} MatrixRing.ide => {?hidden_proof}
+  }

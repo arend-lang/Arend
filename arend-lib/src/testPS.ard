@@ -1,0 +1,38 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Semiring
+\import Arith.Fin
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Combinatorics.Binom
+\import Combinatorics.Factorial
+\import Data.Array
+\import Data.Bool
+\import Data.Fin
+\import Data.Or
+\import Equiv
+\import Equiv.Sigma
+\import Equiv.HalfAdjoint
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Category
+\import Order.LinearOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.Fin.KFin
+\import Set.SubSetT
+\open AddMonoid
+\open NatOrder
+
+\import Combinatorics.Combinations
+
+\lemma fin-last-or {k : Nat} (i : Fin (suc k)) : (i NatOrder.< k) || (i = finLast k)
+  => {?}

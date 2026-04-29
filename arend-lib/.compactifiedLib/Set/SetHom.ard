@@ -1,0 +1,7 @@
+\import Set
+
+\class SetHom {
+  | Dom : BaseSet
+  | Cod : BaseSet
+  | func : Dom -> Cod
+}

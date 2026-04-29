@@ -1,0 +1,4 @@
+\import Debug.Meta
+\import Meta
+
+\meta runTimed m=>m run {(  \let t => time  \in {?},      \let x => nf m  \in {?}, println (time Nat.- t), x)}

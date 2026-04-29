@@ -1,0 +1,84 @@
+\import Algebra.Group
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Monoid.Sub
+\import Algebra.Pointed
+\import Function
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.SetHom
+\open Group \hiding (Dec)
+
+\class SubGroup \extends SubMonoid {
+  \override S : Group
+  | contains_inverse {x : S} : contains x -> contains (inverse x)
+}
+  \where {
+    \func cStruct {G : CGroup} (S : SubGroup G) : CGroup \cowith
+      | Group => S.IGroup
+      | *-comm => ext *-comm
+  }
+
+
+\class DecSubGroup \extends SubGroup, DecSubMonoid {
+  \override S : Group
+}
+
+\func anotherSubgroupDefinition {G : Group} (X : SubSet G) (p : \Pi (x y : G) -> X.contains x -> X.contains y -> X.contains (inverse x * y)) (q : X.contains ide) : (SubGroup G) {
+  | contains => X.contains
+  | contains_ide => q
+} \cowith
+  | contains_* => contains_*
+  | contains_inverse => contains_inverse
+  \where {
+    \func helper (g : G) (r : X.contains g) : X.contains (inverse g * G.ide) => p g ide r q
+
+    \func inv (g : G) (r : X.contains g) : X.contains (inverse g) => transport X.contains G.ide-right (helper g r)
+
+    \func contains_*' {x y : G} (r : X.contains x) (r' : X.contains y) : X.contains (inverse (inverse x) * y) => p (inverse x) y (inv x r) r'
+  }
+
+
+\instance SubGroupPreorder {G : Group} : Preorder (SubGroup G) 
+  | <= => \lam (H K : SubGroup G) => \Pi (g : G) -> H.contains g -> K.contains g
+  | <=-refl => \lam {H : SubGroup G} => \lam (g : G) (p : H.contains g) => p
+  | <=-transitive => \lam {H K N : SubGroup G} (p : \Pi (g : G) -> H.contains g -> K.contains g) (q : \Pi (g : G) -> K.contains g -> N.contains g) =>
+    \lam (g : G) (r : H.contains g) => q g (p g r)
+
+\func kernelEquivProp {G : Group} (N : NormalSubGroup G) (a : G) (p : N.contains a) : N.quotient.ide = in~ a 
+  => qed (N.quotient.ide ==< idp >== in~ ide ==< inv (~-pequiv help-condition) >== in~ a)
+  \where {
+    \func help-condition : a N.equivalence.~ 1 => N.equivalence.~-symmetric {1} {a} (N.contains->equiv p)
+  }
+
+
+\class NormalSubGroup \extends SubGroup {
+  | isNormal (g : S) {h : S} : contains h -> contains (conjugate g h)
+}
+
+\class SubAddGroup \extends SubAddMonoid {
+  \override S : AddGroup
+  | contains_negative {x : S} : contains x -> contains (negative x)
+}
+  \where {
+    \func abStruct {A : AbGroup} (S : SubAddGroup A) : AbGroup \cowith
+      | AddGroup => S.IAddGroup
+      | +-comm => ext +-comm
+
+    \func max {A : AddGroup} : SubAddGroup \cowith
+      | SubAddMonoid => SubAddMonoid.max {A}
+      | contains_negative => \lam _ => ()
+  }
+
+
+\class FinSubGroup \extends DecSubGroup {
+  \override S : FinGroup
+}

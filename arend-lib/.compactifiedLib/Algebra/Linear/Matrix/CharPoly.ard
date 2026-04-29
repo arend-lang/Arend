@@ -1,0 +1,38 @@
+\import Algebra.Group
+\import Algebra.Group.GroupHom
+\import Algebra.Group.Symmetric
+\import Algebra.Linear.Matrix
+\import Algebra.Meta
+\import Algebra.Module
+\import Algebra.Monoid
+\import Algebra.Monoid.MonoidHom
+\import Algebra.Pointed
+\import Algebra.Ring
+\import Algebra.Ring.RingHom
+\import Algebra.Ring.Poly
+\import Algebra.Semiring
+\import Arith.Fin
+\import Data.Array
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+
+\func charPoly {R : CRing} {n : Nat} (M : Matrix R n n) : Poly R => determinant $ padd 1 0 *c matrix-map (padd 0) 1 - matrix-map (padd 0) M
+
+\lemma charPoly-degree {R : CRing} {n : Nat} (M : Matrix R n n) : degree<= (charPoly M) n => {?hidden_proof}
+
+\lemma charPoly-monic {R : CRing} {n : Nat} (M : Matrix R n n) : polyCoef (charPoly M) n = 1 => {?hidden_proof}
+
+\lemma charPoly_map {R S : CRing} (f : RingHom R S) {n : Nat} (A : Matrix R n n) : polyMap f (charPoly A) = charPoly (matrix-map f A) => {?hidden_proof}
+
+\type isEigenvalue {R : Ring} {n : Nat} (A : Matrix R n n) (a : R) => ∃ (U : Matrix R n 1) (\Pi (x : R) -> x *c U = 0 -> x = 0) (a *c U = A MatrixRing.product U)
+
+\lemma eigen-root {R : CRing} {n : Nat} (A : Matrix R n n) {a : R} (e : isEigenvalue A a) : polyEval (charPoly A) a = 0 => {?hidden_proof}
+  \where {
+    \open MatrixRing
+  }
