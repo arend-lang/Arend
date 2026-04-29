@@ -89,6 +89,9 @@ public class ModuleSerialization {
         refBuilder.setAliasName(aliasName);
         refBuilder.setAliasPrecedence(DefinitionSerialization.writePrecedence(gr.getAliasPrecedence()));
       }
+      // Preserve access modifier — without this, deserialized \protected members become PUBLIC,
+      // which leaks them into dynamic scope walks and triggers spurious duplicate-import warnings.
+      refBuilder.setAccessModifier(DefinitionSerialization.writeAccessModifier(gr.getAccessModifier()));
     }
 
     Definition typechecked = referable instanceof TCDefReferable ? ((TCDefReferable) referable).getTypechecked() : null;
