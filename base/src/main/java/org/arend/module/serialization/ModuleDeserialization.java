@@ -271,9 +271,9 @@ public class ModuleDeserialization {
     if (parent == null) {
       referable = new FullModuleReferable(modulePath);
     } else if (kind == GlobalReferable.Kind.META) {
-      referable = new MetaReferable(null, AccessModifier.PUBLIC, readPrecedence(referableProto.getPrecedence()), referableProto.getName(), readAliasPrecedence(referableProto), referableProto.getAliasName().isEmpty() ? null : referableProto.getAliasName(), new MetaTypechecker() {}, null, parent.referable());
+      referable = new MetaReferable(null, readAccessModifier(referableProto.getAccessModifier()), readPrecedence(referableProto.getPrecedence()), referableProto.getName(), readAliasPrecedence(referableProto), referableProto.getAliasName().isEmpty() ? null : referableProto.getAliasName(), new MetaTypechecker() {}, null, parent.referable());
     } else {
-      referable = new LocatedReferableImpl(null, AccessModifier.PUBLIC, readPrecedence(referableProto.getPrecedence()), referableProto.getName(), readAliasPrecedence(referableProto), referableProto.getAliasName().isEmpty() ? null : referableProto.getAliasName(), parent.referable(), kind);
+      referable = new LocatedReferableImpl(null, readAccessModifier(referableProto.getAccessModifier()), readPrecedence(referableProto.getPrecedence()), referableProto.getName(), readAliasPrecedence(referableProto), referableProto.getAliasName().isEmpty() ? null : referableProto.getAliasName(), parent.referable(), kind);
     }
 
     if (referable instanceof TCDefReferable && groupProto.hasDefinition()) {
@@ -337,7 +337,7 @@ public class ModuleDeserialization {
         for (DefinitionProtos.Definition.ClassData.Field fieldProto : defProto.getClass_().getPersonalFieldList()) {
           DefinitionProtos.Referable fieldReferable = fieldProto.getReferable();
           if (fillInternalDefinitions || fieldProto.getIsRealParameter()) {
-            FieldReferableImpl absField = new FieldReferableImpl(null, AccessModifier.PUBLIC, readPrecedence(fieldReferable.getPrecedence()), fieldReferable.getName(), readAliasPrecedence(fieldReferable), fieldReferable.getAliasName().isEmpty() ? null : fieldReferable.getAliasName(), fieldProto.getIsExplicit(), fieldProto.getIsParameter(), fieldProto.getIsRealParameter(), referable);
+            FieldReferableImpl absField = new FieldReferableImpl(null, readAccessModifier(fieldReferable.getAccessModifier()), readPrecedence(fieldReferable.getPrecedence()), fieldReferable.getName(), readAliasPrecedence(fieldReferable), fieldReferable.getAliasName().isEmpty() ? null : fieldReferable.getAliasName(), fieldProto.getIsExplicit(), fieldProto.getIsParameter(), fieldProto.getIsRealParameter(), referable);
             ClassField res = new ClassField(absField, classDef);
             if (fieldProto.getIsProperty()) {
               res.setIsProperty();
@@ -354,7 +354,7 @@ public class ModuleDeserialization {
         if (fillInternalDefinitions) {
           for (DefinitionProtos.Definition.DataData.Constructor constructor : defProto.getData().getConstructorList()) {
             DefinitionProtos.Referable conReferable = constructor.getReferable();
-            InternalReferable absConstructor = new InternalReferableImpl(null, AccessModifier.PUBLIC, readPrecedence(conReferable.getPrecedence()), conReferable.getName(), readAliasPrecedence(conReferable), conReferable.getAliasName().isEmpty() ? null : conReferable.getAliasName(), true, referable, LocatedReferableImpl.Kind.CONSTRUCTOR);
+            InternalReferable absConstructor = new InternalReferableImpl(null, readAccessModifier(conReferable.getAccessModifier()), readPrecedence(conReferable.getPrecedence()), conReferable.getName(), readAliasPrecedence(conReferable), conReferable.getAliasName().isEmpty() ? null : conReferable.getAliasName(), true, referable, LocatedReferableImpl.Kind.CONSTRUCTOR);
             Constructor res = new Constructor(absConstructor, dataDef);
             dataDef.addConstructor(res);
             absConstructor.setTypechecked(res);
@@ -379,6 +379,16 @@ public class ModuleDeserialization {
       ((MetaTopDefinition) def).setLevelParameters(readLevelParameters(defProto.getLevelParamList(), defProto.getIsStdLevels()));
     }
     return def;
+  }
+
+  private static AccessModifier readAccessModifier(DefinitionProtos.AccessModifier proto) {
+    return switch (proto) {
+      case PROTECTED_ACCESS -> AccessModifier.PROTECTED;
+      case PRIVATE_ACCESS -> AccessModifier.PRIVATE;
+      // Default (PUBLIC_ACCESS = 0) preserves backward compatibility with .arc
+      // files that predate the access_modifier field.
+      default -> AccessModifier.PUBLIC;
+    };
   }
 
   private static Precedence readPrecedence(DefinitionProtos.Precedence precedenceProto) throws DeserializationException {
