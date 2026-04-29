@@ -19,7 +19,7 @@ object McpToolFactory {
       ProofSearcherTool(project),
       ListModulesTool(server),
       org.arend.aifeatures.mcpTools.ShowModulesTool(project),
-      ShowModulesFromLineTool(server),
+      org.arend.aifeatures.mcpTools.ShowModulesFromLineTool(project),
       SearchSymbolsTool(server),
       TypecheckerTool(server),
       FixImportsTool(project),
