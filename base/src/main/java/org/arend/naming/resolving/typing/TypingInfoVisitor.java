@@ -110,6 +110,21 @@ public class TypingInfoVisitor implements ConcreteResolvableDefinitionVisitor<Sc
         }
         registerCoreType(tcRef, fnDef.getResultType(), params);
       }
+      // Recover precedence for deserialized coclause functions. A coclause function
+      // generated for `\instance i : C \cowith | f => ...` or `\class C { \default f => ... }`
+      // inherits its precedence from the implemented field `f`. Source-mode populates
+      // this map in `visitFunction` / `visitClass` from `Concrete.CoClauseFunctionReference`;
+      // for deserialized groups those concrete references are absent, but the core
+      // `FunctionDefinition.getImplementedField()` carries the same information. Without
+      // this, `GlobalTypingInfo.getRefPrecedence` falls back to the coclause function's
+      // own (always-DEFAULT) precedence, so an infix field like `+` is treated as
+      // non-infix when parsed through the instance — "1 + 2" becomes application
+      // `1 + 2` rather than the expected binop.
+      if (tcRef.getKind() == GlobalReferable.Kind.COCLAUSE_FUNCTION && fnDef.getImplementedField() != null) {
+        TCDefReferable parentTcRef = tcRef.getLocatedReferableParent() instanceof TCDefReferable p ? p : tcRef;
+        boolean isBodyRef = parentTcRef.getTypechecked() instanceof org.arend.core.definition.ClassDefinition;
+        myTypingInfo.addReferablePrecedence(tcRef, parentTcRef, isBodyRef, fnDef.getImplementedField());
+      }
     }
 
     for (ConcreteStatement statement : group.statements()) {
