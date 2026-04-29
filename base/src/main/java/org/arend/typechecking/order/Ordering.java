@@ -114,6 +114,23 @@ public class Ordering extends TarjanSCC<Concrete.ResolvableDefinition> {
   @Override
   public void order(Concrete.ResolvableDefinition definition) {
     definition = getCanonicalRepresentative(definition);
+    // Diagnostic probe — gated by `-Darend.ordering.probeOrder=<substr>`.
+    // Prints the definition being ordered, whether we're about to REORDER it
+    // (meaning its typechecked state is null or needs-typechecking), or SKIP.
+    // Useful for finding out why a deserialized definition is being ordered
+    // again in a partial-roundtrip-style scenario.
+    String probe = System.getProperty("arend.ordering.probeOrder");
+    if (probe != null && definition.getData().getRefLongName() != null
+        && definition.getData().getRefLongName().toString().contains(probe)) {
+      org.arend.core.definition.Definition tc = definition.getData().getTypechecked();
+      boolean skipped = getTypechecked(definition.getData()) != null;
+      System.err.println("[ORDERING-ORDER] " + definition.getData().getRefLongName()
+          + " refHash=@" + System.identityHashCode(definition.getData())
+          + " typechecked=" + (tc == null ? "null" : tc.getClass().getSimpleName() + "/status=" + tc.status())
+          + " concreteClass=" + definition.getClass().getSimpleName()
+          + " concreteHash=@" + System.identityHashCode(definition)
+          + " action=" + (skipped ? "SKIP (already ok)" : "REORDER"));
+    }
     if (getTypechecked(definition.getData()) == null) {
       ComputationRunner.checkCanceled();
       super.order(definition);
