@@ -226,6 +226,15 @@ message Referable {
     int32 index = 3;
     string alias_name = 4;
     Precedence alias_precedence = 5;
+    // Access modifier (PUBLIC=0, PROTECTED=1, PRIVATE=2). Default 0 = PUBLIC
+    // preserves backward compatibility with .arc files that don't encode this.
+    AccessModifier access_modifier = 6;
+}
+
+enum AccessModifier {
+    PUBLIC_ACCESS = 0;
+    PROTECTED_ACCESS = 1;
+    PRIVATE_ACCESS = 2;
 }
 
 message Precedence {
