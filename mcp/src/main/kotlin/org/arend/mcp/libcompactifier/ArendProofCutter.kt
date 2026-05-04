@@ -2,6 +2,7 @@ package org.arend.mcp.libcompactifier
 
 import org.arend.core.definition.ClassField
 import org.arend.core.definition.FunctionDefinition
+import org.arend.core.expr.ClassCallExpression
 import org.arend.error.DummyErrorReporter
 import org.arend.ext.concrete.definition.FunctionKind
 import org.arend.ext.error.ListErrorReporter
@@ -12,6 +13,7 @@ import org.arend.frontend.library.LibraryManager
 import org.arend.frontend.library.SourceLibrary
 import org.arend.frontend.source.PreludeResourceSource
 import org.arend.naming.reference.TCDefReferable
+import org.arend.naming.reference.UnresolvedReference
 import org.arend.prelude.Prelude
 import org.arend.server.ArendChecker
 import org.arend.server.ArendServer
@@ -37,12 +39,32 @@ object ArendProofCutter {
    * Returns true if the given ClassFieldImpl's implemented field has a proposition type
    * (i.e., its typechecked result type level is -1).
    */
+  private fun isPropositionClassField(field: ClassField): Boolean {
+    if (field.resultTypeLevel == -1) return true
+    if (field.isProperty) return true
+    // Check the sort of the field's type in the parent class
+    // The parent class sort tracks which fields are Prop
+    val parentClass = field.parentClass
+    val fieldType = parentClass.getFieldType(field)
+    if (fieldType != null) {
+      val codomain = fieldType.codomain
+      try {
+        val sort = codomain?.getSortOfType()
+        if (sort != null && sort.isProp) return true
+      } catch (_: Exception) {}
+    }
+    return false
+  }
+
   private fun isPropositionField(fieldImpl: Concrete.ClassFieldImpl): Boolean {
-    val ref = fieldImpl.implementedField
+    var ref = fieldImpl.implementedField
+    if (ref is UnresolvedReference && ref.isResolved) {
+      ref = ref.resolve(null, null, null, null)
+    }
     if (ref is TCDefReferable) {
       val typechecked = ref.typechecked
       if (typechecked is ClassField) {
-        return typechecked.resultTypeLevel == -1
+        return isPropositionClassField(typechecked)
       }
     }
     return false
@@ -70,23 +92,40 @@ object ArendProofCutter {
         val emptyBody = Concrete.TermFunctionBody(null, ConcreteExpressionFactory.cGoal("hidden_proof", null))
         def.copy(def.parameters, emptyBody)
       }
-      def is Concrete.BaseFunctionDefinition && def.kind == FunctionKind.FUNC_COCLAUSE -> {
-        val ref = def.data
-        val typechecked = ref.typechecked
-        if (typechecked is FunctionDefinition) {
-          val implField = typechecked.implementedField
-          if (implField != null) {
-            val fieldDef = implField.typechecked
-            if (fieldDef is ClassField && fieldDef.resultTypeLevel == -1) {
-              val emptyBody = Concrete.TermFunctionBody(null, ConcreteExpressionFactory.cGoal("hidden_proof", null))
-              def.copy(def.parameters, emptyBody)
-            } else def
-          } else def
+      def is Concrete.CoClauseFunctionDefinition && def.kind == FunctionKind.FUNC_COCLAUSE -> {
+        val implFieldRef = def.implementedField
+        val classField = when {
+          implFieldRef is TCDefReferable -> implFieldRef.typechecked as? ClassField
+          else -> {
+            val typechecked = def.data.typechecked
+            if (typechecked is FunctionDefinition) typechecked.implementedField?.typechecked as? ClassField else null
+          }
+        }
+        if (classField != null && isPropositionClassField(classField)) {
+          val emptyBody = Concrete.TermFunctionBody(null, ConcreteExpressionFactory.cGoal("hidden_proof", null))
+          def.copy(def.parameters, emptyBody)
         } else def
+      }
+      def is Concrete.BaseFunctionDefinition && def.body is Concrete.CoelimFunctionBody -> {
+        val coelimBody = def.body as Concrete.CoelimFunctionBody
+        val typecheckedDef = def.data?.typechecked
+        val targetClass = if (typecheckedDef is FunctionDefinition) {
+          (typecheckedDef.resultType as? ClassCallExpression)?.definition
+        } else null
+        for (element in coelimBody.coClauseElements) {
+          if (element is Concrete.ClassFieldImpl && element !is Concrete.CoClauseFunctionReference) {
+            val fieldName = element.implementedField.textRepresentation()
+            val classField = targetClass?.findField { it.name == fieldName }
+            if (classField != null && isPropositionClassField(classField)) {
+              element.implementation = ConcreteExpressionFactory.cGoal("hidden_proof", null)
+            }
+          }
+        }
+        def
       }
       def is Concrete.ClassDefinition -> {
         for (element in def.elements) {
-          if (element is Concrete.ClassFieldImpl && isPropositionField(element)) {
+          if (element is Concrete.ClassFieldImpl && element !is Concrete.CoClauseFunctionReference && isPropositionField(element)) {
             element.implementation = ConcreteExpressionFactory.cGoal("hidden_proof", null)
           }
         }

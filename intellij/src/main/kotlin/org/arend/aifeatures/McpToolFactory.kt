@@ -8,6 +8,7 @@ import org.arend.aifeatures.mcpTools.ProofSearcherTool
 import org.arend.mcp.McpTool
 import org.arend.mcp.tools.ListModulesTool
 import org.arend.mcp.tools.SearchSymbolsTool
+import org.arend.mcp.tools.ShowDefinitionTool
 import org.arend.mcp.tools.ShowModulesFromLineTool
 import org.arend.mcp.tools.TypecheckerTool
 import org.arend.server.ArendServerService
@@ -21,8 +22,10 @@ object McpToolFactory {
       org.arend.aifeatures.mcpTools.ShowModulesTool(project),
       org.arend.aifeatures.mcpTools.ShowModulesFromLineTool(project),
       SearchSymbolsTool(server),
+      ShowDefinitionTool(server),
       TypecheckerTool(server),
       FixImportsTool(project),
+      org.arend.aifeatures.mcpTools.ShowAiGuideTool(project),
     )
   }
 }

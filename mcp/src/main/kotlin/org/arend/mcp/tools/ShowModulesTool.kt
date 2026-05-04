@@ -29,57 +29,57 @@ open class ShowModulesTool(private val server: ArendServer? = null) : McpTool {
       }
   }
 
-    @Serializable
-    private data class ShowModulesInput(val libraryPath: String = "", val modulePath: String = "")
+  @Serializable
+  private data class ShowModulesInput(val libraryPath: String = "", val modulePath: String = "")
 
-    override fun execute(arguments: String): String {
-        val input = try {
-            Json.decodeFromString<ShowModulesInput>(arguments)
-        } catch (e: Exception) {
-            return "Error: Failed to parse arguments: ${e.message}"
-        }
-
-        val module = input.modulePath
-        val libPath = input.libraryPath
-
-        if (module.isBlank()) {
-            return "Error: No module path provided"
-        }
-
-        if (libPath.isBlank()) {
-            return "Error: No library path provided"
-        }
-
-        val libraryName = java.io.File(libPath).name
-        val path = ModulePath.fromString(module.split("/").last())
-        val sourceLocation = ModuleLocation(libraryName, ModuleLocation.LocationKind.SOURCE, path)
-        var fileContent = outputFile(sourceLocation)
-
-        if (fileContent.startsWith("Error:")) {
-            val allLibraries = server?.getLibraries() ?: emptySet()
-            for (lib in allLibraries) {
-                if (lib == libraryName) continue
-                val depLocation = ModuleLocation(lib, ModuleLocation.LocationKind.SOURCE, path)
-                val depContent = outputFile(depLocation)
-                if (!depContent.startsWith("Error:")) {
-                    fileContent = depContent
-                    break
-                }
-            }
-        }
-
-        if (fileContent.startsWith("Error:")) {
-            return fileContent
-        }
-
-        val lines = fileContent.split("\n")
-        if (lines.size <= numberOfAllowedLines) {
-            return "Showing the whole file:\n\"$fileContent\""
-        }
-
-        val truncatedContent = lines.take(numberOfAllowedLines).joinToString("\n")
-        return "Showing the first $numberOfAllowedLines lines of the file:\n\"$truncatedContent\""
+  override fun execute(arguments: String): String {
+    val input = try {
+      Json.decodeFromString<ShowModulesInput>(arguments)
+    } catch (e: Exception) {
+      return "Error: Failed to parse arguments: ${e.message}"
     }
+
+    val module = input.modulePath
+    val libPath = input.libraryPath
+
+    if (module.isBlank()) {
+      return "Error: No module path provided"
+    }
+
+    if (libPath.isBlank()) {
+      return "Error: No library path provided"
+    }
+
+    val libraryName = java.io.File(libPath).name
+    val path = ModulePath.fromString(module.split("/").last())
+    val sourceLocation = ModuleLocation(libraryName, ModuleLocation.LocationKind.SOURCE, path)
+    var fileContent = outputFile(sourceLocation)
+
+    if (fileContent.startsWith("Error:")) {
+      val allLibraries = server?.getLibraries() ?: emptySet()
+      for (lib in allLibraries) {
+        if (lib == libraryName) continue
+        val depLocation = ModuleLocation(lib, ModuleLocation.LocationKind.SOURCE, path)
+        val depContent = outputFile(depLocation)
+        if (!depContent.startsWith("Error:")) {
+          fileContent = depContent
+          break
+        }
+      }
+    }
+
+    if (fileContent.startsWith("Error:")) {
+      return fileContent
+    }
+
+    val lines = fileContent.split("\n")
+    if (lines.size <= numberOfAllowedLines) {
+      return "Showing the whole file:\n\"$fileContent\""
+    }
+
+    val truncatedContent = lines.take(numberOfAllowedLines).joinToString("\n")
+    return "Showing the first $numberOfAllowedLines lines of the file:\n\"$truncatedContent\""
+  }
 
   protected open fun outputFile(moduleLocation: ModuleLocation): String {
     return server?.let { outputFile(it, moduleLocation) } ?: "Server is not initialized"

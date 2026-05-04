@@ -3,8 +3,10 @@ package org.arend.aifeatures.mcpgen
 import kotlinx.serialization.json.*
 import org.arend.aifeatures.mcpTools.FixImportsTool
 import org.arend.aifeatures.mcpTools.ProofSearcherTool
+import org.arend.mcp.tools.ShowAiGuideTool
 import org.arend.mcp.tools.ListModulesTool
 import org.arend.mcp.tools.SearchSymbolsTool
+import org.arend.mcp.tools.ShowDefinitionTool
 import org.arend.mcp.tools.ShowModulesFromLineTool
 import org.arend.mcp.tools.ShowModulesTool
 import org.arend.mcp.tools.TypecheckerTool
@@ -26,7 +28,9 @@ object McpToolsJsonGenerator {
       SearchSymbolsTool(),
       TypecheckerTool(),
       ProofSearcherTool(),
-      FixImportsTool()
+      FixImportsTool(),
+      ShowAiGuideTool(),
+      ShowDefinitionTool()
     )
 
     val toolsArray = tools.map { tool ->
