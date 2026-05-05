@@ -1,5 +1,6 @@
 package org.arend.frontend.library;
 
+import org.arend.core.definition.Definition;
 import org.arend.ext.error.ErrorReporter;
 import org.arend.ext.module.ModuleLocation;
 import org.arend.ext.module.ModulePath;
@@ -129,24 +130,61 @@ public class CliServerRequester implements ArendServerRequester {
     // lookups can find cross-module references.
     int loaded = 0;
     int failed = 0;
+    int incomplete = 0;
     for (PendingBinaryLoad load : phase2b) {
+      ConcreteGroup group = server.getRawGroup(load.module);
       try {
         load.deserialization.readModule(
             server.getModuleScopeProvider(load.module.getLibraryName(), false),
             new org.arend.typechecking.order.dependency.DependencyCollector(null));
-        loaded++;
-        myBinaryCacheLoaded.add(load.module);
+        // Erroneous definitions are not persisted into ARC, so a deserialized module
+        // may contain TCDefReferables without a typechecked counterpart (or with a
+        // stale HAS_ERRORS status from older binaries). Detect this and force a
+        // full re-typecheck of the module from source — otherwise diagnostics
+        // disappear on subsequent runs and a previously-broken file looks clean.
+        if (group != null && hasMissingTypechecked(group)) {
+          clearTypechecked(group);
+          incomplete++;
+        } else {
+          loaded++;
+          myBinaryCacheLoaded.add(load.module);
+        }
       } catch (Exception e) {
         failed++;
-        ConcreteGroup group = server.getRawGroup(load.module);
         if (group != null) {
           clearTypechecked(group);
         }
       }
     }
-    if (loaded > 0 || failed > 0) {
-      System.out.println("[INFO] Binary cache: " + loaded + " loaded, " + failed + " failed out of " + pending.size() + " candidates");
+    if (loaded > 0 || failed > 0 || incomplete > 0) {
+      System.out.println("[INFO] Binary cache: " + loaded + " loaded"
+          + (incomplete > 0 ? ", " + incomplete + " incomplete" : "")
+          + (failed > 0 ? ", " + failed + " failed" : "")
+          + " out of " + pending.size() + " candidates");
     }
+  }
+
+  /**
+   * Returns true if the group contains a typecheckable definition whose typechecked
+   * counterpart is missing (null) or marked HAS_ERRORS. Inline metas and other
+   * non-typecheckable kinds (FIELD, CONSTRUCTOR, LEVEL, META, OTHER) are skipped —
+   * they legitimately have no typechecked counterpart in the cache.
+   */
+  private static boolean hasMissingTypechecked(ConcreteGroup group) {
+    LocatedReferable ref = group.referable();
+    if (ref instanceof TCDefReferable tcRef && tcRef.getKind().isTypecheckable()) {
+      Definition def = tcRef.getTypechecked();
+      if (def == null || def.status() == Definition.TypeCheckingStatus.HAS_ERRORS) {
+        return true;
+      }
+    }
+    for (ConcreteStatement statement : group.statements()) {
+      if (statement.group() != null && hasMissingTypechecked(statement.group())) return true;
+    }
+    for (ConcreteGroup dynGroup : group.dynamicGroups()) {
+      if (hasMissingTypechecked(dynGroup)) return true;
+    }
+    return false;
   }
 
   private static void clearTypechecked(ConcreteGroup group) {
