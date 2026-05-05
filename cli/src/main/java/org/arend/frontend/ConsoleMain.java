@@ -68,6 +68,98 @@ public class ConsoleMain {
   private final static String SHOW_MODULES = "show-modules";
   private final static String SHOW_MODULES_WITH_INSTANCES = "show-modules-with-instances";
   private final static String PRINT_FULL = "print-full";
+
+  private static boolean containsHelpToken(String[] values) {
+    if (values == null) return false;
+    for (String v : values) if ("help".equalsIgnoreCase(v)) return true;
+    return false;
+  }
+
+  private final static String SYMBOL_SEARCH_HELP = """
+      arend -ss <pattern> [option ...]
+
+      Search every loaded library for definitions whose SHORT NAME matches
+      <pattern>. Loads each .ard file at most once and persists a per-library
+      on-disk index under <library>/<binariesDir>/.arend-symbol-index, so
+      subsequent runs with no source changes are near-instant.
+
+      PATTERN
+        Foo                literal substring match (case-insensitive by
+                           default). NOTHING is interpreted as a metacharacter
+                           because Arend identifiers freely use *, ^, $, ?,
+                           etc. (e.g. *-comm, ^-1, <*). To search for a name
+                           containing '*-comm', just type '*-comm'.
+        eq:<text>          exact full-name match
+        glob:<pat>         '*' = any chars, '?' = any one char.
+                           Use '\\*' / '\\?' for literal stars / question
+                           marks (so glob:'abs\\_\\*' matches abs_*, abs_*q,
+                           and so on).
+        re:<java-regex>    raw java.util.regex pattern, matched with find()
+        hb:<chars>         humpback / camel-and-dash boundary fuzzy match,
+                           e.g. 'hb:PMA' on 'PosetAddMonoid', 'hb:p-iP' on
+                           'pi-isProp'. Use `case-sensitive` for strict camel.
+
+      EXTRA TOKENS  (each passed as a separate -ss argument)
+        case-sensitive     match name case exactly (default: case-insensitive)
+        no-cache           bypass the on-disk index, re-parse everything
+        limit=N            cap printed matches at N (0 = unlimited; default 200)
+        kind=k1,k2,...     keep only these kinds. Recognised:
+                           func, sfunc, lemma, type, axiom, instance, coclause,
+                           coerce, level, data, cons|constructor, class, record,
+                           field, meta, other.
+        only=name|self     restrict scope. Default: every library currently
+                           registered (requested libs + transitive deps +
+                           prelude). 'self' means the libraries listed on the
+                           command line; a literal name (e.g. 'arend-lib')
+                           picks that single library. Multiple values can be
+                           comma-separated (e.g. only=arend-lib,liba).
+
+      OUTPUT
+        <abs-path>:<line>:<col>           or  <library:module> for generated
+        <library>::<long-name>  [<KIND>]
+          <signature on a single line>
+
+      EXAMPLES
+        arend -L libs my-lib -ss 'Monoid'                  (substring)
+        arend -L libs my-lib -ss '*-comm'                  (literal '*-comm')
+        arend -L libs my-lib -ss 'eq:pmap' -ss kind=func,lemma
+        arend -L libs my-lib -ss 'glob:abs_*' -ss limit=20
+        arend -L libs my-lib -ss 're:^abs.*\\+.*$'
+        arend -L libs my-lib -ss 'hb:isProp' -ss case-sensitive
+        arend -L libs my-lib -ss only=self -ss 'shared-name'
+      """;
+
+  private final static String PROOF_SEARCH_HELP = """
+      arend -ps <pattern> [print-full]
+
+      Search every loaded library for definitions whose SIGNATURE (parameters
+      and codomain) contains expressions matching <pattern>. Unlike -ss, this
+      runs name resolution on the whole library first, so it is a lot slower
+      than -ss but matches by structure rather than name.
+
+      PATTERN GRAMMAR
+        expr               a single sub-expression that must appear somewhere
+                           in the signature; `_` matches any subexpression
+        expr \\and expr     conjunction inside one clause: both must match
+                           the same parameter (or the same codomain)
+        e1 -> e2 -> codom  position-aware: e1 must match a parameter, e2 must
+                           match a parameter that comes later in the pi, and
+                           codom must match the codomain. With one `->` the
+                           left side is 'any parameter' and the right side is
+                           the codomain. Patterns may be parenthesised.
+
+      OPTIONS
+        print-full         print the entire definition with matching subterms
+                           highlighted, instead of only the matching slice.
+
+      EXAMPLES
+        arend -L libs my-lib -ps 'Monoid'
+        arend -L libs my-lib -ps 'Group -> _ = _'
+        arend -L libs my-lib -ps 'isProp \\and _ -> _'
+        arend -L libs my-lib -ps 'Monoid -> _' -ps print-full
+
+      See also: https://arend-lang.github.io/documentation/plugin-manual/navigating#proof-search
+      """;
   private final static String ANSI_GREEN = "\u001B[32m";
   private final static String ANSI_RESET = "\u001B[0m";
 
@@ -133,7 +225,10 @@ public class ConsoleMain {
       cmdOptions.addOption(Option.builder("c").longOpt("double-check").desc("double check correctness of the result").build());
       cmdOptions.addOption(Option.builder("i").longOpt("interactive").hasArg().optionalArg(true).argName("type").desc("start an interactive REPL, type can be plain or jline (default)").build());
       cmdOptions.addOption(Option.builder("p").longOpt("print").hasArg().argName("target").desc("print a definition or a module").build());
-      cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("pattern").desc("search for definitions matching the pattern").build());
+      cmdOptions.addOption(Option.builder("ps").longOpt("proof-search").hasArgs().argName("pattern")
+          .desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
+      cmdOptions.addOption(Option.builder("ss").longOpt("symbol-search").hasArgs().argName("pattern")
+          .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
@@ -150,6 +245,16 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("v")) {
         System.out.println("Arend " + Prelude.VERSION);
+        return null;
+      }
+
+      if (cmdLine.hasOption("ss") && containsHelpToken(cmdLine.getOptionValues("ss"))) {
+        System.out.println(SYMBOL_SEARCH_HELP);
+        return null;
+      }
+
+      if (cmdLine.hasOption("ps") && containsHelpToken(cmdLine.getOptionValues("ps"))) {
+        System.out.println(PROOF_SEARCH_HELP);
         return null;
       }
 
@@ -468,6 +573,15 @@ public class ConsoleMain {
       return false;
     }
 
+    if (cmdLine.hasOption("ss")) {
+      org.arend.frontend.symbol.SymbolSearch.Parsed parsed =
+          org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), mySystemErrErrorReporter);
+      if (parsed == null) return false;
+      org.arend.frontend.symbol.SymbolSearch.run(parsed.pattern(), parsed.options(),
+          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
+      return true;
+    }
+
     if (cmdLine.hasOption("ps")) {
       String[] psArgs = cmdLine.getOptionValues("ps");
       boolean printFull = false;
@@ -487,7 +601,7 @@ public class ConsoleMain {
         System.err.println("[ERROR] Only one proof search pattern is allowed. Use quotes if the pattern contains spaces.");
         return false;
       }
-      return matchAndPrint(server, requestedLibraries, patterns.getFirst(), printFull);
+      return matchAndPrint(server, libraryManager, requestedLibraries, patterns.getFirst(), printFull);
     }
 
     TimedProgressReporter timedProgressReporter = cmdLine.hasOption(SHOW_TIMES) ? new TimedProgressReporter() : null;
@@ -840,7 +954,7 @@ public class ConsoleMain {
     }
   }
 
-  private boolean matchAndPrint(ArendServer server, List<SourceLibrary> requestedLibraries, String pattern, boolean printFull) {
+  private boolean matchAndPrint(ArendServer server, LibraryManager libraryManager, List<SourceLibrary> requestedLibraries, String pattern, boolean printFull) {
     ProofSearchQuery.ParsingResult<ProofSearchQuery> queryResult = ProofSearchQuery.fromString(pattern);
     if (queryResult == null) return false;
     if (queryResult instanceof ProofSearchQuery.ParsingResult.Error<ProofSearchQuery> error) {
@@ -858,6 +972,7 @@ public class ConsoleMain {
       System.out.println("[INFO] " + "Resolved " + library.getLibraryName() + " (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ")");
     }
 
+    int matches = 0;
     for (ModuleLocation moduleLocation : server.getModules()) {
       for (DefinitionData data : server.getResolvedDefinitions(moduleLocation)) {
         for (Triple<Concrete.GeneralDefinition, List<Concrete.Expression>, Concrete.Expression> signature : getSignatures(data.definition())) {
@@ -869,11 +984,7 @@ public class ConsoleMain {
 
           ArendExpressionMatcher.ProofSearchMatchingResult result = matcher.match(parameters, codomain, scope);
           if (result == null) continue;
-          if (referable.getData() != null) {
-            System.out.println(referable.getRefName() + " " + referable.getData().toString());
-          } else {
-            System.out.println(referable.getRefFullName().toString());
-          }
+          matches++;
 
           Set<Concrete.SourceNode> highlightedNodes = new HashSet<>(result.inCodomain());
           if (result.inPattern() != null) {
@@ -881,33 +992,101 @@ public class ConsoleMain {
               highlightedNodes.addAll(parameterData.proj2);
             }
           }
-          highlightedNodes.addAll(result.inCodomain());
 
+          // Render the signature into a single buffer so we can indent it uniformly.
+          StringBuilder sigBuilder = new StringBuilder();
           Precedence topPrec = new Precedence(Concrete.Expression.PREC);
           if (printFull) {
-            StringBuilder builder = new StringBuilder();
-            HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(builder, 0, highlightedNodes);
+            HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(sigBuilder, 0, highlightedNodes);
             data.definition().accept(visitor, null);
-            System.out.println(builder);
           } else {
             if (result.inPattern() != null) {
               for (Pair<Concrete.Expression, List<Concrete.Expression>> parameterData : result.inPattern()) {
-                StringBuilder builder = new StringBuilder();
-                HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(builder, 0, highlightedNodes);
+                HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(sigBuilder, 0, highlightedNodes);
+                sigBuilder.append("(");
                 parameterData.proj1.prettyPrint(visitor, topPrec);
-                System.out.print("(" + builder + ") -> ");
+                sigBuilder.append(") -> ");
               }
             }
-            StringBuilder builder = new StringBuilder();
-            HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(builder, 0, highlightedNodes);
+            HighlightingPrettyPrintVisitor visitor = new HighlightingPrettyPrintVisitor(sigBuilder, 0, highlightedNodes);
             codomain.prettyPrint(visitor, topPrec);
-            System.out.println(builder);
           }
+
+          // Header line: <abs-path>:<line>:<col>  or  <library:module> when no source.
+          System.out.println(headerLineFor(moduleLocation, referable, libraryManager));
+          // Identity line: <library>::<long-name>  [<KIND>]
+          System.out.println(moduleLocation.getLibraryName() + "::" + referable.getRefLongName() + "  [" + kindLabel(referable, signature.first()) + "]");
+          // Signature, indented two spaces (and through any embedded newlines).
+          System.out.println(indentMultiline(sigBuilder.toString(), "  "));
           System.out.println();
         }
       }
     }
+
+    if (matches == 0) {
+      System.out.println("No matches.");
+    } else {
+      System.out.println("Found " + matches + " match" + (matches == 1 ? "" : "es"));
+    }
     return true;
+  }
+
+  private static String headerLineFor(ModuleLocation moduleLocation, TCDefReferable referable, LibraryManager libraryManager) {
+    String libName = moduleLocation.getLibraryName();
+    SourceLibrary lib = libraryManager.getLibrary(libName);
+    if (lib instanceof org.arend.frontend.library.FileSourceLibrary fl
+        && moduleLocation.getLocationKind() == ModuleLocation.LocationKind.SOURCE) {
+      Path src = fl.getSourceBasePath();
+      if (src != null) {
+        try {
+          Path abs = org.arend.util.FileUtils.sourceFile(src, moduleLocation.getModulePath()).toAbsolutePath().normalize();
+          int line = 0, col = 0;
+          if (referable.getData() instanceof org.arend.error.SourcePosition sp) {
+            line = sp.line;
+            col = sp.column;
+          }
+          return line > 0 ? abs + ":" + line + ":" + col : abs.toString();
+        } catch (RuntimeException ignored) {
+          // fall through to synthetic label
+        }
+      }
+    }
+    return "<" + libName + ":" + moduleLocation.getModulePath() + ">";
+  }
+
+  private static String kindLabel(TCDefReferable ref, Concrete.GeneralDefinition def) {
+    if (def instanceof Concrete.BaseFunctionDefinition fdef) {
+      return switch (fdef.getKind()) {
+        case FUNC -> "FUNCTION";
+        case SFUNC -> "SFUNC";
+        case LEMMA -> "LEMMA";
+        case TYPE -> "TYPE";
+        case AXIOM -> "AXIOM";
+        case INSTANCE -> "INSTANCE";
+        case COERCE -> "COERCE";
+        case LEVEL -> "LEVEL";
+        case FUNC_COCLAUSE, CLASS_COCLAUSE -> "COCLAUSE";
+        case CONS -> "CONSTRUCTOR";
+      };
+    }
+    if (def instanceof Concrete.MetaDefinition) return "META";
+    if (def instanceof Concrete.DataDefinition) return "DATA";
+    if (def instanceof Concrete.ClassDefinition cdef) return cdef.isRecord() ? "RECORD" : "CLASS";
+    if (def instanceof Concrete.Constructor) return "CONSTRUCTOR";
+    if (def instanceof Concrete.ClassField) return "FIELD";
+    return ref.getKind().name();
+  }
+
+  private static String indentMultiline(String s, String prefix) {
+    if (s.isEmpty()) return prefix;
+    StringBuilder out = new StringBuilder(s.length() + prefix.length() * 4);
+    out.append(prefix);
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      out.append(c);
+      if (c == '\n' && i + 1 < s.length()) out.append(prefix);
+    }
+    return out.toString();
   }
 
   public static void main(String[] args) {

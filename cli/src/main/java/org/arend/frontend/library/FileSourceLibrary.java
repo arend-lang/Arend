@@ -96,6 +96,10 @@ public class FileSourceLibrary extends SourceLibrary {
     return binaryBasePath;
   }
 
+  public @Nullable Path getSourceBasePath() {
+    return sourceBasePath;
+  }
+
   @Override
   public @Nullable ClassLoaderDelegate getClassLoaderDelegate() {
     return myClassLoaderDelegate;
