@@ -160,6 +160,47 @@ public class ConsoleMain {
 
       See also: https://arend-lang.github.io/documentation/plugin-manual/navigating#proof-search
       """;
+
+  private final static String FIND_USAGES_HELP = """
+      arend -fu <MODULE_PATH>:<GROUP_PATH> [option ...]
+
+      Find every textual usage of the named definition that resolves to it
+      after name resolution. Same flow as IntelliJ's Find Usages: text-search
+      narrows files, then ArendServer resolveAll validates each candidate via
+      identity comparison on the resolved Referable.
+
+      SPEC
+        MODULE_PATH    dotted module path,         e.g. Algebra.Monoid
+        GROUP_PATH     dotted in-module path,      e.g. Monoid.equals
+                       Reaches class fields, constructors, and \\where members.
+
+      EXTRA TOKENS  (each as a separate -fu argument)
+        with-tests        also search test sources
+        no-line           omit the source line content from output
+        aliases=false     don't include the target's alias name in the search
+        limit=N           cap printed usages at N (0 = unlimited; default 500)
+        only=name|self    restrict scope (default: every loaded library;
+                          'self' = libraries listed on the command line;
+                          comma-separated for multiple).
+
+      ALIAS HANDLING
+        Direct uses, the target's own alias, and locally renamed imports
+        (`\\import M (foo \\as bar)` then `bar` in body) are caught. Multi-hop
+        renames are followed via fixed-point iteration. Implicit references
+        through instance resolution are NOT caught (they have no textual form).
+
+      OUTPUT
+        Usages of <library>::<long-name>  [<KIND>]
+
+        <abs-path>:<line>:<col>: <source line, trimmed>
+        ...
+        Found N usage(s)
+
+      EXAMPLES
+        arend -L libs my-lib -fu 'Algebra.Monoid:Monoid.equals'
+        arend -L libs my-lib -fu 'Paths:transport' -fu limit=20 -fu no-line
+        arend -L libs my-lib -fu only=self -fu 'Foo:bar'
+      """;
   private final static String ANSI_GREEN = "\u001B[32m";
   private final static String ANSI_RESET = "\u001B[0m";
 
@@ -229,6 +270,8 @@ public class ConsoleMain {
           .desc("search by signature shape (parameters/codomain). Pass `-ps help` for the full grammar.").build());
       cmdOptions.addOption(Option.builder("ss").longOpt("symbol-search").hasArgs().argName("pattern")
           .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());
+      cmdOptions.addOption(Option.builder("fu").longOpt("find-usages").hasArgs().argName("MODULE:DEF")
+          .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
@@ -255,6 +298,11 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("ps") && containsHelpToken(cmdLine.getOptionValues("ps"))) {
         System.out.println(PROOF_SEARCH_HELP);
+        return null;
+      }
+
+      if (cmdLine.hasOption("fu") && containsHelpToken(cmdLine.getOptionValues("fu"))) {
+        System.out.println(FIND_USAGES_HELP);
         return null;
       }
 
@@ -578,6 +626,15 @@ public class ConsoleMain {
           org.arend.frontend.symbol.SymbolSearch.parseArgs(cmdLine.getOptionValues("ss"), mySystemErrErrorReporter);
       if (parsed == null) return false;
       org.arend.frontend.symbol.SymbolSearch.run(parsed.pattern(), parsed.options(),
+          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
+      return true;
+    }
+
+    if (cmdLine.hasOption("fu")) {
+      org.arend.frontend.symbol.UsageSearch.Parsed parsed =
+          org.arend.frontend.symbol.UsageSearch.parseArgs(cmdLine.getOptionValues("fu"));
+      if (parsed == null) return false;
+      org.arend.frontend.symbol.UsageSearch.run(parsed.spec(), parsed.options(),
           requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
       return true;
     }
