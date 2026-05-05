@@ -201,6 +201,45 @@ public class ConsoleMain {
         arend -L libs my-lib -fu 'Paths:transport' -fu limit=20 -fu no-line
         arend -L libs my-lib -fu only=self -fu 'Foo:bar'
       """;
+
+  private final static String CLASS_HIERARCHY_HELP = """
+      arend -ch <CLASS> [option ...]
+
+      Print the inheritance lattice around a class plus every \\instance and
+      \\new construction site. Resolves <CLASS> in two ways:
+        - 'MODULE_PATH:GROUP_PATH'    qualified, same shape as -fu / -p
+        - '<short-name>'              looked up via the symbol index, restricted
+                                      to CLASS / RECORD entries. Multiple matches
+                                      print the candidates so you can pick.
+
+      EXTRA TOKENS  (each as a separate -ch argument)
+        up                only superclass chain
+        down              only subclass tree (and constructors of subclasses)
+        no-instances      omit the \\instance section
+        no-news           omit the \\new section
+        with-fields       annotate each tree node with its directly-declared fields
+        with-tests        also search test sources
+        only=name|self    restrict library scope (default: all loaded libraries)
+        format=tree|flat  output format. tree (default) uses pseudographics for
+                          a human-friendly view; flat emits one tagged relation
+                          per line for grep / agentic loops:
+                            TARGET      lib::M:C  KIND  abs:line:col
+                            EXTENDS     lib::M:C  lib::N:Parent
+                            EXTENDED-BY lib::M:C  lib::M:Sub
+                            INSTANCE    lib::M:C  abs:line:col  instanceName
+                            NEW         lib::M:C  abs:line:col  impl=...  miss=...
+        limit=N           cap printed instance / new lines (default 200; 0 = all)
+
+      EXAMPLES
+        arend -L libs my-lib -ch 'CMonoid'
+        arend -L libs my-lib -ch 'Algebra.Monoid:CMonoid' -ch with-fields
+        arend -L libs my-lib -ch 'BaseSet' -ch down
+        arend -L libs my-lib -ch 'Monoid' -ch format=flat -ch up
+
+      Implicit instances inferred during typechecking are NOT shown -- they have
+      no source declaration. Use -fu on the class itself to see all reference
+      sites instead.
+      """;
   private final static String ANSI_GREEN = "\u001B[32m";
   private final static String ANSI_RESET = "\u001B[0m";
 
@@ -272,6 +311,8 @@ public class ConsoleMain {
           .desc("search by short name (uses an mtime-cached on-disk index). Pass `-ss help` for the full grammar.").build());
       cmdOptions.addOption(Option.builder("fu").longOpt("find-usages").hasArgs().argName("MODULE:DEF")
           .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder("ch").longOpt("class-hierarchy").hasArgs().argName("CLASS")
+          .desc("print super/sub-class trees plus \\new and \\instance sites. Accepts MODULE:CLASS or a bare class name (resolved via the symbol index). Pass `-ch help` for full grammar.").build());
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
@@ -303,6 +344,11 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("fu") && containsHelpToken(cmdLine.getOptionValues("fu"))) {
         System.out.println(FIND_USAGES_HELP);
+        return null;
+      }
+
+      if (cmdLine.hasOption("ch") && containsHelpToken(cmdLine.getOptionValues("ch"))) {
+        System.out.println(CLASS_HIERARCHY_HELP);
         return null;
       }
 
@@ -635,6 +681,15 @@ public class ConsoleMain {
           org.arend.frontend.symbol.UsageSearch.parseArgs(cmdLine.getOptionValues("fu"));
       if (parsed == null) return false;
       org.arend.frontend.symbol.UsageSearch.run(parsed.spec(), parsed.options(),
+          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
+      return true;
+    }
+
+    if (cmdLine.hasOption("ch")) {
+      org.arend.frontend.symbol.ClassHierarchy.Parsed parsed =
+          org.arend.frontend.symbol.ClassHierarchy.parseArgs(cmdLine.getOptionValues("ch"));
+      if (parsed == null) return false;
+      org.arend.frontend.symbol.ClassHierarchy.run(parsed.spec(), parsed.options(),
           requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
       return true;
     }
