@@ -313,6 +313,7 @@ public class ConsoleMain {
           .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ch").longOpt("class-hierarchy").hasArgs().argName("CLASS")
           .desc("print super/sub-class trees plus \\new and \\instance sites. Accepts MODULE:CLASS or a bare class name (resolved via the symbol index). Pass `-ch help` for full grammar.").build());
+      cmdOptions.addOption("nr", "name-resolve", false, "only run name resolution; do not typecheck or load binary caches. Honors granularity from positional args: no args = each requested library; MODULE = that module + its transitive raw-import closure; MODULE:DEF = same plus an existence check for DEF.");
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
@@ -694,6 +695,10 @@ public class ConsoleMain {
       return true;
     }
 
+    if (cmdLine.hasOption("nr")) {
+      return runNameResolveOnly(server, requestedLibraries, requestedModules);
+    }
+
     if (cmdLine.hasOption("ps")) {
       String[] psArgs = cmdLine.getOptionValues("ps");
       boolean printFull = false;
@@ -1064,6 +1069,53 @@ public class ConsoleMain {
     } else {
       myExitWithError = true;
     }
+  }
+
+  private boolean runNameResolveOnly(ArendServer server, List<SourceLibrary> requestedLibraries, Set<Pair<ModulePath, LongName>> requestedModules) {
+    if (requestedModules.isEmpty()) {
+      for (SourceLibrary library : requestedLibraries) {
+        System.out.println();
+        System.out.println("--- Resolving " + library.getLibraryName() + " ---");
+        long time = System.currentTimeMillis();
+        List<ModuleLocation> modules = library.findModules(false).stream()
+            .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
+            .toList();
+        if (!modules.isEmpty()) {
+          server.getCheckerFor(modules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+        }
+        System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
+      }
+      return !myExitWithError;
+    }
+
+    for (Pair<ModulePath, LongName> requested : requestedModules) {
+      ModulePath modulePath = requested.proj1;
+      LongName definitionName = requested.proj2;
+      ModuleLocation module = server.findModule(modulePath, null, true, false);
+      if (module == null) {
+        mySystemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
+        continue;
+      }
+      System.out.println();
+      System.out.println("--- Resolving " + module + " ---");
+      long time = System.currentTimeMillis();
+      server.getCheckerFor(Collections.singletonList(module)).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+      System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
+
+      if (definitionName != null) {
+        boolean found = false;
+        for (DefinitionData data : server.getResolvedDefinitions(module)) {
+          if (data.definition().getData().getRefLongName().equals(definitionName)) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          mySystemErrErrorReporter.report(new DefinitionNotFoundError(new FullName(module, definitionName)));
+        }
+      }
+    }
+    return !myExitWithError;
   }
 
   private boolean matchAndPrint(ArendServer server, LibraryManager libraryManager, List<SourceLibrary> requestedLibraries, String pattern, boolean printFull) {
