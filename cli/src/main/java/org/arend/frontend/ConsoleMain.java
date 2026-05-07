@@ -12,6 +12,7 @@ import org.arend.ext.prettyprinting.PrettyPrinterFlag;
 import org.arend.ext.util.Pair;
 import org.arend.frontend.library.*;
 import org.arend.frontend.repl.PlainCliRepl;
+import org.arend.frontend.symbol.SignatureFileWriter;
 import org.arend.frontend.repl.jline.JLineCliRepl;
 import org.arend.frontend.source.PreludeResourceSource;
 import org.arend.library.classLoader.FileClassLoaderDelegate;
@@ -313,6 +314,7 @@ public class ConsoleMain {
           .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ch").longOpt("class-hierarchy").hasArgs().argName("CLASS")
           .desc("print super/sub-class trees plus \\new and \\instance sites. Accepts MODULE:CLASS or a bare class name (resolved via the symbol index). Pass `-ch help` for full grammar.").build());
+      cmdOptions.addOption("sig", "write-signatures", false, "in addition to the chosen mode (default typecheck, -nr, or -rr), emit a signature-only mirror of every processed module to <library>/.sig/<module>.ard. Function/lemma/instance/meta bodies and class-field implementations are replaced with the goal `{?}`; data constructors, class field declarations, namespace commands, and \\where structure are preserved. Honors positional-arg granularity. Off by default.");
       cmdOptions.addOption("nr", "name-resolve", false, "only run name resolution; do not typecheck or load binary caches. Honors granularity from positional args: no args = each requested library; MODULE = that module + its transitive raw-import closure; MODULE:DEF = same plus an existence check for DEF. Requires complete binary symbol indices (build via -ss).");
       cmdOptions.addOption("rr", "reference-resolve", false, "name-resolution + auto-fix: for each unresolved reference, look candidates up in the binary symbol indices, rewrite source files when the candidate is unique, and list alternatives otherwise. Same granularity rules as -nr. Requires complete binary symbol indices (build via -ss).");
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
@@ -722,14 +724,16 @@ public class ConsoleMain {
       return true;
     }
 
+    boolean writeSignatures = cmdLine.hasOption("sig");
+
     if (cmdLine.hasOption("nr")) {
       if (!verifyBinaryIndices(requestedLibraries)) return false;
-      return runNameResolveOnly(server, requestedLibraries, requestedModules);
+      return runNameResolveOnly(server, requestedLibraries, requestedModules, writeSignatures);
     }
 
     if (cmdLine.hasOption("rr")) {
       if (!verifyBinaryIndices(requestedLibraries)) return false;
-      return runReferenceResolveOnly(server, requestedLibraries, requestedModules, libraryManager);
+      return runReferenceResolveOnly(server, requestedLibraries, requestedModules, libraryManager, writeSignatures);
     }
 
     if (cmdLine.hasOption("ps")) {
@@ -868,6 +872,8 @@ public class ConsoleMain {
         }
 
         persistLibrary(library, server, requester.getBinaryCacheLoaded());
+
+        if (writeSignatures) emitSignaturesFor(server, library, null);
       }
     } else {
       for (Pair<ModulePath, LongName> requested : requestedModules) {
@@ -915,6 +921,12 @@ public class ConsoleMain {
       // Persist all libraries that had modules typechecked
       for (SourceLibrary library : requestedLibraries) {
         persistLibrary(library, server, requester.getBinaryCacheLoaded());
+      }
+      if (writeSignatures) {
+        Set<ModulePath> only = collectModulePaths(requestedModules);
+        for (SourceLibrary library : requestedLibraries) {
+          emitSignaturesFor(server, library, only);
+        }
       }
     }
 
@@ -1132,7 +1144,7 @@ public class ConsoleMain {
     return ok;
   }
 
-  private boolean runReferenceResolveOnly(ArendServer server, List<SourceLibrary> requestedLibraries, Set<Pair<ModulePath, LongName>> requestedModules, LibraryManager libraryManager) {
+  private boolean runReferenceResolveOnly(ArendServer server, List<SourceLibrary> requestedLibraries, Set<Pair<ModulePath, LongName>> requestedModules, LibraryManager libraryManager, boolean writeSignatures) {
     myBufferErrors = true;
     myBufferedErrors.clear();
     try {
@@ -1169,6 +1181,13 @@ public class ConsoleMain {
       System.out.println("[INFO] Modified " + result.modifiedFiles().size() + " file(s):");
       for (Path p : result.modifiedFiles()) System.out.println("        " + p);
       System.out.println("[INFO] Re-run the CLI to pick up the rewritten sources.");
+    }
+
+    if (writeSignatures) {
+      Set<ModulePath> only = collectModulePaths(requestedModules);
+      for (SourceLibrary library : requestedLibraries) {
+        emitSignaturesFor(server, library, only);
+      }
     }
 
     return !myExitWithError;
@@ -1220,7 +1239,7 @@ public class ConsoleMain {
     }
   }
 
-  private boolean runNameResolveOnly(ArendServer server, List<SourceLibrary> requestedLibraries, Set<Pair<ModulePath, LongName>> requestedModules) {
+  private boolean runNameResolveOnly(ArendServer server, List<SourceLibrary> requestedLibraries, Set<Pair<ModulePath, LongName>> requestedModules, boolean writeSignatures) {
     if (requestedModules.isEmpty()) {
       for (SourceLibrary library : requestedLibraries) {
         System.out.println();
@@ -1233,6 +1252,7 @@ public class ConsoleMain {
           server.getCheckerFor(modules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
         }
         System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
+        if (writeSignatures) emitSignaturesFor(server, library, null);
       }
       return !myExitWithError;
     }
@@ -1264,7 +1284,26 @@ public class ConsoleMain {
         }
       }
     }
+    if (writeSignatures) {
+      Set<ModulePath> only = collectModulePaths(requestedModules);
+      for (SourceLibrary library : requestedLibraries) {
+        emitSignaturesFor(server, library, only);
+      }
+    }
     return !myExitWithError;
+  }
+
+  private static Set<ModulePath> collectModulePaths(Set<Pair<ModulePath, LongName>> requestedModules) {
+    Set<ModulePath> result = new HashSet<>();
+    for (Pair<ModulePath, LongName> p : requestedModules) result.add(p.proj1);
+    return result;
+  }
+
+  private void emitSignaturesFor(ArendServer server, SourceLibrary library, Set<ModulePath> only) {
+    SignatureFileWriter.Result r = SignatureFileWriter.writeFiltered(server, library, only);
+    for (String err : r.errors()) System.err.println(err);
+    System.out.println("[INFO] -sig wrote " + r.written() + " signature file(s) for "
+        + library.getLibraryName() + (r.skipped() > 0 ? " (skipped " + r.skipped() + ")" : ""));
   }
 
   private boolean matchAndPrint(ArendServer server, LibraryManager libraryManager, List<SourceLibrary> requestedLibraries, String pattern, boolean printFull) {

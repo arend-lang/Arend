@@ -29,6 +29,7 @@ public class FileSourceLibrary extends SourceLibrary {
   protected final Path sourceBasePath;
   protected final Path binaryBasePath;
   protected final Path testBasePath;
+  private @Nullable Path basePath;
   private final Set<ModulePath> myModules;
   private final ClassLoaderDelegate myClassLoaderDelegate;
 
@@ -59,12 +60,15 @@ public class FileSourceLibrary extends SourceLibrary {
 
       LibraryHeader header = LibraryHeader.fromConfig(new YAMLMapper().readValue(configFile.toFile(), LibraryConfig.class), configFile.toString(), errorReporter);
 
-      return header == null ? null : new FileSourceLibrary(libName, isExternalLibrary, Files.getLastModifiedTime(configFile).toMillis(),
+      if (header == null) return null;
+      FileSourceLibrary lib = new FileSourceLibrary(libName, isExternalLibrary, Files.getLastModifiedTime(configFile).toMillis(),
           header.dependencies(), header.version(), header.langVersion(), header.extMainClass(), header.modules(),
           header.sourcesDir() == null ? basePath : basePath.resolve(header.sourcesDir()),
           header.binariesDir() == null ? null : basePath.resolve(header.binariesDir()),
           header.testDir() == null ? null : basePath.resolve(header.testDir()),
           header.extDir() == null ? null : new FileClassLoaderDelegate(basePath.resolve(header.extDir())));
+      lib.basePath = basePath;
+      return lib;
     } catch (IOException e) {
       errorReporter.report(new LibraryIOError(configFile.toString(), "Failed to read configuration file", e.getLocalizedMessage()));
       return null;
@@ -98,6 +102,19 @@ public class FileSourceLibrary extends SourceLibrary {
 
   public @Nullable Path getSourceBasePath() {
     return sourceBasePath;
+  }
+
+  /**
+   * The directory containing this library's {@code arend.yaml}. Set when the
+   * library is loaded via {@link #fromConfigFile}; null for libraries created
+   * directly through the constructor (REPL, default project, tests).
+   */
+  public @Nullable Path getBasePath() {
+    return basePath;
+  }
+
+  public void setBasePath(@Nullable Path basePath) {
+    this.basePath = basePath;
   }
 
   @Override
