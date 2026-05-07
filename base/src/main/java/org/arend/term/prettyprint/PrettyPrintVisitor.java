@@ -87,7 +87,7 @@ public class PrettyPrintVisitor implements ConcreteExpressionVisitor<Precedence,
     oldVisitor.myBuilder.append(newVisitor.myBuilder);
   }
 
-  void printExpr(Concrete.Expression expr, Precedence prec) {
+  public void printExpr(Concrete.Expression expr, Precedence prec) {
     expr.accept(this, prec);
   }
 
