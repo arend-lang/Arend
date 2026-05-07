@@ -47,7 +47,8 @@ public final class ReferenceResolveAutoFix {
       @NotNull List<GeneralError> errorsToPrint,
       @NotNull List<String> suggestionBlocks,
       @NotNull List<String> infoMessages,
-      @NotNull List<Path> modifiedFiles
+      @NotNull List<Path> modifiedFiles,
+      @NotNull List<String> warnings
   ) {}
 
   /**
@@ -62,7 +63,8 @@ public final class ReferenceResolveAutoFix {
 
   public static Result process(@NotNull ArendServer server,
                                @NotNull LibraryManager manager,
-                               @NotNull List<GeneralError> errors) {
+                               @NotNull List<GeneralError> errors,
+                               @NotNull List<SourceLibrary> requestedLibraries) {
     // 1. Load all library symbol indices once.
     Map<SourceLibrary, SymbolIndex> indices = loadIndices(manager);
 
@@ -151,7 +153,135 @@ public final class ReferenceResolveAutoFix {
       if (applyFixes(ff)) modified.add(ff.path);
     }
 
-    return new Result(errorsToPrint, suggestionBlocks, infoMessages, modified);
+    // 6. Surface non-core warnings: imports that bring in a data type but
+    //    leave its constructors out of scope (the silent-variable-pattern bug).
+    List<String> warnings = findMissingConstructorImports(server, manager, requestedLibraries);
+
+    return new Result(errorsToPrint, suggestionBlocks, infoMessages, modified, warnings);
+  }
+
+  // ---- missing-constructor-import warning -------------------------------
+
+  /**
+   * For every selective `\import M(...)` in every loaded source file of the
+   * requested libraries, look up each renaming target in the imported module
+   * and emit a warning when the target is a `\data` definition whose
+   * constructors aren't also brought into the file's scope. This is the
+   * known-confusing pattern documented in arend-bugs.md: a constructor-shaped
+   * pattern silently binds a fresh variable when the constructor isn't in scope.
+   */
+  private static List<String> findMissingConstructorImports(@NotNull ArendServer server,
+                                                            @NotNull LibraryManager manager,
+                                                            @NotNull List<SourceLibrary> requestedLibraries) {
+    List<String> out = new ArrayList<>();
+    for (SourceLibrary library : requestedLibraries) {
+      for (ModulePath mp : library.findModules(false)) {
+        ModuleLocation loc = new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp);
+        ConcreteGroup group = server.getRawGroup(loc);
+        if (group == null) continue;
+        Path filePath = filePathOf(manager, loc);
+        scanGroupForImports(server, loc, group, filePath, out);
+      }
+    }
+    return out;
+  }
+
+  private static void scanGroupForImports(@NotNull ArendServer server,
+                                          @NotNull ModuleLocation currentModule,
+                                          @NotNull ConcreteGroup group,
+                                          @Nullable Path filePath,
+                                          @NotNull List<String> out) {
+    for (ConcreteStatement stmt : group.statements()) {
+      ConcreteNamespaceCommand cmd = stmt.command();
+      if (cmd != null && cmd.isImport()) {
+        checkImportForMissingConstructors(server, currentModule, cmd, filePath, out);
+      }
+      if (stmt.group() != null) {
+        scanGroupForImports(server, currentModule, stmt.group(), filePath, out);
+      }
+    }
+    for (ConcreteGroup dyn : group.dynamicGroups()) {
+      scanGroupForImports(server, currentModule, dyn, filePath, out);
+    }
+  }
+
+  private static void checkImportForMissingConstructors(@NotNull ArendServer server,
+                                                        @NotNull ModuleLocation currentModule,
+                                                        @NotNull ConcreteNamespaceCommand cmd,
+                                                        @Nullable Path filePath,
+                                                        @NotNull List<String> out) {
+    // Only selective imports of the form `import M (a, b, ...)` can leave a
+    // data type's constructors out of scope; the bare and using forms bring everything.
+    if (cmd.isUsing()) return;
+    if (cmd.renamings().isEmpty()) return;
+
+    ModulePath importedPath = new ModulePath(cmd.module().getPath());
+    boolean inTests = currentModule.getLocationKind() == ModuleLocation.LocationKind.TEST;
+    ModuleLocation importedModule = server.findModule(importedPath, currentModule.getLibraryName(), inTests, true);
+    if (importedModule == null) return;
+    ConcreteGroup importedGroup = server.getRawGroup(importedModule);
+    if (importedGroup == null) return;
+
+    Set<String> importedNames = new HashSet<>();
+    for (ConcreteNamespaceCommand.NameRenaming r : cmd.renamings()) {
+      importedNames.add(r.reference().getRefName());
+    }
+    Set<String> hiddenNames = new HashSet<>();
+    for (ConcreteNamespaceCommand.NameHiding h : cmd.hidings()) {
+      hiddenNames.add(h.reference().getRefName());
+    }
+
+    for (ConcreteNamespaceCommand.NameRenaming r : cmd.renamings()) {
+      String name = r.reference().getRefName();
+      ConcreteGroup defGroup = findChildGroupByName(importedGroup, name);
+      if (defGroup == null) continue;
+      if (!(defGroup.definition() instanceof org.arend.term.concrete.Concrete.DataDefinition)) continue;
+
+      List<String> missing = new ArrayList<>();
+      for (org.arend.naming.reference.InternalReferable inner : defGroup.getInternalReferables()) {
+        String cname = inner.textRepresentation();
+        if (cname == null || cname.isEmpty()) continue;
+        if (importedNames.contains(cname)) continue;
+        if (hiddenNames.contains(cname)) continue;
+        missing.add(cname);
+      }
+      if (missing.isEmpty()) continue;
+
+      out.add(formatMissingConstructorWarning(currentModule, cmd, filePath, importedPath, name, missing));
+    }
+  }
+
+  private static @Nullable ConcreteGroup findChildGroupByName(@NotNull ConcreteGroup group, @NotNull String name) {
+    for (ConcreteStatement stmt : group.statements()) {
+      ConcreteGroup sub = stmt.group();
+      if (sub == null) continue;
+      LocatedReferable ref = sub.referable();
+      if (ref == null) continue;
+      if (name.equals(ref.textRepresentation())) return sub;
+      if (ref instanceof GlobalReferable g && name.equals(g.getAliasName())) return sub;
+    }
+    return null;
+  }
+
+  private static String formatMissingConstructorWarning(@NotNull ModuleLocation currentModule,
+                                                        @NotNull ConcreteNamespaceCommand cmd,
+                                                        @Nullable Path filePath,
+                                                        @NotNull ModulePath importedPath,
+                                                        @NotNull String dataName,
+                                                        @NotNull List<String> missing) {
+    String pos;
+    if (cmd.getData() instanceof SourcePosition sp) {
+      String prefix = filePath != null ? filePath.toString() : currentModule.toString();
+      pos = prefix + ":" + sp.line + ":" + sp.column;
+    } else if (filePath != null) {
+      pos = filePath.toString();
+    } else {
+      pos = currentModule.toString();
+    }
+    return "[WARNING] " + pos + ": \\import " + importedPath + "(" + dataName
+        + ") brings the data type but not its constructor(s) " + String.join(", ", missing)
+        + ". Pattern matches against these constructors will silently bind fresh variables."
+        + " Add them: \\import " + importedPath + "(" + dataName + ", " + String.join(", ", missing) + ").";
   }
 
   // ---- candidate lookup --------------------------------------------------

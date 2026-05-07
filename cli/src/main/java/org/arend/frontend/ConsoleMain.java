@@ -1142,7 +1142,7 @@ public class ConsoleMain {
     }
 
     org.arend.frontend.symbol.ReferenceResolveAutoFix.Result result =
-        org.arend.frontend.symbol.ReferenceResolveAutoFix.process(server, libraryManager, myBufferedErrors);
+        org.arend.frontend.symbol.ReferenceResolveAutoFix.process(server, libraryManager, myBufferedErrors, requestedLibraries);
 
     // Print non-fixable errors (with candidate suggestions when present).
     for (GeneralError error : result.errorsToPrint()) {
@@ -1156,6 +1156,11 @@ public class ConsoleMain {
     // Print INFO lines for fixed references.
     for (String info : result.infoMessages()) {
       System.out.println(info);
+      System.out.flush();
+    }
+    // Print non-core warnings (e.g. selective imports that miss a data type's constructors).
+    for (String warning : result.warnings()) {
+      System.out.println(warning);
       System.out.flush();
     }
 
