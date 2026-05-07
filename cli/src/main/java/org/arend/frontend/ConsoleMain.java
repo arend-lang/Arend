@@ -313,7 +313,8 @@ public class ConsoleMain {
           .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ch").longOpt("class-hierarchy").hasArgs().argName("CLASS")
           .desc("print super/sub-class trees plus \\new and \\instance sites. Accepts MODULE:CLASS or a bare class name (resolved via the symbol index). Pass `-ch help` for full grammar.").build());
-      cmdOptions.addOption("nr", "name-resolve", false, "only run name resolution; do not typecheck or load binary caches. Honors granularity from positional args: no args = each requested library; MODULE = that module + its transitive raw-import closure; MODULE:DEF = same plus an existence check for DEF.");
+      cmdOptions.addOption("nr", "name-resolve", false, "only run name resolution; do not typecheck or load binary caches. Honors granularity from positional args: no args = each requested library; MODULE = that module + its transitive raw-import closure; MODULE:DEF = same plus an existence check for DEF. Requires complete binary symbol indices (build via -ss).");
+      cmdOptions.addOption("rr", "reference-resolve", false, "name-resolution + auto-fix: for each unresolved reference, look candidates up in the binary symbol indices, rewrite source files when the candidate is unique, and list alternatives otherwise. Same granularity rules as -nr. Requires complete binary symbol indices (build via -ss).");
       cmdOptions.addOption("r", "recompile", false, "recompile all modules from source, ignoring binary caches (.arc files)");
       cmdOptions.addOption("t", "test", false, "run tests");
       cmdOptions.addOption("v", "version", false, "print language version");
@@ -383,6 +384,9 @@ public class ConsoleMain {
     };
   }
 
+  private boolean myBufferErrors = false;
+  private final List<GeneralError> myBufferedErrors = new ArrayList<>();
+
   private final ErrorReporter myErrorReporter = new ErrorReporter() {
     @Override
     public void report(GeneralError error) {
@@ -391,6 +395,11 @@ public class ConsoleMain {
           updateSourceResult(((LocatedReferable) referable).getLocation(), err.level);
         }
       });
+
+      if (myBufferErrors) {
+        myBufferedErrors.add(error);
+        return;
+      }
 
       //Print error
       PrettyPrinterConfigWithRenamer ppConfig = new PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE);
@@ -411,6 +420,24 @@ public class ConsoleMain {
       }
     }
   };
+
+  private void printError(GeneralError error) {
+    PrettyPrinterConfigWithRenamer ppConfig = new PrettyPrinterConfigWithRenamer(EmptyScope.INSTANCE);
+    if (error instanceof GoalError) {
+      ppConfig.expressionFlags = EnumSet.of(PrettyPrinterFlag.SHOW_LOCAL_FIELD_INSTANCE);
+    }
+    if (error.level == GeneralError.Level.ERROR) {
+      myExitWithError = true;
+    }
+    String errorText = error.getDoc(ppConfig).toString();
+    if (error.isSevere()) {
+      System.err.println(errorText);
+      System.err.flush();
+    } else {
+      System.out.println(errorText);
+      System.out.flush();
+    }
+  }
 
   private void showSizes(ArendServer server, SourceLibrary library) {
     Map<Definition, Integer> sizes = new HashMap<>();
@@ -696,7 +723,13 @@ public class ConsoleMain {
     }
 
     if (cmdLine.hasOption("nr")) {
+      if (!verifyBinaryIndices(requestedLibraries)) return false;
       return runNameResolveOnly(server, requestedLibraries, requestedModules);
+    }
+
+    if (cmdLine.hasOption("rr")) {
+      if (!verifyBinaryIndices(requestedLibraries)) return false;
+      return runReferenceResolveOnly(server, requestedLibraries, requestedModules, libraryManager);
     }
 
     if (cmdLine.hasOption("ps")) {
@@ -1068,6 +1101,117 @@ public class ConsoleMain {
       result.add(library);
     } else {
       myExitWithError = true;
+    }
+  }
+
+  private boolean verifyBinaryIndices(List<SourceLibrary> libraries) {
+    boolean ok = true;
+    for (SourceLibrary library : libraries) {
+      if (!(library instanceof org.arend.frontend.library.FileSourceLibrary fl)) continue;
+      if (fl.getBinaryBasePath() == null) continue;
+      org.arend.frontend.symbol.SymbolIndex idx = org.arend.frontend.symbol.SymbolIndex.loadOrCreate(library);
+      List<ModulePath> stale = new ArrayList<>();
+      for (ModulePath mp : library.findModules(false)) {
+        if (idx.isStale(library, mp)) stale.add(mp);
+      }
+      if (!stale.isEmpty()) {
+        ok = false;
+        System.err.println("[ERROR] Binary symbol index for library '" + library.getLibraryName()
+            + "' is missing or stale (" + stale.size() + " module(s)).");
+        int shown = 0;
+        for (ModulePath mp : stale) {
+          if (shown++ >= 5) { System.err.println("        ... and " + (stale.size() - shown + 1) + " more"); break; }
+          System.err.println("        " + mp);
+        }
+      }
+    }
+    if (!ok) {
+      System.err.println("        Build the indices first by running '-ss <pattern>' on each affected library.");
+      myExitWithError = true;
+    }
+    return ok;
+  }
+
+  private boolean runReferenceResolveOnly(ArendServer server, List<SourceLibrary> requestedLibraries, Set<Pair<ModulePath, LongName>> requestedModules, LibraryManager libraryManager) {
+    myBufferErrors = true;
+    myBufferedErrors.clear();
+    try {
+      runResolveAllForRRArgs(server, requestedLibraries, requestedModules);
+    } finally {
+      myBufferErrors = false;
+    }
+
+    org.arend.frontend.symbol.ReferenceResolveAutoFix.Result result =
+        org.arend.frontend.symbol.ReferenceResolveAutoFix.process(server, libraryManager, myBufferedErrors);
+
+    // Print non-fixable errors (with candidate suggestions when present).
+    for (GeneralError error : result.errorsToPrint()) {
+      printError(error);
+    }
+    // Print suggestion blocks for ambiguous errors.
+    for (String block : result.suggestionBlocks()) {
+      System.out.println(block);
+      System.out.flush();
+    }
+    // Print INFO lines for fixed references.
+    for (String info : result.infoMessages()) {
+      System.out.println(info);
+      System.out.flush();
+    }
+
+    if (!result.modifiedFiles().isEmpty()) {
+      System.out.println();
+      System.out.println("[INFO] Modified " + result.modifiedFiles().size() + " file(s):");
+      for (Path p : result.modifiedFiles()) System.out.println("        " + p);
+      System.out.println("[INFO] Re-run the CLI to pick up the rewritten sources.");
+    }
+
+    return !myExitWithError;
+  }
+
+  private void runResolveAllForRRArgs(ArendServer server, List<SourceLibrary> requestedLibraries, Set<Pair<ModulePath, LongName>> requestedModules) {
+    if (requestedModules.isEmpty()) {
+      for (SourceLibrary library : requestedLibraries) {
+        System.out.println();
+        System.out.println("--- Resolving " + library.getLibraryName() + " ---");
+        long time = System.currentTimeMillis();
+        List<ModuleLocation> modules = library.findModules(false).stream()
+            .map(mp -> new ModuleLocation(library.getLibraryName(), ModuleLocation.LocationKind.SOURCE, mp))
+            .toList();
+        if (!modules.isEmpty()) {
+          server.getCheckerFor(modules).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+        }
+        System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
+      }
+      return;
+    }
+
+    for (Pair<ModulePath, LongName> requested : requestedModules) {
+      ModulePath modulePath = requested.proj1;
+      LongName definitionName = requested.proj2;
+      ModuleLocation module = server.findModule(modulePath, null, true, false);
+      if (module == null) {
+        mySystemErrErrorReporter.report(new ModuleNotFoundError(modulePath));
+        continue;
+      }
+      System.out.println();
+      System.out.println("--- Resolving " + module + " ---");
+      long time = System.currentTimeMillis();
+      server.getCheckerFor(Collections.singletonList(module)).resolveAll(UnstoppableCancellationIndicator.INSTANCE, ProgressReporter.empty());
+      System.out.println("--- Done (" + TimedProgressReporter.timeToString(System.currentTimeMillis() - time) + ") ---");
+
+      if (definitionName != null) {
+        boolean found = false;
+        for (DefinitionData data : server.getResolvedDefinitions(module)) {
+          if (data.definition().getData().getRefLongName().equals(definitionName)) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          mySystemErrErrorReporter.report(new DefinitionNotFoundError(new FullName(module, definitionName)));
+        }
+      }
     }
   }
 
