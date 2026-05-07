@@ -9,7 +9,7 @@
 \import Algebra.Semiring
 \import Arith.Nat
 \import Function
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -32,6 +32,43 @@
           | byRight zro-a#0 => byLeft $ #0-tight (\lam a#0 => apartNonZero (#0-* a#0 zro-a#0) q)
         })
   | zro/=ide => \lam zro=ide => #0-zro (transportInv #0 zro=ide zro#ide)
+
+  \lemma nonZero_* {x y : E} (x/=0 : x /= zro) (y/=0 : y /= zro) : x * y /= zro => {?hidden_proof}
+
+  \lemma nonZero-left {x y : E} (x/=0 : x /= zro) (x*y=0 : x * y = zro) : y = zro => {?hidden_proof}
+
+  \lemma nonZero-right {x y : E} (y/=0 : y /= zro) (x*y=0 : x * y = zro) : x = zro => {?hidden_proof}
+
+  \lemma nonZero-cancel-left {x y z : E} (x/=0 : x /= zro) (x*y=x*z : x * y = x * z) : y = z => {?hidden_proof}
+
+  \lemma nonZero-cancel-right {x y z : E} (z/=0 : z /= zro) (x*z=y*z : x * z = y * z) : x = y => {?hidden_proof}
+
+  \func nonZeroMonoid : CancelMonoid \cowith
+    | E => \Sigma (x : E) (#0 x)
+    | ide => (ide, zro#ide)
+    | * => \lam x y => (x.1 * y.1, #0-* x.2 y.2)
+    | ide-left => {?hidden_proof}
+    | ide-right => {?hidden_proof}
+    | *-assoc => {?hidden_proof}
+    | cancel_*-left => {?hidden_proof}
+    | cancel_*-right => {?hidden_proof}
+
+  \func subMonoid : SubMonoid \this \cowith
+    | contains => #0
+    | contains_ide => {?hidden_proof}
+    | contains_* => {?hidden_proof}
+
+  \lemma ldiv_nonZero {a b : nonZeroMonoid} (a|b : Monoid.LDiv a.1 b.1) : Monoid.LDiv {nonZeroMonoid} a b => {?hidden_proof}
+
+  \func nonZero_ldiv {a b : nonZeroMonoid} (a|b : Monoid.LDiv {nonZeroMonoid} a b) : Monoid.LDiv a.1 b.1 \cowith
+    | inv => a|b.inv.1
+    | inv-right => {?hidden_proof}
+
+  \lemma inv_nonZero {a : nonZeroMonoid} (i : Monoid.Inv a.1) : Monoid.Inv {nonZeroMonoid} a => {?hidden_proof}
+
+  \lemma nonZero_inv {a : nonZeroMonoid} (i : Monoid.Inv {nonZeroMonoid} a) : Monoid.Inv a.1 => {?hidden_proof}
+
+  \lemma pow_#0 {a : E} {n : Nat} (a#0 : #0 a) : #0 (pow a n) => {?hidden_proof}
 }
   \where {
 \class Dec \extends Domain, Ring.Dec, StrictDomain {
@@ -42,17 +79,52 @@
       })
       | zro#ide => nonZeroApart (\lam x => zro/=ide (inv x))
       | #0-* => \lam x#0 y#0 => nonZeroApart (\lam xy=0 => ||.rec' (apartNonZero x#0) (apartNonZero y#0) (zeroProduct xy=0))
+
+      \func LDiv_TruncP {a b : E} (p : TruncP (LDiv a b)) : LDiv a b => \case decideEq a 0 \with {
+        | yes a=0 => LDiv.make 1 (\case p \with {  | inP (_, q) => later (rewrite a=0 simplify) *> q})
+        | no a/=0 => TruncP.remove (\lam d d' => ext $ nonZero-cancel-left a/=0 $ LDiv.inv-right {d} *> inv (LDiv.inv-right {d'})) p
+      }
     }
   }
 
 
-\class IntegralDomain \extends Domain, CRing.With#, ImpotentCRing, NonZeroCRing
+\class IntegralDomain \extends Domain, CRing.With#, ImpotentCRing, NonZeroCRing {
+  \func nonZeroCMonoid : CancelCMonoid \cowith
+    | CancelMonoid => nonZeroMonoid
+    | *-comm => {?hidden_proof}
+
+  \lemma div-inv (x y : E) (x/=0 : x /= zro) (x|y : LDiv x y) (y|x : LDiv y x) : Inv x|y.inv => {?hidden_proof}
+
+  \func gcd_nonZero {a b : nonZeroCMonoid} (gcd : GCD a.1 b.1) : GCD {nonZeroCMonoid} a b \cowith
+    | res => (gcd, #0-*-left (transportInv #0 gcd.res|val1.inv-right a.2))
+    | res|val1 => ldiv_nonZero gcd.res|val1
+    | res|val2 => ldiv_nonZero gcd.res|val2
+    | res-univ => \lam g g|a g|b => ldiv_nonZero $ gcd.res-univ g.1 (nonZero_ldiv g|a) (nonZero_ldiv g|b)
+
+  \func nonZero_gcd {a b : nonZeroCMonoid} (gcd : GCD {nonZeroCMonoid} a b) : GCD a.1 b.1 \cowith
+    | res => gcd.res.1
+    | res|val1 => nonZero_ldiv gcd.res|val1
+    | res|val2 => nonZero_ldiv gcd.res|val2
+    | res-univ => \lam g (g|a : LDiv g a.1) g|b => nonZero_ldiv {_} {(g, #0-*-left $ transportInv #0 g|a.inv-right a.2)} $ gcd.res-univ _ (ldiv_nonZero g|a) (ldiv_nonZero g|b)
+
+  \lemma divQuotient_LDiv {x y : DivQuotient nonZeroCMonoid} :
+    TruncP (LDiv {DivQuotientMonoid \this} (map subMonoid.embedMonoid x) (map subMonoid.embedMonoid y)) <-> TruncP (LDiv {DivQuotientMonoid nonZeroCMonoid} x y) 
+    => {?hidden_proof}
+
+  \lemma toNonZeroDivChain (cc : CMonoid.DivChain {DivQuotientMonoid \this}) : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid} => {?hidden_proof}
+
+  \lemma IsRegular_/=0 {a : E} : IsRegularElem a <-> a /= 0 => {?hidden_proof}
+}
   \where {
     \open DivQuotient
 
 \class Dec \extends IntegralDomain, Domain.Dec, CRing.Dec, StrictIntegralDomain, PPRing {
       | isPPRing => \lam a => inP (\case decideEq a 0 \with {  | yes a=0 => (0, rewrite a=0 (inv zro_*-left), \lam _ => zro_*-left)
         | no a/=0 => (1, inv ide-left, \lam p => ide-left *> nonZero-left a/=0 p)})
+
+      \lemma fromNonZeroDivChain (cc : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}) : CMonoid.DivChain {DivQuotientMonoid \this} => {?hidden_proof}
+
+      \lemma oneDimensional-char : Dim<= 1 <-> (\Pi (a u : E) -> a /= 0 -> ∃ (v : E) (n : Nat) (LDiv a (pow u n * (1 - u * v)))) => {?hidden_proof}
     }
   }
 
@@ -69,6 +141,18 @@
         | byLeft r => byLeft r
         | byRight r => byRight (fromZero r)
       })
+
+\lemma zeroBigProd {l : Array E} (p : BigProd l = zro) : ∃ (j : Fin l.len) (l j = 0) => {?hidden_proof}
+
+\lemma zeroOrCancel-left {x y z : E} (p : x * y = x * z) : (x = 0) || (y = z) => {?hidden_proof}
+
+\lemma zeroOrCancel-right {x y z : E} (p : x * z = y * z) : (x = y) || (z = 0) => {?hidden_proof}
+
+\lemma nonZero-cancel-left {x y z : E} (x/=0 : x /= 0) (p : x * y = x * z) : y = z => {?hidden_proof}
+
+\lemma nonZero-cancel-right {x y z : E} (z/=0 : z /= 0) (p : x * z = y * z) : x = y => {?hidden_proof}
 }
 
-\class StrictIntegralDomain \extends StrictDomain, ImpotentCRing
+\class StrictIntegralDomain \extends StrictDomain, ImpotentCRing {
+\lemma div-associates {a b : E} (a|b : LDiv a b) (b|a : LDiv b a) : TruncP (associates a b) => {?hidden_proof}
+}

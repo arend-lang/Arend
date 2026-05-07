@@ -1,4 +1,4 @@
-\import Data.List(!!, ++, ++-assoc, ++_nil, ::, List, length, nil)
+\import Data.List (!!, ++, ++-assoc, ++_nil, ::, List, length, nil)
 \import Function.Meta
 \import Logic
 \import Logic.Meta

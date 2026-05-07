@@ -22,13 +22,32 @@
 
     \func commaFunctor {C C' : SmallPrecat} {p : Functor C C'} {x y : C'} (f : Hom y x) => commaPrecat.functor (Const {TrivialCat} x) (Const y) p p (Const.natTrans f) (id p)
 
-\class DoubleLimit {
-      | J : SmallPrecat
-      | C : SmallPrecat
-      | C' : SmallPrecat
-      | D : CompletePrecat
-      | p : Functor C C'
-      | F : Functor C D
-      | G : Functor J C'
+\class DoubleLimit {J : SmallPrecat} {C : SmallPrecat} {C' : SmallPrecat} {D : CompletePrecat} (p : Functor C C') (F : Functor C D) (G : Functor J C') {
+      \lemma map_iso (c : Cone G) (e : Iso (lim'.limMap (map_cone c))) : Iso (limMap {D.limit (Comp (RightKanExt D p F) G)} (Cone.map (RightKanExt D p F) c)) => {?hidden_proof}
+
+      \func map_cone (c : Cone G) : Cone (Comp F (commaPrecat.rightForget G p)) \cowith
+        | apex => RightKanExt D p F c
+        | coneMap => \lam (j, z, f) => coneMap $ later ((), z, f ∘ c.coneMap j)
+        | coneCoh => {?hidden_proof}
+
+      \func iso : Iso {D} {D.limit (Comp (RightKanExt D p F) G)} {lim'} \cowith
+        | f => lim'.limMap cone
+        | hinv => limMap cone'
+        | hinv_f => {?hidden_proof}
+        | f_hinv => {?hidden_proof}
+
+      \func lim' : Limit => D.limit (Comp F (commaPrecat.rightForget G p))
+
+      \func cone : Cone (Comp F (commaPrecat.rightForget G p)) (D.limit (Comp (RightKanExt D p F) G)) \cowith
+        | coneMap => \lam w => later (coneMap $ later ((), w.2, w.3)) ∘ coneMap (commaPrecat.leftForget G p w)
+        | coneCoh => {?hidden_proof}
+
+      \func cone'' (j : J) : Cone (Comp F (commaPrecat.rightForget (Const {TrivialCat} (G j)) p)) lim' \cowith
+        | coneMap => \lam y => coneMap $ later (j, y.2, y.3)
+        | coneCoh => {?hidden_proof}
+
+      \func cone' : Cone (Comp (RightKanExt D p F) G) lim' \cowith
+        | coneMap => \lam j => limMap {lim F (G j)} (cone'' j)
+        | coneCoh => {?hidden_proof}
     }
   }

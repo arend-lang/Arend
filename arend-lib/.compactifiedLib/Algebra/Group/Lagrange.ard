@@ -15,7 +15,7 @@
 \import Set.Fin.KFin
 \import Set.Fin.Pigeonhole
 \open Group
-\open Monoid(LDiv)
+\open Monoid (LDiv)
 
 \lemma lagrange-gen (H : SubGroup) (c : Choice H.Cosets) : TruncP (QEquiv {H.S} {\Sigma H.Cosets H.IGroup}) => {?hidden_proof}
 

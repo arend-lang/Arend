@@ -3,7 +3,7 @@
 \import Data.Array
 \import Data.Array.Perm
 \import Data.Bool
-\import Data.Fin(unfsuc)
+\import Data.Fin (unfsuc)
 \import Data.Or
 \import Equiv
 \import Function

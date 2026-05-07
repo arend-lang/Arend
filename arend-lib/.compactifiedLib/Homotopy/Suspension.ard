@@ -14,8 +14,8 @@
   }
 
 
-north {A : \Type} : Susp A => pinl ()
+| north {A : \Type} : Susp A => pinl ()
 
-south {A : \Type} : Susp A => pinr ()
+| south {A : \Type} : Susp A => pinr ()
 
 \func pmerid {A : \Type} (a : A) : north = south => path (pglue a)

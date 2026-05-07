@@ -41,21 +41,22 @@
   | Ring => UnitAlgebra RealField A.toRealAlgebra
   | *-comm => {?hidden_proof}
   | isDivisible => {?hidden_proof}
-  | norm => norm
+  | norm (x : \Sigma Real A) : ExUpperReal 
+    => RealAbGroup.abs x.1 ExUpperRealLattice.∨ Join (\lam (s : \Sigma (y : A) (A.norm y <= 1)) => A.norm (x.1 A.*r s.1 + x.2 * s.1))
   | norm_zro => {?hidden_proof}
   | norm_negative => {?hidden_proof}
   | norm_+ => {?hidden_proof}
   | norm-double => {?hidden_proof}
   | norm-bounded => {?hidden_proof}
-  | norm_*_<= => norm_*_<=
+  | norm_*_<= {x y : \Sigma Real A} : norm (x * {UnitAlgebra RealField A.toRealAlgebra} y) <= norm x * norm y => {?hidden_proof}
   | norm_ide_<= => {?hidden_proof}
   | norm-ext => {?hidden_proof}
   | isCompleteMetric => {?hidden_proof}
   | c*-sum => {?hidden_proof}
   | c*-square => {?hidden_proof}
   \where {
-    \open ExUpperRealAbMonoid(<-rat)
-    \open ExUpperRealSemigroup(<=_*)
+    \open ExUpperRealAbMonoid (<-rat)
+    \open ExUpperRealSemigroup (<=_*)
 
     \lemma inhabitted : ∃ (y : A) (A.norm y <= 1) => {?hidden_proof}
   }
@@ -63,20 +64,20 @@
 
 \func StoneC*AlgebraRieszSpace (A : StoneC*Algebra) : RieszSpace A => RieszSpace.fromAbs (\lam a => TruncP.map (abs-aux a) (\lam s => (s.1, s.3, s.4, s.5)))
   \where {
-    \func StoneC*AlgebraTopPoset : HausdorffTopPosetAbGroup \cowith
+    \protected \func StoneC*AlgebraTopPoset : HausdorffTopPosetAbGroup \cowith
       | TopAbGroup => A
       | PosetAbGroup => A
       | positive-closed => {?hidden_proof}
 
-    \lemma abs-aux (a : A) : ∃ (b : A) (b * b = a * a) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c) => {?hidden_proof}
+    \protected \lemma abs-aux (a : A) : ∃ (b : A) (b * b = a * a) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c) => {?hidden_proof}
 
-    \lemma abs-square {a : A} : (StoneC*AlgebraRieszSpace A).abs a * (StoneC*AlgebraRieszSpace A).abs a = a * a => {?hidden_proof}
+    \protected \lemma abs-square {a : A} : (StoneC*AlgebraRieszSpace A).abs a * (StoneC*AlgebraRieszSpace A).abs a = a * a => {?hidden_proof}
 
-    \func c*abs (a : A) (a<=1 : a <= 1) (-a<=1 : negative a <= 1) : A => sqrt-t (a * a, square-norm)
+    \protected \func c*abs (a : A) (a<=1 : a <= 1) (-a<=1 : negative a <= 1) : A => sqrt-t (a * a, square-norm)
       \where {
         \open RealBanachAlgebra
-        \open RealBanachAlgebra.sqrt(yfunc, zfunc, zfunc-lim, UnitBall)
-        \open ExUpperRealSemigroup(<=_*)
+        \open RealBanachAlgebra.sqrt (yfunc, zfunc, zfunc-lim, UnitBall)
+        \open ExUpperRealSemigroup (<=_*)
 
         \lemma yfunc>=0 {x : A} (x<=1 : x <= 1) {n : Nat} : 0 <= yfunc n x => {?hidden_proof}
 

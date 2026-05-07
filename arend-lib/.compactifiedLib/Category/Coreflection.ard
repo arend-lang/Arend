@@ -15,14 +15,18 @@
 
 \func comma-cat {C : Precat} {D : Cat} (L : Functor D C) (b : C) => commaCat {D} {TrivialCat} {C} L (Const b)
 
-\class Coreflection {
-  | C : Precat
-  | D : Precat
-  | L : Functor D C
-  | B : C
+\class Coreflection {C : Precat} {D : Precat} (L : Functor D C) (B : C) {
   | Coreflected : D
   | corefl-map : Hom (L Coreflected) B
   \property isCoreflection {Z : D} : Equiv {Hom Z Coreflected} {Hom (L Z) B} (\lam x => corefl-map ∘ L.Func x)
+
+  \func to-comma : comma-precat L B => (Coreflected, (), corefl-map)
+
+  \func coreflection-map (x : comma-precat L B) : Hom {comma-precat L B} x to-comma 
+    | (x, s, d) => (isCoreflection.ret d, id {TrivialCat} s, rewrite id-left $ isCoreflection.f_ret d)
+
+  \func to-comma-terminal : terminal-obj (comma-precat L B) => isTerminal {comma-precat L B} to-comma 
+    (\lam (p, s, q) => Contr.make (coreflection-map (p, s, q)) (\lam a => exts (inv $ Equiv.adjoint $ a.3 *> id-left, cases a.2)))
 }
   \where {
     \func from-comma-terminal {C D : Precat} {L : Functor D C} {b : C} (terminal : terminal-obj (comma-precat L b)) : Coreflection L b => \new Coreflection {
@@ -49,7 +53,7 @@
       }
 
 
-    isProp {C : Precat} {D : Cat} {L : Functor D C} {B : C} (x y : Coreflection L B) : x = y 
+    \sfunc isProp {C : Precat} {D : Cat} {L : Functor D C} {B : C} (x y : Coreflection L B) : x = y 
       => terminal-in-comma.to-comma-isInj x y (terminal-prop {comma-cat L B} _ _)
   }
 
@@ -63,6 +67,12 @@
   | Func-o => \lam {_} {Y} {Z} {_} {_} => run
     {(unfold, inv, Equiv.adjoint, unfold, rewrite (Func-o {L}), rewriteI o-assoc, rewrite (Equiv.f_ret {isCoreflection {coreflection Z}}), rewrite o-assoc, 
     rewrite (Equiv.f_ret {isCoreflection {coreflection Y}}), inv o-assoc)}
+
+  \use \func eval-trans : NatTrans (Comp L \this) Id \cowith
+    | trans => \lam c => corefl-map {coreflection c}
+    | natural => {?hidden_proof}
+
+  \use \func is-adjoint-counit {X : D} {Y : C} : Equiv {Hom X (F Y)} {Hom (L X) Y} (eval-trans Y ∘ L.Func __) => isCoreflection
 }
   \where {
     \use \coerce toAdjoint (F : RightAdjointCoreflection) : RightAdjointCounit \cowith
@@ -78,6 +88,6 @@
         | isCoreflection => symQEquiv F.eta_epsilon-equiv
       }
 
-    isProp {C : Precat} {D : Cat} (L : Functor D C) (adj1 adj2 : RightAdjointCoreflection C D L) : adj1 = adj2 \elim adj1, adj2
+    \sfunc isProp {C : Precat} {D : Cat} (L : Functor D C) (adj1 adj2 : RightAdjointCoreflection C D L) : adj1 = adj2 \elim adj1, adj2
       | coref1, coref2 => exts (\lam Z => Coreflection.isProp (coreflection {coref1} Z) (coreflection {coref2} Z))
   }

@@ -10,13 +10,13 @@
 \import Algebra.Ring.Local
 \import Data.Or
 \import Equiv
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
 \import Meta
 \import Paths
 \import Paths.Meta
 \import Set
-\open Monoid(Inv)
+\open Monoid (Inv)
 
 \class Field \extends LocalCRing, GCDDomain {
   | #0 => \lam x => Inv x
@@ -57,6 +57,39 @@
     | byLeft x=0 => absurd (x/=0 x=0)
     | byRight x#0 => x#0
   })
+
+  \protected \default finv-impl x => \case aux zro/=ide x (eitherZeroOrInv x) \with {
+    | inl _ => 0
+    | inr j : Inv => j.inv
+  }
+
+  \protected \default finv_zroImpl : finv-impl 0 = 0 => unfold finv-impl mcases
+
+  \protected \default id_finvImpl {x} x/=0 : x * finv-impl x = 1 => unfold finv-impl mcases
+
+  \lemma finv-left {x : E} (x/=0 : x /= 0) : finv x * x = 1 => {?hidden_proof}
+
+  \lemma finv-Inv {x : E} (x/=0 : x /= 0) : Inv (finv x) x => {?hidden_proof}
+
+  \lemma nonZero-Inv {x : E} (x/=0 : x /= 0) : Inv x (finv x) => {?hidden_proof}
+
+  \lemma finv/=0 {x : E} (x/=0 : x /= 0) : finv x /= 0 => {?hidden_proof}
+
+  \lemma finv_ide : finv ide = ide => {?hidden_proof}
+
+  \lemma finv_* {x y : E} : finv (x * y) = finv y * finv x => {?hidden_proof}
+
+  \lemma finv_pow {x : E} {n : Nat} : finv (pow x n) = pow (finv x) n => {?hidden_proof}
+
+  \lemma finv_finv {x : E} : finv (finv x) = x => {?hidden_proof}
+
+  \lemma zeroDimensional : IsZeroDimensional => {?hidden_proof}
+
+  \lemma decideZeroOrInv (x : E) : (x = 0) `Or` Inv x => {?hidden_proof}
+
+  \lemma finv-diff {x : E} (xi : x /= 0) (x+1i : x + 1 /= 0) : finv x - finv (x + 1) = finv (x * (x + 1)) => {?hidden_proof}
+
+  \lemma finv-square {x : E} (xs : IsSquare x) : IsSquare (finv x) => {?hidden_proof}
 }
   \where {
     \lemma aux {R : CRing} (p : R.zro /= R.ide) (x : R) (q : (x = 0) || Inv x) :

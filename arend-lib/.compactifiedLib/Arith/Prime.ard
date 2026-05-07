@@ -15,7 +15,7 @@
 \import Paths
 \import Paths.Meta
 \import Set
-\open Nat(mod, -)
+\open Nat (mod, -)
 \open Monoid
 \open NatOrder \hiding (<)
 

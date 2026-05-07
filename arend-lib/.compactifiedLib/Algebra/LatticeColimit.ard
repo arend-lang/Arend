@@ -13,7 +13,7 @@
 \import Algebra.Semiring
 \import Category
 \import Category.Functor
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
 \import Meta
 \import Order.Lattice
@@ -26,7 +26,12 @@
 
 \instance MonoidLatticeColimit {D : BottomJoinSemilattice} (F : Functor D MonoidCat) : Monoid (SetColimit (Comp MonoidCat.forget F)) 
   | ide => in~ (D.bottom, ide)
-  | * => *
+  | * (x y : SetColimit (Comp MonoidCat.forget F)) : SetColimit (Comp MonoidCat.forget F) \with
+    | in~ a, in~ b => in~ (a.1 ∨ b.1, F.Func join-left a.2 Monoid.* F.Func join-right b.2)
+    | in~ a, ~-equiv x y r =>
+      ~-cequiv (D.join-monotone <=-refl r.1) $ func-* *> pmap2 Monoid.* (inv Func-app *> poset-app) (inv Func-app *> poset-app *> Func-app *> pmap (F.Func _) r.2)
+    | ~-equiv x y r, in~ b =>
+      ~-cequiv (D.join-monotone r.1 <=-refl) $ func-* *> pmap2 Monoid.* (inv Func-app *> poset-app *> Func-app *> pmap (F.Func _) r.2) (inv Func-app *> poset-app)
   | ide-left => {?hidden_proof}
   | ide-right => {?hidden_proof}
   | *-assoc => {?hidden_proof}
@@ -48,7 +53,12 @@
 
 \instance AddMonoidLatticeColimit {D : BottomJoinSemilattice} (F : Functor D AddMonoidCat) : AddMonoid (SetColimit (Comp AddMonoidCat.forget F)) 
   | zro => in~ (D.bottom, zro)
-  | + => +
+  | + (x y : SetColimit (Comp AddMonoidCat.forget F)) : SetColimit (Comp AddMonoidCat.forget F) \with
+    | in~ a, in~ b => in~ (a.1 ∨ b.1, F.Func join-left a.2 AddMonoid.+ F.Func join-right b.2)
+    | in~ a, ~-equiv x y r =>
+      ~-cequiv (D.join-monotone <=-refl r.1) $ func-+ *> pmap2 AddMonoid.+ (inv Func-app *> poset-app) (inv Func-app *> poset-app *> Func-app *> pmap (F.Func _) r.2)
+    | ~-equiv x y r, in~ b =>
+      ~-cequiv (D.join-monotone r.1 <=-refl) $ func-+ *> pmap2 AddMonoid.+ (inv Func-app *> poset-app *> Func-app *> pmap (F.Func _) r.2) (inv Func-app *> poset-app)
   | zro-left => {?hidden_proof}
   | zro-right => {?hidden_proof}
   | +-assoc => {?hidden_proof}
@@ -70,7 +80,9 @@
 
 \instance AddGroupLatticeColimit {D : BottomJoinSemilattice} (F : Functor D AddGroupCat) : AddGroup (SetColimit (Comp AddGroupCat.forget F)) 
   | AddMonoid => AddMonoidLatticeColimit (Comp AddGroupCat.forgetToAddMonoid F)
-  | negative => negative
+  | negative (x : SetColimit (Comp AddGroupCat.forget F)) : SetColimit (Comp AddGroupCat.forget F) \with
+    | in~ a => in~ (a.1, AddGroup.negative a.2)
+    | ~-equiv x y r => ~-cequiv r.1 $ AddGroupHom.func-negative *> pmap AddGroup.negative r.2
   | negative-left => {?hidden_proof}
   | negative-right => {?hidden_proof}
   \where {

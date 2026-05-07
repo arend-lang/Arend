@@ -96,7 +96,7 @@
   | zro#ide => {?hidden_proof}
   | #0-* => {?hidden_proof}
   \where {
-    \lemma aux {k n m : Nat} (n+m<k : n + m < k) {x y : FSeries R} (xn#0 : #0 (x n)) (ym#0 : #0 (y m)) : ∃ (k : Nat) (#0 ((x * y) k)) => {?hidden_proof}
+    \protected \lemma aux {k n m : Nat} (n+m<k : n + m < k) {x y : FSeries R} (xn#0 : #0 (x n)) (ym#0 : #0 (y m)) : ∃ (k : Nat) (#0 ((x * y) k)) => {?hidden_proof}
   }
 
 

@@ -36,9 +36,21 @@
 \open QModule
 \open PosetQModule
 
-\class OrderedC*AlgebraHom \extends RingHom, PosetHom {
+\record OrderedC*AlgebraHom \extends RingHom, PosetHom {
   \override Dom : OrderedC*Algebra
   \override Cod : OrderedC*Algebra
+
+  \func IsDense : \Prop => ∀ {eps} (0 < eps) y ∃ (x : Dom) (func x - y <= eps *q 1) (y - func x <= eps *q 1)
+
+  \func IsIsometric : \Prop => \Pi {x : Dom} -> func x <= 1 -> negative (func x) <= 1 -> \Pi {q : Rat} -> 1 < q -> x <= q *q 1
+
+  \lemma toNormed : NormedAbGroupMap toBanach toBanach func => {?hidden_proof}
+
+  \lemma dense-toNormed : IsDense <-> toNormed.IsDense => {?hidden_proof}
+
+  \lemma isometry-toNormed : IsIsometric <-> (\Pi {x : Dom} -> toBanach.norm (func x) = toBanach.norm x) => {?hidden_proof}
+
+  \lemma toIsometry (p : IsIsometric) : NormedIsometricMap toBanach toBanach func => {?hidden_proof}
 }
   \where {
     \open OrderedC*Algebra
@@ -47,7 +59,7 @@
   }
 
 
-\class StoneC*AlgebraHom \extends OrderedC*AlgebraHom, BoundedLinearMap {
+\record StoneC*AlgebraHom \extends OrderedC*AlgebraHom, BoundedLinearMap {
   \override Dom : StoneC*Algebra
   \override Cod : StoneC*Algebra
   | func-<= => \lam inP (a, aa=y-x) => inP (func a, inv func-* *> pmap func aa=y-x *> func-minus)
@@ -60,7 +72,7 @@
   }
 
 
-dense-c*-lift {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) : OrderedC*AlgebraHom Y Z 
+\sfunc dense-c*-lift {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) : OrderedC*AlgebraHom Y Z 
 => 
   \let | map => dense-normed-lift (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
        | map-char => dense-normed-lift.char (f.toIsometry fi) (f.dense-toNormed.1 fd) g.toNormed
@@ -69,7 +81,7 @@ dense-c*-lift {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*Algebr
           (map ContMap.∘ *-locally-uniform) (*-locally-uniform ContMap.∘ ProductTopSpace.prod map map) 
           (\lam s => pmap map (inv f.func-*) *> map-char *> g.func-* *> inv (pmap2 * map-char map-char)) (x, y)}) map.func-norm
   \where {
-    \lemma char {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) 
+    \protected \lemma char {X Y : OrderedC*Algebra} {Z : StoneC*Algebra} (f : OrderedC*AlgebraHom X Y) (fd : f.IsDense) (fi : f.IsIsometric) (g : OrderedC*AlgebraHom X Z) 
     {x : X} : dense-c*-lift f fd fi g (f x) = g x => {?hidden_proof}
   }
 

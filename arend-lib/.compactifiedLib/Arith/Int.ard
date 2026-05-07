@@ -16,7 +16,7 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\open LinearOrder(trichotomy)
+\open LinearOrder (trichotomy)
 
 \func isuc (x : Int) : Int 
   | pos n => pos (suc n)
@@ -46,7 +46,7 @@
 
     \lemma signum_- {x y : Int} : signum (x - y) = negative (signum (y - x)) => {?hidden_proof}
       \where {
-        \open Arith.Int(IntRing)
+        \open Arith.Int (IntRing)
       }
 
   }
@@ -54,29 +54,39 @@
 
 \instance IntRing : OrderedCRing.Dec Int 
   | zro => pos 0
-  | + => +
-  | zro-left => zro-left
-  | +-assoc => +-assoc
-  | +-comm => +-comm
+  | + (x y : Int) : Int \with
+    | pos n, pos m => pos (n Nat.+ m)
+    | pos n, neg m => n - m
+    | neg n, pos m => m - n
+    | neg n, neg m => neg (n Nat.+ m)
+  | zro-left {x : Int} : 0 + x = x => {?hidden_proof}
+  | +-assoc {x y z : Int} : (x + y) + z = x + (y + z) => {?hidden_proof}
+  | +-comm {x y : Int} : x + y = y + x => {?hidden_proof}
   | ide => pos 1
-  | * => *
-  | ide-left => ide-left
-  | *-assoc => *-assoc
-  | ldistr => ldistr
-  | negative => negative
-  | negative-left => negative-left
+  | * (x y : Int) : Int \with
+    | pos n, pos m => pos (n Nat.* m)
+    | pos n, neg m => neg (n Nat.* m)
+    | neg suc n, pos m => neg (suc n Nat.* m)
+    | neg suc n, neg m => pos (suc n Nat.* m)
+  | ide-left {x : Int} : 1 * x = x => {?hidden_proof}
+  | *-assoc {x y z : Int} : (x * y) * z = x * (y * z) => {?hidden_proof}
+  | ldistr {x y z : Int} : x * (y + z) = x * y + x * z => {?hidden_proof}
+  | negative (x : Int) : Int \with
+    | pos n => neg n
+    | neg n => pos n
+  | negative-left {x : Int} : negative x + x = 0 => {?hidden_proof}
   | isPos => \lam x => signum x = 1
   | zro/>0 => {?hidden_proof}
-  | positive_+ => positive_+
+  | positive_+ {x y : Int} (x>0 : signum x = 1) (y>0 : signum y = 1) : signum (x + y) = 1 => {?hidden_proof}
   | ide>zro => {?hidden_proof}
   | +_trichotomy => {?hidden_proof}
   | positive_* => {?hidden_proof}
-  | *-comm => *-comm
+  | *-comm {x y : Int} : x * y = y * x => {?hidden_proof}
   | natCoef => pos
   | natCoefZero => {?hidden_proof}
   | natCoefSuc => {?hidden_proof}
   \where {
-    \open Nat(-)
+    \open Nat (-)
     \open OrderedRing
 
     \lemma lldistr (n m k : Nat) : (n Nat.+ m) - k = pos n + (m - k) => {?hidden_proof}
@@ -143,7 +153,7 @@
 
 \lemma <_+1_<= {x y : Int} (p : x < y + 1) : x <= y => {?hidden_proof}
 
-\open Monoid(LDiv)
+\open Monoid (LDiv)
 
 \lemma ldiv_iabs {x y : Int} (d : LDiv x y) : LDiv (iabs x) (iabs y) (iabs d.inv) => {?hidden_proof}
 

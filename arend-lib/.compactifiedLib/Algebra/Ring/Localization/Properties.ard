@@ -12,7 +12,7 @@
 \import Relation.Equivalence
 \import Set
 
-localization-unique {R : CRing} {S : SubSet R} (l1 l2 : Localization R S) : l1 = l2 => 
+\sfunc localization-unique {R : CRing} {S : SubSet R} (l1 l2 : Localization R S) : l1 = l2 => 
   \have e => lift-iso S S l1 l2 l1.local l2.local
   \in ext (Cat.isotoid e, Cat.transport_Hom_iso-right e l1.inL (l1.lift-prop l2.inL l2.local))
   \where {

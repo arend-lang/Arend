@@ -5,7 +5,7 @@
 \import Arith.Real
 \import Arith.Real.Field
 \import Arith.Real.UpperReal
-\import Function()
+\import Function ()
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -53,7 +53,7 @@
     \open ProductCoverSpace
     \open CoverMap
 
-    dist-cover : CoverMap (StrongCompletion X ⨯ StrongCompletion X) RealNormed 
+    \sfunc dist-cover : CoverMap (StrongCompletion X ⨯ StrongCompletion X) RealNormed 
     => weaklyDense-lift {_} {ProductStronglyRegularCoverSpace (StrongCompletion X) (StrongCompletion X)} (prod strongCompletion strongCompletion) 
       (prod.isWeaklyDenseEmbedding strongCompletion.isDenseEmbedding strongCompletion.isDenseEmbedding) ldist-uniform-map
 

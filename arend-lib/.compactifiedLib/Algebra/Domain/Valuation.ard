@@ -41,4 +41,15 @@
             \have gcd=0 : zro = gcd => equation {usingOnly (gcd.res|val1.inv-right, gcd.res|val2.inv-right, c.inv-left)}
             \in byLeft (\new LDiv {  | inv => 0  | inv-right => zro_*-right *> inv zro_*-left *> pmap (* _) gcd=0 *> LDiv.inv-right {bez.4}})
         })
+
+  \func ValuationMonoid : OrderedCMonoid => DivQuotient.DivQuotientMonoid \this
+
+  \func ValuationTotalOrder : TotalOrder \cowith
+    | Poset => ValuationMonoid
+    | totality => {?hidden_proof}
+
+  \func valuation : MonoidHom \this ValuationMonoid \cowith
+    | func => in~
+    | func-ide => {?hidden_proof}
+    | func-* => {?hidden_proof}
 }

@@ -20,6 +20,38 @@
 \class SubGroup \extends SubMonoid {
   \override S : Group
   | contains_inverse {x : S} : contains x -> contains (inverse x)
+
+  \func IGroup : Group \cowith
+    | Monoid => IMonoid
+    | inverse => \lam x => (inverse x.1, contains_inverse x.2)
+    | inverse-left => {?hidden_proof}
+    | inverse-right => {?hidden_proof}
+
+  \func equivalence : Equivalence S \cowith
+    | ~ => \lam x y => contains (inverse x * y)
+    | ~-reflexive => {?hidden_proof}
+    | ~-symmetric => {?hidden_proof}
+    | ~-transitive => {?hidden_proof}
+
+  \func Cosets  => Quotient equivalence.~
+
+  \lemma contains->equiv {x : S} (p : contains x) : 1 equivalence.~ x => {?hidden_proof}
+
+  \lemma equiv->contains {x : S} (p : 1 equivalence.~ x) : contains x => {?hidden_proof}
+    \where {
+      \func helper {x : S} : inverse ide * x = x => qed (inverse ide * x ==< pmap (\lam z => z * x) inverse_ide >== ide * x ==< ide-left >== x)
+    }
+
+
+  \lemma invariant-right-multiplication {x y : S} (p : 1 equivalence.~ y) : in~ {S} {equivalence.~} x = in~ {S} {equivalence.~} (x * y) => {?hidden_proof}
+    \where {
+      \func helper : inverse x * x * y = y => qed (inverse x * x * y ==< pmap (\lam z => z * y) inverse-left >== ide * y ==< ide-left >== y)
+
+      \func contains-x^-1*x*y : contains (inverse x * x * y) => transport contains (inv helper) (equiv->contains p)
+    }
+
+
+  \lemma equivalence-to-1 {x y : S} (p : x equivalence.~ y) : 1 equivalence.~ inverse x * y => {?hidden_proof}
 }
   \where {
     \func cStruct {G : CGroup} (S : SubGroup G) : CGroup \cowith
@@ -36,8 +68,8 @@
   | contains => X.contains
   | contains_ide => q
 } \cowith
-  | contains_* => contains_*
-  | contains_inverse => contains_inverse
+  | contains_* {x y : G} (r : X.contains x) (r' : X.contains y) : X.contains (x * y) => {?hidden_proof}
+  | contains_inverse {g : G} (xi : X.contains g) : X.contains (inverse g) => {?hidden_proof}
   \where {
     \func helper (g : G) (r : X.contains g) : X.contains (inverse g * G.ide) => p g ide r q
 
@@ -61,11 +93,50 @@
 
 \class NormalSubGroup \extends SubGroup {
   | isNormal (g : S) {h : S} : contains h -> contains (conjugate g h)
+
+  \lemma isNormal' (g : S) {h : S} (c : contains h) : contains (inverse g * h * g) => {?hidden_proof}
+
+  \func quotient : Group Cosets \cowith
+    | ide => in~ 1
+    | * (x y : Cosets) : Cosets \with
+      | in~ g, in~ g' => in~ (g Group.* g')
+      | in~ g, ~-equiv x y r => ~-pequiv $ rewriteEq (inverse_*, inverse-left {S} {g}, ide-left) r
+      | ~-equiv x y r, in~ g => ~-pequiv $ rewriteEq inverse_* $ transport contains equation (isNormal' g r)
+    | ide-left => {?hidden_proof}
+    | ide-right => {?hidden_proof}
+    | *-assoc => {?hidden_proof}
+    | inverse (x : Cosets) : Cosets \with
+      | in~ g => in~ (Group.inverse g)
+      | ~-equiv x y r =>
+        ~-pequiv $ rewrite inverse-isInv $ rewriteEq (inverse_*, inverse-isInv) in contains_inverse (rewriteEq (inverse-right {S} {x}, ide-left) in isNormal x r)
+    | inverse-left => {?hidden_proof}
+    | inverse-right => {?hidden_proof}
+
+  \func quotient-proj-setwise : SetHom S quotient \cowith
+    | func => \lam s => in~ s
+
+  \func criterionForKernel (a : S) (p : contains a) : quotient.ide = in~ a => rewrite (inv (~-pequiv help-condition)) idp
+    \where {
+      \func help-condition : a equivalence.~ 1 => equivalence.~-symmetric {1} {a} (contains->equiv p)
+    }
+
+
+  \func quotIsSurj : IsSurj quotient-proj-setwise => \lam (z : quotient) => (\case \elim z \with {
+    | in~ a => inP (a, qed (quotient-proj-setwise a ==< idp >== in~ a))
+  })
 }
 
 \class SubAddGroup \extends SubAddMonoid {
   \override S : AddGroup
   | contains_negative {x : S} : contains x -> contains (negative x)
+
+  \lemma contains_- {x y : S} : contains x -> contains y -> contains (x - y) => {?hidden_proof}
+
+  \func IAddGroup : AddGroup \cowith
+    | AddMonoid => IAddMonoid
+    | negative => \lam x => (negative x.1, contains_negative x.2)
+    | negative-left => {?hidden_proof}
+    | negative-right => {?hidden_proof}
 }
   \where {
     \func abStruct {A : AbGroup} (S : SubAddGroup A) : AbGroup \cowith
@@ -80,4 +151,8 @@
 
 \class FinSubGroup \extends DecSubGroup {
   \override S : FinGroup
+
+  \func IFinGroup : FinGroup \cowith
+    | Group => IGroup
+    | FinSet => SigmaFin.DecSubSet-isFin S \this
 }

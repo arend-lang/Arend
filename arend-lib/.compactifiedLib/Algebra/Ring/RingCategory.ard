@@ -15,7 +15,7 @@
 \import Category.Meta
 \import Category.Subcat
 \import Equiv
-\import Function(IsInj, IsSurj)
+\import Function (IsInj, IsSurj)
 \import Function.Meta
 \import Logic
 \import Logic.FirstOrder.Algebraic
@@ -200,5 +200,5 @@
       }
 
 
-    createsLimits {J : SmallPrecat} (F : Functor J CRingCat) : CreatesLimit CRingCat.forget F => {?}
+    \sfunc createsLimits {J : SmallPrecat} (F : Functor J CRingCat) : CreatesLimit CRingCat.forget F => {?}
   }

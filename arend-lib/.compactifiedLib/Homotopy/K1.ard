@@ -1,11 +1,11 @@
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
-\import Algebra.Pointed(ide)
+\import Algebra.Pointed (ide)
 \import Homotopy.Cube
 \import Logic
 \import Paths
-\import Equiv(QEquiv, Retraction, Section)
+\import Equiv (QEquiv, Retraction, Section)
 \import Equiv
 \import Equiv.Univalence
 \import Paths.Meta

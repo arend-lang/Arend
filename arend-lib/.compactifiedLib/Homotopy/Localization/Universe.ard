@@ -14,21 +14,31 @@
   | isLocal : \hType -> \Prop
 }
 
-\class Local {
-  | U : Universe
-  | S : \hType
+\class Local {U : Universe} (S : \hType) {
   | local : isLocal S
 }
 
-\class Localization {
-  | U : Universe
-  | S : \hType
-  | S' : Local
+\class Localization {U : Universe} (S : \hType) (S' : Local) {
   | inL : S -> S'
   | local-univ (Z : Local) : Equiv {S' -> Z} {S -> Z} (-o inL)
+
+  \func lift {Z : Local {U}} (f : S -> Z) (x' : S') : Z => sec {local-univ Z} f x'
+    \where {
+      \func const {Z : Local {U}} (z : Z) (x' : S') : lift (\lam _ => z) x' = z => remove_inL (lift (\lam _ => z)) (\lam _ => z) (lift-prop (\lam _ => z)) x'
+    }
+
+
+  \func lift-prop {Z : Local {U}} (f : S -> Z) (x : S) : lift f (inL x) = f x => path (\lam i => (f_sec {local-univ Z} f @ i) x)
+
+  \func remove_inL {Z : Local {U}} (f g : S' -> Z) (p : \Pi (x : S) -> f (inL x) = g (inL x)) (x : S') : f x = g x 
+    => path (\lam i => (sec {pmapEquiv (local-univ Z) {f} {g}} (path (\lam i x => p x @ i)) @ i) x)
+
+  \func remove_inL-coh {Z : Local {U}} (f g : S' -> Z) (p : \Pi (x : S) -> f (inL x) = g (inL x)) (x : S) : remove_inL f g p (inL x) = p x => 
+    \have t => f_sec {pmapEquiv (local-univ Z) {f} {g}} (path (\lam i x => p x @ i))
+    \in pmap (\lam q => path ((q @ __) x)) t
 }
   \where {
-    levelProp {U : Universe} (X : \hType) (l1 l2 : Localization X) : l1 = l2 => 
+    \sfunc levelProp {U : Universe} (X : \hType) (l1 l2 : Localization X) : l1 = l2 => 
       \let p : l1.S' = {\hType} l2.S' => path (iso (l1.lift l2.inL) (l2.lift l1.inL)  (remove_inL (l2.lift l1.inL `o` l1.lift l2.inL) id  (\lam x => qed
              (l2.lift l1.inL (l1.lift l2.inL (l1.inL x)) ==< pmap (l2.lift l1.inL) (l1.lift-prop l2.inL x) >== l2.lift l1.inL (l2.inL x) ==< l2.lift-prop l1.inL x >== 
                    l1.inL x)))  (remove_inL (l1.lift l2.inL `o` l2.lift l1.inL) id  (\lam x => qed
@@ -41,7 +51,7 @@
   }
 
 
-\open Localization(lift, lift-prop, remove_inL, remove_inL-coh)
+\open Localization (lift, lift-prop, remove_inL, remove_inL-coh)
 
 \class ReflUniverse \extends Universe {
   | localization (A : \hType) : Localization A
@@ -111,7 +121,7 @@
 
 \lemma pullbackLocal {U : ReflUniverse} (P : Pullback \levels \lp \oo) (VL : Local P.square.V) (XL : Local P.square.X) (YL : Local P.square.Y) : Local P.square.U => {?hidden_proof}
   \where {
-    \open Square(pull)
+    \open Square (pull)
 
     \lemma lem {U : Universe} (P : Pullback \levels \lp \oo) (L : Localization P.square.U) (VL : Local P.square.V) (XL : Local P.square.X) (YL : Local P.square.Y) : Local P.square.U 
       => {?hidden_proof}

@@ -13,12 +13,7 @@
 
 \func SubobjectPoset {C : Precat} (c : C) => Preorder.PosetC {SubobjPreorder {C} c}
 
-\class widePullback {
-  | D : Precat
-  | J : \Set
-  | z : D
-  | objs : J -> D
-  | maps : \Pi (j : J) -> Hom (objs j) z
+\record widePullback {D : Precat} {J : \Set} {z : D} {objs : J -> D} (maps : \Pi (j : J) -> Hom (objs j) z) {
   | wpbLim : LimitDiagram {
     | Diagram => diagram maps
   }
@@ -54,7 +49,11 @@
 
 \instance SubobjectMeetsemilatice (C : PrecatWithPullbacks) (c : C) : TopMeetSemilattice 
   | Poset => SubobjectPoset c
-  | meet => meet
+  | meet (a b : SubobjectPoset c) : SubobjectPoset c \elim a, b
+    | in~ subobj _ m, in~ subobj _ n => in~ $ m xx n
+    | in~ subobj _ m, ~-equiv subobj _ mx subobj _ my (r1, r2) i =>
+      ~-equiv (m xx mx) (m xx my) (product-monotone' mx my m r1, product-monotone' my mx m r2) i
+    | ~-equiv subobj _ mx subobj _ my (r1, r2) i, in~ subobj _ m => ~-equiv (mx xx m) (my xx m) (product-monotone mx my m r1, product-monotone my mx m r2) i
   | meet-left => {?hidden_proof}
   | meet-right => {?hidden_proof}
   | meet-univ => {?hidden_proof}

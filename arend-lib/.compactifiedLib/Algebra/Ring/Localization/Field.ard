@@ -61,11 +61,21 @@
   | positive_* => {?hidden_proof}
   | positive=>#0 => {?hidden_proof}
   | #0=>eitherPosOrNeg => {?hidden_proof}
-  | meet => meet
+  | meet (x y : Type {R} {positiveSubset R}) : Type {R} {positiveSubset R} \with
+    | in~ s, in~ t => in~ ((s.1 * t.2) ∧ (t.1 * s.2), s.2 * t.2, positive_* s.3 t.3)
+    | in~ s, ~-equiv x y r => equals1 $ pmap (_ *) *-comm *> inv *-assoc *> pmap (* _) 
+      (meet_*-right (<_<= $ pos_>0 y.3) *> pmap2 ∧ equation equation *> inv (meet_*-right (<_<= $ pos_>0 x.3))) *> *-assoc *> pmap (_ *) *-comm
+    | ~-equiv x y r, in~ t =>
+      equals1 $ inv *-assoc *> pmap (* _) (meet_*-right (<_<= $ pos_>0 y.3) *> pmap2 ∧ equation equation *> inv (meet_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc
   | meet-left => {?hidden_proof}
   | meet-right => {?hidden_proof}
   | meet-univ => {?hidden_proof}
-  | join => join
+  | join (x y : Type {R} {positiveSubset R}) : Type {R} {positiveSubset R} \with
+    | in~ s, in~ t => in~ ((s.1 * t.2) ∨ (t.1 * s.2), s.2 * t.2, positive_* s.3 t.3)
+    | in~ s, ~-equiv x y r => equals1 $ pmap (_ *) *-comm *> inv *-assoc *> pmap (* _) 
+      (join_*-right (<_<= $ pos_>0 y.3) *> pmap2 ∨ equation equation *> inv (join_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc *> pmap (_ *) *-comm
+    | ~-equiv x y r, in~ t =>
+      equals1 $ inv *-assoc *> pmap (* _) (join_*-right (<_<= $ pos_>0 y.3) *> pmap2 ∨ equation equation *> inv (join_*-right $ <_<= $ pos_>0 x.3)) *> *-assoc
   | join-left => {?hidden_proof}
   | join-right => {?hidden_proof}
   | join-univ => {?hidden_proof}

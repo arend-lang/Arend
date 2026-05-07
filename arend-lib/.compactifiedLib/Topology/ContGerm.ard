@@ -54,7 +54,7 @@
 
 \func inCG {X Y : TopSpace} {x : X} {U : Set X} (Uo : isOpen U) (Ux : U x) (f : ContMap (TopSub U) Y) : ContGerm X Y x => in~ (U, Uo, Ux, f)
 
-inCGt {X Y : TopSpace} {x : X} (f : ContMap X Y) : ContGerm X Y x => inCG open-top () $ f ∘ TopTransfer-map {\Sigma X (\property (\Sigma))} __.1
+\sfunc inCGt {X Y : TopSpace} {x : X} (f : ContMap X Y) : ContGerm X Y x => inCG open-top () $ f ∘ TopTransfer-map {\Sigma X (\property (\Sigma))} __.1
 
 \lemma ~-cgequiv {X Y : TopSpace} {x : X} {u v : \Sigma (U : Set X) (isOpen U) (U x) (ContMap (TopSub U) Y)} {V : Set X} (Vo : isOpen V) (Vx : V x) (p : V ⊆ u.1) 
 (q : V ⊆ v.1) (e : \Pi {x : X} (Vx : V x) -> u.4 (x, p Vx) = v.4 (x, q Vx)) : in~ u = {ContGerm X Y x} in~ v => {?hidden_proof}
@@ -91,7 +91,10 @@ inCGt {X Y : TopSpace} {x : X} (f : ContMap X Y) : ContGerm X Y x => inCG open-t
 
 \instance ContGermLModule (X : TopSpace) {R : TopRing} (Y : TopLModule R) (x : X) : LModule (ContGermRing X R x) (ContGerm X Y x) 
   | AbGroup => ContGermAbGroup X Y x
-  | *c => *c
+  | *c (f : ContGerm X R x) (g : ContGerm X Y x) : ContGerm X Y x \elim f, g
+    | in~ a, in~ b => ContGerm.comp-right (ContGerm.tuple (in~ a) (in~ b)) *c-cont
+    | in~ a, ~-equiv y z r i => ContGerm.comp-right (ContGerm.tuple (in~ a) (~-equiv y z r i)) *c-cont
+    | ~-equiv y z r i, in~ b => ContGerm.comp-right (ContGerm.tuple (~-equiv y z r i) (in~ b)) *c-cont
   | *c-assoc => {?hidden_proof}
   | *c-ldistr => {?hidden_proof}
   | *c-rdistr => {?hidden_proof}

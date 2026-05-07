@@ -47,7 +47,7 @@
 \lemma algebraicClosure-split {K : CRing} {E : StrictIntegralDomain} (f : RingHom K E) (fi : isIntegralExt f) 
 (c : \Pi {p : Poly K} -> isMonic p -> ∃ (l : Array E) (polyMap f p = Monoid.BigProd (map (\lam a => padd 1 (negative a)) l))) : IsAlgebraicClosure f => {?hidden_proof}
 
-countableAlgebraicClosure {k : DiscreteField} (c : Countable k) : \Sigma (K : DiscreteField) (f : RingHom k K) (IsAlgebraicClosure f) => 
+\sfunc countableAlgebraicClosure {k : DiscreteField} (c : Countable k) : \Sigma (K : DiscreteField) (f : RingHom k K) (IsAlgebraicClosure f) => 
   \let | ps n => pointed-countable zro (Poly.poly-countable c) n
        | S => sequence c ps
        | sf n => countableSplittingField (S n).2 {polyMap (S n).3 (ps n)}

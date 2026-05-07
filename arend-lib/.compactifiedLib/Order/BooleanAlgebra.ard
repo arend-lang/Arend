@@ -13,6 +13,20 @@
   | implies => \lam a b => compl a ∨ b
   | exponent-left => \lam xa<=b => meet-univ <=-refl top-univ <=∘ meet-monotone <=-refl compl-join <=∘ ldistr>= <=∘ join-comm =<= join-monotone meet-right xa<=b
   | exponent-right => \lam x<=a-->b => meet-monotone x<=a-->b <=-refl <=∘ rdistr>= <=∘ join-univ (meet-comm =<= compl-meet <=∘ bottom-univ) meet-left
+
+  \lemma compl-adj {a b : E} (ab : a ∧ b <= bottom) : a <= compl b => {?hidden_proof}
+
+  \lemma compl-mono {a b : E} (a<=b : a <= b) : compl b <= compl a => {?hidden_proof}
+
+  \lemma compl_meet {a b : E} : compl (a ∧ b) = compl a ∨ compl b => {?hidden_proof}
+
+  \lemma compl_join {a b : E} : compl (a ∨ b) = compl a ∧ compl b => {?hidden_proof}
+
+  \lemma compl-inv {a : E} : compl (compl a) = a => {?hidden_proof}
+
+  \func symm-diff (a b : E) => a ∧ compl b ∨ b ∧ compl a
+
+  \lemma compl_symm-diff {a b : E} : compl (symm-diff a b) = a ∧ b ∨ compl a ∧ compl b => {?hidden_proof}
 }
 
 \type NegatedElem (R : HeytingAlebra) => Set.Total R.IsNegated

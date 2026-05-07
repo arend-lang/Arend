@@ -18,8 +18,8 @@
 \import Data.Array.Pairs
 \import Data.Fin
 \import Equiv
-\import Function(IsSurj)
-\import Function.Meta($)
+\import Function (IsSurj)
+\import Function.Meta ($)
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -33,7 +33,7 @@
 \import Set
 \import Set.Fin
 \open MonoidSet \hiding (~)
-\open Monoid(pow)
+\open Monoid (pow)
 \open RingHom \hiding (equals)
 
 \func MPoly (J : \Set) (R : CRing) => MonoidAlgebra (PermSetMonoid J) R
@@ -83,12 +83,23 @@
 | f_sec => \lam a => zro-right
 
 \func MPoly_Fin-suc {n : Nat} {R : CRing} : QEquiv {MPoly (Fin (suc n)) R} {Poly (MPoly (Fin n) R)} \cowith
-  | f => f
-  | ret => ret
+  | f (p : MPoly (Fin (suc n)) R) : Poly (MPoly (Fin n) R) \with
+    | in~ l => AddMonoid.BigSum (map m-func l)
+    | ~-equiv l l' r => m-func-coh r
+  | ret (p : Poly (MPoly (Fin n) R)) : MPoly (Fin (suc n)) R \with
+    | pzero => 0
+    | padd p e => ret p * mVar fzero + monoidSet-map (permSet-map fsuc) id e
+    | peq => zro-right *> Ring.zro_*-left {MPoly (Fin (suc n)) R} {mVar fzero}
   | ret_f => \case \elim __ \with {
     | in~ l => retHom.func-BigSum *> pmap AddMonoid.BigSum (exts (\lam j => unfold $ unfold m-func $ cases (l j).2)) *> msMonomial_BigSum-split
   }
-| f_sec => f_sec
+| f_sec (p : Poly (MPoly (Fin n) R)) : f (ret p) = p \with
+  | pzero => idp
+  | padd p e =>
+  fHom.func-+ *> pmap (+ _) (fHom.func-* *> pmap (* _) (f_sec p)) *> pmap2 (\lam x y => p * padd (padd 0 (inMS ((x, ide) :: nil))) 0 + y) (ide-left *> ide-left)
+    (later (\case \elim e \with {
+    | in~ l => pmap AddMonoid.BigSum (exts (\lam j => cases (l j).2)) *> inv polyHom.func-BigSum *> pmap (padd pzero) msMonomial_BigSum-split})) *> inv 
+  padd-expand
   \where {
     \open MonoidSet
 
@@ -119,9 +130,9 @@
 
     \func retHom : RingHom (PolyRing (MPoly (Fin n) R)) (MPoly (Fin (suc n)) R) ret \cowith
       | func-zro => {?hidden_proof}
-      | func-+ => func-+
+      | func-+ {p q : Poly (MPoly (Fin n) R)} : ret (p + q) = ret p + ret q => {?hidden_proof}
       | func-ide => {?hidden_proof}
-      | func-* => func-*
+      | func-* {p q : Poly (MPoly (Fin n) R)} : ret (p * q) = ret p * ret q => {?hidden_proof}
 
     \lemma ret_eval (p : Poly (MPoly (Fin n) R)) {a : R} (l : Array R n) : mPolyEval l (polyEval p (msMonomial a ide)) = mPolyEval (a :: l) (ret p) => {?hidden_proof}
 

@@ -2,7 +2,7 @@
 \import Paths
 \import Set.SetHom
 
-\class PointedHom \extends SetHom {
+\record PointedHom \extends SetHom {
   \override Dom : Pointed
   \override Cod : Pointed
   | func-ide : func ide = ide
@@ -12,13 +12,13 @@
       | func => \lam x => x
       | func-ide => {?hidden_proof}
 
-    \func \infixl 8 compose \alias \infixl 8 ∘ {X Y Z : Pointed} (g : PointedHom Y Z) (f : PointedHom X Y) : PointedHom X Z \cowith
+    \func \fixl 8 compose \alias \infixl 8 ∘ {X Y Z : Pointed} (g : PointedHom Y Z) (f : PointedHom X Y) : PointedHom X Z \cowith
       | func => \lam x => g (f x)
       | func-ide => {?hidden_proof}
   }
 
 
-\class AddPointedHom \extends SetHom {
+\record AddPointedHom \extends SetHom {
   \override Dom : AddPointed
   \override Cod : AddPointed
   | func-zro : func zro = zro
@@ -28,7 +28,7 @@
       | func => \lam x => x
       | func-zro => {?hidden_proof}
 
-    \func \infixl 8 compose \alias \infixl 8 ∘ {A B C : AddPointed} (g : AddPointedHom B C) (f : AddPointedHom A B) : AddPointedHom A C \cowith
+    \func \fixl 8 compose \alias \infixl 8 ∘ {A B C : AddPointed} (g : AddPointedHom B C) (f : AddPointedHom A B) : AddPointedHom A C \cowith
       | func => \lam x => g (f x)
       | func-zro => {?hidden_proof}
   }

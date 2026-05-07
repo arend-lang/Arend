@@ -62,6 +62,21 @@
             )
     })
   }
+
+  \func OBall (a : E) (eps : Rat) (c : E) : Set E => \lam z => (meas (a * (c + z))).U eps
+
+  \lemma OBall-open (a : E) {eps : Rat} {c : E} : isOpen (OBall a eps c) => {?hidden_proof}
+
+  \lemma OBall-center {a : E} {eps : Rat} (eps>0 : 0 < eps) {c : E} : OBall a eps c c => {?hidden_proof}
+
+  \lemma OBall-center_<=< {a : E} {eps : Rat} (eps>0 : 0 < eps) {x : E} : single x <=< OBall a eps x => {?hidden_proof}
+
+  \func toPseudoNormed : ExPseudoNormedAbGroup \cowith
+    | AbGroup => \this
+    | norm => meas
+    | norm_zro => {?hidden_proof}
+    | norm_negative => {?hidden_proof}
+    | norm_+ => {?hidden_proof}
 }
 
 \lemma meas-<=<-ball {X : PremeasureRing} {x : X} {U : Set X} (x<=<U : single x <=< U) : ∃ (a : X) (eps : > 0) (X.OBall a eps x ⊆ U) => {?hidden_proof}
@@ -75,6 +90,10 @@
   | meas-ext => \lam p => isSeparatedCoverSpace $ SeparatedCoverSpace.separated-char 4 7
     (\lam x<=<U => (\case meas-<=<-ball x<=<U \with {  | inP (a, eps, eps>0, h) => h $ transportInv (ExUpperReal.U {__} _) {_} {0} 
       (ExUpperRealAbMonoid.<=-antisymmetric (meas-mono meet-right ExUpperRealAbMonoid.<=∘ =_<= (pmap meas zro-right *> p)) meas>=0) eps>0}))
+
+  \func toNormed : ExNormedAbGroup \cowith
+    | ExPseudoNormedAbGroup => toPseudoNormed
+    | norm-ext => {?hidden_proof}
 }
 
 \lemma meas-modular {X : PremeasureRing} {x y : X} : meas x + meas y = meas (x ∨ y) + meas (x ∧ y) => {?hidden_proof}
@@ -94,4 +113,8 @@
     \in \case isComplete (regCF F') \with {
           | inP (x, xF) => inP (x, \lam a eps>0 => regCF_<= {_} {F'} $ xF $ OBall-center_<=< eps>0)
         })
+
+  \func toCompleteNormed : CompleteExNormedAbGroup \cowith
+    | ExNormedAbGroup => toNormed
+    | isCompleteMetric => {?hidden_proof}
 }

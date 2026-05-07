@@ -13,7 +13,7 @@
 \open GradedCRing
 \open AddMonoid
 
-\class HomogenIdeal \extends Ideal {
+\record HomogenIdeal \extends Ideal {
   \override S : GradedCRing
   | isHomogenIdeal {l : Array S} : isHomogenArray l -> contains (AddMonoid.BigSum l) -> ∀ (x : l) (contains x)
 }

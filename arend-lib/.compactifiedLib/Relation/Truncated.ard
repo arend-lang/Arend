@@ -8,9 +8,9 @@
   | trc-direct (a = b)
   | trc-connect (c : A) (a `R` c) (transitive-refl-closure R c b)
 
-trc-unary {A : \Set} {R : Rel A} {a b : A} (p : a `R` b) : transitive-refl-closure R a b => trc-connect b p (trc-direct idp)
+| trc-unary {A : \Set} {R : Rel A} {a b : A} (p : a `R` b) : transitive-refl-closure R a b => trc-connect b p (trc-direct idp)
 
-trc-direct' {A : \Set} {R : Rel A} {a : A} : transitive-refl-closure R a a => trc-direct idp
+| trc-direct' {A : \Set} {R : Rel A} {a : A} : transitive-refl-closure R a a => trc-direct idp
 
 \data symmetric-closure {A : \Set} (R : Rel A) (a b : A) : \Prop 
   | sc-left (a `R` b)

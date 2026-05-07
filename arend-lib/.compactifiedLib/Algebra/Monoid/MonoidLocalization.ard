@@ -15,7 +15,7 @@
   \where {
     \func SType {M : CMonoid} (S : SubMonoid M) => \Sigma (x y : M) (S y)
 
-    \func \infix 4 ~ (a b : SType S) => a.1 * b.2 = b.1 * a.2
+    \protected \func \infix 4 ~ (a b : SType S) => a.1 * b.2 = b.1 * a.2
 
     \func inl~ (a : SType S) : LocType S => in~ a
 
@@ -27,7 +27,10 @@
 
 \instance LocMonoid {M : CMonoid} (S : SubMonoid M) : CMonoid (LocType S) 
   | ide => in~ (1, 1, S.contains_ide)
-  | * => *
+  | * (x y : LocType S) : LocType S \with
+    | in~ a, in~ b => in~ (a.1 M.* b.1, a.2 M.* b.2, S.contains_* a.3 b.3)
+    | in~ a, ~-equiv x y r => ~-lequiv $ equation.cMonoid {r}
+    | ~-equiv x y r, in~ a => ~-lequiv $ equation.cMonoid {r}
   | ide-left => {?hidden_proof}
   | *-assoc => {?hidden_proof}
   | *-comm => {?hidden_proof}
@@ -40,7 +43,7 @@
   \where {
     \func SType {M : AbMonoid} (S : SubAddMonoid M) => \Sigma (x y : M) (S y)
 
-    \func \infix 4 ~ (a b : SType S) => a.1 + b.2 = b.1 + a.2
+    \protected \func \infix 4 ~ (a b : SType S) => a.1 + b.2 = b.1 + a.2
 
     \func inl~ (a : SType S) : LocAbType S => in~ a
 
@@ -52,7 +55,10 @@
 
 \instance LocAbMonoid {M : AbMonoid} (S : SubAddMonoid M) : AbMonoid (LocAbType S) 
   | zro => in~ (0, 0, S.contains_zro)
-  | + => +
+  | + (x y : LocAbType S) : LocAbType S \with
+    | in~ a, in~ b => in~ (a.1 M.+ b.1, a.2 M.+ b.2, S.contains_+ a.3 b.3)
+    | in~ a, ~-equiv x y r => ~-lequiv $ equation.abMonoid {r}
+    | ~-equiv x y r, in~ a => ~-lequiv $ equation.abMonoid {r}
   | zro-left => {?hidden_proof}
   | +-assoc => {?hidden_proof}
   | +-comm => {?hidden_proof}
@@ -65,5 +71,7 @@
 
 \instance GrothendieckAbGroup (M : AbMonoid) : AbGroup (MaxLocAbType M) 
   | AbMonoid => LocAbMonoid SubAddMonoid.max
-  | negative => negative
+  | negative (x : MaxLocAbType M) : MaxLocAbType M \with
+    | in~ a => in~ (a.2, a.1, ())
+    | ~-equiv x y r => LocAbType.~-lequiv $ equation.abMonoid {r}
   | negative-left => {?hidden_proof}

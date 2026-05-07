@@ -13,7 +13,7 @@
 \func Separated (U : Universe) : Universe \cowith
   | isLocal => \lam Z => \Pi (z z' : Z) -> isLocal (z = z')
 
-\func ReflSeparated (U : ReflUniverse \levels \lp _) : ReflUniverse \cowith
+\func ReflSeparated (U : ReflUniverse \lp) : ReflUniverse \cowith
   | Universe => Separated U
   | localization => \lam A => (
     \have | p (a a' : A) : Local (F a = F a') => transport (Local __) (inv (pathEquiv a a')) (LType (a = a'))

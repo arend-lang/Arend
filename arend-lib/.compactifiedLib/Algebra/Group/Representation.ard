@@ -12,6 +12,17 @@
 \class LinRepres \extends LModule, GroupAction {
   | **-ldistr {g : G} {e e' : E} : g ** (e + e') = g ** e + g ** e'
   | **-*c {g : G} {e : E} {c : R} : g ** (c *c e) = c *c (g ** e)
+
+  \lemma g**-zro {g : G} : g ** 0 = 0 => {?hidden_proof}
+
+  \lemma g**-negative {g : G} {e : E} : g ** negative e = negative (g ** e) => {?hidden_proof}
+
+  \func toLinearMap (g : G) : LinearMap \this \this \cowith
+    | func => \lam e => g ** e
+    | func-+ => {?hidden_proof}
+    | func-*c => {?hidden_proof}
+
+  \lemma toLinearMap-ide : toLinearMap ide = LinearMap.id => {?hidden_proof}
 }
 
 \func TrivialAction {R : Ring} (E : LModule R) (G : Group) : LinRepres R G \cowith

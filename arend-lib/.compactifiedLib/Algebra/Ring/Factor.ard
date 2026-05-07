@@ -22,19 +22,27 @@
 \instance FactorRing (I : Ideal) : CRing 
   | E => Type I
   | zro => inF 0
-  | + => +
+  | + (x y : Type I) : Type I \with
+    | in~ a, in~ b => in~ (a Ring.+ b)
+    | in~ a, ~-equiv b c r => fequiv (simplify r)
+    | ~-equiv b c r, in~ a => fequiv (simplify r)
   | zro-left => {?hidden_proof}
   | +-assoc => {?hidden_proof}
   | +-comm => {?hidden_proof}
   | ide => inF 1
-  | * => *
+  | * (x y : Type I) : Type I \with
+    | in~ a, in~ b => inF (a Ring.* b)
+    | in~ a, ~-equiv b c r => fequiv $ transport I Ring.ldistr_- (I.ideal-left r)
+    | ~-equiv b c r, in~ a => fequiv $ transport I Ring.rdistr_- (I.ideal-right r)
   | ide-left => {?hidden_proof}
   | *-assoc => {?hidden_proof}
   | ldistr => {?hidden_proof}
   | natCoef => \lam n => inF (natCoef n)
   | natCoefZero => {?hidden_proof}
   | natCoefSuc => {?hidden_proof}
-  | negative => negative
+  | negative (x : Type I) : Type I \with
+    | in~ a => inF (Ring.negative a)
+    | ~-equiv a b r => fequiv $ transport I equation.ring (I.ideal-left {-1} r)
   | negative-left => {?hidden_proof}
   | *-comm => {?hidden_proof}
   \where {
@@ -59,7 +67,9 @@
   | func-* => {?hidden_proof}
 
 \func factor-lift {I : Ideal} {R : Ring} (f : RingHom I.S R) (p : \Pi {a : I.S} -> I a -> f a = 0) : RingHom (FactorRing I) R \cowith
-  | func => func
+  | func (x : FactorRing I) : R \with
+    | in~ a => f a
+    | ~-equiv a b r => R.fromZero $ inv (f.func-+ *> pmap (_ +) f.func-negative) *> p r
   | func-+ => {?hidden_proof}
   | func-ide => {?hidden_proof}
   | func-* => {?hidden_proof}

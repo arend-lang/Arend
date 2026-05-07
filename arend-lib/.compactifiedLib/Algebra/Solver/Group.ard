@@ -16,7 +16,11 @@
   | Term => Term
   | NF => \lam n => List (\Sigma Bool (Fin n))
   | normalize => normalize
-  | interpret => interpret
+  | interpret {n : Nat} (env : Fin n -> G) (t : Term n) : G \elim t
+    | var x => env x
+    | :ide => G.ide
+    | :inverse t => inverse (interpret env t)
+    | t :* s => interpret env t * interpret env s
   | interpretNF => \lam env l => interpretNF' env (reduce l)
   | interpretNF-consistent => {?hidden_proof}
   | nfVar => \lam v => (true, v) :: nil
@@ -55,11 +59,11 @@
       | x :: nil => if x.1 (env x.2) (inverse (env x.2))
       | x :: l => if x.1 (env x.2) (inverse (env x.2)) * interpretNF' env l
       \where {
-        \func simple (env : V -> G) (l : List (\Sigma Bool V)) : G \elim l
+        \protected \func simple (env : V -> G) (l : List (\Sigma Bool V)) : G \elim l
           | nil => G.ide
           | x :: l => if x.1 (env x.2) (inverse (env x.2)) * simple env l
 
-        \lemma =simple {l : List (\Sigma Bool V)} : interpretNF' env l = simple env l => {?hidden_proof}
+        \protected \lemma =simple {l : List (\Sigma Bool V)} : interpretNF' env l = simple env l => {?hidden_proof}
       }
 
 
@@ -74,13 +78,13 @@
 
     \lemma interpretNF'_++ {V : \Set} {env : V -> G} {l l' : List (\Sigma Bool V)} : interpretNF' env (l ++ l') = interpretNF' env l * interpretNF' env l' => {?hidden_proof}
       \where {
-        \lemma _simple {l : List (\Sigma Bool V)} : interpretNF'.simple env (l ++ l') = interpretNF'.simple env l * interpretNF'.simple env l' => {?hidden_proof}
+        \protected \lemma _simple {l : List (\Sigma Bool V)} : interpretNF'.simple env (l ++ l') = interpretNF'.simple env l * interpretNF'.simple env l' => {?hidden_proof}
       }
 
 
     \lemma interpretNF'_inverseNF {V : \Set} {env : V -> G} {l acc : List (\Sigma Bool V)} : interpretNF' env (inverseNF l acc) = inverse (interpretNF' env l) * interpretNF' env acc => {?hidden_proof}
       \where {
-        \lemma _simple {l acc : List (\Sigma Bool V)} : interpretNF'.simple env (inverseNF l acc) = inverse (interpretNF'.simple env l) * interpretNF'.simple env acc => {?hidden_proof}
+        \protected \lemma _simple {l acc : List (\Sigma Bool V)} : interpretNF'.simple env (inverseNF l acc) = inverse (interpretNF'.simple env l) * interpretNF'.simple env acc => {?hidden_proof}
       }
 
 

@@ -7,13 +7,20 @@
 \import Paths
 \import Paths.Meta
 
-\class Functor {
-  | C : Precat
-  | D : Precat
-  | F : C -> D
+\class Functor (C : Precat) (D : Precat) (F : C -> D) {
   | Func {X Y : C} : Hom X Y -> Hom (F X) (F Y)
   | Func-id {X : C} : Func (id X) = id (F X)
   | Func-o {X Y Z : C} {g : Hom Y Z} {f : Hom X Y} : Func (g ∘ f) = Func g ∘ Func f
+
+  \protected \func op : Functor C.op D.op F \cowith
+    | Func => \lam f => Func f
+    | Func-id => {?hidden_proof}
+    | Func-o => {?hidden_proof}
+
+  \func Func-iso (e : Iso {C}) : Iso {D} {F e.dom} {F e.cod} (Func e) \cowith
+    | hinv => Func e.hinv
+    | hinv_f => {?hidden_proof}
+    | f_hinv => {?hidden_proof}
 }
   \where {
     \lemma transport_Hom {C D E : Precat} {x1 y1 : C} (p1 : x1 = y1) {x2 y2 : D} (p2 : x2 = y2) (F : Functor C E) (G : Functor D E) {g : Hom (F x1) (G x2)} 
@@ -55,13 +62,15 @@
   }
 
 
-\class NatTrans \plevels obj >= hom >= iobj >= ihom {
-  | C : Precat \levels (iobj, ihom) _
-  | D : Precat \levels (obj, hom) _
-  | F : Functor C D
-  | G : Functor C D
-  | trans (X : C) : Hom (F X) (G X)
+\record NatTrans {C : Precat (iobj, ihom)} {D : Precat (obj, hom)} (F : Functor C D) (G : Functor C D) \plevels obj >= hom >= iobj >= ihom {
+  \coerce | trans (X : C) : Hom (F X) (G X)
   | natural {X Y : C} (f : Hom X Y) : trans Y ∘ F.Func f = G.Func f ∘ trans X
+
+  \protected \func op : NatTrans G.op F.op \cowith
+    | trans => trans
+    | natural => {?hidden_proof}
+
+  \lemma iso (e : \Pi {X : C} -> Iso (trans X)) : NatTrans G F (\lam X => e.hinv) => {?hidden_proof}
 }
   \where {
     \func Comp-left {C D E : Precat} (a : NatTrans {D} {E}) (H : Functor C D) : NatTrans (Comp a.F H) (Comp a.G H) \cowith
@@ -126,14 +135,36 @@
 
 \class FaithfulFunctor \extends Functor {
   | isFaithful {X Y : C} {f g : Hom X Y} : Func f = Func g -> f = g
+
+  \protected \func op : FaithfulFunctor \cowith
+    | Functor => Functor.op
+    | isFaithful => {?hidden_proof}
 }
 
 \class FullFunctor \extends Functor {
   | isFull {X Y : C} (f : Hom (F X) (F Y)) : ∃ (g : Hom X Y) (Func g = f)
+
+  \protected \func op : FullFunctor \cowith
+    | Functor => Functor.op
+    | isFull => {?hidden_proof}
 }
 
 \class FullyFaithfulFunctor \extends FullFunctor, FaithfulFunctor {
   | isFullyFaithful {X Y : C} : Equiv (Func {_} {X} {Y})
   | isFull => \lam f => isSurjMap {ESEquiv.fromEquiv isFullyFaithful} f
   | isFaithful => \lam p => isFullyFaithful.isInj p
+
+  \protected \func op : FullyFaithfulFunctor \cowith
+    | Functor => Functor.op
+    | isFullyFaithful => {?hidden_proof}
+
+  \protected \func inverse {X Y : C} (f : Hom (F X) (F Y)) : Hom X Y => isFullyFaithful.ret f
+
+  \protected \lemma inverse-left {X Y : C} {f : Hom X Y} : inverse (Func f) = f => {?hidden_proof}
+
+  \protected \lemma inverse-right {X Y : C} {f : Hom (F X) (F Y)} : Func (inverse f) = f => {?hidden_proof}
+
+  \lemma inverse-id {x : C} : inverse (id (F x)) = id x => {?hidden_proof}
+
+  \lemma inverse-o {x y z : C} {g : Hom (F y) (F z)} {f : Hom (F x) (F y)} : inverse (g ∘ f) = inverse g ∘ inverse f => {?hidden_proof}
 }

@@ -5,6 +5,8 @@
 \class OrderedMonoid \extends Poset, Monoid {
   | <=_*-left (z : E) {x y : E} : x <= y -> x * z <= y * z
   | <=_*-right (z : E) {x y : E} : x <= y -> z * x <= z * y
+
+  \lemma <=_* {a b c d : E} (p : a <= c) (q : b <= d) : a * b <= c * d => {?hidden_proof}
 }
 
 \class OrderedCMonoid \extends OrderedMonoid, CMonoid {

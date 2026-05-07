@@ -1,4 +1,4 @@
-\import Data.List(List)
+\import Data.List (List)
 \import Data.Or
 \import Logic
 \import Logic.Meta

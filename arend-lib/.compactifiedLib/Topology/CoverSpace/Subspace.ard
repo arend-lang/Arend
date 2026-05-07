@@ -69,5 +69,5 @@
   | isSeparatedCoverSpace => {?hidden_proof}
   | isComplete => {?hidden_proof}
   \where {
-    \lemma conv {X : SeparatedCoverSpace} {S : Set X} (Sc : IsCompleteCoverSpace (CoverTransfer {Total S} __.1)) : X.IsClosed S => {?hidden_proof}
+    \protected \lemma conv {X : SeparatedCoverSpace} {S : Set X} (Sc : IsCompleteCoverSpace (CoverTransfer {Total S} __.1)) : X.IsClosed S => {?hidden_proof}
   }

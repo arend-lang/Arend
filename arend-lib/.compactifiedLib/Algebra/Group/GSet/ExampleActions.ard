@@ -26,8 +26,8 @@
 \func conjAction (G : Group) : GroupAction G \cowith
   | E => G
   | ** => \lam (g : G) => conjugate g
-  | **-assoc => **-assoc
-  | id-action => id-action
+  | **-assoc {m : G} {n : G} {e : G} : conjugate m (conjugate n e) = conjugate (m * n) e => {?hidden_proof}
+  | id-action {e : G} : conjugate G.ide e = e => {?hidden_proof}
 
 \func trivialAction (G : Group) (E : BaseSet) : GroupAction G E \cowith
   | ** => \lam _ e => e

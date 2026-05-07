@@ -33,7 +33,7 @@
 
 \func HasSup (A : Set Real) => \Sigma (B : Real) (IsSup A B)
   \where {
-    \use \level levelProp (s t : HasSup A) : s = t => ext (IsSup.isUnique s.2 t.2)
+    \protected \use \level levelProp (s t : HasSup A) : s = t => ext (IsSup.isUnique s.2 t.2)
   }
 
 
@@ -72,7 +72,7 @@
 
 \func HasInf (A : Set Real) => \Sigma (B : Real) (IsInf A B)
   \where {
-    \use \level levelProp (s t : HasInf A) : s = t => ext (IsInf.isUnique s.2 t.2)
+    \protected \use \level levelProp (s t : HasInf A) : s = t => ext (IsInf.isUnique s.2 t.2)
   }
 
 

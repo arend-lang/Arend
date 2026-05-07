@@ -1,17 +1,7 @@
 \import Equiv
 \import Paths
 
-\class Square {
-  | U : \Type
-  | V : \Type
-  | X : \Type
-  | Y : \Type
-  | ux : U -> X
-  | vy : V -> Y
-  | uv : U -> V
-  | xy : X -> Y
-  | sqcomm : \Pi (u : U) -> vy (uv u) = xy (ux u)
-}
+\record Square (U : \Type) (V : \Type) (X : \Type) (Y : \Type) (ux : U -> X) (vy : V -> Y) (uv : U -> V) (xy : X -> Y) (sqcomm : \Pi (u : U) -> vy (uv u) = xy (ux u))
   \where {
     \func pull (s : Square) {U' : \Type} (f : U' -> s.U) : Square => \new s {
       | U => U'
@@ -29,10 +19,9 @@
   }
 
 
-\open Square(pull, push)
+\open Square (pull, push)
 
-\class Pullback {
-  | square : Square
+\class Pullback (square : Square) {
   | pullback-univ {Z : \Type} : Equiv {Z -> square.U} {Square {  | U => Z  | V => square.V  | X => square.X  | Y => square.Y  | vy => square.vy  | xy => square.xy}} (pull square)
 }
 

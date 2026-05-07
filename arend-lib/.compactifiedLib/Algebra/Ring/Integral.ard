@@ -13,10 +13,10 @@
 \import Algebra.Pointed.PointedHom
 \import Algebra.Pointed.Sub
 \import Algebra.Ring
-\import Algebra.Ring.MonoidRing(evalMS, evalMS_map2, monoidSet-ringHom, msMonomial)
+\import Algebra.Ring.MonoidRing (evalMS, evalMS_map2, monoidSet-ringHom, msMonomial)
 \import Algebra.Ring.RingCategory
 \import Algebra.Ring.RingHom
-\import Algebra.Ring.Factor(FactorRing, factorHom, factor-lift)
+\import Algebra.Ring.Factor (FactorRing, factorHom, factor-lift)
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.MPoly
 \import Algebra.Ring.Poly
@@ -27,7 +27,7 @@
 \import Category.Functor
 \import Data.Array
 \import Equiv
-\import Function(IsInj, IsSurj)
+\import Function (IsInj, IsSurj)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -75,7 +75,7 @@
   | func-ide => {?hidden_proof}
   | func-* => {?hidden_proof}
 
-mPolyImage-finGen {R E : CRing} (f : RingHom R E) (l : Array E) :
+\sfunc mPolyImage-finGen {R E : CRing} (f : RingHom R E) (l : Array E) :
   \Sigma (l' : Array (SubRing.cStruct (mPolyImage f l)) l.len) (RingHom.isAlgebraGenerated (mPolyImageHom f l) l') => 
   \let l' => \lam j => (l j, mPolyImage-element f l j) : SubRing.cStruct (mPolyImage f l)
   \in (l',

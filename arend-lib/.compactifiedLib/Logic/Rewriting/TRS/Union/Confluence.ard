@@ -1,6 +1,6 @@
 \import Algebra.Meta
 \import Logic.Rewriting.ARS.Relation
-\import Data.List(!!, ++, ++_nil, ++-assoc, List, nil, ::)
+\import Data.List (!!, ++, ++_nil, ++-assoc, List, nil, ::)
 \import Data.Maybe
 \import Data.SubList
 \import Data.Or

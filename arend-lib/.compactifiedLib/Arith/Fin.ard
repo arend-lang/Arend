@@ -22,7 +22,7 @@
 \import Paths
 \import Paths.Meta
 \import Set \hiding (#)
-\open Nat(div, mod, divModProp)
+\open Nat (div, mod, divModProp)
 \open AddMonoid
 
 \lemma int_n*_+_mod_n {n r : Nat} {q : Int} (r<=n : r < suc n) : (pos (suc n) * q + r) mod suc n = r => {?hidden_proof}
@@ -92,7 +92,7 @@
 
     \lemma ldiv-modEq (x y : Int) (n : Nat) (p : ∃ (Monoid.LDiv {IntEuclidean} (suc n) (x - y))) : x mod suc n = y mod suc n => {?hidden_proof}
 
-    modEq-ldiv (x y : Int) (n : Nat) (p : x mod suc n = y mod suc n) : Monoid.LDiv {IntEuclidean} (suc n) (x - y) => 
+    \sfunc modEq-ldiv (x y : Int) (n : Nat) (p : x mod suc n = y mod suc n) : Monoid.LDiv {IntEuclidean} (suc n) (x - y) => 
       \have A x => divModProp x (suc n) (\case __ \with {})
       \in rewriteI (A x, A y, p) (\new Monoid.LDiv {  | inv => x div pos (suc n) - y div pos (suc n)  | inv-right => rewrite AbGroup.sum-cancel-right Ring.ldistr_-})
 
@@ -132,7 +132,7 @@
   \where {
     \open EuclideanSemiringData
     \open EuclideanRingData
-    \open Monoid(Inv)
+    \open Monoid (Inv)
 
     \lemma gcd=1 (p : Prime {NatSemiring}) {x : Nat} (x/=0 : Not (x = 0)) (x<p : x < p) : gcd p x = 1 => {?hidden_proof}
   }

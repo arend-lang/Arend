@@ -17,6 +17,44 @@
   | o-assoc => prop-pi
   | \infix 4 >= : E -> E -> \Prop
   | >= => \lam x y => y <= x
+
+  \protected \func op : Preorder E \cowith
+    | <= => \lam x y => y <= x
+    | <=-refl => {?hidden_proof}
+    | <=-transitive => {?hidden_proof}
+
+  \func EquivRel : Equivalence E \cowith
+    | ~ => \lam x y => \Sigma (x <= y) (y <= x)
+    | ~-reflexive => {?hidden_proof}
+    | ~-symmetric => {?hidden_proof}
+    | ~-transitive => {?hidden_proof}
+
+  \func PreorderC  => Quotient EquivRel.~
+
+  \instance PosetC : Poset PreorderC 
+    | <= => <=C
+    | <=-refl => {?hidden_proof}
+    | <=-transitive => {?hidden_proof}
+    | <=-antisymmetric => {?hidden_proof}
+    \where {
+      \func \infix 4 <=C (x y : PreorderC) : \Prop \elim x, y
+        | in~ x, in~ y => x <= y
+        | ~-equiv x x' x~x', in~ y => propExt (<=-transitive x~x'.2) (<=-transitive {_} {x} {x'} {y} x~x'.1)
+        | in~ x, ~-equiv y y' y~y' => propExt (<=-transitive __ y~y'.1) (<=-transitive {_} {x} __ y~y'.2)
+
+      \lemma <=C-reflexive {x : PreorderC} : x <=C x => {?hidden_proof}
+
+      \lemma <=C-transitive {x y z : PreorderC} (x<=y : x <=C y) (y<=z : y <=C z) : x <=C z => {?hidden_proof}
+
+      \lemma <=C-antisymmetric {x y : PreorderC} (x<=y : x <=C y) (y<=x : y <=C x) : x = y => {?hidden_proof}
+    }
+
+
+  \func Is-meet (x y m : E) => \Sigma (m <= x) (m <= y) (\Pi (m' : E) -> m' <= x -> m' <= y -> m' <= m)
+
+  \func IsJoin {J : \Set} (f : J -> E) (a : E) => \Sigma (\Pi (j : J) -> f j <= a) (\Pi {b : E} -> (\Pi (j : J) -> f j <= b) -> a <= b)
+
+  \func IsMeet {J : \Set} (f : J -> E) (a : E) => \Sigma (\Pi (j : J) -> a <= f j) (\Pi {b : E} -> (\Pi (j : J) -> b <= f j) -> b <= a)
 }
 
 \lemma =_<= {P : Preorder} {x y : P} (p : x = y) : x <= y => {?hidden_proof}
@@ -24,6 +62,10 @@
 \class Poset \extends Preorder, Cat (\lp, \lp) {
   | <=-antisymmetric {x y : E} : x <= y -> y <= x -> x = y
   | univalence => Cat.makeUnivalence (\lam (e : Iso) => (<=-antisymmetric e.f e.hinv, prop-pi))
+
+  \protected \func op : Poset \cowith
+    | Preorder => Preorder.op
+    | <=-antisymmetric => {?hidden_proof}
 }
 
 \instance ProductPreorder (P Q : Preorder) : Preorder (\Sigma P Q) 

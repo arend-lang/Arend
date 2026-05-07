@@ -2,7 +2,7 @@
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Array.Perm
-\import Data.List(List, Sort, headDef, length)
+\import Data.List (List, Sort, headDef, length)
 \import Function.Meta
 \import Order.LinearOrder
 \import Order.PartialOrder
@@ -26,7 +26,7 @@
 
     \lemma sort-sorted {A : LinearOrder.Dec} {l : Array A} : IsSorted (sort l) => {?hidden_proof}
 
-    sort-perm {A : LinearOrder.Dec} {n : Nat} {l : Array A n} : Perm l (sort l) => Perm.perm-sym $ EPerm.EPerm_Perm_transport (EPerm.eperm-sym sort-eperm) _
+    \sfunc sort-perm {A : LinearOrder.Dec} {n : Nat} {l : Array A n} : Perm l (sort l) => Perm.perm-sym $ EPerm.EPerm_Perm_transport (EPerm.eperm-sym sort-eperm) _
       \where {
         \func list_perm {A : \Type} {l l' : List A} (p : Sort.Perm l l') : EPerm (fromList l) (fromList l') \elim l, l', p
           | List.nil, List.nil, Sort.perm-nil => eperm-nil

@@ -2,8 +2,7 @@
 \import Paths.Meta
 \import Relation.Truncated
 
-\class AbstractReductionSystem {
-  | A : \Set
+\class AbstractReductionSystem (A : \Set) {
   | \infix 4 ~> : Rel A
   | \infix 5 |--| : Rel A
   | |--|_symmetric (a b : A) (a~b : a |--| b) : b |--| a

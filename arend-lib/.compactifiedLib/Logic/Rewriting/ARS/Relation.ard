@@ -2,11 +2,7 @@
 
 \func Rel (A : \Type) : \Type => A -> A -> \Type
 
-\class StraightJoin {
-  | A : \Type
-  | a : A
-  | b : A
-  | rel : Rel A
+\record StraightJoin {A : \Type} (a : A) (b : A) (rel : Rel A) {
   | common-reduct : A
   | a~>cr : rel a common-reduct
   | b~>cr : rel b common-reduct

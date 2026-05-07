@@ -17,6 +17,16 @@
 
 \class PosetAddMonoid \extends AddMonoid, Poset {
   | <=_+ {a b c d : E} : a <= b -> c <= d -> a + c <= b + d
+
+  \lemma BigSum_<= {n : Nat} {l l' : Array E n} (p : \Pi (j : Fin n) -> l j <= l' j) : BigSum l <= BigSum l' => {?hidden_proof}
+
+  \lemma BigSum_>=0 {l : Array E} (q : \Pi (j : Fin l.len) -> 0 <= l j) : 0 <= BigSum l => {?hidden_proof}
+
+  \lemma <=_+-positive {a b : E} (a>=0 : 0 <= a) (b>=0 : 0 <= b) : 0 <= a + b => {?hidden_proof}
+
+  \lemma *n_<= {n : Nat} {a b : E} (a<=b : a <= b) : n *n a <= n *n b => {?hidden_proof}
+
+  \lemma *n_>=0 {n : Nat} {a : E} (a>=0 : 0 <= a) : 0 <= n *n a => {?hidden_proof}
 }
 
 \class PosetAbMonoid \extends PosetAddMonoid, AbMonoid
@@ -39,7 +49,31 @@
   | meet_+-right => +-comm *> meet_+-left *> pmap2 ∧ +-comm +-comm
 }
 
-\class PosetAddGroup \extends PosetAddMonoid, AddGroup
+\class PosetAddGroup \extends PosetAddMonoid, AddGroup {
+  \lemma from>=0 {x y : E} (p : 0 <= y - x) : x <= y => {?hidden_proof}
+
+  \lemma to>=0 {x y : E} (p : x <= y) : 0 <= y - x => {?hidden_proof}
+
+  \lemma from<=0 {x y : E} (p : x - y <= 0) : x <= y => {?hidden_proof}
+
+  \lemma to<=0 {x y : E} (p : x <= y) : x - y <= 0 => {?hidden_proof}
+
+  \lemma negative_<= {x y : E} (x<=y : x <= y) : negative y <= negative x => {?hidden_proof}
+
+  \lemma negative_<=-conv {x y : E} (p : negative y <= negative x) : x <= y => {?hidden_proof}
+
+  \lemma negative>=0 {x : E} (x<=0 : x <= 0) : 0 <= negative x => {?hidden_proof}
+
+  \lemma negative-to<=0 {x : E} (p : 0 <= negative x) : x <= 0 => {?hidden_proof}
+
+  \lemma negative<=0 {x : E} (x>=0 : 0 <= x) : negative x <= 0 => {?hidden_proof}
+
+  \lemma negative-to>=0 {x : E} (p : negative x <= 0) : 0 <= x => {?hidden_proof}
+
+  \lemma <=_+-cancel-left (x : E) {y z : E} (p : x + y <= x + z) : y <= z => {?hidden_proof}
+
+  \lemma <=_+-cancel-right (z : E) {x y : E} (p : x + z <= y + z) : x <= y => {?hidden_proof}
+}
 
 \class PosetAbGroup \extends PosetAddGroup, PosetAbMonoid, AbGroup
 
@@ -58,6 +92,44 @@
         (=_<= zro-left) <=∘ join-left <=∘ =_<= (inv (pmap (+ _) negative-right *> zro-left) *> +-assoc))
     (<=_+-cancel-left _ $ =_<= meet_+-right <=∘ meet-monotone (=_<= +-assoc <=∘ <=_+ <=-refl (<=_+ <=-refl join-right <=∘ =_<= negative-left) <=∘ =_<= zro-right) 
         (=_<= zro-left) <=∘ join-right <=∘ =_<= (inv (pmap (+ _) negative-right *> zro-left) *> +-assoc)))
+
+  \lemma meet_negative {x y : E} : negative (x ∧ y) = negative x ∨ negative y => {?hidden_proof}
+
+  \lemma join_negative {x y : E} : negative (x ∨ y) = negative x ∧ negative y => {?hidden_proof}
+
+  \lemma modularity {x y : E} : x + y = (x ∨ y) + (x ∧ y) => {?hidden_proof}
+
+  \func abs (x : E) => x ∨ negative x
+
+  \lemma abs>=id {x : E} : x <= abs x => {?hidden_proof}
+
+  \lemma abs>=neg {x : E} : negative x <= abs x => {?hidden_proof}
+
+  \lemma abs_negative {x : E} : abs (negative x) = abs x => {?hidden_proof}
+
+  \lemma abs-ofPos {x : E} (x>=0 : 0 <= x) : abs x = x => {?hidden_proof}
+
+  \lemma abs-ofNeg {x : E} (x<=0 : x <= 0) : abs x = negative x => {?hidden_proof}
+
+  \lemma abs_abs {x : E} : abs (abs x) = abs x => {?hidden_proof}
+
+  \lemma abs_+ {x y : E} : abs (x + y) <= abs x + abs y => {?hidden_proof}
+
+  \lemma abs_- {x y : E} : abs (x - y) = abs (y - x) => {?hidden_proof}
+
+  \lemma abs_-left {x y : E} : abs x - abs y <= abs (x - y) => {?hidden_proof}
+
+  \lemma abs_-right {x y : E} : abs y - abs x <= abs (x - y) => {?hidden_proof}
+
+  \lemma abs_zro : abs zro = zro => {?hidden_proof}
+
+  \lemma abs_zro-ext {x : E} (p : abs x = zro) : x = zro => {?hidden_proof}
+
+  \lemma abs>=_- {x y : E} : y - x <= abs (x - y) => {?hidden_proof}
+
+  \lemma abs-univ {x y z : E} (p : x - y <= z) (q : y - x <= z) : abs (x - y) <= z => {?hidden_proof}
+
+  \type IsSolid (U : Set E) => ∀ {y} {x : U} (abs y <= abs x -> U y)
 }
   \where {
 \class FromMeet \extends LatticeAbGroup {
@@ -78,12 +150,60 @@
 
 \class AbsAbGroup \extends LatticeAbGroup {
   | abs>=0 {x : E} : 0 <= abs x
+
+  \func part+ (x : E) => x ∨ 0
+
+  \func part- (x : E) => negative x ∨ 0
+
+  \lemma parts_join {x : E} : part+ x ∨ part- x = abs x => {?hidden_proof}
+
+  \lemma parts_meet {x : E} : part+ x ∧ part- x = 0 => {?hidden_proof}
+
+  \lemma parts_+ {x : E} : part+ x + part- x = abs x => {?hidden_proof}
+
+  \lemma parts_- {x : E} : part+ x - part- x = x => {?hidden_proof}
+
+  \lemma join_+-double {x y : E} : x + y <= (x + x) ∨ (y + y) => {?hidden_proof}
+
+  \lemma join_+-comm {x y : E} : (x ∨ y) + (x ∨ y) = (x + x) ∨ (y + y) => {?hidden_proof}
+
+  \lemma join_*n {n : Nat} {x y : E} : n *n (x ∨ y) = (n *n x) ∨ (n *n y) => {?hidden_proof}
+    \where {
+      \lemma steps {k : Nat} {x y : E} : NatSemiring.pow 2 k *n (x ∨ y) = (NatSemiring.pow 2 k *n x) ∨ (NatSemiring.pow 2 k *n y) => {?hidden_proof}
+    }
+
+
+  \lemma abs_*n {n : Nat} {x : E} : n *n abs x = abs (n *n x) => {?hidden_proof}
+
+  \lemma meet_*n {n : Nat} {x y : E} : n *n (x ∧ y) = (n *n x) ∧ (n *n y) => {?hidden_proof}
 }
 
 \class PosetSemiring \extends Semiring, PosetAbMonoid {
   | zro<=ide : 0 <= 1
   | <=_*_positive-left {x y z : E} (x<=y : x <= y) (z>=0 : 0 <= z) : x * z <= y * z
   | <=_*_positive-right {x y z : E} (x>=0 : 0 <= x) (y<=z : y <= z) : x * y <= x * z
+
+  \lemma <=_*_positive_positive {x y : E} (x>=0 : 0 <= x) (y>=0 : 0 <= y) : 0 <= x * y => {?hidden_proof}
+
+  \lemma <=_*_positive_negative {x y : E} (x>=0 : 0 <= x) (y<=0 : y <= 0) : x * y <= 0 => {?hidden_proof}
+
+  \lemma <=_*_negative_positive {x y : E} (x<=0 : x <= 0) (y>=0 : 0 <= y) : x * y <= 0 => {?hidden_proof}
+
+  \lemma natCoef>=0 {n : Nat} : zro <= natCoef n => {?hidden_proof}
+
+  \lemma natCoef_<= {n m : Nat} (p : n NatSemiring.<= m) : natCoef n <= natCoef m => {?hidden_proof}
+
+  \lemma pow>=0 {a : E} {k : Nat} (a>=0 : 0 <= a) : 0 <= pow a k => {?hidden_proof}
+
+  \lemma pow_<=-monotone {a b : E} {k : Nat} (a>=0 : 0 <= a) (a<=b : a <= b) : pow a k <= pow b k => {?hidden_proof}
+
+  \lemma pow<=id {a : E} (a>=0 : 0 <= a) (a<=1 : a <= 1) {k : Nat} (k/=0 : k /= 0) : pow a k <= a => {?hidden_proof}
+
+  \lemma pow>=id {a : E} (a>=1 : 1 <= a) {k : Nat} (k/=0 : k /= 0) : a <= pow a k => {?hidden_proof}
+
+  \lemma pow<=1 {a : E} (a>=0 : 0 <= a) (a<=1 : a <= 1) {k : Nat} : pow a k <= 1 => {?hidden_proof}
+
+  \lemma pow_<=-degree {a : E} (a>=0 : 0 <= a) (a<=1 : a <= 1) {n k : Nat} (n<=k : n NatSemiring.<= k) : pow a k <= pow a n => {?hidden_proof}
 }
 
 \class PosetRing \extends PosetSemiring, Ring, PosetAbGroup {

@@ -12,7 +12,7 @@
   | :nil (a = b)
   | \infixl 7 :cons {c : V} (H c b) (CatNF a c H)
 
-\func normalize {V : \Type} {a b : V} {H : V -> V -> \Type} (t : CatTerm a b H) : CatNF a b H => aux t (:nil idp)
+\protected \func normalize {V : \Type} {a b : V} {H : V -> V -> \Type} (t : CatTerm a b H) : CatNF a b H => aux t (:nil idp)
   \where {
     \func aux {V : \Type} {a b c : V} {H : V -> V -> \Type} (t : CatTerm b c H) (acc : CatNF a b H) : CatNF a c H \elim t
       | var h => h :cons acc
@@ -21,10 +21,32 @@
   }
 
 
-\class HData {
-  | C : Precat
-  | V : \Set
-  | f : V -> C
-  | H : V -> V -> \Set
-  | g : \Pi {x y : V} -> H x y -> Hom (f x) (f y)
+\class HData {C : Precat} {V : \Set} (f : V -> C) (H : V -> V -> \Set) (g : \Pi {x y : V} -> H x y -> Hom (f x) (f y)) {
+  \protected \func interpret {a b : V} (t : CatTerm a b H) : Hom (f a) (f b) \elim t
+    | var h => g h
+    | :id idp => id (f a)
+    | :o _ t s => interpret t ∘ interpret s
+
+  \protected \func interpretNF {a b : V} (t : CatNF a b H) : Hom (f a) (f b) \elim t
+    | :nil idp => id (f a)
+    | :cons h :nil idp => g h
+    | :cons h t => g h ∘ interpretNF t
+    \where {
+      \lemma cons {a b c : V} (h : H b c) (l : CatNF a b H) : interpretNF (h :cons l) = g h ∘ interpretNF l => {?hidden_proof}
+    }
+
+
+  \func \infixr 5 :++ {a b c : V} (h : CatNF b c H) (h' : CatNF a b H) : CatNF a c H \elim h
+    | :nil idp => h'
+    | :cons h t => h :cons (t :++ h')
+
+  \protected \lemma interpretNF_++ {a b c : V} (h : CatNF b c H) (h' : CatNF a b H) : interpretNF (h :++ h') = interpretNF h ∘ interpretNF h' => {?hidden_proof}
+
+  \protected \lemma normalize-consistent {a b : V} (t : CatTerm a b H) : interpret t = interpretNF (normalize t) => {?hidden_proof}
+    \where {
+      \lemma aux {a b c : V} (t : CatTerm b c H) (acc : CatNF a b H) : interpret t ∘ interpretNF acc = interpretNF (normalize.aux t acc) => {?hidden_proof}
+    }
+
+
+  \protected \lemma terms-equality {a b : V} (t s : CatTerm a b H) (p : interpretNF (normalize t) = interpretNF (normalize s)) : interpret t = interpret s => {?hidden_proof}
 }

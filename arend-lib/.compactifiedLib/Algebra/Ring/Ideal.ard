@@ -16,7 +16,7 @@
 \import Data.Bool
 \import Data.Or
 \import Equiv
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -31,23 +31,65 @@
 \open AddMonoid
 \open AbMonoid
 
-\class LIdeal \extends SubAddGroup {
+\record LIdeal \extends SubAddGroup {
   \override S : Ring
   | ideal-left {r a : S} : contains a -> contains (r * a)
   | contains_negative => \lam c => transport contains (Ring.negative_*-left *> pmap negative ide-left) (ideal-left c)
 }
 
-\class RIdeal \extends SubAddGroup {
+\record RIdeal \extends SubAddGroup {
   \override S : Ring
   | ideal-right {r a : S} : contains a -> contains (a * r)
   | contains_negative => \lam c => transport contains (Ring.negative_*-right *> pmap negative ide-right) (ideal-right c)
+
+  \lemma ldiv {a b : S} (a|b : Monoid.LDiv a b) (Ia : contains a) : contains b => {?hidden_proof}
 }
 
-\class TIdeal \extends LIdeal, RIdeal
+\record TIdeal \extends LIdeal, RIdeal
 
-\class Ideal \extends TIdeal {
+\record Ideal \extends TIdeal {
   \override S : CRing
   | ideal-right => \lam s => transport contains *-comm (ideal-left s)
+
+  \func radical : Ideal S \cowith
+    | contains => \lam a => ∃ (n : Nat) (contains (Monoid.pow a n))
+    | contains_zro => {?hidden_proof}
+    | contains_+ => {?hidden_proof}
+    | ideal-left => {?hidden_proof}
+
+  \func module : LModule S \cowith
+    | AbGroup => SubAddGroup.abStruct \this
+    | *c => \lam a s => (a * s.1, ideal-left s.2)
+    | *c-assoc => {?hidden_proof}
+    | *c-ldistr => {?hidden_proof}
+    | *c-rdistr => {?hidden_proof}
+    | ide_*c => {?hidden_proof}
+    \where {
+      \lemma finitelyGenerated (p : IsFinitelyGenerated) : module.IsFinitelyGenerated => {?hidden_proof}
+    }
+
+
+  \lemma radical-superset {x : S} (s : contains x) : radical x => {?hidden_proof}
+
+  \lemma radical_pow {x : S} {n : Nat} (s : radical (Monoid.pow x n)) : radical x => {?hidden_proof}
+
+  \lemma radical-univ {I : Ideal S} (p : \Pi {x : S} -> I x -> radical x) {x : S} (s : I.radical x) : radical x => {?hidden_proof}
+
+  \lemma bigSum (l : Array S) (p : \Pi (i : Fin l.len) -> contains (l i)) : contains (BigSum l) => {?hidden_proof}
+
+  \lemma finSum {J : FinSet} {a : J -> S} (p : \Pi (j : J) -> contains (a j)) : contains (FinSum a) => {?hidden_proof}
+
+  \func IsGeneratedBy (l : Array S) => \Sigma (∀ (a : l) (contains a)) (\Pi {a : S} -> contains a -> ∃ (l' : Array S l.len) (a = BigSum (\lam j => l' j * l j)))
+
+  \protected \func IsFinitelyGenerated  => ∃ (l : Array S) (IsGeneratedBy l)
+
+  \func IsGeneratedBy1 (a : S) => \Sigma (contains a) (\Pi {b : S} -> contains b -> TruncP (Monoid.LDiv a b))
+
+  \func IsPrincipal  => ∃ (a : S) (IsGeneratedBy1 a)
+
+  \lemma principal->finitelyGenerated (p : IsPrincipal) : IsFinitelyGenerated => {?hidden_proof}
+
+  \func IsMaximal  => \Sigma (Not (contains 1)) (\Pi (x : S) -> contains x || (\Sigma (y : S) (contains (1 - y * x))))
 }
   \where {
     \open Ideal
@@ -145,17 +187,29 @@
   | <=-refl => {?hidden_proof}
   | <=-transitive => {?hidden_proof}
   | <=-antisymmetric => {?hidden_proof}
-  | meet => meet
+  | meet (I J : Ideal R) : Ideal R 
+    | contains => \lam x => \Sigma (I x) (J x)
+    | contains_zro => (contains_zro, contains_zro)
+    | contains_+ => \lam s t => (contains_+ s.1 t.1, contains_+ s.2 t.2)
+    | ideal-left => \lam s => (ideal-left s.1, ideal-left s.2)
   | meet-left => {?hidden_proof}
   | meet-right => {?hidden_proof}
   | meet-univ => {?hidden_proof}
-  | top => top
+  | top : Ideal R 
+    | contains => \lam _ => \Sigma
+    | contains_zro => ()
+    | contains_+ => \lam _ _ => ()
+    | ideal-left => \lam _ => ()
   | top-univ => {?hidden_proof}
   | join => \lam I J => Ideal.closure {R} {Or (\Sigma (a : R) (I a)) (\Sigma (a : R) (J a))} (Or.rec __.1 __.1)
   | join-left => {?hidden_proof}
   | join-right => {?hidden_proof}
   | join-univ => {?hidden_proof}
-  | bottom => bottom
+  | bottom : Ideal R 
+    | contains => \lam a => a = 0
+    | contains_zro => idp
+    | contains_+ => \lam p q => rewrite (p, q) zro-left
+    | ideal-left => \lam p => rewrite p zro_*-right
   | bottom-univ => {?hidden_proof}
 
 \instance IdealMonoid {R : CRing} : CMonoid (Ideal R) 

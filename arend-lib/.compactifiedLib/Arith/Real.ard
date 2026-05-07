@@ -29,7 +29,7 @@
 
 \lemma <LU-transitive {x : UpperReal} {y z : LowerReal} (p : x <LU y) (q : y <= z) : x <LU z => {?hidden_proof}
 
-\class Real \extends InfReal, UpperReal {
+\record Real \extends InfReal, UpperReal {
   | LU-focus (eps : Rat) : eps > 0 -> ∃ (a : L) (U (a + eps))
   | LU-located => \lam {q} {r} q<r => (\case LU-focus (r - q) (RatField.pos_>0 q<r) \with {
     | inP (s, Ls, Us+r-q) => \case trichotomy q s \with {
@@ -46,6 +46,10 @@
       | byRight s => inP s
     }
   })
+
+  \lemma LU_*-focus-right (x>0 : L 0) {d : Rat} (d>1 : 1 < d) : ∃ (a : Rat) (0 < a) (L a) (U (a * d)) => {?hidden_proof}
+
+  \lemma LU_*-focus-left (x>0 : L 0) {c : Rat} (c<1 : c < 1) : ∃ (b : Rat) (L (b * c)) (U b) => {?hidden_proof}
 }
   \where {
     \open DiscreteOrderedField
@@ -98,7 +102,7 @@
   \where {
     \open OrderedSemiring
 
-    \infixl 6 + (x y : Real) : Real \cowith
+    \sfunc \infixl 6 + (x y : Real) : Real \cowith
       | InfReal => x InfRealAbMonoid.+ y
       | U-inh => {?hidden_proof}
 
@@ -116,7 +120,7 @@
 
     \lemma *n-upper {n : Nat} {x : Real} : n RealAbGroup.*n x = n ExUpperRealAbMonoid.*n x => {?hidden_proof}
 
-    negative (x : Real) : Real \cowith
+    \sfunc negative (x : Real) : Real \cowith
       | L => \lam a => x.U (RatField.negative a)
       | L-inh => {?hidden_proof}
       | L-closed => {?hidden_proof}
@@ -136,7 +140,7 @@
 
     \lemma minus-rat {x y : Rat} : x - {RealAbGroup} y = {Real} x - y => {?hidden_proof}
 
-    meet (x y : Real) : Real \cowith
+    \sfunc meet (x y : Real) : Real \cowith
       | InfReal => InfRealAbMonoid.meet x y
       | U-inh => {?hidden_proof}
 
@@ -146,7 +150,7 @@
 
     \lemma meet_U {x y : Real} {a : Rat} : Real.U {meet x y} a <-> x.U a || y.U a => {?hidden_proof}
 
-    join (x y : Real) : Real \cowith
+    \sfunc join (x y : Real) : Real \cowith
       | InfReal => InfRealAbMonoid.join x y
       | U-inh => {?hidden_proof}
 
@@ -176,7 +180,7 @@
   }
 
 
-\open RealAbGroup(negative_L, +_L)
+\open RealAbGroup (negative_L, +_L)
 
 \lemma real_<-rat-char {x y : Real} : x < y <-> ∃ (a : Rat) (x.U a) (y.L a) => {?hidden_proof}
 

@@ -1,7 +1,7 @@
 \import Data.Array
 \import Data.Or
 \import Function
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
 \import Logic.Meta
 \import Logic.Unique
@@ -30,6 +30,38 @@
     | byLeft y<=z => meet-monotone <=-refl (join-univ y<=z <=-refl) <=∘ join-right
     | byRight z<=y => meet-monotone <=-refl (join-univ <=-refl z<=y) <=∘ join-left
   })
+
+  \protected \default meet (x y : E) : E => (tmeet (totality x y)).1
+
+  \protected \default meet-left {x y : E} : meet x y <= x => (tmeet (totality x y)).2
+
+  \protected \default meet-right {x y : E} : meet x y <= y => (tmeet (totality x y)).3
+
+  \protected \default meet-univ {x y z : E} : z <= x -> z <= y -> z <= meet x y => (tmeet (totality x y)).4 z
+
+  \protected \default join (x y : E) : E => (tjoin (totality x y)).1
+
+  \protected \default join-left {x y : E} : x <= join x y => (tjoin (totality x y)).2
+
+  \protected \default join-right {x y : E} : y <= join x y => (tjoin (totality x y)).3
+
+  \protected \default join-univ {x y z : E} : x <= z -> y <= z -> join x y <= z => (tjoin (totality x y)).4 z
+
+  \lemma meet-isMin (x y : E) : (x ∧ y = x) || (x ∧ y = y) => {?hidden_proof}
+
+  \lemma meet-prop (P : E -> \Prop) {x y : E} (Px : P x) (Py : P y) : P (x ∧ y) => {?hidden_proof}
+
+  \lemma Big01_meet-isMin (l : Array E) (x : E) : (\Sigma (j : Fin l.len) (Big ∧ x l = l j)) || (Big ∧ x l = x) => {?hidden_proof}
+
+  \lemma Big_meet-isMin {n : Nat} (l : Array E (suc n)) : ∃ (j : Fin (suc n)) (Big_∧ l = l j) => {?hidden_proof}
+
+  \lemma join-isMax (x y : E) : (x ∨ y = x) || (x ∨ y = y) => {?hidden_proof}
+
+  \lemma join-prop (P : E -> \Prop) {x y : E} (Px : P x) (Py : P y) : P (x ∨ y) => {?hidden_proof}
+
+  \lemma Big01_join-isMax (l : Array E) (x : E) : (\Sigma (j : Fin l.len) (Big ∨ x l = l j)) || (Big ∨ x l = x) => {?hidden_proof}
+
+  \lemma Big_join-isMax {n : Nat} (l : Array E (suc n)) : ∃ (j : Fin (suc n)) (Big_∨ l = l j) => {?hidden_proof}
 }
   \where {
     \func tmeet {E : Poset} {x y : E} 
@@ -59,6 +91,11 @@
     | byRight a3<a2 => absurd (a3/<a2 a3<a2)
   })
   | <=-less => \lam p => \lam q => <-irreflexive (p <∘ q)
+
+  \protected \func op : LinearOrder \cowith
+    | StrictPoset => StrictPoset.op
+    | <-comparison => {?hidden_proof}
+    | <-connectedness => {?hidden_proof}
 }
   \where {
 \class With# \extends LinearOrder, Set# {
@@ -120,6 +157,35 @@
         | equals x=y => yes x=y
         | greater y<x => no (\lam x=y => <-irreflexive (transport (y <) x=y y<x))
       })
+
+      \protected \default meet (x y : E) : E => \case trichotomy x y \with {
+        | less _ => x
+        | equals _ => x
+        | greater _ => y
+      }
+
+      \protected \default meet-left {x y : E} : meet x y <= x => unfold meet (mcases <=-refl)
+
+      \protected \default meet-right {x y : E} : meet x y <= y => unfold meet mcases
+
+      \protected \default meet-univ {x y z : E} : z <= x -> z <= y -> z <= meet x y => \lam z<=x z<=y => unfold meet (mcases z<=x)
+
+      \protected \default join (x y : E) : E => \case trichotomy x y \with {
+        | less _ => y
+        | equals _ => x
+        | greater _ => x
+      }
+
+      \protected \default join-left {x y : E} : x <= join x y => unfold join (mcases <=-refl)
+
+      \protected \default join-right {x y : E} : y <= join x y => unfold join mcases
+
+      \protected \default join-univ {x y z : E} : x <= z -> y <= z -> join x y <= z => \lam x<=z y<=z => unfold join (mcases x<=z)
+
+      \protected \func op : Dec \cowith
+        | LinearOrder => LinearOrder.op
+        | decideEq => {?hidden_proof}
+        | trichotomy => {?hidden_proof}
     }
 
     \func <-dec {A : Dec} (a a' : A) : Decide (a < a') \cowith

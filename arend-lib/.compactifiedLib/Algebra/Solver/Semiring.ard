@@ -11,7 +11,7 @@
 \import Algebra.Solver.Monoid
 \import Arith.Fin.Order
 \import Arith.Nat
-\import Data.Array(Big, map \as arrayMap)
+\import Data.Array (Big, map \as arrayMap)
 \import Data.List
 \import Function.Meta
 \import Meta
@@ -75,13 +75,70 @@
         | no n => a :: remove0 l
       }
 
-\class Data {
-      | R : Semiring
-      | C : Semiring
-      | D : LinearOrder.Dec C
-      | alg : SemiringHom C R
-      | env : Array R
+\class Data (R : Semiring) (C : Semiring) (D : LinearOrder.Dec C) (alg : SemiringHom C R) (env : Array R) {
       | alg-comm (x : C) (y : R) : alg x R.* y = y R.* alg x
+
+      \func NF  => SemiringSolverModel.NF C env.len
+
+      \func interpret (t : Term C env.len) : R \elim t
+        | coef c => alg c
+        | var c => env c
+        | :zro => 0
+        | :ide => 1
+        | :+ t s => interpret t + interpret s
+        | :* t s => interpret t * interpret s
+
+      \func mulCoef (c : C) (l : List (Fin env.len)) : R \elim l
+        | nil => alg c
+        | l => \case decideEq c 1 \with {
+          | yes _ => MonoidSolverModel.interpretNF env l
+          | no _ => alg c * MonoidSolverModel.interpretNF env l
+        }
+
+      \func interpretNF' (l : NF) : R \elim l
+        | nil => 0
+        | :: x nil => mulCoef x.2 x.1
+        | :: x l => mulCoef x.2 x.1 + interpretNF' l
+
+      \func interpretNF (l : NF) => interpretNF' (remove0 (collapse (RedBlack.sort l)))
+
+      \lemma mulCoef-consistent {c : C} {l : List (Fin env.len)} : mulCoef c l = alg c * MonoidSolverModel.interpretNF env l => {?hidden_proof}
+
+      \lemma interpretNF_:: {x : \Sigma (List (Fin env.len)) C} {l : NF} : interpretNF' (x :: l) = alg x.2 * MonoidSolverModel.interpretNF env x.1 + interpretNF' l => {?hidden_proof}
+
+      \lemma remove0-consistent {l : NF} : interpretNF' (remove0 l) = interpretNF' l => {?hidden_proof}
+
+      \lemma collapse1-consistent {c : C} {m : List (Fin env.len)} {l : NF} : interpretNF' (collapse1 c m l) = alg c * MonoidSolverModel.interpretNF env m + interpretNF' l => {?hidden_proof}
+
+      \lemma collapse-consistent {l : NF} : interpretNF' (collapse l) = interpretNF' l => {?hidden_proof}
+
+      \lemma perm-consistent {l l' : NF} (p : Perm l l') : interpretNF' l = interpretNF' l' => {?hidden_proof}
+
+      \lemma sort-consistent {l : NF} : interpretNF' (RedBlack.sort l) = interpretNF' l => {?hidden_proof}
+
+      \lemma interpretNF_++ {l1 l2 : NF} : interpretNF' (l1 ++ l2) = interpretNF' l1 + interpretNF' l2 => {?hidden_proof}
+
+      \lemma interpretNF_Big_++ {l : Array NF} {a : NF} : interpretNF' (Big ++ a l) = R.BigSum (arrayMap interpretNF' l) + interpretNF' a => {?hidden_proof}
+
+      \lemma interpretNF_map {a1 : C} {a2 a3 : List (Fin env.len)} {l : NF} :
+      interpretNF' (map (\lam b => (a2 ++ b.1 ++ a3, a1 * b.2)) l) = alg a1 * MonoidSolverModel.interpretNF env a2 * interpretNF' l * MonoidSolverModel.interpretNF env 
+        a3 => {?hidden_proof}
+
+      \lemma interpretNF_map-left {a1 : C} {a2 : List (Fin env.len)} {l : NF} :
+        interpretNF' (map (\lam b => (a2 ++ b.1, a1 * b.2)) l) = alg a1 * MonoidSolverModel.interpretNF env a2 * interpretNF' l => {?hidden_proof}
+
+      \lemma interpretNF_multiply' {l1 l2 : NF} {acc : NF} : interpretNF' (multiply' l1 l2 acc) = interpretNF' l1 * interpretNF' l2 + interpretNF' acc => {?hidden_proof}
+
+      \lemma interpretNF_multiply {l1 l2 : NF} : interpretNF' (multiply l1 l2) = interpretNF' l1 * interpretNF' l2 => {?hidden_proof}
+
+      \lemma normalize-consistent {t : Term C env.len} : interpretNF' (normalize t) = interpret t => {?hidden_proof}
+
+      \lemma interpretNF-correct {l : NF} : interpretNF l = interpretNF' l => {?hidden_proof}
+
+      \lemma interpretNF-consistent {t : Term C env.len} : interpretNF (normalize t) = interpret t => {?hidden_proof}
+
+      \lemma apply-axiom2 (t s : Term C env.len) (p : interpret t = interpret s) (left right add : NF) :
+        interpretNF (multiply left (multiply (normalize t) right) ++ add) = interpretNF (multiply left (multiply (normalize s) right) ++ add) => {?hidden_proof}
     }
 
     \func natCoef (x : Nat) : R 

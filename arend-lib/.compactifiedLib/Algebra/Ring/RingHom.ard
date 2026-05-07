@@ -8,13 +8,13 @@
 \import Algebra.Ring
 \import Algebra.Ring.Ideal
 \import Algebra.Ring.MPoly
-\import Algebra.Ring.Poly()
+\import Algebra.Ring.Poly ()
 \import Algebra.Ring.Sub
 \import Algebra.Semiring
 \import Arith.Int
 \import Arith.Nat
 \import Category
-\import Function(IsInj, IsSurj)
+\import Function (IsInj, IsSurj)
 \import Function.Meta
 \import Logic.Unique
 \import Logic
@@ -26,18 +26,40 @@
 
 \lemma *-addMonoidHom-right {R : PseudoSemiring} {a : R} : AddMonoidHom R R (* a) => {?hidden_proof}
 
-\class SemiringHom \extends AddMonoidHom, MonoidHom {
+\record SemiringHom \extends AddMonoidHom, MonoidHom {
   \override Dom : Semiring
   \override Cod : Semiring
+
+  \lemma func-natCoef {n : Nat} : func (natCoef n) = natCoef n => {?hidden_proof}
 }
 
 \lemma *-addGroupHom-left {R : PseudoRing} {a : R} : AddGroupHom R R (a *) => {?hidden_proof}
 
 \lemma *-addGroupHom-right {R : PseudoRing} {a : R} : AddGroupHom R R (* a) => {?hidden_proof}
 
-\class RingHom \extends SemiringHom, AddGroupHom {
+\record RingHom \extends SemiringHom, AddGroupHom {
   \override Dom : Ring
   \override Cod : Ring
+
+  \protected \func Kernel : TIdeal Dom \cowith
+    | SubAddGroup => AddGroupHom.Kernel
+    | ideal-left => {?hidden_proof}
+    | ideal-right => {?hidden_proof}
+
+  \protected \func Image : SubRing Cod \cowith
+    | SubRing => ringHomImage _
+
+  \protected \func image : RingHom (SubRing.IRing {Image}) Cod \cowith
+    | func => \lam x => x.1
+    | func-+ => {?hidden_proof}
+    | func-ide => {?hidden_proof}
+    | func-* => {?hidden_proof}
+    \where {
+      \lemma isInj : IsInj image => {?hidden_proof}
+
+      \lemma isSurj (s : IsSurj func) : IsSurj image => {?hidden_proof}
+    }
+
 }
   \where {
     \func equals {R S : Ring} {f g : RingHom R S} (p : \Pi (x : R) -> f x = g x) : f = g => exts p
@@ -48,7 +70,7 @@
       | func-+ => {?hidden_proof}
       | func-* => {?hidden_proof}
 
-    \func \infixl 8 compose \alias \infixl 8 ∘ {R S T : Ring} (g : RingHom S T) (f : RingHom R S) : RingHom R T \cowith
+    \func \fixl 8 compose \alias \infixl 8 ∘ {R S T : Ring} (g : RingHom S T) (f : RingHom R S) : RingHom R T \cowith
       | func => \lam x => g (f x)
       | func-ide => {?hidden_proof}
       | func-+ => {?hidden_proof}
@@ -79,20 +101,20 @@
 
 \func natMap {R : Semiring} : SemiringHom NatSemiring R \cowith
   | func => natCoef
-  | func-+ => func-+
+  | func-+ {n m : Nat} : R.natCoef (n + m) = natCoef n + natCoef m => {?hidden_proof}
   | func-zro => {?hidden_proof}
   | func-ide => {?hidden_proof}
-  | func-* => func-*
+  | func-* {n m : Nat} : R.natCoef (n * m) = natCoef n * natCoef m => {?hidden_proof}
 
 \lemma natComm {R : Semiring} (n : Nat) (x : R) : natMap n * x = x * natMap n => {?hidden_proof}
 
 \func intMap {R : Ring} : RingHom IntRing R \cowith
   | func => intCoef
-  | func-+ => func-+
+  | func-+ {x y : Int} : R.intCoef (x + y) = intCoef x + intCoef y => {?hidden_proof}
   | func-ide => {?hidden_proof}
-  | func-* => func-*
+  | func-* {x y : Int} : R.intCoef (x * y) = intCoef x * intCoef y => {?hidden_proof}
   \where {
-    \open AddGroup(negative_zro, negative_+)
+    \open AddGroup (negative_zro, negative_+)
     \open Ring
 
     \lemma intCoef_diff {R : Ring} (n m : Nat) : R.intCoef (n Nat.- m) = intCoef n - intCoef m => {?hidden_proof}

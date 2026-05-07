@@ -40,7 +40,7 @@
 \import Set.SetCategory
 \import Topology.Locale
 \open Monoid
-\open CompleteLattice(SJoin)
+\open CompleteLattice (SJoin)
 \open Ideal
 
 \func SpecPres (R : CRing) : FramePres R \cowith
@@ -61,10 +61,7 @@
 
 \func Spec (R : CRing) : Locale => PresentedFrame (SpecPres R)
 
-\class RingedLocale {
-  | L : Locale
-  | R : VSheaf CRingCat L
-}
+\record RingedLocale (\coerce L : Locale) (R : VSheaf CRingCat L)
   \where {
     \use \coerce fromSheaf {L : Locale} (S : VSheaf CRingCat L) => \new (RingedLocale L S)
 
@@ -91,20 +88,15 @@
   }
 
 
-\class RingedLocaleHom {
-  | Dom : RingedLocale
-  | Cod : RingedLocale
-  | f : FrameHom Cod Dom
-  | f# : NatTrans \levels (\suc \lp) _ Cod.R (VSheaf.direct_image_locale f Dom.R)
-}
+\record RingedLocaleHom (Dom : RingedLocale) (Cod : RingedLocale) (\coerce f : FrameHom Cod Dom) (f# : NatTrans (\suc \lp) Cod.R (VSheaf.direct_image_locale f Dom.R))
   \where {
     \func fromHomEq {L M : Locale} {f g : FrameHom M L} (p : f = g) (a : M) : f a <= g a => transport (\lam (h : FrameHom M L) => f a <= h a) p <=-refl
 
     \lemma ext {L M : RingedLocale} (f g : RingedLocaleHom L M) (p : f.f = g.f) (q : \Pi (a : M) (x : M.R a) -> L.R.F.Func (fromHomEq p a) (g.f# a x) = f.f# a x) : f = g 
       => {?hidden_proof}
       \where {
-        \lemma aux {L M : RingedLocale} {f g : FrameHom M L} (f# : NatTrans \levels (\suc \lp) _ M.R (VSheaf.direct_image_locale f L.R)) 
-        (g# : NatTrans \levels (\suc \lp) _ M.R (VSheaf.direct_image_locale g L.R)) (p : f = g) 
+        \lemma aux {L M : RingedLocale} {f g : FrameHom M L} (f# : NatTrans (\suc \lp) M.R (VSheaf.direct_image_locale f L.R)) 
+        (g# : NatTrans (\suc \lp) M.R (VSheaf.direct_image_locale g L.R)) (p : f = g) 
         (q : \Pi (a : M) (x : M.R a) -> L.R.F.Func (fromHomEq p a) (g# a x) = f# a x) : \new (RingedLocaleHom L M f f#) = (\new (RingedLocaleHom L M g g#)) => {?hidden_proof}
       }
 
@@ -113,8 +105,18 @@
 
 \func RingedLocalePrecat : Precat RingedLocale \cowith
   | Hom => RingedLocaleHom
-  | id => id
-  | o => o
+  | id (L : RingedLocale) : RingedLocaleHom L L 
+    | f => FrameCat.id L.L
+    | f# => \new NatTrans {
+      | trans => \lam x => Cat.id _
+      | natural => \lam p => ext $ pmap (\lam x => (L.R.F.Func x).func) prop-pi
+    }
+  | o {L M N : RingedLocale} (g : RingedLocaleHom M N) (f : RingedLocaleHom L M) : RingedLocaleHom L N 
+    | f => f.f FrameCat.∘ g.f
+    | f# => \new NatTrans {
+      | trans => \lam x => f.f#.trans (g x) ∘ g.f#.trans x
+      | natural => \lam {x} {y} p => exts (\lam x => path (\lam i => f.f# (g y) (g.f#.natural p i x)) *> path (\lam i => f.f#.natural _ i _))
+    }
   | id-left => {?hidden_proof}
   | id-right => {?hidden_proof}
   | o-assoc => {?hidden_proof}
@@ -137,8 +139,7 @@
       | trans => homMap p
       | natural => {?hidden_proof}
 
-    \func natTrans-inv {L M : RingedLocale} {e : Iso {RingedLocalePrecat} {L} {M}} 
-    (f : NatTrans \levels (\suc \lp) _ L.R (Comp M.R (Functor.op {FrameHom.functor {e.hinv}}))) :
+    \func natTrans-inv {L M : RingedLocale} {e : Iso {RingedLocalePrecat} {L} {M}} (f : NatTrans (\suc \lp) L.R (Comp M.R (Functor.op {FrameHom.functor {e.hinv}}))) :
       NatTrans (Comp L.R (Functor.op {FrameHom.functor {e.f}})) M.R \cowith
       | trans => \lam x => homMap e.f_hinv x Cat.∘ f (e.f x)
       | natural => {?hidden_proof}
@@ -163,7 +164,7 @@
   }
 
 
-\class LocallyRingedLocale \extends RingedLocale {
+\record LocallyRingedLocale \extends RingedLocale {
   | isNonTrivial (a : L) : 0 = {R.F a} 1 -> a <= bottom
   | isLocallyRinged (a : L) (x : R.F a) : a <= SJoin (\lam b => \Sigma (p : b <= a) (EitherInv \this p x))
 }
@@ -172,12 +173,9 @@
   }
 
 
-\class RingedFramePres {
-  | P : FramePres
-  | R : VSheaf CRingCat (framePresSite P)
-}
+\record RingedFramePres (\coerce P : FramePres) (R : VSheaf CRingCat (framePresSite P))
 
-\class LocallyRingedFramePres \extends RingedFramePres {
+\record LocallyRingedFramePres \extends RingedFramePres {
   | isNonTrivialPres (a : P) : 0 = {R.F a} 1 -> Cover a absurd
   | isLocallyRingedPres (a : P) (x : R.F a) : FramePres.SCover a (\lam b => \Sigma (p : Cover1 b a) (Inv (R.F.Func p x) || Inv (R.F.Func p x + 1)))
 }
@@ -212,12 +210,22 @@
   | isLocallyRinged => {?hidden_proof}
 
 \func affineRingedPres (R : CRing) : LocallyRingedFramePres (SpecPres R) \cowith
-  | R => R
+  | R : VSheaf CRingCat (framePresSite (SpecPres R)) 
+  => sheaf-reflect CRingCat.forget CRingCat.forget.reflectsLimit (functor R) $ sheafOnSiteWithBasis _ $ later
+    (\lam x {J} g c => (\case \elim c \with {
+    | inP (y, x<=y, f, c', q) => FramePres.indexing-transport (\lam {J} e h => \Pi (y : R) (g : J -> SlicePrecat y) ->
+      Cover1 y e -> (\Pi (j : J) -> Cover1 (conj y (h j)) (g j).1) -> Equiv {_} {MatchingFamily y g} (matchingFamily y g))
+      (hiding (c', x, J, g, x<=y, q) $ later  (\case \elim __ \with {  | nothing => \lam z ef z<=0 _ => contr-equiv
+        (LocRing.trivial (\case SpecPres.cover_ideal z<=0 \with {  | inP (n, inP p) => inP (n, p.2 *> R.BigSum_zro (\lam j => zro_*-right))}) $ later $ inP (1, ide-left)) 
+              emptyMatchingFamily  | just (a, b) => \lam z g z<=a+b q => (
+        \have | inP (n, p) => SpecPres.cover_ideal $ cover-trans1 (cover-prod (cover-inj () idp) z<=a+b) $ cover-trans 
+                (cover-ldistr idp (cover-basic $ FramePres.indexing-make $ just (a, b)) (\lam j => idp)) (\lam j => cover-trans1 (q j) $ cover-inj j idp)
+              | inP (c, d, z^n=g1c+g2d) => (closure2-lem (\lam j => (g j).1)).1 p    \in localization-lem g z^n=g1c+g2d)})) c' x g x<=y (q __).2}))
   | isNonTrivialPres => {?hidden_proof}
   | isLocallyRingedPres => {?hidden_proof}
   \where {
     \open localization
-    \open SubMonoid(powers)
+    \open SubMonoid (powers)
     \open sheafOnSiteWithBasis
     \open Cover
 
@@ -253,7 +261,7 @@
 
 \func affineRingedLocale (R : CRing) => locallyRingedLocaleFromPres (affineRingedPres R)
 
-\class Scheme \extends LocallyRingedLocale {
+\record Scheme \extends LocallyRingedLocale {
   | isScheme : L.top <= SJoin (\lam U => ∃ (R' : CRing) (VSheaf.restrict U R = {RingedLocale} affineRingedLocale R'))
   | isNonTrivial => \lam a p => meet-univ L.top-univ <=-refl <=∘ L.meet-monotone isScheme <=-refl <=∘ L.Join-rdistr>= <=∘ Join-univ
     (\lam (b, inP (R', q)) => (
@@ -292,7 +300,13 @@
 
     \func restrict_iso {L : Locale} (S : VSheaf CRingCat L) : Iso {RingedLocalePrecat} {VSheaf.restrict L.top S} {S} \cowith
       | f => restrict_map L.top S
-      | hinv => hinv
+      | hinv : RingedLocaleHom => \new (RingedLocaleHom S (VSheaf.restrict L.top S)) {
+        | f => locale_iso.hinv
+        | f# => \new NatTrans {
+          | trans => \lam p => id _
+          | natural => \lam h => id-left *> pmap S.F.Func prop-pi *> Paths.inv id-right
+        }
+      }
       | hinv_f => {?hidden_proof}
       | f_hinv => {?hidden_proof}
   }

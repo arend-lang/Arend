@@ -52,9 +52,9 @@
 
 \lemma upper-*-locally-uniform : LocallyUniformMap (ManhattanProductPseudoMetricSpace UpperRealMetric UpperRealMetric) UpperRealMetric (\lam s => s.1 * s.2) => {?hidden_proof}
   \where {
-    \open ExUpperReal(<=-rat, +-rat, U_<=, <_<=)
-    \open ExUpperRealAbMonoid(<-rat, <_+, <_+-left)
-    \open ExUpperRealSemigroup(<=_*, ldistr_<=, rdistr_<=)
+    \open ExUpperReal (<=-rat, +-rat, U_<=, <_<=)
+    \open ExUpperRealAbMonoid (<-rat, <_+, <_+-left)
+    \open ExUpperRealSemigroup (<=_*, ldistr_<=, rdistr_<=)
   }
 
 

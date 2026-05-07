@@ -9,7 +9,7 @@
 
 \func Character {R : Ring} {G : Group} (E : LinRepres R G) {lv : Array E} (bv : E.IsBasis lv) (g : G) : R => Trace (LinearMap.toMatrix lv bv (E.toLinearMap g))
   \where {
-    \func chi (g : G) : R => Character E bv g
+    \protected \func chi (g : G) : R => Character E bv g
 
     \func of-1 : chi G.ide = R.natCoef lv.len => unfold chi (unfold Character (rewrite (Matrix-of-1, Trace-ide) idp))
 

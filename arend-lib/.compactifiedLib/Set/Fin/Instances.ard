@@ -21,10 +21,23 @@
     \open AddMonoid
 
     \func aux {n : Nat} {Q : Fin n -> Nat} : QEquiv {Fin (BigSum Q)} {\Sigma (i : Fin n) (Fin (Q i))} \cowith
-      | f => f
-      | ret => ret
-      | ret_f => ret_f
-      | f_sec => f_sec
+      | f (k : Fin (BigSum Q)) : \Sigma (i : Fin n) (Fin (Q i)) \elim n
+        | suc n => \case OrFin.aux.f k \with {
+          | inl s => (0, s)
+          | inr t => 
+            \have (i, r) => f t
+            \in (suc i, r)
+        }
+      | ret (p : \Sigma (i : Fin n) (Fin (Q i))) : Fin (BigSum Q) \elim n, p
+        | 0, ((), _)
+        | suc n, (0, j) => OrFin.aux.ret (inl j)
+        | suc n, (suc i, j) => OrFin.aux.ret (inr (ret (i, j)))
+      | ret_f (k : Fin (BigSum Q)) : ret (f k) = k \elim n
+        | suc n => mcases {_} {arg addPath}
+      | f_sec (p : \Sigma (i : Fin n) (Fin (Q i))) : f (ret p) = p \elim n, p
+        | 0, ((), _)
+        | suc n, (0, j) => rewrite OrFin.ret_inl-lem idp
+        | suc n, (suc i, j) => rewrite OrFin.ret_inr-lem (rewrite (f_sec {n} {\lam i => Q (suc i)} (i, j)) idp)
 
     \lemma DecSubSet-isFin (S : FinSet) (D : DecSubSet S) : FinSet D.ISet => {?hidden_proof}
   }

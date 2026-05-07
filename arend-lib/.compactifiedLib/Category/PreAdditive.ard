@@ -3,8 +3,8 @@
 \import Algebra.Semiring
 \import Category
 \import Category.Limit
-\import Equiv(QEquiv)
-\import Equiv.Univalence(QEquiv-to-=)
+\import Equiv (QEquiv)
+\import Equiv.Univalence (QEquiv-to-=)
 \import Function.Meta
 \import Paths
 \import Paths.Meta

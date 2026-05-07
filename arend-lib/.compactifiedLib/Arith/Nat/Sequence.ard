@@ -1,6 +1,6 @@
 \import Arith.Nat
 \import Data.Or
-\import Equiv(QEquiv)
+\import Equiv (QEquiv)
 \import Equiv.Univalence
 \import Function.Meta
 \import Logic.Unique

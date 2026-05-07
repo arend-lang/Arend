@@ -4,7 +4,7 @@
 \import Data.Or
 \import Equiv
 \import Function
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
 \import Logic.Meta
 \import Order.Biordered
@@ -12,17 +12,23 @@
 \import Order.StrictOrder
 \import Paths
 \import Set
-\import Set.Fin(FinSet)
+\import Set.Fin (FinSet)
 \import Set.Fin.DFin
 
 \class PigeonholeSet \extends BaseSet {
   | pigeonhole (f : Nat -> E) : ∃ (i j : Nat) (i /= j) (f i = f j)
+
+  \lemma pigeonhole< (f : Nat -> E) : ∃ (i j : Nat) (i < j) (f i = f j) => {?hidden_proof}
+
+  \lemma isEquiv (f : E -> E) (inj : IsInj f) : Equiv f => {?hidden_proof}
 }
 
 \class BoundedPigeonholeSet \extends PigeonholeSet {
   | finCard : Nat
   | boundedPigeonhole (f : Fin (suc finCard) -> E) : ∃ (i j : Fin (suc finCard)) (i /= j) (f i = f j)
   | pigeonhole => \lam f => TruncP.map (boundedPigeonhole (\lam j => f j)) (\lam t => (t.1, t.2, fin_nat_/= t.3, t.4))
+
+  \lemma boundedPigeonhole< (f : Fin (suc finCard) -> E) : ∃ (i j : Fin (suc finCard)) (i < j) (f i = f j) => {?hidden_proof}
 }
 
 \lemma pigeonhole-surj (A : BoundedPigeonholeSet) {B : \Set} (f : A -> B) (s : IsSurj f) : BoundedPigeonholeSet B A.finCard => {?hidden_proof}

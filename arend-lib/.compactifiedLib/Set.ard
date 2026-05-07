@@ -1,4 +1,4 @@
-\import Data.Bool(Bool, So, false, not, true)
+\import Data.Bool (Bool, So, false, not, true)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -25,8 +25,7 @@
   | yes _ => true
   | no _ => false
 
-\class Decide {
-  | E : \Prop
+\class Decide (E : \Prop) {
   | decide : Dec E
 }
 
@@ -48,13 +47,11 @@
 \instance NotDecide (A : Decide) : Decide (Not A) 
   | decide => {?hidden_proof}
 
-\class BaseSet {
-  | E : \Set
-}
+\class BaseSet (E : \Set)
 
-\class SubSet {
-  | S : BaseSet
-  | contains : S -> \Prop
+\class SubSet (S : BaseSet) (contains : S -> \Prop) {
+  \func ISet : BaseSet \cowith
+    | E => \Sigma (x : S) (contains x)
 }
 
 \class DecSubSet \extends SubSet {
@@ -78,6 +75,8 @@
   | #-comparison (x y z : E) : x # z -> x # y || y # z
   | tightness {x y : E} : Not (x # y) -> x = y
   | separatedEq => \lam {x} ~~x=y => tightness (\lam x#y => ~~x=y (\lam x=y => #-irreflexive (transport (x #) (inv x=y) x#y)))
+
+  \lemma apartNotEqual {x y : E} (x#y : x # y) : x /= y => {?hidden_proof}
 }
 
 \class DecSet \extends BaseSet, Set# {
@@ -91,6 +90,24 @@
   | #-symmetric => #-symmetric
   | #-comparison => #-comparison
   | tightness => tightness
+
+  \protected \default # x y : \Prop => x /= y
+
+  \protected \default nonEqualApartImpl {x} {y} (p : x /= y) : x # y => p
+
+  \protected \default #-irreflexive {x} (x/=x : x # x) : Empty => x/=x idp
+
+  \protected \default #-symmetric {x} {y} (x/=y : x # y) : y # x => /=-sym x/=y
+
+  \protected \default #-comparison x y z (x/=z : x # z) : x # y || y # z => \case decideEq x y \with {
+    | yes x=y => byRight (\lam y=z => x/=z (x=y *> y=z))
+    | no x/=y => byLeft x/=y
+  }
+
+  \protected \default tightness {x} {y} (x//=y : Not (x # y)) : x = y => \case decideEq x y \with {
+    | yes x=y => x=y
+    | no x/=y => absurd (x//=y x/=y)
+  }
 }
 
 \func SigmaDecSet {A : DecSet} (B : A -> DecSet) : DecSet (\Sigma (a : A) (B a)) \cowith

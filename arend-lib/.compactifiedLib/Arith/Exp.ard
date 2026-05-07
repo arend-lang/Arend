@@ -22,10 +22,10 @@
 \import Topology.NormedAbGroup
 \import Topology.NormedAbGroup.Real
 
-exp {A : RealBanachAlgebra} : CoverMap A A 
+\sfunc exp {A : RealBanachAlgebra} : CoverMap A A 
   => funcLimit (\lam n x => partialSum (powerSeries (\lam n => A.fromRat (RatField.finv (fac n))) __ x) n) (powerSeriesConv-funcConv exp-series-conv)
   \where {
-    \open ExUpperRealSemigroup(<=_*, ide-right)
+    \open ExUpperRealSemigroup (<=_*, ide-right)
 
     \lemma exp-series-conv : IsPowerSeriesConv (\lam n => A.fromRat (RatField.finv (fac n))) => {?hidden_proof}
 

@@ -3,14 +3,17 @@
 \import Algebra.Monoid.MonoidHom
 \import Category
 \import Category.Functor
-\import Equiv(Equiv)
+\import Equiv (Equiv)
 \import Paths.Meta
 
-\class MonoidCatAction {
-  | C : Precat
-  | M : Monoid
-  | c : C
+\class MonoidCatAction {C : Precat} (M : Monoid) (c : C) {
   | act : MonoidHom M (End c)
+
+  \func functor : Functor (DeloopM M) C \cowith
+    | F => \lam _ => c
+    | Func => \lam (f : M) => act f
+    | Func-id => {?hidden_proof}
+    | Func-o => {?hidden_proof}
 }
 
 \instance DeloopM (M : Monoid) : Precat 

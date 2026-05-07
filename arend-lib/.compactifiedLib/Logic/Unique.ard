@@ -5,7 +5,7 @@
 
 \func isProp (A : \Type) => \Pi (a a' : A) -> a = a'
   \where {
-    =>isSet {A : \Type} (p : isProp A) (a a' : A) : isProp (a = a') => \lam s t => (
+    \use \sfunc =>isSet {A : \Type} (p : isProp A) (a a' : A) : isProp (a = a') => \lam s t => (
       \have q => Jl (\lam x q => inv (p a a) *> p a x = q) (inv_*> (p a a))
       \in inv (q s) *> q t)
 
@@ -21,11 +21,7 @@
 
 \func pi-isProp {A : \Type} (B : A -> \Type) (p : \Pi (a : A) -> isProp (B a)) : isProp (\Pi (a : A) -> B a) => \lam f f' => path (\lam i a => p a (f a) (f' a) i)
 
-\class Contr {
-  | A : \Type
-  | center : A
-  | contraction : \Pi (a' : A) -> center = a'
-}
+\class Contr (A : \Type) (center : A) (contraction : \Pi (a' : A) -> center = a')
   \where {
     \func make {A : \Type} (a : A) (p : \Pi (a' : A) -> a = a') => \new (Contr A a p)
 

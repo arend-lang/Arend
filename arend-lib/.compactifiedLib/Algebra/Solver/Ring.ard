@@ -8,7 +8,7 @@
 \import Algebra.Solver.Semiring
 \import Arith.Fin.Order
 \import Arith.Int
-\import Data.Array(Big, map \as arrayMap)
+\import Data.Array (Big, map \as arrayMap)
 \import Data.List
 \import Function.Meta
 \import Meta

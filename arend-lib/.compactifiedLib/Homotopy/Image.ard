@@ -10,12 +10,32 @@
 
 \func MJoin {A B : \Type} (R : A -> B -> \Type) => PushoutData {\Sigma (x : A) (y : B) (R x y)} __.1 __.2
   \where {
-\class MData {
-      | A : \Type
-      | B : \Type (\suc \lp)
-      | f : A -> B
-      | R : B -> B -> \Type
-      | ret : \Pi (b b' : B) -> R b b' -> b = b'
+\class MData {A : \Type} {B : \Type (\suc \lp)} (f : A -> B) (R : B -> B -> \Type) (ret : \Pi (b b' : B) -> R b b' -> b = b') {
+      \func MImageAppr (n : Nat) : \Sigma (X : \hType) (X -> B) \elim n
+        | 0 => (A, f)
+        | suc n => 
+          \let (X, g) => MImageAppr n
+          \in (MJoin (\lam a x => R (f a) (g x)), PushoutData.rec f g (\lam q => ret (f q.1) (g q.2) q.3))
+
+      \func MImage  => SeqColimit seq
+
+      \func seq : Seq \cowith
+        | A => \lam n => (MImageAppr n).1
+        | f => \lam x => pinr x
+
+      \func dom-map (a : A) : MImage => inSC {seq} {0} a
+
+      \lemma dom-map-surj (refl : \Pi {b : B} -> R b b) : Surjection dom-map => {?hidden_proof}
+
+      \func cod-map (x : MImage) : B \elim x
+        | inSC {n} x => (MImageAppr n).2 x
+        | quotSC {n} x => idp
+
+      \lemma cod-map-emb (refl : \Pi {b : B} -> R b b) (refl-idp : \Pi {b : B} -> ret b b refl = idp) : Embedding cod-map => {?hidden_proof}
+        \where {
+          \lemma fibers-contr (refl : \Pi {b : B} -> R b b) (refl-idp : \Pi {b : B} -> ret b b refl = idp) (a : A) : Contr (Fib cod-map (f a)) => {?hidden_proof}
+        }
+
     }
   }
 

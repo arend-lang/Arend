@@ -2,11 +2,11 @@
 \import Arith.Nat
 \import Data.Bool
 \import Data.Fin
-\import Data.List(List, length)
+\import Data.List (List, length)
 \import Data.Maybe
 \import Data.Or
 \import Function
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
 \import Meta
 \import Order.PartialOrder
@@ -544,7 +544,7 @@
     }
   }
 
-index-dec {A : DecSet} (l : Array A) (a : A) : Or (Index a l) (Not (Index a l)) => \case find (EqualityDecide A __ a) l \with {
+\sfunc index-dec {A : DecSet} (l : Array A) (a : A) : Or (Index a l) (Not (Index a l)) => \case find (EqualityDecide A __ a) l \with {
   | inl p => inl (p.1, p.2)
   | inr q => inr (\lam p => q p.2)
 }
@@ -628,11 +628,11 @@ index-dec {A : DecSet} (l : Array A) (a : A) : Or (Index a l) (Not (Index a l)) 
     | no _ => def
   })
   \where {
-    \func alt {A : \Type} {n : Nat} (j : Fin n) (value def : A) : Array A n \elim n, j
+    \protected \func alt {A : \Type} {n : Nat} (j : Fin n) (value def : A) : Array A n \elim n, j
       | suc n, 0 => value :: replicate n def
       | suc n, suc j => def :: alt j value def
 
-    char {A : \Type} {n : Nat} {j : Fin n} {value def : A} : singleAt j value def = alt j value def \elim n, j
+    \protected \sfunc char {A : \Type} {n : Nat} {j : Fin n} {value def : A} : singleAt j value def = alt j value def \elim n, j
       | suc n, 0 => idp
       | suc n, suc j => exts (\case \elim __ \with {  | 0 => idp  | suc k => mcases {2}}) *> pmap {Array A n} (def :: __) char
   }

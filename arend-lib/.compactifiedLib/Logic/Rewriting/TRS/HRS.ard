@@ -12,14 +12,25 @@
   | Sort : \Set
   | symbol : Sort -> \Set
   | domain : \Pi {s : Sort} (symbol s) -> List (\Sigma (List Sort) Sort)
+
+  \func \infix 7 !!domain {s : Sort} (m : symbol s) (index : Index (domain m)) : List Sort => (domain m !! index).1
+
+  \func \infix 7 !!sort {s : Sort} (m : symbol s) (index : Index (domain m)) : Sort => (domain m !! index).2
+
+  \func arity {s : Sort} (f : symbol s) : Nat => length (domain f)
+
+  \func index-in {s : Sort} (f : symbol s) : \Type => Index (domain f)
 }
 
 \open FSignature
 
-\class MetaContext {
-  | Sort : \Set
+\record MetaContext (Sort : \Set) {
   | metaname : Sort -> \Set
   | m-domain : \Pi {s : Sort} (metaname s) -> List Sort
+
+  \func arity {s : Sort} (m : metaname s) : Nat => length (m-domain m)
+
+  \func index-in {s : Sort} (m : metaname s) : \Type => Index (m-domain m)
 }
 
 \data Term (env : FSignature) (context : List Sort) (termSort : Sort) (mc : MetaContext Sort) : \Set 
@@ -75,15 +86,20 @@
   }
 
 
-\class RuleRegistry {
-  | env : FSignature
+\record RuleRegistry (env : FSignature) {
   | rule-J : Sort -> \Set
   | rule-container : \Pi {s : Sort} (id : rule-J s) -> RewriteRule {env} s
+
+  \func rule-mc {s : Sort} (id : rule-J s) : MetaContext Sort => rr-mc {rule-container id}
+
+  \func rule-l {s : Sort} (id : rule-J s) : Term env nil s (rr-mc {rule-container id}) => rr-l {rule-container id}
+
+  \func rule-r {s : Sort} (id : rule-J s) : Term env nil s (rr-mc {rule-container id}) => rr-r {rule-container id}
+
+  \lemma rule-func-root {s : Sort} (id : rule-J s) : FunctionRoot (rule-l id) => {?hidden_proof}
 }
 
-\class RewriteRule {
-  | env : FSignature
-  | s : Sort
+\record RewriteRule {env : FSignature} (s : Sort) {
   | rr-mc : MetaContext Sort
   | rr-l : Term env nil s rr-mc
   | rr-r : Term env nil s rr-mc
@@ -109,10 +125,7 @@ A, B
   | metavar m-A : mc.metaname s arguments-A, metavar m-B : mc.metaname s arguments-B =>
     rewrite-with-parameter-m (p : m-A = m-B) (i : Index (m-domain m-A)) (reduction : RewriteRelation set-of-rules (arguments-A i) (arguments-over-m p arguments-B i)) (other-unchanged : \Pi (j : mc.index-in m-A) (j = i -> Empty) -> arguments-A j = arguments-over-m p arguments-B j)
 
-\class HigherOrderTermRewritingSystem \extends AbstractReductionSystem {
-  | env : FSignature
-  | meta-context : MetaContext Sort
-  | set-of-rules : RuleRegistry env
+\class HigherOrderTermRewritingSystem \extends AbstractReductionSystem (env : FSignature) (meta-context : MetaContext Sort) (set-of-rules : RuleRegistry env) {
   | A => \Sigma (context : List Sort) (sort : Sort) (Term env context sort meta-context)
   | ~> => \lam a b => (\case \elim a, b \with {
     | (context, sort, A), (context', sort', B) =>

@@ -28,7 +28,7 @@
   \where {
     \func DerivDom (U : Set X) => TopSub {X ⨯ (RingTopLModule R ⨯ X)} (\lam s => \Sigma (U s.1) (U (s.1 + s.2.1 *c s.2.2)))
 
-    \lemma unique (f : Set.Total U -> Y) (Uo : isOpen U) (f'1 f'2 : ContMap (DerivDom U) Y) (d1 : IsDerivQuot f f'1) (d2 : IsDerivQuot f f'2) {s : DerivDom U} : f'1 s = f'2 s 
+    \protected \lemma unique (f : Set.Total U -> Y) (Uo : isOpen U) (f'1 f'2 : ContMap (DerivDom U) Y) (d1 : IsDerivQuot f f'1) (d2 : IsDerivQuot f f'2) {s : DerivDom U} : f'1 s = f'2 s 
       => {?hidden_proof}
 
     \lemma isDeriv (f : Set.Total U -> Y) (f' : ContMap (DerivDom U) Y) (Uo : isOpen U) (d : HasDeriv Uo f) (c : IsDerivQuot f f') {x : X} (Ux : U x) (a : X) :
@@ -63,13 +63,13 @@
   | func-+ => {?hidden_proof}
   | func-*c => {?hidden_proof}
   \where {
-    \lemma atZero {x : Set.Total U} {a : X} => {?hidden_proof}
+    \protected \lemma atZero {x : Set.Total U} {a : X} => {?hidden_proof}
   }
 
 
 \func HasTDeriv {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} (f : X -> Y) => HasDeriv open-top (\lam s => f s.1)
   \where {
-    \lemma make (f' : ContMap (ProductTopSpace X (ProductTopSpace R X)) Y) (d : IsTDerivQuot f f') : HasTDeriv f => {?hidden_proof}
+    \protected \lemma make (f' : ContMap (ProductTopSpace X (ProductTopSpace R X)) Y) (d : IsTDerivQuot f f') : HasTDeriv f => {?hidden_proof}
   }
 
 

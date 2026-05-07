@@ -35,20 +35,99 @@
   | \infixl 6 :+ (t s : RingTerm C V)
   | \infixl 7 :* (t s : RingTerm C V)
 
-\class BaseData \extends CMonoidData {
-  | C : Semiring
-  | S : LinearOrder.Dec C
-  | R : Semiring
-  | alg : SemiringHom C R
+\class BaseData \extends CMonoidData {C : Semiring} {S : LinearOrder.Dec C} {R : Semiring} (alg : SemiringHom C R) {
   | M => AbMonoid.toCMonoid R
   | alg-comm (x : C) (y : R) : alg x R.* y = y R.* alg x
   \field mData : MonoidData {R} vars
+
+  \func interpretRingNF (l : List (\Sigma (List V) C)) : R \elim l
+    | nil => 0
+    | :: x nil => alg x.2 * mData.interpretNF x.1
+    | :: x l => alg x.2 * mData.interpretNF x.1 + interpretRingNF l
+
+  \lemma cons (x : \Sigma (List V) C) (l : List (\Sigma (List V) C)) : interpretRingNF (x :: l) = alg x.2 * mData.interpretNF x.1 + interpretRingNF l => {?hidden_proof}
 }
 
 \class AlgData \extends BaseData {
   | pnegative : R -> R
   | negate : List (\Sigma (List V) C) -> List (\Sigma (List V) C)
   | interpretNF_negate (l : List (\Sigma (List V) C)) : pnegative (interpretRingNF l) = interpretRingNF (negate l)
+
+  \func interpret (t : RingTerm C V) : R \elim t
+    | coef c => alg c
+    | var x => vars x
+    | :zro => 0
+    | :ide => 1
+    | :negative t => pnegative (interpret t)
+    | :+ t s => interpret t + interpret s
+    | :* t s => interpret t * interpret s
+
+  \lemma interpretRingNF_++ (l1 l2 : List (\Sigma (List V) C)) : interpretRingNF (l1 ++ l2) = interpretRingNF l1 + interpretRingNF l2 => {?hidden_proof}
+
+  \lemma interpretNF_map (a1 : C) (a2 a3 : List V) (l : List (\Sigma (List V) C)) :
+    interpretRingNF (map (\lam b => (a2 ++ b.1 ++ a3, a1 * b.2)) l) = alg a1 * mData.interpretNF a2 * interpretRingNF l * mData.interpretNF a3 => {?hidden_proof}
+
+  \lemma interpretNF_map-left (a1 : C) (a2 : List V) (l : List (\Sigma (List V) C)) :
+    interpretRingNF (map (\lam b => (a2 ++ b.1, a1 * b.2)) l) = alg a1 * mData.interpretNF a2 * interpretRingNF l => {?hidden_proof}
+
+  \lemma interpretNF_multiply (l1 l2 : List (\Sigma (List V) C)) {acc : List (\Sigma (List V) C)} :
+    interpretRingNF (multiply l1 l2 acc) = interpretRingNF l1 * interpretRingNF l2 + interpretRingNF acc => {?hidden_proof}
+
+  \lemma interpretNF_multiply' (l1 l2 : List (\Sigma (List V) C)) : interpretRingNF (multiply' l1 l2) = interpretRingNF l1 * interpretRingNF l2 => {?hidden_proof}
+
+  \lemma perm-consistent {l l' : List (\Sigma (List V) C)} (p : Perm l l') : interpretRingNF l = interpretRingNF l' => {?hidden_proof}
+
+  \protected \lemma sort-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (sort l) => {?hidden_proof}
+
+  \func collapse1 (m : List V) (c : C) (l : List (\Sigma (List V) C)) : List (\Sigma (List V) C) \elim l
+    | nil => (m, c) :: nil
+    | :: a' l => \case decideEq m a'.1 \with {
+      | yes _ => collapse1 a'.1 (c + a'.2) l
+      | no _ => (m, c) :: collapse1 a'.1 a'.2 l
+    }
+
+  \func collapse (l : List (\Sigma (List V) C)) : List (\Sigma (List V) C) 
+    | nil => nil
+    | :: a l => collapse1 a.1 a.2 l
+
+  \lemma collapse1-consistent (m : List V) (c : C) (l : List (\Sigma (List V) C)) : alg c * mData.interpretNF m + interpretRingNF l = interpretRingNF (collapse1 m c l) => {?hidden_proof}
+
+  \lemma collapse-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (collapse l) => {?hidden_proof}
+
+  \func remove0 (l : List (\Sigma (List V) C)) : List (\Sigma (List V) C) 
+    | nil => nil
+    | :: a l => \case decideEq a.2 zro \with {
+      | yes e => remove0 l
+      | no n => a :: remove0 l
+    }
+
+  \lemma remove0-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (remove0 l) => {?hidden_proof}
+
+  \func normalize' (t : RingTerm C V) : List (\Sigma (List V) C) \elim t
+    | coef c => (nil, c) :: nil
+    | var v => (v :: nil, 1) :: nil
+    | :zro => nil
+    | :ide => (nil, 1) :: nil
+    | :negative t => negate (normalize' t)
+    | :+ t s => normalize' t ++ normalize' s
+    | :* t s => remove0 (collapse (multiply' (normalize' t) (normalize' s)))
+
+  \lemma normalize-consistent' (t : RingTerm C V) : interpret t = interpretRingNF (normalize' t) => {?hidden_proof}
+
+  \func normalize (t : RingTerm C V) => remove0 (collapse (sort (normalize' t)))
+
+  \lemma normalizeList-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (remove0 (collapse (sort l))) => {?hidden_proof}
+
+  \lemma normalize-consistent (t : RingTerm C V) : interpret t = interpretRingNF (normalize t) => {?hidden_proof}
+
+  \protected \lemma terms-equality (t s : RingTerm C V) (p : interpretRingNF (normalize t) = interpretRingNF (normalize s)) : interpret t = interpret s => {?hidden_proof}
+
+  \protected \lemma replace-consistent (list : List (\Sigma (List V) C)) (l r : RingTerm C V) (is : List Nat) (a b : List V) (c : C)
+    (p : interpretRingNF (remove0 (collapse (sort (CMonoidData.indices is list)))) = interpretRingNF 
+    (remove0 (collapse (sort (map (\lam t => (a ++ t.1 ++ b, c * t.2)) (normalize' l)))))) (rule : interpret l = interpret r) :
+    interpretRingNF list = interpretRingNF (map (\lam t => (a ++ t.1 ++ b, c * t.2)) (normalize' r) ++ CMonoidData.removeIndices is list) => {?hidden_proof}
+
+  \protected \lemma replace-consistent-lem (is : List Nat) (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (CMonoidData.indices is l ++ CMonoidData.removeIndices is l) => {?hidden_proof}
 }
   \where {
     \open Sort
@@ -69,6 +148,19 @@
   \override mData : CMonoidData vars
   | mData => \new CMonoidData
   | alg-comm => \lam x y => *-comm
+
+  \func normalize (t : RingTerm C V) => remove0 (collapse (sort (map (\lam p => (sort p.1, p.2)) (normalize' t))))
+
+  \lemma map_sort-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretRingNF (map (\lam p => (sort p.1, p.2)) l) => {?hidden_proof}
+
+  \protected \lemma normalize-consistent (t : RingTerm C V) : interpret t = interpretRingNF (normalize t) => {?hidden_proof}
+
+  \protected \lemma terms-equality (t s : RingTerm C V) (p : interpretRingNF (normalize t) = interpretRingNF (normalize s)) : interpret t = interpret s => {?hidden_proof}
+
+  \protected \lemma replace-consistent (list : List (\Sigma (List V) C)) (l r : RingTerm C V) (is : List Nat) (a : List V) (c : C)
+    (p : interpretRingNF (remove0 (collapse (sort (map (\lam p => (sort p.1, p.2)) (CMonoidData.indices is list))))) = interpretRingNF 
+    (remove0 (collapse (sort (map (\lam t => (sort (a ++ t.1), c * t.2)) (normalize' l)))))) (rule : interpret l = interpret r) :
+    interpretRingNF list = interpretRingNF (map (\lam t => (a ++ t.1, c * t.2)) (normalize' r) ++ CMonoidData.removeIndices is list) => {?hidden_proof}
 }
   \where {
     \open Sort.RedBlack
@@ -89,8 +181,7 @@
 
 \class CSemiringData \extends CAlgData, SemiringData
 
-\class LatticeData \extends CAlgData {
-  | L : BoundedDistributiveLattice
+\class LatticeData \extends CAlgData (L : BoundedDistributiveLattice) {
   | R => L
   | C => BoundedDistributiveLattice.toSemiring BoolLattice
   | S => BoolPoset
@@ -110,6 +201,81 @@
 | pnegative => \lam x => x
 | negate => \lam x => x
 | interpretNF_negate => \lam l => idp
+
+\data ComparisonResult (l l' : List V) 
+  | lessOrEquals (mData.interpretNF l ∨ mData.interpretNF l' = mData.interpretNF l)
+  | greater (mData.interpretNF l ∨ mData.interpretNF l' = mData.interpretNF l')
+  | uncomparable
+
+\func compare (l l' : List V) : ComparisonResult l l' 
+  | nil, _ => lessOrEquals (<=-antisymmetric top-univ join-left)
+  | :: a l, nil => greater (<=-antisymmetric top-univ join-right)
+  | :: a l, :: a' l' => \case trichotomy a a' \with {
+    | less a<a' => \case compare l (a' :: l') \with {
+      | greater p => greater $ rewrite (MonoidData.interpretNF.cons {mData}) (lattice-lem p)
+      | _ => uncomparable
+    }
+    | equals a=a' => \case compare l l' \with {
+      | lessOrEquals p => lessOrEquals $ rewriteI a=a' $ repeat {2} (rewrite (MonoidData.interpretNF.cons {mData})) (inv ldistr *> pmap (vars a ∧) p)
+      | greater p => greater $ rewrite a=a' $ repeat {2} (rewrite (MonoidData.interpretNF.cons {mData})) (inv ldistr *> pmap (vars a' ∧) p)
+      | uncomparable => uncomparable
+    }
+    | Order.LinearOrder.greater a>a' => \case compare (a :: l) l' \with {
+      | lessOrEquals p => lessOrEquals $ rewrite {2} (MonoidData.interpretNF.cons {mData}) (+-comm *> lattice-lem (+-comm *> p))
+      | _ => uncomparable
+    }
+  }
+
+\func insert (m : List V) (l : List (List V)) : List (List V) \elim l
+  | nil => m :: nil
+  | :: a l => \case compare a m \with {
+    | lessOrEquals p => a :: l
+    | greater p => m :: l
+    | uncomparable => a :: insert m l
+  }
+
+\lemma insert-consistent (m : List V) (l : List (List V)) : mData.interpretNF m ∨ interpretLatticeNF l = interpretLatticeNF (insert m l) => {?hidden_proof}
+
+\func collapse (l : List (List V)) : List (List V) 
+  | nil => nil
+  | :: a l => insert a (collapse l)
+
+\lemma collapse-consistent (l : List (List V)) : interpretLatticeNF l = interpretLatticeNF (collapse l) => {?hidden_proof}
+
+\func remove0 (l : List (\Sigma (List V) C)) : List (List V) 
+  | nil => nil
+  | :: (_, false) l => remove0 l
+  | :: (m, true) l => m :: remove0 l
+
+\lemma remove0-consistent (l : List (\Sigma (List V) C)) : interpretRingNF l = interpretLatticeNF (remove0 l) => {?hidden_proof}
+
+\func interpretLatticeNF (l : List (List V)) : L \elim l
+  | nil => bottom
+  | :: x nil => mData.interpretNF x
+  | :: x l => mData.interpretNF x ∨ interpretLatticeNF l
+  \where {
+    \lemma cons (x : List V) (l : List (List V)) : interpretLatticeNF (x :: l) = mData.interpretNF x ∨ interpretLatticeNF l => {?hidden_proof}
+  }
+
+
+\func lData  => \new LData {
+  | L => L
+  | vars => vars
+}
+
+\func normalize (t : RingTerm C V) => sort (collapse (map (\lam l => LData.removeDuplicates {lData} (sort l)) (remove0 (normalize' t))))
+
+\protected \lemma perm-consistent {l l' : List (List V)} (p : Perm l l') : interpretLatticeNF l = interpretLatticeNF l' => {?hidden_proof}
+
+\protected \lemma sort-consistent (l : List (List V)) : interpretLatticeNF l = interpretLatticeNF (sort l) => {?hidden_proof}
+
+\lemma map_sort-consistent (l : List (List V)) : interpretLatticeNF l = interpretLatticeNF (map sort l) => {?hidden_proof}
+
+\lemma map_removeDuplicates-consistent (l : List (List V)) : interpretLatticeNF l = interpretLatticeNF (map (LData.removeDuplicates {lData}) l) => {?hidden_proof}
+
+\protected \lemma normalize-consistent (t : RingTerm C V) : interpret t = interpretLatticeNF (normalize t) => {?hidden_proof}
+
+\protected \lemma terms-equality (t s : RingTerm C V) (p : interpretLatticeNF (normalize t) = interpretLatticeNF (normalize s)) : interpret t = interpret s => {?hidden_proof}
 }
 \where {
   \open AlgData
@@ -129,6 +295,11 @@
 | pnegative => negative
 | negate => BaseRingData.negate
 | interpretNF_negate => interpretNF_negate
+
+\protected \default interpretNF_negate (l : List (\Sigma (List V) C)) : negative (interpretRingNF l) = interpretRingNF (negate l) \elim l
+  | nil => AddGroup.negative_zro
+  | :: a l => repeat {2} (rewrite BaseData.cons) 
+    (AddGroup.negative_+ *> +-comm *> pmap2 + (inv (pmap (* _) (AddGroupHom.func-negative {alg}) *> Ring.negative_*-left)) (interpretNF_negate l))
 }
 \where {
   \func negate {C : Ring} {V : \Type} (l : List (\Sigma (List V) C)) : List (\Sigma (List V) C) \elim l
@@ -162,6 +333,17 @@
 
 \class CRingData \extends CAlgData, RingData {
 \override R : CRing
+
+\func normalize (t : RingTerm C V) => remove0 (collapse (sort (map (\lam p => (sort p.1, p.2)) (RingData.normalize' t))))
+
+\protected \lemma normalize-consistent (t : RingTerm C V) : RingData.interpret t = interpretRingNF (normalize t) => {?hidden_proof}
+
+\protected \lemma terms-equality (t s : RingTerm C V) (p : interpretRingNF (normalize t) = interpretRingNF (normalize s)) : RingData.interpret t = RingData.interpret s => {?hidden_proof}
+
+\protected \lemma replace-consistent (list : List (\Sigma (List V) C)) (l r : RingTerm C V) (is : List Nat) (a : List V) (c : C)
+  (p : interpretRingNF (remove0 (collapse (sort (map (\lam p => (sort p.1, p.2)) (CMonoidData.indices is list))))) = interpretRingNF 
+  (remove0 (collapse (sort (map (\lam t => (sort (a ++ t.1), c * t.2)) (normalize' l)))))) (rule : interpret l = interpret r) :
+  interpretRingNF list = interpretRingNF (map (\lam t => (a ++ t.1, c * t.2)) (normalize' r) ++ CMonoidData.removeIndices is list) => {?hidden_proof}
 }
 \where {
   \open AlgData

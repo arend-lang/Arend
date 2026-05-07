@@ -13,13 +13,9 @@
 \import Meta
 \import Paths
 \import Paths.Meta
-\import Set(in0)
+\import Set (in0)
 
-\class Cone {
-  | J : SmallPrecat
-  | D : Precat
-  | G : Functor J D
-  | apex : D
+\class Cone {J : SmallPrecat} {D : Precat} (G : Functor J D) (apex : D) {
   | coneMap (j : J) : Hom apex (G j)
   | coneCoh {j j' : J} (h : Hom j j') : G.Func h ∘ coneMap j = coneMap j'
 }
@@ -61,6 +57,12 @@
     | ret_f => \lam f => limUnique (limBeta (conePullback _ z f))
     | f_sec => \lam c => exts (limBeta c)
   }
+
+  \protected \default limMap-impl {z} c : Hom z apex => ret {isLimit z} c
+
+  \protected \default limBeta-impl {z} (c : Cone G z) j : coneMap j ∘ limMap-impl c = c.coneMap j => path (\lam i => coneMap {Equiv.f_ret {isLimit z} c @ i} j)
+
+  \lemma limUniqueBeta {z : D} {c : Cone G z} {g : Hom z apex} (p : \Pi (j : J) -> c.coneMap j = coneMap j ∘ g) : limMap c = g => {?hidden_proof}
 }
   \where {
     \use \level levelProp {J : SmallPrecat} {D : Precat} (G : Functor J D) (apex : D) (cm : \Pi (j : J) -> Hom apex (G j)) (L L' : Limit G apex cm) : L = L' 
@@ -85,11 +87,14 @@
 
 \meta Colimit G=>G Limit (Functor.op {G})
 
-\class Diagram {
-  | G : Graph
-  | D : Precat
-  | F : G -> D
-  | Func : \Pi {x y : G} -> G.E x y -> Hom (F x) (F y)
+\class Diagram (G : Graph) (D : Precat) (F : G -> D) (Func : \Pi {x y : G} -> G.E x y -> Hom (F x) (F y)) {
+  \protected \func functor : Functor G.FreeCat D \cowith
+    | F => F
+    | Func {x y : G} (h : G.Paths x y) : Hom (F x) (F y) \elim h
+      | Graph.empty idp => id (F x)
+      | Graph.cons e h => Func h ∘ Diagram.Func e
+    | Func-id => {?hidden_proof}
+    | Func-o {x y z : G} {q : G.Paths y z} {p : G.Paths x y} : Func (G.concat p q) = Func q ∘ Func p => {?hidden_proof}
 }
 
 \class DiagramCone \extends Diagram, Cone {
@@ -125,15 +130,24 @@
   | isLimit => \lam Z => transEquiv (isLimitDiagram Z) (DiagramCone.equiv Z)
 }
 
-\class Product {
-  | J : \Type
-  | D : Precat
-  | G : J -> D
-  | apex : D
+\class Product {J : \Type} {D : Precat} (G : J -> D) (apex : D) {
   | proj (j : J) : Hom apex (G j)
   | tupleMap {Z : D} (f : \Pi (j : J) -> Hom Z (G j)) : Hom Z apex
   | tupleBeta {Z : D} {f : \Pi (j : J) -> Hom Z (G j)} {j : J} : proj j ∘ tupleMap f = f j
   | tupleEq {Z : D} {h1 h2 : Hom Z apex} : (\Pi (j : J) -> proj j ∘ h1 = proj j ∘ h2) -> h1 = h2
+
+  \lemma isProduct (Z : D) : Equiv (\lam (h : Hom Z apex) => proj __ ∘ h) => {?hidden_proof}
+
+  \lemma tupleMapComp {W Z : D} (f : \Pi (j : J) -> Hom Z (G j)) (h : Hom W Z) : tupleMap f ∘ h = tupleMap (f __ ∘ h) => {?hidden_proof}
+
+  \lemma tupleEta {Z : D} {f : Hom Z apex} : tupleMap (\lam j => proj j ∘ f) = f => {?hidden_proof}
+
+  \protected \func toLimit : Limit {DiscretePrecat J} {D} \cowith
+    | G => functor G
+    | apex => apex
+    | coneMap => proj
+    | coneCoh => {?hidden_proof}
+    | isLimit => {?hidden_proof}
 }
   \where {
     \func functor {J : \Type} {D : Precat} (G : J -> D) : Functor (DiscretePrecat J) D \cowith
@@ -155,16 +169,24 @@
   }
 
 
-\class Equalizer {
-  | D : Precat
-  | X : D
-  | Y : D
-  | f : Hom X Y
-  | g : Hom X Y
-  | apex : D
-  | eql : Hom apex X
-  | equal : f ∘ eql = g ∘ eql
+\class Equalizer {D : Precat} {X : D} {Y : D} (f : Hom X Y) (g : Hom X Y) (apex : D) (eql : Hom apex X) (equal : f ∘ eql = g ∘ eql) {
   | isEqualizer (Z : D) : Equiv {Hom Z apex} {\Sigma (h : Hom Z X) (f ∘ h = g ∘ h)} (\lam h => (eql ∘ h, inv o-assoc *> pmap (∘ h) equal *> o-assoc))
+
+  \func eqMap {Z : D} (h : Hom Z X) (p : f ∘ h = g ∘ h) : Hom Z apex => ret {isEqualizer Z} (h, p)
+
+  \lemma eqBeta {Z : D} (h : Hom Z X) (p : f ∘ h = g ∘ h) : eql ∘ eqMap h p = h => {?hidden_proof}
+
+  \lemma eqMono {Z : D} {h1 h2 : Hom Z apex} (p : eql ∘ h1 = eql ∘ h2) : h1 = h2 => {?hidden_proof}
+
+  \protected \func toLimit : Limit {Shape} {D} \cowith
+    | G => functor f g
+    | apex => apex
+    | coneMap => \lam x => (\case \elim x \with {
+      | false => eql
+      | true => g ∘ eql
+    })
+    | coneCoh => {?hidden_proof}
+    | isLimit => {?hidden_proof}
 }
   \where {
 \data Arrows (x y : Bool) \with
@@ -180,8 +202,15 @@
 
     \func Shape : Precat Bool \cowith
       | Hom => Arrows
-      | id => id
-      | o => o
+      | id (x : Bool) : Arrows x x \with
+        | false => id_false
+        | true => id_true
+      | o {x y z : Bool} (g : Arrows y z) (f : Arrows x y) : Arrows x z \elim x, y, z, g, f
+        | false, _, false, _, _ => id_false
+        | true, _, true, _, _ => id_true
+        | false, false, true, a, _ => a
+        | false, true, true, _, a => a
+        | true, false, false, _, ()
       | id-left => {?hidden_proof}
       | id-right => {?hidden_proof}
       | o-assoc => {?hidden_proof}
@@ -234,14 +263,7 @@
   }
 
 
-\class Pullback {
-  | D : Precat
-  | x : D
-  | y : D
-  | z : D
-  | f : Hom x z
-  | g : Hom y z
-  | apex : D
+\class Pullback {D : Precat} {x : D} {y : D} {z : D} (f : Hom x z) (g : Hom y z) (apex : D) {
   | pbProj1 : Hom apex x
   | pbProj2 : Hom apex y
   | pbCoh : f ∘ pbProj1 = g ∘ pbProj2
@@ -249,6 +271,26 @@
   | pbBeta1 {w : D} {p1 : Hom w x} {p2 : Hom w y} {c : f ∘ p1 = g ∘ p2} : pbProj1 ∘ pbMap p1 p2 c = p1
   | pbBeta2 {w : D} {p1 : Hom w x} {p2 : Hom w y} {c : f ∘ p1 = g ∘ p2} : pbProj2 ∘ pbMap p1 p2 c = p2
   | pbEta {w : D} {h1 h2 : Hom w apex} : pbProj1 ∘ h1 = pbProj1 ∘ h2 -> pbProj2 ∘ h1 = pbProj2 ∘ h2 -> h1 = h2
+
+  \lemma pbMap-comp {a b : D} {p1 : Hom b x} {p2 : Hom b y} {c : f ∘ p1 = g ∘ p2} {h : Hom a b} :
+    pbMap p1 p2 c ∘ h = pbMap (p1 ∘ h) (p2 ∘ h) (inv o-assoc *> pmap (∘ h) c *> o-assoc) => {?hidden_proof}
+
+  \func flip : Pullback g f apex pbProj2 pbProj1 (inv pbCoh) \cowith
+    | pbMap => \lam p1 p2 c => pbMap p2 p1 (inv c)
+    | pbBeta1 => {?hidden_proof}
+    | pbBeta2 => {?hidden_proof}
+    | pbEta => {?hidden_proof}
+
+  \protected \func toLimit : LimitDiagram \cowith
+    | Diagram => diagram f g
+    | apex => apex
+    | coneMap => \case \elim __ \with {
+      | 0 => pbProj1
+      | 1 => pbProj2
+      | 2 => f ∘ pbProj1
+    }
+  | diagramCoh => {?hidden_proof}
+  | isLimitDiagram => {?hidden_proof}
 }
   \where {
     \instance Shape : Graph => \new (Graph (Fin 3) (\case __, __ \with {  | 0, 2 => \Sigma  | 1, 2 => \Sigma  | _, _ => Empty}))
@@ -390,13 +432,102 @@
 
 \class PrecatWithTerminal \extends Precat {
   | terminal : terminal-obj \this
+
+  \func terminalMap {x : Ob} : Hom x terminal => tupleMap (\case __ \with {})
+
+  \lemma terminal-unique {x : Ob} {f g : Hom x terminal} : f = g => {?hidden_proof}
+
+  \func global-section {c : Ob} (x : Hom terminal c) : SplitMono x \cowith
+    | hinv => terminalMap
+    | hinv_f => {?hidden_proof}
 }
 
 \class PrecatWithBprod \extends Precat {
   | Bprod (x y : Ob) : Product (x :: y :: nil)
+
+  \func proj1 {x y : Ob} => proj {Bprod x y} 0
+
+  \func proj2 {x y : Ob} => proj {Bprod x y} 1
+
+  \func pair {x y z : Ob} (f : Hom z x) (g : Hom z y) : Hom z (Bprod x y) => tupleMap (\case \elim __ \with {  | 0 => f  | 1 => g})
+
+  \func prodMap {x y x' y' : Ob} (f : Hom x y) (f' : Hom x' y') : Hom (Bprod x x') (Bprod y y') => pair (f ∘ proj1) (f' ∘ proj2)
+
+  \lemma prodMap-comp {x y x' y' z z' : Ob} (f : Hom x y) (g : Hom y z) (f' : Hom x' y') (g' : Hom y' z') : prodMap (g ∘ f) (g' ∘ f') = prodMap g g' ∘ prodMap f f' => {?hidden_proof}
+
+  \func prodMap-split-right {x y x' y' : Ob} (f : Hom x y) (g : Hom x' y') : prodMap f g = prodMap f (id y') ∘ prodMap (id x) g 
+    => rewriteI (prodMap-comp _ _ _ _) $ rewrite (id-left, id-right) idp
+
+  \func prod-id-left {x y z w : Ob} (g : Hom y z) (f : Hom x y) : prodMap (id w) (g ∘ f) = prodMap (id w) g ∘ prodMap (id w) f 
+    => rewriteI {2} id-left $ prodMap-comp _ _ _ _
+
+  \func prod-id-right {x y z w : Ob} (g : Hom y z) (f : Hom x y) : prodMap (g ∘ f) (id w) = prodMap g (id w) ∘ prodMap f (id w) 
+    => rewriteI {5} id-right $ prodMap-comp _ _ _ _
+
+  \lemma prod-id {x y : Ob} : prodMap (id x) (id y) = id (Bprod x y) => {?hidden_proof}
+
+  \lemma beta1 {x y z : Ob} (f : Hom z x) (g : Hom z y) : proj1 ∘ pair f g = f => {?hidden_proof}
+
+  \lemma beta2 {x y z : Ob} (f : Hom z x) (g : Hom z y) : proj2 ∘ pair f g = g => {?hidden_proof}
+
+  \lemma pair-unique {x y z : Ob} {h1 h2 : Hom z (Bprod x y)} (p1 : proj1 ∘ h1 = proj1 ∘ h2) (p2 : proj2 ∘ h1 = proj2 ∘ h2) : h1 = h2 => {?hidden_proof}
+
+  \lemma pair-comp {x y z w : Ob} {f : Hom x y} {g : Hom y z} {h : Hom y w} : pair g h ∘ f = pair (g ∘ f) (h ∘ f) => {?hidden_proof}
+
+  \lemma pair-proj {x y : Ob} : pair proj1 proj2 = id (Bprod x y) => {?hidden_proof}
+
+  \func diagonal (x : Ob) : Hom x (Bprod x x) => pair (id x) (id x)
+    \where {
+      \lemma isSplitMono (x : Ob) : SplitMono (diagonal x) proj1 => {?hidden_proof}
+    }
+
+
+  \func associator {x y z : Ob} : Hom (Bprod (Bprod x y) z) (Bprod x (Bprod y z)) => pair (proj1 ∘ proj1) (pair (proj2 ∘ proj1) proj2)
+
+  \func associator-iso {x y z : Ob} : Iso (associator {_} {x} {y} {z}) \cowith
+    | hinv => pair (pair proj1 (proj1 ∘ proj2)) (proj2 ∘ proj2)
+    | hinv_f => {?hidden_proof}
+    | f_hinv => {?hidden_proof}
+
+  \lemma associtor-prod {x y z : Ob} {x' y' z' : Ob} (f : Hom x x') (g : Hom y y') (h : Hom z z') : prodMap f (prodMap g h) ∘ associator = associator ∘ prodMap (prodMap f g) h 
+    => {?hidden_proof}
+
+  \func bprodFunctorRight (Y : Ob) : Functor \this \this \cowith
+    | F => \lam X => Bprod X Y
+    | Func => \lam f => prodMap f (id Y)
+    | Func-id => {?hidden_proof}
+    | Func-o => {?hidden_proof}
+
+  \func change {x y : Ob} : Hom (Bprod x y) (Bprod y x) => pair proj2 proj1
+
+  \func change-iso {x y : Ob} : Iso (change {_} {x} {y}) \cowith
+    | hinv => change
+    | hinv_f => {?hidden_proof}
+    | f_hinv => {?hidden_proof}
+
+  \lemma change-inv {x y : Ob} : change ∘ change = id (Bprod x y) => {?hidden_proof}
+
+  \lemma change-prod {x y x' y' : Ob} {f : Hom x x'} {g : Hom y y'} : change ∘ prodMap f g = prodMap g f ∘ change => {?hidden_proof}
+
+  \func bprod-comm {x y : Ob} : Iso (change {_} {x} {y}) \cowith
+    | hinv => change {_} {y} {x}
+    | hinv_f => {?hidden_proof}
+    | f_hinv => {?hidden_proof}
+
+  \func bprodBiFunctor : Functor (ProductPrecat \this \this) \this \cowith
+    | F => \lam x => Bprod x.1 x.2
+    | Func => \lam f => prodMap f.1 f.2
+    | Func-id => {?hidden_proof}
+    | Func-o => {?hidden_proof}
 }
 
-\class CartesianPrecat \extends PrecatWithTerminal, PrecatWithBprod
+\class CartesianPrecat \extends PrecatWithTerminal, PrecatWithBprod {
+  \func terminal-prod-left {X : Ob} : Iso {\this} {X} {Bprod terminal X} \cowith
+    | f => pair terminalMap (id X)
+    | hinv => proj2
+    | hinv_f => {?hidden_proof}
+    | f_hinv => {?hidden_proof}
+}
 
 \class FinCompletePrecat \extends PrecatWithPullbacks, CartesianPrecat {
   | Bprod => \lam x y => \new Product {
@@ -419,6 +550,14 @@
   | pullback => \lam f g => Pullback.fromLimit (limit (Diagram.functor {Pullback.diagram f g}))
   | terminal => Product.fromLimit (limit (Product.functor absurd))
   | Bprod => \lam x y => Product.fromLimit (limit (Product.functor (x :: y :: nil)))
+
+  \func product {J : \Type} (G : J -> Ob) : Product G => Product.fromLimit (limit (Product.functor G))
+
+  \func equalizer {x y : Ob} (f g : Hom x y) : Equalizer f g => Equalizer.fromLimit (limit (Equalizer.functor f g))
+
+  \protected \func op : CocompletePrecat \cowith
+    | Precat => Precat.op
+    | colimit => \lam (G : Functor) => limit G.op
 }
   \where {
     \func applyEquiv {C : CompletePrecat} (E : CatEquiv C) {J : SmallPrecat} (G : Functor J E.D) : Limit G => 
@@ -439,19 +578,36 @@
   }
 
 
-\class CompleteCat \extends CompletePrecat, Cat
+\class CompleteCat \extends CompletePrecat, Cat {
+  \protected \func op : CocompleteCat \cowith
+    | Cat => Cat.op
+    | colimit => \lam (G : Functor) => limit G.op
+}
 
 \class CocompletePrecat \extends Precat {
   | colimit {J : Precat} (G : Functor J \this) : Colimit G
+
+  \protected \func op : CompletePrecat \cowith
+    | Precat => Precat.op
+    | limit => \lam (G : Functor) => colimit G.op
 }
   \where {
     \func applyEquiv {C : CocompletePrecat} (E : CatEquiv C) {J : SmallPrecat} (G : Functor J E.D) : Colimit G => CompletePrecat.applyEquiv {C.op} E.op G.op
   }
 
 
-\class CocompleteCat \extends CocompletePrecat, Cat
+\class CocompleteCat \extends CocompletePrecat, Cat {
+  \protected \func op : CompleteCat \cowith
+    | Cat => Cat.op
+    | limit => \lam (G : Functor) => colimit G.op
+}
 
-\class BicompleteCat \extends CompleteCat, CocompleteCat
+\class BicompleteCat \extends CompleteCat, CocompleteCat {
+  \protected \func op : BicompleteCat \cowith
+    | Cat => Cat.op
+    | limit => \lam (G : Functor) => colimit G.op
+    | colimit => \lam (G : Functor) => limit G.op
+}
 
 \func PreservesLimit {J C D : Precat} (G : Functor C D) (F : Functor J C) => \Pi (L : Limit F) -> Limit {
   | Cone => Cone.map G L

@@ -2,7 +2,7 @@
 \import Paths
 \import Logic
 
-\data \infixr 2 Or (A B : \Type) 
+\data \fixr 2 Or (A B : \Type) 
   | inl A
   | inr B
   \where {

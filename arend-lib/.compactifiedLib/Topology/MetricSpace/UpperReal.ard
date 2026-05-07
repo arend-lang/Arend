@@ -20,14 +20,17 @@
 \import Topology.UniformSpace
 
 \instance ExUpperRealMetric : CompleteExMetricSpace ExUpperReal 
-  | dist => dist
+  | dist (x y : ExUpperReal) : ExUpperReal 
+    | U => \lam q => ∃ (a : < q) (0 <= a) (x <= y + a) (y <= x + a)
+    | U-closed => \lam inP (a, a<q, a>=0, x<=y+a, y<=x+a) q<q' => inP (a, a<q <∘ q<q', a>=0, x<=y+a, y<=x+a)
+    | U-rounded => \lam {q} inP (a, a<q, a>=0, x<=y+a, y<=x+a) => inP (RatField.mid a q, inP (a, RatField.mid>left a<q, a>=0, x<=y+a, y<=x+a), RatField.mid<right a<q)
   | dist-refl => {?hidden_proof}
   | dist-symm => {?hidden_proof}
   | dist-triang => {?hidden_proof}
   | dist-ext => {?hidden_proof}
   | isCompleteMetric => {?hidden_proof}
   \where {
-    \open ExUpperRealAbMonoid(<-rat, <_+)
+    \open ExUpperRealAbMonoid (<-rat, <_+)
 
     \lemma dist-left {x y : ExUpperReal} {a : Rat} (xy<a : (dist x y).U a) : x <= y + a => {?hidden_proof}
 

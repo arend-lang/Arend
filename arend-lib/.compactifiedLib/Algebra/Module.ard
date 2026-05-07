@@ -12,10 +12,10 @@
 \import Data.Array
 \import Data.Array.EPerm
 \import Data.Array.Split
-\import Data.Fin(unfsuc)
+\import Data.Fin (unfsuc)
 \import Equiv
-\import Equiv.Univalence(Equiv-to-=)
-\import Function(IsInj, IsSurj)
+\import Equiv.Univalence (Equiv-to-=)
+\import Function (IsInj, IsSurj)
 \import Function.Meta
 \import Logic.Unique
 \import Logic
@@ -33,13 +33,135 @@
 \open AddMonoid
 \open AbMonoid
 
-\class LModule \extends AbGroup {
-  | R : Ring
+\class LModule \extends AbGroup (R : Ring) {
   | \infixl 7 *c : R -> E -> E
   | *c-assoc {r r' : R} {a : E} : r * r' *c a = r *c (r' *c a)
   | *c-ldistr {r : R} {a b : E} : r *c (a + b) = r *c a + r *c b
   | *c-rdistr {r s : R} {a : E} : (r R.+ s) *c a = r *c a + s *c a
   | ide_*c {a : E} : 1 *c a = a
+
+  \lemma cancel {r : R} {a b : E} (i : Monoid.Inv r) (s : r *c a = r *c b) : a = b => {?hidden_proof}
+
+  \lemma *c_zro-left {a : E} : 0 *c a = 0 => {?hidden_proof}
+
+  \lemma *c_zro-right {r : R} : r *c 0 = 0 => {?hidden_proof}
+
+  \lemma *c_negative-left {r : R} {a : E} : R.negative r *c a = negative (r *c a) => {?hidden_proof}
+
+  \lemma *c_negative-right {r : R} {a : E} : r *c negative a = negative (r *c a) => {?hidden_proof}
+
+  \lemma *c-ldistr_- {r : R} {a b : E} : r *c (a - b) = r *c a - r *c b => {?hidden_proof}
+
+  \lemma *c-rdistr_- {r s : R} {a : E} : (r - s) *c a = r *c a - s *c a => {?hidden_proof}
+
+  \lemma neg_ide_*c {a : E} : -1 *c a = negative a => {?hidden_proof}
+
+  \lemma natCoef_*c {n : Nat} {a : E} : natCoef n *c a = n *n a => {?hidden_proof}
+
+  \lemma *c_BigSum-rdistr {l : Array R} {a : E} : R.BigSum l *c a = BigSum (\lam i => l i *c a) => {?hidden_proof}
+
+  \lemma *c_BigSum-ldistr {r : R} {l : Array E} : r *c BigSum l = BigSum (\lam i => r *c l i) => {?hidden_proof}
+
+  \lemma *c_FinSum-rdistr {J : FinSet} {f : J -> R} {a : E} : R.FinSum f *c a = FinSum (\lam j => f j *c a) => {?hidden_proof}
+
+  \lemma *c_FinSum-ldistr {r : R} {J : FinSet} {f : J -> E} : r *c FinSum f = FinSum (\lam j => r *c f j) => {?hidden_proof}
+
+  \func IsDependent (l : Array E) : \Prop => ∃ (c : Array R l.len) (BigSum (\lam j => c j *c l j) = 0) (j : Fin l.len) (c j /= 0)
+
+  \func IsIndependent (l : Array E) : \Prop => \Pi (c : Array R l.len) -> BigSum (\lam j => c j *c l j) = 0 -> \Pi (j : Fin l.len) -> c j = 0
+
+  \type IsGenerated (l : Array E) : \Prop => \Pi (x : E) -> ∃ (c : Array R l.len) (x = BigSum (\lam i => c i *c l i))
+
+  \type IsBasis (l : Array E) : \Prop => \Sigma (IsIndependent l) (IsGenerated l)
+
+  \lemma independent-subset {l : Array E} (li : IsIndependent l) {k : Nat} (p : k <= l.len) : IsIndependent (\lam j => l (fin-inc_<= p j)) => {?hidden_proof}
+
+  \lemma independent-nonZero {l : Array E} (lb : IsIndependent l) {j : Fin l.len} (p : l j = 0) : 0 = {R} 1 => {?hidden_proof}
+
+  \type IsIndependentSet {J : \Set} (g : J -> E) : \Prop => \Pi (c : Array (\Sigma R J)) -> sum g c = 0 -> IsZeroSum c
+    \where {
+      \func sum (g : J -> E) (c : Array (\Sigma R J)) => BigSum (\lam j => (c j).1 *c g (c j).2)
+
+      \lemma sum-ldistr (g : J -> E) {r : R} {c : Array (\Sigma R J)} : r *c sum g c = sum g (map (\lam s => (r * s.1, s.2)) c) => {?hidden_proof}
+
+      \lemma sum_++ (g : J -> E) {c d : Array (\Sigma R J)} : sum g (c ++ d) = sum g c + sum g d => {?hidden_proof}
+
+      \lemma sum_Big++ (g : J -> E) {l : Array (Array (\Sigma R J))} : sum g (Big ++ nil l) = BigSum (map (sum g) l) => {?hidden_proof}
+
+      \lemma sum_negative (g : J -> E) {c : Array (\Sigma R J)} : negative (sum g c) = sum g (map (\lam s => (R.negative s.1, s.2)) c) => {?hidden_proof}
+
+      \lemma sum_EPerm (g : J -> E) {l l' : Array (\Sigma R J)} (p : EPerm l l') : sum g l = sum g l' => {?hidden_proof}
+
+      \lemma =_~ (gi : IsIndependentSet g) {c d : Array (\Sigma R J)} (p : sum g c = sum g d) : c Z~ d => {?hidden_proof}
+
+      \lemma IsZeroSum_= (g : J -> E) {c : Array (\Sigma R J)} (p : IsZeroSum c) : sum g c = 0 => {?hidden_proof}
+
+      \lemma ~_= (g : J -> E) {c d : Array (\Sigma R J)} (p : c Z~ d) : sum g c = sum g d => {?hidden_proof}
+    }
+
+
+  \lemma IsIndependentSet-right-inj {J K : \Set} {f : J -> K} (inj : IsInj f) {g : K -> E} (gi : IsIndependentSet g) : IsIndependentSet (\lam j => g (f j)) => {?hidden_proof}
+
+  \type IsIndependentDec {J : \Set} (g : J -> E) : \Prop => \Pi (l : Array J) (c : Array R l.len) -> IsInj l -> BigSum (\lam j => c j *c g (l j)) = 0 -> \Pi (j : Fin c.len) -> c j = 0
+
+  \lemma IsIndependentSet<->IsIndependentDec {J : DecSet} {g : J -> E} : IsIndependentSet g <-> IsIndependentDec g => {?hidden_proof}
+
+  \lemma IsIndependent<->IsIndependentSet {l : Array E} : IsIndependent l <-> IsIndependentSet l => {?hidden_proof}
+    \where {
+      \lemma sum_BigSum {l : Array E} {c : Array (\Sigma R (Fin l.len))} : sum l c = BigSum (\lam j => count c j *c l j) => {?hidden_proof}
+    }
+
+
+  \lemma IsIndependentSet-fin {J : FinSet} {g : J -> E} : IsIndependentSet g <-> (\Pi (c : J -> R) -> FinSum (\lam j => c j *c g j) = 0 -> \Pi (j : J) -> c j = 0) => {?hidden_proof}
+
+  \type IsGeneratingSet {J : \Set} (g : J -> E) : \Prop => \Pi (x : E) -> ∃ (c : Array (\Sigma R J)) (x = IsIndependentSet.sum g c)
+
+  \lemma IsGeneratingSet-fin {J : \Set} {g : J -> E} : IsGeneratingSet g <-> (\Pi (x : E) -> ∃ (K : FinSet) (c : (K -> \Sigma R J)) (x = FinSum (\lam k => (c k).1 *c g (c k).2))) => {?hidden_proof}
+
+  \lemma IsGeneratingSet-surj {J K : \Set} {f : J -> K} (surj : IsSurj f) {g : K -> E} (gi : IsGeneratingSet g) : IsGeneratingSet (\lam j => g (f j)) => {?hidden_proof}
+
+  \lemma IsBasisSet-equiv {J K : \Set} (e : Equiv {J} {K}) {g : K -> E} (gb : IsBasisSet g) : IsBasisSet (\lam j => g (e j)) => {?hidden_proof}
+
+  \lemma IsGenerated<->IsGeneratingSet {l : Array E} : IsGenerated l <-> IsGeneratingSet l => {?hidden_proof}
+
+  \type IsBasisSet {J : \Set} (g : J -> E) : \Prop => \Sigma (IsIndependentSet g) (IsGeneratingSet g)
+
+  \lemma IsBasis<->IsBasisSet {l : Array E} : IsBasis l <-> IsBasisSet l => {?hidden_proof}
+
+  \lemma independent-split-unique {l : Array E} (li : IsIndependent l) {c d : Array R l.len} (p : BigSum (\lam j => c j *c l j) = BigSum (\lam j => d j *c l j)) (j : Fin l.len) : c j = d j 
+    => {?hidden_proof}
+
+  \lemma basis-split-pair {l : Array E} (lb : IsBasis l) (x : E) : \level (\Sigma (c : Array R l.len) (x = BigSum (\lam j => c j *c l j))) (basis-split-unique lb.1 x) => {?hidden_proof}
+    \where {
+      \lemma basis-split-unique {l : Array E} (li : IsIndependent l) (x : E) : isProp (\Sigma (c : Array R l.len) (x = BigSum (\lam j => c j *c l j))) => {?hidden_proof}
+    }
+
+
+  \sfunc basis-split {l : Array E} (lb : IsBasis l) (x : E) : Array R l.len => (basis-split-pair lb x).1
+
+  \lemma basis-split-char {l : Array E} {lb : IsBasis l} {x : E} : x = BigSum (\lam j => basis-split lb x j *c l j) => {?hidden_proof}
+
+  \lemma basis-split-unique {l : Array E} (lb : IsBasis l) {x : E} (d : Array R l.len) (p : x = BigSum (\lam j => d j *c l j)) (j : Fin l.len) : basis-split lb x j = d j => {?hidden_proof}
+
+  \lemma basis_split_basis {l : Array E} {lb : IsBasis l} {j k : Fin l.len} : basis-split lb (l j) k = (\case decideEq j k \with {  | yes _ => 1  | no _ => 0}) => {?hidden_proof}
+
+  \lemma basis_split_= {l : Array E} {lb : IsBasis l} {j : Fin l.len} : basis-split lb (l j) j = 1 => {?hidden_proof}
+
+  \lemma basis_split_/= {l : Array E} {lb : IsBasis l} {j k : Fin l.len} (j/=k : j /= k) : basis-split lb (l j) k = 0 => {?hidden_proof}
+
+  \type IsGeneratedFin {J : FinSet} (f : J -> E) : \Prop => \Pi (x : E) -> ∃ (c : (J -> R)) (x = FinSum (\lam j => c j *c f j))
+
+  \protected \func IsFinitelyGenerated : \Prop => ∃ (l : Array E) (IsGenerated l)
+
+  \lemma basisSet_basis (J : FinSet) {g : J -> E} (gb : IsBasisSet g) : ∃ (l : Array E J.finCard) (IsBasis l) => {?hidden_proof}
+
+  \lemma free-char : ∃ (l : Array E) (IsBasis l) <-> ∃ (J : FinSet) (g : (J -> E)) (IsBasisSet g) => {?hidden_proof}
+
+  \lemma generated-array-fin {l : Array E} (g : IsGenerated l) : IsGeneratedFin l => {?hidden_proof}
+
+  \lemma generated-fin-array {J : FinSet} {f : J -> E} (g : IsGeneratedFin f) : IsFinitelyGenerated => {?hidden_proof}
+
+  \func IsFaithful : \Prop => \Pi (r : R) -> (\Pi (m : E) -> r *c m = 0) -> r = 0
 }
   \where {
     \func count {R : Semiring} {J : DecSet} (l : Array (\Sigma R J)) (j : J) : R => R.BigSum (map __.1 $ keep (\lam s => decideEq j s.2) l)
@@ -77,7 +199,7 @@
 
     \open IsIndependentSet
 
-    basisSet-split {R : Ring} {U V : LModule R} {J : \Set} {u : J -> U} (ub : U.IsBasisSet u) (v : J -> V) (x : U) :
+    \sfunc basisSet-split {R : Ring} {U V : LModule R} {J : \Set} {u : J -> U} (ub : U.IsBasisSet u) (v : J -> V) (x : U) :
       \Sigma (y : V) (∃ (c : Array (\Sigma R J)) (x = sum u c) (y = sum v c)) 
     => \case TruncP.rec-set (ub.2 x) (\lam s => sum v s.1) (\lam s s' => ~_= v $ =_~ ub.1 $ inv s.2 *> s'.2) \with {
       | (y, t) => (y, TruncP.map t (\lam s => (s.1.1, s.1.2, inv s.2)))

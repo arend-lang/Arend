@@ -20,14 +20,14 @@
 \import Topology.CoverSpace.Complete
 \import Topology.MetricSpace
 \import Topology.UniformSpace
-\open IsTotallyBounded(IsCover, Cond)
+\open IsTotallyBounded (IsCover, Cond)
 \open ClosurePrecoverSpace
 
 \func IsTotallyBounded (X : CoverSpace) : \Prop => Cond X.isCauchy IsCover
   \where {
-    \func IsCover {X : \Set} (C : Set (Set X)) => \Pi (x : X) -> ∃ (U : C) (U x)
+    \protected \func IsCover {X : \Set} (C : Set (Set X)) => \Pi (x : X) -> ∃ (U : C) (U x)
 
-    \func Cond {X : \Set} (P Q : Set (Set (Set X))) => ∀ {C : P} ∃ (U : Array (Set X)) (Q (\lam V => ∃ (W : U) (W = V))) (∀ (V : U) (C V))
+    \protected \func Cond {X : \Set} (P Q : Set (Set (Set X))) => ∀ {C : P} ∃ (U : Array (Set X)) (Q (\lam V => ∃ (W : U) (W = V))) (∀ (V : U) (C V))
   }
 
 

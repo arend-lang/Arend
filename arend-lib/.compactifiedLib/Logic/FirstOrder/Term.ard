@@ -2,7 +2,7 @@
 \import Paths.Meta
 
 \class TermSig {
-  | Sort : \Set
+  \coerce | Sort : \Set
   | Symb : Sort -> \Set
   | domain {s : Sort} : Symb s -> Array Sort
 }

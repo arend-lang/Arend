@@ -20,5 +20,5 @@
 
 \lemma Equiv=>contrFibers (e : Equiv) : hasContrFibers e => {?hidden_proof}
   \where {
-    \lemma fromSection (s : Section) (r : Retraction s) : hasContrFibers s => {?hidden_proof}
+    \protected \lemma fromSection (s : Section) (r : Retraction s) : hasContrFibers s => {?hidden_proof}
   }

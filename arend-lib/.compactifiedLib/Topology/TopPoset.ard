@@ -18,6 +18,14 @@
     \have P => ProductTopSpace \this \this
     \in hausdorff-char.2 $ transport P.IsClosed (ext (\lam s => ext (\lam p => <=-antisymmetric p.1 p.2, \lam p => (=_<= p, =_<= (inv p))))) $ P.closed-inter <=-closed $ 
           cont-closed (tuple proj2 proj1) <=-closed
+
+  \lemma <=-closed-left {b : E} : IsClosed (<= b) => {?hidden_proof}
+
+  \lemma <=-closed-right {a : E} : IsClosed (a <=) => {?hidden_proof}
+
+  \lemma limit-Join {I : DirectedSet} {f : I -> E} (fm : \Pi {i j : I} -> i I.<= j -> f i <= f j) {l : E} (fl : IsLimit f l) : IsJoin f l => {?hidden_proof}
+
+  \lemma limit-Meet {I : DirectedSet} {f : I -> E} (fm : \Pi {i j : I} -> i I.<= j -> f j <= f i) {l : E} (fl : IsLimit f l) : IsMeet f l => {?hidden_proof}
 }
 
 \class HausdorffTopPosetAbGroup \extends HausdorffTopAbGroup, HausdorffTopPoset, PosetAbGroup {

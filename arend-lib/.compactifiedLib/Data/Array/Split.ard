@@ -1,6 +1,6 @@
 \import Data.Array
 \import Data.Array.EPerm
-\import Data.Fin(unfsuc)
+\import Data.Fin (unfsuc)
 \import Function
 \import Function.Meta
 \import Logic

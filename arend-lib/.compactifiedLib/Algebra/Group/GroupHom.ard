@@ -10,26 +10,67 @@
 \import Paths
 \import Paths.Meta
 
-\class GroupHom \extends MonoidHom {
+\record GroupHom \extends MonoidHom {
   \override Dom : Group
   \override Cod : Group
   | func-ide => cancel_*-left (func ide) $ inv func-* *> pmap func ide-left *> inv ide-right
+
+  \lemma func-inverse {a : Dom} : func (inverse a) = inverse (func a) => {?hidden_proof}
+
+  \func Kernel : NormalSubGroup Dom \cowith
+    | contains => \lam x => func x = ide
+    | contains_ide => {?hidden_proof}
+    | contains_inverse => {?hidden_proof}
+    | isNormal => {?hidden_proof}
+    | contains_* => {?hidden_proof}
+
+  \func TrivialKernel : \Prop => \Pi {g : Dom} -> Kernel g -> g = ide
+
+  \func same-images-test {a b : Dom} (p : func a = func b) : Kernel (inverse a * b) => qed
+    (func (inverse a * b) ==< func-* >== func (inverse a) * func b ==< pmap (* func b) func-inverse >== inverse (func a) * func b ==< Group.equality-corrolary 
+      (func a) (func b) p >== ide)
+
+  \lemma Kernel-injectivity-test (p : TrivialKernel) : IsInj func => {?hidden_proof}
+
+  \lemma Kernel-injectivity-corrolary (p : IsInj func) : TrivialKernel => {?hidden_proof}
+
+  \func IsIsomorphism : \Prop => \Sigma (IsInj func) (IsSurj func)
 }
   \where {
     \func id {G : Group} : GroupHom G G \cowith
       | func => \lam x => x
       | func-* => {?hidden_proof}
 
-    \func \infixl 8 compose \alias \infixl 8 ∘ {G H K : Group} (g : GroupHom H K) (f : GroupHom G H) : GroupHom G K \cowith
+    \func \fixl 8 compose \alias \infixl 8 ∘ {G H K : Group} (g : GroupHom H K) (f : GroupHom G H) : GroupHom G K \cowith
       | func => \lam x => g (f x)
       | func-* => {?hidden_proof}
   }
 
 
-\class AddGroupHom \extends AddMonoidHom {
+\record AddGroupHom \extends AddMonoidHom {
   \override Dom : AddGroup
   \override Cod : AddGroup
   | func-zro => AddGroup.cancel-left (func 0) (inv func-+ *> pmap func zro-right *> inv zro-right)
+
+  \lemma func-negative {x : Dom} : func (negative x) = negative (func x) => {?hidden_proof}
+
+  \lemma func-minus {x y : Dom} : func (x - y) = func x - func y => {?hidden_proof}
+
+  \lemma injective (p : \Pi {a : Dom} -> func a = 0 -> a = 0) : IsInj func => {?hidden_proof}
+
+  \lemma func-*i {n : Int} {x : Dom} : func (n AddGroup.*i x) = n AddGroup.*i func x => {?hidden_proof}
+
+  \protected \func Kernel : SubAddGroup Dom \cowith
+    | contains => \lam x => func x = zro
+    | contains_zro => {?hidden_proof}
+    | contains_+ => {?hidden_proof}
+    | contains_negative => {?hidden_proof}
+
+  \protected \func Image : SubAddGroup Cod \cowith
+    | contains => \lam x => ∃ (y : Dom) (func y = x)
+    | contains_zro => {?hidden_proof}
+    | contains_+ => {?hidden_proof}
+    | contains_negative => {?hidden_proof}
 }
   \where {
     \func toGroupHom {G H : AddGroup} (f : AddGroupHom G H) : GroupHom (AddGroup.toGroup G) (AddGroup.toGroup H) \cowith

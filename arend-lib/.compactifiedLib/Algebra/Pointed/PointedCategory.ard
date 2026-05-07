@@ -2,7 +2,7 @@
 \import Algebra.Pointed.PointedHom
 \import Category
 \import Category.Meta
-\import Function(Image, IsInj, IsSurj)
+\import Function (Image, IsInj, IsSurj)
 \import Logic
 \import Paths
 \import Paths.Meta

@@ -7,8 +7,8 @@
 \import Data.Array
 \import Order.StrictOrder
 \import Paths
-\open Monoid(pow)
-\open AddMonoid(BigSum)
+\open Monoid (pow)
+\open AddMonoid (BigSum)
 
 \func binom (n i : Nat) : Nat 
   | _, 0 => 1

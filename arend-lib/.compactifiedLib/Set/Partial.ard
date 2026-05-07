@@ -6,10 +6,11 @@
 \import Paths.Meta
 \import Set
 
-\class Partial {
-  | E : \Set
+\record Partial (E : \Set) {
   | isDefined : \Prop
-  | value : isDefined -> E
+  \coerce | value : isDefined -> E
+
+  \func HasValue (a : E) => \Sigma (P : isDefined) (value P = a)
 }
   \where {
     \func make {X : \Set} (P : \Prop) (f : P -> X) => \new (Partial X P f)
@@ -32,9 +33,9 @@
 
 \lemma defined-ext {X : \Set} {u : Partial X} {x : X} (d : u.isDefined) (p : u d = x) : u = defined x => {?hidden_proof}
   \where {
-    \lemma isDefined (p : u = defined x) : u.isDefined => {?hidden_proof}
+    \protected \lemma isDefined (p : u = defined x) : u.isDefined => {?hidden_proof}
 
-    \lemma value (p : u = defined x) : u (isDefined p) = x => {?hidden_proof}
+    \protected \lemma value (p : u = defined x) : u (isDefined p) = x => {?hidden_proof}
   }
 
 

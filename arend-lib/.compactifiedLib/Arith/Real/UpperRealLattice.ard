@@ -17,10 +17,18 @@
 
 \instance ExUpperRealLattice : CompleteLattice ExUpperReal 
   | Order.Lattice.Lattice => ExUpperRealAbMonoid
-  | Meet => Meet
+  | Meet {J : \Set} (g : J -> ExUpperReal) : ExUpperReal 
+    | U => \lam q => ∃ (j : J) ((g j).U q)
+    | U-closed => \lam inP (j, gj<q) q<q' => inP (j, U-closed gj<q q<q')
+    | U-rounded => \lam inP (j, gj<q) => (\case U-rounded gj<q \with {
+      | inP (r, gj<r, r<q) => inP (r, inP (j, gj<r), r<q)
+    })
   | Meet-cond => {?hidden_proof}
   | Meet-univ => {?hidden_proof}
-  | Join => Join
+  | Join {J : \Set} (g : J -> ExUpperReal) : ExUpperReal 
+    | U => \lam q => ∃ (r : < q) ∀ (j : J) ((g j).U r)
+    | U-closed => \lam inP (r, r<q, c) q<q' => inP (r, r<q <∘ q<q', c)
+    | U-rounded => \lam {q} inP (r, r<q, c) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, c), RatField.mid<right r<q)
   | Join-cond => {?hidden_proof}
   | Join-univ => {?hidden_proof}
   \where {

@@ -17,9 +17,9 @@
   }
 
 
-jinl {A B : \Type} (a : A) : Join A B => pinl a
+| jinl {A B : \Type} (a : A) : Join A B => pinl a
 
-jinr {A B : \Type} (b : B) : Join A B => pinr b
+| jinr {A B : \Type} (b : B) : Join A B => pinr b
 
 \func jglue {A B : \Type} (a : A) (b : B) : jinl a = jinr b => path (pglue (a, b))
 

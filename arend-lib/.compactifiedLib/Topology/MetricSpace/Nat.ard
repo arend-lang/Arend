@@ -28,7 +28,7 @@
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Complete
 \open LinearlyOrderedAbGroup
-\open RatField(finv)
+\open RatField (finv)
 \open NatOrder \hiding (<)
 
 \instance NatMetricSpace : MetricSpace Nat 

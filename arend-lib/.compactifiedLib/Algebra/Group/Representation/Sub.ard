@@ -7,13 +7,13 @@
 \import Logic
 \import Paths.Meta
 
-\class SubLRepres {
-  | R : Ring
-  | G : Group
-  | E : LinRepres R G
-  | S : LinRepres R G
+\class SubLRepres {R : Ring} {G : Group} (E : LinRepres R G) (S : LinRepres R G) {
   | in : InterwiningMap S E
   | in-mono : IsInj in
+
+  \func isTrivial  => IsZeroMod S || IsSurj in
+
+  \func \infix 7 **'in (g : G) (s : S) : S => (LinRepres.** {S}) g s
 }
 
 \func KernelSubLRepres {R : Ring} {G : Group} {A B : LinRepres R G} (f : InterwiningMap A B) : SubLRepres A \cowith

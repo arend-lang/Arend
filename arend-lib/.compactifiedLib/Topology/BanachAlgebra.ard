@@ -41,37 +41,103 @@
 \import Topology.TopSpace
 \import Topology.TopSpace.Product
 
-\class BanachAlgebra \extends BanachSpace, QAlgebra, CompleteExNormedRing
+\class BanachAlgebra \extends BanachSpace, QAlgebra, CompleteExNormedRing {
+  \func fromRat (q : Rat) => q *q 1
+}
 
 \class RealPreBanachAlgebra \extends RealPreBanachSpace, ExPseudoNormedRing
 
-\class RealBanachPseudoAlgebra \extends RealBanachSpace, QPseudoAlgebra, ExPseudoNormedPseudoRing, CompleteExNormedAbGroup
+\class RealBanachPseudoAlgebra \extends RealBanachSpace, QPseudoAlgebra, ExPseudoNormedPseudoRing, CompleteExNormedAbGroup {
+  \lemma *r-comm-left {r : Real} {a b : E} : r *r (a * b) = r *r a * b => {?hidden_proof}
+
+  \lemma *r-comm-right {r : Real} {a b : E} : r *r (a * b) = a * (r *r b) => {?hidden_proof}
+
+  \lemma *r_>=0-square {r : Real} {a : E} (r>=0 : 0 <= r) (as : IsSquare a) : IsSquare (r *r a) => {?hidden_proof}
+
+  \lemma *q_>=0-square {q : Rat} {a : E} (q>=0 : 0 <= q) (as : IsSquare a) : IsSquare (q *q a) => {?hidden_proof}
+
+  \func toRealAlgebra : PseudoAlgebra RealField \cowith
+    | LModule => toRealModule
+    | PseudoRing => \this
+    | *c-comm-left => {?hidden_proof}
+    | *c-comm-right => {?hidden_proof}
+}
   \where {
     \open CoverMap
     \open ProductCoverSpace
   }
 
 
-\class RealBanachAlgebra \extends RealBanachPseudoAlgebra, BanachAlgebra, RealPreBanachAlgebra
+\class RealBanachAlgebra \extends RealBanachPseudoAlgebra, BanachAlgebra, RealPreBanachAlgebra {
+  \sfunc sqrt (x : E) (|1-x|<=1 : norm (1 - x) ExUpperReal.<= RatField.ide) : E => zfunc-lim (x, |1-x|<=1)
+    \where {
+      \protected \func UnitBall  => ExPseudoMetricTransfer {Set.Total (\lam x => norm (1 - x) ExUpperReal.<= RatField.ide)} __.1
+
+      \protected \sfunc yfunc (n : Nat) (x : E) : E \elim n
+        | 0 => 0
+        | suc n => ratio 1 2 *q (1 - x + yfunc n x * yfunc n x)
+
+      \protected \lemma yfunc<=rfunc {n : Nat} {s : UnitBall} : norm (yfunc n s.1) <= rfunc n => {?hidden_proof}
+
+      \protected \lemma yfunc-comm {a x : E} (p : a * x = x * a) {n : Nat} : yfunc n x * a = a * yfunc n x => {?hidden_proof}
+
+      \protected \lemma yfunc-rec {n : Nat} {x : E} : yfunc (suc (suc n)) x - yfunc (suc n) x = ratio 1 2 *q ((yfunc (suc n) x + yfunc n x) * (yfunc (suc n) x - yfunc n x)) => {?hidden_proof}
+
+      \protected \lemma yfunc_rfunc-diff1 {n : Nat} {s : UnitBall} : norm (yfunc (suc n) s.1 - yfunc n s.1) <= rfunc (suc n) - rfunc n => {?hidden_proof}
+
+      \protected \lemma yfunc_rfunc-diff {n k : Nat} {s : UnitBall} : norm (yfunc (n Nat.+ k) s.1 - yfunc n s.1) <= rfunc (n Nat.+ k) - rfunc n => {?hidden_proof}
+
+      \protected \func zfunc (n : Nat) (x : E) => 1 - yfunc n x
+
+      \protected \lemma zfunc-comm {a x : E} (p : a * x = x * a) {n : Nat} : zfunc n x * a = a * zfunc n x => {?hidden_proof}
+
+      \protected \lemma zfunc_rfunc-diff {n k : Nat} (n<=k : n <= k) {s : UnitBall} : norm (zfunc k s.1 - zfunc n s.1) <= rfunc k - rfunc n => {?hidden_proof}
+
+      \protected \lemma zfunc-uni : IsUniFuncConvergent {_} {UnitBall} (\lam n s => zfunc n s.1) => {?hidden_proof}
+
+      \protected \lemma yfunc-cover (n : Nat) : CoverMap \this \this (yfunc n) => {?hidden_proof}
+
+      \protected \lemma zfunc-cover (n : Nat) : CoverMap UnitBall \this (\lam s => zfunc n s.1) => {?hidden_proof}
+
+      \protected \lemma zfunc-funcConv : IsFuncConvergent {_} {UnitBall} (\lam n s => zfunc n s.1) => {?hidden_proof}
+
+      \protected \func zfunc-lim  => funcLimit {_} {UnitBall} (\lam n s => zfunc n s.1) zfunc-funcConv
+
+      \protected \lemma isSquare : sqrt x |1-x|<=1 * sqrt x |1-x|<=1 = x => {?hidden_proof}
+        \where {
+          \lemma dist-lem (n : Nat) : zfunc n x * zfunc n x - x = RatField.natCoef 2 *q (yfunc (suc n) x - yfunc n x) => {?hidden_proof}
+        }
+
+
+      \protected \lemma comm {y : E} (yx=xy : y * x = x * y) : sqrt x |1-x|<=1 * y = y * sqrt x |1-x|<=1 => {?hidden_proof}
+    }
+
+
+  \lemma norm-square {x : E} (p : norm (1 - x) <= RatField.ide) : IsSquare x => {?hidden_proof}
+
+  \lemma norm-square' {x : E} (p : norm x <= RatField.ide) : IsSquare (1 - x) => {?hidden_proof}
+
+  \lemma norm_*q-square {q : Rat} (q>0 : 0 < q) {x : E} (p : norm (q *q 1 - x) <= q) : IsSquare x => {?hidden_proof}
+}
   \where {
     \open CoverMap
     \open ProductCoverSpace
 
-    rfunc (n : Nat) : Rat \elim n
+    \protected \sfunc rfunc (n : Nat) : Rat \elim n
       | 0 => 0
       | suc n => ratio 1 2 * (1 + rfunc n * rfunc n)
 
-    \lemma rfunc>=0 {n : Nat} : 0 <= rfunc n => {?hidden_proof}
+    \protected \lemma rfunc>=0 {n : Nat} : 0 <= rfunc n => {?hidden_proof}
 
-    \lemma rfunc<=1 {n : Nat} : rfunc n <= 1 => {?hidden_proof}
+    \protected \lemma rfunc<=1 {n : Nat} : rfunc n <= 1 => {?hidden_proof}
 
-    \lemma rfunc-inc {n : Nat} : rfunc n <= rfunc (suc n) => {?hidden_proof}
+    \protected \lemma rfunc-inc {n : Nat} : rfunc n <= rfunc (suc n) => {?hidden_proof}
 
-    \lemma rfunc-rec {n : Nat} : rfunc (suc (suc n)) - rfunc (suc n) = ratio 1 2 * ((rfunc (suc n) + rfunc n) * (rfunc (suc n) - rfunc n)) => {?hidden_proof}
+    \protected \lemma rfunc-rec {n : Nat} : rfunc (suc (suc n)) - rfunc (suc n) = ratio 1 2 * ((rfunc (suc n) + rfunc n) * (rfunc (suc n) - rfunc n)) => {?hidden_proof}
 
-    \lemma rfunc-bound {eps : Rat} (eps>0 : 0 < eps) {n : Nat} (p : rfunc n <= 1 - eps) : 1 - rfunc n <= RatField.pow (1 - ratio 1 2 * eps) n => {?hidden_proof}
+    \protected \lemma rfunc-bound {eps : Rat} (eps>0 : 0 < eps) {n : Nat} (p : rfunc n <= 1 - eps) : 1 - rfunc n <= RatField.pow (1 - ratio 1 2 * eps) n => {?hidden_proof}
 
-    \lemma rfunc-limit : TopSpace.IsLimit rfunc 1 => {?hidden_proof}
+    \protected \lemma rfunc-limit : TopSpace.IsLimit rfunc 1 => {?hidden_proof}
   }
 
 

@@ -61,7 +61,7 @@
 
     \lemma point>-char (fm : IsStrictlyMonotone f) {x : Real} : point fm < x <-> ∃ (x' : Real) (x' < x) (p : S.2 <= x') (q : x' <= S.3) (y <= f (x', S.5 p q)) => {?hidden_proof}
 
-    \func elem (fm : IsStrictlyMonotone f) : Elem S.1 => (point fm, S.5 (point>=left fm) (point<=right fm))
+    \protected \func elem (fm : IsStrictlyMonotone f) : Elem S.1 => (point fm, S.5 (point>=left fm) (point<=right fm))
 
     \lemma point<-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<b : x < S.3) (fc : IsContAt f (x, S.5 a<=x (<=-less x<b))) 
     (fx<y : f (x, S.5 a<=x (<=-less x<b)) < y) : x < point fm => {?hidden_proof}
@@ -75,7 +75,7 @@
     \lemma point<=-cont-char (fm : IsStrictlyMonotone f) {x : Real} (a<=x : S.2 <= x) (x<=b : x <= S.3) (fc : IsContAt f (x, S.5 a<=x x<=b)) (x<=p : x <= point fm) : f (x, S.5 a<=x x<=b) <= y 
       => {?hidden_proof}
 
-    \lemma image (fm : IsStrictlyMonotone f) (fc : IsContAt f (elem fm)) : f (elem fm) = y => {?hidden_proof}
+    \protected \lemma image (fm : IsStrictlyMonotone f) (fc : IsContAt f (elem fm)) : f (elem fm) = y => {?hidden_proof}
   }
 
 

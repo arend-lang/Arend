@@ -11,9 +11,9 @@
 \import Algebra.Pointed
 \import Algebra.Ring
 \import Category.Functor
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
-\import Meta(cases, unfold)
+\import Meta (cases, unfold)
 \import Paths
 \import Paths.Meta
 \import Set
@@ -35,13 +35,66 @@
   }
 
 
-\class PermutationRepresReducible {
-  | R : Ring
-  | G : Group
-  | X : GroupAction G
+\class PermutationRepresReducible {R : Ring} {G : Group} (X : GroupAction G) {
   | somepoint : X
   | somepoint' : X
   | different-points : somepoint' /= somepoint
   | not-trivial-ring : R.zro /= R.ide
   | decideEq-somepoint (x : X) : Dec (x = somepoint)
+
+  \func somepoints-equality-1 : decideEq-somepoint somepoint = yes idp => cases (decideEq-somepoint somepoint)
+
+  \func somepoints-equality-2 : decideEq-somepoint somepoint' = no different-points => cases (decideEq-somepoint somepoint')
+
+  \func R_m : LModule R => RingLModule R
+
+  \func R_m-triv : LinRepres R G => TrivialAction R_m G
+
+  \func Module : LModule R => PowerLModule X R_m
+
+  \func Repr : LinRepres R G => PermRepr {R} {G} X
+
+  \func vectorOnes : Module => \lam _ => R.ide
+
+  \func invSubMod : LinearMap R_m Module \cowith
+    | func => \lam (r : R) => \lam _ => r
+    | func-+ => {?hidden_proof}
+    | func-*c => {?hidden_proof}
+
+  \func inv-rev (r : R_m-triv) : (invSubMod r) somepoint = r => idp
+
+  \func fixed-submodule (g : G) (r : R) : g Repr.** invSubMod r = invSubMod r => ext (\lam j => aux r j (inverse g X.** j))
+    \where {
+      \func aux (r : R) (j j' : X) : invSubMod r j = invSubMod r j' => idp
+    }
+
+
+  \func invSubRepr : SubLRepres Repr \cowith
+    | S => R_m-triv
+    | in => \new InterwiningMap {
+      | LinearMap => invSubMod
+      | func-** => \lam {e : R_m-triv} {g : G} => ext (\lam _ => rewrite (fixed-submodule g e) idp)
+    }
+    | in-mono => {?hidden_proof}
+
+  \func Non-constant-vector : Repr => \lam (j : X) => (\case decideEq-somepoint j \with {
+    | yes e => R.ide
+    | no n => R.zro
+  })
+    \where {
+      \func equation-1 : Non-constant-vector somepoint = R.ide => unfold Non-constant-vector $ rewrite somepoints-equality-1 idp
+
+      \func equation-2 : Non-constant-vector somepoint' = R.zro => unfold Non-constant-vector $ rewrite somepoints-equality-2 idp
+    }
+
+
+  \func SubRepr-non-trivial : Not invSubRepr.isTrivial => \lam p => (\case \elim p \with {
+    | byLeft zeromod => not-trivial-ring (inv (zeromod R.ide))
+    | byRight isSurj-in => \case isSurj-in Non-constant-vector \with {
+      | inP a =>
+        not-trivial-ring (rewrite (inv Non-constant-vector.equation-1, inv Non-constant-vector.equation-2, inv a.2, fixed-submodule.aux a.1 somepoint' somepoint) idp)
+    }
+  })
+
+  \func Not-Irreducible : Not (Irreducible Repr) => \lam prf-irred => SubRepr-non-trivial (prf-irred invSubRepr)
 }

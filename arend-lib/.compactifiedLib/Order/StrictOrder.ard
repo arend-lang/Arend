@@ -8,6 +8,15 @@
   | <-transitive \alias \infixr 9 <∘ {x y z : E} : x < y -> y < z -> x < z
   | \infix 4 > : E -> E -> \Prop
   | > => \lam x y => y < x
+
+  \protected \func op : StrictPoset E \cowith
+    | < => \lam x y => y < x
+    | <-irreflexive => {?hidden_proof}
+    | <-transitive => {?hidden_proof}
+
+  \lemma <_/= {x y : E} (x<y : x < y) : x /= y => {?hidden_proof}
+
+  \lemma >_/= {x y : E} (y<x : x > y) : x /= y => {?hidden_proof}
 }
   \where {
     \module Reasoning

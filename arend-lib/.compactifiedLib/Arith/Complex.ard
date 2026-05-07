@@ -16,10 +16,7 @@
 \import Paths.Meta
 \import Arith.Real.Field
 
-\class Complex {
-  | re : Real
-  | im : Real
-}
+\record Complex (re : Real) (im : Real)
 
 \instance ComplexField : Field Complex 
   | zro => \new (Complex 0 0)
@@ -35,7 +32,7 @@
   | locality => {?hidden_proof}
   | #0-tight => {?hidden_proof}
   \where {
-    \open Monoid(Inv)
+    \open Monoid (Inv)
 
     \instance ComplexMonoid : CMonoid Complex 
       | ide => \new (Complex 1 0)

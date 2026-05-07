@@ -8,11 +8,18 @@
 \import Relation.Equivalence
 \import Set
 
-\class GroupAction \extends BaseSet {
-  | G : Group
+\class GroupAction \extends BaseSet (G : Group) {
   | \infixl 8 ** : G -> E -> E
   | **-assoc {m n : G} {e : E} : m ** (n ** e) = (m * n) ** e
   | id-action {e : E} : ide ** e = e
+
+  \func Stabilizer (s : E) : SubGroup G \cowith
+    | contains => \lam m => m ** s = s
+    | contains_* => {?hidden_proof}
+    | contains_ide => {?hidden_proof}
+    | contains_inverse => {?hidden_proof}
+
+  \func choosePoint (e : E) => ActionBySubgroup (Stabilizer e)
 }
 
 \class TransitiveGroupAction \extends GroupAction {
@@ -21,9 +28,13 @@
 
 \func ActionBySubgroup {G : Group} (H : SubGroup G) : GroupAction G \cowith
   | E => H.Cosets
-  | ** => **
-  | **-assoc => **-assoc
-  | id-action => id-action
+  | ** (g : G) (e : H.Cosets) : H.Cosets \with
+    | g, in~ a => in~ (g * a)
+    | g, ~-equiv x y r => qed
+      (in~ (g * x) ==< H.invariant-right-multiplication (H.equivalence-to-1 r) >== in~ (g * x * (inverse x * y)) ==< pmap in~ (trivialRelation g x y) >== in~ 
+        (g * y))
+  | **-assoc {m n : G} {e : H.Cosets} : m ** (n ** e) = (m * n) ** e => {?hidden_proof}
+  | id-action {e : H.Cosets} : ide ** e = e => {?hidden_proof}
   \where {
     \func trivialRelation (g x y : G) : g * x * (inverse x * y) = g * y 
     => qed (g * x * (inverse x * y) ==< *-assoc >== g * (x * (inverse x * y)) ==< pmap (g *) (inv *-assoc) >== g * ((x * inverse x) * y) ==< pmap 
@@ -33,4 +44,4 @@
 
 \instance TransitiveActionBySubgroup {G : Group} (H : SubGroup G) : TransitiveGroupAction G 
   | GroupAction => ActionBySubgroup H
-  | isTransAction => isTransAction
+  | isTransAction (v v' : H.Cosets) : ∃ (g : G) (g ActionBySubgroup.** v = v') => {?hidden_proof}

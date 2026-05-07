@@ -19,11 +19,13 @@
 \import Order.StrictOrder
 \import Paths
 \import Paths.Meta
-\open Monoid(Inv)
+\open Monoid (Inv)
 
 \class OrderedAddMonoid \extends StrictPoset, AddMonoid {
   | <_+-left (z : E) {x y : E} : x < y -> x + z < y + z
   | <_+-right (z : E) {x y : E} : x < y -> z + x < z + y
+
+  \lemma <_+ {a b c d : E} (p : a < c) (q : b < d) : a + b < c + d => {?hidden_proof}
 }
 
 \class OrderedAbMonoid \extends OrderedAddMonoid, AbMonoid {
@@ -47,6 +49,18 @@
   | join_+-left => \lam {a} {b} {c} =>
   <=-antisymmetric (\lam p => (  \have t => LinearOrder.join/=left $ <_/= $ <_+-cancel-left a $ join-left <∘r p  \in join-right $ rewrite t in p)) $ join-univ 
     (<=_+ <=-refl join-left) (<=_+ <=-refl join-right)
+
+  \lemma <_+-invert-right {a b c d : E} (p : b + d <= a + c) (q : c < d) : b < a => {?hidden_proof}
+
+  \lemma <_+-invert-left {a b c d : E} (p : b + d < a + c) (q : c <= d) : b < a => {?hidden_proof}
+
+  \lemma <=_+-left {a b c d : E} (p : a <= c) (q : b < d) : a + b < c + d => {?hidden_proof}
+
+  \lemma <=_+-right {a b c d : E} (p : a < c) (q : b <= d) : a + b < c + d => {?hidden_proof}
+
+  \lemma BigSum_>0 {l : Array E} (q : \Pi (j : Fin l.len) -> 0 <= l j) (p : ∃ (j : Fin l.len) (0 < l j)) : 0 < BigSum l => {?hidden_proof}
+
+  \lemma Big_join-choice {n : Nat} {l : Array E (suc n)} {e : E} (e>0 : 0 < e) : ∃ (a : l) (Big ∨ (l 0) (tail l) < a + e) => {?hidden_proof}
 }
 
 \class PreorderedAddGroup \extends AddGroup {
@@ -65,13 +79,55 @@
         + ((z - z) - x) ==< pmap (y + (__ - x)) negative-right >== y + (zro - x) ==< pmap (y +) zro-left >== y - x))) x<y
   | isNeg : E -> \Prop
   | isNeg => \lam x => isPos (negative x)
+
+  \lemma fromNeg {x y : E} (x-y<0 : isNeg (x - y)) : x < y => {?hidden_proof}
+
+  \lemma toNeg {x y : E} (x<y : x < y) : isNeg (x - y) => {?hidden_proof}
+
+  \lemma pos_>0 {x : E} (p : isPos x) : x > zro => {?hidden_proof}
+
+  \lemma >0_pos {x : E} (x>0 : x > zro) : isPos x => {?hidden_proof}
+
+  \lemma neg_<0 {x : E} (p : isNeg x) : x < zro => {?hidden_proof}
+
+  \lemma <0_neg {x : E} (x<0 : x < zro) : isNeg x => {?hidden_proof}
+
+  \lemma positive_negative' {x : E} (x>0 : isPos x) : isNeg (negative x) => {?hidden_proof}
+
+  \lemma positive_negative {x : E} (x>0 : x > zro) : negative x < zro => {?hidden_proof}
+
+  \lemma negative_positive' {x : E} (-x<0 : isNeg (negative x)) : isPos x => {?hidden_proof}
+
+  \lemma negative_positive {x : E} (x<0 : x < zro) : negative x > zro => {?hidden_proof}
+
+  \lemma negative_< {x y : E} (x<y : x < y) : negative y < negative x => {?hidden_proof}
+
+  \lemma negative_<-inv {x y : E} (p : negative x < negative y) : y < x => {?hidden_proof}
+
+  \lemma negative_<-left {x y : E} (p : negative x < y) : negative y < x => {?hidden_proof}
+
+  \lemma negative_<-right {x y : E} (p : x < negative y) : y < negative x => {?hidden_proof}
+
+  \lemma <-diff-mid {x y z : E} (p : x - y < z) : x < z + y => {?hidden_proof}
+
+  \lemma <-diff-mid-conv {x y z : E} (p : x < z + y) : x - y < z => {?hidden_proof}
+
+  \lemma from>0 {x y : E} (p : 0 < y - x) : x < y => {?hidden_proof}
+
+  \lemma to>0 {x y : E} (p : x < y) : 0 < y - x => {?hidden_proof}
+
+  \lemma from<0 {x y : E} (p : x - y < 0) : x < y => {?hidden_proof}
+
+  \lemma to<0 {x y : E} (p : x < y) : x - y < 0 => {?hidden_proof}
 }
   \where {
     \type \infix 4 < {A : PreorderedAddGroup} (x y : A) => isPos (y - x)
   }
 
 
-\class OrderedAbGroup \extends OrderedAbMonoid, OrderedAddGroup, AbGroup
+\class OrderedAbGroup \extends OrderedAbMonoid, OrderedAddGroup, AbGroup {
+  \lemma <-diff-left {x y z : E} (p : x - y < z) : x - z < y => {?hidden_proof}
+}
 
 \class LinearlyOrderedAbGroup \extends OrderedAbGroup, LinearlyOrderedAbMonoid, AbsAbGroup {
   | <_+-comparison (x y : E) : isPos (x + y) -> isPos x || isPos y
@@ -84,6 +140,8 @@
   })
   | <-connectedness => \lam x/<y y/<x => fromZero $ <_+-connectedness (y/<x __) (\lam p => x/<y (fromNeg p))
   | abs>=0 => \lam p => <-irreflexive $ negative_positive (join-left <∘r p) <∘ join-right <∘r p
+
+  \lemma abs_-_< {x y z : E} (p : x - y < z) (q : y - x < z) : abs (x - y) < z => {?hidden_proof}
 }
 
 \class OrderedSemiring \extends Semiring, OrderedAbMonoid {
@@ -92,6 +150,22 @@
   | <_*_positive-right {x y z : E} : x > zro -> y < z -> x * y < x * z
   | <_*_negative-left {x y z : E} : x < y -> z < zro -> x * z > y * z
   | <_*_negative-right {x y z : E} : x < zro -> y < z -> x * y > x * z
+
+  \lemma natCoef_< {n m : Nat} (p : n NatOrder.< m) : natCoef n < natCoef m => {?hidden_proof}
+
+  \lemma <_*_positive_positive {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) : 0 < x * y => {?hidden_proof}
+
+  \lemma <_*_negative_negative {x y : E} (x<0 : x < 0) (y<0 : y < 0) : 0 < x * y => {?hidden_proof}
+
+  \lemma <_*_positive_negative {x y : E} (x>0 : 0 < x) (y<0 : y < 0) : x * y < 0 => {?hidden_proof}
+
+  \lemma <_*_negative_positive {x y : E} (x<0 : x < 0) (y>0 : 0 < y) : x * y < 0 => {?hidden_proof}
+
+  \lemma <_* {a b c d : E} (a>0 : 0 < a) (c>0 : 0 < c) (a<b : a < b) (c<d : c < d) : a * c < b * d => {?hidden_proof}
+
+  \lemma pow>0 {a : E} (p : 0 < a) {k : Nat} : 0 < pow a k => {?hidden_proof}
+
+  \lemma pow<id {a : E} (a>0 : 0 < a) (a<1 : a < 1) {k : Nat} (k>1 : 1 NatOrder.< k) : pow a k < a => {?hidden_proof}
 }
 
 \class LinearlyOrderedSemiring \extends OrderedSemiring, LinearlyOrderedAbMonoid, PosetSemiring {
@@ -106,6 +180,78 @@
     | byLeft (_, z<y) => y<=z z<y
     | byRight (x<0, _) => x>=0 x<0
   })
+
+  \lemma <_*_positive-cancel-left {x y z : E} (x>=0 : 0 <= x) (p : x * y < x * z) : y < z => {?hidden_proof}
+
+  \lemma <_*_positive-cancel-right {x y z : E} (z>=0 : 0 <= z) (p : x * z < y * z) : x < y => {?hidden_proof}
+
+  \lemma <_*_negative-cancel-left {x y z : E} (x<=0 : x <= 0) (p : x * y < x * z) : z < y => {?hidden_proof}
+
+  \lemma <_*_negative-cancel-right {x y z : E} (z<=0 : z <= 0) (p : x * z < y * z) : y < x => {?hidden_proof}
+
+  \lemma square_>=0 {x : E} : 0 <= x * x => {?hidden_proof}
+
+  \lemma sum_squares_>0 {l : Array E} (p : ∃ (j : Fin l.len) (0 < l j || l j < 0)) : 0 < BigSum (map (\lam x => x * x) l) => {?hidden_proof}
+
+  \lemma >0_Inv (t : Inv {\this}) (p : t > 0) : t.inv > 0 => {?hidden_proof}
+
+  \lemma <0_Inv (t : Inv {\this}) (p : t < 0) : t.inv < 0 => {?hidden_proof}
+
+  \lemma >=0_Inv (t : Inv {\this}) (p : 0 <= t) : 0 <= t.inv => {?hidden_proof}
+
+  \lemma <=0_Inv (t : Inv {\this}) (p : t <= 0) : t.inv <= 0 => {?hidden_proof}
+
+  \lemma <=_Inv-cancel-left {x y z : E} (xi : Inv x) (x>=0 : 0 <= x) (p : x * y <= x * z) : y <= z => {?hidden_proof}
+
+  \lemma <=_Inv-cancel-right {x y z : E} (xi : Inv x) (p : y * x <= z * x) (x>=0 : 0 <= x) : y <= z => {?hidden_proof}
+
+  \func mid_inv (t : Inv (1 + 1)) (a b : E) => (a + b) * t.inv
+
+  \lemma mid_inv>left (t : Inv (1 + 1)) {a b : E} (p : a < b) : a < mid_inv t a b => {?hidden_proof}
+
+  \lemma mid_inv<right (t : Inv (1 + 1)) {a b : E} (p : a < b) : mid_inv t a b < b => {?hidden_proof}
+
+  \func denseOrder (t : Inv (1 + 1)) : DenseLinearOrder \cowith
+    | LinearOrder => \this
+    | isDense => {?hidden_proof}
+
+  \lemma natCoef>0 {n : Nat} (p : 0 NatOrder.< n) : zro < natCoef n => {?hidden_proof}
+
+  \lemma pow_<-monotone {a b : E} {k : Nat} (k/=0 : k /= 0) (a>=0 : 0 <= a) (a<b : a < b) : pow a k < pow b k => {?hidden_proof}
+
+  \lemma meet_*-left {a b c : E} (a>=0 : 0 <= a) : a * (b ∧ c) = (a * b) ∧ (a * c) => {?hidden_proof}
+
+  \lemma meet_*-right {a b c : E} (c>=0 : 0 <= c) : (a ∧ b) * c = (a * c) ∧ (b * c) => {?hidden_proof}
+
+  \lemma join_*-left {a b c : E} (a>=0 : 0 <= a) : a * (b ∨ c) = (a * b) ∨ (a * c) => {?hidden_proof}
+
+  \lemma join_*-right {a b c : E} (c>=0 : 0 <= c) : (a ∨ b) * c = (a * c) ∨ (b * c) => {?hidden_proof}
+
+\class Dec \extends LinearlyOrderedSemiring, LinearOrder.Dec {
+    | <_+-cancel-left => \lam x {y} {z} x+y<x+z => (\case trichotomy y z \with {
+      | equals y=z => absurd (<-irreflexive (rewrite y=z in x+y<x+z))
+      | less y<z => y<z
+      | greater y>z => absurd (<-irreflexive (<_+-right x y>z <∘ x+y<x+z))
+    })
+    | <_*-cancel-left => \lam {x} {y} {z} x*y<x*z => (\case trichotomy x zro, trichotomy y z \with {
+      | equals x=0, _ => absurd (<-irreflexive (transport2 < zro_*-left zro_*-left (rewrite x=0 in x*y<x*z)))
+      | _, equals y=z => absurd (<-irreflexive (rewrite y=z in x*y<x*z))
+      | less x<0, less y<z => absurd (<-irreflexive (<_*_negative-right x<0 y<z <∘ x*y<x*z))
+      | greater x>0, less y<z => byLeft (x>0, y<z)
+      | less x<0, greater y>z => byRight (x<0, y>z)
+      | greater x>0, greater y>z => absurd (<-irreflexive (<_*_positive-right x>0 y>z <∘ x*y<x*z))
+    })
+    | <_*-cancel-right => \lam {x} {y} {z} x*z<y*z => (\case trichotomy x y, trichotomy z zro \with {
+      | equals x=y, _ => absurd (<-irreflexive (rewrite x=y in x*z<y*z))
+      | _, equals z=0 => absurd (<-irreflexive (transport2 < zro_*-right zro_*-right (rewrite z=0 in x*z<y*z)))
+      | less x<y, less z<0 => absurd (<-irreflexive (x*z<y*z <∘ <_*_negative-left x<y z<0))
+      | less x<y, greater z>0 => byLeft (z>0, x<y)
+      | greater x>y, less z<0 => byRight (z<0, x>y)
+      | greater x>y, greater z>0 => absurd (<-irreflexive (x*z<y*z <∘ <_*_positive-left x>y z>0))
+    })
+
+    \lemma splitSum {x y a b : E} (p : x + y <= a + b) : x <= a || y <= b => {?hidden_proof}
+  }
 }
   \where {
     \open LinearOrder
@@ -215,6 +361,35 @@
   | positive=>#0 => positive=>#0Impl
   | negative=>#0 => negative=>#0Impl
   | #0=>eitherPosOrNeg => #0=>eitherPosOrNegImpl
+
+  \protected \default #0 x : \Prop => isPos x || isNeg x
+
+  \protected \default positive=>#0Impl {x} : isPos x -> #0 x => byLeft
+
+  \protected \default negative=>#0Impl {x} : isNeg x -> #0 x => byRight
+
+  \protected \default #0=>eitherPosOrNegImpl {x} (x#0 : #0 x) => x#0
+
+  \lemma pos#0 {x : E} (x>0 : 0 < x) : AddGroup.#0 x => {?hidden_proof}
+
+  \lemma neg#0 {x : E} (x<0 : x < 0) : AddGroup.#0 x => {?hidden_proof}
+
+  \lemma positive_*-cancel-left {x y : E} (xy>0 : 0 < x * y) (x>0 : 0 < x) : 0 < y => {?hidden_proof}
+
+  \lemma positive_*-cancel-right {x y : E} (x*y>0 : 0 < x * y) (y>0 : 0 < y) : 0 < x => {?hidden_proof}
+
+  \func denseOrder (t : Inv (1 + 1)) : UnboundedDenseLinearOrder \cowith
+    | DenseLinearOrder => LinearlyOrderedSemiring.denseOrder t
+    | withoutUpperBound => {?hidden_proof}
+    | withoutLowerBound => {?hidden_proof}
+
+  \lemma inv-negative (t : Inv {\this}) (p : t < 0) : t.inv < 0 => {?hidden_proof}
+
+  \lemma abs_* {x y : E} : abs (x * y) = abs x * abs y => {?hidden_proof}
+
+  \lemma abs_ide : abs 1 = 1 => {?hidden_proof}
+
+  \lemma abs_pow {x : E} {n : Nat} : abs (pow x n) = pow (abs x) n => {?hidden_proof}
 }
   \where {
 \class Dec \extends Domain.Dec, OrderedRing, LinearlyOrderedSemiring.Dec {
@@ -247,6 +422,16 @@
       | positive=>#0 => positive=>#0
       | negative=>#0 => negative=>#0
       | #0=>eitherPosOrNeg => #0=>eitherPosOrNeg
+
+      \protected \default positive=>#0 {x} (x>0 : isPos x) : x /= zro => \lam x=0 => zro/>0 (transport isPos x=0 x>0)
+
+      \protected \default negative=>#0 {x} (x<0 : isNeg x) : x /= zro => \lam x=0 => zro/>0 (transport isPos (pmap negative x=0 *> negative_zro) x<0)
+
+      \protected \default #0=>eitherPosOrNeg {x} (x#0 : x /= zro) : isPos x || isNeg x => \case +_trichotomy x \with {
+        | less x<0 => byRight (<0_neg x<0)
+        | equals x=0 => absurd (transport (/= zro) x=0 x#0 idp)
+        | greater x>0 => byLeft (>0_pos x>0)
+      }
     }
   }
 
@@ -271,6 +456,32 @@
     | byRight y<0 => absurd (zro/>0 (transport isPos negative-right (positive_+ x*y>0 (positive_negative_* x>0 y<0))))
   })
   | negative=>#0 => \lam x<0 => transport #0 negative-isInv (Ring.negative_inv (positive=>#0 x<0))
+
+  \func pinv (x : E) (\property x>0 : 0 < x) : E => Inv.inv {pos#0 x>0}
+
+  \lemma pinv-left {x : E} (x>0 : 0 < x) : pinv x x>0 * x = 1 => {?hidden_proof}
+
+  \lemma pinv-right {x : E} (x>0 : 0 < x) : x * pinv x x>0 = 1 => {?hidden_proof}
+
+  \lemma pinv_pos-inv {x : E} (x>0 : 0 < x) : pinv (pinv x x>0) (pinv>0 x>0) = x => {?hidden_proof}
+
+  \lemma pinv_< {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (x<y : x < y) : pinv y y>0 < pinv x x>0 => {?hidden_proof}
+
+  \lemma pinv_<-conv {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (p : pinv y y>0 < pinv x x>0) : x < y => {?hidden_proof}
+
+  \lemma pinv_<= {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (x<=y : x <= y) : pinv y y>0 <= pinv x x>0 => {?hidden_proof}
+
+  \lemma pinv_<=-conv {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) (p : pinv y y>0 <= pinv x x>0) : x <= y => {?hidden_proof}
+
+  \lemma pinv>0 {x : E} (x>0 : 0 < x) : 0 < pinv x x>0 => {?hidden_proof}
+
+  \lemma pinv>1 {x : E} (x>0 : 0 < x) (x<1 : x < 1) : 1 < pinv x x>0 => {?hidden_proof}
+
+  \lemma pinv_ide : pinv 1 zro<ide = 1 => {?hidden_proof}
+
+  \lemma pinv_* {x y : E} (x>0 : 0 < x) (y>0 : 0 < y) : pinv x x>0 * pinv y y>0 = pinv (x * y) (<_*_positive_positive x>0 y>0) => {?hidden_proof}
+
+  \lemma pinv_pow {x : E} (x>0 : 0 < x) {n : Nat} : pow (pinv x x>0) n = pinv (pow x n) (pow>0 x>0) => {?hidden_proof}
 }
 
 \class DiscreteOrderedField \extends OrderedCRing.Dec, OrderedField, DiscreteField {
@@ -285,12 +496,44 @@
       | byRight x<0 => less $ neg_<0 x<0
     }
   })
+
+  \lemma finv>0 {x : E} (x>0 : 0 < x) : 0 < finv x => {?hidden_proof}
+
+  \lemma finv<0 {x : E} (x<0 : x < 0) : finv x < 0 => {?hidden_proof}
+
+  \lemma finv<1 {x : E} (x>1 : 1 < x) : finv x < 1 => {?hidden_proof}
+
+  \lemma finv>1 {x : E} (x>0 : 0 < x) (x<1 : x < 1) : 1 < finv x => {?hidden_proof}
+
+  \lemma finv_< {x y : E} (x>0 : 0 < x) (x<y : x < y) : finv y < finv x => {?hidden_proof}
+
+  \lemma finv_<-conv {x y : E} (x>0 : 0 < x) (p : finv x < finv y) : y < x => {?hidden_proof}
+
+  \lemma finv_<-left {x y : E} (x>0 : 0 < x) (p : finv x < y) : finv y < x => {?hidden_proof}
+
+  \lemma finv_<-right {x y : E} (x>0 : 0 < x) (p : x < finv y) : y < finv x => {?hidden_proof}
+
+  \lemma <_rotate-right {x y z : E} (y>0 : 0 < y) (xy<z : x * y < z) : x < z * finv y => {?hidden_proof}
+
+  \lemma <_rotate-left {x y z : E} (y>0 : 0 < y) (p : x < y * z) : finv y * x < z => {?hidden_proof}
+
+  \lemma <_rotate-right-conv {x y z : E} (y>0 : 0 < y) (p : x < z * finv y) : x * y < z => {?hidden_proof}
+
+  \lemma <_rotate-left-conv {x y z : E} (y>0 : 0 < y) (p : finv y * x < z) : x < y * z => {?hidden_proof}
+
+  \lemma finv_<= {x y : E} (x>0 : 0 < x) (x<=y : x <= y) : finv y <= finv x => {?hidden_proof}
+
+  \lemma finv>=0 {x : E} (x>=0 : 0 <= x) : 0 <= finv x => {?hidden_proof}
+
+  \lemma finv>0-diff {x : E} (x>0 : 0 < x) : finv x - finv (x + 1) = finv (x * (x + 1)) => {?hidden_proof}
 }
 
 \class OrderedAAlgebra \extends AAlgebra, OrderedRing {
   \override R : OrderedCRing
   | coef_< {x y : R} : x < {R} y -> coefMap x < coefMap y
   | coef_<-inv {x y : R} : coefMap x < coefMap y -> x < {R} y
+
+  \lemma coef_<= {x y : R} (p : x <= {R} y) : coefMap x <= coefMap y => {?hidden_proof}
 }
 
 \class OrderedCAlgebra \extends OrderedAAlgebra, CAlgebra, OrderedCRing {

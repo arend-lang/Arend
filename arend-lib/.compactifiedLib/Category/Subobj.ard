@@ -59,7 +59,7 @@
     \open SubobjPreorder
     \open pullback_regularSubobj-isMeet
 
-    exact {C : FinCompletePrecat} {x y z w : C} (f : Hom x z) (fm : isRegularMono f) (g : Hom y z) (gm : isRegularMono g) {p1 : Hom w x} {p2 : Hom w y} 
+    \sfunc exact {C : FinCompletePrecat} {x y z w : C} (f : Hom x z) (fm : isRegularMono f) (g : Hom y z) (gm : isRegularMono g) {p1 : Hom w x} {p2 : Hom w y} 
     (coh : f ∘ p1 = g ∘ p2) (hm : isRegularMono (f ∘ p1)) (m : Preorder.Is-meet (regSubobj f fm) (regSubobj g gm) (regSubobj (f ∘ p1) hm)) : Pullback f g w p1 p2 
     => 
       \let | pb : Pullback => regularSubobj_meet-pullback fm gm hm m

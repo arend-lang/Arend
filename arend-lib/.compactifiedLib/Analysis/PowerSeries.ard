@@ -32,7 +32,7 @@
 \import Topology.NormedRing
 \import Topology.TopSpace
 \import Topology.UniformSpace
-\open Monoid(pow)
+\open Monoid (pow)
 
 \func powerSeries {X : ExPseudoNormedRing} (cs : Nat -> X) (n : Nat) (x : X) => cs n * pow x n
 
@@ -51,10 +51,10 @@
 
 \type IsPowerSeriesConv {X : ExPseudoNormedRing} (cs : Nat -> X) : \Prop => \Pi {a : Rat} -> 0 <= a -> IsConvUpperSeries (\lam n => norm (cs n) * pow a n)
   \where {
-    \lemma upper (cc : IsPowerSeriesConv cs) {a : ExUpperReal} (a>=0 : 0 <= a) (aB : ∃ (B : Rat) (a.U B)) :
+    \protected \lemma upper (cc : IsPowerSeriesConv cs) {a : ExUpperReal} (a>=0 : 0 <= a) (aB : ∃ (B : Rat) (a.U B)) :
       IsConvUpperSeries (\lam n => norm (cs n) * ExUpperRealSemigroup.pow a n) => {?hidden_proof}
 
-    \lemma atPoint (cc : IsPowerSeriesConv cs) {x : X} : IsConvUpperSeries (\lam n => norm (cs n) * ExUpperRealSemigroup.pow (norm x) n) => {?hidden_proof}
+    \protected \lemma atPoint (cc : IsPowerSeriesConv cs) {x : X} : IsConvUpperSeries (\lam n => norm (cs n) * ExUpperRealSemigroup.pow (norm x) n) => {?hidden_proof}
   }
 
 
@@ -67,7 +67,7 @@
 \lemma power-ratio-test {X : ExPseudoNormedRing} {c : Series X} {b : Series Real} (bp : \Pi (n : Nat) -> norm (c (suc n)) <= norm (c n) * b n) {l : Real} 
 (bl : RealNormed.IsLimit b l) {a : Rat} (a>=0 : 0 <= a) (la<1 : l * a < 1) : IsConvUpperSeries (\lam j => norm (c j) * pow a j) => {?hidden_proof}
   \where {
-    \open ExUpperRealSemigroup(<=_*)
+    \open ExUpperRealSemigroup (<=_*)
   }
 
 

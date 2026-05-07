@@ -7,7 +7,7 @@
 \import Algebra.Ring.RingHom
 \import Category
 \import Category.Subcat
-\import Function(IsInj, IsSurj)
+\import Function (IsInj, IsSurj)
 \import Function.Meta
 \import Logic
 \import Meta
@@ -16,14 +16,16 @@
 \import Relation.Equivalence
 
 \func ringKerImageHom {R : CRing} {S : CRing} (f : RingHom R S) : RingHom (FactorRing (RingHom.KernelC f)) f.Image.IRing \cowith
-  | func => func
+  | func (x : FactorRing (RingHom.KernelC f)) : f.Image.IRing \with
+    | in~ a => (f a, inP (a, idp))
+    | ~-equiv x y r => ext $ inv $ rewrite (zro-left, +-assoc, negative-left, zro-right) in pmap (S.+ f y) (rewrite r in f.func-minus {x} {y})
   | func-+ => {?hidden_proof}
   | func-ide => {?hidden_proof}
   | func-* => {?hidden_proof}
   \where {
-    \lemma isSurj : IsSurj (func {R} {S} {f}) => {?hidden_proof}
+    \protected \lemma isSurj : IsSurj (func {R} {S} {f}) => {?hidden_proof}
 
-    \lemma isInj : IsInj (func {R} {S} {f}) => {?hidden_proof}
+    \protected \lemma isInj : IsInj (func {R} {S} {f}) => {?hidden_proof}
   }
 
 

@@ -21,6 +21,18 @@
 
 \class TopRieszSpace \extends TopAbGroup, RieszSpace {
   | solid-neighborhood {U : Set E} : single 0 <=< U -> ∃ (V : IsSolid) (single 0 <=< V) (V ⊆ U)
+
+  \lemma abs-uniform : UniformMap \this \this abs => {?hidden_proof}
+
+  \lemma *q-right-uniform {q : Rat} : TopAbGroupMap \this \this (q *q) => {?hidden_proof}
+    \where {
+      \lemma *q_<=1-right-uniform {q : Rat} (q>=0 : RatField.zro RatField.<= q) (q<=1 : q RatField.<= 1) : TopAbGroupMap \this \this (q *q) => {?hidden_proof}
+    }
+
+
+  \lemma join-uniform : UniformMap (ProductTopAbGroup \this \this) \this (\lam s => s.1 ∨ s.2) => {?hidden_proof}
+
+  \lemma meet-uniform : UniformMap (ProductTopAbGroup \this \this) \this (\lam s => s.1 ∧ s.2) => {?hidden_proof}
 }
   \where {
     \open UniformMap

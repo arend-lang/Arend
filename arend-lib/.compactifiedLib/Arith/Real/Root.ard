@@ -29,10 +29,10 @@
 \import Topology.TopRing
 \import Topology.TopRing.Real
 \import Topology.TopSpace
-\open Monoid(pow)
+\open Monoid (pow)
 \open ContMap
 
-root (n : Nat) (x : Real) : Real \elim n
+\sfunc root (n : Nat) (x : Real) : Real \elim n
   | 0 => 0
   | suc n => ((rootEquiv {suc n} suc/=0).ret (x ∨ 0, join-right)).1
   \where {
@@ -58,7 +58,7 @@ root (n : Nat) (x : Real) : Real \elim n
 
 \lemma root-rat {n : Nat} (n/=0 : n /= 0) {a b : Rat} (a>=0 : 0 <= a) (a<b : a < b) : ∃ (q r : Rat) (0 < q) (q < r) (a < pow q n) (pow r n < b) => {?hidden_proof}
 
-sqrt (x : Real) => root 2 x
+\sfunc sqrt (x : Real) => root 2 x
 
 \lemma sqrt>=0 {x : Real} : 0 <= sqrt x => {?hidden_proof}
 

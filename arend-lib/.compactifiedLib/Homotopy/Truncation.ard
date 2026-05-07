@@ -10,9 +10,7 @@
 \import Paths
 \import Paths.Meta
 
-\class Truncated_-1+ {
-  | n : Nat
-  | A : \Type
+\class Truncated_-1+ (n : Nat) (A : \Type) {
   | isTruncated : A ofHLevel_-1+ n
 }
   \where {

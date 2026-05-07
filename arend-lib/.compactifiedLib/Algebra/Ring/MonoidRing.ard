@@ -15,8 +15,8 @@
 \import Data.Array.Pairs
 \import Data.Array.Split
 \import Data.Or
-\import Equiv(Equiv)
-\import Function(IsInj)
+\import Equiv (Equiv)
+\import Function (IsInj)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -28,7 +28,7 @@
 \import Set.Fin
 \import Set.Fin.KFin
 \open EPerm
-\open Transitive(Closure, cin, ctrans)
+\open Transitive (Closure, cin, ctrans)
 \open AddMonoid
 
 \type MonoidSet (M : \Set) (R : AddMonoid) => Quotient {Array (\Sigma R M)} ~
@@ -101,10 +101,13 @@
 
 \instance MonoidAbMonoid (M : \Set) (R : AddMonoid) : AbMonoid (MonoidSet M R) 
   | zro => in~ nil
-  | + => +
-  | zro-left => zro-left
-  | +-assoc => +-assoc
-  | +-comm => +-comm
+  | + (x y : MonoidSet M R) : MonoidSet M R \with
+    | in~ l, in~ l' => in~ (l ++ l')
+    | in~ l, ~-equiv l1 l2 r => monoidSet-ext $ ~-pequiv (~-perm eperm-++-comm) *> ~-pequiv (~_++-left r) *> ~-pequiv (~-perm eperm-++-comm)
+    | ~-equiv l1 l2 r, in~ l' => monoidSet-ext $ ~-pequiv (~_++-left r)
+  | zro-left {x : MonoidSet M R} : in~ nil + x = x => {?hidden_proof}
+  | +-assoc {x y z : MonoidSet M R} : (x + y) + z = x + (y + z) => {?hidden_proof}
+  | +-comm {x y : MonoidSet M R} : x + y = y + x => {?hidden_proof}
   \where {
     \open MonoidSet
   }
@@ -112,10 +115,12 @@
 
 \instance MonoidAbGroup (M : \Set) (R : AddGroup) : AbGroup 
   | AbMonoid => MonoidAbMonoid M R
-  | negative => negative
-  | negative-left => negative-left
+  | negative (x : MonoidSet M R) : MonoidSet M R \with
+    | in~ l => in~ (map func l)
+    | ~-equiv l l' r => monoidSet-ext $ Closure.toEquality inMS~ ~-pequiv (~_negative (cin r))
+  | negative-left {x : MonoidSet M R} : negative x + x = 0 => {?hidden_proof}
   \where {
-    \open Transitive(Closure, cin, ctrans)
+    \open Transitive (Closure, cin, ctrans)
 
     \func func {M : \Set} {R : AddGroup} (s : \Sigma R M) => (R.negative s.1, s.2)
 
@@ -136,7 +141,10 @@
 \instance MonoidSemiring (M : Monoid) (R : Semiring) : Semiring 
   | AbMonoid => MonoidAbMonoid M R
   | ide => in~ ((1, 1) :: nil)
-  | * => *
+  | * (x y : MonoidSet M R) : MonoidSet M R \elim x, y
+    | in~ l, in~ l' => in~ (pairs func l l')
+    | in~ l, ~-equiv l1 l2 r => monoidSet-ext $ Closure.toEquality inMS~ ~-pequiv (*-coh-right r)
+    | ~-equiv l1 l2 r, in~ l => monoidSet-ext $ ~-pequiv (~-perm pairs-flip) *> Closure.toEquality inMS~ ~-pequiv (*-coh-right {M.op} {R.op} r) *> ~-pequiv (~-perm pairs-flip)
   | ide-left => {?hidden_proof}
   | ide-right => {?hidden_proof}
   | *-assoc => {?hidden_proof}
@@ -318,12 +326,12 @@
 \func polyToMonoidSetHom {M : Monoid} {R : Ring} (m : M) : AddMonoidHom (PolyRing R) (MonoidRing M R) \cowith
   | func => polyToMonoidSet m
   | func-zro => {?hidden_proof}
-  | func-+ => func-+
+  | func-+ {p q : Poly R} : polyToMonoidSet m (p + q) = polyToMonoidSet m p + polyToMonoidSet m q => {?hidden_proof}
 
 \func polyToMonoidSetRingHom {M : CMonoid} {R : CRing} (m : M) : RingHom (PolyRing R) (MonoidRing M R) \cowith
   | AddMonoidHom => polyToMonoidSetHom m
   | func-ide => {?hidden_proof}
-  | func-* => func-*
+  | func-* {p q : Poly R} : polyToMonoidSet m (p * q) = polyToMonoidSet m p * polyToMonoidSet m q => {?hidden_proof}
   \where {
     \lemma func-*c {m : M} {a : R} {p : Poly R} : polyToMonoidSet m (a PolyRing.*c p) = msMonomial a ide * polyToMonoidSet m p => {?hidden_proof}
   }

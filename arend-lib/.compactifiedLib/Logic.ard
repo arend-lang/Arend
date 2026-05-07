@@ -106,8 +106,7 @@
 
 \meta isProp-prover => \lam x y => cases (x, y) (cong prop-pi <|> contradiction)
 
-\class NegatedProp {
-  | P : \Prop
+\class NegatedProp (P : \Prop) {
   | isNegated : Not (Not P) -> P
 }
 

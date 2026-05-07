@@ -3,7 +3,7 @@
 \import Algebra.Solver
 \import Arith.Bool
 \import Arith.Nat
-\import Data.Array(Big, singleAt)
+\import Data.Array (Big, singleAt)
 \import Data.Bool
 \import Data.List \using ( nil \as lnil, :: \as l:: )
 \import Function.Meta
@@ -76,7 +76,7 @@
       | x l:: lnil => interpretMonomial env x
       | x l:: l => interpretMonomial env x + interpretNF' env l
       \where {
-        \lemma cons {n : Nat} {env : Array B n} {x : Array Bool n} {l : NF n} : interpretNF' env (l:: x l) = interpretMonomial env x + interpretNF' env l => {?hidden_proof}
+        \protected \lemma cons {n : Nat} {env : Array B n} {x : Array Bool n} {l : NF n} : interpretNF' env (l:: x l) = interpretMonomial env x + interpretNF' env l => {?hidden_proof}
       }
 
 

@@ -17,7 +17,12 @@
 
 \instance LocPosetAbMonoid {M : PosetAbMonoid} (S : SubAddMonoid M) : PosetAbMonoid (LocAbType S) 
   | AbMonoid => LocAbMonoid S
-  | <= => <=
+  | <= (x y : LocAbType S) : \Prop \with
+    | in~ a, in~ b => ∃ (c : S.contains) (a.1 + b.2 + c M.<= a.2 + b.1 + c)
+    | in~ a, ~-equiv x y r => ext (\lam inP (c, Sc, q) => inP (x.2 + c, S.contains_+ x.3 Sc, transport2 M.<= equation.abMonoid (equation.abMonoid {r}) $ <=_+ q $ M.<=-refl {y.2}), 
+      \lam inP (c, Sc, q) => inP (y.2 + c, S.contains_+ y.3 Sc, transport2 M.<= equation.abMonoid (equation.abMonoid {r}) $ <=_+ q $ M.<=-refl {x.2}))
+    | ~-equiv x y r, in~ a => ext (\lam inP (c, Sc, q) => inP (x.2 + c, S.contains_+ x.3 Sc, transport2 M.<= (equation.abMonoid {r}) equation.abMonoid $ <=_+ q $ M.<=-refl {y.2}), 
+      \lam inP (c, Sc, q) => inP (y.2 + c, S.contains_+ y.3 Sc, transport2 M.<= (equation.abMonoid {r}) equation.abMonoid $ <=_+ q $ M.<=-refl {x.2}))
   | <=-refl => {?hidden_proof}
   | <=-transitive => {?hidden_proof}
   | <=-antisymmetric => {?hidden_proof}
@@ -29,7 +34,10 @@
 
 \instance LocPosetMeetSemilattice {M : MeetSemilatticeAbMonoid} (S : SubAddMonoid M) : MeetSemilatticeAbMonoid (LocAbType S) 
   | PosetAbMonoid => LocPosetAbMonoid S
-  | meet => meet
+  | meet (x y : LocAbType S) : LocAbType S \with
+    | in~ a, in~ b => inl~ ((a.1 + b.2) ∧ (a.2 + b.1), a.2 + b.2, contains_+ a.3 b.3)
+    | in~ a, ~-equiv x y r => ~-lequiv $ meet_+-right *> pmap2 ∧ equation.abMonoid (equation.abMonoid {r}) *> inv meet_+-right
+    | ~-equiv x y r, in~ a => ~-lequiv $ meet_+-right *> pmap2 ∧ (equation.abMonoid {r}) equation.abMonoid *> inv meet_+-right
   | meet-left => {?hidden_proof}
   | meet-right => {?hidden_proof}
   | meet-univ => {?hidden_proof}

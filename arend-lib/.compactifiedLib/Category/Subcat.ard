@@ -42,7 +42,7 @@
 
 \lemma subCat-iso {C : Precat} {X : \hType obj} {f : X -> C} (e : Iso {subPrecat f}) : Iso {C} {f e.dom} {f e.cod} e => {?hidden_proof}
   \where {
-    \lemma conv {C : Precat} {X : \hType obj} {f : X -> C} {x x' : X} (e : Iso {C} {f x} {f x'}) : Iso {subPrecat f} {x} {x'} e => {?hidden_proof}
+    \protected \lemma conv {C : Precat} {X : \hType obj} {f : X -> C} {x x' : X} (e : Iso {C} {f x} {f x'}) : Iso {subPrecat f} {x} {x'} e => {?hidden_proof}
   }
 
 

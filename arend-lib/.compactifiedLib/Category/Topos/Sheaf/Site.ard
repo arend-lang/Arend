@@ -3,7 +3,7 @@
 \import Category.Limit
 \import Category.Slice
 \import Category.Subcat
-\import Equiv(QEquiv)
+\import Equiv (QEquiv)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -11,10 +11,17 @@
 \import Paths
 \import Paths.Meta
 
-\class Presieve {
-  | C : Precat
-  | x : C
-  | S : \Pi {y : C} -> Hom y x -> \Prop
+\record Presieve {C : Precat} (x : C) (\coerce S : \Pi {y : C} -> Hom y x -> \Prop) {
+  \func diagram : Functor => Comp (SlicePrecat.forget x) (subPrecat.embedding {SlicePrecat x} (\lam (p : \Sigma (y : SlicePrecat x) (S y.2)) => p.1))
+
+  \func cone : Cone diagram.op x \cowith
+    | coneMap => __.1.2
+    | coneCoh => {?hidden_proof}
+
+  \protected \func pullback {y : C} (h : Hom y x) : Presieve y \cowith
+    | S => \lam g => S (h ∘ g)
+
+  \protected \lemma pullback_id : pullback (id x) = {Presieve x} \this => {?hidden_proof}
 }
   \where {
     \lemma idLimit {C D : Precat} {F : Functor C.op D} {x : C} (S : Presieve x) (xS : S (id x)) : Limit {
@@ -31,8 +38,12 @@
   }
 
 
-\class Sieve \extends Presieve {
+\record Sieve \extends Presieve {
   | isSieve : \Pi {z y : C} (g : Hom z y) {f : Hom y x} -> S f -> S (f ∘ g)
+
+  \protected \func pullback {y : C} (h : Hom y x) : Sieve y \cowith
+    | S => \lam g => S (h ∘ g)
+    | isSieve => {?hidden_proof}
 }
   \where {
     \func map {C D : Precat} (F : Functor C D) (s : Sieve {C}) : Sieve {D} \cowith
@@ -47,7 +58,7 @@
   | cover-stable {x y : Ob} (h : Hom x y) {s : Sieve y} (c : isCover y s) : isCover x (s.pullback h)
 }
 
-\class SitePrehom \extends Functor \lp {
+\record SitePrehom \extends Functor \lp {
   \override C : Site
   \override D : Site
   | F-cover {x : C} {s : Sieve x} : isCover x s -> isCover (F x) (Sieve.map \this s)
@@ -64,9 +75,11 @@
   | isCover => \lam x s => ∃ (J : \Set) (g : (J -> SlicePrecat x)) (isBasicCover x g) (\Pi (j : J) -> s (g j).2)
   | cover-stable => \lam h {s} inP (J, g, c, d) =>
     inP (J, \lam j => pullbackFunctor h (g j), basicCover-stable h c, \lam j => transportInv (s {_}) (Pullback.pbCoh {pullback h (g j).2}) (isSieve _ (d j)))
+
+  \lemma genSieve (a : Ob) {J : \Set} (g : J -> SlicePrecat a) : Sieve a (\lam {b} f => ∃ (j : J) (h : Hom b (g j).1) ((g j).2 ∘ h = f)) => {?hidden_proof}
 }
 
-\class SiteWithBasisPrehom \extends Functor \lp {
+\record SiteWithBasisPrehom \extends Functor \lp {
   \override C : SiteWithBasis
   \override D : SiteWithBasis
   | F-basicCover {x : C} {J : \Set} {g : J -> SlicePrecat x} : isBasicCover x g -> isBasicCover (F x) (\lam j => (F (g j).1, Func (g j).2))

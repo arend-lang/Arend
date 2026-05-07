@@ -9,11 +9,35 @@
 \import Logic.Rewriting.TRS.MetaContexts
 \import Logic.Rewriting.TRS.Union
 
-\class TheoremContext {
-  | Color : DecSet
-  | Sort' : \Set
-  | envs : Color -> FSignature Sort'
-  | rules : \Pi (c : Color) -> LinearRegistry (envs c)
+\class TheoremContext (Color : DecSet) (Sort' : \Set) (envs : Color -> FSignature Sort') (rules : \Pi (c : Color) -> LinearRegistry (envs c)) {
+  \instance env : FSignature => SumFSignature envs
+
+  \func monochrome-reduction (c : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} (A B : Term (envs c) context s mc) : \Type 
+    => RewriteRelation {envs c} (rules c) A B
+
+  \func JRegistry : RuleRegistry env => SumRegistry envs rules
+
+  \func get-rule-pattern {s : Sort'} {c : Color} (idx : rule-J {rules c} s) : LinearPattern (envs c) nil s => LinearRegistry.rule-pattern {rules c} idx
+
+  \func rule-linear-mc {s : Sort'} {c : Color} (idx : rule-J {rules c} s) : MetaContext Sort' => LinearMetaContext {envs c} (get-rule-pattern idx)
+
+  \func rule-right-linear {s : Sort'} {c : Color} (idx : rule-J {rules c} s) : Term (envs c) nil s (rule-linear-mc idx) => LinearRegistry.rule-r {rules c} idx
+
+\data HasColoredRoot (color : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} (term : Term env context s mc) \elim term
+    | func f _ => func-root (f.1 = color)
+    \where {
+      \lemma equalize-colors (color color' : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} (f : symbol s) 
+      (arguments arguments' : DArray {env.arity f} (\lam (index : Index (domain f)) => Term env (context ++ f env.!!domain index) (f env.!!sort index) mc)) 
+      (hcl1 : HasColoredRoot color (func f arguments)) (hcl2 : HasColoredRoot color' (func f arguments')) : color = color' => {?hidden_proof}
+
+      \lemma reorganize (color : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} {f : symbol s} 
+      {arguments : DArray {env.arity f} (\lam (index : Index (domain f)) => Term env (context ++ f env.!!domain index) (f env.!!sort index) mc)} 
+      (hcl : HasColoredRoot color (func f arguments)) : f.1 = color => {?hidden_proof}
+    }
+
+
+\data HasExcludedColoredRoot (color : Color) {context : List Sort'} {s : Sort'} {mc : MetaContext Sort'} (term : Term env context s mc) \elim term
+    | func f _ => ex-func-root (Not (f.1 = color))
 }
 
 \open TheoremContext

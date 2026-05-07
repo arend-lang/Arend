@@ -14,9 +14,9 @@
 
 \instance LexicographicalList (A : Dec) : Dec (List A) 
   | < => <L
-  | <-irreflexive => <-irreflexive
-  | <-transitive => <-transitive
-  | trichotomy => trichotomy
+  | <-irreflexive {l : List A} (p : l <L l) : Empty => {?hidden_proof}
+  | <-transitive {as bs cs : List A} (as<bs : as <L bs) (bs<cs : bs <L cs) : as <L cs => {?hidden_proof}
+  | trichotomy (as bs : List A) : Tri {\new (StrictPoset (List A) <L <-irreflexive <-transitive)} as bs => {?hidden_proof}
   \where {
 \data \infix 4 <L {A : Dec} (l1 l2 : List A) : \Prop \elim l1, l2
       | nil, :: _ _ => nil<::

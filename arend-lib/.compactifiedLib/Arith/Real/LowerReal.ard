@@ -17,10 +17,11 @@
 \import Paths
 \import Paths.Meta
 
-\class ExtendedLowerReal {
-  | L : Rat -> \Prop
+\record ExtendedLowerReal (L : Rat -> \Prop) {
   | L-closed {q q' : Rat} : L q -> q' < q -> L q'
   | L-rounded {q : Rat} : L q -> ∃ (r : L) (q < r)
+
+  \lemma L_<= {q r : Rat} (Lq : L q) (p : r <= q) : L r => {?hidden_proof}
 }
   \where {
     \use \coerce fromRat (x : Rat) : ExtendedLowerReal \cowith
@@ -30,7 +31,7 @@
   }
 
 
-\class LowerReal \extends ExtendedLowerReal {
+\record LowerReal \extends ExtendedLowerReal {
   | L-inh : ∃ L
 }
   \where {
@@ -44,7 +45,7 @@
       | L-rounded => {?hidden_proof}
       | L-inh => {?hidden_proof}
 
-    \open LowerRealAbMonoid(<=)
+    \open LowerRealAbMonoid (<=)
 
     \lemma BJoin-bound {b : LowerReal} {J : \Set} {f : J -> ExtendedLowerReal} : b <= BJoin b f => {?hidden_proof}
 
@@ -84,7 +85,7 @@
   | meet_+-left => {?hidden_proof}
   | join_+-left => {?hidden_proof}
   \where {
-    \infixl 6 + (x y : LowerReal) : LowerReal \cowith
+    \sfunc \infixl 6 + (x y : LowerReal) : LowerReal \cowith
       | L => \lam a => ∃ (b : x.L) (c : y.L) (a RatField.< b RatField.+ c)
       | L-inh => {?hidden_proof}
       | L-closed => {?hidden_proof}
@@ -100,7 +101,7 @@
 
     \lemma lower_<_L {a : Rat} {x : LowerReal} : (a : LowerReal) LowerRealAbMonoid.< x <-> x.L a => {?hidden_proof}
 
-    meet (x y : LowerReal) : LowerReal \cowith
+    \sfunc meet (x y : LowerReal) : LowerReal \cowith
       | L => \lam a => \Sigma (x.L a) (y.L a)
       | L-inh => {?hidden_proof}
       | L-closed => {?hidden_proof}
@@ -108,7 +109,7 @@
 
     \lemma meet_L {x y : LowerReal} {a : Rat} : LowerReal.L {meet x y} a <-> (\Sigma (x.L a) (y.L a)) => {?hidden_proof}
 
-    join (x y : LowerReal) : LowerReal \cowith
+    \sfunc join (x y : LowerReal) : LowerReal \cowith
       | L => \lam a => x.L a || y.L a
       | L-inh => {?hidden_proof}
       | L-closed => {?hidden_proof}
@@ -129,6 +130,11 @@
   | <=-refl => {?hidden_proof}
   | <=-transitive => {?hidden_proof}
   | <=-antisymmetric => {?hidden_proof}
-  | Join => Join
+  | Join {J : \Set} (f : J -> ExtendedLowerReal) : ExtendedLowerReal 
+    | L => \lam q => ∃ (j : J) ((f j).L q)
+    | L-closed => \lam inP (j, q<fj) q'<q => inP (j, L-closed q<fj q'<q)
+    | L-rounded => \lam inP (j, q<fj) => (\case L-rounded q<fj \with {
+      | inP (r, r<fj, q<r) => inP (r, inP (j, r<fj), q<r)
+    })
   | Join-cond => {?hidden_proof}
   | Join-univ => {?hidden_proof}

@@ -1,4 +1,4 @@
-\import Algebra.Monoid(Monoid)
+\import Algebra.Monoid (Monoid)
 \import Algebra.Ordered
 \import Algebra.StrictlyOrdered
 \import Data.Bool
@@ -12,7 +12,7 @@
 \import Order.PartialOrder \hiding (<=)
 \import Paths
 \import Paths.Meta
-\import Set(==, ==_=)
+\import Set (==, ==_=)
 \open Nat
 \open LinearlyOrderedAbMonoid
 \open NatOrder
@@ -86,22 +86,22 @@
   | zro => 0
   | + => +
   | zro-left => {?hidden_proof}
-  | +-assoc => +-assoc
-  | +-comm => +-comm
+  | +-assoc {n m k : Nat} : (n + m) + k = n + (m + k) => {?hidden_proof}
+  | +-comm {n m : Nat} : n + m = m + n => {?hidden_proof}
   | ide => 1
   | * => *
-  | ide-left => ide-left
-  | *-assoc => *-assoc
-  | ldistr => ldistr
-  | *-comm => *-comm
+  | ide-left {n : Nat} : 1 * n = n => {?hidden_proof}
+  | *-assoc {n m k : Nat} : (n * m) * k = n * (m * k) => {?hidden_proof}
+  | ldistr {n m k : Nat} : n * (m + k) = n * m + n * k => {?hidden_proof}
+  | *-comm {n m : Nat} : n * m = m * n => {?hidden_proof}
   | zro_*-left => {?hidden_proof}
   | < => <
-  | <-irreflexive => <-irreflexive
-  | <-transitive => <-transitive
+  | <-irreflexive {n : Nat} (p : n < n) : Empty => {?hidden_proof}
+  | <-transitive {n m k : Nat} (p : n < m) (q : m < k) : n < k => {?hidden_proof}
   | trichotomy => {?hidden_proof}
-  | <_+-left => <_+-left
+  | <_+-left (k : Nat) {n m : Nat} (p : n < m) : n + k < m + k => {?hidden_proof}
   | zro<ide => {?hidden_proof}
-  | <_*_positive-left => <_*_positive-left
+  | <_*_positive-left {n m k : Nat} (p : n < m) (q : 0 < k) : n * k < m * k => {?hidden_proof}
   | <_*_negative-left => {?hidden_proof}
   | natCoef => \lam n => n
   | natCoefZero => {?hidden_proof}
@@ -212,7 +212,7 @@
 
 \lemma natUnit {n m : Nat} (p : n * m = 1) : m = 1 => {?hidden_proof}
 
-\open Monoid(LDiv)
+\open Monoid (LDiv)
 
 \lemma natAssociates-areEqual {n m : Nat} (n|m : LDiv n m) (m|n : LDiv m n) : n = m => {?hidden_proof}
 

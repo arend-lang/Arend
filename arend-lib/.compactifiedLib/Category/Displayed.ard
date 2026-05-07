@@ -1,6 +1,6 @@
 \import Category
 \import Category.Functor
-\import Equiv(Equiv, QEquiv, sigmaEquiv, transEquiv)
+\import Equiv (Equiv, QEquiv, sigmaEquiv, transEquiv)
 \import Equiv.Sigma
 \import Function.Meta
 \import Logic
@@ -8,24 +8,17 @@
 \import Paths
 \import Paths.Meta
 
-\class DPrecat {
-  | C : Precat
-  | DOb : C -> \hType obj
+\class DPrecat {C : Precat} (DOb : C -> \hType obj) {
   | DHom {a b : C} : Hom a b -> DOb a -> DOb b -> \Set hom
   | id^ {a : C} (x : DOb a) : DHom (id a) x x
-  | \infixl 8 o^ \alias \infixl 8 ∘^ {a b c : C} {g : Hom b c} {f : Hom a b} {x : DOb a} {y : DOb b} {z : DOb c} : DHom g y z -> DHom f x y -> DHom (g ∘ f) x z
+  | \fixl 8 o^ \alias \infixl 8 ∘^ {a b c : C} {g : Hom b c} {f : Hom a b} {x : DOb a} {y : DOb b} {z : DOb c} : DHom g y z -> DHom f x y -> DHom (g ∘ f) x z
   | id^-left {a b : C} {f : Hom a b} {x : DOb a} {y : DOb b} {f^ : DHom f x y} : transport (DHom __ x y) id-left (id^ y ∘^ f^) = f^
   | id^-right {a b : C} {f : Hom a b} {x : DOb a} {y : DOb b} {f^ : DHom f x y} : transport (DHom __ x y) id-right (f^ ∘^ id^ x) = f^
   | o^-assoc {a b c d : C} {h : Hom c d} {g : Hom b c} {f : Hom a b} {x : DOb a} {y : DOb b} {z : DOb c} {w : DOb d} {h^ : DHom h z w} 
 {g^ : DHom g y z} {f^ : DHom f x y} : transport (DHom __ x w) o-assoc ((h^ ∘^ g^) ∘^ f^) = h^ ∘^ (g^ ∘^ f^)
 }
 
-\class DIso {
-  | D : DPrecat {}
-  | e : Iso {D.C}
-  | dom : D e.dom
-  | cod : D e.cod
-  | f : DHom e.f dom cod
+\record DIso {D : DPrecat {}} (e : Iso {D.C}) {dom : D e.dom} {cod : D e.cod} (\coerce f : DHom e.f dom cod) {
   | inv^ : DHom e.hinv cod dom
   | inv^-left : transport (DHom __ dom dom) e.hinv_f (inv^ ∘^ f) = id^ dom
   | inv^-right : transport (DHom __ cod cod) e.f_hinv (f ∘^ inv^) = id^ cod

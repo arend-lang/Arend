@@ -2,7 +2,7 @@
 \import Algebra.Group
 \import Algebra.Linear.Matrix
 \import Algebra.Linear.Matrix.CharPoly
-\import Algebra.Linear.Solver(LinearData)
+\import Algebra.Linear.Solver (LinearData)
 \import Algebra.Meta
 \import Algebra.Monoid
 \import Algebra.Ordered
@@ -38,7 +38,7 @@
 \import Paths.Meta
 \import Set
 \import Algebra.Group.Symmetric
-\open SFuncPosetQModule(PFunc, add, SFRefines, SFRefines_::-right, SFRefines_++-right)
+\open SFuncPosetQModule (PFunc, add, SFRefines, SFRefines_::-right, SFRefines_++-right)
 \import Algebra.Domain.Euclidean
 
 \lemma test1 {E : TotalOrder} (a x : E) (l : Array E) : (a ∧ Big ∧ x l = a) || (a ∧ Big ∧ x l = Big ∧ x l) => {?hidden_proof}

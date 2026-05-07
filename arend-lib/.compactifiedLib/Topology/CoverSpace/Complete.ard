@@ -20,15 +20,14 @@
 
 \lemma filter-limit-cauchy {X : CoverSpace} {F : SetFilter X} {a : X} (Fa : X.IsFilterLimit F a) : IsCauchyFilter F => {?hidden_proof}
 
-\class WeaklyCauchyFilter \extends WeaklyProperFilter {
-  | S : CoverSpace
+\record WeaklyCauchyFilter \extends WeaklyProperFilter (S : CoverSpace) {
   | X => S
   | isCauchyFilter {C : Set (Set S)} : isCauchy C -> ∃ (U : C) (F U)
 }
 
-\class CauchyFilter \extends WeaklyCauchyFilter, ProperFilter
+\record CauchyFilter \extends WeaklyCauchyFilter, ProperFilter
 
-\class CauchyMap \extends ContMap {
+\record CauchyMap \extends ContMap {
   \override Dom : CoverSpace
   \override Cod : CoverSpace
   | func-cauchy (F : CauchyFilter Dom) : (CauchyFilter Cod) {
@@ -36,13 +35,15 @@
   }
   | func-cont => \lam Uo => cauchy-open.2 (\lam {x} Ufx => (\case isCauchyFilter {func-cauchy (pointCF x)} $ cauchy-open.1 Uo Ufx \with {
     | inP (V, h, fx<=<V) => cauchy-subset (unfolds in fx<=<V) $ later (\lam {W} g Wx {y} Wy => h (<=<_<= fx<=<V idp) $ g (x, (idp, Wx)) Wy)}))
+
+  \lemma func-CF~ {F G : CauchyFilter Dom} (p : F CF~ G) : func-cauchy F CF~ func-cauchy G => {?hidden_proof}
 }
   \where {
     \lemma fromContMap {X : CompleteCoverSpace} {Y : CoverSpace} (f : ContMap X Y) : CauchyMap X Y f => {?hidden_proof}
   }
 
 
-\class StronglyCauchyMap \extends CauchyMap {
+\record StronglyCauchyMap \extends CauchyMap {
   | func-weak-cauchy (F : WeaklyCauchyFilter Dom) : (WeaklyCauchyFilter Cod) {
     | WeaklyProperFilter => WeaklyProperFilter-map func F
   }
@@ -51,7 +52,7 @@
   }
 }
 
-\class CoverMap \extends PrecoverMap, StronglyCauchyMap {
+\record CoverMap \extends PrecoverMap, StronglyCauchyMap {
   \override Dom : CoverSpace
   \override Cod : CoverSpace
   | func-weak-cauchy => \lam F => \new WeaklyCauchyFilter {
@@ -59,6 +60,8 @@
       | inP (U, inP (V, CV, p), FU) => inP (V, CV, transport F p FU)
     })
   }
+
+  \lemma embedding->topEmbedding (e : IsEmbedding) : IsTopEmbedding => {?hidden_proof}
 }
   \where {
     \func id {X : CoverSpace} : CoverMap X X \cowith
@@ -109,7 +112,7 @@
   | ~-reflexive => {?hidden_proof}
   | ~-symmetric => {?hidden_proof}
 
-\class RegularCauchyFilter \extends CauchyFilter {
+\record RegularCauchyFilter \extends CauchyFilter {
   | isRegularFilter {U : Set S} : F U -> ∃ (V : Set S) (V <=< U) (F V)
 }
   \where {
@@ -166,6 +169,20 @@
 
 \class CompleteCoverSpace \extends SeparatedCoverSpace {
   | isComplete : IsCompleteCoverSpace \this
+
+  \protected \lemma filter-point-unique (F : CauchyFilter \this) : isProp (\Sigma (x : E) (pointCF x ⊆ F)) => {?hidden_proof}
+
+  \protected \lemma filter-point-pair (F : CauchyFilter \this) : \level (\Sigma (x : E) (pointCF x ⊆ F)) (filter-point-unique F) => {?hidden_proof}
+
+  \sfunc filter-point (F : CauchyFilter \this) : E => (filter-point-pair F).1
+
+  \lemma filter-point-sub {F : CauchyFilter \this} : pointCF (filter-point F) ⊆ F => {?hidden_proof}
+
+  \lemma filter-point-elem {F : CauchyFilter \this} {U V : Set E} (p : V <=< U) (FV : F V) : single (filter-point F) <=< U => {?hidden_proof}
+
+  \lemma filter-point-char {F : CauchyFilter \this} {U : Set E} : single (filter-point F) <=< U <-> ∃ (V : Set E) (V <=< U) (F V) => {?hidden_proof}
+
+  \lemma filter-point-limit {F : CauchyFilter \this} : IsFilterLimit F (filter-point F) => {?hidden_proof}
 }
 
 \lemma func-cauchy_<= {X Y : CoverSpace} {f : CoverMap X Y} (F G : CauchyFilter X) (p : F ⊆ G) : f.func-cauchy F ⊆ f.func-cauchy G => {?hidden_proof}
@@ -182,7 +199,7 @@
   }
 
 
-cauchy-lift {X Y : CoverSpace} {Z : CompleteCoverSpace} (f : CoverMap X Y) (\property fd : f.IsDenseEmbedding) (g : CauchyMap X Z) (y : Y) : Z 
+\sfunc cauchy-lift {X Y : CoverSpace} {Z : CompleteCoverSpace} (f : CoverMap X Y) (\property fd : f.IsDenseEmbedding) (g : CauchyMap X Z) (y : Y) : Z 
   => Z.filter-point $ g.func-cauchy $ dense-filter-lift f fd (pointCF y)
 
 \func dense-cauchy-lift {X Y : CoverSpace} {Z : CompleteCoverSpace} (f : CoverMap X Y) (fd : f.IsDenseEmbedding) (g : CauchyMap X Z) : CauchyMap Y Z \cowith
@@ -210,7 +227,7 @@ cauchy-lift {X Y : CoverSpace} {Z : CompleteCoverSpace} (f : CoverMap X Y) (\pro
   | func => pointCF
   | func-cover => {?hidden_proof}
   \where {
-    \lemma dense-aux {F : RegularCauchyFilter S} {V : Set (RegularCauchyFilter S)} (r : single F <=< {Completion.coverSpace} V) : F (\lam x => V (completion x)) => {?hidden_proof}
+    \protected \lemma dense-aux {F : RegularCauchyFilter S} {V : Set (RegularCauchyFilter S)} (r : single F <=< {Completion.coverSpace} V) : F (\lam x => V (completion x)) => {?hidden_proof}
 
     \lemma isDenseEmbedding : completion.IsDenseEmbedding => {?hidden_proof}
   }

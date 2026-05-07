@@ -77,7 +77,7 @@ public record ConcreteNamespaceCommand(@Nullable Object data, boolean isImport, 
 
       LineDoc openedReferencesDoc = hSep(text(", "), renamingDocs);
       if (!using) {
-        referenceDoc = hList(referenceDoc, text("("), openedReferencesDoc, text(")"));
+        referenceDoc = hList(referenceDoc, text(" ("), openedReferencesDoc, text(")"));
       }
       docs.add(referenceDoc);
       if (using) {

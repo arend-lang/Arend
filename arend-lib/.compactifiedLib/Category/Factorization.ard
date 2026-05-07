@@ -6,10 +6,7 @@
 \import Paths
 \import Paths.Meta
 
-\class WFS {
-  | C : Precat
-  | L : \Pi {x y : C} -> Hom x y -> \Prop
-  | R : \Pi {x y : C} -> Hom x y -> \Prop
+\class WFS {C : Precat} (L : \Pi {x y : C} -> Hom x y -> \Prop) (R : \Pi {x y : C} -> Hom x y -> \Prop) {
   | factors {x z : C} (h : Hom x z) : \Sigma (y : C) (f : Hom x y) (g : Hom y z) (g ∘ f = h) (L f) (R g)
   | lift {a b c d : C} (t : Hom a c) (s : Hom b d) (f : Hom a b) (g : Hom c d) : g ∘ t = s ∘ f -> L f -> R g -> \Sigma (l : Hom b c) (l ∘ f = t) (g ∘ l = s)
 }

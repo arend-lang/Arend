@@ -21,7 +21,7 @@
 \import Set.Filter
 \import Topology.Locale
 \import Topology.Locale.Points
-\open PresentedFrame(embed)
+\open PresentedFrame (embed)
 \open Locale
 
 \type Interval (Q : Poset) => \Sigma Q Q
@@ -64,7 +64,7 @@
   \where {
     \open JoinSemilattice
     \open MeetSemilattice
-    \open Topology.Locale.Real(RealPres)
+    \open Topology.Locale.Real (RealPres)
 
     \lemma <=-cover {Q : LinearOrder.Dec} {x y : Interval Q} (p : x <= y) : Cover1 x y => {?hidden_proof}
 
@@ -76,9 +76,9 @@
 
     \lemma toPointwiseCover {Q : DenseLinearOrder.Dec} {a : Interval Q} {J : \Set} {g : J -> Interval Q} (c : Cover a g) {x : Q} (b : point x < a) : ∃ (j : J) (point x < g j) => {?hidden_proof}
 
-    \open LinearOrder(dec<_<=)
+    \open LinearOrder (dec<_<=)
 
-    cover-factor-left {Q : LinearOrder.Dec} {a : Interval Q} (z : Interval Q) (a1<z1 : a.1 < z.1) (z1<a2 : z.1 < a.2) (l : Array (Interval Q)) 
+    \sfunc cover-factor-left {Q : LinearOrder.Dec} {a : Interval Q} (z : Interval Q) (a1<z1 : a.1 < z.1) (z1<a2 : z.1 < a.2) (l : Array (Interval Q)) 
     (pc : \Pi {x : Q} -> point x < a -> ∃ (j : Fin (suc l.len)) (point x < (z :: l) j)) :
       \Sigma (b : Q) (z.1 < b) (\Pi {x : Q} -> point x < (a.1, b) -> ∃ (j : Fin l.len) (point x < l j)) => 
       \let fun => \case LinearOrder.trichotomy z.1 __ \return Bool \with {
@@ -94,7 +94,7 @@
         \in inP (j, (z1<gj+1.1 <∘ x<z.1, x<a1b.2 <∘l transport (_ <=) q (Big_<=_meet1 k)))  | _, inP (suc i, p) => inP (i, p)})
     )
 
-    cover-factor-right {Q : LinearOrder.Dec} {a : Interval Q} (z : Interval Q) (a1<z2 : a.1 < z.2) (z2<a2 : z.2 < a.2) (l : Array (Interval Q)) 
+    \sfunc cover-factor-right {Q : LinearOrder.Dec} {a : Interval Q} (z : Interval Q) (a1<z2 : a.1 < z.2) (z2<a2 : z.2 < a.2) (l : Array (Interval Q)) 
     (pc : \Pi {x : Q} -> point x < a -> ∃ (j : Fin (suc l.len)) (point x < (z :: l) j)) :
       \Sigma (c : Q) (c < z.2) (\Pi {x : Q} -> point x < (c, a.2) -> ∃ (j : Fin l.len) (point x < l j)) => 
       \have (b, p, q) => cover-factor-left {Q.op} {(a.2, a.1)} (z.2, z.1) z2<a2 a1<z2 (mkArray {Interval Q.op} (\lam i => ((l i).2, (l i).1))) (\lam s => (\case pc (s.2, s.1) \with {

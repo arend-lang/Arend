@@ -62,7 +62,7 @@
 
 \type RelativeCompletion {X Y : CoverSpace} (f : X -> Y) => \Sigma (F : RegularCauchyFilter X) (y : Y) (\property (pointCF y ⊆ SetFilter-map f F))
   \where {
-    \func inc (s : RelativeCompletion f) : \Sigma (RegularCauchyFilter X) Y => (s.1, s.2)
+    \protected \func inc (s : RelativeCompletion f) : \Sigma (RegularCauchyFilter X) Y => (s.1, s.2)
   }
 
 
@@ -71,7 +71,7 @@
 \func relativeCompletion {X Y : CoverSpace} (f : CoverMap X Y) : CoverMap X (RelativeCompletionCoverSpace f) 
   => CoverTransfer-univ (\lam x => later (pointCF x, f x, <=<-cont __)) RelativeCompletion.inc (ProductCoverSpace.tuple completion f)
   \where {
-    \func toCompletion {X Y : CoverSpace} {f : ContMap X Y} : CoverMap (RelativeCompletionCoverSpace f) (Completion X) 
+    \protected \func toCompletion {X Y : CoverSpace} {f : ContMap X Y} : CoverMap (RelativeCompletionCoverSpace f) (Completion X) 
       => ProductCoverSpace.proj1 CoverMap.∘ CoverTransfer-map RelativeCompletion.inc
 
     \lemma isDenseEmbedding : CoverMap.IsDenseEmbedding {relativeCompletion f} => {?hidden_proof}

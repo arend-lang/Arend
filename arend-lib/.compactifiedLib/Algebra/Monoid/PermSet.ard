@@ -31,7 +31,10 @@
 
 \instance PermSetMonoid (A : \Set) : CMonoid (PermSet A) 
   | ide => in~ nil
-  | * => *
+  | * (x y : PermSet A) : PermSet A \with
+    | in~ l, in~ l' => in~ (l ++ l')
+    | in~ l, ~-equiv l1 l2 r => ~-psequiv (EPerm.eperm-++-right r)
+    | ~-equiv l1 l2 r, in~ l => ~-psequiv (EPerm.eperm-++-left r)
   | ide-left => {?hidden_proof}
   | *-assoc => {?hidden_proof}
   | *-comm => {?hidden_proof}

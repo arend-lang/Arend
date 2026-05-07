@@ -40,7 +40,7 @@
   | base-right => mult-right
   | isConn0 => {?hidden_proof}
   \where {
-    \open Sphere1(ploop)
+    \open Sphere1 (ploop)
 
     \func circle-loop (y : Sphere1) : y = y 
       | base1 => path loop
@@ -65,7 +65,7 @@
   \where {
     \func total-equiv {A : HSpaceConn} : (\Sigma (x : Susp A) (hopf x)) = Join A A => inv (PushoutData.flattening hopf) *> QEquiv-to-= total_join-equiv
       \where {
-        \open PushoutData(ppglue)
+        \open PushoutData (ppglue)
 
         \func total (A : HSpace) => PushoutData {\Sigma A A} {\Sigma (\Sigma) A} {\Sigma (\Sigma) A} (\lam p => ((), p.2)) (\lam p => ((), p.1 * p.2))
 

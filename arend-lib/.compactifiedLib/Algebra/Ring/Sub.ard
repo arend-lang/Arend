@@ -13,6 +13,10 @@
 
 \class SubPseudoRing \extends SubPseudoSemiring, SubAddGroup {
   \override S : PseudoRing
+
+  \func IPseudoRing : PseudoRing \cowith
+    | PseudoSemiring => IPseudoSemiring
+    | AbGroup => SubAddGroup.abStruct \this
 }
   \where {
     \func cStruct {R : PseudoCRing} (S : SubPseudoRing R) : PseudoCRing \cowith
@@ -23,6 +27,22 @@
 
 \class SubRing \extends SubPseudoRing, SubSemiring {
   \override S : Ring
+
+  \func IRing : Ring \cowith
+    | Semiring => ISemiring
+    | AbGroup => SubAddGroup.abStruct \this
+
+  \func corestrict {R : Ring} (f : RingHom R S) (p : \Pi (x : R) -> contains (f x)) : RingHom R IRing \cowith
+    | func => \lam x => (f x, p x)
+    | func-+ => {?hidden_proof}
+    | func-ide => {?hidden_proof}
+    | func-* => {?hidden_proof}
+
+  \func embed : RingHom IRing S \cowith
+    | func => __.1
+    | func-+ => {?hidden_proof}
+    | func-ide => {?hidden_proof}
+    | func-* => {?hidden_proof}
 }
   \where {
     \func cStruct {R : CRing} (S : SubRing R) : CRing \cowith
@@ -41,6 +61,10 @@
 
 \class CSubRing \extends SubRing {
   \override S : CRing
+
+  \func ICRing : CRing \cowith
+    | Ring => SubRing.IRing
+    | *-comm => {?hidden_proof}
 }
 
 \func ringHomImage (f : RingHom) : SubRing f.Cod \cowith

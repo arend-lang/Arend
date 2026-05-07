@@ -3,12 +3,12 @@
 \import Arith.Fin.Order
 \import Arith.Nat \using ( pred \as pred' )
 \import Data.Bool
-\import Data.Fin(fpred, fsuc, fsuc/=, nat_fin_=)
+\import Data.Fin (fpred, fsuc, fsuc/=, nat_fin_=)
 \import Data.Or
 \import Equiv
 \import Equiv.Univalence
 \import Function
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic.Unique
 \import Logic
 \import Logic.Classical
@@ -205,9 +205,17 @@
   | finEq => {?hidden_proof}
   \where {
     \func aux {n m : Nat} : QEquiv {Fin (n + m)} {Or (Fin n) (Fin m)} \cowith
-      | f => f
-      | ret => ret
-      | ret_f => ret_f
+      | f (i : Fin (n + m)) : Or (Fin n) (Fin m) \elim n, i
+        | 0, i => inr i
+        | suc n, 0 => inl 0
+        | suc n, suc i => Or.map (f i) fsuc id
+      | ret (e : Or (Fin n) (Fin m)) : Fin (n + m) \with
+        | inl s => fin-inc s
+        | inr t => fin-raise t
+      | ret_f (i : Fin (n + m)) : ret (f i) = i \elim n, i
+        | 0, i => idp
+        | suc n, 0 => idp
+        | suc n, suc i => cases (f i arg addPath)
       | f_sec => \case \elim __ \with {
         | inl s => ret_inl-lem s
         | inr t => ret_inr-lem t

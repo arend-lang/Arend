@@ -9,7 +9,7 @@
 \import Algebra.Pointed.Sub
 \import Algebra.Ring
 \import Algebra.Ring.RingHom
-\import Function(IsInj, IsSurj)
+\import Function (IsInj, IsSurj)
 \import Function.Meta
 \import Logic.Meta
 \import Logic.Unique
@@ -20,7 +20,7 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set \hiding (#)
-\open Monoid(Inv)
+\open Monoid (Inv)
 \open RingHom
 
 \instance SubsetPoset {M : Monoid} : Poset (SubSet M) 
@@ -29,13 +29,18 @@
   | <=-transitive => {?hidden_proof}
   | <=-antisymmetric => {?hidden_proof}
 
-\class Localization {
-  | R : CRing
-  | S : SubSet R
-  | R' : CRing
+\class Localization (R : CRing) (S : SubSet R) (R' : CRing) {
   | inL : RingHom R R'
   | local (x : R) : S x -> Inv (inL x)
   | local-univ {R'' : CRing} (f : RingHom R R'') (l : \Pi (x : R) -> S x -> Inv (f x)) : Contr (\Sigma (g : RingHom R' R'') (\Pi (x : R) -> g (inL x) = f x))
+
+  \func lift {R'' : CRing} (f : RingHom R R'') (l : \Pi (x : R) -> S x -> Inv (f x)) : RingHom R' R'' => (Contr.center {local-univ f l}).1
+
+  \lemma lift-prop {R'' : CRing} (f : RingHom R R'') (l : \Pi (x : R) -> S x -> Inv (f x)) : lift f l ∘ inL = f => {?hidden_proof}
+
+  \lemma lift-prop-func {R'' : CRing} (f : RingHom R R'') (l : \Pi (x : R) -> S x -> Inv (f x)) (x : R) : lift f l (inL x) = f x => {?hidden_proof}
+
+  \lemma remove_inL {R'' : CRing} (f g : RingHom R' R'') (p : \Pi (x : R) -> f (inL x) = g (inL x)) : f = g => {?hidden_proof}
 }
 
 \instance LocRing {R : CRing} (S : SubMonoid R) : CRing 
@@ -137,7 +142,7 @@
 
     \lemma liftHom-loc {R' : CRing} (f : RingHom R R') (l : \Pi (x : R) -> S x -> Inv (f x)) (x : R) : liftHom f l (locMap x) = f x => {?hidden_proof}
 
-    \open SubMonoid(powers)
+    \open SubMonoid (powers)
     \open Monoid
 
     \func pow-map (b : R) (n : Nat) : RingHom (LocRing (powers (pow b n))) (LocRing (powers b)) \cowith

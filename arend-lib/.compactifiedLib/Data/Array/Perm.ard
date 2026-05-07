@@ -4,7 +4,7 @@
 \import Arith.Fin.Order
 \import Data.Array
 \import Data.Array.EPerm
-\import Data.Fin(fpred, fsuc, fsuc_fpred)
+\import Data.Fin (fpred, fsuc, fsuc_fpred)
 \import Equiv
 \import Function
 \import Function.Meta

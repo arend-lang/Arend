@@ -24,7 +24,7 @@
 \import Topology.TopRing
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Product
-\open Monoid(pow)
+\open Monoid (pow)
 
 \class ExPseudoNormedPseudoRing \extends BoundedExPseudoNormedAbGroup, TopSemigroup, PseudoRing {
   | norm_*_<= {x y : E} : norm (x * y) <= norm x ExUpperReal.* norm y
@@ -55,7 +55,7 @@
 
 \lemma norm_ide<1 {X : ExPseudoNormedRing} (|1|<1 : (X.norm 1).U 1) : X.norm 1 = 0 => {?hidden_proof}
   \where {
-    \lemma aux {q : Rat} (q>0 : q > 0) (q<1 : q < 1) (p : (X.norm 1).U q) {n : Nat} : (X.norm 1).U (pow q n) => {?hidden_proof}
+    \protected \lemma aux {q : Rat} (q>0 : q > 0) (q<1 : q < 1) (p : (X.norm 1).U q) {n : Nat} : (X.norm 1).U (pow q n) => {?hidden_proof}
   }
 
 
@@ -79,6 +79,12 @@
 \class ExPseudoValuedRing \extends ExPseudoValuedPseudoRing, ExPseudoNormedRing, Ring {
   | norm_ide : norm 1 = ExUpperReal.fromRat 1
   | norm_ide_<= => =_<= norm_ide
+
+  \lemma norm_Inv-cancel-left {x : E} (d : Monoid.Inv x) {y z : ExUpperReal} (y>=0 : 0 <= y) (z>=0 : 0 <= z) (p : norm x ExUpperRealSemigroup.* y = norm x ExUpperRealSemigroup.* z) : y = z 
+    => {?hidden_proof}
+
+  \lemma norm_Inv-cancel-right {x y : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) {z : E} (d : Monoid.Inv z) (p : x ExUpperRealSemigroup.* norm z = y ExUpperRealSemigroup.* norm z) : x = y 
+    => {?hidden_proof}
 }
 
 \lemma norm_pow {X : ExPseudoValuedRing} {x : X} {n : Nat} : norm (pow x n) = ExUpperRealSemigroup.pow (norm x) n => {?hidden_proof}

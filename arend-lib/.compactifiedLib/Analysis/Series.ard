@@ -43,7 +43,7 @@
 
 \func Series (A : \Set) => Nat -> A
 
-partialSum {A : AddMonoid} (S : Series A) (n : Nat) : A => A.BigSum (\new (Array A n (\lam j => S j)))
+\sfunc partialSum {A : AddMonoid} (S : Series A) (n : Nat) : A => A.BigSum (\new (Array A n (\lam j => S j)))
 
 \lemma partialSum-empty {A : AddMonoid} {S : Series A} : partialSum S 0 = 0 => {?hidden_proof}
 

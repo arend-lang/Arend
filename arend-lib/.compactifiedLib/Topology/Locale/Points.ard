@@ -34,7 +34,9 @@
 
 \func PointsSpaceFunctor : Functor LocaleCat TopCat \cowith
   | F => PointsSpace
-  | Func => Func
+  | Func {L M : Locale} (f : FrameHom M L) : ContMap (PointsSpace L) (PointsSpace M) 
+    | func => filter-map f
+    | func-cont => \lam inP (b, c) => inP (f b, \lam {x} => c)
   | Func-id => {?hidden_proof}
   | Func-o => {?hidden_proof}
   \where {

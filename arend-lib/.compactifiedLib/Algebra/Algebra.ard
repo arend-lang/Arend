@@ -15,6 +15,18 @@
   | coefMap_*c {x : R} : coefMap x = x *c 1
   | coefMap => coefMap-impl
   | coefMap_*c => coefMap_*c-impl
+
+  \protected \default coefMap-impl x => x *c 1
+
+  \protected \default coefMap_*c-impl {x} : coefMap-impl x = x *c 1 => idp
+
+  \func coefHom : RingHom R \this \cowith
+    | func => coefMap
+    | func-+ => {?hidden_proof}
+    | func-ide => {?hidden_proof}
+    | func-* => {?hidden_proof}
+
+  \lemma coefMap_natCoef {n : Nat} : coefMap (R.natCoef n) = natCoef n => {?hidden_proof}
 }
 
 \class PseudoCAlgebra \extends PseudoAlgebra, CRing {

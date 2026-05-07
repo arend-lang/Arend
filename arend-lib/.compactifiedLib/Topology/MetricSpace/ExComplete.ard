@@ -32,7 +32,10 @@
 
 \instance ExMetricCompletion (X : ExPseudoMetricSpace) : CompleteExMetricSpace 
   | CompleteUniformSpace => UniformCompletion X
-  | dist => dist
+  | dist (F G : RegularCauchyFilter X) : ExUpperReal 
+    | U => \lam q => ∃ (r : < q) (U : F.F) (V : G.F) ∀ {x : U} {y : V} ((X.dist x y).U r)
+    | U-closed => \lam inP (r, r<q, U, FU, V, GV, h) q<q' => inP (r, r<q <∘ q<q', U, FU, V, GV, h)
+    | U-rounded => \lam {q} inP (r, r<q, U, FU, V, GV, h) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, U, FU, V, GV, h), RatField.mid<right r<q)
   | dist-refl => {?hidden_proof}
   | dist-symm => {?hidden_proof}
   | dist-triang => {?hidden_proof}

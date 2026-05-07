@@ -16,7 +16,7 @@
 \import Arith.Nat
 \import Data.Array
 \import Data.Array.Perm
-\import Data.Fin(fsuc, fsuc/=)
+\import Data.Fin (fsuc, fsuc/=)
 \import Data.Or
 \import Function.Meta
 \import Logic
@@ -107,7 +107,7 @@
 
 \instance MatrixRing (R : Ring) (n : Nat) : Ring (Matrix R n n) 
   | AbGroup => MatrixModule R n n
-  | ide => ide
+  | ide : Matrix R n n => diagonal (replicate n R.ide)
   | * => product
   | ide-left => {?hidden_proof}
   | ide-right => {?hidden_proof}
@@ -317,7 +317,7 @@
 
 \lemma determinant22 {R : CRing} {A : Matrix R 2 2} : determinant A = A 0 0 * A 1 1 - A 1 0 * A 0 1 => {?hidden_proof}
 
-\open determinant(minor)
+\open determinant (minor)
 
 \lemma determinant_ide {R : CRing} {n : Nat} : determinant (MatrixRing.ide {R} {n}) = 1 => {?hidden_proof}
   \where {

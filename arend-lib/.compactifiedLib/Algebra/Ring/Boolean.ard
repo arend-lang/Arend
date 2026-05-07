@@ -36,6 +36,34 @@
     (cancel-right y $ zro-left *> cancel-left x 
     (inv isBooleanRing *> ldistr *> pmap2 + rdistr rdistr *> pmap2 (__ + _ + (_ + __)) isBooleanRing isBooleanRing *> +-assoc) *> inv +-assoc) *> 
   +-assoc *> pmap (_ +) (sum2 isBooleanRing) *> zro-right
+
+  \lemma double=0 {x : E} : x + x = 0 => {?hidden_proof}
+
+  \lemma negative=id {x : E} : negative x = x => {?hidden_proof}
+
+  \lemma +_join {x y : E} (xy=0 : x * y = 0) : x + y = x ∨ y => {?hidden_proof}
+
+  \func diff (x y : E) => x + x * y
+
+  \lemma diff_<= {x y : E} : diff x y <= x => {?hidden_proof}
+
+  \lemma diff_* {x y : E} : diff x y * y = 0 => {?hidden_proof}
+
+  \lemma diff-univ {x y z : E} (p : x <= y) (q : x * z = 0) : x <= diff y z => {?hidden_proof}
+
+  \lemma diff-mono {x y x' y' : E} (p : x <= x') (q : y' <= y) : diff x y <= diff x' y' => {?hidden_proof}
+
+  \lemma diff_*_diff {x y : E} : diff x y * diff y x = 0 => {?hidden_proof}
+
+  \lemma +_diff {x y : E} : x + y = diff x y ∨ diff y x => {?hidden_proof}
+
+  \lemma split_<= {x y : E} (p : y <= x) : x = diff x y ∨ y => {?hidden_proof}
+
+  \lemma split {x y : E} : x = diff x y ∨ x * y => {?hidden_proof}
+
+  \lemma diff-trans {x y z : E} : diff x z <= diff x y ∨ diff y z => {?hidden_proof}
+
+  \lemma diff_BigJoin {l : Array E} {x : E} : diff (BigJoin l) x = BigJoin (\lam j => diff (l j) x) => {?hidden_proof}
 }
   \where {
     \lemma sum2 {R : PseudoRing} (br : \Pi {x : R} -> x * x = x) {x : R} : x + x = 0 => {?hidden_proof}

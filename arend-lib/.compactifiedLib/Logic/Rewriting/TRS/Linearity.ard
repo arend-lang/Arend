@@ -32,7 +32,7 @@
 
 \func LinearTerm (env : FSignature) (context : List Sort) (termSort : Sort) : \Type => GenericLinearTerm env context termSort (\Sigma)
 
-lt-var {env : FSignature} {context : List Sort} {termSort : Sort} (index : Index context) (p : termSort = context !! index) : LinearTerm env context termSort => l-var index p ()
+| lt-var {env : FSignature} {context : List Sort} {termSort : Sort} (index : Index context) (p : termSort = context !! index) : LinearTerm env context termSort => l-var index p ()
 
 \func LinearPattern (env : FSignature) (context : List Sort) (termSort : Sort) : \Type => GenericLinearTerm env context termSort Empty
 
@@ -51,12 +51,14 @@ lt-var {env : FSignature} {context : List Sort} {termSort : Sort} (index : Index
   }
 
 
-\class LinearRewriteRule \extends RewriteRule {
+\record LinearRewriteRule \extends RewriteRule {
   | rr-pattern : LinearPattern env nil s
   | rr-mc => LinearMetaContext rr-pattern
   | rr-l => Linear.convert-to-term rr-pattern
 }
 
-\class LinearRegistry \extends RuleRegistry {
+\record LinearRegistry \extends RuleRegistry {
   \override rule-container : \Pi {s : Sort} (id : rule-J s) -> LinearRewriteRule {env} s
+
+  \func rule-pattern {s : Sort} (idx : rule-J s) : LinearPattern env nil s => rr-pattern {rule-container idx}
 }

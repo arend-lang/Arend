@@ -18,10 +18,10 @@
 
 \lemma contr=>isConnected {U : ReflUniverse} (X : \hType) (c : Contr (LType X)) : isConnectedType X => {?hidden_proof}
 
-\class Connected {
-  | U : Universe
-  | X : \hType
+\class Connected {U : Universe} (X : \hType) {
   | connected : isConnectedType X
+
+  \lemma equiv (Z : Local {U}) : Equiv {Z} {X -> Z} (\lam z _ => z) => {?hidden_proof}
 }
 
 \lemma connected_join (X Y M N : \hType) (X-conn : isConnectedType {nullTypeUniverse M} X) (Y-conn : isConnectedType {nullTypeUniverse N} Y) :

@@ -30,6 +30,21 @@
     (\lam {x} inP (U, SU, Ux) => cauchy-refine (cauchy-open.1 (So SU) Ux) (\lam {V} Vc => inP (V, \lam Vx => Vc Vx <=∘ Set.Union-cond SU, <=-refl)))
   | isOpen => isOpen
   | cauchy-open => cauchy-open-impl
+
+  \protected \default isOpen S : \Prop => ∀ {x : S} (isCauchy (\lam U => U x -> U ⊆ S))
+
+  \protected \default cauchy-open-impl {S} : isOpen S <-> _ => <->refl
+
+  \lemma cauchy-trans-dep {C : Set (Set E)} {D : \Pi {U : Set E} -> C U -> Set (Set E)} (Cc : isCauchy C) (Dc : \Pi {U : Set E} (c : C U) -> isCauchy (D c)) :
+    isCauchy (\lam U => ∃ (V W : Set E) (c : C V) (D c W) (U = V ∧ W)) => {?hidden_proof}
+
+  \lemma open-char {S : Set E} : TopSpace.isOpen S <-> ∀ {x : S} (single x <=< S) => {?hidden_proof}
+
+  \func HasWeaklyDensePoints  => \Pi {C : Set (Set E)} -> isCauchy (\lam U => (U = {Set E} bottom) || C U) -> isCauchy C
+
+  \func HasDensePoints  => \Pi {C : Set (Set E)} -> isCauchy C -> isCauchy (\lam U => \Sigma (C U) (∃ U))
+
+  \lemma hasDensePoints_hasWeaklyDensePoints (d : HasDensePoints) : HasWeaklyDensePoints => {?hidden_proof}
 }
   \where {
     \lemma PrecoverSpace-ext {X : \Set} {S T : PrecoverSpace X} (p : \Pi {C : Set (Set X)} -> S.isCauchy C <-> T.isCauchy C) : S = T => {?hidden_proof}
@@ -45,12 +60,21 @@
 \lemma cauchy-array-inter {X : PrecoverSpace} (Cs : Array (Given X.isCauchy)) :
   isCauchy (\lam V => ∃ (Us : Array (Set X) Cs.len) (\Pi (j : Fin Cs.len) -> (Cs j).1 (Us j)) (V = MeetSemilattice.Big_∧ (top :: Us))) => {?hidden_proof}
 
-\class PrecoverMap \extends ContMap {
+\record PrecoverMap \extends ContMap {
   \override Dom : PrecoverSpace
   \override Cod : PrecoverSpace
   | func-cover {D : Set (Set Cod)} : isCauchy D -> isCauchy (\lam U => ∃ (V : D) (U = func ^-1 V))
   | func-cont => \lam Uo =>
     cauchy-open.2 $ later (\lam {x} Ufx => cauchy-refine (func-cover (cauchy-open.1 Uo Ufx)) (\lam inP (W, c, d) => inP (func ^-1 W, \lam a {_} => c a, =_<= d)))
+
+  \func IsEmbedding : \Prop => \Pi {C : Set (Set Dom)} -> isCauchy C -> isCauchy (\lam V => ∃ (U : C) (func ^-1 V ⊆ U))
+
+  \lemma embedding-char : TFAE (IsEmbedding, \Pi {X : PrecoverSpace Dom} -> PrecoverMap X Cod func -> \Pi {C : Set (Set Dom)} -> isCauchy C -> X.isCauchy C, 
+    \Pi {C : Set (Set Dom)} -> isCauchy C -> isCauchy {PrecoverTransfer func} C, Dom = {PrecoverSpace Dom} PrecoverTransfer func) => {?hidden_proof}
+
+  \func IsWeaklyDenseEmbedding : \Prop => \Sigma IsWeaklyDense IsEmbedding
+
+  \func IsDenseEmbedding : \Prop => \Sigma IsDense IsEmbedding
 }
   \where {
     \func id {X : PrecoverSpace} : PrecoverMap X X \cowith
@@ -105,6 +129,12 @@
 
 \class CoverSpace \extends PrecoverSpace {
   | isRegular {C : Set (Set E)} : isCauchy C -> isCauchy (\lam V => ∃ (U : C) (V <=< U))
+
+  \lemma cauchy-regular-cover {C : Set (Set E)} (Cc : isCauchy C) (x : E) : ∃ (U : C) (single x <=< U) => {?hidden_proof}
+
+  \lemma interior {U : Set E} : TopSpace.isOpen (\lam x => single x <=< U) => {?hidden_proof}
+
+  \lemma cauchy-open-cover {C : Set (Set E)} (Cc : isCauchy C) : isCauchy (\lam V => ∃ (U : C) (V = (\lam x => single x <=< U))) => {?hidden_proof}
 }
   \where {
     \lemma CoverSpace-ext {X : \Set} {S T : CoverSpace X} (p : \Pi {C : Set (Set X)} -> S.isCauchy C <-> T.isCauchy C) : S = T => {?hidden_proof}

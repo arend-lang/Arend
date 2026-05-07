@@ -2,7 +2,7 @@
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Pointed
 \import Algebra.Pointed.Sub
-\import Algebra.Ring.Localization()
+\import Algebra.Ring.Localization ()
 \import Arith.Nat
 \import Data.Array
 \import Function.Iterate
@@ -17,6 +17,11 @@
 \class SubSemigroup \extends SubSet {
   \override S : Semigroup
   | contains_* {x y : S} : contains x -> contains y -> contains (x * y)
+
+  \func ISemigroup : Semigroup \cowith
+    | BaseSet => ISet
+    | * => \lam x y => (x.1 * y.1, contains_* x.2 y.2)
+    | *-assoc => {?hidden_proof}
 }
   \where {
     \func cStruct {A : CSemigroup} (S : SubSemigroup A) : CSemigroup \cowith
@@ -27,6 +32,21 @@
 
 \class SubMonoid \extends SubPointed, SubSemigroup {
   \override S : Monoid
+
+  \func IMonoid : Monoid \cowith
+    | Pointed => IPointed
+    | Semigroup => ISemigroup
+    | ide-left => {?hidden_proof}
+    | ide-right => {?hidden_proof}
+
+  \lemma contains_pow {x : S} (s : contains x) {n : Nat} : contains (Monoid.pow x n) => {?hidden_proof}
+
+  \lemma sub-pow {x : IMonoid} {n : Nat} : (IMonoid.pow x n).1 = Monoid.pow x.1 n => {?hidden_proof}
+
+  \func embedMonoid : MonoidHom IMonoid S \cowith
+    | func => __.1
+    | func-ide => {?hidden_proof}
+    | func-* => {?hidden_proof}
 }
   \where {
     \func cStruct {A : CMonoid} (S : SubMonoid A) : CMonoid \cowith
@@ -73,6 +93,15 @@
 \class SubAddMonoid \extends SubAddPointed {
   \override S : AddMonoid
   | contains_+ {x y : S} : contains x -> contains y -> contains (x + y)
+
+  \func IAddMonoid : AddMonoid \cowith
+    | AddPointed => IAddPointed
+    | + => \lam x y => (x.1 + y.1, contains_+ x.2 y.2)
+    | zro-left => {?hidden_proof}
+    | zro-right => {?hidden_proof}
+    | +-assoc => {?hidden_proof}
+
+  \lemma sub-BigSum {l : Array IAddMonoid} : (IAddMonoid.BigSum l).1 = AddMonoid.BigSum (map __.1 l) => {?hidden_proof}
 }
   \where {
     \func abStruct {A : AbMonoid} (S : SubAddMonoid A) : AbMonoid \cowith

@@ -21,7 +21,7 @@
 \import Topology.TopSpace.Product
 \open ContMap
 \open ProductTopSpace
-\open Monoid(Inv)
+\open Monoid (Inv)
 
 \func dquot {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (f : Set.Total S -> Y) {x : Set.Total S} (h : Inv {R}) (a : X) 
 (\property s : S (x.1 + h.val *c a)) => h.inv *c (f (_, s) - f x)
@@ -50,14 +50,14 @@
 
     \lemma aux2  => {?hidden_proof}
 
-    \func DirSet (So : isOpen S) => InvDirectedSet (aux1 So) aux2
+    \protected \func DirSet (So : isOpen S) => InvDirectedSet (aux1 So) aux2
 
     \lemma limit-id (So : isOpen S) => {?hidden_proof}
 
     \lemma limit-char (So : isOpen S) : IsDirDerivAt So f x a d <-> ∀ {V : Y.isOpen} (V 0) ∃ (W : R.isOpen) (W 0) ∀ {h : W} (hi : Inv h) (s : S (x.1 + h *c a)) (V (d - dquot f hi a s)) 
       => {?hidden_proof}
 
-    \lemma unique {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : Set X} (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) (a : X) 
+    \protected \lemma unique {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {S : Set X} (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) (a : X) 
     {d d' : Y} (dd : IsDirDerivAt So f x a d) (d'd : IsDirDerivAt So f x a d') : d = d' => {?hidden_proof}
   }
 
@@ -75,9 +75,9 @@
 \func IsDerivAt {R : NearSkewField} {X Y : TopLModule R} {S : Set X} (So : isOpen S) (f : Set.Total S -> Y) (x : Set.Total S) (Df : X -> Y) : \Prop 
   => \Pi (a0 : X) -> Y.IsLimit {DirSet So a0} (\lam h => dquot f h.6.1 _ h.6.2) (Df a0)
   \where {
-    \lemma isLimitPoint (So : isOpen S) {a : X} : TopSpace.IsLimitPoint {ProductTopSpace R X} (0, a) (\lam s => \Sigma (Inv s.1) (S (x.1 + s.1 *c s.2))) => {?hidden_proof}
+    \protected \lemma isLimitPoint (So : isOpen S) {a : X} : TopSpace.IsLimitPoint {ProductTopSpace R X} (0, a) (\lam s => \Sigma (Inv s.1) (S (x.1 + s.1 *c s.2))) => {?hidden_proof}
 
-    \func DirSet (So : isOpen S) (a : X) => SubPointDirectedSet {ProductTopSpace R X} {\lam s => \Sigma (Monoid.Inv s.1) (S (x.1 + s.1 *c s.2))} (0, a) (isLimitPoint So)
+    \protected \func DirSet (So : isOpen S) (a : X) => SubPointDirectedSet {ProductTopSpace R X} {\lam s => \Sigma (Monoid.Inv s.1) (S (x.1 + s.1 *c s.2))} (0, a) (isLimitPoint So)
 
     \lemma limit-char (So : isOpen S) :
     IsDerivAt So f x Df <-> ∀ a0 {V : Y.isOpen} (V 0) ∃ (W : R.isOpen) (W 0) (U : X.isOpen) (U 0) ∀ {h : W} {a} (U (a0 - a)) (hi : Inv h) (s : S (x.1 + h *c a)) 

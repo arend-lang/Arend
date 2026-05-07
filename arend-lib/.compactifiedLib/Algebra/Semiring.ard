@@ -15,6 +15,14 @@
   | rdistr {x y z : E} : (x + y) * z = x * z + y * z
   | zro_*-left {x : E} : zro * x = zro
   | zro_*-right {x : E} : x * zro = zro
+
+  \protected \func op : PseudoSemiring \cowith
+    | AbMonoid => \this
+    | Semigroup => Semigroup.op
+    | ldistr => {?hidden_proof}
+    | rdistr => {?hidden_proof}
+    | zro_*-left => {?hidden_proof}
+    | zro_*-right => {?hidden_proof}
 }
 
 \class Semiring \extends PseudoSemiring, Monoid {
@@ -24,14 +32,82 @@
   | natCoefZero => natCoefZeroImpl
   | natCoefSuc (n : Nat) : natCoef (suc n) = natCoef n + ide
   | natCoefSuc => natCoefSucImpl
+
+  \protected \default natCoefImpl n \with
+    | 0 => zro
+    | suc n => natCoefImpl n + ide
+
+  \protected \default natCoefZeroImpl : natCoefImpl 0 = zro => idp
+
+  \protected \default natCoefSucImpl n : natCoefImpl (suc n) = natCoefImpl n + ide => idp
+
+  \lemma zero-div {x : E} : LDiv x 0 0 => {?hidden_proof}
+
+  \lemma ldiv=0 {x y : E} (l : LDiv x y) (p : x = 0) : y = 0 => {?hidden_proof}
+
+  \lemma ldiv/=0 {x y : E} (y/=0 : y /= 0) (x|y : LDiv x y) : x /= 0 => {?hidden_proof}
+
+  \func LDiv_+ {a b c : E} (a|b : LDiv a b) (a|c : LDiv a c) : LDiv a (b + c) \cowith
+    | inv => a|b.inv + a|c.inv
+    | inv-right => {?hidden_proof}
+
+  \func LDiv_BigSum {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> LDiv a (l j)) : LDiv a (BigSum l) \cowith
+    | inv => BigSum (\lam j => LDiv.inv {p j})
+    | inv-right => {?hidden_proof}
+
+  \lemma natCoef_*_*n {n : Nat} {a : E} : natCoef n * a = n *n a => {?hidden_proof}
+
+  \lemma natCoef_*_*n-right {n : Nat} {a : E} : a * natCoef n = n *n a => {?hidden_proof}
+
+  \lemma natCoef_*n {n : Nat} : natCoef n = n *n 1 => {?hidden_proof}
+
+  \lemma *n-comm-left {n : Nat} {a b : E} : n *n (a * b) = (n *n a) * b => {?hidden_proof}
+
+  \lemma *n-comm-right {n : Nat} {a b : E} : n *n (a * b) = a * (n *n b) => {?hidden_proof}
+
+  \lemma natCoef_+ {n m : Nat} : natCoef (n Nat.+ m) = natCoef n + natCoef m => {?hidden_proof}
+
+  \lemma natCoef-comm {n : Nat} {a : E} : natCoef n * a = a * natCoef n => {?hidden_proof}
+
+  \lemma natCoef_* {n m : Nat} : natCoef (n Nat.* m) = natCoef n * natCoef m => {?hidden_proof}
+
+  \lemma BigSum-ldistr {x : E} {l : Array E} : x * BigSum l = BigSum (map (x *) l) => {?hidden_proof}
+
+  \lemma FinSum-ldistr {A : FinSet} {x : E} {y : A -> E} : x * FinSum y = FinSum (x * y __) => {?hidden_proof}
+
+  \lemma BigSum-rdistr {l : Array E} {z : E} : BigSum l * z = BigSum (\lam i => l i * z) => {?hidden_proof}
+
+  \lemma FinSum-rdistr {A : FinSet} {x : E} {y : A -> E} : FinSum y * x = FinSum (y __ * x) => {?hidden_proof}
+
+  \lemma FinSum-distr {A B : FinSet} {x : A -> E} {y : B -> E} : FinSum x * FinSum y = FinSum (\lam (s : \Sigma A B) => x s.1 * y s.2) => {?hidden_proof}
+
+  \lemma BigSum_replicate {x : E} {n : Nat} : BigSum (replicate n x) = natCoef n * x => {?hidden_proof}
+
+  \lemma BigSum_replicate1 {n : Nat} : BigSum (replicate n ide) = natCoef n => {?hidden_proof}
+
+  \lemma FinSum_replicate {A : FinSet} {x : E} : FinSum {_} {A} (\lam _ => x) = natCoef A.finCard * x => {?hidden_proof}
+
+  \lemma BigProd_zro {l : Array E} (j : Fin l.len) (p : l j = 0) : BigProd l = 0 => {?hidden_proof}
+
+  \lemma trivial (p : 0 = {E} 1) {x y : E} : x = y => {?hidden_proof}
+
+  \lemma associates0 {a b : E} (c : associates a b) (p : a = 0) : b = 0 => {?hidden_proof}
+
+  \lemma pow_0 {n : Nat} (n/=0 : n /= 0) : pow 0 n = 0 => {?hidden_proof}
+
+  \protected \func op : Semiring \cowith
+    | PseudoSemiring => PseudoSemiring.op
+    | Monoid => Monoid.op
 }
   \where {
-    \open Monoid(LDiv)
+    \open Monoid (LDiv)
   }
 
 
 \class NonZeroSemiring \extends Semiring {
   | zro/=ide : zro /= ide
+
+  \lemma inv-nonZero {a : E} (i : Monoid.Inv a) : a /= zro => {?hidden_proof}
 }
 
 \class PseudoCSemiring \extends PseudoSemiring, CSemigroup {
@@ -41,4 +117,6 @@
   | zro_*-right => *-comm *> zro_*-left
 }
 
-\class CSemiring \extends Semiring, PseudoCSemiring, CMonoid
+\class CSemiring \extends Semiring, PseudoCSemiring, CMonoid {
+  \lemma divQuotient_un0 {a : E} (p : in~ a = {DivQuotient \this} in~ 0) : a = 0 => {?hidden_proof}
+}

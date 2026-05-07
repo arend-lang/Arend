@@ -44,10 +44,10 @@
   | LinearlyOrderedAbGroup => RealAbGroup
   | ide => 1
   | * => *
-  | ide-left => ide-left
-  | *-comm => *-comm
-  | *-assoc => *-assoc
-  | ldistr => ldistr
+  | ide-left {x : Real} : 1 * x = x => {?hidden_proof}
+  | *-comm {x y : Real} : x * y = y * x => {?hidden_proof}
+  | *-assoc {x y z : Real} : x * y * z = x * (y * z) => {?hidden_proof}
+  | ldistr {x y z : Real} : x * (y + z) = x * y + x * z => {?hidden_proof}
   | ide>zro => {?hidden_proof}
   | positive_* => {?hidden_proof}
   | positive=>#0 => {?hidden_proof}
@@ -66,7 +66,7 @@
   | natCoefZero => {?hidden_proof}
   | natCoefSuc => {?hidden_proof}
   \where {
-    \open Semigroup(* \as \infixl 7 *')
+    \open Semigroup (* \as \infixl 7 *')
     \open CoverMap
 
     \lemma unique1 {X : SeparatedCoverSpace} (f g : CoverMap RealNormed X) (p : \Pi (x : Rat) -> f x = g x) {x : Real} : f x = g x => {?hidden_proof}
@@ -80,7 +80,7 @@
 
     \func *-cover-def : CoverMap (RealNormed ⨯ RealNormed) RealNormed => real-lift2 (rat_real ∘ *-rat-locally-uniform)
 
-    \infixl 7 * (x y : Real) : Real => *-cover-def (x, y)
+    \sfunc \infixl 7 * (x y : Real) : Real => *-cover-def (x, y)
 
     \lemma *-rat {x y : Rat} : x * y = {Real} x *' y => {?hidden_proof}
 

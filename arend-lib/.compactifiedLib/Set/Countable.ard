@@ -21,9 +21,16 @@
 \import Set.Fin.KFin
 
 \func natPair-countable : QEquiv {Nat} {\Sigma Nat Nat} \cowith
-  | f => f
-  | ret => ret
-  | ret_f => ret_f
+  | f (k : Nat) : \Sigma Nat Nat \with
+    | 0 => (0, 0)
+    | suc k => \case f k \with {
+      | (0, m) => (suc m, 0)
+      | (suc n, m) => (n, suc m)
+    }
+  | ret (p : \Sigma Nat Nat) : Nat => NatSemiring.BigSum (\lam (i : Fin (p.1 + p.2)) => suc i) + p.2
+  | ret_f (k : Nat) : ret (f k) = k \with
+    | 0 => idp
+    | suc k => mcases {_} {arg addPath}
   | f_sec => \lam (n, m) => aux {_} {n} {m} id<suc
   \where {
     \lemma aux2 {n : Nat} : ret (suc n, 0) = suc (ret (0, n)) => {?hidden_proof}

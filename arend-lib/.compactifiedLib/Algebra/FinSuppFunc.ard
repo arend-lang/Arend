@@ -2,7 +2,7 @@
 \import Algebra.Monoid
 \import Algebra.Pointed
 \import Data.Array
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -12,7 +12,7 @@
 \import Set.SetHom
 \import Set.Fin
 
-\class FinSuppFunc \extends SetHom {
+\record FinSuppFunc \extends SetHom {
   \override Cod : AddPointed
   | fSupp : ∃ (s : Array Dom) ∀ i ((\Pi (j : Fin s.len) -> s j /= i) -> func i = 0)
 }

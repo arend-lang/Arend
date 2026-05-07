@@ -1,7 +1,7 @@
 \import Algebra.Semiring
 \import Data.Array
 \import Data.Array.EPerm
-\import Data.Fin(fsuc, nat_fin_=)
+\import Data.Fin (fsuc, nat_fin_=)
 \import Data.Or
 \import Equiv
 \import Function

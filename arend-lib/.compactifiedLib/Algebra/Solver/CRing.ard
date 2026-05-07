@@ -7,12 +7,12 @@
 \import Algebra.Solver.Ring
 \import Algebra.Solver.Semiring
 \import Arith.Int
-\import Data.Array(Big, map)
-\import Data.List(++)
+\import Data.Array (Big, map)
+\import Data.List (++)
 \import Function.Meta
 \import Paths
 \open RingSolverModel
-\open SemiringSolverModel(NF, multiply)
+\open SemiringSolverModel (NF, multiply)
 \open CSemiringSolverModel
 
 \func CRingSolverModel (R : CRing) : SolverModel R \cowith

@@ -40,11 +40,44 @@
   | c*-square-positive {a : E} : 0 <= a * a
   | c*-<=_*-square {a : E} : a <= 1 -> negative a <= 1 -> a * a <= 1
   | c*-<=-square {a : E} : a * a <= 1 -> a <= 1
+
+  \protected \lemma zro<=ide : 0 <= 1 => {?hidden_proof}
+
+  \lemma <=-square {a : E} {q : Rat} (q>0 : 0 < q) (aa<=qq : a * a <= q RatField.* q *q ide) : a <= q *q ide => {?hidden_proof}
+
+  \lemma <=-square_negative {a : E} {q : Rat} (q>0 : 0 < q) (aa<=qq : a * a <= q RatField.* q *q ide) : negative a <= q *q ide => {?hidden_proof}
+
+  \lemma c*-<=_* {a b : E} (a<=1 : a <= 1) (-a<=1 : negative a <= 1) (b<=1 : b <= 1) (-b<=1 : negative b <= 1) : a * b <= 1 => {?hidden_proof}
+
+  \func toBanach : RealPreBanachAlgebra \cowith
+    | Ring => \this
+    | isDivisible => {?hidden_proof}
+    | norm (a : E) : ExUpperReal 
+      | U => \lam q => ∃ (r : < q) (0 < r) (a <= r *q 1) (negative a <= r *q 1)
+      | U-closed => \lam inP (r, r<q, r>0, a<=r, -a<=r) q<q' => inP (r, r<q <∘ q<q', r>0, a<=r, -a<=r)
+      | U-rounded => \lam {q} inP (r, r<q, r>0, a<=r, -a<=r) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, r>0, a<=r, -a<=r), RatField.mid<right r<q)
+    | norm_zro => {?hidden_proof}
+    | norm_negative => {?hidden_proof}
+    | norm_+ => {?hidden_proof}
+    | norm-double => {?hidden_proof}
+    | norm-bounded => {?hidden_proof}
+    | norm_*_<= => {?hidden_proof}
+    | norm_ide_<= => {?hidden_proof}
+
+  \lemma toBanach_norm<=1 {x : E} (x<=1 : x <= 1) (-x<=1 : negative x <= 1) : toBanach.norm x ExUpperReal.<= ExUpperRealPointed.ide => {?hidden_proof}
+
+  \lemma toBanach_c*-sum {a b : E} : toBanach.norm (a * a) ExUpperReal.<= toBanach.norm (a * a + b * b) => {?hidden_proof}
+
+  \lemma toBanach_c*-square {a : E} : toBanach.norm a ExUpperRealSemigroup.* toBanach.norm a ExUpperReal.<= toBanach.norm (a * a) => {?hidden_proof}
+
+  \lemma *q-upperBound (a : E) : ∃ (q : Rat) (0 < q) (a <= q *q ide) => {?hidden_proof}
 }
 
 \class StoneC*PseudoAlgebra \extends RealBanachPseudoAlgebra, CRing {
   | c*-sum {a b : E} : norm (a * a) ExUpperReal.<= norm (a * a + b * b)
   | c*-square {a : E} : norm a ExUpperReal.* norm a ExUpperReal.<= norm (a * a)
+
+  \lemma norm_*-char {x : E} : norm x = Join (\lam (s : \Sigma (y : E) (norm y <= ExUpperRealPointed.ide)) => norm (x * s.1)) => {?hidden_proof}
 }
 
 \class StoneC*Algebra \extends StoneC*PseudoAlgebra, RealBanachAlgebra, OrderedC*Algebra, PosetRing {
@@ -81,6 +114,20 @@
   | c*-<=-square => \lam {a} inP (b, bb=1-aa) =>
   norm-square' $ ExUpperRealSemigroup.square<=1 $ c*-square ExUpperRealAbMonoid.<=∘ transport (_ ExUpperReal.<= norm __) {_} {1} (equation.abGroup {bb=1-aa}) 
     (c*-sum {_} {a} {b}) ExUpperRealAbMonoid.<=∘ norm_ide_<=
+
+  \lemma norm-c*-positive {x : E} (p : norm (1 - x) ExUpperReal.<= RatField.ide) : 0 <= x => {?hidden_proof}
+
+  \lemma norm_<=_*q {x : E} {q : Rat} (|x|<=q : norm x ExUpperReal.<= q) : x <= q *q 1 => {?hidden_proof}
+
+  \lemma norm-char {x : E} : norm x = toBanach.norm x => {?hidden_proof}
+
+  \lemma square-positive {x : E} : IsSquare x <-> 0 <= x => {?hidden_proof}
+
+  \lemma square-lem {x : E} (x>=0 : 0 <= x) (x<=1 : x <= 1) : norm (1 - x) ExUpperReal.<= ExUpperRealPointed.ide => {?hidden_proof}
+
+  \lemma square_*q-lem {q : Rat} (q>0 : RatField.zro < q) {x : E} (x>=0 : 0 <= x) (x<=q : x <= q *q 1) : norm (q *q 1 - x) ExUpperReal.<= q => {?hidden_proof}
+
+  \lemma square-closed : IsClosed IsSquare => {?hidden_proof}
 }
   \where {
     \type \infix 4 <= {R : Ring} (x y : R) => R.IsSquare (y - x)

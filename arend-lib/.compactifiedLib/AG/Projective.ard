@@ -38,7 +38,7 @@
 \import Topology.Locale
 \open Ideal
 \open AddMonoid
-\open Monoid(pow)
+\open Monoid (pow)
 
 \func ProjPres (R : GradedCRing) : FramePres (Carrier R) \cowith
   | conj => h*

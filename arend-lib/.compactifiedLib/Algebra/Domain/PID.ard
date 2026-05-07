@@ -12,7 +12,7 @@
 \import Algebra.Ring.Noetherian
 \import Algebra.Semiring
 \import Function.Iterate
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -22,12 +22,14 @@
 \import Set
 \open DivQuotient \hiding (~)
 \open Monoid
-\open equation(cRing)
+\open equation (cRing)
 
 \class PID \extends SmithDomain, NoetherianCRing {
   | divChain : CMonoid.DivChain {DivQuotientMonoid nonZeroCMonoid}
   | isNoetherian => \lam I Ifg => Ideal.fromMonoidChainCondition (IntegralDomain.Dec.fromNonZeroDivChain divChain) I (\lam n => bezout_finitelyGenerated_principal.1 isBezout (Ifg n))
   | isKaplansky => adequate_kaplansky (\lam a/=0 => adequate'_adequate (domain_adequate' divChain a/=0))
+
+  \lemma is1Dim : Dim<= 1 => {?hidden_proof}
 }
   \where {
     \type IsAdequate {M : CMonoid} (a : M) => \Pi (b : M) -> ∃ (c : M) (LDiv c a) (IsCoprime c b) ∀ d (LDiv d a -> IsCoprime d b -> TruncP (LDiv d c))

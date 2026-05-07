@@ -22,7 +22,7 @@
 \import Paths
 \import Paths.Meta
 
-\class InfReal \extends LowerReal, ExUpperReal {
+\record InfReal \extends LowerReal, ExUpperReal {
   | LU-disjoint {q : Rat} : L q -> U q -> Empty
   | LU-located {q r : Rat} : q < r -> L q || U r
   | LU-focus-bound (B : Rat) {eps : Rat} : eps > 0 -> L B || Given (a : L) (U (a + eps))
@@ -39,6 +39,30 @@
     | byRight p => inP (p.1, p.2)
   }
 | LU-focus-bound => LU-focus-bound-impl
+
+\protected \default LU-focus-bound-impl (B : Rat) {eps : Rat} (eps>0 : eps > 0) : L B || Given (a : L) (U (a + eps)) => \case L-inh, LU-located {\this} {B} {B + 1} linarith \with {
+  | _, byLeft LB => byLeft LB
+  | inP (q, Lq), byRight Ur => 
+    \let | m r q => (r - q) * finv 3
+         | LU-less {q} {r} (Lq : L q) (Ur : U r) : q < r => \case LinearOrder.dec<_<= q r \with {
+           | inl q<r => q<r
+           | inr r<=q => absurd $ LU-disjoint Lq (U_<= Ur r<=q)
+         }
+         | r => B + 1
+    \in \case focus-iter (ratio 3 2) rat_<=-dec (\lam q r => \Sigma (L q) (U r))
+    (\lam q r (Lq, Ur) => (\case LU-located (linarith (usingOnly (LU-less Lq Ur))) \with {  | byLeft Lq+m => inP (q + m r q, r, (Lq+m, Ur), linarith)
+    | byRight Ur-m => inP (q, r - m r q, (Lq, Ur-m), linarith)})) (iabs $ rat_ceiling $ finv eps * (r - q)) q r (Lq, Ur)
+   \with {
+          | inP (q', r', (Lq', Ur'), p) => byRight (q', Lq',  U-closed Ur'  (  \have | r-q>0 {q} {r} (Lq : L q) (Ur : U r) : 0 < r - q => linarith (usingOnly (LU-less Lq Ur))
+                  | pr>0 => RatField.<_*_positive_positive (RatField.finv>0 eps>0) (r-q>0 Lq Ur)        | c>0 => fromInt_<.conv $ pr>0 <∘l rat_ceiling>=id
+                  | s : (r' - q') * (finv eps * (r - q)) < r - q =>
+                    <_*_positive-right (r-q>0 Lq' Ur') (rat_ceiling>=id <∘r fromInt_<= (=_<= $ inv $ iabs.ofPos $ LinearOrder.<_<= c>0) <∘r pow>id _) <∘l p
+                  | t => transport (_ <) (pmap (_ *) RatField.finv_* *> inv *-assoc *> pmap (* _) (finv-right $ RatField.>_/= $ r-q>0 Lq Ur) *> ide-left *> RatField.finv_finv) 
+                        (RatField.<_rotate-right pr>0 s)  \in linarith (usingOnly t)))
+        }
+}
+
+\lemma LU-less {q r : Rat} (Lq : L q) (Ur : U r) : q < r => {?hidden_proof}
 }
 \where {
   \use \coerce fromRat (x : Rat) : InfReal \cowith
@@ -81,7 +105,7 @@
   | meet_+-left => {?hidden_proof}
   | join_+-left => {?hidden_proof}
 \where {
-  \infixl 6 + (x y : InfReal) : InfReal \cowith
+  \sfunc \infixl 6 + (x y : InfReal) : InfReal \cowith
     | LowerReal => x LowerRealAbMonoid.+ y
     | ExUpperReal => x ExUpperReal.+ y
     | LU-disjoint => {?hidden_proof}
@@ -107,7 +131,7 @@
 
   \lemma <=_U {x y : InfReal} : Not (y < x) <-> ∀ {b : y.U} (x.U b) => {?hidden_proof}
 
-  meet (x y : InfReal) : InfReal \cowith
+  \sfunc meet (x y : InfReal) : InfReal \cowith
     | LowerReal => LowerRealAbMonoid.meet x y
     | ExUpperReal => ExUpperReal.meet x y
     | LU-disjoint => {?hidden_proof}
@@ -119,7 +143,7 @@
 
   \lemma meet_U {x y : InfReal} {a : Rat} : InfReal.U {meet x y} a <-> x.U a || y.U a => {?hidden_proof}
 
-  join (x y : InfReal) : InfReal \cowith
+  \sfunc join (x y : InfReal) : InfReal \cowith
     | LowerReal => LowerRealAbMonoid.join x y
     | ExUpperReal => ExUpperReal.join x y
     | LU-disjoint => {?hidden_proof}

@@ -116,9 +116,9 @@
   }
 
 
-transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n => cycle (a :: b :: nil) inj
+\sfunc transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n => cycle (a :: b :: nil) inj
   \where {
-    \func inj {i j : Fin 2} (p : (a :: b :: nil) i = (a :: b :: nil) j) : i = j \elim i, j
+    \protected \func inj {i j : Fin 2} (p : (a :: b :: nil) i = (a :: b :: nil) j) : i = j \elim i, j
       | 0, 0 => idp
       | 0, 1 => absurd (a/=b p)
       | 1, 0 => absurd $ a/=b (inv p)
@@ -196,7 +196,7 @@ transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n => cycle (a :: b :
   }
 }
   \where {
-    equiv_fin {n m : Nat} : \Sigma (k : Nat) (Equiv {Equiv {Fin n} {Fin m}} {Fin k}) => \case decideEq n m \with {
+    \sfunc equiv_fin {n m : Nat} : \Sigma (k : Nat) (Equiv {Equiv {Fin n} {Fin m}} {Fin k}) => \case decideEq n m \with {
       | yes p => (fac m, 
         rewrite p $ later (\new QEquiv {  | f => \lam e => e  | ret => \lam e => e  | ret_f => idpe  | f_sec => idpe}) `transEquiv` symQEquiv SymFin.fin_equiv
         )
@@ -310,9 +310,9 @@ transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n => cycle (a :: b :
   \where {
     \open sign
     \open transposition1
-    \open NatSemiring(<-irreflexive)
+    \open NatSemiring (<-irreflexive)
 
-    Inverstions_transposition_> {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea<ea+1 : e a < e (suc a)) : Equiv {Or (Inversions e) (Fin 1)} {Inversions (transposition1 a * e)} => 
+    \sfunc Inverstions_transposition_> {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea<ea+1 : e a < e (suc a)) : Equiv {Or (Inversions e) (Fin 1)} {Inversions (transposition1 a * e)} => 
       \have | lem1 {i j : Fin (suc n)} (i<j : i < j) (p : i /= a) : transposition1 a i < transposition1 a j => \case decideEq i (suc a) \with {
               | yes q => rewrite (q, transposition1-right, 
                 transposition1_/= (\lam r => <-irreflexive $ id<suc <∘ transport2 {Nat} {Nat} < q r i<j) (\lam r => <-irreflexive $ transport2 {Nat} {Nat} < q r i<j)) 
@@ -342,7 +342,7 @@ transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n => cycle (a :: b :
             | no q, _ => (inl (transposition1 a r.1, transposition1 a r.2, lem1 r.3 $ /=-sym q, r.4), ext (transposition1-isInv, transposition1-isInv))
             | _, no q => (inl (transposition1 a r.1, transposition1 a r.2, lem2 r.3 $ /=-sym q, r.4), ext (transposition1-isInv, transposition1-isInv))}))
 
-    Inverstions_transposition_< {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea+1<ea : e (suc a) < e a) : Equiv {Or (Inversions (transposition1 a * e)) (Fin 1)} {Inversions e} 
+    \sfunc Inverstions_transposition_< {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea+1<ea : e (suc a) < e a) : Equiv {Or (Inversions (transposition1 a * e)) (Fin 1)} {Inversions e} 
     => transEquiv (Inverstions_transposition_> {n} {transposition1 a * e} (unfold $ rewrite (transposition1-left, transposition1-right) ea+1<ea)) $ later
       (\new QEquiv {  | f => \lam s => (s.1, s.2, s.3, transport2 (e __ < e __) transposition1-isInv transposition1-isInv s.4)
       | ret => \lam s => (s.1, s.2, s.3, transport2 (e __ < e __) (inv transposition1-isInv) (inv transposition1-isInv) s.4)
@@ -352,7 +352,7 @@ transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n => cycle (a :: b :
 
     \lemma inverstions_transposition_< {n : Nat} {e : Sym (suc n)} {a : Fin n} (ea+1<ea : e (suc a) < e a) : suc (inversions (transposition1 a * e)) = inversions e => {?hidden_proof}
 
-    \open Nat(mod)
+    \open Nat (mod)
 
     \lemma inversions_transposition {n : Nat} {e : Sym (suc n)} {a : Fin n} : inversions (transposition1 a * e) mod 2 = suc (inversions e) mod 2 => {?hidden_proof}
 
@@ -372,9 +372,9 @@ transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n => cycle (a :: b :
   | func-ide => {?hidden_proof}
   | func-* => {?hidden_proof}
 
-cycle-decomp {n : Nat} (e : Sym n) => aux e id<suc
+\sfunc cycle-decomp {n : Nat} (e : Sym n) => aux e id<suc
   \where {
-    \open Monoid(pow, BigProd)
+    \open Monoid (pow, BigProd)
 
     \func aux {k n : Nat} (e : Sym n) (p : finCard {Sym.SupportFin e} < k) :
       \Sigma (l : Array (Sym n)) (∀ (e' : l) (isCycle e')) (\Pi (i1 i2 : Fin l.len) {i : Fin n} -> Support (l i1) i -> Support (l i2) i -> i1 = i2) 

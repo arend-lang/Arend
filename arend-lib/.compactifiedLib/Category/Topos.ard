@@ -4,7 +4,7 @@
 \import Category.Coreflection
 \import Category.Limit
 \import Equiv
-\import Function(IsInj)
+\import Function (IsInj)
 \import Function.Meta
 \import Logic
 \import Meta
@@ -22,6 +22,111 @@
   | p-exponential : isExponentiable omega
   | p-exponential => CartesianClosedPrecat.is-exponentiable omega
   | exp => exp
+
+  \use \func Power (B : Ob) : Ob => p-exponential B
+
+  \use \func belongs {B : Ob} : Hom (Bprod (Power B) B) omega => corefl-map {p-exponential B}
+
+  \use \func p-transpose {A B : Ob} (f : Hom (Bprod A B) omega) : Hom A (Power B) => ret {isCoreflection {p-exponential B}} f
+
+  \use \lemma p-transpose-univ {A B : Ob} (f : Hom (Bprod A B) omega) : f = belongs ∘ (prodMap (p-transpose f) (id B)) => {?hidden_proof}
+
+  \use \lemma p-transpose-unique {A B : Ob} {f : Hom (Bprod A B) omega} {g : Hom A (Power B)} (comm : f = belongs ∘ prodMap g (id B)) : g = p-transpose f => {?hidden_proof}
+
+  \use \func anti-transpose {A B : Ob} (g : Hom A (Power B)) : Hom (Bprod A B) omega => belongs ∘ (prodMap g (id B))
+
+  \use \lemma antitranspose-eq {A B : Ob} (f : Hom (Bprod B A) omega) : f = anti-transpose (p-transpose f) => {?hidden_proof}
+
+  \use \lemma transpose-inj {A B : Ob} {f g : Hom (Bprod A B) omega} (e : p-transpose f = p-transpose g) : f = g => {?hidden_proof}
+
+  \use \func internal-equality \alias eq (B : Ob) : Hom (Bprod B B) omega => char-map (diagonal.isSplitMono B)
+
+  \use \func singleton (B : Ob) : Hom B (Power B) => p-transpose (eq B)
+
+  \use \func char-rel {B C : Ob} (f : Hom B C) : Hom (Bprod B C) omega => eq C ∘ prodMap f (id C)
+
+  \use \lemma eqq-p-transpose-s {B X : Ob} (b : Hom X B) : singleton B ∘ b = p-transpose (char-rel b) => {?hidden_proof}
+
+  \use \lemma pbBeta2' {B X : Ob} {b : Hom X B} (w : Ob) (p1 : Hom w (Bprod X B)) (p2 : Hom w B) (c : prodMap b (id B) ∘ p1 = diagonal B ∘ p2) : b ∘ (proj1 ∘ p1) = p2 => {?hidden_proof}
+
+  \use \func left-square {B X : Ob} {b : Hom X B} : Pullback (prodMap b (id B)) (diagonal B) X (pair (id X) b) b \cowith
+    | pbCoh => {?hidden_proof}
+    | pbMap => \lam p1 _ _ => proj1 ∘ p1
+    | pbBeta1 => {?hidden_proof}
+    | pbBeta2 => {?hidden_proof}
+    | pbEta => {?hidden_proof}
+
+  \use \func right-square {B : Ob} : Pullback {\this} {Bprod B B} {terminal} {omega} (eq B) true-map B (diagonal B) terminalMap => char-pullback (diagonal.isSplitMono B)
+
+  \use \func full-square {B X : Ob} (b : Hom X B) : Pullback {\this} (char-rel b) true-map X (pair (id X) b) => pullback-lemma right-square left-square
+
+  \use \lemma singleton-mono (B : Ob) : Mono (singleton B) => {?hidden_proof}
+
+  \use \func is-singleton {B : Ob} : Hom (Power B) omega => char-map (singleton-mono B)
+
+  \use \func true-over-obj {B : Ob} : Hom B omega => true-map ∘ terminalMap
+
+  \use \lemma monic-is-regular {X Y : Ob} (m : Mono {\this} {X} {Y}) : Equalizer true-over-obj (char-map m) X m => {?hidden_proof}
+
+  \use \lemma monic+epi=iso {X Y : Ob} (m : Mono {\this} {X} {Y}) (m-is-epi : isEpi {\this} {X} {Y} m) : Iso {\this} {X} {Y} m => {?hidden_proof}
+
+  \use \func global (X : Ob) => Hom terminal X
+
+  \use \func namePower {A : Ob} (phi : Hom A omega) : global (Power A) => p-transpose (phi ∘ terminal-prod-left.hinv)
+
+  \use \func image {B C : Ob} : Hom (Bprod (Power $ Bprod B C) B) (Power C) => p-transpose $ belongs {_} {Bprod B C} ∘ associator-iso.f
+
+  \use \func is-image-single {B C : Ob} : Hom (Bprod (Power $ Bprod B C) B) omega => is-singleton ∘ image
+
+  \use \func all-with-single-img {B C : Ob} : Hom (Power $ Bprod B C) (Power B) => p-transpose is-image-single
+
+  \use \func graphs {B C : Ob} : Pullback (namePower (true-over-obj {\this} {B})) (all-with-single-img {\this} {B} {C}) 
+    => pullback (namePower (true-over-obj {\this} {B})) (all-with-single-img {\this} {B} {C})
+    \where {
+      \use \func apex (B C : Ob) : Ob => Pullback.apex {graphs {_} {B} {C}}
+
+      \use \func map {B C : Ob} : Hom (graphs.apex B C) (Power $ Bprod B C) => Pullback.pbProj2 {graphs {_} {B} {C}}
+    }
+
+
+  \use \lemma terminate {B C : Ob} {f : Hom B C} : terminalMap ∘ f = terminalMap => {?hidden_proof}
+
+  \use \lemma eval_comm {B C : Ob} : char-map (singleton-mono C) ∘ (image ∘ prodMap graphs.map (id B)) = true-map ∘ terminalMap => {?hidden_proof}
+
+  \use \func eval {B C : Ob} : Hom (Bprod (graphs.apex B C) B) C => pbMap {char-pullback $ singleton-mono C} (image ∘ prodMap graphs.map (id B)) terminalMap eval_comm
+
+  \use \func h {A B C : Ob} (f : Hom (Bprod A B) C) : Hom A (Power $ Bprod B C) => p-transpose (char-rel f ∘ associator-iso.hinv)
+
+  \use \lemma ptranspose-eqq-eq {A B C : Ob} (f : Hom (Bprod A B) C) : p-transpose (char-rel f) = image ∘ prodMap (h f) (id B) => {?hidden_proof}
+
+  \use \lemma singleton-is-single {C : Ob} : is-singleton ∘ singleton C = true-over-obj => {?hidden_proof}
+
+  \use \func transpose' {A B C : Ob} (f : Hom (Bprod A B) C) : Hom A (graphs.apex B C) => 
+    \have | step1 => pmap (∘ f) (inv singleton-is-single) *> o-assoc
+          | step2 : is-image-single ∘ prodMap (h f) (id B) = is-singleton ∘ (image ∘ prodMap (h f) (id B)) => o-assoc
+          | step3 : all-with-single-img ∘ (h f) = p-transpose (is-image-single ∘ prodMap (h f) (id B)) =>
+            p-transpose-unique $ unfold $ rewrite prod-id-right $ rewriteI (o-assoc, antitranspose-eq _) idp
+          | step4 : true-over-obj {_} {B} ∘ proj2 {_} {A} {B} = true-over-obj ∘ f => unfold true-over-obj $ rewrite (o-assoc, terminate, o-assoc, terminate) idp
+          | step5 => run {(p-transpose-unique {\this} {_} {_} {true-over-obj {_} {B} ∘ proj2 {_} {A} {B}} {namePower (true-over-obj {_} {B}) ∘ terminalMap}, 
+            rewrite (prod-id-right, inv o-assoc, inv $ antitranspose-eq _), rewrite (o-assoc, terminate, o-assoc, o-assoc, terminate), idp)}
+    \in pbMap terminalMap (h f) $ unfold (Pullback.f, Pullback.g) $ rewrite (step5, step4, step3, step2, step1, eqq-p-transpose-s _, ptranspose-eqq-eq f) idp
+
+  \use \lemma transpose-univ' {A B C : Ob} (f : Hom (Bprod A B) C) : f = eval ∘ prodMap (transpose' f) (id B) => {?hidden_proof}
+
+  \use \lemma transpose-unique' {A B C : Ob} {f : Hom (Bprod A B) C} {g : Hom A (graphs.apex B C)} (s : f = eval ∘ prodMap g (id B)) : transpose' f = g => {?hidden_proof}
+
+  \use \func exp-adjoint (B : Ob) : RightAdjointCoreflection \this \this (bprodFunctorRight B) \cowith
+    | coreflection => \lam C => \new (Coreflection (bprodFunctorRight B) C) {
+      | Coreflected => graphs.apex B C
+      | corefl-map => eval
+      | isCoreflection => \new QEquiv {
+        | ret => transpose'
+        | ret_f => \lam _ => transpose-unique' idp
+        | f_sec => \lam g => inv $ transpose-univ' g
+      }
+    }
+
+  \protected \default exp (B : Ob) : isExponential {\this} B => RightAdjointCoreflection.toAdjoint (exp-adjoint B)
 }
 
 \lemma sigma-prop-ext {A : \Prop} (a : A) : A = (\Sigma) => {?hidden_proof}

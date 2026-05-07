@@ -6,9 +6,7 @@
 \import Paths.Meta
 \import Set.Subset
 
-\class Filter {
-  | A : TopMeetSemilattice
-  | F : A -> \Prop
+\record Filter (A : TopMeetSemilattice) (\coerce F : A -> \Prop) {
   | filter-mono {a b : A} : F a -> a <= b -> F b
   | filter-top : F top
   | filter-meet {a b : A} : F a -> F b -> F (a ∧ b)
@@ -22,13 +20,14 @@
   }
 
 
-\class CompleteFilter \extends Filter {
+\record CompleteFilter \extends Filter {
   \override A : CompleteLattice
   | filter-Join {J : \Set} {f : J -> A} : F (Join f) -> ∃ (j : J) (F (f j))
+
+  \lemma isProper (p : F CompleteLattice.bottom) : Empty => {?hidden_proof}
 }
 
-\class SetFilter \extends Filter {
-  | X : \Set
+\record SetFilter \extends Filter (X : \Set) {
   | A => SetLattice X
 }
 
@@ -38,11 +37,11 @@
   | filter-top => {?hidden_proof}
   | filter-meet => {?hidden_proof}
 
-\class WeaklyProperFilter \extends SetFilter {
+\record WeaklyProperFilter \extends SetFilter {
   | isWeaklyProper : Not (F bottom)
 }
 
-\class ProperFilter \extends WeaklyProperFilter {
+\record ProperFilter \extends WeaklyProperFilter {
   | isProper {U : Set X} : F U -> ∃ U
   | isWeaklyProper => \lam Fb => (\case isProper Fb \with {
     | inP (x, inP ((), _))

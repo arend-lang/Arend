@@ -14,7 +14,7 @@
 \import Topology.CoverSpace
 \import Topology.CoverSpace.Category
 \import Topology.CoverSpace.Complete
-\import Topology.CoverSpace.StronglyComplete(StronglyCompleteCoverSpace)
+\import Topology.CoverSpace.StronglyComplete (StronglyCompleteCoverSpace)
 \import Topology.Locale \hiding (<=<_<=)
 \import Topology.Locale.Points
 \import Topology.RatherBelow
@@ -110,7 +110,7 @@
             | inP ((_, inP (_, inP (_, byRight idp, idp), idp)), xe) => \case filter-Join xe \with {
               | inP ((c, q), xc) => filter-mono xe $ Join-cond (later (b, b<=<a))            }          }  }}))))))
   \where {
-    \func frameHom (f : PrecoverMap (LocalePrecoverSpace L) (LocalePrecoverSpace M)) : FrameHom M L \cowith
+    \protected \func frameHom (f : PrecoverMap (LocalePrecoverSpace L) (LocalePrecoverSpace M)) : FrameHom M L \cowith
       | func => \lam a => Join (\lam (s : \Sigma (b : M) (b M.<=< a)) => points_* $ f ^-1 points^* s.1)
       | func-<= => {?hidden_proof}
       | func-top>= => {?hidden_proof}

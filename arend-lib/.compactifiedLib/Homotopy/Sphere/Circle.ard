@@ -23,7 +23,7 @@
   | ret_f => CircleSuspCircle
   | f_sec => SuspCircleSusp
   \where {
-    \open Sphere1(ploop)
+    \open Sphere1 (ploop)
 
     \func CircleSusp (x : Sphere1) : Sphere 1 
       | base1 => north

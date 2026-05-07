@@ -1,4 +1,4 @@
-\import Algebra.Domain.GCD(GCDDomain)
+\import Algebra.Domain.GCD (GCDDomain)
 \import Algebra.Group
 \import Algebra.Meta
 \import Algebra.Monoid
@@ -9,7 +9,7 @@
 \import Algebra.Ring.Reduced
 \import Algebra.Semiring
 \import Data.Array
-\import Data.Fin(fsuc/=)
+\import Data.Fin (fsuc/=)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -18,7 +18,7 @@
 \import Paths.Meta
 \import Set
 \import Set.Countable
-\open Monoid(LDiv)
+\open Monoid (LDiv)
 
 \class BezoutRing \extends CRing, GCDMonoid {
   | isBezout : IsBezout
@@ -30,6 +30,28 @@
     | res|val2 => LDiv.product-left c g.res|val2  | res-univ => \lam d (x, p) (y, q) =>
     LDiv.trans (later $ rewrite ldistr $ LDiv_+ (LDiv.make (s * x) (equation.cMonoid {p})) (LDiv.make (t * y) (equation.cMonoid {q}))) $ LDiv.product-left c 
         (g.res-univ _ d1 d2)})
+
+  \lemma gcd_bezout {a b c : E} (gcd : GCD a b c) : ∃ (s t : E) (s * a + t * b = c) => {?hidden_proof}
+
+  \lemma bezoutArray_LDiv (l : Array E) : ∃ (c : Array E l.len) ∀ j (LDiv (BigSum (\lam i => c i * l i)) (l j)) => {?hidden_proof}
+
+  \lemma coprime_bezoutArray {a : Array E} (ac : IsCoprimeArray a) : ∃ (s : Array E a.len) (BigSum (\lam j => s j * a j) = 1) => {?hidden_proof}
+
+  \lemma chinese2 (a1 a2 d1 d2 : E) (p : IsCoprime d1 d2) : ∃ (r : E) (LDiv d1 (r - a1)) (LDiv d2 (r - a2)) => {?hidden_proof}
+
+  \lemma chinese {n : Nat} (a d : Array E n) (p : \Pi (i j : Fin n) -> i /= j -> IsCoprime (d i) (d j)) : ∃ (r : E) (\Pi (j : Fin n) -> LDiv (d j) (r - a j)) => {?hidden_proof}
+
+  \lemma chinese-unique {n : Nat} (r r' : E) (d : Array E n) (p : \Pi (i j : Fin n) -> i /= j -> IsCoprime (d i) (d j)) (q : \Pi (j : Fin n) -> LDiv (d j) (r - r')) : TruncP (LDiv (BigProd d) (r - r')) 
+    => {?hidden_proof}
+
+  \func maximal-ideal (c : Countable E) (p : \Pi (a b : E) -> Dec (TruncP (LDiv a b))) (l : Array E) (lc : Not (IsCoprimeArray l)) :
+    \Sigma (M : Ideal \this) M.IsMaximal (\Pi (j : Fin l.len) -> M (l j)) => 
+    \let (M, Mm, Mc) => Ideal.countable-maximal c
+           (\lam I Ig x => (\case bezout_finitelyGenerated_principal.1 isBezout Ig \with {
+           | inP (y, yg) => transport Dec (ext (\lam inP y|x => Ideal.ldiv y|x yg.1, \lam Ix => yg.2 Ix)) (p y x)})) {Ideal.closure l} 
+         Ideal.closure-finGenerated 
+         (\lam inP c => lc (\lam z d => Monoid.Inv.ldiv $ later $ rewrite c.2 $ LDiv_BigSum (\lam j => later $ LDiv.factor-right $ d (c.1 j).2)))
+    \in (M, Mm, \lam j => Mc $ Ideal.closure-superset j)
 }
   \where {
     \lemma bezoutArray_coprime {R : CRing} {n : Nat} (s : Array R n) {u : Array R n} (p : R.BigSum (\lam j => s j * u j) = 1) : IsCoprimeArray u => {?hidden_proof}
@@ -47,6 +69,8 @@
   | isBezout => \lam a b => TruncP.map (isStrictBezout a b)
     (\lam (s, t, u, v, p, q) => (t, s, \new LDiv {  | inv => v  | inv-right => equation.cRing {(inv p, q)}},
     \new LDiv {  | inv => u  | inv-right => equation.cRing {(p, q)}}))
+
+  \lemma bezoutArray {n : Nat} (a : Array E (suc n)) : ∃ (s u : Array E (suc n)) (BigSum (\lam j => s j * u j) = 1) (d : E) (\Pi (j : Fin (suc n)) -> a j = u j * d) => {?hidden_proof}
 }
 
 \class BezoutDomain \extends GCDDomain, BezoutRing {

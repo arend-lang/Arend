@@ -16,17 +16,13 @@
 \import Set.SetCategory
 \import Topology.Locale
 
-\class VPresheaf {
-  | D : Cat \levels (\suc \lp) _
-  | C : SmallPrecat
-  | F : Functor C.op D
-}
+\record VPresheaf (D : Cat (\suc \lp)) (C : SmallPrecat) (\coerce F : Functor C.op D)
 
-\class Presheaf \extends VPresheaf {
+\record Presheaf \extends VPresheaf {
   | D => SetCat
 }
 
-\instance VPresheafCat (D : Cat \levels (\suc \lp) _) (C : Precat) : Cat 
+\instance VPresheafCat (D : Cat (\suc \lp)) (C : Precat) : Cat 
 => subCat {FunctorCat {C.op} {D}} {VPresheaf D C} (\new Embedding {  | f => \lam P => P  | isEmb => \lam _ _ => \new Retraction {    | sec => \lam p => ext p
     | f_sec => idpe  }})
 
@@ -49,7 +45,7 @@
 
     \lemma direct_image_locale {L L' : Locale} (f : FrameHom L' L) (S : VSheaf {  | C => L}) : VSheaf S.D L' (Comp S f.functor.op) => {?hidden_proof}
       \where {
-        \func map {L L' : Locale} {D : Cat \levels (\suc \lp) _} (f : FrameHom L' L) {S S' : VSheaf D L} (a : NatTrans \levels (\suc \lp) _ S S') :
+        \func map {L L' : Locale} {D : Cat (\suc \lp)} (f : FrameHom L' L) {S S' : VSheaf D L} (a : NatTrans (\suc \lp) S S') :
           NatTrans (direct_image_locale f S) (direct_image_locale f S') \cowith
           | trans => \lam x => a (f x)
           | natural => {?hidden_proof}
@@ -68,26 +64,22 @@
 
 \class Sheaf \extends Presheaf, VSheaf
 
-\instance VSheafCat (D : Cat \levels (\suc \lp) _) (C : Site) : Cat 
+\instance VSheafCat (D : Cat (\suc \lp)) (C : Site) : Cat 
 => subCat {VPresheafCat D C} {VSheaf D C} (\new Embedding {  | f => \lam P => P  | isEmb => \lam _ _ => \new Retraction {    | sec => \lam p => (ext VSheaf) {
       | VPresheaf => p    }    | f_sec => idpe  }})
 
 \instance SheafCat (C : Site) : Cat => VSheafCat SetCat C
 
-\lemma sheaf-preserve {C : Site} {D E : Cat \levels (\suc \lp) _} (G : Functor D E) (G-lim : \Pi {J : Precat} (H : Functor J D) -> PreservesLimit G H) (F : VSheaf D C) : VSheaf E C (Comp G F) 
+\lemma sheaf-preserve {C : Site} {D E : Cat (\suc \lp)} (G : Functor D E) (G-lim : \Pi {J : Precat} (H : Functor J D) -> PreservesLimit G H) (F : VSheaf D C) : VSheaf E C (Comp G F) 
   => {?hidden_proof}
 
-\lemma sheaf-reflect {C : Site} {D E : Cat \levels (\suc \lp) _} (G : Functor D E) (G-lim : \Pi {J : Precat} (H : Functor J D) -> ReflectsLimit G H) (F : Functor C.op D) 
+\lemma sheaf-reflect {C : Site} {D E : Cat (\suc \lp)} (G : Functor D E) (G-lim : \Pi {J : Precat} (H : Functor J D) -> ReflectsLimit G H) (F : Functor C.op D) 
 (S : VSheaf E C (Comp G F)) : VSheaf D C F => {?hidden_proof}
 
-\lemma vsheafOnSiteWithBasis {C : SiteWithBasis} {D : Cat \levels (\suc \lp) _} (F : Functor C.op D) 
+\lemma vsheafOnSiteWithBasis {C : SiteWithBasis} {D : Cat (\suc \lp)} (F : Functor C.op D) 
 (p : \Pi (x : C) {J : \Set} (g : J -> SlicePrecat x) (c : isBasicCover x g) (z : D) -> Equiv (matchingFamily x g z)) : VSheaf D C F => {?hidden_proof}
   \where {
-\class MatchingFamily {
-      | x : C
-      | J : \Set
-      | g : J -> SlicePrecat x
-      | z : D
+\record MatchingFamily (x : C) {J : \Set} (g : J -> SlicePrecat x) (z : D) {
       | family (j : J) : Hom z (F (g j).1)
       | isMatching (j j' : J) : F.Func (pbProj1 {pullback (g j).2 (g j').2}) ∘ family j = Func pbProj2 ∘ family j'
     }
@@ -103,10 +95,10 @@
 
 \open vsheafOnSiteWithBasis
 
-\lemma vsheafMatchingFamily {C : SiteWithBasis} {D : Cat \levels (\suc \lp) _} (F : VSheaf D C) (x : C) {J : \Set} (g : J -> SlicePrecat x) (c : isBasicCover x g) (z : D) : Equiv (matchingFamily x g z) 
+\lemma vsheafMatchingFamily {C : SiteWithBasis} {D : Cat (\suc \lp)} (F : VSheaf D C) (x : C) {J : \Set} (g : J -> SlicePrecat x) (c : isBasicCover x g) (z : D) : Equiv (matchingFamily x g z) 
   => {?hidden_proof}
 
-\lemma vsheafOnSiteWithBasis-equalizer {C : SiteWithBasis} {D : CompleteCat \levels (\suc \lp) _} (F : Functor C.op D) 
+\lemma vsheafOnSiteWithBasis-equalizer {C : SiteWithBasis} {D : CompleteCat (\suc \lp)} (F : Functor C.op D) 
 (p : \Pi (x : C) {J : \Set} (g : J -> SlicePrecat x) (c : isBasicCover x g) -> Equalizer (leftMap x g) (rightMap x g) (F x) (eqMap x g)) : VSheaf D C F 
   => {?hidden_proof}
   \where {
@@ -127,10 +119,7 @@
 \lemma sheafOnSiteWithBasis {C : SiteWithBasis} (F : Functor C.op SetCat) 
 (p : \Pi (x : C) {J : \Set} (g : J -> SlicePrecat x) (c : isBasicCover x g) -> Equiv (matchingFamily x g)) : Sheaf C F => {?hidden_proof}
   \where {
-\class MatchingFamily {
-      | x : C
-      | J : \Set
-      | g : J -> SlicePrecat x
+\record MatchingFamily (x : C) {J : \Set} (g : J -> SlicePrecat x) {
       | family (j : J) : F (g j).1
       | isMatching (j j' : J) : F.Func (pbProj1 {pullback (g j).2 (g j').2}) (family j) = F.Func pbProj2 (family j')
     }
@@ -148,9 +137,9 @@
   }
 
 
-\lemma sheafOnPresentedFrame {P : FramePres} {D : CompleteCat \levels (\suc \lp) _} (F : VSheaf D (framePresSite P)) : VSheaf D (PresentedFrame P) extend => {?hidden_proof}
+\lemma sheafOnPresentedFrame {P : FramePres} {D : CompleteCat (\suc \lp)} (F : VSheaf D (framePresSite P)) : VSheaf D (PresentedFrame P) extend => {?hidden_proof}
   \where {
-    \open PresentedFrame(embed)
+    \open PresentedFrame (embed)
     \open Limit
     \open Cover
 

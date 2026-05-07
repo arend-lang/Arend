@@ -35,7 +35,7 @@
   | TopAbGroupMap => dense-topAb-lift f (fd, f.embedding->topEmbedding $ f.embedding->coverEmbedding (f.dense->uniformEmbedding fd).2) g
   | func-norm => {?hidden_proof}
   \where {
-    \lemma char {X Y : ExPseudoNormedAbGroup} {Z : CompleteExNormedAbGroup} (f : NormedIsometricMap X Y) (fd : f.IsDense) (g : NormedAbGroupMap X Z) {x : X} :
+    \protected \lemma char {X Y : ExPseudoNormedAbGroup} {Z : CompleteExNormedAbGroup} (f : NormedIsometricMap X Y) (fd : f.IsDense) (g : NormedAbGroupMap X Z) {x : X} :
       dense-normed-lift f fd g (f x) = g x => {?hidden_proof}
   }
 
@@ -43,7 +43,10 @@
 \instance ExNormedAbGroupCompletion (X : ExPseudoNormedAbGroup) : CompleteExNormedAbGroup 
   | CompleteExMetricSpace => ExMetricCompletion X
   | CompleteTopAbGroup => TopAbGroupCompletion X
-  | norm => norm
+  | norm (F : RegularCauchyFilter X) : ExUpperReal 
+    | U => \lam q => ∃ (r : < q) (U : F.F) ∀ {x : U} ((X.norm x).U r)
+    | U-closed => \lam inP (r, r<q, U, FU, h) q<q' => inP (r, r<q <∘ q<q', U, FU, h)
+    | U-rounded => \lam {q} inP (r, r<q, U, FU, h) => inP (RatField.mid r q, inP (r, RatField.mid>left r<q, U, FU, h), RatField.mid<right r<q)
   | norm-dist => {?hidden_proof}
   \where {
     \lemma filter-norm_dist {F : RegularCauchyFilter X} : norm F = (ExMetricCompletion X).dist F (pointCF 0) => {?hidden_proof}
@@ -58,13 +61,21 @@
 
 \instance SeparatedNormedAbGroupReflection (X : ExPseudoNormedAbGroup) : ExNormedAbGroup (Quot X) 
   | zro => in~ 0
-  | + => +
+  | + (a b : Quot X) : Quot X \with
+    | in~ x, in~ x' => in~ (x X.+ x')
+    | in~ a, ~-equiv x y r => ~-nequiv (simplify r)
+    | ~-equiv x y r, in~ a => ~-nequiv (simplify r)
   | zro-left => {?hidden_proof}
   | +-assoc => {?hidden_proof}
-  | negative => negative
+  | negative (a : Quot X) : Quot X \with
+    | in~ x => in~ (X.negative x)
+    | ~-equiv x y r => ~-nequiv (inv norm_negative *> simplify (pmap X.norm +-comm *> r))
   | negative-left => {?hidden_proof}
   | +-comm => {?hidden_proof}
-  | norm => norm
+  | norm (a : Quot X) : ExUpperReal \with
+    | in~ x => X.norm x
+    | ~-equiv x y r => <=-antisymmetric (transport2 (X.norm __ <= __) {x - y X.+ y} simplify zro-left $ norm_+ <=∘ ExUpperRealAbMonoid.<=_+ (=_<= r) <=-refl) 
+      (transport2 (X.norm __ <= __) {y - x X.+ x} simplify zro-left $ norm_+ <=∘ ExUpperRealAbMonoid.<=_+ (=_<= $ norm_- *> r) <=-refl)
   | norm_zro => {?hidden_proof}
   | norm_negative => {?hidden_proof}
   | norm_+ => {?hidden_proof}
@@ -81,7 +92,13 @@
 
 
 \func separated-completion {X : ExPseudoNormedAbGroup} : NormedIsometricMap (SeparatedNormedAbGroupReflection X) (ExNormedAbGroupCompletion X) \cowith
-  | func => func
+  | func (a : SeparatedNormedAbGroupReflection.Quot X) : RegularCauchyFilter X \with
+    | in~ x => pointCF x
+    | ~-equiv x y r => 
+      \have lem {x y : X} (p : norm (x - y) = 0) {U : Set X} (x<=<U : pointCF x U) : pointCF y U => \case <=<-ball x<=<U \with {
+              | inP (eps, eps>0, q) => <=<-left (OBall-center_<=< eps>0) (\lam {z} d => q (  \have xz<=yz => dist-triang <=∘ =_<= (pmap (+ _) (norm-dist *> p) *> zro-left)  \in xz<=yz d))
+            }
+      \in exts (\lam U => ext (lem r, lem $ norm_- *> r))
   | func-+ => {?hidden_proof}
   | func-norm-isometry => {?hidden_proof}
   \where {

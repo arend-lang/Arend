@@ -21,7 +21,7 @@
   \where {
     \lemma sort-consistent {n : Nat} {env : Fin n -> M} {l : List (Fin n)} : (MonoidSolverModel M).interpretNF env (RedBlack.sort l) = (MonoidSolverModel M).interpretNF env l => {?hidden_proof}
 
-    \lemma perm-consistent {n : Nat} {env : Fin n -> M} {l l' : List (Fin n)} (p : Sort.Perm l l') : MonoidSolverModel.interpretNF env l = MonoidSolverModel.interpretNF env l' => {?hidden_proof}
+    \protected \lemma perm-consistent {n : Nat} {env : Fin n -> M} {l l' : List (Fin n)} (p : Sort.Perm l l') : MonoidSolverModel.interpretNF env l = MonoidSolverModel.interpretNF env l' => {?hidden_proof}
 
     \lemma interpretNF_iterr {env : Array M} {l : List (Fin env.len)} {v : List (Fin env.len)} {n : Nat} :
       MonoidSolverModel.interpretNF env (iterr (l ++) n v) = M.pow (MonoidSolverModel.interpretNF env l) n * MonoidSolverModel.interpretNF env v => {?hidden_proof}

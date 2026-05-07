@@ -35,9 +35,9 @@
 \func Trace-prod {R : CRing} {n m : Nat} (A : MatrixModule R n m) (B : MatrixModule R m n) : Trace (A product B) = Trace (B product A) 
   => rewrite (Trace-prod-unfold A B, R.BigSum-transpose, Trace-prod-unfold B A, help) idp
   \where {
-    \lemma help : R.BigSum (\lam j => R.BigSum (\lam k => A k j R.* B j k)) = R.BigSum (\lam i => R.BigSum (\lam j => B i j R.* A j i)) => {?hidden_proof}
+    \protected \lemma help : R.BigSum (\lam j => R.BigSum (\lam k => A k j R.* B j k)) = R.BigSum (\lam i => R.BigSum (\lam j => B i j R.* A j i)) => {?hidden_proof}
 
-    \lemma Trace-prod-unfold {R : Ring} {n m : Nat} (X : MatrixModule R n m) (Y : MatrixModule R m n) :
+    \protected \lemma Trace-prod-unfold {R : Ring} {n m : Nat} (X : MatrixModule R n m) (Y : MatrixModule R m n) :
       Trace (X product Y) = R.BigSum (\lam i => R.BigSum (\lam j => X i j R.* Y j i)) => {?hidden_proof}
   }
 

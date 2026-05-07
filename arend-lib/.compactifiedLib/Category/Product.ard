@@ -1,5 +1,5 @@
 \import Category
-\import Equiv(QEquiv, ret)
+\import Equiv (QEquiv, ret)
 \import Paths
 \import Paths.Meta
 \open Precat

@@ -33,7 +33,7 @@
   | ~-reflexive => {?hidden_proof}
   | ~-symmetric => {?hidden_proof}
 
-\class StronglyRegularCauchyFilter \extends WeaklyCauchyFilter {
+\record StronglyRegularCauchyFilter \extends WeaklyCauchyFilter {
   | isStronglyRegularFilter {U : Set S} : F U -> ∃ (V : Set S) (V s<=< U) (F V)
 }
   \where {
@@ -85,6 +85,18 @@
   | isComplete => \lam F => (\case isStronglyComplete (sregCF F) \with {
     | inP (x, p) => inP (x, p <=∘ sregCF_<=)
   })
+
+  \protected \lemma weak-filter-point-unique (F : WeaklyCauchyFilter \this) : isProp (\Sigma (x : E) (pointSCF x ⊆ F)) => {?hidden_proof}
+
+  \protected \lemma weak-filter-point-pair (F : WeaklyCauchyFilter \this) : \level (\Sigma (x : E) (pointSCF x ⊆ F)) (weak-filter-point-unique F) => {?hidden_proof}
+
+  \sfunc weak-filter-point (F : WeaklyCauchyFilter \this) : E => (weak-filter-point-pair F).1
+
+  \lemma weak-filter-point-sub {F : WeaklyCauchyFilter \this} : pointSCF (weak-filter-point F) ⊆ F => {?hidden_proof}
+
+  \lemma weak-filter-point-elem {F : WeaklyCauchyFilter \this} {U V : Set E} (p : V s<=< U) (FV : F V) : single (weak-filter-point F) <=< U => {?hidden_proof}
+
+  \lemma weak-filter-point-char {F : WeaklyCauchyFilter \this} {U : Set E} : single (weak-filter-point F) <=< U <-> ∃ (V : Set E) (V s<=< U) (F V) => {?hidden_proof}
 }
 
 \func weaklyDense-filter-lift {X Y : CoverSpace} (f : CoverMap X Y) (fd : f.IsWeaklyDenseEmbedding) (F : WeaklyCauchyFilter Y) : WeaklyCauchyFilter X \cowith
@@ -130,7 +142,7 @@
   | func => pointSCF
   | func-cover => {?hidden_proof}
   \where {
-    \lemma dense-aux {F : StronglyRegularCauchyFilter S} {V : Set (StronglyRegularCauchyFilter S)} (r : single F <=< {StrongCompletion.coverSpace} V) :
+    \protected \lemma dense-aux {F : StronglyRegularCauchyFilter S} {V : Set (StronglyRegularCauchyFilter S)} (r : single F <=< {StrongCompletion.coverSpace} V) :
       F (\lam x => V (strongCompletion x)) => {?hidden_proof}
 
     \lemma isDenseEmbedding : PrecoverMap.IsWeaklyDenseEmbedding {strongCompletion {S}} => {?hidden_proof}

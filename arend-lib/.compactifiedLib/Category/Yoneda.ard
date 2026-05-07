@@ -2,7 +2,7 @@
 \import Category.Functor
 \import Category.Limit
 \import Category.Topos.Sheaf
-\import Equiv(QEquiv)
+\import Equiv (QEquiv)
 \import Function.Meta
 \import Meta
 \import Paths
@@ -97,7 +97,7 @@
 
 \open Precategory-of-elements
 
-\func embedding-universal {C : SmallPrecat} {E : CocompleteCat \levels (\suc \lp) _} (A : Functor C E) : \Sigma (L : Functor (PresheafCat C) E) (A = Comp L YonedaEmbedding) 
+\func embedding-universal {C : SmallPrecat} {E : CocompleteCat (\suc \lp)} (A : Functor C E) : \Sigma (L : Functor (PresheafCat C) E) (A = Comp L YonedaEmbedding) 
   => (L-Functor, Equiv.ret {FunctorCat.univalence {A} {Comp L-Functor YonedaEmbedding}} functors-iso)
   \where {
     \func functors-iso : Iso {FunctorCat {C} {E}} {A} {Comp L-Functor YonedaEmbedding} \cowith

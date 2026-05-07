@@ -5,10 +5,7 @@
 \import Logic
 \import Paths
 
-\class Seq {
-  | A : Nat -> \Type
-  | f : \Pi {n : Nat} -> A n -> A (suc n)
-}
+\record Seq (A : Nat -> \Type) (f : \Pi {n : Nat} -> A n -> A (suc n))
 
 \data SeqColimit (s : Seq) 
   | inSC {n : Nat} (s.A n)

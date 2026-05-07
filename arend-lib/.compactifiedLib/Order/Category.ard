@@ -1,6 +1,6 @@
 \import Category
 \import Category.Meta
-\import Function()
+\import Function ()
 \import Order.Lattice
 \import Order.LinearOrder
 \import Order.PartialOrder
@@ -9,7 +9,7 @@
 \import Set
 \import Set.SetHom
 
-\class PosetHom \extends SetHom {
+\record PosetHom \extends SetHom {
   \override Dom : Poset
   \override Cod : Poset
   | func-<= {x y : Dom} : x <= y -> func x <= func y
@@ -18,7 +18,9 @@
 \instance PosetCat : Cat 
   | Ob => Poset
   | Hom => \lam P1 P2 => PosetHom P1 P2
-  | id => id
+  | id (P : Poset) : PosetHom P P 
+    | func => \lam x => x
+    | func-<= => \lam leq => leq
   | o => \lam f g => \new PosetHom {
     | func => f Function.o g
     | func-<= => \lam leq => func-<= (func-<= leq)
@@ -28,7 +30,7 @@
   | o-assoc => {?hidden_proof}
   | univalence => {?hidden_proof}
 
-\class StrictPosetHom \extends SetHom {
+\record StrictPosetHom \extends SetHom {
   \override Dom : StrictPoset
   \override Cod : StrictPoset
   | func-< {x y : Dom} : x < y -> func x < func y
@@ -37,7 +39,9 @@
 \instance StrictPosetCat : Cat 
   | Ob => StrictPoset
   | Hom => \lam P1 P2 => StrictPosetHom P1 P2
-  | id => id
+  | id (P : StrictPoset) : StrictPosetHom P P 
+    | func => \lam x => x
+    | func-< => \lam leq => leq
   | o => \lam f g => \new StrictPosetHom {
     | func => f Function.o g
     | func-< => \lam leq => func-< (func-< leq)

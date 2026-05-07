@@ -22,10 +22,13 @@
 \import Paths.Meta
 \import Set
 
-\class ExUpperReal {
-  | U : Rat -> \Prop
+\record ExUpperReal (U : Rat -> \Prop) {
   | U-closed {q q' : Rat} : U q -> q < q' -> U q'
   | U-rounded {q : Rat} : U q -> ∃ (r : U) (r < q)
+
+  \lemma U_<= {q r : Rat} (Uq : U q) (p : q RatField.<= r) : U r => {?hidden_proof}
+
+  \func IsBounded : \Prop => ∃ U
 }
   \where {
     \use \coerce fromRat (x : Rat) : ExUpperReal \cowith
@@ -35,7 +38,7 @@
 
     \lemma fromRat-inj {x y : Rat} (p : fromRat x = fromRat y) : x = y => {?hidden_proof}
 
-    \infixl 6 + (x y : ExUpperReal) : ExUpperReal \cowith
+    \sfunc \infixl 6 + (x y : ExUpperReal) : ExUpperReal \cowith
       | U => \lam a => ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
       | U-closed => {?hidden_proof}
       | U-rounded => {?hidden_proof}
@@ -52,16 +55,16 @@
 
     \lemma <=-rat {a b : Rat} : a RatField.<= b <-> a <= b => {?hidden_proof}
 
-    \lemma <_<= {x : ExUpperReal} {q : Rat} (x<q : x.U q) : x <= q => {?hidden_proof}
+    \protected \lemma <_<= {x : ExUpperReal} {q : Rat} (x<q : x.U q) : x <= q => {?hidden_proof}
 
-    meet (x y : ExUpperReal) : ExUpperReal \cowith
+    \sfunc meet (x y : ExUpperReal) : ExUpperReal \cowith
       | U => \lam a => x.U a || y.U a
       | U-closed => {?hidden_proof}
       | U-rounded => {?hidden_proof}
 
     \lemma meet_U {x y : ExUpperReal} {a : Rat} : UpperReal.U {meet x y} a <-> x.U a || y.U a => {?hidden_proof}
 
-    join (x y : ExUpperReal) : ExUpperReal \cowith
+    \sfunc join (x y : ExUpperReal) : ExUpperReal \cowith
       | U => \lam a => \Sigma (x.U a) (y.U a)
       | U-closed => {?hidden_proof}
       | U-rounded => {?hidden_proof}
@@ -70,7 +73,7 @@
 
     \lemma join-bounded {x y : ExUpperReal} (xb : x.IsBounded) (yb : y.IsBounded) : (join x y).IsBounded => {?hidden_proof}
 
-    \infixl 7 * (x y : ExUpperReal) : ExUpperReal \cowith
+    \sfunc \infixl 7 * (x y : ExUpperReal) : ExUpperReal \cowith
       | U => \lam a => ∃ (b : x.U) (0 RatField.< b) (c : y.U) (0 RatField.< c) (b RatField.* c RatField.< a)
       | U-closed => {?hidden_proof}
       | U-rounded => {?hidden_proof}
@@ -161,11 +164,11 @@
   \where {
     \open ExUpperReal
 
-    \lemma ide-left_<= {x : ExUpperReal} : x <= fromRat 1 * x => {?hidden_proof}
+    \protected \lemma ide-left_<= {x : ExUpperReal} : x <= fromRat 1 * x => {?hidden_proof}
 
-    \lemma ide-left {x : ExUpperReal} (x>=0 : 0 <= x) : fromRat 1 * x = x => {?hidden_proof}
+    \protected \lemma ide-left {x : ExUpperReal} (x>=0 : 0 <= x) : fromRat 1 * x = x => {?hidden_proof}
 
-    \lemma ide-right {x : ExUpperReal} (x>=0 : 0 <= x) : x * fromRat 1 = x => {?hidden_proof}
+    \protected \lemma ide-right {x : ExUpperReal} (x>=0 : 0 <= x) : x * fromRat 1 = x => {?hidden_proof}
 
     \lemma <=_* {x x' y y' : ExUpperReal} (x<=x' : x <= x') (y<=y' : y <= y') : x * y <= x' * y' => {?hidden_proof}
 
@@ -187,17 +190,17 @@
 
     \lemma *_>=0 {x y : ExUpperReal} : 0 <= x * y => {?hidden_proof}
 
-    \lemma ldistr_<= {x y z : ExUpperReal} : x * (y + z) <= x * y + x * z => {?hidden_proof}
+    \protected \lemma ldistr_<= {x y z : ExUpperReal} : x * (y + z) <= x * y + x * z => {?hidden_proof}
 
-    \lemma rdistr_<= {x y z : ExUpperReal} : (x + y) * z <= x * z + y * z => {?hidden_proof}
+    \protected \lemma rdistr_<= {x y z : ExUpperReal} : (x + y) * z <= x * z + y * z => {?hidden_proof}
 
-    \lemma ldistr {x y z : ExUpperReal} (y>=0 : 0 <= y) (z>=0 : 0 <= z) : x * (y + z) = x * y + x * z => {?hidden_proof}
+    \protected \lemma ldistr {x y z : ExUpperReal} (y>=0 : 0 <= y) (z>=0 : 0 <= z) : x * (y + z) = x * y + x * z => {?hidden_proof}
 
-    \lemma rdistr {x y z : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) : (x + y) * z = x * z + y * z => {?hidden_proof}
+    \protected \lemma rdistr {x y z : ExUpperReal} (x>=0 : 0 <= x) (y>=0 : 0 <= y) : (x + y) * z = x * z + y * z => {?hidden_proof}
 
-    \lemma zro_*-left {x : ExUpperReal} (xb : x.IsBounded) : 0 * x = 0 => {?hidden_proof}
+    \protected \lemma zro_*-left {x : ExUpperReal} (xb : x.IsBounded) : 0 * x = 0 => {?hidden_proof}
 
-    \lemma zro_*-right {x : ExUpperReal} (xb : x.IsBounded) : x * 0 = 0 => {?hidden_proof}
+    \protected \lemma zro_*-right {x : ExUpperReal} (xb : x.IsBounded) : x * 0 = 0 => {?hidden_proof}
 
     \lemma *n_*_<= {n : Nat} {x : ExUpperReal} (x>=0 : 0 <= x) : n AddMonoid.*n x <= n * x => {?hidden_proof}
 
@@ -207,7 +210,7 @@
 
     \open ExUpperRealAbMonoid
 
-    div-lb {a : Rat} {b : ExUpperReal} (a>0 : 0 < a) (b>0 : 0 < b) : \Sigma (c : ExUpperReal) (0 < c) (a * c <= b) 
+    \sfunc div-lb {a : Rat} {b : ExUpperReal} (a>0 : 0 < a) (b>0 : 0 < b) : \Sigma (c : ExUpperReal) (0 < c) (a * c <= b) 
     => (ExUpperReal.fromRat (RatField.finv a) * b, <_*-positive (<-rat.2 $ RatField.finv>0 $ <-rat.1 a>0) b>0,
           \have a>0 => <-rat.1 a>0  \in =_<= $ inv ExUpperRealSemigroup.*-assoc *> pmap (* b) 
             (ExUpperReal.*-rat (<=-less a>0) (<=-less $ RatField.finv>0 a>0) *> pmap ExUpperReal.fromRat (RatField.finv-right $ RatField.>_/= a>0)) *> 
@@ -248,8 +251,14 @@
   }
 
 
-\class UpperReal \extends ExUpperReal {
+\record UpperReal \extends ExUpperReal {
   | U-inh : ∃ U
+
+  \lemma natBounded : ∃ (n : Nat) (U n) => {?hidden_proof}
+
+  \lemma U-inh_>0 : ∃ (q : U) (0 < q) => {?hidden_proof}
+
+  \type IsLocated : \Prop => \Pi {a b : Rat} -> a < b -> ∀ {c : U} (a < c) || U b
 }
   \where {
     \use \coerce fromRat (x : Rat) : UpperReal \cowith
@@ -265,7 +274,7 @@
   | *-assoc => {?hidden_proof}
   | *-comm => {?hidden_proof}
   \where {
-    \infixl 7 * (x y : UpperReal) : UpperReal \cowith
+    \sfunc \infixl 7 * (x y : UpperReal) : UpperReal \cowith
       | ExUpperReal => \eval x ExUpperReal.* y
       | U-inh => {?hidden_proof}
 

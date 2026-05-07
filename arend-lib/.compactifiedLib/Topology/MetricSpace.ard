@@ -27,9 +27,9 @@
 \import Topology.UniformSpace
 \import Topology.UniformSpace.Complete
 \import Topology.UniformSpace.Product
-\import Topology.UniformSpace.StronglyComplete(StronglyCompleteUniformSpace)
-\open ExPseudoMetricSpace(metricUniform)
-\open RatField(half, half>0)
+\import Topology.UniformSpace.StronglyComplete (StronglyCompleteUniformSpace)
+\open ExPseudoMetricSpace (metricUniform)
+\open RatField (half, half>0)
 
 \class ExPseudoMetricSpace \extends UniformSpace {
   | dist : E -> E -> ExUpperReal
@@ -60,6 +60,28 @@
   })
   | isUniform => isUniform
   | dist-uniform => dist-uniform-impl
+
+  \protected \default isUniform C : \Prop => ∃ (eps : Rat) (0 < eps) ∀ x ∃ (U : C) ∀ {y} ((dist x y).U eps -> U y)
+
+  \protected \default dist-uniform-impl {C} : isUniform C <-> _ => <->refl
+
+  \lemma metricProperUniform : IsProperUniform => {?hidden_proof}
+
+  \lemma metricUniform {eps : Rat} (eps>0 : 0 < eps) : PreuniformSpace.isUniform (\lam U => ∃ (x : E) (U = (\lam y => (dist x y).U eps))) => {?hidden_proof}
+
+  \func NFilter (x : E) : SetFilter E \cowith
+    | F => \lam U => ∃ (eps : Rat) (0 < eps) (OBall eps x ⊆ U)
+    | filter-mono => {?hidden_proof}
+    | filter-top => {?hidden_proof}
+    | filter-meet => {?hidden_proof}
+
+  \lemma halving {x y z : E} {a b c : Rat} (d1 : (dist x y).U a) (d2 : (dist y z).U b) (p : a + b <= c) : (dist x z).U c => {?hidden_proof}
+
+  \lemma halving-left {x y z : E} {a b c : Rat} (d1 : (dist y x).U a) (d2 : (dist y z).U b) (p : a + b <= c) : (dist x z).U c => {?hidden_proof}
+
+  \lemma halving-right {x y z : E} {a b c : Rat} (d1 : (dist x y).U a) (d2 : (dist z y).U b) (p : a + b <= c) : (dist x z).U c => {?hidden_proof}
+
+  \lemma halving1/2 {x y z : E} {c : Rat} (d1 : (dist y x).U (c * ratio 1 2)) (d2 : (dist y z).U (c * ratio 1 2)) : (dist x z).U c => {?hidden_proof}
 }
 
 \lemma dist>=0 {X : ExPseudoMetricSpace} {x y : X} : 0 <= dist x y => {?hidden_proof}
@@ -129,7 +151,7 @@
 
 \class CompleteMetricSpace \extends MetricSpace, StronglyCompleteUniformSpace
 
-\class LocallyUniformMetricMap \extends LocallyUniformMap {
+\record LocallyUniformMetricMap \extends LocallyUniformMap {
   \override Dom : ExPseudoMetricSpace
   \override Cod : ExPseudoMetricSpace
   | func-dist-locally-uniform : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ (x0 : Dom) ∃ (gamma : Rat) (0 < gamma) ∀ {x x' : Dom} 
@@ -152,7 +174,7 @@
   }
 
 
-\class UniformMetricMap \extends LocallyUniformMetricMap, UniformMap {
+\record UniformMetricMap \extends LocallyUniformMetricMap, UniformMap {
   \override Dom : ExPseudoMetricSpace
   \override Cod : ExPseudoMetricSpace
   | func-dist-uniform : ∀ {eps : Rat} (0 < eps) ∃ (delta : Rat) (0 < delta) ∀ {x x' : Dom} ((dist x x').U delta -> (dist (func x) (func x')).U eps)
@@ -170,7 +192,7 @@
   }
 
 
-\class MetricMap \extends UniformMetricMap {
+\record MetricMap \extends UniformMetricMap {
   | func-dist {x y : Dom} : dist (func x) (func y) <= dist x y
   | func-dist-uniform => \lam {eps} eps>0 => inP (eps, eps>0, func-dist __)
   | func-cont => \lam {U} => defaultImpl PrecoverMap func-cont {_} {U}
@@ -178,9 +200,11 @@
 
 \lemma func-ldist {X Y : PseudoMetricSpace} {f : MetricMap X Y} {x x' : X} : Y.dist (f x) (f x') <= X.dist x x' => {?hidden_proof}
 
-\class IsometricMap \extends MetricMap {
+\record IsometricMap \extends MetricMap {
   | func-isometry {x y : Dom} : dist (func x) (func y) = dist x y
   | func-dist => =_<= func-isometry
+
+  \lemma dense->uniformEmbedding (d : IsDense) : UniformMap.IsDenseUniformEmbedding => {?hidden_proof}
 }
 
 \lemma func-lisometry {X Y : PseudoMetricSpace} {f : IsometricMap X Y} {x x' : X} : Y.dist (f x) (f x') = X.dist x x' => {?hidden_proof}

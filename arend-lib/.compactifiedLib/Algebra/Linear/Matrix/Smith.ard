@@ -18,7 +18,7 @@
 \import Data.Array
 \import Data.Array.Perm
 \import Data.Array.Sort
-\import Data.Fin(fsuc, fsuc/=, nat_fin_=)
+\import Data.Fin (fsuc, fsuc/=, nat_fin_=)
 \import Data.Or
 \import Function
 \import Function.Meta
@@ -87,6 +87,8 @@
 
 \class SmithRing \extends StrictBezoutRing {
   | isKaplansky : IsKaplansky \this
+
+  \lemma toSmith {n m : Nat} (A : Matrix E n m) : ∃ (B : Matrix E n m) (IsSmith B) (A M~ B) => {?hidden_proof}
 }
   \where {
     \type IsKaplansky (R : CRing) => \Pi (a b c : R) -> IsCoprimeArray (a, b, c) -> ∃ (t s : R) (IsCoprime (t * a) (t * b + s * c))
@@ -109,7 +111,7 @@
       }
 
 
-    elimRow {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (d : \Pi (i : Fin n) -> LDiv (A 0 0) (A (suc i) 0)) :
+    \sfunc elimRow {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (d : \Pi (i : Fin n) -> LDiv (A 0 0) (A (suc i) 0)) :
       \Sigma (B : Matrix R (suc n) (suc m)) (A M~ B) (\Pi (i : Fin n) -> B (suc i) 0 = 0) (\Pi (j : Fin (suc m)) -> B 0 j = A 0 j) => 
       \let C => addColumn (ide :: (\lam i => negative (LDiv.inv {d i}))) (addRow {R} (replicate n zro) ide)
       \in (C MatrixRing.product A,
@@ -127,12 +129,12 @@
               ide-left
     )
 
-    elimColumn {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (d : \Pi (j : Fin m) -> LDiv (A 0 0) (A 0 (suc j))) :
+    \sfunc elimColumn {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (d : \Pi (j : Fin m) -> LDiv (A 0 0) (A 0 (suc j))) :
       \Sigma (B : Matrix R (suc n) (suc m)) (A M~ B) (\Pi (j : Fin m) -> B 0 (suc j) = 0) (\Pi (i : Fin (suc n)) -> B i 0 = A i 0) => 
       \have (B, At~B, c, d) => elimRow (transpose A) d
       \in (transpose B, M~.transposed {_} {_} {_} {transpose A} At~B, c, d)
 
-    elimRowColumn {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (d1 : \Pi (i : Fin n) -> LDiv (A 0 0) (A (suc i) 0)) 
+    \sfunc elimRowColumn {R : CRing} {n m : Nat} (A : Matrix R (suc n) (suc m)) (d1 : \Pi (i : Fin n) -> LDiv (A 0 0) (A (suc i) 0)) 
     (d2 : \Pi (j : Fin m) -> LDiv (A 0 0) (A 0 (suc j))) :
       \Sigma (B : Matrix R (suc n) (suc m)) (A M~ B) (B 0 0 = A 0 0) (\Pi (i : Fin n) -> B (suc i) 0 = 0) (\Pi (j : Fin m) -> B 0 (suc j) = 0) => 
       \have | (B, A~B, c, d) => elimRow A d1
@@ -176,7 +178,7 @@
     \lemma embed22_minor_k0 {R : Ring} {A : Matrix R 2 2} {n : Nat} {k : Fin (suc n)} :
       minor (embed22 A (suc k)) (suc k) 0 = diagonal1 k (A 1 0) k :: skip {Array R (suc n)} (diagonal1 k (A 1 0)) k => {?hidden_proof}
 
-    embed22_minor_k0_perm {R : Ring} {A : Matrix R 2 2} {n : Nat} {k : Fin (suc n)} :
+    \sfunc embed22_minor_k0_perm {R : Ring} {A : Matrix R 2 2} {n : Nat} {k : Fin (suc n)} :
       \Sigma (p : Perm (diagonal1 k (A 1 0)) (minor (embed22 A (suc k)) (suc k) 0)) (Perm.inversions p = k) 
       => rewrite embed22_minor_k0 (determinantN.alternating.permutation1 k (diagonal1 k (A 1 0)), determinantN.alternating.permutation1_inversions)
   }

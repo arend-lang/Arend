@@ -9,7 +9,10 @@
   | Term => Term
   | NF => \lam n => List (Fin n)
   | normalize => \lam t => normalize-aux t nil
-  | interpret => interpret
+  | interpret {n : Nat} (env : Fin n -> M) (t : Term n) : M \elim t
+    | var x => env x
+    | :ide => M.ide
+    | :* t s => interpret env t * interpret env s
   | interpretNF => interpretNF
   | interpretNF-consistent => {?hidden_proof}
   | nfVar => \lam v => v :: nil
@@ -26,14 +29,14 @@
       | :ide => acc
       | :* t s => normalize-aux t (normalize-aux s acc)
 
-    \func interpretNF {V : \Set} (env : V -> M) (l : List V) : M \elim l
+    \protected \func interpretNF {V : \Set} (env : V -> M) (l : List V) : M \elim l
       | nil => M.ide
       | x :: nil => env x
       | x :: l => env x * interpretNF env l
 
-    \lemma interpretNF_:: {V : \Set} {env : V -> M} {x : V} {l : List V} : interpretNF env (x :: l) = env x * interpretNF env l => {?hidden_proof}
+    \protected \lemma interpretNF_:: {V : \Set} {env : V -> M} {x : V} {l : List V} : interpretNF env (x :: l) = env x * interpretNF env l => {?hidden_proof}
 
-    \lemma interpretNF_++ {V : \Set} {env : V -> M} {t s : List V} : interpretNF env (t ++ s) = interpretNF env t * interpretNF env s => {?hidden_proof}
+    \protected \lemma interpretNF_++ {V : \Set} {env : V -> M} {t s : List V} : interpretNF env (t ++ s) = interpretNF env t * interpretNF env s => {?hidden_proof}
 
     \lemma interpretNF-consistent-aux {n : Nat} {env : Fin n -> M} {t : Term n} {acc : List (Fin n)} : interpretNF env (normalize-aux t acc) = interpret env t * interpretNF env acc => {?hidden_proof}
 

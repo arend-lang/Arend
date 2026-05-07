@@ -4,7 +4,7 @@
 \import Category.Meta
 \import Category.Subcat
 \import Equiv
-\import Function(IsSurj)
+\import Function (IsSurj)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -15,7 +15,7 @@
 \import Paths.Meta
 \import Set.SetHom
 \import Topology.Locale
-\open CompleteLattice(SJoin)
+\open CompleteLattice (SJoin)
 \open Locale
 \open Nucleus
 \open MeetSemilattice
@@ -50,17 +50,19 @@
   }
 
 
-\open PreuniformLocale(dClosure)
+\open PreuniformLocale (dClosure)
 
-\class UniformHom \extends FrameHom {
+\record UniformHom \extends FrameHom {
   \override Dom : PreuniformLocale
   \override Cod : PreuniformLocale
   | func-uniform {U : Dom -> \Prop} : isUniform U -> isUniform (\lam y => ∃ (x : Dom) (U x) (y <= func x))
 }
 
-\class UniformEmbedding \extends UniformHom {
+\record UniformEmbedding \extends UniformHom {
   | isEmbedding : IsSurj func
   | isUniformEmbedding {U : Cod -> \Prop} : isUniform U -> ∃ (V : isUniform) ∀ {x} (V x -> U (func x))
+
+  \lemma direct-uniform {U : Cod -> \Prop} : isUniform U -> isUniform (\lam x => ∃ (y : Cod) (U y) (x <= direct y)) => {?hidden_proof}
 }
   \where {
     \func comp {L M K : PreuniformLocale} (g : UniformEmbedding M K) (f : UniformEmbedding L M) : UniformEmbedding L K \cowith
@@ -96,6 +98,8 @@
 
 \class UniformLocale \extends PreuniformLocale {
   | isAdmissible (b : E) : b <= SJoin (<=u b)
+
+  \func isComplete  => Iso {PreuniformCat} (completion {\this})
 }
   \where {
     \open NucleusFrame
@@ -168,7 +172,8 @@
 \func Completion (L : UniformLocale) : UniformLocale \cowith
   | Locale => CompletionLocale L
   | uniform-overt => {?hidden_proof}
-  | isUniform => isUniform
+  | isUniform (V : CompletionLocale L -> \Prop) : \Prop 
+    => ∃ (U : (L -> \Prop)) (L.isUniform U) (\Pi {a : L} -> U a -> V (embed a)) (\Pi {x y : CompletionLocale L} -> V y -> x <= y -> V x)
   | isCovering => {?hidden_proof}
   | isDownset => {?hidden_proof}
   | top-uniform => {?hidden_proof}
@@ -177,7 +182,7 @@
   | star-uniform => {?hidden_proof}
   | isAdmissible => {?hidden_proof}
   \where {
-    \open FramePres(indexing-make)
+    \open FramePres (indexing-make)
 
     \func make-covering {L : UniformLocale} (U : L -> \Prop) (uU : L.isUniform U) :
       \Sigma (V : CompletionLocale L -> \Prop) (isUniform V) (\Pi (a : L) -> star (embed a) V <= embed (star a U)) 
@@ -199,7 +204,7 @@
   }
 
 
-completion-factor {L M : UniformLocale} (f : UniformEmbedding M L) (sd : f.isStronglyDense) : \Sigma (g : UniformHom (Completion L) M) (f UniformCat.∘ g = completion) => 
+\sfunc completion-factor {L M : UniformLocale} (f : UniformEmbedding M L) (sd : f.isStronglyDense) : \Sigma (g : UniformHom (Completion L) M) (f UniformCat.∘ g = completion) => 
   \have g => \new (UniformHom (Completion L) M) {
           | FrameHom => FrameReflectiveSubcat.adjointMap (presentation f sd)
           | func-uniform => \lam inP (V, uV, V<=U, Ud) => <=-uniform (f.direct-uniform uV) (\lam inP (y, Vy, x<=f_y) => inP (embed y, V<=U Vy, x<=f_y <=∘ Join-cond (later (y, cover-inj () idp)))) 

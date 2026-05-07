@@ -5,10 +5,18 @@
 \import Paths.Meta
 \import Set.Fin
 
-\class MonoidHom \extends PointedHom {
+\record MonoidHom \extends PointedHom {
   \override Dom : Monoid
   \override Cod : Monoid
   | func-* {x y : Dom} : func (x * y) = func x * func y
+
+  \lemma func-pow {x : Dom} {n : Nat} : func (Monoid.pow x n) = Monoid.pow (func x) n => {?hidden_proof}
+
+  \lemma func-BigProd {l : Array Dom} : func (Monoid.BigProd l) = Monoid.BigProd (\lam j => func (l j)) => {?hidden_proof}
+
+  \lemma func-LDiv {a b : Dom} (d : Monoid.LDiv a b) : Monoid.LDiv (func a) (func b) (func d.inv) => {?hidden_proof}
+
+  \lemma func-Inv {a : Dom} (d : Monoid.Inv a) : Monoid.Inv (func a) (func d.inv) => {?hidden_proof}
 }
   \where {
     \func equals {M N : Monoid} {f g : MonoidHom M N} (p : \Pi (x : M) -> f x = g x) : f = g => exts p
@@ -18,7 +26,7 @@
       | func-ide => {?hidden_proof}
       | func-* => {?hidden_proof}
 
-    \open Monoid(Inv)
+    \open Monoid (Inv)
 
     \func presInv (h : MonoidHom) (e : Inv {h.Dom}) : Inv (h e) \cowith
       | inv => h e.inv
@@ -29,10 +37,14 @@
   }
 
 
-\class AddMonoidHom \extends AddPointedHom {
+\record AddMonoidHom \extends AddPointedHom {
   \override Dom : AddMonoid
   \override Cod : AddMonoid
   | func-+ {x y : Dom} : func (x + y) = func x + func y
+
+  \lemma func-BigSum {l : Array Dom} : func (AddMonoid.BigSum l) = AddMonoid.BigSum (\lam j => func (l j)) => {?hidden_proof}
+
+  \lemma func-*n {n : Nat} {x : Dom} : func (n AddMonoid.*n x) = n AddMonoid.*n func x => {?hidden_proof}
 }
   \where {
     \use \coerce toMonoidHom (f : AddMonoidHom) : MonoidHom \cowith

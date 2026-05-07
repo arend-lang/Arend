@@ -13,8 +13,7 @@
 \import Paths
 \import Paths.Meta
 
-\class InterwiningMap \extends LinearMap {
-  | G : Group
+\record InterwiningMap \extends LinearMap {G : Group} {
   \override Dom : LinRepres LinearMap.R G
   \override Cod : LinRepres LinearMap.R G
   | func-** {e : Dom} {g : G} : func (g ** e) = g ** func e

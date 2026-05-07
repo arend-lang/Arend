@@ -1,7 +1,7 @@
 \import Algebra.Group
 \import Algebra.Group.GroupHom
 \import Algebra.Linear.Matrix
-\import Algebra.Linear.Matrix.Smith(M~)
+\import Algebra.Linear.Matrix.Smith (M~)
 \import Algebra.Meta
 \import Algebra.Module
 \import Algebra.Monoid
@@ -15,7 +15,7 @@
 \import Category
 \import Data.Array
 \import Data.Array.Perm
-\import Data.Fin(nat_fin_=)
+\import Data.Fin (nat_fin_=)
 \import Data.Or
 \import Equiv
 \import Function \hiding (id, o)
@@ -32,11 +32,20 @@
 \open AddMonoid
 \open AddMonoidHom \hiding (id)
 
-\class LinearMap \extends AddGroupHom {
-  | R : Ring
+\record LinearMap \extends AddGroupHom {R : Ring} {
   \override Dom : LModule R
   \override Cod : LModule R
   | func-*c {r : R} {x : Dom} : func (r *c x) = r *c func x
+
+  \lemma linearComb {c : Array R} {l : Array Dom c.len} : func (BigSum (\lam j => c j *c l j)) = BigSum (\lam j => c j *c func (l j)) => {?hidden_proof}
+
+  \lemma inj->independent {l : Array Dom} (li : LModule.IsIndependent (map func l)) (inj : IsInj func) : LModule.IsIndependent l => {?hidden_proof}
+
+  \lemma IsIndependentSet_func {J : \Set} {g : J -> Dom} (fgi : LModule.IsIndependentSet (\lam j => func (g j))) : LModule.IsIndependentSet g => {?hidden_proof}
+
+  \lemma IsIndependentDec_func {J : DecSet} {g : J -> Dom} (fgi : LModule.IsIndependentDec (\lam j => func (g j))) : LModule.IsIndependentDec g => {?hidden_proof}
+
+  \lemma IsIndependentSet-left-inj {J : \Set} (inj : IsInj func) {g : J -> Dom} (gi : LModule.IsIndependentSet g) : LModule.IsIndependentSet (\lam j => func (g j)) => {?hidden_proof}
 }
   \where {
     \func id {R : Ring} {M : LModule R} : LinearMap M M \cowith
@@ -44,7 +53,7 @@
       | func-+ => {?hidden_proof}
       | func-*c => {?hidden_proof}
 
-    \func \infixl 8 compose \alias \infixl 8 ∘ {R : Ring} {U V W : LModule R} (g : LinearMap V W) (f : LinearMap U V) : LinearMap U W \cowith
+    \func \fixl 8 compose \alias \infixl 8 ∘ {R : Ring} {U V W : LModule R} (g : LinearMap V W) (f : LinearMap U V) : LinearMap U W \cowith
       | func => \lam a => g (f a)
       | func-+ => {?hidden_proof}
       | func-*c => {?hidden_proof}
@@ -134,12 +143,7 @@
   }
 
 
-\class BilinearMap {
-  | R : Ring
-  | A : LModule R
-  | B : LModule R
-  | C : LModule R
-  | func : A -> B -> C
+\record BilinearMap {R : Ring} (A : LModule R) (B : LModule R) (C : LModule R) (\coerce func : A -> B -> C) {
   | linear-left {b : B} : LinearMap A C (func __ b)
   | linear-right {a : A} : LinearMap B C (func a)
 }

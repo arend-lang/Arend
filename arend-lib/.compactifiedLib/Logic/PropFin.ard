@@ -4,7 +4,12 @@
 \import Paths
 \import Paths.Meta
 
-\class InjData {
-  | f : \Prop -> \Prop
-  | inj : \Pi {A B : \Prop} -> f A = f B -> A = B
+\class InjData (f : \Prop -> \Prop) (inj : \Pi {A B : \Prop} -> f A = f B -> A = B) {
+  \lemma PropFin (A : \Prop) : f (f A) = A => {?hidden_proof}
+
+  \lemma aux {P : \Prop} (h : f P) : f (\Sigma) = P => {?hidden_proof}
+
+  \lemma true=>equals {P : \Prop} (h : P) : P = (\Sigma) => {?hidden_proof}
+
+  \lemma equals=>true {P : \Prop} (p : P = (\Sigma)) : P => {?hidden_proof}
 }

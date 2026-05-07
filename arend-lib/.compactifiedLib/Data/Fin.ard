@@ -1,10 +1,10 @@
-\import Arith.Nat(pred)
+\import Arith.Nat (pred)
 \import Logic
 \import Paths
 
-fzero {n : Nat} : Fin (suc n) => 0
+| fzero {n : Nat} : Fin (suc n) => 0
 
-fsuc {n : Nat} (x : Fin n) : Fin (suc n) => suc x
+| fsuc {n : Nat} (x : Fin n) : Fin (suc n) => suc x
 
 \func fpred {n : Nat} (def : Fin n) (x : Fin (suc n)) : Fin n \elim x
   | 0 => def

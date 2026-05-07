@@ -12,6 +12,10 @@
   | epsilon : NatTrans (Comp LAdj \this) Id
   | eta_epsilon-left {Y : C} : Func (epsilon Y) ∘ eta (F Y) = id (F Y)
   | eta_epsilon-right {X : D} : epsilon (LAdj X) ∘ LAdj.Func (eta X) = id (LAdj X)
+
+  \lemma eta_epsilon-equiv {X : D} {Y : C} : QEquiv {Hom (LAdj X) Y} {Hom X (F Y)} (Func __ ∘ eta X) (epsilon Y ∘ LAdj.Func __) => {?hidden_proof}
+
+  \lemma eta_Iso {Y : C} (e : Iso (eta (F Y))) : Func (epsilon Y) = e.hinv => {?hidden_proof}
 }
   \where {
     \func rightFactor {C D E : Precat} (G1 : FullyFaithfulFunctor D E) (G2 : Functor E D) (adj : RightAdjoint {  | Functor => Comp G1 G2}) : RightAdjoint \cowith
@@ -59,4 +63,24 @@
     | f_sec => \lam g => Func-o *> pmap (∘ _) (Func-o *> pmap (∘ _) (eta_Iso eta-iso) *> natural {eta.iso eta-iso} g) *> o-assoc *> pmap (g ∘) 
       (Iso.hinv-unique (oIso eta-iso (Func-iso epsilon-iso)) idIso eta_epsilon-left) *> id-right
   }
+
+  \protected \func op : CatEquiv \cowith
+    | Functor => Functor.op
+    | LAdj => LAdj.op
+    | eta => NatTrans.op {eta.iso eta-iso}
+    | epsilon => NatTrans.op {epsilon.iso epsilon-iso}
+    | eta_epsilon-left => {?hidden_proof}
+    | eta_epsilon-right => {?hidden_proof}
+    | eta-iso => {?hidden_proof}
+    | epsilon-iso => {?hidden_proof}
+
+  \func reverse : CatEquiv \cowith
+    | Functor => LAdj
+    | LAdj => \this
+    | eta => epsilon.iso epsilon-iso
+    | epsilon => eta.iso eta-iso
+    | eta_epsilon-left => {?hidden_proof}
+    | eta_epsilon-right => {?hidden_proof}
+    | eta-iso => {?hidden_proof}
+    | epsilon-iso => {?hidden_proof}
 }

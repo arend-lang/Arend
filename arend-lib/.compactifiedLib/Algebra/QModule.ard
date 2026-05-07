@@ -22,9 +22,59 @@
 
 \class TorsionFreeGroup \extends AbGroup {
   | noTorsion {a : E} {n : Nat} : n /= 0 -> n *n a = 0 -> a = 0
+
+  \lemma noTorsion-div {a b : E} {n : Nat} (n/=0 : n /= 0) (p : n *n a = n *n b) : a = b => {?hidden_proof}
 }
 
-\class QModule \extends DivisibleGroup, TorsionFreeGroup
+\class QModule \extends DivisibleGroup, TorsionFreeGroup {
+  \lemma uniquelyDivisible (a : E) {n : Nat} (n/=0 : n /= 0) : Contr (\Sigma (b : E) (n *n b = a)) => {?hidden_proof}
+
+  \sfunc \infixl 7 *q (q : Rat) (a : E) : E => ratNom q *i (uniquelyDivisible a (ratDenom/=0 {q})).center.1
+
+  \lemma *q_*i {x : Int} {a : E} : x *q a = x *i a => {?hidden_proof}
+
+  \lemma *q_*n {n : Nat} {a : E} : n *q a = n *n a => {?hidden_proof}
+
+  \lemma *q_*2 {a : E} : 2 *q a = a + a => {?hidden_proof}
+
+  \lemma ide_*q {a : E} : 1 *q a = a => {?hidden_proof}
+
+  \lemma *q-assoc {q r : Rat} {a : E} : q * r *q a = q *q (r *q a) => {?hidden_proof}
+
+  \lemma *q-cancel {q : Rat} (q/=0 : q /= RatField.zro) {a b : E} (p : q *q a = q *q b) : a = b => {?hidden_proof}
+
+  \protected \lemma ud-cond {a : E} {n : Nat} {n/=0 : n /= 0} : n *n (uniquelyDivisible a n/=0).center.1 = a => {?hidden_proof}
+
+  \protected \lemma ud-unique {a b : E} {n : Nat} {n/=0 : n /= 0} (p : n *n b = a) : (uniquelyDivisible a n/=0).center.1 = b => {?hidden_proof}
+
+  \protected \lemma ud-pi {a : E} {n m : Nat} {n/=0 : n /= 0} {m/=0 : m /= 0} (p : n = m) : (uniquelyDivisible a n/=0).center.1 = (uniquelyDivisible a m/=0).center.1 => {?hidden_proof}
+
+  \protected \func \infixl 7 *aq (q : Rat.AltRat) (a : E) : E \elim q
+    | in~ (n, d, d>0) => n *i (uniquelyDivisible a $ >_/= d>0).center.1
+    | ~-equiv (n1, d1, d1>0) (n2, d2, d2>0) r =>
+    noTorsion-div (>_/= d1>0) $ inv (*i-assoc {_} {iabs d1}) *> pmap (*i _) *-comm *> *i-assoc *> pmap (n1 *i) (ud-cond *> inv ud-cond *> pmap (*i _) (>_iabs d2>0)) *> 
+      inv *i-assoc *> pmap (*i _) (r *> pmap (n2 *) (inv (>_iabs d1>0)) *> *-comm) *> *i-assoc {_} {iabs d1}
+    \where {
+      \lemma >_/= {d : Int} (p : signum d = 1) : iabs d /= 0 => {?hidden_proof}
+
+      \lemma >_iabs {d : Int} (p : signum d = 1) : pos (iabs d) = d => {?hidden_proof}
+
+      \protected \lemma *q_*aq {q : Rat} {a : E} : q *q a = rat_alt q *aq a => {?hidden_proof}
+
+      \protected \lemma *aq-assoc {q r : Rat.AltRat} {a : E} : q Rat.AltRat.* r *aq a = q *aq (r *aq a) => {?hidden_proof}
+
+      \protected \lemma *aq-rdistr {q r : Rat.AltRat} {a : E} : (q Rat.AltRat.+ r) *aq a = q *aq a + r *aq a => {?hidden_proof}
+    }
+
+
+  \func toRatModule : LModule RatField \cowith
+    | AbGroup => \this
+    | *c => *q
+    | *c-assoc => {?hidden_proof}
+    | *c-ldistr => {?hidden_proof}
+    | *c-rdistr => {?hidden_proof}
+    | ide_*c => {?hidden_proof}
+}
   \where {
     \func fromRatModule (M : LModule RatField) : QModule \cowith
       | AbGroup => M
@@ -35,7 +85,19 @@
 
 \lemma func-*q {A B : QModule} {f : AddGroupHom A B} {q : Rat} {a : A} : f (q A.*q a) = q B.*q f a => {?hidden_proof}
 
-\class QPseudoAlgebra \extends QModule, PseudoRing
+\class QPseudoAlgebra \extends QModule, PseudoRing {
+  \lemma *q-comm-left {r : Rat} {a b : E} : r *q (a * b) = r *q a * b => {?hidden_proof}
+
+  \lemma *q-comm-right {r : Rat} {a b : E} : r *q (a * b) = a * (r *q b) => {?hidden_proof}
+
+  \lemma *q-square {q : Rat} {a : E} (qs : RatField.IsSquare q) (as : IsSquare a) : IsSquare (q *q a) => {?hidden_proof}
+
+  \func toRatAlgebra : PseudoAlgebra RatField \cowith
+    | LModule => toRatModule
+    | PseudoRing => \this
+    | *c-comm-left => {?hidden_proof}
+    | *c-comm-right => {?hidden_proof}
+}
   \where {
     \func fromRatAlgebra (R : PseudoAlgebra RatField) : QPseudoAlgebra \cowith
       | QModule => QModule.fromRatModule R
@@ -43,7 +105,13 @@
   }
 
 
-\class QAlgebra \extends QPseudoAlgebra, Ring
+\class QAlgebra \extends QPseudoAlgebra, Ring {
+  \lemma natCoef_*_*q {n : Nat} {a : E} : natCoef n * a = n *q a => {?hidden_proof}
+
+  \func toRatAlgebra : AAlgebra RatField \cowith
+    | PseudoAlgebra => QPseudoAlgebra.toRatAlgebra
+    | Ring => \this
+}
   \where {
     \func fromRatAlgebra (R : AAlgebra RatField) : QAlgebra \cowith
       | QModule => QModule.fromRatModule R

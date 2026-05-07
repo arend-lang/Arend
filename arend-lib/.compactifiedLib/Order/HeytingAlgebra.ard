@@ -16,4 +16,83 @@
   | top-univ => top-univ
   | ldistr>= => ldistr>=
   | exp => exp
+
+  \protected \default top-impl  => bottom --> bottom
+
+  \protected \default top-univ {x : E} : x <= top-impl => exponent-left meet-right
+
+  \protected \default ldistr>= {x y z : E} : x ∧ (y ∨ z) <= (x ∧ y) ∨ (x ∧ z) 
+    => meet-comm =<= exponent-right (join-univ (exponent-left (meet-comm =<= join-left)) (exponent-left (meet-comm =<= join-right)))
+
+  \use \lemma eval {x y : E} : (x --> y) ∧ x <= y => {?hidden_proof}
+
+  \lemma modus-ponens {x y : E} : x ∧ (x --> y) <= y => {?hidden_proof}
+
+  \lemma composition-law {x y z : E} : (x --> y) ∧ (y --> z) <= x --> z => {?hidden_proof}
+
+  \func continuation (y : E) (x : E) => (x --> y) --> y
+
+  \func neg (x : E) => x --> bottom
+
+  \lemma neg_bottom : neg bottom = top => {?hidden_proof}
+
+  \lemma neg_top : neg top = bottom => {?hidden_proof}
+
+  \lemma id<=neg_neg {x : E} : x <= neg (neg x) => {?hidden_proof}
+
+  \lemma neg_join {x y : E} : neg (x ∨ y) = neg x ∧ neg y => {?hidden_proof}
+
+  \func IsNegated (x : E) : \Prop => neg (neg x) <= x
+
+  \lemma bottom-negated : IsNegated bottom => {?hidden_proof}
+
+  \lemma meet-negated {x y : E} (xn : IsNegated x) (yn : IsNegated y) : IsNegated (x ∧ y) => {?hidden_proof}
+
+  \lemma neg-negated {x : E} : IsNegated (neg x) => {?hidden_proof}
+
+  \func double-neg  => continuation bottom
+
+  \func curry {x y z : E} : x ∧ y --> z <= x --> (y --> z) => exponent-left (exponent-left (meet-assoc =<= eval))
+
+  \use \func -->-monotone {x y z : E} (p : y <= z) : x --> y <= x --> z => exponent-left (eval <=∘ p)
+
+  \func -->-increasing {x y : E} : y <= x --> y => exponent-left meet-left
+
+  \use \lemma meet-monotone-partial {x y z : E} (p : y <= z) : x ∧ y <= x ∧ z => {?hidden_proof}
+
+  \use \lemma meet-monotone-partial' {x y z : E} (p : x <= y) : x ∧ z <= y ∧ z => {?hidden_proof}
+
+  \lemma _-->-antimonotone {x y z : E} (p : y <= z) : z --> x <= y --> x => {?hidden_proof}
+
+  \lemma -->_join {x y z : E} : x ∨ y --> z = (x --> z) ∧ (y --> z) => {?hidden_proof}
+
+  \lemma double-->-increasing {x y : E} : x <= (x --> y) --> y => {?hidden_proof}
+
+  \lemma double-->-idempotent {x y : E} : (((x --> y) --> y) --> y) --> y <= (x --> y) --> y => {?hidden_proof}
+
+  \lemma double-->-monotone {x y z : E} (p : y <= z) : continuation x y <= continuation x z => {?hidden_proof}
+
+  \use \lemma exponent-adj-unit {x y : E} : x <= y --> x ∧ y => {?hidden_proof}
+
+  \use \lemma adj-lemma {x y z : E} (f : x <= z --> y) : x ∧ z <= y => {?hidden_proof}
+
+  \use \func exponent-functor (X : E) : Functor \this \this \cowith
+    | F => \lam Y => X --> Y
+    | Func => \lam f => -->-monotone f
+    | Func-id => {?hidden_proof}
+    | Func-o => {?hidden_proof}
+
+  \protected \default exp (Y : E) : RightAdjoint \this \this 
+    | LAdj => bprodFunctorRight Y
+    | Functor => exponent-functor Y
+    | eta {
+      | trans => \lam X => exponent-adj-unit
+      | natural => \lam f => idp
+    }
+    | epsilon {
+      | trans => \lam X => eval
+      | natural => \lam f => idp
+    }
+    | eta_epsilon-left => {?hidden_proof}
+    | eta_epsilon-right => {?hidden_proof}
 }

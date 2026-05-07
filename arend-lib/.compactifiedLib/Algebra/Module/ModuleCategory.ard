@@ -60,7 +60,10 @@
 
 \instance LinearMapLModule {R : CRing} (A B : LModule R) : LModule R 
   | AbGroup => AbHom {LModulePreAdditive R} {A} {B}
-  | *c => *c
+  | *c (c : R) (f : LinearMap A B) : LinearMap A B 
+    | func => \lam a => c B.*c f a
+    | func-+ => rewrite (f.func-+, B.*c-ldistr) idp
+    | func-*c => rewrite (f.func-*c, inv B.*c-assoc, inv B.*c-assoc, R.*-comm) idp
   | *c-assoc => {?hidden_proof}
   | *c-ldistr => {?hidden_proof}
   | *c-rdistr => {?hidden_proof}
@@ -115,7 +118,10 @@
   | rdistr => {?hidden_proof}
   \where {
     \func *c-hom {R : CRing} {U : LModule R} : RingHom R (LinearMapRing U) \cowith
-      | func => func
+      | func (r : R) : LinearMap U U 
+        | func => \lam u => r *c u
+        | func-+ => *c-ldistr
+        | func-*c => inv *c-assoc *> pmap (*c _) R.*-comm *> *c-assoc
       | func-+ => {?hidden_proof}
       | func-ide => {?hidden_proof}
       | func-* => {?hidden_proof}

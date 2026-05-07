@@ -20,6 +20,35 @@
 
 \class CartesianClosedPrecat \extends CartesianPrecat {
   | exp (X : Ob) : isExponential X
+
+  \func is-exponentiable (X : Ob) : isExponentiable X => \lam Y => coreflection {RightAdjointCoreflection.fromAdjoint (exp Y)} X
+
+  \func transpose {X Y Z : Ob} (f : Hom (Bprod X Y) Z) : Hom X (exp Y Z) => Func f ∘ eta X
+
+  \func antitranspose {X Y Z : Ob} (f : Hom X (exp Y Z)) : Hom (Bprod X Y) Z => epsilon {exp Y} Z ∘ prodMap f (id Y)
+
+  \func eval-map {Y Z : Ob} : Hom (Bprod (exp Y Z) Y) Z => epsilon {exp Y} Z
+
+  \func eval-transpose {X Y Z : Ob} (g : Hom (Bprod X Y) Z) : eval-map ∘ prodMap (transpose g) (id Y) = g => RightAdjoint.eta_epsilon-equiv.ret_f g
+
+  \func eval-map-eq {X Y : Ob} (f : Hom X Y) : eval-map ∘ prodMap (name f) (id X) ∘ pair terminalMap (id X) = f 
+    => run {(unfold name, rewrite (eval-transpose _), unfold, rewrite (o-assoc, beta2 _ _, id-right), idp)}
+
+  \func internal-comp {X Y Z : Ob} : Hom (Bprod (exp Y Z) (exp X Y)) (exp X Z) => transpose $ (eval-map ∘ prodMap (id (exp Y Z)) eval-map) ∘ associator
+
+  \func name {X Y : Ob} (f : Hom X Y) : Hom terminal (exp X Y) => transpose $ f ∘ terminal-prod-left.hinv
+
+  \func global-elements-iso {X Y : Ob} : Equiv {Hom X Y} {Hom terminal (exp X Y)} name => \new QEquiv {
+    | ret => \lam f => antitranspose f ∘ terminal-prod-left.f
+    | ret_f => \lam _ => unfold name $ rewrite (eval-transpose _, o-assoc, terminal-prod-left.hinv_f, id-right) idp
+    | f_sec => \lam y => unfold name $ rewrite (o-assoc, terminal-prod-left.f_hinv, id-right) $ RightAdjoint.eta_epsilon-equiv.f_ret y
+  }
+
+  \func internal-homFunctor : Functor (ProductPrecat (Precat.op {\this}) \this) \this \cowith
+    | F => \lam (X, Y) => exp X Y
+    | Func => \lam (f, g) => transpose $ g ∘ eval-map ∘ prodMap (id _) f
+    | Func-id => {?hidden_proof}
+    | Func-o => {?hidden_proof}
 }
 
 \open PrecatWithBprod

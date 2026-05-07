@@ -6,9 +6,9 @@
 
 \instance LexicographicalArray {n : Nat} (A : Dec) : Dec (Array A n) 
   | < => <A
-  | <-irreflexive => <-irreflexive
-  | <-transitive => <-transitive
-  | trichotomy => trichotomy
+  | <-irreflexive {l : Array A n} (p : l <A l) : Empty => {?hidden_proof}
+  | <-transitive {as bs cs : Array A n} (as<bs : as <A bs) (bs<cs : bs <A cs) : as <A cs => {?hidden_proof}
+  | trichotomy (as bs : Array A n) : Tri {\new (StrictPoset (Array A n) <A <-irreflexive <-transitive)} as bs => {?hidden_proof}
   \where {
 \data \infix 4 <A {n : Nat} {A : Dec} (l1 l2 : Array A n) : \Prop \elim n, l1, l2
       | suc n, a :: as, b :: bs => <head (a < b) <tail (a = b) (as <A bs)

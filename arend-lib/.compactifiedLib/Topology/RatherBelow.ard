@@ -6,13 +6,43 @@
 \import Paths.Meta
 \import Set.Subset
 
-\class RatherBelow {
-  | A : TopMeetSemilattice
-  | R : A -> A -> \Prop
+\class RatherBelow {A : TopMeetSemilattice} (R : A -> A -> \Prop) {
   | <=<-left {U V W : A} : R U V -> V <= W -> R U W
   | <=<-right {U V W : A} : U <= V -> R V W -> R U W
   | <=<_top {V : A} : R V top
   | <=<_meet {U V U' V' : A} : R U V -> R U' V' -> R (U ∧ U') (V ∧ V')
+
+  \lemma <=<_meet-same {U V V' : A} (p : R U V) (q : R U V') : R U (V ∧ V') => {?hidden_proof}
+
+  \type \infix 4 <=<o (V U : A) : \Prop => ∃ (R' : (A -> A -> \Prop)) (\Pi {V U : A} -> R' V U -> R V U) (\Pi {V U : A} -> R' V U -> ∃ (W : A) (R' V W) (R W U)) (R' V U)
+
+  \lemma <=<o_<=< {V U : A} (p : V <=<o U) : R V U => {?hidden_proof}
+
+  \lemma <=<o-inter {V U : A} (p : V <=<o U) : ∃ (W : A) (V <=<o W) (R W U) => {?hidden_proof}
+
+  \func Omega : RatherBelow {A} \cowith
+    | R => <=<o
+    | <=<_top => {?hidden_proof}
+    | <=<-left => {?hidden_proof}
+    | <=<-right => {?hidden_proof}
+    | <=<_meet => {?hidden_proof}
+
+  \type \infix 4 <=<c (V U : A) : \Prop => ∃ (R' : (A -> A -> \Prop)) (\Pi {V U : A} -> R' V U -> R V U) (\Pi {V U : A} -> R' V U -> ∃ (W : A) (R' V W) (R' W U)) (R' V U)
+
+  \lemma <=<c_<=<o {V U : A} (p : V <=<c U) : V <=<o U => {?hidden_proof}
+
+  \lemma <=<c_<=< {V U : A} (p : V <=<c U) : R V U => {?hidden_proof}
+
+  \lemma <=<c-inter {V U : A} (p : V <=<c U) : ∃ (W : A) (V <=<c W) (W <=<c U) => {?hidden_proof}
+
+  \lemma <=<c-func {R2 : RatherBelow {A}} (p : \Pi {V U : A} -> R V U -> R2 V U) {V U : A} (q : V <=<c U) : V R2.<=<c U => {?hidden_proof}
+
+  \func Interpolative : RatherBelow {A} \cowith
+    | R => <=<c
+    | <=<_top => {?hidden_proof}
+    | <=<-left => {?hidden_proof}
+    | <=<-right => {?hidden_proof}
+    | <=<_meet => {?hidden_proof}
 }
   \where {
     \lemma <=<c_bottom {A : CompleteLattice} {R : RatherBelow {A}} (p : \Pi {U : A} -> R bottom U) {U : A} : bottom R.<=<c U => {?hidden_proof}

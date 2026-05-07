@@ -56,13 +56,13 @@
 
     \lemma subtract_- {F G : RegularCauchyFilter X} : subtract-cover (F, G) = F - {abGroup} G => {?hidden_proof}
 
-    +-cover : CoverMap (Completion X ⨯ Completion X) (Completion X) => subtract-cover ∘ prod id negative-cover
+    \sfunc +-cover : CoverMap (Completion X ⨯ Completion X) (Completion X) => subtract-cover ∘ prod id negative-cover
 
     \func +-func (x y : RegularCauchyFilter X) => +-cover (x, y)
 
     \lemma +-char {x y : X} : +-cover (pointCF x, pointCF y) = pointCF (x + y) => {?hidden_proof}
 
-    negative-cover : CoverMap (Completion X) (Completion X) => subtract-cover ∘ tuple (const $ pointCF 0) id
+    \sfunc negative-cover : CoverMap (Completion X) (Completion X) => subtract-cover ∘ tuple (const $ pointCF 0) id
 
     \lemma negative-char {x : X} : negative-cover (pointCF x) = pointCF (negative x) => {?hidden_proof}
 

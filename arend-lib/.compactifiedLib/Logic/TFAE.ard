@@ -1,7 +1,7 @@
 \import Arith.Nat
-\import Data.Array(Index, forall, forall-char, map, taild)
+\import Data.Array (Index, forall, forall-char, map, taild)
 \import Data.Bool
-\import Data.Fin(nat_fin_=)
+\import Data.Fin (nat_fin_=)
 \import Data.List \hiding (nil, ::, map)
 \import Function.Meta
 \import Logic

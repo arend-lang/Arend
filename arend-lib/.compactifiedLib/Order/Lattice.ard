@@ -32,6 +32,36 @@
   | tupleBeta => prop-pi
   | tupleEq => \lam _ => prop-pi
   }
+
+  \func Big_meet \alias Big_∧ {n : Nat} (l : Array E (suc n)) : E \elim l
+    | a :: l => Big ∧ a l
+
+  \lemma Big_meet-cond {n : Nat} {l : Array E (suc n)} {j : Fin (suc n)} : Big_∧ l <= l j => {?hidden_proof}
+
+  \lemma meet-idemp {x : E} : x ∧ x = x => {?hidden_proof}
+
+  \lemma meet-comm {x y : E} : x ∧ y = y ∧ x => {?hidden_proof}
+
+  \lemma meet-monotone {x y x' y' : E} (p : x <= x') (q : y <= y') : x ∧ y <= x' ∧ y' => {?hidden_proof}
+
+  \lemma meet-assoc {x y z : E} : (x ∧ y) ∧ z = x ∧ (y ∧ z) => {?hidden_proof}
+
+  \lemma meet_<= {x y : E} (x<=y : x <= y) : x ∧ y = x => {?hidden_proof}
+
+  \lemma meet_<=' {x y : E} (p : x ∧ y = x) : x <= y => {?hidden_proof}
+
+  \lemma Big_<=_meet0 {l : Array E} {x : E} : Big ∧ x l <= x => {?hidden_proof}
+
+  \lemma Big_<=_meet1 {l : Array E} {x : E} (i : Fin l.len) : Big ∧ x l <= l i => {?hidden_proof}
+
+  \lemma Big_meet-univ {l : Array E} {x y : E} (p : y <= x) (f : \Pi (i : Fin l.len) -> y <= l i) : y <= Big ∧ x l => {?hidden_proof}
+
+  \protected \func op : JoinSemilattice \cowith
+    | Poset => Poset.op
+    | join => meet
+    | join-left => {?hidden_proof}
+    | join-right => {?hidden_proof}
+    | join-univ => {?hidden_proof}
 }
   \where {
     \func Meets {E : Poset} (x y : E) => \Sigma (j : E) (j <= x) (j <= y) (\Pi (z : E) -> z <= x -> z <= y -> z <= j)
@@ -45,6 +75,38 @@
   | join-left {x y : E} : x <= x ∨ y
   | join-right {x y : E} : y <= x ∨ y
   | join-univ {x y z : E} : x <= z -> y <= z -> x ∨ y <= z
+
+  \func Big_join \alias Big_∨ {n : Nat} (l : Array E (suc n)) : E \elim l
+    | a :: l => Big ∨ a l
+
+  \lemma Big_join-cond {n : Nat} {l : Array E (suc n)} {j : Fin (suc n)} : l j <= Big_∨ l => {?hidden_proof}
+
+  \lemma join-monotone {x y x' y' : E} (p : x <= x') (q : y <= y') : x ∨ y <= x' ∨ y' => {?hidden_proof}
+
+  \lemma join-idemp {x : E} : x ∨ x = x => {?hidden_proof}
+
+  \lemma join-comm {x y : E} : x ∨ y = y ∨ x => {?hidden_proof}
+
+  \lemma join-assoc {x y z : E} : (x ∨ y) ∨ z = x ∨ (y ∨ z) => {?hidden_proof}
+
+  \lemma join_<= {x y : E} (x<=y : x <= y) : x ∨ y = y => {?hidden_proof}
+
+  \lemma join_<=' {x y : E} (p : x ∨ y = y) : x <= y => {?hidden_proof}
+
+  \lemma Big_<=_join0 {l : Array E} {x : E} : x <= Big ∨ x l => {?hidden_proof}
+
+  \lemma Big_<=_join1 {l : Array E} {x : E} (i : Fin l.len) : l i <= Big ∨ x l => {?hidden_proof}
+
+  \lemma Big_<=_join {n : Nat} {l : Array E (suc n)} (i : Fin (suc n)) : l i <= Big ∨ (l 0) (tail l) => {?hidden_proof}
+
+  \lemma Big_join-univ {l : Array E} {x y : E} (p : x <= y) (f : \Pi (i : Fin l.len) -> l i <= y) : Big ∨ x l <= y => {?hidden_proof}
+
+  \protected \func op : MeetSemilattice \cowith
+    | Poset => Poset.op
+    | meet => join
+    | meet-left => {?hidden_proof}
+    | meet-right => {?hidden_proof}
+    | meet-univ => {?hidden_proof}
 }
   \where {
     \func Joins {E : Poset} (x y : E) => \Sigma (m : E) (x <= m) (y <= m) (\Pi (z : E) -> x <= z -> y <= z -> m <= z)
@@ -53,10 +115,24 @@
   }
 
 
-\class Lattice \extends MeetSemilattice, JoinSemilattice
+\class Lattice \extends MeetSemilattice, JoinSemilattice {
+  \lemma ldistr<= {x y z : E} : (x ∧ y) ∨ (x ∧ z) <= x ∧ (y ∨ z) => {?hidden_proof}
+
+  \protected \func op : Lattice \cowith
+    | MeetSemilattice => JoinSemilattice.op
+    | JoinSemilattice => MeetSemilattice.op
+}
 
 \class DistributiveLattice \extends Lattice {
   | ldistr>= {x y z : E} : x ∧ (y ∨ z) <= (x ∧ y) ∨ (x ∧ z)
+
+  \lemma meet-ldistr {x y z : E} : x ∧ (y ∨ z) = (x ∧ y) ∨ (x ∧ z) => {?hidden_proof}
+
+  \lemma meet-rdistr {x y z : E} : (y ∨ z) ∧ x = (y ∧ x) ∨ (z ∧ x) => {?hidden_proof}
+
+  \lemma rdistr>= {x y z : E} : (y ∨ z) ∧ x <= (y ∧ x) ∨ (z ∧ x) => {?hidden_proof}
+
+  \lemma lcodistr {x y z : E} : x ∨ (y ∧ z) = (x ∨ y) ∧ (x ∨ z) => {?hidden_proof}
 }
 
 \class TopMeetSemilattice \extends MeetSemilattice, CartesianPrecat (\lp, \lp) {
@@ -69,6 +145,21 @@
   | tupleBeta => \lam {_} {_} {j} => (\case j \with {})
   | tupleEq => \lam _ => prop-pi
 }
+
+\use \lemma top-left {x : E} : top ∧ x = x => {?hidden_proof}
+
+\lemma top-right {x : E} : x ∧ top = x => {?hidden_proof}
+
+\func BigMeet (l : Array E) : E => Big ∧ top l
+
+\lemma BigMeet-cond {l : Array E} (j : Fin l.len) : BigMeet l <= l j => {?hidden_proof}
+
+\lemma BigMeet-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> x <= l j) : x <= BigMeet l => {?hidden_proof}
+
+\protected \func op : BottomJoinSemilattice \cowith
+  | Order.Lattice.JoinSemilattice => Order.Lattice.MeetSemilattice.op
+  | bottom => top
+  | bottom-univ => {?hidden_proof}
 }
 \where {
   \use \coerce toMonoid (L : TopMeetSemilattice) : CMonoid L \cowith
@@ -85,6 +176,37 @@
 | bottom-univ {x : E} : bottom <= x
 | isInhabitted => inP bottom
 | isDirected => \lam x y => inP (x ∨ y, join-left, join-right)
+
+\use \lemma bottom-left {x : E} : bottom ∨ x = x => {?hidden_proof}
+
+\lemma bottom-right {x : E} : x ∨ bottom = x => {?hidden_proof}
+
+\func BigJoin (l : Array E) : E => Big ∨ bottom l
+
+\lemma BigJoin-cond {l : Array E} (j : Fin l.len) : l j <= BigJoin l => {?hidden_proof}
+
+\lemma BigJoin-univ {l : Array E} {x : E} (p : \Pi (j : Fin l.len) -> l j <= x) : BigJoin l <= x => {?hidden_proof}
+
+\sfunc FinJoin {J : FinSet} (a : J -> E) : E => \this.FinSum a
+
+\lemma FinJoin-cond {J : FinSet} (j : J) {a : J -> E} : a j <= FinJoin a => {?hidden_proof}
+
+\lemma FinJoin-univ {J : FinSet} {a : J -> E} {x : E} (p : \Pi (j : J) -> a j <= x) : FinJoin a <= x => {?hidden_proof}
+
+\lemma FinJoin_Equiv {A B : FinSet} (e : Equiv {A} {B}) {x : B -> E} : FinJoin x = FinJoin (\lam a => x (e a)) => {?hidden_proof}
+
+\lemma FinJoin=BigJoin {n : Nat} {x : Fin n -> E} : FinJoin x = BigJoin x => {?hidden_proof}
+
+\lemma BigJoin_EPerm {l l' : Array E} (e : EPerm l l') : BigJoin l = BigJoin l' => {?hidden_proof}
+
+\lemma BigJoin_++ {l l' : Array E} : BigJoin (l ++ l') = BigJoin l ∨ BigJoin l' => {?hidden_proof}
+
+\lemma BigJoin_join {n : Nat} {l l' : Array E n} : BigJoin (\lam i => l i ∨ l' i) = BigJoin l ∨ BigJoin l' => {?hidden_proof}
+
+\protected \func op : TopMeetSemilattice \cowith
+  | Order.Lattice.MeetSemilattice => Order.Lattice.JoinSemilattice.op
+  | top => bottom
+  | top-univ => {?hidden_proof}
 }
 \where {
   \use \coerce toMonoid (L : BottomJoinSemilattice) : AbMonoid L \cowith
@@ -96,9 +218,22 @@
 }
 
 
-\class BoundedLattice \extends Lattice, TopMeetSemilattice, BottomJoinSemilattice
+\class BoundedLattice \extends Lattice, TopMeetSemilattice, BottomJoinSemilattice {
+\protected \func op : BoundedLattice => \new BoundedLattice {
+  | TopMeetSemilattice => BottomJoinSemilattice.op
+  | BottomJoinSemilattice => TopMeetSemilattice.op
+}
+}
 
-\class BottomDistributiveLattice \extends DistributiveLattice, BottomJoinSemilattice
+\class BottomDistributiveLattice \extends DistributiveLattice, BottomJoinSemilattice {
+\lemma bottom-ldistr {x : E} : x ∧ bottom = bottom => {?hidden_proof}
+
+\lemma bottom-rdistr {x : E} : bottom ∧ x = bottom => {?hidden_proof}
+
+\lemma BigJoin-ldistr {l : Array E} {x : E} : x ∧ BigJoin l = BigJoin (\lam j => x ∧ l j) => {?hidden_proof}
+
+\lemma BigJoin-rdistr {l : Array E} {x : E} : BigJoin l ∧ x = BigJoin (\lam j => l j ∧ x) => {?hidden_proof}
+}
 
 \class BoundedDistributiveLattice \extends BottomDistributiveLattice, BoundedLattice
 \where {
@@ -159,5 +294,53 @@
   | pbBeta1 => prop-pi
   | pbBeta2 => prop-pi
   | pbEta => \lam _ _ => prop-pi
+}
+
+\protected \default join-impl x y => Join (if __ x y)
+
+\protected \default join-left-impl {x} {y} : x <= join-impl x y => Join-cond true
+
+\protected \default join-right-impl {x} {y} : y <= join-impl x y => Join-cond false
+
+\protected \default join-univ-impl {x} {y} {z} x<=z y<=z : join-impl x y <= z => Join-univ (\case \elim __ \with {  | true => x<=z  | false => y<=z})
+
+\protected \default Meet-impl {J} g => Join (\lam (t : Total (\Pi (j : J) -> __ <= g j)) => t.1)
+
+\protected \default Meet-cond-impl {J} j {f} : Meet-impl f <= f j => Join-univ (__.2 j)
+
+\protected \default Meet-univ-impl {J} {f} {e} p : e <= Meet-impl f => Join-cond (later (e, p))
+
+\protected \default meet-impl x y => Meet (if __ x y)
+
+\protected \default meet-left-impl {x} {y} : meet-impl x y <= x => Meet-cond true
+
+\protected \default meet-right-impl {x} {y} : meet-impl x y <= y => Meet-cond false
+
+\protected \default meet-univ-impl {x} {y} {z} z<=x z<=y : z <= meet-impl x y => Meet-univ (\case \elim __ \with {  | true => z<=x  | false => z<=y})
+
+\protected \default top-impl  => Meet absurd
+
+\protected \default top-univ-impl {x} : x <= top-impl => Meet-univ (\case __ \with {})
+
+\lemma Join-double {I J : \Set} {f : I -> J -> E} : Join (\lam i => Join (\lam j => f i j)) = Join (\lam (p : \Sigma I J) => f p.1 p.2) => {?hidden_proof}
+
+\lemma Join_= {J : \Set} {f g : J -> E} (p : \Pi (j : J) -> f j = g j) : Join f = Join g => {?hidden_proof}
+
+\func SJoin (U : E -> \Prop) => Join (\lam (t : Total U) => t.1)
+
+\lemma SJoin-cond {U : E -> \Prop} {x : E} (Ux : U x) : x <= SJoin U => {?hidden_proof}
+
+\lemma SJoin-univ {U : E -> \Prop} {e : E} (c : \Pi {x : E} -> U x -> x <= e) : SJoin U <= e => {?hidden_proof}
+
+\lemma join_Join {x y : E} : x ∨ y = Join (\lam b => if b x y) => {?hidden_proof}
+
+\protected \func op : CompleteLattice => \new CompleteLattice {
+  | Order.Lattice.Lattice => Order.Lattice.Lattice.op
+  | Join => Meet
+  | Join-cond => Meet-cond
+  | Join-univ => Meet-univ
+  | Meet => Join
+  | Meet-cond => Join-cond
+  | Meet-univ => Join-univ
 }
 }

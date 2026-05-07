@@ -1,5 +1,5 @@
 \import Algebra.Meta
-\import Algebra.Monoid(+, AddMonoid, zro-right)
+\import Algebra.Monoid (+, AddMonoid, zro-right)
 \import Arith.Fin
 \import Arith.Fin.Order
 \import Arith.Nat

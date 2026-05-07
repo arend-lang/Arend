@@ -15,28 +15,82 @@
 
 \func \infix 7 // (G : Group) (H : NormalSubGroup G) : Group => H.quotient
 
-\class GroupTriangle {
-  | X : Group
-  | Y : Group
-  | Z : Group
-  | f : GroupHom X Y
-  | g : GroupHom Y Z
-  | h : GroupHom X Z
-  | comm : h = g GroupHom.∘ f
+\class GroupTriangle (X : Group) (Y : Group) (Z : Group) (f : GroupHom X Y) (g : GroupHom Y Z) (h : GroupHom X Z) (comm : h = g GroupHom.∘ f) {
+  \lemma surjectivity-2-out-3 (p : IsSurj h) (q : IsSurj f) : IsSurj g => {?hidden_proof}
+
+  \lemma surjectivity-2-out-3-pw (p : IsSurj h) (q : IsSurj f) (z : Z) : ∃ (y : Y) (g y = z) => {?hidden_proof}
+    \where {
+      \lemma helper {a : X} : g (f a) = h a => {?hidden_proof}
+    }
+
 }
 
-\class UniversalGroupQuotient {
-  | G : Group
-  | H : Group
-  | f : GroupHom G H
-  | N : NormalSubGroup G
-  | p : N SubGroupPreorder.<= f.Kernel
+\class UniversalGroupQuotient (G : Group) (H : Group) (f : GroupHom G H) (N : NormalSubGroup G) (p : N SubGroupPreorder.<= f.Kernel) {
+  \func universalQuotientMorphismSetwise (a : N.quotient) : H \elim a
+    | in~ n => f n
+    | ~-equiv y x r => equality-check (qed
+      (inverse (f y) * f x ==< pmap (\lam y => y * f x) (inv f.func-inverse) >== f (inverse y) * f x ==< inv f.func-* >== f (inverse y * x) ==< lemma' f N p r >== 
+        ide))
+    \where {
+      \lemma lemma' {x y : G} (f : GroupHom G H) (N : NormalSubGroup G) (p : N SubGroupPreorder.<= f.Kernel) (r : N.contains (inverse y * x)) : f (inverse y * x) = ide => {?hidden_proof}
+    }
+
+
+  \func uqms  => universalQuotientMorphismSetwise
+
+  \lemma universalQuotientMorphismMultiplicative (x y : N.quotient) : uqms (x N.quotient.* y) = uqms x * uqms y => {?hidden_proof}
+
+  \func universalQuotientMorph : GroupHom (G // N) H \cowith
+    | func => uqms
+    | func-ide => {?hidden_proof}
+    | func-* => {?hidden_proof}
+
+  \lemma universalQuotientProperty : universalQuotientMorph GroupHom.∘ quotient-map = f => {?hidden_proof}
 }
 
-\class FirstIsomorphismTheorem {
-  | G : Group
-  | H : Group
-  | f : GroupHom G H
+\class FirstIsomorphismTheorem (G : Group) (H : Group) (f : GroupHom G H) {
+  \func UniversalProperties : UniversalGroupQuotient {
+    | G => G
+    | H => H
+    | f => f
+  } \cowith
+    | N => f.Kernel
+    | p => {?hidden_proof}
+
+  \func Triangle : GroupTriangle \cowith
+    | X => G
+    | Y => G // f.Kernel
+    | Z => H
+    | f => quot
+    | g => UniversalProperties.universalQuotientMorph
+    | h => f
+    | comm => {?hidden_proof}
+
+  \func univ : GroupHom (G // f.Kernel) H => UniversalProperties.universalQuotientMorph
+
+  \func quot : GroupHom G (G // f.Kernel) => quotient-map
+
+  \lemma universalKerProp : univ GroupCat.∘ quot = f => {?hidden_proof}
+
+  \lemma universalQuotientKernel (g : G // f.Kernel) (q : univ g = ide) : g = f.Kernel.quotient.ide => {?hidden_proof}
+    \where {
+      \lemma helper-1 (a : G) (q : univ (in~ a) = ide) : in~ a = f.Kernel.quotient.ide => {?hidden_proof}
+    }
+
+
+  \lemma evidTrivKer : univ.TrivialKernel => {?hidden_proof}
+
+  \lemma universalQuotientKernel' (a : G) (q : univ (in~ a) = ide) : f.Kernel.contains a => {?hidden_proof}
+    \where {
+      \lemma technical-helper (a : G) : univ (in~ a) = f a => {?hidden_proof}
+    }
+
+
+  \lemma univKer-mono : IsInj univ.func => {?hidden_proof}
+
+  \lemma univKer-epi (p : IsSurj f) : IsSurj univ => {?hidden_proof}
+
+  \lemma FirstIsoTheorem (p : IsSurj f) : univ.IsIsomorphism => {?hidden_proof}
 }
 
 \func GroupFirstIsoCorollary-setwise {G H : Group} {N : NormalSubGroup G} (f : GroupHom G H) (p : N = f.Kernel) (q : IsSurj f) : \Sigma (h : GroupHom (G // N) H) h.IsIsomorphism 

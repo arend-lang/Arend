@@ -35,21 +35,21 @@
       => inP (eps, B, eps>0, _, byLeft idp, <=-refl, \lam x => inP (_, byRight (x, idp), \lam {y} d => inP (y, idp, d)))
 
     \func InfRealUniformSpace : StronglyRegularUniformSpace InfReal \cowith
-      | isUniform => isUniform
+      | isUniform (C : Set (Set InfReal)) : \Prop => ∃ (eps B : Real) (0 < eps) (V : C) ((B InfRealAbMonoid.<) ⊆ V) ∀ x ∃ (U : C) ∀ {y : Real} (RealAbGroup.abs (x - y) < eps -> U y)
       | uniform-cover => {?hidden_proof}
       | uniform-top => {?hidden_proof}
       | uniform-refine => {?hidden_proof}
       | uniform-inter => {?hidden_proof}
       | uniform-strongly-star => {?hidden_proof}
 
-    \func NFilter (x : InfReal) : SetFilter InfReal \cowith
+    \protected \func NFilter (x : InfReal) : SetFilter InfReal \cowith
       | F => \lam U => Given (eps : Real) (0 < eps) (x1 : Real) (x1 = x) ∀ {y : Real} (RealAbGroup.abs (x1 - y) < eps -> U y) || Given (B : Real) (B InfRealAbMonoid.< x) ∀ 
         {y : InfReal} (B InfRealAbMonoid.< y -> U y)
       | filter-mono => {?hidden_proof}
       | filter-top => {?hidden_proof}
       | filter-meet => {?hidden_proof}
 
-    \lemma cauchy-ball {C : Set (Set InfReal)} (Cc : InfRealUniformSpace.isCauchy C) (x : InfReal) : ∃ (U : C)
+    \protected \lemma cauchy-ball {C : Set (Set InfReal)} (Cc : InfRealUniformSpace.isCauchy C) (x : InfReal) : ∃ (U : C)
       (Given (eps : Real) (0 < eps) (x1 : Real) (x1 = x) ∀ {y : Real} (RealAbGroup.abs (x1 - y) < eps -> U y) || Given (B : Real) (B InfRealAbMonoid.< x) ∀ 
       {y : InfReal} (B InfRealAbMonoid.< y -> U y)) => {?hidden_proof}
 

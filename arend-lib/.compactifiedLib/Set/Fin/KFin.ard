@@ -1,8 +1,8 @@
-\import Arith.Nat(id<suc)
+\import Arith.Nat (id<suc)
 \import Data.Array
 \import Data.Or
 \import Function
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
 \import Logic.Meta
 \import Meta
@@ -17,6 +17,16 @@
   | boundedPigeonhole => \case finSurj \with {
     | inP (f, s) => boundedPigeonhole {pigeonhole-surj (\new (BoundedPigeonholeSet (Fin finCard) finCard (pigeonhole-fin __ id<suc))) f s}
   }
+
+\lemma search (A : E -> \Prop) (d : \Pi (e : E) -> Dec (A e)) : Dec (∃ (e : E) (A e)) => {?hidden_proof}
+
+\lemma ||-search {A : \Type} {B : E -> \Prop} (f : \Pi (x : E) -> A || B x) : A || (\Pi (x : E) -> B x) => {?hidden_proof}
+
+\lemma search_yes_reduce {A : E -> \Prop} (d : \Pi (e : E) -> Dec (A e)) (e : ∃ (e : E) (A e)) : search A d = yes e => {?hidden_proof}
+
+\lemma search_no_reduce {A : E -> \Prop} (d : \Pi (e : E) -> Dec (A e)) (q : Not (∃ (e : E) (A e))) : search A d = no q => {?hidden_proof}
+
+\lemma dec : Dec (TruncP E) => {?hidden_proof}
 }
 \where {
   \lemma fromArray {A : \Set} (l : Array A) (p : \Pi (a : A) -> ∃ (i : Fin l.len) (l i = a)) : KFinSet A l.len => {?hidden_proof}

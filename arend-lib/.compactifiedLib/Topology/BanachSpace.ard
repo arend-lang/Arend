@@ -40,18 +40,21 @@
 \import Topology.UniformSpace.Complete
 \import Topology.UniformSpace.Product
 
-\class PreBanachSpace \extends BoundedExPseudoNormedAbGroup, DivisibleGroup {
-  | A : RatValue
+\class PreBanachSpace \extends BoundedExPseudoNormedAbGroup, DivisibleGroup (A : RatValue) {
   | norm_*n {n : Nat} {x : E} : norm (n *n x) = A.norm n ExUpperReal.* norm x
   | norm-bounded => \lam x => (\case ExUpperReal.*_U.1 $ transport (ExUpperReal.U {__} 1) (inv norm_zro *> norm_*n {_} {0} {x}) RatField.zro<ide \with {
     | inP (_, _, _, b, |x|<b, _, _) => inP (b, |x|<b)
   })
+
+  \lemma norm_*i {n : Int} {x : E} : norm (n *i x) = A.norm n ExUpperReal.* norm x => {?hidden_proof}
 }
 
 \class SeparatedPreBanachSpace \extends PreBanachSpace, ExNormedAbGroup, QModule {
   | noTorsion => \lam {a} {n} n/=0 na=0 =>
   norm-ext $ inv (ExUpperRealSemigroup.ide-left norm>=0) *> pmap (* _) (inv (pmap A.norm (RatField.finv-left $ natRat/=0 n/=0) *> A.norm_ide) *> A.norm_*) *> 
     *-assoc *> pmap (A.norm (RatField.finv n) *) (inv norm_*n *> pmap norm na=0 *> norm_zro) *> ExUpperRealSemigroup.zro_*-right (A.norm-bounded _)
+
+  \lemma norm_*q {q : Rat} {x : E} : norm (q *q x) = A.norm q ExUpperReal.* norm x => {?hidden_proof}
 }
 
 \lemma *q-right-uniform {X : SeparatedPreBanachSpace} {q : Rat} : UniformNormedAbGroupMap X X (q X.*q) => {?hidden_proof}
@@ -79,14 +82,42 @@
   }
 
 
-\class RealBanachSpace \extends RealPreBanachSpace, BanachSpace
+\class RealBanachSpace \extends RealPreBanachSpace, BanachSpace {
+  \lemma norm_*q-ofPos {q : Rat} (q>=0 : 0 <= q) {x : E} : norm (q *q x) = q ExUpperReal.* norm x => {?hidden_proof}
+
+  \lemma norm_*n-comm {n : Nat} {x : E} : norm (n *n x) = n ExUpperRealAbMonoid.*n norm x => {?hidden_proof}
+
+  \sfunc \infixl 7 *r (r : Real) (a : E) : E => lift (r, a)
+    \where {
+      \protected \func lift  
+      => dense-lift (ProductCoverSpace.prod rat_real UniformMap.id) (ProductCoverSpace.prod.isDenseEmbedding rat_real.dense-coverEmbedding CoverMap.id-denseEmbedding) 
+        (*q-uniform {\this})
+    }
+
+
+  \lemma *r-cover : CoverMap (ProductCoverSpace RealNormed \this) \this (\lam s => s.1 *r s.2) => {?hidden_proof}
+
+  \lemma *r_*q {q : Rat} {a : E} : q *r a = q *q a => {?hidden_proof}
+
+  \lemma *r_*n {n : Nat} {a : E} : n *r a = n *n a => {?hidden_proof}
+
+  \lemma norm_*r {r : Real} {a : E} : norm (r *r a) = RealAbGroup.abs r ExUpperReal.* norm a => {?hidden_proof}
+
+  \func toRealModule : LModule RealField \cowith
+    | AbGroup => \this
+    | *c => *r
+    | *c-assoc => {?hidden_proof}
+    | *c-ldistr => {?hidden_proof}
+    | *c-rdistr => {?hidden_proof}
+    | ide_*c => {?hidden_proof}
+}
   \where {
     \open CoverMap
     \open ProductCoverSpace
   }
 
 
-\class BoundedLinearMap \extends UniformNormedAbGroupMap {
+\record BoundedLinearMap \extends UniformNormedAbGroupMap {
   \override Dom : RealBanachSpace
   \override Cod : RealBanachSpace
   | isBounded : ∃ (C : Rat) (0 RatField.< C) ∀ x (norm (func x) <= C ExUpperReal.* norm x)
@@ -111,7 +142,7 @@
   }
 }
 \where {
-  \open ExUpperRealAbMonoid(<-rat)
+  \open ExUpperRealAbMonoid (<-rat)
 }
 
 

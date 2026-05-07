@@ -6,8 +6,7 @@
 \import Paths
 \import Set
 
-\class Transitive {
-  | A : \Set
+\class Transitive (A : \Set) {
   | \infix 4 ~ : A -> A -> \Prop
   | ~-transitive {x y z : A} : x ~ y -> y ~ z -> x ~ z
 }

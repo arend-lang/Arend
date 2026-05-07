@@ -1,7 +1,7 @@
 \import Algebra.Field
 \import Algebra.Group
 \import Algebra.Meta
-\import Algebra.Module(*c)
+\import Algebra.Module (*c)
 \import Algebra.Monoid
 \import Algebra.Monoid.MonoidHom
 \import Algebra.Monoid.PermSet

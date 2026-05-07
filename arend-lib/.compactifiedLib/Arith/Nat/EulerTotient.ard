@@ -21,7 +21,7 @@
 \import Arith.Nat
 \import Category
 \import Equiv
-\import Function(IsSurj)
+\import Function (IsSurj)
 \import Function.Meta
 \import Logic
 \import Logic.Meta

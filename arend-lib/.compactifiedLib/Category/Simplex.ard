@@ -1,8 +1,8 @@
 \import Arith.Fin.Order
 \import Arith.Nat
 \import Category
-\import Equiv(Equiv, QEquiv)
-\import Function(IsInj)
+\import Equiv (Equiv, QEquiv)
+\import Function (IsInj)
 \import Logic.Unique
 \import Logic
 \import Meta

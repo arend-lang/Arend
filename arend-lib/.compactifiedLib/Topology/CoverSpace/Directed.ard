@@ -38,7 +38,7 @@
   => \Sigma (X.isCauchy (\lam U => ∃ (N : I) (V : D) (\Pi {n : I} {x : X} -> N <= n -> U x -> V (n, x)))) 
   (\Pi (n : I) -> X.isCauchy (\lam U => ∃ (V : D) ∀ {x : U} (V (n, x))))
   \where {
-    \func Space : PrecoverSpace (\Sigma I X) \cowith
+    \protected \func Space : PrecoverSpace (\Sigma I X) \cowith
       | isCauchy => DirectProdCover
       | cauchy-cover => {?hidden_proof}
       | cauchy-top => {?hidden_proof}

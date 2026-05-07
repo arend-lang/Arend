@@ -59,6 +59,27 @@
   )
   | isUniform => isUniform
   | neighborhood-uniform => neighborhood-uniform-impl
+
+  \protected \default isUniform C : \Prop => ∃ (U : isOpen) (U 0) ∀ x ∃ (V : C) ∀ {y} (U (x - y) -> V y)
+
+  \protected \default neighborhood-uniform-impl {C} : _ <-> _ => <->refl {isUniform C}
+
+  \lemma topAbProperUniform : IsProperUniform => {?hidden_proof}
+
+  \func topAbUniform {U : Set E} (Uo : isOpen U) (U0 : U 0) : PreuniformSpace.isUniform (\lam V => ∃ (x : E) (V = (\lam y => U (x - y)))) 
+    => neighborhood-uniform.2 $ inP (U, Uo, U0, \lam x => inP (_, inP $ later (x, idp), \lam u => u))
+
+  \lemma shrink {U : Set E} (Uo : isOpen U) (U0 : U 0) : ∃ (V : isOpen) (V 0) (V <=<ta U) => {?hidden_proof}
+
+  \func UBall (U : Set E) (x : E) : Set E => \lam x' => U (x - x')
+
+  \lemma UBall-open {U : Set E} (Uo : isOpen U) {x : E} : isOpen (UBall U x) => {?hidden_proof}
+
+  \lemma UBall-center {U : Set E} (U0 : U 0) {x : E} : UBall U x x => {?hidden_proof}
+
+  \lemma UBall-point {U : Set E} {x : E} (Ux : U x) : UBall U x 0 => {?hidden_proof}
+
+  \lemma subtract-cont : ContMap (ProductTopSpace \this \this) \this (\lam s => s.1 - s.2) => {?hidden_proof}
 }
   \where {
     \open ContMap
@@ -88,9 +109,11 @@
 
 \lemma <=<ta_<=* {X : TopAbGroup} {W V U : Set X} (Wo : isOpen W) (W0 : W 0) (p : W <=<ta V) (q : V <=<ta U) : W <=* U => {?hidden_proof}
 
-\class HausdorffTopAbGroup \extends TopAbGroup, HausdorffTopSpace, SeparatedCoverSpace
+\class HausdorffTopAbGroup \extends TopAbGroup, HausdorffTopSpace, SeparatedCoverSpace {
+  \lemma equals {x y : E} (p : ∀ {U : isOpen} (U 0) (U (x - y))) : x = y => {?hidden_proof}
+}
 
-\class TopAbGroupMap \extends ContMap, AddGroupHom, UniformMap {
+\record TopAbGroupMap \extends ContMap, AddGroupHom, UniformMap {
   \override Dom : TopAbGroup
   \override Cod : TopAbGroup
   | func-uniform => \lam Eu => (\case neighborhood-uniform.1 Eu \with {
@@ -98,6 +121,8 @@
       (func ^-1 U, func-cont Uo, transportInv U func-zro U0, \lam x => (\case h (func x) \with {
       | inP (V, EV, g) => inP (func ^-1 V, inP $ later (V, EV, idp), \lam u => g $ transport U func-minus u)}))
   })
+
+  \lemma embedding->uniformEmbedding (e : ContMap.IsDenseTopEmbedding) : UniformMap.IsDenseUniformEmbedding => {?hidden_proof}
 }
   \where {
     \open TopAbGroup

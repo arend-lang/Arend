@@ -1,7 +1,7 @@
 \import Algebra.Meta
 \import Equiv
 \import Equiv.Path
-\import Function.Meta($)
+\import Function.Meta ($)
 \import Logic
 \import Meta
 \import Paths
@@ -10,28 +10,36 @@
 
 \plevels obj >= hom
 
-\class Precat {
-  | Ob : \hType obj
+\class Precat (Ob : \hType obj) {
   | Hom : Ob -> Ob -> \Set hom
   | id (X : Ob) : Hom X X
-  | \infixl 8 o \alias \infixl 8 ∘ {X Y Z : Ob} : Hom Y Z -> Hom X Y -> Hom X Z
+  | \fixl 8 o \alias \infixl 8 ∘ {X Y Z : Ob} : Hom Y Z -> Hom X Y -> Hom X Z
   | id-left {X Y : Ob} {f : Hom X Y} : id Y ∘ f = f
   | id-right {X Y : Ob} {f : Hom X Y} : f ∘ id X = f
   | o-assoc {X Y Z W : Ob} {h : Hom Z W} {g : Hom Y Z} {f : Hom X Y} : (h ∘ g) ∘ f = h ∘ (g ∘ f)
+
+  \func \infixl 8 >> {x y z : Ob} (f : Hom x y) (g : Hom y z) => g ∘ f
+
+  \protected \func op : Precat \cowith
+    | Ob => Ob
+    | Hom => \lam x y => Hom y x
+    | id => \lam x => id x
+    | o => \lam g f => o f g
+    | id-left => {?hidden_proof}
+    | id-right => {?hidden_proof}
+    | o-assoc => {?hidden_proof}
+
+  \func idtoiso {a b : Ob} (p : a = b) : Iso {_} {a} {b} \elim p
+    | idp => idIso
 }
 
-\meta SmallPrecat => Precat \levels \lp _
+\meta SmallPrecat => Precat \lp
 
-\open Precat(>>)
+\open Precat (>>)
 
-\class Map {
-  | C : Precat
-  | dom : C
-  | cod : C
-  | f : Hom dom cod
-}
+\record Map {C : Precat} {dom : C} {cod : C} (\coerce f : Hom dom cod)
 
-\class Mono \extends Map {
+\record Mono \extends Map {
   | isMono {x : C} {g h : Hom x dom} : f ∘ g = f ∘ h -> g = h
 }
   \where {
@@ -42,18 +50,32 @@
 
 \func isEpi {C : Precat} {x y : C} (f : Hom x y) => \Pi {z : C} {g h : Hom y z} -> g ∘ f = h ∘ f -> g = h
 
-\class SplitMono \extends Mono {
+\record SplitMono \extends Mono {
   | hinv : Hom cod dom
   | hinv_f : hinv ∘ f = id dom
   | isMono => \lam {_} {g} {h} gf=hf => qed (g ==< inv id-left >== g >> id dom ==< pmap (g >>) (inv hinv_f) >== g >> (f >> hinv) ==< o-assoc >== (g >> f) >> hinv ==< pmap (o hinv) gf=hf >== 
     (h >> f) >> hinv ==< inv o-assoc >== h >> (f >> hinv) ==< pmap (h >>) hinv_f >== h >> id dom ==< id-left >== h)
+
+  \lemma adjointMap {z : C} {g : Hom z dom} {h : Hom z cod} (p : f ∘ g = h) : g = hinv ∘ h => {?hidden_proof}
 }
 
-\class Iso \extends SplitMono {
+\record Iso \extends SplitMono {
   | f_hinv : f ∘ hinv = id cod
+
+  \lemma adjointMapInv {z : C} {g : Hom z dom} {h : Hom z cod} (p : g = hinv ∘ h) : f ∘ g = h => {?hidden_proof}
+
+  \lemma adjointMap' {z : C} {g : Hom cod z} {h : Hom dom z} (p : g ∘ f = h) : g = h ∘ hinv => {?hidden_proof}
+
+  \lemma -o_Equiv {z : C} : Equiv {Hom cod z} {Hom dom z} (__ ∘ f) => {?hidden_proof}
+
+  \lemma o-_Equiv {z : C} : Equiv {Hom z dom} {Hom z cod} (f ∘ __) => {?hidden_proof}
+
+  \protected \func reverse : Iso => \new (Iso hinv f f_hinv hinv_f)
+
+  \protected \func op : Iso => \new (Iso {C.op} f hinv f_hinv hinv_f)
 }
   \where {
-    \func equals {C : Precat} {x y : C} (e e' : Iso {C} {x} {y}) (p : e.f = e'.f) : e = e' 
+    \use \func equals {C : Precat} {x y : C} (e e' : Iso {C} {x} {y}) (p : e.f = e'.f) : e = e' 
       => ext (p, isMono {e} (e.f_hinv *> inv e'.f_hinv *> inv (pmap (e'.hinv >>) p)))
 
     \use \level levelProp {C : Precat} {x y : C} (f : Hom x y) (e e' : Iso f) => equals e e' idp
@@ -81,6 +103,30 @@
 
 \class Cat \extends Precat {
   | univalence {a b : Ob} : Equiv (idtoiso {_} {a} {b})
+
+  \protected \func op : Cat \cowith
+    | Precat => Precat.op
+    | univalence => {?hidden_proof}
+
+  \func isotoid {a b : Ob} (e : Iso {\this} {a} {b}) : a = b => univalence.ret e
+
+  \lemma transport_iso (e : Iso {\this}) : transport (Hom e.dom) (isotoid e) (id e.dom) = e => {?hidden_proof}
+
+  \func univalenceToTransport (e : Iso {\this}) : \Sigma (p : e.dom = e.cod) (transport (Hom e.dom) p (id e.dom) = e) => (isotoid e, transport_iso e)
+
+  \lemma transport_Hom {x1 y1 x2 y2 : Ob} (p1 : x1 = y1) (p2 : x2 = y2) {g : Hom x1 x2} {f : Hom y1 y2} 
+  (h : g >> transport (Hom x2) p2 (id x2) = transport (Hom x1) p1 (id x1) >> f) : coe (\lam i => Hom (p1 @ i) (p2 @ i)) g right = f => {?hidden_proof}
+
+  \lemma transport_Hom-left {x y z : Ob} (p : x = y) {g : Hom x z} {f : Hom y z} (h : g = transport (Hom x) p (id x) >> f) : transport (Hom z) p g = f => {?hidden_proof}
+
+  \lemma transport_Hom-right {x y z : Ob} (p : x = y) {g : Hom z x} {f : Hom z y} (h : g >> transport (Hom x) p (id x) = f) : transport (Hom z) p g = f => {?hidden_proof}
+
+  \lemma transport_Hom_iso (e1 e2 : Iso {\this}) {g : Hom e1.dom e2.dom} {f : Hom e1.cod e2.cod} (h : g >> e2.f = e1.f >> f) :
+    coe (\lam i => Hom (isotoid e1 @ i) (isotoid e2 @ i)) g right = f => {?hidden_proof}
+
+  \lemma transport_Hom_iso-left (e : Iso {\this}) {z : Ob} (g : Hom e.dom z) {f : Hom e.cod z} (h : g = e.f >> f) : transport (Hom z) (isotoid e) g = f => {?hidden_proof}
+
+  \lemma transport_Hom_iso-right (e : Iso {\this}) {z : Ob} (g : Hom z e.dom) {f : Hom z e.cod} (h : g >> e.f = f) : transport (Hom z) (isotoid e) g = f => {?hidden_proof}
 }
   \where {
     \lemma univalenceFromEquiv {C : Precat} (e : \Pi {a b : C} -> Equiv {a = b} {Iso {C} {a} {b}}) (i : \Pi {a : C} -> Iso.f {e (idpe a)} = id a) {a b : C} : Equiv (C.idtoiso {a} {b}) 
@@ -90,12 +136,13 @@
   }
 
 
-\meta SmallCat => Cat \levels \lp _
+\meta SmallCat => Cat \lp
 
 \func DiscretePrecat (X : \Type) : Precat X \cowith
   | Hom => \lam x y => Trunc0 (x = y)
   | id => \lam x => in0 idp
-  | o => o
+  | o {x y z : X} (t : Trunc0 (y = z)) (s : Trunc0 (x = y)) : Trunc0 (x = z) \elim t, s
+    | in0 y=z, in0 x=y => in0 (x=y *> y=z)
   | id-left => {?hidden_proof}
   | id-right => {?hidden_proof}
   | o-assoc => {?hidden_proof}
@@ -105,16 +152,34 @@
   }
 
 
-SIP (C : Cat) (Str : C -> \hType (\suc \lp)) (isHom : \Pi {x y : C} -> Str x -> Str y -> Hom x y -> \hType (\suc \lp)) 
+\sfunc SIP (C : Cat) (Str : C -> \hType (\suc \lp)) (isHom : \Pi {x y : C} -> Str x -> Str y -> Hom x y -> \hType (\suc \lp)) 
 (st : \Pi {X : C} {S1 S2 : Str X} -> isHom S1 S2 (id X) -> isHom S2 S1 (id X) -> S1 = S2) {X Y : C} (e : Iso {C} {X} {Y}) (S1 : Str X) (S2 : Str Y) 
 (p : isHom S1 S2 e) (q : isHom S2 S1 e.hinv) : \Sigma (p : X = Y) (Path (\lam i => Str (p @ i)) S1 S2) (transport (Hom X) p (id X) = e) 
 => \case \elim Y, \elim e, \elim S2, p, q, Cat.univalenceToTransport e \with {
   | Y, e : Iso, S2, p, q, (idp, s) => (idp, st (transportInv (isHom S1 S2) s p) (transport (isHom S2 S1) (inv id-right *> pmap (∘ e.hinv) s *> e.hinv_f) q), s)
 }
 
-\class Graph {
-  | V : \Set
-  | E : V -> V -> \Set
+\class Graph (\coerce V : \Set) (E : V -> V -> \Set) {
+\data Paths (x y : V) 
+    | empty (x = y)
+    | cons {z : V} (E x z) (Paths z y)
+
+  \func concat {x y z : V} (p : Paths x y) (q : Paths y z) : Paths x z \elim p
+    | empty idp => q
+    | cons e p => cons e (concat p q)
+
+  \lemma concat_idp {x y : V} {p : Paths x y} : concat p (empty idp) = p => {?hidden_proof}
+
+  \lemma concat-assoc {x y z w : V} {p : Paths x y} {q : Paths y z} {r : Paths z w} : concat (concat p q) r = concat p (concat q r) => {?hidden_proof}
+
+  \func FreeCat : Cat V \cowith
+    | Hom => Paths
+    | id => \lam x => empty idp
+    | o => \lam q p => concat p q
+    | id-left => {?hidden_proof}
+    | id-right => {?hidden_proof}
+    | o-assoc => {?hidden_proof}
+    | univalence => {?hidden_proof}
 }
 
 \func TrivialCat : Cat => Graph.FreeCat {\new (Graph (\Sigma) (\lam _ _ => Empty))}

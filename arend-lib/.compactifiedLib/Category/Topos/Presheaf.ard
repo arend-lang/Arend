@@ -14,11 +14,11 @@
 \import Paths.Meta
 \import Set.SetCategory
 
-\instance VPresheafComplete (C : SmallPrecat) (D : CompleteCat \levels (\suc \lp) _) : CompleteCat 
+\instance VPresheafComplete (C : SmallPrecat) (D : CompleteCat (\suc \lp)) : CompleteCat 
   | Cat => VPresheafCat D C
   | limit => limit'
   \where {
-    \func limit' {J : Precat \levels (\lp, \lp) _} (G : Functor J (VPresheafCat D C)) : Limit G => \new Limit {
+    \func limit' {J : Precat (\lp, \lp)} (G : Functor J (VPresheafCat D C)) : Limit G => \new Limit {
       | apex => apex
       | coneMap => cone-nat-map
       | coneCoh => \lam h => exts $ (\lam _ => coneCoh h)
@@ -73,9 +73,9 @@
   }
 
 
-\instance VPresheafCocomplete (C : SmallPrecat) (D : Cat \levels (\suc \lp) _) : CocompleteCat (VPresheafCat D C) => {?}
+\instance VPresheafCocomplete (C : SmallPrecat) (D : Cat (\suc \lp)) : CocompleteCat (VPresheafCat D C) => {?}
 
-\instance VPresheafCatBicomplete (C : SmallPrecat) (D : BicompleteCat \levels (\suc \lp) _) : BicompleteCat (VPresheafCat D C) 
+\instance VPresheafCatBicomplete (C : SmallPrecat) (D : BicompleteCat (\suc \lp)) : BicompleteCat (VPresheafCat D C) 
   | Cat => VPresheafCat D C
   | limit => limit {VPresheafComplete C D}
   | colimit => colimit {VPresheafCocomplete C D}

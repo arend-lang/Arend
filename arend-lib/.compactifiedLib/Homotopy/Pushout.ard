@@ -7,8 +7,7 @@
 \import Homotopy.Square
 \import Paths
 
-\class Pushout {
-  | square : Square
+\class Pushout (square : Square) {
   | pushout-univ {Z : \Type} : Equiv {square.Y -> Z} {Square {  | Y => Z  | U => square.U  | V => square.V  | X => square.X  | uv => square.uv  | ux => square.ux}} (Square.push square)
 }
   \where {
@@ -139,10 +138,36 @@
   }
   | pushout-univ => {?hidden_proof}
 
-\class EmbeddingPushout {
-  | A : \Type
-  | B : \Type
-  | C : \Type
-  | f : A -> B
-  | g : Embedding {A} {C}
+\class EmbeddingPushout (A : \Type) (B : \Type) (C : \Type) (f : A -> B) (g : Embedding {A} {C}) {
+  \func PO  => PushoutData f g
+
+  \func code (b0 : B) (w : PO) : \hType \elim w
+    | pinl b => b0 = b
+    | pinr c => \Sigma (a : A) (b0 = f a) (c = g a)
+    | pglue a => QEquiv-to-= (equiv b0 a)
+
+  \protected \lemma equiv (b0 : B) (a : A) : Equiv {b0 = f a} {\Sigma (a' : A) (b0 = f a') (g a = g a')} (a, __, idp) => {?hidden_proof}
+
+  \func encode (b0 : B) {w : PO} (p : pinl b0 = w) : code b0 w => transport (code b0) p idp
+
+  \func decode (b0 : B) {w : PO} (d : code b0 w) : pinl b0 = w \elim w
+    | pinl b => pmap pinl d
+    | pinr c => pmap pinl d.2 *> ppglue d.1 *> inv (pmap pinr d.3)
+    | pglue a i => 
+      \let t => transport_pi2 (code b0) (pinl b0 =) (ppglue a) (pmap pinl) (\lam x => pmap pinl x.2 *> ppglue x.1 *> inv (pmap pinr x.3)) 
+             (\lam p => Jl (\lam _ q => transport (pinl b0 =) q (pmap pinl p) = pmap pinl p *> q) idp (ppglue a))
+      \in (pathOver t @ i) d
+
+  \func encode_decode-left (b0 b : B) (d : code b0 (pinl b)) : encode b0 {pinl b} (decode b0 d) = d \elim d
+    | idp => idp
+
+  \func encode_decode-right (b0 : B) (c : C) (d : code b0 (pinr c)) : encode b0 {pinr c} (decode b0 d) = d \elim d
+    | (a, idp, idp) => pmap (encode (f a)) (idp_*> (ppglue a))
+
+  \func decode_enode (b0 : B) {w : PO} (p : pinl b0 = w) : decode b0 (encode b0 p) = p \elim p
+    | idp => idp
+
+  \lemma pushout-embedding : Embedding {B} {PO} pinl => {?hidden_proof}
+
+  \lemma pullback-path-equiv (b : B) (c : C) : Equiv {\Sigma (a : A) (b = f a) (c = g a)} {pinl b = {PO} pinr c} (decode b) => {?hidden_proof}
 }

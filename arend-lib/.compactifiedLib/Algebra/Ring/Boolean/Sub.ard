@@ -4,4 +4,8 @@
 
 \class SubBooleanPseudoRing \extends SubPseudoRing {
   \override S : BooleanRing
+
+  \func IBooleanPseudoRing : BooleanRing \cowith
+    | PseudoRing => IPseudoRing
+    | isBooleanRing => {?hidden_proof}
 }

@@ -3,10 +3,7 @@
 \open PrecatWithBprod
 \open PrecatWithTerminal
 
-\class BaseObject {
-  | C : CartesianPrecat
-  | E : C
-}
+\class BaseObject {C : CartesianPrecat} (E : C)
 
 \class CMonoidObject \extends BaseObject {
   | iide : Hom terminal.apex E

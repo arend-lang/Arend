@@ -20,7 +20,7 @@
 \import Data.Array
 \import Data.Or
 \import Equiv
-\import Function(Image)
+\import Function (Image)
 \import Function.Meta
 \import Logic
 \import Logic.Meta
@@ -99,7 +99,7 @@
   | LModule => ImageLModule f
   | isFinModule => {?hidden_proof}
   \where {
-    \lemma basis {U V : LModule R} (f : LinearMap U V) {lu' : Array U} (bu' : U.IsBasis lu') {lv' : Array V} (bv' : V.IsBasis lv') :
+    \protected \lemma basis {U V : LModule R} (f : LinearMap U V) {lu' : Array U} (bu' : U.IsBasis lu') {lv' : Array V} (bv' : V.IsBasis lv') :
       ∃ (l : Array (Image f)) (IsBasis {ImageLModule f} l) (l.len = rank (LinearMap.toMatrix lu' bv' f)) => {?hidden_proof}
 
     \lemma dimension_rank {f : LinearMap U V} {lu : Array U} (bu : U.IsBasis lu) {lv : Array V} (bv : V.IsBasis lv) :

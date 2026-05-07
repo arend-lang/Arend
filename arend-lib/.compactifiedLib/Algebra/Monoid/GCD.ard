@@ -15,17 +15,21 @@
 \import Paths.Meta
 \import Relation.Equivalence
 \import Set
-\open Monoid(LDiv, Inv)
-\open Preorder(PreorderC, EquivRel)
+\open Monoid (LDiv, Inv)
+\open Preorder (PreorderC, EquivRel)
 
-\class GCD {
-  | M : CMonoid
-  | val1 : M
-  | val2 : M
-  | res : M
-  | res|val1 : LDiv res val1
-  | res|val2 : LDiv res val2
-  | res-univ : \Pi (g : M) -> LDiv g val1 -> LDiv g val2 -> LDiv g res
+\record GCD {M : CMonoid} (val1 : M) (val2 : M) (\coerce res : M) (res|val1 : LDiv res val1) (res|val2 : LDiv res val2) (res-univ : \Pi (g : M) -> LDiv g val1 -> LDiv g val2 -> LDiv g res) {
+  \protected \func swap : GCD val2 val1 res res|val2 res|val1 \cowith
+    | res-univ => \lam g g|a g|b => res-univ g g|b g|a
+
+  \protected \func reduce (p : CMonoid.IsRegularElem res) : GCD res|val1.inv res|val2.inv 1 LDiv.ide-div LDiv.ide-div \cowith
+    | res-univ => \lam g (g|a : LDiv) (g|b : LDiv) => (
+      \let t : LDiv => res-univ (res * g) (\new LDiv {  | inv => g|a.inv  | inv-right => *-assoc *> rewrite g|a.inv-right res|val1.inv-right})
+             (\new LDiv {  | inv => g|b.inv  | inv-right => *-assoc *> rewrite g|b.inv-right res|val2.inv-right})
+      \in \new LDiv {
+            | inv => t.inv
+            | inv-right => p $ inv *-assoc *> t.inv-right *> inv ide-right
+          })
 }
   \where {
     \func ~-stable {M : CMonoid} {x y z z' : M} (z|z' : LDiv z z') (z'|z : LDiv z' z) (g : GCD x y z) : GCD x y z' \cowith
@@ -38,6 +42,37 @@
 \class GCDMonoid \extends CMonoid {
   | isGCD (x y : E) : TruncP (GCD x y)
   | gcd-ldistr (c : E) {x y z : E} : GCD x y z -> TruncP (GCD (c * x) (c * y) (c * z))
+
+  \lemma gcd-rdistr {x y z : E} (c : E) (gcd : GCD x y z) : TruncP (GCD (x * c) (y * c) (z * c)) => {?hidden_proof}
+
+  \lemma gcd_*-comm {a b c : E} (ab : GCD a b) (a_bc : GCD a (b * c)) : TruncP (GCD a (ab * c) a_bc) => {?hidden_proof}
+
+  \lemma gcd_*_div {a b c : E} (a|bc : LDiv a (b * c)) (ab : GCD a b) : TruncP (LDiv a (ab * c)) => {?hidden_proof}
+
+  \lemma coprime_*_div {a b c : E} (a|bc : LDiv a (b * c)) (a_b : IsCoprime a b) : TruncP (LDiv a c) => {?hidden_proof}
+
+  \lemma gcd_pow_div {a b : E} {n : Nat} (a|bc : LDiv a (pow b n)) (a_b : IsCoprime a b) : TruncP (LDiv a b) => {?hidden_proof}
+
+  \lemma IsCoprime_*-right {a b c : E} (a_b : IsCoprime a b) (a_c : IsCoprime a c) : IsCoprime a (b * c) => {?hidden_proof}
+
+  \lemma IsCoprime_*-left {a b c : E} (a_c : IsCoprime a c) (b_c : IsCoprime b c) : IsCoprime (a * b) c => {?hidden_proof}
+
+  \lemma IsCoprime_pow-left {a b : E} (a_b : IsCoprime a b) {n : Nat} : IsCoprime (Monoid.pow a n) b => {?hidden_proof}
+
+  \lemma IsCoprime_pow-right {a b : E} (a_b : IsCoprime a b) {n : Nat} : IsCoprime a (Monoid.pow b n) => {?hidden_proof}
+
+  \lemma IsCoprime_BigProd-right {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> IsCoprime a (l j)) : IsCoprime a (Monoid.BigProd l) => {?hidden_proof}
+
+  \lemma IsCoprime_BigProd-left {a : E} {l : Array E} (p : \Pi (j : Fin l.len) -> IsCoprime (l j) a) : IsCoprime (Monoid.BigProd l) a => {?hidden_proof}
+
+  \lemma coprime_*_div-left {d e a : E} (d_e : IsCoprime d e) (d|a : LDiv d a) (e|a : LDiv e a) : TruncP (LDiv (d * e) a) => {?hidden_proof}
+
+  \lemma coprime_BigProd_div-left {l : Array E} {a : E} (p : \Pi (i j : Fin l.len) -> i /= j -> IsCoprime (l i) (l j)) (l|a : \Pi (j : Fin l.len) -> LDiv (l j) a) : TruncP (LDiv (BigProd l) a) 
+    => {?hidden_proof}
+
+  \lemma split-equiv {a b c : E} (a|bc : LDiv a (b * c)) : ∃ (a1 a2 : E) (LDiv a (a1 * a2)) (LDiv (a1 * a2) a) (LDiv a1 b) (LDiv a2 c) => {?hidden_proof}
+
+  \lemma split-regular {a b c : E} (ar : IsRegularElem a) (a|bc : LDiv a (b * c)) : ∃ (a1 a2 : E) (a = a1 * a2) (LDiv a1 b) (LDiv a2 c) => {?hidden_proof}
 }
   \where {
     \func gcd-ldistr_cancel {M : CMonoid} {c x y z : M} (cancel : M.IsRegularElem c) (gcd : GCD x y z) (gcd' : GCD (c * x) (c * y)) : GCD (c * x) (c * y) (c * z) => 
@@ -52,13 +87,49 @@
 
 \class CancelGCDMonoid \extends GCDMonoid, CancelCMonoid {
   | gcd-ldistr => \lam c {x} {y} {z} (gcd : GCD x y z) => TruncP.map (isGCD (c * x) (c * y)) (GCDMonoid.gcd-ldistr_cancel (cancel_*-left c) gcd)
+
+  \protected \lemma gcd_*_div {a b c : E} (a|bc : LDiv a (b * c)) (ab : GCD a b) : LDiv a (ab * c) => {?hidden_proof}
+
+  \protected \lemma coprime_*_div {a b c : E} (a|bc : LDiv a (b * c)) (a_b : IsCoprime a b) : LDiv a c => {?hidden_proof}
+
+  \protected \lemma gcd_pow_div {a b : E} {n : Nat} (a|bc : LDiv a (pow b n)) (a_b : IsCoprime a b) : LDiv a b => {?hidden_proof}
+
+  \lemma div_unit : (\Pi (a b : E) -> Dec (LDiv a b)) <-> (\Pi (a : E) -> Dec (Inv a)) => {?hidden_proof}
 }
 
 \class UnitlessMonoid \extends CancelCMonoid {
   | uniqueUnit (j : Inv) : j.val = ide
+
+  \lemma div-eq {x y : E} (d1 : LDiv x y) (d2 : LDiv y x) : x = y => {?hidden_proof}
+
+  \lemma GCD-isProp (x y : E) : isProp (GCD x y) => {?hidden_proof}
+
+  \lemma gcd-isUnique {x y : E} (g g' : GCD x y) : g.res = g'.res => {?hidden_proof}
 }
 
-\class UnitlessGCDMonoid \extends UnitlessMonoid, CancelGCDMonoid
+\class UnitlessGCDMonoid \extends UnitlessMonoid, CancelGCDMonoid {
+  \lemma gcdC (x y : E) : \level (GCD x y) (GCD-isProp x y) => {?hidden_proof}
+
+  \protected \func gcd (x y : E) : E => gcdC x y
+
+  \lemma gcd_~ {x y : E} (g : GCD x y) : g.res = gcd x y => {?hidden_proof}
+
+  \lemma gcd_*-left (c a b : E) : c * gcd a b = gcd (c * a) (c * b) => {?hidden_proof}
+
+  \lemma gcd_*-right (a b c : E) : gcd a b * c = gcd (a * c) (b * c) => {?hidden_proof}
+
+  \func DivLattice : JoinSemilattice E \cowith
+    | <= => \lam x y => LDiv y x
+    | <=-refl => {?hidden_proof}
+    | <=-transitive => {?hidden_proof}
+    | <=-antisymmetric => {?hidden_proof}
+    | ∨ => gcd
+    | join-left => {?hidden_proof}
+    | join-right => {?hidden_proof}
+    | join-univ => {?hidden_proof}
+
+  \lemma gcd_*-comm (a b c : E) : gcd a (b * c) = gcd a (gcd a b * c) => {?hidden_proof}
+}
 
 \func DivQuotient (M : CMonoid) => PreorderC {DivPreoder M}
   \where {
@@ -69,7 +140,7 @@
 
     \func \infix 4 ~ {M : CMonoid} => Equivalence.~ {EquivRel {DivPreoder M}}
 
-    inD {M : CMonoid} (x : M) : DivQuotient M => in~ x
+    | inD {M : CMonoid} (x : M) : DivQuotient M => in~ x
 
     \lemma make~ {M : CMonoid} {x y : M} (p : inD x = inD y) : x ~ y => {?hidden_proof}
 

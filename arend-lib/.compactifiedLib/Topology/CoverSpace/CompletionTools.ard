@@ -17,7 +17,7 @@
 \import Topology.TopSpace.Product
 \open ProductCoverSpace
 
-lift2 {X : CoverSpace} (f : CoverMap (X ⨯ X) X) : CoverMap (Completion X ⨯ Completion X) (Completion X) 
+\sfunc lift2 {X : CoverSpace} (f : CoverMap (X ⨯ X) X) : CoverMap (Completion X ⨯ Completion X) (Completion X) 
   => dense-lift (prod completion completion) (prod.isDenseEmbedding completion.isDenseEmbedding completion.isDenseEmbedding) (completion CoverMap.∘ f)
 
 \lemma lift2-char {X : CoverSpace} {f : CoverMap (X ⨯ X) X} {x y : X} : lift2 f (pointCF x, pointCF y) = pointCF (f (x, y)) => {?hidden_proof}
