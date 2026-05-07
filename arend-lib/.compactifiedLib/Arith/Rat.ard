@@ -106,66 +106,38 @@
 \instance RatField : DiscreteOrderedField Rat 
   | zro => rat 0 1 (\case __ \with {}) idp
   | + => +
-  | zro-left => \lam {x} => rat_alt-inj $ +_alt *> AltRat.zro-left {rat_alt x}
-  | +-assoc => \lam {x} {y} {z} =>
-    rat_alt-inj $ +_alt *> pmap (AltRat.+ rat_alt z) +_alt *> AltRat.+-assoc {rat_alt x} {rat_alt y} {rat_alt z} *> inv (+_alt *> pmap (rat_alt x AltRat.+) +_alt)
-  | +-comm => \lam {x} {y} => rat_alt-inj $ +_alt *> AltRat.+-comm {rat_alt x} {rat_alt y} *> inv +_alt
+  | zro-left => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
+  | +-comm => {?hidden_proof}
   | ide => rat 1 1 (\case __ \with {}) idp
   | * => *
-  | ide-left => \lam {x} => rat_alt-inj $ *_alt *> AltRat.ide-left {rat_alt x}
-  | *-assoc => \lam {x} {y} {z} =>
-    rat_alt-inj $ *_alt *> pmap (__ AltRat.* rat_alt z) *_alt *> AltRat.*-assoc {rat_alt x} {rat_alt y} {rat_alt z} *> inv (*_alt *> pmap (rat_alt x AltRat.*) *_alt)
-  | ldistr => \lam {x} {y} {z} =>
-    rat_alt-inj $ *_alt *> pmap (rat_alt x AltRat.*) +_alt *> AltRat.ldistr {rat_alt x} {rat_alt y} {rat_alt z} *> inv (+_alt *> pmap2 AltRat.+ *_alt *_alt)
+  | ide-left => {?hidden_proof}
+  | *-assoc => {?hidden_proof}
+  | ldistr => {?hidden_proof}
   | negative => negative
-  | negative-left => \lam {x} => rat_alt-inj $ +_alt *> pmap (AltRat.+ rat_alt x) negative_alt *> AltRat.negative-left {rat_alt x} *> LocRing.equals1 idp
-  | *-comm => \lam {x} {y} => rat_alt-inj $ *_alt *> AltRat.*-comm {rat_alt x} {rat_alt y} *> inv *_alt
+  | negative-left => {?hidden_proof}
+  | *-comm => {?hidden_proof}
   | isPos => \lam x => isPos (ratNom x)
-  | zro/>0 => \case __ \with {}
-| positive_+ => mcases {+}
-| ide>zro => idp
-| positive_* => \lam {x} {y} => cases (x, y) (makeRat.signum_nom *> IntRing.positive_* __ __)
-| finv => finv
-| finv_zro => idp
-| finv-right => \lam {x} x/=0 => (
-  \have t : ratNom x IntRing.* ratNom (finv x) = ratDenom x Nat.* ratDenom (finv x) => \case \elim x, \elim x/=0 \with {
-          | rat 0 b _ r, x/=0 => absurd (x/=0 (rat_alt-inj (LocRing.equals1 (later simplify))))
-          | rat pos suc n b b/=0 reduced, _ => pmap pos *-comm
-          | rat neg suc n b b/=0 reduced, _ => pmap pos *-comm
-        }
-  \in rat_alt-inj $ *_alt *> LocRing.equals1 (ide-right *> t *> inv ide-left))
-| decideEq => \lam x y => (\case decideEq (ratNom x) (ratNom y), decideEq (ratDenom x) (ratDenom y) \with {
-  | yes p, yes q => yes (Rat.ext p q)
-  | no p, _ => no (\lam x=y => p $ pmap ratNom x=y)
-  | _, no q => no (\lam x=y => q $ pmap ratDenom x=y)
-})
-| #0=>eitherPosOrNeg => \lam {x} xInv => (\case \elim x, \elim xInv \with {
-  | rat n1 d1 d1/=0 r1, (rat n2 d2 d2/=0 r2, il, _) =>
-    IntRing.#0=>eitherPosOrNeg {n1} (\lam n1=0 => (\case inv makeRat.simp *> (rewrite (n1=0, IntRing.zro_*-right) in il) \with {}))
-})
-| natCoef => \lam n => rat n 1 (\case __ \with {}) idp
-| natCoefZero => idp
-| natCoefSuc => \lam n => idp
-| meet => meet
-| meet-left => \lam {x} {y} => (\case \elim x, \elim y \with {
-  | rat n1 d1 _ r1, rat n2 d2 _ _ => mcases
-})
-| meet-right => \lam {x} {y} => (\case \elim x, \elim y \with {
-  | rat n1 d1 _ _, rat n2 d2 _ _ => mcases
-})
-| meet-univ => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
-  | rat n1 d1 _ _, rat n2 d2 _ _, rat n3 d3 _ _ => \lam p q => mcases
-})
-| join => join
-| join-left => \lam {x} {y} => (\case \elim x, \elim y \with {
-  | rat n1 d1 _ _, rat n2 d2 _ r2 => mcases
-})
-| join-right => \lam {x} {y} => (\case \elim x, \elim y \with {
-  | rat n1 d1 _ _, rat n2 d2 _ _ => mcases
-})
-| join-univ => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
-  | rat n1 d1 _ _, rat n2 d2 _ _, rat n3 d3 _ _ => \lam p q => mcases
-})
+  | zro/>0 => {?hidden_proof}
+  | positive_+ => {?hidden_proof}
+  | ide>zro => {?hidden_proof}
+  | positive_* => {?hidden_proof}
+  | finv => finv
+  | finv_zro => {?hidden_proof}
+  | finv-right => {?hidden_proof}
+  | decideEq => {?hidden_proof}
+  | #0=>eitherPosOrNeg => {?hidden_proof}
+  | natCoef => \lam n => rat n 1 (\case __ \with {}) idp
+  | natCoefZero => {?hidden_proof}
+  | natCoefSuc => {?hidden_proof}
+  | meet => meet
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}
+  | join => join
+  | join-left => {?hidden_proof}
+  | join-right => {?hidden_proof}
+  | join-univ => {?hidden_proof}
   \where {
     \lemma productNonZero {n m : Nat} (n/=0 : Not (n = 0)) (m/=0 : Not (m = 0)) : Not (n Nat.* m = 0) => {?hidden_proof}
 

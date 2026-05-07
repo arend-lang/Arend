@@ -25,16 +25,16 @@
     | func-ide => pmap g f.func-ide *> g.func-ide
     | func-* => pmap g f.func-* *> g.func-*
   }
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam p1 p2 => exts (p1.func-ide, \lam _ _ => p1.func-*))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
   \where {
     \func forget : Functor MonoidCat SetCat \cowith
       | F => \lam R => R
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
   }
 
 
@@ -63,18 +63,14 @@
         | func-ide => f.func-op 0 nil
         | func-* => \lam {x} {y} => f.func-op 1 (x :: y :: nil)
       }
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
       | LAdj => monoidToMod.functor
       | eta {
         | trans => \lam M => id M
         | natural => \lam f => idp
       }
-      | eta-iso => \lam {X} => \new Iso {
-        | hinv => id X
-        | hinv_f => idp
-        | f_hinv => idp
-      }
+      | eta-iso => {?hidden_proof}
       | epsilon {
         | trans => \lam M => \new ModelHom {
           | funcs => \lam x => x
@@ -86,27 +82,16 @@
         }
         | natural => \lam f => idp
       }
-      | eta_epsilon-left => idp
-      | eta_epsilon-right => idp
-      | epsilon-iso => \lam {Y} => \new Iso {
-        | hinv => \new ModelHom {
-          | funcs => \lam y => y
-          | func-op => \case \elim __ \with {
-            | 0 => \lam d => idp
-            | 1 => \lam d => idp
-          }
-        | func-rel => \case __ \with {}
-      }
-      | hinv_f => idp
-      | f_hinv => idp
-      }
+      | eta_epsilon-left => {?hidden_proof}
+      | eta_epsilon-right => {?hidden_proof}
+      | epsilon-iso => {?hidden_proof}
 
     \func modToMonoid (M : Model theory) : Monoid (M ()) \cowith
       | ide => operation 0 nil
       | * => \lam x y => operation 1 (x :: y :: nil)
-      | ide-left => \lam {x} => M.isModel _ (inP (0, idp)) (\lam _ => x) (\case __ \with {})
-      | ide-right => \lam {x} => M.isModel _ (inP (1, idp)) (\lam _ => x) (\case __ \with {})
-      | *-assoc => \lam {x} {y} {z} => M.isModel _ (inP (2, idp)) (\lam {_} => x :: y :: z :: nil) (\case __ \with {})
+      | ide-left => {?hidden_proof}
+      | ide-right => {?hidden_proof}
+      | *-assoc => {?hidden_proof}
 
     \func monoidToMod (M : Monoid) : Model theory (\lam _ => M) \cowith
       | operation => \case \elim __ \with {
@@ -114,11 +99,7 @@
         | 1 => \lam l => l 0 * l 1
       }
     | relation => \case __ \with {}
-    | isModel => \case \elim __, __ \with {
-    | _, inP (0, idp) => \lam rho _ => ide-left
-    | _, inP (1, idp) => \lam rho _ => ide-right
-    | _, inP (2, idp) => \lam rho _ => *-assoc
-    }
+    | isModel => {?hidden_proof}
       \where {
         \func functor : Functor MonoidCat (ModelCat theory) monoidToMod \cowith
           | Func => \lam (f : MonoidHom) => \new ModelHom {
@@ -129,8 +110,8 @@
             }
           | func-rel => \case __ \with {}
           }
-          | Func-id => idp
-          | Func-o => idp
+          | Func-id => {?hidden_proof}
+          | Func-o => {?hidden_proof}
       }
 
   }
@@ -144,64 +125,64 @@
     | func-zro => pmap g func-zro *> func-zro
     | func-+ => pmap g func-+ *> func-+
   }
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam p1 p2 => exts (p1.func-zro, \lam _ _ => p1.func-+))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
   \where {
     \func forget : Functor AddMonoidCat SetCat \cowith
       | F => \lam R => R
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
   }
 
 
 \instance KerAddMonoid (f : AddMonoidHom) : AddMonoid 
   | AddPointed => KerAddPointed f
   | + => \lam a b => (a.1 + b.1, func-+ *> pmap2 + a.2 b.2 *> zro-left)
-  | zro-left => ext zro-left
-  | zro-right => ext zro-right
-  | +-assoc => ext +-assoc
+  | zro-left => {?hidden_proof}
+  | zro-right => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
 
 \func KerMonoidHom (f : AddMonoidHom) : AddMonoidHom (KerAddMonoid f) f.Dom \cowith
   | AddPointedHom => KerPointedHom f
-  | func-+ => idp
+  | func-+ => {?hidden_proof}
 
 \instance KerAbMonoid {A : AbMonoid} (f : AddMonoidHom A) : AbMonoid (Kernel f) 
   | AddMonoid => KerAddMonoid f
-  | +-comm => ext +-comm
+  | +-comm => {?hidden_proof}
 
 \instance ImageAddMonoid (f : AddMonoidHom) : AddMonoid 
   | AddPointed => ImageAddPointed f
   | + => \lam a b => (a.1 + b.1, \case a.2, b.2 \with {  | inP t, inP s => inP (t.1 + s.1, func-+ *> pmap2 + t.2 s.2)})
-  | zro-left => ext zro-left
-  | zro-right => ext zro-right
-  | +-assoc => ext +-assoc
+  | zro-left => {?hidden_proof}
+  | zro-right => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
 
 \instance ImageMonoid (f : MonoidHom) : Monoid 
   | Pointed => ImagePointed f
   | * => \lam a b => (a.1 * b.1, \case a.2, b.2 \with {  | inP t, inP s => inP (t.1 * s.1, func-* *> pmap2 * t.2 s.2)})
-  | ide-left => ext ide-left
-  | ide-right => ext ide-right
-  | *-assoc => ext *-assoc
+  | ide-left => {?hidden_proof}
+  | ide-right => {?hidden_proof}
+  | *-assoc => {?hidden_proof}
 
 \func ImageMonoidLeftHom (f : MonoidHom) : MonoidHom f.Dom (ImageMonoid f) \cowith
   | PointedHom => ImagePointedLeftHom f
-  | func-* => ext func-*
+  | func-* => {?hidden_proof}
 
 \func ImageMonoidRightHom (f : MonoidHom) : MonoidHom (ImageMonoid f) f.Cod \cowith
   | PointedHom => ImagePointedRightHom f
-  | func-* => idp
+  | func-* => {?hidden_proof}
 
 \func ImageAddMonoidLeftHom (f : AddMonoidHom) : AddMonoidHom f.Dom (ImageAddMonoid f) \cowith
   | AddPointedHom => ImageAddPointedLeftHom f
-  | func-+ => ext func-+
+  | func-+ => {?hidden_proof}
 
 \func ImageAddMonoidRightHom (f : AddMonoidHom) : AddMonoidHom (ImageAddMonoid f) f.Cod \cowith
   | AddPointedHom => ImageAddPointedRightHom f
-  | func-+ => idp
+  | func-+ => {?hidden_proof}
 
 \instance ImageAbMonoid {A : AddMonoid} {B : AbMonoid} (f : AddMonoidHom A B) : AbMonoid 
   | AddMonoid => ImageAddMonoid f
-  | +-comm => ext +-comm
+  | +-comm => {?hidden_proof}

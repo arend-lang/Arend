@@ -16,9 +16,9 @@
   \where {
     \func principal {A : TopMeetSemilattice} (a : A) : Filter A \cowith
       | F => a <=
-      | filter-mono => <=∘
-      | filter-top => top-univ
-      | filter-meet => meet-univ
+      | filter-mono => {?hidden_proof}
+      | filter-top => {?hidden_proof}
+      | filter-meet => {?hidden_proof}
   }
 
 
@@ -34,9 +34,9 @@
 
 \func SetFilter-map {X Y : \Set} (f : X -> Y) (F : SetFilter X) : SetFilter Y \cowith
   | F => \lam V => F (f ^-1 V)
-  | filter-mono => \lam d p => filter-mono d (p __)
-  | filter-top => filter-top
-  | filter-meet => filter-meet
+  | filter-mono => {?hidden_proof}
+  | filter-top => {?hidden_proof}
+  | filter-meet => {?hidden_proof}
 
 \class WeaklyProperFilter \extends SetFilter {
   | isWeaklyProper : Not (F bottom)
@@ -51,24 +51,24 @@
 
 \func pointFilter {X : \Set} (x : X) : ProperFilter X \cowith
   | F => \lam U => U x
-  | filter-mono => \lam d p => p d
-  | filter-top => ()
-  | filter-meet => \lam p q => (p, q)
-  | isProper => \lam Ux => inP (x, Ux)
+  | filter-mono => {?hidden_proof}
+  | filter-top => {?hidden_proof}
+  | filter-meet => {?hidden_proof}
+  | isProper => {?hidden_proof}
 
 \func WeaklyProperFilter-map {X Y : \Set} (f : X -> Y) (F : WeaklyProperFilter X) : WeaklyProperFilter Y \cowith
   | SetFilter => SetFilter-map f F
-  | isWeaklyProper => \lam d => F.isWeaklyProper $ F.filter-mono d (\lam inP ((), _) => {?})
+  | isWeaklyProper => {?hidden_proof}
 
 \func ProperFilter-map {X Y : \Set} (f : X -> Y) (F : ProperFilter X) : ProperFilter Y \cowith
   | SetFilter => SetFilter-map f F
-  | isProper => \lam d => TruncP.map (isProper d) (\lam s => (f s.1, s.2))
+  | isProper => {?hidden_proof}
 
 \instance WeaklyProperFilterSemilattice (X : \Set) : MeetSemilattice (WeaklyProperFilter X) 
   | <= => \lam F G => F ⊆ G
-  | <=-refl => \lam c => c
-  | <=-transitive => \lam f g c => g (f c)
-  | <=-antisymmetric => \lam f g => exts (\lam U => ext (f, g))
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
   | meet => \lam F G => \new WeaklyProperFilter {
     | F => \lam U => \Sigma (F U) (G U)
     | filter-mono => \lam s p => (filter-mono s.1 p, filter-mono s.2 p)
@@ -76,15 +76,15 @@
     | filter-meet => \lam s t => (filter-meet s.1 t.1, filter-meet s.2 t.2)
     | isWeaklyProper => \lam s => isWeaklyProper s.1
   }
-  | meet-left => \lam s => s.1
-  | meet-right => \lam s => s.2
-  | meet-univ => \lam f g c => (f c, g c)
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}
 
 \instance ProperFilterSemilattice (X : \Set) : MeetSemilattice (ProperFilter X) 
   | <= => \lam F G => F ⊆ G
-  | <=-refl => \lam c => c
-  | <=-transitive => \lam f g c => g (f c)
-  | <=-antisymmetric => \lam f g => exts (\lam U => ext (f, g))
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
   | meet => \lam F G => \new ProperFilter {
     | F => \lam U => \Sigma (F U) (G U)
     | filter-mono => \lam s p => (filter-mono s.1 p, filter-mono s.2 p)
@@ -92,6 +92,6 @@
     | filter-meet => \lam s t => (filter-meet s.1 t.1, filter-meet s.2 t.2)
     | isProper => \lam s => isProper s.1
   }
-  | meet-left => \lam s => s.1
-  | meet-right => \lam s => s.2
-  | meet-univ => \lam f g c => (f c, g c)
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}

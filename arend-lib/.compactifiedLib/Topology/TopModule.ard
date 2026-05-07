@@ -29,27 +29,20 @@
 \func RingTopLModule (R : TopRing) : TopLModule R R \cowith
   | TopAbGroup => R
   | *c => *
-  | *c-assoc => *-assoc
-  | *c-ldistr => ldistr
-  | *c-rdistr => rdistr
-  | ide_*c => ide-left
-  | *c-cont => *-cont
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
+  | *c-cont => {?hidden_proof}
 
 \instance ProductTopLModule {R : TopRing} (X Y : TopLModule R) : TopLModule R (\Sigma X Y) 
   | TopAbGroup => ProductTopAbGroup X Y
   | *c => \lam r (x, y) => (r *c x, r *c y)
-  | *c-assoc => ext (*c-assoc, *c-assoc)
-  | *c-ldistr => ext (*c-ldistr, *c-ldistr)
-  | *c-rdistr => ext (*c-rdistr, *c-rdistr)
-  | ide_*c => ext (ide_*c, ide_*c)
-  | *c-cont => \new ContMap {
-    | func-cont => \lam {W} f {(r, s)} Wst => (\case f Wst \with {
-      | inP (U, Uo, Ust, V, Vo, Vst, g) => \case *c-cont.func-cont Uo {(r, s.1)} Ust, *c-cont.func-cont Vo {(r, s.2)} Vst \with {
-        | inP (U1, U1o, U1s1, V1, V1o, V1t1, f1), inP (U2, U2o, U2s2, V2, V2o, V2t2, f2) =>
-          inP (U1 ∧ U2, open-inter U1o U2o, (U1s1, U2s2), Set.Prod V1 V2, Prod-open V1o V2o, (V1t1, V2t2), \lam c d => g (f1 c.1 d.1) (f2 c.2 d.2))
-      }
-    })
-  }
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
+  | *c-cont => {?hidden_proof}
 
 \instance TopLModuleHasProduct (R : TopRing) : HasProduct (TopLModule R) 
   | Product => ProductTopLModule {R}

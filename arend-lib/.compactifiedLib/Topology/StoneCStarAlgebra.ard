@@ -103,13 +103,9 @@
 \instance RealStoneC*Algebra : StoneC*Algebra Real 
   | CompleteExNormedAbGroup => RealValuedRing
   | CRing => RealField
-  | isDivisible => \lam a {n} n/=0 => inP (RatField.finv n RealField.* a,  inv RealField.natCoef_*_*n *> inv *-assoc *> pmap (* a) 
-    (pmap (* _) (inv RealField.coefMap_natCoef) *> RealField.*-rat *> pmap Real.fromRat (RatField.finv-right $ natRat/=0 n/=0)) *> ide-left)
-  | norm_ide_<= => Real.<=-upper.1 $ join-univ <=-refl $ RealAbGroup.negative<=0 (<=-less RealAbGroup.zro<ide) <=∘ <=-less RealAbGroup.zro<ide
-  | norm_*n => \lam {n} {x} => pmap RealAbGroup.abs (inv RealField.natCoef_*_*n) *> RealField.abs_* *> pmap (RealField.* _) 
-    (pmap RealAbGroup.abs (inv RealField.coefMap_natCoef) *> RealAbGroup.abs-rat) *> RealField.*-upper (rat_real_<=.1 $ RatField.abs>=0 {n}) 
-    RealAbGroup.abs>=0
-  | norm_*_<= => transportInv (<= _) (RealField.abs_* *> RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0) <=-refl
-  | c*-sum => Real.<=-upper.1 $ join-univ (=_<= (inv zro-right) <=∘ <=_+ <=-refl RealField.square_>=0 <=∘ join-left) 
-    (RealAbGroup.negative<=0 RealField.square_>=0 <=∘ RealAbGroup.abs>=0)
-  | c*-square => transport (ExUpperRealAbMonoid.<= _) (RealField.*-upper RealAbGroup.abs>=0 RealAbGroup.abs>=0) $ =_<= $ Real.=-upper.1 (inv RealField.abs_*)
+  | isDivisible => {?hidden_proof}
+  | norm_ide_<= => {?hidden_proof}
+  | norm_*n => {?hidden_proof}
+  | norm_*_<= => {?hidden_proof}
+  | c*-sum => {?hidden_proof}
+  | c*-square => {?hidden_proof}

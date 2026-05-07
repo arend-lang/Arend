@@ -64,8 +64,8 @@
   \where {
     \func DivPreoder (M : CMonoid) : Preorder M \cowith
       | <= => \lam x y => TruncP (LDiv y x)
-      | <=-refl => \lam {x} => inP (\new (LDiv x x ide ide-right))
-      | <=-transitive => \lam {x} {y} {z} inP y|x inP z|y => inP (LDiv.trans z|y y|x)
+      | <=-refl => {?hidden_proof}
+      | <=-transitive => {?hidden_proof}
 
     \func \infix 4 ~ {M : CMonoid} => Equivalence.~ {EquivRel {DivPreoder M}}
 
@@ -82,11 +82,10 @@
       | Poset => Preorder.PosetC {DivPreoder M}
       | ide => inD ide
       | * => *'
-      | ide-left => \lam {inD x} => pmap inD ide-left
-      | *-assoc => \lam {inD x} {inD y} {inD z} => pmap inD *-assoc
-      | *-comm => \lam {inD x} {inD y} => pmap inD *-comm
-      | <=_*-left => \lam inD z {inD x} {inD y} inP y|x : LDiv =>
-        inP (\new LDiv {  | inv => y|x.inv  | inv-right => pmap (* _) *-comm *> *-assoc *> pmap (z *) y|x.inv-right *> *-comm})
+      | ide-left => {?hidden_proof}
+      | *-assoc => {?hidden_proof}
+      | *-comm => {?hidden_proof}
+      | <=_*-left => {?hidden_proof}
       \where {
         \func \infixl 7 *' {M : CMonoid} (x y : DivQuotient M) : DivQuotient M 
           | inD x, inD y => inD (x * y)
@@ -97,14 +96,14 @@
 
     \func inDHom (M : CMonoid) : MonoidHom M (DivQuotientMonoid M) \cowith
       | func => inD
-      | func-ide => idp
-      | func-* => idp
+      | func-ide => {?hidden_proof}
+      | func-* => {?hidden_proof}
 
     \lemma inv~ide {M : CMonoid} (i : Inv {M}) : i ~ ide => {?hidden_proof}
 
     \func div-to~ {M : CMonoid} {x y : M} (x|y : LDiv x y) : LDiv (inD x) (inD y) \cowith
       | inv => inD x|y.inv
-      | inv-right => pmap inD x|y.inv-right
+      | inv-right => {?hidden_proof}
 
     \lemma div-from~' {M : CMonoid} {x y : M} (d : LDiv (inD x) (inD y)) : TruncP (LDiv x y) => {?hidden_proof}
 
@@ -112,27 +111,17 @@
 
     \instance DivQuotientCancelMonoid (M : CancelCMonoid) : UnitlessMonoid 
       | CMonoid => DivQuotientMonoid M
-      | cancel_*-left => \lam inD x {inD y} {inD z} x*y=x*z => path
-        (~-equiv y z (\case make~ x*y=x*z \return y ~ z \with {  | (inP x*z|x*y, inP x*y|x*z) => (inP (LDiv.cancel-left x x*z|x*y), inP (LDiv.cancel-left x x*y|x*z))}))
-      | uniqueUnit => \lam (j : Inv) => (\case j.val \as [x], j.inv \as [y], j.inv-right : [x] * [y] = inD ide \return [x] = inD ide \with {
-        | inD x, inD y, p => path (~-equiv x ide (inv~ide (  \have d : LDiv x ide => div-from~ (\new LDiv {  | inv => inD y  | inv-right => p})  \in Inv.rmake d.inv d.inv-right)))
-      })
+      | cancel_*-left => {?hidden_proof}
+      | uniqueUnit => {?hidden_proof}
 
     \func map {M N : CMonoid} (f : MonoidHom M N) : MonoidHom (DivQuotientMonoid M) (DivQuotientMonoid N) \cowith
       | func => Quotient.map f (\lam p => later (TruncP.map p.1 f.func-LDiv, TruncP.map p.2 f.func-LDiv))
-      | func-ide => pmap in~ f.func-ide
-      | func-* => \lam {x} {y} => (\case \elim x, \elim y \with {
-        | in~ a, in~ a' => pmap in~ f.func-*
-      })
+      | func-ide => {?hidden_proof}
+      | func-* => {?hidden_proof}
 
     \instance DivQuotientGCDMonoid (M : CancelGCDMonoid) : UnitlessGCDMonoid 
       | UnitlessMonoid => DivQuotientCancelMonoid M
-      | isGCD => \lam inD x inD y => TruncP.map (isGCD x y)
-        (\lam (g : GCD x y) => \new (GCD (inD x) (inD y) (inD g)) {  | res|val1 => div-to~ g.res|val1  | res|val2 => div-to~ g.res|val2
-        | res-univ => \lam [g'] [g']|x [g']|y => (\case \elim [g'], [g']|x, [g']|y \return \level (LDiv [g'] (inD g)) (LDiv.levelProp [g'] (inD g)) \with {
-          | inD g', (inD x', ~x'*g'=x), (inD y', ~y'*g'=y) => div-to~
-            (g.res-univ g' (div-from~ (\new LDiv {  | inv => inD x'  | inv-right => ~x'*g'=x})) (div-from~ (\new LDiv {  | inv => inD y'  | inv-right => ~y'*g'=y})))
-          })})
+      | isGCD => {?hidden_proof}
 
     \func gcd-to~ {M : CancelCMonoid} {x y z : M} (g : GCD x y z) : GCD (inD x) (inD y) (inD z) \cowith
       | res|val1 => div-to~ g.res|val1

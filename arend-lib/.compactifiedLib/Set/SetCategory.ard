@@ -20,12 +20,10 @@
   | Hom => \lam X Y => X -> Y
   | id => \lam _ => \lam x => x
   | o => \lam g f => \lam x => g (f x)
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => Cat.makeUnivalence $ later
-    (\lam (e : Iso) => (  \let p => path (iso e.f e.hinv (\lam x => path ((e.hinv_f @ __) x)) (\lam y => path ((e.f_hinv @ __) y)))
-    \in (p, simp_coe (\lam d => idp))))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
 
 SIP_Set (Str : \Set -> \hType (\suc \lp)) (isHom : \Pi {x y : \Set} -> Str x -> Str y -> (x -> y) -> \hType (\suc \lp)) 
 (st : \Pi {X : \Set} {S1 S2 : Str X} -> isHom S1 S2 (\lam x => x) -> isHom S2 S1 (\lam x => x) -> S1 = S2) {X Y : \Set} (e : Iso {SetCat} {X} {Y}) 
@@ -38,21 +36,14 @@ SIP_Set (Str : \Set -> \hType (\suc \lp)) (isHom : \Pi {x y : \Set} -> Str x -> 
   | apex => Trunc0 (\Sigma (j : J) (F j))
   | proj => \lam j x => in0 (j, x)
   | tupleMap => \lam f in0 (j, x) => f j x
-  | tupleBeta => idp
-  | tupleEq => \lam e => ext (\case \elim __ \with {  | in0 (j, x) => pmap (__ x) (e j)})
+  | tupleBeta => {?hidden_proof}
+  | tupleEq => {?hidden_proof}
 
 \instance SetCoequalizer {X Y : \Set} (f g : X -> Y) : Equalizer {SetCat.op} f g 
   | apex => Quotient (\lam y y' => \Sigma (x : X) (f x = y) (g x = y'))
   | eql => in~
-  | equal => ext (\lam x => path (~-equiv _ _ (later (x, idp, idp))))
-  | isEqualizer => \lam Z => \new QEquiv {
-    | ret => \lam (h, p) => (\case __ \with {
-      | in~ y => h y
-      | ~-equiv y y' (x, fx=y, gx=y') => inv (pmap h fx=y) *> pmap (__ x) p *> pmap h gx=y'
-    })
-    | ret_f => \lam h => ext (\case \elim __ \with {  | in~ y => idp})
-    | f_sec => \lam (h, p) => ext idp
-  }
+  | equal => {?hidden_proof}
+  | isEqualizer => {?hidden_proof}
 
 \instance SetBicat : BicompleteCat 
   | Cat => SetCat
@@ -101,8 +92,8 @@ SIP_Set (Str : \Set -> \hType (\suc \lp)) (isHom : \Pi {x y : \Set} -> Str x -> 
 \func NatFunctor {C : Precat} (F : Nat -> C) (f : \Pi {n : Nat} -> Hom (F n) (F (suc n))) : Functor NatSemiring C \cowith
   | F => F
   | Func => \lam p => natHom (_, <=_exists p)
-  | Func-id => pmap natHom (sigma-isProp _ (0, idp)) *> natHom_id
-  | Func-o => pmap natHom (sigma-isProp _ _) *> natHom-comp
+  | Func-id => {?hidden_proof}
+  | Func-o => {?hidden_proof}
   \where {
     \lemma sigma-isProp {n m : Nat} : isProp (\Sigma (k : Nat) (n + k = m)) => {?hidden_proof}
 

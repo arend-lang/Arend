@@ -40,9 +40,9 @@
 
 \func convRadius {X : ExPseudoNormedRing} (cs : Nat -> X) : LowerReal \cowith
   | L => \lam a => ∃ (b : > a) (IsConvUpperSeries (\lam j => X.norm (cs j) * pow b j))
-  | L-inh => inP (-1, inP (0, idp, powerSeries_0 (\lam j => norm-bounded _)))
-  | L-closed => \lam inP (b, q<b, h) q'<q => inP (b, q'<q <∘ q<b, h)
-  | L-rounded => \lam {a} inP (b, a<b, h) => inP (RatField.mid a b, inP (b, RatField.mid<right a<b, h), RatField.mid>left a<b)
+  | L-inh => {?hidden_proof}
+  | L-closed => {?hidden_proof}
+  | L-rounded => {?hidden_proof}
 
 \lemma convRadius-absConv {X : ExPseudoNormedRing} (cs : Nat -> X) {x : X} (p : norm x <LU convRadius cs) : IsAbsConvSeries (powerSeries cs __ x) => {?hidden_proof}
 

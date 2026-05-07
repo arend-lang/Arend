@@ -23,10 +23,10 @@
     | func => f Function.o g
     | func-<= => \lam leq => func-<= (func-<= leq)
   }
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam {_} {_} {_} p p1 => ext (ext (\lam _ _ => ext (\lam _x => func-<= {p} _x, \lam _x => func-<= {p1} _x))))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
 
 \class StrictPosetHom \extends SetHom {
   \override Dom : StrictPoset
@@ -42,10 +42,10 @@
     | func => f Function.o g
     | func-< => \lam leq => func-< (func-< leq)
   }
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam {_} {_} {_} p p1 => ext (ext (\lam _ _ => ext (\lam _x => func-< {p} _x, \lam _x => func-< {p1} _x))))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
 
 \instance DecLinearOrderCat : Cat 
   | Ob => LinearOrder.Dec
@@ -58,13 +58,7 @@
     | func => \lam x => f (g x)
     | func-<= => \lam p1 => func-<= {f} (func-<= {g} p1)
   }
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam {A} {S1 S2 : LinearOrder.Dec} (f : PosetHom) (g : PosetHom) => (ext LinearOrder.Dec) {
-    | < => ext (\lam _ _ => ext (\lam l => LinearOrder.<=_/= (f.func-<= (LinearOrder.<_<= l)) (StrictPoset.<_/= l), 
-      \lam l => LinearOrder.<=_/= (g.func-<= (LinearOrder.<_<= l)) (StrictPoset.<_/= l)))  | meet => ext
-      (\lam _ _ => S1.<=-antisymmetric (g.func-<= (meet-univ (f.func-<= meet-left) (f.func-<= meet-right))) (meet-univ (g.func-<= meet-left) (g.func-<= meet-right)))
-    | join => ext
-      (\lam _ _ => S2.<=-antisymmetric (f.func-<= (join-univ (g.func-<= join-left) (g.func-<= join-right))) (join-univ (f.func-<= join-left) (f.func-<= join-right)))
-    | # => ext (\lam _ _ => ext (\lam a => nonEqualApart (Set#.apartNotEqual a), \lam a => nonEqualApart (Set#.apartNotEqual a)))})
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}

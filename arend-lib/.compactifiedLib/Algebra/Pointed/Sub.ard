@@ -8,7 +8,7 @@
   \where {
     \func max {A : Pointed} : SubPointed \cowith
       | SubSet => DecSubSet.max {A}
-      | contains_ide => ()
+      | contains_ide => {?hidden_proof}
   }
 
 
@@ -21,5 +21,5 @@
   \where {
     \func max {A : AddPointed} : SubAddPointed \cowith
       | SubSet => DecSubSet.max {A}
-      | contains_zro => ()
+      | contains_zro => {?hidden_proof}
   }

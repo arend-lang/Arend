@@ -19,9 +19,9 @@
 \func KernelSubLRepres {R : Ring} {G : Group} {A B : LinRepres R G} (f : InterwiningMap A B) : SubLRepres A \cowith
   | S => KerLRepres f
   | in => KerLRepresHom f
-  | in-mono => \lam {a a' : KerLRepres f} => \lam (p : KerLRepresHom f a = KerLRepresHom f a') => exts p
+  | in-mono => {?hidden_proof}
 
 \func ImageSubLRepres {R : Ring} {G : Group} {A B : LinRepres R G} (f : InterwiningMap A B) : SubLRepres B \cowith
   | S => ImageLRepres {R} {G} {A} {B} f
   | in => ImageLRepresRightHom f
-  | in-mono => \lam {a a' : ImageLRepres f} => \lam (p : ImageLRepresRightHom f a = ImageLRepresRightHom f a') => ext p
+  | in-mono => {?hidden_proof}

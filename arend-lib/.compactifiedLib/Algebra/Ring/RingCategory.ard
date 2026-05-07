@@ -31,31 +31,30 @@
   | Hom => \lam M N => RingHom M N
   | id => \lam _ => RingHom.id
   | o => RingHom.∘
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam {X} {R} {S} (p1 : RingHom) _ =>
-    exts (p1.func-zro, \lam _ _ => p1.func-+, \lam _ _ => p1.func-*, AddGroup.negative-equality R S p1.func-zro p1.func-+, p1.func-ide, natCoefUnique R S p1))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
   \where {
     \lemma natCoefUnique {X : \Set} (R S : Ring X) (h : RingHom R S (\lam x => x)) (n : Nat) : R.natCoef n = S.natCoef n => {?hidden_proof}
 
     \func forgetToAbGroup : Functor RingCat AbGroupCat \cowith
       | F => \lam R => R
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
 
     \func forgetToMonoid : Functor RingCat MonoidCat \cowith
       | F => \lam R => R
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
 
     \func forget : Functor RingCat SetCat \cowith
       | F => \lam R => R
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
 
     \lemma Group-Iso->Ring-Iso {G H : Ring} {f : RingHom G H} (f_iso : Iso {GroupCat} (AddGroupHom.toGroupHom f)) : Iso {RingCat} f => {?hidden_proof}
 
@@ -75,14 +74,14 @@
     \func forgetToRing : Functor CRingCat RingCat \cowith
       | F => \lam R => R
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
 
     \func forget : Functor CRingCat SetCat \cowith
       | F => \lam R => R
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
       \where {
         \func reflectsLimit {J : SmallPrecat} (H : Functor J CRingCat) : ReflectsLimit forget H => (CRingBicat.createsLimits H (SetBicat.limit (Comp CRingCat.forget H))).3
 
@@ -132,18 +131,14 @@
         | func-+ => \lam {x} {y} => f.func-op 2 (x :: y :: nil)
         | func-* => \lam {x} {y} => f.func-op 3 (x :: y :: nil)
       }
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
       | LAdj => ringtoMod.functor
       | eta {
         | trans => \lam M => id M
         | natural => \lam f => idp
       }
-      | eta-iso => \lam {X} => \new Iso {
-        | hinv => id X
-        | hinv_f => idp
-        | f_hinv => idp
-      }
+      | eta-iso => {?hidden_proof}
       | epsilon {
         | trans => \lam M => \new ModelHom {
           | funcs => \lam x => x
@@ -158,23 +153,9 @@
         }
         | natural => \lam f => idp
       }
-      | eta_epsilon-left => idp
-      | eta_epsilon-right => idp
-      | epsilon-iso => \lam {Y} => \new Iso {
-        | hinv => \new ModelHom {
-          | funcs => \lam y => y
-          | func-op => \case \elim __ \with {
-            | 0 => \lam d => idp
-            | 1 => \lam d => idp
-            | 2 => \lam d => idp
-            | 3 => \lam d => idp
-            | 4 => \lam d => idp
-          }
-        | func-rel => \case __ \with {}
-      }
-      | hinv_f => idp
-      | f_hinv => idp
-      }
+      | eta_epsilon-left => {?hidden_proof}
+      | eta_epsilon-right => {?hidden_proof}
+      | epsilon-iso => {?hidden_proof}
 
     \func modToRing (M : Model theory) : CRing (M ()) \cowith
       | zro => operation 0 nil
@@ -182,14 +163,14 @@
       | + => \lam x y => operation 2 (x :: y :: nil)
       | * => \lam x y => operation 3 (x :: y :: nil)
       | negative => \lam x => operation 4 (x :: nil)
-      | zro-left => \lam {x} => M.isModel _ (inP (0, idp)) (\lam _ => x) (\case __ \with {})
-      | +-assoc => \lam {x} {y} {z} => M.isModel _ (inP (1, idp)) (\lam {_} => x :: y :: z :: nil) (\case __ \with {})
-      | ide-left => \lam {x} => M.isModel _ (inP (2, idp)) (\lam _ => x) (\case __ \with {})
-      | *-assoc => \lam {x} {y} {z} => M.isModel _ (inP (3, idp)) (\lam {_} => x :: y :: z :: nil) (\case __ \with {})
-      | +-comm => \lam {x} {y} => M.isModel _ (inP (4, idp)) (\lam {_} => x :: y :: nil) (\case __ \with {})
-      | *-comm => \lam {x} {y} => M.isModel _ (inP (5, idp)) (\lam {_} => x :: y :: nil) (\case __ \with {})
-      | negative-left => \lam {x} => M.isModel _ (inP (6, idp)) (\lam {_} _ => x) (\case __ \with {})
-      | ldistr => \lam {x} {y} {z} => M.isModel _ (inP (7, idp)) (\lam {_} => x :: y :: z :: nil) (\case __ \with {})
+      | zro-left => {?hidden_proof}
+      | +-assoc => {?hidden_proof}
+      | ide-left => {?hidden_proof}
+      | *-assoc => {?hidden_proof}
+      | +-comm => {?hidden_proof}
+      | *-comm => {?hidden_proof}
+      | negative-left => {?hidden_proof}
+      | ldistr => {?hidden_proof}
 
     \func ringtoMod (R : CRing) : Model theory (\lam _ => R) \cowith
       | operation => \case \elim __ \with {
@@ -200,16 +181,7 @@
         | 4 => \lam l => negative (l 0)
       }
     | relation => \case __ \with {}
-    | isModel => \case \elim __, __ \with {
-    | _, inP (0, idp) => \lam rho _ => zro-left
-    | _, inP (1, idp) => \lam rho _ => +-assoc
-    | _, inP (2, idp) => \lam rho _ => ide-left
-    | _, inP (3, idp) => \lam rho _ => *-assoc
-    | _, inP (4, idp) => \lam rho _ => +-comm
-    | _, inP (5, idp) => \lam rho _ => *-comm
-    | _, inP (6, idp) => \lam rho _ => negative-left
-    | _, inP (7, idp) => \lam rho _ => ldistr
-    }
+    | isModel => {?hidden_proof}
       \where {
         \func functor : Functor CRingCat (ModelCat theory) ringtoMod \cowith
           | Func => \lam (f : RingHom) => \new ModelHom {
@@ -223,8 +195,8 @@
             }
           | func-rel => \case __ \with {}
           }
-          | Func-id => idp
-          | Func-o => idp
+          | Func-id => {?hidden_proof}
+          | Func-o => {?hidden_proof}
       }
 
 

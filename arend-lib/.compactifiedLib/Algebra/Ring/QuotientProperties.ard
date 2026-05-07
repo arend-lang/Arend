@@ -17,13 +17,9 @@
 
 \func ringKerImageHom {R : CRing} {S : CRing} (f : RingHom R S) : RingHom (FactorRing (RingHom.KernelC f)) f.Image.IRing \cowith
   | func => func
-  | func-+ => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ x, in~ y => ext $ rewrite f.func-+ idp
-  })
-  | func-ide => ext f.func-ide
-  | func-* => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ x, in~ y => ext $ rewrite f.func-* idp
-  })
+  | func-+ => {?hidden_proof}
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
   \where {
     \lemma isSurj : IsSurj (func {R} {S} {f}) => {?hidden_proof}
 

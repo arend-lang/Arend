@@ -27,25 +27,14 @@
 \lemma permSet-ext {A : \Set} {x y : PermSet A} (p : x = {Quotient EPerm} y) : x = y => {?hidden_proof}
 
 \instance PermSetDec (A : DecSet) : DecSet (PermSet A) 
-  | decideEq => \case \elim __, \elim __ \with {
-    | in~ l, in~ l' => \case EPerm.EPermDec {A} {l} {l'} \with {
-      | inl e => yes (~-psequiv e)
-      | inr q => no (\lam p => (\case unext p \with {  | inP p' => q p'}))
-    }
-  }
+  | decideEq => {?hidden_proof}
 
 \instance PermSetMonoid (A : \Set) : CMonoid (PermSet A) 
   | ide => in~ nil
   | * => *
-  | ide-left => \lam {x} => (\case \elim x \with {
-    | in~ l => idp
-  })
-  | *-assoc => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
-    | in~ l1, in~ l2, in~ l3 => permSet-ext (pmap in~ ++-assoc)
-  })
-  | *-comm => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ l, in~ l' => ~-psequiv EPerm.eperm-++-comm
-  })
+  | ide-left => {?hidden_proof}
+  | *-assoc => {?hidden_proof}
+  | *-comm => {?hidden_proof}
 
 \func permSet-map {A B : \Set} (f : A -> B) (s : PermSet A) : PermSet B \elim s
   | in~ l => in~ (map f l)
@@ -54,10 +43,8 @@
 \lemma permSet-map-comp {A B C : \Set} {f : A -> B} {g : B -> C} {s : PermSet A} : permSet-map g (permSet-map f s) = permSet-map (\lam a => g (f a)) s => {?hidden_proof}
 
 \func permSet-hom {A B : \Set} (f : A -> B) : MonoidHom (PermSetMonoid A) (PermSetMonoid B) (permSet-map f) \cowith
-  | func-ide => idp
-  | func-* => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ l, in~ l' => pmap inPS (map_++ f)
-  })
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
 
 \lemma permSet-map_+ {A B : \Set} {f : A -> B} {x y : PermSet A} : permSet-map f (x * y) = permSet-map f x * permSet-map f y => {?hidden_proof}
 
@@ -71,8 +58,8 @@
 
 \func permSet-univ {A : \Set} {B : CMonoid} (f : A -> B) : MonoidHom (PermSetMonoid A) B \cowith
   | func => \lam x => permSet-sum (permSet-map f x)
-  | func-ide => idp
-  | func-* => pmap permSet-sum permSet-map_+ *> permSet-sum_+
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
 
 \lemma permSet-univ-natural {A B : CMonoid} (f : MonoidHom A B) {x : PermSet A} : f (permSet-sum x) = permSet-sum (permSet-map f x) => {?hidden_proof}
 

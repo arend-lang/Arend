@@ -44,8 +44,8 @@
   \use \coerce fromRat (x : Rat) : InfReal \cowith
     | LowerReal => LowerReal.fromRat x
     | ExUpperReal => ExUpperReal.fromRat x
-    | LU-disjoint => \lam q<x x<q => <-irreflexive (q<x <∘ x<q)
-    | LU-focus-bound => \lam B {eps} eps>0 => byRight (x - eps * finv 2, linarith, linarith)
+    | LU-disjoint => {?hidden_proof}
+    | LU-focus-bound => {?hidden_proof}
 
   \lemma pow>id (n : Nat) : Monoid.pow (ratio 3 2) n > n => {?hidden_proof}
 
@@ -61,70 +61,31 @@
 \instance InfRealAbMonoid : LinearlyBiorderedAbMonoid InfReal 
   | zro => InfReal.fromRat 0
   | + => +
-  | zro-left => InfReal.real-lower-ext $ +-lower *> {LowerReal} zro-left
-  | +-comm => InfReal.real-lower-ext $ +-lower *> {LowerReal} +-comm *> {LowerReal} inv {LowerReal} +-lower
-  | +-assoc => InfReal.real-lower-ext $ +-lower *> {LowerReal} pmap {LowerReal} (LowerRealAbMonoid.+ _) +-lower *> {LowerReal} +-assoc *> {LowerReal} pmap (_ LowerRealAbMonoid.+) 
-    (inv {LowerReal} +-lower) *> {LowerReal} inv {LowerReal} +-lower
+  | zro-left => {?hidden_proof}
+  | +-comm => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
   | < => <
-  | <-irreflexive => \lam inP (a, x<a, a<x) => LU-disjoint a<x x<a
-  | <-transitive => \lam inP (a, x<a, a<y) inP (b, y<b, b<z) => inP (a, x<a, L-closed b<z $ InfReal.LU-less a<y y<b)
+  | <-irreflexive => {?hidden_proof}
+  | <-transitive => {?hidden_proof}
   | meet => meet
-  | meet-left => \lam inP (a, x<a, a<xy) => absurd $ LU-disjoint (meet_L.1 a<xy).1 x<a
-  | meet-right => \lam inP (a, y<a, a<xy) => absurd $ LU-disjoint (meet_L.1 a<xy).2 y<a
-  | meet-univ => \lam z<=x z<=y inP (a, xy<a, a<z) => (\case meet_U.1 xy<a \with {
-    | byLeft x<a => z<=x $ inP (a, x<a, a<z)
-    | byRight y<a => z<=y $ inP (a, y<a, a<z)
-  })
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}
   | join => join
-  | join-left => \lam inP (a, xy<a, a<x) => LU-disjoint a<x (join_U.1 xy<a).1
-  | join-right => \lam inP (a, xy<a, a<y) => LU-disjoint a<y (join_U.1 xy<a).2
-  | join-univ => \lam x<=z y<=z inP (a, z<a, a<xy) => (\case join_L.1 a<xy \with {
-    | byLeft a<x => x<=z $ inP (a, z<a, a<x)
-    | byRight a<y => y<=z $ inP (a, z<a, a<y)
-  })
-  | <-comparison => \lam y inP (a, x<a, a<z) => (\case L-rounded a<z \with {
-    | inP (b, b<z, a<b) => \case LU-located a<b \with {
-      | byLeft a<y => byLeft $ inP (a, x<a, a<y)
-      | byRight b<y => byRight $ inP (b, b<y, b<z)
-    }
-  })
-  | <-connectedness => \lam p q => InfReal.real-ext (\lam {a} => (\lam a<x => (\case L-rounded a<x \with {  | inP (b, b<x, a<b) => \case LU-located a<b \with {    | byLeft a<y => a<y
-      | byRight y<b => absurd $ q $ inP (b, y<b, b<x)  }}),
-    \lam a<y => (\case L-rounded a<y \with {  | inP (b, b<y, a<b) => \case LU-located a<b \with {    | byLeft a<x => a<x
-      | byRight x<b => absurd $ p $ inP (b, x<b, b<y)  }})))
-  | <=_+ => \lam a<=b c<=d inP (x, b+d<x, x<a+c) => (\case +_L.1 x<a+c, +_U.1 b+d<x \with {
-    | inP (q, q<a, r, r<c, x<q+r), inP (s, b<s, t, d<t, s+t<x) =>
-      <-irreflexive $ x<q+r <∘ RatField.<_+ (InfReal.LU-less q<a $ <=_U.1 a<=b b<s) (InfReal.LU-less r<c $ <=_U.1 c<=d d<t) <∘ s+t<x
-  })
-  | meet_+-left => InfReal.real-lower-ext $ +-lower *> {LowerReal} pmap (_ LowerRealAbMonoid.+) meet-lower *> {LowerReal} meet_+-left *> {LowerReal} inv 
-    (pmap2 LowerRealAbMonoid.meet +-lower +-lower) *> {LowerReal} inv {LowerReal} meet-lower
-  | join_+-left => InfReal.real-lower-ext $ +-lower *> {LowerReal} pmap (_ LowerRealAbMonoid.+) join-lower *> {LowerReal} join_+-left *> {LowerReal} inv 
-    (pmap2 LowerRealAbMonoid.join +-lower +-lower) *> {LowerReal} inv {LowerReal} join-lower
+  | join-left => {?hidden_proof}
+  | join-right => {?hidden_proof}
+  | join-univ => {?hidden_proof}
+  | <-comparison => {?hidden_proof}
+  | <-connectedness => {?hidden_proof}
+  | <=_+ => {?hidden_proof}
+  | meet_+-left => {?hidden_proof}
+  | join_+-left => {?hidden_proof}
 \where {
   \infixl 6 + (x y : InfReal) : InfReal \cowith
     | LowerReal => x LowerRealAbMonoid.+ y
     | ExUpperReal => x ExUpperReal.+ y
-    | LU-disjoint => \lam r1 r2 => (\case LowerRealAbMonoid.+_L.1 r1, ExUpperReal.+_U.1 r2 \with {
-      | inP (a, a<x, b, b<y, q<a+b), inP (c, x<c, d, y<d, c+d<q) => linarith (x.LU-less a<x x<c, y.LU-less b<y y<d)
-    })
-    | LU-focus-bound => \lam B {eps} eps>0 => (
-      \have eps/4>0 : 0 RatField.< eps * ratio 1 4 => linarith
-      \in \case x.LU-focus-bound 1 eps/4>0, y.LU-focus-bound B eps/4>0 \with {
-            | byLeft x>1, byLeft y>B => byLeft $ LowerRealAbMonoid.+_L.2 $ inP (1, x>1, B, y>B, linarith)
-            | byLeft _, byRight (y', y'<y, y<y'+eps/4) => \case x.LU-focus-bound (B - y' RatField.+ 1) eps/4>0 \with {
-              | byLeft B-y'+1<x => byLeft $ LowerRealAbMonoid.+_L.2 $ inP (_, B-y'+1<x, y', y'<y, linarith)
-              | byRight (x', x'<x, x<x'+eps/4) => byRight (x' RatField.+ y' - eps * ratio 1 4, LowerRealAbMonoid.+_L.2 $ inP (x', x'<x, y', y'<y, linarith), 
-                ExUpperReal.+_U.2 $ inP (_, x<x'+eps/4, _, y<y'+eps/4, linarith))
-            }
-            | byRight (x', x'<x, x<x'+eps/4), byLeft _ => \case y.LU-focus-bound (B - x' RatField.+ 1) eps/4>0 \with {
-              | byLeft r => byLeft $ LowerRealAbMonoid.+_L.2 $ inP (x', x'<x, _, r, linarith)
-              | byRight (y', y'<y, y<y'+eps/4) => byRight (x' RatField.+ y' - eps * ratio 1 4, LowerRealAbMonoid.+_L.2 $ inP (x', x'<x, y', y'<y, linarith), 
-                ExUpperReal.+_U.2 $ inP (_, x<x'+eps/4, _, y<y'+eps/4, linarith))
-            }
-            | byRight (x', x'<x, x<x'+eps/4), byRight (y', y'<y, y<y'+eps/4) =>
-            byRight (x' RatField.+ y' - eps * ratio 1 4, LowerRealAbMonoid.+_L.2 $ inP (x', x'<x, y', y'<y, linarith), 
-              ExUpperReal.+_U.2 $ inP (_, x<x'+eps/4, _, y<y'+eps/4, linarith))
-          })
+    | LU-disjoint => {?hidden_proof}
+    | LU-focus-bound => {?hidden_proof}
 
   \lemma +-lower {x y : InfReal} : x + y = {LowerReal} x LowerRealAbMonoid.+ y => {?hidden_proof}
 
@@ -149,15 +110,8 @@
   meet (x y : InfReal) : InfReal \cowith
     | LowerReal => LowerRealAbMonoid.meet x y
     | ExUpperReal => ExUpperReal.meet x y
-    | LU-disjoint => \lam s r => (\case ExUpperReal.meet_U.1 r \with {
-      | byLeft x<q => <-irreflexive (x.LU-less (LowerRealAbMonoid.meet_L.1 s).1 x<q)
-      | byRight y<q => <-irreflexive (y.LU-less (LowerRealAbMonoid.meet_L.1 s).2 y<q)
-    })
-    | LU-located => \lam q<r => (\case x.LU-located q<r, y.LU-located q<r \with {
-      | byLeft q<x, byLeft q<y => byLeft $ LowerRealAbMonoid.meet_L.2 (q<x, q<y)
-      | _, byRight y<r => byRight $ ExUpperReal.meet_U.2 (byRight y<r)
-      | byRight x<r, _ => byRight $ ExUpperReal.meet_U.2 (byLeft x<r)
-    })
+    | LU-disjoint => {?hidden_proof}
+    | LU-located => {?hidden_proof}
 
   \lemma meet-lower {x y : InfReal} : meet x y = {LowerReal} LowerRealAbMonoid.meet x y => {?hidden_proof}
 
@@ -168,15 +122,8 @@
   join (x y : InfReal) : InfReal \cowith
     | LowerReal => LowerRealAbMonoid.join x y
     | ExUpperReal => ExUpperReal.join x y
-    | LU-disjoint => \lam e s => (\case LowerRealAbMonoid.join_L.1 e \with {
-      | byLeft q<x => <-irreflexive $ x.LU-less q<x (ExUpperReal.join_U.1 s).1
-      | byRight q<y => <-irreflexive $ y.LU-less q<y (ExUpperReal.join_U.1 s).2
-    })
-    | LU-located => \lam q<r => (\case x.LU-located q<r, y.LU-located q<r \with {
-      | byLeft q<x, _ => byLeft $ LowerRealAbMonoid.join_L.2 (byLeft q<x)
-      | _, byLeft q<y => byLeft $ LowerRealAbMonoid.join_L.2 (byRight q<y)
-      | byRight x<r, byRight y<r => byRight $ ExUpperReal.join_U.2 (x<r, y<r)
-    })
+    | LU-disjoint => {?hidden_proof}
+    | LU-located => {?hidden_proof}
 
   \lemma join-lower {x y : InfReal} : join x y = {LowerReal} LowerRealAbMonoid.join x y => {?hidden_proof}
 

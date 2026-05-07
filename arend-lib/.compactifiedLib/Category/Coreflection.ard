@@ -69,7 +69,7 @@
       | Functor => F
       | LAdj => F.L
       | epsilon => F.eval-trans
-      | epsilon-adjoint => F.is-adjoint-counit
+      | epsilon-adjoint => {?hidden_proof}
 
     \use \coerce fromAdjoint (F : RightAdjoint) : RightAdjointCoreflection F.C F.D F.LAdj \cowith
       | coreflection => \lam Z => \new Coreflection {

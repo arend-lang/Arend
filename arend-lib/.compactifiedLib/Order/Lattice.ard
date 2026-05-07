@@ -74,9 +74,9 @@
   \use \coerce toMonoid (L : TopMeetSemilattice) : CMonoid L \cowith
     | ide => top
     | * => meet
-    | ide-left => L.top-left
-    | *-assoc => L.meet-assoc
-    | *-comm => L.meet-comm
+    | ide-left => {?hidden_proof}
+    | *-assoc => {?hidden_proof}
+    | *-comm => {?hidden_proof}
 }
 
 
@@ -90,9 +90,9 @@
   \use \coerce toMonoid (L : BottomJoinSemilattice) : AbMonoid L \cowith
     | zro => bottom
     | + => join
-    | zro-left => L.bottom-left
-    | +-assoc => L.join-assoc
-    | +-comm => L.join-comm
+    | zro-left => {?hidden_proof}
+    | +-assoc => {?hidden_proof}
+    | +-comm => {?hidden_proof}
 }
 
 
@@ -105,16 +105,16 @@
   \use \coerce toSemiring (L : BoundedDistributiveLattice) : CSemiring L \cowith
     | zro => bottom
     | + => join
-    | zro-left => L.bottom-left
-    | +-assoc => L.join-assoc
-    | +-comm => L.join-comm
+    | zro-left => {?hidden_proof}
+    | +-assoc => {?hidden_proof}
+    | +-comm => {?hidden_proof}
     | ide => top
     | * => meet
-    | ide-left => L.top-left
-    | *-assoc => L.meet-assoc
-    | ldistr => L.meet-ldistr
-    | zro_*-left => \lam {x} => <=-antisymmetric meet-left bottom-univ
-    | *-comm => L.meet-comm
+    | ide-left => {?hidden_proof}
+    | *-assoc => {?hidden_proof}
+    | ldistr => {?hidden_proof}
+    | zro_*-left => {?hidden_proof}
+    | *-comm => {?hidden_proof}
 }
 
 

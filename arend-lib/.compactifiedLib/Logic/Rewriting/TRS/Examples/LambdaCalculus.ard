@@ -38,7 +38,7 @@
   | rr-mc => BetaRedexContext
   | rr-l => BetaRedex
   | rr-r => BetaResult
-  | rr-l-func-root => T-has-functional-root {LC-FSignature}
+  | rr-l-func-root => {?hidden_proof}
 
 \func LC-rules : RuleRegistry LC-FSignature \cowith
   | rule-J => \lam lc-term => \Sigma

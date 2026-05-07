@@ -13,18 +13,18 @@
 
 \func Trace {R : Ring} {n : Nat} : LinearMap (MatrixModule R n n) (RingLModule R) \cowith
   | func => \lam M => BigSumHom (diag M)
-  | func-+ => rewrite (diag.func-+, inv BigSumHom.func-+) idp
-  | func-*c => rewrite (diag.func-*c, inv BigSumHom.func-*c) idp
+  | func-+ => {?hidden_proof}
+  | func-*c => {?hidden_proof}
   \where {
     \func diag : LinearMap (MatrixModule R n n) (ArrayLModule n (RingLModule R)) \cowith
       | func => \lam M => \lam i => M i i
-      | func-+ => exts (\lam _ => idp)
-      | func-*c => exts (\lam _ => idp)
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \func BigSumHom : LinearMap (ArrayLModule n (RingLModule R)) (RingLModule R) \cowith
       | func => \lam e => R.BigSum e
-      | func-+ => R.BigSum_+
-      | func-*c => inv LModule.*c_BigSum-ldistr
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
   }
 
 

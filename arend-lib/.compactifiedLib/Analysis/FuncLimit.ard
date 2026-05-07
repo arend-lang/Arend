@@ -91,10 +91,10 @@
 \func PointDirectedSet {X : TopSpace} (a : X) : DirectedSet \cowith
   | E => Given (V : isOpen) (V a) (b : X) (V b)
   | <= => \lam S T => T.1 ⊆ S.1
-  | <=-refl => <=-refl
-  | <=-transitive => \lam p q => q <=∘ p
-  | isInhabitted => inP (top, open-top, (), a, ())
-  | isDirected => \lam (V, Vo, Va, _, _) (W, Wo, Wa, _, _) => inP ((V ∧ W, open-inter Vo Wo, (Va, Wa), a, (Va, Wa)), meet-left, meet-right)
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | isInhabitted => {?hidden_proof}
+  | isDirected => {?hidden_proof}
 
 \func IsOpenLimit {Z : TopSpace} (c : Z) {X : CoverSpace} {Y : TopAbGroup} (S : Set (\Sigma Z X)) (f : Set.Total S -> Y) {T : Set X} (L : Set.Total T -> Y) : \Prop 
   => IsCoverLimit {PointDirectedSet c} (\lam h => S (h.1.4, h.2)) (\lam x => f (_, x.2)) L

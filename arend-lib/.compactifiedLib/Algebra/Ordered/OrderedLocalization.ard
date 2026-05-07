@@ -18,14 +18,10 @@
 \instance LocPosetAbMonoid {M : PosetAbMonoid} (S : SubAddMonoid M) : PosetAbMonoid (LocAbType S) 
   | AbMonoid => LocAbMonoid S
   | <= => <=
-  | <=-refl => \lam {in~ a} => inP (0, S.contains_zro, =_<= equation.abMonoid)
-  | <=-transitive => \lam {in~ a} {in~ b} {in~ c} inP (d, Sd, p) inP (e, Se, q) => inP (b.2 + (d + e), S.contains_+ b.3 $ S.contains_+ Sd Se, 
-    transport2 M.<= equation.abMonoid equation.abMonoid $ <=_+ p (M.<=-refl {c.2 + e}) <=∘ =_<= equation.abMonoid <=∘ <=_+ q (M.<=-refl {a.2 + d}))
-  | <=-antisymmetric => \lam {in~ a} {in~ b} inP (d, Sd, p) inP (e, Se, q) =>
-  LocAbType.~-lequiv-right (S.contains_+ Sd Se) $ <=-antisymmetric (transport2 M.<= equation.abMonoid equation.abMonoid $ <=_+ p $ M.<=-refl {e}) 
-    (transport2 M.<= equation.abMonoid equation.abMonoid $ <=_+ q $ M.<=-refl {d})
-  | <=_+ => \lam {in~ a} {in~ b} {in~ c} {in~ d} inP (e, Se, ep) inP (f, Sf, fp) =>
-    inP (e + f, S.contains_+ Se Sf, transport2 M.<= equation.abMonoid equation.abMonoid $ <=_+ ep fp)
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
+  | <=_+ => {?hidden_proof}
 
 \instance GrothendieckOrderedAbGroup (M : PosetAbMonoid) : PosetAbGroup (MaxLocAbType M) 
   | AbGroup => GrothendieckAbGroup M
@@ -34,13 +30,10 @@
 \instance LocPosetMeetSemilattice {M : MeetSemilatticeAbMonoid} (S : SubAddMonoid M) : MeetSemilatticeAbMonoid (LocAbType S) 
   | PosetAbMonoid => LocPosetAbMonoid S
   | meet => meet
-  | meet-left => \lam {in~ a} {in~ b} => inP (0, S.contains_zro, <=_+ (<=_+ meet-left <=-refl <=∘ =_<= equation.abMonoid) <=-refl)
-  | meet-right => \lam {in~ a} {in~ b} => inP (0, S.contains_zro, <=_+ (<=_+ meet-right <=-refl <=∘ =_<= equation.abMonoid) <=-refl)
-  | meet-univ => \lam {in~ a} {in~ b} {in~ c} inP (d, Sd, dp) inP (e, Se, ep) =>
-  inP (d + e, contains_+ Sd Se,  meet-univ (transport2 <= equation.abMonoid equation.abMonoid $ <=_+ dp (<=-refl {_} {b.2 + e})) 
-    (transport2 <= equation.abMonoid equation.abMonoid $ <=_+ ep (<=-refl {_} {a.2 + d})) <=∘ =_<= (inv meet_+-right) <=∘ <=_+ (=_<= $ inv meet_+-left) 
-    <=-refl)
-  | meet_+-left => \lam {in~ a} {in~ b} {in~ c} => ~-lequiv $ pmap (+ _) meet_+-left *> meet_+-right *> pmap2 ∧ equation.abMonoid equation.abMonoid *> inv meet_+-right
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}
+  | meet_+-left => {?hidden_proof}
 
 \instance GrothendieckMeetLattice (M : MeetSemilatticeAbMonoid) : LatticeAbGroup.FromMeet (MaxLocAbType M) 
   | PosetAbGroup => GrothendieckOrderedAbGroup M

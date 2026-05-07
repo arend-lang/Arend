@@ -137,27 +137,13 @@
   | AbMonoid => MonoidAbMonoid M R
   | ide => in~ ((1, 1) :: nil)
   | * => *
-  | ide-left => \lam {x} => (\case \elim x \with {
-    | in~ l => monoidSet-ext ide-left-aux
-  })
-  | ide-right => \lam {x} => (\case \elim x \with {
-    | in~ l => monoidSet-ext $ ~-pequiv (~-perm pairs-flip) *> ide-left-aux {M.op} {R.op}
-  })
-  | *-assoc => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
-    | in~ l1, in~ l2, in~ l3 => monoidSet-ext $ ~-pequiv $ ~-perm $ eperm-= $ pairs-assoc (\lam {a} {b} {c} => ext (R.*-assoc, *-assoc))
-  })
-  | ldistr => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
-    | in~ l1, in~ l2, in~ l3 => monoidSet-ext $ ~-pequiv (~-perm pairs_++-right)
-  })
-  | rdistr => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
-    | in~ l1, in~ l2, in~ l3 => monoidSet-ext (pmap inMS~ pairs_++-left)
-  })
-  | zro_*-left => \lam {x} => (\case \elim x \with {
-    | in~ l => idp
-  })
-  | zro_*-right => \lam {x} => (\case \elim x \with {
-    | in~ l => monoidSet-ext (pmap inMS~ pairs_nil)
-  })
+  | ide-left => {?hidden_proof}
+  | ide-right => {?hidden_proof}
+  | *-assoc => {?hidden_proof}
+  | ldistr => {?hidden_proof}
+  | rdistr => {?hidden_proof}
+  | zro_*-left => {?hidden_proof}
+  | zro_*-right => {?hidden_proof}
   \where {
     \open pairs
 
@@ -177,15 +163,13 @@
 
 \instance MonoidCSemiring (M : CMonoid) (R : CSemiring) : CSemiring 
   | Semiring => MonoidSemiring M R
-  | *-comm => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ l, in~ l' => monoidSet-ext $ ~-pequiv (~-perm pairs.pairs-flip) *> cong (ext (\lam t s => ext (*-comm, *-comm)))
-  })
+  | *-comm => {?hidden_proof}
 
 \func monoidRingHom {M : Monoid} {R : Ring} : RingHom R (MonoidRing M R) \cowith
   | func => \lam a => inMS~ ((a, M.ide) :: nil)
-  | func-+ => monoidSet-ext $ ~-pequiv $ mkcon ~-+ {nil} M.ide idp idp
-  | func-ide => idp
-  | func-* => rewriteI {1} M.ide-left idp
+  | func-+ => {?hidden_proof}
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
 
 \instance MonoidAlgebra (M : CMonoid) (R : CRing) : CAlgebra R => homAlgebra {R} {\new CRing {  | Ring => MonoidRing M R  | *-comm => *-comm}} monoidRingHom
 
@@ -194,17 +178,13 @@
   | ~-equiv l l' r => monoidSet-ext $ ~-pequiv (~_map g f r)
 
 \func monoidSet-hom {M N : \Set} (f : M -> N) (g : AddMonoidHom) : AddMonoidHom (MonoidAbMonoid M g.Dom) (MonoidAbMonoid N g.Cod) (monoidSet-map f g) \cowith
-  | func-zro => idp
-  | func-+ => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ l, in~ l' => pmap inMS $ map_++ (\lam s => (g s.1, f s.2))
-  })
+  | func-zro => {?hidden_proof}
+  | func-+ => {?hidden_proof}
 
 \func monoidSet-semiringHom (f : MonoidHom) (g : SemiringHom) : SemiringHom (MonoidSemiring f.Dom g.Dom) (MonoidSemiring f.Cod g.Cod) \cowith
   | AddMonoidHom => monoidSet-hom f g
-  | func-ide => pmap2 (\lam x y => inMS ((x, y) :: nil)) g.func-ide f.func-ide
-  | func-* => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ l, in~ l' => pmap inMS $ pairs.pairs_map (\lam s => (g s.1, f s.2)) (\lam {a} {b} => ext (g.func-*, f.func-*))
-  })
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
 
 \func monoidSet-ringHom (f : MonoidHom) (g : RingHom) : RingHom (MonoidRing f.Dom g.Dom) (MonoidRing f.Cod g.Cod) \cowith
   | SemiringHom => monoidSet-semiringHom f g
@@ -312,17 +292,13 @@
 
 \func evalMSMonoidHom {M : \Set} {R : Semiring} (f : M -> R) : AddMonoidHom (MonoidAbMonoid M R) R \cowith
   | func => evalMS __ f
-  | func-zro => idp
-  | func-+ => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ l, in~ l' => pmap R.BigSum (map_++ (\lam s => s.1 * f s.2)) *> R.BigSum_++
-  })
+  | func-zro => {?hidden_proof}
+  | func-+ => {?hidden_proof}
 
 \func evalMSSemiringHom {M : Monoid} {R : CSemiring} (f : MonoidHom M R) : SemiringHom (MonoidSemiring M R) R \cowith
   | AddMonoidHom => evalMSMonoidHom f
-  | func-ide => simplify f.func-ide
-  | func-* => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ l, in~ l' => pairs.pairs-distr (\lam s => s.1 * f s.2) (\lam {a} {b} => unfold MonoidSemiring.func (rewrite f.func-* equation))
-  })
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
 
 \func evalMSRingHom {M : Monoid} {R : CRing} (f : MonoidHom M R) : RingHom (MonoidRing M R) R \cowith
   | SemiringHom => evalMSSemiringHom f
@@ -341,12 +317,12 @@
 
 \func polyToMonoidSetHom {M : Monoid} {R : Ring} (m : M) : AddMonoidHom (PolyRing R) (MonoidRing M R) \cowith
   | func => polyToMonoidSet m
-  | func-zro => idp
+  | func-zro => {?hidden_proof}
   | func-+ => func-+
 
 \func polyToMonoidSetRingHom {M : CMonoid} {R : CRing} (m : M) : RingHom (PolyRing R) (MonoidRing M R) \cowith
   | AddMonoidHom => polyToMonoidSetHom m
-  | func-ide => idp
+  | func-ide => {?hidden_proof}
   | func-* => func-*
   \where {
     \lemma func-*c {m : M} {a : R} {p : Poly R} : polyToMonoidSet m (a PolyRing.*c p) = msMonomial a ide * polyToMonoidSet m p => {?hidden_proof}

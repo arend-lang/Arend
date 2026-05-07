@@ -152,14 +152,14 @@
 
 \instance EmptyFin : FinSet Empty 
   | finCard => 0
-  | finEq => inP (\new QEquiv {  | f => \case __ \with {}| ret => \case __ \with {}| ret_f => \case __ \with {}| f_sec => \case __ \with {}})
+  | finEq => {?hidden_proof}
 
 \instance UnitFin : FinSet (\Sigma) 
   | finCard => 1
-  | finEq => inP (\new QEquiv {  | f => \lam _ => ()  | ret => \lam _ => 0  | ret_f => \lam 0 => idp  | f_sec => \lam _ => idp})
+  | finEq => {?hidden_proof}
 
 \instance BoolFin : FinSet Bool 2 
-  | finEq => inP equiv
+  | finEq => {?hidden_proof}
   \where {
     \func equiv : QEquiv {Fin 2} {Bool} \cowith
       | f => \case __ \with {
@@ -180,23 +180,15 @@
 
 \instance FinFin (n : Nat) : FinSet (Fin n) 
   | finCard => n
-  | finEq => inP idEquiv
-  | decideEq => decideEq
+  | finEq => {?hidden_proof}
+  | decideEq => {?hidden_proof}
 
 \func DecFin {P : \Prop} (d : Dec P) : FinSet P \cowith
   | finCard => Dec.rec (\lam _ => 1) (\lam _ => 0) d
-  | finEq => inP $
-    (\case \elim d \with {  | yes e => \new QEquiv {    | f => \lam _ => e    | ret => \lam _ => 0    | ret_f => \lam 0 => idp
-      | f_sec => prop-isProp e  }  | no q => \new QEquiv {    | f => \lam () => {?}    | ret => \lam e => absurd (q e)    | ret_f => \lam () => {?}
-      | f_sec => \lam e => absurd (q e)  }})
+  | finEq => {?hidden_proof}
 
 \func FinDec {A : FinSet} (B : A -> Decide) : Decide (\Pi (a : A) -> B a) \cowith
-  | decide => \case A.finEq \with {
-    | inP e : Equiv => \case fin-dec (\lam j => B (e j)) \with {
-      | yes p => yes (\lam a => transport (B __) (e.f_ret a) $ p (e.ret a))
-      | no q => no (\lam f => q (\lam j => f (e j)))
-    }
-  }
+  | decide => {?hidden_proof}
   \where {
     \func fin-dec {n : Nat} (B : Fin n -> Decide) : Dec (\Pi (j : Fin n) -> B j) \elim n
       | 0 => yes (\case __ \with {})
@@ -210,9 +202,7 @@
 
 \instance OrFin (S T : FinSet) : FinSet (Or S T) 
   | finCard => S.finCard + T.finCard
-  | finEq => \case S.finEq, T.finEq \with {
-    | inP Se, inP Te => inP $ =-to-Equiv $ QEquiv-to-= (aux {S.finCard} {T.finCard}) *> pmap2 Or (Equiv-to-= Se) (Equiv-to-= Te)
-  }
+  | finEq => {?hidden_proof}
   \where {
     \func aux {n m : Nat} : QEquiv {Fin (n + m)} {Or (Fin n) (Fin m)} \cowith
       | f => f

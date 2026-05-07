@@ -57,6 +57,6 @@
 \instance PartialAddMonoid (X : AddMonoid) : AddMonoid (Partial X) 
   | zro => defined X.zro
   | + => plift2 +
-  | zro-left => partial-ext (__.2, ((), __)) (\lam p q => zro-left)
-  | zro-right => partial-ext (__.1, (__, ())) (\lam p q => zro-right)
-  | +-assoc => partial-ext (\lam s => (s.1.1, (s.1.2, s.2)), \lam s => ((s.1, s.2.1), s.2.2)) (\lam p q => +-assoc)
+  | zro-left => {?hidden_proof}
+  | zro-right => {?hidden_proof}
+  | +-assoc => {?hidden_proof}

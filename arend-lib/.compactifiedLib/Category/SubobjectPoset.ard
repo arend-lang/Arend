@@ -55,28 +55,11 @@
 \instance SubobjectMeetsemilatice (C : PrecatWithPullbacks) (c : C) : TopMeetSemilattice 
   | Poset => SubobjectPoset c
   | meet => meet
-  | meet-left => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ sx, in~ sy => \case \elim sx, \elim sy \with {
-      | subobj _ mx, subobj _ my => inP (pbProj1, pbCoh)
-    }
-  })
-  | meet-right => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ sx, in~ sy => \case \elim sx, \elim sy \with {
-      | subobj _ mx, subobj _ my => inP (pbProj2, idp)
-    }
-  })
-  | meet-univ => \lam {x} {y} {z} z<=x z<=y => (\case \elim x, \elim y, \elim z, \elim z<=x, z<=y \with {
-    | in~ sx, in~ sy, in~ sz, z<=x', z<=y' => \case \elim sx, \elim sy, \elim sz, \elim z<=x', \elim z<=y' \with {
-      | subobj _ mx, subobj _ my, subobj _ mz, inP (f, eqf), inP (q, eqq) =>
-        inP (pbMap f q (unfold $ rewrite (eqf, eqq) idp), unfold $ unfold $ rewrite (o-assoc, pbBeta2 {pullback (Mono.f {mx}) (Mono.f {my})}) eqq)
-    }
-  })
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}
   | top => in~ (subobj _ idIso)
-  | top-univ => \lam {x} => (\case \elim x \with {
-    | in~ a => \case \elim a \with {
-      | subobj sub m => inP (Mono.f {m}, rewrite id-left idp)
-    }
-  })
+  | top-univ => {?hidden_proof}
   \where {
     \func mono-from-pullback {a b d : C} (f : Mono {C} {a} {d}) (g : Mono {C} {b} {d}) : Mono {C} {pullback f.f g.f} {d} => Mono.comp g (pullback-of-mono (pullback f.f g.f))
 

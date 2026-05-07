@@ -10,11 +10,11 @@
   \where {
     \func id {X : Pointed} : PointedHom X X \cowith
       | func => \lam x => x
-      | func-ide => idp
+      | func-ide => {?hidden_proof}
 
     \func \infixl 8 compose \alias \infixl 8 ∘ {X Y Z : Pointed} (g : PointedHom Y Z) (f : PointedHom X Y) : PointedHom X Z \cowith
       | func => \lam x => g (f x)
-      | func-ide => pmap g f.func-ide *> g.func-ide
+      | func-ide => {?hidden_proof}
   }
 
 
@@ -26,9 +26,9 @@
   \where {
     \func id (X : AddPointed) : AddPointedHom X X \cowith
       | func => \lam x => x
-      | func-zro => idp
+      | func-zro => {?hidden_proof}
 
     \func \infixl 8 compose \alias \infixl 8 ∘ {A B C : AddPointed} (g : AddPointedHom B C) (f : AddPointedHom A B) : AddPointedHom A C \cowith
       | func => \lam x => g (f x)
-      | func-zro => pmap g f.func-zro *> g.func-zro
+      | func-zro => {?hidden_proof}
   }

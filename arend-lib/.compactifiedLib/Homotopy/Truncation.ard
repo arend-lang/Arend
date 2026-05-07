@@ -28,11 +28,10 @@
 
 
 \instance truncatedEquiv {n : Nat} (t t' : Truncated_-1+ n) : Truncated_-1+ n (Equiv {t} {t'}) 
-  | isTruncated => HLevels-embeddings (\new (Embedding (\lam (e : Equiv {t} {t'}) => e.f) (\lam e e' => \new Retraction {  | sec => \lam p => Equiv.equals p  | f_sec => \lam _ => idp}))) 
-    (HLevels-pi (\lam _ => t') (\lam _ => t'.isTruncated))
+  | isTruncated => {?hidden_proof}
 
 \instance truncatedTypesLevel (n : Nat) : Truncated_-1+ (suc n) (Truncated_-1+ n) 
-  | isTruncated => \lam t t' => rewrite (QEquiv-to-= (Truncated_-1+.equiv t t') *> QEquiv-to-= univalence) (isTruncated {truncatedEquiv t t'})
+  | isTruncated => {?hidden_proof}
 
 \data Trunc_-1+ (n : Nat) (A : \hType) 
   | inT A
@@ -40,10 +39,7 @@
   | spokeT (r : Sphere n -> Trunc_-1+ n A) (x : Sphere n) : r x = hubT r
   \where {
     \instance level (n : Nat) (A : \hType) : Truncated_-1+ n (Trunc_-1+ n A) 
-      | isTruncated => loop-level-iter n
-        (\lam t => rewriteI (SphereLoopEquiv n (Pointed.make t))  (\new (Contr (Sphere.pointed n ->* Pointed.make t) (\lam _ => t, idp)
-        (\lam p => ->*.ext {Sphere.pointed n} {Pointed.make t} (\lam s => inv p.2 *> path (spokeT p.1 north) *> inv (path (spokeT p.1 s))) 
-        (pmap ((inv p.2 *> __) *> p.2) (*>_inv (path (spokeT p.1 north))) *> inv_*> p.2)))))
+      | isTruncated => {?hidden_proof}
 
     \func elim {n : Nat} {A : \hType} (P : Trunc_-1+ n A -> Truncated_-1+ n) (g : \Pi (a : A) -> P (inT a)) (x : Trunc_-1+ n A) : P x \elim x
       | inT a => g a

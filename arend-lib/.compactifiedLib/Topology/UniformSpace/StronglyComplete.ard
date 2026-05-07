@@ -21,33 +21,17 @@
 \func weaklyDense-uniform-lift {X : RegularPreuniformSpace} {Y : StronglyRegularUniformSpace} {Z : StronglyCompleteUniformSpace} (f : UniformMap X Y) 
 (fd : f.IsWeaklyDenseUniformEmbedding) (g : UniformMap X Z) : UniformMap Y Z \cowith
   | CoverMap => weaklyDense-lift f (fd.1, f.embedding->coverEmbedding fd.2) g
-  | func-uniform => \lam Dc => uniform-refine (Y.<=<-regular $ fd.2 $ g.func-uniform $ Z.s<=<-regular Dc)
-    (\lam {V'} inP (V, inP (U, inP (W', inP (W, DW, W'<=<W), p), q), V'<=<V) =>
-  inP (_, inP (W, DW, idp),  \lam {y} V'y => <=<_<= (Z.weak-filter-point-elem W'<=<W (\case <=<-inter (<=<-right (single_<= V'y) V'<=<V) \with {
-    | inP (V'', y<=<V'', V''<=<V) => inP $ later (V'', V, rewrite p in q, V''<=<V, y<=<V'')})) idp))
+  | func-uniform => {?hidden_proof}
 
 \instance UniformStrongCompletion (X : StronglyRegularUniformSpace) : StronglyCompleteUniformSpace 
   | StronglyCompleteCoverSpace => StrongCompletion X
   | isUniform => \lam D => ∃ (C : isUniform) (∀ {U : C} ∃ (V : D) (mkSet U ⊆ V))
-  | uniform-cover => \lam inP (C, Cu, p) F => (
-    \have | inP (U, CU, FU) => isCauchyFilter (X.makeCauchy Cu)
-          | inP (V, DV, q) => p CU
-    \in inP (V, DV, q FU))
-  | uniform-top => inP (single top, uniform-top, \lam _ => inP (top, idp, \lam _ => ()))
-  | uniform-refine => \lam inP (E, Eu, g) f => inP (E, Eu, \lam EU => (  \have | inP (V, CV, p) => g EU        | inP (W, DW, q) => f CV  \in inP (W, DW, p <=∘ q)))
-  | uniform-inter => \lam inP (C', C'u, f) inP (D', D'u, g) => inP (_, uniform-inter C'u D'u,  \lam {U} inP (V', C'V', W', D'W', p) => (\case f C'V', g D'W' \with {  | inP (V, CV, eV), inP (W, DW, eW) =>
-      inP (V ∧ W, inP (V, CV, W, DW, idp), rewrite p (\lam {F} c => (eV $ filter-mono c meet-left, eW $ filter-mono c meet-right)))}))
-  | uniform-strongly-star => \lam inP (C', C'u, f) => (\case uniform-strongly-star C'u \with {
-    | inP (D', D'u, g) => inP (\lam V => ∃ (V' : D') (V = mkSet V'), inP (D', D'u, \lam {V'} D'V' => inP (mkSet V', inP (V', D'V', idp), <=-refl)),
-      \lam inP (V', D'V', p) => (\case g D'V' \with {  | inP (U', C'U', e) => \case f C'U' \with {
-        | inP (U, CU, q) => inP (U, CU,  \lam inP (V'', D'V'', p') => (\case e D'V'' \with {
-          | byLeft r => byLeft $ rewrite (p, p') (\lam (F, (FV', FV'')) => isWeaklyProper {F} $ filter-mono (filter-meet FV' FV'') (\lam {x} s => absurd $ r (x, s)))
-              | byRight r => byRight $ rewrite p' $ mkSet_<= r <=∘ q}))  }}))
-  })
-  | uniform-cauchy => (
-\lam inP (C', C'c, f) => closure-map mkSet (\lam {F} => filter-top) mkSet_<= (\lam s => filter-meet s.1 s.2) f $ uniform-cauchy.1 C'c, 
-closure-cauchy $ later (\lam inP (C', C'u, f) => inP (C', X.makeCauchy C'u, f))
-)
+  | uniform-cover => {?hidden_proof}
+  | uniform-top => {?hidden_proof}
+  | uniform-refine => {?hidden_proof}
+  | uniform-inter => {?hidden_proof}
+  | uniform-strongly-star => {?hidden_proof}
+  | uniform-cauchy => {?hidden_proof}
   \where {
     \lemma properUniform (Xp : X.IsProperUniform) : PreuniformSpace.IsProperUniform {UniformStrongCompletion X} => {?hidden_proof}
 
@@ -57,9 +41,7 @@ closure-cauchy $ later (\lam inP (C', C'u, f) => inP (C', X.makeCauchy C'u, f))
 
 \func uniform-strongCompletion {X : StronglyRegularUniformSpace} : UniformMap X (UniformStrongCompletion X) \cowith
   | CoverMap => strongCompletion
-  | func-uniform => \lam inP (C, Cu, f) => uniform-refine (X.<=<-regular Cu)
-    (\case __ \with {  | inP (U', CU', U<=<U') => \case f CU' \with {
-      | inP (V, DV, p) => inP (pointSCF ^-1 V, inP (V, DV, idp), \lam Ux => p $ <=<-right (single_<= Ux) U<=<U')  }})
+  | func-uniform => {?hidden_proof}
   \where {
     \lemma isDenseEmbedding : UniformMap.IsWeaklyDenseUniformEmbedding {uniform-strongCompletion {X}} => {?hidden_proof}
   }

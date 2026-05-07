@@ -25,8 +25,8 @@
   \where {
     \use \coerce fromRat (x : Rat) : ExtendedLowerReal \cowith
       | L => < x
-      | L-closed => \lam s t => t <∘ s
-      | L-rounded => \lam q<x => TruncP.map (isDense q<x) (\lam t => (t.1, t.3, t.2))
+      | L-closed => {?hidden_proof}
+      | L-rounded => {?hidden_proof}
   }
 
 
@@ -36,25 +36,13 @@
   \where {
     \use \coerce fromRat (x : Rat) : LowerReal \cowith
       | ExtendedLowerReal => ExtendedLowerReal.fromRat x
-      | L-inh => inP (x - 1, linarith)
+      | L-inh => {?hidden_proof}
 
     \func BJoin (b : LowerReal) {J : \Set} (f : J -> ExtendedLowerReal) : LowerReal \cowith
       | L => \lam q => b.L q || Given (j : J) ((f j).L q)
-      | L-closed => \lam e q'<q => (\case \elim e \with {
-        | byLeft q<b => byLeft (L-closed q<b q'<q)
-        | byRight (j, q<fj) => byRight (j, L-closed q<fj q'<q)
-      })
-      | L-rounded => \case \elim __ \with {
-        | byLeft q<b => \case L-rounded q<b \with {
-          | inP (r, r<b, q<r) => inP (r, byLeft r<b, q<r)
-        }
-        | byRight (j, q<fj) => \case L-rounded q<fj \with {
-          | inP (r, r<fj, q<r) => inP (r, byRight (j, r<fj), q<r)
-        }
-      }
-    | L-inh => \case b.L-inh \with {
-      | inP (q, q<b) => inP (q, byLeft q<b)
-    }
+      | L-closed => {?hidden_proof}
+      | L-rounded => {?hidden_proof}
+      | L-inh => {?hidden_proof}
 
     \open LowerRealAbMonoid(<=)
 
@@ -69,69 +57,38 @@
 \instance LowerRealAbMonoid : BiorderedLatticeAbMonoid LowerReal 
   | zro => LowerReal.fromRat 0
   | + => +
-  | zro-left => (\peval _ + _) *> exts
-    (\lam a => ext (\lam inP (b, b<0, c, c<x, a<b+c) => L-closed c<x linarith, \lam a<x => (\case L-rounded a<x \with {
-    | inP (b, b<x, a<b) => inP ((a - b) * ratio 1 2, linarith, b, b<x, linarith)})))
-  | +-assoc => exts (\lam a => ext (\lam r => (\case +_L.1 r \with {  | inP (b, r', c, c<z, a<b+c) => \case +_L.1 r' \with {
-      | inP (d, d<x, e, e<y, b<d+e) => +_L.2 $ inP (d, d<x, (a - d RatField.+ c RatField.+ e) * ratio 1 2, +_L.2 $ inP (e, e<y, c, c<z, linarith), linarith)
-    }}),  \lam r => (\case +_L.1 r \with {  | inP (b, b<x, c, r', a<b+c) => \case +_L.1 r' \with {
-      | inP (d, d<y, e, e<z, c<d+e) => +_L.2 $ inP ((a - e RatField.+ b RatField.+ d) * ratio 1 2, +_L.2 $ inP (b, b<x, d, d<y, linarith), e, e<z, linarith)
-    }})))
-  | +-comm => exts
-  (\lam a => ext (\lam r => (\case +_L.1 r \with {  | inP (b, b<x, c, c<y, a<b+c) => +_L.2 $ inP $ later (c, c<y, b, b<x, rewrite RatField.+-comm a<b+c)}),
-    \lam r => (\case +_L.1 r \with {  | inP (c, c<y, b, b<x, a<c+b) => +_L.2 $ inP $ later (b, b<x, c, c<y, rewrite RatField.+-comm a<c+b)})))
+  | zro-left => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
+  | +-comm => {?hidden_proof}
   | < => \lam x y => x < y
-  | <-irreflexive => \lam inP (a, a<y, p) => <-irreflexive (p a<y)
-  | <-transitive => \lam inP (b, b<y, p) inP (c, c<z, q) => inP (c, c<z, \lam {a} a<x => p a<x <∘ q b<y)
+  | <-irreflexive => {?hidden_proof}
+  | <-transitive => {?hidden_proof}
   | <= => \lam x y => x <= y
-  | <=-refl => \lam a<x => a<x
-  | <=-transitive => \lam p q a<x => q (p a<x)
-  | <=-antisymmetric => \lam p q => exts (\lam a => ext (p, q))
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
   | meet => meet
-  | meet-left => \lam s => (meet_L.1 s).1
-  | meet-right => \lam s => (meet_L.1 s).2
-  | meet-univ => \lam z<=x z<=y a<z => meet_L.2 (z<=x a<z, z<=y a<z)
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}
   | join => join
-  | join-left => \lam a<x => join_L.2 (byLeft a<x)
-  | join-right => \lam a<y => join_L.2 (byRight a<y)
-  | join-univ => \lam x<=z y<=z r => (\case join_L.1 r \with {
-    | byLeft a<x => x<=z a<x
-    | byRight a<y => y<=z a<y
-  })
-  | <-transitive-right => \lam e inP (q, q<a3, p) => inP (q, q<a3, \lam a<a1 => p $ e a<a1)
-  | <-transitive-left => \lam inP (q, q<a2, p) e => inP (q, e q<a2, p)
-  | <=-less => \lam inP (r, r<a2, p) {q} q<a1 => L-closed r<a2 (p q<a1)
-  | <=_+ => \lam {a b c d : LowerReal} p q {x} x<a+b => (\case LowerRealAbMonoid.+_L.1 x<a+b \with {
-    | inP (y, y<a, z, z<b, x<y+z) => LowerRealAbMonoid.+_L.2 $ inP (y, p y<a, z, q z<b, x<y+z)
-  })
-  | <_meet-univ => \case \elim __, \elim __ \with {
-    | inP (a, a<y, p), inP (b, b<z, q) => inP (a ∧ b, meet_L.2 (LowerReal.L_<= a<y meet-left, LowerReal.L_<= b<z meet-right), \lam {c} c<x => <_meet-univ (p c<x) (q c<x))
-  }
-| <_join-univ => \case \elim __, \elim __ \with {
-  | inP (a, a<z, x<=a), inP (b, b<z, y<=b) =>
-  inP (a ∨ b, \case TotalOrder.join-isMax a b \with {  | byLeft p => rewrite p a<z  | byRight p => rewrite p b<z},
-    \lam {c} c<xy => (\case join_L.1 c<xy \with {  | byLeft c<x => x<=a c<x <∘l join-left  | byRight c<y => y<=b c<y <∘l join-right}))
-}
-| meet_+-left => exts (\lam q => ext (\lam p => (  \have | inP (a', a'<a, d, d<bc, q<a'+d) => +_L.1 p        | (d<b, d<c) => meet_L.1 d<bc
-  \in meet_L.2 (+_L.2 $ inP (a', a'<a, d, d<b, q<a'+d), +_L.2 $ inP (a', a'<a, d, d<c, q<a'+d))),
-  \lam p => (  \have | (p1, p2) => meet_L.1 p        | inP (a1, a1<a, b', b'<b, q<a1+b') => +_L.1 p1
-        | inP (a2, a2<a, c', c'<c, q<a2+c') => +_L.1 p2
-  \in +_L.2 (\case totality b' c' \with {  | byLeft b'<=c' => inP (a1, a1<a, b', meet_L.2 (b'<b, LowerReal.L_<= c'<c b'<=c'), q<a1+b')
-        | byRight c'<=b' => inP (a2, a2<a, c', meet_L.2 (LowerReal.L_<= b'<b c'<=b', c'<c), q<a2+c')}))))
-| join_+-left => exts (\lam q => ext (\lam p => (\case +_L.1 p \with {  | inP (a', a'<a, d, d<bc, q<a'+d) => \case join_L.1 d<bc \with {
-    | byLeft d<b => join_L.2 $ byLeft $ +_L.2 $ inP (a', a'<a, d, d<b, q<a'+d)
-    | byRight d<c => join_L.2 $ byRight $ +_L.2 $ inP (a', a'<a, d, d<c, q<a'+d)  }}),
-  \lam p => (\case join_L.1 p \with {  | byLeft q => \case +_L.1 q \with {
-    | inP (a', a'<a, b', b'<b, q<a'+b') => +_L.2 $ inP (a', a'<a, b', join_L.2 $ byLeft b'<b, q<a'+b')  }  | byRight q => \case +_L.1 q \with {
-    | inP (a', a'<a, c', c'<c, q<a'+c') => +_L.2 $ inP (a', a'<a, c', join_L.2 $ byRight c'<c, q<a'+c')  }})))
+  | join-left => {?hidden_proof}
+  | join-right => {?hidden_proof}
+  | join-univ => {?hidden_proof}
+  | <-transitive-right => {?hidden_proof}
+  | <-transitive-left => {?hidden_proof}
+  | <=-less => {?hidden_proof}
+  | <=_+ => {?hidden_proof}
+  | <_meet-univ => {?hidden_proof}
+  | <_join-univ => {?hidden_proof}
+  | meet_+-left => {?hidden_proof}
+  | join_+-left => {?hidden_proof}
   \where {
     \infixl 6 + (x y : LowerReal) : LowerReal \cowith
       | L => \lam a => ∃ (b : x.L) (c : y.L) (a RatField.< b RatField.+ c)
-      | L-inh => \case x.L-inh, y.L-inh \with {
-        | inP (a, a<x), inP (b, b<y) => inP (a RatField.+ b - 1, inP (a, a<x, b, b<y, linarith))
-      }
-    | L-closed => \lam inP (a, a<x, b, b<y, q<a+b) q'<q => inP (a, a<x, b, b<y, q'<q <∘ q<a+b)
-    | L-rounded => \lam {q} inP (a, a<x, b, b<y, q<a+b) => inP (RatField.mid q (a RatField.+ b), inP (a, a<x, b, b<y, RatField.mid<right q<a+b), RatField.mid>left q<a+b)
+      | L-inh => {?hidden_proof}
+      | L-closed => {?hidden_proof}
+      | L-rounded => {?hidden_proof}
 
     \lemma +_L {x y : LowerReal} {a : Rat} : LowerReal.L {x + y} a <-> ∃ (b : x.L) (c : y.L) (a RatField.< b RatField.+ c) => {?hidden_proof}
 
@@ -145,30 +102,17 @@
 
     meet (x y : LowerReal) : LowerReal \cowith
       | L => \lam a => \Sigma (x.L a) (y.L a)
-      | L-inh => \case x.L-inh, y.L-inh \with {
-        | inP (a, a<x), inP (b, b<y) => inP (a ∧ b, (x.L_<= a<x meet-left, y.L_<= b<y meet-right))
-      }
-    | L-closed => \lam (q<x, q<y) q'<q => (x.L-closed q<x q'<q, y.L-closed q<y q'<q)
-    | L-rounded => \lam (q<x, q<y) => (\case x.L-rounded q<x, y.L-rounded q<y \with {
-      | inP (r, r<x, q<r), inP (r', r'<y, q<r') => inP (r ∧ r', (x.L_<= r<x meet-left, y.L_<= r'<y meet-right), <_meet-univ q<r q<r')
-    })
+      | L-inh => {?hidden_proof}
+      | L-closed => {?hidden_proof}
+      | L-rounded => {?hidden_proof}
 
     \lemma meet_L {x y : LowerReal} {a : Rat} : LowerReal.L {meet x y} a <-> (\Sigma (x.L a) (y.L a)) => {?hidden_proof}
 
     join (x y : LowerReal) : LowerReal \cowith
       | L => \lam a => x.L a || y.L a
-      | L-inh => \case x.L-inh \with {
-        | inP (a, a<x) => inP (a, byLeft a<x)
-      }
-    | L-closed => \lam e q'<q => ||.map (x.L-closed __ q'<q) (y.L-closed __ q'<q) e
-    | L-rounded => \case \elim __ \with {
-      | byLeft q<x => \case x.L-rounded q<x \with {
-        | inP (r, r<x, q<r) => inP (r, byLeft r<x, q<r)
-      }
-      | byRight q<y => \case y.L-rounded q<y \with {
-        | inP (r, r<y, q<r) => inP (r, byRight r<y, q<r)
-      }
-    }
+      | L-inh => {?hidden_proof}
+      | L-closed => {?hidden_proof}
+      | L-rounded => {?hidden_proof}
 
     \lemma join_L {x y : LowerReal} {a : Rat} : LowerReal.L {join x y} a <-> x.L a || y.L a => {?hidden_proof}
 
@@ -182,9 +126,9 @@
 
 \instance ExtendedLowerRealLattice : CompleteLattice ExtendedLowerReal 
   | <= => LowerRealAbMonoid.<=
-  | <=-refl => \lam a<x => a<x
-  | <=-transitive => \lam p q a<x => q (p a<x)
-  | <=-antisymmetric => \lam p q => exts (\lam a => ext (p, q))
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
   | Join => Join
-  | Join-cond => \lam j a<fj => inP (j, a<fj)
-  | Join-univ => \lam c inP (j, a<fj) => c j a<fj
+  | Join-cond => {?hidden_proof}
+  | Join-univ => {?hidden_proof}

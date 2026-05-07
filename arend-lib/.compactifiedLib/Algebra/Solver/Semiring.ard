@@ -29,7 +29,7 @@
   | normalize => normalize
   | interpret => \lam env => (SemiringData env).interpret
   | interpretNF => \lam env => (SemiringData env).interpretNF
-  | interpretNF-consistent => \lam {_} {env} => (SemiringData env).interpretNF-consistent
+  | interpretNF-consistent => {?hidden_proof}
   \where {
 \data Term (C : \Set) (n : Nat) 
       | var (Fin n)
@@ -94,7 +94,7 @@
     \lemma natMap' : SemiringHom NatSemiring R natCoef => {?hidden_proof}
 
     \func SemiringData (env : Array R) : Data R NatSemiring NatSemiring natMap' env \cowith
-      | alg-comm => \lam n a => inv (pmap (* a) natCoef-correct) *> natComm n a *> pmap (a *) natCoef-correct
+      | alg-comm => {?hidden_proof}
 
     \lemma apply-axiom (env : Array R) (t s : Term Nat env.len) (p : (SemiringData env).interpret t = (SemiringData env).interpret s) (left right add : NF Nat env.len) => {?hidden_proof}
   }

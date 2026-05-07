@@ -78,20 +78,14 @@
 \instance BanachAlgebraCompletion (X : RealPreBanachAlgebra) : RealBanachAlgebra 
   | BanachSpace => BanachCompletion X
   | * => *-func
-  | *-assoc => unique3 (*-cover ∘ prod *-cover id) (*-cover ∘ tuple (proj1 ∘ proj1) (*-cover ∘ prod proj2 id)) 
-    (\lam x y z => pmap (*-func __ _) lift2-char *> lift2-char *> pmap pointCF *-assoc *> inv (pmap (*-func _) lift2-char *> lift2-char))
-  | ldistr => unique3 (*-cover ∘ tuple (proj1 ∘ proj1) (+-cover ∘ prod proj2 id)) (+-cover ∘ tuple (*-cover ∘ proj1) (*-cover ∘ tuple (proj1 ∘ proj1) proj2)) 
-    (\lam x y z => pmap (*-func _) +-char *> lift2-char *> pmap pointCF X.ldistr *> inv (pmap2 +-func lift2-char lift2-char *> +-char))
-  | rdistr => unique3 (*-cover ∘ prod +-cover id) (+-cover ∘ tuple (*-cover ∘ tuple (proj1 ∘ proj1) proj2) (*-cover ∘ tuple (proj2 ∘ proj1) proj2)) 
-    (\lam x y z => pmap (*-func __ _) +-char *> lift2-char *> pmap pointCF X.rdistr *> inv (pmap2 +-func lift2-char lift2-char *> +-char))
+  | *-assoc => {?hidden_proof}
+  | ldistr => {?hidden_proof}
+  | rdistr => {?hidden_proof}
   | ide => pointCF 1
-  | ide-left => unique1 (*-cover ∘ tuple (const _) id) id (\lam x => lift2-char *> pmap pointCF ide-left)
-  | ide-right => unique1 (*-cover ∘ tuple id (const _)) id (\lam x => lift2-char *> pmap pointCF ide-right)
-  | norm_*_<= => unique2_<= (norm-metric-map {BanachCompletion X} ∘ *-cover) 
-    (ex-upper-*-locally-uniform ∘ prod (bnorm-metric-map {BanachCompletion X}) (bnorm-metric-map {BanachCompletion X}))
-      (\lam x y => transport2 <= (inv $ pmap ExNormedAbGroupCompletion.norm lift2-char *> completion-exNormed-isometry.func-norm-isometry) 
-      (inv $ pmap2 * completion-exNormed-isometry.func-norm-isometry completion-exNormed-isometry.func-norm-isometry) X.norm_*_<=)
-  | norm_ide_<= => completion-exNormed-isometry.func-norm <=∘ norm_ide_<=
+  | ide-left => {?hidden_proof}
+  | ide-right => {?hidden_proof}
+  | norm_*_<= => {?hidden_proof}
+  | norm_ide_<= => {?hidden_proof}
   \where {
     \open ProductCoverSpace
     \open CoverMap

@@ -26,17 +26,17 @@
   | Hom => GroupHom
   | id => \lam _ => GroupHom.id
   | o => GroupHom.∘
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam f _ => exts (f.func-ide, \lam _ _ => f.func-*, \lam _ => f.func-inverse))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
   \where {
     \func ForgetSet : FaithfulFunctor GroupCat SetCat \cowith
       | F => \lam G => G
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
-      | isFaithful => \lam p => ext p
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
+      | isFaithful => {?hidden_proof}
 
     \lemma Iso<->Inj+Surj {G H : Group} (f : GroupHom G H) : Iso {GroupCat} f <-> f.IsIsomorphism => {?hidden_proof}
       \where {
@@ -75,14 +75,14 @@
 
 \func quotient-map {S : Group} {H : NormalSubGroup S} : GroupHom S H.quotient \cowith
   | func => \lam (s : S) => NormalSubGroup.quotient-proj-setwise s
-  | func-ide => idp
-  | func-* => idp
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
 
 \instance ImageGroup (f : GroupHom) : Group 
   | Monoid => ImageMonoid f
   | inverse => \lam a => (inverse a.1, TruncP.map a.2 (\lam s => (inverse s.1, f.func-inverse *> pmap inverse s.2)))
-  | inverse-left => ext inverse-left
-  | inverse-right => ext inverse-right
+  | inverse-left => {?hidden_proof}
+  | inverse-right => {?hidden_proof}
 
 \func ImageGroupLeftHom (f : GroupHom) : GroupHom f.Dom (ImageGroup f) \cowith
   | MonoidHom => ImageMonoidLeftHom f
@@ -92,13 +92,9 @@
 
 \func ImageSubGroup (f : GroupHom) : SubGroup f.Cod \cowith
   | contains => \lam h => ∃ (g : f.Dom) (f g = h)
-  | contains_ide => inP (Group.ide {f.Dom}, f.func-ide)
-  | contains_* => \lam cont1 cont2 => (\case \elim cont1, \elim cont2 \with {
-    | inP a, inP b => inP (a.1 * b.1, rewrite (f.func-*, a.2, b.2) idp)
-  })
-  | contains_inverse => \lam cont1 => (\case \elim cont1 \with {
-    | inP a => inP (inverse a.1, rewrite (f.func-inverse, a.2) idp)
-  })
+  | contains_ide => {?hidden_proof}
+  | contains_* => {?hidden_proof}
+  | contains_inverse => {?hidden_proof}
 
 \instance AddGroupCat : Cat AddGroup 
   | Hom => \lam G H => AddGroupHom G H
@@ -107,22 +103,22 @@
     | func => \lam x => g (f x)
     | func-+ => pmap g func-+ *> func-+
   }
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam {X} {A} {B} p1 p2 => exts (p1.func-zro, \lam _ _ => p1.func-+, AddGroup.negative-equality A B p1.func-zro p1.func-+))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
   \where {
     \func forgetToAddMonoid : Functor AddGroupCat AddMonoidCat \cowith
       | F => \lam A => A
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
 
     \func forget : Functor AddGroupCat SetCat \cowith
       | F => \lam R => R
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
   }
 
 
@@ -132,22 +128,22 @@
     \func forgetToAddGroup : Functor AbGroupCat AddGroupCat \cowith
       | F => \lam A => A
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
 
     \func forget : Functor AbGroupCat SetCat \cowith
       | F => \lam R => R
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
   }
 
 
 \instance KerAddGroup (f : AddGroupHom) : AddGroup 
   | AddMonoid => KerAddMonoid f
   | negative => \lam a => (negative a.1, f.func-negative *> pmap negative a.2 *> AddGroup.negative_zro)
-  | negative-left => ext negative-left
-  | negative-right => ext negative-right
+  | negative-left => {?hidden_proof}
+  | negative-right => {?hidden_proof}
 
 \func KerGroupHom (f : AddGroupHom) : AddGroupHom (KerAddGroup f) f.Dom \cowith
   | AddMonoidHom => KerMonoidHom f
@@ -161,8 +157,8 @@
 \instance ImageAddGroup (f : AddGroupHom) : AddGroup 
   | AddMonoid => ImageAddMonoid f
   | negative => \lam a => (negative a.1, TruncP.map a.2 (\lam s => (negative s.1, f.func-negative *> pmap negative s.2)))
-  | negative-left => ext negative-left
-  | negative-right => ext negative-right
+  | negative-left => {?hidden_proof}
+  | negative-right => {?hidden_proof}
 
 \func ImageAddGroupLeftHom (f : AddGroupHom) : AddGroupHom f.Dom (ImageAddGroup f) \cowith
   | AddMonoidHom => ImageAddMonoidLeftHom f
@@ -176,7 +172,5 @@
 
 \func conjugateHom {E : Group} (g : E) : GroupHom E E \cowith
   | func => conjugate g
-  | func-ide => unfold conjugate $ rewrite (E.ide-right, E.inverse-right) idp
-  | func-* => \lam {x y : E} => (
-    \have aux {x y z w t e : E} : x * y * z * (w * t * e) = (x * y) * (z * w) * (t * e) => equation
-    \in inv $ rewrite (aux, E.inverse-left, E.ide-right) equation)
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}

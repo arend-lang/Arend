@@ -18,9 +18,9 @@
   | Hom => \lam _ _ => M
   | id => \lam _ => M.ide
   | o => *
-  | id-left => ide-left
-  | id-right => ide-right
-  | o-assoc => *-assoc
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
 
 \func functor->action {C : Precat} {M : Monoid} (f : Functor (DeloopM M) C) : MonoidCatAction M \cowith
   | c => f ()

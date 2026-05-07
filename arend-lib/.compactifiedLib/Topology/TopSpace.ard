@@ -22,16 +22,16 @@
 
 \func DiscreteTopSpace (X : \Set) : TopSpace X \cowith
   | isOpen => \lam _ => \Sigma
-  | open-top => ()
-  | open-inter => \lam _ _ => ()
-  | open-Union => \lam _ => ()
+  | open-top => {?hidden_proof}
+  | open-inter => {?hidden_proof}
+  | open-Union => {?hidden_proof}
 
 \func NFilter {X : TopSpace} (x : X) : ProperFilter X \cowith
   | F => \lam U => ∃ (V : isOpen) (V x) (V ⊆ U)
-  | filter-mono => \lam inP (W, Wo, Wx, q) p => inP (W, Wo, Wx, q <=∘ p)
-  | filter-top => inP (top, open-top, (), <=-refl)
-  | filter-meet => \lam inP (U, Uo, Ux, p) inP (V, Vo, Vx, q) => inP (U ∧ V, open-inter Uo Vo, (Ux, Vx), MeetSemilattice.meet-monotone p q)
-  | isProper => \lam inP (V, Vo, Vx, p) => inP (x, p Vx)
+  | filter-mono => {?hidden_proof}
+  | filter-top => {?hidden_proof}
+  | filter-meet => {?hidden_proof}
+  | isProper => {?hidden_proof}
 
 \func IsWeaklyDenseSet {X : TopSpace} (S : Set X) : \Prop => \Pi {U : Set X} -> isOpen U -> Not (Given (y : S) (U y)) -> Not (Given U)
 
@@ -47,15 +47,15 @@
   \where {
     \func id {X : TopSpace} : ContMap X X \cowith
       | func => \lam x => x
-      | func-cont => \lam Uo => Uo
+      | func-cont => {?hidden_proof}
 
     \func compose \alias \infixl 8 ∘ {X Y Z : TopSpace} (g : ContMap Y Z) (f : ContMap X Y) : ContMap X Z \cowith
       | func => \lam x => g (f x)
-      | func-cont => \lam Uo => f.func-cont (g.func-cont Uo)
+      | func-cont => {?hidden_proof}
 
     \func const {Y X : TopSpace} (x : X) : ContMap Y X \cowith
       | func => \lam _ => x
-      | func-cont => \lam _ => Y.cover-open (\lam Ux => inP (top, open-top, (), \lam _ => Ux))
+      | func-cont => {?hidden_proof}
   }
 
 
@@ -106,11 +106,9 @@
 
 \func TopTransfer {X : \Set} {Y : TopSpace} (f : X -> Y) : TopSpace X \cowith
   | isOpen => \lam U => ∃ (V : isOpen) (U = f ^-1 V)
-  | open-top => inP (top, open-top, idp)
-  | open-inter => \lam inP (V, Vo, p) inP (V', V'o, p') => inP (V ∧ V', open-inter Vo V'o, pmap2 ∧ p p')
-  | open-Union => \lam {S} h => inP (Set.Union (\lam V => \Sigma (isOpen V) (f ^-1 V ⊆ Set.Union S)), open-Union __.1,
-    <=-antisymmetric (\lam inP (U, SU, Ux) => (\case h SU \with {  | inP (V, Vo, p) => inP (V, (Vo, rewriteI p $ Set.Union-cond SU), rewrite p in Ux)})) 
-    (\lam inP (V, (Vo, p), Vfx) => p Vfx))
+  | open-top => {?hidden_proof}
+  | open-inter => {?hidden_proof}
+  | open-Union => {?hidden_proof}
 
 \lemma TopTransfer-map {X : \Set} {Y : TopSpace} (f : X -> Y) : ContMap (TopTransfer f) Y f => {?hidden_proof}
 

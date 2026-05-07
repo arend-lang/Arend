@@ -115,15 +115,15 @@
   | Hom => RingedLocaleHom
   | id => id
   | o => o
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
   \where {
     \func forget : Functor RingedLocalePrecat LocaleCat \cowith
       | F => \lam L => L
       | Func => \lam f => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
 
     \func homMap {L M : RingedLocale} {f g : RingedLocaleHom M L} (p : f = g) (a : L) : RingHom (M.R (f a)) (M.R (g a)) 
       => M.R.F.Func (=_<= (inv (path (\lam i => p i a))))
@@ -135,17 +135,13 @@
 
     \func homMap-natural {L M : RingedLocale} {f g : RingedLocaleHom M L} (p : f = g) : NatTrans (Comp M.R f.f.functor.op) (Comp M.R g.f.functor.op) \cowith
       | trans => homMap p
-      | natural => \lam h => inv M.R.F.Func-o *> pmap M.R.F.Func prop-pi *> M.R.F.Func-o
+      | natural => {?hidden_proof}
 
     \func natTrans-inv {L M : RingedLocale} {e : Iso {RingedLocalePrecat} {L} {M}} 
     (f : NatTrans \levels (\suc \lp) _ L.R (Comp M.R (Functor.op {FrameHom.functor {e.hinv}}))) :
       NatTrans (Comp L.R (Functor.op {FrameHom.functor {e.f}})) M.R \cowith
       | trans => \lam x => homMap e.f_hinv x Cat.∘ f (e.f x)
-      | natural => \lam {a} {b} h => (
-        \let t : homMap e.f_hinv b Cat.∘ M.R.F.Func (Func {Functor.op {FrameHom.functor {e.hinv}}} (e.f.func-<= h)) = M.R.F.Func h Cat.∘ homMap e.f_hinv a =>
-               pmap (_ Cat.∘ M.R.F.Func __) prop-pi *> natural {homMap-natural e.f_hinv} h *> pmap (Cat.∘ _) (pmap M.R.F.Func prop-pi)
-        \in unfold Func $ rewrite (prop-isProp (Func {Functor.op {FrameHom.functor {e.f}}} h) (e.f.func-<= h)) $ o-assoc *> rewrite (f.natural (e.f.func-<= h)) 
-              (inv o-assoc *> path (\lam i => t i Cat.∘ f (e.f a)) *> o-assoc))
+      | natural => {?hidden_proof}
 
     \lemma homMap_o {L L' : RingedLocale} (f : RingedLocaleHom L L') (g : RingedLocaleHom L' L) (p : f RingedLocalePrecat.∘ g = id L') (a : L') :
       g.f# (f a) Cat.∘ f.f# a = homMap (inv p) a => {?hidden_proof}
@@ -159,8 +155,8 @@
     \func fromIso {L L' : RingedLocale} (e : Iso {RingedLocalePrecat} {L} {L'}) : Iso {VSheafCat CRingCat L'.L} {VSheaf.direct_image_locale e.f L.R} {L'.R} \cowith
       | f => natTrans-inv (RingedLocaleHom.f# {e.hinv})
       | hinv => RingedLocaleHom.f# {e.f}
-      | hinv_f => exts (homMap_o-right e.f e.hinv e.f_hinv e.hinv_f)
-      | f_hinv => exts (homMap_o-left e.f e.hinv e.f_hinv)
+      | hinv_f => {?hidden_proof}
+      | f_hinv => {?hidden_proof}
 
     \func isotoid (e : Iso {RingedLocalePrecat}) : e.dom = e.cod => ext (Cat.isotoid (RingedLocalePrecat.forget.Func-iso e), 
       VSheaf.transport_direct_image-iso _ (RingedLocale.R {e.dom}) *> Cat.isotoid (RingedLocalePrecat.fromIso e))
@@ -212,23 +208,13 @@
 
 \func locallyRingedLocaleFromPres (P : LocallyRingedFramePres) : LocallyRingedLocale \cowith
   | RingedLocale => ringedLocaleFromPres P
-  | isNonTrivial => \lam U t {x} Ux => cover-trans (isNonTrivialPres x $ pmap (__.1 (x, \lam {y} c => U.2 y $ Cover.cover-trans1 c $ cover-inj (x, Ux) idp)) t) (\case __ \with {})
-  | isLocallyRinged => \lam U x {a} Ua => cover-trans (isLocallyRingedPres a (x.1 (a, \lam {z} c => U.2 z $ Cover.cover-trans1 c $ cover-inj (a, Ua) idp)))
-    (\lam t => cover-inj ((PresentedFrame.embed t.1, 
-    (\lam {z} c => U.2 z $ Cover.cover-trans1 c $ Cover.cover-trans1 t.2.1 $ cover-inj (a, Ua) idp, LocallyRingedFramePres.toPresented t.2.1 U Ua x t.2.2)
-    ), t.1, cover-inj () idp) idp)
+  | isNonTrivial => {?hidden_proof}
+  | isLocallyRinged => {?hidden_proof}
 
 \func affineRingedPres (R : CRing) : LocallyRingedFramePres (SpecPres R) \cowith
   | R => R
-  | isNonTrivialPres => \lam a => \lam p => SpecPres.ideal_cover (\case LocRing.unequals p \with {  | inP (c, inP (n, a^n=c), zro=c) => inP (n, inP (nil, equation))})
-  | isLocallyRingedPres => \lam a in~ (y, c, inP (n, a^n=c)) => cover-trans1 (SpecPres.cover_pow (suc n)) $ transport (Cover __ _) (equation : a * negative y + a * (y + pow a n) = pow a (suc n)) $ cover-trans 
-    (cover-basic $ FramePres.indexing-make $ just (a * negative y, a * (y + pow a n))) $ later
-      (\case \elim __ \with {  | true => cover-inj (_,  (cover-proj1 idp () idp,
-        byLeft $ transportInv Inv (functorial-lem-div (\new LDiv {  | inv => negative y  | inv-right => idp}) n a^n=c) $ Inv.lmake 
-        (inl~ (negative $ pow a (suc n), a * negative y, later $ inP (1, ide-left))) $ LocRing.equals1 $ later $ rewrite CMonoid.pow_*-comm equation)) idp
-      | false => cover-inj (_,  (cover-proj1 idp () idp,
-        byRight $ transportInv (\lam x => Inv (x + 1)) (functorial-lem-div (\new LDiv {  | inv => y + pow a n  | inv-right => idp}) n a^n=c) $ Inv.lmake 
-        (inl~ (pow a (suc n), a * (y + pow a n), later $ inP (1, ide-left))) $ LocRing.equals1 $ later $ rewrite CMonoid.pow_*-comm equation)) idp})
+  | isNonTrivialPres => {?hidden_proof}
+  | isLocallyRingedPres => {?hidden_proof}
   \where {
     \open localization
     \open SubMonoid(powers)
@@ -284,8 +270,7 @@
 
 \func affineScheme (R : CRing) : Scheme \cowith
   | RingedLocale => affineRingedLocale R
-  | isScheme => \lam {x} _ =>
-    cover-inj (((\lam _ => \Sigma, \lam _ _ => ()), inP (R, RingedLocalePrecat.isotoid $ restrict_iso (RingedLocale.R {affineRingedLocale R}))), x, ()) idp
+  | isScheme => {?hidden_proof}
   \where {
     \func locale_iso {L : Locale} : Iso {LocaleCat} {L.restrict L.top} {L} \cowith
       | f => Locale.restrict.map
@@ -295,8 +280,8 @@
         | func-meet => idp
         | func-Join => idp
       }
-      | hinv_f => exts (\lam p => ext L.top-right)
-      | f_hinv => exts (\lam x => L.top-right)
+      | hinv_f => {?hidden_proof}
+      | f_hinv => {?hidden_proof}
 
     \func restrict_map {L : Locale} (a : L) (S : VSheaf CRingCat L) : RingedLocaleHom (\new (RingedLocale (L.restrict a) (VSheaf.restrict a S))) (\new (RingedLocale L S)) \cowith
       | f => Locale.restrict.map
@@ -308,6 +293,6 @@
     \func restrict_iso {L : Locale} (S : VSheaf CRingCat L) : Iso {RingedLocalePrecat} {VSheaf.restrict L.top S} {S} \cowith
       | f => restrict_map L.top S
       | hinv => hinv
-      | hinv_f => RingedLocaleHom.ext (hinv RingedLocalePrecat.∘ restrict_map L.top S) _ locale_iso.hinv_f (\lam p x => pmap (S.F.Func __ x) prop-pi)
-      | f_hinv => RingedLocaleHom.ext (restrict_map L.top S RingedLocalePrecat.∘ hinv) _ locale_iso.f_hinv (\lam a x => pmap (S.F.Func __ x) prop-pi)
+      | hinv_f => {?hidden_proof}
+      | f_hinv => {?hidden_proof}
   }

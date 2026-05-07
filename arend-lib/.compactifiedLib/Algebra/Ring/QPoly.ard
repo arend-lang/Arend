@@ -30,20 +30,9 @@
 
     \func ~-isEquiv {R : AddPointed} : Equivalence (Array R) \cowith
       | ~ => ~
-      | ~-reflexive => eq-left 0 ++_nil
-      | ~-symmetric => symm
-      | ~-transitive => \case __, __ \with {
-        | eq-left n p, eq-left m q => eq-left (n Nat.+ m) (pmap (_ ++) replicate_+ *> inv ++-assoc *> pmap (++ _) p *> q)
-        | eq-left n p, eq-right m q => \case totality (suc m) n \with {
-          | byLeft s => lists-lem1 n (suc m) (p *> inv q) s
-          | byRight s => symm (lists-lem1 (suc m) n (q *> inv p) s)
-        }
-        | eq-right n p, eq-left m q => \case totality (suc n) m \with {
-          | byLeft s => lists-lem2 (suc n) m p q s
-          | byRight s => symm (lists-lem2 m (suc n) q p s)
-        }
-        | eq-right n p, eq-right m q => eq-right (suc m Nat.+ n) (pmap (_ ++) (replicate_+ {_} {suc m} {suc n}) *> inv ++-assoc *> pmap (++ zro :: _) q *> p)
-      }
+      | ~-reflexive => {?hidden_proof}
+      | ~-symmetric => {?hidden_proof}
+      | ~-transitive => {?hidden_proof}
       \where {
         \lemma symm {R : AddPointed} {x y : Array R} (p : x ~ y) : y ~ x => {?hidden_proof}
 

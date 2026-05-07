@@ -19,27 +19,25 @@
 
 \instance HeytingBooleanAlgebra (R : HeytingAlebra) : BooleanAlgebra (NegatedElem R) 
   | <= => \lam a b => a.1 <= b.1
-  | <=-refl => <=-refl
-  | <=-transitive => <=∘
-  | <=-antisymmetric => \lam p q => ext (<=-antisymmetric p q)
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
   | meet => \lam a b => (a.1 ∧ b.1, meet-negated a.2 b.2)
-  | meet-left => meet-left
-  | meet-right => meet-right
-  | meet-univ => meet-univ
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}
   | join => \lam a b => (neg $ neg $ a.1 ∨ b.1, neg-negated)
-  | join-left => join-left <=∘ id<=neg_neg
-  | join-right => join-right <=∘ id<=neg_neg
-  | join-univ => \lam {x} {y} {z} p q => double-->-monotone (join-univ p q) <=∘ z.2
+  | join-left => {?hidden_proof}
+  | join-right => {?hidden_proof}
+  | join-univ => {?hidden_proof}
   | top => (R.top, R.top-univ)
-  | top-univ => R.top-univ
+  | top-univ => {?hidden_proof}
   | bottom => (R.bottom, R.bottom-negated)
-  | bottom-univ => R.bottom-univ
-  | ldistr>= => rewrite (neg_join, neg_join) $ exponent-left $ (R.meet-comm *> inv R.meet-assoc) =<= R.meet-monotone
-    (meet-univ (exponent-left $ R.meet-assoc =<= R.meet-monotone meet-left <=-refl <=∘ eval) 
-    (exponent-left $ R.meet-assoc =<= R.meet-monotone meet-right <=-refl <=∘ eval)) <=-refl <=∘ modus-ponens
+  | bottom-univ => {?hidden_proof}
+  | ldistr>= => {?hidden_proof}
   | compl => \lam a => (neg a.1, neg-negated)
-  | compl-meet => modus-ponens
-  | compl-join => exponent-left $ meet-right <=∘ neg_join =<= modus-ponens
+  | compl-meet => {?hidden_proof}
+  | compl-join => {?hidden_proof}
   \where {
     \open HeytingAlebra
   }

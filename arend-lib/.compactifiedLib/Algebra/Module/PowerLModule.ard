@@ -9,17 +9,17 @@
 \instance PowerLModule {R : Ring} (J : \Set) (M : LModule R) : LModule R (J -> M) 
   | zro => \lam _ => M.zro
   | + => \lam f g j => f j M.+ g j
-  | zro-left => ext (\lam j => M.zro-left)
-  | zro-right => ext (\lam j => M.zro-right)
-  | +-assoc => ext (\lam j => M.+-assoc)
+  | zro-left => {?hidden_proof}
+  | zro-right => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
   | negative => \lam f j => M.negative (f j)
-  | negative-left => ext (\lam j => M.negative-left)
-  | +-comm => ext (\lam j => M.+-comm)
+  | negative-left => {?hidden_proof}
+  | +-comm => {?hidden_proof}
   | *c => \lam r f j => r *c f j
-  | *c-assoc => ext (\lam j => *c-assoc)
-  | *c-ldistr => ext (\lam j => *c-ldistr)
-  | *c-rdistr => ext (\lam j => *c-rdistr)
-  | ide_*c => ext (\lam j => ide_*c)
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
 
 \func FunctorPowerLMod {R : Ring} : Functor SetCat.op (LModuleCat R) \cowith
   | F => \lam I => PowerLModule I (RingLModule R)
@@ -28,5 +28,5 @@
     | func-+ => idp
     | func-*c => idp
   }
-  | Func-id => idp
-  | Func-o => idp
+  | Func-id => {?hidden_proof}
+  | Func-o => {?hidden_proof}

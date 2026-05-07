@@ -21,10 +21,10 @@
 \func PermRepr {R : Ring} {G : Group} (X : GroupAction G) : LinRepres R G \cowith
   | LModule => Module
   | ** => \lam g f j => f (inverse g X.** j)
-  | **-assoc => ext (\lam _ => rewrite (X.**-assoc, inverse_prod) idp)
-  | **-ldistr => idp
-  | **-*c => ext (\lam _ => idp)
-  | id-action => ext (\lam _ => rewrite (G.inverse_ide, X.id-action) idp)
+  | **-assoc => {?hidden_proof}
+  | **-ldistr => {?hidden_proof}
+  | **-*c => {?hidden_proof}
+  | id-action => {?hidden_proof}
   \where {
     \func inverse_prod {m n : G} : inverse (m * n) = inverse n * inverse m 
       => inv (G.check-for-inv (rewrite (G.*-assoc, pmap (* m) (inv G.*-assoc), G.inverse-right, G.ide-left, G.inverse-right) idp))

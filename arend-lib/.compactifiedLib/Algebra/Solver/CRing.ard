@@ -21,7 +21,7 @@
   | normalize => normalize
   | interpret => \lam env => interpret env
   | interpretNF => \lam env nf => ringInterpretNF env (sortMonomials nf)
-  | interpretNF-consistent => \lam {_} {env} {_} => ringInterpretNF-correct *> (RingData env).interpretNF-correct *> interpretNF_sort {R} {RingData env} *> normalize-consistent
+  | interpretNF-consistent => {?hidden_proof}
   \where {
     \lemma terms-equality (env : Array R) (t s : Term Int env.len) (p : ringInterpretNF env (sortMonomials (normalize (t :+ :negative s))) = 0) :
       interpret env t = interpret env s => {?hidden_proof}

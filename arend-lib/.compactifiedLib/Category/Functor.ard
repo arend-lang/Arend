@@ -34,24 +34,24 @@
 \func Id {C : Precat} : Functor C C \cowith
   | F => \lam X => X
   | Func => \lam h => h
-  | Func-id => idp
-  | Func-o => idp
+  | Func-id => {?hidden_proof}
+  | Func-o => {?hidden_proof}
 
 \func Comp {C D E : Precat} (G : Functor D E) (F : Functor C D) : Functor C E \cowith
   | F => \lam X => G (F X)
   | Func => \lam f => G.Func (F.Func f)
-  | Func-id => pmap G.Func F.Func-id *> G.Func-id
-  | Func-o => pmap G.Func F.Func-o *> G.Func-o
+  | Func-id => {?hidden_proof}
+  | Func-o => {?hidden_proof}
 
 \func Const {C D : Precat} (d : D) : Functor C D \cowith
   | F => \lam _ => d
   | Func => \lam _ => id d
-  | Func-id => idp
-  | Func-o => inv id-left
+  | Func-id => {?hidden_proof}
+  | Func-o => {?hidden_proof}
   \where {
     \func natTrans {C D : Precat} {d d' : D} (f : Hom d d') : NatTrans {C} (Const d) (Const d') \cowith
       | trans => \lam _ => f
-      | natural => \lam g => id-right *> inv id-left
+      | natural => {?hidden_proof}
   }
 
 
@@ -66,11 +66,11 @@
   \where {
     \func Comp-left {C D E : Precat} (a : NatTrans {D} {E}) (H : Functor C D) : NatTrans (Comp a.F H) (Comp a.G H) \cowith
       | trans => \lam x => a (H x)
-      | natural => \lam f => a.natural (H.Func f)
+      | natural => {?hidden_proof}
 
     \func Comp-right {C D E : Precat} (H : Functor D E) (a : NatTrans {C} {D}) : NatTrans (Comp H a.F) (Comp H a.G) \cowith
       | trans => \lam x => H.Func (a x)
-      | natural => \lam f => inv H.Func-o *> pmap H.Func (a.natural f) *> H.Func-o
+      | natural => {?hidden_proof}
   }
 
 
@@ -84,23 +84,21 @@
     | trans => \lam X => b X ∘ a X
     | natural => \lam f => run {(rewrite (o-assoc, natural {a} f), rewriteI o-assoc, rewrite (natural {b} f), o-assoc)}
   }
-  | id-left => exts (\lam X => id-left)
-  | id-right => exts (\lam X => id-right)
-  | o-assoc => exts (\lam X => o-assoc)
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
 
 \instance FunctorCat {C : SmallPrecat} {D : SmallCat} : Cat (Functor C D) 
   | Precat => FunctorPrecat
-  | univalence => Cat.makeUnivalence $ later
-    (\lam e => (exts (\lam X => D.isotoid (mapIso e X), \lam {X} {Y} h => Cat.transport_Hom_iso (mapIso e X) (mapIso e Y) (natural h)), 
-    simp_coe $ simp_coe (\lam X => Cat.transport_iso (mapIso e X))  ))
+  | univalence => {?hidden_proof}
   \where {
     \func mapIso {C D : SmallPrecat} (e : Iso {FunctorPrecat {C} {D}}) (X : C) : Iso {D} \cowith
       | dom => e.dom X
       | cod => e.cod X
       | f => e.f X
       | hinv => e.hinv X
-      | hinv_f => path (\lam i => trans {e.hinv_f @ i} X)
-      | f_hinv => path (\lam i => trans {e.f_hinv @ i} X)
+      | hinv_f => {?hidden_proof}
+      | f_hinv => {?hidden_proof}
   }
 
 
@@ -108,21 +106,21 @@
   | Hom => \lam F G => \Pi {j : J} -> Hom (F j) (G j)
   | id => \lam F {j} => id (F j)
   | o => \lam g f {j} => g ∘ f
-  | id-left => ext (\lam {j} => id-left)
-  | id-right => ext (\lam {j} => id-right)
-  | o-assoc => ext (\lam {j} => o-assoc)
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
 
 \instance FamCat {J : \Type} (D : Cat) : Cat (J -> D) 
   | Precat => FamPrecat D
-  | univalence => Cat.makeUnivalence $ later (\lam e => (ext (\lam j => D.isotoid (mapIso e j)), simp_coe (\lam {j} => Cat.transport_iso (mapIso e j))))
+  | univalence => {?hidden_proof}
   \where {
     \func mapIso {J : \Type} {D : Precat} (e : Iso {FamPrecat {J} D}) (j : J) : Iso {D} \cowith
       | dom => e.dom j
       | cod => e.cod j
       | f => e.f
       | hinv => e.hinv
-      | hinv_f => path (e.hinv_f @ __)
-      | f_hinv => path (e.f_hinv @ __)
+      | hinv_f => {?hidden_proof}
+      | f_hinv => {?hidden_proof}
   }
 
 

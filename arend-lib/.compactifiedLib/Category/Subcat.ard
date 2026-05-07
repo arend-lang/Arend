@@ -13,15 +13,15 @@
   | Hom => \lam x y => Hom (f x) (f y)
   | id => \lam x => id (f x)
   | o => \lam h g => o h g
-  | id-left => id-left
-  | id-right => id-right
-  | o-assoc => o-assoc
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
   \where {
     \func embedding {C : Precat} {X : \hType obj} (f : X -> C) : FullyFaithfulFunctor (subPrecat f) C f \cowith
       | Func => \lam h => h
-      | Func-id => idp
-      | Func-o => idp
-      | isFullyFaithful => idEquiv
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
+      | isFullyFaithful => {?hidden_proof}
 
     \func pred {C : Precat} (P : C -> \Prop) => subPrecat (Total.proj P)
       \where {
@@ -31,16 +31,14 @@
 
     \func funcLift {C D : Precat} {X : \hType} (f : X -> D) (g : C -> X) (G : Functor C D) (p : \Pi {a : C} -> Iso {D} {f (g a)} {G a}) : Functor C (subPrecat f) g \cowith
       | Func => \lam h => p.hinv ∘ G.Func h ∘ p.f
-      | Func-id => rewrite (G.Func-id, id-right) p.hinv_f
-      | Func-o => rewrite G.Func-o $ later (rewrite (p.f_hinv, id-left) $ pmap (∘ _) (inv o-assoc) *> o-assoc) *> pmap (_ ∘) (pmap (∘ _) o-assoc *> o-assoc) *> inv o-assoc
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
   }
 
 
 \func subCat {C : Cat} {X : \hType obj} (e : Embedding {X} {C}) : Cat \cowith
   | Precat => subPrecat e
-  | univalence => Cat.makeUnivalence $ later
-    (\lam (j : Iso) => (  \have (t, r) => Cat.univalenceToTransport (\new (Iso j.f j.hinv j.hinv_f j.f_hinv))
-    \in (sec {e.isEmb j.dom j.cod} t, pmap (transport (Hom (e j.dom)) __ (id (e j.dom))) (f_sec {e.isEmb j.dom j.cod} t) *> r)))
+  | univalence => {?hidden_proof}
 
 \lemma subCat-iso {C : Precat} {X : \hType obj} {f : X -> C} (e : Iso {subPrecat f}) : Iso {C} {f e.dom} {f e.cod} e => {?hidden_proof}
   \where {
@@ -70,17 +68,14 @@
       | FullyFaithfulFunctor => ff
       | reflector => F.LAdj
       | reflectorMap => F.eta
-      | isReflective => F.eta_epsilon-equiv
+      | isReflective => {?hidden_proof}
   }
 
 
 \func reflectiveSubPrecatColimit {J : Precat} (I : ReflectiveSubPrecat) (F : Functor J I.C) (c : Colimit (Comp I F)) : Limit F.op \cowith
   | apex => I.reflector c.apex
   | coneMap => \lam j => I.inverse (reflectorMap _ ∘ c.coneMap j)
-  | coneCoh => \lam h => I.isFaithful $ run {(rewrite I.Func-o, repeat {2} (rewrite I.inverse-right), rewrite o-assoc, pmap (_ ∘) (c.coneCoh h))}
+  | coneCoh => {?hidden_proof}
   | limMap => \lam {z} c' => I.isReflective.ret (c.limMap (Cone.map I.op {J.op} c'))
-  | limBeta => \lam c' j =>
-    I.isFullyFaithful.isInj $ Func-o *> pmap (_ ∘) I.inverse-right *> inv o-assoc *> pmap (∘ _) (I.isReflective.f_ret _) *> c.limBeta (Cone.map I.op {J.op} c') j
-  | limUnique => \lam {z} {f} {g} p => inv (I.isReflective.ret_f f) *> pmap I.isReflective.ret 
-    (c.limUnique (\lam j => o-assoc *> (rewrite I.inverse-right in inv I.Func-o *> pmap I.Func (p j) *> I.Func-o) *> inv o-assoc)) *> I.isReflective.ret_f 
-    g
+  | limBeta => {?hidden_proof}
+  | limUnique => {?hidden_proof}

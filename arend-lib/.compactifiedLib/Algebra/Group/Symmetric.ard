@@ -57,12 +57,12 @@
 \instance SymmetricGroup (n : Nat) : Group (Sym n) 
   | ide => idEquiv
   | * => \lam e1 e2 => transEquiv e1 e2
-  | ide-left => Sym.equals (\lam j => idp)
-  | ide-right => Sym.equals (\lam j => idp)
-  | *-assoc => Sym.equals (\lam j => idp)
+  | ide-left => {?hidden_proof}
+  | ide-right => {?hidden_proof}
+  | *-assoc => {?hidden_proof}
   | inverse => \lam e => symQEquiv e
-  | inverse-left => Sym.equals Equiv.f_ret
-  | inverse-right => Sym.equals ret_f
+  | inverse-left => {?hidden_proof}
+  | inverse-right => {?hidden_proof}
   \where {
     \func inv-isEquiv {n : Nat} : QEquiv {Sym n} {Sym n} \cowith
       | f => \lam e => symQEquiv e
@@ -172,7 +172,7 @@ transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n => cycle (a :: b :
   | suc n => symmetric-rec.ret (k, idEquiv)
 
 \instance SymFin (n : Nat) : FinSet (Sym n) (fac n) 
-  | finEq => inP fin_equiv
+  | finEq => {?hidden_proof}
   \where {
     \func fin_equiv {n : Nat} : Equiv {Fin (fac n)} {Sym n} \elim n
       | 0 => \new QEquiv {
@@ -278,7 +278,7 @@ transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n => cycle (a :: b :
     \func Inversions {n : Nat} (e : Sym n) => \Sigma (i j : Fin n) (i < j) (e j < e i)
 
     \func InversionsFin {n : Nat} (e : Sym n) : FinSet (Inversions e) (inversions e) \cowith
-      | finEq => inP (aux e)
+      | finEq => {?hidden_proof}
       \where {
         \func aux {n : Nat} (e : Sym n) : Equiv {Fin (inversions e)} {Inversions e} \elim n
           | 0 => \new QEquiv {
@@ -369,8 +369,8 @@ transposition {n : Nat} {a b : Fin n} (a/=b : a /= b) : Sym n => cycle (a :: b :
 
 \func signHom {R : Ring} {n : Nat} : MonoidHom (SymmetricGroup n) R \cowith
   | func => sign
-  | func-ide => sign_ide
-  | func-* => sign_*
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
 
 cycle-decomp {n : Nat} (e : Sym n) => aux e id<suc
   \where {

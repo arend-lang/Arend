@@ -9,20 +9,14 @@
   | * => \lam p q => (\case \elim p \with {
     | in0 p' => Trunc0.map q (\lam q' => p' *> q')
   })
-  | ide-left => \lam {x} => (\case \elim x \with {
-    | in0 a1 => pmap in0 (idp_*> a1)
-  })
-  | *-assoc => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
-    | in0 a1, in0 a2, in0 a3 => pmap in0 (*>-assoc a1 a2 a3)
-  })
+  | ide-left => {?hidden_proof}
+  | *-assoc => {?hidden_proof}
   | inverse => \lam x => Trunc0.map x inv
-  | inverse-left => \lam {x} => (\case \elim x \with {
-    | in0 a1 => pmap in0 (inv_*> a1)
-  })
+  | inverse-left => {?hidden_proof}
 
 \func End {C : Precat} (c : C) : Monoid (Hom c c) \cowith
   | ide => id c
   | * => ∘
-  | ide-left => id-left
-  | ide-right => id-right
-  | *-assoc => o-assoc
+  | ide-left => {?hidden_proof}
+  | ide-right => {?hidden_proof}
+  | *-assoc => {?hidden_proof}

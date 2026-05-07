@@ -41,9 +41,9 @@
     \func inSF (l : Array (\Sigma V B)) : SFunc V B => in~ l
 
     \instance ~_Equivalence : Equivalence (Array (\Sigma V B)) ~ 
-      | ~-reflexive => ~-perm EPerm.eperm-refl
-      | ~-symmetric => ~-sym
-      | ~-transitive => ~-trans
+      | ~-reflexive => {?hidden_proof}
+      | ~-symmetric => {?hidden_proof}
+      | ~-transitive => {?hidden_proof}
 
     \lemma ~-sfequiv {l l' : Array (\Sigma V B)} (p : l ~ l') : inSF l = inSF l' => {?hidden_proof}
 
@@ -73,15 +73,9 @@
 \instance SFuncAbMonoid (V : AddMonoid) (B : BottomDistributiveLattice) : AbMonoid (SFunc V B) 
   | zro => inSF nil
   | + => +
-  | +-assoc => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
-    | in~ l1, in~ l2, in~ l3 => pmap inSF ++-assoc
-  })
-  | +-comm => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ l, in~ l' => ~-sfequiv (~-perm EPerm.eperm-++-comm)
-  })
-  | zro-left => \lam {x} => (\case \elim x \with {
-    | in~ l => idp
-  })
+  | +-assoc => {?hidden_proof}
+  | +-comm => {?hidden_proof}
+  | zro-left => {?hidden_proof}
   \where {
     \lemma *n-char {n : Nat} {l : Array (\Sigma V B)} : n AddMonoid.*n {SFuncAbMonoid V B} inSF l = inSF (map (\lam s => (n V.*n s.1, s.2)) l) => {?hidden_proof}
   }
@@ -90,9 +84,7 @@
 \instance SFuncAbGroup (V : AddGroup) (B : BottomDistributiveLattice) : AbGroup (SFunc V B) 
   | AbMonoid => SFuncAbMonoid V B
   | negative => negative
-  | negative-left => \lam {x} => (\case \elim x \with {
-    | in~ l => ~-sfequiv ~_negative-left
-  })
+  | negative-left => {?hidden_proof}
   \where {
     \lemma ~_negative {l l' : Array (\Sigma V B)} (l~l' : l ~ l') : map (\lam s => (V.negative s.1, s.2)) l ~ map (\lam s => (V.negative s.1, s.2)) l' => {?hidden_proof}
 
@@ -107,19 +99,10 @@
     \func module : LModule RatField \cowith
       | AbGroup => SFuncAbGroup V B
       | *c => *c
-      | *c-assoc => \lam {q} {r} {x} => (\case \elim x \with {
-        | in~ l => path (\lam i => inSF (map (\lam s => (V.*q-assoc {q} {r} {s.1} i, s.2)) l))
-      })
-      | *c-ldistr => \lam {q} {x} {y} => (\case \elim x, \elim y \with {
-        | in~ l, in~ l' => pmap inSF $ map_++ (\lam (s : \Sigma V B) => (q V.*q s.1, s.2))
-      })
-      | *c-rdistr => \lam {q} {r} {x} => (\case \elim x \with {
-        | in~ l =>
-          ~-sfequiv $ ~-trans (~-perm $ EPerm.eperm-= $ path (\lam i => map (\lam s => (V.toRatModule.*c-rdistr {q} {r} {s.1} i, s.2)) l)) $ ~-sym (~_+ (q V.*q) (r V.*q))
-      })
-      | ide_*c => \lam {x} => (\case \elim x \with {
-        | in~ l => path (\lam i => inSF (map (\lam s => (V.ide_*q {s.1} i, s.2)) l))
-      })
+      | *c-assoc => {?hidden_proof}
+      | *c-ldistr => {?hidden_proof}
+      | *c-rdistr => {?hidden_proof}
+      | ide_*c => {?hidden_proof}
 
     \lemma ~_*q {q : Rat} {l l' : Array (\Sigma V B)} (l~l' : l ~ l') : map (\lam s => (q V.*q s.1, s.2)) l ~ map (\lam s => (q V.*q s.1, s.2)) l' => {?hidden_proof}
 
@@ -130,23 +113,11 @@
 \instance SFuncPosetQModule (V : PosetQModule) (B : BooleanRing) : PosetQModule (SFunc V B) 
   | QModule => SFuncQModule V B
   | <= => <=
-  | <=-refl => inP (nil, negative-right, \case __ \with {})
-  | <=-transitive => \lam inP s inP s' => inP (s.1 ++ s'.1, inv AddGroup.diff_+ *> +-comm *> pmap2 + s.2 s'.2, ++.++-all {_} {\lam s => 0 V.<= s.1} s.3 s'.3)
-  | <=-antisymmetric => \lam inP s inP s' => (\case ~_=-unequals $ inv (pmap negative s.2) *> AddGroup.negative_- *> s'.2 \with {
-    | inP (m, mr, m1, m2) => AddGroup.fromZero $ s'.2 *> ~-sfequiv
-      (~-trans (~-sym reduce_~) $ ~-trans (~-sym $ SFRefines_~ mr reduce_IsReduced m2) $ ~-zros-left  (\lam i =>
-    <=-antisymmetric (SFRefines-closed (V.<= 0) <=-refl m1 (reduce_<=0 (\lam j => later $ V.negative<=0 (s.3 j))) i) $ SFRefines-closed (0 V.<=) <=-refl m2 
-          (reduce_>=0 s'.3) i))
-  })
-  | <=_+ => \case \elim __, \elim __ \with {
-    | inP (l, lp, lf), inP (l', l'p, l'f) => inP (l ++ l', equation.abGroup *> pmap2 + lp l'p,  \lam k => (\case ++.split-index k \with {  | inl (i, ip) => rewrite (ip, ++.++_index-left) (lf i)
-      | inr (j, jp) => rewrite (jp, ++.++_index-right) (l'f j)}))
-  }
-| <=_*n-div => \lam {n} n/=0 => (\case \elim __ \with {
-  | inP (l, lp, lf) => inP (map (\lam s => (RatField.finv n V.*q s.1, s.2)) l,
-    AddGroup.minus_zro *> inv QModule.ide_*q *> pmap (QModule.*q _) (inv $ RatField.finv-left $ natRat/=0 n/=0) *> QModule.*q-assoc *> pmap (_ QModule.*q) 
-    (QModule.*q_*n *> inv AddGroup.minus_zro *> lp) *> SFuncQModule.*q-char, \lam j => V.*q_>=0 (RatField.finv>=0 fromNat_>=0) (lf j))
-})
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
+  | <=_+ => {?hidden_proof}
+  | <=_*n-div => {?hidden_proof}
   \where {
     \func PFunc  => Array (\Sigma V B)
 

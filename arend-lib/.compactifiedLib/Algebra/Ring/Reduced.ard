@@ -37,12 +37,9 @@
     \func subring {R : Ring} {E : ImpotentRing} (f : RingHom R E) (inj : IsInj f) : ImpotentRing {
       | Ring => R
     } \cowith
-      | zro/=ide => \lam p => E.zro/=ide $ inv f.func-zro *> pmap f p *> f.func-ide
-      | isReduced => \lam aa=0 => inj $ isReduced (inv f.func-* *> pmap f aa=0 *> f.func-zro) *> inv f.func-zro
-      | isImpotent => \lam aa=a => (\case isImpotent (inv f.func-* *> pmap f aa=a) \with {
-        | byLeft fa=0 => byLeft $ inj (fa=0 *> inv f.func-zro)
-        | byRight fa=1 => byRight $ inj (fa=1 *> inv f.func-ide)
-      })
+      | zro/=ide => {?hidden_proof}
+      | isReduced => {?hidden_proof}
+      | isImpotent => {?hidden_proof}
   }
 
 

@@ -28,9 +28,9 @@
 
 \instance IntervalPoset (Q : Poset) : Poset (Interval Q) 
   | <= => <=
-  | <=-refl => (<=-refl, <=-refl)
-  | <=-transitive => \lam t s => (<=-transitive s.1 t.1, <=-transitive t.2 s.2)
-  | <=-antisymmetric => \lam t s => ext (<=-antisymmetric s.1 t.1, <=-antisymmetric t.2 s.2)
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
   \where {
     \type \infix 4 <= {Q : Poset} (x y : Interval Q) => \Sigma (y.1 Q.<= x.1) (x.2 Q.<= y.2)
   }
@@ -39,11 +39,11 @@
 \instance IntervalBiordered (Q : BiorderedSet) : BiorderedSet (Interval Q) 
   | Poset => IntervalPoset Q
   | < => <
-  | <-irreflexive => \lam p => <-irreflexive p.1
-  | <-transitive => \lam a<b b<c => (b<c.1 <∘ a<b.1, a<b.2 <∘ b<c.2)
-  | <-transitive-right => \lam a<=b b<c => (b<c.1 <∘l a<=b.1, a<=b.2 <∘r b<c.2)
-  | <-transitive-left => \lam a<b b<=c => (b<=c.1 <∘r a<b.1, a<b.2 <∘l b<=c.2)
-  | <=-less => \lam a<b => (<=-less a<b.1, <=-less a<b.2)
+  | <-irreflexive => {?hidden_proof}
+  | <-transitive => {?hidden_proof}
+  | <-transitive-right => {?hidden_proof}
+  | <-transitive-left => {?hidden_proof}
+  | <=-less => {?hidden_proof}
   \where {
     \type \infix 4 < {Q : BiorderedSet} (x y : Interval Q) => \Sigma (y.1 Q.< x.1) (x.2 Q.< y.2)
   }
@@ -52,9 +52,9 @@
 \instance IntervalSemilattice (Q : Lattice) : MeetSemilattice (Interval Q) 
   | Poset => IntervalPoset Q
   | meet => \lam a b => (a.1 ∨ b.1, a.2 ∧ b.2)
-  | meet-left => (join-left, meet-left)
-  | meet-right => (join-right, meet-right)
-  | meet-univ => \lam t s => (join-univ t.1 s.1, meet-univ t.2 s.2)
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}
 
 \instance RealPres (Q : LinearOrder.Dec) : FramePres (Interval Q) 
   | conj => meet

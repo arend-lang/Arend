@@ -86,10 +86,10 @@
     \func pullback (f : RingHom) (M : LModule f.Cod) : LModule f.Dom \cowith
       | AbGroup => M
       | *c => \lam a x => f a *c x
-      | *c-assoc => pmap (*c _) f.func-* *> *c-assoc
-      | *c-ldistr => *c-ldistr
-      | *c-rdistr => pmap (*c _) f.func-+ *> *c-rdistr
-      | ide_*c => pmap (*c _) f.func-ide *> ide_*c
+      | *c-assoc => {?hidden_proof}
+      | *c-ldistr => {?hidden_proof}
+      | *c-rdistr => {?hidden_proof}
+      | ide_*c => {?hidden_proof}
 
     \lemma generated-fin-comp (f : RingHom) {M : LModule f.Cod} {I J : FinSet} {a : I -> f.Cod} {b : J -> M} (Cg : (homLModule f).IsGeneratedFin a) (Mg : M.IsGeneratedFin b) :
       LModule.IsGeneratedFin {pullback f M} (\lam (p : \Sigma J I) => a p.2 *c b p.1) => {?hidden_proof}
@@ -104,15 +104,15 @@
 \instance ProductLModule (R : Ring) (A B : LModule R) : LModule R 
   | AbGroup => ProductAbGroup A B
   | *c => \lam r p => (r *c p.1, r *c p.2)
-  | *c-assoc => pmap2 (__, __) *c-assoc *c-assoc
-  | *c-ldistr => pmap2 (__, __) *c-ldistr *c-ldistr
-  | *c-rdistr => pmap2 (__, __) *c-rdistr *c-rdistr
-  | ide_*c => pmap2 (__, __) ide_*c ide_*c
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
   \where {
     \func in1 {R : Ring} (A B : LModule R) : LinearMap A (ProductLModule R A B) \cowith
       | func => \lam a => (a, 0)
-      | func-+ => \lam {a} {b} => rewrite (pmap (\lam z => (a A.+ b, z)) (inv B.zro-right)) idp
-      | func-*c => \lam {r} {_} => rewrite (inv $ B.*c_zro-right {r}, inv aux, B.*c_zro-right) idp
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
       \where {
         \lemma aux {r : R} {a : A} {b : B} : r LModule.*c {ProductLModule R A B} (a, b) = (r *c a, r *c b) => {?hidden_proof}
       }
@@ -120,8 +120,8 @@
 
     \func in2 {R : Ring} (A B : LModule R) : LinearMap B (ProductLModule R A B) \cowith
       | func => \lam b => (0, b)
-      | func-+ => \lam {a} {b} => rewrite (pmap (\lam z => (z, a B.+ b)) (inv A.zro-right)) idp
-      | func-*c => \lam {r} {_} => rewrite (inv $ A.*c_zro-right {r}, inv aux, A.*c_zro-right) idp
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
       \where {
         \lemma aux {r : R} {a : A} {b : B} : r LModule.*c {ProductLModule R A B} (a, b) = (r *c a, r *c b) => {?hidden_proof}
       }
@@ -129,43 +129,43 @@
 
     \func proj1 {R : Ring} (A B : LModule R) : LinearMap (ProductLModule R A B) A \cowith
       | func => \lam (a, b) => a
-      | func-+ => idp
-      | func-*c => idp
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \func proj2 {R : Ring} (A B : LModule R) : LinearMap (ProductLModule R A B) B \cowith
       | func => \lam (a, b) => b
-      | func-+ => idp
-      | func-*c => idp
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \func coprod-map {R : Ring} {A B C : LModule R} (i : LinearMap A C) (j : LinearMap B C) : LinearMap (ProductLModule R A B) C \cowith
       | func => \lam (a, b) => i a C.+ j b
-      | func-+ => rewrite (i.func-+, j.func-+) equation
-      | func-*c => rewrite (i.func-*c, j.func-*c, C.*c-ldistr) idp
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \func prod-map {R : Ring} {A B C : LModule R} (a : LinearMap C A) (b : LinearMap C B) : LinearMap C (ProductLModule R A B) \cowith
       | func => \lam c => (a c, b c)
-      | func-+ => rewrite (a.func-+, b.func-+) idp
-      | func-*c => rewrite (a.func-*c, b.func-*c) idp
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
   }
 
 
 \func RingLModule (R : Ring) : LModule R R \cowith
   | AbGroup => R
   | *c => *
-  | *c-assoc => *-assoc
-  | *c-ldistr => R.ldistr
-  | *c-rdistr => R.rdistr
-  | ide_*c => ide-left
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
   \where {
     \func *_hom-left {R : CRing} {x : R} : LinearMap (RingLModule R) (RingLModule R) \cowith
       | func => \lam y => x * y
-      | func-+ => ldistr
-      | func-*c => equation
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \func *_hom-right {R : Ring} {x : R} : LinearMap (RingLModule R) (RingLModule R) \cowith
       | func => \lam y => y * x
-      | func-+ => rdistr
-      | func-*c => *-assoc
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \lemma basis {R : Ring} : LModule.IsBasis {RingLModule R} (1 :: nil) => {?hidden_proof}
   }
@@ -174,17 +174,17 @@
 \instance ArrayLModule {R : Ring} (n : Nat) (M : LModule R) : LModule R (Array M n) 
   | zro => \lam _ => 0
   | + => \lam f g j => f j + g j
-  | zro-left => arrayExt (\lam j => zro-left)
-  | zro-right => arrayExt (\lam j => zro-right)
-  | +-assoc => arrayExt (\lam j => +-assoc)
+  | zro-left => {?hidden_proof}
+  | zro-right => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
   | negative => \lam f j => negative (f j)
-  | negative-left => arrayExt (\lam j => negative-left)
-  | +-comm => arrayExt (\lam j => +-comm)
+  | negative-left => {?hidden_proof}
+  | +-comm => {?hidden_proof}
   | *c => \lam r f j => r *c f j
-  | *c-assoc => arrayExt (\lam j => *c-assoc)
-  | *c-ldistr => arrayExt (\lam j => *c-ldistr)
-  | *c-rdistr => arrayExt (\lam j => *c-rdistr)
-  | ide_*c => arrayExt (\lam j => ide_*c)
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
   \where {
     \lemma skip_*c {R : CRing} {n : Nat} {r : R} {l : Array R (suc n)} {k : Fin (suc n)} :
       skip (r *c {ArrayLModule _ (RingLModule R)} l) k = r *c {ArrayLModule _ (RingLModule R)} skip l k => {?hidden_proof}
@@ -200,7 +200,7 @@
 \func homLModule (f : RingHom) : LModule f.Dom \cowith
   | AbGroup => f.Cod
   | *c => \lam x y => f x * y
-  | *c-assoc => pmap (* _) f.func-* *> *-assoc
-  | *c-ldistr => ldistr
-  | *c-rdistr => pmap (* _) f.func-+ *> rdistr
-  | ide_*c => pmap (* _) f.func-ide *> ide-left
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}

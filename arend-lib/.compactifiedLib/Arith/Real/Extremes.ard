@@ -40,26 +40,15 @@
 \func makeSup {A : Set Real} {a0 : Real} (Aa0 : A a0) {b : Real} (Ab : ∀ {a : A} (a < b)) 
 (As : \Pi {x y : Real} -> x < y -> Given (a : A) (x < a) || ∀ {a : A} (a < y)) : Real \cowith
   | L => \lam z => ∃ (a : A) (Real.L {a} z)
-  | L-inh => \case a0.L-inh \with {
-    | inP (r, r<a0) => inP (r, inP (a0, Aa0, r<a0))
-  }
-| L-closed => \lam inP (a, Aa, q<a) q'<q => inP (a, Aa, L-closed q<a q'<q)
-| L-rounded => \lam inP (a, Aa, q<a) => (\case L-rounded q<a \with {
-  | inP (r, r<a, q<r) => inP (r, inP (a, Aa, r<a), q<r)
-})
-| U => \lam z => ∃ (z' : Real) (z' < z) ∀ {a : A} (a < z')
-| U-inh => \case b.U-inh \with {
-  | inP (r, b<r) => inP (r, inP (b, real_<_U.2 b<r, Ab))
-}
-| U-closed => \lam inP (z, z<q, zb) q<q' => inP (z, z<q <∘ real_<_L.2 q<q', zb)
-| U-rounded => \lam inP (z, z<q, zb) => (\case U-rounded (real_<_U.1 z<q) \with {
-  | inP (r, z<r, r<q) => inP (r, \case U-rounded z<r \with {  | inP (z', z<z', z'<r) => inP (z', real_<_L.2 z'<r, \lam Aa => zb Aa <∘ real_<_U.2 z<z')}, r<q)
-})
-| LU-disjoint => \lam inP (a, Aa, q<a) inP (z, z<q, zb) => linarith (real_<_L.2 q<a, zb Aa)
-| LU-located => \lam {q} {r} q<r => (\case As $ real_<_L.2 (RatField.mid>left q<r) \with {
-  | byLeft (a, Aa, q<a) => byLeft $ inP (a, Aa, real_<_L.1 q<a)
-  | byRight rb => byRight $ inP (RatField.mid q r, real_<_L.2 $ RatField.mid<right q<r, rb)
-})
+  | L-inh => {?hidden_proof}
+  | L-closed => {?hidden_proof}
+  | L-rounded => {?hidden_proof}
+  | U => \lam z => ∃ (z' : Real) (z' < z) ∀ {a : A} (a < z')
+  | U-inh => {?hidden_proof}
+  | U-closed => {?hidden_proof}
+  | U-rounded => {?hidden_proof}
+  | LU-disjoint => {?hidden_proof}
+  | LU-located => {?hidden_proof}
   \where {
     \lemma isSup (Aa0 : A a0) (Ab : ∀ {a : A} (a < b)) (As : \Pi {x y : Real} -> x < y -> Given (a : A) (x < a) || ∀ {a : A} (a < y)) : IsSup A (makeSup Aa0 Ab As) => {?hidden_proof}
 
@@ -97,26 +86,15 @@
 \func makeInf {A : Set Real} {a0 : Real} (Aa0 : A a0) {b : Real} (Ab : ∀ {a : A} (b < a)) 
 (As : \Pi {x y : Real} -> x < y -> ∀ {a : A} (x < a) || Given (a : A) (a < y)) : Real \cowith
   | L => \lam z => ∃ (z' : Real) ((z : Real) < z') ∀ {a : A} (z' < a)
-  | L-inh => \case b.L-inh \with {
-    | inP (r, r<b) => inP (r, inP (b, real_<_L.2 r<b, Ab))
-  }
-| L-closed => \lam inP (z, q<z, zb) q'<q => inP (z, real_<_L.2 q'<q <∘ q<z, zb)
-| L-rounded => \lam inP (z, q<z, zb) => (\case L-rounded (real_<_L.1 q<z) \with {
-  | inP (r, r<z, q<r) => inP (r, \case L-rounded r<z \with {  | inP (z', z<z', z'<r) => inP (z', real_<_L.2 z'<r, \lam Aa => real_<_L.2 z<z' <∘ zb Aa)}, q<r)
-})
-| U => \lam z => ∃ (a : A) (Real.U {a} z)
-| U-inh => \case a0.U-inh \with {
-  | inP (r, a0<r) => inP (r, inP (a0, Aa0, a0<r))
-}
-| U-closed => \lam inP (a, Aa, a<q) q<q' => inP (a, Aa, U-closed a<q q<q')
-| U-rounded => \lam inP (a, Aa, a<q) => (\case U-rounded a<q \with {
-  | inP (r, a<r, r<q) => inP (r, inP (a, Aa, a<r), r<q)
-})
-| LU-disjoint => \lam inP (z, q<z, zb) inP (a, Aa, a<q) => linarith (real_<_U.2 a<q, zb Aa)
-| LU-located => \lam {q} {r} q<r => (\case As $ real_<_U.2 (RatField.mid<right q<r) \with {
-  | byLeft rb => byLeft $ inP (RatField.mid q r, real_<_U.2 $ RatField.mid>left q<r, rb)
-  | byRight (a, Aa, q<a) => byRight $ inP (a, Aa, real_<_U.1 q<a)
-})
+  | L-inh => {?hidden_proof}
+  | L-closed => {?hidden_proof}
+  | L-rounded => {?hidden_proof}
+  | U => \lam z => ∃ (a : A) (Real.U {a} z)
+  | U-inh => {?hidden_proof}
+  | U-closed => {?hidden_proof}
+  | U-rounded => {?hidden_proof}
+  | LU-disjoint => {?hidden_proof}
+  | LU-located => {?hidden_proof}
   \where {
     \lemma isInf : IsInf A (makeInf Aa0 Ab As) => {?hidden_proof}
 

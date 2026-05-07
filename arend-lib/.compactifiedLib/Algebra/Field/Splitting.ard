@@ -62,8 +62,8 @@ countableSplittingField {k : DiscreteField} (c : Countable k) {p : Poly k} : \Si
     \func CountableSplittingFieldData : SplittingFieldData \cowith
       | P => \lam K => Countable K
       | S => \lam _ => \Sigma
-      | S-hom => \lam _ _ => ()
-      | S-factor => \lam _ => ()
+      | S-hom => {?hidden_proof}
+      | S-factor => {?hidden_proof}
       | nextField => \lam {k} {p} c p/=0 pc => \new RootFieldData {
         | RootField => FactorField {(poly-maximal-ideal c p pc).1} (poly-maximal-ideal c p pc).2
         | RootFieldP => factor-countable (Poly.poly-countable c)

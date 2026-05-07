@@ -135,8 +135,8 @@
           \where {
             \func func : Inv (i * j) \cowith
               | inv => j.inv * i.inv
-              | inv-left => lem i j
-              | inv-right => lem (\new (Inv j.inv j.val j.inv-right j.inv-left)) (\new (Inv i.inv i.val i.inv-right i.inv-left))
+              | inv-left => {?hidden_proof}
+              | inv-right => {?hidden_proof}
 
             \lemma lem {M : Monoid} (i j : Inv {M}) : (j.inv * i.inv) * (i * j) = ide => {?hidden_proof}
           }

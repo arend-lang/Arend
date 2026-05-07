@@ -111,21 +111,16 @@
       | ~-+ m idp idp => pmap (+ _) (pmap (*c _) (later msMonomial_+) *> *c-rdistr) *> +-assoc
 
     \func fHom : RingHom (MPoly (Fin (suc n)) R) (PolyRing (MPoly (Fin n) R)) f \cowith
-      | func-+ => \lam {x} {y} => (\case \elim x, \elim y \with {
-        | in~ l, in~ l' => pmap AddMonoid.BigSum (map_++ m-func) *> AddMonoid.BigSum_++
-      })
-      | func-ide => simplify
-      | func-* => \lam {x} {y} => (\case \elim x, \elim y \with {
-        | in~ l, in~ l' =>
-          pairs.pairs-distr m-func (\lam {a} {b} => pmap2 *c msMonomial_* f-monomial_+ *> *c-assoc {_} {msMonomial a.1 ide} *> pmap (_ *c) *c-comm-right *> *c-comm-left)
-      })
+      | func-+ => {?hidden_proof}
+      | func-ide => {?hidden_proof}
+      | func-* => {?hidden_proof}
 
     \lemma ret-aux {p : Poly (MPoly (Fin n) R)} {e : MPoly (Fin n) R} : ret (e *c p) = monoidSet-map (permSet-map fsuc) id e * ret p => {?hidden_proof}
 
     \func retHom : RingHom (PolyRing (MPoly (Fin n) R)) (MPoly (Fin (suc n)) R) ret \cowith
-      | func-zro => idp
+      | func-zro => {?hidden_proof}
       | func-+ => func-+
-      | func-ide => idp
+      | func-ide => {?hidden_proof}
       | func-* => func-*
 
     \lemma ret_eval (p : Poly (MPoly (Fin n) R)) {a : R} (l : Array R n) : mPolyEval l (polyEval p (msMonomial a ide)) = mPolyEval (a :: l) (ret p) => {?hidden_proof}

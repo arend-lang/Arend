@@ -5,14 +5,14 @@
 \instance ProductGroup (G H : Group) : Group 
   | Monoid => ProductMonoid G H
   | inverse => \lam p => (inverse p.1, inverse p.2)
-  | inverse-left => pmap2 (__, __) inverse-left inverse-left
-  | inverse-right => pmap2 (__, __) inverse-right inverse-right
+  | inverse-left => {?hidden_proof}
+  | inverse-right => {?hidden_proof}
 
 \instance ProductAddGroup (A B : AddGroup) : AddGroup 
   | AddMonoid => ProductAddMonoid A B
   | negative => \lam p => (negative p.1, negative p.2)
-  | negative-left => pmap2 (__, __) negative-left negative-left
-  | negative-right => pmap2 (__, __) negative-right negative-right
+  | negative-left => {?hidden_proof}
+  | negative-right => {?hidden_proof}
 
 \instance ProductCGroup (G H : CGroup) : CGroup 
   | Group => ProductGroup G H

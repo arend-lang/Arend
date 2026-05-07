@@ -7,23 +7,23 @@
 
 \instance ElemStrictPoset {X : StrictPoset} (U : Set X) : StrictPoset (Elem U) 
   | < => \lam x y => x.1 < y.1
-  | <-irreflexive => <-irreflexive
-  | <-transitive => <∘
+  | <-irreflexive => {?hidden_proof}
+  | <-transitive => {?hidden_proof}
 
 \instance ElemPoset {X : Poset} (U : Set X) : Poset (Elem U) 
   | <= => \lam x y => x.1 <= y.1
-  | <=-refl => <=-refl
-  | <=-transitive => <=∘
-  | <=-antisymmetric => \lam p q => ext (<=-antisymmetric p q)
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
 
 \instance ElemBiordered {X : BiorderedSet} (U : Set X) : BiorderedSet (Elem U) 
   | StrictPoset => ElemStrictPoset U
   | Poset => ElemPoset U
-  | <-transitive-right => <∘r
-  | <-transitive-left => <∘l
-  | <=-less => <=-less
+  | <-transitive-right => {?hidden_proof}
+  | <-transitive-left => {?hidden_proof}
+  | <=-less => {?hidden_proof}
 
 \instance ElemLinearOrder {X : LinearOrder} (U : Set X) : LinearOrder (Elem U) 
   | StrictPoset => ElemStrictPoset U
-  | <-comparison => \lam y p => <-comparison y.1 p
-  | <-connectedness => \lam p q => ext (<-connectedness p q)
+  | <-comparison => {?hidden_proof}
+  | <-connectedness => {?hidden_proof}

@@ -42,9 +42,9 @@ ext (\lam k => inv (<-connectedness k<=gk (rewrite (pmap (\lam f => f k) fg-comp
     | func => f Function.o g
     | func-<= => \lam eq => f-monotone (g-monotone eq)
   }
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
   \where {
     \func hom (n m : Nat) => PosetHom (FinOrder n) (FinOrder m)
   }
@@ -64,8 +64,4 @@ ext (\lam k => inv (<-connectedness k<=gk (rewrite (pmap (\lam f => f k) fg-comp
 
 \instance SimplexCat : Cat 
   | Precat => SimplexPrecat
-  | univalence => \lam {n} {_} => \new QEquiv {
-    | ret => \lam iso => Simplex_iso iso
-    | ret_f => \lam _ => set-pi
-    | f_sec => \lam iso => transport (\lam k => isProp (Iso {SimplexPrecat} {n} {k})) (Simplex_iso iso) (iso_isProp {n}) _ _
-  }
+  | univalence => {?hidden_proof}

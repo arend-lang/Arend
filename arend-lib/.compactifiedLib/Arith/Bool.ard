@@ -6,22 +6,22 @@
 
 \instance BoolLattice : BoundedDistributiveLattice Bool 
   | <= => <=
-  | <=-refl => \lam {x} => cases x constructor
-  | <=-transitive => \lam {x} {y} {z} p q => cases (x, y, z, p, q) constructor
-  | <=-antisymmetric => \lam {x} {y} p q => cases (x, y, p, q) idp
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
   | meet => and
-  | meet-left => \lam {x} {y} => cases (x, y) constructor
-  | meet-right => \lam {x} {y} => cases (x, y) constructor
-  | meet-univ => \lam {x} {y} {z} p q => cases (x, y, z, p, q) constructor
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}
   | join => or
-  | join-left => \lam {x} {y} => cases x constructor
-  | join-right => \lam {x} {y} => cases (x, y) constructor
-  | join-univ => \lam {x} {y} {z} p q => cases (x, y, z, p, q) constructor
+  | join-left => {?hidden_proof}
+  | join-right => {?hidden_proof}
+  | join-univ => {?hidden_proof}
   | top => true
-  | top-univ => \lam {x} => cases x constructor
+  | top-univ => {?hidden_proof}
   | bottom => false
-  | bottom-univ => false<=_
-  | ldistr>= => \lam {x} {y} {z} => cases (x, y, z) constructor
+  | bottom-univ => {?hidden_proof}
+  | ldistr>= => {?hidden_proof}
   \where {
 \data \infix 4 <= (x y : Bool) \with
       | false, _ => false<=_
@@ -31,14 +31,9 @@
 
 \instance BoolPoset : Dec Bool 
   | < => <
-  | <-irreflexive => \lam {true} () => {?}
-  | <-transitive => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z, __, __ \with {})
-  | trichotomy => \case \elim __, \elim __ \with {
-    | true, true => equals idp
-    | true, false => greater false<true
-    | false, true => less false<true
-    | false, false => equals idp
-  }
+  | <-irreflexive => {?hidden_proof}
+  | <-transitive => {?hidden_proof}
+  | trichotomy => {?hidden_proof}
   \where {
     \open LinearOrder
 

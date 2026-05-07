@@ -4,9 +4,12 @@
 \import Data.Or
 \import Equiv
 \import Equiv.Sigma
+\import Equiv.HalfAdjoint
 \import Function
 \import Function.Meta
 \import Logic
+\import Logic.Meta
+\import Logic.Unique
 \import Meta
 \import Paths
 \import Paths.Meta
@@ -31,4 +34,61 @@
   \where {
     \func prod_equiv {n m : Nat} : Equiv {Fin (n Nat.* m)} {\Sigma (Fin n) (Fin m)} 
       => transport (\lam x => Equiv {Fin x} {_}) Semiring.BigSum_replicate $ SigmaFin.aux {n} {\lam _ => m}
+  }
+
+
+\func pi_equiv {n : Nat} {Q : Fin n -> Nat} : Equiv {Fin (Monoid.BigProd (\new (Array Nat n Q)))} {\Pi (j : Fin n) -> Fin (Q j)} \elim n
+  | 0 => \new QEquiv {
+    | f => \lam _ => (\case __ \with {})
+    | ret => \lam _ => 0
+    | ret_f => \lam 0 => idp
+    | f_sec => \lam f => ext (\case __ \with {})
+  }
+  | suc n => 
+    \let | E1 : Equiv {Fin (Q 0 Nat.* Monoid.BigProd (\new (Array Nat n (\lam j => Q (suc j)))))} 
+           {\Sigma (Fin (Q 0)) (Fin (Monoid.BigProd (\new (Array Nat n (\lam j => Q (suc j))))))} => ProdFin.prod_equiv
+         | E2 : Equiv {\Sigma (Fin (Q 0)) (Fin (Monoid.BigProd (\new (Array Nat n (\lam j => Q (suc j))))))} {\Sigma (Fin (Q 0)) (\Pi (j : Fin n) -> Fin (Q (suc j)))} =>
+           sigma-right (\lam _ => pi_equiv {n} {\lam j => Q (suc j)})
+         | E3 : QEquiv {\Sigma (Fin (Q 0)) (\Pi (j : Fin n) -> Fin (Q (suc j)))} {\Pi (j : Fin (suc n)) -> Fin (Q j)} => \new QEquiv {
+           | f => \lam p j => (\case \elim j \with {
+             | 0 => p.1
+             | suc j => p.2 j
+           })
+           | ret => \lam f => (f 0, \lam j => f (suc j))
+           | ret_f => \lam p => idp
+           | f_sec => \lam f => ext (\case \elim __ \with {  | 0 => idp  | suc j => idp})
+         }
+    \in E1 `transEquiv` E2 `transEquiv` E3
+
+\lemma FinProd_char {M : CMonoid} {A : FinSet} (x : A -> M) : ∃ (e : Equiv {Fin A.finCard} {A}) (CMonoid.FinProd {_} {A} x = Monoid.BigProd (\lam j => x (e j))) => {?hidden_proof}
+
+\lemma FinProd_replicate {M : CMonoid} {A : FinSet} {x : M} : CMonoid.FinProd {M} {A} (\lam _ => x) = M.pow x A.finCard => {?hidden_proof}
+
+\instance PiFin (S : FinSet) (Q : S -> FinSet) : FinSet (\Pi (i : S) -> Q i) (CMonoid.FinProd {NatSemiring} (\lam x => (Q x).finCard)) 
+  | finEq => {?hidden_proof}
+  \where {
+    \func pi-equiv-ext {n : Nat} {B B' : Fin n -> \Type} (q : \Pi (j : Fin n) -> Equiv {B j} {B' j}) : Equiv {\Pi (j : Fin n) -> B j} {\Pi (j : Fin n) -> B' j} \cowith
+      | f => \lam h j => q j (h j)
+      | ret => \lam h' j => (q j).ret (h' j)
+      | sec => \lam h' j => (q j).sec (h' j)
+      | ret_f => \lam h => ext (\lam j => (q j).ret_f (h j))
+      | f_sec => \lam h' => ext (\lam j => (q j).f_sec (h' j))
+
+    \func pi-left {A A' : \Set} {B : A' -> \Type} (e : HAEquiv {A} {A'}) : Equiv {\Pi (a : A) -> B (e a)} {\Pi (a' : A') -> B a'} \cowith
+      | f => \lam h a' => transport B (e.f_sec a') (h (e.ret a'))
+      | ret => \lam h' a => h' (e a)
+      | sec => \lam h' a => h' (e a)
+      | ret_f => \lam h => ext (\lam a => qed
+        (transport B (e.f_sec (e a)) (h (e.ret (e a))) ==< inv (pmap (transport B __ (h (e.ret (e a)))) (e.f_ret_f=f_sec_f a)) >== transport B (pmap e (e.ret_f a)) 
+          (h (e.ret (e a))) ==< transport_pmap B e (e.ret_f a) (h (e.ret (e a))) >== transport (\lam x => B (e x)) (e.ret_f a) (h (e.ret (e a))) ==< 
+          transport_idp (e.ret_f a) h >== h a))
+      | f_sec => \lam h' => ext (\lam a' => pmapd h' (e.f_sec a'))
+
+    \func transport_idp {A : \Type} {B : A -> \Type} {a a' : A} (p : a = a') (h : \Pi (x : A) -> B x) : transport B p (h a) = h a' \elim p
+      | idp => idp
+
+    \func transport_pmap {A B : \Type} (C : B -> \Type) (f : A -> B) {a a' : A} (p : a = a') (c : C (f a)) : transport C (pmap f p) c = transport (\lam x => C (f x)) p c \elim p
+      | idp => idp
+
+    \lemma pi-card {S : FinSet} {Q : S -> FinSet} : (PiFin S Q).finCard = CMonoid.FinProd {NatSemiring} (\lam i => (Q i).finCard) => {?hidden_proof}
   }

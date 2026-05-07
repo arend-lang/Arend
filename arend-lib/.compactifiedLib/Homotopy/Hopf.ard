@@ -38,7 +38,7 @@
   | * => mult
   | base-left => \lam _ => idp
   | base-right => mult-right
-  | isConn0 => \lam base1 base1 => inP idp
+  | isConn0 => {?hidden_proof}
   \where {
     \open Sphere1(ploop)
 

@@ -205,25 +205,18 @@
 \func ExPseudoMetricTransfer {X : \Set} {Y : ExPseudoMetricSpace} (f : X -> Y) : ExPseudoMetricSpace X \cowith
   | TopSpace => TopTransfer f
   | dist => \lam x x' => dist (f x) (f x')
-  | dist-refl => dist-refl
-  | dist-symm => dist-symm
-  | dist-triang => dist-triang
-  | cauchy-open => \lam {S} => later (\lam inP (V, Vo, p) Sx => ClosurePrecoverSpace.closure (\case dist_open.1 Vo (rewrite p in Sx) \with {
-    | inP (eps, eps>0, q) => inP (half eps, half>0 eps>0, \lam x' => inP (_, \lam d1 {x''} d2 => rewrite p $ q (Y.halving1/2 d1 d2), \lam e => e))}),
-    \lam c => inP (Set.Union (\lam V' => \Sigma (isOpen V') (f ^-1 V' ⊆ S)), open-Union __.1,  <=-antisymmetric (later (\lam {x} Sx => (\case 
-    ClosurePrecoverSpace.closure-filter (ExMetricSpace.NFilter {\new (ExPseudoMetricSpace X) {  | dist => \lam x y => dist (f x) (f y)  | dist-refl => dist-refl  | dist-symm => dist-symm
-          | dist-triang => dist-triang}} x)
-      (\lam inP (eps, eps>0, h) => (\case h x \with {  | inP (U, CU, g) => inP (U, CU, inP (eps, eps>0, g __))})) (c Sx)   \with {
-      | inP (U, q, inP (eps, eps>0, p)) => inP (OBall eps (f x), (OBall-open, \lam {x'} d => q (p $ OBall-center eps>0 {f x}) (p d)), OBall-center eps>0)
-    }))) (\lam inP (U, (Uo, p), Ufx) => p Ufx)))
+  | dist-refl => {?hidden_proof}
+  | dist-symm => {?hidden_proof}
+  | dist-triang => {?hidden_proof}
+  | cauchy-open => {?hidden_proof}
 
 \func ExMetricTransfer {X : \Set} {Y : ExMetricSpace} (f : X -> Y) (fi : IsInj f) : ExMetricSpace X \cowith
   | ExPseudoMetricSpace => ExPseudoMetricTransfer f
-  | dist-ext => \lam p => fi (dist-ext p)
+  | dist-ext => {?hidden_proof}
 
 \func PseudoMetricTransfer {X : \Set} {Y : PseudoMetricSpace} (f : X -> Y) : PseudoMetricSpace X \cowith
   | ExPseudoMetricSpace => ExPseudoMetricTransfer f
 
 \func MetricTransfer {X : \Set} {Y : MetricSpace} (f : X -> Y) (fi : IsInj f) : MetricSpace X \cowith
   | ExPseudoMetricSpace => ExPseudoMetricTransfer f
-  | dist-ext => \lam p => fi (dist-ext p)
+  | dist-ext => {?hidden_proof}

@@ -11,11 +11,7 @@
 
 \func YonedaEmbedding {C : Precat} : FullyFaithfulFunctor \cowith
   | Functor => functor {C}
-  | isFullyFaithful => \lam {X} {Y} => \new QEquiv {
-    | ret => QEquiv.f {yoneda-lemma X (hom-presheaf Y)}
-    | ret_f => \lam _ => id-right
-    | f_sec => QEquiv.ret_f {yoneda-lemma X (hom-presheaf Y)}
-  }
+  | isFullyFaithful => {?hidden_proof}
   \where {
     \func hom-presheaf {C : Precat} (c : C) : PresheafCat C => \new VPresheaf {
       | F => \new Functor {
@@ -32,8 +28,8 @@
         | trans => \lam _ => \lam g => f ∘ g
         | natural => \lam _ => exts (\lam _ => inv $ o-assoc)
       }
-      | Func-id => exts (\lam _ => exts (\lam _ => id-left))
-      | Func-o => exts (\lam _ => exts (\lam _ => unfold $ o-assoc))
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
 
     \func yoneda-lemma {C : Precat} (A : C) (F : PresheafCat C) : QEquiv {Hom (Functor.F {functor} A) F} {F A} => \new QEquiv {
       | f => \lam nat => nat A (id A)
@@ -53,21 +49,21 @@
   | Hom => \lam x y => \Sigma (u : Hom x.1 y.1) (x.2 = Func {P} u y.2)
   | id => \lam (c, p) => (id c, unfold $ rewrite (Func-id {P}) idp)
   | o => \lam (u, eq) (u', eq') => (u ∘ u', eq' *> rewrite (eq, Func-o {P}) idp)
-  | id-left => exts id-left
-  | id-right => exts id-right
-  | o-assoc => exts o-assoc
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
   \where {
     \func projection : Functor (Precategory-of-elements P) C \cowith
       | F => \lam (x, _) => x
       | Func => \lam (f, _) => f
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
 
     \func functorial {C : Precat} (P F : PresheafCat C) (nat : Hom P F) : Functor (Precategory-of-elements P) (Precategory-of-elements F) \cowith
       | F => \lam (c, p) => (c, nat c p)
       | Func => \lam {(c, p)} {(c', p')} (h, eq) => (h, rewrite eq $ path (\lam i => (natural {nat} h) i p'))
-      | Func-id => exts $ idp
-      | Func-o => exts $ idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
   }
 
 
@@ -107,8 +103,8 @@
     \func functors-iso : Iso {FunctorCat {C} {E}} {A} {Comp L-Functor YonedaEmbedding} \cowith
       | f => nat
       | hinv => NatTrans.iso {nat} (\lam {X} => image-of-rep-iso X)
-      | hinv_f => exts (\lam _ => unfold $ unfold $ Iso.hinv_f)
-      | f_hinv => exts (\lam _ => unfold $ unfold $ Iso.f_hinv)
+      | hinv_f => {?hidden_proof}
+      | f_hinv => {?hidden_proof}
       \where {
         \func nat : Hom A (Comp L-Functor YonedaEmbedding) => \new NatTrans {
           | trans => \lam x => image-of-rep-iso x
@@ -133,14 +129,10 @@
       | coneMap => \lam p0 => (\case \elim p0 \with {
         | (c, p) => Func {A} p
       })
-      | coneCoh => \lam {i} {j} h => (\case \elim i, \elim j, \elim h \with {
-        | (c, p), (c', p'), (f, eq) => rewriteI (Func-o {A}, eq) idp
-      })
+      | coneCoh => {?hidden_proof}
       | limMap => \lam cone => coneMap {cone} (x, id x)
-      | limBeta => \lam cone j => (\case \elim j \with {
-        | (c, p) => coneCoh {cone} {(x, id x)} {(c, p)} (p, inv id-left)
-      })
-      | limUnique => \lam coh => unfold at coh $ (  \let coh-app => coh (x, id x)  \in rewrite (Func-id {A}, id-right, id-right) at coh-app $ coh-app)
+      | limBeta => {?hidden_proof}
+      | limUnique => {?hidden_proof}
 
     \func image-of-rep-iso-op (x : C) : Iso {E.op} {A x} {L-limit (hom-presheaf x)} 
       => Limit.lim_iso {_} {_} {Functor.op {diagram-functor (hom-presheaf x)}} (L-limit $ hom-presheaf x) (image-of-representable x)
@@ -154,17 +146,13 @@
     \func L-Functor : Functor (PresheafCat C) E \cowith
       | F => \lam P => L-limit P
       | Func => \lam f => induced-map f
-      | Func-id => \lam {X} =>
-        Limit.limUniqueBeta {L-limit X} {L-limit X} (\lam p0 => (\case \elim p0 \with {  | (c, p) => repeat {2} unfold $ rewrite (id-right, id-left {_} {_} {L-limit X}) $ idp}))
-      | Func-o => \lam {X} {Y} {Z} {g} {f} => unfold_let $ Limit.limUniqueBeta {L-limit X} {L-limit Z}
-        (\lam j => (\case \elim j \with {  | (c, p) => repeat {6} unfold $ id-right *>
-          (  \let | limBeta1 => limBeta {L-limit X} (cone-in-induced f) (c, p)       | limBeta2 => limBeta {L-limit Y} (cone-in-induced g) (c, f c p)
-          \in unfold at limBeta1 $ rewrite (o-assoc, limBeta1, id-left) $ unfold at limBeta2 $ rewrite (limBeta2, id-left) idp)}))
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
       \where {
         \func induced-natural {X Y : PresheafCat C} (f : Hom X Y) : NatTrans (Comp (Functor.op {diagram-functor Y}) (Functor.op {functorial X Y f})) (Functor.op {diagram-functor X}) 
         \cowith
           | trans => \lam (q, a) => id (A q)
-          | natural => \lam _ => repeat {4} unfold $ rewrite (id-left, id-right) idp
+          | natural => {?hidden_proof}
 
         \func induced-map {X Y : PresheafCat C} (f : Hom X Y) : Hom (L-limit X) (L-limit Y) 
           => Limit.transFuncMap (L-limit X) (L-limit Y) (Functor.op {functorial X Y f}) $ induced-natural f

@@ -35,7 +35,7 @@
       => {?hidden_proof}
 
     \func func (X : CoverSpace) {S : Set X} (So : X.isOpen S) : PrecoverMap (OpenCoverSpace X So) X __.1 \cowith
-      | func-cover => \lam Dc => makeBasicCover (byLeft Dc)
+      | func-cover => {?hidden_proof}
 
     \lemma <=<-conv (X : CoverSpace) {S : Set X} (So : X.isOpen S) {x' : Total S} {U' : Set (Total S)} (x'<=<U' : single x' <=< {OpenCoverSpace X So} U') : single x'.1 <=< extend U' 
       => {?hidden_proof}
@@ -44,30 +44,21 @@
 
 \func filter-extend {X : \Set} (U : Set X) (F : SetFilter (Total U)) : SetFilter X \cowith
   | F => \lam V => F (\lam s => V s.1)
-  | filter-mono => \lam q p => filter-mono q (\lam c => p c)
-  | filter-top => filter-top
-  | filter-meet => \lam c d => filter-meet c d
+  | filter-mono => {?hidden_proof}
+  | filter-top => {?hidden_proof}
+  | filter-meet => {?hidden_proof}
 
 \func proper-filter-extend {X : \Set} (U : Set X) (F : ProperFilter (Total U)) : ProperFilter X \cowith
   | SetFilter => filter-extend U F
-  | isProper => \lam c => (\case F.isProper c \with {
-    | inP (s, Us) => inP (s.1, Us)
-  })
+  | isProper => {?hidden_proof}
 
 \func cauchy-filter-extend (X : CoverSpace) {S : Set X} (So : X.isOpen S) (F : CauchyFilter (OpenCoverSpace X So)) : CauchyFilter X \cowith
   | ProperFilter => proper-filter-extend S F
-  | isCauchyFilter => \lam Cc => (\case F.isCauchyFilter (OpenCoverSpace.makeBasicCover $ byLeft Cc) \with {
-    | inP (U', inP (U, CU, U'=U), FU') => inP (U, CU, rewrite U'=U in FU')
-  })
+  | isCauchyFilter => {?hidden_proof}
 
 \func OpenCompleteCoverSpace {X : CompleteCoverSpace} {S : Set X} (So : X.isOpen S) : CompleteCoverSpace (Total S) \cowith
   | SeparatedCoverSpace => Separated-char (OpenCoverSpace X So) 3 0 $ inP (X, func X So, \lam p => ext p)
-  | isComplete => \lam F => (
-    \let | F' => cauchy-filter-extend X So F
-         | x => X.filter-point F'
-         | inP (U', inP (U, inP (_, idp, U<=<S), U'=U), FU') => isCauchyFilter {F} $ makeBasicCover $ byRight $ regular-closure-extends (regular-closure idp) idp
-    \in inP ((x, <=<_<= (X.filter-point-elem {F'} U<=<S $ rewrite U'=U in FU') idp), 
-          \lam {V'} x<=<V' => filter-mono (X.filter-point-sub (<=<-conv X So x<=<V')) (\lam s => transport V' (ext idp) s.2)))
+  | isComplete => {?hidden_proof}
   \where {
     \open OpenCoverSpace
   }
@@ -75,24 +66,8 @@
 
 \func ClosedCompleteCoverSpace {X : CompleteCoverSpace} {S : Set X} (Sc : X.IsClosed S) : CompleteCoverSpace (Total S) \cowith
   | CoverSpace => CoverTransfer __.1
-  | isSeparatedCoverSpace => \lam f => ext $ isSeparatedCoverSpace (\lam Cc => (\case f (PrecoverTransfer.makeCauchy Cc) \with {  | inP (_, inP (U, CU, idp), s) => inP (U, CU, s)}))
-  | isComplete => \lam F => (
-    \let | G => \new (CauchyFilter X) {
-           | F => \lam U => F (Set.restrict U)
-           | filter-mono => \lam Fa p => filter-mono Fa (p __)
-           | filter-top => filter-top
-           | filter-meet => filter-meet
-           | isProper => \lam FU => (\case isProper FU \with {
-             | inP (x, Ux) => inP (x.1, Ux)
-           })
-           | isCauchyFilter => \lam Cc => (\case isCauchyFilter {F} (PrecoverTransfer.makeCauchy Cc) \with {
-             | inP (_, inP (U, CU, idp), FU) => inP (U, CU, FU)
-           })
-         }
-         | x => X.filter-point G
-    \in inP ((x,  Sc (\lam {V} Vo VG => (\case (X.filter-point-char {G} {V}).1 $ X.open-char.1 Vo VG \with {  | inP (W, W<=<V, GW) => \case isProper GW \with {
-            | inP ((x, Sx), Wx) => inP (x, Sx, <=<_<= W<=<V Wx)  }}))),  \lam {V} c => (\case X.cauchy-regular-cover c x \with {
-          | inP (U, inP (W, h, p), x<=<U) => filter-mono (X.filter-point-sub x<=<U) (p <=∘ h (_, (idp, p $ <=<_<= x<=<U idp)))})))
+  | isSeparatedCoverSpace => {?hidden_proof}
+  | isComplete => {?hidden_proof}
   \where {
     \lemma conv {X : SeparatedCoverSpace} {S : Set X} (Sc : IsCompleteCoverSpace (CoverTransfer {Total S} __.1)) : X.IsClosed S => {?hidden_proof}
   }

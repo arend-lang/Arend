@@ -33,10 +33,10 @@
 
 \instance NatMetricSpace : MetricSpace Nat 
   | dist => \lam n m => LatticeAbGroup.abs (finv (suc n) - finv (suc m))
-  | dist-refl => RatNormed.dist-refl
-  | dist-symm => RatNormed.dist-symm
-  | dist-triang => RatNormed.dist-triang {_} {_} {finv (suc _)}
-  | dist-ext => \lam p => pmap pred $ pmap ratDenom $ RatNormed.dist-ext {_} {finv (suc _)} p
+  | dist-refl => {?hidden_proof}
+  | dist-symm => {?hidden_proof}
+  | dist-triang => {?hidden_proof}
+  | dist-ext => {?hidden_proof}
   \where {
     \func Cover (C : Set (Set Nat)) : \Prop => ∃ (U : C) (N : Nat) (\Pi {n : Nat} -> N <= n -> U n) (\Pi (j : Fin N) -> Given (V : C) (V j))
 
@@ -54,9 +54,8 @@
 
 \func atTop : CauchyFilter NatMetricSpace \cowith
   | F => \lam U => ∃ (N : Nat) ∀ {n} (N <= n -> U n)
-  | filter-mono => \lam inP (N, f) p => inP (N, \lam q => p $ f q)
-  | filter-top => inP (0, \lam _ => ())
-  | filter-meet => \lam inP (N, f) inP (M, g) => inP (N ∨ M, \lam p => (f $ join-left <=∘ p, g $ join-right <=∘ p))
-  | isProper => \lam inP (N, f) => inP (N, f <=-refl)
-  | isCauchyFilter => (cauchyFilter-uniform-char {_} {\this}).2
-    (\lam Cu => (\case NatMetricSpace.uniform-char.1 Cu \with {  | inP (U, CU, N, g, _) => inP (U, CU, inP (N, g))}))
+  | filter-mono => {?hidden_proof}
+  | filter-top => {?hidden_proof}
+  | filter-meet => {?hidden_proof}
+  | isProper => {?hidden_proof}
+  | isCauchyFilter => {?hidden_proof}

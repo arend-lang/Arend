@@ -41,27 +41,21 @@
   \where {
     \func id {R : Ring} {M : LModule R} : LinearMap M M \cowith
       | func => \lam a => a
-      | func-+ => idp
-      | func-*c => idp
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \func \infixl 8 compose \alias \infixl 8 ∘ {R : Ring} {U V W : LModule R} (g : LinearMap V W) (f : LinearMap U V) : LinearMap U W \cowith
       | func => \lam a => g (f a)
-      | func-+ => pmap g func-+ *> func-+
-      | func-*c => pmap g func-*c *> func-*c
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \lemma extend-unique {R : Ring} {U V : LModule R} {l : Array U} (lb : U.IsBasis l) (lv : Array V l.len) :
       isProp (\Sigma (f : LinearMap U V) (\Pi (j : Fin l.len) -> f (l j) = lv j)) => {?hidden_proof}
 
     \func extend {R : Ring} {U V : LModule R} {l : Array U} (lb : U.IsBasis l) (lv : Array V l.len) : LinearMap U V \cowith
       | func => \lam x => BigSum (\lam j => U.basis-split lb x j *c lv j)
-      | func-+ => \lam {x} {y} => pmap BigSum
-        (exts (\lam j => pmap (*c _)  (U.basis-split-unique lb (\lam j => U.basis-split lb x j + U.basis-split lb y j)
-        (pmap2 + U.basis-split-char (U.basis-split-char {_} {lb}) *> inv (U.BigSum_+ {_} {\lam j => U.basis-split lb x j *c l j}) *> pmap BigSum 
-        (exts (\lam j => inv U.*c-rdistr))) j) *> *c-rdistr)) *> V.BigSum_+ {_} {\lam j => U.basis-split lb x j *c lv j}
-      | func-*c => \lam {r} {x} => pmap BigSum
-        (exts (\lam j => pmap (*c _)  (U.basis-split-unique lb (\lam j => r * U.basis-split lb x j) 
-        (pmap (r *c) (U.basis-split-char {_} {lb}) *> U.*c_BigSum-ldistr *> pmap BigSum (exts (\lam j => inv *c-assoc))) j) *> *c-assoc)) *> inv 
-      V.*c_BigSum-ldistr
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \lemma extend-char {R : Ring} {U V : LModule R} {l : Array U} (lb : U.IsBasis l) (lv : Array V l.len) (j : Fin l.len) : extend lb lv (l j) = lv j => {?hidden_proof}
 
@@ -72,12 +66,8 @@
 
     \func extendSet {R : Ring} {U V : LModule R} {J : \Set} {u : J -> U} (ub : U.IsBasisSet u) (v : J -> V) : LinearMap U V \cowith
       | func => \lam x => (LModule.basisSet-split ub v x).1
-      | func-+ => \lam {x} {y} => (\case (LModule.basisSet-split ub v (x + y)).2, (LModule.basisSet-split ub v x).2, (LModule.basisSet-split ub v y).2 \with {
-        | inP c1, inP c2, inP c3 => c1.3 *> ~_= v (=_~ ub.1 $ inv c1.2 *> pmap2 + c2.2 c3.2 *> inv (sum_++ u)) *> sum_++ v *> inv (pmap2 + c2.3 c3.3)
-      })
-      | func-*c => \lam {r} {x} => (\case (LModule.basisSet-split ub v (r *c x)).2, (LModule.basisSet-split ub v x).2 \with {
-        | inP c1, inP c2 => c1.3 *> ~_= v (=_~ ub.1 (later $ inv c1.2 *> pmap (r *c) c2.2 *> sum-ldistr u)) *> inv (sum-ldistr v) *> pmap (r *c) (inv c2.3)
-      })
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \lemma extendSet-char {R : Ring} {U V : LModule R} {J : \Set} {u : J -> U} {ub : U.IsBasisSet u} {v : J -> V} {j : J} : extendSet ub v (u j) = v j => {?hidden_proof}
 
@@ -133,8 +123,8 @@
 
 \func arrayLinearMap {R : Ring} {V : LModule R} (v : Array V) : LinearMap (ArrayLModule v.len (RingLModule R)) V \cowith
   | func => \lam c => BigSum (\lam j => c j *c v j)
-  | func-+ => \lam {x} {y} => pmap BigSum (exts (\lam j => *c-rdistr)) *> V.BigSum_+ {_} {\lam j => x j *c v j}
-  | func-*c => pmap BigSum (exts (\lam j => *c-assoc)) *> inv V.*c_BigSum-ldistr
+  | func-+ => {?hidden_proof}
+  | func-*c => {?hidden_proof}
   \where {
     \lemma surj-char {v : Array V} : IsSurj (arrayLinearMap v) <-> V.IsGenerated v => {?hidden_proof}
 

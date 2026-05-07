@@ -30,15 +30,15 @@
   \where {
     \use \coerce fromRat (x : Rat) : ExUpperReal \cowith
       | U => x <
-      | U-closed => <∘
-      | U-rounded => isDense
+      | U-closed => {?hidden_proof}
+      | U-rounded => {?hidden_proof}
 
     \lemma fromRat-inj {x y : Rat} (p : fromRat x = fromRat y) : x = y => {?hidden_proof}
 
     \infixl 6 + (x y : ExUpperReal) : ExUpperReal \cowith
       | U => \lam a => ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a)
-      | U-closed => \lam inP (a, a<x, b, b<y, a+b<q) q<q' => inP (a, a<x, b, b<y, a+b<q <∘ q<q')
-      | U-rounded => \lam {q} inP (a, a<x, b, b<y, a+b<q) => inP (RatField.mid (a RatField.+ b) q, inP (a, a<x, b, b<y, RatField.mid>left a+b<q), RatField.mid<right a+b<q)
+      | U-closed => {?hidden_proof}
+      | U-rounded => {?hidden_proof}
 
     \lemma +_U {x y : ExUpperReal} {a : Rat} : UpperReal.U {x + y} a <-> ∃ (b : x.U) (c : y.U) (b RatField.+ c RatField.< a) => {?hidden_proof}
 
@@ -56,24 +56,15 @@
 
     meet (x y : ExUpperReal) : ExUpperReal \cowith
       | U => \lam a => x.U a || y.U a
-      | U-closed => \lam e q'<q => ||.map (x.U-closed __ q'<q) (y.U-closed __ q'<q) e
-      | U-rounded => \case \elim __ \with {
-        | byLeft q<x => \case x.U-rounded q<x \with {
-          | inP (r, r<x, q<r) => inP (r, byLeft r<x, q<r)
-        }
-        | byRight q<y => \case y.U-rounded q<y \with {
-          | inP (r, r<y, q<r) => inP (r, byRight r<y, q<r)
-        }
-      }
+      | U-closed => {?hidden_proof}
+      | U-rounded => {?hidden_proof}
 
     \lemma meet_U {x y : ExUpperReal} {a : Rat} : UpperReal.U {meet x y} a <-> x.U a || y.U a => {?hidden_proof}
 
     join (x y : ExUpperReal) : ExUpperReal \cowith
       | U => \lam a => \Sigma (x.U a) (y.U a)
-      | U-closed => \lam (q<x, q<y) q'<q => (x.U-closed q<x q'<q, y.U-closed q<y q'<q)
-      | U-rounded => \lam (q<x, q<y) => (\case x.U-rounded q<x, y.U-rounded q<y \with {
-        | inP (r, r<x, q<r), inP (r', r'<y, q<r') => inP (r ∨ r', (x.U_<= r<x join-left, y.U_<= r'<y join-right), RatField.<_join-univ q<r q<r')
-      })
+      | U-closed => {?hidden_proof}
+      | U-rounded => {?hidden_proof}
 
     \lemma join_U {x y : ExUpperReal} {a : Rat} : UpperReal.U {join x y} a <-> (\Sigma (x.U a) (y.U a)) => {?hidden_proof}
 
@@ -81,8 +72,8 @@
 
     \infixl 7 * (x y : ExUpperReal) : ExUpperReal \cowith
       | U => \lam a => ∃ (b : x.U) (0 RatField.< b) (c : y.U) (0 RatField.< c) (b RatField.* c RatField.< a)
-      | U-closed => \lam inP (b, x<b, b>0, c, y<c, c>0, bc<q) q<q' => inP (b, x<b, b>0, c, y<c, c>0, bc<q <∘ q<q')
-      | U-rounded => \lam inP (b, x<b, b>0, c, y<c, c>0, bc<q) => inP (_, inP (b, x<b, b>0, c, y<c, c>0, RatField.mid>left bc<q), RatField.mid<right bc<q)
+      | U-closed => {?hidden_proof}
+      | U-rounded => {?hidden_proof}
 
     \lemma *_U {x y : ExUpperReal} {a : Rat} : UpperReal.U {x * y} a <-> ∃ (b : x.U) (0 RatField.< b) (c : y.U) (0 RatField.< c) (b RatField.* c RatField.< a) => {?hidden_proof}
 
@@ -103,59 +94,32 @@
 \instance ExUpperRealAbMonoid : BiorderedLatticeAbMonoid ExUpperReal 
   | zro => ExUpperReal.fromRat 0
   | + => +
-  | zro-left => (\peval _ + _) *> exts
-    (\lam a => ext (\lam inP (b, b<0, c, c<x, a<b+c) => U-closed c<x linarith, \lam a<x => (\case U-rounded a<x \with {
-    | inP (b, b<x, a<b) => inP ((a - b) RatField.* ratio 1 2, linarith, b, b<x, linarith)})))
-  | +-assoc => exts (\lam a => ext (\lam r => (\case +_U.1 r \with {  | inP (b, r', c, c<z, a<b+c) => \case +_U.1 r' \with {
-      | inP (d, d<x, e, e<y, b<d+e) => +_U.2 $ inP (d, d<x, (a - d RatField.+ c RatField.+ e) RatField.* ratio 1 2, +_U.2 $ inP (e, e<y, c, c<z, linarith), linarith)
-    }}),  \lam r => (\case +_U.1 r \with {  | inP (b, b<x, c, r', a<b+c) => \case +_U.1 r' \with {
-      | inP (d, d<y, e, e<z, c<d+e) => +_U.2 $ inP ((a - e RatField.+ b RatField.+ d) RatField.* ratio 1 2, +_U.2 $ inP (b, b<x, d, d<y, linarith), e, e<z, linarith)
-      }})))
-  | +-comm => exts
-  (\lam a => ext (\lam r => (\case +_U.1 r \with {  | inP (b, b<x, c, c<y, a<b+c) => +_U.2 $ inP $ later (c, c<y, b, b<x, rewrite RatField.+-comm a<b+c)}),
-    \lam r => (\case +_U.1 r \with {  | inP (c, c<y, b, b<x, a<c+b) => +_U.2 $ inP $ later (b, b<x, c, c<y, rewrite RatField.+-comm a<c+b)})))
+  | zro-left => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
+  | +-comm => {?hidden_proof}
   | <= => <=
-  | <=-refl => \lam x<a => x<a
-  | <=-transitive => \lam p q x<a => p (q x<a)
-  | <=-antisymmetric => \lam p q => exts (\lam a => ext (q, p))
-  | <=_+ => \lam p q {x} r => (\case +_U.1 r \with {
-    | inP (b', b<b', d', d<d', b'+d'<x) => +_U.2 $ inP (b', p b<b', d', q d<d', b'+d'<x)
-  })
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
+  | <=_+ => {?hidden_proof}
   | < => <
-  | <-irreflexive => \lam inP (q, x<q, q<=x) => <-irreflexive (q<=x x<q)
-  | <-transitive => \lam inP (a, x<a, a<=y) inP (b, y<b, b<=z) => inP (a, x<a, \lam {c} z<c => a<=y y<b <∘ b<=z z<c)
-  | <-transitive-right => \lam e inP (b, a2<b, b<=a3) => inP (b, e a2<b, b<=a3)
-  | <-transitive-left => \lam inP (b, a1<b, b<=a2) e => inP (b, a1<b, \lam {c} a3<c => b<=a2 (e a3<c))
-  | <=-less => \lam inP (q, a1<q, q<=a2) a2<b => U-closed a1<q (q<=a2 a2<b)
+  | <-irreflexive => {?hidden_proof}
+  | <-transitive => {?hidden_proof}
+  | <-transitive-right => {?hidden_proof}
+  | <-transitive-left => {?hidden_proof}
+  | <=-less => {?hidden_proof}
   | meet => meet
-  | meet-left => \lam x<a => meet_U.2 (byLeft x<a)
-  | meet-right => \lam y<a => meet_U.2 (byRight y<a)
-  | meet-univ => \lam x<=z y<=z r => (\case meet_U.1 r \with {
-    | byLeft a<x => x<=z a<x
-    | byRight a<y => y<=z a<y
-  })
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}
   | join => join
-  | join-left => \lam s => (join_U.1 s).1
-  | join-right => \lam s => (join_U.1 s).2
-  | join-univ => \lam z<=x z<=y a<z => join_U.2 (z<=x a<z, z<=y a<z)
-  | <_meet-univ => \lam inP (a, x<a, a<=y) inP (b, x<b, b<=z) =>
-  inP (a ∧ b, real_meet_U x<a x<b, \lam {w} r => (\case meet_U.1 r \with {  | byLeft y<w => meet-left <∘r a<=y y<w  | byRight z<w => meet-right <∘r b<=z z<w
-    }))
-  | <_join-univ => \lam inP (a, x<a, a<=z) inP (b, y<b, b<=z) =>
-    inP (a ∨ b, join_U.2 (U_<= x<a join-left, U_<= y<b join-right), \lam {w} z<w => <_join-univ (a<=z z<w) (b<=z z<w))
-  | meet_+-left => exts (\lam x => ext (\lam r => (\case +_U.1 r \with {  | inP (a', a<a', d, bc<d, a'+d<x) => \case meet_U.1 bc<d \with {
-      | byLeft b<d => meet_U.2 $ byLeft $ +_U.2 $ inP (a', a<a', d, b<d, a'+d<x)
-      | byRight c<d => meet_U.2 $ byRight $ +_U.2 $ inP (a', a<a', d, c<d, a'+d<x)  }}),
-    \lam r => (\case meet_U.1 r \with {  | byLeft a+b<x => \case +_U.1 a+b<x \with {
-      | inP (a', a<a', b', b<b', a'+b'<x) => +_U.2 $ inP (a', a<a', b', meet_U.2 $ byLeft b<b', a'+b'<x)  }
-    | byRight a+c<x => \case +_U.1 a+c<x \with {    | inP (a', a<a', c', c<c', a'+c'<x) => +_U.2 $ inP (a', a<a', c', meet_U.2 $ byRight c<c', a'+c'<x)
-    }})))
-  | join_+-left => exts (\lam x => ext (\lam r => (\case +_U.1 r \with {  | inP (a', a<a', d, bc<d, a'+d<x) => \case join_U.1 bc<d \with {
-      | (b<d, c<d) => join_U.2 (+_U.2 $ inP (a', a<a', d, b<d, a'+d<x), +_U.2 $ inP (a', a<a', d, c<d, a'+d<x))  }}),
-    \lam r => (\case join_U.1 r \with {  | (a+b<x, a+c<x) => \case +_U.1 a+b<x, +_U.1 a+c<x \with {
-      | inP (a1, a<a1, b', b<b', a1+b'<x), inP (a2, a<a2, c', c<c', a2+c'<x) => +_U.2 $ inP
-        (a1 ∧ a2, real_meet_U a<a1 a<a2, b' ∨ c', join_U.2 (U_<= b<b' join-left, U_<= c<c' join-right), 
-      later $ rewrite RatField.join_+-left $ <_join-univ (<=_+ meet-left <=-refl <∘r a1+b'<x) (<=_+ meet-right <=-refl <∘r a2+c'<x))  }})))
+  | join-left => {?hidden_proof}
+  | join-right => {?hidden_proof}
+  | join-univ => {?hidden_proof}
+  | <_meet-univ => {?hidden_proof}
+  | <_join-univ => {?hidden_proof}
+  | meet_+-left => {?hidden_proof}
+  | join_+-left => {?hidden_proof}
   \where {
     \open ExUpperReal
 
@@ -192,19 +156,8 @@
 
 \instance ExUpperRealSemigroup : CSemigroup ExUpperReal 
   | * => *
-  | *-assoc => <=-antisymmetric (\lam {d} xyz<d => (\case *_U.1 xyz<d \with {  | inP (a, x<a, a>0, b', yz<b', _, ab'<d) => \case *_U.1 yz<b' \with {
-      | inP (b, y<b, b>0, c, z<c, c>0, bc<b') => *_U.2 $ inP
-        (a RatField.* b, *_U_<=.2 $ inP (a, x<a, a>0, b, y<b, b>0, <=-refl), RatField.<_*_positive_positive a>0 b>0, c, z<c, c>0, 
-      transportInv (RatField.< _) *-assoc $ RatField.<_*_positive-right a>0 bc<b' <∘ ab'<d)  }}))
-    (\lam {d} xyz<d => (\case *_U.1 xyz<d \with {  | inP (a', xy<a', _, c, z<c, c>0, a'c<d) => \case *_U.1 xy<a' \with {
-      | inP (a, x<a, a>0, b, y<b, b>0, ab<a') => *_U.2 $ inP
-        (a, x<a, a>0, b RatField.* c, *_U_<=.2 $ inP (b, y<b, b>0, c, z<c, c>0, <=-refl), RatField.<_*_positive_positive b>0 c>0, 
-      transport (RatField.< _) *-assoc $ RatField.<_*_positive-left ab<a' c>0 <∘ a'c<d)  }}))
-  | *-comm => 
-    \have lem {x} {y} : x * y <= y * x => \lam {d} yx<d => (\case *_U.1 yx<d \with {
-            | inP (b, y<b, b>0, a, x<a, a>0, ba<d) => *_U.2 $ inP (a, x<a, a>0, b, y<b, b>0, transport (RatField.< _) *-comm ba<d)
-          })
-    \in <=-antisymmetric lem lem
+  | *-assoc => {?hidden_proof}
+  | *-comm => {?hidden_proof}
   \where {
     \open ExUpperReal
 
@@ -301,7 +254,7 @@
   \where {
     \use \coerce fromRat (x : Rat) : UpperReal \cowith
       | ExUpperReal => ExUpperReal.fromRat x
-      | U-inh => inP (x + 1, linarith)
+      | U-inh => {?hidden_proof}
 
     \lemma ex-ext {x y : UpperReal} (p : x = {ExUpperReal} y) : x = y => {?hidden_proof}
   }
@@ -309,14 +262,12 @@
 
 \instance UpperRealSemigroup : CSemigroup UpperReal 
   | * => *
-  | *-assoc => UpperReal.ex-ext $ *-ex *> pmap (ExUpperReal.* _) *-ex *> ExUpperRealSemigroup.*-assoc *> inv (*-ex *> pmap (_ ExUpperReal.*) *-ex)
-  | *-comm => UpperReal.ex-ext $ *-ex *> ExUpperRealSemigroup.*-comm *> inv *-ex
+  | *-assoc => {?hidden_proof}
+  | *-comm => {?hidden_proof}
   \where {
     \infixl 7 * (x y : UpperReal) : UpperReal \cowith
       | ExUpperReal => \eval x ExUpperReal.* y
-      | U-inh => \case x.U-inh_>0, y.U-inh_>0 \with {
-        | inP (q, x<q, q>0), inP (r, y<r, r>0) => inP (q RatField.* r + 1, inP (q, x<q, q>0, r, y<r, r>0, linarith))
-      }
+      | U-inh => {?hidden_proof}
 
     \lemma *_U {x y : UpperReal} {a : Rat} : UpperReal.U {x * y} a <-> ∃ (b : x.U) (0 RatField.< b) (c : y.U) (0 RatField.< c) (b RatField.* c RatField.< a) => {?hidden_proof}
 

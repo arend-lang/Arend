@@ -5,21 +5,21 @@
 \instance ProductMonoid (M N : Monoid) : Monoid (\Sigma M N) 
   | ide => (1, 1)
   | * => \lam p q => (p.1 * q.1, p.2 * q.2)
-  | ide-left => pmap2 (__, __) ide-left ide-left
-  | ide-right => pmap2 (__, __) ide-right ide-right
-  | *-assoc => pmap2 (__, __) *-assoc *-assoc
+  | ide-left => {?hidden_proof}
+  | ide-right => {?hidden_proof}
+  | *-assoc => {?hidden_proof}
 
 \instance ProductAddMonoid (A B : AddMonoid) : AddMonoid (\Sigma A B) 
   | zro => (0, 0)
   | + => \lam p q => (p.1 + q.1, p.2 + q.2)
-  | zro-left => pmap2 (__, __) zro-left zro-left
-  | zro-right => pmap2 (__, __) zro-right zro-right
-  | +-assoc => pmap2 (__, __) +-assoc +-assoc
+  | zro-left => {?hidden_proof}
+  | zro-right => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
 
 \instance ProductCMonoid (M N : CMonoid) : CMonoid 
   | Monoid => ProductMonoid M N
-  | *-comm => pmap2 (__, __) *-comm *-comm
+  | *-comm => {?hidden_proof}
 
 \instance ProductAbMonoid (A B : AbMonoid) : AbMonoid 
   | AddMonoid => ProductAddMonoid A B
-  | +-comm => pmap2 (__, __) +-comm +-comm
+  | +-comm => {?hidden_proof}

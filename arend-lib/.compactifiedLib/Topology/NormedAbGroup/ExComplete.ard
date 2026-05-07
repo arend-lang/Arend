@@ -33,9 +33,7 @@
 \cowith
   | MetricMap => dense-metric-lift f fd g
   | TopAbGroupMap => dense-topAb-lift f (fd, f.embedding->topEmbedding $ f.embedding->coverEmbedding (f.dense->uniformEmbedding fd).2) g
-  | func-norm => rewrite (norm_dist, norm_dist) $ transport (dist __ _ <= _) 
-    (dense-topAb-lift f (fd, f.embedding->topEmbedding $ f.embedding->coverEmbedding (f.dense->uniformEmbedding fd).2) g).func-zro $ func-dist 
-    {dense-metric-lift f fd g}
+  | func-norm => {?hidden_proof}
   \where {
     \lemma char {X Y : ExPseudoNormedAbGroup} {Z : CompleteExNormedAbGroup} (f : NormedIsometricMap X Y) (fd : f.IsDense) (g : NormedAbGroupMap X Z) {x : X} :
       dense-normed-lift f fd g (f x) = g x => {?hidden_proof}
@@ -46,12 +44,7 @@
   | CompleteExMetricSpace => ExMetricCompletion X
   | CompleteTopAbGroup => TopAbGroupCompletion X
   | norm => norm
-  | norm-dist => \lam {F} {G} =>
-  dense-lift-unique (ProductTopSpace.prod completion completion) (ProductTopSpace.prod.isDense completion.isDenseEmbedding.1 completion.isDenseEmbedding.1) 
-    (dist-uniform-map {ExMetricCompletion X}) (norm-cont ContMap.∘ (TopAbGroupCompletion X).subtract-cont)
-      (\lam s => completion-ex-isometry.func-isometry
-      *> norm-dist *> norm_dist *> dist-symm *> inv completion-ex-isometry.func-isometry *> inv filter-norm_dist *> pmap norm 
-      (inv lift2-char *> TopAbGroupCompletion.subtract_- {X})) (F, G)
+  | norm-dist => {?hidden_proof}
   \where {
     \lemma filter-norm_dist {F : RegularCauchyFilter X} : norm F = (ExMetricCompletion X).dist F (pointCF 0) => {?hidden_proof}
 
@@ -61,35 +54,21 @@
 
 \func completion-exNormed-isometry {X : ExPseudoNormedAbGroup} : NormedIsometricMap X (ExNormedAbGroupCompletion X) \cowith
   | IsometricMap => completion-ex-isometry
-  | func-+ => completion-topAb.func-+
+  | func-+ => {?hidden_proof}
 
 \instance SeparatedNormedAbGroupReflection (X : ExPseudoNormedAbGroup) : ExNormedAbGroup (Quot X) 
   | zro => in~ 0
   | + => +
-  | zro-left => \lam {x} => (\case \elim x \with {
-    | in~ x => ~-nequiv (simplify norm_zro)
-  })
-  | +-assoc => \lam {x} {y} {z} => (\case \elim x, \elim y, \elim z \with {
-    | in~ x, in~ y, in~ z => ~-nequiv (simplify norm_zro)
-  })
+  | zro-left => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
   | negative => negative
-  | negative-left => \lam {x} => (\case \elim x \with {
-    | in~ x => ~-nequiv (simplify norm_zro)
-  })
-  | +-comm => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ x, in~ y => ~-nequiv (simplify norm_zro)
-  })
+  | negative-left => {?hidden_proof}
+  | +-comm => {?hidden_proof}
   | norm => norm
-  | norm_zro => norm_zro
-  | norm_negative => \lam {x} => (\case \elim x \with {
-    | in~ x => norm_negative
-  })
-  | norm_+ => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ x, in~ y => norm_+
-  })
-  | norm-ext => \lam {x} => (\case \elim x \with {
-    | in~ x => \lam p => ~-nequiv $ pmap X.norm simplify *> p
-  })
+  | norm_zro => {?hidden_proof}
+  | norm_negative => {?hidden_proof}
+  | norm_+ => {?hidden_proof}
+  | norm-ext => {?hidden_proof}
   \where {
     \type Quot (X : ExPseudoNormedAbGroup) => Quotient {X} (\lam x x' => X.norm (x - x') = 0)
 
@@ -103,12 +82,8 @@
 
 \func separated-completion {X : ExPseudoNormedAbGroup} : NormedIsometricMap (SeparatedNormedAbGroupReflection X) (ExNormedAbGroupCompletion X) \cowith
   | func => func
-  | func-+ => \lam {x} {y} => (\case \elim x, \elim y \with {
-    | in~ x, in~ y => inv TopAbGroupCompletion.+-char
-  })
-  | func-norm-isometry => \lam {x} => (\case \elim x \with {
-    | in~ x => completion-exNormed-isometry.func-norm-isometry
-  })
+  | func-+ => {?hidden_proof}
+  | func-norm-isometry => {?hidden_proof}
   \where {
     \lemma isDense : (separated-completion {X}).IsDense => {?hidden_proof}
   }

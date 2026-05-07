@@ -60,25 +60,8 @@
 \func deriv {R : NearSkewField} {X : TopLModule R} {Y : HausdorffTopLModule R} {U : Set X} (Uo : isOpen U) (f : Set.Total U -> Y) (d : HasDeriv Uo f) 
 (x : Set.Total U) : LinearMap X Y \cowith
   | func => \lam a => deriv-quot Uo f d ((x.1, (0, a)), atZero)
-  | func-+ => \lam {a} {b} => (
-    \have u3 {h} u => transport U (pmap (_ +) (X.*c-ldistr {h}) *> inv +-assoc) u
-    \in nearField-map-unique (open-inter (func-cont {+-cont ∘ tuple (const x.1) (*c-cont ∘ tuple id (const (a + b)))} Uo) 
-          (func-cont {+-cont ∘ tuple (const x.1) (*c-cont ∘ tuple id (const a))} Uo)) 
-        (deriv-quot-cont (const x.1) id (const (a + b)) d (\lam u => later (x.2, u.1)))
-          (+-cont ∘ tuple (deriv-quot-cont (const x.1) id (const a) d (\lam u => later (x.2, u.2))) 
-          (deriv-quot-cont (+-cont ∘ tuple (const x.1) (*c-cont ∘ tuple id (const a))) id (const b) d (\lam u => later (u.2, u3 u.1))))
-          (\lam {h} u => deriv-isQuot d x.2 u.1 *> simplify (+-comm *> pmap (_ + f __) (ext $ pmap (_ +) *c-ldistr *> inv +-assoc)) *> inv 
-          (*c-ldistr *> pmap2 + (deriv-isQuot d x.2 u.2) (deriv-isQuot d u.2 (u3 u.1)))) {0} 
-        (transportInv U (pmap (_ +) X.*c_zro-left *> zro-right) x.2, transportInv U (pmap (_ +) X.*c_zro-left *> zro-right) x.2) *> pmap 
-        (_ + deriv-quot Uo f d __) (ext $ ext (pmap (_ +) X.*c_zro-left *> zro-right, idp)))
-  | func-*c => \lam {r} {a} => (unfold, unfold, unfold, rewrite R.zro_*-left)
-    in nearField-map-unique (func-cont {+-cont ∘ tuple (const x.1) (*c-cont ∘ tuple id (const (r *c a)))} Uo) 
-    (deriv-quot-cont (const x.1) id (const (r *c a)) d (\lam u => (x.2, u)))
-      (*c-cont ∘ tuple (const r) 
-      (deriv-quot-cont (const x.1) (*-cont ∘ tuple id (const r)) (const a) d (\lam u => (\box (x.2, transportInv (\lam y => U (x.1 + y)) *c-assoc u)))))
-      (\lam u =>
-      deriv-isQuot d x.2 u *> pmap (f __ - _) (ext $ pmap (_ +) (inv *c-assoc)) *> inv (deriv-isQuot d x.2 $ transportInv (\lam y => U (x.1 + y)) *c-assoc u) *> *c-assoc) 
-    {0} (transportInv U (pmap (_ +) X.*c_zro-left *> zro-right) x.2)
+  | func-+ => {?hidden_proof}
+  | func-*c => {?hidden_proof}
   \where {
     \lemma atZero {x : Set.Total U} {a : X} => {?hidden_proof}
   }

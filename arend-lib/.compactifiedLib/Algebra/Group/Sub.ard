@@ -24,7 +24,7 @@
   \where {
     \func cStruct {G : CGroup} (S : SubGroup G) : CGroup \cowith
       | Group => S.IGroup
-      | *-comm => ext *-comm
+      | *-comm => {?hidden_proof}
   }
 
 
@@ -49,9 +49,8 @@
 
 \instance SubGroupPreorder {G : Group} : Preorder (SubGroup G) 
   | <= => \lam (H K : SubGroup G) => \Pi (g : G) -> H.contains g -> K.contains g
-  | <=-refl => \lam {H : SubGroup G} => \lam (g : G) (p : H.contains g) => p
-  | <=-transitive => \lam {H K N : SubGroup G} (p : \Pi (g : G) -> H.contains g -> K.contains g) (q : \Pi (g : G) -> K.contains g -> N.contains g) =>
-    \lam (g : G) (r : H.contains g) => q g (p g r)
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
 
 \func kernelEquivProp {G : Group} (N : NormalSubGroup G) (a : G) (p : N.contains a) : N.quotient.ide = in~ a 
   => qed (N.quotient.ide ==< idp >== in~ ide ==< inv (~-pequiv help-condition) >== in~ a)
@@ -71,11 +70,11 @@
   \where {
     \func abStruct {A : AbGroup} (S : SubAddGroup A) : AbGroup \cowith
       | AddGroup => S.IAddGroup
-      | +-comm => ext +-comm
+      | +-comm => {?hidden_proof}
 
     \func max {A : AddGroup} : SubAddGroup \cowith
       | SubAddMonoid => SubAddMonoid.max {A}
-      | contains_negative => \lam _ => ()
+      | contains_negative => {?hidden_proof}
   }
 
 

@@ -42,13 +42,13 @@
 
 \instance InvSubMonoid (M : Monoid) : SubMonoid M 
   | contains => \lam x => Inv x
-  | contains_ide => Inv.ide-isInv
-  | contains_* => \lam xi yi => Inv.product xi yi
+  | contains_ide => {?hidden_proof}
+  | contains_* => {?hidden_proof}
 
 \instance InvGroup (M : Monoid) : Group 
   | Monoid => (InvSubMonoid M).IMonoid
   | inverse => \lam (x, xi) => (xi.inv, \new Inv {  | inv => x  | inv-left => Inv.inv-right  | inv-right => Inv.inv-left})
-  | inverse-left => \lam {x} => ext x.2.inv-left
+  | inverse-left => {?hidden_proof}
 
 \func coPrimes-eq (n : Nat) (n>0 : 0 NatOrder.< n) : QEquiv {coPrimes n} {InvGroup (FinRing {n})} \cowith
   | f => \lam (k, p) => (

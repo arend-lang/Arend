@@ -123,10 +123,7 @@
     }
 
     \func <-dec {A : Dec} (a a' : A) : Decide (a < a') \cowith
-      | decide => \case dec<_<= a a' \with {
-        | inl a<a' => yes a<a'
-        | inr a'<=a => no a'<=a
-      }
+      | decide => {?hidden_proof}
 
     \lemma <=_/= {A : Dec} {a a' : A} (p : a <= a') (q : a /= a') : a < a' => {?hidden_proof}
 

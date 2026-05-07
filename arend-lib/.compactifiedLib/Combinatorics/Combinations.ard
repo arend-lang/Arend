@@ -1,0 +1,209 @@
+\import Algebra.Meta
+\import Algebra.Monoid
+\import Algebra.Semiring
+\import Arith.Fin
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Combinatorics.Binom
+\import Combinatorics.Factorial
+\import Data.Array
+\import Data.Bool
+\import Data.Fin
+\import Data.Or
+\import Equiv
+\import Equiv.Sigma
+\import Equiv.HalfAdjoint
+\import Function
+\import Function.Meta
+\import Logic
+\import Logic.Meta
+\import Meta
+\import Order.Category
+\import Order.LinearOrder
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import Relation.Equivalence
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Set.Fin.KFin
+\open AddMonoid
+
+\func array-equiv {A : \Type} {n : Nat} : QEquiv {Array A n} {\Pi (j : Fin n) -> A} \cowith
+  | f => \lam l => l
+  | ret => \lam f => \new (Array A n f)
+  | ret_f => \lam l => arrayExt (\lam j => idp)
+  | f_sec => \lam f => idp
+
+\instance ArrayFin (A : FinSet) (n : Nat) : FinSet (Array A n) (Monoid.pow A.finCard n) 
+  | finEq => {?hidden_proof}
+
+\func Combinations (n k : Nat) => StrictPosetHom (FinOrder k) (FinOrder n)
+
+\func IsStrictlySorted {n k : Nat} (arr : Array (Fin n) k) : \Prop => \Pi (i j : Fin k) -> i < j -> arr i < arr j
+
+\instance IsStrictlySorted-dec {n k : Nat} (arr : Array (Fin n) k) : Decide (IsStrictlySorted arr) => 
+  \have | dec-prop (i j : Fin k) : Dec (arr i < arr j) => (LinearOrder.<-dec {FinOrder n} (arr i) (arr j)).decide
+        | dec-j (i j : Fin k) : Dec (i < j -> arr i < arr j) => \case (FinOrder k).trichotomy i j \with {
+          | less i<j => \case dec-prop i j \with {
+            | yes arr_i<arr_j => yes (\lam _ => arr_i<arr_j)
+            | no n_arr_i<arr_j => no (\lam h => n_arr_i<arr_j (h i<j))
+          }
+          | equals i=j => yes (\lam i<j => absurd ((FinOrder k).<-irreflexive (transport (< j) i=j i<j)))
+          | greater i>j => yes (\lam i<j => absurd ((FinOrder k).<-irreflexive (i<j <∘ i>j)))
+        }
+        | dec-i (i : Fin k) : Dec (\Pi (j : Fin k) -> i < j -> arr i < arr j) => FinDec.fin-dec (\lam j => \new Decide {  | E => i < j -> arr i < arr j  | decide => dec-j i j})
+  \in \new Decide {
+        | E => IsStrictlySorted arr
+        | decide => FinDec.fin-dec (\lam i => \new Decide {  | E => \Pi (j : Fin k) -> i < j -> arr i < arr j  | decide => dec-i i})
+      }
+
+\instance CombinationsFin (n k : Nat) : FinSet (Combinations n k) => 
+  \let | S : FinSet => ArrayFin (FinFin n) k
+       | D : DecSubSet S => \new DecSubSet {
+         | contains => \lam arr => IsStrictlySorted arr
+         | isDec => \lam arr => decide {IsStrictlySorted-dec arr}
+       }
+       | F : FinSet D.ISet => SigmaFin.DecSubSet-isFin S D
+  \in \new FinSet {
+        | finCard => F.finCard
+        | finEq => TruncP.map F.finEq (\lam e => e `transEquiv` equiv-arr-hom)
+      }
+  \where {
+    \func equiv-arr-hom {n k : Nat} : Equiv {\Sigma (arr : Array (Fin n) k) (IsStrictlySorted arr)} {Combinations n k} \cowith
+      | f => \lam (arr, s) => \new StrictPosetHom {
+        | Dom => FinOrder k
+        | Cod => FinOrder n
+        | func => \lam i => arr i
+        | func-< => \lam {i} {j} i<j => s i j i<j
+      }
+      | ret => \lam (h : StrictPosetHom) => (\lam i => h i, \lam i j i<j => h.func-< i<j)
+      | ret_f => \lam p => ext (arrayExt (\lam i => idp))
+      | sec => \lam (h : StrictPosetHom) => (\lam i => h i, \lam i j i<j => h.func-< i<j)
+      | f_sec => \lam h => ext (ext (\lam i => idp))
+  }
+
+
+\func finRestrict {n : Nat} (a : Fin (suc n)) (p : a NatOrder.< n) : Fin n \elim n, a, p
+  | suc n, 0, _ => 0
+  | suc n, suc a, NatOrder.suc<suc p => suc (finRestrict a p)
+
+\lemma finRestrict-nat {n : Nat} (a : Fin (suc n)) (p : a NatOrder.< n) : (finRestrict a p : Nat) = a => {?hidden_proof}
+
+\lemma finRestrict-< {n : Nat} {a b : Fin (suc n)} {pa : a NatOrder.< n} {pb : b NatOrder.< n} (ab : a NatOrder.< b) : (finRestrict a pa) NatOrder.< (finRestrict b pb) => {?hidden_proof}
+
+\lemma finLast-nat (k : Nat) : (finLast k : Nat) = k => {?hidden_proof}
+
+\lemma binom0 {n : Nat} : binom n 0 = 1 => {?hidden_proof}
+
+\func gTail {n k : Nat} (g : Combinations n (suc k)) : Combinations n k => \new StrictPosetHom {
+  | Dom => FinOrder k
+  | Cod => FinOrder n
+  | func => \lam j => g (suc j)
+  | func-< => \lam j<j' => g.func-< (NatOrder.suc<suc j<j')
+}
+
+\func extendFunc {n k : Nat} (g : Combinations n k) : Fin (suc k) -> Fin (suc n) \elim k
+  | 0 => \lam _ => finLast n
+  | suc k => \lam i => (\case \elim i \with {
+    | 0 => g 0
+    | suc i => extendFunc (gTail g) i
+  })
+
+\lemma extendFunc-gt-head {n k : Nat} (g : Combinations n (suc k)) (j : Fin (suc k)) : (g 0 : Nat) NatOrder.< extendFunc (gTail g) j => {?hidden_proof}
+
+\lemma extendFunc-mono {n k : Nat} (g : Combinations n k) {i j : Fin (suc k)} (i<j : i NatOrder.< j) : (extendFunc g i : Nat) NatOrder.< extendFunc g j => {?hidden_proof}
+
+\lemma extendFunc-last {n k : Nat} (g : Combinations n k) : extendFunc g (finLast k) = finLast n => {?hidden_proof}
+
+\lemma extendFunc-notlast {n k : Nat} (g : Combinations n k) (i : Fin k) : (extendFunc g (i : Fin (suc k)) : Nat) = g i => {?hidden_proof}
+
+\lemma extendFunc-last-nat {n k : Nat} (g : Combinations n k) : (extendFunc g (finLast k) : Nat) = n => {?hidden_proof}
+
+\lemma fin-last-or {k : Nat} (i : Fin (suc k)) : (i NatOrder.< k) || (i = finLast k) => {?hidden_proof}
+
+\lemma lt-suc-neq {a b : Nat} (lt : a < suc b) (neq : a = b -> Empty) : a < b => {?hidden_proof}
+
+\func Combinations-split-f {n k : Nat} (h : Combinations (suc n) (suc k)) : Or (Combinations n k) (Combinations n (suc k)) => \case decideEq (h (finLast k) : Nat) n \with {
+  | yes hk=n => inl (\new StrictPosetHom {  | Dom => FinOrder k  | Cod => FinOrder n  | func => \lam (i : Fin k) => (
+      \let hi<hk : h i < h (finLast k) => h.func-< (transport (i NatOrder.<) (inv (finLast-nat k)) (fin_< i))    \in finRestrict (h i) linarith)
+    | func-< => \lam i<j => finRestrict-< (h.func-< i<j)})
+  | no hk/=n => 
+    \let hk<n : (h (finLast k) : Nat) < n => lt-suc-neq (fin_< (h (finLast k))) hk/=n
+    \in inr (\new StrictPosetHom {  | Dom => FinOrder (suc k)  | Cod => FinOrder n  | func => \lam (i : Fin (suc k)) => (
+            \let hi<n : (h i : Nat) < n => \case fin-last-or i \with {
+                   | byLeft i<k => linarith (h.func-< (transport (i NatOrder.<) (inv (finLast-nat k)) i<k) : (h i : Nat) < (h (finLast k) : Nat))
+                   | byRight i=last => transport (\lam x => (h x : Nat) < n) (inv i=last) hk<n         }    \in finRestrict (h i) hi<n)
+          | func-< => \lam i<j => finRestrict-< (h.func-< i<j)})
+}
+
+\func Combinations-split-ret {n k : Nat} (x : Or (Combinations n k) (Combinations n (suc k))) : Combinations (suc n) (suc k) => \case x \with {
+  | inl g => \new StrictPosetHom {
+    | Dom => FinOrder (suc k)
+    | Cod => FinOrder (suc n)
+    | func => \lam i => extendFunc g i
+    | func-< => \lam i<j => extendFunc-mono g i<j
+  }
+  | inr g => \new StrictPosetHom {
+    | Dom => FinOrder (suc k)
+    | Cod => FinOrder (suc n)
+    | func => \lam i => g i
+    | func-< => \lam i<j => g.func-< i<j
+  }
+}
+
+\func Combinations-split {n k : Nat} : QEquiv {Combinations (suc n) (suc k)} {Or (Combinations n k) (Combinations n (suc k))} => \new QEquiv {
+  | f => Combinations-split-f
+  | ret => Combinations-split-ret
+  | ret_f => \lam h => unfold Combinations-split-f $ unfold Combinations-split-ret $ mcases {2}
+  | f_sec => \lam x => unfold Combinations-split-f $ unfold Combinations-split-ret $ (\case \elim x \with {  | inl g => mcases {1}  | inr g => mcases {1}})
+}
+
+\func Combinations-base0 {n : Nat} : QEquiv {Fin 1} {Combinations n 0} => \new QEquiv {
+  | f => \lam _ => \new StrictPosetHom {
+    | Dom => FinOrder 0
+    | Cod => FinOrder n
+    | func => \lam (i : Fin 0) => (\case i \with {})
+    | func-< => \lam {i} => (\case i \with {})
+  }
+  | ret => \lam _ => 0
+  | f_sec => \lam (h : StrictPosetHom) => ext (ext (\lam (i : Fin 0) => (\case i \with {})))
+  | ret_f => \lam (x : Fin 1) => (\case \elim x \with {
+    | 0 => idp
+  })
+}
+
+\func Combinations-base-empty {k : Nat} : QEquiv {Fin 0} {Combinations 0 (suc k)} => \new QEquiv {
+  | f => \lam (i : Fin 0) => (\case i \with {})
+  | ret => \lam (h : StrictPosetHom) => (\case h.func (0 : Fin (suc k)) \with {})
+  | ret_f => \lam (i : Fin 0) => (\case i \with {})
+  | f_sec => \lam (h : StrictPosetHom) => (\case h.func (0 : Fin (suc k)) \with {})
+}
+
+\func Combinations-binom (n k : Nat) : Equiv {Fin (binom n k)} {Combinations n k} \elim n, k
+  | m, 0 => rewrite (binom0 {m}) $ Combinations-base0 {m}
+  | 0, suc k => Combinations-base-empty
+  | suc n, suc k => 
+    \let | e2 : Equiv {Fin (binom n k)} {Combinations n k} => Combinations-binom n k
+         | e3 : Equiv {Fin (binom n (suc k))} {Combinations n (suc k)} => Combinations-binom n (suc k)
+         | e4 : QEquiv {Or (Fin (binom n k)) (Fin (binom n (suc k)))} {Or (Combinations n k) (Combinations n (suc k))} => \new QEquiv {
+           | f => \lam x => (\case x \with {
+             | inl a => inl (e2 a)
+             | inr b => inr (e3 b)
+           })
+           | ret => \lam x => (\case x \with {
+             | inl a => inl (e2.ret a)
+             | inr b => inr (e3.ret b)
+           })
+           | ret_f => \lam x => (\case \elim x \with {
+             | inl a => pmap inl (e2.ret_f a)
+             | inr b => pmap inr (e3.ret_f b)
+           })
+           | f_sec => \lam x => (\case \elim x \with {
+             | inl a => pmap inl (e2.f_ret a)
+             | inr b => pmap inr (e3.f_ret b)
+           })
+         }
+         | e5 : QEquiv {Combinations (suc n) (suc k)} {Or (Combinations n k) (Combinations n (suc k))} => Combinations-split
+    \in OrFin.aux `transEquiv` e4 `transEquiv` symQEquiv e5

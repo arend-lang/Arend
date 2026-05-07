@@ -70,26 +70,21 @@
 \instance FinRing {n : Nat} : CRing.Dec (Fin (suc n)) 
   | zro => 0
   | + => \lam x y => x + y : Nat
-  | zro-left => \lam {x} => pmap Fin.fromNat zro-left *> fin_mod_id x
-  | +-assoc => mod_+-left *> pmap Fin.fromNat +-assoc *> inv mod_+-right
-  | +-comm => pmap Fin.fromNat +-comm
+  | zro-left => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
+  | +-comm => {?hidden_proof}
   | ide => Fin.fromNat 1
   | * => \lam x y => x * y : Nat
-  | ide-left => \lam {x} => mod_*-left *> pmap Fin.fromNat ide-left *> fin_mod_id x
-  | *-assoc => mod_*-left *> pmap Fin.fromNat *-assoc *> inv mod_*-right
-  | ldistr => \lam {x} {y} {z} => mod_*-right *> pmap Fin.fromNat ldistr *> inv (mod_+-left *> mod_+-right)
+  | ide-left => {?hidden_proof}
+  | *-assoc => {?hidden_proof}
+  | ldistr => {?hidden_proof}
   | negative => \lam x => iabs (suc n Nat.- x)
-  | negative-left => \lam {x} => (
-    \let t => pmap (+ pos x) (pos_iabs (<=-less (fin_< x))) *> IntRing.+-assoc {pos (suc n)} {neg x} *> pmap (_ +) (IntRing.negative-left {pos x})
-    \in mod_+-left *> transport (__ Nat.mod suc n = 0) (inv (pmap iabs t)) (fin_nat-inj (n*_+_mod_n {_} {1} NatOrder.zero<suc)))
-  | decideEq => \lam x y => (\case NatSemiring.decideEq x y \with {
-    | yes x=y => yes (fin_nat-inj x=y)
-    | no x/=y => no (\lam p => x/=y p)
-  })
-  | *-comm => pmap Fin.fromNat *-comm
+  | negative-left => {?hidden_proof}
+  | decideEq => {?hidden_proof}
+  | *-comm => {?hidden_proof}
   | natCoef => Fin.fromNat
-  | natCoefZero => idp
-  | natCoefSuc => \lam m => inv (mod_+-left *> mod_+-right)
+  | natCoefZero => {?hidden_proof}
+  | natCoefSuc => {?hidden_proof}
   \where {
     \open IntEuclidean
 
@@ -119,31 +114,21 @@
 
 \instance FinEuclidean {n : Nat} : EuclideanRingData (Fin (suc n)) 
   | CRing => FinRing {n}
-  | decideEq => decideEq
+  | decideEq => {?hidden_proof}
   | euclideanMap => \lam x => x
   | divMod => \lam x y => (
     \let! (d, m) => Nat.divMod x y
     \in (d `mod` suc n, m `mod` suc n))
-  | isDivMod => \lam x y => run {(unfold_let, rewrite mod_*-right, mod_+-left *> mod_+-right *> pmap Fin.fromNat (Nat.divModProp x y) *> fin_mod_id x)}
-  | isEuclideanMap => \lam x y y/=0 _ => mod<=left <∘r mod<right (fin_nat-ineq y/=0)
+  | isDivMod => {?hidden_proof}
+  | isEuclideanMap => {?hidden_proof}
 
 \instance FinField {n : Nat} {p : Prime (suc n)} : DiscreteField (Fin (suc n)) 
   | CRing => FinRing {n}
-  | zro/=ide => \case __ *> {Nat} mod_< (NatOrder.suc<suc (nonZero>0 (\lam n=0 => p.notInv (transportInv (\lam x => Inv (suc x)) n=0 Inv.ide-isInv)))) \with {}
-| finv => \lam x => (IntEuclidean.natDivMod (bezout (pos (suc n)) (pos x)).2 (suc n)).2 mod suc n
-| finv_zro => idp
-| finv-right => \lam {x} x/=0 => (
-  \let | (u, v) => bezout (pos (suc n)) (pos x)
-       | (q, r) => IntEuclidean.natDivMod v (suc n)
-       | int_gcd=1 : gcd (pos (suc n)) (pos x) = 1 => int_gcd_pos *> pmap pos (gcd=1 p (fin_nat-ineq x/=0) (fin_< x))
-  \in *-comm *> pmap ((__ * x) mod suc n) 
-        (inv (int_n*_+_mod_n=mod *> IntEuclidean.natMod=mod r (suc n)) *> pmap (__ IntEuclidean.mod suc n) (IntEuclidean.natDivModProp v n)) *> fin_nat-inj
-          (inv (IntEuclidean.natMod=mod _ _) *> int_mod_*-left *> inv int_n*_+_mod_n=mod *> pmap (__ IntEuclidean.mod suc n) 
-          (pmap (__ + v * pos x) *-comm *> bezoutIdentity (pos (suc n)) (pos x) *> int_gcd=1) *> IntEuclidean.natMod=mod 1 (suc n)))
-| decideEq => \lam x y => (\case NatSemiring.decideEq x y \with {
-  | yes x=y => yes (fin_nat-inj x=y)
-  | no x/=y => no (\lam x=y => x/=y x=y)
-})
+  | zro/=ide => {?hidden_proof}
+  | finv => \lam x => (IntEuclidean.natDivMod (bezout (pos (suc n)) (pos x)).2 (suc n)).2 mod suc n
+  | finv_zro => {?hidden_proof}
+  | finv-right => {?hidden_proof}
+  | decideEq => {?hidden_proof}
   \where {
     \open EuclideanSemiringData
     \open EuclideanRingData

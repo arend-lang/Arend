@@ -102,14 +102,10 @@
 \func SubPointDirectedSet {X : TopSpace} {U : Set X} (a : X) (Ua : X.IsLimitPoint a U) : DirectedSet \cowith
   | E => Given (V : isOpen) (V a) (x : X) (V x) (U x)
   | <= => \lam S T => T.1 ⊆ S.1
-  | <=-refl => <=-refl
-  | <=-transitive => \lam p q => q <=∘ p
-  | isInhabitted => \case Ua open-top () \with {
-    | inP (x, Ux, _) => inP (top, open-top, (), x, (), Ux)
-  }
-| isDirected => \lam (V, Vo, Va, _, _, _) (W, Wo, Wa, _, _, _) => (\case Ua (open-inter Vo Wo) (Va, Wa) \with {
-  | inP (z, Uz, (Vz, Wz)) => inP ((V ∧ W, open-inter Vo Wo, (Va, Wa), z, (Vz, Wz), Uz), meet-left, meet-right)
-})
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | isInhabitted => {?hidden_proof}
+  | isDirected => {?hidden_proof}
   \where {
     \lemma limit-comp {I : DirectedSet} {X Y : TopSpace} {S : Set X} {lx : X} (Sa : X.IsLimitPoint lx S) {f : I -> X} (Sf : \Pi (n : I) -> S (f n)) (fl : X.IsLimit f lx) 
     {g : Set.Total S -> Y} {ly : Y} (gl : Y.IsLimit {SubPointDirectedSet lx Sa} (\lam h => g (h.4, h.6)) ly) : Y.IsLimit (\lam n => g (f n, Sf n)) ly => {?hidden_proof}

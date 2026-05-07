@@ -11,10 +11,10 @@
   | normalize => \lam t => normalize-aux t nil
   | interpret => interpret
   | interpretNF => interpretNF
-  | interpretNF-consistent => interpretNF-consistent-aux *> ide-right
+  | interpretNF-consistent => {?hidden_proof}
   | nfVar => \lam v => v :: nil
   | >>= => >>=
-  | >>=-consistent => >>=-consistent
+  | >>=-consistent => {?hidden_proof}
   \where {
 \data Term (n : Nat) 
       | var (Fin n)

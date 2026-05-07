@@ -41,19 +41,19 @@
 
 \instance SetLattice (A : \hType) : Locale (Set A) 
   | <= => ⊆
-  | <=-refl => \lam p => p
-  | <=-transitive => \lam p q u => q (p u)
-  | <=-antisymmetric => \lam p q => ext (\lam x => ext (p, q))
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}
   | meet => \lam U V a => \Sigma (U a) (V a)
-  | meet-left => __.1
-  | meet-right => __.2
-  | meet-univ => \lam p q c => (p c, q c)
+  | meet-left => {?hidden_proof}
+  | meet-right => {?hidden_proof}
+  | meet-univ => {?hidden_proof}
   | top => \lam _ => \Sigma
-  | top-univ => \lam _ => ()
+  | top-univ => {?hidden_proof}
   | Join => \lam {J} f a => ∃ (j : J) (f j a)
-  | Join-cond => \lam j c => inP (j, c)
-  | Join-univ => \lam d inP (j, c) => d j c
-  | Join-ldistr>= => \lam (d, inP (j, c)) => inP (j, (d, c))
+  | Join-cond => {?hidden_proof}
+  | Join-univ => {?hidden_proof}
+  | Join-ldistr>= => {?hidden_proof}
 
 \lemma bottom-empty {A : \hType} {E : \Prop} {x : A} (b : (SetLattice A).bottom x) : E => {?hidden_proof}
 
@@ -94,7 +94,7 @@
 
 \func ^-1_FrameHom {A B : \hType} (f : A -> B) : FrameHom (SetLattice B) (SetLattice A) \cowith
   | func => ^-1 f
-  | func-<= => \lam p {_} => p
-  | func-top>= => \lam {_} _ => ()
-  | func-meet>= => \lam c => c
-  | func-Join>= => \lam c => c
+  | func-<= => {?hidden_proof}
+  | func-top>= => {?hidden_proof}
+  | func-meet>= => {?hidden_proof}
+  | func-Join>= => {?hidden_proof}

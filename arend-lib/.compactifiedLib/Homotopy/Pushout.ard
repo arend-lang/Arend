@@ -137,12 +137,7 @@
     | xy => pinr
     | sqcomm => \lam a => path (pglue a)
   }
-  | pushout-univ => \lam {Z} => \new QEquiv {
-    | ret => \lam (s : Square) => rec s.vy s.xy s.sqcomm
-    | ret_f => \lam h => path (\lam i p => (\case \elim p \return rec (h `o` pinl) (h `o` pinr) (\lam a => path (\lam j => h (pglue a j))) p = h p \with {  | pinl _ => idp
-      | pinr _ => idp  | pglue _ _ => idp}) @ i)
-    | f_sec => \lam _ => idp
-  }
+  | pushout-univ => {?hidden_proof}
 
 \class EmbeddingPushout {
   | A : \Type

@@ -8,25 +8,9 @@
 
 \instance LexicographicalProduct (A B : Dec) : Dec (\Sigma A B) 
   | < => \lam a b => a.1 < b.1 || (\Sigma (a.1 = b.1) (a.2 < b.2))
-  | <-irreflexive => \lam {t} => (\case __ \with {
-    | byLeft c => <-irreflexive c
-    | byRight (_, c) => <-irreflexive c
-  })
-  | <-transitive => \case __, __ \with {
-    | byLeft x<y, byLeft y<z => byLeft (x<y <∘ y<z)
-    | byLeft x<y, byRight (y=z, _) => byLeft (rewriteI y=z x<y)
-    | byRight (x=y, _), byLeft y<z => byLeft (rewrite x=y y<z)
-    | byRight (x1=y1, x2<y2), byRight (y1=z1, y2<z2) => byRight (x1=y1 *> y1=z1, x2<y2 <∘ y2<z2)
-  }
-| trichotomy => \lam t s => (\case trichotomy t.1 s.1 \with {
-  | less t1<s1 => less (byLeft t1<s1)
-  | greater t1>s1 => greater (byLeft t1>s1)
-  | equals t1=s1 => \case trichotomy t.2 s.2 \with {
-    | less t2<s2 => less (byRight (t1=s1, t2<s2))
-    | equals t2=s2 => equals (pmap2 (__, __) t1=s1 t2=s2)
-    | greater t2>s2 => greater (byRight (inv t1=s1, t2>s2))
-  }
-})
+  | <-irreflexive => {?hidden_proof}
+  | <-transitive => {?hidden_proof}
+  | trichotomy => {?hidden_proof}
 
 \instance LexicographicalList (A : Dec) : Dec (List A) 
   | < => <L

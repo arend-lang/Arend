@@ -27,21 +27,21 @@
     | LinearMap => f LinearMap.∘ g
     | func-** => rewrite (g.func-**, f.func-**) idp
   }
-  | id-left => ext idp
-  | id-right => ext idp
-  | o-assoc => ext idp
-  | univalence => sip (\lam (e : InterwiningMap) _ => exts (e.func-zro, \lam _ _ => e.func-+, \lam _ => e.func-negative, \lam _ _ => e.func-*c, \lam _ _ => e.func-**))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
   \where {
     \func id-interwining (X : LinRepres R G) : InterwiningMap X X \cowith
       | LinearMap => LinearMap.id
-      | func-** => idp
+      | func-** => {?hidden_proof}
   }
 
 
 \func repr+module-iso=>repr-iso {R : Ring} {G : Group} {A B : LinRepres R G} {f : InterwiningMap A B} (p : Iso {LModuleCat R} f) : Iso f \cowith
   | hinv => inverseMap {R} {G} {A} {B} {f} {p}
-  | hinv_f => unfold (ext (unfold (exts (\lam _ => aux-2))))
-  | f_hinv => unfold (ext (unfold (exts (\lam _ => aux))))
+  | hinv_f => {?hidden_proof}
+  | f_hinv => {?hidden_proof}
   \where {
     \func inverseMap  => \new (InterwiningMap B A) {
       | LinearMap => p.hinv
@@ -57,59 +57,59 @@
 \func KerLRepres {R : Ring} {G : Group} {A B : LinRepres R G} (f : InterwiningMap A B) : LinRepres R G \cowith
   | LModule => KerLModule f
   | ** => \lam (g : G) (e : KerLModule f) => (g A.** e.1, rewrite (f.func-**, e.2, B.g**-zro) idp)
-  | **-assoc => \lam {_ _ : G} {_ : KerLModule f} => exts A.**-assoc
-  | id-action => exts A.id-action
-  | **-ldistr => exts A.**-ldistr
-  | **-*c => exts A.**-*c
+  | **-assoc => {?hidden_proof}
+  | id-action => {?hidden_proof}
+  | **-ldistr => {?hidden_proof}
+  | **-*c => {?hidden_proof}
 
 \func KerLRepresHom {R : Ring} {G : Group} {A B : LinRepres R G} (f : InterwiningMap A B) : InterwiningMap (KerLRepres f) A \cowith
   | LinearMap => KerLModuleHom f
-  | func-** => idp
+  | func-** => {?hidden_proof}
 
 \func ImageLRepres {R : Ring} {G : Group} {A B : LinRepres R G} (f : InterwiningMap A B) : LinRepres R G \cowith
   | LModule => ImageLModule f
   | ** => \lam (g : G) (e : ImageLModule f) => (g B.** e.1, TruncP.map e.2 (\lam s => (g A.** s.1, func-** *> pmap (g B.**) s.2)))
-  | **-assoc => ext B.**-assoc
-  | id-action => ext B.id-action
-  | **-ldistr => ext B.**-ldistr
-  | **-*c => ext B.**-*c
+  | **-assoc => {?hidden_proof}
+  | id-action => {?hidden_proof}
+  | **-ldistr => {?hidden_proof}
+  | **-*c => {?hidden_proof}
 
 \func ImageLRepresRightHom {R : Ring} {G : Group} (f : InterwiningMap {  | R => R  | G => G}) : InterwiningMap (ImageLRepres f) f.Cod \cowith
   | LinearMap => ImageLModuleRightHom f
-  | func-** => idp
+  | func-** => {?hidden_proof}
 
 \func ImageLRepresLeftHom {R : Ring} {G : Group} (f : InterwiningMap {  | R => R  | G => G}) : InterwiningMap f.Dom (ImageLRepres f) \cowith
   | LinearMap => ImageLModuleLeftHom f
-  | func-** => \lam {_} {_} => exts (rewrite f.func-** idp)
+  | func-** => {?hidden_proof}
 
 \instance InterwiningMapLModule {R : CRing} {G : Group} (A B : LinRepres R G) : LModule R (InterwiningMap A B) 
   | zro => zeroInterwining
   | + => addInterwining
-  | zro-left => exts (\lam _ => B.zro-left)
-  | zro-right => exts (\lam _ => B.zro-right)
-  | +-assoc => exts (\lam _ => B.+-assoc)
+  | zro-left => {?hidden_proof}
+  | zro-right => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
   | negative => negativeInterwining
-  | negative-left => exts (\lam _ => B.negative-left)
-  | +-comm => exts (\lam _ => B.+-comm)
+  | negative-left => {?hidden_proof}
+  | +-comm => {?hidden_proof}
   | *c => mulconstInterwining
-  | *c-assoc => exts (\lam _ => B.*c-assoc)
-  | *c-ldistr => exts (\lam _ => B.*c-ldistr)
-  | *c-rdistr => exts (\lam _ => B.*c-rdistr)
-  | ide_*c => exts (\lam _ => B.ide_*c)
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
   \where {
     \func zeroInterwining : InterwiningMap A B \cowith
       | LinearMap => linearMap_zro
-      | func-** => inv B.g**-zro
+      | func-** => {?hidden_proof}
 
     \func addInterwining (f g : InterwiningMap A B) : InterwiningMap A B \cowith
       | LinearMap => linearMap_+ f g
-      | func-** => unfold (rewrite (f.func-**, g.func-**, B.**-ldistr) idp)
+      | func-** => {?hidden_proof}
 
     \func negativeInterwining (f : InterwiningMap A B) : InterwiningMap A B \cowith
       | LinearMap => linearMap_negative f
-      | func-** => unfold (rewrite (f.func-**, B.g**-negative) idp)
+      | func-** => {?hidden_proof}
 
     \func mulconstInterwining (c : R) (f : InterwiningMap A B) : InterwiningMap A B \cowith
       | LinearMap => LModule.*c {LinearMapLModule A B} c f
-      | func-** => rewrite (B.**-*c, inv f.func-**) idp
+      | func-** => {?hidden_proof}
   }

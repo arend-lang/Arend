@@ -56,7 +56,7 @@
 
 \instance ArrayFinModule {R : Ring} (n : Nat) : FinModule R (Array R n) 
   | LModule => ArrayLModule n (RingLModule R)
-  | isFinModule => inP (_, basis)
+  | isFinModule => {?hidden_proof}
   \where {
     \lemma basis {R : Ring} {n : Nat} : LModule.IsBasis {ArrayLModule n (RingLModule R)} MatrixRing.ide => {?hidden_proof}
   }

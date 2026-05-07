@@ -21,8 +21,8 @@
   \where {
     \func toLinearMap {R : CRing} {n m : Nat} (A : Matrix R n m) : LinearMap (ArrayFinModule n) (ArrayFinModule m) \cowith
       | func => \lam u => \lam j => R.BigSum (\lam i => A i j * u i)
-      | func-+ => exts (\lam j => pmap R.BigSum (exts (\lam i => R.ldistr)) *> R.BigSum_+)
-      | func-*c => exts (\lam j => pmap R.BigSum (exts (\lam i => equation)) *> inv R.BigSum-ldistr)
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \lemma poly_func_matrix {R : CRing} {n : Nat} (p : Poly R) (A : Matrix R n n) (i j : Fin n) :
       polyMapEval (CAlgebra.coefHom {MatrixAlgebra R n}) p A i j = polyModule.poly_func p (toLinearMap A) (MatrixRing.ide i) j => {?hidden_proof}

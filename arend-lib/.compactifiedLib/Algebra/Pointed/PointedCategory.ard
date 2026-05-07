@@ -11,19 +11,19 @@
   | Hom => \lam X Y => PointedHom X Y
   | id => \lam _ => PointedHom.id
   | o => PointedHom.∘
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam p1 p2 => ext (func-ide {p1}))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
 
 \instance AddPointedCat : Cat AddPointed 
   | Hom => \lam X Y => AddPointedHom X Y
   | id => AddPointedHom.id
   | o => AddPointedHom.∘
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam p1 p2 => ext (func-zro {p1}))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
 
 \type Kernel (f : AddPointedHom) => \Sigma (a : f.Dom) (f a = 0)
 
@@ -32,7 +32,7 @@
 
 \func KerPointedHom (f : AddPointedHom) : AddPointedHom (KerAddPointed f) f.Dom \cowith
   | func => __.1
-  | func-zro => idp
+  | func-zro => {?hidden_proof}
 
 \lemma kernel-inj {f : AddPointedHom} : IsInj (KerPointedHom f) => {?hidden_proof}
 
@@ -44,19 +44,19 @@
 
 \func ImagePointedLeftHom (f : PointedHom) : PointedHom f.Dom (ImagePointed f) \cowith
   | func => \lam a => (f a, inP (a, idp))
-  | func-ide => ext func-ide
+  | func-ide => {?hidden_proof}
 
 \func ImagePointedRightHom (f : PointedHom) : PointedHom (ImagePointed f) f.Cod \cowith
   | func => __.1
-  | func-ide => idp
+  | func-ide => {?hidden_proof}
 
 \func ImageAddPointedLeftHom (f : AddPointedHom) : AddPointedHom f.Dom (ImageAddPointed f) \cowith
   | func => \lam a => (f a, inP (a, idp))
-  | func-zro => ext func-zro
+  | func-zro => {?hidden_proof}
 
 \func ImageAddPointedRightHom (f : AddPointedHom) : AddPointedHom (ImageAddPointed f) f.Cod \cowith
   | func => __.1
-  | func-zro => idp
+  | func-zro => {?hidden_proof}
 
 \lemma image-surj {f : AddPointedHom} : IsSurj (ImageAddPointedLeftHom f) => {?hidden_proof}
 

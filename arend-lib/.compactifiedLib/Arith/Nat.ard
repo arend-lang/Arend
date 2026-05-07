@@ -85,7 +85,7 @@
 \instance NatSemiring : LinearlyOrderedCSemiring.Dec Nat 
   | zro => 0
   | + => +
-  | zro-left => idp
+  | zro-left => {?hidden_proof}
   | +-assoc => +-assoc
   | +-comm => +-comm
   | ide => 1
@@ -94,22 +94,18 @@
   | *-assoc => *-assoc
   | ldistr => ldistr
   | *-comm => *-comm
-  | zro_*-left => *-comm
+  | zro_*-left => {?hidden_proof}
   | < => <
   | <-irreflexive => <-irreflexive
   | <-transitive => <-transitive
-  | trichotomy => \lam n m => (\case n - m \as d, idp : n - m = d \with {
-    | pos 0, p => equals (triEquals p)
-    | pos suc d, p => greater (triGreater p)
-    | neg suc d, p => less (triLess p)
-  })
+  | trichotomy => {?hidden_proof}
   | <_+-left => <_+-left
-  | zro<ide => zero<suc
+  | zro<ide => {?hidden_proof}
   | <_*_positive-left => <_*_positive-left
-  | <_*_negative-left => \lam x<y z<0 => (\case z<0 \with {})
+  | <_*_negative-left => {?hidden_proof}
   | natCoef => \lam n => n
-  | natCoefZero => idp
-  | natCoefSuc => \lam n => idp
+  | natCoefZero => {?hidden_proof}
+  | natCoefSuc => {?hidden_proof}
   \where {
     \open LinearOrder
 
@@ -134,7 +130,7 @@
 \instance NatBSemilattice : BottomJoinSemilattice 
   | JoinSemilattice => NatSemiring
   | bottom => 0
-  | bottom-univ => \lam {_} => (\case __ \with {})
+  | bottom-univ => {?hidden_proof}
   \where {
     \lemma <=_cancel-left (n : Nat) {m k : Nat} (p : n + m <= n + k) : m <= k => {?hidden_proof}
 

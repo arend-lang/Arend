@@ -26,22 +26,22 @@
       | AbGroup => X.AbHom {()} {()}
       | ide => X.id ()
       | * => X.∘
-      | ide-left => X.id-left
-      | ide-right => X.id-right
-      | *-assoc => X.o-assoc
-      | ldistr => X.l-bilinear
-      | rdistr => X.r-bilinear
+      | ide-left => {?hidden_proof}
+      | ide-right => {?hidden_proof}
+      | *-assoc => {?hidden_proof}
+      | ldistr => {?hidden_proof}
+      | rdistr => {?hidden_proof}
 
     \func Ring_toCat (R : Ring) : PreAdditivePrecat (\Sigma) \cowith
       | Hom => \lam () () => R
       | id => \lam () => R.ide
       | o => R.*
-      | id-left => R.ide-left
-      | id-right => R.ide-right
-      | o-assoc => R.*-assoc
+      | id-left => {?hidden_proof}
+      | id-right => {?hidden_proof}
+      | o-assoc => {?hidden_proof}
       | AbHom => R
-      | l-bilinear => R.ldistr
-      | r-bilinear => R.rdistr
+      | l-bilinear => {?hidden_proof}
+      | r-bilinear => {?hidden_proof}
   }
 
 

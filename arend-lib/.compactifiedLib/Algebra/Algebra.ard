@@ -26,7 +26,7 @@
 \func homAlgebra {R E : CRing} (f : RingHom R E) : CAlgebra \cowith
   | CRing => E
   | LModule => homLModule f
-  | *c-comm-left => inv *-assoc
+  | *c-comm-left => {?hidden_proof}
 
 \func ringAlgebra {R : CRing} : CAlgebra R => homAlgebra RingHom.id
 

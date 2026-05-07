@@ -176,7 +176,7 @@
 
 
     \func EPerm-equivalence {A : \Set} : Equivalence (Array A) (\lam l l' => TruncP (EPerm l l')) \cowith
-      | ~-reflexive => inP EPerm.eperm-refl
-      | ~-symmetric => \lam inP e => inP (EPerm.eperm-sym e)
-      | ~-transitive => \lam inP e1 inP e2 => inP (eperm-trans e1 e2)
+      | ~-reflexive => {?hidden_proof}
+      | ~-symmetric => {?hidden_proof}
+      | ~-transitive => {?hidden_proof}
   }

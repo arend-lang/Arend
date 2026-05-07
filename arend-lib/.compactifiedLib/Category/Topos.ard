@@ -44,12 +44,7 @@
     | pbBeta2 => terminal-unique {SetBicat}
     | pbEta => \lam {_} {h1} {h2} eq _ => ext (\lam x => (  \let s : Mono.f {m} (h1 x) = Mono.f {m} (h2 x) => path (\lam i => (eq @ i) x)  \in mono-is-inj m s))
   }
-  | char-unique => \lam {S} {_} {m} {phi} pullback => ext (\lam b => ext (\lam p => (
-    \let preimage : terminal.apex -> S => pbMap {pullback} (name' b) (terminalMap {SetBicat}) (unfold (unfold name' $ exts (\lam _ => sigma-prop-ext p)))
-    \in SetTopos.isContained (unname' preimage)        (  \let b-image : Mono.f {m} ∘ {SetBicat} preimage = name' b => pbBeta1 {pullback}
-          \in name-inj (rewriteI (name-f (Mono.f {m})) $ rewrite (global-elements-iso.f_ret preimage) b-image))),
-        \let | ss : phi ∘ {SetBicat} (Mono.f {m}) = terminalMap ∘ {SetBicat} true-map => pbCoh {pullback}
-         | ss-impl (x : S) : phi (Mono.f {m} x) = (\Sigma) => path (\lam i => (ss @ i) x)  \in \lam c => cases c))
+  | char-unique => {?hidden_proof}
   \where {
     \func mono-is-inj {A B : SetBicat} (m : Mono {SetBicat} {A} {B}) : IsInj m.f 
       => \lam {a} {b} p => run {(name-inj, m.isMono, rewrite (name-f m.f a, name-f m.f b), pmap name' p)}

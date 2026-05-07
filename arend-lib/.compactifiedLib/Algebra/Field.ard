@@ -65,12 +65,9 @@
     \func backwards (f : RingHom) (e : Equiv f) (D : DiscreteField {  | Ring => f.Cod}) : DiscreteField {
       | Ring => f.Dom
     } \cowith
-      | *-comm => e.isInj $ f.func-* *> *-comm *> inv f.func-*
-      | zro/=ide => \lam q => D.zro/=ide $ inv f.func-zro *> pmap f q *> f.func-ide
-      | eitherZeroOrInv => \lam a => ||.map (\lam q => e.isInj $ q *> inv f.func-zro)
-        (\lam (fai : Inv (f a)) => \new (Inv a) {  | inv => e.ret fai.inv
-        | inv-left => e.isInj $ f.func-* *> pmap (* _) (e.f_ret _) *> fai.inv-left *> inv f.func-ide
-        | inv-right => e.isInj $ f.func-* *> pmap (_ *) (e.f_ret _) *> fai.inv-right *> inv f.func-ide}) (D.eitherZeroOrInv (f a))
+      | *-comm => {?hidden_proof}
+      | zro/=ide => {?hidden_proof}
+      | eitherZeroOrInv => {?hidden_proof}
 
     \func forward {f : RingHom} (e : Equiv f) (D : DiscreteField {  | Ring => f.Dom}) : DiscreteField {
       | Ring => f.Cod

@@ -28,9 +28,9 @@
 \instance LocMonoid {M : CMonoid} (S : SubMonoid M) : CMonoid (LocType S) 
   | ide => in~ (1, 1, S.contains_ide)
   | * => *
-  | ide-left => \lam {in~ a} => ~-lequiv equation.cMonoid
-  | *-assoc => \lam {in~ a} {in~ b} {in~ c} => ~-lequiv equation.cMonoid
-  | *-comm => \lam {in~ a} {in~ b} => ~-lequiv equation.cMonoid
+  | ide-left => {?hidden_proof}
+  | *-assoc => {?hidden_proof}
+  | *-comm => {?hidden_proof}
   \where {
     \open LocType
   }
@@ -53,9 +53,9 @@
 \instance LocAbMonoid {M : AbMonoid} (S : SubAddMonoid M) : AbMonoid (LocAbType S) 
   | zro => in~ (0, 0, S.contains_zro)
   | + => +
-  | zro-left => \lam {in~ a} => ~-lequiv equation.abMonoid
-  | +-assoc => \lam {in~ a} {in~ b} {in~ c} => ~-lequiv equation.abMonoid
-  | +-comm => \lam {in~ a} {in~ b} => ~-lequiv equation.abMonoid
+  | zro-left => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
+  | +-comm => {?hidden_proof}
   \where {
     \open LocAbType
   }
@@ -66,4 +66,4 @@
 \instance GrothendieckAbGroup (M : AbMonoid) : AbGroup (MaxLocAbType M) 
   | AbMonoid => LocAbMonoid SubAddMonoid.max
   | negative => negative
-  | negative-left => \lam {in~ a} => LocAbType.~-lequiv equation.abMonoid
+  | negative-left => {?hidden_proof}

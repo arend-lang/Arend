@@ -7,7 +7,7 @@
   | Hom => ContMap
   | id => \lam X => ContMap.id
   | o => ContMap.∘
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam {X} {S1} {S2} h1 h2 => exts (\lam U => ext (func-cont {h2} {U}, func-cont {h1} {U})))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}

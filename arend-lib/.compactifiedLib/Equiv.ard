@@ -228,7 +228,7 @@
 
     \use \coerce fromEquiv (e : Equiv) : ESEquiv e.f \cowith
       | isEmb => \lam a a' => pmapEquiv e {a} {a'}
-      | isSurjMap => \lam y => inP (e.sec y, e.f_sec y)
+      | isSurjMap => {?hidden_proof}
 
     \lemma aux (e : Embedding) (s : \Pi (y : e.B) -> ∃ (x : e.A) (e x = y)) (y : e.B) => {?hidden_proof}
   }

@@ -117,14 +117,8 @@
 
 \instance SeparatedBanachReflection {A : RatValue} (X : PreBanachSpace A) : SeparatedPreBanachSpace A 
   | ExNormedAbGroup => SeparatedNormedAbGroupReflection X
-  | isDivisible => \case \elim __ \with {
-    | in~ x => \lam n/=0 => (\case isDivisible x n/=0 \with {
-      | inP (y, ny=x) => inP (inN y, inv inN-isometry.func-*n *> pmap inN ny=x)
-    })
-  }
-| norm_*n => \lam {n} {x} => (\case \elim x \with {
-  | in~ x => pmap norm (inv inN-isometry.func-*n) *> norm_*n
-})
+  | isDivisible => {?hidden_proof}
+  | norm_*n => {?hidden_proof}
 \where {
   \open SeparatedNormedAbGroupReflection
 }
@@ -132,14 +126,5 @@
 
 \instance BanachCompletion {A : RatValue} (X : PreBanachSpace A) : BanachSpace A 
   | CompleteExNormedAbGroup => ExNormedAbGroupCompletion X
-  | isDivisible => \lam F {n} n/=0 => (
-    \have *q-lift => dense-uniform-lift separated-completion (separated-completion.dense->uniformEmbedding separated-completion.isDense) 
-            (separated-completion UniformMap.∘ *q-right-uniform {SeparatedBanachReflection X} {RatField.finv n})
-    \in inP (*q-lift F,  dense-lift-unique separated-completion separated-completion.isDense (*n-uniform {_} {n} UniformMap.∘ *q-lift) UniformMap.id  (\lam x =>
-          pmap (n AddMonoid.*n) (dense-lift-char ((IsometricMap.dense->uniformEmbedding separated-completion.isDense).1, UniformMap.embedding->coverEmbedding _) x) 
-                *> inv separated-completion.func-*n *> pmap separated-completion 
-            (inv QModule.*q_*n *> inv QModule.*q-assoc *> pmap (QModule.*q _) (RatField.finv-right $ natRat/=0 n/=0) *> QModule.ide_*q)) F))
-  | norm_*n => \lam {n} {F} => completion-lift-unique (norm-metric-map {ExNormedAbGroupCompletion X} UniformMap.∘ *n-uniform) 
-    (upper-*-left-uniform (A.norm-bounded _) UniformMap.∘ norm-metric-map {ExNormedAbGroupCompletion X})
-      (\lam x => pmap norm (inv completion-topAb.func-*n) *> completion-exNormed-isometry.func-norm-isometry *> norm_*n *> pmap (_ *) 
-      (inv completion-exNormed-isometry.func-norm-isometry)) F
+  | isDivisible => {?hidden_proof}
+  | norm_*n => {?hidden_proof}

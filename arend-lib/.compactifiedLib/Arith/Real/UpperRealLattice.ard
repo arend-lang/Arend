@@ -18,13 +18,11 @@
 \instance ExUpperRealLattice : CompleteLattice ExUpperReal 
   | Order.Lattice.Lattice => ExUpperRealAbMonoid
   | Meet => Meet
-  | Meet-cond => \lam j fj<b => inP (j, fj<b)
-  | Meet-univ => \lam c inP (j, fj<b) => c j fj<b
+  | Meet-cond => {?hidden_proof}
+  | Meet-univ => {?hidden_proof}
   | Join => Join
-  | Join-cond => \lam j inP (r, r<b, c) => U-closed (c j) r<b
-  | Join-univ => \lam c e<b => (\case U-rounded e<b \with {
-    | inP (a, e<a, a<b) => inP (a, a<b, \lam j => c j e<a)
-  })
+  | Join-cond => {?hidden_proof}
+  | Join-univ => {?hidden_proof}
   \where {
     \lemma *n_Join {n : Nat} (n/=0 : n /= 0) {J : \Set} {g : J -> ExUpperReal} : n AddMonoid.*n Join g = Join (\lam j => n AddMonoid.*n g j) => {?hidden_proof}
 

@@ -21,7 +21,7 @@
   | normalize => normalize
   | interpret => interpret
   | interpretNF => interpretNF
-  | interpretNF-consistent => interpretNF-consistent _
+  | interpretNF-consistent => {?hidden_proof}
   \where {
     \func toArray (cs : Array Int) (env : Array G cs.len) : Array G \elim cs, env
       | nil, nil => nil

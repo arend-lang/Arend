@@ -97,9 +97,7 @@
 
 \instance image-fin {R : SmithDomain} {U V : FinModule R} (f : LinearMap U V) : FinModule 
   | LModule => ImageLModule f
-  | isFinModule => \case U.isFinModule, V.isFinModule \with {
-    | inP (lu, bu), inP (lv, bv) => TruncP.map (basis f bu bv) (\lam s => (s.1, s.2))
-  }
+  | isFinModule => {?hidden_proof}
   \where {
     \lemma basis {U V : LModule R} (f : LinearMap U V) {lu' : Array U} (bu' : U.IsBasis lu') {lv' : Array V} (bv' : V.IsBasis lv') :
       ∃ (l : Array (Image f)) (IsBasis {ImageLModule f} l) (l.len = rank (LinearMap.toMatrix lu' bv' f)) => {?hidden_proof}
@@ -111,27 +109,7 @@
 
 \instance kernel-fin {R : SmithDomain} {U V : FinModule R} (f : LinearMap U V) : FinModule 
   | LModule => KerLModule f
-  | isFinModule => \case U.isFinModule, V.isFinModule \with {
-    | inP (_, bu'), inP (_, bv') => \case smith-bases bu' bv' f \with {
-      | inP (lu : Array, bu, lv : Array, bv, d, g, d0) => 
-        \have | KerFin : FinSet (\Sigma (j : Fin lu.len) (d j = 0)) => SigmaFin (FinFin lu.len) (\lam j => DecFin (decideEq (d j) 0))
-              | kb : LModule.IsBasisSet {KerLModule f} (\lam s => (lu s.1, g s.1 *> pmap (*c _) s.2 *> V.*c_zro-left)) => (LinearMap.IsIndependentSet_func
-                {KerLModuleHom f} $ LModule.IsIndependentSet-right-inj (\lam p => ext p) ((U.IsIndependent<->IsIndependentSet {lu}).1 bu.1),
-                \lam x => inP (map (\lam s => (U.basis-split bu x.1 s.1, s)) (filter0 d),
-                ext $ U.basis-split-char {_} {bu} *> filter0_BigSum d (\lam j => basis-split bu x.1 j *c lu j)
-                (\lam j dj/=0 => pmap (*c _)  (\case LinearOrder.dec<_<= j lv.len \with {
-                | inl j<lv => Domain.nonZero-right dj/=0 $ inv (fit_<' (\lam j => basis-split bu x.1 j R.* d j) j<lv) *> bv.1 (fit zro (\lam j => U.basis-split bu x.1 j * d j))
-                          (path (\lam i => V.BigSum (\lam j => fit_map (*c lv j) {zro} V.*c_zro-left {_} {\lam j => basis-split bu x.1 j R.* d j} i j)) *> V.fit-transpose 
-                  (\lam j k => basis-split bu x.1 k * d k *c lv j) *> pmap V.BigSum    (exts (\lam k => later (\case LinearOrder.dec<_<= k lv.len \with {
-                    | inl k<lv => fit_< (\lam i => basis-split bu x.1 k * d k *c lv i) k<lv *> pmap (_ *c) (inv (fit_< lv k<lv))
-                    | inr lv<=k => fit_>= (\lam i => basis-split bu x.1 k * d k *c lv i) lv<=k *> inv 
-                      (pmap (*c _) (pmap (_ *) ((d0 k).2 $ rank<=columns <=∘ lv<=k) *> R.zro_*-right) *> V.*c_zro-left)}) *> *c-assoc *> inv 
-                  (func-*c *> pmap (_ *c) (g k)))) *> inv (pmap f (U.basis-split-char {_} {bu}) *> f.func-BigSum) *> x.2) (toFin j j<lv)
-                | inr lv<=j => absurd $ dj/=0 ((d0 j).2 $ rank<=columns <=∘ lv<=j)}) *> *c_zro-left) *> inv (KerLModuleHom f).func-BigSum)
-              )
-        \in basisSet_basis KerFin kb
-    }
-  }
+  | isFinModule => {?hidden_proof}
   \where {
     \func filter0 {R : AddGroup.Dec} (ds : Array R) : Array (\Sigma (j : Fin ds.len) (ds j = 0)) \elim ds
       | nil => nil

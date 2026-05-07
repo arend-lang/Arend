@@ -15,8 +15,8 @@
 
 \instance SubobjPreorder {C : Precat} (obj : C) : Preorder (Subobj obj) 
   | <= => \lam subobj s f subobj t g => ∃ (h : Hom s t) (Mono.f {g} ∘ h = f)
-  | <=-refl => \lam {subobj s f} => inP (id s, id-right)
-  | <=-transitive => \lam {subobj s1 f1} {subobj s2 f2} {subobj s3 f3} inP (f, s2f=s1) inP (g, s3g=s2) => inP (g ∘ f, rewriteEq s3g=s2 s2f=s1)
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
   \where {
     \lemma extractMap {C : Precat} {obj s t : C} {f : Hom s obj} {g : Hom t obj} (gm : Mono g) (e : ∃ (h : Hom s t) (g ∘ h = f)) : \Sigma (h : Hom s t) (g ∘ h = f) => {?hidden_proof}
 
@@ -38,8 +38,8 @@
 
 \instance RegularSubobjPreorder {C : Precat} (obj : C) : Preorder (RegularSubobj obj) 
   | <= => \lam regSubobj {s} f _ regSubobj {t} g _ => ∃ (h : Hom s t) (g ∘ h = f)
-  | <=-refl => \lam {regSubobj {s} f _} => inP (id s, id-right)
-  | <=-transitive => \lam {regSubobj f1 _} {regSubobj f2 _} {regSubobj f3 _} inP (f, s2f=s1) inP (g, s3g=s2) => inP (g ∘ f, rewriteEq s3g=s2 s2f=s1)
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
 
 \lemma pullback_regularSubobj-isMeet {C : CartesianPrecat} (P : Pullback {C}) (fm : isRegularMono P.f) (gm : isRegularMono P.g) :
   Preorder.Is-meet (regSubobj P.f fm) (regSubobj P.g gm) (regSubobj (P.f ∘ pbProj1) (pullback-isRegularMono fm gm)) => {?hidden_proof}

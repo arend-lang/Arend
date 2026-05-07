@@ -17,7 +17,7 @@
   | normalize => (MonoidSolverModel M).normalize
   | interpret => interpret
   | interpretNF => \lam env nf => MonoidSolverModel.interpretNF env (RedBlack.sort nf)
-  | interpretNF-consistent => sort-consistent *> (MonoidSolverModel M).interpretNF-consistent
+  | interpretNF-consistent => {?hidden_proof}
   \where {
     \lemma sort-consistent {n : Nat} {env : Fin n -> M} {l : List (Fin n)} : (MonoidSolverModel M).interpretNF env (RedBlack.sort l) = (MonoidSolverModel M).interpretNF env l => {?hidden_proof}
 

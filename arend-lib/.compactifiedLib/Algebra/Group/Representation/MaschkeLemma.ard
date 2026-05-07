@@ -31,14 +31,14 @@
 
 \func SumOverGroup {R : CRing} {G : FinGroup} {A B : LinRepres R G} (f : LinearMap A B) : InterwiningMap A B \cowith
   | LinearMap => int
-  | func-** => \lam {a} {h} => rewrite (bring_h_out h a, inv $ ap-rearrange h a) idp
+  | func-** => {?hidden_proof}
   \where {
     \func Ab : AbGroup => PreAdditivePrecat.AbHom {LModulePreAdditive R} {A} {B}
 
     \func adjust (g : G) (f : LinearMap A B) : LinearMap A B \cowith
       | func => \lam a => g B.** f (inverse g A.** a)
-      | func-+ => rewrite (A.**-ldistr, f.func-+, B.**-ldistr) idp
-      | func-*c => rewrite (A.**-*c, f.func-*c, B.**-*c) idp
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \func adjust' : G -> LinearMap A B => \lam g => adjust g f
 

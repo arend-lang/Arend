@@ -29,15 +29,15 @@
   | Hom => \lam A B => LinearMap A B
   | id => \lam _ => id
   | o => ∘
-  | id-left => idp
-  | id-right => idp
-  | o-assoc => idp
-  | univalence => sip (\lam (f : LinearMap) g => exts (f.func-zro, \lam x x' => f.func-+, \lam x => f.func-negative, \lam e x => f.func-*c))
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
+  | univalence => {?hidden_proof}
   \where {
     \func in {N : LModule R} (S : SubLModule R N) : LinearMap S.IModule N \cowith
       | func => \lam x => x.1
-      | func-+ => idp
-      | func-*c => idp
+      | func-+ => {?hidden_proof}
+      | func-*c => {?hidden_proof}
 
     \lemma in-mono {N : LModule R} (S : SubLModule R N) : IsInj (in S) => {?hidden_proof}
   }
@@ -55,16 +55,16 @@
     | negative-left => exts (\lam _ => LModule.negative-left)
     | +-comm => exts (\lam _ => LModule.+-comm)
   }
-  | l-bilinear => exts (\lam _ => func-+)
-  | r-bilinear => exts (\lam _ => idp)
+  | l-bilinear => {?hidden_proof}
+  | r-bilinear => {?hidden_proof}
 
 \instance LinearMapLModule {R : CRing} (A B : LModule R) : LModule R 
   | AbGroup => AbHom {LModulePreAdditive R} {A} {B}
   | *c => *c
-  | *c-assoc => exts (\lam _ => B.*c-assoc)
-  | *c-ldistr => exts (\lam _ => B.*c-ldistr)
-  | *c-rdistr => exts (\lam _ => B.*c-rdistr)
-  | ide_*c => exts (\lam _ => B.ide_*c)
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
 
 \func IsZeroMod {R : Ring} (M : LModule R) => \Pi (m : M) -> m = 0
 
@@ -73,52 +73,52 @@
 \instance KerLModule {R : Ring} {A B : LModule R} (f : LinearMap A B) : LModule R 
   | AbGroup => KerAbGroup f
   | *c => \lam r a => (r *c a.1, func-*c *> pmap (r *c) a.2 *> B.*c_zro-right)
-  | *c-assoc => ext *c-assoc
-  | *c-ldistr => ext *c-ldistr
-  | *c-rdistr => ext *c-rdistr
-  | ide_*c => ext ide_*c
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
 
 \func KerLModuleHom {R : Ring} {A B : LModule R} (f : LinearMap A B) : LinearMap (KerLModule f) A \cowith
   | AddGroupHom => KerGroupHom f
-  | func-*c => idp
+  | func-*c => {?hidden_proof}
 
 \instance ImageLModule {R : Ring} {A B : LModule R} (f : LinearMap A B) : LModule R 
   | AbGroup => ImageAbGroup f
   | *c => \lam r a => (r *c a.1, TruncP.map a.2 (\lam s => (r *c s.1, func-*c *> pmap (r *c) s.2)))
-  | *c-assoc => ext *c-assoc
-  | *c-ldistr => ext *c-ldistr
-  | *c-rdistr => ext *c-rdistr
-  | ide_*c => ext ide_*c
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
 
 \func ImageLModuleLeftHom {R : Ring} {A B : LModule R} (f : LinearMap A B) : LinearMap A (ImageLModule f) \cowith
   | AddGroupHom => ImageAddGroupLeftHom f
-  | func-*c => ext func-*c
+  | func-*c => {?hidden_proof}
 
 \func ImageLModuleRightHom {R : Ring} {A B : LModule R} (f : LinearMap A B) : LinearMap (ImageLModule f) B \cowith
   | AddGroupHom => ImageAddGroupRightHom f
-  | func-*c => idp
+  | func-*c => {?hidden_proof}
 
 \instance LinearMapRing {R : Ring} (U : LModule R) : Ring (LinearMap U U) 
   | zro => linearMap_zro
   | + => linearMap_+
-  | zro-left => exts (\lam _ => U.zro-left)
-  | +-assoc => exts (\lam _ => U.+-assoc)
-  | +-comm => exts (\lam _ => U.+-comm)
+  | zro-left => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
+  | +-comm => {?hidden_proof}
   | negative => linearMap_negative
-  | negative-left => exts (\lam _ => U.negative-left)
+  | negative-left => {?hidden_proof}
   | ide => id
   | * => \lam f g => g ∘ f
-  | ide-left => idp
-  | ide-right => idp
-  | *-assoc => idp
-  | ldistr => idp
-  | rdistr => exts (\lam _ => func-+)
+  | ide-left => {?hidden_proof}
+  | ide-right => {?hidden_proof}
+  | *-assoc => {?hidden_proof}
+  | ldistr => {?hidden_proof}
+  | rdistr => {?hidden_proof}
   \where {
     \func *c-hom {R : CRing} {U : LModule R} : RingHom R (LinearMapRing U) \cowith
       | func => func
-      | func-+ => exts (\lam _ => *c-rdistr)
-      | func-ide => exts (\lam _ => ide_*c)
-      | func-* => exts (\lam u => pmap (*c u) R.*-comm *> *c-assoc)
+      | func-+ => {?hidden_proof}
+      | func-ide => {?hidden_proof}
+      | func-* => {?hidden_proof}
   }
 
 
@@ -126,15 +126,15 @@
 \cowith
   | f => toLinearMap bu lv A.val
   | hinv => toLinearMap bv lu A.inv
-  | hinv_f => inv (toLinearMap_* A.val A.inv bu bv bu) *> cong A.inv-right *> toLinearMap_ide bu
-  | f_hinv => inv (toLinearMap_* A.inv A.val bv bu bv) *> cong A.inv-left *> toLinearMap_ide bv
+  | hinv_f => {?hidden_proof}
+  | f_hinv => {?hidden_proof}
 
 \func toMatrixInv {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) (e : Iso {_} {U} {V}) : Monoid.Inv {MatrixRing R n} 
 \cowith
   | val => toMatrix lu bv e.f
   | inv => toMatrix lv bu e.hinv
-  | inv-left => inv (toMatrix_* e.hinv e.f lv bu bv) *> pmap (toMatrix lv bv) e.f_hinv *> toMatrix_ide bv
-  | inv-right => inv (toMatrix_* e.f e.hinv lu bv bu) *> pmap (toMatrix lu bu) e.hinv_f *> toMatrix_ide bu
+  | inv-left => {?hidden_proof}
+  | inv-right => {?hidden_proof}
 
 \lemma iso<->inj+surj {R : Ring} {U V : LModule R} {f : LinearMap U V} : Iso f <-> (\Sigma (IsInj f) (IsSurj f)) => {?hidden_proof}
 
@@ -171,8 +171,8 @@
 \func basis-iso {R : Ring} {U V : LModule R} {n : Nat} {lu : Array U n} (bu : U.IsBasis lu) {lv : Array V n} (bv : V.IsBasis lv) : Iso {_} {U} {V} \cowith
   | f => extend bu lv
   | hinv => extend bv lu
-  | hinv_f => exts $ basis-ext (extend bv lu ∘ extend bu lv) id bu.2 (\lam j => pmap (extend bv lu) (extend-char bu lv j) *> extend-char bv lu j)
-  | f_hinv => exts $ basis-ext (extend bu lv ∘ extend bv lu) id bv.2 (\lam j => pmap (extend bu lv) (extend-char bv lu j) *> extend-char bu lv j)
+  | hinv_f => {?hidden_proof}
+  | f_hinv => {?hidden_proof}
 
 \lemma change-basis_matrix-left {R : Ring} {U V : LModule R} (f : LinearMap U V) {n : Nat} {lu lu' : Array U n} (bu : U.IsBasis lu) (bu' : U.IsBasis lu') {lv : Array V} 
 (bv : V.IsBasis lv) : toMatrix lu bu (Iso.f {basis-iso bu' bu}) MatrixRing.product toMatrix lu' bv f = toMatrix lu bv f => {?hidden_proof}

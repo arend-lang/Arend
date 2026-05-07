@@ -21,7 +21,7 @@
   \where {
     \func cStruct {A : CSemigroup} (S : SubSemigroup A) : CSemigroup \cowith
       | Semigroup => S.ISemigroup
-      | *-comm => ext *-comm
+      | *-comm => {?hidden_proof}
   }
 
 
@@ -35,12 +35,12 @@
 
     \func max {A : Monoid} : SubMonoid \cowith
       | SubPointed => SubPointed.max {A}
-      | contains_* => \lam _ _ => ()
+      | contains_* => {?hidden_proof}
 
     \func closure {M : Monoid} (S : SubSet M) : SubMonoid M \cowith
       | contains => \lam x => ∃ (n : Nat) (iterr apl n S x)
-      | contains_ide => inP (1, byRight (byLeft idp))
-      | contains_* => \lam {x} {y} inP (n, xr) inP (m, yr) => inP (suc (n ∨ m), byRight (byRight (x, y, apl-inc join-left x xr, apl-inc join-right y yr, idp)))
+      | contains_ide => {?hidden_proof}
+      | contains_* => {?hidden_proof}
       \where {
         \open Algebra.Ring.Localization
 
@@ -61,8 +61,8 @@
 
     \func powers {M : Monoid} (a : M) : SubMonoid M \cowith
       | contains => \lam x => ∃ (n : Nat) (M.pow a n = x)
-      | contains_ide => inP (0, idp)
-      | contains_* => \lam inP (n, a^n=x) inP (m, a^m=y) => inP (n Nat.+ m, M.pow_+ *> pmap2 * a^n=x a^m=y)
+      | contains_ide => {?hidden_proof}
+      | contains_* => {?hidden_proof}
   }
 
 
@@ -77,9 +77,9 @@
   \where {
     \func abStruct {A : AbMonoid} (S : SubAddMonoid A) : AbMonoid \cowith
       | AddMonoid => S.IAddMonoid
-      | +-comm => ext +-comm
+      | +-comm => {?hidden_proof}
 
     \func max {A : AddMonoid} : SubAddMonoid \cowith
       | SubAddPointed => SubAddPointed.max {A}
-      | contains_+ => \lam _ _ => ()
+      | contains_+ => {?hidden_proof}
   }

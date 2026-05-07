@@ -1,0 +1,108 @@
+\import Algebra.Meta
+\import Algebra.Monoid(+, AddMonoid, zro-right)
+\import Arith.Fin
+\import Arith.Fin.Order
+\import Arith.Nat
+\import Combinatorics.Binom
+\import Combinatorics.Combinations
+\import Combinatorics.Factorial
+\import Data.Array
+\import Equiv
+\import Function.Meta
+\import Logic
+\import Meta
+\import Order.Category
+\import Order.LinearOrder
+\import Order.PartialOrder
+\import Paths
+\import Paths.Meta
+\import Set
+\import Set.Fin
+\import Set.Fin.Instances
+\import Algebra.Semiring
+\import Order.StrictOrder
+\import Set.Fin.Pigeonhole
+\open NatOrder
+\open NatSemiring
+
+\func Compositions (n k : Nat) => \Sigma (arr : Array (Fin n) k) (IsPositive arr) (AddMonoid.BigSum arr = n)
+
+\func WeakCompositions (n k : Nat) => \Sigma (arr : Array (Fin n) k) (AddMonoid.BigSum arr = n)
+
+\func IsPositive {k : Nat} (arr : Array Nat k) : \Prop => \Pi (i : Fin k) -> 0 < arr i
+
+\instance IsPositive-dec {k : Nat} (arr : Array Nat k) : Decide (IsPositive arr) 
+  | decide => {?hidden_proof}
+
+\func IsSum {k : Nat} (n : Nat) (arr : Array Nat k) : \Prop => AddMonoid.BigSum arr = n
+
+\func IsSum-dec {k : Nat} (n : Nat) (arr : Array Nat k) : Dec (IsSum n arr) => NatSemiring.decideEq (AddMonoid.BigSum arr) n
+
+\lemma BigSum_elem {k : Nat} {arr : Array Nat (suc k)} (i : Fin (suc k)) : arr i + AddMonoid.BigSum (skip arr i) = AddMonoid.BigSum arr => {?hidden_proof}
+
+\lemma <=_exists {a b n : Nat} (p : a + b = n) : a < suc n => {?hidden_proof}
+
+\instance WeakCompositionsFin (n k : Nat) : FinSet (WeakCompositions n k) => 
+  \let | S : FinSet => ArrayFin (FinFin n) k
+       | D : DecSubSet S => \new DecSubSet {
+         | contains => \lam arr => IsSum n arr
+         | isDec => \lam arr => IsSum-dec n arr
+       }
+       | F : FinSet D.ISet => SigmaFin.DecSubSet-isFin S D
+       | e : Equiv {D.ISet} {WeakCompositions n k} => \new QEquiv {
+         | f => \lam p => p
+         | ret => \lam p => p
+         | ret_f => \lam p => idp
+         | f_sec => \lam p => idp
+       }
+  \in \new FinSet {
+        | finCard => F.finCard
+        | finEq => TruncP.map F.finEq (transEquiv e)
+      }
+
+\instance CompositionsFin (n k : Nat) : FinSet (Compositions n k) => 
+  \let | S : FinSet => WeakCompositionsFin n k
+       | D : DecSubSet S => \new DecSubSet {
+         | contains => \lam arr => IsPositive arr.1
+         | isDec => \lam arr => (IsPositive-dec arr.1).decide
+       }
+       | F : FinSet D.ISet => SigmaFin.DecSubSet-isFin S D
+       | e : Equiv {D.ISet} {Compositions n k} => \new QEquiv {
+         | f => \lam p => (p.1.1, p.2, p.1.2)
+         | ret => \lam p => ((p.1, p.3), p.2)
+         | ret_f => \lam p => idp
+         | f_sec => \lam p => idp
+       }
+  \in \new FinSet {
+        | finCard => F.finCard
+        | finEq => TruncP.map F.finEq (transEquiv e)
+      }
+
+\func partialSums {k : Nat} (arr : Array Nat k) : Array Nat k \elim k, arr
+  | 0, nil => nil
+  | suc k, a :: rest => a :: map (\lam x => suc (a + x)) (partialSums rest)
+
+\lemma partialSums-strictlyIncreasing {k : Nat} {arr : Array Nat k} (i j : Fin k) (i<j : i < j) : partialSums arr i < partialSums arr j => {?hidden_proof}
+
+\lemma partialSums-leq-sum {k : Nat} {arr : Array Nat k} (i : Fin k) : partialSums arr i <= AddMonoid.BigSum arr + i => {?hidden_proof}
+
+\lemma partialSums-bound {n k : Nat} {arr : Array (Fin n) k} {_ : AddMonoid.BigSum arr = n} (i : Fin k) : partialSums arr i < n + k => {?hidden_proof}
+
+\lemma partialSums-strict-bound {n k : Nat} {arr : Array (Fin n) (suc k)} {sum_eq : AddMonoid.BigSum arr = n} (i : Fin k) : partialSums arr i < n + k => {?hidden_proof}
+
+\func weakComp-to-comb {n k : Nat} (w : WeakCompositions n (suc k)) : Combinations (n + k) k => \new StrictPosetHom {
+  | Dom => FinOrder k
+  | Cod => FinOrder (n + k)
+  | func => \lam i => toFin (partialSums w.1 i) (partialSums-strict-bound {n} {k} {w.1} {w.2} i)
+  | func-< => \lam {i} {j} i<j => (
+    \have | mono => partialSums-strictlyIncreasing {suc k} {w.1} i j i<j
+          | ti=i => toFin=id {partialSums w.1 i} {n + k}
+          | tj=j => toFin=id {partialSums w.1 j} {n + k}
+    \in transport2 < (inv ti=i) (inv tj=j) mono)
+}
+
+\func comb-to-weakComp {n k : Nat} (c : Combinations (n + k) k) : WeakCompositions n (suc k) => {?}
+
+\func weakComp-comb-equiv {n k : Nat} : Equiv {WeakCompositions n (suc k)} {Combinations (n + k) k} => {?}
+
+\lemma weakCompositions-binom {n k : Nat} : finCard {WeakCompositionsFin n (suc k)} = binom (n + k) k => {?hidden_proof}

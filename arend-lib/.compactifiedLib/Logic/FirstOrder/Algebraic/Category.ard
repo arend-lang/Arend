@@ -29,11 +29,7 @@
 
 \instance ModelCat (T : Theory) : BicompleteCat (Model T) 
   | Precat => ModelPrecat T
-  | univalence => Cat.makeUnivalence $ later
-    (\lam (e : Iso) => (  \have t => SIP (FamCat SetCat) (Model T) (\lam M N f => ModelHom M N f) 
-            (\lam {E} {M} {N} (p1 : ModelHom M N) (p2 : ModelHom N M) => exts (\lam h d => p1.func-op h d, \lam P d => ext (p1.func-rel P d, p2.func-rel P d))) 
-            (\new (Iso (\lam {j} => e.f {j}) (\lam {j} => e.hinv {j}) (path (\lam i {j} => (e.hinv_f @ i) {j})) (path (\lam i {j} => (e.f_hinv @ i) {j})))) e.dom 
-            e.cod e.f e.hinv  \in (t.2, simp_coe t.3)))
+  | univalence => {?hidden_proof}
   | limit => \lam {J} (G : Functor) => \new Limit {
     | apex => \new Model {
       | Structure => limitStructure T G
@@ -68,7 +64,7 @@
 
     \func emptyFin {S : \Set} : FinSet (\Sigma S Empty) \cowith
       | finCard => 0
-      | finEq => inP (\new QEquiv {  | f => \case __ \with {}| ret => \case __.2 \with {}| ret_f => \case __ \with {}| f_sec => \case __.2 \with {}})
+      | finEq => {?hidden_proof}
 
     \instance ModelPrecat (T : Theory) : Precat (Model T) 
       | Hom => \lam M N => ModelHom M N
@@ -82,9 +78,9 @@
         | func-op => \lam h d => rewrite (func-op {f} h d) (func-op {g} h _)
         | func-rel => \lam P d x => func-rel P (\lam j => f (d j)) (func-rel P d x)
       }
-      | id-left => idp
-      | id-right => idp
-      | o-assoc => idp
+      | id-left => {?hidden_proof}
+      | id-right => {?hidden_proof}
+      | o-assoc => {?hidden_proof}
 
 \class ColimitData {
       | J : SmallPrecat

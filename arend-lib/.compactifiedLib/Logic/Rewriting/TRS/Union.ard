@@ -25,7 +25,7 @@
   | rr-mc => R.rr-mc
   | rr-l => inject-term S R.rr-l
   | rr-r => inject-term S R.rr-r
-  | rr-l-func-root => cases (R.rr-l, R.rr-l-func-root)
+  | rr-l-func-root => {?hidden_proof}
 
 \func SumRegistry {J Sort : \Set} (S : J -> FSignature Sort) (L : \Pi (j : J) -> RuleRegistry (S j)) : RuleRegistry (SumFSignature S) \cowith
   | rule-J => \lam s => \Sigma (j : J) (rule-J {L j} s)

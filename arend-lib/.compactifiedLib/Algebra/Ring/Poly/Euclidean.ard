@@ -28,7 +28,7 @@
 
 \instance PolyEuclideanRingData (R : DiscreteField) : EuclideanRingData (Poly R) 
   | CRing => PolyAlgebra R
-  | decideEq => PolyDecRing.decideEq
+  | decideEq => {?hidden_proof}
   | euclideanMap => degree
   | divMod => \lam p q => (\case decideEq (degree q) 0 \with {
     | yes _ => \case decideEq q 0 \with {
@@ -37,8 +37,8 @@
     }
     | no _ => divMod_fuel p q (EuclideanSemiringData.suc' (degree p))
   })
-  | isDivMod => \lam p q => cases (decideEq (degree q) 0)
-  | isEuclideanMap => \lam p q q/=0 => cases (decideEq (degree q) 0)
+  | isDivMod => {?hidden_proof}
+  | isEuclideanMap => {?hidden_proof}
   \where {
     \func divMod_fuel {R : DiscreteField} (p q : Poly R) (n : Nat) : \Sigma (Poly R) (Poly R) \elim n
       | 0 => (0, 0)
@@ -60,7 +60,7 @@
 
 \instance PolyEuclideanDomain (R : DiscreteField) : EuclideanDomain (Poly R) 
   | IntegralDomain.Dec => PolyDecIntegralDomain R
-  | isEuclidean => inP (PolyEuclideanRingData R)
+  | isEuclidean => {?hidden_proof}
 
 \lemma poly-dec-unit {R : DiscreteField} (p : Poly R) : Dec (Inv p) => {?hidden_proof}
 

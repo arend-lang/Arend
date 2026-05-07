@@ -112,4 +112,4 @@
 }
 
 \instance EmptyNegated : NegatedProp Empty 
-  | isNegated => \lam p => p (\lam x => x)
+  | isNegated => {?hidden_proof}

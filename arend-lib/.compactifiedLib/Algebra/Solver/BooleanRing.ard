@@ -24,7 +24,7 @@
   | normalize => normalize
   | interpret => \lam env => interpret env
   | interpretNF => interpretNF
-  | interpretNF-consistent => interpretNF=interpretNF' *> interpretNF'-consistent
+  | interpretNF-consistent => {?hidden_proof}
   \where {
 \data Term (n : Nat) 
       | var (Fin n)

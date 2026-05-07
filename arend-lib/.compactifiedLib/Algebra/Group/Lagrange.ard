@@ -21,9 +21,7 @@
 
 \func lagrange (H : FinSubGroup) : LDiv (finCard {H.IFinGroup}) (finCard {H.S}) \cowith
   | inv => finCard {Cosets-fin H H.S}
-  | inv-right => \case lagrange-gen H (Cosets-fin H H.S) \with {
-    | inP p => inv $ finCard_Equiv {H.S} {ProdFin (Cosets-fin H H.S) H.IFinGroup} p *> *-comm
-  }
+  | inv-right => {?hidden_proof}
   \where {
     \lemma Cosets-fin (H : DecSubGroup) (_ : KFinSet H.S) : FinSet H.Cosets => {?hidden_proof}
   }

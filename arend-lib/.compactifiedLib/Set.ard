@@ -39,20 +39,14 @@
 \lemma Dec_|| {A B : \Prop} (d : Dec A) (e : Dec B) : Dec (A || B) => {?hidden_proof}
 
 \func SigmaDecide {A : Decide} (B : A -> Decide) : Decide (\Sigma (a : A) (B a)) \cowith
-  | decide => \case A.decide \with {
-    | yes a => \case decide {B a} \with {
-      | yes b => yes (a, b)
-      | no q => no (\lam p => q $ transport (B __) prop-pi p.2)
-    }
-    | no q => no (\lam p => q p.1)
-  }
+  | decide => {?hidden_proof}
 
 \instance ProductDecide (A B : Decide) : Decide => SigmaDecide {A} (\lam _ => B)
 
 \lemma NotDec {P : \Prop} (d : Dec P) : Dec (Not P) => {?hidden_proof}
 
 \instance NotDecide (A : Decide) : Decide (Not A) 
-  | decide => NotDec A.decide
+  | decide => {?hidden_proof}
 
 \class BaseSet {
   | E : \Set
@@ -69,7 +63,7 @@
   \where {
     \func max {S : BaseSet} : DecSubSet S \cowith
       | contains => \lam _ => \Sigma
-      | isDec => \lam _ => yes ()
+      | isDec => {?hidden_proof}
   }
 
 
@@ -100,20 +94,14 @@
 }
 
 \func SigmaDecSet {A : DecSet} (B : A -> DecSet) : DecSet (\Sigma (a : A) (B a)) \cowith
-  | decideEq => \lam p q => (\case decideEq p.1 q.1 \with {
-    | yes e => \case decideEq (transport (\lam a => B a) e p.2) q.2 \with {
-      | yes e' => yes (ext (e, e'))
-      | no n => no (\lam e' => n (rewrite (prop-isProp e (pmap __.1 e')) (pmapd __.2 e')))
-    }
-    | no n => no (\lam e => n (pmap __.1 e))
-  })
+  | decideEq => {?hidden_proof}
 
 \func SubDecSet {A : DecSet} {B : A -> \Prop} : DecSet (\Sigma (a : A) (B a)) 
   => SigmaDecSet (\lam a => \new (DecSet (B a)) {  | decideEq => \lam b b' => yes prop-pi})
 
 \instance DecBool : DecSet 
   | E => Bool
-  | decideEq => \lam x y => compare x y
+  | decideEq => {?hidden_proof}
   \where {
     \func compare (a b : Bool) : Dec (a = b) 
       | false, false => yes idp
@@ -126,10 +114,10 @@
 \instance ProductDecSet (A B : DecSet) : DecSet (\Sigma A B) => SigmaDecSet (\lam _ => B)
 
 \instance EqualityDecide (A : DecSet) (a a' : A) : Decide (a = a') 
-  | decide => decideEq a a'
+  | decide => {?hidden_proof}
 
 \instance ArrayDec (A : DecSet) (n : Nat) : DecSet (Array A n) 
-  | decideEq => aux
+  | decideEq => {?hidden_proof}
   \where {
     \func aux {n : Nat} (l l' : Array A n) : Dec (l = l') \elim n, l, l'
       | 0, nil, nil => yes idp

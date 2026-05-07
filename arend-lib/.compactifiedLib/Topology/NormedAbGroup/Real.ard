@@ -37,14 +37,14 @@
 \instance RatNormed : NormedAbGroup 
   | AbGroup => RatField
   | norm => \lam a => abs a
-  | norm_zro => pmap ExUpperReal.fromRat abs_zro
-  | norm_negative => pmap ExUpperReal.fromRat abs_negative
-  | norm_+ => transportInv (_ <=) ExUpperReal.+-rat $ ExUpperReal.<=-rat.1 abs_+
-  | norm-ext => \lam p => abs_zro-ext $ ExUpperReal.fromRat-inj p
+  | norm_zro => {?hidden_proof}
+  | norm_negative => {?hidden_proof}
+  | norm_+ => {?hidden_proof}
+  | norm-ext => {?hidden_proof}
 
 \func rat_real : NormedIsometricMap RatNormed RealNormedAbGroup Real.fromRat \cowith
-  | func-+ => inv RealAbGroup.+-rat
-  | func-norm-isometry => inv rat_real_abs
+  | func-+ => {?hidden_proof}
+  | func-norm-isometry => {?hidden_proof}
   \where {
     \lemma dense : rat_real.IsDense => {?hidden_proof}
 
@@ -54,42 +54,27 @@
 
 \instance RealNormed : CompleteNormedAbGroup 
   | NormedAbGroup => RealNormedAbGroup
-  | isStronglyComplete => dense-stronglyComplete (rat_real.dense->weaklyDense rat_real.dense, rat_real.embedding->coverEmbedding (rat_real.dense->uniformEmbedding rat_real.dense).2)
-    (\lam F => inP (fromCF F,  \lam {U} => (\case <=<-ball __ \with {  | inP (eps, eps>0, p) =>     \let | x => fromCF F
-           | x<x+eps => transport (RealAbGroup.< _) zro-right $ <_+-right x $ rat_real_<.1 eps>0
-           | inP (a, x-eps<a, inP (y1, eps1, eps1>0, Fy1, a<y1-eps1)) => (real_<-rat-char {x - eps} {x}).1 $ RealAbGroup.<-diff-mid-conv x<x+eps
-           | inP (b, inP (y2, eps2, eps2>0, Fy2, y2+eps2<b), b<x+eps) => (real_<-rat-char {x} {x + eps}).1 x<x+eps
-      \in filter-mono (filter-meet Fy1 Fy2) $          (\lam {z} (|y1-z|<eps1, |y2-z|<eps2) => real_<_U.1 $ later $ RealAbGroup.abs_-_< 
-            (RealAbGroup.<-diff-left $ real_<_U.2 x-eps<a <∘ rat_real_<.1 a<y1-eps1 <∘ rat_real_<.1 (linarith $ abs>=id <∘r |y1-z|<eps1))
-              (RealAbGroup.<-diff-mid-conv $ transport (_ <) +-comm $ rat_real_<.1 (transport (_ <) +-comm (RatField.<-diff-mid $ abs>=_- <∘r |y2-z|<eps2) <∘ y2+eps2<b) <∘ real_<_L.2 b<x+eps)) 
-              <=∘ ^-1_<= rat_real p})))
+  | isStronglyComplete => {?hidden_proof}
   \where {
     \func RealNormedAbGroup : NormedAbGroup \cowith
       | AbGroup => RealAbGroup
       | norm => abs
-      | norm_zro => Real.=-upper.1 abs_zro
-      | norm_negative => Real.=-upper.1 abs_negative
-      | norm_+ => transport (_ ExUpperRealAbMonoid.<=) RealAbGroup.+-upper $ Real.<=-upper.1 abs_+
-      | norm-ext => \lam {x} p => abs_zro-ext $ (Real.=-upper {abs x} {0}).2 p
+      | norm_zro => {?hidden_proof}
+      | norm_negative => {?hidden_proof}
+      | norm_+ => {?hidden_proof}
+      | norm-ext => {?hidden_proof}
 
     \func fromCF (F : StronglyRegularCauchyFilter RatNormed) : Real \cowith
       | L => \lam a => ∃ (x eps : Rat) (0 < eps) (F (OBall eps x)) (a < x - eps)
-      | L-inh => \case cauchyFilter-metric-char.1 F.isCauchyFilter {1} RatField.zro<ide \with {
-        | inP (x, FB) => inP (x - 2, inP (x, 1, idp, FB, linarith))
-      }
-    | L-closed => \lam inP (x, eps, eps>0, FB, q<x-eps) q'<q => inP (x, eps, eps>0, FB, q'<q <∘ q<x-eps)
-    | L-rounded => \lam {a} inP (x, eps, eps>0, FB, a<x-eps) => inP (RatField.mid a (x - eps), inP (x, eps, eps>0, FB, RatField.mid<right a<x-eps), RatField.mid>left a<x-eps)
-    | U => \lam b => ∃ (x eps : Rat) (0 < eps) (F (OBall eps x)) (x + eps < b)
-    | U-inh => \case cauchyFilter-metric-char.1 F.isCauchyFilter {1} RatField.zro<ide \with {
-      | inP (x, FB) => inP (x + 2, inP (x, 1, idp, FB, linarith))
-    }
-    | U-closed => \lam inP (x, eps, eps>0, FB, x+eps<q) q<q' => inP (x, eps, eps>0, FB, x+eps<q <∘ q<q')
-    | U-rounded => \lam {a} inP (x, eps, eps>0, FB, x+eps<a) => inP (RatField.mid (x + eps) a, inP (x, eps, eps>0, FB, RatField.mid>left x+eps<a), RatField.mid<right x+eps<a)
-    | LU-disjoint => \lam inP (x, eps, eps>0, Feps, q<x-eps) inP (y, delta, delta>0, Fdelta, x+eps<q) => F.isWeaklyProper $ filter-mono (filter-meet Feps Fdelta) 
-      (\lam {z} (xz<eps, yz<delta) => absurd $ linarith $ abs>=id <∘r RatNormed.halving-right xz<eps yz<delta <=-refl)
-    | LU-focus => \lam eps eps>0 => (\case cauchyFilter-metric-char.1 F.isCauchyFilter {eps * ratio 1 4} linarith \with {
-      | inP (x, FB) => inP (x - eps * ratio 1 2, inP (x, _, linarith, FB, linarith), inP (x, _, linarith, FB, linarith))
-    })
+      | L-inh => {?hidden_proof}
+      | L-closed => {?hidden_proof}
+      | L-rounded => {?hidden_proof}
+      | U => \lam b => ∃ (x eps : Rat) (0 < eps) (F (OBall eps x)) (x + eps < b)
+      | U-inh => {?hidden_proof}
+      | U-closed => {?hidden_proof}
+      | U-rounded => {?hidden_proof}
+      | LU-disjoint => {?hidden_proof}
+      | LU-focus => {?hidden_proof}
   }
 
 

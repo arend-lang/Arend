@@ -24,7 +24,7 @@
   | normalize => normalize
   | interpret => \lam env => interpret env
   | interpretNF => \lam env => ringInterpretNF env
-  | interpretNF-consistent => \lam {_} {env} {_} => ringInterpretNF-correct *> (RingData env).interpretNF-correct *> normalize-consistent
+  | interpretNF-consistent => {?hidden_proof}
   \where {
 \data Term (C : \Set) (n : Nat) 
       | var (Fin n)
@@ -63,7 +63,7 @@
     \lemma intMap' : RingHom IntRing R intCoef => {?hidden_proof}
 
     \func RingData (env : Array R) : Data R IntRing IntRing intMap' env \cowith
-      | alg-comm => \lam x a => inv (pmap (* a) intCoef-correct) *> intComm x a *> pmap (a *) intCoef-correct
+      | alg-comm => {?hidden_proof}
 
     \func signMulCoef (c : Int) (r : R) : R \elim c
       | pos _ => r

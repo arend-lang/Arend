@@ -16,9 +16,7 @@
   | normalize => normalize
   | interpret => \lam env => (SemiringData env).interpret
   | interpretNF => \lam env nf => (SemiringData env).interpretNF (sortMonomials nf)
-  | interpretNF-consistent => \lam {_} {env} {_} => (
-    \have d => SemiringData env
-    \in d.interpretNF-correct *> interpretNF_sort *> d.normalize-consistent)
+  | interpretNF-consistent => {?hidden_proof}
   \where {
     \func sortMonomials {n : Nat} {C : \Set} (l : NF C n) => map (\lam s => (Sort.RedBlack.sort s.1, s.2)) l
 

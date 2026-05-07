@@ -33,14 +33,9 @@
     \func fromAbs {A : PosetQModule} (abs : \Pi (a : A) -> ∃ (b : A) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c)) : RieszSpace \cowith
       | PosetQModule => A
       | join => join
-      | join-left => transportInv (_ <=) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 <= (inv A.*q_*2) (inv +-assoc *> inv A.ide_*q *> A.*q-assoc) $ <=_+ <=-refl $ =_<= 
-        equation.abGroup <=∘ <=_+ <=-refl (getAbs _).2
-      | join-right => transportInv (_ <=) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 <= (inv A.*q_*2) (inv +-assoc *> pmap (+ _) +-comm *> inv A.ide_*q *> A.*q-assoc) 
-        $ <=_+ <=-refl $ =_<= equation.abGroup <=∘ <=_+ <=-refl (getAbs _).3
-      | join-univ => \lam {x} {y} x<=z y<=z => transportInv (<= _) (\peval join _ _) $ A.<=_*q-cancel-left {2} idp $ transport2 <= (inv A.ide_*q *> A.*q-assoc) (inv A.*q_*2) $ A.<=_+-cancel-left 
-        (negative (x + y)) $ transportInv (<= _) (inv +-assoc *> pmap (+ _) negative-left *> zro-left) $ (getAbs _).4 
-        (A.from>=0 $ transport (A.zro <=) equation.abGroup $ A.<=_+-positive (A.to>=0 x<=z) (A.to>=0 x<=z)) 
-        (A.from>=0 $ transport (A.zro <=) equation.abGroup $ A.<=_+-positive (A.to>=0 y<=z) (A.to>=0 y<=z))
+      | join-left => {?hidden_proof}
+      | join-right => {?hidden_proof}
+      | join-univ => {?hidden_proof}
       \where {
         \lemma getAbs (a : A) : Given (b : A) (a <= b) (negative a <= b) ∀ {c} (a <= c -> negative a <= c -> b <= c) => {?hidden_proof}
 

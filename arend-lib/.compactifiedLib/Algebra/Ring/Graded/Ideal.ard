@@ -31,14 +31,7 @@
 
     \func fromGen {R : GradedCRing} (I : Ideal R) (h : TruncP (hasHomogenGen I)) : HomogenIdeal \cowith
       | Ideal => I
-      | isHomogenIdeal => \lam {l} lh s j => (
-        \have | inP H => h
-              | inP (l', p) => (H.3 (BigSum l)).1 s
-              | inP (N, f, q) => sum-decomp (map (\lam s => (s.1, s.2.1)) l') (\lam i => H.2 (l' i).2.1 (l' i).2.2)
-        \in \case similar-eq (R.homogen-similar lh (\lam n => homogen-FinSum $ (f n).5) (p *> q)) j \with {
-              | inl r => transportInv I r.2 $ I.finSum (\lam k => later $ ideal-left $ (H.3 _).2 $ Ideal.sclosure-superset (l' _).2.2)
-              | inr r => transportInv I r I.contains_zro
-            })
+      | isHomogenIdeal => {?hidden_proof}
   }
 
 

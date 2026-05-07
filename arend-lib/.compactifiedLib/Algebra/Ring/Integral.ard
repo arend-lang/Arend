@@ -53,15 +53,15 @@
 
 \func polyImageHom {R : Ring} {E : CRing} (f : RingHom R E) (a : E) : RingHom R (SubRing.cStruct (polyImage f a)) \cowith
   | func => \lam x => (f x, polyImage-ext f a x)
-  | func-+ => ext f.func-+
-  | func-ide => ext f.func-ide
-  | func-* => ext f.func-*
+  | func-+ => {?hidden_proof}
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
 
 \func polyImageHomPoly {R : Ring} {E : CRing} (f : RingHom R E) (a : E) : RingHom (PolyRing R) (SubRing.cStruct (polyImage f a)) \cowith
   | func => \lam p => (polyEval (polyMap f p) a, inP (p, idp))
-  | func-+ => ext (polyMapEvalRingHom f a).func-+
-  | func-ide => ext $ simplify f.func-ide
-  | func-* => ext (polyMapEvalRingHom f a).func-*
+  | func-+ => {?hidden_proof}
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
 
 \func mPolyImage {R E : CRing} (f : RingHom R E) (l : Array E) : SubRing E => ringHomImage (mPolyEval l ∘ mPoly-mapHom f)
 
@@ -71,9 +71,9 @@
 
 \func mPolyImageHom {R E : CRing} (f : RingHom R E) (l : Array E) : RingHom R (SubRing.cStruct (mPolyImage f l)) \cowith
   | func => \lam x => (f x, mPolyImage-ext f l x)
-  | func-+ => ext f.func-+
-  | func-ide => ext f.func-ide
-  | func-* => ext f.func-*
+  | func-+ => {?hidden_proof}
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
 
 mPolyImage-finGen {R E : CRing} (f : RingHom R E) (l : Array E) :
   \Sigma (l' : Array (SubRing.cStruct (mPolyImage f l)) l.len) (RingHom.isAlgebraGenerated (mPolyImageHom f l) l') => 
@@ -151,15 +151,11 @@ mPolyImage-finGen {R E : CRing} (f : RingHom R E) (l : Array E) :
 
 \func integralClosure-subring {R E : CRing} (f : RingHom R E) : SubRing E \cowith
   | contains => isIntegral f
-  | contains_zro => inP (monomial 1 1, monomial-isMonic 1, rewrite f.func-zro $ zro-right *> E.zro_*-right)
-  | contains_+ => \lam {a} {b} ai bi => integral_image-comp (SubRing.embed {polyImage SubRing.embed b}) $ integral-combined f ai bi 
-    (a + b, inP $ (padd 1 $ repeat {4} unfold (a, inP (padd 1 0, rewrite (f.func-ide, f.func-zro) simplify)), repeat {3} unfold equation))
-  | contains_ide => inP (padd (padd pzero 1) -1, inP (1, idp, idp), rewrite (f.func-negative, f.func-ide) simplify)
-  | contains_* => \lam {a} {b} ai bi => integral_image-comp (SubRing.embed {polyImage SubRing.embed b}) $ integral-combined f ai bi
-    (a * b,
-    inP (padd (padd pzero (a, inP (padd 1 0, unfold $ unfold $ rewrite (f.func-ide, f.func-zro) simplify))) (zro {SubRing.cStruct (polyImage f a)}), 
-    repeat {3} unfold simplify))
-  | contains_negative => \lam {a} ai => transport (isIntegral f) (later $ rewrite (f.func-negative, f.func-zro, f.func-ide) equation) $ poly_integral f a ai (padd (padd pzero -1) 0)
+  | contains_zro => {?hidden_proof}
+  | contains_+ => {?hidden_proof}
+  | contains_ide => {?hidden_proof}
+  | contains_* => {?hidden_proof}
+  | contains_negative => {?hidden_proof}
   \where {
     \lemma integral-combined {R E : CRing} (f : RingHom R E) {a b : E} (ai : isIntegral f a) (bi : isIntegral f b) :
       isIntegralExt (polyImageHom (SubRing.embed {polyImage f a}) b ∘ polyImageHom f a) => {?hidden_proof}

@@ -48,11 +48,7 @@
     | xy => xy
     | sqcomm => \lam p => p.3
   }
-  | pullback-univ => \lam {Z} => \new QEquiv {
-    | ret => \lam (s : Square) z => (s.uv z, s.ux z, s.sqcomm z)
-    | ret_f => \lam _ => idp
-    | f_sec => \lam _ => idp
-  }
+  | pullback-univ => {?hidden_proof}
 
 \func productPullback (A B : \Type) : Pullback \cowith
   | square {
@@ -66,11 +62,7 @@
     | xy => \lam _ => ()
     | sqcomm => \lam _ => idp
   }
-  | pullback-univ => \lam {Z} => \new QEquiv {
-    | ret => \lam (s : Square) z => (s.uv z, s.ux z)
-    | ret_f => \lam _ => idp
-    | f_sec => \lam _ => idp
-  }
+  | pullback-univ => {?hidden_proof}
 
 \func pathPullback {A : \Type} (x y : A) : Pullback \cowith
   | square {
@@ -84,8 +76,4 @@
     | xy => \lam _ => y
     | sqcomm => \lam p => p
   }
-  | pullback-univ => \lam {Z} => \new QEquiv {
-    | ret => \lam (s : Square) => s.sqcomm
-    | ret_f => \lam _ => idp
-    | f_sec => \lam _ => idp
-  }
+  | pullback-univ => {?hidden_proof}

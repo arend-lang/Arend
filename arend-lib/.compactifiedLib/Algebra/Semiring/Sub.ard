@@ -9,7 +9,7 @@
   \where {
     \func cStruct {R : PseudoCSemiring} (S : SubPseudoSemiring R) : PseudoCSemiring \cowith
       | PseudoSemiring => S.IPseudoSemiring
-      | *-comm => ext *-comm
+      | *-comm => {?hidden_proof}
   }
 
 

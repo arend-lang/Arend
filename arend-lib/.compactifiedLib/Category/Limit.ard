@@ -27,12 +27,12 @@
     \func map {C D : Precat} (F : Functor C D) {J : SmallPrecat} {G : Functor J C} (c : Cone G) : Cone (Comp F G) \cowith
       | apex => F c.apex
       | coneMap => \lam j => Func (c.coneMap j)
-      | coneCoh => \lam h => inv Func-o *> pmap Func (c.coneCoh h)
+      | coneCoh => {?hidden_proof}
 
     \func premap {J J' : SmallPrecat} (F : Functor J J') (c : (Cone {J'}) {}) : Cone (Comp c.G F) \cowith
       | apex => c.apex
       | coneMap => \lam j => c.coneMap (F j)
-      | coneCoh => \lam h => c.coneCoh (F.Func h)
+      | coneCoh => {?hidden_proof}
 
     \func mapEquiv {C D : Precat} (F : FullyFaithfulFunctor C D) {J : Precat} {G : Functor J C} (X : C) : QEquiv {Cone G X} {Cone (Comp F G) (F X)} (\lam c => map F c) \cowith
       | ret => \lam (c : Cone) => \new Cone {
@@ -46,7 +46,7 @@
 
 \func conePullback {J : SmallPrecat} {D : Precat} {F : Functor J D} (C : Cone F) (z : D) (f : Hom z C.apex) : Cone F z \cowith
   | coneMap => \lam j => coneMap j ∘ f
-  | coneCoh => \lam h => inv o-assoc *> pmap (∘ f) (coneCoh h)
+  | coneCoh => {?hidden_proof}
 
 \class Limit \extends Cone {
   | isLimit (z : D) : Equiv (conePullback \this z)
@@ -108,7 +108,7 @@
       | Diagram => D
       | apex => z
       | coneMap => \lam j => coneMap j ∘ f
-      | diagramCoh => \lam e => inv o-assoc *> pmap (o f) (diagramCoh e)
+      | diagramCoh => {?hidden_proof}
 
     \func equiv {D : Diagram} (Z : D.D) : QEquiv {DiagramCone {  | Diagram => D  | apex => Z}} {Cone D.functor Z} (\lam d => d) \cowith
       | ret => \lam (c : Cone) => \new DiagramCone {
@@ -139,19 +139,17 @@
     \func functor {J : \Type} {D : Precat} (G : J -> D) : Functor (DiscretePrecat J) D \cowith
       | F => G
       | Func => DiscretePrecat.map G
-      | Func-id => idp
-      | Func-o => \lam {x} {y} {z} {in0 idp} {in0 idp} => inv id-left
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
 
     \use \coerce fromLimit {J : \Type} {D : Precat} (L : Limit {DiscretePrecat J} {D}) : Product L.G L.apex L.coneMap \cowith
       | tupleMap => \lam c => L.limMap (cone c)
-      | tupleBeta => L.limBeta _ _
-      | tupleEq => \lam {z} {h1} {h2} f => inv (ret_f {L.isLimit z} h1) *> pmap (ret {L.isLimit z}) (exts f) *> ret_f {L.isLimit z} h2
+      | tupleBeta => {?hidden_proof}
+      | tupleEq => {?hidden_proof}
       \where {
         \func cone {J : \Type} {D : Precat} {Z : D} {G : Functor (DiscretePrecat J) D} (c : \Pi (j : J) -> Hom Z (G j)) : Cone G Z \cowith
           | coneMap => c
-          | coneCoh => \lam {_} {j'} in0 p => (\case \elim j', \elim p \with {
-            | _, idp => pmap (∘ _) Func-id *> id-left
-          })
+          | coneCoh => {?hidden_proof}
       }
 
   }
@@ -184,15 +182,15 @@
       | Hom => Arrows
       | id => id
       | o => o
-      | id-left => \lam {x} {y} {f} => cases (x, y, f) idp
-      | id-right => \lam {x} {y} {f} => cases (x, y, f) idp
-      | o-assoc => \lam {x} {y} {z} {w} {h} {g} {f} => cases (x, y, z, w, h, g, f) idp
+      | id-left => {?hidden_proof}
+      | id-right => {?hidden_proof}
+      | o-assoc => {?hidden_proof}
 
     \func functor {D : Precat} {x y : D} (f g : Hom x y) : Functor Shape D \cowith
       | F => if __ y x
       | Func => map f g
-      | Func-id => \lam {x} => cases x idp
-      | Func-o => \lam {x} {y} {z} {h} {k} => cases (x, y, z, h, k) (inv id-left)
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
 
     \use \coerce fromLimit {D : Precat} {x y : D} {f g : Hom x y} (L : Limit (functor f g)) : Equalizer f g => 
       \have cone {z : D} (h : Hom z x) (p : f ∘ h = g ∘ h) => \new (Cone (functor f g) z) {
@@ -216,8 +214,8 @@
     \func unique {D : Precat} {x y : D} {f g : Hom x y} (E E' : Equalizer f g) : Iso {D} {E} {E'} \cowith
       | f => E'.eqMap eql equal
       | hinv => E.eqMap eql equal
-      | hinv_f => E.eqMono $ rewriteEq (E.eqBeta E'.eql equal) (E'.eqBeta _ _ *> inv id-right)
-      | f_hinv => E'.eqMono $ rewriteEq (E'.eqBeta E.eql equal) (E.eqBeta _ _ *> inv id-right)
+      | hinv_f => {?hidden_proof}
+      | f_hinv => {?hidden_proof}
 
     \lemma unique-map {D : Precat} {x y : D} {f g : Hom x y} (E E' : Equalizer f g) : E'.eql ∘ Iso.f {unique E E'} = E.eql => {?hidden_proof}
 
@@ -226,17 +224,13 @@
       \Pi (z : D) -> Equiv {Hom z e} {\Sigma (h : Hom z x) (f ∘ h = g ∘ h)} (\lam h => (eql ∘ h, inv o-assoc *> pmap (∘ h) equal *> o-assoc)) => {?hidden_proof}
 
     \func id-equalizer {D : Precat} {X Y : D} {f : Hom X Y} : Equalizer f f X (id X) \cowith
-      | equal => idp
-      | isEqualizer => \lam _ => \new QEquiv {
-        | ret => \lam (h, _) => h
-        | ret_f => \lam _ => id-left
-        | f_sec => \lam _ => exts id-left
-      }
+      | equal => {?hidden_proof}
+      | isEqualizer => {?hidden_proof}
 
     \func equalizer-iso {D : Precat} {X Y : D} {f : Hom X Y} (eq : Equalizer f f) : Iso {D} {eq} {X} eq.eql \cowith
       | hinv => unique id-equalizer eq
-      | hinv_f => unfold $ eq.eqMono $ rewriteI o-assoc $ rewrite (eq.eqBeta _ _, id-left, id-right) idp
-      | f_hinv => unique-map id-equalizer eq
+      | hinv_f => {?hidden_proof}
+      | f_hinv => {?hidden_proof}
   }
 
 
@@ -301,17 +295,17 @@
     \func fromIso (P : Pullback {}) (e : (Iso {P.D}) {  | cod => P}) : Pullback P.f P.g e.dom \cowith
       | pbProj1 => pbProj1 ∘ e
       | pbProj2 => pbProj2 ∘ e
-      | pbCoh => rewriteEq pbCoh o-assoc
+      | pbCoh => {?hidden_proof}
       | pbMap => \lam p1 p2 c => e.hinv ∘ pbMap p1 p2 c
-      | pbBeta1 => rewriteEq e.f_hinv $ rewrite id-right pbBeta1
-      | pbBeta2 => rewriteEq e.f_hinv $ rewrite id-right pbBeta2
-      | pbEta => \lam s1 s2 => e.isMono $ pbEta (rewriteEq s1 o-assoc) (rewriteEq s2 o-assoc)
+      | pbBeta1 => {?hidden_proof}
+      | pbBeta2 => {?hidden_proof}
+      | pbEta => {?hidden_proof}
 
     \func unique {D : Precat} {x y z : D} (f : Hom x z) (g : Hom y z) (P P' : Pullback f g) : Iso {D} {P} {P'} \cowith
       | f => p-map P P'
       | hinv => p-map P' P
-      | hinv_f => hinv' P P'
-      | f_hinv => hinv' P' P
+      | hinv_f => {?hidden_proof}
+      | f_hinv => {?hidden_proof}
       \where {
         \func p-map {D : Precat} {x y z : D} {f : Hom x z} {g : Hom y z} (P P' : Pullback f g) : Hom P P' => pbMap {P'} P.pbProj1 P.pbProj2 P.pbCoh
 
@@ -328,18 +322,10 @@
 
 
     \func pullback-of-mono {D : Precat} {x y z : D} {f : Mono {D} {x} {z}} {g : Hom y z} (P : Pullback f.f g) : Mono {D} {P.apex} {y} (Pullback.pbProj2 {P}) \cowith
-      | isMono => \lam {_} {q} {h} eq2 => (
-        \let | s : g ∘ (P.pbProj2 ∘ q) = g ∘ (P.pbProj2 ∘ h) => pmap (g ∘ __) eq2
-             | f-s : f.f ∘ P.pbProj1 ∘ q = f.f ∘ P.pbProj1 ∘ h => rewrite (P.pbCoh, o-assoc, o-assoc) s
-             | eq1 : P.pbProj1 ∘ q = P.pbProj1 ∘ h => f.isMono $ rewriteI (o-assoc, o-assoc) f-s
-        \in Pullback.pbEta eq1 eq2)
+      | isMono => {?hidden_proof}
 
     \func pullback-of-mono' {D : Precat} {x y z : D} {f : Hom x z} {g : Mono {D} {y} {z}} (P : Pullback f g.f) : Mono {D} {P.apex} {x} (Pullback.pbProj1 {P}) \cowith
-      | isMono => \lam {_} {q} {h} eq2 => (
-        \let | s : f ∘ (P.pbProj1 ∘ q) = f ∘ (P.pbProj1 ∘ h) => pmap (f ∘ __) eq2
-             | f-s : g.f ∘ P.pbProj2 ∘ q = g.f ∘ P.pbProj2 ∘ h => rewrite (inv P.pbCoh, o-assoc, o-assoc) s
-             | eq1 : P.pbProj2 ∘ q = P.pbProj2 ∘ h => g.isMono $ rewriteI (o-assoc, o-assoc) f-s
-        \in Pullback.pbEta eq2 eq1)
+      | isMono => {?hidden_proof}
   }
 
 
@@ -386,16 +372,16 @@
 \func terminal-obj-iso {C : Precat} (a b : terminal-obj C) : Iso {C} {a} {b} \cowith
   | f => tupleMap (\case __ \with {})
   | hinv => tupleMap (\case __ \with {})
-  | hinv_f => tupleEq (\case __ \with {})
-  | f_hinv => tupleEq (\case __ \with {})
+  | hinv_f => {?hidden_proof}
+  | f_hinv => {?hidden_proof}
 
 \func terminalMap' {C : Precat} {t : terminal-obj C} {x : C} : Hom x t => tupleMap (\case __ \with {})
 
 \func isTerminal {C : Precat} (a : C) (e : \Pi (b : C) -> Contr (Hom b a)) : terminal-obj C a \cowith
   | proj => \lam j => absurd j
   | tupleMap => \lam {Z} _ => Contr.center {e Z}
-  | tupleBeta => \lam {_} {_} {j} => absurd j
-  | tupleEq => \lam {Z} {p} {q} _ => isContr=>isProp (e Z) p q
+  | tupleBeta => {?hidden_proof}
+  | tupleEq => {?hidden_proof}
 
 \lemma terminal-unique' {C : Precat} {terminal : terminal-obj C} {x : C} {f g : Hom x terminal} : f = g => {?hidden_proof}
 
@@ -486,20 +472,20 @@
 \lemma regularMono_pullback (P : Pullback {}) (m : isRegularMono P.g) : isRegularMono P.pbProj1 => {?hidden_proof}
 
 \func pullback-lemma (P : Pullback {}) (Q : (Pullback {P.D}) {  | y => P  | z => P.x  | g => P.pbProj1}) : Pullback (P.f ∘ Q.f) P.g Q Q.pbProj1 (P.pbProj2 ∘ Q.pbProj2) \cowith
-  | pbCoh => rewriteEq (Q.pbCoh, P.pbCoh) o-assoc
+  | pbCoh => {?hidden_proof}
   | pbMap => \lam p1 p2 c => Q.pbMap p1 (P.pbMap (Q.f ∘ p1) p2 $ inv o-assoc *> c) $ inv P.pbBeta1
-  | pbBeta1 => Q.pbBeta1
-  | pbBeta2 => rewriteEq Q.pbBeta2 P.pbBeta2
-  | pbEta => \lam p1 p2 => Q.pbEta p1 $ P.pbEta (inv o-assoc *> rewriteI Q.pbCoh (rewriteEq p1 (inv o-assoc) *> pmap (∘ _) Q.pbCoh) *> o-assoc) (inv o-assoc *> p2 *> o-assoc)
+  | pbBeta1 => {?hidden_proof}
+  | pbBeta2 => {?hidden_proof}
+  | pbEta => {?hidden_proof}
 
 \func pullback-lemma-conv (P : Pullback {}) (Q : (Pullback {P.D}) {  | y => P.y  | z => P.z  | g => P.g}) (t : Hom Q.x P.x) (fs=Qf : P.f ∘ t = Q.f) :
   Pullback t P.pbProj1 Q Q.pbProj1 \cowith
   | pbProj2 => P.pbMap (t ∘ Q.pbProj1) Q.pbProj2 (inv o-assoc *> pmap (∘ _) fs=Qf *> Q.pbCoh)
-  | pbCoh => inv P.pbBeta1
+  | pbCoh => {?hidden_proof}
   | pbMap => \lam p1 p2 c => Q.pbMap p1 (P.pbProj2 ∘ p2) $ pmap (∘ p1) (inv fs=Qf) *> o-assoc *> pmap (P.f ∘) c *> inv o-assoc *> pmap (∘ p2) P.pbCoh *> o-assoc
-  | pbBeta1 => Q.pbBeta1
-  | pbBeta2 => \lam {_} {_} {_} {c} => pbEta (inv o-assoc *> rewrite P.pbBeta1 (rewriteEq Q.pbBeta1 c)) (inv o-assoc *> rewrite P.pbBeta2 Q.pbBeta2)
-  | pbEta => \lam p1 p2 => Q.pbEta p1 $ rewrite P.pbBeta2 in o-assoc *> pmap (P.pbProj2 ∘) p2 *> inv o-assoc
+  | pbBeta1 => {?hidden_proof}
+  | pbBeta2 => {?hidden_proof}
+  | pbEta => {?hidden_proof}
 
 \lemma splitMono_regular (f : SplitMono {}) : isRegularMono f.f => {?hidden_proof}
 

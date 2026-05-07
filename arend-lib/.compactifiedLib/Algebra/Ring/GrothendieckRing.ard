@@ -11,13 +11,13 @@
   | AbGroup => GrothendieckAbGroup R
   | * => *
   | ide => inl~ (1, 0, ())
-  | *-assoc => \lam {in~ a} {in~ b} {in~ c} => ~-lequiv equation.semiring
-  | ldistr => \lam {in~ a} {in~ b} {in~ c} => ~-lequiv equation.semiring
-  | rdistr => \lam {in~ a} {in~ b} {in~ c} => ~-lequiv equation.semiring
-  | zro_*-left => \lam {in~ a} => ~-lequiv equation.semiring
-  | zro_*-right => \lam {in~ a} => ~-lequiv equation.semiring
-  | ide-left => \lam {in~ a} => ~-lequiv equation.semiring
-  | ide-right => \lam {in~ a} => ~-lequiv equation.semiring
+  | *-assoc => {?hidden_proof}
+  | ldistr => {?hidden_proof}
+  | rdistr => {?hidden_proof}
+  | zro_*-left => {?hidden_proof}
+  | zro_*-right => {?hidden_proof}
+  | ide-left => {?hidden_proof}
+  | ide-right => {?hidden_proof}
   \where {
     \open LocAbType
   }
@@ -25,4 +25,4 @@
 
 \instance GrothendieckCRing (R : CSemiring) : CRing 
   | Ring => GrothendieckRing R
-  | *-comm => \lam {in~ a} {in~ b} => LocAbType.~-lequiv equation.cSemiring
+  | *-comm => {?hidden_proof}

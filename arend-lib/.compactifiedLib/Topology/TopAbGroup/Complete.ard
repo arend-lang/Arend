@@ -26,11 +26,7 @@
 
 \func dense-topAb-lift {X Y : TopAbGroup} {Z : CompleteTopAbGroup} (f : TopAbGroupMap X Y) (fd : f.IsDenseTopEmbedding) (g : TopAbGroupMap X Z) : TopAbGroupMap Y Z \cowith
   | ContMap => dense-uniform-lift f (f.embedding->uniformEmbedding fd) g
-  | func-+ => \lam {y} {y'} => (
-    \have | g~ => dense-uniform-lift f (f.embedding->uniformEmbedding fd) g
-          | g-char {x} : g~ (f x) = g x => dense-lift-char (fd.1, f.embedding->coverEmbedding (f.embedding->uniformEmbedding fd).2) x
-    \in dense-lift-unique (prod f f) (prod.isDense fd.1 fd.1) (g~ ∘ Y.+-cont) (+-cont ∘ prod g~ g~) 
-          (\lam (x, x') => pmap g~ (inv f.func-+) *> g-char *> g.func-+ *> inv (pmap2 + g-char g-char)) (y, y'))
+  | func-+ => {?hidden_proof}
   \where {
     \open ProductTopSpace
     \open ContMap
@@ -40,22 +36,9 @@
 \instance TopAbGroupCompletion (X : TopAbGroup) : CompleteTopAbGroup 
   | CompleteUniformSpace => UniformCompletion X
   | AbGroup => abGroup
-  | +-cont => +-cover
-  | negative-cont => negative-cover
-  | neighborhood-uniform => (\lam inP (D, Du, g) => (\case neighborhood-uniform.1 Du \with {  | inP (U1, U1o, U1_0, h) => 
-    \have | inP (U2, U2o, U2_0, h2) => X.shrink U1o U1_0          | inP (U3, U3o, U3_0, h3) => X.shrink U2o U2_0
-    \in inP (mkSet U3, mkSet-open U3o, PrecoverSpace.open-char.1 U3o U3_0,
-          \lam F => (\case isCauchyFilter {F} (X.makeCauchy $ X.topAbUniform U3o U3_0) \with {  | inP (_, inP (x, idp), Fx) => \case h x \with {
-            | inP (V, DV, d) => \case g DV \with {      | inP (U', CU', p) =>
-              inP (U', CU',  \lam {G} q => p (\case topAb-neighborhood.1 $ mkSet_<=<-point.2 q \with {  | inP (U'', U''<=<U3, V1, FV1, V2, GV2, h') => filter-mono GV2
-                      (\lam {z} V2z => (\case isProper (filter-meet Fx FV1) \with {
-                  | inP (y, (U3xy, V1y)) => d $ simplify in h2 (h3 U3xy U3_0) (h3 U3_0 $ <=<_<= (<=<_<= U''<=<U3 (h' V1y V2z)) idp)}))}))    }  }}))}),
-    \lam inP (U1, U1o, U1_0, h1) => (\case <=<-inter $ (PrecoverSpace.open-char {Completion X}).1 (PrecoverSpace.cauchy-open.2 U1o) U1_0 \with {
-  | inP (U2, U2_0, U2<=<U1) => \case X.shrink (completion.func-cont $ CoverSpace.interior {Completion X}) U2_0 \with {
-    | inP (U3, U3o, U3_0, h3) => inP (_, X.topAbUniform U3o U3_0,  \lam {_} inP (x, idp) => (\case h1 (pointCF x) \with {  | inP (V, CV, g) => inP (V, CV,  \lam {F} FU3x => g $ <=<_<=
-            (topAb-neighborhood.2 $ inP  (U2, U2<=<U1, X.UBall U3 x, X.open-char.1 (X.UBall-open U3o) $ X.UBall-center {U3} U3_0, _, FU3x, 
-      \lam {y} p {z} q => transport (\lam w => U2 (pointCF w)) X.diff-cancel-left $ <=<_<= (h3 q p) idp)) idp)}))  }})
-)
+  | +-cont => {?hidden_proof}
+  | negative-cont => {?hidden_proof}
+  | neighborhood-uniform => {?hidden_proof}
   \where {
     \open ProductCoverSpace
     \open CoverMap
@@ -63,12 +46,11 @@
     \func abGroup : AbGroup (RegularCauchyFilter X) \cowith
       | zro => pointCF 0
       | + => +-func
-      | zro-left => unique1 (+-cover ∘ tuple (const _) id) id (\lam x => +-char *> pmap pointCF zro-left)
-      | +-assoc => unique3 (+-cover ∘ prod +-cover id) (+-cover ∘ tuple (proj1 ∘ proj1) (+-cover ∘ prod proj2 id)) 
-        (\lam x y z => pmap (+-func __ _) +-char *> +-char *> pmap pointCF +-assoc *> inv (pmap (+-func _) +-char *> +-char))
+      | zro-left => {?hidden_proof}
+      | +-assoc => {?hidden_proof}
       | negative => negative-cover
-      | negative-left => unique1 (+-cover ∘ tuple negative-cover id) (const _) (\lam x => pmap (+-func __ _) negative-char *> +-char *> pmap pointCF negative-left)
-      | +-comm => unique2 +-cover (+-cover ∘ tuple proj2 proj1) (\lam x y => +-char *> pmap pointCF +-comm *> inv +-char)
+      | negative-left => {?hidden_proof}
+      | +-comm => {?hidden_proof}
 
     \func subtract-cover : CoverMap (Completion X ⨯ Completion X) (Completion X) => lift2 (+-uniform ∘ prod id negative-uniform)
 
@@ -92,4 +74,4 @@
 
 \func completion-topAb {X : TopAbGroup} : TopAbGroupMap X (TopAbGroupCompletion X) \cowith
   | UniformMap => uniform-completion
-  | func-+ => inv TopAbGroupCompletion.+-char
+  | func-+ => {?hidden_proof}

@@ -18,20 +18,10 @@
   \where {
     \func precover : PrecoverSpace I \cowith
       | isCauchy => \lam C => \Sigma (∃ (U : C) (N : I) (\Pi {n : I} -> N <= n -> U n)) (\Pi (n : I) -> ∃ (V : C) (V n))
-      | cauchy-cover => __.2
-      | cauchy-top => \case I.isInhabitted \with {
-        | inP n => (inP (top, idp, n, \lam _ => ()), \lam n => inP (top, idp, ()))
-      }
-    | cauchy-refine => \lam Cc C<D => (\case Cc.1 \with {
-      | inP (U, CU, N, g) => (\case C<D CU \with {  | inP (V, DV, U<=V) => inP (V, DV, N, \lam p => U<=V (g p))},
-        \lam n => (\case Cc.2 n \with {  | inP (V, CV, Vn) => \case C<D CV \with {    | inP (W, DW, V<=W) => inP (W, DW, V<=W Vn)  }})
-      )
-    })
-    | cauchy-glue => \lam Cc Dc => (\case Cc.1 \with {  | inP (U, CU, N, g) => \case (Dc CU).1 \with {    | inP (V, DUV, M, h) => \case isDirected N M \with {
-          | inP (L, N<=L, M<=L) => inP (U ∧ V, inP (U, V, CU, DUV, idp), L, \lam L<=n => (g $ N<=L <=∘ L<=n, h $ M<=L <=∘ L<=n))    }  }},
-      \lam n => (\case Cc.2 n \with {  | inP (U, CU, Un) => \case (Dc CU).2 n \with {
-        | inP (V, DUV, Vn) => inP (U ∧ V, inP (U, V, CU, DUV, idp), (Un, Vn))  }})
-    )
+      | cauchy-cover => {?hidden_proof}
+      | cauchy-top => {?hidden_proof}
+      | cauchy-refine => {?hidden_proof}
+      | cauchy-glue => {?hidden_proof}
 
     \lemma makePrecover (N : I) : precover.isCauchy (\lam V => (V = (\lam n => N <= n)) || Given (n : I) (V = single n)) => {?hidden_proof}
   }
@@ -50,25 +40,10 @@
   \where {
     \func Space : PrecoverSpace (\Sigma I X) \cowith
       | isCauchy => DirectProdCover
-      | cauchy-cover => \lam Cc s => (\case cauchy-cover (Cc.2 s.1) s.2 \with {
-        | inP (U, inP (V, CV, h), Ux) => inP (V, CV, h Ux)
-      })
-      | cauchy-top => (top-cauchy (\case I.isInhabitted \with {  | inP N => inP $ later (N, top, idp, \lam _ _ => ())}), 
-    \lam n => top-cauchy $ inP $ later (top, idp, \lam _ => ())
-    )
-      | cauchy-refine => \lam Cc C<D => (
-        cauchy-subset Cc.1 (\lam inP (N, V, CV, p) => (\case C<D CV \with {  | inP (V', DV', V<=V') => inP $ later (N, V', DV', \lam N<=n Ux => V<=V' $ p N<=n Ux)})),
-          \lam n => cauchy-subset (Cc.2 n) (\lam inP (V, CV, h) => (\case C<D CV \with {  | inP (V', DV', V<=V') => inP $ later (V', DV', \lam Ux => V<=V' (h Ux))}))
-        )
-      | cauchy-glue => \lam {C} Cc {D} Dc => (cauchy-subset (cauchy-glue Cc.1 {\lam U V => ∃ (U' : C) (N : I) (Set.Prod (N <=) U ⊆ U') (V' : D U') (Set.Prod (N <=) V ⊆ V')}
-        (\lam inP (N, U', CU', Uh) => cauchy-subset (Dc CU').1  (\lam {V} inP (M, V', DU'V', Vh) => (\case isDirected N M \with {
-        | inP (L, L<=N, L<=M) => inP $ later (U', CU', L, \lam (p1, p2) => Uh (L<=N <=∘ p1) p2, V', DU'V', \lam (p1, p2) => Vh (L<=M <=∘ p1) p2)}))))
-        (\lam {_} inP (U, V, _, inP (U', CU', N, Uh, V', DU'V', Vh), idp) =>
-        inP $ later (N, U' ∧ V', inP (U', V', CU', DU'V', idp), \lam p1 p2 => (Uh (p1, p2.1), Vh (p1, p2.2)))),
-        \lam n => cauchy-subset (cauchy-glue (Cc.2 n) {\lam U V => ∃ (U' : C) (V' : D U') (∀ {x : U} (U' (n, x))) (∀ {x : V} (V' (n, x)))} 
-        (\lam inP (U', CU', Uh) => cauchy-subset ((Dc CU').2 n) (\lam {V} inP (V', DU'V', Vh) => inP $ later (U', CU', V', DU'V', Uh, Vh))))
-        (\lam {_} inP (U, V, _, inP (U', CU', V', DU'V', Uh, Vh), idp) => inP $ later (U' ∧ V', inP (U', V', CU', DU'V', idp), \lam (p1, p2) => (Uh p1, Vh p2)))
-      )
+      | cauchy-cover => {?hidden_proof}
+      | cauchy-top => {?hidden_proof}
+      | cauchy-refine => {?hidden_proof}
+      | cauchy-glue => {?hidden_proof}
   }
 
 

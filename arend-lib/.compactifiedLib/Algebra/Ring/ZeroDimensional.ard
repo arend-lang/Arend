@@ -46,5 +46,5 @@
 \func zeroDim->field {R : ImpotentCRing} (zd : R.IsZeroDimensional) : DiscreteField {
   | CRing => R
 } \cowith
-  | zro/=ide => R.zro/=ide
-  | eitherZeroOrInv => zeroDim->inv zd
+  | zro/=ide => {?hidden_proof}
+  | eitherZeroOrInv => {?hidden_proof}

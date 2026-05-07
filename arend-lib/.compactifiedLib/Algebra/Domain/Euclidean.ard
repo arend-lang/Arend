@@ -74,12 +74,9 @@
   | CSemiring => NatSemiring
   | euclideanMap => \lam n => n
   | divMod => divMod
-  | isDivMod => divModProp
-  | isEuclideanMap => \lam n m m/=0 _ => (\case \elim m, m/=0 \with {
-    | 0, c => absurd (c idp)
-    | suc m, _ => fin_< (n mod suc m)
-  })
-  | decideEq => NatSemiring.decideEq
+  | isDivMod => {?hidden_proof}
+  | isEuclideanMap => {?hidden_proof}
+  | decideEq => {?hidden_proof}
   | summandDiv => summandDiv
   \where {
     \open Nat
@@ -90,24 +87,13 @@
 
 \instance IntEuclidean : EuclideanRingData 
   | CRing => IntRing
-  | decideEq => IntRing.decideEq
+  | decideEq => {?hidden_proof}
   | euclideanMap => iabs
   | divMod => \lam x y => (
     \let! (d, m) => Nat.divMod (iabs x) (iabs y)
     \in (pos d * signum y * signum x, pos m * signum x))
   | isDivMod => isDivMod
-  | isEuclideanMap => \lam x y y/=0 r/=0 => (
-    \have |y|/=0 : iabs y /= 0 => \case \elim y, y/=0 \with {
-            | 0, c => \lam _ => c idp
-            | pos suc _, c => \lam y=0 => c (pmap pos y=0)
-            | neg suc _, c => \lam y=0 => c (pmap neg y=0)
-          }
-    \in \case decideEq (signum x) 0 \with {
-          | yes x=0 => rewrite x=0 (nonZero>0 |y|/=0)
-          | no x/=0 => 
-            \have t : iabs (pos (iabs x Nat.mod iabs y) * signum x) = iabs x Nat.mod iabs y => iabs_* *> pmap (_ *) (iabs.signum_/=0 (x/=0 $ pmap signum __))
-            \in transport (< iabs y) (inv t) $ isEuclideanMap (iabs x) (iabs y) |y|/=0 (\lam e => r/=0 $ pmap (pos __ * _) e *> zro_*-left)
-        })
+  | isEuclideanMap => {?hidden_proof}
   \where {
     \func modToNat (m : Int) (p : \Sigma Int Int) : \Sigma Int Nat \elim p
       | (q, pos n) => (q, n)
@@ -141,10 +127,10 @@
 
 \instance IntDomain : EuclideanDomain 
   | CRing => IntRing
-  | zro#ide => \case __ \with {}
-| #0-* => #0-*
-| decideEq => IntRing.decideEq
-| isEuclidean => inP IntEuclidean
+  | zro#ide => {?hidden_proof}
+  | #0-* => #0-*
+  | decideEq => {?hidden_proof}
+  | isEuclidean => {?hidden_proof}
 
 \lemma ldiv_nat_int (d : LDiv {NatSemiring}) : LDiv (pos d.val) (pos d.elem) (pos d.inv) => {?hidden_proof}
 

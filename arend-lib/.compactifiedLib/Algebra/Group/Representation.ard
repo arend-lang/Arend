@@ -17,5 +17,5 @@
 \func TrivialAction {R : Ring} (E : LModule R) (G : Group) : LinRepres R G \cowith
   | LModule => E
   | GroupAction => trivialAction G E
-  | **-*c => idp
-  | **-ldistr => idp
+  | **-*c => {?hidden_proof}
+  | **-ldistr => {?hidden_proof}

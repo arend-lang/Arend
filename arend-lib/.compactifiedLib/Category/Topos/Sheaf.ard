@@ -41,20 +41,7 @@
   \where {
     \func restrict {L : Locale} (a : L) (S : VSheaf {  | C => L}) : VSheaf S.D (L.restrict a) \cowith
       | F => Comp S Locale.restrict.functor.op
-      | isSheaf => \lam {x} {s : Sieve} x<=s => (
-        \let | lim : Limit => S.isSheaf {x.1}
-               {\new Sieve {  | S => \lam {y} y<=x => s {(y, y<=x <=∘ x.2)} y<=x
-               | isSieve => \lam {z} {y} z<=y {y<=x} => s.isSieve {(z, z<=y <=∘ y<=x <=∘ x.2)} {(y, y<=x <=∘ x.2)} z<=y}} $ TruncP.map x<=s
-               (\lam (J, g, x<=g, sg) => (J, \lam j => ((g j).1.1, (g j).2), x<=g, \lam j => transport {ObOver {L.restrict a} x} (\lam p => s {p.1} p.2) {g j} {(_, _)} (ext (ext idp)) (sg j)))
-             | imap (j : \Sigma (y : ObOver {L.restrict a} x) (s y.2)) : \Sigma (y : ObOver x.1) (s {(y.1, y.2 <=∘ x.2)} y.2) => ((j.1.1.1, j.1.2), transport (\lam x => s {(j.1.1.1, x)} j.1.2) prop-pi j.2)
-             | jmap (j : \Sigma (y : ObOver x.1) (s {(y.1, y.2 <=∘ x.2)} y.2)) : \Sigma (y : ObOver {L.restrict a} x) (s y.2) => (((j.1.1, j.1.2 <=∘ x.2), j.1.2), j.2)
-        \in \new Limit {
-              | isLimit => \lam z => transEquiv (lim.isLimit z) $ later
-                (\new QEquiv {  | f => \lam (c : Cone) => \new Cone {    | coneMap => \lam j => c.coneMap (imap j)
-                  | coneCoh => \lam {j} {j'} => c.coneCoh {imap j} {imap j'}  }  | ret => \lam (c : Cone) => \new Cone {
-                  | coneMap => \lam j => c.coneMap (jmap j)    | coneCoh => \lam {j} {j'} => c.coneCoh {jmap j} {jmap j'}  }
-                | ret_f => \lam c => exts (\lam j => cong (ext idp))  | f_sec => \lam c => exts (\lam j => cong $ ext $ ext (ext idp))})
-            })
+      | isSheaf => {?hidden_proof}
 
     \lemma direct_image {C C' : SiteWithBasis} (f : SiteWithBasisPrehom C C') (S : VSheaf {  | C => C'}) : VSheaf S.D C (Comp S f.op) => {?hidden_proof}
 
@@ -65,7 +52,7 @@
         \func map {L L' : Locale} {D : Cat \levels (\suc \lp) _} (f : FrameHom L' L) {S S' : VSheaf D L} (a : NatTrans \levels (\suc \lp) _ S S') :
           NatTrans (direct_image_locale f S) (direct_image_locale f S') \cowith
           | trans => \lam x => a (f x)
-          | natural => \lam g => a.natural (f.functor.Func g)
+          | natural => {?hidden_proof}
       }
 
 
@@ -107,7 +94,7 @@
 
     \func matchingFamily (x : C) {J : \Set} (g : J -> SlicePrecat x) (z : D) (h : Hom z (F x)) : MatchingFamily x g z \cowith
       | family => \lam j => Func (g j).2 ∘ h
-      | isMatching => \lam j j' => inv o-assoc *> pmap (∘ h) (inv Func-o *> pmap Func pbCoh *> Func-o) *> o-assoc
+      | isMatching => {?hidden_proof}
 
     \lemma cone-isMatching {x : C} (z : D) {s : Sieve x} {c : Cone (Comp F s.diagram.op) z} (q q' : \Sigma (y : SlicePrecat x) (s y.2)) :
       F.Func pbProj1 ∘ c.coneMap q = Func pbProj2 ∘ c.coneMap q' => {?hidden_proof}
@@ -150,7 +137,7 @@
 
     \func matchingFamily (x : C) {J : \Set} (g : J -> SlicePrecat x) (e : F x) : MatchingFamily x g \cowith
       | family => \lam j => F.Func (g j).2 e
-      | isMatching => \lam j j' => pmap (__ e) $ inv Func-o *> pmap F.Func (pbCoh {pullback (g j).2 (g j').2}) *> Func-o
+      | isMatching => {?hidden_proof}
 
     \func piEquiv (e : Equiv) (Z : \Type) : Equiv {Z -> e.A} {Z -> e.B} \cowith
       | f => \lam g z => e (g z)
@@ -182,9 +169,8 @@
     \func extend : Functor (Precat.op {PresentedFrame P}) D \cowith
       | F => \lam b => lim b
       | Func => \lam {a} {b} b<=a => limMap {lim b} (cone b<=a)
-      | Func-id => \lam {b} => limUniqueBeta {lim b} {lim b} (\lam j => unfold $ inv $ id-right *> cong (ext idp))
-      | Func-o => \lam {a} {b} {c} {b<=c} {a<=b} =>
-        limUniqueBeta {lim c} {lim a} (\lam j => inv (pmap (∘ _) (limBeta {lim c} (cone b<=c) j) *> limBeta {lim b} (cone a<=b) (j.1, <=-transitive j.2 b<=c)) *> o-assoc)
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
       \where {
         \func limFunctor (b : PresentedFrame P) => Comp F (Functor.op {subPrecat.embedding (\lam (t : \Sigma (x : P) (PresentedFrame.embed x <= b)) => t.1)})
 
@@ -192,9 +178,7 @@
 
         \func cone {a b : PresentedFrame P} (b<=a : b <= a) : Cone (limFunctor b) (lim a) \cowith
           | coneMap => \lam (x, x<=b) => coneMap (later (x, <=-transitive (\lam {_} => x<=b) b<=a))
-          | coneCoh => \lam {j} {j'} => (\case \elim j, \elim j' \with {
-            | (_, _), (_, _) => \lam h => coneCoh $ later h
-          })
+          | coneCoh => {?hidden_proof}
       }
 
 

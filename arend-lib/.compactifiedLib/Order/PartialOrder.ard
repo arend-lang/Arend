@@ -28,15 +28,15 @@
 
 \instance ProductPreorder (P Q : Preorder) : Preorder (\Sigma P Q) 
   | <= => \lam (x, y) (x', y') => \Sigma (x <= x') (y <= y')
-  | <=-refl => (<=-refl, <=-refl)
-  | <=-transitive => \lam (p, q) (p', q') => (<=-transitive p p', <=-transitive q q')
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
 
 \instance ProductPoset (P Q : Poset) : Poset (\Sigma P Q) 
   | Preorder => ProductPreorder P Q
-  | <=-antisymmetric => \lam (p, q) (p', q') => ext (<=-antisymmetric p p', <=-antisymmetric q q')
+  | <=-antisymmetric => {?hidden_proof}
 
 \func subPoset {P : Poset} (S : P -> \Prop) : Poset (\Sigma (x : P) (S x)) \cowith
   | <= => \lam x y => x.1 <= y.1
-  | <=-refl => <=-refl
-  | <=-transitive => <=-transitive
-  | <=-antisymmetric => \lam p q => ext (<=-antisymmetric p q)
+  | <=-refl => {?hidden_proof}
+  | <=-transitive => {?hidden_proof}
+  | <=-antisymmetric => {?hidden_proof}

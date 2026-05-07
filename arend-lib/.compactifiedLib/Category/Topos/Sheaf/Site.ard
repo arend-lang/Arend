@@ -38,7 +38,7 @@
     \func map {C D : Precat} (F : Functor C D) (s : Sieve {C}) : Sieve {D} \cowith
       | x => F s.x
       | S => \lam {y} h => ∃ (z : C) (f : Hom y (F z)) (g : Hom z s.x) (h = F.Func g ∘ f) (s g)
-      | isSieve => \lam h inP (w, k, g, p, sg) => inP (w, k ∘ h, g, rewrite p o-assoc, sg)
+      | isSieve => {?hidden_proof}
   }
 
 
@@ -56,7 +56,7 @@
 \func inducedSite {C : SmallPrecat} {D : Site} (F : Functor C D) : Site \cowith
   | Precat => C
   | isCover => \lam x s => ∃ (s' : Sieve (F x)) (isCover (F x) s') ∀ {y} (h : Hom y x) (s h = s' (F.Func h))
-  | cover-stable => \lam h {s} inP (s' : Sieve, c, p) => inP (s'.pullback (F.Func h), cover-stable (F.Func h) c, \lam g => p (h ∘ g) *> pmap (s' __) Func-o)
+  | cover-stable => {?hidden_proof}
 
 \class SiteWithBasis \extends Site, PrecatWithPullbacks (\lp, \lp) {
   | isBasicCover (x : Ob) {J : \Set} (g : J -> SlicePrecat x) : \Prop

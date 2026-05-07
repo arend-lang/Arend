@@ -15,15 +15,15 @@
 
     \func id {M : Monoid} : MonoidHom M M \cowith
       | func => \lam x => x
-      | func-ide => idp
-      | func-* => idp
+      | func-ide => {?hidden_proof}
+      | func-* => {?hidden_proof}
 
     \open Monoid(Inv)
 
     \func presInv (h : MonoidHom) (e : Inv {h.Dom}) : Inv (h e) \cowith
       | inv => h e.inv
-      | inv-left => inv h.func-* *> pmap h e.inv-left *> h.func-ide
-      | inv-right => inv h.func-* *> pmap h e.inv-right *> h.func-ide
+      | inv-left => {?hidden_proof}
+      | inv-right => {?hidden_proof}
 
     \lemma presInvElem (h : MonoidHom) (e : Inv {h.Dom}) (e' : Inv (h e)) : h e.inv = e'.inv => {?hidden_proof}
   }
@@ -39,13 +39,13 @@
       | Dom => f.Dom
       | Cod => f.Cod
       | func => f
-      | func-* => func-+
-      | func-ide => func-zro
+      | func-* => {?hidden_proof}
+      | func-ide => {?hidden_proof}
 
     \func id {M : AddMonoid} : AddMonoidHom M M \cowith
       | func => \lam x => x
-      | func-zro => idp
-      | func-+ => idp
+      | func-zro => {?hidden_proof}
+      | func-+ => {?hidden_proof}
 
     \lemma func-FinSum {A B : AbMonoid} (f : AddMonoidHom A B) {J : FinSet} {a : J -> A} : f (A.FinSum a) = B.FinSum (\lam j => f (a j)) => {?hidden_proof}
   }

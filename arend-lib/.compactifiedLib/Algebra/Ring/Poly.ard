@@ -231,13 +231,13 @@
 \instance PolyRing (R : Ring) : Ring (Poly R) 
   | zro => pzero
   | + => +
-  | zro-left => idp
+  | zro-left => {?hidden_proof}
   | zro-right => zro-right
   | +-assoc => +-assoc
   | +-comm => +-comm
   | ide => padd pzero 1
   | * => *
-  | ide-left => pmap2 + (path peq) ide_*c
+  | ide-left => {?hidden_proof}
   | ide-right => ide-right
   | *-assoc => *-assoc
   | ldistr => ldistr
@@ -245,8 +245,8 @@
   | negative => negative
   | negative-left => negative-left
   | natCoef => \lam n => padd pzero (R.natCoef n)
-  | natCoefZero => pmap (padd pzero) R.natCoefZero *> peq
-  | natCoefSuc => \lam n => pmap (padd pzero) (R.natCoefSuc n)
+  | natCoefZero => {?hidden_proof}
+  | natCoefSuc => {?hidden_proof}
   \where {
     \func \infixl 7 *c {R : Ring} (r : R) (p : Poly R) : Poly R \elim p
       | pzero => pzero
@@ -277,20 +277,20 @@
 
 \func polyHom {R : Ring} : RingHom R (PolyRing R) \cowith
   | func => padd pzero
-  | func-+ => idp
-  | func-ide => idp
-  | func-* => pmap (padd pzero) (inv zro-left)
+  | func-+ => {?hidden_proof}
+  | func-ide => {?hidden_proof}
+  | func-* => {?hidden_proof}
 
 \lemma polyHom_polyMapEval {R : Ring} {p : Poly R} : polyMapEval polyHom p (padd 1 0) = p => {?hidden_proof}
 
 \instance PolyAlgebra (R : CRing) : CAlgebra R 
   | Ring => PolyRing R
   | *c => *c
-  | *c-assoc => *c-assoc
-  | *c-ldistr => *c-ldistr
-  | *c-rdistr => *c-rdistr
-  | ide_*c => ide_*c
-  | *c-comm-left => *c-comm-left
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
+  | *c-comm-left => {?hidden_proof}
   | *-comm => *-comm
   \where {
     \open PolyRing
@@ -302,7 +302,7 @@
 \instance PolyRingWith# (R : Ring.With#) : Ring.With# 
   | Ring => PolyRing R
   | #0 => #0
-  | #0-zro => absurd
+  | #0-zro => {?hidden_proof}
   | #0-+ => #0-+
   | #0-tight => #0-tight
   | #0-*-left => #0-*-left
@@ -318,11 +318,11 @@
 
 \instance PolyCRingWith# (R : CRing.With#) : CRing.With# 
   | Ring.With# => PolyRingWith# R
-  | *-comm => PolyAlgebra.*-comm
+  | *-comm => {?hidden_proof}
 
 \instance PolyDomain (R : Domain) : Domain 
   | Ring.With# => PolyRingWith# R
-  | zro#ide => byRight R.zro#ide
+  | zro#ide => {?hidden_proof}
   | #0-* => #0-*
   \where {
     \open PolyRing
@@ -332,11 +332,11 @@
 
 \instance PolyIntegralDomain (R : IntegralDomain) : IntegralDomain 
   | Domain => PolyDomain R
-  | *-comm => PolyAlgebra.*-comm
+  | *-comm => {?hidden_proof}
 
 \instance PolyStrictDomain (R : StrictDomain) : StrictDomain 
   | Ring => PolyRing R
-  | zro/=ide => \lam x => R.zro/=ide (pmap lastCoef x)
+  | zro/=ide => {?hidden_proof}
   | zeroProduct => zeroProduct
   \where {
     \open PolyRing
@@ -345,7 +345,7 @@
 
 \instance PolyStrictIntegralDomain (R : StrictIntegralDomain) : StrictIntegralDomain 
   | StrictDomain => PolyStrictDomain R
-  | *-comm => PolyAlgebra.*-comm
+  | *-comm => {?hidden_proof}
 
 \instance PolyDecRing (R : Ring.Dec) : Ring.Dec 
   | Ring => PolyRing R
@@ -357,8 +357,8 @@
 
 \func polyCoefHom {R : Ring} {n : Nat} : AddGroupHom (PolyRing R) R \cowith
   | func => polyCoef __ n
-  | func-zro => idp
-  | func-+ => polyCoef_+
+  | func-zro => {?hidden_proof}
+  | func-+ => {?hidden_proof}
 
 \lemma polyCoef_negative {R : Ring} {p : Poly R} {n : Nat} : polyCoef (negative p) n = negative (polyCoef p n) => {?hidden_proof}
 
@@ -375,7 +375,7 @@
 \func polyMapRingHom (f : RingHom) : RingHom (PolyRing f.Dom) (PolyRing f.Cod) \cowith
   | func => polyMap f
   | func-+ => func-+
-  | func-ide => rewrite func-ide idp
+  | func-ide => {?hidden_proof}
   | func-* => func-*
   \where {
     \func polyMap_*c {f : RingHom} {a : f.Dom} {q : Poly f.Dom} : polyMap f (a PolyRing.*c q) = f a PolyRing.*c polyMap f q \elim q
@@ -387,7 +387,7 @@
 \func polyEvalRingHom {R : CRing} (a : R) : RingHom (PolyRing R) R \cowith
   | func => polyEval __ a
   | func-+ => func-+
-  | func-ide => simplify
+  | func-ide => {?hidden_proof}
   | func-* => func-*
   \where {
     \lemma polyEval_*c {R : Ring} {x a : R} {p : Poly R} : polyEval (x PolyRing.*c p) a = x * polyEval p a => {?hidden_proof}
@@ -557,11 +557,11 @@
 
 \instance PolyDecCRing (R : CRing.Dec) : CRing.Dec 
   | Ring.Dec => PolyDecRing R
-  | *-comm => PolyAlgebra.*-comm
+  | *-comm => {?hidden_proof}
 
 \instance PolyDecDomain (R : Domain.Dec) : Domain.Dec 
   | Domain => PolyDomain R
-  | decideEq => PolyDecRing.decideEq
+  | decideEq => {?hidden_proof}
   | nonZeroApart => nonZeroApart
   \where {
     \open PolyRingWith#
@@ -570,7 +570,7 @@
 
 \instance PolyDecIntegralDomain (R : IntegralDomain.Dec) : IntegralDomain.Dec 
   | Domain.Dec => PolyDecDomain R
-  | *-comm => PolyAlgebra.*-comm
+  | *-comm => {?hidden_proof}
 
 \lemma degree_padd {R : Ring.Dec} {p : Poly R} (a : R) (p/=0 : p /= 0) : degree (padd p a) = suc (degree p) => {?hidden_proof}
 
@@ -617,7 +617,7 @@
   | *c-assoc => *c-assoc
   | *c-ldistr => *c-ldistr
   | *c-rdistr => *c-rdistr
-  | ide_*c => pmap2 + f.func-zro ide_*c *> zro-left
+  | ide_*c => {?hidden_proof}
   \where {
     \func poly_func {R : Ring} {U : LModule R} (p : Poly R) (f : AddPointedHom U U) (u : U) : U \elim p
       | pzero => 0

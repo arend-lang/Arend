@@ -22,8 +22,8 @@
         | natural => \lam h => run {(G1.isFullyFaithful.isInj, repeat {2} (rewrite G1.Func-o), repeat {2} (rewrite G1.inverse-right), adj.eta.natural (G1.Func h))}
       }
       | epsilon => adj.epsilon
-      | eta_epsilon-left => G1.isFaithful $ G1.Func-o *> pmap (_ ∘) (G1.isFullyFaithful.f_ret _) *> adj.eta_epsilon-left *> inv G1.Func-id
-      | eta_epsilon-right => pmap (_ ∘ Func __) (G1.isFullyFaithful.f_ret _) *> adj.eta_epsilon-right
+      | eta_epsilon-left => {?hidden_proof}
+      | eta_epsilon-right => {?hidden_proof}
   }
 
 

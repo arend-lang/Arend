@@ -18,10 +18,10 @@
   | normalize => normalize
   | interpret => interpret
   | interpretNF => \lam env l => interpretNF' env (reduce l)
-  | interpretNF-consistent => interpretNF'_reduce *> interpretNF'-consistent
+  | interpretNF-consistent => {?hidden_proof}
   | nfVar => \lam v => (true, v) :: nil
   | >>= => >>=
-  | >>=-consistent => interpretNF'_reduce *> interpretNF'_>>= *> pmap (interpretNF' __ _) (ext (\lam v => inv interpretNF'_reduce)) *> inv interpretNF'_reduce
+  | >>=-consistent => {?hidden_proof}
   \where {
 \data Term (n : Nat) 
       | var (Fin n)

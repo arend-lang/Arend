@@ -34,23 +34,23 @@
 \func idIso^ {D : DPrecat {}} {a : D.C} {x : D a} : DIso idIso {x} {x} \cowith
   | f => id^ x
   | inv^ => id^ x
-  | inv^-left => rewrite (prop-isProp idIso.hinv_f id-left) id^-left
-  | inv^-right => rewrite (prop-isProp idIso.hinv_f id-right) id^-right
+  | inv^-left => {?hidden_proof}
+  | inv^-right => {?hidden_proof}
 
 \func totalPrecat (D : DPrecat {}) : Precat \cowith
   | Ob => \Sigma (a : D.C) (D a)
   | Hom => \lam (a, x) (b, y) => \Sigma (f : Hom a b) (DHom f x y)
   | id => \lam (a, x) => (id a, id^ x)
   | o => \lam (g, g^) (f, f^) => (g ∘ f, g^ ∘^ f^)
-  | id-left => ext (id-left, id^-left)
-  | id-right => ext (id-right, id^-right)
-  | o-assoc => ext (o-assoc, o^-assoc)
+  | id-left => {?hidden_proof}
+  | id-right => {?hidden_proof}
+  | o-assoc => {?hidden_proof}
   \where {
     \func proj : Functor (totalPrecat D) D.C \cowith
       | F => \lam x => x.1
       | Func => \lam f => f.1
-      | Func-id => idp
-      | Func-o => idp
+      | Func-id => {?hidden_proof}
+      | Func-o => {?hidden_proof}
   }
 
 
@@ -63,9 +63,7 @@
 
     \func totalCat (D : DCat {}) (C-uni : \Pi {a b : D.C} -> Equiv (Precat.idtoiso {_} {a} {b})) : Cat \cowith
       | Precat => totalPrecat D
-      | univalence => Cat.univalenceFromEquiv (later
-        (\lam {t} {s} => transEquiv (sigmaEquiv D t s) $ transEquiv (sigma-right eq-over) $ transEquiv (sigma-left {_} {_} {\lam e => DIso e {t.2} {s.2}} C-uni) (total-iso D))) 
-      (\lam {p} => idp)
+      | univalence => {?hidden_proof}
 
     \func total-iso (D : DCat {}) {x y : totalPrecat D} : QEquiv {\Sigma (e : Iso {_} {x.1} {y.1}) (DIso e {x.2} {y.2})} {Iso {totalPrecat D} {x} {y}} \cowith
       | f => \lam p => \new Iso {

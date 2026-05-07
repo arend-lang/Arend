@@ -95,7 +95,7 @@
 
   \func bnorm {X : BoundedExPseudoNormedAbGroup} (x : X) : UpperReal \cowith
     | ExUpperReal => norm x
-    | U-inh => norm-bounded x
+    | U-inh => {?hidden_proof}
 
 \class PseudoNormedAbGroup \extends BoundedExPseudoNormedAbGroup, PseudoMetricSpace {
     \override norm : E -> Real

@@ -66,19 +66,15 @@
   | negative => negative
   | negative-left => negative-left
   | isPos => \lam x => signum x = 1
-  | zro/>0 => \case __ \with {}
-| positive_+ => positive_+
-| ide>zro => idp
-| +_trichotomy => \lam x => (\case \elim x \with {
-  | pos 0 => equals idp
-  | pos suc n => greater idp
-  | neg suc n => less idp
-})
-| positive_* => \lam {x} {y} x>0 y>0 => signum.*-comm *> pmap2 * x>0 y>0
-| *-comm => *-comm
-| natCoef => pos
-| natCoefZero => idp
-| natCoefSuc => \lam _ => idp
+  | zro/>0 => {?hidden_proof}
+  | positive_+ => positive_+
+  | ide>zro => {?hidden_proof}
+  | +_trichotomy => {?hidden_proof}
+  | positive_* => {?hidden_proof}
+  | *-comm => *-comm
+  | natCoef => pos
+  | natCoefZero => {?hidden_proof}
+  | natCoefSuc => {?hidden_proof}
   \where {
     \open Nat(-)
     \open OrderedRing

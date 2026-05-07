@@ -34,12 +34,7 @@
     \func power-coreflection (X Z : SetBicat) : Coreflection (SetBicat.bprodFunctorRight X) Z \cowith
       | Coreflected => X -> Z
       | corefl-map => apply
-      | isCoreflection => \lam {_} => \new QEquiv {
-        | ret => curry
-        | ret_f => \lam f => ext
-          (\lam _ _ => unfold $ unfold (apply, curry) $ rewrite (proj1-prodMap-applied f (id X) _, proj2-prodMap f (id X) _, proj1-unname-pair, proj2-unname-pair) idp)
-        | f_sec => f_sec
-      }
+      | isCoreflection => {?hidden_proof}
       \where {
         \func apply (f : Product.apex {Bprod {SetBicat} (X -> Z) X}) : Z => (proj1 {SetBicat} f) (proj2 {SetBicat} f)
 

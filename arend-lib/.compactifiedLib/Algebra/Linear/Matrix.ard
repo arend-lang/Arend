@@ -82,19 +82,19 @@
 \instance MatrixAbGroup (A : AbGroup) (n m : Nat) : AbGroup (Matrix A n m) 
   | zro => mkMatrix (\lam _ _ => zro)
   | + => \lam M N => mkMatrix (\lam i j => M i j + N i j)
-  | zro-left => matrixExt (\lam i j => zro-left)
-  | +-assoc => matrixExt (\lam i j => +-assoc)
-  | +-comm => matrixExt (\lam i j => +-comm)
+  | zro-left => {?hidden_proof}
+  | +-assoc => {?hidden_proof}
+  | +-comm => {?hidden_proof}
   | negative => \lam M => mkMatrix (\lam i j => negative (M i j))
-  | negative-left => matrixExt (\lam i j => negative-left)
+  | negative-left => {?hidden_proof}
 
 \instance MatrixModule (R : Ring) (n m : Nat) : LModule R 
   | AbGroup => MatrixAbGroup R n m
   | *c => \lam a M => mkMatrix (\lam i j => a * M i j)
-  | *c-assoc => matrixExt (\lam i j => *-assoc)
-  | *c-ldistr => matrixExt (\lam i j => ldistr)
-  | *c-rdistr => matrixExt (\lam i j => rdistr)
-  | ide_*c => matrixExt (\lam i j => ide-left)
+  | *c-assoc => {?hidden_proof}
+  | *c-ldistr => {?hidden_proof}
+  | *c-rdistr => {?hidden_proof}
+  | ide_*c => {?hidden_proof}
   \where {
     \func *c-gen {R : Ring} {M : LModule R} (a : R) {n m : Nat} (A : Matrix M n m) : Matrix M n m => mkMatrix (\lam i j => a *c A i j)
   }
@@ -109,11 +109,11 @@
   | AbGroup => MatrixModule R n n
   | ide => ide
   | * => product
-  | ide-left => product_ide-left
-  | ide-right => product_ide-right
-  | *-assoc => product-assoc _ _ _
-  | ldistr => product-ldistr
-  | rdistr => product-rdistr _ _
+  | ide-left => {?hidden_proof}
+  | ide-right => {?hidden_proof}
+  | *-assoc => {?hidden_proof}
+  | ldistr => {?hidden_proof}
+  | rdistr => {?hidden_proof}
   \where {
     \open AddMonoid
 
@@ -170,8 +170,8 @@
 } 
   | Ring => MatrixRing R n
   | LModule => MatrixModule R n n
-  | *c-comm-left => product_*c-comm-left _
-  | *c-comm-right => product_*c-comm-right
+  | *c-comm-left => {?hidden_proof}
+  | *c-comm-right => {?hidden_proof}
   \where {
     \lemma product_*c-comm-left {R : Ring} {n m k : Nat} {a : R} (A : Matrix R n m) {B : Matrix R m k} : a *c (A MatrixRing.product B) = (a *c A) MatrixRing.product B => {?hidden_proof}
 
