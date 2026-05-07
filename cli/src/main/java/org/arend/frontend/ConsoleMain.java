@@ -241,6 +241,38 @@ public class ConsoleMain {
       no source declaration. Use -fu on the class itself to see all reference
       sites instead.
       """;
+  private final static String SCOPE_HELP = """
+      arend -sc <REFERABLE> [<PATTERN>] [option ...]
+
+      Dump the ambient name scope visible at a given referable's position.
+      Mainly intended for debugging reference-resolution issues: which names
+      are in scope here, and what do they actually resolve to?
+
+      Resolves <REFERABLE> in two ways:
+        - 'MODULE_PATH:GROUP_PATH'    qualified, same shape as -fu / -p / -ch
+        - '<short-name>'              looked up via the symbol index. Multiple
+                                      matches print the candidates so you can pick.
+
+      <PATTERN> is optional and uses the same grammar as -ss (literal substring
+      by default; eq:, glob:, re:, hb: prefixes available). When given, only
+      scope entries whose short name matches are printed.
+
+      EXTRA TOKENS  (each as a separate -sc argument)
+        context=static    only static-scope entries (default)
+        context=dynamic   only dynamic-scope entries (record/class fields)
+        context=all       print STATIC, DYNAMIC, PLEVEL, HLEVEL sections in turn
+
+      OUTPUT FORMAT
+        Each in-scope entry is printed as
+            SHORT_NAME -> LIBRARY::MODULE_PATH:LONG_NAME [KIND]
+        (locally-bound referables that have no global location print as
+            SHORT_NAME -> (local <RefType>))
+
+      EXAMPLES
+        arend -L libs my-lib -sc 'Algebra.Monoid:Monoid'
+        arend -L libs my-lib -sc 'Monoid' 'hb:CM'
+        arend -L libs my-lib -sc 'Algebra.Monoid:Monoid' context=all
+      """;
   private final static String ANSI_GREEN = "\u001B[32m";
   private final static String ANSI_RESET = "\u001B[0m";
 
@@ -314,6 +346,8 @@ public class ConsoleMain {
           .desc("find every usage of a definition. Pass `-fu help` for full grammar.").build());
       cmdOptions.addOption(Option.builder("ch").longOpt("class-hierarchy").hasArgs().argName("CLASS")
           .desc("print super/sub-class trees plus \\new and \\instance sites. Accepts MODULE:CLASS or a bare class name (resolved via the symbol index). Pass `-ch help` for full grammar.").build());
+      cmdOptions.addOption(Option.builder("sc").longOpt("scope").hasArgs().argName("REFERABLE")
+          .desc("dump the ambient scope at a referable's position; debug aid for reference-resolution issues. Accepts MODULE:PATH or a bare short name, plus an optional -ss-style pattern to filter results. Pass `-sc help` for full grammar.").build());
       cmdOptions.addOption("sig", "write-signatures", false, "in addition to the chosen mode (default typecheck, -nr, or -rr), emit a signature-only mirror of every processed module to <library>/.sig/<module>.ard. Function/lemma/instance/meta bodies and class-field implementations are replaced with the goal `{?}`; data constructors, class field declarations, namespace commands, and \\where structure are preserved. Honors positional-arg granularity. Off by default.");
       cmdOptions.addOption("nr", "name-resolve", false, "only run name resolution; do not typecheck or load binary caches. Honors granularity from positional args: no args = each requested library; MODULE = that module + its transitive raw-import closure; MODULE:DEF = same plus an existence check for DEF. Requires complete binary symbol indices (build via -ss).");
       cmdOptions.addOption("rr", "reference-resolve", false, "name-resolution + auto-fix: for each unresolved reference, look candidates up in the binary symbol indices, rewrite source files when the candidate is unique, and list alternatives otherwise. Same granularity rules as -nr. Requires complete binary symbol indices (build via -ss).");
@@ -353,6 +387,11 @@ public class ConsoleMain {
 
       if (cmdLine.hasOption("ch") && containsHelpToken(cmdLine.getOptionValues("ch"))) {
         System.out.println(CLASS_HIERARCHY_HELP);
+        return null;
+      }
+
+      if (cmdLine.hasOption("sc") && containsHelpToken(cmdLine.getOptionValues("sc"))) {
+        System.out.println(SCOPE_HELP);
         return null;
       }
 
@@ -720,6 +759,15 @@ public class ConsoleMain {
           org.arend.frontend.symbol.ClassHierarchy.parseArgs(cmdLine.getOptionValues("ch"));
       if (parsed == null) return false;
       org.arend.frontend.symbol.ClassHierarchy.run(parsed.spec(), parsed.options(),
+          requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
+      return true;
+    }
+
+    if (cmdLine.hasOption("sc")) {
+      org.arend.frontend.symbol.ReferableScope.Parsed parsed =
+          org.arend.frontend.symbol.ReferableScope.parseArgs(cmdLine.getOptionValues("sc"));
+      if (parsed == null) return false;
+      org.arend.frontend.symbol.ReferableScope.run(parsed.spec(), parsed.pattern(), parsed.options(),
           requestedLibraries, libraryManager, server, mySystemErrErrorReporter);
       return true;
     }
